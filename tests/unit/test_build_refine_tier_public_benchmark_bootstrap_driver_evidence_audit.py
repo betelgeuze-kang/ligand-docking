@@ -134,7 +134,7 @@ def _fixture_paths(tmp_path: Path) -> dict[str, Path]:
                     "review_class": "bootstrap_p05_fragility_driver",
                     "bootstrap_p05_delta_if_removed": "0.12",
                     "rank_abs_error": 18,
-                    "deltaG_proxy_kcal_mol": "-2.3",
+                    "refine_proxy_score": "-2.3",
                     "deltaG_experimental_kcal_mol": "-10.5",
                 },
                 {
@@ -147,7 +147,7 @@ def _fixture_paths(tmp_path: Path) -> dict[str, Path]:
                     "review_class": "bootstrap_p05_fragility_driver",
                     "bootstrap_p05_delta_if_removed": "0.08",
                     "rank_abs_error": 16,
-                    "deltaG_proxy_kcal_mol": "-2.1",
+                    "refine_proxy_score": "-2.1",
                     "deltaG_experimental_kcal_mol": "-9.8",
                 },
             ]

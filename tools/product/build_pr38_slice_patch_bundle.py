@@ -88,6 +88,47 @@ def _git_diff_for_paths(*, base_ref: str, paths: list[str], root: Path) -> str:
     return proc.stdout
 
 
+def _git_worktree_diff_for_paths(*, paths: list[str], root: Path) -> str:
+    if not paths:
+        return ""
+    unstaged = subprocess.run(
+        ["git", "diff", "--binary", "--", *paths],
+        cwd=root,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    staged = subprocess.run(
+        ["git", "diff", "--binary", "--cached", "--", *paths],
+        cwd=root,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    untracked_proc = subprocess.run(
+        ["git", "ls-files", "--others", "--exclude-standard", "--", *paths],
+        cwd=root,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    untracked_parts: list[str] = []
+    for raw_path in untracked_proc.stdout.splitlines():
+        file_path = raw_path.strip()
+        if not file_path:
+            continue
+        proc = subprocess.run(
+            ["git", "diff", "--binary", "--no-index", "--", "/dev/null", file_path],
+            cwd=root,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if proc.stdout:
+            untracked_parts.append(proc.stdout)
+    return "\n".join(part for part in [staged, unstaged, *untracked_parts] if part)
+
+
 def _slice_rows(split_payload: dict[str, Any], slice_id: str) -> list[dict[str, Any]]:
     rows = split_payload.get("rows")
     if not isinstance(rows, list):
@@ -115,6 +156,12 @@ def build_pr38_slice_patch_bundle(
     plan_rows = plan_payload.get("rows") if isinstance(plan_payload.get("rows"), list) else []
     bundle_dir = _resolve(out_dir, root=root_path)
     bundle_dir.mkdir(parents=True, exist_ok=True)
+    stale_patch_files_removed: list[str] = []
+    for stale_patch in sorted(bundle_dir.glob("*.patch")):
+        stale_patch_files_removed.append(
+            str(stale_patch.relative_to(root_path) if stale_patch.is_relative_to(root_path) else stale_patch)
+        )
+        stale_patch.unlink()
 
     head_sha = _git("rev-parse", "HEAD", root=root_path)
     merge_base_sha = _git("merge-base", base_ref, "HEAD", root=root_path)
@@ -127,7 +174,9 @@ def build_pr38_slice_patch_bundle(
         sequence = int(plan_row.get("sequence") or len(rows) + 1)
         file_rows = _slice_rows(split_payload, slice_id)
         file_paths = [_text(row.get("file_path")) for row in file_rows if _text(row.get("file_path"))]
-        patch_text = _git_diff_for_paths(base_ref=base_ref, paths=file_paths, root=root_path)
+        base_patch_text = _git_diff_for_paths(base_ref=base_ref, paths=file_paths, root=root_path)
+        worktree_patch_text = _git_worktree_diff_for_paths(paths=file_paths, root=root_path)
+        patch_text = "\n".join(part for part in [base_patch_text, worktree_patch_text] if part)
         patch_name = f"{sequence:02d}-{slice_id}.patch"
         patch_path = bundle_dir / patch_name
         patch_path.write_text(patch_text, encoding="utf-8")
@@ -147,6 +196,7 @@ def build_pr38_slice_patch_bundle(
                 "draft_branch_name": _text(plan_row.get("draft_branch_name")),
                 "draft_pr_title": _text(plan_row.get("draft_pr_title")),
                 "patch_nonempty": bool(patch_text.strip()),
+                "worktree_overlay_patch_included": bool(worktree_patch_text.strip()),
                 **_READ_ONLY_FLAGS,
             }
         )
@@ -176,6 +226,11 @@ def build_pr38_slice_patch_bundle(
         "bundled_changed_file_count": total_file_count,
         "empty_patch_count": len(empty_patch_slice_ids),
         "empty_patch_slice_ids": empty_patch_slice_ids,
+        "stale_patch_files_removed_count": len(stale_patch_files_removed),
+        "stale_patch_files_removed": stale_patch_files_removed,
+        "worktree_overlay_patch_count": sum(
+            1 for row in rows if row["worktree_overlay_patch_included"]
+        ),
         "bundle_dir": str(bundle_dir.relative_to(root_path) if bundle_dir.is_relative_to(root_path) else bundle_dir),
         "claim_boundary": CLAIM_BOUNDARY,
         "next_required_step": (

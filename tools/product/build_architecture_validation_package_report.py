@@ -61,6 +61,15 @@ def _bool(value: Any) -> bool:
     return value is True
 
 
+def _string_list(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return [_text(item) for item in value if _text(item)]
+    if isinstance(value, tuple):
+        return [_text(item) for item in value if _text(item)]
+    text = _text(value)
+    return [text] if text else []
+
+
 def _row(
     test_id: str,
     package: str,
@@ -414,8 +423,17 @@ def build_architecture_validation_package_report(*, bundle_dir: str = DEFAULT_BU
             "CAMEO official results intake",
             status="closed" if _bool(competition.get("cameo_official_results_used")) else "operator_pending_closed",
             required=True,
-            evidence="runs/cameo_official_results_operator_intake.csv",
-            observed=f"official_results_used={competition.get('cameo_official_results_used')};intake_rows={competition.get('cameo_official_intake_row_count')}",
+            evidence=_text(competition.get("cameo_official_intake_gate_artifact_path"))
+            or "runs/cameo_official_results_intake_gate_current.json",
+            observed=(
+                f"official_results_used={competition.get('cameo_official_results_used')};"
+                f"intake_gate={competition.get('cameo_official_intake_gate_status')};"
+                f"accepted={competition.get('cameo_official_accepted_result_count')};"
+                f"rejected={competition.get('cameo_official_rejected_result_count')};"
+                f"blockers={competition.get('cameo_official_blocker_count')};"
+                f"operator_actions={competition.get('cameo_official_operator_action_required_count')};"
+                f"local_native_blockers={competition.get('cameo_official_local_native_accuracy_blocker_count')}"
+            ),
             next_action=_text(competition.get("cameo_official_next_action")),
         )
     )
@@ -494,6 +512,267 @@ def build_architecture_validation_package_report(*, bundle_dir: str = DEFAULT_BU
         "overclaim_soft_warning_count": int(depth_audit.get("overclaim_soft_warning_count") or 0),
         "overclaim_open_test_ids": [row["test_id"] for row in rows if row.get("status") == "summary_overclaim_open"],
         "evidence_depth_tier": _text(depth_audit.get("evidence_depth_tier")) or "accounting_only",
+        "competition_benchmark_rollup_status": _text(competition.get("status")),
+        "competition_benchmark_cameo_validation_status": _text(
+            competition.get("cameo_validation_status")
+        ),
+        "competition_benchmark_cameo_official_results_used": _bool(
+            competition.get("cameo_official_results_used")
+        ),
+        "competition_benchmark_cameo_official_intake_gate_status": _text(
+            competition.get("cameo_official_intake_gate_status")
+        ),
+        "competition_benchmark_cameo_official_intake_gate_ready": _bool(
+            competition.get("cameo_official_intake_gate_ready")
+        ),
+        "competition_benchmark_cameo_official_result_intake_status": _text(
+            competition.get("cameo_official_result_intake_status")
+            or competition.get("cameo_official_intake_gate_status")
+        ),
+        "competition_benchmark_cameo_official_result_intake_ready": _bool(
+            competition.get("cameo_official_result_intake_ready")
+        ),
+        "competition_benchmark_cameo_official_result_intake_claim_allowed": _bool(
+            competition.get("cameo_official_result_intake_claim_allowed")
+        ),
+        "competition_benchmark_cameo_official_result_intake_fetch_enabled": _bool(
+            competition.get("cameo_official_result_intake_fetch_enabled")
+        ),
+        "competition_benchmark_cameo_official_result_intake_external_state_mutated": _bool(
+            competition.get("cameo_official_result_intake_external_state_mutated")
+            or competition.get("cameo_official_external_state_mutated")
+        ),
+        "competition_benchmark_cameo_official_result_intake_local_native_accuracy_used": _bool(
+            competition.get("cameo_official_result_intake_local_native_accuracy_used")
+            or competition.get("cameo_official_native_local_accuracy_used")
+        ),
+        "competition_benchmark_cameo_official_intake_gate_artifact_path": _text(
+            competition.get("cameo_official_intake_gate_artifact_path")
+        ),
+        "competition_benchmark_cameo_official_operator_intake_csv": _text(
+            competition.get("cameo_official_operator_intake_csv")
+            or competition.get("cameo_official_intake_csv")
+        ),
+        "competition_benchmark_cameo_official_operator_template_csv": _text(
+            competition.get("cameo_official_operator_template_csv")
+        ),
+        "competition_benchmark_cameo_official_result_row_count": int(
+            competition.get("cameo_official_result_row_count") or 0
+        ),
+        "competition_benchmark_cameo_official_accepted_result_count": int(
+            competition.get("cameo_official_accepted_result_count") or 0
+        ),
+        "competition_benchmark_cameo_official_rejected_result_count": int(
+            competition.get("cameo_official_rejected_result_count") or 0
+        ),
+        "competition_benchmark_cameo_official_model1_result_ready": _bool(
+            competition.get("cameo_official_model1_result_ready")
+        ),
+        "competition_benchmark_cameo_official_blocker_count": int(
+            competition.get("cameo_official_blocker_count") or 0
+        ),
+        "competition_benchmark_cameo_official_blocker_codes": _string_list(
+            competition.get("cameo_official_blocker_codes")
+        ),
+        "competition_benchmark_cameo_official_operator_action_required_count": int(
+            competition.get("cameo_official_operator_action_required_count") or 0
+        ),
+        "competition_benchmark_cameo_official_operator_action_required_row_count": int(
+            competition.get("cameo_official_operator_action_required_row_count") or 0
+        ),
+        "competition_benchmark_cameo_official_primary_blocker_code": _text(
+            competition.get("cameo_official_primary_blocker_code")
+        ),
+        "competition_benchmark_cameo_official_primary_required_action": _text(
+            competition.get("cameo_official_primary_required_action")
+        ),
+        "competition_benchmark_cameo_official_required_column_count": int(
+            competition.get("cameo_official_required_column_count") or 0
+        ),
+        "competition_benchmark_cameo_official_missing_required_column_count": int(
+            competition.get("cameo_official_missing_required_column_count") or 0
+        ),
+        "competition_benchmark_cameo_official_missing_required_columns": _string_list(
+            competition.get("cameo_official_missing_required_columns")
+        ),
+        "competition_benchmark_cameo_official_allowed_result_source_kinds": _string_list(
+            competition.get("cameo_official_allowed_result_source_kinds")
+        ),
+        "competition_benchmark_cameo_official_source_provenance_ready_row_count": int(
+            competition.get("cameo_official_source_provenance_ready_row_count") or 0
+        ),
+        "competition_benchmark_cameo_official_metric_ready_row_count": int(
+            competition.get("cameo_official_metric_ready_row_count") or 0
+        ),
+        "competition_benchmark_cameo_official_local_native_accuracy_blocker_count": int(
+            competition.get("cameo_official_local_native_accuracy_blocker_count") or 0
+        ),
+        "competition_benchmark_cameo_official_native_local_accuracy_used": _bool(
+            competition.get("cameo_official_native_local_accuracy_used")
+        ),
+        "competition_benchmark_cameo_official_external_state_mutated": _bool(
+            competition.get("cameo_official_external_state_mutated")
+        ),
+        "competition_benchmark_casp_strict_blind_first_slot_ready": _bool(
+            competition.get("casp_strict_blind_first_slot_ready")
+        ),
+        "competition_benchmark_casp16_ligand_source_manifest_status": _text(
+            competition.get("casp16_ligand_source_manifest_status")
+        ),
+        "competition_benchmark_casp16_ligand_source_manifest_ready": _bool(
+            competition.get("casp16_ligand_source_manifest_ready")
+        ),
+        "competition_benchmark_casp16_ligand_materialization_ready": _bool(
+            competition.get("casp16_ligand_materialization_ready")
+        ),
+        "competition_benchmark_casp16_ligand_scorecard_ready": _bool(
+            competition.get("casp16_ligand_scorecard_ready")
+        ),
+        "competition_benchmark_casp16_ligand_competition_credibility_ready": _bool(
+            competition.get("casp16_ligand_competition_credibility_ready")
+        ),
+        "competition_benchmark_casp16_ligand_raw_data_committed": _bool(
+            competition.get("casp16_ligand_raw_data_committed")
+        ),
+        "competition_benchmark_casp16_ligand_raw_data_git_tracked_file_count": int(
+            competition.get("casp16_ligand_raw_data_git_tracked_file_count") or 0
+        ),
+        "competition_benchmark_casp16_ligand_pose_target_count": int(
+            competition.get("casp16_ligand_pose_target_count") or 0
+        ),
+        "competition_benchmark_casp16_ligand_affinity_target_count": int(
+            competition.get("casp16_ligand_affinity_target_count") or 0
+        ),
+        "competition_benchmark_casp16_ligand_next_action": _text(
+            competition.get("casp16_ligand_next_action")
+        ),
+        "competition_benchmark_bm5_capri_complex_source_manifest_status": _text(
+            competition.get("bm5_capri_complex_source_manifest_status")
+        ),
+        "competition_benchmark_bm5_complex_benchmark_ready": _bool(
+            competition.get("bm5_complex_benchmark_ready")
+        ),
+        "competition_benchmark_capri_score_set_ready": _bool(
+            competition.get("capri_score_set_ready")
+        ),
+        "competition_benchmark_bm5_capri_complex_competition_credibility_ready": _bool(
+            competition.get("bm5_capri_complex_competition_credibility_ready")
+        ),
+        "competition_benchmark_bm5_capri_complex_raw_data_committed": _bool(
+            competition.get("bm5_capri_complex_raw_data_committed")
+        ),
+        "competition_benchmark_bm5_capri_complex_raw_data_git_tracked_file_count": int(
+            competition.get("bm5_capri_complex_raw_data_git_tracked_file_count") or 0
+        ),
+        "competition_benchmark_bm5_capri_complex_primary_metric": _text(
+            competition.get("bm5_capri_complex_primary_metric")
+        ),
+        "competition_benchmark_bm5_capri_complex_next_action": _text(
+            competition.get("bm5_capri_complex_next_action")
+        ),
+        "competition_benchmark_competition_credibility_extension_ready": _bool(
+            competition.get("competition_credibility_extension_ready")
+        ),
+        "competition_benchmark_competition_credibility_extension_blocker_count": int(
+            competition.get("competition_credibility_extension_blocker_count") or 0
+        ),
+        "competition_benchmark_competition_credibility_extension_blockers": _string_list(
+            competition.get("competition_credibility_extension_blockers")
+        ),
+        "competition_benchmark_competition_credibility_extension_primary_blocker": _text(
+            competition.get("competition_credibility_extension_primary_blocker")
+        ),
+        "competition_benchmark_competition_credibility_extension_next_actions": _string_list(
+            competition.get("competition_credibility_extension_next_actions")
+        ),
+        "competition_benchmark_competition_credibility_extension_primary_next_action": _text(
+            competition.get("competition_credibility_extension_primary_next_action")
+        ),
+        "competition_benchmark_custody_work_order_status": _text(
+            competition.get("competition_benchmark_custody_work_order_status")
+        ),
+        "competition_benchmark_custody_work_order_ready": _bool(
+            competition.get("competition_benchmark_custody_work_order_ready")
+        ),
+        "competition_benchmark_custody_work_order_action_count": int(
+            competition.get("competition_benchmark_custody_work_order_action_count") or 0
+        ),
+        "competition_benchmark_custody_work_order_raw_data_blocked_row_count": int(
+            competition.get(
+                "competition_benchmark_custody_work_order_raw_data_blocked_row_count"
+            )
+            or 0
+        ),
+        "competition_benchmark_custody_work_order_missing_receipt_row_count": int(
+            competition.get(
+                "competition_benchmark_custody_work_order_missing_receipt_row_count"
+            )
+            or 0
+        ),
+        "competition_benchmark_custody_work_order_primary_work_order_id": _text(
+            competition.get("competition_benchmark_custody_work_order_primary_work_order_id")
+        ),
+        "competition_benchmark_custody_work_order_primary_required_action": _text(
+            competition.get(
+                "competition_benchmark_custody_work_order_primary_required_action"
+            )
+        ),
+        "competition_benchmark_custody_work_order_primary_verification_command": _text(
+            competition.get(
+                "competition_benchmark_custody_work_order_primary_verification_command"
+            )
+        ),
+        "competition_benchmark_package_b_required_for_ligand_commercial_claims": _bool(
+            competition.get("package_b_required_for_ligand_commercial_claims")
+        ),
+        "competition_benchmark_package_b_public_benchmark_contract_status": _text(
+            competition.get("package_b_public_benchmark_contract_status")
+        ),
+        "competition_benchmark_package_b_public_benchmark_validation_ready": _bool(
+            competition.get("package_b_public_benchmark_validation_ready")
+        ),
+        "competition_benchmark_package_b_ligand_public_benchmark_foundation_ready": _bool(
+            competition.get("package_b_ligand_public_benchmark_foundation_ready")
+        ),
+        "competition_benchmark_package_b_ligand_suite_ids": _string_list(
+            competition.get("package_b_ligand_suite_ids")
+        ),
+        "competition_benchmark_package_b_refine_tier_public_benchmark_status": _text(
+            competition.get("package_b_refine_tier_public_benchmark_status")
+        ),
+        "competition_benchmark_package_b_claim_grade_public_benchmark_ready": _bool(
+            competition.get("package_b_claim_grade_public_benchmark_ready")
+        ),
+        "competition_benchmark_package_b_claim_grade_blocker_count": int(
+            competition.get("package_b_claim_grade_blocker_count") or 0
+        ),
+        "competition_benchmark_package_b_claim_grade_blockers": _string_list(
+            competition.get("package_b_claim_grade_blockers")
+        ),
+        "competition_benchmark_package_b_refine_tier_work_order_apply_status": _text(
+            competition.get("package_b_refine_tier_work_order_apply_status")
+        ),
+        "competition_benchmark_package_b_refine_tier_work_order_apply_ready": _bool(
+            competition.get("package_b_refine_tier_work_order_apply_ready")
+        ),
+        "competition_benchmark_competition_evidence_role": _text(
+            competition.get("competition_evidence_role")
+        ),
+        "competition_benchmark_competition_ligand_commercial_claim_allowed": _bool(
+            competition.get("competition_ligand_commercial_claim_allowed")
+        ),
+        "competition_benchmark_competition_ligand_claim_package_b_dependency_ready": _bool(
+            competition.get("competition_ligand_claim_package_b_dependency_ready")
+        ),
+        "competition_benchmark_competition_ligand_claim_blocker_count": int(
+            competition.get("competition_ligand_claim_blocker_count") or 0
+        ),
+        "competition_benchmark_competition_ligand_claim_blockers": _string_list(
+            competition.get("competition_ligand_claim_blockers")
+        ),
+        "competition_benchmark_package_b_bridge_next_action": _text(
+            competition.get("package_b_bridge_next_action")
+        ),
         "claim_boundary": CLAIM_BOUNDARY,
     }
     return {"summary": summary, "rows": rows, "overclaim_warnings": depth_audit.get("overclaim_warnings") or []}
@@ -512,6 +791,11 @@ def _write_md(path: Path, payload: dict[str, Any]) -> None:
         f"- evidence_depth_tier: `{s.get('evidence_depth_tier', 'accounting_only')}`",
         f"- overclaim_warning_count: `{s.get('overclaim_warning_count', 0)}`",
         f"- overclaim_open_test_ids: `{s.get('overclaim_open_test_ids', [])}`",
+        f"- competition_benchmark_rollup_status: `{s.get('competition_benchmark_rollup_status', '')}`",
+        f"- competition_benchmark_casp16_ligand_source_manifest_status: `{s.get('competition_benchmark_casp16_ligand_source_manifest_status', '')}`",
+        f"- competition_benchmark_casp16_ligand_competition_credibility_ready: `{s.get('competition_benchmark_casp16_ligand_competition_credibility_ready', False)}`",
+        f"- competition_benchmark_bm5_capri_complex_source_manifest_status: `{s.get('competition_benchmark_bm5_capri_complex_source_manifest_status', '')}`",
+        f"- competition_benchmark_bm5_capri_complex_competition_credibility_ready: `{s.get('competition_benchmark_bm5_capri_complex_competition_credibility_ready', False)}`",
         "",
         "## Overclaim Warnings",
         "",

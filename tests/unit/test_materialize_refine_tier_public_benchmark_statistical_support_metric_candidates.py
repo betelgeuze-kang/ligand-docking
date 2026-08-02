@@ -122,7 +122,7 @@ def test_candidate_fill_computes_three_values_without_touching_expected_payload(
                 "work_order_id": "seed_001",
                 "target_id": "seed",
                 "split": "fit",
-                "deltaG_mm_gbsa_kcal_mol": "-4.0",
+                "internal_refine_proxy_score": "-4.0",
                 "deltaG_experimental_kcal_mol": "-4.5",
             }
         ],

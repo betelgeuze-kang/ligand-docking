@@ -27,7 +27,7 @@ def _write_existing_csv(path: Path, root: Path) -> None:
                 "target_id",
                 "pose_id",
                 "split",
-                "deltaG_mm_gbsa_kcal_mol",
+                "internal_refine_proxy_score",
                 "deltaG_experimental_kcal_mol",
                 "internal_deltaG_source_artifact",
             ],
@@ -39,7 +39,7 @@ def _write_existing_csv(path: Path, root: Path) -> None:
                 "target_id": "2j7h",
                 "pose_id": "2j7h_48",
                 "split": "fit",
-                "deltaG_mm_gbsa_kcal_mol": "-2.0",
+                "internal_refine_proxy_score": "-2.0",
                 "deltaG_experimental_kcal_mol": "-9.0",
                 "internal_deltaG_source_artifact": "runs/sources/seed_001_internal_deltaG.json",
             }

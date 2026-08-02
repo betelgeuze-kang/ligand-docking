@@ -4,8 +4,8 @@ Separate operator actions for **live CAMEO** and **external CASP credibility**. 
 
 - status: `competition_external_operator_track_ready`
 - architecture_validation_status: `architecture_validation_packages_in_progress`
-- evidence_depth_tier: `accounting_only`
-- overclaim_warning_count: `3`
+- evidence_depth_tier: `row_evidence_partial`
+- overclaim_warning_count: `1`
 
 ## Tracks
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 import numpy as np
 
 from betelgeuze_product.structure_analysis import analyze_structure_source
+from betelgeuze_engine.physics.mm_gbsa import GB_SA_PROXY_ENERGY_FIELD
 from core.mm_gbsa import REFINE_LIGAND_MODEL, mm_gbsa_binding_energy, mm_gbsa_refinement_delta
 from core.pocket_detection import detect_binding_pocket
 from core.pose_generation import cluster_poses_by_rmsd, generate_pose_ensemble
@@ -59,7 +60,7 @@ def test_mm_gbsa_binding_energy_refine_tier():
     assert out["claim_safe"] is False
     assert out["blocked_reason"] == "internal_gb_sa_proxy_uncalibrated"
     assert out["claim_metadata"]["claim_safe"] is False
-    assert np.isfinite(out["deltaG_mm_gbsa_kcal_mol"])
+    assert np.isfinite(out[GB_SA_PROXY_ENERGY_FIELD])
 
 
 def test_mm_gbsa_binding_energy_accepts_typed_elements_without_opening_claim():
@@ -96,7 +97,7 @@ def test_mm_gbsa_contact_normalized_score_prefers_contact_rich_pose():
     far = mm_gbsa_binding_energy(protein, far_ligand)
 
     assert near["contact_count"] > far["contact_count"]
-    assert near["deltaG_mm_gbsa_kcal_mol"] < far["deltaG_mm_gbsa_kcal_mol"]
+    assert near[GB_SA_PROXY_ENERGY_FIELD] < far[GB_SA_PROXY_ENERGY_FIELD]
 
 
 def test_backmapping_refine_gb_sa_model():
@@ -110,8 +111,10 @@ def test_backmapping_refine_gb_sa_model():
         protein_elements=["N", "C", "O", "S", "C"],
     )
     assert out["ligand_model"] == REFINE_LIGAND_MODEL
-    assert "deltaG_mm_gbsa_kcal_mol" in out
-    assert out["deltaG_mmpbsa_proxy_kcal_mol"] == out["deltaG_mm_gbsa_kcal_mol"]
+    # The retired deltaG_*_kcal_mol names must not reappear in the active schema.
+    assert GB_SA_PROXY_ENERGY_FIELD in out
+    assert "internal_refine_proxy_score" not in out
+    assert "deltaG_mmpbsa_proxy_kcal_mol" not in out
     assert out["element_model"] == "typed_pairwise"
     assert out["ligand_element_source"] == "rdkit_atom_elements_projected_to_model_coords"
 

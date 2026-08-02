@@ -142,7 +142,7 @@ def _score_decoy(row: dict[str, Any], *, receptor_coords: np.ndarray) -> tuple[f
                 receptor_coords,
                 ligand_coords,
                 props=_ligand_descriptor_props(_text(row.get("pose_artifact"))),
-            )["deltaG_mm_gbsa_kcal_mol"]
+            )["internal_refine_proxy_score"]
         )
     except Exception as exc:  # noqa: BLE001 - row-level metadata must fail closed.
         blockers.append(f"decoy_score_failed:{type(exc).__name__}")
@@ -224,7 +224,7 @@ def build_pdbbind_casf_fixed_gold_metadata(
         if not receptor:
             row_blockers.append("receptor_artifact_missing")
         affinity_label = -float(_float(metric.get("deltaG_experimental_kcal_mol")) or 0.0)
-        active_score = _float(metric.get("deltaG_mm_gbsa_kcal_mol"))
+        active_score = _float(metric.get("internal_refine_proxy_score"))
         if active_score is None:
             row_blockers.append("active_internal_deltaG_missing")
         receptor_coords = np.zeros((0, 3), dtype=np.float64)

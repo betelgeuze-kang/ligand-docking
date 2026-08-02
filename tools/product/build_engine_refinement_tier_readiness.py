@@ -1038,7 +1038,7 @@ def build_engine_refinement_tier_readiness(
     checks.append(
         {
             "check_id": "stage3b_refined_energy_col",
-            "status": "pass" if stage3b.get("physics_refinement_refined_energy_col") == "deltaG_mm_gbsa_kcal_mol" else "blocked",
+            "status": "pass" if stage3b.get("physics_refinement_refined_energy_col") == "internal_refine_proxy_score" else "blocked",
             "detail": str(stage3b.get("physics_refinement_refined_energy_col")),
         }
     )

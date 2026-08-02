@@ -140,6 +140,8 @@ def _normalize_platform(value: str) -> str:
         return "linux"
     if text in {"windows", "win32", "cygwin", "msys"}:
         return "windows"
+    if text.startswith(("msys", "mingw", "cygwin_nt", "windows", "win32")):
+        return "windows"
     return text
 
 
@@ -362,12 +364,21 @@ def build_developer_preview_platform_reproducibility_receipt(
     platform_evidence_primary_row = (
         platform_evidence_blocked_rows[0] if platform_evidence_blocked_rows else {}
     )
+    primary_blocker = blockers[0] if blockers else ""
+    if ready:
+        primary_required_action = ""
+    else:
+        primary_required_action = str(
+            platform_evidence_primary_row.get("required_action") or ""
+        ) or "Run the platform command set, capture ai-verify and pytest JUnit evidence, then rebuild this receipt."
     summary = {
         "packet_type": PACKET_TYPE,
         "schema_version": SCHEMA_VERSION,
         "status": "developer_preview_platform_reproducibility_receipt_ready"
         if ready
         else "blocked_developer_preview_platform_reproducibility_receipt",
+        "platform_reproducibility_ready": ready,
+        "reproducibility_ready": ready,
         "platform_id": normalized_platform,
         "command_set_passed": command_set_passed,
         "linux_receipt": linux_receipt,
@@ -376,6 +387,8 @@ def build_developer_preview_platform_reproducibility_receipt(
         "pytest_command_set_passed": pytest_passed,
         "platform_match": platform_match,
         "blocker_count": len(blockers),
+        "primary_blocker": primary_blocker,
+        "primary_required_action": primary_required_action,
         "blockers": blockers,
         "pytest_test_count": junit["test_count"],
         "pytest_failure_count": junit["failure_count"],
@@ -411,7 +424,7 @@ def build_developer_preview_platform_reproducibility_receipt(
         if ready and normalized_platform == "linux"
         else "Attach the matching Linux receipt to close the platform reproducibility gate."
         if ready and normalized_platform == "windows"
-        else "Run the platform command set, capture ai-verify and pytest JUnit evidence, then rebuild this receipt.",
+        else primary_required_action,
     }
     return {
         "summary": summary,
@@ -438,6 +451,8 @@ def _render_md(payload: dict[str, Any]) -> str:
         f"- pytest_command_set_passed: `{summary['pytest_command_set_passed']}`",
         f"- platform_match: `{summary['platform_match']}`",
         f"- blocker_count: `{summary['blocker_count']}`",
+        f"- primary_blocker: `{summary['primary_blocker'] or '-'}`",
+        f"- primary_required_action: {summary['primary_required_action'] or '-'}",
         f"- platform_evidence_blocked_field_count: `{summary['platform_evidence_blocked_field_count']}`",
         "",
         "| check | status | blockers |",
@@ -505,6 +520,11 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--pytest-junit-xml", default="")
     parser.add_argument("--out-json", default="")
     parser.add_argument("--out-md", default="")
+    parser.add_argument(
+        "--allow-blocked",
+        action="store_true",
+        help="Write a fail-closed blocked receipt and return success so the operator can continue rebuilding the final audit.",
+    )
     return parser
 
 
@@ -521,7 +541,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     _write_json(out_json, payload)
     _write_text(out_md, _render_md(payload))
-    return 0 if payload["summary"]["status"] == "developer_preview_platform_reproducibility_receipt_ready" else 1
+    if payload["summary"]["status"] == "developer_preview_platform_reproducibility_receipt_ready":
+        return 0
+    return 0 if args.allow_blocked else 1
 
 
 if __name__ == "__main__":

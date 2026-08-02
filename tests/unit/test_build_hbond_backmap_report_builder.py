@@ -8,6 +8,7 @@ from tools.product import build_hbond_backmap_report as mod
 
 
 def _write_scores_csv(path: Path, rows: list[dict[str, object]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
     fieldnames = [
         "target",
         "ligand_id",
@@ -27,6 +28,24 @@ def _write_scores_csv(path: Path, rows: list[dict[str, object]]) -> None:
         writer.writeheader()
         for row in rows:
             writer.writerow(row)
+
+
+def _write_product_image_smoke_receipt(
+    path: Path,
+    *,
+    runner_smoke_dir: Path,
+    ready: bool = True,
+    outside_workspace: bool = True,
+) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "status": "product_image_smoke_ready" if ready else "blocked_product_image_smoke",
+        "mode": "rocm-runtime" if ready else "build",
+        "runner_smoke_dir": str(runner_smoke_dir),
+        "runner_smoke_dir_outside_workspace": outside_workspace,
+        "workspace_runner_smoke_dir_cleanup_ready": outside_workspace,
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
 
 
 def _claim_safe_row() -> dict[str, object]:
@@ -106,6 +125,35 @@ def test_builder_fail_closed_on_missing_csv(tmp_path: Path) -> None:
     assert artifact["status"] == mod.STATUS_BLOCKED_MISSING
     assert artifact["summary"]["claim_safe_rate"] == 0.0
     assert artifact["rows"] == []
+
+
+def test_builder_resolves_scores_csv_from_product_image_smoke_receipt(tmp_path: Path) -> None:
+    smoke_dir = tmp_path / "runner-temp" / "product_image_smoke_runner_artifacts"
+    scores_csv = smoke_dir / "backmapping_scores.csv"
+    receipt = tmp_path / "runs" / "product_image_smoke_receipt_current.json"
+    _write_scores_csv(scores_csv, [_claim_safe_row(), _fallback_row()])
+    _write_product_image_smoke_receipt(receipt, runner_smoke_dir=smoke_dir)
+
+    artifact = mod.build_hbond_backmap_report_artifact_from_product_image_smoke_receipt(receipt)
+
+    assert artifact["status"] == mod.STATUS_OK
+    assert artifact["scores_csv"] == str(scores_csv)
+    assert artifact["summary"]["candidate_count"] == 2
+
+
+def test_builder_blocks_receipt_workspace_artifact_root(tmp_path: Path) -> None:
+    workspace_smoke_dir = tmp_path / "runs" / "product_image_smoke_runner_artifacts"
+    receipt = tmp_path / "runs" / "product_image_smoke_receipt_current.json"
+    _write_product_image_smoke_receipt(
+        receipt,
+        runner_smoke_dir=workspace_smoke_dir,
+        outside_workspace=False,
+    )
+
+    artifact = mod.build_hbond_backmap_report_artifact_from_product_image_smoke_receipt(receipt)
+
+    assert artifact["status"] == mod.STATUS_BLOCKED_RECEIPT_WORKSPACE_ARTIFACT_ROOT
+    assert "workspace artifact root" in artifact["detail"]
 
 
 def test_builder_fail_closed_on_empty_csv(tmp_path: Path) -> None:

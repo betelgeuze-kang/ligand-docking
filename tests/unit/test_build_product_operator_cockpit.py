@@ -34,6 +34,7 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
         "public_vina_gnina_score_receipt": (
             tmp_path / "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
         ),
+        "competition": tmp_path / "runs/competition_benchmark_rollup_current.json",
         "release_decision": tmp_path / "runs/goal_release_decision_gate_current.json",
         "release": tmp_path / "runs/goal_operator_action_board_current.json",
         "full_commercial": (
@@ -55,6 +56,12 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
         ),
         "developer_preview_new_user_observation_receipt": (
             tmp_path / ".betelgeuze/developer_preview_new_user_observation_receipt.json"
+        ),
+        "github_runner_preflight": (
+            tmp_path / "runs/github_self_hosted_runner_host_preflight_current.json"
+        ),
+        "release_ci_remote_green": (
+            tmp_path / "runs/release_ci_remote_green_receipt_current.json"
         ),
         "f2g_preflight": tmp_path / ".betelgeuze/f2g_f2h_surface_preflight.local.json",
         "f2g_recovery": (
@@ -936,6 +943,96 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
         },
     )
     _write_json(
+        paths["competition"],
+        {
+            "summary": {
+                "status": "competition_benchmark_rollup_ready",
+                "competition_evidence_role": "competition_credibility_evidence_only",
+                "cameo_official_result_intake_status": "cameo_official_results_intake_ready",
+                "cameo_official_result_intake_ready": True,
+                "cameo_official_result_row_count": 1,
+                "cameo_official_accepted_result_count": 1,
+                "cameo_official_result_intake_claim_allowed": False,
+                "cameo_official_result_intake_fetch_enabled": False,
+                "cameo_official_result_intake_external_state_mutated": False,
+                "cameo_official_result_intake_local_native_accuracy_used": False,
+                "github_raw_data_policy_ready": False,
+                "github_raw_data_git_tracked_total_count": 2802,
+                "raw_data_stored_in_repo": True,
+                "raw_data_free": False,
+                "github_raw_payloads_allowed": False,
+                "github_safe_allowed_artifact_classes": [
+                    "source_manifests",
+                    "checksum_manifests",
+                    "materialization_manifests",
+                    "scorecard_builders",
+                    "scorecard_receipts",
+                    "claim_boundary_docs",
+                ],
+                "github_disallowed_artifact_classes": [
+                    "raw_benchmark_payloads",
+                    "raw_structure_archives",
+                    "official_archive_models_as_internal_predictions",
+                ],
+                "github_raw_benchmark_payloads_allowed": False,
+                "github_official_archive_models_as_internal_predictions_allowed": False,
+                "casp16_ligand_competition_credibility_ready": False,
+                "bm5_capri_complex_competition_credibility_ready": False,
+                "competition_credibility_extension_ready": False,
+                "competition_credibility_extension_blocker_count": 3,
+                "competition_credibility_extension_blockers": [
+                    "casp16_ligand_materialization_not_ready",
+                    "casp16_ligand_scorecard_not_ready",
+                    "capri_score_set_not_ready",
+                ],
+                "competition_credibility_extension_primary_blocker": (
+                    "casp16_ligand_materialization_not_ready"
+                ),
+                "competition_credibility_extension_next_actions": [
+                    "Attach local CASP16 ligand receipts.",
+                    "Attach CAPRI score_set receipts.",
+                ],
+                "competition_credibility_extension_primary_next_action": (
+                    "Attach local CASP16 ligand receipts."
+                ),
+                "competition_benchmark_custody_work_order_status": (
+                    "blocked_competition_benchmark_custody_work_order"
+                ),
+                "competition_benchmark_custody_work_order_ready": False,
+                "competition_benchmark_custody_work_order_action_count": 3,
+                "competition_benchmark_custody_work_order_primary_required_action": (
+                    "Place reviewed CASP16 ligand source/checksum/materialization/scorecard receipts."
+                ),
+                "package_b_required_for_ligand_commercial_claims": True,
+                "package_b_ligand_suite_ids": [
+                    "pdbbind_casf_pose_affinity",
+                    "lit_pcba_virtual_screening",
+                    "dude_z_decoy_smoke",
+                ],
+                "package_b_ligand_public_benchmark_foundation_ready": True,
+                "package_b_claim_grade_public_benchmark_ready": False,
+                "package_b_claim_grade_blocker_count": 2,
+                "package_b_claim_grade_blockers": [
+                    "free_energy_spearman_or_pair_gate_not_ready",
+                    "fit_and_holdout_splits_required",
+                ],
+                "competition_ligand_commercial_claim_allowed": False,
+                "competition_ligand_claim_package_b_dependency_ready": False,
+                "competition_ligand_claim_blocker_count": 2,
+                "competition_ligand_claim_blockers": [
+                    "casp16_ligand_competition_credibility_not_ready",
+                    "package_b_claim_grade_public_benchmark_not_ready",
+                ],
+                "package_b_bridge_next_action": (
+                    "Fill the work-order CSV from reviewed public provenance."
+                ),
+                "claim_boundary": (
+                    "Competition credibility only; Package B is required for ligand commercial claims."
+                ),
+            }
+        },
+    )
+    _write_json(
         paths["release_decision"],
         {
             "summary": {
@@ -1393,12 +1490,71 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                 "receipt_work_order_primary_source_blocker_required_action": (
                     "Attach the missing source evidence required by the receipt."
                 ),
+                "next_operator_command_pack_target": "clean-checkout",
+                "next_operator_command_pack_command": (
+                    "bash runs/developer_preview_external_operator_command_pack_current.sh clean-checkout"
+                ),
+                "next_operator_command_pack_required_platform": "fresh local clone",
+                "next_operator_command_pack_required_env_vars": [
+                    "DEVELOPER_PREVIEW_REPO_URL",
+                    "DEVELOPER_PREVIEW_REVIEWER_ID",
+                    "DEVELOPER_PREVIEW_REVIEWED_AT_UTC",
+                ],
+                "next_operator_command_pack_required_input_artifacts": [],
+                "next_operator_command_pack_receipt_artifacts": [
+                    ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
+                ],
                 "stage5_recovery_row_count": 1,
                 "stage5_missing_source_artifact_count": 1,
                 "stage5_required_argument_count": 4,
+                "stage5_recovery_operator_work_order_ready": True,
+                "stage5_recovery_operator_work_order_materialized": True,
+                "stage5_input_family_csv_path": (
+                    ".betelgeuze/developer_preview_clean_checkout_stage5_input_family_current.csv"
+                ),
+                "stage5_input_family_md_path": (
+                    ".betelgeuze/developer_preview_clean_checkout_stage5_input_family_current.md"
+                ),
+                "stage5_input_family_csv_present": True,
+                "stage5_input_family_md_present": True,
                 "stage5_primary_task_key": "stage5_gpcr",
                 "stage5_primary_source_argument": "--scores-csv",
                 "stage5_primary_source_artifact_path": "runs/missing_stage5_scores.csv",
+                "stage5_restore_packet_status": (
+                    "blocked_developer_preview_stage5_restore_packet"
+                ),
+                "stage5_restore_packet_ready": False,
+                "stage5_restore_packet_fail_closed_restore_receipt_ready": True,
+                "stage5_restore_packet_operator_restore_queue_ready": True,
+                "stage5_restore_packet_operator_restore_queue_row_count": 1,
+                "stage5_restore_packet_missing_source_artifact_count": 1,
+                "stage5_restore_packet_primary_blocker": (
+                    "stage5_source_artifacts_missing:1"
+                ),
+                "stage5_restore_packet_primary_missing_source_argument": (
+                    "--scores-csv"
+                ),
+                "stage5_restore_packet_primary_missing_source_artifact_path": (
+                    "runs/missing_stage5_scores.csv"
+                ),
+                "stage5_restore_packet_primary_missing_pipeline_summary_json": (
+                    "runs/missing_stage5_summary.json"
+                ),
+                "stage5_restore_packet_primary_missing_pipeline_summary_present": True,
+                "stage5_restore_packet_primary_missing_profile_json": (
+                    "config/missing_stage5_profile.json"
+                ),
+                "stage5_restore_packet_primary_missing_profile_present": True,
+                "stage5_restore_packet_primary_missing_restore_queue_ready": True,
+                "stage5_restore_packet_primary_missing_restore_instruction": (
+                    "Restore runs/missing_stage5_scores.csv for --scores-csv from "
+                    "approved clean-checkout baseline material."
+                ),
+                "stage5_restore_packet_next_required_step": (
+                    "Restore or regenerate the missing stage5 input CSVs from "
+                    "approved clean-checkout baseline material."
+                ),
+                "stage5_restore_packet_operator_action_required": True,
                 "primary_blocker_id": "benchmark_results_clean_checkout_regenerated",
                 "next_required_step": "Attach the clean-checkout benchmark receipt.",
                 "blockers": [
@@ -1725,6 +1881,30 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                 "observation_review_primary_required_action": (
                     "Record a non-secret observer id in the reviewed receipt."
                 ),
+                "runbook_path": "docs/developer_preview_core_workflow_quickstart.md",
+                "runbook_ready": True,
+                "runbook_required_token_count": 10,
+                "runbook_missing_required_token_count": 0,
+                "runbook_missing_required_tokens": [],
+                "core_workflow_receipt_path_documented": True,
+                "core_workflow_command_set_documented": True,
+                "new_user_draft_fail_closed_ready": True,
+                "observation_input_json": (
+                    ".betelgeuze/developer_preview_new_user_observation_input.json"
+                ),
+                "observation_input_template_json": (
+                    ".betelgeuze/developer_preview_new_user_observation_input_template.json"
+                ),
+                "observation_input_json_present": True,
+                "observation_input_contract_ready": True,
+                "observation_input_policy_ready": True,
+                "observation_checklist_path_documented": True,
+                "new_user_observation_template_next_action": (
+                    "Copy the generated observation input template to "
+                    ".betelgeuze/developer_preview_new_user_observation_input.json, "
+                    "fill only derived/anonymized observer metadata, then run the "
+                    "new-user-final command-pack target."
+                ),
                 "claim_boundary": "new-user observation boundary",
             },
             "observation_review_template_rows": [
@@ -1761,6 +1941,58 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                     "claim_promotion_allowed": True,
                 },
             ],
+        },
+    )
+    _write_json(
+        paths["github_runner_preflight"],
+        {
+            "summary": {
+                "status": "blocked_github_self_hosted_runner_host_preflight",
+                "local_runner_host_ready": False,
+                "repo_self_hosted_runner_ready": True,
+                "docker_daemon_accessible": True,
+                "rocm_device_nodes_ready": True,
+                "product_image_rocm_runtime_ready": False,
+                "product_image_receipt_runner_hygiene_ready": False,
+                "product_image_workspace_smoke_artifact_current_cleanup_ready": False,
+                "product_image_workspace_smoke_artifact_current_bad_owner_path": (
+                    "runs/product_image_smoke_runner_artifacts/backmapping_out"
+                ),
+                "product_image_workspace_smoke_artifact_current_not_writable_path": (
+                    "runs/product_image_smoke_runner_artifacts/backmapping_out"
+                ),
+                "product_image_workspace_smoke_artifact_current_required_action": (
+                    "Normalize product image smoke artifact ownership."
+                ),
+                "linux_runner_online_count": 1,
+                "rocm_runner_online_count": 1,
+                "next_required_steps": [
+                    "Rerun API worker workflow with self-hosted linux labels.",
+                    "Rerun product-image ROCm runtime smoke after runner cleanup.",
+                ],
+                "claim_boundary": "github runner boundary",
+            },
+        },
+    )
+    _write_json(
+        paths["release_ci_remote_green"],
+        {
+            "summary": {
+                "status": "blocked_release_ci_remote_green",
+                "pass": False,
+                "blocker_count": 4,
+                "linux_self_hosted_runner_ready": True,
+                "rocm_self_hosted_runner_ready": True,
+                "main_required_checks_ready": False,
+                "workflow_source_contract_ready": True,
+                "weekly_rocm_schedule_green": False,
+                "failure_artifacts_preserved": False,
+                "release_tag_rocm_gate_green": False,
+                "next_required_step": (
+                    "Resolve blocked rows in GitHub runner/settings/workflow evidence."
+                ),
+                "claim_boundary": "release ci boundary",
+            },
         },
     )
     _write_json(
@@ -1884,6 +2116,7 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
     pr38_locks = [
         "paid_pilot_wording_allowed=false",
         "public_benchmark_claim_allowed=false",
+        "competition_benchmark_competition_ligand_commercial_claim_allowed=false",
         "gpcr_broad_claim_allowed=false",
         "pocketmd_lite_claim_allowed=false",
         "f2g_f2h_placeholder_surface_creation_allowed=false",
@@ -1896,6 +2129,8 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                 "status": "pr38_split_acceptance_packet_ready",
                 "split_acceptance_ready": True,
                 "child_pr_count": 5,
+                "minimum_child_pr_count": 5,
+                "minimum_child_pr_count_met": True,
                 "ready_child_pr_count": 5,
                 "blocked_child_pr_count": 0,
                 "blocked_slice_ids": [],
@@ -1921,6 +2156,8 @@ def _write_inputs(tmp_path: Path) -> dict[str, Path]:
                 "status": "pr38_child_pr_verification_matrix_ready",
                 "verification_matrix_ready": True,
                 "child_pr_count": 5,
+                "minimum_child_pr_count": 5,
+                "minimum_child_pr_count_met": True,
                 "ready_child_pr_count": 5,
                 "blocked_child_pr_count": 0,
                 "blocked_slice_ids": [],
@@ -1986,6 +2223,7 @@ def _build_payload(tmp_path: Path) -> dict:
         public_benchmark_vina_gnina_score_template_receipt_json=(
             paths["public_vina_gnina_score_receipt"]
         ),
+        competition_benchmark_json=paths["competition"],
         goal_release_decision_json=paths["release_decision"],
         release_actions_json=paths["release"],
         full_commercial_blocker_matrix_json=paths["full_commercial"],
@@ -2006,13 +2244,37 @@ def _build_payload(tmp_path: Path) -> dict:
         developer_preview_new_user_observation_receipt_json=(
             paths["developer_preview_new_user_observation_receipt"]
         ),
+        github_self_hosted_runner_preflight_json=paths["github_runner_preflight"],
+        release_ci_remote_green_json=paths["release_ci_remote_green"],
         f2g_f2h_preflight_json=paths["f2g_preflight"],
         f2g_f2h_recovery_json=paths["f2g_recovery"],
+        include_f2g_f2h_panel=True,
         enterprise_on_prem_json=paths["enterprise"],
         pr38_split_acceptance_json=paths["pr38_acceptance"],
         pr38_child_pr_verification_matrix_json=paths["pr38_matrix"],
         root=tmp_path,
     )
+
+
+def test_product_operator_cockpit_omits_legacy_f2g_f2h_panel_by_default(
+    tmp_path: Path,
+) -> None:
+    _write_inputs(tmp_path)
+
+    payload = mod.build_product_operator_cockpit(root=tmp_path)
+    summary = payload["summary"]
+    panel_ids = {row["panel_id"] for row in payload["rows"]}
+
+    assert "f2g_f2h_preflight_work_order" not in panel_ids
+    assert summary["f2g_f2h_preflight_present"] is False
+    assert summary["f2g_f2h_recovery_packet_present"] is False
+    assert summary["f2g_f2h_primary_operator_action"] == ""
+    assert summary["pm_priority_queue_blocked_item_count"] == 0
+    assert summary["pm_priority_queue_first_blocked_item_id"] == ""
+    assert summary["pm_priority_queue_first_blocker"] == ""
+    assert summary["pm_priority_queue_next_required_step"] == ""
+    assert "F2/G1" not in summary["next_required_step"]
+    assert summary["next_required_step"] == "Clear third-party license review gate before release."
 
 
 def test_product_operator_cockpit_keeps_pocketmd_preview_under_canonical_review(
@@ -2053,12 +2315,12 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
 
     assert summary["status"] == "product_operator_cockpit_ready_claims_blocked"
     assert summary["phase8_surface_ready"] is True
-    assert summary["required_phase8_panel_count"] == 9
-    assert summary["observed_phase8_panel_count"] == 15
+    assert summary["required_phase8_panel_count"] == 11
+    assert summary["observed_phase8_panel_count"] == 17
     assert summary["missing_required_phase8_panel_count"] == 0
     assert summary["paid_pilot_wording_allowed"] is False
     assert summary["allowed_claim_count"] == 5
-    assert summary["disallowed_claim_count"] == 6
+    assert summary["disallowed_claim_count"] == 7
     assert summary["allowed_claim_ids"] == [
         "operator_cockpit_surface",
         "restricted_scope_claim_guard",
@@ -2072,6 +2334,7 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
         "broad_gpcr_claim",
         "pocketmd_lite_customer_claim",
         "public_benchmark_claim",
+        "competition_ligand_commercial_claim",
         "enterprise_on_prem_platform_claim",
     ]
     assert summary["allowed_claim_text"] == (
@@ -2082,6 +2345,7 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["disallowed_claim_text"] == (
         "paid_pilot_wording; general_platform_claim; broad_gpcr_claim; "
         "pocketmd_lite_customer_claim; public_benchmark_claim; "
+        "competition_ligand_commercial_claim; "
         "enterprise_on_prem_platform_claim"
     )
     assert claims["paid_pilot_wording"]["claim_text"] == (
@@ -2100,6 +2364,9 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert claims["public_benchmark_claim"]["claim_text"] == (
         "Public benchmark claim-grade support is not allowed."
     )
+    assert claims["competition_ligand_commercial_claim"]["claim_text"] == (
+        "Competition-backed ligand commercial claim is not allowed."
+    )
     assert claims["enterprise_on_prem_platform_claim"]["claim_text"] == (
         "Enterprise/on-prem platform claim is not allowed."
     )
@@ -2108,6 +2375,86 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
         for claim_id in summary["disallowed_claim_ids"]
     )
     assert summary["general_platform_claim_allowed"] is False
+    assert summary["competition_benchmark_rollup_present"] is True
+    assert summary["competition_benchmark_rollup_ready"] is True
+    assert summary["competition_benchmark_competition_evidence_role"] == (
+        "competition_credibility_evidence_only"
+    )
+    assert summary["competition_benchmark_cameo_official_result_intake_status"] == (
+        "cameo_official_results_intake_ready"
+    )
+    assert summary["competition_benchmark_cameo_official_result_intake_ready"] is True
+    assert summary["competition_benchmark_cameo_official_result_row_count"] == 1
+    assert summary["competition_benchmark_cameo_official_accepted_result_count"] == 1
+    assert summary["competition_benchmark_cameo_official_result_intake_claim_allowed"] is False
+    assert summary["competition_benchmark_cameo_official_result_intake_fetch_enabled"] is False
+    assert (
+        summary["competition_benchmark_cameo_official_result_intake_external_state_mutated"]
+        is False
+    )
+    assert (
+        summary["competition_benchmark_cameo_official_result_intake_local_native_accuracy_used"]
+        is False
+    )
+    assert summary["competition_benchmark_competition_credibility_extension_ready"] is False
+    assert summary["competition_benchmark_package_b_required_for_ligand_commercial_claims"] is True
+    assert summary["competition_benchmark_package_b_ligand_suite_count"] == 3
+    assert summary["competition_benchmark_package_b_claim_grade_public_benchmark_ready"] is False
+    assert summary["competition_benchmark_competition_ligand_commercial_claim_allowed"] is False
+    assert summary["competition_benchmark_competition_ligand_claim_blockers"] == [
+        "casp16_ligand_competition_credibility_not_ready",
+        "package_b_claim_grade_public_benchmark_not_ready",
+    ]
+    assert summary["competition_benchmark_github_raw_data_policy_ready"] is False
+    assert summary["competition_benchmark_github_raw_data_git_tracked_total_count"] == 2802
+    assert summary["competition_benchmark_raw_data_stored_in_repo"] is True
+    assert summary["competition_benchmark_raw_data_free"] is False
+    assert summary["competition_benchmark_github_raw_payloads_allowed"] is False
+    assert summary["competition_benchmark_github_safe_allowed_artifact_classes"] == [
+        "source_manifests",
+        "checksum_manifests",
+        "materialization_manifests",
+        "scorecard_builders",
+        "scorecard_receipts",
+        "claim_boundary_docs",
+    ]
+    assert summary["competition_benchmark_github_disallowed_artifact_classes"] == [
+        "raw_benchmark_payloads",
+        "raw_structure_archives",
+        "official_archive_models_as_internal_predictions",
+    ]
+    assert summary["competition_benchmark_github_raw_benchmark_payloads_allowed"] is False
+    assert (
+        summary[
+            "competition_benchmark_github_official_archive_models_as_internal_predictions_allowed"
+        ]
+        is False
+    )
+    assert panels["competition_benchmark_claim_boundary"]["claim_allowed"] is False
+    assert panels["competition_benchmark_claim_boundary"]["source_artifact_ready"] is True
+    assert panels["competition_benchmark_claim_boundary"]["operator_action_required"] is True
+    assert "package_b_claim_grade=false" in (
+        panels["competition_benchmark_claim_boundary"]["secondary_metric"]
+    )
+    assert "cameo_official_intake=true" in (
+        panels["competition_benchmark_claim_boundary"]["secondary_metric"]
+    )
+    assert "cameo_claim_allowed=false" in (
+        panels["competition_benchmark_claim_boundary"]["secondary_metric"]
+    )
+    assert "github_raw_data_policy=false" in (
+        panels["competition_benchmark_claim_boundary"]["secondary_metric"]
+    )
+    assert "raw_payloads_allowed=false" in (
+        panels["competition_benchmark_claim_boundary"]["secondary_metric"]
+    )
+    assert "git_tracked_raw_data=2802" in (
+        panels["competition_benchmark_claim_boundary"]["secondary_metric"]
+    )
+    assert panels["competition_benchmark_claim_boundary"]["blockers"] == [
+        "casp16_ligand_competition_credibility_not_ready",
+        "package_b_claim_grade_public_benchmark_not_ready",
+    ]
     assert summary["product_capability_row_count"] == 2
     assert summary["product_capability_blocker_row_count"] == 1
     assert summary["product_capability_rows"] == [
@@ -3045,14 +3392,130 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary[
         "developer_preview_receipt_work_order_primary_source_blocker_required_action"
     ] == "Attach the missing source evidence required by the receipt."
+    assert summary["developer_preview_next_operator_command_pack_target"] == (
+        "clean-checkout"
+    )
+    assert summary["developer_preview_next_operator_command_pack_command"] == (
+        "bash runs/developer_preview_external_operator_command_pack_current.sh clean-checkout"
+    )
+    assert summary["developer_preview_next_operator_command_pack_required_platform"] == (
+        "fresh local clone"
+    )
+    assert summary["developer_preview_next_operator_command_pack_required_env_vars"] == [
+        "DEVELOPER_PREVIEW_REPO_URL",
+        "DEVELOPER_PREVIEW_REVIEWER_ID",
+        "DEVELOPER_PREVIEW_REVIEWED_AT_UTC",
+    ]
+    assert summary["developer_preview_next_operator_command_pack_required_input_artifacts"] == []
+    assert summary["developer_preview_next_operator_command_pack_receipt_artifacts"] == [
+        ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
+    ]
     assert summary["developer_preview_stage5_recovery_row_count"] == 1
     assert summary["developer_preview_stage5_missing_source_artifact_count"] == 1
     assert summary["developer_preview_stage5_required_argument_count"] == 4
+    assert summary["developer_preview_stage5_recovery_operator_work_order_ready"] is True
+    assert (
+        summary["developer_preview_stage5_recovery_operator_work_order_materialized"]
+        is True
+    )
+    assert summary["developer_preview_stage5_input_family_csv_path"] == (
+        ".betelgeuze/developer_preview_clean_checkout_stage5_input_family_current.csv"
+    )
+    assert summary["developer_preview_stage5_input_family_md_path"] == (
+        ".betelgeuze/developer_preview_clean_checkout_stage5_input_family_current.md"
+    )
+    assert summary["developer_preview_stage5_input_family_csv_present"] is True
+    assert summary["developer_preview_stage5_input_family_md_present"] is True
     assert summary["developer_preview_stage5_primary_task_key"] == "stage5_gpcr"
     assert summary["developer_preview_stage5_primary_source_argument"] == "--scores-csv"
     assert (
         summary["developer_preview_stage5_primary_source_artifact_path"]
         == "runs/missing_stage5_scores.csv"
+    )
+    assert summary["developer_preview_stage5_restore_packet_status"] == (
+        "blocked_developer_preview_stage5_restore_packet"
+    )
+    assert summary["developer_preview_stage5_restore_packet_ready"] is False
+    assert (
+        summary[
+            "developer_preview_stage5_restore_packet_fail_closed_restore_receipt_ready"
+        ]
+        is True
+    )
+    assert (
+        summary["developer_preview_stage5_restore_packet_operator_restore_queue_ready"]
+        is True
+    )
+    assert (
+        summary[
+            "developer_preview_stage5_restore_packet_operator_restore_queue_row_count"
+        ]
+        == 1
+    )
+    assert (
+        summary[
+            "developer_preview_stage5_restore_packet_missing_source_artifact_count"
+        ]
+        == 1
+    )
+    assert summary["developer_preview_stage5_restore_packet_primary_blocker"] == (
+        "stage5_source_artifacts_missing:1"
+    )
+    assert (
+        summary[
+            "developer_preview_stage5_restore_packet_primary_missing_source_argument"
+        ]
+        == "--scores-csv"
+    )
+    assert (
+        summary[
+            "developer_preview_stage5_restore_packet_primary_missing_source_artifact_path"
+        ]
+        == "runs/missing_stage5_scores.csv"
+    )
+    assert (
+        summary[
+            "developer_preview_stage5_restore_packet_primary_missing_pipeline_summary_json"
+        ]
+        == "runs/missing_stage5_summary.json"
+    )
+    assert (
+        summary[
+            "developer_preview_stage5_restore_packet_primary_missing_pipeline_summary_present"
+        ]
+        is True
+    )
+    assert (
+        summary[
+            "developer_preview_stage5_restore_packet_primary_missing_profile_json"
+        ]
+        == "config/missing_stage5_profile.json"
+    )
+    assert (
+        summary[
+            "developer_preview_stage5_restore_packet_primary_missing_profile_present"
+        ]
+        is True
+    )
+    assert (
+        summary[
+            "developer_preview_stage5_restore_packet_primary_missing_restore_queue_ready"
+        ]
+        is True
+    )
+    assert summary[
+        "developer_preview_stage5_restore_packet_primary_missing_restore_instruction"
+    ] == (
+        "Restore runs/missing_stage5_scores.csv for --scores-csv from "
+        "approved clean-checkout baseline material."
+    )
+    assert summary["developer_preview_stage5_restore_packet_next_required_step"] == (
+        "Restore or regenerate the missing stage5 input CSVs from "
+        "approved clean-checkout baseline material."
+    )
+    assert (
+        summary["developer_preview_stage5_restore_packet_operator_action_required"]
+        is True
     )
     assert summary["developer_preview_stage5_recovery_rows"] == [
         {
@@ -3178,6 +3641,45 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["developer_preview_new_user_observation_receipt_status"] == (
         "blocked_developer_preview_new_user_observation_receipt"
     )
+    assert summary["developer_preview_new_user_observation_runbook_ready"] is True
+    assert (
+        summary[
+            "developer_preview_new_user_observation_runbook_missing_required_token_count"
+        ]
+        == 0
+    )
+    assert (
+        summary[
+            "developer_preview_new_user_observation_core_workflow_receipt_path_documented"
+        ]
+        is True
+    )
+    assert (
+        summary[
+            "developer_preview_new_user_observation_core_workflow_command_set_documented"
+        ]
+        is True
+    )
+    assert (
+        summary["developer_preview_new_user_observation_draft_fail_closed_ready"]
+        is True
+    )
+    assert summary["developer_preview_new_user_observation_input_json"] == (
+        ".betelgeuze/developer_preview_new_user_observation_input.json"
+    )
+    assert summary["developer_preview_new_user_observation_input_template_json"] == (
+        ".betelgeuze/developer_preview_new_user_observation_input_template.json"
+    )
+    assert summary["developer_preview_new_user_observation_input_json_present"] is True
+    assert summary["developer_preview_new_user_observation_input_contract_ready"] is True
+    assert summary["developer_preview_new_user_observation_input_policy_ready"] is True
+    assert (
+        summary["developer_preview_new_user_observation_checklist_path_documented"]
+        is True
+    )
+    assert "new-user-final" in summary[
+        "developer_preview_new_user_observation_template_next_action"
+    ]
     assert summary["developer_preview_new_user_observation_required_field_count"] == 8
     assert summary["developer_preview_new_user_observation_ready_field_count"] == 2
     assert summary["developer_preview_new_user_observation_blocked_field_count"] == 6
@@ -3359,6 +3861,8 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["pr38_split_ready_for_human_branch_approval"] is True
     assert summary["pr38_operator_branch_approval_required"] is True
     assert summary["pr38_child_pr_count"] == 5
+    assert summary["pr38_minimum_child_pr_count"] == 5
+    assert summary["pr38_minimum_child_pr_count_met"] is True
     assert summary["pr38_ready_child_pr_count"] == 5
     assert summary["pr38_blocked_child_pr_count"] == 0
     assert summary["pr38_focused_test_required_count"] == 5
@@ -3373,6 +3877,7 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert summary["pr38_product_mode_claim_boundary_expected_locks"] == [
         "paid_pilot_wording_allowed=false",
         "public_benchmark_claim_allowed=false",
+        "competition_benchmark_competition_ligand_commercial_claim_allowed=false",
         "gpcr_broad_claim_allowed=false",
         "pocketmd_lite_claim_allowed=false",
         "f2g_f2h_placeholder_surface_creation_allowed=false",
@@ -3897,16 +4402,78 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert "receipt_work_order_rows=29" in panels["developer_preview_final_gates"]["secondary_metric"]
     assert "receipt_blockers=12" in panels["developer_preview_final_gates"]["secondary_metric"]
     assert "source_blockers=7" in panels["developer_preview_final_gates"]["secondary_metric"]
+    assert "next_command_pack_target=clean-checkout" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "next_command_pack_platform=fresh local clone" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert (
+        "next_command_pack_command=bash runs/developer_preview_external_operator_command_pack_current.sh clean-checkout"
+        in panels["developer_preview_final_gates"]["secondary_metric"]
+    )
     assert "stage5_recovery_rows=1" in (
         panels["developer_preview_final_gates"]["secondary_metric"]
     )
     assert "stage5_missing_sources=1" in (
         panels["developer_preview_final_gates"]["secondary_metric"]
     )
+    assert "stage5_operator_work_order_ready=true" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "stage5_operator_work_order_materialized=true" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "stage5_input_family_csv_present=true" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "stage5_input_family_md_present=true" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
     assert "stage5_primary_task=stage5_gpcr" in (
         panels["developer_preview_final_gates"]["secondary_metric"]
     )
     assert "stage5_primary_source_arg=--scores-csv" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert (
+        "stage5_restore_packet=blocked_developer_preview_stage5_restore_packet"
+        in panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "stage5_restore_ready=false" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "stage5_restore_receipt=true" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "stage5_restore_queue=true" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "stage5_restore_queue_rows=1" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "stage5_restore_missing=1" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "stage5_restore_primary_blocker=stage5_source_artifacts_missing:1" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "stage5_restore_primary_arg=--scores-csv" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "stage5_restore_primary_source=runs/missing_stage5_scores.csv" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "stage5_restore_primary_pipeline_present=true" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "stage5_restore_primary_profile_present=true" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "stage5_restore_primary_queue_ready=true" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "stage5_restore_action_required=true" in (
         panels["developer_preview_final_gates"]["secondary_metric"]
     )
     assert (
@@ -3949,6 +4516,21 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert (
         "new_user_observation_receipt=blocked_developer_preview_new_user_observation_receipt"
         in panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "new_user_observation_runbook_ready=true" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "new_user_observation_draft_ready=true" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "new_user_observation_input_contract=true" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "new_user_observation_checklist=true" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
+    )
+    assert "new_user_observation_runbook_missing_tokens=0" in (
+        panels["developer_preview_final_gates"]["secondary_metric"]
     )
     assert "new_user_observation_fields=8" in (
         panels["developer_preview_final_gates"]["secondary_metric"]
@@ -4056,6 +4638,7 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
         "pr38 child verification boundary"
     )
     assert "child_prs=5" in panels["pr38_child_pr_split_queue"]["primary_metric"]
+    assert "min_child_prs=5" in panels["pr38_child_pr_split_queue"]["primary_metric"]
     assert "ready=5" in panels["pr38_child_pr_split_queue"]["primary_metric"]
     assert "blocked=0" in panels["pr38_child_pr_split_queue"]["primary_metric"]
     assert "focused_tests=5" in panels["pr38_child_pr_split_queue"]["primary_metric"]
@@ -4063,6 +4646,7 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert "product_mode=5" in panels["pr38_child_pr_split_queue"]["secondary_metric"]
     assert "hunk_review=2" in panels["pr38_child_pr_split_queue"]["secondary_metric"]
     assert "claim_review=5" in panels["pr38_child_pr_split_queue"]["secondary_metric"]
+    assert "minimum_met=true" in panels["pr38_child_pr_split_queue"]["secondary_metric"]
     assert "branch_commit_allowed=false" in panels["pr38_child_pr_split_queue"]["secondary_metric"]
     assert "patches_applied=false" in panels["pr38_child_pr_split_queue"]["secondary_metric"]
     assert "branches_created=false" in panels["pr38_child_pr_split_queue"]["secondary_metric"]
@@ -4071,6 +4655,68 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
         "human_branch_commit_approval_required"
     ]
     assert "paid-pilot" in panels["pr38_child_pr_split_queue"]["disallowed_claim_text"]
+    assert panels["release_ci_remote_green"]["route"] == "/goal/ci-release"
+    assert panels["release_ci_remote_green"]["source_artifact_ready"] is False
+    assert panels["release_ci_remote_green"]["operator_action_required"] is True
+    assert panels["release_ci_remote_green"]["claim_allowed"] is False
+    assert panels["release_ci_remote_green"]["claim_boundary"] == "release ci boundary"
+    assert "remote_green=false" in panels["release_ci_remote_green"]["primary_metric"]
+    assert "runner_host_ready=false" in panels["release_ci_remote_green"]["primary_metric"]
+    assert "repo_runner_ready=true" in panels["release_ci_remote_green"]["primary_metric"]
+    assert "product_image_rocm_runtime=false" in panels["release_ci_remote_green"]["primary_metric"]
+    assert "runner_hygiene=false" in panels["release_ci_remote_green"]["primary_metric"]
+    assert "workspace_cleanup=false" in panels["release_ci_remote_green"]["primary_metric"]
+    assert "linux_runners=1" in panels["release_ci_remote_green"]["secondary_metric"]
+    assert "rocm_runners=1" in panels["release_ci_remote_green"]["secondary_metric"]
+    assert "main_required_checks=false" in panels["release_ci_remote_green"]["secondary_metric"]
+    assert "weekly_rocm_schedule=false" in panels["release_ci_remote_green"]["secondary_metric"]
+    assert "failure_artifacts=false" in panels["release_ci_remote_green"]["secondary_metric"]
+    assert "release_tag_rocm_gate=false" in panels["release_ci_remote_green"]["secondary_metric"]
+    assert "remote_green_blockers=4" in panels["release_ci_remote_green"]["secondary_metric"]
+    assert panels["release_ci_remote_green"]["blockers"] == [
+        "github_self_hosted_runner_host_not_ready",
+        "product_image_runner_hygiene_not_ready",
+        "product_image_workspace_smoke_artifact_cleanup_not_ready",
+        "product_image_workspace_smoke_artifact_owner_not_normalized",
+        "product_image_workspace_smoke_artifact_not_writable",
+        "release_ci_remote_green_not_ready",
+        "main_required_checks_not_ready",
+        "weekly_rocm_schedule_not_green",
+        "failure_artifacts_not_preserved",
+        "release_tag_rocm_gate_not_green",
+    ]
+    assert summary["github_self_hosted_runner_preflight_present"] is True
+    assert summary["github_self_hosted_runner_local_host_ready"] is False
+    assert summary["github_self_hosted_runner_repo_ready"] is True
+    assert summary["github_self_hosted_runner_product_image_hygiene_ready"] is False
+    assert (
+        summary["github_self_hosted_runner_product_image_workspace_cleanup_ready"]
+        is False
+    )
+    assert summary[
+        "github_self_hosted_runner_product_image_workspace_bad_owner_path"
+    ] == "runs/product_image_smoke_runner_artifacts/backmapping_out"
+    assert summary[
+        "github_self_hosted_runner_product_image_workspace_required_action"
+    ] == "Normalize product image smoke artifact ownership."
+    assert summary["release_ci_remote_green_present"] is True
+    assert summary["release_ci_remote_green_ready"] is False
+    assert summary["release_ci_remote_green_pass"] is False
+    assert summary["release_ci_remote_green_blocker_count"] == 4
+    assert summary["release_ci_main_required_checks_ready"] is False
+    assert summary["release_ci_weekly_rocm_schedule_green"] is False
+    assert summary["release_ci_panel_blockers"] == [
+        "github_self_hosted_runner_host_not_ready",
+        "product_image_runner_hygiene_not_ready",
+        "product_image_workspace_smoke_artifact_cleanup_not_ready",
+        "product_image_workspace_smoke_artifact_owner_not_normalized",
+        "product_image_workspace_smoke_artifact_not_writable",
+        "release_ci_remote_green_not_ready",
+        "main_required_checks_not_ready",
+        "weekly_rocm_schedule_not_green",
+        "failure_artifacts_not_preserved",
+        "release_tag_rocm_gate_not_green",
+    ]
     assert panels["f2g_f2h_preflight_work_order"]["blockers"] == [
         "implementation_phase1_dir_missing",
         "real_mgt_input_surface_missing",
@@ -4084,6 +4730,7 @@ def test_product_operator_cockpit_surfaces_phase8_panels_and_locks_claims(tmp_pa
     assert claims["broad_gpcr_claim"]["allowed"] is False
     assert claims["pocketmd_lite_customer_claim"]["allowed"] is False
     assert claims["public_benchmark_claim"]["allowed"] is False
+    assert claims["competition_ligand_commercial_claim"]["allowed"] is False
     assert claims["enterprise_on_prem_platform_claim"]["allowed"] is False
     assert summary["execution_enabled"] is False
     assert summary["external_state_mutated"] is False
@@ -4106,7 +4753,7 @@ def test_product_operator_cockpit_writes_outputs(tmp_path: Path) -> None:
     csv_text = (tmp_path / "runs/product_operator_cockpit_current.csv").read_text(encoding="utf-8")
     md = (tmp_path / "runs/product_operator_cockpit_current.md").read_text(encoding="utf-8")
 
-    assert written["summary"]["required_phase8_panel_count"] == 9
+    assert written["summary"]["required_phase8_panel_count"] == 11
     assert "Product Operator Cockpit" in html
     assert "H-Bond BackMap candidate table" in html
     assert "PR #38 child PR split queue" in html
@@ -4115,6 +4762,8 @@ def test_product_operator_cockpit_writes_outputs(tmp_path: Path) -> None:
     assert "http://" not in html
     assert "https://" not in html
     assert "public_benchmark_scorecard" in csv_text
+    assert "competition_benchmark_claim_boundary" in csv_text
+    assert "competition_ligand_commercial_claim" in html
     assert "pr38_child_pr_split_queue" in csv_text
     assert "paid_pilot_wording_allowed: false" in md
     assert "pr38_child_pr_split_queue" in md
@@ -4161,6 +4810,10 @@ def test_product_operator_cockpit_cli_writes_current_artifacts(tmp_path: Path) -
             str(paths["developer_preview"]),
             "--developer-preview-clean-checkout-receipt-json",
             str(paths["developer_preview_clean_checkout_receipt"]),
+            "--github-self-hosted-runner-preflight-json",
+            str(paths["github_runner_preflight"]),
+            "--release-ci-remote-green-json",
+            str(paths["release_ci_remote_green"]),
             "--f2g-f2h-preflight-json",
             str(paths["f2g_preflight"]),
             "--f2g-f2h-recovery-json",

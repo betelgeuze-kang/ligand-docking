@@ -29,6 +29,7 @@ DEFAULT_REFINEMENT_ABLATION_JSON = "runs/casp17_refinement_ablation_packet_curre
 DEFAULT_OUT_JSON = "runs/casp17_win_tier_action_queue_packet_current.json"
 DEFAULT_OUT_CSV = "runs/casp17_win_tier_action_queue_packet_current.csv"
 DEFAULT_OUT_MD = "runs/casp17_win_tier_action_queue_packet_current.md"
+GOAL_ACTIONABILITY_SCHEMA_ID = "casp17_win_tier_goal_actionability/1.0.0"
 
 
 def _resolve(path_like: str | Path) -> Path:
@@ -93,6 +94,71 @@ def _write_csv(path_like: str | Path, rows: list[dict[str, Any]]) -> None:
         writer.writerows(rows)
 
 
+def _goal_actionability(*, status: str, lane: str) -> dict[str, Any]:
+    if lane == "external_state" or status in {
+        "blocked_r4_confirmation",
+        "needs_r4_confirmation",
+    }:
+        actionability_class = "r4_confirmation_required"
+        next_step = "await_explicit_r4_confirmation"
+        local_goal_actionable = False
+        operator_input_required = False
+        r4_confirmation_required = True
+    elif status == "pass":
+        actionability_class = "already_passed"
+        next_step = "none_already_passed"
+        local_goal_actionable = False
+        operator_input_required = False
+        r4_confirmation_required = False
+    elif status == "blocked_input":
+        actionability_class = "operator_input_required"
+        next_step = "await_operator_input"
+        local_goal_actionable = False
+        operator_input_required = True
+        r4_confirmation_required = False
+    elif (
+        status,
+        lane,
+    ) in {
+        ("ready_internal_development", "internal_quality"),
+        ("ready_to_score", "no_leak_native_benchmark"),
+        ("ready_to_score", "model_selection"),
+    }:
+        actionability_class = "local_action_ready"
+        next_step = "run_or_implement_local_action"
+        local_goal_actionable = True
+        operator_input_required = False
+        r4_confirmation_required = False
+    elif (
+        status,
+        lane,
+    ) == ("ready_to_promote", "no_leak_native_benchmark"):
+        actionability_class = "operator_decision_required"
+        next_step = "await_operator_promotion_decision"
+        local_goal_actionable = False
+        operator_input_required = True
+        r4_confirmation_required = False
+    elif (status, lane) == ("blocked", "review_quality"):
+        actionability_class = "local_repair_required"
+        next_step = "repair_local_action"
+        local_goal_actionable = True
+        operator_input_required = False
+        r4_confirmation_required = False
+    else:
+        actionability_class = "unclassified_blocked"
+        next_step = "stop_unclassified_status"
+        local_goal_actionable = False
+        operator_input_required = False
+        r4_confirmation_required = False
+    return {
+        "actionability_class": actionability_class,
+        "local_goal_actionable": local_goal_actionable,
+        "operator_input_required": operator_input_required,
+        "r4_confirmation_required": r4_confirmation_required,
+        "goal_mode_next_step": next_step,
+    }
+
+
 def _row(
     *,
     priority: int,
@@ -113,6 +179,7 @@ def _row(
         "action_id": action_id,
         "lane": lane,
         "status": status,
+        **_goal_actionability(status=status, lane=lane),
         "related_dimension": related_dimension,
         "required_level": required_level,
         "current_evidence": current_evidence,
@@ -394,8 +461,29 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     ready_count = sum(1 for row in rows if row["status"].startswith("ready"))
     blocked_count = len(rows) - pass_count - ready_count
     first_not_pass = next((row for row in rows if row["status"] != "pass"), None)
+    local_goal_actions = [row for row in rows if row["local_goal_actionable"]]
+    operator_input_required_count = sum(
+        1 for row in rows if row["operator_input_required"]
+    )
+    r4_confirmation_required_count = sum(
+        1 for row in rows if row["r4_confirmation_required"]
+    )
+    unclassified_blocked_count = sum(
+        1
+        for row in rows
+        if row["actionability_class"] == "unclassified_blocked"
+    )
+    if local_goal_actions:
+        goal_mode_selection_status = "ready"
+    elif pass_count == len(rows):
+        goal_mode_selection_status = "complete"
+    elif unclassified_blocked_count:
+        goal_mode_selection_status = "blocked_unclassified_action"
+    else:
+        goal_mode_selection_status = "blocked_new_input_or_confirmation"
     summary = {
         "packet_type": "casp17_win_tier_action_queue_packet",
+        "goal_actionability_schema_id": GOAL_ACTIONABILITY_SCHEMA_ID,
         "generated_at_local": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
         "win_rubric_json": _artifact(args.win_rubric_json),
         "competitive_readiness_json": _artifact(args.competitive_readiness_json),
@@ -426,6 +514,14 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "first_not_pass_action_id": first_not_pass["action_id"] if first_not_pass else "",
         "first_not_pass_status": first_not_pass["status"] if first_not_pass else "",
         "first_not_pass_blockers": first_not_pass["blockers"] if first_not_pass else "",
+        "goal_mode_selection_status": goal_mode_selection_status,
+        "local_goal_actionable_count": len(local_goal_actions),
+        "first_local_goal_actionable_action_id": (
+            local_goal_actions[0]["action_id"] if local_goal_actions else ""
+        ),
+        "operator_input_required_count": operator_input_required_count,
+        "r4_confirmation_required_count": r4_confirmation_required_count,
+        "unclassified_blocked_count": unclassified_blocked_count,
         "action_queue_status": "pass" if blocked_count == 0 and ready_count == 0 else "blocked",
         "claim_boundary": "Internal CASP17 win-tier action queue only; it does not fetch native structures, prove current-target accuracy, submit to CASP, or replace official CASP assessment.",
     }
@@ -445,15 +541,19 @@ def _write_md(path_like: str | Path, payload: dict[str, Any]) -> None:
         f"- forcefield/statistical_rotamer/sidechain_native/ablation: `{summary['forcefield_minimization_status']}/{summary['statistical_rotamer_status']}/{summary['sidechain_native_benchmark_status']}/{summary['refinement_ablation_status']}`",
         f"- pass/ready/blocked: `{summary['pass_count']}/{summary['ready_count']}/{summary['blocked_count']}`",
         f"- first_not_pass: `{summary['first_not_pass_action_id'] or '-'}` (`{summary['first_not_pass_status'] or '-'}`)",
+        f"- goal_mode_selection: `{summary['goal_mode_selection_status']}`",
+        f"- local_goal_actionable/operator_input/R4/unclassified: `{summary['local_goal_actionable_count']}/{summary['operator_input_required_count']}/{summary['r4_confirmation_required_count']}/{summary['unclassified_blocked_count']}`",
+        f"- first_local_goal_actionable: `{summary['first_local_goal_actionable_action_id'] or '-'}`",
         "",
         "## Actions",
         "",
-        "| priority | action | lane | status | dimension | current evidence | inputs needed | blockers | done when |",
-        "| ---: | --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| priority | action | lane | status | actionability | local goal actionable | dimension | current evidence | inputs needed | blockers | done when |",
+        "| ---: | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for row in payload["rows"]:
         lines.append(
             f"| {row['priority']} | `{row['action_id']}` | `{row['lane']}` | `{row['status']}` | "
+            f"`{row['actionability_class']}` | `{str(row['local_goal_actionable']).lower()}` | "
             f"`{row['related_dimension']}` | {row['current_evidence']} | {row['inputs_needed']} | "
             f"{row['blockers'] or '-'} | {row['done_when']} |"
         )

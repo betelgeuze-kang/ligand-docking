@@ -33,6 +33,627 @@ def _last_refresh_index(command: str) -> int:
     ).index(command)
 
 
+def test_release_source_of_truth_tracks_competition_rollup_and_status_doc() -> None:
+    rollup_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "competition_benchmark_rollup"
+    )
+    status_doc_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "competition_benchmark_status_current_md"
+    )
+    bridge_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "package_b_competition_bridge"
+    )
+    bridge_doc_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "package_b_competition_bridge_current_md"
+    )
+    rollup_fail_closed_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "competition_benchmark_rollup_fail_closed_semantic_ready"
+    )
+    rollup_raw_data_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "competition_benchmark_rollup_raw_data_policy_semantic_ready"
+    )
+    bridge_claim_lock_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "package_b_competition_bridge_claim_locked_semantic_ready"
+    )
+
+    assert rollup_spec["artifact_path"] == "runs/competition_benchmark_rollup_current.json"
+    assert rollup_spec["builder_command"] == mod.COMPETITION_BENCHMARK_ROLLUP_COMMAND
+    for source_artifact in (
+        "tools/product/build_competition_benchmark_rollup.py",
+        "tools/build_competition_benchmark_rollup.py",
+        "runs/cameo_official_results_operator_intake.csv",
+        "runs/cameo_official_results_intake_gate_current.json",
+        "runs/casp16_ligand_source_manifest_current.json",
+        "runs/bm5_capri_complex_source_manifest_current.json",
+        "runs/competition_benchmark_custody_work_order_current.json",
+        "runs/product_public_benchmark_contract_current.json",
+        "runs/refine_tier_public_benchmark_readiness_current.json",
+        "runs/refine_tier_public_benchmark_work_order_apply_current.json",
+    ):
+        assert source_artifact in rollup_spec["depends_on"]
+
+    assert status_doc_spec["artifact_path"] == "docs/competition_benchmark_status_current.md"
+    assert status_doc_spec["builder_command"] == mod.COMPETITION_BENCHMARK_ROLLUP_COMMAND
+    assert "runs/competition_benchmark_rollup_current.json" in status_doc_spec["depends_on"]
+    assert bridge_spec["artifact_path"] == "runs/package_b_competition_bridge_current.json"
+    assert bridge_spec["builder_command"] == mod.PACKAGE_B_COMPETITION_BRIDGE_COMMAND
+    assert "tools/product/build_package_b_competition_bridge.py" in bridge_spec["depends_on"]
+    assert "tools/build_package_b_competition_bridge.py" in bridge_spec["depends_on"]
+    assert "runs/competition_benchmark_rollup_current.json" in bridge_spec["depends_on"]
+    assert bridge_doc_spec["artifact_path"] == "docs/package_b_competition_bridge_current.md"
+    assert bridge_doc_spec["builder_command"] == mod.PACKAGE_B_COMPETITION_BRIDGE_COMMAND
+    assert (
+        "runs/package_b_competition_bridge_current.json"
+        in bridge_doc_spec["depends_on"]
+    )
+    assert rollup_fail_closed_status_spec["artifact_path"] == (
+        "runs/competition_benchmark_rollup_current.json"
+    )
+    assert rollup_fail_closed_status_spec["required_status"] == (
+        "competition_benchmark_rollup_ready"
+    )
+    assert "competition_credibility_only" in rollup_fail_closed_status_spec[
+        "required_true_fields"
+    ]
+    assert rollup_fail_closed_status_spec["required_int_exact_fields"][
+        "commercial_claim_unlocked"
+    ] == 0
+    assert rollup_raw_data_status_spec["required_true_fields"] == [
+        "competition_benchmark_rollup_ready",
+        "github_raw_data_policy_ready",
+        "raw_data_free",
+    ]
+    assert rollup_raw_data_status_spec["required_int_exact_fields"][
+        "raw_data_stored_in_repo"
+    ] == 0
+    assert bridge_claim_lock_status_spec["artifact_path"] == (
+        "runs/package_b_competition_bridge_current.json"
+    )
+    assert bridge_claim_lock_status_spec["required_status"] == (
+        "package_b_competition_bridge_ready"
+    )
+    assert "bridge_claim_lock_ready" in bridge_claim_lock_status_spec[
+        "required_true_fields"
+    ]
+    assert (
+        "ligand_commercial_claim_unlock_requires_separate_promotion_gate"
+        in bridge_claim_lock_status_spec["required_true_fields"]
+    )
+    assert bridge_claim_lock_status_spec["required_int_exact_fields"][
+        "blocker_count"
+    ] == 0
+    assert bridge_claim_lock_status_spec["required_int_exact_fields"][
+        "bridge_blocker_count"
+    ] == 0
+    assert bridge_claim_lock_status_spec["required_int_exact_fields"][
+        "competition_ligand_commercial_claim_allowed"
+    ] == 0
+    assert mod.COMPETITION_BENCHMARK_ROLLUP_COMMAND in mod.RELEASE_REFRESH_COMMANDS
+    assert mod.PACKAGE_B_COMPETITION_BRIDGE_COMMAND in mod.RELEASE_REFRESH_COMMANDS
+    assert mod.RELEASE_REFRESH_COMMANDS.index(
+        mod.COMPETITION_BENCHMARK_ROLLUP_COMMAND
+    ) < mod.RELEASE_REFRESH_COMMANDS.index(mod.PACKAGE_B_COMPETITION_BRIDGE_COMMAND)
+    assert mod.RELEASE_REFRESH_COMMANDS.index(
+        mod.PACKAGE_B_COMPETITION_BRIDGE_COMMAND
+    ) < mod.RELEASE_REFRESH_COMMANDS.index(
+        "python3 tools/build_architecture_validation_package_report.py"
+    )
+
+
+def test_release_source_of_truth_tracks_developer_preview_operator_command_pack() -> None:
+    artifact_ids = {spec["artifact_id"] for spec in mod.DEFAULT_ARTIFACT_SPECS}
+    assert "developer_preview_external_operator_command_pack" in artifact_ids
+    assert "developer_preview_external_operator_command_pack_sh" in artifact_ids
+    assert "developer_preview_external_operator_command_pack_ps1" in artifact_ids
+    assert "developer_preview_external_operator_command_pack_md" in artifact_ids
+    assert "developer_preview_stage5_restore_packet" in artifact_ids
+    assert "developer_preview_stage5_restore_packet_csv" in artifact_ids
+    assert "developer_preview_stage5_restore_packet_md" in artifact_ids
+    assert "developer_preview_clean_checkout_benchmark_receipt" in artifact_ids
+    assert "developer_preview_clean_checkout_benchmark_receipt_md" in artifact_ids
+    assert "developer_preview_clean_checkout_stage5_input_family_csv" in artifact_ids
+    assert "developer_preview_clean_checkout_stage5_input_family_md" in artifact_ids
+    assert "developer_preview_linux_reproducibility_receipt" in artifact_ids
+    assert "developer_preview_linux_reproducibility_receipt_md" in artifact_ids
+    assert "developer_preview_windows_reproducibility_receipt" in artifact_ids
+    assert "developer_preview_windows_reproducibility_receipt_md" in artifact_ids
+    assert "developer_preview_new_user_execution_work_order" in artifact_ids
+    assert "developer_preview_new_user_execution_preflight" in artifact_ids
+    assert "developer_preview_new_user_observation_receipt" in artifact_ids
+    assert "developer_preview_new_user_observation_checklist_csv" in artifact_ids
+    assert "developer_preview_new_user_observation_checklist_md" in artifact_ids
+
+    command_pack_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "developer_preview_external_operator_command_pack"
+    )
+    command_pack_sh_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "developer_preview_external_operator_command_pack_sh"
+    )
+    command_pack_md_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "developer_preview_external_operator_command_pack_md"
+    )
+    command_pack_ps1_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "developer_preview_external_operator_command_pack_ps1"
+    )
+    final_gate_audit_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "developer_preview_final_gate_audit"
+    )
+    clean_checkout_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "developer_preview_clean_checkout_benchmark_receipt"
+    )
+    linux_repro_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "developer_preview_linux_reproducibility_receipt"
+    )
+    windows_repro_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "developer_preview_windows_reproducibility_receipt"
+    )
+    new_user_work_order_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "developer_preview_new_user_execution_work_order"
+    )
+    new_user_preflight_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "developer_preview_new_user_execution_preflight"
+    )
+    new_user_receipt_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "developer_preview_new_user_observation_receipt"
+    )
+    new_user_checklist_csv_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "developer_preview_new_user_observation_checklist_csv"
+    )
+    new_user_checklist_md_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "developer_preview_new_user_observation_checklist_md"
+    )
+    restore_packet_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "developer_preview_stage5_restore_packet"
+    )
+    restore_packet_csv_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "developer_preview_stage5_restore_packet_csv"
+    )
+    restore_packet_md_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "developer_preview_stage5_restore_packet_md"
+    )
+    restore_packet_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "developer_preview_stage5_restore_packet_semantic_ready"
+    )
+    clean_checkout_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"]
+        == "developer_preview_clean_checkout_benchmark_receipt_semantic_ready"
+    )
+    clean_checkout_fail_closed_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"]
+        == "developer_preview_clean_checkout_fail_closed_receipt_semantic_ready"
+    )
+    linux_repro_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "developer_preview_linux_reproducibility_semantic_ready"
+    )
+    windows_repro_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "developer_preview_windows_reproducibility_semantic_ready"
+    )
+    windows_repro_fail_closed_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"]
+        == "developer_preview_windows_reproducibility_fail_closed_receipt_semantic_ready"
+    )
+    final_gate_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "developer_preview_final_gate_audit_semantic_ready"
+    )
+    final_gate_fail_closed_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"]
+        == "developer_preview_final_gate_audit_fail_closed_semantic_ready"
+    )
+    command_pack_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"]
+        == "developer_preview_external_operator_command_pack_semantic_ready"
+    )
+    restore_packet_fail_closed_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"]
+        == "developer_preview_stage5_restore_packet_fail_closed_receipt_semantic_ready"
+    )
+    new_user_draft_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"]
+        == "developer_preview_new_user_observation_draft_fail_closed_receipt_semantic_ready"
+    )
+    pr38_launch_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "pr38_child_pr_launch_command_pack_semantic_ready"
+    )
+
+    assert command_pack_spec["artifact_path"] == (
+        "runs/developer_preview_external_operator_command_pack_current.json"
+    )
+    assert command_pack_spec["builder_command"] == mod.DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_COMMAND
+    assert "runs/developer_preview_external_operator_work_order_current.json" in command_pack_spec[
+        "depends_on"
+    ]
+    assert command_pack_status_spec["artifact_path"] == (
+        "runs/developer_preview_external_operator_command_pack_current.json"
+    )
+    assert command_pack_status_spec["required_status"] == (
+        "developer_preview_external_operator_command_pack_ready"
+    )
+    assert "command_pack_ready" in command_pack_status_spec["required_true_fields"]
+    assert (
+        "operator_must_explicitly_run_target"
+        in command_pack_status_spec["required_true_fields"]
+    )
+    assert (
+        "generated_scripts_non_executable_by_default"
+        in command_pack_status_spec["required_true_fields"]
+    )
+    assert command_pack_status_spec["required_int_exact_fields"]["blocker_count"] == 0
+    assert command_pack_status_spec["required_int_exact_fields"]["powershell_target_count"] == 2
+    assert command_pack_sh_spec["artifact_path"] == (
+        "runs/developer_preview_external_operator_command_pack_current.sh"
+    )
+    assert command_pack_sh_spec["must_be_non_executable"] is True
+    assert "runs/developer_preview_external_operator_command_pack_current.json" in command_pack_sh_spec[
+        "depends_on"
+    ]
+    assert "docs/developer_preview_core_workflow_quickstart.md" in command_pack_sh_spec[
+        "depends_on"
+    ]
+    assert "docs/developer_preview_final_gate_action_register.md" in command_pack_sh_spec[
+        "depends_on"
+    ]
+    assert command_pack_ps1_spec["artifact_path"] == (
+        "runs/developer_preview_external_operator_command_pack_current.ps1"
+    )
+    assert command_pack_ps1_spec["must_be_non_executable"] is True
+    assert "runs/developer_preview_external_operator_command_pack_current.json" in command_pack_ps1_spec[
+        "depends_on"
+    ]
+    assert "docs/developer_preview_core_workflow_quickstart.md" in command_pack_ps1_spec[
+        "depends_on"
+    ]
+    assert "docs/developer_preview_final_gate_action_register.md" in command_pack_ps1_spec[
+        "depends_on"
+    ]
+    assert command_pack_md_spec["artifact_path"] == (
+        "runs/developer_preview_external_operator_command_pack_current.md"
+    )
+    assert "runs/developer_preview_external_operator_command_pack_current.json" in command_pack_md_spec[
+        "depends_on"
+    ]
+    assert "docs/developer_preview_core_workflow_quickstart.md" in command_pack_md_spec[
+        "depends_on"
+    ]
+    assert "docs/developer_preview_final_gate_action_register.md" in command_pack_md_spec[
+        "depends_on"
+    ]
+    for source_receipt in (
+        ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json",
+        ".betelgeuze/developer_preview_linux_reproducibility_receipt.json",
+        ".betelgeuze/developer_preview_windows_reproducibility_receipt.json",
+    ):
+        assert source_receipt in final_gate_audit_spec["depends_on"]
+    assert clean_checkout_spec["artifact_path"] == (
+        ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
+    )
+    assert clean_checkout_spec["builder_command"] == (
+        mod.DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_COMMAND
+    )
+    assert ".betelgeuze/developer_preview_clean_checkout_ai_verify.log" in (
+        clean_checkout_spec["depends_on"]
+    )
+    assert (
+        ".betelgeuze/developer_preview_clean_checkout_source_provenance.json"
+        in clean_checkout_spec["depends_on"]
+    )
+    assert linux_repro_spec["builder_command"] == (
+        mod.DEVELOPER_PREVIEW_LINUX_REPRODUCIBILITY_RECEIPT_COMMAND
+    )
+    assert ".betelgeuze/developer_preview_linux_reproducibility_pytest.xml" in (
+        linux_repro_spec["depends_on"]
+    )
+    assert windows_repro_spec["builder_command"] == (
+        mod.DEVELOPER_PREVIEW_WINDOWS_REPRODUCIBILITY_RECEIPT_COMMAND
+    )
+    assert ".betelgeuze/developer_preview_windows_reproducibility_pytest.xml" in (
+        windows_repro_spec["depends_on"]
+    )
+    assert new_user_work_order_spec["artifact_path"] == (
+        ".betelgeuze/developer_preview_new_user_execution_work_order.json"
+    )
+    assert new_user_work_order_spec["builder_command"] == (
+        mod.DEVELOPER_PREVIEW_NEW_USER_DRAFT_COMMAND
+    )
+    assert "tools/build_product_execution_work_order.py" in new_user_work_order_spec[
+        "depends_on"
+    ]
+    assert "runs/developer_preview_external_operator_command_pack_current.sh" not in (
+        new_user_work_order_spec["depends_on"]
+    )
+    assert new_user_preflight_spec["artifact_path"] == (
+        ".betelgeuze/developer_preview_new_user_execution_preflight.json"
+    )
+    assert ".betelgeuze/developer_preview_new_user_execution_work_order.json" in (
+        new_user_preflight_spec["depends_on"]
+    )
+    assert "runs/developer_preview_external_operator_command_pack_current.sh" not in (
+        new_user_preflight_spec["depends_on"]
+    )
+    assert new_user_receipt_spec["artifact_path"] == (
+        ".betelgeuze/developer_preview_new_user_observation_receipt.json"
+    )
+    for source_artifact in (
+        "tools/product/build_developer_preview_new_user_observation_receipt.py",
+        ".betelgeuze/developer_preview_new_user_execution_work_order.json",
+        ".betelgeuze/developer_preview_new_user_execution_preflight.json",
+        "docs/developer_preview_core_workflow_quickstart.md",
+    ):
+        assert source_artifact in new_user_receipt_spec["depends_on"]
+    assert "runs/developer_preview_external_operator_command_pack_current.sh" not in (
+        new_user_receipt_spec["depends_on"]
+    )
+    assert new_user_checklist_csv_spec["artifact_path"] == (
+        ".betelgeuze/developer_preview_new_user_observation_checklist.csv"
+    )
+    assert ".betelgeuze/developer_preview_new_user_observation_receipt.json" in (
+        new_user_checklist_csv_spec["depends_on"]
+    )
+    assert new_user_checklist_md_spec["artifact_path"] == (
+        ".betelgeuze/developer_preview_new_user_observation_checklist.md"
+    )
+    assert ".betelgeuze/developer_preview_new_user_observation_receipt.json" in (
+        new_user_checklist_md_spec["depends_on"]
+    )
+    assert restore_packet_spec["artifact_path"] == (
+        "runs/developer_preview_stage5_restore_packet_current.json"
+    )
+    assert restore_packet_spec["builder_command"] == (
+        mod.DEVELOPER_PREVIEW_STAGE5_RESTORE_PACKET_COMMAND
+    )
+    assert "tools/product/build_developer_preview_stage5_restore_packet.py" in restore_packet_spec[
+        "depends_on"
+    ]
+    assert "tools/build_developer_preview_stage5_restore_packet.py" in restore_packet_spec[
+        "depends_on"
+    ]
+    assert ".betelgeuze/developer_preview_clean_checkout_stage5_input_family_current.csv" in (
+        restore_packet_spec["depends_on"]
+    )
+    assert "runs/developer_preview_final_gate_audit_current.json" not in (
+        restore_packet_spec["depends_on"]
+    )
+    assert restore_packet_csv_spec["artifact_path"] == (
+        "runs/developer_preview_stage5_restore_packet_current.csv"
+    )
+    assert "runs/developer_preview_stage5_restore_packet_current.json" in restore_packet_csv_spec[
+        "depends_on"
+    ]
+    assert restore_packet_md_spec["artifact_path"] == (
+        "runs/developer_preview_stage5_restore_packet_current.md"
+    )
+    assert "runs/developer_preview_stage5_restore_packet_current.json" in restore_packet_md_spec[
+        "depends_on"
+    ]
+    assert restore_packet_status_spec["required_status"] == (
+        "developer_preview_stage5_restore_packet_ready"
+    )
+    assert "stage5_restore_ready" in restore_packet_status_spec["required_true_fields"]
+    assert "restore_ready" in restore_packet_status_spec["required_true_fields"]
+    assert "input_present" in restore_packet_status_spec["required_true_fields"]
+    assert restore_packet_status_spec["required_int_min_fields"]["total_rows"] == 1
+    assert restore_packet_status_spec["required_int_exact_fields"]["missing_source_artifact_count"] == 0
+    assert restore_packet_fail_closed_status_spec["required_status"] == (
+        "blocked_developer_preview_stage5_restore_packet"
+    )
+    assert "stage5_fail_closed_restore_receipt_ready" in (
+        restore_packet_fail_closed_status_spec["required_true_fields"]
+    )
+    assert "stage5_operator_restore_queue_ready" in (
+        restore_packet_fail_closed_status_spec["required_true_fields"]
+    )
+    assert "restore_queue_ready" in restore_packet_fail_closed_status_spec["required_true_fields"]
+    assert "operator_restore_sequence_ready" in (
+        restore_packet_fail_closed_status_spec["required_true_fields"]
+    )
+    assert "input_present" in restore_packet_fail_closed_status_spec["required_true_fields"]
+    assert restore_packet_fail_closed_status_spec["required_int_min_fields"][
+        "missing_source_artifact_count"
+    ] == 1
+    assert restore_packet_fail_closed_status_spec["required_int_min_fields"][
+        "restore_queue_ready_count"
+    ] == 1
+    assert restore_packet_fail_closed_status_spec["required_int_min_fields"]["total_rows"] == 1
+    assert restore_packet_fail_closed_status_spec["required_int_exact_fields"][
+        "stage5_restore_ready"
+    ] == 0
+    assert clean_checkout_status_spec["required_status"] == (
+        "developer_preview_clean_checkout_benchmark_receipt_ready"
+    )
+    assert "clean_checkout_benchmark_regenerated" in clean_checkout_status_spec[
+        "required_true_fields"
+    ]
+    assert clean_checkout_status_spec["required_int_exact_fields"]["blocker_count"] == 0
+    assert clean_checkout_fail_closed_status_spec["required_status"] == (
+        "blocked_developer_preview_clean_checkout_benchmark_receipt"
+    )
+    assert "baseline_summary_present" in clean_checkout_fail_closed_status_spec[
+        "required_true_fields"
+    ]
+    assert clean_checkout_fail_closed_status_spec["required_int_min_fields"][
+        "stage5_missing_source_artifact_count"
+    ] == 1
+    assert clean_checkout_fail_closed_status_spec["required_int_exact_fields"][
+        "reviewed_receipt_attached"
+    ] == 0
+    assert linux_repro_status_spec["required_status"] == (
+        "developer_preview_platform_reproducibility_receipt_ready"
+    )
+    assert "platform_reproducibility_ready" in linux_repro_status_spec["required_true_fields"]
+    assert "reproducibility_ready" in linux_repro_status_spec["required_true_fields"]
+    assert "linux_receipt" in linux_repro_status_spec["required_true_fields"]
+    assert linux_repro_status_spec["required_int_exact_fields"][
+        "platform_evidence_ready_field_count"
+    ] == 9
+    assert windows_repro_status_spec["required_status"] == (
+        "developer_preview_platform_reproducibility_receipt_ready"
+    )
+    assert "platform_reproducibility_ready" in windows_repro_status_spec["required_true_fields"]
+    assert "reproducibility_ready" in windows_repro_status_spec["required_true_fields"]
+    assert "windows_receipt" in windows_repro_status_spec["required_true_fields"]
+    assert windows_repro_fail_closed_status_spec["required_status"] == (
+        "blocked_developer_preview_platform_reproducibility_receipt"
+    )
+    assert windows_repro_fail_closed_status_spec["required_int_exact_fields"][
+        "platform_reproducibility_ready"
+    ] == 0
+    assert windows_repro_fail_closed_status_spec["required_int_exact_fields"][
+        "reproducibility_ready"
+    ] == 0
+    assert windows_repro_fail_closed_status_spec["required_int_exact_fields"][
+        "platform_evidence_blocked_field_count"
+    ] == 8
+    assert windows_repro_fail_closed_status_spec["required_text_exact_fields"][
+        "platform_evidence_primary_blocker"
+    ] == "ai_verify_log_missing"
+    assert final_gate_status_spec["required_status"] == (
+        "developer_preview_final_gate_audit_ready"
+    )
+    assert "developer_preview_exit_ready" in final_gate_status_spec["required_true_fields"]
+    assert final_gate_fail_closed_status_spec["required_status"] == (
+        "blocked_developer_preview_final_gate_audit"
+    )
+    assert "register_fail_closed_command_contract_ready" in (
+        final_gate_fail_closed_status_spec["required_true_fields"]
+    )
+    assert "new_user_draft_fail_closed_ready" in new_user_draft_status_spec[
+        "required_true_fields"
+    ]
+    assert new_user_draft_status_spec["required_int_exact_fields"][
+        "new_user_observation_ready"
+    ] == 0
+    assert new_user_draft_status_spec["required_int_exact_fields"][
+        "observation_ready"
+    ] == 0
+    assert final_gate_fail_closed_status_spec["required_int_exact_fields"][
+        "missing_receipt_count"
+    ] == 0
+    assert new_user_draft_status_spec["required_status"] == (
+        "blocked_developer_preview_new_user_observation_receipt"
+    )
+    for field in (
+        "runbook_ready",
+        "work_order_ready",
+        "preflight_ready",
+        "observation_checklist_path_documented",
+        "clean_checkout_bootstrap_documented",
+        "windows_bootstrap_command_set_documented",
+        "raw_customer_data_storage_unverified",
+    ):
+        assert field in new_user_draft_status_spec["required_true_fields"]
+    assert new_user_draft_status_spec["required_int_min_fields"][
+        "observation_review_required_field_count"
+    ] == 8
+    for field in (
+        "observer_signoff",
+        "anonymized_notes_only",
+        "observer_id_present",
+        "observed_at_utc_present",
+        "raw_customer_data_not_stored_in_repo",
+        "raw_customer_data_stored_in_repo",
+        "customer_retained_raw_data",
+        "claim_promotion_allowed",
+    ):
+        assert new_user_draft_status_spec["required_int_exact_fields"][field] == 0
+    assert pr38_launch_status_spec["required_int_exact_fields"][
+        "operator_branch_pr_launch_allowed_by_this_packet"
+    ] == 0
+    assert mod.DEVELOPER_PREVIEW_STAGE5_RESTORE_PACKET_COMMAND in mod.RELEASE_REFRESH_COMMANDS
+    assert mod.DEVELOPER_PREVIEW_NEW_USER_DRAFT_COMMAND in mod.RELEASE_REFRESH_COMMANDS
+    assert mod.DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_COMMAND in mod.RELEASE_REFRESH_COMMANDS
+    assert mod.DEVELOPER_PREVIEW_LINUX_REPRODUCIBILITY_RECEIPT_COMMAND in mod.RELEASE_REFRESH_COMMANDS
+    assert mod.DEVELOPER_PREVIEW_WINDOWS_REPRODUCIBILITY_RECEIPT_COMMAND in mod.RELEASE_REFRESH_COMMANDS
+    assert mod.RELEASE_REFRESH_COMMANDS.index(
+        mod.DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_COMMAND
+    ) < mod.RELEASE_REFRESH_COMMANDS.index(
+        mod.DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_COMMAND
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index(
+        mod.DEVELOPER_PREVIEW_WINDOWS_REPRODUCIBILITY_RECEIPT_COMMAND
+    ) < mod.RELEASE_REFRESH_COMMANDS.index(
+        mod.DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_COMMAND
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index(
+        mod.DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_COMMAND
+    ) < mod.RELEASE_REFRESH_COMMANDS.index(
+        mod.DEVELOPER_PREVIEW_NEW_USER_DRAFT_COMMAND
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index(
+        mod.DEVELOPER_PREVIEW_NEW_USER_DRAFT_COMMAND
+    ) < mod.RELEASE_REFRESH_COMMANDS.index(
+        mod.DEVELOPER_PREVIEW_STAGE5_RESTORE_PACKET_COMMAND
+    )
+
+
 def _refresh_release_decision_ready() -> dict:
     return {
         "summary": {
@@ -661,6 +1282,8 @@ def test_release_source_of_truth_gate_blocks_stale_artifact_and_readme_drift(tmp
     assert summary["stale_artifact_count"] == 1
     assert summary["readme_drift_count"] == 1
     assert summary["blocked_artifact_ids"] == ["operator_packet", "readme_accuracy_parity:README.md"]
+    assert summary["blockers"] == ["operator_packet", "readme_accuracy_parity:README.md"]
+    assert summary["primary_blocker"] == "operator_packet"
     stale_row = next(row for row in payload["rows"] if row["artifact_id"] == "operator_packet")
     assert stale_row["stale_dependency_paths"] == ["runs/goal_audit.json"]
     readme_row = next(row for row in payload["rows"] if row["row_type"] == "readme_metric_drift")
@@ -696,6 +1319,8 @@ def test_release_source_of_truth_gate_passes_current_artifact_and_readme_metrics
 
     assert payload["summary"]["status"] == "product_release_source_of_truth_gate_ready"
     assert payload["summary"]["release_source_of_truth_ready"] is True
+    assert payload["summary"]["blockers"] == []
+    assert payload["summary"]["primary_blocker"] == ""
     assert payload["blockers"] == []
 
 
@@ -750,6 +1375,44 @@ def test_release_source_of_truth_records_source_fingerprint_change_and_stale_blo
     assert after_row["source_artifact_fingerprints"][0]["sha256"] == hashlib.sha256(
         b"print('v2')\n"
     ).hexdigest()
+
+
+def test_release_source_of_truth_blocks_executable_operator_artifact_when_non_executable_required(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "runs" / "operator-pack.sh"
+    source = tmp_path / "tools" / "build_operator_pack.py"
+    artifact.parent.mkdir(parents=True, exist_ok=True)
+    source.parent.mkdir(parents=True, exist_ok=True)
+    artifact.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    source.write_text("print('build')\n", encoding="utf-8")
+    artifact.chmod(0o755)
+    os.utime(source, (1_700_000_000, 1_700_000_000))
+    os.utime(artifact, (1_700_000_100, 1_700_000_100))
+
+    payload = mod.build_product_release_source_of_truth_gate(
+        root=tmp_path,
+        artifact_specs=[
+            {
+                "artifact_id": "operator_pack_sh",
+                "artifact_path": "runs/operator-pack.sh",
+                "builder_command": "python3 tools/build_operator_pack.py",
+                "depends_on": ["tools/build_operator_pack.py"],
+                "must_be_non_executable": True,
+            }
+        ],
+        readme_paths=[],
+    )
+    row = payload["rows"][0]
+
+    assert payload["summary"]["status"] == "blocked_product_release_source_of_truth_gate"
+    assert row["status"] == "fail"
+    assert row["release_blocker"] is True
+    assert row["artifact_file_mode_octal"] == "755"
+    assert row["artifact_executable"] is True
+    assert row["must_be_non_executable"] is True
+    assert row["executable_mode_blocked"] is True
+    assert "artifact is not executable" in row["required"]
 
 
 def test_product_release_current_refresh_defaults_to_dry_run_plan(tmp_path: Path) -> None:
@@ -1389,6 +2052,9 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         in artifact_ids
     )
     assert "refine_tier_public_benchmark_claim_grade_gap_audit" in artifact_ids
+    assert "bm5_capri_raw_data_custody_plan" in artifact_ids
+    assert "bm5_capri_raw_data_untrack_apply_preflight" in artifact_ids
+    assert "product_ci_runtime_gate" in artifact_ids
     assert "science_accuracy_frontier" in artifact_ids
     assert "self_hosted_license_distribution_audit" in artifact_ids
     assert "third_party_license_review_gate" in artifact_ids
@@ -1405,6 +2071,16 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert "product_pose_sampling_readiness_semantic_ready" in status_ids
     assert "product_trajectory_sla_contract_semantic_ready" in status_ids
     assert "product_job_orchestration_contract_semantic_ready" in status_ids
+    assert "competition_benchmark_rollup_fail_closed_semantic_ready" in status_ids
+    assert "competition_benchmark_rollup_raw_data_policy_semantic_ready" in status_ids
+    assert "package_b_competition_bridge_claim_locked_semantic_ready" in status_ids
+    assert "pr38_split_structural_acceptance_handoff_semantic_ready" in status_ids
+    assert "developer_preview_external_operator_command_pack_semantic_ready" in status_ids
+    assert "bm5_capri_raw_data_custody_plan_semantic_ready" in status_ids
+    assert "bm5_capri_raw_data_custody_plan_operator_evacuation_semantic_ready" in status_ids
+    assert "bm5_capri_raw_data_untrack_apply_preflight_semantic_ready" in status_ids
+    assert "product_ci_runtime_gate_semantic_ready" in status_ids
+    assert "product_ci_runtime_gate_remote_ci_not_green_handoff_semantic_ready" in status_ids
     assert "gpcr_commercial_phase_ab_closure_chain_claim_locked_metric_ready" in status_ids
     assert "gpcr_active_scorer_promotion_decision_claim_locked_metric_ready" in status_ids
     assert "gpcr_broad_claim_review_receipt_blocked_semantic_ready" in status_ids
@@ -1528,6 +2204,11 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         in mod.RELEASE_REFRESH_COMMANDS
     )
     assert mod.REFINE_TIER_PUBLIC_BENCHMARK_CLAIM_GRADE_GAP_AUDIT_COMMAND in mod.RELEASE_REFRESH_COMMANDS
+    assert mod.BM5_CAPRI_RAW_DATA_CUSTODY_PLAN_COMMAND in mod.RELEASE_REFRESH_COMMANDS
+    assert (
+        mod.BM5_CAPRI_RAW_DATA_UNTRACK_APPLY_PREFLIGHT_COMMAND
+        in mod.RELEASE_REFRESH_COMMANDS
+    )
     assert "python3 tools/product/build_science_accuracy_frontier.py" in mod.RELEASE_REFRESH_COMMANDS
     assert "product_release_bundle_semantic_ready" in status_ids
     assert (
@@ -1625,6 +2306,498 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
         for spec in mod.DEFAULT_STATUS_SPECS
         if spec["artifact_id"] == "ai_md_product_evidence_bundle_semantic_ready"
     )
+    product_image_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "product_image_smoke_preflight_semantic_ready"
+    )
+    runner_host_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "github_self_hosted_runner_host_preflight_semantic_ready"
+    )
+    remote_green_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "release_ci_remote_green_semantic_ready"
+    )
+    product_ci_runtime_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "product_ci_runtime_gate_semantic_ready"
+    )
+    product_ci_runtime_remote_ci_handoff_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"]
+        == "product_ci_runtime_gate_remote_ci_not_green_handoff_semantic_ready"
+    )
+    pr38_structural_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "pr38_split_structural_preflight_semantic_ready"
+    )
+    pr38_structural_acceptance_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "pr38_split_structural_acceptance_handoff_semantic_ready"
+    )
+    pr38_acceptance_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "pr38_split_acceptance_semantic_ready"
+    )
+    pr38_launch_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "pr38_child_pr_launch_command_pack_semantic_ready"
+    )
+    pr38_matrix_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "pr38_child_pr_verification_matrix_semantic_ready"
+    )
+    pr38_ci_runner_hygiene_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "pr38_ci_runner_hygiene_child_pr_gate_semantic_ready"
+    )
+    assert "receipt_runner_hygiene_schema_ready" in product_image_status_spec["required_true_fields"]
+    assert "receipt_runner_hygiene_ready" in product_image_status_spec["required_true_fields"]
+    assert "workspace_smoke_artifact_current_cleanup_ready" in product_image_status_spec[
+        "required_true_fields"
+    ]
+    assert (
+        "receipt_runner_smoke_dir_outside_workspace"
+        in product_image_status_spec["required_true_fields"]
+    )
+    assert (
+        "receipt_container_output_uid_gid_pinned"
+        in product_image_status_spec["required_true_fields"]
+    )
+    assert "container_output_uid_gid_fixed" in product_image_status_spec["required_true_fields"]
+    assert "pre_checkout_cleanup_ready" in product_image_status_spec["required_true_fields"]
+    assert pr38_structural_status_spec["artifact_path"] == (
+        ".betelgeuze/pr38_slice_patch_apply_preflight_current.json"
+    )
+    assert pr38_structural_status_spec["required_int_min_fields"]["slice_patch_count"] == 5
+    assert pr38_structural_status_spec["required_int_exact_fields"]["real_index_mutated"] == 0
+    assert pr38_structural_acceptance_status_spec["artifact_path"] == (
+        ".betelgeuze/pr38_split_acceptance_packet_current.json"
+    )
+    assert pr38_structural_acceptance_status_spec["required_status"] == (
+        "blocked_pr38_split_acceptance_packet"
+    )
+    assert "split_structural_acceptance_ready" in pr38_structural_acceptance_status_spec[
+        "required_true_fields"
+    ]
+    assert pr38_structural_acceptance_status_spec["required_int_min_fields"][
+        "child_pr_count"
+    ] == 5
+    assert pr38_structural_acceptance_status_spec["required_int_exact_fields"][
+        "product_mode_verification_ready"
+    ] == 0
+    assert pr38_structural_acceptance_status_spec["required_text_exact_fields"] == {
+        "product_mode_expected_result": "blocked_product_mode_verification"
+    }
+    assert pr38_acceptance_status_spec["required_status"] == "pr38_split_acceptance_packet_ready"
+    assert "product_mode_verification_ready" in pr38_acceptance_status_spec[
+        "required_true_fields"
+    ]
+    assert "launch_command_pack_ready" in pr38_acceptance_status_spec[
+        "required_true_fields"
+    ]
+    assert pr38_acceptance_status_spec["required_int_exact_fields"][
+        "launch_command_pack_pull_requests_created"
+    ] == 0
+    assert pr38_acceptance_status_spec["required_text_exact_fields"] == {
+        "product_mode_expected_result": "pass_product_smoke_claim_boundaries_locked"
+    }
+    assert pr38_launch_status_spec["required_status"] == (
+        "pr38_child_pr_launch_command_pack_ready"
+    )
+    assert "shell_pack_prints_commands_only" in pr38_launch_status_spec[
+        "required_true_fields"
+    ]
+    assert "launch_scripts_non_executable" in pr38_launch_status_spec[
+        "required_true_fields"
+    ]
+    assert "post_push_remote_ci_dispatch_required" in pr38_launch_status_spec[
+        "required_true_fields"
+    ]
+    assert "post_push_remote_ci_dispatch_guard_present" in pr38_launch_status_spec[
+        "required_true_fields"
+    ]
+    assert "post_push_remote_ci_waits_for_expected_head_sha" in (
+        pr38_launch_status_spec["required_true_fields"]
+    )
+    assert "post_push_remote_ci_requires_all_dispatched_runs_observed" in (
+        pr38_launch_status_spec["required_true_fields"]
+    )
+    assert "post_push_remote_ci_branch_filter_uses_json_head_branch" in (
+        pr38_launch_status_spec["required_true_fields"]
+    )
+    assert "bootstrap_ci_runner_hygiene_acceptance_blocker_clearance_path" in (
+        pr38_launch_status_spec["required_true_fields"]
+    )
+    assert "bootstrap_ci_runner_hygiene_launch_preconditions_ready" in (
+        pr38_launch_status_spec["required_true_fields"]
+    )
+    assert (
+        "bootstrap_ci_runner_hygiene_post_push_remote_ci_dispatch_guard_present"
+        in pr38_launch_status_spec["required_true_fields"]
+    )
+    assert pr38_launch_status_spec["required_int_min_fields"]["child_pr_count"] == 5
+    assert pr38_launch_status_spec["required_int_min_fields"][
+        "post_push_remote_ci_verification_slice_count"
+    ] == 1
+    assert pr38_launch_status_spec["required_int_min_fields"][
+        "post_push_remote_ci_command_count"
+    ] == 24
+    assert pr38_launch_status_spec["required_int_min_fields"][
+        "bootstrap_ci_runner_hygiene_post_push_remote_ci_command_count"
+    ] == 24
+    assert pr38_launch_status_spec["required_int_exact_fields"]["pull_requests_created"] == 0
+    assert pr38_launch_status_spec["required_int_exact_fields"][
+        "post_push_remote_ci_dispatch_executed_by_this_packet"
+    ] == 0
+    assert pr38_launch_status_spec["required_int_exact_fields"][
+        "post_push_remote_ci_unsupported_branch_flag_present"
+    ] == 0
+    assert pr38_launch_status_spec["required_int_exact_fields"][
+        "bootstrap_ci_runner_hygiene_operator_launch_allowed_by_this_packet"
+    ] == 0
+    assert pr38_matrix_status_spec["required_status"] == (
+        "pr38_child_pr_verification_matrix_ready"
+    )
+    assert "launch_command_pack_ready" in pr38_matrix_status_spec["required_true_fields"]
+    assert pr38_matrix_status_spec["required_int_min_fields"]["child_pr_count"] == 5
+    assert pr38_matrix_status_spec["required_int_exact_fields"][
+        "branch_commit_work_allowed_by_this_matrix"
+    ] == 0
+    assert pr38_ci_runner_hygiene_status_spec["required_status"] == (
+        "pr38_ci_runner_hygiene_child_pr_gate_ready"
+    )
+    assert "local_product_image_container_output_uid_gid_non_root" in (
+        pr38_ci_runner_hygiene_status_spec["required_true_fields"]
+    )
+    assert "product_ci_runtime_remote_ci_handoff_recorded" in (
+        pr38_ci_runner_hygiene_status_spec["required_true_fields"]
+    )
+    assert "remote_ci_rerun_current_patch_verification_required" in (
+        pr38_ci_runner_hygiene_status_spec["required_true_fields"]
+    )
+    assert "launch_pack_post_push_remote_ci_branch_filter_uses_json_head_branch" in (
+        pr38_ci_runner_hygiene_status_spec["required_true_fields"]
+    )
+    assert "launch_pack_post_push_remote_ci_dispatch_guard_present" in (
+        pr38_ci_runner_hygiene_status_spec["required_true_fields"]
+    )
+    assert "launch_pack_post_push_remote_ci_waits_for_expected_head_sha" in (
+        pr38_ci_runner_hygiene_status_spec["required_true_fields"]
+    )
+    assert "launch_pack_post_push_remote_ci_requires_all_dispatched_runs_observed" in (
+        pr38_ci_runner_hygiene_status_spec["required_true_fields"]
+    )
+    assert (
+        "launch_pack_bootstrap_ci_runner_hygiene_post_push_remote_ci_dispatch_guard_present"
+        in pr38_ci_runner_hygiene_status_spec["required_true_fields"]
+    )
+    assert (
+        "launch_pack_bootstrap_ci_runner_hygiene_acceptance_blocker_clearance_path"
+        in pr38_ci_runner_hygiene_status_spec["required_true_fields"]
+    )
+    assert "launch_pack_bootstrap_ci_runner_hygiene_launch_preconditions_ready" in (
+        pr38_ci_runner_hygiene_status_spec["required_true_fields"]
+    )
+    assert pr38_ci_runner_hygiene_status_spec["required_int_exact_fields"][
+        "ci_runner_hygiene_remote_ci_verified"
+    ] == 0
+    assert pr38_ci_runner_hygiene_status_spec["required_int_exact_fields"][
+        "operator_branch_pr_launch_allowed_by_this_gate"
+    ] == 0
+    assert pr38_ci_runner_hygiene_status_spec["required_int_exact_fields"][
+        "product_ci_runtime_gate_ready"
+    ] == 0
+    assert pr38_ci_runner_hygiene_status_spec["required_int_exact_fields"][
+        "launch_pack_post_push_remote_ci_unsupported_branch_flag_present"
+    ] == 0
+    assert pr38_ci_runner_hygiene_status_spec["required_int_exact_fields"][
+        "launch_pack_bootstrap_ci_runner_hygiene_operator_launch_allowed"
+    ] == 0
+    assert pr38_ci_runner_hygiene_status_spec["required_int_min_fields"][
+        "required_patch_file_count"
+    ] == 17
+    assert pr38_ci_runner_hygiene_status_spec["required_int_min_fields"][
+        "required_focused_test_token_count"
+    ] == 7
+    product_image_artifact_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "product_image_smoke_preflight"
+    )
+    product_image_runner_hygiene_work_order_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "product_image_smoke_runner_hygiene_work_order"
+    )
+    product_image_runner_hygiene_command_pack_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "product_image_smoke_runner_hygiene_command_pack"
+    )
+    product_image_runner_hygiene_command_pack_sh_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "product_image_smoke_runner_hygiene_command_pack_sh"
+    )
+    product_image_runner_hygiene_command_pack_md_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "product_image_smoke_runner_hygiene_command_pack_md"
+    )
+    assert (
+        "scripts/normalize_product_image_smoke_artifact_ownership.sh"
+        in product_image_artifact_spec["depends_on"]
+    )
+    assert ".github/workflows/product-api-worker.yml" in product_image_artifact_spec["depends_on"]
+    assert product_image_runner_hygiene_work_order_spec["artifact_path"] == (
+        "runs/product_image_smoke_runner_hygiene_work_order_current.json"
+    )
+    assert product_image_runner_hygiene_work_order_spec["builder_command"] == (
+        "python3 tools/build_product_image_smoke_preflight.py"
+    )
+    for source_artifact in (
+        "tools/product/build_product_image_smoke_preflight.py",
+        "tools/build_product_image_smoke_preflight.py",
+        "runs/product_image_smoke_preflight_current.json",
+        "runs/product_image_smoke_receipt_current.json",
+        ".github/workflows/product-image-smoke.yml",
+        ".github/workflows/product-api-worker.yml",
+    ):
+        assert source_artifact in product_image_runner_hygiene_work_order_spec["depends_on"]
+    assert product_image_runner_hygiene_command_pack_spec["artifact_path"] == (
+        "runs/product_image_smoke_runner_hygiene_command_pack_current.json"
+    )
+    assert product_image_runner_hygiene_command_pack_spec["builder_command"] == (
+        "python3 tools/build_product_image_smoke_preflight.py"
+    )
+    assert (
+        "runs/product_image_smoke_runner_hygiene_work_order_current.json"
+        in product_image_runner_hygiene_command_pack_spec["depends_on"]
+    )
+    assert product_image_runner_hygiene_command_pack_sh_spec["artifact_path"] == (
+        "runs/product_image_smoke_runner_hygiene_command_pack_current.sh"
+    )
+    assert (
+        "runs/product_image_smoke_runner_hygiene_command_pack_current.json"
+        in product_image_runner_hygiene_command_pack_sh_spec["depends_on"]
+    )
+    for source_artifact in (
+        ".github/workflows/product-image-smoke.yml",
+        ".github/workflows/product-api-worker.yml",
+    ):
+        assert source_artifact in product_image_runner_hygiene_command_pack_sh_spec[
+            "depends_on"
+        ]
+    assert product_image_runner_hygiene_command_pack_md_spec["artifact_path"] == (
+        "runs/product_image_smoke_runner_hygiene_command_pack_current.md"
+    )
+    assert (
+        "runs/product_image_smoke_runner_hygiene_command_pack_current.json"
+        in product_image_runner_hygiene_command_pack_md_spec["depends_on"]
+    )
+    for source_artifact in (
+        ".github/workflows/product-image-smoke.yml",
+        ".github/workflows/product-api-worker.yml",
+    ):
+        assert source_artifact in product_image_runner_hygiene_command_pack_md_spec[
+            "depends_on"
+        ]
+    pr38_artifact_ids = {
+        "pr38_split_review_packet",
+        "pr38_child_pr_extraction_plan",
+        "pr38_slice_patch_bundle",
+        "pr38_slice_patch_apply_preflight",
+        "pr38_child_pr_launch_command_pack",
+        "pr38_split_acceptance_packet",
+        "pr38_child_pr_verification_matrix",
+        "pr38_ci_runner_hygiene_child_pr_gate",
+        "pr38_ci_runner_hygiene_child_pr_gate_csv",
+        "pr38_ci_runner_hygiene_child_pr_gate_md",
+    }
+    artifact_ids = {spec["artifact_id"] for spec in mod.DEFAULT_ARTIFACT_SPECS}
+    assert pr38_artifact_ids <= artifact_ids
+    pr38_ci_runner_hygiene_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "pr38_ci_runner_hygiene_child_pr_gate"
+    )
+    assert pr38_ci_runner_hygiene_spec["artifact_path"] == (
+        ".betelgeuze/pr38_ci_runner_hygiene_child_pr_gate_current.json"
+    )
+    assert pr38_ci_runner_hygiene_spec["builder_command"] == (
+        mod.PR38_CI_RUNNER_HYGIENE_CHILD_PR_GATE_COMMAND
+    )
+    for source_artifact in (
+        "tools/product/build_pr38_ci_runner_hygiene_child_pr_gate.py",
+        "tools/build_pr38_ci_runner_hygiene_child_pr_gate.py",
+        ".betelgeuze/pr38_child_pr_launch_command_pack_current.json",
+        "runs/product_image_smoke_preflight_current.json",
+        "runs/product_ci_runtime_gate_current.json",
+    ):
+        assert source_artifact in pr38_ci_runner_hygiene_spec["depends_on"]
+    assert mod.PR38_SPLIT_REVIEW_PACKET_COMMAND in mod.RELEASE_REFRESH_COMMANDS
+    assert mod.PR38_CHILD_PR_LAUNCH_COMMAND_PACK_COMMAND in mod.RELEASE_REFRESH_COMMANDS
+    assert mod.PR38_CHILD_PR_VERIFICATION_MATRIX_COMMAND in mod.RELEASE_REFRESH_COMMANDS
+    assert mod.PR38_CI_RUNNER_HYGIENE_CHILD_PR_GATE_COMMAND in mod.RELEASE_REFRESH_COMMANDS
+    runner_host_artifact_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "github_self_hosted_runner_host_preflight"
+    )
+    assert "runs/product_image_smoke_preflight_current.json" in runner_host_artifact_spec[
+        "depends_on"
+    ]
+    assert "runs/github_self_hosted_runner_inventory_current.json" in runner_host_artifact_spec[
+        "depends_on"
+    ]
+    remote_green_artifact_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "release_ci_remote_green_receipt"
+    )
+    product_ci_runtime_artifact_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "product_ci_runtime_gate"
+    )
+    assert "runs/release_ci_required_status_checks_main_current.json" in remote_green_artifact_spec[
+        "depends_on"
+    ]
+    assert ".github/workflows/product-image-smoke.yml" in remote_green_artifact_spec[
+        "depends_on"
+    ]
+    assert product_ci_runtime_artifact_spec["artifact_path"] == (
+        "runs/product_ci_runtime_gate_current.json"
+    )
+    assert product_ci_runtime_artifact_spec["builder_command"] == (
+        mod.PRODUCT_CI_RUNTIME_GATE_OBSERVED_WORKSPACE_CLEANUP_FAILURE_COMMAND
+    )
+    assert "observe_product_ci_runtime_gate_from_github.py" in product_ci_runtime_artifact_spec[
+        "builder_command"
+    ]
+    assert "--branch codex/source-of-truth-benchmark-gpcr-pocketmd" in product_ci_runtime_artifact_spec[
+        "builder_command"
+    ]
+    for source_artifact in (
+        "tools/product/observe_product_ci_runtime_gate_from_github.py",
+        "tools/product/build_product_ci_runtime_gate.py",
+        "runs/product_image_smoke_preflight_current.json",
+        "runs/github_self_hosted_runner_inventory_current.json",
+        "runs/github_self_hosted_runner_host_preflight_current.json",
+    ):
+        assert source_artifact in product_ci_runtime_artifact_spec["depends_on"]
+    assert (
+        "receipt_workspace_runner_smoke_dir_cleanup_ready"
+        in product_image_status_spec["required_true_fields"]
+    )
+    assert product_image_status_spec["required_text_exact_fields"][
+        "required_runner_hygiene_schema_version"
+    ] == "product_image_runner_hygiene_v1"
+    assert product_image_status_spec["required_text_exact_fields"][
+        "receipt_runner_hygiene_schema_version"
+    ] == "product_image_runner_hygiene_v1"
+    assert runner_host_status_spec["required_status"] == (
+        "github_self_hosted_runner_host_preflight_ready"
+    )
+    assert "product_image_receipt_runner_hygiene_ready" in runner_host_status_spec[
+        "required_true_fields"
+    ]
+    assert "product_image_workspace_smoke_artifact_current_cleanup_ready" in runner_host_status_spec[
+        "required_true_fields"
+    ]
+    assert "runner_workspace_cleanup_command_available" in runner_host_status_spec[
+        "required_true_fields"
+    ]
+    assert "runner_workspace_cleanup_command_mutates_files_if_run" in runner_host_status_spec[
+        "required_true_fields"
+    ]
+    assert runner_host_status_spec["required_int_min_fields"][
+        "rocm_runner_online_count"
+    ] == 1
+    assert runner_host_status_spec["required_int_exact_fields"][
+        "runner_workspace_cleanup_command_executed"
+    ] == 0
+    assert runner_host_status_spec["required_int_exact_fields"][
+        "workflow_dispatch_executed"
+    ] == 0
+    assert remote_green_status_spec["required_status"] == "release_ci_remote_green_ready"
+    assert "main_required_checks_ready" in remote_green_status_spec["required_true_fields"]
+    assert "weekly_rocm_schedule_green" in remote_green_status_spec["required_true_fields"]
+    assert "release_tag_rocm_gate_green" in remote_green_status_spec["required_true_fields"]
+    assert remote_green_status_spec["required_int_exact_fields"]["blocker_count"] == 0
+    assert product_ci_runtime_status_spec["required_status"] == "product_ci_runtime_gate_ready"
+    assert "remote_product_ci_green" in product_ci_runtime_status_spec[
+        "required_true_fields"
+    ]
+    assert product_ci_runtime_status_spec["required_int_exact_fields"][
+        "blocker_count"
+    ] == 0
+    assert product_ci_runtime_remote_ci_handoff_status_spec["required_status"] == (
+        "blocked_product_ci_runtime_gate"
+    )
+    assert "remote_ci_rerun_required" in (
+        product_ci_runtime_remote_ci_handoff_status_spec["required_true_fields"]
+    )
+    assert "remote_ci_rerun_handoff_ready" in (
+        product_ci_runtime_remote_ci_handoff_status_spec["required_true_fields"]
+    )
+    assert "remote_ci_science_tests_unverified" in (
+        product_ci_runtime_remote_ci_handoff_status_spec["required_true_fields"]
+    )
+    assert "remote_workspace_cleanup_permission_blocked" in (
+        product_ci_runtime_remote_ci_handoff_status_spec["required_true_fields"]
+    )
+    assert "remote_ci_observed_checkout_clean_true" in (
+        product_ci_runtime_remote_ci_handoff_status_spec["required_true_fields"]
+    )
+    assert "remote_ci_current_workflow_patch_unverified" in (
+        product_ci_runtime_remote_ci_handoff_status_spec["required_true_fields"]
+    )
+    assert "remote_ci_rerun_after_workflow_publication_required" in (
+        product_ci_runtime_remote_ci_handoff_status_spec["required_true_fields"]
+    )
+    assert "product_image_build_smoke_observed" in (
+        product_ci_runtime_remote_ci_handoff_status_spec["required_true_fields"]
+    )
+    assert "local_product_image_runner_hygiene_remediation_ready" in (
+        product_ci_runtime_remote_ci_handoff_status_spec["required_true_fields"]
+    )
+    assert product_ci_runtime_remote_ci_handoff_status_spec["required_int_exact_fields"][
+        "remote_product_ci_green"
+    ] == 0
+    assert product_ci_runtime_remote_ci_handoff_status_spec["required_int_exact_fields"][
+        "blocker_count"
+    ] == 4
+    assert product_ci_runtime_remote_ci_handoff_status_spec["required_text_exact_fields"][
+        "primary_blocker"
+    ] == "github_actions_workspace_cleanup_permission_denied"
+    assert product_ci_runtime_remote_ci_handoff_status_spec["required_text_exact_fields"][
+        "remote_ci_failure_class"
+    ] == "workspace_cleanup_permission"
+    assert product_ci_runtime_remote_ci_handoff_status_spec["required_text_exact_fields"][
+        "remote_ci_observed_head_sha"
+    ] == "f28bab0aa1067b154b1f6dc7ce8a774274ba1cc6"
+    assert product_ci_runtime_remote_ci_handoff_status_spec["required_text_exact_fields"][
+        "remote_ci_observed_head_branch"
+    ] == "codex/source-of-truth-benchmark-gpcr-pocketmd"
+    assert product_ci_runtime_remote_ci_handoff_status_spec["required_text_exact_fields"][
+        "remote_ci_observed_checkout_clean_mode"
+    ] == "true"
+    assert product_ci_runtime_remote_ci_handoff_status_spec["required_text_exact_fields"][
+        "remote_workspace_cleanup_permission_blocker_code"
+    ] == "github_actions_workspace_cleanup_permission_denied"
     assert ai_md_bundle_status_spec["required_status"] == "ai_md_product_evidence_bundle_ready"
     assert "bundle_export_ready" in ai_md_bundle_status_spec["required_true_fields"]
     assert ai_md_bundle_status_spec["required_int_exact_fields"]["product_claim_ready"] == 1
@@ -5411,6 +6584,30 @@ def test_release_source_of_truth_tracks_customer_report_ux_artifacts() -> None:
     assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_image_smoke_preflight.py") < (
         ai_md_kpi_indices[0]
     )
+    runner_host_preflight_index = mod.RELEASE_REFRESH_COMMANDS.index(
+        "python3 tools/product/build_github_self_hosted_runner_host_preflight.py"
+    )
+    remote_green_placeholders_index = mod.RELEASE_REFRESH_COMMANDS.index(
+        "python3 tools/product/release_ci_remote_green_evidence_contract.py --emit-placeholders"
+    )
+    remote_green_manifest_index = mod.RELEASE_REFRESH_COMMANDS.index(
+        "python3 tools/product/release_ci_remote_green_evidence_contract.py --emit-manifest"
+    )
+    remote_green_receipt_index = next(
+        index
+        for index, command in enumerate(mod.RELEASE_REFRESH_COMMANDS)
+        if command.startswith("python3 tools/product/build_release_ci_remote_green_receipt.py")
+    )
+    assert mod.RELEASE_REFRESH_COMMANDS.index("python3 tools/build_product_image_smoke_preflight.py") < (
+        runner_host_preflight_index
+    )
+    assert (
+        runner_host_preflight_index
+        < remote_green_placeholders_index
+        < remote_green_manifest_index
+        < remote_green_receipt_index
+    )
+    assert remote_green_receipt_index < ai_md_kpi_indices[0]
     assert (
         ai_md_kpi_indices[0]
         < ai_md_bundle_indices[0]
@@ -5614,6 +6811,444 @@ def test_release_source_of_truth_blocks_fresh_but_semantically_blocked_report(tm
     assert row["row_type"] == "artifact_semantic_status"
     assert row["observed_status"] == "blocked_product_ai_report_ux_contract"
     assert row["missing_true_fields"] == ["ai_report_ux_ready", "customer_report_viewer_binding_ready"]
+
+
+def test_release_source_of_truth_surfaces_product_image_runner_hygiene_blockers(
+    tmp_path: Path,
+) -> None:
+    preflight = tmp_path / "runs" / "product_image_smoke_preflight_current.json"
+    _write_json(
+        preflight,
+        {
+            "summary": {
+                "status": "blocked_product_image_smoke_preflight",
+                "script_contract_ready": True,
+                "workflow_contract_ready": True,
+                "clean_container_smoke_ready": False,
+                "container_runtime_receipt_ready": True,
+                "container_runtime_in_container": True,
+                "container_runtime_device_nodes_ready": True,
+                "container_runtime_torch_rocm_ready": True,
+                "container_runtime_torch_cuda_available": True,
+                "container_runtime_rust_hip_backend_enabled": True,
+                "product_runner_smoke_ready": True,
+                "receipt_runner_hygiene_schema_ready": False,
+                "receipt_runner_hygiene_ready": False,
+                "required_runner_hygiene_schema_version": "product_image_runner_hygiene_v1",
+                "receipt_runner_hygiene_schema_version": "",
+                "receipt_runner_smoke_dir_outside_workspace": False,
+                "receipt_container_output_uid_gid_pinned": False,
+                "receipt_container_output_uid_gid_matches_host": False,
+                "receipt_container_output_uid_gid_non_root": False,
+                "container_output_uid_gid_fixed": False,
+                "pre_checkout_cleanup_ready": False,
+                "receipt_workspace_runner_smoke_dir_cleanup_ready": False,
+                "workspace_smoke_artifact_current_cleanup_ready": False,
+                "container_runtime_visible_device_count": 1,
+                "receipt_simulate_missing_profile_http": 422,
+                "container_runtime_proof_schema_version": "rocm_container_runtime_proof_v1",
+                "receipt_mode": "rocm-runtime",
+                "receipt_status": "product_image_smoke_ready",
+            }
+        },
+    )
+    spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "product_image_smoke_preflight_semantic_ready"
+    )
+
+    payload = mod.build_product_release_source_of_truth_gate(
+        root=tmp_path,
+        artifact_specs=[],
+        status_specs=[spec],
+        readme_paths=[],
+    )
+
+    row = payload["rows"][0]
+    assert payload["summary"]["status"] == "blocked_product_release_source_of_truth_gate"
+    assert row["status"] == "fail"
+    assert row["observed_status"] == "blocked_product_image_smoke_preflight"
+    assert row["missing_true_fields"] == [
+        "clean_container_smoke_ready",
+        "receipt_runner_hygiene_schema_ready",
+        "receipt_runner_hygiene_ready",
+        "receipt_runner_smoke_dir_outside_workspace",
+        "receipt_container_output_uid_gid_pinned",
+        "receipt_container_output_uid_gid_matches_host",
+        "receipt_container_output_uid_gid_non_root",
+        "container_output_uid_gid_fixed",
+        "pre_checkout_cleanup_ready",
+        "receipt_workspace_runner_smoke_dir_cleanup_ready",
+        "workspace_smoke_artifact_current_cleanup_ready",
+    ]
+    assert row["failed_text_exact_fields"] == ["receipt_runner_hygiene_schema_version"]
+
+
+def test_release_source_of_truth_surfaces_runner_host_and_remote_ci_blockers(
+    tmp_path: Path,
+) -> None:
+    runner_host = tmp_path / "runs" / "github_self_hosted_runner_host_preflight_current.json"
+    remote_green = tmp_path / "runs" / "release_ci_remote_green_receipt_current.json"
+    _write_json(
+        runner_host,
+        {
+            "summary": {
+                "status": "blocked_github_self_hosted_runner_host_preflight",
+                "local_runner_host_ready": False,
+                "repo_self_hosted_runner_ready": True,
+                "docker_cli_present": True,
+                "docker_daemon_accessible": True,
+                "rocm_device_nodes_ready": True,
+                "product_image_rocm_runtime_ready": False,
+                "product_image_receipt_runner_hygiene_ready": False,
+                "product_image_workspace_smoke_artifact_current_cleanup_ready": False,
+                "runner_configured": True,
+                "runner_service_started": True,
+                "runner_inventory_total_count": 1,
+                "linux_runner_online_count": 1,
+                "rocm_runner_online_count": 1,
+                "github_registration_token_requested": False,
+                "workflow_dispatch_executed": False,
+                "external_state_mutated": False,
+            }
+        },
+    )
+    _write_json(
+        remote_green,
+        {
+            "summary": {
+                "status": "blocked_release_ci_remote_green",
+                "pass": False,
+                "linux_self_hosted_runner_ready": True,
+                "rocm_self_hosted_runner_ready": True,
+                "main_required_checks_ready": False,
+                "workflow_source_contract_ready": True,
+                "weekly_rocm_schedule_green": False,
+                "failure_artifacts_preserved": False,
+                "release_tag_rocm_gate_green": False,
+                "blocker_count": 4,
+                "external_state_mutated": False,
+            }
+        },
+    )
+    status_specs = [
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"]
+        in {
+            "github_self_hosted_runner_host_preflight_semantic_ready",
+            "release_ci_remote_green_semantic_ready",
+        }
+    ]
+
+    payload = mod.build_product_release_source_of_truth_gate(
+        root=tmp_path,
+        artifact_specs=[],
+        status_specs=status_specs,
+        readme_paths=[],
+    )
+    rows = {row["artifact_id"]: row for row in payload["rows"]}
+    runner_row = rows["github_self_hosted_runner_host_preflight_semantic_ready"]
+    remote_row = rows["release_ci_remote_green_semantic_ready"]
+
+    assert payload["summary"]["status"] == "blocked_product_release_source_of_truth_gate"
+    assert runner_row["status"] == "fail"
+    assert runner_row["observed_status"] == "blocked_github_self_hosted_runner_host_preflight"
+    assert runner_row["missing_true_fields"] == [
+        "local_runner_host_ready",
+        "product_image_rocm_runtime_ready",
+        "product_image_receipt_runner_hygiene_ready",
+        "product_image_workspace_smoke_artifact_current_cleanup_ready",
+        "runner_workspace_cleanup_command_available",
+        "runner_workspace_cleanup_command_mutates_files_if_run",
+    ]
+    assert remote_row["status"] == "fail"
+    assert remote_row["observed_status"] == "blocked_release_ci_remote_green"
+    assert remote_row["missing_true_fields"] == [
+        "pass",
+        "main_required_checks_ready",
+        "weekly_rocm_schedule_green",
+        "failure_artifacts_preserved",
+        "release_tag_rocm_gate_green",
+    ]
+    assert remote_row["failed_int_exact_fields"] == ["blocker_count"]
+
+
+def test_release_source_of_truth_surfaces_bm5_capri_raw_data_custody_blockers(
+    tmp_path: Path,
+) -> None:
+    custody_plan = tmp_path / "runs" / "bm5_capri_raw_data_custody_plan_current.json"
+    _write_json(
+        custody_plan,
+        {
+            "summary": {
+                "status": "bm5_capri_raw_data_custody_plan_ready",
+                "custody_plan_ready": True,
+                "raw_data_custody_clear": False,
+                "operator_action_required_count": 2,
+                "blocker_count": 0,
+                "raw_data_git_tracked_file_count": 2,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        },
+    )
+    spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "bm5_capri_raw_data_custody_plan_semantic_ready"
+    )
+
+    payload = mod.build_product_release_source_of_truth_gate(
+        root=tmp_path,
+        artifact_specs=[],
+        status_specs=[spec],
+        readme_paths=[],
+    )
+
+    row = payload["rows"][0]
+    assert payload["summary"]["status"] == "blocked_product_release_source_of_truth_gate"
+    assert row["status"] == "fail"
+    assert row["observed_status"] == "bm5_capri_raw_data_custody_plan_ready"
+    assert row["missing_true_fields"] == ["raw_data_custody_clear"]
+    assert row["failed_int_exact_fields"] == [
+        "operator_action_required_count",
+        "raw_data_git_tracked_file_count",
+    ]
+
+
+def test_release_source_of_truth_separates_competition_claim_lock_from_raw_data_policy(
+    tmp_path: Path,
+) -> None:
+    rollup = tmp_path / "runs" / "competition_benchmark_rollup_current.json"
+    _write_json(
+        rollup,
+        {
+            "summary": {
+                "status": "competition_benchmark_rollup_ready",
+                "competition_benchmark_rollup_ready": True,
+                "competition_credibility_only": True,
+                "competition_evidence_role": "competition_credibility_evidence_only",
+                    "package_b_required_for_ligand_commercial_claims": True,
+                    "ligand_commercial_claim_unlock_requires_separate_promotion_gate": True,
+                    "blocker_count": 0,
+                    "bridge_blocker_count": 0,
+                    "competition_ligand_commercial_claim_allowed": False,
+                "ligand_commercial_claim_unlocked": False,
+                "commercial_claim_unlocked": False,
+                "claim_promotion_allowed": False,
+                "github_raw_payloads_allowed": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "github_raw_data_policy_ready": False,
+                "raw_data_free": False,
+                "raw_data_stored_in_repo": True,
+                "github_raw_data_git_tracked_total_count": 2,
+            }
+        },
+    )
+    specs = [
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"]
+        in {
+            "competition_benchmark_rollup_fail_closed_semantic_ready",
+            "competition_benchmark_rollup_raw_data_policy_semantic_ready",
+        }
+    ]
+
+    payload = mod.build_product_release_source_of_truth_gate(
+        root=tmp_path,
+        artifact_specs=[],
+        status_specs=specs,
+        readme_paths=[],
+    )
+
+    rows = {row["artifact_id"]: row for row in payload["rows"]}
+    claim_lock_row = rows["competition_benchmark_rollup_fail_closed_semantic_ready"]
+    raw_policy_row = rows["competition_benchmark_rollup_raw_data_policy_semantic_ready"]
+    assert payload["summary"]["status"] == "blocked_product_release_source_of_truth_gate"
+    assert claim_lock_row["status"] == "pass"
+    assert claim_lock_row["missing_true_fields"] == []
+    assert claim_lock_row["failed_int_exact_fields"] == []
+    assert raw_policy_row["status"] == "fail"
+    assert raw_policy_row["missing_true_fields"] == [
+        "github_raw_data_policy_ready",
+        "raw_data_free",
+    ]
+    assert raw_policy_row["failed_int_exact_fields"] == [
+        "raw_data_stored_in_repo",
+        "github_raw_data_git_tracked_total_count",
+    ]
+
+
+def test_release_source_of_truth_accepts_pr38_structural_handoff_when_product_mode_blocked(
+    tmp_path: Path,
+) -> None:
+    packet = tmp_path / ".betelgeuze" / "pr38_split_acceptance_packet_current.json"
+    _write_json(
+        packet,
+        {
+            "summary": {
+                "status": "blocked_pr38_split_acceptance_packet",
+                "split_structural_acceptance_ready": True,
+                "count_alignment_ready": True,
+                "required_receipts_ready": True,
+                "source_of_truth_registry_reconciles_last": True,
+                "launch_command_pack_ready": True,
+                "launch_command_pack_alignment_ready": True,
+                "launch_command_pack_safe_ready": True,
+                "launch_command_pack_operator_launch_requires_human_approval": True,
+                "launch_command_pack_branch_commit_push_pr_mutation_required": True,
+                "launch_command_pack_shell_prints_commands_only": True,
+                "child_pr_count": 10,
+                "ready_child_pr_count": 10,
+                "launch_command_pack_child_pr_count": 10,
+                "blocked_child_pr_count": 0,
+                "product_mode_verification_ready": False,
+                "branch_commit_work_allowed_by_this_packet": False,
+                "branches_created": False,
+                "launch_command_pack_branches_created": False,
+                "launch_command_pack_commits_created": False,
+                "launch_command_pack_pushes_executed": False,
+                "launch_command_pack_pull_requests_created": False,
+                "paid_pilot_wording_allowed": False,
+                "patches_applied": False,
+                "real_index_mutated": False,
+                "worktree_mutated": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+                "product_mode_expected_result": "blocked_product_mode_verification",
+            }
+        },
+    )
+    spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "pr38_split_structural_acceptance_handoff_semantic_ready"
+    )
+
+    payload = mod.build_product_release_source_of_truth_gate(
+        root=tmp_path,
+        artifact_specs=[],
+        status_specs=[spec],
+        readme_paths=[],
+    )
+
+    row = payload["rows"][0]
+    assert payload["summary"]["status"] == "product_release_source_of_truth_gate_ready"
+    assert row["status"] == "pass"
+    assert row["observed_status"] == "blocked_pr38_split_acceptance_packet"
+    assert row["missing_true_fields"] == []
+    assert row["failed_int_min_fields"] == []
+    assert row["failed_int_exact_fields"] == []
+    assert row["failed_text_exact_fields"] == []
+
+
+def test_release_source_of_truth_accepts_package_b_competition_claim_lock(
+    tmp_path: Path,
+) -> None:
+    bridge = tmp_path / "runs" / "package_b_competition_bridge_current.json"
+    _write_json(
+        bridge,
+        {
+            "summary": {
+                "status": "package_b_competition_bridge_ready",
+                "package_b_competition_bridge_ready": True,
+                "bridge_claim_lock_ready": True,
+                "competition_credibility_only": True,
+                "competition_evidence_role": "competition_credibility_evidence_only",
+                "package_b_required_for_ligand_commercial_claims": True,
+                "ligand_commercial_claim_unlock_requires_separate_promotion_gate": True,
+                "blocker_count": 0,
+                "bridge_blocker_count": 0,
+                "competition_ligand_commercial_claim_allowed": False,
+                "ligand_commercial_claim_unlocked": False,
+                "commercial_claim_unlocked": False,
+                "claim_promotion_allowed": False,
+                "github_raw_payloads_allowed": False,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+            }
+        },
+    )
+    spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "package_b_competition_bridge_claim_locked_semantic_ready"
+    )
+
+    payload = mod.build_product_release_source_of_truth_gate(
+        root=tmp_path,
+        artifact_specs=[],
+        status_specs=[spec],
+        readme_paths=[],
+    )
+
+    row = payload["rows"][0]
+    assert payload["summary"]["status"] == "product_release_source_of_truth_gate_ready"
+    assert row["status"] == "pass"
+    assert row["observed_status"] == "package_b_competition_bridge_ready"
+    assert row["missing_true_fields"] == []
+    assert row["failed_int_exact_fields"] == []
+    assert row["failed_text_exact_fields"] == []
+
+
+def test_release_source_of_truth_accepts_bm5_capri_operator_evacuation_plan(
+    tmp_path: Path,
+) -> None:
+    custody_plan = tmp_path / "runs" / "bm5_capri_raw_data_custody_plan_current.json"
+    _write_json(
+        custody_plan,
+        {
+            "summary": {
+                "status": "bm5_capri_raw_data_custody_plan_ready",
+                "custody_plan_ready": True,
+                "raw_data_custody_clear": False,
+                "checksum_manifest_ready": True,
+                "untrack_candidate_manifest_ready": True,
+                "approved_untrack_manifest_template_ready": True,
+                "review_group_manifest_ready": True,
+                "materialization_manifest_ready": True,
+                "operator_action_required_count": 2,
+                "raw_data_git_tracked_file_count": 2,
+                "raw_data_review_group_count": 1,
+                "untrack_candidate_count": 2,
+                "sha256_row_count": 2,
+                "blocker_count": 0,
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+                "untrack_approval_token_required": "APPROVE_BM5_CAPRI_RAW_DATA_UNTRACK",
+                "external_custody_root": "OPERATOR_EXTERNAL_BM5_CAPRI_RAW_DATA_ROOT",
+            }
+        },
+    )
+    spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"]
+        == "bm5_capri_raw_data_custody_plan_operator_evacuation_semantic_ready"
+    )
+
+    payload = mod.build_product_release_source_of_truth_gate(
+        root=tmp_path,
+        artifact_specs=[],
+        status_specs=[spec],
+        readme_paths=[],
+    )
+
+    row = payload["rows"][0]
+    assert payload["summary"]["status"] == "product_release_source_of_truth_gate_ready"
+    assert row["status"] == "pass"
+    assert row["observed_status"] == "bm5_capri_raw_data_custody_plan_ready"
+    assert row["missing_true_fields"] == []
+    assert row["failed_int_min_fields"] == []
+    assert row["failed_int_exact_fields"] == []
+    assert row["failed_text_exact_fields"] == []
 
 
 def test_release_source_of_truth_blocks_semantic_status_when_required_int_fields_missing(tmp_path: Path) -> None:
@@ -6039,6 +7674,16 @@ def test_release_source_of_truth_tracks_product_operator_cockpit() -> None:
         for spec in mod.DEFAULT_ARTIFACT_SPECS
         if spec["artifact_id"] == "developer_preview_final_gate_audit"
     )
+    developer_preview_operator_work_order_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "developer_preview_external_operator_work_order"
+    )
+    developer_preview_stage5_restore_packet_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "developer_preview_stage5_restore_packet"
+    )
     hbond_spec = next(
         spec
         for spec in mod.DEFAULT_ARTIFACT_SPECS
@@ -6048,6 +7693,32 @@ def test_release_source_of_truth_tracks_product_operator_cockpit() -> None:
         spec
         for spec in mod.DEFAULT_ARTIFACT_SPECS
         if spec["artifact_id"] == "benchmark_ledger"
+    )
+    raw_custody_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "bm5_capri_raw_data_custody_plan"
+    )
+    raw_untrack_apply_spec = next(
+        spec
+        for spec in mod.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "bm5_capri_raw_data_untrack_apply_preflight"
+    )
+    raw_custody_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "bm5_capri_raw_data_custody_plan_semantic_ready"
+    )
+    raw_custody_operator_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"]
+        == "bm5_capri_raw_data_custody_plan_operator_evacuation_semantic_ready"
+    )
+    raw_untrack_apply_status_spec = next(
+        spec
+        for spec in mod.DEFAULT_STATUS_SPECS
+        if spec["artifact_id"] == "bm5_capri_raw_data_untrack_apply_preflight_semantic_ready"
     )
     comparison_work_order_spec = next(
         spec
@@ -6083,7 +7754,29 @@ def test_release_source_of_truth_tracks_product_operator_cockpit() -> None:
 
     assert developer_preview_spec["artifact_path"] == "runs/developer_preview_final_gate_audit_current.json"
     assert developer_preview_spec["builder_command"] == mod.DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_COMMAND
+    assert developer_preview_operator_work_order_spec["artifact_path"] == (
+        "runs/developer_preview_external_operator_work_order_current.json"
+    )
+    assert developer_preview_operator_work_order_spec["builder_command"] == (
+        mod.DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_COMMAND
+    )
+    assert "runs/developer_preview_final_gate_audit_current.json" in (
+        developer_preview_operator_work_order_spec["depends_on"]
+    )
+    assert "tools/product/build_developer_preview_final_gate_audit.py" in (
+        developer_preview_operator_work_order_spec["depends_on"]
+    )
+    assert "docs/developer_preview_core_workflow_quickstart.md" in (
+        developer_preview_operator_work_order_spec["depends_on"]
+    )
+    assert "docs/developer_preview_final_gate_action_register.md" in (
+        developer_preview_operator_work_order_spec["depends_on"]
+    )
     assert "tools/build_backmapping_scoring_batch_smoke_benchmark.py" in developer_preview_spec["depends_on"]
+    assert ".betelgeuze/pr38_child_pr_launch_command_pack_current.json" in depends_on
+    assert ".betelgeuze/pr38_split_acceptance_packet_current.json" in depends_on
+    assert ".betelgeuze/pr38_child_pr_verification_matrix_current.json" in depends_on
+    assert ".betelgeuze/pr38_ci_runner_hygiene_child_pr_gate_current.json" in depends_on
     assert "tools/build_ligand_scaleup_benchmark_summary.py" in developer_preview_spec["depends_on"]
     assert "tools/build_product_end_to_end_rocm_benchmark.py" in developer_preview_spec["depends_on"]
     assert "tools/build_product_execution_preflight.py" in developer_preview_spec["depends_on"]
@@ -6097,21 +7790,119 @@ def test_release_source_of_truth_tracks_product_operator_cockpit() -> None:
     assert "tools/product/build_developer_preview_final_gate_audit.py" in developer_preview_spec["depends_on"]
     assert "tools/product/build_developer_preview_new_user_observation_receipt.py" in developer_preview_spec["depends_on"]
     assert "tools/product/build_developer_preview_platform_reproducibility_receipt.py" in developer_preview_spec["depends_on"]
+    assert "tools/product/build_developer_preview_stage5_restore_packet.py" in developer_preview_spec["depends_on"]
+    assert "tools/build_developer_preview_stage5_restore_packet.py" in developer_preview_spec["depends_on"]
     assert "tools/product/build_developer_preview_silent_import_loss_receipt.py" in developer_preview_spec["depends_on"]
     assert "tools/product/build_ligand_scaleup_benchmark_summary.py" in developer_preview_spec["depends_on"]
     assert "tools/product/build_product_end_to_end_rocm_benchmark.py" in developer_preview_spec["depends_on"]
     assert "tools/product/build_product_pose_sampling_readiness.py" in developer_preview_spec["depends_on"]
+    assert "docs/developer_preview_core_workflow_quickstart.md" in developer_preview_spec["depends_on"]
     assert "docs/developer_preview_final_gate_action_register.md" in developer_preview_spec["depends_on"]
     assert mod.DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_COMMAND in mod.RELEASE_REFRESH_COMMANDS
+    assert developer_preview_stage5_restore_packet_spec["builder_command"] == (
+        mod.DEVELOPER_PREVIEW_STAGE5_RESTORE_PACKET_COMMAND
+    )
+    assert "runs/developer_preview_stage5_restore_packet_current.json" in depends_on
+    assert mod.DEVELOPER_PREVIEW_STAGE5_RESTORE_PACKET_COMMAND in mod.RELEASE_REFRESH_COMMANDS
     assert hbond_spec["artifact_path"] == "runs/hbond_backmap_report_current.json"
     assert hbond_spec["builder_command"] == mod.HBOND_BACKMAP_REPORT_COMMAND
+    assert "--product-image-smoke-receipt runs/product_image_smoke_receipt_current.json" in hbond_spec["builder_command"]
+    assert "--allow-blocked" in hbond_spec["builder_command"]
     assert "tools/product/build_hbond_backmap_report.py" in hbond_spec["depends_on"]
     assert "betelgeuze_product/hbond_backmap_report.py" in hbond_spec["depends_on"]
-    assert "runs/product_image_smoke_runner_artifacts/backmapping_scores.csv" in hbond_spec["depends_on"]
+    assert "runs/product_image_smoke_receipt_current.json" in hbond_spec["depends_on"]
+    assert "runs/product_image_smoke_runner_artifacts/backmapping_scores.csv" not in hbond_spec["depends_on"]
     assert ledger_spec["artifact_path"] == "runs/benchmark_ledger_current.json"
     assert ledger_spec["builder_command"] == mod.BENCHMARK_LEDGER_COMMAND
     assert "tools/product/build_benchmark_ledger.py" in ledger_spec["depends_on"]
     assert "betelgeuze_product/benchmark_ledger.py" in ledger_spec["depends_on"]
+    assert raw_custody_spec["artifact_path"] == "runs/bm5_capri_raw_data_custody_plan_current.json"
+    assert raw_custody_spec["builder_command"] == mod.BM5_CAPRI_RAW_DATA_CUSTODY_PLAN_COMMAND
+    assert "--compute-sha256" in raw_custody_spec["builder_command"]
+    assert "tools/product/build_bm5_capri_raw_data_custody_plan.py" in raw_custody_spec["depends_on"]
+    assert "tools/build_bm5_capri_raw_data_custody_plan.py" in raw_custody_spec["depends_on"]
+    assert (
+        "data/public_benchmarks/protein_protein_docking_benchmark_v5"
+        in raw_custody_spec["depends_on"]
+    )
+    assert raw_untrack_apply_spec["artifact_path"] == (
+        "runs/bm5_capri_raw_data_untrack_apply_preflight_current.json"
+    )
+    assert raw_untrack_apply_spec["builder_command"] == (
+        mod.BM5_CAPRI_RAW_DATA_UNTRACK_APPLY_PREFLIGHT_COMMAND
+    )
+    assert (
+        "tools/product/apply_bm5_capri_raw_data_custody_plan.py"
+        in raw_untrack_apply_spec["depends_on"]
+    )
+    assert "tools/apply_bm5_capri_raw_data_custody_plan.py" in raw_untrack_apply_spec[
+        "depends_on"
+    ]
+    assert "runs/bm5_capri_raw_data_custody_plan_current.json" in raw_untrack_apply_spec[
+        "depends_on"
+    ]
+    assert "runs/bm5_capri_raw_data_untrack_candidates_current.txt" in raw_untrack_apply_spec[
+        "depends_on"
+    ]
+    assert raw_custody_status_spec["required_status"] == (
+        "bm5_capri_raw_data_custody_plan_ready"
+    )
+    assert raw_custody_status_spec["required_true_fields"] == [
+        "custody_plan_ready",
+        "raw_data_custody_clear",
+    ]
+    assert raw_custody_status_spec["required_int_exact_fields"][
+        "operator_action_required_count"
+    ] == 0
+    assert raw_custody_status_spec["required_int_exact_fields"][
+        "raw_data_git_tracked_file_count"
+    ] == 0
+    assert raw_custody_operator_status_spec["required_status"] == (
+        "bm5_capri_raw_data_custody_plan_ready"
+    )
+    assert raw_custody_operator_status_spec["required_true_fields"] == [
+        "custody_plan_ready",
+        "checksum_manifest_ready",
+        "untrack_candidate_manifest_ready",
+        "approved_untrack_manifest_template_ready",
+        "review_group_manifest_ready",
+        "materialization_manifest_ready",
+    ]
+    assert raw_custody_operator_status_spec["required_int_min_fields"][
+        "operator_action_required_count"
+    ] == 1
+    assert raw_custody_operator_status_spec["required_int_min_fields"][
+        "raw_data_git_tracked_file_count"
+    ] == 1
+    assert raw_custody_operator_status_spec["required_int_min_fields"][
+        "untrack_candidate_count"
+    ] == 1
+    assert raw_custody_operator_status_spec["required_int_exact_fields"][
+        "raw_data_custody_clear"
+    ] == 0
+    assert raw_custody_operator_status_spec["required_int_exact_fields"][
+        "execution_enabled"
+    ] == 0
+    assert raw_custody_operator_status_spec["required_int_exact_fields"][
+        "external_state_mutated"
+    ] == 0
+    assert raw_custody_operator_status_spec["required_text_exact_fields"] == {
+        "untrack_approval_token_required": "APPROVE_BM5_CAPRI_RAW_DATA_UNTRACK",
+        "external_custody_root": "OPERATOR_EXTERNAL_BM5_CAPRI_RAW_DATA_ROOT",
+    }
+    assert raw_untrack_apply_status_spec["required_status"] == (
+        "bm5_capri_raw_data_untrack_apply_preflight_ready"
+    )
+    assert "preview_ready" in raw_untrack_apply_status_spec["required_true_fields"]
+    assert raw_untrack_apply_status_spec["required_int_exact_fields"][
+        "local_git_index_mutated"
+    ] == 0
+    assert raw_untrack_apply_status_spec["required_int_exact_fields"][
+        "file_delete_requested"
+    ] == 0
+    assert raw_untrack_apply_status_spec["required_text_exact_fields"] == {
+        "approval_token_required": "APPROVE_BM5_CAPRI_RAW_DATA_UNTRACK"
+    }
     assert comparison_work_order_spec["artifact_path"] == (
         "runs/public_benchmark_vina_gnina_comparison_work_order_current.json"
     )

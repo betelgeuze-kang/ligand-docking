@@ -26,6 +26,7 @@ from betelgeuze_engine.chemistry.ligand_states import (
     enumerate_ligand_states_from_smiles as _enumerate_ligand_states_from_smiles,
 )
 from betelgeuze_engine.physics.dense_guard import ensure_small_dense_diagnostic
+from betelgeuze_engine.physics.mm_gbsa import gb_sa_proxy_energy
 from betelgeuze_engine.biodiscovery.ligand_prep import (
     ResolvedLigandInput,
     ligand_topology_payload as _ligand_topology_payload,
@@ -560,8 +561,8 @@ class TierBetaScreening:
 
                 composite = float(diag.get("total_energy", ffield_score))
                 mm_energy = float(
-                    mm_score.get(
-                        "deltaG_mm_gbsa_kcal_mol",
+                    gb_sa_proxy_energy(
+                        mm_score,
                         mm_score.get("binding_energy_kcal_mol", float("inf")),
                     )
                 )

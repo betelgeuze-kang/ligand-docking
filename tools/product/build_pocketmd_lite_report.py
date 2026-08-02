@@ -32,6 +32,7 @@ from betelgeuze_product.pocketmd_lite_contract import (
 ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_INPUT_CSV = "config/pocketmd_lite_candidates_current.csv"
+DEFAULT_CANDIDATE_FILL_PREVIEW_JSON = "runs/pocketmd_lite_candidate_metric_fill_preview_current.json"
 DEFAULT_OUT_JSON = "runs/pocketmd_lite_report_current.json"
 DEFAULT_OUT_MD = "runs/pocketmd_lite_report_current.md"
 DEFAULT_OUT_CSV = "runs/pocketmd_lite_report_current.csv"
@@ -57,6 +58,7 @@ STATUS_BLOCKED_MISSING = "blocked_missing_input_csv"
 STATUS_BLOCKED_EMPTY = "blocked_empty_input_csv"
 STATUS_BLOCKED_SCHEMA = "blocked_input_schema_missing_required_columns"
 STATUS_BLOCKED_INVALID_ROW = "blocked_invalid_input_row"
+STATUS_FILL_PREVIEW_READY = "pocketmd_lite_candidate_metric_fill_preview_ready"
 
 _READ_ONLY_FLAGS = {
     "execution_enabled": False,
@@ -106,6 +108,17 @@ def _resolve(path_like: str | Path) -> Path:
     return path if path.is_absolute() else ROOT / path
 
 
+def _read_json(path_like: str | Path) -> dict[str, Any]:
+    path = _resolve(path_like)
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
 def _text(value: Any) -> str:
     return str(value or "").strip()
 
@@ -135,7 +148,68 @@ def _row_to_candidate(row: dict[str, Any]) -> dict[str, Any]:
     return candidate
 
 
-def _blocked_artifact(status: str, input_csv: Path, detail: str) -> dict[str, Any]:
+def _fill_preview_artifact_fields(metadata: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "candidate_fill_preview_json": _text(metadata.get("candidate_fill_preview_json")),
+        "candidate_fill_preview_status": _text(metadata.get("candidate_fill_preview_status")),
+        "candidate_fill_preview_input_csv": _text(metadata.get("candidate_fill_preview_input_csv")),
+        "candidate_fill_preview_applied": bool(metadata.get("candidate_fill_preview_applied") is True),
+        "candidate_fill_preview_ready": bool(metadata.get("candidate_fill_preview_ready") is True),
+        "candidate_fill_preview_canonical_candidate_csv_mutated": bool(
+            metadata.get("candidate_fill_preview_canonical_candidate_csv_mutated") is True
+        ),
+        "candidate_fill_preview_candidate_csv_update_allowed": bool(
+            metadata.get("candidate_fill_preview_candidate_csv_update_allowed") is True
+        ),
+    }
+
+
+def _candidate_fill_preview_input_csv(
+    candidate_fill_preview_json: str | Path | None,
+) -> tuple[Path | None, dict[str, Any]]:
+    if candidate_fill_preview_json is None or _text(candidate_fill_preview_json) == "":
+        return None, {}
+
+    receipt_path = _resolve(candidate_fill_preview_json)
+    payload = _read_json(receipt_path)
+    summary = payload.get("summary") if isinstance(payload.get("summary"), dict) else {}
+    preview_candidate_csv = _text(summary.get("preview_candidate_csv"))
+    preview_path = _resolve(preview_candidate_csv) if preview_candidate_csv else None
+    metadata: dict[str, Any] = {
+        "candidate_fill_preview_json": str(receipt_path),
+        "candidate_fill_preview_status": _text(summary.get("status")),
+        "candidate_fill_preview_input_csv": str(preview_path) if preview_path else "",
+        "candidate_fill_preview_applied": False,
+        "candidate_fill_preview_ready": summary.get("preview_candidate_csv_ready") is True,
+        "candidate_fill_preview_canonical_candidate_csv_mutated": (
+            summary.get("canonical_candidate_csv_mutated") is True
+        ),
+        "candidate_fill_preview_candidate_csv_update_allowed": (
+            summary.get("candidate_csv_update_allowed") is True
+        ),
+    }
+    if (
+        summary.get("status") == STATUS_FILL_PREVIEW_READY
+        and summary.get("preview_candidate_csv_ready") is True
+        and summary.get("canonical_candidate_csv_mutated") is False
+        and summary.get("candidate_csv_update_allowed") is False
+        and preview_path is not None
+        and preview_path.exists()
+    ):
+        metadata["candidate_fill_preview_applied"] = True
+        return preview_path, metadata
+    return None, metadata
+
+
+def _blocked_artifact(
+    status: str,
+    input_csv: Path,
+    detail: str,
+    *,
+    source_input_csv: Path | None = None,
+    fill_preview_metadata: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    fill_preview_fields = _fill_preview_artifact_fields(fill_preview_metadata or {})
     band_fields = _band_summary_fields({}, selected_count=0)
     summary = {
         "schema_version": REPORT_SCHEMA_VERSION,
@@ -145,6 +219,7 @@ def _blocked_artifact(status: str, input_csv: Path, detail: str) -> dict[str, An
         "pocketmd_lite_claim_safe": False,
         **band_fields,
         **_READ_ONLY_FLAGS,
+        **fill_preview_fields,
     }
     claim_grade_requirement_rows = _claim_grade_requirement_rows(summary, [])
     summary.update(_claim_grade_requirement_summary(claim_grade_requirement_rows))
@@ -153,6 +228,8 @@ def _blocked_artifact(status: str, input_csv: Path, detail: str) -> dict[str, An
         "schema_version": REPORT_SCHEMA_VERSION,
         "materializer_status": status,
         "input_csv": str(input_csv),
+        "source_input_csv": str(source_input_csv or input_csv),
+        **fill_preview_fields,
         "detail": detail,
         "summary": summary,
         "rows": [],
@@ -195,13 +272,13 @@ def _value_list(rows: list[dict[str, Any]], field: str) -> list[float]:
     return values
 
 
-def _target_green_count(rows: list[dict[str, Any]], target_id: str) -> int:
+def _target_metric_ready_count(rows: list[dict[str, Any]], target_id: str) -> int:
     return sum(
         1
         for row in rows
         if target_id in _text(row.get("entry_id"))
-        and row.get("band") == BAND_GREEN
-        and row.get("claim_safe") is True
+        and row.get("band") in CLAIM_GRADE_BANDS
+        and not row.get("missing_evidence_fields")
     )
 
 
@@ -247,11 +324,11 @@ def _claim_grade_requirement_rows(
     initial_clash_values = _value_list(rows, "initial_clash_count")
     final_clash_values = _value_list(rows, "clash_count")
     clash_relief_values = _value_list(rows, "clash_relief_count")
-    adrb2_green_count = _target_green_count(rows, "ADRB2")
+    adrb2_metric_ready_count = _target_metric_ready_count(rows, "ADRB2")
     recovered_targets = sorted(
         target_id
         for target_id in REQUIRED_RECOVERED_TARGET_IDS
-        if _target_green_count(rows, target_id) > 0
+        if _target_metric_ready_count(rows, target_id) > 0
     )
 
     requirement_rows = [
@@ -265,10 +342,10 @@ def _claim_grade_requirement_rows(
         ),
         _claim_grade_requirement_row(
             requirement_id="adrb2_three_collection_ready_rows",
-            ready=adrb2_green_count >= REQUIRED_ADRB2_GREEN_ROWS,
-            observed_value=str(adrb2_green_count),
+            ready=adrb2_metric_ready_count >= REQUIRED_ADRB2_GREEN_ROWS,
+            observed_value=str(adrb2_metric_ready_count),
             required_value=f">={REQUIRED_ADRB2_GREEN_ROWS}",
-            blocker=f"adrb2_collection_ready_rows_below_required:{adrb2_green_count}/{REQUIRED_ADRB2_GREEN_ROWS}",
+            blocker=f"adrb2_collection_ready_rows_below_required:{adrb2_metric_ready_count}/{REQUIRED_ADRB2_GREEN_ROWS}",
             operator_action="Run bounded metric collection for three ADRB2 collection-ready rows.",
         ),
         _claim_grade_requirement_row(
@@ -410,10 +487,25 @@ def _claim_grade_requirement_summary(requirement_rows: list[dict[str, Any]]) -> 
     }
 
 
-def build_pocketmd_lite_report_artifact(input_csv: str | Path) -> dict[str, Any]:
-    path = _resolve(input_csv)
+def build_pocketmd_lite_report_artifact(
+    input_csv: str | Path,
+    *,
+    candidate_fill_preview_json: str | Path | None = None,
+) -> dict[str, Any]:
+    source_path = _resolve(input_csv)
+    preview_path, fill_preview_metadata = _candidate_fill_preview_input_csv(
+        candidate_fill_preview_json
+    )
+    path = preview_path or source_path
+    fill_preview_fields = _fill_preview_artifact_fields(fill_preview_metadata)
     if not path.exists():
-        return _blocked_artifact(STATUS_BLOCKED_MISSING, path, "input CSV does not exist")
+        return _blocked_artifact(
+            STATUS_BLOCKED_MISSING,
+            path,
+            "input CSV does not exist",
+            source_input_csv=source_path,
+            fill_preview_metadata=fill_preview_metadata,
+        )
 
     with path.open("r", encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle)
@@ -421,20 +513,34 @@ def build_pocketmd_lite_report_artifact(input_csv: str | Path) -> dict[str, Any]
         rows = [dict(row) for row in reader]
 
     if not rows:
-        return _blocked_artifact(STATUS_BLOCKED_EMPTY, path, "input CSV has no candidate rows")
+        return _blocked_artifact(
+            STATUS_BLOCKED_EMPTY,
+            path,
+            "input CSV has no candidate rows",
+            source_input_csv=source_path,
+            fill_preview_metadata=fill_preview_metadata,
+        )
     missing_columns = [column for column in REQUIRED_COLUMNS if column not in fieldnames]
     if missing_columns:
         return _blocked_artifact(
             STATUS_BLOCKED_SCHEMA,
             path,
             f"input CSV missing required columns: {missing_columns}",
+            source_input_csv=source_path,
+            fill_preview_metadata=fill_preview_metadata,
         )
 
     try:
         candidates = [_row_to_candidate(row) for row in rows]
         report = build_pocketmd_lite_report(candidates)
     except (PocketMdLiteError, ValueError) as exc:
-        return _blocked_artifact(STATUS_BLOCKED_INVALID_ROW, path, str(exc))
+        return _blocked_artifact(
+            STATUS_BLOCKED_INVALID_ROW,
+            path,
+            str(exc),
+            source_input_csv=source_path,
+            fill_preview_metadata=fill_preview_metadata,
+        )
 
     summary = dict(report["summary"])
     band_counts = summary.get("band_counts") or {}
@@ -458,6 +564,7 @@ def build_pocketmd_lite_report_artifact(input_csv: str | Path) -> dict[str, Any]
             "pocketmd_lite_claim_safe": selected_count > 0 and blocker_count == 0,
             **band_fields,
             **_READ_ONLY_FLAGS,
+            **fill_preview_fields,
         }
     )
     claim_grade_requirement_rows = _claim_grade_requirement_rows(summary, report["rows"])
@@ -467,6 +574,8 @@ def build_pocketmd_lite_report_artifact(input_csv: str | Path) -> dict[str, Any]
         "schema_version": REPORT_SCHEMA_VERSION,
         "materializer_status": STATUS_MATERIALIZED,
         "input_csv": str(path),
+        "source_input_csv": str(source_path),
+        **fill_preview_fields,
         "detail": "",
         "summary": summary,
         "rows": report["rows"],
@@ -489,6 +598,8 @@ def _render_markdown(artifact: dict[str, Any]) -> str:
         "",
         f"- materializer_status: `{artifact['materializer_status']}`",
         f"- input_csv: `{artifact['input_csv']}`",
+        f"- source_input_csv: `{artifact.get('source_input_csv', artifact['input_csv'])}`",
+        f"- candidate_fill_preview_applied: `{str(summary.get('candidate_fill_preview_applied')).lower()}`",
         f"- status: `{summary.get('status')}`",
         f"- candidate_count: `{summary.get('candidate_count')}`",
         f"- selected_top_k_count: `{summary.get('selected_top_k_count', 0)}`",
@@ -630,12 +741,16 @@ def _write_csv(out_csv: Path, rows: list[dict[str, Any]]) -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Materialize the PocketMD Lite top-k refinement report.")
     parser.add_argument("--input-csv", default=DEFAULT_INPUT_CSV)
+    parser.add_argument("--candidate-fill-preview-json", default="")
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     args = parser.parse_args(argv)
 
-    artifact = build_pocketmd_lite_report_artifact(args.input_csv)
+    artifact = build_pocketmd_lite_report_artifact(
+        args.input_csv,
+        candidate_fill_preview_json=args.candidate_fill_preview_json or None,
+    )
     out_json = _resolve(args.out_json)
     out_md = _resolve(args.out_md)
     out_csv = _resolve(args.out_csv)

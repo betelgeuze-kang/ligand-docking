@@ -22,7 +22,7 @@ def _write_existing_csv(path: Path) -> None:
                 "target_id",
                 "pose_id",
                 "split",
-                "deltaG_mm_gbsa_kcal_mol",
+                "internal_refine_proxy_score",
                 "deltaG_experimental_kcal_mol",
             ],
         )
@@ -33,7 +33,7 @@ def _write_existing_csv(path: Path) -> None:
                 "target_id": "seed_a",
                 "pose_id": "seed_a_1",
                 "split": "fit",
-                "deltaG_mm_gbsa_kcal_mol": "-9.0",
+                "internal_refine_proxy_score": "-9.0",
                 "deltaG_experimental_kcal_mol": "-9.2",
             }
         )
@@ -43,7 +43,7 @@ def _write_existing_csv(path: Path) -> None:
                 "target_id": "seed_b",
                 "pose_id": "seed_b_1",
                 "split": "holdout",
-                "deltaG_mm_gbsa_kcal_mol": "-4.0",
+                "internal_refine_proxy_score": "-4.0",
                 "deltaG_experimental_kcal_mol": "-6.0",
             }
         )
@@ -58,7 +58,7 @@ def test_candidate_support_diagnostic_records_rank_sensitivity(tmp_path: Path) -
                 "target_id": "cand_a",
                 "pose_id": "cand_a_1",
                 "split": "fit",
-                "deltaG_candidate_kcal_mol": "-8.0",
+                "candidate_refine_proxy_score": "-8.0",
                 "deltaG_experimental_kcal_mol": "-8.3",
                 "candidate_status": "pass",
             },
@@ -67,7 +67,7 @@ def test_candidate_support_diagnostic_records_rank_sensitivity(tmp_path: Path) -
                 "target_id": "cand_b",
                 "pose_id": "cand_b_1",
                 "split": "holdout",
-                "deltaG_candidate_kcal_mol": "-2.0",
+                "candidate_refine_proxy_score": "-2.0",
                 "deltaG_experimental_kcal_mol": "-10.0",
                 "candidate_status": "pass",
             },
@@ -112,7 +112,7 @@ def test_candidate_support_diagnostic_cli_writes_outputs(tmp_path: Path) -> None
                     "target_id": "cand_a",
                     "pose_id": "cand_a_1",
                     "split": "fit",
-                    "deltaG_candidate_kcal_mol": "-8.0",
+                    "candidate_refine_proxy_score": "-8.0",
                     "deltaG_experimental_kcal_mol": "-8.3",
                     "candidate_status": "pass",
                 }

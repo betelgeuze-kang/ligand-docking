@@ -22,6 +22,10 @@ from betelgeuze_product.docking_response import (
     docking_structure_summary,
     docking_validation_summary,
 )
+from betelgeuze_product.legacy_input_contract import (
+    LegacyInputContractError,
+    resolve_legacy_input_policy,
+)
 from betelgeuze_product.job_orchestration import (
     cancel_job_record,
     job_history,
@@ -60,6 +64,7 @@ class DockingJobRequest(BaseModel):
     mmcif_content: str | None = None
     ligands: list[LigandInput] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
+    legacy_input_compatibility_mode: bool | None = None
 
 
 class StructureAnalysisRequest(BaseModel):
@@ -68,6 +73,9 @@ class StructureAnalysisRequest(BaseModel):
     pdb_content: str | None = None
     mmcif_path: str | None = None
     mmcif_content: str | None = None
+    # Explicit, recorded opt-in to the pre-contract lenient intake. Absent means
+    # fail-closed; see betelgeuze_product.legacy_input_contract.
+    legacy_input_compatibility_mode: bool | None = None
 
 
 class JobActionRequest(BaseModel):
@@ -95,6 +103,30 @@ def _read_json_object(path: Path) -> dict[str, Any]:
     return payload if isinstance(payload, dict) else {}
 
 
+def _legacy_input_blocked_analysis(
+    exc: LegacyInputContractError, policy: Any
+) -> dict[str, Any]:
+    """Render a fail-closed structure-analysis payload for malformed intake.
+
+    Keeps the response shape stable (status/blockers/counters) so callers do not
+    have to special-case a contract failure.
+    """
+
+    return {
+        "status": "structure_analysis_blocked",
+        "blockers": [{"code": exc.reason_code, "severity": "hard", "reason": exc.reason}],
+        "source_kind": "",
+        "source_available": False,
+        "parser": "",
+        "atom_count": 0,
+        "chain_count": 0,
+        "residue_count": 0,
+        "ligand_like_residue_count": 0,
+        "structure_coordinates_present": False,
+        **policy.receipt(),
+    }
+
+
 @router.post("/docking/jobs")
 async def submit_docking_job(
     payload: DockingJobRequest, request: Request, debug: bool = False
@@ -104,6 +136,7 @@ async def submit_docking_job(
         source_host=request.client.host if request.client else "",
         residual_registry_packet=_read_json_object(RESIDUAL_MODEL_REGISTRY_ARTIFACT),
         scope_claim_guard_packet=_read_json_object(PRODUCT_SCOPE_CLAIM_GUARD_ARTIFACT),
+        legacy_input_compatibility_mode=payload.legacy_input_compatibility_mode,
     )
     persist_docking_job_record(record, _jobs_dir())
     # Persist the ORIGINAL request encrypted at rest, bound to job_id and the
@@ -149,7 +182,19 @@ async def submit_docking_job(
 
 @router.post("/structure/analyze")
 async def analyze_product_structure(payload: StructureAnalysisRequest) -> dict[str, Any]:
-    analysis = analyze_structure_source(_model_to_dict(payload), root=ROOT)
+    policy = resolve_legacy_input_policy(
+        compatibility_mode=payload.legacy_input_compatibility_mode
+    )
+    try:
+        analysis = analyze_structure_source(
+            _model_to_dict(payload),
+            root=ROOT,
+            legacy_input_compatibility_mode=policy.compatibility_mode,
+        )
+    except LegacyInputContractError as exc:
+        # Malformed legacy intake must surface as a structured blocker payload,
+        # never as an unhandled 500.
+        analysis = _legacy_input_blocked_analysis(exc, policy)
     return {
         **analysis,
         "execution_enabled": False,

@@ -7,6 +7,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from betelgeuze_engine.physics.mm_gbsa import gb_sa_proxy_energy
 from tools.run_ligand_backmapping_scoring import _frame_mmpbsa_proxy, _ligand_props, _load_native_target_coords
 
 
@@ -48,8 +49,8 @@ def score_skipped_row_inline(row: dict[str, Any], *, contact_cutoff_A: float = 6
         "stage2_skip_applied": True,
         "trajectory_frame_count": 0,
         "trajectory_frames": 0,
-        "binding_energy_proxy": float(ff["deltaG_mmpbsa_proxy_kcal_mol"]),
-        "binding_energy_mmpbsa_kcal_mol_proxy": float(ff["deltaG_mmpbsa_proxy_kcal_mol"]),
+        "binding_energy_proxy": float(gb_sa_proxy_energy(ff, 0.0)),
+        "binding_energy_mmpbsa_kcal_mol_proxy": float(gb_sa_proxy_energy(ff, 0.0)),
         "binding_energy_mmpbsa_std": 0.0,
         "stability_score": float(ff["contact_fraction"] / (1.0 + ff["min_distance_A"])),
         "contact_fraction": float(ff["contact_fraction"]),

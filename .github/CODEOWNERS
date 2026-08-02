@@ -1,0 +1,44 @@
+# CODEOWNERS — separated review ownership (P0-2).
+#
+# P0-2 requires review ownership to be separate from authorship: at least one
+# author-distinct reviewer, with a named security reviewer and a named
+# numerical/scientific reviewer.
+#
+# The handles below are intentionally UNFILLED. Assigning the repository author
+# here would satisfy the file but not the requirement, so
+# `build_independent_review_evidence_gate.py` reports `*_unassigned` /
+# `*_only_author` until real non-author handles are recorded.
+#
+# Replace each OPERATOR_FILL_* token with a GitHub handle or team, then run:
+#   python3 tools/product/build_independent_review_evidence_gate.py
+
+# Default owner for anything not matched below.
+*                                       OPERATOR_FILL_DEFAULT_REVIEWER
+
+# --- Security review surface -------------------------------------------------
+# Auth, tenant isolation, payload/path handling, private payload storage,
+# secrets posture, and the input contracts that keep bad input out.
+/api/                                   OPERATOR_FILL_SECURITY_REVIEWER
+/betelgeuze_product/legacy_input_contract.py  OPERATOR_FILL_SECURITY_REVIEWER
+/betelgeuze_product/docking_private_payload.py OPERATOR_FILL_SECURITY_REVIEWER
+/betelgeuze_product/private_payload_store.py   OPERATOR_FILL_SECURITY_REVIEWER
+/betelgeuze_product/payload_privacy.py  OPERATOR_FILL_SECURITY_REVIEWER
+/betelgeuze_product/service_boundary.py OPERATOR_FILL_SECURITY_REVIEWER
+/deploy/                                OPERATOR_FILL_SECURITY_REVIEWER
+/.github/                               OPERATOR_FILL_SECURITY_REVIEWER
+/scripts/                               OPERATOR_FILL_SECURITY_REVIEWER
+
+# --- Numerical / scientific review surface -----------------------------------
+# Physics, scoring, conformer generation, pose clustering, and the benchmark
+# contracts that decide what a number is allowed to claim.
+/betelgeuze_engine/physics/             OPERATOR_FILL_NUMERICAL_REVIEWER
+/betelgeuze_engine/scoring/             OPERATOR_FILL_NUMERICAL_REVIEWER
+/betelgeuze_engine/chemistry/           OPERATOR_FILL_NUMERICAL_REVIEWER
+/betelgeuze_engine/backmapping/         OPERATOR_FILL_NUMERICAL_REVIEWER
+/betelgeuze_engine/interactions/        OPERATOR_FILL_NUMERICAL_REVIEWER
+/core/                                  OPERATOR_FILL_NUMERICAL_REVIEWER
+/betelgeuze_product/frozen_benchmark_suite.py OPERATOR_FILL_NUMERICAL_REVIEWER
+/betelgeuze_product/benchmark_ledger.py OPERATOR_FILL_NUMERICAL_REVIEWER
+/betelgeuze_product/proxy_energy_schema.py OPERATOR_FILL_NUMERICAL_REVIEWER
+/betelgeuze_product/docking_result_bundle.py OPERATOR_FILL_NUMERICAL_REVIEWER
+/betelgeuze_product/shadow_execution.py OPERATOR_FILL_NUMERICAL_REVIEWER

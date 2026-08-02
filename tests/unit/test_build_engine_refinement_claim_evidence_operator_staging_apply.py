@@ -127,7 +127,7 @@ def _work_order_rows(tmp_path: Path, *, filled: bool = False) -> list[dict[str, 
             "pose_rmsd_A": "OPERATOR_FILL_POSE_RMSD_A",
             "dockq": "OPERATOR_FILL_DOCKQ",
             "lddt_pli": "OPERATOR_FILL_LDDT_PLI",
-            "deltaG_mm_gbsa_kcal_mol": "OPERATOR_FILL_INTERNAL_REFINE_DG",
+            "internal_refine_proxy_score": "OPERATOR_FILL_INTERNAL_REFINE_DG",
             "dockq_source_artifact": "OPERATOR_FILL_DOCKQ_SOURCE_ARTIFACT",
             "lddt_pli_source_artifact": "OPERATOR_FILL_LDDT_PLI_SOURCE_ARTIFACT",
             "internal_deltaG_source_artifact": "OPERATOR_FILL_INTERNAL_DELTAG_SOURCE_ARTIFACT",
@@ -155,7 +155,7 @@ def _work_order_rows(tmp_path: Path, *, filled: bool = False) -> list[dict[str, 
                     "pose_rmsd_A": "1.2",
                     "dockq": "0.4",
                     "lddt_pli": "0.7",
-                    "deltaG_mm_gbsa_kcal_mol": "-8.1",
+                    "internal_refine_proxy_score": "-8.1",
                     "dockq_source_artifact": str(dockq_source),
                     "lddt_pli_source_artifact": str(lddt_source),
                     "internal_deltaG_source_artifact": str(internal_delta_g_source),
@@ -188,7 +188,7 @@ def _work_order_rows(tmp_path: Path, *, filled: bool = False) -> list[dict[str, 
                     "internal_deltaG",
                     target_id=target_id,
                     pose_id=pose_id,
-                    value=row["deltaG_mm_gbsa_kcal_mol"],
+                    value=row["internal_refine_proxy_score"],
                     input_artifacts=input_artifacts,
                 ),
             )
@@ -256,7 +256,7 @@ def _metric_evidence_rows(work_order_rows: list[dict[str, object]], *, filled: b
             for field, metric_name, value_field in [
                 ("dockq_source_artifact", "dockq", "dockq"),
                 ("lddt_pli_source_artifact", "lddt_pli", "lddt_pli"),
-                ("internal_deltaG_source_artifact", "internal_deltaG", "deltaG_mm_gbsa_kcal_mol"),
+                ("internal_deltaG_source_artifact", "internal_deltaG", "internal_refine_proxy_score"),
             ]:
                 _write_json(
                     Path(str(row[field])),
@@ -281,7 +281,7 @@ def _metric_evidence_rows(work_order_rows: list[dict[str, object]], *, filled: b
                 "pose_id": pose_id,
                 "dockq": row["dockq"],
                 "lddt_pli": row["lddt_pli"],
-                "deltaG_mm_gbsa_kcal_mol": row["deltaG_mm_gbsa_kcal_mol"],
+                "internal_refine_proxy_score": row["internal_refine_proxy_score"],
                 "dockq_source_artifact": row["dockq_source_artifact"],
                 "lddt_pli_source_artifact": row["lddt_pli_source_artifact"],
                 "internal_deltaG_source_artifact": row["internal_deltaG_source_artifact"],
@@ -785,7 +785,9 @@ def test_current_staging_apply_surfaces_materialized_public_benchmark_candidate(
     assert summary["materialized_public_benchmark_free_energy_pair_count"] == 8
     assert summary["materialized_public_benchmark_free_energy_spearman"] == 0.6190476190476191
     assert summary["materialized_public_benchmark_free_energy_spearman_gate_ready"] is True
-    assert summary["materialized_public_benchmark_free_energy_spearman_bootstrap_p05"] == -0.14285714285714285
+    # Bootstrap p05 comes from the materialization artifact (seed 20260614, 200
+    # iterations); it stays far below the 0.5 claim-grade floor either way.
+    assert summary["materialized_public_benchmark_free_energy_spearman_bootstrap_p05"] == -0.19612534732942263
     assert summary["materialized_public_benchmark_claim_grade_statistical_support_ready"] is False
     assert summary["materialized_public_benchmark_claim_grade_statistical_support_blocker_count"] == 3
     assert (

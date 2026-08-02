@@ -1,0 +1,52 @@
+{
+  "baseline_executed": false,
+  "bootstrap_intervals": [
+    {
+      "ci_high": 0.012244897959183673,
+      "ci_low": 0.0,
+      "iterations": 5000,
+      "metric_id": "top1_rmsd_success_rate_2a",
+      "point_estimate": 0.004081632653061225,
+      "seed": 1729
+    }
+  ],
+  "case_set_hash": "0667e7319f2ea6d02e67c8672c70b1aed139f54d7afcfd06117528557b58363e",
+  "claim_boundary": "Frozen public docking benchmark subject execution only. It verifies immutable public inputs, runs the internal Legacy and V2 surfaces on one canonical preparation packet per case, evaluates deposited-pose recovery, and counts all selected cases. It does not install or run Vina/GNINA/Smina, invent paired baseline results, promote a product claim, or mutate external state.",
+  "execution_receipt": "runs/frozen_public_docking_benchmark_execution_current.json",
+  "frozen_at_utc": "2026-07-27T00:26:02Z",
+  "metrics": {
+    "attempted_case_count": 245,
+    "bootstrap_ci": {
+      "ci_high": 0.012244897959183673,
+      "ci_low": 0.0,
+      "iterations": 5000,
+      "metric_id": "top1_rmsd_success_rate_2a",
+      "point_estimate": 0.004081632653061225,
+      "seed": 1729
+    },
+    "candidate_budget": 5,
+    "chemical_validity_rate": 0.673469387755102,
+    "full_case_failure_rate": 0.32653061224489793,
+    "geometric_validity_rate": 0.024489795918367346,
+    "rotor_subgroup_success": {
+      "flexible_3_5_rotors": 0.0,
+      "highly_flexible_ge_10_rotors": 0.0,
+      "rigid_le_2_rotors": 0.030303030303030304,
+      "very_flexible_6_9_rotors": 0.0
+    },
+    "runtime_seconds_median": 6.327458,
+    "size_subgroup_success": {
+      "large_29_40_heavy": 0.0,
+      "medium_19_28_heavy": 0.01,
+      "small_le_18_heavy": 0.0,
+      "very_large_gt_40_heavy": 0.0
+    },
+    "top1_rmsd_success_rate_2a": 0.004081632653061225,
+    "top3_success_rate": 0.004081632653061225,
+    "top5_success_rate": 0.004081632653061225
+  },
+  "paired_baseline_deltas": [],
+  "schema_version": "frozen_public_docking_benchmark_subject_metrics_v1",
+  "subject_engine_surface": "engine_v2",
+  "synthetic_metrics_used": false
+}

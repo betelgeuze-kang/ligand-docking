@@ -48,7 +48,7 @@ WORK_ORDER_COLUMNS = [
 
 REQUIRED_FIELDS = (
     "benchmark_id;target_id;split;license_ok;pose_rmsd_A;dockq;lddt_pli;"
-    "deltaG_mm_gbsa_kcal_mol;dockq_source_artifact;lddt_pli_source_artifact;"
+    "internal_refine_proxy_score;dockq_source_artifact;lddt_pli_source_artifact;"
     "internal_deltaG_source_artifact;deltaG_experimental_kcal_mol;receptor_coordinate_artifact"
 )
 REQUIRED_METRIC_SOURCE_PAYLOADS = "dockq;lddt_pli;internal_deltaG"

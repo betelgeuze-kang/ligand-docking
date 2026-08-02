@@ -14,6 +14,12 @@ from betelgeuze_product.residual_mode_policy import (
     production_ai_inference_subject_active,
 )
 from betelgeuze_product.structure_analysis import analyze_structure_source
+from betelgeuze_product.legacy_input_contract import (
+    LegacyInputContractError,
+    LegacyInputPolicy,
+    resolve_legacy_input_policy,
+    strict_bool,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 RESIDUAL_MODEL_REGISTRY_ARTIFACT = ROOT / "runs" / "residual_model_registry_current.json"
@@ -780,13 +786,32 @@ def _ligand_has_source(row: Any) -> bool:
     return False
 
 
-def validate_docking_request(payload: dict[str, Any]) -> dict[str, Any]:
+def validate_docking_request(
+    payload: dict[str, Any],
+    *,
+    legacy_input_compatibility_mode: bool | None = None,
+) -> dict[str, Any]:
+    policy = resolve_legacy_input_policy(compatibility_mode=legacy_input_compatibility_mode)
     blockers: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
     family = _canonical_family(payload.get("family") or payload.get("scope_family"))
     ligands = _as_list(payload.get("ligands"))
     structure_source = _structure_source(payload)
     request_type = _text(payload.get("request_type") or "structure_analysis_ligand_docking")
+
+    # Boolean intake flags must be real booleans or canonical tokens; a value
+    # like "maybe" must not become True by truthiness on the product path.
+    for boolean_field in (
+        "allow_synthetic_ligand_input",
+        "runner_synthetic_input_allowed",
+        "execution_requested",
+    ):
+        if boolean_field not in payload or payload.get(boolean_field) is None:
+            continue
+        try:
+            strict_bool(payload.get(boolean_field), field=boolean_field, policy=policy)
+        except LegacyInputContractError as exc:
+            blockers.append(_blocker(exc.reason_code, exc.reason))
 
     if request_type not in {"structure_analysis_ligand_docking", "ligand_docking", "docking_screen"}:
         blockers.append(_blocker("unsupported_request_type", "Request type must be a structure-analysis or ligand-docking product request."))
@@ -828,6 +853,7 @@ def validate_docking_request(payload: dict[str, Any]) -> dict[str, Any]:
         "status": "pass" if not blockers else "fail",
         "blockers": blockers,
         "warnings": warnings,
+        **policy.receipt(),
         "normalized": {
             "request_type": request_type,
             "family": family,
@@ -840,8 +866,33 @@ def validate_docking_request(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _pose_generation_contract(payload: dict[str, Any], normalized: dict[str, Any]) -> dict[str, Any]:
-    """Preview pose-generation capability without emitting customer poses (fail-closed)."""
+def _pose_generation_contract(
+    payload: dict[str, Any],
+    normalized: dict[str, Any],
+    *,
+    legacy_input_policy: LegacyInputPolicy | None = None,
+) -> dict[str, Any]:
+    """Preview pose-generation capability without emitting customer poses (fail-closed).
+
+    Malformed structure intake previously vanished into a blanket
+    ``except Exception``, so a request with unparseable coordinates reported the
+    same "no pocket" contract as a well-formed coordinate-free request. The
+    intake policy is now honored: under the fail-closed policy the contract
+    carries an explicit structured reason instead of a silent default.
+
+    The receptor side is prepared by the *canonical* preparation service rather
+    than by a private parse-and-detect pass in this module (roadmap P1-1). That
+    matters beyond tidiness: while the active legacy path did its own preparation,
+    a legacy-vs-V2 difference could always be explained by the two surfaces having
+    been handed different atoms or a different pocket. The contract now reports the
+    same receptor packet the engine adapters consume, and records its hash so a
+    served result can be tied back to a specific prepared input.
+    """
+    policy = (
+        legacy_input_policy
+        if legacy_input_policy is not None
+        else resolve_legacy_input_policy()
+    )
     contract: dict[str, Any] = {
         "pose_generation_modes": ["standard", "cross_docking", "induced_fit"],
         "planned_poses_per_ligand": 3,
@@ -849,39 +900,82 @@ def _pose_generation_contract(payload: dict[str, Any], normalized: dict[str, Any
         "pocket_method": "",
         "execution_enabled": False,
         "docking_results_emitted": False,
+        "legacy_input_blocked": False,
+        "legacy_input_reason_code": "",
+        "legacy_input_reason": "",
+        "canonical_preparation_packet_used": True,
+        "prepared_receptor_status": "",
+        "prepared_receptor_input_hash": "",
+        "prepared_receptor_atom_count": 0,
+        "prepared_receptor_blockers": [],
+        **policy.receipt(),
     }
-    pdb_text = _text(payload.get("pdb_content"))
-    if not pdb_text:
-        path_value = _text(payload.get("pdb_path"))
-        if path_value:
-            candidate = Path(path_value)
-            if not candidate.is_absolute():
-                candidate = ROOT / candidate
-            if candidate.is_file():
-                try:
-                    pdb_text = candidate.read_text(encoding="utf-8", errors="ignore")
-                except OSError:
-                    pdb_text = ""
-    if not pdb_text:
+    if not _structure_source_present(payload):
+        # No structure supplied is a legitimate contract-preview state, not a
+        # failure, so preparation is not attempted at all.
         return contract
     try:
-        import numpy as np
+        from betelgeuze_product.preparation_service import prepare_receptor
 
-        from core.pocket_detection import detect_binding_pocket
-        from core.structure_metrics import parse_pdb_atoms_with_coords
-
-        atoms = parse_pdb_atoms_with_coords(pdb_text)
-        protein_atoms = [a for a in atoms if a.get("record") == "ATOM"]
-        if protein_atoms:
-            coords = np.stack([a["xyz"] for a in protein_atoms], axis=0)
-            pocket = detect_binding_pocket(coords)
-            contract["pocket_detection_available"] = pocket.get("status") == "pocket_ready"
-            contract["pocket_method"] = pocket.get("method", "")
-            contract["pocket_center"] = pocket.get("pocket_center")
-            contract["pocket_radius_a"] = pocket.get("pocket_radius_a")
-    except Exception:
+        receptor = prepare_receptor(
+            payload,
+            target_id=_text(normalized.get("target_id")),
+            root=ROOT,
+            legacy_input_compatibility_mode=policy.compatibility_mode,
+        )
+    except LegacyInputContractError as exc:
+        # Fail-closed intake: record why preparation was refused so the caller
+        # cannot read the default contract as "structure was fine".
+        contract["legacy_input_blocked"] = True
+        contract["legacy_input_reason_code"] = exc.reason_code
+        contract["legacy_input_reason"] = exc.reason
+        contract["prepared_receptor_status"] = "blocked_prepared_receptor"
         return contract
+    except Exception:
+        # Preparation is a preview here; an unexpected failure leaves the
+        # fail-closed defaults in place rather than fabricating a pocket.
+        return contract
+
+    pocket = receptor.pocket
+    contract["prepared_receptor_status"] = receptor.status
+    contract["prepared_receptor_atom_count"] = int(receptor.atom_count)
+    contract["prepared_receptor_blockers"] = list(receptor.blockers)
+    contract["prepared_receptor_input_hash"] = receptor.input_hash
+    legacy_receipt = receptor.legacy_input_contract or {}
+    contract["legacy_input_blocked"] = bool(legacy_receipt.get("legacy_input_blocked"))
+    contract["legacy_input_reason_code"] = str(
+        legacy_receipt.get("legacy_input_reason_code") or ""
+    )
+    contract["legacy_input_reason"] = str(legacy_receipt.get("legacy_input_reason") or "")
+    if contract["legacy_input_blocked"]:
+        # A refused parse must not read as "no pocket in an otherwise fine
+        # structure", so the pocket fields stay at their fail-closed defaults.
+        return contract
+    contract["pocket_detection_available"] = bool(pocket.ready)
+    contract["pocket_method"] = str(pocket.method or "")
+    contract["pocket_center"] = [float(value) for value in pocket.center]
+    contract["pocket_radius_a"] = float(pocket.radius_a)
     return contract
+
+
+def _structure_source_present(payload: dict[str, Any]) -> bool:
+    """True when the request carried any receptor structure source."""
+
+    if any(
+        _text(payload.get(key))
+        for key in ("pdb_content", "mmcif_content", "pdb_id")
+    ):
+        return True
+    for key in ("pdb_path", "mmcif_path"):
+        path_value = _text(payload.get(key))
+        if not path_value:
+            continue
+        candidate = Path(path_value)
+        if not candidate.is_absolute():
+            candidate = ROOT / candidate
+        if candidate.is_file():
+            return True
+    return False
 
 
 def build_docking_job_record(
@@ -892,11 +986,21 @@ def build_docking_job_record(
     residual_registry_packet: dict[str, Any] | None = None,
     scope_claim_guard_packet: dict[str, Any] | None = None,
     shadow_only_active_locked: bool = True,
+    legacy_input_compatibility_mode: bool | None = None,
 ) -> dict[str, Any]:
-    validation = validate_docking_request(payload)
+    legacy_input_policy = resolve_legacy_input_policy(
+        compatibility_mode=legacy_input_compatibility_mode
+    )
+    validation = validate_docking_request(
+        payload, legacy_input_compatibility_mode=legacy_input_policy.compatibility_mode
+    )
     normalized = validation["normalized"]
-    structure_analysis = analyze_structure_source(payload)
-    pose_generation_contract = _pose_generation_contract(payload, normalized)
+    structure_analysis = analyze_structure_source(
+        payload, legacy_input_compatibility_mode=legacy_input_policy.compatibility_mode
+    )
+    pose_generation_contract = _pose_generation_contract(
+        payload, normalized, legacy_input_policy=legacy_input_policy
+    )
     ai_posture = _production_ai_posture(
         residual_registry_packet,
         shadow_only_active_locked=shadow_only_active_locked,
@@ -983,6 +1087,7 @@ def build_docking_job_record(
         "structure_residue_count": structure_analysis["residue_count"],
         "structure_ligand_like_residue_count": structure_analysis["ligand_like_residue_count"],
         "structure_analysis": structure_analysis,
+        "legacy_input_contract": legacy_input_policy.receipt(),
         "pose_generation_contract": pose_generation_contract,
         "pocket_detection_available": bool(pose_generation_contract.get("pocket_detection_available")),
         "validation_status": validation["status"],

@@ -84,12 +84,16 @@ def _write_packets(root: Path, *, split_ready: bool = True) -> tuple[Path, Path]
 def test_slice_patch_bundle_writes_one_patch_per_child_slice_with_checksums(tmp_path: Path) -> None:
     base_sha = _init_repo(tmp_path)
     split_path, plan_path = _write_packets(tmp_path)
+    patch_dir = tmp_path / "patches"
+    patch_dir.mkdir()
+    stale_patch = patch_dir / "99-stale.patch"
+    stale_patch.write_text("stale\n", encoding="utf-8")
 
     payload = mod.build_pr38_slice_patch_bundle(
         split_packet_json=split_path,
         extraction_plan_json=plan_path,
         base_ref=base_sha,
-        out_dir=tmp_path / "patches",
+        out_dir=patch_dir,
         root=tmp_path,
     )
 
@@ -99,6 +103,8 @@ def test_slice_patch_bundle_writes_one_patch_per_child_slice_with_checksums(tmp_
     assert summary["expected_changed_file_count"] == 2
     assert summary["bundled_changed_file_count"] == 2
     assert summary["empty_patch_count"] == 0
+    assert summary["stale_patch_files_removed_count"] == 1
+    assert not stale_patch.exists()
     assert summary["patches_applied"] is False
     assert summary["branches_created"] is False
     rows = {row["slice_id"]: row for row in payload["rows"]}
@@ -125,6 +131,64 @@ def test_slice_patch_bundle_blocks_if_split_packet_is_not_ready(tmp_path: Path) 
 
     assert payload["summary"]["status"] == "blocked_pr38_slice_patch_bundle"
     assert payload["summary"]["patch_bundle_ready"] is False
+
+
+def test_slice_patch_bundle_includes_worktree_overlay_and_untracked_files(
+    tmp_path: Path,
+) -> None:
+    base_sha = _init_repo(tmp_path)
+    (tmp_path / "a.txt").write_text("base a\nfeature a\nworktree a\n", encoding="utf-8")
+    (tmp_path / "c.txt").write_text("new untracked file\n", encoding="utf-8")
+    split_packet = {
+        "summary": {
+            "status": "pr38_split_review_packet_ready",
+            "split_review_ready": True,
+            "changed_file_count": 2,
+        },
+        "rows": [
+            {"slice_id": "slice_a", "file_path": "a.txt"},
+            {"slice_id": "slice_a", "file_path": "c.txt"},
+        ],
+    }
+    extraction_plan = {
+        "summary": {
+            "status": "pr38_child_pr_extraction_plan_ready",
+            "extraction_plan_ready": True,
+        },
+        "rows": [
+            {
+                "sequence": 1,
+                "slice_id": "slice_a",
+                "integration_touchpoint_count": 0,
+                "focused_test_command": "pytest a",
+                "claim_boundary": "No claim A.",
+                "draft_branch_name": "slice-a",
+                "draft_pr_title": "Slice A",
+            }
+        ],
+    }
+    split_path = tmp_path / "split.json"
+    plan_path = tmp_path / "plan.json"
+    _write_json(split_path, split_packet)
+    _write_json(plan_path, extraction_plan)
+
+    payload = mod.build_pr38_slice_patch_bundle(
+        split_packet_json=split_path,
+        extraction_plan_json=plan_path,
+        base_ref=base_sha,
+        out_dir=tmp_path / "patches",
+        root=tmp_path,
+    )
+
+    summary = payload["summary"]
+    row = payload["rows"][0]
+    patch_text = (tmp_path / row["patch_path"]).read_text(encoding="utf-8")
+
+    assert summary["status"] == "pr38_slice_patch_bundle_ready"
+    assert summary["worktree_overlay_patch_count"] == 1
+    assert row["worktree_overlay_patch_included"] is True
+    assert "worktree a" in patch_text
+    assert "new untracked file" in patch_text
 
 
 def test_main_writes_slice_patch_bundle_manifest_artifacts(tmp_path: Path) -> None:

@@ -36,8 +36,11 @@ def test_check_independent_product_readiness_script_reports_current_state() -> N
     assert summary["accuracy_parity_ligand_ranking_metric_blocker_count"] == 0
     assert summary["accuracy_parity_ligand_ranking_claim_scope_lock_only"] is True
     assert summary["full_commercial_open_gap_ids"] == []
+    # The GPCR heldout/guarded input blocker cleared once all four input
+    # readiness flags in runs/gpcr_broad_claim_scope_readiness_current.json went
+    # true; the remaining blockers are review/promotion approvals and public
+    # benchmark evidence, which are still open.
     assert summary["science_accuracy_frontier_blockers"] == [
-        "gpcr_target_heldout_or_guarded_input_not_ready",
         "gpcr_broad_claim_review_not_approved",
         "gpcr_scorer_router_promotion_not_approved",
         "openmm_schrodinger_public_benchmark_not_promoted_to_canonical_intake",
@@ -69,14 +72,17 @@ def test_check_independent_product_readiness_script_reports_current_state() -> N
         "R9_engine_refinement_claim_promotion",
         "ACCURACY:ligand_ranking",
     ]
-    assert summary["blocker_count"] == 2
+    # Only the source-of-truth gate is still blocked; the release-refresh final
+    # gates now report final_gate_blocker_count=0, so they are no longer a blocker.
+    assert summary["blocker_count"] == 1
+    assert summary["blocked_checks"] == ["release_source_of_truth_ready"]
     assert summary["execution_enabled"] is False
     assert summary["external_state_mutated"] is False
     rows = {row["check"]: row for row in payload["rows"]}
     assert rows["commercial_independence_restricted_self_hosted"]["status"] == "pass"
     assert rows["capability_surface_restricted_scope_ready"]["status"] == "pass"
     assert rows["release_source_of_truth_ready"]["status"] == "fail"
-    assert rows["release_refresh_final_gates_verified"]["status"] == "fail"
+    assert rows["release_refresh_final_gates_verified"]["status"] == "pass"
     assert rows["full_commercial_claim_boundaries_explicit"]["status"] == "fail"
     boundary = rows["full_commercial_claim_boundaries_explicit"]
     assert "ligand_metric_thresholds_pass=True" in boundary["observed"]
@@ -90,7 +96,9 @@ def test_check_independent_product_readiness_script_reports_current_state() -> N
     assert "openmm_schrodinger_public_benchmark_science_ready=True" in boundary["observed"]
     assert "public_benchmark_materialized_metric_ready=True" in boundary["observed"]
     assert "public_benchmark_materialized_apply_ready=True" in boundary["observed"]
-    assert "public_benchmark_materialized_bootstrap_p05=-0.14285714285714285" in boundary["observed"]
+    # Bootstrap p05 comes from runs/refine_tier_public_benchmark_metric_source_materialization_current.json
+    # (seed 20260614, 200 iterations); it stays below the 0.5 claim-grade floor.
+    assert "public_benchmark_materialized_bootstrap_p05=-0.19612534732942263" in boundary["observed"]
     assert "public_benchmark_materialized_claim_grade_statistical_support_ready=False" in boundary["observed"]
     assert "coordinate_fetch_r4_preflight_ready=True" in boundary["observed"]
     assert "coordinate_fetch_r4_download_executed=False" in boundary["observed"]

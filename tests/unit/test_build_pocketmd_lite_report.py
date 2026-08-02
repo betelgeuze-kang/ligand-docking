@@ -166,6 +166,41 @@ def test_claim_grade_contract_ready_requires_targeted_green_rows(tmp_path: Path)
     assert requirements["pocketmd_lite_claim_promotion_review_allowed"]["ready"] is False
 
 
+def test_collection_ready_targets_can_be_yellow_but_residual_clash_still_blocks(
+    tmp_path: Path,
+) -> None:
+    input_csv = tmp_path / "in.csv"
+    yellow_rows = []
+    for entry_id in [
+        "ADRB2_GPCR_BLIND:carvedilol",
+        "ADRB2_GPCR_BLIND:timolol",
+        "ADRB2_GPCR_BLIND:carazolol",
+        "CHEMBL234_DRD3_HUMAN:CHEMBL5841759",
+        "CHEMBL236_OPRD1_HUMAN:CHEMBL67192",
+    ]:
+        row = _green_row(entry_id)
+        row["initial_clash_count"] = 5
+        row["clash_count"] = 1
+        yellow_rows.append(row)
+    _write_csv(input_csv, yellow_rows)
+
+    artifact = mod.build_pocketmd_lite_report_artifact(input_csv)
+    summary = artifact["summary"]
+    requirements = {
+        row["requirement_id"]: row for row in artifact["claim_grade_requirement_rows"]
+    }
+
+    assert summary["green_row_count"] == 0
+    assert summary["yellow_row_count"] == 5
+    assert summary["claim_grade_metric_ready_row_count"] == 5
+    assert requirements["adrb2_three_collection_ready_rows"]["ready"] is True
+    assert requirements["adrb2_three_collection_ready_rows"]["observed_value"] == "3"
+    assert requirements["drd3_oprd1_atom_frame_recovery"]["ready"] is True
+    assert requirements["clash_relief_ready"]["ready"] is False
+    assert summary["claim_grade_primary_requirement_id"] == "clash_relief_ready"
+    assert summary["claim_grade_primary_blocker"] == "clash_relief_not_claim_grade"
+
+
 def test_missing_refinement_evidence_abstains_and_blocks(tmp_path: Path) -> None:
     input_csv = tmp_path / "in.csv"
     _write_csv(input_csv, [{"entry_id": "top-a", "family": "gpcr", "rank_pct": 0.001}])
@@ -200,6 +235,46 @@ def test_missing_refinement_evidence_abstains_and_blocks(tmp_path: Path) -> None
     assert summary["pocketmd_lite_claim_grade_contract_ready"] is False
     assert summary["claim_grade_requirement_blocked_row_count"] == 10
     assert summary["claim_grade_primary_requirement_id"] == "selected_top_k_minimum_met"
+
+
+def test_report_can_consume_fill_preview_candidate_csv_without_mutating_canonical(
+    tmp_path: Path,
+) -> None:
+    canonical_csv = tmp_path / "canonical.csv"
+    preview_csv = tmp_path / "preview.candidates.csv"
+    preview_json = tmp_path / "preview.json"
+    _write_csv(canonical_csv, [{"entry_id": "top-a", "family": "gpcr", "rank_pct": 0.001}])
+    _write_csv(preview_csv, [_green_row("top-a")])
+    preview_json.write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": mod.STATUS_FILL_PREVIEW_READY,
+                    "preview_candidate_csv": str(preview_csv),
+                    "preview_candidate_csv_ready": True,
+                    "canonical_candidate_csv_mutated": False,
+                    "candidate_csv_update_allowed": False,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    artifact = mod.build_pocketmd_lite_report_artifact(
+        canonical_csv,
+        candidate_fill_preview_json=preview_json,
+    )
+
+    summary = artifact["summary"]
+    assert artifact["input_csv"] == str(preview_csv)
+    assert artifact["source_input_csv"] == str(canonical_csv)
+    assert artifact["candidate_fill_preview_applied"] is True
+    assert summary["candidate_fill_preview_applied"] is True
+    assert summary["candidate_fill_preview_canonical_candidate_csv_mutated"] is False
+    assert summary["candidate_fill_preview_candidate_csv_update_allowed"] is False
+    assert summary["missing_refinement_metric_names"] == []
+    assert summary["green_row_count"] == 1
+    assert summary["abstain_row_count"] == 0
 
 
 def test_non_top_k_candidate_is_coarse_only_not_blocker(tmp_path: Path) -> None:

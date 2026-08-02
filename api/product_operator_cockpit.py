@@ -775,6 +775,68 @@ def _developer_preview_receipt_work_order_rows(value: Any) -> list[dict[str, Any
     return work_rows
 
 
+def _developer_preview_platform_evidence_requirement_rows(
+    value: Any,
+) -> list[dict[str, Any]]:
+    rows = value if isinstance(value, list) else []
+    evidence_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        evidence_rows.append(
+            {
+                "field_id": str(row.get("field_id") or ""),
+                "label": str(row.get("label") or ""),
+                "status": str(row.get("status") or ""),
+                "ready": bool(row.get("ready") is True),
+                "observed": str(row.get("observed") or ""),
+                "blocker": str(row.get("blocker") or ""),
+                "required_action": str(row.get("required_action") or ""),
+                "operator_action_required": bool(
+                    row.get("operator_action_required") is True
+                ),
+                "claim_boundary": str(row.get("claim_boundary") or ""),
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return evidence_rows
+
+
+def _developer_preview_new_user_observation_template_rows(
+    value: Any,
+) -> list[dict[str, Any]]:
+    rows = value if isinstance(value, list) else []
+    template_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        template_rows.append(
+            {
+                "field_id": str(row.get("field_id") or ""),
+                "label": str(row.get("label") or ""),
+                "status": str(row.get("status") or ""),
+                "ready": bool(row.get("ready") is True),
+                "observed": str(row.get("observed") or ""),
+                "blocker": str(row.get("blocker") or ""),
+                "required_action": str(row.get("required_action") or ""),
+                "raw_customer_data_allowed": bool(
+                    row.get("raw_customer_data_allowed") is True
+                ),
+                "stores_private_notes": bool(row.get("stores_private_notes") is True),
+                "operator_action_required": bool(
+                    row.get("operator_action_required") is True
+                ),
+                "claim_boundary": str(row.get("claim_boundary") or ""),
+                "execution_enabled": False,
+                "external_state_mutated": False,
+                "claim_promotion_allowed": False,
+            }
+        )
+    return template_rows
+
+
 def _developer_preview_stage5_recovery_rows(value: Any) -> list[dict[str, Any]]:
     rows = value if isinstance(value, list) else []
     recovery_rows: list[dict[str, Any]] = []
@@ -1026,6 +1088,23 @@ def _pr38_split_surface() -> dict[str, Any]:
         "pr38_child_pr_count": _int(
             matrix.get("child_pr_count") or acceptance.get("child_pr_count")
         ),
+        "pr38_minimum_child_pr_count": _int(
+            matrix.get("minimum_child_pr_count")
+            or acceptance.get("minimum_child_pr_count")
+        ),
+        "pr38_minimum_child_pr_count_met": bool(
+            _int(
+                matrix.get("minimum_child_pr_count")
+                or acceptance.get("minimum_child_pr_count")
+            )
+            and _int(matrix.get("child_pr_count") or acceptance.get("child_pr_count"))
+            >= _int(
+                matrix.get("minimum_child_pr_count")
+                or acceptance.get("minimum_child_pr_count")
+            )
+            and matrix.get("minimum_child_pr_count_met") is not False
+            and acceptance.get("minimum_child_pr_count_met") is not False
+        ),
         "pr38_ready_child_pr_count": _int(
             matrix.get("ready_child_pr_count") or acceptance.get("ready_child_pr_count")
         ),
@@ -1091,9 +1170,9 @@ def _missing_response() -> dict[str, Any]:
         "status": "missing_product_operator_cockpit",
         "artifact_path": str(PRODUCT_OPERATOR_COCKPIT_ARTIFACT),
         "phase8_surface_ready": False,
-        "required_phase8_panel_count": 9,
+        "required_phase8_panel_count": 11,
         "observed_phase8_panel_count": 0,
-        "missing_required_phase8_panel_count": 9,
+        "missing_required_phase8_panel_count": 11,
         "missing_required_phase8_panel_ids": [
             "product_capabilities_dashboard",
             "goal_readiness_dashboard",
@@ -1101,14 +1180,16 @@ def _missing_response() -> dict[str, Any]:
             "gpcr_hard_decoy_blocker_panel",
             "pocketmd_lite_report_panel",
             "public_benchmark_scorecard",
+            "competition_benchmark_claim_boundary",
+            "release_ci_remote_green",
             "release_blockers_operator_actions",
             "evidence_bundle_export",
             "claim_boundary_matrix",
         ],
         "source_artifact_ready_panel_count": 0,
-        "source_artifact_blocked_panel_count": 9,
+        "source_artifact_blocked_panel_count": 11,
         "source_artifact_blocked_panel_ids": [],
-        "operator_action_required_panel_count": 9,
+        "operator_action_required_panel_count": 11,
         "operator_action_required_panel_ids": [],
         "paid_pilot_wording_allowed": False,
         "general_platform_claim_allowed": False,
@@ -1244,6 +1325,55 @@ def _missing_response() -> dict[str, Any]:
         "public_benchmark_vina_gnina_score_template_receipt_json": "",
         "public_benchmark_metric_source_receipt_csv": "",
         "public_benchmark_vina_gnina_adapter_command_after_fill": "",
+        "competition_benchmark_rollup_present": False,
+        "competition_benchmark_rollup_status": "",
+        "competition_benchmark_rollup_ready": False,
+        "competition_benchmark_cameo_official_result_intake_status": "",
+        "competition_benchmark_cameo_official_result_intake_ready": False,
+        "competition_benchmark_cameo_official_result_row_count": 0,
+        "competition_benchmark_cameo_official_accepted_result_count": 0,
+        "competition_benchmark_cameo_official_result_intake_claim_allowed": False,
+        "competition_benchmark_cameo_official_result_intake_fetch_enabled": False,
+        "competition_benchmark_cameo_official_result_intake_external_state_mutated": False,
+        "competition_benchmark_cameo_official_result_intake_local_native_accuracy_used": False,
+        "competition_benchmark_competition_evidence_role": "",
+        "competition_benchmark_casp16_ligand_competition_credibility_ready": False,
+        "competition_benchmark_bm5_capri_complex_competition_credibility_ready": False,
+        "competition_benchmark_competition_credibility_extension_ready": False,
+        "competition_benchmark_competition_credibility_extension_blocker_count": 0,
+        "competition_benchmark_competition_credibility_extension_blockers": [],
+        "competition_benchmark_competition_credibility_extension_primary_blocker": "",
+        "competition_benchmark_competition_credibility_extension_next_actions": [],
+        "competition_benchmark_competition_credibility_extension_primary_next_action": "",
+        "competition_benchmark_custody_work_order_status": "",
+        "competition_benchmark_custody_work_order_ready": False,
+        "competition_benchmark_custody_work_order_action_count": 0,
+        "competition_benchmark_custody_work_order_primary_required_action": "",
+        "competition_benchmark_package_b_required_for_ligand_commercial_claims": False,
+        "competition_benchmark_package_b_ligand_suite_ids": [],
+        "competition_benchmark_package_b_ligand_suite_count": 0,
+        "competition_benchmark_package_b_ligand_public_benchmark_foundation_ready": False,
+        "competition_benchmark_package_b_claim_grade_public_benchmark_ready": False,
+        "competition_benchmark_package_b_claim_grade_blocker_count": 0,
+        "competition_benchmark_package_b_claim_grade_blockers": [],
+        "competition_benchmark_competition_ligand_commercial_claim_allowed": False,
+        "competition_benchmark_competition_ligand_claim_package_b_dependency_ready": False,
+        "competition_benchmark_competition_ligand_claim_blocker_count": 0,
+        "competition_benchmark_competition_ligand_claim_blockers": [],
+        "competition_benchmark_github_raw_data_policy_ready": False,
+        "competition_benchmark_github_raw_data_git_tracked_total_count": 0,
+        "competition_benchmark_raw_data_stored_in_repo": False,
+        "competition_benchmark_raw_data_free": False,
+        "competition_benchmark_github_raw_payloads_allowed": False,
+        "competition_benchmark_github_safe_allowed_artifact_classes": [],
+        "competition_benchmark_github_disallowed_artifact_classes": [],
+        "competition_benchmark_github_raw_benchmark_payloads_allowed": False,
+        "competition_benchmark_github_official_archive_models_as_internal_predictions_allowed": False,
+        "competition_benchmark_package_b_bridge_next_action": "",
+        "competition_benchmark_claim_boundary": "",
+        "competition_benchmark_claim_promotion_allowed": False,
+        "competition_benchmark_execution_enabled": False,
+        "competition_benchmark_external_state_mutated": False,
         "evidence_bundle_export_ready": False,
         "evidence_bundle_export_row_count": 0,
         "evidence_bundle_export_blocker_row_count": 0,
@@ -1335,14 +1465,75 @@ def _missing_response() -> dict[str, Any]:
         "developer_preview_receipt_work_order_primary_source_blocker_receipt_artifact": "",
         "developer_preview_receipt_work_order_primary_source_blocker": "",
         "developer_preview_receipt_work_order_primary_source_blocker_required_action": "",
+        "developer_preview_next_operator_command_pack_target": "",
+        "developer_preview_next_operator_command_pack_command": "",
+        "developer_preview_next_operator_command_pack_required_platform": "",
+        "developer_preview_next_operator_command_pack_required_env_vars": [],
+        "developer_preview_next_operator_command_pack_required_input_artifacts": [],
+        "developer_preview_next_operator_command_pack_receipt_artifacts": [],
         "developer_preview_receipt_work_order_rows": [],
         "developer_preview_stage5_recovery_row_count": 0,
         "developer_preview_stage5_missing_source_artifact_count": 0,
         "developer_preview_stage5_required_argument_count": 0,
+        "developer_preview_stage5_recovery_operator_work_order_ready": False,
+        "developer_preview_stage5_recovery_operator_work_order_materialized": False,
+        "developer_preview_stage5_input_family_csv_path": "",
+        "developer_preview_stage5_input_family_md_path": "",
+        "developer_preview_stage5_input_family_csv_present": False,
+        "developer_preview_stage5_input_family_md_present": False,
         "developer_preview_stage5_primary_task_key": "",
         "developer_preview_stage5_primary_source_argument": "",
         "developer_preview_stage5_primary_source_artifact_path": "",
+        "developer_preview_stage5_restore_packet_status": "",
+        "developer_preview_stage5_restore_packet_ready": False,
+        "developer_preview_stage5_restore_packet_fail_closed_restore_receipt_ready": False,
+        "developer_preview_stage5_restore_packet_operator_restore_queue_ready": False,
+        "developer_preview_stage5_restore_packet_operator_restore_queue_row_count": 0,
+        "developer_preview_stage5_restore_packet_missing_source_artifact_count": 0,
+        "developer_preview_stage5_restore_packet_primary_blocker": "",
+        "developer_preview_stage5_restore_packet_primary_missing_source_argument": "",
+        "developer_preview_stage5_restore_packet_primary_missing_source_artifact_path": "",
+        "developer_preview_stage5_restore_packet_primary_missing_pipeline_summary_json": "",
+        "developer_preview_stage5_restore_packet_primary_missing_pipeline_summary_present": False,
+        "developer_preview_stage5_restore_packet_primary_missing_profile_json": "",
+        "developer_preview_stage5_restore_packet_primary_missing_profile_present": False,
+        "developer_preview_stage5_restore_packet_primary_missing_restore_queue_ready": False,
+        "developer_preview_stage5_restore_packet_primary_missing_restore_instruction": "",
+        "developer_preview_stage5_restore_packet_next_required_step": "",
+        "developer_preview_stage5_restore_packet_operator_action_required": False,
         "developer_preview_stage5_recovery_rows": [],
+        "developer_preview_linux_reproducibility_receipt_present": False,
+        "developer_preview_linux_reproducibility_receipt_status": "",
+        "developer_preview_windows_reproducibility_receipt_present": False,
+        "developer_preview_windows_reproducibility_receipt_status": "",
+        "developer_preview_windows_reproducibility_required_field_count": 0,
+        "developer_preview_windows_reproducibility_ready_field_count": 0,
+        "developer_preview_windows_reproducibility_blocked_field_count": 0,
+        "developer_preview_windows_reproducibility_primary_field_id": "",
+        "developer_preview_windows_reproducibility_primary_blocker": "",
+        "developer_preview_windows_reproducibility_primary_required_action": "",
+        "developer_preview_windows_reproducibility_requirement_rows": [],
+        "developer_preview_new_user_observation_receipt_present": False,
+        "developer_preview_new_user_observation_receipt_status": "",
+        "developer_preview_new_user_observation_runbook_ready": False,
+        "developer_preview_new_user_observation_runbook_missing_required_token_count": 0,
+        "developer_preview_new_user_observation_core_workflow_receipt_path_documented": False,
+        "developer_preview_new_user_observation_core_workflow_command_set_documented": False,
+        "developer_preview_new_user_observation_draft_fail_closed_ready": False,
+        "developer_preview_new_user_observation_input_json": "",
+        "developer_preview_new_user_observation_input_template_json": "",
+        "developer_preview_new_user_observation_input_json_present": False,
+        "developer_preview_new_user_observation_input_contract_ready": False,
+        "developer_preview_new_user_observation_input_policy_ready": False,
+        "developer_preview_new_user_observation_checklist_path_documented": False,
+        "developer_preview_new_user_observation_template_next_action": "",
+        "developer_preview_new_user_observation_required_field_count": 0,
+        "developer_preview_new_user_observation_ready_field_count": 0,
+        "developer_preview_new_user_observation_blocked_field_count": 0,
+        "developer_preview_new_user_observation_primary_field_id": "",
+        "developer_preview_new_user_observation_primary_blocker": "",
+        "developer_preview_new_user_observation_primary_required_action": "",
+        "developer_preview_new_user_observation_template_rows": [],
         "enterprise_on_prem_readiness_present": False,
         "enterprise_on_prem_ready": False,
         "enterprise_on_prem_claim_allowed": False,
@@ -1360,6 +1551,35 @@ def _missing_response() -> dict[str, Any]:
         "enterprise_on_prem_support_bundle_recovery_drill_ready": False,
         "enterprise_on_prem_rollback_retry_idempotency_ready": False,
         "enterprise_on_prem_control_rows": [],
+        "github_self_hosted_runner_preflight_present": False,
+        "github_self_hosted_runner_preflight_status": "",
+        "github_self_hosted_runner_local_host_ready": False,
+        "github_self_hosted_runner_repo_ready": False,
+        "github_self_hosted_runner_docker_daemon_accessible": False,
+        "github_self_hosted_runner_rocm_device_nodes_ready": False,
+        "github_self_hosted_runner_product_image_rocm_runtime_ready": False,
+        "github_self_hosted_runner_product_image_hygiene_ready": False,
+        "github_self_hosted_runner_product_image_workspace_cleanup_ready": False,
+        "github_self_hosted_runner_product_image_workspace_bad_owner_path": "",
+        "github_self_hosted_runner_product_image_workspace_not_writable_path": "",
+        "github_self_hosted_runner_product_image_workspace_required_action": "",
+        "github_self_hosted_runner_linux_online_count": 0,
+        "github_self_hosted_runner_rocm_online_count": 0,
+        "github_self_hosted_runner_next_required_steps": [],
+        "release_ci_remote_green_present": False,
+        "release_ci_remote_green_status": "",
+        "release_ci_remote_green_ready": False,
+        "release_ci_remote_green_pass": False,
+        "release_ci_remote_green_blocker_count": 0,
+        "release_ci_linux_self_hosted_runner_ready": False,
+        "release_ci_rocm_self_hosted_runner_ready": False,
+        "release_ci_main_required_checks_ready": False,
+        "release_ci_workflow_source_contract_ready": False,
+        "release_ci_weekly_rocm_schedule_green": False,
+        "release_ci_failure_artifacts_preserved": False,
+        "release_ci_release_tag_rocm_gate_green": False,
+        "release_ci_next_required_step": "",
+        "release_ci_panel_blockers": [],
         "f2g_f2h_preflight_present": False,
         "f2g_f2h_recovery_packet_present": False,
         "f2g_f2h_preflight_status": "",
@@ -1430,6 +1650,8 @@ def _missing_response() -> dict[str, Any]:
         "pr38_split_ready_for_human_branch_approval": False,
         "pr38_operator_branch_approval_required": False,
         "pr38_child_pr_count": 0,
+        "pr38_minimum_child_pr_count": 0,
+        "pr38_minimum_child_pr_count_met": False,
         "pr38_ready_child_pr_count": 0,
         "pr38_blocked_child_pr_count": 0,
         "pr38_blocked_slice_ids": [],
@@ -1925,6 +2147,200 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         "public_benchmark_vina_gnina_adapter_command_after_fill": str(
             summary.get("public_benchmark_vina_gnina_adapter_command_after_fill") or ""
         ),
+        "competition_benchmark_rollup_present": bool(
+            summary.get("competition_benchmark_rollup_present") is True
+        ),
+        "competition_benchmark_rollup_status": str(
+            summary.get("competition_benchmark_rollup_status") or ""
+        ),
+        "competition_benchmark_rollup_ready": bool(
+            summary.get("competition_benchmark_rollup_ready") is True
+        ),
+        "competition_benchmark_competition_evidence_role": str(
+            summary.get("competition_benchmark_competition_evidence_role") or ""
+        ),
+        "competition_benchmark_cameo_official_result_intake_status": str(
+            summary.get("competition_benchmark_cameo_official_result_intake_status")
+            or ""
+        ),
+        "competition_benchmark_cameo_official_result_intake_ready": bool(
+            summary.get("competition_benchmark_cameo_official_result_intake_ready")
+            is True
+        ),
+        "competition_benchmark_cameo_official_result_row_count": _int(
+            summary.get("competition_benchmark_cameo_official_result_row_count")
+        ),
+        "competition_benchmark_cameo_official_accepted_result_count": _int(
+            summary.get("competition_benchmark_cameo_official_accepted_result_count")
+        ),
+        "competition_benchmark_cameo_official_result_intake_claim_allowed": bool(
+            summary.get(
+                "competition_benchmark_cameo_official_result_intake_claim_allowed"
+            )
+            is True
+        ),
+        "competition_benchmark_cameo_official_result_intake_fetch_enabled": bool(
+            summary.get(
+                "competition_benchmark_cameo_official_result_intake_fetch_enabled"
+            )
+            is True
+        ),
+        "competition_benchmark_cameo_official_result_intake_external_state_mutated": bool(
+            summary.get(
+                "competition_benchmark_cameo_official_result_intake_external_state_mutated"
+            )
+            is True
+        ),
+        "competition_benchmark_cameo_official_result_intake_local_native_accuracy_used": bool(
+            summary.get(
+                "competition_benchmark_cameo_official_result_intake_local_native_accuracy_used"
+            )
+            is True
+        ),
+        "competition_benchmark_casp16_ligand_competition_credibility_ready": bool(
+            summary.get(
+                "competition_benchmark_casp16_ligand_competition_credibility_ready"
+            )
+            is True
+        ),
+        "competition_benchmark_bm5_capri_complex_competition_credibility_ready": bool(
+            summary.get(
+                "competition_benchmark_bm5_capri_complex_competition_credibility_ready"
+            )
+            is True
+        ),
+        "competition_benchmark_competition_credibility_extension_ready": bool(
+            summary.get("competition_benchmark_competition_credibility_extension_ready")
+            is True
+        ),
+        "competition_benchmark_competition_credibility_extension_blocker_count": _int(
+            summary.get(
+                "competition_benchmark_competition_credibility_extension_blocker_count"
+            )
+        ),
+        "competition_benchmark_competition_credibility_extension_blockers": _string_list(
+            summary.get("competition_benchmark_competition_credibility_extension_blockers")
+        ),
+        "competition_benchmark_competition_credibility_extension_primary_blocker": str(
+            summary.get(
+                "competition_benchmark_competition_credibility_extension_primary_blocker"
+            )
+            or ""
+        ),
+        "competition_benchmark_competition_credibility_extension_next_actions": _string_list(
+            summary.get(
+                "competition_benchmark_competition_credibility_extension_next_actions"
+            )
+        ),
+        "competition_benchmark_competition_credibility_extension_primary_next_action": str(
+            summary.get(
+                "competition_benchmark_competition_credibility_extension_primary_next_action"
+            )
+            or ""
+        ),
+        "competition_benchmark_custody_work_order_status": str(
+            summary.get("competition_benchmark_custody_work_order_status") or ""
+        ),
+        "competition_benchmark_custody_work_order_ready": bool(
+            summary.get("competition_benchmark_custody_work_order_ready") is True
+        ),
+        "competition_benchmark_custody_work_order_action_count": _int(
+            summary.get("competition_benchmark_custody_work_order_action_count")
+        ),
+        "competition_benchmark_custody_work_order_primary_required_action": str(
+            summary.get(
+                "competition_benchmark_custody_work_order_primary_required_action"
+            )
+            or ""
+        ),
+        "competition_benchmark_package_b_required_for_ligand_commercial_claims": bool(
+            summary.get(
+                "competition_benchmark_package_b_required_for_ligand_commercial_claims"
+            )
+            is True
+        ),
+        "competition_benchmark_package_b_ligand_suite_ids": _string_list(
+            summary.get("competition_benchmark_package_b_ligand_suite_ids")
+        ),
+        "competition_benchmark_package_b_ligand_suite_count": _int(
+            summary.get("competition_benchmark_package_b_ligand_suite_count")
+        ),
+        "competition_benchmark_package_b_ligand_public_benchmark_foundation_ready": bool(
+            summary.get(
+                "competition_benchmark_package_b_ligand_public_benchmark_foundation_ready"
+            )
+            is True
+        ),
+        "competition_benchmark_package_b_claim_grade_public_benchmark_ready": bool(
+            summary.get(
+                "competition_benchmark_package_b_claim_grade_public_benchmark_ready"
+            )
+            is True
+        ),
+        "competition_benchmark_package_b_claim_grade_blocker_count": _int(
+            summary.get("competition_benchmark_package_b_claim_grade_blocker_count")
+        ),
+        "competition_benchmark_package_b_claim_grade_blockers": _string_list(
+            summary.get("competition_benchmark_package_b_claim_grade_blockers")
+        ),
+        "competition_benchmark_competition_ligand_commercial_claim_allowed": bool(
+            summary.get(
+                "competition_benchmark_competition_ligand_commercial_claim_allowed"
+            )
+            is True
+        ),
+        "competition_benchmark_competition_ligand_claim_package_b_dependency_ready": bool(
+            summary.get(
+                "competition_benchmark_competition_ligand_claim_package_b_dependency_ready"
+            )
+            is True
+        ),
+        "competition_benchmark_competition_ligand_claim_blocker_count": _int(
+            summary.get("competition_benchmark_competition_ligand_claim_blocker_count")
+        ),
+        "competition_benchmark_competition_ligand_claim_blockers": _string_list(
+            summary.get("competition_benchmark_competition_ligand_claim_blockers")
+        ),
+        "competition_benchmark_github_raw_data_policy_ready": bool(
+            summary.get("competition_benchmark_github_raw_data_policy_ready") is True
+        ),
+        "competition_benchmark_github_raw_data_git_tracked_total_count": _int(
+            summary.get("competition_benchmark_github_raw_data_git_tracked_total_count")
+        ),
+        "competition_benchmark_raw_data_stored_in_repo": bool(
+            summary.get("competition_benchmark_raw_data_stored_in_repo") is True
+        ),
+        "competition_benchmark_raw_data_free": bool(
+            summary.get("competition_benchmark_raw_data_free") is True
+        ),
+        "competition_benchmark_github_raw_payloads_allowed": bool(
+            summary.get("competition_benchmark_github_raw_payloads_allowed") is True
+        ),
+        "competition_benchmark_github_safe_allowed_artifact_classes": _string_list(
+            summary.get("competition_benchmark_github_safe_allowed_artifact_classes")
+        ),
+        "competition_benchmark_github_disallowed_artifact_classes": _string_list(
+            summary.get("competition_benchmark_github_disallowed_artifact_classes")
+        ),
+        "competition_benchmark_github_raw_benchmark_payloads_allowed": bool(
+            summary.get("competition_benchmark_github_raw_benchmark_payloads_allowed")
+            is True
+        ),
+        "competition_benchmark_github_official_archive_models_as_internal_predictions_allowed": bool(
+            summary.get(
+                "competition_benchmark_github_official_archive_models_as_internal_predictions_allowed"
+            )
+            is True
+        ),
+        "competition_benchmark_package_b_bridge_next_action": str(
+            summary.get("competition_benchmark_package_b_bridge_next_action") or ""
+        ),
+        "competition_benchmark_claim_boundary": str(
+            summary.get("competition_benchmark_claim_boundary") or ""
+        ),
+        "competition_benchmark_claim_promotion_allowed": False,
+        "competition_benchmark_execution_enabled": False,
+        "competition_benchmark_external_state_mutated": False,
         "evidence_bundle_export_ready": bool(summary.get("evidence_bundle_export_ready") is True),
         "evidence_bundle_export_row_count": _int(
             summary.get("evidence_bundle_export_row_count")
@@ -2176,6 +2592,27 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
             )
             or ""
         ),
+        "developer_preview_next_operator_command_pack_target": str(
+            summary.get("developer_preview_next_operator_command_pack_target") or ""
+        ),
+        "developer_preview_next_operator_command_pack_command": str(
+            summary.get("developer_preview_next_operator_command_pack_command") or ""
+        ),
+        "developer_preview_next_operator_command_pack_required_platform": str(
+            summary.get("developer_preview_next_operator_command_pack_required_platform")
+            or ""
+        ),
+        "developer_preview_next_operator_command_pack_required_env_vars": _string_list(
+            summary.get("developer_preview_next_operator_command_pack_required_env_vars")
+        ),
+        "developer_preview_next_operator_command_pack_required_input_artifacts": _string_list(
+            summary.get(
+                "developer_preview_next_operator_command_pack_required_input_artifacts"
+            )
+        ),
+        "developer_preview_next_operator_command_pack_receipt_artifacts": _string_list(
+            summary.get("developer_preview_next_operator_command_pack_receipt_artifacts")
+        ),
         "developer_preview_receipt_work_order_rows": _developer_preview_receipt_work_order_rows(
             summary.get("developer_preview_receipt_work_order_rows")
         ),
@@ -2188,6 +2625,26 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         "developer_preview_stage5_required_argument_count": _int(
             summary.get("developer_preview_stage5_required_argument_count")
         ),
+        "developer_preview_stage5_recovery_operator_work_order_ready": bool(
+            summary.get("developer_preview_stage5_recovery_operator_work_order_ready")
+            is True
+        ),
+        "developer_preview_stage5_recovery_operator_work_order_materialized": bool(
+            summary.get("developer_preview_stage5_recovery_operator_work_order_materialized")
+            is True
+        ),
+        "developer_preview_stage5_input_family_csv_path": str(
+            summary.get("developer_preview_stage5_input_family_csv_path") or ""
+        ),
+        "developer_preview_stage5_input_family_md_path": str(
+            summary.get("developer_preview_stage5_input_family_md_path") or ""
+        ),
+        "developer_preview_stage5_input_family_csv_present": bool(
+            summary.get("developer_preview_stage5_input_family_csv_present") is True
+        ),
+        "developer_preview_stage5_input_family_md_present": bool(
+            summary.get("developer_preview_stage5_input_family_md_present") is True
+        ),
         "developer_preview_stage5_primary_task_key": str(
             summary.get("developer_preview_stage5_primary_task_key") or ""
         ),
@@ -2197,8 +2654,227 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         "developer_preview_stage5_primary_source_artifact_path": str(
             summary.get("developer_preview_stage5_primary_source_artifact_path") or ""
         ),
+        "developer_preview_stage5_restore_packet_status": str(
+            summary.get("developer_preview_stage5_restore_packet_status") or ""
+        ),
+        "developer_preview_stage5_restore_packet_ready": bool(
+            summary.get("developer_preview_stage5_restore_packet_ready") is True
+        ),
+        "developer_preview_stage5_restore_packet_fail_closed_restore_receipt_ready": bool(
+            summary.get(
+                "developer_preview_stage5_restore_packet_fail_closed_restore_receipt_ready"
+            )
+            is True
+        ),
+        "developer_preview_stage5_restore_packet_operator_restore_queue_ready": bool(
+            summary.get(
+                "developer_preview_stage5_restore_packet_operator_restore_queue_ready"
+            )
+            is True
+        ),
+        "developer_preview_stage5_restore_packet_operator_restore_queue_row_count": _int(
+            summary.get(
+                "developer_preview_stage5_restore_packet_operator_restore_queue_row_count"
+            )
+        ),
+        "developer_preview_stage5_restore_packet_missing_source_artifact_count": _int(
+            summary.get(
+                "developer_preview_stage5_restore_packet_missing_source_artifact_count"
+            )
+        ),
+        "developer_preview_stage5_restore_packet_primary_blocker": str(
+            summary.get("developer_preview_stage5_restore_packet_primary_blocker") or ""
+        ),
+        "developer_preview_stage5_restore_packet_primary_missing_source_argument": str(
+            summary.get(
+                "developer_preview_stage5_restore_packet_primary_missing_source_argument"
+            )
+            or ""
+        ),
+        "developer_preview_stage5_restore_packet_primary_missing_source_artifact_path": str(
+            summary.get(
+                "developer_preview_stage5_restore_packet_primary_missing_source_artifact_path"
+            )
+            or ""
+        ),
+        "developer_preview_stage5_restore_packet_primary_missing_pipeline_summary_json": str(
+            summary.get(
+                "developer_preview_stage5_restore_packet_primary_missing_pipeline_summary_json"
+            )
+            or ""
+        ),
+        "developer_preview_stage5_restore_packet_primary_missing_pipeline_summary_present": bool(
+            summary.get(
+                "developer_preview_stage5_restore_packet_primary_missing_pipeline_summary_present"
+            )
+            is True
+        ),
+        "developer_preview_stage5_restore_packet_primary_missing_profile_json": str(
+            summary.get(
+                "developer_preview_stage5_restore_packet_primary_missing_profile_json"
+            )
+            or ""
+        ),
+        "developer_preview_stage5_restore_packet_primary_missing_profile_present": bool(
+            summary.get(
+                "developer_preview_stage5_restore_packet_primary_missing_profile_present"
+            )
+            is True
+        ),
+        "developer_preview_stage5_restore_packet_primary_missing_restore_queue_ready": bool(
+            summary.get(
+                "developer_preview_stage5_restore_packet_primary_missing_restore_queue_ready"
+            )
+            is True
+        ),
+        "developer_preview_stage5_restore_packet_primary_missing_restore_instruction": str(
+            summary.get(
+                "developer_preview_stage5_restore_packet_primary_missing_restore_instruction"
+            )
+            or ""
+        ),
+        "developer_preview_stage5_restore_packet_next_required_step": str(
+            summary.get("developer_preview_stage5_restore_packet_next_required_step")
+            or ""
+        ),
+        "developer_preview_stage5_restore_packet_operator_action_required": bool(
+            summary.get(
+                "developer_preview_stage5_restore_packet_operator_action_required"
+            )
+            is True
+        ),
         "developer_preview_stage5_recovery_rows": _developer_preview_stage5_recovery_rows(
             summary.get("developer_preview_stage5_recovery_rows")
+        ),
+        "developer_preview_linux_reproducibility_receipt_present": bool(
+            summary.get("developer_preview_linux_reproducibility_receipt_present")
+            is True
+        ),
+        "developer_preview_linux_reproducibility_receipt_status": str(
+            summary.get("developer_preview_linux_reproducibility_receipt_status") or ""
+        ),
+        "developer_preview_windows_reproducibility_receipt_present": bool(
+            summary.get("developer_preview_windows_reproducibility_receipt_present")
+            is True
+        ),
+        "developer_preview_windows_reproducibility_receipt_status": str(
+            summary.get("developer_preview_windows_reproducibility_receipt_status") or ""
+        ),
+        "developer_preview_windows_reproducibility_required_field_count": _int(
+            summary.get("developer_preview_windows_reproducibility_required_field_count")
+        ),
+        "developer_preview_windows_reproducibility_ready_field_count": _int(
+            summary.get("developer_preview_windows_reproducibility_ready_field_count")
+        ),
+        "developer_preview_windows_reproducibility_blocked_field_count": _int(
+            summary.get("developer_preview_windows_reproducibility_blocked_field_count")
+        ),
+        "developer_preview_windows_reproducibility_primary_field_id": str(
+            summary.get("developer_preview_windows_reproducibility_primary_field_id")
+            or ""
+        ),
+        "developer_preview_windows_reproducibility_primary_blocker": str(
+            summary.get("developer_preview_windows_reproducibility_primary_blocker")
+            or ""
+        ),
+        "developer_preview_windows_reproducibility_primary_required_action": str(
+            summary.get(
+                "developer_preview_windows_reproducibility_primary_required_action"
+            )
+            or ""
+        ),
+        "developer_preview_windows_reproducibility_requirement_rows": (
+            _developer_preview_platform_evidence_requirement_rows(
+                summary.get("developer_preview_windows_reproducibility_requirement_rows")
+            )
+        ),
+        "developer_preview_new_user_observation_receipt_present": bool(
+            summary.get("developer_preview_new_user_observation_receipt_present")
+            is True
+        ),
+        "developer_preview_new_user_observation_receipt_status": str(
+            summary.get("developer_preview_new_user_observation_receipt_status") or ""
+        ),
+        "developer_preview_new_user_observation_runbook_ready": bool(
+            summary.get("developer_preview_new_user_observation_runbook_ready") is True
+        ),
+        "developer_preview_new_user_observation_runbook_missing_required_token_count": _int(
+            summary.get(
+                "developer_preview_new_user_observation_runbook_missing_required_token_count"
+            )
+        ),
+        "developer_preview_new_user_observation_core_workflow_receipt_path_documented": bool(
+            summary.get(
+                "developer_preview_new_user_observation_core_workflow_receipt_path_documented"
+            )
+            is True
+        ),
+        "developer_preview_new_user_observation_core_workflow_command_set_documented": bool(
+            summary.get(
+                "developer_preview_new_user_observation_core_workflow_command_set_documented"
+            )
+            is True
+        ),
+        "developer_preview_new_user_observation_draft_fail_closed_ready": bool(
+            summary.get("developer_preview_new_user_observation_draft_fail_closed_ready")
+            is True
+        ),
+        "developer_preview_new_user_observation_input_json": str(
+            summary.get("developer_preview_new_user_observation_input_json") or ""
+        ),
+        "developer_preview_new_user_observation_input_template_json": str(
+            summary.get("developer_preview_new_user_observation_input_template_json")
+            or ""
+        ),
+        "developer_preview_new_user_observation_input_json_present": bool(
+            summary.get("developer_preview_new_user_observation_input_json_present")
+            is True
+        ),
+        "developer_preview_new_user_observation_input_contract_ready": bool(
+            summary.get("developer_preview_new_user_observation_input_contract_ready")
+            is True
+        ),
+        "developer_preview_new_user_observation_input_policy_ready": bool(
+            summary.get("developer_preview_new_user_observation_input_policy_ready")
+            is True
+        ),
+        "developer_preview_new_user_observation_checklist_path_documented": bool(
+            summary.get(
+                "developer_preview_new_user_observation_checklist_path_documented"
+            )
+            is True
+        ),
+        "developer_preview_new_user_observation_template_next_action": str(
+            summary.get("developer_preview_new_user_observation_template_next_action")
+            or ""
+        ),
+        "developer_preview_new_user_observation_required_field_count": _int(
+            summary.get("developer_preview_new_user_observation_required_field_count")
+        ),
+        "developer_preview_new_user_observation_ready_field_count": _int(
+            summary.get("developer_preview_new_user_observation_ready_field_count")
+        ),
+        "developer_preview_new_user_observation_blocked_field_count": _int(
+            summary.get("developer_preview_new_user_observation_blocked_field_count")
+        ),
+        "developer_preview_new_user_observation_primary_field_id": str(
+            summary.get("developer_preview_new_user_observation_primary_field_id")
+            or ""
+        ),
+        "developer_preview_new_user_observation_primary_blocker": str(
+            summary.get("developer_preview_new_user_observation_primary_blocker")
+            or ""
+        ),
+        "developer_preview_new_user_observation_primary_required_action": str(
+            summary.get(
+                "developer_preview_new_user_observation_primary_required_action"
+            )
+            or ""
+        ),
+        "developer_preview_new_user_observation_template_rows": (
+            _developer_preview_new_user_observation_template_rows(
+                summary.get("developer_preview_new_user_observation_template_rows")
+            )
         ),
         "enterprise_on_prem_readiness_present": bool(
             summary.get("enterprise_on_prem_readiness_present") is True
@@ -2246,6 +2922,106 @@ async def get_product_operator_cockpit() -> dict[str, Any]:
         ),
         "enterprise_on_prem_control_rows": _enterprise_on_prem_control_rows(
             summary.get("enterprise_on_prem_control_rows")
+        ),
+        "github_self_hosted_runner_preflight_present": bool(
+            summary.get("github_self_hosted_runner_preflight_present") is True
+        ),
+        "github_self_hosted_runner_preflight_status": str(
+            summary.get("github_self_hosted_runner_preflight_status") or ""
+        ),
+        "github_self_hosted_runner_local_host_ready": bool(
+            summary.get("github_self_hosted_runner_local_host_ready") is True
+        ),
+        "github_self_hosted_runner_repo_ready": bool(
+            summary.get("github_self_hosted_runner_repo_ready") is True
+        ),
+        "github_self_hosted_runner_docker_daemon_accessible": bool(
+            summary.get("github_self_hosted_runner_docker_daemon_accessible") is True
+        ),
+        "github_self_hosted_runner_rocm_device_nodes_ready": bool(
+            summary.get("github_self_hosted_runner_rocm_device_nodes_ready") is True
+        ),
+        "github_self_hosted_runner_product_image_rocm_runtime_ready": bool(
+            summary.get("github_self_hosted_runner_product_image_rocm_runtime_ready")
+            is True
+        ),
+        "github_self_hosted_runner_product_image_hygiene_ready": bool(
+            summary.get("github_self_hosted_runner_product_image_hygiene_ready") is True
+        ),
+        "github_self_hosted_runner_product_image_workspace_cleanup_ready": bool(
+            summary.get(
+                "github_self_hosted_runner_product_image_workspace_cleanup_ready"
+            )
+            is True
+        ),
+        "github_self_hosted_runner_product_image_workspace_bad_owner_path": str(
+            summary.get(
+                "github_self_hosted_runner_product_image_workspace_bad_owner_path"
+            )
+            or ""
+        ),
+        "github_self_hosted_runner_product_image_workspace_not_writable_path": str(
+            summary.get(
+                "github_self_hosted_runner_product_image_workspace_not_writable_path"
+            )
+            or ""
+        ),
+        "github_self_hosted_runner_product_image_workspace_required_action": str(
+            summary.get(
+                "github_self_hosted_runner_product_image_workspace_required_action"
+            )
+            or ""
+        ),
+        "github_self_hosted_runner_linux_online_count": _int(
+            summary.get("github_self_hosted_runner_linux_online_count")
+        ),
+        "github_self_hosted_runner_rocm_online_count": _int(
+            summary.get("github_self_hosted_runner_rocm_online_count")
+        ),
+        "github_self_hosted_runner_next_required_steps": _string_list(
+            summary.get("github_self_hosted_runner_next_required_steps")
+        ),
+        "release_ci_remote_green_present": bool(
+            summary.get("release_ci_remote_green_present") is True
+        ),
+        "release_ci_remote_green_status": str(
+            summary.get("release_ci_remote_green_status") or ""
+        ),
+        "release_ci_remote_green_ready": bool(
+            summary.get("release_ci_remote_green_ready") is True
+        ),
+        "release_ci_remote_green_pass": bool(
+            summary.get("release_ci_remote_green_pass") is True
+        ),
+        "release_ci_remote_green_blocker_count": _int(
+            summary.get("release_ci_remote_green_blocker_count")
+        ),
+        "release_ci_linux_self_hosted_runner_ready": bool(
+            summary.get("release_ci_linux_self_hosted_runner_ready") is True
+        ),
+        "release_ci_rocm_self_hosted_runner_ready": bool(
+            summary.get("release_ci_rocm_self_hosted_runner_ready") is True
+        ),
+        "release_ci_main_required_checks_ready": bool(
+            summary.get("release_ci_main_required_checks_ready") is True
+        ),
+        "release_ci_workflow_source_contract_ready": bool(
+            summary.get("release_ci_workflow_source_contract_ready") is True
+        ),
+        "release_ci_weekly_rocm_schedule_green": bool(
+            summary.get("release_ci_weekly_rocm_schedule_green") is True
+        ),
+        "release_ci_failure_artifacts_preserved": bool(
+            summary.get("release_ci_failure_artifacts_preserved") is True
+        ),
+        "release_ci_release_tag_rocm_gate_green": bool(
+            summary.get("release_ci_release_tag_rocm_gate_green") is True
+        ),
+        "release_ci_next_required_step": str(
+            summary.get("release_ci_next_required_step") or ""
+        ),
+        "release_ci_panel_blockers": _string_list(
+            summary.get("release_ci_panel_blockers")
         ),
         "f2g_f2h_preflight_present": bool(summary.get("f2g_f2h_preflight_present") is True),
         "f2g_f2h_recovery_packet_present": bool(

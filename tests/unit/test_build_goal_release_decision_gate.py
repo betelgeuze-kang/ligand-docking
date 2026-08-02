@@ -1559,6 +1559,102 @@ def _blocked_api_customer_flow() -> dict:
     }
 
 
+def _competition_benchmark_rollup() -> dict:
+    return {
+        "summary": {
+            "status": "competition_benchmark_rollup_ready",
+            "cameo_api_dependency_ready": True,
+            "cameo_receiver_smoke_ready": True,
+            "cameo_format_validation_ready": True,
+            "cameo_model1_selection_ready": True,
+            "cameo_dry_run_handoff_ready": True,
+            "cameo_validation_status": "cameo_validation_pending_official_results",
+            "cameo_validation_next_action": "Fill official CAMEO assessment rows.",
+            "cameo_official_results_used": False,
+            "cameo_official_intake_row_count": 0,
+            "cameo_official_intake_gate_status": "blocked_cameo_official_results_intake",
+            "cameo_official_intake_gate_ready": False,
+            "cameo_official_intake_gate_artifact_path": (
+                "runs/cameo_official_results_intake_gate_current.json"
+            ),
+            "cameo_official_operator_intake_csv": (
+                "runs/cameo_official_results_operator_intake.csv"
+            ),
+            "cameo_official_operator_template_csv": (
+                "runs/cameo_official_results_operator_template_current.csv"
+            ),
+            "cameo_official_result_row_count": 0,
+            "cameo_official_accepted_result_count": 0,
+            "cameo_official_rejected_result_count": 0,
+            "cameo_official_model1_result_ready": False,
+            "cameo_official_blocker_count": 2,
+            "cameo_official_blocker_codes": [
+                "official_result_required_columns_missing",
+                "official_result_rows_missing",
+            ],
+            "cameo_official_required_column_count": 8,
+            "cameo_official_missing_required_column_count": 8,
+            "cameo_official_missing_required_columns": ["target_id"],
+            "cameo_official_native_local_accuracy_used": False,
+            "cameo_official_external_state_mutated": False,
+            "cameo_official_next_action": "Fill official CAMEO assessment rows.",
+            "casp_strict_blind_first_slot_ready": False,
+            "casp_strict_blind_blocked_check_count": 1,
+            "casp_strict_blind_next_action": "Provide a verified strict-blind source.",
+            "casp_winner_band_unblocked_count": 0,
+            "casp_winner_band_total_count": 3,
+            "casp16_ligand_source_manifest_status": (
+                "blocked_casp16_ligand_competition_credibility"
+            ),
+            "casp16_ligand_source_manifest_ready": True,
+            "casp16_ligand_materialization_ready": False,
+            "casp16_ligand_scorecard_ready": False,
+            "casp16_ligand_competition_credibility_ready": False,
+            "casp16_ligand_pose_target_count": 233,
+            "casp16_ligand_affinity_target_count": 140,
+            "casp16_ligand_next_action": "Attach local CASP16 ligand receipts.",
+            "bm5_capri_complex_source_manifest_status": (
+                "blocked_bm5_capri_complex_competition_credibility"
+            ),
+            "bm5_complex_benchmark_ready": True,
+            "capri_score_set_ready": False,
+            "bm5_capri_complex_competition_credibility_ready": False,
+            "bm5_capri_complex_primary_metric": "CAPRI quality category",
+            "bm5_capri_complex_next_action": "Attach CAPRI score_set receipts.",
+            "package_b_required_for_ligand_commercial_claims": True,
+            "package_b_public_benchmark_contract_status": (
+                "product_public_benchmark_contract_ready"
+            ),
+            "package_b_public_benchmark_validation_ready": True,
+            "package_b_ligand_public_benchmark_foundation_ready": True,
+            "package_b_ligand_suite_ids": [
+                "pdbbind_casf_pose_affinity",
+                "lit_pcba_virtual_screening",
+                "dude_z_decoy_smoke",
+            ],
+            "package_b_refine_tier_public_benchmark_status": (
+                "blocked_refine_tier_public_benchmark_readiness"
+            ),
+            "package_b_claim_grade_public_benchmark_ready": False,
+            "package_b_claim_grade_blocker_count": 6,
+            "package_b_claim_grade_blockers": ["insufficient_total_rows"],
+            "package_b_refine_tier_work_order_apply_status": (
+                "blocked_refine_tier_public_benchmark_work_order_apply"
+            ),
+            "package_b_refine_tier_work_order_apply_ready": False,
+            "competition_evidence_role": "competition_credibility_evidence_only",
+            "competition_ligand_commercial_claim_allowed": False,
+            "competition_ligand_claim_package_b_dependency_ready": False,
+            "competition_ligand_claim_blocker_count": 1,
+            "competition_ligand_claim_blockers": [
+                "package_b_claim_grade_public_benchmark_not_ready"
+            ],
+            "package_b_bridge_next_action": "Fill Package B refine-tier evidence.",
+            "claim_boundary": "Competition credibility only.",
+        }
+    }
+
+
 def _ready_api_customer_flow() -> dict:
     return {
         "summary": {
@@ -1608,6 +1704,7 @@ def test_goal_release_decision_gate_blocks_current_incomplete_goal() -> None:
         cameo_official_result_fetch_preflight_packet=(
             _blocked_cameo_official_result_fetch_preflight()
         ),
+        competition_benchmark_rollup_packet=_competition_benchmark_rollup(),
         goal_rollup_packet=_blocked_rollup(),
         operator_action_board_packet=_blocked_action_board(),
         transition_cleanup_preflight_packet=_transition_cleanup("transition_cleanup_execution_preflight_ready"),
@@ -1668,6 +1765,46 @@ def test_goal_release_decision_gate_blocks_current_incomplete_goal() -> None:
     assert summary["product_architecture_public_benchmark_requires_24h_server"] is False
     assert summary["public_benchmark_required_for_product_release"] is True
     assert summary["release_blocked_by_public_benchmark"] is True
+    assert summary["competition_benchmark_rollup_status"] == "competition_benchmark_rollup_ready"
+    assert summary["competition_benchmark_cameo_official_intake_gate_status"] == (
+        "blocked_cameo_official_results_intake"
+    )
+    assert summary["competition_benchmark_cameo_official_blocker_count"] == 2
+    assert summary["competition_benchmark_cameo_official_missing_required_columns"] == [
+        "target_id"
+    ]
+    assert summary["competition_benchmark_casp16_ligand_source_manifest_status"] == (
+        "blocked_casp16_ligand_competition_credibility"
+    )
+    assert summary["competition_benchmark_casp16_ligand_source_manifest_ready"] is True
+    assert (
+        summary["competition_benchmark_casp16_ligand_competition_credibility_ready"]
+        is False
+    )
+    assert summary["competition_benchmark_casp16_ligand_pose_target_count"] == 233
+    assert summary["competition_benchmark_casp16_ligand_affinity_target_count"] == 140
+    assert summary["competition_benchmark_bm5_capri_complex_source_manifest_status"] == (
+        "blocked_bm5_capri_complex_competition_credibility"
+    )
+    assert summary["competition_benchmark_bm5_complex_benchmark_ready"] is True
+    assert summary["competition_benchmark_capri_score_set_ready"] is False
+    assert (
+        summary["competition_benchmark_bm5_capri_complex_competition_credibility_ready"]
+        is False
+    )
+    assert summary["competition_benchmark_package_b_public_benchmark_validation_ready"] is True
+    assert (
+        summary["competition_benchmark_package_b_ligand_public_benchmark_foundation_ready"]
+        is True
+    )
+    assert summary["competition_benchmark_package_b_claim_grade_public_benchmark_ready"] is False
+    assert summary["competition_benchmark_competition_evidence_role"] == (
+        "competition_credibility_evidence_only"
+    )
+    assert summary["competition_benchmark_competition_ligand_commercial_claim_allowed"] is False
+    assert summary["competition_benchmark_competition_ligand_claim_blockers"] == [
+        "package_b_claim_grade_public_benchmark_not_ready"
+    ]
     assert summary["cameo_live_validation_channel"] is True
     assert summary["cameo_live_validation_required_for_product_release"] is False
     assert summary["cameo_registration_required_for_product_release"] is False
@@ -3343,6 +3480,7 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
         "cameo_validation": tmp_path / "cameo_validation.json",
         "cameo_capability": tmp_path / "cameo_capability.json",
         "cameo_fetch_preflight": tmp_path / "cameo_fetch_preflight.json",
+        "competition_benchmark": tmp_path / "competition_benchmark.json",
         "rollup": tmp_path / "rollup.json",
         "actions": tmp_path / "actions.json",
         "transition_cleanup": tmp_path / "transition_cleanup.json",
@@ -3383,6 +3521,10 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
     paths["cameo_capability"].write_text(json.dumps(_blocked_cameo_capability()) + "\n", encoding="utf-8")
     paths["cameo_fetch_preflight"].write_text(
         json.dumps(_blocked_cameo_official_result_fetch_preflight()) + "\n",
+        encoding="utf-8",
+    )
+    paths["competition_benchmark"].write_text(
+        json.dumps(_competition_benchmark_rollup()) + "\n",
         encoding="utf-8",
     )
     paths["rollup"].write_text(json.dumps(_blocked_rollup()) + "\n", encoding="utf-8")
@@ -3470,6 +3612,8 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
             str(paths["cameo_capability"]),
             "--cameo-official-result-fetch-preflight-json",
             str(paths["cameo_fetch_preflight"]),
+            "--competition-benchmark-rollup-json",
+            str(paths["competition_benchmark"]),
             "--goal-rollup-json",
             str(paths["rollup"]),
             "--operator-action-board-json",
@@ -3534,6 +3678,25 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
     )
     assert summary["cameo_official_result_fetch_preflight_fetch_approval_token_required"] == (
         "APPROVE_CAMEO_OFFICIAL_RESULT_FETCH"
+    )
+    assert summary["competition_benchmark_rollup_status"] == "competition_benchmark_rollup_ready"
+    assert summary["competition_benchmark_cameo_official_intake_gate_status"] == (
+        "blocked_cameo_official_results_intake"
+    )
+    assert summary["competition_benchmark_casp16_ligand_source_manifest_status"] == (
+        "blocked_casp16_ligand_competition_credibility"
+    )
+    assert summary["competition_benchmark_casp16_ligand_next_action"] == (
+        "Attach local CASP16 ligand receipts."
+    )
+    assert summary["competition_benchmark_bm5_capri_complex_source_manifest_status"] == (
+        "blocked_bm5_capri_complex_competition_credibility"
+    )
+    assert summary["competition_benchmark_bm5_capri_complex_next_action"] == (
+        "Attach CAPRI score_set receipts."
+    )
+    assert summary["competition_benchmark_package_b_bridge_next_action"] == (
+        "Fill Package B refine-tier evidence."
     )
     assert summary["self_hosted_license_distribution_audit_recorded"] is True
     assert summary["self_hosted_license_distribution_audit_product_license_path"] == "LICENSE"
@@ -3637,6 +3800,9 @@ def test_goal_release_decision_gate_tool_writes_outputs(tmp_path: Path) -> None:
     assert "cameo_live_validation_required_for_product_release" in md_text
     assert "cameo_official_result_fetch_preflight_status" in md_text
     assert "APPROVE_CAMEO_OFFICIAL_RESULT_FETCH" in md_text
+    assert "competition_benchmark_rollup_status" in md_text
+    assert "blocked_casp16_ligand_competition_credibility" in md_text
+    assert "blocked_bm5_capri_complex_competition_credibility" in md_text
     assert "self_hosted_license_distribution_audit_recorded" in md_text
     assert "third_party_license_review_gate_recorded" in md_text
     assert "APPROVE_THIRD_PARTY_LICENSE_REVIEW" in md_text

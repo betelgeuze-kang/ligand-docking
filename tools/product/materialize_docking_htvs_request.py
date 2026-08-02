@@ -10,6 +10,12 @@ from typing import Any
 import pandas as pd
 
 from betelgeuze_product.docking_materialization_errors import DockingMaterializationError
+from betelgeuze_product.legacy_input_contract import (
+    LegacyInputContractError,
+    LegacyInputPolicy,
+    resolve_legacy_input_policy,
+    strict_int,
+)
 from betelgeuze_product.job_orchestration import read_job_record
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -116,19 +122,40 @@ def _estimate_expected_ligand_count(
     params: dict[str, Any],
     ledger: dict[str, Any],
     candidate_count: int,
+    legacy_input_policy: LegacyInputPolicy | None = None,
 ) -> int:
-    for value in (
-        params.get("ligand_count"),
-        ledger.get("ligand_count"),
-        (ledger.get("intake_payload") or {}).get("ligand_count")
-        if isinstance(ledger.get("intake_payload"), dict)
-        else None,
-    ):
-        try:
-            count = int(value)
-        except (TypeError, ValueError):
+    """Resolve the declared ligand count, failing closed on malformed values.
+
+    The legacy behaviour silently skipped an unparseable ``ligand_count`` and
+    fell through to the next source (ultimately the observed candidate count),
+    so a corrupted declaration could not be distinguished from an absent one.
+    Under the fail-closed policy a present-but-invalid value raises
+    ``DockingMaterializationError`` carrying the legacy-input reason code.
+    """
+
+    policy = (
+        legacy_input_policy
+        if legacy_input_policy is not None
+        else resolve_legacy_input_policy()
+    )
+    sources = (
+        ("params.ligand_count", params.get("ligand_count")),
+        ("ledger.ligand_count", ledger.get("ligand_count")),
+        (
+            "ledger.intake_payload.ligand_count",
+            (ledger.get("intake_payload") or {}).get("ligand_count")
+            if isinstance(ledger.get("intake_payload"), dict)
+            else None,
+        ),
+    )
+    for field, value in sources:
+        if value is None or (isinstance(value, str) and value.strip() == ""):
             continue
-        if count > 0:
+        try:
+            count = strict_int(value, field=field, policy=policy)
+        except LegacyInputContractError as exc:
+            raise DockingMaterializationError(exc.reason_code, exc.reason_detail) from exc
+        if count is not None and count > 0:
             return count
     return int(candidate_count)
 
@@ -189,6 +216,25 @@ def _resolve_materialization_inputs(
     synthetic_used = False
     if not ligands:
         if not allow_synthetic:
+            # A row that names a real but unsupported source kind (sdf/mol2/pdbqt)
+            # is a different failure from "no source at all". Report the specific
+            # kind so the caller can see which input needs conversion, and keep
+            # the generic code for redacted/absent sources.
+            unsupported_kind = next(
+                (
+                    key
+                    for rows in candidate_lists
+                    for row in rows
+                    if not _has_materializable_source(row)
+                    for key in _PATH_SOURCE_FIELDS
+                    if _text(row.get(key))
+                ),
+                "",
+            )
+            if unsupported_kind:
+                raise DockingMaterializationError(
+                    "unsupported_ligand_source_for_htvs_materialization", unsupported_kind
+                )
             raise DockingMaterializationError("ligand_source_unavailable_for_materialization")
         if expected_count not in {0, 1}:
             raise DockingMaterializationError(

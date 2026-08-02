@@ -126,7 +126,7 @@ def test_current_heavy_compaction_accepts_ligand_refine_scores_without_gpcr_name
         csv_path,
         "\n".join(
             [
-                "queue_id,target,ligand_id,ligand_smiles,binding_score_composite_v7,deltaG_mm_gbsa_kcal_mol,export_rank",
+                "queue_id,target,ligand_id,ligand_smiles,binding_score_composite_v7,internal_refine_proxy_score,export_rank",
                 "Q1,EGFR,L1,C,-11.0,-8.0,2",
                 "Q2,EGFR,L2,CC,-20.0,-12.0,1",
                 "Q3,EGFR,L3,CCC,-5.0,-3.0,3",
@@ -148,5 +148,5 @@ def test_current_heavy_compaction_accepts_ligand_refine_scores_without_gpcr_name
     assert row["score_col"] == "binding_score_composite_v7"
     assert row["top_rows"][0]["ligand_id"] == "L2"
     assert row["top_rows"][0]["queue_id"] == "Q2"
-    assert row["top_rows"][0]["deltaG_mm_gbsa_kcal_mol"] == "-12.0"
+    assert row["top_rows"][0]["internal_refine_proxy_score"] == "-12.0"
     assert row["delete_status"] == "pending_delete_after_top_rank_retention"

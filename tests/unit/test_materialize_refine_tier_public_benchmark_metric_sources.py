@@ -95,7 +95,7 @@ def test_materializes_metric_sources_and_pass_metric_evidence(tmp_path: Path) ->
                 "pose_rmsd_A": "0.05",
                 "dockq": "OPERATOR_FILL_DOCKQ",
                 "lddt_pli": "OPERATOR_FILL_LDDT_PLI",
-                "deltaG_mm_gbsa_kcal_mol": "OPERATOR_FILL_INTERNAL_REFINE_DG",
+                "internal_refine_proxy_score": "OPERATOR_FILL_INTERNAL_REFINE_DG",
                 "dockq_source_artifact": "OPERATOR_FILL_DOCKQ_SOURCE_ARTIFACT",
                 "lddt_pli_source_artifact": "OPERATOR_FILL_LDDT_PLI_SOURCE_ARTIFACT",
                 "internal_deltaG_source_artifact": "OPERATOR_FILL_INTERNAL_DELTAG_SOURCE_ARTIFACT",

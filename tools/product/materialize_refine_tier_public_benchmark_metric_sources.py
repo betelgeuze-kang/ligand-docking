@@ -12,6 +12,7 @@ from typing import Any
 
 import numpy as np
 
+from betelgeuze_engine.physics.mm_gbsa import gb_sa_proxy_energy
 from core.mm_gbsa import mm_gbsa_binding_energy
 from core.score_calibration import calibration_quality_gate, fit_linear_calibration
 from core.structure_metrics import dockq_proxy, lddt_pli_proxy, parse_pdb_atoms_with_coords
@@ -330,7 +331,7 @@ def _materialize_row(
                 pose_coords,
                 props=_ligand_descriptor_props(ligand_pose_artifact),
             )
-            internal_delta_g = float(refine["deltaG_mm_gbsa_kcal_mol"])
+            internal_delta_g = float(gb_sa_proxy_energy(refine, 0.0))
             details = {
                 "dockq_proxy_backend": "core.structure_metrics.dockq_proxy",
                 "lddt_pli_proxy_backend": "core.structure_metrics.lddt_pli_proxy",
@@ -367,7 +368,7 @@ def _materialize_row(
                 "license_ok": "True",
                 "dockq": _format_metric(dockq_value),
                 "lddt_pli": _format_metric(lddt_value),
-                "deltaG_mm_gbsa_kcal_mol": _format_metric(internal_delta_g_value),
+                "internal_refine_proxy_score": _format_metric(internal_delta_g_value),
                 "dockq_source_artifact": dockq_source,
                 "lddt_pli_source_artifact": lddt_source,
                 "internal_deltaG_source_artifact": internal_delta_g_source,
@@ -424,7 +425,7 @@ def _materialize_row(
         "metric_materialization_status": "pass" if metric_values_present and not blockers else "blocked",
         "dockq": _format_metric(dockq) if dockq is not None else "",
         "lddt_pli": _format_metric(lddt_pli) if lddt_pli is not None else "",
-        "deltaG_mm_gbsa_kcal_mol": (
+        "internal_refine_proxy_score": (
             _format_metric(internal_delta_g) if internal_delta_g is not None else ""
         ),
         "deltaG_experimental_kcal_mol": _text(row.get("deltaG_experimental_kcal_mol")),
@@ -470,7 +471,7 @@ def materialize_refine_tier_public_benchmark_metric_sources(
 
     metric_evidence_rows = _build_metric_evidence_rows(filled_rows, list(science_rows.values()))
     materialized_rows = [row for row in report_rows if row["metric_materialization_status"] == "pass"]
-    proxy_values = [_float(row.get("deltaG_mm_gbsa_kcal_mol")) for row in materialized_rows]
+    proxy_values = [_float(row.get("internal_refine_proxy_score")) for row in materialized_rows]
     experimental_values = [_float(row.get("deltaG_experimental_kcal_mol")) for row in materialized_rows]
     paired = [
         {

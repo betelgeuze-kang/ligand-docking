@@ -33,6 +33,7 @@ from betelgeuze_product.residual_mode_policy import (
     residual_ranking_apply_active,
     residual_runtime_status,
 )
+from betelgeuze_product.structured_reason import join_reason
 from betelgeuze_engine.contracts import default_claim_metadata
 from betelgeuze_engine.interactions import HBOND_EVIDENCE_SCHEMA_VERSION, evaluate_hbond_evidence
 from betelgeuze_engine.backmapping.onsps import (
@@ -40,7 +41,12 @@ from betelgeuze_engine.backmapping.onsps import (
     hbond_angle_score,
     needs_onsps_4bead,
 )
-from betelgeuze_engine.physics.mm_gbsa import REFINE_LIGAND_MODEL, mm_gbsa_binding_energy
+from betelgeuze_engine.physics.mm_gbsa import (
+    GB_SA_PROXY_ENERGY_FIELD,
+    REFINE_LIGAND_MODEL,
+    gb_sa_proxy_energy,
+    mm_gbsa_binding_energy,
+)
 from betelgeuze_engine.residual.score import apply_score_residual
 from betelgeuze_engine.topology import ligand_topology_from_smiles, summarize_topo_correction
 from tools.native_target_registry import resolve_repo_native_entry
@@ -161,20 +167,61 @@ def _canonical_json_hash(payload: Dict[str, Any]) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def _load_score_reference_scaling(*, mode: str, stats_json: str) -> Dict[str, Any]:
+FROZEN_SCORE_SCALING_MODES = {"fixed_family_reference", "reference", "frozen"}
+
+
+class ScoreScalingFailClosedError(ValueError):
+    """Raised when frozen score scaling is requested but cannot be honored.
+
+    Production scoring must not silently degrade to run-local z-scores: a
+    run-local fallback rescales every score against the current candidate set,
+    so scores stop being comparable across runs and any frozen-reference claim
+    becomes unfalsifiable. Callers that genuinely want the old behaviour must
+    opt in explicitly via the compatibility flag, which is recorded in the
+    scaling receipt.
+    """
+
+    def __init__(self, reason_code: str, reason_detail: str = ""):
+        self.reason_code = str(reason_code)
+        self.reason_detail = str(reason_detail)
+        super().__init__(join_reason(self.reason_code, self.reason_detail))
+
+    @property
+    def reason(self) -> str:
+        return join_reason(self.reason_code, self.reason_detail)
+
+
+def _load_score_reference_scaling(
+    *,
+    mode: str,
+    stats_json: str,
+    allow_run_local_fallback: bool = False,
+) -> Dict[str, Any]:
     requested_mode = str(mode or "run_local").strip().lower()
     stats_path = str(stats_json or "").strip()
     payload = _read_json_if_exists(stats_path) if stats_path else {}
     features = payload.get("features") if isinstance(payload.get("features"), dict) else {}
     if not features and isinstance(payload.get("columns"), dict):
         features = payload.get("columns", {})
+    compatibility_mode = bool(allow_run_local_fallback)
     status = "run_local"
-    if requested_mode in {"fixed_family_reference", "reference", "frozen"}:
-        status = "loaded" if features else "missing_stats_fallback_run_local"
+    if requested_mode in FROZEN_SCORE_SCALING_MODES:
+        if features:
+            status = "loaded"
+        elif compatibility_mode:
+            status = "missing_stats_compatibility_run_local"
+        else:
+            # Fail closed: no frozen stats means no frozen-reference scoring.
+            raise ScoreScalingFailClosedError(
+                "score_reference_stats_missing",
+                f"mode={requested_mode} stats_json={stats_path or '<unset>'}",
+            )
     return {
         "mode": requested_mode,
         "stats_json": stats_path,
         "status": status,
+        "fail_closed": requested_mode in FROZEN_SCORE_SCALING_MODES and not compatibility_mode,
+        "compatibility_run_local_fallback_allowed": compatibility_mode,
         "schema_version": str(payload.get("schema_version", "") or ""),
         "reference_scope": payload.get("reference_scope", {}) if isinstance(payload.get("reference_scope"), dict) else {},
         "stats_hash": _canonical_json_hash(payload) if payload else "",
@@ -204,12 +251,18 @@ def _zscore_with_reference(result_df: pd.DataFrame, col: str, scaling: Dict[str,
     s = pd.to_numeric(result_df[col], errors="coerce")
     mode = str(scaling.get("mode", "run_local") or "run_local").strip().lower()
     features = scaling.get("features") if isinstance(scaling.get("features"), dict) else {}
-    if mode not in {"fixed_family_reference", "reference", "frozen"}:
+    if mode not in FROZEN_SCORE_SCALING_MODES:
         return _run_local_zscore(s)
+    fail_closed = bool(scaling.get("fail_closed", True))
 
     stats = features.get(col) if isinstance(features, dict) else None
     if not isinstance(stats, dict):
         _append_unique(scaling["missing_columns"], col)
+        if fail_closed:
+            raise ScoreScalingFailClosedError(
+                "score_reference_stats_column_missing",
+                f"mode={mode} column={col}",
+            )
         _append_unique(scaling["fallback_columns"], col)
         return _run_local_zscore(s)
 
@@ -217,6 +270,11 @@ def _zscore_with_reference(result_df: pd.DataFrame, col: str, scaling: Dict[str,
     sd = _safe_optional_float(stats.get("std", stats.get("sd")))
     if mu is None or sd is None or sd <= 1e-12:
         _append_unique(scaling["invalid_columns"], col)
+        if fail_closed:
+            raise ScoreScalingFailClosedError(
+                "score_reference_stats_column_invalid",
+                f"mode={mode} column={col}",
+            )
         _append_unique(scaling["fallback_columns"], col)
         return _run_local_zscore(s)
     _append_unique(scaling["applied_columns"], col)
@@ -2704,7 +2762,7 @@ def _frame_mmpbsa_proxy(
         )
         refined["ligand_model"] = REFINE_LIGAND_MODEL
         refined["min_distance_A"] = float(refined["min_distance_a"])
-        refined["deltaG_mmpbsa_proxy_kcal_mol"] = float(refined["deltaG_mm_gbsa_kcal_mol"])
+        refined[GB_SA_PROXY_ENERGY_FIELD] = float(gb_sa_proxy_energy(refined, 0.0))
         refined.update(ligand_element_meta)
         return refined
     if prot.size == 0 or lig.size == 0:
@@ -2714,7 +2772,7 @@ def _frame_mmpbsa_proxy(
             "contact_count": 0.0,
             "close_contact_count": 0.0,
             "clash_count": 0.0,
-            "deltaG_mmpbsa_proxy_kcal_mol": 5.0,
+            GB_SA_PROXY_ENERGY_FIELD: 5.0,
             "e_vdw": 0.0,
             "e_polar": 0.0,
             "e_nonpolar": 0.0,
@@ -2789,7 +2847,7 @@ def _frame_mmpbsa_proxy(
         "contact_count": float(contacts),
         "close_contact_count": float(close_contacts),
         "clash_count": float(clashes),
-        "deltaG_mmpbsa_proxy_kcal_mol": float(delta_g),
+        GB_SA_PROXY_ENERGY_FIELD: float(delta_g),
         "e_vdw": float(e_vdw),
         "e_polar": float(e_polar),
         "e_nonpolar": float(e_nonpolar),
@@ -2866,7 +2924,7 @@ def _frame_mmpbsa_proxy_batch(
         "contact_count": np.asarray([], dtype=np.float64),
         "close_contact_count": np.asarray([], dtype=np.float64),
         "clash_count": np.asarray([], dtype=np.float64),
-        "deltaG_mmpbsa_proxy_kcal_mol": np.asarray([], dtype=np.float64),
+        GB_SA_PROXY_ENERGY_FIELD: np.asarray([], dtype=np.float64),
         "e_vdw": np.asarray([], dtype=np.float64),
         "e_polar": np.asarray([], dtype=np.float64),
         "e_nonpolar": np.asarray([], dtype=np.float64),
@@ -2898,7 +2956,7 @@ def _frame_mmpbsa_proxy_batch(
             "contact_count": np.asarray([r["contact_count"] for r in per_frame], dtype=np.float64),
             "close_contact_count": np.asarray([r["close_contact_count"] for r in per_frame], dtype=np.float64),
             "clash_count": np.asarray([r["clash_count"] for r in per_frame], dtype=np.float64),
-            "deltaG_mmpbsa_proxy_kcal_mol": np.asarray([r["deltaG_mm_gbsa_kcal_mol"] for r in per_frame], dtype=np.float64),
+            GB_SA_PROXY_ENERGY_FIELD: np.asarray([gb_sa_proxy_energy(r, 0.0) for r in per_frame], dtype=np.float64),
             "e_vdw": np.asarray([r["e_vdw"] for r in per_frame], dtype=np.float64),
             "e_polar": np.asarray([r["e_polar"] for r in per_frame], dtype=np.float64),
             "e_nonpolar": np.asarray([r["e_nonpolar"] for r in per_frame], dtype=np.float64),
@@ -2974,7 +3032,7 @@ def _frame_mmpbsa_proxy_batch(
         "contact_count": contacts.astype(np.float64),
         "close_contact_count": close_contacts.astype(np.float64),
         "clash_count": clashes.astype(np.float64),
-        "deltaG_mmpbsa_proxy_kcal_mol": delta_g.astype(np.float64),
+        GB_SA_PROXY_ENERGY_FIELD: delta_g.astype(np.float64),
         "e_vdw": e_vdw.astype(np.float64),
         "e_polar": e_polar.astype(np.float64),
         "e_nonpolar": e_nonpolar.astype(np.float64),
@@ -3254,7 +3312,7 @@ def _score_frames(
                 max_steps=int(clash_relief_max_steps),
             )
             pre_repair_min_dists.append(float(pre_ff["min_distance_A"]))
-            pre_repair_frame_energy.append(float(pre_ff["deltaG_mmpbsa_proxy_kcal_mol"]))
+            pre_repair_frame_energy.append(float(pre_ff[GB_SA_PROXY_ENERGY_FIELD]))
             pre_repair_clash_counts.append(float(pre_ff["clash_count"]))
             pre_repair_e_vdw.append(float(pre_ff["e_vdw"]))
             clash_relief_translations.append(float(repair_meta.get("translation_norm_A", 0.0)))
@@ -3310,7 +3368,7 @@ def _score_frames(
                     translation = np.asarray(repaired_first, dtype=np.float32) - first_lig
                     batch_frames = lig_frames + translation.reshape(1, translation.shape[0], 3)
                     pre_repair_min_dists.append(float(pre_ff["min_distance_A"]))
-                    pre_repair_frame_energy.append(float(pre_ff["deltaG_mmpbsa_proxy_kcal_mol"]))
+                    pre_repair_frame_energy.append(float(pre_ff[GB_SA_PROXY_ENERGY_FIELD]))
                     pre_repair_clash_counts.append(float(pre_ff["clash_count"]))
                     pre_repair_e_vdw.append(float(pre_ff["e_vdw"]))
                     clash_relief_translations.append(float(repair_meta.get("translation_norm_A", 0.0)))
@@ -3343,7 +3401,7 @@ def _score_frames(
                         contact_counts.extend(batch_ff["contact_count"].tolist())
                         close_contact_counts.extend(batch_ff["close_contact_count"].tolist())
                         clash_counts.extend(batch_ff["clash_count"].tolist())
-                        frame_energy.extend(batch_ff["deltaG_mmpbsa_proxy_kcal_mol"].tolist())
+                        frame_energy.extend(batch_ff[GB_SA_PROXY_ENERGY_FIELD].tolist())
                         e_vdw.extend(batch_ff["e_vdw"].tolist())
                         e_polar.extend(batch_ff["e_polar"].tolist())
                         e_nonpolar.extend(batch_ff["e_nonpolar"].tolist())
@@ -3362,7 +3420,7 @@ def _score_frames(
                         contact_counts.append(float(ff["contact_count"]))
                         close_contact_counts.append(float(ff["close_contact_count"]))
                         clash_counts.append(float(ff["clash_count"]))
-                        frame_energy.append(float(ff["deltaG_mmpbsa_proxy_kcal_mol"]))
+                        frame_energy.append(float(ff[GB_SA_PROXY_ENERGY_FIELD]))
                         e_vdw.append(float(ff["e_vdw"]))
                         e_polar.append(float(ff["e_polar"]))
                         e_nonpolar.append(float(ff["e_nonpolar"]))
@@ -3398,7 +3456,7 @@ def _score_frames(
             contact_counts.append(float(ff["contact_count"]))
             close_contact_counts.append(float(ff["close_contact_count"]))
             clash_counts.append(float(ff["clash_count"]))
-            frame_energy.append(float(ff["deltaG_mmpbsa_proxy_kcal_mol"]))
+            frame_energy.append(float(ff[GB_SA_PROXY_ENERGY_FIELD]))
             e_vdw.append(float(ff["e_vdw"]))
             e_polar.append(float(ff["e_polar"]))
             e_nonpolar.append(float(ff["e_nonpolar"]))
@@ -3412,7 +3470,7 @@ def _score_frames(
             contact_cnt = float(ff["contact_count"])
             close_contact_cnt = float(ff["close_contact_count"])
             clash_cnt = float(ff["clash_count"])
-            dG = float(ff["deltaG_mmpbsa_proxy_kcal_mol"])
+            dG = float(ff[GB_SA_PROXY_ENERGY_FIELD])
             vv = float(ff["e_vdw"])
             pp = float(ff["e_polar"])
             nn = float(ff["e_nonpolar"])
@@ -4570,6 +4628,9 @@ def _compute_binding_composite_scores(result_df: pd.DataFrame, args: argparse.Na
     score_reference_scaling = _load_score_reference_scaling(
         mode=str(args.score_reference_scaling_mode),
         stats_json=str(args.score_reference_stats_json),
+        allow_run_local_fallback=bool(
+            getattr(args, "score_reference_allow_run_local_fallback", False)
+        ),
     )
 
     def _z(col: str) -> pd.Series:
@@ -4884,6 +4945,9 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         score_reference_scaling = _load_score_reference_scaling(
             mode=str(args.score_reference_scaling_mode),
             stats_json=str(args.score_reference_stats_json),
+            allow_run_local_fallback=bool(
+                getattr(args, "score_reference_allow_run_local_fallback", False)
+            ),
         )
 
         def _z(col: str) -> pd.Series:
@@ -5006,6 +5070,9 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         score_reference_scaling = _load_score_reference_scaling(
             mode=str(args.score_reference_scaling_mode),
             stats_json=str(args.score_reference_stats_json),
+            allow_run_local_fallback=bool(
+                getattr(args, "score_reference_allow_run_local_fallback", False)
+            ),
         )
 
     ranking_meta = _resolve_ranking_columns(result_df, residual_shadow_meta)
@@ -5208,6 +5275,11 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
             [
                 f"- score_reference_scaling_mode: {scaling_meta.get('mode')}",
                 f"- score_reference_scaling_status: {scaling_meta.get('status')}",
+                f"- score_reference_scaling_fail_closed: {scaling_meta.get('fail_closed')}",
+                (
+                    "- score_reference_compatibility_run_local_fallback_allowed: "
+                    f"{scaling_meta.get('compatibility_run_local_fallback_allowed')}"
+                ),
                 f"- score_reference_stats_hash: {scaling_meta.get('stats_hash')}",
                 f"- score_reference_applied_columns: {scaling_meta.get('applied_columns')}",
                 f"- score_reference_fallback_columns: {scaling_meta.get('fallback_columns')}",
@@ -5317,6 +5389,15 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--residual-prototype-yellow-band-abs-delta-score", type=float, default=None)
     p.add_argument("--score-reference-scaling-mode", type=str, default="run_local")
     p.add_argument("--score-reference-stats-json", type=str, default="")
+    p.add_argument(
+        "--score-reference-allow-run-local-fallback",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help=(
+            "Compatibility mode only: allow frozen score scaling to degrade to run-local "
+            "z-scores when frozen stats are missing/invalid. Off by default (fail-closed)."
+        ),
+    )
     p.add_argument("--score-only", action=argparse.BooleanOptionalAction, default=False)
     p.add_argument("--make-bundle-zip", action=argparse.BooleanOptionalAction, default=True)
     p.add_argument("--bundle-base", type=str, default="")

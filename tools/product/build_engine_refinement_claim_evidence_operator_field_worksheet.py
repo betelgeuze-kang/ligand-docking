@@ -63,7 +63,7 @@ WORK_ORDER_OPERATOR_FIELDS = [
     "pose_rmsd_A",
     "dockq",
     "lddt_pli",
-    "deltaG_mm_gbsa_kcal_mol",
+    "internal_refine_proxy_score",
     "dockq_source_artifact",
     "lddt_pli_source_artifact",
     "internal_deltaG_source_artifact",
@@ -77,7 +77,7 @@ STATISTICAL_SUPPORT_FALLBACK_FIELDS = [
     "pose_rmsd_A",
     "dockq",
     "lddt_pli",
-    "deltaG_mm_gbsa_kcal_mol",
+    "internal_refine_proxy_score",
     "dockq_source_artifact",
     "lddt_pli_source_artifact",
     "internal_deltaG_source_artifact",
@@ -122,7 +122,7 @@ FIELD_ACTIONS = {
     "pose_rmsd_A": "Fill a finite pose RMSD in Angstrom.",
     "dockq": "Fill a finite DockQ-like score.",
     "lddt_pli": "Fill a finite lDDT-PLI-like score.",
-    "deltaG_mm_gbsa_kcal_mol": "Fill the internal refine free-energy estimate.",
+    "internal_refine_proxy_score": "Fill the internal refine free-energy estimate.",
     "dockq_source_artifact": "Point to the local reviewed artifact used to compute or verify DockQ.",
     "lddt_pli_source_artifact": "Point to the local reviewed artifact used to compute or verify lDDT-PLI.",
     "internal_deltaG_source_artifact": "Point to the local reviewed artifact used to compute or verify internal refine ΔG.",
@@ -384,7 +384,7 @@ def _receipt_field_row(
 
 
 def _expected_work_order_value(field_name: str) -> str:
-    if field_name in {"pose_rmsd_A", "dockq", "lddt_pli", "deltaG_mm_gbsa_kcal_mol", "deltaG_experimental_kcal_mol"}:
+    if field_name in {"pose_rmsd_A", "dockq", "lddt_pli", "internal_refine_proxy_score", "deltaG_experimental_kcal_mol"}:
         return "finite numeric value"
     if field_name in {"dockq_source_artifact", "lddt_pli_source_artifact", "internal_deltaG_source_artifact"}:
         return "local reviewed metric evidence artifact path"
@@ -398,7 +398,7 @@ def _work_order_field_status(field_name: str, value: Any) -> tuple[str, str]:
         return "operator_fill_pending", "operator_placeholder_or_empty"
     if field_name == "license_ok":
         return ("ready", "") if _bool_text(value) else ("invalid", "license_not_ok")
-    if field_name in {"pose_rmsd_A", "dockq", "lddt_pli", "deltaG_mm_gbsa_kcal_mol", "deltaG_experimental_kcal_mol"}:
+    if field_name in {"pose_rmsd_A", "dockq", "lddt_pli", "internal_refine_proxy_score", "deltaG_experimental_kcal_mol"}:
         return ("ready", "") if _float_ok(value) else ("invalid", f"{field_name}_not_numeric")
     return ("ready", "") if _text(value) else ("operator_fill_pending", "operator_placeholder_or_empty")
 

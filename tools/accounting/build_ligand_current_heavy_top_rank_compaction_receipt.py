@@ -78,7 +78,7 @@ RETAIN_COLUMNS = (
     "binding_score_composite_v7_htr2a_oprm1_topology_pose_shadow",
     "binding_score_composite_v7_htr2a_oprm1_drd2_weakbase_false_support_shadow",
     "binding_energy_mmpbsa_kcal_mol_proxy",
-    "deltaG_mm_gbsa_kcal_mol",
+    "internal_refine_proxy_score",
     "binding_score_stronger_physics_v1",
     "physics_refinement_decision_bucket",
     "physics_refinement_confidence",

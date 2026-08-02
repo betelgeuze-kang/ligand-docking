@@ -4,6 +4,12 @@ import json
 import subprocess
 from pathlib import Path
 
+import pytest
+
+from tools.casp17.build_casp17_win_tier_action_queue_packet import (
+    _goal_actionability,
+)
+
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -187,7 +193,24 @@ def test_build_casp17_win_tier_action_queue_packet_orders_blocked_gaps(tmp_path:
     assert payload["summary"]["sidechain_native_benchmark_status"] == "blocked"
     assert payload["summary"]["refinement_ablation_status"] == "blocked"
     assert payload["summary"]["historical_input_preflight_status"] == "blocked"
+    assert payload["summary"]["goal_actionability_schema_id"] == (
+        "casp17_win_tier_goal_actionability/1.0.0"
+    )
+    assert payload["summary"]["goal_mode_selection_status"] == (
+        "blocked_new_input_or_confirmation"
+    )
+    assert payload["summary"]["local_goal_actionable_count"] == 0
+    assert payload["summary"]["first_local_goal_actionable_action_id"] == ""
+    assert payload["summary"]["operator_input_required_count"] == 6
+    assert payload["summary"]["r4_confirmation_required_count"] == 1
+    assert payload["summary"]["unclassified_blocked_count"] == 0
     assert rows["all_atom_quality_upgrade"]["status"] == "blocked_input"
+    assert rows["all_atom_quality_upgrade"]["actionability_class"] == (
+        "operator_input_required"
+    )
+    assert rows["all_atom_quality_upgrade"]["local_goal_actionable"] is False
+    assert rows["all_atom_quality_upgrade"]["operator_input_required"] is True
+    assert rows["all_atom_quality_upgrade"]["r4_confirmation_required"] is False
     assert rows["all_atom_quality_upgrade"]["blockers"] == "sidechain_native_benchmark_missing_or_blocked"
     assert "runs/casp17_predictions_forcefield_minimized_current" in rows["all_atom_quality_upgrade"]["command"]
     assert "runs/casp17_predictions_statistical_rotamer_current" in rows["all_atom_quality_upgrade"]["command"]
@@ -206,5 +229,47 @@ def test_build_casp17_win_tier_action_queue_packet_orders_blocked_gaps(tmp_path:
     assert "casp17/build_casp17_refinement_ablation_packet.py" in rows["refinement_ablation_native_evidence"]["command"]
     assert rows["model_selection_calibration_inputs"]["status"] == "blocked_input"
     assert rows["visual_review_current"]["status"] == "pass"
+    assert rows["visual_review_current"]["actionability_class"] == "already_passed"
     assert rows["final_submission_confirmation"]["status"] == "blocked_r4_confirmation"
+    assert rows["final_submission_confirmation"]["actionability_class"] == (
+        "r4_confirmation_required"
+    )
+    assert rows["final_submission_confirmation"]["r4_confirmation_required"] is True
     assert "Internal CASP17 win-tier action queue" in (tmp_path / "queue.md").read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    ("status", "lane", "expected_class", "actionable"),
+    (
+        ("pass", "review_quality", "already_passed", False),
+        ("blocked_input", "model_selection", "operator_input_required", False),
+        ("ready_to_score", "model_selection", "local_action_ready", True),
+        ("blocked", "review_quality", "local_repair_required", True),
+        (
+            "ready_to_promote",
+            "no_leak_native_benchmark",
+            "operator_decision_required",
+            False,
+        ),
+        (
+            "needs_r4_confirmation",
+            "external_state",
+            "r4_confirmation_required",
+            False,
+        ),
+        ("ready_future_status", "internal_quality", "unclassified_blocked", False),
+        ("unexpected_status", "internal_quality", "unclassified_blocked", False),
+    ),
+)
+def test_goal_actionability_is_explicit_and_unknown_statuses_fail_closed(
+    status: str,
+    lane: str,
+    expected_class: str,
+    actionable: bool,
+) -> None:
+    result = _goal_actionability(status=status, lane=lane)
+
+    assert result["actionability_class"] == expected_class
+    assert result["local_goal_actionable"] is actionable
+    if expected_class == "unclassified_blocked":
+        assert result["goal_mode_next_step"] == "stop_unclassified_status"

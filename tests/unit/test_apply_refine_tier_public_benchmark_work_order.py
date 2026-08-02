@@ -65,7 +65,7 @@ def _write_work_order(path: Path, rows: list[dict[str, object]], *, source_artif
                     "internal_deltaG_source_artifact",
                     "internal_deltaG.json",
                     "internal_deltaG",
-                    "deltaG_mm_gbsa_kcal_mol",
+                    "internal_refine_proxy_score",
                 ),
             ]:
                 artifact = evidence_dir / f"{target_id}_{suffix}"
@@ -151,7 +151,7 @@ def _write_metric_evidence_rows(path: Path, rows: list[dict[str, object]], *, st
             for field, metric_name, value_field in [
                 ("dockq_source_artifact", "dockq", "dockq"),
                 ("lddt_pli_source_artifact", "lddt_pli", "lddt_pli"),
-                ("internal_deltaG_source_artifact", "internal_deltaG", "deltaG_mm_gbsa_kcal_mol"),
+                ("internal_deltaG_source_artifact", "internal_deltaG", "internal_refine_proxy_score"),
             ]:
                 source_path = Path(str(row.get(field, "")))
                 if source_path.is_file():
@@ -178,8 +178,8 @@ def _write_metric_evidence_rows(path: Path, rows: list[dict[str, object]], *, st
                 "pose_id": pose_id,
                 "dockq": row["dockq"] if status == "pass" else "OPERATOR_FILL_DOCKQ",
                 "lddt_pli": row["lddt_pli"] if status == "pass" else "OPERATOR_FILL_LDDT_PLI",
-                "deltaG_mm_gbsa_kcal_mol": (
-                    row["deltaG_mm_gbsa_kcal_mol"] if status == "pass" else "OPERATOR_FILL_INTERNAL_REFINE_DG"
+                "internal_refine_proxy_score": (
+                    row["internal_refine_proxy_score"] if status == "pass" else "OPERATOR_FILL_INTERNAL_REFINE_DG"
                 ),
                 "dockq_source_artifact": row.get("dockq_source_artifact", f"fixtures/{row['target_id']}_dockq.json"),
                 "lddt_pli_source_artifact": row.get("lddt_pli_source_artifact", f"fixtures/{row['target_id']}_lddt_pli.json"),
@@ -238,7 +238,7 @@ def _valid_work_order_rows() -> list[dict[str, object]]:
                 "pose_rmsd_A": 1.2,
                 "dockq": 0.65,
                 "lddt_pli": 0.82,
-                "deltaG_mm_gbsa_kcal_mol": pred,
+                "internal_refine_proxy_score": pred,
                 "dockq_source_artifact": "",
                 "lddt_pli_source_artifact": "",
                 "internal_deltaG_source_artifact": "",

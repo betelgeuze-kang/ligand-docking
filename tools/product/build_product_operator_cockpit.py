@@ -31,6 +31,7 @@ DEFAULT_PUBLIC_BENCHMARK_RECEIPT_ATTACH_PACKET_JSON = (
 DEFAULT_PUBLIC_BENCHMARK_VINA_GNINA_SCORE_TEMPLATE_RECEIPT_JSON = (
     "runs/public_benchmark_vina_gnina_score_template_receipt_current.json"
 )
+DEFAULT_COMPETITION_BENCHMARK_ROLLUP_JSON = "runs/competition_benchmark_rollup_current.json"
 DEFAULT_GOAL_RELEASE_DECISION_JSON = "runs/goal_release_decision_gate_current.json"
 DEFAULT_RELEASE_ACTIONS_JSON = "runs/goal_operator_action_board_current.json"
 DEFAULT_FULL_COMMERCIAL_BLOCKER_MATRIX_JSON = (
@@ -56,6 +57,10 @@ DEFAULT_DEVELOPER_PREVIEW_NEW_USER_OBSERVATION_RECEIPT_JSON = (
 DEFAULT_F2G_F2H_PREFLIGHT_JSON = ".betelgeuze/f2g_f2h_surface_preflight.local.json"
 DEFAULT_F2G_F2H_RECOVERY_JSON = ".betelgeuze/f2g_f2h_authoritative_surface_recovery_packet.local.json"
 DEFAULT_ENTERPRISE_ON_PREM_JSON = "runs/enterprise_on_prem_readiness_gate_current.json"
+DEFAULT_GITHUB_SELF_HOSTED_RUNNER_PREFLIGHT_JSON = (
+    "runs/github_self_hosted_runner_host_preflight_current.json"
+)
+DEFAULT_RELEASE_CI_REMOTE_GREEN_JSON = "runs/release_ci_remote_green_receipt_current.json"
 DEFAULT_PR38_SPLIT_ACCEPTANCE_JSON = ".betelgeuze/pr38_split_acceptance_packet_current.json"
 DEFAULT_PR38_CHILD_PR_VERIFICATION_MATRIX_JSON = (
     ".betelgeuze/pr38_child_pr_verification_matrix_current.json"
@@ -78,7 +83,9 @@ REQUIRED_PHASE8_PANEL_IDS = [
     "gpcr_hard_decoy_blocker_panel",
     "pocketmd_lite_report_panel",
     "public_benchmark_scorecard",
+    "competition_benchmark_claim_boundary",
     "release_blockers_operator_actions",
+    "release_ci_remote_green",
     "evidence_bundle_export",
     "claim_boundary_matrix",
 ]
@@ -144,6 +151,19 @@ def _dict_list(payload: dict[str, Any], key: str) -> list[dict[str, Any]]:
 
 def _text(value: Any) -> str:
     return str(value or "").strip()
+
+
+def _is_legacy_f2g_f2h_text(*values: Any) -> bool:
+    text = " ".join(_text(value).lower() for value in values if _text(value))
+    legacy_tokens = (
+        "f2/g1",
+        "f2g",
+        "f2h",
+        "implementation/phase1",
+        "structural-analysis",
+        "structural analysis",
+    )
+    return any(token in text for token in legacy_tokens)
 
 
 def _int(value: Any) -> int:
@@ -1374,6 +1394,7 @@ def _build_claim_rows(
     pocketmd_refinement_ready: bool,
     pocketmd_claim_allowed: bool,
     public_benchmark_claim_allowed: bool,
+    competition_ligand_claim_allowed: bool,
     evidence_bundle_export_ready: bool,
     release_allowed: bool,
     customer_shadow_paid_pilot_ready: bool,
@@ -1465,6 +1486,21 @@ def _build_claim_rows(
                 disallowed_text="Public benchmark claim-grade support is not allowed.",
             ),
             "boundary": "Blocked until benchmark readiness and receipt ledger pass.",
+        },
+        {
+            "claim_id": "competition_ligand_commercial_claim",
+            "allowed": competition_ligand_claim_allowed,
+            "claim_text": _claim_text_for_status(
+                allowed=competition_ligand_claim_allowed,
+                allowed_text="Competition-backed ligand commercial claim is allowed.",
+                disallowed_text=(
+                    "Competition-backed ligand commercial claim is not allowed."
+                ),
+            ),
+            "boundary": (
+                "CASP16, CAPRI/BM5, and CAMEO remain competition credibility evidence only; "
+                "ligand commercial claims require separate Package B claim-grade public benchmark evidence."
+            ),
         },
         {
             "claim_id": "enterprise_on_prem_platform_claim",
@@ -1777,6 +1813,7 @@ def build_product_operator_cockpit(
     public_benchmark_vina_gnina_score_template_receipt_json: str | Path = (
         DEFAULT_PUBLIC_BENCHMARK_VINA_GNINA_SCORE_TEMPLATE_RECEIPT_JSON
     ),
+    competition_benchmark_json: str | Path = DEFAULT_COMPETITION_BENCHMARK_ROLLUP_JSON,
     goal_release_decision_json: str | Path = DEFAULT_GOAL_RELEASE_DECISION_JSON,
     release_actions_json: str | Path = DEFAULT_RELEASE_ACTIONS_JSON,
     full_commercial_blocker_matrix_json: str | Path = (
@@ -1801,7 +1838,12 @@ def build_product_operator_cockpit(
     ),
     f2g_f2h_preflight_json: str | Path = DEFAULT_F2G_F2H_PREFLIGHT_JSON,
     f2g_f2h_recovery_json: str | Path = DEFAULT_F2G_F2H_RECOVERY_JSON,
+    include_f2g_f2h_panel: bool = False,
     enterprise_on_prem_json: str | Path = DEFAULT_ENTERPRISE_ON_PREM_JSON,
+    github_self_hosted_runner_preflight_json: str | Path = (
+        DEFAULT_GITHUB_SELF_HOSTED_RUNNER_PREFLIGHT_JSON
+    ),
+    release_ci_remote_green_json: str | Path = DEFAULT_RELEASE_CI_REMOTE_GREEN_JSON,
     pr38_split_acceptance_json: str | Path = DEFAULT_PR38_SPLIT_ACCEPTANCE_JSON,
     pr38_child_pr_verification_matrix_json: str | Path = (
         DEFAULT_PR38_CHILD_PR_VERIFICATION_MATRIX_JSON
@@ -1880,6 +1922,8 @@ def build_product_operator_cockpit(
             public_vina_gnina_score_template_receipt_payload
         )
     )
+    competition_benchmark_payload = _read_json(competition_benchmark_json, root=root)
+    competition_benchmark = _summary(competition_benchmark_payload)
     public_score_evidence_row_work_order_row_preview = (
         _public_benchmark_score_evidence_row_work_order_rows(
             public_receipt_attach_payload,
@@ -1996,12 +2040,32 @@ def build_product_operator_cockpit(
             developer_preview_new_user_observation_receipt_payload
         )
     )
-    f2g_preflight_payload = _read_json(f2g_f2h_preflight_json, root=root)
-    f2g_preflight = _summary(f2g_preflight_payload)
-    f2g_recovery_payload = _read_json(f2g_f2h_recovery_json, root=root)
-    f2g_recovery = _summary(f2g_recovery_payload)
-    f2g_recovery_rows = _rows(f2g_recovery_payload)
-    f2g_f2h_recovery_row_preview = _f2g_f2h_recovery_rows(f2g_recovery_payload)
+    github_self_hosted_runner_preflight_payload = _read_json(
+        github_self_hosted_runner_preflight_json,
+        root=root,
+    )
+    github_self_hosted_runner_preflight = _summary(
+        github_self_hosted_runner_preflight_payload
+    )
+    release_ci_remote_green_payload = _read_json(
+        release_ci_remote_green_json,
+        root=root,
+    )
+    release_ci_remote_green = _summary(release_ci_remote_green_payload)
+    if include_f2g_f2h_panel:
+        f2g_preflight_payload = _read_json(f2g_f2h_preflight_json, root=root)
+        f2g_preflight = _summary(f2g_preflight_payload)
+        f2g_recovery_payload = _read_json(f2g_f2h_recovery_json, root=root)
+        f2g_recovery = _summary(f2g_recovery_payload)
+        f2g_recovery_rows = _rows(f2g_recovery_payload)
+        f2g_f2h_recovery_row_preview = _f2g_f2h_recovery_rows(f2g_recovery_payload)
+    else:
+        f2g_preflight_payload = {}
+        f2g_preflight = {}
+        f2g_recovery_payload = {}
+        f2g_recovery = {}
+        f2g_recovery_rows = []
+        f2g_f2h_recovery_row_preview = []
     enterprise_on_prem_payload = _read_json(enterprise_on_prem_json, root=root)
     enterprise_on_prem = _summary(enterprise_on_prem_payload)
     enterprise_on_prem_control_row_preview = _enterprise_on_prem_control_rows(
@@ -2460,6 +2524,150 @@ def build_product_operator_cockpit(
         public_receipt_attach_packet.get("vina_gnina_adapter_command_after_fill"),
         public_vina_gnina_score_template_receipt.get("adapter_command_after_fill"),
     )
+    competition_benchmark_present = bool(competition_benchmark)
+    competition_benchmark_rollup_status = _first_text(competition_benchmark.get("status"))
+    competition_benchmark_rollup_ready = (
+        competition_benchmark_rollup_status == "competition_benchmark_rollup_ready"
+    )
+    competition_evidence_role = _first_text(
+        competition_benchmark.get("competition_evidence_role"),
+        "competition_credibility_evidence_only",
+    )
+    competition_cameo_official_intake_status = _first_text(
+        competition_benchmark.get("cameo_official_result_intake_status"),
+        competition_benchmark.get("cameo_official_intake_gate_status"),
+    )
+    competition_cameo_official_intake_ready = _bool_true(
+        competition_benchmark.get("cameo_official_result_intake_ready")
+    )
+    competition_cameo_official_result_count = _int(
+        competition_benchmark.get("cameo_official_result_row_count")
+    )
+    competition_cameo_official_accepted_count = _int(
+        competition_benchmark.get("cameo_official_accepted_result_count")
+    )
+    competition_cameo_official_claim_allowed = _bool_true(
+        competition_benchmark.get("cameo_official_result_intake_claim_allowed")
+    )
+    competition_cameo_official_fetch_enabled = _bool_true(
+        competition_benchmark.get("cameo_official_result_intake_fetch_enabled")
+    )
+    competition_cameo_official_external_state_mutated = _bool_true(
+        competition_benchmark.get("cameo_official_result_intake_external_state_mutated")
+    )
+    competition_cameo_official_local_native_accuracy_used = _bool_true(
+        competition_benchmark.get("cameo_official_result_intake_local_native_accuracy_used")
+    )
+    competition_casp16_ready = _bool_true(
+        competition_benchmark.get("casp16_ligand_competition_credibility_ready")
+    )
+    competition_bm5_capri_ready = _bool_true(
+        competition_benchmark.get("bm5_capri_complex_competition_credibility_ready")
+    )
+    competition_credibility_extension_ready = _bool_true(
+        competition_benchmark.get("competition_credibility_extension_ready")
+    )
+    competition_credibility_extension_blocker_count = _int(
+        competition_benchmark.get("competition_credibility_extension_blocker_count")
+    )
+    competition_credibility_extension_blockers = _string_list(
+        competition_benchmark.get("competition_credibility_extension_blockers")
+    )
+    competition_credibility_extension_primary_blocker = _first_text(
+        competition_benchmark.get("competition_credibility_extension_primary_blocker")
+    )
+    competition_credibility_extension_next_actions = _string_list(
+        competition_benchmark.get("competition_credibility_extension_next_actions")
+    )
+    competition_credibility_extension_primary_next_action = _first_text(
+        competition_benchmark.get("competition_credibility_extension_primary_next_action")
+    )
+    competition_custody_work_order_status = _first_text(
+        competition_benchmark.get("competition_benchmark_custody_work_order_status")
+    )
+    competition_custody_work_order_ready = _bool_true(
+        competition_benchmark.get("competition_benchmark_custody_work_order_ready")
+    )
+    competition_custody_work_order_action_count = _int(
+        competition_benchmark.get("competition_benchmark_custody_work_order_action_count")
+    )
+    competition_custody_work_order_primary_action = _first_text(
+        competition_benchmark.get(
+            "competition_benchmark_custody_work_order_primary_required_action"
+        )
+    )
+    competition_package_b_required = _bool_true(
+        competition_benchmark.get("package_b_required_for_ligand_commercial_claims")
+    )
+    competition_package_b_suite_ids = _string_list(
+        competition_benchmark.get("package_b_ligand_suite_ids")
+    )
+    competition_package_b_foundation_ready = _bool_true(
+        competition_benchmark.get("package_b_ligand_public_benchmark_foundation_ready")
+    )
+    competition_package_b_claim_grade_ready = _bool_true(
+        competition_benchmark.get("package_b_claim_grade_public_benchmark_ready")
+    )
+    competition_package_b_claim_grade_blocker_count = _int(
+        competition_benchmark.get("package_b_claim_grade_blocker_count")
+    )
+    competition_package_b_claim_grade_blockers = _string_list(
+        competition_benchmark.get("package_b_claim_grade_blockers")
+    )
+    competition_ligand_claim_allowed = _bool_true(
+        competition_benchmark.get("competition_ligand_commercial_claim_allowed")
+    )
+    competition_ligand_claim_package_b_dependency_ready = _bool_true(
+        competition_benchmark.get("competition_ligand_claim_package_b_dependency_ready")
+    )
+    competition_ligand_claim_blocker_count = _int(
+        competition_benchmark.get("competition_ligand_claim_blocker_count")
+    )
+    competition_ligand_claim_blockers = _string_list(
+        competition_benchmark.get("competition_ligand_claim_blockers")
+    )
+    competition_github_raw_data_policy_ready = _bool_true(
+        competition_benchmark.get("github_raw_data_policy_ready")
+    )
+    competition_github_raw_data_git_tracked_total_count = _int(
+        competition_benchmark.get("github_raw_data_git_tracked_total_count")
+    )
+    competition_raw_data_stored_in_repo = _bool_true(
+        competition_benchmark.get("raw_data_stored_in_repo")
+    )
+    competition_raw_data_free = _bool_true(competition_benchmark.get("raw_data_free"))
+    competition_github_raw_payloads_allowed = _bool_true(
+        competition_benchmark.get("github_raw_payloads_allowed")
+    )
+    competition_github_safe_allowed_artifact_classes = _string_list(
+        competition_benchmark.get("github_safe_allowed_artifact_classes")
+    )
+    competition_github_disallowed_artifact_classes = _string_list(
+        competition_benchmark.get("github_disallowed_artifact_classes")
+    )
+    competition_github_raw_benchmark_payloads_allowed = _bool_true(
+        competition_benchmark.get("github_raw_benchmark_payloads_allowed")
+    )
+    competition_github_official_archive_models_as_internal_predictions_allowed = (
+        _bool_true(
+            competition_benchmark.get(
+                "github_official_archive_models_as_internal_predictions_allowed"
+            )
+        )
+    )
+    competition_package_b_bridge_next_action = _first_text(
+        competition_benchmark.get("package_b_bridge_next_action")
+    )
+    competition_claim_boundary = _first_text(
+        competition_benchmark.get("claim_boundary"),
+        "Competition benchmark rollup is competition credibility evidence only.",
+    )
+    competition_benchmark_operator_action_required = bool(
+        not competition_credibility_extension_ready
+        or not competition_package_b_claim_grade_ready
+        or competition_ligand_claim_blocker_count > 0
+        or not competition_ligand_claim_allowed
+    )
     public_vina_score_receipt_present = bool(public_vina_gnina_score_template_receipt)
     public_vina_score_receipt_status = _text(
         public_vina_gnina_score_template_receipt.get("status")
@@ -2603,6 +2811,15 @@ def build_product_operator_cockpit(
         pm_queue_first_blocked_row.get("next_action"),
         pm_queue.get("next_required_step"),
     )
+    if not include_f2g_f2h_panel and _is_legacy_f2g_f2h_text(
+        pm_queue_first_blocked_item_id,
+        pm_queue_first_blocker,
+        pm_queue_first_action,
+    ):
+        pm_queue_blocked_count = 0
+        pm_queue_first_blocked_item_id = ""
+        pm_queue_first_blocker = ""
+        pm_queue_first_action = ""
     pm_queue_blocked = pm_queue_present and pm_queue_blocked_count > 0
     full_commercial_present = bool(full_commercial)
     full_commercial_ready = (
@@ -2828,6 +3045,24 @@ def build_product_operator_cockpit(
     developer_preview_primary_source_blocker_action = _first_text(
         developer_preview.get("receipt_work_order_primary_source_blocker_required_action")
     )
+    developer_preview_next_operator_command_pack_target = _text(
+        developer_preview.get("next_operator_command_pack_target")
+    )
+    developer_preview_next_operator_command_pack_command = _text(
+        developer_preview.get("next_operator_command_pack_command")
+    )
+    developer_preview_next_operator_command_pack_required_platform = _text(
+        developer_preview.get("next_operator_command_pack_required_platform")
+    )
+    developer_preview_next_operator_command_pack_required_env_vars = _string_list(
+        developer_preview.get("next_operator_command_pack_required_env_vars")
+    )
+    developer_preview_next_operator_command_pack_required_input_artifacts = _string_list(
+        developer_preview.get("next_operator_command_pack_required_input_artifacts")
+    )
+    developer_preview_next_operator_command_pack_receipt_artifacts = _string_list(
+        developer_preview.get("next_operator_command_pack_receipt_artifacts")
+    )
     developer_preview_stage5_recovery_row_count = _int(
         developer_preview.get("stage5_recovery_row_count")
     ) or len(developer_preview_stage5_recovery_row_preview)
@@ -2836,6 +3071,24 @@ def build_product_operator_cockpit(
     )
     developer_preview_stage5_required_argument_count = _int(
         developer_preview.get("stage5_required_argument_count")
+    )
+    developer_preview_stage5_recovery_operator_work_order_ready = _bool_true(
+        developer_preview.get("stage5_recovery_operator_work_order_ready")
+    )
+    developer_preview_stage5_recovery_operator_work_order_materialized = _bool_true(
+        developer_preview.get("stage5_recovery_operator_work_order_materialized")
+    )
+    developer_preview_stage5_input_family_csv_path = _text(
+        developer_preview.get("stage5_input_family_csv_path")
+    )
+    developer_preview_stage5_input_family_md_path = _text(
+        developer_preview.get("stage5_input_family_md_path")
+    )
+    developer_preview_stage5_input_family_csv_present = _bool_true(
+        developer_preview.get("stage5_input_family_csv_present")
+    )
+    developer_preview_stage5_input_family_md_present = _bool_true(
+        developer_preview.get("stage5_input_family_md_present")
     )
     developer_preview_stage5_first_row = (
         developer_preview_stage5_recovery_row_preview[0]
@@ -2853,6 +3106,94 @@ def build_product_operator_cockpit(
     developer_preview_stage5_primary_source_artifact_path = _first_text(
         developer_preview.get("stage5_primary_source_artifact_path"),
         developer_preview_stage5_first_row.get("source_artifact_path"),
+    )
+    developer_preview_stage5_restore_packet_status = _text(
+        developer_preview.get("stage5_restore_packet_status")
+    )
+    developer_preview_stage5_restore_packet_ready = _bool_true(
+        developer_preview.get("stage5_restore_packet_ready")
+    )
+    developer_preview_stage5_restore_packet_fail_closed_restore_receipt_ready = (
+        _bool_true(
+            developer_preview.get(
+                "stage5_restore_packet_fail_closed_restore_receipt_ready"
+            )
+        )
+    )
+    developer_preview_stage5_restore_packet_operator_restore_queue_ready = (
+        _bool_true(
+            developer_preview.get(
+                "stage5_restore_packet_operator_restore_queue_ready"
+            )
+        )
+    )
+    developer_preview_stage5_restore_packet_operator_restore_queue_row_count = _int(
+        developer_preview.get("stage5_restore_packet_operator_restore_queue_row_count")
+    )
+    developer_preview_stage5_restore_packet_missing_source_artifact_count = _int(
+        developer_preview.get("stage5_restore_packet_missing_source_artifact_count")
+    )
+    developer_preview_stage5_restore_packet_primary_blocker = _text(
+        developer_preview.get("stage5_restore_packet_primary_blocker")
+    )
+    developer_preview_stage5_restore_packet_primary_missing_source_argument = (
+        _text(
+            developer_preview.get(
+                "stage5_restore_packet_primary_missing_source_argument"
+            )
+        )
+    )
+    developer_preview_stage5_restore_packet_primary_missing_source_artifact_path = (
+        _first_text(
+            developer_preview.get(
+                "stage5_restore_packet_primary_missing_source_artifact_path"
+            ),
+            developer_preview_stage5_primary_source_artifact_path,
+        )
+    )
+    developer_preview_stage5_restore_packet_primary_missing_pipeline_summary_json = (
+        _text(
+            developer_preview.get(
+                "stage5_restore_packet_primary_missing_pipeline_summary_json"
+            )
+        )
+    )
+    developer_preview_stage5_restore_packet_primary_missing_pipeline_summary_present = (
+        _bool_true(
+            developer_preview.get(
+                "stage5_restore_packet_primary_missing_pipeline_summary_present"
+            )
+        )
+    )
+    developer_preview_stage5_restore_packet_primary_missing_profile_json = _text(
+        developer_preview.get("stage5_restore_packet_primary_missing_profile_json")
+    )
+    developer_preview_stage5_restore_packet_primary_missing_profile_present = (
+        _bool_true(
+            developer_preview.get(
+                "stage5_restore_packet_primary_missing_profile_present"
+            )
+        )
+    )
+    developer_preview_stage5_restore_packet_primary_missing_restore_queue_ready = (
+        _bool_true(
+            developer_preview.get(
+                "stage5_restore_packet_primary_missing_restore_queue_ready"
+            )
+        )
+    )
+    developer_preview_stage5_restore_packet_primary_missing_restore_instruction = (
+        _text(
+            developer_preview.get(
+                "stage5_restore_packet_primary_missing_restore_instruction"
+            )
+        )
+    )
+    developer_preview_stage5_restore_packet_next_required_step = _text(
+        developer_preview.get("stage5_restore_packet_next_required_step")
+    )
+    developer_preview_stage5_restore_packet_operator_action_required = _bool_true(
+        developer_preview.get("stage5_restore_packet_operator_action_required")
     )
     developer_preview_clean_checkout_receipt_present = bool(
         developer_preview_clean_checkout_receipt
@@ -2973,6 +3314,63 @@ def build_product_operator_cockpit(
     developer_preview_new_user_observation_receipt_status = _text(
         developer_preview_new_user_observation_receipt.get("status")
     )
+    developer_preview_new_user_observation_runbook_ready = _bool_true(
+        developer_preview_new_user_observation_receipt.get("runbook_ready")
+    )
+    developer_preview_new_user_observation_runbook_missing_required_token_count = _int(
+        developer_preview_new_user_observation_receipt.get(
+            "runbook_missing_required_token_count"
+        )
+    )
+    developer_preview_new_user_observation_core_workflow_receipt_path_documented = _bool_true(
+        developer_preview_new_user_observation_receipt.get(
+            "core_workflow_receipt_path_documented"
+        )
+    )
+    developer_preview_new_user_observation_core_workflow_command_set_documented = _bool_true(
+        developer_preview_new_user_observation_receipt.get(
+            "core_workflow_command_set_documented"
+        )
+    )
+    developer_preview_new_user_observation_draft_fail_closed_ready = _bool_true(
+        developer_preview_new_user_observation_receipt.get(
+            "new_user_draft_fail_closed_ready"
+        )
+    )
+    developer_preview_new_user_observation_input_json = _first_text(
+        developer_preview_new_user_observation_receipt.get("observation_input_json"),
+        developer_preview_new_user_observation_receipt.get(
+            "new_user_final_observation_input_json"
+        ),
+        ".betelgeuze/developer_preview_new_user_observation_input.json",
+    )
+    developer_preview_new_user_observation_input_template_json = _first_text(
+        developer_preview_new_user_observation_receipt.get(
+            "observation_input_template_json"
+        ),
+        ".betelgeuze/developer_preview_new_user_observation_input_template.json",
+    )
+    developer_preview_new_user_observation_input_json_present = _bool_true(
+        developer_preview_new_user_observation_receipt.get("observation_input_json_present")
+    )
+    developer_preview_new_user_observation_input_contract_ready = _bool_true(
+        developer_preview_new_user_observation_receipt.get(
+            "observation_input_contract_ready"
+        )
+    )
+    developer_preview_new_user_observation_input_policy_ready = _bool_true(
+        developer_preview_new_user_observation_receipt.get("observation_input_policy_ready")
+    )
+    developer_preview_new_user_observation_checklist_path_documented = _bool_true(
+        developer_preview_new_user_observation_receipt.get(
+            "observation_checklist_path_documented"
+        )
+    )
+    developer_preview_new_user_observation_template_next_action = _first_text(
+        developer_preview_new_user_observation_receipt.get(
+            "new_user_observation_template_next_action"
+        )
+    )
     developer_preview_new_user_observation_required_field_count = _int(
         developer_preview_new_user_observation_receipt.get(
             "observation_review_required_field_count"
@@ -3068,6 +3466,135 @@ def build_product_operator_cockpit(
     enterprise_rollback_retry_ready = _bool_true(
         enterprise_on_prem.get("rollback_retry_idempotency_ready")
     )
+    github_runner_preflight_present = bool(github_self_hosted_runner_preflight)
+    github_runner_preflight_status = _text(
+        github_self_hosted_runner_preflight.get("status")
+    )
+    github_runner_local_host_ready = _bool_true(
+        github_self_hosted_runner_preflight.get("local_runner_host_ready")
+    )
+    github_repo_self_hosted_runner_ready = _bool_true(
+        github_self_hosted_runner_preflight.get("repo_self_hosted_runner_ready")
+    )
+    github_runner_docker_daemon_accessible = _bool_true(
+        github_self_hosted_runner_preflight.get("docker_daemon_accessible")
+    )
+    github_runner_rocm_device_nodes_ready = _bool_true(
+        github_self_hosted_runner_preflight.get("rocm_device_nodes_ready")
+    )
+    github_runner_product_image_rocm_runtime_ready = _bool_true(
+        github_self_hosted_runner_preflight.get("product_image_rocm_runtime_ready")
+    )
+    github_runner_product_image_hygiene_ready = _bool_true(
+        github_self_hosted_runner_preflight.get(
+            "product_image_receipt_runner_hygiene_ready"
+        )
+    )
+    github_runner_product_image_workspace_cleanup_ready = _bool_true(
+        github_self_hosted_runner_preflight.get(
+            "product_image_workspace_smoke_artifact_current_cleanup_ready"
+        )
+    )
+    github_runner_product_image_workspace_bad_owner_path = _text(
+        github_self_hosted_runner_preflight.get(
+            "product_image_workspace_smoke_artifact_current_bad_owner_path"
+        )
+    )
+    github_runner_product_image_workspace_not_writable_path = _text(
+        github_self_hosted_runner_preflight.get(
+            "product_image_workspace_smoke_artifact_current_not_writable_path"
+        )
+    )
+    github_runner_product_image_workspace_required_action = _text(
+        github_self_hosted_runner_preflight.get(
+            "product_image_workspace_smoke_artifact_current_required_action"
+        )
+    )
+    github_runner_linux_online_count = _int(
+        github_self_hosted_runner_preflight.get("linux_runner_online_count")
+    )
+    github_runner_rocm_online_count = _int(
+        github_self_hosted_runner_preflight.get("rocm_runner_online_count")
+    )
+    github_runner_next_required_steps = _string_list(
+        github_self_hosted_runner_preflight.get("next_required_steps")
+    )
+    github_runner_primary_next_step = _first_text(
+        github_runner_next_required_steps[0] if github_runner_next_required_steps else "",
+        github_self_hosted_runner_preflight.get("product_image_rocm_runtime_rerun_command"),
+    )
+    release_ci_remote_green_present = bool(release_ci_remote_green)
+    release_ci_remote_green_status = _text(release_ci_remote_green.get("status"))
+    release_ci_remote_green_pass = _bool_true(release_ci_remote_green.get("pass"))
+    release_ci_remote_green_blocker_count = _int(
+        release_ci_remote_green.get("blocker_count")
+    )
+    release_ci_linux_runner_ready = _bool_true(
+        release_ci_remote_green.get("linux_self_hosted_runner_ready")
+    )
+    release_ci_rocm_runner_ready = _bool_true(
+        release_ci_remote_green.get("rocm_self_hosted_runner_ready")
+    )
+    release_ci_main_required_checks_ready = _bool_true(
+        release_ci_remote_green.get("main_required_checks_ready")
+    )
+    release_ci_workflow_source_contract_ready = _bool_true(
+        release_ci_remote_green.get("workflow_source_contract_ready")
+    )
+    release_ci_weekly_rocm_schedule_green = _bool_true(
+        release_ci_remote_green.get("weekly_rocm_schedule_green")
+    )
+    release_ci_failure_artifacts_preserved = _bool_true(
+        release_ci_remote_green.get("failure_artifacts_preserved")
+    )
+    release_ci_release_tag_rocm_gate_green = _bool_true(
+        release_ci_remote_green.get("release_tag_rocm_gate_green")
+    )
+    release_ci_next_required_step = _first_text(
+        release_ci_remote_green.get("next_required_step"),
+        github_runner_primary_next_step,
+    )
+    release_ci_remote_green_ready = bool(
+        github_runner_preflight_present
+        and release_ci_remote_green_present
+        and github_runner_local_host_ready
+        and github_repo_self_hosted_runner_ready
+        and release_ci_remote_green_pass
+    )
+    release_ci_panel_blockers: list[str] = []
+    if not github_runner_preflight_present:
+        release_ci_panel_blockers.append("github_self_hosted_runner_host_preflight_missing")
+    elif not github_runner_local_host_ready:
+        release_ci_panel_blockers.append("github_self_hosted_runner_host_not_ready")
+    if github_runner_preflight_present and not github_runner_product_image_hygiene_ready:
+        release_ci_panel_blockers.append("product_image_runner_hygiene_not_ready")
+    if (
+        github_runner_preflight_present
+        and not github_runner_product_image_workspace_cleanup_ready
+    ):
+        release_ci_panel_blockers.append(
+            "product_image_workspace_smoke_artifact_cleanup_not_ready"
+        )
+        if github_runner_product_image_workspace_bad_owner_path:
+            release_ci_panel_blockers.append(
+                "product_image_workspace_smoke_artifact_owner_not_normalized"
+            )
+        if github_runner_product_image_workspace_not_writable_path:
+            release_ci_panel_blockers.append(
+                "product_image_workspace_smoke_artifact_not_writable"
+            )
+    if not release_ci_remote_green_present:
+        release_ci_panel_blockers.append("release_ci_remote_green_receipt_missing")
+    elif not release_ci_remote_green_pass:
+        release_ci_panel_blockers.append("release_ci_remote_green_not_ready")
+    if release_ci_remote_green_present and not release_ci_main_required_checks_ready:
+        release_ci_panel_blockers.append("main_required_checks_not_ready")
+    if release_ci_remote_green_present and not release_ci_weekly_rocm_schedule_green:
+        release_ci_panel_blockers.append("weekly_rocm_schedule_not_green")
+    if release_ci_remote_green_present and not release_ci_failure_artifacts_preserved:
+        release_ci_panel_blockers.append("failure_artifacts_not_preserved")
+    if release_ci_remote_green_present and not release_ci_release_tag_rocm_gate_green:
+        release_ci_panel_blockers.append("release_tag_rocm_gate_not_green")
     pr38_split_acceptance_present = bool(pr38_acceptance)
     pr38_split_acceptance_ready = _bool_true(pr38_acceptance.get("split_acceptance_ready"))
     pr38_child_pr_verification_matrix_present = bool(pr38_matrix)
@@ -3081,6 +3608,27 @@ def build_product_operator_cockpit(
     )
     pr38_child_pr_count = _int(
         pr38_matrix.get("child_pr_count") or pr38_acceptance.get("child_pr_count")
+    )
+    pr38_minimum_child_pr_count = _int(
+        pr38_matrix.get("minimum_child_pr_count")
+        or pr38_acceptance.get("minimum_child_pr_count")
+    )
+    pr38_minimum_child_pr_count_flags = [
+        value
+        for value in (
+            pr38_matrix.get("minimum_child_pr_count_met"),
+            pr38_acceptance.get("minimum_child_pr_count_met"),
+        )
+        if isinstance(value, bool)
+    ]
+    pr38_minimum_child_pr_count_met = bool(
+        pr38_minimum_child_pr_count
+        and pr38_child_pr_count >= pr38_minimum_child_pr_count
+        and (
+            all(pr38_minimum_child_pr_count_flags)
+            if pr38_minimum_child_pr_count_flags
+            else True
+        )
     )
     pr38_ready_child_pr_count = _int(
         pr38_matrix.get("ready_child_pr_count") or pr38_acceptance.get("ready_child_pr_count")
@@ -3144,6 +3692,8 @@ def build_product_operator_cockpit(
         pr38_panel_blockers.append("pr38_split_acceptance_not_ready")
     if not pr38_child_pr_verification_matrix_ready:
         pr38_panel_blockers.append("pr38_child_pr_verification_matrix_not_ready")
+    if pr38_split_acceptance_present and not pr38_minimum_child_pr_count_met:
+        pr38_panel_blockers.append("pr38_minimum_child_pr_count_not_met")
     if pr38_split_ready_for_human_branch_approval:
         pr38_panel_blockers.append("human_branch_commit_approval_required")
 
@@ -3155,6 +3705,7 @@ def build_product_operator_cockpit(
         pocketmd_refinement_ready=pocketmd_refinement_ready,
         pocketmd_claim_allowed=pocketmd_lite_claim_allowed,
         public_benchmark_claim_allowed=public_benchmark_claim_allowed,
+        competition_ligand_claim_allowed=competition_ligand_claim_allowed,
         evidence_bundle_export_ready=evidence_bundle_export_ready,
         release_allowed=release_allowed,
         customer_shadow_paid_pilot_ready=customer_shadow_paid_pilot_ready,
@@ -3584,6 +4135,94 @@ def build_product_operator_cockpit(
             root=root,
         ),
         _panel(
+            panel_id="competition_benchmark_claim_boundary",
+            title="Competition benchmark claim boundary",
+            route="/product/architecture-validation#competition-benchmark",
+            artifact_path=competition_benchmark_json,
+            artifact_present=competition_benchmark_present,
+            status=competition_benchmark_rollup_status
+            or "missing_competition_benchmark_rollup",
+            surface_ready=True,
+            source_artifact_ready=(
+                competition_benchmark_present and competition_benchmark_rollup_ready
+            ),
+            operator_action_required=competition_benchmark_operator_action_required,
+            claim_allowed=False,
+            primary_metric=_join_metrics(
+                _metric("rollup_ready", competition_benchmark_rollup_ready),
+                _metric("credibility_ready", competition_credibility_extension_ready),
+                _count_metric(
+                    "credibility_blockers",
+                    competition_credibility_extension_blocker_count,
+                ),
+                _metric("custody_work_order_ready", competition_custody_work_order_ready),
+                _metric("ligand_claim_allowed", competition_ligand_claim_allowed),
+            ),
+            secondary_metric=_join_metrics(
+                _metric("evidence_role", competition_evidence_role),
+                _metric("cameo_official_intake", competition_cameo_official_intake_ready),
+                _count_metric("cameo_official_rows", competition_cameo_official_result_count),
+                _count_metric("cameo_official_accepted", competition_cameo_official_accepted_count),
+                _metric("cameo_claim_allowed", competition_cameo_official_claim_allowed),
+                _metric("casp16_ligand_ready", competition_casp16_ready),
+                _metric("bm5_capri_ready", competition_bm5_capri_ready),
+                _metric("package_b_required", competition_package_b_required),
+                _count_metric("package_b_suites", len(competition_package_b_suite_ids)),
+                _metric("package_b_foundation", competition_package_b_foundation_ready),
+                _metric("package_b_claim_grade", competition_package_b_claim_grade_ready),
+                _count_metric(
+                    "package_b_claim_blockers",
+                    competition_package_b_claim_grade_blocker_count,
+                ),
+                _metric(
+                    "package_b_dependency",
+                    competition_ligand_claim_package_b_dependency_ready,
+                ),
+                _count_metric("ligand_claim_blockers", competition_ligand_claim_blocker_count),
+                _metric(
+                    "github_raw_data_policy",
+                    competition_github_raw_data_policy_ready,
+                ),
+                _metric(
+                    "raw_payloads_allowed",
+                    competition_github_raw_payloads_allowed,
+                ),
+                _count_metric(
+                    "git_tracked_raw_data",
+                    competition_github_raw_data_git_tracked_total_count,
+                ),
+                _metric(
+                    "primary_credibility_blocker",
+                    competition_credibility_extension_primary_blocker,
+                ),
+                _count_metric(
+                    "custody_actions",
+                    competition_custody_work_order_action_count,
+                ),
+            ),
+            next_action=_first_text(
+                competition_credibility_extension_primary_next_action,
+                competition_package_b_bridge_next_action,
+                competition_custody_work_order_primary_action,
+                "Keep CASP/CAPRI/CAMEO evidence separate from ligand commercial claims until Package B is claim-grade ready.",
+            ),
+            allowed_claim_text=(
+                "Competition credibility evidence may be displayed as non-promoting readiness status."
+            ),
+            disallowed_claim_text=(
+                "Ligand commercial docking claims remain disallowed until Package B public ligand "
+                "benchmarks are separately claim-grade ready."
+            ),
+            blockers=(
+                competition_ligand_claim_blockers
+                or competition_credibility_extension_blockers
+                or competition_package_b_claim_grade_blockers
+                or ([] if competition_benchmark_present else ["missing_competition_benchmark_rollup"])
+            ),
+            claim_boundary=competition_claim_boundary,
+            root=root,
+        ),
+        _panel(
             panel_id="developer_preview_final_gates",
             title="Developer Preview final gates",
             route="/goal/developer-preview",
@@ -3611,6 +4250,18 @@ def build_product_operator_cockpit(
                 _metric("primary_source_receipt", developer_preview_primary_source_blocker_receipt),
                 _metric("primary_source_blocker", developer_preview_primary_source_blocker),
                 _metric("primary_source_action", developer_preview_primary_source_blocker_action),
+                _metric(
+                    "next_command_pack_target",
+                    developer_preview_next_operator_command_pack_target,
+                ),
+                _metric(
+                    "next_command_pack_platform",
+                    developer_preview_next_operator_command_pack_required_platform,
+                ),
+                _metric(
+                    "next_command_pack_command",
+                    developer_preview_next_operator_command_pack_command,
+                ),
                 _count_metric(
                     "stage5_recovery_rows",
                     developer_preview_stage5_recovery_row_count,
@@ -3619,10 +4270,78 @@ def build_product_operator_cockpit(
                     "stage5_missing_sources",
                     developer_preview_stage5_missing_source_artifact_count,
                 ),
+                _metric(
+                    "stage5_operator_work_order_ready",
+                    developer_preview_stage5_recovery_operator_work_order_ready,
+                ),
+                _metric(
+                    "stage5_operator_work_order_materialized",
+                    developer_preview_stage5_recovery_operator_work_order_materialized,
+                ),
+                _metric(
+                    "stage5_input_family_csv_present",
+                    developer_preview_stage5_input_family_csv_present,
+                ),
+                _metric(
+                    "stage5_input_family_md_present",
+                    developer_preview_stage5_input_family_md_present,
+                ),
                 _metric("stage5_primary_task", developer_preview_stage5_primary_task_key),
                 _metric(
                     "stage5_primary_source_arg",
                     developer_preview_stage5_primary_source_argument,
+                ),
+                _metric(
+                    "stage5_restore_packet",
+                    developer_preview_stage5_restore_packet_status,
+                ),
+                _metric(
+                    "stage5_restore_ready",
+                    developer_preview_stage5_restore_packet_ready,
+                ),
+                _metric(
+                    "stage5_restore_receipt",
+                    developer_preview_stage5_restore_packet_fail_closed_restore_receipt_ready,
+                ),
+                _metric(
+                    "stage5_restore_queue",
+                    developer_preview_stage5_restore_packet_operator_restore_queue_ready,
+                ),
+                _count_metric(
+                    "stage5_restore_queue_rows",
+                    developer_preview_stage5_restore_packet_operator_restore_queue_row_count,
+                ),
+                _count_metric(
+                    "stage5_restore_missing",
+                    developer_preview_stage5_restore_packet_missing_source_artifact_count,
+                ),
+                _metric(
+                    "stage5_restore_primary_blocker",
+                    developer_preview_stage5_restore_packet_primary_blocker,
+                ),
+                _metric(
+                    "stage5_restore_primary_arg",
+                    developer_preview_stage5_restore_packet_primary_missing_source_argument,
+                ),
+                _metric(
+                    "stage5_restore_primary_source",
+                    developer_preview_stage5_restore_packet_primary_missing_source_artifact_path,
+                ),
+                _metric(
+                    "stage5_restore_primary_pipeline_present",
+                    developer_preview_stage5_restore_packet_primary_missing_pipeline_summary_present,
+                ),
+                _metric(
+                    "stage5_restore_primary_profile_present",
+                    developer_preview_stage5_restore_packet_primary_missing_profile_present,
+                ),
+                _metric(
+                    "stage5_restore_primary_queue_ready",
+                    developer_preview_stage5_restore_packet_primary_missing_restore_queue_ready,
+                ),
+                _metric(
+                    "stage5_restore_action_required",
+                    developer_preview_stage5_restore_packet_operator_action_required,
                 ),
                 _metric(
                     "clean_checkout_receipt",
@@ -3672,6 +4391,28 @@ def build_product_operator_cockpit(
                     "new_user_observation_receipt",
                     developer_preview_new_user_observation_receipt_status,
                 ),
+                _metric(
+                    "new_user_observation_runbook_ready",
+                    "true"
+                    if developer_preview_new_user_observation_runbook_ready
+                    else "false",
+                ),
+                _metric(
+                    "new_user_observation_draft_ready",
+                    developer_preview_new_user_observation_draft_fail_closed_ready,
+                ),
+                _metric(
+                    "new_user_observation_input_contract",
+                    developer_preview_new_user_observation_input_contract_ready,
+                ),
+                _metric(
+                    "new_user_observation_checklist",
+                    developer_preview_new_user_observation_checklist_path_documented,
+                ),
+                _count_metric(
+                    "new_user_observation_runbook_missing_tokens",
+                    developer_preview_new_user_observation_runbook_missing_required_token_count,
+                ),
                 _count_metric(
                     "new_user_observation_fields",
                     developer_preview_new_user_observation_required_field_count,
@@ -3705,46 +4446,6 @@ def build_product_operator_cockpit(
             disallowed_claim_text="Developer demo-ready wording is disallowed until all final gates pass.",
             blockers=_string_list(developer_preview.get("blockers")),
             claim_boundary=_text(developer_preview.get("claim_boundary")) or CLAIM_BOUNDARY,
-            root=root,
-        ),
-        _panel(
-            panel_id="f2g_f2h_preflight_work_order",
-            title="F2g/F2h preflight / work order",
-            route="/goal/priority-queue#f2g-f2h",
-            artifact_path=f2g_f2h_recovery_json,
-            artifact_present=f2g_recovery_present,
-            status=f2g_preflight_status or f2g_recovery_status or "missing_f2g_f2h_surface_preflight",
-            surface_ready=True,
-            source_artifact_ready=f2g_preflight_present and f2g_recovery_present,
-            operator_action_required=f2g_recovery_required or not f2h_continuation_allowed,
-            claim_allowed=False,
-            primary_metric=_join_metrics(
-                _count_metric("preflight_blockers", f2g_preflight_blocker_count),
-                _count_metric("blocked_recovery_items", f2g_blocked_recovery_item_count),
-                _count_metric("recovery_items", f2g_recovery_item_count),
-                _metric("f2g_audit_ready", f2g_audit_ready),
-                _metric("f2h_allowed", f2h_continuation_allowed),
-            ),
-            secondary_metric=_join_metrics(
-                _metric("recovery_required", f2g_recovery_required),
-                _metric("primary_recovery_item", f2g_primary_recovery_item),
-                _metric("primary_required_surface", f2g_primary_required_surface),
-                _metric("primary_blocker", f2g_primary_blocker),
-                _metric("placeholder_allowed", f2g_placeholder_creation_allowed),
-                _metric("surface_restore_executed", f2g_surface_restore_executed),
-            ),
-            next_action=_first_text(
-                f2g_primary_operator_action,
-                "Restore the authoritative F2/G1 surfaces, then rerun the local F2g/F2h preflight.",
-            ),
-            allowed_claim_text="F2g/F2h recovery work order can be shown as non-promoting operator guidance.",
-            disallowed_claim_text="F2g audit, F2h continuation, G1 promotion, and solver claims remain disallowed.",
-            blockers=_string_list(f2g_preflight.get("blockers")) or _string_list(
-                f2g_recovery.get("preflight_blockers")
-            ),
-            claim_boundary=_text(f2g_recovery.get("claim_boundary"))
-            or _text(f2g_preflight.get("claim_boundary"))
-            or CLAIM_BOUNDARY,
             root=root,
         ),
         _panel(
@@ -3810,6 +4511,7 @@ def build_product_operator_cockpit(
             claim_allowed=False,
             primary_metric=_join_metrics(
                 _count_metric("child_prs", pr38_child_pr_count),
+                _count_metric("min_child_prs", pr38_minimum_child_pr_count),
                 _count_metric("ready", pr38_ready_child_pr_count),
                 _count_metric("blocked", pr38_blocked_child_pr_count),
                 _count_metric("focused_tests", pr38_focused_test_required_count),
@@ -3819,6 +4521,7 @@ def build_product_operator_cockpit(
                 _count_metric("product_mode", pr38_product_mode_required_count),
                 _count_metric("hunk_review", pr38_hunk_split_review_required_count),
                 _count_metric("claim_review", pr38_claim_boundary_review_required_count),
+                _metric("minimum_met", pr38_minimum_child_pr_count_met),
                 _metric("branch_commit_allowed", pr38_branch_commit_work_allowed),
                 _metric("patches_applied", pr38_patches_applied),
                 _metric("branches_created", pr38_branches_created),
@@ -3839,6 +4542,69 @@ def build_product_operator_cockpit(
             claim_boundary=_first_text(
                 pr38_matrix.get("claim_boundary"),
                 pr38_acceptance.get("claim_boundary"),
+                CLAIM_BOUNDARY,
+            ),
+            root=root,
+        ),
+        _panel(
+            panel_id="release_ci_remote_green",
+            title="Release CI remote green",
+            route="/goal/ci-release",
+            artifact_path=(
+                release_ci_remote_green_json
+                if release_ci_remote_green_present
+                else github_self_hosted_runner_preflight_json
+            ),
+            artifact_present=(
+                github_runner_preflight_present or release_ci_remote_green_present
+            ),
+            status=_first_text(
+                release_ci_remote_green_status,
+                github_runner_preflight_status,
+                "missing_release_ci_remote_green_receipt",
+            ),
+            surface_ready=True,
+            source_artifact_ready=release_ci_remote_green_ready,
+            operator_action_required=not release_ci_remote_green_ready,
+            claim_allowed=False,
+            primary_metric=_join_metrics(
+                _metric("remote_green", release_ci_remote_green_pass),
+                _metric("runner_host_ready", github_runner_local_host_ready),
+                _metric("repo_runner_ready", github_repo_self_hosted_runner_ready),
+                _metric("product_image_rocm_runtime", github_runner_product_image_rocm_runtime_ready),
+                _metric("runner_hygiene", github_runner_product_image_hygiene_ready),
+                _metric(
+                    "workspace_cleanup",
+                    github_runner_product_image_workspace_cleanup_ready,
+                ),
+            ),
+            secondary_metric=_join_metrics(
+                _metric("linux_runners", github_runner_linux_online_count),
+                _metric("rocm_runners", github_runner_rocm_online_count),
+                _metric("docker_daemon", github_runner_docker_daemon_accessible),
+                _metric("rocm_nodes", github_runner_rocm_device_nodes_ready),
+                _metric("main_required_checks", release_ci_main_required_checks_ready),
+                _metric("workflow_contract", release_ci_workflow_source_contract_ready),
+                _metric("weekly_rocm_schedule", release_ci_weekly_rocm_schedule_green),
+                _metric("failure_artifacts", release_ci_failure_artifacts_preserved),
+                _metric("release_tag_rocm_gate", release_ci_release_tag_rocm_gate_green),
+                _count_metric("remote_green_blockers", release_ci_remote_green_blocker_count),
+            ),
+            next_action=_first_text(
+                github_runner_product_image_workspace_required_action,
+                release_ci_next_required_step,
+                github_runner_primary_next_step,
+                "Refresh read-only GitHub CI evidence and rerun product-image ROCm runtime smoke.",
+            ),
+            allowed_claim_text="Remote CI and runner evidence may be displayed as operational status.",
+            disallowed_claim_text=(
+                "No PR, release, product-image, or paid-pilot verification claim is allowed until "
+                "runner hygiene and remote CI green receipts pass."
+            ),
+            blockers=release_ci_panel_blockers,
+            claim_boundary=_first_text(
+                release_ci_remote_green.get("claim_boundary"),
+                github_self_hosted_runner_preflight.get("claim_boundary"),
                 CLAIM_BOUNDARY,
             ),
             root=root,
@@ -3906,8 +4672,8 @@ def build_product_operator_cockpit(
             ),
             next_action=_first_text(
                 release_decision.get("next_required_step") if not release_allowed else "",
-                pm_queue_first_action if pm_queue_blocked else "",
                 full_commercial_primary_next_step if full_commercial_blocked else "",
+                pm_queue_first_action if pm_queue_blocked else "",
                 release_actions.get("primary_action_recommended_action"),
                 release_actions.get("next_required_step"),
                 "Resolve the primary operator action before release promotion.",
@@ -4110,6 +4876,53 @@ def build_product_operator_cockpit(
             root=root,
         ),
     ]
+    if include_f2g_f2h_panel:
+        panels.append(
+            _panel(
+                panel_id="f2g_f2h_preflight_work_order",
+                title="F2g/F2h preflight / work order",
+                route="/goal/priority-queue#f2g-f2h",
+                artifact_path=f2g_f2h_recovery_json,
+                artifact_present=f2g_recovery_present,
+                status=(
+                    f2g_preflight_status
+                    or f2g_recovery_status
+                    or "missing_f2g_f2h_surface_preflight"
+                ),
+                surface_ready=True,
+                source_artifact_ready=f2g_preflight_present and f2g_recovery_present,
+                operator_action_required=f2g_recovery_required or not f2h_continuation_allowed,
+                claim_allowed=False,
+                primary_metric=_join_metrics(
+                    _count_metric("preflight_blockers", f2g_preflight_blocker_count),
+                    _count_metric("blocked_recovery_items", f2g_blocked_recovery_item_count),
+                    _count_metric("recovery_items", f2g_recovery_item_count),
+                    _metric("f2g_audit_ready", f2g_audit_ready),
+                    _metric("f2h_allowed", f2h_continuation_allowed),
+                ),
+                secondary_metric=_join_metrics(
+                    _metric("recovery_required", f2g_recovery_required),
+                    _metric("primary_recovery_item", f2g_primary_recovery_item),
+                    _metric("primary_required_surface", f2g_primary_required_surface),
+                    _metric("primary_blocker", f2g_primary_blocker),
+                    _metric("placeholder_allowed", f2g_placeholder_creation_allowed),
+                    _metric("surface_restore_executed", f2g_surface_restore_executed),
+                ),
+                next_action=_first_text(
+                    f2g_primary_operator_action,
+                    "Restore the authoritative F2/G1 surfaces, then rerun the local F2g/F2h preflight.",
+                ),
+                allowed_claim_text="F2g/F2h recovery work order can be shown as non-promoting operator guidance.",
+                disallowed_claim_text="F2g audit, F2h continuation, G1 promotion, and solver claims remain disallowed.",
+                blockers=_string_list(f2g_preflight.get("blockers")) or _string_list(
+                    f2g_recovery.get("preflight_blockers")
+                ),
+                claim_boundary=_text(f2g_recovery.get("claim_boundary"))
+                or _text(f2g_preflight.get("claim_boundary"))
+                or CLAIM_BOUNDARY,
+                root=root,
+            )
+        )
 
     missing_required_panel_ids = [
         panel_id for panel_id in REQUIRED_PHASE8_PANEL_IDS if panel_id not in {row["panel_id"] for row in panels}
@@ -4440,6 +5253,135 @@ def build_product_operator_cockpit(
         "public_benchmark_vina_gnina_adapter_command_after_fill": (
             public_vina_adapter_command_after_fill
         ),
+        "competition_benchmark_rollup_present": competition_benchmark_present,
+        "competition_benchmark_rollup_status": competition_benchmark_rollup_status,
+        "competition_benchmark_rollup_ready": competition_benchmark_rollup_ready,
+        "competition_benchmark_competition_evidence_role": competition_evidence_role,
+        "competition_benchmark_cameo_official_result_intake_status": (
+            competition_cameo_official_intake_status
+        ),
+        "competition_benchmark_cameo_official_result_intake_ready": (
+            competition_cameo_official_intake_ready
+        ),
+        "competition_benchmark_cameo_official_result_row_count": (
+            competition_cameo_official_result_count
+        ),
+        "competition_benchmark_cameo_official_accepted_result_count": (
+            competition_cameo_official_accepted_count
+        ),
+        "competition_benchmark_cameo_official_result_intake_claim_allowed": (
+            competition_cameo_official_claim_allowed
+        ),
+        "competition_benchmark_cameo_official_result_intake_fetch_enabled": (
+            competition_cameo_official_fetch_enabled
+        ),
+        "competition_benchmark_cameo_official_result_intake_external_state_mutated": (
+            competition_cameo_official_external_state_mutated
+        ),
+        "competition_benchmark_cameo_official_result_intake_local_native_accuracy_used": (
+            competition_cameo_official_local_native_accuracy_used
+        ),
+        "competition_benchmark_casp16_ligand_competition_credibility_ready": (
+            competition_casp16_ready
+        ),
+        "competition_benchmark_bm5_capri_complex_competition_credibility_ready": (
+            competition_bm5_capri_ready
+        ),
+        "competition_benchmark_competition_credibility_extension_ready": (
+            competition_credibility_extension_ready
+        ),
+        "competition_benchmark_competition_credibility_extension_blocker_count": (
+            competition_credibility_extension_blocker_count
+        ),
+        "competition_benchmark_competition_credibility_extension_blockers": (
+            competition_credibility_extension_blockers
+        ),
+        "competition_benchmark_competition_credibility_extension_primary_blocker": (
+            competition_credibility_extension_primary_blocker
+        ),
+        "competition_benchmark_competition_credibility_extension_next_actions": (
+            competition_credibility_extension_next_actions
+        ),
+        "competition_benchmark_competition_credibility_extension_primary_next_action": (
+            competition_credibility_extension_primary_next_action
+        ),
+        "competition_benchmark_custody_work_order_status": (
+            competition_custody_work_order_status
+        ),
+        "competition_benchmark_custody_work_order_ready": (
+            competition_custody_work_order_ready
+        ),
+        "competition_benchmark_custody_work_order_action_count": (
+            competition_custody_work_order_action_count
+        ),
+        "competition_benchmark_custody_work_order_primary_required_action": (
+            competition_custody_work_order_primary_action
+        ),
+        "competition_benchmark_package_b_required_for_ligand_commercial_claims": (
+            competition_package_b_required
+        ),
+        "competition_benchmark_package_b_ligand_suite_ids": (
+            competition_package_b_suite_ids
+        ),
+        "competition_benchmark_package_b_ligand_suite_count": len(
+            competition_package_b_suite_ids
+        ),
+        "competition_benchmark_package_b_ligand_public_benchmark_foundation_ready": (
+            competition_package_b_foundation_ready
+        ),
+        "competition_benchmark_package_b_claim_grade_public_benchmark_ready": (
+            competition_package_b_claim_grade_ready
+        ),
+        "competition_benchmark_package_b_claim_grade_blocker_count": (
+            competition_package_b_claim_grade_blocker_count
+        ),
+        "competition_benchmark_package_b_claim_grade_blockers": (
+            competition_package_b_claim_grade_blockers
+        ),
+        "competition_benchmark_competition_ligand_commercial_claim_allowed": (
+            competition_ligand_claim_allowed
+        ),
+        "competition_benchmark_competition_ligand_claim_package_b_dependency_ready": (
+            competition_ligand_claim_package_b_dependency_ready
+        ),
+        "competition_benchmark_competition_ligand_claim_blocker_count": (
+            competition_ligand_claim_blocker_count
+        ),
+        "competition_benchmark_competition_ligand_claim_blockers": (
+            competition_ligand_claim_blockers
+        ),
+        "competition_benchmark_github_raw_data_policy_ready": (
+            competition_github_raw_data_policy_ready
+        ),
+        "competition_benchmark_github_raw_data_git_tracked_total_count": (
+            competition_github_raw_data_git_tracked_total_count
+        ),
+        "competition_benchmark_raw_data_stored_in_repo": (
+            competition_raw_data_stored_in_repo
+        ),
+        "competition_benchmark_raw_data_free": competition_raw_data_free,
+        "competition_benchmark_github_raw_payloads_allowed": (
+            competition_github_raw_payloads_allowed
+        ),
+        "competition_benchmark_github_safe_allowed_artifact_classes": (
+            competition_github_safe_allowed_artifact_classes
+        ),
+        "competition_benchmark_github_disallowed_artifact_classes": (
+            competition_github_disallowed_artifact_classes
+        ),
+        "competition_benchmark_github_raw_benchmark_payloads_allowed": (
+            competition_github_raw_benchmark_payloads_allowed
+        ),
+        "competition_benchmark_github_official_archive_models_as_internal_predictions_allowed": (
+            competition_github_official_archive_models_as_internal_predictions_allowed
+        ),
+        "competition_benchmark_package_b_bridge_next_action": (
+            competition_package_b_bridge_next_action
+        ),
+        "competition_benchmark_claim_boundary": competition_claim_boundary,
+        "competition_benchmark_claim_promotion_allowed": False,
+        "competition_benchmark_execution_enabled": False,
+        "competition_benchmark_external_state_mutated": False,
         "evidence_bundle_export_ready": evidence_bundle_export_ready,
         "evidence_bundle_export_row_count": evidence_bundle_export_row_count,
         "evidence_bundle_export_blocker_row_count": (
@@ -4601,6 +5543,24 @@ def build_product_operator_cockpit(
         "developer_preview_receipt_work_order_primary_source_blocker_required_action": (
             developer_preview_primary_source_blocker_action
         ),
+        "developer_preview_next_operator_command_pack_target": (
+            developer_preview_next_operator_command_pack_target
+        ),
+        "developer_preview_next_operator_command_pack_command": (
+            developer_preview_next_operator_command_pack_command
+        ),
+        "developer_preview_next_operator_command_pack_required_platform": (
+            developer_preview_next_operator_command_pack_required_platform
+        ),
+        "developer_preview_next_operator_command_pack_required_env_vars": (
+            developer_preview_next_operator_command_pack_required_env_vars
+        ),
+        "developer_preview_next_operator_command_pack_required_input_artifacts": (
+            developer_preview_next_operator_command_pack_required_input_artifacts
+        ),
+        "developer_preview_next_operator_command_pack_receipt_artifacts": (
+            developer_preview_next_operator_command_pack_receipt_artifacts
+        ),
         "developer_preview_receipt_work_order_rows": (
             developer_preview_receipt_work_order_row_preview
         ),
@@ -4613,6 +5573,24 @@ def build_product_operator_cockpit(
         "developer_preview_stage5_required_argument_count": (
             developer_preview_stage5_required_argument_count
         ),
+        "developer_preview_stage5_recovery_operator_work_order_ready": (
+            developer_preview_stage5_recovery_operator_work_order_ready
+        ),
+        "developer_preview_stage5_recovery_operator_work_order_materialized": (
+            developer_preview_stage5_recovery_operator_work_order_materialized
+        ),
+        "developer_preview_stage5_input_family_csv_path": (
+            developer_preview_stage5_input_family_csv_path
+        ),
+        "developer_preview_stage5_input_family_md_path": (
+            developer_preview_stage5_input_family_md_path
+        ),
+        "developer_preview_stage5_input_family_csv_present": (
+            developer_preview_stage5_input_family_csv_present
+        ),
+        "developer_preview_stage5_input_family_md_present": (
+            developer_preview_stage5_input_family_md_present
+        ),
         "developer_preview_stage5_primary_task_key": (
             developer_preview_stage5_primary_task_key
         ),
@@ -4621,6 +5599,57 @@ def build_product_operator_cockpit(
         ),
         "developer_preview_stage5_primary_source_artifact_path": (
             developer_preview_stage5_primary_source_artifact_path
+        ),
+        "developer_preview_stage5_restore_packet_status": (
+            developer_preview_stage5_restore_packet_status
+        ),
+        "developer_preview_stage5_restore_packet_ready": (
+            developer_preview_stage5_restore_packet_ready
+        ),
+        "developer_preview_stage5_restore_packet_fail_closed_restore_receipt_ready": (
+            developer_preview_stage5_restore_packet_fail_closed_restore_receipt_ready
+        ),
+        "developer_preview_stage5_restore_packet_operator_restore_queue_ready": (
+            developer_preview_stage5_restore_packet_operator_restore_queue_ready
+        ),
+        "developer_preview_stage5_restore_packet_operator_restore_queue_row_count": (
+            developer_preview_stage5_restore_packet_operator_restore_queue_row_count
+        ),
+        "developer_preview_stage5_restore_packet_missing_source_artifact_count": (
+            developer_preview_stage5_restore_packet_missing_source_artifact_count
+        ),
+        "developer_preview_stage5_restore_packet_primary_blocker": (
+            developer_preview_stage5_restore_packet_primary_blocker
+        ),
+        "developer_preview_stage5_restore_packet_primary_missing_source_argument": (
+            developer_preview_stage5_restore_packet_primary_missing_source_argument
+        ),
+        "developer_preview_stage5_restore_packet_primary_missing_source_artifact_path": (
+            developer_preview_stage5_restore_packet_primary_missing_source_artifact_path
+        ),
+        "developer_preview_stage5_restore_packet_primary_missing_pipeline_summary_json": (
+            developer_preview_stage5_restore_packet_primary_missing_pipeline_summary_json
+        ),
+        "developer_preview_stage5_restore_packet_primary_missing_pipeline_summary_present": (
+            developer_preview_stage5_restore_packet_primary_missing_pipeline_summary_present
+        ),
+        "developer_preview_stage5_restore_packet_primary_missing_profile_json": (
+            developer_preview_stage5_restore_packet_primary_missing_profile_json
+        ),
+        "developer_preview_stage5_restore_packet_primary_missing_profile_present": (
+            developer_preview_stage5_restore_packet_primary_missing_profile_present
+        ),
+        "developer_preview_stage5_restore_packet_primary_missing_restore_queue_ready": (
+            developer_preview_stage5_restore_packet_primary_missing_restore_queue_ready
+        ),
+        "developer_preview_stage5_restore_packet_primary_missing_restore_instruction": (
+            developer_preview_stage5_restore_packet_primary_missing_restore_instruction
+        ),
+        "developer_preview_stage5_restore_packet_next_required_step": (
+            developer_preview_stage5_restore_packet_next_required_step
+        ),
+        "developer_preview_stage5_restore_packet_operator_action_required": (
+            developer_preview_stage5_restore_packet_operator_action_required
         ),
         "developer_preview_stage5_recovery_rows": (
             developer_preview_stage5_recovery_row_preview
@@ -4697,6 +5726,42 @@ def build_product_operator_cockpit(
         "developer_preview_new_user_observation_receipt_status": (
             developer_preview_new_user_observation_receipt_status
         ),
+        "developer_preview_new_user_observation_runbook_ready": (
+            developer_preview_new_user_observation_runbook_ready
+        ),
+        "developer_preview_new_user_observation_runbook_missing_required_token_count": (
+            developer_preview_new_user_observation_runbook_missing_required_token_count
+        ),
+        "developer_preview_new_user_observation_core_workflow_receipt_path_documented": (
+            developer_preview_new_user_observation_core_workflow_receipt_path_documented
+        ),
+        "developer_preview_new_user_observation_core_workflow_command_set_documented": (
+            developer_preview_new_user_observation_core_workflow_command_set_documented
+        ),
+        "developer_preview_new_user_observation_draft_fail_closed_ready": (
+            developer_preview_new_user_observation_draft_fail_closed_ready
+        ),
+        "developer_preview_new_user_observation_input_json": (
+            developer_preview_new_user_observation_input_json
+        ),
+        "developer_preview_new_user_observation_input_template_json": (
+            developer_preview_new_user_observation_input_template_json
+        ),
+        "developer_preview_new_user_observation_input_json_present": (
+            developer_preview_new_user_observation_input_json_present
+        ),
+        "developer_preview_new_user_observation_input_contract_ready": (
+            developer_preview_new_user_observation_input_contract_ready
+        ),
+        "developer_preview_new_user_observation_input_policy_ready": (
+            developer_preview_new_user_observation_input_policy_ready
+        ),
+        "developer_preview_new_user_observation_checklist_path_documented": (
+            developer_preview_new_user_observation_checklist_path_documented
+        ),
+        "developer_preview_new_user_observation_template_next_action": (
+            developer_preview_new_user_observation_template_next_action
+        ),
         "developer_preview_new_user_observation_required_field_count": (
             developer_preview_new_user_observation_required_field_count
         ),
@@ -4737,6 +5802,55 @@ def build_product_operator_cockpit(
         "enterprise_on_prem_support_bundle_recovery_drill_ready": enterprise_support_bundle_ready,
         "enterprise_on_prem_rollback_retry_idempotency_ready": enterprise_rollback_retry_ready,
         "enterprise_on_prem_control_rows": enterprise_on_prem_control_row_preview,
+        "github_self_hosted_runner_preflight_present": github_runner_preflight_present,
+        "github_self_hosted_runner_preflight_status": github_runner_preflight_status,
+        "github_self_hosted_runner_local_host_ready": github_runner_local_host_ready,
+        "github_self_hosted_runner_repo_ready": github_repo_self_hosted_runner_ready,
+        "github_self_hosted_runner_docker_daemon_accessible": (
+            github_runner_docker_daemon_accessible
+        ),
+        "github_self_hosted_runner_rocm_device_nodes_ready": (
+            github_runner_rocm_device_nodes_ready
+        ),
+        "github_self_hosted_runner_product_image_rocm_runtime_ready": (
+            github_runner_product_image_rocm_runtime_ready
+        ),
+        "github_self_hosted_runner_product_image_hygiene_ready": (
+            github_runner_product_image_hygiene_ready
+        ),
+        "github_self_hosted_runner_product_image_workspace_cleanup_ready": (
+            github_runner_product_image_workspace_cleanup_ready
+        ),
+        "github_self_hosted_runner_product_image_workspace_bad_owner_path": (
+            github_runner_product_image_workspace_bad_owner_path
+        ),
+        "github_self_hosted_runner_product_image_workspace_not_writable_path": (
+            github_runner_product_image_workspace_not_writable_path
+        ),
+        "github_self_hosted_runner_product_image_workspace_required_action": (
+            github_runner_product_image_workspace_required_action
+        ),
+        "github_self_hosted_runner_linux_online_count": github_runner_linux_online_count,
+        "github_self_hosted_runner_rocm_online_count": github_runner_rocm_online_count,
+        "github_self_hosted_runner_next_required_steps": (
+            github_runner_next_required_steps
+        ),
+        "release_ci_remote_green_present": release_ci_remote_green_present,
+        "release_ci_remote_green_status": release_ci_remote_green_status,
+        "release_ci_remote_green_ready": release_ci_remote_green_ready,
+        "release_ci_remote_green_pass": release_ci_remote_green_pass,
+        "release_ci_remote_green_blocker_count": release_ci_remote_green_blocker_count,
+        "release_ci_linux_self_hosted_runner_ready": release_ci_linux_runner_ready,
+        "release_ci_rocm_self_hosted_runner_ready": release_ci_rocm_runner_ready,
+        "release_ci_main_required_checks_ready": release_ci_main_required_checks_ready,
+        "release_ci_workflow_source_contract_ready": (
+            release_ci_workflow_source_contract_ready
+        ),
+        "release_ci_weekly_rocm_schedule_green": release_ci_weekly_rocm_schedule_green,
+        "release_ci_failure_artifacts_preserved": release_ci_failure_artifacts_preserved,
+        "release_ci_release_tag_rocm_gate_green": release_ci_release_tag_rocm_gate_green,
+        "release_ci_next_required_step": release_ci_next_required_step,
+        "release_ci_panel_blockers": release_ci_panel_blockers,
         "pr38_split_acceptance_present": pr38_split_acceptance_present,
         "pr38_split_acceptance_status": _text(pr38_acceptance.get("status")),
         "pr38_split_acceptance_ready": pr38_split_acceptance_ready,
@@ -4748,6 +5862,8 @@ def build_product_operator_cockpit(
         ),
         "pr38_operator_branch_approval_required": pr38_split_ready_for_human_branch_approval,
         "pr38_child_pr_count": pr38_child_pr_count,
+        "pr38_minimum_child_pr_count": pr38_minimum_child_pr_count,
+        "pr38_minimum_child_pr_count_met": pr38_minimum_child_pr_count_met,
         "pr38_ready_child_pr_count": pr38_ready_child_pr_count,
         "pr38_blocked_child_pr_count": pr38_blocked_child_pr_count,
         "pr38_blocked_slice_ids": pr38_blocked_slice_ids,
@@ -4863,8 +5979,8 @@ def build_product_operator_cockpit(
         "release_allowed": release_allowed,
         "next_required_step": _first_text(
             release_decision.get("next_required_step") if not release_allowed else "",
-            pm_queue_first_action if pm_queue_blocked else "",
             full_commercial_primary_next_step if full_commercial_blocked else "",
+            pm_queue_first_action if pm_queue_blocked else "",
             action_panels[0]["next_action"] if action_panels else "",
         ),
         "execution_enabled": False,
@@ -4916,6 +6032,10 @@ def _parser() -> argparse.ArgumentParser:
         default=DEFAULT_PUBLIC_BENCHMARK_VINA_GNINA_SCORE_TEMPLATE_RECEIPT_JSON,
     )
     parser.add_argument(
+        "--competition-benchmark-json",
+        default=DEFAULT_COMPETITION_BENCHMARK_ROLLUP_JSON,
+    )
+    parser.add_argument(
         "--goal-release-decision-json",
         default=DEFAULT_GOAL_RELEASE_DECISION_JSON,
     )
@@ -4947,7 +6067,23 @@ def _parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--f2g-f2h-preflight-json", default=DEFAULT_F2G_F2H_PREFLIGHT_JSON)
     parser.add_argument("--f2g-f2h-recovery-json", default=DEFAULT_F2G_F2H_RECOVERY_JSON)
+    parser.add_argument(
+        "--include-f2g-f2h-panel",
+        action="store_true",
+        help=(
+            "Opt in to the legacy structural-analysis F2g/F2h recovery panel. "
+            "The molecular-dynamics cockpit omits it by default."
+        ),
+    )
     parser.add_argument("--enterprise-on-prem-json", default=DEFAULT_ENTERPRISE_ON_PREM_JSON)
+    parser.add_argument(
+        "--github-self-hosted-runner-preflight-json",
+        default=DEFAULT_GITHUB_SELF_HOSTED_RUNNER_PREFLIGHT_JSON,
+    )
+    parser.add_argument(
+        "--release-ci-remote-green-json",
+        default=DEFAULT_RELEASE_CI_REMOTE_GREEN_JSON,
+    )
     parser.add_argument("--pr38-split-acceptance-json", default=DEFAULT_PR38_SPLIT_ACCEPTANCE_JSON)
     parser.add_argument(
         "--pr38-child-pr-verification-matrix-json",
@@ -4976,6 +6112,7 @@ def main(argv: list[str] | None = None) -> int:
         public_benchmark_vina_gnina_score_template_receipt_json=(
             args.public_benchmark_vina_gnina_score_template_receipt_json
         ),
+        competition_benchmark_json=args.competition_benchmark_json,
         goal_release_decision_json=args.goal_release_decision_json,
         release_actions_json=args.release_actions_json,
         full_commercial_blocker_matrix_json=args.full_commercial_blocker_matrix_json,
@@ -4998,7 +6135,12 @@ def main(argv: list[str] | None = None) -> int:
         ),
         f2g_f2h_preflight_json=args.f2g_f2h_preflight_json,
         f2g_f2h_recovery_json=args.f2g_f2h_recovery_json,
+        include_f2g_f2h_panel=args.include_f2g_f2h_panel,
         enterprise_on_prem_json=args.enterprise_on_prem_json,
+        github_self_hosted_runner_preflight_json=(
+            args.github_self_hosted_runner_preflight_json
+        ),
+        release_ci_remote_green_json=args.release_ci_remote_green_json,
         pr38_split_acceptance_json=args.pr38_split_acceptance_json,
         pr38_child_pr_verification_matrix_json=args.pr38_child_pr_verification_matrix_json,
     )

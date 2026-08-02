@@ -12,6 +12,7 @@ from typing import Any
 
 import numpy as np
 
+from betelgeuze_engine.physics.mm_gbsa import gb_sa_proxy_energy
 from core.mm_gbsa import mm_gbsa_binding_energy
 from core.structure_metrics import dockq_proxy, lddt_pli_proxy
 from tools.accounting.build_storage_retention_manifest import _human_size
@@ -223,7 +224,7 @@ def _candidate_pair_metrics(readiness_row: dict[str, Any], *, root: Path) -> dic
                 pose_coords,
                 props=_ligand_descriptor_props(_resolve(ligand_pose_artifact, root=root)),
             )
-            internal_delta_g = float(refine["deltaG_mm_gbsa_kcal_mol"])
+            internal_delta_g = float(gb_sa_proxy_energy(refine, 0.0))
             details = {
                 "dockq_proxy_backend": "core.structure_metrics.dockq_proxy",
                 "lddt_pli_proxy_backend": "core.structure_metrics.lddt_pli_proxy",
@@ -292,7 +293,7 @@ def _candidate_rows(
                     "target_id": pair["target_id"],
                     "pose_id": pair["pose_id"],
                     "split": pair["split"],
-                    "deltaG_candidate_kcal_mol": _format_metric(pair["value_by_metric"].get("internal_deltaG")),
+                    "candidate_refine_proxy_score": _format_metric(pair["value_by_metric"].get("internal_deltaG")),
                     "deltaG_experimental_kcal_mol": pair["deltaG_experimental_kcal_mol"],
                     "dockq": _format_metric(pair["value_by_metric"].get("dockq")),
                     "lddt_pli": _format_metric(pair["value_by_metric"].get("lddt_pli")),
@@ -358,7 +359,7 @@ def _candidate_rows(
 def _existing_pairs(rows: list[dict[str, str]]) -> list[dict[str, Any]]:
     pairs: list[dict[str, Any]] = []
     for row in rows:
-        proxy = _float(row.get("deltaG_mm_gbsa_kcal_mol"))
+        proxy = _float(row.get("internal_refine_proxy_score"))
         reference = _float(row.get("deltaG_experimental_kcal_mol"))
         if proxy is None or reference is None:
             continue
@@ -379,7 +380,7 @@ def _candidate_pairs(pair_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     for row in pair_rows:
         if row.get("candidate_status") != "pass":
             continue
-        proxy = _float(row.get("deltaG_candidate_kcal_mol"))
+        proxy = _float(row.get("candidate_refine_proxy_score"))
         reference = _float(row.get("deltaG_experimental_kcal_mol"))
         if proxy is None or reference is None:
             continue
@@ -552,7 +553,7 @@ def _render_md(payload: dict[str, Any], *, root: Path) -> str:
     for row in payload["candidate_pairs"][:25]:
         lines.append(
             f"| `{row['work_order_id']}` | `{row['target_id']}` | `{row['pose_id']}` | `{row['split']}` | "
-            f"`{row['deltaG_candidate_kcal_mol']}` | `{row['deltaG_experimental_kcal_mol']}` | "
+            f"`{row['candidate_refine_proxy_score']}` | `{row['deltaG_experimental_kcal_mol']}` | "
             f"`{row['dockq']}` | `{row['lddt_pli']}` | `{row['candidate_status']}` |"
         )
     lines.extend(["", "## Claim Boundary", "", summary["claim_boundary"], ""])

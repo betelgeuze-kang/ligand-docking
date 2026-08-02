@@ -5,6 +5,12 @@ import re
 from typing import Any
 
 from betelgeuze_engine.chemistry.ligand_states import ligand_chemistry_state_from_smiles
+from betelgeuze_engine.chemistry.rotor_perception import (
+    STATUS_SUPPORTED,
+    STATUS_UNSUPPORTED_MACROCYCLE,
+    RotorPerception,
+    perceive_ligand_rotors,
+)
 
 try:
     from rdkit import Chem  # type: ignore
@@ -47,6 +53,7 @@ def _base_validity(
     salt_parent_smiles: str = "",
     fragment_count: int = 0,
     salt_stripped: bool = False,
+    rotor_perception: RotorPerception | None = None,
     blockers: list[str] | None = None,
 ) -> dict[str, Any]:
     blocker_values = [str(v) for v in blockers or [] if str(v)]
@@ -63,6 +70,18 @@ def _base_validity(
     claim_safe = bool(valid and chirality_valid and source == "rdkit")
     if valid and source != "rdkit":
         blocker_values.append("rdkit_unavailable_ligand_topology")
+    rotor_payload = rotor_perception.to_dict() if rotor_perception is not None else {}
+    rotor_status = str(rotor_payload.get("status") or "not_assessed")
+    rotor_supported = rotor_status == STATUS_SUPPORTED
+    macrocycle_present = bool(rotor_payload.get("macrocycle_present"))
+    if valid and rotor_perception is not None and not rotor_supported:
+        # A ligand whose flexibility cannot be perceived must not read as
+        # claim-safe: macrocycles need a separate ring-closure lane.
+        blocker_values.append(
+            "macrocycle_ligand_unsupported_lane"
+            if rotor_status == STATUS_UNSUPPORTED_MACROCYCLE
+            else "ligand_rotor_perception_unsupported"
+        )
     if valid and not chirality_valid:
         if int(unassigned_chiral_center_count) > 0:
             blocker_values.append("unassigned_ligand_chirality")
@@ -113,6 +132,25 @@ def _base_validity(
         "salt_parent_smiles": salt_parent_smiles,
         "fragment_count": int(fragment_count),
         "salt_stripped": bool(salt_stripped),
+        "rotor_perception_status": rotor_status,
+        "rotor_perception_supported": bool(rotor_supported),
+        "rotor_perception_schema_version": str(rotor_payload.get("schema_version") or ""),
+        "rotor_count": int(rotor_payload.get("rotor_count") or 0),
+        "free_rotor_count": int(rotor_payload.get("free_rotor_count") or 0),
+        "restrained_rotor_count": int(rotor_payload.get("restrained_rotor_count") or 0),
+        "conjugated_rotor_count": int(rotor_payload.get("conjugated_rotor_count") or 0),
+        "exocyclic_ring_rotor_count": int(rotor_payload.get("exocyclic_ring_rotor_count") or 0),
+        "ring_ring_rotor_count": int(rotor_payload.get("ring_ring_rotor_count") or 0),
+        "stereo_locked_bond_count": int(rotor_payload.get("stereo_locked_bond_count") or 0),
+        "rigid_component_count": int(rotor_payload.get("rigid_component_count") or 0),
+        "macrocycle_present": macrocycle_present,
+        "macrocycle_ring_sizes": list(rotor_payload.get("macrocycle_ring_sizes") or []),
+        "ligand_flexibility_lane": (
+            "macrocycle_unsupported"
+            if rotor_status == STATUS_UNSUPPORTED_MACROCYCLE
+            else ("rigid_component_plus_rotor" if rotor_supported else "unsupported")
+        ),
+        "rotor_perception": rotor_payload,
     }
 
 
@@ -125,6 +163,7 @@ class LigandTopology:
     ring_flags: list[bool]
     chirality_tags: list[str]
     validity: dict[str, Any] = field(default_factory=dict)
+    rotor_perception: RotorPerception | None = None
 
 
 def _fallback_elements(smiles: str) -> list[str]:
@@ -156,6 +195,7 @@ def ligand_topology_from_smiles(smiles: str) -> LigandTopology:
                 _base_validity(valid=False, reason="invalid_smiles", source="rdkit", blockers=["invalid_smiles"]),
             )
         chemistry = ligand_chemistry_state_from_smiles(smi)
+        rotors = perceive_ligand_rotors(smi)
         roles_by_atom: dict[int, set[str]] = {}
         for site in chemistry.feature_sites:
             roles_by_atom.setdefault(int(site.atom_idx), set()).add(str(site.role))
@@ -216,8 +256,10 @@ def ligand_topology_from_smiles(smiles: str) -> LigandTopology:
                 salt_parent_smiles=chemistry.salt_parent_smiles,
                 fragment_count=chemistry.fragment_count,
                 salt_stripped=chemistry.salt_stripped,
+                rotor_perception=rotors,
                 blockers=list(chemistry.claim_safe_blockers),
             ),
+            rotor_perception=rotors,
         )
 
     atom_elements = _fallback_elements(smi)

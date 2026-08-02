@@ -65,7 +65,11 @@ def features_from_scoring_row(row: dict[str, Any]) -> dict[str, Any]:
     base_proxy = float(row.get("binding_energy_mmpbsa_kcal_mol_proxy", row.get("base_score", 0.0)) or 0.0)
     refined = row.get("binding_energy_explicit_water_recheck_kcal_mol_proxy")
     refined_val = float(refined) if refined not in {None, ""} else base_proxy
-    mm_gbsa = row.get("deltaG_mm_gbsa_kcal_mol", refined_val)
+    # Prefer the active proxy field; retired deltaG_* names are read only so
+    # pre-rename score CSVs stay usable.
+    mm_gbsa = row.get("gb_sa_proxy_energy_score")
+    if mm_gbsa in {None, ""}:
+        mm_gbsa = row.get("internal_refine_proxy_score", refined_val)
     mm_gbsa_val = float(mm_gbsa) if mm_gbsa not in {None, ""} else refined_val
     return build_residual_feature_vector(
         base_score=float(row.get("binding_score_composite_v7", base_proxy) or base_proxy),

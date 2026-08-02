@@ -19,7 +19,7 @@ def _candidate_pair(index: int, contact: float, atoms: int, reference: float) ->
         "pose_id": f"t{index}_pose",
         "work_order_id": f"wo_{index}",
         "split": "holdout" if index in {1, 2} else "fit",
-        "deltaG_candidate_kcal_mol": str(-contact),
+        "candidate_refine_proxy_score": str(-contact),
         "deltaG_experimental_kcal_mol": str(reference),
         "details_json": json.dumps(
             {

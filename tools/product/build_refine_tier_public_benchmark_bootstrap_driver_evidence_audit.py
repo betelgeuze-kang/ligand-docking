@@ -330,7 +330,7 @@ def build_refine_tier_public_benchmark_bootstrap_driver_evidence_audit(
             "audit_class": audit_class,
             "bootstrap_p05_delta_if_removed": _text(recovery.get("bootstrap_p05_delta_if_removed")),
             "rank_abs_error": _int(recovery.get("rank_abs_error")),
-            "deltaG_proxy_kcal_mol": _text(recovery.get("deltaG_proxy_kcal_mol")),
+            "refine_proxy_score": _text(recovery.get("refine_proxy_score")),
             "deltaG_experimental_kcal_mol": _text(recovery.get("deltaG_experimental_kcal_mol")),
             "dossier_review_lane": _text(dossier.get("next_review_lane")),
             "dossier_feature_extrapolation_residual_class": _text(

@@ -6,6 +6,8 @@ from typing import Any
 import numpy as np
 
 from betelgeuze_engine.chemistry.ligand_states import ligand_chemistry_state_from_smiles
+from betelgeuze_engine.chemistry.rotor_perception import perceive_ligand_rotors
+from betelgeuze_engine.chemistry.pose_clustering import cluster_poses as _cluster_poses_graph
 
 try:
     from rdkit import Chem
@@ -76,6 +78,40 @@ def rotatable_bond_count(smiles: str) -> int:
     return int(rdMolDescriptors.CalcNumRotatableBonds(mol))
 
 
+def chemistry_aware_rotor_summary(smiles: str) -> dict[str, Any]:
+    """Chemistry-aware flexibility summary for pose-search diagnostics.
+
+    The plain rotatable-bond count is kept alongside it because they answer
+    different questions: the raw count is how many acyclic single bonds exist,
+    while the perceived rotor set says how many of them actually sample freely
+    and which ring systems must move as rigid bodies.
+    """
+
+    perception = perceive_ligand_rotors(smiles)
+    payload = perception.to_dict()
+    return {
+        "status": payload["status"],
+        "supported": payload["supported"],
+        "flexibility_lane": (
+            "macrocycle_unsupported"
+            if payload["macrocycle_present"]
+            else ("rigid_component_plus_rotor" if payload["supported"] else "unsupported")
+        ),
+        "rotor_count": payload["rotor_count"],
+        "free_rotor_count": payload["free_rotor_count"],
+        "restrained_rotor_count": payload["restrained_rotor_count"],
+        "conjugated_rotor_count": payload["conjugated_rotor_count"],
+        "exocyclic_ring_rotor_count": payload["exocyclic_ring_rotor_count"],
+        "ring_ring_rotor_count": payload["ring_ring_rotor_count"],
+        "stereo_locked_bond_count": payload["stereo_locked_bond_count"],
+        "rigid_component_count": payload["rigid_component_count"],
+        "macrocycle_present": payload["macrocycle_present"],
+        "macrocycle_ring_sizes": payload["macrocycle_ring_sizes"],
+        "effective_torsion_state_count": payload["effective_torsion_state_count"],
+        "rotor_perception_schema_version": payload["schema_version"],
+    }
+
+
 def conformer_diversity_diagnostics(
     poses: np.ndarray,
     *,
@@ -100,6 +136,7 @@ def conformer_diversity_diagnostics(
         "status": status,
         "method": "atom_order_pairwise_heavy_atom_rmsd",
         "rotatable_bond_count": rotatable_bond_count(smiles) if smiles else 0,
+        "chemistry_aware_rotors": chemistry_aware_rotor_summary(smiles) if smiles else {},
         "conformer_count": count,
         "pairwise_rmsd_count": int(len(finite)),
         "pairwise_rmsd_min_a": min(finite) if finite else 0.0,
@@ -167,51 +204,91 @@ def cluster_poses_by_symmetry(
     symmetry_mappings: list[tuple[int, ...]],
     *,
     threshold_a: float = 2.0,
+    max_cluster_diameter_a: float | None = None,
 ) -> dict[str, Any]:
-    clusters: list[dict[str, Any]] = []
-    for row in pose_scores:
-        pose_index = int(row["pose_index"])
-        coords = placed_pose_coords[pose_index]
-        assigned_cluster = -1
-        assigned_rmsd = float("inf")
-        for cluster_idx, cluster in enumerate(clusters):
-            representative = placed_pose_coords[int(cluster["representative_pose_index"])]
-            rmsd = symmetry_aware_pose_rmsd(coords, representative, symmetry_mappings)
-            if rmsd <= float(threshold_a):
-                assigned_cluster = cluster_idx
-                assigned_rmsd = rmsd
-                break
-        if assigned_cluster < 0:
-            assigned_cluster = len(clusters)
-            assigned_rmsd = 0.0
-            clusters.append(
-                {
-                    "cluster_id": int(assigned_cluster),
-                    "representative_pose_index": pose_index,
-                    "member_pose_indices": [],
-                    "best_composite_score": float(row.get("composite_score", float("inf"))),
-                }
-            )
-        clusters[assigned_cluster]["member_pose_indices"].append(pose_index)
-        row["pose_cluster_id"] = int(assigned_cluster)
-        row["symmetry_aware_pose_rmsd_to_cluster_representative_a"] = float(assigned_rmsd)
-        row["pose_rmsd_clustering"] = {
-            "schema_version": "tier_beta_pose_rmsd_clustering_v1",
-            "method": "rdkit_automorphism_min_rmsd" if symmetry_mappings else "identity_atom_order_rmsd",
+    """Cluster scored poses into distinct binding modes.
+
+    Backed by order-independent connected-component clustering over the
+    symmetry-aware RMSD graph. The previous greedy pass attached each pose to the
+    first representative within the threshold, so the result depended on the
+    order the poses happened to arrive in.
+    """
+
+    method = "rdkit_automorphism_min_rmsd" if symmetry_mappings else "identity_atom_order_rmsd"
+    pose_indices = [int(row["pose_index"]) for row in pose_scores]
+    if not pose_indices:
+        return {
+            "status": "symmetry_aware_rmsd_clustered",
+            "method": method,
+            "clustering_algorithm": "connected_component_rmsd_graph",
+            "order_independent": True,
             "threshold_a": float(threshold_a),
             "symmetry_mapping_count": int(len(symmetry_mappings) if symmetry_mappings else 1),
-            "cluster_id": int(assigned_cluster),
-            "cluster_representative_pose_index": int(clusters[assigned_cluster]["representative_pose_index"]),
+            "cluster_count": 0,
+            "clusters": [],
         }
-    for cluster in clusters:
-        cluster["member_count"] = int(len(cluster["member_pose_indices"]))
+
+    coords = [np.asarray(placed_pose_coords[index], dtype=np.float64) for index in pose_indices]
+    scores = [float(row.get("composite_score", float("inf"))) for row in pose_scores]
+    graph = _cluster_poses_graph(
+        coords,
+        scores=scores,
+        symmetry_mappings=symmetry_mappings or None,
+        threshold_a=float(threshold_a),
+        max_cluster_diameter_a=max_cluster_diameter_a,
+    )
+
+    clusters: list[dict[str, Any]] = []
+    for cluster in graph.clusters:
+        representative_pose_index = pose_indices[int(cluster.representative_pose_index)]
+        clusters.append(
+            {
+                "cluster_id": int(cluster.cluster_id),
+                "representative_pose_index": int(representative_pose_index),
+                "member_pose_indices": [pose_indices[int(idx)] for idx in cluster.member_pose_indices],
+                "best_composite_score": float(cluster.best_score),
+                "member_count": int(cluster.member_count),
+                "cluster_diameter_a": float(cluster.diameter_a),
+            }
+        )
+
+    by_cluster_id = {int(cluster["cluster_id"]): cluster for cluster in clusters}
+    for position, row in enumerate(pose_scores):
+        cluster_id = int(graph.assignments[position])
+        cluster = by_cluster_id[cluster_id]
+        representative_position = pose_indices.index(int(cluster["representative_pose_index"]))
+        rmsd_to_representative = float(
+            symmetry_aware_pose_rmsd(
+                coords[position], coords[representative_position], symmetry_mappings
+            )
+        )
+        row["pose_cluster_id"] = cluster_id
+        row["symmetry_aware_pose_rmsd_to_cluster_representative_a"] = rmsd_to_representative
+        row["pose_rmsd_clustering"] = {
+            "schema_version": "tier_beta_pose_rmsd_clustering_v2",
+            "method": method,
+            "clustering_algorithm": "connected_component_rmsd_graph",
+            "order_independent": True,
+            "threshold_a": float(threshold_a),
+            "max_cluster_diameter_a": max_cluster_diameter_a,
+            "symmetry_mapping_count": int(len(symmetry_mappings) if symmetry_mappings else 1),
+            "cluster_id": cluster_id,
+            "cluster_representative_pose_index": int(cluster["representative_pose_index"]),
+        }
+
     return {
         "status": "symmetry_aware_rmsd_clustered",
-        "method": "rdkit_automorphism_min_rmsd" if symmetry_mappings else "identity_atom_order_rmsd",
+        "method": method,
+        "clustering_algorithm": "connected_component_rmsd_graph",
+        "order_independent": True,
         "threshold_a": float(threshold_a),
+        "max_cluster_diameter_a": max_cluster_diameter_a,
         "symmetry_mapping_count": int(len(symmetry_mappings) if symmetry_mappings else 1),
-        "cluster_count": int(len(clusters)),
+        "cluster_count": int(graph.cluster_count),
         "clusters": clusters,
+        "representative_pose_indices": [
+            pose_indices[int(index)] for index in graph.representative_pose_indices()
+        ],
     }
 
 

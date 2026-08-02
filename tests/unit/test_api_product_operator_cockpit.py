@@ -26,6 +26,8 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "status": "pr38_split_acceptance_packet_ready",
                 "split_acceptance_ready": True,
                 "child_pr_count": 5,
+                "minimum_child_pr_count": 5,
+                "minimum_child_pr_count_met": True,
                 "ready_child_pr_count": 5,
                 "blocked_child_pr_count": 0,
                 "blocked_slice_ids": [],
@@ -34,6 +36,7 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "product_mode_claim_boundary_expected_locks": [
                     "paid_pilot_wording_allowed=false",
                     "public_benchmark_claim_allowed=false",
+                    "competition_benchmark_competition_ligand_commercial_claim_allowed=false",
                 ],
                 "paid_pilot_wording_allowed": False,
                 "branch_commit_work_allowed_by_this_packet": False,
@@ -51,6 +54,8 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "verification_matrix_ready": True,
                 "split_acceptance_ready": True,
                 "child_pr_count": 5,
+                "minimum_child_pr_count": 5,
+                "minimum_child_pr_count_met": True,
                 "ready_child_pr_count": 5,
                 "blocked_child_pr_count": 0,
                 "blocked_slice_ids": [],
@@ -64,6 +69,7 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "product_mode_claim_boundary_expected_locks": [
                     "paid_pilot_wording_allowed=false",
                     "public_benchmark_claim_allowed=false",
+                    "competition_benchmark_competition_ligand_commercial_claim_allowed=false",
                 ],
                 "paid_pilot_wording_allowed": False,
                 "branch_commit_work_allowed_by_this_matrix": False,
@@ -124,19 +130,30 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "status": "product_operator_cockpit_ready_claims_blocked",
                 "schema_version": "product_operator_cockpit_v1",
                 "phase8_surface_ready": True,
-                "required_phase8_panel_count": 9,
-                "required_phase8_panel_ids": ["product_capabilities_dashboard"],
-                "observed_phase8_panel_count": 9,
+                "required_phase8_panel_count": 11,
+                "required_phase8_panel_ids": [
+                    "product_capabilities_dashboard",
+                    "competition_benchmark_claim_boundary",
+                    "release_ci_remote_green",
+                ],
+                "observed_phase8_panel_count": 11,
                 "missing_required_phase8_panel_count": 0,
                 "missing_required_phase8_panel_ids": [],
-                "surface_ready_panel_count": 9,
-                "source_artifact_ready_panel_count": 6,
-                "source_artifact_blocked_panel_count": 3,
-                "source_artifact_blocked_panel_ids": ["hbond_backmap_candidate_table"],
-                "operator_action_required_panel_count": 8,
-                "operator_action_required_panel_ids": ["release_blockers_operator_actions"],
+                "surface_ready_panel_count": 11,
+                "source_artifact_ready_panel_count": 7,
+                "source_artifact_blocked_panel_count": 4,
+                "source_artifact_blocked_panel_ids": [
+                    "hbond_backmap_candidate_table",
+                    "release_ci_remote_green",
+                ],
+                "operator_action_required_panel_count": 10,
+                "operator_action_required_panel_ids": [
+                    "competition_benchmark_claim_boundary",
+                    "release_ci_remote_green",
+                    "release_blockers_operator_actions",
+                ],
                 "allowed_claim_count": 4,
-                "disallowed_claim_count": 6,
+                "disallowed_claim_count": 7,
                 "allowed_claim_ids": [
                     "operator_cockpit_surface",
                     "restricted_scope_claim_guard",
@@ -149,6 +166,7 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                     "broad_gpcr_claim",
                     "pocketmd_lite_customer_claim",
                     "public_benchmark_claim",
+                    "competition_ligand_commercial_claim",
                     "enterprise_on_prem_platform_claim",
                 ],
                 "allowed_claim_text": (
@@ -158,8 +176,67 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "disallowed_claim_text": (
                     "paid_pilot_wording; general_platform_claim; broad_gpcr_claim; "
                     "pocketmd_lite_customer_claim; public_benchmark_claim; "
+                    "competition_ligand_commercial_claim; "
                     "enterprise_on_prem_platform_claim"
                 ),
+                "competition_benchmark_rollup_present": True,
+                "competition_benchmark_rollup_status": "competition_benchmark_rollup_ready",
+                "competition_benchmark_rollup_ready": True,
+                "competition_benchmark_competition_evidence_role": (
+                    "competition_credibility_evidence_only"
+                ),
+                "competition_benchmark_cameo_official_result_intake_status": (
+                    "cameo_official_results_intake_ready"
+                ),
+                "competition_benchmark_cameo_official_result_intake_ready": True,
+                "competition_benchmark_cameo_official_result_row_count": 1,
+                "competition_benchmark_cameo_official_accepted_result_count": 1,
+                "competition_benchmark_cameo_official_result_intake_claim_allowed": False,
+                "competition_benchmark_cameo_official_result_intake_fetch_enabled": False,
+                "competition_benchmark_cameo_official_result_intake_external_state_mutated": False,
+                "competition_benchmark_cameo_official_result_intake_local_native_accuracy_used": False,
+                "competition_benchmark_github_raw_data_policy_ready": False,
+                "competition_benchmark_github_raw_data_git_tracked_total_count": 2802,
+                "competition_benchmark_raw_data_stored_in_repo": True,
+                "competition_benchmark_raw_data_free": False,
+                "competition_benchmark_github_raw_payloads_allowed": False,
+                "competition_benchmark_github_safe_allowed_artifact_classes": [
+                    "source_manifests",
+                    "checksum_manifests",
+                    "materialization_manifests",
+                    "scorecard_builders",
+                    "scorecard_receipts",
+                    "claim_boundary_docs",
+                ],
+                "competition_benchmark_github_disallowed_artifact_classes": [
+                    "raw_benchmark_payloads",
+                    "raw_structure_archives",
+                    "official_archive_models_as_internal_predictions",
+                ],
+                "competition_benchmark_github_raw_benchmark_payloads_allowed": False,
+                "competition_benchmark_github_official_archive_models_as_internal_predictions_allowed": False,
+                "competition_benchmark_competition_credibility_extension_ready": False,
+                "competition_benchmark_competition_credibility_extension_blocker_count": 1,
+                "competition_benchmark_competition_credibility_extension_blockers": [
+                    "casp16_ligand_materialization_not_ready"
+                ],
+                "competition_benchmark_package_b_required_for_ligand_commercial_claims": True,
+                "competition_benchmark_package_b_ligand_suite_ids": [
+                    "pdbbind_casf_pose_affinity",
+                    "lit_pcba_virtual_screening",
+                    "dude_z_decoy_smoke",
+                ],
+                "competition_benchmark_package_b_ligand_suite_count": 3,
+                "competition_benchmark_package_b_claim_grade_public_benchmark_ready": False,
+                "competition_benchmark_competition_ligand_commercial_claim_allowed": False,
+                "competition_benchmark_competition_ligand_claim_blocker_count": 1,
+                "competition_benchmark_competition_ligand_claim_blockers": [
+                    "package_b_claim_grade_public_benchmark_not_ready"
+                ],
+                "competition_benchmark_package_b_bridge_next_action": (
+                    "Fill reviewed Package B public benchmark receipts."
+                ),
+                "competition_benchmark_claim_boundary": "competition credibility only",
                 "paid_pilot_wording_allowed": False,
                 "general_platform_claim_allowed": False,
                 "product_capability_row_count": 2,
@@ -1065,6 +1142,22 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "developer_preview_receipt_work_order_primary_source_blocker_required_action": (
                     "Attach the missing source evidence required by the receipt."
                 ),
+                "developer_preview_next_operator_command_pack_target": "clean-checkout",
+                "developer_preview_next_operator_command_pack_command": (
+                    "bash runs/developer_preview_external_operator_command_pack_current.sh clean-checkout"
+                ),
+                "developer_preview_next_operator_command_pack_required_platform": (
+                    "fresh local clone"
+                ),
+                "developer_preview_next_operator_command_pack_required_env_vars": [
+                    "DEVELOPER_PREVIEW_REPO_URL",
+                    "DEVELOPER_PREVIEW_REVIEWER_ID",
+                    "DEVELOPER_PREVIEW_REVIEWED_AT_UTC",
+                ],
+                "developer_preview_next_operator_command_pack_required_input_artifacts": [],
+                "developer_preview_next_operator_command_pack_receipt_artifacts": [
+                    ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
+                ],
                 "developer_preview_receipt_work_order_rows": [
                     {
                         "gate_id": "benchmark_results_clean_checkout_regenerated",
@@ -1105,11 +1198,56 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                 "developer_preview_stage5_recovery_row_count": 1,
                 "developer_preview_stage5_missing_source_artifact_count": 1,
                 "developer_preview_stage5_required_argument_count": 4,
+                "developer_preview_stage5_recovery_operator_work_order_ready": True,
+                "developer_preview_stage5_recovery_operator_work_order_materialized": True,
+                "developer_preview_stage5_input_family_csv_path": (
+                    ".betelgeuze/developer_preview_clean_checkout_stage5_input_family_current.csv"
+                ),
+                "developer_preview_stage5_input_family_md_path": (
+                    ".betelgeuze/developer_preview_clean_checkout_stage5_input_family_current.md"
+                ),
+                "developer_preview_stage5_input_family_csv_present": True,
+                "developer_preview_stage5_input_family_md_present": True,
                 "developer_preview_stage5_primary_task_key": "stage5_gpcr",
                 "developer_preview_stage5_primary_source_argument": "--scores-csv",
                 "developer_preview_stage5_primary_source_artifact_path": (
                     "runs/missing_stage5_scores.csv"
                 ),
+                "developer_preview_stage5_restore_packet_status": (
+                    "blocked_developer_preview_stage5_restore_packet"
+                ),
+                "developer_preview_stage5_restore_packet_ready": False,
+                "developer_preview_stage5_restore_packet_fail_closed_restore_receipt_ready": True,
+                "developer_preview_stage5_restore_packet_operator_restore_queue_ready": True,
+                "developer_preview_stage5_restore_packet_operator_restore_queue_row_count": 1,
+                "developer_preview_stage5_restore_packet_missing_source_artifact_count": 1,
+                "developer_preview_stage5_restore_packet_primary_blocker": (
+                    "stage5_source_artifacts_missing:1"
+                ),
+                "developer_preview_stage5_restore_packet_primary_missing_source_argument": (
+                    "--scores-csv"
+                ),
+                "developer_preview_stage5_restore_packet_primary_missing_source_artifact_path": (
+                    "runs/missing_stage5_scores.csv"
+                ),
+                "developer_preview_stage5_restore_packet_primary_missing_pipeline_summary_json": (
+                    "runs/missing_stage5_summary.json"
+                ),
+                "developer_preview_stage5_restore_packet_primary_missing_pipeline_summary_present": True,
+                "developer_preview_stage5_restore_packet_primary_missing_profile_json": (
+                    "config/missing_stage5_profile.json"
+                ),
+                "developer_preview_stage5_restore_packet_primary_missing_profile_present": True,
+                "developer_preview_stage5_restore_packet_primary_missing_restore_queue_ready": True,
+                "developer_preview_stage5_restore_packet_primary_missing_restore_instruction": (
+                    "Restore runs/missing_stage5_scores.csv for --scores-csv from "
+                    "approved clean-checkout baseline material."
+                ),
+                "developer_preview_stage5_restore_packet_next_required_step": (
+                    "Restore or regenerate the missing stage5 input CSVs from "
+                    "approved clean-checkout baseline material."
+                ),
+                "developer_preview_stage5_restore_packet_operator_action_required": True,
                 "developer_preview_stage5_recovery_rows": [
                     {
                         "priority": "A",
@@ -1142,6 +1280,131 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                         "external_state_mutated": True,
                         "claim_promotion_allowed": True,
                     }
+                ],
+                "developer_preview_linux_reproducibility_receipt_present": True,
+                "developer_preview_linux_reproducibility_receipt_status": (
+                    "developer_preview_platform_reproducibility_receipt_ready"
+                ),
+                "developer_preview_windows_reproducibility_receipt_present": True,
+                "developer_preview_windows_reproducibility_receipt_status": (
+                    "blocked_developer_preview_platform_reproducibility_receipt"
+                ),
+                "developer_preview_windows_reproducibility_required_field_count": 9,
+                "developer_preview_windows_reproducibility_ready_field_count": 1,
+                "developer_preview_windows_reproducibility_blocked_field_count": 8,
+                "developer_preview_windows_reproducibility_primary_field_id": (
+                    "ai_verify_log_present"
+                ),
+                "developer_preview_windows_reproducibility_primary_blocker": (
+                    "ai_verify_log_missing"
+                ),
+                "developer_preview_windows_reproducibility_primary_required_action": (
+                    "Run ai-verify on this platform and attach the captured log."
+                ),
+                "developer_preview_windows_reproducibility_requirement_rows": [
+                    {
+                        "field_id": "platform_supported",
+                        "label": "Requested platform is supported by the receipt contract",
+                        "status": "pass",
+                        "ready": True,
+                        "observed": "windows",
+                        "blocker": "",
+                        "required_action": "",
+                        "operator_action_required": False,
+                        "claim_boundary": "windows reproducibility boundary",
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    },
+                    {
+                        "field_id": "ai_verify_log_present",
+                        "label": "ai-verify log is attached",
+                        "status": "blocked",
+                        "ready": False,
+                        "observed": "missing",
+                        "blocker": "ai_verify_log_missing",
+                        "required_action": (
+                            "Run ai-verify on this platform and attach the captured log."
+                        ),
+                        "operator_action_required": True,
+                        "claim_boundary": "windows reproducibility boundary",
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    },
+                ],
+                "developer_preview_new_user_observation_receipt_present": True,
+                "developer_preview_new_user_observation_receipt_status": (
+                    "blocked_developer_preview_new_user_observation_receipt"
+                ),
+                "developer_preview_new_user_observation_runbook_ready": True,
+                "developer_preview_new_user_observation_runbook_missing_required_token_count": 0,
+                "developer_preview_new_user_observation_core_workflow_receipt_path_documented": True,
+                "developer_preview_new_user_observation_core_workflow_command_set_documented": True,
+                "developer_preview_new_user_observation_draft_fail_closed_ready": True,
+                "developer_preview_new_user_observation_input_json": (
+                    ".betelgeuze/developer_preview_new_user_observation_input.json"
+                ),
+                "developer_preview_new_user_observation_input_template_json": (
+                    ".betelgeuze/developer_preview_new_user_observation_input_template.json"
+                ),
+                "developer_preview_new_user_observation_input_json_present": True,
+                "developer_preview_new_user_observation_input_contract_ready": True,
+                "developer_preview_new_user_observation_input_policy_ready": True,
+                "developer_preview_new_user_observation_checklist_path_documented": True,
+                "developer_preview_new_user_observation_template_next_action": (
+                    "Copy the generated observation input template to "
+                    ".betelgeuze/developer_preview_new_user_observation_input.json, "
+                    "fill only derived/anonymized observer metadata, then run the "
+                    "new-user-final command-pack target."
+                ),
+                "developer_preview_new_user_observation_required_field_count": 8,
+                "developer_preview_new_user_observation_ready_field_count": 1,
+                "developer_preview_new_user_observation_blocked_field_count": 7,
+                "developer_preview_new_user_observation_primary_field_id": (
+                    "observer_id_present"
+                ),
+                "developer_preview_new_user_observation_primary_blocker": (
+                    "observer_id_missing"
+                ),
+                "developer_preview_new_user_observation_primary_required_action": (
+                    "Record a non-secret observer id in the reviewed receipt."
+                ),
+                "developer_preview_new_user_observation_template_rows": [
+                    {
+                        "field_id": "observer_id_present",
+                        "label": "Observer ID recorded as derived operator metadata",
+                        "status": "blocked",
+                        "ready": False,
+                        "observed": "missing",
+                        "blocker": "observer_id_missing",
+                        "required_action": (
+                            "Record a non-secret observer id in the reviewed receipt."
+                        ),
+                        "raw_customer_data_allowed": False,
+                        "stores_private_notes": False,
+                        "operator_action_required": True,
+                        "claim_boundary": "new-user observation boundary",
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    },
+                    {
+                        "field_id": "hidden_state_blockers_absent",
+                        "label": "No hidden local state was required",
+                        "status": "pass",
+                        "ready": True,
+                        "observed": "hidden_state_blocker_count=0",
+                        "blocker": "",
+                        "required_action": "",
+                        "raw_customer_data_allowed": False,
+                        "stores_private_notes": False,
+                        "operator_action_required": False,
+                        "claim_boundary": "new-user observation boundary",
+                        "execution_enabled": True,
+                        "external_state_mutated": True,
+                        "claim_promotion_allowed": True,
+                    },
                 ],
                 "enterprise_on_prem_readiness_present": True,
                 "enterprise_on_prem_ready": False,
@@ -1182,6 +1445,59 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
                         "external_state_mutated": True,
                         "claim_promotion_allowed": True,
                     }
+                ],
+                "github_self_hosted_runner_preflight_present": True,
+                "github_self_hosted_runner_preflight_status": (
+                    "blocked_github_self_hosted_runner_host_preflight"
+                ),
+                "github_self_hosted_runner_local_host_ready": False,
+                "github_self_hosted_runner_repo_ready": True,
+                "github_self_hosted_runner_docker_daemon_accessible": True,
+                "github_self_hosted_runner_rocm_device_nodes_ready": True,
+                "github_self_hosted_runner_product_image_rocm_runtime_ready": False,
+                "github_self_hosted_runner_product_image_hygiene_ready": False,
+                "github_self_hosted_runner_product_image_workspace_cleanup_ready": False,
+                "github_self_hosted_runner_product_image_workspace_bad_owner_path": (
+                    "runs/product_image_smoke_runner_artifacts/backmapping_out"
+                ),
+                "github_self_hosted_runner_product_image_workspace_not_writable_path": (
+                    "runs/product_image_smoke_runner_artifacts/backmapping_out"
+                ),
+                "github_self_hosted_runner_product_image_workspace_required_action": (
+                    "Normalize product image smoke artifact ownership."
+                ),
+                "github_self_hosted_runner_linux_online_count": 1,
+                "github_self_hosted_runner_rocm_online_count": 1,
+                "github_self_hosted_runner_next_required_steps": [
+                    "Rerun API worker workflow with self-hosted linux labels.",
+                    "Rerun product-image ROCm runtime smoke after runner cleanup.",
+                ],
+                "release_ci_remote_green_present": True,
+                "release_ci_remote_green_status": "blocked_release_ci_remote_green",
+                "release_ci_remote_green_ready": False,
+                "release_ci_remote_green_pass": False,
+                "release_ci_remote_green_blocker_count": 4,
+                "release_ci_linux_self_hosted_runner_ready": True,
+                "release_ci_rocm_self_hosted_runner_ready": True,
+                "release_ci_main_required_checks_ready": False,
+                "release_ci_workflow_source_contract_ready": True,
+                "release_ci_weekly_rocm_schedule_green": False,
+                "release_ci_failure_artifacts_preserved": False,
+                "release_ci_release_tag_rocm_gate_green": False,
+                "release_ci_next_required_step": (
+                    "Resolve blocked rows in GitHub runner/settings/workflow evidence."
+                ),
+                "release_ci_panel_blockers": [
+                    "github_self_hosted_runner_host_not_ready",
+                    "product_image_runner_hygiene_not_ready",
+                    "product_image_workspace_smoke_artifact_cleanup_not_ready",
+                    "product_image_workspace_smoke_artifact_owner_not_normalized",
+                    "product_image_workspace_smoke_artifact_not_writable",
+                    "release_ci_remote_green_not_ready",
+                    "main_required_checks_not_ready",
+                    "weekly_rocm_schedule_not_green",
+                    "failure_artifacts_not_preserved",
+                    "release_tag_rocm_gate_not_green",
                 ],
                 "f2g_f2h_preflight_present": True,
                 "f2g_f2h_recovery_packet_present": True,
@@ -1534,10 +1850,13 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     assert response["status"] == "product_operator_cockpit_ready_claims_blocked"
     assert response["artifact_path"] == str(artifact)
     assert response["phase8_surface_ready"] is True
-    assert response["required_phase8_panel_count"] == 9
-    assert response["source_artifact_blocked_panel_ids"] == ["hbond_backmap_candidate_table"]
+    assert response["required_phase8_panel_count"] == 11
+    assert response["source_artifact_blocked_panel_ids"] == [
+        "hbond_backmap_candidate_table",
+        "release_ci_remote_green",
+    ]
     assert response["allowed_claim_count"] == 4
-    assert response["disallowed_claim_count"] == 6
+    assert response["disallowed_claim_count"] == 7
     assert response["allowed_claim_ids"] == [
         "operator_cockpit_surface",
         "restricted_scope_claim_guard",
@@ -1550,6 +1869,7 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
         "broad_gpcr_claim",
         "pocketmd_lite_customer_claim",
         "public_benchmark_claim",
+        "competition_ligand_commercial_claim",
         "enterprise_on_prem_platform_claim",
     ]
     assert response["allowed_claim_text"] == (
@@ -1559,8 +1879,59 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     assert response["disallowed_claim_text"] == (
         "paid_pilot_wording; general_platform_claim; broad_gpcr_claim; "
         "pocketmd_lite_customer_claim; public_benchmark_claim; "
+        "competition_ligand_commercial_claim; "
         "enterprise_on_prem_platform_claim"
     )
+    assert response["competition_benchmark_rollup_ready"] is True
+    assert response["competition_benchmark_competition_evidence_role"] == (
+        "competition_credibility_evidence_only"
+    )
+    assert response["competition_benchmark_cameo_official_result_intake_status"] == (
+        "cameo_official_results_intake_ready"
+    )
+    assert response["competition_benchmark_cameo_official_result_intake_ready"] is True
+    assert response["competition_benchmark_cameo_official_result_row_count"] == 1
+    assert response["competition_benchmark_cameo_official_accepted_result_count"] == 1
+    assert response["competition_benchmark_cameo_official_result_intake_claim_allowed"] is False
+    assert response["competition_benchmark_cameo_official_result_intake_fetch_enabled"] is False
+    assert (
+        response["competition_benchmark_cameo_official_result_intake_external_state_mutated"]
+        is False
+    )
+    assert (
+        response["competition_benchmark_cameo_official_result_intake_local_native_accuracy_used"]
+        is False
+    )
+    assert response["competition_benchmark_github_raw_data_policy_ready"] is False
+    assert response["competition_benchmark_github_raw_data_git_tracked_total_count"] == 2802
+    assert response["competition_benchmark_raw_data_stored_in_repo"] is True
+    assert response["competition_benchmark_raw_data_free"] is False
+    assert response["competition_benchmark_github_raw_payloads_allowed"] is False
+    assert response["competition_benchmark_github_safe_allowed_artifact_classes"] == [
+        "source_manifests",
+        "checksum_manifests",
+        "materialization_manifests",
+        "scorecard_builders",
+        "scorecard_receipts",
+        "claim_boundary_docs",
+    ]
+    assert response["competition_benchmark_github_disallowed_artifact_classes"] == [
+        "raw_benchmark_payloads",
+        "raw_structure_archives",
+        "official_archive_models_as_internal_predictions",
+    ]
+    assert response["competition_benchmark_github_raw_benchmark_payloads_allowed"] is False
+    assert (
+        response[
+            "competition_benchmark_github_official_archive_models_as_internal_predictions_allowed"
+        ]
+        is False
+    )
+    assert response["competition_benchmark_package_b_ligand_suite_count"] == 3
+    assert response["competition_benchmark_competition_ligand_commercial_claim_allowed"] is False
+    assert response["competition_benchmark_competition_ligand_claim_blockers"] == [
+        "package_b_claim_grade_public_benchmark_not_ready"
+    ]
     assert response["claim_boundary_row_count"] == 2
     assert response["allowed_claim_row_count"] == 1
     assert response["disallowed_claim_row_count"] == 1
@@ -2468,6 +2839,24 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     assert response[
         "developer_preview_receipt_work_order_primary_source_blocker_required_action"
     ] == "Attach the missing source evidence required by the receipt."
+    assert response["developer_preview_next_operator_command_pack_target"] == (
+        "clean-checkout"
+    )
+    assert response["developer_preview_next_operator_command_pack_command"] == (
+        "bash runs/developer_preview_external_operator_command_pack_current.sh clean-checkout"
+    )
+    assert response["developer_preview_next_operator_command_pack_required_platform"] == (
+        "fresh local clone"
+    )
+    assert response["developer_preview_next_operator_command_pack_required_env_vars"] == [
+        "DEVELOPER_PREVIEW_REPO_URL",
+        "DEVELOPER_PREVIEW_REVIEWER_ID",
+        "DEVELOPER_PREVIEW_REVIEWED_AT_UTC",
+    ]
+    assert response["developer_preview_next_operator_command_pack_required_input_artifacts"] == []
+    assert response["developer_preview_next_operator_command_pack_receipt_artifacts"] == [
+        ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json"
+    ]
     assert response["developer_preview_receipt_work_order_rows"] == [
         {
             "gate_id": "benchmark_results_clean_checkout_regenerated",
@@ -2500,11 +2889,109 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     assert response["developer_preview_stage5_recovery_row_count"] == 1
     assert response["developer_preview_stage5_missing_source_artifact_count"] == 1
     assert response["developer_preview_stage5_required_argument_count"] == 4
+    assert response["developer_preview_stage5_recovery_operator_work_order_ready"] is True
+    assert (
+        response["developer_preview_stage5_recovery_operator_work_order_materialized"]
+        is True
+    )
+    assert response["developer_preview_stage5_input_family_csv_path"] == (
+        ".betelgeuze/developer_preview_clean_checkout_stage5_input_family_current.csv"
+    )
+    assert response["developer_preview_stage5_input_family_md_path"] == (
+        ".betelgeuze/developer_preview_clean_checkout_stage5_input_family_current.md"
+    )
+    assert response["developer_preview_stage5_input_family_csv_present"] is True
+    assert response["developer_preview_stage5_input_family_md_present"] is True
     assert response["developer_preview_stage5_primary_task_key"] == "stage5_gpcr"
     assert response["developer_preview_stage5_primary_source_argument"] == "--scores-csv"
     assert (
         response["developer_preview_stage5_primary_source_artifact_path"]
         == "runs/missing_stage5_scores.csv"
+    )
+    assert response["developer_preview_stage5_restore_packet_status"] == (
+        "blocked_developer_preview_stage5_restore_packet"
+    )
+    assert response["developer_preview_stage5_restore_packet_ready"] is False
+    assert (
+        response[
+            "developer_preview_stage5_restore_packet_fail_closed_restore_receipt_ready"
+        ]
+        is True
+    )
+    assert (
+        response["developer_preview_stage5_restore_packet_operator_restore_queue_ready"]
+        is True
+    )
+    assert (
+        response[
+            "developer_preview_stage5_restore_packet_operator_restore_queue_row_count"
+        ]
+        == 1
+    )
+    assert (
+        response[
+            "developer_preview_stage5_restore_packet_missing_source_artifact_count"
+        ]
+        == 1
+    )
+    assert response["developer_preview_stage5_restore_packet_primary_blocker"] == (
+        "stage5_source_artifacts_missing:1"
+    )
+    assert (
+        response[
+            "developer_preview_stage5_restore_packet_primary_missing_source_argument"
+        ]
+        == "--scores-csv"
+    )
+    assert (
+        response[
+            "developer_preview_stage5_restore_packet_primary_missing_source_artifact_path"
+        ]
+        == "runs/missing_stage5_scores.csv"
+    )
+    assert (
+        response[
+            "developer_preview_stage5_restore_packet_primary_missing_pipeline_summary_json"
+        ]
+        == "runs/missing_stage5_summary.json"
+    )
+    assert (
+        response[
+            "developer_preview_stage5_restore_packet_primary_missing_pipeline_summary_present"
+        ]
+        is True
+    )
+    assert (
+        response[
+            "developer_preview_stage5_restore_packet_primary_missing_profile_json"
+        ]
+        == "config/missing_stage5_profile.json"
+    )
+    assert (
+        response[
+            "developer_preview_stage5_restore_packet_primary_missing_profile_present"
+        ]
+        is True
+    )
+    assert (
+        response[
+            "developer_preview_stage5_restore_packet_primary_missing_restore_queue_ready"
+        ]
+        is True
+    )
+    assert response[
+        "developer_preview_stage5_restore_packet_primary_missing_restore_instruction"
+    ] == (
+        "Restore runs/missing_stage5_scores.csv for --scores-csv from "
+        "approved clean-checkout baseline material."
+    )
+    assert response["developer_preview_stage5_restore_packet_next_required_step"] == (
+        "Restore or regenerate the missing stage5 input CSVs from "
+        "approved clean-checkout baseline material."
+    )
+    assert (
+        response["developer_preview_stage5_restore_packet_operator_action_required"]
+        is True
     )
     assert response["developer_preview_stage5_recovery_rows"] == [
         {
@@ -2538,6 +3025,146 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
             "external_state_mutated": False,
             "claim_promotion_allowed": False,
         }
+    ]
+    assert response["developer_preview_linux_reproducibility_receipt_present"] is True
+    assert response["developer_preview_linux_reproducibility_receipt_status"] == (
+        "developer_preview_platform_reproducibility_receipt_ready"
+    )
+    assert response["developer_preview_windows_reproducibility_receipt_present"] is True
+    assert response["developer_preview_windows_reproducibility_receipt_status"] == (
+        "blocked_developer_preview_platform_reproducibility_receipt"
+    )
+    assert response["developer_preview_windows_reproducibility_required_field_count"] == 9
+    assert response["developer_preview_windows_reproducibility_ready_field_count"] == 1
+    assert response["developer_preview_windows_reproducibility_blocked_field_count"] == 8
+    assert response["developer_preview_windows_reproducibility_primary_field_id"] == (
+        "ai_verify_log_present"
+    )
+    assert response["developer_preview_windows_reproducibility_primary_blocker"] == (
+        "ai_verify_log_missing"
+    )
+    assert response["developer_preview_windows_reproducibility_primary_required_action"] == (
+        "Run ai-verify on this platform and attach the captured log."
+    )
+    assert response["developer_preview_windows_reproducibility_requirement_rows"] == [
+        {
+            "field_id": "platform_supported",
+            "label": "Requested platform is supported by the receipt contract",
+            "status": "pass",
+            "ready": True,
+            "observed": "windows",
+            "blocker": "",
+            "required_action": "",
+            "operator_action_required": False,
+            "claim_boundary": "windows reproducibility boundary",
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        },
+        {
+            "field_id": "ai_verify_log_present",
+            "label": "ai-verify log is attached",
+            "status": "blocked",
+            "ready": False,
+            "observed": "missing",
+            "blocker": "ai_verify_log_missing",
+            "required_action": (
+                "Run ai-verify on this platform and attach the captured log."
+            ),
+            "operator_action_required": True,
+            "claim_boundary": "windows reproducibility boundary",
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        },
+    ]
+    assert response["developer_preview_new_user_observation_receipt_present"] is True
+    assert response["developer_preview_new_user_observation_receipt_status"] == (
+        "blocked_developer_preview_new_user_observation_receipt"
+    )
+    assert response["developer_preview_new_user_observation_runbook_ready"] is True
+    assert (
+        response[
+            "developer_preview_new_user_observation_runbook_missing_required_token_count"
+        ]
+        == 0
+    )
+    assert (
+        response[
+            "developer_preview_new_user_observation_core_workflow_receipt_path_documented"
+        ]
+        is True
+    )
+    assert (
+        response[
+            "developer_preview_new_user_observation_core_workflow_command_set_documented"
+        ]
+        is True
+    )
+    assert response["developer_preview_new_user_observation_draft_fail_closed_ready"] is True
+    assert response["developer_preview_new_user_observation_input_json"] == (
+        ".betelgeuze/developer_preview_new_user_observation_input.json"
+    )
+    assert response["developer_preview_new_user_observation_input_template_json"] == (
+        ".betelgeuze/developer_preview_new_user_observation_input_template.json"
+    )
+    assert response["developer_preview_new_user_observation_input_json_present"] is True
+    assert response["developer_preview_new_user_observation_input_contract_ready"] is True
+    assert response["developer_preview_new_user_observation_input_policy_ready"] is True
+    assert (
+        response["developer_preview_new_user_observation_checklist_path_documented"]
+        is True
+    )
+    assert "new-user-final" in response[
+        "developer_preview_new_user_observation_template_next_action"
+    ]
+    assert response["developer_preview_new_user_observation_required_field_count"] == 8
+    assert response["developer_preview_new_user_observation_ready_field_count"] == 1
+    assert response["developer_preview_new_user_observation_blocked_field_count"] == 7
+    assert response["developer_preview_new_user_observation_primary_field_id"] == (
+        "observer_id_present"
+    )
+    assert response["developer_preview_new_user_observation_primary_blocker"] == (
+        "observer_id_missing"
+    )
+    assert response["developer_preview_new_user_observation_primary_required_action"] == (
+        "Record a non-secret observer id in the reviewed receipt."
+    )
+    assert response["developer_preview_new_user_observation_template_rows"] == [
+        {
+            "field_id": "observer_id_present",
+            "label": "Observer ID recorded as derived operator metadata",
+            "status": "blocked",
+            "ready": False,
+            "observed": "missing",
+            "blocker": "observer_id_missing",
+            "required_action": (
+                "Record a non-secret observer id in the reviewed receipt."
+            ),
+            "raw_customer_data_allowed": False,
+            "stores_private_notes": False,
+            "operator_action_required": True,
+            "claim_boundary": "new-user observation boundary",
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        },
+        {
+            "field_id": "hidden_state_blockers_absent",
+            "label": "No hidden local state was required",
+            "status": "pass",
+            "ready": True,
+            "observed": "hidden_state_blocker_count=0",
+            "blocker": "",
+            "required_action": "",
+            "raw_customer_data_allowed": False,
+            "stores_private_notes": False,
+            "operator_action_required": False,
+            "claim_boundary": "new-user observation boundary",
+            "execution_enabled": False,
+            "external_state_mutated": False,
+            "claim_promotion_allowed": False,
+        },
     ]
     assert response["enterprise_on_prem_readiness_present"] is True
     assert response["enterprise_on_prem_ready"] is False
@@ -2573,6 +3200,59 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
             "external_state_mutated": False,
             "claim_promotion_allowed": False,
         }
+    ]
+    assert response["github_self_hosted_runner_preflight_present"] is True
+    assert response["github_self_hosted_runner_preflight_status"] == (
+        "blocked_github_self_hosted_runner_host_preflight"
+    )
+    assert response["github_self_hosted_runner_local_host_ready"] is False
+    assert response["github_self_hosted_runner_repo_ready"] is True
+    assert response["github_self_hosted_runner_docker_daemon_accessible"] is True
+    assert response["github_self_hosted_runner_rocm_device_nodes_ready"] is True
+    assert response["github_self_hosted_runner_product_image_rocm_runtime_ready"] is False
+    assert response["github_self_hosted_runner_product_image_hygiene_ready"] is False
+    assert (
+        response["github_self_hosted_runner_product_image_workspace_cleanup_ready"]
+        is False
+    )
+    assert response[
+        "github_self_hosted_runner_product_image_workspace_bad_owner_path"
+    ] == "runs/product_image_smoke_runner_artifacts/backmapping_out"
+    assert response[
+        "github_self_hosted_runner_product_image_workspace_required_action"
+    ] == "Normalize product image smoke artifact ownership."
+    assert response["github_self_hosted_runner_linux_online_count"] == 1
+    assert response["github_self_hosted_runner_rocm_online_count"] == 1
+    assert response["github_self_hosted_runner_next_required_steps"] == [
+        "Rerun API worker workflow with self-hosted linux labels.",
+        "Rerun product-image ROCm runtime smoke after runner cleanup.",
+    ]
+    assert response["release_ci_remote_green_present"] is True
+    assert response["release_ci_remote_green_status"] == "blocked_release_ci_remote_green"
+    assert response["release_ci_remote_green_ready"] is False
+    assert response["release_ci_remote_green_pass"] is False
+    assert response["release_ci_remote_green_blocker_count"] == 4
+    assert response["release_ci_linux_self_hosted_runner_ready"] is True
+    assert response["release_ci_rocm_self_hosted_runner_ready"] is True
+    assert response["release_ci_main_required_checks_ready"] is False
+    assert response["release_ci_workflow_source_contract_ready"] is True
+    assert response["release_ci_weekly_rocm_schedule_green"] is False
+    assert response["release_ci_failure_artifacts_preserved"] is False
+    assert response["release_ci_release_tag_rocm_gate_green"] is False
+    assert response["release_ci_next_required_step"] == (
+        "Resolve blocked rows in GitHub runner/settings/workflow evidence."
+    )
+    assert response["release_ci_panel_blockers"] == [
+        "github_self_hosted_runner_host_not_ready",
+        "product_image_runner_hygiene_not_ready",
+        "product_image_workspace_smoke_artifact_cleanup_not_ready",
+        "product_image_workspace_smoke_artifact_owner_not_normalized",
+        "product_image_workspace_smoke_artifact_not_writable",
+        "release_ci_remote_green_not_ready",
+        "main_required_checks_not_ready",
+        "weekly_rocm_schedule_not_green",
+        "failure_artifacts_not_preserved",
+        "release_tag_rocm_gate_not_green",
     ]
     assert response["f2g_f2h_preflight_present"] is True
     assert response["f2g_f2h_recovery_packet_present"] is True
@@ -2784,6 +3464,8 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     assert response["pr38_split_ready_for_human_branch_approval"] is True
     assert response["pr38_operator_branch_approval_required"] is True
     assert response["pr38_child_pr_count"] == 5
+    assert response["pr38_minimum_child_pr_count"] == 5
+    assert response["pr38_minimum_child_pr_count_met"] is True
     assert response["pr38_ready_child_pr_count"] == 5
     assert response["pr38_blocked_child_pr_count"] == 0
     assert response["pr38_blocked_slice_ids"] == []
@@ -2799,6 +3481,7 @@ def test_product_operator_cockpit_endpoint_reads_current_artifact(monkeypatch, t
     assert response["pr38_product_mode_claim_boundary_expected_locks"] == [
         "paid_pilot_wording_allowed=false",
         "public_benchmark_claim_allowed=false",
+        "competition_benchmark_competition_ligand_commercial_claim_allowed=false",
     ]
     assert response["pr38_paid_pilot_wording_allowed"] is False
     assert response["pr38_branch_commit_work_allowed"] is False
@@ -2856,7 +3539,7 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
 
     assert response["status"] == "missing_product_operator_cockpit"
     assert response["phase8_surface_ready"] is False
-    assert response["required_phase8_panel_count"] == 9
+    assert response["required_phase8_panel_count"] == 11
     assert response["observed_phase8_panel_count"] == 0
     assert response["allowed_claim_count"] == 0
     assert response["disallowed_claim_count"] == 0
@@ -3071,10 +3754,153 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["developer_preview_stage5_recovery_row_count"] == 0
     assert response["developer_preview_stage5_missing_source_artifact_count"] == 0
     assert response["developer_preview_stage5_required_argument_count"] == 0
+    assert response["developer_preview_stage5_recovery_operator_work_order_ready"] is False
+    assert (
+        response["developer_preview_stage5_recovery_operator_work_order_materialized"]
+        is False
+    )
+    assert response["developer_preview_stage5_input_family_csv_path"] == ""
+    assert response["developer_preview_stage5_input_family_md_path"] == ""
+    assert response["developer_preview_stage5_input_family_csv_present"] is False
+    assert response["developer_preview_stage5_input_family_md_present"] is False
     assert response["developer_preview_stage5_primary_task_key"] == ""
     assert response["developer_preview_stage5_primary_source_argument"] == ""
     assert response["developer_preview_stage5_primary_source_artifact_path"] == ""
+    assert response["developer_preview_stage5_restore_packet_status"] == ""
+    assert response["developer_preview_stage5_restore_packet_ready"] is False
+    assert (
+        response[
+            "developer_preview_stage5_restore_packet_fail_closed_restore_receipt_ready"
+        ]
+        is False
+    )
+    assert (
+        response["developer_preview_stage5_restore_packet_operator_restore_queue_ready"]
+        is False
+    )
+    assert (
+        response[
+            "developer_preview_stage5_restore_packet_operator_restore_queue_row_count"
+        ]
+        == 0
+    )
+    assert (
+        response[
+            "developer_preview_stage5_restore_packet_missing_source_artifact_count"
+        ]
+        == 0
+    )
+    assert response["developer_preview_stage5_restore_packet_primary_blocker"] == ""
+    assert (
+        response[
+            "developer_preview_stage5_restore_packet_primary_missing_source_argument"
+        ]
+        == ""
+    )
+    assert (
+        response[
+            "developer_preview_stage5_restore_packet_primary_missing_source_artifact_path"
+        ]
+        == ""
+    )
+    assert (
+        response[
+            "developer_preview_stage5_restore_packet_primary_missing_pipeline_summary_json"
+        ]
+        == ""
+    )
+    assert (
+        response[
+            "developer_preview_stage5_restore_packet_primary_missing_pipeline_summary_present"
+        ]
+        is False
+    )
+    assert (
+        response[
+            "developer_preview_stage5_restore_packet_primary_missing_profile_json"
+        ]
+        == ""
+    )
+    assert (
+        response[
+            "developer_preview_stage5_restore_packet_primary_missing_profile_present"
+        ]
+        is False
+    )
+    assert (
+        response[
+            "developer_preview_stage5_restore_packet_primary_missing_restore_queue_ready"
+        ]
+        is False
+    )
+    assert (
+        response[
+            "developer_preview_stage5_restore_packet_primary_missing_restore_instruction"
+        ]
+        == ""
+    )
+    assert response["developer_preview_stage5_restore_packet_next_required_step"] == ""
+    assert (
+        response["developer_preview_stage5_restore_packet_operator_action_required"]
+        is False
+    )
     assert response["developer_preview_stage5_recovery_rows"] == []
+    assert response["developer_preview_linux_reproducibility_receipt_present"] is False
+    assert response["developer_preview_linux_reproducibility_receipt_status"] == ""
+    assert response["developer_preview_windows_reproducibility_receipt_present"] is False
+    assert response["developer_preview_windows_reproducibility_receipt_status"] == ""
+    assert response["developer_preview_windows_reproducibility_required_field_count"] == 0
+    assert response["developer_preview_windows_reproducibility_ready_field_count"] == 0
+    assert response["developer_preview_windows_reproducibility_blocked_field_count"] == 0
+    assert response["developer_preview_windows_reproducibility_primary_field_id"] == ""
+    assert response["developer_preview_windows_reproducibility_primary_blocker"] == ""
+    assert (
+        response["developer_preview_windows_reproducibility_primary_required_action"]
+        == ""
+    )
+    assert response["developer_preview_windows_reproducibility_requirement_rows"] == []
+    assert response["developer_preview_new_user_observation_receipt_present"] is False
+    assert response["developer_preview_new_user_observation_receipt_status"] == ""
+    assert response["developer_preview_new_user_observation_runbook_ready"] is False
+    assert (
+        response[
+            "developer_preview_new_user_observation_runbook_missing_required_token_count"
+        ]
+        == 0
+    )
+    assert (
+        response[
+            "developer_preview_new_user_observation_core_workflow_receipt_path_documented"
+        ]
+        is False
+    )
+    assert (
+        response[
+            "developer_preview_new_user_observation_core_workflow_command_set_documented"
+        ]
+        is False
+    )
+    assert response["developer_preview_new_user_observation_draft_fail_closed_ready"] is False
+    assert response["developer_preview_new_user_observation_input_json"] == ""
+    assert response["developer_preview_new_user_observation_input_template_json"] == ""
+    assert response["developer_preview_new_user_observation_input_json_present"] is False
+    assert response["developer_preview_new_user_observation_input_contract_ready"] is False
+    assert response["developer_preview_new_user_observation_input_policy_ready"] is False
+    assert (
+        response["developer_preview_new_user_observation_checklist_path_documented"]
+        is False
+    )
+    assert response["developer_preview_new_user_observation_template_next_action"] == ""
+    assert response["developer_preview_new_user_observation_required_field_count"] == 0
+    assert response["developer_preview_new_user_observation_ready_field_count"] == 0
+    assert response["developer_preview_new_user_observation_blocked_field_count"] == 0
+    assert response["developer_preview_new_user_observation_primary_field_id"] == ""
+    assert response["developer_preview_new_user_observation_primary_blocker"] == ""
+    assert (
+        response["developer_preview_new_user_observation_primary_required_action"]
+        == ""
+    )
+    assert response["developer_preview_new_user_observation_template_rows"] == []
     assert response["enterprise_on_prem_readiness_present"] is False
     assert response["enterprise_on_prem_ready"] is False
     assert response["enterprise_on_prem_claim_allowed"] is False
@@ -3092,6 +3918,47 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["enterprise_on_prem_support_bundle_recovery_drill_ready"] is False
     assert response["enterprise_on_prem_rollback_retry_idempotency_ready"] is False
     assert response["enterprise_on_prem_control_rows"] == []
+    assert response["github_self_hosted_runner_preflight_present"] is False
+    assert response["github_self_hosted_runner_preflight_status"] == ""
+    assert response["github_self_hosted_runner_local_host_ready"] is False
+    assert response["github_self_hosted_runner_repo_ready"] is False
+    assert response["github_self_hosted_runner_docker_daemon_accessible"] is False
+    assert response["github_self_hosted_runner_rocm_device_nodes_ready"] is False
+    assert response["github_self_hosted_runner_product_image_rocm_runtime_ready"] is False
+    assert response["github_self_hosted_runner_product_image_hygiene_ready"] is False
+    assert (
+        response["github_self_hosted_runner_product_image_workspace_cleanup_ready"]
+        is False
+    )
+    assert (
+        response["github_self_hosted_runner_product_image_workspace_bad_owner_path"]
+        == ""
+    )
+    assert (
+        response["github_self_hosted_runner_product_image_workspace_not_writable_path"]
+        == ""
+    )
+    assert (
+        response["github_self_hosted_runner_product_image_workspace_required_action"]
+        == ""
+    )
+    assert response["github_self_hosted_runner_linux_online_count"] == 0
+    assert response["github_self_hosted_runner_rocm_online_count"] == 0
+    assert response["github_self_hosted_runner_next_required_steps"] == []
+    assert response["release_ci_remote_green_present"] is False
+    assert response["release_ci_remote_green_status"] == ""
+    assert response["release_ci_remote_green_ready"] is False
+    assert response["release_ci_remote_green_pass"] is False
+    assert response["release_ci_remote_green_blocker_count"] == 0
+    assert response["release_ci_linux_self_hosted_runner_ready"] is False
+    assert response["release_ci_rocm_self_hosted_runner_ready"] is False
+    assert response["release_ci_main_required_checks_ready"] is False
+    assert response["release_ci_workflow_source_contract_ready"] is False
+    assert response["release_ci_weekly_rocm_schedule_green"] is False
+    assert response["release_ci_failure_artifacts_preserved"] is False
+    assert response["release_ci_release_tag_rocm_gate_green"] is False
+    assert response["release_ci_next_required_step"] == ""
+    assert response["release_ci_panel_blockers"] == []
     assert response["f2g_f2h_preflight_present"] is False
     assert response["f2g_f2h_recovery_packet_present"] is False
     assert response["f2g_f2h_preflight_status"] == ""
@@ -3161,6 +4028,8 @@ def test_product_operator_cockpit_endpoint_fails_closed_when_artifact_missing(mo
     assert response["pr38_split_ready_for_human_branch_approval"] is False
     assert response["pr38_operator_branch_approval_required"] is False
     assert response["pr38_child_pr_count"] == 0
+    assert response["pr38_minimum_child_pr_count"] == 0
+    assert response["pr38_minimum_child_pr_count_met"] is False
     assert response["pr38_ready_child_pr_count"] == 0
     assert response["pr38_blocked_child_pr_count"] == 0
     assert response["pr38_blocked_slice_ids"] == []

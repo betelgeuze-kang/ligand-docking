@@ -4,6 +4,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from tools import run_ligand_backmapping_scoring as mod
 from tools.run_ligand_backmapping_scoring import _inline_score_from_row, _ligand_props
@@ -732,7 +733,7 @@ def test_fixed_family_reference_scaling_uses_frozen_feature_stats(tmp_path):
     assert scaling["reference_scope"]["eval_roles_used"] == []
 
 
-def test_fixed_family_reference_scaling_falls_back_to_run_local_when_feature_missing(tmp_path):
+def test_fixed_family_reference_scaling_fails_closed_when_feature_missing(tmp_path):
     stats_json = tmp_path / "gpcr_reference_stats.json"
     stats_json.write_text(
         json.dumps(
@@ -751,12 +752,111 @@ def test_fixed_family_reference_scaling_falls_back_to_run_local_when_feature_mis
     )
     df = pd.DataFrame({"ligand_h_acceptors": [10.0, 12.0, 14.0]})
 
+    with pytest.raises(mod.ScoreScalingFailClosedError) as excinfo:
+        mod._zscore_with_reference(df, "ligand_h_acceptors", scaling)
+
+    assert excinfo.value.reason_code == "score_reference_stats_column_missing"
+    assert scaling["applied_columns"] == []
+    assert scaling["missing_columns"] == ["ligand_h_acceptors"]
+    assert scaling["fallback_columns"] == []
+
+
+def test_fixed_family_reference_scaling_compatibility_mode_allows_run_local_for_missing_feature(tmp_path):
+    stats_json = tmp_path / "gpcr_reference_stats.json"
+    stats_json.write_text(
+        json.dumps(
+            {
+                "schema_version": "score_reference_stats_v1",
+                "features": {
+                    "ligand_h_donors": {"mean": 2.0, "std": 2.0, "n": 50},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    scaling = mod._load_score_reference_scaling(
+        mode="fixed_family_reference",
+        stats_json=str(stats_json),
+        allow_run_local_fallback=True,
+    )
+    df = pd.DataFrame({"ligand_h_acceptors": [10.0, 12.0, 14.0]})
+
     z = mod._zscore_with_reference(df, "ligand_h_acceptors", scaling)
 
     assert z.round(6).tolist() == [-1.0, 0.0, 1.0]
     assert scaling["applied_columns"] == []
     assert scaling["missing_columns"] == ["ligand_h_acceptors"]
     assert scaling["fallback_columns"] == ["ligand_h_acceptors"]
+    assert scaling["fail_closed"] is False
+    assert scaling["compatibility_run_local_fallback_allowed"] is True
+
+
+def test_frozen_score_scaling_fails_closed_when_stats_file_missing(tmp_path):
+    with pytest.raises(mod.ScoreScalingFailClosedError) as excinfo:
+        mod._load_score_reference_scaling(
+            mode="fixed_family_reference",
+            stats_json=str(tmp_path / "does_not_exist.json"),
+        )
+
+    assert excinfo.value.reason_code == "score_reference_stats_missing"
+    assert "fixed_family_reference" in excinfo.value.reason_detail
+
+
+def test_frozen_score_scaling_fails_closed_when_stats_path_unset():
+    with pytest.raises(mod.ScoreScalingFailClosedError) as excinfo:
+        mod._load_score_reference_scaling(mode="frozen", stats_json="")
+
+    assert excinfo.value.reason_code == "score_reference_stats_missing"
+
+
+def test_frozen_score_scaling_compatibility_mode_reports_run_local_status(tmp_path):
+    scaling = mod._load_score_reference_scaling(
+        mode="fixed_family_reference",
+        stats_json=str(tmp_path / "does_not_exist.json"),
+        allow_run_local_fallback=True,
+    )
+
+    assert scaling["status"] == "missing_stats_compatibility_run_local"
+    assert scaling["fail_closed"] is False
+    assert scaling["compatibility_run_local_fallback_allowed"] is True
+
+
+def test_run_local_scaling_mode_is_unaffected_by_fail_closed_contract():
+    scaling = mod._load_score_reference_scaling(mode="run_local", stats_json="")
+    df = pd.DataFrame({"ligand_h_acceptors": [10.0, 12.0, 14.0]})
+
+    z = mod._zscore_with_reference(df, "ligand_h_acceptors", scaling)
+
+    assert z.round(6).tolist() == [-1.0, 0.0, 1.0]
+    assert scaling["status"] == "run_local"
+    assert scaling["fail_closed"] is False
+
+
+def test_frozen_score_scaling_fails_closed_on_invalid_column_stats(tmp_path):
+    stats_json = tmp_path / "gpcr_reference_stats.json"
+    stats_json.write_text(
+        json.dumps(
+            {
+                "schema_version": "score_reference_stats_v1",
+                "features": {
+                    "ligand_h_donors": {"mean": 2.0, "std": 0.0, "n": 50},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    scaling = mod._load_score_reference_scaling(
+        mode="fixed_family_reference",
+        stats_json=str(stats_json),
+    )
+    df = pd.DataFrame({"ligand_h_donors": [2.0, 6.0]})
+
+    with pytest.raises(mod.ScoreScalingFailClosedError) as excinfo:
+        mod._zscore_with_reference(df, "ligand_h_donors", scaling)
+
+    assert excinfo.value.reason_code == "score_reference_stats_column_invalid"
+    assert scaling["invalid_columns"] == ["ligand_h_donors"]
+    assert scaling["fallback_columns"] == []
 
 
 def test_residual_pharmacophore_variant_rewards_aryloxypropanolamine_shadow_only(tmp_path):

@@ -162,32 +162,60 @@ def generate_pose_ensemble(
     }
 
 
-def cluster_poses_by_rmsd(poses: list[np.ndarray], *, rmsd_cutoff_a: float = 1.5) -> dict[str, Any]:
-    """Greedy RMSD clustering for pose diversity reporting."""
+def cluster_poses_by_rmsd(
+    poses: list[np.ndarray],
+    *,
+    rmsd_cutoff_a: float = 1.5,
+    symmetry_mappings: list[tuple[int, ...]] | None = None,
+    max_cluster_diameter_a: float | None = None,
+) -> dict[str, Any]:
+    """Order-independent RMSD clustering for pose diversity reporting.
+
+    Uses connected components over the RMSD graph instead of the previous greedy
+    first-match pass, whose output depended on the order the poses arrived in.
+    """
+
+    from betelgeuze_engine.chemistry.pose_clustering import cluster_poses as _cluster_poses_graph
+
     if not poses:
-        return {"cluster_count": 0, "assignments": []}
-    reps: list[int] = []
-    assignments: list[int] = []
+        return {"cluster_count": 0, "assignments": [], "representative_indices": []}
+
+    usable: list[int] = []
+    coords: list[np.ndarray] = []
     for idx, pose in enumerate(poses):
-        p = np.asarray(pose, dtype=np.float64)
-        if p.size == 0:
-            assignments.append(-1)
+        candidate = np.asarray(pose, dtype=np.float64)
+        if candidate.size == 0:
             continue
-        assigned = False
-        for c_idx, rep_idx in enumerate(reps):
-            r = np.asarray(poses[rep_idx], dtype=np.float64)
-            n = min(p.shape[0], r.shape[0])
-            if n == 0:
-                continue
-            rmsd = float(np.sqrt(np.mean(np.sum((p[:n] - r[:n]) ** 2, axis=1))))
-            if rmsd <= float(rmsd_cutoff_a):
-                assignments.append(c_idx)
-                assigned = True
-                break
-        if not assigned:
-            reps.append(idx)
-            assignments.append(len(reps) - 1)
-    return {"cluster_count": len(reps), "assignments": assignments, "representative_indices": reps}
+        usable.append(idx)
+        coords.append(candidate)
+    if not coords:
+        return {
+            "cluster_count": 0,
+            "assignments": [-1 for _ in poses],
+            "representative_indices": [],
+        }
+
+    result = _cluster_poses_graph(
+        coords,
+        scores=[float(position) for position in range(len(coords))],
+        symmetry_mappings=symmetry_mappings,
+        threshold_a=float(rmsd_cutoff_a),
+        max_cluster_diameter_a=max_cluster_diameter_a,
+    )
+    assignments = [-1 for _ in poses]
+    for position, cluster_id in result.assignments.items():
+        assignments[usable[int(position)]] = int(cluster_id)
+    representative_indices = [
+        usable[int(cluster.representative_pose_index)] for cluster in result.clusters
+    ]
+    return {
+        "cluster_count": int(result.cluster_count),
+        "assignments": assignments,
+        "representative_indices": representative_indices,
+        "clustering_algorithm": result.method,
+        "order_independent": True,
+        "rmsd_cutoff_a": float(rmsd_cutoff_a),
+    }
 
 
 def sample_sidechain_rotamers(

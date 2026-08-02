@@ -10,6 +10,37 @@ def _write(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
+def _row_evidence_count(payload: Any) -> int:
+    """Count row-level evidence entries in an artifact payload."""
+
+    if not isinstance(payload, dict):
+        return 0
+    total = 0
+    for key in ("rows", "checks"):
+        value = payload.get(key)
+        if isinstance(value, list):
+            total += len(value)
+    return total
+
+
+def _write_without_degrading(path: Path, payload: dict[str, Any]) -> None:
+    """Write a fixture packet unless it would drop existing row-level evidence.
+
+    These are summary-only CI scaffolds. Written over a real generated artifact
+    they delete its ``rows``/``checks`` evidence, and a consumer that requires
+    row-level proof then reports blocked while the summary still says ready.
+    """
+
+    if path.is_file():
+        try:
+            existing = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            existing = None
+        if _row_evidence_count(existing) > _row_evidence_count(payload):
+            return
+    _write(path, payload)
+
+
 def write_full_gap_closure_fixture_packets(runs_dir: Path) -> None:
     _write(
         runs_dir / "product_end_to_end_rocm_benchmark_current.json",
@@ -186,7 +217,7 @@ def write_full_gap_closure_fixture_packets(runs_dir: Path) -> None:
             }
         },
     )
-    _write(
+    _write_without_degrading(
         runs_dir / "cameo_architecture_validation_contract_current.json",
         {
             "summary": {

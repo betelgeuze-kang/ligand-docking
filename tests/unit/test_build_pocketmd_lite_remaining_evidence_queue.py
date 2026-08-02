@@ -201,6 +201,61 @@ def test_remaining_queue_ready_when_selected_evidence_complete(tmp_path: Path) -
     assert payload["rows"][0]["recommended_next_local_action"] == "rerun_pocketmd_lite_report_and_review_band"
 
 
+def test_remaining_queue_can_consume_fill_preview_candidate_csv(
+    tmp_path: Path,
+) -> None:
+    canonical = tmp_path / "canonical.csv"
+    preview = tmp_path / "preview.candidates.csv"
+    preview_json = tmp_path / "preview.json"
+    stage3 = tmp_path / "stage3.json"
+    _write_candidates(canonical, [{"entry_id": "T:L", "family": "gpcr", "rank_pct": 0.001}])
+    _write_candidates(
+        preview,
+        [
+            {
+                "entry_id": "T:L",
+                "family": "gpcr",
+                "rank_pct": 0.001,
+                "local_min_ligand_rmsd_a": 1.1,
+                "hbond_persistence": 0.7,
+                "contact_persistence": 0.8,
+                "initial_clash_count": 2,
+                "clash_count": 1,
+            }
+        ],
+    )
+    preview_json.write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "status": "pocketmd_lite_candidate_metric_fill_preview_ready",
+                    "preview_candidate_csv": str(preview),
+                    "preview_candidate_csv_ready": True,
+                    "canonical_candidate_csv_mutated": False,
+                    "candidate_csv_update_allowed": False,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    _write_stage3(stage3, [{"target": "T", "ligand_id": "L"}])
+
+    payload = mod.build_pocketmd_lite_remaining_evidence_queue(
+        candidate_csv=canonical,
+        candidate_fill_preview_json=preview_json,
+        stage3_json=stage3,
+    )
+
+    summary = payload["summary"]
+    assert summary["status"] == "pocketmd_lite_remaining_evidence_queue_ready"
+    assert summary["candidate_csv"] == str(preview)
+    assert summary["source_candidate_csv"] == str(canonical)
+    assert summary["candidate_fill_preview_applied"] is True
+    assert summary["remaining_metric_count"] == 0
+    assert summary["missing_metric_names"] == []
+    assert payload["rows"][0]["missing_metrics"] == ""
+
+
 def test_remaining_queue_does_not_count_coarse_only_rows(tmp_path: Path) -> None:
     candidates = tmp_path / "candidates.csv"
     stage3 = tmp_path / "stage3.json"

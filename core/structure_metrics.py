@@ -7,6 +7,16 @@ from typing import Any
 
 import numpy as np
 
+from betelgeuze_product.legacy_input_contract import (
+    REASON_MISSING_REQUIRED_FIELD,
+    LegacyInputPolicy as _LegacyInputPolicy,
+    LegacyInputContractError,
+    LegacyInputPolicy,
+    strict_coordinate,
+)
+
+_LENIENT_COORDINATE_POLICY = _LegacyInputPolicy(compatibility_mode=True)
+
 STRUCTURE_METRICS_CLAIM_BOUNDARY = (
     "Internal geometry proxies for structure quality reporting. "
     "Not validated MolProbity/OpenStructure parity."
@@ -20,31 +30,112 @@ def _radius(element: str) -> float:
     return float(_VDW_RADII.get(str(element or "").upper()[:1], _VDW_RADII["DEFAULT"]))
 
 
-def parse_pdb_atoms_with_coords(text: str) -> list[dict[str, Any]]:
+def _parse_coordinate_columns(columns: list[Any]) -> tuple[float, float, float] | None:
+    """Try to parse a coordinate triple without failing closed.
+
+    Used to distinguish "this layout did not apply" (fixed-width columns are
+    misaligned, so the whitespace layout should be tried) from "the coordinate
+    is genuinely invalid".
+    """
+
+    return strict_coordinate(
+        columns, field="pdb_atom_xyz", policy=_LENIENT_COORDINATE_POLICY
+    )
+
+
+def _strict_pdb_field(
+    value: str,
+    *,
+    field: str,
+    line_number: int,
+    policy: LegacyInputPolicy,
+    default: str,
+) -> str:
+    """Return a required PDB column, failing closed instead of placeholdering.
+
+    The legacy parser substituted ``UNK``/``_``/``0`` for absent columns, which
+    silently turned a malformed record into an analyzable atom.
+    """
+
+    text = str(value or "").strip()
+    if text:
+        return text
+    if policy.compatibility_mode:
+        return default
+    raise LegacyInputContractError(
+        REASON_MISSING_REQUIRED_FIELD, f"field={field} line={line_number}"
+    )
+
+
+def parse_pdb_atoms_with_coords(
+    text: str,
+    *,
+    policy: LegacyInputPolicy | None = None,
+) -> list[dict[str, Any]]:
+    """Parse ``ATOM``/``HETATM`` rows into atoms with coordinates.
+
+    With ``policy=None`` the historical lenient behaviour is kept for internal
+    analysis tooling: unparseable coordinates and absent columns are skipped or
+    placeholdered. Product intake passes a fail-closed
+    :class:`~betelgeuze_product.legacy_input_contract.LegacyInputPolicy`, which
+    turns those cases into
+    :class:`~betelgeuze_product.legacy_input_contract.LegacyInputContractError`
+    instead of a partially parsed structure.
+    """
+
+    active_policy = policy if policy is not None else LegacyInputPolicy(compatibility_mode=True)
     atoms: list[dict[str, Any]] = []
-    for line in str(text or "").splitlines():
+    for line_number, line in enumerate(str(text or "").splitlines(), start=1):
         record = line[:6].strip().upper()
         if record not in {"ATOM", "HETATM"}:
             continue
-        try:
-            x = float(line[30:38])
-            y = float(line[38:46])
-            z = float(line[46:54])
-        except (ValueError, IndexError):
+        columns = [line[30:38], line[38:46], line[46:54]]
+        coordinate = _parse_coordinate_columns(columns)
+        if coordinate is None:
+            # Fixed-width columns did not apply (common in relaxed/legacy PDB
+            # writers); try the whitespace layout before deciding the row is bad.
             fields = line.split()
-            if len(fields) < 9:
-                continue
-            try:
-                x = float(fields[6])
-                y = float(fields[7])
-                z = float(fields[8])
-            except ValueError:
-                continue
+            coordinate = _parse_coordinate_columns(fields[6:9] if len(fields) >= 9 else [])
+        if coordinate is None:
+            # Neither layout yields a usable coordinate: this is a real invalid
+            # coordinate, so honor the caller's policy.
+            coordinate = strict_coordinate(
+                columns,
+                field=f"pdb_atom_xyz(line={line_number})",
+                policy=active_policy,
+            )
+        if coordinate is None:
+            continue
+        x, y, z = coordinate
         atom_name = line[12:16].strip() if len(line) >= 16 else ""
-        resname = (line[17:20].strip() if len(line) >= 20 else "") or "UNK"
-        chain_id = (line[21:22].strip() if len(line) >= 22 else "") or "_"
-        resseq = (line[22:26].strip() if len(line) >= 26 else "") or "0"
-        element = (line[76:78].strip() if len(line) >= 78 else "") or atom_name[:1]
+        resname = _strict_pdb_field(
+            line[17:20] if len(line) >= 20 else "",
+            field="resname",
+            line_number=line_number,
+            policy=active_policy,
+            default="UNK",
+        )
+        chain_id = _strict_pdb_field(
+            line[21:22] if len(line) >= 22 else "",
+            field="chain_id",
+            line_number=line_number,
+            policy=active_policy,
+            default="_",
+        )
+        resseq = _strict_pdb_field(
+            line[22:26] if len(line) >= 26 else "",
+            field="residue_id",
+            line_number=line_number,
+            policy=active_policy,
+            default="0",
+        )
+        element = _strict_pdb_field(
+            (line[76:78].strip() if len(line) >= 78 else "") or atom_name[:1],
+            field="element",
+            line_number=line_number,
+            policy=active_policy,
+            default=atom_name[:1],
+        )
         atoms.append(
             {
                 "record": record,

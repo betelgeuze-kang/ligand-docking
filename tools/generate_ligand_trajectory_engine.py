@@ -28,6 +28,7 @@ import torch
 from core.config import config
 from core.definitions import StrategyType
 from core.forcefield import ForceField
+from betelgeuze_engine.physics.mm_gbsa import GB_SA_PROXY_ENERGY_FIELD, gb_sa_proxy_energy
 from core.integrator import LangevinIntegrator
 from core.topology import TopologyFactory
 from tools.pdb_loader import load_native_structure
@@ -851,7 +852,7 @@ def _inline_frame_mmpbsa_proxy(
         return {
             "min_distance_A": 999.0,
             "contact_fraction": 0.0,
-            "deltaG_mmpbsa_proxy_kcal_mol": 5.0,
+            GB_SA_PROXY_ENERGY_FIELD: 5.0,
             "e_vdw": 0.0,
             "e_polar": 0.0,
             "e_nonpolar": 0.0,
@@ -880,7 +881,7 @@ def _inline_frame_mmpbsa_proxy(
     return {
         "min_distance_A": float(min_d),
         "contact_fraction": float(contact_fraction),
-        "deltaG_mmpbsa_proxy_kcal_mol": float(delta_g),
+        GB_SA_PROXY_ENERGY_FIELD: float(delta_g),
         "e_vdw": float(e_vdw),
         "e_polar": float(e_polar),
         "e_nonpolar": float(e_nonpolar),
@@ -924,7 +925,7 @@ def _compute_inline_aux_features(
         )
         min_dists.append(float(ff["min_distance_A"]))
         contact_fracs.append(float(ff["contact_fraction"]))
-        energies.append(float(ff["deltaG_mmpbsa_proxy_kcal_mol"]))
+        energies.append(float(gb_sa_proxy_energy(ff, 0.0)))
         e_vdw_rows.append(float(ff["e_vdw"]))
         e_polar_rows.append(float(ff["e_polar"]))
         e_nonpolar_rows.append(float(ff["e_nonpolar"]))

@@ -87,10 +87,18 @@ PRODUCT_PUBLIC_BENCHMARK_SCORECARD_INTAKE_SYNC_COMMAND = (
 )
 PRODUCT_PUBLIC_BENCHMARK_CONTRACT_COMMAND = "python3 tools/build_product_public_benchmark_contract.py"
 PRODUCT_PUBLIC_BENCHMARK_WORK_ORDER_COMMAND = "python3 tools/build_product_public_benchmark_work_order.py"
+COMPETITION_BENCHMARK_ROLLUP_COMMAND = "python3 tools/build_competition_benchmark_rollup.py"
+PACKAGE_B_COMPETITION_BRIDGE_COMMAND = "python3 tools/build_package_b_competition_bridge.py"
 PUBLIC_BENCHMARK_PHASE2_HARNESS_AUDIT_COMMAND = (
     "python3 tools/product/build_public_benchmark_phase2_harness_audit.py"
 )
 BENCHMARK_LEDGER_COMMAND = "python3 tools/product/build_benchmark_ledger.py"
+BM5_CAPRI_RAW_DATA_CUSTODY_PLAN_COMMAND = (
+    "python3 tools/build_bm5_capri_raw_data_custody_plan.py --compute-sha256"
+)
+BM5_CAPRI_RAW_DATA_UNTRACK_APPLY_PREFLIGHT_COMMAND = (
+    "python3 tools/apply_bm5_capri_raw_data_custody_plan.py --mode preview"
+)
 PUBLIC_BENCHMARK_VINA_GNINA_COMPARISON_WORK_ORDER_COMMAND = (
     "python3 tools/product/build_public_benchmark_vina_gnina_comparison_work_order.py"
 )
@@ -143,7 +151,8 @@ POCKETMD_LITE_STAGE3_CONTACT_CLASH_INTAKE_COMMAND = (
 POCKETMD_LITE_REPORT_COMMAND = "python3 tools/product/build_pocketmd_lite_report.py"
 POCKETMD_LITE_REFINEMENT_WORK_ORDER_COMMAND = "python3 tools/product/build_pocketmd_lite_refinement_work_order.py"
 POCKETMD_LITE_REMAINING_EVIDENCE_QUEUE_COMMAND = (
-    "python3 tools/product/build_pocketmd_lite_remaining_evidence_queue.py"
+    "python3 tools/product/build_pocketmd_lite_remaining_evidence_queue.py "
+    "--candidate-fill-preview-json runs/pocketmd_lite_candidate_metric_fill_preview_current.json"
 )
 POCKETMD_LITE_EVIDENCE_RECOVERY_MANIFEST_COMMAND = (
     "python3 tools/product/build_pocketmd_lite_evidence_recovery_manifest.py"
@@ -181,7 +190,33 @@ POCKETMD_LITE_TOPK_REFINEMENT_AUDIT_COMMAND = (
 )
 HBOND_BACKMAP_REPORT_COMMAND = (
     "python3 tools/product/build_hbond_backmap_report.py "
-    "--scores-csv runs/product_image_smoke_runner_artifacts/backmapping_scores.csv"
+    "--product-image-smoke-receipt runs/product_image_smoke_receipt_current.json "
+    "--allow-blocked"
+)
+PR38_SPLIT_REVIEW_PACKET_COMMAND = "python3 tools/product/build_pr38_split_review_packet.py"
+PR38_CHILD_PR_EXTRACTION_PLAN_COMMAND = (
+    "python3 tools/product/build_pr38_child_pr_extraction_plan.py"
+)
+PR38_SLICE_PATCH_BUNDLE_COMMAND = "python3 tools/product/build_pr38_slice_patch_bundle.py"
+PR38_SLICE_PATCH_APPLY_PREFLIGHT_COMMAND = (
+    "python3 tools/product/build_pr38_slice_patch_apply_preflight.py"
+)
+PR38_SPLIT_ACCEPTANCE_PACKET_COMMAND = (
+    "python3 tools/product/build_pr38_split_acceptance_packet.py"
+)
+PR38_CHILD_PR_LAUNCH_COMMAND_PACK_COMMAND = (
+    "python3 tools/product/build_pr38_child_pr_launch_command_pack.py"
+)
+PR38_CHILD_PR_VERIFICATION_MATRIX_COMMAND = (
+    "python3 tools/product/build_pr38_child_pr_verification_matrix.py"
+)
+PR38_CI_RUNNER_HYGIENE_CHILD_PR_GATE_COMMAND = (
+    "python3 tools/product/build_pr38_ci_runner_hygiene_child_pr_gate.py"
+)
+PRODUCT_CI_RUNTIME_GATE_OBSERVED_WORKSPACE_CLEANUP_FAILURE_COMMAND = (
+    "python3 tools/product/observe_product_ci_runtime_gate_from_github.py "
+    "--repo betelgeuze-kang/ligand-docking "
+    "--branch codex/source-of-truth-benchmark-gpcr-pocketmd"
 )
 PRODUCT_OPERATOR_COCKPIT_COMMAND = "python3 tools/product/build_product_operator_cockpit.py"
 SUPPORT_BUNDLE_COMMAND = "python3 tools/product/build_support_bundle.py"
@@ -190,6 +225,24 @@ ENTERPRISE_ON_PREM_READINESS_GATE_COMMAND = (
 )
 DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_COMMAND = (
     "python3 tools/product/build_developer_preview_final_gate_audit.py"
+)
+DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_COMMAND = (
+    "python3 tools/product/build_developer_preview_clean_checkout_benchmark_receipt.py "
+    "--allow-blocked"
+)
+DEVELOPER_PREVIEW_LINUX_REPRODUCIBILITY_RECEIPT_COMMAND = (
+    "python3 tools/product/build_developer_preview_platform_reproducibility_receipt.py "
+    "--platform linux --allow-blocked"
+)
+DEVELOPER_PREVIEW_WINDOWS_REPRODUCIBILITY_RECEIPT_COMMAND = (
+    "python3 tools/product/build_developer_preview_platform_reproducibility_receipt.py "
+    "--platform windows --allow-blocked"
+)
+DEVELOPER_PREVIEW_STAGE5_RESTORE_PACKET_COMMAND = (
+    "python3 tools/product/build_developer_preview_stage5_restore_packet.py"
+)
+DEVELOPER_PREVIEW_NEW_USER_DRAFT_COMMAND = (
+    "bash runs/developer_preview_external_operator_command_pack_current.sh new-user-draft"
 )
 
 RELEASE_REFRESH_COMMANDS = [
@@ -231,6 +284,8 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_product_job_orchestration_contract.py",
     PRODUCT_PUBLIC_BENCHMARK_SCORECARD_INTAKE_SYNC_COMMAND,
     PRODUCT_PUBLIC_BENCHMARK_CONTRACT_COMMAND,
+    COMPETITION_BENCHMARK_ROLLUP_COMMAND,
+    PACKAGE_B_COMPETITION_BRIDGE_COMMAND,
     "python3 tools/build_architecture_validation_package_report.py",
     "python3 tools/product/build_restricted_unattended_execution_readiness.py",
     "python3 tools/build_product_security_deployment_contract.py",
@@ -247,6 +302,8 @@ RELEASE_REFRESH_COMMANDS = [
     PRODUCT_PUBLIC_BENCHMARK_WORK_ORDER_COMMAND,
     PUBLIC_BENCHMARK_PHASE2_HARNESS_AUDIT_COMMAND,
     BENCHMARK_LEDGER_COMMAND,
+    BM5_CAPRI_RAW_DATA_CUSTODY_PLAN_COMMAND,
+    BM5_CAPRI_RAW_DATA_UNTRACK_APPLY_PREFLIGHT_COMMAND,
     PUBLIC_BENCHMARK_VINA_GNINA_COMPARISON_WORK_ORDER_COMMAND,
     PUBLIC_BENCHMARK_VINA_GNINA_EXECUTION_PREFLIGHT_COMMAND,
     PUBLIC_BENCHMARK_VINA_GNINA_SCORE_TEMPLATE_RECEIPT_COMMAND,
@@ -272,6 +329,18 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_product_capability_surface_contract.py",
     "python3 tools/build_product_commercial_independence_gate.py",
     "python3 tools/build_product_image_smoke_preflight.py",
+    "python3 tools/product/build_github_self_hosted_runner_host_preflight.py",
+    "python3 tools/product/release_ci_remote_green_evidence_contract.py --emit-placeholders",
+    "python3 tools/product/release_ci_remote_green_evidence_contract.py --emit-manifest",
+    (
+        "python3 tools/product/build_release_ci_remote_green_receipt.py "
+        "--runner-inventory-json runs/github_self_hosted_runner_inventory_current.json "
+        "--branch-json runs/release_ci_branch_main_current.json "
+        "--required-checks-json runs/release_ci_required_status_checks_main_current.json "
+        "--schedule-runs-json runs/release_ci_product_image_smoke_schedule_runs_current.json "
+        "--failed-run-artifacts-json runs/release_ci_failed_run_artifacts_current.json "
+        "--release-tag-runs-json runs/release_ci_product_image_smoke_push_runs_current.json"
+    ),
     HBOND_BACKMAP_REPORT_COMMAND,
     "python3 tools/build_product_end_to_end_rocm_benchmark.py",
     "python3 tools/build_ai_md_engine_kpi_report.py",
@@ -337,12 +406,26 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_cameo_outbound_email_send_preflight.py",
     "python3 tools/build_cameo_validation_operations_dossier.py",
     "python3 tools/build_cameo_architecture_validation_contract.py",
+    DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_COMMAND,
+    DEVELOPER_PREVIEW_LINUX_REPRODUCIBILITY_RECEIPT_COMMAND,
+    DEVELOPER_PREVIEW_WINDOWS_REPRODUCIBILITY_RECEIPT_COMMAND,
     DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_COMMAND,
+    DEVELOPER_PREVIEW_NEW_USER_DRAFT_COMMAND,
+    DEVELOPER_PREVIEW_STAGE5_RESTORE_PACKET_COMMAND,
     "python3 tools/build_goal_readiness_rollup.py",
     "python3 tools/build_product_release_source_of_truth_gate.py",
     "python3 tools/build_goal_release_decision_gate.py",
     "python3 tools/build_product_goal_completion_audit.py",
     "python3 tools/build_goal_operator_action_board.py",
+    PR38_SPLIT_REVIEW_PACKET_COMMAND,
+    PR38_CHILD_PR_EXTRACTION_PLAN_COMMAND,
+    PR38_SLICE_PATCH_BUNDLE_COMMAND,
+    PR38_SLICE_PATCH_APPLY_PREFLIGHT_COMMAND,
+    PR38_CHILD_PR_LAUNCH_COMMAND_PACK_COMMAND,
+    PR38_SPLIT_ACCEPTANCE_PACKET_COMMAND,
+    PR38_CHILD_PR_LAUNCH_COMMAND_PACK_COMMAND,
+    PR38_CHILD_PR_VERIFICATION_MATRIX_COMMAND,
+    PR38_CI_RUNNER_HYGIENE_CHILD_PR_GATE_COMMAND,
     PRODUCT_OPERATOR_COCKPIT_COMMAND,
     "python3 tools/build_goal_operator_intake_kit.py",
     "python3 tools/build_goal_api_surface_contract.py",
@@ -690,6 +773,53 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         ],
     },
     {
+        "artifact_id": "competition_benchmark_rollup",
+        "artifact_path": "runs/competition_benchmark_rollup_current.json",
+        "builder_command": COMPETITION_BENCHMARK_ROLLUP_COMMAND,
+        "depends_on": [
+            "tools/product/build_competition_benchmark_rollup.py",
+            "tools/build_competition_benchmark_rollup.py",
+            "runs/cameo_official_results_operator_intake.csv",
+            "runs/cameo_official_results_intake_gate_current.json",
+            "runs/casp16_ligand_source_manifest_current.json",
+            "runs/bm5_capri_complex_source_manifest_current.json",
+            "runs/competition_benchmark_custody_work_order_current.json",
+            "runs/product_public_benchmark_contract_current.json",
+            "runs/refine_tier_public_benchmark_readiness_current.json",
+            "runs/refine_tier_public_benchmark_work_order_apply_current.json",
+        ],
+    },
+    {
+        "artifact_id": "competition_benchmark_status_current_md",
+        "artifact_path": "docs/competition_benchmark_status_current.md",
+        "builder_command": COMPETITION_BENCHMARK_ROLLUP_COMMAND,
+        "depends_on": [
+            "tools/product/build_competition_benchmark_rollup.py",
+            "tools/build_competition_benchmark_rollup.py",
+            "runs/competition_benchmark_rollup_current.json",
+        ],
+    },
+    {
+        "artifact_id": "package_b_competition_bridge",
+        "artifact_path": "runs/package_b_competition_bridge_current.json",
+        "builder_command": PACKAGE_B_COMPETITION_BRIDGE_COMMAND,
+        "depends_on": [
+            "tools/product/build_package_b_competition_bridge.py",
+            "tools/build_package_b_competition_bridge.py",
+            "runs/competition_benchmark_rollup_current.json",
+        ],
+    },
+    {
+        "artifact_id": "package_b_competition_bridge_current_md",
+        "artifact_path": "docs/package_b_competition_bridge_current.md",
+        "builder_command": PACKAGE_B_COMPETITION_BRIDGE_COMMAND,
+        "depends_on": [
+            "tools/product/build_package_b_competition_bridge.py",
+            "tools/build_package_b_competition_bridge.py",
+            "runs/package_b_competition_bridge_current.json",
+        ],
+    },
+    {
         "artifact_id": "architecture_validation_package_report",
         "artifact_path": "runs/architecture_validation_package_report_current.json",
         "builder_command": "python3 tools/build_architecture_validation_package_report.py",
@@ -981,6 +1111,27 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         "depends_on": [
             "tools/product/build_benchmark_ledger.py",
             "betelgeuze_product/benchmark_ledger.py",
+        ],
+    },
+    {
+        "artifact_id": "bm5_capri_raw_data_custody_plan",
+        "artifact_path": "runs/bm5_capri_raw_data_custody_plan_current.json",
+        "builder_command": BM5_CAPRI_RAW_DATA_CUSTODY_PLAN_COMMAND,
+        "depends_on": [
+            "tools/product/build_bm5_capri_raw_data_custody_plan.py",
+            "tools/build_bm5_capri_raw_data_custody_plan.py",
+            "data/public_benchmarks/protein_protein_docking_benchmark_v5",
+        ],
+    },
+    {
+        "artifact_id": "bm5_capri_raw_data_untrack_apply_preflight",
+        "artifact_path": "runs/bm5_capri_raw_data_untrack_apply_preflight_current.json",
+        "builder_command": BM5_CAPRI_RAW_DATA_UNTRACK_APPLY_PREFLIGHT_COMMAND,
+        "depends_on": [
+            "tools/product/apply_bm5_capri_raw_data_custody_plan.py",
+            "tools/apply_bm5_capri_raw_data_custody_plan.py",
+            "runs/bm5_capri_raw_data_custody_plan_current.json",
+            "runs/bm5_capri_raw_data_untrack_candidates_current.txt",
         ],
     },
     {
@@ -1278,7 +1429,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "betelgeuze_product/hbond_backmap_report.py",
             "betelgeuze_product/structured_reason.py",
             "docs/hbond_backmap_contract.md",
-            "runs/product_image_smoke_runner_artifacts/backmapping_scores.csv",
+            "runs/product_image_smoke_receipt_current.json",
         ],
     },
     {
@@ -1490,12 +1641,118 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "tools/product/build_product_image_smoke_preflight.py",
             "tools/build_product_image_smoke_preflight.py",
             "deploy/verify_product_image.sh",
+            "scripts/normalize_product_image_smoke_artifact_ownership.sh",
             ".github/workflows/product-image-smoke.yml",
+            ".github/workflows/product-api-worker.yml",
             "Dockerfile.product",
             "requirements-base.txt",
             "requirements-rocm.txt",
             "requirements-product-rocm.txt",
             "runs/product_image_smoke_receipt_current.json",
+        ],
+    },
+    {
+        "artifact_id": "product_image_smoke_runner_hygiene_work_order",
+        "artifact_path": "runs/product_image_smoke_runner_hygiene_work_order_current.json",
+        "builder_command": "python3 tools/build_product_image_smoke_preflight.py",
+        "depends_on": [
+            "tools/product/build_product_image_smoke_preflight.py",
+            "tools/build_product_image_smoke_preflight.py",
+            "runs/product_image_smoke_preflight_current.json",
+            "runs/product_image_smoke_receipt_current.json",
+            ".github/workflows/product-image-smoke.yml",
+            ".github/workflows/product-api-worker.yml",
+        ],
+    },
+    {
+        "artifact_id": "product_image_smoke_runner_hygiene_command_pack",
+        "artifact_path": "runs/product_image_smoke_runner_hygiene_command_pack_current.json",
+        "builder_command": "python3 tools/build_product_image_smoke_preflight.py",
+        "depends_on": [
+            "tools/product/build_product_image_smoke_preflight.py",
+            "tools/build_product_image_smoke_preflight.py",
+            "runs/product_image_smoke_preflight_current.json",
+            "runs/product_image_smoke_runner_hygiene_work_order_current.json",
+            "runs/product_image_smoke_receipt_current.json",
+            ".github/workflows/product-image-smoke.yml",
+            ".github/workflows/product-api-worker.yml",
+        ],
+    },
+    {
+        "artifact_id": "product_image_smoke_runner_hygiene_command_pack_sh",
+        "artifact_path": "runs/product_image_smoke_runner_hygiene_command_pack_current.sh",
+        "builder_command": "python3 tools/build_product_image_smoke_preflight.py",
+        "depends_on": [
+            "tools/product/build_product_image_smoke_preflight.py",
+            "runs/product_image_smoke_runner_hygiene_command_pack_current.json",
+            ".github/workflows/product-image-smoke.yml",
+            ".github/workflows/product-api-worker.yml",
+        ],
+    },
+    {
+        "artifact_id": "product_image_smoke_runner_hygiene_command_pack_md",
+        "artifact_path": "runs/product_image_smoke_runner_hygiene_command_pack_current.md",
+        "builder_command": "python3 tools/build_product_image_smoke_preflight.py",
+        "depends_on": [
+            "tools/product/build_product_image_smoke_preflight.py",
+            "runs/product_image_smoke_runner_hygiene_command_pack_current.json",
+            ".github/workflows/product-image-smoke.yml",
+            ".github/workflows/product-api-worker.yml",
+        ],
+    },
+    {
+        "artifact_id": "github_self_hosted_runner_host_preflight",
+        "artifact_path": "runs/github_self_hosted_runner_host_preflight_current.json",
+        "builder_command": "python3 tools/product/build_github_self_hosted_runner_host_preflight.py",
+        "depends_on": [
+            "tools/product/build_github_self_hosted_runner_host_preflight.py",
+            "runs/product_image_smoke_preflight_current.json",
+            "runs/github_self_hosted_runner_inventory_current.json",
+        ],
+    },
+    {
+        "artifact_id": "release_ci_remote_green_evidence_collect_manifest",
+        "artifact_path": "runs/release_ci_remote_green_evidence_collect_manifest_current.json",
+        "builder_command": "python3 tools/product/release_ci_remote_green_evidence_contract.py --emit-manifest",
+        "depends_on": [
+            "tools/product/release_ci_remote_green_evidence_contract.py",
+        ],
+    },
+    {
+        "artifact_id": "release_ci_remote_green_receipt",
+        "artifact_path": "runs/release_ci_remote_green_receipt_current.json",
+        "builder_command": (
+            "python3 tools/product/build_release_ci_remote_green_receipt.py "
+            "--runner-inventory-json runs/github_self_hosted_runner_inventory_current.json "
+            "--branch-json runs/release_ci_branch_main_current.json "
+            "--required-checks-json runs/release_ci_required_status_checks_main_current.json "
+            "--schedule-runs-json runs/release_ci_product_image_smoke_schedule_runs_current.json "
+            "--failed-run-artifacts-json runs/release_ci_failed_run_artifacts_current.json "
+            "--release-tag-runs-json runs/release_ci_product_image_smoke_push_runs_current.json"
+        ),
+        "depends_on": [
+            "tools/product/build_release_ci_remote_green_receipt.py",
+            "tools/product/release_ci_remote_green_evidence_contract.py",
+            ".github/workflows/product-image-smoke.yml",
+            "runs/github_self_hosted_runner_inventory_current.json",
+            "runs/release_ci_branch_main_current.json",
+            "runs/release_ci_required_status_checks_main_current.json",
+            "runs/release_ci_product_image_smoke_schedule_runs_current.json",
+            "runs/release_ci_failed_run_artifacts_current.json",
+            "runs/release_ci_product_image_smoke_push_runs_current.json",
+            "runs/release_ci_remote_green_evidence_collect_manifest_current.json",
+        ],
+    },
+    {
+        "artifact_id": "product_ci_runtime_gate",
+        "artifact_path": "runs/product_ci_runtime_gate_current.json",
+        "builder_command": PRODUCT_CI_RUNTIME_GATE_OBSERVED_WORKSPACE_CLEANUP_FAILURE_COMMAND,
+        "depends_on": [
+            "tools/product/observe_product_ci_runtime_gate_from_github.py",
+            "tools/product/build_product_ci_runtime_gate.py",
+            "runs/product_image_smoke_preflight_current.json",
+            "runs/github_self_hosted_runner_inventory_current.json",
+            "runs/github_self_hosted_runner_host_preflight_current.json",
         ],
     },
     {
@@ -1632,11 +1889,225 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "tools/product/build_developer_preview_final_gate_audit.py",
             "tools/product/build_developer_preview_new_user_observation_receipt.py",
             "tools/product/build_developer_preview_platform_reproducibility_receipt.py",
+            "tools/product/build_developer_preview_stage5_restore_packet.py",
+            "tools/build_developer_preview_stage5_restore_packet.py",
             "tools/product/build_developer_preview_silent_import_loss_receipt.py",
             "tools/product/build_ligand_scaleup_benchmark_summary.py",
             "tools/product/build_product_end_to_end_rocm_benchmark.py",
             "tools/product/build_product_pose_sampling_readiness.py",
+            "docs/developer_preview_core_workflow_quickstart.md",
             "docs/developer_preview_final_gate_action_register.md",
+            ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json",
+            ".betelgeuze/developer_preview_linux_reproducibility_receipt.json",
+            ".betelgeuze/developer_preview_windows_reproducibility_receipt.json",
+        ],
+    },
+    {
+        "artifact_id": "developer_preview_clean_checkout_benchmark_receipt",
+        "artifact_path": ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json",
+        "builder_command": DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_COMMAND,
+        "depends_on": [
+            "tools/product/build_developer_preview_clean_checkout_benchmark_receipt.py",
+            ".betelgeuze/developer_preview_clean_checkout_ai_verify.log",
+            ".betelgeuze/developer_preview_external_baselines/biorxiv_baseline_comparison_developer_preview_clean_checkout/summary.json",
+            ".betelgeuze/developer_preview_clean_checkout_source_provenance.json",
+            "docs/developer_preview_core_workflow_quickstart.md",
+        ],
+    },
+    {
+        "artifact_id": "developer_preview_clean_checkout_benchmark_receipt_md",
+        "artifact_path": ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.md",
+        "builder_command": DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_COMMAND,
+        "depends_on": [
+            ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json",
+        ],
+    },
+    {
+        "artifact_id": "developer_preview_clean_checkout_stage5_input_family_csv",
+        "artifact_path": ".betelgeuze/developer_preview_clean_checkout_stage5_input_family_current.csv",
+        "builder_command": DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_COMMAND,
+        "depends_on": [
+            ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json",
+        ],
+    },
+    {
+        "artifact_id": "developer_preview_clean_checkout_stage5_input_family_md",
+        "artifact_path": ".betelgeuze/developer_preview_clean_checkout_stage5_input_family_current.md",
+        "builder_command": DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_COMMAND,
+        "depends_on": [
+            ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json",
+        ],
+    },
+    {
+        "artifact_id": "developer_preview_linux_reproducibility_receipt",
+        "artifact_path": ".betelgeuze/developer_preview_linux_reproducibility_receipt.json",
+        "builder_command": DEVELOPER_PREVIEW_LINUX_REPRODUCIBILITY_RECEIPT_COMMAND,
+        "depends_on": [
+            "tools/product/build_developer_preview_platform_reproducibility_receipt.py",
+            ".betelgeuze/developer_preview_linux_ai_verify.log",
+            ".betelgeuze/developer_preview_linux_reproducibility_pytest.xml",
+            "docs/developer_preview_core_workflow_quickstart.md",
+        ],
+    },
+    {
+        "artifact_id": "developer_preview_linux_reproducibility_receipt_md",
+        "artifact_path": ".betelgeuze/developer_preview_linux_reproducibility_receipt.md",
+        "builder_command": DEVELOPER_PREVIEW_LINUX_REPRODUCIBILITY_RECEIPT_COMMAND,
+        "depends_on": [
+            ".betelgeuze/developer_preview_linux_reproducibility_receipt.json",
+        ],
+    },
+    {
+        "artifact_id": "developer_preview_windows_reproducibility_receipt",
+        "artifact_path": ".betelgeuze/developer_preview_windows_reproducibility_receipt.json",
+        "builder_command": DEVELOPER_PREVIEW_WINDOWS_REPRODUCIBILITY_RECEIPT_COMMAND,
+        "depends_on": [
+            "tools/product/build_developer_preview_platform_reproducibility_receipt.py",
+            ".betelgeuze/developer_preview_windows_ai_verify.log",
+            ".betelgeuze/developer_preview_windows_reproducibility_pytest.xml",
+            "docs/developer_preview_core_workflow_quickstart.md",
+        ],
+    },
+    {
+        "artifact_id": "developer_preview_windows_reproducibility_receipt_md",
+        "artifact_path": ".betelgeuze/developer_preview_windows_reproducibility_receipt.md",
+        "builder_command": DEVELOPER_PREVIEW_WINDOWS_REPRODUCIBILITY_RECEIPT_COMMAND,
+        "depends_on": [
+            ".betelgeuze/developer_preview_windows_reproducibility_receipt.json",
+        ],
+    },
+    {
+        "artifact_id": "developer_preview_external_operator_work_order",
+        "artifact_path": "runs/developer_preview_external_operator_work_order_current.json",
+        "builder_command": DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_COMMAND,
+        "depends_on": [
+            "tools/product/build_developer_preview_final_gate_audit.py",
+            "runs/developer_preview_final_gate_audit_current.json",
+            "docs/developer_preview_core_workflow_quickstart.md",
+            "docs/developer_preview_final_gate_action_register.md",
+        ],
+    },
+    {
+        "artifact_id": "developer_preview_external_operator_command_pack",
+        "artifact_path": "runs/developer_preview_external_operator_command_pack_current.json",
+        "builder_command": DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_COMMAND,
+        "depends_on": [
+            "tools/product/build_developer_preview_final_gate_audit.py",
+            "tools/product/build_developer_preview_stage5_restore_packet.py",
+            "runs/developer_preview_final_gate_audit_current.json",
+            "runs/developer_preview_external_operator_work_order_current.json",
+            "docs/developer_preview_core_workflow_quickstart.md",
+            "docs/developer_preview_final_gate_action_register.md",
+        ],
+    },
+    {
+        "artifact_id": "developer_preview_external_operator_command_pack_sh",
+        "artifact_path": "runs/developer_preview_external_operator_command_pack_current.sh",
+        "builder_command": DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_COMMAND,
+        "must_be_non_executable": True,
+        "depends_on": [
+            "tools/product/build_developer_preview_final_gate_audit.py",
+            "tools/product/build_developer_preview_stage5_restore_packet.py",
+            "runs/developer_preview_external_operator_command_pack_current.json",
+            "docs/developer_preview_core_workflow_quickstart.md",
+            "docs/developer_preview_final_gate_action_register.md",
+        ],
+    },
+    {
+        "artifact_id": "developer_preview_external_operator_command_pack_ps1",
+        "artifact_path": "runs/developer_preview_external_operator_command_pack_current.ps1",
+        "builder_command": DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_COMMAND,
+        "must_be_non_executable": True,
+        "depends_on": [
+            "tools/product/build_developer_preview_final_gate_audit.py",
+            "runs/developer_preview_external_operator_command_pack_current.json",
+            "docs/developer_preview_core_workflow_quickstart.md",
+            "docs/developer_preview_final_gate_action_register.md",
+        ],
+    },
+    {
+        "artifact_id": "developer_preview_external_operator_command_pack_md",
+        "artifact_path": "runs/developer_preview_external_operator_command_pack_current.md",
+        "builder_command": DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_COMMAND,
+        "depends_on": [
+            "tools/product/build_developer_preview_final_gate_audit.py",
+            "runs/developer_preview_external_operator_command_pack_current.json",
+            "docs/developer_preview_core_workflow_quickstart.md",
+            "docs/developer_preview_final_gate_action_register.md",
+        ],
+    },
+    {
+        "artifact_id": "developer_preview_new_user_execution_work_order",
+        "artifact_path": ".betelgeuze/developer_preview_new_user_execution_work_order.json",
+        "builder_command": DEVELOPER_PREVIEW_NEW_USER_DRAFT_COMMAND,
+        "depends_on": [
+            "tools/build_product_execution_work_order.py",
+            "docs/developer_preview_core_workflow_quickstart.md",
+        ],
+    },
+    {
+        "artifact_id": "developer_preview_new_user_execution_preflight",
+        "artifact_path": ".betelgeuze/developer_preview_new_user_execution_preflight.json",
+        "builder_command": DEVELOPER_PREVIEW_NEW_USER_DRAFT_COMMAND,
+        "depends_on": [
+            "tools/build_product_execution_preflight.py",
+            ".betelgeuze/developer_preview_new_user_execution_work_order.json",
+            "docs/developer_preview_core_workflow_quickstart.md",
+        ],
+    },
+    {
+        "artifact_id": "developer_preview_new_user_observation_receipt",
+        "artifact_path": ".betelgeuze/developer_preview_new_user_observation_receipt.json",
+        "builder_command": DEVELOPER_PREVIEW_NEW_USER_DRAFT_COMMAND,
+        "depends_on": [
+            "tools/product/build_developer_preview_new_user_observation_receipt.py",
+            ".betelgeuze/developer_preview_new_user_execution_work_order.json",
+            ".betelgeuze/developer_preview_new_user_execution_preflight.json",
+            "docs/developer_preview_core_workflow_quickstart.md",
+        ],
+    },
+    {
+        "artifact_id": "developer_preview_new_user_observation_checklist_csv",
+        "artifact_path": ".betelgeuze/developer_preview_new_user_observation_checklist.csv",
+        "builder_command": DEVELOPER_PREVIEW_NEW_USER_DRAFT_COMMAND,
+        "depends_on": [
+            ".betelgeuze/developer_preview_new_user_observation_receipt.json",
+        ],
+    },
+    {
+        "artifact_id": "developer_preview_new_user_observation_checklist_md",
+        "artifact_path": ".betelgeuze/developer_preview_new_user_observation_checklist.md",
+        "builder_command": DEVELOPER_PREVIEW_NEW_USER_DRAFT_COMMAND,
+        "depends_on": [
+            ".betelgeuze/developer_preview_new_user_observation_receipt.json",
+        ],
+    },
+    {
+        "artifact_id": "developer_preview_stage5_restore_packet",
+        "artifact_path": "runs/developer_preview_stage5_restore_packet_current.json",
+        "builder_command": DEVELOPER_PREVIEW_STAGE5_RESTORE_PACKET_COMMAND,
+        "depends_on": [
+            "tools/product/build_developer_preview_stage5_restore_packet.py",
+            "tools/build_developer_preview_stage5_restore_packet.py",
+            ".betelgeuze/developer_preview_clean_checkout_stage5_input_family_current.csv",
+        ],
+    },
+    {
+        "artifact_id": "developer_preview_stage5_restore_packet_csv",
+        "artifact_path": "runs/developer_preview_stage5_restore_packet_current.csv",
+        "builder_command": DEVELOPER_PREVIEW_STAGE5_RESTORE_PACKET_COMMAND,
+        "depends_on": [
+            "tools/product/build_developer_preview_stage5_restore_packet.py",
+            "runs/developer_preview_stage5_restore_packet_current.json",
+        ],
+    },
+    {
+        "artifact_id": "developer_preview_stage5_restore_packet_md",
+        "artifact_path": "runs/developer_preview_stage5_restore_packet_current.md",
+        "builder_command": DEVELOPER_PREVIEW_STAGE5_RESTORE_PACKET_COMMAND,
+        "depends_on": [
+            "tools/product/build_developer_preview_stage5_restore_packet.py",
+            "runs/developer_preview_stage5_restore_packet_current.json",
         ],
     },
     {
@@ -2052,6 +2523,117 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
         ],
     },
     {
+        "artifact_id": "pr38_split_review_packet",
+        "artifact_path": ".betelgeuze/pr38_split_review_packet_current.json",
+        "builder_command": PR38_SPLIT_REVIEW_PACKET_COMMAND,
+        "depends_on": [
+            "tools/product/build_pr38_split_review_packet.py",
+            "docs/ai/tasks/TASK-pr38-stabilization-split.md",
+            "docs/ai/tasks/TASK-pr38-slice-ci-runner-hygiene.md",
+            "docs/ai/tasks/TASK-pr38-slice-source-of-truth-refresh.md",
+            "docs/ai/tasks/TASK-pr38-slice-public-benchmark-phase2.md",
+            "docs/ai/tasks/TASK-pr38-slice-gpcr-hard-decoy-closure.md",
+            "docs/ai/tasks/TASK-pr38-slice-pocketmd-lite-recovery.md",
+            "docs/ai/tasks/TASK-pr38-slice-developer-preview-reproducibility.md",
+            "docs/ai/tasks/TASK-pr38-slice-api-operator-cockpit.md",
+            "docs/ai/tasks/TASK-pr38-slice-docs-tests-reconciliation.md",
+            "docs/ai/tasks/TASK-pr38-slice-f2g-f2h-preflight.md",
+        ],
+    },
+    {
+        "artifact_id": "pr38_child_pr_extraction_plan",
+        "artifact_path": ".betelgeuze/pr38_child_pr_extraction_plan_current.json",
+        "builder_command": PR38_CHILD_PR_EXTRACTION_PLAN_COMMAND,
+        "depends_on": [
+            "tools/product/build_pr38_child_pr_extraction_plan.py",
+            ".betelgeuze/pr38_split_review_packet_current.json",
+        ],
+    },
+    {
+        "artifact_id": "pr38_slice_patch_bundle",
+        "artifact_path": ".betelgeuze/pr38_slice_patch_bundle_current.json",
+        "builder_command": PR38_SLICE_PATCH_BUNDLE_COMMAND,
+        "depends_on": [
+            "tools/product/build_pr38_slice_patch_bundle.py",
+            ".betelgeuze/pr38_split_review_packet_current.json",
+            ".betelgeuze/pr38_child_pr_extraction_plan_current.json",
+        ],
+    },
+    {
+        "artifact_id": "pr38_slice_patch_apply_preflight",
+        "artifact_path": ".betelgeuze/pr38_slice_patch_apply_preflight_current.json",
+        "builder_command": PR38_SLICE_PATCH_APPLY_PREFLIGHT_COMMAND,
+        "depends_on": [
+            "tools/product/build_pr38_slice_patch_apply_preflight.py",
+            ".betelgeuze/pr38_slice_patch_bundle_current.json",
+        ],
+    },
+    {
+        "artifact_id": "pr38_child_pr_launch_command_pack",
+        "artifact_path": ".betelgeuze/pr38_child_pr_launch_command_pack_current.json",
+        "builder_command": PR38_CHILD_PR_LAUNCH_COMMAND_PACK_COMMAND,
+        "depends_on": [
+            "tools/product/build_pr38_child_pr_launch_command_pack.py",
+            ".betelgeuze/pr38_child_pr_extraction_plan_current.json",
+            ".betelgeuze/pr38_slice_patch_bundle_current.json",
+        ],
+    },
+    {
+        "artifact_id": "pr38_split_acceptance_packet",
+        "artifact_path": ".betelgeuze/pr38_split_acceptance_packet_current.json",
+        "builder_command": PR38_SPLIT_ACCEPTANCE_PACKET_COMMAND,
+        "depends_on": [
+            "tools/product/build_pr38_split_acceptance_packet.py",
+            ".betelgeuze/pr38_split_review_packet_current.json",
+            ".betelgeuze/pr38_child_pr_extraction_plan_current.json",
+            ".betelgeuze/pr38_slice_patch_bundle_current.json",
+            ".betelgeuze/pr38_slice_patch_apply_preflight_current.json",
+            ".betelgeuze/pr38_child_pr_launch_command_pack_current.json",
+            "runs/product_image_smoke_preflight_current.json",
+        ],
+    },
+    {
+        "artifact_id": "pr38_child_pr_verification_matrix",
+        "artifact_path": ".betelgeuze/pr38_child_pr_verification_matrix_current.json",
+        "builder_command": PR38_CHILD_PR_VERIFICATION_MATRIX_COMMAND,
+        "depends_on": [
+            "tools/product/build_pr38_child_pr_verification_matrix.py",
+            ".betelgeuze/pr38_split_acceptance_packet_current.json",
+            ".betelgeuze/pr38_child_pr_launch_command_pack_current.json",
+        ],
+    },
+    {
+        "artifact_id": "pr38_ci_runner_hygiene_child_pr_gate",
+        "artifact_path": ".betelgeuze/pr38_ci_runner_hygiene_child_pr_gate_current.json",
+        "builder_command": PR38_CI_RUNNER_HYGIENE_CHILD_PR_GATE_COMMAND,
+        "depends_on": [
+            "tools/product/build_pr38_ci_runner_hygiene_child_pr_gate.py",
+            "tools/build_pr38_ci_runner_hygiene_child_pr_gate.py",
+            ".betelgeuze/pr38_child_pr_extraction_plan_current.json",
+            ".betelgeuze/pr38_slice_patch_bundle_current.json",
+            ".betelgeuze/pr38_slice_patch_apply_preflight_current.json",
+            ".betelgeuze/pr38_child_pr_launch_command_pack_current.json",
+            "runs/product_image_smoke_preflight_current.json",
+            "runs/product_ci_runtime_gate_current.json",
+        ],
+    },
+    {
+        "artifact_id": "pr38_ci_runner_hygiene_child_pr_gate_csv",
+        "artifact_path": ".betelgeuze/pr38_ci_runner_hygiene_child_pr_gate_current.csv",
+        "builder_command": PR38_CI_RUNNER_HYGIENE_CHILD_PR_GATE_COMMAND,
+        "depends_on": [
+            ".betelgeuze/pr38_ci_runner_hygiene_child_pr_gate_current.json",
+        ],
+    },
+    {
+        "artifact_id": "pr38_ci_runner_hygiene_child_pr_gate_md",
+        "artifact_path": ".betelgeuze/pr38_ci_runner_hygiene_child_pr_gate_current.md",
+        "builder_command": PR38_CI_RUNNER_HYGIENE_CHILD_PR_GATE_COMMAND,
+        "depends_on": [
+            ".betelgeuze/pr38_ci_runner_hygiene_child_pr_gate_current.json",
+        ],
+    },
+    {
         "artifact_id": "product_operator_cockpit",
         "artifact_path": "runs/product_operator_cockpit_current.json",
         "builder_command": PRODUCT_OPERATOR_COCKPIT_COMMAND,
@@ -2075,10 +2657,15 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/api_customer_flow_release_evidence_current.json",
             "runs/customer_shadow_evidence_status_current.json",
             "runs/developer_preview_final_gate_audit_current.json",
+            "runs/developer_preview_stage5_restore_packet_current.json",
             ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json",
             ".betelgeuze/developer_preview_linux_reproducibility_receipt.json",
             ".betelgeuze/developer_preview_windows_reproducibility_receipt.json",
             ".betelgeuze/developer_preview_new_user_observation_receipt.json",
+            ".betelgeuze/pr38_child_pr_launch_command_pack_current.json",
+            ".betelgeuze/pr38_split_acceptance_packet_current.json",
+            ".betelgeuze/pr38_child_pr_verification_matrix_current.json",
+            ".betelgeuze/pr38_ci_runner_hygiene_child_pr_gate_current.json",
             "runs/enterprise_on_prem_readiness_gate_current.json",
         ],
     },
@@ -2520,6 +3107,16 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "container_runtime_torch_cuda_available",
             "container_runtime_rust_hip_backend_enabled",
             "product_runner_smoke_ready",
+            "receipt_runner_hygiene_schema_ready",
+            "receipt_runner_hygiene_ready",
+            "receipt_runner_smoke_dir_outside_workspace",
+            "receipt_container_output_uid_gid_pinned",
+            "receipt_container_output_uid_gid_matches_host",
+            "receipt_container_output_uid_gid_non_root",
+            "container_output_uid_gid_fixed",
+            "pre_checkout_cleanup_ready",
+            "receipt_workspace_runner_smoke_dir_cleanup_ready",
+            "workspace_smoke_artifact_current_cleanup_ready",
         ],
         "required_int_exact_fields": {
             "receipt_simulate_missing_profile_http": 422,
@@ -2531,6 +3128,794 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "container_runtime_proof_schema_version": "rocm_container_runtime_proof_v1",
             "receipt_mode": "rocm-runtime",
             "receipt_status": "product_image_smoke_ready",
+            "required_runner_hygiene_schema_version": "product_image_runner_hygiene_v1",
+            "receipt_runner_hygiene_schema_version": "product_image_runner_hygiene_v1",
+        },
+    },
+    {
+        "artifact_id": "github_self_hosted_runner_host_preflight_semantic_ready",
+        "artifact_path": "runs/github_self_hosted_runner_host_preflight_current.json",
+        "builder_command": "python3 tools/product/build_github_self_hosted_runner_host_preflight.py",
+        "required_status": "github_self_hosted_runner_host_preflight_ready",
+        "required_true_fields": [
+            "local_runner_host_ready",
+            "repo_self_hosted_runner_ready",
+            "docker_cli_present",
+            "docker_daemon_accessible",
+            "rocm_device_nodes_ready",
+            "product_image_rocm_runtime_ready",
+            "product_image_receipt_runner_hygiene_ready",
+            "product_image_workspace_smoke_artifact_current_cleanup_ready",
+            "runner_workspace_cleanup_command_available",
+            "runner_workspace_cleanup_command_mutates_files_if_run",
+            "runner_configured",
+            "runner_service_started",
+        ],
+        "required_int_min_fields": {
+            "runner_inventory_total_count": 1,
+            "linux_runner_online_count": 1,
+            "rocm_runner_online_count": 1,
+        },
+        "required_int_exact_fields": {
+            "github_registration_token_requested": 0,
+            "runner_workspace_cleanup_command_executed": 0,
+            "workflow_dispatch_executed": 0,
+            "external_state_mutated": 0,
+        },
+    },
+    {
+        "artifact_id": "release_ci_remote_green_semantic_ready",
+        "artifact_path": "runs/release_ci_remote_green_receipt_current.json",
+        "builder_command": (
+            "python3 tools/product/build_release_ci_remote_green_receipt.py "
+            "--runner-inventory-json runs/github_self_hosted_runner_inventory_current.json "
+            "--branch-json runs/release_ci_branch_main_current.json "
+            "--required-checks-json runs/release_ci_required_status_checks_main_current.json "
+            "--schedule-runs-json runs/release_ci_product_image_smoke_schedule_runs_current.json "
+            "--failed-run-artifacts-json runs/release_ci_failed_run_artifacts_current.json "
+            "--release-tag-runs-json runs/release_ci_product_image_smoke_push_runs_current.json"
+        ),
+        "required_status": "release_ci_remote_green_ready",
+        "required_true_fields": [
+            "pass",
+            "linux_self_hosted_runner_ready",
+            "rocm_self_hosted_runner_ready",
+            "main_required_checks_ready",
+            "workflow_source_contract_ready",
+            "weekly_rocm_schedule_green",
+            "failure_artifacts_preserved",
+            "release_tag_rocm_gate_green",
+        ],
+        "required_int_exact_fields": {
+            "blocker_count": 0,
+            "external_state_mutated": 0,
+        },
+    },
+    {
+        "artifact_id": "product_ci_runtime_gate_semantic_ready",
+        "artifact_path": "runs/product_ci_runtime_gate_current.json",
+        "builder_command": PRODUCT_CI_RUNTIME_GATE_OBSERVED_WORKSPACE_CLEANUP_FAILURE_COMMAND,
+        "required_status": "product_ci_runtime_gate_ready",
+        "required_true_fields": [
+            "runtime_gate_ready",
+            "remote_product_ci_green",
+            "local_rocm_clean_container_ready",
+            "local_product_image_runner_hygiene_remediation_ready",
+        ],
+        "required_int_exact_fields": {
+            "blocker_count": 0,
+            "workflow_dispatch_executed": 0,
+            "external_state_mutated": 0,
+        },
+    },
+    {
+        "artifact_id": "product_ci_runtime_gate_remote_ci_not_green_handoff_semantic_ready",
+        "artifact_path": "runs/product_ci_runtime_gate_current.json",
+        "builder_command": PRODUCT_CI_RUNTIME_GATE_OBSERVED_WORKSPACE_CLEANUP_FAILURE_COMMAND,
+        "required_status": "blocked_product_ci_runtime_gate",
+        "required_true_fields": [
+            "remote_ci_rerun_required",
+            "remote_ci_rerun_handoff_ready",
+            "remote_ci_science_tests_unverified",
+            "remote_workspace_cleanup_permission_blocked",
+            "remote_ci_observed_checkout_clean_true",
+            "remote_ci_current_workflow_patch_unverified",
+            "remote_ci_rerun_after_workflow_publication_required",
+            "local_rocm_clean_container_ready",
+            "product_image_build_smoke_observed",
+            "local_product_image_runner_hygiene_remediation_ready",
+            "local_product_image_workflow_contract_ready",
+            "local_product_image_workflow_workspace_artifact_recovery_ready",
+            "local_product_image_runner_smoke_dir_contract_ready",
+            "local_product_image_receipt_runner_hygiene_ready",
+            "local_product_image_workspace_smoke_artifact_current_cleanup_ready",
+            "self_hosted_runner_inventory_present",
+            "self_hosted_linux_runner_online",
+            "self_hosted_rocm_runner_online",
+        ],
+        "required_int_exact_fields": {
+            "runtime_gate_ready": 0,
+            "remote_product_ci_green": 0,
+            "blocker_count": 4,
+            "workflow_dispatch_executed": 0,
+            "external_state_mutated": 0,
+        },
+        "required_text_exact_fields": {
+            "primary_blocker": "github_actions_workspace_cleanup_permission_denied",
+            "remote_ci_failure_class": "workspace_cleanup_permission",
+            "remote_ci_observed_head_sha": "f28bab0aa1067b154b1f6dc7ce8a774274ba1cc6",
+            "remote_ci_observed_head_branch": "codex/source-of-truth-benchmark-gpcr-pocketmd",
+            "remote_ci_observed_checkout_clean_mode": "true",
+            "remote_workspace_cleanup_permission_blocker_code": (
+                "github_actions_workspace_cleanup_permission_denied"
+            ),
+        },
+    },
+    {
+        "artifact_id": "pr38_split_structural_preflight_semantic_ready",
+        "artifact_path": ".betelgeuze/pr38_slice_patch_apply_preflight_current.json",
+        "builder_command": PR38_SLICE_PATCH_APPLY_PREFLIGHT_COMMAND,
+        "required_status": "pr38_slice_patch_apply_preflight_ready",
+        "required_true_fields": [
+            "patch_apply_preflight_ready",
+            "patch_bundle_ready",
+        ],
+        "required_int_min_fields": {
+            "slice_patch_count": 5,
+            "apply_check_pass_count": 5,
+        },
+        "required_int_exact_fields": {
+            "apply_check_fail_count": 0,
+            "execution_enabled": 0,
+            "external_state_mutated": 0,
+            "claim_promotion_allowed": 0,
+            "patches_applied": 0,
+            "branches_created": 0,
+            "real_index_mutated": 0,
+            "worktree_mutated": 0,
+        },
+    },
+    {
+        "artifact_id": "developer_preview_stage5_restore_packet_semantic_ready",
+        "artifact_path": "runs/developer_preview_stage5_restore_packet_current.json",
+        "builder_command": DEVELOPER_PREVIEW_STAGE5_RESTORE_PACKET_COMMAND,
+        "required_status": "developer_preview_stage5_restore_packet_ready",
+        "required_true_fields": [
+            "developer_preview_stage5_restore_packet_ready",
+            "stage5_restore_ready",
+            "restore_ready",
+            "stage5_input_family_csv_present",
+            "input_present",
+        ],
+        "required_int_min_fields": {
+            "row_count": 1,
+            "total_rows": 1,
+            "task_count": 1,
+            "required_stage5_argument_count": 4,
+        },
+        "required_int_exact_fields": {
+            "missing_source_artifact_count": 0,
+            "missing_pipeline_summary_count": 0,
+            "missing_profile_count": 0,
+            "blocker_count": 0,
+            "execution_enabled": 0,
+            "external_state_mutated": 0,
+            "claim_promotion_allowed": 0,
+        },
+    },
+    {
+        "artifact_id": "developer_preview_stage5_restore_packet_fail_closed_receipt_semantic_ready",
+        "artifact_path": "runs/developer_preview_stage5_restore_packet_current.json",
+        "builder_command": DEVELOPER_PREVIEW_STAGE5_RESTORE_PACKET_COMMAND,
+        "required_status": "blocked_developer_preview_stage5_restore_packet",
+        "required_true_fields": [
+            "stage5_fail_closed_restore_receipt_ready",
+            "stage5_operator_restore_queue_ready",
+            "restore_queue_ready",
+            "operator_restore_sequence_ready",
+            "input_present",
+            "all_missing_rows_have_pipeline_summary",
+            "all_missing_rows_have_profile",
+        ],
+        "required_int_min_fields": {
+            "row_count": 1,
+            "total_rows": 1,
+            "missing_source_artifact_count": 1,
+            "stage5_operator_restore_queue_row_count": 1,
+            "restore_queue_ready_count": 1,
+            "task_count": 1,
+        },
+        "required_int_exact_fields": {
+            "developer_preview_stage5_restore_packet_ready": 0,
+            "stage5_restore_ready": 0,
+            "missing_pipeline_summary_count": 0,
+            "missing_profile_count": 0,
+            "execution_enabled": 0,
+            "external_state_mutated": 0,
+            "claim_promotion_allowed": 0,
+        },
+    },
+    {
+        "artifact_id": "developer_preview_clean_checkout_benchmark_receipt_semantic_ready",
+        "artifact_path": ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json",
+        "builder_command": DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_COMMAND,
+        "required_status": "developer_preview_clean_checkout_benchmark_receipt_ready",
+        "required_true_fields": [
+            "clean_checkout_benchmark_regenerated",
+            "ai_verify_passed",
+            "clean_checkout_provenance_ready",
+            "clean_checkout_source_repo_url_present",
+            "clean_checkout_working_tree_clean",
+            "stage5_input_family_ready",
+            "reviewed_receipt_attached",
+        ],
+        "required_int_exact_fields": {
+            "blocker_count": 0,
+            "failed_count": 0,
+            "stage5_missing_source_artifact_count": 0,
+            "stage5_missing_input_count": 0,
+            "reviewer_id_present": 1,
+            "reviewed_at_utc_present": 1,
+            "execution_enabled": 0,
+            "external_state_mutated": 0,
+            "claim_promotion_allowed": 0,
+        },
+    },
+    {
+        "artifact_id": "developer_preview_clean_checkout_fail_closed_receipt_semantic_ready",
+        "artifact_path": ".betelgeuze/developer_preview_clean_checkout_benchmark_receipt.json",
+        "builder_command": DEVELOPER_PREVIEW_CLEAN_CHECKOUT_RECEIPT_COMMAND,
+        "required_status": "blocked_developer_preview_clean_checkout_benchmark_receipt",
+        "required_true_fields": [
+            "ai_verify_passed",
+            "baseline_summary_present",
+        ],
+        "required_int_min_fields": {
+            "blocker_count": 1,
+            "failed_count": 1,
+            "baseline_summary_blocker_count": 1,
+            "baseline_task_count": 1,
+            "baseline_task_source_error_count": 1,
+            "stage5_input_family_row_count": 1,
+            "stage5_missing_source_artifact_count": 1,
+            "stage5_recovery_task_count": 1,
+            "stage5_required_argument_count": 4,
+        },
+        "required_int_exact_fields": {
+            "clean_checkout_benchmark_regenerated": 0,
+            "clean_checkout_provenance_ready": 0,
+            "clean_checkout_working_tree_clean": 0,
+            "stage5_input_family_ready": 0,
+            "reviewed_receipt_attached": 0,
+            "reviewer_id_present": 0,
+            "reviewed_at_utc_present": 0,
+            "execution_enabled": 0,
+            "external_state_mutated": 0,
+            "claim_promotion_allowed": 0,
+        },
+    },
+    {
+        "artifact_id": "developer_preview_linux_reproducibility_semantic_ready",
+        "artifact_path": ".betelgeuze/developer_preview_linux_reproducibility_receipt.json",
+        "builder_command": DEVELOPER_PREVIEW_LINUX_REPRODUCIBILITY_RECEIPT_COMMAND,
+        "required_status": "developer_preview_platform_reproducibility_receipt_ready",
+        "required_true_fields": [
+            "platform_reproducibility_ready",
+            "reproducibility_ready",
+            "command_set_passed",
+            "ai_verify_passed",
+            "pytest_command_set_passed",
+            "platform_match",
+            "linux_receipt",
+        ],
+        "required_int_min_fields": {
+            "pytest_test_count": 1,
+        },
+        "required_int_exact_fields": {
+            "blocker_count": 0,
+            "platform_evidence_blocked_field_count": 0,
+            "platform_evidence_ready_field_count": 9,
+            "platform_evidence_required_field_count": 9,
+            "pytest_failure_count": 0,
+            "pytest_error_count": 0,
+            "windows_receipt": 0,
+            "execution_enabled": 0,
+            "external_state_mutated": 0,
+            "claim_promotion_allowed": 0,
+        },
+        "required_text_exact_fields": {
+            "platform_id": "linux",
+        },
+    },
+    {
+        "artifact_id": "developer_preview_windows_reproducibility_semantic_ready",
+        "artifact_path": ".betelgeuze/developer_preview_windows_reproducibility_receipt.json",
+        "builder_command": DEVELOPER_PREVIEW_WINDOWS_REPRODUCIBILITY_RECEIPT_COMMAND,
+        "required_status": "developer_preview_platform_reproducibility_receipt_ready",
+        "required_true_fields": [
+            "platform_reproducibility_ready",
+            "reproducibility_ready",
+            "command_set_passed",
+            "ai_verify_passed",
+            "pytest_command_set_passed",
+            "platform_match",
+            "windows_receipt",
+        ],
+        "required_int_min_fields": {
+            "pytest_test_count": 1,
+        },
+        "required_int_exact_fields": {
+            "blocker_count": 0,
+            "platform_evidence_blocked_field_count": 0,
+            "platform_evidence_ready_field_count": 9,
+            "platform_evidence_required_field_count": 9,
+            "pytest_failure_count": 0,
+            "pytest_error_count": 0,
+            "linux_receipt": 0,
+            "execution_enabled": 0,
+            "external_state_mutated": 0,
+            "claim_promotion_allowed": 0,
+        },
+        "required_text_exact_fields": {
+            "platform_id": "windows",
+        },
+    },
+    {
+        "artifact_id": "developer_preview_windows_reproducibility_fail_closed_receipt_semantic_ready",
+        "artifact_path": ".betelgeuze/developer_preview_windows_reproducibility_receipt.json",
+        "builder_command": DEVELOPER_PREVIEW_WINDOWS_REPRODUCIBILITY_RECEIPT_COMMAND,
+        "required_status": "blocked_developer_preview_platform_reproducibility_receipt",
+        "required_true_fields": [],
+        "required_int_exact_fields": {
+            "platform_reproducibility_ready": 0,
+            "reproducibility_ready": 0,
+            "command_set_passed": 0,
+            "ai_verify_passed": 0,
+            "pytest_command_set_passed": 0,
+            "platform_match": 0,
+            "linux_receipt": 0,
+            "windows_receipt": 0,
+            "blocker_count": 3,
+            "platform_evidence_blocked_field_count": 8,
+            "platform_evidence_ready_field_count": 1,
+            "platform_evidence_required_field_count": 9,
+            "pytest_test_count": 0,
+            "pytest_failure_count": 0,
+            "pytest_error_count": 0,
+            "execution_enabled": 0,
+            "external_state_mutated": 0,
+            "claim_promotion_allowed": 0,
+        },
+        "required_text_exact_fields": {
+            "platform_id": "windows",
+            "platform_evidence_primary_blocker": "ai_verify_log_missing",
+            "platform_evidence_primary_field_id": "ai_verify_log_present",
+            "observed_platform_system": "Linux",
+        },
+    },
+    {
+        "artifact_id": "developer_preview_final_gate_audit_semantic_ready",
+        "artifact_path": "runs/developer_preview_final_gate_audit_current.json",
+        "builder_command": DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_COMMAND,
+        "required_status": "developer_preview_final_gate_audit_ready",
+        "required_true_fields": [
+            "developer_preview_exit_ready",
+            "clean_checkout_ready",
+            "linux_windows_reproducibility_ready",
+            "new_user_observation_ready",
+            "external_operator_work_order_ready",
+        ],
+        "required_int_exact_fields": {
+            "blocker_count": 0,
+            "blocked_gate_count": 0,
+            "present_blocked_receipt_count": 0,
+            "receipt_blocker_count": 0,
+            "missing_receipt_count": 0,
+            "execution_enabled": 0,
+            "external_state_mutated": 0,
+            "claim_promotion_allowed": 0,
+        },
+    },
+    {
+        "artifact_id": "developer_preview_final_gate_audit_fail_closed_semantic_ready",
+        "artifact_path": "runs/developer_preview_final_gate_audit_current.json",
+        "builder_command": DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_COMMAND,
+        "required_status": "blocked_developer_preview_final_gate_audit",
+        "required_true_fields": [
+            "register_fail_closed_command_contract_ready",
+            "stage5_recovery_operator_work_order_materialized",
+            "stage5_recovery_operator_work_order_ready",
+        ],
+        "required_int_min_fields": {
+            "gate_count": 6,
+            "ready_gate_count": 1,
+            "blocked_gate_count": 1,
+            "present_blocked_receipt_count": 1,
+            "receipt_blocker_count": 1,
+            "receipt_work_order_row_count": 1,
+            "external_operator_work_order_row_count": 1,
+            "stage5_missing_source_artifact_count": 1,
+            "stage5_recovery_row_count": 1,
+        },
+        "required_int_exact_fields": {
+            "missing_receipt_count": 0,
+            "register_fail_closed_missing_token_count": 0,
+            "execution_enabled": 0,
+            "external_state_mutated": 0,
+            "claim_promotion_allowed": 0,
+        },
+    },
+    {
+        "artifact_id": "developer_preview_external_operator_command_pack_semantic_ready",
+        "artifact_path": "runs/developer_preview_external_operator_command_pack_current.json",
+        "builder_command": DEVELOPER_PREVIEW_FINAL_GATE_AUDIT_COMMAND,
+        "required_status": "developer_preview_external_operator_command_pack_ready",
+        "required_true_fields": [
+            "command_pack_ready",
+            "operator_must_explicitly_run_target",
+            "human_review_required_before_external_operator_run",
+            "generated_scripts_non_executable_by_default",
+            "windows_repro_powershell_command_pack_ready",
+            "shell_platform_guard_normalizes_observed_platform",
+            "shell_platform_guard_accepts_git_bash_windows",
+            "clean_checkout_existing_workdir_fail_closed",
+        ],
+        "required_int_min_fields": {
+            "target_count": 7,
+            "command_count": 1,
+            "platform_guard_count": 2,
+        },
+        "required_int_exact_fields": {
+            "blocker_count": 0,
+            "powershell_target_count": 2,
+            "execution_enabled": 0,
+            "external_state_mutated": 0,
+            "claim_promotion_allowed": 0,
+        },
+    },
+    {
+        "artifact_id": "developer_preview_new_user_observation_draft_fail_closed_receipt_semantic_ready",
+        "artifact_path": ".betelgeuze/developer_preview_new_user_observation_receipt.json",
+        "builder_command": DEVELOPER_PREVIEW_NEW_USER_DRAFT_COMMAND,
+        "required_status": "blocked_developer_preview_new_user_observation_receipt",
+        "required_true_fields": [
+            "new_user_draft_fail_closed_ready",
+            "runbook_ready",
+            "work_order_ready",
+            "preflight_ready",
+            "core_workflow_receipt_path_documented",
+            "core_workflow_command_set_documented",
+            "developer_preview_exit_receipt_path_documented",
+            "developer_preview_exit_command_set_documented",
+            "observation_checklist_path_documented",
+            "clean_checkout_bootstrap_documented",
+            "linux_bootstrap_command_set_documented",
+            "windows_bootstrap_command_set_documented",
+            "clean_checkout_receipt_path_documented",
+            "platform_reproducibility_receipt_paths_documented",
+            "raw_customer_data_storage_unverified",
+        ],
+        "required_int_min_fields": {
+            "blocker_count": 1,
+            "observation_review_required_field_count": 8,
+            "observation_review_blocked_field_count": 1,
+        },
+        "required_int_exact_fields": {
+            "new_user_observation_ready": 0,
+            "observation_ready": 0,
+            "observer_signoff": 0,
+            "anonymized_notes_only": 0,
+            "observer_id_present": 0,
+            "observed_at_utc_present": 0,
+            "anonymized_summary_present": 0,
+            "raw_customer_data_not_stored_in_repo": 0,
+            "raw_customer_data_stored_in_repo": 0,
+            "customer_retained_raw_data": 0,
+            "execution_enabled": 0,
+            "external_state_mutated": 0,
+            "claim_promotion_allowed": 0,
+        },
+    },
+    {
+        "artifact_id": "pr38_child_pr_launch_command_pack_semantic_ready",
+        "artifact_path": ".betelgeuze/pr38_child_pr_launch_command_pack_current.json",
+        "builder_command": PR38_CHILD_PR_LAUNCH_COMMAND_PACK_COMMAND,
+        "required_status": "pr38_child_pr_launch_command_pack_ready",
+        "required_true_fields": [
+            "launch_command_pack_ready",
+            "minimum_child_pr_count_met",
+            "operator_launch_requires_human_approval",
+            "branch_commit_push_pr_mutation_required",
+            "post_push_remote_ci_dispatch_required",
+            "post_push_remote_ci_dispatch_guard_present",
+            "post_push_remote_ci_waits_for_expected_head_sha",
+            "post_push_remote_ci_requires_all_dispatched_runs_observed",
+            "post_push_remote_ci_branch_filter_uses_json_head_branch",
+            "bootstrap_ci_runner_hygiene_acceptance_blocker_clearance_path",
+            "bootstrap_ci_runner_hygiene_launch_preconditions_ready",
+            "bootstrap_ci_runner_hygiene_post_push_remote_ci_dispatch_guard_present",
+            "shell_pack_prints_commands_only",
+            "launch_scripts_non_executable",
+        ],
+        "required_int_min_fields": {
+            "child_pr_count": 5,
+            "body_file_count": 5,
+            "post_push_remote_ci_verification_slice_count": 1,
+            "post_push_remote_ci_command_count": 24,
+            "bootstrap_ci_runner_hygiene_post_push_remote_ci_command_count": 24,
+        },
+        "required_int_exact_fields": {
+            "missing_patch_slice_count": 0,
+            "empty_patch_count": 0,
+            "execution_enabled": 0,
+            "external_state_mutated": 0,
+            "branches_created": 0,
+            "commits_created": 0,
+            "pushes_executed": 0,
+            "pull_requests_created": 0,
+            "claim_promotion_allowed": 0,
+            "operator_branch_pr_launch_allowed_by_this_packet": 0,
+            "post_push_remote_ci_dispatch_executed_by_this_packet": 0,
+            "post_push_remote_ci_unsupported_branch_flag_present": 0,
+            "bootstrap_ci_runner_hygiene_operator_launch_allowed_by_this_packet": 0,
+        },
+    },
+    {
+        "artifact_id": "pr38_split_structural_acceptance_handoff_semantic_ready",
+        "artifact_path": ".betelgeuze/pr38_split_acceptance_packet_current.json",
+        "builder_command": PR38_SPLIT_ACCEPTANCE_PACKET_COMMAND,
+        "required_status": "blocked_pr38_split_acceptance_packet",
+        "required_true_fields": [
+            "split_structural_acceptance_ready",
+            "count_alignment_ready",
+            "required_receipts_ready",
+            "source_of_truth_registry_reconciles_last",
+            "launch_command_pack_ready",
+            "launch_command_pack_alignment_ready",
+            "launch_command_pack_safe_ready",
+            "launch_command_pack_operator_launch_requires_human_approval",
+            "launch_command_pack_branch_commit_push_pr_mutation_required",
+            "launch_command_pack_shell_prints_commands_only",
+        ],
+        "required_int_min_fields": {
+            "child_pr_count": 5,
+            "ready_child_pr_count": 5,
+            "launch_command_pack_child_pr_count": 5,
+        },
+        "required_int_exact_fields": {
+            "blocked_child_pr_count": 0,
+            "product_mode_verification_ready": 0,
+            "branch_commit_work_allowed_by_this_packet": 0,
+            "branches_created": 0,
+            "launch_command_pack_branches_created": 0,
+            "launch_command_pack_commits_created": 0,
+            "launch_command_pack_pushes_executed": 0,
+            "launch_command_pack_pull_requests_created": 0,
+            "paid_pilot_wording_allowed": 0,
+            "patches_applied": 0,
+            "real_index_mutated": 0,
+            "worktree_mutated": 0,
+            "execution_enabled": 0,
+            "external_state_mutated": 0,
+            "claim_promotion_allowed": 0,
+        },
+        "required_text_exact_fields": {
+            "product_mode_expected_result": "blocked_product_mode_verification",
+        },
+    },
+    {
+        "artifact_id": "pr38_split_acceptance_semantic_ready",
+        "artifact_path": ".betelgeuze/pr38_split_acceptance_packet_current.json",
+        "builder_command": PR38_SPLIT_ACCEPTANCE_PACKET_COMMAND,
+        "required_status": "pr38_split_acceptance_packet_ready",
+        "required_true_fields": [
+            "split_acceptance_ready",
+            "split_structural_acceptance_ready",
+            "product_mode_verification_ready",
+            "source_of_truth_registry_reconciles_last",
+            "launch_command_pack_ready",
+            "launch_command_pack_alignment_ready",
+            "launch_command_pack_safe_ready",
+            "launch_command_pack_operator_launch_requires_human_approval",
+            "launch_command_pack_branch_commit_push_pr_mutation_required",
+            "launch_command_pack_shell_prints_commands_only",
+        ],
+        "required_int_min_fields": {
+            "child_pr_count": 5,
+            "ready_child_pr_count": 5,
+            "launch_command_pack_child_pr_count": 5,
+        },
+        "required_int_exact_fields": {
+            "blocked_child_pr_count": 0,
+            "paid_pilot_wording_allowed": 0,
+            "branch_commit_work_allowed_by_this_packet": 0,
+            "launch_command_pack_execution_enabled": 0,
+            "launch_command_pack_branches_created": 0,
+            "launch_command_pack_commits_created": 0,
+            "launch_command_pack_pushes_executed": 0,
+            "launch_command_pack_pull_requests_created": 0,
+            "launch_command_pack_external_state_mutated": 0,
+            "execution_enabled": 0,
+            "external_state_mutated": 0,
+            "claim_promotion_allowed": 0,
+            "patches_applied": 0,
+            "branches_created": 0,
+            "real_index_mutated": 0,
+            "worktree_mutated": 0,
+        },
+        "required_text_exact_fields": {
+            "product_mode_expected_result": "pass_product_smoke_claim_boundaries_locked",
+        },
+    },
+    {
+        "artifact_id": "pr38_child_pr_verification_matrix_semantic_ready",
+        "artifact_path": ".betelgeuze/pr38_child_pr_verification_matrix_current.json",
+        "builder_command": PR38_CHILD_PR_VERIFICATION_MATRIX_COMMAND,
+        "required_status": "pr38_child_pr_verification_matrix_ready",
+        "required_true_fields": [
+            "verification_matrix_ready",
+            "split_acceptance_ready",
+            "upstream_acceptance_ready",
+            "child_pr_rows_ready",
+            "all_child_prs_ready",
+            "product_mode_verification_ready",
+            "launch_command_pack_ready",
+            "launch_command_pack_alignment_ready",
+            "launch_command_pack_safe_ready",
+            "launch_command_pack_operator_launch_requires_human_approval",
+            "launch_command_pack_branch_commit_push_pr_mutation_required",
+            "launch_command_pack_shell_prints_commands_only",
+        ],
+        "required_int_min_fields": {
+            "child_pr_count": 5,
+            "ready_child_pr_count": 5,
+            "focused_test_required_count": 5,
+            "ai_verify_required_count": 5,
+            "product_mode_required_count": 5,
+            "claim_boundary_review_required_count": 5,
+            "launch_command_pack_child_pr_count": 5,
+        },
+        "required_int_exact_fields": {
+            "blocked_child_pr_count": 0,
+            "launch_command_pack_blocker_count": 0,
+            "launch_command_pack_branches_created": 0,
+            "launch_command_pack_pull_requests_created": 0,
+            "branch_commit_work_allowed_by_this_matrix": 0,
+            "paid_pilot_wording_allowed": 0,
+            "execution_enabled": 0,
+            "external_state_mutated": 0,
+            "claim_promotion_allowed": 0,
+            "patches_applied": 0,
+            "branches_created": 0,
+        },
+        "required_text_exact_fields": {
+            "product_mode_expected_result": "pass_product_smoke_claim_boundaries_locked",
+        },
+    },
+    {
+        "artifact_id": "pr38_ci_runner_hygiene_child_pr_gate_semantic_ready",
+        "artifact_path": ".betelgeuze/pr38_ci_runner_hygiene_child_pr_gate_current.json",
+        "builder_command": PR38_CI_RUNNER_HYGIENE_CHILD_PR_GATE_COMMAND,
+        "required_status": "pr38_ci_runner_hygiene_child_pr_gate_ready",
+        "required_true_fields": [
+            "ci_runner_hygiene_child_pr_gate_ready",
+            "ci_runner_hygiene_child_pr_review_ready",
+            "ci_runner_hygiene_remote_ci_verification_required",
+            "remote_ci_rerun_current_patch_verification_required",
+            "local_product_image_runner_hygiene_ready",
+            "local_product_image_runner_smoke_dir_outside_workspace",
+            "local_product_image_container_output_uid_gid_pinned",
+            "local_product_image_container_output_uid_gid_matches_host",
+            "local_product_image_container_output_uid_gid_non_root",
+            "local_product_image_runner_hygiene_remediation_ready",
+            "product_ci_runtime_remote_ci_handoff_recorded",
+            "launch_command_pack_ready",
+            "launch_pack_prints_commands_only",
+            "launch_pack_post_push_remote_ci_branch_filter_uses_json_head_branch",
+            "launch_pack_post_push_remote_ci_dispatch_guard_present",
+            "launch_pack_post_push_remote_ci_waits_for_expected_head_sha",
+            "launch_pack_post_push_remote_ci_requires_all_dispatched_runs_observed",
+            "launch_pack_bootstrap_ci_runner_hygiene_post_push_remote_ci_dispatch_guard_present",
+            "launch_pack_bootstrap_ci_runner_hygiene_acceptance_blocker_clearance_path",
+            "launch_pack_bootstrap_ci_runner_hygiene_launch_preconditions_ready",
+        ],
+        "required_int_min_fields": {
+            "required_patch_file_count": 17,
+            "required_patch_token_count": 12,
+            "required_focused_test_token_count": 7,
+            "check_count": 10,
+            "pass_count": 10,
+        },
+        "required_int_exact_fields": {
+            "missing_required_patch_file_count": 0,
+            "missing_required_patch_token_count": 0,
+            "missing_focused_test_token_count": 0,
+            "fail_count": 0,
+            "blocker_count": 0,
+            "ci_runner_hygiene_remote_ci_verified": 0,
+            "operator_branch_pr_launch_allowed_by_this_gate": 0,
+            "product_ci_runtime_gate_ready": 0,
+            "launch_pack_branch_pr_launch_allowed": 0,
+            "launch_pack_post_push_remote_ci_unsupported_branch_flag_present": 0,
+            "launch_pack_bootstrap_ci_runner_hygiene_operator_launch_allowed": 0,
+            "execution_enabled": 0,
+            "external_state_mutated": 0,
+            "claim_promotion_allowed": 0,
+        },
+    },
+    {
+        "artifact_id": "bm5_capri_raw_data_custody_plan_semantic_ready",
+        "artifact_path": "runs/bm5_capri_raw_data_custody_plan_current.json",
+        "builder_command": BM5_CAPRI_RAW_DATA_CUSTODY_PLAN_COMMAND,
+        "required_status": "bm5_capri_raw_data_custody_plan_ready",
+        "required_true_fields": [
+            "custody_plan_ready",
+            "raw_data_custody_clear",
+        ],
+        "required_int_exact_fields": {
+            "operator_action_required_count": 0,
+            "blocker_count": 0,
+            "raw_data_git_tracked_file_count": 0,
+            "execution_enabled": 0,
+            "external_state_mutated": 0,
+            "claim_promotion_allowed": 0,
+        },
+    },
+    {
+        "artifact_id": "bm5_capri_raw_data_custody_plan_operator_evacuation_semantic_ready",
+        "artifact_path": "runs/bm5_capri_raw_data_custody_plan_current.json",
+        "builder_command": BM5_CAPRI_RAW_DATA_CUSTODY_PLAN_COMMAND,
+        "required_status": "bm5_capri_raw_data_custody_plan_ready",
+        "required_true_fields": [
+            "custody_plan_ready",
+            "checksum_manifest_ready",
+            "untrack_candidate_manifest_ready",
+            "approved_untrack_manifest_template_ready",
+            "review_group_manifest_ready",
+            "materialization_manifest_ready",
+        ],
+        "required_int_min_fields": {
+            "operator_action_required_count": 1,
+            "raw_data_git_tracked_file_count": 1,
+            "raw_data_review_group_count": 1,
+            "untrack_candidate_count": 1,
+            "sha256_row_count": 1,
+        },
+        "required_int_exact_fields": {
+            "raw_data_custody_clear": 0,
+            "blocker_count": 0,
+            "execution_enabled": 0,
+            "external_state_mutated": 0,
+            "claim_promotion_allowed": 0,
+        },
+        "required_text_exact_fields": {
+            "untrack_approval_token_required": "APPROVE_BM5_CAPRI_RAW_DATA_UNTRACK",
+            "external_custody_root": "OPERATOR_EXTERNAL_BM5_CAPRI_RAW_DATA_ROOT",
+        },
+    },
+    {
+        "artifact_id": "bm5_capri_raw_data_untrack_apply_preflight_semantic_ready",
+        "artifact_path": "runs/bm5_capri_raw_data_untrack_apply_preflight_current.json",
+        "builder_command": BM5_CAPRI_RAW_DATA_UNTRACK_APPLY_PREFLIGHT_COMMAND,
+        "required_status": "bm5_capri_raw_data_untrack_apply_preflight_ready",
+        "required_true_fields": [
+            "apply_ready",
+            "preview_ready",
+            "untrack_candidates_match_custody_plan",
+        ],
+        "required_int_exact_fields": {
+            "blocker_count": 0,
+            "duplicate_untrack_candidate_count": 0,
+            "missing_candidate_count": 0,
+            "path_outside_allowed_roots_count": 0,
+            "local_git_index_mutated": 0,
+            "file_delete_requested": 0,
+            "external_state_mutated": 0,
+            "execution_enabled": 0,
+            "claim_promotion_allowed": 0,
+        },
+        "required_text_exact_fields": {
+            "approval_token_required": "APPROVE_BM5_CAPRI_RAW_DATA_UNTRACK",
         },
     },
     {
@@ -2806,6 +4191,74 @@ DEFAULT_STATUS_SPECS: list[dict[str, Any]] = [
             "execution_enabled": 0,
             "docking_results_emitted": 0,
             "external_state_mutated": 0,
+        },
+    },
+    {
+        "artifact_id": "competition_benchmark_rollup_fail_closed_semantic_ready",
+        "artifact_path": "runs/competition_benchmark_rollup_current.json",
+        "builder_command": COMPETITION_BENCHMARK_ROLLUP_COMMAND,
+        "required_status": "competition_benchmark_rollup_ready",
+        "required_true_fields": [
+            "competition_benchmark_rollup_ready",
+            "competition_credibility_only",
+            "package_b_required_for_ligand_commercial_claims",
+        ],
+        "required_int_exact_fields": {
+            "competition_ligand_commercial_claim_allowed": 0,
+            "ligand_commercial_claim_unlocked": 0,
+            "commercial_claim_unlocked": 0,
+            "claim_promotion_allowed": 0,
+            "github_raw_payloads_allowed": 0,
+            "execution_enabled": 0,
+            "external_state_mutated": 0,
+        },
+        "required_text_exact_fields": {
+            "competition_evidence_role": "competition_credibility_evidence_only",
+        },
+    },
+    {
+        "artifact_id": "competition_benchmark_rollup_raw_data_policy_semantic_ready",
+        "artifact_path": "runs/competition_benchmark_rollup_current.json",
+        "builder_command": COMPETITION_BENCHMARK_ROLLUP_COMMAND,
+        "required_status": "competition_benchmark_rollup_ready",
+        "required_true_fields": [
+            "competition_benchmark_rollup_ready",
+            "github_raw_data_policy_ready",
+            "raw_data_free",
+        ],
+        "required_int_exact_fields": {
+            "raw_data_stored_in_repo": 0,
+            "github_raw_data_git_tracked_total_count": 0,
+            "github_raw_payloads_allowed": 0,
+            "execution_enabled": 0,
+            "external_state_mutated": 0,
+        },
+    },
+    {
+        "artifact_id": "package_b_competition_bridge_claim_locked_semantic_ready",
+        "artifact_path": "runs/package_b_competition_bridge_current.json",
+        "builder_command": PACKAGE_B_COMPETITION_BRIDGE_COMMAND,
+        "required_status": "package_b_competition_bridge_ready",
+        "required_true_fields": [
+            "package_b_competition_bridge_ready",
+            "bridge_claim_lock_ready",
+            "competition_credibility_only",
+            "package_b_required_for_ligand_commercial_claims",
+            "ligand_commercial_claim_unlock_requires_separate_promotion_gate",
+        ],
+        "required_int_exact_fields": {
+            "blocker_count": 0,
+            "bridge_blocker_count": 0,
+            "competition_ligand_commercial_claim_allowed": 0,
+            "ligand_commercial_claim_unlocked": 0,
+            "commercial_claim_unlocked": 0,
+            "claim_promotion_allowed": 0,
+            "github_raw_payloads_allowed": 0,
+            "execution_enabled": 0,
+            "external_state_mutated": 0,
+        },
+        "required_text_exact_fields": {
+            "competition_evidence_role": "competition_credibility_evidence_only",
         },
     },
     {
@@ -5692,9 +7145,19 @@ def _int(value: Any) -> int:
 def _artifact_row(spec: dict[str, Any], *, root: Path = ROOT) -> dict[str, Any]:
     artifact_path = _text(spec.get("artifact_path"))
     depends_on = [_text(item) for item in spec.get("depends_on") or [] if _text(item)]
+    must_be_non_executable = spec.get("must_be_non_executable") is True
     artifact = _resolve(artifact_path, root=root)
     artifact_present = artifact.is_file()
     artifact_mtime = _mtime(artifact_path, root=root)
+    artifact_mode = 0
+    artifact_executable = False
+    if artifact_present:
+        try:
+            artifact_mode = artifact.stat().st_mode & 0o777
+            artifact_executable = bool(artifact_mode & 0o111)
+        except OSError:
+            artifact_mode = 0
+            artifact_executable = False
     missing_dependencies = [path for path in depends_on if not _resolve(path, root=root).exists()]
     stale_dependencies = [
         path
@@ -5707,7 +7170,13 @@ def _artifact_row(spec: dict[str, Any], *, root: Path = ROOT) -> dict[str, Any]:
         newest_dependency_mtime = max((_mtime(path, root=root) for path in depends_on if _resolve(path, root=root).exists()), default=0.0)
     else:
         newest_dependency_mtime = 0.0
-    passed = artifact_present and not missing_dependencies and not stale_dependencies
+    executable_mode_blocked = bool(must_be_non_executable and artifact_executable)
+    passed = (
+        artifact_present
+        and not missing_dependencies
+        and not stale_dependencies
+        and not executable_mode_blocked
+    )
     return {
         "row_type": "artifact_freshness",
         "artifact_id": _text(spec.get("artifact_id")),
@@ -5717,6 +7186,10 @@ def _artifact_row(spec: dict[str, Any], *, root: Path = ROOT) -> dict[str, Any]:
         "artifact_present": artifact_present,
         "artifact_mtime_utc": _iso_from_mtime(artifact_mtime),
         "artifact_sha256": _sha256_file_if_present(artifact_path, root=root),
+        "artifact_file_mode_octal": f"{artifact_mode:03o}" if artifact_present else "",
+        "artifact_executable": artifact_executable,
+        "must_be_non_executable": must_be_non_executable,
+        "executable_mode_blocked": executable_mode_blocked,
         "source_artifact_fingerprint_sha256": source_artifact_fingerprint_sha256,
         "source_artifact_fingerprint_count": len(source_artifact_fingerprints),
         "source_artifact_file_sha256_count": sum(
@@ -5731,9 +7204,13 @@ def _artifact_row(spec: dict[str, Any], *, root: Path = ROOT) -> dict[str, Any]:
         "stale_dependency_paths": stale_dependencies,
         "observed": (
             f"present={artifact_present};dependencies={len(depends_on)};"
-            f"missing_dependencies={len(missing_dependencies)};stale_dependencies={len(stale_dependencies)}"
+            f"missing_dependencies={len(missing_dependencies)};stale_dependencies={len(stale_dependencies)};"
+            f"artifact_executable={artifact_executable}"
         ),
-        "required": "artifact exists and is not older than any listed source/dependency artifact",
+        "required": (
+            "artifact exists and is not older than any listed source/dependency artifact"
+            + ("; artifact is not executable" if must_be_non_executable else "")
+        ),
         "release_blocker": not passed,
         "execution_enabled": False,
         "external_state_mutated": False,
@@ -5928,6 +7405,7 @@ def build_product_release_source_of_truth_gate(
     status_rows = [row for row in rows if row["row_type"] == "artifact_semantic_status"]
     readme_rows = [row for row in rows if row["row_type"] == "readme_metric_drift"]
     ready = not blockers
+    blocker_ids = [row["artifact_id"] for row in blockers]
     summary = {
         "packet_type": "product_release_source_of_truth_gate",
         "status": "product_release_source_of_truth_gate_ready" if ready else "blocked_product_release_source_of_truth_gate",
@@ -5943,7 +7421,9 @@ def build_product_release_source_of_truth_gate(
         "stale_artifact_count": sum(1 for row in artifact_rows if int(row["stale_dependency_count"]) > 0),
         "semantic_status_blocker_count": sum(1 for row in status_rows if row["release_blocker"]),
         "readme_drift_count": sum(1 for row in readme_rows if row["release_blocker"]),
-        "blocked_artifact_ids": [row["artifact_id"] for row in blockers],
+        "blocked_artifact_ids": blocker_ids,
+        "blockers": blocker_ids,
+        "primary_blocker": blocker_ids[0] if blocker_ids else "",
         "release_refresh_command_count": len(RELEASE_REFRESH_COMMANDS),
         "release_refresh_commands": list(RELEASE_REFRESH_COMMANDS),
         "claim_boundary": CLAIM_BOUNDARY,
@@ -5967,6 +7447,7 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any], *, root: Pat
         f"- status: `{s['status']}`",
         f"- release_source_of_truth_ready: `{s['release_source_of_truth_ready']}`",
         f"- blocker_count: `{s['blocker_count']}`",
+        f"- primary_blocker: `{s['primary_blocker'] or '-'}`",
         f"- stale_artifact_count: `{s['stale_artifact_count']}`",
         f"- semantic_status_blocker_count: `{s['semantic_status_blocker_count']}`",
         f"- readme_drift_count: `{s['readme_drift_count']}`",

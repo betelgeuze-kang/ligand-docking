@@ -95,7 +95,7 @@ def _refine_path_from_stage5_source(source_csv: str) -> Path | None:
 
 def _meta_from_row(raw: dict[str, Any], stage3_path: Path) -> dict[str, Any] | None:
     base = _float(raw.get("binding_energy_mmpbsa_kcal_mol_proxy"))
-    refined = _float(raw.get("deltaG_mm_gbsa_kcal_mol")) or _float(
+    refined = _float(raw.get("internal_refine_proxy_score")) or _float(
         raw.get("binding_energy_explicit_water_recheck_kcal_mol_proxy")
     )
     if refined is None:

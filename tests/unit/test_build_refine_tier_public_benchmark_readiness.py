@@ -139,7 +139,7 @@ def _ready_rows(source_dir: Path) -> list[dict[str, object]]:
                 "pose_rmsd_A": 1.2,
                 "dockq": 0.65,
                 "lddt_pli": 0.82,
-                "deltaG_mm_gbsa_kcal_mol": pred,
+                "internal_refine_proxy_score": pred,
                 "dockq_source_artifact": str(dockq_source),
                 "lddt_pli_source_artifact": str(lddt_source),
                 "internal_deltaG_source_artifact": str(internal_delta_g_source),

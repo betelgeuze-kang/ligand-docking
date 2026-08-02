@@ -53,7 +53,7 @@ REQUIRED_COLUMNS = [
     "pose_rmsd_A",
     "dockq",
     "lddt_pli",
-    "deltaG_mm_gbsa_kcal_mol",
+    "internal_refine_proxy_score",
     "dockq_source_artifact",
     "lddt_pli_source_artifact",
     "internal_deltaG_source_artifact",
@@ -82,7 +82,7 @@ WORK_ORDER_COLUMNS = [
     "pose_rmsd_A",
     "dockq",
     "lddt_pli",
-    "deltaG_mm_gbsa_kcal_mol",
+    "internal_refine_proxy_score",
     "dockq_source_artifact",
     "lddt_pli_source_artifact",
     "internal_deltaG_source_artifact",
@@ -99,7 +99,7 @@ WORK_ORDER_OPERATOR_FIELDS = [
     "pose_rmsd_A",
     "dockq",
     "lddt_pli",
-    "deltaG_mm_gbsa_kcal_mol",
+    "internal_refine_proxy_score",
     "dockq_source_artifact",
     "lddt_pli_source_artifact",
     "internal_deltaG_source_artifact",
@@ -161,7 +161,7 @@ METRIC_EVIDENCE_COLUMNS = [
     "pose_id",
     "dockq",
     "lddt_pli",
-    "deltaG_mm_gbsa_kcal_mol",
+    "internal_refine_proxy_score",
     "dockq_source_artifact",
     "lddt_pli_source_artifact",
     "internal_deltaG_source_artifact",
@@ -252,7 +252,7 @@ SEED_RECEPTOR_COLUMN_NAMES = {
 }
 SEED_INTERACTION_METRIC_COLUMN_NAMES = {"dockq", "lddt_pli", "pli_lddt", "interaction_lddt"}
 SEED_INTERNAL_DG_COLUMN_NAMES = {
-    "deltaG_mm_gbsa_kcal_mol",
+    "internal_refine_proxy_score",
     "delta_g_mm_gbsa_kcal_mol",
     "internal_refine_deltaG_kcal_mol",
     "internal_deltaG_kcal_mol",
@@ -636,7 +636,7 @@ def _build_science_input_gap_rows(
         receptor_artifact = _matching_receptor_coordinate_artifact(dataset_dir, target_id)
         pending_dockq = _has_placeholder(row.get("dockq"))
         pending_lddt_pli = _has_placeholder(row.get("lddt_pli"))
-        pending_internal_delta_g = _has_placeholder(row.get("deltaG_mm_gbsa_kcal_mol"))
+        pending_internal_delta_g = _has_placeholder(row.get("internal_refine_proxy_score"))
         dockq_source_validation = _metric_source_payload_validation(
             row.get("dockq_source_artifact"),
             expected_metric_name="dockq",
@@ -656,7 +656,7 @@ def _build_science_input_gap_rows(
             expected_metric_name="internal_deltaG",
             expected_target_id=target_id,
             expected_pose_id=pose_id,
-            expected_value=row.get("deltaG_mm_gbsa_kcal_mol"),
+            expected_value=row.get("internal_refine_proxy_score"),
         )
         dockq_source_present = bool(dockq_source_validation["payload_valid"])
         lddt_source_present = bool(lddt_source_validation["payload_valid"])
@@ -1154,7 +1154,7 @@ def _build_metric_evidence_rows(
             missing_required_inputs.append("receptor_coordinate_artifact")
         dockq = _text(row.get("dockq"))
         lddt_pli = _text(row.get("lddt_pli"))
-        internal_delta_g = _text(row.get("deltaG_mm_gbsa_kcal_mol"))
+        internal_delta_g = _text(row.get("internal_refine_proxy_score"))
         dockq_source = _text(row.get("dockq_source_artifact"))
         lddt_source = _text(row.get("lddt_pli_source_artifact"))
         internal_delta_g_source = _text(row.get("internal_deltaG_source_artifact"))
@@ -1219,7 +1219,7 @@ def _build_metric_evidence_rows(
                 "pose_id": pose_id,
                 "dockq": dockq,
                 "lddt_pli": lddt_pli,
-                "deltaG_mm_gbsa_kcal_mol": internal_delta_g,
+                "internal_refine_proxy_score": internal_delta_g,
                 "dockq_source_artifact": dockq_source,
                 "lddt_pli_source_artifact": lddt_source,
                 "internal_deltaG_source_artifact": internal_delta_g_source,
@@ -1422,7 +1422,7 @@ def _operator_field_counts(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "work_order_pending_license_ok_count": pending_by_field["license_ok"],
         "work_order_pending_dockq_count": pending_by_field["dockq"],
         "work_order_pending_lddt_pli_count": pending_by_field["lddt_pli"],
-        "work_order_pending_internal_deltaG_count": pending_by_field["deltaG_mm_gbsa_kcal_mol"],
+        "work_order_pending_internal_deltaG_count": pending_by_field["internal_refine_proxy_score"],
         "work_order_pending_experimental_deltaG_count": pending_by_field["deltaG_experimental_kcal_mol"],
         "work_order_remaining_operator_license_review_field_count": pending_by_field["license_ok"],
         "work_order_remaining_receptor_interaction_metric_field_count": (
@@ -1431,7 +1431,7 @@ def _operator_field_counts(rows: list[dict[str, Any]]) -> dict[str, Any]:
             + pending_by_field["lddt_pli_source_artifact"]
         ),
         "work_order_remaining_internal_refine_deltaG_field_count": pending_by_field[
-            "deltaG_mm_gbsa_kcal_mol"
+            "internal_refine_proxy_score"
         ] + pending_by_field["internal_deltaG_source_artifact"],
     }
 
@@ -1446,7 +1446,7 @@ def _row_status(row: dict[str, Any], *, max_pose_rmsd_a: float, min_dockq: float
     pose_rmsd = _float(row.get("pose_rmsd_A"))
     dockq = _float(row.get("dockq"))
     lddt = _float(row.get("lddt_pli"))
-    dg_refine = _float(row.get("deltaG_mm_gbsa_kcal_mol"))
+    dg_refine = _float(row.get("internal_refine_proxy_score"))
     dg_exp = _float(row.get("deltaG_experimental_kcal_mol"))
     target_id = _text(row.get("target_id"))
     pose_id = _pose_id_from_work_order_row(row) or _text(row.get("pose_id"))
@@ -1469,7 +1469,7 @@ def _row_status(row: dict[str, Any], *, max_pose_rmsd_a: float, min_dockq: float
         expected_metric_name="internal_deltaG",
         expected_target_id=target_id,
         expected_pose_id=pose_id,
-        expected_value=row.get("deltaG_mm_gbsa_kcal_mol"),
+        expected_value=row.get("internal_refine_proxy_score"),
     )
     dockq_source_present = bool(dockq_source_validation["artifact_present"])
     lddt_source_present = bool(lddt_source_validation["artifact_present"])
@@ -1616,7 +1616,7 @@ def _build_operator_work_order_rows(
             "pose_rmsd_A": pose_rmsd_a,
             "dockq": "OPERATOR_FILL_DOCKQ",
             "lddt_pli": "OPERATOR_FILL_LDDT_PLI",
-            "deltaG_mm_gbsa_kcal_mol": "OPERATOR_FILL_INTERNAL_REFINE_DG",
+            "internal_refine_proxy_score": "OPERATOR_FILL_INTERNAL_REFINE_DG",
             "dockq_source_artifact": "OPERATOR_FILL_DOCKQ_SOURCE_ARTIFACT",
             "lddt_pli_source_artifact": "OPERATOR_FILL_LDDT_PLI_SOURCE_ARTIFACT",
             "internal_deltaG_source_artifact": "OPERATOR_FILL_INTERNAL_DELTAG_SOURCE_ARTIFACT",
@@ -1660,7 +1660,7 @@ def build_refine_tier_public_benchmark_readiness(
     calibration_ready = False
     if free_energy_rows:
         fit = fit_linear_calibration(
-            [_float(row.get("deltaG_mm_gbsa_kcal_mol")) for row in free_energy_rows],
+            [_float(row.get("internal_refine_proxy_score")) for row in free_energy_rows],
             [_float(row.get("deltaG_experimental_kcal_mol")) for row in free_energy_rows],
         )
         gate = calibration_quality_gate(fit, min_pairs=min_free_energy_pairs, min_spearman=min_spearman)

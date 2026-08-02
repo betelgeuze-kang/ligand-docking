@@ -6,6 +6,12 @@ from typing import Any
 
 from core.structure_metrics import parse_pdb_atoms_with_coords
 from core.structure_metrics_external import evaluate_structure_quality_with_external
+from betelgeuze_product.legacy_input_contract import (
+    LegacyInputContractError,
+    LegacyInputPolicy,
+    resolve_legacy_input_policy,
+    strict_coordinate,
+)
 
 CLAIM_BOUNDARY = (
     "Local molecular-structure analysis only; it parses supplied PDB/mmCIF content or local files to summarize "
@@ -88,10 +94,14 @@ def _split_mmcif_line(line: str) -> list[str]:
 
 
 def _parse_mmcif(text: str) -> list[dict[str, Any]]:
+    return _parse_mmcif_with_policy(text, policy=LegacyInputPolicy(compatibility_mode=True))
+
+
+def _parse_mmcif_with_policy(text: str, *, policy: LegacyInputPolicy) -> list[dict[str, Any]]:
     atoms: list[dict[str, Any]] = []
     headers: list[str] = []
     in_atom_loop = False
-    for raw_line in text.splitlines():
+    for line_number, raw_line in enumerate(text.splitlines(), start=1):
         line = raw_line.strip()
         if not line or line.startswith("#"):
             if in_atom_loop and headers:
@@ -126,14 +136,25 @@ def _parse_mmcif(text: str) -> list[dict[str, Any]]:
             "residue_id": residue_id,
             "element": _text(values.get("_atom_site.type_symbol")).upper(),
         }
-        try:
-            atom["xyz"] = [
-                float(_text(values.get("_atom_site.Cartn_x"))),
-                float(_text(values.get("_atom_site.Cartn_y"))),
-                float(_text(values.get("_atom_site.Cartn_z"))),
-            ]
-        except ValueError:
-            pass
+        columns = [
+            _text(values.get("_atom_site.Cartn_x")),
+            _text(values.get("_atom_site.Cartn_y")),
+            _text(values.get("_atom_site.Cartn_z")),
+        ]
+        coordinates_declared = all(
+            f"_atom_site.Cartn_{axis}" in headers for axis in ("x", "y", "z")
+        )
+        # A file that never declares Cartn_* columns is a coordinate-free
+        # mmCIF, not a malformed coordinate. Only a declared-but-unparseable
+        # coordinate is the fail-closed case.
+        if coordinates_declared:
+            coordinate = strict_coordinate(
+                columns,
+                field=f"mmcif_atom_xyz(line={line_number})",
+                policy=policy,
+            )
+            if coordinate is not None:
+                atom["xyz"] = [coordinate[0], coordinate[1], coordinate[2]]
         atoms.append(atom)
     return atoms
 
@@ -174,23 +195,34 @@ def _summarize_atoms(atoms: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def analyze_structure_source(payload: dict[str, Any], *, root: str | Path = ".") -> dict[str, Any]:
+def analyze_structure_source(
+    payload: dict[str, Any],
+    *,
+    root: str | Path = ".",
+    legacy_input_compatibility_mode: bool | None = None,
+) -> dict[str, Any]:
+    policy = resolve_legacy_input_policy(compatibility_mode=legacy_input_compatibility_mode)
     source_kind, source_value = _source(payload)
     source_text, source_available, blockers = _read_source_text(source_kind, source_value, root)
     parser = ""
     atoms: list[dict[str, Any]] = []
     if source_text:
         parser = "mmcif" if source_kind.startswith("mmcif") else "pdb"
-        if parser == "pdb":
-            atoms = parse_pdb_atoms_with_coords(source_text)
-        else:
-            atoms = _parse_mmcif(source_text)
-        if not atoms:
+        try:
+            if parser == "pdb":
+                atoms = parse_pdb_atoms_with_coords(source_text, policy=policy)
+            else:
+                atoms = _parse_mmcif_with_policy(source_text, policy=policy)
+        except LegacyInputContractError as exc:
+            atoms = []
+            blockers.append(_blocker(exc.reason_code, exc.reason))
+        if not atoms and not blockers:
             blockers.append(_blocker("structure_atoms_not_found", "No ATOM/HETATM rows were parsed from the supplied structure source."))
 
     summary = _summarize_atoms(atoms)
     quality_metrics: dict[str, Any] = {}
-    if atoms and all("xyz" in atom for atom in atoms):
+    coordinates_present = bool(atoms) and all("xyz" in atom for atom in atoms)
+    if coordinates_present:
         quality_metrics = evaluate_structure_quality_with_external(
             atoms,
             pdb_text=source_text if parser == "pdb" else "",
@@ -205,6 +237,8 @@ def analyze_structure_source(payload: dict[str, Any], *, root: str | Path = ".")
         "source_reference": source_value if source_kind == "pdb_id" else "",
         "parser": parser,
         **summary,
+        **policy.receipt(),
+        "structure_coordinates_present": coordinates_present,
         "quality_metrics": quality_metrics,
         "molprobity_clashscore": quality_metrics.get("molprobity_clashscore"),
         "molprobity_clashscore_source": quality_metrics.get("molprobity_clashscore_source", "internal_proxy"),

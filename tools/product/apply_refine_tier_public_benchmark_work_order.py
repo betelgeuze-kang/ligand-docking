@@ -178,7 +178,7 @@ def _metric_evidence_contract_blockers(
         blockers.append("metric_evidence_target_mismatch")
     if pose_id and _text(metric_evidence_row.get("pose_id")) != pose_id:
         blockers.append("metric_evidence_pose_mismatch")
-    for field in ("dockq", "lddt_pli", "deltaG_mm_gbsa_kcal_mol"):
+    for field in ("dockq", "lddt_pli", "internal_refine_proxy_score"):
         if not _same_float(work_order_row.get(field), metric_evidence_row.get(field)):
             blockers.append(f"metric_evidence_{field}_value_mismatch")
     for field in ("dockq_source_artifact", "lddt_pli_source_artifact", "internal_deltaG_source_artifact"):
@@ -216,7 +216,7 @@ def _metric_evidence_contract_blockers(
     for metric_name, source_field, value_field in (
         ("dockq", "dockq_source_artifact", "dockq"),
         ("lddt_pli", "lddt_pli_source_artifact", "lddt_pli"),
-        ("internal_deltaG", "internal_deltaG_source_artifact", "deltaG_mm_gbsa_kcal_mol"),
+        ("internal_deltaG", "internal_deltaG_source_artifact", "internal_refine_proxy_score"),
     ):
         source_validation = _metric_source_payload_validation(
             metric_evidence_row.get(source_field),

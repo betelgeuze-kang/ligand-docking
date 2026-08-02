@@ -341,6 +341,109 @@ def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     assert architecture["commercial_independence_ready"] is True
     assert architecture["cleanup_control_surface_ready"] is True
 
+    architecture_validation_source = _artifact_summary(
+        "architecture_validation_package_report_current.json"
+    )
+    architecture_validation = asyncio.run(product.get_product_architecture_validation())
+    assert architecture_validation["status"] == architecture_validation_source.get(
+        "status",
+        "missing_architecture_validation_package_report",
+    )
+    assert architecture_validation[
+        "competition_benchmark_cameo_official_intake_gate_status"
+    ] == architecture_validation_source.get(
+        "competition_benchmark_cameo_official_intake_gate_status",
+        "",
+    )
+    assert architecture_validation[
+        "competition_benchmark_cameo_official_intake_gate_ready"
+    ] is (
+        architecture_validation_source.get(
+            "competition_benchmark_cameo_official_intake_gate_ready"
+        )
+        is True
+    )
+    assert architecture_validation[
+        "competition_benchmark_cameo_official_blocker_count"
+    ] == int(
+        architecture_validation_source.get(
+            "competition_benchmark_cameo_official_blocker_count"
+        )
+        or 0
+    )
+    assert architecture_validation[
+        "competition_benchmark_cameo_official_missing_required_columns"
+    ] == architecture_validation_source.get(
+        "competition_benchmark_cameo_official_missing_required_columns",
+        [],
+    )
+    assert architecture_validation[
+        "competition_benchmark_casp16_ligand_source_manifest_status"
+    ] == architecture_validation_source.get(
+        "competition_benchmark_casp16_ligand_source_manifest_status",
+        "",
+    )
+    assert architecture_validation[
+        "competition_benchmark_casp16_ligand_competition_credibility_ready"
+    ] is (
+        architecture_validation_source.get(
+            "competition_benchmark_casp16_ligand_competition_credibility_ready"
+        )
+        is True
+    )
+    assert architecture_validation[
+        "competition_benchmark_bm5_capri_complex_source_manifest_status"
+    ] == architecture_validation_source.get(
+        "competition_benchmark_bm5_capri_complex_source_manifest_status",
+        "",
+    )
+    assert architecture_validation[
+        "competition_benchmark_bm5_capri_complex_competition_credibility_ready"
+    ] is (
+        architecture_validation_source.get(
+            "competition_benchmark_bm5_capri_complex_competition_credibility_ready"
+        )
+        is True
+    )
+    assert architecture_validation[
+        "competition_benchmark_package_b_public_benchmark_validation_ready"
+    ] is (
+        architecture_validation_source.get(
+            "competition_benchmark_package_b_public_benchmark_validation_ready"
+        )
+        is True
+    )
+    assert architecture_validation[
+        "competition_benchmark_package_b_ligand_public_benchmark_foundation_ready"
+    ] is (
+        architecture_validation_source.get(
+            "competition_benchmark_package_b_ligand_public_benchmark_foundation_ready"
+        )
+        is True
+    )
+    assert architecture_validation[
+        "competition_benchmark_package_b_claim_grade_public_benchmark_ready"
+    ] is (
+        architecture_validation_source.get(
+            "competition_benchmark_package_b_claim_grade_public_benchmark_ready"
+        )
+        is True
+    )
+    assert architecture_validation[
+        "competition_benchmark_competition_ligand_commercial_claim_allowed"
+    ] is (
+        architecture_validation_source.get(
+            "competition_benchmark_competition_ligand_commercial_claim_allowed"
+        )
+        is True
+    )
+    assert architecture_validation[
+        "competition_benchmark_competition_ligand_claim_blockers"
+    ] == architecture_validation_source.get(
+        "competition_benchmark_competition_ligand_claim_blockers",
+        [],
+    )
+
     service_boundary = asyncio.run(product.get_product_service_boundary())
     assert service_boundary["status"] == "product_service_boundary_contract_ready"
     assert service_boundary["service_boundary_ready"] is True

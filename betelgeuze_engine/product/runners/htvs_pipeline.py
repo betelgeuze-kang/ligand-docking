@@ -2571,6 +2571,8 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
                 str(args.stage3_score_reference_stats_json),
             ]
         )
+    if bool(getattr(args, "stage3_score_reference_allow_run_local_fallback", False)):
+        stage3_cmd.append("--score-reference-allow-run-local-fallback")
     # Keep calibration fit-role coverage inside stage3 sampling window.
     # Without fit keys here, stage4 can become fit_rows_total=0.
     stage3_priority_roles = _merge_roles_csv(
@@ -4327,6 +4329,15 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--stage3-residual-prototype-yellow-band-abs-delta-score", type=float, default=None)
     p.add_argument("--stage3-score-reference-scaling-mode", type=str, default="run_local")
     p.add_argument("--stage3-score-reference-stats-json", type=str, default="")
+    p.add_argument(
+        "--stage3-score-reference-allow-run-local-fallback",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help=(
+            "Compatibility mode only: let stage3 frozen score scaling degrade to run-local "
+            "z-scores when frozen stats are missing/invalid. Off by default (fail-closed)."
+        ),
+    )
     p.add_argument("--run-physics-refinement", action=argparse.BooleanOptionalAction, default=False)
     p.add_argument("--physics-refinement-mode", type=str, default="explicit_water_surrogate")
     p.add_argument("--physics-refinement-backend", type=str, default="deterministic_surrogate_wrapper_v1")

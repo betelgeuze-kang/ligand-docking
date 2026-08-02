@@ -212,6 +212,7 @@ def build_replay(
     residual_prototype_mode: str = "shadow_only",
     score_reference_scaling_mode: str = "run_local",
     score_reference_stats_json: str | Path = "",
+    score_reference_allow_run_local_fallback: bool = False,
     feature_cache_csv: str | Path = "",
     reset_prior_active_to_base: bool = True,
     active_lock_required: bool = True,
@@ -230,6 +231,7 @@ def build_replay(
     scaling = scoring._load_score_reference_scaling(
         mode=str(score_reference_scaling_mode),
         stats_json=str(score_reference_stats_json),
+        allow_run_local_fallback=bool(score_reference_allow_run_local_fallback),
     )
     z = _ensure_base_scores(df, scaling)
     if reset_prior_active_to_base:
@@ -297,6 +299,11 @@ def build_replay(
         "residual_prototype": residual_meta,
         "score_reference_scaling": {
             "mode": scaling.get("mode", "run_local"),
+            "status": scaling.get("status", ""),
+            "fail_closed": bool(scaling.get("fail_closed", False)),
+            "compatibility_run_local_fallback_allowed": bool(
+                scaling.get("compatibility_run_local_fallback_allowed", False)
+            ),
             "stats_hash": scaling.get("stats_hash", ""),
             "applied_columns": scaling.get("applied_columns", []),
             "fallback_columns": scaling.get("fallback_columns", []),
@@ -315,6 +322,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--residual-prototype-mode", default="shadow_only")
     parser.add_argument("--score-reference-scaling-mode", default="run_local")
     parser.add_argument("--score-reference-stats-json", default="")
+    parser.add_argument(
+        "--score-reference-allow-run-local-fallback",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help=(
+            "Compatibility mode only: allow frozen score scaling to degrade to run-local "
+            "z-scores when frozen stats are missing/invalid. Off by default (fail-closed)."
+        ),
+    )
     parser.add_argument("--feature-cache-csv", default="")
     parser.add_argument("--reset-prior-active-to-base", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--active-lock-required", action=argparse.BooleanOptionalAction, default=True)
@@ -332,6 +348,9 @@ def main(argv: list[str] | None = None) -> None:
         residual_prototype_mode=args.residual_prototype_mode,
         score_reference_scaling_mode=args.score_reference_scaling_mode,
         score_reference_stats_json=args.score_reference_stats_json,
+        score_reference_allow_run_local_fallback=bool(
+            args.score_reference_allow_run_local_fallback
+        ),
         feature_cache_csv=args.feature_cache_csv,
         reset_prior_active_to_base=bool(args.reset_prior_active_to_base),
         active_lock_required=bool(args.active_lock_required),

@@ -59,3 +59,10 @@ def test_kiro_design_wrapper_blocks_model_substitution(tmp_path: Path) -> None:
 
     assert result.returncode == 2
     assert "Kiro model is fixed to Opus 4.8" in result.stderr
+
+
+def test_ai_verify_uses_unique_kiro_prompt_path() -> None:
+    script = (ROOT / "scripts/ai-verify.sh").read_text(encoding="utf-8")
+
+    assert "mktemp .betelgeuze/ai_verify_kiro_design_prompt." in script
+    assert 'kiro_verify_prompt=".betelgeuze/ai_verify_kiro_design_prompt.md"' not in script

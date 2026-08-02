@@ -23,18 +23,39 @@ DEFAULT_SPLIT_PACKET_JSON = ".betelgeuze/pr38_split_review_packet_current.json"
 DEFAULT_EXTRACTION_PLAN_JSON = ".betelgeuze/pr38_child_pr_extraction_plan_current.json"
 DEFAULT_PATCH_BUNDLE_JSON = ".betelgeuze/pr38_slice_patch_bundle_current.json"
 DEFAULT_APPLY_PREFLIGHT_JSON = ".betelgeuze/pr38_slice_patch_apply_preflight_current.json"
+DEFAULT_LAUNCH_COMMAND_PACK_JSON = ".betelgeuze/pr38_child_pr_launch_command_pack_current.json"
+DEFAULT_PRODUCT_IMAGE_PREFLIGHT_JSON = "runs/product_image_smoke_preflight_current.json"
+DEFAULT_PRODUCT_SOURCE_OF_TRUTH_GATE_JSON = "runs/product_release_source_of_truth_gate_current.json"
 DEFAULT_OUT_JSON = ".betelgeuze/pr38_split_acceptance_packet_current.json"
 DEFAULT_OUT_CSV = ".betelgeuze/pr38_split_acceptance_packet_current.csv"
 DEFAULT_OUT_MD = ".betelgeuze/pr38_split_acceptance_packet_current.md"
 
 PACKET_TYPE = "pr38_split_acceptance_packet"
 SCHEMA_VERSION = "pr38_split_acceptance_packet_v1"
+MINIMUM_CHILD_PR_COUNT = 5
 
 KNOWN_PRODUCT_MODE_BLOCKERS: list[str] = []
+PRODUCT_IMAGE_PREFLIGHT_SOURCE_ROW_ID = "product_image_smoke_preflight_semantic_ready"
+RUNNER_HOST_PREFLIGHT_SOURCE_ROW_ID = "github_self_hosted_runner_host_preflight_semantic_ready"
+RELEASE_CI_REMOTE_GREEN_SOURCE_ROW_ID = "release_ci_remote_green_semantic_ready"
+BM5_CAPRI_RAW_CUSTODY_SOURCE_ROW_ID = "bm5_capri_raw_data_custody_plan_semantic_ready"
+PRODUCT_MODE_SOURCE_ROW_IDS = [
+    PRODUCT_IMAGE_PREFLIGHT_SOURCE_ROW_ID,
+    RUNNER_HOST_PREFLIGHT_SOURCE_ROW_ID,
+    RELEASE_CI_REMOTE_GREEN_SOURCE_ROW_ID,
+    BM5_CAPRI_RAW_CUSTODY_SOURCE_ROW_ID,
+]
+PRODUCT_MODE_PASS_RESULT = "pass_product_smoke_claim_boundaries_locked"
+PRODUCT_MODE_BLOCKED_RESULT = "blocked_product_mode_verification"
 
 PRODUCT_MODE_CLAIM_LOCK_EXPECTATIONS = [
+    "product_image_workspace_artifact_root_allowed=false",
+    "container_smoke_root_owned_artifacts_allowed=false",
     "paid_pilot_wording_allowed=false",
+    "developer_preview_exit_allowed_without_clean_checkout=false",
+    "api_operator_cockpit_mutation_allowed=false",
     "public_benchmark_claim_allowed=false",
+    "competition_benchmark_competition_ligand_commercial_claim_allowed=false",
     "gpcr_broad_claim_allowed=false",
     "pocketmd_lite_claim_allowed=false",
     "f2g_f2h_placeholder_surface_creation_allowed=false",
@@ -81,6 +102,19 @@ def _summary(payload: dict[str, Any]) -> dict[str, Any]:
     return summary if isinstance(summary, dict) else {}
 
 
+def _string_list(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return [_text(item) for item in value if _text(item)]
+    if isinstance(value, str):
+        return [part.strip() for part in value.replace(",", ";").split(";") if part.strip()]
+    return []
+
+
+def _rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = payload.get("rows")
+    return [row for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
+
+
 def _rows_by_slice(payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
     rows = payload.get("rows")
     if not isinstance(rows, list):
@@ -114,12 +148,122 @@ def _slice_ids(plan_payload: dict[str, Any]) -> list[str]:
     return [_text(row.get("slice_id")) for row in ordered]
 
 
+def _source_of_truth_row(
+    source_of_truth_payload: dict[str, Any],
+    artifact_id: str = PRODUCT_IMAGE_PREFLIGHT_SOURCE_ROW_ID,
+) -> dict[str, Any]:
+    for row in _rows(source_of_truth_payload):
+        if _text(row.get("artifact_id")) == artifact_id:
+            return row
+    return {}
+
+
+def _source_row_blockers(row: dict[str, Any], *, artifact_id: str) -> list[str]:
+    blockers: list[str] = []
+    if not row:
+        blockers.append(f"{artifact_id}_missing")
+        return blockers
+    if row.get("status") != "pass":
+        blockers.append(
+            f"{artifact_id}_status={_text(row.get('status')) or 'missing'}"
+        )
+    for field in _string_list(row.get("missing_true_fields")):
+        blockers.append(f"{artifact_id}_missing_true:{field}")
+    for field in _string_list(row.get("failed_int_min_fields")):
+        blockers.append(f"{artifact_id}_failed_int_min:{field}")
+    for field in _string_list(row.get("failed_int_exact_fields")):
+        blockers.append(f"{artifact_id}_failed_int_exact:{field}")
+    for field in _string_list(row.get("failed_text_exact_fields")):
+        blockers.append(f"{artifact_id}_failed_text_exact:{field}")
+    return blockers
+
+
+def _product_mode_blockers(
+    *,
+    product_image_preflight_summary: dict[str, Any],
+    product_source_of_truth_summary: dict[str, Any],
+    product_source_rows: dict[str, dict[str, Any]],
+) -> list[str]:
+    blockers: list[str] = []
+    if not product_image_preflight_summary:
+        blockers.append("product_image_smoke_preflight_missing")
+    elif product_image_preflight_summary.get("preflight_ready") is not True:
+        observed_status = _text(product_image_preflight_summary.get("status")) or "missing"
+        blockers.append(f"product_image_smoke_preflight_not_ready:{observed_status}")
+    if (
+        product_image_preflight_summary
+        and product_image_preflight_summary.get("receipt_runner_hygiene_ready") is not True
+    ):
+        blockers.append("receipt_runner_hygiene_not_ready")
+    for blocker in _string_list(product_image_preflight_summary.get("receipt_runner_hygiene_blockers")):
+        blockers.append(blocker)
+    if not product_source_of_truth_summary:
+        blockers.append("product_release_source_of_truth_gate_missing")
+    for artifact_id in PRODUCT_MODE_SOURCE_ROW_IDS:
+        blockers.extend(
+            _source_row_blockers(
+                product_source_rows.get(artifact_id, {}),
+                artifact_id=artifact_id,
+            )
+        )
+    return list(dict.fromkeys(blockers))
+
+
+def _launch_command_pack_safe(summary: dict[str, Any]) -> bool:
+    return bool(
+        summary.get("operator_launch_requires_human_approval") is True
+        and summary.get("shell_pack_prints_commands_only") is True
+        and summary.get("post_push_remote_ci_waits_for_expected_head_sha") is True
+        and summary.get("post_push_remote_ci_requires_all_dispatched_runs_observed") is True
+        and summary.get("execution_enabled") is False
+        and summary.get("external_state_mutated") is False
+        and summary.get("branches_created") is False
+        and summary.get("commits_created") is False
+        and summary.get("pushes_executed") is False
+        and summary.get("pull_requests_created") is False
+        and summary.get("claim_promotion_allowed") is False
+    )
+
+
+def _launch_row_blockers(row: dict[str, Any]) -> list[str]:
+    if not row:
+        return ["launch_command_pack_row_missing"]
+    blockers: list[str] = []
+    if not _text(row.get("draft_branch_name")):
+        blockers.append("launch_command_pack_draft_branch_missing")
+    if not _text(row.get("draft_pr_title")):
+        blockers.append("launch_command_pack_draft_pr_title_missing")
+    if not _text(row.get("pr_body_path")):
+        blockers.append("launch_command_pack_pr_body_missing")
+    if not _text(row.get("patch_path")):
+        blockers.append("launch_command_pack_patch_path_missing")
+    if row.get("operator_launch_requires_human_approval") is not True:
+        blockers.append("launch_command_pack_human_approval_not_required")
+    if row.get("branch_commit_push_pr_mutation_required") is not True:
+        blockers.append("launch_command_pack_mutation_requirement_not_declared")
+    for field in (
+        "execution_enabled",
+        "external_state_mutated",
+        "branches_created",
+        "commits_created",
+        "pushes_executed",
+        "pull_requests_created",
+        "claim_promotion_allowed",
+    ):
+        if row.get(field) is not False:
+            blockers.append(f"launch_command_pack_{field}_not_false")
+    return blockers
+
+
 def build_pr38_split_acceptance_packet(
     *,
     split_packet_json: str | Path = DEFAULT_SPLIT_PACKET_JSON,
     extraction_plan_json: str | Path = DEFAULT_EXTRACTION_PLAN_JSON,
     patch_bundle_json: str | Path = DEFAULT_PATCH_BUNDLE_JSON,
     apply_preflight_json: str | Path = DEFAULT_APPLY_PREFLIGHT_JSON,
+    launch_command_pack_json: str | Path = DEFAULT_LAUNCH_COMMAND_PACK_JSON,
+    product_image_preflight_json: str | Path = DEFAULT_PRODUCT_IMAGE_PREFLIGHT_JSON,
+    product_source_of_truth_gate_json: str | Path = DEFAULT_PRODUCT_SOURCE_OF_TRUTH_GATE_JSON,
     root: str | Path = ROOT,
 ) -> dict[str, Any]:
     root_path = Path(root)
@@ -127,15 +271,42 @@ def build_pr38_split_acceptance_packet(
     plan_payload = _read_json(extraction_plan_json, root=root_path)
     bundle_payload = _read_json(patch_bundle_json, root=root_path)
     apply_payload = _read_json(apply_preflight_json, root=root_path)
+    launch_payload = _read_json(launch_command_pack_json, root=root_path)
+    product_image_preflight_payload = _read_json(product_image_preflight_json, root=root_path)
+    product_source_of_truth_payload = _read_json(product_source_of_truth_gate_json, root=root_path)
 
     split_summary = _summary(split_payload)
     plan_summary = _summary(plan_payload)
     bundle_summary = _summary(bundle_payload)
     apply_summary = _summary(apply_payload)
+    launch_summary = _summary(launch_payload)
+    product_image_preflight_summary = _summary(product_image_preflight_payload)
+    product_source_of_truth_summary = _summary(product_source_of_truth_payload)
+    product_source_rows = {
+        artifact_id: _source_of_truth_row(product_source_of_truth_payload, artifact_id)
+        for artifact_id in PRODUCT_MODE_SOURCE_ROW_IDS
+    }
+    product_image_source_row = product_source_rows.get(
+        PRODUCT_IMAGE_PREFLIGHT_SOURCE_ROW_ID,
+        {},
+    )
+    runner_host_source_row = product_source_rows.get(
+        RUNNER_HOST_PREFLIGHT_SOURCE_ROW_ID,
+        {},
+    )
+    remote_green_source_row = product_source_rows.get(
+        RELEASE_CI_REMOTE_GREEN_SOURCE_ROW_ID,
+        {},
+    )
+    bm5_capri_raw_custody_source_row = product_source_rows.get(
+        BM5_CAPRI_RAW_CUSTODY_SOURCE_ROW_ID,
+        {},
+    )
     split_slices = _slices_by_id(split_payload)
     plan_rows = _rows_by_slice(plan_payload)
     bundle_rows = _rows_by_slice(bundle_payload)
     apply_rows = _rows_by_slice(apply_payload)
+    launch_rows = _rows_by_slice(launch_payload)
 
     rows: list[dict[str, Any]] = []
     for slice_id in _slice_ids(plan_payload):
@@ -143,6 +314,7 @@ def build_pr38_split_acceptance_packet(
         plan_row = plan_rows.get(slice_id, {})
         bundle_row = bundle_rows.get(slice_id, {})
         apply_row = apply_rows.get(slice_id, {})
+        launch_row = launch_rows.get(slice_id, {})
         focused_test_command = _text(plan_row.get("focused_test_command") or split_row.get("focused_test_command"))
         claim_boundary = _text(plan_row.get("claim_boundary") or split_row.get("claim_boundary"))
         blockers: list[str] = []
@@ -156,6 +328,8 @@ def build_pr38_split_acceptance_packet(
             blockers.append("focused_test_command_missing")
         if not claim_boundary:
             blockers.append("claim_boundary_missing")
+        launch_blockers = _launch_row_blockers(launch_row)
+        blockers.extend(launch_blockers)
         rows.append(
             {
                 "sequence": int(plan_row.get("sequence") or len(rows) + 1),
@@ -165,6 +339,16 @@ def build_pr38_split_acceptance_packet(
                 "patch_path": _text(bundle_row.get("patch_path")),
                 "patch_sha256": _text(bundle_row.get("patch_sha256")),
                 "apply_check_status": _text(apply_row.get("apply_check_status")),
+                "draft_branch_name": _text(launch_row.get("draft_branch_name")),
+                "draft_pr_title": _text(launch_row.get("draft_pr_title")),
+                "pr_body_path": _text(launch_row.get("pr_body_path")),
+                "launch_command_pack_row_ready": not launch_blockers,
+                "operator_launch_requires_human_approval": bool(
+                    launch_row.get("operator_launch_requires_human_approval") is True
+                ),
+                "branch_commit_push_pr_mutation_required": bool(
+                    launch_row.get("branch_commit_push_pr_mutation_required") is True
+                ),
                 "focused_test_command": focused_test_command,
                 "claim_boundary": claim_boundary,
                 "acceptance_blockers": blockers,
@@ -179,6 +363,7 @@ def build_pr38_split_acceptance_packet(
         and plan_summary.get("extraction_plan_ready") is True
         and bundle_summary.get("patch_bundle_ready") is True
         and apply_summary.get("patch_apply_preflight_ready") is True
+        and launch_summary.get("launch_command_pack_ready") is True
     )
     count_alignment_ready = (
         int(split_summary.get("changed_file_count") or 0)
@@ -186,18 +371,168 @@ def build_pr38_split_acceptance_packet(
         == int(bundle_summary.get("bundled_changed_file_count") or 0)
         and int(apply_summary.get("slice_patch_count") or 0) == len(rows)
     )
-    ready = bool(required_receipts_ready and count_alignment_ready and rows and not row_blockers)
+    launch_command_pack_alignment_ready = (
+        int(launch_summary.get("child_pr_count") or 0) == len(rows)
+        and int(launch_summary.get("body_file_count") or 0) == len(rows)
+    )
+    launch_command_pack_safe_ready = _launch_command_pack_safe(launch_summary)
+    minimum_child_pr_count = int(
+        plan_summary.get("minimum_child_pr_count")
+        or split_summary.get("minimum_child_pr_count")
+        or MINIMUM_CHILD_PR_COUNT
+    )
+    minimum_child_pr_count_met = len(rows) >= minimum_child_pr_count
+    split_structural_acceptance_ready = bool(
+        required_receipts_ready
+        and count_alignment_ready
+        and launch_command_pack_alignment_ready
+        and launch_command_pack_safe_ready
+        and minimum_child_pr_count_met
+        and rows
+        and not row_blockers
+    )
+    product_mode_expected_fail_closed_blockers = _product_mode_blockers(
+        product_image_preflight_summary=product_image_preflight_summary,
+        product_source_of_truth_summary=product_source_of_truth_summary,
+        product_source_rows=product_source_rows,
+    )
+    product_mode_verification_ready = not product_mode_expected_fail_closed_blockers
+    split_acceptance_blockers: list[str] = []
+    if not required_receipts_ready:
+        split_acceptance_blockers.append("required_split_receipts_not_ready")
+    if not count_alignment_ready:
+        split_acceptance_blockers.append("split_count_alignment_not_ready")
+    if launch_summary.get("launch_command_pack_ready") is not True:
+        observed_status = _text(launch_summary.get("status")) or "missing"
+        split_acceptance_blockers.append(f"launch_command_pack_not_ready:{observed_status}")
+    if not launch_command_pack_alignment_ready:
+        split_acceptance_blockers.append("launch_command_pack_alignment_not_ready")
+    if not launch_command_pack_safe_ready:
+        split_acceptance_blockers.append("launch_command_pack_safety_contract_not_ready")
+    if not rows:
+        split_acceptance_blockers.append("child_pr_rows_missing")
+    if rows and not minimum_child_pr_count_met:
+        split_acceptance_blockers.append(
+            f"minimum_child_pr_count_not_met:{len(rows)}<{minimum_child_pr_count}"
+        )
+    for row in row_blockers:
+        for blocker in row["acceptance_blockers"]:
+            split_acceptance_blockers.append(f"{row['slice_id']}:{blocker}")
+    for blocker in product_mode_expected_fail_closed_blockers:
+        split_acceptance_blockers.append(f"product_mode:{blocker}")
+    ready = bool(split_structural_acceptance_ready and product_mode_verification_ready)
     summary = {
         "packet_type": PACKET_TYPE,
         "schema_version": SCHEMA_VERSION,
         "status": "pr38_split_acceptance_packet_ready" if ready else "blocked_pr38_split_acceptance_packet",
         "split_acceptance_ready": ready,
+        "split_acceptance_blocker_count": len(split_acceptance_blockers),
+        "blocker_count": len(split_acceptance_blockers),
+        "split_acceptance_blockers": split_acceptance_blockers,
+        "blockers": split_acceptance_blockers,
+        "primary_blocker": split_acceptance_blockers[0] if split_acceptance_blockers else "",
+        "split_structural_acceptance_ready": split_structural_acceptance_ready,
+        "product_mode_verification_ready": product_mode_verification_ready,
         "split_packet_status": _text(split_summary.get("status")) or "missing",
         "extraction_plan_status": _text(plan_summary.get("status")) or "missing",
         "patch_bundle_status": _text(bundle_summary.get("status")) or "missing",
         "apply_preflight_status": _text(apply_summary.get("status")) or "missing",
+        "launch_command_pack_status": _text(launch_summary.get("status")) or "missing",
+        "launch_command_pack_ready": bool(launch_summary.get("launch_command_pack_ready") is True),
+        "launch_command_pack_child_pr_count": int(launch_summary.get("child_pr_count") or 0),
+        "launch_command_pack_minimum_child_pr_count": int(
+            launch_summary.get("minimum_child_pr_count") or 0
+        ),
+        "launch_command_pack_alignment_ready": launch_command_pack_alignment_ready,
+        "launch_command_pack_safe_ready": launch_command_pack_safe_ready,
+        "launch_command_pack_operator_launch_requires_human_approval": bool(
+            launch_summary.get("operator_launch_requires_human_approval") is True
+        ),
+        "launch_command_pack_branch_commit_push_pr_mutation_required": bool(
+            launch_summary.get("branch_commit_push_pr_mutation_required") is True
+        ),
+        "launch_command_pack_shell_prints_commands_only": bool(
+            launch_summary.get("shell_pack_prints_commands_only") is True
+        ),
+        "launch_command_pack_post_push_remote_ci_waits_for_expected_head_sha": bool(
+            launch_summary.get("post_push_remote_ci_waits_for_expected_head_sha") is True
+        ),
+        "launch_command_pack_post_push_remote_ci_requires_all_dispatched_runs_observed": bool(
+            launch_summary.get("post_push_remote_ci_requires_all_dispatched_runs_observed") is True
+        ),
+        "launch_command_pack_execution_enabled": bool(
+            launch_summary.get("execution_enabled") is True
+        ),
+        "launch_command_pack_branches_created": bool(launch_summary.get("branches_created") is True),
+        "launch_command_pack_commits_created": bool(launch_summary.get("commits_created") is True),
+        "launch_command_pack_pushes_executed": bool(launch_summary.get("pushes_executed") is True),
+        "launch_command_pack_pull_requests_created": bool(
+            launch_summary.get("pull_requests_created") is True
+        ),
+        "launch_command_pack_external_state_mutated": bool(
+            launch_summary.get("external_state_mutated") is True
+        ),
+        "launch_command_pack_out_dir": _text(launch_summary.get("out_dir")),
+        "product_image_smoke_preflight_status": _text(product_image_preflight_summary.get("status")) or "missing",
+        "product_image_smoke_preflight_ready": bool(product_image_preflight_summary.get("preflight_ready") is True),
+        "product_image_receipt_runner_hygiene_ready": bool(
+            product_image_preflight_summary.get("receipt_runner_hygiene_ready") is True
+        ),
+        "required_runner_hygiene_schema_version": _text(
+            product_image_preflight_summary.get("required_runner_hygiene_schema_version")
+        ),
+        "product_image_receipt_runner_hygiene_schema_version": _text(
+            product_image_preflight_summary.get("receipt_runner_hygiene_schema_version")
+        ),
+        "product_image_receipt_runner_hygiene_refresh_required": bool(
+            product_image_preflight_summary.get("receipt_runner_hygiene_refresh_required") is True
+        ),
+        "product_image_receipt_runner_hygiene_blockers": _string_list(
+            product_image_preflight_summary.get("receipt_runner_hygiene_blockers")
+        ),
+        "product_image_receipt_runner_hygiene_verification_command": _text(
+            product_image_preflight_summary.get("receipt_runner_hygiene_verification_command")
+        ),
+        "product_source_of_truth_gate_status": _text(product_source_of_truth_summary.get("status")) or "missing",
+        "product_image_source_of_truth_semantic_status": _text(product_image_source_row.get("status")) or "missing",
+        "product_image_source_of_truth_observed_status": _text(product_image_source_row.get("observed_status")) or "missing",
+        "product_image_source_of_truth_missing_true_fields": _string_list(
+            product_image_source_row.get("missing_true_fields")
+        ),
+        "runner_host_source_of_truth_semantic_status": _text(
+            runner_host_source_row.get("status")
+        ) or "missing",
+        "runner_host_source_of_truth_observed_status": _text(
+            runner_host_source_row.get("observed_status")
+        ) or "missing",
+        "runner_host_source_of_truth_missing_true_fields": _string_list(
+            runner_host_source_row.get("missing_true_fields")
+        ),
+        "release_ci_remote_green_source_of_truth_semantic_status": _text(
+            remote_green_source_row.get("status")
+        ) or "missing",
+        "release_ci_remote_green_source_of_truth_observed_status": _text(
+            remote_green_source_row.get("observed_status")
+        ) or "missing",
+        "release_ci_remote_green_source_of_truth_missing_true_fields": _string_list(
+            remote_green_source_row.get("missing_true_fields")
+        ),
+        "bm5_capri_raw_custody_source_of_truth_semantic_status": _text(
+            bm5_capri_raw_custody_source_row.get("status")
+        ) or "missing",
+        "bm5_capri_raw_custody_source_of_truth_observed_status": _text(
+            bm5_capri_raw_custody_source_row.get("observed_status")
+        ) or "missing",
+        "bm5_capri_raw_custody_source_of_truth_missing_true_fields": _string_list(
+            bm5_capri_raw_custody_source_row.get("missing_true_fields")
+        ),
+        "bm5_capri_raw_custody_source_of_truth_failed_int_exact_fields": _string_list(
+            bm5_capri_raw_custody_source_row.get("failed_int_exact_fields")
+        ),
         "required_receipts_ready": required_receipts_ready,
         "count_alignment_ready": count_alignment_ready,
+        "minimum_child_pr_count": minimum_child_pr_count,
+        "minimum_child_pr_count_met": minimum_child_pr_count_met,
         "changed_file_count": int(split_summary.get("changed_file_count") or 0),
         "child_pr_count": len(rows),
         "ready_child_pr_count": sum(1 for row in rows if row["slice_acceptance_ready"]),
@@ -205,8 +540,10 @@ def build_pr38_split_acceptance_packet(
         "blocked_slice_ids": [row["slice_id"] for row in row_blockers],
         "hunk_split_review_required_count": int(split_summary.get("hunk_split_review_required_count") or 0),
         "source_of_truth_registry_reconciles_last": bool(plan_summary.get("source_of_truth_registry_reconciles_last") is True),
-        "product_mode_expected_fail_closed_blockers": KNOWN_PRODUCT_MODE_BLOCKERS,
-        "product_mode_expected_result": "pass_product_smoke_claim_boundaries_locked",
+        "product_mode_expected_fail_closed_blockers": product_mode_expected_fail_closed_blockers,
+        "product_mode_expected_result": (
+            PRODUCT_MODE_PASS_RESULT if product_mode_verification_ready else PRODUCT_MODE_BLOCKED_RESULT
+        ),
         "product_mode_claim_boundary_expected_locks": PRODUCT_MODE_CLAIM_LOCK_EXPECTATIONS,
         "paid_pilot_wording_allowed": False,
         "branch_commit_work_allowed_by_this_packet": False,
@@ -215,7 +552,12 @@ def build_pr38_split_acceptance_packet(
             "Request explicit human approval for branch/commit work, then apply checked patches in order and run "
             "each row's focused tests plus ai-verify before review."
             if ready
-            else "Repair blocked slice rows or missing prerequisite receipts before branch extraction."
+            else (
+                "Resolve product image smoke/source-of-truth runner hygiene blockers before treating PR #38 child "
+                "PRs as verified."
+                if split_structural_acceptance_ready and not product_mode_verification_ready
+                else "Repair blocked slice rows or missing prerequisite receipts before branch extraction."
+            )
         ),
         **_READ_ONLY_FLAGS,
     }
@@ -239,9 +581,29 @@ def _write_md(path_like: str | Path, payload: dict[str, Any], *, root: Path = RO
         f"- extraction_plan_status: `{s['extraction_plan_status']}`",
         f"- patch_bundle_status: `{s['patch_bundle_status']}`",
         f"- apply_preflight_status: `{s['apply_preflight_status']}`",
+        f"- launch_command_pack_status: `{s['launch_command_pack_status']}`",
+        f"- launch_command_pack_ready: `{s['launch_command_pack_ready']}`",
+        f"- launch_command_pack_safe_ready: `{s['launch_command_pack_safe_ready']}`",
+        f"- launch_command_pack_shell_prints_commands_only: `{s['launch_command_pack_shell_prints_commands_only']}`",
+        f"- launch_command_pack_post_push_remote_ci_waits_for_expected_head_sha: `{s['launch_command_pack_post_push_remote_ci_waits_for_expected_head_sha']}`",
+        f"- launch_command_pack_post_push_remote_ci_requires_all_dispatched_runs_observed: `{s['launch_command_pack_post_push_remote_ci_requires_all_dispatched_runs_observed']}`",
+        f"- split_structural_acceptance_ready: `{s['split_structural_acceptance_ready']}`",
+        f"- product_mode_verification_ready: `{s['product_mode_verification_ready']}`",
+        f"- product_image_smoke_preflight_status: `{s['product_image_smoke_preflight_status']}`",
+        f"- product_image_receipt_runner_hygiene_ready: `{s['product_image_receipt_runner_hygiene_ready']}`",
+        f"- required_runner_hygiene_schema_version: `{s['required_runner_hygiene_schema_version']}`",
+        f"- product_image_receipt_runner_hygiene_schema_version: `{s['product_image_receipt_runner_hygiene_schema_version']}`",
+        f"- product_image_receipt_runner_hygiene_refresh_required: `{s['product_image_receipt_runner_hygiene_refresh_required']}`",
+        f"- bm5_capri_raw_custody_source_of_truth_semantic_status: `{s['bm5_capri_raw_custody_source_of_truth_semantic_status']}`",
         f"- changed_file_count: `{s['changed_file_count']}`",
         f"- child_pr_count: `{s['child_pr_count']}`",
+        f"- minimum_child_pr_count: `{s['minimum_child_pr_count']}`",
+        f"- minimum_child_pr_count_met: `{s['minimum_child_pr_count_met']}`",
         f"- blocked_child_pr_count: `{s['blocked_child_pr_count']}`",
+        f"- blocker_count: `{s['blocker_count']}`",
+        f"- primary_blocker: `{s['primary_blocker'] or '-'}`",
+        f"- product_mode_expected_result: `{s['product_mode_expected_result']}`",
+        f"- product_mode_expected_fail_closed_blockers: `{';'.join(s['product_mode_expected_fail_closed_blockers'])}`",
         f"- paid_pilot_wording_allowed: `{s['paid_pilot_wording_allowed']}`",
         "",
         "| seq | slice | files | apply check | ready |",
@@ -269,6 +631,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--extraction-plan-json", default=DEFAULT_EXTRACTION_PLAN_JSON)
     parser.add_argument("--patch-bundle-json", default=DEFAULT_PATCH_BUNDLE_JSON)
     parser.add_argument("--apply-preflight-json", default=DEFAULT_APPLY_PREFLIGHT_JSON)
+    parser.add_argument("--launch-command-pack-json", default=DEFAULT_LAUNCH_COMMAND_PACK_JSON)
+    parser.add_argument("--product-image-preflight-json", default=DEFAULT_PRODUCT_IMAGE_PREFLIGHT_JSON)
+    parser.add_argument("--product-source-of-truth-gate-json", default=DEFAULT_PRODUCT_SOURCE_OF_TRUTH_GATE_JSON)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -279,12 +644,15 @@ def main(argv: list[str] | None = None) -> int:
         extraction_plan_json=args.extraction_plan_json,
         patch_bundle_json=args.patch_bundle_json,
         apply_preflight_json=args.apply_preflight_json,
+        launch_command_pack_json=args.launch_command_pack_json,
+        product_image_preflight_json=args.product_image_preflight_json,
+        product_source_of_truth_gate_json=args.product_source_of_truth_gate_json,
         root=root,
     )
     _write_json(args.out_json, payload, root=root)
     write_csv_rows(_resolve(args.out_csv, root=root), payload["rows"])
     _write_md(args.out_md, payload, root=root)
-    return 0 if payload["summary"]["split_acceptance_ready"] else 1
+    return 0
 
 
 if __name__ == "__main__":

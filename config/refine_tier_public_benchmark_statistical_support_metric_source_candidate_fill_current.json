@@ -3,7 +3,7 @@
     {
       "blockers": "",
       "candidate_status": "pass",
-      "deltaG_candidate_kcal_mol": "-7.158980",
+      "candidate_refine_proxy_score": "-7.158980",
       "deltaG_experimental_kcal_mol": "-13.6425",
       "dockq": "0.728921",
       "expansion_slot_id": "refine_tier_public_benchmark_stat_support_expansion_001",
@@ -16,7 +16,7 @@
     {
       "blockers": "",
       "candidate_status": "pass",
-      "deltaG_candidate_kcal_mol": "-6.709551",
+      "candidate_refine_proxy_score": "-6.709551",
       "deltaG_experimental_kcal_mol": "-12.9916",
       "dockq": "0.731997",
       "expansion_slot_id": "refine_tier_public_benchmark_stat_support_expansion_002",
@@ -29,7 +29,7 @@
     {
       "blockers": "",
       "candidate_status": "pass",
-      "deltaG_candidate_kcal_mol": "-3.853712",
+      "candidate_refine_proxy_score": "-3.853712",
       "deltaG_experimental_kcal_mol": "-7.7748",
       "dockq": "0.732979",
       "expansion_slot_id": "refine_tier_public_benchmark_stat_support_expansion_003",
@@ -42,7 +42,7 @@
     {
       "blockers": "",
       "candidate_status": "pass",
-      "deltaG_candidate_kcal_mol": "-3.302813",
+      "candidate_refine_proxy_score": "-3.302813",
       "deltaG_experimental_kcal_mol": "-5.04631",
       "dockq": "0.719352",
       "expansion_slot_id": "refine_tier_public_benchmark_stat_support_expansion_004",
@@ -55,7 +55,7 @@
     {
       "blockers": "",
       "candidate_status": "pass",
-      "deltaG_candidate_kcal_mol": "-2.392981",
+      "candidate_refine_proxy_score": "-2.392981",
       "deltaG_experimental_kcal_mol": "-10.5033",
       "dockq": "0.733726",
       "expansion_slot_id": "refine_tier_public_benchmark_stat_support_expansion_005",
@@ -68,7 +68,7 @@
     {
       "blockers": "",
       "candidate_status": "pass",
-      "deltaG_candidate_kcal_mol": "-9.316900",
+      "candidate_refine_proxy_score": "-9.316900",
       "deltaG_experimental_kcal_mol": "-12.6889",
       "dockq": "0.733143",
       "expansion_slot_id": "refine_tier_public_benchmark_stat_support_expansion_006",
@@ -81,7 +81,7 @@
     {
       "blockers": "",
       "candidate_status": "pass",
-      "deltaG_candidate_kcal_mol": "-4.215750",
+      "candidate_refine_proxy_score": "-4.215750",
       "deltaG_experimental_kcal_mol": "-9.0435",
       "dockq": "0.731980",
       "expansion_slot_id": "refine_tier_public_benchmark_stat_support_expansion_007",
@@ -94,7 +94,7 @@
     {
       "blockers": "",
       "candidate_status": "pass",
-      "deltaG_candidate_kcal_mol": "-6.401457",
+      "candidate_refine_proxy_score": "-6.401457",
       "deltaG_experimental_kcal_mol": "-11.8979",
       "dockq": "0.732935",
       "expansion_slot_id": "refine_tier_public_benchmark_stat_support_expansion_008",
@@ -107,7 +107,7 @@
     {
       "blockers": "",
       "candidate_status": "pass",
-      "deltaG_candidate_kcal_mol": "-8.336393",
+      "candidate_refine_proxy_score": "-8.336393",
       "deltaG_experimental_kcal_mol": "-7.692",
       "dockq": "0.733667",
       "expansion_slot_id": "refine_tier_public_benchmark_stat_support_expansion_009",
@@ -120,7 +120,7 @@
     {
       "blockers": "",
       "candidate_status": "pass",
-      "deltaG_candidate_kcal_mol": "-5.174766",
+      "candidate_refine_proxy_score": "-5.174766",
       "deltaG_experimental_kcal_mol": "-6.21014",
       "dockq": "0.734431",
       "expansion_slot_id": "refine_tier_public_benchmark_stat_support_expansion_010",
@@ -133,7 +133,7 @@
     {
       "blockers": "",
       "candidate_status": "pass",
-      "deltaG_candidate_kcal_mol": "-5.774185",
+      "candidate_refine_proxy_score": "-5.774185",
       "deltaG_experimental_kcal_mol": "-8.53969",
       "dockq": "0.723214",
       "expansion_slot_id": "refine_tier_public_benchmark_stat_support_expansion_011",
@@ -146,7 +146,7 @@
     {
       "blockers": "",
       "candidate_status": "pass",
-      "deltaG_candidate_kcal_mol": "-6.456997",
+      "candidate_refine_proxy_score": "-6.456997",
       "deltaG_experimental_kcal_mol": "-8.12901",
       "dockq": "0.733469",
       "expansion_slot_id": "refine_tier_public_benchmark_stat_support_expansion_012",
@@ -159,7 +159,7 @@
     {
       "blockers": "",
       "candidate_status": "pass",
-      "deltaG_candidate_kcal_mol": "-7.545382",
+      "candidate_refine_proxy_score": "-7.545382",
       "deltaG_experimental_kcal_mol": "-10.3478",
       "dockq": "0.734087",
       "expansion_slot_id": "refine_tier_public_benchmark_stat_support_expansion_013",
@@ -172,7 +172,7 @@
     {
       "blockers": "",
       "candidate_status": "pass",
-      "deltaG_candidate_kcal_mol": "-3.278713",
+      "candidate_refine_proxy_score": "-3.278713",
       "deltaG_experimental_kcal_mol": "-7.04108",
       "dockq": "0.732851",
       "expansion_slot_id": "refine_tier_public_benchmark_stat_support_expansion_014",
@@ -185,7 +185,7 @@
     {
       "blockers": "",
       "candidate_status": "pass",
-      "deltaG_candidate_kcal_mol": "-3.153874",
+      "candidate_refine_proxy_score": "-3.153874",
       "deltaG_experimental_kcal_mol": "-7.4781",
       "dockq": "0.731915",
       "expansion_slot_id": "refine_tier_public_benchmark_stat_support_expansion_015",
@@ -198,7 +198,7 @@
     {
       "blockers": "",
       "candidate_status": "pass",
-      "deltaG_candidate_kcal_mol": "-4.650096",
+      "candidate_refine_proxy_score": "-4.650096",
       "deltaG_experimental_kcal_mol": "-7.32127",
       "dockq": "0.735113",
       "expansion_slot_id": "refine_tier_public_benchmark_stat_support_expansion_016",
@@ -211,7 +211,7 @@
     {
       "blockers": "",
       "candidate_status": "pass",
-      "deltaG_candidate_kcal_mol": "-7.621207",
+      "candidate_refine_proxy_score": "-7.621207",
       "deltaG_experimental_kcal_mol": "-8.9008",
       "dockq": "0.734780",
       "expansion_slot_id": "refine_tier_public_benchmark_stat_support_expansion_017",

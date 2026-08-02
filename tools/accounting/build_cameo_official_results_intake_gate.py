@@ -54,16 +54,25 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         "# CAMEO Official Results Intake Gate",
         "",
         f"- status: `{s['status']}`",
+        f"- official_result_intake_ready: `{s['official_result_intake_ready']}`",
         f"- result_row_count: `{s['result_row_count']}`",
         f"- accepted_official_result_count: `{s['accepted_official_result_count']}`",
         f"- rejected_official_result_count: `{s['rejected_official_result_count']}`",
         f"- model1_official_result_ready: `{s['model1_official_result_ready']}`",
         f"- blocker_count: `{s['blocker_count']}`",
         f"- blocker_codes: `{','.join(s['blocker_codes'])}`",
+        f"- operator_action_required_count: `{s['operator_action_required_count']}`",
+        f"- operator_action_required_row_count: `{s['operator_action_required_row_count']}`",
+        f"- primary_blocker_code: `{s['primary_blocker_code']}`",
+        f"- primary_required_action: `{s['primary_required_action']}`",
         f"- required_columns: `{','.join(s['required_columns'])}`",
         f"- missing_required_columns: `{','.join(s['missing_required_columns'])}`",
         f"- official_metric_columns: `{','.join(s['official_metric_columns'])}`",
         f"- disallowed_local_accuracy_columns: `{','.join(s['disallowed_local_accuracy_columns'])}`",
+        f"- allowed_result_source_kinds: `{','.join(s['allowed_result_source_kinds'])}`",
+        f"- source_provenance_ready_row_count: `{s['source_provenance_ready_row_count']}`",
+        f"- official_metric_ready_row_count: `{s['official_metric_ready_row_count']}`",
+        f"- local_native_accuracy_blocker_count: `{s['local_native_accuracy_blocker_count']}`",
         f"- operator_template_csv: `{s['operator_template_csv']}`",
         f"- operator_intake_csv: `{s['operator_intake_csv']}`",
         f"- native_local_accuracy_used: `{s['native_local_accuracy_used']}`",
@@ -73,18 +82,22 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any]) -> None:
         "",
         "## Rows",
         "",
-        "| row | target | candidate | rank | ready | blockers | metrics | source |",
-        "| ---: | --- | --- | ---: | --- | --- | ---: | --- |",
+        "| row | target | candidate | rank | ready | provenance | metrics | local/native absent | blockers | action |",
+        "| ---: | --- | --- | ---: | --- | --- | --- | --- | --- | --- |",
     ]
     for row in payload.get("rows") or []:
         lines.append(
             f"| `{row['row_number']}` | `{row['target_id']}` | `{row['candidate_id']}` | `{row['cameo_model_rank']}` | "
-            f"`{row['ready']}` | `{row['blockers']}` | `{row['official_metric_count']}` | `{row['result_source_url']}` |"
+            f"`{row['ready']}` | `{row['source_provenance_ready']}` | `{row['official_metric_ready']}` | "
+            f"`{row['local_native_accuracy_absent']}` | `{row['blockers']}` | {row['required_action']} |"
         )
     lines.extend(["", "## Blockers", ""])
     blockers = payload.get("blockers") or []
     if blockers:
-        lines.extend(f"- `{blocker['code']}`: {blocker['reason']}" for blocker in blockers)
+        lines.extend(
+            f"- `{blocker['code']}`: {blocker['reason']} Action: {blocker['required_action']}"
+            for blocker in blockers
+        )
     else:
         lines.append("- none")
     lines.extend(["", "## Claim Boundary", "", s["claim_boundary"], "", "## Next Step", "", f"- {s['next_required_step']}", ""])

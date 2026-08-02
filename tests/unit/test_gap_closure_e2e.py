@@ -33,7 +33,7 @@ def test_engine_refinement_config_loads_stage3b_defaults():
     s3b = stage3b_defaults(cfg)
     assert bool(s3b.get("run_physics_refinement")) is True
     assert s3b.get("physics_refinement_backend") == "internal_gb_sa_v1"
-    assert s3b.get("physics_refinement_refined_energy_col") == "deltaG_mm_gbsa_kcal_mol"
+    assert s3b.get("physics_refinement_refined_energy_col") == "internal_refine_proxy_score"
 
 
 def test_apply_engine_refinement_defaults_enables_refine_tier_cascade():
@@ -43,7 +43,7 @@ def test_apply_engine_refinement_defaults_enables_refine_tier_cascade():
     assert bool(getattr(args, "run_physics_refinement")) is True
     assert getattr(args, "physics_refinement_backend") == "internal_gb_sa_v1"
     assert bool(getattr(args, "traj_cross_docking_pose_seed")) is True
-    assert getattr(args, "calibration_proxy_col") == "deltaG_mm_gbsa_kcal_mol"
+    assert getattr(args, "calibration_proxy_col") == "internal_refine_proxy_score"
 
 
 def test_resolve_ligand_model_auto_and_rank_pct():
@@ -275,9 +275,11 @@ def test_materialize_from_docking_request(tmp_path: Path, monkeypatch: pytest.Mo
     from api.config import settings
     from tools.product.materialize_docking_htvs_request import materialize_from_docking_request
 
-    jobs_dir = tmp_path / "product_docking_jobs"
-    jobs_dir.mkdir()
+    # The materializer resolves the ledger under results_storage_path, so the
+    # fixture must write the job record there rather than beside it.
     monkeypatch.setattr(settings, "results_storage_path", str(tmp_path / "results"))
+    jobs_dir = tmp_path / "results" / "product_docking_jobs"
+    jobs_dir.mkdir(parents=True)
     ledger = {
         "job_id": "dock-mat-1",
         "intake_payload": {
@@ -363,9 +365,9 @@ def test_materialize_backmapping_from_docking_request(tmp_path: Path, monkeypatc
     from api.config import settings
     from tools.product.materialize_docking_backmapping_request import materialize_from_docking_request
 
-    jobs_dir = tmp_path / "product_docking_jobs"
-    jobs_dir.mkdir()
     monkeypatch.setattr(settings, "results_storage_path", str(tmp_path / "results"))
+    jobs_dir = tmp_path / "results" / "product_docking_jobs"
+    jobs_dir.mkdir(parents=True)
     ledger = {
         "job_id": "dock-bm-1",
         "intake_payload": {

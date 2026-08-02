@@ -41,12 +41,16 @@ def test_platform_reproducibility_receipt_ready_for_linux(tmp_path: Path) -> Non
     summary = payload["summary"]
 
     assert summary["status"] == "developer_preview_platform_reproducibility_receipt_ready"
+    assert summary["platform_reproducibility_ready"] is True
+    assert summary["reproducibility_ready"] is True
     assert summary["command_set_passed"] is True
     assert summary["linux_receipt"] is True
     assert summary["windows_receipt"] is False
     assert summary["ai_verify_passed"] is True
     assert summary["pytest_command_set_passed"] is True
     assert summary["blocker_count"] == 0
+    assert summary["primary_blocker"] == ""
+    assert summary["primary_required_action"] == ""
     assert summary["platform_evidence_required_field_count"] == 9
     assert summary["platform_evidence_ready_field_count"] == 9
     assert summary["platform_evidence_blocked_field_count"] == 0
@@ -60,6 +64,34 @@ def test_platform_reproducibility_receipt_ready_for_linux(tmp_path: Path) -> Non
         and row["claim_promotion_allowed"] is False
         for row in payload["platform_evidence_requirement_rows"]
     )
+
+
+def test_platform_reproducibility_receipt_accepts_windows_git_bash_system_names(
+    tmp_path: Path,
+) -> None:
+    ai_verify = tmp_path / ".betelgeuze/developer_preview_windows_ai_verify.log"
+    junit = tmp_path / ".betelgeuze/developer_preview_windows_reproducibility_pytest.xml"
+    _write_ai_verify(ai_verify)
+    _write_junit(junit)
+
+    for observed_system in ("MSYS_NT-10.0-22631", "MINGW64_NT-10.0-22631"):
+        payload = mod.build_developer_preview_platform_reproducibility_receipt(
+            platform_id="windows",
+            ai_verify_log=ai_verify,
+            pytest_junit_xml=junit,
+            observed_system=observed_system,
+            root=tmp_path,
+        )
+        summary = payload["summary"]
+
+        assert summary["status"] == "developer_preview_platform_reproducibility_receipt_ready"
+        assert summary["platform_reproducibility_ready"] is True
+        assert summary["reproducibility_ready"] is True
+        assert summary["command_set_passed"] is True
+        assert summary["linux_receipt"] is False
+        assert summary["windows_receipt"] is True
+        assert summary["platform_match"] is True
+        assert summary["blocker_count"] == 0
 
 
 def test_platform_reproducibility_receipt_blocks_failed_inputs(tmp_path: Path) -> None:
@@ -82,6 +114,8 @@ def test_platform_reproducibility_receipt_blocks_failed_inputs(tmp_path: Path) -
     }
 
     assert summary["status"] == "blocked_developer_preview_platform_reproducibility_receipt"
+    assert summary["platform_reproducibility_ready"] is False
+    assert summary["reproducibility_ready"] is False
     assert summary["command_set_passed"] is False
     assert summary["linux_receipt"] is False
     assert summary["ai_verify_passed"] is False
@@ -105,6 +139,14 @@ def test_platform_reproducibility_receipt_blocks_failed_inputs(tmp_path: Path) -
     assert summary["platform_evidence_primary_required_action"] == (
         "Re-run ai-verify on this platform until the log records verify ok."
     )
+    assert (
+        summary["primary_blocker"]
+        == ".betelgeuze/developer_preview_linux_ai_verify.log:verify_ok_missing"
+    )
+    assert summary["primary_required_action"] == summary[
+        "platform_evidence_primary_required_action"
+    ]
+    assert summary["next_required_step"] == summary["primary_required_action"]
     assert "verify_ok_missing" in blockers
     assert "failure_count_nonzero" in blockers
     assert "platform_mismatch" in blockers
@@ -144,6 +186,35 @@ def test_platform_reproducibility_receipt_cli_writes_outputs(tmp_path: Path) -> 
     assert payload["summary"]["packet_type"] == "developer_preview_platform_reproducibility_receipt"
     assert "Developer Preview Platform Reproducibility Receipt" in out_md.read_text(encoding="utf-8")
     assert "Platform Evidence Checklist" in out_md.read_text(encoding="utf-8")
+
+
+def test_platform_reproducibility_receipt_cli_allow_blocked_writes_fail_closed_outputs(
+    tmp_path: Path,
+) -> None:
+    out_json = tmp_path / ".betelgeuze/developer_preview_windows_reproducibility_receipt.json"
+    out_md = tmp_path / ".betelgeuze/developer_preview_windows_reproducibility_receipt.md"
+
+    assert mod.main(
+        [
+            "--platform",
+            "windows",
+            "--ai-verify-log",
+            str(tmp_path / ".betelgeuze/missing_windows_ai_verify.log"),
+            "--pytest-junit-xml",
+            str(tmp_path / ".betelgeuze/missing_windows_pytest.xml"),
+            "--allow-blocked",
+            "--out-json",
+            str(out_json),
+            "--out-md",
+            str(out_md),
+        ]
+    ) == 0
+
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    assert payload["summary"]["status"] == "blocked_developer_preview_platform_reproducibility_receipt"
+    assert payload["summary"]["windows_receipt"] is False
+    assert payload["summary"]["claim_promotion_allowed"] is False
+    assert out_md.is_file()
 
 
 def test_platform_reproducibility_receipt_uses_platform_specific_defaults() -> None:

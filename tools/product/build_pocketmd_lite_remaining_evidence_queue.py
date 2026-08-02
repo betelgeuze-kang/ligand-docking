@@ -20,6 +20,7 @@ from betelgeuze_product.pocketmd_lite_contract import TOPK_DEFAULT_THRESHOLD_PCT
 ROOT = Path(__file__).resolve().parents[2]
 
 DEFAULT_CANDIDATE_CSV = "config/pocketmd_lite_candidates_current.csv"
+DEFAULT_CANDIDATE_FILL_PREVIEW_JSON = "runs/pocketmd_lite_candidate_metric_fill_preview_current.json"
 DEFAULT_STAGE3_JSON = (
     "runs/external_validation_2026-05-10_beta_blocker_rescue_v2_family_balanced100k_r1_set1_core_blind_"
     "gpcr_core_full_p0_n100000_r1_stage3_summary.json"
@@ -45,9 +46,11 @@ REQUIRED_REFINEMENT_METRICS = (
 
 REFRESH_COMMAND = (
     "python3 tools/product/build_pocketmd_lite_stage3_contact_clash_intake.py && "
-    "python3 tools/product/build_pocketmd_lite_report.py && "
+    "python3 tools/product/build_pocketmd_lite_report.py "
+    "--candidate-fill-preview-json runs/pocketmd_lite_candidate_metric_fill_preview_current.json && "
     "python3 tools/product/build_pocketmd_lite_refinement_work_order.py && "
-    "python3 tools/product/build_pocketmd_lite_remaining_evidence_queue.py"
+    "python3 tools/product/build_pocketmd_lite_remaining_evidence_queue.py "
+    "--candidate-fill-preview-json runs/pocketmd_lite_candidate_metric_fill_preview_current.json"
 )
 
 CLAIM_BOUNDARY = (
@@ -174,6 +177,45 @@ def _read_json(path: Path) -> dict[str, Any]:
     return payload if isinstance(payload, dict) else {}
 
 
+def _summary(payload: dict[str, Any]) -> dict[str, Any]:
+    summary = payload.get("summary")
+    return summary if isinstance(summary, dict) else {}
+
+
+def _candidate_fill_preview_input_csv(path_like: str | Path | None) -> tuple[Path | None, dict[str, Any]]:
+    if path_like is None or not _text(path_like):
+        return None, {}
+    receipt_path = _resolve(path_like)
+    payload = _read_json(receipt_path)
+    summary = _summary(payload)
+    preview_csv = _text(summary.get("preview_candidate_csv"))
+    preview_path = _resolve(preview_csv) if preview_csv else None
+    metadata: dict[str, Any] = {
+        "candidate_fill_preview_json": _display(receipt_path),
+        "candidate_fill_preview_status": _text(summary.get("status")),
+        "candidate_fill_preview_input_csv": _display(preview_path) if preview_path else "",
+        "candidate_fill_preview_ready": summary.get("preview_candidate_csv_ready") is True,
+        "candidate_fill_preview_applied": False,
+        "candidate_fill_preview_canonical_candidate_csv_mutated": (
+            summary.get("canonical_candidate_csv_mutated") is True
+        ),
+        "candidate_fill_preview_candidate_csv_update_allowed": (
+            summary.get("candidate_csv_update_allowed") is True
+        ),
+    }
+    if (
+        summary.get("status") == "pocketmd_lite_candidate_metric_fill_preview_ready"
+        and summary.get("preview_candidate_csv_ready") is True
+        and summary.get("canonical_candidate_csv_mutated") is False
+        and summary.get("candidate_csv_update_allowed") is False
+        and preview_path is not None
+        and preview_path.exists()
+    ):
+        metadata["candidate_fill_preview_applied"] = True
+        return preview_path, metadata
+    return None, metadata
+
+
 def _split_entry_id(entry_id: str) -> tuple[str, str]:
     target, sep, ligand = _text(entry_id).partition(":")
     return _text(target), _text(ligand) if sep else ""
@@ -274,10 +316,15 @@ def _missing_metrics(candidate: dict[str, Any], stage3: dict[str, Any], selected
 def build_pocketmd_lite_remaining_evidence_queue(
     *,
     candidate_csv: str | Path = DEFAULT_CANDIDATE_CSV,
+    candidate_fill_preview_json: str | Path | None = None,
     stage3_json: str | Path = DEFAULT_STAGE3_JSON,
     trajectory_search_roots: list[str | Path] | None = None,
 ) -> dict[str, Any]:
-    candidate_path = _resolve(candidate_csv)
+    source_candidate_path = _resolve(candidate_csv)
+    preview_candidate_path, fill_preview_metadata = _candidate_fill_preview_input_csv(
+        candidate_fill_preview_json
+    )
+    candidate_path = preview_candidate_path or source_candidate_path
     stage3_path = _resolve(stage3_json)
     trajectory_roots = list(trajectory_search_roots or DEFAULT_TRAJECTORY_SEARCH_ROOTS)
     fieldnames, candidates = _read_csv(candidate_path)
@@ -427,6 +474,8 @@ def build_pocketmd_lite_remaining_evidence_queue(
         "candidates_with_alternate_trajectory_count": candidates_with_alternate_trajectory_count,
         "protein_structure_source_path_unavailable_count": protein_unavailable_count,
         "candidate_csv": _display(candidate_path),
+        "source_candidate_csv": _display(source_candidate_path),
+        **fill_preview_metadata,
         "stage3_json": _display(stage3_path),
         "trajectory_search_roots": [_display(root) for root in trajectory_roots],
         "refresh_command_after_fill": REFRESH_COMMAND,
@@ -553,6 +602,7 @@ def _render_markdown(payload: dict[str, Any]) -> str:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Build the PocketMD Lite remaining evidence queue.")
     parser.add_argument("--candidate-csv", default=DEFAULT_CANDIDATE_CSV)
+    parser.add_argument("--candidate-fill-preview-json", default="")
     parser.add_argument("--stage3-json", default=DEFAULT_STAGE3_JSON)
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -567,6 +617,7 @@ def main(argv: list[str] | None = None) -> int:
 
     payload = build_pocketmd_lite_remaining_evidence_queue(
         candidate_csv=args.candidate_csv,
+        candidate_fill_preview_json=args.candidate_fill_preview_json or None,
         stage3_json=args.stage3_json,
         trajectory_search_roots=args.trajectory_search_root,
     )

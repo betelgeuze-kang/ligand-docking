@@ -134,7 +134,7 @@ def _work_order_rows(*, filled: bool = False) -> list[dict[str, str]]:
             "pose_rmsd_A": "OPERATOR_FILL_POSE_RMSD_A",
             "dockq": "OPERATOR_FILL_DOCKQ",
             "lddt_pli": "OPERATOR_FILL_LDDT_PLI",
-            "deltaG_mm_gbsa_kcal_mol": "OPERATOR_FILL_INTERNAL_REFINE_DG",
+            "internal_refine_proxy_score": "OPERATOR_FILL_INTERNAL_REFINE_DG",
             "dockq_source_artifact": "OPERATOR_FILL_DOCKQ_SOURCE_ARTIFACT",
             "lddt_pli_source_artifact": "OPERATOR_FILL_LDDT_PLI_SOURCE_ARTIFACT",
             "internal_deltaG_source_artifact": "OPERATOR_FILL_INTERNAL_DELTAG_SOURCE_ARTIFACT",
@@ -153,7 +153,7 @@ def _work_order_rows(*, filled: bool = False) -> list[dict[str, str]]:
                     "pose_rmsd_A": "1.2",
                     "dockq": "0.4",
                     "lddt_pli": "0.7",
-                    "deltaG_mm_gbsa_kcal_mol": "-8.1",
+                    "internal_refine_proxy_score": "-8.1",
                     "dockq_source_artifact": f"runs/metric_sources/target_{index:03d}_dockq.json",
                     "lddt_pli_source_artifact": f"runs/metric_sources/target_{index:03d}_lddt_pli.json",
                     "internal_deltaG_source_artifact": f"runs/metric_sources/target_{index:03d}_internal_deltaG.json",
@@ -281,8 +281,8 @@ def _metric_evidence_rows(work_order_rows: list[dict[str, str]], *, ready: bool)
                 "pose_id": f"pose_{index:03d}",
                 "dockq": row["dockq"] if ready else "OPERATOR_FILL_DOCKQ",
                 "lddt_pli": row["lddt_pli"] if ready else "OPERATOR_FILL_LDDT_PLI",
-                "deltaG_mm_gbsa_kcal_mol": (
-                    row["deltaG_mm_gbsa_kcal_mol"] if ready else "OPERATOR_FILL_INTERNAL_REFINE_DG"
+                "internal_refine_proxy_score": (
+                    row["internal_refine_proxy_score"] if ready else "OPERATOR_FILL_INTERNAL_REFINE_DG"
                 ),
                 "dockq_source_artifact": (
                     row["dockq_source_artifact"] if ready else "OPERATOR_FILL_DOCKQ_SOURCE_ARTIFACT"
@@ -536,7 +536,9 @@ def test_engine_refinement_claim_evidence_operator_field_worksheet_surfaces_curr
     assert summary["public_benchmark_materialized_free_energy_pair_count"] == 8
     assert summary["public_benchmark_materialized_free_energy_spearman"] == 0.6190476190476191
     assert summary["public_benchmark_materialized_free_energy_spearman_gate_ready"] is True
-    assert summary["public_benchmark_materialized_free_energy_spearman_bootstrap_p05"] == -0.14285714285714285
+    # Bootstrap p05 comes from the materialization artifact (seed 20260614, 200
+    # iterations); it stays far below the 0.5 claim-grade floor either way.
+    assert summary["public_benchmark_materialized_free_energy_spearman_bootstrap_p05"] == -0.19612534732942263
     assert summary["public_benchmark_materialized_claim_grade_statistical_support_ready"] is False
     assert summary["public_benchmark_materialized_claim_grade_statistical_support_blocker_count"] == 3
     assert summary["public_benchmark_statistical_support_work_order_artifact_present"] is True
@@ -549,7 +551,8 @@ def test_engine_refinement_claim_evidence_operator_field_worksheet_surfaces_curr
     assert summary["public_benchmark_statistical_support_work_order_minimum_new_holdout_pair_count"] == 5
     assert summary["public_benchmark_statistical_support_work_order_minimum_new_fit_or_holdout_pair_count"] == 12
     assert summary["public_benchmark_statistical_support_work_order_bootstrap_spearman_p05_deficit"] == (
-        0.6428571428571428
+        # 0.5 claim-grade floor minus the current bootstrap p05 (-0.19612534732942263).
+        0.6961253473294227
     )
     assert summary["public_benchmark_statistical_support_work_order_bootstrap_retest_required"] is True
     assert (
@@ -854,9 +857,9 @@ def test_engine_refinement_claim_evidence_operator_field_worksheet_surfaces_curr
     assert "required_input_artifacts=34/34/0" in summary["top_next_operator_step"]
     assert "local_coordinate_present_targets=17" in summary["top_next_operator_step"]
     assert summary["worksheet_field_row_count"] == 389
-    assert summary["operator_fill_pending_field_count"] == 296
+    assert summary["operator_fill_pending_field_count"] == 288
     assert summary["top_blocker_field_count"] == 329
-    assert summary["top_blocker_pending_field_count"] == 266
+    assert summary["top_blocker_pending_field_count"] == 258
     assert summary["public_benchmark_statistical_support_expansion_slot_row_count"] == 17
     assert summary["public_benchmark_statistical_support_expansion_holdout_slot_count"] == 5
     assert summary["public_benchmark_statistical_support_expansion_fit_or_holdout_slot_count"] == 12

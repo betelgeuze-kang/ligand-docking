@@ -112,7 +112,7 @@ def _existing_pairs(rows: list[dict[str, str]]) -> list[dict[str, Any]]:
     for row in rows:
         if _text(row.get("metric_materialization_status")) not in {"", "pass"}:
             continue
-        proxy = _float(row.get("deltaG_mm_gbsa_kcal_mol"))
+        proxy = _float(row.get("internal_refine_proxy_score"))
         reference = _float(row.get("deltaG_experimental_kcal_mol"))
         if proxy is None or reference is None:
             continue
@@ -137,7 +137,7 @@ def _candidate_pairs(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     for row in rows:
         if _text(row.get("candidate_status")) != "pass":
             continue
-        proxy = _float(row.get("deltaG_candidate_kcal_mol"))
+        proxy = _float(row.get("candidate_refine_proxy_score"))
         reference = _float(row.get("deltaG_experimental_kcal_mol"))
         if proxy is None or reference is None:
             continue
@@ -236,7 +236,7 @@ def build_refine_tier_public_benchmark_bootstrap_recovery_queue(
                 "target_id": pair["target_id"],
                 "pose_id": pair["pose_id"],
                 "split": pair["split"],
-                "deltaG_proxy_kcal_mol": _format_float(pair["proxy"]),
+                "refine_proxy_score": _format_float(pair["proxy"]),
                 "deltaG_experimental_kcal_mol": _format_float(pair["reference"]),
                 "dockq": _text(pair.get("dockq")),
                 "lddt_pli": _text(pair.get("lddt_pli")),
@@ -360,7 +360,7 @@ def _write_md(path_like: str | Path, payload: dict[str, Any], *, root: Path) -> 
     for row in payload["recovery_rows"][:12]:
         lines.append(
             f"| `{row['recovery_priority_rank']}` | `{row['source_class']}` | `{row['target_id']}` | "
-            f"`{row['pose_id']}` | `{row['split']}` | `{row['deltaG_proxy_kcal_mol']}` | "
+            f"`{row['pose_id']}` | `{row['split']}` | `{row['refine_proxy_score']}` | "
             f"`{row['deltaG_experimental_kcal_mol']}` | `{row['rank_abs_error']}` | "
             f"`{row['bootstrap_p05_delta_if_removed']}` | `{row['review_class']}` | "
             f"{row['next_science_step']} |"

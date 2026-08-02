@@ -147,7 +147,12 @@ def test_service_pdb_smiles_success_signed_manifest_and_claim_limits() -> None:
         "identity_atom_order_rmsd",
     }
     assert result.pose_scores[0]["symmetry_aware_pose_rmsd_to_top1_a"] == 0.0
-    assert result.pose_scores[0]["pose_rmsd_clustering"]["schema_version"] == "tier_beta_pose_rmsd_clustering_v1"
+    # v2 is the order-independent connected-component clustering (P1-7); the v1
+    # payload came from the greedy first-match pass.
+    clustering = result.pose_scores[0]["pose_rmsd_clustering"]
+    assert clustering["schema_version"] == "tier_beta_pose_rmsd_clustering_v2"
+    assert clustering["clustering_algorithm"] == "connected_component_rmsd_graph"
+    assert clustering["order_independent"] is True
     anchor_mapping = pose_search["chemical_anchor_mapping"]
     assert anchor_mapping["schema_version"] == "tier_beta_ligand_anchor_mapping_v1"
     assert anchor_mapping["status"] == "rdkit_feature_charge_ring_graph_anchor_mapping"

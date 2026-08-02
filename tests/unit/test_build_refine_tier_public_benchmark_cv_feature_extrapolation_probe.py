@@ -19,7 +19,7 @@ def _candidate_pair(target: str, pose: str, *, contact_per_atom: float, pose_ato
         "pose_id": pose,
         "work_order_id": f"wo_{target}",
         "split": "fit",
-        "deltaG_candidate_kcal_mol": "-5.0",
+        "candidate_refine_proxy_score": "-5.0",
         "deltaG_experimental_kcal_mol": str(reference),
         "details_json": json.dumps(
             {

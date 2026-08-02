@@ -32,7 +32,7 @@ _BUILTIN_DEFAULTS: dict[str, Any] = {
         "run_physics_refinement": True,
         "physics_refinement_mode": "implicit_gb_sa_v1",
         "physics_refinement_backend": "internal_gb_sa_v1",
-        "physics_refinement_refined_energy_col": "deltaG_mm_gbsa_kcal_mol",
+        "physics_refinement_refined_energy_col": "internal_refine_proxy_score",
         "physics_refinement_use_refined_scores_downstream": True,
         "physics_refinement_use_refined_proxy_for_calibration": True,
     },

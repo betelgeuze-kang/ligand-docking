@@ -45,6 +45,72 @@ CLAIM_LOCAL_ONLY = "local_only"
 CLAIM_REMOTE_GREEN = "remote_green"
 CLAIM_RUNTIME_GREEN = "runtime_green"
 
+#: Tier aliases for the structured ladder API. A tier and its claim name are the
+#: same string on purpose: the highest supported tier *is* the highest claim, so
+#: the two cannot drift apart.
+NONE_CLAIM = CLAIM_NONE
+TIER_LOCAL = CLAIM_LOCAL_ONLY
+TIER_REMOTE = CLAIM_REMOTE_GREEN
+TIER_RUNTIME = CLAIM_RUNTIME_GREEN
+
+#: Lowest to highest. Rank 0 is reserved for "no claim".
+TIER_ORDER = (TIER_LOCAL, TIER_REMOTE, TIER_RUNTIME)
+TIER_RANK = {TIER_LOCAL: 1, TIER_REMOTE: 2, TIER_RUNTIME: 3}
+
+
+def _tier_supported(results: dict[str, Any], tier: str) -> bool:
+    row = results.get(tier)
+    if not isinstance(row, dict):
+        return False
+    return str(row.get("result") or "") == "supported"
+
+
+def _rank_ladder(results: dict[str, Any]) -> tuple[str, list[str]]:
+    """Return ``(highest_supported_tier, gap_tiers)``.
+
+    The ladder is contiguous from rank 1: a higher tier only counts when every
+    tier below it is also supported. A tier that is supported but sits above an
+    unsupported one is reported as a gap, never promoted — that is what stops a
+    runtime run from implying the local and remote rungs beneath it.
+    """
+
+    highest = NONE_CLAIM
+    for tier in TIER_ORDER:
+        if _tier_supported(results, tier):
+            highest = tier
+        else:
+            break
+    highest_rank = 0 if highest == NONE_CLAIM else TIER_RANK[highest]
+    gaps = [
+        tier
+        for tier in TIER_ORDER
+        if TIER_RANK[tier] > highest_rank and _tier_supported(results, tier)
+    ]
+    return highest, gaps
+
+
+def _attributed_run(records: Any, head_sha: str) -> dict[str, Any] | None:
+    """Return the newest completed/successful run whose ``head_sha`` matches.
+
+    Attribution is exact: a green run on any other commit is not evidence for
+    this one, so a non-matching sha yields ``None`` rather than a best guess.
+    """
+
+    sha = str(head_sha or "")
+    if not sha:
+        return None
+    matches = [
+        record
+        for record in (records or [])
+        if isinstance(record, dict)
+        and str(record.get("head_sha") or record.get("head_commit_sha") or "") == sha
+        and str(record.get("status") or "").lower() == "completed"
+        and str(record.get("conclusion") or "").lower() == "success"
+    ]
+    if not matches:
+        return None
+    return max(matches, key=lambda record: str(record.get("run_completed_at") or ""))
+
 
 def _resolve(root: Path, path_like: str | Path) -> Path:
     path = Path(path_like)
@@ -186,8 +252,12 @@ def build_release_claim_evidence_ladder_gate(
     remote_receipt_json: str | Path | None = "",
     head_runs_json: str | Path | None = "",
     main_head_sha: str = "",
+    merge_commit_sha: str = "",
 ) -> dict[str, Any]:
     root_path = Path(root)
+    # ``merge_commit_sha`` is the caller-facing name for the same HEAD: the
+    # commit whose workflow run must exist before remote-green may be claimed.
+    main_head_sha = str(main_head_sha or merge_commit_sha or "")
     local_receipt = _read_json(root_path, local_receipt_json)
     remote_receipt = _read_json(root_path, remote_receipt_json)
     head_runs = _read_json(root_path, head_runs_json)
@@ -293,6 +363,14 @@ def build_release_claim_evidence_ladder_gate(
         "status": "release_claim_ladder_ready" if runtime_or_production_claim else "blocked_release_claim_ladder",
         "pass": runtime_or_production_claim,
         "highest_supported_claim": highest_supported_claim,
+        # Explicit per-rung permission flags. A caller must not have to re-derive
+        # "may I say runtime-green?" from the claim string.
+        "runtime_claim_allowed": bool(highest_supported_claim == CLAIM_RUNTIME_GREEN),
+        "remote_claim_allowed": bool(
+            highest_supported_claim in {CLAIM_REMOTE_GREEN, CLAIM_RUNTIME_GREEN}
+        ),
+        "local_claim_allowed": bool(highest_supported_claim != CLAIM_NONE),
+        "execution_enabled": False,
         "local_observed_green": local_observed_green,
         "remote_green": remote_green,
         "merge_commit_workflow_run_present": merge_commit_workflow_run_present,

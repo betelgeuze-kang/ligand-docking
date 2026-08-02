@@ -82,7 +82,7 @@ def _existing_pairs(path_like: str | Path, *, root: Path) -> list[dict[str, Any]
     pairs: list[dict[str, Any]] = []
     with path.open("r", encoding="utf-8", newline="") as handle:
         for row in csv.DictReader(handle):
-            proxy = _float(row.get("deltaG_mm_gbsa_kcal_mol"))
+            proxy = _float(row.get("internal_refine_proxy_score"))
             reference = _float(row.get("deltaG_experimental_kcal_mol"))
             if proxy is None or reference is None:
                 continue
@@ -108,7 +108,7 @@ def _candidate_pairs(payload: dict[str, Any]) -> list[dict[str, Any]]:
     for row in rows:
         if not isinstance(row, dict) or row.get("candidate_status") != "pass":
             continue
-        proxy = _float(row.get("deltaG_candidate_kcal_mol"))
+        proxy = _float(row.get("candidate_refine_proxy_score"))
         reference = _float(row.get("deltaG_experimental_kcal_mol"))
         if proxy is None or reference is None:
             continue

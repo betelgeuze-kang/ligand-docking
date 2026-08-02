@@ -1073,6 +1073,16 @@ def test_goal_developer_preview_endpoint_reads_fail_closed_audit(monkeypatch, tm
                         "Attach the missing source evidence required by the receipt."
                     ),
                     "primary_blocker_id": "benchmark_results_clean_checkout_regenerated",
+                    "stage5_recovery_operator_work_order_ready": True,
+                    "stage5_recovery_operator_work_order_materialized": True,
+                    "stage5_input_family_csv_path": (
+                        ".betelgeuze/developer_preview_clean_checkout_stage5_input_family_current.csv"
+                    ),
+                    "stage5_input_family_md_path": (
+                        ".betelgeuze/developer_preview_clean_checkout_stage5_input_family_current.md"
+                    ),
+                    "stage5_input_family_csv_present": True,
+                    "stage5_input_family_md_present": True,
                     "next_required_step": "Attach clean-checkout receipt.",
                     "claim_boundary": "developer preview boundary",
                 },
@@ -1362,6 +1372,13 @@ def test_goal_developer_preview_endpoint_reads_fail_closed_audit(monkeypatch, tm
                     "observation_review_primary_required_action": (
                         "Record a non-secret observer id in the reviewed receipt."
                     ),
+                    "runbook_path": "docs/developer_preview_core_workflow_quickstart.md",
+                    "runbook_ready": True,
+                    "runbook_required_token_count": 10,
+                    "runbook_missing_required_token_count": 0,
+                    "runbook_missing_required_tokens": [],
+                    "core_workflow_receipt_path_documented": True,
+                    "core_workflow_command_set_documented": True,
                     "claim_boundary": "new-user observation boundary",
                 },
                 "observation_review_template_rows": [
@@ -1507,6 +1524,19 @@ def test_goal_developer_preview_endpoint_reads_fail_closed_audit(monkeypatch, tm
     assert response["developer_preview_missing_stage5_input_paths"] == [
         "/tmp/dp/runs/stage5_scores.csv"
     ]
+    assert response["developer_preview_stage5_recovery_operator_work_order_ready"] is True
+    assert (
+        response["developer_preview_stage5_recovery_operator_work_order_materialized"]
+        is True
+    )
+    assert response["developer_preview_stage5_input_family_csv_path"] == (
+        ".betelgeuze/developer_preview_clean_checkout_stage5_input_family_current.csv"
+    )
+    assert response["developer_preview_stage5_input_family_md_path"] == (
+        ".betelgeuze/developer_preview_clean_checkout_stage5_input_family_current.md"
+    )
+    assert response["developer_preview_stage5_input_family_csv_present"] is True
+    assert response["developer_preview_stage5_input_family_md_present"] is True
     assert response["clean_checkout_receipt_status"] == (
         "blocked_developer_preview_clean_checkout_benchmark_receipt"
     )
@@ -1577,6 +1607,36 @@ def test_goal_developer_preview_endpoint_reads_fail_closed_audit(monkeypatch, tm
     assert response["developer_preview_new_user_observation_receipt_status"] == (
         "blocked_developer_preview_new_user_observation_receipt"
     )
+    assert response["developer_preview_new_user_observation_runbook_path"] == (
+        "docs/developer_preview_core_workflow_quickstart.md"
+    )
+    assert response["developer_preview_new_user_observation_runbook_ready"] is True
+    assert (
+        response["developer_preview_new_user_observation_runbook_required_token_count"]
+        == 10
+    )
+    assert (
+        response[
+            "developer_preview_new_user_observation_runbook_missing_required_token_count"
+        ]
+        == 0
+    )
+    assert (
+        response["developer_preview_new_user_observation_runbook_missing_required_tokens"]
+        == []
+    )
+    assert (
+        response[
+            "developer_preview_new_user_observation_core_workflow_receipt_path_documented"
+        ]
+        is True
+    )
+    assert (
+        response[
+            "developer_preview_new_user_observation_core_workflow_command_set_documented"
+        ]
+        is True
+    )
     assert response["developer_preview_new_user_observation_required_field_count"] == 3
     assert response["developer_preview_new_user_observation_ready_field_count"] == 1
     assert response["developer_preview_new_user_observation_blocked_field_count"] == 2
@@ -1632,6 +1692,15 @@ def test_goal_developer_preview_endpoint_reads_fail_closed_audit(monkeypatch, tm
     assert missing["blocked_receipt_work_order_rows"] == []
     assert missing["source_receipt_work_order_rows"] == []
     assert missing["developer_preview_source_blocker_detail_row_count"] == 0
+    assert missing["developer_preview_stage5_recovery_operator_work_order_ready"] is False
+    assert (
+        missing["developer_preview_stage5_recovery_operator_work_order_materialized"]
+        is False
+    )
+    assert missing["developer_preview_stage5_input_family_csv_path"] == ""
+    assert missing["developer_preview_stage5_input_family_md_path"] == ""
+    assert missing["developer_preview_stage5_input_family_csv_present"] is False
+    assert missing["developer_preview_stage5_input_family_md_present"] is False
     assert missing["developer_preview_linux_reproducibility_receipt_present"] is False
     assert missing["developer_preview_linux_reproducibility_requirement_rows"] == []
     assert missing["developer_preview_windows_reproducibility_receipt_present"] is False
@@ -2585,6 +2654,7 @@ def test_api_app_imports_with_goal_router() -> None:
         "engine_refinement_claim_evidence_priority_packet_current.json"
     )
     cameo_fetch_artifact = _artifact_summary("cameo_official_result_fetch_preflight_current.json")
+    competition_benchmark_artifact = _artifact_summary("competition_benchmark_rollup_current.json")
     rollout_smoke_receipt_artifact = _artifact_summary(
         "product_rollout_execution_smoke_receipt_current.json"
     )
@@ -2623,7 +2693,9 @@ def test_api_app_imports_with_goal_router() -> None:
     assert status["release_decision_status"] == release_artifact.get("status")
     assert status["readiness_status"] == readiness_artifact.get("status")
     assert status["release_burndown_status"] == burndown_artifact.get("status")
-    assert status["commercial_independent_product_ready"] is True
+    assert status["commercial_independent_product_ready"] is (
+        release_artifact.get("commercial_independent_product_ready") is True
+    )
     assert status["cleanup_objective_ready"] is True
     assert status["goal_api_surface_ready"] is True
     assert status["bottleneck_count"] == int(bottlenecks_artifact.get("bottleneck_count") or 0)
@@ -3099,10 +3171,12 @@ def test_api_app_imports_with_goal_router() -> None:
     assert status["primary_bottleneck_post_return_acceptance_artifact"] == bottlenecks_artifact.get(
         "primary_bottleneck_post_return_acceptance_artifact"
     )
-    assert status["commercial_readiness_handoff_bundle_status"] == (
-        "product_commercial_readiness_handoff_bundle_ready"
+    assert status["commercial_readiness_handoff_bundle_status"] == handoff_artifact.get(
+        "status"
     )
-    assert status["commercial_readiness_handoff_bundle_ready"] is True
+    assert status["commercial_readiness_handoff_bundle_ready"] is (
+        handoff_artifact.get("handoff_bundle_ready") is True
+    )
     assert status["commercial_readiness_handoff_bundle_artifact_reference_count"] == int(
         handoff_artifact.get("artifact_reference_count") or 0
     )
@@ -3541,6 +3615,323 @@ def test_api_app_imports_with_goal_router() -> None:
     assert "operator_fetch_csv_missing" in status[
         "cameo_official_result_fetch_preflight_blockers"
     ]
+    assert status["competition_benchmark_rollup_status"] == (
+        competition_benchmark_artifact.get("status", "")
+    )
+    assert status["competition_benchmark_rollup_ready"] is (
+        competition_benchmark_artifact.get("status") == "competition_benchmark_rollup_ready"
+    )
+    assert status["competition_benchmark_rollup_artifact_path"].endswith(
+        "runs/competition_benchmark_rollup_current.json"
+    )
+    assert status["competition_benchmark_cameo_official_intake_gate_status"] == (
+        competition_benchmark_artifact.get("cameo_official_intake_gate_status", "")
+    )
+    assert status["competition_benchmark_cameo_official_intake_gate_ready"] is (
+        competition_benchmark_artifact.get("cameo_official_intake_gate_ready") is True
+    )
+    assert status["competition_benchmark_cameo_official_intake_gate_artifact_path"] == (
+        competition_benchmark_artifact.get("cameo_official_intake_gate_artifact_path", "")
+    )
+    assert status["competition_benchmark_cameo_official_operator_intake_csv"] == (
+        competition_benchmark_artifact.get(
+            "cameo_official_operator_intake_csv",
+            competition_benchmark_artifact.get("cameo_official_intake_csv", ""),
+        )
+    )
+    assert status["competition_benchmark_cameo_official_operator_template_csv"] == (
+        competition_benchmark_artifact.get("cameo_official_operator_template_csv", "")
+    )
+    assert status["competition_benchmark_cameo_official_result_row_count"] == int(
+        competition_benchmark_artifact.get("cameo_official_result_row_count") or 0
+    )
+    assert status["competition_benchmark_cameo_official_accepted_result_count"] == int(
+        competition_benchmark_artifact.get("cameo_official_accepted_result_count") or 0
+    )
+    assert status["competition_benchmark_cameo_official_rejected_result_count"] == int(
+        competition_benchmark_artifact.get("cameo_official_rejected_result_count") or 0
+    )
+    assert status["competition_benchmark_cameo_official_model1_result_ready"] is (
+        competition_benchmark_artifact.get("cameo_official_model1_result_ready") is True
+    )
+    assert status["competition_benchmark_cameo_official_blocker_count"] == int(
+        competition_benchmark_artifact.get("cameo_official_blocker_count") or 0
+    )
+    assert status["competition_benchmark_cameo_official_blocker_codes"] == (
+        competition_benchmark_artifact.get("cameo_official_blocker_codes", [])
+    )
+    assert status["competition_benchmark_cameo_official_required_column_count"] == int(
+        competition_benchmark_artifact.get("cameo_official_required_column_count") or 0
+    )
+    assert status[
+        "competition_benchmark_cameo_official_missing_required_column_count"
+    ] == int(
+        competition_benchmark_artifact.get("cameo_official_missing_required_column_count")
+        or 0
+    )
+    assert status["competition_benchmark_cameo_official_missing_required_columns"] == (
+        competition_benchmark_artifact.get("cameo_official_missing_required_columns", [])
+    )
+    assert status["competition_benchmark_cameo_official_native_local_accuracy_used"] is (
+        competition_benchmark_artifact.get("cameo_official_native_local_accuracy_used")
+        is True
+    )
+    assert status["competition_benchmark_cameo_official_external_state_mutated"] is (
+        competition_benchmark_artifact.get("cameo_official_external_state_mutated") is True
+    )
+    assert status["competition_benchmark_casp16_ligand_source_manifest_status"] == (
+        competition_benchmark_artifact.get("casp16_ligand_source_manifest_status", "")
+    )
+    assert status["competition_benchmark_casp16_ligand_source_manifest_ready"] is (
+        competition_benchmark_artifact.get("casp16_ligand_source_manifest_ready") is True
+    )
+    assert status["competition_benchmark_casp16_ligand_competition_credibility_ready"] is (
+        competition_benchmark_artifact.get(
+            "casp16_ligand_competition_credibility_ready"
+        )
+        is True
+    )
+    assert status["competition_benchmark_casp16_ligand_raw_data_committed"] is (
+        competition_benchmark_artifact.get("casp16_ligand_raw_data_committed") is True
+    )
+    assert status[
+        "competition_benchmark_casp16_ligand_raw_data_git_tracked_file_count"
+    ] == int(
+        competition_benchmark_artifact.get("casp16_ligand_raw_data_git_tracked_file_count")
+        or 0
+    )
+    assert status["competition_benchmark_casp16_ligand_pose_target_count"] == int(
+        competition_benchmark_artifact.get("casp16_ligand_pose_target_count") or 0
+    )
+    assert status["competition_benchmark_casp16_ligand_affinity_target_count"] == int(
+        competition_benchmark_artifact.get("casp16_ligand_affinity_target_count") or 0
+    )
+    assert status["competition_benchmark_casp16_ligand_next_action"] == (
+        competition_benchmark_artifact.get("casp16_ligand_next_action", "")
+    )
+    assert status["competition_benchmark_bm5_capri_complex_source_manifest_status"] == (
+        competition_benchmark_artifact.get(
+            "bm5_capri_complex_source_manifest_status",
+            "",
+        )
+    )
+    assert status["competition_benchmark_bm5_complex_benchmark_ready"] is (
+        competition_benchmark_artifact.get("bm5_complex_benchmark_ready") is True
+    )
+    assert status["competition_benchmark_capri_score_set_ready"] is (
+        competition_benchmark_artifact.get("capri_score_set_ready") is True
+    )
+    assert status[
+        "competition_benchmark_bm5_capri_complex_competition_credibility_ready"
+    ] is (
+        competition_benchmark_artifact.get(
+            "bm5_capri_complex_competition_credibility_ready"
+        )
+        is True
+    )
+    assert status["competition_benchmark_bm5_capri_complex_raw_data_committed"] is (
+        competition_benchmark_artifact.get("bm5_capri_complex_raw_data_committed") is True
+    )
+    assert status[
+        "competition_benchmark_bm5_capri_complex_raw_data_git_tracked_file_count"
+    ] == int(
+        competition_benchmark_artifact.get(
+            "bm5_capri_complex_raw_data_git_tracked_file_count"
+        )
+        or 0
+    )
+    assert status["competition_benchmark_bm5_capri_complex_primary_metric"] == (
+        competition_benchmark_artifact.get("bm5_capri_complex_primary_metric", "")
+    )
+    assert status["competition_benchmark_bm5_capri_complex_next_action"] == (
+        competition_benchmark_artifact.get("bm5_capri_complex_next_action", "")
+    )
+    assert status[
+        "competition_benchmark_competition_credibility_extension_ready"
+    ] is (
+        competition_benchmark_artifact.get("competition_credibility_extension_ready")
+        is True
+    )
+    assert status[
+        "competition_benchmark_competition_credibility_extension_blocker_count"
+    ] == int(
+        competition_benchmark_artifact.get("competition_credibility_extension_blocker_count")
+        or 0
+    )
+    assert status[
+        "competition_benchmark_competition_credibility_extension_blockers"
+    ] == competition_benchmark_artifact.get(
+        "competition_credibility_extension_blockers",
+        [],
+    )
+    assert status[
+        "competition_benchmark_competition_credibility_extension_primary_blocker"
+    ] == competition_benchmark_artifact.get(
+        "competition_credibility_extension_primary_blocker",
+        "",
+    )
+    assert status[
+        "competition_benchmark_competition_credibility_extension_next_actions"
+    ] == competition_benchmark_artifact.get(
+        "competition_credibility_extension_next_actions",
+        [],
+    )
+    assert status[
+        "competition_benchmark_competition_credibility_extension_primary_next_action"
+    ] == competition_benchmark_artifact.get(
+        "competition_credibility_extension_primary_next_action",
+        "",
+    )
+    assert status["competition_benchmark_custody_work_order_status"] == (
+        competition_benchmark_artifact.get("competition_benchmark_custody_work_order_status", "")
+    )
+    assert status["competition_benchmark_custody_work_order_ready"] is (
+        competition_benchmark_artifact.get("competition_benchmark_custody_work_order_ready")
+        is True
+    )
+    assert status["competition_benchmark_custody_work_order_action_count"] == int(
+        competition_benchmark_artifact.get("competition_benchmark_custody_work_order_action_count")
+        or 0
+    )
+    assert status[
+        "competition_benchmark_custody_work_order_raw_data_blocked_row_count"
+    ] == int(
+        competition_benchmark_artifact.get(
+            "competition_benchmark_custody_work_order_raw_data_blocked_row_count"
+        )
+        or 0
+    )
+    assert status[
+        "competition_benchmark_custody_work_order_missing_receipt_row_count"
+    ] == int(
+        competition_benchmark_artifact.get(
+            "competition_benchmark_custody_work_order_missing_receipt_row_count"
+        )
+        or 0
+    )
+    assert status["competition_benchmark_custody_work_order_primary_work_order_id"] == (
+        competition_benchmark_artifact.get(
+            "competition_benchmark_custody_work_order_primary_work_order_id",
+            "",
+        )
+    )
+    assert status["competition_benchmark_custody_work_order_primary_required_action"] == (
+        competition_benchmark_artifact.get(
+            "competition_benchmark_custody_work_order_primary_required_action",
+            "",
+        )
+    )
+    assert status[
+        "competition_benchmark_custody_work_order_primary_verification_command"
+    ] == competition_benchmark_artifact.get(
+        "competition_benchmark_custody_work_order_primary_verification_command",
+        "",
+    )
+    assert status[
+        "competition_benchmark_custody_work_order_primary_raw_data_work_order_id"
+    ] == competition_benchmark_artifact.get(
+        "competition_benchmark_custody_work_order_primary_raw_data_work_order_id",
+        "",
+    )
+    assert status[
+        "competition_benchmark_custody_work_order_primary_raw_data_required_action"
+    ] == competition_benchmark_artifact.get(
+        "competition_benchmark_custody_work_order_primary_raw_data_required_action",
+        "",
+    )
+    assert status[
+        "competition_benchmark_custody_work_order_primary_raw_data_verification_command"
+    ] == competition_benchmark_artifact.get(
+        "competition_benchmark_custody_work_order_primary_raw_data_verification_command",
+        "",
+    )
+    assert status[
+        "competition_benchmark_custody_work_order_primary_raw_data_git_tracked_file_count"
+    ] == int(
+        competition_benchmark_artifact.get(
+            "competition_benchmark_custody_work_order_primary_raw_data_git_tracked_file_count"
+        )
+        or 0
+    )
+    assert status[
+        "competition_benchmark_custody_work_order_primary_raw_data_git_tracked_sample_paths"
+    ] == competition_benchmark_artifact.get(
+        "competition_benchmark_custody_work_order_primary_raw_data_git_tracked_sample_paths",
+        [],
+    )
+    assert status[
+        "competition_benchmark_custody_work_order_casp16_operator_input_schema_ready"
+    ] is (
+        competition_benchmark_artifact.get(
+            "competition_benchmark_custody_work_order_casp16_operator_input_schema_ready"
+        )
+        is True
+    )
+    assert status[
+        "competition_benchmark_custody_work_order_casp16_source_manifest_required_columns"
+    ] == competition_benchmark_artifact.get(
+        "competition_benchmark_custody_work_order_casp16_source_manifest_required_columns",
+        [],
+    )
+    assert status[
+        "competition_benchmark_custody_work_order_casp16_checksum_manifest_format"
+    ] == competition_benchmark_artifact.get(
+        "competition_benchmark_custody_work_order_casp16_checksum_manifest_format",
+        "",
+    )
+    assert status[
+        "competition_benchmark_custody_work_order_casp16_scorecard_required_columns"
+    ] == competition_benchmark_artifact.get(
+        "competition_benchmark_custody_work_order_casp16_scorecard_required_columns",
+        [],
+    )
+    assert status[
+        "competition_benchmark_custody_work_order_casp16_scorecard_allowed_task_types"
+    ] == competition_benchmark_artifact.get(
+        "competition_benchmark_custody_work_order_casp16_scorecard_allowed_task_types",
+        [],
+    )
+    assert status[
+        "competition_benchmark_custody_work_order_casp16_scorecard_allowed_metrics"
+    ] == competition_benchmark_artifact.get(
+        "competition_benchmark_custody_work_order_casp16_scorecard_allowed_metrics",
+        [],
+    )
+    assert status[
+        "competition_benchmark_package_b_public_benchmark_validation_ready"
+    ] is (
+        competition_benchmark_artifact.get("package_b_public_benchmark_validation_ready")
+        is True
+    )
+    assert status[
+        "competition_benchmark_package_b_ligand_public_benchmark_foundation_ready"
+    ] is (
+        competition_benchmark_artifact.get(
+            "package_b_ligand_public_benchmark_foundation_ready"
+        )
+        is True
+    )
+    assert status[
+        "competition_benchmark_package_b_claim_grade_public_benchmark_ready"
+    ] is (
+        competition_benchmark_artifact.get("package_b_claim_grade_public_benchmark_ready")
+        is True
+    )
+    assert status["competition_benchmark_competition_evidence_role"] == (
+        competition_benchmark_artifact.get("competition_evidence_role", "")
+    )
+    assert status[
+        "competition_benchmark_competition_ligand_commercial_claim_allowed"
+    ] is (
+        competition_benchmark_artifact.get("competition_ligand_commercial_claim_allowed")
+        is True
+    )
+    assert status["competition_benchmark_competition_ligand_claim_blockers"] == (
+        competition_benchmark_artifact.get("competition_ligand_claim_blockers", [])
+    )
+    assert status["competition_benchmark_package_b_bridge_next_action"] == (
+        competition_benchmark_artifact.get("package_b_bridge_next_action", "")
+    )
     assert status["product_rollout_execution_smoke_receipt_status"] == (
         rollout_smoke_receipt_artifact.get("status")
     )

@@ -25,7 +25,7 @@ def batch_refine_stage3_scores(
     stage3_glob: str,
     backend: str = "internal_gb_sa_v1",
     refinement_mode: str = "implicit_gb_sa_v1",
-    refined_energy_col: str = "deltaG_mm_gbsa_kcal_mol",
+    refined_energy_col: str = "internal_refine_proxy_score",
     topk_global: int = 128,
     skip_existing: bool = True,
 ) -> dict[str, Any]:
@@ -92,7 +92,7 @@ def main() -> None:
     p.add_argument("--stage3-glob", default="runs/ligand_htvs_nightly_*_stage3_scores.csv")
     p.add_argument("--backend", default="internal_gb_sa_v1")
     p.add_argument("--refinement-mode", default="implicit_gb_sa_v1")
-    p.add_argument("--refined-energy-col", default="deltaG_mm_gbsa_kcal_mol")
+    p.add_argument("--refined-energy-col", default="internal_refine_proxy_score")
     p.add_argument("--topk-global", type=int, default=128)
     p.add_argument("--no-skip-existing", action="store_true")
     args = p.parse_args()

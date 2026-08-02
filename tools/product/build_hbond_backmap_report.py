@@ -41,6 +41,7 @@ ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUT_JSON = "runs/hbond_backmap_report_current.json"
 DEFAULT_OUT_MD = "runs/hbond_backmap_report_current.md"
 DEFAULT_OUT_CSV = "runs/hbond_backmap_report_current.csv"
+DEFAULT_PRODUCT_IMAGE_SMOKE_RECEIPT_JSON = "runs/product_image_smoke_receipt_current.json"
 
 # Per-candidate scores-CSV columns emitted by the backmapping scoring runner
 # (see betelgeuze_engine/product/runners/backmapping_scoring.py).
@@ -80,6 +81,10 @@ BUILDER_SCORE_COLUMNS = (
 )
 
 STATUS_OK = "hbond_backmap_report_ready"
+STATUS_BLOCKED_RECEIPT_MISSING = "blocked_missing_product_image_smoke_receipt"
+STATUS_BLOCKED_RECEIPT_NOT_READY = "blocked_product_image_smoke_receipt_not_ready"
+STATUS_BLOCKED_RECEIPT_WORKSPACE_ARTIFACT_ROOT = "blocked_product_image_smoke_workspace_artifact_root"
+STATUS_BLOCKED_RECEIPT_RUNNER_DIR_MISSING = "blocked_product_image_smoke_runner_dir_missing"
 STATUS_BLOCKED_MISSING = "blocked_missing_scores_csv"
 STATUS_BLOCKED_EMPTY = "blocked_empty_scores_csv"
 STATUS_BLOCKED_SCHEMA = "blocked_scores_csv_missing_onsps_columns"
@@ -88,6 +93,15 @@ STATUS_BLOCKED_SCHEMA = "blocked_scores_csv_missing_onsps_columns"
 def _resolve(path_like: str | Path) -> Path:
     path = Path(path_like)
     return path if path.is_absolute() else ROOT / path
+
+
+def _read_json(path_like: str | Path) -> dict[str, Any]:
+    path = _resolve(path_like)
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
 
 
 def _to_bool(value: Any) -> bool:
@@ -182,6 +196,11 @@ def _blocked_artifact(status: str, scores_csv: Path, detail: str) -> dict[str, A
     }
 
 
+def _receipt_summary(payload: dict[str, Any]) -> dict[str, Any]:
+    summary = payload.get("summary")
+    return summary if isinstance(summary, dict) else payload
+
+
 def build_hbond_backmap_report_artifact(scores_csv: str | Path) -> dict[str, Any]:
     """Build the report artifact dict from a backmapping-scoring scores CSV.
 
@@ -218,6 +237,55 @@ def build_hbond_backmap_report_artifact(scores_csv: str | Path) -> dict[str, Any
         "rows": batch["rows"],
         "claim_boundary": CLAIM_BOUNDARY,
     }
+
+
+def build_hbond_backmap_report_artifact_from_product_image_smoke_receipt(
+    receipt_json: str | Path = DEFAULT_PRODUCT_IMAGE_SMOKE_RECEIPT_JSON,
+) -> dict[str, Any]:
+    """Build the report artifact from the smoke receipt's runner-temp scores CSV.
+
+    This route is for CI/source-of-truth refreshes after product image smoke
+    artifacts were moved outside the checkout workspace. It intentionally
+    refuses receipt paths that still point at the workspace artifact root.
+    """
+
+    receipt_path = _resolve(receipt_json)
+    payload = _read_json(receipt_path)
+    receipt = _receipt_summary(payload)
+    if not receipt:
+        return _blocked_artifact(
+            STATUS_BLOCKED_RECEIPT_MISSING,
+            receipt_path,
+            "product image smoke receipt is missing or invalid",
+        )
+
+    runner_smoke_dir = str(receipt.get("runner_smoke_dir") or "").strip()
+    scores_csv = Path(runner_smoke_dir) / "backmapping_scores.csv" if runner_smoke_dir else receipt_path
+    if receipt.get("status") != "product_image_smoke_ready" or receipt.get("mode") != "rocm-runtime":
+        return _blocked_artifact(
+            STATUS_BLOCKED_RECEIPT_NOT_READY,
+            scores_csv,
+            "product image smoke receipt is not a ready rocm-runtime receipt",
+        )
+    if receipt.get("runner_smoke_dir_outside_workspace") is not True:
+        return _blocked_artifact(
+            STATUS_BLOCKED_RECEIPT_WORKSPACE_ARTIFACT_ROOT,
+            scores_csv,
+            "product image smoke receipt points to a workspace artifact root; runner-temp artifact root required",
+        )
+    if receipt.get("workspace_runner_smoke_dir_cleanup_ready") is not True:
+        return _blocked_artifact(
+            STATUS_BLOCKED_RECEIPT_WORKSPACE_ARTIFACT_ROOT,
+            scores_csv,
+            "product image smoke receipt did not prove stale workspace artifact cleanup",
+        )
+    if not runner_smoke_dir:
+        return _blocked_artifact(
+            STATUS_BLOCKED_RECEIPT_RUNNER_DIR_MISSING,
+            receipt_path,
+            "product image smoke receipt does not record runner_smoke_dir",
+        )
+    return build_hbond_backmap_report_artifact(scores_csv)
 
 
 def _render_markdown(artifact: dict[str, Any]) -> str:
@@ -332,15 +400,33 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Build the H-Bond BackMap candidate report surface.")
     parser.add_argument(
         "--scores-csv",
-        required=True,
+        default="",
         help="Backmapping-scoring scores CSV with onsps_backmap_*/hbond_* columns.",
+    )
+    parser.add_argument(
+        "--product-image-smoke-receipt",
+        default="",
+        help=(
+            "Product image smoke receipt JSON. When --scores-csv is omitted, "
+            "the builder reads runner_smoke_dir/backmapping_scores.csv from this receipt."
+        ),
+    )
+    parser.add_argument(
+        "--allow-blocked",
+        action="store_true",
+        help="Return zero after writing a blocked fail-closed artifact.",
     )
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     args = parser.parse_args(argv)
 
-    artifact = build_hbond_backmap_report_artifact(args.scores_csv)
+    if args.scores_csv:
+        artifact = build_hbond_backmap_report_artifact(args.scores_csv)
+    else:
+        artifact = build_hbond_backmap_report_artifact_from_product_image_smoke_receipt(
+            args.product_image_smoke_receipt or DEFAULT_PRODUCT_IMAGE_SMOKE_RECEIPT_JSON
+        )
 
     out_json = _resolve(args.out_json)
     out_md = _resolve(args.out_md)
@@ -356,7 +442,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # Fail-closed: a blocked artifact returns non-zero so callers/CI never treat
     # a missing/wrong-schema scores CSV as a green report.
-    return 0 if artifact["status"] == STATUS_OK else 1
+    return 0 if artifact["status"] == STATUS_OK or args.allow_blocked else 1
 
 
 if __name__ == "__main__":

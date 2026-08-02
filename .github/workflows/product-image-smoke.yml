@@ -28,6 +28,10 @@ on:
       - tests/unit/test_betelgeuze_ai_md_*.py
       - third_party/rocm_device_libs_pkg/**
       - deploy/verify_product_image.sh
+      - scripts/normalize_product_image_smoke_artifact_ownership.sh
+      - tools/product/build_product_image_smoke_preflight.py
+      - tools/build_product_image_smoke_preflight.py
+      - tests/unit/test_build_product_image_smoke_preflight.py
       - .github/workflows/product-image-smoke.yml
       - tools/product/run_runtime_neighbor_release_scaling.py
       - tests/unit/test_runtime_neighbor_release_scaling.py
@@ -54,6 +58,10 @@ on:
       - tests/unit/test_betelgeuze_ai_md_*.py
       - third_party/rocm_device_libs_pkg/**
       - deploy/verify_product_image.sh
+      - scripts/normalize_product_image_smoke_artifact_ownership.sh
+      - tools/product/build_product_image_smoke_preflight.py
+      - tools/build_product_image_smoke_preflight.py
+      - tests/unit/test_build_product_image_smoke_preflight.py
       - .github/workflows/product-image-smoke.yml
       - tools/product/run_runtime_neighbor_release_scaling.py
       - tests/unit/test_runtime_neighbor_release_scaling.py
@@ -87,19 +95,61 @@ jobs:
       || (github.event_name == 'workflow_dispatch' && github.event.inputs.verify_mode == 'build') }}
     runs-on: ${{ fromJSON(inputs.build_runner_labels_json || '["self-hosted","linux"]') }}
     steps:
+      - name: Recover stale product image smoke workspace artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          runs_dir="${GITHUB_WORKSPACE}/runs"
+          smoke_dir="${runs_dir}/product_image_smoke_runner_artifacts"
+          receipt_path="${runs_dir}/product_image_smoke_receipt_current.json"
+          build_log_path="${runs_dir}/product_image_build_smoke.log"
+          rocm_log_path="${runs_dir}/product_image_rocm_runtime_smoke.log"
+          repair_path() {
+            local path="$1"
+            if [[ -e "${path}" ]]; then
+              chown -R "$(id -u):$(id -g)" "${path}" 2>/dev/null || sudo -n chown -R "$(id -u):$(id -g)" "${path}" 2>/dev/null || true
+              chmod -R u+rwX "${path}" 2>/dev/null || sudo -n chmod -R u+rwX "${path}" 2>/dev/null || true
+            fi
+          }
+          if [[ -e "${runs_dir}" ]]; then
+            chown "$(id -u):$(id -g)" "${runs_dir}" 2>/dev/null || sudo -n chown "$(id -u):$(id -g)" "${runs_dir}" 2>/dev/null || true
+            chmod u+rwx "${runs_dir}" 2>/dev/null || sudo -n chmod u+rwx "${runs_dir}" 2>/dev/null || true
+          fi
+          repair_path "${receipt_path}"
+          repair_path "${build_log_path}"
+          repair_path "${rocm_log_path}"
+          if [[ -e "${smoke_dir}" ]]; then
+            repair_path "${smoke_dir}"
+            if ! rm -rf "${smoke_dir}"; then
+              echo "::warning::product_image_smoke_workspace_cleanup_failed path=${smoke_dir}; continuing so verify_product_image.sh can emit a fail-closed receipt" >&2
+            fi
+          fi
       - uses: actions/checkout@v5
+        with:
+          path: product-ci-checkout
+          clean: false
       - uses: docker/setup-buildx-action@v3
       - name: Verify product image build smoke
+        working-directory: product-ci-checkout
         env:
           PRODUCT_IMAGE_VERIFY_MODE: build
           DOCKER_BUILDKIT: "1"
           PRODUCT_IMAGE_REQUIRE_BUILDX: "1"
           PRODUCT_IMAGE_PRUNE_BEFORE_BUILD: "1"
+          PRODUCT_IMAGE_RUNNER_SMOKE_DIR: ${{ runner.temp }}/product_image_smoke_runner_artifacts
         shell: bash
         run: |
           mkdir -p runs
+          export PRODUCT_IMAGE_CONTAINER_UID_GID="$(id -u):$(id -g)"
           set -o pipefail
           bash deploy/verify_product_image.sh 2>&1 | tee runs/product_image_build_smoke.log
+      - name: Normalize product image smoke artifact ownership
+        if: always()
+        working-directory: product-ci-checkout
+        shell: bash
+        run: |
+          bash scripts/normalize_product_image_smoke_artifact_ownership.sh \
+            --log-path runs/product_image_build_smoke.log
       - name: Upload product image build smoke artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -108,10 +158,12 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
           path: |
-            runs/product_image_smoke_receipt_current.json
-            runs/product_image_build_smoke.log
+            product-ci-checkout/runs/product_image_smoke_receipt_current.json
+            product-ci-checkout/runs/product_image_build_smoke.log
+            ${{ runner.temp }}/product_image_smoke_runner_artifacts/**
       - name: Summarize product image build boundary
         if: always()
+        working-directory: product-ci-checkout
         run: |
           python3 - <<'PY'
           import json
@@ -154,19 +206,61 @@ jobs:
       || (github.event_name == 'workflow_dispatch' && github.event.inputs.verify_mode == 'rocm-runtime') }}
     runs-on: [self-hosted, linux, rocm]
     steps:
+      - name: Recover stale product image smoke workspace artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          runs_dir="${GITHUB_WORKSPACE}/runs"
+          smoke_dir="${runs_dir}/product_image_smoke_runner_artifacts"
+          receipt_path="${runs_dir}/product_image_smoke_receipt_current.json"
+          build_log_path="${runs_dir}/product_image_build_smoke.log"
+          rocm_log_path="${runs_dir}/product_image_rocm_runtime_smoke.log"
+          repair_path() {
+            local path="$1"
+            if [[ -e "${path}" ]]; then
+              chown -R "$(id -u):$(id -g)" "${path}" 2>/dev/null || sudo -n chown -R "$(id -u):$(id -g)" "${path}" 2>/dev/null || true
+              chmod -R u+rwX "${path}" 2>/dev/null || sudo -n chmod -R u+rwX "${path}" 2>/dev/null || true
+            fi
+          }
+          if [[ -e "${runs_dir}" ]]; then
+            chown "$(id -u):$(id -g)" "${runs_dir}" 2>/dev/null || sudo -n chown "$(id -u):$(id -g)" "${runs_dir}" 2>/dev/null || true
+            chmod u+rwx "${runs_dir}" 2>/dev/null || sudo -n chmod u+rwx "${runs_dir}" 2>/dev/null || true
+          fi
+          repair_path "${receipt_path}"
+          repair_path "${build_log_path}"
+          repair_path "${rocm_log_path}"
+          if [[ -e "${smoke_dir}" ]]; then
+            repair_path "${smoke_dir}"
+            if ! rm -rf "${smoke_dir}"; then
+              echo "::warning::product_image_smoke_workspace_cleanup_failed path=${smoke_dir}; continuing so verify_product_image.sh can emit a fail-closed receipt" >&2
+            fi
+          fi
       - uses: actions/checkout@v5
+        with:
+          path: product-ci-checkout
+          clean: false
       - uses: docker/setup-buildx-action@v3
       - name: Verify product image ROCm/HIP/Rust runtime smoke
+        working-directory: product-ci-checkout
         env:
           PRODUCT_IMAGE_VERIFY_MODE: rocm-runtime
           DOCKER_BUILDKIT: "1"
           PRODUCT_IMAGE_REQUIRE_BUILDX: "1"
           PRODUCT_IMAGE_PRUNE_BEFORE_BUILD: "1"
+          PRODUCT_IMAGE_RUNNER_SMOKE_DIR: ${{ runner.temp }}/product_image_smoke_runner_artifacts
         shell: bash
         run: |
           mkdir -p runs
+          export PRODUCT_IMAGE_CONTAINER_UID_GID="$(id -u):$(id -g)"
           set -o pipefail
           bash deploy/verify_product_image.sh 2>&1 | tee runs/product_image_rocm_runtime_smoke.log
+      - name: Normalize product image smoke artifact ownership
+        if: always()
+        working-directory: product-ci-checkout
+        shell: bash
+        run: |
+          bash scripts/normalize_product_image_smoke_artifact_ownership.sh \
+            --log-path runs/product_image_rocm_runtime_smoke.log
       - name: Upload product image ROCm runtime smoke artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -175,11 +269,12 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
           path: |
-            runs/product_image_smoke_receipt_current.json
-            runs/product_image_rocm_runtime_smoke.log
-            runs/product_image_smoke_runner_artifacts/**
+            product-ci-checkout/runs/product_image_smoke_receipt_current.json
+            product-ci-checkout/runs/product_image_rocm_runtime_smoke.log
+            ${{ runner.temp }}/product_image_smoke_runner_artifacts/**
       - name: Summarize product image ROCm runtime boundary
         if: always()
+        working-directory: product-ci-checkout
         run: |
           python3 - <<'PY'
           import json

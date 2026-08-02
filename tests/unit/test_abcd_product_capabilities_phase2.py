@@ -390,7 +390,7 @@ def test_refine_tier_training_enrichment_and_model_features(tmp_path: Path):
         encoding="utf-8",
     )
     stage3.write_text(
-        "target,ligand_id,binding_energy_mmpbsa_kcal_mol_proxy,deltaG_mm_gbsa_kcal_mol,physics_refinement_confidence\n"
+        "target,ligand_id,binding_energy_mmpbsa_kcal_mol_proxy,internal_refine_proxy_score,physics_refinement_confidence\n"
         "ADRB2,lig1,-6.0,-5.2,0.85\n"
         "ADRB2,lig2,-1.0,-0.5,0.55\n",
         encoding="utf-8",
@@ -429,12 +429,12 @@ def test_refine_tier_enrichment_merges_multiple_stage3_sources(tmp_path: Path) -
         encoding="utf-8",
     )
     stage3_a.write_text(
-        "target,ligand_id,binding_energy_mmpbsa_kcal_mol_proxy,deltaG_mm_gbsa_kcal_mol,physics_refinement_confidence\n"
+        "target,ligand_id,binding_energy_mmpbsa_kcal_mol_proxy,internal_refine_proxy_score,physics_refinement_confidence\n"
         "T1,lig1,-6.0,-5.0,0.8\n",
         encoding="utf-8",
     )
     stage3_b.write_text(
-        "target,ligand_id,binding_energy_mmpbsa_kcal_mol_proxy,deltaG_mm_gbsa_kcal_mol,physics_refinement_confidence\n"
+        "target,ligand_id,binding_energy_mmpbsa_kcal_mol_proxy,internal_refine_proxy_score,physics_refinement_confidence\n"
         "T2,lig2,-1.0,-0.4,0.6\n",
         encoding="utf-8",
     )
@@ -457,7 +457,7 @@ def test_refine_tier_enrichment_normalizes_product_gate_decoy_ids(tmp_path: Path
         encoding="utf-8",
     )
     stage3.write_text(
-        "target,ligand_id,binding_energy_mmpbsa_kcal_mol_proxy,deltaG_mm_gbsa_kcal_mol,physics_refinement_confidence\n"
+        "target,ligand_id,binding_energy_mmpbsa_kcal_mol_proxy,internal_refine_proxy_score,physics_refinement_confidence\n"
         "ADRB2_GPCR_BLIND,product_gate_decoy_0144,-1.0,-0.4,0.6\n",
         encoding="utf-8",
     )
@@ -481,7 +481,7 @@ def test_refine_tier_enrichment_joins_by_queue_id(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     stage3.write_text(
-        "target,ligand_id,queue_id,binding_energy_mmpbsa_kcal_mol_proxy,deltaG_mm_gbsa_kcal_mol,physics_refinement_confidence\n"
+        "target,ligand_id,queue_id,binding_energy_mmpbsa_kcal_mol_proxy,internal_refine_proxy_score,physics_refinement_confidence\n"
         "HIV1_PROTEASE,imatinib,HIV1_PROTEASE__rep0022__imatinib,-6.0,-5.0,0.8\n",
         encoding="utf-8",
     )

@@ -23,7 +23,7 @@ SCORE_COLUMNS = (
     "binding_score_composite_v4",
 )
 ENERGY_PROXY_COLUMNS = (
-    "deltaG_mm_gbsa_kcal_mol",
+    "internal_refine_proxy_score",
     "binding_energy_explicit_water_recheck_kcal_mol_proxy",
     "binding_energy_mmpbsa_kcal_mol_proxy",
     "binding_energy_proxy",
@@ -215,7 +215,7 @@ def _iter_source_rows(path: Path, *, max_rows_per_source: int) -> tuple[list[dic
                     row["delta_energy"] = energy_proxy[0]
                     row["delta_energy_label_source"] = f"stage3_energy_proxy:{energy_proxy[1]}"
                     energy_joined += 1
-                    if energy_proxy[1] in {"deltaG_mm_gbsa_kcal_mol", "binding_energy_explicit_water_recheck_kcal_mol_proxy"}:
+                    if energy_proxy[1] in {"internal_refine_proxy_score", "binding_energy_explicit_water_recheck_kcal_mol_proxy"}:
                         row["refine_tier_label"] = energy_proxy[0]
                         row["refine_tier_label_source"] = energy_proxy[1]
                 else:

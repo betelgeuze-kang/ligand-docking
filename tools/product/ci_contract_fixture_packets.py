@@ -10,6 +10,38 @@ def _write(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
+def _row_evidence_count(payload: Any) -> int:
+    """Count row-level evidence entries in an artifact payload."""
+
+    if not isinstance(payload, dict):
+        return 0
+    total = 0
+    for key in ("rows", "checks"):
+        value = payload.get(key)
+        if isinstance(value, list):
+            total += len(value)
+    return total
+
+
+def _write_without_degrading(path: Path, payload: dict[str, Any]) -> None:
+    """Write a fixture packet unless it would drop existing row-level evidence.
+
+    These fixture packets are summary-only scaffolds for CI contract runs. When
+    they are written over a real generated artifact they silently delete its
+    ``rows``/``checks`` evidence, and consumers that require row-level proof then
+    derive a blocked status from an artifact whose summary still says ready.
+    """
+
+    if path.is_file():
+        try:
+            existing = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            existing = None
+        if _row_evidence_count(existing) > _row_evidence_count(payload):
+            return
+    _write(path, payload)
+
+
 def _release_bundle_payload() -> dict[str, Any]:
     summary = {
         "status": "release_bundle_ready_for_operator_review",
@@ -1432,7 +1464,7 @@ def write_deploy_ops_legal_closure_packets(runs_dir: Path) -> None:
             }
         },
     )
-    _write(
+    _write_without_degrading(
         runs_dir / "product_security_deployment_contract_current.json",
         {
             "summary": {

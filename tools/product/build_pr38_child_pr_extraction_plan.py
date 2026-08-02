@@ -25,6 +25,7 @@ DEFAULT_OUT_MD = ".betelgeuze/pr38_child_pr_extraction_plan_current.md"
 
 PACKET_TYPE = "pr38_child_pr_extraction_plan"
 SCHEMA_VERSION = "pr38_child_pr_extraction_plan_v1"
+MINIMUM_CHILD_PR_COUNT = 5
 
 CLAIM_BOUNDARY = (
     "PR #38 child-PR extraction plan only; it orders local review slices and names verification gates. It does "
@@ -41,6 +42,15 @@ _READ_ONLY_FLAGS = {
 _ORDERED_SLICES: list[dict[str, Any]] = [
     {
         "sequence": 1,
+        "slice_id": "ci_runner_hygiene",
+        "draft_branch_name": "codex/pr38-ci-runner-hygiene",
+        "draft_pr_title": "[codex] Split PR38 self-hosted runner hygiene",
+        "depends_on_slice_ids": [],
+        "merge_reason": "CI cleanup and artifact ownership must be reviewable before treating child PR verification as meaningful.",
+        "special_review_note": "Require runner-temp artifacts, numeric UID:GID output, and fail-closed workspace cleanup receipts.",
+    },
+    {
+        "sequence": 2,
         "slice_id": "f2g_f2h_preflight",
         "draft_branch_name": "codex/pr38-f2g-f2h-preflight",
         "draft_pr_title": "[codex] Split PR38 F2g/F2h preflight work order",
@@ -49,7 +59,7 @@ _ORDERED_SLICES: list[dict[str, Any]] = [
         "special_review_note": "Verify it reports missing authoritative inputs without placeholder solver surfaces.",
     },
     {
-        "sequence": 2,
+        "sequence": 3,
         "slice_id": "public_benchmark_phase2",
         "draft_branch_name": "codex/pr38-public-benchmark-phase2",
         "draft_pr_title": "[codex] Split PR38 public benchmark Phase 2 audit surfaces",
@@ -58,7 +68,16 @@ _ORDERED_SLICES: list[dict[str, Any]] = [
         "special_review_note": "Do not attach or imply real external receipts; keep external beta language locked.",
     },
     {
-        "sequence": 3,
+        "sequence": 4,
+        "slice_id": "competition_benchmark_credibility",
+        "draft_branch_name": "codex/pr38-competition-benchmark-credibility",
+        "draft_pr_title": "[codex] Split PR38 competition benchmark credibility lane",
+        "depends_on_slice_ids": [],
+        "merge_reason": "CASP16/BM5/CAPRI/CAMEO credibility evidence should be reviewed separately from public ligand benchmark claim work.",
+        "special_review_note": "Keep raw benchmark payloads out of git and preserve the Package B ligand claim boundary.",
+    },
+    {
+        "sequence": 5,
         "slice_id": "gpcr_hard_decoy_closure",
         "draft_branch_name": "codex/pr38-gpcr-hard-decoy-closure-tools",
         "draft_pr_title": "[codex] Split PR38 GPCR hard-decoy closure tools",
@@ -67,7 +86,7 @@ _ORDERED_SLICES: list[dict[str, Any]] = [
         "special_review_note": "Keep broad GPCR/router claims locked until registered numeric thresholds and ledger approval.",
     },
     {
-        "sequence": 4,
+        "sequence": 6,
         "slice_id": "pocketmd_lite_recovery",
         "draft_branch_name": "codex/pr38-pocketmd-lite-recovery",
         "draft_pr_title": "[codex] Split PR38 PocketMD Lite recovery surfaces",
@@ -76,15 +95,62 @@ _ORDERED_SLICES: list[dict[str, Any]] = [
         "special_review_note": "Review API/import hunks manually; recovered frames are collector inputs, not claim-grade metrics.",
     },
     {
-        "sequence": 5,
+        "sequence": 7,
+        "slice_id": "developer_preview_reproducibility",
+        "draft_branch_name": "codex/pr38-developer-preview-reproducibility",
+        "draft_pr_title": "[codex] Split PR38 Developer Preview reproducibility gates",
+        "depends_on_slice_ids": ["ci_runner_hygiene"],
+        "merge_reason": "Developer Preview receipts depend on trustworthy local/CI preflight evidence.",
+        "special_review_note": "Keep clean-checkout, Windows/platform reproducibility, and new-user observation fail-closed until observed.",
+    },
+    {
+        "sequence": 8,
+        "slice_id": "api_operator_cockpit",
+        "draft_branch_name": "codex/pr38-api-operator-cockpit",
+        "draft_pr_title": "[codex] Split PR38 API operator cockpit surfaces",
+        "depends_on_slice_ids": [
+            "public_benchmark_phase2",
+            "competition_benchmark_credibility",
+            "gpcr_hard_decoy_closure",
+            "pocketmd_lite_recovery",
+            "developer_preview_reproducibility",
+        ],
+        "merge_reason": "Read-only API/operator status surfaces should land after their underlying evidence slices are isolated.",
+        "special_review_note": "Review route and gate wiring hunks manually; no endpoint may execute jobs or promote readiness.",
+    },
+    {
+        "sequence": 9,
+        "slice_id": "docs_tests_reconciliation",
+        "draft_branch_name": "codex/pr38-docs-tests-reconciliation",
+        "draft_pr_title": "[codex] Split PR38 docs and tests reconciliation",
+        "depends_on_slice_ids": [
+            "ci_runner_hygiene",
+            "f2g_f2h_preflight",
+            "public_benchmark_phase2",
+            "competition_benchmark_credibility",
+            "gpcr_hard_decoy_closure",
+            "pocketmd_lite_recovery",
+            "developer_preview_reproducibility",
+            "api_operator_cockpit",
+        ],
+        "merge_reason": "Cross-cutting docs/tests should reconcile after code-bearing slices are separated.",
+        "special_review_note": "Keep this slice behavior-free; move code changes back to their owning child PR.",
+    },
+    {
+        "sequence": 10,
         "slice_id": "source_of_truth_refresh",
         "draft_branch_name": "codex/pr38-source-of-truth-refresh",
         "draft_pr_title": "[codex] Split PR38 source-of-truth refresh path",
         "depends_on_slice_ids": [
+            "ci_runner_hygiene",
             "f2g_f2h_preflight",
             "public_benchmark_phase2",
+            "competition_benchmark_credibility",
             "gpcr_hard_decoy_closure",
             "pocketmd_lite_recovery",
+            "developer_preview_reproducibility",
+            "api_operator_cockpit",
+            "docs_tests_reconciliation",
         ],
         "merge_reason": "Final release/source-of-truth wiring should land after dependent tools exist on main.",
         "special_review_note": (
@@ -173,7 +239,16 @@ def build_pr38_child_pr_extraction_plan(
         if spec["slice_id"] not in split_slices
     ]
     not_ready_slice_ids = [row["slice_id"] for row in rows if not row["child_pr_ready_to_extract"]]
-    ready = split_ready and not missing_slice_ids and not not_ready_slice_ids
+    minimum_child_pr_count = int(
+        split_summary.get("minimum_child_pr_count") or MINIMUM_CHILD_PR_COUNT
+    )
+    minimum_child_pr_count_met = len(rows) >= minimum_child_pr_count
+    ready = (
+        split_ready
+        and minimum_child_pr_count_met
+        and not missing_slice_ids
+        and not not_ready_slice_ids
+    )
     source_row = next((row for row in rows if row["slice_id"] == "source_of_truth_refresh"), {})
     summary = {
         "packet_type": PACKET_TYPE,
@@ -184,6 +259,8 @@ def build_pr38_child_pr_extraction_plan(
         "split_packet_status": _text(split_summary.get("status")) or "missing",
         "split_review_ready": split_ready,
         "child_pr_count": len(rows),
+        "minimum_child_pr_count": minimum_child_pr_count,
+        "minimum_child_pr_count_met": minimum_child_pr_count_met,
         "ready_child_pr_count": sum(1 for row in rows if row["child_pr_ready_to_extract"]),
         "not_ready_child_pr_count": len(not_ready_slice_ids),
         "not_ready_slice_ids": not_ready_slice_ids,
@@ -196,7 +273,7 @@ def build_pr38_child_pr_extraction_plan(
         "source_of_truth_sequence": int(source_row.get("sequence") or 0),
         "source_of_truth_depends_on_slice_count": int(source_row.get("depends_on_slice_count") or 0),
         "source_of_truth_registry_reconciles_last": int(source_row.get("sequence") or 0) == len(rows)
-        and int(source_row.get("depends_on_slice_count") or 0) == 4,
+        and int(source_row.get("depends_on_slice_count") or 0) == len(rows) - 1,
         "claim_boundary": CLAIM_BOUNDARY,
         "next_required_step": (
             "After explicit human approval to create branches/commits, extract child PRs in sequence and run each "
@@ -224,6 +301,8 @@ def _write_md(path_like: str | Path, payload: dict[str, Any], *, root: Path = RO
         f"- status: `{s['status']}`",
         f"- split_packet_status: `{s['split_packet_status']}`",
         f"- child_pr_count: `{s['child_pr_count']}`",
+        f"- minimum_child_pr_count: `{s['minimum_child_pr_count']}`",
+        f"- minimum_child_pr_count_met: `{s['minimum_child_pr_count_met']}`",
         f"- total_changed_file_count: `{s['total_changed_file_count']}`",
         f"- integration_touchpoint_count: `{s['integration_touchpoint_count']}`",
         f"- source_of_truth_registry_reconciles_last: `{s['source_of_truth_registry_reconciles_last']}`",

@@ -19,6 +19,36 @@ REFINE_STACK_CALIBRATION_STATUS = "internal_solvent_fep_proxy_uncalibrated"
 REFINE_PROXY_BLOCKED_REASON = "internal_gb_sa_proxy_uncalibrated"
 MM_GBSA_CLAIM_METADATA_SCHEMA_VERSION = "mm_gbsa_refine_claim_metadata_v1"
 
+#: Active proxy energy field name. ``deltaG_*_kcal_mol`` is retired from the
+#: active schema because it reads like a calibrated binding free energy; this
+#: value is an uncalibrated internal GB/SA proxy score.
+GB_SA_PROXY_ENERGY_FIELD = "gb_sa_proxy_energy_score"
+
+#: Retired field names kept for reading pre-rename artifacts only. Nothing in
+#: the active path may emit these.
+RETIRED_PROXY_ENERGY_FIELDS = (
+    "deltaG_mm_gbsa_kcal_mol",
+    "deltaG_mmpbsa_proxy_kcal_mol",
+)
+
+
+def gb_sa_proxy_energy(mapping: Any, default: Any = None) -> Any:
+    """Read the GB/SA proxy energy from a result mapping.
+
+    Prefers the active field and falls back to the retired ``deltaG_*_kcal_mol``
+    names so historical artifacts stay readable without reintroducing them into
+    the active schema.
+    """
+
+    if not isinstance(mapping, dict):
+        return default
+    if GB_SA_PROXY_ENERGY_FIELD in mapping:
+        return mapping[GB_SA_PROXY_ENERGY_FIELD]
+    for legacy in RETIRED_PROXY_ENERGY_FIELDS:
+        if legacy in mapping:
+            return mapping[legacy]
+    return default
+
 
 def _refine_claim_metadata() -> dict[str, Any]:
     return {
@@ -90,8 +120,7 @@ def mm_gbsa_binding_energy(
             "contact_count": 0.0,
             "close_contact_count": 0.0,
             "clash_count": 0.0,
-            "deltaG_mm_gbsa_kcal_mol": 5.0,
-            "deltaG_mmpbsa_proxy_kcal_mol": 5.0,
+            GB_SA_PROXY_ENERGY_FIELD: 5.0,
             "e_vdw": 0.0,
             "e_polar": 0.0,
             "e_nonpolar": 0.0,
@@ -162,8 +191,7 @@ def mm_gbsa_binding_energy(
         "ligand_contact_atom_count": ligand_contact_atom_count,
         "close_contact_count": close_contacts,
         "clash_count": clashes,
-        "deltaG_mm_gbsa_kcal_mol": delta_g,
-        "deltaG_mmpbsa_proxy_kcal_mol": delta_g,
+        GB_SA_PROXY_ENERGY_FIELD: delta_g,
         "e_vdw": float(e_vdw),
         "raw_e_vdw": raw_vdw,
         "e_polar": float(e_polar),
@@ -201,10 +229,11 @@ def mm_gbsa_refinement_delta(
             protein_elements=protein_elements,
             ligand_elements=ligand_elements,
         )
-        delta = float(refined["deltaG_mm_gbsa_kcal_mol"] - float(base_proxy_kcal))
+        refined_energy = float(gb_sa_proxy_energy(refined, 0.0))
+        delta = float(refined_energy - float(base_proxy_kcal))
         confidence = float(np.clip(1.0 / (1.0 + 0.25 * abs(delta) + 0.1 * refined["clash_count"]), 0.05, 0.99))
         return {
-            "refined_energy_kcal_mol": float(refined["deltaG_mm_gbsa_kcal_mol"]),
+            "refined_energy_kcal_mol": refined_energy,
             "refinement_delta_kcal_mol": float(max(delta, 0.05)),
             "confidence": confidence,
             "backend": "internal_gb_sa_v1",
@@ -308,7 +337,7 @@ def refine_stack_calibration_report(
         except (TypeError, ValueError):
             return False
 
-    gb_ready = _finite_number(gb, "deltaG_mm_gbsa_kcal_mol")
+    gb_ready = _finite_number(gb, GB_SA_PROXY_ENERGY_FIELD)
     explicit_ready = bool(explicit.get("refine_tier") == "explicit_tip3p_shell_v1" and _finite_number(explicit, "delta_e_total_kcal_mol"))
     fep_ready = bool(fep.get("status") == "fep_estimate_ready" and _finite_number(fep, "delta_g_fep_kcal_mol"))
     solvent_pairs = int(public_solvent_pair_count)

@@ -160,7 +160,7 @@ def main() -> None:
         "--stage3-refine-glob",
         type=str,
         default="",
-        help="Optional glob of refined stage3 CSVs (deltaG_mm_gbsa_kcal_mol) for multi-source label enrichment.",
+        help="Optional glob of refined stage3 CSVs (internal_refine_proxy_score) for multi-source label enrichment.",
     )
     p.add_argument("--dataset-csv", type=str, default=DEFAULT_DATASET_CSV)
     p.add_argument("--enriched-csv", type=str, default=DEFAULT_ENRICHED_CSV)

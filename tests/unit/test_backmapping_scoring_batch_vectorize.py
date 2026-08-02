@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
+from betelgeuze_engine.physics.mm_gbsa import GB_SA_PROXY_ENERGY_FIELD
 from tools.run_ligand_backmapping_scoring import _frame_mmpbsa_proxy, _frame_mmpbsa_proxy_batch, _score_frames
 
 
@@ -29,7 +30,9 @@ def test_frame_mmpbsa_proxy_batch_matches_single_frame_loop() -> None:
     ]
     assert batch["min_distance_A"].shape[0] == len(singles)
     for idx, single in enumerate(singles):
-        assert np.isclose(batch["deltaG_mmpbsa_proxy_kcal_mol"][idx], single["deltaG_mmpbsa_proxy_kcal_mol"], rtol=1e-5)
+        assert np.isclose(
+            batch[GB_SA_PROXY_ENERGY_FIELD][idx], single[GB_SA_PROXY_ENERGY_FIELD], rtol=1e-5
+        )
         assert np.isclose(batch["min_distance_A"][idx], single["min_distance_A"], rtol=1e-5)
         assert np.isclose(batch["contact_count"][idx], single["contact_count"], rtol=1e-5)
 

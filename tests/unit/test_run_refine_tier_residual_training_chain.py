@@ -21,7 +21,7 @@ def _write_stage5(path: Path, rows: int = 40) -> None:
 def _write_stage3(path: Path, rows: int = 40) -> None:
     header = (
         "target,ligand_id,binding_energy_mmpbsa_kcal_mol_proxy,"
-        "deltaG_mm_gbsa_kcal_mol,physics_refinement_confidence\n"
+        "internal_refine_proxy_score,physics_refinement_confidence\n"
     )
     body = "\n".join(
         f"ADRB2_GPCR_BLIND,lig{i},{-6.0 - i * 0.01},{-5.0 - i * 0.01},{0.5 + (i % 5) * 0.08}"

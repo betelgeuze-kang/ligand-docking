@@ -23,13 +23,26 @@ def test_build_cameo_official_results_intake_gate_tool_writes_outputs_and_templa
     assert json.loads(out_json.read_text(encoding="utf-8"))["summary"]["status"] == "cameo_official_results_intake_ready"
     assert "required_columns" in json.loads(out_json.read_text(encoding="utf-8"))["summary"]
     summary = json.loads(out_json.read_text(encoding="utf-8"))["summary"]
+    rows = json.loads(out_json.read_text(encoding="utf-8"))["rows"]
     assert summary["operator_template_csv"] == str(template)
     assert summary["operator_intake_csv"] == str(results)
+    assert summary["official_result_intake_ready"] is True
     assert summary["missing_required_columns"] == []
     assert summary["blocker_codes"] == []
+    assert summary["operator_action_required_count"] == 0
+    assert summary["operator_action_required_row_count"] == 0
+    assert summary["source_provenance_ready_row_count"] == 1
+    assert summary["official_metric_ready_row_count"] == 1
+    assert summary["local_native_accuracy_blocker_count"] == 0
     assert summary["rejected_official_result_count"] == 0
+    assert rows[0]["source_provenance_ready"] is True
+    assert rows[0]["official_metric_ready"] is True
+    assert rows[0]["local_native_accuracy_absent"] is True
+    assert rows[0]["operator_action_required"] is False
     assert out_csv.read_text(encoding="utf-8").startswith("row_number,target_id,")
     assert "CAMEO Official Results Intake Gate" in out_md.read_text(encoding="utf-8")
     assert "operator_intake_csv" in out_md.read_text(encoding="utf-8")
     assert "disallowed_local_accuracy_columns" in out_md.read_text(encoding="utf-8")
+    assert "allowed_result_source_kinds" in out_md.read_text(encoding="utf-8")
+    assert "local_native_accuracy_blocker_count" in out_md.read_text(encoding="utf-8")
     assert template.read_text(encoding="utf-8").startswith("target_id,candidate_id,")
