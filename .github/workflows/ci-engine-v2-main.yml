@@ -10,6 +10,7 @@ on:
       - "config/independent_engine_v2_capabilities.yaml"
       - "config/engine_v2_public_redocking_contamination_registry.json"
       - "config/engine_v2_fresh_redocking_holdout_manifest.json"
+      - "config/engine_v2_phase25_cohort_admission.json"
       - "tools/build_engine_v2_wheel.py"
       - "tools/build_engine_v2_native_wheel.py"
       - "tools/build_engine_v2_sbom.py"
@@ -18,6 +19,7 @@ on:
       - "tools/build_engine_v2_receipt_bound_scale_feasibility_audit.py"
       - "tools/run_engine_v2_public_redocking_300.py"
       - "tools/verify_engine_v2_public_redocking_stage0.py"
+      - "tools/verify_engine_v2_phase25_cohort_admission.py"
       - "tools/classify_engine_v2_stage0_full_suite.py"
       - "tools/reconcile_engine_v2_stage0_full_suites.py"
       - "tools/audit_engine_v2_ci_authority.py"
@@ -28,6 +30,7 @@ on:
       - "tests/unit/test_audit_engine_v2_ci_authority.py"
       - "tests/unit/test_build_engine_v2_source_paired_failure_atlas.py"
       - "tests/unit/test_build_engine_v2_receipt_bound_scale_feasibility_audit.py"
+      - "tests/unit/test_verify_engine_v2_phase25_cohort_admission.py"
       - "docs/engine_v2_*.md"
       - "docs/independent_engine_v2_commercial_roadmap.ko.md"
       - "docs/roadmaps/engine-v2-scientific-evidence-roadmap.md"
@@ -99,6 +102,7 @@ jobs:
             config/independent_engine_v2_capabilities.yaml
             config/engine_v2_public_redocking_contamination_registry.json
             config/engine_v2_fresh_redocking_holdout_manifest.json
+            config/engine_v2_phase25_cohort_admission.json
             config/engine_v2_public_redocking_stage0_threshold_evidence.json
             tools/__init__.py
             tools/build_engine_v2_wheel.py
@@ -111,6 +115,7 @@ jobs:
             tools/build_engine_v2_receipt_bound_scale_feasibility_audit.py
             tools/run_engine_v2_public_redocking_300.py
             tools/verify_engine_v2_public_redocking_stage0.py
+            tools/verify_engine_v2_phase25_cohort_admission.py
             tools/classify_engine_v2_stage0_full_suite.py
             tools/reconcile_engine_v2_stage0_full_suites.py
             tools/audit_engine_v2_ci_authority.py
@@ -122,6 +127,7 @@ jobs:
             tests/unit/test_build_engine_v2_stage0_development_gate_ledger.py
             tests/unit/test_build_engine_v2_source_paired_failure_atlas.py
             tests/unit/test_build_engine_v2_receipt_bound_scale_feasibility_audit.py
+            tests/unit/test_verify_engine_v2_phase25_cohort_admission.py
             tests/unit/test_classify_engine_v2_stage0_full_suite.py
             tests/unit/test_reconcile_engine_v2_stage0_full_suites.py
             tests/unit/test_audit_engine_v2_ci_authority.py
@@ -253,10 +259,12 @@ jobs:
             tools/build_engine_v2_receipt_bound_scale_feasibility_audit.py \
             tools/run_engine_v2_public_redocking_300.py \
             tools/verify_engine_v2_public_redocking_stage0.py \
+            tools/verify_engine_v2_phase25_cohort_admission.py \
             tools/classify_engine_v2_stage0_full_suite.py \
             tools/reconcile_engine_v2_stage0_full_suites.py \
             tools/audit_engine_v2_ci_authority.py
           python tools/check_engine_v2_architecture.py
+          python tools/verify_engine_v2_phase25_cohort_admission.py
 
       - name: Run complete focused Engine v2 CPU suite
         shell: bash
@@ -338,6 +346,7 @@ jobs:
             tests/unit/test_build_engine_v2_stage0_development_gate_ledger.py \
             tests/unit/test_build_engine_v2_source_paired_failure_atlas.py \
             tests/unit/test_build_engine_v2_receipt_bound_scale_feasibility_audit.py \
+            tests/unit/test_verify_engine_v2_phase25_cohort_admission.py \
             tests/unit/test_classify_engine_v2_stage0_full_suite.py \
             tests/unit/test_reconcile_engine_v2_stage0_full_suites.py \
             tests/unit/test_audit_engine_v2_ci_authority.py \

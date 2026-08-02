@@ -2,95 +2,71 @@
 
 ## Decision
 
-Expansion of the Phase 2.5 uncovered-case atlas is not admitted. The only
-currently admitted failure cohort is the exact seven-case
-proposal-oracle-uncovered subset of the pinned nine-case source-paired A/B
-archive:
+Expansion of the Phase 2.5 uncovered-case atlas is not admitted. The admitted
+cohort remains the exact seven proposal-oracle-uncovered cases derived from the
+pinned nine-case source-paired historical-development A/B.
 
-- `5SD5_HWI`
-- `5SIS_JSM`
-- `6M2B_EZO`
-- `6TW5_9M2`
-- `6TW7_NZB`
-- `6VTA_AKN`
-- `6WTN_RXT`
+The machine-readable source of truth is
+[`config/engine_v2_phase25_cohort_admission.json`](../config/engine_v2_phase25_cohort_admission.json).
+It binds the ordered rosters and their hashes, evidence identities, expansion
+requirements, claim boundary, and local-refinement experiment stop rule. This
+document is explanatory and cannot widen or override that policy.
 
-This contract freezes an evidence boundary. It does not authorize another
-historical run, a fresh-128 run, a taxonomy relabel, a refinement or selection
-policy change, scorer calibration, promotion, or a scientific or product
-claim.
+## Evidence classes remain distinct
 
-## Current evidence boundary
+| Evidence class | Scope | Admission authority |
+| --- | --- | --- |
+| Failure atlas | 7 proposal-oracle-uncovered cases from the pinned 9-case A/B | Exact current admission only |
+| Stage 0 threshold authority | 12 cases / 36 three-engine receipt hashes | None; this is a threshold source map, not a failure roster |
+| V7 narrative remainder | `29 scored - 14 with any exact-valid candidate = 15` | None; no ordered roster or authenticated payload exists |
 
-| Evidence | Authenticated scope | Identity | Admission consequence |
-|---|---|---|---|
-| Source-paired A/B archive | 9 historical cases; 8 scored | case-ID SHA-256 `cd2c24c9c7d937865f40352375e8a17c6b83b0b0fab8c134218d2c29537493c1`; source commit `754bebb9ddc2fbffdaca5d4143ff515c3b38c032`; archive SHA-256 `8bef33eba296989b795a11fd05a7e119124b066d91bec28a8b910d38a083fbcc` | Admits only the deterministically pinned seven-case uncovered subset above. |
-| Failure atlas | 7 proposal-oracle-uncovered cases | schema `betelgeuze.engine_v2_source_paired_failure_atlas/2.1.0`; self-hash `58528986f293d96a8a4a3971ecc7abab436c7f27e768589cf0c22d8bc970c1d7` | Admits the ten-category representation, including unresolved statuses; it does not prove every cause. |
-| Stage 0 threshold authority | 12 historical cases represented by 36 three-engine receipt hashes | case-ID SHA-256 `cba8259f2dd99b1b998903f4edffb4696f0bbdcb758f9c4df15573d29db2a621`; evidence self-hash `8f6e548bae67e56dbe05e95ae4ac08f4af5b1eb7b8119adc09cb33e366a36ce3` | Authenticates the tracked threshold source map only. Its receipt payloads are not committed, and the cohort is not an uncovered-case roster. |
-| V7 narrative aggregate | 29 scored cases; 14 with any exact-valid candidate | arithmetic remainder `29 - 14 = 15`; no ordered roster, roster hash, or receipt archive | Does not identify 15 cases and is not equivalent to proposal-oracle-uncovered status. |
+Threshold membership must not be relabeled as failure-atlas membership. The
+narrative remainder must not be combined with or subtracted from either
+authenticated cohort to infer case identities.
 
-The threshold cohort contains the nine source-paired IDs plus `7A9E_R4W`,
-`7MWU_ZPM`, and `7OSO_0V1`. Those three IDs must not be labeled failures or
-added to the atlas from threshold membership alone. Likewise, the narrative
-remainder 15 must not be combined with or subtracted from either authenticated
-cohort to infer missing IDs.
+## Expansion gate
 
-## Admission requirements for a broader cohort
+A broader cohort requires one immutable historical-development evidence bundle
+that satisfies every structured requirement in the policy:
 
-A broader Phase 2.5 cohort is admitted only when one immutable evidence bundle
-satisfies every requirement below:
+- exact ordered input and uncovered rosters within the pinned contaminated-300
+  registry, with no smoke or fresh-holdout overlap;
+- complete execution, implementation, evaluation-pipeline, and environment
+  identities;
+- failure-complete receipts and the fixed candidate denominator;
+- a pinned archive, manifest, checksum, member count, and member digests;
+- predeclared deterministic proposal-oracle derivation at `<= 2.0` angstrom;
+- ten-category taxonomy reconciliation with unsupported causes left
+  `unresolved`;
+- historical-development-only, no-execution, no-promotion, and no-claim
+  governance.
 
-1. **Exact scope identity.** It records an ordered historical-development input
-   roster, an ordered uncovered roster, both counts, and canonical SHA-256
-   digests. Every input ID is a member of the pinned 300-case contaminated-
-   development registry whose case-ID digest is
-   `110c9ccc37255c39df3dae5b0213e4cf158cccfaf30071cb5ec9eb8e269ef349`
-   and whose registry self-hash is
-   `89a58e6fbadd7e249df20bdf8db36f317e3e2e2dd6f32c32879d1a989dd28f31`;
-   an updated registry requires separate review. Both rosters are disjoint from
-   engineering-smoke and fresh-holdout identities.
-2. **Execution identity.** It binds the exact source commit, algorithm profile,
-   runner, candidate, diagnostic, result, refinement-receipt, scorer, pocket,
-   charge, and proposal policies used for every case. Every execution receipt
-   also authenticates the implementation, evaluation-pipeline, and execution-
-   environment SHA-256 identities.
-3. **Failure-complete receipts.** Every input case has authenticated result and
-   diagnostic receipts plus input and materialization identities. Every
-   preparation-success case retains the complete fixed candidate-slot
-   denominator; a preparation-failure case instead retains its typed failure
-   and an empty candidate list. Missing, duplicated, cross-wired, or mixed-
-   version rows fail closed.
-4. **Archive identity.** The archive file, member manifest, bundle checksum,
-   member count, and every member digest are pinned and verified before any
-   payload is classified.
-5. **Deterministic uncovered derivation.** Proposal-oracle recovery is
-   recomputed from the authenticated candidate diagnostics of one named
-   classification lane and exact algorithm profile that were fixed before
-   result inspection, using the frozen `<= 2.0` angstrom criterion. If a bundle
-   carries other lanes, it records their results but cannot switch the
-   classification lane post hoc. The uncovered roster is derived from the
-   authoritative-lane result, not from exact-valid-pose counts, threshold
-   membership, narrative arithmetic, or filenames.
-6. **Taxonomy reconciliation.** Every admitted uncovered case has all ten
-   category keys, one allowed status per category, deterministic zero-inclusive
-   roll-ups, and a self-hash. Evidence-unsupported categories remain
-   `unresolved`; absence of evidence is not converted into a causal label.
-7. **Claim boundary.** The bundle declares historical contaminated development
-   only and authorizes no new execution, including no fresh-holdout execution.
-   Historical execution receipts retain their truthful cache-free
-   `fresh_execution` fact; the separate governance field remains
-   `fresh_execution_authorized: false`. The bundle grants no runtime or
-   selection-policy authority, promotion eligibility, or public or scientific
-   validation claim.
+Receipt hashes without authenticated payloads, or aggregate counts without an
+ordered roster, fail closed. A later evidence bundle needs separate review;
+this contract itself authorizes no run.
 
-Receipt hashes without their authenticated payloads cannot satisfy items 3–6.
-An aggregate count without an ordered roster cannot satisfy item 1. Failure of
-any requirement leaves the admitted cohort unchanged at seven cases.
+## Local-refinement stop rule
 
-## Permitted next action
+The predeclared clearance rule remains shadow-only until a separately reviewed
+activation receipt exists. No V9 or V10 refinement PR is admitted before the
+single source-paired nine-case A/B completes. That A/B must retain the 512-slot
+denominator, source control, full score-term verification, and all nonregression
+guards in the policy. The machine policy pins the exact PR #243 policy SHA,
+nine-case archive and ordered roster, seven previously uncovered cases,
+`6M73_FNR` preparation failure, and existing `6T88_MWQ` Top-1/Top-5 recovery.
+Go requires all invariants, at least one primary gain, and no No-Go trigger. A
+No-Go trigger has precedence and closes the local torsion/clearance refinement
+epic.
 
-A later, separately reviewed historical-development evidence bundle may be
-checked against this contract. Until such a bundle exists, implementation work
-may improve evidence plumbing or validation, but it must not widen the atlas,
-invent case identities, infer causal categories, or open any fresh-holdout
-state.
+## CI enforcement
+
+Run:
+
+```bash
+python3 tools/verify_engine_v2_phase25_cohort_admission.py
+```
+
+The verifier checks the policy self-hash, exact seven/nine-case rosters, the
+tracked threshold authority and contaminated-300 registry identities, the
+non-authoritative 15-case remainder, and the frozen A/B stop rule. The
+authoritative Engine V2 workflow runs the same verifier and its focused tests.

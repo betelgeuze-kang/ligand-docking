@@ -125,6 +125,11 @@ The canonical capability state is:
   historical-only roster, complete per-case diagnostic receipts, a pinned
   archive, and deterministic proposal-oracle-uncovered derivation; neither the
   12-case threshold map nor the narrative remainder 15 satisfies that gate.
+  Its machine-readable policy and CI verifier now bind the exact seven/nine-case
+  rosters, cross-check the 12-case threshold authority and contaminated-300
+  registry, and freeze the local-refinement A/B stop rule. V9/V10 refinement
+  work is prohibited until the separately activated, single nine-case clearance
+  A/B reaches its frozen decision.
 - The Stage 0 source-freeze contract names one V7 algorithm profile and binds
   runner `2.13.0`, candidate schema `1.6.0`, the complete binary64 V7 config,
   its `5e8b61d2...75337` fingerprint, and the result-independent `[2.0,4.0)`
@@ -229,6 +234,15 @@ The canonical capability state is:
   21,367,212 expanded bytes to 505,161 bytes and is pinned to
   `7a2561f646f3cf5434de6c79ed797073ac1b7e034e4fcd2291755a58128f5e98`.
   This is descriptive telemetry only and selects no rule.
+- The source-paired clearance-selection policy is now predeclared, but remains
+  caller-supplied-probe shadow logic with
+  `activation_evidence_admissible=false`. It cannot activate coordinates or
+  support the historical A/B until a new outer activation receipt binds the
+  exact V1.1 source receipt, allocation and proposal identity, V6/optimized
+  coordinates, clearance/objective/atom/pair/torsion evidence, and complete
+  ScorerV1Terms score, term, and rank semantics. The historical PR #242 archive
+  lacks that complete scoring receipt and cannot be reused for Top-1/Top-5
+  meaning validation.
 - Solo self-review pass records now have a fail-closed generator that requires
   one clean commit/evidence identity and enforces at least 24 hours between
   pass 1 and pass 2 without claiming reviewer independence. A separate
@@ -317,8 +331,12 @@ The canonical capability state is:
    The completed receipt-bound scale audit finds 7/22 inside the same numeric
    interval only after heavy-atom normalization, while exact lexicographic
    ordering accepts all 22 and therefore does not provide a bounded selector.
-   Predeclare one result-independent rule before any historical A/B; do not
-   relabel, filter, abstain, or relax thresholds around the current pool.
+   The result-independent clearance shadow rule is predeclared, but its current
+   caller-supplied probe cannot serve as activation evidence. Add and review the
+   source-bound activation receipt before the single predeclared historical
+   A/B can receive separate execution authority; do not execute early, relabel,
+   filter, abstain, relax
+   thresholds, or open V9/V10 refinement work around the current pool.
 4. **Full-suite self-review:** a solo operational evidence builder dispositions the 49
    conservative `actual_regression` rows as pre-existing unresolved behavior
    debt and freezes the Engine-required/legacy/product/local-evidence tier
