@@ -10,9 +10,9 @@ from pathlib import Path
 from typing import Any, Mapping
 
 
-SCHEMA_ID = "betelgeuze.engine_v2_phase25_cohort_admission/1.2.0"
+SCHEMA_ID = "betelgeuze.engine_v2_phase25_cohort_admission/1.3.0"
 EXPECTED_POLICY_SHA256 = (
-    "67910559ec02790cb59fbf41648ca9aff2134cff960292d7ad1acc4caf546cfa"
+    "b4c5530dc4766500dbbc854875cfb39baadad94196c63be6150514879993d211"
 )
 EXPECTED_THRESHOLD_EVIDENCE_SHA256 = (
     "8f6e548bae67e56dbe05e95ae4ac08f4af5b1eb7b8119adc09cb33e366a36ce3"
@@ -124,10 +124,10 @@ EXPECTED_EXECUTION_IDENTITY_FIELDS = (
 TOP_LEVEL_KEYS = {
     "authority_boundary",
     "cohort_relationships",
-    "current_admission",
     "decision",
     "distinguished_non_admission_evidence",
     "expansion_gate",
+    "failure_atlas_cohort_authority",
     "governance_base_commit",
     "local_refinement_experiment_stop_rule",
     "policy_sha256",
@@ -136,7 +136,7 @@ TOP_LEVEL_KEYS = {
 }
 
 EXPECTED_AUTHORITY_BOUNDARY = {
-    "clearance_selection_policy_cohort_authority": False,
+    "clearance_selection_policy_failure_atlas_membership_authority": False,
     "cohort_expansion_failure_effect": "retain_exact_7_case_failure_atlas",
     "fresh_holdout_execution_authorized": False,
     "historical_receipt_fresh_execution_fact_preserved": True,
@@ -148,7 +148,7 @@ EXPECTED_AUTHORITY_BOUNDARY = {
     "scientific_claim_authority": False,
     "scorer_authority": False,
     "selection_policy_authority": False,
-    "v11_clearance_audit_cohort_authority": False,
+    "v11_clearance_audit_failure_atlas_membership_authority": False,
 }
 
 
@@ -243,7 +243,9 @@ def _verify_self_hash(payload: Mapping[str, Any], *, field: str, name: str) -> N
 def _threshold_case_ids(source_reports: object) -> tuple[str, ...]:
     reports = _mapping(source_reports, name="threshold source_reports_sha256")
     if len(reports) != 36:
-        raise ValueError("threshold authority must retain exactly 36 receipt hashes")
+        raise ValueError(
+            "threshold proposal source map must retain exactly 36 receipt hashes"
+        )
     case_engines: dict[str, set[str]] = {}
     for raw_path, digest in reports.items():
         if not isinstance(raw_path, str) or not _is_sha256(digest):
@@ -300,11 +302,14 @@ def verify_policy(
     ):
         raise ValueError("governance base commit is invalid")
 
-    admission = _mapping(policy.get("current_admission"), name="current_admission")
+    admission = _mapping(
+        policy.get("failure_atlas_cohort_authority"),
+        name="failure_atlas_cohort_authority",
+    )
     _exact_keys(
         admission,
         {
-            "admission_authority",
+            "failure_atlas_membership_authority",
             "admitted_case_count",
             "admitted_case_ids",
             "admitted_case_ids_sha256",
@@ -313,12 +318,12 @@ def verify_policy(
             "failure_atlas_self_sha256",
             "source_paired_archive",
         },
-        name="current_admission",
+        name="failure_atlas_cohort_authority",
     )
     _exact_bool(
-        admission.get("admission_authority"),
+        admission.get("failure_atlas_membership_authority"),
         True,
-        name="failure-atlas admission_authority",
+        name="failure-atlas membership authority",
     )
     _exact_list(
         admission.get("admitted_case_ids"),
@@ -397,7 +402,7 @@ def verify_policy(
     )
     _exact_keys(
         non_admission,
-        {"narrative_remainder", "stage0_threshold_authority"},
+        {"narrative_remainder", "stage0_threshold_proposal_source_map"},
         name="distinguished_non_admission_evidence",
     )
     narrative = _mapping(
@@ -406,7 +411,7 @@ def verify_policy(
     _exact_keys(
         narrative,
         {
-            "admission_authority",
+            "failure_atlas_membership_authority",
             "case_ids_sha256",
             "cases_with_any_exact_valid_candidate",
             "ordered_case_ids",
@@ -424,33 +429,36 @@ def verify_policy(
         or narrative.get("remainder") != 15
         or narrative.get("ordered_case_ids") is not None
         or narrative.get("case_ids_sha256") is not None
-        or type(narrative.get("admission_authority")) is not bool
-        or narrative.get("admission_authority") is not False
+        or type(narrative.get("failure_atlas_membership_authority")) is not bool
+        or narrative.get("failure_atlas_membership_authority") is not False
     ):
         raise ValueError(
             "narrative remainder must remain non-authoritative 29 - 14 = 15"
         )
 
     threshold_policy = _mapping(
-        non_admission.get("stage0_threshold_authority"),
-        name="stage0_threshold_authority",
+        non_admission.get("stage0_threshold_proposal_source_map"),
+        name="stage0_threshold_proposal_source_map",
     )
     _exact_keys(
         threshold_policy,
         {
-            "admission_authority",
+            "artifact_identity_status",
             "case_count",
             "case_ids",
             "case_ids_sha256",
             "config_path",
             "evidence_self_sha256",
-            "failure_roster_authority",
+            "failure_atlas_membership_authority",
+            "failure_atlas_roster_authority",
             "receipt_hash_count",
             "receipt_payloads_committed",
             "schema_id",
+            "stage0_execution_threshold_authority",
+            "threshold_value_status",
             "threshold_only_case_ids",
         },
-        name="stage0_threshold_authority",
+        name="stage0_threshold_proposal_source_map",
     )
     _exact_list(
         threshold_policy.get("case_ids"),
@@ -463,12 +471,25 @@ def verify_policy(
         name="threshold_only_case_ids",
     )
     if (
-        type(threshold_policy.get("admission_authority")) is not bool
-        or threshold_policy.get("admission_authority") is not False
-        or type(threshold_policy.get("failure_roster_authority")) is not bool
-        or threshold_policy.get("failure_roster_authority") is not False
+        type(threshold_policy.get("failure_atlas_membership_authority")) is not bool
+        or threshold_policy.get("failure_atlas_membership_authority") is not False
+        or type(threshold_policy.get("failure_atlas_roster_authority")) is not bool
+        or threshold_policy.get("failure_atlas_roster_authority") is not False
+        or type(threshold_policy.get("stage0_execution_threshold_authority"))
+        is not bool
+        or threshold_policy.get("stage0_execution_threshold_authority") is not False
     ):
-        raise ValueError("threshold authority cannot admit failure cases")
+        raise ValueError(
+            "threshold proposal source map cannot admit failure-atlas cases "
+            "or authorize Stage 0 execution thresholds"
+        )
+    if (
+        threshold_policy.get("artifact_identity_status")
+        != "pinned_for_phase25_cross_check"
+        or threshold_policy.get("threshold_value_status")
+        != "proposed_not_frozen_for_stage0_execution"
+    ):
+        raise ValueError("threshold proposal and artifact identity states are invalid")
     if (
         threshold_policy.get("config_path")
         != "config/engine_v2_public_redocking_stage0_threshold_evidence.json"
@@ -476,16 +497,22 @@ def verify_policy(
         != "betelgeuze.engine_v2_stage0_threshold_evidence/1.0.0"
         or threshold.get("schema_id") != threshold_policy.get("schema_id")
     ):
-        raise ValueError("threshold authority source identity is invalid")
-    _verify_self_hash(threshold, field="evidence_sha256", name="threshold authority")
+        raise ValueError("threshold proposal source-map identity is invalid")
+    _verify_self_hash(
+        threshold,
+        field="evidence_sha256",
+        name="threshold proposal source map",
+    )
     if (
         threshold.get("evidence_sha256") != EXPECTED_THRESHOLD_EVIDENCE_SHA256
         or threshold.get("case_ids_sha256") != EXPECTED_THRESHOLD_CASE_IDS_SHA256
     ):
-        raise ValueError("threshold authority is not the frozen identity")
+        raise ValueError(
+            "threshold proposal source-map artifact is not the pinned identity"
+        )
     threshold_ids = _threshold_case_ids(threshold.get("source_reports_sha256"))
     if threshold_ids != EXPECTED_THRESHOLD_CASE_IDS:
-        raise ValueError("threshold authority case membership drifted")
+        raise ValueError("threshold proposal source-map case membership drifted")
     if (
         type(threshold.get("case_count")) is not int
         or threshold.get("case_count") != 12
@@ -509,7 +536,7 @@ def verify_policy(
         or threshold.get("scientific_validation_claimed") is not False
     ):
         raise ValueError(
-            "threshold authority identity does not match the cohort policy"
+            "threshold proposal source-map identity does not match the cohort policy"
         )
 
     relationships = _mapping(
@@ -809,7 +836,7 @@ def verify_policy(
     ):
         raise ValueError("local-refinement stop rule is not frozen")
     if policy.get("policy_sha256") != EXPECTED_POLICY_SHA256:
-        raise ValueError("cohort policy is not the frozen identity")
+        raise ValueError("cohort policy is not the pinned identity")
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -821,10 +848,16 @@ def _parser() -> argparse.ArgumentParser:
         default=repo_root / "config/engine_v2_phase25_cohort_admission.json",
     )
     parser.add_argument(
+        "--threshold-source-map",
         "--threshold-authority",
+        dest="threshold_source_map",
         type=Path,
         default=repo_root
         / "config/engine_v2_public_redocking_stage0_threshold_evidence.json",
+        help=(
+            "pinned Stage 0 threshold-proposal source-map artifact; "
+            "--threshold-authority is a deprecated compatibility alias"
+        ),
     )
     parser.add_argument(
         "--contamination-registry",
@@ -845,7 +878,7 @@ def main() -> int:
     try:
         policy = _load_json(arguments.policy, name="cohort policy")
         threshold = _load_json(
-            arguments.threshold_authority, name="threshold authority"
+            arguments.threshold_source_map, name="threshold proposal source map"
         )
         registry = _load_json(
             arguments.contamination_registry, name="contamination registry"

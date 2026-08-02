@@ -64,7 +64,7 @@ def test_tracked_phase25_cohort_policy_is_valid() -> None:
 def test_threshold_membership_cannot_expand_the_failure_atlas() -> None:
     policy, threshold, registry, fresh = _inputs()
     widened = copy.deepcopy(policy)
-    admission = widened["current_admission"]
+    admission = widened["failure_atlas_cohort_authority"]
     assert isinstance(admission, dict)
     admitted = admission["admitted_case_ids"]
     assert isinstance(admitted, list)
@@ -154,6 +154,34 @@ def test_narrative_remainder_cannot_gain_a_roster() -> None:
         verify_policy(weakened, threshold, registry, fresh)
 
 
+def test_threshold_proposal_source_map_cannot_claim_execution_authority() -> None:
+    policy, threshold, registry, fresh = _inputs()
+    weakened = copy.deepcopy(policy)
+    evidence = weakened["distinguished_non_admission_evidence"]
+    assert isinstance(evidence, dict)
+    source_map = evidence["stage0_threshold_proposal_source_map"]
+    assert isinstance(source_map, dict)
+    source_map["stage0_execution_threshold_authority"] = True
+    _rehash_policy(weakened)
+
+    with pytest.raises(ValueError, match="cannot admit failure-atlas cases"):
+        verify_policy(weakened, threshold, registry, fresh)
+
+
+def test_threshold_proposal_values_cannot_be_relabelled_as_frozen() -> None:
+    policy, threshold, registry, fresh = _inputs()
+    weakened = copy.deepcopy(policy)
+    evidence = weakened["distinguished_non_admission_evidence"]
+    assert isinstance(evidence, dict)
+    source_map = evidence["stage0_threshold_proposal_source_map"]
+    assert isinstance(source_map, dict)
+    source_map["threshold_value_status"] = "frozen_for_stage0_execution"
+    _rehash_policy(weakened)
+
+    with pytest.raises(ValueError, match="proposal and artifact identity states"):
+        verify_policy(weakened, threshold, registry, fresh)
+
+
 def test_threshold_difference_reason_cannot_be_relabelled() -> None:
     policy, threshold, registry, fresh = _inputs()
     weakened = copy.deepcopy(policy)
@@ -178,12 +206,12 @@ def test_jointly_resealed_threshold_artifact_and_policy_are_rejected() -> None:
     _rehash_payload(threshold, "evidence_sha256")
     evidence = policy["distinguished_non_admission_evidence"]
     assert isinstance(evidence, dict)
-    authority = evidence["stage0_threshold_authority"]
+    authority = evidence["stage0_threshold_proposal_source_map"]
     assert isinstance(authority, dict)
     authority["evidence_self_sha256"] = threshold["evidence_sha256"]
     _rehash_policy(policy)
 
-    with pytest.raises(ValueError, match="threshold authority is not the frozen"):
+    with pytest.raises(ValueError, match="artifact is not the pinned identity"):
         verify_policy(policy, threshold, registry, fresh)
 
 

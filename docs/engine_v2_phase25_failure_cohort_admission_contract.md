@@ -14,15 +14,27 @@ document is explanatory and cannot widen or override that policy.
 
 ## Evidence classes remain distinct
 
-| Evidence class | Scope | Admission authority |
+| Evidence class | Scope | Failure-atlas cohort membership authority |
 | --- | --- | --- |
-| Failure atlas | 7 proposal-oracle-uncovered cases from the pinned 9-case A/B | Exact current admission only |
-| Stage 0 threshold authority | 12 cases / 36 three-engine receipt hashes | None; this is a threshold source map, not a failure roster |
+| Failure atlas | 7 proposal-oracle-uncovered cases from the pinned 9-case A/B | Exact current membership only |
+| Stage 0 threshold proposal source map | 12 cases / 36 three-engine receipt hashes | None; this is a proposed-threshold evidence map, not a failure roster or execution-threshold freeze |
 | V7 narrative remainder | `29 scored - 14 with any exact-valid candidate = 15` | None; no ordered roster or authenticated payload exists |
 
 Threshold membership must not be relabeled as failure-atlas membership. The
 narrative remainder must not be combined with or subtracted from either
 authenticated cohort to infer case identities.
+
+The 12-case artifact identity is pinned only for this Phase 2.5 cross-check.
+Its numeric fields remain named `proposed_threshold`; they are not frozen Stage
+0 execution thresholds and grant no execution authority. If those proposal
+values are later explicitly reviewed and frozen against the present eight
+scored-case denominator, proposal-oracle recovery would require at least `3/8`
+and invalid Top-1 would require at most `1/8`. The one-shot local A/B triggers
+of `2/8` and `4/8` are experiment Go criteria only and cannot admit Stage 0.
+Legacy protocol prose that calls the same JSON a "current machine authority",
+and the ledger-builder symbol `_require_frozen_threshold_binding`, refer only
+to its pinned artifact identity. They do not override policy schema 1.3.0,
+freeze its `proposed_threshold` values, or grant execution-threshold authority.
 
 ## Expansion gate
 
@@ -67,6 +79,7 @@ python3 tools/verify_engine_v2_phase25_cohort_admission.py
 ```
 
 The verifier checks the policy self-hash, exact seven/nine-case rosters, the
-tracked threshold authority and contaminated-300 registry identities, the
-non-authoritative 15-case remainder, and the frozen A/B stop rule. The
-authoritative Engine V2 workflow runs the same verifier and its focused tests.
+pinned threshold-proposal source-map artifact and contaminated-300 registry
+identities, the non-authoritative 15-case remainder, and the frozen A/B stop
+rule. The authoritative Engine V2 workflow runs the same verifier and its
+focused tests.
