@@ -254,13 +254,16 @@ false values for stage, product, public, scientific, claim, fresh-execution,
 primary-claim, threshold, selection-rule, and V7-replacement boundaries so a
 result-only downstream consumer remains fail-closed.
 
-## Next bounded action
+## Completed bounded follow-up
 
-The next admissible task is to predeclare one result-independent,
-source-retaining selection rule before another historical A/B. It must state
-numeric tolerances for receptor and internal objectives, require a strictly
-improved minimum surface gap, forbid raw minimum-distance regression, require
-genuinely changed optimized coordinates, and keep the four-variant hard cap.
+The required rule is now frozen by the
+[source-paired clearance-selection policy](engine_v2_source_paired_clearance_selection_policy.md)
+as a pure, non-activated shadow contract. It uses the existing `1e-18` V7
+objective tolerance, exact strict surface-gap improvement, exact raw minimum-
+distance nonregression, coordinate-hash inequality, the authenticated 64-
+candidate allocation, and its four-variant cap. Its policy SHA-256 is
+`e5936f33d5aec54aae67f519e5cf6dffcc61181237270adb3e367a5f65cb29ad`.
 
-Do not fit a gap threshold from these outcomes, select only the 10 observed
-improvements, relax `[2.0,4.0)`, change scoring, promote V7, or open fresh-128.
+This completion does not select the 10 observed improvements, fit a gap
+threshold, relax `[2.0,4.0)`, change scoring, promote V7, or open fresh-128.
+Activation and any later historical A/B remain separate review slices.
