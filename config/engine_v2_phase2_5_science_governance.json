@@ -1,0 +1,402 @@
+{
+  "authority_boundary": {
+    "fresh_128_execution_authorized": false,
+    "product_promotion_authorized": false,
+    "protected_experiment_executed": false,
+    "public_claim_authorized": false,
+    "scientific_implementation_authorized": false,
+    "scientific_validation_claimed": false,
+    "stage0_promotion_authorized": false
+  },
+  "base_commit_sha1": "e782fb2dadd83ce4b9e41fc1af5b970fe63e28ca",
+  "phase2_historical_one_shot_ab": {
+    "candidate_denominator": {
+      "baseline_candidate_slots": 512,
+      "candidate_slots_per_scored_case": 64,
+      "experimental_candidate_slots": 512,
+      "failure_rows_preserved": true,
+      "scored_case_count": 8
+    },
+    "cohort": {
+      "case_count": 9,
+      "case_ids_sha256": "cd2c24c9c7d937865f40352375e8a17c6b83b0b0fab8c134218d2c29537493c1",
+      "ordered_case_ids": [
+        "5SD5_HWI",
+        "5SIS_JSM",
+        "6M2B_EZO",
+        "6M73_FNR",
+        "6T88_MWQ",
+        "6TW5_9M2",
+        "6TW7_NZB",
+        "6VTA_AKN",
+        "6WTN_RXT"
+      ],
+      "preparation_failure_case_ids": [
+        "6M73_FNR"
+      ],
+      "previously_uncovered_case_ids": [
+        "5SD5_HWI",
+        "5SIS_JSM",
+        "6M2B_EZO",
+        "6TW5_9M2",
+        "6TW7_NZB",
+        "6VTA_AKN",
+        "6WTN_RXT"
+      ],
+      "recovered_control_case_ids": [
+        "6T88_MWQ"
+      ]
+    },
+    "comparison": {
+      "baseline": {
+        "refiner_profile": "current_v7",
+        "selected_state_replacement": "none"
+      },
+      "experimental": {
+        "refiner_profile": "current_v7",
+        "selected_state_replacement": "predeclared_clearance_shadow_decision_only"
+      },
+      "clearance_policy_sha256": "e5936f33d5aec54aae67f519e5cf6dffcc61181237270adb3e367a5f65cb29ad",
+      "result_dependent_allocation_allowed": false,
+      "source_proposal_control_required": true
+    },
+    "evidence_requirements": {
+        "activated_state_independent_rederivation_required": true,
+        "activation_policy_schema_id": "betelgeuze.engine_v2_source_paired_clearance_activation_policy/1.2.0",
+        "activation_policy_self_hash_verification_required": true,
+        "activation_policy_sha256": "988d0bb47bfa6ff934887e1e12b5a512b55aaf40033a04963d141c4ffefe212c",
+        "activation_receipt_schema_id": "betelgeuze.engine_v2_source_paired_clearance_selection_activation_receipt/2.0.0",
+        "activation_snapshot_schema_id": "betelgeuze.engine_v2_source_paired_torsion_rescue_activation_snapshot/1.2.0",
+        "all_allocated_targets_required": true,
+        "authenticated_geometry_independent_clearance_rederivation_required": true,
+        "authenticated_rmsd_receipts_required": true,
+        "authenticated_torsion_move_replay_required": true,
+      "case_source_frozen_archive_member_authority_required": true,
+      "case_source_receipt_schema_id": "betelgeuze.engine_v2_source_paired_clearance_case_source_receipt/1.0.0",
+      "complete_internal_validity_context_and_pose_binding_required": true,
+      "complete_posebusters_validity_required": true,
+      "complete_scorer_v1_terms_receipts_required": true,
+        "current_v7_candidate_full_64_slot_lineage_required": true,
+        "current_v7_lineage_receipt_schema_id": "betelgeuze.engine_v2_source_paired_clearance_current_v7_lineage/1.0.0",
+        "exact_rank_recomputation_required": true,
+        "exact_snapshot_runtime_type_required": true,
+      "exact_source_v11_receipt_required": true,
+      "historical_case_source_authority_sha256": "4c083af473c369bf35fc34fdf4fe797ddbb2ef60b5474a78d6354415e3aa06bc",
+      "historical_v11_archive_score_rank_evidence_admissible": false,
+      "non_target_and_retained_target_evidence_equality_required": true,
+      "posebusters_required_check_set_sha256": "3b4797c8eb95f6471f3dce0977b95b83fd0ed2630d6079607609fbcb2c1d8b93",
+      "score_term_semantics_fully_reverifiable_required": true,
+      "scorer_authority_bound_to_authenticated_input_required": true,
+      "source_proposal_receipt_full_64_slot_lineage_required": true,
+      "source_proposal_receipt_schema_id": "betelgeuze.engine_v2_source_paired_torsion_rescue_proposal_receipt/1.0.0"
+    },
+    "go_decision": {
+      "all_guardrails_required": [
+        {
+          "baseline_case_ids_must_equal": [
+            "6M73_FNR"
+          ],
+          "baseline_value": 1,
+          "experimental_case_ids_must_equal": [
+            "6M73_FNR"
+          ],
+          "metric": "preparation_failure_case_ids",
+          "operator": "baseline_and_experimental_exact"
+        },
+        {
+          "baseline_case_ids": [
+            "6T88_MWQ"
+          ],
+          "baseline_value": 1,
+          "denominator": 8,
+          "metric": "top1_recovery_case_ids",
+          "operator": "baseline_subset_of_experimental"
+        },
+        {
+          "baseline_case_ids": [
+            "6T88_MWQ"
+          ],
+          "baseline_value": 1,
+          "denominator": 8,
+          "metric": "top5_recovery_case_ids",
+          "operator": "baseline_subset_of_experimental"
+        },
+        {
+          "exact_value_per_arm": 512,
+          "metric": "candidate_denominator",
+          "operator": "exact"
+        },
+        {
+          "metric": "source_proposal_control_preserved",
+          "operator": "is_true"
+        },
+        {
+          "metric": "score_term_semantics_fully_verified",
+          "operator": "is_true"
+        },
+        {
+          "metric": "result_dependent_allocation",
+          "operator": "is_false"
+        }
+      ],
+      "at_least_one_primary_gain_required": [
+        {
+          "case_scope": "previously_uncovered_case_ids",
+          "metric": "new_exact_valid_candidate_case_count",
+          "minimum_experimental_value": 1
+        },
+        {
+          "baseline_value": 1,
+          "denominator": 8,
+          "metric": "proposal_oracle_recovery_case_count",
+          "minimum_experimental_value": 2
+        },
+        {
+          "baseline_value": 5,
+          "denominator": 8,
+          "maximum_experimental_value": 4,
+          "metric": "invalid_top1_case_count"
+        }
+      ],
+      "no_go_trigger_precedence": true
+    },
+    "lifetime_execution": {
+      "atomic_consume_implementation_available": false,
+      "completed_runs": 0,
+      "execution_authorized": false,
+      "external_authority_available": false,
+      "external_authority_receipt_sha256": null,
+      "external_authority_type": "append_only_worm_atomic_single_consume",
+      "failed_or_partial_attempt_consumes_run": true,
+      "maximum_runs": 1,
+      "overwrite_allowed": false,
+      "partial_result_aggregate_replacement_allowed": false,
+      "rerun_allowed": false,
+      "resume_allowed": false,
+      "run_budget_consumed": false
+    },
+    "no_go_decision": {
+      "any_trigger_closes_local_torsion_clearance_epic": true,
+      "terminal_decision_id": "no_go_close_local_torsion_clearance_epic",
+      "triggers": [
+        {
+          "all_conditions": [
+            "shadow_eligible_candidate_count_gt_0",
+            "new_case_recovery_count_eq_0"
+          ],
+          "id": "eligible_without_new_case_recovery"
+        },
+        {
+          "id": "no_exact_valid_case_increase",
+          "metric": "exact_valid_case_count_delta",
+          "operator": "lte",
+          "value": 0
+        },
+        {
+          "id": "no_invalid_top1_decrease",
+          "metric": "invalid_top1_case_count_delta",
+          "operator": "gte",
+          "value": 0
+        },
+        {
+          "any_conditions": [
+            {
+              "baseline_case_ids": [
+                "6T88_MWQ"
+              ],
+              "experimental_metric": "top1_recovery_case_ids",
+              "metric": "baseline_top1_recovery_case_loss",
+              "operator": "baseline_not_subset_of_experimental"
+            },
+            {
+              "baseline_case_ids": [
+                "6T88_MWQ"
+              ],
+              "experimental_metric": "top5_recovery_case_ids",
+              "metric": "baseline_top5_recovery_case_loss",
+              "operator": "baseline_not_subset_of_experimental"
+            }
+          ],
+          "id": "existing_recovery_regression"
+        },
+        {
+          "all_conditions": [
+            {
+              "metric": "selected_replacement_minimum_vdw_gap",
+              "operator": "lt",
+              "value": 0
+            },
+            {
+              "identity_join": [
+                "case_id",
+                "proposal_index",
+                "source_proposal_fingerprint_sha256"
+              ],
+              "metric": "selected_replacement_posebusters_validity_changed",
+              "operator": "is_false"
+            }
+          ],
+          "evaluation_scope": "each_selected_replacement_candidate_case_pair",
+          "quantifier": "any",
+          "id": "selected_state_remains_penetrating_without_validity_change"
+        }
+      ]
+    },
+    "status": "blocked_preexecution"
+  },
+  "phase3_global_orientation_track": {
+    "activation": {
+      "execution_authorized": false,
+      "implementation_authorized": false,
+      "phase2_terminal_decision_present": false,
+      "required_phase2_terminal_decision_id": "no_go_close_local_torsion_clearance_epic",
+      "status": "blocked_pending_phase2_no_go"
+    },
+    "deterministic_orientation_requirements": {
+      "canonical_quaternion_sign_required": true,
+      "duplicate_orientation_removal_required": true,
+      "index_stable_quaternion_required": true,
+      "low_discrepancy_so3_required": true,
+      "random_haar_only_allowed": false,
+      "result_independent_required": true,
+      "rotation_space_uniformity_required": true,
+      "source_dependent_seed_required": true
+    },
+    "geometric_prefilter": {
+      "before_scorer_required": true,
+      "candidate_deletion_allowed": false,
+      "failure_reason_required": true,
+      "metrics": [
+        "minimum_vdw_surface_gap",
+        "pocket_escape",
+        "volume_overlap_estimate",
+        "heavy_atom_penetration_count"
+      ],
+      "rejected_slot_representation": "typed_geometric_rejection_row_in_original_proposal_index",
+      "slot_denominator_preserved": true,
+      "thresholds_frozen": false
+    },
+    "multi_anchor": {
+      "historical_candidate_count": 84,
+      "historical_native_like_and_valid_count": 0,
+      "included_in_profile": false,
+      "promotion_authorized": false
+    },
+    "proposed_profile": {
+      "candidate_slots": 64,
+      "lane_quotas": {
+        "charge_aromatic_shape_single_anchor": 8,
+        "donor_acceptor_single_anchor": 8,
+        "independent_orientation_variants": 12,
+        "pocket_centered_controls": 8,
+        "retained_paired_controls": 4,
+        "true_conformer_independent_orientation": 8,
+        "uniform_source_controls": 16
+      },
+      "profile_frozen": false,
+      "selection_authorized": false
+    },
+    "single_anchor_requirements": {
+      "anchor_lanes": [
+        "ligand_donor_to_receptor_acceptor",
+        "ligand_acceptor_to_receptor_donor",
+        "positive_to_negative",
+        "aromatic_plane_orientation",
+        "shape_principal_axis"
+      ],
+      "direction_vector_required": true,
+      "local_surface_normal_required": true,
+      "steric_precheck_required": true,
+      "target_distance_required": true
+    }
+  },
+  "phase4_corpus_authority": {
+    "d0_diagnostic_9": {
+      "case_count": 9,
+      "case_ids_sha256": "cd2c24c9c7d937865f40352375e8a17c6b83b0b0fab8c134218d2c29537493c1",
+      "new_execution_authorized": false,
+      "promotion_authority": false,
+      "purpose": "rapid_implementation_hypothesis_decision",
+      "source_authority": {
+        "case_ids_constant": "EXPECTED_CASE_IDS",
+        "case_ids_sha256_constant": "EXPECTED_CASE_IDS_SHA256",
+        "evidence_archive_sha256": "8bef33eba296989b795a11fd05a7e119124b066d91bec28a8b910d38a083fbcc",
+        "evidence_archive_sha256_constant": "EXPECTED_EVIDENCE_ARCHIVE_SHA256",
+        "path": "tools/build_engine_v2_source_paired_failure_atlas.py"
+      }
+    },
+    "d1_fixed_decision_32": {
+      "case_count": 32,
+      "case_ids": null,
+      "case_ids_may_be_invented_or_derived_from_results": false,
+      "case_ids_sha256": null,
+      "execution_authorized": false,
+      "intended_purpose": [
+        "proposal_profile_selection",
+        "validity_profile_selection",
+        "size_rotor_ring_subgroup_decision",
+        "stage0_candidate_decision"
+      ],
+      "promotion_authority": false,
+      "selection_rule_sha256": null,
+      "status": "blocked_missing_exact_32_case_ids_and_selection_sha256"
+    },
+    "d2_historical_contaminated_300": {
+      "case_count": 300,
+      "case_ids_sha256": "110c9ccc37255c39df3dae5b0213e4cf158cccfaf30071cb5ec9eb8e269ef349",
+      "claim_authority": false,
+      "existing_data_use_authorized": true,
+      "new_execution_authorized": false,
+      "purposes": [
+        "descriptive_robustness",
+        "subgroup_failure",
+        "runtime_capacity"
+      ],
+      "registry_path": "config/engine_v2_public_redocking_contamination_registry.json",
+      "registry_sha256": "89a58e6fbadd7e249df20bdf8db36f317e3e2e2dd6f32c32879d1a989dd28f31"
+    },
+    "fresh_128": {
+      "case_count": 128,
+      "case_ids_sha256": "ecc91c660896245f62ad8b583cfa4f45e50038cf513c384f6bdb56d406278248",
+      "development_set_transfer_allowed": false,
+      "exactly_once_required": true,
+      "execution_authorized": false,
+      "manifest_path": "config/engine_v2_fresh_redocking_holdout_manifest.json",
+      "manifest_sha256": "459303a54cb1e8ebaf2bfa4320ad2287536d0e20a916fe5d2bac60edbdffdfba",
+      "post_result_tuning_allowed": false,
+      "purpose": "exactly_once_internal_provisional_blind_evidence",
+      "result_values_inspected": false,
+      "stage0_admission_required_before_execution": true
+    }
+  },
+  "phase5_scorer_v2_gate": {
+    "entry_conditions": {
+      "admissible_oracle_case_count": null,
+      "admissible_oracle_case_count_verified": false,
+      "minimum_oracle_case_count": 20,
+      "proposal_profile_frozen": false,
+      "valid_case_coverage_definition": null,
+      "valid_case_coverage_definition_frozen": false,
+      "valid_case_coverage_sufficient": false
+    },
+    "planned_work": [
+      "scorer_v1_eight_term_ablation",
+      "ligand_size_normalization",
+      "contact_count_normalization",
+      "charge_bias_analysis",
+      "pairwise_native_like_ranking",
+      "target_held_out_validation",
+      "top1_top5_objective_separation",
+      "uncertainty_calibration",
+      "abstention"
+    ],
+    "scorer_v1_deterministic_reference_retained": true,
+    "scorer_v1_replacement_authorized": false,
+    "scorer_v2_implementation_authorized": false,
+    "scorer_v2_training_authorized": false,
+    "status": "blocked_entry_conditions_unsatisfied"
+  },
+  "policy_id": "engine_v2_phase2_5_science_governance",
+  "policy_sha256": "686533aeec0c3af0f2d22701a7990ae030b0706797b9b7fff194de1c6e06e1e3",
+  "schema_id": "betelgeuze.engine_v2_phase2_5_science_governance/1.0.0"
+}

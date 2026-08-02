@@ -21,6 +21,9 @@ def test_ci_authority_inventory_exposes_specialized_workflows(tmp_path: Path) ->
         "tools/build_engine_v2_stage0_development_gate_ledger.py",
         "tools/classify_engine_v2_stage0_full_suite.py",
         "tools/reconcile_engine_v2_stage0_full_suites.py",
+        "config/engine_v2_phase2_5_science_governance.json",
+        "tools/verify_engine_v2_phase2_5_science_governance.py",
+        "tests/unit/test_verify_engine_v2_phase2_5_science_governance.py",
     )
     for workflow in AUTHORITATIVE_WORKFLOWS:
         path = tmp_path / workflow

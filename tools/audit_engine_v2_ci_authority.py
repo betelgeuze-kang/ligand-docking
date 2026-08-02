@@ -42,7 +42,9 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         )
     )
     authoritative = tuple(path for path in AUTHORITATIVE_WORKFLOWS if path in workflows)
-    specialized = tuple(path for path in workflows if path not in AUTHORITATIVE_WORKFLOWS)
+    specialized = tuple(
+        path for path in workflows if path not in AUTHORITATIVE_WORKFLOWS
+    )
     hashes = {path: _sha256(repo_root / path) for path in workflows}
     main_text = (repo_root / AUTHORITATIVE_WORKFLOWS[0]).read_text(encoding="utf-8")
     stage0_required_tokens = (
@@ -57,6 +59,9 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         "tools/build_engine_v2_stage0_development_gate_ledger.py",
         "tools/classify_engine_v2_stage0_full_suite.py",
         "tools/reconcile_engine_v2_stage0_full_suites.py",
+        "config/engine_v2_phase2_5_science_governance.json",
+        "tools/verify_engine_v2_phase2_5_science_governance.py",
+        "tests/unit/test_verify_engine_v2_phase2_5_science_governance.py",
     )
     payload: dict[str, Any] = {
         "schema_id": SCHEMA_ID,
@@ -80,7 +85,9 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--repo-root", type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument(
+        "--repo-root", type=Path, default=Path(__file__).resolve().parents[1]
+    )
     parser.add_argument("--out", type=Path, required=True)
     return parser
 
