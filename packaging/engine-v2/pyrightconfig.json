@@ -3,7 +3,9 @@
     "../../betelgeuze_engine_v2/contracts",
     "../../betelgeuze_engine_v2/molecular/models.py",
     "../../betelgeuze_engine_v2/molecular/serialization.py",
-    "../../betelgeuze_engine_v2/physics/reference_parameters.py"
+    "../../betelgeuze_engine_v2/physics/reference_parameters.py",
+    "../../betelgeuze_engine_v2/docking/backend_abi.py",
+    "../../betelgeuze_engine_v2/docking/gpu_parity.py"
   ],
   "exclude": [
     "../../betelgeuze_engine_v2/molecular/legacy.py"

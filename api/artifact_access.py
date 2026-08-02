@@ -68,6 +68,7 @@ class VerifiedResultArtifacts:
     evidence_bundle_sha256: str
     media_type: str
     artifact_type: str
+    validated_runner_execution_evidence: dict[str, Any] | None = None
     result_snapshot: BinaryIO | None = None
 
     def close(self) -> None:
@@ -353,7 +354,7 @@ def _require_published_worker_provenance(
     status_data: dict[str, Any],
     manifest: dict[str, Any],
     expected: dict[str, Any],
-) -> None:
+) -> dict[str, Any] | None:
     """Verify the selected attempt and optional signed runtime qualification."""
 
     status_provenance = status_data.get("worker_provenance")
@@ -454,6 +455,7 @@ def _require_published_worker_provenance(
     if execution_evidence is None:
         if status_execution_evidence is not None:
             raise _forbidden("validated runner execution evidence is not signed")
+        return None
     else:
         try:
             validated_evidence = validate_validated_runner_execution_evidence(
@@ -470,6 +472,7 @@ def _require_published_worker_provenance(
             raise _forbidden(
                 "validated runner execution evidence status binding mismatch"
             )
+        return validated_evidence
 
 
 def verify_completed_result_artifacts(
@@ -487,6 +490,7 @@ def verify_completed_result_artifacts(
     if str(record.get("status", "")) != "completed" or str(status_data.get("status", "")) != "completed":
         raise HTTPException(status_code=400, detail="Job is not completed")
     result_snapshot: BinaryIO | None = None
+    validated_runner_execution_evidence: dict[str, Any] | None = None
     opened_handles: list[BinaryIO] = []
     try:
         with _ConfinedArtifactRoot(result_root, label="job result") as confined:
@@ -568,10 +572,12 @@ def verify_completed_result_artifacts(
                         record.get("published_attempt_token_sha256", "") or ""
                     ).lower(),
                 }
-                _require_published_worker_provenance(
-                    status_data=status_data,
-                    manifest=manifest,
-                    expected=expected_worker_provenance,
+                validated_runner_execution_evidence = (
+                    _require_published_worker_provenance(
+                        status_data=status_data,
+                        manifest=manifest,
+                        expected=expected_worker_provenance,
+                    )
                 )
 
             request_sha = str(record.get("request_sha256", "") or "").lower()
@@ -703,6 +709,9 @@ def verify_completed_result_artifacts(
                 evidence_bundle_sha256=evidence_fingerprint,
                 media_type=manifest_media_type,
                 artifact_type=manifest_artifact_type,
+                validated_runner_execution_evidence=(
+                    validated_runner_execution_evidence
+                ),
                 result_snapshot=result_snapshot,
             )
     except Exception:

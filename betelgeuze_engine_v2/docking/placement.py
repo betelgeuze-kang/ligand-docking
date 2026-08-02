@@ -47,24 +47,16 @@ from .proposals import (
 )
 
 
-POCKET_PLACEMENT_POLICY_SCHEMA_ID = (
-    "betelgeuze.engine_v2_pocket_placement_policy/1.1.0"
-)
+POCKET_PLACEMENT_POLICY_SCHEMA_ID = "betelgeuze.engine_v2_pocket_placement_policy/1.1.0"
 POCKET_PLACEMENT_RECEIPT_SCHEMA_ID = (
     "betelgeuze.engine_v2_pocket_placement_receipt/1.1.0"
 )
 POCKET_PLACEMENT_SEARCH_RESULT_SCHEMA_ID = (
     "betelgeuze.engine_v2_pocket_placement_search_result/1.0.0"
 )
-POCKET_PLACEMENT_POLICY_ID = (
-    "betelgeuze.engine_v2_authenticated_pocket_placement/1.1.0"
-)
-HAAR_ROTATION_SAMPLER_ID = (
-    "shoemake_three_uniform_unit_quaternion/1.0.0"
-)
-SPHERICAL_TRANSLATION_SAMPLER_ID = (
-    "uniform_spherical_volume_centroid_offset/1.0.0"
-)
+POCKET_PLACEMENT_POLICY_ID = "betelgeuze.engine_v2_authenticated_pocket_placement/1.1.0"
+HAAR_ROTATION_SAMPLER_ID = "shoemake_three_uniform_unit_quaternion/1.0.0"
+SPHERICAL_TRANSLATION_SAMPLER_ID = "uniform_spherical_volume_centroid_offset/1.0.0"
 CENTROID_POLICY_ID = "all_atom_arithmetic_centroid/1.0.0"
 COUNTER_PRNG_ID = "sha256_counter_uniform_binary64/1.0.0"
 MAX_POCKET_PLACEMENT_PROPOSALS = 4_096
@@ -98,9 +90,7 @@ def _freeze_json(value: Any) -> Any:
         return value
     if isinstance(value, float):
         if not math.isfinite(value):
-            raise DockingAuthorityError(
-                "placement metadata floats must be finite"
-            )
+            raise DockingAuthorityError("placement metadata floats must be finite")
         return float(value)
     if isinstance(value, Mapping):
         return MappingProxyType(
@@ -108,9 +98,7 @@ def _freeze_json(value: Any) -> Any:
         )
     if isinstance(value, (tuple, list)):
         return tuple(_freeze_json(item) for item in value)
-    raise DockingAuthorityError(
-        "placement metadata must be canonical JSON-compatible"
-    )
+    raise DockingAuthorityError("placement metadata must be canonical JSON-compatible")
 
 
 def _thaw_json(value: Any) -> Any:
@@ -152,15 +140,11 @@ def _stable_candidate_id(
 ) -> str:
     identity = _sha256(
         {
-            "schema_id": (
-                "betelgeuze.engine_v2_docking_candidate_identity/1.0.0"
-            ),
+            "schema_id": ("betelgeuze.engine_v2_docking_candidate_identity/1.0.0"),
             "proposal_index": int(proposal_index),
             "seed": int(seed),
             "problem_fingerprint_sha256": problem_fingerprint_sha256,
-            "search_space_fingerprint_sha256": (
-                search_space_fingerprint_sha256
-            ),
+            "search_space_fingerprint_sha256": (search_space_fingerprint_sha256),
         }
     )
     return f"pose-{int(proposal_index):05d}-{identity[:12]}"
@@ -219,9 +203,7 @@ def _haar_rotation(
         dtype=dtype,
     )
     identity = torch.eye(3, dtype=dtype)
-    orthogonality_error = float(
-        (rotation.T @ rotation - identity).abs().max().item()
-    )
+    orthogonality_error = float((rotation.T @ rotation - identity).abs().max().item())
     determinant = float(torch.linalg.det(rotation).item())
     if (
         orthogonality_error > _ROTATION_TOLERANCE
@@ -296,10 +278,14 @@ def _torsion_angles(
     )
     if proposal_index == 0:
         return angles
-    rotatable_indices = torch.nonzero(
-        search_space.rotatable_mask,
-        as_tuple=False,
-    ).reshape(-1).tolist()
+    rotatable_indices = (
+        torch.nonzero(
+            search_space.rotatable_mask,
+            as_tuple=False,
+        )
+        .reshape(-1)
+        .tolist()
+    )
     for counter, atom_index in enumerate(rotatable_indices):
         uniform = _counter_uniform(
             seed=seed,
@@ -344,9 +330,7 @@ class PocketPlacementPolicy:
             type(self.centered_candidate_count) is not int
             or not 1 <= self.centered_candidate_count <= 64
         ):
-            raise DockingAuthorityError(
-                "centered_candidate_count must be in [1,64]"
-            )
+            raise DockingAuthorityError("centered_candidate_count must be in [1,64]")
         metadata = _freeze_json(dict(self.metadata))
         object.__setattr__(self, "metadata", metadata)
         object.__setattr__(
@@ -405,13 +389,14 @@ class PocketPlacementReceipt:
             "budget_sha256",
         ):
             value = str(getattr(self, field_name) or "").lower()
-            if len(value) != 64 or any(char not in "0123456789abcdef" for char in value):
+            if len(value) != 64 or any(
+                char not in "0123456789abcdef" for char in value
+            ):
                 raise DockingAuthorityError(f"{field_name} must be a SHA-256")
             object.__setattr__(self, field_name, value)
         fingerprints = tuple(str(value) for value in self.proposal_fingerprint_sha256s)
         if not fingerprints or any(
-            len(value) != 64
-            or any(char not in "0123456789abcdef" for char in value)
+            len(value) != 64 or any(char not in "0123456789abcdef" for char in value)
             for value in fingerprints
         ):
             raise DockingAuthorityError("proposal fingerprints are invalid")
@@ -433,9 +418,7 @@ class PocketPlacementReceipt:
             "placement_policy_sha256": self.placement_policy_sha256,
             "budget_sha256": self.budget_sha256,
             "proposal_count": len(self.proposal_fingerprint_sha256s),
-            "proposal_fingerprint_sha256s": list(
-                self.proposal_fingerprint_sha256s
-            ),
+            "proposal_fingerprint_sha256s": list(self.proposal_fingerprint_sha256s),
             "centroid_offset_angstrom_binary64_hex": [
                 value.hex() for value in self.centroid_offset_angstroms
             ],
@@ -576,12 +559,9 @@ def install_pocket_proposal_override() -> str:
                 problem=problem,
                 placement_center=placement_center,
             )
-        problem_fingerprint = (
-            "" if problem is None else problem.fingerprint_sha256
-        )
+        problem_fingerprint = "" if problem is None else problem.fingerprint_sha256
         if (
-            search_space.fingerprint_sha256
-            != override.search_space_fingerprint_sha256
+            search_space.fingerprint_sha256 != override.search_space_fingerprint_sha256
             or _budget_sha256(budget) != override.budget_sha256
             or problem_fingerprint != override.problem_fingerprint_sha256
         ):
@@ -595,9 +575,7 @@ def install_pocket_proposal_override() -> str:
     search_module.generate_bounded_docking_proposals = dispatch
     receipt = _sha256(
         {
-            "schema_id": (
-                "betelgeuze.engine_v2_pocket_proposal_dispatch/1.0.0"
-            ),
+            "schema_id": ("betelgeuze.engine_v2_pocket_proposal_dispatch/1.0.0"),
             "context_local": True,
             "generic_search_implementation_reused": True,
             "generic_generation_unchanged_without_override": True,
@@ -616,9 +594,7 @@ def generate_pocket_centered_docking_proposals(
     policy: PocketPlacementPolicy | None = None,
 ) -> tuple[tuple[DockingProposal, ...], PocketPlacementReceipt]:
     if not isinstance(authenticated_problem, AuthenticatedDockingProblem):
-        raise TypeError(
-            "authenticated_problem must be AuthenticatedDockingProblem"
-        )
+        raise TypeError("authenticated_problem must be AuthenticatedDockingProblem")
     if not isinstance(budget, DockingBudget):
         raise TypeError("budget must be DockingBudget")
     authenticated_problem.input_receipt_sha256
@@ -632,14 +608,11 @@ def generate_pocket_centered_docking_proposals(
             "authenticated search space exceeds the torsion budget"
         )
     if not 1 <= budget.candidate_count <= MAX_POCKET_PLACEMENT_PROPOSALS:
-        raise DockingAuthorityError(
-            "candidate count exceeds the placement hard bound"
-        )
+        raise DockingAuthorityError("candidate count exceeds the placement hard bound")
     if (
         budget.translation_radius_angstrom
         > authenticated_problem.pocket.radius_angstrom
-        or budget.translation_radius_angstrom
-        > MAX_POCKET_TRANSLATION_RADIUS_ANGSTROM
+        or budget.translation_radius_angstrom > MAX_POCKET_TRANSLATION_RADIUS_ANGSTROM
     ):
         raise DockingAuthorityError(
             "placement translation radius exceeds the pocket authority bound"
@@ -682,9 +655,9 @@ def generate_pocket_centered_docking_proposals(
                 dtype=conformer.dtype,
             )
         )
-        target_centroid = authenticated_problem.pocket.center.to(
-            dtype=conformer.dtype
-        ) + offset
+        target_centroid = (
+            authenticated_problem.pocket.center.to(dtype=conformer.dtype) + offset
+        )
         coordinates = centered @ rotation.T + target_centroid
         observed_centroid = coordinates.mean(dim=0)
         centroid_error = float(
@@ -728,9 +701,7 @@ def generate_pocket_centered_docking_proposals(
                 problem_fingerprint_sha256=(
                     authenticated_problem.problem.fingerprint_sha256
                 ),
-                search_space_fingerprint_sha256=(
-                    search_space.fingerprint_sha256
-                ),
+                search_space_fingerprint_sha256=(search_space.fingerprint_sha256),
             ),
             coordinates=coordinates,
             torsion_angles=angles,
@@ -742,9 +713,7 @@ def generate_pocket_centered_docking_proposals(
             problem_fingerprint_sha256=(
                 authenticated_problem.problem.fingerprint_sha256
             ),
-            search_space_fingerprint_sha256=(
-                search_space.fingerprint_sha256
-            ),
+            search_space_fingerprint_sha256=(search_space.fingerprint_sha256),
             coordinate_fingerprint_sha256=coordinate_digest,
         )
         proposal.assert_integrity()
@@ -752,9 +721,7 @@ def generate_pocket_centered_docking_proposals(
         centroid_offsets.append(centroid_offset)
     result = tuple(proposals)
     receipt = PocketPlacementReceipt(
-        authenticated_input_receipt_sha256=(
-            authenticated_problem.input_receipt_sha256
-        ),
+        authenticated_input_receipt_sha256=(authenticated_problem.input_receipt_sha256),
         placement_policy_sha256=placement_policy.fingerprint_sha256,
         budget_sha256=_budget_sha256(budget),
         proposal_fingerprint_sha256s=tuple(
@@ -774,23 +741,44 @@ def run_authenticated_pocket_placement_search(
     policy: PocketPlacementPolicy | None = None,
     diversity_rmsd_angstrom: float = 0.5,
     diversity_metric: str = "direct_rmsd",
-    symmetry_permutations: Sequence[
-        Sequence[int] | torch.Tensor
-    ] | None = None,
+    symmetry_permutations: Sequence[Sequence[int] | torch.Tensor] | None = None,
+    precomputed_proposals: Sequence[DockingProposal] | None = None,
+    precomputed_placement_receipt: PocketPlacementReceipt | None = None,
 ) -> PocketPlacementSearchResult:
-    proposals, placement_receipt = generate_pocket_centered_docking_proposals(
-        authenticated_problem,
-        budget,
-        policy=policy,
-    )
+    if (precomputed_proposals is None) is not (precomputed_placement_receipt is None):
+        raise DockingAuthorityError(
+            "precomputed pocket proposals and receipt must be supplied together"
+        )
+    if precomputed_proposals is None:
+        proposals, placement_receipt = generate_pocket_centered_docking_proposals(
+            authenticated_problem,
+            budget,
+            policy=policy,
+        )
+    else:
+        proposals = tuple(precomputed_proposals)
+        placement_receipt = precomputed_placement_receipt
+        assert placement_receipt is not None
+        if (
+            len(proposals) != budget.candidate_count
+            or placement_receipt.authenticated_input_receipt_sha256
+            != authenticated_problem.input_receipt_sha256
+            or placement_receipt.budget_sha256 != _budget_sha256(budget)
+            or placement_receipt.proposal_fingerprint_sha256s
+            != tuple(proposal.fingerprint_sha256 for proposal in proposals)
+        ):
+            raise DockingAuthorityError(
+                "precomputed pocket proposal authority is cross-wired"
+            )
+        placement_receipt.receipt_sha256
+        for proposal in proposals:
+            proposal.assert_integrity()
     override = _ProposalOverride(
         search_space_fingerprint_sha256=(
             authenticated_problem.search_space.fingerprint_sha256
         ),
         budget_sha256=_budget_sha256(budget),
-        problem_fingerprint_sha256=(
-            authenticated_problem.problem.fingerprint_sha256
-        ),
+        problem_fingerprint_sha256=(authenticated_problem.problem.fingerprint_sha256),
         proposals=proposals,
     )
     token = _PROPOSAL_OVERRIDE.set(override)

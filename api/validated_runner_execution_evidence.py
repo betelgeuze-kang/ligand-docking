@@ -13,6 +13,9 @@ EXECUTION_EVIDENCE_SOURCE_ACTOR_REQUEST_KEY = "execution_evidence_source_actor"
 TIER_ALPHA_ADRB2_EVIDENCE_PURPOSE = "tier_alpha_adrb2_dispatch_smoke_v1"
 TIER_ALPHA_ADRB2_SOURCE_ACTOR = "tier_alpha_dispatch_smoke"
 TIER_ALPHA_ADRB2_RUNNER_PROFILE_ID = "ligand_htvs_pipeline_default"
+ENGINE_V2_SHADOW_EVIDENCE_PURPOSE = "engine_v2_operator_shadow_v1"
+ENGINE_V2_SHADOW_SOURCE_ACTOR = "engine_v2_docking_pipeline"
+ENGINE_V2_SHADOW_RUNNER_PROFILE_ID = "engine_v2_operator_shadow"
 EXECUTION_EVIDENCE_FIELDS = (
     "schema_version",
     "evidence_purpose",
@@ -57,6 +60,7 @@ def _optional_match(value: Any, pattern: re.Pattern[str], *, label: str) -> str:
 
 def build_validated_runner_execution_evidence(
     *,
+    job_id: str,
     profile_id: str,
     execution_contract: dict[str, Any],
     request_data: dict[str, Any],
@@ -64,33 +68,68 @@ def build_validated_runner_execution_evidence(
     params = request_data.get("runner_profile_params")
     if not isinstance(params, dict):
         params = {}
+    if profile_id == ENGINE_V2_SHADOW_RUNNER_PROFILE_ID:
+        return engine_v2_shadow_execution_evidence(
+            job_id,
+            execution_contract=execution_contract,
+        )
     payload = {
         "schema_version": EXECUTION_EVIDENCE_SCHEMA_VERSION,
-        "evidence_purpose": request_data.get(
-            EXECUTION_EVIDENCE_PURPOSE_REQUEST_KEY,
-            "",
-        ),
-        "source_actor": request_data.get(
-            EXECUTION_EVIDENCE_SOURCE_ACTOR_REQUEST_KEY,
-            "",
-        ),
+        "evidence_purpose": "",
+        "source_actor": "",
         "runner_profile_id": profile_id,
         "execution_mode": execution_contract.get("execution_mode"),
         "customer_submission_allowed": execution_contract.get(
             "customer_submission_allowed"
         ),
-        "synthetic_input_allowed": execution_contract.get(
-            "synthetic_input_allowed"
-        ),
-        "production_claim_allowed": execution_contract.get(
-            "production_claim_allowed"
-        ),
+        "synthetic_input_allowed": execution_contract.get("synthetic_input_allowed"),
+        "production_claim_allowed": execution_contract.get("production_claim_allowed"),
         "customer_pose_emission_allowed": execution_contract.get(
             "customer_pose_emission_allowed"
         ),
         "target_name": request_data.get("target_name", ""),
         "family": params.get("family", ""),
-        "docking_job_id": params.get("docking_job_id", ""),
+        "docking_job_id": job_id,
+    }
+    return validate_validated_runner_execution_evidence(payload)
+
+
+def engine_v2_shadow_execution_evidence(
+    job_id: str,
+    *,
+    execution_contract: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build server-owned evidence for the one registered Engine V2 shadow lane."""
+
+    expected_contract = {
+        "execution_mode": "restricted-production",
+        "customer_submission_allowed": False,
+        "synthetic_input_allowed": False,
+        "production_claim_allowed": False,
+        "customer_pose_emission_allowed": False,
+    }
+    if execution_contract is not None:
+        if execution_contract.get("execution_mode") != expected_contract[
+            "execution_mode"
+        ] or any(
+            execution_contract.get(field) is not expected_contract[field]
+            for field in (
+                "customer_submission_allowed",
+                "synthetic_input_allowed",
+                "production_claim_allowed",
+                "customer_pose_emission_allowed",
+            )
+        ):
+            raise ValueError("Engine V2 shadow runner execution contract is invalid")
+    payload = {
+        "schema_version": EXECUTION_EVIDENCE_SCHEMA_VERSION,
+        "evidence_purpose": ENGINE_V2_SHADOW_EVIDENCE_PURPOSE,
+        "source_actor": ENGINE_V2_SHADOW_SOURCE_ACTOR,
+        "runner_profile_id": ENGINE_V2_SHADOW_RUNNER_PROFILE_ID,
+        **expected_contract,
+        "target_name": "",
+        "family": "",
+        "docking_job_id": _required_match(job_id, _JOB_ID_RE, label="docking_job_id"),
     }
     return validate_validated_runner_execution_evidence(payload)
 
@@ -137,3 +176,36 @@ def validate_validated_runner_execution_evidence(
     _optional_match(value["family"], _FAMILY_RE, label="family")
     _optional_match(value["docking_job_id"], _JOB_ID_RE, label="docking_job_id")
     return {field: value[field] for field in EXECUTION_EVIDENCE_FIELDS}
+
+
+def require_engine_v2_shadow_execution_evidence(
+    value: Any,
+) -> dict[str, Any]:
+    """Require the signed, non-customer, non-claim Engine V2 shadow purpose."""
+
+    payload = validate_validated_runner_execution_evidence(value)
+    if (
+        payload["evidence_purpose"] != ENGINE_V2_SHADOW_EVIDENCE_PURPOSE
+        or payload["source_actor"] != ENGINE_V2_SHADOW_SOURCE_ACTOR
+        or payload["runner_profile_id"] != ENGINE_V2_SHADOW_RUNNER_PROFILE_ID
+        or payload["execution_mode"] != "restricted-production"
+        or payload["customer_submission_allowed"] is not False
+        or payload["synthetic_input_allowed"] is not False
+        or payload["production_claim_allowed"] is not False
+        or payload["customer_pose_emission_allowed"] is not False
+        or not payload["docking_job_id"]
+    ):
+        raise ValueError(
+            "validated runner evidence is not an Engine V2 shadow execution"
+        )
+    return payload
+
+
+def is_engine_v2_shadow_execution_evidence(value: Any) -> bool:
+    """Return whether signed runner provenance identifies the exact shadow lane."""
+
+    try:
+        require_engine_v2_shadow_execution_evidence(value)
+    except ValueError:
+        return False
+    return True

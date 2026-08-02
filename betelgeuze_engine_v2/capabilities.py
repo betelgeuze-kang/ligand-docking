@@ -13,8 +13,32 @@ from copy import deepcopy
 from typing import Any
 
 from .engine import REFERENCE_CLAIM_BLOCKERS
+from .docking.backend_abi import (
+    ENGINE_V2_NATIVE_ABI_VERSION,
+    EngineV2ABIStage,
+    HIP_FAST_BUILD_FLAGS,
+    HIP_FAST_BUILD_PROFILE_SHA256,
+    HIP_SAFE_BUILD_FLAGS,
+    HIP_SAFE_BUILD_PROFILE_SHA256,
+)
+from .docking.gpu_parity import (
+    GATE_ARCHITECTURE,
+    GATE_DENOMINATOR,
+    GATE_FAILURE_CODES,
+    GATE_HIP_SAFE_PRECEDENT,
+    GATE_OOM_FAIL_CLOSED,
+    GATE_OVERFLOW_FAIL_CLOSED,
+    GATE_REPEATED_RANK,
+    GATE_SCORER_TERMS,
+    GATE_TOP1,
+    GATE_TOP5,
+    GATE_V7_DECISION,
+    GATE_VALIDITY,
+    GPU_PARITY_QUALIFICATION_AUTHORITY_BLOCKER,
+    ScorerV1TermTolerance,
+)
 
-CAPABILITY_SCHEMA_VERSION = 4
+CAPABILITY_SCHEMA_VERSION = 5
 ENGINE_ID = "betelgeuze_independent_engine_v2"
 IMPLEMENTATION_STAGE = "v2_ao_native_cpu_scorer_contract_rc5"
 
@@ -117,6 +141,106 @@ BENCHMARK_CAPABILITY_ID = "v2_benchmark_failure_row_ledger"
 PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID = "v2_frozen_public_benchmark_protocol"
 EXTERNAL_BASELINE_CAPABILITY_ID = "v2_external_baseline_receipts"
 DISTRIBUTION_CAPABILITY_ID = "v2_independent_distribution"
+STANDALONE_CPU_PRODUCT_CAPABILITY_ID = "v2_standalone_cpu_product_pipeline"
+PRODUCT_SHADOW_CAPABILITY_ID = "v2_operator_product_shadow"
+
+
+def _gpu_backend_policy() -> dict[str, Any]:
+    """Return the fail-closed Phase 10 backend and claim boundary."""
+
+    return {
+        "schema_id": "betelgeuze.engine_v2_gpu_backend_policy/1.0.0",
+        "native_abi_version": ENGINE_V2_NATIVE_ABI_VERSION,
+        "backends": {
+            "python_reference": {
+                "internal_reference_execution_available": True,
+                "gpu_acceleration_backend": False,
+                "acceleration_claim_allowed": False,
+            },
+            "rust_cpu": {
+                "internal_reference_execution_available": True,
+                "gpu_acceleration_backend": False,
+                "acceleration_claim_allowed": False,
+            },
+            "hip_safe": {
+                "internal_reference_execution_available": False,
+                "current_state": "fail_closed_unavailable",
+                "deterministic_parity_backend": True,
+                "parity_evidence_present": False,
+                "acceleration_claim_allowed": False,
+            },
+            "hip_fast": {
+                "internal_reference_execution_available": False,
+                "current_state": "blocked_until_hip_safe_parity",
+                "requires_hip_safe_qualification_same_architecture": True,
+                "parity_evidence_present": False,
+                "acceleration_claim_allowed": False,
+            },
+        },
+        "implementation_sequence": {
+            "versioned_tensor_stream_abi_contract": True,
+            "persistent_receptor_context": False,
+            "candidate_transform_batch": False,
+            "pair_list": False,
+            "scorer_v1_eight_term_kernel": False,
+            "pose_validity": False,
+            "stable_top_k": False,
+            "v2_v3_v6_v7_refinement": False,
+            "clustering_and_rmsd": False,
+            "unified_on_prem_runner": False,
+        },
+        "abi_contract_controls": {
+            "exact_stage_order": [stage.value for stage in EngineV2ABIStage],
+            "exact_tensor_role_dtype_shape_ownership_required": True,
+            "backend_receipt_embeds_full_native_abi": True,
+            "exact_source_algorithm_execution_profile_binding_required": True,
+            "parity_probe_execution_receipt_required": True,
+            "implicit_fallback_allowed": False,
+        },
+        "hip_build_profiles": {
+            "hip_safe": {
+                "profile_sha256": HIP_SAFE_BUILD_PROFILE_SHA256,
+                "exact_flags": list(HIP_SAFE_BUILD_FLAGS),
+                "strict_binary64": True,
+            },
+            "hip_fast": {
+                "profile_sha256": HIP_FAST_BUILD_PROFILE_SHA256,
+                "exact_flags": list(HIP_FAST_BUILD_FLAGS),
+                "requires_typed_hip_safe_precedent": True,
+            },
+        },
+        "required_parity_gates": [
+            GATE_DENOMINATOR,
+            GATE_FAILURE_CODES,
+            GATE_SCORER_TERMS,
+            GATE_VALIDITY,
+            GATE_TOP1,
+            GATE_TOP5,
+            GATE_V7_DECISION,
+            GATE_REPEATED_RANK,
+            GATE_OOM_FAIL_CLOSED,
+            GATE_OVERFLOW_FAIL_CLOSED,
+            GATE_ARCHITECTURE,
+            GATE_HIP_SAFE_PRECEDENT,
+        ],
+        "scorer_v1_term_tolerance_policy": ScorerV1TermTolerance.frozen().to_dict(),
+        "qualification_authority": {
+            "implemented": False,
+            "blocker": GPU_PARITY_QUALIFICATION_AUTHORITY_BLOCKER,
+            "caller_supplied_receipt_sha256_sufficient": False,
+        },
+        "qualified_gpu_architectures": [],
+        "legacy_hip_backend_promotable": False,
+        "legacy_hip_blockers": [
+            "gfx1030_only_build_not_architecture_qualified",
+            "fast_math_not_safe_parity_mode",
+            "unsafe_fp_atomics_forbidden",
+            "rocm_device_library_fallback_forbidden",
+            "engine_v2_backend_artifact_execution_unavailable",
+            "gpu_parity_evidence_missing",
+        ],
+        "gpu_acceleration_claim_allowed": False,
+    }
 
 CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
     CPU_REFERENCE_CAPABILITY_ID: tuple(REFERENCE_CLAIM_BLOCKERS),
@@ -569,6 +693,25 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "scientific_validation_missing",
         "gpu_parity_evidence_missing",
     ),
+    STANDALONE_CPU_PRODUCT_CAPABILITY_ID: (
+        "stage0_admission_not_closed",
+        "fresh_128_internal_provisional_blind_holdout_not_executed",
+        "independent_attestation_missing",
+        "legal_compliance_determination_not_made",
+        "scientific_validation_missing",
+        "product_integration_not_qualified",
+        "customer_execution_not_authorized",
+    ),
+    PRODUCT_SHADOW_CAPABILITY_ID: (
+        "stage0_admission_not_closed",
+        "fresh_128_internal_provisional_blind_holdout_not_executed",
+        "product_shadow_artifact_producer_not_activated",
+        "independent_attestation_missing",
+        "legal_compliance_determination_not_made",
+        "scientific_validation_missing",
+        "product_integration_not_qualified",
+        "customer_pose_emission_forbidden",
+    ),
 }
 
 
@@ -615,6 +758,7 @@ def capability_snapshot() -> dict[str, Any]:
             "docking_accuracy_claim_allowed": False,
             "free_energy_claim_allowed": False,
         },
+        "gpu_backend_policy": _gpu_backend_policy(),
         "capabilities": {
             CPU_REFERENCE_CAPABILITY_ID: _row(
                 CPU_REFERENCE_CAPABILITY_ID,
@@ -948,6 +1092,22 @@ def capability_snapshot() -> dict[str, Any]:
                 internal_execution_enabled=False,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
+            STANDALONE_CPU_PRODUCT_CAPABILITY_ID: _row(
+                STANDALONE_CPU_PRODUCT_CAPABILITY_ID,
+                current_state=(
+                    "shared_docking_pipeline_standalone_cpu_surface_ready_unqualified"
+                ),
+                internal_execution_enabled=True,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
+            PRODUCT_SHADOW_CAPABILITY_ID: _row(
+                PRODUCT_SHADOW_CAPABILITY_ID,
+                current_state=(
+                    "operator_only_evidence_projection_surface_ready_activation_blocked"
+                ),
+                internal_execution_enabled=False,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
             DISTRIBUTION_CAPABILITY_ID: _row(
                 DISTRIBUTION_CAPABILITY_ID,
                 current_state="reproducible_rc_wheel_with_spdx_sbom",
@@ -1029,10 +1189,12 @@ __all__ = [
     "MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID",
     "NATIVE_CPU_SCORER_CAPABILITY_ID",
     "PDB_INGEST_CAPABILITY_ID",
+    "PRODUCT_SHADOW_CAPABILITY_ID",
     "PARAMETER_SOURCE_PROVENANCE_CAPABILITY_ID",
     "PHYSICS_REGISTRY_CAPABILITY_ID",
     "PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID",
     "SDF_INGEST_CAPABILITY_ID",
+    "STANDALONE_CPU_PRODUCT_CAPABILITY_ID",
     "capability_snapshot",
     "require_capability_snapshot",
 ]

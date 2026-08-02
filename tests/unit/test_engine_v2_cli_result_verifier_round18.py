@@ -22,6 +22,8 @@ from betelgeuze_engine_v2 import (  # noqa: E402
     StructureProvenance,
 )
 from betelgeuze_engine_v2.cli import (  # noqa: E402
+    CLI_DOCKING_RESULT_LEGACY_SCHEMA_ID,
+    CLI_DOCKING_RESULT_SCHEMA_ID,
     CLI_POCKET_INPUT_SCHEMA_ID,
     run_canonical_docking,
 )
@@ -196,8 +198,17 @@ def _recompute_interpretable_receipt(document: dict[str, object]) -> str:
     return str(result["receipt_sha256"])
 
 
+def _recompute_pipeline_receipt(document: dict[str, object]) -> None:
+    pipeline = document["pipeline_evidence"]
+    assert isinstance(pipeline, dict)
+    projection = dict(pipeline)
+    projection.pop("receipt_sha256", None)
+    pipeline["receipt_sha256"] = _sha256(projection)
+
+
 def test_strict_verifier_accepts_a_canonical_cli_result(tmp_path: Path) -> None:
     document = _document(tmp_path)
+    assert document["schema_id"] == CLI_DOCKING_RESULT_SCHEMA_ID
     raw = _canonical_bytes(document) + b"\n"
     receipt_from_bytes = verify_canonical_cli_result_bytes(raw)
     receipt_from_document = verify_canonical_cli_result_document(document)
@@ -216,6 +227,65 @@ def test_strict_verifier_accepts_a_canonical_cli_result(tmp_path: Path) -> None:
         "betelgeuze.engine_v2_strict_cli_result_verification/2.0.0"
     )
     assert verification["claim_safe"] is False
+
+
+def test_legacy_v1_result_without_pipeline_evidence_remains_verifiable(
+    tmp_path: Path,
+) -> None:
+    legacy = deepcopy(_document(tmp_path))
+    legacy["schema_id"] = CLI_DOCKING_RESULT_LEGACY_SCHEMA_ID
+    legacy.pop("pipeline_evidence")
+    _recompute_cli_document_sha(legacy)
+
+    receipt = verify_canonical_cli_result_document(legacy)
+    assert receipt.candidate_count == 4
+
+    ambiguous = deepcopy(_document(tmp_path / "ambiguous"))
+    ambiguous["schema_id"] = CLI_DOCKING_RESULT_LEGACY_SCHEMA_ID
+    _recompute_cli_document_sha(ambiguous)
+    with pytest.raises(
+        CliResultVerificationError,
+        match="legacy CLI result cannot claim pipeline evidence",
+    ):
+        verify_canonical_cli_result_document(ambiguous)
+
+
+def test_resealed_unknown_pose_or_authority_fields_are_rejected(
+    tmp_path: Path,
+) -> None:
+    original = _document(tmp_path)
+    for name, value in (
+        ("customer_pose_coordinates", [[1.0, 2.0, 3.0]]),
+        ("production_claim_granted", True),
+    ):
+        attacked = deepcopy(original)
+        attacked[name] = value
+        _recompute_cli_document_sha(attacked)
+        with pytest.raises(
+            CliResultVerificationError,
+            match="docking-result fields",
+        ):
+            verify_canonical_cli_result_document(attacked)
+
+
+def test_resealed_pipeline_rank_drift_is_rejected(tmp_path: Path) -> None:
+    document = deepcopy(_document(tmp_path))
+    pipeline = document["pipeline_evidence"]
+    assert isinstance(pipeline, dict)
+    ranking = pipeline["ranking_evidence"]
+    assert isinstance(ranking, dict)
+    raw_rank = ranking["raw_score_rank_candidate_ids"]
+    assert isinstance(raw_rank, list)
+    assert len(raw_rank) >= 2
+    raw_rank[0], raw_rank[1] = raw_rank[1], raw_rank[0]
+    _recompute_pipeline_receipt(document)
+    _recompute_cli_document_sha(document)
+
+    with pytest.raises(
+        CliResultVerificationError,
+        match="pipeline ranking evidence is invalid",
+    ):
+        verify_canonical_cli_result_document(document)
 
 
 def test_nested_score_term_tamper_is_rejected_even_with_new_top_sha(

@@ -12,11 +12,15 @@ from starlette.background import BackgroundTask
 import hashlib
 import json
 import uuid
-from api.artifact_access import read_confined_json_object, verify_completed_result_artifacts
+from api.artifact_access import (
+    read_confined_json_object,
+    verify_completed_result_artifacts,
+)
 from api.cameo import router as cameo_router
 from api.casp17 import router as casp17_router
 from api.cleanup import router as cleanup_router
 from api.goal import router as goal_router
+from api.engine_v2_shadow import router as engine_v2_shadow_router
 from api.product_ai_surface import router as product_ai_surface_router
 from api.product_architecture import router as product_architecture_router
 from api.product_scope import router as product_scope_router
@@ -24,7 +28,9 @@ from api.product import router as product_router
 from api.product_benchmark import router as product_benchmark_router
 from api.product_cameo_runner import router as product_cameo_runner_router
 from api.product_capabilities import router as product_capabilities_router
-from api.product_commercial_readiness import router as product_commercial_readiness_router
+from api.product_commercial_readiness import (
+    router as product_commercial_readiness_router,
+)
 from api.product_evidence_goal import router as product_evidence_goal_router
 from api.product_gpcr_hard_decoy import router as product_gpcr_hard_decoy_router
 from api.product_hbond_backmap import router as product_hbond_backmap_router
@@ -48,6 +54,9 @@ from api.startup_preflight import run_startup_preflight, check_key_staleness
 from api.job_store import SQLiteJobStore, get_configured_job_store
 from api.request_identity import request_identity
 from api.security import ProductSecurityMiddleware, security_metrics_text
+from api.validated_runner_execution_evidence import (
+    is_engine_v2_shadow_execution_evidence,
+)
 from api.simulation_endpoint_access import (
     create_simulation_job_for_identity,
     get_simulation_job_for_identity,
@@ -61,7 +70,9 @@ from api.worker import (
     run_job_once,
     write_status_file,  # noqa: F401 - retained as a compatibility export
 )
-from betelgeuze_product.tier_beta_vertical_slice import is_tier_beta_vertical_slice_request
+from betelgeuze_product.tier_beta_vertical_slice import (
+    is_tier_beta_vertical_slice_request,
+)
 
 # --- Startup preflight: fail fast on fatal misconfigurations ---
 run_startup_preflight(settings)
@@ -73,6 +84,8 @@ app.include_router(cameo_router)
 app.include_router(casp17_router)
 app.include_router(cleanup_router)
 app.include_router(goal_router)
+if engine_v2_shadow_router is not None:
+    app.include_router(engine_v2_shadow_router)
 app.include_router(product_architecture_router)
 app.include_router(product_capabilities_router)
 app.include_router(product_docking_router)
@@ -222,7 +235,9 @@ def get_simulation_status(job_id: str, request: Request = None):
     )
 
     # Read status from file only after object authorization succeeds.
-    status_file_path = str(record.get("published_status_path") or job_status_path(job_id))
+    status_file_path = str(
+        record.get("published_status_path") or job_status_path(job_id)
+    )
     result_root = job_results_dir(job_id)
     status_data = read_confined_json_object(
         result_root,
@@ -307,7 +322,9 @@ def get_simulation_results(job_id: str, request: Request = None):
         resource="Job",
     )
 
-    status_file_path = str(record.get("published_status_path") or job_status_path(job_id))
+    status_file_path = str(
+        record.get("published_status_path") or job_status_path(job_id)
+    )
     result_root = job_results_dir(job_id)
     status_data = read_confined_json_object(
         result_root,
@@ -327,12 +344,25 @@ def get_simulation_results(job_id: str, request: Request = None):
         expected_key_id=settings.api_result_manifest_key_id,
         snapshot_result=True,
     )
+    if is_engine_v2_shadow_execution_evidence(
+        verified.validated_runner_execution_evidence
+    ):
+        verified.close()
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Engine V2 shadow artifacts are available only through the "
+                "operator shadow evidence route"
+            ),
+        )
     if verified.artifact_type == "json" or verified.media_type == "application/json":
         try:
             assert verified.result_snapshot is not None
             result_payload = json.load(verified.result_snapshot)
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-            raise HTTPException(status_code=500, detail="Result JSON artifact is invalid") from exc
+            raise HTTPException(
+                status_code=500, detail="Result JSON artifact is invalid"
+            ) from exc
         finally:
             verified.close()
         return JSONResponse(result_payload)
@@ -347,4 +377,5 @@ def get_simulation_results(job_id: str, request: Request = None):
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)

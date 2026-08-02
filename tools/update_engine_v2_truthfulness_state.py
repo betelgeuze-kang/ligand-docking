@@ -12,17 +12,18 @@ ROOT = Path(__file__).resolve().parents[1]
 CAPABILITIES_PATH = ROOT / "betelgeuze_engine_v2" / "capabilities.py"
 CAPABILITY_YAML_PATH = ROOT / "config" / "independent_engine_v2_capabilities.yaml"
 
-_OLD_PYTHON_STATE = '''                current_state=(
+_OLD_PYTHON_STATE = """                current_state=(
                     "frozen_four_case_public_redocking_protocol_definition_"
                     "without_execution_or_results"
-                ),'''
-_NEW_PYTHON_STATE = '''                current_state=(
-                    "frozen_four_case_public_redocking_protocol_with_"
-                    "result_free_input_materializer_without_execution_or_results"
-                ),'''
-_OLD_PYTHON_BLOCKERS = '''        "symmetry_mapping_materializer_not_implemented",
+                ),"""
+_NEW_PYTHON_STATE = """                current_state=(
+                    "historical_300_case_contaminated_development_with_fresh_"
+                    "128_case_internal_provisional_blind_unexecuted_and_"
+                    "active_v7_refiner"
+                ),"""
+_OLD_PYTHON_BLOCKERS = """        "symmetry_mapping_materializer_not_implemented",
         "reference_ligand_match_materializer_not_implemented",
-'''
+"""
 
 _OLD_YAML_STATE = (
     "    current_state: "
@@ -30,21 +31,19 @@ _OLD_YAML_STATE = (
 )
 _NEW_YAML_STATE = (
     "    current_state: "
-    "frozen_four_case_public_redocking_protocol_with_"
-    "result_free_input_materializer_without_execution_or_results\n"
+    "historical_300_case_contaminated_development_with_fresh_"
+    "128_case_internal_provisional_blind_unexecuted_and_active_v7_refiner\n"
 )
-_OLD_YAML_BLOCKERS = '''      - symmetry_mapping_materializer_not_implemented
+_OLD_YAML_BLOCKERS = """      - symmetry_mapping_materializer_not_implemented
       - reference_ligand_match_materializer_not_implemented
-'''
+"""
 
 
 class StateUpdateError(RuntimeError):
     """The expected capability source shape drifted."""
 
 
-def _replace_or_require_canonical(
-    source: str, old: str, new: str, *, name: str
-) -> str:
+def _replace_or_require_canonical(source: str, old: str, new: str, *, name: str) -> str:
     old_count = source.count(old)
     new_count = source.count(new)
     if old_count == 1 and new_count == 0:
@@ -62,9 +61,7 @@ def _remove_or_require_absent(source: str, old: str, *, name: str) -> str:
         return source.replace(old, "", 1)
     if count == 0:
         return source
-    raise StateUpdateError(
-        f"{name} expected at most one match, observed {count}"
-    )
+    raise StateUpdateError(f"{name} expected at most one match, observed {count}")
 
 
 def render_capabilities(source: str) -> str:

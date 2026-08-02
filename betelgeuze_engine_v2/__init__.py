@@ -87,6 +87,13 @@ from .molecular import (
     require_valid_all_atom_system,
     validate_all_atom_system,
 )
+from .pipeline import (
+    DOCKING_PIPELINE_EXECUTION_SCHEMA_ID,
+    DOCKING_PIPELINE_PROFILE_SCHEMA_ID,
+    DockingPipeline,
+    DockingPipelineError,
+    DockingPipelineExecution,
+)
 from .physics import (
     EnergyCompositionResult,
     EnergyTermResult,
@@ -208,6 +215,8 @@ __all__ = [
     "DISTRIBUTION_VERSION",
     "DOCKING_SEARCH_FINGERPRINT_SCHEMA_ID",
     "DOCKING_SEARCH_RESULT_SCHEMA_ID",
+    "DOCKING_PIPELINE_EXECUTION_SCHEMA_ID",
+    "DOCKING_PIPELINE_PROFILE_SCHEMA_ID",
     "ENGINE_API_VERSION",
     "ENGINE_RESULT_SCHEMA_VERSION",
     "EXECUTION_PARAMETER_ATTESTATION_SHA256",
@@ -241,6 +250,9 @@ __all__ = [
     "ClaimBlocker",
     "ClaimStage",
     "CompactNeighborList",
+    "DockingPipeline",
+    "DockingPipelineError",
+    "DockingPipelineExecution",
     "EnergyCompositionResult",
     "EnergyForcePrediction",
     "EnergyTermResult",

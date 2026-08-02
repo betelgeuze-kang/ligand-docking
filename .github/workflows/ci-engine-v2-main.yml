@@ -5,6 +5,16 @@ on:
     branches: ["main"]
     paths:
       - "betelgeuze_engine_v2/**"
+      - "betelgeuze_engine_v2/benchmark/fresh_run_verifier.py"
+      - "betelgeuze_engine_v2/docking/backend_abi.py"
+      - "betelgeuze_engine_v2/docking/gpu_parity.py"
+      - "betelgeuze_engine_v2/pipeline.py"
+      - "betelgeuze_engine_v2/product_shadow.py"
+      - "betelgeuze_engine_v2/standalone_cli.py"
+      - "api/engine_v2_shadow.py"
+      - "api/config.py"
+      - "api/request_identity.py"
+      - "betelgeuze_product/engine_v2_shadow.py"
       - "packaging/engine-v2/**"
       - "rust_engine_v2/**"
       - "config/independent_engine_v2_capabilities.yaml"
@@ -21,8 +31,23 @@ on:
       - "tools/classify_engine_v2_stage0_full_suite.py"
       - "tools/reconcile_engine_v2_stage0_full_suites.py"
       - "tools/audit_engine_v2_ci_authority.py"
+      - "tools/build_engine_v2_solo_stage0_evidence.py"
+      - "tools/build_engine_v2_solo_self_review.py"
+      - "tools/build_engine_v2_solo_stage0_policy.py"
+      - "tools/verify_engine_v2_fresh_redocking_run.py"
       - "config/engine_v2_public_redocking_stage0_*.json"
       - "tests/unit/test_engine_v2_*.py"
+      - "tests/unit/test_build_engine_v2_solo_self_review.py"
+      - "tests/unit/test_engine_v2_backend_abi.py"
+      - "tests/unit/test_engine_v2_docking_pipeline.py"
+      - "tests/unit/test_engine_v2_fresh_redocking_holdout.py"
+      - "tests/unit/test_engine_v2_fresh_artifacts.py"
+      - "tests/unit/test_engine_v2_fresh_run_verifier.py"
+      - "tests/unit/test_engine_v2_gpu_parity.py"
+      - "tests/unit/test_engine_v2_product_shadow.py"
+      - "tests/unit/test_engine_v2_product_shadow_adapter.py"
+      - "tests/unit/test_engine_v2_standalone_cli.py"
+      - "tests/unit/test_engine_v2_wheel_artifact.py"
       - "tests/unit/test_classify_engine_v2_stage0_full_suite.py"
       - "tests/unit/test_reconcile_engine_v2_stage0_full_suites.py"
       - "tests/unit/test_audit_engine_v2_ci_authority.py"
@@ -85,6 +110,12 @@ jobs:
           clean: true
           sparse-checkout: |
             betelgeuze_engine_v2
+            api/__init__.py
+            api/config.py
+            api/engine_v2_shadow.py
+            api/request_identity.py
+            betelgeuze_product/__init__.py
+            betelgeuze_product/engine_v2_shadow.py
             packaging/engine-v2
             rust_engine_v2
             core/__init__.py
@@ -114,6 +145,10 @@ jobs:
             tools/classify_engine_v2_stage0_full_suite.py
             tools/reconcile_engine_v2_stage0_full_suites.py
             tools/audit_engine_v2_ci_authority.py
+            tools/build_engine_v2_solo_stage0_evidence.py
+            tools/build_engine_v2_solo_self_review.py
+            tools/build_engine_v2_solo_stage0_policy.py
+            tools/verify_engine_v2_fresh_redocking_run.py
             config/engine_v2_public_redocking_stage0_freeze.template.json
             config/engine_v2_public_redocking_stage0_attestation.template.json
             config/engine_v2_public_redocking_stage0_threshold_evidence.template.json
@@ -125,6 +160,17 @@ jobs:
             tests/unit/test_classify_engine_v2_stage0_full_suite.py
             tests/unit/test_reconcile_engine_v2_stage0_full_suites.py
             tests/unit/test_audit_engine_v2_ci_authority.py
+            tests/unit/test_build_engine_v2_solo_self_review.py
+            tests/unit/test_engine_v2_backend_abi.py
+            tests/unit/test_engine_v2_docking_pipeline.py
+            tests/unit/test_engine_v2_fresh_redocking_holdout.py
+            tests/unit/test_engine_v2_fresh_artifacts.py
+            tests/unit/test_engine_v2_fresh_run_verifier.py
+            tests/unit/test_engine_v2_gpu_parity.py
+            tests/unit/test_engine_v2_product_shadow.py
+            tests/unit/test_engine_v2_product_shadow_adapter.py
+            tests/unit/test_engine_v2_standalone_cli.py
+            tests/unit/test_engine_v2_wheel_artifact.py
             tests/unit/test_engine_v2_contracts_molecular.py
             tests/unit/test_engine_v2_mmcif_syntax.py
             tests/unit/test_engine_v2_mmcif_semantics.py
@@ -255,7 +301,11 @@ jobs:
             tools/verify_engine_v2_public_redocking_stage0.py \
             tools/classify_engine_v2_stage0_full_suite.py \
             tools/reconcile_engine_v2_stage0_full_suites.py \
-            tools/audit_engine_v2_ci_authority.py
+            tools/audit_engine_v2_ci_authority.py \
+            tools/build_engine_v2_solo_stage0_evidence.py \
+            tools/build_engine_v2_solo_self_review.py \
+            tools/build_engine_v2_solo_stage0_policy.py \
+            tools/verify_engine_v2_fresh_redocking_run.py
           python tools/check_engine_v2_architecture.py
 
       - name: Run complete focused Engine v2 CPU suite
@@ -335,6 +385,17 @@ jobs:
             tests/unit/test_engine_v2_external_baseline.py \
             tests/unit/test_analyze_engine_v2_score_terms.py \
             tests/unit/test_engine_v2_blind_stage0.py \
+            tests/unit/test_engine_v2_fresh_redocking_holdout.py \
+            tests/unit/test_engine_v2_fresh_artifacts.py \
+            tests/unit/test_engine_v2_fresh_run_verifier.py \
+            tests/unit/test_build_engine_v2_solo_self_review.py \
+            tests/unit/test_engine_v2_docking_pipeline.py \
+            tests/unit/test_engine_v2_standalone_cli.py \
+            tests/unit/test_engine_v2_product_shadow.py \
+            tests/unit/test_engine_v2_product_shadow_adapter.py \
+            tests/unit/test_engine_v2_backend_abi.py \
+            tests/unit/test_engine_v2_gpu_parity.py \
+            tests/unit/test_engine_v2_wheel_artifact.py \
             tests/unit/test_build_engine_v2_stage0_development_gate_ledger.py \
             tests/unit/test_build_engine_v2_source_paired_failure_atlas.py \
             tests/unit/test_build_engine_v2_receipt_bound_scale_feasibility_audit.py \

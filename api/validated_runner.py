@@ -152,16 +152,18 @@ def _validate_native_bundle_execution_binding(
     expected_result_path = Path(os.path.abspath(str(result_file)))
     manifest = bundle.result_manifest
     if bundle.bundle_id != f"api_{job_id}_evidence_bundle":
-        raise ContractValidationError("native EvidenceBundle bundle_id binding mismatch")
+        raise ContractValidationError(
+            "native EvidenceBundle bundle_id binding mismatch"
+        )
     if str(manifest.get("job_id") or "") != job_id:
         raise ContractValidationError("native EvidenceBundle job binding mismatch")
     if str(manifest.get("status") or "") != "completed":
         raise ContractValidationError("native EvidenceBundle status binding mismatch")
-    manifest_result = Path(
-        os.path.abspath(str(manifest.get("result_file") or ""))
-    )
+    manifest_result = Path(os.path.abspath(str(manifest.get("result_file") or "")))
     if manifest_result != expected_result_path:
-        raise ContractValidationError("native EvidenceBundle result path binding mismatch")
+        raise ContractValidationError(
+            "native EvidenceBundle result path binding mismatch"
+        )
     if str(manifest.get("result_file_sha256") or "").lower() != result_file_sha256:
         raise ContractValidationError("native EvidenceBundle result SHA-256 mismatch")
     if str(manifest.get("request_sha256") or "").lower() != expected_request_sha256:
@@ -197,9 +199,8 @@ def _validate_native_bundle_execution_binding(
         raise ContractValidationError(
             "native EvidenceBundle execution provenance mismatch"
         )
-    if (
-        str(request_provenance.get("execution_request_transform_id") or "")
-        != str(manifest.get("execution_request_transform_id") or "")
+    if str(request_provenance.get("execution_request_transform_id") or "") != str(
+        manifest.get("execution_request_transform_id") or ""
     ):
         raise ContractValidationError(
             "native EvidenceBundle request transform provenance mismatch"
@@ -274,10 +275,15 @@ def _require_output_within_results_dir(
         resolved_root = results_dir.resolve(strict=True)
         resolved_parent = candidate.parent.resolve(strict=True)
     except ValueError as exc:
-        raise PermissionError(f"{label} escapes the job attempt results directory") from exc
+        raise PermissionError(
+            f"{label} escapes the job attempt results directory"
+        ) from exc
     except OSError as exc:
         raise PermissionError(f"{label} parent is unavailable") from exc
-    if resolved_parent != resolved_root and resolved_root not in resolved_parent.parents:
+    if (
+        resolved_parent != resolved_root
+        and resolved_root not in resolved_parent.parents
+    ):
         raise PermissionError(f"{label} escapes the job attempt results directory")
     cursor = logical_root
     for part in relative_parent.parts:
@@ -293,7 +299,10 @@ def _require_output_within_results_dir(
 
 def _runner_script(profile: dict[str, Any]) -> str:
     script = str(profile.get("runner_script", "") or "").strip()
-    if script not in ALLOWED_RUNNER_SCRIPTS and str(Path(script).resolve()) not in ALLOWED_RUNNER_SCRIPTS:
+    if (
+        script not in ALLOWED_RUNNER_SCRIPTS
+        and str(Path(script).resolve()) not in ALLOWED_RUNNER_SCRIPTS
+    ):
         raise PermissionError(f"runner_script is not allowlisted: {script}")
     path = Path(script)
     if not path.is_absolute():
@@ -394,7 +403,9 @@ def _validate_evidence_artifact(path_value: str) -> dict[str, Any]:
     if not path.is_absolute():
         path = _repo_root() / path
     if not path.exists() or not path.is_file():
-        raise FileNotFoundError(f"runner profile evidence artifact missing: {path_value}")
+        raise FileNotFoundError(
+            f"runner profile evidence artifact missing: {path_value}"
+        )
     payload = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
         raise PermissionError("runner profile evidence artifact must be a JSON object")
@@ -407,17 +418,25 @@ def _validate_evidence_artifact(path_value: str) -> dict[str, Any]:
     )
     missing = [key for key in required_true if payload.get(key) is not True]
     if missing:
-        raise PermissionError(f"runner profile evidence artifact has unmet checks: {missing}")
+        raise PermissionError(
+            f"runner profile evidence artifact has unmet checks: {missing}"
+        )
     gate_artifact = str(payload.get("gate_policy_artifact", "") or "").strip()
     if not gate_artifact:
-        raise PermissionError("runner profile evidence artifact requires gate_policy_artifact")
+        raise PermissionError(
+            "runner profile evidence artifact requires gate_policy_artifact"
+        )
     return payload
 
 
-def validate_profile_readiness(profile: dict[str, Any], *, runner_script_path: str) -> dict[str, Any]:
+def validate_profile_readiness(
+    profile: dict[str, Any], *, runner_script_path: str
+) -> dict[str, Any]:
     readiness = profile.get("production_readiness")
     if not isinstance(readiness, dict):
-        raise PermissionError("enabled runner profile requires production_readiness block")
+        raise PermissionError(
+            "enabled runner profile requires production_readiness block"
+        )
 
     approved_by = _require_nonempty_text(readiness, "approved_by")
     approved_at_utc = _require_nonempty_text(readiness, "approved_at_utc")
@@ -426,7 +445,9 @@ def validate_profile_readiness(profile: dict[str, Any], *, runner_script_path: s
     expected_hash = _require_nonempty_text(readiness, "runner_script_sha256")
     observed_hash = _sha256_file(Path(runner_script_path))
     if observed_hash != expected_hash:
-        raise PermissionError("runner profile runner_script_sha256 does not match allowlisted runner")
+        raise PermissionError(
+            "runner profile runner_script_sha256 does not match allowlisted runner"
+        )
 
     evidence_payload = _validate_evidence_artifact(evidence_artifact)
     return {
@@ -435,7 +456,9 @@ def validate_profile_readiness(profile: dict[str, Any], *, runner_script_path: s
         "claim_scope": claim_scope,
         "evidence_artifact": evidence_artifact,
         "runner_script_sha256": observed_hash,
-        "gate_policy_artifact": str(evidence_payload.get("gate_policy_artifact", "") or ""),
+        "gate_policy_artifact": str(
+            evidence_payload.get("gate_policy_artifact", "") or ""
+        ),
     }
 
 
@@ -522,7 +545,9 @@ def _run_profile_command(
         os.close(start_write_fd)
         supervisor.kill()
         supervisor.communicate()
-        raise RuntimeError("validated runner supervisor rejected its configuration") from exc
+        raise RuntimeError(
+            "validated runner supervisor rejected its configuration"
+        ) from exc
     finally:
         os.close(config_write_fd)
 
@@ -628,9 +653,7 @@ def _run_profile_command(
                     supervisor.kill()
                 except ProcessLookupError:
                     pass
-                reason = (
-                    "validated runner supervisor did not complete bounded namespace teardown"
-                )
+                reason = "validated runner supervisor did not complete bounded namespace teardown"
                 teardown_errors.append(reason)
                 try:
                     supervisor_stdout, supervisor_stderr = supervisor.communicate(
@@ -651,9 +674,7 @@ def _run_profile_command(
                         )
                         if item
                     ),
-                    "containment_error": "; ".join(
-                        dict.fromkeys(teardown_errors)
-                    ),
+                    "containment_error": "; ".join(dict.fromkeys(teardown_errors)),
                     "supervisor": "linux_pid_namespace_v1",
                 }
             try:
@@ -705,7 +726,9 @@ def _run_profile_command(
                 "cancelled": cancellation_requested,
                 "stdout": "",
                 "stderr": "\n".join(
-                    item for item in (supervisor_stderr or "", containment_error) if item
+                    item
+                    for item in (supervisor_stderr or "", containment_error)
+                    if item
                 ),
                 "containment_error": containment_error,
                 "supervisor": "linux_pid_namespace_v1",
@@ -714,7 +737,9 @@ def _run_profile_command(
         try:
             payload = json.loads(supervisor_stdout)
         except (TypeError, json.JSONDecodeError):
-            reason = "validated runner supervisor returned an invalid containment record"
+            reason = (
+                "validated runner supervisor returned an invalid containment record"
+            )
             return {
                 "returncode": 125,
                 "timed_out": outer_timeout,
@@ -742,18 +767,14 @@ def _run_profile_command(
             )
             if item
         )
-        payload["containment_error"] = str(
-            payload.get("containment_error", "") or ""
-        )
+        payload["containment_error"] = str(payload.get("containment_error", "") or "")
         protocol_errors: list[str] = []
         if payload.get("protocol_nonce") != protocol_nonce:
             protocol_errors.append("validated runner supervisor nonce mismatch")
         if payload.get("supervisor") != "linux_pid_namespace_v1":
             protocol_errors.append("validated runner supervisor kind mismatch")
         expected_supervisor_failure = bool(
-            payload["timed_out"]
-            or payload["cancelled"]
-            or payload["containment_error"]
+            payload["timed_out"] or payload["cancelled"] or payload["containment_error"]
         )
         if supervisor.returncode != 0 and not expected_supervisor_failure:
             protocol_errors.append(
@@ -773,9 +794,7 @@ def _run_profile_command(
                 payload["returncode"] if payload["returncode"] != 0 else 125
             )
             payload["containment_error"] = "; ".join(
-                item
-                for item in (payload["containment_error"], reason)
-                if item
+                item for item in (payload["containment_error"], reason) if item
             )
             payload["stderr"] = "\n".join(
                 item for item in (payload["stderr"], reason) if item
@@ -797,9 +816,7 @@ async def execute_validated_runner_profile(
             "operator-approved profile and a namespace-qualified host runtime receipt."
         )
     runtime_qualification = require_validated_runner_namespace_runtime()
-    runtime_qualification_record = _runtime_qualification_record(
-        runtime_qualification
-    )
+    runtime_qualification_record = _runtime_qualification_record(runtime_qualification)
 
     profile_id = _safe_profile_id(request_data.get("runner_profile_id"))
     profile = _load_profile(profile_id)
@@ -815,6 +832,7 @@ async def execute_validated_runner_profile(
             f"runner profile does not allow customer submissions: {profile_id}"
         )
     execution_evidence = build_validated_runner_execution_evidence(
+        job_id=job_id,
         profile_id=profile_id,
         execution_contract=execution_contract,
         request_data=request_data,
@@ -833,14 +851,26 @@ async def execute_validated_runner_profile(
         + "\n",
     )
 
-    result_file_template = str(profile.get("result_file_template", "{job_results_dir}/runner_result.json") or "")
-    evidence_bundle_template = str(profile.get("evidence_bundle_template", "") or "").strip()
+    result_file_template = str(
+        profile.get("result_file_template", "{job_results_dir}/runner_result.json")
+        or ""
+    )
+    evidence_bundle_template = str(
+        profile.get("evidence_bundle_template", "") or ""
+    ).strip()
     has_evidence_bundle_template = bool(evidence_bundle_template)
     context = {
         "job_id": job_id,
         "job_results_dir": str(results_dir),
         "request_json_path": str(request_json_path),
-        "result_file": _render_template(result_file_template, {"job_id": job_id, "job_results_dir": str(results_dir), "request_json_path": str(request_json_path)}),
+        "result_file": _render_template(
+            result_file_template,
+            {
+                "job_id": job_id,
+                "job_results_dir": str(results_dir),
+                "request_json_path": str(request_json_path),
+            },
+        ),
     }
     context["result_file"] = _render_template(result_file_template, context)
     if has_evidence_bundle_template:
@@ -872,7 +902,9 @@ async def execute_validated_runner_profile(
 
     script = _runner_script(profile)
     readiness_record = validate_profile_readiness(profile, runner_script_path=script)
-    command = [sys.executable, script] + [_render_template(item, context) for item in args]
+    command = [sys.executable, script] + [
+        _render_template(item, context) for item in args
+    ]
 
     started = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
     t0 = time.time()
@@ -911,7 +943,9 @@ async def execute_validated_runner_profile(
 
     result_file = Path(context["result_file"])
     evidence_bundle_path_value = context.get("evidence_bundle", "")
-    evidence_bundle_path = Path(evidence_bundle_path_value) if evidence_bundle_path_value else None
+    evidence_bundle_path = (
+        Path(evidence_bundle_path_value) if evidence_bundle_path_value else None
+    )
     command_ok = bool(
         completed["returncode"] == 0
         and not completed.get("timed_out")
@@ -945,7 +979,9 @@ async def execute_validated_runner_profile(
         "stderr_tail": "\n".join(str(completed["stderr"] or "").splitlines()[-40:]),
         "result_file": str(result_file),
         "evidence_bundle_template": evidence_bundle_template or "",
-        "native_evidence_bundle": str(evidence_bundle_path) if evidence_bundle_path else "",
+        "native_evidence_bundle": str(evidence_bundle_path)
+        if evidence_bundle_path
+        else "",
         "native_evidence_bundle_sha256": "",
         **runtime_qualification_record,
         "claim_boundary": (
@@ -972,7 +1008,9 @@ async def execute_validated_runner_profile(
                 **runtime_qualification_record,
             },
         )
-        raise RuntimeError(f"validated runner failed for profile {profile_id}; see {execution_record_path}")
+        raise RuntimeError(
+            f"validated runner failed for profile {profile_id}; see {execution_record_path}"
+        )
     result_file_sha256 = _sha256_confined_result_file(
         result_file,
         results_dir=results_dir,
@@ -996,19 +1034,19 @@ async def execute_validated_runner_profile(
                 parse_float=parse_finite_json_float,
             )
         except (OSError, UnicodeDecodeError, ValueError, json.JSONDecodeError) as exc:
-            raise PermissionError(
-                "validated runner JSON result is not valid"
-            ) from exc
+            raise PermissionError("validated runner JSON result is not valid") from exc
         if not isinstance(parsed_result, dict):
             raise PermissionError("validated runner JSON result must be an object")
         result_payload = parsed_result
 
     native_bundle_record: dict[str, str] = {}
     if has_evidence_bundle_template:
-        if evidence_bundle_path is None or not evidence_bundle_path.exists() or not evidence_bundle_path.is_file():
-            error = (
-                f"validated_runner_missing_native_evidence_bundle:{evidence_bundle_path_value}"
-            )
+        if (
+            evidence_bundle_path is None
+            or not evidence_bundle_path.exists()
+            or not evidence_bundle_path.is_file()
+        ):
+            error = f"validated_runner_missing_native_evidence_bundle:{evidence_bundle_path_value}"
             execution_record["native_evidence_bundle_error"] = error
             _write_json_artifact(execution_record_path, execution_record)
             _write_status(
@@ -1043,9 +1081,7 @@ async def execute_validated_runner_profile(
             ValueError,
             json.JSONDecodeError,
         ) as exc:
-            error = (
-                f"validated_runner_native_evidence_bundle_not_json:{evidence_bundle_path_value}"
-            )
+            error = f"validated_runner_native_evidence_bundle_not_json:{evidence_bundle_path_value}"
             execution_record["native_evidence_bundle_error"] = error
             _write_json_artifact(execution_record_path, execution_record)
             _write_status(
@@ -1062,9 +1098,7 @@ async def execute_validated_runner_profile(
                 f"native evidence bundle is not valid JSON: {evidence_bundle_path_value}"
             ) from exc
         if not isinstance(raw_payload, dict):
-            error = (
-                f"validated_runner_native_evidence_bundle_not_object:{evidence_bundle_path_value}"
-            )
+            error = f"validated_runner_native_evidence_bundle_not_object:{evidence_bundle_path_value}"
             execution_record["native_evidence_bundle_error"] = error
             _write_json_artifact(execution_record_path, execution_record)
             _write_status(
@@ -1091,9 +1125,7 @@ async def execute_validated_runner_profile(
                 result_payload=result_payload,
             )
         except (ContractValidationError, TypeError) as exc:
-            error = (
-                f"validated_runner_native_evidence_bundle_invalid:{exc}"
-            )
+            error = f"validated_runner_native_evidence_bundle_invalid:{exc}"
             execution_record["native_evidence_bundle_error"] = error
             _write_json_artifact(execution_record_path, execution_record)
             _write_status(

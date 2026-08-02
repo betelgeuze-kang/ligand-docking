@@ -3,34 +3,57 @@
 from pydantic_settings import BaseSettings
 import os
 
+
 class Settings(BaseSettings):
     app_name: str = "MICF API Server"
     admin_email: str = "admin@example.com"
     mlflow_tracking_uri: str = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
     # database_url: str = os.getenv("DATABASE_URL", "sqlite:///./micf.db")
-    model_storage_path: str = "./models/" # Path to load models from
-    results_storage_path: str = "./results/" # Path to store results
-    api_job_store_path: str = os.getenv("API_JOB_STORE_PATH", "./results/api_jobs.sqlite3")
+    model_storage_path: str = "./models/"  # Path to load models from
+    results_storage_path: str = "./results/"  # Path to store results
+    api_job_store_path: str = os.getenv(
+        "API_JOB_STORE_PATH", "./results/api_jobs.sqlite3"
+    )
     api_inline_worker_enabled: bool = os.getenv("API_INLINE_WORKER_ENABLED", "0") == "1"
     api_worker_lease_seconds: int = int(os.getenv("API_WORKER_LEASE_SECONDS", "300"))
-    api_worker_heartbeat_interval_seconds: float = float(os.getenv("API_WORKER_HEARTBEAT_INTERVAL_SECONDS", "30"))
-    api_validated_runner_enabled: bool = os.getenv("API_VALIDATED_RUNNER_ENABLED", "0") == "1"
+    api_worker_heartbeat_interval_seconds: float = float(
+        os.getenv("API_WORKER_HEARTBEAT_INTERVAL_SECONDS", "30")
+    )
+    api_validated_runner_enabled: bool = (
+        os.getenv("API_VALIDATED_RUNNER_ENABLED", "0") == "1"
+    )
     api_validated_runner_profiles_path: str = os.getenv(
         "API_VALIDATED_RUNNER_PROFILES_PATH",
         "./config/api_validated_runner_profiles",
     )
-    api_validated_runner_timeout_seconds: int = int(os.getenv("API_VALIDATED_RUNNER_TIMEOUT_SECONDS", "3600"))
+    api_validated_runner_timeout_seconds: int = int(
+        os.getenv("API_VALIDATED_RUNNER_TIMEOUT_SECONDS", "3600")
+    )
     api_result_manifest_signing_key: str = os.getenv(
         "API_RESULT_MANIFEST_SIGNING_KEY",
         "local-dev-result-manifest-signing-key-change-me",
     )
-    api_result_manifest_key_id: str = os.getenv("API_RESULT_MANIFEST_KEY_ID", "local-dev")
+    api_result_manifest_key_id: str = os.getenv(
+        "API_RESULT_MANIFEST_KEY_ID", "local-dev"
+    )
+    # Engine V2 operator-shadow stays unavailable until all three paths point
+    # to one independently admitted Stage 0 freeze on final main.
+    engine_v2_stage0_policy_path: str = os.getenv("ENGINE_V2_STAGE0_POLICY_PATH", "")
+    engine_v2_stage0_gnina_path: str = os.getenv("ENGINE_V2_STAGE0_GNINA_PATH", "")
+    engine_v2_stage0_output_root: str = os.getenv("ENGINE_V2_STAGE0_OUTPUT_ROOT", "")
+    # Product shadow also requires a reverified Fresh-128 completion rooted in
+    # the canonical retained run directory. It remains unconfigured by default.
+    engine_v2_fresh_output_root: str = os.getenv("ENGINE_V2_FRESH_OUTPUT_ROOT", "")
     # Encrypted private payload store (raw customer inputs at rest). When
     # docking_private_payload_keys is empty the store is disabled and the
     # pipeline degrades to ledger redaction only (fail-closed).
     docking_private_payload_keys: str = os.getenv("DOCKING_PRIVATE_PAYLOAD_KEYS", "")
-    docking_private_payload_dir: str = os.getenv("DOCKING_PRIVATE_PAYLOAD_DIR", "./results/private_payloads")
-    docking_private_payload_ttl_seconds: int = int(os.getenv("DOCKING_PRIVATE_PAYLOAD_TTL_SECONDS", str(7 * 24 * 3600)))
+    docking_private_payload_dir: str = os.getenv(
+        "DOCKING_PRIVATE_PAYLOAD_DIR", "./results/private_payloads"
+    )
+    docking_private_payload_ttl_seconds: int = int(
+        os.getenv("DOCKING_PRIVATE_PAYLOAD_TTL_SECONDS", str(7 * 24 * 3600))
+    )
     redis_host: str = os.getenv("REDIS_HOST", "localhost")
     redis_port: int = int(os.getenv("REDIS_PORT", 6379))
     redis_db: int = int(os.getenv("REDIS_DB", 0))
@@ -38,17 +61,36 @@ class Settings(BaseSettings):
     product_api_token: str = os.getenv("PRODUCT_API_TOKEN", "")
     product_api_token_tenant_id: str = os.getenv("PRODUCT_API_TOKEN_TENANT_ID", "local")
     product_api_admin_token: str = os.getenv("PRODUCT_API_ADMIN_TOKEN", "")
-    product_api_rate_limit_per_minute: int = int(os.getenv("PRODUCT_API_RATE_LIMIT_PER_MINUTE", "120"))
-    product_api_tenant_daily_quota: int = int(os.getenv("PRODUCT_API_TENANT_DAILY_QUOTA", "5000"))
-    product_api_max_payload_bytes: int = int(os.getenv("PRODUCT_API_MAX_PAYLOAD_BYTES", "10485760"))
-    product_api_audit_log_path: str = os.getenv("PRODUCT_API_AUDIT_LOG_PATH", "./results/product_audit_log.jsonl")
+    product_api_rate_limit_per_minute: int = int(
+        os.getenv("PRODUCT_API_RATE_LIMIT_PER_MINUTE", "120")
+    )
+    product_api_tenant_daily_quota: int = int(
+        os.getenv("PRODUCT_API_TENANT_DAILY_QUOTA", "5000")
+    )
+    product_api_max_payload_bytes: int = int(
+        os.getenv("PRODUCT_API_MAX_PAYLOAD_BYTES", "10485760")
+    )
+    product_api_audit_log_path: str = os.getenv(
+        "PRODUCT_API_AUDIT_LOG_PATH", "./results/product_audit_log.jsonl"
+    )
     product_api_security_ledger_path: str = os.getenv(
         "PRODUCT_API_SECURITY_LEDGER_PATH", "./results/product_security.sqlite3"
     )
-    product_api_audit_retention_days: int = int(os.getenv("PRODUCT_API_AUDIT_RETENTION_DAYS", "90"))
-    product_api_secret_rotation_days: int = int(os.getenv("PRODUCT_API_SECRET_ROTATION_DAYS", "30"))
-    product_api_hosted_exposure_approved: bool = os.getenv("PRODUCT_API_HOSTED_EXPOSURE_APPROVED", "0") == "1"
-    product_api_tls_termination_operator_verified: bool = os.getenv("PRODUCT_API_TLS_TERMINATION_OPERATOR_VERIFIED", "0") == "1"
-    product_api_pager_webhook_configured: bool = os.getenv("PRODUCT_API_PAGER_WEBHOOK_CONFIGURED", "0") == "1"
+    product_api_audit_retention_days: int = int(
+        os.getenv("PRODUCT_API_AUDIT_RETENTION_DAYS", "90")
+    )
+    product_api_secret_rotation_days: int = int(
+        os.getenv("PRODUCT_API_SECRET_ROTATION_DAYS", "30")
+    )
+    product_api_hosted_exposure_approved: bool = (
+        os.getenv("PRODUCT_API_HOSTED_EXPOSURE_APPROVED", "0") == "1"
+    )
+    product_api_tls_termination_operator_verified: bool = (
+        os.getenv("PRODUCT_API_TLS_TERMINATION_OPERATOR_VERIFIED", "0") == "1"
+    )
+    product_api_pager_webhook_configured: bool = (
+        os.getenv("PRODUCT_API_PAGER_WEBHOOK_CONFIGURED", "0") == "1"
+    )
+
 
 settings = Settings()

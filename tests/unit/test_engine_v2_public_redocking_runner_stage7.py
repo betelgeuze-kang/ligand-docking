@@ -5,6 +5,7 @@ import importlib.util
 import json
 from pathlib import Path
 import stat
+import sys
 from types import SimpleNamespace
 import zipfile
 
@@ -27,6 +28,11 @@ from betelgeuze_engine_v2.benchmark import (  # noqa: E402
 )
 import betelgeuze_engine_v2.benchmark.public_redocking_benchmark as benchmark_contract  # noqa: E402
 import betelgeuze_engine_v2.benchmark.blind_stage0 as stage0_contract  # noqa: E402
+from betelgeuze_engine_v2.benchmark.fresh_redocking_holdout import (  # noqa: E402
+    FRESH_REDOCKING_HOLDOUT_MANIFEST_SHA256,
+)
+import betelgeuze_engine_v2.benchmark.public_redocking_pipeline as pipeline_contract  # noqa: E402
+from betelgeuze_engine_v2.pipeline import DockingPipeline  # noqa: E402
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -37,7 +43,29 @@ _SPEC = importlib.util.spec_from_file_location(
 )
 assert _SPEC is not None and _SPEC.loader is not None
 runner = importlib.util.module_from_spec(_SPEC)
+sys.modules[_SPEC.name] = runner
 _SPEC.loader.exec_module(runner)
+
+
+def _bounded_process_result(
+    *,
+    returncode: int = 0,
+    timed_out: bool = False,
+    log_limit_exceeded: bool = False,
+) -> object:
+    empty = runner._CapturedProcessStream(
+        payload=b"",
+        total_bytes=0,
+        sha256=runner.hashlib.sha256(b"").hexdigest(),
+        overflowed=False,
+    )
+    return runner._BoundedProcessResult(
+        returncode=returncode,
+        timed_out=timed_out,
+        log_limit_exceeded=log_limit_exceeded,
+        stdout=empty,
+        stderr=empty,
+    )
 
 
 def _python_backend_receipt() -> dict[str, object]:
@@ -151,6 +179,190 @@ def _engine_outcome(
     return runner.EngineV2PoseSearchOutcome(
         ranked_coordinates=coordinates,
         diagnostics=diagnostics,
+    )
+
+
+def test_public_redocking_pipeline_rejects_foreign_runtime_callbacks() -> None:
+    implementation_sha256 = stage0_contract.stage0_engine_implementation_sha256(
+        _REPO_ROOT
+    )
+    callbacks = {
+        f"{role}.{method}": (lambda *_args: None)
+        for role, methods in pipeline_contract.PUBLIC_REDOCKING_PIPELINE_ROLE_METHODS.items()
+        for method in methods
+    }
+
+    with pytest.raises(
+        pipeline_contract.PublicRedockingPipelineProfileError,
+        match="canonical public-redocking runner|exact bound method",
+    ):
+        pipeline_contract.build_public_redocking_pipeline(
+            engine_implementation_sha256=implementation_sha256,
+            variant_kind="",
+            callbacks=callbacks,
+        )
+
+
+def test_public_redocking_pipeline_rejects_monolithic_executor_injection() -> None:
+    with pytest.raises(TypeError, match="unexpected keyword argument 'executor'"):
+        runner._BenchmarkPipelineComponent(
+            "ranker",
+            executor=lambda *_args: None,
+        )
+
+
+def test_public_redocking_runtime_callbacks_match_profile_only_and_are_frozen(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    case_id = FROZEN_PUBLIC_REDOCKING_CASE_IDS[0]
+    paths = {
+        role: tmp_path / f"{role}.fixture"
+        for role in ("receptor", "reference", "native", "seed")
+    }
+    paths["receptor"].write_bytes(
+        (_REPO_ROOT / "tests/fixtures/tier_beta/mini_protein.pdb").read_bytes()
+    )
+    ligand = (_REPO_ROOT / "tests/fixtures/tier_beta/ethanol.sdf").read_bytes()
+    for role in ("reference", "native", "seed"):
+        paths[role].write_bytes(ligand)
+
+    def reject_legacy_monolith(*_args, **_kwargs):
+        raise AssertionError("legacy monolithic scientific executor was called")
+
+    monkeypatch.setattr(
+        runner,
+        "_engine_v2_pose_coordinates",
+        reject_legacy_monolith,
+    )
+    actual_builder = runner.build_public_redocking_pipeline
+    observed: dict[str, object] = {}
+    actual_run_verified = DockingPipeline.run_verified
+
+    def capture_verified_execution(self, request):
+        verified = actual_run_verified(self, request)
+        observed["verified_execution"] = verified
+        return verified
+
+    monkeypatch.setattr(DockingPipeline, "run_verified", capture_verified_execution)
+
+    def capture_pipeline(**kwargs):
+        callbacks = kwargs["callbacks"]
+        pipeline = actual_builder(**kwargs)
+        observed["pipeline"] = pipeline
+        observed["caller_callbacks"] = callbacks
+        observed["scorer_owner"] = callbacks["scorer.score"].__self__
+        wrong_role_callbacks = dict(callbacks)
+        wrong_role_callbacks["ranker.rank"] = callbacks["input_preparer.prepare"]
+        with pytest.raises(
+            pipeline_contract.PublicRedockingPipelineProfileError,
+            match="canonical runner adapter",
+        ):
+            actual_builder(
+                engine_implementation_sha256=kwargs["engine_implementation_sha256"],
+                variant_kind=kwargs["variant_kind"],
+                callbacks=wrong_role_callbacks,
+            )
+        return pipeline
+
+    monkeypatch.setattr(runner, "build_public_redocking_pipeline", capture_pipeline)
+    outcome = runner._run_engine_v2_benchmark_pipeline(
+        case_id,
+        paths,
+        seed=11,
+        scorer_backend=runner.ScorerBackend.PYTHON_REFERENCE,
+    )
+
+    assert type(outcome) is runner.EngineV2PoseSearchOutcome
+    assert len(outcome.verified_candidate_evidence) == 64
+    assert len(outcome.ranked_coordinates) == 5
+    verified_execution = observed["verified_execution"]
+    scored_stage = verified_execution.stage_outputs[6].value
+    validity_stage = verified_execution.stage_outputs[7].value
+    assert type(scored_stage) is runner._BenchmarkScoringStage
+    assert type(validity_stage) is runner._BenchmarkValidityStage
+    assert validity_stage.scoring is scored_stage
+    assert all(
+        row.pose_validity is None and row.selection_eligible is False
+        for row in scored_stage.scored.rows
+    )
+    assert verified_execution.stage_outputs[8].value is outcome
+    assert len(verified_execution.candidate_evidence) == 64
+    pipeline = observed["pipeline"]
+    assert isinstance(pipeline, DockingPipeline)
+    profile_id, profile_sha256 = (
+        pipeline_contract.public_redocking_pipeline_profile_identity(
+            engine_implementation_sha256=(
+                stage0_contract.stage0_engine_implementation_sha256(_REPO_ROOT)
+            ),
+            variant_kind="",
+        )
+    )
+    assert (pipeline.profile_id, pipeline.profile_sha256) == (
+        profile_id,
+        profile_sha256,
+    )
+    callback_authority = pipeline.profile_document()["components"]["scorer"][
+        "configuration"
+    ]["callback_authority"]
+    assert callback_authority["runner_source_sha256"] == runner._sha256_path(
+        _RUNNER_PATH
+    )
+    assert callback_authority["callback_keys"] == sorted(
+        f"{role}.{method}"
+        for role, methods in pipeline_contract.PUBLIC_REDOCKING_PIPELINE_ROLE_METHODS.items()
+        for method in methods
+    )
+    assert set(callback_authority["scientific_stages"]) == {
+        "_prepare_benchmark_scientific_input",
+        "_provide_benchmark_conformers",
+        "_generate_benchmark_proposals",
+        "_admit_benchmark_proposals",
+        "_refine_benchmark_candidates",
+        "_score_benchmark_candidates",
+        "_validate_benchmark_candidates",
+        "_rank_benchmark_candidates",
+    }
+    caller_callbacks = observed["caller_callbacks"]
+    assert isinstance(caller_callbacks, dict)
+    caller_callbacks.clear()
+    assert pipeline.profile_sha256 == profile_sha256
+    with pytest.raises(TypeError):
+        pipeline.scorer._callbacks["scorer.score"] = lambda *_args: None
+    with pytest.raises(
+        pipeline_contract.PublicRedockingPipelineProfileError,
+        match="immutable",
+    ):
+        pipeline.scorer._callbacks = {}
+    with pytest.raises(
+        pipeline_contract.PublicRedockingPipelineProfileError,
+        match="immutable",
+    ):
+        observed["scorer_owner"].stage_override = lambda *_args: None
+
+
+def test_public_redocking_profile_only_identity_does_not_require_runner_import(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    implementation_sha256 = stage0_contract.stage0_engine_implementation_sha256(
+        _REPO_ROOT
+    )
+    expected = pipeline_contract.public_redocking_pipeline_profile_identity(
+        engine_implementation_sha256=implementation_sha256,
+        variant_kind="",
+    )
+    monkeypatch.setattr(
+        pipeline_contract,
+        "_local_runner_source_path",
+        lambda: None,
+    )
+
+    assert (
+        pipeline_contract.public_redocking_pipeline_profile_identity(
+            engine_implementation_sha256=implementation_sha256,
+            variant_kind="",
+        )
+        == expected
     )
 
 
@@ -483,7 +695,11 @@ def test_sealed_engine_execution_retains_stage0_logical_command(
             failure_code="engine_v2_input_unsupported",
         )
 
-    monkeypatch.setattr(runner, "_engine_v2_pose_coordinates", fail_before_science)
+    monkeypatch.setattr(
+        runner,
+        "_run_engine_v2_benchmark_pipeline",
+        fail_before_science,
+    )
     with runner.SealedCaseInputSnapshots(paths, inputs) as snapshots:
         result = runner._engine_v2_result(
             case_id,
@@ -1312,8 +1528,15 @@ def test_evaluator_pipeline_identity_binds_installed_distribution_bytes(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    distribution_versions = {
+        **runner.EVALUATOR_DISTRIBUTION_VERSIONS,
+        **{
+            name: runner.metadata.version(name)
+            for name in stage0_contract.STAGE0_CORE_RUNTIME_DISTRIBUTIONS
+        },
+    }
     roots: dict[str, Path] = {}
-    for distribution_name in runner.EVALUATOR_DISTRIBUTION_VERSIONS:
+    for distribution_name in distribution_versions:
         root = tmp_path / distribution_name
         root.mkdir()
         (root / "payload.bin").write_bytes(f"{distribution_name}:first".encode("ascii"))
@@ -1322,8 +1545,9 @@ def test_evaluator_pipeline_identity_binds_installed_distribution_bytes(
     class FakeDistribution:
         files = (Path("payload.bin"),)
 
-        def __init__(self, root: Path) -> None:
+        def __init__(self, root: Path, version: str) -> None:
             self.root = root
+            self.version = version
 
         def locate_file(self, relative_path: Path) -> Path:
             return self.root / relative_path
@@ -1331,7 +1555,7 @@ def test_evaluator_pipeline_identity_binds_installed_distribution_bytes(
     monkeypatch.setattr(
         runner.metadata,
         "distribution",
-        lambda name: FakeDistribution(roots[name]),
+        lambda name: FakeDistribution(roots[name], distribution_versions[name]),
     )
     runner._evaluator_distribution_payload_sha256s.cache_clear()
     first = runner._evaluator_distribution_payload_sha256s()
@@ -1928,11 +2152,9 @@ def test_development_engine_v2_only_summary_is_single_engine_and_nonclaimable(
         incomplete_execution_payloads[0]["result"] = incomplete_rows[0].to_dict()
         incomplete_execution_projection = dict(incomplete_execution_payloads[0])
         incomplete_execution_projection.pop("receipt_sha256")
-        incomplete_execution_payloads[0]["receipt_sha256"] = (
-            runner.hashlib.sha256(
-                runner._canonical_bytes(incomplete_execution_projection)
-            ).hexdigest()
-        )
+        incomplete_execution_payloads[0]["receipt_sha256"] = runner.hashlib.sha256(
+            runner._canonical_bytes(incomplete_execution_projection)
+        ).hexdigest()
         incomplete_executions = [
             SimpleNamespace(to_dict=lambda payload=payload: payload)
             for payload in incomplete_execution_payloads
@@ -2150,11 +2372,11 @@ def test_external_runtime_stops_before_evaluation_and_evaluator_errors_abort(
 
     def write_fresh_output(*args, **kwargs):
         output.write_bytes(b"fixture\n$$$$\n" * 5)
-        return SimpleNamespace(returncode=0)
+        return _bounded_process_result()
 
     monkeypatch.setattr(
-        runner.subprocess,
-        "run",
+        runner,
+        "_run_bounded_external_process",
         write_fresh_output,
     )
 
@@ -2200,11 +2422,11 @@ def test_external_success_runtime_excludes_shared_evaluator(
 
     def write_fresh_output(*args, **kwargs):
         output.write_bytes(b"fixture\n$$$$\n" * 5)
-        return SimpleNamespace(returncode=0)
+        return _bounded_process_result()
 
     monkeypatch.setattr(
-        runner.subprocess,
-        "run",
+        runner,
+        "_run_bounded_external_process",
         write_fresh_output,
     )
     monkeypatch.setattr(
@@ -2254,11 +2476,11 @@ def test_external_launch_revalidates_binary_after_subprocess(
         output.write_bytes(b"fixture\n$$$$\n" * 5)
         binary.chmod(0o700)
         binary.write_bytes(b"replacement-binary\n")
-        return SimpleNamespace(returncode=0)
+        return _bounded_process_result()
 
     monkeypatch.setattr(
-        runner.subprocess,
-        "run",
+        runner,
+        "_run_bounded_external_process",
         replace_binary_during_launch,
     )
 
@@ -2312,9 +2534,13 @@ def test_external_launch_executes_open_descriptor_during_path_swap_restore(
         pinned.path.unlink()
         backup.replace(pinned.path)
         output.write_bytes(b"fixture\n$$$$\n" * 5)
-        return SimpleNamespace(returncode=0)
+        return _bounded_process_result()
 
-    monkeypatch.setattr(runner.subprocess, "run", swap_restore_during_launch)
+    monkeypatch.setattr(
+        runner,
+        "_run_bounded_external_process",
+        swap_restore_during_launch,
+    )
     monkeypatch.setattr(
         runner,
         "_posebusters_outcomes",
@@ -2379,11 +2605,11 @@ def test_external_launch_uses_pinned_input_and_output_descriptors(
             output_path = Path(command[command.index("--out") + 1])
             assert output_path.as_posix().startswith("/proc/self/fd/")
             output_path.write_bytes(b"fixture\n$$$$\n" * 5)
-            return SimpleNamespace(returncode=0)
+            return _bounded_process_result()
 
         monkeypatch.setattr(
-            runner.subprocess,
-            "run",
+            runner,
+            "_run_bounded_external_process",
             write_descriptor_anchored_output,
         )
         monkeypatch.setattr(
@@ -2435,9 +2661,9 @@ def test_external_run_cannot_reuse_stale_pose_output(
     times = iter((10.0, 12.5))
     monkeypatch.setattr(runner.time, "perf_counter", lambda: next(times))
     monkeypatch.setattr(
-        runner.subprocess,
-        "run",
-        lambda *args, **kwargs: SimpleNamespace(returncode=0),
+        runner,
+        "_run_bounded_external_process",
+        lambda *args, **kwargs: _bounded_process_result(),
     )
 
     with runner.PinnedExternalBinary(binary, binary_sha256) as pinned:
@@ -2456,6 +2682,158 @@ def test_external_run_cannot_reuse_stale_pose_output(
     assert row.failure_code == "external_process_failed"
     assert not output.exists()
     assert len(tuple(tmp_path.glob("poses.sdf.stale-*"))) == 1
+
+
+def test_external_process_logs_are_bounded_and_retained() -> None:
+    result = runner._run_bounded_external_process(
+        (
+            sys.executable,
+            "-c",
+            "import sys; sys.stdout.buffer.write(b'out'); sys.stderr.buffer.write(b'err')",
+        ),
+        pass_fds=(),
+        timeout_seconds=5,
+    )
+
+    assert result.returncode == 0
+    assert result.timed_out is False
+    assert result.log_limit_exceeded is False
+    assert result.stdout.payload == b"out"
+    assert result.stderr.payload == b"err"
+    assert result.log_document()["stdout"]["payload_base64"] == "b3V0"
+
+    overflow = runner._run_bounded_external_process(
+        (sys.executable, "-c", "import sys; sys.stdout.buffer.write(b'x' * 70000)"),
+        pass_fds=(),
+        timeout_seconds=5,
+    )
+    assert overflow.log_limit_exceeded is True
+    assert len(overflow.stdout.payload) == 64 * 1024
+    assert overflow.stdout.overflowed is True
+
+
+def test_failed_external_output_is_discarded_and_log_is_retained(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    case_id = FROZEN_PUBLIC_REDOCKING_CASE_IDS[0]
+    paths = runner._case_paths(tmp_path / "inputs", case_id)
+    output = tmp_path / "poses.sdf"
+    inputs = {
+        "receptor": "3" * 64,
+        "reference": "4" * 64,
+        "native": "5" * 64,
+        "seed": "6" * 64,
+    }
+    binary, binary_sha256 = _external_binary(tmp_path)
+
+    def failed_process(*args, **kwargs):
+        output.write_bytes(b"partial\n$$$$\n")
+        return _bounded_process_result(returncode=9)
+
+    monkeypatch.setattr(
+        runner,
+        "_run_bounded_external_process",
+        failed_process,
+    )
+    log_sink: dict[tuple[str, str], dict[str, object]] = {}
+    with runner.PinnedExternalBinary(binary, binary_sha256) as pinned:
+        row, _ = runner._external_result(
+            case_id,
+            "vina",
+            paths,
+            binary=pinned,
+            input_sha256s=inputs,
+            output=output,
+            seed=11,
+            timeout_seconds=300,
+            process_log_sink=log_sink,
+        )
+
+    assert row.status == "failure"
+    assert row.failure_code == "external_process_failed"
+    assert not output.exists()
+    assert set(log_sink) == {("vina", case_id)}
+
+
+def test_reserved_fresh_failure_is_terminalized_once(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    output_root = tmp_path / "fresh"
+    output_root.mkdir(mode=0o700)
+    retention_root = runner.STAGE0_CANONICAL_FRESH_RETENTION_ROOT
+    monkeypatch.setattr(
+        runner,
+        "_fresh_retention_root",
+        lambda repo_root, active_output_root: retention_root,
+    )
+    pipeline_profile_id, pipeline_profile_sha256 = (
+        runner._benchmark_pipeline_profile_identity("")
+    )
+    reservation: dict[str, object] = {
+        "schema_id": runner.FRESH_RUN_ONCE_RESERVATION_SCHEMA_ID,
+        "runner_id": runner.FRESH_RUNNER_ID,
+        "status": "reserved_before_holdout_open",
+        "reservation_nonce": "1" * 32,
+        "reserved_at_unix_ns": 1,
+        "retention_root": retention_root,
+        "fresh_holdout_manifest_sha256": FRESH_REDOCKING_HOLDOUT_MANIFEST_SHA256,
+        "case_ids_sha256": runner._fresh_canonical_sha256(
+            list(runner.FROZEN_PUBLIC_REDOCKING_FRESH_HOLDOUT_CASE_IDS)
+        ),
+        "stage0_policy_sha256": "2" * 64,
+        "source_freeze_sha256": "3" * 64,
+        "execution_profile_sha256": "4" * 64,
+        "external_run_once_authority_id": "test-worm-authority",
+        "external_run_once_reservation_sha256": "5" * 64,
+        "fresh_run_identity_sha256": "6" * 64,
+        "docking_pipeline_profile_id": pipeline_profile_id,
+        "docking_pipeline_profile_sha256": pipeline_profile_sha256,
+        "external_worm_reservation_bound": True,
+        "expected_case_count": 128,
+        "expected_engine_case_row_count": runner.FRESH_ENGINE_ROW_COUNT,
+        "expected_engine_v2_candidate_slot_count": runner.FRESH_ENGINE_V2_SLOT_COUNT,
+        "single_execution_only": True,
+        "resume_allowed": False,
+        "rerun_allowed": False,
+        "result_dependent_changes_allowed": False,
+    }
+    reservation["reservation_sha256"] = runner._fresh_canonical_sha256(reservation)
+    reservation_path = output_root / runner.FRESH_RESERVATION_FILENAME
+    reservation_path.write_bytes(runner._canonical_bytes(reservation) + b"\n")
+    reservation_path.chmod(0o600)
+    arguments = (
+        "--case-subset",
+        "fresh-internal-blind-holdout",
+        "--output-root",
+        str(output_root),
+    )
+
+    assert (
+        runner._terminalize_reserved_fresh_failure(
+            arguments,
+            RuntimeError("private failure detail"),
+        )
+        is True
+    )
+    failure_path = output_root / runner.FRESH_FAILURE_FILENAME
+    first = failure_path.read_bytes()
+    failure = json.loads(first.decode("ascii"))
+    runner.verify_terminal_failure_document(
+        failure,
+        reservation_sha256=str(reservation["reservation_sha256"]),
+    )
+    assert failure["rerun_allowed"] is False
+    assert failure["completion_published"] is False
+    assert (
+        runner._terminalize_reserved_fresh_failure(
+            arguments,
+            RuntimeError("replacement attempt"),
+        )
+        is True
+    )
+    assert failure_path.read_bytes() == first
 
 
 def test_runner_quarantines_prior_full_report_before_preflight_failure(
@@ -2576,7 +2954,7 @@ def test_engine_v2_evaluator_failure_aborts_instead_of_counting_engine_failure(
     monkeypatch.setattr(runner.time, "perf_counter", lambda: next(times))
     monkeypatch.setattr(
         runner,
-        "_engine_v2_pose_coordinates",
+        "_run_engine_v2_benchmark_pipeline",
         lambda *args, **kwargs: _engine_outcome((torch.zeros((1, 3)),) * 5),
     )
 
@@ -2616,7 +2994,7 @@ def test_engine_v2_artifact_failure_aborts_instead_of_counting_engine_failure(
     }
     monkeypatch.setattr(
         runner,
-        "_engine_v2_pose_coordinates",
+        "_run_engine_v2_benchmark_pipeline",
         lambda *args, **kwargs: _engine_outcome((torch.zeros((1, 3)),) * 5),
     )
 
@@ -2660,7 +3038,7 @@ def test_engine_v2_failure_quarantines_prior_success_pose(
     def incomplete(*args, **kwargs):
         raise runner.IncompleteRankedPoseSet("fixture incomplete")
 
-    monkeypatch.setattr(runner, "_engine_v2_pose_coordinates", incomplete)
+    monkeypatch.setattr(runner, "_run_engine_v2_benchmark_pipeline", incomplete)
 
     row = runner._engine_v2_result(
         case_id,
@@ -2815,7 +3193,7 @@ def test_true_conformer_result_sink_retains_receipt_on_search_failure(
 
     monkeypatch.setattr(
         runner,
-        "_engine_v2_pose_coordinates",
+        "_run_engine_v2_benchmark_pipeline",
         fail_with_receipt,
     )
     times = iter((10.0, 12.0))
@@ -3618,7 +3996,7 @@ def test_engine_v2_hashes_and_evaluator_use_one_pinned_pose_payload(
     monkeypatch.setattr(runner.time, "perf_counter", lambda: next(times))
     monkeypatch.setattr(
         runner,
-        "_engine_v2_pose_coordinates",
+        "_run_engine_v2_benchmark_pipeline",
         lambda *args, **kwargs: _engine_outcome((torch.zeros((1, 3)),) * 5),
     )
 

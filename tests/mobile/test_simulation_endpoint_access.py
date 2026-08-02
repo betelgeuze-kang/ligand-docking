@@ -46,11 +46,14 @@ def test_endpoint_adapter_creates_owned_job_and_hides_cross_tenant_access(
     )
 
     assert created["job_id"] == "job-a"
-    assert get_simulation_job_for_identity(
-        store,
-        _identity("tenant-a"),
-        "job-a",
-    )["job_id"] == "job-a"
+    assert (
+        get_simulation_job_for_identity(
+            store,
+            _identity("tenant-a"),
+            "job-a",
+        )["job_id"]
+        == "job-a"
+    )
 
     with pytest.raises(HTTPException) as cross_tenant:
         get_simulation_job_for_identity(
@@ -126,7 +129,9 @@ def test_ownership_store_cache_tracks_active_job_store_path(tmp_path: Path) -> N
     assert ownership_b is not ownership_a
 
 
-def test_fastapi_injects_request_when_direct_call_compatibility_default_is_none() -> None:
+def test_fastapi_injects_request_when_direct_call_compatibility_default_is_none() -> (
+    None
+):
     app = FastAPI()
 
     @app.get("/request-probe")
@@ -148,7 +153,10 @@ def test_fastapi_injects_request_when_direct_call_compatibility_default_is_none(
 def _function_calls(tree: ast.Module, function_name: str) -> set[str]:
     target: ast.AST | None = None
     for node in tree.body:
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == function_name:
+        if (
+            isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and node.name == function_name
+        ):
             target = node
             break
     assert target is not None, f"missing function: {function_name}"
@@ -175,6 +183,7 @@ def test_live_simulation_routes_are_wired_to_identity_and_ownership_helpers() ->
     assert {"request_identity", "create_simulation_job_for_identity"} <= submit_calls
     assert {"request_identity", "get_simulation_job_for_identity"} <= status_calls
     assert {"request_identity", "get_simulation_job_for_identity"} <= result_calls
+    assert "is_engine_v2_shadow_execution_evidence" in result_calls
     assert "job_exists" not in status_calls
     assert "job_exists" not in result_calls
 

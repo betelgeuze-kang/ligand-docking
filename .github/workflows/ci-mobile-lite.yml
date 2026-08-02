@@ -124,6 +124,7 @@ jobs:
               "tests.mobile.test_optional_runtime_boundaries",
               "tests.mobile.test_authenticated_identity_contracts",
               "tests.mobile.test_product_docking_tenant_isolation",
+              "tests.mobile.test_engine_v2_shadow_route",
               "tests.mobile.test_scientific_input_provenance",
               "tests.mobile.test_simulation_job_ownership",
               "tests.mobile.test_simulation_endpoint_access",
@@ -136,7 +137,10 @@ jobs:
         run: python -m pytest -c pytest-mobile.ini --collect-only -q
 
       - name: Run mobile API and route contracts
-        run: python -m pytest -c pytest-mobile.ini -q tests/mobile/test_mobile_api_contracts.py
+        run: >-
+          python -m pytest -c pytest-mobile.ini -q
+          tests/mobile/test_mobile_api_contracts.py
+          tests/mobile/test_engine_v2_shadow_route.py
 
       - name: Run mobile security and SQLite privacy contracts
         run: python -m pytest -c pytest-mobile.ini -q tests/mobile/test_mobile_security_contracts.py

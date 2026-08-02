@@ -1,25 +1,37 @@
 from __future__ import annotations
 
+import base64
+import csv
 import hashlib
+import io
 from importlib import metadata
 import json
 from pathlib import Path
 import platform
 import subprocess
+from types import SimpleNamespace
+import zipfile
 
 import pytest
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 import betelgeuze_engine_v2.benchmark.blind_stage0 as blind_stage0_contract
 import betelgeuze_engine_v2.benchmark.public_redocking_benchmark as benchmark_contract
+import betelgeuze_engine_v2.benchmark.wheel_artifact as wheel_artifact_contract
 from betelgeuze_engine_v2.benchmark.blind_stage0 import (
     STAGE0_DIAGNOSTIC_CONTRACT_ID,
     STAGE0_DIAGNOSTIC_REVIEW_HEAD_SHA,
     STAGE0_ENGINE_V2_ALGORITHM_PROFILE_ID,
+    STAGE0_EXTERNAL_RUN_ONCE_RESERVATION_SCHEMA_ID,
+    STAGE0_INDEPENDENT_ATTESTATION_SCHEMA_ID,
     STAGE0_PROTOCOL_ID,
     STAGE0_REQUIRED_SOURCE_FREEZE_PATHS,
+    STAGE0_TRUSTED_REVIEW_TIME_EVIDENCE_SCHEMA_ID,
     Stage0AdmissionError,
     VerifiedStage0Admission,
     compute_stage0_execution_profile_sha256,
+    compute_stage0_fresh_run_identity_sha256,
     compute_stage0_policy_sha256,
     compute_stage0_review_subject_sha256,
     current_stage0_host_environment,
@@ -30,6 +42,7 @@ from betelgeuze_engine_v2.benchmark.blind_stage0 import (
     stage0_fresh_execution_profile,
     stage0_fresh_execution_runtime_arguments,
     stage0_recompute_development_report,
+    validate_stage0_admission_receipt_document,
     verify_stage0_admission,
 )
 from betelgeuze_engine_v2.benchmark.public_redocking_benchmark import (
@@ -49,6 +62,7 @@ from tools.audit_engine_v2_ci_authority import (
     AUTHORITATIVE_WORKFLOWS,
     build_inventory,
 )
+from tools.build_engine_v2_sbom import build_sbom
 
 
 def _version(name: str) -> str:
@@ -76,8 +90,266 @@ def _canonical_sha256(payload: object) -> str:
     return hashlib.sha256(_canonical_bytes(payload)).hexdigest()
 
 
+def _verified_stage0_receipt(
+    *,
+    policy_sha256: str = "1" * 64,
+    source_freeze_sha256: str = "2" * 64,
+    execution_profile_sha256: str = "3" * 64,
+) -> VerifiedStage0Admission:
+    return VerifiedStage0Admission._from_verified_policy(
+        policy_sha256=policy_sha256,
+        source_freeze_sha256=source_freeze_sha256,
+        execution_profile_sha256=execution_profile_sha256,
+        reviewer_id="reviewer",
+        operator_id="operator",
+        governance_mode="independent_three_role",
+        independent_review_complete=True,
+        trusted_review_time_authority_id="test-clock-authority",
+        trusted_review_time_evidence_sha256="4" * 64,
+        external_run_once_authority_id="test-worm-authority",
+        external_run_once_reservation_sha256="5" * 64,
+        fresh_run_identity_sha256="6" * 64,
+        docking_pipeline_profile_id="test-stage0-pipeline-profile",
+        docking_pipeline_profile_sha256="7" * 64,
+        verification_authority=(
+            blind_stage0_contract._VERIFIED_STAGE0_ADMISSION_AUTHORITY
+        ),
+    )
+
+
 def _write_canonical_json(path: Path, payload: object) -> None:
     path.write_bytes(_canonical_bytes(payload) + b"\n")
+
+
+def _signed_document(
+    payload: dict[str, object],
+    private_key: Ed25519PrivateKey,
+) -> dict[str, object]:
+    signed = dict(payload)
+    signed["signature_base64"] = base64.b64encode(
+        private_key.sign(_canonical_bytes(signed))
+    ).decode("ascii")
+    return signed
+
+
+def _raw_public_key_hex(private_key: Ed25519PrivateKey) -> str:
+    return (
+        private_key.public_key()
+        .public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw,
+        )
+        .hex()
+    )
+
+
+def _record_hash(payload: bytes) -> str:
+    encoded = base64.urlsafe_b64encode(hashlib.sha256(payload).digest()).rstrip(b"=")
+    return f"sha256={encoded.decode('ascii')}"
+
+
+def _write_test_wheel(
+    path: Path,
+    *,
+    distribution: str,
+    native_extension: bytes | None = None,
+) -> str:
+    normalized = distribution.replace("-", "_")
+    dist_info = f"{normalized}-0.2.0rc5.dist-info"
+    if native_extension is None:
+        members = {"betelgeuze_engine_v2/__init__.py": b'__version__ = "0.2.0rc5"\n'}
+        tag = "py3-none-any"
+        purelib = "true"
+        extension_sha256 = ""
+    else:
+        extension_name = "betelgeuze_engine_v2_native.cpython-310-x86_64-linux-gnu.so"
+        members = {extension_name: native_extension}
+        tag = "cp310-cp310-manylinux_2_28_x86_64"
+        purelib = "false"
+        extension_sha256 = hashlib.sha256(native_extension).hexdigest()
+    if native_extension is None:
+        members[f"{dist_info}/METADATA"] = (
+            "Metadata-Version: 2.2\n"
+            f"Name: {distribution}\n"
+            "Version: 0.2.0rc5\n"
+            "Summary: Fail-closed independent molecular Engine v2 reference contracts and CPU primitives.\n"
+            "Classifier: Development Status :: 4 - Beta\n"
+            "Classifier: Programming Language :: Python :: 3\n"
+            "Classifier: Programming Language :: Python :: 3.10\n"
+            "Classifier: Programming Language :: Python :: 3.11\n"
+            "Classifier: Programming Language :: Python :: 3.12\n"
+            "Classifier: Operating System :: OS Independent\n"
+            "Classifier: Typing :: Typed\n"
+            "Requires-Python: <3.13,>=3.10\n"
+            "Requires-Dist: cryptography==46.0.5\n"
+            "Requires-Dist: numpy<3,>=1.26\n"
+            "Requires-Dist: torch==2.6.0\n"
+            "Requires-Dist: betelgeuze-engine-v2-native==0.2.0rc5; "
+            '(platform_system == "Linux" and platform_machine == "x86_64") '
+            'and extra == "native-cpu"\n'
+            "Provides-Extra: native-cpu\n"
+        ).encode("utf-8")
+        members[f"{dist_info}/entry_points.txt"] = (
+            "[console_scripts]\n"
+            "betelgeuze-engine-v2 = betelgeuze_engine_v2.cli_dispatch:main\n"
+            "betelgeuze-dock = betelgeuze_engine_v2.standalone_cli:main\n"
+        ).encode("utf-8")
+        generator = "setuptools (75.8.2)"
+    else:
+        members[f"{dist_info}/METADATA"] = (
+            f"Metadata-Version: 2.4\nName: {distribution}\nVersion: 0.2.0rc5\n\n"
+        ).encode("ascii")
+        generator = "stage0-test"
+    members[f"{dist_info}/WHEEL"] = (
+        "Wheel-Version: 1.0\n"
+        f"Generator: {generator}\n"
+        f"Root-Is-Purelib: {purelib}\n"
+        f"Tag: {tag}\n\n"
+    ).encode("ascii")
+    record_path = f"{dist_info}/RECORD"
+    rows = [
+        [name, _record_hash(payload), str(len(payload))]
+        for name, payload in sorted(members.items())
+    ]
+    rows.append([record_path, "", ""])
+    handle = io.StringIO(newline="")
+    csv.writer(handle, lineterminator="\n").writerows(rows)
+    members[record_path] = handle.getvalue().encode("utf-8")
+    with zipfile.ZipFile(path, mode="w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for name, payload in members.items():
+            archive.writestr(name, payload)
+    return extension_sha256
+
+
+def _write_test_wheel_sbom(
+    path: Path,
+    wheel: Path,
+    *,
+    distribution: str,
+    source_root: Path,
+    source_receipt_sha256: str,
+) -> dict[str, str]:
+    native = distribution == "betelgeuze-engine-v2-native"
+    cargo_lock = source_root / "Cargo.lock" if native else None
+    dependencies = ()
+    if cargo_lock is not None:
+        cargo_packages, _ = wheel_artifact_contract._parse_cargo_lock(cargo_lock)
+        dependencies, _ = wheel_artifact_contract._cargo_dependency_packages(
+            cargo_packages,
+            root_distribution=distribution,
+            root_version="0.2.0rc5",
+        )
+    else:
+        with zipfile.ZipFile(wheel) as archive:
+            metadata_member = next(
+                name
+                for name in archive.namelist()
+                if name.endswith(".dist-info/METADATA")
+            )
+            metadata_message = wheel_artifact_contract._parse_control_message(
+                archive.read(metadata_member),
+                blocker="fixture_metadata_invalid",
+            )
+        dependencies = wheel_artifact_contract._pypi_dependency_packages(
+            wheel_artifact_contract._parse_metadata_requirements(metadata_message)
+        )
+    package_keys = wheel_artifact_contract._expected_license_keys(
+        distribution=distribution,
+        version="0.2.0rc5",
+        dependencies=dependencies,
+    )
+    license_path = path.parent / f"{distribution}.license-determination.json"
+    _write_canonical_json(
+        license_path,
+        {
+            "schema_id": wheel_artifact_contract.LICENSE_DETERMINATION_SCHEMA_ID,
+            "review_id": "fixture-legal-review",
+            "reviewer_identity": "fixture-independent-legal-reviewer",
+            "reviewed_at": "2025-01-01T00:00:00Z",
+            "review_status": "approved",
+            "review_evidence_sha256": "b" * 64,
+            "scope_sha256": wheel_artifact_contract._license_scope_sha256(package_keys),
+            "extracted_licenses": [],
+            "determinations": [
+                {
+                    "package_key": key,
+                    "license_concluded": "Apache-2.0",
+                    "license_declared": "Apache-2.0",
+                    "copyright_text": "Copyright fixture owners",
+                    "evidence": f"fixture-license-evidence:{key}",
+                }
+                for key in sorted(package_keys)
+            ],
+        },
+    )
+    provenance_path: Path | None = None
+    if native:
+        with zipfile.ZipFile(wheel) as archive:
+            extension_member = next(
+                name for name in archive.namelist() if name.endswith((".so", ".pyd"))
+            )
+            extension_payload = archive.read(extension_member)
+        payload_members = {
+            extension_member: (
+                hashlib.sha256(extension_payload).hexdigest(),
+                len(extension_payload),
+            )
+        }
+        source_inventory, _ = wheel_artifact_contract._source_file_inventory(
+            source_root,
+            kind=wheel_artifact_contract.WheelArtifactKind.NATIVE,
+            payload_members=payload_members,
+        )
+        provenance_path = path.parent / "native-build-provenance.json"
+        _write_canonical_json(
+            provenance_path,
+            {
+                "schema_id": (
+                    wheel_artifact_contract.NATIVE_BUILD_PROVENANCE_SCHEMA_ID
+                ),
+                "source_receipt_sha256": source_receipt_sha256,
+                "source_inventory_sha256": _canonical_sha256(
+                    dict(sorted(source_inventory.items()))
+                ),
+                "cargo_lock_sha256": _sha256(cargo_lock),
+                "wheel_sha256": _sha256(wheel),
+                "extension_member": extension_member,
+                "extension_sha256": hashlib.sha256(extension_payload).hexdigest(),
+                "builder_id": "fixture-manylinux-builder",
+                "builder_version": "fixture-1",
+                "build_environment_sha256": "d" * 64,
+                "build_invocation_sha256": "e" * 64,
+                "reproducible_build_match": True,
+            },
+        )
+    payload = build_sbom(
+        wheel,
+        source_root=source_root,
+        license_determination=license_path,
+        cargo_lock=cargo_lock,
+        native_build_provenance=provenance_path,
+        source_receipt_sha256=source_receipt_sha256,
+    )
+    packages = payload.get("packages")
+    assert isinstance(packages, list)
+    assert packages[0]["name"] == distribution
+    _write_canonical_json(path, payload)
+    authority = {
+        "source_receipt_sha256": source_receipt_sha256,
+        "license_determination_path": license_path.name,
+        "license_determination_sha256": _sha256(license_path),
+    }
+    if native:
+        assert cargo_lock is not None
+        assert provenance_path is not None
+        authority.update(
+            {
+                "cargo_lock_path": cargo_lock.relative_to(path.parent).as_posix(),
+                "native_build_provenance_path": provenance_path.name,
+                "native_build_provenance_sha256": _sha256(provenance_path),
+            }
+        )
+    return authority
 
 
 def _fixture_threshold_contract() -> tuple[
@@ -171,6 +443,7 @@ def _development_materialization(case_id: str) -> VerifiedCaseMaterialization:
         for profile in frozen_public_redocking_profiles()
         if profile.case_id == case_id
     )
+
     def digest(role: str) -> str:
         return hashlib.sha256(f"{case_id}:{role}".encode("ascii")).hexdigest()
 
@@ -254,12 +527,7 @@ def _development_result(
     )
     paths = {
         "receptor": repo_root / "inputs" / case_id / f"{case_id}_protein.pdb",
-        "seed": (
-            repo_root
-            / "inputs"
-            / case_id
-            / f"{case_id}_ligand_start_conf.sdf"
-        ),
+        "seed": (repo_root / "inputs" / case_id / f"{case_id}_ligand_start_conf.sdf"),
         "native": repo_root / "inputs" / case_id / f"{case_id}_ligand.sdf",
     }
     command = runner._engine_v2_command(
@@ -269,11 +537,7 @@ def _development_result(
         seed=materialization.frozen_case_seed,
     )
     execution_policy = runner._execution_policy_tokens(
-        {
-            **runner.ENGINE_V2_CPU_POLICY,
-            "scorer_backend": "python_reference",
-            "scorer_thread_count": 1,
-        }
+        blind_stage0_contract.stage0_development_execution_policy("python_reference")
     )
     return PublicRedockingCaseResult(
         case_id=case_id,
@@ -299,6 +563,54 @@ def _policy(
     gnina: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> dict[str, object]:
+    monkeypatch.delenv("PYTHONPATH", raising=False)
+    runtime_dependency_authority: dict[str, object] = {
+        "schema_id": (
+            blind_stage0_contract.STAGE0_RUNTIME_DEPENDENCY_AUTHORITY_SCHEMA_ID
+        ),
+        "distribution_versions": {
+            **dict(blind_stage0_contract.STAGE0_EVALUATOR_DISTRIBUTION_VERSIONS),
+            "torch": _version("torch"),
+        },
+        "installed_distribution_file_ledger_sha256s": {
+            distribution_name: hashlib.sha256(
+                f"stage0-fixture:{distribution_name}".encode("ascii")
+            ).hexdigest()
+            for distribution_name in (
+                *blind_stage0_contract.STAGE0_EVALUATOR_DISTRIBUTION_VERSIONS,
+                *blind_stage0_contract.STAGE0_CORE_RUNTIME_DISTRIBUTIONS,
+            )
+        },
+    }
+    runtime_dependency_authority["authority_sha256"] = _canonical_sha256(
+        runtime_dependency_authority
+    )
+    monkeypatch.setattr(
+        blind_stage0_contract,
+        "stage0_runtime_dependency_authority",
+        lambda: json.loads(json.dumps(runtime_dependency_authority)),
+    )
+    monkeypatch.setattr(
+        blind_stage0_contract,
+        "_loaded_engine_module_items",
+        lambda: (
+            (
+                "betelgeuze_engine_v2",
+                SimpleNamespace(
+                    __file__=str(repo_root / "betelgeuze_engine_v2/__init__.py")
+                ),
+            ),
+            (
+                "betelgeuze_engine_v2.benchmark.blind_stage0",
+                SimpleNamespace(
+                    __file__=str(
+                        repo_root
+                        / "betelgeuze_engine_v2/benchmark/blind_stage0.py"
+                    )
+                ),
+            ),
+        ),
+    )
     thresholds, threshold_evidence_payload = _fixture_threshold_contract()
     threshold_relative_path = (
         blind_stage0_contract.STAGE0_FROZEN_THRESHOLD_EVIDENCE_PATH
@@ -309,11 +621,14 @@ def _policy(
         source.parent.mkdir(parents=True, exist_ok=True)
         if relative_path == threshold_relative_path:
             _write_canonical_json(source, threshold_evidence_payload)
+        elif relative_path == "betelgeuze_engine_v2/__init__.py":
+            source.write_text('__version__ = "0.2.0rc5"\n', encoding="utf-8")
         elif relative_path in {
             "config/engine_v2_public_redocking_contamination_registry.json",
             "config/engine_v2_fresh_redocking_holdout_manifest.json",
             "tools/analyze_engine_v2_score_terms.py",
-        }:
+            "packaging/engine-v2/pyproject.toml",
+        } or relative_path.startswith("rust_engine_v2/"):
             source.write_text(
                 (Path(__file__).resolve().parents[2] / relative_path).read_text(
                     encoding="utf-8"
@@ -379,8 +694,33 @@ def _policy(
     reconciliation_receipt = repo_root / "suite-reconciliation.json"
     attestation = repo_root / "independent-attestation.json"
     ci_receipt = repo_root / "ci-authority.json"
-    native_wheel = repo_root / "native-wheel.whl"
-    native_wheel.write_bytes(b"native-wheel-test-fixture")
+    implementation_sha256 = stage0_engine_implementation_sha256(repo_root)
+    native_wheel = repo_root / (
+        "betelgeuze_engine_v2_native-0.2.0rc5-cp310-cp310-manylinux_2_28_x86_64.whl"
+    )
+    native_extension_sha256 = _write_test_wheel(
+        native_wheel,
+        distribution="betelgeuze-engine-v2-native",
+        native_extension=b"\x7fELF" + b"stage0-native-extension" * 4,
+    )
+    base_wheel = repo_root / "betelgeuze_engine_v2-0.2.0rc5-py3-none-any.whl"
+    _write_test_wheel(base_wheel, distribution="betelgeuze-engine-v2")
+    native_wheel_sbom = repo_root / "native-wheel.spdx.json"
+    base_wheel_sbom = repo_root / "base-wheel.spdx.json"
+    native_wheel_authority = _write_test_wheel_sbom(
+        native_wheel_sbom,
+        native_wheel,
+        distribution="betelgeuze-engine-v2-native",
+        source_root=repo_root / "rust_engine_v2",
+        source_receipt_sha256=implementation_sha256,
+    )
+    base_wheel_authority = _write_test_wheel_sbom(
+        base_wheel_sbom,
+        base_wheel,
+        distribution="betelgeuze-engine-v2",
+        source_root=repo_root,
+        source_receipt_sha256=implementation_sha256,
+    )
     for workflow in AUTHORITATIVE_WORKFLOWS:
         path = repo_root / workflow
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -414,7 +754,6 @@ def _policy(
         for case_id in PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS
         if case_id not in PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS
     ][:8]
-    implementation_sha256 = stage0_engine_implementation_sha256(repo_root)
     source_receipts_sha256: dict[str, str] = {}
     development_results: list[dict[str, object]] = []
     for case_id in development_case_ids:
@@ -458,9 +797,7 @@ def _policy(
     development_provenance = stage0_execution_profile_development_provenance(
         development_report_path=development_report.relative_to(repo_root).as_posix(),
         development_report_file_sha256=_sha256(development_report),
-        development_report_sha256=str(
-            development_report_payload["report_sha256"]
-        ),
+        development_report_sha256=str(development_report_payload["report_sha256"]),
         case_ids=development_case_ids,
         scored_case_count=len(development_case_ids),
         source_receipt_binding=source_receipt_binding,
@@ -524,12 +861,16 @@ def _policy(
         "source_freeze": {
             "algorithm_profile": stage0_engine_v2_algorithm_profile(),
             "execution_profile": stage0_fresh_execution_profile(
-                development_provenance
+                development_provenance,
+                repo_root=repo_root,
             ),
             "diagnostic_contract_pr_number": 211,
             "diagnostic_contract_review_head_sha": (STAGE0_DIAGNOSTIC_REVIEW_HEAD_SHA),
             "git_head_sha": git_head,
             "origin_main_sha": git_head,
+            "integration_state": "exact_origin_main_commit",
+            "unmerged_execution_is_internal_only": False,
+            "engine_implementation_sha256": implementation_sha256,
             "candidate_budget": 64,
             "retained_pose_count": 5,
             "scorer_id": "chemistry_pose_scorer_v1",
@@ -550,12 +891,25 @@ def _policy(
                 "posebusters": _version("posebusters"),
             },
             "gnina_sha256": _sha256(gnina),
+            "python_wheel": {
+                "wheel_path": base_wheel.name,
+                "wheel_sha256": _sha256(base_wheel),
+                "sbom_path": base_wheel_sbom.name,
+                "sbom_sha256": _sha256(base_wheel_sbom),
+                "source_root": ".",
+                **base_wheel_authority,
+            },
             "native_backend": {
                 "backend": "rust_cpu_required",
                 "distribution_version": "0.2.0rc5",
                 "wheel_path": native_wheel.name,
                 "wheel_sha256": _sha256(native_wheel),
-                "extension_sha256": "8" * 64,
+                "sbom_path": native_wheel_sbom.name,
+                "sbom_sha256": _sha256(native_wheel_sbom),
+                "source_root": "rust_engine_v2",
+                **native_wheel_authority,
+                "extension_path": "/test/site-packages/native.so",
+                "extension_sha256": native_extension_sha256,
                 "cargo_lock_sha256": _sha256(repo_root / "rust_engine_v2/Cargo.lock"),
                 "rustc_version": "rustc 1.93.0 (test)",
                 "target_triple": "x86_64-unknown-linux-gnu",
@@ -568,6 +922,11 @@ def _policy(
                 "torch_interop_threads": 1,
             },
             "host": current_stage0_host_environment(),
+            "runtime_dependency_authority": runtime_dependency_authority,
+            "evaluation_pipeline_sha256": stage0_fresh_execution_profile(
+                development_provenance,
+                repo_root=repo_root,
+            )["evaluation_pipeline_sha256"],
         },
         "artifact_retention": {
             "engine_case_rows": 384,
@@ -628,6 +987,7 @@ def _policy(
             "inventory_receipt_sha256": _sha256(ci_receipt),
         },
         "governance": {
+            "governance_mode": "independent_three_role",
             "contract_author_id": "author-a",
             "independent_reviewer_id": "reviewer-b",
             "blind_operator_id": "operator-c",
@@ -712,7 +1072,7 @@ def _policy(
     suite_policy["reconciliation_receipt_sha256"] = _sha256(reconciliation_receipt)
 
     attestation_payload = {
-        "schema_id": "betelgeuze.engine_v2_stage0_independent_attestation/1.0.0",
+        "schema_id": STAGE0_INDEPENDENT_ATTESTATION_SCHEMA_ID,
         "review_subject_sha256": compute_stage0_review_subject_sha256(payload),
         "contract_author_id": "author-a",
         "independent_reviewer_id": "reviewer-b",
@@ -743,6 +1103,127 @@ def _policy(
     return payload
 
 
+def _attach_trusted_external_authorities(
+    payload: dict[str, object],
+    *,
+    repo_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source_freeze = payload["source_freeze"]
+    artifacts = payload["artifact_retention"]
+    governance = payload["governance"]
+    assert isinstance(source_freeze, dict)
+    assert isinstance(artifacts, dict)
+    assert isinstance(governance, dict)
+    source_rows = source_freeze["files"]
+    execution_profile = source_freeze["execution_profile"]
+    assert isinstance(source_rows, list)
+    assert isinstance(execution_profile, dict)
+    source_freeze_sha256 = _canonical_sha256(
+        [
+            {"path": row["path"], "sha256": _sha256(repo_root / row["path"])}
+            for row in source_rows
+        ]
+    )
+    fresh_run_identity_sha256 = compute_stage0_fresh_run_identity_sha256(
+        source_freeze_sha256=source_freeze_sha256,
+        execution_profile_sha256=str(execution_profile["profile_sha256"]),
+        engine_implementation_sha256=str(source_freeze["engine_implementation_sha256"]),
+        loaded_engine_module_ledger_sha256=(
+            blind_stage0_contract.stage0_loaded_engine_module_ledger_sha256(
+                repo_root
+            )
+        ),
+        runtime_dependency_authority_sha256=str(
+            execution_profile["runtime_dependency_authority"]["authority_sha256"]
+        ),
+        evaluation_pipeline_sha256=str(
+            execution_profile["evaluation_pipeline_sha256"]
+        ),
+    )
+
+    worm_private_key = Ed25519PrivateKey.generate()
+    worm_authority_id = "test-external-worm-authority"
+    worm_key_id = "test-worm-key-1"
+    worm_receipt = _signed_document(
+        {
+            "schema_id": STAGE0_EXTERNAL_RUN_ONCE_RESERVATION_SCHEMA_ID,
+            "authority_kind": "external_worm_global_run_once",
+            "authority_id": worm_authority_id,
+            "key_id": worm_key_id,
+            "fresh_run_identity_sha256": fresh_run_identity_sha256,
+            "reservation_state": "globally_reserved_before_holdout_open",
+            "reserved_at_utc": "2026-07-30T00:02:00Z",
+            "worm_ledger_entry_id": "test-worm-ledger-entry-0001",
+            "single_global_execution": True,
+            "resume_allowed": False,
+            "replacement_allowed": False,
+            "release_allowed": False,
+            "signature_algorithm": "ed25519",
+        },
+        worm_private_key,
+    )
+    worm_path = repo_root / "external-worm-reservation.json"
+    _write_canonical_json(worm_path, worm_receipt)
+    artifacts["external_run_once_reservation"] = {
+        "authority_kind": "external_worm_global_run_once",
+        "authority_id": worm_authority_id,
+        "receipt_path": worm_path.name,
+        "receipt_sha256": _sha256(worm_path),
+    }
+    monkeypatch.setattr(
+        blind_stage0_contract,
+        "_TRUSTED_EXTERNAL_RUN_ONCE_ED25519_KEYS",
+        {(worm_authority_id, worm_key_id): _raw_public_key_hex(worm_private_key)},
+    )
+
+    clock_private_key = Ed25519PrivateKey.generate()
+    clock_authority_id = "test-external-clock-authority"
+    clock_key_id = "test-clock-key-1"
+    governance["trusted_review_time_authority_id"] = clock_authority_id
+    governance["trusted_review_time_evidence_path"] = "trusted-review-time.json"
+    attestation_path = repo_root / str(governance["independent_attestation_path"])
+    attestation = json.loads(attestation_path.read_text(encoding="utf-8"))
+    attestation.update(
+        {
+            "trusted_review_time_authority_id": clock_authority_id,
+            "trusted_review_time_key_id": clock_key_id,
+            "first_reviewed_at_utc": "2026-07-29T00:01:00Z",
+            "second_reviewed_at_utc": "2026-07-30T00:01:00Z",
+            "attested_at_utc": "2026-07-30T00:01:00Z",
+        }
+    )
+    attestation["review_subject_sha256"] = compute_stage0_review_subject_sha256(payload)
+    _write_canonical_json(attestation_path, attestation)
+    governance["independent_attestation_sha256"] = _sha256(attestation_path)
+    time_evidence = _signed_document(
+        {
+            "schema_id": STAGE0_TRUSTED_REVIEW_TIME_EVIDENCE_SCHEMA_ID,
+            "authority_kind": "external_trusted_clock",
+            "authority_id": clock_authority_id,
+            "key_id": clock_key_id,
+            "review_subject_sha256": compute_stage0_review_subject_sha256(payload),
+            "independent_attestation_sha256": _sha256(attestation_path),
+            "independent_reviewer_id": "reviewer-b",
+            "first_reviewed_at_utc": "2026-07-29T00:01:00Z",
+            "second_reviewed_at_utc": "2026-07-30T00:01:00Z",
+            "minimum_separation_hours": 24,
+            "issued_at_utc": "2026-07-30T00:01:01Z",
+            "signature_algorithm": "ed25519",
+        },
+        clock_private_key,
+    )
+    time_path = repo_root / "trusted-review-time.json"
+    _write_canonical_json(time_path, time_evidence)
+    governance["trusted_review_time_evidence_sha256"] = _sha256(time_path)
+    monkeypatch.setattr(
+        blind_stage0_contract,
+        "_TRUSTED_REVIEW_TIME_ED25519_KEYS",
+        {(clock_authority_id, clock_key_id): _raw_public_key_hex(clock_private_key)},
+    )
+    payload["policy_sha256"] = compute_stage0_policy_sha256(payload)
+
+
 def _write_policy(path: Path, payload: dict[str, object]) -> None:
     path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
 
@@ -770,7 +1251,10 @@ def _rebind_development_profile(
         )
     provenance["development_report_file_sha256"] = _sha256(development_path)
     provenance["development_report_sha256"] = development["report_sha256"]
-    source_freeze["execution_profile"] = stage0_fresh_execution_profile(provenance)
+    source_freeze["execution_profile"] = stage0_fresh_execution_profile(
+        provenance,
+        repo_root=development_path.parents[3],
+    )
     payload["policy_sha256"] = compute_stage0_policy_sha256(payload)
 
 
@@ -801,7 +1285,13 @@ def _native_snapshot(payload: dict[str, object]) -> dict[str, object]:
     return {
         key: value
         for key, value in native.items()
-        if key not in {"wheel_path", "wheel_sha256"}
+        if key
+        not in {
+            "wheel_path",
+            "wheel_sha256",
+            "sbom_path",
+            "sbom_sha256",
+        }
     }
 
 
@@ -832,8 +1322,8 @@ def _as_solo_policy(payload: dict[str, object], repo_root: Path) -> dict[str, ob
     }
     source_freeze = payload["source_freeze"]
     assert isinstance(source_freeze, dict)
-    source_freeze["integration_state"] = "frozen_dedicated_branch_commit"
-    source_freeze["unmerged_execution_is_internal_only"] = True
+    source_freeze["integration_state"] = "exact_origin_main_commit"
+    source_freeze["unmerged_execution_is_internal_only"] = False
     developer_id = "solo-developer"
     threshold_path = (
         repo_root / blind_stage0_contract.STAGE0_FROZEN_THRESHOLD_EVIDENCE_PATH
@@ -854,9 +1344,15 @@ def _as_solo_policy(payload: dict[str, object], repo_root: Path) -> dict[str, ob
     baseline_provenance = baseline["provenance"]
     assert isinstance(baseline_provenance, dict)
     baseline_provenance["evidence_sha256"] = _sha256(threshold_path)
+    environment = payload["environment_freeze"]
+    assert isinstance(environment, dict)
+    python_wheel = environment["python_wheel"]
+    native_backend = environment["native_backend"]
+    assert isinstance(python_wheel, dict)
+    assert isinstance(native_backend, dict)
     operational_path = repo_root / "solo-operational.json"
     operational = {
-        "schema_id": "betelgeuze.engine_v2_stage0_solo_operational_evidence/1.0.0",
+        "schema_id": "betelgeuze.engine_v2_stage0_solo_operational_evidence/1.1.0",
         "developer_id": developer_id,
     }
     operational["receipt_sha256"] = _canonical_sha256(operational)
@@ -870,12 +1366,20 @@ def _as_solo_policy(payload: dict[str, object], repo_root: Path) -> dict[str, ob
         "threshold_evidence_path": threshold_path.relative_to(repo_root).as_posix(),
         "threshold_evidence_file_sha256": _sha256(threshold_path),
         "threshold_evidence_sha256": threshold["evidence_sha256"],
+        "base_wheel_path": python_wheel["wheel_path"],
+        "base_wheel_sha256": python_wheel["wheel_sha256"],
+        "base_wheel_sbom_path": python_wheel["sbom_path"],
+        "base_wheel_sbom_sha256": python_wheel["sbom_sha256"],
+        "native_wheel_path": native_backend["wheel_path"],
+        "native_cp310_wheel_sha256": native_backend["wheel_sha256"],
+        "native_wheel_sbom_path": native_backend["sbom_path"],
+        "native_wheel_sbom_sha256": native_backend["sbom_sha256"],
     }
     git_head = source_freeze["git_head_sha"]
     pass1_path = repo_root / "solo-self-review-pass-1.json"
     pass2_path = repo_root / "solo-self-review-pass-2.json"
     pass1: dict[str, object] = {
-        "schema_id": "betelgeuze.engine_v2_stage0_solo_self_review_pass/1.2.0",
+        "schema_id": "betelgeuze.engine_v2_stage0_solo_self_review_pass/1.3.0",
         "review_pass": 1,
         "developer_id": developer_id,
         "reviewed_at_utc": "2026-07-27T00:00:00Z",
@@ -969,7 +1473,7 @@ def _as_solo_policy(payload: dict[str, object], repo_root: Path) -> dict[str, ob
     return payload
 
 
-def test_stage0_admits_only_complete_frozen_policy(
+def test_stage0_rejects_unsigned_independent_governance_authority(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     gnina = tmp_path / "gnina"
@@ -982,6 +1486,41 @@ def test_stage0_admits_only_complete_frozen_policy(
     )
     _write_policy(policy_path, payload)
 
+    with pytest.raises(Stage0AdmissionError) as raised:
+        verify_stage0_admission(
+            policy_path,
+            repo_root=tmp_path,
+            gnina_path=gnina,
+            output_root=tmp_path / ".betelgeuze/fresh-redocking-128",
+        )
+
+    assert "independent_attestation_trust_domain_unverified" in raised.value.blockers
+    assert (
+        "independent_review_time_separation_trusted_clock_unverified"
+        in raised.value.blockers
+    )
+    assert "external_run_once_reservation_authority_unverified" in raised.value.blockers
+
+
+def test_stage0_admits_only_signed_time_separated_and_external_worm_authority(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    gnina = tmp_path / "gnina"
+    gnina.write_bytes(b"gnina-test-binary")
+    payload = _policy(tmp_path, gnina, monkeypatch)
+    _attach_trusted_external_authorities(
+        payload,
+        repo_root=tmp_path,
+        monkeypatch=monkeypatch,
+    )
+    monkeypatch.setattr(
+        "betelgeuze_engine_v2.benchmark.blind_stage0.current_stage0_native_backend",
+        lambda: _native_snapshot(payload),
+    )
+    policy_path = tmp_path / "policy.json"
+    _write_policy(policy_path, payload)
+
     receipt = verify_stage0_admission(
         policy_path,
         repo_root=tmp_path,
@@ -989,12 +1528,41 @@ def test_stage0_admits_only_complete_frozen_policy(
         output_root=tmp_path / ".betelgeuze/fresh-redocking-128",
     )
 
-    assert receipt.policy_sha256 == payload["policy_sha256"]
-    assert receipt.execution_profile_sha256 == payload["source_freeze"][
-        "execution_profile"
-    ]["profile_sha256"]
-    assert receipt.reviewer_id == "reviewer-b"
-    assert receipt.operator_id == "operator-c"
+    serialized = receipt.to_dict()
+    assert serialized["receipt_sha256"] == receipt.receipt_sha256
+    assert serialized["trusted_review_time_authority_id"] == (
+        "test-external-clock-authority"
+    )
+    assert serialized["external_run_once_authority_id"] == (
+        "test-external-worm-authority"
+    )
+    assert serialized["docking_pipeline_profile_id"]
+    assert len(str(serialized["docking_pipeline_profile_sha256"])) == 64
+
+
+def test_verified_stage0_admission_cannot_be_publicly_constructed() -> None:
+    with pytest.raises(TypeError):
+        VerifiedStage0Admission(  # type: ignore[call-arg]
+            policy_sha256="1" * 64,
+            source_freeze_sha256="2" * 64,
+            execution_profile_sha256="3" * 64,
+            reviewer_id="reviewer",
+            operator_id="operator",
+            governance_mode="independent_three_role",
+            independent_review_complete=True,
+        )
+
+
+def test_verified_stage0_admission_serialization_is_exact_and_tamper_evident() -> None:
+    receipt = _verified_stage0_receipt()
+    serialized = receipt.to_dict()
+
+    assert validate_stage0_admission_receipt_document(serialized) == (
+        receipt.receipt_sha256
+    )
+    serialized["external_run_once_authority_id"] = "forged-authority"
+    with pytest.raises(Stage0AdmissionError, match="receipt_invalid"):
+        validate_stage0_admission_receipt_document(serialized)
 
 
 def test_stage0_template_binds_exact_v7_profile_and_source_manifest() -> None:
@@ -1023,9 +1591,389 @@ def test_stage0_template_binds_exact_v7_profile_and_source_manifest() -> None:
         "betelgeuze_engine_v2/docking/torsion_contact_refinement.py"
         in STAGE0_REQUIRED_SOURCE_FREEZE_PATHS
     )
+    assert (
+        "betelgeuze_engine_v2/benchmark/public_redocking_pipeline.py"
+        in STAGE0_REQUIRED_SOURCE_FREEZE_PATHS
+    )
+    assert source_freeze["engine_implementation_sha256"] == (
+        "OPERATOR_FILL_DYNAMIC_COMPLETE_EXECUTION_CLOSURE_SHA256"
+    )
+    external_reservation = template["artifact_retention"][
+        "external_run_once_reservation"
+    ]
+    assert external_reservation["authority_kind"] == ("external_worm_global_run_once")
+    environment = template["environment_freeze"]
+    assert set(environment["python_wheel"]) == {
+        "wheel_path",
+        "wheel_sha256",
+        "sbom_path",
+        "sbom_sha256",
+        "source_receipt_sha256",
+        "license_determination_path",
+        "license_determination_sha256",
+        "source_root",
+    }
+    assert environment["native_backend"]["sbom_path"]
+    assert environment["native_backend"]["extension_path"]
 
 
-def test_stage0_admits_solo_developer_internal_only_policy(
+def test_stage0_implementation_hash_discovers_new_execution_source(
+    tmp_path: Path,
+) -> None:
+    paths = (
+        "betelgeuze_engine_v2/benchmark/public_redocking_pipeline.py",
+        "tools/run_engine_v2_public_redocking_300.py",
+        "rust_engine_v2/Cargo.toml",
+        "rust_engine_v2/Cargo.lock",
+        "rust_engine_v2/build.rs",
+        "rust_engine_v2/pyproject.toml",
+        "rust_engine_v2/src/lib.rs",
+    )
+    for relative_path in paths:
+        path = tmp_path / relative_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"fixture:{relative_path}\n", encoding="utf-8")
+    before = stage0_engine_implementation_sha256(tmp_path)
+    newly_reachable = tmp_path / "betelgeuze_engine_v2/docking/new_runtime_path.py"
+    newly_reachable.parent.mkdir(parents=True, exist_ok=True)
+    newly_reachable.write_text("runtime = True\n", encoding="utf-8")
+
+    assert stage0_engine_implementation_sha256(tmp_path) != before
+
+
+def test_stage0_implementation_hash_discovers_nested_rust_sources_and_manifests(
+    tmp_path: Path,
+) -> None:
+    for relative_path in (
+        "betelgeuze_engine_v2/__init__.py",
+        "tools/run_engine_v2_public_redocking_300.py",
+        "rust_engine_v2/Cargo.toml",
+    ):
+        path = tmp_path / relative_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"fixture:{relative_path}\n", encoding="utf-8")
+    before = stage0_engine_implementation_sha256(tmp_path)
+    nested_rust = tmp_path / "rust_engine_v2/crates/scorer/src/kernel.rs"
+    nested_rust.parent.mkdir(parents=True, exist_ok=True)
+    nested_rust.write_text("pub fn score() {}\n", encoding="utf-8")
+    after_rust = stage0_engine_implementation_sha256(tmp_path)
+    nested_manifest = tmp_path / "rust_engine_v2/crates/scorer/Cargo.toml"
+    nested_manifest.write_text("[package]\nname = \"scorer\"\n", encoding="utf-8")
+    after_manifest = stage0_engine_implementation_sha256(tmp_path)
+    cargo_config = tmp_path / "rust_engine_v2/.cargo/config"
+    cargo_config.parent.mkdir(parents=True, exist_ok=True)
+    cargo_config.write_text("[net]\noffline = true\n", encoding="utf-8")
+
+    assert after_rust != before
+    assert after_manifest != after_rust
+    assert stage0_engine_implementation_sha256(tmp_path) != after_manifest
+
+
+def test_loaded_engine_module_ledger_rejects_nonempty_pythonpath(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("PYTHONPATH", "/unreviewed/import/root")
+
+    with pytest.raises(ValueError, match="stage0_pythonpath_not_empty"):
+        blind_stage0_contract.stage0_loaded_engine_module_ledger(
+            Path(__file__).resolve().parents[2]
+        )
+
+
+def test_loaded_engine_module_ledger_rejects_mixed_module_origin(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[2]
+    foreign_module = tmp_path / "foreign.py"
+    foreign_module.write_text("foreign = True\n", encoding="utf-8")
+    monkeypatch.delenv("PYTHONPATH", raising=False)
+    monkeypatch.setattr(
+        blind_stage0_contract,
+        "_loaded_engine_module_items",
+        lambda: (
+            (
+                "betelgeuze_engine_v2",
+                SimpleNamespace(__file__=str(repo_root / "betelgeuze_engine_v2/__init__.py")),
+            ),
+            (
+                "betelgeuze_engine_v2.benchmark.blind_stage0",
+                SimpleNamespace(__file__=str(Path(blind_stage0_contract.__file__))),
+            ),
+            (
+                "betelgeuze_engine_v2.foreign",
+                SimpleNamespace(__file__=str(foreign_module)),
+            ),
+        ),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="stage0_loaded_engine_module_origin_invalid",
+    ):
+        blind_stage0_contract.stage0_loaded_engine_module_ledger(repo_root)
+
+
+def test_runtime_module_origin_ledger_rejects_shadow_loaded_module(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    shadow_numpy = tmp_path / "numpy.py"
+    shadow_numpy.write_text("shadow = True\n", encoding="utf-8")
+    monkeypatch.setitem(
+        blind_stage0_contract.sys.modules,
+        "numpy",
+        SimpleNamespace(__file__=str(shadow_numpy)),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="stage0_runtime_module_origin_invalid:numpy",
+    ):
+        blind_stage0_contract.stage0_loaded_runtime_module_origin_ledger()
+
+
+def test_fresh_identity_binds_loaded_module_and_runtime_ledgers() -> None:
+    common = {
+        "source_freeze_sha256": "1" * 64,
+        "execution_profile_sha256": "2" * 64,
+        "engine_implementation_sha256": "3" * 64,
+        "runtime_dependency_authority_sha256": "5" * 64,
+        "evaluation_pipeline_sha256": "6" * 64,
+    }
+    first = compute_stage0_fresh_run_identity_sha256(
+        **common,
+        loaded_engine_module_ledger_sha256="4" * 64,
+    )
+    second = compute_stage0_fresh_run_identity_sha256(
+        **common,
+        loaded_engine_module_ledger_sha256="7" * 64,
+    )
+
+    assert first != second
+
+
+def test_runtime_dependency_file_ledgers_are_remeasured_without_cache(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[str] = []
+    monkeypatch.setattr(
+        blind_stage0_contract,
+        "stage0_runtime_dependency_versions",
+        lambda: {"torch": "fixture"},
+    )
+
+    def measured(distribution_name: str) -> str:
+        calls.append(distribution_name)
+        return hashlib.sha256(
+            f"{distribution_name}:{len(calls)}".encode("ascii")
+        ).hexdigest()
+
+    monkeypatch.setattr(
+        blind_stage0_contract,
+        "_stage0_installed_distribution_file_ledger_sha256",
+        measured,
+    )
+
+    first = blind_stage0_contract.stage0_installed_distribution_file_ledger_sha256s()
+    second = blind_stage0_contract.stage0_installed_distribution_file_ledger_sha256s()
+
+    assert calls == ["torch", "torch"]
+    assert first != second
+
+
+@pytest.mark.parametrize(
+    ("artifact_name", "field", "value", "expected_blocker"),
+    (
+        (
+            "python_wheel",
+            "wheel_sha256",
+            "",
+            "python_wheel_wheel_sha256_invalid",
+        ),
+        (
+            "python_wheel",
+            "sbom_sha256",
+            "not-a-sha256",
+            "python_wheel_sbom_sha256_invalid",
+        ),
+        (
+            "native_backend",
+            "wheel_sha256",
+            None,
+            "native_backend_wheel_sha256_invalid",
+        ),
+        (
+            "native_backend",
+            "sbom_sha256",
+            "f" * 63,
+            "native_backend_sbom_sha256_invalid",
+        ),
+    ),
+)
+def test_stage0_requires_exact_wheel_and_sbom_sha256s(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    artifact_name: str,
+    field: str,
+    value: object,
+    expected_blocker: str,
+) -> None:
+    gnina = tmp_path / "gnina"
+    gnina.write_bytes(b"gnina-test-binary")
+    payload = _policy(tmp_path, gnina, monkeypatch)
+    environment = payload["environment_freeze"]
+    assert isinstance(environment, dict)
+    artifact = environment[artifact_name]
+    assert isinstance(artifact, dict)
+    artifact[field] = value
+    monkeypatch.setattr(
+        blind_stage0_contract,
+        "current_stage0_native_backend",
+        lambda: _native_snapshot(payload),
+    )
+    policy_path = tmp_path / "policy.json"
+    _write_policy(policy_path, payload)
+
+    with pytest.raises(Stage0AdmissionError) as raised:
+        verify_stage0_admission(
+            policy_path,
+            repo_root=tmp_path,
+            gnina_path=gnina,
+            output_root=tmp_path / ".betelgeuze/fresh-redocking-128",
+        )
+
+    assert expected_blocker in raised.value.blockers
+
+
+def test_stage0_rejects_runtime_dependency_authority_cross_wire(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    gnina = tmp_path / "gnina"
+    gnina.write_bytes(b"gnina-test-binary")
+    payload = _policy(tmp_path, gnina, monkeypatch)
+    environment = payload["environment_freeze"]
+    assert isinstance(environment, dict)
+    authority = environment["runtime_dependency_authority"]
+    assert isinstance(authority, dict)
+    ledgers = authority["installed_distribution_file_ledger_sha256s"]
+    assert isinstance(ledgers, dict)
+    ledgers["torch"] = "f" * 64
+    authority.pop("authority_sha256")
+    authority["authority_sha256"] = _canonical_sha256(authority)
+    source_freeze = payload["source_freeze"]
+    assert isinstance(source_freeze, dict)
+    execution_profile = source_freeze["execution_profile"]
+    assert isinstance(execution_profile, dict)
+    frozen_authority = execution_profile["runtime_dependency_authority"]
+    monkeypatch.setattr(
+        blind_stage0_contract,
+        "stage0_runtime_dependency_authority",
+        lambda: json.loads(json.dumps(frozen_authority)),
+    )
+    monkeypatch.setattr(
+        blind_stage0_contract,
+        "current_stage0_native_backend",
+        lambda: _native_snapshot(payload),
+    )
+    policy_path = tmp_path / "policy.json"
+    _write_policy(policy_path, payload)
+
+    with pytest.raises(Stage0AdmissionError) as raised:
+        verify_stage0_admission(
+            policy_path,
+            repo_root=tmp_path,
+            gnina_path=gnina,
+            output_root=tmp_path / ".betelgeuze/fresh-redocking-128",
+        )
+
+    assert "environment_runtime_dependency_authority_mismatch" in (
+        raised.value.blockers
+    )
+    assert "execution_environment_runtime_authority_cross_wired" in (
+        raised.value.blockers
+    )
+
+
+def test_stage0_rejects_resealed_sbom_that_does_not_bind_python_wheel(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    gnina = tmp_path / "gnina"
+    gnina.write_bytes(b"gnina-test-binary")
+    payload = _policy(tmp_path, gnina, monkeypatch)
+    environment = payload["environment_freeze"]
+    assert isinstance(environment, dict)
+    python_wheel = environment["python_wheel"]
+    assert isinstance(python_wheel, dict)
+    sbom_path = tmp_path / str(python_wheel["sbom_path"])
+    sbom = json.loads(sbom_path.read_text(encoding="utf-8"))
+    sbom["packages"][0]["checksums"][0]["checksumValue"] = "f" * 64
+    _write_canonical_json(sbom_path, sbom)
+    python_wheel["sbom_sha256"] = _sha256(sbom_path)
+    payload = _as_solo_policy(payload, tmp_path)
+    monkeypatch.setattr(
+        "betelgeuze_engine_v2.benchmark.blind_stage0.current_stage0_native_backend",
+        lambda: _native_snapshot(payload),
+    )
+    policy_path = tmp_path / "policy.json"
+    _write_policy(policy_path, payload)
+
+    with pytest.raises(Stage0AdmissionError) as raised:
+        verify_stage0_admission(
+            policy_path,
+            repo_root=tmp_path,
+            gnina_path=gnina,
+            output_root=tmp_path / ".betelgeuze/fresh-redocking-128",
+        )
+
+    assert "python_wheel_wheel_sbom_checksum_mismatch" in raised.value.blockers
+
+
+def test_stage0_rejects_resealed_non_wheel_even_with_matching_sbom_hashes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    gnina = tmp_path / "gnina"
+    gnina.write_bytes(b"gnina-test-binary")
+    payload = _policy(tmp_path, gnina, monkeypatch)
+    environment = payload["environment_freeze"]
+    assert isinstance(environment, dict)
+    python_wheel = environment["python_wheel"]
+    assert isinstance(python_wheel, dict)
+    wheel_path = tmp_path / str(python_wheel["wheel_path"])
+    sbom_path = tmp_path / str(python_wheel["sbom_path"])
+    wheel_path.write_bytes(b"not-a-wheel")
+    wheel_sha256 = _sha256(wheel_path)
+    sbom = json.loads(sbom_path.read_text(encoding="utf-8"))
+    sbom["packages"][0]["checksums"][0]["checksumValue"] = wheel_sha256
+    sbom["documentNamespace"] = (
+        f"https://betelgeuze.invalid/spdx/betelgeuze-engine-v2/0.2.0rc5/{wheel_sha256}"
+    )
+    _write_canonical_json(sbom_path, sbom)
+    python_wheel["wheel_sha256"] = wheel_sha256
+    python_wheel["sbom_sha256"] = _sha256(sbom_path)
+    payload = _as_solo_policy(payload, tmp_path)
+    monkeypatch.setattr(
+        "betelgeuze_engine_v2.benchmark.blind_stage0.current_stage0_native_backend",
+        lambda: _native_snapshot(payload),
+    )
+    policy_path = tmp_path / "policy.json"
+    _write_policy(policy_path, payload)
+
+    with pytest.raises(Stage0AdmissionError) as raised:
+        verify_stage0_admission(
+            policy_path,
+            repo_root=tmp_path,
+            gnina_path=gnina,
+            output_root=tmp_path / ".betelgeuze/fresh-redocking-128",
+        )
+
+    assert "python_wheel_wheel_zip_invalid" in raised.value.blockers
+
+
+def test_stage0_rejects_solo_timestamps_without_trusted_clock_authority(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     gnina = tmp_path / "gnina"
@@ -1038,17 +1986,53 @@ def test_stage0_admits_solo_developer_internal_only_policy(
     )
     _write_policy(policy_path, payload)
 
-    receipt = verify_stage0_admission(
-        policy_path,
-        repo_root=tmp_path,
-        gnina_path=gnina,
-        output_root=tmp_path / ".betelgeuze/fresh-redocking-128",
+    with pytest.raises(Stage0AdmissionError) as raised:
+        verify_stage0_admission(
+            policy_path,
+            repo_root=tmp_path,
+            gnina_path=gnina,
+            output_root=tmp_path / ".betelgeuze/fresh-redocking-128",
+        )
+
+    assert (
+        "solo_review_time_separation_trusted_clock_unverified" in raised.value.blockers
     )
 
-    assert receipt.governance_mode == "solo_developer_controlled"
-    assert receipt.reviewer_id == "solo-developer"
-    assert receipt.operator_id == "solo-developer"
-    assert receipt.independent_review_complete is False
+
+def test_stage0_solo_governance_cannot_admit_an_unmerged_head(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    gnina = tmp_path / "gnina"
+    gnina.write_bytes(b"gnina-test-binary")
+    payload = _as_solo_policy(_policy(tmp_path, gnina, monkeypatch), tmp_path)
+    subprocess.run(
+        (
+            "git",
+            "-C",
+            str(tmp_path),
+            "commit",
+            "--allow-empty",
+            "-qm",
+            "unmerged stage0 head",
+        ),
+        check=True,
+    )
+    monkeypatch.setattr(
+        "betelgeuze_engine_v2.benchmark.blind_stage0.current_stage0_native_backend",
+        lambda: _native_snapshot(payload),
+    )
+    policy_path = tmp_path / "policy.json"
+    _write_policy(policy_path, payload)
+
+    with pytest.raises(Stage0AdmissionError) as raised:
+        verify_stage0_admission(
+            policy_path,
+            repo_root=tmp_path,
+            gnina_path=gnina,
+            output_root=tmp_path / ".betelgeuze/fresh-redocking-128",
+        )
+
+    assert "source_head_is_not_origin_main" in raised.value.blockers
 
 
 def test_stage0_rejects_mutated_solo_review_pass(
@@ -1183,6 +2167,36 @@ def test_stage0_rejects_frozen_source_mutation(
     )
 
 
+def test_stage0_rejects_new_untracked_execution_source(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    gnina = tmp_path / "gnina"
+    gnina.write_bytes(b"gnina-test-binary")
+    payload = _policy(tmp_path, gnina, monkeypatch)
+    newly_reachable = tmp_path / "betelgeuze_engine_v2/docking/untracked_runtime.py"
+    newly_reachable.write_text("runtime = True\n", encoding="utf-8")
+    payload["policy_sha256"] = compute_stage0_policy_sha256(payload)
+    monkeypatch.setattr(
+        "betelgeuze_engine_v2.benchmark.blind_stage0.current_stage0_native_backend",
+        lambda: _native_snapshot(payload),
+    )
+    policy_path = tmp_path / "policy.json"
+    _write_policy(policy_path, payload)
+
+    with pytest.raises(Stage0AdmissionError) as raised:
+        verify_stage0_admission(
+            policy_path,
+            repo_root=tmp_path,
+            gnina_path=gnina,
+            output_root=tmp_path / ".betelgeuze/fresh-redocking-128",
+        )
+
+    assert "engine_source_closure_hash_mismatch" in raised.value.blockers
+    assert "source_execution_closure_not_clean" in raised.value.blockers
+    assert "source_execution_closure_not_fully_tracked" in raised.value.blockers
+
+
 def test_stage0_rejects_missing_v7_source_manifest_row(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -1264,8 +2278,8 @@ def test_stage0_rejects_rehashed_execution_profile_drift(
     runtime_arguments = execution_profile["runtime_arguments"]
     assert isinstance(runtime_arguments, dict)
     runtime_arguments["bootstrap_samples"] = 1_999
-    execution_profile["profile_sha256"] = (
-        compute_stage0_execution_profile_sha256(execution_profile)
+    execution_profile["profile_sha256"] = compute_stage0_execution_profile_sha256(
+        execution_profile
     )
     payload["policy_sha256"] = compute_stage0_policy_sha256(payload)
     monkeypatch.setattr(
@@ -1296,9 +2310,11 @@ def test_stage0_rejects_fresh_case_in_rebound_development_report(
     development = json.loads(development_path.read_text(encoding="utf-8"))
     original_case_id = str(development["case_ids"][0])
     fresh_case_id = FROZEN_PUBLIC_REDOCKING_FRESH_HOLDOUT_CASE_IDS[0]
-    original_receipt_relative = _development_receipt_path(
-        tmp_path, original_case_id
-    ).relative_to(tmp_path).as_posix()
+    original_receipt_relative = (
+        _development_receipt_path(tmp_path, original_case_id)
+        .relative_to(tmp_path)
+        .as_posix()
+    )
     fresh_receipt_path = _development_receipt_path(tmp_path, fresh_case_id)
     fresh_receipt_relative = fresh_receipt_path.relative_to(tmp_path).as_posix()
     source_receipts = dict(development["source_receipts_sha256"])
@@ -1311,9 +2327,7 @@ def test_stage0_rejects_fresh_case_in_rebound_development_report(
     for case_row in development["cases"]:
         if case_row["case_id"] == original_case_id:
             case_row["case_id"] = fresh_case_id
-    development["cases"] = sorted(
-        development["cases"], key=lambda row: row["case_id"]
-    )
+    development["cases"] = sorted(development["cases"], key=lambda row: row["case_id"])
     _rebind_development_profile(payload, development_path, development)
     monkeypatch.setattr(
         "betelgeuze_engine_v2.benchmark.blind_stage0.current_stage0_native_backend",
@@ -1364,7 +2378,8 @@ def test_stage0_rejects_self_hashed_development_report_without_source_receipts(
         )
 
     assert any(
-        blocker == (
+        blocker
+        == (
             "execution_profile_development_source_receipts_invalid:"
             "development_source_receipts_missing"
         )
@@ -1416,9 +2431,7 @@ def test_stage0_rejects_resealed_cross_wired_development_receipts(
         )
 
     assert any(
-        blocker.startswith(
-            "execution_profile_development_source_receipts_invalid:"
-        )
+        blocker.startswith("execution_profile_development_source_receipts_invalid:")
         for blocker in raised.value.blockers
     )
 
@@ -1750,16 +2763,15 @@ def test_holdout_runner_rejects_profile_argument_drift_before_output_creation(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     output_root = tmp_path / "output"
-    receipt = VerifiedStage0Admission(
-        policy_sha256="1" * 64,
-        source_freeze_sha256="2" * 64,
-        execution_profile_sha256="3" * 64,
-        reviewer_id="reviewer",
-        operator_id="operator",
-        governance_mode="independent_three_role",
-        independent_review_complete=True,
+    receipt = _verified_stage0_receipt()
+    monkeypatch.setattr(
+        runner, "verify_stage0_admission", lambda *args, **kwargs: receipt
     )
-    monkeypatch.setattr(runner, "verify_stage0_admission", lambda *args, **kwargs: receipt)
+    monkeypatch.setattr(
+        runner,
+        "_require_stage0_prebound_runtime_authority",
+        lambda **kwargs: ({}, "9" * 64),
+    )
 
     with pytest.raises(Stage0AdmissionError) as raised:
         runner.main(
@@ -1787,6 +2799,130 @@ def test_holdout_runner_rejects_profile_argument_drift_before_output_creation(
 
     assert raised.value.blockers == (
         "stage0_execution_argument_mismatch:external_timeout_seconds",
+    )
+    assert not output_root.exists()
+
+
+def test_runner_remeasures_prebound_runtime_authority_before_fresh_output(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    authority: dict[str, object] = {
+        "schema_id": (
+            blind_stage0_contract.STAGE0_RUNTIME_DEPENDENCY_AUTHORITY_SCHEMA_ID
+        ),
+        "distribution_versions": {
+            **dict(blind_stage0_contract.STAGE0_EVALUATOR_DISTRIBUTION_VERSIONS),
+            "torch": "fixture",
+        },
+        "installed_distribution_file_ledger_sha256s": {
+            distribution_name: "8" * 64
+            for distribution_name in (
+                *blind_stage0_contract.STAGE0_EVALUATOR_DISTRIBUTION_VERSIONS,
+                *blind_stage0_contract.STAGE0_CORE_RUNTIME_DISTRIBUTIONS,
+            )
+        },
+    }
+    authority["authority_sha256"] = _canonical_sha256(authority)
+    evaluation_sha256 = "9" * 64
+    payload: dict[str, object] = {
+        "source_freeze": {
+            "execution_profile": {
+                "runtime_dependency_authority": authority,
+                "evaluation_pipeline_sha256": evaluation_sha256,
+            }
+        },
+        "environment_freeze": {
+            "runtime_dependency_authority": authority,
+            "evaluation_pipeline_sha256": evaluation_sha256,
+        },
+    }
+    payload["policy_sha256"] = compute_stage0_policy_sha256(payload)
+    policy_path = tmp_path / "policy.json"
+    _write_policy(policy_path, payload)
+    receipt = _verified_stage0_receipt(
+        policy_sha256=str(payload["policy_sha256"]),
+    )
+    monkeypatch.setattr(
+        runner,
+        "stage0_runtime_dependency_authority",
+        lambda: json.loads(json.dumps(authority)),
+    )
+    monkeypatch.setattr(
+        runner,
+        "stage0_evaluation_pipeline_sha256",
+        lambda *args, **kwargs: evaluation_sha256,
+    )
+    origin_checks: list[bool] = []
+    monkeypatch.setattr(runner, "_load_rdkit_modules", lambda: ())
+    monkeypatch.setattr(runner, "_load_posebusters", lambda: object())
+    monkeypatch.setattr(
+        runner,
+        "stage0_loaded_runtime_module_origin_ledger",
+        lambda: origin_checks.append(True) or (),
+    )
+
+    observed = runner._require_stage0_prebound_runtime_authority(
+        policy_path=policy_path,
+        repo_root=tmp_path,
+        receipt=receipt,
+    )
+    assert observed == (authority, evaluation_sha256)
+    assert origin_checks == [True]
+
+    monkeypatch.setattr(
+        runner,
+        "stage0_evaluation_pipeline_sha256",
+        lambda *args, **kwargs: "7" * 64,
+    )
+    with pytest.raises(Stage0AdmissionError) as raised:
+        runner._require_stage0_prebound_runtime_authority(
+            policy_path=policy_path,
+            repo_root=tmp_path,
+            receipt=receipt,
+        )
+    assert raised.value.blockers == ("stage0_evaluation_pipeline_mismatch",)
+
+
+def test_holdout_runner_blocks_without_live_consume_authority_before_output(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    output_root = tmp_path / "output"
+    receipt = _verified_stage0_receipt()
+    monkeypatch.setattr(
+        runner, "verify_stage0_admission", lambda *args, **kwargs: receipt
+    )
+    monkeypatch.setattr(
+        runner,
+        "_require_stage0_prebound_runtime_authority",
+        lambda **kwargs: ({}, "9" * 64),
+    )
+
+    with pytest.raises(Stage0AdmissionError) as raised:
+        runner.main(
+            [
+                "--archive",
+                str(tmp_path / "unopened.tar.gz"),
+                "--source-identifiers",
+                str(tmp_path / "unread.pdf"),
+                "--gnina",
+                str(tmp_path / "gnina"),
+                "--output-root",
+                str(output_root),
+                "--case-subset",
+                "fresh-internal-blind-holdout",
+                "--stage0-policy",
+                str(tmp_path / "stage0-policy.json"),
+                "--engine-v2-scorer-backend",
+                "rust_cpu_required",
+                "--seed",
+                "2026073000",
+            ]
+        )
+
+    assert raised.value.blockers == (
+        "fresh_live_run_once_consumption_authority_unavailable",
     )
     assert not output_root.exists()
 
@@ -1843,21 +2979,30 @@ def test_fresh_report_requires_complete_profile_bound_execution_receipts(
             del top_k, threshold
             return 0.0
 
-    rows = {
-        (engine_id, case_id): _Payload(
-            {"engine_id": engine_id, "case_id": case_id, "status": "failure"}
-        )
-        for engine_id in runner.PUBLIC_REDOCKING_PRIMARY_ENGINES
-        for case_id in case_ids
-    }
+    rows = {}
+    for engine_id in runner.PUBLIC_REDOCKING_PRIMARY_ENGINES:
+        for case_id in case_ids:
+            payload: dict[str, object] = {
+                "engine_id": engine_id,
+                "case_id": case_id,
+                "status": "failure",
+            }
+            if engine_id == "engine_v2":
+                payload["engine_v2_diagnostics"] = {
+                    "preparation_status": "failure",
+                    "preparation_failure_code": "input_parse_unsupported",
+                    "candidates": [],
+                }
+            rows[(engine_id, case_id)] = _Payload(payload)
     executions = {
         engine_id: [
             _Payload(
                 {
                     "result": rows[(engine_id, case_id)].to_dict(),
-                    "execution_policy": {
-                        "execution_profile_sha256": profile_sha256
-                    },
+                    "execution_policy": {"execution_profile_sha256": profile_sha256},
+                    "receipt_sha256": hashlib.sha256(
+                        f"{engine_id}:{case_id}".encode("ascii")
+                    ).hexdigest(),
                 }
             )
             for case_id in case_ids
@@ -1885,6 +3030,7 @@ def test_fresh_report_requires_complete_profile_bound_execution_receipts(
             {
                 "result": rows[("engine_v2", case_ids[0])].to_dict(),
                 "execution_policy": {"execution_profile_sha256": "5" * 64},
+                "receipt_sha256": "7" * 64,
             }
         ),
         *executions["engine_v2"][1:],
@@ -1907,9 +3053,8 @@ def test_fresh_report_requires_complete_profile_bound_execution_receipts(
         _Payload(
             {
                 "result": altered_result,
-                "execution_policy": {
-                    "execution_profile_sha256": profile_sha256
-                },
+                "execution_policy": {"execution_profile_sha256": profile_sha256},
+                "receipt_sha256": "8" * 64,
             }
         ),
         *executions["engine_v2"][1:],
@@ -1992,16 +3137,16 @@ def test_fresh_report_requires_complete_profile_bound_execution_receipts(
             for engine_id in runner.PUBLIC_REDOCKING_PRIMARY_ENGINES
         ],
         policy=_Payload({"rmsd_threshold_angstrom": 2.0}),
-        stage0_receipt=VerifiedStage0Admission(
-            policy_sha256="1" * 64,
-            source_freeze_sha256="2" * 64,
+        stage0_receipt=_verified_stage0_receipt(
             execution_profile_sha256=profile_sha256,
-            reviewer_id="reviewer",
-            operator_id="operator",
-            governance_mode="independent_three_role",
-            independent_review_complete=True,
         ),
         manifest_sha256="6" * 64,
+        run_once_reservation_sha256="9" * 64,
     )
     assert report["execution_receipts"] == validated_receipts
     assert len(report["execution_receipts"]) == 384
+    assert report["engine_v2_candidate_slot_count"] == 8_192
+    assert len(report["engine_v2_candidate_slots"]) == 8_192
+    assert {slot["slot_status"] for slot in report["engine_v2_candidate_slots"]} == {
+        "preparation_failure"
+    }

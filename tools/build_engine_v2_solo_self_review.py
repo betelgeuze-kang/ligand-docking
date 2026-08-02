@@ -12,9 +12,9 @@ import subprocess
 from typing import Mapping, Sequence
 
 
-SCHEMA_ID = "betelgeuze.engine_v2_stage0_solo_self_review_pass/1.2.0"
+SCHEMA_ID = "betelgeuze.engine_v2_stage0_solo_self_review_pass/1.3.0"
 OPERATIONAL_SCHEMA_ID = (
-    "betelgeuze.engine_v2_stage0_solo_operational_evidence/1.0.0"
+    "betelgeuze.engine_v2_stage0_solo_operational_evidence/1.1.0"
 )
 THRESHOLD_SCHEMA_ID = "betelgeuze.engine_v2_stage0_threshold_evidence/1.0.0"
 DEVELOPMENT_SCHEMA_PREFIX = "betelgeuze.engine_v2_scorer_v1_development_analysis/"
@@ -231,6 +231,8 @@ def build_review(
     threshold_path: Path,
     native_wheel_path: Path,
     base_wheel_path: Path,
+    native_wheel_sbom_path: Path,
+    base_wheel_sbom_path: Path,
     developer_id: str,
     review_pass: int,
     reviewed_at_utc: str,
@@ -259,8 +261,15 @@ def build_review(
     if not isinstance(source_state, Mapping):
         raise ValueError("operational source state is missing")
     head = _git(repo_root, "rev-parse", "HEAD")
+    origin_main = _git(repo_root, "rev-parse", "refs/remotes/origin/main")
     if source_state.get("git_head_sha") != head:
         raise ValueError("operational evidence is not bound to current HEAD")
+    if (
+        head != origin_main
+        or source_state.get("origin_main_sha") != origin_main
+        or source_state.get("dedicated_branch_internal_only") is not False
+    ):
+        raise ValueError("solo self-review requires the exact origin/main commit")
     if source_state.get("worktree_clean") is not True:
         raise ValueError("operational evidence did not observe a clean worktree")
     if _git(repo_root, "status", "--porcelain"):
@@ -292,10 +301,16 @@ def build_review(
         raise ValueError("operator environment is missing")
     expected_base = operator_environment.get("base_wheel_sha256")
     expected_native = operator_environment.get("native_wheel_sha256")
+    expected_base_sbom = operator_environment.get("base_wheel_sbom_sha256")
+    expected_native_sbom = operator_environment.get("native_wheel_sbom_sha256")
     if _sha256_path(base_wheel_path) != expected_base:
         raise ValueError("base wheel is cross-wired")
     if _sha256_path(native_wheel_path) != expected_native:
         raise ValueError("native wheel is cross-wired")
+    if _sha256_path(base_wheel_sbom_path) != expected_base_sbom:
+        raise ValueError("base wheel SBOM is cross-wired")
+    if _sha256_path(native_wheel_sbom_path) != expected_native_sbom:
+        raise ValueError("native wheel SBOM is cross-wired")
 
     reviewed_evidence = {
         "operational_evidence_path": str(operational_path.relative_to(repo_root)),
@@ -317,6 +332,14 @@ def build_review(
         "base_wheel_sha256": expected_base,
         "native_wheel_path": str(native_wheel_path.relative_to(repo_root)),
         "native_cp310_wheel_sha256": expected_native,
+        "base_wheel_sbom_path": str(
+            base_wheel_sbom_path.relative_to(repo_root)
+        ),
+        "base_wheel_sbom_sha256": expected_base_sbom,
+        "native_wheel_sbom_path": str(
+            native_wheel_sbom_path.relative_to(repo_root)
+        ),
+        "native_wheel_sbom_sha256": expected_native_sbom,
     }
     first_reviewed = reviewed
     previous_review_pass: dict[str, object] | None = None
@@ -441,6 +464,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--threshold-evidence", required=True, type=Path)
     parser.add_argument("--native-wheel", required=True, type=Path)
     parser.add_argument("--base-wheel", required=True, type=Path)
+    parser.add_argument("--native-wheel-sbom", required=True, type=Path)
+    parser.add_argument("--base-wheel-sbom", required=True, type=Path)
     parser.add_argument("--developer-id", required=True)
     parser.add_argument("--review-pass", required=True, type=int, choices=(1, 2))
     parser.add_argument("--reviewed-at-utc", required=True)
@@ -455,6 +480,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         threshold_path=arguments.threshold_evidence.resolve(),
         native_wheel_path=arguments.native_wheel.resolve(),
         base_wheel_path=arguments.base_wheel.resolve(),
+        native_wheel_sbom_path=arguments.native_wheel_sbom.resolve(),
+        base_wheel_sbom_path=arguments.base_wheel_sbom.resolve(),
         developer_id=arguments.developer_id,
         review_pass=arguments.review_pass,
         reviewed_at_utc=arguments.reviewed_at_utc,

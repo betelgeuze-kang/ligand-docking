@@ -54,13 +54,70 @@ from betelgeuze_engine_v2.capabilities import (  # noqa: E402
 )
 
 
-def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
+def test_capability_yaml_matches_executable_v2_schema_v5_snapshot() -> None:
     path = Path("config/independent_engine_v2_capabilities.yaml")
     loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
     assert loaded == capability_snapshot()
-    assert loaded["schema_version"] == CAPABILITY_SCHEMA_VERSION == 4
+    assert loaded["schema_version"] == CAPABILITY_SCHEMA_VERSION == 5
     assert loaded["implementation_stage"] == IMPLEMENTATION_STAGE
-    assert len(loaded["capabilities"]) == 45
+    assert len(loaded["capabilities"]) == 47
+
+    gpu = loaded["gpu_backend_policy"]
+    assert gpu["qualified_gpu_architectures"] == []
+    assert gpu["gpu_acceleration_claim_allowed"] is False
+    assert gpu["legacy_hip_backend_promotable"] is False
+    assert gpu["backends"]["hip_safe"] == {
+        "internal_reference_execution_available": False,
+        "current_state": "fail_closed_unavailable",
+        "deterministic_parity_backend": True,
+        "parity_evidence_present": False,
+        "acceleration_claim_allowed": False,
+    }
+    assert gpu["backends"]["hip_fast"][
+        "requires_hip_safe_qualification_same_architecture"
+    ] is True
+    assert gpu["implementation_sequence"] == {
+        "versioned_tensor_stream_abi_contract": True,
+        "persistent_receptor_context": False,
+        "candidate_transform_batch": False,
+        "pair_list": False,
+        "scorer_v1_eight_term_kernel": False,
+        "pose_validity": False,
+        "stable_top_k": False,
+        "v2_v3_v6_v7_refinement": False,
+        "clustering_and_rmsd": False,
+        "unified_on_prem_runner": False,
+    }
+    assert gpu["abi_contract_controls"]["exact_stage_order"] == [
+        "persistent_receptor_context",
+        "candidate_transform_batch",
+        "pair_list",
+        "scorer_v1_8term",
+        "pose_validity",
+        "stable_top_k",
+        "refinement_v2",
+        "refinement_v3",
+        "refinement_v6",
+        "refinement_v7",
+        "clustering_rmsd",
+    ]
+    assert gpu["abi_contract_controls"][
+        "exact_source_algorithm_execution_profile_binding_required"
+    ] is True
+    assert gpu["hip_build_profiles"]["hip_safe"]["strict_binary64"] is True
+    assert set(gpu["required_parity_gates"]) >= {
+        "candidate_denominator_identical",
+        "failure_codes_identical",
+        "scorer_v1_eight_terms_within_tolerance",
+        "pose_validity_identical",
+        "top1_identical",
+        "top5_identical",
+        "v7_decision_identical",
+        "repeated_run_rank_stable",
+        "oom_fail_closed",
+        "overflow_fail_closed",
+        "exact_architecture_qualified",
+    }
 
     rows = loaded["capabilities"]
     assert all(row["implemented"] is True for row in rows.values())

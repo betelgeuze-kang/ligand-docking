@@ -1,4 +1,4 @@
-schema_version: 4
+schema_version: 5
 engine_id: betelgeuze_independent_engine_v2
 implementation_stage: v2_ao_native_cpu_scorer_contract_rc5
 
@@ -9,6 +9,126 @@ claim_policy:
   gpu_acceleration_claim_allowed: false
   docking_accuracy_claim_allowed: false
   free_energy_claim_allowed: false
+
+gpu_backend_policy:
+  schema_id: betelgeuze.engine_v2_gpu_backend_policy/1.0.0
+  native_abi_version: 1.1.0
+  backends:
+    python_reference:
+      internal_reference_execution_available: true
+      gpu_acceleration_backend: false
+      acceleration_claim_allowed: false
+    rust_cpu:
+      internal_reference_execution_available: true
+      gpu_acceleration_backend: false
+      acceleration_claim_allowed: false
+    hip_safe:
+      internal_reference_execution_available: false
+      current_state: fail_closed_unavailable
+      deterministic_parity_backend: true
+      parity_evidence_present: false
+      acceleration_claim_allowed: false
+    hip_fast:
+      internal_reference_execution_available: false
+      current_state: blocked_until_hip_safe_parity
+      requires_hip_safe_qualification_same_architecture: true
+      parity_evidence_present: false
+      acceleration_claim_allowed: false
+  implementation_sequence:
+    versioned_tensor_stream_abi_contract: true
+    persistent_receptor_context: false
+    candidate_transform_batch: false
+    pair_list: false
+    scorer_v1_eight_term_kernel: false
+    pose_validity: false
+    stable_top_k: false
+    v2_v3_v6_v7_refinement: false
+    clustering_and_rmsd: false
+    unified_on_prem_runner: false
+  abi_contract_controls:
+    exact_stage_order:
+      - persistent_receptor_context
+      - candidate_transform_batch
+      - pair_list
+      - scorer_v1_8term
+      - pose_validity
+      - stable_top_k
+      - refinement_v2
+      - refinement_v3
+      - refinement_v6
+      - refinement_v7
+      - clustering_rmsd
+    exact_tensor_role_dtype_shape_ownership_required: true
+    backend_receipt_embeds_full_native_abi: true
+    exact_source_algorithm_execution_profile_binding_required: true
+    parity_probe_execution_receipt_required: true
+    implicit_fallback_allowed: false
+  hip_build_profiles:
+    hip_safe:
+      profile_sha256: c2286fc03780e0a3155bfafd132a4af8608b1f23073f3191cc1d4ca0d1c19819
+      exact_flags:
+        - "-O2"
+        - "-fno-fast-math"
+        - "-fno-unsafe-math-optimizations"
+        - "-fno-finite-math-only"
+        - "-fsigned-zeros"
+        - "-ffp-contract=off"
+      strict_binary64: true
+    hip_fast:
+      profile_sha256: 51494475a5e9fdda184ff64a9833d9881a6ff1b1b1394d4f07a5e0380dd74033
+      exact_flags:
+        - "-O3"
+        - "-ffast-math"
+      requires_typed_hip_safe_precedent: true
+  required_parity_gates:
+    - candidate_denominator_identical
+    - failure_codes_identical
+    - scorer_v1_eight_terms_within_tolerance
+    - pose_validity_identical
+    - top1_identical
+    - top5_identical
+    - v7_decision_identical
+    - repeated_run_rank_stable
+    - oom_fail_closed
+    - overflow_fail_closed
+    - exact_architecture_qualified
+    - hip_safe_precedes_hip_fast
+  scorer_v1_term_tolerance_policy:
+    schema_id: engine-v2-gpu-parity-evidence-v1
+    scorer_terms:
+      - typed_vdw
+      - electrostatics
+      - directional_hbond
+      - hydrophobic_contact
+      - desolvation_proxy
+      - torsion_energy
+      - ligand_strain
+      - weak_pocket_prior
+    absolute_tolerance_binary64_hex_by_term:
+      typed_vdw: 0x1.19799812dea11p-40
+      electrostatics: 0x1.19799812dea11p-40
+      directional_hbond: 0x1.19799812dea11p-40
+      hydrophobic_contact: 0x1.19799812dea11p-40
+      desolvation_proxy: 0x1.19799812dea11p-40
+      torsion_energy: 0x1.19799812dea11p-40
+      ligand_strain: 0x1.19799812dea11p-40
+      weak_pocket_prior: 0x1.19799812dea11p-40
+    relative_tolerance_binary64_hex: 0x0.0p+0
+    fingerprint_sha256: ff9d0de34e66fbb37ffcb19c7aa63ce6356927d08cfdbcbcd5271f363f65a824
+  qualification_authority:
+    implemented: false
+    blocker: gpu_parity_artifact_execution_authority_not_implemented
+    caller_supplied_receipt_sha256_sufficient: false
+  qualified_gpu_architectures: []
+  legacy_hip_backend_promotable: false
+  legacy_hip_blockers:
+    - gfx1030_only_build_not_architecture_qualified
+    - fast_math_not_safe_parity_mode
+    - unsafe_fp_atomics_forbidden
+    - rocm_device_library_fallback_forbidden
+    - engine_v2_backend_artifact_execution_unavailable
+    - gpu_parity_evidence_missing
+  gpu_acceleration_claim_allowed: false
 
 capabilities:
   v2_cpu_reference_orchestrator:
@@ -1033,6 +1153,51 @@ capabilities:
       - reviewed_external_engine_results_missing
       - public_comparison_evidence_missing
       - operator_execution_not_authorized
+
+  v2_standalone_cpu_product_pipeline:
+    current_state: shared_docking_pipeline_standalone_cpu_surface_ready_unqualified
+    implemented: true
+    reference_contract_ready: true
+    internal_reference_execution_enabled: true
+    calibrated: false
+    scientifically_validated: false
+    public_evidence_ready: false
+    benchmark_validated: false
+    product_qualified: false
+    customer_execution_enabled: false
+    claim_safe: false
+    blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
+    blockers:
+      - stage0_admission_not_closed
+      - fresh_128_internal_provisional_blind_holdout_not_executed
+      - independent_attestation_missing
+      - legal_compliance_determination_not_made
+      - scientific_validation_missing
+      - product_integration_not_qualified
+      - customer_execution_not_authorized
+
+  v2_operator_product_shadow:
+    current_state: operator_only_evidence_projection_surface_ready_activation_blocked
+    implemented: true
+    reference_contract_ready: true
+    internal_reference_execution_enabled: false
+    calibrated: false
+    scientifically_validated: false
+    public_evidence_ready: false
+    benchmark_validated: false
+    product_qualified: false
+    customer_execution_enabled: false
+    claim_safe: false
+    blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
+    blockers:
+      - stage0_admission_not_closed
+      - fresh_128_internal_provisional_blind_holdout_not_executed
+      - product_shadow_artifact_producer_not_activated
+      - independent_attestation_missing
+      - legal_compliance_determination_not_made
+      - scientific_validation_missing
+      - product_integration_not_qualified
+      - customer_pose_emission_forbidden
 
   v2_independent_distribution:
     current_state: reproducible_rc_wheel_with_spdx_sbom

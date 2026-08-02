@@ -25,7 +25,7 @@ from tools.run_engine_v2_public_redocking_300 import (
 )
 
 
-SCHEMA_ID = "betelgeuze.engine_v2_stage0_solo_operational_evidence/1.0.0"
+SCHEMA_ID = "betelgeuze.engine_v2_stage0_solo_operational_evidence/1.1.0"
 
 
 def _canonical_bytes(value: object) -> bytes:
@@ -61,6 +61,36 @@ def _verify_self_hash(payload: Mapping[str, object], field: str) -> None:
         raise ValueError(f"receipt self-hash mismatch: {field}")
 
 
+def _verify_sbom_binding(sbom_path: Path, wheel_path: Path) -> None:
+    sbom = _read_json(sbom_path)
+    if (
+        sbom.get("spdxVersion") != "SPDX-2.3"
+        or sbom.get("dataLicense") != "CC0-1.0"
+        or sbom.get("SPDXID") != "SPDXRef-DOCUMENT"
+    ):
+        raise ValueError("wheel SBOM is not SPDX 2.3 JSON")
+    packages = sbom.get("packages")
+    if not isinstance(packages, list):
+        raise ValueError("wheel SBOM package ledger is missing")
+    roots = [
+        package
+        for package in packages
+        if isinstance(package, Mapping)
+        and package.get("SPDXID") == "SPDXRef-Package-EngineV2"
+    ]
+    wheel_sha256 = _sha256_path(wheel_path)
+    expected = {"algorithm": "SHA256", "checksumValue": wheel_sha256}
+    if (
+        len(roots) != 1
+        or not isinstance(roots[0].get("checksums"), list)
+        or roots[0]["checksums"].count(expected) != 1
+        or not str(sbom.get("documentNamespace", "")).endswith(
+            f"/{wheel_sha256}"
+        )
+    ):
+        raise ValueError("wheel SBOM does not bind the exact wheel SHA-256")
+
+
 def _git(repo_root: Path, *arguments: str) -> str:
     result = subprocess.run(
         ("git", *arguments),
@@ -82,6 +112,8 @@ def build_packet(
     gnina_path: Path,
     native_wheel_path: Path,
     base_wheel_path: Path,
+    native_wheel_sbom_path: Path,
+    base_wheel_sbom_path: Path,
     developer_id: str,
     reviewed_at_utc: str,
 ) -> dict[str, object]:
@@ -108,14 +140,29 @@ def build_packet(
         or reconciliation.get("only_historical_rows") != []
     ):
         raise ValueError("historical/current full-suite rows are not reconciled")
-    if not gnina_path.is_file() or not native_wheel_path.is_file() or not base_wheel_path.is_file():
+    if not all(
+        path.is_file()
+        for path in (
+            gnina_path,
+            native_wheel_path,
+            base_wheel_path,
+            native_wheel_sbom_path,
+            base_wheel_sbom_path,
+        )
+    ):
         raise ValueError("operator binary or wheel is missing")
+    _verify_sbom_binding(base_wheel_sbom_path, base_wheel_path)
+    _verify_sbom_binding(native_wheel_sbom_path, native_wheel_path)
     reviewed = datetime.fromisoformat(reviewed_at_utc.replace("Z", "+00:00"))
     if reviewed.tzinfo is None or reviewed.utcoffset() != timezone.utc.utcoffset(reviewed):
         raise ValueError("reviewed_at_utc must be an explicit UTC timestamp")
     head = _git(repo_root, "rev-parse", "HEAD")
     origin_main = _git(repo_root, "rev-parse", "refs/remotes/origin/main")
     dirty = _git(repo_root, "status", "--porcelain")
+    if head != origin_main:
+        raise ValueError("Stage 0 evidence requires the exact origin/main commit")
+    if dirty:
+        raise ValueError("Stage 0 evidence requires a clean worktree")
     free_bytes = shutil.disk_usage(repo_root).free
     minimum_free_bytes = 20 * 1024**3
     if free_bytes < minimum_free_bytes:
@@ -129,8 +176,8 @@ def build_packet(
             "origin_main_sha": origin_main,
             "engine_implementation_sha256": _engine_source_sha256(repo_root),
             "runner_id": RUNNER_ID,
-            "dedicated_branch_internal_only": head != origin_main,
-            "worktree_clean": dirty == "",
+            "dedicated_branch_internal_only": False,
+            "worktree_clean": True,
             "worktree_status_sha256": hashlib.sha256(dirty.encode("utf-8")).hexdigest(),
         },
         "full_suite_disposition": {
@@ -196,6 +243,16 @@ def build_packet(
             "native_wheel_sha256": _sha256_path(native_wheel_path),
             "base_wheel_path": str(base_wheel_path.relative_to(repo_root)),
             "base_wheel_sha256": _sha256_path(base_wheel_path),
+            "base_wheel_sbom_path": str(
+                base_wheel_sbom_path.relative_to(repo_root)
+            ),
+            "base_wheel_sbom_sha256": _sha256_path(base_wheel_sbom_path),
+            "native_wheel_sbom_path": str(
+                native_wheel_sbom_path.relative_to(repo_root)
+            ),
+            "native_wheel_sbom_sha256": _sha256_path(
+                native_wheel_sbom_path
+            ),
             "cpu_policy": {
                 "cpu_count": 1,
                 "torch_intraop_threads": 1,
@@ -282,6 +339,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--gnina", required=True, type=Path)
     parser.add_argument("--native-wheel", required=True, type=Path)
     parser.add_argument("--base-wheel", required=True, type=Path)
+    parser.add_argument("--native-wheel-sbom", required=True, type=Path)
+    parser.add_argument("--base-wheel-sbom", required=True, type=Path)
     parser.add_argument("--developer-id", required=True)
     parser.add_argument("--reviewed-at-utc", required=True)
     parser.add_argument("--output", required=True, type=Path)
@@ -295,6 +354,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         gnina_path=arguments.gnina.resolve(),
         native_wheel_path=arguments.native_wheel.resolve(),
         base_wheel_path=arguments.base_wheel.resolve(),
+        native_wheel_sbom_path=arguments.native_wheel_sbom.resolve(),
+        base_wheel_sbom_path=arguments.base_wheel_sbom.resolve(),
         developer_id=arguments.developer_id,
         reviewed_at_utc=arguments.reviewed_at_utc,
     )

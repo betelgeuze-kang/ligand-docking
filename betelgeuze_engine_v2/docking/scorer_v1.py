@@ -2033,6 +2033,23 @@ def run_authenticated_scorer_v1_guided_search(
         precomputed_guided_receipt=precomputed_guided_receipt,
         precomputed_provenance_receipt=precomputed_provenance_receipt,
     )
+    return build_scorer_v1_guided_search_result(guided, scorer)
+
+
+def build_scorer_v1_guided_search_result(
+    guided: GuidedPlacementSearchResult,
+    scorer: ChemistryPoseScorerV1,
+) -> ScorerV1GuidedSearchResult:
+    """Retain exact ScorerV1Terms after validity and ranking are complete."""
+
+    if not isinstance(guided, GuidedPlacementSearchResult):
+        raise TypeError("guided must be GuidedPlacementSearchResult")
+    if not isinstance(scorer, ChemistryPoseScorerV1):
+        raise TypeError("scorer must be ChemistryPoseScorerV1")
+    if scorer.authority_input_receipt_sha256 != (
+        guided.authenticated_search_result.authenticated_input_receipt_sha256
+    ):
+        raise ScorerV1Error("scorer v1 result authority is cross-wired")
     retained: list[ScorerV1SearchTermRow] = []
     for row in guided.authenticated_search_result.search_result.rows:
         if row.succeeded:
@@ -2106,5 +2123,6 @@ __all__ = [
     "ScorerV1GuidedSearchResult",
     "ScorerV1SearchTermRow",
     "ScorerV1Terms",
+    "build_scorer_v1_guided_search_result",
     "run_authenticated_scorer_v1_guided_search",
 ]

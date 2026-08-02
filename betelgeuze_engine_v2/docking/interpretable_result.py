@@ -28,10 +28,11 @@ from .interpretable_scorer import (
 )
 from .placement import (
     PocketPlacementPolicy,
+    PocketPlacementReceipt,
     PocketPlacementSearchResult,
     run_authenticated_pocket_placement_search,
 )
-from .proposals import DockingBudget
+from .proposals import DockingBudget, DockingProposal
 from .search import DockingSearchRow
 
 
@@ -101,9 +102,7 @@ class InterpretableSearchTermRow:
             )
         status = str(self.search_status or "").strip()
         if status not in {"success", "failure"}:
-            raise InterpretableSearchResultError(
-                "term row search_status is invalid"
-            )
+            raise InterpretableSearchResultError("term row search_status is invalid")
         search_row_sha = _require_sha256(
             self.search_row_sha256,
             name="search_row_sha256",
@@ -217,10 +216,7 @@ class InterpretableScoredSearchResult:
             raise InterpretableSearchResultError(
                 "scorer authority and placement search are cross-wired"
             )
-        if (
-            search.search_result.scorer_contract_fingerprint_sha256
-            != scorer_contract
-        ):
+        if search.search_result.scorer_contract_fingerprint_sha256 != scorer_contract:
             raise InterpretableSearchResultError(
                 "scorer contract and generic search are cross-wired"
             )
@@ -244,9 +240,7 @@ class InterpretableScoredSearchResult:
                     "term row does not bind the generic search row"
                 )
             if retained.search_status != source.status:
-                raise InterpretableSearchResultError(
-                    "term row status is cross-wired"
-                )
+                raise InterpretableSearchResultError("term row status is cross-wired")
         object.__setattr__(self, "rows", rows)
         object.__setattr__(
             self,
@@ -296,9 +290,7 @@ class InterpretableScoredSearchResult:
             "success_count": self.success_count,
             "failure_count": self.failure_count,
             "failure_rows_retained": True,
-            "row_receipt_sha256s": [
-                row.receipt_sha256 for row in self.rows
-            ],
+            "row_receipt_sha256s": [row.receipt_sha256 for row in self.rows],
             "calibrated": False,
             "validated_for_docking_ranking": False,
             "scientifically_validated": False,
@@ -335,14 +327,12 @@ def run_authenticated_interpretable_pocket_search(
     policy: PocketPlacementPolicy | None = None,
     diversity_rmsd_angstrom: float = 0.5,
     diversity_metric: str = "direct_rmsd",
-    symmetry_permutations: Sequence[
-        Sequence[int] | torch.Tensor
-    ] | None = None,
+    symmetry_permutations: Sequence[Sequence[int] | torch.Tensor] | None = None,
+    precomputed_proposals: Sequence[DockingProposal] | None = None,
+    precomputed_placement_receipt: PocketPlacementReceipt | None = None,
 ) -> InterpretableScoredSearchResult:
     if not isinstance(authenticated_problem, AuthenticatedDockingProblem):
-        raise TypeError(
-            "authenticated_problem must be AuthenticatedDockingProblem"
-        )
+        raise TypeError("authenticated_problem must be AuthenticatedDockingProblem")
     if not isinstance(scorer, InterpretablePoseScorerV0):
         raise TypeError("scorer must be InterpretablePoseScorerV0")
     if scorer.authority_input_receipt_sha256 != (
@@ -360,10 +350,29 @@ def run_authenticated_interpretable_pocket_search(
         diversity_rmsd_angstrom=diversity_rmsd_angstrom,
         diversity_metric=diversity_metric,
         symmetry_permutations=symmetry_permutations,
+        precomputed_proposals=precomputed_proposals,
+        precomputed_placement_receipt=precomputed_placement_receipt,
     )
-    search_rows = (
-        placement_result.authenticated_search_result.search_result.rows
-    )
+    return build_interpretable_scored_search_result(placement_result, scorer)
+
+
+def build_interpretable_scored_search_result(
+    placement_result: PocketPlacementSearchResult,
+    scorer: InterpretablePoseScorerV0,
+) -> InterpretableScoredSearchResult:
+    """Attach exact score-term receipts after search ranking is complete."""
+
+    if not isinstance(placement_result, PocketPlacementSearchResult):
+        raise TypeError("placement_result must be PocketPlacementSearchResult")
+    if not isinstance(scorer, InterpretablePoseScorerV0):
+        raise TypeError("scorer must be InterpretablePoseScorerV0")
+    if scorer.authority_input_receipt_sha256 != (
+        placement_result.authenticated_search_result.authenticated_input_receipt_sha256
+    ):
+        raise InterpretableSearchResultError(
+            "scorer and placement result authority are cross-wired"
+        )
+    search_rows = placement_result.authenticated_search_result.search_result.rows
     retained_rows: list[InterpretableSearchTermRow] = []
     for row in search_rows:
         if row.succeeded:
@@ -398,12 +407,8 @@ def run_authenticated_interpretable_pocket_search(
             )
     return InterpretableScoredSearchResult(
         placement_search_result=placement_result,
-        scorer_contract_fingerprint_sha256=(
-            scorer.contract_fingerprint_sha256
-        ),
-        scorer_authority_input_receipt_sha256=(
-            scorer.authority_input_receipt_sha256
-        ),
+        scorer_contract_fingerprint_sha256=(scorer.contract_fingerprint_sha256),
+        scorer_authority_input_receipt_sha256=(scorer.authority_input_receipt_sha256),
         rows=tuple(retained_rows),
     )
 
@@ -414,5 +419,6 @@ __all__ = [
     "InterpretableScoredSearchResult",
     "InterpretableSearchResultError",
     "InterpretableSearchTermRow",
+    "build_interpretable_scored_search_result",
     "run_authenticated_interpretable_pocket_search",
 ]

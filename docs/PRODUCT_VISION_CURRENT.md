@@ -19,7 +19,7 @@ Primary source-of-truth documents:
 Betelgeuze is not positioned as a blanket Schrödinger/OpenMM/Desmond/FEP+ replacement. The current product identity is narrower and stronger:
 
 - local/private execution first,
-- ROCm/HIP-first acceleration with fallback-capable backend boundaries,
+- ROCm/HIP-first acceleration behind explicit, fail-closed backend boundaries,
 - restricted kinase / selected GPCR / ion-channel docking and ranking triage,
 - O/N/P/S H-bond-aware backmapping to recover chemical interpretability from coarse ligand representations,
 - bounded residual AI over physics-derived features,
@@ -205,8 +205,14 @@ Required caveat:
 
 ## Immediate next work
 
-1. Keep benchmark ledger generation and docs in sync.
-2. Wire H-Bond BackMap report rows into candidate-level output and GUI/report surfaces.
-3. Build the CASF/PDBBind public benchmark harness and Vina/GNINA comparison adapter.
-4. Convert DRD2/HTR2A/OPRM1 diagnostics into the GPCR hard-decoy suite input table.
-5. Add PocketMD Lite as a top-k-only refinement/reporting lane.
+H-Bond candidate wiring, PocketMD admission, and Selection Score Authority are
+implemented foundations and are no longer listed as future work. The next
+delivery sequence is:
+
+1. Close the restricted-pilot end-to-end path with one evidence-bound operator workflow.
+2. Activate the claim-locked Engine V2 product-shadow artifact producer only after
+   Stage 0 and Fresh-128; the operator evidence/second-opinion projection surface
+   exists, but no worker profile or customer execution path is enabled.
+3. Close all seven Engine V2 Stage 0 gates and bind exact source, wheels, SBOMs, environment, GNINA, review, and retention evidence before Fresh-128.
+4. Consolidate preparation, docking, verification, and reporting behind the standalone `DockingPipeline` core shared by CLI, benchmark, API, and product shadow.
+5. Establish ROCm/HIP `hip_safe` parity first, then qualify `hip_fast` only after denominator, term, validity, rank, V7-decision, repeatability, failure, and architecture gates pass.

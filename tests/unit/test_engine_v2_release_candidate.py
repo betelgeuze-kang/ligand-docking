@@ -87,6 +87,9 @@ def test_sbom_contract_uses_spdx_23() -> None:
     assert SPDX_VERSION == "SPDX-2.3"
     source = Path("tools/build_engine_v2_sbom.py").read_text(encoding="utf-8")
     assert "DEPENDS_ON" in source
+    assert "CONTAINS" in source
+    assert '"filesAnalyzed": True' in source
+    assert '"files": files' in source
     assert "wheel_sha256" in source
 
 
@@ -108,6 +111,9 @@ def test_release_workflow_splits_pinned_static_and_matrix_jobs() -> None:
     action_refs = re.findall(r"uses: [^@\s]+@([^\s]+)", workflow)
     assert action_refs
     assert all(re.fullmatch(r"[0-9a-f]{40}", ref) for ref in action_refs)
+    assert "validate_wheel_artifact" in workflow
+    assert "expected_extension_sha256" in workflow
+    assert "native wheel verification failed" in workflow
 
 
 def test_all_wheel_build_lanes_install_the_exact_backend_contract() -> None:

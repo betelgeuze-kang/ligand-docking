@@ -26,9 +26,9 @@ from tools.run_engine_v2_public_redocking_300 import (
 )
 
 
-SELF_REVIEW_SCHEMA_ID = "betelgeuze.engine_v2_stage0_solo_self_review_pass/1.2.0"
+SELF_REVIEW_SCHEMA_ID = "betelgeuze.engine_v2_stage0_solo_self_review_pass/1.3.0"
 OPERATIONAL_SCHEMA_ID = (
-    "betelgeuze.engine_v2_stage0_solo_operational_evidence/1.0.0"
+    "betelgeuze.engine_v2_stage0_solo_operational_evidence/1.1.0"
 )
 THRESHOLD_SCHEMA_ID = "betelgeuze.engine_v2_stage0_threshold_evidence/1.0.0"
 ATTESTATION_SCHEMA_ID = "betelgeuze.engine_v2_stage0_solo_attestation/1.0.0"
@@ -240,6 +240,8 @@ def build_policy(
         raise ValueError("Stage 0 policy assembly requires a clean worktree")
     head = _git(repo_root, "rev-parse", "HEAD")
     origin_main = _git(repo_root, "rev-parse", "refs/remotes/origin/main")
+    if head != origin_main:
+        raise ValueError("Stage 0 policy requires the exact origin/main commit")
     operational, threshold, pass1, pass2 = _verify_review_chain(
         repo_root=repo_root,
         operational_path=operational_path,
@@ -254,6 +256,7 @@ def build_policy(
     if (
         source_state.get("git_head_sha") != head
         or source_state.get("origin_main_sha") != origin_main
+        or source_state.get("dedicated_branch_internal_only") is not False
         or source_state.get("worktree_clean") is not True
         or source_state.get("runner_id") != RUNNER_ID
         or source_state.get("engine_implementation_sha256")
@@ -358,8 +361,8 @@ def build_policy(
         {
             "git_head_sha": head,
             "origin_main_sha": origin_main,
-            "integration_state": "frozen_dedicated_branch_commit",
-            "unmerged_execution_is_internal_only": True,
+            "integration_state": "exact_origin_main_commit",
+            "unmerged_execution_is_internal_only": False,
         }
     )
     files = source_freeze.get("files")
@@ -380,6 +383,23 @@ def build_policy(
     native = operator_environment.get("native_backend")
     if not isinstance(native, Mapping):
         raise ValueError("native operator environment is missing")
+    reviewed_artifact_bindings = {
+        "base_wheel_sha256": operator_environment.get("base_wheel_sha256"),
+        "native_cp310_wheel_sha256": operator_environment.get(
+            "native_wheel_sha256"
+        ),
+        "base_wheel_sbom_sha256": operator_environment.get(
+            "base_wheel_sbom_sha256"
+        ),
+        "native_wheel_sbom_sha256": operator_environment.get(
+            "native_wheel_sbom_sha256"
+        ),
+    }
+    if any(
+        reviewed_evidence.get(field) != expected
+        for field, expected in reviewed_artifact_bindings.items()
+    ):
+        raise ValueError("solo-reviewed wheel or SBOM binding is cross-wired")
     environment.update(
         {
             "versions": dict(operator_environment["versions"]),
@@ -390,11 +410,24 @@ def build_policy(
                 "torch_intraop_threads": 1,
                 "torch_interop_threads": 1,
             },
+            "python_wheel": {
+                "wheel_path": operator_environment["base_wheel_path"],
+                "wheel_sha256": operator_environment["base_wheel_sha256"],
+                "sbom_path": operator_environment["base_wheel_sbom_path"],
+                "sbom_sha256": operator_environment[
+                    "base_wheel_sbom_sha256"
+                ],
+            },
             "native_backend": {
                 "backend": native["backend"],
                 "distribution_version": native["distribution_version"],
                 "wheel_path": operator_environment["native_wheel_path"],
                 "wheel_sha256": operator_environment["native_wheel_sha256"],
+                "sbom_path": operator_environment["native_wheel_sbom_path"],
+                "sbom_sha256": operator_environment[
+                    "native_wheel_sbom_sha256"
+                ],
+                "extension_path": native["extension_path"],
                 "extension_sha256": native["extension_sha256"],
                 "cargo_lock_sha256": native["cargo_lock_sha256"],
                 "rustc_version": native["rustc_version"],

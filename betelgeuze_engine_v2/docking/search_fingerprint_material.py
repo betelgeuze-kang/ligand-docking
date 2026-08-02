@@ -21,6 +21,7 @@ import hashlib
 import json
 import math
 import sys
+from typing import TypeVar
 
 import torch
 
@@ -40,6 +41,7 @@ _SEARCH_MATERIAL_ATTRIBUTES = (
     "_search_material_unbound_validity_compatibility",
     "_search_material_symmetry_permutations",
 )
+_SearchResultT = TypeVar("_SearchResultT")
 
 
 class SearchFingerprintMaterialError(RuntimeError):
@@ -142,6 +144,73 @@ def recompute_search_fingerprint_sha256(result: object) -> str:
     return observed
 
 
+def bind_search_fingerprint_material(
+    result: _SearchResultT,
+    *,
+    atom_count: int,
+    diversity_threshold: float,
+    unbound_validity_compatibility: bool,
+    symmetry_permutations: Sequence[Sequence[int]],
+) -> _SearchResultT:
+    """Attach and verify one complete schema-v6 ranked-search identity.
+
+    The compatibility wrapper and the typed staged pipeline both terminate in
+    this function. This prevents the staged core from silently downgrading its
+    public result to the legacy cross-link-only fingerprint contract.
+    """
+
+    if isinstance(atom_count, bool) or not isinstance(atom_count, int):
+        raise SearchFingerprintMaterialError(
+            "search fingerprint atom count must be an integer"
+        )
+    if atom_count < 1:
+        raise SearchFingerprintMaterialError(
+            "search fingerprint atom count must be positive"
+        )
+    threshold = float(diversity_threshold)
+    if not math.isfinite(threshold) or threshold < 0.0:
+        raise SearchFingerprintMaterialError(
+            "search fingerprint diversity threshold is invalid"
+        )
+    if type(unbound_validity_compatibility) is not bool:
+        raise SearchFingerprintMaterialError(
+            "search fingerprint unbound-validity flag must be boolean"
+        )
+    canonical_permutations = tuple(
+        tuple(int(value) for value in permutation)
+        for permutation in symmetry_permutations
+    )
+    expected_atoms = list(range(atom_count))
+    if any(
+        len(permutation) != atom_count
+        or sorted(permutation) != expected_atoms
+        for permutation in canonical_permutations
+    ):
+        raise SearchFingerprintMaterialError(
+            "search fingerprint symmetry mapping is not a permutation"
+        )
+    object.__setattr__(result, "_search_material_atom_count", atom_count)
+    object.__setattr__(
+        result,
+        "_search_material_diversity_threshold",
+        threshold,
+    )
+    object.__setattr__(
+        result,
+        "_search_material_unbound_validity_compatibility",
+        unbound_validity_compatibility,
+    )
+    object.__setattr__(
+        result,
+        "_search_material_symmetry_permutations",
+        canonical_permutations,
+    )
+    material = _material_from_result(result)
+    object.__setattr__(result, "search_fingerprint_sha256", _sha256(material))
+    recompute_search_fingerprint_sha256(result)
+    return result
+
+
 def install_search_fingerprint_material() -> str:
     """Install schema-v6 material around the final active search function."""
 
@@ -207,34 +276,13 @@ def install_search_fingerprint_material() -> str:
             problem=problem,
             placement_center=placement_center,
         )
-        object.__setattr__(
+        return bind_search_fingerprint_material(
             result,
-            "_search_material_atom_count",
-            int(search_space.atom_count),
+            atom_count=int(search_space.atom_count),
+            diversity_threshold=threshold,
+            unbound_validity_compatibility=unbound_compatibility,
+            symmetry_permutations=canonical_permutations,
         )
-        object.__setattr__(
-            result,
-            "_search_material_diversity_threshold",
-            threshold,
-        )
-        object.__setattr__(
-            result,
-            "_search_material_unbound_validity_compatibility",
-            unbound_compatibility,
-        )
-        object.__setattr__(
-            result,
-            "_search_material_symmetry_permutations",
-            tuple(canonical_permutations),
-        )
-        material = _material_from_result(result)
-        object.__setattr__(
-            result,
-            "search_fingerprint_sha256",
-            _sha256(material),
-        )
-        recompute_search_fingerprint_sha256(result)
-        return result
 
     run_bounded_docking_search._betelgeuze_search_material_v6 = True
 
@@ -320,6 +368,7 @@ __all__ = [
     "DOCKING_SEARCH_RESULT_SCHEMA_ID",
     "SEARCH_FINGERPRINT_MATERIAL_INSTALLER_SCHEMA_ID",
     "SearchFingerprintMaterialError",
+    "bind_search_fingerprint_material",
     "install_search_fingerprint_material",
     "recompute_search_fingerprint_sha256",
 ]

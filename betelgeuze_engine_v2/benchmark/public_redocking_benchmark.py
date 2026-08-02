@@ -1295,6 +1295,16 @@ PUBLIC_REDOCKING_FRESH_HOLDOUT_CASE_IDS_SHA256 = (
 )
 
 
+def _is_authorized_result_case_id(value: object) -> bool:
+    """Accept the legacy namespace plus only the exact frozen Fresh exceptions."""
+
+    case_id = str(value or "")
+    return (
+        _CASE_ID_RE.fullmatch(case_id) is not None
+        or case_id in FROZEN_PUBLIC_REDOCKING_FRESH_HOLDOUT_CASE_IDS
+    )
+
+
 def require_public_redocking_contamination_registry(
     payload: object,
 ) -> Mapping[str, object]:
@@ -2710,7 +2720,7 @@ class PublicRedockingCaseProfile:
     ligand_artifact_sha256: str
 
     def __post_init__(self) -> None:
-        if _CASE_ID_RE.fullmatch(str(self.case_id or "")) is None:
+        if not _is_authorized_result_case_id(self.case_id):
             raise PublicRedockingBenchmarkError("profile case_id is invalid")
         if (
             type(self.heavy_atom_count) is not int
@@ -4331,7 +4341,7 @@ class PublicRedockingCaseResult:
     engine_v2_diagnostics: PublicRedockingEngineV2Diagnostics | None = None
 
     def __post_init__(self) -> None:
-        if _CASE_ID_RE.fullmatch(str(self.case_id or "")) is None:
+        if not _is_authorized_result_case_id(self.case_id):
             raise PublicRedockingBenchmarkError("result case_id is invalid")
         engine_id = str(self.engine_id or "").strip().lower()
         if engine_id not in PUBLIC_REDOCKING_PRIMARY_ENGINES:

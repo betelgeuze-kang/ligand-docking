@@ -4,9 +4,10 @@
 from __future__ import annotations
 
 import argparse
+import base64
 from contextlib import contextmanager, ExitStack
 import ctypes
-from dataclasses import replace
+from dataclasses import dataclass, replace
 import fcntl
 from functools import lru_cache
 import hashlib
@@ -21,6 +22,7 @@ import shutil
 import stat
 import subprocess
 import sys
+import threading
 import time
 from typing import Iterator, Mapping, Sequence
 import uuid
@@ -29,12 +31,19 @@ import torch
 
 import betelgeuze_engine_v2.benchmark.public_redocking_benchmark as benchmark_contract
 from betelgeuze_engine_v2.benchmark.blind_stage0 import (
+    STAGE0_CANONICAL_FRESH_RETENTION_ROOT,
     STAGE0_ENGINE_V2_ALGORITHM_PROFILE_ID,
+    STAGE0_EVALUATOR_DISTRIBUTION_VERSIONS,
     Stage0AdmissionError,
     VerifiedStage0Admission,
+    compute_stage0_policy_sha256,
     stage0_engine_v2_algorithm_profile,
     stage0_engine_implementation_sha256,
+    stage0_evaluation_pipeline_sha256,
     stage0_fresh_execution_runtime_arguments,
+    stage0_installed_distribution_file_ledger_sha256s,
+    stage0_loaded_runtime_module_origin_ledger,
+    stage0_runtime_dependency_authority,
     verify_stage0_admission,
 )
 from betelgeuze_engine_v2.benchmark.fresh_redocking_holdout import (
@@ -42,6 +51,39 @@ from betelgeuze_engine_v2.benchmark.fresh_redocking_holdout import (
     FrozenFreshRedockingCase,
     VerifiedFreshRedockingArchive,
     load_fresh_redocking_holdout_manifest,
+)
+from betelgeuze_engine_v2.benchmark.fresh_artifacts import (
+    FRESH_ARTIFACT_MANIFEST_FILENAME,
+    FRESH_EXECUTION_ENVIRONMENT_FILENAME,
+    FRESH_EXECUTION_LOG_FILENAME,
+    FRESH_STAGE0_POLICY_SNAPSHOT_FILENAME,
+    build_fresh_artifact_manifest,
+)
+from betelgeuze_engine_v2.benchmark.fresh_run_verifier import (
+    FRESH_COMPLETION_FILENAME,
+    FRESH_FAILURE_FILENAME,
+    FRESH_ENGINE_ROW_COUNT,
+    FRESH_ENGINE_V2_SLOT_COUNT,
+    FRESH_INTERNAL_REPORT_SCHEMA_ID,
+    FRESH_REPORT_FILENAME,
+    FRESH_RESERVATION_FILENAME,
+    FRESH_RUNNER_ID,
+    FRESH_RUN_ONCE_COMPLETION_SCHEMA_ID,
+    FRESH_RUN_ONCE_RESERVATION_SCHEMA_ID,
+    FRESH_RUN_TERMINAL_FAILURE_SCHEMA_ID,
+    build_candidate_slot_ledger,
+    canonical_sha256 as _fresh_canonical_sha256,
+    verify_completion_document,
+    verify_fresh_report_document,
+    verify_fresh_run_root,
+    verify_reservation_document,
+    verify_terminal_failure_document,
+)
+from betelgeuze_engine_v2.benchmark.public_redocking_pipeline import (
+    PUBLIC_REDOCKING_PIPELINE_ROLES,
+    PublicRedockingPipelineProfileError,
+    build_public_redocking_pipeline,
+    public_redocking_pipeline_profile_identity,
 )
 from betelgeuze_engine_v2.benchmark import (
     FROZEN_PUBLIC_REDOCKING_CASE_IDS,
@@ -75,6 +117,7 @@ from betelgeuze_engine_v2.benchmark import (
     verify_public_redocking_source_identifiers,
 )
 from betelgeuze_engine_v2.docking import (
+    AuthenticatedDockingSearchResult,
     ChemistryPoseScorerV1,
     ConformerPreparationConfig,
     ConformerPreparationError,
@@ -86,6 +129,7 @@ from betelgeuze_engine_v2.docking import (
     FIXED_SOURCE_BOUND_CONFORMER_PROFILE_ID,
     FixedSourceBoundConformerProposalReceipt,
     GuidedPlacementPolicy,
+    GuidedPlacementSearchResult,
     INTERACTION_AWARE_SOURCE_PAIRED_TORSION_RESCUE_REFINER_ID,
     INTERACTION_AWARE_SOURCE_PAIRED_TORSION_RESCUE_REFINER_VERSION,
     INTERACTION_AWARE_TORSION_CLEARANCE_REFINER_V8_ID,
@@ -103,12 +147,19 @@ from betelgeuze_engine_v2.docking import (
     UnsupportedVdwElementError,
     build_element_aware_authenticated_known_pocket_docking_problem,
     build_guided_placement_context,
+    build_scorer_v1_guided_search_result,
+    evaluate_scored_docking_candidates,
     fixed_source_bound_conformer_profile_document,
     fixed_source_bound_conformer_proposal_indices,
     generate_fixed_source_bound_conformer_docking_proposals,
+    generate_guided_docking_proposals,
     generate_source_paired_torsion_rescue_docking_proposals,
     prepare_source_bound_conformer_ensemble,
+    prepare_bounded_docking_search,
+    rank_validated_docking_candidates,
+    refine_bounded_docking_candidates,
     run_authenticated_scorer_v1_guided_search,
+    score_refined_docking_candidates,
     uniform_v3_ensemble_proposal_indices,
 )
 from betelgeuze_engine_v2.io import (
@@ -118,19 +169,19 @@ from betelgeuze_engine_v2.io import (
     parse_sdf_v2000,
 )
 from betelgeuze_engine_v2.molecular import AllAtomSystem
+from betelgeuze_engine_v2.pipeline import (
+    DockingPipelineExecution,
+    build_docking_pipeline_candidate_evidence,
+    build_docking_pipeline_recorded_evidence,
+    build_docking_pipeline_source_binding,
+)
 
 
 RUNNER_ID = PUBLIC_REDOCKING_RUNNER_ID
 DEFAULT_SEED = PUBLIC_REDOCKING_CASE_SEED_BASE
 POSEBUSTERS_VERSION = "0.3.1"
 RDKit_VERSION = "2022.09.5"
-EVALUATOR_DISTRIBUTION_VERSIONS = {
-    "numpy": "1.26.4",
-    "pandas": "2.3.3",
-    "PyYAML": "6.0.3",
-    "rdkit-pypi": "2022.9.5",
-    "posebusters": POSEBUSTERS_VERSION,
-}
+EVALUATOR_DISTRIBUTION_VERSIONS = dict(STAGE0_EVALUATOR_DISTRIBUTION_VERSIONS)
 _RUNTIME_ENVIRONMENT_KEYS = (
     "CUDA_VISIBLE_DEVICES",
     "HIP_VISIBLE_DEVICES",
@@ -250,6 +301,7 @@ _EXTERNAL_INPUT_ALIAS_NAMES = {
     "native": "native.sdf",
     "seed": "seed.sdf",
 }
+_MAX_EXTERNAL_PROCESS_LOG_BYTES = 64 * 1024
 _INOTIFY_DIRECTORY_MUTATION_MASK = (
     0x00000004  # IN_ATTRIB
     | 0x00000040  # IN_MOVED_FROM
@@ -399,6 +451,8 @@ class EngineV2PoseSearchOutcome:
         "diagnostic_evaluation_seconds",
         "diagnostics",
         "ranked_coordinates",
+        "source_binding",
+        "verified_candidate_evidence",
     )
 
     def __init__(
@@ -412,16 +466,23 @@ class EngineV2PoseSearchOutcome:
             | SourcePairedTorsionRescueProposalReceipt
             | None
         ) = None,
+        source_binding: Mapping[str, object] | None = None,
+        verified_candidate_evidence: tuple[Mapping[str, object], ...] = (),
     ) -> None:
         self.ranked_coordinates = tuple(ranked_coordinates)
         self.diagnostics = diagnostics
         self.diagnostic_evaluation_seconds = float(diagnostic_evaluation_seconds)
         self.development_proposal_receipt = development_proposal_receipt
+        self.source_binding = None if source_binding is None else dict(source_binding)
+        self.verified_candidate_evidence = tuple(
+            dict(row) for row in verified_candidate_evidence
+        )
 
 
 class ExecutionEnvironmentIdentity:
     __slots__ = (
         "boot_session_id_available",
+        "projection",
         "sha256",
         "timed_cache_reusable",
     )
@@ -432,10 +493,12 @@ class ExecutionEnvironmentIdentity:
         sha256: str,
         boot_session_id_available: bool,
         timed_cache_reusable: bool,
+        projection: Mapping[str, object],
     ) -> None:
         self.sha256 = sha256
         self.boot_session_id_available = boot_session_id_available
         self.timed_cache_reusable = timed_cache_reusable
+        self.projection = dict(projection)
 
 
 class PinnedExternalBinary:
@@ -1202,10 +1265,15 @@ def _engine_v2_execution_policy(
         base_policy = DEVELOPMENT_SOURCE_PAIRED_TORSION_RESCUE_CPU_POLICY
     else:
         base_policy = ENGINE_V2_CPU_POLICY
+    pipeline_profile_id, pipeline_profile_sha256 = _benchmark_pipeline_profile_identity(
+        variant_kind
+    )
     return {
         **base_policy,
         "scorer_backend": scorer_backend.value,
         "scorer_thread_count": 1,
+        "docking_pipeline_profile_id": pipeline_profile_id,
+        "docking_pipeline_profile_sha256": pipeline_profile_sha256,
         **_execution_profile_binding(execution_profile_sha256),
     }
 
@@ -1249,58 +1317,16 @@ def _evaluator_environment_versions() -> dict[str, str]:
 
 @lru_cache(maxsize=1)
 def _evaluator_distribution_payload_sha256s() -> dict[str, str]:
-    payload_sha256s: dict[str, str] = {}
-    for distribution_name in EVALUATOR_DISTRIBUTION_VERSIONS:
-        try:
-            distribution = metadata.distribution(distribution_name)
-        except metadata.PackageNotFoundError as exc:
-            raise PublicRedockingRunnerError(
-                f"evaluator dependency is missing: {distribution_name}"
-            ) from exc
-        files = tuple(distribution.files or ())
-        if not files:
-            raise PublicRedockingRunnerError(
-                f"evaluator dependency has no installed-file record: {distribution_name}"
-            )
-        rows: list[tuple[object, ...]] = []
-        for relative_path in sorted(files, key=str):
-            path = Path(distribution.locate_file(relative_path))
-            try:
-                status = path.lstat()
-            except FileNotFoundError:
-                rows.append((str(relative_path), "missing"))
-                continue
-            except OSError as exc:
-                raise PublicRedockingRunnerError(
-                    f"evaluator dependency file cannot be identified: {distribution_name}"
-                ) from exc
-            if stat.S_ISLNK(status.st_mode):
-                rows.append(
-                    (
-                        str(relative_path),
-                        "symlink",
-                        os.readlink(path),
-                    )
-                )
-            elif stat.S_ISREG(status.st_mode):
-                rows.append(
-                    (
-                        str(relative_path),
-                        "regular",
-                        status.st_size,
-                        _sha256_path(path),
-                    )
-                )
-            else:
-                rows.append(
-                    (
-                        str(relative_path),
-                        "other",
-                        stat.S_IFMT(status.st_mode),
-                    )
-                )
-        payload_sha256s[distribution_name] = _sha256_bytes(_canonical_bytes(rows))
-    return dict(sorted(payload_sha256s.items()))
+    try:
+        payload_sha256s = stage0_installed_distribution_file_ledger_sha256s()
+    except ValueError as exc:
+        raise PublicRedockingRunnerError(
+            "evaluator dependency file ledger is unavailable"
+        ) from exc
+    return {
+        distribution_name: payload_sha256s[distribution_name]
+        for distribution_name in sorted(EVALUATOR_DISTRIBUTION_VERSIONS)
+    }
 
 
 def _canonical_bytes(value: object) -> bytes:
@@ -1432,7 +1458,23 @@ def _static_runtime_environment_projection() -> dict[str, object]:
 def _execution_environment_identity(
     *,
     boot_id_path: Path | None = None,
+    runtime_dependency_authority: Mapping[str, object] | None = None,
+    evaluation_pipeline_sha256: str = "",
 ) -> ExecutionEnvironmentIdentity:
+    if (runtime_dependency_authority is None) != (not evaluation_pipeline_sha256):
+        raise PublicRedockingRunnerError(
+            "runtime dependency and evaluation-pipeline authority must be bound together"
+        )
+    if evaluation_pipeline_sha256 and (
+        len(evaluation_pipeline_sha256) != 64
+        or any(
+            character not in "0123456789abcdef"
+            for character in evaluation_pipeline_sha256
+        )
+    ):
+        raise PublicRedockingRunnerError(
+            "evaluation pipeline SHA-256 is invalid"
+        )
     active_boot_id_path = (
         Path("/proc/sys/kernel/random/boot_id")
         if boot_id_path is None
@@ -1459,10 +1501,20 @@ def _execution_environment_identity(
         "system_release": platform.release(),
         "torch_version": str(torch.__version__),
     }
+    if runtime_dependency_authority is not None:
+        projection.update(
+            {
+                "runtime_dependency_authority": dict(
+                    runtime_dependency_authority
+                ),
+                "evaluation_pipeline_sha256": evaluation_pipeline_sha256,
+            }
+        )
     return ExecutionEnvironmentIdentity(
         sha256=_sha256_bytes(_canonical_bytes(projection)),
         boot_session_id_available=boot_session_id_available,
         timed_cache_reusable=False,
+        projection=projection,
     )
 
 
@@ -1545,6 +1597,59 @@ def _owned_directory_descriptor(
 def _atomic_json(path: Path, payload: object) -> None:
     encoded = _canonical_bytes(payload) + b"\n"
     _atomic_bytes(path, encoded)
+
+
+def _exclusive_json(path: Path, payload: object, *, label: str) -> None:
+    encoded = _canonical_bytes(payload) + b"\n"
+    _exclusive_bytes(path, encoded, label=label)
+
+
+def _exclusive_bytes(path: Path, payload: bytes, *, label: str) -> None:
+    """Create one permanent owner-only artifact without a replacement path."""
+
+    if not isinstance(payload, bytes):
+        raise TypeError("exclusive payload must be bytes")
+    descriptor = -1
+    directory_descriptor = -1
+    try:
+        directory_descriptor = _owned_directory_descriptor(
+            path.parent,
+            create=True,
+        )
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+        if hasattr(os, "O_CLOEXEC"):
+            flags |= os.O_CLOEXEC
+        if hasattr(os, "O_NOFOLLOW"):
+            flags |= os.O_NOFOLLOW
+        descriptor = os.open(
+            path.name,
+            flags,
+            0o600,
+            dir_fd=directory_descriptor,
+        )
+        remaining = memoryview(payload)
+        while remaining:
+            written = os.write(descriptor, remaining)
+            if written <= 0:
+                raise OSError("exclusive artifact write made no progress")
+            remaining = remaining[written:]
+        os.fsync(descriptor)
+        os.close(descriptor)
+        descriptor = -1
+        os.fsync(directory_descriptor)
+    except FileExistsError as exc:
+        raise PublicRedockingRunnerError(
+            f"{label} already exists; replacement, resume, and rerun are forbidden"
+        ) from exc
+    except OSError as exc:
+        raise PublicRedockingRunnerError(
+            f"{label} could not be created exclusively"
+        ) from exc
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+        if directory_descriptor >= 0:
+            os.close(directory_descriptor)
 
 
 def _atomic_bytes(path: Path, payload: bytes) -> None:
@@ -1661,6 +1766,303 @@ def _quarantine_managed_regular_file(
         ) from exc
     finally:
         os.close(directory_descriptor)
+
+
+def _fresh_retention_root(repo_root: Path, output_root: Path) -> str:
+    try:
+        relative = output_root.resolve().relative_to(repo_root.resolve()).as_posix()
+    except ValueError as exc:
+        raise PublicRedockingRunnerError(
+            "fresh output root must be inside the repository retention boundary"
+        ) from exc
+    if relative != STAGE0_CANONICAL_FRESH_RETENTION_ROOT:
+        raise PublicRedockingRunnerError(
+            "fresh output root must be the canonical Fresh-128 retention root"
+        )
+    return relative
+
+
+def _reserve_fresh_run_once(
+    *,
+    repo_root: Path,
+    output_root: Path,
+    case_ids: Sequence[str],
+    manifest_sha256: str,
+    stage0_receipt: VerifiedStage0Admission,
+) -> dict[str, object]:
+    """Permanently consume the one Fresh-128 attempt before opening the archive."""
+
+    _require_fresh_live_run_once_consumption_authority()
+    _require_fresh_independent_stage0(stage0_receipt)
+    stage0_document = stage0_receipt.to_dict()
+    reservation: dict[str, object] = {
+        "schema_id": FRESH_RUN_ONCE_RESERVATION_SCHEMA_ID,
+        "runner_id": FRESH_RUNNER_ID,
+        "status": "reserved_before_holdout_open",
+        "reservation_nonce": uuid.uuid4().hex,
+        "reserved_at_unix_ns": time.time_ns(),
+        "retention_root": _fresh_retention_root(repo_root, output_root),
+        "fresh_holdout_manifest_sha256": manifest_sha256,
+        "case_ids_sha256": _fresh_canonical_sha256(list(case_ids)),
+        "stage0_policy_sha256": stage0_document["policy_sha256"],
+        "source_freeze_sha256": stage0_document["source_freeze_sha256"],
+        "execution_profile_sha256": stage0_document["execution_profile_sha256"],
+        "docking_pipeline_profile_id": stage0_document["docking_pipeline_profile_id"],
+        "docking_pipeline_profile_sha256": stage0_document[
+            "docking_pipeline_profile_sha256"
+        ],
+        "external_run_once_authority_id": (
+            stage0_document["external_run_once_authority_id"]
+        ),
+        "external_run_once_reservation_sha256": (
+            stage0_document["external_run_once_reservation_sha256"]
+        ),
+        "fresh_run_identity_sha256": stage0_document["fresh_run_identity_sha256"],
+        "external_worm_reservation_bound": True,
+        "expected_case_count": 128,
+        "expected_engine_case_row_count": FRESH_ENGINE_ROW_COUNT,
+        "expected_engine_v2_candidate_slot_count": FRESH_ENGINE_V2_SLOT_COUNT,
+        "single_execution_only": True,
+        "resume_allowed": False,
+        "rerun_allowed": False,
+        "result_dependent_changes_allowed": False,
+    }
+    reservation["reservation_sha256"] = _fresh_canonical_sha256(reservation)
+    verify_reservation_document(reservation)
+    _exclusive_json(
+        output_root / FRESH_RESERVATION_FILENAME,
+        reservation,
+        label="Fresh-128 run-once reservation",
+    )
+    # The reservation is intentionally never removed, including on preflight or
+    # infrastructure failure.  Any pre-existing output makes this one attempt a
+    # permanent fail-closed failure rather than a source for result replacement.
+    observed_entries = set(os.listdir(output_root))
+    if observed_entries != {FRESH_RESERVATION_FILENAME}:
+        raise PublicRedockingRunnerError(
+            "fresh output root was not pristine when the run-once reservation was created"
+        )
+    return reservation
+
+
+def _reject_protected_fresh_output_root(output_root: Path) -> None:
+    protected = {
+        FRESH_RESERVATION_FILENAME,
+        FRESH_REPORT_FILENAME,
+        FRESH_COMPLETION_FILENAME,
+        FRESH_FAILURE_FILENAME,
+        FRESH_ARTIFACT_MANIFEST_FILENAME,
+        FRESH_EXECUTION_ENVIRONMENT_FILENAME,
+        FRESH_EXECUTION_LOG_FILENAME,
+        FRESH_STAGE0_POLICY_SNAPSHOT_FILENAME,
+    }
+    try:
+        observed = set(os.listdir(output_root))
+    except FileNotFoundError:
+        return
+    if observed & protected:
+        raise PublicRedockingRunnerError(
+            "non-fresh execution cannot mutate a Fresh-128 evidence root"
+        )
+
+
+def _fresh_completion_document(
+    *,
+    reservation_sha256: str,
+    report_fingerprint_sha256: str,
+    report_file_sha256: str,
+    artifact_manifest_sha256: str,
+    artifact_manifest_file_sha256: str,
+) -> dict[str, object]:
+    completion: dict[str, object] = {
+        "schema_id": FRESH_RUN_ONCE_COMPLETION_SCHEMA_ID,
+        "runner_id": FRESH_RUNNER_ID,
+        "status": "complete",
+        "completed_at_unix_ns": time.time_ns(),
+        "reservation_sha256": reservation_sha256,
+        "report_fingerprint_sha256": report_fingerprint_sha256,
+        "report_file_sha256": report_file_sha256,
+        "artifact_manifest_sha256": artifact_manifest_sha256,
+        "artifact_manifest_file_sha256": artifact_manifest_file_sha256,
+        "case_count": 128,
+        "engine_case_row_count": FRESH_ENGINE_ROW_COUNT,
+        "engine_v2_candidate_slot_count": FRESH_ENGINE_V2_SLOT_COUNT,
+        "thresholds_modified_after_results": False,
+        "scorer_weights_modified_after_results": False,
+        "proposal_allocation_modified_after_results": False,
+        "failed_cases_rerun": False,
+        "fresh_cases_moved_to_development": False,
+    }
+    completion["completion_sha256"] = _fresh_canonical_sha256(completion)
+    verify_completion_document(
+        completion,
+        reservation_sha256=reservation_sha256,
+        report_fingerprint_sha256=report_fingerprint_sha256,
+        report_file_sha256=report_file_sha256,
+        artifact_manifest_sha256=artifact_manifest_sha256,
+        artifact_manifest_file_sha256=artifact_manifest_file_sha256,
+    )
+    return completion
+
+
+def _fresh_terminal_failure_document(
+    *,
+    reservation_sha256: str,
+    exc: BaseException,
+) -> dict[str, object]:
+    private = (
+        f"{exc.__class__.__module__}.{exc.__class__.__qualname__}: {exc}"
+    ).encode("utf-8", errors="replace")
+    failure: dict[str, object] = {
+        "schema_id": FRESH_RUN_TERMINAL_FAILURE_SCHEMA_ID,
+        "runner_id": FRESH_RUNNER_ID,
+        "status": "failed_terminal",
+        "failed_at_unix_ns": time.time_ns(),
+        "reservation_sha256": reservation_sha256,
+        "exception_type": (f"{exc.__class__.__module__}.{exc.__class__.__qualname__}"),
+        "private_error_sha256": hashlib.sha256(private).hexdigest(),
+        "private_error_byte_length": len(private),
+        "completion_published": False,
+        "rerun_allowed": False,
+        "result_replacement_allowed": False,
+        "claim_safe": False,
+    }
+    failure["failure_sha256"] = _fresh_canonical_sha256(failure)
+    verify_terminal_failure_document(
+        failure,
+        reservation_sha256=reservation_sha256,
+    )
+    return failure
+
+
+def _fresh_stage0_policy_snapshot(
+    policy_path: Path,
+    *,
+    stage0_receipt: VerifiedStage0Admission,
+) -> dict[str, object]:
+    """Retain the exact admitted Stage 0 policy as canonical JSON."""
+
+    try:
+        raw = policy_path.read_bytes()
+        payload = json.loads(raw.decode("utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise PublicRedockingRunnerError(
+            "admitted Stage 0 policy cannot be retained"
+        ) from exc
+    if (
+        not isinstance(payload, dict)
+        or payload.get("policy_sha256") != stage0_receipt.policy_sha256
+        or not isinstance(payload.get("source_freeze"), dict)
+        or not isinstance(payload["source_freeze"].get("execution_profile"), dict)
+    ):
+        raise PublicRedockingRunnerError(
+            "admitted Stage 0 policy snapshot is cross-wired"
+        )
+    return payload
+
+
+def _fresh_execution_environment_receipt(
+    identity: ExecutionEnvironmentIdentity,
+) -> dict[str, object]:
+    projection = dict(identity.projection)
+    if _sha256_bytes(_canonical_bytes(projection)) != identity.sha256:
+        raise PublicRedockingRunnerError(
+            "Fresh execution environment identity is inconsistent"
+        )
+    receipt: dict[str, object] = {
+        "schema_id": ("betelgeuze.engine_v2_fresh_execution_environment_receipt/1.0.0"),
+        "runner_id": FRESH_RUNNER_ID,
+        "environment": projection,
+        "execution_environment_sha256": identity.sha256,
+        "boot_session_id_available": identity.boot_session_id_available,
+        "cache_read_allowed": False,
+        "timed_cache_reusable": False,
+        "result_values_included": False,
+        "claim_safe": False,
+    }
+    receipt["receipt_sha256"] = _fresh_canonical_sha256(receipt)
+    return receipt
+
+
+def _fresh_execution_log_receipt(
+    executions: Sequence[VerifiedPublicRedockingCaseExecution],
+    *,
+    execution_environment_sha256: str,
+    external_process_logs: Mapping[tuple[str, str], Mapping[str, object]],
+) -> dict[str, object]:
+    entries: list[dict[str, object]] = []
+    observed_external_keys: set[tuple[str, str]] = set()
+    for execution in executions:
+        payload = execution.to_dict()
+        result = payload.get("result")
+        if not isinstance(result, dict):
+            raise PublicRedockingRunnerError("Fresh execution log result is incomplete")
+        engine_id = str(result.get("engine_id") or "")
+        case_id = str(result.get("case_id") or "")
+        if engine_id == "engine_v2":
+            process_log: Mapping[str, object] = {
+                "capture_mode": "structured_in_process",
+                "timeout_terminated": False,
+                "log_limit_terminated": False,
+                "stdout": _CapturedProcessStream(
+                    payload=b"",
+                    total_bytes=0,
+                    sha256=hashlib.sha256(b"").hexdigest(),
+                    overflowed=False,
+                ).to_dict(),
+                "stderr": _CapturedProcessStream(
+                    payload=b"",
+                    total_bytes=0,
+                    sha256=hashlib.sha256(b"").hexdigest(),
+                    overflowed=False,
+                ).to_dict(),
+            }
+        else:
+            key = (engine_id, case_id)
+            if key in observed_external_keys or key not in external_process_logs:
+                raise PublicRedockingRunnerError(
+                    "Fresh external process log ledger is incomplete"
+                )
+            observed_external_keys.add(key)
+            process_log = external_process_logs[key]
+        entries.append(
+            {
+                "engine_id": engine_id,
+                "case_id": case_id,
+                "status": result.get("status"),
+                "failure_code": result.get("failure_code", ""),
+                "execution_receipt_sha256": payload.get("receipt_sha256"),
+                "execution_environment_sha256": payload.get(
+                    "execution_environment_sha256"
+                ),
+                "process_log": dict(process_log),
+            }
+        )
+    if observed_external_keys != set(external_process_logs):
+        raise PublicRedockingRunnerError(
+            "Fresh external process log ledger contains extra rows"
+        )
+    if len(entries) != FRESH_ENGINE_ROW_COUNT or any(
+        row["execution_environment_sha256"] != execution_environment_sha256
+        for row in entries
+    ):
+        raise PublicRedockingRunnerError(
+            "Fresh execution log denominator or environment is incomplete"
+        )
+    receipt: dict[str, object] = {
+        "schema_id": "betelgeuze.engine_v2_fresh_execution_log_receipt/1.0.0",
+        "runner_id": FRESH_RUNNER_ID,
+        "execution_environment_sha256": execution_environment_sha256,
+        "engine_case_row_count": len(entries),
+        "entries": entries,
+        "entries_sha256": _fresh_canonical_sha256(entries),
+        "stdout_stderr_payload_retained": True,
+        "structured_execution_receipts_are_authoritative": True,
+        "result_replacement_allowed": False,
+        "claim_safe": False,
+    }
+    receipt["receipt_sha256"] = _fresh_canonical_sha256(receipt)
+    return receipt
 
 
 def _split_sdf_records(source: bytes) -> tuple[bytes, ...]:
@@ -2346,29 +2748,27 @@ def _evaluation_pipeline_sha256(
     repo_root: Path,
     *,
     evaluator_versions: dict[str, str] | None = None,
+    runtime_dependency_file_ledger_sha256s: Mapping[str, str] | None = None,
 ) -> str:
-    paths = (
-        repo_root / "betelgeuze_engine_v2/benchmark/public_redocking_benchmark.py",
-        Path(__file__).resolve(),
-    )
-    projection = {
-        "runner_id": RUNNER_ID,
-        "evaluator_distribution_versions": (
-            _evaluator_environment_versions()
-            if evaluator_versions is None
-            else dict(sorted(evaluator_versions.items()))
-        ),
-        "evaluator_distribution_payload_sha256s": (
-            _evaluator_distribution_payload_sha256s()
-        ),
-        "chemical_columns": list(CHEMICAL_COLUMNS),
-        "geometric_columns": list(GEOMETRIC_COLUMNS),
-        "source_sha256s": [
-            (path.relative_to(repo_root).as_posix(), _sha256_path(path))
-            for path in paths
-        ],
-    }
-    return hashlib.sha256(_canonical_bytes(projection)).hexdigest()
+    try:
+        return stage0_evaluation_pipeline_sha256(
+            repo_root,
+            runner_path=Path(__file__).resolve(),
+            evaluator_versions=(
+                _evaluator_environment_versions()
+                if evaluator_versions is None
+                else evaluator_versions
+            ),
+            runtime_dependency_file_ledger_sha256s=(
+                stage0_installed_distribution_file_ledger_sha256s()
+                if runtime_dependency_file_ledger_sha256s is None
+                else runtime_dependency_file_ledger_sha256s
+            ),
+        )
+    except (OSError, TypeError, ValueError) as exc:
+        raise PublicRedockingRunnerError(
+            "evaluation pipeline authority is unavailable"
+        ) from exc
 
 
 def _verify_external_binary(binary: PinnedExternalBinary) -> str:
@@ -3254,6 +3654,1172 @@ def _engine_v2_pose_coordinates(
     )
 
 
+@dataclass(frozen=True, slots=True)
+class _PreparedBenchmarkScientificInput:
+    request: Mapping[str, object]
+    case_id: str
+    paths: Mapping[str, Path]
+    seed: int
+    scorer_backend: ScorerBackend
+    variant_kind: str
+    receptor_bytes: bytes
+    seed_bytes: bytes
+    native_bytes: bytes
+    receptor: AllAtomSystem
+    ligand: AllAtomSystem
+    native: AllAtomSystem
+    authority: object
+    budget: DockingBudget
+    scorer: ChemistryPoseScorerV1
+    context: object
+    source_binding: Mapping[str, object]
+
+
+@dataclass(frozen=True, slots=True)
+class _BenchmarkConformerStage:
+    prepared: _PreparedBenchmarkScientificInput
+    source_conformer_ensemble: object | None
+
+
+@dataclass(frozen=True, slots=True)
+class _BenchmarkProposalStage:
+    conformers: _BenchmarkConformerStage
+    proposals: tuple[object, ...]
+    guided_receipt: object
+    development_proposal_receipt: object | None
+    v3_proposal_indices: tuple[int, ...]
+    rescue_allocation: object | None
+
+
+@dataclass(frozen=True, slots=True)
+class _BenchmarkAdmissionStage:
+    proposals: _BenchmarkProposalStage
+
+
+@dataclass(frozen=True, slots=True)
+class _BenchmarkRefinementStage:
+    admission: _BenchmarkAdmissionStage
+    refiner: object
+    refined: object
+
+
+@dataclass(frozen=True, slots=True)
+class _BenchmarkScoringStage:
+    refinement: _BenchmarkRefinementStage
+    scored: object
+
+
+@dataclass(frozen=True, slots=True)
+class _BenchmarkValidityStage:
+    scoring: _BenchmarkScoringStage
+    validated: object
+
+
+def _prepare_benchmark_scientific_input(
+    request: Mapping[str, object],
+) -> _PreparedBenchmarkScientificInput:
+    case_id = str(request.get("case_id") or "").strip()
+    raw_paths = request.get("paths")
+    seed = request.get("seed")
+    variant_kind = str(request.get("variant_kind") or "")
+    try:
+        scorer_backend = ScorerBackend(request.get("scorer_backend"))
+    except ValueError as exc:
+        raise PublicRedockingRunnerError("benchmark scorer backend is invalid") from exc
+    if (
+        not case_id
+        or not isinstance(raw_paths, Mapping)
+        or type(seed) is not int
+        or variant_kind
+        not in {"", "v8_clearance", "true_conformer", "source_paired_torsion_rescue"}
+    ):
+        raise PublicRedockingRunnerError("benchmark scientific request is invalid")
+    paths = {str(role): path for role, path in raw_paths.items()}
+    if any(not isinstance(path, Path) for path in paths.values()):
+        raise PublicRedockingRunnerError("benchmark scientific input paths are invalid")
+    development_true_conformer_profile = variant_kind == "true_conformer"
+    try:
+        receptor_bytes = paths["receptor"].read_bytes()
+        seed_bytes = paths["seed"].read_bytes()
+        native_bytes = paths["native"].read_bytes()
+        receptor = parse_pdb(
+            receptor_bytes,
+            source_id=f"{case_id}:receptor",
+            dtype=torch.float64,
+            device="cpu",
+            connectivity_policy="record_unrepresented",
+            unit_cell_policy="ignore",
+        )
+        ligand = parse_sdf_v2000(
+            seed_bytes.decode("ascii"),
+            source_id=f"{case_id}:seed",
+            dtype=torch.float64,
+            device="cpu",
+        )
+        native = parse_sdf_v2000(
+            native_bytes.decode("ascii"),
+            source_id=f"{case_id}:native",
+            dtype=torch.float64,
+            device="cpu",
+        )
+    except (KeyError, OSError, PDBParseError, SDFParseError, UnicodeDecodeError) as exc:
+        raise EngineV2PreparationFailure(
+            "input_parse_unsupported",
+            "Engine V2 input parsing is unsupported",
+            failure_code="engine_v2_input_unsupported",
+            development_proposal_failure_stage=(
+                "input_parse" if development_true_conformer_profile else ""
+            ),
+        ) from exc
+    try:
+        receptor = _assign_receptor_proxy_charges(receptor)
+        ligand = _assign_ligand_gasteiger_charges(ligand, paths["seed"])
+    except EngineV2CaseFailure as exc:
+        raise EngineV2PreparationFailure(
+            "partial_charge_assignment_failed",
+            "Engine V2 partial-charge preparation failed",
+            development_proposal_failure_stage=(
+                "partial_charge_assignment"
+                if development_true_conformer_profile
+                else ""
+            ),
+        ) from exc
+    native_coordinates = native.coordinates[0]
+    center = native_coordinates.mean(dim=0)
+    radius = max(
+        6.0,
+        float(
+            torch.linalg.vector_norm(native_coordinates - center, dim=-1).max().item()
+        )
+        + 4.0,
+    )
+    pocket = PocketDefinition(
+        scope=DockingScope.KNOWN_POCKET,
+        method_id="posebusters-crystal-redocking-sphere",
+        method_version="1.0.0",
+        coordinate_frame_id="posebusters-receptor-frame-v1",
+        center=center,
+        radius_angstrom=radius,
+        source_artifact_sha256=_sha256_bytes(native_bytes),
+        implementation_source_sha256=_sha256_bytes(
+            b"posebusters-crystal-redocking-sphere/1.0.0"
+        ),
+    )
+    budget = DockingBudget(
+        candidate_count=ENGINE_V2_CANDIDATE_COUNT,
+        top_k=5,
+        max_torsions=32,
+        max_refinement_steps=ENGINE_V2_CPU_POLICY["interaction_refinement_steps"],
+        translation_radius_angstrom=min(4.0, radius),
+        seed=seed,
+    )
+    try:
+        authority = build_element_aware_authenticated_known_pocket_docking_problem(
+            receptor,
+            ligand,
+            pocket,
+            receptor_margin_angstrom=4.0,
+        )
+        scorer = ChemistryPoseScorerV1(
+            authority,
+            receptor,
+            ligand,
+            implementation_source_sha256=_sha256_bytes(
+                b"engine-v2-public-redocking-scorer-v1"
+            ),
+            backend=scorer_backend,
+            backend_options=ScorerBackendOptions(thread_count=1),
+        )
+        context = build_guided_placement_context(authority, receptor, ligand)
+    except UnsupportedVdwElementError as exc:
+        raise EngineV2PreparationFailure(
+            "unsupported_vdw_element",
+            "Engine V2 validity/scoring tables do not cover an observed element",
+            development_proposal_failure_stage=(
+                "docking_context_preparation"
+                if development_true_conformer_profile
+                else ""
+            ),
+        ) from exc
+    except UnsupportedLargeRingSystemError as exc:
+        raise EngineV2PreparationFailure(
+            "unsupported_large_ring_system",
+            "Engine V2 rigid-ring lane does not support this ring system",
+            development_proposal_failure_stage=(
+                "docking_context_preparation"
+                if development_true_conformer_profile
+                else ""
+            ),
+        ) from exc
+    except (DockingAuthorityError, ElementAwareValidityError, ScorerV1Error) as exc:
+        raise EngineV2PreparationFailure(
+            "docking_context_preparation_failed",
+            "Engine V2 docking-context preparation failed",
+            development_proposal_failure_stage=(
+                "fixed_proposal_or_refiner_preparation"
+                if development_true_conformer_profile
+                else ""
+            ),
+        ) from exc
+    source_artifact_sha256s = {
+        role: _sha256_bytes(path.read_bytes()) for role, path in sorted(paths.items())
+    }
+    request_receipt = _sha256_bytes(
+        _canonical_bytes(
+            {
+                "case_id": case_id,
+                "seed": seed,
+                "scorer_backend": scorer_backend.value,
+                "variant_kind": variant_kind,
+                "source_artifact_sha256s": source_artifact_sha256s,
+                "algorithm_profile_id": request["algorithm_profile_id"],
+                "refiner_policy_id": request["refiner_policy_id"],
+                "refiner_config_sha256": request["refiner_config_sha256"],
+            }
+        )
+    )
+    source_binding = build_docking_pipeline_source_binding(
+        request_receipt_sha256=request_receipt,
+        source_receipt_sha256=authority.input_receipt_sha256,
+        source_artifact_sha256s=source_artifact_sha256s,
+    )
+    return _PreparedBenchmarkScientificInput(
+        request=dict(request),
+        case_id=case_id,
+        paths=paths,
+        seed=seed,
+        scorer_backend=scorer_backend,
+        variant_kind=variant_kind,
+        receptor_bytes=receptor_bytes,
+        seed_bytes=seed_bytes,
+        native_bytes=native_bytes,
+        receptor=receptor,
+        ligand=ligand,
+        native=native,
+        authority=authority,
+        budget=budget,
+        scorer=scorer,
+        context=context,
+        source_binding=source_binding,
+    )
+
+
+def _provide_benchmark_conformers(
+    prepared: _PreparedBenchmarkScientificInput,
+) -> _BenchmarkConformerStage:
+    ensemble = None
+    if prepared.variant_kind == "true_conformer":
+        try:
+            ensemble = prepare_source_bound_conformer_ensemble(
+                prepared.ligand,
+                prepared.seed_bytes,
+                config=_DEVELOPMENT_TRUE_CONFORMER_CONFIG,
+            )
+        except ConformerPreparationError as exc:
+            raise EngineV2PreparationFailure(
+                "docking_context_preparation_failed",
+                "Engine V2 source-bound conformer preparation failed",
+                development_proposal_failure_stage=(
+                    "source_bound_conformer_preparation"
+                ),
+            ) from exc
+    return _BenchmarkConformerStage(
+        prepared=prepared,
+        source_conformer_ensemble=ensemble,
+    )
+
+
+def _generate_benchmark_proposals(
+    conformers: _BenchmarkConformerStage,
+) -> _BenchmarkProposalStage:
+    prepared = conformers.prepared
+    development_receipt = None
+    rescue_allocation = None
+    try:
+        if prepared.variant_kind == "true_conformer":
+            if conformers.source_conformer_ensemble is None:
+                raise DockingAuthorityError(
+                    "source-bound conformer ensemble is unavailable"
+                )
+            proposals, guided_receipt, development_receipt = (
+                generate_fixed_source_bound_conformer_docking_proposals(
+                    prepared.authority,
+                    prepared.budget,
+                    prepared.context,
+                    receptor_system=prepared.receptor,
+                    ligand_system=prepared.ligand,
+                    source_conformer_ensemble=(conformers.source_conformer_ensemble),
+                )
+            )
+            v3_indices = fixed_source_bound_conformer_proposal_indices()
+        elif prepared.variant_kind == "source_paired_torsion_rescue":
+            proposals, guided_receipt, development_receipt = (
+                generate_source_paired_torsion_rescue_docking_proposals(
+                    prepared.authority,
+                    prepared.budget,
+                    prepared.context,
+                    receptor_system=prepared.receptor,
+                    ligand_system=prepared.ligand,
+                    policy=_DEVELOPMENT_SOURCE_PAIRED_TORSION_RESCUE_POLICY,
+                )
+            )
+            rescue_allocation = development_receipt.allocation
+            v3_indices = tuple(
+                target for target, _ in rescue_allocation.v3_target_parent_pairs
+            )
+        else:
+            guided_policy = GuidedPlacementPolicy(
+                uniform_v3_ensemble_enabled=True,
+            )
+            proposals, guided_receipt = generate_guided_docking_proposals(
+                prepared.authority,
+                prepared.budget,
+                prepared.context,
+                receptor_system=prepared.receptor,
+                ligand_system=prepared.ligand,
+                policy=guided_policy,
+            )
+            v3_indices = uniform_v3_ensemble_proposal_indices(
+                prepared.context,
+                prepared.budget,
+                guided_policy,
+            )
+        if (
+            len(proposals) != ENGINE_V2_CANDIDATE_COUNT
+            or guided_receipt.proposal_fingerprint_sha256s
+            != tuple(proposal.fingerprint_sha256 for proposal in proposals)
+        ):
+            raise DockingAuthorityError(
+                "benchmark proposal denominator or receipt is cross-wired"
+            )
+        if development_receipt is not None and (
+            development_receipt.guided_receipt.receipt_sha256
+            != guided_receipt.receipt_sha256
+            or development_receipt.proposal_fingerprint_sha256s
+            != tuple(proposal.fingerprint_sha256 for proposal in proposals)
+        ):
+            raise DockingAuthorityError("development proposal evidence is cross-wired")
+    except (
+        DockingAuthorityError,
+        ElementAwareValidityError,
+        ScorerV1Error,
+        UnsupportedVdwElementError,
+        UnsupportedLargeRingSystemError,
+    ) as exc:
+        raise EngineV2PreparationFailure(
+            "docking_context_preparation_failed",
+            "Engine V2 proposal generation failed",
+            development_proposal_failure_stage="fixed_proposal_or_refiner_preparation",
+            development_proposal_receipt=development_receipt,
+        ) from exc
+    return _BenchmarkProposalStage(
+        conformers=conformers,
+        proposals=tuple(proposals),
+        guided_receipt=guided_receipt,
+        development_proposal_receipt=development_receipt,
+        v3_proposal_indices=tuple(v3_indices),
+        rescue_allocation=rescue_allocation,
+    )
+
+
+def _admit_benchmark_proposals(
+    proposals: _BenchmarkProposalStage,
+) -> _BenchmarkAdmissionStage:
+    if len(proposals.proposals) != ENGINE_V2_CANDIDATE_COUNT or tuple(
+        row.proposal_index for row in proposals.proposals
+    ) != tuple(range(ENGINE_V2_CANDIDATE_COUNT)):
+        raise PublicRedockingRunnerError(
+            "benchmark geometric admission denominator is invalid"
+        )
+    for proposal in proposals.proposals:
+        proposal.assert_integrity()
+    return _BenchmarkAdmissionStage(proposals=proposals)
+
+
+def _benchmark_preparation_counts(
+    prepared: _PreparedBenchmarkScientificInput,
+) -> dict[str, int]:
+    return {
+        "receptor_atom_count": prepared.receptor.atom_count,
+        "ligand_atom_count": prepared.ligand.atom_count,
+        "receptor_partial_charge_count": sum(
+            atom.partial_charge_e is not None for atom in prepared.receptor.atoms
+        ),
+        "ligand_partial_charge_count": sum(
+            atom.partial_charge_e is not None for atom in prepared.ligand.atoms
+        ),
+        "receptor_donor_count": len(prepared.scorer.context.receptor_donors),
+        "receptor_acceptor_count": len(prepared.scorer.context.receptor_acceptors),
+        "ligand_donor_count": len(prepared.scorer.context.ligand_donors),
+        "ligand_acceptor_count": len(prepared.scorer.context.ligand_acceptors),
+        "receptor_ion_proxy_count": sum(
+            atom.element.upper() in {"NA", "MG", "CA", "CO", "ZN", "FE"}
+            for atom in prepared.receptor.atoms
+        ),
+    }
+
+
+def _benchmark_candidate_schema_id(
+    prepared: _PreparedBenchmarkScientificInput,
+) -> str:
+    return (
+        PUBLIC_REDOCKING_ENGINE_V2_TORSION_RESCUE_CANDIDATE_SCHEMA_ID
+        if prepared.variant_kind == "source_paired_torsion_rescue"
+        else PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID
+    )
+
+
+def _benchmark_diagnostic_schema_id(
+    prepared: _PreparedBenchmarkScientificInput,
+) -> str:
+    return (
+        PUBLIC_REDOCKING_ENGINE_V2_TORSION_RESCUE_DIAGNOSTIC_SCHEMA_ID
+        if prepared.variant_kind == "source_paired_torsion_rescue"
+        else benchmark_contract.PUBLIC_REDOCKING_ENGINE_V2_DIAGNOSTIC_SCHEMA_ID
+    )
+
+
+def _staged_search_failure_diagnostics(
+    proposals: _BenchmarkProposalStage,
+    error_code: str,
+) -> PublicRedockingEngineV2Diagnostics:
+    prepared = proposals.conformers.prepared
+    receipt = proposals.guided_receipt
+    return PublicRedockingEngineV2Diagnostics(
+        schema_id=_benchmark_diagnostic_schema_id(prepared),
+        preparation_status="success",
+        **_benchmark_preparation_counts(prepared),
+        scorer_backend_receipt=prepared.scorer.backend_receipt.to_dict(),
+        source_paired_torsion_rescue_proposal_receipt=(
+            proposals.development_proposal_receipt.to_dict()
+            if isinstance(
+                proposals.development_proposal_receipt,
+                SourcePairedTorsionRescueProposalReceipt,
+            )
+            else None
+        ),
+        candidates=tuple(
+            PublicRedockingEngineV2CandidateDiagnostic(
+                proposal_index=index,
+                status="failure",
+                proposal_mode=receipt.proposal_modes[index],
+                ensemble_source_proposal_index=(
+                    receipt.ensemble_source_proposal_indices[index]
+                ),
+                torsion_rescue_parent_proposal_index=(
+                    receipt.torsion_rescue_parent_proposal_indices[index]
+                ),
+                error_code=error_code,
+                schema_id=_benchmark_candidate_schema_id(prepared),
+            )
+            for index in range(ENGINE_V2_CANDIDATE_COUNT)
+        ),
+    )
+
+
+def _refine_benchmark_candidates(
+    admission: _BenchmarkAdmissionStage,
+    scorer: ChemistryPoseScorerV1,
+) -> _BenchmarkRefinementStage:
+    prepared = admission.proposals.conformers.prepared
+    if scorer is not prepared.scorer:
+        raise PublicRedockingRunnerError("benchmark scorer binding is cross-wired")
+    try:
+        if prepared.variant_kind == "v8_clearance":
+            refiner = InteractionAwareTorsionClearanceEnsembleRefinerV8(
+                prepared.authority,
+                prepared.receptor,
+                prepared.ligand,
+                implementation_source_sha256=_sha256_bytes(
+                    b"engine-v2-interaction-aware-torsion-clearance-ensemble-refiner-v8"
+                ),
+                v3_proposal_indices=admission.proposals.v3_proposal_indices,
+                clearance_guard_config=_DEVELOPMENT_V8_CLEARANCE_CONFIG,
+            )
+        else:
+            refiner = InteractionAwareTorsionContactEnsembleRefinerV7(
+                prepared.authority,
+                prepared.receptor,
+                prepared.ligand,
+                implementation_source_sha256=_sha256_bytes(
+                    (
+                        b"engine-v2-source-paired-torsion-rescue-refiner-v1"
+                        if prepared.variant_kind == "source_paired_torsion_rescue"
+                        else b"engine-v2-interaction-aware-torsion-contact-ensemble-refiner-v7"
+                    )
+                ),
+                v3_proposal_indices=admission.proposals.v3_proposal_indices,
+                source_paired_torsion_rescue_profile=(
+                    prepared.variant_kind == "source_paired_torsion_rescue"
+                ),
+                source_paired_torsion_rescue_allocation=(
+                    admission.proposals.rescue_allocation
+                ),
+            )
+        search = prepare_bounded_docking_search(
+            prepared.authority.search_space,
+            prepared.budget,
+            scorer,
+            refiner=refiner,
+            validity_context=prepared.authority.validity_context,
+            diversity_rmsd_angstrom=0.0,
+            problem=prepared.authority.problem,
+            proposals=admission.proposals.proposals,
+        )
+        refined = refine_bounded_docking_candidates(search)
+    except (
+        DockingAuthorityError,
+        DockingSearchError,
+        ElementAwareValidityError,
+        ScorerV1Error,
+    ) as exc:
+        raise EngineV2SearchCaseFailure(
+            "Engine V2 refinement stage failed",
+            diagnostics=_staged_search_failure_diagnostics(
+                admission.proposals,
+                "search_execution_failed",
+            ),
+            development_proposal_receipt=(
+                admission.proposals.development_proposal_receipt
+            ),
+        ) from exc
+    return _BenchmarkRefinementStage(
+        admission=admission,
+        refiner=refiner,
+        refined=refined,
+    )
+
+
+def _score_benchmark_candidates(
+    refinement: _BenchmarkRefinementStage,
+    scorer: ChemistryPoseScorerV1,
+) -> _BenchmarkScoringStage:
+    prepared = refinement.admission.proposals.conformers.prepared
+    if scorer is not prepared.scorer:
+        raise PublicRedockingRunnerError("benchmark scorer changed after refinement")
+    scored = score_refined_docking_candidates(refinement.refined)
+    if len(scored.rows) != ENGINE_V2_CANDIDATE_COUNT or any(
+        row.pose_validity is not None or row.selection_eligible for row in scored.rows
+    ):
+        raise PublicRedockingRunnerError(
+            "benchmark scorer precomputed validity or changed the denominator"
+        )
+    return _BenchmarkScoringStage(refinement=refinement, scored=scored)
+
+
+def _validate_benchmark_candidates(
+    scoring: _BenchmarkScoringStage,
+) -> _BenchmarkValidityStage:
+    validated = evaluate_scored_docking_candidates(scoring.scored)
+    if len(validated.rows) != ENGINE_V2_CANDIDATE_COUNT:
+        raise PublicRedockingRunnerError(
+            "benchmark validity stage changed the candidate denominator"
+        )
+    return _BenchmarkValidityStage(scoring=scoring, validated=validated)
+
+
+def _rank_benchmark_candidates(
+    validity: _BenchmarkValidityStage,
+) -> EngineV2PoseSearchOutcome:
+    scoring = validity.scoring
+    refinement = scoring.refinement
+    proposals = refinement.admission.proposals
+    prepared = proposals.conformers.prepared
+    try:
+        search = rank_validated_docking_candidates(validity.validated)
+        authenticated = AuthenticatedDockingSearchResult(
+            authenticated_input_receipt_sha256=(
+                prepared.authority.input_receipt_sha256
+            ),
+            search_result=search,
+        )
+        guided = GuidedPlacementSearchResult(
+            guided_receipt=proposals.guided_receipt,
+            authenticated_search_result=authenticated,
+        )
+        result = build_scorer_v1_guided_search_result(guided, prepared.scorer)
+    except (
+        DockingAuthorityError,
+        DockingSearchError,
+        ElementAwareValidityError,
+        ScorerV1Error,
+    ) as exc:
+        raise EngineV2SearchCaseFailure(
+            "Engine V2 rank stage failed",
+            diagnostics=_staged_search_failure_diagnostics(
+                proposals,
+                "search_execution_failed",
+            ),
+            development_proposal_receipt=proposals.development_proposal_receipt,
+        ) from exc
+    if (
+        len(search.rows) != ENGINE_V2_CANDIDATE_COUNT
+        or len(result.rows) != ENGINE_V2_CANDIDATE_COUNT
+        or tuple(row.proposal_index for row in search.rows)
+        != tuple(range(ENGINE_V2_CANDIDATE_COUNT))
+    ):
+        raise EngineV2SearchCaseFailure(
+            "Engine V2 search did not retain the fixed candidate denominator",
+            diagnostics=_staged_search_failure_diagnostics(
+                proposals,
+                "candidate_denominator_incomplete",
+            ),
+            development_proposal_receipt=proposals.development_proposal_receipt,
+        )
+    term_rows = {row.proposal_index: row for row in result.rows}
+    successful_rows = tuple(
+        sorted(
+            (
+                row
+                for row in search.rows
+                if row.status == "success"
+                and row.proposal is not None
+                and row.score is not None
+                and math.isfinite(float(row.score))
+            ),
+            key=lambda row: (float(row.score), row.proposal_index),
+        )
+    )
+    diagnostic_evaluation_started = time.perf_counter()
+    evaluated_by_index: dict[
+        int,
+        tuple[float, bool, bool, tuple[str, ...], str],
+    ] = {}
+    if successful_rows:
+        records = _serialize_pose_records(
+            prepared.paths["seed"],
+            tuple(row.proposal.coordinates for row in successful_rows),
+            case_id=prepared.case_id,
+        )
+        rmsds, geometric, chemical, failed_checks = _posebusters_outcomes(
+            b"".join(records),
+            native_payload=prepared.native_bytes,
+            receptor_payload=prepared.receptor_bytes,
+            expected_pose_count=len(successful_rows),
+        )
+        evaluated_by_index = {
+            row.proposal_index: (
+                rmsd,
+                geometric_valid,
+                chemical_valid,
+                candidate_failed_checks,
+                _sha256_bytes(record),
+            )
+            for row, rmsd, geometric_valid, chemical_valid, candidate_failed_checks, record in zip(
+                successful_rows,
+                rmsds,
+                geometric,
+                chemical,
+                failed_checks,
+                records,
+                strict=True,
+            )
+        }
+    refinement_receipts = refinement.refiner.receipts
+    candidate_rows: list[PublicRedockingEngineV2CandidateDiagnostic] = []
+    full_terms_by_index: dict[int, Mapping[str, object]] = {}
+    full_refinement_by_index: dict[int, Mapping[str, object]] = {}
+    for row in search.rows:
+        if row.proposal_index in evaluated_by_index:
+            terms = term_rows[row.proposal_index].terms
+            if terms is None or row.proposal is None or row.score is None:
+                raise PublicRedockingRunnerError(
+                    "successful Engine V2 candidate lacks retained score terms"
+                )
+            rmsd, geometric_valid, chemical_valid, failed_check_ids, artifact_sha256 = (
+                evaluated_by_index[row.proposal_index]
+            )
+            proposal_mode = proposals.guided_receipt.proposal_modes[row.proposal_index]
+            ensemble_source = proposals.guided_receipt.ensemble_source_proposal_indices[
+                row.proposal_index
+            ]
+            rescue_parent = (
+                proposals.guided_receipt.torsion_rescue_parent_proposal_indices[
+                    row.proposal_index
+                ]
+            )
+            refinement_receipt = refinement_receipts.get(
+                row.proposal_fingerprint_sha256
+            )
+            if refinement_receipt is None:
+                raise PublicRedockingRunnerError(
+                    "successful Engine V2 candidate lacks refinement receipt"
+                )
+            refinement_payload = dict(refinement_receipt)
+            full_terms_by_index[row.proposal_index] = terms.to_dict()
+            full_refinement_by_index[row.proposal_index] = refinement_payload
+            candidate_rows.append(
+                PublicRedockingEngineV2CandidateDiagnostic(
+                    proposal_index=row.proposal_index,
+                    status="success",
+                    proposal_mode=proposal_mode,
+                    ensemble_source_proposal_index=ensemble_source,
+                    torsion_rescue_parent_proposal_index=rescue_parent,
+                    proposal_fingerprint_sha256=row.proposal.fingerprint_sha256,
+                    coordinate_fingerprint_sha256=(
+                        row.proposal.coordinate_fingerprint_sha256
+                    ),
+                    score=float(row.score),
+                    rmsd_angstrom=rmsd,
+                    geometric_valid=geometric_valid,
+                    chemical_valid=chemical_valid,
+                    pose_artifact_sha256=artifact_sha256,
+                    score_terms_receipt_sha256=terms.receipt_sha256,
+                    hbond_count=terms.hbond_count,
+                    selection_eligible=row.selection_eligible,
+                    posebusters_failed_check_ids=failed_check_ids,
+                    refinement_receipt_sha256=str(refinement_payload["receipt_sha256"]),
+                    refinement_initial_penalty_binary64_hex=str(
+                        refinement_payload["initial_penalty_binary64_hex"]
+                    ),
+                    refinement_final_penalty_binary64_hex=str(
+                        refinement_payload["final_penalty_binary64_hex"]
+                    ),
+                    refinement_accepted_steps=int(refinement_payload["accepted_steps"]),
+                    refinement_accepted_rotation_steps=int(
+                        refinement_payload.get("accepted_rotation_steps", 0)
+                    ),
+                    refinement_original_pose_valid=bool(
+                        refinement_payload["original_pose_valid"]
+                    ),
+                    refinement_total_translation_binary64_hex=tuple(
+                        str(value)
+                        for value in refinement_payload[
+                            "total_translation_binary64_hex"
+                        ]
+                    ),
+                    refinement_total_rotation_vector_binary64_hex=tuple(
+                        str(value)
+                        for value in refinement_payload.get(
+                            "total_rotation_vector_binary64_hex",
+                            ((0.0).hex(), (0.0).hex(), (0.0).hex()),
+                        )
+                    ),
+                    refinement_receipt_payload=refinement_payload,
+                    score_term_binary64_hex={
+                        name: float(getattr(terms, name)).hex()
+                        for name in (
+                            "typed_vdw",
+                            "electrostatics",
+                            "directional_hbond",
+                            "hydrophobic_contact",
+                            "desolvation_proxy",
+                            "torsion_energy",
+                            "ligand_strain",
+                            "weak_pocket_prior",
+                            "total_score",
+                        )
+                    },
+                    schema_id=_benchmark_candidate_schema_id(prepared),
+                )
+            )
+        else:
+            candidate_rows.append(
+                PublicRedockingEngineV2CandidateDiagnostic(
+                    proposal_index=row.proposal_index,
+                    status="failure",
+                    proposal_mode=proposals.guided_receipt.proposal_modes[
+                        row.proposal_index
+                    ],
+                    ensemble_source_proposal_index=(
+                        proposals.guided_receipt.ensemble_source_proposal_indices[
+                            row.proposal_index
+                        ]
+                    ),
+                    torsion_rescue_parent_proposal_index=(
+                        proposals.guided_receipt.torsion_rescue_parent_proposal_indices[
+                            row.proposal_index
+                        ]
+                    ),
+                    error_code=str(row.error_code or "candidate_failed"),
+                    schema_id=_benchmark_candidate_schema_id(prepared),
+                )
+            )
+    ranked_proposals: tuple[object, ...] = ()
+    ranking_failure: IncompleteRankedPoseSet | None = None
+    try:
+        ranked_proposals = _benchmark_ranked_proposals(search)
+    except IncompleteRankedPoseSet as exc:
+        ranking_failure = exc
+    diagnostic_seconds = time.perf_counter() - diagnostic_evaluation_started
+    diagnostics = PublicRedockingEngineV2Diagnostics(
+        schema_id=_benchmark_diagnostic_schema_id(prepared),
+        preparation_status="success",
+        **_benchmark_preparation_counts(prepared),
+        scorer_backend_receipt=prepared.scorer.backend_receipt.to_dict(),
+        candidates=tuple(candidate_rows),
+        diagnostic_evaluation_seconds=diagnostic_seconds,
+        source_paired_torsion_rescue_proposal_receipt=(
+            proposals.development_proposal_receipt.to_dict()
+            if isinstance(
+                proposals.development_proposal_receipt,
+                SourcePairedTorsionRescueProposalReceipt,
+            )
+            else None
+        ),
+    )
+    if ranking_failure is not None:
+        raise EngineV2SearchCaseFailure(
+            str(ranking_failure),
+            diagnostics=diagnostics,
+            failure_code=ranking_failure.failure_code,
+            diagnostic_evaluation_seconds=diagnostic_seconds,
+            development_proposal_receipt=proposals.development_proposal_receipt,
+        ) from ranking_failure
+    verified_candidates = tuple(
+        build_docking_pipeline_candidate_evidence(
+            candidate_id=str(
+                proposals.proposals[candidate.proposal_index].candidate_id
+            ),
+            source_candidate=candidate.to_dict(),
+            scorer_v1_terms=full_terms_by_index.get(candidate.proposal_index),
+            refinement_receipt=full_refinement_by_index.get(candidate.proposal_index),
+            baseline_disagreement={
+                "available": False,
+                "reason": "baseline_not_evaluated",
+            },
+        )
+        for candidate in candidate_rows
+    )
+    return EngineV2PoseSearchOutcome(
+        ranked_coordinates=tuple(proposal.coordinates for proposal in ranked_proposals),
+        diagnostics=diagnostics,
+        diagnostic_evaluation_seconds=diagnostic_seconds,
+        development_proposal_receipt=proposals.development_proposal_receipt,
+        source_binding=prepared.source_binding,
+        verified_candidate_evidence=verified_candidates,
+    )
+
+
+class _BenchmarkPipelineComponent:
+    """One immutable owner of exactly one benchmark scientific stage."""
+
+    __slots__ = ("role", "component_id", "_sealed")
+
+    def __init__(self, role: str) -> None:
+        if role not in PUBLIC_REDOCKING_PIPELINE_ROLES:
+            raise PublicRedockingPipelineProfileError(
+                "benchmark pipeline component role is invalid"
+            )
+        object.__setattr__(self, "role", role)
+        object.__setattr__(
+            self,
+            "component_id",
+            f"betelgeuze.engine_v2.public_redocking_{role}/1.0.0",
+        )
+        object.__setattr__(self, "_sealed", True)
+
+    def __setattr__(self, name: str, value: object) -> None:
+        if getattr(self, "_sealed", False):
+            raise PublicRedockingPipelineProfileError(
+                "benchmark pipeline callback owner is immutable"
+            )
+        object.__setattr__(self, name, value)
+
+    def pipeline_configuration(self) -> Mapping[str, object]:
+        return {
+            "role": self.role,
+            "staged_scientific_operation": True,
+            "downstream_precomputation_forbidden": True,
+        }
+
+    def prepare(self, request: object) -> _PreparedBenchmarkScientificInput:
+        if self.role != "input_preparer" or not isinstance(request, Mapping):
+            raise PublicRedockingRunnerError("benchmark pipeline request is invalid")
+        paths = request.get("paths")
+        required_roles = {"receptor", "reference", "native", "seed"}
+        if not isinstance(paths, Mapping) or not required_roles.issubset(paths):
+            raise PublicRedockingRunnerError(
+                "benchmark pipeline input roles are incomplete"
+            )
+        if any(not isinstance(paths[role], Path) for role in required_roles):
+            raise PublicRedockingRunnerError(
+                "benchmark pipeline input paths are invalid"
+            )
+        return _prepare_benchmark_scientific_input(request)
+
+    def provide(self, prepared: object) -> _BenchmarkConformerStage:
+        if (
+            self.role != "conformer_provider"
+            or type(prepared) is not _PreparedBenchmarkScientificInput
+        ):
+            raise PublicRedockingRunnerError(
+                "benchmark conformer provider input is invalid"
+            )
+        return _provide_benchmark_conformers(prepared)
+
+    def generate(
+        self,
+        prepared: object,
+        conformers: object,
+    ) -> _BenchmarkProposalStage:
+        if (
+            self.role != "proposal_generator"
+            or type(prepared) is not _PreparedBenchmarkScientificInput
+            or type(conformers) is not _BenchmarkConformerStage
+            or conformers.prepared is not prepared
+        ):
+            raise PublicRedockingRunnerError(
+                "benchmark proposal generator input is invalid"
+            )
+        return _generate_benchmark_proposals(conformers)
+
+    def admit(
+        self,
+        prepared: object,
+        proposals: object,
+    ) -> _BenchmarkAdmissionStage:
+        if (
+            self.role != "geometric_admission"
+            or type(prepared) is not _PreparedBenchmarkScientificInput
+            or type(proposals) is not _BenchmarkProposalStage
+            or proposals.conformers.prepared is not prepared
+        ):
+            raise PublicRedockingRunnerError(
+                "benchmark geometric admission denominator is invalid"
+            )
+        return _admit_benchmark_proposals(proposals)
+
+    def bind(
+        self,
+        prepared: object,
+        admission: object,
+    ) -> ChemistryPoseScorerV1:
+        if (
+            self.role != "scorer"
+            or type(prepared) is not _PreparedBenchmarkScientificInput
+            or type(admission) is not _BenchmarkAdmissionStage
+            or admission.proposals.conformers.prepared is not prepared
+        ):
+            raise PublicRedockingRunnerError("benchmark scorer binding is invalid")
+        return prepared.scorer
+
+    def refine(
+        self,
+        prepared: object,
+        admission: object,
+        scorer: object,
+    ) -> _BenchmarkRefinementStage:
+        if (
+            self.role != "refiner"
+            or type(prepared) is not _PreparedBenchmarkScientificInput
+            or type(admission) is not _BenchmarkAdmissionStage
+            or admission.proposals.conformers.prepared is not prepared
+            or scorer is not prepared.scorer
+        ):
+            raise PublicRedockingRunnerError("benchmark refiner binding is invalid")
+        return _refine_benchmark_candidates(admission, prepared.scorer)
+
+    def score(
+        self,
+        prepared: object,
+        refined: object,
+        scorer: object,
+    ) -> _BenchmarkScoringStage:
+        if (
+            self.role != "scorer"
+            or type(prepared) is not _PreparedBenchmarkScientificInput
+            or type(refined) is not _BenchmarkRefinementStage
+            or refined.admission.proposals.conformers.prepared is not prepared
+            or scorer is not prepared.scorer
+        ):
+            raise PublicRedockingRunnerError("benchmark scoring stage is cross-wired")
+        return _score_benchmark_candidates(refined, prepared.scorer)
+
+    def evaluate(
+        self,
+        prepared: object,
+        scored: object,
+    ) -> _BenchmarkValidityStage:
+        if (
+            self.role != "validity_evaluator"
+            or type(prepared) is not _PreparedBenchmarkScientificInput
+            or type(scored) is not _BenchmarkScoringStage
+            or scored.refinement.admission.proposals.conformers.prepared is not prepared
+        ):
+            raise PublicRedockingRunnerError(
+                "benchmark validity evaluator input is invalid"
+            )
+        return _validate_benchmark_candidates(scored)
+
+    def rank(
+        self,
+        prepared: object,
+        scored: object,
+        validity: object,
+    ) -> EngineV2PoseSearchOutcome:
+        if (
+            self.role != "ranker"
+            or type(prepared) is not _PreparedBenchmarkScientificInput
+            or type(scored) is not _BenchmarkScoringStage
+            or type(validity) is not _BenchmarkValidityStage
+            or validity.scoring is not scored
+            or scored.refinement.admission.proposals.conformers.prepared is not prepared
+        ):
+            raise PublicRedockingRunnerError(
+                "benchmark raw score ranking evidence is invalid"
+            )
+        outcome = _rank_benchmark_candidates(validity)
+        if len(outcome.ranked_coordinates) != 5:
+            raise PublicRedockingRunnerError(
+                "benchmark rank stage did not retain five output poses"
+            )
+        return outcome
+
+    def record(
+        self,
+        execution: DockingPipelineExecution,
+    ) -> Mapping[str, object]:
+        if (
+            self.role != "evidence_recorder"
+            or type(execution.scored_result) is not EngineV2PoseSearchOutcome
+        ):
+            raise PublicRedockingRunnerError(
+                "benchmark pipeline evidence recorder is cross-wired"
+            )
+        outcome = execution.scored_result
+        if (
+            outcome.source_binding is None
+            or len(outcome.verified_candidate_evidence) != ENGINE_V2_CANDIDATE_COUNT
+            or len(execution.stage_outputs) != 9
+        ):
+            raise PublicRedockingRunnerError(
+                "benchmark pipeline lacks complete verified candidate evidence"
+            )
+        proposal_stage = execution.stage_outputs[2]
+        verified_execution_evidence = build_docking_pipeline_recorded_evidence(
+            source_binding=outcome.source_binding,
+            candidates=[dict(row) for row in outcome.verified_candidate_evidence],
+            candidate_ids=proposal_stage.candidate_ids,
+            candidate_binding_sha256=proposal_stage.candidate_binding_sha256,
+        )
+        return {
+            "outcome": outcome,
+            "pipeline_profile_id": execution.pipeline_profile_id,
+            "pipeline_profile_sha256": execution.pipeline_profile_sha256,
+            "ranking_evidence": execution.ranking_evidence,
+            "verified_execution_evidence": verified_execution_evidence,
+        }
+
+
+@lru_cache(maxsize=4)
+def _benchmark_pipeline_profile_identity(
+    variant_kind: str,
+) -> tuple[str, str]:
+    if variant_kind not in {
+        "",
+        "v8_clearance",
+        "true_conformer",
+        "source_paired_torsion_rescue",
+    }:
+        raise PublicRedockingRunnerError(
+            "benchmark pipeline variant identity is invalid"
+        )
+    implementation_sha256 = stage0_engine_implementation_sha256(
+        Path(__file__).resolve().parents[1]
+    )
+    return public_redocking_pipeline_profile_identity(
+        engine_implementation_sha256=implementation_sha256,
+        variant_kind=variant_kind,
+    )
+
+
+def _run_engine_v2_benchmark_pipeline(
+    case_id: str,
+    paths: Mapping[str, Path],
+    *,
+    seed: int,
+    scorer_backend: ScorerBackend,
+    development_v8_clearance_variant: bool = False,
+    development_true_conformer_profile: bool = False,
+    development_source_paired_torsion_rescue: bool = False,
+) -> EngineV2PoseSearchOutcome:
+    variant_kind = _development_variant_kind(
+        development_v8_clearance_variant=development_v8_clearance_variant,
+        development_true_conformer_profile=development_true_conformer_profile,
+        development_source_paired_torsion_rescue=(
+            development_source_paired_torsion_rescue
+        ),
+    )
+    profile_id, expected_profile_sha256 = _benchmark_pipeline_profile_identity(
+        variant_kind
+    )
+    request: dict[str, object] = {
+        "case_id": case_id,
+        "paths": dict(paths),
+        "seed": seed,
+        "scorer_backend": scorer_backend.value,
+        "variant_kind": variant_kind,
+        "algorithm_profile_id": (ENGINE_V2_CPU_POLICY["algorithm_profile_id"]),
+        "refiner_policy_id": ENGINE_V2_CPU_POLICY["interaction_refiner"],
+        "refiner_config_sha256": (
+            ENGINE_V2_CPU_POLICY["interaction_refiner_config_sha256"]
+        ),
+    }
+
+    callback_components = {
+        "input_preparer": _BenchmarkPipelineComponent("input_preparer"),
+        "conformer_provider": _BenchmarkPipelineComponent("conformer_provider"),
+        "proposal_generator": _BenchmarkPipelineComponent("proposal_generator"),
+        "geometric_admission": _BenchmarkPipelineComponent("geometric_admission"),
+        "scorer": _BenchmarkPipelineComponent("scorer"),
+        "refiner": _BenchmarkPipelineComponent("refiner"),
+        "validity_evaluator": _BenchmarkPipelineComponent("validity_evaluator"),
+        "ranker": _BenchmarkPipelineComponent("ranker"),
+        "evidence_recorder": _BenchmarkPipelineComponent("evidence_recorder"),
+    }
+    callbacks = {
+        "input_preparer.prepare": callback_components["input_preparer"].prepare,
+        "conformer_provider.provide": callback_components["conformer_provider"].provide,
+        "proposal_generator.generate": callback_components[
+            "proposal_generator"
+        ].generate,
+        "geometric_admission.admit": callback_components["geometric_admission"].admit,
+        "scorer.bind": callback_components["scorer"].bind,
+        "refiner.refine": callback_components["refiner"].refine,
+        "scorer.score": callback_components["scorer"].score,
+        "validity_evaluator.evaluate": callback_components[
+            "validity_evaluator"
+        ].evaluate,
+        "ranker.rank": callback_components["ranker"].rank,
+        "evidence_recorder.record": callback_components["evidence_recorder"].record,
+    }
+    pipeline = build_public_redocking_pipeline(
+        engine_implementation_sha256=stage0_engine_implementation_sha256(
+            Path(__file__).resolve().parents[1]
+        ),
+        variant_kind=variant_kind,
+        callbacks=callbacks,
+    )
+    verified = pipeline.run_verified(request)
+    recorded = dict(verified.recorded_evidence)
+    outcome = recorded.get("outcome")
+    if type(outcome) is not EngineV2PoseSearchOutcome:
+        raise PublicRedockingRunnerError(
+            "benchmark pipeline did not retain its typed outcome"
+        )
+    if (
+        recorded.get("pipeline_profile_id") != profile_id
+        or recorded.get("pipeline_profile_sha256") != expected_profile_sha256
+        or len(verified.candidate_evidence) != ENGINE_V2_CANDIDATE_COUNT
+        or recorded.get("ranking_evidence")
+        != {
+            "ranker_id": ("betelgeuze.engine_v2.public_redocking_ranker/1.0.0"),
+            "ranking_semantics": "raw_score_then_proposal_index",
+            "raw_top5_proposal_indices": [
+                candidate.proposal_index
+                for candidate in outcome.diagnostics.score_ranked_candidates[:5]
+            ],
+            "validity_filtered_before_raw_rank": False,
+            "invalid_top1_observable": True,
+        }
+    ):
+        raise PublicRedockingRunnerError(
+            "benchmark pipeline execution receipt is cross-wired"
+        )
+    return outcome
+
+
 def _engine_v2_failure_code(exc: Exception) -> str:
     if isinstance(exc, EngineV2CaseFailure):
         return exc.failure_code
@@ -3366,7 +4932,11 @@ def _engine_v2_result(
             pose_arguments["development_true_conformer_profile"] = True
         if development_source_paired_torsion_rescue:
             pose_arguments["development_source_paired_torsion_rescue"] = True
-        outcome = _engine_v2_pose_coordinates(case_id, paths, **pose_arguments)
+        outcome = _run_engine_v2_benchmark_pipeline(
+            case_id,
+            paths,
+            **pose_arguments,
+        )
         if type(outcome) is not EngineV2PoseSearchOutcome:
             raise PublicRedockingRunnerError(
                 "Engine V2 search did not return typed diagnostics"
@@ -3878,6 +5448,168 @@ def _validate_development_true_conformer_case_receipt(
     return payload
 
 
+class _CapturedProcessStream:
+    __slots__ = ("overflowed", "payload", "sha256", "total_bytes")
+
+    def __init__(
+        self,
+        *,
+        payload: bytes,
+        total_bytes: int,
+        sha256: str,
+        overflowed: bool,
+    ) -> None:
+        self.payload = payload
+        self.total_bytes = total_bytes
+        self.sha256 = sha256
+        self.overflowed = overflowed
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "payload_base64": base64.b64encode(self.payload).decode("ascii"),
+            "retained_byte_count": len(self.payload),
+            "observed_byte_count": self.total_bytes,
+            "observed_sha256": self.sha256,
+            "payload_complete": not self.overflowed,
+        }
+
+
+class _BoundedProcessResult:
+    __slots__ = (
+        "log_limit_exceeded",
+        "returncode",
+        "stderr",
+        "stdout",
+        "timed_out",
+    )
+
+    def __init__(
+        self,
+        *,
+        returncode: int,
+        timed_out: bool,
+        log_limit_exceeded: bool,
+        stdout: _CapturedProcessStream,
+        stderr: _CapturedProcessStream,
+    ) -> None:
+        self.returncode = returncode
+        self.timed_out = timed_out
+        self.log_limit_exceeded = log_limit_exceeded
+        self.stdout = stdout
+        self.stderr = stderr
+
+    def log_document(self) -> dict[str, object]:
+        return {
+            "capture_mode": "bounded_subprocess_pipe",
+            "timeout_terminated": self.timed_out,
+            "log_limit_terminated": self.log_limit_exceeded,
+            "stdout": self.stdout.to_dict(),
+            "stderr": self.stderr.to_dict(),
+        }
+
+
+def _run_bounded_external_process(
+    command: Sequence[str],
+    *,
+    pass_fds: Sequence[int],
+    timeout_seconds: int,
+) -> _BoundedProcessResult:
+    """Run one external engine with bounded, retained stdout/stderr payloads."""
+
+    try:
+        process = subprocess.Popen(
+            tuple(command),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            pass_fds=tuple(pass_fds),
+        )
+    except OSError as exc:
+        raise PublicRedockingRunnerError(
+            "external engine infrastructure failed"
+        ) from exc
+    if process.stdout is None or process.stderr is None:
+        process.kill()
+        process.wait()
+        raise PublicRedockingRunnerError("external engine log pipes are unavailable")
+
+    overflow = threading.Event()
+    captures: dict[str, _CapturedProcessStream] = {}
+
+    def read_stream(name: str, stream) -> None:
+        digest = hashlib.sha256()
+        retained = bytearray()
+        total = 0
+        exceeded = False
+        while True:
+            chunk = stream.read(16 * 1024)
+            if not chunk:
+                break
+            digest.update(chunk)
+            total += len(chunk)
+            available = _MAX_EXTERNAL_PROCESS_LOG_BYTES - len(retained)
+            if available > 0:
+                retained.extend(chunk[:available])
+            if total > _MAX_EXTERNAL_PROCESS_LOG_BYTES:
+                exceeded = True
+                overflow.set()
+        captures[name] = _CapturedProcessStream(
+            payload=bytes(retained),
+            total_bytes=total,
+            sha256=digest.hexdigest(),
+            overflowed=exceeded,
+        )
+
+    threads = (
+        threading.Thread(
+            target=read_stream,
+            args=("stdout", process.stdout),
+            daemon=True,
+        ),
+        threading.Thread(
+            target=read_stream,
+            args=("stderr", process.stderr),
+            daemon=True,
+        ),
+    )
+    for thread in threads:
+        thread.start()
+    deadline = time.monotonic() + timeout_seconds
+    timed_out = False
+    log_limit_exceeded = False
+    while process.poll() is None:
+        if overflow.is_set():
+            log_limit_exceeded = True
+            process.kill()
+            break
+        if time.monotonic() >= deadline:
+            timed_out = True
+            process.kill()
+            break
+        time.sleep(0.01)
+    process.wait()
+    for thread in threads:
+        thread.join(timeout=5.0)
+    process.stdout.close()
+    process.stderr.close()
+    if any(thread.is_alive() for thread in threads) or set(captures) != {
+        "stdout",
+        "stderr",
+    }:
+        raise PublicRedockingRunnerError(
+            "external engine logs could not be retained completely"
+        )
+    log_limit_exceeded = log_limit_exceeded or any(
+        capture.overflowed for capture in captures.values()
+    )
+    return _BoundedProcessResult(
+        returncode=int(process.returncode),
+        timed_out=timed_out,
+        log_limit_exceeded=log_limit_exceeded,
+        stdout=captures["stdout"],
+        stderr=captures["stderr"],
+    )
+
+
 def _external_result(
     case_id: str,
     engine_id: str,
@@ -3892,6 +5624,7 @@ def _external_result(
     seed: int,
     timeout_seconds: int,
     execution_profile_sha256: str = "",
+    process_log_sink: dict[tuple[str, str], dict[str, object]] | None = None,
 ) -> tuple[PublicRedockingCaseResult, tuple[str, ...]]:
     _verify_external_binary(binary)
     active_external_paths = paths if external_paths is None else external_paths
@@ -3909,6 +5642,28 @@ def _external_result(
             create=True,
         )
         stack.callback(os.close, output_directory_descriptor)
+
+        def discard_failed_output() -> None:
+            try:
+                failed_status = os.stat(
+                    output.name,
+                    dir_fd=output_directory_descriptor,
+                    follow_symlinks=False,
+                )
+            except FileNotFoundError:
+                return
+            if not stat.S_ISREG(failed_status.st_mode):
+                raise PublicRedockingRunnerError(
+                    "failed external pose output is not a regular file"
+                )
+            try:
+                os.unlink(output.name, dir_fd=output_directory_descriptor)
+                os.fsync(output_directory_descriptor)
+            except OSError as exc:
+                raise PublicRedockingRunnerError(
+                    "failed external pose output could not be discarded"
+                ) from exc
+
         try:
             stale_status = os.stat(
                 output.name,
@@ -3949,11 +5704,8 @@ def _external_result(
         )
         started = time.perf_counter()
         try:
-            completed = subprocess.run(
+            completed = _run_bounded_external_process(
                 tuple(executed_command),
-                check=False,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
                 pass_fds=tuple(
                     dict.fromkeys(
                         (
@@ -3963,15 +5715,29 @@ def _external_result(
                         )
                     )
                 ),
-                timeout=timeout_seconds,
+                timeout_seconds=timeout_seconds,
             )
-        except subprocess.TimeoutExpired:
+        except PublicRedockingRunnerError:
+            discard_failed_output()
+            raise
+        finally:
+            _verify_external_binary(binary)
+        runtime = time.perf_counter() - started
+        if process_log_sink is not None:
+            log_key = (engine_id, case_id)
+            if log_key in process_log_sink:
+                raise PublicRedockingRunnerError(
+                    "external engine process log was already retained"
+                )
+            process_log_sink[log_key] = completed.log_document()
+        if completed.timed_out:
+            discard_failed_output()
             return (
                 PublicRedockingCaseResult(
                     case_id=case_id,
                     engine_id=engine_id,
                     status="failure",
-                    runtime_seconds=time.perf_counter() - started,
+                    runtime_seconds=runtime,
                     **_result_input_fields(input_sha256s),
                     execution_command=command,
                     execution_policy=execution_policy,
@@ -3979,14 +5745,23 @@ def _external_result(
                 ),
                 command,
             )
-        except (OSError, subprocess.SubprocessError) as exc:
-            raise PublicRedockingRunnerError(
-                "external engine infrastructure failed"
-            ) from exc
-        finally:
-            _verify_external_binary(binary)
-        runtime = time.perf_counter() - started
+        if completed.log_limit_exceeded:
+            discard_failed_output()
+            return (
+                PublicRedockingCaseResult(
+                    case_id=case_id,
+                    engine_id=engine_id,
+                    status="failure",
+                    runtime_seconds=runtime,
+                    **_result_input_fields(input_sha256s),
+                    execution_command=command,
+                    execution_policy=execution_policy,
+                    failure_code="external_log_limit_exceeded",
+                ),
+                command,
+            )
         if completed.returncode != 0:
+            discard_failed_output()
             return (
                 PublicRedockingCaseResult(
                     case_id=case_id,
@@ -4025,10 +5800,14 @@ def _external_result(
             raise PublicRedockingRunnerError(
                 "external pose output is not a regular file"
             )
+        os.fchmod(output_descriptor, 0o600)
+        if stat.S_IMODE(os.fstat(output_descriptor).st_mode) != 0o600:
+            raise PublicRedockingRunnerError("external pose output is not owner-only")
         output_payload = _bytes_from_descriptor(output_descriptor)
         try:
             records = _split_sdf_records(output_payload)
         except PublicRedockingRunnerError:
+            discard_failed_output()
             return (
                 PublicRedockingCaseResult(
                     case_id=case_id,
@@ -4043,6 +5822,7 @@ def _external_result(
                 command,
             )
         if len(records) != 5:
+            discard_failed_output()
             return (
                 PublicRedockingCaseResult(
                     case_id=case_id,
@@ -4216,6 +5996,95 @@ def _require_stage0_execution_arguments(
         blockers.append("stage0_execution_profile_sha256_invalid")
     if blockers:
         raise Stage0AdmissionError(tuple(blockers))
+
+
+def _require_stage0_prebound_runtime_authority(
+    *,
+    policy_path: Path,
+    repo_root: Path,
+    receipt: VerifiedStage0Admission,
+) -> tuple[dict[str, object], str]:
+    """Remeasure and match runtime/evaluator authority before any Fresh output."""
+
+    try:
+        payload = json.loads(policy_path.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            raise ValueError("policy is not an object")
+        if (
+            payload.get("policy_sha256") != receipt.policy_sha256
+            or compute_stage0_policy_sha256(payload) != receipt.policy_sha256
+        ):
+            raise ValueError("policy identity changed")
+        source_freeze = payload.get("source_freeze")
+        environment_freeze = payload.get("environment_freeze")
+        if not isinstance(source_freeze, Mapping) or not isinstance(
+            environment_freeze, Mapping
+        ):
+            raise ValueError("runtime authority is missing")
+        execution_profile = source_freeze.get("execution_profile")
+        if not isinstance(execution_profile, Mapping):
+            raise ValueError("execution profile is missing")
+        __import__("numpy")
+        __import__("pandas")
+        __import__("yaml")
+        _load_rdkit_modules()
+        _load_posebusters()
+        stage0_loaded_runtime_module_origin_ledger()
+        current_authority = stage0_runtime_dependency_authority()
+        file_ledgers = current_authority.get(
+            "installed_distribution_file_ledger_sha256s"
+        )
+        if not isinstance(file_ledgers, Mapping):
+            raise ValueError("runtime file ledger is missing")
+        current_evaluation_pipeline_sha256 = stage0_evaluation_pipeline_sha256(
+            repo_root,
+            runner_path=Path(__file__).resolve(),
+            runtime_dependency_file_ledger_sha256s=file_ledgers,
+        )
+    except (OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise Stage0AdmissionError(
+            ("stage0_runtime_dependency_authority_unavailable",)
+        ) from exc
+    blockers: list[str] = []
+    if (
+        execution_profile.get("runtime_dependency_authority")
+        != current_authority
+        or environment_freeze.get("runtime_dependency_authority")
+        != current_authority
+    ):
+        blockers.append("stage0_runtime_dependency_authority_mismatch")
+    if (
+        execution_profile.get("evaluation_pipeline_sha256")
+        != current_evaluation_pipeline_sha256
+        or environment_freeze.get("evaluation_pipeline_sha256")
+        != current_evaluation_pipeline_sha256
+    ):
+        blockers.append("stage0_evaluation_pipeline_mismatch")
+    if blockers:
+        raise Stage0AdmissionError(tuple(blockers))
+    return current_authority, current_evaluation_pipeline_sha256
+
+
+def _require_fresh_independent_stage0(
+    receipt: VerifiedStage0Admission,
+) -> None:
+    receipt.receipt_sha256
+    document = receipt.to_dict()
+    if (
+        document.get("governance_mode") != "independent_three_role"
+        or document.get("independent_review_complete") is not True
+        or not document.get("reviewer_id")
+        or document.get("reviewer_id") == document.get("operator_id")
+    ):
+        raise Stage0AdmissionError(("fresh_holdout_independent_attestation_required",))
+
+
+def _require_fresh_live_run_once_consumption_authority() -> None:
+    """Fail closed until one factory-only atomic external consume API exists."""
+
+    raise Stage0AdmissionError(
+        ("fresh_live_run_once_consumption_authority_unavailable",)
+    )
 
 
 def _case_ids_from_arguments(arguments: argparse.Namespace) -> tuple[str, ...]:
@@ -4833,9 +6702,12 @@ def _fresh_internal_report(
     policy: PublicRedockingEvaluationPolicy,
     stage0_receipt: VerifiedStage0Admission,
     manifest_sha256: str,
+    run_once_reservation_sha256: str,
 ) -> dict[str, object]:
     """Build a claim-safe internal report without reusing the invalidated 300 schema."""
 
+    _require_fresh_independent_stage0(stage0_receipt)
+    stage0_document = stage0_receipt.to_dict()
     expected_ids = tuple(case_ids)
     if len(expected_ids) != 128 or tuple(profile.case_id for profile in profiles) != (
         expected_ids
@@ -4859,6 +6731,13 @@ def _fresh_internal_report(
         row_map=row_map,
         executions_by_engine=executions_by_engine,
         execution_profile_sha256=stage0_receipt.execution_profile_sha256,
+    )
+    engine_v2_rows = [row.to_dict() for row in rows_by_engine["engine_v2"]]
+    engine_v2_execution_receipts = execution_receipts[: len(expected_ids)]
+    candidate_slots = build_candidate_slot_ledger(
+        case_ids=expected_ids,
+        engine_v2_rows=engine_v2_rows,
+        engine_v2_execution_receipts=engine_v2_execution_receipts,
     )
     primary_metrics = benchmark_contract._derive_scope_all_metrics(
         row_map,
@@ -4907,18 +6786,42 @@ def _fresh_internal_report(
                 }
             )
     report: dict[str, object] = {
-        "schema_id": "betelgeuze.engine_v2_fresh_redocking_internal_report/1.0.0",
-        "runner_id": "betelgeuze.engine_v2_fresh_redocking_128_runner/1.0.0",
+        "schema_id": FRESH_INTERNAL_REPORT_SCHEMA_ID,
+        "runner_id": FRESH_RUNNER_ID,
         "analysis_scope": "fresh_internal_blind_holdout",
         "case_count": len(expected_ids),
         "engine_case_row_count": len(row_map),
+        "engine_v2_candidate_slot_count": len(candidate_slots),
+        "engine_v2_candidate_slots": candidate_slots,
+        "run_once_reservation_sha256": run_once_reservation_sha256,
         "fresh_holdout_manifest_sha256": manifest_sha256,
         "stage0_admission": {
-            "policy_sha256": stage0_receipt.policy_sha256,
-            "source_freeze_sha256": stage0_receipt.source_freeze_sha256,
-            "execution_profile_sha256": (stage0_receipt.execution_profile_sha256),
-            "governance_mode": stage0_receipt.governance_mode,
-            "independent_review_complete": stage0_receipt.independent_review_complete,
+            "policy_sha256": stage0_document["policy_sha256"],
+            "source_freeze_sha256": stage0_document["source_freeze_sha256"],
+            "execution_profile_sha256": stage0_document["execution_profile_sha256"],
+            "docking_pipeline_profile_id": stage0_document[
+                "docking_pipeline_profile_id"
+            ],
+            "docking_pipeline_profile_sha256": stage0_document[
+                "docking_pipeline_profile_sha256"
+            ],
+            "governance_mode": stage0_document["governance_mode"],
+            "independent_review_complete": stage0_document[
+                "independent_review_complete"
+            ],
+            "trusted_review_time_authority_id": (
+                stage0_document["trusted_review_time_authority_id"]
+            ),
+            "trusted_review_time_evidence_sha256": (
+                stage0_document["trusted_review_time_evidence_sha256"]
+            ),
+            "external_run_once_authority_id": (
+                stage0_document["external_run_once_authority_id"]
+            ),
+            "external_run_once_reservation_sha256": (
+                stage0_document["external_run_once_reservation_sha256"]
+            ),
+            "fresh_run_identity_sha256": stage0_document["fresh_run_identity_sha256"],
         },
         "policy": policy.to_dict(),
         "profiles": [profile.to_dict() for profile in profiles],
@@ -5006,7 +6909,7 @@ def _report_engine_identities(
     )
 
 
-def main(argv: Sequence[str] | None = None) -> int:
+def _main(argv: Sequence[str] | None = None) -> int:
     arguments = _parser().parse_args(argv)
     repo_root = Path(__file__).resolve().parents[1]
     archive_path = arguments.archive.resolve()
@@ -5038,6 +6941,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     scorer_backend = ScorerBackend(arguments.engine_v2_scorer_backend)
     stage0_receipt: VerifiedStage0Admission | None = None
     stage0_policy_path: Path | None = None
+    prebound_runtime_dependency_authority: dict[str, object] | None = None
+    prebound_evaluation_pipeline_sha256 = ""
     if requires_stage0:
         if source_binary is None:
             raise Stage0AdmissionError(("fresh_holdout_gnina_required",))
@@ -5052,7 +6957,17 @@ def main(argv: Sequence[str] | None = None) -> int:
             gnina_path=source_binary,
             output_root=output_root,
         )
+        _require_fresh_independent_stage0(stage0_receipt)
         _require_stage0_execution_arguments(arguments, stage0_receipt)
+        (
+            prebound_runtime_dependency_authority,
+            prebound_evaluation_pipeline_sha256,
+        ) = _require_stage0_prebound_runtime_authority(
+            policy_path=stage0_policy_path,
+            repo_root=repo_root,
+            receipt=stage0_receipt,
+        )
+        _require_fresh_live_run_once_consumption_authority()
 
     execution_profile_sha256 = (
         stage0_receipt.execution_profile_sha256 if stage0_receipt is not None else ""
@@ -5078,30 +6993,45 @@ def main(argv: Sequence[str] | None = None) -> int:
         exact_mode=0o700,
     )
     os.close(output_root_descriptor)
-    if stage0_receipt is not None:
-        _atomic_json(
-            output_root / "stage0-admission-receipt.json",
-            {
-                "admitted": True,
-                "operator_id": stage0_receipt.operator_id,
-                "policy_sha256": stage0_receipt.policy_sha256,
-                "execution_profile_sha256": (stage0_receipt.execution_profile_sha256),
-                "reviewer_id": stage0_receipt.reviewer_id,
-                "governance_mode": stage0_receipt.governance_mode,
-                "independent_review_complete": (
-                    stage0_receipt.independent_review_complete
-                ),
-                "source_freeze_sha256": stage0_receipt.source_freeze_sha256,
-            },
+    fresh_reservation: dict[str, object] | None = None
+    if fresh_run:
+        if stage0_receipt is None or fresh_holdout is None:
+            raise Stage0AdmissionError(("fresh_holdout_stage0_receipt_missing",))
+        fresh_reservation = _reserve_fresh_run_once(
+            repo_root=repo_root,
+            output_root=output_root,
+            case_ids=case_ids,
+            manifest_sha256=fresh_holdout.manifest_sha256,
+            stage0_receipt=stage0_receipt,
         )
+    else:
+        _reject_protected_fresh_output_root(output_root)
+    if stage0_receipt is not None:
+        admission_payload = stage0_receipt.to_dict()
+        if fresh_run:
+            if stage0_policy_path is None:
+                raise Stage0AdmissionError(("stage0_policy_snapshot_missing",))
+            _exclusive_json(
+                output_root / "stage0-admission-receipt.json",
+                admission_payload,
+                label="Fresh-128 Stage 0 admission receipt",
+            )
+            _exclusive_json(
+                output_root / FRESH_STAGE0_POLICY_SNAPSHOT_FILENAME,
+                _fresh_stage0_policy_snapshot(
+                    stage0_policy_path,
+                    stage0_receipt=stage0_receipt,
+                ),
+                label="Fresh-128 Stage 0 policy snapshot",
+            )
+        else:
+            _atomic_json(
+                output_root / "stage0-admission-receipt.json",
+                admission_payload,
+            )
     _quarantine_managed_regular_file(
         output_root / "public-redocking-report.json",
         label="prior public redocking report",
-        required_mode=0o600,
-    )
-    _quarantine_managed_regular_file(
-        output_root / "fresh-redocking-internal-report.json",
-        label="prior fresh internal redocking report",
         required_mode=0o600,
     )
     development_summary_path = output_root / (
@@ -5150,11 +7080,38 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
     evaluation_policy = _evaluation_policy_from_arguments(arguments)
     engine_source_sha256 = _engine_source_sha256(repo_root)
-    evaluation_pipeline_sha256 = _evaluation_pipeline_sha256(
-        repo_root,
-        evaluator_versions=evaluator_versions,
+    if prebound_runtime_dependency_authority is None:
+        try:
+            runtime_dependency_authority = stage0_runtime_dependency_authority()
+        except ValueError as exc:
+            raise PublicRedockingRunnerError(
+                "runtime dependency authority is unavailable"
+            ) from exc
+        runtime_ledgers = runtime_dependency_authority.get(
+            "installed_distribution_file_ledger_sha256s"
+        )
+        if not isinstance(runtime_ledgers, Mapping):
+            raise PublicRedockingRunnerError(
+                "runtime dependency file ledger is unavailable"
+            )
+        evaluation_pipeline_sha256 = _evaluation_pipeline_sha256(
+            repo_root,
+            evaluator_versions=evaluator_versions,
+            runtime_dependency_file_ledger_sha256s=runtime_ledgers,
+        )
+    else:
+        runtime_dependency_authority = prebound_runtime_dependency_authority
+        evaluation_pipeline_sha256 = prebound_evaluation_pipeline_sha256
+    execution_environment = _execution_environment_identity(
+        runtime_dependency_authority=runtime_dependency_authority,
+        evaluation_pipeline_sha256=evaluation_pipeline_sha256,
     )
-    execution_environment = _execution_environment_identity()
+    if fresh_run:
+        _exclusive_json(
+            output_root / FRESH_EXECUTION_ENVIRONMENT_FILENAME,
+            _fresh_execution_environment_receipt(execution_environment),
+            label="Fresh-128 execution environment receipt",
+        )
     partial_run = tuple(case_ids) != all_case_ids
     active_engine_ids = (
         ("engine_v2",)
@@ -5185,6 +7142,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     executions_by_engine: dict[str, list[VerifiedPublicRedockingCaseExecution]] = {
         engine_id: [] for engine_id in active_engine_ids
     }
+    fresh_external_process_logs: dict[tuple[str, str], dict[str, object]] = {}
     development_proposal_evidence_by_case: dict[
         str,
         DevelopmentTrueConformerProposalEvidence,
@@ -5360,6 +7318,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                                 seed=case_seed,
                                 timeout_seconds=arguments.timeout_seconds,
                                 execution_profile_sha256=execution_profile_sha256,
+                                process_log_sink=(
+                                    fresh_external_process_logs if fresh_run else None
+                                ),
                             )
                         pinned_inputs.verify()
                         execution = _verified_case_execution(
@@ -5501,12 +7462,82 @@ def main(argv: Sequence[str] | None = None) -> int:
             policy=evaluation_policy,
             stage0_receipt=stage0_receipt,
             manifest_sha256=fresh_holdout.manifest_sha256,
+            run_once_reservation_sha256=str(fresh_reservation["reservation_sha256"]),
+        )
+        verify_fresh_report_document(
+            fresh_report,
+            reservation_sha256=str(fresh_reservation["reservation_sha256"]),
         )
         _verify_external_binary(pinned_binary)
-        _atomic_json(
-            output_root / "fresh-redocking-internal-report.json",
+        report_path = output_root / FRESH_REPORT_FILENAME
+        _exclusive_json(
+            report_path,
             fresh_report,
+            label="Fresh-128 internal report",
         )
+        _exclusive_json(
+            output_root / FRESH_EXECUTION_LOG_FILENAME,
+            _fresh_execution_log_receipt(
+                ordered_executions,
+                execution_environment_sha256=execution_environment.sha256,
+                external_process_logs=fresh_external_process_logs,
+            ),
+            label="Fresh-128 execution log receipt",
+        )
+        report_file_sha256 = _sha256_path(report_path)
+        artifact_manifest = build_fresh_artifact_manifest(
+            output_root=output_root,
+            runner_id=FRESH_RUNNER_ID,
+            retention_root=str(fresh_reservation["retention_root"]),
+            reservation_sha256=str(fresh_reservation["reservation_sha256"]),
+            report_fingerprint_sha256=str(fresh_report["fingerprint_sha256"]),
+            report_file_sha256=report_file_sha256,
+            stage0_policy_sha256=stage0_receipt.policy_sha256,
+            source_freeze_sha256=stage0_receipt.source_freeze_sha256,
+            execution_profile_sha256=stage0_receipt.execution_profile_sha256,
+            fresh_holdout_manifest_sha256=fresh_holdout.manifest_sha256,
+            completion_filename=FRESH_COMPLETION_FILENAME,
+        )
+        artifact_manifest_path = output_root / FRESH_ARTIFACT_MANIFEST_FILENAME
+        _exclusive_json(
+            artifact_manifest_path,
+            artifact_manifest,
+            label="Fresh-128 terminal artifact manifest",
+        )
+        completion = _fresh_completion_document(
+            reservation_sha256=str(fresh_reservation["reservation_sha256"]),
+            report_fingerprint_sha256=str(fresh_report["fingerprint_sha256"]),
+            report_file_sha256=report_file_sha256,
+            artifact_manifest_sha256=str(artifact_manifest["manifest_sha256"]),
+            artifact_manifest_file_sha256=_sha256_path(artifact_manifest_path),
+        )
+        prepublication_verification = verify_fresh_run_root(
+            output_root,
+            repo_root=repo_root,
+            verified_stage0_receipt=stage0_receipt,
+            proposed_completion_document=completion,
+        )
+        if (
+            prepublication_verification.completion_sha256
+            != completion["completion_sha256"]
+        ):
+            raise PublicRedockingRunnerError(
+                "Fresh completion prepublication verification is cross-wired"
+            )
+        _exclusive_json(
+            output_root / FRESH_COMPLETION_FILENAME,
+            completion,
+            label="Fresh-128 run-once completion",
+        )
+        terminal_verification = verify_fresh_run_root(
+            output_root,
+            repo_root=repo_root,
+            verified_stage0_receipt=stage0_receipt,
+        )
+        if terminal_verification != prepublication_verification:
+            raise PublicRedockingRunnerError(
+                "Fresh terminal verification changed after completion publication"
+            )
         print(fresh_report["fingerprint_sha256"])
         pinned_binary.close()
         return 0
@@ -5522,6 +7553,106 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(report.fingerprint_sha256)
     pinned_binary.close()
     return 0
+
+
+def _argument_values(arguments: Sequence[str], option: str) -> tuple[str, ...]:
+    values: list[str] = []
+    prefix = f"{option}="
+    for index, value in enumerate(arguments):
+        if value == option and index + 1 < len(arguments):
+            values.append(arguments[index + 1])
+        elif value.startswith(prefix):
+            values.append(value[len(prefix) :])
+    return tuple(values)
+
+
+def _terminalize_reserved_fresh_failure(
+    arguments: Sequence[str],
+    exc: BaseException,
+) -> bool:
+    if _argument_values(arguments, "--case-subset") != (
+        "fresh-internal-blind-holdout",
+    ):
+        return False
+    output_values = _argument_values(arguments, "--output-root")
+    if len(output_values) != 1:
+        return False
+    repo_root = Path(__file__).resolve().parents[1]
+    output_root = Path(os.path.abspath(output_values[0]))
+    try:
+        raw = (output_root / FRESH_RESERVATION_FILENAME).read_bytes()
+        retention_root = _fresh_retention_root(repo_root, output_root)
+        if len(raw) > 8 * 1024 * 1024:
+            raise PublicRedockingRunnerError(
+                "Fresh reservation exceeds its terminalization bound"
+            )
+        reservation = json.loads(raw.decode("ascii"))
+        if (
+            not isinstance(reservation, dict)
+            or _canonical_bytes(reservation) + b"\n" != raw
+            or reservation.get("retention_root") != retention_root
+        ):
+            raise PublicRedockingRunnerError(
+                "Fresh reservation is invalid during terminalization"
+            )
+        reservation_sha256 = verify_reservation_document(reservation)
+    except FileNotFoundError:
+        return False
+    except (UnicodeError, json.JSONDecodeError, ValueError) as terminal_exc:
+        raise PublicRedockingRunnerError(
+            "Fresh reservation could not be verified during terminalization"
+        ) from terminal_exc
+    if (output_root / FRESH_COMPLETION_FILENAME).exists():
+        return False
+    failure_path = output_root / FRESH_FAILURE_FILENAME
+    if failure_path.exists():
+        try:
+            existing_raw = failure_path.read_bytes()
+            existing = json.loads(existing_raw.decode("ascii"))
+            if (
+                not isinstance(existing, dict)
+                or _canonical_bytes(existing) + b"\n" != existing_raw
+            ):
+                raise PublicRedockingRunnerError(
+                    "existing Fresh terminal failure is invalid"
+                )
+            verify_terminal_failure_document(
+                existing,
+                reservation_sha256=reservation_sha256,
+            )
+        except (
+            OSError,
+            UnicodeError,
+            json.JSONDecodeError,
+            ValueError,
+        ) as terminal_exc:
+            raise PublicRedockingRunnerError(
+                "existing Fresh terminal failure could not be verified"
+            ) from terminal_exc
+        return True
+    _exclusive_json(
+        failure_path,
+        _fresh_terminal_failure_document(
+            reservation_sha256=reservation_sha256,
+            exc=exc,
+        ),
+        label="Fresh-128 terminal failure receipt",
+    )
+    return True
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    arguments = list(sys.argv[1:] if argv is None else argv)
+    try:
+        return _main(arguments)
+    except BaseException as exc:
+        try:
+            _terminalize_reserved_fresh_failure(arguments, exc)
+        except BaseException as terminal_exc:
+            raise PublicRedockingRunnerError(
+                "Fresh run failed and could not be terminalized"
+            ) from terminal_exc
+        raise
 
 
 if __name__ == "__main__":

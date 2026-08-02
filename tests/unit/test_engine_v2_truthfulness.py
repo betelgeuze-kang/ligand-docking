@@ -49,7 +49,7 @@ def test_lifecycle_snapshot_separates_wiring_from_production_evidence() -> None:
         "claim_safe": False,
     }
     rows = snapshot["capabilities"]
-    assert len(rows) == 45
+    assert len(rows) == 47
     required_fields = {
         "current_state",
         "implemented",

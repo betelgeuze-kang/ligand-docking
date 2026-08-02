@@ -8,8 +8,11 @@ on:
       - "betelgeuze_engine_v2/**"
       - "packaging/engine-v2/**"
       - "tools/build_engine_v2_wheel.py"
+      - "tools/build_engine_v2_sbom.py"
       - "tools/check_engine_v2_architecture.py"
       - "tests/unit/test_engine_v2_packaging_guards.py"
+      - "tests/unit/test_engine_v2_standalone_cli.py"
+      - "tests/unit/test_engine_v2_wheel_artifact.py"
       - ".github/workflows/ci-engine-v2-package.yml"
   workflow_dispatch:
 
@@ -44,8 +47,11 @@ jobs:
             betelgeuze_engine_v2
             packaging/engine-v2
             tools/build_engine_v2_wheel.py
+            tools/build_engine_v2_sbom.py
             tools/check_engine_v2_architecture.py
             tests/unit/test_engine_v2_packaging_guards.py
+            tests/unit/test_engine_v2_standalone_cli.py
+            tests/unit/test_engine_v2_wheel_artifact.py
             docs/engine_v2_pr_overlap_matrix.md
             .github/workflows/ci-engine-v2-package.yml
           sparse-checkout-cone-mode: false
@@ -69,9 +75,16 @@ jobs:
 
       - name: Compile and enforce Engine v2 AST boundaries
         run: |
-          python -m compileall -q betelgeuze_engine_v2 tools/build_engine_v2_wheel.py tools/check_engine_v2_architecture.py
+          python -m compileall -q \
+            betelgeuze_engine_v2 \
+            tools/build_engine_v2_wheel.py \
+            tools/build_engine_v2_sbom.py \
+            tools/check_engine_v2_architecture.py
           python tools/check_engine_v2_architecture.py
-          python -m pytest -q tests/unit/test_engine_v2_packaging_guards.py
+          python -m pytest -q \
+            tests/unit/test_engine_v2_packaging_guards.py \
+            tests/unit/test_engine_v2_standalone_cli.py \
+            tests/unit/test_engine_v2_wheel_artifact.py
 
       - name: Build two byte-identical Engine v2 wheels
         shell: bash
@@ -91,6 +104,43 @@ jobs:
           cp "$wheel_a" dist-engine-v2/
           sha256sum dist-engine-v2/*.whl | tee dist-engine-v2/SHA256SUMS
 
+      - name: Require external legal authority before admission SBOM
+        shell: bash
+        run: |
+          set -euo pipefail
+          wheel_path="$(find dist-engine-v2 -maxdepth 1 -name '*.whl' -print -quit)"
+          source_receipt_sha256="$(git rev-parse HEAD | tr -d '\n' | sha256sum | cut -d' ' -f1)"
+          if python tools/build_engine_v2_sbom.py \
+            "$wheel_path" \
+            --source-root . \
+            --source-receipt-sha256 "$source_receipt_sha256" \
+            --output dist-engine-v2/betelgeuze-engine-v2.spdx.json; then
+            echo "SBOM unexpectedly admitted without reviewed license authority" >&2
+            exit 1
+          fi
+          SOURCE_RECEIPT_SHA256="$source_receipt_sha256" python - <<'PY'
+          import os
+          from pathlib import Path
+          from betelgeuze_engine_v2.benchmark.wheel_artifact import (
+              WheelArtifactKind,
+              validate_wheel_artifact,
+          )
+
+          wheel = next(Path("dist-engine-v2").glob("*.whl"))
+          result = validate_wheel_artifact(
+              wheel,
+              Path("dist-engine-v2/missing-unreviewed.spdx.json"),
+              artifact_kind=WheelArtifactKind.BASE,
+              expected_distribution="betelgeuze-engine-v2",
+              expected_version="0.2.0rc5",
+              source_root=Path("."),
+              license_determination_path=Path("dist-engine-v2/missing-license-review.json"),
+              expected_source_receipt_sha256=os.environ["SOURCE_RECEIPT_SHA256"],
+              expected_license_determination_sha256="0" * 64,
+          )
+          assert result.blockers == ("license_determination_missing",), result.blockers
+          PY
+
       - name: Install in a clean dependency-complete venv
         shell: bash
         run: |
@@ -106,6 +156,7 @@ jobs:
           "$venv/bin/python" -m pip install --no-deps dist-engine-v2/*.whl
           "$venv/bin/python" -m pip check
           test -x "$venv/bin/betelgeuze-engine-v2"
+          test -x "$venv/bin/betelgeuze-dock"
 
       - name: Import wheel outside checkout and verify package isolation
         shell: bash
@@ -123,6 +174,7 @@ jobs:
           import betelgeuze_engine_v2 as engine
           from betelgeuze_engine_v2.cli import (
               CLI_DOCKING_RESULT_SCHEMA_ID,
+              CLI_DOCKING_RESULT_LEGACY_SCHEMA_ID,
               EngineV2CliError,
               main,
               run_canonical_docking,
@@ -151,7 +203,8 @@ jobs:
           assert metadata.version("betelgeuze-engine-v2") == engine.DISTRIBUTION_VERSION
           assert engine.DISTRIBUTION_NAME == "betelgeuze-engine-v2"
           assert engine.__version__ == engine.ENGINE_API_VERSION
-          assert CLI_DOCKING_RESULT_SCHEMA_ID.endswith("/1.0.0")
+          assert CLI_DOCKING_RESULT_SCHEMA_ID.endswith("/1.1.0")
+          assert CLI_DOCKING_RESULT_LEGACY_SCHEMA_ID.endswith("/1.0.0")
           for value in (
               EngineV2CliError,
               main,
@@ -195,6 +248,13 @@ jobs:
           "$venv/bin/betelgeuze-engine-v2" dock-canonical --help
           "$venv/bin/betelgeuze-engine-v2" verify-result --help
           "$venv/bin/betelgeuze-engine-v2" verify-bundle --help
+          "$venv/bin/betelgeuze-dock" --help
+          "$venv/bin/betelgeuze-dock" prepare-receptor --help
+          "$venv/bin/betelgeuze-dock" prepare-ligands --help
+          "$venv/bin/betelgeuze-dock" define-pocket --help
+          "$venv/bin/betelgeuze-dock" dock --help
+          "$venv/bin/betelgeuze-dock" verify --help
+          "$venv/bin/betelgeuze-dock" report --help
           "$venv/bin/python" - <<'PY'
           from pathlib import Path
           import json

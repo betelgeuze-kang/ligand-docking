@@ -441,6 +441,7 @@ def _verify_generic_search(document: object) -> dict[str, object]:
         raise CliResultVerificationError("generic failure count does not match rows")
     candidate_ids: list[str] = []
     proposal_fingerprints: list[str] = []
+    raw_score_rank: list[tuple[float, int, str]] = []
     valid_pose_count = 0
     selection_eligible_ids: set[str] = set()
     for raw_row in rows:
@@ -461,7 +462,20 @@ def _verify_generic_search(document: object) -> dict[str, object]:
         if status not in {"success", "failure"}:
             raise CliResultVerificationError("generic search-row status is invalid")
         if status == "success":
-            _finite_float(row.get("score"), name="generic successful score")
+            score = _finite_float(
+                row.get("score"), name="generic successful score"
+            )
+            raw_score_rank.append(
+                (
+                    score,
+                    _exact_int(
+                        row.get("proposal_index"),
+                        name="generic proposal_index",
+                        minimum=0,
+                    ),
+                    candidate_id,
+                )
+            )
             if row.get("valid_pose") is True:
                 valid_pose_count += 1
             if row.get("selection_eligible") is True:
@@ -506,6 +520,10 @@ def _verify_generic_search(document: object) -> dict[str, object]:
         "rows": rows,
         "candidate_ids": candidate_ids,
         "proposal_fingerprints": proposal_fingerprints,
+        "raw_score_rank_candidate_ids": [
+            item[2] for item in sorted(raw_score_rank)
+        ],
+        "top_candidate_ids": normalized_top,
         "candidate_count": candidate_count,
         "success_count": success_count,
         "failure_count": failure_count,
@@ -843,7 +861,226 @@ def _verify_interpretable_result(document: object) -> dict[str, object]:
             generic["problem_fingerprint_sha256"]
         ),
         "scorer_contract_fingerprint_sha256": scorer_contract,
+        "raw_score_rank_candidate_ids": generic[
+            "raw_score_rank_candidate_ids"
+        ],
+        "top_candidate_ids": generic["top_candidate_ids"],
     }
+
+
+def _verify_pipeline_evidence(
+    document: object,
+    *,
+    candidate_count: int,
+    success_count: int,
+    failure_count: int,
+    raw_score_rank_candidate_ids: list[str],
+    top_candidate_ids: list[str],
+) -> None:
+    from .cli import (
+        CANONICAL_DOCKING_PIPELINE_PROFILE_ID,
+        build_canonical_docking_pipeline,
+    )
+    from .pipeline import DOCKING_PIPELINE_EXECUTION_SCHEMA_ID
+
+    evidence = _require_dict(document, name="pipeline evidence")
+    expected_fields = {
+        "schema_id",
+        "pipeline_profile_id",
+        "pipeline_profile_sha256",
+        "conformer_evidence",
+        "proposal_evidence",
+        "geometric_admission_evidence",
+        "refiner_id",
+        "refinement_performed",
+        "validity_evidence",
+        "ranking_evidence",
+        "candidate_denominator_preserved",
+        "failure_complete",
+        "scientifically_validated",
+        "product_qualified",
+        "claim_safe",
+        "receipt_sha256",
+    }
+    if set(evidence) != expected_fields:
+        raise CliResultVerificationError("pipeline evidence fields are invalid")
+    pipeline = build_canonical_docking_pipeline()
+    if (
+        evidence.get("schema_id") != DOCKING_PIPELINE_EXECUTION_SCHEMA_ID
+        or evidence.get("pipeline_profile_id")
+        != CANONICAL_DOCKING_PIPELINE_PROFILE_ID
+        or evidence.get("pipeline_profile_sha256") != pipeline.profile_sha256
+        or evidence.get("refiner_id")
+        != "betelgeuze.engine_v2.no_refinement/1.0.0"
+        or evidence.get("refinement_performed") is not False
+        or evidence.get("candidate_denominator_preserved") is not True
+        or evidence.get("failure_complete") is not True
+    ):
+        raise CliResultVerificationError("pipeline profile binding is invalid")
+    _verify_receipt(evidence, name="pipeline evidence")
+    conformer = _require_dict(
+        evidence.get("conformer_evidence"),
+        name="pipeline conformer evidence",
+    )
+    if (
+        set(conformer)
+        != {
+            "provider_id",
+            "source_artifact_sha256",
+            "available_model_count",
+            "selected_model_index",
+            "coordinate_generation_performed",
+            "result_dependent_selection",
+        }
+        or conformer.get("provider_id")
+        != "betelgeuze.engine_v2.source_coordinate_conformer_provider/1.0.0"
+        or conformer.get("coordinate_generation_performed") is not False
+        or conformer.get("result_dependent_selection") is not False
+        or conformer.get("selected_model_index") != 0
+        or _exact_int(
+            conformer.get("available_model_count"),
+            name="pipeline conformer model count",
+            minimum=1,
+        )
+        < 1
+    ):
+        raise CliResultVerificationError("pipeline conformer evidence is invalid")
+    _require_sha256(
+        conformer.get("source_artifact_sha256"),
+        name="pipeline conformer source artifact",
+    )
+    proposal = _require_dict(
+        evidence.get("proposal_evidence"),
+        name="pipeline proposal evidence",
+    )
+    admission = _require_dict(
+        evidence.get("geometric_admission_evidence"),
+        name="pipeline geometric admission evidence",
+    )
+    if (
+        set(proposal)
+        != {
+            "generator_id",
+            "candidate_count",
+            "seed",
+            "translation_radius_angstrom_binary64_hex",
+            "orientation_sequence",
+            "allocation_result_independent",
+            "candidate_denominator_preserved",
+        }
+        or proposal.get("generator_id")
+        != "betelgeuze.engine_v2.deterministic_haar_pocket_proposal_plan/1.0.0"
+        or proposal.get("orientation_sequence")
+        != "index_stable_deterministic_haar"
+        or _exact_int(
+            proposal.get("candidate_count"),
+            name="pipeline proposal candidate count",
+            minimum=1,
+        )
+        != candidate_count
+        or proposal.get("allocation_result_independent") is not True
+        or proposal.get("candidate_denominator_preserved") is not True
+        or set(admission)
+        != {
+            "admission_id",
+            "candidate_slot_count",
+            "pre_score_candidate_deletion_performed",
+            "pose_validity_evaluated_in_search",
+            "failure_slots_retained",
+        }
+        or admission.get("admission_id")
+        != "betelgeuze.engine_v2.denominator_preserving_validity_admission/1.0.0"
+        or _exact_int(
+            admission.get("candidate_slot_count"),
+            name="pipeline admission slot count",
+            minimum=1,
+        )
+        != candidate_count
+        or admission.get("pre_score_candidate_deletion_performed") is not False
+        or admission.get("pose_validity_evaluated_in_search") is not True
+        or admission.get("failure_slots_retained") is not True
+    ):
+        raise CliResultVerificationError(
+            "pipeline proposal or admission denominator is invalid"
+        )
+    validity = _require_dict(
+        evidence.get("validity_evidence"),
+        name="pipeline validity evidence",
+    )
+    if (
+        set(validity)
+        != {
+            "evaluator_id",
+            "candidate_slot_count",
+            "successful_candidate_count",
+            "valid_candidate_count",
+            "invalid_candidate_count",
+            "failure_count",
+            "validity_complete",
+            "failure_slots_retained",
+        }
+        or validity.get("evaluator_id")
+        != "betelgeuze.engine_v2.element_aware_validity_evaluator/1.0.0"
+        or validity.get("candidate_slot_count") != candidate_count
+        or validity.get("successful_candidate_count") != success_count
+        or validity.get("failure_count") != failure_count
+        or validity.get("validity_complete") is not True
+        or validity.get("failure_slots_retained") is not True
+        or _exact_int(
+            validity.get("valid_candidate_count"),
+            name="pipeline valid candidate count",
+            minimum=0,
+        )
+        + _exact_int(
+            validity.get("invalid_candidate_count"),
+            name="pipeline invalid candidate count",
+            minimum=0,
+        )
+        != success_count
+    ):
+        raise CliResultVerificationError("pipeline validity denominator is invalid")
+    ranking = _require_dict(
+        evidence.get("ranking_evidence"),
+        name="pipeline ranking evidence",
+    )
+    raw_rank = _require_list(
+        ranking.get("raw_score_rank_candidate_ids"),
+        name="pipeline raw score rank",
+    )
+    eligible_rank = _require_list(
+        ranking.get("validity_eligible_top_candidate_ids"),
+        name="pipeline eligible rank",
+    )
+    if (
+        set(ranking)
+        != {
+            "ranker_id",
+            "raw_score_rank_candidate_ids",
+            "validity_eligible_top_candidate_ids",
+            "raw_rank_preserves_invalid_candidates",
+            "stable_tie_break",
+            "result_dependent_reranking",
+        }
+        or ranking.get("ranker_id")
+        != "betelgeuze.engine_v2.raw_and_eligible_stable_ranker/1.0.0"
+        or len(raw_rank) != success_count
+        or len(raw_rank) != len(set(raw_rank))
+        or len(eligible_rank) != len(set(eligible_rank))
+        or not set(eligible_rank).issubset(set(raw_rank))
+        or raw_rank != raw_score_rank_candidate_ids
+        or eligible_rank != top_candidate_ids
+        or ranking.get("raw_rank_preserves_invalid_candidates") is not True
+        or ranking.get("stable_tie_break")
+        != "score_then_proposal_index_then_candidate_id"
+        or ranking.get("result_dependent_reranking") is not False
+    ):
+        raise CliResultVerificationError("pipeline ranking evidence is invalid")
+    _require_false(
+        evidence,
+        "scientifically_validated",
+        "product_qualified",
+        "claim_safe",
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -934,6 +1171,7 @@ def verify_canonical_cli_result_document(
 ) -> CliResultVerificationReceipt:
     from .cli import (
         CLI_COMMAND_ID,
+        CLI_DOCKING_RESULT_LEGACY_SCHEMA_ID,
         CLI_DOCKING_RESULT_SCHEMA_ID,
         DISTRIBUTION_VERSION,
         ENGINE_API_VERSION,
@@ -941,8 +1179,64 @@ def verify_canonical_cli_result_document(
     )
 
     result_document = _require_dict(document, name="CLI docking result")
-    if result_document.get("schema_id") != CLI_DOCKING_RESULT_SCHEMA_ID:
+    result_schema_id = result_document.get("schema_id")
+    if result_schema_id not in {
+        CLI_DOCKING_RESULT_LEGACY_SCHEMA_ID,
+        CLI_DOCKING_RESULT_SCHEMA_ID,
+    }:
         raise CliResultVerificationError("CLI docking-result schema is unsupported")
+    if (
+        result_schema_id == CLI_DOCKING_RESULT_LEGACY_SCHEMA_ID
+        and "pipeline_evidence" in result_document
+    ):
+        raise CliResultVerificationError(
+            "legacy CLI result cannot claim pipeline evidence"
+        )
+    common_fields = {
+        "schema_id",
+        "command_id",
+        "engine_api_version",
+        "distribution_version",
+        "receptor_artifact_sha256",
+        "ligand_artifact_sha256",
+        "pocket_artifact_sha256",
+        "pocket_definition_sha256",
+        "authenticated_input_receipt_sha256",
+        "scorer_source_sha256",
+        "scorer_source_binding_mode",
+        "scorer_source_preimport_attested",
+        "scorer_qualification",
+        "result_receipt_sha256",
+        "candidate_count",
+        "success_count",
+        "failure_count",
+        "network_fetch_performed",
+        "chemistry_inference_performed",
+        "pocket_prediction_performed",
+        "calibrated",
+        "scientifically_validated",
+        "benchmark_validated",
+        "product_qualified",
+        "customer_execution_enabled",
+        "claim_safe",
+        "result",
+        "document_sha256",
+    }
+    expected_fields = (
+        common_fields | {"pipeline_evidence"}
+        if result_schema_id == CLI_DOCKING_RESULT_SCHEMA_ID
+        else common_fields
+    )
+    execution_extension_fields = {
+        "execution_parameters",
+        "execution_parameters_receipt_sha256",
+    }
+    observed_fields = set(result_document)
+    if observed_fields not in {
+        frozenset(expected_fields),
+        frozenset(expected_fields | execution_extension_fields),
+    }:
+        raise CliResultVerificationError("CLI docking-result fields are invalid")
     producer_fields = {
         "command_id": CLI_COMMAND_ID,
         "engine_api_version": ENGINE_API_VERSION,
@@ -1000,6 +1294,21 @@ def verify_canonical_cli_result_document(
         "claim_safe",
     )
     nested = _verify_interpretable_result(result_document.get("result"))
+    if result_schema_id == CLI_DOCKING_RESULT_SCHEMA_ID:
+        _verify_pipeline_evidence(
+            result_document.get("pipeline_evidence"),
+            candidate_count=int(nested["candidate_count"]),
+            success_count=int(nested["success_count"]),
+            failure_count=int(nested["failure_count"]),
+            raw_score_rank_candidate_ids=list(
+                nested["raw_score_rank_candidate_ids"]
+            ),
+            top_candidate_ids=list(nested["top_candidate_ids"]),
+        )
+    elif "pipeline_evidence" in result_document:
+        raise CliResultVerificationError(
+            "legacy CLI result cannot claim pipeline evidence"
+        )
     if _require_sha256(
         result_document.get("result_receipt_sha256"),
         name="CLI result receipt",
