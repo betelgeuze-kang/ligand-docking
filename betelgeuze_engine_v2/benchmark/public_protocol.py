@@ -43,7 +43,7 @@ PUBLIC_BENCHMARK_PROTOCOL_ID = (
 PUBLIC_BENCHMARK_PROTOCOL_VERSION = "1.1.2"
 PUBLIC_BENCHMARK_PROTOCOL_FROZEN_AT_UTC = "2026-07-27T21:35:00Z"
 FROZEN_PUBLIC_BENCHMARK_PROTOCOL_SHA256 = (
-    "45620c9b8bf47376a654e77fff4f2b8cc941b7adffc9d50b7787f46c489eb279"
+    "acc9d5ddc6c927d826a76f5cbc6c5d6deb07b81e7d6f92f11cdd9406566bd16d"
 )
 
 POSEBUSTERS_REPOSITORY_URL = "https://github.com/maabuu/posebusters"
@@ -683,7 +683,7 @@ def _build_frozen_public_benchmark_protocol() -> FrozenPublicBenchmarkProtocol:
                 module="betelgeuze_engine_v2.docking.validity",
                 relative_path="betelgeuze_engine_v2/docking/validity.py",
                 source_sha256=(
-                    "996cfd1ea8ea230a5cb3a8449142babc1e17cf4103f07e70054fe977aef0318e"
+                    "5b1263ddf83deee0c46142be9e8d973bc9af6710d197f20451ab4d5ee996a619"
                 ),
             ),
             PublicBenchmarkScorerIdentity(
