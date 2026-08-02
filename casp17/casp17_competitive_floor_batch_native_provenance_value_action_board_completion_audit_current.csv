@@ -1,4 +1,0 @@
-target_id,target_name,audit_status,target_action_folder,folder_present,readme_present,value_actions_present,expected_action_count,value_actions_csv_rows,value_actions_row_mismatch,board_action_json_rows,coordinate_copy_count,competitive_proof_eligible,author_serialized,blockers
-H1319,Human astrovirus VA1 capsid spike - antibody 7C8 complex,pass,casp17/competitive_floor_batch_native_provenance_value_action_board/H1319_Human_astrovirus_VA1_capsid_spike_antibody_7C8_complex,1,1,1,12,12,0,12,0,false,false,
-H1321,Human astrovirus VA1 capsid spike - antibody 2A2 complex,pass,casp17/competitive_floor_batch_native_provenance_value_action_board/H1321_Human_astrovirus_VA1_capsid_spike_antibody_2A2_complex,1,1,1,12,12,0,12,0,false,false,
-H2324,"T Cell Receptor N17.2, complex (5 chains)",pass,casp17/competitive_floor_batch_native_provenance_value_action_board/H2324_T_Cell_Receptor_N17_2_complex_5_chains,1,1,1,12,12,0,12,0,false,false,

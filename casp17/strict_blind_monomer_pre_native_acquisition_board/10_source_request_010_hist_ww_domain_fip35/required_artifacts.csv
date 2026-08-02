@@ -1,4 +1,0 @@
-artifact_key,required,operator_path_or_uri,expected_dropzone,notes
-prediction_pdb,true,,casp17/historical_seed_strict_blind_replacement_evidence_dropzones/01_hist_required_monomer_001/prediction/replacement_prediction.pdb,pre-native internal prediction PDB; do not use current post-native local candidate
-creation_evidence_ref,true,,,"timestamp, immutable job record, archive manifest, or signed lab notebook evidence"
-no_leak_evidence_ref,true,,,independent no-leak provenance and negative-control evidence

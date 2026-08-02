@@ -1,5 +1,0 @@
-target_id,benchmark_id,scope,role,path,exists,atom_count,coordinate_valid,sha256_16,notes
-HIST_TRP_CAGE,hist_seed_trp_cage,monomer,selected_prediction,data/internal_structures_refined/nightly/2026-02-19-ops-full-dashboard-r1/visual_post_internal_post_trp_cage_sample000_step00020.pdb,True,80,True,db81626e5021440c,operator seed selected prediction
-HIST_TRP_CAGE,hist_seed_trp_cage,monomer,native_reference,data/native/trp_cage.pdb,True,20,True,52ce2472e07d6f5e,reference path only; not an ablation layer
-HIST_TRP_CAGE,hist_seed_trp_cage,monomer,same_run_step_candidate,data/internal_structures_refined/nightly/2026-02-19-ops-full-dashboard-r1/visual_post_internal_post_trp_cage_sample000_step00010.pdb,False,0,False,,derived from visual_post_internal_post_trp_cage_sample000_step00020.pdb via step00010
-HIST_TRP_CAGE,hist_seed_trp_cage,monomer,same_run_step_candidate,data/internal_structures_refined/nightly/2026-02-19-ops-full-dashboard-r1/visual_post_internal_post_trp_cage_sample000_step00000.pdb,False,0,False,,derived from visual_post_internal_post_trp_cage_sample000_step00020.pdb via step00000

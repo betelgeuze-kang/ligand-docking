@@ -1,4 +1,0 @@
-gate,status,required_evidence
-registration,ready,CASP ID and CAPRI registration confirmation
-format_template,blocked,target-specific CAPRI template
-online_validation,blocked,CAPRI online validator acceptance

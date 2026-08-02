@@ -1,5 +1,0 @@
-field,value,evidence_ref,operator_clearance,notes
-casp_team_id,,,,12-digit CASP Team ID for joint CASP-CAPRI predictor/server participation
-capri_registration_confirmed,,,,true after CAPRI Round 65 registration is confirmed
-selected_role,,,,"predictor_server, scorer, or both"
-submitter_contact,,,,operator/account owner contact for upload and confirmation receipts

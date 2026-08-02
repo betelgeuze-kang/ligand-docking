@@ -1,5 +1,0 @@
-file_key,required_path_or_ref,file_status,required_format,notes
-prediction_pdb,,awaiting_operator_file,local pre-native prediction PDB with ATOM/HETATM records,Do not use official archive or other-team model as internal proof.
-prediction_pdb_dropzone,casp17/historical_seed_strict_blind_replacement_evidence_dropzones/01_hist_required_monomer_001/prediction/replacement_prediction.pdb,awaiting_operator_file,copy of verified prediction_pdb after review,Destination used later by the internal source apply plan.
-creation_evidence_ref,,awaiting_operator_evidence,timestamp evidence created before native release,Current candidate prediction date is 2026-02-19; native date is 2004-05-13.
-no_leak_evidence_ref,,awaiting_operator_evidence,no native/template/other-team leakage declaration with evidence,Needed before any winner-normalized competitive proof claim.
