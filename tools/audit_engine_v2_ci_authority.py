@@ -16,6 +16,19 @@ AUTHORITATIVE_WORKFLOWS = (
     ".github/workflows/ci-engine-v2-release-candidate.yml",
     ".github/workflows/ci-engine-v2-cpu-reference-validation-protocol.yml",
 )
+CLEARANCE_ACTIVATION_REQUIRED_TOKENS = (
+    "betelgeuze_engine_v2/benchmark/source_paired_clearance_activation.py",
+    "betelgeuze_engine_v2/docking/source_paired_clearance_activation.py",
+    "config/engine_v2_source_paired_clearance_activation.json",
+    "tools/verify_engine_v2_source_paired_clearance_activation.py",
+    "tests/unit/test_source_paired_clearance_activation.py",
+    "tests/unit/test_source_paired_clearance_activation_evidence.py",
+    "tests/unit/test_source_paired_torsion_rescue_activation_snapshot.py",
+    "tests/unit/test_verify_engine_v2_source_paired_clearance_activation.py",
+    "docs/engine_v2_source_paired_clearance_activation.md",
+    "docs/engine_v2_source_paired_clearance_selection_policy.md",
+    "docs/engine_v2_stage0_status.md",
+)
 
 
 def _canonical_bytes(value: object) -> bytes:
@@ -42,7 +55,9 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         )
     )
     authoritative = tuple(path for path in AUTHORITATIVE_WORKFLOWS if path in workflows)
-    specialized = tuple(path for path in workflows if path not in AUTHORITATIVE_WORKFLOWS)
+    specialized = tuple(
+        path for path in workflows if path not in AUTHORITATIVE_WORKFLOWS
+    )
     hashes = {path: _sha256(repo_root / path) for path in workflows}
     main_text = (repo_root / AUTHORITATIVE_WORKFLOWS[0]).read_text(encoding="utf-8")
     stage0_required_tokens = (
@@ -57,7 +72,7 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         "tools/build_engine_v2_stage0_development_gate_ledger.py",
         "tools/classify_engine_v2_stage0_full_suite.py",
         "tools/reconcile_engine_v2_stage0_full_suites.py",
-    )
+    ) + CLEARANCE_ACTIVATION_REQUIRED_TOKENS
     payload: dict[str, Any] = {
         "schema_id": SCHEMA_ID,
         "workflow_count": len(workflows),
@@ -80,7 +95,9 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--repo-root", type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument(
+        "--repo-root", type=Path, default=Path(__file__).resolve().parents[1]
+    )
     parser.add_argument("--out", type=Path, required=True)
     return parser
 

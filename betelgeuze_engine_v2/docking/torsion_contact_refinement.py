@@ -15,18 +15,20 @@ import hashlib
 import json
 import math
 from types import MappingProxyType
-from typing import Mapping
+from typing import Mapping, cast
 
 import torch
 
 from betelgeuze_engine_v2.molecular import AllAtomSystem, canonical_system_sha256
 
 from .authority import AuthenticatedDockingProblem
-from .contact_validity import VdwContactPolicy
+from .contact_validity import ElementAwarePoseValidityContext, VdwContactPolicy
 from .identity import coordinate_fingerprint
 from .guided_placement import (
     SourcePairedTorsionRescueAllocation,
     SourcePairedTorsionRescuePolicy,
+    SourcePairedTorsionRescueProposalReceipt,
+    _torsion_metadata_sha256,
 )
 from .interaction_refinement import (
     ClashReliefRefinementError,
@@ -36,6 +38,7 @@ from .interaction_refinement import (
     InteractionAwareRigidHybridClearanceEnsembleRefinerV6,
 )
 from .proposals import DockingProposal
+from .validity import POSE_VALIDITY_RECEPTOR_COORDINATES_SCHEMA_ID
 
 
 INTERACTION_AWARE_TORSION_CONTACT_CONFIG_V7_SCHEMA_ID = (
@@ -60,6 +63,9 @@ INTERACTION_AWARE_SOURCE_PAIRED_TORSION_RESCUE_RECEIPT_V1_SCHEMA_ID = (
 )
 INTERACTION_AWARE_SOURCE_PAIRED_TORSION_RESCUE_RECEIPT_SCHEMA_ID = (
     "betelgeuze.engine_v2_source_paired_torsion_rescue_receipt/1.1.0"
+)
+SOURCE_PAIRED_TORSION_RESCUE_ACTIVATION_SNAPSHOT_SCHEMA_ID = (
+    "betelgeuze.engine_v2_source_paired_torsion_rescue_activation_snapshot/1.2.0"
 )
 MAX_SOURCE_PAIRED_TORSION_RESCUE_VARIANTS = 4
 SOURCE_PAIRED_TORSION_RESCUE_CANDIDATE_COUNT = 64
@@ -100,6 +106,126 @@ def _canonical_bytes(value: object) -> bytes:
 
 def _sha256(value: object) -> str:
     return hashlib.sha256(_canonical_bytes(value)).hexdigest()
+
+
+def _freeze_activation_json(value: object) -> object:
+    """Recursively freeze one already-canonical activation projection."""
+
+    if value is None or type(value) in {bool, int, str}:
+        return value
+    if type(value) is float:
+        if not math.isfinite(value):
+            raise TorsionContactRefinementError(
+                "activation snapshot contains a non-finite float"
+            )
+        return value
+    if isinstance(value, Mapping):
+        if any(type(key) is not str for key in value):
+            raise TorsionContactRefinementError(
+                "activation snapshot mapping keys must be strings"
+            )
+        return MappingProxyType(
+            {key: _freeze_activation_json(value[key]) for key in sorted(value)}
+        )
+    if isinstance(value, (list, tuple)):
+        return tuple(_freeze_activation_json(item) for item in value)
+    raise TorsionContactRefinementError(
+        "activation snapshot contains an unsupported value"
+    )
+
+
+def _thaw_activation_json(value: object) -> object:
+    if isinstance(value, Mapping):
+        return {str(key): _thaw_activation_json(item) for key, item in value.items()}
+    if isinstance(value, tuple):
+        return [_thaw_activation_json(item) for item in value]
+    return value
+
+
+def _canonical_binary64_tensor_payload(
+    value: torch.Tensor,
+    *,
+    name: str,
+) -> dict[str, object]:
+    if (
+        not isinstance(value, torch.Tensor)
+        or value.device.type != "cpu"
+        or not value.is_floating_point()
+        or not bool(torch.isfinite(value).all().item())
+    ):
+        raise TorsionContactRefinementError(
+            f"{name} must be a finite CPU floating tensor"
+        )
+    canonical = value.detach().to(dtype=torch.float64, device="cpu").contiguous()
+    return {
+        "dtype": "float64",
+        "shape": [int(size) for size in canonical.shape],
+        "values_binary64_hex": [
+            float(item).hex() for item in canonical.reshape(-1).tolist()
+        ],
+    }
+
+
+def _canonical_coordinate_payload(
+    value: torch.Tensor,
+    *,
+    expected_sha256: str,
+    name: str,
+) -> dict[str, object]:
+    if value.ndim != 2 or value.shape[1:] != (3,) or not len(value):
+        raise TorsionContactRefinementError(
+            f"{name} must have canonical coordinate shape [N,3]"
+        )
+    payload = _canonical_binary64_tensor_payload(value, name=name)
+    values_binary64_hex = cast(list[object], payload["values_binary64_hex"])
+    shape = cast(list[object], payload["shape"])
+    canonical = torch.tensor(
+        [float.fromhex(str(item)) for item in values_binary64_hex],
+        dtype=torch.float64,
+    ).reshape(tuple(int(size) for size in shape))
+    observed_source_sha256 = coordinate_fingerprint(value)
+    observed_canonical_sha256 = coordinate_fingerprint(canonical)
+    if (
+        observed_source_sha256 != expected_sha256
+        or observed_canonical_sha256 != expected_sha256
+    ):
+        raise TorsionContactRefinementError(
+            f"{name} coordinate SHA-256 cross-check failed"
+        )
+    payload["coordinate_sha256"] = expected_sha256
+    return payload
+
+
+def _canonical_validity_receptor_coordinate_payload(
+    value: torch.Tensor,
+    *,
+    expected_sha256: str,
+) -> dict[str, object]:
+    """Seal the exact receptor tensor under the validity-context identity."""
+
+    if value.ndim != 2 or value.shape[1:] != (3,) or not len(value):
+        raise TorsionContactRefinementError(
+            "activation receptor coordinates must have shape [N,3]"
+        )
+    payload = _canonical_binary64_tensor_payload(
+        value,
+        name="activation receptor coordinates",
+    )
+    values_binary64_hex = cast(list[object], payload["values_binary64_hex"])
+    shape = cast(list[object], payload["shape"])
+    observed = _sha256(
+        {
+            "schema_id": POSE_VALIDITY_RECEPTOR_COORDINATES_SCHEMA_ID,
+            "shape": [int(size) for size in shape],
+            "values_hex": [str(item) for item in values_binary64_hex],
+        }
+    )
+    if observed != expected_sha256:
+        raise TorsionContactRefinementError(
+            "activation receptor coordinates are cross-wired to the validity context"
+        )
+    payload["validity_coordinate_sha256"] = expected_sha256
+    return payload
 
 
 @dataclass(frozen=True, slots=True)
@@ -354,6 +480,70 @@ class _ReceptorClearanceStatistics:
                 self.minimum_vdw_ratio_receptor_atom_index
             ),
         }
+
+
+@dataclass(frozen=True, slots=True, init=False)
+class SourcePairedTorsionRescueActivationSnapshotV1:
+    """Builder-only immutable source evidence for later activation logic."""
+
+    _projection: Mapping[str, object]
+    _snapshot_sha256: str
+
+    def __init__(self) -> None:
+        raise TypeError(
+            "SourcePairedTorsionRescueActivationSnapshotV1 is builder-produced"
+        )
+
+    @property
+    def snapshot_sha256(self) -> str:
+        projection = _thaw_activation_json(self._projection)
+        observed = _sha256(projection)
+        if observed != self._snapshot_sha256:
+            raise TorsionContactRefinementError(
+                "source-paired activation snapshot changed"
+            )
+        return observed
+
+    def to_dict(self) -> dict[str, object]:
+        projection = _thaw_activation_json(self._projection)
+        if not isinstance(projection, dict):
+            raise TorsionContactRefinementError(
+                "source-paired activation snapshot projection is invalid"
+            )
+        return {**projection, "snapshot_sha256": self.snapshot_sha256}
+
+
+_ACTIVATION_SNAPSHOT_BUILDER_TOKEN = object()
+
+
+def _build_source_paired_activation_snapshot(
+    projection: Mapping[str, object],
+    *,
+    _builder_token: object,
+) -> SourcePairedTorsionRescueActivationSnapshotV1:
+    if _builder_token is not _ACTIVATION_SNAPSHOT_BUILDER_TOKEN:
+        raise TorsionContactRefinementError(
+            "source-paired activation snapshots require the refiner builder"
+        )
+    canonical_projection = deepcopy(dict(projection))
+    if (
+        canonical_projection.get("schema_id")
+        != (SOURCE_PAIRED_TORSION_RESCUE_ACTIVATION_SNAPSHOT_SCHEMA_ID)
+        or "snapshot_sha256" in canonical_projection
+    ):
+        raise TorsionContactRefinementError(
+            "source-paired activation snapshot projection is invalid"
+        )
+    snapshot_sha256 = _sha256(canonical_projection)
+    frozen_projection = _freeze_activation_json(canonical_projection)
+    if not isinstance(frozen_projection, Mapping):
+        raise TorsionContactRefinementError(
+            "source-paired activation snapshot projection is invalid"
+        )
+    snapshot = object.__new__(SourcePairedTorsionRescueActivationSnapshotV1)
+    object.__setattr__(snapshot, "_projection", frozen_projection)
+    object.__setattr__(snapshot, "_snapshot_sha256", snapshot_sha256)
+    return snapshot
 
 
 def _receptor_clearance_statistics(
@@ -723,6 +913,10 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
         self._receipts: dict[str, Mapping[str, object]] = {}
         self._baseline_states: dict[str, _TorsionOptimizedState] = {}
         self._optimized_states: dict[str, _TorsionOptimizedState] = {}
+        self._activation_snapshot_projections: dict[
+            str,
+            Mapping[str, object],
+        ] = {}
 
     @property
     def problem_fingerprint_sha256(self) -> str:
@@ -748,6 +942,444 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
                 for key, receipt in self._receipts.items()
             }
         )
+
+    def activation_snapshot(
+        self,
+        proposal_fingerprint_sha256: str,
+        *,
+        proposal_receipt: SourcePairedTorsionRescueProposalReceipt,
+    ) -> SourcePairedTorsionRescueActivationSnapshotV1:
+        """Clone sealed activation evidence for one already-refined rescue target."""
+
+        if (
+            type(proposal_fingerprint_sha256) is not str
+            or len(proposal_fingerprint_sha256) != 64
+            or any(
+                character not in "0123456789abcdef"
+                for character in proposal_fingerprint_sha256
+            )
+        ):
+            raise TorsionContactRefinementError(
+                "activation snapshot proposal fingerprint must be canonical SHA-256"
+            )
+        if not self._source_paired_torsion_rescue_profile:
+            raise TorsionContactRefinementError(
+                "activation snapshots require the source-paired V1.1 profile"
+            )
+        if proposal_fingerprint_sha256 not in self._receipts:
+            raise TorsionContactRefinementError(
+                "activation snapshot requires the exact proposal to be refined"
+            )
+        try:
+            projection = self._activation_snapshot_projections[
+                proposal_fingerprint_sha256
+            ]
+        except KeyError as exc:
+            receipt = self._receipts[proposal_fingerprint_sha256]
+            if receipt.get("proposal_torsion_eligibility_lane") != (
+                "source_paired_torsion_rescue_variant"
+            ):
+                reason = "proposal is not a fixed source-paired rescue target"
+            else:
+                reason = "complete source-paired clearance evidence is unavailable"
+            raise TorsionContactRefinementError(reason) from exc
+        cloned_projection = _thaw_activation_json(projection)
+        if not isinstance(cloned_projection, Mapping):
+            raise TorsionContactRefinementError(
+                "source-paired activation snapshot projection is invalid"
+            )
+        if not isinstance(
+            proposal_receipt,
+            SourcePairedTorsionRescueProposalReceipt,
+        ):
+            raise TypeError(
+                "proposal_receipt must be SourcePairedTorsionRescueProposalReceipt"
+            )
+        proposal_receipt_sha256 = proposal_receipt.receipt_sha256
+        proposal_payload = proposal_receipt.to_dict()
+        proposal_projection = deepcopy(proposal_payload)
+        embedded_proposal_sha256 = proposal_projection.pop("receipt_sha256", None)
+        proposal_index = cloned_projection.get("proposal_index")
+        parent_index = cloned_projection.get("source_paired_parent_proposal_index")
+        if type(proposal_index) is not int or type(parent_index) is not int:
+            raise TorsionContactRefinementError(
+                "activation snapshot proposal indices are invalid"
+            )
+        candidate_slots = proposal_payload.get("candidate_slots")
+        if (
+            embedded_proposal_sha256 != proposal_receipt_sha256
+            or _sha256(proposal_projection) != proposal_receipt_sha256
+            or proposal_receipt.allocation.allocation_sha256
+            != self._source_paired_torsion_rescue_allocation.allocation_sha256
+            or proposal_receipt.authenticated_input_receipt_sha256
+            != self._authority.input_receipt_sha256
+            or proposal_receipt.candidate_ids[proposal_index]
+            != cloned_projection.get("candidate_id")
+            or proposal_receipt.proposal_fingerprint_sha256s[proposal_index]
+            != cloned_projection.get("source_proposal_fingerprint_sha256")
+            or proposal_receipt.proposal_coordinate_fingerprint_sha256s[proposal_index]
+            != cloned_projection.get("source_coordinate_sha256")
+            or proposal_receipt.proposal_torsion_metadata_sha256s[proposal_index]
+            != cloned_projection.get("source_torsion_metadata_sha256")
+            or not isinstance(candidate_slots, list)
+            or len(candidate_slots) != SOURCE_PAIRED_TORSION_RESCUE_CANDIDATE_COUNT
+        ):
+            raise TorsionContactRefinementError(
+                "activation snapshot proposal receipt is cross-wired"
+            )
+        target_slot = deepcopy(candidate_slots[proposal_index])
+        parent_slot = deepcopy(candidate_slots[parent_index])
+        if (
+            not isinstance(target_slot, dict)
+            or target_slot.get("proposal_index") != proposal_index
+            or not isinstance(parent_slot, dict)
+            or parent_slot.get("proposal_index") != parent_index
+        ):
+            raise TorsionContactRefinementError(
+                "activation snapshot proposal slots are cross-wired"
+            )
+        cloned_projection = dict(cloned_projection)
+        cloned_projection.update(
+            {
+                "source_proposal_receipt_payload": proposal_payload,
+                "source_proposal_receipt_sha256": proposal_receipt_sha256,
+                "source_proposal_slot": target_slot,
+                "source_parent_slot": parent_slot,
+            }
+        )
+        return _build_source_paired_activation_snapshot(
+            cloned_projection,
+            _builder_token=_ACTIVATION_SNAPSHOT_BUILDER_TOKEN,
+        )
+
+    def _activation_snapshot_projection(
+        self,
+        *,
+        proposal: DockingProposal,
+        refined: DockingProposal,
+        receipt: Mapping[str, object],
+        baseline_state: _TorsionOptimizedState,
+        optimized_state: _TorsionOptimizedState,
+        baseline_clearance: _ReceptorClearanceStatistics,
+        optimized_clearance: _ReceptorClearanceStatistics,
+        baseline_receptor_objective: float,
+        baseline_internal_objective: float,
+        baseline_combined_objective: float,
+        optimized_receptor_objective: float,
+        optimized_internal_objective: float,
+        optimized_combined_objective: float,
+    ) -> dict[str, object]:
+        allocation = self._source_paired_torsion_rescue_allocation
+        if not isinstance(allocation, SourcePairedTorsionRescueAllocation):
+            raise TorsionContactRefinementError(
+                "activation snapshot allocation evidence is unavailable"
+            )
+        proposal.assert_integrity()
+        refined.assert_integrity()
+        receipt_payload = deepcopy(dict(receipt))
+        receipt_projection = deepcopy(receipt_payload)
+        source_v11_receipt_sha256 = receipt_projection.pop("receipt_sha256", None)
+        if (
+            receipt_payload.get("schema_id")
+            != INTERACTION_AWARE_SOURCE_PAIRED_TORSION_RESCUE_RECEIPT_SCHEMA_ID
+            or source_v11_receipt_sha256 != _sha256(receipt_projection)
+            or receipt_payload.get("source_proposal_sha256")
+            != proposal.fingerprint_sha256
+            or receipt_payload.get("source_paired_torsion_rescue_allocation_sha256")
+            != allocation.allocation_sha256
+            or receipt_payload.get("proposal_torsion_eligibility_lane")
+            != "source_paired_torsion_rescue_variant"
+            or receipt_payload.get("clearance_measurement_evaluated") is not True
+            or receipt_payload.get("clearance_measurement_unavailable_reason") != "none"
+        ):
+            raise TorsionContactRefinementError(
+                "activation snapshot source V1.1 receipt is invalid"
+            )
+        allocation_payload = allocation.to_dict()
+        allocation_projection = deepcopy(allocation_payload)
+        allocation_sha256 = allocation_projection.pop("allocation_sha256", None)
+        if (
+            allocation_sha256 != allocation.allocation_sha256
+            or allocation_sha256 != _sha256(allocation_projection)
+        ):
+            raise TorsionContactRefinementError(
+                "activation snapshot allocation receipt is invalid"
+            )
+        validity_context = self._authority.validity_context
+        if type(validity_context) is not ElementAwarePoseValidityContext:
+            raise TorsionContactRefinementError(
+                "activation snapshots require the exact element-aware validity context"
+            )
+        authenticated_input_receipt_payload = deepcopy(self._authority.to_dict())
+        validity_context_payload = deepcopy(validity_context.to_dict())
+        receptor_coordinates = _canonical_validity_receptor_coordinate_payload(
+            self._receptor_coordinates,
+            expected_sha256=validity_context.receptor_coordinates_sha256,
+        )
+        if (
+            authenticated_input_receipt_payload.get("input_receipt_sha256")
+            != self._authority.input_receipt_sha256
+            or authenticated_input_receipt_payload.get(
+                "validity_context_fingerprint_sha256"
+            )
+            != validity_context.fingerprint_sha256
+            or validity_context_payload.get("receptor_coordinates_sha256")
+            != receptor_coordinates["validity_coordinate_sha256"]
+            or validity_context_payload.get("contact_policy_sha256")
+            != self._radii_policy_sha256
+            or validity_context_payload.get("contact_policy")
+            != validity_context.contact_policy.to_dict()
+            or len(validity_context.ligand_elements) != len(self._ligand_radii)
+            or len(validity_context.receptor_elements) != len(self._receptor_radii)
+        ):
+            raise TorsionContactRefinementError(
+                "activation snapshot authenticated geometry is cross-wired"
+            )
+        expected_parent_index = self._source_paired_torsion_rescue_parent_by_target.get(
+            proposal.proposal_index
+        )
+        if (
+            expected_parent_index is None
+            or receipt_payload.get("source_paired_parent_proposal_index")
+            != expected_parent_index
+        ):
+            raise TorsionContactRefinementError(
+                "activation snapshot proposal identity is cross-wired"
+            )
+        baseline_coordinates_sha256 = str(
+            receipt_payload.get("baseline_coordinates_sha256") or ""
+        )
+        optimized_coordinates_sha256 = str(
+            receipt_payload.get("optimized_coordinates_sha256") or ""
+        )
+        baseline_coordinates = _canonical_coordinate_payload(
+            baseline_state.coordinates,
+            expected_sha256=baseline_coordinates_sha256,
+            name="V6 baseline coordinates",
+        )
+        optimized_coordinates = _canonical_coordinate_payload(
+            optimized_state.coordinates,
+            expected_sha256=optimized_coordinates_sha256,
+            name="optimized coordinates",
+        )
+        baseline_torsion_angles = _canonical_binary64_tensor_payload(
+            baseline_state.torsion_angles,
+            name="V6 baseline torsion angles",
+        )
+        optimized_torsion_angles = _canonical_binary64_tensor_payload(
+            optimized_state.torsion_angles,
+            name="optimized torsion angles",
+        )
+        if (
+            baseline_coordinates["shape"] != [len(self._ligand_radii), 3]
+            or optimized_coordinates["shape"] != [len(self._ligand_radii), 3]
+            or baseline_torsion_angles["shape"] != [len(self._ligand_radii)]
+            or optimized_torsion_angles["shape"] != [len(self._ligand_radii)]
+        ):
+            raise TorsionContactRefinementError(
+                "activation snapshot ligand state shape is cross-wired"
+            )
+        objective_fields = {
+            "baseline_receptor_objective_binary64_hex": (
+                baseline_receptor_objective.hex()
+            ),
+            "baseline_internal_objective_binary64_hex": (
+                baseline_internal_objective.hex()
+            ),
+            "baseline_combined_objective_binary64_hex": (
+                baseline_combined_objective.hex()
+            ),
+            "optimized_receptor_objective_binary64_hex": (
+                optimized_receptor_objective.hex()
+            ),
+            "optimized_internal_objective_binary64_hex": (
+                optimized_internal_objective.hex()
+            ),
+            "optimized_combined_objective_binary64_hex": (
+                optimized_combined_objective.hex()
+            ),
+        }
+        receipt_objective_fields = {
+            "baseline_receptor_objective_binary64_hex": (
+                "baseline_v6_receptor_penalty_binary64_hex"
+            ),
+            "baseline_internal_objective_binary64_hex": (
+                "baseline_v6_internal_penalty_binary64_hex"
+            ),
+            "baseline_combined_objective_binary64_hex": (
+                "baseline_v6_combined_penalty_binary64_hex"
+            ),
+            "optimized_receptor_objective_binary64_hex": (
+                "optimized_receptor_penalty_binary64_hex"
+            ),
+            "optimized_internal_objective_binary64_hex": (
+                "optimized_internal_penalty_binary64_hex"
+            ),
+            "optimized_combined_objective_binary64_hex": (
+                "optimized_combined_penalty_binary64_hex"
+            ),
+        }
+        if any(
+            receipt_payload.get(receipt_name) != objective_fields[snapshot_name]
+            for snapshot_name, receipt_name in receipt_objective_fields.items()
+        ):
+            raise TorsionContactRefinementError(
+                "activation snapshot objectives are cross-wired"
+            )
+        ligand_atom_count = len(self._ligand_radii)
+        receptor_atom_count = len(self._receptor_radii)
+        exact_pair_count = ligand_atom_count * receptor_atom_count
+        if (
+            receipt_payload.get("clearance_ligand_atom_count") != ligand_atom_count
+            or receipt_payload.get("clearance_receptor_atom_count")
+            != receptor_atom_count
+            or receipt_payload.get("clearance_full_cartesian_pair_count")
+            != exact_pair_count
+            or receipt_payload.get("clearance_radii_policy_sha256")
+            != self._radii_policy_sha256
+            or receipt_payload.get(
+                "baseline_v6_minimum_vdw_surface_gap_angstrom_binary64_hex"
+            )
+            != baseline_clearance.minimum_vdw_surface_gap_angstrom.hex()
+            or receipt_payload.get(
+                "optimized_minimum_vdw_surface_gap_angstrom_binary64_hex"
+            )
+            != optimized_clearance.minimum_vdw_surface_gap_angstrom.hex()
+        ):
+            raise TorsionContactRefinementError(
+                "activation snapshot clearance evidence is cross-wired"
+            )
+        torsion_variant_available = receipt_payload.get("torsion_variant_available")
+        torsion_selected = receipt_payload.get("torsion_selected")
+        if (
+            type(torsion_variant_available) is not bool
+            or type(torsion_selected) is not bool
+        ):
+            raise TorsionContactRefinementError(
+                "activation snapshot torsion state is invalid"
+            )
+        source_torsion_metadata_sha256 = _torsion_metadata_sha256(
+            proposal.torsion_angles
+        )
+        candidate_torsion_metadata_sha256 = _torsion_metadata_sha256(
+            refined.torsion_angles
+        )
+        baseline_torsion_metadata_sha256 = _torsion_metadata_sha256(
+            baseline_state.torsion_angles
+        )
+        optimized_torsion_metadata_sha256 = _torsion_metadata_sha256(
+            optimized_state.torsion_angles
+        )
+        if (
+            baseline_torsion_metadata_sha256 != source_torsion_metadata_sha256
+            or candidate_torsion_metadata_sha256
+            != (
+                optimized_torsion_metadata_sha256
+                if torsion_selected
+                else baseline_torsion_metadata_sha256
+            )
+        ):
+            raise TorsionContactRefinementError(
+                "activation snapshot torsion identities are cross-wired"
+            )
+        objectives = {
+            "baseline": {
+                "receptor_binary64_hex": baseline_receptor_objective.hex(),
+                "internal_binary64_hex": baseline_internal_objective.hex(),
+                "combined_binary64_hex": baseline_combined_objective.hex(),
+            },
+            "optimized": {
+                "receptor_binary64_hex": optimized_receptor_objective.hex(),
+                "internal_binary64_hex": optimized_internal_objective.hex(),
+                "combined_binary64_hex": optimized_combined_objective.hex(),
+            },
+        }
+        clearance = {
+            "evaluated": True,
+            "reason": "none",
+            "unavailable_reason": "none",
+            "radii_policy_sha256": self._radii_policy_sha256,
+            "ligand_atom_count": ligand_atom_count,
+            "receptor_atom_count": receptor_atom_count,
+            "exact_pair_count": exact_pair_count,
+            "pair_count_bound": MAX_RECEPTOR_CLEARANCE_PAIR_COUNT,
+            "baseline": baseline_clearance.to_dict(),
+            "optimized": optimized_clearance.to_dict(),
+        }
+        torsion_state = {
+            "evaluated": bool(receipt_payload.get("torsion_evaluated")),
+            "variant_available": torsion_variant_available,
+            "selected": torsion_selected,
+            "evaluated_steps": int(receipt_payload.get("evaluated_torsion_steps", 0)),
+            "evaluated_moves": deepcopy(
+                receipt_payload.get("evaluated_torsion_moves", [])
+            ),
+        }
+        v6_baseline_state = {
+            "coordinates": baseline_coordinates,
+            "torsion_angles": baseline_torsion_angles,
+        }
+        optimized_state_payload = {
+            "coordinates": optimized_coordinates,
+            "torsion_angles": optimized_torsion_angles,
+        }
+        return {
+            "schema_id": SOURCE_PAIRED_TORSION_RESCUE_ACTIVATION_SNAPSHOT_SCHEMA_ID,
+            "source_v11_receipt_payload": receipt_payload,
+            "source_v11_receipt_sha256": source_v11_receipt_sha256,
+            "allocation_receipt_payload": allocation_payload,
+            "allocation_receipt_sha256": allocation_sha256,
+            "authenticated_input_receipt_payload": (
+                authenticated_input_receipt_payload
+            ),
+            "authenticated_input_receipt_sha256": (
+                self._authority.input_receipt_sha256
+            ),
+            "validity_context_payload": validity_context_payload,
+            "receptor_coordinates": receptor_coordinates,
+            "candidate_id": refined.candidate_id,
+            "proposal_index": refined.proposal_index,
+            "candidate_proposal_fingerprint_sha256": refined.fingerprint_sha256,
+            "source_proposal_fingerprint_sha256": proposal.fingerprint_sha256,
+            "generic_v7_config_sha256": self._config.fingerprint_sha256,
+            "vdw_contact_policy_sha256": self._radii_policy_sha256,
+            "source_coordinate_sha256": proposal.coordinate_fingerprint_sha256,
+            "candidate_coordinate_sha256": refined.coordinate_fingerprint_sha256,
+            "source_torsion_metadata_sha256": source_torsion_metadata_sha256,
+            "candidate_torsion_metadata_sha256": (candidate_torsion_metadata_sha256),
+            "v6_baseline_torsion_metadata_sha256": (baseline_torsion_metadata_sha256),
+            "optimized_torsion_metadata_sha256": (optimized_torsion_metadata_sha256),
+            "source_paired_parent_proposal_index": expected_parent_index,
+            "v6_baseline_state": v6_baseline_state,
+            "optimized_state": optimized_state_payload,
+            "objectives": objectives,
+            "clearance": clearance,
+            "torsion_state": torsion_state,
+            "v6_baseline_coordinates": baseline_coordinates,
+            "optimized_coordinates": optimized_coordinates,
+            "v6_baseline_torsion_angles": baseline_torsion_angles,
+            "optimized_torsion_angles": optimized_torsion_angles,
+            "baseline_clearance_statistics": baseline_clearance.to_dict(),
+            "optimized_clearance_statistics": optimized_clearance.to_dict(),
+            **objective_fields,
+            "ligand_atom_count": ligand_atom_count,
+            "receptor_atom_count": receptor_atom_count,
+            "exact_pair_count": exact_pair_count,
+            "evaluated_internal_pair_count": len(self._internal_first),
+            "clearance_radii_policy_sha256": self._radii_policy_sha256,
+            "torsion_evaluated": torsion_state["evaluated"],
+            "torsion_variant_available": torsion_variant_available,
+            "torsion_selected": torsion_selected,
+            "evaluated_torsion_steps": torsion_state["evaluated_steps"],
+            "evaluated_torsion_moves": torsion_state["evaluated_moves"],
+            "result_dependent_allocation": False,
+            "selection_applied": False,
+            "default_v7_output_changed": False,
+            "development_only": True,
+            "stage0_eligible": False,
+            "fresh_execution_authorized": False,
+            "claim_safe": False,
+        }
 
     def _optimized_state_for_experimental_v8(
         self,
@@ -1410,7 +2042,40 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
             refinement_receipt_sha256=receipt_sha256,
             torsion_angles=final_torsion_angles,
         )
+        activation_projection: Mapping[str, object] | None = None
+        if clearance_measurement_evaluated:
+            raw_projection = self._activation_snapshot_projection(
+                proposal=proposal,
+                refined=refined,
+                receipt=receipt,
+                baseline_state=_TorsionOptimizedState(
+                    coordinates=baseline.coordinates,
+                    torsion_angles=baseline.torsion_angles,
+                ),
+                optimized_state=_TorsionOptimizedState(
+                    coordinates=optimized_state_coordinates,
+                    torsion_angles=optimized_state_torsion_angles,
+                ),
+                baseline_clearance=baseline_clearance,
+                optimized_clearance=optimized_clearance,
+                baseline_receptor_objective=baseline_receptor,
+                baseline_internal_objective=baseline_internal,
+                baseline_combined_objective=baseline_combined,
+                optimized_receptor_objective=optimized_receptor,
+                optimized_internal_objective=optimized_internal,
+                optimized_combined_objective=optimized_combined,
+            )
+            frozen_projection = _freeze_activation_json(raw_projection)
+            if not isinstance(frozen_projection, Mapping):
+                raise TorsionContactRefinementError(
+                    "source-paired activation projection is invalid"
+                )
+            activation_projection = frozen_projection
         self._receipts[proposal.fingerprint_sha256] = MappingProxyType(receipt)
+        if activation_projection is not None:
+            self._activation_snapshot_projections[proposal.fingerprint_sha256] = (
+                activation_projection
+            )
         return refined
 
 

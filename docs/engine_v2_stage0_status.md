@@ -223,6 +223,31 @@ The canonical capability state is:
   21,367,212 expanded bytes to 505,161 bytes and is pinned to
   `7a2561f646f3cf5434de6c79ed797073ac1b7e034e4fcd2291755a58128f5e98`.
   This is descriptive telemetry only and selects no rule.
+- The frozen source-paired clearance policy remains exactly
+  `e5936f33d5aec54aae67f519e5cf6dffcc61181237270adb3e367a5f65cb29ad`.
+  Its original caller-supplied probe is explicitly inadmissible activation
+  evidence. A separate
+  [snapshot-driven activation contract](engine_v2_source_paired_clearance_activation.md)
+  now binds the exact frozen per-case archive-member authority, full 64-slot
+  source-proposal receipt, full typed current-V7 candidate/V1.1 lineage, V1.1
+  target receipts, and allocation receipt to every allocated target and parent,
+  proposal and coordinate/torsion identities, V6-baseline and optimized states,
+  raw-distance and VDW-gap telemetry, objectives, counts, and torsion status.
+  Snapshot `1.2.0` also binds the authenticated input, element-aware validity
+  context, receptor tensor, element-derived VDW radii, and baseline/optimized
+  torsion digests. The adapter independently recomputes the complete clearance
+  statistics and replays every authenticated torsion move; snapshot subclasses
+  fail before dispatch.
+  Its outer receipt independently rederives every activated state, requires all
+  allocated targets, permits changes only for targets selected by the
+  predeclared rule, rejects equal cross-arm non-target substitutions, and retains complete
+  `ScorerV1Terms`, context-bound internal validity, the exact 22-check
+  PoseBusters map, authenticated symmetry-aware RMSD, and the complete 64-slot
+  score/rank order for both arms. Score terms, exact validity, Top-1, and Top-5
+  can therefore be rederived without treating the incomplete historical score
+  archive as authority. It constructs non-executing evidence only: historical
+  A/B, result materialization, default V7 changes, CLI/product wiring,
+  fresh-128, and scientific or product claims remain unauthorized.
 - Solo self-review pass records now have a fail-closed generator that requires
   one clean commit/evidence identity and enforces at least 24 hours between
   pass 1 and pass 2 without claiming reviewer independence. A separate
@@ -311,8 +336,11 @@ The canonical capability state is:
    The completed receipt-bound scale audit finds 7/22 inside the same numeric
    interval only after heavy-atom normalization, while exact lexicographic
    ordering accepts all 22 and therefore does not provide a bounded selector.
-   Predeclare one result-independent rule before any historical A/B; do not
-   relabel, filter, abstain, or relax thresholds around the current pool.
+   One result-independent shadow rule is frozen, and its snapshot-driven
+   activation-evidence contract can preserve complete score, term, validity,
+   and rank semantics. The historical A/B has not been authorized or run;
+   do not relabel, filter, abstain, relax thresholds, or substitute an
+   incomplete historical score archive around the current pool.
 4. **Full-suite self-review:** a solo operational evidence builder dispositions the 49
    conservative `actual_regression` rows as pre-existing unresolved behavior
    debt and freezes the Engine-required/legacy/product/local-evidence tier

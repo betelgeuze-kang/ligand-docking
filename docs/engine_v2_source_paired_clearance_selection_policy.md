@@ -8,6 +8,12 @@ refiner, runner, scorer, benchmark parser, or product path. Therefore this
 slice changes no candidate coordinates, V7 selection, V1/V1.1 receipt, score,
 candidate denominator, historical artifact, or fresh-holdout authority.
 
+The policy itself remains unchanged by the later activation-evidence slice.
+In particular, its SHA-256 stays
+`e5936f33d5aec54aae67f519e5cf6dffcc61181237270adb3e367a5f65cb29ad`.
+The original caller-supplied probe and self-hashed decision remain useful for
+testing the predicate, but remain inadmissible as activation provenance.
+
 | Item | Frozen value |
 | --- | --- |
 | Policy schema | `betelgeuze.engine_v2_source_paired_torsion_rescue_clearance_selection_policy/1.0.0` |
@@ -82,12 +88,32 @@ Every evaluator-created, private init-disabled decision records `selection_appli
 Stage 0 eligibility, fresh execution, product promotion, public claim,
 scientific validation, and claim safety are all false.
 
-Activating the rule is a separate future slice. It must add raw minimum-distance
-telemetry to a new outer receipt, authenticate and bind the unchanged V1.1
-receipt payload, preserve the
-fixed allocation, and prove that the default/product V7 path remains byte-
-identical. Only then may one already-authorized historical-development A/B be
-considered. Fresh-128 remains closed.
+A separate
+[snapshot-driven activation-evidence contract](engine_v2_source_paired_clearance_activation.md)
+now authenticates the unchanged V1.1 receipt payload and SHA-256, exact
+allocation receipt, frozen per-case archive-member authority, complete 64-slot
+source-proposal receipt, complete typed current-V7 proposal/V1.1 lineage, target/parent
+slots, proposal and coordinate/torsion identities, V6-baseline and optimized
+states, raw minimum distances, minimum VDW gaps, objectives, atom/pair counts,
+and torsion status. Snapshot `1.2.0` further binds the authenticated input,
+element-aware validity context, receptor coordinate tensor, and source/optimized
+torsion digests. The adapter derives radii from authenticated elements,
+independently recomputes full clearance statistics, replays every authenticated
+torsion move, and rejects snapshot subclasses before dispatch. It reconstructs
+this frozen predicate for every allocated target and seals every experimental
+state before score, rank, validity,
+PoseBusters, or RMSD evidence is attached. Complete `ScorerV1Terms`, bound
+internal validity, the exact 22-check PoseBusters map, authenticated
+symmetry-aware RMSD, and the full 64-slot rank ordering are retained for both
+arms in the outer evidence receipt. Every activated state is independently
+rederived from its snapshot and baseline proposal. Non-target rows and retained
+target scientific evidence must be identical across arms and must also match
+the frozen current-V7 lineage, so equal cross-arm forgery is rejected.
+
+That capability constructs evidence only. It does not authorize or run the
+historical A/B, does not change default V7, is not wired to a generic runner,
+CLI, API, or product path, and grants no fresh-holdout or claim authority.
+Fresh-128 remains closed.
 
 ## Compact verification record
 

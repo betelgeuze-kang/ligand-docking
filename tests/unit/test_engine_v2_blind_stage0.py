@@ -47,6 +47,7 @@ from betelgeuze_engine_v2.benchmark.public_redocking_benchmark import (
 from tools import run_engine_v2_public_redocking_300 as runner
 from tools.audit_engine_v2_ci_authority import (
     AUTHORITATIVE_WORKFLOWS,
+    CLEARANCE_ACTIVATION_REQUIRED_TOKENS,
     build_inventory,
 )
 
@@ -171,6 +172,7 @@ def _development_materialization(case_id: str) -> VerifiedCaseMaterialization:
         for profile in frozen_public_redocking_profiles()
         if profile.case_id == case_id
     )
+
     def digest(role: str) -> str:
         return hashlib.sha256(f"{case_id}:{role}".encode("ascii")).hexdigest()
 
@@ -254,12 +256,7 @@ def _development_result(
     )
     paths = {
         "receptor": repo_root / "inputs" / case_id / f"{case_id}_protein.pdb",
-        "seed": (
-            repo_root
-            / "inputs"
-            / case_id
-            / f"{case_id}_ligand_start_conf.sdf"
-        ),
+        "seed": (repo_root / "inputs" / case_id / f"{case_id}_ligand_start_conf.sdf"),
         "native": repo_root / "inputs" / case_id / f"{case_id}_ligand.sdf",
     }
     command = runner._engine_v2_command(
@@ -400,6 +397,7 @@ def _policy(
                 "tools/build_engine_v2_stage0_development_gate_ledger.py",
                 "tools/classify_engine_v2_stage0_full_suite.py",
                 "tools/reconcile_engine_v2_stage0_full_suites.py",
+                *CLEARANCE_ACTIVATION_REQUIRED_TOKENS,
             )
         ),
         encoding="utf-8",
@@ -458,9 +456,7 @@ def _policy(
     development_provenance = stage0_execution_profile_development_provenance(
         development_report_path=development_report.relative_to(repo_root).as_posix(),
         development_report_file_sha256=_sha256(development_report),
-        development_report_sha256=str(
-            development_report_payload["report_sha256"]
-        ),
+        development_report_sha256=str(development_report_payload["report_sha256"]),
         case_ids=development_case_ids,
         scored_case_count=len(development_case_ids),
         source_receipt_binding=source_receipt_binding,
@@ -523,9 +519,7 @@ def _policy(
         "holdout_reuse_policy": "never_use_fresh_128_for_tuning",
         "source_freeze": {
             "algorithm_profile": stage0_engine_v2_algorithm_profile(),
-            "execution_profile": stage0_fresh_execution_profile(
-                development_provenance
-            ),
+            "execution_profile": stage0_fresh_execution_profile(development_provenance),
             "diagnostic_contract_pr_number": 211,
             "diagnostic_contract_review_head_sha": (STAGE0_DIAGNOSTIC_REVIEW_HEAD_SHA),
             "git_head_sha": git_head,
@@ -990,9 +984,10 @@ def test_stage0_admits_only_complete_frozen_policy(
     )
 
     assert receipt.policy_sha256 == payload["policy_sha256"]
-    assert receipt.execution_profile_sha256 == payload["source_freeze"][
-        "execution_profile"
-    ]["profile_sha256"]
+    assert (
+        receipt.execution_profile_sha256
+        == payload["source_freeze"]["execution_profile"]["profile_sha256"]
+    )
     assert receipt.reviewer_id == "reviewer-b"
     assert receipt.operator_id == "operator-c"
 
@@ -1264,8 +1259,8 @@ def test_stage0_rejects_rehashed_execution_profile_drift(
     runtime_arguments = execution_profile["runtime_arguments"]
     assert isinstance(runtime_arguments, dict)
     runtime_arguments["bootstrap_samples"] = 1_999
-    execution_profile["profile_sha256"] = (
-        compute_stage0_execution_profile_sha256(execution_profile)
+    execution_profile["profile_sha256"] = compute_stage0_execution_profile_sha256(
+        execution_profile
     )
     payload["policy_sha256"] = compute_stage0_policy_sha256(payload)
     monkeypatch.setattr(
@@ -1296,9 +1291,11 @@ def test_stage0_rejects_fresh_case_in_rebound_development_report(
     development = json.loads(development_path.read_text(encoding="utf-8"))
     original_case_id = str(development["case_ids"][0])
     fresh_case_id = FROZEN_PUBLIC_REDOCKING_FRESH_HOLDOUT_CASE_IDS[0]
-    original_receipt_relative = _development_receipt_path(
-        tmp_path, original_case_id
-    ).relative_to(tmp_path).as_posix()
+    original_receipt_relative = (
+        _development_receipt_path(tmp_path, original_case_id)
+        .relative_to(tmp_path)
+        .as_posix()
+    )
     fresh_receipt_path = _development_receipt_path(tmp_path, fresh_case_id)
     fresh_receipt_relative = fresh_receipt_path.relative_to(tmp_path).as_posix()
     source_receipts = dict(development["source_receipts_sha256"])
@@ -1311,9 +1308,7 @@ def test_stage0_rejects_fresh_case_in_rebound_development_report(
     for case_row in development["cases"]:
         if case_row["case_id"] == original_case_id:
             case_row["case_id"] = fresh_case_id
-    development["cases"] = sorted(
-        development["cases"], key=lambda row: row["case_id"]
-    )
+    development["cases"] = sorted(development["cases"], key=lambda row: row["case_id"])
     _rebind_development_profile(payload, development_path, development)
     monkeypatch.setattr(
         "betelgeuze_engine_v2.benchmark.blind_stage0.current_stage0_native_backend",
@@ -1364,7 +1359,8 @@ def test_stage0_rejects_self_hashed_development_report_without_source_receipts(
         )
 
     assert any(
-        blocker == (
+        blocker
+        == (
             "execution_profile_development_source_receipts_invalid:"
             "development_source_receipts_missing"
         )
@@ -1416,9 +1412,7 @@ def test_stage0_rejects_resealed_cross_wired_development_receipts(
         )
 
     assert any(
-        blocker.startswith(
-            "execution_profile_development_source_receipts_invalid:"
-        )
+        blocker.startswith("execution_profile_development_source_receipts_invalid:")
         for blocker in raised.value.blockers
     )
 
@@ -1759,7 +1753,9 @@ def test_holdout_runner_rejects_profile_argument_drift_before_output_creation(
         governance_mode="independent_three_role",
         independent_review_complete=True,
     )
-    monkeypatch.setattr(runner, "verify_stage0_admission", lambda *args, **kwargs: receipt)
+    monkeypatch.setattr(
+        runner, "verify_stage0_admission", lambda *args, **kwargs: receipt
+    )
 
     with pytest.raises(Stage0AdmissionError) as raised:
         runner.main(
@@ -1855,9 +1851,7 @@ def test_fresh_report_requires_complete_profile_bound_execution_receipts(
             _Payload(
                 {
                     "result": rows[(engine_id, case_id)].to_dict(),
-                    "execution_policy": {
-                        "execution_profile_sha256": profile_sha256
-                    },
+                    "execution_policy": {"execution_profile_sha256": profile_sha256},
                 }
             )
             for case_id in case_ids
@@ -1907,9 +1901,7 @@ def test_fresh_report_requires_complete_profile_bound_execution_receipts(
         _Payload(
             {
                 "result": altered_result,
-                "execution_policy": {
-                    "execution_profile_sha256": profile_sha256
-                },
+                "execution_policy": {"execution_profile_sha256": profile_sha256},
             }
         ),
         *executions["engine_v2"][1:],

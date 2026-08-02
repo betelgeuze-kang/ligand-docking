@@ -14,6 +14,11 @@ import torch
 
 from .proposals import DockingProposal
 
+
+POSE_VALIDITY_RECEPTOR_COORDINATES_SCHEMA_ID = (
+    "betelgeuze.engine_v2_pose_validity_receptor_coordinates/1.0.0"
+)
+
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
@@ -31,9 +36,7 @@ def _canonical_sha256(value: object) -> str:
             separators=(",", ":"),
         ).encode("ascii")
     except (TypeError, ValueError) as exc:
-        raise PoseValidityError(
-            "pose validity identity is not canonical JSON"
-        ) from exc
+        raise PoseValidityError("pose validity identity is not canonical JSON") from exc
     return hashlib.sha256(encoded).hexdigest()
 
 
@@ -50,18 +53,12 @@ def _coords(
     name: str,
     require_nonempty: bool = False,
 ) -> torch.Tensor:
-    if (
-        not isinstance(value, torch.Tensor)
-        or value.ndim != 2
-        or value.shape[-1] != 3
-    ):
+    if not isinstance(value, torch.Tensor) or value.ndim != 2 or value.shape[-1] != 3:
         raise PoseValidityError(f"{name} must have shape [N,3]")
     if require_nonempty and int(value.shape[0]) < 1:
         raise PoseValidityError(f"{name} must contain at least one coordinate")
     if not value.is_floating_point() or not bool(torch.isfinite(value).all().item()):
-        raise PoseValidityError(
-            f"{name} must contain finite floating coordinates"
-        )
+        raise PoseValidityError(f"{name} must contain finite floating coordinates")
     return (
         value.detach()
         .to(dtype=torch.float64, device="cpu")
@@ -84,9 +81,7 @@ def _coordinate_identity(value: torch.Tensor, *, schema_id: str) -> str:
         {
             "schema_id": schema_id,
             "shape": [int(size) for size in tensor.shape],
-            "values_hex": [
-                float(item).hex() for item in tensor.reshape(-1).tolist()
-            ],
+            "values_hex": [float(item).hex() for item in tensor.reshape(-1).tolist()],
         }
     )
 
@@ -121,9 +116,7 @@ def _normalize_chirality(
             or min(indices) < 0
             or max(indices) >= atom_count
         ):
-            raise PoseValidityError(
-                "chirality center references invalid atom indices"
-            )
+            raise PoseValidityError("chirality center references invalid atom indices")
         if indices in seen:
             raise PoseValidityError("chirality centers must be unique")
         seen.add(indices)
@@ -168,9 +161,7 @@ class PoseValidityConfig:
         ):
             value = float(getattr(self, name))
             if not math.isfinite(value) or value < 0.0:
-                raise PoseValidityError(
-                    f"{name} must be finite and non-negative"
-                )
+                raise PoseValidityError(f"{name} must be finite and non-negative")
             object.__setattr__(self, name, value)
         if self.pocket_radius_angstrom is not None:
             radius = float(self.pocket_radius_angstrom)
@@ -182,9 +173,7 @@ class PoseValidityConfig:
         pair_checks = int(self.max_pair_checks)
         cross_checks = int(self.max_cross_checks)
         if pair_checks < 0 or cross_checks < 0:
-            raise PoseValidityError(
-                "pair-check capacities must be non-negative"
-            )
+            raise PoseValidityError("pair-check capacities must be non-negative")
         object.__setattr__(self, "max_pair_checks", pair_checks)
         object.__setattr__(self, "max_cross_checks", cross_checks)
 
@@ -253,9 +242,7 @@ class PoseValidityResult:
             "checks": dict(self.checks),
             "evaluated_checks": dict(self.evaluated_checks),
             "complete": bool(self.complete),
-            "valid_within_evaluated_scope": bool(
-                self.valid_within_evaluated_scope
-            ),
+            "valid_within_evaluated_scope": bool(self.valid_within_evaluated_scope),
             "measurements": dict(self.measurements),
             "blockers": list(self.blockers),
             "not_evaluated_reasons": dict(self.not_evaluated_reasons),
@@ -344,9 +331,7 @@ class PoseValidityContext:
     def receptor_coordinates_sha256(self) -> str:
         return _coordinate_identity(
             self.receptor_coordinates,
-            schema_id=(
-                "betelgeuze.engine_v2_pose_validity_receptor_coordinates/1.0.0"
-            ),
+            schema_id=POSE_VALIDITY_RECEPTOR_COORDINATES_SCHEMA_ID,
         )
 
     @property
@@ -369,9 +354,7 @@ class PoseValidityContext:
             "excluded_nonbonded_pairs": [
                 list(pair) for pair in self.excluded_nonbonded_pairs
             ],
-            "chirality_centers": [
-                list(row) for row in self.chirality_centers
-            ],
+            "chirality_centers": [list(row) for row in self.chirality_centers],
             "config": self.config.to_dict(),
             "config_fingerprint_sha256": self.config.fingerprint_sha256,
             "all_required_inputs_explicit": True,
@@ -389,9 +372,7 @@ class PoseValidityContext:
 
     def assert_integrity(self) -> None:
         if self._current_fingerprint_sha256() != self._fingerprint_sha256:
-            raise PoseValidityError(
-                "pose validity context changed after construction"
-            )
+            raise PoseValidityError("pose validity context changed after construction")
 
     def evaluate(self, proposal: DockingProposal) -> PoseValidityResult:
         self.assert_integrity()
@@ -443,9 +424,7 @@ def evaluate_pose_validity(
         require_nonempty=True,
     )
     if reference.shape != pose.shape:
-        raise PoseValidityError(
-            "reference and proposal coordinate shapes differ"
-        )
+        raise PoseValidityError("reference and proposal coordinate shapes differ")
     atom_count = int(pose.shape[0])
     bond_set = (
         set()
@@ -493,21 +472,15 @@ def evaluate_pose_validity(
     if bond_pairs is None:
         checks["bond_lengths_preserved"] = False
         evaluated_checks["bond_lengths_preserved"] = False
-        not_evaluated_reasons["bond_lengths_preserved"] = (
-            "bond_pairs_not_supplied"
-        )
+        not_evaluated_reasons["bond_lengths_preserved"] = "bond_pairs_not_supplied"
         checks["ligand_self_clash_free"] = False
         evaluated_checks["ligand_self_clash_free"] = False
-        not_evaluated_reasons["ligand_self_clash_free"] = (
-            "bond_pairs_not_supplied"
-        )
+        not_evaluated_reasons["ligand_self_clash_free"] = "bond_pairs_not_supplied"
     else:
         max_bond_delta = 0.0
         for first, second in sorted(bond_set):
             reference_length = float(
-                torch.linalg.vector_norm(
-                    reference[first] - reference[second]
-                ).item()
+                torch.linalg.vector_norm(reference[first] - reference[second]).item()
             )
             pose_length = float(
                 torch.linalg.vector_norm(pose[first] - pose[second]).item()
@@ -535,9 +508,7 @@ def evaluate_pose_validity(
                     continue
                 evaluated_pair_count += 1
                 distance = float(
-                    torch.linalg.vector_norm(
-                        pose[first] - pose[second]
-                    ).item()
+                    torch.linalg.vector_norm(pose[first] - pose[second]).item()
                 )
                 minimum_nonbonded = min(minimum_nonbonded, distance)
         if not math.isfinite(minimum_nonbonded):
@@ -546,12 +517,8 @@ def evaluate_pose_validity(
             minimum_nonbonded >= cfg.ligand_self_clash_angstrom
         )
         evaluated_checks["ligand_self_clash_free"] = True
-        measurements["minimum_ligand_nonbonded_distance_angstrom"] = (
-            minimum_nonbonded
-        )
-        measurements["evaluated_ligand_nonbonded_pair_count"] = (
-            evaluated_pair_count
-        )
+        measurements["minimum_ligand_nonbonded_distance_angstrom"] = minimum_nonbonded
+        measurements["evaluated_ligand_nonbonded_pair_count"] = evaluated_pair_count
         measurements["excluded_ligand_pair_count"] = len(exclusion_set)
         if not checks["ligand_self_clash_free"]:
             blockers.append("ligand_self_clash_detected")
@@ -570,9 +537,7 @@ def evaluate_pose_validity(
         )
         cross_count = int(receptor.shape[0]) * atom_count
         if cross_count > cfg.max_cross_checks:
-            raise PoseValidityError(
-                "receptor-ligand cross-check capacity exceeded"
-            )
+            raise PoseValidityError("receptor-ligand cross-check capacity exceeded")
         minimum_receptor_distance = float("inf")
         for ligand_index in range(atom_count):
             for receptor_index in range(int(receptor.shape[0])):
@@ -635,16 +600,12 @@ def evaluate_pose_validity(
     if pocket_center is None:
         checks["inside_declared_pocket"] = False
         evaluated_checks["inside_declared_pocket"] = False
-        not_evaluated_reasons["inside_declared_pocket"] = (
-            "pocket_center_not_supplied"
-        )
+        not_evaluated_reasons["inside_declared_pocket"] = "pocket_center_not_supplied"
     else:
         center = _vector3(pocket_center, name="pocket_center")
         radius = cfg.pocket_radius_angstrom
         if radius is None:
-            raise PoseValidityError(
-                "pocket_center requires pocket_radius_angstrom"
-            )
+            raise PoseValidityError("pocket_center requires pocket_radius_angstrom")
         max_distance = 0.0
         for index in range(atom_count):
             max_distance = max(
@@ -659,9 +620,7 @@ def evaluate_pose_validity(
 
     complete = all(evaluated_checks.values())
     valid_within_evaluated_scope = all(
-        checks[name]
-        for name, evaluated in evaluated_checks.items()
-        if evaluated
+        checks[name] for name, evaluated in evaluated_checks.items() if evaluated
     )
     proposal.assert_integrity()
     return PoseValidityResult(
@@ -676,6 +635,7 @@ def evaluate_pose_validity(
 
 
 __all__ = [
+    "POSE_VALIDITY_RECEPTOR_COORDINATES_SCHEMA_ID",
     "PoseValidityConfig",
     "PoseValidityContext",
     "PoseValidityError",

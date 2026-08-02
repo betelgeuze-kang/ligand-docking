@@ -4,6 +4,7 @@ from pathlib import Path
 
 from tools.audit_engine_v2_ci_authority import (
     AUTHORITATIVE_WORKFLOWS,
+    CLEARANCE_ACTIVATION_REQUIRED_TOKENS,
     build_inventory,
 )
 
@@ -21,6 +22,19 @@ def test_ci_authority_inventory_exposes_specialized_workflows(tmp_path: Path) ->
         "tools/build_engine_v2_stage0_development_gate_ledger.py",
         "tools/classify_engine_v2_stage0_full_suite.py",
         "tools/reconcile_engine_v2_stage0_full_suites.py",
+    ) + CLEARANCE_ACTIVATION_REQUIRED_TOKENS
+    assert CLEARANCE_ACTIVATION_REQUIRED_TOKENS == (
+        "betelgeuze_engine_v2/benchmark/source_paired_clearance_activation.py",
+        "betelgeuze_engine_v2/docking/source_paired_clearance_activation.py",
+        "config/engine_v2_source_paired_clearance_activation.json",
+        "tools/verify_engine_v2_source_paired_clearance_activation.py",
+        "tests/unit/test_source_paired_clearance_activation.py",
+        "tests/unit/test_source_paired_clearance_activation_evidence.py",
+        "tests/unit/test_source_paired_torsion_rescue_activation_snapshot.py",
+        "tests/unit/test_verify_engine_v2_source_paired_clearance_activation.py",
+        "docs/engine_v2_source_paired_clearance_activation.md",
+        "docs/engine_v2_source_paired_clearance_selection_policy.md",
+        "docs/engine_v2_stage0_status.md",
     )
     for workflow in AUTHORITATIVE_WORKFLOWS:
         path = tmp_path / workflow
@@ -41,3 +55,14 @@ def test_ci_authority_inventory_exposes_specialized_workflows(tmp_path: Path) ->
     assert payload["specialized_workflows_hidden"] is False
     assert len(payload["workflow_inventory_sha256"]) == 64
     assert len(payload["receipt_sha256"]) == 64
+
+    main_path = tmp_path / AUTHORITATIVE_WORKFLOWS[0]
+    main_path.write_text(
+        "\n".join(
+            token
+            for token in required_tokens
+            if token != "config/engine_v2_source_paired_clearance_activation.json"
+        ),
+        encoding="utf-8",
+    )
+    assert build_inventory(tmp_path)["stage0_tests_in_authoritative_main"] is False
