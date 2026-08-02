@@ -127,6 +127,9 @@ def test_source_paired_clearance_selection_policy_is_frozen_and_shadow_only() ->
         "optimized_strictly_gt_baseline"
     )
     assert payload["raw_minimum_distance_comparator"] == "optimized_gte_baseline"
+    assert payload["clearance_metric_integrity_rule"] == (
+        "each_surface_gap_strictly_lt_corresponding_raw_distance"
+    )
     assert payload["selection_activation"] == "not_wired_shadow_only"
     assert payload["shadow_input_authority"] == ("caller_supplied_contract_probe_only")
     assert payload["activation_evidence_admissible"] is False
@@ -138,7 +141,7 @@ def test_source_paired_clearance_selection_policy_is_frozen_and_shadow_only() ->
     assert payload["product_promotion_eligible"] is False
     assert payload["claim_safe"] is False
     assert policy.fingerprint_sha256 == (
-        "3e5c8464abb78695e9683b6d791712528f275a39e06c9f363fefeadd22e75252"
+        "9d084632c98eb312fed40e59ba7c10f338c4e99dbbba61282a40bb35f19305d0"
     )
     assert InteractionAwareTorsionContactConfigV7().to_dict() == active_v7_before
 
@@ -388,14 +391,28 @@ def test_source_paired_clearance_selection_unavailability_fails_closed() -> None
                 "baseline_minimum_vdw_surface_gap_angstrom": 3.0,
                 "baseline_raw_minimum_distance_angstrom": 2.0,
             },
-            "surface gaps cannot exceed",
+            "surface gaps must be below",
         ),
         (
             {
                 "optimized_minimum_vdw_surface_gap_angstrom": 3.0,
                 "optimized_raw_minimum_distance_angstrom": 2.0,
             },
-            "surface gaps cannot exceed",
+            "surface gaps must be below",
+        ),
+        (
+            {
+                "baseline_minimum_vdw_surface_gap_angstrom": 2.0,
+                "baseline_raw_minimum_distance_angstrom": 2.0,
+            },
+            "surface gaps must be below",
+        ),
+        (
+            {
+                "optimized_minimum_vdw_surface_gap_angstrom": 2.0,
+                "optimized_raw_minimum_distance_angstrom": 2.0,
+            },
+            "surface gaps must be below",
         ),
         (
             {

@@ -12,7 +12,7 @@ candidate denominator, historical artifact, or fresh-holdout authority.
 | --- | --- |
 | Policy schema | `betelgeuze.engine_v2_source_paired_torsion_rescue_clearance_selection_policy/1.0.0` |
 | Policy ID | `betelgeuze.engine_v2_historical_development_source_paired_torsion_rescue_clearance_selection/1.0.0` |
-| Policy SHA-256 | `3e5c8464abb78695e9683b6d791712528f275a39e06c9f363fefeadd22e75252` |
+| Policy SHA-256 | `9d084632c98eb312fed40e59ba7c10f338c4e99dbbba61282a40bb35f19305d0` |
 | Required V1.1 receipt schema | `betelgeuze.engine_v2_source_paired_torsion_rescue_receipt/1.1.0` |
 | Required generic V7 config SHA-256 | `5e8b61d242abfe52e04df6de7f56a137b7736150e95d3e6b526e4269eb275337` |
 | Required result-independent allocation policy SHA-256 | `1930119181619f603f563e3e2aabc8b7ae1347b58e2fcf0a657a7b234f8bb8a6` |
@@ -34,8 +34,9 @@ caller-supplied probes as inadmissible activation evidence.
 
 Input validation also requires the allocation's base guided-policy identity,
 exact equality of each combined objective to its receptor-plus-internal
-components, and each minimum VDW surface gap to be no greater than the
-corresponding raw minimum distance.
+components, and each minimum VDW surface gap to be strictly less than the
+corresponding raw minimum distance. The frozen radii are strictly positive, so
+equality is also rejected.
 The supplied legacy-selection flag must also equal
 `variant_available AND 2.0 <= optimized_receptor < 4.0`; callers cannot relabel
 an already-selected V7 state as a shadow candidate.
@@ -81,8 +82,8 @@ considered. Fresh-128 remains closed.
 
 ## Compact verification record
 
-The focused contract suite result is `19 passed`; the final minimal run adds two
-existing V7/allocation nonregression nodes for `21 passed` total. It covers the frozen policy
+The focused contract suite result is `21 passed`; the final minimal run adds two
+existing V7/allocation nonregression nodes for `23 passed` total. It covers the frozen policy
 and complete fingerprint, required provenance identities and count products,
 every individual guard, binary64/ULP boundaries, legitimate pair-bound
 unavailability, canonical hashes, non-finite values, and bool-as-int rejection.

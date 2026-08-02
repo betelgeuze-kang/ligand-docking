@@ -58,7 +58,7 @@ _FROZEN_CANDIDATE_COUNT = 64
 _FROZEN_MAXIMUM_VARIANT_COUNT = 4
 _FROZEN_CLEARANCE_PAIR_COUNT_BOUND = 1_000_000
 _FROZEN_POLICY_SHA256 = (
-    "3e5c8464abb78695e9683b6d791712528f275a39e06c9f363fefeadd22e75252"
+    "9d084632c98eb312fed40e59ba7c10f338c4e99dbbba61282a40bb35f19305d0"
 )
 _DECISION_GUARD_NAMES = (
     "target_scope_guard_passed",
@@ -255,6 +255,9 @@ class SourcePairedTorsionRescueClearanceSelectionPolicyV1:
             ),
             "minimum_vdw_surface_gap_comparator": "optimized_strictly_gt_baseline",
             "raw_minimum_distance_comparator": "optimized_gte_baseline",
+            "clearance_metric_integrity_rule": (
+                "each_surface_gap_strictly_lt_corresponding_raw_distance"
+            ),
             "coordinate_comparator": "optimized_sha256_not_equal_baseline_sha256",
             "legacy_v7_selection_action": "retain_legacy_v7",
             "otherwise_eligible_action": "shadow_eligible_only",
@@ -467,12 +470,12 @@ class SourcePairedTorsionRescueClearanceSelectionEvidenceV1:
                 )
             if (
                 self.baseline_minimum_vdw_surface_gap_angstrom
-                > self.baseline_raw_minimum_distance_angstrom
+                >= self.baseline_raw_minimum_distance_angstrom
                 or self.optimized_minimum_vdw_surface_gap_angstrom
-                > self.optimized_raw_minimum_distance_angstrom
+                >= self.optimized_raw_minimum_distance_angstrom
             ):
                 raise TorsionContactRefinementError(
-                    "VDW surface gaps cannot exceed raw minimum distances"
+                    "VDW surface gaps must be below raw minimum distances"
                 )
         elif is_target:
             if (
