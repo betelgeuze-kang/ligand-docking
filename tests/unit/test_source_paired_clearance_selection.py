@@ -72,6 +72,20 @@ def _evidence(
         "optimized_raw_minimum_distance_angstrom": 2.0,
     }
     values.update(updates)
+    if "baseline_combined_objective" not in updates and (
+        "baseline_receptor_objective" in updates
+        or "baseline_internal_objective" in updates
+    ):
+        values["baseline_combined_objective"] = float(
+            values["baseline_receptor_objective"]
+        ) + float(values["baseline_internal_objective"])
+    if "optimized_combined_objective" not in updates and (
+        "optimized_receptor_objective" in updates
+        or "optimized_internal_objective" in updates
+    ):
+        values["optimized_combined_objective"] = float(
+            values["optimized_receptor_objective"]
+        ) + float(values["optimized_internal_objective"])
     return SourcePairedTorsionRescueClearanceSelectionEvidenceV1(**values)
 
 
@@ -85,6 +99,9 @@ def test_source_paired_clearance_selection_policy_is_frozen_and_shadow_only() ->
     )
     assert payload["required_rescue_allocation_policy_sha256"] == (
         SourcePairedTorsionRescuePolicy().fingerprint_sha256
+    )
+    assert payload["required_base_guided_policy_sha256"] == (
+        SourcePairedTorsionRescuePolicy().base_guided_policy.fingerprint_sha256
     )
     assert payload["required_vdw_contact_policy_sha256"] == (
         "acd011160586307d92ee2ff26a62183aaac5dbd9d12093ac13f018f3787c3f8e"
@@ -110,7 +127,7 @@ def test_source_paired_clearance_selection_policy_is_frozen_and_shadow_only() ->
     assert payload["product_promotion_eligible"] is False
     assert payload["claim_safe"] is False
     assert policy.fingerprint_sha256 == (
-        "8878d05b96a4204592e3e08ea9fca03f702c4383891f3effcf9a2d7b1fcd53a2"
+        "ca843cd77ff5e0f426af51338d219325d29d950c911f0b537b85e1d64c941ee7"
     )
     assert InteractionAwareTorsionContactConfigV7().to_dict() == active_v7_before
 
@@ -171,7 +188,11 @@ def test_source_paired_clearance_selection_requires_every_guard() -> None:
             "internal_objective_regressed",
         ),
         (
-            {"optimized_combined_objective": 6.0},
+            {
+                "optimized_receptor_objective": 4.0,
+                "optimized_internal_objective": 2.0,
+                "optimized_combined_objective": 6.0,
+            },
             "combined_objective_not_strictly_improved",
         ),
         (
@@ -239,14 +260,22 @@ def test_source_paired_clearance_selection_boundaries_are_exact() -> None:
 
     combined_edge = evaluate_source_paired_torsion_rescue_clearance_selection_v1(
         _evidence(
+            baseline_receptor_objective=tolerance,
+            baseline_internal_objective=tolerance,
             baseline_combined_objective=2.0 * tolerance,
+            optimized_receptor_objective=0.0,
+            optimized_internal_objective=tolerance,
             optimized_combined_objective=tolerance,
         )
     )
     assert combined_edge.combined_objective_guard_passed is False
     combined_below = evaluate_source_paired_torsion_rescue_clearance_selection_v1(
         _evidence(
+            baseline_receptor_objective=tolerance,
+            baseline_internal_objective=tolerance,
             baseline_combined_objective=2.0 * tolerance,
+            optimized_receptor_objective=0.0,
+            optimized_internal_objective=math.nextafter(tolerance, -math.inf),
             optimized_combined_objective=math.nextafter(tolerance, -math.inf),
         )
     )
@@ -320,6 +349,37 @@ def test_source_paired_clearance_selection_unavailability_fails_closed() -> None
         ({"vdw_contact_policy_sha256": "0" * 64}, "VDW identity drifted"),
         ({"clearance_ligand_atom_count": 10.0}, "nonnegative integers"),
         ({"clearance_receptor_atom_count": 11}, "counts are inconsistent"),
+        (
+            {
+                "allocation": replace(
+                    _allocation(),
+                    base_guided_policy_sha256="0" * 64,
+                )
+            },
+            "allocation drifted",
+        ),
+        (
+            {"baseline_combined_objective": 5.9},
+            "combined objectives must match",
+        ),
+        (
+            {"optimized_combined_objective": 4.4},
+            "combined objectives must match",
+        ),
+        (
+            {
+                "baseline_minimum_vdw_surface_gap_angstrom": 3.0,
+                "baseline_raw_minimum_distance_angstrom": 2.0,
+            },
+            "surface gaps cannot exceed",
+        ),
+        (
+            {
+                "optimized_minimum_vdw_surface_gap_angstrom": 3.0,
+                "optimized_raw_minimum_distance_angstrom": 2.0,
+            },
+            "surface gaps cannot exceed",
+        ),
     ),
 )
 def test_source_paired_clearance_selection_rejects_noncanonical_evidence(

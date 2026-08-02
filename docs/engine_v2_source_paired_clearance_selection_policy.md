@@ -12,10 +12,11 @@ candidate denominator, historical artifact, or fresh-holdout authority.
 | --- | --- |
 | Policy schema | `betelgeuze.engine_v2_source_paired_torsion_rescue_clearance_selection_policy/1.0.0` |
 | Policy ID | `betelgeuze.engine_v2_historical_development_source_paired_torsion_rescue_clearance_selection/1.0.0` |
-| Policy SHA-256 | `8878d05b96a4204592e3e08ea9fca03f702c4383891f3effcf9a2d7b1fcd53a2` |
+| Policy SHA-256 | `ca843cd77ff5e0f426af51338d219325d29d950c911f0b537b85e1d64c941ee7` |
 | Required V1.1 receipt schema | `betelgeuze.engine_v2_source_paired_torsion_rescue_receipt/1.1.0` |
 | Required generic V7 config SHA-256 | `5e8b61d242abfe52e04df6de7f56a137b7736150e95d3e6b526e4269eb275337` |
 | Required result-independent allocation policy SHA-256 | `1930119181619f603f563e3e2aabc8b7ae1347b58e2fcf0a657a7b234f8bb8a6` |
+| Required base guided-policy SHA-256 | `2974e9ba80479cccc97dce1b51567e8e7309e7f89c983401c9a8966a3d08633f` |
 | Required VDW policy SHA-256 | `acd011160586307d92ee2ff26a62183aaac5dbd9d12093ac13f018f3787c3f8e` |
 | Candidate count / rescue cap | `64 / 4` |
 | Clearance pair-count bound | `1,000,000` |
@@ -29,6 +30,11 @@ clearance values, availability, and coordinate fingerprints. Input and decision
 projections are canonical-JSON self-hashed result values. Self-hashing provides
 integrity, not provenance: both policy and decision explicitly mark these
 caller-supplied probes as inadmissible activation evidence.
+
+Input validation also requires the allocation's base guided-policy identity,
+exact equality of each combined objective to its receptor-plus-internal
+components, and each minimum VDW surface gap to be no greater than the
+corresponding raw minimum distance.
 
 ## Frozen predicate
 
@@ -71,8 +77,8 @@ considered. Fresh-128 remains closed.
 
 ## Compact verification record
 
-The focused contract suite result is `12 passed`; the final minimal run adds two
-existing V7/allocation nonregression nodes for `14 passed` total. It covers the frozen policy
+The focused contract suite result is `17 passed`; the final minimal run adds two
+existing V7/allocation nonregression nodes for `19 passed` total. It covers the frozen policy
 and complete fingerprint, required provenance identities and count products,
 every individual guard, binary64/ULP boundaries, legitimate pair-bound
 unavailability, canonical hashes, non-finite values, and bool-as-int rejection.

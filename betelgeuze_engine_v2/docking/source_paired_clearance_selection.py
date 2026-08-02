@@ -46,6 +46,9 @@ _FROZEN_OBJECTIVE_TOLERANCE = float.fromhex("0x1.2725dd1d243acp-60")
 _FROZEN_RESCUE_ALLOCATION_POLICY_SHA256 = (
     "1930119181619f603f563e3e2aabc8b7ae1347b58e2fcf0a657a7b234f8bb8a6"
 )
+_FROZEN_BASE_GUIDED_POLICY_SHA256 = (
+    "2974e9ba80479cccc97dce1b51567e8e7309e7f89c983401c9a8966a3d08633f"
+)
 _FROZEN_VDW_CONTACT_POLICY_SHA256 = (
     "acd011160586307d92ee2ff26a62183aaac5dbd9d12093ac13f018f3787c3f8e"
 )
@@ -53,7 +56,7 @@ _FROZEN_CANDIDATE_COUNT = 64
 _FROZEN_MAXIMUM_VARIANT_COUNT = 4
 _FROZEN_CLEARANCE_PAIR_COUNT_BOUND = 1_000_000
 _FROZEN_POLICY_SHA256 = (
-    "8878d05b96a4204592e3e08ea9fca03f702c4383891f3effcf9a2d7b1fcd53a2"
+    "ca843cd77ff5e0f426af51338d219325d29d950c911f0b537b85e1d64c941ee7"
 )
 _DECISION_GUARD_NAMES = (
     "target_scope_guard_passed",
@@ -88,6 +91,8 @@ def _require_frozen_dependencies() -> None:
         v7_config.fingerprint_sha256 != _FROZEN_V7_CONFIG_SHA256
         or v7_config.penalty_tolerance != _FROZEN_OBJECTIVE_TOLERANCE
         or rescue_policy.fingerprint_sha256 != _FROZEN_RESCUE_ALLOCATION_POLICY_SHA256
+        or rescue_policy.base_guided_policy.fingerprint_sha256
+        != _FROZEN_BASE_GUIDED_POLICY_SHA256
         or SOURCE_PAIRED_TORSION_RESCUE_VDW_CONTACT_POLICY_SHA256
         != _FROZEN_VDW_CONTACT_POLICY_SHA256
         or SOURCE_PAIRED_TORSION_RESCUE_CANDIDATE_COUNT != _FROZEN_CANDIDATE_COUNT
@@ -214,6 +219,7 @@ class SourcePairedTorsionRescueClearanceSelectionPolicyV1:
             "required_rescue_allocation_policy_sha256": (
                 _FROZEN_RESCUE_ALLOCATION_POLICY_SHA256
             ),
+            "required_base_guided_policy_sha256": (_FROZEN_BASE_GUIDED_POLICY_SHA256),
             "required_vdw_contact_policy_sha256": (_FROZEN_VDW_CONTACT_POLICY_SHA256),
             "candidate_count": self.candidate_count,
             "maximum_variant_count": self.maximum_variant_count,
@@ -306,6 +312,8 @@ class SourcePairedTorsionRescueClearanceSelectionEvidenceV1:
             self.allocation.candidate_count != _FROZEN_CANDIDATE_COUNT
             or self.allocation.rescue_policy_sha256
             != _FROZEN_RESCUE_ALLOCATION_POLICY_SHA256
+            or self.allocation.base_guided_policy_sha256
+            != _FROZEN_BASE_GUIDED_POLICY_SHA256
             or len(self.allocation.rescue_target_parent_pairs)
             > _FROZEN_MAXIMUM_VARIANT_COUNT
         ):
@@ -371,6 +379,15 @@ class SourcePairedTorsionRescueClearanceSelectionEvidenceV1:
                 raise TorsionContactRefinementError(
                     "source-paired objective values must be nonnegative"
                 )
+        if (
+            self.baseline_combined_objective
+            != self.baseline_receptor_objective + self.baseline_internal_objective
+            or self.optimized_combined_objective
+            != self.optimized_receptor_objective + self.optimized_internal_objective
+        ):
+            raise TorsionContactRefinementError(
+                "combined objectives must match receptor plus internal components"
+            )
 
         target_indices = {
             target for target, _parent in self.allocation.rescue_target_parent_pairs
@@ -413,6 +430,24 @@ class SourcePairedTorsionRescueClearanceSelectionEvidenceV1:
             ):
                 raise TorsionContactRefinementError(
                     "raw minimum distances must be nonnegative"
+                )
+            if (
+                self.baseline_minimum_vdw_surface_gap_angstrom is None
+                or self.optimized_minimum_vdw_surface_gap_angstrom is None
+                or self.baseline_raw_minimum_distance_angstrom is None
+                or self.optimized_raw_minimum_distance_angstrom is None
+            ):
+                raise TorsionContactRefinementError(
+                    "evaluated clearance values are unavailable"
+                )
+            if (
+                self.baseline_minimum_vdw_surface_gap_angstrom
+                > self.baseline_raw_minimum_distance_angstrom
+                or self.optimized_minimum_vdw_surface_gap_angstrom
+                > self.optimized_raw_minimum_distance_angstrom
+            ):
+                raise TorsionContactRefinementError(
+                    "VDW surface gaps cannot exceed raw minimum distances"
                 )
         elif is_target:
             if (
