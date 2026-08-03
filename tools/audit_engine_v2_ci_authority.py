@@ -16,6 +16,11 @@ AUTHORITATIVE_WORKFLOWS = (
     ".github/workflows/ci-engine-v2-release-candidate.yml",
     ".github/workflows/ci-engine-v2-cpu-reference-validation-protocol.yml",
 )
+CLEARANCE_ACTIVATION_CONTRACT_PATHS = (
+    "betelgeuze_engine_v2/benchmark/source_paired_clearance_activation.py",
+    "betelgeuze_engine_v2/docking/source_paired_clearance_activation.py",
+    "config/engine_v2_source_paired_clearance_activation.json",
+)
 CLEARANCE_ACTIVATION_REQUIRED_TOKENS = (
     "betelgeuze_engine_v2/benchmark/source_paired_clearance_activation.py",
     "betelgeuze_engine_v2/docking/source_paired_clearance_activation.py",
@@ -75,7 +80,13 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         "tools/build_engine_v2_stage0_development_gate_ledger.py",
         "tools/classify_engine_v2_stage0_full_suite.py",
         "tools/reconcile_engine_v2_stage0_full_suites.py",
-    ) + CLEARANCE_ACTIVATION_REQUIRED_TOKENS
+    )
+    clearance_activation_contract_present = any(
+        (repo_root / path).is_file() for path in CLEARANCE_ACTIVATION_CONTRACT_PATHS
+    )
+    if clearance_activation_contract_present:
+        stage0_required_tokens += CLEARANCE_ACTIVATION_REQUIRED_TOKENS
+
     payload: dict[str, Any] = {
         "schema_id": SCHEMA_ID,
         "workflow_count": len(workflows),
