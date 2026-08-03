@@ -47,7 +47,6 @@ from betelgeuze_engine_v2.benchmark.public_redocking_benchmark import (
 from tools import run_engine_v2_public_redocking_300 as runner
 from tools.audit_engine_v2_ci_authority import (
     AUTHORITATIVE_WORKFLOWS,
-    CLEARANCE_ACTIVATION_REQUIRED_TOKENS,
     build_inventory,
 )
 
@@ -397,7 +396,9 @@ def _policy(
                 "tools/build_engine_v2_stage0_development_gate_ledger.py",
                 "tools/classify_engine_v2_stage0_full_suite.py",
                 "tools/reconcile_engine_v2_stage0_full_suites.py",
-                *CLEARANCE_ACTIVATION_REQUIRED_TOKENS,
+                "config/engine_v2_phase25_cohort_admission.json",
+                "tools/verify_engine_v2_phase25_cohort_admission.py",
+                "tests/unit/test_verify_engine_v2_phase25_cohort_admission.py",
             )
         ),
         encoding="utf-8",

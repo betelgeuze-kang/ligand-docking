@@ -151,14 +151,16 @@ only an objective proxy. Those categories remain
 `unresolved_requires_coordinate_replay` or the more specific unresolved status
 recorded per case; they must not be promoted to causal conclusions.
 
-The source-paired refinement receipt V1.1 now instruments the minimum numeric
-vdW surface gap for baseline and optimized states on future runs, after
-selection and without changing coordinates. The atlas remains bound to the
-historical V1 archive, so it does not import or infer those values. A separate
-reviewed historical-development rerun and newly pinned archive are required
-before this taxonomy can consume numeric clearance evidence. The V1 parser is
-confined to that pinned-archive path; current live diagnostics require uniform
-V1.1 receipts.
+The source-paired refinement receipt V1.1 instruments the minimum numeric vdW
+surface gap for baseline and optimized states after selection and without
+changing coordinates. The reviewed V1.1 historical archive now exists, but it
+does not supersede this atlas or grant cohort authority: it lacks complete
+`ScorerV1Terms` receipts and cannot authenticate Top-1/Top-5 score, term, and
+rank semantics. The atlas therefore remains bound to the historical V1 archive
+and imports no V1.1 values. Consuming numeric clearance evidence requires a
+separately reviewed activation receipt and newly pinned historical-development
+bundle. The V1 parser is confined to its pinned-archive path; current live
+diagnostics require uniform V1.1 receipts.
 
 ## Next bounded action
 
@@ -173,8 +175,11 @@ maximum-penetration, and absolute-clearance alternatives remain unavailable in
 the pinned archive. Forward-only V1.1 clearance telemetry is instrumentation,
 not a rule or result.
 
-One bounded selection rule must be predeclared before a historical-development
-A/B. Any later proposal intervention must remain
-result-independent, hard-capped, source-retaining, and genuinely coordinate-
-changing. Fresh execution, scorer calibration, relabeling/filtering, V7
-replacement, product promotion, and public claims remain out of scope.
+The bounded clearance shadow rule is already predeclared. The next action is a
+source-bound activation receipt that authenticates the exact rule, archive,
+cohort, coordinates, full scorer terms, validity evidence, and rank semantics.
+Only after that receipt is independently reviewed may a separate authority
+permit the single historical-development A/B. Any later proposal intervention
+must remain result-independent, hard-capped, source-retaining, and genuinely
+coordinate-changing. Fresh execution, scorer calibration, relabeling/filtering,
+V7 replacement, product promotion, and public claims remain out of scope.

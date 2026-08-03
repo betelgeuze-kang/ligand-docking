@@ -205,8 +205,16 @@ Required caveat:
 
 ## Immediate next work
 
-1. Keep benchmark ledger generation and docs in sync.
-2. Wire H-Bond BackMap report rows into candidate-level output and GUI/report surfaces.
-3. Build the CASF/PDBBind public benchmark harness and Vina/GNINA comparison adapter.
-4. Convert DRD2/HTR2A/OPRM1 diagnostics into the GPCR hard-decoy suite input table.
-5. Add PocketMD Lite as a top-k-only refinement/reporting lane.
+H-Bond candidate wiring, PocketMD admission, and Selection Score Authority are
+completed foundations and are no longer next-work items. The active sequence is:
+
+1. Close the restricted-pilot end-to-end path from local input through an
+   audit-ready, claim-gated delivery bundle.
+2. Run Engine V2 in a non-authoritative shadow lane against the restricted
+   pilot without changing active product decisions.
+3. Close the remaining Stage 0 scientific and governance gates before any
+   fresh internal provisional execution.
+4. Package the validated path as a standalone local pipeline with explicit
+   inputs, outputs, abstentions, and replay identities.
+5. Establish HIP parity only after the CPU reference and standalone-pipeline
+   contracts are closed; acceleration remains a separate evidence claim.
