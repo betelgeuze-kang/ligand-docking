@@ -7,10 +7,6 @@ on:
 permissions:
   contents: write
 
-concurrency:
-  group: pr244-fix-stage0-fixture-once
-  cancel-in-progress: true
-
 jobs:
   repair:
     if: github.event.pull_request.number == 244
