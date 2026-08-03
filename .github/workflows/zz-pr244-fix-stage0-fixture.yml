@@ -9,7 +9,7 @@ permissions:
 
 concurrency:
   group: pr244-fix-stage0-fixture-once
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   repair:
