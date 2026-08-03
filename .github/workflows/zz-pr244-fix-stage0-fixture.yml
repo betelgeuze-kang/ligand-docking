@@ -1,0 +1,66 @@
+name: pr244-fix-stage0-fixture-once
+
+on:
+  pull_request:
+    types: [synchronize]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pr244-fix-stage0-fixture-once
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    if: github.event.pull_request.number == 244
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Add activation authority tokens to the synthetic Stage 0 workflow fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('tests/unit/test_engine_v2_blind_stage0.py')
+          text = path.read_text(encoding='utf-8')
+          old_import = '''from tools.audit_engine_v2_ci_authority import (
+              AUTHORITATIVE_WORKFLOWS,
+              build_inventory,
+          )'''
+          new_import = '''from tools.audit_engine_v2_ci_authority import (
+              AUTHORITATIVE_WORKFLOWS,
+              CLEARANCE_ACTIVATION_REQUIRED_TOKENS,
+              build_inventory,
+          )'''
+          if new_import not in text:
+              if old_import not in text:
+                  raise SystemExit('CI authority import anchor missing')
+              text = text.replace(old_import, new_import, 1)
+
+          old_tuple = '''                "tests/unit/test_verify_engine_v2_phase25_cohort_admission.py",
+                      )'''
+          new_tuple = '''                "tests/unit/test_verify_engine_v2_phase25_cohort_admission.py",
+                          *CLEARANCE_ACTIVATION_REQUIRED_TOKENS,
+                      )'''
+          if new_tuple not in text:
+              if old_tuple not in text:
+                  raise SystemExit('synthetic workflow token anchor missing')
+              text = text.replace(old_tuple, new_tuple, 1)
+          path.write_text(text, encoding='utf-8')
+          PY
+
+          rm -f .github/workflows/zz-pr244-fix-stage0-fixture.yml .pr244-stage0-fixture-trigger
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'Include activation tokens in Stage 0 CI fixture'
+          git push origin HEAD:codex/source-paired-clearance-activation-v1
