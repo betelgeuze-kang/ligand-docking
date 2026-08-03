@@ -1,11 +1,8 @@
 name: pr244-sync-main-once
 
 on:
-  push:
-    branches:
-      - codex/source-paired-clearance-activation-v1
-    paths:
-      - .github/workflows/zz-pr244-sync-main.yml
+  pull_request:
+    types: [ready_for_review]
 
 permissions:
   contents: write
@@ -16,15 +13,17 @@ concurrency:
 
 jobs:
   merge-main:
+    if: github.event.pull_request.number == 244
     runs-on: ubuntu-latest
     steps:
-      - name: Check out PR branch
+      - name: Check out PR head
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
+          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Merge current main and resolve the five known overlap surfaces
+      - name: Merge current main and resolve the known overlap surfaces
         shell: bash
         run: |
           set -euo pipefail
@@ -56,7 +55,6 @@ jobs:
 
           workflow_path = ".github/workflows/ci-engine-v2-main.yml"
           text = Path(workflow_path).read_text(encoding="utf-8")
-
           replacements = (
               (
                   '      - "config/engine_v2_fresh_redocking_holdout_manifest.json"\n',
