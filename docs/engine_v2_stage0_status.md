@@ -103,7 +103,7 @@ The canonical capability state is:
   is `148 passed, 7 deselected`; lint, py_compile, diff-check, and orchestration
   smoke also pass. Evidence self-hash is
   `9c89ac550cfc8259cdb236ee9970242c4b06a6d720295078b106b7b9a4ee27e5`.
-- The separately tracked Stage 0 threshold authority contains exactly 36
+- The separately tracked Stage 0 threshold proposal source map contains exactly 36
   source-report hashes: one `engine_v2`, `vina`, and `gnina` receipt identity
   for each of 12 historical cases. The gate-ledger validator now recomputes
   the identical case set for all three engines, requires non-smoke historical
@@ -112,13 +112,29 @@ The canonical capability state is:
   Nine IDs overlap the exact source-paired A/B cohort; the threshold-only IDs
   are `7A9E_R4W`, `7MWU_ZPM`, and `7OSO_0V1`. This authenticates the tracked
   source map only: its receipt payloads are not committed, and it neither
-  defines nor authorizes a 15-case failure atlas. The narrative count 15 is
-  only `29 scored - 14 with any exact-valid candidate`; it is not an exact
+  defines nor authorizes a 15-case failure atlas. Its values remain
+  `proposed_threshold`, not frozen Stage 0 execution thresholds. A later
+  explicit reviewed freeze is required; on the present eight scored cases the
+  proposal values would mean oracle recovery `>= 3/8` and invalid Top-1
+  `<= 1/8`. The local one-shot A/B Go triggers `2/8` and `4/8` are separate
+  experiment-decision criteria and cannot admit Stage 0. The narrative count
+  15 is only `29 scored - 14 with any exact-valid candidate`; it is not an exact
   proposal-oracle-uncovered roster. Aggregate-report derivation remains a
   separate supported source mode: it requires absolute JSON paths and unique
   file digests but cannot reconstruct case IDs from filenames. Receipt and
   aggregate modes cannot be mixed, so adding a report cannot bypass an
   incomplete receipt cohort.
+- The fail-closed
+  [Phase 2.5 failure-cohort admission contract](engine_v2_phase25_failure_cohort_admission_contract.md)
+  keeps the authenticated atlas at seven cases. Expansion requires an exact
+  historical-only roster, complete per-case diagnostic receipts, a pinned
+  archive, and deterministic proposal-oracle-uncovered derivation; neither the
+  12-case threshold map nor the narrative remainder 15 satisfies that gate.
+  Its machine-readable policy and CI verifier now bind the exact seven/nine-case
+  rosters, cross-check the 12-case threshold proposal source map and contaminated-300
+  registry, and freeze the local-refinement A/B stop rule. V9/V10 refinement
+  work is prohibited until the separately activated, single nine-case clearance
+  A/B reaches its frozen decision.
 - The Stage 0 source-freeze contract names one V7 algorithm profile and binds
   runner `2.13.0`, candidate schema `1.6.0`, the complete binary64 V7 config,
   its `5e8b61d2...75337` fingerprint, and the result-independent `[2.0,4.0)`
@@ -139,9 +155,9 @@ The canonical capability state is:
   incomplete or mixed receipt ledgers fail closed.
 - A compact development-gate ledger builder now consumes that authenticated
   Scorer-v1 report and its typed results, re-evaluates all seven gates against
-  the tracked 12-case threshold authority at
+  the tracked 12-case threshold proposal source map at
   `config/engine_v2_public_redocking_stage0_threshold_evidence.json`, whose
-  frozen inner SHA-256 is
+  pinned artifact SHA-256 is
   `8f6e548bae67e56dbe05e95ae4ac08f4af5b1eb7b8119adc09cb33e366a36ce3`.
   It records exact numerators, denominators, per-case observed blockers,
   PoseBusters failure counts, and proposal/refiner lineage digests. It does not
@@ -223,6 +239,15 @@ The canonical capability state is:
   21,367,212 expanded bytes to 505,161 bytes and is pinned to
   `7a2561f646f3cf5434de6c79ed797073ac1b7e034e4fcd2291755a58128f5e98`.
   This is descriptive telemetry only and selects no rule.
+- The source-paired clearance-selection policy is now predeclared, but remains
+  caller-supplied-probe shadow logic with
+  `activation_evidence_admissible=false`. It cannot activate coordinates or
+  support the historical A/B until a new outer activation receipt binds the
+  exact V1.1 source receipt, allocation and proposal identity, V6/optimized
+  coordinates, clearance/objective/atom/pair/torsion evidence, and complete
+  ScorerV1Terms score, term, and rank semantics. The historical PR #242 archive
+  lacks that complete scoring receipt and cannot be reused for Top-1/Top-5
+  meaning validation.
 - Solo self-review pass records now have a fail-closed generator that requires
   one clean commit/evidence identity and enforces at least 24 hours between
   pass 1 and pass 2 without claiming reviewer independence. A separate
@@ -311,8 +336,12 @@ The canonical capability state is:
    The completed receipt-bound scale audit finds 7/22 inside the same numeric
    interval only after heavy-atom normalization, while exact lexicographic
    ordering accepts all 22 and therefore does not provide a bounded selector.
-   Predeclare one result-independent rule before any historical A/B; do not
-   relabel, filter, abstain, or relax thresholds around the current pool.
+   The result-independent clearance shadow rule is predeclared, but its current
+   caller-supplied probe cannot serve as activation evidence. Add and review the
+   source-bound activation receipt before the single predeclared historical
+   A/B can receive separate execution authority; do not execute early, relabel,
+   filter, abstain, relax
+   thresholds, or open V9/V10 refinement work around the current pool.
 4. **Full-suite self-review:** a solo operational evidence builder dispositions the 49
    conservative `actual_regression` rows as pre-existing unresolved behavior
    debt and freezes the Engine-required/legacy/product/local-evidence tier
@@ -330,14 +359,14 @@ The canonical capability state is:
    invocation with redistribution forbidden. It must be rebound in the new
    solo pass; genuine external review remains a later prerequisite for public
    claims.
-8. **Issue/CI administration:** GitHub Issue #199 remains `open`. Its recorded
-   Cut B reconstruction reduced 13 historical per-round/per-surface workflows
-   to three authoritative workflows, and Cuts C/D were reconstructed as
-   dependent drafts. The Issue exit condition is not satisfied because the
-   replacement cuts are not recorded as merged/closed with independent review.
-   The 40 specialized workflows also require an explicit reviewer disposition;
-   the attestation has a separate CI-authority approval decision.
-   No external issue, PR, required-check, or workflow state was mutated here.
+8. **Issue/CI administration:** GitHub Issue #199 is closed after replacement
+   Cuts A-D merged in order as PRs #200-#203 and the Engine V2 feature-stack
+   PRs covered by that reconstruction were closed as superseded. Unrelated
+   Dependabot PRs #168/#169 are outside that statement. Follow-on Stage 0 work
+   is tracked by Issue #216. This administrative closure does not assert Stage 0 admission,
+   scientific validity, independent public review, product promotion, or public
+   claims. The 40 specialized Engine V2 workflows still require the separately
+   modeled CI-authority disposition.
 9. **Later native tracks:** `cpp_hip_required` remains an explicit fail-closed
     unavailable backend. C++/HIP shadow work, Rust RMSD/clustering extraction,
     the native candidate executor, and bounded native parser are not admitted

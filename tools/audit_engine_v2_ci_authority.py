@@ -42,18 +42,23 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         )
     )
     authoritative = tuple(path for path in AUTHORITATIVE_WORKFLOWS if path in workflows)
-    specialized = tuple(path for path in workflows if path not in AUTHORITATIVE_WORKFLOWS)
+    specialized = tuple(
+        path for path in workflows if path not in AUTHORITATIVE_WORKFLOWS
+    )
     hashes = {path: _sha256(repo_root / path) for path in workflows}
     main_text = (repo_root / AUTHORITATIVE_WORKFLOWS[0]).read_text(encoding="utf-8")
     stage0_required_tokens = (
         "tools/__init__.py",
         "config/engine_v2_public_redocking_stage0_threshold_evidence.json",
+        "config/engine_v2_phase25_cohort_admission.json",
         "tests/unit/test_analyze_engine_v2_score_terms.py",
         "tests/unit/test_engine_v2_blind_stage0.py",
         "tests/unit/test_build_engine_v2_stage0_development_gate_ledger.py",
+        "tests/unit/test_verify_engine_v2_phase25_cohort_admission.py",
         "tests/unit/test_classify_engine_v2_stage0_full_suite.py",
         "tests/unit/test_reconcile_engine_v2_stage0_full_suites.py",
         "tools/verify_engine_v2_public_redocking_stage0.py",
+        "tools/verify_engine_v2_phase25_cohort_admission.py",
         "tools/build_engine_v2_stage0_development_gate_ledger.py",
         "tools/classify_engine_v2_stage0_full_suite.py",
         "tools/reconcile_engine_v2_stage0_full_suites.py",
@@ -80,7 +85,9 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--repo-root", type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument(
+        "--repo-root", type=Path, default=Path(__file__).resolve().parents[1]
+    )
     parser.add_argument("--out", type=Path, required=True)
     return parser
 

@@ -1,0 +1,276 @@
+{
+  "failure_atlas_cohort_authority": {
+    "failure_atlas_membership_authority": true,
+    "admitted_case_count": 7,
+    "admitted_case_ids": [
+      "5SD5_HWI",
+      "5SIS_JSM",
+      "6M2B_EZO",
+      "6TW5_9M2",
+      "6TW7_NZB",
+      "6VTA_AKN",
+      "6WTN_RXT"
+    ],
+    "admitted_case_ids_sha256": "7a6e03739f0d5035d1a12dd5554d85b1d79b4ac13c59d075696f67497311614d",
+    "classification_criterion": {
+      "comparison": "less_than_or_equal",
+      "lane": "proposal_oracle",
+      "rmsd_angstrom": 2.0
+    },
+    "failure_atlas_schema_id": "betelgeuze.engine_v2_source_paired_failure_atlas/2.1.0",
+    "failure_atlas_self_sha256": "58528986f293d96a8a4a3971ecc7abab436c7f27e768589cf0c22d8bc970c1d7",
+    "source_paired_archive": {
+      "archive_sha256": "8bef33eba296989b795a11fd05a7e119124b066d91bec28a8b910d38a083fbcc",
+      "case_count": 9,
+      "case_ids": [
+        "5SD5_HWI",
+        "5SIS_JSM",
+        "6M2B_EZO",
+        "6M73_FNR",
+        "6T88_MWQ",
+        "6TW5_9M2",
+        "6TW7_NZB",
+        "6VTA_AKN",
+        "6WTN_RXT"
+      ],
+      "case_ids_sha256": "cd2c24c9c7d937865f40352375e8a17c6b83b0b0fab8c134218d2c29537493c1",
+      "scored_case_count": 8,
+      "source_commit_git_sha1": "754bebb9ddc2fbffdaca5d4143ff515c3b38c032",
+      "source_commit_hash_algorithm": "git_sha1"
+    }
+  },
+  "decision": "freeze_exact_seven_case_proposal_oracle_uncovered_atlas",
+  "distinguished_non_admission_evidence": {
+    "narrative_remainder": {
+      "failure_atlas_membership_authority": false,
+      "case_ids_sha256": null,
+      "cases_with_any_exact_valid_candidate": 14,
+      "ordered_case_ids": null,
+      "remainder": 15,
+      "scored_case_count": 29
+    },
+    "stage0_threshold_proposal_source_map": {
+      "artifact_identity_status": "pinned_for_phase25_cross_check",
+      "case_count": 12,
+      "case_ids": [
+        "5SD5_HWI",
+        "5SIS_JSM",
+        "6M2B_EZO",
+        "6M73_FNR",
+        "6T88_MWQ",
+        "6TW5_9M2",
+        "6TW7_NZB",
+        "6VTA_AKN",
+        "6WTN_RXT",
+        "7A9E_R4W",
+        "7MWU_ZPM",
+        "7OSO_0V1"
+      ],
+      "case_ids_sha256": "cba8259f2dd99b1b998903f4edffb4696f0bbdcb758f9c4df15573d29db2a621",
+      "config_path": "config/engine_v2_public_redocking_stage0_threshold_evidence.json",
+      "evidence_self_sha256": "8f6e548bae67e56dbe05e95ae4ac08f4af5b1eb7b8119adc09cb33e366a36ce3",
+      "failure_atlas_membership_authority": false,
+      "failure_atlas_roster_authority": false,
+      "receipt_hash_count": 36,
+      "receipt_payloads_committed": false,
+      "schema_id": "betelgeuze.engine_v2_stage0_threshold_evidence/1.0.0",
+      "stage0_execution_threshold_authority": false,
+      "threshold_value_status": "proposed_not_frozen_for_stage0_execution",
+      "threshold_only_case_ids": [
+        "7A9E_R4W",
+        "7MWU_ZPM",
+        "7OSO_0V1"
+      ]
+    }
+  },
+  "cohort_relationships": {
+    "failure_atlas_is_strict_subset_of_source_paired": true,
+    "narrative_remainder_has_set_relationship_authority": false,
+    "source_paired_is_strict_subset_of_threshold": true,
+    "source_paired_not_failure_atlas": [
+      {
+        "case_id": "6M73_FNR",
+        "reason": "preparation_failure"
+      },
+      {
+        "case_id": "6T88_MWQ",
+        "reason": "proposal_oracle_recovered"
+      }
+    ],
+    "threshold_not_failure_atlas": [
+      "6M73_FNR",
+      "6T88_MWQ",
+      "7A9E_R4W",
+      "7MWU_ZPM",
+      "7OSO_0V1"
+    ],
+    "threshold_not_source_paired": [
+      "7A9E_R4W",
+      "7MWU_ZPM",
+      "7OSO_0V1"
+    ]
+  },
+  "expansion_gate": {
+    "archive_identity": {
+      "required": [
+        "archive_file_sha256",
+        "member_manifest_sha256",
+        "bundle_checksum_sha256",
+        "member_count",
+        "member_sha256s"
+      ]
+    },
+    "claim_boundary": {
+      "fresh_execution_authorized": false,
+      "historical_development_only": true,
+      "product_promotion_eligible": false,
+      "public_or_scientific_claim_eligible": false,
+      "runtime_or_selection_policy_authority": false
+    },
+    "deterministic_uncovered_derivation": {
+      "classification_lane_predeclared": true,
+      "criterion_comparison": "less_than_or_equal",
+      "criterion_rmsd_angstrom": 2.0,
+      "derived_from_authenticated_candidate_diagnostics": true,
+      "post_result_lane_switch_forbidden": true
+    },
+    "execution_identity": {
+      "required": [
+        "source_commit",
+        "algorithm_profile",
+        "runner",
+        "candidate_schema",
+        "diagnostic_schema",
+        "result_schema",
+        "refinement_receipt_schema",
+        "scorer_policy",
+        "pocket_policy",
+        "charge_policy",
+        "proposal_policy",
+        "implementation_sha256",
+        "evaluation_pipeline_sha256",
+        "execution_environment_sha256"
+      ]
+    },
+    "failure_complete_receipts": {
+      "complete_candidate_denominator_required_for_preparation_success": true,
+      "empty_candidate_list_required_for_preparation_failure": true,
+      "mixed_version_rows_rejected": true,
+      "typed_preparation_failure_required": true
+    },
+    "scope_identity": {
+      "engineering_smoke_overlap_forbidden": true,
+      "fresh_holdout_overlap_forbidden": true,
+      "historical_registry_case_count": 300,
+      "historical_registry_case_ids_sha256": "110c9ccc37255c39df3dae5b0213e4cf158cccfaf30071cb5ec9eb8e269ef349",
+      "historical_registry_self_sha256": "89a58e6fbadd7e249df20bdf8db36f317e3e2e2dd6f32c32879d1a989dd28f31",
+      "ordered_input_and_uncovered_rosters_required": true
+    },
+    "taxonomy_reconciliation": {
+      "absence_of_evidence_status": "unresolved",
+      "allowed_status_per_category_required": true,
+      "category_count": 10,
+      "deterministic_zero_inclusive_rollups_required": true,
+      "self_hash_required": true
+    }
+  },
+  "authority_boundary": {
+    "clearance_selection_policy_failure_atlas_membership_authority": false,
+    "cohort_expansion_failure_effect": "retain_exact_7_case_failure_atlas",
+    "fresh_holdout_execution_authorized": false,
+    "historical_receipt_fresh_execution_fact_preserved": true,
+    "new_execution_authorized": false,
+    "product_authority": false,
+    "profile_promotion_authority": false,
+    "public_claim_authority": false,
+    "runtime_authority": false,
+    "scientific_claim_authority": false,
+    "scorer_authority": false,
+    "selection_policy_authority": false,
+    "v11_clearance_audit_failure_atlas_membership_authority": false
+  },
+  "governance_base_commit": "e782fb2dadd83ce4b9e41fc1af5b970fe63e28ca",
+  "local_refinement_experiment_stop_rule": {
+    "ab_profile": {
+      "baseline": "current_v7",
+      "candidate_denominator": 512,
+      "candidate_slots_per_scored_case": 64,
+      "clearance_policy_sha256": "e5936f33d5aec54aae67f519e5cf6dffcc61181237270adb3e367a5f65cb29ad",
+      "experimental": "current_v7_with_only_predeclared_clearance_shadow_selected_states_replaced",
+      "historical_archive_sha256": "8bef33eba296989b795a11fd05a7e119124b066d91bec28a8b910d38a083fbcc",
+      "historical_case_count": 9,
+      "historical_case_ids": [
+        "5SD5_HWI",
+        "5SIS_JSM",
+        "6M2B_EZO",
+        "6M73_FNR",
+        "6T88_MWQ",
+        "6TW5_9M2",
+        "6TW7_NZB",
+        "6VTA_AKN",
+        "6WTN_RXT"
+      ],
+      "historical_case_ids_sha256": "cd2c24c9c7d937865f40352375e8a17c6b83b0b0fab8c134218d2c29537493c1",
+      "maximum_lifetime_run_count": 1,
+      "baseline_top1_recovery_case_ids": [
+        "6T88_MWQ"
+      ],
+      "baseline_top5_recovery_case_ids": [
+        "6T88_MWQ"
+      ],
+      "preparation_failure_case_count": 1,
+      "preparation_failure_case_ids": [
+        "6M73_FNR"
+      ],
+      "previously_uncovered_case_ids": [
+        "5SD5_HWI",
+        "5SIS_JSM",
+        "6M2B_EZO",
+        "6TW5_9M2",
+        "6TW7_NZB",
+        "6VTA_AKN",
+        "6WTN_RXT"
+      ],
+      "scored_case_count": 8,
+      "source_control_required": true
+    },
+    "activation_evidence_required_before_run": true,
+    "completed_run_count": 0,
+    "decision_logic": {
+      "go_requires_all_invariants": true,
+      "go_requires_any_primary_criterion": true,
+      "go_requires_no_no_go_trigger": true,
+      "no_go_trigger_precedence": true
+    },
+    "execution_authorized": false,
+    "go_criteria_any": [
+      "new_exact_valid_candidate_in_previously_uncovered_case",
+      "proposal_oracle_recovery_at_least_2_of_8",
+      "invalid_top1_at_most_4_of_8"
+    ],
+    "invariants_all": [
+      "no_preparation_failure_regression",
+      "no_top1_or_top5_recovery_regression",
+      "candidate_denominator_512",
+      "source_control_preserved",
+      "score_term_semantics_fully_verified",
+      "no_result_dependent_allocation"
+    ],
+    "new_refinement_versions_prohibited_while_frozen": [
+      "V9",
+      "V10"
+    ],
+    "no_go_criteria_any": [
+      "shadow_eligible_candidate_without_new_case_recovery",
+      "no_exact_valid_case_increase",
+      "no_invalid_top1_reduction",
+      "existing_recovery_regression",
+      "selected_state_remains_penetrating_without_posebusters_validity_change"
+    ],
+    "no_go_effect": "close_local_torsion_clearance_refinement_epic",
+    "status": "frozen_pending_source_paired_clearance_activation_and_single_ab"
+  },
+  "policy_sha256": "b4c5530dc4766500dbbc854875cfb39baadad94196c63be6150514879993d211",
+  "schema_id": "betelgeuze.engine_v2_phase25_cohort_admission/1.3.0",
+  "status": "closed_exact_seven"
+}
