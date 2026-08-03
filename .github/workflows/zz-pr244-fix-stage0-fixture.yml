@@ -46,10 +46,10 @@ jobs:
               text = text.replace(old_import, new_import, 1)
 
           old_tuple = '''                "tests/unit/test_verify_engine_v2_phase25_cohort_admission.py",
-                      )'''
+                      )'''.replace('                      )', '            )')
           new_tuple = '''                "tests/unit/test_verify_engine_v2_phase25_cohort_admission.py",
                           *CLEARANCE_ACTIVATION_REQUIRED_TOKENS,
-                      )'''
+                      )'''.replace('                          *', '                *').replace('                      )', '            )')
           if new_tuple not in text:
               if old_tuple not in text:
                   raise SystemExit('synthetic workflow token anchor missing')
