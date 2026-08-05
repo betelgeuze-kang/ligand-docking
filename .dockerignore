@@ -4,16 +4,12 @@
 !pyproject.toml
 !requirements-package.txt
 !requirements-api.txt
+!requirements-api-runtime.txt
 !requirements-deploy.txt
 !requirements-base.txt
 !requirements.txt
 !requirements-rocm.txt
 !requirements-product-rocm.txt
-
-!runs
-!runs/
-runs/**
-!runs/independent_engine_roadmap_status_current.json
 
 !api
 !api/**
@@ -38,6 +34,13 @@ runs/**
 !third_party
 !third_party/**
 
+runs
+runs/**
+.betelgeuze
+.betelgeuze/**
+.git
+.github
+**/.git
 __pycache__
 **/__pycache__
 *.py[cod]

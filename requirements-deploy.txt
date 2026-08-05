@@ -1,2 +1,2 @@
 # Optional deployment tracking profile, not required for offline local delivery runtime.
-mlflow
+mlflow==3.14.0
