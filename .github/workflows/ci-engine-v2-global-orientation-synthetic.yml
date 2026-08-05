@@ -8,10 +8,13 @@ on:
       - "betelgeuze_engine_v2/benchmark/oracle_selection_metrics.py"
       - "betelgeuze_engine_v2/benchmark/oracle_selection_evidence.py"
       - "config/engine_v2_global_orientation_synthetic_contract.json"
+      - "config/engine_v2_global_orientation_development_protocol.json"
       - "tools/verify_engine_v2_global_orientation_synthetic_contract.py"
+      - "tools/verify_engine_v2_global_orientation_development_protocol.py"
       - "tests/unit/test_engine_v2_global_orientation*.py"
       - "tests/unit/test_engine_v2_oracle_selection*.py"
       - "docs/engine_v2_global_orientation_design.md"
+      - "docs/engine_v2_global_orientation_development_protocol.md"
       - ".github/workflows/ci-engine-v2-global-orientation-synthetic.yml"
 
 permissions:
@@ -53,23 +56,29 @@ jobs:
             numpy==1.26.4
           python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
 
-      - name: Verify synthetic authority and compile
+      - name: Verify synthetic and development authority
         run: |
           python -m py_compile \
             betelgeuze_engine_v2/docking/global_orientation.py \
             betelgeuze_engine_v2/docking/global_orientation_evidence.py \
             betelgeuze_engine_v2/benchmark/oracle_selection_metrics.py \
             betelgeuze_engine_v2/benchmark/oracle_selection_evidence.py \
-            tools/verify_engine_v2_global_orientation_synthetic_contract.py
+            tools/verify_engine_v2_global_orientation_synthetic_contract.py \
+            tools/verify_engine_v2_global_orientation_development_protocol.py
           python tools/verify_engine_v2_global_orientation_synthetic_contract.py
+          python tools/verify_engine_v2_phase25_cohort_admission.py
+          python tools/verify_engine_v2_source_paired_clearance_activation.py \
+            --policy config/engine_v2_source_paired_clearance_activation.json
+          python tools/verify_engine_v2_global_orientation_development_protocol.py
 
-      - name: Run synthetic contracts
+      - name: Run synthetic and development contracts
         run: |
           python -m pytest -q \
             --confcutdir=tests/unit \
             tests/unit/test_engine_v2_global_orientation.py \
             tests/unit/test_engine_v2_global_orientation_evidence.py \
             tests/unit/test_engine_v2_global_orientation_synthetic_contract.py \
+            tests/unit/test_engine_v2_global_orientation_development_protocol.py \
             tests/unit/test_engine_v2_oracle_selection_metrics.py \
             tests/unit/test_engine_v2_oracle_selection_evidence.py
 
@@ -81,9 +90,11 @@ jobs:
             betelgeuze_engine_v2/benchmark/oracle_selection_metrics.py \
             betelgeuze_engine_v2/benchmark/oracle_selection_evidence.py \
             tools/verify_engine_v2_global_orientation_synthetic_contract.py \
+            tools/verify_engine_v2_global_orientation_development_protocol.py \
             tests/unit/test_engine_v2_global_orientation.py \
             tests/unit/test_engine_v2_global_orientation_evidence.py \
             tests/unit/test_engine_v2_global_orientation_synthetic_contract.py \
+            tests/unit/test_engine_v2_global_orientation_development_protocol.py \
             tests/unit/test_engine_v2_oracle_selection_metrics.py \
             tests/unit/test_engine_v2_oracle_selection_evidence.py
           git diff --check ${{ github.event.pull_request.base.sha }}...HEAD

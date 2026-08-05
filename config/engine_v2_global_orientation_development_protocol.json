@@ -1,0 +1,161 @@
+{
+  "arms": {
+    "baseline": {
+      "arm_id": "current_v7_frozen",
+      "candidate_denominator": 512,
+      "candidate_slots_per_scored_case": 64,
+      "proposal_policy": "current_v7_source_paired_frozen"
+    },
+    "experimental": {
+      "arm_id": "global_orientation_v1_frozen",
+      "candidate_denominator": 512,
+      "candidate_formula": "orientation_count*(1+shell_count*translation_points_per_shell)",
+      "candidate_slots_per_scored_case": 64,
+      "generator_id": "deterministic_surface_aware_rigid_v1",
+      "minimum_receptor_distance_angstrom": 1.1,
+      "orientation_count": 16,
+      "translation_points_per_shell": 3,
+      "translation_shell_radii_angstrom": [
+        2.0
+      ]
+    },
+    "shared_contract": {
+      "benchmark_outcome_input_to_generator_allowed": false,
+      "prior_score_input_to_generator_allowed": false,
+      "reference_pose_input_to_generator_allowed": false,
+      "rmsd_input_to_generator_allowed": false,
+      "same_candidate_denominator": true,
+      "same_charge_policy": true,
+      "same_conformer_inputs": true,
+      "same_pocket_declaration": true,
+      "same_preparation": true,
+      "same_scorer_backend": true
+    }
+  },
+  "authority": {
+    "customer_pose_emission_authorized": false,
+    "fresh_holdout_execution_authorized": false,
+    "historical_execution_authorized": false,
+    "product_execution_authorized": false,
+    "profile_promotion_authority": false,
+    "public_or_scientific_claim_authorized": false,
+    "stage0_admission_authority": false
+  },
+  "cohort": {
+    "baseline_recovered_case_ids": [
+      "6T88_MWQ"
+    ],
+    "case_count": 9,
+    "case_ids_sha256": "cd2c24c9c7d937865f40352375e8a17c6b83b0b0fab8c134218d2c29537493c1",
+    "cohort_kind": "historical_contaminated_development",
+    "exact_case_source_receipt_required": true,
+    "fresh_holdout_overlap_allowed": false,
+    "ordered_case_ids": [
+      "5SD5_HWI",
+      "5SIS_JSM",
+      "6M2B_EZO",
+      "6M73_FNR",
+      "6T88_MWQ",
+      "6TW5_9M2",
+      "6TW7_NZB",
+      "6VTA_AKN",
+      "6WTN_RXT"
+    ],
+    "preparation_failure_case_ids": [
+      "6M73_FNR"
+    ],
+    "previously_uncovered_case_ids": [
+      "5SD5_HWI",
+      "5SIS_JSM",
+      "6M2B_EZO",
+      "6TW5_9M2",
+      "6TW7_NZB",
+      "6VTA_AKN",
+      "6WTN_RXT"
+    ],
+    "scored_case_count": 8,
+    "scored_case_ids": [
+      "5SD5_HWI",
+      "5SIS_JSM",
+      "6M2B_EZO",
+      "6T88_MWQ",
+      "6TW5_9M2",
+      "6TW7_NZB",
+      "6VTA_AKN",
+      "6WTN_RXT"
+    ]
+  },
+  "decision": {
+    "actual_execution_requires_pr_245_reviewed_terminal_state": true,
+    "go_requires_all_invariants": true,
+    "go_requires_any_primary_criterion": true,
+    "hard_no_go_criteria_any": [
+      "required_invariant_failed",
+      "all_primary_go_criteria_failed",
+      "baseline_recovered_case_regressed",
+      "candidate_denominator_mismatch",
+      "reference_or_result_dependent_generator_input_detected"
+    ],
+    "invariants_all": [
+      "exact_source_receipts_complete",
+      "baseline_and_experimental_denominators_equal",
+      "no_preparation_failure_regression",
+      "no_reference_or_result_dependent_generator_input",
+      "all_candidate_slots_failure_complete",
+      "all_metrics_independently_rederived",
+      "baseline_recovered_case_not_regressed"
+    ],
+    "primary_go_criteria_any": [
+      "selected_exact_valid_recovery_in_previously_uncovered_case",
+      "proposal_oracle_recovery_at_least_2_of_8",
+      "valid_proposal_oracle_recovery_at_least_2_of_8"
+    ],
+    "stop_rules": [
+      "stop_on_source_identity_mismatch",
+      "stop_on_denominator_mismatch",
+      "stop_on_reference_leakage",
+      "stop_on_nonrederivable_evidence"
+    ]
+  },
+  "evaluation": {
+    "all_failed_candidate_rows_retained": true,
+    "all_failed_preparation_rows_retained": true,
+    "failure_classes": [
+      "success",
+      "proposal_failure",
+      "validity_failure",
+      "ranking_failure"
+    ],
+    "full_observation_rederivation_required": true,
+    "ranked_top_k": [
+      1,
+      5
+    ],
+    "required_metrics": [
+      "proposal_oracle",
+      "valid_proposal_oracle",
+      "ranked_top_k_oracle",
+      "selected_top1",
+      "selection_regret",
+      "rejected_candidate_count",
+      "failure_class"
+    ],
+    "rmsd_threshold_angstrom": 2.0,
+    "source_rederivation_required": true
+  },
+  "frozen_dependencies": {
+    "activation_policy_schema_id": "betelgeuze.engine_v2_source_paired_clearance_activation_policy/1.2.0",
+    "activation_policy_sha256": "988d0bb47bfa6ff934887e1e12b5a512b55aaf40033a04963d141c4ffefe212c",
+    "global_orientation_synthetic_contract_schema_id": "betelgeuze.engine_v2_global_orientation_synthetic_contract/1.1.0",
+    "global_orientation_synthetic_contract_sha256": "b86059aca76425aacc7a2cc28bac98e9ce87f026b399c6a839e9560ff7332a44",
+    "historical_archive_sha256": "8bef33eba296989b795a11fd05a7e119124b066d91bec28a8b910d38a083fbcc",
+    "historical_case_source_authority_sha256": "4c083af473c369bf35fc34fdf4fe797ddbb2ef60b5474a78d6354415e3aa06bc",
+    "phase25_policy_schema_id": "betelgeuze.engine_v2_phase25_cohort_admission/1.3.0",
+    "phase25_policy_sha256": "b4c5530dc4766500dbbc854875cfb39baadad94196c63be6150514879993d211",
+    "posebusters_version": "0.3.1",
+    "scorer_v1_terms_schema_id": "betelgeuze.engine_v2_scorer_v1_terms/1.1.0"
+  },
+  "protocol_sha256": "ab1a3954893023e95dc23e9f35f54571cd2a9043d054da1d3150648156619e55",
+  "schema_id": "betelgeuze.engine_v2_global_orientation_development_protocol/1.0.0",
+  "status": "frozen_not_execution_authorized"
+}
