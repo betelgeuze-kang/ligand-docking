@@ -46,6 +46,7 @@ ONE_SHOT_REQUIRED_TOKENS = (
     "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_legacy.py",
     "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_binding.py",
     "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_evidence.py",
+    "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_full_evidence.py",
     "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_result.py",
     "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_result_legacy.py",
     "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_result_binding.py",
@@ -56,10 +57,12 @@ ONE_SHOT_REQUIRED_TOKENS = (
     "tests/unit/test_source_paired_clearance_one_shot_ab.py",
     "tests/unit/test_source_paired_clearance_one_shot_canonical_imports.py",
     "tests/unit/test_source_paired_clearance_one_shot_evidence.py",
+    "tests/unit/test_source_paired_clearance_one_shot_full_evidence.py",
     "tests/unit/test_source_paired_clearance_one_shot_result.py",
     "tests/unit/test_source_paired_clearance_one_shot_source_policy_tamper.py",
     "tests/unit/test_source_paired_clearance_one_shot_verdict_semantics.py",
     "docs/engine_v2_source_paired_clearance_one_shot_ab.md",
+    "docs/engine_v2_source_paired_clearance_one_shot_full_evidence.md",
 )
 
 
@@ -131,7 +134,9 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         not one_shot_contract_present
         or (
             ONE_SHOT_AUTHORITY_WORKFLOW in workflows
-            and all(token in one_shot_text for token in ONE_SHOT_REQUIRED_TOKENS)
+            and all(
+                token in one_shot_text for token in ONE_SHOT_REQUIRED_TOKENS
+            )
         )
     )
 
@@ -150,7 +155,9 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         "one_shot_contract_in_authoritative_ci": (
             one_shot_contract_in_authoritative_ci
         ),
-        "new_feature_workflow_policy": "consolidate_into_authoritative_workflows",
+        "new_feature_workflow_policy": (
+            "consolidate_into_authoritative_workflows"
+        ),
         "specialized_workflows_hidden": False,
         "issue_199_external_state_mutated": False,
     }
@@ -163,7 +170,9 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--repo-root", type=Path, default=Path(__file__).resolve().parents[1]
+        "--repo-root",
+        type=Path,
+        default=Path(__file__).resolve().parents[1],
     )
     parser.add_argument("--out", type=Path, required=True)
     return parser
