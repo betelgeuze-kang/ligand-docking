@@ -1,67 +1,188 @@
-"""Canonical authority for the single historical source-paired clearance A/B.
+"""Atomic authority for the single historical source-paired clearance A/B.
 
-The module verifies one frozen contaminated-development comparison. It does not
-materialize molecular inputs, execute docking, access fresh holdout data, promote
-an algorithm profile, or authorize product/customer/scientific use.
+This module authorizes only the exact contaminated-development comparison frozen
+by ``config/engine_v2_source_paired_clearance_one_shot_ab.json``. It does not
+materialize molecular inputs, execute docking, access the fresh holdout, promote
+an algorithm profile, or authorize product/customer use.
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+import hashlib
+import json
+import os
 from pathlib import Path
-from typing import Any, Mapping
-
-from . import source_paired_clearance_one_shot_legacy as _legacy
-from .source_paired_clearance_one_shot_binding import (
-    EXPECTED_NO_GO_CRITERIA,
-    read_durable_receipt,
-    require_clean_checkout,
-)
+import re
+import stat
+from typing import Any, Mapping, Sequence
 
 
 POLICY_SCHEMA_ID = (
-    "betelgeuze.engine_v2_source_paired_clearance_one_shot_ab_policy/1.1.0"
+    "betelgeuze.engine_v2_source_paired_clearance_one_shot_ab_policy/1.0.0"
 )
-RESERVATION_SCHEMA_ID = _legacy.RESERVATION_SCHEMA_ID
-RUN_START_SCHEMA_ID = _legacy.RUN_START_SCHEMA_ID
+RESERVATION_SCHEMA_ID = (
+    "betelgeuze.engine_v2_source_paired_clearance_one_shot_ab_reservation/1.0.0"
+)
+RUN_START_SCHEMA_ID = (
+    "betelgeuze.engine_v2_source_paired_clearance_one_shot_ab_run_start/1.0.0"
+)
 VERDICT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_source_paired_clearance_one_shot_ab_verdict/1.1.0"
+    "betelgeuze.engine_v2_source_paired_clearance_one_shot_ab_verdict/1.0.0"
 )
 EXPECTED_POLICY_SHA256 = (
-    "b9d2dc1c716c0f954ba5a9f30ecc08168eb29331293b8df5c08fa67ca7ae377f"
+    "f9e5ff44a95361df3394b316ad071966d2a23e45d8de395428ac29ef4fd5a0a5"
 )
 EXPECTED_PHASE25_POLICY_SHA256 = (
-    "b4c5530dc4766500dbbc854875cfb39baadad94196c63be6150514879993d211"
+    "67910559ec02790cb59fbf41648ca9aff2134cff960292d7ad1acc4caf546cfa"
 )
 EXPECTED_ACTIVATION_POLICY_SHA256 = (
     "988d0bb47bfa6ff934887e1e12b5a512b55aaf40033a04963d141c4ffefe212c"
 )
-EXPECTED_CLEARANCE_POLICY_SHA256 = _legacy.EXPECTED_CLEARANCE_POLICY_SHA256
-EXPECTED_OUTPUT_ROOT = _legacy.EXPECTED_OUTPUT_ROOT
-EXPECTED_RESERVATION_FILENAME = _legacy.EXPECTED_RESERVATION_FILENAME
-EXPECTED_RUN_START_FILENAME = _legacy.EXPECTED_RUN_START_FILENAME
-EXPECTED_RESULT_FILENAME = _legacy.EXPECTED_RESULT_FILENAME
-EXPECTED_CASE_IDS = _legacy.EXPECTED_CASE_IDS
-EXPECTED_UNCOVERED_CASE_IDS = _legacy.EXPECTED_UNCOVERED_CASE_IDS
-EXPECTED_GO_CRITERIA = _legacy.EXPECTED_GO_CRITERIA
-EXPECTED_INVARIANTS = _legacy.EXPECTED_INVARIANTS
-LEGACY_NONBLOCKING_DIAGNOSTIC_KEYS = (
+EXPECTED_CLEARANCE_POLICY_SHA256 = (
+    "e5936f33d5aec54aae67f519e5cf6dffcc61181237270adb3e367a5f65cb29ad"
+)
+EXPECTED_OUTPUT_ROOT = Path(
+    ".betelgeuze/engine_v2_source_paired_clearance_one_shot_ab"
+)
+EXPECTED_RESERVATION_FILENAME = "execution-reservation.json"
+EXPECTED_RUN_START_FILENAME = "run-start.json"
+EXPECTED_RESULT_FILENAME = "result.json"
+EXPECTED_CASE_IDS = (
+    "5SD5_HWI",
+    "5SIS_JSM",
+    "6M2B_EZO",
+    "6M73_FNR",
+    "6T88_MWQ",
+    "6TW5_9M2",
+    "6TW7_NZB",
+    "6VTA_AKN",
+    "6WTN_RXT",
+)
+EXPECTED_UNCOVERED_CASE_IDS = (
+    "5SD5_HWI",
+    "5SIS_JSM",
+    "6M2B_EZO",
+    "6TW5_9M2",
+    "6TW7_NZB",
+    "6VTA_AKN",
+    "6WTN_RXT",
+)
+EXPECTED_GO_CRITERIA = (
+    "new_exact_valid_candidate_in_previously_uncovered_case",
+    "proposal_oracle_recovery_at_least_2_of_8",
+    "invalid_top1_at_most_4_of_8",
+)
+EXPECTED_INVARIANTS = (
+    "no_preparation_failure_regression",
+    "no_top1_or_top5_recovery_regression",
+    "candidate_denominator_512_per_arm",
+    "source_control_preserved",
+    "score_term_semantics_fully_verified",
+    "no_result_dependent_allocation",
+)
+EXPECTED_NO_GO_CRITERIA = (
     "shadow_eligible_candidate_without_new_case_recovery",
     "no_exact_valid_case_increase",
     "no_invalid_top1_reduction",
+    "existing_recovery_regression",
+    "selected_state_remains_penetrating_without_posebusters_validity_change",
 )
+_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+_GIT_SHA1_RE = re.compile(r"^[0-9a-f]{40}$")
 
-OneShotABAuthorityError = _legacy.OneShotABAuthorityError
-OneShotABDecision = _legacy.OneShotABDecision
-OneShotABVerdictInputs = _legacy.OneShotABVerdictInputs
-canonical_json_bytes = _legacy.canonical_json_bytes
-sha256_payload = _legacy.sha256_payload
-_is_sha256 = _legacy._is_sha256
-_mapping = _legacy._mapping
-_exact_keys = _legacy._exact_keys
-_exact_string_sequence = _legacy._exact_string_sequence
-verify_self_hash = _legacy.verify_self_hash
-load_json_document = _legacy.load_json_document
-_write_exclusive_json = _legacy._write_exclusive_json
+
+class OneShotABAuthorityError(ValueError):
+    """Raised when one-shot authority or evidence fails closed."""
+
+
+@dataclass(frozen=True, slots=True)
+class OneShotABDecision:
+    authorized: bool
+    blockers: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class OneShotABVerdictInputs:
+    preparation_failure_case_ids: tuple[str, ...]
+    baseline_top1_recovery_case_ids: tuple[str, ...]
+    experimental_top1_recovery_case_ids: tuple[str, ...]
+    baseline_top5_recovery_case_ids: tuple[str, ...]
+    experimental_top5_recovery_case_ids: tuple[str, ...]
+    baseline_exact_valid_case_ids: tuple[str, ...]
+    experimental_exact_valid_case_ids: tuple[str, ...]
+    baseline_proposal_oracle_case_ids: tuple[str, ...]
+    experimental_proposal_oracle_case_ids: tuple[str, ...]
+    baseline_invalid_top1_case_ids: tuple[str, ...]
+    experimental_invalid_top1_case_ids: tuple[str, ...]
+    baseline_candidate_count: int
+    experimental_candidate_count: int
+    source_control_preserved: bool
+    score_term_semantics_fully_verified: bool
+    result_dependent_allocation_observed: bool
+    shadow_eligible_candidate_count: int
+    selected_penetrating_without_validity_change_count: int
+
+
+def canonical_json_bytes(value: object) -> bytes:
+    return json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+        allow_nan=False,
+    ).encode("ascii")
+
+
+def sha256_payload(value: object) -> str:
+    return hashlib.sha256(canonical_json_bytes(value)).hexdigest()
+
+
+def _is_sha256(value: object) -> bool:
+    return isinstance(value, str) and _SHA256_RE.fullmatch(value) is not None
+
+
+def _mapping(value: object, *, name: str) -> Mapping[str, Any]:
+    if not isinstance(value, dict):
+        raise OneShotABAuthorityError(f"{name} must be an object")
+    return value
+
+
+def _exact_keys(value: Mapping[str, Any], keys: set[str], *, name: str) -> None:
+    if set(value) != keys:
+        raise OneShotABAuthorityError(f"{name} key set is invalid")
+
+
+def _exact_string_sequence(
+    value: object,
+    expected: Sequence[str],
+    *,
+    name: str,
+) -> None:
+    if not isinstance(value, list) or tuple(value) != tuple(expected):
+        raise OneShotABAuthorityError(f"{name} must equal the frozen ordered values")
+
+
+def verify_self_hash(
+    document: Mapping[str, Any],
+    *,
+    hash_field: str,
+    name: str,
+) -> None:
+    projection = dict(document)
+    observed = projection.pop(hash_field, None)
+    if not _is_sha256(observed) or observed != sha256_payload(projection):
+        raise OneShotABAuthorityError(f"{name} self-hash is invalid")
+
+
+def load_json_document(path: Path, *, name: str) -> dict[str, Any]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise OneShotABAuthorityError(f"{name} is not readable canonical JSON: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise OneShotABAuthorityError(f"{name} must be a JSON object")
+    return payload
 
 
 def verify_one_shot_policy(
@@ -70,8 +191,6 @@ def verify_one_shot_policy(
     phase25_policy: Mapping[str, Any],
     activation_policy: Mapping[str, Any],
 ) -> None:
-    """Verify frozen one-shot and source-policy identities without side effects."""
-
     _exact_keys(
         policy,
         {
@@ -105,9 +224,7 @@ def verify_one_shot_policy(
     if authority.get("historical_ab_execution_authorized") is not True:
         raise OneShotABAuthorityError("historical A/B execution is not authorized")
     if authority.get("historical_result_materialization_authorized") is not True:
-        raise OneShotABAuthorityError(
-            "historical result materialization is not authorized"
-        )
+        raise OneShotABAuthorityError("historical result materialization is not authorized")
     if authority.get("maximum_lifetime_run_count") != 1:
         raise OneShotABAuthorityError("maximum lifetime run count must equal one")
     for forbidden in (
@@ -141,21 +258,6 @@ def verify_one_shot_policy(
     if source.get("source_control_required") is not True:
         raise OneShotABAuthorityError("paired source controls are required")
 
-    verify_self_hash(
-        phase25_policy,
-        hash_field="policy_sha256",
-        name="Phase 2.5 cohort policy",
-    )
-    try:
-        verify_self_hash(
-            activation_policy,
-            hash_field="policy_sha256",
-            name="activation policy",
-        )
-    except OneShotABAuthorityError as exc:
-        raise OneShotABAuthorityError(
-            "activation policy self-hash is invalid; activation policy cross-wire"
-        ) from exc
     if phase25_policy.get("schema_id") != source.get("phase25_cohort_policy_schema_id"):
         raise OneShotABAuthorityError("Phase 2.5 schema cross-wire")
     if phase25_policy.get("policy_sha256") != EXPECTED_PHASE25_POLICY_SHA256:
@@ -167,9 +269,7 @@ def verify_one_shot_policy(
 
     cohort = _mapping(policy.get("cohort"), name="cohort")
     _exact_string_sequence(
-        cohort.get("historical_case_ids"),
-        EXPECTED_CASE_IDS,
-        name="historical case IDs",
+        cohort.get("historical_case_ids"), EXPECTED_CASE_IDS, name="historical case IDs"
     )
     _exact_string_sequence(
         cohort.get("previously_uncovered_case_ids"),
@@ -192,9 +292,7 @@ def verify_one_shot_policy(
         raise OneShotABAuthorityError("candidate-slot denominator drifted")
     if cohort.get("arm_count") != 2 or cohort.get("expected_scored_candidate_rows") != 1024:
         raise OneShotABAuthorityError("two-arm candidate denominator drifted")
-    if cohort.get("historical_case_ids_sha256") != sha256_payload(
-        list(EXPECTED_CASE_IDS)
-    ):
+    if cohort.get("historical_case_ids_sha256") != sha256_payload(list(EXPECTED_CASE_IDS)):
         raise OneShotABAuthorityError("historical case roster hash is invalid")
 
     arm_contract = _mapping(policy.get("arm_contract"), name="arm_contract")
@@ -253,20 +351,10 @@ def verify_one_shot_policy(
         raise OneShotABAuthorityError("result filename drifted")
 
     decision = _mapping(policy.get("decision"), name="decision")
+    _exact_string_sequence(decision.get("go_criteria_any"), EXPECTED_GO_CRITERIA, name="Go criteria")
+    _exact_string_sequence(decision.get("invariants_all"), EXPECTED_INVARIANTS, name="invariants")
     _exact_string_sequence(
-        decision.get("go_criteria_any"),
-        EXPECTED_GO_CRITERIA,
-        name="Go criteria",
-    )
-    _exact_string_sequence(
-        decision.get("invariants_all"),
-        EXPECTED_INVARIANTS,
-        name="invariants",
-    )
-    _exact_string_sequence(
-        decision.get("no_go_criteria_any"),
-        EXPECTED_NO_GO_CRITERIA,
-        name="No-Go criteria",
+        decision.get("no_go_criteria_any"), EXPECTED_NO_GO_CRITERIA, name="No-Go criteria"
     )
     if decision.get("go_requires_all_invariants") is not True:
         raise OneShotABAuthorityError("Go must require all invariants")
@@ -277,7 +365,42 @@ def verify_one_shot_policy(
 
 
 def resolve_output_root(policy: Mapping[str, Any], *, repository_root: Path) -> Path:
-    return _legacy.resolve_output_root(policy, repository_root=repository_root)
+    execution = _mapping(policy.get("execution"), name="execution")
+    configured = Path(str(execution.get("output_root", "")))
+    if configured != EXPECTED_OUTPUT_ROOT or configured.is_absolute():
+        raise OneShotABAuthorityError("one-shot output root is not the frozen path")
+    if any(part in {"", ".", ".."} for part in configured.parts):
+        raise OneShotABAuthorityError("one-shot output root contains an unsafe component")
+    root = repository_root.resolve(strict=True)
+    output = (root / configured).resolve(strict=False)
+    if root not in output.parents:
+        raise OneShotABAuthorityError("one-shot output root escapes the repository root")
+    return output
+
+
+def _prepare_owner_only_directory(path: Path, *, repository_root: Path) -> None:
+    root = repository_root.resolve(strict=True)
+    try:
+        relative = path.relative_to(root)
+    except ValueError as exc:
+        raise OneShotABAuthorityError("output path is outside the repository root") from exc
+    current = root
+    for component in relative.parts:
+        current = current / component
+        if current.exists() or current.is_symlink():
+            if current.is_symlink() or not current.is_dir():
+                raise OneShotABAuthorityError("output path contains a symlink or non-directory")
+            mode = stat.S_IMODE(current.stat().st_mode)
+            if mode != 0o700:
+                raise OneShotABAuthorityError(
+                    f"existing evidence directory {current.name} must have mode 0700"
+                )
+        else:
+            current.mkdir(mode=0o700)
+            if stat.S_IMODE(current.stat().st_mode) != 0o700:
+                raise OneShotABAuthorityError(
+                    f"created evidence directory {current.name} is not mode 0700"
+                )
 
 
 def authorization_decision(
@@ -295,9 +418,9 @@ def authorization_decision(
             activation_policy=activation_policy,
         )
         output_root = resolve_output_root(policy, repository_root=repository_root)
-        require_clean_checkout(repository_root)
-    except (OSError, RuntimeError, OneShotABAuthorityError) as exc:
-        return OneShotABDecision(authorized=False, blockers=(str(exc),))
+    except (OneShotABAuthorityError, OSError) as exc:
+        blockers.append(str(exc))
+        return OneShotABDecision(authorized=False, blockers=tuple(blockers))
 
     execution = _mapping(policy.get("execution"), name="execution")
     reservation = output_root / str(execution.get("reservation_filename", ""))
@@ -310,6 +433,39 @@ def authorization_decision(
     if result.exists() or result.is_symlink():
         blockers.append("one_shot_result_already_exists")
     return OneShotABDecision(authorized=not blockers, blockers=tuple(blockers))
+
+
+def _write_all(descriptor: int, payload: bytes) -> None:
+    view = memoryview(payload)
+    while view:
+        written = os.write(descriptor, view)
+        if written <= 0:
+            raise OneShotABAuthorityError("short write while creating evidence receipt")
+        view = view[written:]
+
+
+def _write_exclusive_json(
+    path: Path,
+    payload: Mapping[str, Any],
+    *,
+    repository_root: Path,
+) -> None:
+    _prepare_owner_only_directory(path.parent, repository_root=repository_root)
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    try:
+        descriptor = os.open(path, flags, 0o600)
+    except FileExistsError as exc:
+        raise OneShotABAuthorityError(f"refusing to overwrite {path.name}") from exc
+    try:
+        encoded = json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n"
+        _write_all(descriptor, encoded.encode("utf-8"))
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+    if stat.S_IMODE(path.stat().st_mode) != 0o600:
+        raise OneShotABAuthorityError(f"{path.name} is not owner-only")
 
 
 def reserve_one_shot_execution(
@@ -330,24 +486,19 @@ def reserve_one_shot_execution(
     )
     if not decision.authorized:
         raise OneShotABAuthorityError(";".join(decision.blockers))
-    observed_head = require_clean_checkout(repository_root)
-    if source_commit_git_sha1 != observed_head:
-        raise OneShotABAuthorityError(
-            "declared source commit does not equal the clean checkout HEAD"
-        )
+    if _GIT_SHA1_RE.fullmatch(source_commit_git_sha1) is None:
+        raise OneShotABAuthorityError("source commit must be a lowercase Git SHA-1")
     if not operator_id or operator_id.strip() != operator_id:
         raise OneShotABAuthorityError("operator_id is invalid")
     if not _is_sha256(execution_environment_sha256):
-        raise OneShotABAuthorityError(
-            "execution environment SHA-256 is invalid"
-        )
+        raise OneShotABAuthorityError("execution environment SHA-256 is invalid")
 
     output_root = resolve_output_root(policy, repository_root=repository_root)
     execution = _mapping(policy["execution"], name="execution")
     receipt: dict[str, Any] = {
         "schema_id": RESERVATION_SCHEMA_ID,
         "policy_sha256": policy["policy_sha256"],
-        "source_commit_git_sha1": observed_head,
+        "source_commit_git_sha1": source_commit_git_sha1,
         "operator_id": operator_id,
         "execution_environment_sha256": execution_environment_sha256,
         "durable_output_root": EXPECTED_OUTPUT_ROOT.as_posix(),
@@ -372,53 +523,26 @@ def create_run_start_receipt(
     reservation: Mapping[str, Any],
     repository_root: Path,
 ) -> dict[str, Any]:
-    verify_self_hash(policy, hash_field="policy_sha256", name="one-shot policy")
-    if policy.get("policy_sha256") != EXPECTED_POLICY_SHA256:
-        raise OneShotABAuthorityError("run-start policy identity is invalid")
-    output_root = resolve_output_root(policy, repository_root=repository_root)
-    execution = _mapping(policy.get("execution"), name="execution")
-    reservation_path = output_root / str(execution.get("reservation_filename"))
-    try:
-        durable_reservation = read_durable_receipt(
-            reservation_path,
-            repository_root=repository_root,
-            name="one-shot reservation",
-        )
-        observed_head = require_clean_checkout(repository_root)
-    except (OSError, RuntimeError) as exc:
-        raise OneShotABAuthorityError(str(exc)) from exc
-    if dict(reservation) != durable_reservation:
-        raise OneShotABAuthorityError(
-            "reservation argument does not equal the durable reservation"
-        )
-    verify_self_hash(
-        durable_reservation,
-        hash_field="receipt_sha256",
-        name="reservation receipt",
-    )
-    if durable_reservation.get("schema_id") != RESERVATION_SCHEMA_ID:
+    verify_self_hash(reservation, hash_field="receipt_sha256", name="reservation receipt")
+    if reservation.get("schema_id") != RESERVATION_SCHEMA_ID:
         raise OneShotABAuthorityError("reservation schema is invalid")
-    if durable_reservation.get("policy_sha256") != policy.get("policy_sha256"):
+    if reservation.get("policy_sha256") != policy.get("policy_sha256"):
         raise OneShotABAuthorityError("reservation/policy cross-wire")
-    if durable_reservation.get("durable_output_root") != EXPECTED_OUTPUT_ROOT.as_posix():
+    if reservation.get("durable_output_root") != EXPECTED_OUTPUT_ROOT.as_posix():
         raise OneShotABAuthorityError("reservation output-root identity drifted")
-    if durable_reservation.get("reserved_run_ordinal") != 1:
+    if reservation.get("reserved_run_ordinal") != 1:
         raise OneShotABAuthorityError("only run ordinal one is authorized")
-    if durable_reservation.get("source_commit_git_sha1") != observed_head:
-        raise OneShotABAuthorityError(
-            "reservation source commit does not equal the clean checkout HEAD"
-        )
+    output_root = resolve_output_root(policy, repository_root=repository_root)
+    execution = _mapping(policy["execution"], name="execution")
     if (output_root / str(execution["result_filename"])).exists():
         raise OneShotABAuthorityError("result already exists")
 
     receipt: dict[str, Any] = {
         "schema_id": RUN_START_SCHEMA_ID,
         "policy_sha256": policy["policy_sha256"],
-        "reservation_receipt_sha256": durable_reservation["receipt_sha256"],
-        "source_commit_git_sha1": observed_head,
-        "execution_environment_sha256": durable_reservation[
-            "execution_environment_sha256"
-        ],
+        "reservation_receipt_sha256": reservation["receipt_sha256"],
+        "source_commit_git_sha1": reservation["source_commit_git_sha1"],
+        "execution_environment_sha256": reservation["execution_environment_sha256"],
         "durable_output_root": EXPECTED_OUTPUT_ROOT.as_posix(),
         "required_scorer_backend": "rust_cpu_required",
         "historical_case_ids": list(EXPECTED_CASE_IDS),
@@ -437,11 +561,7 @@ def create_run_start_receipt(
     return receipt
 
 
-def build_verdict(
-    inputs: OneShotABVerdictInputs,
-    *,
-    policy_sha256: str,
-) -> dict[str, Any]:
+def build_verdict(inputs: OneShotABVerdictInputs, *, policy_sha256: str) -> dict[str, Any]:
     if policy_sha256 != EXPECTED_POLICY_SHA256:
         raise OneShotABAuthorityError("verdict policy identity is invalid")
     candidate_denominator_ok = (
@@ -455,68 +575,50 @@ def build_verdict(
     top5_regression = not set(inputs.baseline_top5_recovery_case_ids).issubset(
         inputs.experimental_top5_recovery_case_ids
     )
-    existing_recovery_regression = top1_regression or top5_regression
     new_valid = bool(
-        (
-            set(inputs.experimental_exact_valid_case_ids)
-            & set(EXPECTED_UNCOVERED_CASE_IDS)
-        )
+        (set(inputs.experimental_exact_valid_case_ids) & set(EXPECTED_UNCOVERED_CASE_IDS))
         - set(inputs.baseline_exact_valid_case_ids)
     )
-    oracle_at_least_two = (
-        len(set(inputs.experimental_proposal_oracle_case_ids)) >= 2
-    )
-    invalid_top1_at_most_four = (
-        len(set(inputs.experimental_invalid_top1_case_ids)) <= 4
-    )
+    oracle_at_least_two = len(set(inputs.experimental_proposal_oracle_case_ids)) >= 2
+    invalid_top1_at_most_four = len(set(inputs.experimental_invalid_top1_case_ids)) <= 4
 
     invariants = {
         "no_preparation_failure_regression": preparation_ok,
-        "no_top1_or_top5_recovery_regression": not existing_recovery_regression,
+        "no_top1_or_top5_recovery_regression": not top1_regression and not top5_regression,
         "candidate_denominator_512_per_arm": candidate_denominator_ok,
         "source_control_preserved": inputs.source_control_preserved,
-        "score_term_semantics_fully_verified": (
-            inputs.score_term_semantics_fully_verified
-        ),
-        "no_result_dependent_allocation": (
-            not inputs.result_dependent_allocation_observed
-        ),
+        "score_term_semantics_fully_verified": inputs.score_term_semantics_fully_verified,
+        "no_result_dependent_allocation": not inputs.result_dependent_allocation_observed,
     }
     go_criteria = {
         "new_exact_valid_candidate_in_previously_uncovered_case": new_valid,
         "proposal_oracle_recovery_at_least_2_of_8": oracle_at_least_two,
         "invalid_top1_at_most_4_of_8": invalid_top1_at_most_four,
     }
-    hard_no_go_criteria = {
-        "required_invariant_failed": not all(invariants.values()),
-        "all_primary_go_criteria_failed": not any(go_criteria.values()),
-        "existing_recovery_regression": existing_recovery_regression,
-        "selected_state_remains_penetrating_without_posebusters_validity_change": (
-            inputs.selected_penetrating_without_validity_change_count > 0
-        ),
-    }
-    hard_no_go = any(hard_no_go_criteria.values())
-    go = all(invariants.values()) and any(go_criteria.values()) and not hard_no_go
     no_go_criteria = {
-        **hard_no_go_criteria,
         "shadow_eligible_candidate_without_new_case_recovery": (
             inputs.shadow_eligible_candidate_count > 0
-            and not any(go_criteria.values())
+            and not new_valid
+            and not oracle_at_least_two
+            and not invalid_top1_at_most_four
         ),
         "no_exact_valid_case_increase": not new_valid,
         "no_invalid_top1_reduction": (
             len(set(inputs.experimental_invalid_top1_case_ids))
             >= len(set(inputs.baseline_invalid_top1_case_ids))
         ),
+        "existing_recovery_regression": top1_regression or top5_regression,
+        "selected_state_remains_penetrating_without_posebusters_validity_change": (
+            inputs.selected_penetrating_without_validity_change_count > 0
+        ),
     }
+    no_go = any(no_go_criteria.values())
+    go = all(invariants.values()) and any(go_criteria.values()) and not no_go
+    verdict = "GO_CONTINUE_FIXED_32_CASE" if go else "NO_GO_CLOSE_LOCAL_REFINEMENT"
     receipt: dict[str, Any] = {
         "schema_id": VERDICT_SCHEMA_ID,
         "policy_sha256": policy_sha256,
-        "verdict": (
-            "GO_CONTINUE_FIXED_32_CASE"
-            if go
-            else "NO_GO_CLOSE_LOCAL_REFINEMENT"
-        ),
+        "verdict": verdict,
         "invariants": invariants,
         "go_criteria": go_criteria,
         "no_go_criteria": no_go_criteria,
