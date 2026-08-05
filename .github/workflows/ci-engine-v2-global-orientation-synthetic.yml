@@ -4,11 +4,13 @@ on:
   pull_request:
     paths:
       - "betelgeuze_engine_v2/docking/global_orientation.py"
+      - "betelgeuze_engine_v2/docking/global_orientation_evidence.py"
       - "betelgeuze_engine_v2/benchmark/oracle_selection_metrics.py"
+      - "betelgeuze_engine_v2/benchmark/oracle_selection_evidence.py"
       - "config/engine_v2_global_orientation_synthetic_contract.json"
       - "tools/verify_engine_v2_global_orientation_synthetic_contract.py"
       - "tests/unit/test_engine_v2_global_orientation*.py"
-      - "tests/unit/test_engine_v2_oracle_selection_metrics.py"
+      - "tests/unit/test_engine_v2_oracle_selection*.py"
       - "docs/engine_v2_global_orientation_design.md"
       - ".github/workflows/ci-engine-v2-global-orientation-synthetic.yml"
 
@@ -55,7 +57,9 @@ jobs:
         run: |
           python -m py_compile \
             betelgeuze_engine_v2/docking/global_orientation.py \
+            betelgeuze_engine_v2/docking/global_orientation_evidence.py \
             betelgeuze_engine_v2/benchmark/oracle_selection_metrics.py \
+            betelgeuze_engine_v2/benchmark/oracle_selection_evidence.py \
             tools/verify_engine_v2_global_orientation_synthetic_contract.py
           python tools/verify_engine_v2_global_orientation_synthetic_contract.py
 
@@ -64,16 +68,22 @@ jobs:
           python -m pytest -q \
             --confcutdir=tests/unit \
             tests/unit/test_engine_v2_global_orientation.py \
+            tests/unit/test_engine_v2_global_orientation_evidence.py \
             tests/unit/test_engine_v2_global_orientation_synthetic_contract.py \
-            tests/unit/test_engine_v2_oracle_selection_metrics.py
+            tests/unit/test_engine_v2_oracle_selection_metrics.py \
+            tests/unit/test_engine_v2_oracle_selection_evidence.py
 
       - name: Lint and diff check
         run: |
           python -m ruff check \
             betelgeuze_engine_v2/docking/global_orientation.py \
+            betelgeuze_engine_v2/docking/global_orientation_evidence.py \
             betelgeuze_engine_v2/benchmark/oracle_selection_metrics.py \
+            betelgeuze_engine_v2/benchmark/oracle_selection_evidence.py \
             tools/verify_engine_v2_global_orientation_synthetic_contract.py \
             tests/unit/test_engine_v2_global_orientation.py \
+            tests/unit/test_engine_v2_global_orientation_evidence.py \
             tests/unit/test_engine_v2_global_orientation_synthetic_contract.py \
-            tests/unit/test_engine_v2_oracle_selection_metrics.py
+            tests/unit/test_engine_v2_oracle_selection_metrics.py \
+            tests/unit/test_engine_v2_oracle_selection_evidence.py
           git diff --check ${{ github.event.pull_request.base.sha }}...HEAD

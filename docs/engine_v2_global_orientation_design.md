@@ -21,8 +21,10 @@ The first implementation provides:
 3. a deterministic surface-oriented translation shell;
 4. a bounded receptor-surface clash prefilter;
 5. a failure-complete candidate denominator retaining rejected slots;
-6. immutable candidate and batch receipt identities; and
-7. metrics that distinguish proposal, validity, and ranking failures.
+6. immutable candidate and batch receipt identities;
+7. self-contained source-geometry evidence that rederives every batch slot;
+8. metrics that distinguish proposal, validity, and ranking failures; and
+9. self-contained observation evidence that rederives every reported metric.
 
 ## Inputs
 
@@ -85,6 +87,24 @@ A clashing slot is marked `receptor_clash`, but it remains in the candidate
 receipt denominator. The prefilter is not a chemistry model and does not replace
 full internal validity or PoseBusters evaluation.
 
+## Source-rederived proposal evidence
+
+`GlobalOrientationEvidence` retains the complete synthetic inputs:
+
+- ligand coordinates;
+- pocket center and normal;
+- receptor surface points; and
+- the exact generator configuration.
+
+Construction reruns `generate_global_orientation_batch(...)` and requires the
+supplied batch to equal the complete rederived batch. A resealed coordinate,
+translation, receptor surface, acceptance state, or slot receipt therefore fails
+closed. A batch hash alone is not accepted as proof of generator execution.
+
+This evidence is intentionally practical only for bounded synthetic fixtures.
+A later molecular protocol may use immutable external source artifacts, but it
+must preserve the same independent rederivation property.
+
 ## Proposal and selection metrics
 
 The companion `oracle_selection_metrics` module reports:
@@ -106,6 +126,18 @@ The companion `oracle_selection_metrics` module reports:
 The reference pose is used only by the **post-generation evaluator**. It is not
 an input to candidate generation.
 
+## Full-observation metric evidence
+
+`OracleSelectionEvidence` retains every `CandidateObservation`, the RMSD
+threshold, and the ordered Top-K requests. Construction reruns
+`evaluate_oracle_selection(...)` and requires exact equality with the supplied
+report. A changed score, RMSD, validity bit, threshold, Top-K list, selected
+candidate, regret, or failure class therefore fails closed.
+
+The synthetic contract requires both source-rederived proposal evidence and
+full-observation metric evidence. Summary hashes or caller-declared booleans are
+not sufficient.
+
 ## Synthetic fixtures
 
 The initial tests cover:
@@ -116,8 +148,11 @@ The initial tests cover:
 - normalized quaternion receipts;
 - clash rejection without denominator loss;
 - absence of native/reference/score inputs in the generator signature;
-- proposal, validity, and ranking failure classification; and
-- deterministic score tie-breaking.
+- proposal, validity, and ranking failure classification;
+- deterministic score tie-breaking;
+- coordinate, translation, and receptor-surface substitution rejection;
+- report, score, and threshold substitution rejection; and
+- contract-level rederivation and authority-escalation tamper rejection.
 
 Future synthetic fixtures should add narrow channels, two-lobe pockets, mirror
 and symmetry decoys, tangent placement, and independent orientation-versus-
@@ -132,8 +167,9 @@ true:
 2. a fixed contaminated development protocol is approved for global orientation;
 3. proposal-oracle improvement is shown across previously uncovered cases;
 4. validity and ranking metrics remain independently rederivable;
-5. a fresh protocol is admitted through the Stage 0 governance chain; and
-6. independent scientific review approves any claim wording.
+5. complete molecular source and observation artifacts replace synthetic fixtures;
+6. a fresh protocol is admitted through the Stage 0 governance chain; and
+7. independent scientific review approves any claim wording.
 
 ## Authority boundary
 
@@ -147,7 +183,7 @@ customer_pose_emission_authorized = false
 public_or_scientific_claim_authorized = false
 ```
 
-The contract is evidence that deterministic code and synthetic tests exist. It
-is not evidence of docking accuracy, generalization, affinity prediction,
-commercial readiness, GPU parity, MD/FEP parity, or superiority over Vina,
-GNINA, or commercial suites.
+The contract is evidence that deterministic code, complete synthetic inputs,
+rederived outputs, and tamper tests exist. It is not evidence of docking
+accuracy, generalization, affinity prediction, commercial readiness, GPU parity,
+MD/FEP parity, or superiority over Vina, GNINA, or commercial suites.
