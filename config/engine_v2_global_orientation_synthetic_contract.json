@@ -5,6 +5,7 @@
     "native_pose_input_allowed": false,
     "receptor_surface_prefilter_allowed": true,
     "score_feedback_input_allowed": false,
+    "source_rederivation_evidence_required": true,
     "synthetic_contract_only": true
   },
   "authority": {
@@ -16,7 +17,7 @@
     "public_or_scientific_claim_authorized": false,
     "stage0_admission_authority": false
   },
-  "contract_sha256": "8729c781ccb88895e08abebedc68cc2f2b68688ff93edd7f9e067ec7d6ae75b2",
+  "contract_sha256": "b86059aca76425aacc7a2cc28bac98e9ce87f026b399c6a839e9560ff7332a44",
   "metrics": {
     "failure_classes": [
       "success",
@@ -24,10 +25,11 @@
       "validity_failure",
       "ranking_failure"
     ],
+    "full_observation_rederivation_required": true,
     "proposal_oracle_and_selection_separated": true,
     "selection_regret_reported": true,
     "top_k_ranked_oracle_reported": true
   },
-  "schema_id": "betelgeuze.engine_v2_global_orientation_synthetic_contract/1.0.0",
+  "schema_id": "betelgeuze.engine_v2_global_orientation_synthetic_contract/1.1.0",
   "status": "implemented_synthetic_validation_only"
 }
