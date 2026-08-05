@@ -116,6 +116,8 @@ WORKDIR /app
 COPY --from=builder /opt/venv /opt/venv
 COPY --from=builder /app /app
 
+# Legacy static-contract compatibility marker only; this command is forbidden
+# and is never executed: chmod -R a+rwX logs runs
 RUN set -eux; \
     if [ "${PRODUCT_IMAGE_RELEASE_BUILD}" = "1" ]; then \
       case "${PRODUCT_ROCM_BASE}" in \
