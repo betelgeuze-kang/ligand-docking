@@ -38,12 +38,27 @@ jobs:
           python -m pip install pip==25.0.1
           python -m pip install pytest==8.3.5 ruff==0.11.13
 
-      - name: Compile and test explicit bootstrap modes
+      - name: Compile and test explicit product artifact ownership
         run: |
-          python -m py_compile tests/conftest.py tests/unit/test_pytest_product_artifact_bootstrap_boundary.py
+          python -m py_compile \
+            tests/conftest.py \
+            tests/unit/test_pytest_product_artifact_bootstrap_boundary.py
           python -m pytest -q \
             --confcutdir=tests/unit \
             tests/unit/test_pytest_product_artifact_bootstrap_boundary.py
+
+      - name: Prove a new focused test performs no implicit bootstrap
+        run: |
+          test ! -e runs/product_capability_surface_contract_current.json
+          cat > tests/unit/test_temporary_explicit_bootstrap_probe.py <<'PY'
+          def test_new_focused_contract_has_no_product_dependency():
+              assert True
+          PY
+          BETELGEUZE_PRODUCT_TEST_ARTIFACT_BOOTSTRAP=auto \
+            python -m pytest -q \
+              tests/unit/test_temporary_explicit_bootstrap_probe.py
+          test ! -e runs/product_capability_surface_contract_current.json
+          rm -f tests/unit/test_temporary_explicit_bootstrap_probe.py
 
       - name: Lint and diff check
         run: |
