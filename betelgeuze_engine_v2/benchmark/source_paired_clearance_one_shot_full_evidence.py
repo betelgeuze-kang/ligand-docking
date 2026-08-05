@@ -341,9 +341,10 @@ def _verify_internal_validity(
         result.get("evaluated_checks"),
         name="internal validity evaluated checks",
     )
+    required_check_set = set(INTERNAL_VALIDITY_REQUIRED_CHECK_NAMES)
     if (
-        tuple(checks) != tuple(INTERNAL_VALIDITY_REQUIRED_CHECK_NAMES)
-        or tuple(evaluated) != tuple(INTERNAL_VALIDITY_REQUIRED_CHECK_NAMES)
+        set(checks) != required_check_set
+        or set(evaluated) != required_check_set
         or any(type(item) is not bool for item in checks.values())
         or any(item is not True for item in evaluated.values())
     ):
