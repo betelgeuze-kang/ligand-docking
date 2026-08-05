@@ -1,0 +1,71 @@
+name: ci-engine-v2-external-one-shot-reservation
+
+on:
+  pull_request:
+    paths:
+      - "betelgeuze_engine_v2/benchmark/source_paired_clearance_external_reservation.py"
+      - "config/engine_v2_source_paired_clearance_external_reservation.json"
+      - "tools/verify_engine_v2_source_paired_clearance_external_reservation.py"
+      - "tests/unit/test_source_paired_clearance_external_reservation.py"
+      - "docs/engine_v2_source_paired_clearance_external_reservation.md"
+      - ".github/workflows/ci-engine-v2-external-one-shot-reservation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-engine-v2-external-one-shot-reservation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  external-reservation-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+          clean: true
+          fetch-depth: 0
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.11"
+
+      - name: Install bounded test dependencies
+        run: |
+          python -m pip install pip==25.0.1
+          python -m pip install \
+            cryptography==46.0.5 \
+            pytest==8.3.5 \
+            ruff==0.11.13
+
+      - name: Verify policy and compile contract
+        run: |
+          python -m py_compile \
+            betelgeuze_engine_v2/benchmark/source_paired_clearance_external_reservation.py \
+            tools/verify_engine_v2_source_paired_clearance_external_reservation.py
+          python tools/verify_engine_v2_source_paired_clearance_external_reservation.py \
+            | tee external-reservation-status.json
+          grep -q '"external_reservation_operational": false' \
+            external-reservation-status.json
+          grep -q '"historical_execution_operational": false' \
+            external-reservation-status.json
+
+      - name: Run signed receipt and replay contracts
+        run: |
+          python -m pytest -q \
+            --confcutdir=tests/unit \
+            tests/unit/test_source_paired_clearance_external_reservation.py
+
+      - name: Lint and diff check
+        run: |
+          python -m ruff check \
+            betelgeuze_engine_v2/benchmark/source_paired_clearance_external_reservation.py \
+            tools/verify_engine_v2_source_paired_clearance_external_reservation.py \
+            tests/unit/test_source_paired_clearance_external_reservation.py
+          git diff --check ${{ github.event.pull_request.base.sha }}...HEAD
