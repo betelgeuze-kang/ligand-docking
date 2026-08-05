@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 
-SCHEMA_ID = "betelgeuze.engine_v2_global_orientation_synthetic_contract/1.0.0"
+SCHEMA_ID = "betelgeuze.engine_v2_global_orientation_synthetic_contract/1.1.0"
 GENERATOR_ID = "deterministic_surface_aware_rigid_v1"
 EXPECTED_FAILURE_CLASSES = (
     "success",
@@ -104,6 +104,7 @@ def verify_contract(contract: Mapping[str, Any]) -> str:
         "native_pose_input_allowed",
         "receptor_surface_prefilter_allowed",
         "score_feedback_input_allowed",
+        "source_rederivation_evidence_required",
         "synthetic_contract_only",
     }:
         raise GlobalOrientationSyntheticContractError(
@@ -116,6 +117,7 @@ def verify_contract(contract: Mapping[str, Any]) -> str:
     for required_true in (
         "candidate_denominator_failure_complete",
         "receptor_surface_prefilter_allowed",
+        "source_rederivation_evidence_required",
         "synthetic_contract_only",
     ):
         if algorithm.get(required_true) is not True:
@@ -145,6 +147,7 @@ def verify_contract(contract: Mapping[str, Any]) -> str:
     metrics = _mapping(contract.get("metrics"), name="metrics")
     if set(metrics) != {
         "failure_classes",
+        "full_observation_rederivation_required",
         "proposal_oracle_and_selection_separated",
         "selection_regret_reported",
         "top_k_ranked_oracle_reported",
@@ -157,6 +160,7 @@ def verify_contract(contract: Mapping[str, Any]) -> str:
             "failure class order drifted"
         )
     for required_true in (
+        "full_observation_rederivation_required",
         "proposal_oracle_and_selection_separated",
         "selection_regret_reported",
         "top_k_ranked_oracle_reported",
