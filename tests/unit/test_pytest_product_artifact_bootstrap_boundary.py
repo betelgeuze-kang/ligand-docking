@@ -22,44 +22,97 @@ def _module():
     return module
 
 
-def _config(*paths: Path) -> SimpleNamespace:
-    return SimpleNamespace(args=[str(path) for path in paths])
+class _Config:
+    def __init__(self, *, requested: bool = False) -> None:
+        self.requested = requested
+        self.markers: list[tuple[str, str]] = []
+
+    def getoption(self, name: str) -> bool:
+        assert name == "product_contract_artifacts"
+        return self.requested
+
+    def addinivalue_line(self, name: str, value: str) -> None:
+        self.markers.append((name, value))
 
 
-def test_disabled_mode_skips_nonlightweight_product_bootstrap(monkeypatch) -> None:
+def test_default_mode_skips_a_new_unclassified_unit_test(monkeypatch) -> None:
     module = _module()
-    monkeypatch.setenv(
-        module._PRODUCT_ARTIFACT_BOOTSTRAP_ENV,
-        "disabled",
-    )
+    monkeypatch.delenv(module._PRODUCT_ARTIFACT_BOOTSTRAP_ENV, raising=False)
+
+    assert module._product_artifact_bootstrap_mode() == "disabled"
+    assert module._product_artifact_bootstrap_required(_Config()) is False
+    assert not hasattr(module, "_LIGHTWEIGHT_CONTRACT_FILES")
+
+
+def test_required_mode_explicitly_bootstraps_product_integration(monkeypatch) -> None:
+    module = _module()
+    monkeypatch.setenv(module._PRODUCT_ARTIFACT_BOOTSTRAP_ENV, "required")
+
+    assert module._product_artifact_bootstrap_required(_Config()) is True
+
+
+def test_disabled_mode_overrides_the_cli_option(monkeypatch) -> None:
+    module = _module()
+    monkeypatch.setenv(module._PRODUCT_ARTIFACT_BOOTSTRAP_ENV, "disabled")
 
     assert module._product_artifact_bootstrap_required(
-        _config(_REPO_ROOT / "tests/unit/nonlightweight_contract.py")
+        _Config(requested=True)
     ) is False
 
 
-def test_required_mode_forces_bootstrap_even_for_mobile_contract(monkeypatch) -> None:
-    module = _module()
-    monkeypatch.setenv(
-        module._PRODUCT_ARTIFACT_BOOTSTRAP_ENV,
-        "required",
-    )
-
-    assert module._product_artifact_bootstrap_required(
-        _config(_REPO_ROOT / "tests/mobile/lightweight_contract.py")
-    ) is True
-
-
-def test_auto_mode_preserves_existing_lightweight_boundary(monkeypatch) -> None:
+def test_auto_mode_requires_the_explicit_cli_option(monkeypatch) -> None:
     module = _module()
     monkeypatch.setenv(module._PRODUCT_ARTIFACT_BOOTSTRAP_ENV, "auto")
 
+    assert module._product_artifact_bootstrap_required(_Config()) is False
     assert module._product_artifact_bootstrap_required(
-        _config(_REPO_ROOT / "tests/mobile/lightweight_contract.py")
-    ) is False
-    assert module._product_artifact_bootstrap_required(
-        _config(_REPO_ROOT / "tests/unit/nonlightweight_contract.py")
+        _Config(requested=True)
     ) is True
+
+
+def test_sessionstart_does_not_materialize_by_default(monkeypatch) -> None:
+    module = _module()
+    monkeypatch.delenv(module._PRODUCT_ARTIFACT_BOOTSTRAP_ENV, raising=False)
+    called = []
+    monkeypatch.setattr(
+        module,
+        "_materialize_product_contract_artifacts",
+        lambda: called.append(True),
+    )
+
+    module.pytest_sessionstart(SimpleNamespace(config=_Config()))
+
+    assert called == []
+
+
+def test_sessionstart_materializes_once_when_required(monkeypatch) -> None:
+    module = _module()
+    monkeypatch.setenv(module._PRODUCT_ARTIFACT_BOOTSTRAP_ENV, "required")
+    called = []
+    monkeypatch.setattr(
+        module,
+        "_materialize_product_contract_artifacts",
+        lambda: called.append(True),
+    )
+
+    module.pytest_sessionstart(SimpleNamespace(config=_Config()))
+
+    assert called == [True]
+
+
+def test_product_marker_is_registered() -> None:
+    module = _module()
+    config = _Config()
+
+    module.pytest_configure(config)
+
+    assert config.markers == [
+        (
+            "markers",
+            "product_contract_artifacts: request the session-scoped product "
+            "contract artifact fixture for this test",
+        )
+    ]
 
 
 def test_invalid_mode_fails_closed(monkeypatch) -> None:
@@ -72,6 +125,6 @@ def test_invalid_mode_fails_closed(monkeypatch) -> None:
 
 def test_whitespace_and_case_are_normalized(monkeypatch) -> None:
     module = _module()
-    monkeypatch.setenv(module._PRODUCT_ARTIFACT_BOOTSTRAP_ENV, "  DISABLED  ")
+    monkeypatch.setenv(module._PRODUCT_ARTIFACT_BOOTSTRAP_ENV, "  REQUIRED  ")
 
-    assert module._product_artifact_bootstrap_mode() == "disabled"
+    assert module._product_artifact_bootstrap_mode() == "required"

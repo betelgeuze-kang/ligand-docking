@@ -12,41 +12,38 @@ _CI_INTEGRATION_FILES = {
     "test_api_product_import.py",
 }
 
-_LIGHTWEIGHT_CONTRACT_FILES = {
-    "test_release_claim_evidence_ladder_gate.py",
-    "test_product_docking_response_snapshot.py",
-    "test_benchmark_contract.py",
-    "test_api_h4_security_hardening.py",
-    "test_api_job_store.py",
-    "test_api_security_middleware.py",
-    "test_api_worker_deploy_artifacts.py",
-}
-
 _PRODUCT_ARTIFACT_BOOTSTRAP_ENV = "BETELGEUZE_PRODUCT_TEST_ARTIFACT_BOOTSTRAP"
 _PRODUCT_ARTIFACT_BOOTSTRAP_MODES = frozenset({"auto", "required", "disabled"})
+_PRODUCT_ARTIFACT_BOOTSTRAP_OPTION = "product_contract_artifacts"
+_PRODUCT_ARTIFACT_MARKER = "product_contract_artifacts"
 
 
-def _requested_tests_are_lightweight(config) -> bool:
-    args = [str(arg).split("::", 1)[0] for arg in getattr(config, "args", []) or []]
-    if not args:
-        return False
-    root = Path(__file__).resolve().parents[1]
-    for text in args:
-        candidate = Path(text)
-        if candidate.name in _LIGHTWEIGHT_CONTRACT_FILES:
-            continue
-        try:
-            relative = candidate.resolve().relative_to(root)
-        except (OSError, ValueError):
-            return False
-        if relative.parts[:2] == ("tests", "mobile"):
-            continue
-        return False
-    return True
+def pytest_addoption(parser) -> None:
+    group = parser.getgroup("betelgeuze-product")
+    group.addoption(
+        "--product-contract-artifacts",
+        action="store_true",
+        dest=_PRODUCT_ARTIFACT_BOOTSTRAP_OPTION,
+        default=False,
+        help=(
+            "Materialize product contract packets before test collection. "
+            "Focused unit and scientific suites remain disabled by default."
+        ),
+    )
+
+
+def pytest_configure(config) -> None:
+    config.addinivalue_line(
+        "markers",
+        (
+            f"{_PRODUCT_ARTIFACT_MARKER}: request the session-scoped product "
+            "contract artifact fixture for this test"
+        ),
+    )
 
 
 def _product_artifact_bootstrap_mode() -> str:
-    raw = os.getenv(_PRODUCT_ARTIFACT_BOOTSTRAP_ENV, "auto")
+    raw = os.getenv(_PRODUCT_ARTIFACT_BOOTSTRAP_ENV, "disabled")
     mode = raw.strip().lower()
     if mode not in _PRODUCT_ARTIFACT_BOOTSTRAP_MODES:
         allowed = ", ".join(sorted(_PRODUCT_ARTIFACT_BOOTSTRAP_MODES))
@@ -56,32 +53,68 @@ def _product_artifact_bootstrap_mode() -> str:
     return mode
 
 
+def _product_artifact_option_requested(config) -> bool:
+    getter = getattr(config, "getoption", None)
+    if getter is None:
+        return False
+    try:
+        return bool(getter(_PRODUCT_ARTIFACT_BOOTSTRAP_OPTION))
+    except (LookupError, ValueError):
+        return False
+
+
 def _product_artifact_bootstrap_required(config) -> bool:
     mode = _product_artifact_bootstrap_mode()
-    if mode == "disabled":
-        return False
     if mode == "required":
         return True
-    return not _requested_tests_are_lightweight(config)
+    if mode == "disabled":
+        return False
+    return _product_artifact_option_requested(config)
 
 
-def pytest_sessionstart(session) -> None:
-    if not _product_artifact_bootstrap_required(session.config):
-        return
+def _materialize_product_contract_artifacts() -> Path:
     root = Path(__file__).resolve().parents[1]
     capability = root / "runs" / "product_capability_surface_contract_current.json"
     if capability.exists():
-        return
+        return capability
     from tools.product.bootstrap_api_worker_contract_artifacts import materialize
 
     materialize()
+    if not capability.is_file():
+        raise pytest.UsageError(
+            "product contract artifact bootstrap completed without the "
+            "capability surface packet"
+        )
+    return capability
+
+
+def pytest_sessionstart(session) -> None:
+    if _product_artifact_bootstrap_required(session.config):
+        _materialize_product_contract_artifacts()
+
+
+@pytest.fixture(scope="session")
+def product_contract_artifacts() -> Path:
+    """Explicit fixture for tests that consume bootstrapped product packets."""
+
+    return _materialize_product_contract_artifacts()
+
+
+@pytest.fixture(autouse=True)
+def _bootstrap_marked_product_contract_artifacts(request):
+    marker = request.node.get_closest_marker(_PRODUCT_ARTIFACT_MARKER)
+    if marker is not None:
+        request.getfixturevalue("product_contract_artifacts")
 
 
 def pytest_collection_modifyitems(config, items) -> None:
     if not os.getenv("GITHUB_ACTIONS"):
         return
     skip = pytest.mark.skip(
-        reason="Integration test requires the full local runs/ artifact tree; CI bootstraps contract packets only."
+        reason=(
+            "Integration test requires the full local runs/ artifact tree; "
+            "CI bootstraps contract packets only."
+        )
     )
     for item in items:
         if any(name in str(item.fspath) for name in _CI_INTEGRATION_FILES):
