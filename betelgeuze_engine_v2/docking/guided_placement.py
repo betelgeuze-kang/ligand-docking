@@ -2607,6 +2607,9 @@ class SourcePairedTorsionRescueProposalReceipt:
     proposal_fingerprint_sha256s: tuple[str, ...]
     proposal_coordinate_fingerprint_sha256s: tuple[str, ...]
     proposal_torsion_metadata_sha256s: tuple[str, ...]
+    _allocation_payload: Any = field(init=False, repr=False)
+    _baseline_guided_receipt_payload: Any = field(init=False, repr=False)
+    _guided_receipt_payload: Any = field(init=False, repr=False)
     _receipt_sha256: str = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -2622,18 +2625,27 @@ class SourcePairedTorsionRescueProposalReceipt:
                 name,
                 _digest(getattr(self, name), name=name),
             )
-        if not isinstance(self.allocation, SourcePairedTorsionRescueAllocation):
-            raise TypeError("allocation must be SourcePairedTorsionRescueAllocation")
-        if not isinstance(self.baseline_guided_receipt, GuidedPlacementReceipt):
-            raise TypeError("baseline_guided_receipt must be GuidedPlacementReceipt")
-        if not isinstance(self.guided_receipt, GuidedPlacementReceipt):
-            raise TypeError("guided_receipt must be GuidedPlacementReceipt")
+        if type(self.allocation) is not SourcePairedTorsionRescueAllocation:
+            raise TypeError(
+                "allocation must be the exact SourcePairedTorsionRescueAllocation type"
+            )
+        if type(self.baseline_guided_receipt) is not GuidedPlacementReceipt:
+            raise TypeError(
+                "baseline_guided_receipt must be the exact GuidedPlacementReceipt type"
+            )
+        if type(self.guided_receipt) is not GuidedPlacementReceipt:
+            raise TypeError(
+                "guided_receipt must be the exact GuidedPlacementReceipt type"
+            )
         allocation = self.allocation
         baseline = self.baseline_guided_receipt
         guided = self.guided_receipt
         allocation.allocation_sha256
         baseline.receipt_sha256
         guided.receipt_sha256
+        allocation_payload = allocation.to_dict()
+        baseline_payload = baseline.to_dict()
+        guided_payload = guided.to_dict()
 
         policy = SourcePairedTorsionRescuePolicy()
         base_policy = policy.base_guided_policy
@@ -2786,6 +2798,21 @@ class SourcePairedTorsionRescueProposalReceipt:
             "proposal_torsion_metadata_sha256s",
             torsion_fingerprints,
         )
+        object.__setattr__(
+            self,
+            "_allocation_payload",
+            _freeze_json(allocation_payload),
+        )
+        object.__setattr__(
+            self,
+            "_baseline_guided_receipt_payload",
+            _freeze_json(baseline_payload),
+        )
+        object.__setattr__(
+            self,
+            "_guided_receipt_payload",
+            _freeze_json(guided_payload),
+        )
         object.__setattr__(self, "_receipt_sha256", _sha256(self._projection()))
 
     def _projection(self) -> dict[str, object]:
@@ -2800,9 +2827,11 @@ class SourcePairedTorsionRescueProposalReceipt:
             "source_ligand_topology_sha256": self.source_ligand_topology_sha256,
             "rescue_policy_sha256": self.rescue_policy_sha256,
             "rescue_policy": policy.to_dict(),
-            "allocation": self.allocation.to_dict(),
-            "baseline_guided_placement": self.baseline_guided_receipt.to_dict(),
-            "guided_placement": self.guided_receipt.to_dict(),
+            "allocation": _thaw_json(self._allocation_payload),
+            "baseline_guided_placement": _thaw_json(
+                self._baseline_guided_receipt_payload
+            ),
+            "guided_placement": _thaw_json(self._guided_receipt_payload),
             "candidate_count": SOURCE_PAIRED_TORSION_RESCUE_CANDIDATE_COUNT,
             "candidate_slots": [
                 {
@@ -2832,6 +2861,28 @@ class SourcePairedTorsionRescueProposalReceipt:
 
     @property
     def receipt_sha256(self) -> str:
+        if (
+            type(self.allocation) is not SourcePairedTorsionRescueAllocation
+            or type(self.baseline_guided_receipt) is not GuidedPlacementReceipt
+            or type(self.guided_receipt) is not GuidedPlacementReceipt
+        ):
+            raise DockingAuthorityError(
+                "source-paired torsion-rescue nested receipt type changed"
+            )
+        allocation_payload = _thaw_json(self._allocation_payload)
+        baseline_payload = _thaw_json(self._baseline_guided_receipt_payload)
+        guided_payload = _thaw_json(self._guided_receipt_payload)
+        if (
+            self.allocation.allocation_sha256
+            != allocation_payload.get("allocation_sha256")
+            or self.baseline_guided_receipt.receipt_sha256
+            != baseline_payload.get("receipt_sha256")
+            or self.guided_receipt.receipt_sha256
+            != guided_payload.get("receipt_sha256")
+        ):
+            raise DockingAuthorityError(
+                "source-paired torsion-rescue nested receipt changed"
+            )
         observed = _sha256(self._projection())
         if observed != self._receipt_sha256:
             raise DockingAuthorityError(

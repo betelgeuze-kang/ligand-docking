@@ -16,6 +16,24 @@ AUTHORITATIVE_WORKFLOWS = (
     ".github/workflows/ci-engine-v2-release-candidate.yml",
     ".github/workflows/ci-engine-v2-cpu-reference-validation-protocol.yml",
 )
+CLEARANCE_ACTIVATION_CONTRACT_PATHS = (
+    "betelgeuze_engine_v2/benchmark/source_paired_clearance_activation.py",
+    "betelgeuze_engine_v2/docking/source_paired_clearance_activation.py",
+    "config/engine_v2_source_paired_clearance_activation.json",
+)
+CLEARANCE_ACTIVATION_REQUIRED_TOKENS = (
+    "betelgeuze_engine_v2/benchmark/source_paired_clearance_activation.py",
+    "betelgeuze_engine_v2/docking/source_paired_clearance_activation.py",
+    "config/engine_v2_source_paired_clearance_activation.json",
+    "tools/verify_engine_v2_source_paired_clearance_activation.py",
+    "tests/unit/test_source_paired_clearance_activation.py",
+    "tests/unit/test_source_paired_clearance_activation_evidence.py",
+    "tests/unit/test_source_paired_torsion_rescue_activation_snapshot.py",
+    "tests/unit/test_verify_engine_v2_source_paired_clearance_activation.py",
+    "docs/engine_v2_source_paired_clearance_activation.md",
+    "docs/engine_v2_source_paired_clearance_selection_policy.md",
+    "docs/engine_v2_stage0_status.md",
+)
 
 
 def _canonical_bytes(value: object) -> bytes:
@@ -63,6 +81,12 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         "tools/classify_engine_v2_stage0_full_suite.py",
         "tools/reconcile_engine_v2_stage0_full_suites.py",
     )
+    clearance_activation_contract_present = any(
+        (repo_root / path).is_file() for path in CLEARANCE_ACTIVATION_CONTRACT_PATHS
+    )
+    if clearance_activation_contract_present:
+        stage0_required_tokens += CLEARANCE_ACTIVATION_REQUIRED_TOKENS
+
     payload: dict[str, Any] = {
         "schema_id": SCHEMA_ID,
         "workflow_count": len(workflows),
