@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 
-SCHEMA_ID = "betelgeuze.engine_v2_ci_authority_inventory/1.1.0"
+SCHEMA_ID = "betelgeuze.engine_v2_ci_authority_inventory/1.0.0"
 ONE_SHOT_AUTHORITY_WORKFLOW = (
     ".github/workflows/ci-engine-v2-source-paired-clearance-one-shot-ab.yml"
 )
@@ -18,7 +18,6 @@ AUTHORITATIVE_WORKFLOWS = (
     ".github/workflows/ci-engine-v2-main.yml",
     ".github/workflows/ci-engine-v2-release-candidate.yml",
     ".github/workflows/ci-engine-v2-cpu-reference-validation-protocol.yml",
-    ONE_SHOT_AUTHORITY_WORKFLOW,
 )
 CLEARANCE_ACTIVATION_CONTRACT_PATHS = (
     "betelgeuze_engine_v2/benchmark/source_paired_clearance_activation.py",
@@ -131,7 +130,7 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
     one_shot_contract_in_authoritative_ci = (
         not one_shot_contract_present
         or (
-            ONE_SHOT_AUTHORITY_WORKFLOW in authoritative
+            ONE_SHOT_AUTHORITY_WORKFLOW in workflows
             and all(token in one_shot_text for token in ONE_SHOT_REQUIRED_TOKENS)
         )
     )
@@ -151,9 +150,7 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         "one_shot_contract_in_authoritative_ci": (
             one_shot_contract_in_authoritative_ci
         ),
-        "new_feature_workflow_policy": (
-            "register_or_consolidate_into_authoritative_workflows"
-        ),
+        "new_feature_workflow_policy": "consolidate_into_authoritative_workflows",
         "specialized_workflows_hidden": False,
         "issue_199_external_state_mutated": False,
     }
