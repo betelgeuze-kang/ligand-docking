@@ -42,6 +42,8 @@ ONE_SHOT_CONTRACT_PATHS = (
     "config/engine_v2_source_paired_clearance_one_shot_ab.json",
 )
 ONE_SHOT_REQUIRED_TOKENS = (
+    "betelgeuze_engine_v2/benchmark/source_paired_clearance_artifact_consistency.py",
+    "betelgeuze_engine_v2/benchmark/source_paired_clearance_external_reservation.py",
     "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_ab.py",
     "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_legacy.py",
     "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_binding.py",
@@ -54,6 +56,7 @@ ONE_SHOT_REQUIRED_TOKENS = (
     "config/engine_v2_source_paired_clearance_one_shot_ab.json",
     "tools/manage_engine_v2_source_paired_clearance_one_shot_ab.py",
     "tools/verify_engine_v2_source_paired_clearance_one_shot_ab.py",
+    "tests/unit/test_source_paired_clearance_external_reservation.py",
     "tests/unit/test_source_paired_clearance_one_shot_ab.py",
     "tests/unit/test_source_paired_clearance_one_shot_canonical_imports.py",
     "tests/unit/test_source_paired_clearance_one_shot_evidence.py",
@@ -61,6 +64,7 @@ ONE_SHOT_REQUIRED_TOKENS = (
     "tests/unit/test_source_paired_clearance_one_shot_result.py",
     "tests/unit/test_source_paired_clearance_one_shot_source_policy_tamper.py",
     "tests/unit/test_source_paired_clearance_one_shot_verdict_semantics.py",
+    "docs/engine_v2_source_paired_clearance_external_reservation.md",
     "docs/engine_v2_source_paired_clearance_one_shot_ab.md",
     "docs/engine_v2_source_paired_clearance_one_shot_full_evidence.md",
 )
@@ -116,7 +120,8 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         "tools/reconcile_engine_v2_stage0_full_suites.py",
     )
     clearance_activation_contract_present = any(
-        (repo_root / path).is_file() for path in CLEARANCE_ACTIVATION_CONTRACT_PATHS
+        (repo_root / path).is_file()
+        for path in CLEARANCE_ACTIVATION_CONTRACT_PATHS
     )
     if clearance_activation_contract_present:
         stage0_required_tokens += CLEARANCE_ACTIVATION_REQUIRED_TOKENS
