@@ -66,7 +66,9 @@ def _sha256_rows(
     if any(not _is_sha256(item) for item in rows):
         raise OneShotABAuthorityError(f"{name} contains an invalid SHA-256")
     if len(set(rows)) != len(rows):
-        raise OneShotABAuthorityError(f"{name} must contain unique receipt identities")
+        raise OneShotABAuthorityError(
+            f"{name} must contain unique receipt identities"
+        )
     return rows
 
 
@@ -81,11 +83,16 @@ def _read_pinned_regular_file(path: Path, *, name: str) -> bytes:
         if not stat.S_ISREG(before.st_mode):
             raise OneShotABAuthorityError(f"{name} must be a regular file")
         if before.st_size <= 0 or before.st_size > MAX_EXTERNAL_EVIDENCE_BYTES:
-            raise OneShotABAuthorityError(f"{name} size is outside the bounded envelope")
+            raise OneShotABAuthorityError(
+                f"{name} size is outside the bounded envelope"
+            )
         chunks: list[bytes] = []
         observed_size = 0
         while True:
-            chunk = os.read(descriptor, min(1024 * 1024, MAX_EXTERNAL_EVIDENCE_BYTES + 1))
+            chunk = os.read(
+                descriptor,
+                min(1024 * 1024, MAX_EXTERNAL_EVIDENCE_BYTES + 1),
+            )
             if not chunk:
                 break
             observed_size += len(chunk)
@@ -134,6 +141,16 @@ def _summary_projection(summary: Mapping[str, Any], *, role: str) -> dict[str, A
     return projection
 
 
+def _run_start_bindings(run_start: Mapping[str, Any]) -> dict[str, object]:
+    return {
+        "run_start_receipt_sha256": run_start.get("receipt_sha256"),
+        "source_commit_git_sha1": run_start.get("source_commit_git_sha1"),
+        "execution_environment_sha256": run_start.get(
+            "execution_environment_sha256"
+        ),
+    }
+
+
 def build_external_evidence_envelope(
     *,
     role: str,
@@ -179,11 +196,7 @@ def build_external_evidence_envelope(
         "schema_id": EXTERNAL_EVIDENCE_ENVELOPE_SCHEMA_ID,
         "evidence_role": role,
         "policy_sha256": EXPECTED_POLICY_SHA256,
-        "run_start_receipt_sha256": run_start.get("receipt_sha256"),
-        "source_commit_git_sha1": run_start.get("source_commit_git_sha1"),
-        "execution_environment_sha256": run_start.get(
-            "execution_environment_sha256"
-        ),
+        **_run_start_bindings(run_start),
         "payload": payload,
     }
     envelope["receipt_sha256"] = sha256_payload(envelope)
@@ -216,13 +229,11 @@ def verify_external_evidence_file(
         raise OneShotABAuthorityError(f"{role} evidence role is cross-wired")
     if envelope.get("policy_sha256") != EXPECTED_POLICY_SHA256:
         raise OneShotABAuthorityError(f"{role} evidence policy is cross-wired")
-    for field in (
-        "run_start_receipt_sha256",
-        "source_commit_git_sha1",
-        "execution_environment_sha256",
-    ):
-        if envelope.get(field) != run_start.get(field):
-            raise OneShotABAuthorityError(f"{role} evidence {field} is cross-wired")
+    for field, expected in _run_start_bindings(run_start).items():
+        if envelope.get(field) != expected:
+            raise OneShotABAuthorityError(
+                f"{role} evidence {field} is cross-wired"
+            )
     payload = envelope.get("payload")
     if not isinstance(payload, dict):
         raise OneShotABAuthorityError(f"{role} evidence payload must be an object")
@@ -243,9 +254,13 @@ def verify_external_evidence_file(
             name=f"{role} candidate receipts",
         )
         if summary.get("arm_evidence_file_sha256") != file_sha256:
-            raise OneShotABAuthorityError(f"{role} evidence file SHA-256 is cross-wired")
+            raise OneShotABAuthorityError(
+                f"{role} evidence file SHA-256 is cross-wired"
+            )
         if summary.get("arm_evidence_self_sha256") != envelope.get("receipt_sha256"):
-            raise OneShotABAuthorityError(f"{role} evidence self-hash is cross-wired")
+            raise OneShotABAuthorityError(
+                f"{role} evidence self-hash is cross-wired"
+            )
     else:
         _exact_keys(payload, _CROSS_PAYLOAD_KEYS, name="cross-arm evidence payload")
         if payload.get("cross_arm_projection") != expected_projection:
