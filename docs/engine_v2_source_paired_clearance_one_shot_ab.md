@@ -4,6 +4,7 @@
 
 ```text
 authority_contract_implemented: true
+complete_candidate_artifact_audit_implemented: true
 historical_ab_execution_authorized: true
 maximum_lifetime_run_count: 1
 molecular_runner_implemented_here: false
@@ -32,9 +33,9 @@ run ordinal one.
 | Verdict receipt | `betelgeuze.engine_v2_source_paired_clearance_one_shot_ab_verdict/1.1.0` |
 | Required scorer backend | `rust_cpu_required` |
 
-The source-binding layer installs these exact identities, independently verifies
-the Phase 2.5 and activation policy self-hashes, and keeps all fresh, product,
-customer-pose, Stage 0, promotion, and public/scientific authority false.
+The source-binding layer independently verifies the Phase 2.5 and activation
+policy self-hashes and keeps all fresh, product, customer-pose, Stage 0,
+promotion, and public/scientific authority false.
 
 ## Corrected frozen decision semantics
 
@@ -47,7 +48,7 @@ A research Go requires all six invariants:
 - complete score-term semantics verified;
 - no result-dependent allocation.
 
-After all invariants pass, **any one** of these primary criteria is sufficient:
+After all invariants pass, **any one** primary criterion is sufficient:
 
 - a new exact-valid candidate in a previously uncovered case;
 - proposal-oracle recovery of at least `2/8`;
@@ -60,13 +61,10 @@ The hard No-Go keys are:
 - `existing_recovery_regression`;
 - `selected_state_remains_penetrating_without_posebusters_validity_change`.
 
-Hard No-Go has precedence. Historical fields named
-`shadow_eligible_candidate_without_new_case_recovery`,
-`no_exact_valid_case_increase`, and `no_invalid_top1_reduction` remain in verdict
-receipts only as nonblocking diagnostics; they do not override another successful
-primary criterion.
+Hard No-Go has precedence. Historical diagnostic fields remain nonblocking and
+cannot override another successful primary criterion.
 
-A Go authorizes only a fixed 32-case development decision study. A No-Go closes
+A Go authorizes only a separate fixed development decision study. A No-Go closes
 the local torsion/clearance refinement epic and directs the next scientific track
 to deterministic global orientation and surface-aware placement. Neither result
 opens fresh-128, Stage 0, product execution, pose delivery, promotion, or claims.
@@ -112,7 +110,8 @@ All authority state is confined to:
 
 Every evidence directory below `.betelgeuze` must be mode `0700`; every receipt
 is mode `0600` and created with exclusive no-overwrite semantics. Symlinked,
-escaping, missing, wrong-mode, or substituted durable receipts fail closed.
+escaping, missing, wrong-mode, or substituted durable roots and receipts fail
+closed.
 
 Authorization, reservation, run-start, and result writing require the exact clean
 Git checkout. The operator's source SHA must equal the observed lowercase
@@ -130,6 +129,61 @@ scientifically authoritative run. Cross-clone lifetime uniqueness therefore
 requires an external immutable reservation ledger or equivalent reviewed operator
 control. Until that external authority exists, the local policy must not be
 represented as globally enforcing one run across every copy of the repository.
+
+## Complete candidate-level evidence contract
+
+The historical result writer accepts exactly one external evidence file:
+
+```text
+full-comparison-evidence.json
+```
+
+Hash-only arm summaries, caller-declared candidate counts, caller-declared
+Top-1/Top-5 sets, and separate cross-arm summary files are not accepted by the
+operator CLI.
+
+The complete artifact contains:
+
+1. the exact eight full
+   `SourcePairedClearanceSelectionActivationReceiptV1` case receipts;
+2. 512 baseline candidate bindings;
+3. 512 experimental candidate bindings; and
+4. run, source, environment, arm, case, and proposal-index bindings for every
+   candidate receipt.
+
+Each full case receipt must retain and revalidate:
+
+- the frozen archive-member and authenticated-input source authority;
+- the complete 64-slot source proposal receipt;
+- the complete current-V7 lineage;
+- the pre-score activation snapshot and selected/retained state;
+- all eight `ScorerV1Terms` values and their exact binary64 decomposition;
+- context-bound internal-validity observations;
+- all 22 PoseBusters checks under `posebusters==0.3.1`, mode `redock`;
+- authenticated symmetry-aware RMSD evidence;
+- raw score, deterministic rank, Top-1, and Top-5 identity; and
+- exact target/non-target cross-arm behavior.
+
+The full-artifact verifier independently reconstructs:
+
+- the exact `(case_id, arm, proposal_index)` grid;
+- candidate and case receipt uniqueness;
+- score ordering and ranks;
+- Top-1 and Top-5 recovery sets;
+- exact-valid and proposal-oracle case sets;
+- invalid selected Top-1 case sets;
+- changed-slot identities;
+- shadow-eligible and penetrating-without-validity-change counts; and
+- the compact arm, cross-arm, and final verdict documents.
+
+Missing rows, duplicate rows, fabricated nested receipts, source cross-wires,
+non-target changes, cross-run reuse, cross-arm reuse outside the frozen contract,
+or caller-declared summary drift fail closed.
+
+The complete artifact is opened with `O_NOFOLLOW`, bounded to 512 MiB, and pinned
+by descriptor identity, mode, size, and modification time throughout the read.
+The artifact itself remains development evidence; it does not make the scorer an
+affinity model or make the result claim-safe.
 
 ## Operator sequence
 
@@ -165,64 +219,33 @@ python tools/manage_engine_v2_source_paired_clearance_one_shot_ab.py \
 
 No molecular output should be created before this succeeds.
 
-### 4. External molecular execution
+### 4. External molecular execution and full artifact construction
 
-The external runner must use the source-bound clearance activation snapshots and
-retain:
+The reviewed external runner must use the source-bound clearance activation
+snapshots, retain all 1,024 full candidate receipts, and construct one
+self-hashed full-comparison artifact bound to the durable run-start identity.
 
-- baseline current-V7 and experimental activation evidence;
-- complete `ScorerV1Terms` for all 1,024 scored rows;
-- context-bound internal validity;
-- the exact 22 PoseBusters checks;
-- symmetry-aware RMSD;
-- stable rank, Top-1, and Top-5;
-- source-control and changed-slot evidence;
-- complete self-hashed evidence artifacts.
-
-It produces three compact summaries and three evidence envelopes:
+Repository code provides the pure constructor and verifier:
 
 ```text
-baseline-arm.json
-baseline-arm-evidence.json
-experimental-arm.json
-experimental-arm-evidence.json
-cross-arm.json
-cross-arm-evidence.json
+build_full_comparison_evidence_artifact(...)
+verify_full_comparison_evidence_artifact(...)
 ```
 
-Each evidence envelope binds the exact one-shot policy, run-start receipt, source
-commit, execution environment, role, file SHA-256, and canonical self-hash. Each
-arm envelope retains eight unique case receipt identities and 512 unique candidate
-receipt identities. The cross-arm envelope retains eight unique case-cross-arm
-receipt identities and exactly one receipt identity for every declared changed
-slot. Its embedded summary projection must equal the separately supplied compact
-summary.
+These functions do not run docking and do not reserve execution.
 
-The identity manifest proves denominator and binding identities; it does not by
-itself parse and scientifically revalidate every external candidate receipt. The
-reviewed external runner and subsequent artifact audit must bind these identities
-to the complete receipt bytes before the historical result is treated as usable
-development evidence.
-
-`write-result` opens envelopes with `O_NOFOLLOW`, pins inode, mode, size, and
-mtime throughout a bounded read, and rejects stale, substituted, shortened, or
-cross-wired evidence.
-
-### 5. Atomically bind the result
+### 5. Atomically derive and bind the result
 
 ```bash
 python tools/manage_engine_v2_source_paired_clearance_one_shot_ab.py \
   --repo-root "$PWD" write-result \
-  --baseline-arm baseline-arm.json \
-  --baseline-evidence baseline-arm-evidence.json \
-  --experimental-arm experimental-arm.json \
-  --experimental-evidence experimental-arm-evidence.json \
-  --cross-arm cross-arm.json \
-  --cross-arm-evidence cross-arm-evidence.json
+  --full-evidence full-comparison-evidence.json
 ```
 
-`result.json` is written once only after all durable state and external evidence
-bindings pass and the verdict is independently rederived.
+The CLI accepts no baseline-arm, experimental-arm, cross-arm, or hash-only
+summary arguments. `result.json` is written once only after complete artifact,
+durable state, source, denominator, and result bindings pass and the verdict is
+independently rederived.
 
 ## Claim boundary
 
@@ -243,10 +266,8 @@ ROCm/HIP acceleration, affinity, free energy, or broad product superiority.
 
 ## CI boundary
 
-PR #245 is restacked directly on the merged activation-receipt `main`. Its
-specialized contract workflow is read-only, checks out the exact PR head, and
-isolates unit contracts from repository-wide product artifact bootstrap. Before
-final merge, the one-shot files and tests must still be consolidated into the
-authoritative `ci-engine-v2-main` sparse checkout, compilation list, focused suite,
-and CI-authority inventory; the specialized workflow is not a substitute for
-authoritative Engine V2 CI.
+The bounded one-shot workflow is read-only, checks out the exact PR head, and is
+registered in the Engine V2 CI authority inventory. It compiles the full artifact
+verifier, runs the original authority/result contracts and full-artifact tamper
+suite, and proves that the operator CLI exposes only `--full-evidence` for result
+binding. Stage 0's frozen authoritative workflow set remains unchanged.

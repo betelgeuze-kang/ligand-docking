@@ -10,6 +10,7 @@ on:
       - "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_legacy.py"
       - "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_binding.py"
       - "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_evidence.py"
+      - "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_full_evidence.py"
       - "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_result.py"
       - "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_result_legacy.py"
       - "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_result_binding.py"
@@ -165,6 +166,7 @@ jobs:
             tests/unit/test_source_paired_clearance_one_shot_ab.py
             tests/unit/test_source_paired_clearance_one_shot_canonical_imports.py
             tests/unit/test_source_paired_clearance_one_shot_evidence.py
+            tests/unit/test_source_paired_clearance_one_shot_full_evidence.py
             tests/unit/test_source_paired_clearance_one_shot_result.py
             tests/unit/test_source_paired_clearance_one_shot_source_policy_tamper.py
             tests/unit/test_source_paired_clearance_one_shot_verdict_semantics.py
@@ -314,6 +316,12 @@ jobs:
           python tools/verify_engine_v2_source_paired_clearance_one_shot_ab.py \
             --repo-root . \
             --policy config/engine_v2_source_paired_clearance_one_shot_ab.json
+          python tools/manage_engine_v2_source_paired_clearance_one_shot_ab.py \
+            write-result --help > /tmp/engine-v2-one-shot-write-result-help.txt
+          grep -q -- '--full-evidence' /tmp/engine-v2-one-shot-write-result-help.txt
+          ! grep -q -- '--baseline-arm' /tmp/engine-v2-one-shot-write-result-help.txt
+          ! grep -q -- '--experimental-arm' /tmp/engine-v2-one-shot-write-result-help.txt
+          ! grep -q -- '--cross-arm' /tmp/engine-v2-one-shot-write-result-help.txt
 
       - name: Run complete focused Engine v2 CPU suite
         shell: bash
@@ -406,6 +414,7 @@ jobs:
             tests/unit/test_source_paired_clearance_one_shot_ab.py \
             tests/unit/test_source_paired_clearance_one_shot_canonical_imports.py \
             tests/unit/test_source_paired_clearance_one_shot_evidence.py \
+            tests/unit/test_source_paired_clearance_one_shot_full_evidence.py \
             tests/unit/test_source_paired_clearance_one_shot_result.py \
             tests/unit/test_source_paired_clearance_one_shot_source_policy_tamper.py \
             tests/unit/test_source_paired_clearance_one_shot_verdict_semantics.py \
@@ -460,6 +469,7 @@ jobs:
           import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_ab
           import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_binding
           import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_evidence
+          import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_full_evidence
           import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_legacy
           import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_result
           import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_result_binding

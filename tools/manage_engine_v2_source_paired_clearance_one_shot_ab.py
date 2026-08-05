@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Manage the frozen one-shot historical clearance A/B authority.
 
-This command never runs docking. An external operator/runtime must generate the
-complete baseline, experimental, and cross-arm evidence JSON documents after a
-successful ``reserve`` and ``start`` sequence.
+This command never runs docking. An external operator/runtime must generate one
+complete comparison-evidence artifact after a successful ``reserve`` and
+``start`` sequence. Compact summaries are independently derived from that full
+artifact; caller-supplied hash-only summaries are not accepted.
 """
 
 from __future__ import annotations
@@ -28,11 +29,10 @@ from betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_ab import (
     reserve_one_shot_execution,
     resolve_output_root,
 )
-from betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_evidence import (  # noqa: E402
-    verify_external_evidence_file,
+from betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_full_evidence import (  # noqa: E402
+    build_result_document_from_full_evidence_file,
 )
 from betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_result import (  # noqa: E402
-    build_result_document,
     write_result_once,
 )
 
@@ -76,14 +76,20 @@ def _parser() -> argparse.ArgumentParser:
 
     write_result = subparsers.add_parser(
         "write-result",
-        help="Bind externally generated two-arm evidence and write result once.",
+        help=(
+            "Independently audit one complete candidate-level evidence artifact "
+            "and atomically write the derived compact result."
+        ),
     )
-    write_result.add_argument("--baseline-arm", type=Path, required=True)
-    write_result.add_argument("--baseline-evidence", type=Path, required=True)
-    write_result.add_argument("--experimental-arm", type=Path, required=True)
-    write_result.add_argument("--experimental-evidence", type=Path, required=True)
-    write_result.add_argument("--cross-arm", type=Path, required=True)
-    write_result.add_argument("--cross-arm-evidence", type=Path, required=True)
+    write_result.add_argument(
+        "--full-evidence",
+        type=Path,
+        required=True,
+        help=(
+            "One self-hashed comparison artifact containing all eight full case "
+            "receipts and 1,024 run-bound candidate wrappers."
+        ),
+    )
     return parser
 
 
@@ -159,60 +165,9 @@ def main() -> int:
             "run-start.json",
             name="one-shot run-start",
         )
-        baseline = _json(arguments.baseline_arm, name="baseline arm summary")
-        experimental = _json(
-            arguments.experimental_arm,
-            name="experimental arm summary",
-        )
-        cross_arm = _json(arguments.cross_arm, name="cross-arm evidence summary")
-        required_cross_keys = {
-            "changed_slot_count",
-            "changed_slots_sha256",
-            "cross_arm_evidence_sha256",
-            "result_dependent_allocation_observed",
-            "selected_penetrating_without_validity_change_count",
-            "shadow_eligible_candidate_count",
-            "source_control_preserved",
-        }
-        if set(cross_arm) != required_cross_keys:
-            raise OneShotABAuthorityError("cross-arm input key set is invalid")
-
-        verify_external_evidence_file(
-            arguments.baseline_evidence,
-            role="baseline_arm",
+        result = build_result_document_from_full_evidence_file(
+            arguments.full_evidence.resolve(strict=True),
             run_start=run_start,
-            summary=baseline,
-        )
-        verify_external_evidence_file(
-            arguments.experimental_evidence,
-            role="experimental_arm",
-            run_start=run_start,
-            summary=experimental,
-        )
-        verify_external_evidence_file(
-            arguments.cross_arm_evidence,
-            role="cross_arm",
-            run_start=run_start,
-            summary=cross_arm,
-        )
-
-        result = build_result_document(
-            run_start=run_start,
-            baseline_arm=baseline,
-            experimental_arm=experimental,
-            source_control_preserved=cross_arm["source_control_preserved"],
-            result_dependent_allocation_observed=cross_arm[
-                "result_dependent_allocation_observed"
-            ],
-            shadow_eligible_candidate_count=cross_arm[
-                "shadow_eligible_candidate_count"
-            ],
-            selected_penetrating_without_validity_change_count=cross_arm[
-                "selected_penetrating_without_validity_change_count"
-            ],
-            changed_slot_count=cross_arm["changed_slot_count"],
-            changed_slots_sha256=cross_arm["changed_slots_sha256"],
-            cross_arm_evidence_sha256=cross_arm["cross_arm_evidence_sha256"],
         )
         write_result_once(
             policy=policy,
