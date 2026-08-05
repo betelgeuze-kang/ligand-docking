@@ -1,0 +1,234 @@
+# Engine V2 source-paired clearance one-shot A/B
+
+## Status
+
+```text
+authority_contract_implemented: true
+historical_ab_execution_authorized: true
+maximum_lifetime_run_count: 1
+molecular_runner_implemented_here: false
+external_operator_reservation_required: true
+fresh_holdout_execution_authorized: false
+stage0_admission_authority: false
+profile_promotion_authority: false
+product_execution_authorized: false
+customer_pose_emission_authorized: false
+public_or_scientific_claim_authorized: false
+```
+
+This contract authorizes one historical contaminated-development comparison only.
+It does not execute docking in GitHub or in the package. An external reviewed
+runtime must generate the complete two-arm evidence after atomically reserving
+run ordinal one.
+
+## Frozen source authorities
+
+| Authority | Identity |
+| --- | --- |
+| Phase 2.5 cohort policy | `betelgeuze.engine_v2_phase25_cohort_admission/1.3.0` / `b4c5530dc4766500dbbc854875cfb39baadad94196c63be6150514879993d211` |
+| Clearance activation policy | `betelgeuze.engine_v2_source_paired_clearance_activation_policy/1.2.0` / `988d0bb47bfa6ff934887e1e12b5a512b55aaf40033a04963d141c4ffefe212c` |
+| Clearance selection policy | `e5936f33d5aec54aae67f519e5cf6dffcc61181237270adb3e367a5f65cb29ad` |
+| One-shot policy | `betelgeuze.engine_v2_source_paired_clearance_one_shot_ab_policy/1.1.0` / `b9d2dc1c716c0f954ba5a9f30ecc08168eb29331293b8df5c08fa67ca7ae377f` |
+| Verdict receipt | `betelgeuze.engine_v2_source_paired_clearance_one_shot_ab_verdict/1.1.0` |
+| Required scorer backend | `rust_cpu_required` |
+
+The source-binding layer installs these exact identities, independently verifies
+the Phase 2.5 and activation policy self-hashes, and keeps all fresh, product,
+customer-pose, Stage 0, promotion, and public/scientific authority false.
+
+## Corrected frozen decision semantics
+
+A research Go requires all six invariants:
+
+- no preparation-failure regression;
+- no Top-1 or Top-5 recovery regression;
+- exactly 512 candidates in each arm;
+- source controls preserved;
+- complete score-term semantics verified;
+- no result-dependent allocation.
+
+After all invariants pass, **any one** of these primary criteria is sufficient:
+
+- a new exact-valid candidate in a previously uncovered case;
+- proposal-oracle recovery of at least `2/8`;
+- invalid Top-1 at most `4/8`.
+
+The hard No-Go keys are:
+
+- `required_invariant_failed`;
+- `all_primary_go_criteria_failed`;
+- `existing_recovery_regression`;
+- `selected_state_remains_penetrating_without_posebusters_validity_change`.
+
+Hard No-Go has precedence. Historical fields named
+`shadow_eligible_candidate_without_new_case_recovery`,
+`no_exact_valid_case_increase`, and `no_invalid_top1_reduction` remain in verdict
+receipts only as nonblocking diagnostics; they do not override another successful
+primary criterion.
+
+A Go authorizes only a fixed 32-case development decision study. A No-Go closes
+the local torsion/clearance refinement epic and directs the next scientific track
+to deterministic global orientation and surface-aware placement. Neither result
+opens fresh-128, Stage 0, product execution, pose delivery, promotion, or claims.
+
+## Exact cohort and denominator
+
+The input roster is fixed in this order:
+
+```text
+5SD5_HWI
+5SIS_JSM
+6M2B_EZO
+6M73_FNR
+6T88_MWQ
+6TW5_9M2
+6TW7_NZB
+6VTA_AKN
+6WTN_RXT
+```
+
+`6M73_FNR` remains the typed preparation failure. The other eight cases retain
+64 candidate slots in each arm:
+
+```text
+baseline current V7:      8 × 64 = 512 candidate receipts
+experimental activation:  8 × 64 = 512 candidate receipts
+combined scored rows:               1,024
+```
+
+Vina, GNINA, fresh-128, smoke cases, aliases, and result-driven allocation are
+outside this execution authority.
+
+## Exact clean-checkout and durable-state boundary
+
+All authority state is confined to:
+
+```text
+.betelgeuze/engine_v2_source_paired_clearance_one_shot_ab/
+├── execution-reservation.json
+├── run-start.json
+└── result.json
+```
+
+Every evidence directory below `.betelgeuze` must be mode `0700`; every receipt
+is mode `0600` and created with exclusive no-overwrite semantics. Symlinked,
+escaping, missing, wrong-mode, or substituted durable receipts fail closed.
+
+Authorization, reservation, run-start, and result writing require the exact clean
+Git checkout. The operator's source SHA must equal the observed lowercase
+40-character `HEAD`. Run-start reopens and compares the exact durable reservation,
+then rechecks clean `HEAD`. Result writing reopens and compares the exact durable
+run-start, then rechecks clean `HEAD` again. Reconstructed in-memory receipts,
+missing Git metadata, installed-wheel-only execution, dirty files, or checkout
+movement cannot consume or finalize the one-shot authority.
+
+## Operator sequence
+
+### 1. Verify status
+
+```bash
+python tools/manage_engine_v2_source_paired_clearance_one_shot_ab.py \
+  --repo-root "$PWD" status
+```
+
+### 2. Reserve run ordinal one
+
+```bash
+source_commit="$(git rev-parse --verify 'HEAD^{commit}')"
+python tools/manage_engine_v2_source_paired_clearance_one_shot_ab.py \
+  --repo-root "$PWD" reserve \
+  --source-commit "$source_commit" \
+  --operator-id <reviewed-operator-id> \
+  --execution-environment-sha256 <64-char-sha256>
+```
+
+The environment identity must bind the exact Python, Torch, RDKit, PoseBusters,
+Rust/native wheel, host, CPU/thread policy, and reviewed source checkout.
+
+### 3. Create run-start receipt
+
+Do not modify or advance the checkout after reservation.
+
+```bash
+python tools/manage_engine_v2_source_paired_clearance_one_shot_ab.py \
+  --repo-root "$PWD" start
+```
+
+No molecular output should be created before this succeeds.
+
+### 4. External molecular execution
+
+The external runner must use the PR #244 activation snapshots and retain:
+
+- baseline current-V7 and experimental activation evidence;
+- complete `ScorerV1Terms` for all 1,024 scored rows;
+- context-bound internal validity;
+- the exact 22 PoseBusters checks;
+- symmetry-aware RMSD;
+- stable rank, Top-1, and Top-5;
+- source-control and changed-slot evidence;
+- complete self-hashed evidence artifacts.
+
+It produces three compact summaries and three evidence envelopes:
+
+```text
+baseline-arm.json
+baseline-arm-evidence.json
+experimental-arm.json
+experimental-arm-evidence.json
+cross-arm.json
+cross-arm-evidence.json
+```
+
+Each evidence envelope binds the exact one-shot policy, run-start receipt, source
+commit, execution environment, role, file SHA-256, and canonical self-hash. Each
+arm envelope retains eight unique case receipt identities and 512 unique candidate
+receipt identities. The cross-arm envelope retains eight unique case-cross-arm
+receipt identities and exactly one receipt identity for every declared changed
+slot. Its embedded summary projection must equal the separately supplied compact
+summary.
+
+`write-result` opens envelopes with `O_NOFOLLOW`, pins inode, mode, size, and
+mtime throughout a bounded read, and rejects stale, substituted, shortened, or
+cross-wired evidence.
+
+### 5. Atomically bind the result
+
+```bash
+python tools/manage_engine_v2_source_paired_clearance_one_shot_ab.py \
+  --repo-root "$PWD" write-result \
+  --baseline-arm baseline-arm.json \
+  --baseline-evidence baseline-arm-evidence.json \
+  --experimental-arm experimental-arm.json \
+  --experimental-evidence experimental-arm-evidence.json \
+  --cross-arm cross-arm.json \
+  --cross-arm-evidence cross-arm-evidence.json
+```
+
+`result.json` is written once only after all durable state and external evidence
+bindings pass and the verdict is independently rederived.
+
+## Claim boundary
+
+The result always retains:
+
+```text
+fresh_holdout_execution_authorized = false
+stage0_admission_authority = false
+profile_promotion_authority = false
+product_execution_authorized = false
+customer_pose_emission_authorized = false
+public_or_scientific_claim_authorized = false
+```
+
+The historical result is diagnostic development evidence only. It cannot be used
+to claim calibrated docking, independent validation, customer readiness,
+ROCm/HIP acceleration, affinity, free energy, or broad product superiority.
+
+## CI boundary
+
+The stacked PR carries a dedicated read-only contract workflow while PR #244 is
+its base. Before final merge, these files and tests must be consolidated into the
+authoritative `ci-engine-v2-main` sparse checkout, compilation list, focused suite,
+and CI-authority inventory. The specialized workflow is not a substitute for
+authoritative Engine V2 CI.

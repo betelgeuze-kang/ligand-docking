@@ -1,0 +1,120 @@
+{
+  "arm_contract": {
+    "allocated_target_exactly_once_required": true,
+    "baseline_candidate_authority": "current_v7",
+    "candidate_denominator_failure_complete": true,
+    "changed_slots_equal_selected_targets_required": true,
+    "complete_scorer_v1_terms_required": true,
+    "experimental_candidate_authority": "activation_snapshot_selected_or_current_v7",
+    "internal_validity_required": true,
+    "non_target_rows_identical_required": true,
+    "posebusters_check_count": 22,
+    "selection_sealed_before_scoring": true,
+    "stable_rank_required": true,
+    "symmetry_aware_rmsd_required": true,
+    "top1_top5_required": true
+  },
+  "authority": {
+    "customer_pose_emission_authorized": false,
+    "fresh_holdout_execution_authorized": false,
+    "historical_ab_execution_authorized": true,
+    "historical_result_materialization_authorized": true,
+    "maximum_lifetime_run_count": 1,
+    "product_execution_authorized": false,
+    "profile_promotion_authority": false,
+    "public_or_scientific_claim_authorized": false,
+    "selection_policy_authority": false,
+    "stage0_admission_authority": false
+  },
+  "cohort": {
+    "arm_count": 2,
+    "baseline_recovery_case_ids": [
+      "6T88_MWQ"
+    ],
+    "candidate_slots_per_scored_case_per_arm": 64,
+    "expected_scored_candidate_rows": 1024,
+    "historical_case_count": 9,
+    "historical_case_ids": [
+      "5SD5_HWI",
+      "5SIS_JSM",
+      "6M2B_EZO",
+      "6M73_FNR",
+      "6T88_MWQ",
+      "6TW5_9M2",
+      "6TW7_NZB",
+      "6VTA_AKN",
+      "6WTN_RXT"
+    ],
+    "historical_case_ids_sha256": "cd2c24c9c7d937865f40352375e8a17c6b83b0b0fab8c134218d2c29537493c1",
+    "preparation_failure_case_ids": [
+      "6M73_FNR"
+    ],
+    "previously_uncovered_case_ids": [
+      "5SD5_HWI",
+      "5SIS_JSM",
+      "6M2B_EZO",
+      "6TW5_9M2",
+      "6TW7_NZB",
+      "6VTA_AKN",
+      "6WTN_RXT"
+    ],
+    "scored_case_count": 8
+  },
+  "decision": {
+    "go_criteria_any": [
+      "new_exact_valid_candidate_in_previously_uncovered_case",
+      "proposal_oracle_recovery_at_least_2_of_8",
+      "invalid_top1_at_most_4_of_8"
+    ],
+    "go_effect": "continue_local_clearance_research_on_fixed_32_case_decision_set",
+    "go_requires_all_invariants": true,
+    "go_requires_any_primary_criterion": true,
+    "invariants_all": [
+      "no_preparation_failure_regression",
+      "no_top1_or_top5_recovery_regression",
+      "candidate_denominator_512_per_arm",
+      "source_control_preserved",
+      "score_term_semantics_fully_verified",
+      "no_result_dependent_allocation"
+    ],
+    "no_go_criteria_any": [
+      "required_invariant_failed",
+      "all_primary_go_criteria_failed",
+      "existing_recovery_regression",
+      "selected_state_remains_penetrating_without_posebusters_validity_change"
+    ],
+    "no_go_effect": "close_local_torsion_clearance_refinement_epic_and_start_global_orientation",
+    "no_go_trigger_precedence": true
+  },
+  "execution": {
+    "atomic_no_overwrite": true,
+    "cpu_count": 1,
+    "external_engine_invocation": false,
+    "native_scorer_threads": 1,
+    "output_root": ".betelgeuze/engine_v2_source_paired_clearance_one_shot_ab",
+    "owner_only_mode_octal": "0600",
+    "preexisting_reservation_rejected": true,
+    "preexisting_result_rejected": true,
+    "reservation_filename": "execution-reservation.json",
+    "result_filename": "result.json",
+    "run_start_filename": "run-start.json",
+    "seed": 2026073000,
+    "torch_interop_threads": 1,
+    "torch_intraop_threads": 1
+  },
+  "policy_role": "historical_contaminated_development_single_execution_authority",
+  "policy_sha256": "b9d2dc1c716c0f954ba5a9f30ecc08168eb29331293b8df5c08fa67ca7ae377f",
+  "schema_id": "betelgeuze.engine_v2_source_paired_clearance_one_shot_ab_policy/1.1.0",
+  "source_bindings": {
+    "activation_policy_schema_id": "betelgeuze.engine_v2_source_paired_clearance_activation_policy/1.2.0",
+    "activation_policy_sha256": "988d0bb47bfa6ff934887e1e12b5a512b55aaf40033a04963d141c4ffefe212c",
+    "baseline_profile_id": "current_v7",
+    "clearance_selection_policy_sha256": "e5936f33d5aec54aae67f519e5cf6dffcc61181237270adb3e367a5f65cb29ad",
+    "experimental_profile_id": "current_v7_with_only_predeclared_clearance_shadow_selected_states_replaced",
+    "phase25_cohort_policy_schema_id": "betelgeuze.engine_v2_phase25_cohort_admission/1.3.0",
+    "phase25_cohort_policy_sha256": "b4c5530dc4766500dbbc854875cfb39baadad94196c63be6150514879993d211",
+    "required_scorer_backend": "rust_cpu_required",
+    "source_control_required": true
+  },
+  "status": "authorized_pending_external_operator_reservation"
+}
