@@ -14,7 +14,7 @@ from collections.abc import Sequence
 
 
 SOURCE_PAIRED_CLEARANCE_ARTIFACT_CONSISTENCY_SCHEMA_ID = (
-    "betelgeuze.engine_v2_source_paired_clearance_artifact_consistency/1.0.0"
+    "betelgeuze.engine_v2_source_paired_clearance_artifact_consistency/1.2.0"
 )
 
 
@@ -55,7 +55,7 @@ def _assert_pose_artifact_coordinate_consistency(
 
 
 def install_source_paired_clearance_artifact_consistency() -> str:
-    """Install idempotent construction- and access-time consistency checks."""
+    """Install idempotent activation, one-shot, and result-state guards."""
 
     marker = "_betelgeuze_source_paired_clearance_artifact_consistency_sha256"
     existing = getattr(sys, marker, None)
@@ -65,6 +65,15 @@ def install_source_paired_clearance_artifact_consistency() -> str:
     from .source_paired_clearance_activation import (
         SourcePairedClearanceArmRankingReceiptV1,
         SourcePairedClearanceSelectionActivationReceiptV1,
+    )
+    from .source_paired_clearance_one_shot_binding import (
+        install_source_paired_clearance_one_shot_binding,
+    )
+    from .source_paired_clearance_one_shot_result_binding import (
+        install_source_paired_clearance_one_shot_result_binding,
+    )
+    from .source_paired_clearance_one_shot_verdict_diagnostics import (
+        install_source_paired_clearance_one_shot_verdict_diagnostics,
     )
 
     arm_type = SourcePairedClearanceArmRankingReceiptV1
@@ -109,6 +118,11 @@ def install_source_paired_clearance_artifact_consistency() -> str:
     outer_type.__post_init__ = outer_post_init
     outer_type.receipt_sha256 = property(outer_receipt_sha256)
 
+    one_shot_binding_sha256 = install_source_paired_clearance_one_shot_binding()
+    verdict_diagnostics_sha256 = (
+        install_source_paired_clearance_one_shot_verdict_diagnostics()
+    )
+    result_binding_sha256 = install_source_paired_clearance_one_shot_result_binding()
     receipt = _sha256(
         {
             "schema_id": SOURCE_PAIRED_CLEARANCE_ARTIFACT_CONSISTENCY_SCHEMA_ID,
@@ -116,6 +130,9 @@ def install_source_paired_clearance_artifact_consistency() -> str:
             "cross_arm_pose_artifact_coordinate_consistency_required": True,
             "construction_time_check": True,
             "receipt_access_time_check": True,
+            "one_shot_source_policy_binding_sha256": one_shot_binding_sha256,
+            "one_shot_verdict_diagnostics_sha256": verdict_diagnostics_sha256,
+            "one_shot_result_binding_sha256": result_binding_sha256,
             "historical_ab_execution_authorized": False,
             "fresh_execution_authorized": False,
             "product_or_claim_authority": False,
