@@ -10,11 +10,15 @@ from pathlib import Path
 from typing import Any
 
 
-SCHEMA_ID = "betelgeuze.engine_v2_ci_authority_inventory/1.0.0"
+SCHEMA_ID = "betelgeuze.engine_v2_ci_authority_inventory/1.1.0"
+ONE_SHOT_AUTHORITY_WORKFLOW = (
+    ".github/workflows/ci-engine-v2-source-paired-clearance-one-shot-ab.yml"
+)
 AUTHORITATIVE_WORKFLOWS = (
     ".github/workflows/ci-engine-v2-main.yml",
     ".github/workflows/ci-engine-v2-release-candidate.yml",
     ".github/workflows/ci-engine-v2-cpu-reference-validation-protocol.yml",
+    ONE_SHOT_AUTHORITY_WORKFLOW,
 )
 CLEARANCE_ACTIVATION_CONTRACT_PATHS = (
     "betelgeuze_engine_v2/benchmark/source_paired_clearance_activation.py",
@@ -33,6 +37,30 @@ CLEARANCE_ACTIVATION_REQUIRED_TOKENS = (
     "docs/engine_v2_source_paired_clearance_activation.md",
     "docs/engine_v2_source_paired_clearance_selection_policy.md",
     "docs/engine_v2_stage0_status.md",
+)
+ONE_SHOT_CONTRACT_PATHS = (
+    "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_ab.py",
+    "config/engine_v2_source_paired_clearance_one_shot_ab.json",
+)
+ONE_SHOT_REQUIRED_TOKENS = (
+    "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_ab.py",
+    "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_legacy.py",
+    "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_binding.py",
+    "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_evidence.py",
+    "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_result.py",
+    "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_result_legacy.py",
+    "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_result_binding.py",
+    "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_verdict_diagnostics.py",
+    "config/engine_v2_source_paired_clearance_one_shot_ab.json",
+    "tools/manage_engine_v2_source_paired_clearance_one_shot_ab.py",
+    "tools/verify_engine_v2_source_paired_clearance_one_shot_ab.py",
+    "tests/unit/test_source_paired_clearance_one_shot_ab.py",
+    "tests/unit/test_source_paired_clearance_one_shot_canonical_imports.py",
+    "tests/unit/test_source_paired_clearance_one_shot_evidence.py",
+    "tests/unit/test_source_paired_clearance_one_shot_result.py",
+    "tests/unit/test_source_paired_clearance_one_shot_source_policy_tamper.py",
+    "tests/unit/test_source_paired_clearance_one_shot_verdict_semantics.py",
+    "docs/engine_v2_source_paired_clearance_one_shot_ab.md",
 )
 
 
@@ -59,12 +87,16 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
             if path.is_file()
         )
     )
-    authoritative = tuple(path for path in AUTHORITATIVE_WORKFLOWS if path in workflows)
+    authoritative = tuple(
+        path for path in AUTHORITATIVE_WORKFLOWS if path in workflows
+    )
     specialized = tuple(
         path for path in workflows if path not in AUTHORITATIVE_WORKFLOWS
     )
     hashes = {path: _sha256(repo_root / path) for path in workflows}
-    main_text = (repo_root / AUTHORITATIVE_WORKFLOWS[0]).read_text(encoding="utf-8")
+    main_text = (repo_root / AUTHORITATIVE_WORKFLOWS[0]).read_text(
+        encoding="utf-8"
+    )
     stage0_required_tokens = (
         "tools/__init__.py",
         "config/engine_v2_public_redocking_stage0_threshold_evidence.json",
@@ -87,6 +119,23 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
     if clearance_activation_contract_present:
         stage0_required_tokens += CLEARANCE_ACTIVATION_REQUIRED_TOKENS
 
+    one_shot_contract_present = any(
+        (repo_root / path).is_file() for path in ONE_SHOT_CONTRACT_PATHS
+    )
+    one_shot_workflow = repo_root / ONE_SHOT_AUTHORITY_WORKFLOW
+    one_shot_text = (
+        one_shot_workflow.read_text(encoding="utf-8")
+        if one_shot_workflow.is_file()
+        else ""
+    )
+    one_shot_contract_in_authoritative_ci = (
+        not one_shot_contract_present
+        or (
+            ONE_SHOT_AUTHORITY_WORKFLOW in authoritative
+            and all(token in one_shot_text for token in ONE_SHOT_REQUIRED_TOKENS)
+        )
+    )
+
     payload: dict[str, Any] = {
         "schema_id": SCHEMA_ID,
         "workflow_count": len(workflows),
@@ -99,11 +148,18 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         "stage0_tests_in_authoritative_main": all(
             token in main_text for token in stage0_required_tokens
         ),
-        "new_feature_workflow_policy": "consolidate_into_authoritative_workflows",
+        "one_shot_contract_in_authoritative_ci": (
+            one_shot_contract_in_authoritative_ci
+        ),
+        "new_feature_workflow_policy": (
+            "register_or_consolidate_into_authoritative_workflows"
+        ),
         "specialized_workflows_hidden": False,
         "issue_199_external_state_mutated": False,
     }
-    payload["receipt_sha256"] = hashlib.sha256(_canonical_bytes(payload)).hexdigest()
+    payload["receipt_sha256"] = hashlib.sha256(
+        _canonical_bytes(payload)
+    ).hexdigest()
     return payload
 
 
@@ -121,7 +177,8 @@ def main() -> int:
     payload = build_inventory(arguments.repo_root.resolve())
     arguments.out.parent.mkdir(parents=True, exist_ok=True)
     arguments.out.write_text(
-        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        json.dumps(payload, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
     )
     print(payload["receipt_sha256"])
     return 0
