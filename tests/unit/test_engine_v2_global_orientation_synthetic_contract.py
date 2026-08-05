@@ -83,3 +83,27 @@ def test_failure_class_drift_fails_closed() -> None:
         match="failure class order",
     ):
         verify_contract(changed)
+
+
+def test_resealed_source_rederivation_requirement_cannot_be_disabled() -> None:
+    changed = _contract()
+    changed["algorithm"]["source_rederivation_evidence_required"] = False
+    changed = _reseal(changed)
+
+    with pytest.raises(
+        GlobalOrientationSyntheticContractError,
+        match="source_rederivation_evidence_required",
+    ):
+        verify_contract(changed)
+
+
+def test_resealed_full_observation_requirement_cannot_be_disabled() -> None:
+    changed = _contract()
+    changed["metrics"]["full_observation_rederivation_required"] = False
+    changed = _reseal(changed)
+
+    with pytest.raises(
+        GlobalOrientationSyntheticContractError,
+        match="full_observation_rederivation_required",
+    ):
+        verify_contract(changed)
