@@ -47,8 +47,10 @@ jobs:
           test -f config/engine_v2_source_paired_clearance_one_shot_ab.json
           test -f docs/engine_v2_source_paired_clearance_one_shot_ab.md
           test -f docs/engine_v2_source_paired_clearance_one_shot_full_evidence.md
+          test -f docs/engine_v2_source_paired_clearance_external_reservation.md
           python -m py_compile \
             betelgeuze_engine_v2/benchmark/source_paired_clearance_artifact_consistency.py \
+            betelgeuze_engine_v2/benchmark/source_paired_clearance_external_reservation.py \
             betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_ab.py \
             betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_legacy.py \
             betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_binding.py \
@@ -72,6 +74,7 @@ jobs:
           python -m pytest -q \
             --confcutdir=tests/unit \
             tests/unit/test_audit_engine_v2_ci_authority.py \
+            tests/unit/test_source_paired_clearance_external_reservation.py \
             tests/unit/test_source_paired_clearance_one_shot_ab.py \
             tests/unit/test_source_paired_clearance_one_shot_canonical_imports.py \
             tests/unit/test_source_paired_clearance_one_shot_evidence.py \
@@ -84,6 +87,7 @@ jobs:
         run: |
           python -m ruff check \
             betelgeuze_engine_v2/benchmark/source_paired_clearance_artifact_consistency.py \
+            betelgeuze_engine_v2/benchmark/source_paired_clearance_external_reservation.py \
             betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_ab.py \
             betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_legacy.py \
             betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_binding.py \
@@ -97,6 +101,7 @@ jobs:
             tools/verify_engine_v2_source_paired_clearance_one_shot_ab.py \
             tools/manage_engine_v2_source_paired_clearance_one_shot_ab.py \
             tests/unit/test_audit_engine_v2_ci_authority.py \
+            tests/unit/test_source_paired_clearance_external_reservation.py \
             tests/unit/test_source_paired_clearance_one_shot_ab.py \
             tests/unit/test_source_paired_clearance_one_shot_canonical_imports.py \
             tests/unit/test_source_paired_clearance_one_shot_evidence.py \
