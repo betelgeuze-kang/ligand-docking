@@ -41,6 +41,10 @@ EXPECTED_NO_GO_CRITERIA = (
     "selected_state_remains_penetrating_without_posebusters_validity_change",
 )
 MAX_DURABLE_RECEIPT_BYTES = 4 * 1024 * 1024
+_DURABLE_ROOT_COMPONENTS = (
+    ".betelgeuze",
+    "engine_v2_source_paired_clearance_one_shot_ab",
+)
 
 
 def _canonical_bytes(value: object) -> bytes:
@@ -90,9 +94,30 @@ def _run_git(repository_root: Path, *arguments: str) -> str:
     return completed.stdout.strip()
 
 
+def _require_symlink_free_durable_root(repository_root: Path) -> None:
+    """Reject every existing symlink or non-directory in the frozen root path."""
+
+    current = repository_root.resolve(strict=True)
+    for component in _DURABLE_ROOT_COMPONENTS:
+        current = current / component
+        try:
+            observed = os.lstat(current)
+        except FileNotFoundError:
+            return
+        except OSError as exc:
+            raise RuntimeError(
+                f"one-shot durable root cannot be inspected safely: {exc}"
+            ) from exc
+        if stat.S_ISLNK(observed.st_mode) or not stat.S_ISDIR(observed.st_mode):
+            raise RuntimeError(
+                "one-shot durable root contains a symlink or non-directory"
+            )
+
+
 def require_clean_checkout(repository_root: Path) -> str:
     """Return exact lowercase Git HEAD only for a clean complete checkout."""
 
+    _require_symlink_free_durable_root(repository_root)
     head = _run_git(repository_root, "rev-parse", "--verify", "HEAD^{commit}")
     if len(head) != 40 or any(character not in "0123456789abcdef" for character in head):
         raise RuntimeError("observed Git HEAD is not a lowercase SHA-1")
@@ -131,6 +156,7 @@ def read_durable_receipt(
 ) -> dict[str, Any]:
     """Read an exact owner-only JSON receipt without following symlinks."""
 
+    _require_symlink_free_durable_root(repository_root)
     components = _durable_path_components(path, repository_root=repository_root)
     if not components:
         raise RuntimeError(f"{name} path is empty")
