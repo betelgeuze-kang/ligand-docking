@@ -1,0 +1,50 @@
+{
+  "container": {
+    "base_image_release_digest_required": true,
+    "build_fixture_artifacts_forbidden": true,
+    "builder_runtime_stage_separation_required": true,
+    "development_tag_fallback_allowed": true,
+    "non_root_runtime_uid_gid": "10001:10001",
+    "permissive_world_writable_runtime_directories_forbidden": true,
+    "pip_check_required_in_builder_and_runtime": true,
+    "release_build_flag": "PRODUCT_IMAGE_RELEASE_BUILD",
+    "runtime_test_dependencies_forbidden": true
+  },
+  "dependency_profiles": {
+    "api_development": "requirements-api.txt",
+    "api_runtime": "requirements-api-runtime.txt",
+    "base": "requirements-base.txt",
+    "deployment": "requirements-deploy.txt",
+    "product_rocm": "requirements-product-rocm.txt",
+    "top_level_exact_pins_required": true,
+    "transitive_hash_lock_status": "not_implemented_blocks_signed_release"
+  },
+  "monitoring": {
+    "dependabot_ecosystems_required": [
+      "docker",
+      "github-actions",
+      "pip"
+    ],
+    "dependency_license_scan_status": "not_implemented",
+    "sbom_status": "not_implemented",
+    "vulnerability_scan_status": "not_implemented"
+  },
+  "policy_role": "product_image_build_and_dependency_guardrails",
+  "policy_sha256": "59828c1ac97c92c103325287200bf867f0734f7ac506d8f09ca03e6c26fb02dc",
+  "release_authority": {
+    "container_registry_push_authorized": false,
+    "deployment_authorized": false,
+    "gpu_parity_claim_authorized": false,
+    "product_release_authorized": false,
+    "release_signing_authorized": false,
+    "scientific_claim_authorized": false
+  },
+  "rust": {
+    "installer_checksum_required_for_release": true,
+    "installer_source_commit": "28d1352dbcb436d3111c3594b9e1588e94950464",
+    "installer_version": "1.29.0",
+    "toolchain": "1.93.0"
+  },
+  "schema_id": "betelgeuze.product_supply_chain_policy/1.0.0",
+  "status": "guardrails_implemented_release_not_qualified"
+}

@@ -1,8 +1,14 @@
+x-product-build: &product-build
+  context: ..
+  dockerfile: Dockerfile.product
+  args:
+    PRODUCT_ROCM_BASE: "${PRODUCT_ROCM_BASE:-rocm/pytorch:rocm7.1_ubuntu22.04_py3.10_pytorch_release_2.6.0}"
+    PRODUCT_IMAGE_RELEASE_BUILD: "${PRODUCT_IMAGE_RELEASE_BUILD:-0}"
+    RUSTUP_INIT_SHA256: "${RUSTUP_INIT_SHA256:-}"
+
 services:
   api-server:
-    build:
-      context: ..
-      dockerfile: Dockerfile.product
+    build: *product-build
     image: micf-api:product
     restart: unless-stopped
     ports:
@@ -23,7 +29,6 @@ services:
       DOCKING_PRIVATE_PAYLOAD_KEYS: "${DOCKING_PRIVATE_PAYLOAD_KEYS:?set DOCKING_PRIVATE_PAYLOAD_KEYS}"
       DOCKING_PRIVATE_PAYLOAD_DIR: "/data/private_payloads"
       API_INLINE_WORKER_ENABLED: "0"
-      # Standard Docker is not PID-namespace-qualified for validated execution.
       API_VALIDATED_RUNNER_ENABLED: "0"
       FORCE_RUST_HIP: "${FORCE_RUST_HIP:-1}"
       RUST_HIP_USE_GPU_NBLIST_BUILDER: "${RUST_HIP_USE_GPU_NBLIST_BUILDER:-1}"
@@ -45,15 +50,12 @@ services:
 
   api-worker:
     image: micf-api:product
-    build:
-      context: ..
-      dockerfile: Dockerfile.product
+    build: *product-build
     restart: unless-stopped
     depends_on:
       - api-server
     environment:
       API_INLINE_WORKER_ENABLED: "0"
-      # Use a separately qualified host runtime before enabling validated execution.
       API_VALIDATED_RUNNER_ENABLED: "0"
       API_VALIDATED_RUNNER_PROFILES_PATH: "${API_VALIDATED_RUNNER_PROFILES_PATH:-/app/config/api_validated_runner_profiles}"
       API_VALIDATED_RUNNER_TIMEOUT_SECONDS: "${API_VALIDATED_RUNNER_TIMEOUT_SECONDS:-3600}"
@@ -83,16 +85,13 @@ services:
 
   api-docking-dispatch:
     image: micf-api:product
-    build:
-      context: ..
-      dockerfile: Dockerfile.product
+    build: *product-build
     restart: unless-stopped
     depends_on:
       - api-server
       - api-worker
     environment:
       API_INLINE_WORKER_ENABLED: "0"
-      # Standard Docker is a fail-closed wiring surface only.
       API_VALIDATED_RUNNER_ENABLED: "0"
       FORCE_RUST_HIP: "${FORCE_RUST_HIP:-1}"
       RUST_HIP_USE_GPU_NBLIST_BUILDER: "${RUST_HIP_USE_GPU_NBLIST_BUILDER:-1}"
