@@ -27,6 +27,9 @@ from betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_full_eviden
 _FIXTURES = runpy.run_path(
     str(Path(__file__).with_name("test_source_paired_clearance_activation_evidence.py"))
 )
+_RESULT_FIXTURES = runpy.run_path(
+    str(Path(__file__).with_name("test_source_paired_clearance_one_shot_result.py"))
+)
 
 
 def _digest(label: str) -> str:
@@ -186,18 +189,22 @@ def _patch_fake_case_verifier(
     monkeypatch.setattr(full_module, "_verify_case_activation_receipt", verify)
 
 
-def _build_fake_artifact(monkeypatch: pytest.MonkeyPatch) -> tuple[dict[str, object], dict[str, object]]:
+def _build_fake_artifact(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    run_start: dict[str, object] | None = None,
+) -> tuple[dict[str, object], dict[str, object]]:
     cases = _fake_cases()
     _patch_fake_case_verifier(monkeypatch, cases)
-    run_start = _run_start()
+    selected_run_start = run_start or _run_start()
     artifact = build_full_comparison_evidence_artifact(
-        run_start=run_start,
+        run_start=selected_run_start,
         case_activation_receipts=[
             {"case_id": case_id}
             for case_id in SOURCE_PAIRED_CLEARANCE_SCORED_CASE_IDS
         ],
     )
-    return artifact, run_start
+    return artifact, selected_run_start
 
 
 def test_full_artifact_retains_exact_8_by_64_by_2_grid(
@@ -284,7 +291,13 @@ def test_compact_result_is_derived_from_full_file_bytes(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    artifact, run_start = _build_fake_artifact(monkeypatch)
+    _policy, durable_run_start, _repository_root = _RESULT_FIXTURES["_run_start"](
+        tmp_path
+    )
+    artifact, run_start = _build_fake_artifact(
+        monkeypatch,
+        run_start=durable_run_start,
+    )
     path = tmp_path / "full-evidence.json"
     path.write_text(
         json.dumps(artifact, indent=2, sort_keys=True) + "\n",
