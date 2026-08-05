@@ -68,7 +68,10 @@ def _initialize_checkout(repository_root: Path) -> str:
         _git(repository_root, "init", "-q")
         _git(repository_root, "config", "user.name", "one-shot-test")
         _git(repository_root, "config", "user.email", "one-shot-test@example.invalid")
-        (repository_root / ".gitignore").write_text(".betelgeuze/\n", encoding="utf-8")
+        (repository_root / ".gitignore").write_text(
+            ".betelgeuze\n.betelgeuze/\n",
+            encoding="utf-8",
+        )
         (repository_root / "tracked.txt").write_text("clean\n", encoding="utf-8")
         _git(repository_root, "add", ".gitignore", "tracked.txt")
         _git(repository_root, "commit", "-q", "-m", "initialize test checkout")
