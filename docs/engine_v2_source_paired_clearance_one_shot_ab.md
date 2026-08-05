@@ -122,6 +122,15 @@ run-start, then rechecks clean `HEAD` again. Reconstructed in-memory receipts,
 missing Git metadata, installed-wheel-only execution, dirty files, or checkout
 movement cannot consume or finalize the one-shot authority.
 
+### Lifetime uniqueness boundary
+
+The repository code enforces one run inside the exact reviewed durable evidence
+store. Copying the repository or deleting that store cannot create a second
+scientifically authoritative run. Cross-clone lifetime uniqueness therefore
+requires an external immutable reservation ledger or equivalent reviewed operator
+control. Until that external authority exists, the local policy must not be
+represented as globally enforcing one run across every copy of the repository.
+
 ## Operator sequence
 
 ### 1. Verify status
@@ -158,7 +167,8 @@ No molecular output should be created before this succeeds.
 
 ### 4. External molecular execution
 
-The external runner must use the PR #244 activation snapshots and retain:
+The external runner must use the source-bound clearance activation snapshots and
+retain:
 
 - baseline current-V7 and experimental activation evidence;
 - complete `ScorerV1Terms` for all 1,024 scored rows;
@@ -187,6 +197,12 @@ receipt identities. The cross-arm envelope retains eight unique case-cross-arm
 receipt identities and exactly one receipt identity for every declared changed
 slot. Its embedded summary projection must equal the separately supplied compact
 summary.
+
+The identity manifest proves denominator and binding identities; it does not by
+itself parse and scientifically revalidate every external candidate receipt. The
+reviewed external runner and subsequent artifact audit must bind these identities
+to the complete receipt bytes before the historical result is treated as usable
+development evidence.
 
 `write-result` opens envelopes with `O_NOFOLLOW`, pins inode, mode, size, and
 mtime throughout a bounded read, and rejects stale, substituted, shortened, or
@@ -227,8 +243,10 @@ ROCm/HIP acceleration, affinity, free energy, or broad product superiority.
 
 ## CI boundary
 
-The stacked PR carries a dedicated read-only contract workflow while PR #244 is
-its base. Before final merge, these files and tests must be consolidated into the
+PR #245 is restacked directly on the merged activation-receipt `main`. Its
+specialized contract workflow is read-only, checks out the exact PR head, and
+isolates unit contracts from repository-wide product artifact bootstrap. Before
+final merge, the one-shot files and tests must still be consolidated into the
 authoritative `ci-engine-v2-main` sparse checkout, compilation list, focused suite,
-and CI-authority inventory. The specialized workflow is not a substitute for
+and CI-authority inventory; the specialized workflow is not a substitute for
 authoritative Engine V2 CI.
