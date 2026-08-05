@@ -44,6 +44,8 @@ jobs:
 
       - name: Verify policy and compile authority surfaces
         run: |
+          test -f config/engine_v2_source_paired_clearance_one_shot_ab.json
+          test -f docs/engine_v2_source_paired_clearance_one_shot_ab.md
           python -m py_compile \
             betelgeuze_engine_v2/benchmark/source_paired_clearance_artifact_consistency.py \
             betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_ab.py \
@@ -54,17 +56,20 @@ jobs:
             betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_result_legacy.py \
             betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_result_binding.py \
             betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_verdict_diagnostics.py \
+            tools/audit_engine_v2_ci_authority.py \
             tools/verify_engine_v2_source_paired_clearance_one_shot_ab.py \
             tools/manage_engine_v2_source_paired_clearance_one_shot_ab.py
           python tools/verify_engine_v2_source_paired_clearance_activation.py \
             --policy config/engine_v2_source_paired_clearance_activation.json
           python tools/verify_engine_v2_source_paired_clearance_one_shot_ab.py \
-            --repo-root .
+            --repo-root . \
+            --policy config/engine_v2_source_paired_clearance_one_shot_ab.json
 
       - name: Run one-shot authority and result-contract tests
         run: |
           python -m pytest -q \
             --confcutdir=tests/unit \
+            tests/unit/test_audit_engine_v2_ci_authority.py \
             tests/unit/test_source_paired_clearance_one_shot_ab.py \
             tests/unit/test_source_paired_clearance_one_shot_canonical_imports.py \
             tests/unit/test_source_paired_clearance_one_shot_evidence.py \
@@ -84,8 +89,10 @@ jobs:
             betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_result_legacy.py \
             betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_result_binding.py \
             betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_verdict_diagnostics.py \
+            tools/audit_engine_v2_ci_authority.py \
             tools/verify_engine_v2_source_paired_clearance_one_shot_ab.py \
             tools/manage_engine_v2_source_paired_clearance_one_shot_ab.py \
+            tests/unit/test_audit_engine_v2_ci_authority.py \
             tests/unit/test_source_paired_clearance_one_shot_ab.py \
             tests/unit/test_source_paired_clearance_one_shot_canonical_imports.py \
             tests/unit/test_source_paired_clearance_one_shot_evidence.py \
