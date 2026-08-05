@@ -1,12 +1,18 @@
 from __future__ import annotations
 
 import copy
+from dataclasses import replace
 import hashlib
 import json
 from pathlib import Path
+import runpy
 
 import pytest
 
+from betelgeuze_engine_v2.benchmark.source_paired_clearance_activation import (
+    SourcePairedClearanceActivationEvidenceError,
+    SourcePairedClearanceArmRankingReceiptV1,
+)
 from tools.verify_engine_v2_source_paired_clearance_activation import (
     EXPECTED_POLICY_SHA256,
     verify_policy,
@@ -259,3 +265,87 @@ def test_policy_identity_cannot_be_replaced_by_a_valid_self_hash() -> None:
 
     with pytest.raises(ValueError, match="status"):
         verify_policy(policy)
+
+
+def _complete_activation_evidence(monkeypatch: pytest.MonkeyPatch):
+    fixtures = runpy.run_path(
+        str(Path(__file__).with_name("test_source_paired_clearance_activation_evidence.py"))
+    )
+    evidence_module = fixtures["activation_evidence_module"]
+    synthetic_authority: dict[str, dict[str, str]] = {}
+    monkeypatch.setattr(
+        evidence_module,
+        "_FROZEN_CASE_SOURCE_AUTHORITY_BY_CASE",
+        synthetic_authority,
+    )
+    monkeypatch.setattr(
+        evidence_module,
+        "_frozen_case_source_authority",
+        synthetic_authority.get,
+    )
+    return fixtures, fixtures["_complete_activation_evidence"]()
+
+
+def _reuse_pose_artifact(row, pose_artifact_sha256: str):
+    return replace(
+        row,
+        pose_artifact_sha256=pose_artifact_sha256,
+        internal_validity=replace(
+            row.internal_validity,
+            pose_artifact_sha256=pose_artifact_sha256,
+        ),
+        posebusters=replace(
+            row.posebusters,
+            pose_artifact_sha256=pose_artifact_sha256,
+        ),
+        rmsd=replace(
+            row.rmsd,
+            pose_artifact_sha256=pose_artifact_sha256,
+        ),
+    )
+
+
+def test_arm_rejects_one_pose_artifact_bound_to_distinct_coordinates(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _, evidence = _complete_activation_evidence(monkeypatch)
+    rows = list(evidence["baseline"].candidate_rows)
+    assert rows[0].coordinate_sha256 != rows[1].coordinate_sha256
+    rows[1] = _reuse_pose_artifact(rows[1], rows[0].pose_artifact_sha256)
+
+    with pytest.raises(
+        SourcePairedClearanceActivationEvidenceError,
+        match="pose artifact",
+    ):
+        SourcePairedClearanceArmRankingReceiptV1(
+            arm="baseline_current_v7",
+            candidate_rows=rows,
+        )
+
+
+def test_outer_rejects_cross_arm_pose_artifact_reuse_after_coordinate_change(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fixtures, evidence = _complete_activation_evidence(monkeypatch)
+    target = evidence["target"]
+    baseline = evidence["baseline"].candidate_rows[target]
+    experimental_rows = list(evidence["experimental"].candidate_rows)
+    experimental = experimental_rows[target]
+    assert baseline.coordinate_sha256 != experimental.coordinate_sha256
+    experimental_rows[target] = _reuse_pose_artifact(
+        experimental,
+        baseline.pose_artifact_sha256,
+    )
+    experimental_arm = SourcePairedClearanceArmRankingReceiptV1(
+        arm="experimental_clearance_shadow",
+        candidate_rows=experimental_rows,
+    )
+
+    with pytest.raises(
+        SourcePairedClearanceActivationEvidenceError,
+        match="pose artifact",
+    ):
+        fixtures["_outer"](
+            evidence,
+            experimental=experimental_arm,
+        )

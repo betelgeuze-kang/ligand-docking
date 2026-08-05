@@ -192,6 +192,13 @@ from .public_evaluator_authenticated import (
     authenticated_public_benchmark_derivation_policy_document,
     run_authenticated_offline_public_benchmark_evaluation,
 )
+from .source_paired_clearance_artifact_consistency import (
+    install_source_paired_clearance_artifact_consistency as _install_source_paired_clearance_artifact_consistency,
+)
+
+SOURCE_PAIRED_CLEARANCE_ARTIFACT_CONSISTENCY_SHA256 = (
+    _install_source_paired_clearance_artifact_consistency()
+)
 
 run_offline_public_benchmark_evaluation = (
     run_authenticated_offline_public_benchmark_evaluation
@@ -255,6 +262,7 @@ __all__ = [
     "PUBLIC_BENCHMARK_PRIMARY_RMSD_THRESHOLD_ANGSTROM",
     "PUBLIC_BENCHMARK_PROTOCOL_ID",
     "PUBLIC_BENCHMARK_PROTOCOL_SCHEMA_ID",
+    "SOURCE_PAIRED_CLEARANCE_ARTIFACT_CONSISTENCY_SHA256",
     "SUPPORTED_EXTERNAL_ENGINES",
     "AuthenticatedPublicBenchmarkCaseInput",
     "AuthenticatedPublicBenchmarkInputError",
