@@ -38,18 +38,21 @@ jobs:
       - name: Install focused governance dependencies
         run: |
           python -m pip install pip==25.0.1
-          python -m pip install pytest==9.1.1 ruff==0.11.13 PyYAML==6.0.3
+          python -m pip install pytest==9.1.1 ruff==0.11.13 PyYAML==6.0.3 cryptography==46.0.5
 
-      - name: Compile and test repository governance policies
+      - name: Compile and test repository, supply-chain, and release policies
         run: |
           python -m py_compile \
             tools/check_repository_hygiene.py \
             tools/verify_product_supply_chain.py \
+            tools/verify_product_release_qualification.py \
             tests/conftest.py \
             tests/unit/test_repository_hygiene.py \
             tests/unit/test_product_supply_chain.py \
+            tests/unit/test_product_release_qualification.py \
             tests/unit/test_pytest_product_artifact_bootstrap_boundary.py
           python tools/verify_product_supply_chain.py --repo-root .
+          python tools/verify_product_release_qualification.py
           python - <<'PY'
           import pathlib
           import yaml
@@ -60,11 +63,14 @@ jobs:
           python -m pytest --confcutdir=tests/unit -q \
             tests/unit/test_repository_hygiene.py \
             tests/unit/test_product_supply_chain.py \
+            tests/unit/test_product_release_qualification.py \
             tests/unit/test_pytest_product_artifact_bootstrap_boundary.py
           python -m ruff check \
             tools/verify_product_supply_chain.py \
+            tools/verify_product_release_qualification.py \
             tests/conftest.py \
             tests/unit/test_product_supply_chain.py \
+            tests/unit/test_product_release_qualification.py \
             tests/unit/test_pytest_product_artifact_bootstrap_boundary.py
 
       - name: Prove a new focused test performs no implicit bootstrap

@@ -1,0 +1,68 @@
+{
+  "authority": {
+    "deployment_authorized": false,
+    "gpu_parity_claim_authorized": false,
+    "product_release_authorized": false,
+    "registry_push_authorized": false,
+    "scientific_claim_authorized": false
+  },
+  "evidence_sha256": "c55daa6d27f5922c41b2fb7c6979d6bf7467b4dac091afdb4442981e5317c6bd",
+  "hardware_compatibility": {
+    "cpu_rows": [],
+    "operational_compatibility_only": true,
+    "rocm_rows": [],
+    "scientific_parity_claimed": false
+  },
+  "image": {
+    "base_image_digest": "",
+    "base_image_reference": "",
+    "digest": "",
+    "reference": "",
+    "registry_immutable": false
+  },
+  "license_scan": null,
+  "policy_sha256": "e18e20bc218f6fcf3cbe30b87df5b2afcab354d8e0915354436b501bbb5db7e8",
+  "provenance": {
+    "attestation_path": "",
+    "attestation_sha256": "",
+    "signature_base64": "",
+    "signed": false
+  },
+  "python_lock": {
+    "offline": false,
+    "path": "",
+    "require_hashes": false,
+    "sha256": ""
+  },
+  "rollback": {
+    "incident_response_path": "",
+    "previous_digest": "",
+    "registry_retention_days": 0,
+    "restore_procedure_path": "",
+    "verified": false
+  },
+  "runtime": {
+    "gid": 0,
+    "privileged": true,
+    "read_only_root": false,
+    "uid": 0,
+    "verified": false,
+    "writable_mounts": []
+  },
+  "sboms": {
+    "container": null,
+    "native_extension": null,
+    "source": null,
+    "wheel": null
+  },
+  "schema_id": "betelgeuze.product_release_qualification_evidence/1.0.0",
+  "status": "unqualified_template",
+  "vulnerability_scan": null,
+  "wheelhouse": {
+    "all_origins_verified": false,
+    "all_records_verified": false,
+    "entry_count": 0,
+    "manifest_path": "",
+    "manifest_sha256": ""
+  }
+}

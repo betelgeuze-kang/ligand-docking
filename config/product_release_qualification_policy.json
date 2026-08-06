@@ -1,0 +1,80 @@
+{
+  "authority": {
+    "deployment_authorized": false,
+    "gpu_parity_claim_authorized": false,
+    "product_release_authorized": false,
+    "registry_push_authorized": false,
+    "scientific_claim_authorized": false
+  },
+  "base_image": {
+    "approved_inventory_required": true,
+    "digest_required": true,
+    "mutable_tag_only_for_development": true
+  },
+  "hardware": {
+    "cpu_matrix_required": true,
+    "operational_compatibility_only": true,
+    "rocm_matrix_required": true,
+    "scientific_parity_claim_allowed": false
+  },
+  "license": {
+    "attribution_required": true,
+    "denied_spdx_ids": [
+      "AGPL-3.0-only",
+      "SSPL-1.0"
+    ],
+    "scan_required": true,
+    "unknown_license_allowed": false
+  },
+  "policy_sha256": "e18e20bc218f6fcf3cbe30b87df5b2afcab354d8e0915354436b501bbb5db7e8",
+  "provenance": {
+    "immutable_registry_digest_required": true,
+    "signature_algorithm": "ed25519",
+    "signed_attestation_required": true
+  },
+  "python_dependencies": {
+    "offline_wheelhouse_required": true,
+    "package_origin_required": true,
+    "require_hashes": true,
+    "wheel_record_required": true
+  },
+  "rollback": {
+    "incident_response_required": true,
+    "previous_digest_required": true,
+    "registry_retention_required": true,
+    "restore_procedure_required": true
+  },
+  "runtime": {
+    "gid": 10001,
+    "privileged_allowed": false,
+    "read_only_root_required": true,
+    "uid": 10001,
+    "writable_mounts": [
+      "/app/logs",
+      "/app/runs",
+      "/data"
+    ]
+  },
+  "sbom": {
+    "allowed_formats": [
+      "spdx-2.3",
+      "cyclonedx-1.6"
+    ],
+    "required_components": [
+      "source",
+      "wheel",
+      "native_extension",
+      "container"
+    ]
+  },
+  "schema_id": "betelgeuze.product_release_qualification_policy/1.0.0",
+  "status": "contract_only_release_unqualified",
+  "vulnerability": {
+    "blocked_severities": [
+      "critical",
+      "high"
+    ],
+    "exception_max_days": 30,
+    "scanner_db_identity_required": true
+  }
+}

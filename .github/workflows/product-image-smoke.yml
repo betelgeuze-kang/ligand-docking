@@ -29,9 +29,14 @@ on:
       - tools/product/build_product_image_smoke_preflight.py
       - tools/build_product_image_smoke_preflight.py
       - tools/verify_product_supply_chain.py
+      - tools/verify_product_release_qualification.py
       - config/product_supply_chain_policy.json
+      - config/product_release_qualification_policy.json
+      - config/product_release_qualification_evidence.template.json
       - tests/unit/test_product_supply_chain.py
+      - tests/unit/test_product_release_qualification.py
       - docs/PRODUCT_SUPPLY_CHAIN_POLICY.md
+      - docs/PRODUCT_RELEASE_QUALIFICATION.md
       - api/validated_runner_runtime_qualification.py
       - tests/unit/test_build_product_image_smoke_preflight.py
       - tests/unit/test_validated_runner_runtime_qualification.py
