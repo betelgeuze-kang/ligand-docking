@@ -1,0 +1,48 @@
+name: temporary-pr252-preflight-diagnostics
+
+on:
+  push:
+    branches:
+      - codex/temp-diagnose-pr252-preflight-20260806
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+      PRODUCT_API_AUTH_REQUIRED: "0"
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          clean: true
+          fetch-depth: 1
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.11"
+      - run: python -m pip install -r requirements-mobile.txt
+      - name: Print failed product image preflight rows
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from tools.product.build_product_image_smoke_preflight import build_product_image_smoke_preflight
+
+          payload = build_product_image_smoke_preflight(
+              root=Path('.'),
+              docker_cli_path='/usr/bin/docker',
+              docker_daemon_ready=True,
+              receipt_json=Path('missing-receipt.json'),
+          )
+          print(json.dumps(payload['summary'], indent=2, sort_keys=True))
+          print('FAILED_ROWS')
+          for row in payload['rows']:
+              if not row['passed']:
+                  print(json.dumps(row, sort_keys=True))
+          print('BLOCKERS')
+          print(json.dumps(payload['blockers'], indent=2, sort_keys=True))
+          PY
