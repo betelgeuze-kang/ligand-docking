@@ -15,8 +15,24 @@ _CI_INTEGRATION_FILES = {
 
 _PRODUCT_ARTIFACT_BOOTSTRAP_ENV = "BETELGEUZE_PRODUCT_TEST_ARTIFACT_BOOTSTRAP"
 _PRODUCT_ARTIFACT_BOOTSTRAP_MODES = frozenset({"auto", "required", "disabled"})
+_PRODUCT_ARTIFACT_BOOTSTRAP_OPTION = "product_contract_artifacts"
 _PRODUCT_ARTIFACT_MARKER = "product_artifacts"
 _PRODUCT_CAPABILITY_FILENAME = "product_capability_surface_contract_current.json"
+
+
+def pytest_addoption(parser) -> None:
+    group = parser.getgroup("betelgeuze-product")
+    group.addoption(
+        "--product-contract-artifacts",
+        action="store_true",
+        dest=_PRODUCT_ARTIFACT_BOOTSTRAP_OPTION,
+        default=False,
+        help=(
+            "Materialize product contract packets before test collection. "
+            "Focused tests remain isolated unless this option or required mode "
+            "is used."
+        ),
+    )
 
 
 def _product_artifact_bootstrap_mode() -> str:
@@ -30,16 +46,30 @@ def _product_artifact_bootstrap_mode() -> str:
     return mode
 
 
-def _product_artifact_bootstrap_required(config=None) -> bool:
-    """Return true only for an explicit dedicated product-test configuration.
+def _product_artifact_option_requested(config) -> bool:
+    getter = getattr(config, "getoption", None)
+    if getter is None:
+        return False
+    try:
+        return bool(getter(_PRODUCT_ARTIFACT_BOOTSTRAP_OPTION))
+    except (LookupError, ValueError):
+        return False
 
-    `auto` intentionally means no session-wide bootstrap. Product tests opt in
-    through the marker/fixture below, while dedicated integration workflows may
-    set the environment mode to `required`.
+
+def _product_artifact_bootstrap_required(config=None) -> bool:
+    """Return whether this pytest session explicitly owns product artifacts.
+
+    `required` always materializes. `disabled` overrides every opt-in. `auto`
+    remains non-materializing unless the dedicated CLI option is present.
+    Marker and fixture ownership continue to materialize lazily at test time.
     """
 
-    del config
-    return _product_artifact_bootstrap_mode() == "required"
+    mode = _product_artifact_bootstrap_mode()
+    if mode == "required":
+        return True
+    if mode == "disabled":
+        return False
+    return config is not None and _product_artifact_option_requested(config)
 
 
 def _repository_root() -> Path:

@@ -22,29 +22,59 @@ def _module():
     return module
 
 
-def test_disabled_mode_skips_session_bootstrap(monkeypatch) -> None:
+def _config(*, cli_requested: bool):
+    return SimpleNamespace(
+        getoption=lambda name: cli_requested
+        if name == "product_contract_artifacts"
+        else False
+    )
+
+
+def test_disabled_mode_overrides_cli_opt_in(monkeypatch) -> None:
     module = _module()
     monkeypatch.setenv(module._PRODUCT_ARTIFACT_BOOTSTRAP_ENV, "disabled")
 
-    assert module._product_artifact_bootstrap_required(SimpleNamespace()) is False
+    assert module._product_artifact_bootstrap_required(
+        _config(cli_requested=True)
+    ) is False
 
 
-def test_required_mode_is_the_only_session_bootstrap_opt_in(monkeypatch) -> None:
+def test_required_mode_materializes_without_cli_opt_in(monkeypatch) -> None:
     module = _module()
     monkeypatch.setenv(module._PRODUCT_ARTIFACT_BOOTSTRAP_ENV, "required")
 
-    assert module._product_artifact_bootstrap_required(SimpleNamespace()) is True
+    assert module._product_artifact_bootstrap_required(
+        _config(cli_requested=False)
+    ) is True
 
 
 def test_auto_mode_no_longer_classifies_tests_by_filename(monkeypatch) -> None:
     module = _module()
     monkeypatch.setenv(module._PRODUCT_ARTIFACT_BOOTSTRAP_ENV, "auto")
+    config = SimpleNamespace(
+        args=[str(_REPO_ROOT / "tests/unit/new_contract.py")],
+        getoption=lambda _name: False,
+    )
 
-    assert module._product_artifact_bootstrap_required(
-        SimpleNamespace(args=[str(_REPO_ROOT / "tests/unit/new_contract.py")])
-    ) is False
+    assert module._product_artifact_bootstrap_required(config) is False
     assert not hasattr(module, "_LIGHTWEIGHT_CONTRACT_FILES")
     assert not hasattr(module, "_requested_tests_are_lightweight")
+
+
+def test_auto_mode_accepts_explicit_cli_opt_in(monkeypatch) -> None:
+    module = _module()
+    monkeypatch.setenv(module._PRODUCT_ARTIFACT_BOOTSTRAP_ENV, "auto")
+
+    assert module._product_artifact_bootstrap_required(
+        _config(cli_requested=True)
+    ) is True
+
+
+def test_missing_cli_accessor_is_non_materializing_in_auto(monkeypatch) -> None:
+    module = _module()
+    monkeypatch.setenv(module._PRODUCT_ARTIFACT_BOOTSTRAP_ENV, "auto")
+
+    assert module._product_artifact_bootstrap_required(SimpleNamespace()) is False
 
 
 def test_invalid_mode_fails_closed(monkeypatch) -> None:
@@ -60,6 +90,24 @@ def test_whitespace_and_case_are_normalized(monkeypatch) -> None:
     monkeypatch.setenv(module._PRODUCT_ARTIFACT_BOOTSTRAP_ENV, "  REQUIRED  ")
 
     assert module._product_artifact_bootstrap_mode() == "required"
+
+
+def test_pytest_cli_option_is_registered() -> None:
+    module = _module()
+    observed: dict[str, object] = {}
+
+    class Group:
+        def addoption(self, option, **kwargs) -> None:
+            observed["option"] = option
+            observed.update(kwargs)
+
+    parser = SimpleNamespace(getgroup=lambda name: Group())
+    module.pytest_addoption(parser)
+
+    assert observed["option"] == "--product-contract-artifacts"
+    assert observed["dest"] == module._PRODUCT_ARTIFACT_BOOTSTRAP_OPTION
+    assert observed["action"] == "store_true"
+    assert observed["default"] is False
 
 
 def test_explicit_materializer_creates_and_returns_artifact_root(tmp_path) -> None:
@@ -137,7 +185,7 @@ def test_product_artifact_marker_is_explicit() -> None:
     assert module._node_requests_product_artifacts(unmarked) is False
 
 
-def test_sessionstart_materializes_only_in_required_mode(monkeypatch) -> None:
+def test_sessionstart_respects_required_auto_cli_and_disabled(monkeypatch) -> None:
     module = _module()
     calls: list[str] = []
     monkeypatch.setattr(
@@ -145,13 +193,21 @@ def test_sessionstart_materializes_only_in_required_mode(monkeypatch) -> None:
         "_ensure_product_contract_artifacts",
         lambda: calls.append("materialized"),
     )
-    session = SimpleNamespace(config=SimpleNamespace())
 
     monkeypatch.setenv(module._PRODUCT_ARTIFACT_BOOTSTRAP_ENV, "auto")
-    module.pytest_sessionstart(session)
+    module.pytest_sessionstart(
+        SimpleNamespace(config=_config(cli_requested=False))
+    )
+    module.pytest_sessionstart(
+        SimpleNamespace(config=_config(cli_requested=True))
+    )
     monkeypatch.setenv(module._PRODUCT_ARTIFACT_BOOTSTRAP_ENV, "disabled")
-    module.pytest_sessionstart(session)
+    module.pytest_sessionstart(
+        SimpleNamespace(config=_config(cli_requested=True))
+    )
     monkeypatch.setenv(module._PRODUCT_ARTIFACT_BOOTSTRAP_ENV, "required")
-    module.pytest_sessionstart(session)
+    module.pytest_sessionstart(
+        SimpleNamespace(config=_config(cli_requested=False))
+    )
 
-    assert calls == ["materialized"]
+    assert calls == ["materialized", "materialized"]
