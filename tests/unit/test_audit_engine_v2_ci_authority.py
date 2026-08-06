@@ -11,6 +11,9 @@ from tools.audit_engine_v2_ci_authority import (
     EXTERNAL_RESERVATION_OPERATIONS_DECISION_REQUIRED_TOKEN_COUNTS,
     EXTERNAL_RESERVATION_OPERATIONS_DECISION_REQUIRED_TOKENS,
     EXTERNAL_RESERVATION_REQUIRED_TOKENS,
+    GLOBAL_ORIENTATION_AUTHORITY_WORKFLOW,
+    GLOBAL_ORIENTATION_CONTRACT_PATHS,
+    GLOBAL_ORIENTATION_REQUIRED_TOKENS,
     ONE_SHOT_CONTRACT_PATHS,
     ONE_SHOT_REQUIRED_TOKENS,
     STANDALONE_PIPELINE_CONTRACT_PATHS,
@@ -367,3 +370,43 @@ def test_repository_without_optional_contracts_keeps_legacy_scope(
     assert (
         payload["external_operations_decision_contract_in_authoritative_ci"] is True
     )
+
+
+def test_global_orientation_contract_requires_complete_authoritative_lane(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_STAGE0_TOKENS),
+        encoding="utf-8",
+    )
+    marker = tmp_path / GLOBAL_ORIENTATION_CONTRACT_PATHS[-1]
+    marker.parent.mkdir(parents=True, exist_ok=True)
+    marker.write_text("{}\n", encoding="utf-8")
+    global_workflow = tmp_path / GLOBAL_ORIENTATION_AUTHORITY_WORKFLOW
+    global_workflow.write_text(
+        "\n".join(GLOBAL_ORIENTATION_REQUIRED_TOKENS),
+        encoding="utf-8",
+    )
+
+    payload = build_inventory(tmp_path)
+
+    assert GLOBAL_ORIENTATION_AUTHORITY_WORKFLOW in payload[
+        "authoritative_workflows"
+    ]
+    assert GLOBAL_ORIENTATION_AUTHORITY_WORKFLOW not in payload[
+        "specialized_workflows"
+    ]
+    assert payload["global_orientation_contract_in_authoritative_ci"] is True
+
+    global_workflow.write_text(
+        "\n".join(
+            token
+            for token in GLOBAL_ORIENTATION_REQUIRED_TOKENS
+            if token != "tests/unit/test_engine_v2_oracle_selection_evidence.py"
+        ),
+        encoding="utf-8",
+    )
+    assert build_inventory(tmp_path)[
+        "global_orientation_contract_in_authoritative_ci"
+    ] is False

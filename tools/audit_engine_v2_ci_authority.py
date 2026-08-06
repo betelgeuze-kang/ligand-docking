@@ -11,10 +11,14 @@ from typing import Any
 
 
 SCHEMA_ID = "betelgeuze.engine_v2_ci_authority_inventory/1.0.0"
+GLOBAL_ORIENTATION_AUTHORITY_WORKFLOW = (
+    ".github/workflows/ci-engine-v2-global-orientation-authority.yml"
+)
 AUTHORITATIVE_WORKFLOWS = (
     ".github/workflows/ci-engine-v2-main.yml",
     ".github/workflows/ci-engine-v2-release-candidate.yml",
     ".github/workflows/ci-engine-v2-cpu-reference-validation-protocol.yml",
+    GLOBAL_ORIENTATION_AUTHORITY_WORKFLOW,
 )
 CLEARANCE_ACTIVATION_CONTRACT_PATHS = (
     "betelgeuze_engine_v2/benchmark/source_paired_clearance_activation.py",
@@ -33,6 +37,25 @@ CLEARANCE_ACTIVATION_REQUIRED_TOKENS = (
     "docs/engine_v2_source_paired_clearance_activation.md",
     "docs/engine_v2_source_paired_clearance_selection_policy.md",
     "docs/engine_v2_stage0_status.md",
+)
+GLOBAL_ORIENTATION_CONTRACT_PATHS = (
+    "betelgeuze_engine_v2/docking/global_orientation.py",
+    "betelgeuze_engine_v2/docking/global_orientation_evidence.py",
+    "betelgeuze_engine_v2/benchmark/oracle_selection_metrics.py",
+    "betelgeuze_engine_v2/benchmark/oracle_selection_evidence.py",
+    "config/engine_v2_global_orientation_synthetic_contract.json",
+)
+GLOBAL_ORIENTATION_REQUIRED_TOKENS = (
+    *GLOBAL_ORIENTATION_CONTRACT_PATHS,
+    "tools/verify_engine_v2_global_orientation_synthetic_contract.py",
+    "tests/unit/test_engine_v2_global_orientation.py",
+    "tests/unit/test_engine_v2_global_orientation_evidence.py",
+    "tests/unit/test_engine_v2_global_orientation_synthetic_contract.py",
+    "tests/unit/test_engine_v2_oracle_selection_metrics.py",
+    "tests/unit/test_engine_v2_oracle_selection_evidence.py",
+    "docs/engine_v2_global_orientation_design.md",
+    "tools/build_engine_v2_wheel.py",
+    "dist-global-orientation",
 )
 ONE_SHOT_CONTRACT_PATHS = (
     "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_ab.py",
@@ -193,6 +216,27 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
     if clearance_activation_contract_present:
         stage0_required_tokens += CLEARANCE_ACTIVATION_REQUIRED_TOKENS
 
+    global_orientation_contract_present = any(
+        (repo_root / path).is_file()
+        for path in GLOBAL_ORIENTATION_CONTRACT_PATHS
+    )
+    global_workflow = repo_root / GLOBAL_ORIENTATION_AUTHORITY_WORKFLOW
+    global_workflow_text = (
+        global_workflow.read_text(encoding="utf-8")
+        if global_workflow.is_file()
+        else ""
+    )
+    global_orientation_contract_in_authoritative_ci = (
+        not global_orientation_contract_present
+        or (
+            GLOBAL_ORIENTATION_AUTHORITY_WORKFLOW in authoritative
+            and all(
+                token in global_workflow_text
+                for token in GLOBAL_ORIENTATION_REQUIRED_TOKENS
+            )
+        )
+    )
+
     one_shot_contract_present = any(
         (repo_root / path).is_file() for path in ONE_SHOT_CONTRACT_PATHS
     )
@@ -274,6 +318,9 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         ).hexdigest(),
         "stage0_tests_in_authoritative_main": all(
             token in main_text for token in stage0_required_tokens
+        ),
+        "global_orientation_contract_in_authoritative_ci": (
+            global_orientation_contract_in_authoritative_ci
         ),
         "one_shot_contract_in_authoritative_ci": (
             one_shot_contract_in_authoritative_ci
