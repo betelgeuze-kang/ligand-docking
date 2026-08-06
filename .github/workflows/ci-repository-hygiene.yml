@@ -36,17 +36,31 @@ jobs:
           python-version: "3.11"
 
       - name: Install focused test dependencies
-        run: python -m pip install pytest==9.1.1 ruff==0.11.13
+        run: |
+          python -m pip install pip==25.0.1
+          python -m pip install pytest==9.1.1 ruff==0.11.13
 
-      - name: Compile and test hygiene and bootstrap ownership policies
+      - name: Compile and test repository governance policies
         run: |
           python -m py_compile \
             tools/check_repository_hygiene.py \
+            tools/verify_product_capability_registry.py \
             tests/conftest.py \
             tests/unit/test_repository_hygiene.py \
+            tests/unit/test_product_capability_registry.py \
+            tests/unit/test_product_capability_registry_sources.py \
             tests/unit/test_pytest_product_artifact_bootstrap_boundary.py
+          python tools/verify_product_capability_registry.py
           python -m pytest --confcutdir=tests/unit -q \
             tests/unit/test_repository_hygiene.py \
+            tests/unit/test_product_capability_registry.py \
+            tests/unit/test_product_capability_registry_sources.py \
+            tests/unit/test_pytest_product_artifact_bootstrap_boundary.py
+          python -m ruff check \
+            tools/verify_product_capability_registry.py \
+            tests/conftest.py \
+            tests/unit/test_product_capability_registry.py \
+            tests/unit/test_product_capability_registry_sources.py \
             tests/unit/test_pytest_product_artifact_bootstrap_boundary.py
 
       - name: Prove a new focused test performs no implicit bootstrap
@@ -61,12 +75,6 @@ jobs:
               tests/unit/test_temporary_explicit_bootstrap_probe.py
           test ! -e runs/product_capability_surface_contract_current.json
           rm -f tests/unit/test_temporary_explicit_bootstrap_probe.py
-
-      - name: Lint explicit bootstrap ownership boundary
-        run: |
-          python -m ruff check \
-            tests/conftest.py \
-            tests/unit/test_pytest_product_artifact_bootstrap_boundary.py
 
       - name: Resolve reviewed commit range
         id: range

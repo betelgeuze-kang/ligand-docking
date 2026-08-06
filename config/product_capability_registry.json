@@ -1,0 +1,290 @@
+{
+  "canonical_workflow": [
+    {
+      "authority_boundary": "input_contract_only",
+      "display_name": "Prepare",
+      "step_id": "prepare"
+    },
+    {
+      "authority_boundary": "support_and_abstention_gate",
+      "display_name": "Validate",
+      "step_id": "validate"
+    },
+    {
+      "authority_boundary": "lane_routed_candidate_generation",
+      "display_name": "Propose",
+      "step_id": "propose"
+    },
+    {
+      "authority_boundary": "lane_routed_scoring",
+      "display_name": "Score",
+      "step_id": "score"
+    },
+    {
+      "authority_boundary": "claim_independent_selection",
+      "display_name": "Select",
+      "step_id": "select"
+    },
+    {
+      "authority_boundary": "human_review_and_uncertainty",
+      "display_name": "Review",
+      "step_id": "review"
+    },
+    {
+      "authority_boundary": "claim_gated_evidence_bundle",
+      "display_name": "Export",
+      "step_id": "export"
+    }
+  ],
+  "capabilities": [
+    {
+      "allowed_wording": [],
+      "benchmark_status": "synthetic_only",
+      "blocked_by": [
+        "fixed_development_evaluation_protocol",
+        "historical_one_shot_terminal_verdict",
+        "stage0_admission"
+      ],
+      "capability_id": "engine_v2_global_orientation",
+      "claim_safe": false,
+      "claim_scope": "none",
+      "customer_execution": "disabled",
+      "default_enabled": false,
+      "display_name": "Engine V2 deterministic global orientation",
+      "evidence_source_paths": [
+        "config/engine_v2_global_orientation_synthetic_contract.json",
+        "docs/engine_v2_global_orientation_design.md"
+      ],
+      "forbidden_wording": [
+        "improves docking accuracy",
+        "generalizes to unseen proteins",
+        "production global search"
+      ],
+      "implementation_lane": "engine_v2_research",
+      "implementation_status": "synthetic_contract_implemented",
+      "product_status": "research_only",
+      "scientific_status": "unvalidated"
+    },
+    {
+      "allowed_wording": [],
+      "benchmark_status": "fresh_holdout_unexecuted",
+      "blocked_by": [
+        "development_gate_7_of_7",
+        "external_reservation_ledger",
+        "fresh_holdout_authorization",
+        "full_candidate_artifact_audit"
+      ],
+      "capability_id": "engine_v2_redocking",
+      "claim_safe": false,
+      "claim_scope": "none",
+      "customer_execution": "disabled",
+      "default_enabled": false,
+      "display_name": "Engine V2 redocking",
+      "evidence_source_paths": [
+        "docs/engine_v2_stage0_status.md",
+        "config/independent_engine_v2_capabilities.yaml"
+      ],
+      "forbidden_wording": [
+        "validated docking engine",
+        "customer ready",
+        "fresh holdout passed"
+      ],
+      "implementation_lane": "engine_v2_research",
+      "implementation_status": "implemented_blocked",
+      "product_status": "disabled",
+      "scientific_status": "stage0_blocked"
+    },
+    {
+      "allowed_wording": [],
+      "benchmark_status": "not_benchmarked",
+      "blocked_by": [
+        "calibrated_parameterization",
+        "external_generalization",
+        "solvent_and_free_energy_validation"
+      ],
+      "capability_id": "full_all_atom_md_fep",
+      "claim_safe": false,
+      "claim_scope": "none",
+      "customer_execution": "disabled",
+      "default_enabled": false,
+      "display_name": "Full all-atom MD and FEP",
+      "evidence_source_paths": [
+        "docs/PRODUCT_VISION_CURRENT.md",
+        "docs/BENCHMARK_LEDGER_CURRENT.md"
+      ],
+      "forbidden_wording": [
+        "OpenMM parity",
+        "Desmond parity",
+        "FEP+ replacement"
+      ],
+      "implementation_lane": "future_product",
+      "implementation_status": "not_product_implemented",
+      "product_status": "disabled",
+      "scientific_status": "unsupported"
+    },
+    {
+      "allowed_wording": [],
+      "benchmark_status": "family_gate_locked",
+      "blocked_by": [
+        "drd2_hard_decoy_gate",
+        "htr2a_hard_decoy_gate",
+        "oprm1_hard_decoy_gate"
+      ],
+      "capability_id": "gpcr_broad_router",
+      "claim_safe": false,
+      "claim_scope": "none",
+      "customer_execution": "disabled",
+      "default_enabled": false,
+      "display_name": "Broad GPCR routing",
+      "evidence_source_paths": [
+        "docs/gpcr_hard_decoy_suite_contract.md",
+        "docs/BENCHMARK_LEDGER_CURRENT.md"
+      ],
+      "forbidden_wording": [
+        "broad GPCR validated",
+        "GPCR family generalization",
+        "router ready for all GPCRs"
+      ],
+      "implementation_lane": "legacy_product_research",
+      "implementation_status": "partial",
+      "product_status": "disabled",
+      "scientific_status": "family_locked"
+    },
+    {
+      "allowed_wording": [
+        "O/N/P/S H-Bond BackMap is available as a gated interpretability layer when the emitted row is claim-safe."
+      ],
+      "benchmark_status": "lane_specific_internal",
+      "blocked_by": [
+        "per_result_claim_safe_gate"
+      ],
+      "capability_id": "hbond_backmap",
+      "claim_safe": false,
+      "claim_scope": "per_result_gate",
+      "customer_execution": "guarded_operator_only",
+      "default_enabled": false,
+      "display_name": "O/N/P/S H-Bond BackMap",
+      "evidence_source_paths": [
+        "docs/hbond_backmap_contract.md",
+        "docs/PRODUCT_VISION_CURRENT.md"
+      ],
+      "forbidden_wording": [
+        "guarantees pose accuracy",
+        "all chemistry supported"
+      ],
+      "implementation_lane": "legacy_product",
+      "implementation_status": "implemented",
+      "product_status": "restricted_delivery",
+      "scientific_status": "interpretability_only"
+    },
+    {
+      "allowed_wording": [
+        "Restricted local docking and ranking delivery is available only for the guarded target and chemistry lanes named in the evidence bundle."
+      ],
+      "benchmark_status": "external_safe_restricted",
+      "blocked_by": [],
+      "capability_id": "legacy_restricted_docking",
+      "claim_safe": true,
+      "claim_scope": "restricted_target_specific",
+      "customer_execution": "guarded_operator_only",
+      "default_enabled": false,
+      "display_name": "Restricted local docking delivery",
+      "evidence_source_paths": [
+        "docs/BENCHMARK_LEDGER_CURRENT.md",
+        "docs/local_delivery_claim_policy.md",
+        "docs/PRODUCT_VISION_CURRENT.md"
+      ],
+      "forbidden_wording": [
+        "general docking platform",
+        "broad GPCR support",
+        "commercial suite replacement"
+      ],
+      "implementation_lane": "legacy_product",
+      "implementation_status": "implemented",
+      "product_status": "restricted_delivery",
+      "scientific_status": "target_specific_validated"
+    },
+    {
+      "allowed_wording": [],
+      "benchmark_status": "diagnostic_only",
+      "blocked_by": [
+        "calibrated_survival_metrics",
+        "external_reproduction"
+      ],
+      "capability_id": "pocketmd_lite",
+      "claim_safe": false,
+      "claim_scope": "none",
+      "customer_execution": "disabled",
+      "default_enabled": false,
+      "display_name": "PocketMD Lite",
+      "evidence_source_paths": [
+        "docs/PRODUCT_VISION_CURRENT.md"
+      ],
+      "forbidden_wording": [
+        "MD validated",
+        "binding stability proven",
+        "free energy prediction"
+      ],
+      "implementation_lane": "legacy_product_research",
+      "implementation_status": "diagnostic_contract_implemented",
+      "product_status": "research_only",
+      "scientific_status": "diagnostic_only"
+    },
+    {
+      "allowed_wording": [],
+      "benchmark_status": "harness_incomplete",
+      "blocked_by": [
+        "external_reproduction",
+        "fair_vina_gnina_adapter",
+        "public_case_materialization"
+      ],
+      "capability_id": "public_benchmark_harness",
+      "claim_safe": false,
+      "claim_scope": "none",
+      "customer_execution": "disabled",
+      "default_enabled": false,
+      "display_name": "Public docking benchmark harness",
+      "evidence_source_paths": [
+        "docs/PRODUCT_VISION_CURRENT.md",
+        "docs/docking_comparison_contract.md"
+      ],
+      "forbidden_wording": [
+        "public benchmark passed",
+        "Vina superiority",
+        "GNINA superiority"
+      ],
+      "implementation_lane": "benchmark_research",
+      "implementation_status": "partial",
+      "product_status": "research_only",
+      "scientific_status": "unvalidated"
+    }
+  ],
+  "governance": {
+    "claim_safe_benchmark_statuses": [
+      "external_safe_restricted"
+    ],
+    "claim_safe_scientific_statuses": [
+      "target_specific_validated"
+    ],
+    "default_enabled_requires_product_status": [
+      "product_qualified"
+    ],
+    "disabled_customer_execution_values": [
+      "disabled"
+    ],
+    "registry_is_product_routing_source": false,
+    "registry_is_status_and_claim_source": true
+  },
+  "product_identity": {
+    "brand": "Betelgeuze",
+    "customer_product": "Betelgeuze Docking",
+    "evidence_review_ui": "Evidence Desk",
+    "research_lane": "Research Validation Lanes",
+    "scientific_engine": "Engine V2",
+    "supported_positioning": "Local-first restricted docking validation and audit-ready evidence delivery",
+    "unsupported_positioning": "Blanket docking, MD, FEP, or commercial-suite replacement"
+  },
+  "registry_role": "product_capability_status_and_claim_source_of_truth",
+  "registry_sha256": "9b70c0c3b649c4c5c1226ab27f8ae9c0fe5312254a67df0c4e46e14c46b04555",
+  "schema_id": "betelgeuze.product_capability_registry/1.0.0"
+}
