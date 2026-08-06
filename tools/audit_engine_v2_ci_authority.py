@@ -18,6 +18,8 @@ AUTHORITATIVE_WORKFLOWS = (
     ".github/workflows/ci-engine-v2-main.yml",
     ".github/workflows/ci-engine-v2-release-candidate.yml",
     ".github/workflows/ci-engine-v2-cpu-reference-validation-protocol.yml",
+)
+REGISTERED_BOUNDED_WORKFLOWS = (
     GLOBAL_ORIENTATION_AUTHORITY_WORKFLOW,
 )
 CLEARANCE_ACTIVATION_CONTRACT_PATHS = (
@@ -187,9 +189,11 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
     authoritative = tuple(
         path for path in AUTHORITATIVE_WORKFLOWS if path in workflows
     )
-    specialized = tuple(
-        path for path in workflows if path not in AUTHORITATIVE_WORKFLOWS
+    registered_bounded = tuple(
+        path for path in REGISTERED_BOUNDED_WORKFLOWS if path in workflows
     )
+    known = set(AUTHORITATIVE_WORKFLOWS) | set(REGISTERED_BOUNDED_WORKFLOWS)
+    specialized = tuple(path for path in workflows if path not in known)
     hashes = {path: _sha256(repo_root / path) for path in workflows}
     main_text = (repo_root / AUTHORITATIVE_WORKFLOWS[0]).read_text(
         encoding="utf-8"
@@ -229,7 +233,7 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
     global_orientation_contract_in_authoritative_ci = (
         not global_orientation_contract_present
         or (
-            GLOBAL_ORIENTATION_AUTHORITY_WORKFLOW in authoritative
+            GLOBAL_ORIENTATION_AUTHORITY_WORKFLOW in registered_bounded
             and all(
                 token in global_workflow_text
                 for token in GLOBAL_ORIENTATION_REQUIRED_TOKENS
@@ -311,6 +315,7 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         "schema_id": SCHEMA_ID,
         "workflow_count": len(workflows),
         "authoritative_workflows": list(authoritative),
+        "registered_bounded_workflows": list(registered_bounded),
         "specialized_workflows": list(specialized),
         "workflow_sha256s": hashes,
         "workflow_inventory_sha256": hashlib.sha256(
@@ -340,7 +345,7 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         "external_operations_decision_contract_in_authoritative_ci": (
             external_operations_decision_contract_in_authoritative_ci
         ),
-        "new_feature_workflow_policy": "consolidate_into_authoritative_workflows",
+        "new_feature_workflow_policy": "consolidate_or_register_bounded_authority",
         "specialized_workflows_hidden": False,
         "issue_199_external_state_mutated": False,
     }
