@@ -4,10 +4,12 @@ on:
   pull_request:
     paths:
       - Dockerfile.product
+      - .dockerignore
       - pyproject.toml
       - requirements-package.txt
       - requirements-base.txt
       - requirements.txt
+      - requirements-api-runtime.txt
       - requirements-api.txt
       - requirements-deploy.txt
       - requirements-rocm.txt
@@ -22,9 +24,14 @@ on:
       - tests/unit/test_betelgeuze_ai_md_*.py
       - third_party/rocm_device_libs_pkg/**
       - deploy/verify_product_image.sh
+      - deploy/docker-compose.product.yml
       - scripts/normalize_product_image_smoke_artifact_ownership.sh
       - tools/product/build_product_image_smoke_preflight.py
       - tools/build_product_image_smoke_preflight.py
+      - tools/verify_product_supply_chain.py
+      - config/product_supply_chain_policy.json
+      - tests/unit/test_product_supply_chain.py
+      - docs/PRODUCT_SUPPLY_CHAIN_POLICY.md
       - api/validated_runner_runtime_qualification.py
       - tests/unit/test_build_product_image_smoke_preflight.py
       - tests/unit/test_validated_runner_runtime_qualification.py
@@ -54,6 +61,7 @@ jobs:
       - name: Check out untrusted source on an ephemeral hosted runner
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
+          ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
           clean: true
           show-progress: false
@@ -63,3 +71,47 @@ jobs:
 
       - name: Validate the product image build graph without runtime execution
         run: docker buildx build --check --file Dockerfile.product .
+
+  product-image-supply-chain-contract:
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+          clean: true
+          fetch-depth: 0
+          show-progress: false
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.11"
+
+      - name: Install bounded supply-chain dependencies
+        run: |
+          python -m pip install pip==25.0.1
+          python -m pip install pytest==8.3.5 ruff==0.11.13 PyYAML==6.0.3
+
+      - name: Verify release gates, dependency profiles, and image boundaries
+        run: |
+          python -m py_compile tools/verify_product_supply_chain.py
+          python tools/verify_product_supply_chain.py --repo-root .
+          python - <<'PY'
+          import pathlib
+          import yaml
+
+          yaml.safe_load(pathlib.Path('.github/dependabot.yml').read_text(encoding='utf-8'))
+          yaml.safe_load(pathlib.Path('deploy/docker-compose.product.yml').read_text(encoding='utf-8'))
+          PY
+          python -m pytest -q \
+            --confcutdir=tests/unit \
+            tests/unit/test_product_supply_chain.py
+          python -m ruff check \
+            tools/verify_product_supply_chain.py \
+            tests/unit/test_product_supply_chain.py
+          git diff --check "${{ github.event.pull_request.base.sha }}...HEAD"
