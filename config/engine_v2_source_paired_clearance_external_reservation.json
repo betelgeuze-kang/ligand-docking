@@ -1,0 +1,65 @@
+{
+  "authority": {
+    "customer_pose_emission_authorized": false,
+    "fresh_holdout_execution_authorized": false,
+    "historical_execution_operational": false,
+    "product_execution_authorized": false,
+    "profile_promotion_authority": false,
+    "public_or_scientific_claim_authorized": false,
+    "stage0_admission_authority": false
+  },
+  "downstream_binding": {
+    "candidate_evidence_required": true,
+    "external_receipt_sha256_required": true,
+    "global_reservation_key_sha256_required": true,
+    "local_reservation_required": true,
+    "result_required": true,
+    "run_start_required": true
+  },
+  "incident_recovery": {
+    "recovery_requires_independent_review": true,
+    "replacement_reservation_after_incident_forbidden_without_new_policy": true,
+    "reservation_rollback_forbidden": true,
+    "revocation_is_append_only": true
+  },
+  "policy_role": "cross_clone_immutable_reservation_contract",
+  "policy_sha256": "5e6417cb27f243effa698e860f43569751a0ea735858468151e8c9b75efecf4b",
+  "provider": {
+    "append_only_immutable_required": true,
+    "endpoint": "",
+    "mutual_tls_required": true,
+    "network_round_trip_required": true,
+    "provider_id": "unconfigured",
+    "provider_operational": false,
+    "receipt_signature_algorithm": "ed25519",
+    "server_timestamp_required": true,
+    "trust_anchor_public_key_hex": ""
+  },
+  "reservation_key": {
+    "atomic_create_if_absent_required": true,
+    "deleted_local_store_does_not_restore_authority": true,
+    "fields": [
+      "one_shot_policy_sha256",
+      "source_commit_git_sha1",
+      "execution_environment_sha256",
+      "historical_case_ids_sha256"
+    ],
+    "maximum_lifetime_reservations": 1,
+    "reserved_run_ordinal": 1
+  },
+  "retention": {
+    "append_only_audit_log_required": true,
+    "deletion_prohibited": true,
+    "minimum_years": 10,
+    "primary_and_offsite_backup_required": true
+  },
+  "roles": {
+    "author_reviewer_operator_distinct_required": true,
+    "github_actions_operator_forbidden": true,
+    "operator_identity_required": true,
+    "reviewer_identity_required": true,
+    "test_double_authority_forbidden": true
+  },
+  "schema_id": "betelgeuze.engine_v2_source_paired_clearance_external_reservation_policy/1.0.0",
+  "status": "contract_implemented_external_service_not_operational"
+}

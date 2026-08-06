@@ -70,6 +70,20 @@ ONE_SHOT_REQUIRED_TOKENS = (
     "import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_result_legacy",
     "import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_verdict_diagnostics",
 )
+EXTERNAL_RESERVATION_CONTRACT_PATHS = (
+    "betelgeuze_engine_v2/benchmark/source_paired_clearance_external_reservation.py",
+    "config/engine_v2_source_paired_clearance_external_reservation.json",
+)
+EXTERNAL_RESERVATION_REQUIRED_TOKENS = (
+    "betelgeuze_engine_v2/benchmark/source_paired_clearance_external_reservation.py",
+    "config/engine_v2_source_paired_clearance_external_reservation.json",
+    "tools/verify_engine_v2_source_paired_clearance_external_reservation.py",
+    "tests/unit/test_source_paired_clearance_external_reservation.py",
+    "tests/unit/test_source_paired_clearance_external_reservation_concurrency.py",
+    "docs/engine_v2_source_paired_clearance_external_reservation.md",
+    "dist-engine-v2",
+    "import betelgeuze_engine_v2.benchmark.source_paired_clearance_external_reservation",
+)
 
 
 def _canonical_bytes(value: object) -> bytes:
@@ -130,9 +144,24 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
     one_shot_contract_present = any(
         (repo_root / path).is_file() for path in ONE_SHOT_CONTRACT_PATHS
     )
+    external_reservation_contract_present = any(
+        (repo_root / path).is_file()
+        for path in EXTERNAL_RESERVATION_CONTRACT_PATHS
+    )
+    required_one_shot_tokens = ONE_SHOT_REQUIRED_TOKENS
+    if external_reservation_contract_present:
+        required_one_shot_tokens += EXTERNAL_RESERVATION_REQUIRED_TOKENS
+
     one_shot_contract_in_authoritative_ci = (
         not one_shot_contract_present
-        or all(token in main_text for token in ONE_SHOT_REQUIRED_TOKENS)
+        or all(token in main_text for token in required_one_shot_tokens)
+    )
+    external_reservation_contract_in_authoritative_ci = (
+        not external_reservation_contract_present
+        or all(
+            token in main_text
+            for token in EXTERNAL_RESERVATION_REQUIRED_TOKENS
+        )
     )
 
     payload: dict[str, Any] = {
@@ -149,6 +178,9 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         ),
         "one_shot_contract_in_authoritative_ci": (
             one_shot_contract_in_authoritative_ci
+        ),
+        "external_reservation_contract_in_authoritative_ci": (
+            external_reservation_contract_in_authoritative_ci
         ),
         "new_feature_workflow_policy": "consolidate_into_authoritative_workflows",
         "specialized_workflows_hidden": False,
