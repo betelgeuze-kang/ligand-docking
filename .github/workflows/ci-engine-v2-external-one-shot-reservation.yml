@@ -43,6 +43,7 @@ jobs:
             cryptography==46.0.5 \
             pytest==8.3.5 \
             ruff==0.11.13
+          python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
 
       - name: Verify policy and compile contract
         run: |
