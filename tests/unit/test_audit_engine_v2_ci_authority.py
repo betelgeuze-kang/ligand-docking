@@ -16,6 +16,7 @@ from tools.audit_engine_v2_ci_authority import (
     GLOBAL_ORIENTATION_REQUIRED_TOKENS,
     ONE_SHOT_CONTRACT_PATHS,
     ONE_SHOT_REQUIRED_TOKENS,
+    REGISTERED_BOUNDED_WORKFLOWS,
     STANDALONE_PIPELINE_CONTRACT_PATHS,
     STANDALONE_PIPELINE_REQUIRED_TOKENS,
     STANDALONE_CONSUMER_CONTRACT_PATHS,
@@ -74,7 +75,7 @@ def _operations_decision_ci_tokens() -> tuple[str, ...]:
     )
 
 
-def test_ci_authority_inventory_requires_contracts_in_canonical_main(
+def test_ci_authority_inventory_preserves_frozen_stage0_tuple(
     tmp_path: Path,
 ) -> None:
     _write_authoritative_workflows(tmp_path)
@@ -86,6 +87,19 @@ def test_ci_authority_inventory_requires_contracts_in_canonical_main(
     _mark_contract(tmp_path, STANDALONE_CONTRACT_PATHS)
     _mark_complete_contract(
         tmp_path, EXTERNAL_RESERVATION_OPERATIONS_DECISION_CONTRACT_PATHS
+    )
+    assert AUTHORITATIVE_WORKFLOWS == (
+        ".github/workflows/ci-engine-v2-main.yml",
+        ".github/workflows/ci-engine-v2-release-candidate.yml",
+        ".github/workflows/ci-engine-v2-cpu-reference-validation-protocol.yml",
+    )
+    assert REGISTERED_BOUNDED_WORKFLOWS == (
+        GLOBAL_ORIENTATION_AUTHORITY_WORKFLOW,
+    )
+    assert CLEARANCE_ACTIVATION_CONTRACT_PATHS == (
+        "betelgeuze_engine_v2/benchmark/source_paired_clearance_activation.py",
+        "betelgeuze_engine_v2/docking/source_paired_clearance_activation.py",
+        "config/engine_v2_source_paired_clearance_activation.json",
     )
     (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
         "\n".join(
@@ -108,6 +122,8 @@ def test_ci_authority_inventory_requires_contracts_in_canonical_main(
     payload = build_inventory(tmp_path)
 
     assert payload["workflow_count"] == len(AUTHORITATIVE_WORKFLOWS) + 1
+    assert payload["authoritative_workflows"] == list(AUTHORITATIVE_WORKFLOWS)
+    assert payload["registered_bounded_workflows"] == []
     assert payload["specialized_workflows"] == [specialized]
     assert payload["stage0_tests_in_authoritative_main"] is True
     assert payload["one_shot_contract_in_authoritative_ci"] is True
@@ -119,7 +135,7 @@ def test_ci_authority_inventory_requires_contracts_in_canonical_main(
         payload["external_operations_decision_contract_in_authoritative_ci"] is True
     )
     assert payload["new_feature_workflow_policy"] == (
-        "consolidate_into_authoritative_workflows"
+        "consolidate_or_register_bounded_authority"
     )
 
 
@@ -370,9 +386,10 @@ def test_repository_without_optional_contracts_keeps_legacy_scope(
     assert (
         payload["external_operations_decision_contract_in_authoritative_ci"] is True
     )
+    assert payload["global_orientation_contract_in_authoritative_ci"] is True
 
 
-def test_global_orientation_contract_requires_complete_authoritative_lane(
+def test_global_orientation_contract_requires_complete_registered_lane(
     tmp_path: Path,
 ) -> None:
     _write_authoritative_workflows(tmp_path)
@@ -391,8 +408,11 @@ def test_global_orientation_contract_requires_complete_authoritative_lane(
 
     payload = build_inventory(tmp_path)
 
-    assert GLOBAL_ORIENTATION_AUTHORITY_WORKFLOW in payload[
+    assert GLOBAL_ORIENTATION_AUTHORITY_WORKFLOW not in payload[
         "authoritative_workflows"
+    ]
+    assert payload["registered_bounded_workflows"] == [
+        GLOBAL_ORIENTATION_AUTHORITY_WORKFLOW
     ]
     assert GLOBAL_ORIENTATION_AUTHORITY_WORKFLOW not in payload[
         "specialized_workflows"
