@@ -9,6 +9,7 @@ from tools.audit_engine_v2_ci_authority import (
     GLOBAL_ORIENTATION_AUTHORITY_WORKFLOW,
     GLOBAL_ORIENTATION_CONTRACT_PATHS,
     GLOBAL_ORIENTATION_REQUIRED_TOKENS,
+    REGISTERED_BOUNDED_WORKFLOWS,
     build_inventory,
 )
 
@@ -38,11 +39,19 @@ def _write_authority_workflows(tmp_path: Path) -> None:
         path.write_text("name: authority\n", encoding="utf-8")
 
 
-def test_ci_authority_inventory_exposes_specialized_workflows(
+def test_ci_authority_inventory_preserves_frozen_stage0_tuple(
     tmp_path: Path,
 ) -> None:
     required_tokens = _STAGE0_REQUIRED_TOKENS + (
         CLEARANCE_ACTIVATION_REQUIRED_TOKENS
+    )
+    assert AUTHORITATIVE_WORKFLOWS == (
+        ".github/workflows/ci-engine-v2-main.yml",
+        ".github/workflows/ci-engine-v2-release-candidate.yml",
+        ".github/workflows/ci-engine-v2-cpu-reference-validation-protocol.yml",
+    )
+    assert REGISTERED_BOUNDED_WORKFLOWS == (
+        GLOBAL_ORIENTATION_AUTHORITY_WORKFLOW,
     )
     assert CLEARANCE_ACTIVATION_CONTRACT_PATHS == (
         "betelgeuze_engine_v2/benchmark/source_paired_clearance_activation.py",
@@ -64,6 +73,7 @@ def test_ci_authority_inventory_exposes_specialized_workflows(
 
     assert payload["workflow_count"] == len(AUTHORITATIVE_WORKFLOWS) + 1
     assert payload["authoritative_workflows"] == list(AUTHORITATIVE_WORKFLOWS)
+    assert payload["registered_bounded_workflows"] == []
     assert payload["specialized_workflows"] == [specialized]
     assert payload["stage0_tests_in_authoritative_main"] is True
     assert payload["global_orientation_contract_in_authoritative_ci"] is True
@@ -96,9 +106,10 @@ def test_synthetic_stage0_repository_without_activation_contract_keeps_legacy_sc
     payload = build_inventory(tmp_path)
 
     assert payload["stage0_tests_in_authoritative_main"] is True
+    assert payload["global_orientation_contract_in_authoritative_ci"] is True
 
 
-def test_global_orientation_contract_requires_complete_authoritative_lane(
+def test_global_orientation_contract_requires_complete_registered_lane(
     tmp_path: Path,
 ) -> None:
     _write_authority_workflows(tmp_path)
@@ -117,8 +128,11 @@ def test_global_orientation_contract_requires_complete_authoritative_lane(
 
     payload = build_inventory(tmp_path)
 
-    assert GLOBAL_ORIENTATION_AUTHORITY_WORKFLOW in payload[
+    assert GLOBAL_ORIENTATION_AUTHORITY_WORKFLOW not in payload[
         "authoritative_workflows"
+    ]
+    assert payload["registered_bounded_workflows"] == [
+        GLOBAL_ORIENTATION_AUTHORITY_WORKFLOW
     ]
     assert GLOBAL_ORIENTATION_AUTHORITY_WORKFLOW not in payload[
         "specialized_workflows"
