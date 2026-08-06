@@ -1,6 +1,19 @@
-name: ci-engine-v2-global-orientation-synthetic
+name: ci-engine-v2-global-orientation-authority
 
 on:
+  push:
+    branches: ["main"]
+    paths:
+      - "betelgeuze_engine_v2/docking/global_orientation.py"
+      - "betelgeuze_engine_v2/docking/global_orientation_evidence.py"
+      - "betelgeuze_engine_v2/benchmark/oracle_selection_metrics.py"
+      - "betelgeuze_engine_v2/benchmark/oracle_selection_evidence.py"
+      - "config/engine_v2_global_orientation_synthetic_contract.json"
+      - "tools/verify_engine_v2_global_orientation_synthetic_contract.py"
+      - "tests/unit/test_engine_v2_global_orientation*.py"
+      - "tests/unit/test_engine_v2_oracle_selection*.py"
+      - "docs/engine_v2_global_orientation_design.md"
+      - ".github/workflows/ci-engine-v2-global-orientation-authority.yml"
   pull_request:
     paths:
       - "betelgeuze_engine_v2/docking/global_orientation.py"
@@ -12,29 +25,30 @@ on:
       - "tests/unit/test_engine_v2_global_orientation*.py"
       - "tests/unit/test_engine_v2_oracle_selection*.py"
       - "docs/engine_v2_global_orientation_design.md"
-      - ".github/workflows/ci-engine-v2-global-orientation-synthetic.yml"
+      - ".github/workflows/ci-engine-v2-global-orientation-authority.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-engine-v2-global-orientation-synthetic-${{ github.ref }}
+  group: ci-engine-v2-global-orientation-authority-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  synthetic-contract:
+  synthetic-authority:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     env:
       CUDA_VISIBLE_DEVICES: ""
       HIP_VISIBLE_DEVICES: ""
       ROCR_VISIBLE_DEVICES: ""
       PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
     steps:
-      - name: Check out exact PR head
+      - name: Check out exact source
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
           clean: true
           fetch-depth: 0
@@ -43,10 +57,13 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install bounded test dependencies
+      - name: Install bounded test and package dependencies
         run: |
           python -m pip install pip==25.0.1
           python -m pip install \
+            build==1.2.2.post1 \
+            setuptools==75.8.2 \
+            wheel==0.45.1 \
             pytest==8.3.5 \
             ruff==0.11.13 \
             cryptography==46.0.5 \
@@ -73,6 +90,31 @@ jobs:
             tests/unit/test_engine_v2_oracle_selection_metrics.py \
             tests/unit/test_engine_v2_oracle_selection_evidence.py
 
+      - name: Build isolated Engine V2 wheel
+        run: |
+          rm -rf dist-global-orientation
+          python tools/build_engine_v2_wheel.py --output-dir dist-global-orientation
+          test "$(find dist-global-orientation -maxdepth 1 -name '*.whl' | wc -l)" -eq 1
+
+      - name: Import global-orientation surfaces outside checkout
+        run: |
+          venv=/tmp/global-orientation-authority
+          outside=/tmp/global-orientation-authority-outside
+          rm -rf "$venv" "$outside"
+          python -m venv "$venv"
+          "$venv/bin/python" -m pip install pip==25.0.1
+          "$venv/bin/python" -m pip install cryptography==46.0.5 numpy==1.26.4
+          "$venv/bin/python" -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+          "$venv/bin/python" -m pip install --no-deps dist-global-orientation/*.whl
+          mkdir -p "$outside"
+          cd "$outside"
+          "$venv/bin/python" - <<'PY'
+          import betelgeuze_engine_v2.benchmark.oracle_selection_evidence
+          import betelgeuze_engine_v2.benchmark.oracle_selection_metrics
+          import betelgeuze_engine_v2.docking.global_orientation
+          import betelgeuze_engine_v2.docking.global_orientation_evidence
+          PY
+
       - name: Lint and diff check
         run: |
           python -m ruff check \
@@ -86,4 +128,7 @@ jobs:
             tests/unit/test_engine_v2_global_orientation_synthetic_contract.py \
             tests/unit/test_engine_v2_oracle_selection_metrics.py \
             tests/unit/test_engine_v2_oracle_selection_evidence.py
-          git diff --check ${{ github.event.pull_request.base.sha }}...HEAD
+          git diff --check
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            git diff --check "${{ github.event.pull_request.base.sha }}...HEAD"
+          fi
