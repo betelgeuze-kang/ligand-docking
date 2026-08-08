@@ -194,6 +194,16 @@ from .molecular import (
     indexed_topology_sha256,
     source_bound_topology_sha256,
 )
+from .docking.pipeline import (
+    CURRENT_V7_FIXED64_PROFILE_ID,
+    EXTERNAL_AUTHORITY_BLOCKERS,
+    CandidateEvidenceV1,
+    DockingPipeline,
+    DockingPipelineError,
+    DockingPipelineProfileV1,
+    DockingPipelineRequestV1,
+    DockingPipelineResultV1,
+)
 
 __version__ = ENGINE_API_VERSION
 
@@ -203,6 +213,7 @@ __all__ = [
     "ATOM_FEATURE_SCHEMA_VERSION",
     "ATTESTED_INPUT_BOUND_VERIFICATION_SCHEMA_ID",
     "CHECKPOINT_SCHEMA_VERSION",
+    "CURRENT_V7_FIXED64_PROFILE_ID",
     "CLI_EXECUTION_PARAMETERS_SCHEMA_ID",
     "DISTRIBUTION_NAME",
     "DISTRIBUTION_VERSION",
@@ -245,10 +256,17 @@ __all__ = [
     "EnergyForcePrediction",
     "EnergyTermResult",
     "EngineExecutionProvenance",
+    "EXTERNAL_AUTHORITY_BLOCKERS",
     "ExecutionParameterAttestationError",
     "IndependentEngineV2",
     "IndependentEngineV2Config",
     "IndependentEngineV2Result",
+    "DockingPipeline",
+    "DockingPipelineError",
+    "DockingPipelineProfileV1",
+    "DockingPipelineRequestV1",
+    "DockingPipelineResultV1",
+    "CandidateEvidenceV1",
     "IndependentPhysicsProvider",
     "KinematicResult",
     "LocalEnergyConfig",
