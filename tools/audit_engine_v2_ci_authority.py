@@ -11,16 +11,10 @@ from typing import Any
 
 
 SCHEMA_ID = "betelgeuze.engine_v2_ci_authority_inventory/1.0.0"
-GLOBAL_ORIENTATION_AUTHORITY_WORKFLOW = (
-    ".github/workflows/ci-engine-v2-global-orientation-authority.yml"
-)
 AUTHORITATIVE_WORKFLOWS = (
     ".github/workflows/ci-engine-v2-main.yml",
     ".github/workflows/ci-engine-v2-release-candidate.yml",
     ".github/workflows/ci-engine-v2-cpu-reference-validation-protocol.yml",
-)
-REGISTERED_BOUNDED_WORKFLOWS = (
-    GLOBAL_ORIENTATION_AUTHORITY_WORKFLOW,
 )
 CLEARANCE_ACTIVATION_CONTRACT_PATHS = (
     "betelgeuze_engine_v2/benchmark/source_paired_clearance_activation.py",
@@ -57,7 +51,11 @@ GLOBAL_ORIENTATION_REQUIRED_TOKENS = (
     "tests/unit/test_engine_v2_oracle_selection_evidence.py",
     "docs/engine_v2_global_orientation_design.md",
     "tools/build_engine_v2_wheel.py",
-    "dist-global-orientation",
+    "dist-engine-v2",
+    "import betelgeuze_engine_v2.benchmark.oracle_selection_evidence",
+    "import betelgeuze_engine_v2.benchmark.oracle_selection_metrics",
+    "import betelgeuze_engine_v2.docking.global_orientation",
+    "import betelgeuze_engine_v2.docking.global_orientation_evidence",
 )
 ONE_SHOT_CONTRACT_PATHS = (
     "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_ab.py",
@@ -186,18 +184,12 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
             if path.is_file()
         )
     )
-    authoritative = tuple(
-        path for path in AUTHORITATIVE_WORKFLOWS if path in workflows
+    authoritative = tuple(path for path in AUTHORITATIVE_WORKFLOWS if path in workflows)
+    specialized = tuple(
+        path for path in workflows if path not in AUTHORITATIVE_WORKFLOWS
     )
-    registered_bounded = tuple(
-        path for path in REGISTERED_BOUNDED_WORKFLOWS if path in workflows
-    )
-    known = set(AUTHORITATIVE_WORKFLOWS) | set(REGISTERED_BOUNDED_WORKFLOWS)
-    specialized = tuple(path for path in workflows if path not in known)
     hashes = {path: _sha256(repo_root / path) for path in workflows}
-    main_text = (repo_root / AUTHORITATIVE_WORKFLOWS[0]).read_text(
-        encoding="utf-8"
-    )
+    main_text = (repo_root / AUTHORITATIVE_WORKFLOWS[0]).read_text(encoding="utf-8")
     stage0_required_tokens = (
         "tools/__init__.py",
         "config/engine_v2_public_redocking_stage0_threshold_evidence.json",
@@ -221,24 +213,11 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         stage0_required_tokens += CLEARANCE_ACTIVATION_REQUIRED_TOKENS
 
     global_orientation_contract_present = any(
-        (repo_root / path).is_file()
-        for path in GLOBAL_ORIENTATION_CONTRACT_PATHS
-    )
-    global_workflow = repo_root / GLOBAL_ORIENTATION_AUTHORITY_WORKFLOW
-    global_workflow_text = (
-        global_workflow.read_text(encoding="utf-8")
-        if global_workflow.is_file()
-        else ""
+        (repo_root / path).is_file() for path in GLOBAL_ORIENTATION_CONTRACT_PATHS
     )
     global_orientation_contract_in_authoritative_ci = (
         not global_orientation_contract_present
-        or (
-            GLOBAL_ORIENTATION_AUTHORITY_WORKFLOW in registered_bounded
-            and all(
-                token in global_workflow_text
-                for token in GLOBAL_ORIENTATION_REQUIRED_TOKENS
-            )
-        )
+        or all(token in main_text for token in GLOBAL_ORIENTATION_REQUIRED_TOKENS)
     )
 
     one_shot_contract_present = any(
@@ -315,7 +294,6 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         "schema_id": SCHEMA_ID,
         "workflow_count": len(workflows),
         "authoritative_workflows": list(authoritative),
-        "registered_bounded_workflows": list(registered_bounded),
         "specialized_workflows": list(specialized),
         "workflow_sha256s": hashes,
         "workflow_inventory_sha256": hashlib.sha256(
@@ -345,13 +323,11 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         "external_operations_decision_contract_in_authoritative_ci": (
             external_operations_decision_contract_in_authoritative_ci
         ),
-        "new_feature_workflow_policy": "consolidate_or_register_bounded_authority",
+        "new_feature_workflow_policy": "consolidate_into_authoritative_workflows",
         "specialized_workflows_hidden": False,
         "issue_199_external_state_mutated": False,
     }
-    payload["receipt_sha256"] = hashlib.sha256(
-        _canonical_bytes(payload)
-    ).hexdigest()
+    payload["receipt_sha256"] = hashlib.sha256(_canonical_bytes(payload)).hexdigest()
     return payload
 
 
