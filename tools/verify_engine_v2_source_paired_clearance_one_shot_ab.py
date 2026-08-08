@@ -18,6 +18,9 @@ from betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_ab import (
     resolve_output_root,
     verify_one_shot_policy,
 )
+from betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_external_gate import (  # noqa: E402
+    combine_one_shot_and_external_decisions,
+)
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -45,6 +48,12 @@ def _parser() -> argparse.ArgumentParser:
         default=_REPO_ROOT
         / "config/engine_v2_source_paired_clearance_activation.json",
     )
+    parser.add_argument(
+        "--external-reservation-policy",
+        type=Path,
+        default=_REPO_ROOT
+        / "config/engine_v2_source_paired_clearance_external_reservation.json",
+    )
     return parser
 
 
@@ -58,17 +67,24 @@ def main() -> int:
     activation = load_json_document(
         args.activation_policy.resolve(), name="clearance activation policy"
     )
+    external_reservation = load_json_document(
+        args.external_reservation_policy.resolve(),
+        name="external reservation policy",
+    )
     verify_one_shot_policy(
         policy,
         phase25_policy=phase25,
         activation_policy=activation,
     )
     output_root = resolve_output_root(policy, repository_root=repo_root)
-    decision = authorization_decision(
-        policy,
-        phase25_policy=phase25,
-        activation_policy=activation,
-        repository_root=repo_root,
+    decision = combine_one_shot_and_external_decisions(
+        authorization_decision(
+            policy,
+            phase25_policy=phase25,
+            activation_policy=activation,
+            repository_root=repo_root,
+        ),
+        external_policy=external_reservation,
     )
     print(
         {

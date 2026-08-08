@@ -43,6 +43,7 @@ ONE_SHOT_REQUIRED_TOKENS = (
     "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_legacy.py",
     "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_binding.py",
     "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_evidence.py",
+    "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_external_gate.py",
     "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_full_evidence.py",
     "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_result.py",
     "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_result_legacy.py",
@@ -54,6 +55,7 @@ ONE_SHOT_REQUIRED_TOKENS = (
     "tests/unit/test_source_paired_clearance_one_shot_ab.py",
     "tests/unit/test_source_paired_clearance_one_shot_canonical_imports.py",
     "tests/unit/test_source_paired_clearance_one_shot_evidence.py",
+    "tests/unit/test_source_paired_clearance_one_shot_external_gate.py",
     "tests/unit/test_source_paired_clearance_one_shot_full_evidence.py",
     "tests/unit/test_source_paired_clearance_one_shot_result.py",
     "tests/unit/test_source_paired_clearance_one_shot_source_policy_tamper.py",
@@ -63,6 +65,7 @@ ONE_SHOT_REQUIRED_TOKENS = (
     "import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_ab",
     "import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_binding",
     "import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_evidence",
+    "import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_external_gate",
     "import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_full_evidence",
     "import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_legacy",
     "import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_result",
@@ -76,13 +79,18 @@ EXTERNAL_RESERVATION_CONTRACT_PATHS = (
 )
 EXTERNAL_RESERVATION_REQUIRED_TOKENS = (
     "betelgeuze_engine_v2/benchmark/source_paired_clearance_external_reservation.py",
+    "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_external_gate.py",
     "config/engine_v2_source_paired_clearance_external_reservation.json",
+    "tools/manage_engine_v2_source_paired_clearance_one_shot_ab.py",
+    "tools/verify_engine_v2_source_paired_clearance_one_shot_ab.py",
     "tools/verify_engine_v2_source_paired_clearance_external_reservation.py",
     "tests/unit/test_source_paired_clearance_external_reservation.py",
     "tests/unit/test_source_paired_clearance_external_reservation_concurrency.py",
+    "tests/unit/test_source_paired_clearance_one_shot_external_gate.py",
     "docs/engine_v2_source_paired_clearance_external_reservation.md",
     "dist-engine-v2",
     "import betelgeuze_engine_v2.benchmark.source_paired_clearance_external_reservation",
+    "import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_external_gate",
 )
 
 

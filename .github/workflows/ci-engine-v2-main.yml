@@ -11,6 +11,7 @@ on:
       - "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_legacy.py"
       - "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_binding.py"
       - "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_evidence.py"
+      - "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_external_gate.py"
       - "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_full_evidence.py"
       - "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_result.py"
       - "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_result_legacy.py"
@@ -171,6 +172,7 @@ jobs:
             tests/unit/test_source_paired_clearance_one_shot_ab.py
             tests/unit/test_source_paired_clearance_one_shot_canonical_imports.py
             tests/unit/test_source_paired_clearance_one_shot_evidence.py
+            tests/unit/test_source_paired_clearance_one_shot_external_gate.py
             tests/unit/test_source_paired_clearance_one_shot_full_evidence.py
             tests/unit/test_source_paired_clearance_one_shot_result.py
             tests/unit/test_source_paired_clearance_one_shot_source_policy_tamper.py
@@ -337,6 +339,12 @@ jobs:
             /tmp/engine-v2-external-reservation-status.json
           grep -q '"historical_execution_operational": false' \
             /tmp/engine-v2-external-reservation-status.json
+          python tools/manage_engine_v2_source_paired_clearance_one_shot_ab.py \
+            status > /tmp/engine-v2-one-shot-combined-status.json
+          grep -q '"authorized_if_reserved_now": false' \
+            /tmp/engine-v2-one-shot-combined-status.json
+          grep -q 'external_reservation_provider_not_operational' \
+            /tmp/engine-v2-one-shot-combined-status.json
 
       - name: Run complete focused Engine v2 CPU suite
         shell: bash
@@ -429,6 +437,7 @@ jobs:
             tests/unit/test_source_paired_clearance_one_shot_ab.py \
             tests/unit/test_source_paired_clearance_one_shot_canonical_imports.py \
             tests/unit/test_source_paired_clearance_one_shot_evidence.py \
+            tests/unit/test_source_paired_clearance_one_shot_external_gate.py \
             tests/unit/test_source_paired_clearance_one_shot_full_evidence.py \
             tests/unit/test_source_paired_clearance_one_shot_result.py \
             tests/unit/test_source_paired_clearance_one_shot_source_policy_tamper.py \
@@ -487,6 +496,7 @@ jobs:
           import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_ab
           import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_binding
           import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_evidence
+          import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_external_gate
           import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_full_evidence
           import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_legacy
           import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_result

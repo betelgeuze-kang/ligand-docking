@@ -32,6 +32,10 @@ from betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_ab import (
 from betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_full_evidence import (  # noqa: E402
     build_result_document_from_full_evidence_file,
 )
+from betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_external_gate import (  # noqa: E402
+    combine_one_shot_and_external_decisions,
+    require_external_historical_execution_authority,
+)
 from betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_result import (  # noqa: E402
     write_result_once,
 )
@@ -43,7 +47,7 @@ def _json(path: Path, *, name: str) -> dict[str, Any]:
 
 def _source_documents(
     repo_root: Path,
-) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
     return (
         _json(
             repo_root / "config/engine_v2_source_paired_clearance_one_shot_ab.json",
@@ -56,6 +60,11 @@ def _source_documents(
         _json(
             repo_root / "config/engine_v2_source_paired_clearance_activation.json",
             name="clearance activation policy",
+        ),
+        _json(
+            repo_root
+            / "config/engine_v2_source_paired_clearance_external_reservation.json",
+            name="external reservation policy",
         ),
     )
 
@@ -105,15 +114,18 @@ def _load_fixed_receipt(
 def main() -> int:
     arguments = _parser().parse_args()
     repo_root = arguments.repo_root.resolve(strict=True)
-    policy, phase25, activation = _source_documents(repo_root)
+    policy, phase25, activation, external_reservation = _source_documents(repo_root)
     output_root = resolve_output_root(policy, repository_root=repo_root)
 
     if arguments.command == "status":
-        decision = authorization_decision(
-            policy,
-            phase25_policy=phase25,
-            activation_policy=activation,
-            repository_root=repo_root,
+        decision = combine_one_shot_and_external_decisions(
+            authorization_decision(
+                policy,
+                phase25_policy=phase25,
+                activation_policy=activation,
+                repository_root=repo_root,
+            ),
+            external_policy=external_reservation,
         )
         print(
             json.dumps(
@@ -133,6 +145,7 @@ def main() -> int:
         return 0
 
     if arguments.command == "reserve":
+        require_external_historical_execution_authority(external_reservation)
         receipt = reserve_one_shot_execution(
             policy=policy,
             phase25_policy=phase25,
@@ -145,6 +158,7 @@ def main() -> int:
         print(receipt["receipt_sha256"])
         return 0
 
+    require_external_historical_execution_authority(external_reservation)
     reservation = _load_fixed_receipt(
         output_root,
         "execution-reservation.json",
