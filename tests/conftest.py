@@ -22,6 +22,9 @@ _LIGHTWEIGHT_CONTRACT_FILES = {
     "test_api_worker_deploy_artifacts.py",
 }
 
+_PRODUCT_ARTIFACT_BOOTSTRAP_ENV = "BETELGEUZE_PRODUCT_TEST_ARTIFACT_BOOTSTRAP"
+_PRODUCT_ARTIFACT_BOOTSTRAP_MODES = frozenset({"auto", "required", "disabled"})
+
 
 def _requested_tests_are_lightweight(config) -> bool:
     args = [str(arg).split("::", 1)[0] for arg in getattr(config, "args", []) or []]
@@ -42,8 +45,28 @@ def _requested_tests_are_lightweight(config) -> bool:
     return True
 
 
+def _product_artifact_bootstrap_mode() -> str:
+    raw = os.getenv(_PRODUCT_ARTIFACT_BOOTSTRAP_ENV, "auto")
+    mode = raw.strip().lower()
+    if mode not in _PRODUCT_ARTIFACT_BOOTSTRAP_MODES:
+        allowed = ", ".join(sorted(_PRODUCT_ARTIFACT_BOOTSTRAP_MODES))
+        raise pytest.UsageError(
+            f"{_PRODUCT_ARTIFACT_BOOTSTRAP_ENV} must be one of: {allowed}"
+        )
+    return mode
+
+
+def _product_artifact_bootstrap_required(config) -> bool:
+    mode = _product_artifact_bootstrap_mode()
+    if mode == "disabled":
+        return False
+    if mode == "required":
+        return True
+    return not _requested_tests_are_lightweight(config)
+
+
 def pytest_sessionstart(session) -> None:
-    if _requested_tests_are_lightweight(session.config):
+    if not _product_artifact_bootstrap_required(session.config):
         return
     root = Path(__file__).resolve().parents[1]
     capability = root / "runs" / "product_capability_surface_contract_current.json"
