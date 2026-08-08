@@ -7,6 +7,10 @@ on:
       - "betelgeuze_engine_v2/**"
       - "betelgeuze_engine_v2/benchmark/source_paired_clearance_activation.py"
       - "betelgeuze_engine_v2/docking/source_paired_clearance_activation.py"
+      - "betelgeuze_engine_v2/docking/global_orientation.py"
+      - "betelgeuze_engine_v2/docking/global_orientation_evidence.py"
+      - "betelgeuze_engine_v2/benchmark/oracle_selection_metrics.py"
+      - "betelgeuze_engine_v2/benchmark/oracle_selection_evidence.py"
       - "packaging/engine-v2/**"
       - "rust_engine_v2/**"
       - "config/independent_engine_v2_capabilities.yaml"
@@ -14,6 +18,7 @@ on:
       - "config/engine_v2_fresh_redocking_holdout_manifest.json"
       - "config/engine_v2_phase25_cohort_admission.json"
       - "config/engine_v2_source_paired_clearance_activation.json"
+      - "config/engine_v2_global_orientation_synthetic_contract.json"
       - "tools/build_engine_v2_wheel.py"
       - "tools/build_engine_v2_native_wheel.py"
       - "tools/build_engine_v2_sbom.py"
@@ -27,6 +32,7 @@ on:
       - "tools/reconcile_engine_v2_stage0_full_suites.py"
       - "tools/audit_engine_v2_ci_authority.py"
       - "tools/verify_engine_v2_source_paired_clearance_activation.py"
+      - "tools/verify_engine_v2_global_orientation_synthetic_contract.py"
       - "config/engine_v2_public_redocking_stage0_*.json"
       - "tests/unit/test_engine_v2_*.py"
       - "tests/unit/test_classify_engine_v2_stage0_full_suite.py"
@@ -115,6 +121,7 @@ jobs:
             config/engine_v2_fresh_redocking_holdout_manifest.json
             config/engine_v2_phase25_cohort_admission.json
             config/engine_v2_source_paired_clearance_activation.json
+            config/engine_v2_global_orientation_synthetic_contract.json
             config/engine_v2_public_redocking_stage0_threshold_evidence.json
             tools/__init__.py
             tools/build_engine_v2_wheel.py
@@ -132,6 +139,7 @@ jobs:
             tools/reconcile_engine_v2_stage0_full_suites.py
             tools/audit_engine_v2_ci_authority.py
             tools/verify_engine_v2_source_paired_clearance_activation.py
+            tools/verify_engine_v2_global_orientation_synthetic_contract.py
             config/engine_v2_public_redocking_stage0_freeze.template.json
             config/engine_v2_public_redocking_stage0_attestation.template.json
             config/engine_v2_public_redocking_stage0_threshold_evidence.template.json
@@ -144,6 +152,11 @@ jobs:
             tests/unit/test_classify_engine_v2_stage0_full_suite.py
             tests/unit/test_reconcile_engine_v2_stage0_full_suites.py
             tests/unit/test_audit_engine_v2_ci_authority.py
+            tests/unit/test_engine_v2_global_orientation.py
+            tests/unit/test_engine_v2_global_orientation_evidence.py
+            tests/unit/test_engine_v2_global_orientation_synthetic_contract.py
+            tests/unit/test_engine_v2_oracle_selection_metrics.py
+            tests/unit/test_engine_v2_oracle_selection_evidence.py
             tests/unit/test_source_paired_clearance_activation.py
             tests/unit/test_source_paired_clearance_activation_evidence.py
             tests/unit/test_source_paired_torsion_rescue_activation_snapshot.py
@@ -223,6 +236,7 @@ jobs:
             docs/engine_v2_public_api.md
             docs/engine_v2_source_paired_clearance_activation.md
             docs/engine_v2_source_paired_clearance_selection_policy.md
+            docs/engine_v2_global_orientation_design.md
             docs/engine_v2_stage0_status.md
             docs/independent_engine_v2_commercial_roadmap.ko.md
             docs/roadmaps/engine-v2-scientific-evidence-roadmap.md
@@ -283,11 +297,13 @@ jobs:
             tools/classify_engine_v2_stage0_full_suite.py \
             tools/reconcile_engine_v2_stage0_full_suites.py \
             tools/audit_engine_v2_ci_authority.py \
-            tools/verify_engine_v2_source_paired_clearance_activation.py
+            tools/verify_engine_v2_source_paired_clearance_activation.py \
+            tools/verify_engine_v2_global_orientation_synthetic_contract.py
           python tools/check_engine_v2_architecture.py
           python tools/verify_engine_v2_phase25_cohort_admission.py
           python tools/verify_engine_v2_source_paired_clearance_activation.py \
             --policy config/engine_v2_source_paired_clearance_activation.json
+          python tools/verify_engine_v2_global_orientation_synthetic_contract.py
 
       - name: Run complete focused Engine v2 CPU suite
         shell: bash
@@ -377,6 +393,11 @@ jobs:
             tests/unit/test_source_paired_clearance_activation_evidence.py \
             tests/unit/test_source_paired_torsion_rescue_activation_snapshot.py \
             tests/unit/test_verify_engine_v2_source_paired_clearance_activation.py \
+            tests/unit/test_engine_v2_global_orientation.py \
+            tests/unit/test_engine_v2_global_orientation_evidence.py \
+            tests/unit/test_engine_v2_global_orientation_synthetic_contract.py \
+            tests/unit/test_engine_v2_oracle_selection_metrics.py \
+            tests/unit/test_engine_v2_oracle_selection_evidence.py \
             > engine-v2-main.log 2>&1
           status=$?
           cat engine-v2-main.log
@@ -425,6 +446,10 @@ jobs:
           import importlib.metadata as metadata
           import importlib.util
           import betelgeuze_engine_v2 as engine
+          import betelgeuze_engine_v2.benchmark.oracle_selection_evidence
+          import betelgeuze_engine_v2.benchmark.oracle_selection_metrics
+          import betelgeuze_engine_v2.docking.global_orientation
+          import betelgeuze_engine_v2.docking.global_orientation_evidence
           from betelgeuze_engine_v2.benchmark import (
               ExternalBaselineEngine,
               FROZEN_PUBLIC_BENCHMARK_PROTOCOL_SHA256,

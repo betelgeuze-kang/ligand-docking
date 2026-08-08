@@ -6,10 +6,8 @@ from tools.audit_engine_v2_ci_authority import (
     AUTHORITATIVE_WORKFLOWS,
     CLEARANCE_ACTIVATION_CONTRACT_PATHS,
     CLEARANCE_ACTIVATION_REQUIRED_TOKENS,
-    GLOBAL_ORIENTATION_AUTHORITY_WORKFLOW,
     GLOBAL_ORIENTATION_CONTRACT_PATHS,
     GLOBAL_ORIENTATION_REQUIRED_TOKENS,
-    REGISTERED_BOUNDED_WORKFLOWS,
     build_inventory,
 )
 
@@ -42,16 +40,11 @@ def _write_authority_workflows(tmp_path: Path) -> None:
 def test_ci_authority_inventory_preserves_frozen_stage0_tuple(
     tmp_path: Path,
 ) -> None:
-    required_tokens = _STAGE0_REQUIRED_TOKENS + (
-        CLEARANCE_ACTIVATION_REQUIRED_TOKENS
-    )
+    required_tokens = _STAGE0_REQUIRED_TOKENS + (CLEARANCE_ACTIVATION_REQUIRED_TOKENS)
     assert AUTHORITATIVE_WORKFLOWS == (
         ".github/workflows/ci-engine-v2-main.yml",
         ".github/workflows/ci-engine-v2-release-candidate.yml",
         ".github/workflows/ci-engine-v2-cpu-reference-validation-protocol.yml",
-    )
-    assert REGISTERED_BOUNDED_WORKFLOWS == (
-        GLOBAL_ORIENTATION_AUTHORITY_WORKFLOW,
     )
     assert CLEARANCE_ACTIVATION_CONTRACT_PATHS == (
         "betelgeuze_engine_v2/benchmark/source_paired_clearance_activation.py",
@@ -73,7 +66,7 @@ def test_ci_authority_inventory_preserves_frozen_stage0_tuple(
 
     assert payload["workflow_count"] == len(AUTHORITATIVE_WORKFLOWS) + 1
     assert payload["authoritative_workflows"] == list(AUTHORITATIVE_WORKFLOWS)
-    assert payload["registered_bounded_workflows"] == []
+    assert "registered_bounded_workflows" not in payload
     assert payload["specialized_workflows"] == [specialized]
     assert payload["stage0_tests_in_authoritative_main"] is True
     assert payload["global_orientation_contract_in_authoritative_ci"] is True
@@ -86,8 +79,7 @@ def test_ci_authority_inventory_preserves_frozen_stage0_tuple(
         "\n".join(
             token
             for token in required_tokens
-            if token
-            != "config/engine_v2_source_paired_clearance_activation.json"
+            if token != "config/engine_v2_source_paired_clearance_activation.json"
         ),
         encoding="utf-8",
     )
@@ -109,7 +101,7 @@ def test_synthetic_stage0_repository_without_activation_contract_keeps_legacy_sc
     assert payload["global_orientation_contract_in_authoritative_ci"] is True
 
 
-def test_global_orientation_contract_requires_complete_registered_lane(
+def test_global_orientation_contract_requires_complete_authoritative_main(
     tmp_path: Path,
 ) -> None:
     _write_authority_workflows(tmp_path)
@@ -120,26 +112,19 @@ def test_global_orientation_contract_requires_complete_registered_lane(
     marker = tmp_path / GLOBAL_ORIENTATION_CONTRACT_PATHS[-1]
     marker.parent.mkdir(parents=True, exist_ok=True)
     marker.write_text("{}\n", encoding="utf-8")
-    global_workflow = tmp_path / GLOBAL_ORIENTATION_AUTHORITY_WORKFLOW
-    global_workflow.write_text(
+    main_workflow = tmp_path / AUTHORITATIVE_WORKFLOWS[0]
+    main_workflow.write_text(
         "\n".join(GLOBAL_ORIENTATION_REQUIRED_TOKENS),
         encoding="utf-8",
     )
 
     payload = build_inventory(tmp_path)
 
-    assert GLOBAL_ORIENTATION_AUTHORITY_WORKFLOW not in payload[
-        "authoritative_workflows"
-    ]
-    assert payload["registered_bounded_workflows"] == [
-        GLOBAL_ORIENTATION_AUTHORITY_WORKFLOW
-    ]
-    assert GLOBAL_ORIENTATION_AUTHORITY_WORKFLOW not in payload[
-        "specialized_workflows"
-    ]
+    assert "registered_bounded_workflows" not in payload
+    assert payload["specialized_workflows"] == []
     assert payload["global_orientation_contract_in_authoritative_ci"] is True
 
-    global_workflow.write_text(
+    main_workflow.write_text(
         "\n".join(
             token
             for token in GLOBAL_ORIENTATION_REQUIRED_TOKENS
@@ -147,6 +132,26 @@ def test_global_orientation_contract_requires_complete_registered_lane(
         ),
         encoding="utf-8",
     )
-    assert build_inventory(tmp_path)[
-        "global_orientation_contract_in_authoritative_ci"
-    ] is False
+    assert (
+        build_inventory(tmp_path)["global_orientation_contract_in_authoritative_ci"]
+        is False
+    )
+
+
+def test_deprecated_global_workflow_cannot_substitute_for_main(
+    tmp_path: Path,
+) -> None:
+    _write_authority_workflows(tmp_path)
+    marker = tmp_path / GLOBAL_ORIENTATION_CONTRACT_PATHS[-1]
+    marker.parent.mkdir(parents=True, exist_ok=True)
+    marker.write_text("{}\n", encoding="utf-8")
+    deprecated = ".github/workflows/ci-engine-v2-global-orientation-authority.yml"
+    (tmp_path / deprecated).write_text(
+        "\n".join(GLOBAL_ORIENTATION_REQUIRED_TOKENS),
+        encoding="utf-8",
+    )
+
+    payload = build_inventory(tmp_path)
+
+    assert payload["specialized_workflows"] == [deprecated]
+    assert payload["global_orientation_contract_in_authoritative_ci"] is False
