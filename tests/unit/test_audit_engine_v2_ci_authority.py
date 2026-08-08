@@ -167,3 +167,15 @@ def test_contaminated_development_contract_uses_canonical_main_workflow() -> Non
 
     assert not deprecated.exists()
     assert all(token in main_text for token in GLOBAL_ORIENTATION_REQUIRED_TOKENS)
+    assert (
+        "tools/verify_engine_v2_global_orientation_synthetic_contract.py \\\n"
+        "            tools/verify_engine_v2_global_orientation_contaminated_development.py"
+        not in main_text.split("sparse-checkout: |", maxsplit=1)[1].split(
+            "sparse-checkout-cone-mode:", maxsplit=1
+        )[0]
+    )
+    assert (
+        "tools/verify_engine_v2_global_orientation_synthetic_contract.py \\\n"
+        "            tools/verify_engine_v2_global_orientation_contaminated_development.py"
+        in main_text.split("python -m compileall -q", maxsplit=1)[1]
+    )
