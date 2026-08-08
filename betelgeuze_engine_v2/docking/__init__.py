@@ -329,6 +329,21 @@ from .torsion_contact_refinement import (  # noqa: E402
     InteractionAwareTorsionContactEnsembleRefinerV7,
     TorsionContactRefinementError,
 )
+from .pipeline import (  # noqa: E402
+    CURRENT_V7_FIXED64_PROFILE_ID,
+    EXTERNAL_AUTHORITY_BLOCKERS,
+    PIPELINE_CANDIDATE_SCHEMA_ID,
+    PIPELINE_PROFILE_SCHEMA_ID,
+    PIPELINE_REQUEST_SCHEMA_ID,
+    PIPELINE_RESULT_SCHEMA_ID,
+    SYNTHETIC_TEST_PROFILE_ID,
+    CandidateEvidenceV1,
+    DockingPipeline,
+    DockingPipelineError,
+    DockingPipelineProfileV1,
+    DockingPipelineRequestV1,
+    DockingPipelineResultV1,
+)
 
 __all__ = [
     "AUTHENTICATED_DOCKING_DERIVATION_ID",
@@ -609,4 +624,17 @@ __all__ = [
     "scorer_descriptor",
     "search_space_fingerprint",
     "symmetry_aware_rmsd",
+    "CURRENT_V7_FIXED64_PROFILE_ID",
+    "EXTERNAL_AUTHORITY_BLOCKERS",
+    "PIPELINE_CANDIDATE_SCHEMA_ID",
+    "PIPELINE_PROFILE_SCHEMA_ID",
+    "PIPELINE_REQUEST_SCHEMA_ID",
+    "PIPELINE_RESULT_SCHEMA_ID",
+    "SYNTHETIC_TEST_PROFILE_ID",
+    "CandidateEvidenceV1",
+    "DockingPipeline",
+    "DockingPipelineError",
+    "DockingPipelineProfileV1",
+    "DockingPipelineRequestV1",
+    "DockingPipelineResultV1",
 ]

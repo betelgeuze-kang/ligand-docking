@@ -386,6 +386,21 @@ This adapter relaxes ligand-internal coordinates only. It does not include
 receptor--ligand interaction energy, prove pose improvement, provide an
 affinity/free-energy estimate, or establish scientific/product readiness.
 
+`DockingPipeline(...)` is the provisional standalone CPU composition boundary
+for canonical, already-prepared receptor and ligand systems plus an explicit
+typed pocket. Its default `DockingPipelineProfileV1` binds the current V7,
+Scorer-v1, fixed-64/Top-5 baseline; a separate bounded synthetic profile exists
+only for tests. `DockingPipelineRequestV1` cannot be constructed as a production
+request, and `DockingPipelineResultV1` retains all candidate failures, complete
+successful score-term/validity/refinement evidence, the four external-authority
+blockers, and false Fresh, Stage 0, product, customer-pose, and public/scientific
+authorities. The pass-through geometric-admission component records that the
+future surface-aware gate is not enabled and never removes a candidate.
+
+The dependency-injected component boundary is provisional. It performs no file
+parsing, protonation, tautomer selection, charge generation, pocket prediction,
+external reservation, benchmark evaluation, or product action.
+
 ### Internal APIs
 
 Names beginning with `_`, implementation files not re-exported from a package
