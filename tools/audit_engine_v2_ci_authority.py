@@ -11,9 +11,6 @@ from typing import Any
 
 
 SCHEMA_ID = "betelgeuze.engine_v2_ci_authority_inventory/1.0.0"
-ONE_SHOT_AUTHORITY_WORKFLOW = (
-    ".github/workflows/ci-engine-v2-source-paired-clearance-one-shot-ab.yml"
-)
 AUTHORITATIVE_WORKFLOWS = (
     ".github/workflows/ci-engine-v2-main.yml",
     ".github/workflows/ci-engine-v2-release-candidate.yml",
@@ -60,6 +57,15 @@ ONE_SHOT_REQUIRED_TOKENS = (
     "tests/unit/test_source_paired_clearance_one_shot_source_policy_tamper.py",
     "tests/unit/test_source_paired_clearance_one_shot_verdict_semantics.py",
     "docs/engine_v2_source_paired_clearance_one_shot_ab.md",
+    "dist-engine-v2",
+    "import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_ab",
+    "import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_binding",
+    "import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_evidence",
+    "import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_legacy",
+    "import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_result",
+    "import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_result_binding",
+    "import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_result_legacy",
+    "import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_verdict_diagnostics",
 )
 
 
@@ -121,18 +127,9 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
     one_shot_contract_present = any(
         (repo_root / path).is_file() for path in ONE_SHOT_CONTRACT_PATHS
     )
-    one_shot_workflow = repo_root / ONE_SHOT_AUTHORITY_WORKFLOW
-    one_shot_text = (
-        one_shot_workflow.read_text(encoding="utf-8")
-        if one_shot_workflow.is_file()
-        else ""
-    )
     one_shot_contract_in_authoritative_ci = (
         not one_shot_contract_present
-        or (
-            ONE_SHOT_AUTHORITY_WORKFLOW in workflows
-            and all(token in one_shot_text for token in ONE_SHOT_REQUIRED_TOKENS)
-        )
+        or all(token in main_text for token in ONE_SHOT_REQUIRED_TOKENS)
     )
 
     payload: dict[str, Any] = {

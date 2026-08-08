@@ -6,6 +6,14 @@ on:
     paths:
       - "betelgeuze_engine_v2/**"
       - "betelgeuze_engine_v2/benchmark/source_paired_clearance_activation.py"
+      - "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_ab.py"
+      - "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_legacy.py"
+      - "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_binding.py"
+      - "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_evidence.py"
+      - "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_result.py"
+      - "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_result_legacy.py"
+      - "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_result_binding.py"
+      - "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_verdict_diagnostics.py"
       - "betelgeuze_engine_v2/docking/source_paired_clearance_activation.py"
       - "packaging/engine-v2/**"
       - "rust_engine_v2/**"
@@ -14,6 +22,7 @@ on:
       - "config/engine_v2_fresh_redocking_holdout_manifest.json"
       - "config/engine_v2_phase25_cohort_admission.json"
       - "config/engine_v2_source_paired_clearance_activation.json"
+      - "config/engine_v2_source_paired_clearance_one_shot_ab.json"
       - "tools/build_engine_v2_wheel.py"
       - "tools/build_engine_v2_native_wheel.py"
       - "tools/build_engine_v2_sbom.py"
@@ -27,6 +36,8 @@ on:
       - "tools/reconcile_engine_v2_stage0_full_suites.py"
       - "tools/audit_engine_v2_ci_authority.py"
       - "tools/verify_engine_v2_source_paired_clearance_activation.py"
+      - "tools/verify_engine_v2_source_paired_clearance_one_shot_ab.py"
+      - "tools/manage_engine_v2_source_paired_clearance_one_shot_ab.py"
       - "config/engine_v2_public_redocking_stage0_*.json"
       - "tests/unit/test_engine_v2_*.py"
       - "tests/unit/test_classify_engine_v2_stage0_full_suite.py"
@@ -115,6 +126,7 @@ jobs:
             config/engine_v2_fresh_redocking_holdout_manifest.json
             config/engine_v2_phase25_cohort_admission.json
             config/engine_v2_source_paired_clearance_activation.json
+            config/engine_v2_source_paired_clearance_one_shot_ab.json
             config/engine_v2_public_redocking_stage0_threshold_evidence.json
             tools/__init__.py
             tools/build_engine_v2_wheel.py
@@ -132,6 +144,8 @@ jobs:
             tools/reconcile_engine_v2_stage0_full_suites.py
             tools/audit_engine_v2_ci_authority.py
             tools/verify_engine_v2_source_paired_clearance_activation.py
+            tools/verify_engine_v2_source_paired_clearance_one_shot_ab.py
+            tools/manage_engine_v2_source_paired_clearance_one_shot_ab.py
             config/engine_v2_public_redocking_stage0_freeze.template.json
             config/engine_v2_public_redocking_stage0_attestation.template.json
             config/engine_v2_public_redocking_stage0_threshold_evidence.template.json
@@ -148,6 +162,12 @@ jobs:
             tests/unit/test_source_paired_clearance_activation_evidence.py
             tests/unit/test_source_paired_torsion_rescue_activation_snapshot.py
             tests/unit/test_verify_engine_v2_source_paired_clearance_activation.py
+            tests/unit/test_source_paired_clearance_one_shot_ab.py
+            tests/unit/test_source_paired_clearance_one_shot_canonical_imports.py
+            tests/unit/test_source_paired_clearance_one_shot_evidence.py
+            tests/unit/test_source_paired_clearance_one_shot_result.py
+            tests/unit/test_source_paired_clearance_one_shot_source_policy_tamper.py
+            tests/unit/test_source_paired_clearance_one_shot_verdict_semantics.py
             tests/unit/test_engine_v2_contracts_molecular.py
             tests/unit/test_engine_v2_mmcif_syntax.py
             tests/unit/test_engine_v2_mmcif_semantics.py
@@ -223,6 +243,7 @@ jobs:
             docs/engine_v2_public_api.md
             docs/engine_v2_source_paired_clearance_activation.md
             docs/engine_v2_source_paired_clearance_selection_policy.md
+            docs/engine_v2_source_paired_clearance_one_shot_ab.md
             docs/engine_v2_stage0_status.md
             docs/independent_engine_v2_commercial_roadmap.ko.md
             docs/roadmaps/engine-v2-scientific-evidence-roadmap.md
@@ -283,11 +304,16 @@ jobs:
             tools/classify_engine_v2_stage0_full_suite.py \
             tools/reconcile_engine_v2_stage0_full_suites.py \
             tools/audit_engine_v2_ci_authority.py \
-            tools/verify_engine_v2_source_paired_clearance_activation.py
+            tools/verify_engine_v2_source_paired_clearance_activation.py \
+            tools/verify_engine_v2_source_paired_clearance_one_shot_ab.py \
+            tools/manage_engine_v2_source_paired_clearance_one_shot_ab.py
           python tools/check_engine_v2_architecture.py
           python tools/verify_engine_v2_phase25_cohort_admission.py
           python tools/verify_engine_v2_source_paired_clearance_activation.py \
             --policy config/engine_v2_source_paired_clearance_activation.json
+          python tools/verify_engine_v2_source_paired_clearance_one_shot_ab.py \
+            --repo-root . \
+            --policy config/engine_v2_source_paired_clearance_one_shot_ab.json
 
       - name: Run complete focused Engine v2 CPU suite
         shell: bash
@@ -377,6 +403,12 @@ jobs:
             tests/unit/test_source_paired_clearance_activation_evidence.py \
             tests/unit/test_source_paired_torsion_rescue_activation_snapshot.py \
             tests/unit/test_verify_engine_v2_source_paired_clearance_activation.py \
+            tests/unit/test_source_paired_clearance_one_shot_ab.py \
+            tests/unit/test_source_paired_clearance_one_shot_canonical_imports.py \
+            tests/unit/test_source_paired_clearance_one_shot_evidence.py \
+            tests/unit/test_source_paired_clearance_one_shot_result.py \
+            tests/unit/test_source_paired_clearance_one_shot_source_policy_tamper.py \
+            tests/unit/test_source_paired_clearance_one_shot_verdict_semantics.py \
             > engine-v2-main.log 2>&1
           status=$?
           cat engine-v2-main.log
@@ -425,6 +457,14 @@ jobs:
           import importlib.metadata as metadata
           import importlib.util
           import betelgeuze_engine_v2 as engine
+          import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_ab
+          import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_binding
+          import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_evidence
+          import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_legacy
+          import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_result
+          import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_result_binding
+          import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_result_legacy
+          import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_verdict_diagnostics
           from betelgeuze_engine_v2.benchmark import (
               ExternalBaselineEngine,
               FROZEN_PUBLIC_BENCHMARK_PROTOCOL_SHA256,
