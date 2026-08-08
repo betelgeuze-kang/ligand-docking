@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+import tools.verify_product_supply_chain as supply_chain_module
 from tools.verify_product_supply_chain import (
     ProductSupplyChainError,
     verify_supply_chain,
@@ -57,11 +58,19 @@ def test_current_product_supply_chain_guardrails_verify() -> None:
     assert len(observed) == 64
 
 
-def test_release_authority_escalation_fails_closed(tmp_path: Path) -> None:
+def test_release_authority_escalation_fails_closed(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
     _copy_guardrail_fixture(tmp_path)
     policy = json.loads(_POLICY_PATH.read_text(encoding="utf-8"))
     policy["release_authority"]["product_release_authorized"] = True
     changed = _reseal(policy)
+    monkeypatch.setattr(
+        supply_chain_module,
+        "EXPECTED_POLICY_SHA256",
+        changed["policy_sha256"],
+    )
 
     target = tmp_path / "config/product_supply_chain_policy.json"
     target.write_text(
@@ -70,6 +79,46 @@ def test_release_authority_escalation_fails_closed(tmp_path: Path) -> None:
     )
 
     with pytest.raises(ProductSupplyChainError, match="authority"):
+        verify_supply_chain(tmp_path)
+
+
+def test_resealed_nested_policy_drift_fails_identity(tmp_path: Path) -> None:
+    _copy_guardrail_fixture(tmp_path)
+    policy = json.loads(_POLICY_PATH.read_text(encoding="utf-8"))
+    policy["container"]["base_image_release_digest_required"] = False
+    changed = _reseal(policy)
+
+    target = tmp_path / "config/product_supply_chain_policy.json"
+    target.write_text(
+        json.dumps(changed, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ProductSupplyChainError, match="identity"):
+        verify_supply_chain(tmp_path)
+
+
+def test_nested_policy_shape_is_exact_at_reviewed_identity(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _copy_guardrail_fixture(tmp_path)
+    policy = json.loads(_POLICY_PATH.read_text(encoding="utf-8"))
+    policy["container"]["base_image_release_digest_required"] = False
+    changed = _reseal(policy)
+    monkeypatch.setattr(
+        supply_chain_module,
+        "EXPECTED_POLICY_SHA256",
+        changed["policy_sha256"],
+    )
+
+    target = tmp_path / "config/product_supply_chain_policy.json"
+    target.write_text(
+        json.dumps(changed, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ProductSupplyChainError, match="container policy"):
         verify_supply_chain(tmp_path)
 
 
@@ -94,6 +143,21 @@ def test_permissive_runtime_permissions_fail_closed(tmp_path: Path) -> None:
     )
 
     with pytest.raises(ProductSupplyChainError, match="forbidden token"):
+        verify_supply_chain(tmp_path)
+
+
+def test_weak_release_base_digest_pattern_fails_closed(tmp_path: Path) -> None:
+    _copy_guardrail_fixture(tmp_path)
+    path = tmp_path / "Dockerfile.product"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace(
+            "grep -Eq '^.+@sha256:[0-9a-f]{64}$'",
+            "grep -Eq '^.+@sha256:[0-9a-f]*$'",
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ProductSupplyChainError, match="exact SHA-256"):
         verify_supply_chain(tmp_path)
 
 

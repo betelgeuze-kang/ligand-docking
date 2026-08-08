@@ -12,6 +12,9 @@ from typing import Any, Mapping
 
 
 POLICY_SCHEMA_ID = "betelgeuze.product_supply_chain_policy/1.0.0"
+EXPECTED_POLICY_SHA256 = (
+    "59828c1ac97c92c103325287200bf867f0734f7ac506d8f09ca03e6c26fb02dc"
+)
 EXPECTED_RUSTUP_COMMIT = "28d1352dbcb436d3111c3594b9e1588e94950464"
 EXPECTED_RUSTUP_VERSION = "1.29.0"
 EXPECTED_RUST_TOOLCHAIN = "1.93.0"
@@ -25,10 +28,48 @@ EXPECTED_RUNTIME_REQUIREMENTS = {
 }
 EXPECTED_DEVELOPMENT_REQUIREMENTS = {"pytest": "9.1.1"}
 EXPECTED_DEPLOY_REQUIREMENTS = {"mlflow": "3.14.0"}
+EXPECTED_CONTAINER_POLICY = {
+    "base_image_release_digest_required": True,
+    "build_fixture_artifacts_forbidden": True,
+    "builder_runtime_stage_separation_required": True,
+    "development_tag_fallback_allowed": True,
+    "non_root_runtime_uid_gid": "10001:10001",
+    "permissive_world_writable_runtime_directories_forbidden": True,
+    "pip_check_required_in_builder_and_runtime": True,
+    "release_build_flag": "PRODUCT_IMAGE_RELEASE_BUILD",
+    "runtime_test_dependencies_forbidden": True,
+}
+EXPECTED_DEPENDENCY_PROFILES = {
+    "api_development": "requirements-api.txt",
+    "api_runtime": "requirements-api-runtime.txt",
+    "base": "requirements-base.txt",
+    "deployment": "requirements-deploy.txt",
+    "product_rocm": "requirements-product-rocm.txt",
+    "top_level_exact_pins_required": True,
+    "transitive_hash_lock_status": "not_implemented_blocks_signed_release",
+}
+EXPECTED_MONITORING_POLICY = {
+    "dependabot_ecosystems_required": ["docker", "github-actions", "pip"],
+    "dependency_license_scan_status": "not_implemented",
+    "sbom_status": "not_implemented",
+    "vulnerability_scan_status": "not_implemented",
+}
+EXPECTED_RELEASE_AUTHORITY = {
+    "container_registry_push_authorized": False,
+    "deployment_authorized": False,
+    "gpu_parity_claim_authorized": False,
+    "product_release_authorized": False,
+    "release_signing_authorized": False,
+    "scientific_claim_authorized": False,
+}
+EXPECTED_RUST_POLICY = {
+    "installer_checksum_required_for_release": True,
+    "installer_source_commit": EXPECTED_RUSTUP_COMMIT,
+    "installer_version": EXPECTED_RUSTUP_VERSION,
+    "toolchain": EXPECTED_RUST_TOOLCHAIN,
+}
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
-_REQUIREMENT_RE = re.compile(
-    r"^([A-Za-z0-9_.-]+(?:\[[A-Za-z0-9_,.-]+\])?)==([^\s;]+)$"
-)
+_REQUIREMENT_RE = re.compile(r"^([A-Za-z0-9_.-]+(?:\[[A-Za-z0-9_,.-]+\])?)==([^\s;]+)$")
 
 
 class ProductSupplyChainError(ValueError):
@@ -60,9 +101,7 @@ def _read_json(path: Path, *, name: str) -> dict[str, Any]:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
-        raise ProductSupplyChainError(
-            f"{name} cannot be read as JSON: {exc}"
-        ) from exc
+        raise ProductSupplyChainError(f"{name} cannot be read as JSON: {exc}") from exc
     if not isinstance(payload, dict):
         raise ProductSupplyChainError(f"{name} must be a JSON object")
     return payload
@@ -72,6 +111,18 @@ def _mapping(value: object, *, name: str) -> Mapping[str, Any]:
     if not isinstance(value, dict):
         raise ProductSupplyChainError(f"{name} must be an object")
     return value
+
+
+def _exact_mapping(
+    value: object,
+    expected: Mapping[str, Any],
+    *,
+    name: str,
+) -> Mapping[str, Any]:
+    observed = _mapping(value, name=name)
+    if observed != expected:
+        raise ProductSupplyChainError(f"{name} drifted")
+    return observed
 
 
 def _exact_requirements(
@@ -123,9 +174,7 @@ def _dockerfile_executable_text(dockerfile: str) -> str:
     """Return Dockerfile instructions while excluding whole-line comments."""
 
     return "\n".join(
-        line
-        for line in dockerfile.splitlines()
-        if not line.lstrip().startswith("#")
+        line for line in dockerfile.splitlines() if not line.lstrip().startswith("#")
     )
 
 
@@ -150,10 +199,7 @@ def verify_supply_chain(repo_root: Path) -> str:
         raise ProductSupplyChainError("policy key set is invalid")
     if policy.get("schema_id") != POLICY_SCHEMA_ID:
         raise ProductSupplyChainError("policy schema is invalid")
-    if (
-        policy.get("policy_role")
-        != "product_image_build_and_dependency_guardrails"
-    ):
+    if policy.get("policy_role") != "product_image_build_and_dependency_guardrails":
         raise ProductSupplyChainError("policy role is invalid")
     observed_hash = policy.get("policy_sha256")
     if (
@@ -166,19 +212,29 @@ def verify_supply_chain(repo_root: Path) -> str:
     expected_hash = _sha256(projection)
     if observed_hash != expected_hash:
         raise ProductSupplyChainError("policy self-hash is invalid")
+    if observed_hash != EXPECTED_POLICY_SHA256:
+        raise ProductSupplyChainError("policy identity drifted")
 
-    release_authority = _mapping(
+    release_authority = _exact_mapping(
         policy.get("release_authority"),
+        EXPECTED_RELEASE_AUTHORITY,
         name="release_authority",
     )
     if any(value is not False for value in release_authority.values()):
-        raise ProductSupplyChainError(
-            "release or claim authority must remain false"
-        )
+        raise ProductSupplyChainError("release or claim authority must remain false")
     if policy.get("status") != "guardrails_implemented_release_not_qualified":
         raise ProductSupplyChainError("policy status is invalid")
 
-    rust = _mapping(policy.get("rust"), name="rust")
+    _exact_mapping(
+        policy.get("container"),
+        EXPECTED_CONTAINER_POLICY,
+        name="container policy",
+    )
+    rust = _exact_mapping(
+        policy.get("rust"),
+        EXPECTED_RUST_POLICY,
+        name="rust policy",
+    )
     if rust.get("installer_source_commit") != EXPECTED_RUSTUP_COMMIT:
         raise ProductSupplyChainError("Rustup source commit drifted")
     if rust.get("installer_version") != EXPECTED_RUSTUP_VERSION:
@@ -186,9 +242,7 @@ def verify_supply_chain(repo_root: Path) -> str:
     if rust.get("toolchain") != EXPECTED_RUST_TOOLCHAIN:
         raise ProductSupplyChainError("Rust toolchain drifted")
     if rust.get("installer_checksum_required_for_release") is not True:
-        raise ProductSupplyChainError(
-            "release Rustup checksum must be required"
-        )
+        raise ProductSupplyChainError("release Rustup checksum must be required")
 
     dockerfile = _read_text(
         root / "Dockerfile.product",
@@ -200,18 +254,18 @@ def verify_supply_chain(repo_root: Path) -> str:
             "FROM ${PRODUCT_ROCM_BASE} AS builder",
             "FROM ${PRODUCT_ROCM_BASE} AS runtime",
             "ARG PRODUCT_IMAGE_RELEASE_BUILD=0",
-            "ARG RUSTUP_INIT_SHA256=\"\"",
+            'ARG RUSTUP_INIT_SHA256=""',
             f"rust-lang/rustup/{EXPECTED_RUSTUP_COMMIT}/rustup-init.sh",
             f"ARG RUSTUP_VERSION={EXPECTED_RUSTUP_VERSION}",
             f"ARG RUST_TOOLCHAIN={EXPECTED_RUST_TOOLCHAIN}",
             "@sha256:",
-            "release builds require PRODUCT_ROCM_BASE pinned by @sha256",
+            "release builds require PRODUCT_ROCM_BASE pinned by exact @sha256 digest",
             "sha256sum -c -",
             "requirements-api-runtime.txt",
             "python -m venv --system-site-packages /opt/venv",
             "COPY --from=builder /opt/venv /opt/venv",
             "COPY --from=builder /app /app",
-            "python -m pip install --no-cache-dir \"pip==${PIP_VERSION}\"",
+            'python -m pip install --no-cache-dir "pip==${PIP_VERSION}"',
             "python -m pip check",
             "USER 10001:10001",
             "chmod 0700 /app/logs /app/runs /data",
@@ -219,8 +273,10 @@ def verify_supply_chain(repo_root: Path) -> str:
         name="Dockerfile.product",
     )
     if dockerfile.count("python -m pip check") < 2:
+        raise ProductSupplyChainError("builder and runtime must both run pip check")
+    if dockerfile.count("grep -Eq '^.+@sha256:[0-9a-f]{64}$'") != 2:
         raise ProductSupplyChainError(
-            "builder and runtime must both run pip check"
+            "release base image gate must require two exact SHA-256 digests"
         )
     executable_dockerfile = _dockerfile_executable_text(dockerfile)
     for forbidden in (
@@ -245,14 +301,11 @@ def verify_supply_chain(repo_root: Path) -> str:
             "runtime API requirements cannot include profiles"
         )
     if runtime_pins != {
-        key.lower(): value
-        for key, value in EXPECTED_RUNTIME_REQUIREMENTS.items()
+        key.lower(): value for key, value in EXPECTED_RUNTIME_REQUIREMENTS.items()
     }:
         raise ProductSupplyChainError("runtime API direct pins drifted")
     if "pytest" in runtime_pins:
-        raise ProductSupplyChainError(
-            "runtime API requirements include pytest"
-        )
+        raise ProductSupplyChainError("runtime API requirements include pytest")
 
     development_pins, development_includes = _exact_requirements(
         root / "requirements-api.txt",
@@ -263,9 +316,7 @@ def verify_supply_chain(repo_root: Path) -> str:
             "API development profile must include runtime once"
         )
     if development_pins != EXPECTED_DEVELOPMENT_REQUIREMENTS:
-        raise ProductSupplyChainError(
-            "API development direct pins drifted"
-        )
+        raise ProductSupplyChainError("API development direct pins drifted")
 
     deploy_pins, deploy_includes = _exact_requirements(
         root / "requirements-deploy.txt",
@@ -278,13 +329,9 @@ def verify_supply_chain(repo_root: Path) -> str:
         root / ".github/dependabot.yml",
         name="Dependabot config",
     )
-    ecosystems = set(
-        re.findall(r"package-ecosystem:\s*([a-z-]+)", dependabot)
-    )
+    ecosystems = set(re.findall(r"package-ecosystem:\s*([a-z-]+)", dependabot))
     if ecosystems != {"github-actions", "pip", "docker"}:
-        raise ProductSupplyChainError(
-            "Dependabot ecosystem coverage is incomplete"
-        )
+        raise ProductSupplyChainError("Dependabot ecosystem coverage is incomplete")
 
     dockerignore = _read_text(root / ".dockerignore", name=".dockerignore")
     _require_tokens(
@@ -321,31 +368,30 @@ def verify_supply_chain(repo_root: Path) -> str:
             "all three product services must share the build contract"
         )
 
-    dependency_profiles = _mapping(
+    dependency_profiles = _exact_mapping(
         policy.get("dependency_profiles"),
+        EXPECTED_DEPENDENCY_PROFILES,
         name="dependency_profiles",
     )
     if dependency_profiles.get("top_level_exact_pins_required") is not True:
-        raise ProductSupplyChainError(
-            "top-level exact pinning is not required"
-        )
+        raise ProductSupplyChainError("top-level exact pinning is not required")
     if (
         dependency_profiles.get("transitive_hash_lock_status")
         != "not_implemented_blocks_signed_release"
     ):
-        raise ProductSupplyChainError(
-            "hash-lock limitation must remain explicit"
-        )
+        raise ProductSupplyChainError("hash-lock limitation must remain explicit")
 
-    monitoring = _mapping(policy.get("monitoring"), name="monitoring")
+    monitoring = _exact_mapping(
+        policy.get("monitoring"),
+        EXPECTED_MONITORING_POLICY,
+        name="monitoring policy",
+    )
     if sorted(monitoring.get("dependabot_ecosystems_required", [])) != [
         "docker",
         "github-actions",
         "pip",
     ]:
-        raise ProductSupplyChainError(
-            "policy Dependabot ecosystems drifted"
-        )
+        raise ProductSupplyChainError("policy Dependabot ecosystems drifted")
     for field in (
         "dependency_license_scan_status",
         "sbom_status",

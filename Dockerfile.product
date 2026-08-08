@@ -26,10 +26,9 @@ WORKDIR /app
 
 RUN set -eux; \
     if [ "${PRODUCT_IMAGE_RELEASE_BUILD}" = "1" ]; then \
-      case "${PRODUCT_ROCM_BASE}" in \
-        *@sha256:[0-9a-f][0-9a-f]*) ;; \
-        *) echo "release builds require PRODUCT_ROCM_BASE pinned by @sha256" >&2; exit 1 ;; \
-      esac; \
+      printf '%s\n' "${PRODUCT_ROCM_BASE}" \
+        | grep -Eq '^.+@sha256:[0-9a-f]{64}$' \
+        || { echo "release builds require PRODUCT_ROCM_BASE pinned by exact @sha256 digest" >&2; exit 1; }; \
       echo "${RUSTUP_INIT_SHA256}" | grep -Eq '^[0-9a-f]{64}$' \
         || { echo "release builds require RUSTUP_INIT_SHA256" >&2; exit 1; }; \
     fi
@@ -120,10 +119,9 @@ COPY --from=builder /app /app
 # and is never executed: chmod -R a+rwX logs runs
 RUN set -eux; \
     if [ "${PRODUCT_IMAGE_RELEASE_BUILD}" = "1" ]; then \
-      case "${PRODUCT_ROCM_BASE}" in \
-        *@sha256:[0-9a-f][0-9a-f]*) ;; \
-        *) echo "release runtime requires PRODUCT_ROCM_BASE pinned by @sha256" >&2; exit 1 ;; \
-      esac; \
+      printf '%s\n' "${PRODUCT_ROCM_BASE}" \
+        | grep -Eq '^.+@sha256:[0-9a-f]{64}$' \
+        || { echo "release runtime requires PRODUCT_ROCM_BASE pinned by exact @sha256 digest" >&2; exit 1; }; \
     fi; \
     groupadd --gid 10001 betelgeuze; \
     useradd --uid 10001 --gid 10001 --no-create-home --home-dir /nonexistent --shell /usr/sbin/nologin betelgeuze; \
