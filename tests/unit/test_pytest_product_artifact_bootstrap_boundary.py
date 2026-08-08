@@ -211,3 +211,17 @@ def test_sessionstart_respects_required_auto_cli_and_disabled(monkeypatch) -> No
     )
 
     assert calls == ["materialized", "materialized"]
+
+
+def test_bootstrap_contract_uses_canonical_repository_hygiene_ci() -> None:
+    specialized = (
+        _REPO_ROOT
+        / ".github/workflows/ci-pytest-product-bootstrap-boundary.yml"
+    )
+    canonical = _REPO_ROOT / ".github/workflows/ci-repository-hygiene.yml"
+
+    assert not specialized.exists()
+    workflow = canonical.read_text(encoding="utf-8")
+    assert "tests/unit/test_pytest_product_artifact_bootstrap_boundary.py" in workflow
+    assert "BETELGEUZE_PRODUCT_TEST_ARTIFACT_BOOTSTRAP=auto" in workflow
+    assert "github.event.pull_request.head.sha || github.sha" in workflow
