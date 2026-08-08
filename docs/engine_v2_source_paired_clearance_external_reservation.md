@@ -129,6 +129,24 @@ schemas and require the binding at every stage. Until that integration and the
 external service are both operational, historical molecular execution remains
 blocked.
 
+## Operator composition gate
+
+The canonical verifier and operator CLI compose local one-shot eligibility with
+this external policy. `status` reports both local and external blockers, and all
+three mutating commands fail before local durable state or molecular evidence is
+opened:
+
+```text
+reserve
+start
+write-result
+```
+
+The committed non-operational policy therefore cannot be bypassed through the
+canonical operator entrypoint. A future operational provider still requires a
+reviewed policy/code update that consumes the signed external receipt and its
+versioned downstream bindings; changing or resealing the current JSON is rejected.
+
 ## Provider operational requirements
 
 A production provider must be reviewed outside the repository and supply:
