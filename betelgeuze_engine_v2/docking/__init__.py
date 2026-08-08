@@ -360,6 +360,15 @@ from .pipeline import (  # noqa: E402
     SyntheticD0FixtureAdmissionV1,
     repository_synthetic_d0_fixture_admission,
 )
+from .consumers import (  # noqa: E402
+    CONSUMER_ENVELOPE_SCHEMA_ID,
+    DIAGNOSTIC_BENCHMARK_SCOPE,
+    StandaloneConsumerEnvelopeV1,
+    StandaloneDiagnosticBenchmarkAdapter,
+    StandaloneDockingPythonApi,
+    StandaloneProductShadowAdapter,
+    run_standalone_docking,
+)
 
 __all__ = [
     "AUTHENTICATED_DOCKING_DERIVATION_ID",
@@ -669,4 +678,11 @@ __all__ = [
     "ProposalGenerationPlanV1",
     "SyntheticD0FixtureAdmissionV1",
     "repository_synthetic_d0_fixture_admission",
+    "CONSUMER_ENVELOPE_SCHEMA_ID",
+    "DIAGNOSTIC_BENCHMARK_SCOPE",
+    "StandaloneConsumerEnvelopeV1",
+    "StandaloneDiagnosticBenchmarkAdapter",
+    "StandaloneDockingPythonApi",
+    "StandaloneProductShadowAdapter",
+    "run_standalone_docking",
 ]

@@ -216,6 +216,14 @@ from .docking.pipeline import (
     SyntheticD0FixtureAdmissionV1,
     repository_synthetic_d0_fixture_admission,
 )
+from .docking.consumers import (
+    DIAGNOSTIC_BENCHMARK_SCOPE,
+    StandaloneConsumerEnvelopeV1,
+    StandaloneDiagnosticBenchmarkAdapter,
+    StandaloneDockingPythonApi,
+    StandaloneProductShadowAdapter,
+    run_standalone_docking,
+)
 
 __version__ = ENGINE_API_VERSION
 
@@ -291,6 +299,12 @@ __all__ = [
     "UNVERIFIED_SIDE_EFFECT_BLOCKER",
     "SyntheticD0FixtureAdmissionV1",
     "repository_synthetic_d0_fixture_admission",
+    "DIAGNOSTIC_BENCHMARK_SCOPE",
+    "StandaloneConsumerEnvelopeV1",
+    "StandaloneDiagnosticBenchmarkAdapter",
+    "StandaloneDockingPythonApi",
+    "StandaloneProductShadowAdapter",
+    "run_standalone_docking",
     "IndependentPhysicsProvider",
     "KinematicResult",
     "LocalEnergyConfig",
