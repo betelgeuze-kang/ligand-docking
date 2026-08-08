@@ -30,6 +30,7 @@ native-cpu = [
 
 [project.scripts]
 betelgeuze-engine-v2 = "betelgeuze_engine_v2.cli_dispatch:main"
+betelgeuze-dock = "betelgeuze_engine_v2.standalone_cli:main"
 
 [tool.setuptools.packages.find]
 include = ["betelgeuze_engine_v2*"]
