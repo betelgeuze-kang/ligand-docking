@@ -26,8 +26,7 @@ from betelgeuze_engine_v2.benchmark.source_paired_clearance_external_reservation
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _POLICY_PATH = (
-    _REPO_ROOT
-    / "config/engine_v2_source_paired_clearance_external_reservation.json"
+    _REPO_ROOT / "config/engine_v2_source_paired_clearance_external_reservation.json"
 )
 
 
@@ -41,6 +40,7 @@ def _request() -> ExternalReservationRequest:
         source_commit_git_sha1="1" * 40,
         execution_environment_sha256="2" * 64,
         historical_case_ids_sha256=EXPECTED_HISTORICAL_CASE_IDS_SHA256,
+        author_id="author-gamma",
         operator_id="operator-alpha",
         reviewer_id="reviewer-beta",
         nonce_sha256="3" * 64,
@@ -51,7 +51,14 @@ def _request() -> ExternalReservationRequest:
 
 def _signed_receipt(
     request: ExternalReservationRequest,
-) -> tuple[bytes, bytes, ExternalLedgerTrustAnchor, Ed25519PrivateKey]:
+) -> tuple[
+    bytes,
+    bytes,
+    bytes,
+    bytes,
+    ExternalLedgerTrustAnchor,
+    Ed25519PrivateKey,
+]:
     private_key = Ed25519PrivateKey.generate()
     public_raw = private_key.public_key().public_bytes(
         encoding=serialization.Encoding.Raw,
@@ -61,12 +68,14 @@ def _signed_receipt(
         "schema_id": module.RECEIPT_SCHEMA_ID,
         "provider_id": "reviewed-ledger-v1",
         "reservation_id": "reservation-0001",
+        "lifetime_reservation_key_sha256": (request.lifetime_reservation_key_sha256),
         "global_reservation_key_sha256": request.global_reservation_key_sha256,
         "request_sha256": request.request_sha256,
         "one_shot_policy_sha256": request.one_shot_policy_sha256,
         "source_commit_git_sha1": request.source_commit_git_sha1,
         "execution_environment_sha256": request.execution_environment_sha256,
         "historical_case_ids_sha256": request.historical_case_ids_sha256,
+        "author_id": request.author_id,
         "operator_id": request.operator_id,
         "reviewer_id": request.reviewer_id,
         "nonce_sha256": request.nonce_sha256,
@@ -74,13 +83,15 @@ def _signed_receipt(
         "maximum_lifetime_reservations": 1,
         "ledger_sequence": 1,
         "committed_at_unix": 1_800_000_100,
-        "retention_until_unix": (
-            1_800_000_100 + module.MIN_RETENTION_SECONDS + 1
-        ),
+        "retention_until_unix": (1_800_000_100 + module.MIN_RETENTION_SECONDS + 1),
         "immutable": True,
         "append_only": True,
         "revoked": False,
         "test_only": False,
+        "author_identity_authenticated": True,
+        "operator_identity_authenticated": True,
+        "reviewer_identity_authenticated": True,
+        "github_actions_operator": False,
         "historical_execution_operational": False,
         "fresh_holdout_execution_authorized": False,
         "stage0_admission_authority": False,
@@ -91,9 +102,22 @@ def _signed_receipt(
     }
     payload["receipt_sha256"] = module._sha256(payload)
     payload_bytes = module._canonical_bytes(payload)
+    revocation: dict[str, object] = {
+        "schema_id": module.REVOCATION_SNAPSHOT_SCHEMA_ID,
+        "provider_id": "reviewed-ledger-v1",
+        "ledger_sequence": 1,
+        "generated_at_unix": 1_800_000_150,
+        "valid_until_unix": 1_800_000_300,
+        "revoked_receipt_sha256s": [],
+        "append_only": True,
+    }
+    revocation["snapshot_sha256"] = module._sha256(revocation)
+    revocation_bytes = module._canonical_bytes(revocation)
     return (
         payload_bytes,
         private_key.sign(payload_bytes),
+        revocation_bytes,
+        private_key.sign(revocation_bytes),
         ExternalLedgerTrustAnchor(
             provider_id="reviewed-ledger-v1",
             public_key_raw=public_raw,
@@ -146,8 +170,26 @@ def test_request_identity_is_stable_and_role_separated() -> None:
             source_commit_git_sha1="1" * 40,
             execution_environment_sha256="2" * 64,
             historical_case_ids_sha256=EXPECTED_HISTORICAL_CASE_IDS_SHA256,
+            author_id="same",
             operator_id="same",
             reviewer_id="same",
+            nonce_sha256="3" * 64,
+            issued_at_unix=1,
+            expires_at_unix=2,
+        )
+
+    with pytest.raises(
+        ExternalReservationContractError,
+        match="GitHub Actions",
+    ):
+        ExternalReservationRequest(
+            one_shot_policy_sha256=EXPECTED_ONE_SHOT_POLICY_SHA256,
+            source_commit_git_sha1="1" * 40,
+            execution_environment_sha256="2" * 64,
+            historical_case_ids_sha256=EXPECTED_HISTORICAL_CASE_IDS_SHA256,
+            author_id="author",
+            operator_id="github-actions[bot]",
+            reviewer_id="reviewer",
             nonce_sha256="3" * 64,
             issued_at_unix=1,
             expires_at_unix=2,
@@ -156,11 +198,20 @@ def test_request_identity_is_stable_and_role_separated() -> None:
 
 def test_valid_signed_receipt_is_verified_but_not_execution_authority() -> None:
     request = _request()
-    payload, signature, trust_anchor, _private = _signed_receipt(request)
+    (
+        payload,
+        signature,
+        revocation_payload,
+        revocation_signature,
+        trust_anchor,
+        _private,
+    ) = _signed_receipt(request)
 
     verified = verify_signed_external_reservation_receipt(
         payload_bytes=payload,
         signature_bytes=signature,
+        revocation_payload_bytes=revocation_payload,
+        revocation_signature_bytes=revocation_signature,
         request=request,
         trust_anchor=trust_anchor,
         now_unix=1_800_000_200,
@@ -175,7 +226,14 @@ def test_valid_signed_receipt_is_verified_but_not_execution_authority() -> None:
 
 def test_signed_receipt_rejects_tamper_crosswire_and_revocation() -> None:
     request = _request()
-    payload, signature, trust_anchor, private_key = _signed_receipt(request)
+    (
+        payload,
+        signature,
+        revocation_payload,
+        revocation_signature,
+        trust_anchor,
+        private_key,
+    ) = _signed_receipt(request)
     decoded = json.loads(payload)
     decoded["execution_environment_sha256"] = "4" * 64
     decoded.pop("receipt_sha256")
@@ -186,6 +244,8 @@ def test_signed_receipt_rejects_tamper_crosswire_and_revocation() -> None:
         verify_signed_external_reservation_receipt(
             payload_bytes=tampered_bytes,
             signature_bytes=private_key.sign(tampered_bytes),
+            revocation_payload_bytes=revocation_payload,
+            revocation_signature_bytes=revocation_signature,
             request=request,
             trust_anchor=trust_anchor,
             now_unix=1_800_000_200,
@@ -195,37 +255,107 @@ def test_signed_receipt_rejects_tamper_crosswire_and_revocation() -> None:
         verify_signed_external_reservation_receipt(
             payload_bytes=payload,
             signature_bytes=b"0" * 64,
+            revocation_payload_bytes=revocation_payload,
+            revocation_signature_bytes=revocation_signature,
             request=request,
             trust_anchor=trust_anchor,
             now_unix=1_800_000_200,
         )
 
     receipt_sha256 = json.loads(payload)["receipt_sha256"]
+    decoded_revocation = json.loads(revocation_payload)
+    decoded_revocation["revoked_receipt_sha256s"] = [receipt_sha256]
+    decoded_revocation.pop("snapshot_sha256")
+    decoded_revocation["snapshot_sha256"] = module._sha256(decoded_revocation)
+    revoked_payload = module._canonical_bytes(decoded_revocation)
     with pytest.raises(ExternalReservationContractError, match="revoked"):
         verify_signed_external_reservation_receipt(
             payload_bytes=payload,
             signature_bytes=signature,
+            revocation_payload_bytes=revoked_payload,
+            revocation_signature_bytes=private_key.sign(revoked_payload),
             request=request,
             trust_anchor=trust_anchor,
             now_unix=1_800_000_200,
-            revoked_receipt_sha256s=(receipt_sha256,),
         )
 
 
-def test_duplicate_json_keys_and_stale_retention_fail_closed() -> None:
+def test_duplicate_json_keys_fail_closed() -> None:
     request = _request()
-    payload, signature, trust_anchor, private_key = _signed_receipt(request)
+    (
+        payload,
+        signature,
+        revocation_payload,
+        revocation_signature,
+        trust_anchor,
+        private_key,
+    ) = _signed_receipt(request)
     duplicate = payload[:-1] + b',"provider_id":"duplicate"}'
 
     with pytest.raises(ExternalReservationContractError, match="duplicate"):
         verify_signed_external_reservation_receipt(
             payload_bytes=duplicate,
             signature_bytes=private_key.sign(duplicate),
+            revocation_payload_bytes=revocation_payload,
+            revocation_signature_bytes=revocation_signature,
             request=request,
             trust_anchor=trust_anchor,
             now_unix=1_800_000_200,
         )
 
+
+def test_noncanonical_receipt_and_stale_revocation_snapshot_fail_closed() -> None:
+    request = _request()
+    (
+        payload,
+        _signature,
+        revocation_payload,
+        revocation_signature,
+        trust_anchor,
+        private_key,
+    ) = _signed_receipt(request)
+    noncanonical_payload = json.dumps(
+        json.loads(payload), indent=2, sort_keys=False
+    ).encode("utf-8")
+
+    with pytest.raises(ExternalReservationContractError, match="canonical"):
+        verify_signed_external_reservation_receipt(
+            payload_bytes=noncanonical_payload,
+            signature_bytes=private_key.sign(noncanonical_payload),
+            revocation_payload_bytes=revocation_payload,
+            revocation_signature_bytes=private_key.sign(revocation_payload),
+            request=request,
+            trust_anchor=trust_anchor,
+            now_unix=1_800_000_200,
+        )
+
+    stale_revocation = json.loads(revocation_payload)
+    stale_revocation["valid_until_unix"] = 1_800_000_200
+    stale_revocation.pop("snapshot_sha256")
+    stale_revocation["snapshot_sha256"] = module._sha256(stale_revocation)
+    stale_revocation_payload = module._canonical_bytes(stale_revocation)
+    with pytest.raises(ExternalReservationContractError, match="lifetime"):
+        verify_signed_external_reservation_receipt(
+            payload_bytes=payload,
+            signature_bytes=private_key.sign(payload),
+            revocation_payload_bytes=stale_revocation_payload,
+            revocation_signature_bytes=private_key.sign(stale_revocation_payload),
+            request=request,
+            trust_anchor=trust_anchor,
+            now_unix=1_800_000_200,
+        )
+
+
+def test_stale_retention_fails_closed() -> None:
+    request = _request()
+    (
+        payload,
+        _signature,
+        revocation_payload,
+        revocation_signature,
+        trust_anchor,
+        private_key,
+    ) = _signed_receipt(request)
     decoded = json.loads(payload)
     decoded["retention_until_unix"] = decoded["committed_at_unix"] + 10
     decoded.pop("receipt_sha256")
@@ -235,6 +365,8 @@ def test_duplicate_json_keys_and_stale_retention_fail_closed() -> None:
         verify_signed_external_reservation_receipt(
             payload_bytes=stale,
             signature_bytes=private_key.sign(stale),
+            revocation_payload_bytes=revocation_payload,
+            revocation_signature_bytes=revocation_signature,
             request=request,
             trust_anchor=trust_anchor,
             now_unix=1_800_000_200,
@@ -243,10 +375,19 @@ def test_duplicate_json_keys_and_stale_retention_fail_closed() -> None:
 
 def test_all_downstream_roles_bind_exact_external_identity() -> None:
     request = _request()
-    payload, signature, trust_anchor, _private = _signed_receipt(request)
+    (
+        payload,
+        signature,
+        revocation_payload,
+        revocation_signature,
+        trust_anchor,
+        _private,
+    ) = _signed_receipt(request)
     verified = verify_signed_external_reservation_receipt(
         payload_bytes=payload,
         signature_bytes=signature,
+        revocation_payload_bytes=revocation_payload,
+        revocation_signature_bytes=revocation_signature,
         request=request,
         trust_anchor=trust_anchor,
         now_unix=1_800_000_200,
@@ -259,28 +400,54 @@ def test_all_downstream_roles_bind_exact_external_identity() -> None:
             document_sha256=document_sha256,
             reservation=verified,
         )
-        assert verify_external_reservation_binding(
-            binding,
-            document_role=role,
-            document_sha256=document_sha256,
-            reservation=verified,
-        ) == binding["binding_sha256"]
+        assert (
+            verify_external_reservation_binding(
+                binding,
+                document_role=role,
+                document_sha256=document_sha256,
+                reservation=verified,
+            )
+            == binding["binding_sha256"]
+        )
         assert binding["authoritative_for_execution"] is False
+        assert binding["lifetime_reservation_key_sha256"] == (
+            request.lifetime_reservation_key_sha256
+        )
+        assert binding["external_reservation_receipt_signature_sha256"] == (
+            verified.receipt_signature_sha256
+        )
+        assert binding["external_revocation_snapshot_sha256"] == (
+            verified.revocation_snapshot_sha256
+        )
 
 
 def test_unconfigured_policy_blocks_before_any_client_call() -> None:
     request = _request()
-    payload, signature, trust_anchor, _private = _signed_receipt(request)
+    (
+        payload,
+        signature,
+        revocation_payload,
+        revocation_signature,
+        trust_anchor,
+        _private,
+    ) = _signed_receipt(request)
 
     class Client:
         provider_id = trust_anchor.provider_id
         production_authority = True
         calls = 0
 
-        def reserve(self, canonical_request: bytes) -> tuple[bytes, bytes]:
+        def reserve(
+            self, canonical_request: bytes
+        ) -> tuple[bytes, bytes, bytes, bytes]:
             del canonical_request
             self.calls += 1
-            return payload, signature
+            return (
+                payload,
+                signature,
+                revocation_payload,
+                revocation_signature,
+            )
 
     client = Client()
     with pytest.raises(
@@ -292,14 +459,20 @@ def test_unconfigured_policy_blocks_before_any_client_call() -> None:
             request=request,
             policy=_policy(),
             trust_anchor=trust_anchor,
-            now_unix=1_800_000_200,
         )
     assert client.calls == 0
 
 
 def test_test_double_cannot_acquire_authority_even_with_operational_shape() -> None:
     request = _request()
-    payload, signature, trust_anchor, _private = _signed_receipt(request)
+    (
+        payload,
+        signature,
+        revocation_payload,
+        revocation_signature,
+        trust_anchor,
+        _private,
+    ) = _signed_receipt(request)
     policy = copy.deepcopy(_policy())
     policy["provider"] = {
         "provider_id": trust_anchor.provider_id,
@@ -310,6 +483,9 @@ def test_test_double_cannot_acquire_authority_even_with_operational_shape() -> N
         "mutual_tls_required": True,
         "server_timestamp_required": True,
         "receipt_signature_algorithm": "ed25519",
+        "canonical_signed_payload_required": True,
+        "policy_bound_trust_anchor_required": True,
+        "signed_revocation_snapshot_required": True,
         "provider_operational": True,
     }
     policy["authority"]["historical_execution_operational"] = True
@@ -318,9 +494,16 @@ def test_test_double_cannot_acquire_authority_even_with_operational_shape() -> N
         provider_id = trust_anchor.provider_id
         production_authority = False
 
-        def reserve(self, canonical_request: bytes) -> tuple[bytes, bytes]:
+        def reserve(
+            self, canonical_request: bytes
+        ) -> tuple[bytes, bytes, bytes, bytes]:
             del canonical_request
-            return payload, signature
+            return (
+                payload,
+                signature,
+                revocation_payload,
+                revocation_signature,
+            )
 
     monkey_policy_verifier = module.verify_external_reservation_policy
     try:
@@ -334,7 +517,70 @@ def test_test_double_cannot_acquire_authority_even_with_operational_shape() -> N
                 request=request,
                 policy=policy,
                 trust_anchor=trust_anchor,
-                now_unix=1_800_000_200,
             )
     finally:
         module.verify_external_reservation_policy = monkey_policy_verifier
+
+
+def test_operational_shape_rejects_policy_trust_anchor_substitution() -> None:
+    request = _request()
+    (
+        payload,
+        signature,
+        revocation_payload,
+        revocation_signature,
+        trust_anchor,
+        _private,
+    ) = _signed_receipt(request)
+    substituted_private_key = Ed25519PrivateKey.generate()
+    substituted_anchor = ExternalLedgerTrustAnchor(
+        provider_id=trust_anchor.provider_id,
+        public_key_raw=substituted_private_key.public_key().public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw,
+        ),
+    )
+    policy = copy.deepcopy(_policy())
+    policy["provider"] = {
+        **policy["provider"],
+        "provider_id": trust_anchor.provider_id,
+        "endpoint": "https://reviewed.example.invalid",
+        "trust_anchor_public_key_hex": trust_anchor.public_key_raw.hex(),
+        "provider_operational": True,
+    }
+    policy["authority"]["historical_execution_operational"] = True
+
+    class Client:
+        provider_id = trust_anchor.provider_id
+        production_authority = True
+        calls = 0
+
+        def reserve(
+            self, canonical_request: bytes
+        ) -> tuple[bytes, bytes, bytes, bytes]:
+            del canonical_request
+            self.calls += 1
+            return (
+                payload,
+                signature,
+                revocation_payload,
+                revocation_signature,
+            )
+
+    client = Client()
+    monkey_policy_verifier = module.verify_external_reservation_policy
+    try:
+        module.verify_external_reservation_policy = lambda _policy: "test"
+        with pytest.raises(
+            ExternalReservationContractError,
+            match="trust anchor",
+        ):
+            request_external_reservation(
+                client=client,
+                request=request,
+                policy=policy,
+                trust_anchor=substituted_anchor,
+            )
+    finally:
+        module.verify_external_reservation_policy = monkey_policy_verifier
+    assert client.calls == 0

@@ -28,39 +28,37 @@ class _TestOnlyInMemoryReservationProvider:
     def __init__(self, private_key: Ed25519PrivateKey) -> None:
         self._private_key = private_key
         self._lock = threading.Lock()
-        self._receipts: dict[str, tuple[bytes, bytes]] = {}
+        self._receipts: dict[str, tuple[bytes, bytes, bytes, bytes]] = {}
         self._used_nonces: set[str] = set()
 
     def reserve(
         self,
         request: ExternalReservationRequest,
-    ) -> tuple[bytes, bytes]:
-        key = request.global_reservation_key_sha256
+    ) -> tuple[bytes, bytes, bytes, bytes]:
+        lifetime_key = request.lifetime_reservation_key_sha256
         with self._lock:
             if request.nonce_sha256 in self._used_nonces:
+                raise ExternalReservationContractError("reservation nonce replayed")
+            if lifetime_key in self._receipts:
                 raise ExternalReservationContractError(
-                    "reservation nonce replayed"
-                )
-            if key in self._receipts:
-                raise ExternalReservationContractError(
-                    "global reservation already exists"
+                    "lifetime reservation already exists"
                 )
             self._used_nonces.add(request.nonce_sha256)
             committed = request.issued_at_unix + 1
             payload: dict[str, object] = {
                 "schema_id": reservation_module.RECEIPT_SCHEMA_ID,
                 "provider_id": self.provider_id,
-                "reservation_id": f"reservation-{key[:16]}",
-                "global_reservation_key_sha256": key,
+                "reservation_id": f"reservation-{lifetime_key[:16]}",
+                "lifetime_reservation_key_sha256": lifetime_key,
+                "global_reservation_key_sha256": (
+                    request.global_reservation_key_sha256
+                ),
                 "request_sha256": request.request_sha256,
                 "one_shot_policy_sha256": request.one_shot_policy_sha256,
                 "source_commit_git_sha1": request.source_commit_git_sha1,
-                "execution_environment_sha256": (
-                    request.execution_environment_sha256
-                ),
-                "historical_case_ids_sha256": (
-                    request.historical_case_ids_sha256
-                ),
+                "execution_environment_sha256": (request.execution_environment_sha256),
+                "historical_case_ids_sha256": (request.historical_case_ids_sha256),
+                "author_id": request.author_id,
                 "operator_id": request.operator_id,
                 "reviewer_id": request.reviewer_id,
                 "nonce_sha256": request.nonce_sha256,
@@ -75,6 +73,10 @@ class _TestOnlyInMemoryReservationProvider:
                 "append_only": True,
                 "revoked": False,
                 "test_only": False,
+                "author_identity_authenticated": True,
+                "operator_identity_authenticated": True,
+                "reviewer_identity_authenticated": True,
+                "github_actions_operator": False,
                 "historical_execution_operational": False,
                 "fresh_holdout_execution_authorized": False,
                 "stage0_admission_authority": False,
@@ -85,21 +87,46 @@ class _TestOnlyInMemoryReservationProvider:
             }
             payload["receipt_sha256"] = reservation_module._sha256(payload)
             payload_bytes = reservation_module._canonical_bytes(payload)
-            signed = (payload_bytes, self._private_key.sign(payload_bytes))
-            self._receipts[key] = signed
+            revocation: dict[str, object] = {
+                "schema_id": reservation_module.REVOCATION_SNAPSHOT_SCHEMA_ID,
+                "provider_id": self.provider_id,
+                "ledger_sequence": 1,
+                "generated_at_unix": committed,
+                "valid_until_unix": (
+                    committed
+                    + reservation_module.MAX_REVOCATION_SNAPSHOT_LIFETIME_SECONDS
+                ),
+                "revoked_receipt_sha256s": [],
+                "append_only": True,
+            }
+            revocation["snapshot_sha256"] = reservation_module._sha256(revocation)
+            revocation_bytes = reservation_module._canonical_bytes(revocation)
+            signed = (
+                payload_bytes,
+                self._private_key.sign(payload_bytes),
+                revocation_bytes,
+                self._private_key.sign(revocation_bytes),
+            )
+            self._receipts[lifetime_key] = signed
             return signed
 
-    def lookup(self, reservation_key: str) -> tuple[bytes, bytes] | None:
+    def lookup(self, reservation_key: str) -> tuple[bytes, bytes, bytes, bytes] | None:
         with self._lock:
             return self._receipts.get(reservation_key)
 
 
-def _request(*, nonce: str, environment: str = "2" * 64) -> ExternalReservationRequest:
+def _request(
+    *,
+    nonce: str,
+    environment: str = "2" * 64,
+    source: str = "1" * 40,
+) -> ExternalReservationRequest:
     return ExternalReservationRequest(
         one_shot_policy_sha256=EXPECTED_ONE_SHOT_POLICY_SHA256,
-        source_commit_git_sha1="1" * 40,
+        source_commit_git_sha1=source,
         execution_environment_sha256=environment,
         historical_case_ids_sha256=EXPECTED_HISTORICAL_CASE_IDS_SHA256,
+        author_id=f"author-{nonce[:8]}",
         operator_id=f"operator-{nonce[:8]}",
         reviewer_id=f"reviewer-{nonce[:8]}",
         nonce_sha256=nonce,
@@ -139,14 +166,16 @@ def test_two_independent_clients_have_exactly_one_global_winner() -> None:
     losers = tuple(item for item in results if item[2] is not None)
     assert len(winners) == 1
     assert len(losers) == 1
-    assert losers[0][2] == "global reservation already exists"
+    assert losers[0][2] == "lifetime reservation already exists"
 
     winning_request, signed, _error = winners[0]
     assert signed is not None
-    payload, signature = signed
+    payload, signature, revocation_payload, revocation_signature = signed
     verified = verify_signed_external_reservation_receipt(
         payload_bytes=payload,
         signature_bytes=signature,
+        revocation_payload_bytes=revocation_payload,
+        revocation_signature_bytes=revocation_signature,
         request=winning_request,
         trust_anchor=_trust_anchor(private_key),
         now_unix=1_800_000_100,
@@ -166,7 +195,7 @@ def test_deleting_local_state_does_not_restore_provider_authority() -> None:
 
     local_state.clear()
 
-    assert provider.lookup(request.global_reservation_key_sha256) == signed
+    assert provider.lookup(request.lifetime_reservation_key_sha256) == signed
     with pytest.raises(
         ExternalReservationContractError,
         match="already exists",
@@ -187,9 +216,32 @@ def test_nonce_replay_is_rejected_even_for_another_global_key() -> None:
         provider.reserve(_request(nonce=nonce, environment="8" * 64))
 
 
-def test_unknown_global_key_lookup_is_absent() -> None:
-    provider = _TestOnlyInMemoryReservationProvider(
-        Ed25519PrivateKey.generate()
+def test_alternate_environment_cannot_allocate_another_lifetime_ordinal() -> None:
+    private_key = Ed25519PrivateKey.generate()
+    provider = _TestOnlyInMemoryReservationProvider(private_key)
+    first = _request(nonce="a" * 64, environment="2" * 64)
+    alternate = _request(
+        nonce="b" * 64,
+        environment="8" * 64,
+        source="f" * 40,
     )
+
+    assert first.lifetime_reservation_key_sha256 == (
+        alternate.lifetime_reservation_key_sha256
+    )
+    assert first.global_reservation_key_sha256 != (
+        alternate.global_reservation_key_sha256
+    )
+    provider.reserve(first)
+
+    with pytest.raises(
+        ExternalReservationContractError,
+        match="lifetime reservation already exists",
+    ):
+        provider.reserve(alternate)
+
+
+def test_unknown_global_key_lookup_is_absent() -> None:
+    provider = _TestOnlyInMemoryReservationProvider(Ed25519PrivateKey.generate())
 
     assert provider.lookup("9" * 64) is None
