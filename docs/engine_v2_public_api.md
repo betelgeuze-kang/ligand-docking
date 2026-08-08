@@ -521,6 +521,14 @@ that normalized verification and remains claim-blocked. The only executable
 profile is fixed-64/Top-5 and requires `--test-only-synthetic`; caller-selected
 small denominators and Top-K values are not accepted.
 
+The provisional Python, diagnostic-benchmark, and product-shadow adapters all
+delegate to this exact core and bind the same pipeline-result receipt. The
+benchmark adapter admits only a bounded synthetic D0 fixture and cannot invoke
+historical, Fresh-128, or public datasets. Product shadow is likewise synthetic
+only: it may display evidence as an operator second opinion, while automatic
+rank changes, customer pose emission, product mutation, and production claims
+remain false and fail closed.
+
 ### Internal APIs
 
 Names beginning with `_`, implementation files not re-exported from a package
