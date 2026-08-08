@@ -155,3 +155,15 @@ def test_deprecated_global_workflow_cannot_substitute_for_main(
 
     assert payload["specialized_workflows"] == [deprecated]
     assert payload["global_orientation_contract_in_authoritative_ci"] is False
+
+
+def test_contaminated_development_contract_uses_canonical_main_workflow() -> None:
+    repo_root = Path(__file__).resolve().parents[2]
+    deprecated = (
+        repo_root
+        / ".github/workflows/ci-engine-v2-global-orientation-development-protocol.yml"
+    )
+    main_text = (repo_root / AUTHORITATIVE_WORKFLOWS[0]).read_text(encoding="utf-8")
+
+    assert not deprecated.exists()
+    assert all(token in main_text for token in GLOBAL_ORIENTATION_REQUIRED_TOKENS)
