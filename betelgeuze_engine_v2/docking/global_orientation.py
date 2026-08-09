@@ -18,13 +18,14 @@ from typing import Iterable, Sequence
 GLOBAL_ORIENTATION_CONFIG_SCHEMA_ID = (
     "betelgeuze.engine_v2_global_orientation_config/1.0.0"
 )
-GLOBAL_ORIENTATION_SLOT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_global_orientation_slot/1.0.0"
-)
+GLOBAL_ORIENTATION_SLOT_SCHEMA_ID = "betelgeuze.engine_v2_global_orientation_slot/2.0.0"
 GLOBAL_ORIENTATION_BATCH_SCHEMA_ID = (
-    "betelgeuze.engine_v2_global_orientation_batch/1.0.0"
+    "betelgeuze.engine_v2_global_orientation_batch/2.0.0"
 )
-GLOBAL_ORIENTATION_GENERATOR_ID = "deterministic_surface_aware_rigid_v1"
+GLOBAL_ORIENTATION_GENERATOR_ID = "deterministic_surface_aware_rigid_v2"
+GLOBAL_ORIENTATION_SOURCE_SEED_SCHEMA_ID = (
+    "betelgeuze.engine_v2_global_orientation_source_seed/1.0.0"
+)
 MAX_LIGAND_ATOMS = 512
 MAX_RECEPTOR_SURFACE_POINTS = 4096
 MAX_ORIENTATIONS = 512
@@ -33,7 +34,9 @@ MAX_TRANSLATION_POINTS_PER_SHELL = 256
 MAX_CANDIDATE_SLOTS = 65536
 _EPSILON = 1.0e-12
 _GOLDEN_RATIO_CONJUGATE = (math.sqrt(5.0) - 1.0) / 2.0
-_SQRT2_FRACTION = math.sqrt(2.0) - 1.0
+_GEODESIC_DUPLICATE_TOLERANCE_RADIANS = 1.0e-10
+_LOW_DISCREPANCY_BASES = (2, 3, 5)
+_MAX_SEQUENCE_ATTEMPTS_PER_ORIENTATION = 1024
 
 Vector3 = tuple[float, float, float]
 Quaternion = tuple[float, float, float, float]
@@ -56,6 +59,28 @@ def _canonical_bytes(value: object) -> bytes:
 
 def _sha256(value: object) -> str:
     return hashlib.sha256(_canonical_bytes(value)).hexdigest()
+
+
+def _sha256_identity(value: object, *, name: str) -> str:
+    if type(value) is not str or len(value) != 64:
+        raise GlobalOrientationError(f"{name} must be a lowercase SHA-256")
+    if any(character not in "0123456789abcdef" for character in value):
+        raise GlobalOrientationError(f"{name} must be a lowercase SHA-256")
+    return value
+
+
+def _profile_id(value: object) -> str:
+    if (
+        type(value) is not str
+        or not value
+        or len(value) > 256
+        or value != value.strip()
+        or not value.isascii()
+    ):
+        raise GlobalOrientationError(
+            "profile_id must be non-empty canonical ASCII within 256 characters"
+        )
+    return value
 
 
 def _finite_float(value: object, *, name: str) -> float:
@@ -125,6 +150,8 @@ def _normalize(value: Vector3, *, name: str) -> Vector3:
     length = _norm(value)
     if length <= _EPSILON:
         raise GlobalOrientationError(f"{name} must be non-zero")
+    if abs(length - 1.0) <= 1.0e-15:
+        return value
     return _scale(value, 1.0 / length)
 
 
@@ -167,13 +194,26 @@ def _long_axis(coordinates: Coordinates) -> Vector3:
 
 
 def _quaternion_normalize(value: Quaternion) -> Quaternion:
-    length = math.sqrt(sum(component * component for component in value))
+    if len(value) != 4:
+        raise GlobalOrientationError("quaternion must contain exactly four values")
+    finite = tuple(
+        _finite_float(component, name=f"quaternion[{index}]")
+        for index, component in enumerate(value)
+    )
+    length = math.sqrt(sum(component * component for component in finite))
     if length <= _EPSILON:
         raise GlobalOrientationError("quaternion must be non-zero")
-    normalized = tuple(component / length for component in value)
-    if normalized[3] < 0.0:
-        normalized = tuple(-component for component in normalized)
-    return normalized  # type: ignore[return-value]
+    normalized = tuple(component / length for component in finite)
+    # q and -q encode the same SO(3) rotation. Choose one representation using
+    # the first non-zero component in (w, z, y, x) order so even exact pi
+    # rotations (w == 0) have one canonical receipt representation.
+    for component in reversed(normalized):
+        if component > 0.0:
+            break
+        if component < 0.0:
+            normalized = tuple(-observed for observed in normalized)
+            break
+    return tuple(0.0 if component == 0.0 else component for component in normalized)  # type: ignore[return-value]
 
 
 def _quaternion_from_axis_angle(axis: Vector3, angle: float) -> Quaternion:
@@ -227,6 +267,26 @@ def _coordinate_identity(value: Coordinates) -> str:
     return _sha256(_coordinates_projection(value))
 
 
+def _derive_source_seed_sha256(
+    *,
+    source_receipt_sha256: str | None,
+    ligand_input_sha256: str,
+    pocket_center: Vector3,
+    pocket_normal: Vector3,
+    profile_id: str,
+) -> str:
+    return _sha256(
+        {
+            "schema_id": GLOBAL_ORIENTATION_SOURCE_SEED_SCHEMA_ID,
+            "source_receipt_sha256": source_receipt_sha256,
+            "ligand_input_sha256": ligand_input_sha256,
+            "pocket_center_binary64_hex": _vector_projection(pocket_center),
+            "pocket_normal_binary64_hex": _vector_projection(pocket_normal),
+            "profile_id": profile_id,
+        }
+    )
+
+
 def _orthonormal_basis(normal: Vector3) -> tuple[Vector3, Vector3, Vector3]:
     axis_z = _normalize(normal, name="pocket normal")
     reference = (1.0, 0.0, 0.0)
@@ -248,10 +308,70 @@ def _local_to_global(
     )
 
 
-def _hopf_quaternion(index: int, count: int) -> Quaternion:
-    unit_1 = (index + 0.5) / count
-    unit_2 = (index * _GOLDEN_RATIO_CONJUGATE) % 1.0
-    unit_3 = (index * _SQRT2_FRACTION) % 1.0
+def _quaternion_geodesic_distance(
+    left: Quaternion,
+    right: Quaternion,
+) -> float:
+    left_unit = _quaternion_normalize(left)
+    right_unit = _quaternion_normalize(right)
+    dot = sum(a * b for a, b in zip(left_unit, right_unit))
+    equivalent_right = (
+        right_unit if dot >= 0.0 else tuple(-value for value in right_unit)
+    )
+    difference_norm = math.sqrt(
+        sum(
+            (a - b) ** 2
+            for a, b in zip(left_unit, equivalent_right)
+        )
+    )
+    sum_norm = math.sqrt(
+        sum(
+            (a + b) ** 2
+            for a, b in zip(left_unit, equivalent_right)
+        )
+    )
+    # For unit quaternions, the SO(3) angle is twice their S3 angle.
+    # This atan2/chord form remains stable when dot rounds to exactly 1.0.
+    return 4.0 * math.atan2(difference_norm, sum_norm)
+
+
+def _radical_inverse(index: int, base: int) -> float:
+    if type(index) is not int or index < 0:
+        raise GlobalOrientationError(
+            "low-discrepancy sequence index must be non-negative"
+        )
+    inverse_base = 1.0 / base
+    fraction = inverse_base
+    value = 0.0
+    remaining = index
+    while remaining:
+        remaining, digit = divmod(remaining, base)
+        value += digit * fraction
+        fraction *= inverse_base
+    return value
+
+
+def _source_seed_offsets(source_seed_sha256: str) -> tuple[float, float, float]:
+    digest = bytes.fromhex(
+        _sha256_identity(source_seed_sha256, name="source_seed_sha256")
+    )
+    denominator = float(1 << 64)
+    return tuple(
+        int.from_bytes(digest[offset : offset + 8], "big") / denominator
+        for offset in (0, 8, 16)
+    )  # type: ignore[return-value]
+
+
+def _low_discrepancy_quaternion(
+    raw_sequence_index: int,
+    *,
+    source_seed_sha256: str,
+) -> Quaternion:
+    offsets = _source_seed_offsets(source_seed_sha256)
+    unit_1, unit_2, unit_3 = tuple(
+        (_radical_inverse(raw_sequence_index, base) + offset) % 1.0
+        for base, offset in zip(_LOW_DISCREPANCY_BASES, offsets)
+    )
     first_radius = math.sqrt(max(0.0, 1.0 - unit_1))
     second_radius = math.sqrt(max(0.0, unit_1))
     return _quaternion_normalize(
@@ -264,30 +384,46 @@ def _hopf_quaternion(index: int, count: int) -> Quaternion:
     )
 
 
+@dataclass(frozen=True, slots=True)
+class _OrientationSequenceItem:
+    raw_sequence_index: int
+    accepted_sequence_index: int
+    quaternion: Quaternion
+
+
 def _orientation_quaternions(
     *,
-    long_axis: Vector3,
-    pocket_normal: Vector3,
+    source_seed_sha256: str,
     count: int,
-) -> tuple[Quaternion, ...]:
-    basis = _orthonormal_basis(pocket_normal)
-    aligned_to_normal = _quaternion_between(long_axis, basis[2])
-    aligned_to_tangent = _quaternion_between(long_axis, basis[0])
-    orientations: list[Quaternion] = []
-    for candidate in (aligned_to_normal, aligned_to_tangent):
-        if len(orientations) < count and candidate not in orientations:
-            orientations.append(candidate)
-    hopf_index = 0
+) -> tuple[_OrientationSequenceItem, ...]:
+    orientations: list[_OrientationSequenceItem] = []
+    raw_sequence_index = 0
+    maximum_attempts = count * _MAX_SEQUENCE_ATTEMPTS_PER_ORIENTATION
     while len(orientations) < count:
-        candidate = _hopf_quaternion(hopf_index, max(1, count))
-        hopf_index += 1
+        if raw_sequence_index >= maximum_attempts:
+            raise GlobalOrientationError(
+                "low-discrepancy sequence exhausted before the requested "
+                "unique orientation count"
+            )
+        candidate = _low_discrepancy_quaternion(
+            raw_sequence_index,
+            source_seed_sha256=source_seed_sha256,
+        )
+        observed_raw_sequence_index = raw_sequence_index
+        raw_sequence_index += 1
         if any(
-            sum((left - right) ** 2 for left, right in zip(candidate, existing))
-            <= 1.0e-20
+            _quaternion_geodesic_distance(candidate, existing.quaternion)
+            <= _GEODESIC_DUPLICATE_TOLERANCE_RADIANS
             for existing in orientations
         ):
             continue
-        orientations.append(candidate)
+        orientations.append(
+            _OrientationSequenceItem(
+                raw_sequence_index=observed_raw_sequence_index,
+                accepted_sequence_index=len(orientations),
+                quaternion=candidate,
+            )
+        )
     return tuple(orientations)
 
 
@@ -426,6 +562,8 @@ class GlobalOrientationConfig:
 class GlobalOrientationSlot:
     proposal_index: int
     orientation_index: int
+    raw_sequence_index: int
+    accepted_sequence_index: int
     translation_index: int
     quaternion: Quaternion
     translation: Vector3
@@ -442,12 +580,12 @@ class GlobalOrientationSlot:
         for name, value in (
             ("proposal_index", self.proposal_index),
             ("orientation_index", self.orientation_index),
+            ("raw_sequence_index", self.raw_sequence_index),
+            ("accepted_sequence_index", self.accepted_sequence_index),
             ("translation_index", self.translation_index),
         ):
             if type(value) is not int or value < 0:
-                raise GlobalOrientationError(
-                    f"{name} must be a non-negative integer"
-                )
+                raise GlobalOrientationError(f"{name} must be a non-negative integer")
         quaternion = _quaternion_normalize(self.quaternion)
         translation = _vector(self.translation, name="translation")
         coordinates = _coordinates(
@@ -489,6 +627,8 @@ class GlobalOrientationSlot:
             "schema_id": self.schema_id,
             "proposal_index": self.proposal_index,
             "orientation_index": self.orientation_index,
+            "raw_sequence_index": self.raw_sequence_index,
+            "accepted_sequence_index": self.accepted_sequence_index,
             "translation_index": self.translation_index,
             "quaternion_binary64_hex": [
                 component.hex() for component in self.quaternion
@@ -523,6 +663,9 @@ class GlobalOrientationBatch:
     config: GlobalOrientationConfig
     ligand_input_sha256: str
     receptor_surface_input_sha256: str | None
+    source_receipt_sha256: str | None
+    source_seed_sha256: str
+    profile_id: str
     pocket_center: Vector3
     pocket_normal: Vector3
     slots: tuple[GlobalOrientationSlot, ...]
@@ -534,14 +677,27 @@ class GlobalOrientationBatch:
             raise GlobalOrientationError("global-orientation batch schema is invalid")
         if type(self.config) is not GlobalOrientationConfig:
             raise TypeError("config must be the exact GlobalOrientationConfig type")
-        if len(self.ligand_input_sha256) != 64:
-            raise GlobalOrientationError("ligand input SHA-256 is invalid")
-        if self.receptor_surface_input_sha256 is not None and len(
-            self.receptor_surface_input_sha256
-        ) != 64:
-            raise GlobalOrientationError(
-                "receptor surface input SHA-256 is invalid"
+        ligand_input_sha256 = _sha256_identity(
+            self.ligand_input_sha256,
+            name="ligand_input_sha256",
+        )
+        receptor_surface_input_sha256 = self.receptor_surface_input_sha256
+        if receptor_surface_input_sha256 is not None:
+            receptor_surface_input_sha256 = _sha256_identity(
+                receptor_surface_input_sha256,
+                name="receptor_surface_input_sha256",
             )
+        source_receipt_sha256 = self.source_receipt_sha256
+        if source_receipt_sha256 is not None:
+            source_receipt_sha256 = _sha256_identity(
+                source_receipt_sha256,
+                name="source_receipt_sha256",
+            )
+        source_seed_sha256 = _sha256_identity(
+            self.source_seed_sha256,
+            name="source_seed_sha256",
+        )
+        profile_id = _profile_id(self.profile_id)
         pocket_center = _vector(self.pocket_center, name="pocket_center")
         pocket_normal = _normalize(
             _vector(self.pocket_normal, name="pocket_normal"),
@@ -565,9 +721,65 @@ class GlobalOrientationBatch:
             (slot.orientation_index, slot.translation_index) for slot in slots
         )
         if observed_pairs != expected_pairs:
-            raise GlobalOrientationError(
-                "orientation/translation grid is incomplete"
+            raise GlobalOrientationError("orientation/translation grid is incomplete")
+        raw_sequence_indices: list[int] = []
+        orientation_quaternions: list[Quaternion] = []
+        for orientation_index in range(self.config.orientation_count):
+            start = orientation_index * self.config.translation_count
+            stop = start + self.config.translation_count
+            orientation_slots = slots[start:stop]
+            first = orientation_slots[0]
+            if any(
+                slot.raw_sequence_index != first.raw_sequence_index
+                or slot.accepted_sequence_index != orientation_index
+                or slot.orientation_index != orientation_index
+                or slot.quaternion != first.quaternion
+                for slot in orientation_slots
+            ):
+                raise GlobalOrientationError(
+                    "orientation sequence evidence is inconsistent within a slot group"
+                )
+            raw_sequence_indices.append(first.raw_sequence_index)
+            orientation_quaternions.append(first.quaternion)
+        if raw_sequence_indices[0] != 0 or any(
+            right <= left
+            for left, right in zip(
+                raw_sequence_indices,
+                raw_sequence_indices[1:],
             )
+        ):
+            raise GlobalOrientationError(
+                "raw orientation sequence indices must begin at zero and increase"
+            )
+        if any(
+            _quaternion_geodesic_distance(left, right)
+            <= _GEODESIC_DUPLICATE_TOLERANCE_RADIANS
+            for index, left in enumerate(orientation_quaternions[:-1])
+            for right in orientation_quaternions[index + 1 :]
+        ):
+            raise GlobalOrientationError(
+                "orientation sequence contains a geodesic duplicate"
+            )
+        expected_source_seed_sha256 = _derive_source_seed_sha256(
+            source_receipt_sha256=source_receipt_sha256,
+            ligand_input_sha256=ligand_input_sha256,
+            pocket_center=pocket_center,
+            pocket_normal=pocket_normal,
+            profile_id=profile_id,
+        )
+        if source_seed_sha256 != expected_source_seed_sha256:
+            raise GlobalOrientationError(
+                "source seed is not bound to source, ligand, pocket, and profile"
+            )
+        object.__setattr__(self, "ligand_input_sha256", ligand_input_sha256)
+        object.__setattr__(
+            self,
+            "receptor_surface_input_sha256",
+            receptor_surface_input_sha256,
+        )
+        object.__setattr__(self, "source_receipt_sha256", source_receipt_sha256)
+        object.__setattr__(self, "source_seed_sha256", source_seed_sha256)
+        object.__setattr__(self, "profile_id", profile_id)
         object.__setattr__(self, "pocket_center", pocket_center)
         object.__setattr__(self, "pocket_normal", pocket_normal)
         object.__setattr__(self, "slots", slots)
@@ -581,6 +793,71 @@ class GlobalOrientationBatch:
     def rejected_count(self) -> int:
         return len(self.slots) - self.accepted_count
 
+    @property
+    def raw_sequence_count(self) -> int:
+        return (
+            self.slots[
+                (self.config.orientation_count - 1) * self.config.translation_count
+            ].raw_sequence_index
+            + 1
+        )
+
+    @property
+    def duplicate_orientation_count(self) -> int:
+        return self.raw_sequence_count - self.config.orientation_count
+
+    def _orientation_coverage_statistics(self) -> dict[str, object]:
+        quaternions = tuple(
+            self.slots[index * self.config.translation_count].quaternion
+            for index in range(self.config.orientation_count)
+        )
+        pairwise_distances = tuple(
+            _quaternion_geodesic_distance(left, right)
+            for index, left in enumerate(quaternions[:-1])
+            for right in quaternions[index + 1 :]
+        )
+        nearest_neighbor_distances = (
+            tuple(
+                min(
+                    _quaternion_geodesic_distance(quaternion, other)
+                    for other_index, other in enumerate(quaternions)
+                    if other_index != index
+                )
+                for index, quaternion in enumerate(quaternions)
+            )
+            if len(quaternions) > 1
+            else ()
+        )
+        minimum_pairwise = min(pairwise_distances) if pairwise_distances else None
+        mean_nearest_neighbor = (
+            sum(nearest_neighbor_distances) / len(nearest_neighbor_distances)
+            if nearest_neighbor_distances
+            else None
+        )
+        maximum_nearest_neighbor = (
+            max(nearest_neighbor_distances) if nearest_neighbor_distances else None
+        )
+        return {
+            "requested_orientation_count": self.config.orientation_count,
+            "raw_sequence_count": self.raw_sequence_count,
+            "accepted_sequence_count": self.config.orientation_count,
+            "duplicate_orientation_count": self.duplicate_orientation_count,
+            "geodesic_duplicate_tolerance_radians_binary64_hex": (
+                _GEODESIC_DUPLICATE_TOLERANCE_RADIANS.hex()
+            ),
+            "minimum_pairwise_geodesic_distance_radians_binary64_hex": (
+                None if minimum_pairwise is None else minimum_pairwise.hex()
+            ),
+            "mean_nearest_neighbor_geodesic_distance_radians_binary64_hex": (
+                None if mean_nearest_neighbor is None else mean_nearest_neighbor.hex()
+            ),
+            "maximum_nearest_neighbor_geodesic_distance_radians_binary64_hex": (
+                None
+                if maximum_nearest_neighbor is None
+                else maximum_nearest_neighbor.hex()
+            ),
+        }
+
     def _projection(self) -> dict[str, object]:
         return {
             "schema_id": self.schema_id,
@@ -588,11 +865,17 @@ class GlobalOrientationBatch:
             "config": self.config.to_dict(),
             "ligand_input_sha256": self.ligand_input_sha256,
             "receptor_surface_input_sha256": self.receptor_surface_input_sha256,
+            "source_receipt_sha256": self.source_receipt_sha256,
+            "source_seed_sha256": self.source_seed_sha256,
+            "profile_id": self.profile_id,
             "pocket_center_binary64_hex": _vector_projection(self.pocket_center),
             "pocket_normal_binary64_hex": _vector_projection(self.pocket_normal),
             "candidate_slot_count": len(self.slots),
             "accepted_count": self.accepted_count,
             "rejected_count": self.rejected_count,
+            "orientation_coverage_statistics": (
+                self._orientation_coverage_statistics()
+            ),
             "slot_receipt_sha256s": [slot.receipt_sha256 for slot in self.slots],
             "failure_complete_denominator": True,
             "native_pose_input_consumed": False,
@@ -621,6 +904,8 @@ def generate_global_orientation_batch(
     pocket_normal: Sequence[float],
     receptor_surface_points: Iterable[Sequence[float]] = (),
     config: GlobalOrientationConfig | None = None,
+    source_receipt_sha256: str | None = None,
+    profile_id: str = GLOBAL_ORIENTATION_GENERATOR_ID,
 ) -> GlobalOrientationBatch:
     """Generate a deterministic failure-complete rigid proposal grid.
 
@@ -649,11 +934,27 @@ def generate_global_orientation_batch(
         _vector(pocket_normal, name="pocket_normal"),
         name="pocket_normal",
     )
+    if source_receipt_sha256 is not None:
+        source_receipt_sha256 = _sha256_identity(
+            source_receipt_sha256,
+            name="source_receipt_sha256",
+        )
+    profile_identity = _profile_id(profile_id)
     centered_ligand = _center(ligand)
-    long_axis = _long_axis(centered_ligand)
-    orientations = _orientation_quaternions(
-        long_axis=long_axis,
+    # Preserve the existing fail-closed requirement for at least two distinct
+    # ligand points even though the independent SO(3) lane no longer aligns a
+    # molecule-specific long axis before sampling.
+    _long_axis(centered_ligand)
+    ligand_identity = _coordinate_identity(ligand)
+    source_seed_sha256 = _derive_source_seed_sha256(
+        source_receipt_sha256=source_receipt_sha256,
+        ligand_input_sha256=ligand_identity,
+        pocket_center=center,
         pocket_normal=normal,
+        profile_id=profile_identity,
+    )
+    orientations = _orientation_quaternions(
+        source_seed_sha256=source_seed_sha256,
         count=active_config.orientation_count,
     )
     translations = _translation_targets(
@@ -662,15 +963,13 @@ def generate_global_orientation_batch(
         radii=active_config.translation_shell_radii,
         points_per_shell=active_config.translation_points_per_shell,
     )
-    ligand_identity = _coordinate_identity(ligand)
     receptor_identity = _coordinate_identity(receptor) if receptor else None
 
     slots: list[GlobalOrientationSlot] = []
     proposal_index = 0
-    for orientation_index, quaternion in enumerate(orientations):
-        rotated = tuple(
-            rotate_vector(point, quaternion) for point in centered_ligand
-        )
+    for orientation_index, orientation in enumerate(orientations):
+        quaternion = orientation.quaternion
+        rotated = tuple(rotate_vector(point, quaternion) for point in centered_ligand)
         for translation_index, translation in enumerate(translations):
             transformed = tuple(_add(point, translation) for point in rotated)
             minimum_distance = _minimum_distance(transformed, receptor)
@@ -683,6 +982,8 @@ def generate_global_orientation_batch(
                 GlobalOrientationSlot(
                     proposal_index=proposal_index,
                     orientation_index=orientation_index,
+                    raw_sequence_index=orientation.raw_sequence_index,
+                    accepted_sequence_index=orientation.accepted_sequence_index,
                     translation_index=translation_index,
                     quaternion=quaternion,
                     translation=translation,
@@ -698,6 +999,9 @@ def generate_global_orientation_batch(
         config=active_config,
         ligand_input_sha256=ligand_identity,
         receptor_surface_input_sha256=receptor_identity,
+        source_receipt_sha256=source_receipt_sha256,
+        source_seed_sha256=source_seed_sha256,
+        profile_id=profile_identity,
         pocket_center=center,
         pocket_normal=normal,
         slots=tuple(slots),
@@ -709,6 +1013,7 @@ __all__ = [
     "GLOBAL_ORIENTATION_BATCH_SCHEMA_ID",
     "GLOBAL_ORIENTATION_CONFIG_SCHEMA_ID",
     "GLOBAL_ORIENTATION_GENERATOR_ID",
+    "GLOBAL_ORIENTATION_SOURCE_SEED_SCHEMA_ID",
     "GLOBAL_ORIENTATION_SLOT_SCHEMA_ID",
     "GlobalOrientationBatch",
     "GlobalOrientationConfig",

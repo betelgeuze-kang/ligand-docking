@@ -16,15 +16,17 @@ scientific claim.
 
 The first implementation provides:
 
-1. a deterministic bounded orientation lattice;
+1. a source-bound, index-stable deterministic orientation sequence;
 2. explicit ligand-long-axis alignment to the pocket normal and a pocket tangent;
 3. a deterministic surface-oriented translation shell;
 4. a bounded receptor-surface clash prefilter;
 5. a failure-complete candidate denominator retaining rejected slots;
 6. immutable candidate and batch receipt identities;
 7. self-contained source-geometry evidence that rederives every batch slot;
-8. metrics that distinguish proposal, validity, and ranking failures; and
-9. self-contained observation evidence that rederives every reported metric.
+8. orientation receipts that preserve raw and accepted sequence indices,
+   canonical quaternions, duplicate counts, and coverage statistics;
+9. metrics that distinguish proposal, validity, and ranking failures; and
+10. self-contained observation evidence that rederives every reported metric.
 
 ## Inputs
 
@@ -33,6 +35,8 @@ The generator accepts only:
 - ligand coordinates;
 - a declared pocket center;
 - a declared pocket normal;
+- an optional exact source-receipt SHA-256;
+- an explicit deterministic profile identity;
 - optional receptor surface points used only for a steric prefilter; and
 - a bounded deterministic configuration.
 
@@ -50,14 +54,21 @@ contract surface.
 
 ## Orientation construction
 
-The ordered orientation set begins with two interpretable placements:
+The orientation set uses an infinite deterministic low-discrepancy quaternion
+sequence. A source seed is the canonical SHA-256 binding of the optional exact
+source receipt, ligand coordinate identity, pocket center and normal, and
+profile identity. `orientation_count` is deliberately excluded from that seed:
+changing only the requested count must preserve the already-generated prefix.
 
-1. ligand longest geometric axis aligned to the pocket normal;
-2. ligand longest geometric axis aligned to a deterministic pocket tangent.
-
-The remaining orientations use a deterministic low-discrepancy quaternion
-sequence. Every quaternion is normalized and serialized using binary64 hex
-representations before receipt hashing.
+Every accepted quaternion has a raw sequence index and an accepted sequence
+index. Quaternions are normalized, canonicalized across the `q`/`-q`
+equivalence, and serialized using binary64 hex representations before receipt
+hashing. Candidates at geodesic distance at or below `1e-10` radians from an
+already accepted orientation are duplicates and do not consume an accepted
+index. The batch receipt preserves raw, accepted, and duplicate counts plus
+minimum and nearest-neighbor geodesic coverage statistics. This makes duplicate
+removal and coverage independently inspectable instead of an implicit generator
+detail.
 
 This does not claim uniform optimal coverage of `SO(3)`. Coverage quality must be
 measured later on contaminated development data and then independently evaluated
@@ -94,12 +105,18 @@ full internal validity or PoseBusters evaluation.
 - ligand coordinates;
 - pocket center and normal;
 - receptor surface points; and
-- the exact generator configuration.
+- the exact generator configuration;
+- the optional exact source-receipt SHA-256; and
+- the deterministic profile identity.
 
 Construction reruns `generate_global_orientation_batch(...)` and requires the
-supplied batch to equal the complete rederived batch. A resealed coordinate,
-translation, receptor surface, acceptance state, or slot receipt therefore fails
-closed. A batch hash alone is not accepted as proof of generator execution.
+supplied batch to equal the complete rederived batch. The evidence projection
+also binds the source seed, every raw and accepted sequence index, every
+canonical quaternion, and the complete coverage-statistics object. A resealed
+source receipt, profile identity, seed, sequence index, quaternion, coverage
+statistic, coordinate, translation, receptor surface, acceptance state, or slot
+receipt therefore fails closed. A batch hash alone is not accepted as proof of
+generator execution.
 
 This evidence is intentionally practical only for bounded synthetic fixtures.
 A later molecular protocol may use immutable external source artifacts, but it
@@ -143,14 +160,19 @@ not sufficient.
 The initial tests cover:
 
 - deterministic batch identity;
+- source-dependent seed identity and source/profile cross-wiring rejection;
+- prefix stability when only `orientation_count` increases;
+- raw and accepted sequence-index completeness;
+- canonical `q`/`-q` receipts and geodesic duplicate removal;
+- rederived duplicate and orientation-coverage statistics;
 - complete orientation/translation denominator;
-- explicit normal alignment;
 - normalized quaternion receipts;
 - clash rejection without denominator loss;
 - absence of native/reference/score inputs in the generator signature;
 - proposal, validity, and ranking failure classification;
 - deterministic score tie-breaking;
 - coordinate, translation, and receptor-surface substitution rejection;
+- source seed, sequence index, quaternion, and coverage substitution rejection;
 - report, score, and threshold substitution rejection; and
 - contract-level rederivation and authority-escalation tamper rejection.
 

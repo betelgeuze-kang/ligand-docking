@@ -1,10 +1,13 @@
 {
   "algorithm": {
     "candidate_denominator_failure_complete": true,
-    "generator_id": "deterministic_surface_aware_rigid_v1",
+    "generator_id": "deterministic_surface_aware_rigid_v2",
+    "index_stable_orientation_sequence_required": true,
     "native_pose_input_allowed": false,
+    "orientation_count_prefix_invariant_required": true,
     "receptor_surface_prefilter_allowed": true,
     "score_feedback_input_allowed": false,
+    "source_dependent_seed_required": true,
     "source_rederivation_evidence_required": true,
     "synthetic_contract_only": true
   },
@@ -17,7 +20,7 @@
     "public_or_scientific_claim_authorized": false,
     "stage0_admission_authority": false
   },
-  "contract_sha256": "b86059aca76425aacc7a2cc28bac98e9ce87f026b399c6a839e9560ff7332a44",
+  "contract_sha256": "02fa37a94f3c1719f5e7b5b808c71d053e313b018ef9bfa7d904869c2ab1dad0",
   "metrics": {
     "failure_classes": [
       "success",
@@ -30,6 +33,33 @@
     "selection_regret_reported": true,
     "top_k_ranked_oracle_reported": true
   },
-  "schema_id": "betelgeuze.engine_v2_global_orientation_synthetic_contract/1.1.0",
+  "orientation_receipt": {
+    "accepted_sequence_indices_required": true,
+    "canonical_quaternion_binary64_hex_required": true,
+    "coverage_statistic_fields": [
+      "requested_orientation_count",
+      "raw_sequence_count",
+      "accepted_sequence_count",
+      "duplicate_orientation_count",
+      "geodesic_duplicate_tolerance_radians_binary64_hex",
+      "minimum_pairwise_geodesic_distance_radians_binary64_hex",
+      "mean_nearest_neighbor_geodesic_distance_radians_binary64_hex",
+      "maximum_nearest_neighbor_geodesic_distance_radians_binary64_hex"
+    ],
+    "coverage_statistics_required": true,
+    "duplicate_statistics_required": true,
+    "geodesic_duplicate_threshold_radians_binary64_hex": "0x1.b7cdfd9d7bdbbp-34",
+    "quaternion_sign_canonicalization_required": true,
+    "raw_sequence_indices_required": true,
+    "source_seed_binding_fields": [
+      "source_receipt_sha256",
+      "ligand_input_sha256",
+      "pocket_center_binary64_hex",
+      "pocket_normal_binary64_hex",
+      "profile_id"
+    ],
+    "source_seed_sha256_required": true
+  },
+  "schema_id": "betelgeuze.engine_v2_global_orientation_synthetic_contract/2.0.0",
   "status": "implemented_synthetic_validation_only"
 }

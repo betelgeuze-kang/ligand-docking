@@ -10,8 +10,26 @@ from pathlib import Path
 from typing import Any, Mapping
 
 
-SCHEMA_ID = "betelgeuze.engine_v2_global_orientation_synthetic_contract/1.1.0"
-GENERATOR_ID = "deterministic_surface_aware_rigid_v1"
+SCHEMA_ID = "betelgeuze.engine_v2_global_orientation_synthetic_contract/2.0.0"
+GENERATOR_ID = "deterministic_surface_aware_rigid_v2"
+GEODESIC_DUPLICATE_THRESHOLD_RADIANS = 1.0e-10
+EXPECTED_SOURCE_SEED_BINDING_FIELDS = (
+    "source_receipt_sha256",
+    "ligand_input_sha256",
+    "pocket_center_binary64_hex",
+    "pocket_normal_binary64_hex",
+    "profile_id",
+)
+EXPECTED_COVERAGE_STATISTIC_FIELDS = (
+    "requested_orientation_count",
+    "raw_sequence_count",
+    "accepted_sequence_count",
+    "duplicate_orientation_count",
+    "geodesic_duplicate_tolerance_radians_binary64_hex",
+    "minimum_pairwise_geodesic_distance_radians_binary64_hex",
+    "mean_nearest_neighbor_geodesic_distance_radians_binary64_hex",
+    "maximum_nearest_neighbor_geodesic_distance_radians_binary64_hex",
+)
 EXPECTED_FAILURE_CLASSES = (
     "success",
     "proposal_failure",
@@ -73,6 +91,7 @@ def verify_contract(contract: Mapping[str, Any]) -> str:
         "authority",
         "contract_sha256",
         "metrics",
+        "orientation_receipt",
         "schema_id",
         "status",
     }
@@ -101,9 +120,12 @@ def verify_contract(contract: Mapping[str, Any]) -> str:
     if set(algorithm) != {
         "candidate_denominator_failure_complete",
         "generator_id",
+        "index_stable_orientation_sequence_required",
         "native_pose_input_allowed",
+        "orientation_count_prefix_invariant_required",
         "receptor_surface_prefilter_allowed",
         "score_feedback_input_allowed",
+        "source_dependent_seed_required",
         "source_rederivation_evidence_required",
         "synthetic_contract_only",
     }:
@@ -116,7 +138,10 @@ def verify_contract(contract: Mapping[str, Any]) -> str:
         )
     for required_true in (
         "candidate_denominator_failure_complete",
+        "index_stable_orientation_sequence_required",
+        "orientation_count_prefix_invariant_required",
         "receptor_surface_prefilter_allowed",
+        "source_dependent_seed_required",
         "source_rederivation_evidence_required",
         "synthetic_contract_only",
     ):
@@ -132,6 +157,68 @@ def verify_contract(contract: Mapping[str, Any]) -> str:
             raise GlobalOrientationSyntheticContractError(
                 f"{forbidden_input} must remain false"
             )
+
+    orientation_receipt = _mapping(
+        contract.get("orientation_receipt"),
+        name="orientation_receipt",
+    )
+    if set(orientation_receipt) != {
+        "accepted_sequence_indices_required",
+        "canonical_quaternion_binary64_hex_required",
+        "coverage_statistic_fields",
+        "coverage_statistics_required",
+        "duplicate_statistics_required",
+        "geodesic_duplicate_threshold_radians_binary64_hex",
+        "quaternion_sign_canonicalization_required",
+        "raw_sequence_indices_required",
+        "source_seed_binding_fields",
+        "source_seed_sha256_required",
+    }:
+        raise GlobalOrientationSyntheticContractError(
+            "orientation receipt key set is invalid"
+        )
+    for required_true in (
+        "accepted_sequence_indices_required",
+        "canonical_quaternion_binary64_hex_required",
+        "coverage_statistics_required",
+        "duplicate_statistics_required",
+        "quaternion_sign_canonicalization_required",
+        "raw_sequence_indices_required",
+        "source_seed_sha256_required",
+    ):
+        if orientation_receipt.get(required_true) is not True:
+            raise GlobalOrientationSyntheticContractError(
+                f"{required_true} must remain true"
+            )
+    if tuple(orientation_receipt.get("source_seed_binding_fields", ())) != (
+        EXPECTED_SOURCE_SEED_BINDING_FIELDS
+    ):
+        raise GlobalOrientationSyntheticContractError(
+            "source seed binding fields drifted"
+        )
+    if tuple(orientation_receipt.get("coverage_statistic_fields", ())) != (
+        EXPECTED_COVERAGE_STATISTIC_FIELDS
+    ):
+        raise GlobalOrientationSyntheticContractError(
+            "coverage statistic fields drifted"
+        )
+    encoded_threshold = orientation_receipt.get(
+        "geodesic_duplicate_threshold_radians_binary64_hex"
+    )
+    if type(encoded_threshold) is not str:
+        raise GlobalOrientationSyntheticContractError(
+            "geodesic duplicate threshold must be binary64 hex"
+        )
+    try:
+        observed_threshold = float.fromhex(encoded_threshold)
+    except ValueError as exc:
+        raise GlobalOrientationSyntheticContractError(
+            "geodesic duplicate threshold must be binary64 hex"
+        ) from exc
+    if observed_threshold != GEODESIC_DUPLICATE_THRESHOLD_RADIANS:
+        raise GlobalOrientationSyntheticContractError(
+            "geodesic duplicate threshold drifted"
+        )
 
     authority = _mapping(contract.get("authority"), name="authority")
     if set(authority) != set(FORBIDDEN_TRUE_AUTHORITY_KEYS):

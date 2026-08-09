@@ -18,7 +18,7 @@ from .global_orientation import (
 
 
 GLOBAL_ORIENTATION_EVIDENCE_SCHEMA_ID = (
-    "betelgeuze.engine_v2_global_orientation_evidence/1.0.0"
+    "betelgeuze.engine_v2_global_orientation_evidence/2.0.0"
 )
 
 Vector3 = tuple[float, float, float]
@@ -76,6 +76,8 @@ class GlobalOrientationEvidence:
     receptor_surface_points: Coordinates
     config: GlobalOrientationConfig
     batch: GlobalOrientationBatch
+    source_receipt_sha256: str | None = None
+    profile_id: str = GLOBAL_ORIENTATION_GENERATOR_ID
     schema_id: str = GLOBAL_ORIENTATION_EVIDENCE_SCHEMA_ID
     _receipt_sha256: str = field(init=False, repr=False)
 
@@ -99,6 +101,8 @@ class GlobalOrientationEvidence:
             pocket_normal=normal,
             receptor_surface_points=receptor,
             config=self.config,
+            source_receipt_sha256=self.source_receipt_sha256,
+            profile_id=self.profile_id,
         )
         if self.batch.to_dict() != expected.to_dict():
             raise GlobalOrientationError(
@@ -108,7 +112,28 @@ class GlobalOrientationEvidence:
         object.__setattr__(self, "pocket_center", center)
         object.__setattr__(self, "pocket_normal", normal)
         object.__setattr__(self, "receptor_surface_points", receptor)
+        object.__setattr__(
+            self,
+            "source_receipt_sha256",
+            expected.source_receipt_sha256,
+        )
+        object.__setattr__(self, "profile_id", expected.profile_id)
         object.__setattr__(self, "_receipt_sha256", _sha256(self._projection()))
+
+    def _orientation_sequence_projection(self) -> list[dict[str, object]]:
+        translation_count = self.config.translation_count
+        return [
+            {
+                "orientation_index": orientation_index,
+                "raw_sequence_index": slot.raw_sequence_index,
+                "accepted_sequence_index": slot.accepted_sequence_index,
+                "canonical_quaternion_binary64_hex": [
+                    component.hex() for component in slot.quaternion
+                ],
+            }
+            for orientation_index in range(self.config.orientation_count)
+            for slot in (self.batch.slots[orientation_index * translation_count],)
+        ]
 
     def _projection(self) -> dict[str, object]:
         return {
@@ -126,13 +151,27 @@ class GlobalOrientationEvidence:
             "receptor_surface_points_binary64_hex": _coordinates_projection(
                 self.receptor_surface_points
             ),
+            "source_receipt_sha256": self.source_receipt_sha256,
+            "source_seed_sha256": self.batch.source_seed_sha256,
+            "profile_id": self.profile_id,
             "config": self.config.to_dict(),
+            "orientation_sequence": self._orientation_sequence_projection(),
+            "orientation_coverage_statistics": self.batch.to_dict()[
+                "orientation_coverage_statistics"
+            ],
             "batch": self.batch.to_dict(),
             "source_rederivation_verified": True,
             "native_pose_input_consumed": False,
             "score_input_consumed": False,
+            "benchmark_outcome_input_consumed": False,
             "fresh_holdout_input_consumed": False,
+            "historical_ab_execution_authorized": False,
+            "fresh_holdout_execution_authorized": False,
+            "stage0_admission_authority": False,
+            "profile_promotion_authority": False,
+            "molecular_execution_authorized": False,
             "product_execution_authorized": False,
+            "customer_pose_emission_authorized": False,
             "public_or_scientific_claim_authorized": False,
         }
 
@@ -154,6 +193,8 @@ def build_global_orientation_evidence(
     pocket_normal: Sequence[float],
     receptor_surface_points: Iterable[Sequence[float]] = (),
     config: GlobalOrientationConfig | None = None,
+    source_receipt_sha256: str | None = None,
+    profile_id: str = GLOBAL_ORIENTATION_GENERATOR_ID,
 ) -> GlobalOrientationEvidence:
     active_config = config or GlobalOrientationConfig()
     ligand = _coordinates(ligand_coordinates, name="ligand_coordinates")
@@ -169,6 +210,8 @@ def build_global_orientation_evidence(
         pocket_normal=normal,
         receptor_surface_points=receptor,
         config=active_config,
+        source_receipt_sha256=source_receipt_sha256,
+        profile_id=profile_id,
     )
     return GlobalOrientationEvidence(
         ligand_coordinates=ligand,
@@ -177,6 +220,8 @@ def build_global_orientation_evidence(
         receptor_surface_points=receptor,
         config=active_config,
         batch=batch,
+        source_receipt_sha256=batch.source_receipt_sha256,
+        profile_id=batch.profile_id,
     )
 
 
