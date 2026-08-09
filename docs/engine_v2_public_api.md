@@ -521,13 +521,16 @@ that normalized verification and remains claim-blocked. The only executable
 profile is fixed-64/Top-5 and requires `--test-only-synthetic`; caller-selected
 small denominators and Top-K values are not accepted.
 
-The provisional Python, diagnostic-benchmark, and product-shadow adapters all
-delegate to this exact core and bind the same pipeline-result receipt. The
-benchmark adapter admits only a bounded synthetic D0 fixture and cannot invoke
-historical, Fresh-128, or public datasets. Product shadow is likewise synthetic
-only: it may display evidence as an operator second opinion, while automatic
-rank changes, customer pose emission, product mutation, and production claims
-remain false and fail closed.
+The provisional Python, diagnostic-benchmark, and product-shadow adapters call
+only the no-argument sealed `DockingPipeline().run` core. Each admits the exact
+package-owned synthetic D0 fixed-64/Top-5 request and embeds the same unmodified
+pipeline-result receipt; no adapter owns a second fixture manifest, component
+factory, recorder, ranker, or result-rewrite path. The benchmark adapter rejects
+historical, Fresh-128, public, and arbitrary cases before constructing the core.
+Product shadow may display that evidence as an operator second opinion, while
+automatic rank or selection changes, customer pose emission, product mutation,
+reservation, real molecular execution, and production/scientific claims remain
+false and fail closed.
 
 ### Internal APIs
 
