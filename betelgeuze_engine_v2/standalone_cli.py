@@ -37,13 +37,22 @@ from .docking import DockingScope, PocketDefinition
 from .docking.pipeline import (
     EXTERNAL_AUTHORITY_BLOCKERS,
     PIPELINE_CANDIDATE_SCHEMA_ID,
-    PIPELINE_PROFILE_SCHEMA_ID,
     PIPELINE_CLAIM_BLOCKERS,
+    PIPELINE_PROFILE_SCHEMA_ID,
+    PIPELINE_PROPOSAL_PLAN_SCHEMA_ID,
     PIPELINE_REQUEST_SCHEMA_ID,
     PIPELINE_RESULT_SCHEMA_ID,
+    SEALED_CANONICAL_COMPONENT_BINDING,
+    SYNTHETIC_D0_FIXTURE_ADMISSION_RECEIPT_SCHEMA_ID,
+    SYNTHETIC_D0_FIXTURE_ID,
+    SYNTHETIC_D0_FIXTURE_MANIFEST_SHA256,
+    SYNTHETIC_D0_FIXTURE_REQUEST_SHA256,
+    SYNTHETIC_ONLY_ACKNOWLEDGMENT,
     DockingPipeline,
+    DockingPipelineError,
     DockingPipelineProfileV1,
     DockingPipelineRequestV1,
+    repository_synthetic_d0_fixture_admission,
 )
 from .docking.interaction_refinement import (
     INTERACTION_AWARE_RIGID_HYBRID_ENSEMBLE_RECEIPT_V6_SCHEMA_ID,
@@ -67,13 +76,22 @@ LIGAND_MANIFEST_SCHEMA_ID = (
     "betelgeuze.engine_v2_standalone_ligand_manifest/1.1.0"
 )
 PIPELINE_VERIFICATION_SCHEMA_ID = (
-    "betelgeuze.engine_v2_standalone_pipeline_verification/1.1.0"
+    "betelgeuze.engine_v2_standalone_pipeline_verification/1.2.0"
 )
 PIPELINE_REPORT_SCHEMA_ID = (
     "betelgeuze.engine_v2_standalone_pipeline_report/1.1.0"
 )
 EXPLICIT_POCKET_METHOD_ID = "explicit-spherical-known-pocket"
 EXPLICIT_POCKET_METHOD_VERSION = "1.0.0"
+_SYNTHETIC_D0_POCKET_METHOD_ID = "consumer-reviewed-sphere"
+_SYNTHETIC_D0_POCKET_METHOD_VERSION = "1.0.0"
+_SYNTHETIC_D0_POCKET_FRAME_ID = "prepared-receptor-frame-v1"
+_SYNTHETIC_D0_CONSTRUCTION_PROOF_SCOPE = (
+    "process_local_not_serialized_not_cryptographic_attestation"
+)
+_SYNTHETIC_D0_CAPABILITY_SCOPE = (
+    "one_run_process_local_not_serialized_not_cryptographic_attestation"
+)
 
 _RESULT_KEYS = frozenset(
     {
@@ -87,14 +105,26 @@ _RESULT_KEYS = frozenset(
         "conformer_receipt_sha256",
         "authority_input_receipt_sha256",
         "proposal_plan_receipt_sha256",
+        "guided_placement_receipt_sha256",
+        "authenticated_search_receipt_sha256",
         "pipeline_source_binding_mode",
+        "scorer_refiner_source_binding_status",
         "scorer_v1_result_receipt_sha256",
+        "budget",
+        "budget_sha256",
+        "proposal_plan",
         "candidate_count",
         "success_count",
         "failure_count",
         "top_proposal_indices",
         "abstained",
         "component_ids",
+        "component_binding_mode",
+        "canonical_components_sealed",
+        "arbitrary_dependency_injection_used",
+        "component_chain_product_qualified",
+        "evidence_record_capability_consumed",
+        "evidence_record_capability_scope",
         "candidate_evidence",
         "blockers",
         "failure_denominator_preserved",
@@ -102,6 +132,14 @@ _RESULT_KEYS = frozenset(
         "pocket_prediction_performed",
         "network_fetch_performed",
         "external_reservation_requested",
+        "side_effect_evidence_status",
+        "external_reservation_authorized",
+        "caller_acknowledged_synthetic_fixture_only",
+        "synthetic_fixture_identity_independently_verified",
+        "synthetic_d0_fixture_id",
+        "synthetic_d0_fixture_manifest_sha256",
+        "synthetic_d0_fixture_admission_receipt_sha256",
+        "synthetic_only_acknowledgment",
         "test_only",
         "historical_execution_authorized",
         "fresh_holdout_execution_authorized",
@@ -110,6 +148,8 @@ _RESULT_KEYS = frozenset(
         "customer_pose_emission_authorized",
         "public_or_scientific_claim_authorized",
         "claim_safe",
+        "canonical_evidence_recorder_factory_sealed",
+        "construction_proof_scope",
         "request",
         "profile",
         "receipt_sha256",
@@ -123,6 +163,11 @@ _REQUEST_KEYS = frozenset(
         "pocket_fingerprint_sha256",
         "seed",
         "profile_receipt_sha256",
+        "fixture_id",
+        "fixture_scope",
+        "caller_acknowledged_input_scope",
+        "synthetic_only_acknowledgment",
+        "synthetic_fixture_identity_independently_verified",
         "test_only",
         "external_reservation_requested",
         "molecular_experiment_authorized",
@@ -145,6 +190,9 @@ _PROFILE_KEYS = frozenset(
         "geometric_admission",
         "clearance_shadow_selection_enabled",
         "result_dependent_allocation",
+        "full_budget_receipt_required",
+        "full_proposal_plan_receipt_required",
+        "failure_denominator_required",
         "test_only_profile",
         "stage0_eligible",
         "product_qualified",
@@ -171,6 +219,36 @@ _CANDIDATE_KEYS = frozenset(
         "error_code",
         "baseline_disagreement",
         "claim_safe",
+        "canonical_recorder_factory_sealed",
+        "construction_proof_scope",
+        "receipt_sha256",
+    }
+)
+_BUDGET_KEYS = frozenset(
+    {
+        "candidate_count",
+        "top_k",
+        "max_torsions",
+        "max_refinement_steps",
+        "translation_radius_angstrom",
+        "seed",
+    }
+)
+_PROPOSAL_PLAN_KEYS = frozenset(
+    {
+        "schema_id",
+        "component_id",
+        "request_sha256",
+        "authority_input_receipt_sha256",
+        "guidance_context_fingerprint_sha256",
+        "guided_policy_fingerprint_sha256",
+        "budget",
+        "budget_sha256",
+        "v3_proposal_indices",
+        "allocation_result_dependent",
+        "full_budget_bound",
+        "claim_safe",
+        "receipt_sha256",
     }
 )
 _POSE_VALIDITY_KEYS = frozenset(
@@ -512,6 +590,22 @@ def _installed_source_sha256() -> str:
     return _sha256_bytes(payload)
 
 
+def _installed_docking_source_sha256(filename: str) -> str:
+    try:
+        payload = resources.files("betelgeuze_engine_v2.docking").joinpath(
+            filename
+        ).read_bytes()
+    except (FileNotFoundError, ModuleNotFoundError, OSError) as exc:
+        raise StandaloneDockCliError(
+            f"installed docking source {filename!r} is unavailable"
+        ) from exc
+    if not payload:
+        raise StandaloneDockCliError(
+            f"installed docking source {filename!r} is empty"
+        )
+    return _sha256_bytes(payload)
+
+
 def _canonical_system_from_path(path: Path, *, role: str) -> tuple[AllAtomSystem, bytes]:
     raw = _read_bounded(path, maximum=MAX_CLI_INPUT_BYTES, name=f"{role} document")
     canonical = raw[:-1] if raw.endswith(b"\n") else raw
@@ -676,7 +770,54 @@ def define_explicit_pocket(
     }
 
 
+def _define_synthetic_d0_fixture_pocket() -> dict[str, object]:
+    admission = repository_synthetic_d0_fixture_admission()
+    pocket = PocketDefinition(
+        scope=DockingScope.KNOWN_POCKET,
+        method_id=_SYNTHETIC_D0_POCKET_METHOD_ID,
+        method_version=_SYNTHETIC_D0_POCKET_METHOD_VERSION,
+        coordinate_frame_id=_SYNTHETIC_D0_POCKET_FRAME_ID,
+        center=torch.zeros(3, dtype=torch.float64),
+        radius_angstrom=10.0,
+        source_artifact_sha256="c" * 64,
+        implementation_source_sha256="d" * 64,
+        metadata={},
+    )
+    if pocket.fingerprint_sha256 != admission.pocket_fingerprint_sha256:
+        raise StandaloneDockCliError(
+            "package-owned synthetic D0 pocket identity is inconsistent"
+        )
+    return {
+        "schema_id": CLI_POCKET_INPUT_SCHEMA_ID,
+        "scope": pocket.scope.value,
+        "method_id": pocket.method_id,
+        "method_version": pocket.method_version,
+        "coordinate_frame_id": pocket.coordinate_frame_id,
+        "center_angstrom": [float(value) for value in pocket.center.tolist()],
+        "radius_angstrom": pocket.radius_angstrom,
+        "source_artifact_sha256": pocket.source_artifact_sha256,
+        "implementation_source_sha256": pocket.implementation_source_sha256,
+        "metadata": {},
+    }
+
+
 def define_pocket(arguments: argparse.Namespace) -> dict[str, object]:
+    if arguments.synthetic_d0_fixture:
+        if (
+            arguments.reference_ligand is not None
+            or arguments.center is not None
+            or arguments.radius is not None
+            or arguments.source_artifact is not None
+            or arguments.model_index is not None
+            or arguments.padding_angstrom is not None
+            or arguments.minimum_radius_angstrom is not None
+            or arguments.coordinate_frame_id != _SYNTHETIC_D0_POCKET_FRAME_ID
+        ):
+            raise StandaloneDockCliError(
+                "synthetic D0 pocket rejects caller geometry and requires only "
+                "its exact coordinate frame"
+            )
+        return _define_synthetic_d0_fixture_pocket()
     if arguments.reference_ligand is not None:
         if arguments.radius is not None or arguments.source_artifact is not None:
             raise StandaloneDockCliError(
@@ -685,9 +826,27 @@ def define_pocket(arguments: argparse.Namespace) -> dict[str, object]:
         return derive_reference_pocket_from_path(
             arguments.reference_ligand,
             coordinate_frame_id=arguments.coordinate_frame_id,
-            model_index=arguments.model_index,
-            padding_angstrom=arguments.padding_angstrom,
-            minimum_radius_angstrom=arguments.minimum_radius_angstrom,
+            model_index=(
+                0 if arguments.model_index is None else arguments.model_index
+            ),
+            padding_angstrom=(
+                4.0
+                if arguments.padding_angstrom is None
+                else arguments.padding_angstrom
+            ),
+            minimum_radius_angstrom=(
+                6.0
+                if arguments.minimum_radius_angstrom is None
+                else arguments.minimum_radius_angstrom
+            ),
+        )
+    if (
+        arguments.model_index is not None
+        or arguments.padding_angstrom is not None
+        or arguments.minimum_radius_angstrom is not None
+    ):
+        raise StandaloneDockCliError(
+            "reference geometry tuning flags require --reference-ligand"
         )
     if arguments.center is None or arguments.radius is None or arguments.source_artifact is None:
         raise StandaloneDockCliError(
@@ -707,10 +866,12 @@ def dock(
     ligand_path: Path,
     pocket_path: Path,
     seed: int,
-    synthetic_candidate_count: int | None = None,
-    synthetic_top_k: int | None = None,
     synthetic_acknowledged: bool = False,
 ) -> dict[str, object]:
+    if synthetic_acknowledged is not True:
+        raise StandaloneDockCliError(
+            "exact synthetic D0 docking requires --test-only-synthetic"
+        )
     receptor, _ = _canonical_system_from_path(receptor_path, role="receptor")
     ligand, _ = _canonical_system_from_path(ligand_path, role="ligand")
     pocket_raw = _read_bounded(
@@ -719,30 +880,24 @@ def dock(
         name="pocket document",
     )
     pocket = _pocket_from_document(_load_canonical_pocket_document(pocket_raw))
-    if synthetic_candidate_count is None:
-        if synthetic_acknowledged or synthetic_top_k is not None:
-            raise StandaloneDockCliError(
-                "synthetic test flags require --synthetic-test-candidates"
-            )
-        profile = DockingPipelineProfileV1()
-    else:
-        if not synthetic_acknowledged:
-            raise StandaloneDockCliError(
-                "small denominators require --test-only-synthetic"
-            )
-        profile = DockingPipelineProfileV1.synthetic_test(
-            candidate_count=synthetic_candidate_count,
-            top_k=2 if synthetic_top_k is None else synthetic_top_k,
+    admission = repository_synthetic_d0_fixture_admission()
+    profile = DockingPipelineProfileV1()
+    try:
+        request = DockingPipelineRequestV1(
+            receptor_system=receptor,
+            ligand_system=ligand,
+            pocket=pocket,
+            seed=seed,
+            synthetic_only_acknowledgment=SYNTHETIC_ONLY_ACKNOWLEDGMENT,
+            fixture_admission=admission,
+            profile=profile,
+            test_only=True,
         )
-    request = DockingPipelineRequestV1(
-        receptor_system=receptor,
-        ligand_system=ligand,
-        pocket=pocket,
-        seed=seed,
-        profile=profile,
-        test_only=True,
-    )
-    return DockingPipeline().run(request).to_dict()
+        return DockingPipeline().run(request).to_dict()
+    except DockingPipelineError as exc:
+        raise StandaloneDockCliError(
+            "synthetic D0 request failed exact package admission"
+        ) from exc
 
 
 def _load_canonical_json(path: Path, *, name: str, maximum: int) -> dict[str, object]:
@@ -877,43 +1032,15 @@ def _verify_profile(profile: Mapping[str, object]) -> dict[str, object]:
     if profile.get("schema_id") != PIPELINE_PROFILE_SCHEMA_ID:
         raise StandaloneDockCliError("pipeline profile schema is unsupported")
     try:
-        normalized = DockingPipelineProfileV1(
-            profile_id=str(profile.get("profile_id", "")),
-            candidate_count=_require_exact_int(
-                profile.get("candidate_count"),
-                name="profile candidate_count",
-                minimum=1,
-            ),
-            top_k=_require_exact_int(
-                profile.get("top_k"),
-                name="profile top_k",
-                minimum=1,
-            ),
-            max_torsions=_require_exact_int(
-                profile.get("max_torsions"),
-                name="profile max_torsions",
-            ),
-            max_refinement_steps=_require_exact_int(
-                profile.get("max_refinement_steps"),
-                name="profile max_refinement_steps",
-                minimum=1,
-            ),
-            translation_radius_angstrom=_binary64(
-                profile.get("translation_radius_angstrom_binary64_hex"),
-                name="profile translation radius",
-            ),
-            receptor_margin_angstrom=_binary64(
-                profile.get("receptor_margin_angstrom_binary64_hex"),
-                name="profile receptor margin",
-            ),
-            test_only_profile=profile.get("test_only_profile") is True,
-        ).to_dict()
+        normalized = DockingPipelineProfileV1().to_dict()
     except (TypeError, ValueError, RuntimeError) as exc:
         if isinstance(exc, StandaloneDockCliError):
             raise
         raise StandaloneDockCliError("pipeline profile semantics are invalid") from exc
     if dict(profile) != normalized:
-        raise StandaloneDockCliError("pipeline profile is not normalized")
+        raise StandaloneDockCliError(
+            "pipeline profile is not the exact admitted fixed64/Top5 profile"
+        )
     return normalized
 
 
@@ -925,6 +1052,7 @@ def _verify_request(
     _require_exact_keys(request, _REQUEST_KEYS, name="pipeline request")
     if request.get("schema_id") != PIPELINE_REQUEST_SCHEMA_ID:
         raise StandaloneDockCliError("pipeline request schema is unsupported")
+    admission = repository_synthetic_d0_fixture_admission()
     for field in (
         "receptor_system_sha256",
         "ligand_system_sha256",
@@ -935,8 +1063,27 @@ def _verify_request(
     if request.get("profile_receipt_sha256") != profile_receipt_sha256:
         raise StandaloneDockCliError("request/profile receipt cross-binding mismatch")
     seed = _require_exact_int(request.get("seed"), name="request seed")
-    if seed >= 2**63:
-        raise StandaloneDockCliError("request seed is outside its bound")
+    if (
+        seed != admission.seed
+        or request.get("receptor_system_sha256")
+        != admission.receptor_system_sha256
+        or request.get("ligand_system_sha256") != admission.ligand_system_sha256
+        or request.get("pocket_fingerprint_sha256")
+        != admission.pocket_fingerprint_sha256
+        or request.get("profile_receipt_sha256")
+        != admission.profile_receipt_sha256
+        or request.get("fixture_id") != admission.fixture_id
+        or request.get("fixture_scope") != "repository_owned_synthetic_d0"
+        or request.get("caller_acknowledged_input_scope")
+        != "synthetic_fixture_only"
+        or request.get("synthetic_only_acknowledgment")
+        != SYNTHETIC_ONLY_ACKNOWLEDGMENT
+        or request.get("synthetic_fixture_identity_independently_verified")
+        is not True
+    ):
+        raise StandaloneDockCliError(
+            "pipeline request is not the exact package-owned synthetic D0 fixture"
+        )
     if (
         request.get("test_only") is not True
         or request.get("external_reservation_requested") is not False
@@ -946,7 +1093,100 @@ def _verify_request(
     projection = dict(request)
     projection.pop("request_sha256")
     _require_hash(request, "request_sha256", projection)
+    if request.get("request_sha256") != SYNTHETIC_D0_FIXTURE_REQUEST_SHA256:
+        raise StandaloneDockCliError("pipeline request identity is not admitted")
     return dict(request)
+
+
+def _budget_sha256(budget: Mapping[str, object]) -> str:
+    return _sha256_document(
+        {
+            "schema_id": "betelgeuze.engine_v2_docking_budget_identity/1.0.0",
+            "budget": dict(budget),
+        }
+    )
+
+
+def _verify_budget(
+    budget: Mapping[str, object],
+    *,
+    profile: Mapping[str, object],
+    request: Mapping[str, object],
+) -> str:
+    _require_exact_keys(budget, _BUDGET_KEYS, name="pipeline budget")
+    for field in (
+        "candidate_count",
+        "top_k",
+        "max_torsions",
+        "max_refinement_steps",
+        "seed",
+    ):
+        _require_exact_int(budget.get(field), name=f"pipeline budget {field}")
+    translation = budget.get("translation_radius_angstrom")
+    if type(translation) is not float or not math.isfinite(translation):
+        raise StandaloneDockCliError(
+            "pipeline budget translation_radius_angstrom is not a finite float"
+        )
+    expected = {
+        "candidate_count": profile["candidate_count"],
+        "top_k": profile["top_k"],
+        "max_torsions": profile["max_torsions"],
+        "max_refinement_steps": profile["max_refinement_steps"],
+        "translation_radius_angstrom": _binary64(
+            profile["translation_radius_angstrom_binary64_hex"],
+            name="profile translation radius",
+        ),
+        "seed": request["seed"],
+    }
+    if dict(budget) != expected:
+        raise StandaloneDockCliError("pipeline budget is cross-wired")
+    return _budget_sha256(budget)
+
+
+def _verify_proposal_plan(
+    plan: Mapping[str, object],
+    *,
+    request_sha256: str,
+    authority_input_receipt_sha256: str,
+    budget: Mapping[str, object],
+    budget_sha256: str,
+    proposal_component_id: str,
+    candidate_count: int,
+) -> str:
+    _require_exact_keys(plan, _PROPOSAL_PLAN_KEYS, name="pipeline proposal plan")
+    if plan.get("schema_id") != PIPELINE_PROPOSAL_PLAN_SCHEMA_ID:
+        raise StandaloneDockCliError("pipeline proposal plan schema is unsupported")
+    for field in (
+        "authority_input_receipt_sha256",
+        "guidance_context_fingerprint_sha256",
+        "guided_policy_fingerprint_sha256",
+        "budget_sha256",
+    ):
+        _require_digest(plan.get(field), name=f"pipeline proposal plan {field}")
+    if (
+        plan.get("component_id") != proposal_component_id
+        or plan.get("request_sha256") != request_sha256
+        or plan.get("authority_input_receipt_sha256")
+        != authority_input_receipt_sha256
+        or plan.get("budget") != dict(budget)
+        or plan.get("budget_sha256") != budget_sha256
+        or plan.get("allocation_result_dependent") is not False
+        or plan.get("full_budget_bound") is not True
+        or plan.get("claim_safe") is not False
+    ):
+        raise StandaloneDockCliError("pipeline proposal plan is cross-wired")
+    indices = _index_list(
+        plan.get("v3_proposal_indices"),
+        name="pipeline proposal plan v3 indices",
+    )
+    if indices != tuple(sorted(indices)) or any(
+        index >= candidate_count for index in indices
+    ):
+        raise StandaloneDockCliError("pipeline proposal allocation is invalid")
+    projection = dict(plan)
+    projection.pop("receipt_sha256")
+    _require_hash(plan, "receipt_sha256", projection)
+    return str(plan["receipt_sha256"])
 
 
 def _verify_pose_validity(document: Mapping[str, object]) -> dict[str, object]:
@@ -1451,6 +1691,9 @@ def _verify_candidate(
         or document.get("candidate_removed_from_denominator") is not False
         or document.get("baseline_disagreement") != "not_evaluated"
         or document.get("claim_safe") is not False
+        or document.get("canonical_recorder_factory_sealed") is not True
+        or document.get("construction_proof_scope")
+        != _SYNTHETIC_D0_CONSTRUCTION_PROOF_SCOPE
         or type(document.get("selection_eligible")) is not bool
     ):
         raise StandaloneDockCliError("pipeline candidate fixed semantics are invalid")
@@ -1520,6 +1763,9 @@ def _verify_candidate(
                     document["source_proposal_fingerprint_sha256"]
                 ),
             )
+    projection = dict(document)
+    projection.pop("receipt_sha256")
+    _require_hash(document, "receipt_sha256", projection)
     return candidate_id, str(status), score_value, bool(document["selection_eligible"])
 
 
@@ -1534,10 +1780,14 @@ def verify_pipeline_result(document: Mapping[str, object]) -> dict[str, object]:
     _require_hash(document, "receipt_sha256", result_projection)
     request = document.get("request")
     profile = document.get("profile")
+    budget = document.get("budget")
+    proposal_plan = document.get("proposal_plan")
     candidates = document.get("candidate_evidence")
     blockers = document.get("blockers")
     if not isinstance(request, dict) or not isinstance(profile, dict):
         raise StandaloneDockCliError("pipeline request/profile evidence is missing")
+    if not isinstance(budget, dict) or not isinstance(proposal_plan, dict):
+        raise StandaloneDockCliError("pipeline budget/proposal evidence is missing")
     if not isinstance(candidates, list) or not isinstance(blockers, list):
         raise StandaloneDockCliError("pipeline candidate/blocker evidence is missing")
     normalized_profile = _verify_profile(profile)
@@ -1551,12 +1801,40 @@ def verify_pipeline_result(document: Mapping[str, object]) -> dict[str, object]:
         or document.get("profile_receipt_sha256") != profile_receipt
     ):
         raise StandaloneDockCliError("pipeline top-level request/profile cross-binding mismatch")
+    admission = repository_synthetic_d0_fixture_admission()
+    admission_document = admission.to_dict()
+    if (
+        admission_document.get("schema_id")
+        != SYNTHETIC_D0_FIXTURE_ADMISSION_RECEIPT_SCHEMA_ID
+        or document.get("synthetic_d0_fixture_id") != SYNTHETIC_D0_FIXTURE_ID
+        or document.get("synthetic_d0_fixture_id") != admission.fixture_id
+        or document.get("synthetic_d0_fixture_manifest_sha256")
+        != SYNTHETIC_D0_FIXTURE_MANIFEST_SHA256
+        or document.get("synthetic_d0_fixture_manifest_sha256")
+        != admission.manifest_sha256
+        or document.get("synthetic_d0_fixture_admission_receipt_sha256")
+        != admission.receipt_sha256
+        or document.get("synthetic_only_acknowledgment")
+        != SYNTHETIC_ONLY_ACKNOWLEDGMENT
+        or document.get("caller_acknowledged_synthetic_fixture_only") is not True
+        or document.get("synthetic_fixture_identity_independently_verified")
+        is not True
+    ):
+        raise StandaloneDockCliError(
+            "pipeline synthetic D0 manifest/admission binding is invalid"
+        )
     candidate_count = _require_exact_int(
         document.get("candidate_count"),
         name="pipeline candidate_count",
         minimum=1,
     )
-    if candidate_count != len(candidates) or candidate_count != normalized_profile["candidate_count"]:
+    if (
+        candidate_count != 64
+        or candidate_count != len(candidates)
+        or candidate_count != normalized_profile["candidate_count"]
+        or normalized_profile.get("top_k") != 5
+        or normalized_profile.get("failure_denominator_required") != 64
+    ):
         raise StandaloneDockCliError("pipeline candidate denominator mismatch")
     for field in (
         "pipeline_source_sha256",
@@ -1566,14 +1844,42 @@ def verify_pipeline_result(document: Mapping[str, object]) -> dict[str, object]:
         "conformer_receipt_sha256",
         "authority_input_receipt_sha256",
         "proposal_plan_receipt_sha256",
+        "guided_placement_receipt_sha256",
+        "authenticated_search_receipt_sha256",
         "scorer_v1_result_receipt_sha256",
+        "budget_sha256",
     ):
         _require_digest(document.get(field), name=f"pipeline {field}")
+    expected_source_hashes = {
+        "pipeline_source_sha256": _installed_docking_source_sha256(
+            "pipeline.py"
+        ),
+        "scorer_source_sha256": _installed_docking_source_sha256(
+            "scorer_v1.py"
+        ),
+        "refiner_source_sha256": _installed_docking_source_sha256(
+            "torsion_contact_refinement.py"
+        ),
+    }
+    if any(
+        document.get(field) != expected
+        for field, expected in expected_source_hashes.items()
+    ):
+        raise StandaloneDockCliError(
+            "pipeline installed source identities are cross-wired"
+        )
     if (
         document.get("pipeline_source_binding_mode")
         != "observed_installed_package_resource_after_import_not_preimport_attested"
+        or document.get("scorer_refiner_source_binding_status")
+        != "observed_canonical_package_resources"
+        or document.get("component_binding_mode")
+        != SEALED_CANONICAL_COMPONENT_BINDING
+        or document.get("canonical_components_sealed") is not True
+        or document.get("arbitrary_dependency_injection_used") is not False
+        or document.get("component_chain_product_qualified") is not False
     ):
-        raise StandaloneDockCliError("pipeline source binding mode is unsupported")
+        raise StandaloneDockCliError("pipeline canonical component binding is invalid")
     component_ids = document.get("component_ids")
     if (
         not isinstance(component_ids, dict)
@@ -1582,6 +1888,26 @@ def verify_pipeline_result(document: Mapping[str, object]) -> dict[str, object]:
         or component_ids != _DEFAULT_COMPONENT_IDS
     ):
         raise StandaloneDockCliError("pipeline component identities are not canonical")
+    derived_budget_sha256 = _verify_budget(
+        budget,
+        profile=normalized_profile,
+        request=normalized_request,
+    )
+    if document.get("budget_sha256") != derived_budget_sha256:
+        raise StandaloneDockCliError("pipeline budget receipt is cross-wired")
+    proposal_receipt = _verify_proposal_plan(
+        proposal_plan,
+        request_sha256=str(normalized_request["request_sha256"]),
+        authority_input_receipt_sha256=str(
+            document["authority_input_receipt_sha256"]
+        ),
+        budget=budget,
+        budget_sha256=derived_budget_sha256,
+        proposal_component_id=str(component_ids["proposal_generator"]),
+        candidate_count=candidate_count,
+    )
+    if document.get("proposal_plan_receipt_sha256") != proposal_receipt:
+        raise StandaloneDockCliError("pipeline proposal plan receipt is cross-wired")
     candidate_rows: list[tuple[str, str, float | None, bool]] = []
     authority_receipt = str(document["authority_input_receipt_sha256"])
     for index, row in enumerate(candidates):
@@ -1646,9 +1972,24 @@ def verify_pipeline_result(document: Mapping[str, object]) -> dict[str, object]:
         document.get("chemistry_inference_performed") is not False
         or document.get("pocket_prediction_performed") is not False
         or document.get("network_fetch_performed") is not False
+        or document.get("external_reservation_requested") is not False
+        or document.get("external_reservation_authorized") is not False
+        or document.get("side_effect_evidence_status")
+        != "verified_absent_by_sealed_canonical_components"
         or document.get("test_only") is not True
     ):
         raise StandaloneDockCliError("pipeline fixed execution semantics are invalid")
+    if (
+        document.get("evidence_record_capability_consumed") is not True
+        or document.get("evidence_record_capability_scope")
+        != _SYNTHETIC_D0_CAPABILITY_SCOPE
+        or document.get("canonical_evidence_recorder_factory_sealed") is not True
+        or document.get("construction_proof_scope")
+        != _SYNTHETIC_D0_CONSTRUCTION_PROOF_SCOPE
+    ):
+        raise StandaloneDockCliError(
+            "pipeline serialized recorder/capability scope is invalid"
+        )
     if (
         any(not isinstance(value, str) or not value for value in blockers)
         or len(blockers) != len(set(blockers))
@@ -1669,18 +2010,22 @@ def verify_pipeline_result(document: Mapping[str, object]) -> dict[str, object]:
     )
     if any(document.get(field) is not False for field in required_false):
         raise StandaloneDockCliError("pipeline result asserts forbidden authority")
-    if document.get("external_reservation_requested") is not False:
-        raise StandaloneDockCliError("pipeline result requested external authority")
     projection: dict[str, object] = {
         "schema_id": PIPELINE_VERIFICATION_SCHEMA_ID,
         "status": "verified_structural_consistency_only",
         "verification_scope": (
-            "exact_schema_keys_self_hashes_cross_bindings_and_derived_semantics"
+            "available_serialized_structure_only_no_opaque_upstream_content"
         ),
         "pipeline_result_receipt_sha256": document["receipt_sha256"],
         "request_sha256": normalized_request["request_sha256"],
         "profile_receipt_sha256": profile_receipt,
         "profile_id": normalized_profile["profile_id"],
+        "synthetic_d0_fixture_id": admission.fixture_id,
+        "synthetic_d0_fixture_manifest_sha256": admission.manifest_sha256,
+        "synthetic_d0_fixture_admission_receipt_sha256": (
+            admission.receipt_sha256
+        ),
+        "component_binding_mode": SEALED_CANONICAL_COMPONENT_BINDING,
         "candidate_count": candidate_count,
         "success_count": derived_success_count,
         "failure_count": derived_failure_count,
@@ -1690,8 +2035,17 @@ def verify_pipeline_result(document: Mapping[str, object]) -> dict[str, object]:
         "external_authority_blocker_count": len(EXTERNAL_AUTHORITY_BLOCKERS),
         "structural_consistency_verified": True,
         "self_hash_consistency_verified": True,
-        "cross_bindings_verified": True,
-        "derived_semantics_verified": True,
+        "available_structural_cross_bindings_verified": True,
+        "available_derived_semantics_verified": True,
+        "verified_structural_items": [
+            "exact_serialized_schema_keys",
+            "embedded_structural_self_hashes",
+            "available_admission_request_profile_budget_plan_bindings",
+            "available_candidate_score_validity_refinement_bindings",
+            "fixed64_failure_denominator_and_stable_top_k_at_most5",
+            "sealed_component_and_false_authority_declarations",
+        ],
+        "opaque_upstream_receipt_content_verified": False,
         "cryptographic_signature_verified": False,
         "content_authenticity_verified": False,
         "source_preimport_attestation_verified": False,
@@ -1760,12 +2114,13 @@ def _parser() -> argparse.ArgumentParser:
     source = pocket.add_mutually_exclusive_group(required=True)
     source.add_argument("--reference-ligand", type=Path)
     source.add_argument("--center", type=float, nargs=3)
+    source.add_argument("--synthetic-d0-fixture", action="store_true")
     pocket.add_argument("--radius", type=float)
     pocket.add_argument("--source-artifact", type=Path)
     pocket.add_argument("--coordinate-frame-id", required=True)
-    pocket.add_argument("--model-index", type=int, default=0)
-    pocket.add_argument("--padding-angstrom", type=float, default=4.0)
-    pocket.add_argument("--minimum-radius-angstrom", type=float, default=6.0)
+    pocket.add_argument("--model-index", type=int)
+    pocket.add_argument("--padding-angstrom", type=float)
+    pocket.add_argument("--minimum-radius-angstrom", type=float)
     pocket.add_argument("--output", type=Path, required=True)
     pocket.add_argument("--overwrite", action="store_true")
 
@@ -1774,8 +2129,6 @@ def _parser() -> argparse.ArgumentParser:
     docking.add_argument("--ligand", type=Path, required=True)
     docking.add_argument("--pocket", type=Path, required=True)
     docking.add_argument("--seed", type=int, required=True)
-    docking.add_argument("--synthetic-test-candidates", type=int)
-    docking.add_argument("--synthetic-test-top-k", type=int)
     docking.add_argument("--test-only-synthetic", action="store_true")
     docking.add_argument("--output", type=Path, required=True)
     docking.add_argument("--overwrite", action="store_true")
@@ -1805,9 +2158,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         elif arguments.command == "define-pocket":
             document = define_pocket(arguments)
             source_paths = (
-                (arguments.reference_ligand,)
-                if arguments.reference_ligand is not None
-                else (arguments.source_artifact,)
+                ()
+                if arguments.synthetic_d0_fixture
+                else (
+                    (arguments.reference_ligand,)
+                    if arguments.reference_ligand is not None
+                    else (arguments.source_artifact,)
+                )
             )
             _write_output(
                 document,
@@ -1821,8 +2178,6 @@ def main(argv: Sequence[str] | None = None) -> int:
                 ligand_path=arguments.ligand,
                 pocket_path=arguments.pocket,
                 seed=arguments.seed,
-                synthetic_candidate_count=arguments.synthetic_test_candidates,
-                synthetic_top_k=arguments.synthetic_test_top_k,
                 synthetic_acknowledged=arguments.test_only_synthetic,
             )
             _write_output(

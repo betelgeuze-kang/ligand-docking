@@ -45,6 +45,7 @@ exclude = [
 
 [tool.setuptools.package-data]
 betelgeuze_engine_v2 = ["py.typed"]
+"betelgeuze_engine_v2.docking" = ["synthetic_d0_fixture_admission.json"]
 
 [tool.ruff]
 target-version = "py310"

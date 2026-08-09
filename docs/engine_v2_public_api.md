@@ -457,11 +457,20 @@ six file-oriented commands:
 ```text
 betelgeuze-dock prepare-receptor --input SYSTEM --output SYSTEM
 betelgeuze-dock prepare-ligands --input SYSTEM [--input SYSTEM ...] --output-dir BUNDLE
-betelgeuze-dock define-pocket ... --output POCKET
-betelgeuze-dock dock --receptor SYSTEM --ligand SYSTEM --pocket POCKET --seed INTEGER --output RESULT
+betelgeuze-dock define-pocket --synthetic-d0-fixture --coordinate-frame-id prepared-receptor-frame-v1 --output POCKET
+betelgeuze-dock dock --receptor SYSTEM --ligand SYSTEM --pocket POCKET --seed 4301 --test-only-synthetic --output RESULT
 betelgeuze-dock verify --result RESULT --output VERIFICATION
 betelgeuze-dock report --result RESULT --output REPORT
 ```
+
+The current `dock` command admits only the package-owned synthetic D0 fixed-64,
+Top-5 fixture. `prepare-receptor` and `prepare-ligands` preserve and rederive
+canonical identities; they do not relabel arbitrary caller inputs as admitted.
+Likewise, generic explicit or reference-derived pockets remain useful typed
+preparation outputs but are not admitted by `dock`. The special
+`--synthetic-d0-fixture` pocket mode materializes only the exact package-owned
+fixture identity and accepts no caller center, reference ligand, radius, source
+artifact, model index, padding, or minimum-radius tuning.
 
 `prepare-ligands` publishes an absent-only directory containing fixed
 `manifest.json` plus content-addressed canonical ligand files. It builds and
@@ -482,16 +491,28 @@ Argument-admission failures use the same single canonical failure JSON as
 runtime failures.
 
 `verify` checks exact serialized keys, embedded self-hashes, available receipt
-cross-bindings, denominator preservation, score-term decomposition, stable
-Top-K semantics, and false authority fields. Its normalized output is explicitly
+cross-bindings, the fixed-64 failure denominator, full budget and proposal-plan
+receipts, complete candidate failure rows, score-term decomposition, stable
+Top-K semantics up to the profile's Top-5 bound, sealed component-binding
+declarations, and false authority
+fields. Serialized construction/capability scope flags are structural receipt
+fields only; `verify` does not possess or validate the process-local private
+construction proof. Opaque prepared-input, conformer, guided-search,
+authenticated-search, and Scorer-v1 receipt digests are checked as digest fields
+but their upstream contents are not embedded or reconstructed. The output uses
+`available_structural_cross_bindings_verified` and
+`available_derived_semantics_verified`, supplies an explicit
+`verified_structural_items` list, and keeps
+`opaque_upstream_receipt_content_verified=false`. Its normalized output is
+explicitly
 `verified_structural_consistency_only`: it verifies neither a cryptographic
 signature nor content authenticity, pre-import source attestation, external
 authority, or execution authorization. The receipt deliberately exposes
 `structural_consistency_valid`, not a generic `valid` field, so consumers cannot
 mistake this narrow result for content or scientific validity. `report` consumes
-that normalized verification and remains claim-blocked. Synthetic denominators require the
-paired `--synthetic-test-candidates` and `--test-only-synthetic` acknowledgment;
-orphan synthetic flags fail closed.
+that normalized verification and remains claim-blocked. The only executable
+profile is fixed-64/Top-5 and requires `--test-only-synthetic`; caller-selected
+small denominators and Top-K values are not accepted.
 
 ### Internal APIs
 
