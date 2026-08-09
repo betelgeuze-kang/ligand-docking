@@ -27,6 +27,7 @@ on:
       - "config/engine_v2_source_paired_clearance_activation.json"
       - "config/engine_v2_source_paired_clearance_one_shot_ab.json"
       - "config/engine_v2_source_paired_clearance_external_reservation.json"
+      - "config/engine_v2_source_paired_clearance_external_reservation_operations_decision.json"
       - "tools/build_engine_v2_wheel.py"
       - "tools/build_engine_v2_native_wheel.py"
       - "tools/build_engine_v2_sbom.py"
@@ -44,6 +45,7 @@ on:
       - "tools/verify_engine_v2_source_paired_clearance_one_shot_ab.py"
       - "tools/manage_engine_v2_source_paired_clearance_one_shot_ab.py"
       - "tools/verify_engine_v2_source_paired_clearance_external_reservation.py"
+      - "tools/verify_engine_v2_source_paired_clearance_external_reservation_operations_decision.py"
       - "config/engine_v2_public_redocking_stage0_*.json"
       - "tests/unit/test_engine_v2_*.py"
       - "tests/unit/test_classify_engine_v2_stage0_full_suite.py"
@@ -56,6 +58,7 @@ on:
       - "tests/unit/test_source_paired_clearance_activation_evidence.py"
       - "tests/unit/test_source_paired_torsion_rescue_activation_snapshot.py"
       - "tests/unit/test_verify_engine_v2_source_paired_clearance_activation.py"
+      - "tests/unit/test_verify_engine_v2_source_paired_clearance_external_reservation_operations_decision.py"
       - "docs/engine_v2_source_paired_clearance_activation.md"
       - "docs/engine_v2_*.md"
       - "docs/independent_engine_v2_commercial_roadmap.ko.md"
@@ -134,6 +137,7 @@ jobs:
             config/engine_v2_source_paired_clearance_activation.json
             config/engine_v2_source_paired_clearance_one_shot_ab.json
             config/engine_v2_source_paired_clearance_external_reservation.json
+            config/engine_v2_source_paired_clearance_external_reservation_operations_decision.json
             config/engine_v2_public_redocking_stage0_threshold_evidence.json
             tools/__init__.py
             tools/build_engine_v2_wheel.py
@@ -155,6 +159,7 @@ jobs:
             tools/verify_engine_v2_source_paired_clearance_one_shot_ab.py
             tools/manage_engine_v2_source_paired_clearance_one_shot_ab.py
             tools/verify_engine_v2_source_paired_clearance_external_reservation.py
+            tools/verify_engine_v2_source_paired_clearance_external_reservation_operations_decision.py
             config/engine_v2_public_redocking_stage0_freeze.template.json
             config/engine_v2_public_redocking_stage0_attestation.template.json
             config/engine_v2_public_redocking_stage0_threshold_evidence.template.json
@@ -181,6 +186,7 @@ jobs:
             tests/unit/test_source_paired_clearance_one_shot_verdict_semantics.py
             tests/unit/test_source_paired_clearance_external_reservation.py
             tests/unit/test_source_paired_clearance_external_reservation_concurrency.py
+            tests/unit/test_verify_engine_v2_source_paired_clearance_external_reservation_operations_decision.py
             tests/unit/test_engine_v2_contracts_molecular.py
             tests/unit/test_engine_v2_mmcif_syntax.py
             tests/unit/test_engine_v2_mmcif_semantics.py
@@ -325,7 +331,8 @@ jobs:
             tools/verify_engine_v2_source_paired_clearance_activation.py \
             tools/verify_engine_v2_source_paired_clearance_one_shot_ab.py \
             tools/manage_engine_v2_source_paired_clearance_one_shot_ab.py \
-            tools/verify_engine_v2_source_paired_clearance_external_reservation.py
+            tools/verify_engine_v2_source_paired_clearance_external_reservation.py \
+            tools/verify_engine_v2_source_paired_clearance_external_reservation_operations_decision.py
           python tools/check_engine_v2_architecture.py
           python tools/verify_engine_v2_phase25_cohort_admission.py
           python tools/verify_engine_v2_source_paired_clearance_activation.py \
@@ -351,6 +358,18 @@ jobs:
             /tmp/engine-v2-one-shot-combined-status.json
           grep -q 'external_reservation_provider_not_operational' \
             /tmp/engine-v2-one-shot-combined-status.json
+          python tools/verify_engine_v2_source_paired_clearance_external_reservation_operations_decision.py \
+            > /tmp/engine-v2-external-reservation-operations-decision.json
+          grep -q '"operations_decision_ready": false' \
+            /tmp/engine-v2-external-reservation-operations-decision.json
+          grep -q 'external_reservation_provider_not_operational' \
+            /tmp/engine-v2-external-reservation-operations-decision.json
+          grep -q 'external_reservation_endpoint_not_configured' \
+            /tmp/engine-v2-external-reservation-operations-decision.json
+          grep -q 'external_reservation_trust_anchor_not_configured' \
+            /tmp/engine-v2-external-reservation-operations-decision.json
+          grep -q 'historical_execution_operational_authority_false' \
+            /tmp/engine-v2-external-reservation-operations-decision.json
 
       - name: Run complete focused Engine v2 CPU suite
         shell: bash
@@ -453,6 +472,7 @@ jobs:
             tests/unit/test_source_paired_clearance_one_shot_verdict_semantics.py \
             tests/unit/test_source_paired_clearance_external_reservation.py \
             tests/unit/test_source_paired_clearance_external_reservation_concurrency.py \
+            tests/unit/test_verify_engine_v2_source_paired_clearance_external_reservation_operations_decision.py \
             > engine-v2-main.log 2>&1
           status=$?
           cat engine-v2-main.log

@@ -117,6 +117,25 @@ STANDALONE_REQUIRED_TOKENS = (
     "docs/engine_v2_public_api.md",
     "Run installed standalone synthetic D0 fixed64 flow outside checkout",
 )
+EXTERNAL_RESERVATION_OPERATIONS_DECISION_CONTRACT_PATHS = (
+    "config/engine_v2_source_paired_clearance_external_reservation_"
+    "operations_decision.json",
+    "tools/verify_engine_v2_source_paired_clearance_external_reservation_"
+    "operations_decision.py",
+)
+EXTERNAL_RESERVATION_OPERATIONS_DECISION_REQUIRED_TOKEN_COUNTS = {
+    "config/engine_v2_source_paired_clearance_external_reservation_"
+    "operations_decision.json": 2,
+    "tools/verify_engine_v2_source_paired_clearance_external_reservation_"
+    "operations_decision.py": 4,
+    "tests/unit/test_verify_engine_v2_source_paired_clearance_external_reservation_"
+    "operations_decision.py": 3,
+    "docs/engine_v2_source_paired_clearance_external_reservation.md": 1,
+    "operations_decision_ready": 1,
+}
+EXTERNAL_RESERVATION_OPERATIONS_DECISION_REQUIRED_TOKENS = tuple(
+    EXTERNAL_RESERVATION_OPERATIONS_DECISION_REQUIRED_TOKEN_COUNTS
+)
 
 
 def _canonical_bytes(value: object) -> bytes:
@@ -181,6 +200,14 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         (repo_root / path).is_file()
         for path in EXTERNAL_RESERVATION_CONTRACT_PATHS
     )
+    external_operations_decision_contract_present = any(
+        (repo_root / path).is_file()
+        for path in EXTERNAL_RESERVATION_OPERATIONS_DECISION_CONTRACT_PATHS
+    )
+    external_operations_decision_contract_files_complete = all(
+        (repo_root / path).is_file()
+        for path in EXTERNAL_RESERVATION_OPERATIONS_DECISION_CONTRACT_PATHS
+    )
     required_one_shot_tokens = ONE_SHOT_REQUIRED_TOKENS
     if external_reservation_contract_present:
         required_one_shot_tokens += EXTERNAL_RESERVATION_REQUIRED_TOKENS
@@ -223,6 +250,18 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         not standalone_contract_present
         or all(token in main_text for token in STANDALONE_REQUIRED_TOKENS)
     )
+    external_operations_decision_contract_in_authoritative_ci = (
+        not external_operations_decision_contract_present
+        or (
+            external_operations_decision_contract_files_complete
+            and all(
+                main_text.count(token) >= minimum_count
+                for token, minimum_count in (
+                    EXTERNAL_RESERVATION_OPERATIONS_DECISION_REQUIRED_TOKEN_COUNTS.items()
+                )
+            )
+        )
+    )
 
     payload: dict[str, Any] = {
         "schema_id": SCHEMA_ID,
@@ -250,6 +289,9 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         ),
         "standalone_contract_in_authoritative_ci": (
             standalone_contract_in_authoritative_ci
+        ),
+        "external_operations_decision_contract_in_authoritative_ci": (
+            external_operations_decision_contract_in_authoritative_ci
         ),
         "new_feature_workflow_policy": "consolidate_into_authoritative_workflows",
         "specialized_workflows_hidden": False,

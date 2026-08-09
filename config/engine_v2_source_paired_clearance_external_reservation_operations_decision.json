@@ -1,0 +1,132 @@
+{
+  "authority": {
+    "customer_pose_emission_authorized": false,
+    "fresh_holdout_execution_authorized": false,
+    "historical_execution_operational": false,
+    "product_execution_authorized": false,
+    "profile_promotion_authority": false,
+    "public_or_scientific_claim_authorized": false,
+    "stage0_admission_authority": false
+  },
+  "bindings": {
+    "external_reservation_policy_schema_id": "betelgeuze.engine_v2_source_paired_clearance_external_reservation_policy/1.1.0",
+    "external_reservation_policy_sha256": "e018b149a010b337ddc3705c0cb904466a6cd870db82836b3b5c580c3cb650c4",
+    "one_shot_policy_schema_id": "betelgeuze.engine_v2_source_paired_clearance_one_shot_ab_policy/1.1.0",
+    "one_shot_policy_sha256": "b9d2dc1c716c0f954ba5a9f30ecc08168eb29331293b8df5c08fa67ca7ae377f",
+    "phase25_cohort_policy_schema_id": "betelgeuze.engine_v2_phase25_cohort_admission/1.3.0",
+    "phase25_cohort_policy_sha256": "b4c5530dc4766500dbbc854875cfb39baadad94196c63be6150514879993d211"
+  },
+  "decision_sha256": "0ce7914de8a02b2ce438aee35dd7907e161f82fa92e9175d684cd96a22800100",
+  "decisions": {
+    "audit_and_recovery": {
+      "backup_design": null,
+      "retention_years": null,
+      "rpo_seconds": null,
+      "rto_seconds": null,
+      "worm_audit_log_product": null
+    },
+    "ledger_ownership": {
+      "accountable_owner": null,
+      "operating_organization": null
+    },
+    "mutual_tls": {
+      "certificate_authority": null,
+      "client_certificate_lifetime_seconds": null,
+      "workload_identity_profile": null
+    },
+    "operating_procedures": {
+      "ambiguous_commit": null,
+      "break_glass": null,
+      "incident": null,
+      "revocation": null
+    },
+    "role_roster": {
+      "author_real_names": [],
+      "operator_real_names": [],
+      "reviewer_real_names": []
+    },
+    "service_realm": {
+      "account_or_project_id": null,
+      "consistency_model": null,
+      "lifetime_key_store_product": null,
+      "region": null,
+      "versioned_endpoint": null
+    },
+    "signing_custody": {
+      "asymmetric_algorithm": null,
+      "hsm_or_kms_product": null,
+      "key_destruction_procedure": null,
+      "key_rotation_procedure": null,
+      "non_export_configuration_reference": null,
+      "region": null
+    },
+    "trust_anchor_lifecycle": {
+      "issuing_authority": null,
+      "publication_procedure": null,
+      "revocation_procedure": null,
+      "rotation_procedure": null
+    }
+  },
+  "operational_blockers": [
+    "external_reservation_provider_not_operational",
+    "external_reservation_endpoint_not_configured",
+    "external_reservation_trust_anchor_not_configured",
+    "historical_execution_operational_authority_false"
+  ],
+  "operations_decision_ready": false,
+  "qualification": {
+    "independent_review_complete": false,
+    "provider_qualification_complete": false,
+    "qualification_receipt_sha256": null
+  },
+  "record_role": "review_only_unresolved_external_reservation_operations_decision",
+  "requirements": {
+    "distinct_human_author_operator_reviewer_required": true,
+    "github_actions_production_access_forbidden": true,
+    "independent_provider_qualification_required": true,
+    "non_consuming_preflight_required": true,
+    "non_exporting_asymmetric_hsm_or_kms_required": true,
+    "private_network_and_mutual_tls_required": true,
+    "reservation_before_zero_blockers_forbidden": true,
+    "separate_production_realm_required": true,
+    "strongly_consistent_atomic_lifetime_key_store_required": true,
+    "test_double_production_access_forbidden": true,
+    "worm_audit_log_required": true
+  },
+  "schema_id": "betelgeuze.engine_v2_source_paired_clearance_external_reservation_operations_decision/1.0.0",
+  "status": "unresolved_review_only_no_operational_authority",
+  "unresolved_fields": [
+    "decisions.audit_and_recovery.backup_design",
+    "decisions.audit_and_recovery.retention_years",
+    "decisions.audit_and_recovery.rpo_seconds",
+    "decisions.audit_and_recovery.rto_seconds",
+    "decisions.audit_and_recovery.worm_audit_log_product",
+    "decisions.ledger_ownership.accountable_owner",
+    "decisions.ledger_ownership.operating_organization",
+    "decisions.mutual_tls.certificate_authority",
+    "decisions.mutual_tls.client_certificate_lifetime_seconds",
+    "decisions.mutual_tls.workload_identity_profile",
+    "decisions.operating_procedures.ambiguous_commit",
+    "decisions.operating_procedures.break_glass",
+    "decisions.operating_procedures.incident",
+    "decisions.operating_procedures.revocation",
+    "decisions.role_roster.author_real_names",
+    "decisions.role_roster.operator_real_names",
+    "decisions.role_roster.reviewer_real_names",
+    "decisions.service_realm.account_or_project_id",
+    "decisions.service_realm.consistency_model",
+    "decisions.service_realm.lifetime_key_store_product",
+    "decisions.service_realm.region",
+    "decisions.service_realm.versioned_endpoint",
+    "decisions.signing_custody.asymmetric_algorithm",
+    "decisions.signing_custody.hsm_or_kms_product",
+    "decisions.signing_custody.key_destruction_procedure",
+    "decisions.signing_custody.key_rotation_procedure",
+    "decisions.signing_custody.non_export_configuration_reference",
+    "decisions.signing_custody.region",
+    "decisions.trust_anchor_lifecycle.issuing_authority",
+    "decisions.trust_anchor_lifecycle.publication_procedure",
+    "decisions.trust_anchor_lifecycle.revocation_procedure",
+    "decisions.trust_anchor_lifecycle.rotation_procedure"
+  ]
+}
