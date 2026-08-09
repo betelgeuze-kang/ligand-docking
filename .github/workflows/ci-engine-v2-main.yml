@@ -39,6 +39,7 @@ on:
       - "tools/classify_engine_v2_stage0_full_suite.py"
       - "tools/reconcile_engine_v2_stage0_full_suites.py"
       - "tools/audit_engine_v2_ci_authority.py"
+      - "tools/run_engine_v2_standalone_cli_wheel_smoke.py"
       - "tools/verify_engine_v2_source_paired_clearance_activation.py"
       - "tools/verify_engine_v2_source_paired_clearance_one_shot_ab.py"
       - "tools/manage_engine_v2_source_paired_clearance_one_shot_ab.py"
@@ -149,6 +150,7 @@ jobs:
             tools/classify_engine_v2_stage0_full_suite.py
             tools/reconcile_engine_v2_stage0_full_suites.py
             tools/audit_engine_v2_ci_authority.py
+            tools/run_engine_v2_standalone_cli_wheel_smoke.py
             tools/verify_engine_v2_source_paired_clearance_activation.py
             tools/verify_engine_v2_source_paired_clearance_one_shot_ab.py
             tools/manage_engine_v2_source_paired_clearance_one_shot_ab.py
@@ -250,6 +252,8 @@ jobs:
             tests/unit/test_engine_v2_reference_physics.py
             tests/unit/test_engine_v2_reference_solvation.py
             tests/unit/test_engine_v2_external_baseline.py
+            tests/unit/test_engine_v2_standalone_cli.py
+            tests/unit/test_engine_v2_standalone_pipeline_core.py
             docs/engine_v2_pr_overlap_matrix.md
             docs/engine_v2_status.md
             docs/engine_v2_public_api.md
@@ -317,6 +321,7 @@ jobs:
             tools/classify_engine_v2_stage0_full_suite.py \
             tools/reconcile_engine_v2_stage0_full_suites.py \
             tools/audit_engine_v2_ci_authority.py \
+            tools/run_engine_v2_standalone_cli_wheel_smoke.py \
             tools/verify_engine_v2_source_paired_clearance_activation.py \
             tools/verify_engine_v2_source_paired_clearance_one_shot_ab.py \
             tools/manage_engine_v2_source_paired_clearance_one_shot_ab.py \
@@ -423,6 +428,8 @@ jobs:
             tests/unit/test_engine_v2_reference_physics.py \
             tests/unit/test_engine_v2_reference_solvation.py \
             tests/unit/test_engine_v2_external_baseline.py \
+            tests/unit/test_engine_v2_standalone_cli.py \
+            tests/unit/test_engine_v2_standalone_pipeline_core.py \
             tests/unit/test_analyze_engine_v2_score_terms.py \
             tests/unit/test_engine_v2_blind_stage0.py \
             tests/unit/test_build_engine_v2_stage0_development_gate_ledger.py \
@@ -480,6 +487,20 @@ jobs:
           "$venv/bin/python" -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
           "$venv/bin/python" -m pip install --no-deps dist-engine-v2/*.whl
           "$venv/bin/python" -m pip check
+
+      - name: Run installed standalone toy flow outside checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          venv="/tmp/engine-v2-main-${{ matrix.python-version }}"
+          outside="/tmp/engine-v2-main-outside-${{ matrix.python-version }}"
+          rm -rf "$outside/standalone-toy"
+          mkdir -p "$outside"
+          cd "$outside"
+          "$venv/bin/python" \
+            "$GITHUB_WORKSPACE/tools/run_engine_v2_standalone_cli_wheel_smoke.py" \
+            --work-dir "$outside/standalone-toy" \
+            --forbid-import-root "$GITHUB_WORKSPACE"
 
       - name: Import outside checkout
         shell: bash

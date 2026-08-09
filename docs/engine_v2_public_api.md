@@ -451,6 +451,48 @@ fixture can reach the current scorer, and that admission keeps reservation,
 Historical A/B, Fresh-128, public benchmark, product mutation, and all external
 claim authorities false.
 
+The provisional `betelgeuze-dock` console entry point exposes the same core as
+six file-oriented commands:
+
+```text
+betelgeuze-dock prepare-receptor --input SYSTEM --output SYSTEM
+betelgeuze-dock prepare-ligands --input SYSTEM [--input SYSTEM ...] --output-dir BUNDLE
+betelgeuze-dock define-pocket ... --output POCKET
+betelgeuze-dock dock --receptor SYSTEM --ligand SYSTEM --pocket POCKET --seed INTEGER --output RESULT
+betelgeuze-dock verify --result RESULT --output VERIFICATION
+betelgeuze-dock report --result RESULT --output REPORT
+```
+
+`prepare-ligands` publishes an absent-only directory containing fixed
+`manifest.json` plus content-addressed canonical ligand files. It builds and
+synchronizes a private sibling staging directory, atomically renames the whole
+bundle without clobbering, and synchronizes the parent directory. It has no
+manifest-path or overwrite option. All standalone output writers reject parent
+symlink traversal, special files, multiple hard links, input/output aliases,
+and detected replacement races. The hardened publication path is Linux-specific
+and fails closed when no-follow directory descriptors, `/proc/self/fd`, or
+`renameat2` semantics are unavailable. It pins and rechecks source and
+destination inode identities. A detected overwrite race aborts, and rollback is
+attempted only while an exact operation-owned inode remains at one exchange
+endpoint; arbitrary same-UID mutation can still prevent confirmed restoration.
+The writer is therefore not a security boundary against another process running
+as the same UID with access to the writable parent or this process's descriptors;
+deployment still requires process/account isolation.
+Argument-admission failures use the same single canonical failure JSON as
+runtime failures.
+
+`verify` checks exact serialized keys, embedded self-hashes, available receipt
+cross-bindings, denominator preservation, score-term decomposition, stable
+Top-K semantics, and false authority fields. Its normalized output is explicitly
+`verified_structural_consistency_only`: it verifies neither a cryptographic
+signature nor content authenticity, pre-import source attestation, external
+authority, or execution authorization. The receipt deliberately exposes
+`structural_consistency_valid`, not a generic `valid` field, so consumers cannot
+mistake this narrow result for content or scientific validity. `report` consumes
+that normalized verification and remains claim-blocked. Synthetic denominators require the
+paired `--synthetic-test-candidates` and `--test-only-synthetic` acknowledgment;
+orphan synthetic flags fail closed.
+
 ### Internal APIs
 
 Names beginning with `_`, implementation files not re-exported from a package

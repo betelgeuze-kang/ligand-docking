@@ -99,6 +99,18 @@ STANDALONE_PIPELINE_CONTRACT_PATHS = (
 STANDALONE_PIPELINE_REQUIRED_TOKENS = (
     "tests/unit/test_engine_v2_standalone_pipeline_core.py",
 )
+STANDALONE_CONTRACT_PATHS = (
+    "betelgeuze_engine_v2/standalone_cli.py",
+    "betelgeuze_engine_v2/docking/pipeline.py",
+    "betelgeuze_engine_v2/docking/synthetic_d0_fixture_admission.json",
+)
+STANDALONE_REQUIRED_TOKENS = (
+    "tests/unit/test_engine_v2_standalone_cli.py",
+    "tests/unit/test_engine_v2_standalone_pipeline_core.py",
+    "tools/run_engine_v2_standalone_cli_wheel_smoke.py",
+    "docs/engine_v2_public_api.md",
+    "Run installed standalone toy flow outside checkout",
+)
 
 
 def _canonical_bytes(value: object) -> bytes:
@@ -189,6 +201,13 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
             for token in STANDALONE_PIPELINE_REQUIRED_TOKENS
         )
     )
+    standalone_contract_present = any(
+        (repo_root / path).is_file() for path in STANDALONE_CONTRACT_PATHS
+    )
+    standalone_contract_in_authoritative_ci = (
+        not standalone_contract_present
+        or all(token in main_text for token in STANDALONE_REQUIRED_TOKENS)
+    )
 
     payload: dict[str, Any] = {
         "schema_id": SCHEMA_ID,
@@ -210,6 +229,9 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         ),
         "standalone_pipeline_contract_in_authoritative_ci": (
             standalone_pipeline_contract_in_authoritative_ci
+        ),
+        "standalone_contract_in_authoritative_ci": (
+            standalone_contract_in_authoritative_ci
         ),
         "new_feature_workflow_policy": "consolidate_into_authoritative_workflows",
         "specialized_workflows_hidden": False,
