@@ -232,6 +232,7 @@ jobs:
             tests/unit/test_engine_v2_input_identity.py
             tests/unit/test_engine_v2_docking_semantics.py
             tests/unit/test_engine_v2_standalone_pipeline_core.py
+            tests/unit/test_engine_v2_standalone_consumers.py
             tests/unit/test_engine_v2_benchmark_contracts.py
             tests/unit/test_engine_v2_public_benchmark_protocol.py
             tests/unit/test_engine_v2_reference_constrained_minimization.py
@@ -407,6 +408,7 @@ jobs:
             tests/unit/test_engine_v2_input_identity.py \
             tests/unit/test_engine_v2_docking_semantics.py \
             tests/unit/test_engine_v2_standalone_pipeline_core.py \
+            tests/unit/test_engine_v2_standalone_consumers.py \
             tests/unit/test_engine_v2_benchmark_contracts.py \
             tests/unit/test_engine_v2_public_benchmark_protocol.py \
             tests/unit/test_engine_v2_reference_constrained_minimization.py \

@@ -99,6 +99,12 @@ STANDALONE_PIPELINE_CONTRACT_PATHS = (
 STANDALONE_PIPELINE_REQUIRED_TOKENS = (
     "tests/unit/test_engine_v2_standalone_pipeline_core.py",
 )
+STANDALONE_CONSUMER_CONTRACT_PATHS = (
+    "betelgeuze_engine_v2/docking/consumers.py",
+)
+STANDALONE_CONSUMER_REQUIRED_TOKENS = (
+    "tests/unit/test_engine_v2_standalone_consumers.py",
+)
 STANDALONE_CONTRACT_PATHS = (
     "betelgeuze_engine_v2/standalone_cli.py",
     "betelgeuze_engine_v2/docking/pipeline.py",
@@ -201,6 +207,15 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
             for token in STANDALONE_PIPELINE_REQUIRED_TOKENS
         )
     )
+    standalone_consumer_contract_present = any(
+        (repo_root / path).is_file() for path in STANDALONE_CONSUMER_CONTRACT_PATHS
+    )
+    standalone_consumer_contract_in_authoritative_ci = (
+        not standalone_consumer_contract_present
+        or all(
+            main_text.count(token) == 2 for token in STANDALONE_CONSUMER_REQUIRED_TOKENS
+        )
+    )
     standalone_contract_present = any(
         (repo_root / path).is_file() for path in STANDALONE_CONTRACT_PATHS
     )
@@ -229,6 +244,9 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         ),
         "standalone_pipeline_contract_in_authoritative_ci": (
             standalone_pipeline_contract_in_authoritative_ci
+        ),
+        "standalone_consumer_contract_in_authoritative_ci": (
+            standalone_consumer_contract_in_authoritative_ci
         ),
         "standalone_contract_in_authoritative_ci": (
             standalone_contract_in_authoritative_ci
