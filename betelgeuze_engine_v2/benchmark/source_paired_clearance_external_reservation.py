@@ -12,7 +12,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import hashlib
+import hmac
 import json
+import secrets
 import time
 from typing import Any, Mapping, Protocol
 
@@ -426,6 +428,9 @@ class ExternalLedgerTrustAnchor:
             )
 
 
+_VERIFIED_RECEIPT_PROOF_SECRET = secrets.token_bytes(32)
+
+
 @dataclass(frozen=True, slots=True)
 class VerifiedExternalReservationReceipt:
     provider_id: str
@@ -444,6 +449,71 @@ class VerifiedExternalReservationReceipt:
     source_commit_git_sha1: str
     execution_environment_sha256: str
     authoritative_for_execution: bool = False
+    _verification_proof_sha256: str = field(
+        default="",
+        repr=False,
+        compare=False,
+    )
+
+    def _proof_projection(self) -> dict[str, object]:
+        return {
+            "provider_id": self.provider_id,
+            "reservation_id": self.reservation_id,
+            "lifetime_reservation_key_sha256": self.lifetime_reservation_key_sha256,
+            "global_reservation_key_sha256": self.global_reservation_key_sha256,
+            "request_sha256": self.request_sha256,
+            "receipt_sha256": self.receipt_sha256,
+            "receipt_signature_sha256": self.receipt_signature_sha256,
+            "revocation_snapshot_sha256": self.revocation_snapshot_sha256,
+            "committed_at_unix": self.committed_at_unix,
+            "retention_until_unix": self.retention_until_unix,
+            "author_id": self.author_id,
+            "operator_id": self.operator_id,
+            "reviewer_id": self.reviewer_id,
+            "source_commit_git_sha1": self.source_commit_git_sha1,
+            "execution_environment_sha256": self.execution_environment_sha256,
+            "authoritative_for_execution": self.authoritative_for_execution,
+        }
+
+    def _require_verifier_proof(self) -> None:
+        expected = hmac.new(
+            _VERIFIED_RECEIPT_PROOF_SECRET,
+            _canonical_bytes(self._proof_projection()),
+            hashlib.sha256,
+        ).hexdigest()
+        if not hmac.compare_digest(self._verification_proof_sha256, expected):
+            raise ExternalReservationContractError(
+                "verified external receipts are verifier-constructed only"
+            )
+
+    def __post_init__(self) -> None:
+        self._require_verifier_proof()
+        _identity(self.provider_id, name="verified provider_id")
+        _identity(self.reservation_id, name="verified reservation_id")
+        for name, value in (
+            ("lifetime_reservation_key_sha256", self.lifetime_reservation_key_sha256),
+            ("global_reservation_key_sha256", self.global_reservation_key_sha256),
+            ("request_sha256", self.request_sha256),
+            ("receipt_sha256", self.receipt_sha256),
+            ("receipt_signature_sha256", self.receipt_signature_sha256),
+            ("revocation_snapshot_sha256", self.revocation_snapshot_sha256),
+            ("execution_environment_sha256", self.execution_environment_sha256),
+        ):
+            if not _is_sha256(value):
+                raise ExternalReservationContractError(f"verified {name} is invalid")
+        _integer(self.committed_at_unix, name="verified committed_at_unix")
+        _integer(self.retention_until_unix, name="verified retention_until_unix")
+        _identity(self.author_id, name="verified author_id")
+        _operator_identity(self.operator_id)
+        _identity(self.reviewer_id, name="verified reviewer_id")
+        if not _is_git_sha1(self.source_commit_git_sha1):
+            raise ExternalReservationContractError(
+                "verified source_commit_git_sha1 is invalid"
+            )
+        if self.authoritative_for_execution is not False:
+            raise ExternalReservationContractError(
+                "verified receipt cannot grant execution authority"
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -464,6 +534,9 @@ class ExternalReservationLedgerClient(Protocol):
 
     def reserve(self, canonical_request: bytes) -> tuple[bytes, bytes, bytes, bytes]:
         """Return signed receipt and signed revocation-snapshot envelopes."""
+
+    def lookup(self, canonical_request: bytes) -> tuple[bytes, bytes, bytes, bytes] | None:
+        """Recover the signed envelopes after an ambiguous reserve response."""
 
 
 def _verify_canonical_signature(
@@ -668,10 +741,25 @@ def verify_signed_external_reservation_receipt(
             raise ExternalReservationContractError(
                 f"external reservation {binding_field} is cross-wired"
             )
+    reserved_run_ordinal = _integer(
+        payload.get("reserved_run_ordinal"),
+        name="reserved_run_ordinal",
+        minimum=1,
+    )
+    maximum_lifetime_reservations = _integer(
+        payload.get("maximum_lifetime_reservations"),
+        name="maximum_lifetime_reservations",
+        minimum=1,
+    )
+    ledger_sequence = _integer(
+        payload.get("ledger_sequence"),
+        name="receipt ledger_sequence",
+        minimum=1,
+    )
     if (
-        payload.get("reserved_run_ordinal") != 1
-        or payload.get("maximum_lifetime_reservations") != 1
-        or payload.get("ledger_sequence") != 1
+        reserved_run_ordinal != 1
+        or maximum_lifetime_reservations != 1
+        or ledger_sequence != 1
         or payload.get("immutable") is not True
         or payload.get("append_only") is not True
         or payload.get("test_only") is not False
@@ -707,23 +795,32 @@ def verify_signed_external_reservation_receipt(
         raise ExternalReservationContractError(
             "external reservation receipt exceeds its authority boundary"
         )
+    verified_fields: dict[str, object] = {
+        "provider_id": trust_anchor.provider_id,
+        "reservation_id": reservation_id,
+        "lifetime_reservation_key_sha256": request.lifetime_reservation_key_sha256,
+        "global_reservation_key_sha256": request.global_reservation_key_sha256,
+        "request_sha256": request.request_sha256,
+        "receipt_sha256": receipt_sha256,
+        "receipt_signature_sha256": receipt_signature_sha256,
+        "revocation_snapshot_sha256": revocation.snapshot_sha256,
+        "committed_at_unix": committed,
+        "retention_until_unix": retention,
+        "author_id": request.author_id,
+        "operator_id": request.operator_id,
+        "reviewer_id": request.reviewer_id,
+        "source_commit_git_sha1": request.source_commit_git_sha1,
+        "execution_environment_sha256": request.execution_environment_sha256,
+        "authoritative_for_execution": False,
+    }
+    verification_proof = hmac.new(
+        _VERIFIED_RECEIPT_PROOF_SECRET,
+        _canonical_bytes(verified_fields),
+        hashlib.sha256,
+    ).hexdigest()
     return VerifiedExternalReservationReceipt(
-        provider_id=trust_anchor.provider_id,
-        reservation_id=reservation_id,
-        lifetime_reservation_key_sha256=request.lifetime_reservation_key_sha256,
-        global_reservation_key_sha256=request.global_reservation_key_sha256,
-        request_sha256=request.request_sha256,
-        receipt_sha256=receipt_sha256,
-        receipt_signature_sha256=receipt_signature_sha256,
-        revocation_snapshot_sha256=revocation.snapshot_sha256,
-        committed_at_unix=committed,
-        retention_until_unix=retention,
-        author_id=request.author_id,
-        operator_id=request.operator_id,
-        reviewer_id=request.reviewer_id,
-        source_commit_git_sha1=request.source_commit_git_sha1,
-        execution_environment_sha256=request.execution_environment_sha256,
-        authoritative_for_execution=False,
+        **verified_fields,
+        _verification_proof_sha256=verification_proof,
     )
 
 
@@ -774,20 +871,43 @@ def request_external_reservation(
         raise ExternalReservationContractError(
             "test doubles and nonproduction clients cannot reserve authority"
         )
-    try:
-        payload, signature, revocation_payload, revocation_signature = client.reserve(
-            _canonical_bytes(request.to_dict())
-        )
-    except Exception as exc:
+    lookup = getattr(client, "lookup", None)
+    if not callable(lookup):
         raise ExternalReservationContractError(
-            "external reservation provider is unavailable"
+            "production ledger client lacks ambiguous-commit receipt recovery"
+        )
+    now = _integer(int(time.time()), name="current_unix_time")
+    if not request.issued_at_unix <= now < request.expires_at_unix:
+        raise ExternalReservationContractError(
+            "external reservation request is outside its active window"
+        )
+    canonical_request = _canonical_bytes(request.to_dict())
+    try:
+        signed_envelopes = client.reserve(canonical_request)
+    except Exception as reserve_error:
+        try:
+            recovered = lookup(canonical_request)
+        except Exception as lookup_error:
+            raise ExternalReservationContractError(
+                "external reservation commit is ambiguous and recovery failed"
+            ) from lookup_error
+        if recovered is None:
+            raise ExternalReservationContractError(
+                "external reservation commit is ambiguous and no receipt was recovered"
+            ) from reserve_error
+        signed_envelopes = recovered
+    try:
+        payload, signature, revocation_payload, revocation_signature = signed_envelopes
+    except (TypeError, ValueError) as exc:
+        raise ExternalReservationContractError(
+            "external reservation provider returned an invalid envelope set"
         ) from exc
     return verify_signed_external_reservation_receipt(
         payload_bytes=payload,
         signature_bytes=signature,
         request=request,
         trust_anchor=trust_anchor,
-        now_unix=int(time.time()),
+        now_unix=now,
         revocation_payload_bytes=revocation_payload,
         revocation_signature_bytes=revocation_signature,
     )
@@ -812,6 +932,7 @@ def build_external_reservation_binding(
         raise ExternalReservationContractError(
             "downstream reservation must be an exact non-authorizing verified receipt"
         )
+    reservation._require_verifier_proof()
     binding: dict[str, Any] = {
         "schema_id": BINDING_SCHEMA_ID,
         "document_role": document_role,
@@ -872,7 +993,6 @@ __all__ = [
     "RECEIPT_SCHEMA_ID",
     "REQUEST_SCHEMA_ID",
     "REVOCATION_SNAPSHOT_SCHEMA_ID",
-    "VerifiedExternalReservationReceipt",
     "VerifiedExternalRevocationSnapshot",
     "build_external_reservation_binding",
     "external_reservation_operational_blockers",
