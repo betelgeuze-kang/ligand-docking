@@ -7,6 +7,9 @@ from tools.audit_engine_v2_ci_authority import (
     CLEARANCE_ACTIVATION_CONTRACT_PATHS,
     CLEARANCE_ACTIVATION_REQUIRED_TOKENS,
     EXTERNAL_RESERVATION_CONTRACT_PATHS,
+    EXTERNAL_RESERVATION_OPERATIONS_DECISION_CONTRACT_PATHS,
+    EXTERNAL_RESERVATION_OPERATIONS_DECISION_REQUIRED_TOKEN_COUNTS,
+    EXTERNAL_RESERVATION_OPERATIONS_DECISION_REQUIRED_TOKENS,
     EXTERNAL_RESERVATION_REQUIRED_TOKENS,
     ONE_SHOT_CONTRACT_PATHS,
     ONE_SHOT_REQUIRED_TOKENS,
@@ -51,6 +54,23 @@ def _mark_contract(tmp_path: Path, paths: tuple[str, ...]) -> None:
     marker.write_text("# authority\n", encoding="utf-8")
 
 
+def _mark_complete_contract(tmp_path: Path, paths: tuple[str, ...]) -> None:
+    for raw_path in paths:
+        marker = tmp_path / raw_path
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.write_text("# authority\n", encoding="utf-8")
+
+
+def _operations_decision_ci_tokens() -> tuple[str, ...]:
+    return tuple(
+        token
+        for token, minimum_count in (
+            EXTERNAL_RESERVATION_OPERATIONS_DECISION_REQUIRED_TOKEN_COUNTS.items()
+        )
+        for _ in range(minimum_count)
+    )
+
+
 def test_ci_authority_inventory_requires_contracts_in_canonical_main(
     tmp_path: Path,
 ) -> None:
@@ -61,6 +81,9 @@ def test_ci_authority_inventory_requires_contracts_in_canonical_main(
     _mark_contract(tmp_path, STANDALONE_PIPELINE_CONTRACT_PATHS)
     _mark_contract(tmp_path, STANDALONE_CONSUMER_CONTRACT_PATHS)
     _mark_contract(tmp_path, STANDALONE_CONTRACT_PATHS)
+    _mark_complete_contract(
+        tmp_path, EXTERNAL_RESERVATION_OPERATIONS_DECISION_CONTRACT_PATHS
+    )
     (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
         "\n".join(
             _STAGE0_TOKENS
@@ -72,6 +95,7 @@ def test_ci_authority_inventory_requires_contracts_in_canonical_main(
             + STANDALONE_CONSUMER_REQUIRED_TOKENS
             + STANDALONE_CONSUMER_REQUIRED_TOKENS
             + STANDALONE_REQUIRED_TOKENS
+            + _operations_decision_ci_tokens()
         ),
         encoding="utf-8",
     )
@@ -88,6 +112,9 @@ def test_ci_authority_inventory_requires_contracts_in_canonical_main(
     assert payload["standalone_pipeline_contract_in_authoritative_ci"] is True
     assert payload["standalone_consumer_contract_in_authoritative_ci"] is True
     assert payload["standalone_contract_in_authoritative_ci"] is True
+    assert (
+        payload["external_operations_decision_contract_in_authoritative_ci"] is True
+    )
     assert payload["new_feature_workflow_policy"] == (
         "consolidate_into_authoritative_workflows"
     )
@@ -219,6 +246,50 @@ def test_standalone_consumer_test_requires_sparse_and_pytest_entries(
     )
 
 
+def test_missing_operations_decision_token_fails_main_coverage(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _mark_complete_contract(
+        tmp_path, EXTERNAL_RESERVATION_OPERATIONS_DECISION_CONTRACT_PATHS
+    )
+    missing = (
+        "tests/unit/test_verify_engine_v2_source_paired_clearance_external_"
+        "reservation_operations_decision.py"
+    )
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(
+            token
+            for token in _operations_decision_ci_tokens()
+            if token != missing
+        ),
+        encoding="utf-8",
+    )
+
+    payload = build_inventory(tmp_path)
+    assert (
+        payload["external_operations_decision_contract_in_authoritative_ci"] is False
+    )
+
+
+def test_incomplete_operations_decision_contract_fails_main_coverage(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _mark_contract(
+        tmp_path, EXTERNAL_RESERVATION_OPERATIONS_DECISION_CONTRACT_PATHS
+    )
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_operations_decision_ci_tokens()),
+        encoding="utf-8",
+    )
+
+    payload = build_inventory(tmp_path)
+    assert (
+        payload["external_operations_decision_contract_in_authoritative_ci"] is False
+    )
+
+
 def test_specialized_workflow_cannot_substitute_for_main(tmp_path: Path) -> None:
     _write_authoritative_workflows(tmp_path)
     _mark_contract(tmp_path, ONE_SHOT_CONTRACT_PATHS)
@@ -265,6 +336,16 @@ def test_repository_has_no_specialized_one_shot_workflow() -> None:
         is True
     )
     assert all(token in main_text for token in STANDALONE_REQUIRED_TOKENS)
+    assert all(
+        token in main_text
+        for token in EXTERNAL_RESERVATION_OPERATIONS_DECISION_REQUIRED_TOKENS
+    )
+    assert all(
+        main_text.count(token) >= minimum_count
+        for token, minimum_count in (
+            EXTERNAL_RESERVATION_OPERATIONS_DECISION_REQUIRED_TOKEN_COUNTS.items()
+        )
+    )
 
 
 def test_repository_without_optional_contracts_keeps_legacy_scope(
@@ -283,3 +364,6 @@ def test_repository_without_optional_contracts_keeps_legacy_scope(
     assert payload["standalone_pipeline_contract_in_authoritative_ci"] is True
     assert payload["standalone_consumer_contract_in_authoritative_ci"] is True
     assert payload["standalone_contract_in_authoritative_ci"] is True
+    assert (
+        payload["external_operations_decision_contract_in_authoritative_ci"] is True
+    )

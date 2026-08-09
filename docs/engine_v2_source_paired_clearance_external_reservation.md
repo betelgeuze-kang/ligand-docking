@@ -34,6 +34,40 @@ betelgeuze.engine_v2_source_paired_clearance_external_reservation_policy/1.1.0
 e018b149a010b337ddc3705c0cb904466a6cd870db82836b3b5c580c3cb650c4
 ```
 
+## Review-only operations decision record
+
+The separate review record below enumerates the operational decisions that an
+external provider owner and independent reviewer must make. It is deliberately
+unresolved and is not consumed by the reservation runtime, external gate, or
+operator CLI:
+
+```text
+config/engine_v2_source_paired_clearance_external_reservation_operations_decision.json
+betelgeuze.engine_v2_source_paired_clearance_external_reservation_operations_decision/1.0.0
+0ce7914de8a02b2ce438aee35dd7907e161f82fa92e9175d684cd96a22800100
+```
+
+It pins the current external-reservation policy, historical one-shot policy,
+and Phase 2.5 cohort identities. Its 32 unresolved fields cover ledger
+ownership, the isolated production realm and strongly consistent store,
+non-exporting HSM/KMS signing custody, trust-anchor lifecycle, mTLS, distinct
+real-name author/operator/reviewer rosters, WORM retention and recovery, and
+ambiguous-commit, revocation, incident, and break-glass procedures.
+
+Every decision value remains `null` or empty, provider qualification and
+independent review remain false, and every authority value remains false. The
+review record verifier exits successfully for this valid unresolved state while
+reporting `operations_decision_ready=false`; success is evidence of schema
+integrity, not operational readiness. Any filled value, authority escalation,
+source-policy drift, duplicate key, sensitive-material field, or re-sealed
+semantic change fails closed.
+
+The record preserves the same four operational blockers listed below. It does
+not contain an endpoint, account/project selection, identity roster,
+authentication material, signing material, or qualification receipt. GitHub
+Actions and test doubles remain prohibited from production authority and
+production network access.
+
 ## Lifetime uniqueness and exact execution keys
 
 The immutable create-if-absent lifetime key is the canonical SHA-256 of:
