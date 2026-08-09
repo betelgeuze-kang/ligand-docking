@@ -858,10 +858,11 @@ class ScorerV1Terms:
             "hydrophobic_contact_count",
             "buried_polar_count",
         ):
-            value = int(getattr(self, name))
+            value = getattr(self, name)
+            if type(value) is not int:
+                raise ScorerV1Error(f"{name} must be an exact integer")
             if value < 0:
                 raise ScorerV1Error(f"{name} must be non-negative")
-            object.__setattr__(self, name, value)
         expected = sum(
             float(getattr(self, name))
             for name in (

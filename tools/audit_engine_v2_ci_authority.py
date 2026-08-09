@@ -57,6 +57,46 @@ GLOBAL_ORIENTATION_REQUIRED_TOKENS = (
     "import betelgeuze_engine_v2.docking.global_orientation",
     "import betelgeuze_engine_v2.docking.global_orientation_evidence",
 )
+MIXED64_V2_CONTRACT_PATHS = (
+    "betelgeuze_engine_v2/docking/mixed64_allocation.py",
+    "betelgeuze_engine_v2/docking/geometric_admission_v2.py",
+    "betelgeuze_engine_v2/docking/pipeline_candidate_evidence_v2.py",
+    "tools/verify_engine_v2_mixed64_candidate_evidence_artifact.py",
+    "tests/unit/test_verify_engine_v2_mixed64_candidate_evidence_artifact.py",
+    "docs/engine_v2_mixed64_geometric_candidate_evidence_v2.md",
+    "config/engine_v2_mixed64_geometric_candidate_evidence_v2.json",
+)
+MIXED64_V2_REQUIRED_TOKEN_COUNTS = {
+    "betelgeuze_engine_v2/docking/mixed64_allocation.py": 1,
+    "betelgeuze_engine_v2/docking/geometric_admission_v2.py": 1,
+    "betelgeuze_engine_v2/docking/pipeline_candidate_evidence_v2.py": 1,
+    "config/engine_v2_mixed64_geometric_candidate_evidence_v2.json": 2,
+    "tools/verify_engine_v2_mixed64_geometric_candidate_evidence_v2.py": 4,
+    "tools/verify_engine_v2_mixed64_candidate_evidence_artifact.py": 3,
+    "tests/unit/test_engine_v2_fixed_mixed64_allocation.py": 2,
+    "tests/unit/test_engine_v2_geometric_admission_v2.py": 2,
+    "tests/unit/test_engine_v2_pipeline_candidate_evidence_v2.py": 2,
+    "tests/unit/test_verify_engine_v2_mixed64_geometric_candidate_evidence_v2.py": 2,
+    "tests/unit/test_verify_engine_v2_mixed64_candidate_evidence_artifact.py": 2,
+    "docs/engine_v2_mixed64_geometric_candidate_evidence_v2.md": 1,
+    "import betelgeuze_engine_v2.docking.mixed64_allocation": 1,
+    "import betelgeuze_engine_v2.docking.geometric_admission_v2": 1,
+    "import betelgeuze_engine_v2.docking.pipeline_candidate_evidence_v2": 1,
+}
+MIXED64_V2_REQUIRED_TOKENS = tuple(MIXED64_V2_REQUIRED_TOKEN_COUNTS)
+MIXED64_V2_FORBIDDEN_TRUE_AUTHORITY_KEYS = (
+    "customer_pose_emission_authorized",
+    "existing_rank_auto_change_authorized",
+    "fresh_holdout_execution_authorized",
+    "historical_execution_authorized",
+    "molecular_execution_authorized",
+    "product_execution_authorized",
+    "product_mutation_authorized",
+    "profile_promotion_authority",
+    "public_benchmark_execution_authorized",
+    "public_or_scientific_claim_authorized",
+    "stage0_admission_authority",
+)
 ONE_SHOT_CONTRACT_PATHS = (
     "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_ab.py",
     "config/engine_v2_source_paired_clearance_one_shot_ab.json",
@@ -175,6 +215,62 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _mixed64_v2_authority_is_fail_closed(repo_root: Path) -> bool:
+    def reject_duplicate_keys(
+        pairs: list[tuple[str, object]],
+    ) -> dict[str, object]:
+        observed: dict[str, object] = {}
+        for key, value in pairs:
+            if key in observed:
+                raise ValueError(f"duplicate JSON key: {key}")
+            observed[key] = value
+        return observed
+
+    def reject_nonfinite_constant(value: str) -> object:
+        raise ValueError(f"non-finite JSON constant: {value}")
+
+    contract_path = (
+        repo_root / "config/engine_v2_mixed64_geometric_candidate_evidence_v2.json"
+    )
+    try:
+        text = contract_path.read_bytes().decode("ascii")
+        contract = json.loads(
+            text,
+            object_pairs_hook=reject_duplicate_keys,
+            parse_constant=reject_nonfinite_constant,
+        )
+    except (OSError, UnicodeError, ValueError):
+        return False
+    if type(contract) is not dict or set(contract) != {
+        "allocation",
+        "authority",
+        "candidate_evidence",
+        "contract_sha256",
+        "geometric_admission",
+        "schema_id",
+        "status",
+    }:
+        return False
+    canonical_text = json.dumps(
+        contract,
+        indent=2,
+        sort_keys=True,
+        ensure_ascii=True,
+        allow_nan=False,
+    ) + "\n"
+    if text != canonical_text:
+        return False
+    authority = contract.get("authority")
+    return bool(
+        type(authority) is dict
+        and set(authority) == set(MIXED64_V2_FORBIDDEN_TRUE_AUTHORITY_KEYS)
+        and all(
+            type(authority.get(key)) is bool and authority.get(key) is False
+            for key in MIXED64_V2_FORBIDDEN_TRUE_AUTHORITY_KEYS
+        )
+    )
+
+
 def build_inventory(repo_root: Path) -> dict[str, Any]:
     workflow_root = repo_root / ".github/workflows"
     workflows = tuple(
@@ -218,6 +314,31 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
     global_orientation_contract_in_authoritative_ci = (
         not global_orientation_contract_present
         or all(token in main_text for token in GLOBAL_ORIENTATION_REQUIRED_TOKENS)
+    )
+
+    mixed64_v2_contract_present = any(
+        (repo_root / path).is_file() for path in MIXED64_V2_CONTRACT_PATHS
+    )
+    mixed64_v2_contract_files_complete = all(
+        (repo_root / path).is_file() for path in MIXED64_V2_CONTRACT_PATHS
+    )
+    mixed64_v2_authority_fail_closed = (
+        not mixed64_v2_contract_present
+        or (
+            mixed64_v2_contract_files_complete
+            and _mixed64_v2_authority_is_fail_closed(repo_root)
+        )
+    )
+    mixed64_v2_contract_in_authoritative_ci = (
+        not mixed64_v2_contract_present
+        or (
+            mixed64_v2_contract_files_complete
+            and mixed64_v2_authority_fail_closed
+            and all(
+                main_text.count(token) >= minimum_count
+                for token, minimum_count in MIXED64_V2_REQUIRED_TOKEN_COUNTS.items()
+            )
+        )
     )
 
     one_shot_contract_present = any(
@@ -305,6 +426,10 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         "global_orientation_contract_in_authoritative_ci": (
             global_orientation_contract_in_authoritative_ci
         ),
+        "mixed64_v2_contract_in_authoritative_ci": (
+            mixed64_v2_contract_in_authoritative_ci
+        ),
+        "mixed64_v2_authority_fail_closed": mixed64_v2_authority_fail_closed,
         "one_shot_contract_in_authoritative_ci": (
             one_shot_contract_in_authoritative_ci
         ),
