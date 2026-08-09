@@ -110,9 +110,31 @@ class _TestOnlyInMemoryReservationProvider:
             self._receipts[lifetime_key] = signed
             return signed
 
-    def lookup(self, reservation_key: str) -> tuple[bytes, bytes, bytes, bytes] | None:
+    def lookup(
+        self,
+        canonical_request: bytes,
+    ) -> tuple[bytes, bytes, bytes, bytes] | None:
+        request = reservation_module._strict_json_object(
+            canonical_request,
+            name="test-only lookup request",
+        )
+        lifetime_key = request.get("lifetime_reservation_key_sha256")
+        request_sha256 = request.get("request_sha256")
+        if not reservation_module._is_sha256(lifetime_key) or not reservation_module._is_sha256(
+            request_sha256
+        ):
+            raise ExternalReservationContractError("lookup request identity is invalid")
         with self._lock:
-            return self._receipts.get(reservation_key)
+            signed = self._receipts.get(str(lifetime_key))
+            if signed is None:
+                return None
+            receipt = reservation_module._strict_json_object(
+                signed[0],
+                name="test-only stored receipt",
+            )
+            if receipt.get("request_sha256") != request_sha256:
+                return None
+            return signed
 
 
 def _request(
@@ -195,7 +217,7 @@ def test_deleting_local_state_does_not_restore_provider_authority() -> None:
 
     local_state.clear()
 
-    assert provider.lookup(request.lifetime_reservation_key_sha256) == signed
+    assert provider.lookup(reservation_module._canonical_bytes(request.to_dict())) == signed
     with pytest.raises(
         ExternalReservationContractError,
         match="already exists",
@@ -234,6 +256,8 @@ def test_alternate_environment_cannot_allocate_another_lifetime_ordinal() -> Non
     )
     provider.reserve(first)
 
+    assert provider.lookup(reservation_module._canonical_bytes(alternate.to_dict())) is None
+
     with pytest.raises(
         ExternalReservationContractError,
         match="lifetime reservation already exists",
@@ -243,5 +267,6 @@ def test_alternate_environment_cannot_allocate_another_lifetime_ordinal() -> Non
 
 def test_unknown_global_key_lookup_is_absent() -> None:
     provider = _TestOnlyInMemoryReservationProvider(Ed25519PrivateKey.generate())
+    request = _request(nonce="9" * 64)
 
-    assert provider.lookup("9" * 64) is None
+    assert provider.lookup(reservation_module._canonical_bytes(request.to_dict())) is None
