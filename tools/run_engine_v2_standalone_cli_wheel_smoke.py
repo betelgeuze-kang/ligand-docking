@@ -15,6 +15,7 @@ import torch
 
 import betelgeuze_engine_v2 as engine
 from betelgeuze_engine_v2.molecular import (
+    all_atom_system_from_canonical_json,
     canonical_system_json_bytes,
     canonical_system_sha256,
 )
@@ -22,10 +23,10 @@ from betelgeuze_engine_v2.molecular import (
 
 def _provenance(name: str, digest: str) -> engine.StructureProvenance:
     return engine.StructureProvenance(
-        source_format="installed-wheel-toy",
+        source_format="unit",
         source_id=name,
         source_sha256=digest,
-        parser_name="installed-wheel-toy-fixture",
+        parser_name="standalone-consumer-fixture",
         parser_version="1.0.0",
     )
 
@@ -40,7 +41,7 @@ def _system(*, receptor: bool) -> engine.AllAtomSystem:
     )
     role = "receptor" if receptor else "ligand"
     return engine.AllAtomSystem(
-        system_id=f"installed-wheel-toy-{role}",
+        system_id=f"standalone-consumer-{role}",
         atoms=tuple(
             engine.Atom(
                 index=index,
@@ -162,14 +163,7 @@ def run(work_directory: Path, *, forbidden_import_root: Path | None) -> None:
     _run(
         cli,
         "define-pocket",
-        "--center",
-        "0",
-        "0",
-        "0",
-        "--radius",
-        "10",
-        "--source-artifact",
-        str(receptor_output),
+        "--synthetic-d0-fixture",
         "--coordinate-frame-id",
         "prepared-receptor-frame-v1",
         "--output",
@@ -186,10 +180,6 @@ def run(work_directory: Path, *, forbidden_import_root: Path | None) -> None:
         str(pocket),
         "--seed",
         "4301",
-        "--synthetic-test-candidates",
-        "2",
-        "--synthetic-test-top-k",
-        "1",
         "--test-only-synthetic",
         "--output",
         str(result),
@@ -197,7 +187,17 @@ def run(work_directory: Path, *, forbidden_import_root: Path | None) -> None:
     _run(cli, "verify", "--result", str(result), "--output", str(verification))
     _run(cli, "report", "--result", str(result), "--output", str(report))
 
+    admission = engine.repository_synthetic_d0_fixture_admission()
+    prepared_receptor_raw = receptor_output.read_bytes()
+    if not prepared_receptor_raw.endswith(b"\n"):
+        raise RuntimeError("installed prepared receptor is not newline terminated")
+    prepared_receptor = all_atom_system_from_canonical_json(
+        prepared_receptor_raw[:-1]
+    )
+    if canonical_system_sha256(prepared_receptor) != admission.receptor_system_sha256:
+        raise RuntimeError("installed prepared receptor lost admitted identity")
     manifest = _load(ligand_bundle / "manifest.json")
+    pocket_document = _load(pocket)
     result_document = _load(result)
     verification_document = _load(verification)
     report_document = _load(report)
@@ -205,10 +205,78 @@ def run(work_directory: Path, *, forbidden_import_root: Path | None) -> None:
         raise RuntimeError("installed ligand bundle lost absent-only semantics")
     if stat.S_IMODE(ligand_bundle.stat().st_mode) != 0o700:
         raise RuntimeError("installed ligand bundle is not private")
-    if result_document.get("candidate_count") != 2:
-        raise RuntimeError("installed synthetic denominator changed")
+    if (
+        manifest.get("systems", [{}])[0].get("system_sha256")
+        != admission.ligand_system_sha256
+    ):
+        raise RuntimeError("installed prepared ligand lost admitted identity")
+    if (
+        pocket_document.get("method_id") != "consumer-reviewed-sphere"
+        or pocket_document.get("coordinate_frame_id")
+        != "prepared-receptor-frame-v1"
+        or pocket_document.get("center_angstrom") != [0.0, 0.0, 0.0]
+        or pocket_document.get("radius_angstrom") != 10.0
+    ):
+        raise RuntimeError("installed synthetic D0 pocket materialization changed")
+    candidates = result_document.get("candidate_evidence")
+    top_indices = result_document.get("top_proposal_indices")
+    profile = result_document.get("profile")
+    request = result_document.get("request")
+    if (
+        result_document.get("candidate_count") != 64
+        or not isinstance(candidates, list)
+        or [row.get("proposal_index") for row in candidates] != list(range(64))
+        or result_document.get("success_count", 0)
+        + result_document.get("failure_count", 0)
+        != 64
+        or result_document.get("failure_denominator_preserved") is not True
+        or not isinstance(profile, dict)
+        or profile.get("candidate_count") != 64
+        or profile.get("top_k") != 5
+        or profile.get("failure_denominator_required") != 64
+        or not isinstance(top_indices, list)
+        or len(top_indices) != 5
+    ):
+        raise RuntimeError("installed synthetic D0 fixed64/Top5 contract changed")
+    if (
+        not isinstance(request, dict)
+        or request.get("request_sha256") != admission.request_sha256
+        or request.get("receptor_system_sha256")
+        != admission.receptor_system_sha256
+        or request.get("ligand_system_sha256") != admission.ligand_system_sha256
+        or request.get("pocket_fingerprint_sha256")
+        != admission.pocket_fingerprint_sha256
+        or result_document.get("synthetic_d0_fixture_manifest_sha256")
+        != admission.manifest_sha256
+        or result_document.get(
+            "synthetic_d0_fixture_admission_receipt_sha256"
+        )
+        != admission.receipt_sha256
+        or result_document.get("synthetic_only_acknowledgment")
+        != engine.SYNTHETIC_ONLY_ACKNOWLEDGMENT
+        or result_document.get(
+            "caller_acknowledged_synthetic_fixture_only"
+        )
+        is not True
+        or result_document.get(
+            "synthetic_fixture_identity_independently_verified"
+        )
+        is not True
+    ):
+        raise RuntimeError("installed synthetic D0 admission binding changed")
+    if (
+        result_document.get("component_binding_mode")
+        != engine.SEALED_CANONICAL_COMPONENT_BINDING
+        or result_document.get("canonical_components_sealed") is not True
+        or result_document.get("arbitrary_dependency_injection_used") is not False
+        or result_document.get("evidence_record_capability_consumed") is not True
+        or result_document.get("canonical_evidence_recorder_factory_sealed")
+        is not True
+    ):
+        raise RuntimeError("installed sealed component/recorder binding changed")
     for field in (
         "external_reservation_requested",
+        "external_reservation_authorized",
         "historical_execution_authorized",
         "fresh_holdout_execution_authorized",
         "stage0_admission_authority",
@@ -219,11 +287,30 @@ def run(work_directory: Path, *, forbidden_import_root: Path | None) -> None:
     ):
         if result_document.get(field) is not False:
             raise RuntimeError(f"installed flow asserted forbidden field {field}")
+    if "_construction_proof_sha256" in json.dumps(
+        result_document,
+        sort_keys=True,
+    ):
+        raise RuntimeError("installed result serialized a private construction proof")
     if (
         verification_document.get("status")
         != "verified_structural_consistency_only"
+        or verification_document.get("verification_scope")
+        != "available_serialized_structure_only_no_opaque_upstream_content"
         or "valid" in verification_document
+        or "cross_bindings_verified" in verification_document
+        or "derived_semantics_verified" in verification_document
         or verification_document.get("structural_consistency_valid") is not True
+        or verification_document.get(
+            "available_structural_cross_bindings_verified"
+        )
+        is not True
+        or verification_document.get("available_derived_semantics_verified")
+        is not True
+        or verification_document.get(
+            "opaque_upstream_receipt_content_verified"
+        )
+        is not False
         or verification_document.get("content_authenticity_verified") is not False
         or verification_document.get("execution_authority_granted") is not False
     ):

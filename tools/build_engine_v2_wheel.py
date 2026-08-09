@@ -35,6 +35,13 @@ def _verify_wheel_members(path: Path) -> None:
         raise RuntimeError("Engine v2 wheel contains no betelgeuze_engine_v2 package")
     if "betelgeuze_engine_v2/py.typed" not in package_members:
         raise RuntimeError("Engine v2 wheel is missing the PEP 561 py.typed marker")
+    admission_resource = (
+        "betelgeuze_engine_v2/docking/synthetic_d0_fixture_admission.json"
+    )
+    if admission_resource not in package_members:
+        raise RuntimeError(
+            "Engine v2 wheel is missing the synthetic D0 admission manifest"
+        )
     top_levels = {
         member.split("/", 1)[0]
         for member in members

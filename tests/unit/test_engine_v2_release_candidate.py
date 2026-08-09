@@ -46,10 +46,16 @@ def test_release_candidate_versions_and_typed_package_metadata_match() -> None:
     ]
     assert "Typing :: Typed" in metadata["project"]["classifiers"]
     assert metadata["tool"]["setuptools"]["package-data"]["betelgeuze_engine_v2"] == ["py.typed"]
+    assert metadata["tool"]["setuptools"]["package-data"][
+        "betelgeuze_engine_v2.docking"
+    ] == ["synthetic_d0_fixture_admission.json"]
     assert metadata["tool"]["setuptools"]["packages"]["find"]["include"] == [
         "betelgeuze_engine_v2*"
     ]
     assert Path("betelgeuze_engine_v2/py.typed").is_file()
+    assert Path(
+        "betelgeuze_engine_v2/docking/synthetic_d0_fixture_admission.json"
+    ).is_file()
 
 
 def test_static_analysis_configuration_is_scoped_to_independent_contracts() -> None:

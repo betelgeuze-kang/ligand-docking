@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import copy
 import json
 import os
@@ -18,6 +19,10 @@ from betelgeuze_engine_v2 import (  # noqa: E402
     Chain,
     Residue,
     StructureProvenance,
+    SYNTHETIC_D0_FIXTURE_MANIFEST_SHA256,
+    SYNTHETIC_D0_FIXTURE_REQUEST_SHA256,
+    SYNTHETIC_ONLY_ACKNOWLEDGMENT,
+    repository_synthetic_d0_fixture_admission,
 )
 from betelgeuze_engine_v2.molecular import (  # noqa: E402
     canonical_system_json_bytes,
@@ -30,7 +35,8 @@ from betelgeuze_engine_v2.cli import (  # noqa: E402
 from betelgeuze_engine_v2.standalone_cli import (  # noqa: E402
     LIGAND_MANIFEST_SCHEMA_ID,
     StandaloneDockCliError,
-    define_explicit_pocket,
+    _define_synthetic_d0_fixture_pocket,
+    define_pocket,
     dock,
     main,
     prepare_ligands,
@@ -45,7 +51,7 @@ def _provenance(name: str, digest: str) -> StructureProvenance:
         source_format="unit",
         source_id=name,
         source_sha256=digest,
-        parser_name="standalone-cli-fixture",
+        parser_name="standalone-consumer-fixture",
         parser_version="1.0.0",
     )
 
@@ -60,7 +66,7 @@ def _system(*, receptor: bool) -> AllAtomSystem:
     )
     role = "receptor" if receptor else "ligand"
     return AllAtomSystem(
-        system_id=f"standalone-cli-{role}",
+        system_id=f"standalone-consumer-{role}",
         atoms=tuple(
             Atom(
                 index=index,
@@ -116,22 +122,20 @@ def _rehash_result(document: dict[str, object]) -> None:
     document["receipt_sha256"] = _sha256_document(projection)
 
 
+def _rehash_candidate(document: dict[str, object]) -> None:
+    projection = dict(document)
+    projection.pop("receipt_sha256")
+    document["receipt_sha256"] = _sha256_document(projection)
+
+
 def _synthetic_result(
     tmp_path: Path,
-    *,
-    candidate_count: int = 8,
-    top_k: int = 5,
 ) -> dict[str, object]:
     receptor_path = tmp_path / "receptor.json"
     ligand_path = tmp_path / "ligand.json"
     _write_system(receptor_path, _system(receptor=True))
     _write_system(ligand_path, _system(receptor=False))
-    pocket = define_explicit_pocket(
-        center_angstrom=(0.0, 0.0, 0.0),
-        radius_angstrom=10.0,
-        coordinate_frame_id="prepared-receptor-frame-v1",
-        source_artifact=receptor_path,
-    )
+    pocket = _define_synthetic_d0_fixture_pocket()
     pocket_path = tmp_path / "pocket.json"
     _write_document(pocket_path, pocket)
     return dock(
@@ -139,8 +143,6 @@ def _synthetic_result(
         ligand_path=ligand_path,
         pocket_path=pocket_path,
         seed=4301,
-        synthetic_candidate_count=candidate_count,
-        synthetic_top_k=top_k,
         synthetic_acknowledged=True,
     )
 
@@ -159,9 +161,14 @@ def test_prepare_commands_only_admit_canonical_prepared_systems(tmp_path: Path) 
         tmp_path / "ligands",
     )
 
+    admission = repository_synthetic_d0_fixture_admission()
     assert receipt["system_sha256"] == canonical_system_sha256(receptor)
+    assert receipt["system_sha256"] == admission.receptor_system_sha256
     assert manifest["schema_id"] == LIGAND_MANIFEST_SCHEMA_ID
     assert manifest["system_count"] == 1
+    assert manifest["systems"][0]["system_sha256"] == (
+        admission.ligand_system_sha256
+    )
     assert manifest["manifest_filename"] == "manifest.json"
     assert manifest["bundle_absent_only"] is True
     assert manifest["chemistry_inference_performed"] is False
@@ -174,17 +181,93 @@ def test_prepare_commands_only_admit_canonical_prepared_systems(tmp_path: Path) 
     assert stat.S_IMODE((bundle / "manifest.json").stat().st_mode) == 0o600
 
 
+def test_define_pocket_materializes_only_the_package_owned_synthetic_fixture(
+    tmp_path: Path,
+    capfd: pytest.CaptureFixture[str],
+) -> None:
+    pocket_path = tmp_path / "pocket.json"
+    status = main(
+        [
+            "define-pocket",
+            "--synthetic-d0-fixture",
+            "--coordinate-frame-id",
+            "prepared-receptor-frame-v1",
+            "--output",
+            str(pocket_path),
+        ]
+    )
+
+    assert status == 0
+    assert capfd.readouterr() == ("", "")
+    assert json.loads(pocket_path.read_text(encoding="ascii")) == (
+        _define_synthetic_d0_fixture_pocket()
+    )
+    assert stat.S_IMODE(pocket_path.stat().st_mode) == 0o600
+
+    conflicts = (
+        ("radius", 11.0, ("--radius", "11")),
+        (
+            "source_artifact",
+            tmp_path / "source.json",
+            ("--source-artifact", str(tmp_path / "source.json")),
+        ),
+        ("model_index", 0, ("--model-index", "0")),
+        ("padding_angstrom", 4.0, ("--padding-angstrom", "4")),
+        (
+            "minimum_radius_angstrom",
+            6.0,
+            ("--minimum-radius-angstrom", "6"),
+        ),
+        ("center", (0.0, 0.0, 0.0), ("--center", "0", "0", "0")),
+        (
+            "reference_ligand",
+            tmp_path / "reference.sdf",
+            ("--reference-ligand", str(tmp_path / "reference.sdf")),
+        ),
+    )
+    namespace_defaults = {
+        "synthetic_d0_fixture": True,
+        "reference_ligand": None,
+        "center": None,
+        "radius": None,
+        "source_artifact": None,
+        "coordinate_frame_id": "prepared-receptor-frame-v1",
+        "model_index": None,
+        "padding_angstrom": None,
+        "minimum_radius_angstrom": None,
+    }
+    for index, (field, value, flags) in enumerate(conflicts):
+        namespace = argparse.Namespace(
+            **{**namespace_defaults, field: value},
+        )
+        with pytest.raises(StandaloneDockCliError, match="rejects caller geometry"):
+            define_pocket(namespace)
+
+        rejected_path = tmp_path / f"relabelled-pocket-{index}.json"
+        status = main(
+            [
+                "define-pocket",
+                "--synthetic-d0-fixture",
+                "--coordinate-frame-id",
+                "prepared-receptor-frame-v1",
+                *flags,
+                "--output",
+                str(rejected_path),
+            ]
+        )
+        captured = capfd.readouterr()
+        assert status == 2
+        assert captured.out == ""
+        assert json.loads(captured.err)["status"] == "failure"
+        assert not rejected_path.exists()
+
+
 def test_synthetic_cli_flow_is_verifiable_reportable_and_claim_blocked(tmp_path: Path) -> None:
     receptor_path = tmp_path / "receptor.json"
     ligand_path = tmp_path / "ligand.json"
     _write_system(receptor_path, _system(receptor=True))
     _write_system(ligand_path, _system(receptor=False))
-    pocket = define_explicit_pocket(
-        center_angstrom=(0.0, 0.0, 0.0),
-        radius_angstrom=10.0,
-        coordinate_frame_id="prepared-receptor-frame-v1",
-        source_artifact=receptor_path,
-    )
+    pocket = _define_synthetic_d0_fixture_pocket()
     pocket_path = tmp_path / "pocket.json"
     _write_document(pocket_path, pocket)
 
@@ -193,8 +276,6 @@ def test_synthetic_cli_flow_is_verifiable_reportable_and_claim_blocked(tmp_path:
         ligand_path=ligand_path,
         pocket_path=pocket_path,
         seed=4301,
-        synthetic_candidate_count=2,
-        synthetic_top_k=1,
         synthetic_acknowledged=True,
     )
     verification = verify_pipeline_result(result)
@@ -207,13 +288,43 @@ def test_synthetic_cli_flow_is_verifiable_reportable_and_claim_blocked(tmp_path:
     assert verification == repeated_verification
     assert report == repeated_report
     assert verification["status"] == "verified_structural_consistency_only"
+    assert verification["verification_scope"] == (
+        "available_serialized_structure_only_no_opaque_upstream_content"
+    )
     assert verification["structural_consistency_verified"] is True
+    assert verification["available_structural_cross_bindings_verified"] is True
+    assert verification["available_derived_semantics_verified"] is True
+    assert verification["opaque_upstream_receipt_content_verified"] is False
+    assert "cross_bindings_verified" not in verification
+    assert "derived_semantics_verified" not in verification
+    assert verification["verified_structural_items"] == [
+        "exact_serialized_schema_keys",
+        "embedded_structural_self_hashes",
+        "available_admission_request_profile_budget_plan_bindings",
+        "available_candidate_score_validity_refinement_bindings",
+        "fixed64_failure_denominator_and_stable_top_k_at_most5",
+        "sealed_component_and_false_authority_declarations",
+    ]
     assert verification["content_authenticity_verified"] is False
     assert verification["cryptographic_signature_verified"] is False
     assert verification["external_authority_verified"] is False
     assert verification["execution_authority_granted"] is False
     assert verification["claim_safe"] is False
-    assert result["candidate_count"] == 2
+    admission = repository_synthetic_d0_fixture_admission()
+    assert result["candidate_count"] == 64
+    assert len(result["candidate_evidence"]) == 64
+    assert result["profile"]["top_k"] == 5
+    assert result["profile"]["failure_denominator_required"] == 64
+    assert result["request_sha256"] == SYNTHETIC_D0_FIXTURE_REQUEST_SHA256
+    assert result["synthetic_d0_fixture_manifest_sha256"] == (
+        SYNTHETIC_D0_FIXTURE_MANIFEST_SHA256
+    )
+    assert result["synthetic_d0_fixture_admission_receipt_sha256"] == (
+        admission.receipt_sha256
+    )
+    assert result["synthetic_only_acknowledgment"] == (
+        SYNTHETIC_ONLY_ACKNOWLEDGMENT
+    )
     assert result["external_reservation_requested"] is False
     assert result["product_execution_authorized"] is False
     assert report["customer_pose_emission_authorized"] is False
@@ -222,74 +333,65 @@ def test_synthetic_cli_flow_is_verifiable_reportable_and_claim_blocked(tmp_path:
     assert report["content_authenticity_verified"] is False
 
 
-def test_small_denominator_requires_explicit_synthetic_acknowledgement(tmp_path: Path) -> None:
+def test_dock_requires_exact_fixture_ack_and_rejects_legacy_small_profiles(
+    tmp_path: Path,
+    capfd: pytest.CaptureFixture[str],
+) -> None:
     receptor_path = tmp_path / "receptor.json"
     ligand_path = tmp_path / "ligand.json"
     _write_system(receptor_path, _system(receptor=True))
     _write_system(ligand_path, _system(receptor=False))
-    pocket = define_explicit_pocket(
-        center_angstrom=(0.0, 0.0, 0.0),
-        radius_angstrom=10.0,
-        coordinate_frame_id="prepared-receptor-frame-v1",
-        source_artifact=receptor_path,
-    )
+    pocket = _define_synthetic_d0_fixture_pocket()
     pocket_path = tmp_path / "pocket.json"
     _write_document(pocket_path, pocket)
 
     with pytest.raises(StandaloneDockCliError, match="--test-only-synthetic"):
         dock(
-            receptor_path=receptor_path,
-            ligand_path=ligand_path,
-            pocket_path=pocket_path,
+            receptor_path=tmp_path / "not-read-receptor.json",
+            ligand_path=tmp_path / "not-read-ligand.json",
+            pocket_path=tmp_path / "not-read-pocket.json",
             seed=4301,
-            synthetic_candidate_count=2,
         )
-    with pytest.raises(
-        StandaloneDockCliError,
-        match="synthetic test flags require --synthetic-test-candidates",
-    ):
+    status = main(
+        [
+            "dock",
+            "--receptor",
+            str(receptor_path),
+            "--ligand",
+            str(ligand_path),
+            "--pocket",
+            str(pocket_path),
+            "--seed",
+            "4301",
+            "--synthetic-test-candidates",
+            "2",
+            "--synthetic-test-top-k",
+            "1",
+            "--test-only-synthetic",
+            "--output",
+            str(tmp_path / "result.json"),
+        ]
+    )
+    captured = capfd.readouterr()
+    assert status == 2
+    assert captured.out == ""
+    failure = json.loads(captured.err)
+    assert failure["status"] == "failure"
+    assert failure["error_code"] == "engine_v2_cli_failed"
+    assert not (tmp_path / "result.json").exists()
+
+    with pytest.raises(StandaloneDockCliError, match="admission"):
         dock(
             receptor_path=receptor_path,
             ligand_path=ligand_path,
             pocket_path=pocket_path,
-            seed=4301,
-            synthetic_top_k=1,
-        )
-    with pytest.raises(
-        StandaloneDockCliError,
-        match="synthetic test flags require --synthetic-test-candidates",
-    ):
-        dock(
-            receptor_path=receptor_path,
-            ligand_path=ligand_path,
-            pocket_path=pocket_path,
-            seed=4301,
+            seed=4302,
             synthetic_acknowledged=True,
         )
 
 
 def test_verifier_rejects_authority_escalation(tmp_path: Path) -> None:
-    receptor_path = tmp_path / "receptor.json"
-    ligand_path = tmp_path / "ligand.json"
-    _write_system(receptor_path, _system(receptor=True))
-    _write_system(ligand_path, _system(receptor=False))
-    pocket = define_explicit_pocket(
-        center_angstrom=(0.0, 0.0, 0.0),
-        radius_angstrom=10.0,
-        coordinate_frame_id="prepared-receptor-frame-v1",
-        source_artifact=receptor_path,
-    )
-    pocket_path = tmp_path / "pocket.json"
-    _write_document(pocket_path, pocket)
-    result = dock(
-        receptor_path=receptor_path,
-        ligand_path=ligand_path,
-        pocket_path=pocket_path,
-        seed=7,
-        synthetic_candidate_count=1,
-        synthetic_top_k=1,
-        synthetic_acknowledged=True,
-    )
+    result = _synthetic_result(tmp_path)
     result["product_execution_authorized"] = True
 
     with pytest.raises(StandaloneDockCliError, match="receipt_sha256 mismatch"):
@@ -628,7 +730,7 @@ def test_verifier_rejects_exact_schema_derived_rank_and_term_cross_wires(
 
 
 def test_verifier_rejects_rehashed_authority_escalation(tmp_path: Path) -> None:
-    result = _synthetic_result(tmp_path, candidate_count=2, top_k=1)
+    result = _synthetic_result(tmp_path)
     result["product_execution_authorized"] = True
     _rehash_result(result)
 
@@ -640,29 +742,36 @@ def test_verifier_admits_failure_rows_without_dropping_the_denominator(
     tmp_path: Path,
 ) -> None:
     result = _synthetic_result(tmp_path)
-    candidate = result["candidate_evidence"][0]
-    assert candidate["selection_eligible"] is False
+    top_indices = set(result["top_proposal_indices"])
+    candidate = next(
+        row
+        for row in result["candidate_evidence"]
+        if row["status"] == "success"
+        and row["proposal_index"] not in top_indices
+    )
     candidate["status"] = "failure"
     candidate["result_proposal_fingerprint_sha256"] = ""
     candidate["score_binary64_hex"] = None
     candidate["pose_validity"] = None
     candidate["scorer_terms"] = None
+    candidate["selection_eligible"] = False
     candidate["error_code"] = "synthetic_failure_row"
+    _rehash_candidate(candidate)
     result["success_count"] = int(result["success_count"]) - 1
     result["failure_count"] = int(result["failure_count"]) + 1
     _rehash_result(result)
 
     verification = verify_pipeline_result(result)
 
-    assert verification["candidate_count"] == 8
-    assert verification["success_count"] == 7
+    assert verification["candidate_count"] == 64
+    assert verification["success_count"] == 63
     assert verification["failure_count"] == 1
 
 
 def test_verifier_rejects_boolean_counts_indices_and_component_rebinding(
     tmp_path: Path,
 ) -> None:
-    result = _synthetic_result(tmp_path, candidate_count=2, top_k=1)
+    result = _synthetic_result(tmp_path)
 
     boolean_count = copy.deepcopy(result)
     boolean_count["success_count"] = True
@@ -681,3 +790,86 @@ def test_verifier_rejects_boolean_counts_indices_and_component_rebinding(
     _rehash_result(rebound_component)
     with pytest.raises(StandaloneDockCliError, match="not canonical"):
         verify_pipeline_result(rebound_component)
+
+
+def test_verifier_rejects_rehashed_final_receipt_cross_wires_and_private_proof(
+    tmp_path: Path,
+) -> None:
+    result = _synthetic_result(tmp_path)
+
+    bad_manifest = copy.deepcopy(result)
+    bad_manifest["synthetic_d0_fixture_manifest_sha256"] = "0" * 64
+    _rehash_result(bad_manifest)
+    with pytest.raises(StandaloneDockCliError, match="manifest/admission"):
+        verify_pipeline_result(bad_manifest)
+
+    bad_request = copy.deepcopy(result)
+    bad_request["request"]["synthetic_only_acknowledgment"] = "attacker"
+    request_projection = dict(bad_request["request"])
+    request_projection.pop("request_sha256")
+    bad_request["request"]["request_sha256"] = _sha256_document(
+        request_projection
+    )
+    bad_request["request_sha256"] = bad_request["request"]["request_sha256"]
+    _rehash_result(bad_request)
+    with pytest.raises(StandaloneDockCliError, match="package-owned synthetic D0"):
+        verify_pipeline_result(bad_request)
+
+    bad_budget = copy.deepcopy(result)
+    bad_budget["budget"]["candidate_count"] = 63
+    _rehash_result(bad_budget)
+    with pytest.raises(StandaloneDockCliError, match="budget is cross-wired"):
+        verify_pipeline_result(bad_budget)
+
+    bad_plan = copy.deepcopy(result)
+    bad_plan["proposal_plan"]["allocation_result_dependent"] = True
+    plan_projection = dict(bad_plan["proposal_plan"])
+    plan_projection.pop("receipt_sha256")
+    bad_plan["proposal_plan"]["receipt_sha256"] = _sha256_document(
+        plan_projection
+    )
+    bad_plan["proposal_plan_receipt_sha256"] = bad_plan["proposal_plan"][
+        "receipt_sha256"
+    ]
+    _rehash_result(bad_plan)
+    with pytest.raises(StandaloneDockCliError, match="proposal plan is cross-wired"):
+        verify_pipeline_result(bad_plan)
+
+    rebound_source = copy.deepcopy(result)
+    rebound_source["scorer_source_sha256"] = "0" * 64
+    _rehash_result(rebound_source)
+    with pytest.raises(StandaloneDockCliError, match="source identities"):
+        verify_pipeline_result(rebound_source)
+
+    unsealed = copy.deepcopy(result)
+    unsealed["canonical_components_sealed"] = False
+    _rehash_result(unsealed)
+    with pytest.raises(StandaloneDockCliError, match="component binding"):
+        verify_pipeline_result(unsealed)
+
+    rebound_capability = copy.deepcopy(result)
+    rebound_capability["evidence_record_capability_scope"] = "attacker"
+    _rehash_result(rebound_capability)
+    with pytest.raises(StandaloneDockCliError, match="recorder/capability"):
+        verify_pipeline_result(rebound_capability)
+
+    bad_candidate_receipt = copy.deepcopy(result)
+    bad_candidate_receipt["candidate_evidence"][0]["receipt_sha256"] = "0" * 64
+    _rehash_result(bad_candidate_receipt)
+    with pytest.raises(StandaloneDockCliError, match="receipt_sha256 mismatch"):
+        verify_pipeline_result(bad_candidate_receipt)
+
+    leaked_candidate_proof = copy.deepcopy(result)
+    leaked_candidate_proof["candidate_evidence"][0][
+        "_construction_proof_sha256"
+    ] = "0" * 64
+    _rehash_result(leaked_candidate_proof)
+    with pytest.raises(StandaloneDockCliError, match="exact schema"):
+        verify_pipeline_result(leaked_candidate_proof)
+    with pytest.raises(StandaloneDockCliError, match="exact schema"):
+        report_pipeline_result(leaked_candidate_proof)
+
+    leaked_result_proof = copy.deepcopy(result)
+    leaked_result_proof["_construction_proof_sha256"] = "0" * 64
+    with pytest.raises(StandaloneDockCliError, match="exact schema"):
+        verify_pipeline_result(leaked_result_proof)

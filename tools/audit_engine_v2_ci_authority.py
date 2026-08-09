@@ -109,7 +109,7 @@ STANDALONE_REQUIRED_TOKENS = (
     "tests/unit/test_engine_v2_standalone_pipeline_core.py",
     "tools/run_engine_v2_standalone_cli_wheel_smoke.py",
     "docs/engine_v2_public_api.md",
-    "Run installed standalone toy flow outside checkout",
+    "Run installed standalone synthetic D0 fixed64 flow outside checkout",
 )
 
 
