@@ -10,6 +10,8 @@ from tools.audit_engine_v2_ci_authority import (
     EXTERNAL_RESERVATION_REQUIRED_TOKENS,
     ONE_SHOT_CONTRACT_PATHS,
     ONE_SHOT_REQUIRED_TOKENS,
+    STANDALONE_PIPELINE_CONTRACT_PATHS,
+    STANDALONE_PIPELINE_REQUIRED_TOKENS,
     build_inventory,
 )
 
@@ -52,12 +54,15 @@ def test_ci_authority_inventory_requires_contracts_in_canonical_main(
     _mark_contract(tmp_path, CLEARANCE_ACTIVATION_CONTRACT_PATHS)
     _mark_contract(tmp_path, ONE_SHOT_CONTRACT_PATHS)
     _mark_contract(tmp_path, EXTERNAL_RESERVATION_CONTRACT_PATHS)
+    _mark_contract(tmp_path, STANDALONE_PIPELINE_CONTRACT_PATHS)
     (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
         "\n".join(
             _STAGE0_TOKENS
             + CLEARANCE_ACTIVATION_REQUIRED_TOKENS
             + ONE_SHOT_REQUIRED_TOKENS
             + EXTERNAL_RESERVATION_REQUIRED_TOKENS
+            + STANDALONE_PIPELINE_REQUIRED_TOKENS
+            + STANDALONE_PIPELINE_REQUIRED_TOKENS
         ),
         encoding="utf-8",
     )
@@ -71,6 +76,7 @@ def test_ci_authority_inventory_requires_contracts_in_canonical_main(
     assert payload["stage0_tests_in_authoritative_main"] is True
     assert payload["one_shot_contract_in_authoritative_ci"] is True
     assert payload["external_reservation_contract_in_authoritative_ci"] is True
+    assert payload["standalone_pipeline_contract_in_authoritative_ci"] is True
     assert payload["new_feature_workflow_policy"] == (
         "consolidate_into_authoritative_workflows"
     )
@@ -125,6 +131,34 @@ def test_missing_external_reservation_token_fails_main_coverage(
     assert payload["external_reservation_contract_in_authoritative_ci"] is False
 
 
+def test_standalone_pipeline_test_requires_sparse_and_pytest_entries(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _mark_contract(tmp_path, STANDALONE_PIPELINE_CONTRACT_PATHS)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        STANDALONE_PIPELINE_REQUIRED_TOKENS[0],
+        encoding="utf-8",
+    )
+
+    payload = build_inventory(tmp_path)
+    assert payload["standalone_pipeline_contract_in_authoritative_ci"] is False
+
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(
+            STANDALONE_PIPELINE_REQUIRED_TOKENS
+            + STANDALONE_PIPELINE_REQUIRED_TOKENS
+        ),
+        encoding="utf-8",
+    )
+    assert (
+        build_inventory(tmp_path)[
+            "standalone_pipeline_contract_in_authoritative_ci"
+        ]
+        is True
+    )
+
+
 def test_specialized_workflow_cannot_substitute_for_main(tmp_path: Path) -> None:
     _write_authoritative_workflows(tmp_path)
     _mark_contract(tmp_path, ONE_SHOT_CONTRACT_PATHS)
@@ -156,6 +190,13 @@ def test_repository_has_no_specialized_one_shot_workflow() -> None:
     assert not deprecated.exists()
     assert all(token in main_text for token in ONE_SHOT_REQUIRED_TOKENS)
     assert all(token in main_text for token in EXTERNAL_RESERVATION_REQUIRED_TOKENS)
+    assert all(
+        main_text.count(token) >= 2
+        for token in STANDALONE_PIPELINE_REQUIRED_TOKENS
+    )
+    assert build_inventory(repo_root)[
+        "standalone_pipeline_contract_in_authoritative_ci"
+    ] is True
 
 
 def test_repository_without_optional_contracts_keeps_legacy_scope(

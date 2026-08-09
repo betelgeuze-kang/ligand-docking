@@ -25,5 +25,8 @@ include = [
   "betelgeuze_cleanup*",
 ]
 
+[tool.setuptools.package-data]
+"betelgeuze_engine_v2.docking" = ["synthetic_d0_fixture_admission.json"]
+
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements-package.txt"]}

@@ -92,6 +92,13 @@ EXTERNAL_RESERVATION_REQUIRED_TOKENS = (
     "import betelgeuze_engine_v2.benchmark.source_paired_clearance_external_reservation",
     "import betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_external_gate",
 )
+STANDALONE_PIPELINE_CONTRACT_PATHS = (
+    "betelgeuze_engine_v2/docking/pipeline.py",
+    "betelgeuze_engine_v2/docking/synthetic_d0_fixture_admission.json",
+)
+STANDALONE_PIPELINE_REQUIRED_TOKENS = (
+    "tests/unit/test_engine_v2_standalone_pipeline_core.py",
+)
 
 
 def _canonical_bytes(value: object) -> bytes:
@@ -171,6 +178,17 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
             for token in EXTERNAL_RESERVATION_REQUIRED_TOKENS
         )
     )
+    standalone_pipeline_contract_present = any(
+        (repo_root / path).is_file()
+        for path in STANDALONE_PIPELINE_CONTRACT_PATHS
+    )
+    standalone_pipeline_contract_in_authoritative_ci = (
+        not standalone_pipeline_contract_present
+        or all(
+            main_text.count(token) >= 2
+            for token in STANDALONE_PIPELINE_REQUIRED_TOKENS
+        )
+    )
 
     payload: dict[str, Any] = {
         "schema_id": SCHEMA_ID,
@@ -189,6 +207,9 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         ),
         "external_reservation_contract_in_authoritative_ci": (
             external_reservation_contract_in_authoritative_ci
+        ),
+        "standalone_pipeline_contract_in_authoritative_ci": (
+            standalone_pipeline_contract_in_authoritative_ci
         ),
         "new_feature_workflow_policy": "consolidate_into_authoritative_workflows",
         "specialized_workflows_hidden": False,

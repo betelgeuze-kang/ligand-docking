@@ -386,20 +386,70 @@ This adapter relaxes ligand-internal coordinates only. It does not include
 receptor--ligand interaction energy, prove pose improvement, provide an
 affinity/free-energy estimate, or establish scientific/product readiness.
 
-`DockingPipeline(...)` is the provisional standalone CPU composition boundary
-for canonical, already-prepared receptor and ligand systems plus an explicit
-typed pocket. Its default `DockingPipelineProfileV1` binds the current V7,
-Scorer-v1, fixed-64/Top-5 baseline; a separate bounded synthetic profile exists
-only for tests. `DockingPipelineRequestV1` cannot be constructed as a production
-request, and `DockingPipelineResultV1` retains all candidate failures, complete
-successful score-term/validity/refinement evidence, the four external-authority
-blockers, and false Fresh, Stage 0, product, customer-pose, and public/scientific
-authorities. The pass-through geometric-admission component records that the
-future surface-aware gate is not enabled and never removes a candidate.
+`DockingPipeline()` is the provisional standalone CPU composition boundary for
+canonical, already-prepared receptor and ligand inputs plus an explicit typed
+pocket. Every `DockingPipelineRequestV1` must carry both the exact exported
+`SYNTHETIC_ONLY_ACKNOWLEDGMENT` and the package-owned
+`SyntheticD0FixtureAdmissionV1`. The loader authenticates the canonical
+manifest bytes and fixes the receptor/ligand canonical SHA-256 values, pocket
+fingerprint, seed, profile ID and receipt, request SHA-256, fixed-64 denominator,
+and Top-5. Construction and `run()` independently recheck that admission before
+any component or scorer call. Arbitrary coordinates, pockets, seeds, and
+profiles therefore fail before computation. This repository-fixture identity
+check is not external execution authority, scientific admission, or a molecular
+experiment authorization. The admitted profile binds the current V7,
+Scorer-v1, full fixed-64/Top-5 budget and proposal-plan receipts.
 
-The dependency-injected component boundary is provisional. It performs no file
-parsing, protonation, tautomer selection, charge generation, pocket prediction,
-external reservation, benchmark evaluation, or product action.
+The no-argument pipeline seals the exact canonical component types and IDs.
+The public constructor rejects supplied dependencies before execution. The
+underscore-prefixed internal test factory is the only dependency-injected path;
+its result records `internal_test_only_unverified_components`,
+`arbitrary_dependency_injection_unverified`, and
+`unverified_component_side_effects_unknown`. Network, reservation, chemistry,
+and pocket-prediction observations are `null`, rather than falsely asserted
+absent, for that path. Its component IDs are fixed to `UNVERIFIED`, and its
+scorer/refiner implementation source identities are `null`; caller component
+labels cannot become receipt evidence.
+
+The evidence recorder is private, non-exported, and not dependency-injectable.
+Each `run()` rederives package source hashes, evidence-safe component IDs, and
+the sealed-or-unverified binding internally. It then issues one opaque,
+process-local capability bound to the exact request, budget, proposal plan,
+Scorer-v1 result object and receipt, refiner receipts, admission statuses, and
+Top-K. The private recorder consumes that capability before validation and
+cannot reuse it after success or failure. Its record method accepts no caller
+source hashes, component IDs, or binding mode. Direct calls, replay, and
+cross-run result substitution therefore fail closed without minting a result.
+
+Candidate receipts
+deep-canonicalize nested evidence and enforce disjoint success/failure states;
+result receipts independently rederive the exact stable MINIMIZE Top-K and
+reject missing, reordered, duplicate, out-of-range, failed, or ineligible
+references. Candidate and result objects also carry a process-local HMAC
+construction proof that only the canonical recorder creates. The proof is
+rechecked whenever a receipt is read, so a format-valid `dataclasses.replace`
+cannot substitute lineage, component binding, or nested receipt content. The
+proof and key are never serialized; the serialized `receipt_sha256` remains a
+deterministic structural self-hash, not a signature, cryptographic attestation,
+or cross-process trust proof. These process-local controls protect the supported
+API against accidental minting, replay, and ordinary cross-wiring; they are not
+a security boundary against hostile same-process reflection, private-name
+access, memory inspection, monkeypatching, or arbitrary code execution.
+`DockingPipelineResultV1` retains all candidate
+failures, complete
+successful score-term/validity/refinement evidence, all required claim blockers,
+and false Historical, Fresh, Stage 0, product, customer-pose, and
+public/scientific authorities. The pass-through geometric-admission component
+records that the future surface-aware gate is not enabled and never removes a
+candidate.
+
+The component boundary performs no file parsing, protonation, tautomer
+selection, charge generation, pocket prediction, external reservation,
+benchmark evaluation, or product action. It does not authorize or independently
+admit real molecular execution. Only the exact repository-owned synthetic D0
+fixture can reach the current scorer, and that admission keeps reservation,
+Historical A/B, Fresh-128, public benchmark, product mutation, and all external
+claim authorities false.
 
 ### Internal APIs
 
