@@ -25,7 +25,7 @@ classifiers = [
 
 [project.optional-dependencies]
 native-cpu = [
-  "betelgeuze-engine-v2-native==0.2.0rc5; platform_system == 'Linux' and platform_machine == 'x86_64'",
+  "betelgeuze-engine-v2-native==0.2.0rc6; platform_system == 'Linux' and platform_machine == 'x86_64'",
 ]
 
 [project.scripts]

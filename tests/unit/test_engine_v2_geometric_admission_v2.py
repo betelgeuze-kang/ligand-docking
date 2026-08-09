@@ -18,6 +18,7 @@ from betelgeuze_engine_v2.docking.geometric_admission_v2 import (
     TYPED_MISSING_FEATURE_REJECTION_CODE,
     GeometricAdmissionV2,
     GeometricAdmissionV2Error,
+    evaluate_geometric_admission_metrics_one_python,
 )
 import betelgeuze_engine_v2.docking.geometric_admission_v2 as geometric_module
 from betelgeuze_engine_v2.docking.mixed64_allocation import (
@@ -666,3 +667,35 @@ def test_duplicate_decision_and_post_init_tamper_fail_closed() -> None:
     object.__setattr__(batch, "decisions", duplicated)
     with pytest.raises(GeometricAdmissionV2Error, match="decisions changed"):
         batch.to_dict()
+
+
+def test_public_one_candidate_reference_is_the_fixed64_kernel() -> None:
+    ligand = ((0.0, 0.0, 0.0), (3.0, 0.0, 0.0))
+    ligand_radii = (1.0, 1.2)
+    heavy_mask = (True, False)
+    receptor = ((1.0, 0.0, 0.0), (10.0, 0.0, 0.0))
+    receptor_radii = (1.0, 1.5)
+    center = (0.0, 0.0, 0.0)
+    radius = 4.0
+    direct = evaluate_geometric_admission_metrics_one_python(
+        ligand,
+        ligand_vdw_radii=ligand_radii,
+        ligand_heavy_atom_mask=heavy_mask,
+        receptor_coordinates=receptor,
+        receptor_vdw_radii=receptor_radii,
+        pocket_center=center,
+        pocket_radius=radius,
+    )
+    batch = GeometricAdmissionV2().admit_fixed64(
+        _fixed64(ligand),
+        allocation=_allocation(),
+        ligand_vdw_radii=ligand_radii,
+        ligand_heavy_atom_mask=heavy_mask,
+        receptor_coordinates=receptor,
+        receptor_vdw_radii=receptor_radii,
+        pocket_center=center,
+        pocket_radius=radius,
+    )
+
+    assert batch.decisions[0].metrics is not None
+    assert direct.to_dict() == batch.decisions[0].metrics.to_dict()
