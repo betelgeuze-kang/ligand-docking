@@ -487,6 +487,13 @@ endpoint; arbitrary same-UID mutation can still prevent confirmed restoration.
 The writer is therefore not a security boundary against another process running
 as the same UID with access to the writable parent or this process's descriptors;
 deployment still requires process/account isolation.
+This Linux-specific writer is scoped to `betelgeuze-dock`; the pre-existing
+`betelgeuze-engine-v2`, reference-pocket, and verification commands retain a
+portable temporary-file plus `os.replace` publication path on macOS and
+Windows and do not call `/proc/self/fd` or `renameat2`. The portable writer
+fails closed on POSIX directory-open or directory-fsync errors; Windows retains
+file synchronization and atomic replacement because portable directory fsync
+is unavailable there.
 Argument-admission failures use the same single canonical failure JSON as
 runtime failures.
 

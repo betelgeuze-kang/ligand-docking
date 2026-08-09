@@ -128,6 +128,12 @@ def _rehash_candidate(document: dict[str, object]) -> None:
     document["receipt_sha256"] = _sha256_document(projection)
 
 
+def _rehash_embedded_receipt(document: dict[str, object]) -> None:
+    projection = dict(document)
+    projection.pop("receipt_sha256")
+    document["receipt_sha256"] = _sha256_document(projection)
+
+
 def _synthetic_result(
     tmp_path: Path,
 ) -> dict[str, object]:
@@ -452,6 +458,72 @@ def test_hardened_writer_rejects_parent_symlinks_special_files_and_aliases(
     assert source.read_bytes() == original
 
 
+def test_legacy_cli_output_writer_uses_no_linux_publication_primitive(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import betelgeuze_engine_v2.cli as cli_module
+
+    def forbidden_linux_primitive(*args: object, **kwargs: object) -> None:
+        raise AssertionError("legacy CLI called a standalone Linux writer primitive")
+
+    monkeypatch.setattr(cli_module, "_renameat2", forbidden_linux_primitive)
+    monkeypatch.setattr(
+        cli_module,
+        "_write_output_hardened",
+        forbidden_linux_primitive,
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "run_canonical_docking",
+        lambda **kwargs: {"portable_output": True},
+    )
+    output = tmp_path / "legacy-output.json"
+    arguments = [
+        "dock-canonical",
+        "--receptor",
+        str(tmp_path / "receptor.json"),
+        "--ligand",
+        str(tmp_path / "ligand.json"),
+        "--pocket",
+        str(tmp_path / "pocket.json"),
+        "--output",
+        str(output),
+    ]
+
+    assert cli_module.main(arguments) == 0
+    assert output.read_bytes() == b'{"portable_output":true}\n'
+    assert cli_module.main([*arguments, "--overwrite"]) == 0
+    assert output.read_bytes() == b'{"portable_output":true}\n'
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX directory fsync contract")
+def test_legacy_portable_writer_fails_closed_on_directory_fsync_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import betelgeuze_engine_v2.cli as cli_module
+
+    original_fsync = cli_module.os.fsync
+
+    def fail_directory_fsync(descriptor: int) -> None:
+        if stat.S_ISDIR(os.fstat(descriptor).st_mode):
+            raise OSError("synthetic directory fsync failure")
+        original_fsync(descriptor)
+
+    monkeypatch.setattr(cli_module.os, "fsync", fail_directory_fsync)
+    output = tmp_path / "legacy-output.json"
+
+    with pytest.raises(EngineV2CliError, match="written durably"):
+        cli_module._write_output(
+            {"portable_output": True},
+            output,
+            overwrite=False,
+        )
+
+    assert output.read_bytes() == b'{"portable_output":true}\n'
+
+
 def test_hardened_writer_detects_overwrite_toctou_without_clobbering_racer(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -727,6 +799,126 @@ def test_verifier_rejects_exact_schema_derived_rank_and_term_cross_wires(
     _rehash_result(bad_terms)
     with pytest.raises(StandaloneDockCliError, match="proposal cross-binding"):
         verify_pipeline_result(bad_terms)
+
+
+def test_verifier_recomputes_all_fixed_pose_admission_checks(
+    tmp_path: Path,
+) -> None:
+    result = _synthetic_result(tmp_path)
+    inconsistent_measurements = (
+        ("rotation_orthogonality_max_error", 2.0e-6),
+        ("rotation_determinant", 0.99),
+        ("max_bond_length_delta_angstrom", 0.16),
+        ("minimum_ligand_nonbonded_distance_angstrom", 0.74),
+        ("minimum_receptor_ligand_distance_angstrom", 0.79),
+        ("maximum_pocket_center_distance_angstrom", 10.01),
+        ("element_vdw_ligand_minimum_ratio", 0.54),
+        ("element_vdw_receptor_minimum_ratio", 0.54),
+    )
+    for field, value in inconsistent_measurements:
+        tampered = copy.deepcopy(result)
+        candidate = tampered["candidate_evidence"][0]
+        candidate["pose_validity"]["measurements"][field] = value
+        _rehash_candidate(candidate)
+        _rehash_result(tampered)
+        with pytest.raises(
+            StandaloneDockCliError,
+            match="pose validity measured checks are inconsistent",
+        ):
+            verify_pipeline_result(tampered)
+
+    chirality_relabel = copy.deepcopy(result)
+    candidate = chirality_relabel["candidate_evidence"][0]
+    candidate["pose_validity"]["measurements"][
+        "declared_chirality_center_count"
+    ] = 1
+    _rehash_candidate(candidate)
+    _rehash_result(chirality_relabel)
+    with pytest.raises(StandaloneDockCliError, match="fixed synthetic D0"):
+        verify_pipeline_result(chirality_relabel)
+
+
+def test_verifier_rejects_rehashed_impossible_exact_d0_count_relabels(
+    tmp_path: Path,
+) -> None:
+    result = _synthetic_result(tmp_path)
+
+    full_pair_relabel = copy.deepcopy(result)
+    candidate = full_pair_relabel["candidate_evidence"][0]
+    measurements = candidate["pose_validity"]["measurements"]
+    measurements["full_cartesian_receptor_ligand_pair_count"] = 24
+    measurements["element_vdw_receptor_full_cartesian_pair_count"] = 24
+    _rehash_candidate(candidate)
+    _rehash_result(full_pair_relabel)
+    with pytest.raises(StandaloneDockCliError, match="fixed synthetic D0"):
+        verify_pipeline_result(full_pair_relabel)
+
+    cell_relabel = copy.deepcopy(result)
+    candidate = cell_relabel["candidate_evidence"][0]
+    measurements = candidate["pose_validity"]["measurements"]
+    measurements["sparse_receptor_cell_count"] = 999
+    measurements["element_vdw_receptor_cell_count"] = 999
+    _rehash_candidate(candidate)
+    _rehash_result(cell_relabel)
+    with pytest.raises(StandaloneDockCliError, match="fixed synthetic D0"):
+        verify_pipeline_result(cell_relabel)
+
+    candidate_pair_overflow = copy.deepcopy(result)
+    candidate = candidate_pair_overflow["candidate_evidence"][0]
+    measurements = candidate["pose_validity"]["measurements"]
+    measurements["evaluated_receptor_ligand_pair_count"] = 26
+    measurements["element_vdw_receptor_candidate_pair_count"] = 26
+    _rehash_candidate(candidate)
+    _rehash_result(candidate_pair_overflow)
+    with pytest.raises(StandaloneDockCliError, match="measured checks"):
+        verify_pipeline_result(candidate_pair_overflow)
+
+    ligand_pair_relabel = copy.deepcopy(result)
+    candidate = ligand_pair_relabel["candidate_evidence"][0]
+    measurements = candidate["pose_validity"]["measurements"]
+    measurements["evaluated_ligand_nonbonded_pair_count"] = 0
+    measurements["excluded_ligand_pair_count"] = 10
+    measurements["element_vdw_ligand_pair_count"] = 0
+    measurements["minimum_ligand_nonbonded_distance_angstrom"] = 999.0
+    measurements["element_vdw_ligand_minimum_distance_angstrom"] = 999.0
+    measurements["element_vdw_ligand_minimum_ratio"] = 999.0
+    _rehash_candidate(candidate)
+    _rehash_result(ligand_pair_relabel)
+    with pytest.raises(StandaloneDockCliError, match="fixed synthetic D0"):
+        verify_pipeline_result(ligand_pair_relabel)
+
+
+def test_verifier_binds_plan_allocation_to_every_refinement_receipt(
+    tmp_path: Path,
+) -> None:
+    result = _synthetic_result(tmp_path)
+    result["proposal_plan"]["v3_proposal_indices"] = []
+    _rehash_embedded_receipt(result["proposal_plan"])
+    result["proposal_plan_receipt_sha256"] = result["proposal_plan"][
+        "receipt_sha256"
+    ]
+    _rehash_result(result)
+
+    with pytest.raises(
+        StandaloneDockCliError,
+        match="proposal allocation/refinement receipt mismatch",
+    ):
+        verify_pipeline_result(result)
+
+
+def test_verifier_binds_v7_original_validity_to_embedded_v6(
+    tmp_path: Path,
+) -> None:
+    result = _synthetic_result(tmp_path)
+    candidate = result["candidate_evidence"][0]
+    v7_receipt = candidate["refinement_receipt"]
+    v7_receipt["original_pose_valid"] = not v7_receipt["original_pose_valid"]
+    _rehash_embedded_receipt(v7_receipt)
+    _rehash_candidate(candidate)
+    _rehash_result(result)
+
+    with pytest.raises(StandaloneDockCliError, match="V7/V6 refinement"):
+        verify_pipeline_result(result)
 
 
 def test_verifier_rejects_rehashed_authority_escalation(tmp_path: Path) -> None:
