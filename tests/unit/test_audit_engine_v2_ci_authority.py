@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
+
+import pytest
 
 from tools.audit_engine_v2_ci_authority import (
     AUTHORITATIVE_WORKFLOWS,
@@ -13,6 +16,10 @@ from tools.audit_engine_v2_ci_authority import (
     EXTERNAL_RESERVATION_REQUIRED_TOKENS,
     GLOBAL_ORIENTATION_CONTRACT_PATHS,
     GLOBAL_ORIENTATION_REQUIRED_TOKENS,
+    MIXED64_V2_CONTRACT_PATHS,
+    MIXED64_V2_FORBIDDEN_TRUE_AUTHORITY_KEYS,
+    MIXED64_V2_REQUIRED_TOKEN_COUNTS,
+    MIXED64_V2_REQUIRED_TOKENS,
     ONE_SHOT_CONTRACT_PATHS,
     ONE_SHOT_REQUIRED_TOKENS,
     STANDALONE_PIPELINE_CONTRACT_PATHS,
@@ -73,6 +80,42 @@ def _operations_decision_ci_tokens() -> tuple[str, ...]:
     )
 
 
+def _mixed64_v2_ci_tokens() -> tuple[str, ...]:
+    return tuple(
+        token
+        for token, minimum_count in MIXED64_V2_REQUIRED_TOKEN_COUNTS.items()
+        for _ in range(minimum_count)
+    )
+
+
+def _write_mixed64_v2_contract(
+    tmp_path: Path,
+    *,
+    authority_override: tuple[str, bool] | None = None,
+) -> None:
+    _mark_complete_contract(tmp_path, MIXED64_V2_CONTRACT_PATHS)
+    source = (
+        Path(__file__).resolve().parents[2]
+        / "config/engine_v2_mixed64_geometric_candidate_evidence_v2.json"
+    )
+    payload = json.loads(source.read_text(encoding="ascii"))
+    if authority_override is not None:
+        key, value = authority_override
+        payload["authority"][key] = value
+    contract = tmp_path / MIXED64_V2_CONTRACT_PATHS[-1]
+    contract.write_text(
+        json.dumps(
+            payload,
+            indent=2,
+            sort_keys=True,
+            ensure_ascii=True,
+            allow_nan=False,
+        )
+        + "\n",
+        encoding="ascii",
+    )
+
+
 def test_ci_authority_inventory_preserves_frozen_stage0_tuple(
     tmp_path: Path,
 ) -> None:
@@ -126,6 +169,8 @@ def test_ci_authority_inventory_preserves_frozen_stage0_tuple(
     assert payload["standalone_pipeline_contract_in_authoritative_ci"] is True
     assert payload["standalone_consumer_contract_in_authoritative_ci"] is True
     assert payload["standalone_contract_in_authoritative_ci"] is True
+    assert payload["mixed64_v2_contract_in_authoritative_ci"] is True
+    assert payload["mixed64_v2_authority_fail_closed"] is True
     assert (
         payload["external_operations_decision_contract_in_authoritative_ci"] is True
     )
@@ -360,6 +405,116 @@ def test_repository_has_no_specialized_one_shot_workflow() -> None:
             EXTERNAL_RESERVATION_OPERATIONS_DECISION_REQUIRED_TOKEN_COUNTS.items()
         )
     )
+    assert all(token in main_text for token in MIXED64_V2_REQUIRED_TOKENS)
+    assert all(
+        main_text.count(token) >= minimum_count
+        for token, minimum_count in MIXED64_V2_REQUIRED_TOKEN_COUNTS.items()
+    )
+    inventory = build_inventory(repo_root)
+    assert inventory["mixed64_v2_contract_in_authoritative_ci"] is True
+    assert inventory["mixed64_v2_authority_fail_closed"] is True
+
+
+def test_mixed64_v2_contract_requires_complete_authoritative_main(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_mixed64_v2_contract(tmp_path)
+    main_workflow = tmp_path / AUTHORITATIVE_WORKFLOWS[0]
+    tokens = list(_mixed64_v2_ci_tokens())
+    main_workflow.write_text("\n".join(tokens), encoding="utf-8")
+
+    payload = build_inventory(tmp_path)
+    assert payload["mixed64_v2_contract_in_authoritative_ci"] is True
+    assert payload["mixed64_v2_authority_fail_closed"] is True
+
+    tokens.remove("tests/unit/test_engine_v2_pipeline_candidate_evidence_v2.py")
+    main_workflow.write_text("\n".join(tokens), encoding="utf-8")
+    assert (
+        build_inventory(tmp_path)["mixed64_v2_contract_in_authoritative_ci"]
+        is False
+    )
+
+
+def test_mixed64_v2_contract_requires_documented_contract_inventory(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_mixed64_v2_contract(tmp_path)
+    main_workflow = tmp_path / AUTHORITATIVE_WORKFLOWS[0]
+    main_workflow.write_text(
+        "\n".join(_mixed64_v2_ci_tokens()),
+        encoding="utf-8",
+    )
+
+    assert build_inventory(tmp_path)["mixed64_v2_contract_in_authoritative_ci"] is True
+    (tmp_path / "docs/engine_v2_mixed64_geometric_candidate_evidence_v2.md").unlink()
+    assert build_inventory(tmp_path)["mixed64_v2_contract_in_authoritative_ci"] is False
+
+
+@pytest.mark.parametrize(
+    "required_token",
+    (
+        "tools/verify_engine_v2_mixed64_candidate_evidence_artifact.py",
+        "tests/unit/test_verify_engine_v2_mixed64_candidate_evidence_artifact.py",
+    ),
+)
+def test_mixed64_v2_artifact_replay_is_mandatory_in_authoritative_main(
+    tmp_path: Path,
+    required_token: str,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_mixed64_v2_contract(tmp_path)
+    main_workflow = tmp_path / AUTHORITATIVE_WORKFLOWS[0]
+    tokens = list(_mixed64_v2_ci_tokens())
+    main_workflow.write_text("\n".join(tokens), encoding="utf-8")
+
+    assert build_inventory(tmp_path)["mixed64_v2_contract_in_authoritative_ci"] is True
+    tokens.remove(required_token)
+    main_workflow.write_text("\n".join(tokens), encoding="utf-8")
+    assert build_inventory(tmp_path)["mixed64_v2_contract_in_authoritative_ci"] is False
+
+
+@pytest.mark.parametrize("authority_key", MIXED64_V2_FORBIDDEN_TRUE_AUTHORITY_KEYS)
+def test_mixed64_v2_authority_escalation_fails_ci_audit(
+    tmp_path: Path,
+    authority_key: str,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_mixed64_v2_contract(
+        tmp_path,
+        authority_override=(authority_key, True),
+    )
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_mixed64_v2_ci_tokens()),
+        encoding="utf-8",
+    )
+
+    payload = build_inventory(tmp_path)
+    assert payload["mixed64_v2_authority_fail_closed"] is False
+    assert payload["mixed64_v2_contract_in_authoritative_ci"] is False
+
+
+def test_duplicate_mixed64_v2_authority_key_fails_ci_audit(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_mixed64_v2_contract(tmp_path)
+    contract = tmp_path / MIXED64_V2_CONTRACT_PATHS[-1]
+    duplicate = contract.read_text(encoding="ascii").replace(
+        '  "authority": {',
+        '  "authority": {},\n  "authority": {',
+        1,
+    )
+    contract.write_text(duplicate, encoding="ascii")
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_mixed64_v2_ci_tokens()),
+        encoding="utf-8",
+    )
+
+    payload = build_inventory(tmp_path)
+    assert payload["mixed64_v2_authority_fail_closed"] is False
+    assert payload["mixed64_v2_contract_in_authoritative_ci"] is False
 
 
 def test_repository_without_optional_contracts_keeps_legacy_scope(
@@ -382,6 +537,8 @@ def test_repository_without_optional_contracts_keeps_legacy_scope(
         payload["external_operations_decision_contract_in_authoritative_ci"] is True
     )
     assert payload["global_orientation_contract_in_authoritative_ci"] is True
+    assert payload["mixed64_v2_contract_in_authoritative_ci"] is True
+    assert payload["mixed64_v2_authority_fail_closed"] is True
 
 
 def test_global_orientation_contract_requires_complete_authoritative_main(
