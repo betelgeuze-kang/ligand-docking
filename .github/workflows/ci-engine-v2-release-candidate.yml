@@ -10,10 +10,13 @@ on:
       - "rust_engine_v2/**"
       - "tools/build_engine_v2_wheel.py"
       - "tools/build_engine_v2_native_wheel.py"
+      - "tools/run_engine_v2_cpu_performance_qualification.py"
       - "tools/build_engine_v2_sbom.py"
       - "tests/unit/test_engine_v2_release_candidate.py"
       - "tests/unit/test_engine_v2_native_packaging.py"
       - "tests/unit/test_engine_v2_scorer_v1_stage5.py"
+      - "tests/unit/test_engine_v2_native_geometric_admission.py"
+      - "config/engine_v2_cpu_performance_profile.json"
       - "CHANGELOG.md"
       - "docs/engine_v2_0_2_0rc5.md"
       - ".github/workflows/ci-engine-v2-release-candidate.yml"
@@ -45,7 +48,9 @@ jobs:
             rust_engine_v2
             tools/build_engine_v2_wheel.py
             tools/build_engine_v2_native_wheel.py
+            tools/run_engine_v2_cpu_performance_qualification.py
             tools/build_engine_v2_sbom.py
+            config/engine_v2_cpu_performance_profile.json
             .github/workflows/ci-engine-v2-release-candidate.yml
           sparse-checkout-cone-mode: false
           show-progress: false
@@ -70,6 +75,7 @@ jobs:
             betelgeuze_engine_v2/physics/reference_parameters.py \
             betelgeuze_engine_v2/physics/reference_forcefield.py \
             tools/build_engine_v2_wheel.py \
+            tools/run_engine_v2_cpu_performance_qualification.py \
             tools/build_engine_v2_sbom.py \
             --config packaging/engine-v2/pyproject.toml > static-analysis.log 2>&1
           ruff_status=$?
@@ -116,11 +122,14 @@ jobs:
             rust_engine_v2
             tools/build_engine_v2_wheel.py
             tools/build_engine_v2_native_wheel.py
+            tools/run_engine_v2_cpu_performance_qualification.py
             tools/build_engine_v2_sbom.py
             tools/check_engine_v2_architecture.py
             tests/unit/test_engine_v2_release_candidate.py
             tests/unit/test_engine_v2_native_packaging.py
             tests/unit/test_engine_v2_scorer_v1_stage5.py
+            tests/unit/test_engine_v2_native_geometric_admission.py
+            config/engine_v2_cpu_performance_profile.json
             tests/unit/test_engine_v2_packaging_guards.py
             CHANGELOG.md
             docs/engine_v2_0_2_0rc5.md
@@ -259,9 +268,13 @@ jobs:
             betelgeuze_engine_v2
             rust_engine_v2
             tools/build_engine_v2_native_wheel.py
+            tools/run_engine_v2_cpu_performance_qualification.py
             tools/build_engine_v2_sbom.py
             tests/unit/test_engine_v2_native_packaging.py
             tests/unit/test_engine_v2_scorer_v1_stage5.py
+            tests/unit/test_engine_v2_native_geometric_admission.py
+            config/engine_v2_cpu_performance_profile.json
+            .github/workflows/ci-engine-v2-release-candidate.yml
           sparse-checkout-cone-mode: false
           show-progress: false
 
@@ -281,8 +294,10 @@ jobs:
         run: |
           set -euo pipefail
           for output in native-dist-a native-dist-b; do
+            mkdir -p "$output"
             docker run --rm --user "$(id -u):$(id -g)" \
-              -v "$PWD:/io" -w /io \
+              -v "$PWD:/io:ro" -w /io \
+              -v "$PWD/$output:/output" \
               -v "$HOME/.rustup:/rustup:ro" \
               -v "$HOME/.cargo:/cargo:ro" \
               -e RUSTUP_HOME=/rustup \
@@ -293,7 +308,8 @@ jobs:
                 /opt/python/${{ matrix.abi }}/bin/python -m venv /tmp/native-venv
                 /tmp/native-venv/bin/python -m pip install --disable-pip-version-check maturin==1.11.5 >/tmp/maturin-install.log
                 PATH=/cargo/bin:/tmp/native-venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-                  /tmp/native-venv/bin/python tools/build_engine_v2_native_wheel.py --output-dir $output"
+                  /tmp/native-venv/bin/python tools/build_engine_v2_native_wheel.py --output-dir /output"
+            git diff --exit-code
           done
           wheel_a="$(find native-dist-a -maxdepth 1 -name '*.whl' -print -quit)"
           wheel_b="$(find native-dist-b -maxdepth 1 -name '*.whl' -print -quit)"
@@ -311,18 +327,20 @@ jobs:
           python -m pip install --no-deps "$wheel"
           python tools/build_engine_v2_sbom.py "$wheel" \
             --cargo-lock rust_engine_v2/Cargo.lock \
-            --output native-dist-a/betelgeuze-engine-v2-native-0.2.0rc5.spdx.json
+            --output native-dist-a/betelgeuze-engine-v2-native-0.2.0rc6.spdx.json
           cargo check --locked --manifest-path rust_engine_v2/Cargo.toml
           cargo test --locked --manifest-path rust_engine_v2/Cargo.toml
           python -m pytest -q \
             tests/unit/test_engine_v2_native_packaging.py \
-            tests/unit/test_engine_v2_scorer_v1_stage5.py -k 'native or rust_cpu'
+            tests/unit/test_engine_v2_scorer_v1_stage5.py \
+            tests/unit/test_engine_v2_native_geometric_admission.py \
+            -k 'native or rust_cpu'
 
       - name: Upload native wheel and SBOM
         if: matrix.python-version == '3.11'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: engine-v2-native-0.2.0rc5-${{ github.run_id }}
+          name: engine-v2-native-0.2.0rc6-${{ github.run_id }}
           path: |
             native-dist-a/*.whl
             native-dist-a/*.spdx.json

@@ -1083,6 +1083,69 @@ def _evaluate_metrics(
     )
 
 
+def evaluate_geometric_admission_metrics_one_python(
+    ligand_coordinates: Iterable[Iterable[float]],
+    *,
+    ligand_vdw_radii: Iterable[float],
+    ligand_heavy_atom_mask: Iterable[bool],
+    receptor_coordinates: Iterable[Iterable[float]],
+    receptor_vdw_radii: Iterable[float],
+    pocket_center: Iterable[float],
+    pocket_radius: float,
+) -> GeometricAdmissionMetricsV2:
+    """Run the bounded one-candidate Python reference geometric kernel.
+
+    The wrapper applies the same bounded normalization as fixed64 batch input
+    construction and then dispatches to its exact ``_evaluate_metrics``
+    implementation. Synthetic parity uses this validation surface; timing uses
+    the already-normalized internal boundary that fixed64 calls per candidate.
+    """
+
+    ligand = _coordinates(
+        ligand_coordinates,
+        name="ligand_coordinates",
+        maximum_count=MAX_LIGAND_ATOMS,
+    )
+    ligand_radii = _radii(
+        ligand_vdw_radii,
+        name="ligand_vdw_radii",
+        expected_count=len(ligand),
+    )
+    heavy_mask = _heavy_atom_mask(
+        ligand_heavy_atom_mask,
+        expected_count=len(ligand),
+    )
+    receptor = _coordinates(
+        receptor_coordinates,
+        name="receptor_coordinates",
+        maximum_count=MAX_RECEPTOR_ATOMS,
+    )
+    receptor_radii = _radii(
+        receptor_vdw_radii,
+        name="receptor_vdw_radii",
+        expected_count=len(receptor),
+    )
+    center = _vector(pocket_center, name="pocket_center")
+    radius = _finite_float(pocket_radius, name="pocket_radius")
+    if not 0.0 < radius <= MAX_POCKET_RADIUS_ANGSTROM:
+        raise GeometricAdmissionV2Error(
+            "pocket_radius must be within the pocket safety envelope"
+        )
+    if len(ligand) * len(receptor) > MAX_BATCH_EXACT_PAIR_EVALUATIONS:
+        raise GeometricAdmissionV2Error(
+            "one-candidate exact pair work exceeds the fail-closed limit"
+        )
+    return _evaluate_metrics(
+        ligand,
+        ligand_radii,
+        heavy_mask,
+        receptor,
+        receptor_radii,
+        center,
+        radius,
+    )
+
+
 def _derive_decisions(
     allocation: FixedMixed64Allocation,
     exact_inputs: _GeometricAdmissionExactInputsV2,
@@ -1254,4 +1317,5 @@ __all__ = [
     "SPHERE_OVERLAP_PROXY_DEFINITION",
     "TYPED_GENERATION_FAILURE_STATUS",
     "TYPED_MISSING_FEATURE_REJECTION_CODE",
+    "evaluate_geometric_admission_metrics_one_python",
 ]
