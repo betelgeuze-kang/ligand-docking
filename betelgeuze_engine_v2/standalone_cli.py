@@ -31,7 +31,7 @@ from .cli import (
     _sha256_bytes,
     _sha256_document,
     _write_private_bundle,
-    _write_output,
+    _write_output_hardened as _write_output,
 )
 from .docking import DockingScope, PocketDefinition
 from .docking.pipeline import (
@@ -92,6 +92,18 @@ _SYNTHETIC_D0_CONSTRUCTION_PROOF_SCOPE = (
 _SYNTHETIC_D0_CAPABILITY_SCOPE = (
     "one_run_process_local_not_serialized_not_cryptographic_attestation"
 )
+_SYNTHETIC_D0_LIGAND_ATOM_COUNT = 5
+_SYNTHETIC_D0_RECEPTOR_ATOM_COUNT = 5
+_SYNTHETIC_D0_LIGAND_NONBONDED_PAIR_COUNT = 3
+_SYNTHETIC_D0_LIGAND_EXCLUDED_PAIR_COUNT = 7
+_SYNTHETIC_D0_RECEPTOR_FULL_CARTESIAN_PAIR_COUNT = 25
+_SYNTHETIC_D0_RECEPTOR_OCCUPIED_CELL_COUNT = 3
+_SYNTHETIC_D0_POCKET_RADIUS_ANGSTROM = 10.0
+_SYNTHETIC_D0_BOND_LENGTH_TOLERANCE_ANGSTROM = 0.15
+_SYNTHETIC_D0_LIGAND_SELF_CLASH_ANGSTROM = 0.75
+_SYNTHETIC_D0_RECEPTOR_LIGAND_CLASH_ANGSTROM = 0.8
+_SYNTHETIC_D0_ROTATION_TOLERANCE = 1.0e-6
+_SYNTHETIC_D0_SEVERE_VDW_OVERLAP_SCALE = 0.55
 
 _RESULT_KEYS = frozenset(
     {
@@ -1152,7 +1164,7 @@ def _verify_proposal_plan(
     budget_sha256: str,
     proposal_component_id: str,
     candidate_count: int,
-) -> str:
+) -> tuple[str, tuple[int, ...]]:
     _require_exact_keys(plan, _PROPOSAL_PLAN_KEYS, name="pipeline proposal plan")
     if plan.get("schema_id") != PIPELINE_PROPOSAL_PLAN_SCHEMA_ID:
         raise StandaloneDockCliError("pipeline proposal plan schema is unsupported")
@@ -1186,7 +1198,7 @@ def _verify_proposal_plan(
     projection = dict(plan)
     projection.pop("receipt_sha256")
     _require_hash(plan, "receipt_sha256", projection)
-    return str(plan["receipt_sha256"])
+    return str(plan["receipt_sha256"]), indices
 
 
 def _verify_pose_validity(document: Mapping[str, object]) -> dict[str, object]:
@@ -1217,25 +1229,107 @@ def _verify_pose_validity(document: Mapping[str, object]) -> dict[str, object]:
     for field, value in measurements.items():
         if field in _POSE_INTEGER_MEASUREMENTS:
             _require_exact_int(value, name=f"pose validity measurement {field}")
-        elif type(value) is not float or not math.isfinite(value):
+        elif (
+            type(value) is not float
+            or not math.isfinite(value)
+            or (field != "rotation_determinant" and value < 0.0)
+        ):
             raise StandaloneDockCliError(
-                f"pose validity measurement {field} is not a finite float"
+                f"pose validity measurement {field} is not an admitted float"
             )
+    if (
+        measurements["atom_count"] != _SYNTHETIC_D0_LIGAND_ATOM_COUNT
+        or measurements["declared_chirality_center_count"] != 0
+        or measurements["minimum_declared_chiral_volume"] != 0.0
+        or measurements["evaluated_ligand_nonbonded_pair_count"]
+        != _SYNTHETIC_D0_LIGAND_NONBONDED_PAIR_COUNT
+        or measurements["excluded_ligand_pair_count"]
+        != _SYNTHETIC_D0_LIGAND_EXCLUDED_PAIR_COUNT
+        or measurements["element_vdw_ligand_pair_count"]
+        != measurements["evaluated_ligand_nonbonded_pair_count"]
+        or measurements["full_cartesian_receptor_ligand_pair_count"]
+        != _SYNTHETIC_D0_RECEPTOR_FULL_CARTESIAN_PAIR_COUNT
+        or measurements["sparse_receptor_cell_count"]
+        != _SYNTHETIC_D0_RECEPTOR_OCCUPIED_CELL_COUNT
+        or measurements["sparse_receptor_cell_count"]
+        > _SYNTHETIC_D0_RECEPTOR_ATOM_COUNT
+    ):
+        raise StandaloneDockCliError(
+            "pose validity fixed synthetic D0 measurements are inconsistent"
+        )
+    expected_checks = {
+        "proper_rotation": (
+            measurements["rotation_orthogonality_max_error"]
+            <= _SYNTHETIC_D0_ROTATION_TOLERANCE
+            and abs(measurements["rotation_determinant"] - 1.0)
+            <= _SYNTHETIC_D0_ROTATION_TOLERANCE
+        ),
+        "bond_lengths_preserved": (
+            measurements["max_bond_length_delta_angstrom"]
+            <= _SYNTHETIC_D0_BOND_LENGTH_TOLERANCE_ANGSTROM
+        ),
+        "ligand_self_clash_free": (
+            measurements["minimum_ligand_nonbonded_distance_angstrom"]
+            >= _SYNTHETIC_D0_LIGAND_SELF_CLASH_ANGSTROM
+        ),
+        "receptor_ligand_clash_free": (
+            measurements["minimum_receptor_ligand_distance_angstrom"]
+            >= _SYNTHETIC_D0_RECEPTOR_LIGAND_CLASH_ANGSTROM
+        ),
+        # The exact admitted fixture has no declared chirality center.  The
+        # identity/count checks above make this otherwise non-derivable check
+        # fully determined from the serialized measurement set.
+        "declared_chirality_preserved": True,
+        "inside_declared_pocket": (
+            measurements["maximum_pocket_center_distance_angstrom"]
+            <= _SYNTHETIC_D0_POCKET_RADIUS_ANGSTROM
+        ),
+        "element_vdw_ligand_overlap_free": (
+            measurements["element_vdw_ligand_severe_overlap_count"] == 0
+        ),
+        "element_vdw_receptor_overlap_free": (
+            measurements["element_vdw_receptor_severe_overlap_count"] == 0
+        ),
+    }
     if (
         measurements["element_vdw_receptor_full_cartesian_pair_count"]
         != measurements["full_cartesian_receptor_ligand_pair_count"]
         or measurements["element_vdw_receptor_candidate_pair_count"]
         != measurements["evaluated_receptor_ligand_pair_count"]
+        or measurements["evaluated_receptor_ligand_pair_count"]
+        > measurements["full_cartesian_receptor_ligand_pair_count"]
+        or measurements["element_vdw_ligand_minimum_distance_angstrom"]
+        != measurements["minimum_ligand_nonbonded_distance_angstrom"]
+        or measurements["element_vdw_receptor_minimum_distance_angstrom"]
+        != measurements["minimum_receptor_ligand_distance_angstrom"]
+        or measurements["element_vdw_receptor_cell_count"]
+        != measurements["sparse_receptor_cell_count"]
         or measurements["element_vdw_ligand_severe_overlap_count"]
         > measurements["element_vdw_ligand_pair_count"]
         or measurements["element_vdw_receptor_severe_overlap_count"]
         > measurements["element_vdw_receptor_candidate_pair_count"]
-        or checks["element_vdw_ligand_overlap_free"]
-        is not (measurements["element_vdw_ligand_severe_overlap_count"] == 0)
-        or checks["element_vdw_receptor_overlap_free"]
-        is not (measurements["element_vdw_receptor_severe_overlap_count"] == 0)
+        or (
+            measurements["element_vdw_ligand_severe_overlap_count"] == 0
+        )
+        is not (
+            measurements["element_vdw_ligand_minimum_ratio"]
+            >= _SYNTHETIC_D0_SEVERE_VDW_OVERLAP_SCALE
+        )
+        or (
+            measurements["element_vdw_receptor_severe_overlap_count"] == 0
+        )
+        is not (
+            measurements["element_vdw_receptor_minimum_ratio"]
+            >= _SYNTHETIC_D0_SEVERE_VDW_OVERLAP_SCALE
+        )
+        or any(
+            checks[check_name] is not expected
+            for check_name, expected in expected_checks.items()
+        )
     ):
-        raise StandaloneDockCliError("pose validity contact measurements are inconsistent")
+        raise StandaloneDockCliError(
+            "pose validity measured checks are inconsistent"
+        )
     blockers = document.get("blockers")
     if (
         not isinstance(blockers, list)
@@ -1450,7 +1544,7 @@ def _verify_refinement_receipt(
     document: Mapping[str, object],
     *,
     source_proposal_fingerprint_sha256: str,
-) -> None:
+) -> tuple[int, ...]:
     _require_exact_keys(
         document,
         _REFINEMENT_RECEIPT_KEYS,
@@ -1476,14 +1570,23 @@ def _verify_refinement_receipt(
         payload,
         source_proposal_fingerprint_sha256=source_proposal_fingerprint_sha256,
     )
+    baseline_v3_indices = _index_list(
+        payload.get("v3_proposal_indices"),
+        name="V6 v3 proposal indices",
+    )
+    v7_v3_indices = _index_list(
+        document.get("v3_proposal_indices"),
+        name="V7 v3 proposal indices",
+    )
     if (
         document.get("baseline_v6_receipt_sha256") != baseline_receipt
         or document.get("pre_coordinates_sha256")
         != payload.get("pre_coordinates_sha256")
         or document.get("baseline_coordinates_sha256")
         != payload.get("post_coordinates_sha256")
-        or document.get("v3_proposal_indices")
-        != payload.get("v3_proposal_indices")
+        or v7_v3_indices != baseline_v3_indices
+        or document.get("original_pose_valid")
+        is not payload.get("original_pose_valid")
     ):
         raise StandaloneDockCliError("V7/V6 refinement cross-binding mismatch")
     _require_nonempty_text(document.get("lane"), name="V7 refinement lane")
@@ -1503,7 +1606,6 @@ def _verify_refinement_receipt(
         document.get("torsion_evaluation_skip_reason"),
         name="V7 torsion skip reason",
     )
-    _index_list(document.get("v3_proposal_indices"), name="V7 v3 proposal indices")
     _index_list(
         document.get("rotatable_child_atom_indices"),
         name="V7 rotatable child atom indices",
@@ -1660,6 +1762,7 @@ def _verify_refinement_receipt(
     projection = dict(document)
     projection.pop("receipt_sha256")
     _require_hash(document, "receipt_sha256", projection)
+    return v7_v3_indices
 
 
 def _verify_candidate(
@@ -1667,7 +1770,7 @@ def _verify_candidate(
     *,
     proposal_index: int,
     authority_input_receipt_sha256: str,
-) -> tuple[str, str, float | None, bool]:
+) -> tuple[str, str, float | None, bool, tuple[int, ...] | None]:
     _require_exact_keys(document, _CANDIDATE_KEYS, name="pipeline candidate")
     if document.get("schema_id") != PIPELINE_CANDIDATE_SCHEMA_ID:
         raise StandaloneDockCliError("pipeline candidate schema is unsupported")
@@ -1719,6 +1822,7 @@ def _verify_candidate(
     pose = document.get("pose_validity")
     terms = document.get("scorer_terms")
     refinement = document.get("refinement_receipt")
+    refinement_v3_indices: tuple[int, ...] | None = None
     if status == "success":
         if error_code or score_value is None:
             raise StandaloneDockCliError("successful candidate status fields are inconsistent")
@@ -1737,7 +1841,7 @@ def _verify_candidate(
         )
         if score_value.hex() != terms_score.hex():
             raise StandaloneDockCliError("candidate score/term cross-binding mismatch")
-        _verify_refinement_receipt(
+        refinement_v3_indices = _verify_refinement_receipt(
             refinement,
             source_proposal_fingerprint_sha256=str(
                 document["source_proposal_fingerprint_sha256"]
@@ -1757,7 +1861,7 @@ def _verify_candidate(
         if refinement is not None:
             if not isinstance(refinement, dict):
                 raise StandaloneDockCliError("failed candidate refinement evidence is invalid")
-            _verify_refinement_receipt(
+            refinement_v3_indices = _verify_refinement_receipt(
                 refinement,
                 source_proposal_fingerprint_sha256=str(
                     document["source_proposal_fingerprint_sha256"]
@@ -1766,7 +1870,13 @@ def _verify_candidate(
     projection = dict(document)
     projection.pop("receipt_sha256")
     _require_hash(document, "receipt_sha256", projection)
-    return candidate_id, str(status), score_value, bool(document["selection_eligible"])
+    return (
+        candidate_id,
+        str(status),
+        score_value,
+        bool(document["selection_eligible"]),
+        refinement_v3_indices,
+    )
 
 
 def verify_pipeline_result(document: Mapping[str, object]) -> dict[str, object]:
@@ -1895,7 +2005,7 @@ def verify_pipeline_result(document: Mapping[str, object]) -> dict[str, object]:
     )
     if document.get("budget_sha256") != derived_budget_sha256:
         raise StandaloneDockCliError("pipeline budget receipt is cross-wired")
-    proposal_receipt = _verify_proposal_plan(
+    proposal_receipt, proposal_v3_indices = _verify_proposal_plan(
         proposal_plan,
         request_sha256=str(normalized_request["request_sha256"]),
         authority_input_receipt_sha256=str(
@@ -1908,7 +2018,9 @@ def verify_pipeline_result(document: Mapping[str, object]) -> dict[str, object]:
     )
     if document.get("proposal_plan_receipt_sha256") != proposal_receipt:
         raise StandaloneDockCliError("pipeline proposal plan receipt is cross-wired")
-    candidate_rows: list[tuple[str, str, float | None, bool]] = []
+    candidate_rows: list[
+        tuple[str, str, float | None, bool, tuple[int, ...] | None]
+    ] = []
     authority_receipt = str(document["authority_input_receipt_sha256"])
     for index, row in enumerate(candidates):
         if not isinstance(row, dict):
@@ -1923,7 +2035,17 @@ def verify_pipeline_result(document: Mapping[str, object]) -> dict[str, object]:
     candidate_ids = [row[0] for row in candidate_rows]
     if len(candidate_ids) != len(set(candidate_ids)):
         raise StandaloneDockCliError("pipeline candidate identities are not unique")
-    derived_success_count = sum(status == "success" for _, status, _, _ in candidate_rows)
+    if any(
+        refinement_indices is not None
+        and refinement_indices != proposal_v3_indices
+        for _, _, _, _, refinement_indices in candidate_rows
+    ):
+        raise StandaloneDockCliError(
+            "pipeline proposal allocation/refinement receipt mismatch"
+        )
+    derived_success_count = sum(
+        status == "success" for _, status, _, _, _ in candidate_rows
+    )
     derived_failure_count = candidate_count - derived_success_count
     success_count = _require_exact_int(
         document.get("success_count"),
@@ -1945,7 +2067,7 @@ def verify_pipeline_result(document: Mapping[str, object]) -> dict[str, object]:
         raise StandaloneDockCliError("pipeline Top-K indices are invalid")
     top_order: list[tuple[float, int, str]] = []
     for index in top_indices:
-        candidate_id, status, score, eligible = candidate_rows[index]
+        candidate_id, status, score, eligible, _ = candidate_rows[index]
         if status != "success" or score is None or not eligible:
             raise StandaloneDockCliError("pipeline Top-K includes an ineligible candidate")
         top_order.append((score, index, candidate_id))
@@ -1955,7 +2077,7 @@ def verify_pipeline_result(document: Mapping[str, object]) -> dict[str, object]:
         index
         for _, index, _ in sorted(
             (score, index, candidate_id)
-            for index, (candidate_id, status, score, eligible) in enumerate(
+            for index, (candidate_id, status, score, eligible, _) in enumerate(
                 candidate_rows
             )
             if status == "success" and score is not None and eligible

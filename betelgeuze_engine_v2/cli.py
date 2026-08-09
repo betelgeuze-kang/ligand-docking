@@ -482,8 +482,76 @@ def _write_output(
     path: Path,
     *,
     overwrite: bool,
+) -> None:
+    """Atomically publish legacy CLI output using portable Python primitives.
+
+    The pre-existing CLI entry points are declared OS-independent, so they
+    must not depend on Linux ``/proc`` descriptor links or ``renameat2``.  The
+    stricter descriptor-anchored writer below is reserved for the standalone
+    command, whose narrower platform boundary is documented explicitly.
+    """
+
+    payload = _canonical_bytes(document) + b"\n"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        existing = os.lstat(path)
+    except FileNotFoundError:
+        existing = None
+    if existing is not None:
+        if not overwrite:
+            raise EngineV2CliError(
+                "output already exists; use --overwrite to replace it"
+            )
+        if not stat.S_ISREG(existing.st_mode) or existing.st_nlink != 1:
+            raise EngineV2CliError(
+                "output must be absent or a single-link regular file"
+            )
+    temporary = path.with_name(
+        f".{path.name}.tmp-{os.getpid()}-{secrets.token_hex(8)}"
+    )
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    flags |= getattr(os, "O_CLOEXEC", 0)
+    flags |= getattr(os, "O_NOFOLLOW", 0)
+    descriptor = -1
+    try:
+        descriptor = os.open(temporary, flags, 0o600)
+        _write_all(descriptor, payload)
+        os.fsync(descriptor)
+        os.close(descriptor)
+        descriptor = -1
+        os.replace(temporary, path)
+
+        # Windows does not expose a uniform directory-fsync primitive.  On
+        # POSIX, opening and synchronizing the containing directory is part of
+        # this writer's durability contract and must fail closed.
+        if os.name != "nt":
+            directory_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+            directory_flags |= getattr(os, "O_CLOEXEC", 0)
+            directory = os.open(path.parent, directory_flags)
+            try:
+                os.fsync(directory)
+            finally:
+                os.close(directory)
+    except OSError as exc:
+        raise EngineV2CliError("CLI output could not be written durably") from exc
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+        try:
+            os.unlink(temporary)
+        except FileNotFoundError:
+            pass
+
+
+def _write_output_hardened(
+    document: Mapping[str, object],
+    path: Path,
+    *,
+    overwrite: bool,
     input_paths: Sequence[Path] = (),
 ) -> None:
+    """Publish standalone output through Linux descriptor-anchored checks."""
+
     payload = _canonical_bytes(document) + b"\n"
     input_identities = {
         _regular_file_identity(source, name="CLI input")
