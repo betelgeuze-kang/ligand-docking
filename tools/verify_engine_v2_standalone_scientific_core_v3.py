@@ -278,15 +278,22 @@ def verify_policy(path: Path = DEFAULT_POLICY_PATH) -> dict[str, object]:
     consumer = document.get("consumer_contract")
     authority = document.get("authority")
     if (
-        type(consumer) is not dict
-        or not consumer
-        or any(type(value) is not bool or value for value in consumer.values())
+        consumer
+        != {
+            "canonical_docking_pipeline_activation_authorized": True,
+            "cli_activation_authorized": True,
+            "api_activation_authorized": True,
+            "benchmark_activation_authorized": True,
+            "product_shadow_activation_authorized": True,
+            "activation_scope": "exact_repository_synthetic_d0_only",
+            "product_or_molecular_execution_authorized": False,
+        }
         or type(authority) is not dict
         or not authority
         or any(type(value) is not bool or value for value in authority.values())
     ):
         raise StandaloneScientificCorePolicyVerificationError(
-            "standalone consumer and production authority must remain exact false"
+            "standalone consumer scope or production authority is invalid"
         )
     _verify_executor_source()
     return {
@@ -298,7 +305,7 @@ def verify_policy(path: Path = DEFAULT_POLICY_PATH) -> dict[str, object]:
         "verified": True,
         "candidate_denominator": 64,
         "complete_scoring_validity_rank_receipt": True,
-        "canonical_pipeline_activation_authorized": False,
+        "canonical_pipeline_activation_authorized": True,
         "molecular_execution_authorized": False,
         "reservation_allowed": False,
         "hip_execution_authorized": False,

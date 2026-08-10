@@ -17,6 +17,7 @@ from betelgeuze_engine_v2 import (  # noqa: E402
     Atom,
     Bond,
     Chain,
+    DockingPipeline,
     Residue,
     StructureProvenance,
     SYNTHETIC_D0_FIXTURE_MANIFEST_SHA256,
@@ -43,6 +44,9 @@ from betelgeuze_engine_v2.standalone_cli import (  # noqa: E402
     prepare_receptor,
     report_pipeline_result,
     verify_pipeline_result,
+)
+from tests.unit.test_engine_v2_standalone_pipeline_core import (  # noqa: E402
+    _request as _pipeline_request,
 )
 
 
@@ -134,16 +138,53 @@ def _rehash_embedded_receipt(document: dict[str, object]) -> None:
     document["receipt_sha256"] = _sha256_document(projection)
 
 
+def _rehash_scientific_result(document: dict[str, object]) -> None:
+    projection = dict(document)
+    projection.pop("receipt_sha256")
+    document["receipt_sha256"] = _sha256_document(projection)
+
+
+def _rehash_scientific_batch_chain(document: dict[str, object]) -> None:
+    scientific = document["scientific_pipeline_receipt"]
+    batch = scientific["final_scoring_batch"]
+    _rehash_embedded_receipt(batch)
+    scientific["stage_receipt_sha256s"][
+        "scorer_v1_validity_stable_ranking"
+    ] = batch["receipt_sha256"]
+    _rehash_embedded_receipt(scientific)
+    document["scientific_pipeline_receipt_sha256"] = scientific["receipt_sha256"]
+    document["stage_receipt_sha256s"] = copy.deepcopy(
+        scientific["stage_receipt_sha256s"]
+    )
+    _rehash_scientific_result(document)
+
+
+def _rehash_scientific_record_chain(
+    document: dict[str, object],
+    record: dict[str, object],
+) -> None:
+    _rehash_embedded_receipt(record)
+    batch = document["scientific_pipeline_receipt"]["final_scoring_batch"]
+    batch["record_receipt_sha256s"][record["slot_index"]] = record[
+        "receipt_sha256"
+    ]
+    _rehash_scientific_batch_chain(document)
+
+
 def _synthetic_result(
     tmp_path: Path,
 ) -> dict[str, object]:
-    receptor_path = tmp_path / "receptor.json"
-    ligand_path = tmp_path / "ligand.json"
+    del tmp_path
+    return DockingPipeline()._run_legacy_v1(_pipeline_request()).to_dict()
+
+
+def _scientific_result(tmp_path: Path) -> dict[str, object]:
+    receptor_path = tmp_path / "scientific-receptor.json"
+    ligand_path = tmp_path / "scientific-ligand.json"
+    pocket_path = tmp_path / "scientific-pocket.json"
     _write_system(receptor_path, _system(receptor=True))
     _write_system(ligand_path, _system(receptor=False))
-    pocket = _define_synthetic_d0_fixture_pocket()
-    pocket_path = tmp_path / "pocket.json"
-    _write_document(pocket_path, pocket)
+    _write_document(pocket_path, _define_synthetic_d0_fixture_pocket())
     return dock(
         receptor_path=receptor_path,
         ligand_path=ligand_path,
@@ -304,11 +345,11 @@ def test_synthetic_cli_flow_is_verifiable_reportable_and_claim_blocked(tmp_path:
     assert "cross_bindings_verified" not in verification
     assert "derived_semantics_verified" not in verification
     assert verification["verified_structural_items"] == [
-        "exact_serialized_schema_keys",
-        "embedded_structural_self_hashes",
-        "available_admission_request_profile_budget_plan_bindings",
-        "available_candidate_score_validity_refinement_bindings",
-        "fixed64_failure_denominator_and_stable_top_k_at_most5",
+        "exact_standalone_scientific_schema_keys",
+        "embedded_source_pipeline_batch_record_self_hashes",
+        "request_fixture_source_allocation_stage_cross_bindings",
+        "complete_scorer_v1_terms_and_pose_validity_bindings",
+        "fixed64_failure_denominator_and_primary_valid_rank_rederivation",
         "sealed_component_and_false_authority_declarations",
     ]
     assert verification["content_authenticity_verified"] is False
@@ -317,26 +358,146 @@ def test_synthetic_cli_flow_is_verifiable_reportable_and_claim_blocked(tmp_path:
     assert verification["execution_authority_granted"] is False
     assert verification["claim_safe"] is False
     admission = repository_synthetic_d0_fixture_admission()
-    assert result["candidate_count"] == 64
-    assert len(result["candidate_evidence"]) == 64
-    assert result["profile"]["top_k"] == 5
-    assert result["profile"]["failure_denominator_required"] == 64
+    assert result["candidate_denominator"] == 64
+    assert len(
+        result["scientific_pipeline_receipt"]["final_scoring_batch"]["records"]
+    ) == 64
+    assert result["pipeline_profile"]["top_k"] == 5
+    assert result["pipeline_profile"]["failure_denominator_required"] == 64
+    assert result["success_count"] == 32
+    assert result["failure_count"] == 32
+    assert result["top_proposal_indices"] == [45, 47, 23, 63, 9]
     assert result["request_sha256"] == SYNTHETIC_D0_FIXTURE_REQUEST_SHA256
-    assert result["synthetic_d0_fixture_manifest_sha256"] == (
+    assert result["fixture_manifest_sha256"] == (
         SYNTHETIC_D0_FIXTURE_MANIFEST_SHA256
     )
-    assert result["synthetic_d0_fixture_admission_receipt_sha256"] == (
+    assert result["fixture_admission_receipt_sha256"] == (
         admission.receipt_sha256
     )
-    assert result["synthetic_only_acknowledgment"] == (
+    assert result["request"]["synthetic_only_acknowledgment"] == (
         SYNTHETIC_ONLY_ACKNOWLEDGMENT
     )
+    assert result["cli_activation_authorized"] is True
     assert result["external_reservation_requested"] is False
     assert result["product_execution_authorized"] is False
     assert report["customer_pose_emission_authorized"] is False
     assert report["public_or_scientific_claim_authorized"] is False
     assert report["status"] == "structural_report_only"
     assert report["content_authenticity_verified"] is False
+
+
+def test_scientific_verifier_rejects_rehashed_counts_authority_and_components(
+    tmp_path: Path,
+) -> None:
+    result = _scientific_result(tmp_path)
+
+    bad_count = copy.deepcopy(result)
+    bad_count["success_count"] = 31
+    bad_count["failure_count"] = 33
+    _rehash_scientific_result(bad_count)
+    with pytest.raises(StandaloneDockCliError, match="counts or stable ranking"):
+        verify_pipeline_result(bad_count)
+
+    authority = copy.deepcopy(result)
+    authority["product_execution_authorized"] = True
+    _rehash_scientific_result(authority)
+    with pytest.raises(StandaloneDockCliError, match="evidence or authority"):
+        verify_pipeline_result(authority)
+
+    component = copy.deepcopy(result)
+    component["component_ids"]["scorer_validity_ranker"] = "attacker/1.0.0"
+    _rehash_scientific_result(component)
+    with pytest.raises(StandaloneDockCliError, match="component binding"):
+        verify_pipeline_result(component)
+
+    activation = copy.deepcopy(result)
+    activation["consumer_activation_scope"] = "production"
+    _rehash_scientific_result(activation)
+    with pytest.raises(StandaloneDockCliError, match="evidence or authority"):
+        verify_pipeline_result(activation)
+
+
+def test_scientific_verifier_rejects_nested_receipt_and_chain_tampering(
+    tmp_path: Path,
+) -> None:
+    result = _scientific_result(tmp_path)
+
+    extra = copy.deepcopy(result)
+    extra["unexpected"] = False
+    with pytest.raises(StandaloneDockCliError, match="exact schema"):
+        verify_pipeline_result(extra)
+
+    record = copy.deepcopy(result)
+    rows = record["scientific_pipeline_receipt"]["final_scoring_batch"]["records"]
+    scored = next(row for row in rows if row["rank_eligible"])
+    scored["stable_rank"] = 64
+    scored["top5_member"] = False
+    _rehash_scientific_record_chain(record, scored)
+    with pytest.raises(
+        StandaloneDockCliError,
+        match="stable ranking does not rederive",
+    ):
+        verify_pipeline_result(record)
+
+    source = copy.deepcopy(result)
+    source["source_adapter_receipt"]["request_sha256"] = "0" * 64
+    _rehash_embedded_receipt(source["source_adapter_receipt"])
+    source["source_adapter_receipt_sha256"] = source[
+        "source_adapter_receipt"
+    ]["receipt_sha256"]
+    _rehash_scientific_result(source)
+    with pytest.raises(StandaloneDockCliError, match="receipt chain is cross-wired"):
+        verify_pipeline_result(source)
+
+    top = copy.deepcopy(result)
+    top["top_proposal_indices"] = list(reversed(top["top_proposal_indices"]))
+    _rehash_scientific_result(top)
+    with pytest.raises(StandaloneDockCliError, match="counts or stable ranking"):
+        verify_pipeline_result(top)
+
+    nested_extra = copy.deepcopy(result)
+    batch = nested_extra["scientific_pipeline_receipt"]["final_scoring_batch"]
+    batch["unexpected"] = False
+    _rehash_scientific_batch_chain(nested_extra)
+    with pytest.raises(StandaloneDockCliError, match="batch keys.*unexpected"):
+        verify_pipeline_result(nested_extra)
+
+    terms_extra = copy.deepcopy(result)
+    rows = terms_extra["scientific_pipeline_receipt"]["final_scoring_batch"][
+        "records"
+    ]
+    scored = next(row for row in rows if row["rank_eligible"])
+    terms = scored["scorer_evidence"]["terms"]
+    terms["unexpected"] = False
+    _rehash_embedded_receipt(terms)
+    scored["scorer_evidence"]["terms_receipt_sha256"] = terms["receipt_sha256"]
+    _rehash_embedded_receipt(scored["scorer_evidence"])
+    _rehash_scientific_record_chain(terms_extra, scored)
+    with pytest.raises(StandaloneDockCliError, match="ScorerV1 terms keys.*unexpected"):
+        verify_pipeline_result(terms_extra)
+
+    semantic = copy.deepcopy(result)
+    rows = semantic["scientific_pipeline_receipt"]["final_scoring_batch"]["records"]
+    scored = next(row for row in rows if row["status"] == "scored_pose_valid")
+    scored["status"] = "scored_pose_invalid"
+    _rehash_scientific_record_chain(semantic, scored)
+    with pytest.raises(
+        StandaloneDockCliError,
+        match="status and validity result are inconsistent",
+    ):
+        verify_pipeline_result(semantic)
+
+    inner_authority = copy.deepcopy(result)
+    source = inner_authority["source_adapter_receipt"]
+    source["standalone_activation_authorized"] = True
+    _rehash_embedded_receipt(source)
+    inner_authority["source_adapter_receipt_sha256"] = source["receipt_sha256"]
+    _rehash_scientific_result(inner_authority)
+    with pytest.raises(
+        StandaloneDockCliError,
+        match="source adapter asserts forbidden",
+    ):
+        verify_pipeline_result(inner_authority)
 
 
 def test_dock_requires_exact_fixture_ack_and_rejects_legacy_small_profiles(

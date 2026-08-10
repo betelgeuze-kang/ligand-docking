@@ -58,6 +58,39 @@ from .docking.interaction_refinement import (
     INTERACTION_AWARE_RIGID_HYBRID_ENSEMBLE_RECEIPT_V6_SCHEMA_ID,
 )
 from .docking.scorer_v1 import SCORER_V1_SCORE_ID, SCORER_V1_TERMS_SCHEMA_ID
+from .docking.mixed64_scorer_validity_ranking_v3 import (
+    SCORED_POSE_INVALID_STATUS,
+    SCORED_POSE_VALID_STATUS,
+    SCORED_VALIDITY_INCOMPLETE_STATUS,
+    TYPED_SCORER_FAILURE_STATUS,
+    TYPED_VALIDITY_FAILURE_STATUS,
+    UPSTREAM_NOT_SCORED_STATUS,
+)
+from .docking.mixed64_scorer_validity_ranking_policy_v3 import (
+    MIXED64_SCORER_VALIDITY_RANKING_BATCH_SCHEMA_ID,
+    MIXED64_SCORER_VALIDITY_RANKING_POLICY_SHA256,
+    MIXED64_SCORER_VALIDITY_RANKING_RECORD_SCHEMA_ID,
+    frozen_mixed64_scorer_validity_ranking_policy,
+)
+from .docking.standalone_scientific_core_policy_v3 import (
+    STANDALONE_SCIENTIFIC_CORE_POLICY_SHA256,
+    frozen_standalone_scientific_core_policy,
+)
+from .docking.standalone_scientific_core_v3 import (
+    STANDALONE_SCIENTIFIC_CORE_BLOCKERS,
+    STANDALONE_SCIENTIFIC_CORE_COMPONENT_IDS,
+    StandaloneScientificCoreV3Error,
+)
+from .docking.synthetic_d0_mixed64_source_policy_v3 import (
+    SYNTHETIC_D0_MIXED64_SOURCE_POLICY_SHA256,
+    SYNTHETIC_D0_MIXED64_SOURCE_RECEIPT_SCHEMA_ID,
+    frozen_synthetic_d0_mixed64_source_policy,
+)
+from .docking.mixed64_scientific_pipeline_policy_v3 import (
+    MIXED64_SCIENTIFIC_PIPELINE_POLICY_SHA256,
+    MIXED64_SCIENTIFIC_PIPELINE_RECEIPT_SCHEMA_ID,
+    frozen_mixed64_scientific_pipeline_policy,
+)
 from .docking.torsion_contact_refinement import (
     INTERACTION_AWARE_TORSION_CONTACT_RECEIPT_V7_SCHEMA_ID,
 )
@@ -80,6 +113,9 @@ PIPELINE_VERIFICATION_SCHEMA_ID = (
 )
 PIPELINE_REPORT_SCHEMA_ID = (
     "betelgeuze.engine_v2_standalone_pipeline_report/1.1.0"
+)
+STANDALONE_SCIENTIFIC_CORE_RESULT_SCHEMA_ID = (
+    "betelgeuze.engine_v2_standalone_scientific_core_receipt/1.0.0"
 )
 EXPLICIT_POCKET_METHOD_ID = "explicit-spherical-known-pocket"
 EXPLICIT_POCKET_METHOD_VERSION = "1.0.0"
@@ -165,6 +201,327 @@ _RESULT_KEYS = frozenset(
         "request",
         "profile",
         "receipt_sha256",
+    }
+)
+_SCIENTIFIC_CORE_RESULT_KEYS = frozenset(
+    {
+        "schema_id",
+        "component_id",
+        "profile_id",
+        "policy",
+        "policy_sha256",
+        "request_sha256",
+        "request",
+        "pipeline_profile",
+        "fixture_id",
+        "fixture_manifest_sha256",
+        "fixture_admission_receipt_sha256",
+        "recorder_implementation_source_sha256",
+        "source_adapter_implementation_source_sha256",
+        "scientific_pipeline_implementation_source_sha256",
+        "scorer_implementation_source_sha256",
+        "refiner_implementation_source_sha256",
+        "component_ids",
+        "component_binding_mode",
+        "source_adapter_receipt_sha256",
+        "source_adapter_receipt",
+        "scientific_pipeline_receipt_sha256",
+        "scientific_pipeline_receipt",
+        "stage_receipt_sha256s",
+        "candidate_denominator",
+        "success_count",
+        "failure_count",
+        "score_evidence_complete_count",
+        "pose_valid_count",
+        "pose_invalid_count",
+        "top_proposal_indices",
+        "top_valid_proposal_indices",
+        "invalid_top1",
+        "abstained",
+        "blockers",
+        "failure_denominator_preserved",
+        "complete_scorer_v1_terms_preserved",
+        "complete_pose_validity_preserved",
+        "primary_and_valid_only_rank_preserved",
+        "canonical_scientific_core_receipt",
+        "canonical_components_sealed",
+        "arbitrary_dependency_injection_used",
+        "result_dependent_retry_performed",
+        "network_fetch_performed",
+        "external_reservation_requested",
+        "producer_attested",
+        "activation_evidence_eligible",
+        "canonical_docking_pipeline_activation_authorized",
+        "cli_activation_authorized",
+        "api_activation_authorized",
+        "benchmark_activation_authorized",
+        "product_shadow_activation_authorized",
+        "consumer_activation_scope",
+        "reservation_allowed",
+        "molecular_cohort_execution_authorized",
+        "historical_or_fresh_execution_authorized",
+        "stage0_admission_authority",
+        "product_execution_authorized",
+        "product_mutation_authorized",
+        "existing_rank_auto_change_authorized",
+        "customer_pose_emission_authorized",
+        "public_benchmark_execution_authorized",
+        "hip_execution_authorized",
+        "public_or_scientific_claim_authorized",
+        "claim_safe",
+        "receipt_sha256",
+    }
+)
+_SCIENTIFIC_CORE_SCORING_RECORD_KEYS = frozenset(
+    {
+        "schema_id",
+        "component_id",
+        "policy_sha256",
+        "slot_index",
+        "post_admission_record_receipt_sha256",
+        "post_admission_status",
+        "result_proposal_sha256",
+        "result_coordinate_fingerprint_sha256",
+        "scorer_authority_input_receipt_sha256",
+        "scorer_context_fingerprint_sha256",
+        "scorer_config_fingerprint_sha256",
+        "scorer_backend_receipt_sha256",
+        "scorer_evidence",
+        "pose_validity_evidence",
+        "status",
+        "failure_code",
+        "score_binary64_hex",
+        "rank_eligible",
+        "stable_rank",
+        "top1_member",
+        "top5_member",
+        "valid_rank_eligible",
+        "stable_valid_rank",
+        "valid_top1_member",
+        "valid_top5_member",
+        "slot_preserved_in_denominator",
+        "producer_attested",
+        "activation_evidence_eligible",
+        "molecular_cohort_execution_authorized",
+        "reservation_allowed",
+        "product_or_stage0_authority",
+        "public_or_scientific_claim_authorized",
+        "receipt_sha256",
+    }
+)
+_SCIENTIFIC_SOURCE_RECEIPT_KEYS = frozenset(
+    {
+        "schema_id",
+        "component_id",
+        "profile_id",
+        "policy",
+        "policy_sha256",
+        "request_sha256",
+        "fixture_id",
+        "fixture_manifest_sha256",
+        "fixture_admission_receipt_sha256",
+        "pipeline_profile_receipt_sha256",
+        "prepared_input_receipt_sha256",
+        "authority_input_receipt_sha256",
+        "problem_fingerprint_sha256",
+        "search_space_fingerprint_sha256",
+        "guided_placement_receipt_sha256",
+        "guided_placement_receipt",
+        "allocation_receipt_sha256",
+        "source_bundle_receipt_sha256",
+        "source_bundle",
+        "adapter_implementation_source_sha256",
+        "scientific_pipeline_policy_sha256",
+        "candidate_denominator",
+        "v7_control_source_count",
+        "retained_source_count",
+        "true_conformer_source_count",
+        "atomic_feature_count",
+        "result_fields_consumed",
+        "standalone_binding_ready",
+        "producer_attested",
+        "activation_evidence_eligible",
+        "standalone_activation_authorized",
+        "benchmark_activation_authorized",
+        "api_activation_authorized",
+        "product_shadow_activation_authorized",
+        "reservation_allowed",
+        "molecular_cohort_execution_authorized",
+        "historical_or_fresh_execution_authorized",
+        "product_or_stage0_authority",
+        "hip_execution_authorized",
+        "public_or_scientific_claim_authorized",
+        "receipt_sha256",
+    }
+)
+_SCIENTIFIC_SOURCE_BUNDLE_KEYS = frozenset(
+    {
+        "schema_id",
+        "exact_v11_source",
+        "receptor_source_receipt_sha256",
+        "receptor_source_receipt",
+        "receptor_coordinate_sha256",
+        "receptor_coordinates_binary64_hex",
+        "receptor_vdw_radii_binary64_hex",
+        "ligand_vdw_radii_binary64_hex",
+        "ligand_heavy_atom_mask",
+        "pocket_center_binary64_hex",
+        "pocket_radius_binary64_hex",
+        "pocket_normal_binary64_hex",
+        "v7_control_sources",
+        "retained_sources",
+        "conformer_sources",
+        "allocation_receipt_sha256",
+        "all_present_source_payload_identities_rederived",
+        "missing_source_payloads_allowed_only_as_typed_slot_failures",
+        "result_fields_consumed",
+        "receipt_sha256",
+    }
+)
+_SCIENTIFIC_PIPELINE_RECEIPT_KEYS = frozenset(
+    {
+        "schema_id",
+        "component_id",
+        "profile_id",
+        "policy",
+        "policy_sha256",
+        "pipeline_implementation_source_sha256",
+        "source_bundle_receipt_sha256",
+        "allocation_receipt_sha256",
+        "exact_v11_source_receipt_sha256",
+        "stage_receipt_sha256s",
+        "stage_counts",
+        "final_scoring_batch",
+        "candidate_denominator",
+        "stable_ranking_slot_indices",
+        "stable_valid_ranking_slot_indices",
+        "top1_slot_index",
+        "top5_slot_indices",
+        "valid_top1_slot_index",
+        "valid_top5_slot_indices",
+        "invalid_top1",
+        "denominator_failure_complete",
+        "complete_scorer_v1_terms_preserved",
+        "canonical_scientific_core_receipt",
+        "producer_attested",
+        "activation_evidence_eligible",
+        "standalone_consumer_activation_authorized",
+        "benchmark_consumer_activation_authorized",
+        "api_consumer_activation_authorized",
+        "product_shadow_consumer_activation_authorized",
+        "reservation_allowed",
+        "molecular_cohort_execution_authorized",
+        "historical_or_fresh_execution_authorized",
+        "product_or_stage0_authority",
+        "hip_execution_authorized",
+        "public_or_scientific_claim_authorized",
+        "receipt_sha256",
+    }
+)
+_SCIENTIFIC_SCORING_BATCH_KEYS = frozenset(
+    {
+        "schema_id",
+        "component_id",
+        "profile_id",
+        "policy",
+        "policy_sha256",
+        "post_admission_batch_receipt_sha256",
+        "scorer_implementation_source_sha256",
+        "validity_implementation_source_sha256",
+        "base_validity_implementation_source_sha256",
+        "records",
+        "record_receipt_sha256s",
+        "candidate_denominator",
+        "score_evidence_complete_count",
+        "pose_valid_count",
+        "pose_invalid_count",
+        "upstream_not_scored_count",
+        "typed_scorer_failure_count",
+        "typed_validity_failure_count",
+        "validity_incomplete_count",
+        "stable_ranking_slot_indices",
+        "stable_valid_ranking_slot_indices",
+        "top1_slot_index",
+        "top5_slot_indices",
+        "valid_top1_slot_index",
+        "valid_top5_slot_indices",
+        "invalid_top1",
+        "denominator_failure_complete",
+        "scorer_v1_terms_fully_preserved",
+        "primary_ranking_includes_pose_invalid",
+        "producer_attested",
+        "activation_evidence_eligible",
+        "reservation_allowed",
+        "molecular_cohort_execution_authorized",
+        "historical_or_fresh_execution_authorized",
+        "product_or_stage0_authority",
+        "public_or_scientific_claim_authorized",
+        "receipt_sha256",
+    }
+)
+_SCIENTIFIC_SCORER_EVIDENCE_KEYS = frozenset(
+    {
+        "schema_id",
+        "scorer_implementation_source_sha256",
+        "terms_receipt_sha256",
+        "terms",
+        "receipt_sha256",
+    }
+)
+_SCIENTIFIC_SCORER_TERMS_KEYS = frozenset(
+    {
+        "schema_id",
+        "score_id",
+        "proposal_fingerprint_sha256",
+        "authority_input_receipt_sha256",
+        "context_fingerprint_sha256",
+        "config_fingerprint_sha256",
+        "backend_receipt_sha256",
+        "typed_vdw_binary64_hex",
+        "electrostatics_binary64_hex",
+        "directional_hbond_binary64_hex",
+        "hydrophobic_contact_binary64_hex",
+        "desolvation_proxy_binary64_hex",
+        "torsion_energy_binary64_hex",
+        "ligand_strain_binary64_hex",
+        "weak_pocket_prior_binary64_hex",
+        "total_score_binary64_hex",
+        "receptor_candidate_pair_count",
+        "ligand_pair_count",
+        "hbond_count",
+        "hydrophobic_contact_count",
+        "buried_polar_count",
+        "calibrated",
+        "scientifically_validated",
+        "claim_safe",
+        "receipt_sha256",
+    }
+)
+_SCIENTIFIC_VALIDITY_EVIDENCE_KEYS = frozenset(
+    {
+        "schema_id",
+        "result_proposal_sha256",
+        "result_coordinate_fingerprint_sha256",
+        "validity_context_fingerprint_sha256",
+        "validity_config_fingerprint_sha256",
+        "contact_policy_fingerprint_sha256",
+        "validity_implementation_source_sha256",
+        "base_validity_implementation_source_sha256",
+        "result",
+        "receipt_sha256",
+    }
+)
+_SCIENTIFIC_VALIDITY_RESULT_KEYS = frozenset(
+    {
+        "complete",
+        "valid",
+        "valid_within_evaluated_scope",
+        "checks",
+        "measurements",
+        "evaluated_checks",
+        "not_evaluated_reasons",
+        "blockers",
+        "claim_safe",
     }
 )
 _REQUEST_KEYS = frozenset(
@@ -906,7 +1263,7 @@ def dock(
             test_only=True,
         )
         return DockingPipeline().run(request).to_dict()
-    except DockingPipelineError as exc:
+    except (DockingPipelineError, StandaloneScientificCoreV3Error) as exc:
         raise StandaloneDockCliError(
             "synthetic D0 request failed exact package admission"
         ) from exc
@@ -1879,7 +2236,741 @@ def _verify_candidate(
     )
 
 
-def verify_pipeline_result(document: Mapping[str, object]) -> dict[str, object]:
+def _verify_embedded_self_hash(
+    document: Mapping[str, object],
+    *,
+    name: str,
+) -> str:
+    if not isinstance(document, dict):
+        raise StandaloneDockCliError(f"{name} is not an exact object")
+    projection = dict(document)
+    projection.pop("receipt_sha256", None)
+    try:
+        _require_hash(document, "receipt_sha256", projection)
+    except StandaloneDockCliError as exc:
+        raise StandaloneDockCliError(f"{name} receipt_sha256 mismatch") from exc
+    return str(document["receipt_sha256"])
+
+
+def _verify_scientific_core_result(
+    document: Mapping[str, object],
+) -> dict[str, object]:
+    _require_exact_keys(
+        document,
+        _SCIENTIFIC_CORE_RESULT_KEYS,
+        name="standalone scientific core result",
+    )
+    if document.get("schema_id") != STANDALONE_SCIENTIFIC_CORE_RESULT_SCHEMA_ID:
+        raise StandaloneDockCliError(
+            "standalone scientific core result schema is unsupported"
+        )
+    result_projection = dict(document)
+    result_projection.pop("receipt_sha256")
+    _require_hash(document, "receipt_sha256", result_projection)
+    if (
+        document.get("policy") != frozen_standalone_scientific_core_policy()
+        or document.get("policy_sha256")
+        != STANDALONE_SCIENTIFIC_CORE_POLICY_SHA256
+    ):
+        raise StandaloneDockCliError(
+            "standalone scientific core policy binding is invalid"
+        )
+
+    request = document.get("request")
+    profile = document.get("pipeline_profile")
+    if not isinstance(request, dict) or not isinstance(profile, dict):
+        raise StandaloneDockCliError(
+            "standalone scientific request/profile evidence is missing"
+        )
+    normalized_profile = _verify_profile(profile)
+    profile_receipt_sha256 = str(normalized_profile["receipt_sha256"])
+    normalized_request = _verify_request(
+        request,
+        profile_receipt_sha256=profile_receipt_sha256,
+    )
+    admission = repository_synthetic_d0_fixture_admission()
+    if (
+        document.get("request_sha256") != normalized_request["request_sha256"]
+        or document.get("fixture_id") != admission.fixture_id
+        or document.get("fixture_manifest_sha256") != admission.manifest_sha256
+        or document.get("fixture_admission_receipt_sha256")
+        != admission.receipt_sha256
+    ):
+        raise StandaloneDockCliError(
+            "standalone scientific fixture admission is cross-wired"
+        )
+
+    for field in (
+        "recorder_implementation_source_sha256",
+        "source_adapter_implementation_source_sha256",
+        "scientific_pipeline_implementation_source_sha256",
+        "scorer_implementation_source_sha256",
+        "refiner_implementation_source_sha256",
+        "source_adapter_receipt_sha256",
+        "scientific_pipeline_receipt_sha256",
+    ):
+        _require_digest(document.get(field), name=f"scientific core {field}")
+    expected_sources = {
+        "recorder_implementation_source_sha256": (
+            _installed_docking_source_sha256("standalone_scientific_core_v3.py")
+        ),
+        "source_adapter_implementation_source_sha256": (
+            _installed_docking_source_sha256("synthetic_d0_mixed64_source_v3.py")
+        ),
+        "scientific_pipeline_implementation_source_sha256": (
+            _installed_docking_source_sha256("mixed64_scientific_pipeline_v3.py")
+        ),
+        "scorer_implementation_source_sha256": (
+            _installed_docking_source_sha256("scorer_v1.py")
+        ),
+        "refiner_implementation_source_sha256": (
+            _installed_docking_source_sha256("torsion_contact_refinement.py")
+        ),
+    }
+    if any(
+        document.get(field) != expected
+        for field, expected in expected_sources.items()
+    ):
+        raise StandaloneDockCliError(
+            "standalone scientific installed source identities are cross-wired"
+        )
+    if (
+        document.get("component_ids")
+        != dict(sorted(STANDALONE_SCIENTIFIC_CORE_COMPONENT_IDS.items()))
+        or document.get("component_binding_mode")
+        != "sealed_fixed64_scientific_components"
+        or document.get("canonical_components_sealed") is not True
+        or document.get("arbitrary_dependency_injection_used") is not False
+    ):
+        raise StandaloneDockCliError(
+            "standalone scientific component binding is invalid"
+        )
+
+    source = document.get("source_adapter_receipt")
+    scientific = document.get("scientific_pipeline_receipt")
+    if not isinstance(source, dict) or not isinstance(scientific, dict):
+        raise StandaloneDockCliError(
+            "standalone source or scientific pipeline receipt is missing"
+        )
+    _require_exact_keys(
+        source,
+        _SCIENTIFIC_SOURCE_RECEIPT_KEYS,
+        name="synthetic D0 source adapter",
+    )
+    _require_exact_keys(
+        scientific,
+        _SCIENTIFIC_PIPELINE_RECEIPT_KEYS,
+        name="fixed64 scientific pipeline",
+    )
+    source_receipt_sha256 = _verify_embedded_self_hash(
+        source,
+        name="synthetic D0 source adapter",
+    )
+    scientific_receipt_sha256 = _verify_embedded_self_hash(
+        scientific,
+        name="fixed64 scientific pipeline",
+    )
+    if (
+        document.get("source_adapter_receipt_sha256")
+        != source_receipt_sha256
+        or document.get("scientific_pipeline_receipt_sha256")
+        != scientific_receipt_sha256
+        or source.get("policy_sha256")
+        != SYNTHETIC_D0_MIXED64_SOURCE_POLICY_SHA256
+        or source.get("policy")
+        != frozen_synthetic_d0_mixed64_source_policy()
+        or source.get("schema_id")
+        != SYNTHETIC_D0_MIXED64_SOURCE_RECEIPT_SCHEMA_ID
+        or scientific.get("policy_sha256")
+        != MIXED64_SCIENTIFIC_PIPELINE_POLICY_SHA256
+        or scientific.get("policy")
+        != frozen_mixed64_scientific_pipeline_policy()
+        or scientific.get("schema_id")
+        != MIXED64_SCIENTIFIC_PIPELINE_RECEIPT_SCHEMA_ID
+        or source.get("request_sha256") != document.get("request_sha256")
+        or source.get("fixture_admission_receipt_sha256")
+        != document.get("fixture_admission_receipt_sha256")
+        or source.get("candidate_denominator") != 64
+        or scientific.get("candidate_denominator") != 64
+        or source.get("source_bundle_receipt_sha256")
+        != scientific.get("source_bundle_receipt_sha256")
+        or source.get("allocation_receipt_sha256")
+        != scientific.get("allocation_receipt_sha256")
+    ):
+        raise StandaloneDockCliError(
+            "standalone source and scientific receipt chain is cross-wired"
+        )
+    for receipt_name, receipt, false_fields in (
+        (
+            "synthetic D0 source adapter",
+            source,
+            (
+                "producer_attested",
+                "activation_evidence_eligible",
+                "standalone_activation_authorized",
+                "benchmark_activation_authorized",
+                "api_activation_authorized",
+                "product_shadow_activation_authorized",
+                "reservation_allowed",
+                "molecular_cohort_execution_authorized",
+                "historical_or_fresh_execution_authorized",
+                "product_or_stage0_authority",
+                "hip_execution_authorized",
+                "public_or_scientific_claim_authorized",
+            ),
+        ),
+        (
+            "fixed64 scientific pipeline",
+            scientific,
+            (
+                "producer_attested",
+                "activation_evidence_eligible",
+                "standalone_consumer_activation_authorized",
+                "benchmark_consumer_activation_authorized",
+                "api_consumer_activation_authorized",
+                "product_shadow_consumer_activation_authorized",
+                "reservation_allowed",
+                "molecular_cohort_execution_authorized",
+                "historical_or_fresh_execution_authorized",
+                "product_or_stage0_authority",
+                "hip_execution_authorized",
+                "public_or_scientific_claim_authorized",
+            ),
+        ),
+    ):
+        if any(receipt.get(field) is not False for field in false_fields):
+            raise StandaloneDockCliError(
+                f"{receipt_name} asserts forbidden consumer or execution authority"
+            )
+    source_bundle = source.get("source_bundle")
+    if not isinstance(source_bundle, dict):
+        raise StandaloneDockCliError("source bundle receipt is missing")
+    _require_exact_keys(
+        source_bundle,
+        _SCIENTIFIC_SOURCE_BUNDLE_KEYS,
+        name="source bundle",
+    )
+    source_bundle_receipt_sha256 = _verify_embedded_self_hash(
+        source_bundle,
+        name="source bundle",
+    )
+    if (
+        source_bundle.get("schema_id")
+        != "betelgeuze.engine_v2_mixed64_proposal_source_bundle/1.0.0"
+        or source_bundle_receipt_sha256
+        != source.get("source_bundle_receipt_sha256")
+    ):
+        raise StandaloneDockCliError("source bundle receipt is cross-wired")
+
+    stage_receipts = scientific.get("stage_receipt_sha256s")
+    if not isinstance(stage_receipts, dict) or set(stage_receipts) != {
+        "source_bundle",
+        "allocation",
+        "fixed64_producer",
+        "pre_refinement_geometric_admission",
+        "operational_proposal_materialization",
+        "current_v7_post_admission",
+        "scorer_v1_validity_stable_ranking",
+    }:
+        raise StandaloneDockCliError(
+            "scientific stage receipt map is incomplete"
+        )
+    for name, digest in stage_receipts.items():
+        _require_digest(digest, name=f"scientific stage {name}")
+    if (
+        document.get("stage_receipt_sha256s") != stage_receipts
+        or stage_receipts.get("source_bundle") != source_bundle_receipt_sha256
+        or stage_receipts.get("allocation")
+        != source.get("allocation_receipt_sha256")
+    ):
+        raise StandaloneDockCliError(
+            "standalone scientific stage receipt map is cross-wired"
+        )
+
+    batch = scientific.get("final_scoring_batch")
+    if not isinstance(batch, dict):
+        raise StandaloneDockCliError("final scoring batch receipt is missing")
+    _require_exact_keys(
+        batch,
+        _SCIENTIFIC_SCORING_BATCH_KEYS,
+        name="final ScorerV1 validity ranking batch",
+    )
+    batch_receipt_sha256 = _verify_embedded_self_hash(
+        batch,
+        name="final ScorerV1 validity ranking batch",
+    )
+    if (
+        batch_receipt_sha256
+        != stage_receipts.get("scorer_v1_validity_stable_ranking")
+        or batch.get("schema_id")
+        != MIXED64_SCORER_VALIDITY_RANKING_BATCH_SCHEMA_ID
+        or batch.get("policy_sha256")
+        != MIXED64_SCORER_VALIDITY_RANKING_POLICY_SHA256
+        or batch.get("policy")
+        != frozen_mixed64_scorer_validity_ranking_policy()
+        or batch.get("candidate_denominator") != 64
+        or batch.get("scorer_v1_terms_fully_preserved") is not True
+        or batch.get("denominator_failure_complete") is not True
+        or batch.get("primary_ranking_includes_pose_invalid") is not True
+    ):
+        raise StandaloneDockCliError(
+            "final ScorerV1 validity ranking batch is cross-wired"
+        )
+    if any(
+        batch.get(field) is not False
+        for field in (
+            "producer_attested",
+            "activation_evidence_eligible",
+            "reservation_allowed",
+            "molecular_cohort_execution_authorized",
+            "historical_or_fresh_execution_authorized",
+            "product_or_stage0_authority",
+            "public_or_scientific_claim_authorized",
+        )
+    ):
+        raise StandaloneDockCliError(
+            "final ScorerV1 validity batch asserts forbidden authority"
+        )
+    records = batch.get("records")
+    record_receipts = batch.get("record_receipt_sha256s")
+    if (
+        not isinstance(records, list)
+        or len(records) != 64
+        or not isinstance(record_receipts, list)
+        or len(record_receipts) != 64
+    ):
+        raise StandaloneDockCliError(
+            "final scoring batch changed the fixed64 denominator"
+        )
+
+    scored: list[tuple[float, int, str, bool]] = []
+    success_count = 0
+    pose_valid_count = 0
+    pose_invalid_count = 0
+    allowed_statuses = {
+        UPSTREAM_NOT_SCORED_STATUS,
+        TYPED_SCORER_FAILURE_STATUS,
+        TYPED_VALIDITY_FAILURE_STATUS,
+        SCORED_VALIDITY_INCOMPLETE_STATUS,
+        SCORED_POSE_VALID_STATUS,
+        SCORED_POSE_INVALID_STATUS,
+    }
+    status_counts = {status: 0 for status in allowed_statuses}
+    for slot_index, row in enumerate(records):
+        if not isinstance(row, dict):
+            raise StandaloneDockCliError("scientific candidate record is not an object")
+        _require_exact_keys(
+            row,
+            _SCIENTIFIC_CORE_SCORING_RECORD_KEYS,
+            name=f"scientific candidate {slot_index}",
+        )
+        row_receipt_sha256 = _verify_embedded_self_hash(
+            row,
+            name=f"scientific candidate {slot_index}",
+        )
+        if (
+            row_receipt_sha256 != record_receipts[slot_index]
+            or _require_exact_int(
+                row.get("slot_index"),
+                name=f"scientific candidate {slot_index} slot",
+            )
+            != slot_index
+            or row.get("slot_preserved_in_denominator") is not True
+            or row.get("status") not in allowed_statuses
+            or row.get("schema_id")
+            != MIXED64_SCORER_VALIDITY_RANKING_RECORD_SCHEMA_ID
+        ):
+            raise StandaloneDockCliError(
+                "scientific candidate order, identity, or status is invalid"
+            )
+        for forbidden in (
+            "producer_attested",
+            "activation_evidence_eligible",
+            "molecular_cohort_execution_authorized",
+            "reservation_allowed",
+            "product_or_stage0_authority",
+            "public_or_scientific_claim_authorized",
+        ):
+            if row.get(forbidden) is not False:
+                raise StandaloneDockCliError(
+                    "scientific candidate asserts forbidden authority"
+                )
+        rank_eligible = _require_exact_bool(
+            row.get("rank_eligible"),
+            name=f"scientific candidate {slot_index} rank eligibility",
+        )
+        valid_rank_eligible = _require_exact_bool(
+            row.get("valid_rank_eligible"),
+            name=f"scientific candidate {slot_index} valid-rank eligibility",
+        )
+        scorer_evidence = row.get("scorer_evidence")
+        validity_evidence = row.get("pose_validity_evidence")
+        status = str(row["status"])
+        status_counts[status] += 1
+        expected_rank_eligible = status not in {
+            UPSTREAM_NOT_SCORED_STATUS,
+            TYPED_SCORER_FAILURE_STATUS,
+        }
+        expected_validity_evidence = status in {
+            SCORED_VALIDITY_INCOMPLETE_STATUS,
+            SCORED_POSE_VALID_STATUS,
+            SCORED_POSE_INVALID_STATUS,
+        }
+        if (
+            rank_eligible is not expected_rank_eligible
+            or (validity_evidence is not None) is not expected_validity_evidence
+            or (
+                not rank_eligible
+                and (
+                    row.get("top1_member") is not False
+                    or row.get("top5_member") is not False
+                )
+            )
+            or (
+                not valid_rank_eligible
+                and (
+                    row.get("valid_top1_member") is not False
+                    or row.get("valid_top5_member") is not False
+                )
+            )
+        ):
+            raise StandaloneDockCliError(
+                "scientific candidate status and rank eligibility are inconsistent"
+            )
+        if rank_eligible:
+            if not isinstance(scorer_evidence, dict):
+                raise StandaloneDockCliError(
+                    "rank-eligible candidate lacks ScorerV1 evidence"
+                )
+            _require_exact_keys(
+                scorer_evidence,
+                _SCIENTIFIC_SCORER_EVIDENCE_KEYS,
+                name=f"scientific candidate {slot_index} ScorerV1 evidence",
+            )
+            _verify_embedded_self_hash(
+                scorer_evidence,
+                name=f"scientific candidate {slot_index} ScorerV1 evidence",
+            )
+            terms = scorer_evidence.get("terms")
+            if not isinstance(terms, dict):
+                raise StandaloneDockCliError(
+                    "rank-eligible candidate lacks complete ScorerV1 terms"
+                )
+            _require_exact_keys(
+                terms,
+                _SCIENTIFIC_SCORER_TERMS_KEYS,
+                name=f"scientific candidate {slot_index} ScorerV1 terms",
+            )
+            terms_receipt_sha256 = _verify_embedded_self_hash(
+                terms,
+                name=f"scientific candidate {slot_index} ScorerV1 terms",
+            )
+            score = _binary64(
+                row.get("score_binary64_hex"),
+                name=f"scientific candidate {slot_index} score",
+            )
+            stable_rank = _require_exact_int(
+                row.get("stable_rank"),
+                name=f"scientific candidate {slot_index} stable rank",
+                minimum=1,
+            )
+            result_proposal_sha256 = _require_digest(
+                row.get("result_proposal_sha256"),
+                name=f"scientific candidate {slot_index} result proposal",
+            )
+            if (
+                scorer_evidence.get("schema_id")
+                != "betelgeuze.engine_v2_mixed64_scorer_v1_evidence/1.0.0"
+                or terms.get("schema_id") != SCORER_V1_TERMS_SCHEMA_ID
+                or terms.get("score_id") != SCORER_V1_SCORE_ID
+                or scorer_evidence.get("scorer_implementation_source_sha256")
+                != document.get("scorer_implementation_source_sha256")
+                or scorer_evidence.get("terms_receipt_sha256")
+                != terms_receipt_sha256
+                or terms.get("proposal_fingerprint_sha256")
+                != result_proposal_sha256
+                or terms.get("total_score_binary64_hex")
+                != row.get("score_binary64_hex")
+            ):
+                raise StandaloneDockCliError(
+                    "scientific candidate score, term, or proposal is cross-wired"
+                )
+            scored.append(
+                (score, slot_index, result_proposal_sha256, valid_rank_eligible)
+            )
+            if row.get("top1_member") is not (stable_rank == 1) or row.get(
+                "top5_member"
+            ) is not (stable_rank <= 5):
+                raise StandaloneDockCliError(
+                    "scientific candidate primary rank membership is inconsistent"
+                )
+        elif any(
+            value is not None
+            for value in (
+                scorer_evidence,
+                row.get("score_binary64_hex"),
+                row.get("stable_rank"),
+            )
+        ):
+            raise StandaloneDockCliError(
+                "rank-ineligible candidate fabricated score evidence"
+            )
+        if validity_evidence is not None:
+            if not isinstance(validity_evidence, dict):
+                raise StandaloneDockCliError("pose validity evidence is invalid")
+            _require_exact_keys(
+                validity_evidence,
+                _SCIENTIFIC_VALIDITY_EVIDENCE_KEYS,
+                name=f"scientific candidate {slot_index} pose validity evidence",
+            )
+            _verify_embedded_self_hash(
+                validity_evidence,
+                name=f"scientific candidate {slot_index} pose validity evidence",
+            )
+            validity_result = validity_evidence.get("result")
+            if not isinstance(validity_result, dict):
+                raise StandaloneDockCliError("pose validity result is missing")
+            _require_exact_keys(
+                validity_result,
+                _SCIENTIFIC_VALIDITY_RESULT_KEYS,
+                name=f"scientific candidate {slot_index} pose validity result",
+            )
+            if (
+                validity_evidence.get("schema_id")
+                != "betelgeuze.engine_v2_mixed64_pose_validity_evidence/1.0.0"
+                or validity_evidence.get("validity_implementation_source_sha256")
+                != batch.get("validity_implementation_source_sha256")
+                or validity_evidence.get(
+                    "base_validity_implementation_source_sha256"
+                )
+                != batch.get("base_validity_implementation_source_sha256")
+                or type(validity_result.get("complete")) is not bool
+                or type(validity_result.get("valid")) is not bool
+                or not isinstance(validity_result.get("checks"), dict)
+                or not isinstance(validity_result.get("measurements"), dict)
+                or not isinstance(validity_result.get("blockers"), list)
+                or validity_result.get("claim_safe") is not False
+                or valid_rank_eligible
+                is not bool(validity_result.get("valid"))
+                or validity_evidence.get("result_proposal_sha256")
+                != row.get("result_proposal_sha256")
+            ):
+                raise StandaloneDockCliError(
+                    "scientific candidate validity evidence is cross-wired"
+                )
+            expected_complete = status in {
+                SCORED_POSE_VALID_STATUS,
+                SCORED_POSE_INVALID_STATUS,
+            }
+            expected_valid = status == SCORED_POSE_VALID_STATUS
+            if (
+                validity_result.get("complete") is not expected_complete
+                or validity_result.get("valid") is not expected_valid
+                or valid_rank_eligible is not expected_valid
+            ):
+                raise StandaloneDockCliError(
+                    "scientific candidate status and validity result are inconsistent"
+                )
+        elif valid_rank_eligible:
+            raise StandaloneDockCliError(
+                "valid-rank-eligible candidate lacks validity evidence"
+            )
+        if valid_rank_eligible:
+            stable_valid_rank = _require_exact_int(
+                row.get("stable_valid_rank"),
+                name=f"scientific candidate {slot_index} stable valid rank",
+                minimum=1,
+            )
+            if row.get("valid_top1_member") is not (
+                stable_valid_rank == 1
+            ) or row.get("valid_top5_member") is not (
+                stable_valid_rank <= 5
+            ):
+                raise StandaloneDockCliError(
+                    "scientific candidate valid rank membership is inconsistent"
+                )
+        elif row.get("stable_valid_rank") is not None:
+            raise StandaloneDockCliError(
+                "valid-rank-ineligible candidate fabricated a valid rank"
+            )
+        if row.get("status") == SCORED_POSE_VALID_STATUS:
+            pose_valid_count += 1
+            success_count += 1
+        elif row.get("status") == SCORED_POSE_INVALID_STATUS:
+            pose_invalid_count += 1
+            success_count += 1
+
+    score_order = sorted(scored, key=lambda value: (value[0], value[1], value[2]))
+    rank_by_slot = {
+        slot: rank for rank, (_score, slot, _proposal, _valid) in enumerate(score_order, 1)
+    }
+    valid_order = tuple(value for value in score_order if value[3])
+    valid_rank_by_slot = {
+        slot: rank
+        for rank, (_score, slot, _proposal, _valid) in enumerate(valid_order, 1)
+    }
+    for row in records:
+        slot = int(row["slot_index"])
+        if row.get("stable_rank") != rank_by_slot.get(slot) or row.get(
+            "stable_valid_rank"
+        ) != valid_rank_by_slot.get(slot):
+            raise StandaloneDockCliError(
+                "scientific candidate stable ranking does not rederive"
+            )
+    top_indices = tuple(value[1] for value in score_order[:5])
+    valid_top_indices = tuple(value[1] for value in valid_order[:5])
+    stable_indices = tuple(value[1] for value in score_order)
+    stable_valid_indices = tuple(value[1] for value in valid_order)
+    failure_count = 64 - success_count
+    invalid_top1 = (
+        None if not score_order else not bool(records[top_indices[0]]["valid_rank_eligible"])
+    )
+    if (
+        batch.get("stable_ranking_slot_indices") != list(stable_indices)
+        or batch.get("stable_valid_ranking_slot_indices")
+        != list(stable_valid_indices)
+        or batch.get("top5_slot_indices") != list(top_indices)
+        or batch.get("valid_top5_slot_indices") != list(valid_top_indices)
+        or batch.get("top1_slot_index")
+        != (None if not top_indices else top_indices[0])
+        or batch.get("valid_top1_slot_index")
+        != (None if not valid_top_indices else valid_top_indices[0])
+        or batch.get("invalid_top1") is not invalid_top1
+        or batch.get("score_evidence_complete_count") != len(score_order)
+        or batch.get("pose_valid_count") != pose_valid_count
+        or batch.get("pose_invalid_count") != pose_invalid_count
+        or batch.get("upstream_not_scored_count")
+        != status_counts[UPSTREAM_NOT_SCORED_STATUS]
+        or batch.get("typed_scorer_failure_count")
+        != status_counts[TYPED_SCORER_FAILURE_STATUS]
+        or batch.get("typed_validity_failure_count")
+        != status_counts[TYPED_VALIDITY_FAILURE_STATUS]
+        or batch.get("validity_incomplete_count")
+        != status_counts[SCORED_VALIDITY_INCOMPLETE_STATUS]
+        or scientific.get("stable_ranking_slot_indices")
+        != list(stable_indices)
+        or scientific.get("stable_valid_ranking_slot_indices")
+        != list(stable_valid_indices)
+        or scientific.get("top1_slot_index")
+        != (None if not top_indices else top_indices[0])
+        or scientific.get("top5_slot_indices") != list(top_indices)
+        or scientific.get("valid_top1_slot_index")
+        != (None if not valid_top_indices else valid_top_indices[0])
+        or scientific.get("valid_top5_slot_indices") != list(valid_top_indices)
+        or scientific.get("invalid_top1") is not invalid_top1
+        or document.get("top_proposal_indices") != list(top_indices)
+        or document.get("top_valid_proposal_indices") != list(valid_top_indices)
+        or document.get("success_count") != success_count
+        or document.get("failure_count") != failure_count
+        or document.get("score_evidence_complete_count") != len(score_order)
+        or document.get("pose_valid_count") != pose_valid_count
+        or document.get("pose_invalid_count") != pose_invalid_count
+        or document.get("invalid_top1") is not invalid_top1
+        or document.get("abstained") is not (len(top_indices) < 5)
+    ):
+        raise StandaloneDockCliError(
+            "standalone scientific counts or stable ranking are inconsistent"
+        )
+    blockers = document.get("blockers")
+    if blockers != list(STANDALONE_SCIENTIFIC_CORE_BLOCKERS):
+        raise StandaloneDockCliError(
+            "standalone scientific blockers are not the canonical ordered set"
+        )
+    if any(value not in blockers for value in EXTERNAL_AUTHORITY_BLOCKERS):
+        raise StandaloneDockCliError(
+            "standalone scientific external blockers are incomplete"
+        )
+    required_true = (
+        "failure_denominator_preserved",
+        "complete_scorer_v1_terms_preserved",
+        "complete_pose_validity_preserved",
+        "primary_and_valid_only_rank_preserved",
+        "canonical_scientific_core_receipt",
+        "canonical_components_sealed",
+        "canonical_docking_pipeline_activation_authorized",
+        "cli_activation_authorized",
+        "api_activation_authorized",
+        "benchmark_activation_authorized",
+        "product_shadow_activation_authorized",
+    )
+    required_false = (
+        "arbitrary_dependency_injection_used",
+        "result_dependent_retry_performed",
+        "network_fetch_performed",
+        "external_reservation_requested",
+        "producer_attested",
+        "activation_evidence_eligible",
+        "reservation_allowed",
+        "molecular_cohort_execution_authorized",
+        "historical_or_fresh_execution_authorized",
+        "stage0_admission_authority",
+        "product_execution_authorized",
+        "product_mutation_authorized",
+        "existing_rank_auto_change_authorized",
+        "customer_pose_emission_authorized",
+        "public_benchmark_execution_authorized",
+        "hip_execution_authorized",
+        "public_or_scientific_claim_authorized",
+        "claim_safe",
+    )
+    if (
+        any(document.get(field) is not True for field in required_true)
+        or any(document.get(field) is not False for field in required_false)
+        or document.get("consumer_activation_scope")
+        != "exact_repository_synthetic_d0_only"
+    ):
+        raise StandaloneDockCliError(
+            "standalone scientific result asserts inconsistent evidence or authority"
+        )
+
+    projection: dict[str, object] = {
+        "schema_id": PIPELINE_VERIFICATION_SCHEMA_ID,
+        "status": "verified_structural_consistency_only",
+        "verification_scope": (
+            "available_serialized_structure_only_no_opaque_upstream_content"
+        ),
+        "pipeline_result_receipt_sha256": document["receipt_sha256"],
+        "request_sha256": normalized_request["request_sha256"],
+        "profile_receipt_sha256": profile_receipt_sha256,
+        "profile_id": document["profile_id"],
+        "synthetic_d0_fixture_id": admission.fixture_id,
+        "synthetic_d0_fixture_manifest_sha256": admission.manifest_sha256,
+        "synthetic_d0_fixture_admission_receipt_sha256": (
+            admission.receipt_sha256
+        ),
+        "component_binding_mode": "sealed_fixed64_scientific_components",
+        "candidate_count": 64,
+        "success_count": success_count,
+        "failure_count": failure_count,
+        "top_proposal_indices": list(top_indices),
+        "abstained": len(top_indices) < 5,
+        "blockers": list(blockers),
+        "external_authority_blocker_count": len(EXTERNAL_AUTHORITY_BLOCKERS),
+        "structural_consistency_verified": True,
+        "self_hash_consistency_verified": True,
+        "available_structural_cross_bindings_verified": True,
+        "available_derived_semantics_verified": True,
+        "verified_structural_items": [
+            "exact_standalone_scientific_schema_keys",
+            "embedded_source_pipeline_batch_record_self_hashes",
+            "request_fixture_source_allocation_stage_cross_bindings",
+            "complete_scorer_v1_terms_and_pose_validity_bindings",
+            "fixed64_failure_denominator_and_primary_valid_rank_rederivation",
+            "sealed_component_and_false_authority_declarations",
+        ],
+        "opaque_upstream_receipt_content_verified": False,
+        "cryptographic_signature_verified": False,
+        "content_authenticity_verified": False,
+        "source_preimport_attestation_verified": False,
+        "external_authority_verified": False,
+        "execution_authority_granted": False,
+        "structural_consistency_valid": True,
+        "claim_safe": False,
+    }
+    return {**projection, "receipt_sha256": _sha256_document(projection)}
+
+
+def _verify_pipeline_result_v1(document: Mapping[str, object]) -> dict[str, object]:
     _require_exact_keys(document, _RESULT_KEYS, name="pipeline result")
     if document.get("schema_id") != PIPELINE_RESULT_SCHEMA_ID:
         raise StandaloneDockCliError("pipeline result schema is unsupported")
@@ -2177,6 +3268,17 @@ def verify_pipeline_result(document: Mapping[str, object]) -> dict[str, object]:
         "claim_safe": False,
     }
     return {**projection, "receipt_sha256": _sha256_document(projection)}
+
+
+def verify_pipeline_result(document: Mapping[str, object]) -> dict[str, object]:
+    """Verify either the current scientific receipt or legacy V1 evidence."""
+
+    schema_id = document.get("schema_id")
+    if schema_id == STANDALONE_SCIENTIFIC_CORE_RESULT_SCHEMA_ID:
+        return _verify_scientific_core_result(document)
+    if schema_id == PIPELINE_RESULT_SCHEMA_ID:
+        return _verify_pipeline_result_v1(document)
+    raise StandaloneDockCliError("pipeline result schema is unsupported")
 
 
 def report_pipeline_result(document: Mapping[str, object]) -> dict[str, object]:

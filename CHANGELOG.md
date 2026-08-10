@@ -6,6 +6,15 @@ scientific claim from a package version.
 
 ## Unreleased
 
+- Activated the exact repository-synthetic D0 fixed-64 scientific core for the
+  standalone pipeline, CLI, Python API, diagnostic benchmark, and product
+  shadow. Canonical consumers now return and embed
+  `StandaloneScientificCoreReceiptV1`; the consumer-envelope schema advances
+  from `1.2.0` to `1.3.0`. The legacy `DockingPipelineResultV1` path remains
+  internal-only. The new receipt preserves complete Scorer-v1 terms, pose
+  validity, typed failures, and primary/valid-only stable ranks. This grants no
+  reservation, molecular, Historical/Fresh, public-benchmark, product-mutation,
+  HIP, Stage 0, or scientific-claim authority.
 - Invalidated the former 298-case blind designation after discovering and
   hash-verifying a pre-freeze complete 300-case/900-row report. All historical
   300 cases are now development/diagnostic-only.

@@ -19,7 +19,7 @@ def test_canonical_policy_and_executor_verify() -> None:
     assert result["verification_blockers"] == []
     assert result["candidate_denominator"] == 64
     assert result["complete_scoring_validity_rank_receipt"] is True
-    assert result["canonical_pipeline_activation_authorized"] is False
+    assert result["canonical_pipeline_activation_authorized"] is True
     assert result["molecular_execution_authorized"] is False
     assert result["reservation_allowed"] is False
 

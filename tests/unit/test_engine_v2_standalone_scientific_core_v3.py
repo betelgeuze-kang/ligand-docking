@@ -61,13 +61,19 @@ def test_exact_repository_request_emits_failure_complete_scientific_receipt() ->
     assert document["primary_and_valid_only_rank_preserved"] is True
     assert document["failure_denominator_preserved"] is True
     for key in (
-        "producer_attested",
-        "activation_evidence_eligible",
         "canonical_docking_pipeline_activation_authorized",
         "cli_activation_authorized",
         "api_activation_authorized",
         "benchmark_activation_authorized",
         "product_shadow_activation_authorized",
+    ):
+        assert document[key] is True
+    assert document["consumer_activation_scope"] == (
+        "exact_repository_synthetic_d0_only"
+    )
+    for key in (
+        "producer_attested",
+        "activation_evidence_eligible",
         "reservation_allowed",
         "molecular_cohort_execution_authorized",
         "historical_or_fresh_execution_authorized",

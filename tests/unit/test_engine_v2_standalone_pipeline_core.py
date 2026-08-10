@@ -232,67 +232,55 @@ def test_pipeline_is_deterministic_failure_complete_and_claim_blocked() -> None:
     assert first.receipt_sha256 == second.receipt_sha256
     assert len(first.candidates) == 64
     assert first.success_count + first.failure_count == 64
-    assert tuple(row.proposal_index for row in first.candidates) == tuple(range(64))
-    assert all(
-        row.geometric_admission_status
-        == "not_enabled_in_current_v7_baseline"
-        for row in first.candidates
-    )
+    assert tuple(row.slot_index for row in first.candidates) == tuple(range(64))
+    assert first.success_count == 32
+    assert first.failure_count == 32
+    assert first.top_proposal_indices == (45, 47, 23, 63, 9)
     assert all(code in first.blockers for code in EXTERNAL_AUTHORITY_BLOCKERS)
     assert all(code in first.blockers for code in PIPELINE_CLAIM_BLOCKERS)
     document = first.to_dict()
-    assert document["scorer_source_sha256"] == hashlib.sha256(
+    assert document["scorer_implementation_source_sha256"] == hashlib.sha256(
         resources.files("betelgeuze_engine_v2.docking").joinpath("scorer_v1.py").read_bytes()
     ).hexdigest()
-    assert document["refiner_source_sha256"] == hashlib.sha256(
+    assert document["refiner_implementation_source_sha256"] == hashlib.sha256(
         resources.files("betelgeuze_engine_v2.docking")
         .joinpath("torsion_contact_refinement.py")
         .read_bytes()
     ).hexdigest()
     for receipt_field in (
-        "prepared_input_receipt_sha256",
-        "conformer_receipt_sha256",
-        "authority_input_receipt_sha256",
-        "proposal_plan_receipt_sha256",
+        "source_adapter_receipt_sha256",
+        "scientific_pipeline_receipt_sha256",
+        "fixture_admission_receipt_sha256",
     ):
         assert len(document[receipt_field]) == 64
     assert document["failure_denominator_preserved"] is True
-    assert document["caller_acknowledged_synthetic_fixture_only"] is True
-    assert document["synthetic_fixture_identity_independently_verified"] is True
     assert SYNTHETIC_D0_FIXTURE_ONLY_BLOCKER in first.blockers
-    assert document["synthetic_d0_fixture_manifest_sha256"] == (
+    assert document["fixture_manifest_sha256"] == (
         SYNTHETIC_D0_FIXTURE_MANIFEST_SHA256
     )
     assert document["request_sha256"] == SYNTHETIC_D0_FIXTURE_REQUEST_SHA256
-    assert (
-        document["synthetic_only_acknowledgment"]
-        == SYNTHETIC_ONLY_ACKNOWLEDGMENT
+    assert document["component_binding_mode"] == (
+        "sealed_fixed64_scientific_components"
     )
-    assert document["component_binding_mode"] == SEALED_CANONICAL_COMPONENT_BINDING
     assert document["canonical_components_sealed"] is True
     assert document["arbitrary_dependency_injection_used"] is False
     assert document["external_reservation_requested"] is False
-    assert document["historical_execution_authorized"] is False
-    assert document["fresh_holdout_execution_authorized"] is False
+    assert document["historical_or_fresh_execution_authorized"] is False
     assert document["product_execution_authorized"] is False
     assert document["public_or_scientific_claim_authorized"] is False
     assert document["claim_safe"] is False
     for row in first.candidates:
         assert len(row.receipt_sha256) == 64
-        assert row.to_dict()["construction_proof_scope"] == (
-            "process_local_not_serialized_not_cryptographic_attestation"
-        )
-        assert not any("proof_sha256" in key for key in row.to_dict())
-        if row.status == "success":
+        assert row.to_dict()["slot_preserved_in_denominator"] is True
+        if row.rank_eligible:
             assert row.scorer_terms is not None
-            assert row.refinement_receipt is not None
-            assert row.pose_validity is not None
+            assert row.pose_validity_result is not None
         else:
-            assert row.error_code
+            assert row.to_dict()["scorer_evidence"] is None
 
 
 def test_candidate_and_result_receipts_are_deep_canonical_and_fail_closed() -> None:
-    result = DockingPipeline().run(_request())
+    result = DockingPipeline()._run_legacy_v1(_request())
     successful = next(row for row in result.candidates if row.status == "success")
     refinement = successful.to_dict()["refinement_receipt"]
     assert isinstance(refinement, dict)
@@ -469,7 +457,7 @@ def test_dependency_injection_is_unverified_and_recorder_is_sealed(
         invalid_record_result,
     )
     with pytest.raises(TypeError, match="return exact DockingPipelineResultV1"):
-        DockingPipeline().run(_request())
+        DockingPipeline()._run_legacy_v1(_request())
 
 
 def test_internal_recorder_capability_blocks_direct_replay_and_crosswire(
@@ -494,7 +482,7 @@ def test_internal_recorder_capability_blocks_direct_replay_and_crosswire(
         return original_record(self, **kwargs)  # type: ignore[arg-type]
 
     monkeypatch.setattr(recorder_type, "_record", capture_record)
-    first = DockingPipeline().run(_request())
+    first = DockingPipeline()._run_legacy_v1(_request())
     assert len(captured) == 1
     recorder, issued_kwargs = captured[0]
     document = first.to_dict()
@@ -532,7 +520,7 @@ def test_internal_recorder_capability_blocks_direct_replay_and_crosswire(
 
     monkeypatch.setattr(recorder_type, "_record", crosswire_record)
     with pytest.raises(DockingPipelineError, match="object identity is cross-wired"):
-        DockingPipeline().run(_request())
+        DockingPipeline()._run_legacy_v1(_request())
 
     consumed_recorder = crosswire_capture["recorder"]
     consumed_kwargs = crosswire_capture["correct"]
@@ -584,8 +572,8 @@ def test_actual_fixed64_preserves_failures_and_is_repeatable(
         capture_core_result,
     )
     pipeline = DockingPipeline()
-    first = pipeline.run(_request())
-    second = pipeline.run(_request())
+    first = pipeline._run_legacy_v1(_request())
+    second = pipeline._run_legacy_v1(_request())
 
     assert first.receipt_sha256 == second.receipt_sha256
     assert len(captured_core_results) == 2

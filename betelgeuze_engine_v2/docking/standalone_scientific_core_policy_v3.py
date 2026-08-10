@@ -78,11 +78,13 @@ def frozen_standalone_scientific_core_policy() -> dict[str, object]:
             "request_and_fixture_admission_bound": True,
         },
         "consumer_contract": {
-            "canonical_docking_pipeline_activation_authorized": False,
-            "cli_activation_authorized": False,
-            "api_activation_authorized": False,
-            "benchmark_activation_authorized": False,
-            "product_shadow_activation_authorized": False,
+            "canonical_docking_pipeline_activation_authorized": True,
+            "cli_activation_authorized": True,
+            "api_activation_authorized": True,
+            "benchmark_activation_authorized": True,
+            "product_shadow_activation_authorized": True,
+            "activation_scope": "exact_repository_synthetic_d0_only",
+            "product_or_molecular_execution_authorized": False,
         },
         "authority": {
             "reservation_allowed": False,
@@ -99,7 +101,7 @@ def frozen_standalone_scientific_core_policy() -> dict[str, object]:
             "github_actions_production_authority_allowed": False,
             "test_double_production_authority_allowed": False,
         },
-        "status": "sealed_repository_synthetic_d0_standalone_core_only",
+        "status": "repository_synthetic_d0_consumers_activated_claim_blocked",
     }
 
 

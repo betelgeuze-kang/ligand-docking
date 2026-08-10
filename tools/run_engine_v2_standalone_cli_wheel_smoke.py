@@ -218,17 +218,31 @@ def run(work_directory: Path, *, forbidden_import_root: Path | None) -> None:
         or pocket_document.get("radius_angstrom") != 10.0
     ):
         raise RuntimeError("installed synthetic D0 pocket materialization changed")
-    candidates = result_document.get("candidate_evidence")
+    scientific = result_document.get("scientific_pipeline_receipt")
+    if not isinstance(scientific, dict):
+        raise RuntimeError("installed scientific pipeline receipt is missing")
+    final_batch = scientific.get("final_scoring_batch")
+    if not isinstance(final_batch, dict):
+        raise RuntimeError("installed final scoring batch is missing")
+    candidates = final_batch.get("records")
     top_indices = result_document.get("top_proposal_indices")
-    profile = result_document.get("profile")
+    valid_top_indices = result_document.get("top_valid_proposal_indices")
+    profile = result_document.get("pipeline_profile")
     request = result_document.get("request")
     if (
-        result_document.get("candidate_count") != 64
+        result_document.get("schema_id")
+        != "betelgeuze.engine_v2_standalone_scientific_core_receipt/1.0.0"
+        or result_document.get("candidate_denominator") != 64
         or not isinstance(candidates, list)
-        or [row.get("proposal_index") for row in candidates] != list(range(64))
+        or [row.get("slot_index") for row in candidates] != list(range(64))
         or result_document.get("success_count", 0)
         + result_document.get("failure_count", 0)
         != 64
+        or result_document.get("success_count") != 32
+        or result_document.get("failure_count") != 32
+        or result_document.get("score_evidence_complete_count") != 32
+        or result_document.get("pose_valid_count") != 32
+        or result_document.get("pose_invalid_count") != 0
         or result_document.get("failure_denominator_preserved") is not True
         or not isinstance(profile, dict)
         or profile.get("candidate_count") != 64
@@ -236,8 +250,31 @@ def run(work_directory: Path, *, forbidden_import_root: Path | None) -> None:
         or profile.get("failure_denominator_required") != 64
         or not isinstance(top_indices, list)
         or len(top_indices) != 5
+        or top_indices != [45, 47, 23, 63, 9]
+        or valid_top_indices != top_indices
+        or final_batch.get("candidate_denominator") != 64
+        or final_batch.get("score_evidence_complete_count") != 32
+        or final_batch.get("pose_valid_count") != 32
+        or final_batch.get("denominator_failure_complete") is not True
+        or final_batch.get("scorer_v1_terms_fully_preserved") is not True
     ):
-        raise RuntimeError("installed synthetic D0 fixed64/Top5 contract changed")
+        raise RuntimeError(
+            "installed scientific synthetic D0 fixed64/Top5 contract changed"
+        )
+    scored = [row for row in candidates if row.get("rank_eligible") is True]
+    if (
+        len(scored) != 32
+        or any(
+            not isinstance(row.get("scorer_evidence"), dict)
+            or not isinstance(row["scorer_evidence"].get("terms"), dict)
+            or not isinstance(row.get("pose_validity_evidence"), dict)
+            or row.get("valid_rank_eligible") is not True
+            for row in scored
+        )
+    ):
+        raise RuntimeError(
+            "installed scientific receipt lost scorer terms or validity evidence"
+        )
     if (
         not isinstance(request, dict)
         or request.get("request_sha256") != admission.request_sha256
@@ -246,42 +283,49 @@ def run(work_directory: Path, *, forbidden_import_root: Path | None) -> None:
         or request.get("ligand_system_sha256") != admission.ligand_system_sha256
         or request.get("pocket_fingerprint_sha256")
         != admission.pocket_fingerprint_sha256
-        or result_document.get("synthetic_d0_fixture_manifest_sha256")
-        != admission.manifest_sha256
-        or result_document.get(
-            "synthetic_d0_fixture_admission_receipt_sha256"
-        )
+        or result_document.get("fixture_manifest_sha256") != admission.manifest_sha256
+        or result_document.get("fixture_admission_receipt_sha256")
         != admission.receipt_sha256
-        or result_document.get("synthetic_only_acknowledgment")
+        or request.get("synthetic_only_acknowledgment")
         != engine.SYNTHETIC_ONLY_ACKNOWLEDGMENT
-        or result_document.get(
-            "caller_acknowledged_synthetic_fixture_only"
-        )
-        is not True
-        or result_document.get(
-            "synthetic_fixture_identity_independently_verified"
-        )
-        is not True
     ):
         raise RuntimeError("installed synthetic D0 admission binding changed")
     if (
         result_document.get("component_binding_mode")
-        != engine.SEALED_CANONICAL_COMPONENT_BINDING
+        != "sealed_fixed64_scientific_components"
         or result_document.get("canonical_components_sealed") is not True
         or result_document.get("arbitrary_dependency_injection_used") is not False
-        or result_document.get("evidence_record_capability_consumed") is not True
-        or result_document.get("canonical_evidence_recorder_factory_sealed")
-        is not True
+        or result_document.get("canonical_scientific_core_receipt") is not True
+        or result_document.get("complete_scorer_v1_terms_preserved") is not True
+        or result_document.get("complete_pose_validity_preserved") is not True
+        or result_document.get("primary_and_valid_only_rank_preserved") is not True
+        or result_document.get("consumer_activation_scope")
+        != "exact_repository_synthetic_d0_only"
     ):
-        raise RuntimeError("installed sealed component/recorder binding changed")
+        raise RuntimeError("installed sealed scientific component binding changed")
+    for field in (
+        "canonical_docking_pipeline_activation_authorized",
+        "cli_activation_authorized",
+        "api_activation_authorized",
+        "benchmark_activation_authorized",
+        "product_shadow_activation_authorized",
+    ):
+        if result_document.get(field) is not True:
+            raise RuntimeError(f"installed flow lost synthetic activation {field}")
     for field in (
         "external_reservation_requested",
-        "external_reservation_authorized",
-        "historical_execution_authorized",
-        "fresh_holdout_execution_authorized",
+        "producer_attested",
+        "activation_evidence_eligible",
+        "reservation_allowed",
+        "molecular_cohort_execution_authorized",
+        "historical_or_fresh_execution_authorized",
         "stage0_admission_authority",
         "product_execution_authorized",
+        "product_mutation_authorized",
+        "existing_rank_auto_change_authorized",
         "customer_pose_emission_authorized",
+        "public_benchmark_execution_authorized",
+        "hip_execution_authorized",
         "public_or_scientific_claim_authorized",
         "claim_safe",
     ):

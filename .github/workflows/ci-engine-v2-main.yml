@@ -40,6 +40,7 @@ on:
       - "config/engine_v2_mixed64_scientific_pipeline_v3.json"
       - "config/engine_v2_synthetic_d0_mixed64_source_v3.json"
       - "config/engine_v2_standalone_scientific_core_v3.json"
+      - "config/engine_v2_standalone_scientific_consumer_activation_v3.json"
       - "config/engine_v2_cpu_performance_profile.json"
       - "config/engine_v2_cpu_performance_v2_terminal_decision.json"
       - "config/engine_v2_cpu_performance_profile_v3.json"
@@ -69,6 +70,7 @@ on:
       - "tools/verify_engine_v2_mixed64_scientific_pipeline_v3.py"
       - "tools/verify_engine_v2_synthetic_d0_mixed64_source_v3.py"
       - "tools/verify_engine_v2_standalone_scientific_core_v3.py"
+      - "tools/verify_engine_v2_standalone_scientific_consumer_activation_v3.py"
       - "tools/verify_engine_v2_cpu_performance_profile.py"
       - "tools/verify_engine_v2_cpu_performance_v2_terminal_decision.py"
       - "tools/verify_engine_v2_cpu_performance_profile_v3.py"
@@ -76,6 +78,7 @@ on:
       - "tools/run_engine_v2_cpu_performance_qualification_v3.py"
       - "config/engine_v2_public_redocking_stage0_*.json"
       - "tests/unit/test_engine_v2_*.py"
+      - "tests/unit/test_verify_engine_v2_standalone_scientific_consumer_activation_v3.py"
       - "tests/unit/test_classify_engine_v2_stage0_full_suite.py"
       - "tests/unit/test_reconcile_engine_v2_stage0_full_suites.py"
       - "tests/unit/test_audit_engine_v2_ci_authority.py"
@@ -179,6 +182,7 @@ jobs:
             config/engine_v2_mixed64_scientific_pipeline_v3.json
             config/engine_v2_synthetic_d0_mixed64_source_v3.json
             config/engine_v2_standalone_scientific_core_v3.json
+            config/engine_v2_standalone_scientific_consumer_activation_v3.json
             config/engine_v2_cpu_performance_profile.json
             config/engine_v2_cpu_performance_v2_terminal_decision.json
             config/engine_v2_cpu_performance_profile_v3.json
@@ -218,6 +222,7 @@ jobs:
             tools/verify_engine_v2_mixed64_scientific_pipeline_v3.py
             tools/verify_engine_v2_synthetic_d0_mixed64_source_v3.py
             tools/verify_engine_v2_standalone_scientific_core_v3.py
+            tools/verify_engine_v2_standalone_scientific_consumer_activation_v3.py
             tools/verify_engine_v2_cpu_performance_profile.py
             tools/verify_engine_v2_cpu_performance_v2_terminal_decision.py
             tools/verify_engine_v2_cpu_performance_profile_v3.py
@@ -257,6 +262,7 @@ jobs:
             tests/unit/test_verify_engine_v2_synthetic_d0_mixed64_source_v3.py
             tests/unit/test_engine_v2_standalone_scientific_core_v3.py
             tests/unit/test_verify_engine_v2_standalone_scientific_core_v3.py
+            tests/unit/test_verify_engine_v2_standalone_scientific_consumer_activation_v3.py
             tests/unit/test_engine_v2_geometric_admission_v2.py
             tests/unit/test_engine_v2_pipeline_candidate_evidence_v2.py
             tests/unit/test_verify_engine_v2_mixed64_geometric_candidate_evidence_v2.py
@@ -361,6 +367,7 @@ jobs:
             docs/engine_v2_pr_overlap_matrix.md
             docs/engine_v2_status.md
             docs/engine_v2_public_api.md
+            docs/engine_v2_standalone_scientific_consumer_activation_v3.md
             docs/engine_v2_source_paired_clearance_activation.md
             docs/engine_v2_source_paired_clearance_selection_policy.md
             docs/engine_v2_source_paired_clearance_one_shot_ab.md
@@ -437,6 +444,7 @@ jobs:
             tools/verify_engine_v2_global_orientation_synthetic_contract.py \
             tools/verify_engine_v2_mixed64_geometric_candidate_evidence_v2.py \
             tools/verify_engine_v2_mixed64_candidate_evidence_artifact.py \
+            tools/verify_engine_v2_standalone_scientific_consumer_activation_v3.py \
             tools/verify_engine_v2_cpu_performance_profile.py \
             tools/verify_engine_v2_cpu_performance_v2_terminal_decision.py \
             tools/verify_engine_v2_cpu_performance_profile_v3.py \
@@ -482,6 +490,7 @@ jobs:
             /tmp/engine-v2-external-reservation-operations-decision.json
           python tools/verify_engine_v2_global_orientation_synthetic_contract.py
           python tools/verify_engine_v2_mixed64_geometric_candidate_evidence_v2.py
+          python tools/verify_engine_v2_standalone_scientific_consumer_activation_v3.py
           python tools/verify_engine_v2_cpu_performance_profile.py \
             > /tmp/engine-v2-cpu-performance-profile.json
           grep -q '"live_run_capability":false' \
@@ -636,6 +645,7 @@ jobs:
             tests/unit/test_verify_engine_v2_synthetic_d0_mixed64_source_v3.py \
             tests/unit/test_engine_v2_standalone_scientific_core_v3.py \
             tests/unit/test_verify_engine_v2_standalone_scientific_core_v3.py \
+            tests/unit/test_verify_engine_v2_standalone_scientific_consumer_activation_v3.py \
             tests/unit/test_engine_v2_geometric_admission_v2.py \
             tests/unit/test_engine_v2_pipeline_candidate_evidence_v2.py \
             tests/unit/test_verify_engine_v2_mixed64_geometric_candidate_evidence_v2.py \

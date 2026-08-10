@@ -14,17 +14,16 @@ from typing import Literal
 
 from .pipeline import (
     CURRENT_V7_FIXED64_PROFILE_ID,
-    SEALED_CANONICAL_COMPONENT_BINDING,
     DockingPipeline,
     DockingPipelineError,
     DockingPipelineRequestV1,
-    DockingPipelineResultV1,
     SyntheticD0FixtureAdmissionV1,
     repository_synthetic_d0_fixture_admission,
 )
+from .standalone_scientific_core_v3 import StandaloneScientificCoreReceiptV1
 
 
-CONSUMER_ENVELOPE_SCHEMA_ID = "betelgeuze.engine_v2_standalone_consumer_envelope/1.2.0"
+CONSUMER_ENVELOPE_SCHEMA_ID = "betelgeuze.engine_v2_standalone_consumer_envelope/1.3.0"
 DIAGNOSTIC_BENCHMARK_SCOPE = "d0_synthetic_test_fixture"
 ConsumerSurface = Literal["python_api", "benchmark_adapter", "product_shadow"]
 
@@ -108,7 +107,7 @@ class StandaloneConsumerEnvelopeV1:
     """Surface receipt that embeds the exact, unmodified core result."""
 
     surface: ConsumerSurface
-    result: DockingPipelineResultV1 = field(repr=False, compare=False)
+    result: StandaloneScientificCoreReceiptV1 = field(repr=False, compare=False)
     context_id: str
     evidence_display_allowed: bool
     operator_second_opinion_allowed: bool
@@ -121,15 +120,20 @@ class StandaloneConsumerEnvelopeV1:
             "product_shadow",
         }:
             raise DockingPipelineError("standalone consumer surface is unsupported")
-        if type(self.result) is not DockingPipelineResultV1:
-            raise TypeError("result must be exact DockingPipelineResultV1")
+        if type(self.result) is not StandaloneScientificCoreReceiptV1:
+            raise TypeError(
+                "result must be exact StandaloneScientificCoreReceiptV1"
+            )
         admission = _exact_admission_for_request(self.result.request)
         _surface_context(
             admission,
             surface=self.surface,
             context_id=self.context_id,
         )
-        if self.result.component_binding_mode != SEALED_CANONICAL_COMPONENT_BINDING:
+        if (
+            self.result.component_binding_mode
+            != "sealed_fixed64_scientific_components"
+        ):
             raise DockingPipelineError(
                 "standalone consumers require the sealed canonical core"
             )
@@ -284,11 +288,16 @@ class StandaloneProductShadowAdapter:
 
 def run_standalone_docking(
     request: DockingPipelineRequestV1,
-) -> DockingPipelineResultV1:
+) -> StandaloneScientificCoreReceiptV1:
     """Return the unwrapped, unmodified exact core receipt."""
 
     _exact_admission_for_request(request)
-    return DockingPipeline().run(request)
+    result = DockingPipeline().run(request)
+    if type(result) is not StandaloneScientificCoreReceiptV1:
+        raise TypeError(
+            "canonical pipeline must return exact StandaloneScientificCoreReceiptV1"
+        )
+    return result
 
 
 __all__ = [

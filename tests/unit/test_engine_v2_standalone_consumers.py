@@ -26,7 +26,6 @@ from betelgeuze_engine_v2.docking import (  # noqa: E402
     DIAGNOSTIC_BENCHMARK_SCOPE,
     DockingScope,
     PocketDefinition,
-    SEALED_CANONICAL_COMPONENT_BINDING,
     StandaloneDiagnosticBenchmarkAdapter,
     StandaloneDockingPythonApi,
     StandaloneProductShadowAdapter,
@@ -178,8 +177,8 @@ def test_all_consumers_expose_the_same_unmodified_fixed64_core_receipt(
 
     assert calls == [request, request, request, request]
     assert direct is exact_core_result
-    assert (
-        exact_core_result.component_binding_mode == SEALED_CANONICAL_COMPONENT_BINDING
+    assert exact_core_result.component_binding_mode == (
+        "sealed_fixed64_scientific_components"
     )
     assert len(exact_core_result.candidates) == 64
     assert exact_core_result.request.profile.top_k == 5

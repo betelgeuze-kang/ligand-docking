@@ -398,50 +398,44 @@ any component or scorer call. Arbitrary coordinates, pockets, seeds, and
 profiles therefore fail before computation. This repository-fixture identity
 check is not external execution authority, scientific admission, or a molecular
 experiment authorization. The admitted profile binds the current V7,
-Scorer-v1, full fixed-64/Top-5 budget and proposal-plan receipts.
+Scorer-v1, full fixed-64/Top-5 budget, allocation, and proposal receipts.
 
-The no-argument pipeline seals the exact canonical component types and IDs.
-The public constructor rejects supplied dependencies before execution. The
-underscore-prefixed internal test factory is the only dependency-injected path;
-its result records `internal_test_only_unverified_components`,
-`arbitrary_dependency_injection_unverified`, and
-`unverified_component_side_effects_unknown`. Network, reservation, chemistry,
-and pocket-prediction observations are `null`, rather than falsely asserted
-absent, for that path. Its component IDs are fixed to `UNVERIFIED`, and its
-scorer/refiner implementation source identities are `null`; caller component
-labels cannot become receipt evidence.
+The no-argument pipeline is now the exact repository-synthetic scientific
+route. `DockingPipeline.run()` calls the bounded standalone scientific executor
+once and returns an exact `StandaloneScientificCoreReceiptV1`. That executor
+owns the source adapter, current V7 refiner, Scorer-v1 instance, and fixed-64
+scientific pipeline; callers cannot supply source bundles, allocations,
+coordinates, components, scores, terms, validity decisions, ranks, thresholds,
+or weights.
 
-The evidence recorder is private, non-exported, and not dependency-injectable.
-Each `run()` rederives package source hashes, evidence-safe component IDs, and
-the sealed-or-unverified binding internally. It then issues one opaque,
-process-local capability bound to the exact request, budget, proposal plan,
-Scorer-v1 result object and receipt, refiner receipts, admission statuses, and
-Top-K. The private recorder consumes that capability before validation and
-cannot reuse it after success or failure. Its record method accepts no caller
-source hashes, component IDs, or binding mode. Direct calls, replay, and
-cross-run result substitution therefore fail closed without minting a result.
+The scientific route executes these receipt-bound stages in order:
 
-Candidate receipts
-deep-canonicalize nested evidence and enforce disjoint success/failure states;
-result receipts independently rederive the exact stable MINIMIZE Top-K and
-reject missing, reordered, duplicate, out-of-range, failed, or ineligible
-references. Candidate and result objects also carry a process-local HMAC
-construction proof that only the canonical recorder creates. The proof is
-rechecked whenever a receipt is read, so a format-valid `dataclasses.replace`
-cannot substitute lineage, component binding, or nested receipt content. The
-proof and key are never serialized; the serialized `receipt_sha256` remains a
-deterministic structural self-hash, not a signature, cryptographic attestation,
-or cross-process trust proof. These process-local controls protect the supported
-API against accidental minting, replay, and ordinary cross-wiring; they are not
-a security boundary against hostile same-process reflection, private-name
-access, memory inspection, monkeypatching, or arbitrary code execution.
-`DockingPipelineResultV1` retains all candidate
-failures, complete
-successful score-term/validity/refinement evidence, all required claim blockers,
-and false Historical, Fresh, Stage 0, product, customer-pose, and
-public/scientific authorities. The pass-through geometric-admission component
-records that the future surface-aware gate is not enabled and never removes a
-candidate.
+1. repository synthetic-D0 source adaptation;
+2. fixed mixed-64 proposal production, including deterministic SO(3),
+   surface-aware, and single-anchor lanes;
+3. pre-refinement `GeometricAdmissionV3`, preserving every rejected slot as a
+   typed denominator row;
+4. operational proposal materialization;
+5. the exact current V7 post-admission refinement for slots 24--43; and
+6. Scorer-v1, pose validity, primary ranking, and valid-only stable ranking.
+
+The receipt embeds the source and scientific-pipeline receipts, binds every
+stage SHA-256, and preserves all 64 slots. Every rank-eligible row retains the
+complete `ScorerV1Terms` receipt, proposal identity, score, validity evidence,
+and both rank domains. Upstream, scorer, and validity failures remain typed
+rows; they are never deleted from the denominator. The exact repository fixture
+currently yields 32 scored/valid rows and 32 typed upstream failures, with
+stable Top-5 indices `45, 47, 23, 63, 9`. These fixture values are deterministic
+software evidence only, not docking-performance evidence.
+
+The public constructor still rejects supplied dependencies. The
+underscore-prefixed internal dependency-injected path and legacy
+`DockingPipelineResultV1` recorder remain only for isolated component and
+legacy-verifier regression tests. They cannot be reached by the canonical CLI,
+Python API, diagnostic benchmark, or product-shadow adapters and retain their
+explicit unverified-component blockers. Serialized receipt SHA-256 values are
+deterministic structural self-hashes, not signatures, external attestations, or
+cross-process trust proofs.
 
 The component boundary performs no file parsing, protonation, tautomer
 selection, charge generation, pocket prediction, external reservation,
@@ -497,16 +491,18 @@ is unavailable there.
 Argument-admission failures use the same single canonical failure JSON as
 runtime failures.
 
-`verify` checks exact serialized keys, embedded self-hashes, available receipt
-cross-bindings, the fixed-64 failure denominator, full budget and proposal-plan
-receipts, complete candidate failure rows, score-term decomposition, stable
-Top-K semantics up to the profile's Top-5 bound, sealed component-binding
-declarations, and false authority
-fields. Serialized construction/capability scope flags are structural receipt
-fields only; `verify` does not possess or validate the process-local private
-construction proof. Opaque prepared-input, conformer, guided-search,
-authenticated-search, and Scorer-v1 receipt digests are checked as digest fields
-but their upstream contents are not embedded or reconstructed. The output uses
+`verify` recognizes the current `StandaloneScientificCoreReceiptV1` schema and
+the legacy V1 schema. For the current schema it checks exact serialized keys;
+all available source, scientific-pipeline, batch, candidate, Scorer-v1 term, and
+validity self-hashes; request/fixture/source/allocation/stage cross-bindings; the
+fixed-64 typed-failure denominator; complete score-term and pose-validity
+evidence; primary and valid-only stable rankings; sealed component declarations;
+and every false production, molecular, benchmark, HIP, and claim authority.
+Counts, Top-5, valid Top-5, and invalid-Top-1 are rederived from the 64 candidate
+rows rather than trusted from serialized summaries. The legacy path retains its
+earlier structural checks only for compatibility and regression testing.
+
+The output uses
 `available_structural_cross_bindings_verified` and
 `available_derived_semantics_verified`, supplies an explicit
 `verified_structural_items` list, and keeps

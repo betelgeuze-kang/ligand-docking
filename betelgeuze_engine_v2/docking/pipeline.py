@@ -18,7 +18,7 @@ import math
 import secrets
 import threading
 from types import MappingProxyType
-from typing import Mapping, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Mapping, Protocol, runtime_checkable
 
 import torch
 
@@ -50,6 +50,9 @@ from .torsion_contact_refinement import (
     INTERACTION_AWARE_TORSION_CONTACT_RECEIPT_V7_SCHEMA_ID,
     InteractionAwareTorsionContactEnsembleRefinerV7,
 )
+
+if TYPE_CHECKING:
+    from .standalone_scientific_core_v3 import StandaloneScientificCoreReceiptV1
 
 
 PIPELINE_REQUEST_SCHEMA_ID = "betelgeuze.engine_v2_docking_pipeline_request/1.0.0"
@@ -2724,7 +2727,50 @@ class DockingPipeline:
             return self._observed_component_ids()
         return _unverified_component_ids()
 
-    def run(self, request: DockingPipelineRequestV1) -> DockingPipelineResultV1:
+    def run(
+        self,
+        request: DockingPipelineRequestV1,
+    ) -> DockingPipelineResultV1 | StandaloneScientificCoreReceiptV1:
+        """Run the sealed scientific core or the isolated unverified DI path.
+
+        The no-argument canonical pipeline returns the exact repository
+        synthetic-D0 fixed64 scientific receipt. Dependency-injected internal
+        tests retain the legacy V1 recorder path and remain explicitly
+        unverified.
+        """
+
+        if type(request) is not DockingPipelineRequestV1:
+            raise TypeError("request must be exact DockingPipelineRequestV1")
+        request._assert_fixture_admission()
+        if request.request_sha256 != request.fixture_admission.request_sha256:
+            raise DockingPipelineError(
+                "pipeline request is cross-wired from its synthetic D0 admission"
+            )
+        self._assert_component_contracts()
+        if self._component_binding_mode == SEALED_CANONICAL_COMPONENT_BINDING:
+            from .standalone_scientific_core_v3 import (
+                StandaloneScientificCoreReceiptV1,
+                execute_repository_synthetic_d0_standalone_scientific_core,
+            )
+
+            recorded = execute_repository_synthetic_d0_standalone_scientific_core(
+                request
+            )
+            if type(recorded) is not StandaloneScientificCoreReceiptV1:
+                raise TypeError(
+                    "canonical scientific core must return exact "
+                    "StandaloneScientificCoreReceiptV1"
+                )
+            recorded.receipt_sha256
+            return recorded
+        return self._run_legacy_v1(request)
+
+    def _run_legacy_v1(
+        self,
+        request: DockingPipelineRequestV1,
+    ) -> DockingPipelineResultV1:
+        """Retain V1 only for internal DI and legacy verifier regression tests."""
+
         if type(request) is not DockingPipelineRequestV1:
             raise TypeError("request must be exact DockingPipelineRequestV1")
         request._assert_fixture_admission()

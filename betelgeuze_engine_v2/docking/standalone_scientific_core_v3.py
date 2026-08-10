@@ -72,7 +72,7 @@ _MAX_CANONICAL_RECEIPT_BYTES: Final = 256 * 1024 * 1024
 STANDALONE_SCIENTIFIC_CORE_BLOCKERS: Final = (
     *PIPELINE_CLAIM_BLOCKERS,
     "fixed64_source_producer_not_attested",
-    "standalone_scientific_core_not_consumer_activated",
+    "standalone_scientific_core_not_product_qualified",
 )
 STANDALONE_SCIENTIFIC_CORE_COMPONENT_IDS: Final = {
     "source_adapter": (
@@ -406,11 +406,12 @@ class StandaloneScientificCoreReceiptV1:
             "external_reservation_requested": False,
             "producer_attested": False,
             "activation_evidence_eligible": False,
-            "canonical_docking_pipeline_activation_authorized": False,
-            "cli_activation_authorized": False,
-            "api_activation_authorized": False,
-            "benchmark_activation_authorized": False,
-            "product_shadow_activation_authorized": False,
+            "canonical_docking_pipeline_activation_authorized": True,
+            "cli_activation_authorized": True,
+            "api_activation_authorized": True,
+            "benchmark_activation_authorized": True,
+            "product_shadow_activation_authorized": True,
+            "consumer_activation_scope": "exact_repository_synthetic_d0_only",
             "reservation_allowed": False,
             "molecular_cohort_execution_authorized": False,
             "historical_or_fresh_execution_authorized": False,
