@@ -1,0 +1,6 @@
+BETELGEUZE_ENGINE_1.0 {
+    global:
+        bg_*;
+    local:
+        *;
+};

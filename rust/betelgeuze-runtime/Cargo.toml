@@ -1,0 +1,10 @@
+[package]
+name = "betelgeuze-runtime"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license-file.workspace = true
+publish = false
+
+[dependencies]
+betelgeuze-sys = { version = "0.1.0", path = "../betelgeuze-sys" }

@@ -1,0 +1,69 @@
+name: ci-native-compute-abi
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "CMakeLists.txt"
+      - "include/betelgeuze/**"
+      - "native/**"
+      - "rust/**"
+      - ".github/workflows/ci-native-compute-abi.yml"
+  pull_request:
+    paths:
+      - "CMakeLists.txt"
+      - "include/betelgeuze/**"
+      - "native/**"
+      - "rust/**"
+      - ".github/workflows/ci-native-compute-abi.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-native-compute-abi-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  hosted-cpu-abi:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CUDA_VISIBLE_DEVICES: ""
+      HIP_VISIBLE_DEVICES: ""
+      ROCR_VISIBLE_DEVICES: ""
+    steps:
+      - name: Check out native compute sources
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          clean: true
+          sparse-checkout: |
+            CMakeLists.txt
+            LICENSE
+            include
+            native
+            rust
+
+      - name: Report hosted toolchain
+        run: |
+          cmake --version
+          c++ --version
+          rustc --version
+          cargo --version
+
+      - name: Build and test the C ABI
+        run: |
+          cmake -S . -B build/native -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+          cmake --build build/native --parallel 2
+          ctest --test-dir build/native --output-on-failure
+
+      - name: Check Rust formatting
+        run: cargo fmt --manifest-path rust/Cargo.toml --all -- --check
+
+      - name: Lint Rust workspace
+        run: cargo clippy --manifest-path rust/Cargo.toml --workspace --all-targets --locked -- -D warnings
+
+      - name: Test Rust C++ boundary
+        run: cargo test --manifest-path rust/Cargo.toml --workspace --locked
