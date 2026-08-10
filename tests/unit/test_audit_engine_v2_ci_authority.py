@@ -133,6 +133,14 @@ def _write_cpu_performance_contract(
     )
     profile_v3 = tmp_path / "config/engine_v2_cpu_performance_profile_v3.json"
     profile_v3.write_bytes(profile_v3_source.read_bytes())
+    activation_source = (
+        Path(__file__).resolve().parents[2]
+        / "config/engine_v2_cpu_performance_v3_runner_activation.json"
+    )
+    activation = (
+        tmp_path / "config/engine_v2_cpu_performance_v3_runner_activation.json"
+    )
+    activation.write_bytes(activation_source.read_bytes())
 
 
 def _write_mixed64_v2_contract(
@@ -609,6 +617,45 @@ def test_cpu_performance_v3_escalation_fails_ci_audit(
     profile_v3[section][field] = value
     profile_v3_path.write_text(
         json.dumps(profile_v3, indent=2, sort_keys=True) + "\n",
+        encoding="ascii",
+    )
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_cpu_performance_ci_tokens()), encoding="utf-8"
+    )
+
+    payload = build_inventory(tmp_path)
+    assert payload["cpu_performance_authority_fail_closed"] is False
+    assert payload["cpu_performance_contract_in_authoritative_ci"] is False
+
+
+@pytest.mark.parametrize(
+    ("section", "field", "value"),
+    (
+        ("authority", "molecular_execution_authorized", True),
+        ("restrictions", "reservation_allowed", True),
+        ("runner", "caller_supplied_probe_allowed", True),
+        ("runner", "exactly_once_profile_attempt", False),
+        ("runner", "github_actions_live_execution_allowed", True),
+        ("runner", "molecular_execution_allowed", True),
+        ("runner", "result_dependent_configuration_allowed", True),
+        ("runner", "test_double_execution_authority", True),
+    ),
+)
+def test_cpu_performance_v3_runner_activation_escalation_fails_ci_audit(
+    tmp_path: Path,
+    section: str,
+    field: str,
+    value: object,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_cpu_performance_contract(tmp_path)
+    activation_path = (
+        tmp_path / "config/engine_v2_cpu_performance_v3_runner_activation.json"
+    )
+    activation = json.loads(activation_path.read_text(encoding="ascii"))
+    activation[section][field] = value
+    activation_path.write_text(
+        json.dumps(activation, indent=2, sort_keys=True) + "\n",
         encoding="ascii",
     )
     (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(

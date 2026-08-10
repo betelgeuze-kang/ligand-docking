@@ -40,6 +40,7 @@ on:
       - "config/engine_v2_cpu_performance_profile.json"
       - "config/engine_v2_cpu_performance_v2_terminal_decision.json"
       - "config/engine_v2_cpu_performance_profile_v3.json"
+      - "config/engine_v2_cpu_performance_v3_runner_activation.json"
       - "tools/build_engine_v2_wheel.py"
       - "tools/build_engine_v2_native_wheel.py"
       - "tools/run_engine_v2_cpu_performance_qualification.py"
@@ -66,6 +67,7 @@ on:
       - "tools/verify_engine_v2_cpu_performance_v2_terminal_decision.py"
       - "tools/verify_engine_v2_cpu_performance_profile_v3.py"
       - "tools/preflight_engine_v2_cpu_performance_v3.py"
+      - "tools/run_engine_v2_cpu_performance_qualification_v3.py"
       - "config/engine_v2_public_redocking_stage0_*.json"
       - "tests/unit/test_engine_v2_*.py"
       - "tests/unit/test_classify_engine_v2_stage0_full_suite.py"
@@ -137,6 +139,8 @@ jobs:
           clean: true
           sparse-checkout: |
             betelgeuze_engine_v2
+            betelgeuze_engine_v2/docking/performance_host_preflight_v3.py
+            betelgeuze_engine_v2/docking/performance_qualification_v3.py
             betelgeuze_engine_v2/benchmark/source_paired_clearance_activation.py
             betelgeuze_engine_v2/docking/source_paired_clearance_activation.py
             packaging/engine-v2
@@ -163,6 +167,7 @@ jobs:
             config/engine_v2_cpu_performance_profile.json
             config/engine_v2_cpu_performance_v2_terminal_decision.json
             config/engine_v2_cpu_performance_profile_v3.json
+            config/engine_v2_cpu_performance_v3_runner_activation.json
             config/engine_v2_public_redocking_stage0_threshold_evidence.json
             tools/__init__.py
             tools/build_engine_v2_wheel.py
@@ -193,6 +198,7 @@ jobs:
             tools/verify_engine_v2_cpu_performance_v2_terminal_decision.py
             tools/verify_engine_v2_cpu_performance_profile_v3.py
             tools/preflight_engine_v2_cpu_performance_v3.py
+            tools/run_engine_v2_cpu_performance_qualification_v3.py
             config/engine_v2_public_redocking_stage0_freeze.template.json
             config/engine_v2_public_redocking_stage0_attestation.template.json
             config/engine_v2_public_redocking_stage0_threshold_evidence.template.json
@@ -218,6 +224,7 @@ jobs:
             tests/unit/test_verify_engine_v2_cpu_performance_v2_terminal_decision.py
             tests/unit/test_engine_v2_cpu_performance_host_preflight_v3.py
             tests/unit/test_verify_engine_v2_cpu_performance_profile_v3.py
+            tests/unit/test_engine_v2_cpu_performance_qualification_v3.py
             tests/unit/test_engine_v2_native_geometric_admission.py
             tests/unit/test_engine_v2_oracle_selection_metrics.py
             tests/unit/test_engine_v2_oracle_selection_evidence.py
@@ -392,6 +399,7 @@ jobs:
             tools/verify_engine_v2_cpu_performance_v2_terminal_decision.py \
             tools/verify_engine_v2_cpu_performance_profile_v3.py \
             tools/preflight_engine_v2_cpu_performance_v3.py \
+            tools/run_engine_v2_cpu_performance_qualification_v3.py \
             tools/run_engine_v2_cpu_performance_qualification.py
           python tools/check_engine_v2_architecture.py
           python tools/verify_engine_v2_phase25_cohort_admission.py
@@ -454,6 +462,13 @@ jobs:
             /tmp/engine-v2-cpu-performance-preflight-v3.json
           grep -q '"execution_authorized":false' \
             /tmp/engine-v2-cpu-performance-preflight-v3.json
+          python tools/run_engine_v2_cpu_performance_qualification_v3.py \
+            --verify-activation \
+            > /tmp/engine-v2-cpu-performance-runner-v3.json
+          grep -q '"github_actions_live_execution_allowed":false' \
+            /tmp/engine-v2-cpu-performance-runner-v3.json
+          grep -q '"molecular_execution":false' \
+            /tmp/engine-v2-cpu-performance-runner-v3.json
 
       - name: Run complete focused Engine v2 CPU suite
         shell: bash
@@ -570,6 +585,7 @@ jobs:
             tests/unit/test_verify_engine_v2_cpu_performance_v2_terminal_decision.py \
             tests/unit/test_engine_v2_cpu_performance_host_preflight_v3.py \
             tests/unit/test_verify_engine_v2_cpu_performance_profile_v3.py \
+            tests/unit/test_engine_v2_cpu_performance_qualification_v3.py \
             tests/unit/test_engine_v2_native_geometric_admission.py \
             tests/unit/test_engine_v2_oracle_selection_metrics.py \
             tests/unit/test_engine_v2_oracle_selection_evidence.py \
@@ -653,6 +669,8 @@ jobs:
           import betelgeuze_engine_v2.docking.geometric_admission_v2
           import betelgeuze_engine_v2.docking.mixed64_allocation
           import betelgeuze_engine_v2.docking.pipeline_candidate_evidence_v2
+          import betelgeuze_engine_v2.docking.performance_host_preflight_v3
+          import betelgeuze_engine_v2.docking.performance_qualification_v3
           import betelgeuze_engine_v2.docking.performance_sidecar
           from betelgeuze_engine_v2.benchmark import (
               ExternalBaselineEngine,
