@@ -48,7 +48,9 @@ COPY tools ./tools
 COPY config ./config
 COPY rust_engine ./rust_engine
 COPY third_party ./third_party
-RUN python -m pip install --no-cache-dir --upgrade pip \
+RUN test ! -e /app/benchmarks \
+    && python tools/check_external_oracle_architecture.py --root /app --product-image \
+    && python -m pip install --no-cache-dir --upgrade pip \
     && python -m pip install --no-cache-dir . \
     && python -m pip install --no-cache-dir -r requirements-api.txt -r requirements-deploy.txt -r requirements-product-rocm.txt \
     && python tools/build_rust_hip_engine.py --output /app \
@@ -56,11 +58,22 @@ RUN python -m pip install --no-cache-dir --upgrade pip \
     && python -c "import json; from pathlib import Path; Path('runs/independent_engine_roadmap_status_current.json').write_text(json.dumps({'summary': {'status': 'independent_engine_roadmap_closed', 'engine_dispatch_ready': True, 'scoring_ranking_contract_ready': True, 'source': 'product_image_build_time_fixture'}}, indent=2, sort_keys=True) + '\n', encoding='utf-8')" \
     && python - <<'PY'
 import importlib
+import sys
 import torch
 
 assert torch.version.hip, "Product image must use a PyTorch ROCm/HIP build"
+external_roots = {"openmm", "simtk", "gmxapi", "gromacs", "vina", "gnina"}
+loaded_before = set(sys.modules)
 importlib.import_module("ldi_arc_rust")
+importlib.import_module("tools.run_ligand_htvs_pipeline")
 importlib.import_module("tools.run_ligand_backmapping_scoring")
+importlib.import_module("tools.run_ligand_topk_delivery")
+importlib.import_module("tools.run_tier_beta_vertical_slice")
+loaded_by_product = {
+    name.split(".", 1)[0]
+    for name in set(sys.modules) - loaded_before
+}
+assert not (loaded_by_product & external_roots), loaded_by_product & external_roots
 print("product rocm hip rust import ok")
 PY
 

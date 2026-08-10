@@ -12,11 +12,13 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 
+from benchmarks.oracles.openmm import load_openmm
 from core.definitions import ResearchConstants
 
 try:
-    import openmm as mm
-    import openmm.unit as unit
+    _openmm = load_openmm()
+    mm = _openmm.mm
+    unit = _openmm.unit
 except Exception as exc:  # pragma: no cover
     raise RuntimeError(
         "openmm is required for this script. Install with: python3 -m pip install --user openmm"

@@ -1,0 +1,28 @@
+{
+  "case_id": "harmonic-bond-stretched-v1",
+  "expected": {
+    "energy_kcal_per_mol": 1.0,
+    "force_x_kcal_per_mol_angstrom": [10.0, -10.0]
+  },
+  "request": {
+    "case_id": "harmonic-bond-stretched-v1",
+    "engine_id": "openmm",
+    "input_sha256": {
+      "prepared_system": "1f75c513f5e4499c40d4adac5429c5e219b915aa39d9fdb61a31d7417fe0b2c1"
+    },
+    "parameters": {
+      "distance_angstrom": 1.2,
+      "equilibrium_angstrom": 1.0,
+      "force_constant_kcal_per_mol_angstrom2": 50.0
+    },
+    "seed": 0,
+    "task": "energy_force",
+    "thread_count": 1
+  },
+  "schema_id": "betelgeuze.openmm_harmonic_bond_fixture/2.0.0",
+  "smoke_parameters": {
+    "distance_angstrom": 1.2,
+    "equilibrium_angstrom": 1.0,
+    "force_constant_kcal_per_mol_angstrom2": 50.0
+  }
+}

@@ -6,12 +6,12 @@ import datetime as dt
 import math
 import os
 import subprocess
-import tempfile
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 
+from benchmarks.oracles.openmm import load_openmm
 from tools.lib.artifacts import (
     artifact as _artifact,
     read_json as _read_json,
@@ -272,7 +272,7 @@ def _write_integrated_complex_pdb(protein_pdb: str | Path, ligand_pdb: str | Pat
 
 def _available_platform(preferred: str) -> str:
     try:
-        import openmm as mm  # type: ignore
+        mm = load_openmm().mm
 
         names = [mm.Platform.getPlatform(i).getName() for i in range(mm.Platform.getNumPlatforms())]
         if preferred and preferred in names:
@@ -432,9 +432,14 @@ def _parameterize_and_minimize(
         }
 
     try:
-        import openmm as mm  # type: ignore
-        from openmm import unit  # type: ignore
-        from openmm.app import ForceField, Modeller, NoCutoff, PDBFile, Simulation  # type: ignore
+        openmm = load_openmm()
+        mm = openmm.mm
+        unit = openmm.unit
+        ForceField = openmm.app.ForceField
+        Modeller = openmm.app.Modeller
+        NoCutoff = openmm.app.NoCutoff
+        PDBFile = openmm.app.PDBFile
+        Simulation = openmm.app.Simulation
     except Exception as exc:
         return {
             **row,

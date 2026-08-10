@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import argparse
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import shutil
 import subprocess
 import sys
@@ -24,13 +24,52 @@ PROHIBITED_WHEEL_PREFIXES = (
 DEFAULT_SOURCE_DATE_EPOCH = 1_735_689_600  # 2025-01-01T00:00:00Z
 
 
-def _verify_wheel_members(path: Path) -> None:
+def _is_benchmark_package_member(member: str) -> bool:
+    """Return whether a wheel member can install the benchmark namespace."""
+
+    if (
+        not member
+        or "\x00" in member
+        or "\\" in member
+        or member.startswith("/")
+        or any(part in {"", ".", ".."} for part in member.rstrip("/").split("/"))
+    ):
+        raise RuntimeError(f"wheel contains a non-canonical member: {member!r}")
+    parts = PurePosixPath(member).parts
+    if not parts:
+        return False
+    package_parts = parts
+    if parts[0].endswith(".data"):
+        if len(parts) < 3 or parts[1] not in {"purelib", "platlib"}:
+            return False
+        package_parts = parts[2:]
+    return bool(package_parts) and package_parts[0] in {"benchmarks", "benchmarks.py"}
+
+
+def verify_no_benchmark_package_members(path: Path) -> None:
+    """Reject benchmark packages in wheel roots and wheel library schemes."""
+
     with zipfile.ZipFile(path) as archive:
-        members = [name for name in archive.namelist() if not name.endswith("/")]
+        leaked = sorted(
+            member
+            for member in archive.namelist()
+            if _is_benchmark_package_member(member)
+        )
+    if leaked:
+        raise RuntimeError("benchmark oracle entered wheel: " + ", ".join(leaked))
+
+
+def _verify_wheel_members(path: Path) -> None:
+    verify_no_benchmark_package_members(path)
+    with zipfile.ZipFile(path) as archive:
+        archive_members = archive.namelist()
+    members = [name for name in archive_members if not name.endswith("/")]
     for member in members:
         if member.startswith(PROHIBITED_WHEEL_PREFIXES):
             raise RuntimeError(f"prohibited package entered Engine v2 wheel: {member}")
-    package_members = [name for name in members if name.startswith("betelgeuze_engine_v2/")]
+    package_members = [
+        name for name in members if name.startswith("betelgeuze_engine_v2/")
+    ]
     if not package_members:
         raise RuntimeError("Engine v2 wheel contains no betelgeuze_engine_v2 package")
     if "betelgeuze_engine_v2/py.typed" not in package_members:
@@ -49,7 +88,9 @@ def _verify_wheel_members(path: Path) -> None:
     }
     unexpected = sorted(top_levels - ALLOWED_TOP_LEVEL)
     if unexpected:
-        raise RuntimeError("unexpected top-level wheel packages: " + ", ".join(unexpected))
+        raise RuntimeError(
+            "unexpected top-level wheel packages: " + ", ".join(unexpected)
+        )
 
 
 def _normalized_epoch(value: int | str | None) -> int:
@@ -64,7 +105,9 @@ def _normalize_build_tree(path: Path, *, epoch: int) -> None:
             shutil.rmtree(candidate)
             continue
         if candidate.is_symlink():
-            raise RuntimeError(f"Engine v2 build context may not contain symlinks: {candidate}")
+            raise RuntimeError(
+                f"Engine v2 build context may not contain symlinks: {candidate}"
+            )
         os.utime(candidate, (epoch, epoch), follow_symlinks=False)
     os.utime(path, (epoch, epoch), follow_symlinks=False)
 
@@ -123,7 +166,9 @@ def build_wheel(
 
     wheels = sorted(output_dir.glob("betelgeuze_engine_v2-*.whl"))
     if len(wheels) != 1:
-        raise RuntimeError(f"expected exactly one Engine v2 wheel, observed {len(wheels)}")
+        raise RuntimeError(
+            f"expected exactly one Engine v2 wheel, observed {len(wheels)}"
+        )
     _verify_wheel_members(wheels[0])
     return wheels[0]
 
