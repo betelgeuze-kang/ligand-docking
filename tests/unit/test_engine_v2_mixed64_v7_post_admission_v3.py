@@ -179,9 +179,26 @@ def _feature_evidence() -> tuple[Mixed64AtomicFeatureEvidence, ...]:
     )
 
 
-def _fixture(*, legacy_exact_identity: bool = False):
+def _fixture(
+    *,
+    legacy_exact_identity: bool = False,
+    scoring_ready: bool = False,
+):
     ligand = _ligand()
     receptor = _receptor(many=True)
+    if scoring_ready:
+        ligand = replace(
+            ligand,
+            atoms=tuple(
+                replace(atom, partial_charge_e=0.0) for atom in ligand.atoms
+            ),
+        )
+        receptor = replace(
+            receptor,
+            atoms=tuple(
+                replace(atom, partial_charge_e=0.0) for atom in receptor.atoms
+            ),
+        )
     shifted_receptor = receptor.coordinates.clone()
     shifted_receptor[..., 0] += 30.0
     receptor = replace(receptor, coordinates=shifted_receptor)

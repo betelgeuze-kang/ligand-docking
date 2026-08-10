@@ -49,6 +49,8 @@ mutate product output, admit Stage 0, run public benchmarks, or authorize a
 scientific claim. GitHub Actions and test doubles remain non-production
 authorities.
 
-The next implementation stage must derive complete Scorer V1 term receipts and
-pose-validity evidence from only the accepted post-refinement records, while
-preserving all 64 slots and preventing rejected or failed records from ranking.
+The next stage is implemented by the synthetic-only mixed64 Scorer V1,
+pose-validity, and stable-ranking v3 component. It derives complete term and
+validity receipts from only accepted post-refinement records while preserving
+all 64 slots. That stage still grants no molecular, cohort, reservation,
+product, or claim authority.
