@@ -6,9 +6,15 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import sys
 from typing import Any, Mapping
 
-from betelgeuze_engine_v2.docking.performance_sidecar import (
+
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from betelgeuze_engine_v2.docking.performance_sidecar import (  # noqa: E402
     AUTHORITY_FALSE,
     PROFILE_ID,
     load_cpu_performance_artifact,
@@ -17,8 +23,7 @@ from betelgeuze_engine_v2.docking.performance_sidecar import (
 
 
 DEFAULT_PROFILE_PATH = (
-    Path(__file__).resolve().parents[1]
-    / "config/engine_v2_cpu_performance_profile.json"
+    _REPO_ROOT / "config/engine_v2_cpu_performance_profile.json"
 )
 
 
