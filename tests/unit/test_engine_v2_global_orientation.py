@@ -11,6 +11,7 @@ from betelgeuze_engine_v2.docking.global_orientation import (
     GlobalOrientationError,
     _quaternion_geodesic_distance,
     generate_global_orientation_batch,
+    rotate_vector,
 )
 
 
@@ -85,6 +86,38 @@ def test_low_discrepancy_orientation_prefix_is_independent_of_requested_count() 
     assert tuple(slot.accepted_sequence_index for slot in short.slots) == tuple(
         range(6)
     )
+
+
+def test_orientation_applies_directly_without_ligand_axis_prealignment() -> None:
+    batch = generate_global_orientation_batch(
+        LIGAND,
+        pocket_center=(3.0, -2.0, 1.0),
+        pocket_normal=(0.0, 0.0, 1.0),
+        config=GlobalOrientationConfig(
+            orientation_count=1,
+            translation_shell_radii=(),
+            translation_points_per_shell=1,
+        ),
+        source_receipt_sha256=SOURCE_RECEIPT,
+        profile_id="mixed64-independent-so3-v1",
+    )
+    slot = batch.slots[0]
+    centroid = tuple(
+        sum(point[axis] for point in LIGAND) / len(LIGAND) for axis in range(3)
+    )
+    centered = tuple(
+        tuple(point[axis] - centroid[axis] for axis in range(3)) for point in LIGAND
+    )
+    expected = tuple(
+        tuple(
+            rotated[axis] + slot.translation[axis] for axis in range(3)
+        )
+        for rotated in (
+            rotate_vector(point, slot.quaternion) for point in centered
+        )
+    )
+
+    assert slot.transformed_coordinates == expected
 
 
 def test_all_quaternions_are_normalized_and_slot_receipts_are_unique() -> None:

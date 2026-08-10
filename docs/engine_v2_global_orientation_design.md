@@ -17,7 +17,8 @@ scientific claim.
 The first implementation provides:
 
 1. a source-bound, index-stable deterministic orientation sequence;
-2. explicit ligand-long-axis alignment to the pocket normal and a pocket tangent;
+2. source-independent rigid rotations of centered ligand coordinates without a
+   molecule-specific long-axis alignment step;
 3. a deterministic surface-oriented translation shell;
 4. a bounded receptor-surface clash prefilter;
 5. a failure-complete candidate denominator retaining rejected slots;
@@ -69,6 +70,13 @@ index. The batch receipt preserves raw, accepted, and duplicate counts plus
 minimum and nearest-neighbor geodesic coverage statistics. This makes duplicate
 removal and coverage independently inspectable instead of an implicit generator
 detail.
+
+The ligand is centered and each accepted quaternion is applied directly to the
+centered coordinates. The generator deliberately does not align a derived
+ligand axis to the pocket normal first: doing so would couple an otherwise
+index-stable `SO(3)` lane to a molecule-specific axis convention. The input must
+still contain at least two distinct coordinate points so degenerate ligand
+geometry fails closed.
 
 This does not claim uniform optimal coverage of `SO(3)`. Coverage quality must be
 measured later on contaminated development data and then independently evaluated

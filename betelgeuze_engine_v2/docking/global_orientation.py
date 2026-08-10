@@ -169,28 +169,15 @@ def _center(coordinates: Coordinates) -> Coordinates:
     return tuple(_subtract(point, center) for point in coordinates)
 
 
-def _long_axis(coordinates: Coordinates) -> Vector3:
-    best_distance = -1.0
-    best_pair: tuple[int, int] | None = None
-    for left_index, left in enumerate(coordinates[:-1]):
-        for right_index in range(left_index + 1, len(coordinates)):
-            delta = _subtract(coordinates[right_index], left)
-            distance = _dot(delta, delta)
-            candidate_pair = (left_index, right_index)
-            if distance > best_distance + _EPSILON or (
-                abs(distance - best_distance) <= _EPSILON
-                and (best_pair is None or candidate_pair < best_pair)
-            ):
-                best_distance = distance
-                best_pair = candidate_pair
-    if best_pair is None or best_distance <= _EPSILON:
+def _require_distinct_points(coordinates: Coordinates) -> None:
+    first = coordinates[0]
+    if all(
+        _dot(_subtract(point, first), _subtract(point, first)) <= _EPSILON
+        for point in coordinates[1:]
+    ):
         raise GlobalOrientationError(
             "ligand coordinates must contain at least two distinct points"
         )
-    return _normalize(
-        _subtract(coordinates[best_pair[1]], coordinates[best_pair[0]]),
-        name="ligand long axis",
-    )
 
 
 def _quaternion_normalize(value: Quaternion) -> Quaternion:
@@ -941,10 +928,10 @@ def generate_global_orientation_batch(
         )
     profile_identity = _profile_id(profile_id)
     centered_ligand = _center(ligand)
-    # Preserve the existing fail-closed requirement for at least two distinct
-    # ligand points even though the independent SO(3) lane no longer aligns a
-    # molecule-specific long axis before sampling.
-    _long_axis(centered_ligand)
+    # Preserve the fail-closed requirement for non-degenerate ligand geometry;
+    # independent SO(3) sampling deliberately has no molecule-specific axis
+    # alignment step.
+    _require_distinct_points(centered_ligand)
     ligand_identity = _coordinate_identity(ligand)
     source_seed_sha256 = _derive_source_seed_sha256(
         source_receipt_sha256=source_receipt_sha256,
