@@ -161,6 +161,34 @@ python3 tools/verify_engine_v2_cpu_performance_v2_terminal_decision.py \
   .betelgeuze/evidence/engine-v2-cpu-performance-v2/geometric-cpu-qualification-a4a6dd39655a.json
 ```
 
+## Successor profile v3 host preflight
+
+Profile v3 has a new profile and schema identity. It binds the terminal v2
+record and rederives hashes for the unchanged fixtures, kernel, parity,
+sampling, runtime, and numerical gates. Its only admitted semantic change is
+the Linux sysfs boost-state reader.
+
+Linux sysfs pseudo-files may report a page-sized `st_size` while returning only
+the short current value. The v3 reader therefore treats reported size as
+advisory and bounds bytes actually read to 32. It still requires the exact
+`/sys/devices/system/cpu/cpufreq/boost` path, `O_NOFOLLOW`, a root-owned regular
+file, one link, no group/world write bit, stable descriptor/path identity, and
+two identical bounded reads of one of the exact payloads `0`, `0\n`, `1`, or
+`1\n`.
+
+The v3 command below is read-only and non-consuming. It launches no timed
+measurement, writes no evidence artifact, reserves nothing, accepts no
+molecular input, and grants no execution or claim authority:
+
+```bash
+python3 tools/verify_engine_v2_cpu_performance_profile_v3.py
+python3 tools/preflight_engine_v2_cpu_performance_v3.py
+```
+
+Passing this preflight only proves that the host contract can be read. The
+full v3 measurement runner and a one-shot terminal result remain separate
+downstream work.
+
 ## Live versus offline evidence
 
 `run_sealed_local_performance_runner()` is the only live entry point and has no

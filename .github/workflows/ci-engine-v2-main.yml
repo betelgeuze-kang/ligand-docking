@@ -39,6 +39,7 @@ on:
       - "config/engine_v2_mixed64_geometric_candidate_evidence_v2.json"
       - "config/engine_v2_cpu_performance_profile.json"
       - "config/engine_v2_cpu_performance_v2_terminal_decision.json"
+      - "config/engine_v2_cpu_performance_profile_v3.json"
       - "tools/build_engine_v2_wheel.py"
       - "tools/build_engine_v2_native_wheel.py"
       - "tools/run_engine_v2_cpu_performance_qualification.py"
@@ -63,6 +64,8 @@ on:
       - "tools/verify_engine_v2_mixed64_candidate_evidence_artifact.py"
       - "tools/verify_engine_v2_cpu_performance_profile.py"
       - "tools/verify_engine_v2_cpu_performance_v2_terminal_decision.py"
+      - "tools/verify_engine_v2_cpu_performance_profile_v3.py"
+      - "tools/preflight_engine_v2_cpu_performance_v3.py"
       - "config/engine_v2_public_redocking_stage0_*.json"
       - "tests/unit/test_engine_v2_*.py"
       - "tests/unit/test_classify_engine_v2_stage0_full_suite.py"
@@ -159,6 +162,7 @@ jobs:
             config/engine_v2_mixed64_geometric_candidate_evidence_v2.json
             config/engine_v2_cpu_performance_profile.json
             config/engine_v2_cpu_performance_v2_terminal_decision.json
+            config/engine_v2_cpu_performance_profile_v3.json
             config/engine_v2_public_redocking_stage0_threshold_evidence.json
             tools/__init__.py
             tools/build_engine_v2_wheel.py
@@ -187,6 +191,8 @@ jobs:
             tools/verify_engine_v2_mixed64_candidate_evidence_artifact.py
             tools/verify_engine_v2_cpu_performance_profile.py
             tools/verify_engine_v2_cpu_performance_v2_terminal_decision.py
+            tools/verify_engine_v2_cpu_performance_profile_v3.py
+            tools/preflight_engine_v2_cpu_performance_v3.py
             config/engine_v2_public_redocking_stage0_freeze.template.json
             config/engine_v2_public_redocking_stage0_attestation.template.json
             config/engine_v2_public_redocking_stage0_threshold_evidence.template.json
@@ -210,6 +216,8 @@ jobs:
             tests/unit/test_engine_v2_cpu_performance_sidecar.py
             tests/unit/test_verify_engine_v2_cpu_performance_profile.py
             tests/unit/test_verify_engine_v2_cpu_performance_v2_terminal_decision.py
+            tests/unit/test_engine_v2_cpu_performance_host_preflight_v3.py
+            tests/unit/test_verify_engine_v2_cpu_performance_profile_v3.py
             tests/unit/test_engine_v2_native_geometric_admission.py
             tests/unit/test_engine_v2_oracle_selection_metrics.py
             tests/unit/test_engine_v2_oracle_selection_evidence.py
@@ -382,6 +390,8 @@ jobs:
             tools/verify_engine_v2_mixed64_candidate_evidence_artifact.py \
             tools/verify_engine_v2_cpu_performance_profile.py \
             tools/verify_engine_v2_cpu_performance_v2_terminal_decision.py \
+            tools/verify_engine_v2_cpu_performance_profile_v3.py \
+            tools/preflight_engine_v2_cpu_performance_v3.py \
             tools/run_engine_v2_cpu_performance_qualification.py
           python tools/check_engine_v2_architecture.py
           python tools/verify_engine_v2_phase25_cohort_admission.py
@@ -434,6 +444,16 @@ jobs:
             /tmp/engine-v2-cpu-performance-v2-terminal.json
           grep -q '"rerun_allowed":false' \
             /tmp/engine-v2-cpu-performance-v2-terminal.json
+          python tools/verify_engine_v2_cpu_performance_profile_v3.py \
+            > /tmp/engine-v2-cpu-performance-profile-v3.json
+          grep -q '"non_consuming_preflight_only":true' \
+            /tmp/engine-v2-cpu-performance-profile-v3.json
+          python tools/preflight_engine_v2_cpu_performance_v3.py \
+            > /tmp/engine-v2-cpu-performance-preflight-v3.json
+          grep -q '"consumes_qualification":false' \
+            /tmp/engine-v2-cpu-performance-preflight-v3.json
+          grep -q '"execution_authorized":false' \
+            /tmp/engine-v2-cpu-performance-preflight-v3.json
 
       - name: Run complete focused Engine v2 CPU suite
         shell: bash
@@ -548,6 +568,8 @@ jobs:
             tests/unit/test_engine_v2_cpu_performance_sidecar.py \
             tests/unit/test_verify_engine_v2_cpu_performance_profile.py \
             tests/unit/test_verify_engine_v2_cpu_performance_v2_terminal_decision.py \
+            tests/unit/test_engine_v2_cpu_performance_host_preflight_v3.py \
+            tests/unit/test_verify_engine_v2_cpu_performance_profile_v3.py \
             tests/unit/test_engine_v2_native_geometric_admission.py \
             tests/unit/test_engine_v2_oracle_selection_metrics.py \
             tests/unit/test_engine_v2_oracle_selection_evidence.py \
