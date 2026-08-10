@@ -68,6 +68,14 @@ jobs:
       - name: Test Rust C++ boundary
         run: cargo test --manifest-path rust/Cargo.toml --workspace --locked
 
+      - name: Verify standalone Rust packages
+        run: |
+          cargo package --manifest-path rust/betelgeuze-sys/Cargo.toml --locked
+          cargo package --manifest-path rust/betelgeuze-runtime/Cargo.toml --locked \
+            --config 'patch.crates-io.betelgeuze-sys.path="rust/betelgeuze-sys"' \
+            --config 'patch.crates-io.betelgeuze-reference-physics.path="rust/reference-physics"' \
+            --config 'patch.crates-io.betelgeuze-reference-dynamics.path="rust/reference-dynamics"'
+
   trusted-rocm-hip-parity:
     if: >-
       ${{ vars.TRUSTED_SELF_HOSTED_CI_ENABLED == 'true'

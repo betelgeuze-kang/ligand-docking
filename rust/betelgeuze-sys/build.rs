@@ -1,58 +1,108 @@
+use std::fs;
 use std::path::{Path, PathBuf};
+
+const VENDORED_FILES: &[&str] = &[
+    "include/betelgeuze/engine.h",
+    "native/src/internal.hpp",
+    "native/src/context.cpp",
+    "native/src/evaluator.cpp",
+    "native/src/forcefield.cpp",
+    "native/src/system.cpp",
+    "native/src/cpu/evaluator.hpp",
+    "native/src/cpu/evaluator.cpp",
+    "native/src/dynamics/dynamics.hpp",
+    "native/src/dynamics/api.cpp",
+    "native/src/dynamics/checkpoint.cpp",
+    "native/src/dynamics/common.cpp",
+    "native/src/dynamics/integrator.cpp",
+    "native/src/dynamics/sha256.hpp",
+    "native/src/dynamics/sha256.cpp",
+    "native/src/hip/backend.hpp",
+    "native/src/hip/backend.hip",
+    "native/src/hip/planning.hpp",
+    "native/src/hip/stub.cpp",
+];
 
 fn track(path: &Path) {
     println!("cargo:rerun-if-changed={}", path.display());
+}
+
+fn verify_workspace_vendor(manifest_dir: &Path) {
+    let workspace_root = manifest_dir.join("../..");
+    let workspace_manifest = workspace_root.join("rust/Cargo.toml");
+    let checkout_manifest = workspace_root.join("rust/betelgeuze-sys/Cargo.toml");
+    let current_manifest = manifest_dir.join("Cargo.toml");
+
+    let is_workspace_checkout = match (
+        checkout_manifest.canonicalize(),
+        current_manifest.canonicalize(),
+    ) {
+        (Ok(checkout), Ok(current)) => workspace_manifest.is_file() && checkout == current,
+        _ => false,
+    };
+    if !is_workspace_checkout {
+        return;
+    }
+
+    for relative in VENDORED_FILES {
+        let canonical = workspace_root.join(relative);
+        let vendored = manifest_dir.join("vendor").join(relative);
+        track(&canonical);
+        let canonical_bytes = fs::read(&canonical).unwrap_or_else(|error| {
+            panic!(
+                "failed to read canonical native source {}: {error}",
+                canonical.display()
+            )
+        });
+        let vendored_bytes = fs::read(&vendored).unwrap_or_else(|error| {
+            panic!(
+                "failed to read vendored native source {}: {error}",
+                vendored.display()
+            )
+        });
+        if canonical_bytes != vendored_bytes {
+            panic!(
+                "vendored native source drifted from {}; copy it byte-for-byte to {}",
+                canonical.display(),
+                vendored.display()
+            );
+        }
+    }
 }
 
 fn main() {
     let manifest_dir = PathBuf::from(
         std::env::var_os("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR is set by Cargo"),
     );
-    let repository_root = manifest_dir
-        .join("../..")
-        .canonicalize()
-        .expect("betelgeuze-sys must be built inside the repository");
-    let include_dir = repository_root.join("include");
-    let internal_header = repository_root.join("native/src/internal.hpp");
-    let context_source = repository_root.join("native/src/context.cpp");
-    let evaluator_source = repository_root.join("native/src/evaluator.cpp");
-    let forcefield_source = repository_root.join("native/src/forcefield.cpp");
-    let system_source = repository_root.join("native/src/system.cpp");
-    let cpu_evaluator_header = repository_root.join("native/src/cpu/evaluator.hpp");
-    let cpu_evaluator_source = repository_root.join("native/src/cpu/evaluator.cpp");
-    let dynamics_header = repository_root.join("native/src/dynamics/dynamics.hpp");
-    let dynamics_api_source = repository_root.join("native/src/dynamics/api.cpp");
-    let dynamics_checkpoint_source = repository_root.join("native/src/dynamics/checkpoint.cpp");
-    let dynamics_common_source = repository_root.join("native/src/dynamics/common.cpp");
-    let dynamics_integrator_source = repository_root.join("native/src/dynamics/integrator.cpp");
-    let dynamics_sha256_header = repository_root.join("native/src/dynamics/sha256.hpp");
-    let dynamics_sha256_source = repository_root.join("native/src/dynamics/sha256.cpp");
-    let hip_backend_header = repository_root.join("native/src/hip/backend.hpp");
-    let hip_backend_source = repository_root.join("native/src/hip/backend.hip");
-    let hip_planning_header = repository_root.join("native/src/hip/planning.hpp");
-    let hip_stub_source = repository_root.join("native/src/hip/stub.cpp");
+    verify_workspace_vendor(&manifest_dir);
+
+    let vendor_root = manifest_dir.join("vendor");
+    for relative in VENDORED_FILES {
+        let vendored = vendor_root.join(relative);
+        track(&vendored);
+        if !vendored.is_file() {
+            panic!(
+                "required vendored native source is missing: {}",
+                vendored.display()
+            );
+        }
+    }
+    let include_dir = vendor_root.join("include");
+    let context_source = vendor_root.join("native/src/context.cpp");
+    let evaluator_source = vendor_root.join("native/src/evaluator.cpp");
+    let forcefield_source = vendor_root.join("native/src/forcefield.cpp");
+    let system_source = vendor_root.join("native/src/system.cpp");
+    let cpu_evaluator_source = vendor_root.join("native/src/cpu/evaluator.cpp");
+    let dynamics_api_source = vendor_root.join("native/src/dynamics/api.cpp");
+    let dynamics_checkpoint_source = vendor_root.join("native/src/dynamics/checkpoint.cpp");
+    let dynamics_common_source = vendor_root.join("native/src/dynamics/common.cpp");
+    let dynamics_integrator_source = vendor_root.join("native/src/dynamics/integrator.cpp");
+    let dynamics_sha256_source = vendor_root.join("native/src/dynamics/sha256.cpp");
+    let hip_backend_source = vendor_root.join("native/src/hip/backend.hip");
+    let hip_stub_source = vendor_root.join("native/src/hip/stub.cpp");
     let c_header_probe = manifest_dir.join("abi/header_c11.c");
     let cpp_layout_probe = manifest_dir.join("abi/layout_assertions.cpp");
 
-    track(&include_dir.join("betelgeuze/engine.h"));
-    track(&internal_header);
-    track(&context_source);
-    track(&evaluator_source);
-    track(&forcefield_source);
-    track(&system_source);
-    track(&cpu_evaluator_header);
-    track(&cpu_evaluator_source);
-    track(&dynamics_header);
-    track(&dynamics_api_source);
-    track(&dynamics_checkpoint_source);
-    track(&dynamics_common_source);
-    track(&dynamics_integrator_source);
-    track(&dynamics_sha256_header);
-    track(&dynamics_sha256_source);
-    track(&hip_backend_header);
-    track(&hip_backend_source);
-    track(&hip_planning_header);
-    track(&hip_stub_source);
     track(&c_header_probe);
     track(&cpp_layout_probe);
 
@@ -71,6 +121,7 @@ fn main() {
         .file(&dynamics_common_source)
         .file(&dynamics_integrator_source)
         .file(&dynamics_sha256_source)
+        .define("BG_DISABLE_DESCRIPTOR_INIT_CONVENIENCE_MACROS", None)
         .warnings(true)
         .warnings_into_errors(true);
     let hip_enabled = std::env::var_os("CARGO_FEATURE_HIP").is_some();

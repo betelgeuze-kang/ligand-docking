@@ -301,6 +301,16 @@ fn channel_pointer(values: &[f64]) -> *const f64 {
     }
 }
 
+/// Owned native execution context.
+///
+/// Context operations are intentionally confined to their creating thread
+/// until the native ABI publishes a stronger synchronization contract.
+///
+/// ```compile_fail
+/// use betelgeuze_runtime::Context;
+/// fn require_send_sync<T: Send + Sync>() {}
+/// require_send_sync::<Context>();
+/// ```
 pub struct Context {
     handle: NonNull<sys::bg_context>,
     // The ABI does not yet promise concurrent context operations.
@@ -316,7 +326,13 @@ impl Context {
 
         let mut raw_options = MaybeUninit::<sys::bg_context_options>::uninit();
         // SAFETY: raw_options points to correctly sized writable storage.
-        status_result(unsafe { sys::bg_context_options_init(raw_options.as_mut_ptr()) })?;
+        status_result(unsafe {
+            sys::bg_context_options_init(
+                raw_options.as_mut_ptr(),
+                std::mem::size_of::<sys::bg_context_options>(),
+                sys::BG_ABI_VERSION,
+            )
+        })?;
         // SAFETY: The successful initializer wrote every field.
         let mut raw_options = unsafe { raw_options.assume_init() };
         raw_options.backend = options.backend.as_raw();
@@ -553,6 +569,18 @@ impl ParticleSnapshot {
     }
 }
 
+/// Owned native particle system.
+///
+/// The safe layer never exposes the native borrowed pointers: [`snapshot`](Self::snapshot)
+/// copies every channel while `self` is immutably borrowed, and mutation
+/// requires `&mut self`. The handle is also deliberately neither `Send` nor
+/// `Sync`, enforcing the native external-synchronization rule.
+///
+/// ```compile_fail
+/// use betelgeuze_runtime::System;
+/// fn require_send_sync<T: Send + Sync>() {}
+/// require_send_sync::<System>();
+/// ```
 pub struct System {
     handle: NonNull<sys::bg_system>,
     // The ABI requires external synchronization for calls on one system.
@@ -567,7 +595,13 @@ impl System {
 
         let mut raw = MaybeUninit::<sys::bg_particle_soa>::uninit();
         // SAFETY: raw points to correctly sized writable storage.
-        status_result(unsafe { sys::bg_particle_soa_init(raw.as_mut_ptr()) })?;
+        status_result(unsafe {
+            sys::bg_particle_soa_init(
+                raw.as_mut_ptr(),
+                std::mem::size_of::<sys::bg_particle_soa>(),
+                sys::BG_ABI_VERSION,
+            )
+        })?;
         // SAFETY: The successful initializer wrote every field.
         let mut raw = unsafe { raw.assume_init() };
         raw.particle_count = particle_count;
@@ -632,7 +666,13 @@ impl System {
         let expected_count = self.len()?;
         let mut view = MaybeUninit::<sys::bg_particle_soa_view>::uninit();
         // SAFETY: view points to correctly sized writable storage.
-        status_result(unsafe { sys::bg_particle_soa_view_init(view.as_mut_ptr()) })?;
+        status_result(unsafe {
+            sys::bg_particle_soa_view_init(
+                view.as_mut_ptr(),
+                std::mem::size_of::<sys::bg_particle_soa_view>(),
+                sys::BG_ABI_VERSION,
+            )
+        })?;
         // SAFETY: The successful initializer wrote every field.
         let mut view = unsafe { view.assume_init() };
         // SAFETY: The private system handle remains live for all copies below.
@@ -689,7 +729,13 @@ impl System {
 
         let mut raw = MaybeUninit::<sys::bg_position_soa>::uninit();
         // SAFETY: raw points to correctly sized writable storage.
-        status_result(unsafe { sys::bg_position_soa_init(raw.as_mut_ptr()) })?;
+        status_result(unsafe {
+            sys::bg_position_soa_init(
+                raw.as_mut_ptr(),
+                std::mem::size_of::<sys::bg_position_soa>(),
+                sys::BG_ABI_VERSION,
+            )
+        })?;
         // SAFETY: The successful initializer wrote every field.
         let mut raw = unsafe { raw.assume_init() };
         raw.particle_count = checked_count(count)?;

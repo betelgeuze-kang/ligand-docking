@@ -9,6 +9,53 @@
 #define BG_TEST_HIP_ENABLED 0
 #endif
 
+#define BG_TEST_EXACT_INITIALIZER(TYPE, INITIALIZER)                         \
+    do {                                                                    \
+        TYPE descriptor;                                                    \
+        unsigned char snapshot[sizeof(descriptor)];                         \
+        bg_status(BG_CALL * initializer_function)(                          \
+            TYPE *, size_t, uint32_t) = (INITIALIZER);                      \
+        memset(&descriptor, 0xA5, sizeof(descriptor));                      \
+        memcpy(snapshot, &descriptor, sizeof(descriptor));                  \
+        assert(initializer_function(                                        \
+                   &descriptor, sizeof(descriptor) - 1, BG_ABI_VERSION) ==  \
+               BG_STATUS_ABI_MISMATCH);                                     \
+        assert(memcmp(snapshot, &descriptor, sizeof(descriptor)) == 0);      \
+        assert(initializer_function(                                        \
+                   &descriptor, sizeof(descriptor) + 1, BG_ABI_VERSION) ==  \
+               BG_STATUS_ABI_MISMATCH);                                     \
+        assert(memcmp(snapshot, &descriptor, sizeof(descriptor)) == 0);      \
+        assert(initializer_function(                                        \
+                   &descriptor, sizeof(descriptor), BG_ABI_VERSION + 1) ==  \
+               BG_STATUS_ABI_MISMATCH);                                     \
+        assert(memcmp(snapshot, &descriptor, sizeof(descriptor)) == 0);      \
+        assert(INITIALIZER(&descriptor) == BG_STATUS_OK);                   \
+        assert((size_t)descriptor.struct_size == sizeof(descriptor));       \
+        assert(descriptor.abi_version == BG_ABI_VERSION);                   \
+    } while (0)
+
+static void test_descriptor_initializer_compatibility(void) {
+    BG_TEST_EXACT_INITIALIZER(bg_context_options, bg_context_options_init);
+    BG_TEST_EXACT_INITIALIZER(bg_particle_soa, bg_particle_soa_init);
+    BG_TEST_EXACT_INITIALIZER(bg_particle_soa_view, bg_particle_soa_view_init);
+    BG_TEST_EXACT_INITIALIZER(bg_position_soa, bg_position_soa_init);
+    BG_TEST_EXACT_INITIALIZER(
+        bg_forcefield_soa_v1, bg_forcefield_soa_v1_init);
+    BG_TEST_EXACT_INITIALIZER(bg_force_soa_v1, bg_force_soa_v1_init);
+    BG_TEST_EXACT_INITIALIZER(
+        bg_energy_components_v1, bg_energy_components_v1_init);
+    BG_TEST_EXACT_INITIALIZER(
+        bg_distance_constraints_v1, bg_distance_constraints_v1_init);
+    BG_TEST_EXACT_INITIALIZER(
+        bg_simulation_options_v1, bg_simulation_options_v1_init);
+    BG_TEST_EXACT_INITIALIZER(
+        bg_minimizer_options_v1, bg_minimizer_options_v1_init);
+    BG_TEST_EXACT_INITIALIZER(
+        bg_minimization_report_v1, bg_minimization_report_v1_init);
+    BG_TEST_EXACT_INITIALIZER(
+        bg_dynamics_report_v1, bg_dynamics_report_v1_init);
+}
+
 static void test_context_contract(void) {
     assert(bg_abi_version() == BG_ABI_VERSION);
     assert(bg_abi_version_major() == BG_ABI_VERSION_MAJOR);
@@ -253,6 +300,7 @@ static void test_empty_and_invalid_systems(void) {
 }
 
 int main(void) {
+    test_descriptor_initializer_compatibility();
     test_context_contract();
     test_owned_soa_and_transactional_update();
     test_empty_and_invalid_systems();

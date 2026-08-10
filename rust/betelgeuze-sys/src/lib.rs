@@ -327,20 +327,66 @@ unsafe extern "C" {
         required_size: *mut u64,
     ) -> bg_status;
 
-    pub fn bg_context_options_init(options: *mut bg_context_options) -> bg_status;
-    pub fn bg_particle_soa_init(particles: *mut bg_particle_soa) -> bg_status;
-    pub fn bg_particle_soa_view_init(view: *mut bg_particle_soa_view) -> bg_status;
-    pub fn bg_position_soa_init(positions: *mut bg_position_soa) -> bg_status;
-    pub fn bg_forcefield_soa_v1_init(forcefield: *mut bg_forcefield_soa_v1) -> bg_status;
-    pub fn bg_force_soa_v1_init(forces: *mut bg_force_soa_v1) -> bg_status;
-    pub fn bg_energy_components_v1_init(energy: *mut bg_energy_components_v1) -> bg_status;
+    pub fn bg_context_options_init(
+        options: *mut bg_context_options,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_particle_soa_init(
+        particles: *mut bg_particle_soa,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_particle_soa_view_init(
+        view: *mut bg_particle_soa_view,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_position_soa_init(
+        positions: *mut bg_position_soa,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_forcefield_soa_v1_init(
+        forcefield: *mut bg_forcefield_soa_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_force_soa_v1_init(
+        forces: *mut bg_force_soa_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_energy_components_v1_init(
+        energy: *mut bg_energy_components_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
     pub fn bg_distance_constraints_v1_init(
         constraints: *mut bg_distance_constraints_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
     ) -> bg_status;
-    pub fn bg_simulation_options_v1_init(options: *mut bg_simulation_options_v1) -> bg_status;
-    pub fn bg_minimizer_options_v1_init(options: *mut bg_minimizer_options_v1) -> bg_status;
-    pub fn bg_minimization_report_v1_init(report: *mut bg_minimization_report_v1) -> bg_status;
-    pub fn bg_dynamics_report_v1_init(report: *mut bg_dynamics_report_v1) -> bg_status;
+    pub fn bg_simulation_options_v1_init(
+        options: *mut bg_simulation_options_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_minimizer_options_v1_init(
+        options: *mut bg_minimizer_options_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_minimization_report_v1_init(
+        report: *mut bg_minimization_report_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_dynamics_report_v1_init(
+        report: *mut bg_dynamics_report_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
 
     pub fn bg_backend_is_available(
         backend: bg_backend,
