@@ -1,0 +1,76 @@
+{
+  "authority": {
+    "fresh_holdout_execution_authorized": false,
+    "historical_ab_execution_authorized": false,
+    "molecular_execution_authorized": false,
+    "product_performance_claim_authorized": false,
+    "public_benchmark_authorized": false,
+    "scientific_claim_authorized": false,
+    "stage0_admission_authorized": false
+  },
+  "change_control": {
+    "change_reason": "replace_regular_file_size_bound_with_actual_byte_bound_for_exact_sysfs_boost_path",
+    "numeric_contract_changed": false,
+    "permitted_changes": [
+      "profile_identity",
+      "profile_schema_identity",
+      "boost_state_reader_contract"
+    ],
+    "predecessor_blocker": "boost_state_unavailable",
+    "predecessor_profile_id": "engine_v2_ryzen_5900x_geometric_kernel_synthetic_v2",
+    "predecessor_profile_sha256": "1d6d3da4dc1d3d0a2734cd2a19ee45409e105fe67c3bc6518b3df566d86b7560",
+    "predecessor_terminal_decision": "BLOCKED",
+    "predecessor_terminal_decision_sha256": "047f157c8d5d3228c180aca6af392eb8cf13d828659b9a83c38c74c34cc0cf0f"
+  },
+  "host_preflight": {
+    "boost_disabled_required": true,
+    "boost_state_reader": {
+      "accepted_payload_sha256": [
+        "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9",
+        "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+        "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+      ],
+      "exact_path": "/sys/devices/system/cpu/cpufreq/boost",
+      "expected_uid": 0,
+      "group_or_world_writable_allowed": false,
+      "maximum_actual_bytes": 32,
+      "nofollow_required": true,
+      "reader_id": "betelgeuze.linux_sysfs_boolean_reader/1.0.0",
+      "regular_file_required": true,
+      "reported_size_is_advisory": true,
+      "single_link_required": true,
+      "source_sha256": "236496cb7342040191db51f6c801948ab1c6b859d09a85b35e3c8a9c00a38adf",
+      "stable_value_read_count": 2
+    },
+    "consumes_qualification": false,
+    "launches_measurements": false,
+    "molecular_inputs_allowed": false,
+    "otherwise_unchanged_v2_host_contract_sha256": "3ed4d5427f4d18276b7ba006029adf8afbf4a65988fbc4a7f20ce5ea2b2789ea",
+    "persists_result": false,
+    "reservation_allowed": false
+  },
+  "predecessor_contract": {
+    "authority_sha256": "9eae80e47a8bf6b5a88498d0ff93d10e1237425cf608f4f68dce704c316a3b89",
+    "fixtures_sha256": "007f7b70313308812afcb78b72cea797a336e4f554cc2a6ad365dae2dc5e2cd9",
+    "gates_sha256": "5818f66eb7c2383631d27fe0cf2da12182afafed9186e1c1efe14aee5a1732c1",
+    "kernel_sha256": "b6a65cb49d4542751f3fbbd2c3d97d4032841e370951e01dc5fd5ff783c97284",
+    "parity_sha256": "35716969b1f68b8300a4459bc1619ffd3c044625de178fd135785cc6fbf2d300",
+    "performance_source_sha256": "04253e3897bb5746e1c1082dbf8e27922835ffb075aeb3268c18a0895662173f",
+    "restrictions_sha256": "78f0d4d45ec05b9e136d0c42516d5fd2e422e2832a6a60d52936c495b6d30de4",
+    "runtime_sha256": "ae4c0c662cc50e1ff5f0caa2f4a94a07c88cd0ff449cec6ddc2ef752d7ac363c",
+    "sampling_sha256": "c8edabff5b2e25b832bf6931ad6a73f3abb293007ae615eea08add796ee80944"
+  },
+  "profile_id": "engine_v2_ryzen_5900x_geometric_kernel_synthetic_v3",
+  "restrictions": {
+    "actual_molecular_execution_allowed": false,
+    "contains_molecular_cases": false,
+    "fresh_or_historical_case_input_allowed": false,
+    "github_actions_production_authority_allowed": false,
+    "public_or_scientific_performance_claim_allowed": false,
+    "reservation_allowed": false,
+    "test_double_production_authority_allowed": false
+  },
+  "schema_id": "betelgeuze.engine_v2_cpu_performance_profile/3.0.0",
+  "status": "synthetic_geometric_kernel_development_only"
+}

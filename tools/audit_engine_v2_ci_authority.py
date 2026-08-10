@@ -101,24 +101,34 @@ CPU_PERFORMANCE_CONTRACT_PATHS = (
     "betelgeuze_engine_v2/docking/performance_sidecar.py",
     "config/engine_v2_cpu_performance_profile.json",
     "config/engine_v2_cpu_performance_v2_terminal_decision.json",
+    "config/engine_v2_cpu_performance_profile_v3.json",
     "tools/run_engine_v2_cpu_performance_qualification.py",
     "tools/verify_engine_v2_cpu_performance_profile.py",
     "tools/verify_engine_v2_cpu_performance_v2_terminal_decision.py",
+    "tools/verify_engine_v2_cpu_performance_profile_v3.py",
+    "tools/preflight_engine_v2_cpu_performance_v3.py",
     "tests/unit/test_engine_v2_cpu_performance_sidecar.py",
     "tests/unit/test_verify_engine_v2_cpu_performance_profile.py",
     "tests/unit/test_verify_engine_v2_cpu_performance_v2_terminal_decision.py",
+    "tests/unit/test_engine_v2_cpu_performance_host_preflight_v3.py",
+    "tests/unit/test_verify_engine_v2_cpu_performance_profile_v3.py",
     "tests/unit/test_engine_v2_native_geometric_admission.py",
     "docs/engine_v2_cpu_performance_qualification.md",
 )
 CPU_PERFORMANCE_REQUIRED_TOKEN_COUNTS = {
     "config/engine_v2_cpu_performance_profile.json": 2,
     "config/engine_v2_cpu_performance_v2_terminal_decision.json": 2,
+    "config/engine_v2_cpu_performance_profile_v3.json": 2,
     "tools/run_engine_v2_cpu_performance_qualification.py": 3,
     "tools/verify_engine_v2_cpu_performance_profile.py": 4,
     "tools/verify_engine_v2_cpu_performance_v2_terminal_decision.py": 3,
+    "tools/verify_engine_v2_cpu_performance_profile_v3.py": 3,
+    "tools/preflight_engine_v2_cpu_performance_v3.py": 3,
     "tests/unit/test_engine_v2_cpu_performance_sidecar.py": 2,
     "tests/unit/test_verify_engine_v2_cpu_performance_profile.py": 2,
     "tests/unit/test_verify_engine_v2_cpu_performance_v2_terminal_decision.py": 2,
+    "tests/unit/test_engine_v2_cpu_performance_host_preflight_v3.py": 2,
+    "tests/unit/test_verify_engine_v2_cpu_performance_profile_v3.py": 2,
     "tests/unit/test_engine_v2_native_geometric_admission.py": 2,
     "docs/engine_v2_cpu_performance_qualification.md": 1,
     "import betelgeuze_engine_v2.docking.performance_sidecar": 1,
@@ -375,7 +385,7 @@ def _cpu_performance_authority_is_fail_closed(repo_root: Path) -> bool:
         return False
     terminal_authority = terminal.get("authority")
     disposition = terminal.get("disposition")
-    return bool(
+    terminal_fail_closed = bool(
         type(terminal_authority) is dict
         and set(terminal_authority) == set(CPU_PERFORMANCE_FALSE_AUTHORITY_KEYS)
         and all(
@@ -389,6 +399,77 @@ def _cpu_performance_authority_is_fail_closed(repo_root: Path) -> bool:
         and disposition.get("rerun_allowed") is False
         and disposition.get("successor_requires_new_profile_id") is True
         and disposition.get("terminal_decision") == "BLOCKED"
+    )
+    if not terminal_fail_closed:
+        return False
+
+    profile_v3_path = (
+        repo_root / "config/engine_v2_cpu_performance_profile_v3.json"
+    )
+    try:
+        profile_v3_raw = profile_v3_path.read_bytes()
+        if not profile_v3_raw.endswith(b"\n") or profile_v3_raw.endswith(b"\n\n"):
+            return False
+        profile_v3 = json.loads(
+            profile_v3_raw[:-1].decode("ascii"),
+            object_pairs_hook=reject_duplicate_keys,
+            parse_float=reject_float,
+            parse_constant=reject_float,
+        )
+    except (OSError, UnicodeError, ValueError):
+        return False
+    expected_v3_bytes = (
+        json.dumps(
+            profile_v3,
+            indent=2,
+            sort_keys=True,
+            ensure_ascii=True,
+            allow_nan=False,
+        ).encode("ascii")
+        + b"\n"
+    )
+    if (
+        type(profile_v3) is not dict
+        or profile_v3.get("schema_id")
+        != "betelgeuze.engine_v2_cpu_performance_profile/3.0.0"
+        or profile_v3_raw != expected_v3_bytes
+    ):
+        return False
+    authority_v3 = profile_v3.get("authority")
+    restrictions_v3 = profile_v3.get("restrictions")
+    change_control = profile_v3.get("change_control")
+    host_preflight = profile_v3.get("host_preflight")
+    reader = (
+        host_preflight.get("boost_state_reader")
+        if type(host_preflight) is dict
+        else None
+    )
+    return bool(
+        type(authority_v3) is dict
+        and set(authority_v3) == set(CPU_PERFORMANCE_FALSE_AUTHORITY_KEYS)
+        and all(
+            authority_v3.get(key) is False
+            for key in CPU_PERFORMANCE_FALSE_AUTHORITY_KEYS
+        )
+        and type(restrictions_v3) is dict
+        and restrictions_v3
+        and all(value is False for value in restrictions_v3.values())
+        and type(change_control) is dict
+        and change_control.get("numeric_contract_changed") is False
+        and type(host_preflight) is dict
+        and host_preflight.get("consumes_qualification") is False
+        and host_preflight.get("launches_measurements") is False
+        and host_preflight.get("molecular_inputs_allowed") is False
+        and host_preflight.get("persists_result") is False
+        and host_preflight.get("reservation_allowed") is False
+        and type(reader) is dict
+        and reader.get("exact_path")
+        == "/sys/devices/system/cpu/cpufreq/boost"
+        and reader.get("reported_size_is_advisory") is True
+        and reader.get("maximum_actual_bytes") == 32
+        and reader.get("nofollow_required") is True
+        and reader.get("group_or_world_writable_allowed") is False
+        and reader.get("stable_value_read_count") == 2
     )
 
 
