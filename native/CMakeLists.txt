@@ -10,6 +10,11 @@ add_library(betelgeuze_engine SHARED
     src/forcefield.cpp
     src/system.cpp
     src/cpu/evaluator.cpp
+    src/dynamics/api.cpp
+    src/dynamics/checkpoint.cpp
+    src/dynamics/common.cpp
+    src/dynamics/integrator.cpp
+    src/dynamics/sha256.cpp
     ${BG_ENGINE_BACKEND_SOURCE}
 )
 
@@ -153,6 +158,44 @@ if(BUILD_TESTING)
     add_test(
         NAME betelgeuze_engine_cpu_evaluator
         COMMAND betelgeuze_engine_cpu_evaluator
+    )
+
+    add_executable(
+        betelgeuze_engine_dynamics
+        tests/dynamics.cpp
+    )
+    target_link_libraries(
+        betelgeuze_engine_dynamics
+        PRIVATE betelgeuze_engine
+    )
+    target_compile_definitions(betelgeuze_engine_dynamics PRIVATE
+        BG_TEST_HIP_ENABLED=$<BOOL:${BG_ENABLE_HIP}>
+    )
+    target_compile_features(
+        betelgeuze_engine_dynamics
+        PRIVATE cxx_std_17
+    )
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(betelgeuze_engine_dynamics PRIVATE
+            -Wall
+            -Wextra
+            -Wpedantic
+            -Wconversion
+            -Wsign-conversion
+            -Werror
+            -UNDEBUG
+            -ffp-contract=off
+            -fno-fast-math
+        )
+    elseif(MSVC)
+        target_compile_options(
+            betelgeuze_engine_dynamics
+            PRIVATE /W4 /WX /UNDEBUG /fp:strict
+        )
+    endif()
+    add_test(
+        NAME betelgeuze_engine_dynamics
+        COMMAND betelgeuze_engine_dynamics
     )
 
     if(BG_ENABLE_HIP)

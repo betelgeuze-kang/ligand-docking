@@ -1,0 +1,13 @@
+[package]
+name = "betelgeuze-reference-dynamics"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license-file.workspace = true
+publish = false
+description = "Independent deterministic scalar dynamics oracle for Betelgeuze"
+
+[dependencies]
+
+[lints.rust]
+unsafe_code = "forbid"

@@ -16,7 +16,7 @@
 use core::ffi::c_char;
 
 pub const BG_ABI_VERSION_MAJOR: u32 = 1;
-pub const BG_ABI_VERSION_MINOR: u32 = 2;
+pub const BG_ABI_VERSION_MINOR: u32 = 3;
 pub const BG_ABI_VERSION: u32 = 1;
 
 pub const BG_CANONICAL_LENGTH_UNIT: &[u8] = b"angstrom\0";
@@ -27,6 +27,7 @@ pub const BG_CANONICAL_MASS_UNIT: &[u8] = b"dalton\0";
 pub const BG_CANONICAL_ANGLE_UNIT: &[u8] = b"radian\0";
 pub const BG_CANONICAL_TIME_UNIT: &[u8] = b"femtosecond\0";
 pub const BG_CANONICAL_VELOCITY_UNIT: &[u8] = b"angstrom/femtosecond\0";
+pub const BG_CANONICAL_TEMPERATURE_UNIT: &[u8] = b"kelvin\0";
 
 pub const BG_COULOMB_CONSTANT_KCAL_ANGSTROM_PER_MOL_E2: f64 = 332.063_713_299;
 
@@ -51,6 +52,10 @@ pub const BG_BACKEND_HIP: bg_backend = 2;
 pub type bg_unit_system = i32;
 pub const BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL: bg_unit_system = 1;
 
+pub type bg_integrator = i32;
+pub const BG_INTEGRATOR_VELOCITY_VERLET: bg_integrator = 1;
+pub const BG_INTEGRATOR_LANGEVIN_BAOAB: bg_integrator = 2;
+
 /// Opaque native context. Its representation is intentionally unavailable.
 #[repr(C)]
 pub struct bg_context {
@@ -66,6 +71,12 @@ pub struct bg_system {
 /// Opaque native force field. Its representation is intentionally unavailable.
 #[repr(C)]
 pub struct bg_forcefield {
+    _private: [u8; 0],
+}
+
+/// Opaque native simulation. Its representation is intentionally unavailable.
+#[repr(C)]
+pub struct bg_simulation {
     _private: [u8; 0],
 }
 
@@ -216,6 +227,90 @@ pub struct bg_energy_components_v1 {
     pub reserved: [u64; 4],
 }
 
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_distance_constraints_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub constraint_count: u64,
+    pub unit_system: bg_unit_system,
+    pub reserved0: u32,
+    pub atom_i: *const u64,
+    pub atom_j: *const u64,
+    pub distance_angstrom: *const f64,
+    pub tolerance_angstrom: f64,
+    pub velocity_tolerance_angstrom_per_femtosecond: f64,
+    pub max_iterations: u32,
+    pub reserved1: u32,
+    pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_simulation_options_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub unit_system: bg_unit_system,
+    pub integrator: bg_integrator,
+    pub timestep_femtoseconds: f64,
+    pub temperature_kelvin: f64,
+    pub friction_per_femtosecond: f64,
+    pub random_seed: u64,
+    pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_minimizer_options_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub unit_system: bg_unit_system,
+    pub reserved0: u32,
+    pub max_iterations: u64,
+    pub max_line_search_steps: u32,
+    pub reserved1: u32,
+    pub initial_step_angstrom2_mol_per_kcal: f64,
+    pub minimum_step_angstrom2_mol_per_kcal: f64,
+    pub energy_tolerance_kcal_per_mol: f64,
+    pub force_tolerance_kcal_per_mol_angstrom: f64,
+    pub armijo_coefficient: f64,
+    pub backtrack_factor: f64,
+    pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_minimization_report_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub unit_system: bg_unit_system,
+    pub reserved0: u32,
+    pub iterations: u64,
+    pub converged: u32,
+    pub reserved1: u32,
+    pub initial_potential_kcal_per_mol: f64,
+    pub final_potential_kcal_per_mol: f64,
+    pub maximum_force_kcal_per_mol_angstrom: f64,
+    pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_dynamics_report_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub unit_system: bg_unit_system,
+    pub reserved0: u32,
+    pub steps_completed: u64,
+    pub absolute_step: u64,
+    pub degrees_of_freedom: u64,
+    pub potential_kcal_per_mol: f64,
+    pub kinetic_kcal_per_mol: f64,
+    pub total_kcal_per_mol: f64,
+    pub temperature_kelvin: f64,
+    pub reserved: [u64; 4],
+}
+
 unsafe extern "C" {
     pub fn bg_abi_version() -> u32;
     pub fn bg_abi_version_major() -> u32;
@@ -239,6 +334,13 @@ unsafe extern "C" {
     pub fn bg_forcefield_soa_v1_init(forcefield: *mut bg_forcefield_soa_v1) -> bg_status;
     pub fn bg_force_soa_v1_init(forces: *mut bg_force_soa_v1) -> bg_status;
     pub fn bg_energy_components_v1_init(energy: *mut bg_energy_components_v1) -> bg_status;
+    pub fn bg_distance_constraints_v1_init(
+        constraints: *mut bg_distance_constraints_v1,
+    ) -> bg_status;
+    pub fn bg_simulation_options_v1_init(options: *mut bg_simulation_options_v1) -> bg_status;
+    pub fn bg_minimizer_options_v1_init(options: *mut bg_minimizer_options_v1) -> bg_status;
+    pub fn bg_minimization_report_v1_init(report: *mut bg_minimization_report_v1) -> bg_status;
+    pub fn bg_dynamics_report_v1_init(report: *mut bg_dynamics_report_v1) -> bg_status;
 
     pub fn bg_backend_is_available(
         backend: bg_backend,
@@ -301,5 +403,49 @@ unsafe extern "C" {
         forcefield: *const bg_forcefield,
         out_energy: *mut bg_energy_components_v1,
         out_forces: *mut bg_force_soa_v1,
+    ) -> bg_status;
+
+    pub fn bg_simulation_create(
+        system: *const bg_system,
+        forcefield: *const bg_forcefield,
+        constraints: *const bg_distance_constraints_v1,
+        options: *const bg_simulation_options_v1,
+        out_simulation: *mut *mut bg_simulation,
+    ) -> bg_status;
+    pub fn bg_simulation_destroy(simulation: *mut bg_simulation);
+    pub fn bg_simulation_get_particles(
+        simulation: *const bg_simulation,
+        out_view: *mut bg_particle_soa_view,
+    ) -> bg_status;
+    pub fn bg_simulation_get_absolute_step(
+        simulation: *const bg_simulation,
+        absolute_step: *mut u64,
+    ) -> bg_status;
+    pub fn bg_context_minimize(
+        context: *const bg_context,
+        simulation: *mut bg_simulation,
+        options: *const bg_minimizer_options_v1,
+        out_report: *mut bg_minimization_report_v1,
+    ) -> bg_status;
+    pub fn bg_context_integrate(
+        context: *const bg_context,
+        simulation: *mut bg_simulation,
+        step_count: u64,
+        out_report: *mut bg_dynamics_report_v1,
+    ) -> bg_status;
+    pub fn bg_simulation_checkpoint_size(
+        simulation: *const bg_simulation,
+        required_size: *mut u64,
+    ) -> bg_status;
+    pub fn bg_simulation_checkpoint_write(
+        simulation: *const bg_simulation,
+        buffer: *mut core::ffi::c_void,
+        buffer_capacity: u64,
+        written_size: *mut u64,
+    ) -> bg_status;
+    pub fn bg_simulation_checkpoint_load(
+        simulation: *mut bg_simulation,
+        buffer: *const core::ffi::c_void,
+        buffer_size: u64,
     ) -> bg_status;
 }
