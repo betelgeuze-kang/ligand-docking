@@ -206,7 +206,13 @@ impl Simulation {
 
         let mut raw_options = MaybeUninit::<sys::bg_simulation_options_v1>::uninit();
         // SAFETY: raw_options is correctly sized writable storage.
-        status_result(unsafe { sys::bg_simulation_options_v1_init(raw_options.as_mut_ptr()) })?;
+        status_result(unsafe {
+            sys::bg_simulation_options_v1_init(
+                raw_options.as_mut_ptr(),
+                std::mem::size_of::<sys::bg_simulation_options_v1>(),
+                sys::BG_ABI_VERSION,
+            )
+        })?;
         // SAFETY: The successful initializer wrote every field.
         let mut raw_options = unsafe { raw_options.assume_init() };
         raw_options.integrator = options.integrator.as_raw();
@@ -218,7 +224,11 @@ impl Simulation {
         let mut raw_constraints = MaybeUninit::<sys::bg_distance_constraints_v1>::uninit();
         // SAFETY: raw_constraints is correctly sized writable storage.
         status_result(unsafe {
-            sys::bg_distance_constraints_v1_init(raw_constraints.as_mut_ptr())
+            sys::bg_distance_constraints_v1_init(
+                raw_constraints.as_mut_ptr(),
+                std::mem::size_of::<sys::bg_distance_constraints_v1>(),
+                sys::BG_ABI_VERSION,
+            )
         })?;
         // SAFETY: The successful initializer wrote every field.
         let mut raw_constraints = unsafe { raw_constraints.assume_init() };
@@ -265,7 +275,13 @@ impl Simulation {
     pub fn snapshot(&self) -> Result<ParticleSnapshot> {
         let mut view = MaybeUninit::<sys::bg_particle_soa_view>::uninit();
         // SAFETY: view is correctly sized writable storage.
-        status_result(unsafe { sys::bg_particle_soa_view_init(view.as_mut_ptr()) })?;
+        status_result(unsafe {
+            sys::bg_particle_soa_view_init(
+                view.as_mut_ptr(),
+                std::mem::size_of::<sys::bg_particle_soa_view>(),
+                sys::BG_ABI_VERSION,
+            )
+        })?;
         // SAFETY: The successful initializer wrote every field.
         let mut view = unsafe { view.assume_init() };
         // SAFETY: The simulation remains live and immutably borrowed while copied.
@@ -390,7 +406,13 @@ impl Context {
     ) -> Result<MinimizationReport> {
         let mut raw_options = MaybeUninit::<sys::bg_minimizer_options_v1>::uninit();
         // SAFETY: raw_options is correctly sized writable storage.
-        status_result(unsafe { sys::bg_minimizer_options_v1_init(raw_options.as_mut_ptr()) })?;
+        status_result(unsafe {
+            sys::bg_minimizer_options_v1_init(
+                raw_options.as_mut_ptr(),
+                std::mem::size_of::<sys::bg_minimizer_options_v1>(),
+                sys::BG_ABI_VERSION,
+            )
+        })?;
         // SAFETY: The successful initializer wrote every field.
         let mut raw_options = unsafe { raw_options.assume_init() };
         raw_options.max_iterations = options.max_iterations;
@@ -407,7 +429,13 @@ impl Context {
 
         let mut raw_report = MaybeUninit::<sys::bg_minimization_report_v1>::uninit();
         // SAFETY: raw_report is correctly sized writable storage.
-        status_result(unsafe { sys::bg_minimization_report_v1_init(raw_report.as_mut_ptr()) })?;
+        status_result(unsafe {
+            sys::bg_minimization_report_v1_init(
+                raw_report.as_mut_ptr(),
+                std::mem::size_of::<sys::bg_minimization_report_v1>(),
+                sys::BG_ABI_VERSION,
+            )
+        })?;
         // SAFETY: The successful initializer wrote every field.
         let mut raw_report = unsafe { raw_report.assume_init() };
         // SAFETY: Both private handles remain live and exclusively borrowing
@@ -448,7 +476,13 @@ impl Context {
             })?;
         let mut raw_report = MaybeUninit::<sys::bg_dynamics_report_v1>::uninit();
         // SAFETY: raw_report is correctly sized writable storage.
-        status_result(unsafe { sys::bg_dynamics_report_v1_init(raw_report.as_mut_ptr()) })?;
+        status_result(unsafe {
+            sys::bg_dynamics_report_v1_init(
+                raw_report.as_mut_ptr(),
+                std::mem::size_of::<sys::bg_dynamics_report_v1>(),
+                sys::BG_ABI_VERSION,
+            )
+        })?;
         // SAFETY: The successful initializer wrote every field.
         let mut raw_report = unsafe { raw_report.assume_init() };
         // SAFETY: Both private handles remain live and simulation is exclusively borrowed.

@@ -7,6 +7,34 @@ license-file.workspace = true
 publish = false
 links = "betelgeuze_engine"
 build = "build.rs"
+include = [
+    "Cargo.toml",
+    "abi/header_c11.c",
+    "abi/layout_assertions.cpp",
+    "build.rs",
+    "src/lib.rs",
+    "tests/layout.rs",
+    "tests/raw_smoke.rs",
+    "vendor/include/betelgeuze/engine.h",
+    "vendor/native/src/internal.hpp",
+    "vendor/native/src/context.cpp",
+    "vendor/native/src/evaluator.cpp",
+    "vendor/native/src/forcefield.cpp",
+    "vendor/native/src/system.cpp",
+    "vendor/native/src/cpu/evaluator.hpp",
+    "vendor/native/src/cpu/evaluator.cpp",
+    "vendor/native/src/dynamics/dynamics.hpp",
+    "vendor/native/src/dynamics/api.cpp",
+    "vendor/native/src/dynamics/checkpoint.cpp",
+    "vendor/native/src/dynamics/common.cpp",
+    "vendor/native/src/dynamics/integrator.cpp",
+    "vendor/native/src/dynamics/sha256.hpp",
+    "vendor/native/src/dynamics/sha256.cpp",
+    "vendor/native/src/hip/backend.hpp",
+    "vendor/native/src/hip/backend.hip",
+    "vendor/native/src/hip/planning.hpp",
+    "vendor/native/src/hip/stub.cpp",
+]
 
 [features]
 default = []

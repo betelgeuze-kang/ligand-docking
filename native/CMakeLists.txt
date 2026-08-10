@@ -21,6 +21,7 @@ add_library(betelgeuze_engine SHARED
 target_compile_features(betelgeuze_engine PUBLIC cxx_std_17)
 target_compile_definitions(betelgeuze_engine PRIVATE
     BG_ENGINE_BUILD_SHARED
+    BG_DISABLE_DESCRIPTOR_INIT_CONVENIENCE_MACROS
     BG_ENABLE_HIP=$<BOOL:${BG_ENABLE_HIP}>
 )
 target_include_directories(betelgeuze_engine

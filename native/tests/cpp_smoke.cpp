@@ -23,6 +23,8 @@ struct SystemDeleter {
 }  // namespace
 
 int main() {
+    using ContextOptionsInitializer = bg_status(BG_CALL *)(
+        bg_context_options *, std::size_t, uint32_t) noexcept;
     static_assert(std::is_standard_layout_v<bg_context_options>);
     static_assert(std::is_standard_layout_v<bg_particle_soa>);
     static_assert(std::is_standard_layout_v<bg_particle_soa_view>);
@@ -30,6 +32,17 @@ int main() {
     static_assert(noexcept(bg_abi_version()));
     static_assert(noexcept(bg_context_destroy(nullptr)));
     static_assert(noexcept(bg_system_destroy(nullptr)));
+    static_assert(std::is_same_v<
+                  decltype(&bg_context_options_init),
+                  ContextOptionsInitializer>);
+
+    const ContextOptionsInitializer context_options_initializer =
+        (bg_context_options_init);
+    bg_context_options raw_options{};
+    assert(context_options_initializer(
+               &raw_options,
+               sizeof(raw_options),
+               BG_ABI_VERSION) == BG_STATUS_OK);
 
     bg_context_options options{};
     assert(bg_context_options_init(&options) == BG_STATUS_OK);

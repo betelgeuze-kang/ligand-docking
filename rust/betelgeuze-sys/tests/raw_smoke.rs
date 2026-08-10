@@ -14,6 +14,73 @@ unsafe fn owned_string(pointer: *const c_char) -> String {
         .to_owned()
 }
 
+unsafe fn initialize<T>(
+    initializer: unsafe extern "C" fn(*mut T, usize, u32) -> bg_status,
+    descriptor: *mut T,
+) -> bg_status {
+    // SAFETY: The caller supplies writable storage for T. Passing size_of::<T>
+    // and this binding's ABI version is the exact initializer contract.
+    unsafe { initializer(descriptor, core::mem::size_of::<T>(), BG_ABI_VERSION) }
+}
+
+unsafe fn assert_initializer_exact<T>(
+    initializer: unsafe extern "C" fn(*mut T, usize, u32) -> bg_status,
+) {
+    let size = core::mem::size_of::<T>();
+    assert!(size > 0);
+    let mut storage = core::mem::MaybeUninit::<T>::uninit();
+    // SAFETY: MaybeUninit storage may hold arbitrary bytes. Mismatch calls are
+    // required not to read or write them.
+    unsafe { storage.as_mut_ptr().cast::<u8>().write_bytes(0xA5, size) };
+    // SAFETY: Reading the object representation as bytes is always valid.
+    let snapshot = unsafe { core::slice::from_raw_parts(storage.as_ptr().cast::<u8>(), size) };
+    let snapshot = snapshot.to_vec();
+
+    for (caller_size, caller_version) in [
+        (size - 1, BG_ABI_VERSION),
+        (size + 1, BG_ABI_VERSION),
+        (size, BG_ABI_VERSION + 1),
+    ] {
+        // SAFETY: The pointer addresses size bytes, and the initializer must
+        // reject this incompatible identity before dereferencing it.
+        assert_eq!(
+            unsafe { initializer(storage.as_mut_ptr(), caller_size, caller_version) },
+            BG_STATUS_ABI_MISMATCH
+        );
+        // SAFETY: The rejected initializer leaves the representation untouched.
+        assert_eq!(
+            unsafe { core::slice::from_raw_parts(storage.as_ptr().cast::<u8>(), size) },
+            snapshot
+        );
+    }
+
+    // SAFETY: Exact size/version authorizes initialization of the whole T.
+    assert_eq!(
+        unsafe { initializer(storage.as_mut_ptr(), size, BG_ABI_VERSION) },
+        BG_STATUS_OK
+    );
+}
+
+#[test]
+fn descriptor_initializers_reject_incompatible_callers_without_writing() {
+    // SAFETY: The helper provides allocated storage of the exact descriptor
+    // type and only asks mismatch calls to honor their no-access contract.
+    unsafe {
+        assert_initializer_exact(bg_context_options_init);
+        assert_initializer_exact(bg_particle_soa_init);
+        assert_initializer_exact(bg_particle_soa_view_init);
+        assert_initializer_exact(bg_position_soa_init);
+        assert_initializer_exact(bg_forcefield_soa_v1_init);
+        assert_initializer_exact(bg_force_soa_v1_init);
+        assert_initializer_exact(bg_energy_components_v1_init);
+        assert_initializer_exact(bg_distance_constraints_v1_init);
+        assert_initializer_exact(bg_simulation_options_v1_init);
+        assert_initializer_exact(bg_minimizer_options_v1_init);
+        assert_initializer_exact(bg_minimization_report_v1_init);
+        assert_initializer_exact(bg_dynamics_report_v1_init);
+    }
+}
+
 #[test]
 fn native_abi_identity_and_canonical_units_match_the_header() {
     // SAFETY: These functions take no pointers and return static diagnostics.
@@ -47,7 +114,10 @@ fn descriptor_initializers_bind_size_version_and_units() {
     // the descriptor accepted by the initializer.
     unsafe {
         let mut options = core::mem::MaybeUninit::<bg_context_options>::uninit();
-        assert_eq!(bg_context_options_init(options.as_mut_ptr()), BG_STATUS_OK);
+        assert_eq!(
+            initialize(bg_context_options_init, options.as_mut_ptr()),
+            BG_STATUS_OK
+        );
         let options = options.assume_init();
         assert_eq!(
             options.struct_size as usize,
@@ -57,7 +127,10 @@ fn descriptor_initializers_bind_size_version_and_units() {
         assert_eq!(options.unit_system, BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL);
 
         let mut particles = core::mem::MaybeUninit::<bg_particle_soa>::uninit();
-        assert_eq!(bg_particle_soa_init(particles.as_mut_ptr()), BG_STATUS_OK);
+        assert_eq!(
+            initialize(bg_particle_soa_init, particles.as_mut_ptr()),
+            BG_STATUS_OK
+        );
         let particles = particles.assume_init();
         assert_eq!(
             particles.struct_size as usize,
@@ -67,14 +140,20 @@ fn descriptor_initializers_bind_size_version_and_units() {
         assert_eq!(particles.unit_system, BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL);
 
         let mut view = core::mem::MaybeUninit::<bg_particle_soa_view>::uninit();
-        assert_eq!(bg_particle_soa_view_init(view.as_mut_ptr()), BG_STATUS_OK);
+        assert_eq!(
+            initialize(bg_particle_soa_view_init, view.as_mut_ptr()),
+            BG_STATUS_OK
+        );
         let view = view.assume_init();
         assert_eq!(view.struct_size as usize, core::mem::size_of_val(&view));
         assert_eq!(view.abi_version, BG_ABI_VERSION);
         assert_eq!(view.unit_system, BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL);
 
         let mut positions = core::mem::MaybeUninit::<bg_position_soa>::uninit();
-        assert_eq!(bg_position_soa_init(positions.as_mut_ptr()), BG_STATUS_OK);
+        assert_eq!(
+            initialize(bg_position_soa_init, positions.as_mut_ptr()),
+            BG_STATUS_OK
+        );
         let positions = positions.assume_init();
         assert_eq!(
             positions.struct_size as usize,
@@ -85,7 +164,7 @@ fn descriptor_initializers_bind_size_version_and_units() {
 
         let mut constraints = core::mem::MaybeUninit::<bg_distance_constraints_v1>::uninit();
         assert_eq!(
-            bg_distance_constraints_v1_init(constraints.as_mut_ptr()),
+            initialize(bg_distance_constraints_v1_init, constraints.as_mut_ptr()),
             BG_STATUS_OK
         );
         let constraints = constraints.assume_init();
@@ -101,7 +180,7 @@ fn descriptor_initializers_bind_size_version_and_units() {
 
         let mut simulation = core::mem::MaybeUninit::<bg_simulation_options_v1>::uninit();
         assert_eq!(
-            bg_simulation_options_v1_init(simulation.as_mut_ptr()),
+            initialize(bg_simulation_options_v1_init, simulation.as_mut_ptr()),
             BG_STATUS_OK
         );
         let simulation = simulation.assume_init();
@@ -115,7 +194,7 @@ fn descriptor_initializers_bind_size_version_and_units() {
 
         let mut minimizer = core::mem::MaybeUninit::<bg_minimizer_options_v1>::uninit();
         assert_eq!(
-            bg_minimizer_options_v1_init(minimizer.as_mut_ptr()),
+            initialize(bg_minimizer_options_v1_init, minimizer.as_mut_ptr()),
             BG_STATUS_OK
         );
         let minimizer = minimizer.assume_init();
@@ -128,7 +207,10 @@ fn descriptor_initializers_bind_size_version_and_units() {
 
         let mut minimization_report = core::mem::MaybeUninit::<bg_minimization_report_v1>::uninit();
         assert_eq!(
-            bg_minimization_report_v1_init(minimization_report.as_mut_ptr()),
+            initialize(
+                bg_minimization_report_v1_init,
+                minimization_report.as_mut_ptr(),
+            ),
             BG_STATUS_OK
         );
         let minimization_report = minimization_report.assume_init();
@@ -139,7 +221,7 @@ fn descriptor_initializers_bind_size_version_and_units() {
 
         let mut dynamics_report = core::mem::MaybeUninit::<bg_dynamics_report_v1>::uninit();
         assert_eq!(
-            bg_dynamics_report_v1_init(dynamics_report.as_mut_ptr()),
+            initialize(bg_dynamics_report_v1_init, dynamics_report.as_mut_ptr()),
             BG_STATUS_OK
         );
         let dynamics_report = dynamics_report.assume_init();
@@ -163,7 +245,10 @@ fn explicit_cpu_context_round_trips_without_fallback() {
         assert_eq!(available, 1);
 
         let mut options = core::mem::MaybeUninit::<bg_context_options>::uninit();
-        assert_eq!(bg_context_options_init(options.as_mut_ptr()), BG_STATUS_OK);
+        assert_eq!(
+            initialize(bg_context_options_init, options.as_mut_ptr()),
+            BG_STATUS_OK
+        );
         let mut options = options.assume_init();
         options.backend = BG_BACKEND_CPU;
         options.device_ordinal = 0;
@@ -207,7 +292,10 @@ fn explicit_hip_request_is_unavailable_and_never_falls_back_to_cpu() {
         assert_eq!(available, 0);
 
         let mut options = core::mem::MaybeUninit::<bg_context_options>::uninit();
-        assert_eq!(bg_context_options_init(options.as_mut_ptr()), BG_STATUS_OK);
+        assert_eq!(
+            initialize(bg_context_options_init, options.as_mut_ptr()),
+            BG_STATUS_OK
+        );
         let mut options = options.assume_init();
         options.backend = BG_BACKEND_HIP;
 
@@ -242,7 +330,10 @@ fn explicit_hip_request_round_trips_without_cpu_fallback() {
         }
 
         let mut options = core::mem::MaybeUninit::<bg_context_options>::uninit();
-        assert_eq!(bg_context_options_init(options.as_mut_ptr()), BG_STATUS_OK);
+        assert_eq!(
+            initialize(bg_context_options_init, options.as_mut_ptr()),
+            BG_STATUS_OK
+        );
         let mut options = options.assume_init();
         options.backend = BG_BACKEND_HIP;
 
@@ -268,7 +359,10 @@ fn system_deep_copies_soa_and_replaces_positions_transactionally() {
     // The returned borrowed view is only read while the system remains alive.
     unsafe {
         let mut particles = core::mem::MaybeUninit::<bg_particle_soa>::uninit();
-        assert_eq!(bg_particle_soa_init(particles.as_mut_ptr()), BG_STATUS_OK);
+        assert_eq!(
+            initialize(bg_particle_soa_init, particles.as_mut_ptr()),
+            BG_STATUS_OK
+        );
         let mut particles = particles.assume_init();
         particles.particle_count = 2;
         particles.position_x_angstrom = x.as_ptr();
@@ -284,7 +378,10 @@ fn system_deep_copies_soa_and_replaces_positions_transactionally() {
         x[0] = 99.0;
         assert_eq!(x[0], 99.0);
         let mut view = core::mem::MaybeUninit::<bg_particle_soa_view>::uninit();
-        assert_eq!(bg_particle_soa_view_init(view.as_mut_ptr()), BG_STATUS_OK);
+        assert_eq!(
+            initialize(bg_particle_soa_view_init, view.as_mut_ptr()),
+            BG_STATUS_OK
+        );
         let mut view = view.assume_init();
         assert_eq!(bg_system_get_particles(system, &mut view), BG_STATUS_OK);
         assert_eq!(view.particle_count, 2);
@@ -301,7 +398,10 @@ fn system_deep_copies_soa_and_replaces_positions_transactionally() {
         let replacement_y = [9.0, 10.0];
         let replacement_z = [11.0, 12.0];
         let mut positions = core::mem::MaybeUninit::<bg_position_soa>::uninit();
-        assert_eq!(bg_position_soa_init(positions.as_mut_ptr()), BG_STATUS_OK);
+        assert_eq!(
+            initialize(bg_position_soa_init, positions.as_mut_ptr()),
+            BG_STATUS_OK
+        );
         let mut positions = positions.assume_init();
         positions.particle_count = 2;
         positions.x_angstrom = replacement_x.as_ptr();
@@ -309,7 +409,10 @@ fn system_deep_copies_soa_and_replaces_positions_transactionally() {
         positions.z_angstrom = replacement_z.as_ptr();
         assert_eq!(bg_system_set_positions(system, &positions), BG_STATUS_OK);
 
-        assert_eq!(bg_particle_soa_view_init(&mut view), BG_STATUS_OK);
+        assert_eq!(
+            initialize(bg_particle_soa_view_init, &mut view),
+            BG_STATUS_OK
+        );
         assert_eq!(bg_system_get_particles(system, &mut view), BG_STATUS_OK);
         assert_eq!(
             std::slice::from_raw_parts(view.position_x_angstrom, 2),
