@@ -38,6 +38,7 @@ on:
       - "config/engine_v2_global_orientation_synthetic_contract.json"
       - "config/engine_v2_mixed64_geometric_candidate_evidence_v2.json"
       - "config/engine_v2_cpu_performance_profile.json"
+      - "config/engine_v2_cpu_performance_v2_terminal_decision.json"
       - "tools/build_engine_v2_wheel.py"
       - "tools/build_engine_v2_native_wheel.py"
       - "tools/run_engine_v2_cpu_performance_qualification.py"
@@ -61,6 +62,7 @@ on:
       - "tools/verify_engine_v2_mixed64_geometric_candidate_evidence_v2.py"
       - "tools/verify_engine_v2_mixed64_candidate_evidence_artifact.py"
       - "tools/verify_engine_v2_cpu_performance_profile.py"
+      - "tools/verify_engine_v2_cpu_performance_v2_terminal_decision.py"
       - "config/engine_v2_public_redocking_stage0_*.json"
       - "tests/unit/test_engine_v2_*.py"
       - "tests/unit/test_classify_engine_v2_stage0_full_suite.py"
@@ -156,6 +158,7 @@ jobs:
             config/engine_v2_global_orientation_synthetic_contract.json
             config/engine_v2_mixed64_geometric_candidate_evidence_v2.json
             config/engine_v2_cpu_performance_profile.json
+            config/engine_v2_cpu_performance_v2_terminal_decision.json
             config/engine_v2_public_redocking_stage0_threshold_evidence.json
             tools/__init__.py
             tools/build_engine_v2_wheel.py
@@ -183,6 +186,7 @@ jobs:
             tools/verify_engine_v2_mixed64_geometric_candidate_evidence_v2.py
             tools/verify_engine_v2_mixed64_candidate_evidence_artifact.py
             tools/verify_engine_v2_cpu_performance_profile.py
+            tools/verify_engine_v2_cpu_performance_v2_terminal_decision.py
             config/engine_v2_public_redocking_stage0_freeze.template.json
             config/engine_v2_public_redocking_stage0_attestation.template.json
             config/engine_v2_public_redocking_stage0_threshold_evidence.template.json
@@ -205,6 +209,7 @@ jobs:
             tests/unit/test_verify_engine_v2_mixed64_candidate_evidence_artifact.py
             tests/unit/test_engine_v2_cpu_performance_sidecar.py
             tests/unit/test_verify_engine_v2_cpu_performance_profile.py
+            tests/unit/test_verify_engine_v2_cpu_performance_v2_terminal_decision.py
             tests/unit/test_engine_v2_native_geometric_admission.py
             tests/unit/test_engine_v2_oracle_selection_metrics.py
             tests/unit/test_engine_v2_oracle_selection_evidence.py
@@ -376,6 +381,7 @@ jobs:
             tools/verify_engine_v2_mixed64_geometric_candidate_evidence_v2.py \
             tools/verify_engine_v2_mixed64_candidate_evidence_artifact.py \
             tools/verify_engine_v2_cpu_performance_profile.py \
+            tools/verify_engine_v2_cpu_performance_v2_terminal_decision.py \
             tools/run_engine_v2_cpu_performance_qualification.py
           python tools/check_engine_v2_architecture.py
           python tools/verify_engine_v2_phase25_cohort_admission.py
@@ -422,6 +428,12 @@ jobs:
             /tmp/engine-v2-cpu-performance-profile.json
           grep -q '"qualification_authority":false' \
             /tmp/engine-v2-cpu-performance-profile.json
+          python tools/verify_engine_v2_cpu_performance_v2_terminal_decision.py \
+            > /tmp/engine-v2-cpu-performance-v2-terminal.json
+          grep -q '"qualification_consumed":true' \
+            /tmp/engine-v2-cpu-performance-v2-terminal.json
+          grep -q '"rerun_allowed":false' \
+            /tmp/engine-v2-cpu-performance-v2-terminal.json
 
       - name: Run complete focused Engine v2 CPU suite
         shell: bash
@@ -535,6 +547,7 @@ jobs:
             tests/unit/test_verify_engine_v2_mixed64_candidate_evidence_artifact.py \
             tests/unit/test_engine_v2_cpu_performance_sidecar.py \
             tests/unit/test_verify_engine_v2_cpu_performance_profile.py \
+            tests/unit/test_verify_engine_v2_cpu_performance_v2_terminal_decision.py \
             tests/unit/test_engine_v2_native_geometric_admission.py \
             tests/unit/test_engine_v2_oracle_selection_metrics.py \
             tests/unit/test_engine_v2_oracle_selection_evidence.py \

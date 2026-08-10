@@ -125,6 +125,42 @@ cross multiplication, and all parity rows must pass. A threshold miss is
 `NO_GO`; an unqualified host, dirty source tree, missing/mismatched native
 binding, incomplete transcript, or timeout is `BLOCKED`, not a result.
 
+## Terminal v2 disposition
+
+The v2 profile was consumed exactly once at implementation commit
+`33bb355ef2d6e7fea7f4f6b796806e12e5acb70a`. It terminated before any timed
+observation with status `blocked_preflight`, decision `BLOCKED`, and blocker
+`boost_state_unavailable`. The transcript and fixture-result denominators are
+both zero, so no numeric performance gate was evaluated. This is neither a
+`GO` nor a `NO_GO` result.
+
+The original owner-only artifact is retained outside Git under
+`.betelgeuze/evidence/engine-v2-cpu-performance-v2/`; its exact SHA-256 is
+`a4a6dd39655a2477ecece142273400d86252c72056059c7485f3b30ed09d1e93`.
+The tracked terminal record freezes that hash, byte count, receipt, run nonce,
+profile identity, blocker, and all-false authority. Offline replay can verify
+structure but cannot attest that execution occurred.
+
+Profile v2 is closed: it must not be edited, relabeled, or rerun. A correction
+requires a new profile and schema identity, an explicit predecessor binding,
+and a frozen declaration that the fixtures, expected outputs, sampling plan,
+parity tolerances, and numeric gates did not change.
+
+Verify the terminal record without consuming another qualification:
+
+```bash
+python3 tools/verify_engine_v2_cpu_performance_v2_terminal_decision.py
+```
+
+On the owner-controlled host, the retained artifact may additionally be
+replayed offline:
+
+```bash
+python3 tools/verify_engine_v2_cpu_performance_v2_terminal_decision.py \
+  --artifact \
+  .betelgeuze/evidence/engine-v2-cpu-performance-v2/geometric-cpu-qualification-a4a6dd39655a.json
+```
+
 ## Live versus offline evidence
 
 `run_sealed_local_performance_runner()` is the only live entry point and has no

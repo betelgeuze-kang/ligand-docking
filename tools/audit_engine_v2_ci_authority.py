@@ -100,19 +100,25 @@ MIXED64_V2_FORBIDDEN_TRUE_AUTHORITY_KEYS = (
 CPU_PERFORMANCE_CONTRACT_PATHS = (
     "betelgeuze_engine_v2/docking/performance_sidecar.py",
     "config/engine_v2_cpu_performance_profile.json",
+    "config/engine_v2_cpu_performance_v2_terminal_decision.json",
     "tools/run_engine_v2_cpu_performance_qualification.py",
     "tools/verify_engine_v2_cpu_performance_profile.py",
+    "tools/verify_engine_v2_cpu_performance_v2_terminal_decision.py",
     "tests/unit/test_engine_v2_cpu_performance_sidecar.py",
     "tests/unit/test_verify_engine_v2_cpu_performance_profile.py",
+    "tests/unit/test_verify_engine_v2_cpu_performance_v2_terminal_decision.py",
     "tests/unit/test_engine_v2_native_geometric_admission.py",
     "docs/engine_v2_cpu_performance_qualification.md",
 )
 CPU_PERFORMANCE_REQUIRED_TOKEN_COUNTS = {
     "config/engine_v2_cpu_performance_profile.json": 2,
+    "config/engine_v2_cpu_performance_v2_terminal_decision.json": 2,
     "tools/run_engine_v2_cpu_performance_qualification.py": 3,
     "tools/verify_engine_v2_cpu_performance_profile.py": 4,
+    "tools/verify_engine_v2_cpu_performance_v2_terminal_decision.py": 3,
     "tests/unit/test_engine_v2_cpu_performance_sidecar.py": 2,
     "tests/unit/test_verify_engine_v2_cpu_performance_profile.py": 2,
+    "tests/unit/test_verify_engine_v2_cpu_performance_v2_terminal_decision.py": 2,
     "tests/unit/test_engine_v2_native_geometric_admission.py": 2,
     "docs/engine_v2_cpu_performance_qualification.md": 1,
     "import betelgeuze_engine_v2.docking.performance_sidecar": 1,
@@ -334,13 +340,55 @@ def _cpu_performance_authority_is_fail_closed(repo_root: Path) -> bool:
         return False
     authority = document.get("authority")
     restrictions = document.get("restrictions")
-    return bool(
+    profile_fail_closed = bool(
         type(authority) is dict
         and set(authority) == set(CPU_PERFORMANCE_FALSE_AUTHORITY_KEYS)
         and all(authority.get(key) is False for key in CPU_PERFORMANCE_FALSE_AUTHORITY_KEYS)
         and type(restrictions) is dict
         and restrictions
         and all(value is False for value in restrictions.values())
+    )
+    if not profile_fail_closed:
+        return False
+
+    terminal_path = (
+        repo_root / "config/engine_v2_cpu_performance_v2_terminal_decision.json"
+    )
+    try:
+        terminal_raw = terminal_path.read_bytes()
+        if not terminal_raw.endswith(b"\n") or terminal_raw.endswith(b"\n\n"):
+            return False
+        terminal = json.loads(
+            terminal_raw[:-1].decode("ascii"),
+            object_pairs_hook=reject_duplicate_keys,
+            parse_float=reject_float,
+            parse_constant=reject_float,
+        )
+    except (OSError, UnicodeError, ValueError):
+        return False
+    if (
+        type(terminal) is not dict
+        or terminal.get("schema_id")
+        != "betelgeuze.engine_v2_cpu_performance_terminal_decision/1.0.0"
+        or _canonical_bytes(terminal) + b"\n" != terminal_raw
+    ):
+        return False
+    terminal_authority = terminal.get("authority")
+    disposition = terminal.get("disposition")
+    return bool(
+        type(terminal_authority) is dict
+        and set(terminal_authority) == set(CPU_PERFORMANCE_FALSE_AUTHORITY_KEYS)
+        and all(
+            terminal_authority.get(key) is False
+            for key in CPU_PERFORMANCE_FALSE_AUTHORITY_KEYS
+        )
+        and type(disposition) is dict
+        and disposition.get("profile_closed") is True
+        and disposition.get("profile_mutation_allowed") is False
+        and disposition.get("qualification_consumed") is True
+        and disposition.get("rerun_allowed") is False
+        and disposition.get("successor_requires_new_profile_id") is True
+        and disposition.get("terminal_decision") == "BLOCKED"
     )
 
 

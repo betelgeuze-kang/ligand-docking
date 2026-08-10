@@ -119,6 +119,14 @@ def _write_cpu_performance_contract(
         json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n",
         encoding="ascii",
     )
+    terminal_source = (
+        Path(__file__).resolve().parents[2]
+        / "config/engine_v2_cpu_performance_v2_terminal_decision.json"
+    )
+    terminal = tmp_path / (
+        "config/engine_v2_cpu_performance_v2_terminal_decision.json"
+    )
+    terminal.write_bytes(terminal_source.read_bytes())
 
 
 def _write_mixed64_v2_contract(
@@ -504,6 +512,63 @@ def test_cpu_performance_authority_escalation_fails_ci_audit(
     _write_authoritative_workflows(tmp_path)
     _write_cpu_performance_contract(
         tmp_path, authority_override=(authority_key, True)
+    )
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_cpu_performance_ci_tokens()), encoding="utf-8"
+    )
+
+    payload = build_inventory(tmp_path)
+    assert payload["cpu_performance_authority_fail_closed"] is False
+    assert payload["cpu_performance_contract_in_authoritative_ci"] is False
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (
+        ("qualification_consumed", False),
+        ("rerun_allowed", True),
+        ("profile_mutation_allowed", True),
+        ("terminal_decision", "GO"),
+    ),
+)
+def test_cpu_performance_terminal_disposition_escalation_fails_ci_audit(
+    tmp_path: Path,
+    field: str,
+    value: object,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_cpu_performance_contract(tmp_path)
+    terminal_path = tmp_path / (
+        "config/engine_v2_cpu_performance_v2_terminal_decision.json"
+    )
+    terminal = json.loads(terminal_path.read_text(encoding="ascii"))
+    terminal["disposition"][field] = value
+    terminal_path.write_text(
+        json.dumps(terminal, sort_keys=True, separators=(",", ":")) + "\n",
+        encoding="ascii",
+    )
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_cpu_performance_ci_tokens()), encoding="utf-8"
+    )
+
+    payload = build_inventory(tmp_path)
+    assert payload["cpu_performance_authority_fail_closed"] is False
+    assert payload["cpu_performance_contract_in_authoritative_ci"] is False
+
+
+def test_cpu_performance_terminal_authority_escalation_fails_ci_audit(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_cpu_performance_contract(tmp_path)
+    terminal_path = tmp_path / (
+        "config/engine_v2_cpu_performance_v2_terminal_decision.json"
+    )
+    terminal = json.loads(terminal_path.read_text(encoding="ascii"))
+    terminal["authority"]["molecular_execution_authorized"] = True
+    terminal_path.write_text(
+        json.dumps(terminal, sort_keys=True, separators=(",", ":")) + "\n",
+        encoding="ascii",
     )
     (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
         "\n".join(_cpu_performance_ci_tokens()), encoding="utf-8"
