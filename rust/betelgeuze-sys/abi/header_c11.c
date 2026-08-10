@@ -233,9 +233,12 @@ _Static_assert(
     offsetof(bg_dynamics_report_v1, reserved) == 72,
     "bad dynamics report reserved offset");
 
-typedef bg_status(BG_CALL *bg_forcefield_soa_v1_init_fn)(bg_forcefield_soa_v1 *);
-typedef bg_status(BG_CALL *bg_force_soa_v1_init_fn)(bg_force_soa_v1 *);
-typedef bg_status(BG_CALL *bg_energy_components_v1_init_fn)(bg_energy_components_v1 *);
+typedef bg_status(BG_CALL *bg_forcefield_soa_v1_init_fn)(
+    bg_forcefield_soa_v1 *, size_t, uint32_t);
+typedef bg_status(BG_CALL *bg_force_soa_v1_init_fn)(
+    bg_force_soa_v1 *, size_t, uint32_t);
+typedef bg_status(BG_CALL *bg_energy_components_v1_init_fn)(
+    bg_energy_components_v1 *, size_t, uint32_t);
 typedef bg_status(BG_CALL *bg_forcefield_create_fn)(
     const bg_forcefield_soa_v1 *, bg_forcefield **);
 typedef void(BG_CALL *bg_forcefield_destroy_fn)(bg_forcefield *);

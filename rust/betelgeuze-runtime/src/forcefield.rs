@@ -200,7 +200,13 @@ impl ForceField {
 
         let mut raw = MaybeUninit::<sys::bg_forcefield_soa_v1>::uninit();
         // SAFETY: raw points to correctly sized writable storage.
-        status_result(unsafe { sys::bg_forcefield_soa_v1_init(raw.as_mut_ptr()) })?;
+        status_result(unsafe {
+            sys::bg_forcefield_soa_v1_init(
+                raw.as_mut_ptr(),
+                std::mem::size_of::<sys::bg_forcefield_soa_v1>(),
+                sys::BG_ABI_VERSION,
+            )
+        })?;
         // SAFETY: The successful initializer wrote every field.
         let mut raw = unsafe { raw.assume_init() };
         raw.atom_count = atom_count;
@@ -331,7 +337,13 @@ impl Context {
         let mut raw_energy = initialized_energy()?;
         let mut raw_forces = MaybeUninit::<sys::bg_force_soa_v1>::uninit();
         // SAFETY: raw_forces points to correctly sized writable storage.
-        status_result(unsafe { sys::bg_force_soa_v1_init(raw_forces.as_mut_ptr()) })?;
+        status_result(unsafe {
+            sys::bg_force_soa_v1_init(
+                raw_forces.as_mut_ptr(),
+                std::mem::size_of::<sys::bg_force_soa_v1>(),
+                sys::BG_ABI_VERSION,
+            )
+        })?;
         // SAFETY: The successful initializer wrote every field.
         let mut raw_forces = unsafe { raw_forces.assume_init() };
         raw_forces.particle_capacity = checked_count(count)?;
@@ -393,7 +405,13 @@ impl Context {
 fn initialized_energy() -> Result<sys::bg_energy_components_v1> {
     let mut raw = MaybeUninit::<sys::bg_energy_components_v1>::uninit();
     // SAFETY: raw points to correctly sized writable storage.
-    status_result(unsafe { sys::bg_energy_components_v1_init(raw.as_mut_ptr()) })?;
+    status_result(unsafe {
+        sys::bg_energy_components_v1_init(
+            raw.as_mut_ptr(),
+            std::mem::size_of::<sys::bg_energy_components_v1>(),
+            sys::BG_ABI_VERSION,
+        )
+    })?;
     // SAFETY: The successful initializer wrote every field.
     Ok(unsafe { raw.assume_init() })
 }
