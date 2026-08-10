@@ -14,6 +14,7 @@ from pathlib import Path
 import platform
 import runpy
 import shutil
+import stat
 import subprocess
 import sys
 from types import MappingProxyType
@@ -162,6 +163,7 @@ STAGE0_REQUIRED_SOURCE_FREEZE_PATHS = frozenset(
         "betelgeuze_engine_v2/docking/scorer_v1.py",
         "betelgeuze_engine_v2/docking/scoring.py",
         "betelgeuze_engine_v2/docking/search.py",
+        "betelgeuze_engine_v2/docking/search_v2.py",
         "betelgeuze_engine_v2/docking/torsion_contact_refinement.py",
         "packaging/engine-v2/pyproject.toml",
         "tools/build_engine_v2_native_wheel.py",
@@ -171,6 +173,26 @@ STAGE0_REQUIRED_SOURCE_FREEZE_PATHS = frozenset(
         "rust_engine_v2/build.rs",
         "rust_engine_v2/pyproject.toml",
         "rust_engine_v2/src/lib.rs",
+        "rust_engine_v2/src/docking_v2.rs",
+        "rust/Cargo.toml",
+        "rust/betelgeuze-docking-search/Cargo.toml",
+        "rust/betelgeuze-docking-search/src/anchors.rs",
+        "rust/betelgeuze-docking-search/src/cluster.rs",
+        "rust/betelgeuze-docking-search/src/error.rs",
+        "rust/betelgeuze-docking-search/src/geometry.rs",
+        "rust/betelgeuze-docking-search/src/identity.rs",
+        "rust/betelgeuze-docking-search/src/lib.rs",
+        "rust/betelgeuze-docking-search/src/model.rs",
+        "rust/betelgeuze-docking-search/src/prune.rs",
+        "rust/betelgeuze-docking-search/src/receipt.rs",
+        "rust/betelgeuze-docking-search/src/refine.rs",
+        "rust/betelgeuze-docking-search/src/search.rs",
+        "rust/betelgeuze-docking-search/src/sha256.rs",
+        "rust/betelgeuze-docking-search/src/short_range.rs",
+        "rust/betelgeuze-docking-search/src/so3.rs",
+        "rust/betelgeuze-docking-search/src/surface.rs",
+        "rust/betelgeuze-docking-search/src/validity.rs",
+        "LICENSE",
     }
 )
 _REQUIRED_SOURCE_FREEZE_PATHS = STAGE0_REQUIRED_SOURCE_FREEZE_PATHS
@@ -303,18 +325,45 @@ def stage0_engine_implementation_sha256(
         if runner_path is None
         else runner_path
     )
-    native_paths = tuple(
+    native_manifest_paths = tuple(
         repo_root / relative_path
         for relative_path in (
             "rust_engine_v2/Cargo.toml",
             "rust_engine_v2/Cargo.lock",
             "rust_engine_v2/build.rs",
             "rust_engine_v2/pyproject.toml",
-            "rust_engine_v2/src/lib.rs",
+            "rust/Cargo.toml",
+            "rust/betelgeuze-docking-search/Cargo.toml",
+            "LICENSE",
         )
     )
-    paths = tuple(sorted(package_root.rglob("*.py"))) + native_paths + (active_runner,)
-    if not paths or any(not path.is_file() for path in paths):
+    native_source_roots = (
+        repo_root / "rust_engine_v2/src",
+        repo_root / "rust/betelgeuze-docking-search/src",
+    )
+    if any(
+        not stat.S_ISDIR(root.lstat().st_mode) or root.is_symlink()
+        for root in native_source_roots
+    ):
+        raise ValueError("engine_source_closure_incomplete")
+    native_source_paths_list: list[Path] = []
+    for root in native_source_roots:
+        for path in sorted(root.rglob("*")):
+            mode = path.lstat().st_mode
+            if stat.S_ISLNK(mode) or not (stat.S_ISDIR(mode) or stat.S_ISREG(mode)):
+                raise ValueError("engine_source_closure_nonregular")
+            if stat.S_ISREG(mode):
+                native_source_paths_list.append(path)
+    native_source_paths = tuple(native_source_paths_list)
+    paths = (
+        tuple(sorted(package_root.rglob("*.py")))
+        + native_manifest_paths
+        + native_source_paths
+        + (active_runner,)
+    )
+    if not paths or any(
+        path.is_symlink() or not stat.S_ISREG(path.lstat().st_mode) for path in paths
+    ):
         raise ValueError("engine_source_closure_incomplete")
     projection = [
         (path.relative_to(repo_root).as_posix(), _sha256_path(path)) for path in paths
@@ -1565,8 +1614,8 @@ def _validate_environment(
     native = _mapping(environment.get("native_backend"))
     if native.get("backend") != "rust_cpu_required":
         blockers.append("native_backend_not_rust_cpu_required")
-    if native.get("distribution_version") != "0.2.0rc5":
-        blockers.append("native_backend_version_not_rc5")
+    if native.get("distribution_version") != "0.2.0rc6":
+        blockers.append("native_backend_version_not_rc6")
     if native.get("thread_count") != 1:
         blockers.append("native_backend_thread_count_not_frozen")
     for field in ("extension_sha256", "cargo_lock_sha256", "wheel_sha256"):

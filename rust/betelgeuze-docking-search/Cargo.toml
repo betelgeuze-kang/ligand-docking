@@ -1,0 +1,13 @@
+[package]
+name = "betelgeuze-docking-search"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license-file.workspace = true
+publish = false
+description = "Deterministic native docking-search core for Betelgeuze"
+
+[dependencies]
+
+[lints.rust]
+unsafe_code = "forbid"

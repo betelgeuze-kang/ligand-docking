@@ -44,6 +44,20 @@ from .search import (
     DockingSearchRow,
     run_bounded_docking_search,
 )
+from .search_v2 import (
+    DOCKING_SEARCH_V2_ALGORITHM_ID,
+    DOCKING_SEARCH_V2_CLAIM_BLOCKERS,
+    DOCKING_SEARCH_V2_RESULT_SCHEMA_ID,
+    DockingAnchorKind,
+    DockingSearchV2CandidateRow,
+    DockingSearchV2Config,
+    DockingSearchV2Error,
+    DockingSearchV2Input,
+    DockingSearchV2Pose,
+    DockingSearchV2Result,
+    DockingShortRangeV2Config,
+    run_docking_search_v2,
+)
 from .validity import (
     PoseValidityConfig,
     PoseValidityContext,
@@ -371,6 +385,18 @@ from .consumers import (  # noqa: E402
 )
 
 __all__ = [
+    "DOCKING_SEARCH_V2_ALGORITHM_ID",
+    "DOCKING_SEARCH_V2_CLAIM_BLOCKERS",
+    "DOCKING_SEARCH_V2_RESULT_SCHEMA_ID",
+    "DockingAnchorKind",
+    "DockingSearchV2CandidateRow",
+    "DockingSearchV2Config",
+    "DockingSearchV2Error",
+    "DockingSearchV2Input",
+    "DockingSearchV2Pose",
+    "DockingSearchV2Result",
+    "DockingShortRangeV2Config",
+    "run_docking_search_v2",
     "AUTHENTICATED_DOCKING_DERIVATION_ID",
     "AUTHENTICATED_DOCKING_DERIVATION_POLICY_SCHEMA_ID",
     "AUTHENTICATED_DOCKING_INPUT_SCHEMA_ID",

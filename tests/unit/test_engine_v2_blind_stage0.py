@@ -547,7 +547,7 @@ def _policy(
             "gnina_sha256": _sha256(gnina),
             "native_backend": {
                 "backend": "rust_cpu_required",
-                "distribution_version": "0.2.0rc5",
+                "distribution_version": "0.2.0rc6",
                 "wheel_path": native_wheel.name,
                 "wheel_sha256": _sha256(native_wheel),
                 "extension_sha256": "8" * 64,

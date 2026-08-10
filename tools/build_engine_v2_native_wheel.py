@@ -117,7 +117,7 @@ _SANITIZED_BUILD_ENV_NAMES = frozenset(
 )
 _WHEEL_RE = re.compile(
     r"^betelgeuze_engine_v2_native-0\.2\.0rc6-cp3(?:10|11|12)-cp3(?:10|11|12)-"
-    r"manylinux_[0-9_]+_x86_64\.whl$"
+    r"(?:manylinux_[0-9_]+|linux)_x86_64\.whl$"
 )
 
 
@@ -383,9 +383,23 @@ def _isolated_cargo_target_directory(
         yield Path(temporary).resolve(strict=True)
 
 
-def _verify_wheel(path: Path) -> None:
+def _validate_compatibility(compatibility: str) -> str:
+    if compatibility != "linux" and re.fullmatch(
+        r"manylinux_[0-9_]+", compatibility
+    ) is None:
+        raise RuntimeError(f"unsupported native wheel compatibility: {compatibility}")
+    return compatibility
+
+
+def _verify_wheel(path: Path, *, compatibility: str | None = None) -> None:
     if _WHEEL_RE.fullmatch(path.name) is None:
         raise RuntimeError(f"unexpected native wheel name: {path.name}")
+    if compatibility is not None:
+        compatibility = _validate_compatibility(compatibility)
+        if not path.name.endswith(f"-{compatibility}_x86_64.whl"):
+            raise RuntimeError(
+                "native wheel platform tag does not match the requested compatibility"
+            )
     with zipfile.ZipFile(path) as archive:
         files = tuple(name for name in archive.namelist() if not name.endswith("/"))
     extensions = tuple(
@@ -408,6 +422,7 @@ def build_native_wheel(
     compatibility: str = "manylinux_2_28",
     source_date_epoch: int = DEFAULT_SOURCE_DATE_EPOCH,
 ) -> Path:
+    compatibility = _validate_compatibility(compatibility)
     manifest = repository_root / "rust_engine_v2" / "Cargo.toml"
     lock = repository_root / "rust_engine_v2" / "Cargo.lock"
     if not manifest.is_file() or not lock.is_file():
@@ -457,7 +472,7 @@ def build_native_wheel(
     wheels = tuple(sorted(output_dir.glob("*.whl")))
     if len(wheels) != 1:
         raise RuntimeError(f"expected one native wheel, observed {len(wheels)}")
-    _verify_wheel(wheels[0])
+    _verify_wheel(wheels[0], compatibility=compatibility)
     return wheels[0]
 
 

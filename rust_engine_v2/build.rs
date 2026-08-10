@@ -1,6 +1,6 @@
 use sha2::{Digest, Sha256};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 const FROZEN_RUSTC_VERSION: &str = "rustc 1.93.0 (254b59607 2026-01-19)";
@@ -14,6 +14,8 @@ fn sha256_file(path: &PathBuf) -> String {
 
 fn main() {
     let manifest = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
+    let (source_closure_sha256, source_closure_file_count, source_paths) =
+        source_closure(&manifest);
     let manifest_toml = manifest.join("Cargo.toml");
     let native_pyproject = manifest.join("pyproject.toml");
     let lock = manifest.join("Cargo.lock");
@@ -180,6 +182,9 @@ fn main() {
     println!("cargo:rerun-if-changed=src/lib.rs");
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=../tools/build_engine_v2_native_wheel.py");
+    for path in source_paths {
+        println!("cargo:rerun-if-changed={}", path.display());
+    }
     println!("cargo:rerun-if-env-changed=BETELGEUZE_EXPECTED_RUSTC_EXECUTABLE_SHA256");
     println!("cargo:rerun-if-env-changed=BETELGEUZE_EXPECTED_RUSTC_VERBOSE_SHA256");
     println!("cargo:rerun-if-env-changed=BETELGEUZE_NATIVE_BUILD_WRAPPER_SHA256");
@@ -188,6 +193,10 @@ fn main() {
     println!("cargo:rustc-env=BETELGEUZE_CARGO_LOCK_SHA256={lock_sha256}");
     println!("cargo:rustc-env=BETELGEUZE_RUST_LIB_SHA256={lib_sha256}");
     println!("cargo:rustc-env=BETELGEUZE_BUILD_SCRIPT_SHA256={build_script_sha256}");
+    println!("cargo:rustc-env=BETELGEUZE_NATIVE_SOURCE_CLOSURE_SHA256={source_closure_sha256}");
+    println!(
+        "cargo:rustc-env=BETELGEUZE_NATIVE_SOURCE_CLOSURE_FILE_COUNT={source_closure_file_count}"
+    );
     println!(
         "cargo:rustc-env=BETELGEUZE_NATIVE_BUILD_WRAPPER_SHA256={native_build_wrapper_sha256}"
     );
@@ -236,4 +245,112 @@ fn main() {
     println!("cargo:rustc-env=BETELGEUZE_RUSTFLAGS_COUNT={rustflags_count}");
     println!("cargo:rustc-env=BETELGEUZE_BUILD_WRAPPER_CONTROL={wrapper_control}");
     println!("cargo:rustc-env=BETELGEUZE_BUILD_FLAGS={actual_build_flags}");
+}
+
+fn source_closure(manifest: &Path) -> (String, usize, Vec<PathBuf>) {
+    let repository = manifest
+        .parent()
+        .expect("native crate must be inside the repository");
+    let dependency = repository.join("rust/betelgeuze-docking-search");
+    let mut paths = vec![
+        manifest.join("Cargo.toml"),
+        manifest.join("Cargo.lock"),
+        manifest.join("build.rs"),
+        repository.join("rust/Cargo.toml"),
+        dependency.join("Cargo.toml"),
+        repository.join("LICENSE"),
+    ];
+    collect_regular_files(&manifest.join("src"), &mut paths);
+    collect_regular_files(&dependency.join("src"), &mut paths);
+    paths.sort_by(|left, right| {
+        closure_label(repository, left).cmp(&closure_label(repository, right))
+    });
+    paths.dedup();
+
+    let mut digest = Sha256::new();
+    digest.update(b"betelgeuze.engine-v2.native-source-closure/v1\0");
+    for path in &paths {
+        let label = closure_label(repository, path);
+        let bytes = read_regular_file(path);
+        digest.update((label.len() as u64).to_be_bytes());
+        digest.update(label.as_bytes());
+        digest.update((bytes.len() as u64).to_be_bytes());
+        digest.update(&bytes);
+    }
+    (format!("{:x}", digest.finalize()), paths.len(), paths)
+}
+
+fn collect_regular_files(root: &Path, output: &mut Vec<PathBuf>) {
+    let root_metadata = fs::symlink_metadata(root).unwrap_or_else(|error| {
+        panic!(
+            "cannot identify native source directory {}: {error}",
+            root.display()
+        )
+    });
+    if root_metadata.file_type().is_symlink() || !root_metadata.is_dir() {
+        panic!(
+            "native source directory must be a non-symlink directory: {}",
+            root.display()
+        );
+    }
+    let mut entries: Vec<_> = fs::read_dir(root)
+        .unwrap_or_else(|error| {
+            panic!(
+                "cannot read native source directory {}: {error}",
+                root.display()
+            )
+        })
+        .map(|entry| {
+            entry
+                .expect("native source directory entry must be readable")
+                .path()
+        })
+        .collect();
+    entries.sort();
+    for path in entries {
+        let metadata = fs::symlink_metadata(&path).unwrap_or_else(|error| {
+            panic!("cannot identify native source {}: {error}", path.display())
+        });
+        if metadata.file_type().is_symlink() {
+            panic!("native source closure rejects symlink: {}", path.display());
+        }
+        if metadata.is_dir() {
+            collect_regular_files(&path, output);
+        } else if metadata.is_file() {
+            output.push(path);
+        } else {
+            panic!(
+                "native source closure rejects non-regular entry: {}",
+                path.display()
+            );
+        }
+    }
+}
+
+fn read_regular_file(path: &Path) -> Vec<u8> {
+    let metadata = fs::symlink_metadata(path).unwrap_or_else(|error| {
+        panic!(
+            "cannot identify native source closure {}: {error}",
+            path.display()
+        )
+    });
+    if metadata.file_type().is_symlink() || !metadata.is_file() {
+        panic!(
+            "native source closure entry must be a non-symlink regular file: {}",
+            path.display()
+        );
+    }
+    fs::read(path).unwrap_or_else(|error| {
+        panic!(
+            "cannot read native source closure {}: {error}",
+            path.display()
+        )
+    })
+}
+
+fn closure_label(repository: &Path, path: &Path) -> String {
+    path.strip_prefix(repository)
+        .expect("native source must remain inside repository")
+        .to_string_lossy()
+        .replace('\\', "/")
 }

@@ -1279,6 +1279,12 @@ def test_engine_source_identity_hashes_python_and_native_source_closure(
         "rust_engine_v2/build.rs",
         "rust_engine_v2/pyproject.toml",
         "rust_engine_v2/src/lib.rs",
+        "rust_engine_v2/src/docking/search.rs",
+        "rust/Cargo.toml",
+        "rust/betelgeuze-docking-search/Cargo.toml",
+        "rust/betelgeuze-docking-search/src/lib.rs",
+        "rust/betelgeuze-docking-search/src/nested/search.rs",
+        "LICENSE",
     ):
         path = tmp_path / relative_path
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -1289,6 +1295,22 @@ def test_engine_source_identity_hashes_python_and_native_source_closure(
     second = runner._engine_source_sha256(tmp_path, runner_path=runner_path)
 
     assert first != second
+
+    native_dependency = (
+        tmp_path / "rust/betelgeuze-docking-search/src/nested/search.rs"
+    )
+    native_dependency.write_text("// dependency changed\n", encoding="ascii")
+    third = runner._engine_source_sha256(tmp_path, runner_path=runner_path)
+
+    assert second != third
+
+    symlink = tmp_path / "rust/betelgeuze-docking-search/src/escaped.rs"
+    symlink.symlink_to(native_dependency)
+    with pytest.raises(
+        runner.PublicRedockingRunnerError,
+        match="implementation source closure is incomplete",
+    ):
+        runner._engine_source_sha256(tmp_path, runner_path=runner_path)
 
 
 def test_evaluator_environment_requires_every_frozen_dependency(
