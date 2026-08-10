@@ -170,6 +170,74 @@ fn independent_oracle_remains_a_dev_only_dependency() {
     assert!(dev_dependencies.contains("betelgeuze-reference-physics"));
 }
 
+#[test]
+#[cfg(feature = "hip")]
+fn hip_matches_the_cpu_and_independent_oracle_without_fallback() {
+    if !runtime::Context::backend_available(runtime::Backend::Hip, 0)
+        .expect("HIP availability query succeeds")
+    {
+        assert_ne!(
+            std::env::var("BG_REQUIRE_HIP_DEVICE").as_deref(),
+            Ok("1"),
+            "BG_REQUIRE_HIP_DEVICE=1 but no HIP device is available at ordinal zero"
+        );
+        eprintln!("SKIP: HIP feature was compiled without a visible device zero");
+        return;
+    }
+    for fixture in fixtures() {
+        let expected = oracle::evaluate(&fixture.input)
+            .unwrap_or_else(|error| panic!("{} oracle evaluation failed: {error}", fixture.name));
+        let native = native_fixture(&fixture);
+        let cpu = native
+            .context
+            .evaluate(&native.system, &native.forcefield)
+            .unwrap_or_else(|error| panic!("{} CPU evaluation failed: {error}", fixture.name));
+        let hip_context = runtime::Context::new(runtime::ContextOptions::hip(0))
+            .unwrap_or_else(|error| panic!("{} HIP context failed: {error}", fixture.name));
+        assert_eq!(
+            hip_context.backend().expect("HIP backend query succeeds"),
+            runtime::Backend::Hip
+        );
+        let hip = hip_context
+            .evaluate(&native.system, &native.forcefield)
+            .unwrap_or_else(|error| panic!("{} HIP evaluation failed: {error}", fixture.name));
+        let repeated = hip_context
+            .evaluate(&native.system, &native.forcefield)
+            .unwrap_or_else(|error| {
+                panic!("{} repeated HIP evaluation failed: {error}", fixture.name)
+            });
+
+        assert_energy_close(fixture.name, hip.energy, expected);
+        assert_runtime_energy_bits_equal(
+            fixture.name,
+            "repeated HIP evaluation",
+            hip.energy,
+            repeated.energy,
+        );
+        for axis in 0..3 {
+            let cpu_channel = force_channel(&cpu.forces, axis);
+            let hip_channel = force_channel(&hip.forces, axis);
+            let repeated_channel = force_channel(&repeated.forces, axis);
+            for atom in 0..cpu_channel.len() {
+                let tolerance = 1.0e-10 * (1.0 + cpu_channel[atom].abs());
+                assert!(
+                    (hip_channel[atom] - cpu_channel[atom]).abs() <= tolerance,
+                    "{} CPU/HIP force mismatch at atom {atom}, axis {axis}: CPU={:.17e}, HIP={:.17e}",
+                    fixture.name,
+                    cpu_channel[atom],
+                    hip_channel[atom]
+                );
+                assert_eq!(
+                    hip_channel[atom].to_bits(),
+                    repeated_channel[atom].to_bits(),
+                    "{} repeated HIP force changed bits at atom {atom}, axis {axis}",
+                    fixture.name
+                );
+            }
+        }
+    }
+}
+
 fn fixtures() -> Vec<Fixture> {
     vec![
         isolated_bond(),

@@ -20,6 +20,10 @@ fn main() {
     let system_source = repository_root.join("native/src/system.cpp");
     let cpu_evaluator_header = repository_root.join("native/src/cpu/evaluator.hpp");
     let cpu_evaluator_source = repository_root.join("native/src/cpu/evaluator.cpp");
+    let hip_backend_header = repository_root.join("native/src/hip/backend.hpp");
+    let hip_backend_source = repository_root.join("native/src/hip/backend.hip");
+    let hip_planning_header = repository_root.join("native/src/hip/planning.hpp");
+    let hip_stub_source = repository_root.join("native/src/hip/stub.cpp");
     let c_header_probe = manifest_dir.join("abi/header_c11.c");
     let cpp_layout_probe = manifest_dir.join("abi/layout_assertions.cpp");
 
@@ -31,6 +35,10 @@ fn main() {
     track(&system_source);
     track(&cpu_evaluator_header);
     track(&cpu_evaluator_source);
+    track(&hip_backend_header);
+    track(&hip_backend_source);
+    track(&hip_planning_header);
+    track(&hip_stub_source);
     track(&c_header_probe);
     track(&cpp_layout_probe);
 
@@ -46,6 +54,61 @@ fn main() {
         .file(&cpu_evaluator_source)
         .warnings(true)
         .warnings_into_errors(true);
+    let hip_enabled = std::env::var_os("CARGO_FEATURE_HIP").is_some();
+    if hip_enabled {
+        println!("cargo:rerun-if-env-changed=HIP_PATH");
+        println!("cargo:rerun-if-env-changed=ROCM_PATH");
+        println!("cargo:rerun-if-env-changed=ROCM_DEVICE_LIB_PATH");
+        println!("cargo:rerun-if-env-changed=BG_HIP_ARCHITECTURE");
+        let rocm_path = std::env::var_os("HIP_PATH")
+            .or_else(|| std::env::var_os("ROCM_PATH"))
+            .map(PathBuf::from)
+            .unwrap_or_else(|| PathBuf::from("/opt/rocm"));
+        let hip_compiler = rocm_path.join("bin/hipcc");
+        let architecture = std::env::var("BG_HIP_ARCHITECTURE").unwrap_or_else(|_| {
+            panic!(
+                "the HIP feature requires an explicit BG_HIP_ARCHITECTURE \
+                 (for example gfx1030); hardware-derived native builds are \
+                 intentionally forbidden"
+            )
+        });
+        if architecture.trim().is_empty() {
+            panic!("BG_HIP_ARCHITECTURE must not be empty");
+        }
+        native_build
+            .compiler(&hip_compiler)
+            .include(rocm_path.join("include"))
+            .file(&hip_backend_source)
+            .define("BG_ENABLE_HIP", "1")
+            .flag(format!("--offload-arch={architecture}"));
+        let device_libs = std::env::var_os("ROCM_DEVICE_LIB_PATH")
+            .map(PathBuf::from)
+            .or_else(|| {
+                let installed = rocm_path.join("amdgcn/bitcode");
+                installed.is_dir().then_some(installed)
+            })
+            .unwrap_or_else(|| {
+                panic!(
+                    "the HIP feature requires matching ROCm device libraries; \
+                     install rocm-device-libs or set ROCM_DEVICE_LIB_PATH"
+                )
+            });
+        track(&device_libs);
+        native_build.flag(format!("--rocm-device-lib-path={}", device_libs.display()));
+        println!(
+            "cargo:rustc-link-search=native={}",
+            rocm_path.join("lib").display()
+        );
+        println!(
+            "cargo:rustc-link-search=native={}",
+            rocm_path.join("lib64").display()
+        );
+        println!("cargo:rustc-link-lib=dylib=amdhip64");
+    } else {
+        native_build
+            .file(&hip_stub_source)
+            .define("BG_ENABLE_HIP", "0");
+    }
     if native_build.get_compiler().is_like_msvc() {
         native_build.flag_if_supported("/fp:strict");
     } else {

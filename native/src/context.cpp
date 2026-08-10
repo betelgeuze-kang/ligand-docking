@@ -1,3 +1,4 @@
+#include "hip/backend.hpp"
 #include "internal.hpp"
 
 #include <cstring>
@@ -55,13 +56,6 @@ bool cpu_is_available(int32_t device_ordinal) noexcept {
     return device_ordinal == 0;
 }
 
-/* No HIP provider is linked in ABI v1 yet.  Merely compiling with hipcc must
- * never make this return true; a provider must implement allocation, stream,
- * and execution ownership before it can be wired here. */
-bool hip_is_available(int32_t /*device_ordinal*/) noexcept {
-    return false;
-}
-
 }  // namespace
 }  // namespace betelgeuze::native
 
@@ -78,7 +72,7 @@ extern "C" BG_API uint32_t BG_CALL bg_abi_version_minor(void) BG_NOEXCEPT {
 }
 
 extern "C" BG_API const char *BG_CALL bg_abi_version_string(void) BG_NOEXCEPT {
-    return "1.1";
+    return "1.2";
 }
 
 extern "C" BG_API const char *BG_CALL bg_status_string(
@@ -259,10 +253,16 @@ extern "C" BG_API bg_status BG_CALL bg_backend_is_available(
                 *available = cpu_is_available(device_ordinal) ? UINT8_C(1)
                                                                : UINT8_C(0);
                 return BG_STATUS_OK;
-            case BG_BACKEND_HIP:
-                *available = hip_is_available(device_ordinal) ? UINT8_C(1)
-                                                               : UINT8_C(0);
+            case BG_BACKEND_HIP: {
+                bool hip_available = false;
+                const bg_status status = hip::query_availability(
+                    device_ordinal, &hip_available);
+                if (status != BG_STATUS_OK) {
+                    return status;
+                }
+                *available = hip_available ? UINT8_C(1) : UINT8_C(0);
                 return BG_STATUS_OK;
+            }
             default:
                 return fail(
                     BG_STATUS_UNSUPPORTED_BACKEND,
@@ -308,16 +308,31 @@ extern "C" BG_API bg_status BG_CALL bg_context_create(
                     BG_STATUS_BACKEND_UNAVAILABLE,
                     "requested CPU device ordinal is unavailable");
             }
-        } else if (!hip_is_available(options->device_ordinal)) {
-            return fail(
-                BG_STATUS_BACKEND_UNAVAILABLE,
-                "HIP backend is unavailable; CPU fallback is forbidden");
+        } else {
+            bool hip_available = false;
+            status = hip::query_availability(
+                options->device_ordinal, &hip_available);
+            if (status != BG_STATUS_OK) {
+                return status;
+            }
+            if (!hip_available) {
+                return fail(
+                    BG_STATUS_BACKEND_UNAVAILABLE,
+                    "HIP backend is unavailable; CPU fallback is forbidden");
+            }
         }
 
         auto context = std::make_unique<bg_context>();
         context->backend = selected_backend;
         context->unit_system = options->unit_system;
         context->device_ordinal = options->device_ordinal;
+        if (selected_backend == BG_BACKEND_HIP) {
+            status = hip::initialize(context.get());
+            if (status != BG_STATUS_OK) {
+                hip::shutdown(context.get());
+                return status;
+            }
+        }
         *out_context = context.release();
         return BG_STATUS_OK;
     });
@@ -325,6 +340,9 @@ extern "C" BG_API bg_status BG_CALL bg_context_create(
 
 extern "C" BG_API void BG_CALL bg_context_destroy(
     bg_context *context) BG_NOEXCEPT {
+    if (context != nullptr && context->backend == BG_BACKEND_HIP) {
+        betelgeuze::native::hip::shutdown(context);
+    }
     delete context;
 }
 

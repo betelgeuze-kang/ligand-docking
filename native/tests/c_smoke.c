@@ -5,11 +5,15 @@
 #include <stdint.h>
 #include <string.h>
 
+#ifndef BG_TEST_HIP_ENABLED
+#define BG_TEST_HIP_ENABLED 0
+#endif
+
 static void test_context_contract(void) {
     assert(bg_abi_version() == BG_ABI_VERSION);
     assert(bg_abi_version_major() == BG_ABI_VERSION_MAJOR);
     assert(bg_abi_version_minor() == BG_ABI_VERSION_MINOR);
-    assert(strcmp(bg_abi_version_string(), "1.1") == 0);
+    assert(strcmp(bg_abi_version_string(), "1.2") == 0);
     assert(strcmp(bg_status_string(BG_STATUS_OK), "ok") == 0);
     assert(strcmp(bg_backend_string(BG_BACKEND_CPU), "cpu") == 0);
     assert(strcmp(
@@ -22,7 +26,10 @@ static void test_context_contract(void) {
     assert(available == 1);
     assert(bg_backend_is_available(BG_BACKEND_HIP, 0, &available) ==
            BG_STATUS_OK);
-    assert(available == 0);
+    const uint8_t hip_available = available;
+#if !BG_TEST_HIP_ENABLED
+    assert(hip_available == 0);
+#endif
 
     bg_context_options options;
     assert(bg_context_options_init(&options) == BG_STATUS_OK);
@@ -43,21 +50,49 @@ static void test_context_contract(void) {
 
     options.backend = BG_BACKEND_HIP;
     context = (bg_context *)(uintptr_t)1;
-    assert(bg_context_create(&options, &context) ==
-           BG_STATUS_BACKEND_UNAVAILABLE);
+    const bg_status hip_create_status = bg_context_create(&options, &context);
+    bg_status unavailable_hip_status = hip_create_status;
+#if BG_TEST_HIP_ENABLED
+    if (hip_available != 0) {
+        assert(hip_create_status == BG_STATUS_OK);
+        assert(context != NULL);
+        assert(bg_context_get_backend(context, &selected) == BG_STATUS_OK);
+        assert(selected == BG_BACKEND_HIP);
+        bg_context_destroy(context);
+        context = NULL;
+
+        /* Even in a HIP-enabled process, an explicitly unavailable ordinal
+         * must fail closed instead of selecting CPU. */
+        options.device_ordinal = INT32_MAX;
+        context = (bg_context *)(uintptr_t)1;
+        unavailable_hip_status = bg_context_create(&options, &context);
+        assert(unavailable_hip_status == BG_STATUS_BACKEND_UNAVAILABLE);
+        assert(context == NULL);
+        assert(strstr(bg_last_error_message(), "fallback is forbidden") != NULL);
+    } else {
+        assert(hip_create_status == BG_STATUS_BACKEND_UNAVAILABLE);
+        assert(context == NULL);
+        assert(strstr(bg_last_error_message(), "fallback is forbidden") != NULL);
+    }
+#else
+    assert(hip_create_status == BG_STATUS_BACKEND_UNAVAILABLE);
     assert(context == NULL);
     assert(strstr(bg_last_error_message(), "fallback is forbidden") != NULL);
+#endif
 
-    uint64_t required = 0;
-    assert(bg_last_error_message_copy(NULL, 0, &required) == BG_STATUS_OK);
-    assert(required > 1);
-    char too_small[2];
-    assert(bg_last_error_message_copy(too_small, sizeof(too_small), &required) ==
-           BG_STATUS_BUFFER_TOO_SMALL);
-    char message[256];
-    assert(bg_last_error_message_copy(message, sizeof(message), &required) ==
-           BG_STATUS_OK);
-    assert(strstr(message, "fallback is forbidden") != NULL);
+    if (unavailable_hip_status == BG_STATUS_BACKEND_UNAVAILABLE) {
+        uint64_t required = 0;
+        assert(bg_last_error_message_copy(NULL, 0, &required) == BG_STATUS_OK);
+        assert(required > 1);
+        char too_small[2];
+        assert(bg_last_error_message_copy(
+                   too_small, sizeof(too_small), &required) ==
+               BG_STATUS_BUFFER_TOO_SMALL);
+        char message[256];
+        assert(bg_last_error_message_copy(message, sizeof(message), &required) ==
+               BG_STATUS_OK);
+        assert(strstr(message, "fallback is forbidden") != NULL);
+    }
 
     assert(bg_context_options_init(&options) == BG_STATUS_OK);
     options.reserved[2] = 1;

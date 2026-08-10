@@ -1,4 +1,5 @@
 #include "cpu/evaluator.hpp"
+#include "hip/backend.hpp"
 #include "internal.hpp"
 
 #include <algorithm>
@@ -172,15 +173,28 @@ extern "C" BG_API bg_status BG_CALL bg_context_evaluate(
                 BG_STATUS_INVALID_ARGUMENT,
                 "context, system, and forcefield unit systems must match");
         }
-        if (context->backend != BG_BACKEND_CPU) {
-            return fail(
-                BG_STATUS_UNSUPPORTED_BACKEND,
-                "the selected backend has no evaluator implementation");
-        }
-
         cpu::Evaluation evaluation;
-        status = cpu::evaluate(
-            *system, *forcefield, out_forces != nullptr, &evaluation);
+        switch (context->backend) {
+            case BG_BACKEND_CPU:
+                status = cpu::evaluate(
+                    *system,
+                    *forcefield,
+                    out_forces != nullptr,
+                    &evaluation);
+                break;
+            case BG_BACKEND_HIP:
+                status = hip::evaluate(
+                    *context,
+                    *system,
+                    *forcefield,
+                    out_forces != nullptr,
+                    &evaluation);
+                break;
+            default:
+                return fail(
+                    BG_STATUS_UNSUPPORTED_BACKEND,
+                    "the selected backend has no evaluator implementation");
+        }
         if (status != BG_STATUS_OK) {
             return status;
         }

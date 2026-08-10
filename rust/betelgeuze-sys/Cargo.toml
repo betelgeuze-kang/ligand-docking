@@ -8,5 +8,9 @@ publish = false
 links = "betelgeuze_engine"
 build = "build.rs"
 
+[features]
+default = []
+hip = []
+
 [build-dependencies]
 cc = "1.2"
