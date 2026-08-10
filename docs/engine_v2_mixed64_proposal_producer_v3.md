@@ -66,8 +66,9 @@ whose sum must remain 64.
 This producer closes the generation implementation gap only within its own
 non-authoritative receipt. Activation remains false because:
 
-- geometric admission v2 cannot represent a generation-eligible slot whose
-  producer emitted a typed failure; a failure-aware admission v3 is required;
+- geometric admission v3 now preserves generated candidates, allocation
+  failures, and runtime proposal failures in the same fixed64 denominator, but
+  remains synthetic and non-authoritative;
 - a second geometric gate must bind post-refinement coordinates;
 - Scorer V1 terms and pose validity must be reexecuted from these exact
   coordinates;
