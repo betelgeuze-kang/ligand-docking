@@ -66,6 +66,9 @@ fn descriptor_initializers_reject_incompatible_callers_without_writing() {
         assert_initializer_exact(bg_tensor_view_v1_init);
         assert_initializer_exact(bg_mutable_tensor_view_v1_init);
         assert_initializer_exact(bg_stream_v1_init);
+        assert_initializer_exact(bg_forcefield_soa_v1_init);
+        assert_initializer_exact(bg_force_soa_v1_init);
+        assert_initializer_exact(bg_energy_components_v1_init);
     }
 }
 

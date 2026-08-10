@@ -40,6 +40,68 @@ struct bg_system final {
     std::vector<double> charge;
 };
 
+struct bg_forcefield final {
+    struct BondSoa {
+        std::vector<std::size_t> atom_i;
+        std::vector<std::size_t> atom_j;
+        std::vector<double> equilibrium;
+        std::vector<double> force_constant;
+    } bonds;
+
+    struct AngleSoa {
+        std::vector<std::size_t> atom_i;
+        std::vector<std::size_t> atom_j;
+        std::vector<std::size_t> atom_k;
+        std::vector<double> equilibrium;
+        std::vector<double> force_constant;
+    } angles;
+
+    struct TorsionSoa {
+        std::vector<std::size_t> atom_i;
+        std::vector<std::size_t> atom_j;
+        std::vector<std::size_t> atom_k;
+        std::vector<std::size_t> atom_l;
+        std::vector<uint32_t> periodicity;
+        std::vector<double> phase;
+        std::vector<double> amplitude;
+    } torsions;
+
+    struct Pair {
+        std::size_t atom_i = 0;
+        std::size_t atom_j = 0;
+
+        friend bool operator<(const Pair &left, const Pair &right) noexcept {
+            return left.atom_i < right.atom_i ||
+                   (left.atom_i == right.atom_i &&
+                    left.atom_j < right.atom_j);
+        }
+
+        friend bool operator==(const Pair &left, const Pair &right) noexcept {
+            return left.atom_i == right.atom_i && left.atom_j == right.atom_j;
+        }
+    };
+
+    struct PairScale {
+        Pair pair;
+        double lennard_jones = 1.0;
+        double coulomb = 1.0;
+    };
+
+    bg_unit_system unit_system = BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL;
+    std::size_t atom_count = 0;
+    std::vector<double> sigma;
+    std::vector<double> epsilon;
+    std::vector<Pair> exclusions;
+    std::vector<PairScale> pair_scales;
+    uint32_t periodic_axes_mask = 0;
+    std::array<double, 3> cell_lengths = {0.0, 0.0, 0.0};
+    double cutoff = 10.0;
+    double switch_start = 8.0;
+    double dielectric = 1.0;
+    double screening_kappa = 0.0;
+    double minimum_pair_distance = 1.0e-6;
+};
+
 namespace betelgeuze::native {
 
 inline constexpr std::size_t kLastErrorCapacity = 1024;
@@ -211,6 +273,40 @@ inline bool all_positive_finite(const std::vector<double> &values) noexcept {
 inline bool double_pointer_is_aligned(const double *pointer) noexcept {
     return pointer == nullptr ||
            (reinterpret_cast<std::uintptr_t>(pointer) % alignof(double)) == 0;
+}
+
+template <typename Type>
+inline bool pointer_is_aligned(const Type *pointer) noexcept {
+    return pointer == nullptr ||
+           (reinterpret_cast<std::uintptr_t>(pointer) % alignof(Type)) == 0;
+}
+
+inline bg_status checked_element_count(
+    uint64_t observed_count,
+    std::size_t element_size,
+    const char *overflow_message,
+    std::size_t *out_count) noexcept {
+    if (out_count == nullptr || element_size == 0) {
+        return fail(BG_STATUS_INTERNAL_ERROR, "invalid internal count request");
+    }
+    if constexpr (sizeof(std::size_t) < sizeof(uint64_t)) {
+        if (observed_count > static_cast<uint64_t>(
+                                 std::numeric_limits<std::size_t>::max())) {
+            return fail(BG_STATUS_CAPACITY_OVERFLOW, overflow_message);
+        }
+    }
+    const auto max_count = static_cast<uint64_t>(
+        std::numeric_limits<std::size_t>::max() / element_size);
+    if (observed_count > max_count) {
+        return fail(BG_STATUS_CAPACITY_OVERFLOW, overflow_message);
+    }
+    const auto max_difference_count = static_cast<uint64_t>(
+        std::numeric_limits<std::ptrdiff_t>::max() / element_size);
+    if (observed_count > max_difference_count) {
+        return fail(BG_STATUS_CAPACITY_OVERFLOW, overflow_message);
+    }
+    *out_count = static_cast<std::size_t>(observed_count);
+    return BG_STATUS_OK;
 }
 
 inline const double *borrowed_data(const std::vector<double> &values) noexcept {

@@ -1,7 +1,10 @@
 add_library(betelgeuze_engine SHARED
     src/context.cpp
+    src/evaluator.cpp
+    src/forcefield.cpp
     src/system.cpp
     src/tensor.cpp
+    src/cpu/evaluator.cpp
 )
 
 target_compile_features(betelgeuze_engine PUBLIC cxx_std_17)
@@ -18,7 +21,7 @@ set_target_properties(betelgeuze_engine PROPERTIES
     CXX_VISIBILITY_PRESET hidden
     VISIBILITY_INLINES_HIDDEN YES
     OUTPUT_NAME betelgeuze_engine
-    VERSION 1.0.0
+    VERSION 1.1.0
     SOVERSION 1
 )
 
@@ -39,7 +42,11 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
         -Wconversion
         -Wsign-conversion
         -Werror
+        -ffp-contract=off
+        -fno-fast-math
     )
+elseif(MSVC)
+    target_compile_options(betelgeuze_engine PRIVATE /W4 /WX /fp:strict)
 endif()
 
 include(GNUInstallDirs)
@@ -90,6 +97,41 @@ if(BUILD_TESTING)
         target_compile_options(betelgeuze_engine_cpp_smoke PRIVATE /UNDEBUG)
     endif()
     add_test(NAME betelgeuze_engine_cpp_smoke COMMAND betelgeuze_engine_cpp_smoke)
+
+    add_executable(
+        betelgeuze_engine_cpu_evaluator
+        tests/cpu_evaluator.cpp
+    )
+    target_link_libraries(
+        betelgeuze_engine_cpu_evaluator
+        PRIVATE betelgeuze_engine
+    )
+    target_compile_features(
+        betelgeuze_engine_cpu_evaluator
+        PRIVATE cxx_std_17
+    )
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(betelgeuze_engine_cpu_evaluator PRIVATE
+            -Wall
+            -Wextra
+            -Wpedantic
+            -Wconversion
+            -Wsign-conversion
+            -Werror
+            -UNDEBUG
+            -ffp-contract=off
+            -fno-fast-math
+        )
+    elseif(MSVC)
+        target_compile_options(
+            betelgeuze_engine_cpu_evaluator
+            PRIVATE /W4 /WX /UNDEBUG /fp:strict
+        )
+    endif()
+    add_test(
+        NAME betelgeuze_engine_cpu_evaluator
+        COMMAND betelgeuze_engine_cpu_evaluator
+    )
 
     if(UNIX AND NOT APPLE AND CMAKE_NM)
         add_test(

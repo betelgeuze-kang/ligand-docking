@@ -10,7 +10,7 @@
 use core::ffi::c_char;
 
 pub const BG_ABI_VERSION_MAJOR: u32 = 1;
-pub const BG_ABI_VERSION_MINOR: u32 = 0;
+pub const BG_ABI_VERSION_MINOR: u32 = 1;
 pub const BG_ABI_VERSION: u32 = 1;
 
 pub const BG_CANONICAL_LENGTH_UNIT: &[u8] = b"angstrom\0";
@@ -35,6 +35,7 @@ pub const BG_STATUS_CAPACITY_OVERFLOW: bg_status = 6;
 pub const BG_STATUS_BUFFER_TOO_SMALL: bg_status = 7;
 pub const BG_STATUS_BACKEND_ERROR: bg_status = 8;
 pub const BG_STATUS_INTERNAL_ERROR: bg_status = 9;
+pub const BG_STATUS_NUMERICAL_ERROR: bg_status = 10;
 
 pub type bg_backend = i32;
 pub const BG_BACKEND_AUTO: bg_backend = 0;
@@ -57,6 +58,12 @@ pub struct bg_context {
 /// Opaque native particle system. Its representation is intentionally unavailable.
 #[repr(C)]
 pub struct bg_system {
+    _private: [u8; 0],
+}
+
+/// Opaque native force field. Its representation is intentionally unavailable.
+#[repr(C)]
+pub struct bg_forcefield {
     _private: [u8; 0],
 }
 
@@ -188,6 +195,88 @@ pub struct bg_stream_v1 {
     pub reserved: [u64; 4],
 }
 
+pub const BG_PERIODIC_AXIS_X: u32 = 1 << 0;
+pub const BG_PERIODIC_AXIS_Y: u32 = 1 << 1;
+pub const BG_PERIODIC_AXIS_Z: u32 = 1 << 2;
+pub const BG_PERIODIC_AXES_ALL: u32 = BG_PERIODIC_AXIS_X | BG_PERIODIC_AXIS_Y | BG_PERIODIC_AXIS_Z;
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_forcefield_soa_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub atom_count: u64,
+    pub unit_system: bg_unit_system,
+    pub periodic_axes_mask: u32,
+    pub sigma_angstrom: *const f64,
+    pub epsilon_kcal_per_mol: *const f64,
+    pub bond_count: u64,
+    pub bond_atom_i: *const u64,
+    pub bond_atom_j: *const u64,
+    pub bond_equilibrium_angstrom: *const f64,
+    pub bond_force_constant_kcal_per_mol_angstrom2: *const f64,
+    pub angle_count: u64,
+    pub angle_atom_i: *const u64,
+    pub angle_atom_j: *const u64,
+    pub angle_atom_k: *const u64,
+    pub angle_equilibrium_radians: *const f64,
+    pub angle_force_constant_kcal_per_mol_radian2: *const f64,
+    pub torsion_count: u64,
+    pub torsion_atom_i: *const u64,
+    pub torsion_atom_j: *const u64,
+    pub torsion_atom_k: *const u64,
+    pub torsion_atom_l: *const u64,
+    pub torsion_periodicity: *const u32,
+    pub torsion_phase_radians: *const f64,
+    pub torsion_amplitude_kcal_per_mol: *const f64,
+    pub exclusion_count: u64,
+    pub exclusion_atom_i: *const u64,
+    pub exclusion_atom_j: *const u64,
+    pub pair_scale_count: u64,
+    pub pair_scale_atom_i: *const u64,
+    pub pair_scale_atom_j: *const u64,
+    pub pair_scale_lennard_jones: *const f64,
+    pub pair_scale_coulomb: *const f64,
+    pub cell_lengths_angstrom: [f64; 3],
+    pub cutoff_angstrom: f64,
+    pub switch_start_angstrom: f64,
+    pub dielectric: f64,
+    pub screening_kappa_per_angstrom: f64,
+    pub minimum_pair_distance_angstrom: f64,
+    pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_force_soa_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub particle_capacity: u64,
+    pub particle_count: u64,
+    pub unit_system: bg_unit_system,
+    pub reserved0: u32,
+    pub x_kcal_per_mol_angstrom: *mut f64,
+    pub y_kcal_per_mol_angstrom: *mut f64,
+    pub z_kcal_per_mol_angstrom: *mut f64,
+    pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_energy_components_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub unit_system: bg_unit_system,
+    pub reserved0: u32,
+    pub harmonic_bond_kcal_per_mol: f64,
+    pub harmonic_angle_kcal_per_mol: f64,
+    pub periodic_torsion_kcal_per_mol: f64,
+    pub lennard_jones_kcal_per_mol: f64,
+    pub coulomb_kcal_per_mol: f64,
+    pub total_kcal_per_mol: f64,
+    pub reserved: [u64; 4],
+}
+
 unsafe extern "C" {
     pub fn bg_abi_version() -> u32;
     pub fn bg_abi_version_major() -> u32;
@@ -236,6 +325,21 @@ unsafe extern "C" {
     ) -> bg_status;
     pub fn bg_stream_v1_init(
         stream: *mut bg_stream_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_forcefield_soa_v1_init(
+        forcefield: *mut bg_forcefield_soa_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_force_soa_v1_init(
+        forces: *mut bg_force_soa_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_energy_components_v1_init(
+        energy: *mut bg_energy_components_v1,
         caller_struct_size: usize,
         caller_abi_version: u32,
     ) -> bg_status;
@@ -295,5 +399,23 @@ unsafe extern "C" {
     pub fn bg_system_set_positions(
         system: *mut bg_system,
         positions: *const bg_position_soa,
+    ) -> bg_status;
+
+    pub fn bg_forcefield_create(
+        parameters: *const bg_forcefield_soa_v1,
+        out_forcefield: *mut *mut bg_forcefield,
+    ) -> bg_status;
+    pub fn bg_forcefield_destroy(forcefield: *mut bg_forcefield);
+    pub fn bg_forcefield_get_atom_count(
+        forcefield: *const bg_forcefield,
+        atom_count: *mut u64,
+    ) -> bg_status;
+
+    pub fn bg_context_evaluate(
+        context: *const bg_context,
+        system: *const bg_system,
+        forcefield: *const bg_forcefield,
+        out_energy: *mut bg_energy_components_v1,
+        out_forces: *mut bg_force_soa_v1,
     ) -> bg_status;
 }

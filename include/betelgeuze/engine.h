@@ -55,7 +55,7 @@ extern "C" {
 #endif
 
 #define BG_ABI_VERSION_MAJOR UINT32_C(1)
-#define BG_ABI_VERSION_MINOR UINT32_C(0)
+#define BG_ABI_VERSION_MINOR UINT32_C(1)
 #define BG_ABI_VERSION UINT32_C(1)
 
 #define BG_CANONICAL_LENGTH_UNIT "angstrom"
@@ -81,7 +81,8 @@ enum {
     BG_STATUS_CAPACITY_OVERFLOW = 6,
     BG_STATUS_BUFFER_TOO_SMALL = 7,
     BG_STATUS_BACKEND_ERROR = 8,
-    BG_STATUS_INTERNAL_ERROR = 9
+    BG_STATUS_INTERNAL_ERROR = 9,
+    BG_STATUS_NUMERICAL_ERROR = 10
 };
 
 typedef int32_t bg_backend;
@@ -106,6 +107,7 @@ enum {
 /* Incomplete declarations are the only public handle representation. */
 typedef struct bg_context bg_context;
 typedef struct bg_system bg_system;
+typedef struct bg_forcefield bg_forcefield;
 
 typedef struct bg_context_options {
     uint32_t struct_size;
@@ -259,6 +261,132 @@ typedef struct bg_stream_v1 {
     uint64_t reserved[4];
 } bg_stream_v1;
 
+enum {
+    BG_PERIODIC_AXIS_X = UINT32_C(1) << 0,
+    BG_PERIODIC_AXIS_Y = UINT32_C(1) << 1,
+    BG_PERIODIC_AXIS_Z = UINT32_C(1) << 2,
+    BG_PERIODIC_AXES_ALL = BG_PERIODIC_AXIS_X | BG_PERIODIC_AXIS_Y |
+                           BG_PERIODIC_AXIS_Z
+};
+
+/*
+ * Input-only force-field SoA, frozen as ABI v1.  Every channel associated
+ * with a non-zero count is required, naturally aligned, and deep-copied by
+ * bg_forcefield_create.  Atom indices are zero-based uint64 values.
+ *
+ * Bond:     0.5*k*(r-r0)^2
+ * Angle:    0.5*k*(theta-theta0)^2, with the normalized dot product clamped
+ *           to [-1+1e-12,1-1e-12] before acos.
+ * Torsion:  amplitude*(1+cos(periodicity*phi-phase)), where b0=ri-rj,
+ *           b1=rk-rj, b2=rl-rk, axis=b1/|b1|, v and w are b0 and b2
+ *           projected perpendicular to axis, and
+ *           phi=atan2(dot(cross(axis,v),w),dot(v,w)) in [-pi,pi].
+ * LJ mixing uses sigma=(sigma_i+sigma_j)/2 and
+ * epsilon=sqrt(epsilon_i*epsilon_j), followed by
+ * 4*epsilon*((sigma/r)^12-(sigma/r)^6).  Coulomb is
+ * C*qi*qj*exp(-kappa*r)/(dielectric*r), where qi/qj come from the associated
+ * bg_system charge_elementary channel.  Both components are multiplied by
+ * S=1 below switch_start, S=0 at and above cutoff, and inside the switch
+ * interval S=1-10*x^3+15*x^4-6*x^5 for
+ * x=(r-switch_start)/(cutoff-switch_start).  Pairs at exactly cutoff are
+ * evaluated and multiplied by zero; only r>cutoff is skipped.
+ * Explicit exclusions suppress both nonbonded components; topology does not
+ * imply exclusions.  Pair scales must lie in [0,1].
+ *
+ * Orthorhombic minimum images use d-L*floor(d/L+0.5) for every bonded and
+ * nonbonded displacement on axes selected by periodic_axes_mask.  When any
+ * axis is periodic all three cell lengths must
+ * be finite and positive, and cutoff must be strictly below half every
+ * periodic length.  With no periodic axes, cell lengths must be either all
+ * zero (no cell) or all finite and positive (a nonperiodic cell).
+ *
+ * Exclusion lookup precedes the minimum-distance check, so a coincident
+ * excluded pair has exactly zero nonbonded energy.  Every other pair below
+ * minimum_pair_distance_angstrom is rejected before cutoff handling.
+ */
+typedef struct bg_forcefield_soa_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    uint64_t atom_count;
+    bg_unit_system unit_system;
+    uint32_t periodic_axes_mask;
+
+    const double *sigma_angstrom;
+    const double *epsilon_kcal_per_mol;
+
+    uint64_t bond_count;
+    const uint64_t *bond_atom_i;
+    const uint64_t *bond_atom_j;
+    const double *bond_equilibrium_angstrom;
+    const double *bond_force_constant_kcal_per_mol_angstrom2;
+
+    uint64_t angle_count;
+    const uint64_t *angle_atom_i;
+    const uint64_t *angle_atom_j;
+    const uint64_t *angle_atom_k;
+    const double *angle_equilibrium_radians;
+    const double *angle_force_constant_kcal_per_mol_radian2;
+
+    uint64_t torsion_count;
+    const uint64_t *torsion_atom_i;
+    const uint64_t *torsion_atom_j;
+    const uint64_t *torsion_atom_k;
+    const uint64_t *torsion_atom_l;
+    const uint32_t *torsion_periodicity;
+    const double *torsion_phase_radians;
+    const double *torsion_amplitude_kcal_per_mol;
+
+    uint64_t exclusion_count;
+    const uint64_t *exclusion_atom_i;
+    const uint64_t *exclusion_atom_j;
+
+    uint64_t pair_scale_count;
+    const uint64_t *pair_scale_atom_i;
+    const uint64_t *pair_scale_atom_j;
+    const double *pair_scale_lennard_jones;
+    const double *pair_scale_coulomb;
+
+    double cell_lengths_angstrom[3];
+    double cutoff_angstrom;
+    double switch_start_angstrom;
+    double dielectric;
+    double screening_kappa_per_angstrom;
+    double minimum_pair_distance_angstrom;
+    uint64_t reserved[4];
+} bg_forcefield_soa_v1;
+
+/* Caller-owned force output.  capacity and all channels are input fields;
+ * particle_count is committed on success.  A null descriptor requests energy
+ * only.  For the first particle_count elements, x/y/z channels must be
+ * mutually non-overlapping and must not overlap either output descriptor. */
+typedef struct bg_force_soa_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    uint64_t particle_capacity;
+    uint64_t particle_count;
+    bg_unit_system unit_system;
+    uint32_t reserved0;
+    double *x_kcal_per_mol_angstrom;
+    double *y_kcal_per_mol_angstrom;
+    double *z_kcal_per_mol_angstrom;
+    uint64_t reserved[4];
+} bg_force_soa_v1;
+
+/* Energy output in the frozen bond, angle, torsion, LJ, Coulomb order. */
+typedef struct bg_energy_components_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    bg_unit_system unit_system;
+    uint32_t reserved0;
+    double harmonic_bond_kcal_per_mol;
+    double harmonic_angle_kcal_per_mol;
+    double periodic_torsion_kcal_per_mol;
+    double lennard_jones_kcal_per_mol;
+    double coulomb_kcal_per_mol;
+    double total_kcal_per_mol;
+    uint64_t reserved[4];
+} bg_energy_components_v1;
+
 /* ABI and diagnostics. */
 BG_API uint32_t BG_CALL bg_abi_version(void) BG_NOEXCEPT;
 BG_API uint32_t BG_CALL bg_abi_version_major(void) BG_NOEXCEPT;
@@ -316,6 +444,18 @@ BG_API bg_status BG_CALL bg_stream_v1_init(
     bg_stream_v1 *stream,
     size_t caller_struct_size,
     uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_forcefield_soa_v1_init(
+    bg_forcefield_soa_v1 *forcefield,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_force_soa_v1_init(
+    bg_force_soa_v1 *forces,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_energy_components_v1_init(
+    bg_energy_components_v1 *energy,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
 
 #if !defined(BG_DISABLE_DESCRIPTOR_INIT_CONVENIENCE_MACROS)
 #  define bg_context_options_init(options) \
@@ -339,6 +479,15 @@ BG_API bg_status BG_CALL bg_stream_v1_init(
 #  define bg_stream_v1_init(stream) \
     bg_stream_v1_init( \
         (stream), sizeof(bg_stream_v1), BG_ABI_VERSION)
+#  define bg_forcefield_soa_v1_init(forcefield) \
+    bg_forcefield_soa_v1_init( \
+        (forcefield), sizeof(bg_forcefield_soa_v1), BG_ABI_VERSION)
+#  define bg_force_soa_v1_init(forces) \
+    bg_force_soa_v1_init( \
+        (forces), sizeof(bg_force_soa_v1), BG_ABI_VERSION)
+#  define bg_energy_components_v1_init(energy) \
+    bg_energy_components_v1_init( \
+        (energy), sizeof(bg_energy_components_v1), BG_ABI_VERSION)
 #endif
 
 /* Structural validation never reads tensor payload bytes or submits work. */
@@ -395,6 +544,31 @@ BG_API bg_status BG_CALL bg_system_get_particles(
 BG_API bg_status BG_CALL bg_system_set_positions(
     bg_system *system,
     const bg_position_soa *positions) BG_NOEXCEPT;
+
+/* A force-field handle owns validated parameter SoAs and has no parent handle. */
+BG_API bg_status BG_CALL bg_forcefield_create(
+    const bg_forcefield_soa_v1 *parameters,
+    bg_forcefield **out_forcefield) BG_NOEXCEPT;
+BG_API void BG_CALL bg_forcefield_destroy(
+    bg_forcefield *forcefield) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_forcefield_get_atom_count(
+    const bg_forcefield *forcefield,
+    uint64_t *atom_count) BG_NOEXCEPT;
+
+/*
+ * Dispatch through the explicitly selected context backend.  CPU evaluation
+ * is scalar binary64 with a fixed serial accumulation order and analytic
+ * forces defined as -dU/d(position).  Output buffers are transactional: no output value changes unless
+ * the complete evaluation succeeds.  Energy-only evaluation does not require
+ * differentiability of a zero-length harmonic bond; requesting forces for
+ * that geometry returns BG_STATUS_NUMERICAL_ERROR.
+ */
+BG_API bg_status BG_CALL bg_context_evaluate(
+    const bg_context *context,
+    const bg_system *system,
+    const bg_forcefield *forcefield,
+    bg_energy_components_v1 *out_energy,
+    bg_force_soa_v1 *out_forces) BG_NOEXCEPT;
 
 #if defined(__cplusplus)
 } /* extern "C" */
