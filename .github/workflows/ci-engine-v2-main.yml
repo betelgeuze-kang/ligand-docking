@@ -20,6 +20,9 @@ on:
       - "betelgeuze_engine_v2/docking/source_paired_clearance_activation.py"
       - "packaging/engine-v2/**"
       - "rust_engine_v2/**"
+      - "rust/betelgeuze-docking-search/**"
+      - "rust/Cargo.toml"
+      - "LICENSE"
       - "config/independent_engine_v2_capabilities.yaml"
       - "config/engine_v2_public_redocking_contamination_registry.json"
       - "config/engine_v2_fresh_redocking_holdout_manifest.json"
@@ -125,6 +128,9 @@ jobs:
             benchmarks/oracles
             packaging/engine-v2
             rust_engine_v2
+            rust/betelgeuze-docking-search
+            rust/Cargo.toml
+            LICENSE
             core/__init__.py
             core/ai_correction.py
             core/config.py

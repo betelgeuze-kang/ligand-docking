@@ -1,5 +1,7 @@
 #![allow(non_local_definitions)]
 
+mod docking_v2;
+
 use numpy::{PyReadonlyArray1, PyReadonlyArray2, PyReadonlyArray3};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -613,10 +615,51 @@ fn build_info() -> BTreeMap<&'static str, String> {
             "cargo_lock_sha256",
             env!("BETELGEUZE_CARGO_LOCK_SHA256").to_owned(),
         ),
+        (
+            "native_source_closure_sha256",
+            env!("BETELGEUZE_NATIVE_SOURCE_CLOSURE_SHA256").to_owned(),
+        ),
+        (
+            "native_source_closure_file_count",
+            env!("BETELGEUZE_NATIVE_SOURCE_CLOSURE_FILE_COUNT").to_owned(),
+        ),
         ("rustc_version", env!("BETELGEUZE_RUSTC_VERSION").to_owned()),
         ("target_triple", env!("BETELGEUZE_TARGET_TRIPLE").to_owned()),
+        ("build_profile", env!("BETELGEUZE_BUILD_PROFILE").to_owned()),
+        ("opt_level", env!("BETELGEUZE_OPT_LEVEL").to_owned()),
+        ("debug", env!("BETELGEUZE_DEBUG").to_owned()),
+        (
+            "panic_strategy",
+            if cfg!(panic = "abort") {
+                "abort"
+            } else {
+                "unwind"
+            }
+            .to_owned(),
+        ),
         ("build_flags", env!("BETELGEUZE_BUILD_FLAGS").to_owned()),
+        (
+            "cargo_features",
+            if cfg!(feature = "extension-module") {
+                "extension-module"
+            } else {
+                "none"
+            }
+            .to_owned(),
+        ),
         ("implicit_fallback_allowed", "false".to_owned()),
+        (
+            "docking_search_schema_id",
+            betelgeuze_docking_search::SEARCH_SCHEMA_ID.to_owned(),
+        ),
+        (
+            "docking_search_receipt_schema_id",
+            betelgeuze_docking_search::SEARCH_RECEIPT_SCHEMA_ID.to_owned(),
+        ),
+        (
+            "docking_search_evaluator_id",
+            "betelgeuze_short_range_analytic/1.0.0".to_owned(),
+        ),
     ])
 }
 
@@ -625,6 +668,7 @@ fn betelgeuze_engine_v2_native(_py: Python<'_>, module: &PyModule) -> PyResult<(
     module.add_class::<NativeScorerContext>()?;
     module.add_class::<NativeScoreRow>()?;
     module.add_function(wrap_pyfunction!(build_info, module)?)?;
+    docking_v2::register(module)?;
     Ok(())
 }
 

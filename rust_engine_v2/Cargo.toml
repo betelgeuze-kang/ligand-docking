@@ -1,6 +1,6 @@
 [package]
 name = "betelgeuze-engine-v2-native"
-version = "0.2.0-rc.5"
+version = "0.2.0-rc.6"
 edition = "2021"
 rust-version = "1.93"
 
@@ -8,9 +8,14 @@ rust-version = "1.93"
 name = "betelgeuze_engine_v2_native"
 crate-type = ["cdylib"]
 
+[features]
+default = ["extension-module"]
+extension-module = ["pyo3/extension-module"]
+
 [dependencies]
+betelgeuze-docking-search = { path = "../rust/betelgeuze-docking-search" }
 numpy = "0.20.0"
-pyo3 = { version = "0.20.3", features = ["extension-module"] }
+pyo3 = "0.20.3"
 rayon = "1.10.0"
 
 [build-dependencies]

@@ -8,12 +8,16 @@ on:
       - "betelgeuze_engine_v2/**"
       - "packaging/engine-v2/**"
       - "rust_engine_v2/**"
+      - "rust/betelgeuze-docking-search/**"
+      - "rust/Cargo.toml"
+      - "LICENSE"
       - "tools/build_engine_v2_wheel.py"
       - "tools/build_engine_v2_native_wheel.py"
       - "tools/build_engine_v2_sbom.py"
       - "tests/unit/test_engine_v2_release_candidate.py"
       - "tests/unit/test_engine_v2_native_packaging.py"
       - "tests/unit/test_engine_v2_scorer_v1_stage5.py"
+      - "tests/unit/test_engine_v2_docking_search_v2_facade.py"
       - "CHANGELOG.md"
       - "docs/engine_v2_0_2_0rc5.md"
       - ".github/workflows/ci-engine-v2-release-candidate.yml"
@@ -43,6 +47,9 @@ jobs:
             betelgeuze_engine_v2
             packaging/engine-v2
             rust_engine_v2
+            rust/betelgeuze-docking-search
+            rust/Cargo.toml
+            LICENSE
             tools/build_engine_v2_wheel.py
             tools/build_engine_v2_native_wheel.py
             tools/build_engine_v2_sbom.py
@@ -114,6 +121,9 @@ jobs:
             betelgeuze_engine_v2
             packaging/engine-v2
             rust_engine_v2
+            rust/betelgeuze-docking-search
+            rust/Cargo.toml
+            LICENSE
             tools/build_engine_v2_wheel.py
             tools/build_engine_v2_native_wheel.py
             tools/build_engine_v2_sbom.py
@@ -121,6 +131,7 @@ jobs:
             tests/unit/test_engine_v2_release_candidate.py
             tests/unit/test_engine_v2_native_packaging.py
             tests/unit/test_engine_v2_scorer_v1_stage5.py
+            tests/unit/test_engine_v2_docking_search_v2_facade.py
             tests/unit/test_engine_v2_packaging_guards.py
             CHANGELOG.md
             docs/engine_v2_0_2_0rc5.md
@@ -258,10 +269,14 @@ jobs:
           sparse-checkout: |
             betelgeuze_engine_v2
             rust_engine_v2
+            rust/betelgeuze-docking-search
+            rust/Cargo.toml
+            LICENSE
             tools/build_engine_v2_native_wheel.py
             tools/build_engine_v2_sbom.py
             tests/unit/test_engine_v2_native_packaging.py
             tests/unit/test_engine_v2_scorer_v1_stage5.py
+            tests/unit/test_engine_v2_docking_search_v2_facade.py
           sparse-checkout-cone-mode: false
           show-progress: false
 
@@ -311,18 +326,19 @@ jobs:
           python -m pip install --no-deps "$wheel"
           python tools/build_engine_v2_sbom.py "$wheel" \
             --cargo-lock rust_engine_v2/Cargo.lock \
-            --output native-dist-a/betelgeuze-engine-v2-native-0.2.0rc5.spdx.json
+            --output native-dist-a/betelgeuze-engine-v2-native-0.2.0rc6.spdx.json
           cargo check --locked --manifest-path rust_engine_v2/Cargo.toml
-          cargo test --locked --manifest-path rust_engine_v2/Cargo.toml
+          cargo test --locked --no-default-features --manifest-path rust_engine_v2/Cargo.toml
           python -m pytest -q \
             tests/unit/test_engine_v2_native_packaging.py \
             tests/unit/test_engine_v2_scorer_v1_stage5.py -k 'native or rust_cpu'
+          python -m pytest -q tests/unit/test_engine_v2_docking_search_v2_facade.py
 
       - name: Upload native wheel and SBOM
         if: matrix.python-version == '3.11'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: engine-v2-native-0.2.0rc5-${{ github.run_id }}
+          name: engine-v2-native-0.2.0rc6-${{ github.run_id }}
           path: |
             native-dist-a/*.whl
             native-dist-a/*.spdx.json
