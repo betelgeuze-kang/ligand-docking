@@ -11,9 +11,12 @@ from typing import Any
 
 import numpy as np
 
+from benchmarks.oracles.openmm import load_openmm
+
 try:  # pragma: no cover - optional dependency path is covered by tests when installed.
-    import openmm as mm  # type: ignore
-    from openmm import unit  # type: ignore
+    _openmm = load_openmm()
+    mm = _openmm.mm
+    unit = _openmm.unit
 except Exception:  # pragma: no cover
     mm = None  # type: ignore
     unit = None  # type: ignore

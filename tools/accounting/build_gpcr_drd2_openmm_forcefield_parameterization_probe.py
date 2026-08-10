@@ -11,6 +11,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from benchmarks.oracles.openmm import load_openmm
 from tools.lib.artifacts import (
     artifact as _artifact,
     read_csv as _read_csv,
@@ -190,7 +191,11 @@ def _probe_protein_parameterization(protein_pdb: str, *, attempt_build: bool) ->
     if not attempt_build:
         return {"attempted": False, "ready": False, "path": _artifact(path), "error": "build_attempt_disabled"}
     try:
-        from openmm.app import ForceField, Modeller, NoCutoff, PDBFile  # type: ignore
+        app = load_openmm().app
+        ForceField = app.ForceField
+        Modeller = app.Modeller
+        NoCutoff = app.NoCutoff
+        PDBFile = app.PDBFile
 
         pdb = PDBFile(str(path))
         forcefield = ForceField("amber14-all.xml")
@@ -250,7 +255,10 @@ def _probe_ligand_template(
     if not attempt_build:
         return {"attempted": False, "ready": False, "path": _artifact(ligand_path), "error": "build_attempt_disabled"}
     try:
-        from openmm.app import ForceField, NoCutoff, PDBFile  # type: ignore
+        app = load_openmm().app
+        ForceField = app.ForceField
+        NoCutoff = app.NoCutoff
+        PDBFile = app.PDBFile
 
         with tempfile.TemporaryDirectory(prefix="drd2_ligand_ff_") as tmp:
             tmp_path = Path(tmp)
@@ -364,7 +372,11 @@ def _probe_integrated_complex_parameterization(
     if not attempt_build:
         return {"attempted": False, "ready": False, "error": "build_attempt_disabled"}
     try:
-        from openmm.app import ForceField, Modeller, NoCutoff, PDBFile  # type: ignore
+        app = load_openmm().app
+        ForceField = app.ForceField
+        Modeller = app.Modeller
+        NoCutoff = app.NoCutoff
+        PDBFile = app.PDBFile
 
         with tempfile.TemporaryDirectory(prefix="drd2_integrated_ff_") as tmp:
             tmp_path = Path(tmp)

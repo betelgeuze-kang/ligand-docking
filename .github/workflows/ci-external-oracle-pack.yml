@@ -1,0 +1,227 @@
+name: ci-external-oracle-pack
+
+on:
+  pull_request:
+    paths:
+      - "benchmarks/**"
+      - "api/**"
+      - "core/**"
+      - "runtime/**"
+      - "train/**"
+      - "theory/**"
+      - "betelgeuze_*/**"
+      - "tools/**"
+      - "include/**"
+      - "native/**"
+      - "rust/**"
+      - "rust_engine/**"
+      - "rust_engine_v2/**"
+      - "requirements*.txt"
+      - "CMakeLists.txt"
+      - "pyproject.toml"
+      - "packaging/engine-v2/pyproject.toml"
+      - ".dockerignore"
+      - "Dockerfile.product"
+      - "tests/unit/test_external_oracle_*.py"
+      - "tests/unit/test_external_engine_adapters.py"
+      - "tests/unit/test_build_engine_v2_wheel.py"
+      - "tests/unit/test_verify_product_docker_context.py"
+      - ".github/workflows/ci-external-oracle-pack.yml"
+  push:
+    branches: ["main"]
+    paths:
+      - "benchmarks/**"
+      - "api/**"
+      - "core/**"
+      - "runtime/**"
+      - "train/**"
+      - "theory/**"
+      - "betelgeuze_*/**"
+      - "tools/**"
+      - "include/**"
+      - "native/**"
+      - "rust/**"
+      - "rust_engine/**"
+      - "rust_engine_v2/**"
+      - "requirements*.txt"
+      - "CMakeLists.txt"
+      - "pyproject.toml"
+      - "packaging/engine-v2/pyproject.toml"
+      - ".dockerignore"
+      - "Dockerfile.product"
+      - "tests/unit/test_external_oracle_*.py"
+      - "tests/unit/test_external_engine_adapters.py"
+      - "tests/unit/test_build_engine_v2_wheel.py"
+      - "tests/unit/test_verify_product_docker_context.py"
+      - ".github/workflows/ci-external-oracle-pack.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-external-oracle-pack-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  offline-contract-and-boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CUDA_VISIBLE_DEVICES: ""
+      HIP_VISIBLE_DEVICES: ""
+      ROCR_VISIBLE_DEVICES: ""
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+      BETELGEUZE_REQUIRE_OPENMM_ORACLE: "1"
+    steps:
+      - name: Check out product and oracle sources
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          clean: true
+          fetch-depth: 1
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.11"
+
+      - name: Install and verify Linux oracle sandbox primitives
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends util-linux libseccomp2
+          command -v unshare
+          unshare --version
+          python - <<'PY'
+          import ctypes
+          import ctypes.util
+
+          library = ctypes.util.find_library("seccomp")
+          assert library and library.endswith(".so.2"), library
+          ctypes.CDLL(library)
+          print(library)
+          PY
+
+      - name: Install offline contract test tooling
+        run: |
+          python -m pip install --upgrade pip==25.0.1
+          python -m pip install pytest==8.3.5 build==1.2.2.post1 setuptools==75.8.2 wheel==0.45.1
+          python -m pip install \
+            --require-hashes \
+            --no-deps \
+            --only-binary=:all: \
+            -r benchmarks/oracles/requirements-ci-py311-linux-x86_64.txt
+
+      - name: Record hash-locked OpenMM and NumPy actual-byte runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from importlib import metadata
+          import json
+          import os
+          from pathlib import Path
+          import platform
+          import sys
+
+          from benchmarks.oracles.openmm import adapter
+
+          APPROVED_RUNTIME_SCHEMA_ID = (
+              "betelgeuze.openmm_runtime_dependency_distributions/3.0.0"
+          )
+          APPROVED_RUNTIME_SHA256 = (
+              "093f35a9cca838d4bf2d35c03c092aef2aed2e85f1e9c22cd1428dae7e92df38"
+          )
+          APPROVED_RUNTIME_ARTIFACT_COUNTS = {"OpenMM": 523, "numpy": 913}
+
+          assert sys.version_info[:2] == (3, 11), sys.version
+          assert platform.system() == "Linux", platform.platform()
+          assert platform.machine() == "x86_64", platform.machine()
+          assert adapter.RUNTIME_DIGEST_SCHEMA_ID == APPROVED_RUNTIME_SCHEMA_ID
+          approved_versions = {"OpenMM": "8.4.0.post2", "numpy": "1.26.4"}
+          observed_versions = {
+              name: metadata.version(name) for name in approved_versions
+          }
+          assert observed_versions == approved_versions, observed_versions
+          inventory = adapter._distribution_inventory()
+          observed_counts = {
+              distribution.name: len(distribution.entries)
+              for distribution in inventory.distributions
+          }
+          assert observed_counts == APPROVED_RUNTIME_ARTIFACT_COUNTS, observed_counts
+          first = adapter.openmm_runtime_dependency_distributions_sha256()
+          second = adapter.openmm_runtime_dependency_distributions_sha256()
+          assert first == second == APPROVED_RUNTIME_SHA256
+          int(first, 16)
+          record = {
+              "schema_id": APPROVED_RUNTIME_SCHEMA_ID,
+              "python": "3.11",
+              "platform": "linux_x86_64",
+              "runtime_dependency_distributions": observed_versions,
+              "runtime_dependency_artifact_counts": observed_counts,
+              "runtime_dependency_artifact_count": sum(observed_counts.values()),
+              "runtime_sha256": first,
+          }
+          encoded = json.dumps(record, sort_keys=True, separators=(",", ":"))
+          output = Path(os.environ["RUNNER_TEMP"]) / "openmm-numpy-runtime.json"
+          output.write_text(encoded + "\n", encoding="utf-8")
+          assert json.loads(output.read_text(encoding="utf-8")) == record
+          print(encoded)
+          PY
+
+      - name: Enforce external oracle architecture
+        run: python tools/check_external_oracle_architecture.py --root .
+
+      - name: Run boundary mutation tests
+        run: >-
+          python -m pytest -q
+          tests/unit/test_external_oracle_architecture.py
+          tests/unit/test_external_oracle_ci.py
+          tests/unit/test_build_engine_v2_wheel.py
+          tests/unit/test_verify_product_docker_context.py
+
+      - name: Run engine-free oracle contract fixtures
+        run: >-
+          python -m pytest -q
+          tests/unit/test_external_oracle_pack.py
+          tests/unit/test_external_engine_adapters.py
+
+      - name: Materialize and verify product Docker build context
+        shell: bash
+        run: |
+          set -euo pipefail
+          product_context="$(mktemp -d "${RUNNER_TEMP}/betelgeuze-product-context.XXXXXX")"
+          python tools/verify_product_docker_context.py \
+            --root . \
+            --output "$product_context" \
+            | tee "${RUNNER_TEMP}/product-docker-context.json"
+          test -f "$product_context/Dockerfile.product"
+          test ! -e "$product_context/benchmarks"
+
+      - name: Build product and Engine v2 wheels
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m build --wheel --no-isolation --outdir dist/product .
+          python tools/build_engine_v2_wheel.py --output-dir dist/engine-v2
+
+      - name: Prove wheels exclude oracle adapters
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          from tools.build_engine_v2_wheel import (
+              verify_no_benchmark_package_members,
+          )
+
+          wheels = sorted(Path("dist").rglob("*.whl"))
+          assert len(wheels) == 2, wheels
+          for wheel in wheels:
+              verify_no_benchmark_package_members(wheel)
+              print(f"oracle-free wheel: {wheel}")
+          PY

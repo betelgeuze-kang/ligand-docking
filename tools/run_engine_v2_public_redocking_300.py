@@ -28,6 +28,11 @@ import uuid
 import torch
 
 import betelgeuze_engine_v2.benchmark.public_redocking_benchmark as benchmark_contract
+from benchmarks.oracles.execution import invoke_argv
+from benchmarks.oracles.gnina import (
+    OracleAdapterError as ExternalOracleAdapterError,
+    build_prepared_redocking_command,
+)
 from betelgeuze_engine_v2.benchmark.blind_stage0 import (
     STAGE0_ENGINE_V2_ALGORITHM_PROFILE_ID,
     Stage0AdmissionError,
@@ -2504,8 +2509,9 @@ def _stage_external_binary(
 def _binary_version(binary: PinnedExternalBinary) -> str:
     _verify_external_binary(binary)
     try:
-        completed = subprocess.run(
+        completed = invoke_argv(
             (binary.execution_path, "--version"),
+            runner=subprocess.run,
             check=False,
             capture_output=True,
             pass_fds=(binary.descriptor,),
@@ -2536,44 +2542,17 @@ def _external_command(
     output: Path,
     seed: int,
 ) -> tuple[str, ...]:
-    if engine_id not in {"vina", "gnina"}:
-        raise PublicRedockingRunnerError("unsupported external engine")
-    command = [
-        str(binary),
-        "--receptor",
-        str(paths["receptor"]),
-        "--ligand",
-        str(paths["seed"]),
-        "--autobox_ligand",
-        str(paths["native"]),
-        "--autobox_add",
-        "4",
-        "--num_modes",
-        "5",
-        "--exhaustiveness",
-        "1",
-        "--cpu",
-        "1",
-        "--no_gpu",
-        "--seed",
-        str(seed),
-        "--out",
-        str(output),
-    ]
-    if engine_id == "vina":
-        command.extend(("--scoring", "vina", "--cnn_scoring", "none"))
-    else:
-        command.extend(
-            (
-                "--scoring",
-                "vina",
-                "--cnn_scoring",
-                "rescore",
-                "--cnn",
-                "crossdock_default2018",
-            )
+    try:
+        return build_prepared_redocking_command(
+            case_id,
+            engine_id,
+            paths,
+            binary=binary,
+            output=output,
+            seed=seed,
         )
-    return tuple(command)
+    except ExternalOracleAdapterError as exc:
+        raise PublicRedockingRunnerError("unsupported external engine command") from exc
 
 
 def _engine_v2_command(
@@ -3949,8 +3928,9 @@ def _external_result(
         )
         started = time.perf_counter()
         try:
-            completed = subprocess.run(
+            completed = invoke_argv(
                 tuple(executed_command),
+                runner=subprocess.run,
                 check=False,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,

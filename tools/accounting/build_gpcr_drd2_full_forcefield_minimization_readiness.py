@@ -8,8 +8,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from benchmarks.oracles.openmm import load_openmm
 from tools.lib.artifacts import (
-    ROOT,
     artifact as _artifact,
     jsonable as _jsonable,
     read_csv as _read_csv,
@@ -105,7 +105,11 @@ def _probe_openmm_protein_build(protein_pdb: str) -> dict[str, Any]:
     if not path.exists():
         return {"attempted": False, "ready": False, "error": "protein_structure_source_path_not_found", "path": _artifact(path)}
     try:
-        from openmm.app import ForceField, Modeller, NoCutoff, PDBFile  # type: ignore
+        app = load_openmm().app
+        ForceField = app.ForceField
+        Modeller = app.Modeller
+        NoCutoff = app.NoCutoff
+        PDBFile = app.PDBFile
 
         pdb = PDBFile(str(path))
         forcefield = ForceField("amber14-all.xml")
@@ -146,7 +150,10 @@ def _probe_ligand_template_build(ligand_pdb: str, gaff_xml: str | Path) -> dict[
     if not gaff_path.exists():
         return {"attempted": False, "ready": False, "error": "gaff_xml_not_found", "path": _artifact(gaff_path)}
     try:
-        from openmm.app import ForceField, NoCutoff, PDBFile  # type: ignore
+        app = load_openmm().app
+        ForceField = app.ForceField
+        NoCutoff = app.NoCutoff
+        PDBFile = app.PDBFile
 
         pdb = PDBFile(str(ligand_path))
         forcefield = ForceField(str(gaff_path))
@@ -194,9 +201,6 @@ def build_readiness(
     openff_available = bool(deps["openff"]["available"] or deps["openff.toolkit"]["available"])
     openmmforcefields_available = bool(deps["openmmforcefields"]["available"])
     pdbfixer_available = bool(deps["pdbfixer"]["available"])
-    parmed_available = bool(deps["parmed"]["available"])
-    openbabel_available = bool(deps["openbabel"]["available"])
-
     row_probe = {
         "target": _text(positive.get("target")) if positive else target,
         "ligand_id": _text(positive.get("ligand_id")) if positive else ligand_id,
