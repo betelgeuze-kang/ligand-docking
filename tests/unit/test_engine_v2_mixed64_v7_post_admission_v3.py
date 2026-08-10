@@ -9,6 +9,14 @@ from pathlib import Path
 import pytest
 import torch
 
+from betelgeuze_engine_v2 import (
+    AllAtomSystem,
+    Atom,
+    Bond,
+    Chain,
+    Residue,
+    StructureProvenance,
+)
 import betelgeuze_engine_v2.docking.torsion_contact_refinement as refinement_module
 from betelgeuze_engine_v2.docking import (
     DockingScope,
@@ -69,11 +77,99 @@ from betelgeuze_engine_v2.docking.proposals import bind_docking_proposal_state
 from betelgeuze_engine_v2.docking.torsion_contact_refinement import (
     InteractionAwareTorsionContactEnsembleRefinerV7,
 )
-from tests.unit.test_engine_v2_element_contact_round8 import _ligand, _receptor
-
-
 def _digest(label: str) -> str:
     return hashlib.sha256(label.encode("ascii")).hexdigest()
+
+
+def _provenance(name: str, digest: str) -> StructureProvenance:
+    return StructureProvenance(
+        source_format="unit",
+        source_id=name,
+        source_sha256=digest,
+        parser_name="mixed64-v7-fixture",
+        parser_version="1.0.0",
+    )
+
+
+def _ligand() -> AllAtomSystem:
+    elements = ("C", "N", "C", "O")
+    atomic_numbers = {"C": 6, "N": 7, "O": 8}
+    return AllAtomSystem(
+        system_id="mixed64-v7-ligand",
+        atoms=tuple(
+            Atom(
+                index=index,
+                name=f"L{index}",
+                element=element,
+                atomic_number=atomic_numbers[element],
+                residue_index=0,
+            )
+            for index, element in enumerate(elements)
+        ),
+        bonds=(
+            Bond(index=0, atom_i=0, atom_j=1, order=1.0),
+            Bond(index=1, atom_i=1, atom_j=2, order=1.0),
+            Bond(index=2, atom_i=2, atom_j=3, order=1.0),
+        ),
+        residues=(
+            Residue(
+                index=0,
+                name="LIG",
+                chain_index=0,
+                sequence_number=1,
+                atom_indices=(0, 1, 2, 3),
+            ),
+        ),
+        chains=(Chain(index=0, chain_id="L", residue_indices=(0,)),),
+        coordinates=torch.tensor(
+            [
+                [
+                    [0.0, 0.0, 0.0],
+                    [1.4, 0.0, 0.0],
+                    [2.8, 0.3, 0.0],
+                    [4.1, 1.0, 0.2],
+                ]
+            ],
+            dtype=torch.float64,
+        ),
+        provenance=_provenance("mixed64-v7-ligand-source", "a" * 64),
+    )
+
+
+def _receptor() -> AllAtomSystem:
+    coordinates = [
+        [float(x), float(y), float(z)]
+        for x in range(-8, 9, 4)
+        for y in range(-8, 9, 4)
+        for z in (-6, 0, 6)
+    ]
+    atoms = tuple(
+        Atom(
+            index=index,
+            name=f"R{index}",
+            element="C",
+            atomic_number=6,
+            residue_index=0,
+        )
+        for index in range(len(coordinates))
+    )
+    return AllAtomSystem(
+        system_id="mixed64-v7-receptor",
+        atoms=atoms,
+        bonds=(),
+        residues=(
+            Residue(
+                index=0,
+                name="REC",
+                chain_index=0,
+                sequence_number=1,
+                atom_indices=tuple(range(len(atoms))),
+            ),
+        ),
+        chains=(Chain(index=0, chain_id="A", residue_indices=(0,)),),
+        coordinates=torch.tensor([coordinates], dtype=torch.float64),
+        provenance=_provenance("mixed64-v7-receptor-source", "b" * 64),
+    )
 
 
 def _canonical(value: object) -> bytes:
@@ -181,7 +277,7 @@ def _feature_evidence() -> tuple[Mixed64AtomicFeatureEvidence, ...]:
 
 def _fixture(*, legacy_exact_identity: bool = False):
     ligand = _ligand()
-    receptor = _receptor(many=True)
+    receptor = _receptor()
     shifted_receptor = receptor.coordinates.clone()
     shifted_receptor[..., 0] += 30.0
     receptor = replace(receptor, coordinates=shifted_receptor)
