@@ -13,6 +13,15 @@ if(NOT nm_result EQUAL 0)
 endif()
 
 string(REPLACE "\n" ";" nm_lines "${nm_output}")
+set(v1_1_symbols
+    bg_forcefield_soa_v1_init
+    bg_force_soa_v1_init
+    bg_energy_components_v1_init
+    bg_forcefield_create
+    bg_forcefield_destroy
+    bg_forcefield_get_atom_count
+    bg_context_evaluate
+)
 foreach(line IN LISTS nm_lines)
     if(line STREQUAL "")
         continue()
@@ -20,7 +29,22 @@ foreach(line IN LISTS nm_lines)
     string(REGEX MATCH "[^ 	]+$" symbol "${line}")
     string(REGEX REPLACE "@@.*$" "" unversioned "${symbol}")
     if(NOT unversioned MATCHES "^bg_" AND
-       NOT unversioned STREQUAL "BETELGEUZE_ENGINE_1.0")
+       NOT unversioned STREQUAL "BETELGEUZE_ENGINE_1.0" AND
+       NOT unversioned STREQUAL "BETELGEUZE_ENGINE_1.1")
         message(FATAL_ERROR "unexpected exported symbol: ${symbol}")
+    endif()
+    if(unversioned MATCHES "^bg_")
+        list(FIND v1_1_symbols "${unversioned}" v1_1_index)
+        if(NOT v1_1_index EQUAL -1)
+            set(expected_version "BETELGEUZE_ENGINE_1.1")
+        else()
+            set(expected_version "BETELGEUZE_ENGINE_1.0")
+        endif()
+        if(NOT symbol MATCHES "@@${expected_version}$")
+            message(FATAL_ERROR
+                "wrong symbol version for ${unversioned}: ${symbol}; "
+                "expected ${expected_version}"
+            )
+        endif()
     endif()
 endforeach()

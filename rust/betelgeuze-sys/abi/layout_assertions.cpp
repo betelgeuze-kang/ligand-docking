@@ -4,10 +4,23 @@
 #include <cstdint>
 #include <type_traits>
 
+template <typename T, typename = void>
+struct is_complete : std::false_type {};
+
+template <typename T>
+struct is_complete<T, std::void_t<decltype(sizeof(T))>> : std::true_type {};
+
 static_assert(std::is_standard_layout<bg_context_options>::value);
 static_assert(std::is_standard_layout<bg_particle_soa>::value);
 static_assert(std::is_standard_layout<bg_particle_soa_view>::value);
 static_assert(std::is_standard_layout<bg_position_soa>::value);
+static_assert(std::is_standard_layout<bg_forcefield_soa_v1>::value);
+static_assert(std::is_standard_layout<bg_force_soa_v1>::value);
+static_assert(std::is_standard_layout<bg_energy_components_v1>::value);
+
+static_assert(!is_complete<bg_context>::value);
+static_assert(!is_complete<bg_system>::value);
+static_assert(!is_complete<bg_forcefield>::value);
 
 static_assert(sizeof(bg_context_options) == 64);
 static_assert(alignof(bg_context_options) == alignof(uint64_t));
@@ -56,8 +69,88 @@ static_assert(offsetof(bg_position_soa, x_angstrom) == 24);
 static_assert(offsetof(bg_position_soa, y_angstrom) == 32);
 static_assert(offsetof(bg_position_soa, z_angstrom) == 40);
 static_assert(offsetof(bg_position_soa, reserved) == 48);
+
+static_assert(sizeof(bg_forcefield_soa_v1) == 352);
+static_assert(alignof(bg_forcefield_soa_v1) == 8);
+static_assert(offsetof(bg_forcefield_soa_v1, struct_size) == 0);
+static_assert(offsetof(bg_forcefield_soa_v1, abi_version) == 4);
+static_assert(offsetof(bg_forcefield_soa_v1, atom_count) == 8);
+static_assert(offsetof(bg_forcefield_soa_v1, unit_system) == 16);
+static_assert(offsetof(bg_forcefield_soa_v1, periodic_axes_mask) == 20);
+static_assert(offsetof(bg_forcefield_soa_v1, sigma_angstrom) == 24);
+static_assert(offsetof(bg_forcefield_soa_v1, epsilon_kcal_per_mol) == 32);
+static_assert(offsetof(bg_forcefield_soa_v1, bond_count) == 40);
+static_assert(offsetof(bg_forcefield_soa_v1, bond_atom_i) == 48);
+static_assert(offsetof(bg_forcefield_soa_v1, bond_atom_j) == 56);
+static_assert(offsetof(bg_forcefield_soa_v1, bond_equilibrium_angstrom) == 64);
+static_assert(
+    offsetof(bg_forcefield_soa_v1, bond_force_constant_kcal_per_mol_angstrom2) == 72);
+static_assert(offsetof(bg_forcefield_soa_v1, angle_count) == 80);
+static_assert(offsetof(bg_forcefield_soa_v1, angle_atom_i) == 88);
+static_assert(offsetof(bg_forcefield_soa_v1, angle_atom_j) == 96);
+static_assert(offsetof(bg_forcefield_soa_v1, angle_atom_k) == 104);
+static_assert(offsetof(bg_forcefield_soa_v1, angle_equilibrium_radians) == 112);
+static_assert(
+    offsetof(bg_forcefield_soa_v1, angle_force_constant_kcal_per_mol_radian2) == 120);
+static_assert(offsetof(bg_forcefield_soa_v1, torsion_count) == 128);
+static_assert(offsetof(bg_forcefield_soa_v1, torsion_atom_i) == 136);
+static_assert(offsetof(bg_forcefield_soa_v1, torsion_atom_j) == 144);
+static_assert(offsetof(bg_forcefield_soa_v1, torsion_atom_k) == 152);
+static_assert(offsetof(bg_forcefield_soa_v1, torsion_atom_l) == 160);
+static_assert(offsetof(bg_forcefield_soa_v1, torsion_periodicity) == 168);
+static_assert(offsetof(bg_forcefield_soa_v1, torsion_phase_radians) == 176);
+static_assert(offsetof(bg_forcefield_soa_v1, torsion_amplitude_kcal_per_mol) == 184);
+static_assert(offsetof(bg_forcefield_soa_v1, exclusion_count) == 192);
+static_assert(offsetof(bg_forcefield_soa_v1, exclusion_atom_i) == 200);
+static_assert(offsetof(bg_forcefield_soa_v1, exclusion_atom_j) == 208);
+static_assert(offsetof(bg_forcefield_soa_v1, pair_scale_count) == 216);
+static_assert(offsetof(bg_forcefield_soa_v1, pair_scale_atom_i) == 224);
+static_assert(offsetof(bg_forcefield_soa_v1, pair_scale_atom_j) == 232);
+static_assert(offsetof(bg_forcefield_soa_v1, pair_scale_lennard_jones) == 240);
+static_assert(offsetof(bg_forcefield_soa_v1, pair_scale_coulomb) == 248);
+static_assert(offsetof(bg_forcefield_soa_v1, cell_lengths_angstrom) == 256);
+static_assert(offsetof(bg_forcefield_soa_v1, cutoff_angstrom) == 280);
+static_assert(offsetof(bg_forcefield_soa_v1, switch_start_angstrom) == 288);
+static_assert(offsetof(bg_forcefield_soa_v1, dielectric) == 296);
+static_assert(offsetof(bg_forcefield_soa_v1, screening_kappa_per_angstrom) == 304);
+static_assert(offsetof(bg_forcefield_soa_v1, minimum_pair_distance_angstrom) == 312);
+static_assert(offsetof(bg_forcefield_soa_v1, reserved) == 320);
+
+static_assert(sizeof(bg_force_soa_v1) == 88);
+static_assert(alignof(bg_force_soa_v1) == 8);
+static_assert(offsetof(bg_force_soa_v1, struct_size) == 0);
+static_assert(offsetof(bg_force_soa_v1, abi_version) == 4);
+static_assert(offsetof(bg_force_soa_v1, particle_capacity) == 8);
+static_assert(offsetof(bg_force_soa_v1, particle_count) == 16);
+static_assert(offsetof(bg_force_soa_v1, unit_system) == 24);
+static_assert(offsetof(bg_force_soa_v1, reserved0) == 28);
+static_assert(offsetof(bg_force_soa_v1, x_kcal_per_mol_angstrom) == 32);
+static_assert(offsetof(bg_force_soa_v1, y_kcal_per_mol_angstrom) == 40);
+static_assert(offsetof(bg_force_soa_v1, z_kcal_per_mol_angstrom) == 48);
+static_assert(offsetof(bg_force_soa_v1, reserved) == 56);
 #endif
+
+static_assert(sizeof(bg_energy_components_v1) == 96);
+static_assert(alignof(bg_energy_components_v1) == alignof(uint64_t));
+static_assert(offsetof(bg_energy_components_v1, struct_size) == 0);
+static_assert(offsetof(bg_energy_components_v1, abi_version) == 4);
+static_assert(offsetof(bg_energy_components_v1, unit_system) == 8);
+static_assert(offsetof(bg_energy_components_v1, reserved0) == 12);
+static_assert(offsetof(bg_energy_components_v1, harmonic_bond_kcal_per_mol) == 16);
+static_assert(offsetof(bg_energy_components_v1, harmonic_angle_kcal_per_mol) == 24);
+static_assert(offsetof(bg_energy_components_v1, periodic_torsion_kcal_per_mol) == 32);
+static_assert(offsetof(bg_energy_components_v1, lennard_jones_kcal_per_mol) == 40);
+static_assert(offsetof(bg_energy_components_v1, coulomb_kcal_per_mol) == 48);
+static_assert(offsetof(bg_energy_components_v1, total_kcal_per_mol) == 56);
+static_assert(offsetof(bg_energy_components_v1, reserved) == 64);
 
 static_assert(noexcept(bg_abi_version()));
 static_assert(noexcept(bg_context_destroy(nullptr)));
 static_assert(noexcept(bg_system_destroy(nullptr)));
+static_assert(noexcept(bg_forcefield_soa_v1_init(nullptr)));
+static_assert(noexcept(bg_force_soa_v1_init(nullptr)));
+static_assert(noexcept(bg_energy_components_v1_init(nullptr)));
+static_assert(noexcept(bg_forcefield_create(nullptr, nullptr)));
+static_assert(noexcept(bg_forcefield_destroy(nullptr)));
+static_assert(noexcept(bg_forcefield_get_atom_count(nullptr, nullptr)));
+static_assert(noexcept(bg_context_evaluate(nullptr, nullptr, nullptr, nullptr, nullptr)));

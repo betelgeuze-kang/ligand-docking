@@ -8,3 +8,6 @@ publish = false
 
 [dependencies]
 betelgeuze-sys = { version = "0.1.0", path = "../betelgeuze-sys" }
+
+[dev-dependencies]
+betelgeuze-reference-physics = { version = "0.1.0", path = "../reference-physics" }

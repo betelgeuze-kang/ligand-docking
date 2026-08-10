@@ -15,27 +15,46 @@ fn main() {
     let include_dir = repository_root.join("include");
     let internal_header = repository_root.join("native/src/internal.hpp");
     let context_source = repository_root.join("native/src/context.cpp");
+    let evaluator_source = repository_root.join("native/src/evaluator.cpp");
+    let forcefield_source = repository_root.join("native/src/forcefield.cpp");
     let system_source = repository_root.join("native/src/system.cpp");
+    let cpu_evaluator_header = repository_root.join("native/src/cpu/evaluator.hpp");
+    let cpu_evaluator_source = repository_root.join("native/src/cpu/evaluator.cpp");
     let c_header_probe = manifest_dir.join("abi/header_c11.c");
     let cpp_layout_probe = manifest_dir.join("abi/layout_assertions.cpp");
 
     track(&include_dir.join("betelgeuze/engine.h"));
     track(&internal_header);
     track(&context_source);
+    track(&evaluator_source);
+    track(&forcefield_source);
     track(&system_source);
+    track(&cpu_evaluator_header);
+    track(&cpu_evaluator_source);
     track(&c_header_probe);
     track(&cpp_layout_probe);
 
-    cc::Build::new()
+    let mut native_build = cc::Build::new();
+    native_build
         .cpp(true)
         .std("c++17")
         .include(&include_dir)
         .file(&context_source)
+        .file(&evaluator_source)
+        .file(&forcefield_source)
         .file(&system_source)
-        .flag_if_supported("-fvisibility=hidden")
+        .file(&cpu_evaluator_source)
         .warnings(true)
-        .warnings_into_errors(true)
-        .compile("betelgeuze_engine");
+        .warnings_into_errors(true);
+    if native_build.get_compiler().is_like_msvc() {
+        native_build.flag_if_supported("/fp:strict");
+    } else {
+        native_build
+            .flag_if_supported("-fvisibility=hidden")
+            .flag_if_supported("-ffp-contract=off")
+            .flag_if_supported("-fno-fast-math");
+    }
+    native_build.compile("betelgeuze_engine");
 
     cc::Build::new()
         .include(&include_dir)
