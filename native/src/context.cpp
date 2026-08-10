@@ -78,7 +78,7 @@ extern "C" BG_API uint32_t BG_CALL bg_abi_version_minor(void) BG_NOEXCEPT {
 }
 
 extern "C" BG_API const char *BG_CALL bg_abi_version_string(void) BG_NOEXCEPT {
-    return "1.0";
+    return "1.1";
 }
 
 extern "C" BG_API const char *BG_CALL bg_status_string(
@@ -104,6 +104,8 @@ extern "C" BG_API const char *BG_CALL bg_status_string(
             return "backend_error";
         case BG_STATUS_INTERNAL_ERROR:
             return "internal_error";
+        case BG_STATUS_NUMERICAL_ERROR:
+            return "numerical_error";
         default:
             return "unknown_status";
     }

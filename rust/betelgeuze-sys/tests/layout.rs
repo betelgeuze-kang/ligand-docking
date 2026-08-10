@@ -4,15 +4,23 @@ use betelgeuze_sys::*;
 
 #[test]
 fn scalar_aliases_and_discriminants_match_the_c_header() {
+    assert_eq!(BG_ABI_VERSION_MAJOR, 1);
+    assert_eq!(BG_ABI_VERSION_MINOR, 1);
+    assert_eq!(BG_ABI_VERSION, 1);
     assert_eq!(size_of::<bg_status>(), 4);
     assert_eq!(size_of::<bg_backend>(), 4);
     assert_eq!(size_of::<bg_unit_system>(), 4);
     assert_eq!(BG_STATUS_OK, 0);
     assert_eq!(BG_STATUS_INTERNAL_ERROR, 9);
+    assert_eq!(BG_STATUS_NUMERICAL_ERROR, 10);
     assert_eq!(BG_BACKEND_AUTO, 0);
     assert_eq!(BG_BACKEND_CPU, 1);
     assert_eq!(BG_BACKEND_HIP, 2);
     assert_eq!(BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL, 1);
+    assert_eq!(BG_PERIODIC_AXIS_X, 1);
+    assert_eq!(BG_PERIODIC_AXIS_Y, 2);
+    assert_eq!(BG_PERIODIC_AXIS_Z, 4);
+    assert_eq!(BG_PERIODIC_AXES_ALL, 7);
 }
 
 #[test]
@@ -82,8 +90,136 @@ fn position_soa_layout_matches_the_c_header() {
     assert_eq!(offset_of!(bg_position_soa, reserved), 48);
 }
 
+#[cfg(target_pointer_width = "64")]
+#[test]
+fn forcefield_soa_v1_layout_matches_the_c_header() {
+    assert_eq!(size_of::<bg_forcefield_soa_v1>(), 352);
+    assert_eq!(align_of::<bg_forcefield_soa_v1>(), 8);
+    assert_eq!(offset_of!(bg_forcefield_soa_v1, struct_size), 0);
+    assert_eq!(offset_of!(bg_forcefield_soa_v1, abi_version), 4);
+    assert_eq!(offset_of!(bg_forcefield_soa_v1, atom_count), 8);
+    assert_eq!(offset_of!(bg_forcefield_soa_v1, unit_system), 16);
+    assert_eq!(offset_of!(bg_forcefield_soa_v1, periodic_axes_mask), 20);
+    assert_eq!(offset_of!(bg_forcefield_soa_v1, sigma_angstrom), 24);
+    assert_eq!(offset_of!(bg_forcefield_soa_v1, epsilon_kcal_per_mol), 32);
+    assert_eq!(offset_of!(bg_forcefield_soa_v1, bond_count), 40);
+    assert_eq!(offset_of!(bg_forcefield_soa_v1, bond_atom_i), 48);
+    assert_eq!(offset_of!(bg_forcefield_soa_v1, bond_atom_j), 56);
+    assert_eq!(
+        offset_of!(bg_forcefield_soa_v1, bond_equilibrium_angstrom),
+        64
+    );
+    assert_eq!(
+        offset_of!(
+            bg_forcefield_soa_v1,
+            bond_force_constant_kcal_per_mol_angstrom2
+        ),
+        72
+    );
+    assert_eq!(offset_of!(bg_forcefield_soa_v1, angle_count), 80);
+    assert_eq!(offset_of!(bg_forcefield_soa_v1, angle_atom_i), 88);
+    assert_eq!(offset_of!(bg_forcefield_soa_v1, angle_atom_j), 96);
+    assert_eq!(offset_of!(bg_forcefield_soa_v1, angle_atom_k), 104);
+    assert_eq!(
+        offset_of!(bg_forcefield_soa_v1, angle_equilibrium_radians),
+        112
+    );
+    assert_eq!(
+        offset_of!(
+            bg_forcefield_soa_v1,
+            angle_force_constant_kcal_per_mol_radian2
+        ),
+        120
+    );
+    assert_eq!(offset_of!(bg_forcefield_soa_v1, torsion_count), 128);
+    assert_eq!(offset_of!(bg_forcefield_soa_v1, torsion_atom_i), 136);
+    assert_eq!(offset_of!(bg_forcefield_soa_v1, torsion_atom_j), 144);
+    assert_eq!(offset_of!(bg_forcefield_soa_v1, torsion_atom_k), 152);
+    assert_eq!(offset_of!(bg_forcefield_soa_v1, torsion_atom_l), 160);
+    assert_eq!(offset_of!(bg_forcefield_soa_v1, torsion_periodicity), 168);
+    assert_eq!(offset_of!(bg_forcefield_soa_v1, torsion_phase_radians), 176);
+    assert_eq!(
+        offset_of!(bg_forcefield_soa_v1, torsion_amplitude_kcal_per_mol),
+        184
+    );
+    assert_eq!(offset_of!(bg_forcefield_soa_v1, exclusion_count), 192);
+    assert_eq!(offset_of!(bg_forcefield_soa_v1, exclusion_atom_i), 200);
+    assert_eq!(offset_of!(bg_forcefield_soa_v1, exclusion_atom_j), 208);
+    assert_eq!(offset_of!(bg_forcefield_soa_v1, pair_scale_count), 216);
+    assert_eq!(offset_of!(bg_forcefield_soa_v1, pair_scale_atom_i), 224);
+    assert_eq!(offset_of!(bg_forcefield_soa_v1, pair_scale_atom_j), 232);
+    assert_eq!(
+        offset_of!(bg_forcefield_soa_v1, pair_scale_lennard_jones),
+        240
+    );
+    assert_eq!(offset_of!(bg_forcefield_soa_v1, pair_scale_coulomb), 248);
+    assert_eq!(offset_of!(bg_forcefield_soa_v1, cell_lengths_angstrom), 256);
+    assert_eq!(offset_of!(bg_forcefield_soa_v1, cutoff_angstrom), 280);
+    assert_eq!(offset_of!(bg_forcefield_soa_v1, switch_start_angstrom), 288);
+    assert_eq!(offset_of!(bg_forcefield_soa_v1, dielectric), 296);
+    assert_eq!(
+        offset_of!(bg_forcefield_soa_v1, screening_kappa_per_angstrom),
+        304
+    );
+    assert_eq!(
+        offset_of!(bg_forcefield_soa_v1, minimum_pair_distance_angstrom),
+        312
+    );
+    assert_eq!(offset_of!(bg_forcefield_soa_v1, reserved), 320);
+}
+
+#[cfg(target_pointer_width = "64")]
+#[test]
+fn force_soa_v1_layout_matches_the_c_header() {
+    assert_eq!(size_of::<bg_force_soa_v1>(), 88);
+    assert_eq!(align_of::<bg_force_soa_v1>(), 8);
+    assert_eq!(offset_of!(bg_force_soa_v1, struct_size), 0);
+    assert_eq!(offset_of!(bg_force_soa_v1, abi_version), 4);
+    assert_eq!(offset_of!(bg_force_soa_v1, particle_capacity), 8);
+    assert_eq!(offset_of!(bg_force_soa_v1, particle_count), 16);
+    assert_eq!(offset_of!(bg_force_soa_v1, unit_system), 24);
+    assert_eq!(offset_of!(bg_force_soa_v1, reserved0), 28);
+    assert_eq!(offset_of!(bg_force_soa_v1, x_kcal_per_mol_angstrom), 32);
+    assert_eq!(offset_of!(bg_force_soa_v1, y_kcal_per_mol_angstrom), 40);
+    assert_eq!(offset_of!(bg_force_soa_v1, z_kcal_per_mol_angstrom), 48);
+    assert_eq!(offset_of!(bg_force_soa_v1, reserved), 56);
+}
+
+#[test]
+fn energy_components_v1_layout_matches_the_c_header() {
+    assert_eq!(size_of::<bg_energy_components_v1>(), 96);
+    assert_eq!(align_of::<bg_energy_components_v1>(), align_of::<u64>());
+    assert_eq!(offset_of!(bg_energy_components_v1, struct_size), 0);
+    assert_eq!(offset_of!(bg_energy_components_v1, abi_version), 4);
+    assert_eq!(offset_of!(bg_energy_components_v1, unit_system), 8);
+    assert_eq!(offset_of!(bg_energy_components_v1, reserved0), 12);
+    assert_eq!(
+        offset_of!(bg_energy_components_v1, harmonic_bond_kcal_per_mol),
+        16
+    );
+    assert_eq!(
+        offset_of!(bg_energy_components_v1, harmonic_angle_kcal_per_mol),
+        24
+    );
+    assert_eq!(
+        offset_of!(bg_energy_components_v1, periodic_torsion_kcal_per_mol),
+        32
+    );
+    assert_eq!(
+        offset_of!(bg_energy_components_v1, lennard_jones_kcal_per_mol),
+        40
+    );
+    assert_eq!(
+        offset_of!(bg_energy_components_v1, coulomb_kcal_per_mol),
+        48
+    );
+    assert_eq!(offset_of!(bg_energy_components_v1, total_kcal_per_mol), 56);
+    assert_eq!(offset_of!(bg_energy_components_v1, reserved), 64);
+}
+
 #[test]
 fn opaque_handles_are_only_used_behind_pointers() {
     assert_eq!(size_of::<*mut bg_context>(), size_of::<usize>());
     assert_eq!(size_of::<*mut bg_system>(), size_of::<usize>());
+    assert_eq!(size_of::<*mut bg_forcefield>(), size_of::<usize>());
 }

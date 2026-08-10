@@ -3,6 +3,14 @@
 //! The raw handles and pointers remain private to this crate. All system input
 //! is copied into native-owned structure-of-arrays storage.
 
+mod forcefield;
+
+pub use forcefield::{
+    AtomNonbonded, EnergyComponents, Evaluation, ForceField, ForceFieldInput, ForceSoaOwned,
+    HarmonicAngle, HarmonicBond, NonbondedSettings, OrthorhombicCell, PairExclusion, PairScale,
+    PeriodicTorsion,
+};
+
 use std::ffi::CStr;
 use std::fmt;
 use std::marker::PhantomData;
@@ -131,6 +139,7 @@ pub enum ErrorCode {
     BufferTooSmall,
     BackendError,
     InternalError,
+    NumericalError,
     Unknown(i32),
 }
 
@@ -147,6 +156,7 @@ impl ErrorCode {
             sys::BG_STATUS_BUFFER_TOO_SMALL => Some(Self::BufferTooSmall),
             sys::BG_STATUS_BACKEND_ERROR => Some(Self::BackendError),
             sys::BG_STATUS_INTERNAL_ERROR => Some(Self::InternalError),
+            sys::BG_STATUS_NUMERICAL_ERROR => Some(Self::NumericalError),
             other => Some(Self::Unknown(other)),
         }
     }
@@ -162,6 +172,7 @@ impl ErrorCode {
             Self::BufferTooSmall => sys::BG_STATUS_BUFFER_TOO_SMALL,
             Self::BackendError => sys::BG_STATUS_BACKEND_ERROR,
             Self::InternalError => sys::BG_STATUS_INTERNAL_ERROR,
+            Self::NumericalError => sys::BG_STATUS_NUMERICAL_ERROR,
             Self::Unknown(raw) => raw,
         }
     }
