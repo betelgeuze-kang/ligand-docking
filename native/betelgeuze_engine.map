@@ -1,6 +1,41 @@
 BETELGEUZE_ENGINE_1.0 {
     global:
-        bg_*;
+        bg_abi_version;
+        bg_abi_version_major;
+        bg_abi_version_minor;
+        bg_abi_version_string;
+        bg_status_string;
+        bg_backend_string;
+        bg_unit_system_string;
+        bg_last_error_message;
+        bg_last_error_message_copy;
+        bg_context_options_init;
+        bg_particle_soa_init;
+        bg_particle_soa_view_init;
+        bg_position_soa_init;
+        bg_backend_is_available;
+        bg_context_create;
+        bg_context_destroy;
+        bg_context_get_backend;
+        bg_context_get_device_ordinal;
+        bg_context_get_unit_system;
+        bg_system_create;
+        bg_system_destroy;
+        bg_system_get_particle_count;
+        bg_system_get_unit_system;
+        bg_system_get_particles;
+        bg_system_set_positions;
     local:
         *;
 };
+
+BETELGEUZE_ENGINE_1.1 {
+    global:
+        bg_forcefield_soa_v1_init;
+        bg_force_soa_v1_init;
+        bg_energy_components_v1_init;
+        bg_forcefield_create;
+        bg_forcefield_destroy;
+        bg_forcefield_get_atom_count;
+        bg_context_evaluate;
+} BETELGEUZE_ENGINE_1.0;
