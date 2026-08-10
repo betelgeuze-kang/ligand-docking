@@ -7,9 +7,15 @@ import argparse
 import json
 import os
 from pathlib import Path
+import sys
 from typing import Sequence
 
-from betelgeuze_engine_v2.docking.performance_qualification_v3 import (
+
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from betelgeuze_engine_v2.docking.performance_qualification_v3 import (  # noqa: E402
     CPUPerformanceQualificationV3Error,
     require_cpu_performance_artifact_v3_bytes,
     run_sealed_local_performance_runner_v3,

@@ -93,7 +93,7 @@ def test_current_runner_activation_is_exact_and_authority_false() -> None:
 
     assert result == {
         "activation_sha256": (
-            "8fc8cf6499785d96188faef934c283a1feb12600c443976dda56ad4c76c2047a"
+            "31dbf2cac0796e154d0fb7706260faefca6a07fcd5638e9584c199341edbfe41"
         ),
         "authority": {
             "fresh_holdout_execution_authorized": False,
