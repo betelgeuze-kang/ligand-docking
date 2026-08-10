@@ -164,6 +164,7 @@ jobs:
             config/engine_v2_source_paired_clearance_external_reservation_operations_decision.json
             config/engine_v2_global_orientation_synthetic_contract.json
             config/engine_v2_mixed64_geometric_candidate_evidence_v2.json
+            config/engine_v2_mixed64_proposal_geometry_v3.json
             config/engine_v2_cpu_performance_profile.json
             config/engine_v2_cpu_performance_v2_terminal_decision.json
             config/engine_v2_cpu_performance_profile_v3.json
@@ -194,6 +195,7 @@ jobs:
             tools/verify_engine_v2_global_orientation_synthetic_contract.py
             tools/verify_engine_v2_mixed64_geometric_candidate_evidence_v2.py
             tools/verify_engine_v2_mixed64_candidate_evidence_artifact.py
+            tools/verify_engine_v2_mixed64_proposal_geometry_v3.py
             tools/verify_engine_v2_cpu_performance_profile.py
             tools/verify_engine_v2_cpu_performance_v2_terminal_decision.py
             tools/verify_engine_v2_cpu_performance_profile_v3.py
@@ -215,6 +217,8 @@ jobs:
             tests/unit/test_engine_v2_global_orientation_evidence.py
             tests/unit/test_engine_v2_global_orientation_synthetic_contract.py
             tests/unit/test_engine_v2_fixed_mixed64_allocation.py
+            tests/unit/test_engine_v2_mixed64_proposal_geometry_v3.py
+            tests/unit/test_verify_engine_v2_mixed64_proposal_geometry_v3.py
             tests/unit/test_engine_v2_geometric_admission_v2.py
             tests/unit/test_engine_v2_pipeline_candidate_evidence_v2.py
             tests/unit/test_verify_engine_v2_mixed64_geometric_candidate_evidence_v2.py
@@ -576,6 +580,8 @@ jobs:
             tests/unit/test_engine_v2_global_orientation_evidence.py \
             tests/unit/test_engine_v2_global_orientation_synthetic_contract.py \
             tests/unit/test_engine_v2_fixed_mixed64_allocation.py \
+            tests/unit/test_engine_v2_mixed64_proposal_geometry_v3.py \
+            tests/unit/test_verify_engine_v2_mixed64_proposal_geometry_v3.py \
             tests/unit/test_engine_v2_geometric_admission_v2.py \
             tests/unit/test_engine_v2_pipeline_candidate_evidence_v2.py \
             tests/unit/test_verify_engine_v2_mixed64_geometric_candidate_evidence_v2.py \

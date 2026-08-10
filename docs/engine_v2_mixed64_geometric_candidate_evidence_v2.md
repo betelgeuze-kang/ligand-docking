@@ -198,6 +198,11 @@ The exact activation blockers are:
 The independent-SO(3) lane therefore still needs an exact base-source receipt
 plus quaternion/seed/deduplication evidence. Single-anchor lanes still need
 target distance, direction, local surface normal, and steric-precheck receipts.
+The pre-activation geometry primitives described in
+[mixed64 proposal geometry v3](engine_v2_mixed64_proposal_geometry_v3.md)
+implement and unit-test those transforms with replayable inputs. They do not
+remove either blocker here because no admitted fixed64 producer yet binds the
+primitive receipts into all 64 generation outcomes.
 The uniform-control lineage digest also needs its underlying source payload
 rederived before the lane name becomes activation evidence.
 The current artifact verifier replays identities, receipt hashes, the geometric
