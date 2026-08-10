@@ -3,6 +3,12 @@
 //! This crate intentionally mirrors `include/betelgeuze/engine.h` without
 //! adding ownership or lifetime semantics. Prefer `betelgeuze-runtime` for a
 //! safe API.
+//!
+//! The optional `hip` feature requires `BG_HIP_ARCHITECTURE` and a ROCm
+//! toolchain selected with `HIP_PATH` or `ROCM_PATH`. If device libraries are
+//! not installed below that toolchain, set `ROCM_DEVICE_LIB_PATH`. Deployed
+//! executables must also make that ROCm installation's `libamdhip64` visible
+//! to the platform dynamic loader.
 
 #![no_std]
 #![allow(non_camel_case_types)]
@@ -10,7 +16,7 @@
 use core::ffi::c_char;
 
 pub const BG_ABI_VERSION_MAJOR: u32 = 1;
-pub const BG_ABI_VERSION_MINOR: u32 = 1;
+pub const BG_ABI_VERSION_MINOR: u32 = 2;
 pub const BG_ABI_VERSION: u32 = 1;
 
 pub const BG_CANONICAL_LENGTH_UNIT: &[u8] = b"angstrom\0";

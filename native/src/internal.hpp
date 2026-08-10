@@ -18,6 +18,10 @@ struct bg_context final {
     bg_backend backend = BG_BACKEND_CPU;
     bg_unit_system unit_system = BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL;
     int32_t device_ordinal = 0;
+    /* Backend-private ownership.  Public callers only ever see bg_context as
+     * an opaque handle; the selected provider initializes and destroys this
+     * state with the context. */
+    void *backend_state = nullptr;
 };
 
 struct bg_system final {
