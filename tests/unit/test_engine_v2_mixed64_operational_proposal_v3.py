@@ -1,0 +1,364 @@
+from __future__ import annotations
+
+import hashlib
+import inspect
+import json
+
+import pytest
+import torch
+
+from betelgeuze_engine_v2.docking.geometric_admission_v3 import GeometricAdmissionV3
+from betelgeuze_engine_v2.docking.mixed64_allocation import (
+    Mixed64ConformerSourceEvidence,
+    Mixed64FeatureEvidence,
+    Mixed64RetainedSourceEvidence,
+    Mixed64V7ControlSourceEvidence,
+    build_fixed_mixed64_allocation,
+)
+from betelgeuze_engine_v2.docking.mixed64_operational_proposal_v3 import (
+    MATERIALIZED_STATUS,
+    MIXED64_OPERATIONAL_PROPOSAL_POLICY_SHA256,
+    SOURCE_PROPOSAL_IDENTITY_NOT_OPERATIONAL,
+    TYPED_MATERIALIZATION_FAILURE_STATUS,
+    UPSTREAM_NOT_MATERIALIZED_STATUS,
+    Mixed64OperationalProposalRecordV1,
+    Mixed64OperationalProposalV3Error,
+    frozen_mixed64_operational_proposal_policy,
+    materialize_mixed64_operational_proposals,
+)
+from betelgeuze_engine_v2.docking.mixed64_proposal_producer_v3 import (
+    Mixed64CoordinateSourcePayloadV1,
+    Mixed64ProposalSourceBundleV1,
+    produce_fixed_mixed64_proposals,
+)
+from betelgeuze_engine_v2.docking.proposals import bind_docking_proposal_state
+from tests.unit.test_engine_v2_mixed64_proposal_producer_v3 import _fixture
+
+
+def _digest(label: str) -> str:
+    return hashlib.sha256(label.encode("ascii")).hexdigest()
+
+
+def _canonical(document: object) -> bytes:
+    return json.dumps(
+        document,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+        allow_nan=False,
+    ).encode("ascii")
+
+
+def _operational_source(
+    source: Mixed64CoordinateSourcePayloadV1,
+    *,
+    coordinate_identity_override: str | None = None,
+    problem_label: str = "problem",
+) -> Mixed64CoordinateSourcePayloadV1:
+    coordinates = torch.tensor(source.coordinates, dtype=torch.float64)
+    proposal_index = 0 if source.source_ordinal is None else source.source_ordinal
+    proposal = bind_docking_proposal_state(
+        coordinates=coordinates,
+        torsion_angles=torch.zeros(len(source.coordinates), dtype=torch.float64),
+        rotation=torch.eye(3, dtype=torch.float64),
+        translation=torch.zeros(3, dtype=torch.float64),
+        proposal_index=proposal_index,
+        seed=1000 + proposal_index,
+        problem_fingerprint_sha256=_digest(problem_label),
+        search_space_fingerprint_sha256=_digest("search-space"),
+    )
+    identity = proposal.identity_payload()
+    if coordinate_identity_override is not None:
+        identity["coordinate_fingerprint_sha256"] = coordinate_identity_override
+    return Mixed64CoordinateSourcePayloadV1(
+        source_kind=source.source_kind,
+        source_ordinal=source.source_ordinal,
+        proposal_identity_payload_canonical_json=_canonical(identity),
+        source_receipt_canonical_json=source.source_receipt_canonical_json,
+        coordinates=source.coordinates,
+        proposal_lineage_canonical_json=source.proposal_lineage_canonical_json,
+    )
+
+
+def _operational_fixture(
+    *,
+    corrupt_exact_coordinate_identity: bool = False,
+    crosswire_control_problem: bool = False,
+):
+    original_allocation, original_bundle, exact, controls, conformers, retained = (
+        _fixture()
+    )
+    operational_exact = _operational_source(
+        exact,
+        coordinate_identity_override=(
+            _digest("wrong-coordinate")
+            if corrupt_exact_coordinate_identity
+            else None
+        ),
+    )
+    operational_controls = tuple(
+        _operational_source(
+            value,
+            problem_label=(
+                "wrong-problem"
+                if crosswire_control_problem and value.source_ordinal == 0
+                else "problem"
+            ),
+        )
+        for value in controls
+    )
+    operational_conformers = tuple(_operational_source(value) for value in conformers)
+    operational_retained = tuple(_operational_source(value) for value in retained)
+    original_features = original_allocation.features
+    features = Mixed64FeatureEvidence(
+        exact_v11_source_receipt_sha256=operational_exact.source_receipt_sha256,
+        prepared_ligand_topology_sha256=(
+            original_features.prepared_ligand_topology_sha256
+        ),
+        prepared_receptor_topology_sha256=(
+            original_features.prepared_receptor_topology_sha256
+        ),
+        feature_extractor_policy_sha256=(
+            original_features.feature_extractor_policy_sha256
+        ),
+        atomic_features=original_features.atomic_features,
+        v7_control_sources=tuple(
+            Mixed64V7ControlSourceEvidence(
+                source_index=int(source.source_ordinal),
+                proposal_mode=(
+                    "pocket_centered_control"
+                    if int(source.source_ordinal) < 8
+                    else "uniform_source_control"
+                ),
+                proposal_sha256=source.proposal_sha256,
+                coordinate_sha256=source.coordinate_sha256,
+                proposal_lineage_sha256=str(source.proposal_lineage_sha256),
+                source_receipt_sha256=source.source_receipt_sha256,
+            )
+            for source in operational_controls
+        ),
+        conformer_sources=tuple(
+            Mixed64ConformerSourceEvidence(
+                rank=int(source.source_ordinal),
+                proposal_sha256=source.proposal_sha256,
+                coordinate_sha256=source.coordinate_sha256,
+                source_receipt_sha256=source.source_receipt_sha256,
+            )
+            for source in operational_conformers
+        ),
+        retained_sources=tuple(
+            Mixed64RetainedSourceEvidence(
+                source_index=int(source.source_ordinal),
+                proposal_sha256=source.proposal_sha256,
+                coordinate_sha256=source.coordinate_sha256,
+                source_receipt_sha256=source.source_receipt_sha256,
+            )
+            for source in operational_retained
+        ),
+    )
+    allocation = build_fixed_mixed64_allocation(features)
+    distant_receptor = tuple(
+        (point[0], point[1], point[2] + 100.0)
+        for point in original_bundle.receptor_coordinates
+    )
+    bundle = Mixed64ProposalSourceBundleV1(
+        allocation=allocation,
+        exact_v11_source=operational_exact,
+        v7_control_sources=operational_controls,
+        conformer_sources=operational_conformers,
+        retained_sources=operational_retained,
+        ligand_vdw_radii=original_bundle.ligand_vdw_radii,
+        ligand_heavy_atom_mask=original_bundle.ligand_heavy_atom_mask,
+        receptor_coordinates=distant_receptor,
+        receptor_vdw_radii=original_bundle.receptor_vdw_radii,
+        receptor_source_receipt_canonical_json=(
+            original_bundle.receptor_source_receipt_canonical_json
+        ),
+        pocket_center=(0.0, 0.0, 100.0),
+        pocket_normal=original_bundle.pocket_normal,
+        pocket_radius=200.0,
+    )
+    producer = produce_fixed_mixed64_proposals(allocation, source_bundle=bundle)
+    admission = GeometricAdmissionV3().admit_producer_batch(producer)
+    return allocation, bundle, producer, admission
+
+
+def test_exact_operational_sources_materialize_all_admitted_slots_repeatably() -> None:
+    _allocation, _bundle, producer, admission = _operational_fixture()
+    first = materialize_mixed64_operational_proposals(admission)
+    second = materialize_mixed64_operational_proposals(admission)
+
+    assert first.receipt_sha256 == second.receipt_sha256
+    assert len(first.records) == 64
+    assert first.materialized_count == admission.accepted_count
+    assert first.typed_materialization_failure_count == 0
+    assert first.upstream_not_materialized_count == admission.nonaccepted_count
+    for producer_record, admission_decision, record in zip(
+        producer.records,
+        admission.decisions,
+        first.records,
+        strict=True,
+    ):
+        assert record.admission_decision.receipt_sha256 == (
+            admission_decision.receipt_sha256
+        )
+        if record.status == MATERIALIZED_STATUS:
+            assert record.operational_proposal is not None
+            assert tuple(
+                tuple(float(component) for component in point)
+                for point in record.operational_proposal.coordinates.tolist()
+            ) == producer_record.output_coordinates
+            if record.slot_index < 60 and record.slot_index >= 24:
+                assert record.operational_proposal.proposal_index == record.slot_index
+
+
+def test_passthrough_preserves_identity_and_transformed_lane_binds_new_identity() -> None:
+    _allocation, _bundle, producer, admission = _operational_fixture()
+    batch = materialize_mixed64_operational_proposals(admission)
+
+    passthrough = next(
+        value
+        for value in batch.records
+        if value.materialized and value.slot_index < 24
+    )
+    transformed = next(
+        value
+        for value in batch.records
+        if value.materialized and 24 <= value.slot_index < 60
+    )
+    assert passthrough.operational_proposal.fingerprint_sha256 == (
+        producer.records[passthrough.slot_index].source_proposal_sha256
+    )
+    assert transformed.operational_proposal.fingerprint_sha256 != (
+        producer.records[transformed.slot_index].source_proposal_sha256
+    )
+    assert transformed.source_operational_proposal.torsion_angles.tolist() == (
+        transformed.operational_proposal.torsion_angles.tolist()
+    )
+    assert transformed.source_operational_proposal.problem_fingerprint_sha256 == (
+        transformed.operational_proposal.problem_fingerprint_sha256
+    )
+
+
+def test_historical_nonoperational_source_identity_is_typed_not_guessed() -> None:
+    allocation, bundle, *_ = _fixture()
+    producer = produce_fixed_mixed64_proposals(allocation, source_bundle=bundle)
+    admission = GeometricAdmissionV3().admit_producer_batch(producer)
+    batch = materialize_mixed64_operational_proposals(admission)
+
+    assert batch.typed_materialization_failure_count == admission.accepted_count
+    assert all(
+        record.failure_code == SOURCE_PROPOSAL_IDENTITY_NOT_OPERATIONAL
+        for record in batch.records
+        if record.status == TYPED_MATERIALIZATION_FAILURE_STATUS
+    )
+    assert all(
+        record.operational_proposal is None
+        for record in batch.records
+        if record.status != MATERIALIZED_STATUS
+    )
+
+
+def test_source_coordinate_identity_cross_wiring_is_typed_per_dependent_slot() -> None:
+    _allocation, _bundle, _producer, admission = _operational_fixture(
+        corrupt_exact_coordinate_identity=True
+    )
+    batch = materialize_mixed64_operational_proposals(admission)
+
+    failed = tuple(
+        value
+        for value in batch.records
+        if value.status == TYPED_MATERIALIZATION_FAILURE_STATUS
+    )
+    assert failed
+    assert all(value.operational_proposal is None for value in failed)
+    assert all(value.failure_code == SOURCE_PROPOSAL_IDENTITY_NOT_OPERATIONAL for value in failed)
+
+
+def test_upstream_rejections_never_materialize_proposal_state() -> None:
+    _allocation, _bundle, _producer, admission = _operational_fixture()
+    batch = materialize_mixed64_operational_proposals(admission)
+
+    for decision, record in zip(admission.decisions, batch.records, strict=True):
+        if not decision.accepted:
+            assert record.status == UPSTREAM_NOT_MATERIALIZED_STATUS
+            assert record.source_payload is None
+            assert record.operational_proposal is None
+
+
+def test_cross_wired_problem_identity_fails_the_whole_batch() -> None:
+    _allocation, _bundle, _producer, admission = _operational_fixture(
+        crosswire_control_problem=True
+    )
+
+    with pytest.raises(Mixed64OperationalProposalV3Error, match="problem identity"):
+        materialize_mixed64_operational_proposals(admission)
+
+
+def test_public_proposal_factory_rederives_identity_without_fingerprint_input() -> None:
+    coordinates = torch.tensor(((1.0, 2.0, 3.0),), dtype=torch.float64)
+    proposal = bind_docking_proposal_state(
+        coordinates=coordinates,
+        torsion_angles=torch.zeros(1, dtype=torch.float64),
+        rotation=torch.eye(3, dtype=torch.float64),
+        translation=torch.zeros(3, dtype=torch.float64),
+        proposal_index=7,
+        seed=11,
+        problem_fingerprint_sha256=_digest("problem-factory"),
+        search_space_fingerprint_sha256=_digest("search-factory"),
+    )
+
+    assert hashlib.sha256(_canonical(proposal.identity_payload())).hexdigest() == (
+        proposal.fingerprint_sha256
+    )
+    assert "fingerprint_sha256" not in inspect.signature(
+        bind_docking_proposal_state
+    ).parameters
+
+
+def test_record_cannot_be_forged_without_factory() -> None:
+    _allocation, _bundle, _producer, admission = _operational_fixture()
+    with pytest.raises(Mixed64OperationalProposalV3Error, match="bounded factory"):
+        Mixed64OperationalProposalRecordV1(
+            admission_decision=admission.decisions[0],
+            source_payload=None,
+            source_operational_proposal=None,
+            operational_proposal=None,
+            status=UPSTREAM_NOT_MATERIALIZED_STATUS,
+            failure_code=None,
+        )
+
+
+def test_policy_and_output_keep_all_authority_false() -> None:
+    _allocation, _bundle, _producer, admission = _operational_fixture()
+    policy = frozen_mixed64_operational_proposal_policy()
+    batch = materialize_mixed64_operational_proposals(admission)
+    document = batch.to_dict()
+
+    assert len(MIXED64_OPERATIONAL_PROPOSAL_POLICY_SHA256) == 64
+    assert policy["candidate_denominator"] == 64
+    assert all(value is False for value in policy["authority"].values())
+    assert document["producer_attested"] is False
+    assert document["admission_batch"]["receipt_sha256"] == (
+        admission.receipt_sha256
+    )
+    assert document["activation_evidence_eligible"] is False
+    assert document["refinement_scoring_validity_executed"] is False
+    assert document["molecular_execution_authorized"] is False
+    assert document["reservation_allowed"] is False
+
+
+def test_materializer_accepts_no_caller_coordinates_results_or_authority() -> None:
+    parameters = set(
+        inspect.signature(materialize_mixed64_operational_proposals).parameters
+    )
+    assert parameters == {"admission_batch"}
+    assert not parameters & {
+        "coordinates",
+        "score",
+        "rank",
+        "validity",
+        "refinement_result",
+        "authority",
+        "reservation",
+    }
