@@ -533,15 +533,19 @@ def _cpu_performance_authority_is_fail_closed(repo_root: Path) -> bool:
         "test_double_production_authority_allowed",
     }
     expected_runner_keys = {
+        "attempt_ledger_policy",
         "caller_supplied_probe_allowed",
+        "decision_return_policy",
         "exactly_once_profile_attempt",
         "execution_state_recorded_only_by_terminal_decision",
         "github_actions_live_execution_allowed",
+        "isolated_live_entrypoint_required",
         "live_synthetic_local_execution_implemented",
         "molecular_execution_allowed",
         "output_policy",
         "reservation_created",
         "result_dependent_configuration_allowed",
+        "terminal_state_policy",
         "test_double_execution_authority",
     }
     return bool(
@@ -559,16 +563,23 @@ def _cpu_performance_authority_is_fail_closed(repo_root: Path) -> bool:
         )
         and type(runner) is dict
         and set(runner) == expected_runner_keys
+        and runner.get("attempt_ledger_policy")
+        == "fixed_account_scoped_profile_sha_o_excl_before_preflight"
         and runner.get("caller_supplied_probe_allowed") is False
+        and runner.get("decision_return_policy")
+        == "artifact_and_terminal_persisted_before_return"
         and runner.get("exactly_once_profile_attempt") is True
         and runner.get("execution_state_recorded_only_by_terminal_decision") is True
         and runner.get("github_actions_live_execution_allowed") is False
+        and runner.get("isolated_live_entrypoint_required") is True
         and runner.get("live_synthetic_local_execution_implemented") is True
         and runner.get("molecular_execution_allowed") is False
         and runner.get("output_policy")
-        == "owner_only_absent_only_single_artifact"
+        == "owner_only_absent_only_single_artifact_plus_terminal"
         and runner.get("reservation_created") is False
         and runner.get("result_dependent_configuration_allowed") is False
+        and runner.get("terminal_state_policy")
+        == "owner_only_absent_only_attempt_and_artifact_bound"
         and runner.get("test_double_execution_authority") is False
     )
 

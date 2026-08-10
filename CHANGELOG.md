@@ -6,6 +6,13 @@ scientific claim from a package version.
 
 ## Unreleased
 
+- Hardened the synthetic CPU profile-v3 runner into an account-scoped
+  exactly-once transaction: the attempt is atomically consumed before
+  preflight, one live result can publish only once, and no decision is returned
+  until the artifact and cross-bound terminal state are durable. Added the
+  isolated CPython 3.10 bootstrap, underlying GitHub Actions denial, and a
+  bounded no-symlink offline artifact reader. All molecular, benchmark,
+  qualification, product, and claim authority remains false.
 - Invalidated the former 298-case blind designation after discovering and
   hash-verifying a pre-freeze complete 300-case/900-row report. All historical
   300 cases are now development/diagnostic-only.

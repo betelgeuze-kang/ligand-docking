@@ -8,9 +8,11 @@ import json
 import os
 from pathlib import Path
 import platform
+import pwd
 import secrets
 import stat
 import sys
+import threading
 import time
 from types import MappingProxyType
 from typing import Any, Final, Mapping, Sequence
@@ -58,6 +60,18 @@ PREDECESSOR_TERMINAL_SHA256: Final = (
     "047f157c8d5d3228c180aca6af392eb8cf13d828659b9a83c38c74c34cc0cf0f"
 )
 MAX_ARTIFACT_BYTES: Final = 32 * 1024 * 1024
+MAX_STATE_BYTES: Final = 64 * 1024
+STATE_DIRECTORY_RELATIVE_PATH: Final = (
+    Path(".betelgeuze-engine-v2") / "qualification" / PROFILE_SHA256
+)
+ATTEMPT_LEDGER_FILENAME: Final = "attempt.json"
+TERMINAL_STATE_FILENAME: Final = "terminal.json"
+ATTEMPT_LEDGER_SCHEMA_ID: Final = (
+    "betelgeuze.engine_v2_cpu_performance_attempt_ledger/3.0.0"
+)
+TERMINAL_STATE_SCHEMA_ID: Final = (
+    "betelgeuze.engine_v2_cpu_performance_terminal_state/3.0.0"
+)
 
 
 class CPUPerformanceQualificationV3Error(ValueError):
@@ -95,6 +109,116 @@ def _read_exact_source(path: Path, *, name: str, maximum_bytes: int) -> bytes:
         )
     except v2.CPUPerformanceError as exc:
         raise CPUPerformanceQualificationV3Error(str(exc)) from exc
+
+
+def _account_home_directory() -> Path:
+    """Return the login-account home without trusting caller environment state."""
+
+    try:
+        home = Path(pwd.getpwuid(os.geteuid()).pw_dir).absolute()
+        resolved = home.resolve(strict=True)
+        metadata = home.lstat()
+    except (KeyError, OSError) as exc:
+        raise CPUPerformanceQualificationV3Error(
+            "qualification account home is unavailable"
+        ) from exc
+    if (
+        home != resolved
+        or not stat.S_ISDIR(metadata.st_mode)
+        or metadata.st_uid != os.geteuid()
+        or metadata.st_mode & (stat.S_IWGRP | stat.S_IWOTH)
+    ):
+        raise CPUPerformanceQualificationV3Error(
+            "qualification account home is not owner-controlled"
+        )
+    return resolved
+
+
+def _open_state_directory() -> tuple[Path, int]:
+    """Create/open the fixed account-scoped state directory descriptor-first."""
+
+    home = _account_home_directory()
+    directory_flags = os.O_RDONLY | os.O_CLOEXEC | getattr(os, "O_DIRECTORY", 0)
+    directory_flags |= getattr(os, "O_NOFOLLOW", 0)
+    try:
+        descriptor = os.open(home, directory_flags)
+    except OSError as exc:
+        raise CPUPerformanceQualificationV3Error(
+            "qualification account home cannot be opened safely"
+        ) from exc
+    current = home
+    try:
+        for component in STATE_DIRECTORY_RELATIVE_PATH.parts:
+            if (
+                not component
+                or component in (".", "..")
+                or "/" in component
+                or "\x00" in component
+            ):
+                raise CPUPerformanceQualificationV3Error(
+                    "qualification state path is invalid"
+                )
+            created = False
+            try:
+                os.mkdir(component, 0o700, dir_fd=descriptor)
+                created = True
+            except FileExistsError:
+                pass
+            except OSError as exc:
+                raise CPUPerformanceQualificationV3Error(
+                    "qualification state directory cannot be created safely"
+                ) from exc
+            if created:
+                try:
+                    os.fsync(descriptor)
+                except OSError as exc:
+                    raise CPUPerformanceQualificationV3Error(
+                        "qualification state directory creation is not durable"
+                    ) from exc
+            try:
+                child = os.open(component, directory_flags, dir_fd=descriptor)
+            except OSError as exc:
+                raise CPUPerformanceQualificationV3Error(
+                    "qualification state directory cannot be opened safely"
+                ) from exc
+            metadata = os.fstat(child)
+            if (
+                not stat.S_ISDIR(metadata.st_mode)
+                or metadata.st_uid != os.geteuid()
+                or metadata.st_mode & (stat.S_IWGRP | stat.S_IWOTH)
+            ):
+                os.close(child)
+                raise CPUPerformanceQualificationV3Error(
+                    "qualification state directory is not owner-controlled"
+                )
+            os.close(descriptor)
+            descriptor = child
+            current /= component
+        _require_state_directory_binding(current, descriptor)
+        return current, descriptor
+    except BaseException:
+        os.close(descriptor)
+        raise
+
+
+def _require_state_directory_binding(path: Path, descriptor: int) -> None:
+    try:
+        path_metadata = os.stat(path, follow_symlinks=False)
+        descriptor_metadata = os.fstat(descriptor)
+    except OSError as exc:
+        raise CPUPerformanceQualificationV3Error(
+            "qualification state directory identity is unavailable"
+        ) from exc
+    if (
+        (path_metadata.st_dev, path_metadata.st_ino)
+        != (descriptor_metadata.st_dev, descriptor_metadata.st_ino)
+        or not stat.S_ISDIR(descriptor_metadata.st_mode)
+        or descriptor_metadata.st_uid != os.geteuid()
+        or descriptor_metadata.st_mode & (stat.S_IWGRP | stat.S_IWOTH)
+    ):
+        raise CPUPerformanceQualificationV3Error(
+            "qualification state directory identity changed"
+        )
 
 
 def _load_profiles() -> tuple[Mapping[str, Any], v2.CPUPerformanceProfileV2]:
@@ -211,15 +335,19 @@ def verify_runner_activation_contract() -> Mapping[str, object]:
         activation["runner"],
         name="runner activation policy",
         keys=(
+            "attempt_ledger_policy",
             "caller_supplied_probe_allowed",
+            "decision_return_policy",
             "exactly_once_profile_attempt",
             "execution_state_recorded_only_by_terminal_decision",
             "github_actions_live_execution_allowed",
+            "isolated_live_entrypoint_required",
             "live_synthetic_local_execution_implemented",
             "molecular_execution_allowed",
             "output_policy",
             "reservation_created",
             "result_dependent_configuration_allowed",
+            "terminal_state_policy",
             "test_double_execution_authority",
         ),
     )
@@ -236,15 +364,27 @@ def verify_runner_activation_contract() -> Mapping[str, object]:
         or activation["restrictions"] != dict(v2.RESTRICTIONS)
         or runner
         != {
+            "attempt_ledger_policy": (
+                "fixed_account_scoped_profile_sha_o_excl_before_preflight"
+            ),
             "caller_supplied_probe_allowed": False,
+            "decision_return_policy": (
+                "artifact_and_terminal_persisted_before_return"
+            ),
             "exactly_once_profile_attempt": True,
             "execution_state_recorded_only_by_terminal_decision": True,
             "github_actions_live_execution_allowed": False,
+            "isolated_live_entrypoint_required": True,
             "live_synthetic_local_execution_implemented": True,
             "molecular_execution_allowed": False,
-            "output_policy": "owner_only_absent_only_single_artifact",
+            "output_policy": (
+                "owner_only_absent_only_single_artifact_plus_terminal"
+            ),
             "reservation_created": False,
             "result_dependent_configuration_allowed": False,
+            "terminal_state_policy": (
+                "owner_only_absent_only_attempt_and_artifact_bound"
+            ),
             "test_double_execution_authority": False,
         }
     ):
@@ -735,6 +875,303 @@ def require_cpu_performance_artifact_v3_bytes(
     return require_cpu_performance_artifact_v3_document(document)
 
 
+def read_cpu_performance_artifact_v3(
+    path: Path,
+) -> VerifiedOfflineCPUPerformanceArtifactV3:
+    """Read one bounded owner-only artifact without following path symlinks."""
+
+    target = Path(path)
+    try:
+        parent, _parent_metadata = v2._reject_symlink_parent(target)
+    except v2.CPUPerformanceError as exc:
+        raise CPUPerformanceQualificationV3Error(str(exc)) from exc
+    bound_target = parent / target.name
+    try:
+        metadata = bound_target.lstat()
+    except OSError as exc:
+        raise CPUPerformanceQualificationV3Error(
+            "CPU performance artifact v3 is unavailable"
+        ) from exc
+    if (
+        not stat.S_ISREG(metadata.st_mode)
+        or stat.S_IMODE(metadata.st_mode) != 0o600
+        or metadata.st_uid != os.geteuid()
+        or metadata.st_nlink != 1
+    ):
+        raise CPUPerformanceQualificationV3Error(
+            "CPU performance artifact v3 is not an owner-only single-link file"
+        )
+    raw = _read_exact_source(
+        bound_target,
+        name="CPU performance artifact v3",
+        maximum_bytes=MAX_ARTIFACT_BYTES,
+    )
+    return require_cpu_performance_artifact_v3_bytes(raw)
+
+
+def _validated_absent_artifact_target(path: Path) -> Path:
+    target = Path(path)
+    if (
+        not target.name
+        or target.name in (".", "..")
+        or target.suffix != ".json"
+        or len(os.fsencode(target.name)) > 240
+        or len(os.fsencode(target)) > 4096
+    ):
+        raise CPUPerformanceQualificationV3Error("artifact output filename is invalid")
+    try:
+        parent, parent_metadata = v2._reject_symlink_parent(target)
+    except v2.CPUPerformanceError as exc:
+        raise CPUPerformanceQualificationV3Error(str(exc)) from exc
+    directory_flags = os.O_RDONLY | os.O_CLOEXEC | getattr(os, "O_DIRECTORY", 0)
+    directory_flags |= getattr(os, "O_NOFOLLOW", 0)
+    try:
+        directory_fd = os.open(parent, directory_flags)
+    except OSError as exc:
+        raise CPUPerformanceQualificationV3Error(
+            "artifact parent cannot be opened safely"
+        ) from exc
+    try:
+        try:
+            v2._require_same_trusted_parent(parent, directory_fd, parent_metadata)
+        except v2.CPUPerformanceError as exc:
+            raise CPUPerformanceQualificationV3Error(str(exc)) from exc
+        try:
+            os.stat(target.name, dir_fd=directory_fd, follow_symlinks=False)
+        except FileNotFoundError:
+            pass
+        except OSError as exc:
+            raise CPUPerformanceQualificationV3Error(
+                "artifact output state is ambiguous"
+            ) from exc
+        else:
+            raise CPUPerformanceQualificationV3Error(
+                "artifact output already exists"
+            )
+    finally:
+        os.close(directory_fd)
+    return parent / target.name
+
+
+def _output_path_sha256(path: Path) -> str:
+    return _sha256_bytes(os.fsencode(str(path)))
+
+
+def _write_all(descriptor: int, raw: bytes, *, name: str) -> None:
+    offset = 0
+    while offset < len(raw):
+        try:
+            written = os.write(descriptor, raw[offset:])
+        except OSError as exc:
+            raise CPUPerformanceQualificationV3Error(
+                f"{name} write failed"
+            ) from exc
+        if written <= 0:
+            raise CPUPerformanceQualificationV3Error(
+                f"{name} write made no progress"
+            )
+        offset += written
+
+
+class _ReservedProfileAttemptV3:
+    """Opaque lease backed by the durable attempt marker."""
+
+    __slots__ = (
+        "_activation_sha256",
+        "_attempt_receipt_sha256",
+        "_issued_pid",
+        "_issued_start_ticks",
+        "_output_path_sha256",
+        "_raw_sha256",
+        "_run_nonce",
+        "__weakref__",
+    )
+
+    def __init__(self, *_args: object, **_kwargs: object) -> None:
+        raise CPUPerformanceQualificationV3Error(
+            "reserved profile attempts cannot be caller-constructed"
+        )
+
+    def __setattr__(self, _name: str, _value: object) -> None:
+        raise CPUPerformanceQualificationV3Error(
+            "reserved profile attempts are immutable"
+        )
+
+
+@dataclass(slots=True)
+class _AttemptRegistryEntryV3:
+    raw_sha256: str
+    pid: int
+    process_start_ticks: int
+    state: str
+
+
+def _build_attempt_registry() -> tuple[Any, Any]:
+    issued: weakref.WeakKeyDictionary[
+        _ReservedProfileAttemptV3, _AttemptRegistryEntryV3
+    ] = weakref.WeakKeyDictionary()
+    lock = threading.Lock()
+
+    def issue(
+        *,
+        raw_sha256: str,
+        activation_sha256: str,
+        attempt_receipt_sha256: str,
+        output_path_sha256: str,
+        run_nonce: str,
+        process_start_ticks: int,
+    ) -> _ReservedProfileAttemptV3:
+        attempt = object.__new__(_ReservedProfileAttemptV3)
+        object.__setattr__(attempt, "_activation_sha256", activation_sha256)
+        object.__setattr__(
+            attempt, "_attempt_receipt_sha256", attempt_receipt_sha256
+        )
+        object.__setattr__(attempt, "_issued_pid", os.getpid())
+        object.__setattr__(attempt, "_issued_start_ticks", process_start_ticks)
+        object.__setattr__(attempt, "_output_path_sha256", output_path_sha256)
+        object.__setattr__(attempt, "_raw_sha256", raw_sha256)
+        object.__setattr__(attempt, "_run_nonce", run_nonce)
+        with lock:
+            issued[attempt] = _AttemptRegistryEntryV3(
+                raw_sha256=raw_sha256,
+                pid=os.getpid(),
+                process_start_ticks=process_start_ticks,
+                state="reserved",
+            )
+        return attempt
+
+    def begin(attempt: object) -> _ReservedProfileAttemptV3:
+        if not isinstance(attempt, _ReservedProfileAttemptV3):
+            raise CPUPerformanceQualificationV3Error(
+                "live v3 execution requires a durable attempt lease"
+            )
+        with lock:
+            try:
+                entry = issued.get(attempt)
+                valid = bool(
+                    entry is not None
+                    and entry.state == "reserved"
+                    and attempt._raw_sha256 == entry.raw_sha256
+                    and attempt._issued_pid == entry.pid == os.getpid()
+                    and attempt._issued_start_ticks == entry.process_start_ticks
+                    and v2._process_start_ticks(os.getpid())
+                    == entry.process_start_ticks
+                )
+            except (AttributeError, TypeError, v2.CPUPerformanceError):
+                valid = False
+            if not valid or entry is None:
+                raise CPUPerformanceQualificationV3Error(
+                    "durable attempt lease is invalid or already consumed"
+                )
+            entry.state = "executing"
+        return attempt
+
+    return issue, begin
+
+
+_issue_reserved_attempt, _begin_reserved_attempt = _build_attempt_registry()
+
+
+def _reserve_profile_attempt_v3(
+    *,
+    state_directory_fd: int,
+    activation_sha256: str,
+    output_path_sha256: str,
+) -> _ReservedProfileAttemptV3:
+    """Atomically burn the one profile attempt before any host measurement."""
+
+    for name in (ATTEMPT_LEDGER_FILENAME, TERMINAL_STATE_FILENAME):
+        try:
+            os.stat(name, dir_fd=state_directory_fd, follow_symlinks=False)
+        except FileNotFoundError:
+            continue
+        except OSError as exc:
+            raise CPUPerformanceQualificationV3Error(
+                "qualification state is ambiguous"
+            ) from exc
+        if name == ATTEMPT_LEDGER_FILENAME:
+            raise CPUPerformanceQualificationV3Error(
+                "exactly-once profile attempt was already consumed"
+            )
+        raise CPUPerformanceQualificationV3Error(
+            "terminal state exists without an available profile attempt"
+        )
+
+    run_nonce = secrets.token_hex(32)
+    process_start_ticks = v2._process_start_ticks(os.getpid())
+    projection: dict[str, object] = {
+        "schema_id": ATTEMPT_LEDGER_SCHEMA_ID,
+        "profile_id": PROFILE_ID,
+        "profile_sha256": PROFILE_SHA256,
+        "activation_sha256": activation_sha256,
+        "run_nonce": run_nonce,
+        "output_path_sha256": output_path_sha256,
+        "process_id": os.getpid(),
+        "process_start_ticks": process_start_ticks,
+        "attempt_ordinal": 1,
+        "measurement_started": False,
+        "authority": dict(v2.AUTHORITY_FALSE),
+        "restrictions": dict(v2.RESTRICTIONS),
+    }
+    document = {**projection, "receipt_sha256": _sha256_json(projection)}
+    raw = _canonical_json_bytes(document) + b"\n"
+    if len(raw) > MAX_STATE_BYTES:
+        raise CPUPerformanceQualificationV3Error("attempt ledger exceeds byte limit")
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC
+    flags |= getattr(os, "O_NOFOLLOW", 0)
+    try:
+        descriptor = os.open(
+            ATTEMPT_LEDGER_FILENAME,
+            flags,
+            0o600,
+            dir_fd=state_directory_fd,
+        )
+    except FileExistsError as exc:
+        raise CPUPerformanceQualificationV3Error(
+            "exactly-once profile attempt was concurrently consumed"
+        ) from exc
+    except OSError as exc:
+        raise CPUPerformanceQualificationV3Error(
+            "attempt ledger cannot be created atomically"
+        ) from exc
+    try:
+        os.fchmod(descriptor, 0o600)
+        initial = os.fstat(descriptor)
+        if (
+            not stat.S_ISREG(initial.st_mode)
+            or stat.S_IMODE(initial.st_mode) != 0o600
+            or initial.st_uid != os.geteuid()
+            or initial.st_nlink != 1
+            or initial.st_size != 0
+        ):
+            raise CPUPerformanceQualificationV3Error(
+                "attempt ledger initial identity is invalid"
+            )
+        _write_all(descriptor, raw, name="attempt ledger")
+        os.fsync(descriptor)
+        final = os.fstat(descriptor)
+        if (
+            (final.st_dev, final.st_ino) != (initial.st_dev, initial.st_ino)
+            or final.st_nlink != 1
+            or final.st_size != len(raw)
+            or stat.S_IMODE(final.st_mode) != 0o600
+        ):
+            raise CPUPerformanceQualificationV3Error(
+                "attempt ledger final identity is invalid"
+            )
+    finally:
+        os.close(descriptor)
+    os.fsync(state_directory_fd)
+    return _issue_reserved_attempt(
+        raw_sha256=_sha256_bytes(raw),
+        activation_sha256=activation_sha256,
+        attempt_receipt_sha256=str(document["receipt_sha256"]),
+        output_path_sha256=output_path_sha256,
+        run_nonce=run_nonce,
+        process_start_ticks=process_start_ticks,
+    )
+
+
 class LiveCPUPerformanceRunResultV3:
     """Opaque process-local v3 result issued only by the sealed registry."""
 
@@ -782,10 +1219,41 @@ class LiveCPUPerformanceRunResultV3:
         return self._document()
 
 
-def _build_live_result_registry() -> tuple[Any, Any]:
+@dataclass(slots=True)
+class _LiveResultRegistryEntryV3:
+    artifact_sha256: str
+    pid: int
+    process_start_ticks: int
+    state: str
+
+
+def _build_live_result_registry() -> tuple[Any, Any, Any, Any]:
     issued: weakref.WeakKeyDictionary[
-        LiveCPUPerformanceRunResultV3, tuple[str, int, int]
+        LiveCPUPerformanceRunResultV3, _LiveResultRegistryEntryV3
     ] = weakref.WeakKeyDictionary()
+    lock = threading.Lock()
+
+    def valid_entry(
+        result: object, *, required_state: str
+    ) -> _LiveResultRegistryEntryV3 | None:
+        if not isinstance(result, LiveCPUPerformanceRunResultV3):
+            return None
+        try:
+            entry = issued.get(result)
+            if entry is None or entry.state != required_state:
+                return None
+            if not (
+                result._artifact_sha256 == entry.artifact_sha256
+                and _sha256_bytes(result._artifact_bytes) == entry.artifact_sha256
+                and result._issued_pid == entry.pid == os.getpid()
+                and result._issued_start_ticks == entry.process_start_ticks
+                and v2._process_start_ticks(os.getpid())
+                == entry.process_start_ticks
+            ):
+                return None
+            return entry
+        except (AttributeError, TypeError, v2.CPUPerformanceError):
+            return None
 
     def issue(projection: Mapping[str, object]) -> LiveCPUPerformanceRunResultV3:
         artifact = _seal_artifact(projection)
@@ -797,35 +1265,47 @@ def _build_live_result_registry() -> tuple[Any, Any]:
         object.__setattr__(result, "_artifact_sha256", artifact_sha)
         object.__setattr__(result, "_issued_pid", os.getpid())
         object.__setattr__(result, "_issued_start_ticks", v2._process_start_ticks(os.getpid()))
-        issued[result] = (
-            artifact_sha,
-            os.getpid(),
-            v2._process_start_ticks(os.getpid()),
-        )
+        with lock:
+            issued[result] = _LiveResultRegistryEntryV3(
+                artifact_sha256=artifact_sha,
+                pid=os.getpid(),
+                process_start_ticks=v2._process_start_ticks(os.getpid()),
+                state="issued",
+            )
         return result
 
     def is_registered(result: object) -> bool:
-        if not isinstance(result, LiveCPUPerformanceRunResultV3):
-            return False
-        try:
-            expected = issued.get(result)
-            if expected is None:
-                return False
-            artifact_sha, pid, start_ticks = expected
-            return bool(
-                result._artifact_sha256 == artifact_sha
-                and _sha256_bytes(result._artifact_bytes) == artifact_sha
-                and result._issued_pid == pid == os.getpid()
-                and result._issued_start_ticks == start_ticks
-                and v2._process_start_ticks(os.getpid()) == start_ticks
-            )
-        except (AttributeError, TypeError, v2.CPUPerformanceError):
-            return False
+        with lock:
+            return valid_entry(result, required_state="issued") is not None
 
-    return issue, is_registered
+    def claim(result: object) -> bytes:
+        with lock:
+            entry = valid_entry(result, required_state="issued")
+            if entry is None:
+                raise CPUPerformanceQualificationV3Error(
+                    "live v3 result was already claimed or is not runner-issued"
+                )
+            entry.state = "writing"
+            return bytes(result._artifact_bytes)
+
+    def consume(result: object) -> None:
+        with lock:
+            entry = valid_entry(result, required_state="writing")
+            if entry is None:
+                raise CPUPerformanceQualificationV3Error(
+                    "live v3 result persistence state changed"
+                )
+            entry.state = "consumed"
+
+    return issue, is_registered, claim, consume
 
 
-_issue_live_result, _live_result_is_registered = _build_live_result_registry()
+(
+    _issue_live_result,
+    _live_result_is_registered,
+    _claim_live_result,
+    _consume_live_result,
+) = _build_live_result_registry()
 
 
 def _blocked_result(
@@ -867,14 +1347,29 @@ def _unevaluated_timeout_host() -> HostPreflightEvidenceV3:
     )
 
 
-def run_sealed_local_performance_runner_v3() -> LiveCPUPerformanceRunResultV3:
-    """Execute the frozen synthetic v3 qualification with no caller inputs."""
+def _require_live_execution_environment_v3() -> None:
+    if os.environ.get("GITHUB_ACTIONS", "").lower() == "true":
+        raise CPUPerformanceQualificationV3Error(
+            "GitHub Actions cannot execute the live v3 qualification"
+        )
+
+
+def _execute_reserved_performance_runner_v3(
+    attempt: _ReservedProfileAttemptV3,
+) -> LiveCPUPerformanceRunResultV3:
+    """Execute only after the fixed account-scoped attempt has been burned."""
 
     started = time.monotonic()
-    verify_runner_activation_contract()
+    _require_live_execution_environment_v3()
+    reserved = _begin_reserved_attempt(attempt)
+    activation = verify_runner_activation_contract()
+    if activation["activation_sha256"] != reserved._activation_sha256:
+        raise CPUPerformanceQualificationV3Error(
+            "runner activation changed after attempt reservation"
+        )
     _profile_v3, predecessor = _load_profiles()
     deadline = started + predecessor.total_timeout_seconds
-    run_nonce = secrets.token_hex(32)
+    run_nonce = reserved._run_nonce
     if time.monotonic() >= deadline:
         return _blocked_result(
             predecessor=predecessor,
@@ -1064,33 +1559,23 @@ def run_sealed_local_performance_runner_v3() -> LiveCPUPerformanceRunResultV3:
     return result
 
 
-def write_cpu_performance_artifact_v3(
+def _write_cpu_performance_artifact_v3(
     result: LiveCPUPerformanceRunResultV3,
     path: Path,
 ) -> Path:
-    """Publish one owner-only, absent-only canonical v3 artifact."""
+    """Publish and irrevocably consume one process-local live result."""
 
-    if not isinstance(result, LiveCPUPerformanceRunResultV3) or not (
-        result.live_run_capability
-    ):
-        raise CPUPerformanceQualificationV3Error(
-            "only a current live v3 result can be persisted"
-        )
-    target = Path(path)
-    if (
-        not target.name
-        or target.name in (".", "..")
-        or target.suffix != ".json"
-        or len(os.fsencode(target.name)) > 240
-    ):
-        raise CPUPerformanceQualificationV3Error("artifact output filename is invalid")
+    target = _validated_absent_artifact_target(path)
+    parent = target.parent
     try:
-        parent, parent_stat = v2._reject_symlink_parent(target)
-    except v2.CPUPerformanceError as exc:
-        raise CPUPerformanceQualificationV3Error(str(exc)) from exc
-    document = result.artifact_document()
-    require_cpu_performance_artifact_v3_document(document)
-    raw = _canonical_json_bytes(document) + b"\n"
+        parent_stat = os.stat(parent, follow_symlinks=False)
+    except OSError as exc:
+        raise CPUPerformanceQualificationV3Error(
+            "artifact parent directory is unavailable"
+        ) from exc
+    artifact_bytes = _claim_live_result(result)
+    raw = artifact_bytes + b"\n"
+    require_cpu_performance_artifact_v3_bytes(raw)
     if len(raw) > MAX_ARTIFACT_BYTES:
         raise CPUPerformanceQualificationV3Error("artifact exceeds byte limit")
     directory_flags = os.O_RDONLY | os.O_CLOEXEC | getattr(os, "O_DIRECTORY", 0)
@@ -1291,20 +1776,484 @@ def write_cpu_performance_artifact_v3(
         if descriptor is not None:
             os.close(descriptor)
         os.close(directory_fd)
+        _consume_live_result(result)
     return parent / target_name
+
+
+def _read_state_file(
+    directory_fd: int,
+    filename: str,
+    *,
+    name: str,
+) -> bytes:
+    flags = os.O_RDONLY | os.O_CLOEXEC | getattr(os, "O_NONBLOCK", 0)
+    flags |= getattr(os, "O_NOFOLLOW", 0)
+    try:
+        descriptor = os.open(filename, flags, dir_fd=directory_fd)
+    except OSError as exc:
+        raise CPUPerformanceQualificationV3Error(f"{name} is unavailable") from exc
+    try:
+        before = os.fstat(descriptor)
+        if (
+            not stat.S_ISREG(before.st_mode)
+            or stat.S_IMODE(before.st_mode) != 0o600
+            or before.st_uid != os.geteuid()
+            or before.st_nlink != 1
+            or not 1 <= before.st_size <= MAX_STATE_BYTES
+        ):
+            raise CPUPerformanceQualificationV3Error(
+                f"{name} is not an owner-only bounded state file"
+            )
+        chunks: list[bytes] = []
+        observed = 0
+        while observed <= MAX_STATE_BYTES:
+            chunk = os.read(
+                descriptor,
+                min(64 * 1024, MAX_STATE_BYTES + 1 - observed),
+            )
+            if not chunk:
+                break
+            chunks.append(chunk)
+            observed += len(chunk)
+        after = os.fstat(descriptor)
+        identity_fields = (
+            "st_dev",
+            "st_ino",
+            "st_mode",
+            "st_uid",
+            "st_gid",
+            "st_nlink",
+            "st_size",
+            "st_mtime_ns",
+            "st_ctime_ns",
+        )
+        if observed != before.st_size or any(
+            getattr(before, field) != getattr(after, field)
+            for field in identity_fields
+        ):
+            raise CPUPerformanceQualificationV3Error(f"{name} changed while read")
+        return b"".join(chunks)
+    finally:
+        os.close(descriptor)
+
+
+def _require_attempt_ledger_bytes(raw: bytes) -> Mapping[str, Any]:
+    try:
+        parsed = v2.require_canonical_json_object_bytes(
+            raw,
+            name="CPU performance v3 attempt ledger",
+            maximum_bytes=MAX_STATE_BYTES,
+            trailing_newline_required=True,
+        )
+    except v2.CPUPerformanceError as exc:
+        raise CPUPerformanceQualificationV3Error(str(exc)) from exc
+    document = _require_exact_keys(
+        parsed,
+        name="CPU performance v3 attempt ledger",
+        keys=(
+            "schema_id",
+            "profile_id",
+            "profile_sha256",
+            "activation_sha256",
+            "run_nonce",
+            "output_path_sha256",
+            "process_id",
+            "process_start_ticks",
+            "attempt_ordinal",
+            "measurement_started",
+            "authority",
+            "restrictions",
+            "receipt_sha256",
+        ),
+    )
+    receipt = _require_digest(document["receipt_sha256"], name="attempt receipt")
+    projection = {
+        key: value for key, value in document.items() if key != "receipt_sha256"
+    }
+    if (
+        document["schema_id"] != ATTEMPT_LEDGER_SCHEMA_ID
+        or document["profile_id"] != PROFILE_ID
+        or document["profile_sha256"] != PROFILE_SHA256
+        or document["authority"] != dict(v2.AUTHORITY_FALSE)
+        or document["restrictions"] != dict(v2.RESTRICTIONS)
+        or document["attempt_ordinal"] != 1
+        or document["measurement_started"] is not False
+        or type(document["process_id"]) is not int
+        or document["process_id"] < 1
+        or type(document["process_start_ticks"]) is not int
+        or document["process_start_ticks"] < 1
+        or _sha256_json(projection) != receipt
+    ):
+        raise CPUPerformanceQualificationV3Error("attempt ledger contract changed")
+    _require_digest(document["activation_sha256"], name="attempt activation SHA-256")
+    _require_digest(document["run_nonce"], name="attempt run nonce")
+    _require_digest(document["output_path_sha256"], name="attempt output path SHA-256")
+    return document
+
+
+def _publish_terminal_state(
+    directory_fd: int,
+    raw: bytes,
+) -> None:
+    if not raw or len(raw) > MAX_STATE_BYTES:
+        raise CPUPerformanceQualificationV3Error(
+            "terminal state byte count is outside its envelope"
+        )
+    temporary_name = f".{TERMINAL_STATE_FILENAME}.tmp.{secrets.token_hex(16)}"
+    file_flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC
+    file_flags |= getattr(os, "O_NOFOLLOW", 0)
+    descriptor: int | None = None
+    temporary_created = False
+    target_published = False
+    identity: tuple[int, int] | None = None
+    try:
+        try:
+            os.stat(
+                TERMINAL_STATE_FILENAME,
+                dir_fd=directory_fd,
+                follow_symlinks=False,
+            )
+        except FileNotFoundError:
+            pass
+        except OSError as exc:
+            raise CPUPerformanceQualificationV3Error(
+                "terminal state is ambiguous"
+            ) from exc
+        else:
+            raise CPUPerformanceQualificationV3Error(
+                "terminal state already exists"
+            )
+        try:
+            descriptor = os.open(
+                temporary_name,
+                file_flags,
+                0o600,
+                dir_fd=directory_fd,
+            )
+        except OSError as exc:
+            raise CPUPerformanceQualificationV3Error(
+                "terminal staging file cannot be created"
+            ) from exc
+        temporary_created = True
+        os.fchmod(descriptor, 0o600)
+        initial = os.fstat(descriptor)
+        identity = (initial.st_dev, initial.st_ino)
+        if (
+            not stat.S_ISREG(initial.st_mode)
+            or stat.S_IMODE(initial.st_mode) != 0o600
+            or initial.st_uid != os.geteuid()
+            or initial.st_nlink != 1
+            or initial.st_size != 0
+        ):
+            raise CPUPerformanceQualificationV3Error(
+                "terminal staging identity is invalid"
+            )
+        _write_all(descriptor, raw, name="terminal state")
+        os.fsync(descriptor)
+        final = os.fstat(descriptor)
+        if (
+            (final.st_dev, final.st_ino) != identity
+            or final.st_nlink != 1
+            or final.st_size != len(raw)
+            or stat.S_IMODE(final.st_mode) != 0o600
+        ):
+            raise CPUPerformanceQualificationV3Error(
+                "terminal staging identity changed"
+            )
+        try:
+            os.link(
+                temporary_name,
+                TERMINAL_STATE_FILENAME,
+                src_dir_fd=directory_fd,
+                dst_dir_fd=directory_fd,
+                follow_symlinks=False,
+            )
+        except FileExistsError as exc:
+            raise CPUPerformanceQualificationV3Error(
+                "terminal state was concurrently published"
+            ) from exc
+        except OSError as exc:
+            raise CPUPerformanceQualificationV3Error(
+                "terminal state cannot be published atomically"
+            ) from exc
+        target_published = True
+        linked = os.stat(
+            TERMINAL_STATE_FILENAME,
+            dir_fd=directory_fd,
+            follow_symlinks=False,
+        )
+        if (linked.st_dev, linked.st_ino) != identity or linked.st_nlink != 2:
+            raise CPUPerformanceQualificationV3Error(
+                "terminal published identity is invalid"
+            )
+        os.unlink(temporary_name, dir_fd=directory_fd)
+        temporary_created = False
+        if os.fstat(descriptor).st_nlink != 1:
+            raise CPUPerformanceQualificationV3Error(
+                "terminal published link count is invalid"
+            )
+        os.fsync(directory_fd)
+        if _read_state_file(
+            directory_fd,
+            TERMINAL_STATE_FILENAME,
+            name="CPU performance v3 terminal state",
+        ) != raw:
+            raise CPUPerformanceQualificationV3Error(
+                "terminal published bytes changed"
+            )
+    except BaseException:
+        if target_published and identity is not None:
+            try:
+                target = os.stat(
+                    TERMINAL_STATE_FILENAME,
+                    dir_fd=directory_fd,
+                    follow_symlinks=False,
+                )
+            except OSError:
+                pass
+            else:
+                if (target.st_dev, target.st_ino) == identity:
+                    try:
+                        os.unlink(TERMINAL_STATE_FILENAME, dir_fd=directory_fd)
+                        os.fsync(directory_fd)
+                    except OSError:
+                        pass
+        raise
+    finally:
+        if temporary_created:
+            try:
+                temporary = os.stat(
+                    temporary_name,
+                    dir_fd=directory_fd,
+                    follow_symlinks=False,
+                )
+            except OSError:
+                pass
+            else:
+                if identity is None or (temporary.st_dev, temporary.st_ino) == identity:
+                    try:
+                        os.unlink(temporary_name, dir_fd=directory_fd)
+                    except OSError:
+                        pass
+        if descriptor is not None:
+            os.close(descriptor)
+
+
+def _terminal_state_document(
+    *,
+    attempt: _ReservedProfileAttemptV3,
+    artifact_raw: bytes,
+    artifact: VerifiedOfflineCPUPerformanceArtifactV3,
+) -> dict[str, object]:
+    artifact_document = artifact.document
+    projection: dict[str, object] = {
+        "schema_id": TERMINAL_STATE_SCHEMA_ID,
+        "status": "terminal_recorded",
+        "profile_id": PROFILE_ID,
+        "profile_sha256": PROFILE_SHA256,
+        "activation_sha256": attempt._activation_sha256,
+        "attempt_ledger_raw_sha256": attempt._raw_sha256,
+        "attempt_receipt_sha256": attempt._attempt_receipt_sha256,
+        "run_nonce": attempt._run_nonce,
+        "output_path_sha256": attempt._output_path_sha256,
+        "artifact_raw_sha256": _sha256_bytes(artifact_raw),
+        "artifact_byte_count": len(artifact_raw),
+        "artifact_receipt_sha256": artifact_document["receipt_sha256"],
+        "artifact_persisted": True,
+        "recorded_decision": artifact.recorded_decision,
+        "recorded_numeric_gate_passed": artifact.recorded_numeric_gate_passed,
+        "blockers": list(artifact_document["blockers"]),
+        "decision_returned_only_after_terminal_persistence": True,
+        "execution_attested": False,
+        "live_run_capability": False,
+        "qualification_authority": False,
+        "authority": dict(v2.AUTHORITY_FALSE),
+        "restrictions": dict(v2.RESTRICTIONS),
+    }
+    return {**projection, "receipt_sha256": _sha256_json(projection)}
+
+
+def _require_terminal_state_bytes(
+    raw: bytes,
+    *,
+    attempt_raw: bytes,
+    artifact_raw: bytes,
+    output_path_sha256: str,
+) -> Mapping[str, Any]:
+    try:
+        parsed = v2.require_canonical_json_object_bytes(
+            raw,
+            name="CPU performance v3 terminal state",
+            maximum_bytes=MAX_STATE_BYTES,
+            trailing_newline_required=True,
+        )
+    except v2.CPUPerformanceError as exc:
+        raise CPUPerformanceQualificationV3Error(str(exc)) from exc
+    attempt = _require_attempt_ledger_bytes(attempt_raw)
+    artifact = require_cpu_performance_artifact_v3_bytes(artifact_raw)
+    artifact_document = artifact.document
+    document = _require_exact_keys(
+        parsed,
+        name="CPU performance v3 terminal state",
+        keys=(
+            "schema_id",
+            "status",
+            "profile_id",
+            "profile_sha256",
+            "activation_sha256",
+            "attempt_ledger_raw_sha256",
+            "attempt_receipt_sha256",
+            "run_nonce",
+            "output_path_sha256",
+            "artifact_raw_sha256",
+            "artifact_byte_count",
+            "artifact_receipt_sha256",
+            "artifact_persisted",
+            "recorded_decision",
+            "recorded_numeric_gate_passed",
+            "blockers",
+            "decision_returned_only_after_terminal_persistence",
+            "execution_attested",
+            "live_run_capability",
+            "qualification_authority",
+            "authority",
+            "restrictions",
+            "receipt_sha256",
+        ),
+    )
+    receipt = _require_digest(document["receipt_sha256"], name="terminal receipt")
+    projection = {
+        key: value for key, value in document.items() if key != "receipt_sha256"
+    }
+    blockers = document["blockers"]
+    if (
+        document["schema_id"] != TERMINAL_STATE_SCHEMA_ID
+        or document["status"] != "terminal_recorded"
+        or document["profile_id"] != PROFILE_ID
+        or document["profile_sha256"] != PROFILE_SHA256
+        or document["activation_sha256"] != attempt["activation_sha256"]
+        or document["attempt_ledger_raw_sha256"] != _sha256_bytes(attempt_raw)
+        or document["attempt_receipt_sha256"] != attempt["receipt_sha256"]
+        or document["run_nonce"] != attempt["run_nonce"]
+        or document["output_path_sha256"] != output_path_sha256
+        or document["output_path_sha256"] != attempt["output_path_sha256"]
+        or document["artifact_raw_sha256"] != _sha256_bytes(artifact_raw)
+        or document["artifact_byte_count"] != len(artifact_raw)
+        or document["artifact_receipt_sha256"]
+        != artifact_document["receipt_sha256"]
+        or document["artifact_persisted"] is not True
+        or document["recorded_decision"] != artifact.recorded_decision
+        or document["recorded_numeric_gate_passed"]
+        is not artifact.recorded_numeric_gate_passed
+        or blockers != artifact_document["blockers"]
+        or type(blockers) is not list
+        or any(type(value) is not str or not value for value in blockers)
+        or document["decision_returned_only_after_terminal_persistence"] is not True
+        or document["execution_attested"] is not False
+        or document["live_run_capability"] is not False
+        or document["qualification_authority"] is not False
+        or document["authority"] != dict(v2.AUTHORITY_FALSE)
+        or document["restrictions"] != dict(v2.RESTRICTIONS)
+        or _sha256_json(projection) != receipt
+    ):
+        raise CPUPerformanceQualificationV3Error(
+            "terminal state does not rederive from attempt and artifact"
+        )
+    return document
+
+
+@dataclass(frozen=True, slots=True)
+class PersistedCPUPerformanceRunV3:
+    artifact_path: Path
+    attempt_ledger_path: Path
+    terminal_state_path: Path
+    recorded_numeric_gate_passed: bool | None
+    recorded_decision: str
+    blockers: tuple[str, ...]
+    artifact_sha256: str
+    terminal_state_sha256: str
+    live_run_capability: bool = False
+    qualification_authority: bool = False
+    execution_attested: bool = False
+
+
+def run_sealed_local_performance_runner_v3(
+    output_path: Path,
+) -> PersistedCPUPerformanceRunV3:
+    """Run exactly once and return a decision only after terminal persistence."""
+
+    _require_live_execution_environment_v3()
+    target = _validated_absent_artifact_target(output_path)
+    activation = verify_runner_activation_contract()
+    state_directory, state_directory_fd = _open_state_directory()
+    try:
+        _require_state_directory_binding(state_directory, state_directory_fd)
+        attempt = _reserve_profile_attempt_v3(
+            state_directory_fd=state_directory_fd,
+            activation_sha256=str(activation["activation_sha256"]),
+            output_path_sha256=_output_path_sha256(target),
+        )
+        live_result = _execute_reserved_performance_runner_v3(attempt)
+        published = _write_cpu_performance_artifact_v3(live_result, target)
+        artifact = read_cpu_performance_artifact_v3(published)
+        artifact_raw = _read_exact_source(
+            published,
+            name="CPU performance artifact v3",
+            maximum_bytes=MAX_ARTIFACT_BYTES,
+        )
+        attempt_raw = _read_state_file(
+            state_directory_fd,
+            ATTEMPT_LEDGER_FILENAME,
+            name="CPU performance v3 attempt ledger",
+        )
+        if _sha256_bytes(attempt_raw) != attempt._raw_sha256:
+            raise CPUPerformanceQualificationV3Error(
+                "attempt ledger changed after execution"
+            )
+        terminal_document = _terminal_state_document(
+            attempt=attempt,
+            artifact_raw=artifact_raw,
+            artifact=artifact,
+        )
+        terminal_raw = _canonical_json_bytes(terminal_document) + b"\n"
+        _publish_terminal_state(state_directory_fd, terminal_raw)
+        persisted_terminal = _read_state_file(
+            state_directory_fd,
+            TERMINAL_STATE_FILENAME,
+            name="CPU performance v3 terminal state",
+        )
+        terminal = _require_terminal_state_bytes(
+            persisted_terminal,
+            attempt_raw=attempt_raw,
+            artifact_raw=artifact_raw,
+            output_path_sha256=_output_path_sha256(published),
+        )
+        _require_state_directory_binding(state_directory, state_directory_fd)
+        return PersistedCPUPerformanceRunV3(
+            artifact_path=published,
+            attempt_ledger_path=state_directory / ATTEMPT_LEDGER_FILENAME,
+            terminal_state_path=state_directory / TERMINAL_STATE_FILENAME,
+            recorded_numeric_gate_passed=artifact.recorded_numeric_gate_passed,
+            recorded_decision=artifact.recorded_decision,
+            blockers=tuple(str(value) for value in terminal["blockers"]),
+            artifact_sha256=_sha256_bytes(artifact_raw),
+            terminal_state_sha256=_sha256_bytes(persisted_terminal),
+        )
+    finally:
+        os.close(state_directory_fd)
 
 
 __all__ = [
     "ACTIVATION_RELATIVE_PATH",
     "ARTIFACT_SCHEMA_ID",
     "CPUPerformanceQualificationV3Error",
-    "LiveCPUPerformanceRunResultV3",
+    "PersistedCPUPerformanceRunV3",
     "PROFILE_ID",
     "PROFILE_SHA256",
     "VerifiedOfflineCPUPerformanceArtifactV3",
+    "read_cpu_performance_artifact_v3",
     "require_cpu_performance_artifact_v3_bytes",
     "require_cpu_performance_artifact_v3_document",
     "run_sealed_local_performance_runner_v3",
     "verify_runner_activation_contract",
-    "write_cpu_performance_artifact_v3",
 ]
