@@ -85,3 +85,9 @@ activation blockers remain in force until a later producer:
 GitHub Actions and synthetic fixtures have no production authority. This
 component does not create an external reservation and cannot run the historical
 one-shot A/B or Fresh-128.
+
+The follow-on
+[mixed64 fixed64 producer v3](engine_v2_mixed64_proposal_producer_v3.md)
+now binds these primitives into 64 denominator-preserving generation records.
+That producer remains pre-activation until failure-aware and post-refinement
+admission, score, validity, and independent attestation are connected.
