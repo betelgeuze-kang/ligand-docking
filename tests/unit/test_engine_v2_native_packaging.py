@@ -215,13 +215,17 @@ def test_native_manifest_release_profile_is_exactly_frozen() -> None:
     _verify_manifest_profile(Path("rust_engine_v2/Cargo.toml"))
 
 
-def test_native_wheel_member_guard_accepts_only_separate_extension(tmp_path: Path) -> None:
+def test_native_wheel_member_guard_accepts_only_separate_extension(
+    tmp_path: Path,
+) -> None:
     wheel = tmp_path / (
         "betelgeuze_engine_v2_native-0.2.0rc6-cp310-cp310-"
         "manylinux_2_28_x86_64.whl"
     )
     with zipfile.ZipFile(wheel, "w") as archive:
-        archive.writestr("betelgeuze_engine_v2_native.cpython-310-x86_64-linux-gnu.so", b"x")
+        archive.writestr(
+            "betelgeuze_engine_v2_native.cpython-310-x86_64-linux-gnu.so", b"x"
+        )
         archive.writestr(
             "betelgeuze_engine_v2_native-0.2.0rc6.dist-info/METADATA",
             "Name: betelgeuze-engine-v2-native\nVersion: 0.2.0rc6\n",
@@ -230,13 +234,17 @@ def test_native_wheel_member_guard_accepts_only_separate_extension(tmp_path: Pat
     _verify_wheel(wheel)
 
 
-def test_native_wheel_member_guard_rejects_bundled_python_package(tmp_path: Path) -> None:
+def test_native_wheel_member_guard_rejects_bundled_python_package(
+    tmp_path: Path,
+) -> None:
     wheel = tmp_path / (
         "betelgeuze_engine_v2_native-0.2.0rc6-cp310-cp310-"
         "manylinux_2_28_x86_64.whl"
     )
     with zipfile.ZipFile(wheel, "w") as archive:
-        archive.writestr("betelgeuze_engine_v2_native.cpython-310-x86_64-linux-gnu.so", b"x")
+        archive.writestr(
+            "betelgeuze_engine_v2_native.cpython-310-x86_64-linux-gnu.so", b"x"
+        )
         archive.writestr("betelgeuze_engine_v2/__init__.py", b"")
         archive.writestr(
             "betelgeuze_engine_v2_native-0.2.0rc6.dist-info/METADATA",
@@ -245,3 +253,23 @@ def test_native_wheel_member_guard_rejects_bundled_python_package(tmp_path: Path
 
     with pytest.raises(RuntimeError, match="must not bundle"):
         _verify_wheel(wheel)
+
+
+def test_native_wheel_platform_tag_must_match_requested_compatibility(
+    tmp_path: Path,
+) -> None:
+    wheel = tmp_path / (
+        "betelgeuze_engine_v2_native-0.2.0rc6-cp310-cp310-linux_x86_64.whl"
+    )
+    with zipfile.ZipFile(wheel, "w") as archive:
+        archive.writestr(
+            "betelgeuze_engine_v2_native.cpython-310-x86_64-linux-gnu.so", b"x"
+        )
+        archive.writestr(
+            "betelgeuze_engine_v2_native-0.2.0rc6.dist-info/METADATA",
+            "Name: betelgeuze-engine-v2-native\nVersion: 0.2.0rc6\n",
+        )
+
+    _verify_wheel(wheel, compatibility="linux")
+    with pytest.raises(RuntimeError, match="platform tag"):
+        _verify_wheel(wheel, compatibility="manylinux_2_28")

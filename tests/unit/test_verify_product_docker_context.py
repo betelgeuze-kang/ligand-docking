@@ -13,6 +13,13 @@ from tools.verify_product_docker_context import (
 )
 
 
+_DOCKING_SEARCH_V2_OPERATOR_EXCLUSIONS = {
+    "tools/run_docking_search_v2_development_cohort.py",
+    "tools/benchmarking/__init__.py",
+    "tools/benchmarking/build_docking_search_v2_development_evidence.py",
+}
+
+
 def _write(path: Path, payload: str = "fixture\n") -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(payload, encoding="utf-8")
@@ -51,6 +58,9 @@ def test_materialized_product_context_is_oracle_free_and_deterministic(
     assert not (tmp_path / "context-a/benchmarks").exists()
     for relative in LEGACY_BENCHMARK_DOCKER_EXCLUSIONS:
         assert not (tmp_path / "context-a" / relative).exists()
+    assert _DOCKING_SEARCH_V2_OPERATOR_EXCLUSIONS.issubset(
+        LEGACY_BENCHMARK_DOCKER_EXCLUSIONS
+    )
 
 
 @pytest.mark.parametrize(

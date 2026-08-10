@@ -62,6 +62,14 @@ def test_repository_satisfies_external_oracle_boundary() -> None:
     )
 
 
+def test_docking_search_v2_operator_tools_are_product_image_exclusions() -> None:
+    assert {
+        "tools/run_docking_search_v2_development_cohort.py",
+        "tools/benchmarking/__init__.py",
+        "tools/benchmarking/build_docking_search_v2_development_evidence.py",
+    }.issubset(architecture.LEGACY_BENCHMARK_DOCKER_EXCLUSIONS)
+
+
 @pytest.mark.parametrize(
     ("source", "expected_code"),
     [

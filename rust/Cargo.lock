@@ -3,6 +3,10 @@
 version = 4
 
 [[package]]
+name = "betelgeuze-docking-search"
+version = "0.1.0"
+
+[[package]]
 name = "betelgeuze-reference-dynamics"
 version = "0.1.0"
 
