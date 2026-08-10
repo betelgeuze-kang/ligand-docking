@@ -7,18 +7,25 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import sys
 from typing import Any, Mapping
 
-from betelgeuze_engine_v2.docking import performance_host_preflight_v3 as preflight
-from betelgeuze_engine_v2.docking import performance_sidecar as v2
-from tools.verify_engine_v2_cpu_performance_v2_terminal_decision import (
+
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from betelgeuze_engine_v2.docking import (  # noqa: E402
+    performance_host_preflight_v3 as preflight,
+)
+from betelgeuze_engine_v2.docking import performance_sidecar as v2  # noqa: E402
+from tools.verify_engine_v2_cpu_performance_v2_terminal_decision import (  # noqa: E402
     CPUPerformanceTerminalDecisionError,
     DEFAULT_DECISION_PATH,
     verify_terminal_decision,
 )
 
 
-_REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_PROFILE_V3_PATH = (
     _REPO_ROOT / "config/engine_v2_cpu_performance_profile_v3.json"
 )

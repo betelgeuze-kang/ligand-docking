@@ -6,11 +6,18 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+from pathlib import Path
+import sys
 
-from betelgeuze_engine_v2.docking.performance_host_preflight_v3 import (
+
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from betelgeuze_engine_v2.docking.performance_host_preflight_v3 import (  # noqa: E402
     derive_host_preflight_evidence_v3,
 )
-from tools.verify_engine_v2_cpu_performance_profile_v3 import (
+from tools.verify_engine_v2_cpu_performance_profile_v3 import (  # noqa: E402
     verify_cpu_performance_profile_v3,
 )
 
