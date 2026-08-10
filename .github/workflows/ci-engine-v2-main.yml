@@ -37,8 +37,11 @@ on:
       - "config/engine_v2_source_paired_clearance_external_reservation_operations_decision.json"
       - "config/engine_v2_global_orientation_synthetic_contract.json"
       - "config/engine_v2_mixed64_geometric_candidate_evidence_v2.json"
+      - "config/engine_v2_cpu_performance_profile.json"
+      - "config/engine_v2_cpu_performance_v2_terminal_decision.json"
       - "tools/build_engine_v2_wheel.py"
       - "tools/build_engine_v2_native_wheel.py"
+      - "tools/run_engine_v2_cpu_performance_qualification.py"
       - "tools/build_engine_v2_sbom.py"
       - "tools/check_engine_v2_architecture.py"
       - "tools/build_engine_v2_source_paired_failure_atlas.py"
@@ -58,6 +61,8 @@ on:
       - "tools/verify_engine_v2_global_orientation_synthetic_contract.py"
       - "tools/verify_engine_v2_mixed64_geometric_candidate_evidence_v2.py"
       - "tools/verify_engine_v2_mixed64_candidate_evidence_artifact.py"
+      - "tools/verify_engine_v2_cpu_performance_profile.py"
+      - "tools/verify_engine_v2_cpu_performance_v2_terminal_decision.py"
       - "config/engine_v2_public_redocking_stage0_*.json"
       - "tests/unit/test_engine_v2_*.py"
       - "tests/unit/test_classify_engine_v2_stage0_full_suite.py"
@@ -152,10 +157,13 @@ jobs:
             config/engine_v2_source_paired_clearance_external_reservation_operations_decision.json
             config/engine_v2_global_orientation_synthetic_contract.json
             config/engine_v2_mixed64_geometric_candidate_evidence_v2.json
+            config/engine_v2_cpu_performance_profile.json
+            config/engine_v2_cpu_performance_v2_terminal_decision.json
             config/engine_v2_public_redocking_stage0_threshold_evidence.json
             tools/__init__.py
             tools/build_engine_v2_wheel.py
             tools/build_engine_v2_native_wheel.py
+            tools/run_engine_v2_cpu_performance_qualification.py
             tools/build_engine_v2_sbom.py
             tools/check_engine_v2_architecture.py
             tools/analyze_engine_v2_score_terms.py
@@ -177,6 +185,8 @@ jobs:
             tools/verify_engine_v2_global_orientation_synthetic_contract.py
             tools/verify_engine_v2_mixed64_geometric_candidate_evidence_v2.py
             tools/verify_engine_v2_mixed64_candidate_evidence_artifact.py
+            tools/verify_engine_v2_cpu_performance_profile.py
+            tools/verify_engine_v2_cpu_performance_v2_terminal_decision.py
             config/engine_v2_public_redocking_stage0_freeze.template.json
             config/engine_v2_public_redocking_stage0_attestation.template.json
             config/engine_v2_public_redocking_stage0_threshold_evidence.template.json
@@ -197,6 +207,10 @@ jobs:
             tests/unit/test_engine_v2_pipeline_candidate_evidence_v2.py
             tests/unit/test_verify_engine_v2_mixed64_geometric_candidate_evidence_v2.py
             tests/unit/test_verify_engine_v2_mixed64_candidate_evidence_artifact.py
+            tests/unit/test_engine_v2_cpu_performance_sidecar.py
+            tests/unit/test_verify_engine_v2_cpu_performance_profile.py
+            tests/unit/test_verify_engine_v2_cpu_performance_v2_terminal_decision.py
+            tests/unit/test_engine_v2_native_geometric_admission.py
             tests/unit/test_engine_v2_oracle_selection_metrics.py
             tests/unit/test_engine_v2_oracle_selection_evidence.py
             tests/unit/test_source_paired_clearance_activation.py
@@ -296,6 +310,7 @@ jobs:
             docs/engine_v2_source_paired_clearance_external_reservation.md
             docs/engine_v2_global_orientation_design.md
             docs/engine_v2_mixed64_geometric_candidate_evidence_v2.md
+            docs/engine_v2_cpu_performance_qualification.md
             docs/engine_v2_stage0_status.md
             docs/independent_engine_v2_commercial_roadmap.ko.md
             docs/roadmaps/engine-v2-scientific-evidence-roadmap.md
@@ -364,7 +379,10 @@ jobs:
             tools/verify_engine_v2_source_paired_clearance_external_reservation_operations_decision.py \
             tools/verify_engine_v2_global_orientation_synthetic_contract.py \
             tools/verify_engine_v2_mixed64_geometric_candidate_evidence_v2.py \
-            tools/verify_engine_v2_mixed64_candidate_evidence_artifact.py
+            tools/verify_engine_v2_mixed64_candidate_evidence_artifact.py \
+            tools/verify_engine_v2_cpu_performance_profile.py \
+            tools/verify_engine_v2_cpu_performance_v2_terminal_decision.py \
+            tools/run_engine_v2_cpu_performance_qualification.py
           python tools/check_engine_v2_architecture.py
           python tools/verify_engine_v2_phase25_cohort_admission.py
           python tools/verify_engine_v2_source_paired_clearance_activation.py \
@@ -404,6 +422,18 @@ jobs:
             /tmp/engine-v2-external-reservation-operations-decision.json
           python tools/verify_engine_v2_global_orientation_synthetic_contract.py
           python tools/verify_engine_v2_mixed64_geometric_candidate_evidence_v2.py
+          python tools/verify_engine_v2_cpu_performance_profile.py \
+            > /tmp/engine-v2-cpu-performance-profile.json
+          grep -q '"live_run_capability":false' \
+            /tmp/engine-v2-cpu-performance-profile.json
+          grep -q '"qualification_authority":false' \
+            /tmp/engine-v2-cpu-performance-profile.json
+          python tools/verify_engine_v2_cpu_performance_v2_terminal_decision.py \
+            > /tmp/engine-v2-cpu-performance-v2-terminal.json
+          grep -q '"qualification_consumed":true' \
+            /tmp/engine-v2-cpu-performance-v2-terminal.json
+          grep -q '"rerun_allowed":false' \
+            /tmp/engine-v2-cpu-performance-v2-terminal.json
 
       - name: Run complete focused Engine v2 CPU suite
         shell: bash
@@ -515,6 +545,10 @@ jobs:
             tests/unit/test_engine_v2_pipeline_candidate_evidence_v2.py \
             tests/unit/test_verify_engine_v2_mixed64_geometric_candidate_evidence_v2.py \
             tests/unit/test_verify_engine_v2_mixed64_candidate_evidence_artifact.py \
+            tests/unit/test_engine_v2_cpu_performance_sidecar.py \
+            tests/unit/test_verify_engine_v2_cpu_performance_profile.py \
+            tests/unit/test_verify_engine_v2_cpu_performance_v2_terminal_decision.py \
+            tests/unit/test_engine_v2_native_geometric_admission.py \
             tests/unit/test_engine_v2_oracle_selection_metrics.py \
             tests/unit/test_engine_v2_oracle_selection_evidence.py \
             > engine-v2-main.log 2>&1
@@ -597,6 +631,7 @@ jobs:
           import betelgeuze_engine_v2.docking.geometric_admission_v2
           import betelgeuze_engine_v2.docking.mixed64_allocation
           import betelgeuze_engine_v2.docking.pipeline_candidate_evidence_v2
+          import betelgeuze_engine_v2.docking.performance_sidecar
           from betelgeuze_engine_v2.benchmark import (
               ExternalBaselineEngine,
               FROZEN_PUBLIC_BENCHMARK_PROTOCOL_SHA256,

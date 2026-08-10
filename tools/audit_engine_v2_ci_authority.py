@@ -97,6 +97,42 @@ MIXED64_V2_FORBIDDEN_TRUE_AUTHORITY_KEYS = (
     "public_or_scientific_claim_authorized",
     "stage0_admission_authority",
 )
+CPU_PERFORMANCE_CONTRACT_PATHS = (
+    "betelgeuze_engine_v2/docking/performance_sidecar.py",
+    "config/engine_v2_cpu_performance_profile.json",
+    "config/engine_v2_cpu_performance_v2_terminal_decision.json",
+    "tools/run_engine_v2_cpu_performance_qualification.py",
+    "tools/verify_engine_v2_cpu_performance_profile.py",
+    "tools/verify_engine_v2_cpu_performance_v2_terminal_decision.py",
+    "tests/unit/test_engine_v2_cpu_performance_sidecar.py",
+    "tests/unit/test_verify_engine_v2_cpu_performance_profile.py",
+    "tests/unit/test_verify_engine_v2_cpu_performance_v2_terminal_decision.py",
+    "tests/unit/test_engine_v2_native_geometric_admission.py",
+    "docs/engine_v2_cpu_performance_qualification.md",
+)
+CPU_PERFORMANCE_REQUIRED_TOKEN_COUNTS = {
+    "config/engine_v2_cpu_performance_profile.json": 2,
+    "config/engine_v2_cpu_performance_v2_terminal_decision.json": 2,
+    "tools/run_engine_v2_cpu_performance_qualification.py": 3,
+    "tools/verify_engine_v2_cpu_performance_profile.py": 4,
+    "tools/verify_engine_v2_cpu_performance_v2_terminal_decision.py": 3,
+    "tests/unit/test_engine_v2_cpu_performance_sidecar.py": 2,
+    "tests/unit/test_verify_engine_v2_cpu_performance_profile.py": 2,
+    "tests/unit/test_verify_engine_v2_cpu_performance_v2_terminal_decision.py": 2,
+    "tests/unit/test_engine_v2_native_geometric_admission.py": 2,
+    "docs/engine_v2_cpu_performance_qualification.md": 1,
+    "import betelgeuze_engine_v2.docking.performance_sidecar": 1,
+}
+CPU_PERFORMANCE_REQUIRED_TOKENS = tuple(CPU_PERFORMANCE_REQUIRED_TOKEN_COUNTS)
+CPU_PERFORMANCE_FALSE_AUTHORITY_KEYS = (
+    "fresh_holdout_execution_authorized",
+    "historical_ab_execution_authorized",
+    "molecular_execution_authorized",
+    "product_performance_claim_authorized",
+    "public_benchmark_authorized",
+    "scientific_claim_authorized",
+    "stage0_admission_authorized",
+)
 ONE_SHOT_CONTRACT_PATHS = (
     "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_ab.py",
     "config/engine_v2_source_paired_clearance_one_shot_ab.json",
@@ -271,6 +307,91 @@ def _mixed64_v2_authority_is_fail_closed(repo_root: Path) -> bool:
     )
 
 
+def _cpu_performance_authority_is_fail_closed(repo_root: Path) -> bool:
+    def reject_duplicate_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
+        observed: dict[str, object] = {}
+        for key, value in pairs:
+            if key in observed:
+                raise ValueError(f"duplicate JSON key: {key}")
+            observed[key] = value
+        return observed
+
+    def reject_float(value: str) -> object:
+        raise ValueError(f"JSON float is forbidden: {value}")
+
+    path = repo_root / "config/engine_v2_cpu_performance_profile.json"
+    try:
+        raw = path.read_bytes()
+        if not raw.endswith(b"\n") or raw.endswith(b"\n\n"):
+            return False
+        document = json.loads(
+            raw[:-1].decode("ascii"),
+            object_pairs_hook=reject_duplicate_keys,
+            parse_float=reject_float,
+            parse_constant=reject_float,
+        )
+    except (OSError, UnicodeError, ValueError):
+        return False
+    if type(document) is not dict or document.get("schema_id") != (
+        "betelgeuze.engine_v2_cpu_performance_profile/2.0.0"
+    ):
+        return False
+    if _canonical_bytes(document) + b"\n" != raw:
+        return False
+    authority = document.get("authority")
+    restrictions = document.get("restrictions")
+    profile_fail_closed = bool(
+        type(authority) is dict
+        and set(authority) == set(CPU_PERFORMANCE_FALSE_AUTHORITY_KEYS)
+        and all(authority.get(key) is False for key in CPU_PERFORMANCE_FALSE_AUTHORITY_KEYS)
+        and type(restrictions) is dict
+        and restrictions
+        and all(value is False for value in restrictions.values())
+    )
+    if not profile_fail_closed:
+        return False
+
+    terminal_path = (
+        repo_root / "config/engine_v2_cpu_performance_v2_terminal_decision.json"
+    )
+    try:
+        terminal_raw = terminal_path.read_bytes()
+        if not terminal_raw.endswith(b"\n") or terminal_raw.endswith(b"\n\n"):
+            return False
+        terminal = json.loads(
+            terminal_raw[:-1].decode("ascii"),
+            object_pairs_hook=reject_duplicate_keys,
+            parse_float=reject_float,
+            parse_constant=reject_float,
+        )
+    except (OSError, UnicodeError, ValueError):
+        return False
+    if (
+        type(terminal) is not dict
+        or terminal.get("schema_id")
+        != "betelgeuze.engine_v2_cpu_performance_terminal_decision/1.0.0"
+        or _canonical_bytes(terminal) + b"\n" != terminal_raw
+    ):
+        return False
+    terminal_authority = terminal.get("authority")
+    disposition = terminal.get("disposition")
+    return bool(
+        type(terminal_authority) is dict
+        and set(terminal_authority) == set(CPU_PERFORMANCE_FALSE_AUTHORITY_KEYS)
+        and all(
+            terminal_authority.get(key) is False
+            for key in CPU_PERFORMANCE_FALSE_AUTHORITY_KEYS
+        )
+        and type(disposition) is dict
+        and disposition.get("profile_closed") is True
+        and disposition.get("profile_mutation_allowed") is False
+        and disposition.get("qualification_consumed") is True
+        and disposition.get("rerun_allowed") is False
+        and disposition.get("successor_requires_new_profile_id") is True
+        and disposition.get("terminal_decision") == "BLOCKED"
+    )
+
+
 def build_inventory(repo_root: Path) -> dict[str, Any]:
     workflow_root = repo_root / ".github/workflows"
     workflows = tuple(
@@ -337,6 +458,33 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
             and all(
                 main_text.count(token) >= minimum_count
                 for token, minimum_count in MIXED64_V2_REQUIRED_TOKEN_COUNTS.items()
+            )
+        )
+    )
+
+    cpu_performance_contract_present = any(
+        (repo_root / path).is_file() for path in CPU_PERFORMANCE_CONTRACT_PATHS
+    )
+    cpu_performance_contract_files_complete = all(
+        (repo_root / path).is_file() for path in CPU_PERFORMANCE_CONTRACT_PATHS
+    )
+    cpu_performance_authority_fail_closed = (
+        not cpu_performance_contract_present
+        or (
+            cpu_performance_contract_files_complete
+            and _cpu_performance_authority_is_fail_closed(repo_root)
+        )
+    )
+    cpu_performance_contract_in_authoritative_ci = (
+        not cpu_performance_contract_present
+        or (
+            cpu_performance_contract_files_complete
+            and cpu_performance_authority_fail_closed
+            and all(
+                main_text.count(token) >= minimum_count
+                for token, minimum_count in (
+                    CPU_PERFORMANCE_REQUIRED_TOKEN_COUNTS.items()
+                )
             )
         )
     )
@@ -430,6 +578,12 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
             mixed64_v2_contract_in_authoritative_ci
         ),
         "mixed64_v2_authority_fail_closed": mixed64_v2_authority_fail_closed,
+        "cpu_performance_contract_in_authoritative_ci": (
+            cpu_performance_contract_in_authoritative_ci
+        ),
+        "cpu_performance_authority_fail_closed": (
+            cpu_performance_authority_fail_closed
+        ),
         "one_shot_contract_in_authoritative_ci": (
             one_shot_contract_in_authoritative_ci
         ),

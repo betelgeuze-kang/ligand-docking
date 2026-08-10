@@ -40,6 +40,9 @@ def test_release_candidate_versions_and_typed_package_metadata_match() -> None:
         "numpy>=1.26,<3",
         "torch==2.6.0",
     }
+    assert metadata["project"]["optional-dependencies"]["native-cpu"] == [
+        "betelgeuze-engine-v2-native==0.2.0rc6; platform_system == 'Linux' and platform_machine == 'x86_64'"
+    ]
     assert metadata["build-system"]["requires"] == [
         "setuptools==75.8.2",
         "wheel==0.45.1",
