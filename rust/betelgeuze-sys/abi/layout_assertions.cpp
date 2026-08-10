@@ -17,10 +17,16 @@ static_assert(std::is_standard_layout<bg_position_soa>::value);
 static_assert(std::is_standard_layout<bg_forcefield_soa_v1>::value);
 static_assert(std::is_standard_layout<bg_force_soa_v1>::value);
 static_assert(std::is_standard_layout<bg_energy_components_v1>::value);
+static_assert(std::is_standard_layout<bg_distance_constraints_v1>::value);
+static_assert(std::is_standard_layout<bg_simulation_options_v1>::value);
+static_assert(std::is_standard_layout<bg_minimizer_options_v1>::value);
+static_assert(std::is_standard_layout<bg_minimization_report_v1>::value);
+static_assert(std::is_standard_layout<bg_dynamics_report_v1>::value);
 
 static_assert(!is_complete<bg_context>::value);
 static_assert(!is_complete<bg_system>::value);
 static_assert(!is_complete<bg_forcefield>::value);
+static_assert(!is_complete<bg_simulation>::value);
 
 static_assert(sizeof(bg_context_options) == 64);
 static_assert(alignof(bg_context_options) == alignof(uint64_t));
@@ -144,6 +150,71 @@ static_assert(offsetof(bg_energy_components_v1, coulomb_kcal_per_mol) == 48);
 static_assert(offsetof(bg_energy_components_v1, total_kcal_per_mol) == 56);
 static_assert(offsetof(bg_energy_components_v1, reserved) == 64);
 
+#if INTPTR_MAX == INT64_MAX
+static_assert(sizeof(bg_distance_constraints_v1) == 104);
+static_assert(alignof(bg_distance_constraints_v1) == 8);
+static_assert(offsetof(bg_distance_constraints_v1, constraint_count) == 8);
+static_assert(offsetof(bg_distance_constraints_v1, atom_i) == 24);
+static_assert(offsetof(bg_distance_constraints_v1, atom_j) == 32);
+static_assert(offsetof(bg_distance_constraints_v1, distance_angstrom) == 40);
+static_assert(offsetof(bg_distance_constraints_v1, tolerance_angstrom) == 48);
+static_assert(
+    offsetof(
+        bg_distance_constraints_v1,
+        velocity_tolerance_angstrom_per_femtosecond) == 56);
+static_assert(offsetof(bg_distance_constraints_v1, max_iterations) == 64);
+static_assert(offsetof(bg_distance_constraints_v1, reserved1) == 68);
+static_assert(offsetof(bg_distance_constraints_v1, reserved) == 72);
+#endif
+
+static_assert(sizeof(bg_simulation_options_v1) == 80);
+static_assert(alignof(bg_simulation_options_v1) == 8);
+static_assert(offsetof(bg_simulation_options_v1, integrator) == 12);
+static_assert(offsetof(bg_simulation_options_v1, timestep_femtoseconds) == 16);
+static_assert(offsetof(bg_simulation_options_v1, temperature_kelvin) == 24);
+static_assert(offsetof(bg_simulation_options_v1, friction_per_femtosecond) == 32);
+static_assert(offsetof(bg_simulation_options_v1, random_seed) == 40);
+static_assert(offsetof(bg_simulation_options_v1, reserved) == 48);
+
+static_assert(sizeof(bg_minimizer_options_v1) == 112);
+static_assert(alignof(bg_minimizer_options_v1) == 8);
+static_assert(offsetof(bg_minimizer_options_v1, max_iterations) == 16);
+static_assert(offsetof(bg_minimizer_options_v1, max_line_search_steps) == 24);
+static_assert(
+    offsetof(bg_minimizer_options_v1, initial_step_angstrom2_mol_per_kcal) == 32);
+static_assert(
+    offsetof(bg_minimizer_options_v1, minimum_step_angstrom2_mol_per_kcal) == 40);
+static_assert(
+    offsetof(bg_minimizer_options_v1, energy_tolerance_kcal_per_mol) == 48);
+static_assert(
+    offsetof(bg_minimizer_options_v1, force_tolerance_kcal_per_mol_angstrom) == 56);
+static_assert(offsetof(bg_minimizer_options_v1, armijo_coefficient) == 64);
+static_assert(offsetof(bg_minimizer_options_v1, backtrack_factor) == 72);
+static_assert(offsetof(bg_minimizer_options_v1, reserved) == 80);
+
+static_assert(sizeof(bg_minimization_report_v1) == 88);
+static_assert(alignof(bg_minimization_report_v1) == 8);
+static_assert(offsetof(bg_minimization_report_v1, iterations) == 16);
+static_assert(offsetof(bg_minimization_report_v1, converged) == 24);
+static_assert(
+    offsetof(bg_minimization_report_v1, initial_potential_kcal_per_mol) == 32);
+static_assert(
+    offsetof(bg_minimization_report_v1, final_potential_kcal_per_mol) == 40);
+static_assert(
+    offsetof(bg_minimization_report_v1, maximum_force_kcal_per_mol_angstrom) == 48);
+static_assert(offsetof(bg_minimization_report_v1, reserved) == 56);
+
+static_assert(sizeof(bg_dynamics_report_v1) == 104);
+static_assert(alignof(bg_dynamics_report_v1) == 8);
+static_assert(offsetof(bg_dynamics_report_v1, steps_completed) == 16);
+static_assert(offsetof(bg_dynamics_report_v1, absolute_step) == 24);
+static_assert(offsetof(bg_dynamics_report_v1, degrees_of_freedom) == 32);
+static_assert(offsetof(bg_dynamics_report_v1, potential_kcal_per_mol) == 40);
+static_assert(offsetof(bg_dynamics_report_v1, kinetic_kcal_per_mol) == 48);
+static_assert(offsetof(bg_dynamics_report_v1, total_kcal_per_mol) == 56);
+static_assert(offsetof(bg_dynamics_report_v1, temperature_kelvin) == 64);
+static_assert(offsetof(bg_dynamics_report_v1, reserved) == 72);
+
 static_assert(noexcept(bg_abi_version()));
 static_assert(noexcept(bg_context_destroy(nullptr)));
 static_assert(noexcept(bg_system_destroy(nullptr)));
@@ -154,3 +225,17 @@ static_assert(noexcept(bg_forcefield_create(nullptr, nullptr)));
 static_assert(noexcept(bg_forcefield_destroy(nullptr)));
 static_assert(noexcept(bg_forcefield_get_atom_count(nullptr, nullptr)));
 static_assert(noexcept(bg_context_evaluate(nullptr, nullptr, nullptr, nullptr, nullptr)));
+static_assert(noexcept(bg_distance_constraints_v1_init(nullptr)));
+static_assert(noexcept(bg_simulation_options_v1_init(nullptr)));
+static_assert(noexcept(bg_minimizer_options_v1_init(nullptr)));
+static_assert(noexcept(bg_minimization_report_v1_init(nullptr)));
+static_assert(noexcept(bg_dynamics_report_v1_init(nullptr)));
+static_assert(noexcept(bg_simulation_create(nullptr, nullptr, nullptr, nullptr, nullptr)));
+static_assert(noexcept(bg_simulation_destroy(nullptr)));
+static_assert(noexcept(bg_simulation_get_particles(nullptr, nullptr)));
+static_assert(noexcept(bg_simulation_get_absolute_step(nullptr, nullptr)));
+static_assert(noexcept(bg_context_minimize(nullptr, nullptr, nullptr, nullptr)));
+static_assert(noexcept(bg_context_integrate(nullptr, nullptr, 0, nullptr)));
+static_assert(noexcept(bg_simulation_checkpoint_size(nullptr, nullptr)));
+static_assert(noexcept(bg_simulation_checkpoint_write(nullptr, nullptr, 0, nullptr)));
+static_assert(noexcept(bg_simulation_checkpoint_load(nullptr, nullptr, 0)));

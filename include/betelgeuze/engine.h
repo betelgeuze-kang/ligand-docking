@@ -17,6 +17,7 @@
  *   angle        radian
  *   time         femtosecond
  *   velocity     angstrom/femtosecond
+ *   temperature  kelvin
  *
  * Callers must convert at adapters before entering this ABI.  Native entry
  * points reject any other unit-system identifier.
@@ -54,7 +55,7 @@ extern "C" {
 #endif
 
 #define BG_ABI_VERSION_MAJOR UINT32_C(1)
-#define BG_ABI_VERSION_MINOR UINT32_C(2)
+#define BG_ABI_VERSION_MINOR UINT32_C(3)
 #define BG_ABI_VERSION UINT32_C(1)
 
 #define BG_CANONICAL_LENGTH_UNIT "angstrom"
@@ -65,6 +66,7 @@ extern "C" {
 #define BG_CANONICAL_ANGLE_UNIT "radian"
 #define BG_CANONICAL_TIME_UNIT "femtosecond"
 #define BG_CANONICAL_VELOCITY_UNIT "angstrom/femtosecond"
+#define BG_CANONICAL_TEMPERATURE_UNIT "kelvin"
 
 /* q1*q2/r electrostatic factor for the canonical unit system. */
 #define BG_COULOMB_CONSTANT_KCAL_ANGSTROM_PER_MOL_E2 (332.063713299)
@@ -96,10 +98,17 @@ enum {
     BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL = 1
 };
 
+typedef int32_t bg_integrator;
+enum {
+    BG_INTEGRATOR_VELOCITY_VERLET = 1,
+    BG_INTEGRATOR_LANGEVIN_BAOAB = 2
+};
+
 /* Incomplete declarations are the only public handle representation. */
 typedef struct bg_context bg_context;
 typedef struct bg_system bg_system;
 typedef struct bg_forcefield bg_forcefield;
+typedef struct bg_simulation bg_simulation;
 
 typedef struct bg_context_options {
     uint32_t struct_size;
@@ -305,6 +314,122 @@ typedef struct bg_energy_components_v1 {
     uint64_t reserved[4];
 } bg_energy_components_v1;
 
+/*
+ * Canonical distance constraints.  Rows are deep-copied and canonicalized by
+ * bg_simulation_create.  Atom indices are zero based, each target distance is
+ * finite and positive, tolerance_angstrom is finite and positive, and
+ * max_iterations is non-zero.  Duplicate unordered atom pairs are rejected.
+ * tolerance_angstrom controls SHAKE distance residuals and
+ * velocity_tolerance_angstrom_per_femtosecond separately controls RATTLE.
+ * Every target must be below half each periodic axis length.  Rows are
+ * required to be independent; duplicates and detectable
+ * singular/nonconvergent initial states are rejected.  SHAKE/RATTLE process
+ * canonical pair order and use the force field's exact
+ * d-L*floor(d/L+0.5) orthorhombic minimum-image rule while positions remain
+ * unwrapped.
+ */
+typedef struct bg_distance_constraints_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    uint64_t constraint_count;
+    bg_unit_system unit_system;
+    uint32_t reserved0;
+    const uint64_t *atom_i;
+    const uint64_t *atom_j;
+    const double *distance_angstrom;
+    double tolerance_angstrom;
+    double velocity_tolerance_angstrom_per_femtosecond;
+    uint32_t max_iterations;
+    uint32_t reserved1;
+    uint64_t reserved[4];
+} bg_distance_constraints_v1;
+
+/*
+ * Dynamics configuration in canonical units.  The timestep must be finite
+ * and positive, including a representable positive half-step.  Temperature
+ * and friction are validated as finite and non-negative for both integrators;
+ * Velocity Verlet canonicalizes its unused temperature, friction, and seed to
+ * zero for semantic checkpoint fingerprints.  Langevin BAOAB's counter-based
+ * Philox4x32-10 stream is keyed by random_seed and the absolute step, so
+ * checkpoint continuation consumes exactly the same samples and keeps no
+ * hidden spare-normal cache.
+ */
+typedef struct bg_simulation_options_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    bg_unit_system unit_system;
+    bg_integrator integrator;
+    double timestep_femtoseconds;
+    double temperature_kelvin;
+    double friction_per_femtosecond;
+    uint64_t random_seed;
+    uint64_t reserved[4];
+} bg_simulation_options_v1;
+
+/*
+ * Deterministic steepest-descent and bounded Armijo line-search settings.
+ * The step has units angstrom^2*mol/kcal because it multiplies force.  Energy
+ * and maximum-force convergence thresholds use kcal/mol and
+ * kcal/(mol*angstrom), respectively.  All tolerances are non-negative;
+ * initial/minimum step and both iteration bounds are positive; 0<armijo<1 and
+ * 0<backtrack<1.  An energy tolerance of zero disables energy convergence; a
+ * force tolerance of zero requires an exactly zero projected force.
+ */
+typedef struct bg_minimizer_options_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    bg_unit_system unit_system;
+    uint32_t reserved0;
+    uint64_t max_iterations;
+    uint32_t max_line_search_steps;
+    uint32_t reserved1;
+    double initial_step_angstrom2_mol_per_kcal;
+    double minimum_step_angstrom2_mol_per_kcal;
+    double energy_tolerance_kcal_per_mol;
+    double force_tolerance_kcal_per_mol_angstrom;
+    double armijo_coefficient;
+    double backtrack_factor;
+    uint64_t reserved[4];
+} bg_minimizer_options_v1;
+
+typedef struct bg_minimization_report_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    bg_unit_system unit_system;
+    uint32_t reserved0;
+    uint64_t iterations;
+    uint32_t converged;
+    uint32_t reserved1;
+    double initial_potential_kcal_per_mol;
+    double final_potential_kcal_per_mol;
+    double maximum_force_kcal_per_mol_angstrom;
+    uint64_t reserved[4];
+} bg_minimization_report_v1;
+
+/* maximum_force is the Euclidean tangential projection used by constrained
+ * Cartesian steepest descent, rather than an unprojected constraint reaction. */
+
+/*
+ * Dynamics energies use deterministic float64 evaluation.  Kinetic energy is
+ * 0.5/4.184e-4 * sum(mass_dalton*velocity_angstrom_per_fs^2).  Temperature is
+ * 2*K/(DOF*R), R=0.0019872042586408316 kcal/(mol*K), with
+ * DOF=3*particle_count-constraint_count and no implicit COM removal.
+ */
+typedef struct bg_dynamics_report_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    bg_unit_system unit_system;
+    uint32_t reserved0;
+    uint64_t steps_completed;
+    uint64_t absolute_step;
+    uint64_t degrees_of_freedom;
+    double potential_kcal_per_mol;
+    double kinetic_kcal_per_mol;
+    double total_kcal_per_mol;
+    double temperature_kelvin;
+    uint64_t reserved[4];
+} bg_dynamics_report_v1;
+
 /* ABI and diagnostics. */
 BG_API uint32_t BG_CALL bg_abi_version(void) BG_NOEXCEPT;
 BG_API uint32_t BG_CALL bg_abi_version_major(void) BG_NOEXCEPT;
@@ -341,10 +466,20 @@ BG_API bg_status BG_CALL bg_force_soa_v1_init(
     bg_force_soa_v1 *forces) BG_NOEXCEPT;
 BG_API bg_status BG_CALL bg_energy_components_v1_init(
     bg_energy_components_v1 *energy) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_distance_constraints_v1_init(
+    bg_distance_constraints_v1 *constraints) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_simulation_options_v1_init(
+    bg_simulation_options_v1 *options) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_minimizer_options_v1_init(
+    bg_minimizer_options_v1 *options) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_minimization_report_v1_init(
+    bg_minimization_report_v1 *report) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_dynamics_report_v1_init(
+    bg_dynamics_report_v1 *report) BG_NOEXCEPT;
 
 /*
  * Backend selection is explicit.  AUTO remains the deterministic CPU backend
- * in ABI v1.2.  HIP is reported available only when the native library was
+ * in ABI v1.3.  HIP is reported available only when the native library was
  * built with its HIP provider, the requested runtime device supports
  * binary64, and the library contains a compatible device code object.
  * An explicit unavailable HIP request never runs CPU.  The availability
@@ -421,6 +556,78 @@ BG_API bg_status BG_CALL bg_context_evaluate(
     const bg_forcefield *forcefield,
     bg_energy_components_v1 *out_energy,
     bg_force_soa_v1 *out_forces) BG_NOEXCEPT;
+
+/*
+ * A simulation deep-owns independent copies of the system, force field,
+ * canonicalized constraints, and integration configuration.  A null
+ * constraints pointer means no constraints.  For a constrained simulation,
+ * creation transactionally SHAKE-projects copied positions and RATTLE-projects
+ * copied velocities before returning.  It has no
+ * parent-handle lifetime dependency.  Particle views remain valid until the
+ * simulation is destroyed and observe committed minimize/integrate/load
+ * results after the synchronized call returns without changing the borrowed
+ * channel addresses.  Mutating calls are whole-call
+ * transactional: every failure leaves positions, velocities, and absolute
+ * step unchanged.  The supplied context selects the force evaluator and an
+ * unavailable/erroring HIP backend never falls back to CPU.
+ */
+BG_API bg_status BG_CALL bg_simulation_create(
+    const bg_system *system,
+    const bg_forcefield *forcefield,
+    const bg_distance_constraints_v1 *constraints,
+    const bg_simulation_options_v1 *options,
+    bg_simulation **out_simulation) BG_NOEXCEPT;
+BG_API void BG_CALL bg_simulation_destroy(
+    bg_simulation *simulation) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_simulation_get_particles(
+    const bg_simulation *simulation,
+    bg_particle_soa_view *out_view) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_simulation_get_absolute_step(
+    const bg_simulation *simulation,
+    uint64_t *absolute_step) BG_NOEXCEPT;
+
+/* Minimization preserves absolute step.  It preserves velocity bits when
+ * unconstrained; constrained minimization performs a final mass-weighted
+ * RATTLE projection against its new geometry. */
+BG_API bg_status BG_CALL bg_context_minimize(
+    const bg_context *context,
+    bg_simulation *simulation,
+    const bg_minimizer_options_v1 *options,
+    bg_minimization_report_v1 *out_report) BG_NOEXCEPT;
+/* Integrating zero steps evaluates and reports the current energy but is a
+ * strict dynamic-state no-op; backend or numerical evaluation errors are
+ * still returned transactionally. */
+BG_API bg_status BG_CALL bg_context_integrate(
+    const bg_context *context,
+    bg_simulation *simulation,
+    uint64_t step_count,
+    bg_dynamics_report_v1 *out_report) BG_NOEXCEPT;
+
+/*
+ * Checkpoint wire format v1 is canonical little-endian and padding-free:
+ * magic "BGDYN001" at bytes 0..7, uint32 format/version and header size at
+ * 8/12, uint64 total size/particle count/absolute step at 16/24/32, semantic
+ * fingerprint at 40..71, integrity digest at 72..103, then float64 SoA payload
+ * in x,y,z,vx,vy,vz channel order.  The fixed header is 104 bytes.  SHA-256
+ * covers every serialized byte with bytes 72..103 zeroed, and a
+ * separate semantic SHA-256 fingerprint binds the complete force field,
+ * masses, charges, constraints, and integration configuration.  Load
+ * validates everything, including an exact static-fingerprint match with the
+ * existing destination simulation, before transactionally committing dynamic
+ * state.
+ */
+BG_API bg_status BG_CALL bg_simulation_checkpoint_size(
+    const bg_simulation *simulation,
+    uint64_t *required_size) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_simulation_checkpoint_write(
+    const bg_simulation *simulation,
+    void *buffer,
+    uint64_t buffer_capacity,
+    uint64_t *written_size) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_simulation_checkpoint_load(
+    bg_simulation *simulation,
+    const void *buffer,
+    uint64_t buffer_size) BG_NOEXCEPT;
 
 #if defined(__cplusplus)
 } /* extern "C" */

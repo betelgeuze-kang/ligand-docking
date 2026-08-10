@@ -5,7 +5,7 @@
 
 _Static_assert(BG_ABI_VERSION == UINT32_C(1), "unexpected ABI version");
 _Static_assert(BG_ABI_VERSION_MAJOR == UINT32_C(1), "unexpected ABI major version");
-_Static_assert(BG_ABI_VERSION_MINOR == UINT32_C(2), "unexpected ABI minor version");
+_Static_assert(BG_ABI_VERSION_MINOR == UINT32_C(3), "unexpected ABI minor version");
 _Static_assert(BG_STATUS_OK == 0, "unexpected success status");
 _Static_assert(BG_STATUS_NUMERICAL_ERROR == 10, "unexpected numerical status");
 _Static_assert(BG_BACKEND_CPU == 1, "unexpected CPU backend value");
@@ -18,6 +18,9 @@ _Static_assert(sizeof(bg_backend) == sizeof(int32_t), "bg_backend width changed"
 _Static_assert(
     sizeof(bg_unit_system) == sizeof(int32_t),
     "bg_unit_system width changed");
+_Static_assert(sizeof(bg_integrator) == sizeof(int32_t), "bg_integrator width changed");
+_Static_assert(BG_INTEGRATOR_VELOCITY_VERLET == 1, "unexpected Verlet value");
+_Static_assert(BG_INTEGRATOR_LANGEVIN_BAOAB == 2, "unexpected BAOAB value");
 _Static_assert(sizeof(bg_context_options) == 64, "context options ABI changed");
 _Static_assert(BG_PERIODIC_AXIS_X == UINT32_C(1), "unexpected periodic X bit");
 _Static_assert(BG_PERIODIC_AXIS_Y == UINT32_C(2), "unexpected periodic Y bit");
@@ -141,6 +144,33 @@ _Static_assert(
     offsetof(bg_force_soa_v1, z_kcal_per_mol_angstrom) == 48,
     "bad force z offset");
 _Static_assert(offsetof(bg_force_soa_v1, reserved) == 56, "bad force reserved offset");
+
+_Static_assert(
+    sizeof(bg_distance_constraints_v1) == 104,
+    "distance constraints ABI changed");
+_Static_assert(
+    offsetof(bg_distance_constraints_v1, constraint_count) == 8,
+    "bad constraint count offset");
+_Static_assert(
+    offsetof(bg_distance_constraints_v1, atom_i) == 24,
+    "bad constraint atom_i offset");
+_Static_assert(
+    offsetof(bg_distance_constraints_v1, distance_angstrom) == 40,
+    "bad constraint distance offset");
+_Static_assert(
+    offsetof(bg_distance_constraints_v1, tolerance_angstrom) == 48,
+    "bad constraint position tolerance offset");
+_Static_assert(
+    offsetof(
+        bg_distance_constraints_v1,
+        velocity_tolerance_angstrom_per_femtosecond) == 56,
+    "bad constraint velocity tolerance offset");
+_Static_assert(
+    offsetof(bg_distance_constraints_v1, max_iterations) == 64,
+    "bad constraint iteration offset");
+_Static_assert(
+    offsetof(bg_distance_constraints_v1, reserved) == 72,
+    "bad constraint reserved offset");
 #endif
 
 _Static_assert(sizeof(bg_energy_components_v1) == 96, "energy output ABI changed");
@@ -168,6 +198,41 @@ _Static_assert(
     "bad total energy offset");
 _Static_assert(offsetof(bg_energy_components_v1, reserved) == 64, "bad energy reserved offset");
 
+_Static_assert(sizeof(bg_simulation_options_v1) == 80, "simulation options ABI changed");
+_Static_assert(offsetof(bg_simulation_options_v1, integrator) == 12, "bad integrator offset");
+_Static_assert(
+    offsetof(bg_simulation_options_v1, timestep_femtoseconds) == 16,
+    "bad timestep offset");
+_Static_assert(offsetof(bg_simulation_options_v1, random_seed) == 40, "bad seed offset");
+_Static_assert(offsetof(bg_simulation_options_v1, reserved) == 48, "bad options reserved offset");
+_Static_assert(sizeof(bg_minimizer_options_v1) == 112, "minimizer options ABI changed");
+_Static_assert(
+    offsetof(bg_minimizer_options_v1, max_iterations) == 16,
+    "bad minimizer iterations offset");
+_Static_assert(
+    offsetof(bg_minimizer_options_v1, initial_step_angstrom2_mol_per_kcal) == 32,
+    "bad minimizer initial step offset");
+_Static_assert(
+    offsetof(bg_minimizer_options_v1, reserved) == 80,
+    "bad minimizer reserved offset");
+_Static_assert(sizeof(bg_minimization_report_v1) == 88, "minimizer report ABI changed");
+_Static_assert(
+    offsetof(bg_minimization_report_v1, iterations) == 16,
+    "bad minimizer report iterations offset");
+_Static_assert(
+    offsetof(bg_minimization_report_v1, reserved) == 56,
+    "bad minimizer report reserved offset");
+_Static_assert(sizeof(bg_dynamics_report_v1) == 104, "dynamics report ABI changed");
+_Static_assert(
+    offsetof(bg_dynamics_report_v1, steps_completed) == 16,
+    "bad dynamics steps offset");
+_Static_assert(
+    offsetof(bg_dynamics_report_v1, temperature_kelvin) == 64,
+    "bad dynamics temperature offset");
+_Static_assert(
+    offsetof(bg_dynamics_report_v1, reserved) == 72,
+    "bad dynamics report reserved offset");
+
 typedef bg_status(BG_CALL *bg_forcefield_soa_v1_init_fn)(bg_forcefield_soa_v1 *);
 typedef bg_status(BG_CALL *bg_force_soa_v1_init_fn)(bg_force_soa_v1 *);
 typedef bg_status(BG_CALL *bg_energy_components_v1_init_fn)(bg_energy_components_v1 *);
@@ -181,11 +246,26 @@ typedef bg_status(BG_CALL *bg_context_evaluate_fn)(
     const bg_forcefield *,
     bg_energy_components_v1 *,
     bg_force_soa_v1 *);
+typedef bg_status(BG_CALL *bg_simulation_create_fn)(
+    const bg_system *,
+    const bg_forcefield *,
+    const bg_distance_constraints_v1 *,
+    const bg_simulation_options_v1 *,
+    bg_simulation **);
+typedef void(BG_CALL *bg_simulation_destroy_fn)(bg_simulation *);
+typedef bg_status(BG_CALL *bg_context_minimize_fn)(
+    const bg_context *,
+    bg_simulation *,
+    const bg_minimizer_options_v1 *,
+    bg_minimization_report_v1 *);
+typedef bg_status(BG_CALL *bg_context_integrate_fn)(
+    const bg_context *, bg_simulation *, uint64_t, bg_dynamics_report_v1 *);
 
 void betelgeuze_sys_header_c11_typecheck(void) {
     bg_context *context = NULL;
     bg_system *system = NULL;
     bg_forcefield *forcefield = NULL;
+    bg_simulation *simulation = NULL;
     bg_context_options options;
     bg_particle_soa particles;
     bg_particle_soa_view view;
@@ -193,6 +273,11 @@ void betelgeuze_sys_header_c11_typecheck(void) {
     bg_forcefield_soa_v1 forcefield_parameters;
     bg_force_soa_v1 forces;
     bg_energy_components_v1 energy;
+    bg_distance_constraints_v1 constraints;
+    bg_simulation_options_v1 simulation_options;
+    bg_minimizer_options_v1 minimizer_options;
+    bg_minimization_report_v1 minimization_report;
+    bg_dynamics_report_v1 dynamics_report;
     bg_forcefield_soa_v1_init_fn forcefield_init = bg_forcefield_soa_v1_init;
     bg_force_soa_v1_init_fn forces_init = bg_force_soa_v1_init;
     bg_energy_components_v1_init_fn energy_init = bg_energy_components_v1_init;
@@ -200,9 +285,14 @@ void betelgeuze_sys_header_c11_typecheck(void) {
     bg_forcefield_destroy_fn forcefield_destroy = bg_forcefield_destroy;
     bg_forcefield_get_atom_count_fn forcefield_get_atom_count = bg_forcefield_get_atom_count;
     bg_context_evaluate_fn context_evaluate = bg_context_evaluate;
+    bg_simulation_create_fn simulation_create = bg_simulation_create;
+    bg_simulation_destroy_fn simulation_destroy = bg_simulation_destroy;
+    bg_context_minimize_fn context_minimize = bg_context_minimize;
+    bg_context_integrate_fn context_integrate = bg_context_integrate;
     (void)context;
     (void)system;
     (void)forcefield;
+    (void)simulation;
     (void)options;
     (void)particles;
     (void)view;
@@ -210,6 +300,11 @@ void betelgeuze_sys_header_c11_typecheck(void) {
     (void)forcefield_parameters;
     (void)forces;
     (void)energy;
+    (void)constraints;
+    (void)simulation_options;
+    (void)minimizer_options;
+    (void)minimization_report;
+    (void)dynamics_report;
     (void)forcefield_init;
     (void)forces_init;
     (void)energy_init;
@@ -217,4 +312,8 @@ void betelgeuze_sys_header_c11_typecheck(void) {
     (void)forcefield_destroy;
     (void)forcefield_get_atom_count;
     (void)context_evaluate;
+    (void)simulation_create;
+    (void)simulation_destroy;
+    (void)context_minimize;
+    (void)context_integrate;
 }

@@ -1,0 +1,12 @@
+# betelgeuze.reference_dynamics/1.0.0 IEEE-754 binary64 results
+# case<TAB>field<TAB>bits
+baoab_one_step	position_x_angstrom	3fe66b5a015f06b0
+baoab_one_step	position_y_angstrom	bfc9bdaa67b5c0b0
+baoab_one_step	position_z_angstrom	3fb9f6fdced9124a
+baoab_one_step	velocity_x_angstrom_per_fs	3f573a7cef1547c7
+baoab_one_step	velocity_y_angstrom_per_fs	bf63ae74707de039
+baoab_one_step	velocity_z_angstrom_per_fs	3f661e968cbb884d
+baoab_one_step	potential_kcal_per_mol	3fe3ee121209d515
+baoab_one_step	kinetic_kcal_per_mol	3fcbaaccd7d636e7
+nve_2000_step_envelope	max_abs_energy_drift_kcal_per_mol	3f456c0cb0445c00
+nvt_50000_sample	mean_temperature_kelvin	4072b44eb3e821b1
