@@ -185,9 +185,30 @@ python3 tools/verify_engine_v2_cpu_performance_profile_v3.py
 python3 tools/preflight_engine_v2_cpu_performance_v3.py
 ```
 
-Passing this preflight only proves that the host contract can be read. The
-full v3 measurement runner and a one-shot terminal result remain separate
-downstream work.
+Passing this preflight only proves that the host contract can be read.
+
+## Profile v3 runner activation
+
+The separate v3 runner activation binds the v3 profile, terminal v2 record,
+host reader, inherited v2 measurement core, runner, and verifier source. The
+runner has no caller-supplied probe or fixture input. It reuses the unchanged
+three synthetic fixtures and fixed 210-observation schedule, performs pre/post
+host and source checks, discards partial measurements, and publishes one
+owner-only absent-only artifact.
+
+GitHub Actions may verify the activation and offline artifacts but is
+explicitly denied live execution. The activation does not authorize molecular,
+historical, Fresh-128, public benchmark, scientific-claim, or product-claim
+work:
+
+```bash
+python3 tools/run_engine_v2_cpu_performance_qualification_v3.py \
+  --verify-activation
+```
+
+This activation PR does not consume the exactly-once v3 profile attempt. A
+subsequent clean exact-main operation may invoke `--run-output` once, after
+which a terminal decision record must freeze the artifact and forbid reruns.
 
 ## Live versus offline evidence
 
