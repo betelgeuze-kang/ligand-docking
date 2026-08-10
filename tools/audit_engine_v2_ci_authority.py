@@ -34,6 +34,29 @@ CLEARANCE_ACTIVATION_REQUIRED_TOKENS = (
     "docs/engine_v2_source_paired_clearance_selection_policy.md",
     "docs/engine_v2_stage0_status.md",
 )
+GLOBAL_ORIENTATION_CONTRACT_PATHS = (
+    "betelgeuze_engine_v2/docking/global_orientation.py",
+    "betelgeuze_engine_v2/docking/global_orientation_evidence.py",
+    "betelgeuze_engine_v2/benchmark/oracle_selection_metrics.py",
+    "betelgeuze_engine_v2/benchmark/oracle_selection_evidence.py",
+    "config/engine_v2_global_orientation_synthetic_contract.json",
+)
+GLOBAL_ORIENTATION_REQUIRED_TOKENS = (
+    *GLOBAL_ORIENTATION_CONTRACT_PATHS,
+    "tools/verify_engine_v2_global_orientation_synthetic_contract.py",
+    "tests/unit/test_engine_v2_global_orientation.py",
+    "tests/unit/test_engine_v2_global_orientation_evidence.py",
+    "tests/unit/test_engine_v2_global_orientation_synthetic_contract.py",
+    "tests/unit/test_engine_v2_oracle_selection_metrics.py",
+    "tests/unit/test_engine_v2_oracle_selection_evidence.py",
+    "docs/engine_v2_global_orientation_design.md",
+    "tools/build_engine_v2_wheel.py",
+    "dist-engine-v2",
+    "import betelgeuze_engine_v2.benchmark.oracle_selection_evidence",
+    "import betelgeuze_engine_v2.benchmark.oracle_selection_metrics",
+    "import betelgeuze_engine_v2.docking.global_orientation",
+    "import betelgeuze_engine_v2.docking.global_orientation_evidence",
+)
 ONE_SHOT_CONTRACT_PATHS = (
     "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_ab.py",
     "config/engine_v2_source_paired_clearance_one_shot_ab.json",
@@ -161,16 +184,12 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
             if path.is_file()
         )
     )
-    authoritative = tuple(
-        path for path in AUTHORITATIVE_WORKFLOWS if path in workflows
-    )
+    authoritative = tuple(path for path in AUTHORITATIVE_WORKFLOWS if path in workflows)
     specialized = tuple(
         path for path in workflows if path not in AUTHORITATIVE_WORKFLOWS
     )
     hashes = {path: _sha256(repo_root / path) for path in workflows}
-    main_text = (repo_root / AUTHORITATIVE_WORKFLOWS[0]).read_text(
-        encoding="utf-8"
-    )
+    main_text = (repo_root / AUTHORITATIVE_WORKFLOWS[0]).read_text(encoding="utf-8")
     stage0_required_tokens = (
         "tools/__init__.py",
         "config/engine_v2_public_redocking_stage0_threshold_evidence.json",
@@ -192,6 +211,14 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
     )
     if clearance_activation_contract_present:
         stage0_required_tokens += CLEARANCE_ACTIVATION_REQUIRED_TOKENS
+
+    global_orientation_contract_present = any(
+        (repo_root / path).is_file() for path in GLOBAL_ORIENTATION_CONTRACT_PATHS
+    )
+    global_orientation_contract_in_authoritative_ci = (
+        not global_orientation_contract_present
+        or all(token in main_text for token in GLOBAL_ORIENTATION_REQUIRED_TOKENS)
+    )
 
     one_shot_contract_present = any(
         (repo_root / path).is_file() for path in ONE_SHOT_CONTRACT_PATHS
@@ -275,6 +302,9 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         "stage0_tests_in_authoritative_main": all(
             token in main_text for token in stage0_required_tokens
         ),
+        "global_orientation_contract_in_authoritative_ci": (
+            global_orientation_contract_in_authoritative_ci
+        ),
         "one_shot_contract_in_authoritative_ci": (
             one_shot_contract_in_authoritative_ci
         ),
@@ -297,9 +327,7 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         "specialized_workflows_hidden": False,
         "issue_199_external_state_mutated": False,
     }
-    payload["receipt_sha256"] = hashlib.sha256(
-        _canonical_bytes(payload)
-    ).hexdigest()
+    payload["receipt_sha256"] = hashlib.sha256(_canonical_bytes(payload)).hexdigest()
     return payload
 
 

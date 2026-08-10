@@ -11,6 +11,8 @@ from tools.audit_engine_v2_ci_authority import (
     EXTERNAL_RESERVATION_OPERATIONS_DECISION_REQUIRED_TOKEN_COUNTS,
     EXTERNAL_RESERVATION_OPERATIONS_DECISION_REQUIRED_TOKENS,
     EXTERNAL_RESERVATION_REQUIRED_TOKENS,
+    GLOBAL_ORIENTATION_CONTRACT_PATHS,
+    GLOBAL_ORIENTATION_REQUIRED_TOKENS,
     ONE_SHOT_CONTRACT_PATHS,
     ONE_SHOT_REQUIRED_TOKENS,
     STANDALONE_PIPELINE_CONTRACT_PATHS,
@@ -71,7 +73,7 @@ def _operations_decision_ci_tokens() -> tuple[str, ...]:
     )
 
 
-def test_ci_authority_inventory_requires_contracts_in_canonical_main(
+def test_ci_authority_inventory_preserves_frozen_stage0_tuple(
     tmp_path: Path,
 ) -> None:
     _write_authoritative_workflows(tmp_path)
@@ -83,6 +85,16 @@ def test_ci_authority_inventory_requires_contracts_in_canonical_main(
     _mark_contract(tmp_path, STANDALONE_CONTRACT_PATHS)
     _mark_complete_contract(
         tmp_path, EXTERNAL_RESERVATION_OPERATIONS_DECISION_CONTRACT_PATHS
+    )
+    assert AUTHORITATIVE_WORKFLOWS == (
+        ".github/workflows/ci-engine-v2-main.yml",
+        ".github/workflows/ci-engine-v2-release-candidate.yml",
+        ".github/workflows/ci-engine-v2-cpu-reference-validation-protocol.yml",
+    )
+    assert CLEARANCE_ACTIVATION_CONTRACT_PATHS == (
+        "betelgeuze_engine_v2/benchmark/source_paired_clearance_activation.py",
+        "betelgeuze_engine_v2/docking/source_paired_clearance_activation.py",
+        "config/engine_v2_source_paired_clearance_activation.json",
     )
     (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
         "\n".join(
@@ -105,6 +117,8 @@ def test_ci_authority_inventory_requires_contracts_in_canonical_main(
     payload = build_inventory(tmp_path)
 
     assert payload["workflow_count"] == len(AUTHORITATIVE_WORKFLOWS) + 1
+    assert payload["authoritative_workflows"] == list(AUTHORITATIVE_WORKFLOWS)
+    assert "registered_bounded_workflows" not in payload
     assert payload["specialized_workflows"] == [specialized]
     assert payload["stage0_tests_in_authoritative_main"] is True
     assert payload["one_shot_contract_in_authoritative_ci"] is True
@@ -367,3 +381,60 @@ def test_repository_without_optional_contracts_keeps_legacy_scope(
     assert (
         payload["external_operations_decision_contract_in_authoritative_ci"] is True
     )
+    assert payload["global_orientation_contract_in_authoritative_ci"] is True
+
+
+def test_global_orientation_contract_requires_complete_authoritative_main(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_STAGE0_TOKENS),
+        encoding="utf-8",
+    )
+    marker = tmp_path / GLOBAL_ORIENTATION_CONTRACT_PATHS[-1]
+    marker.parent.mkdir(parents=True, exist_ok=True)
+    marker.write_text("{}\n", encoding="utf-8")
+    main_workflow = tmp_path / AUTHORITATIVE_WORKFLOWS[0]
+    main_workflow.write_text(
+        "\n".join(GLOBAL_ORIENTATION_REQUIRED_TOKENS),
+        encoding="utf-8",
+    )
+
+    payload = build_inventory(tmp_path)
+
+    assert "registered_bounded_workflows" not in payload
+    assert payload["specialized_workflows"] == []
+    assert payload["global_orientation_contract_in_authoritative_ci"] is True
+
+    main_workflow.write_text(
+        "\n".join(
+            token
+            for token in GLOBAL_ORIENTATION_REQUIRED_TOKENS
+            if token != "tests/unit/test_engine_v2_oracle_selection_evidence.py"
+        ),
+        encoding="utf-8",
+    )
+    assert (
+        build_inventory(tmp_path)["global_orientation_contract_in_authoritative_ci"]
+        is False
+    )
+
+
+def test_deprecated_global_workflow_cannot_substitute_for_main(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    marker = tmp_path / GLOBAL_ORIENTATION_CONTRACT_PATHS[-1]
+    marker.parent.mkdir(parents=True, exist_ok=True)
+    marker.write_text("{}\n", encoding="utf-8")
+    deprecated = ".github/workflows/ci-engine-v2-global-orientation-authority.yml"
+    (tmp_path / deprecated).write_text(
+        "\n".join(GLOBAL_ORIENTATION_REQUIRED_TOKENS),
+        encoding="utf-8",
+    )
+
+    payload = build_inventory(tmp_path)
+
+    assert payload["specialized_workflows"] == [deprecated]
+    assert payload["global_orientation_contract_in_authoritative_ci"] is False
