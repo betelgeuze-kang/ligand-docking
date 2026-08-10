@@ -20,6 +20,8 @@ on:
       - "tests/unit/test_engine_v2_energy_local_refinement_stage6.py"
       - "tests/unit/test_engine_v2_public_redocking_benchmark_stage7.py"
       - "tests/unit/test_engine_v2_public_redocking_runner_stage7.py"
+      - "benchmarks/__init__.py"
+      - "benchmarks/oracles/**"
       - "tools/run_engine_v2_public_redocking_300.py"
       - ".github/workflows/ci-engine-v2-docking-semantics.yml"
   workflow_dispatch:
@@ -48,6 +50,8 @@ jobs:
           clean: true
           sparse-checkout: |
             betelgeuze_engine_v2
+            benchmarks/__init__.py
+            benchmarks/oracles
             tools/run_engine_v2_public_redocking_300.py
             tests/unit/test_engine_v2_conformer_ensemble_stage3.py
             tests/unit/test_engine_v2_public_redocking_runner_stage7.py

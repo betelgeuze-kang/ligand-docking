@@ -1,0 +1,6 @@
+# External-oracle CI runtime only; never install this lock in product dispatch.
+# The job additionally records and verifies the actual-byte OpenMM+NumPy digest.
+numpy==1.26.4 \
+    --hash=sha256:666dbfb6ec68962c033a450943ded891bed2d54e6755e35e5835d63f4f6931d5
+openmm==8.4.0.post2 \
+    --hash=sha256:12ffcd82d596bded1382e30af55907754ee481aafc0fc4a921a97de2ea7a8c55

@@ -10,8 +10,8 @@ from typing import Any
 
 import numpy as np
 
+from benchmarks.oracles.openmm import load_openmm
 from tools.lib.artifacts import (
-    ROOT,
     artifact as _artifact,
     read_json as _read_json,
     resolve as _resolve,
@@ -68,9 +68,14 @@ def _run_full_forcefield_minimization(
     max_iterations: int,
 ) -> dict[str, Any]:
     try:
-        import openmm as mm  # type: ignore
-        from openmm import unit  # type: ignore
-        from openmm.app import ForceField, Modeller, NoCutoff, PDBFile, Simulation  # type: ignore
+        openmm = load_openmm()
+        mm = openmm.mm
+        unit = openmm.unit
+        ForceField = openmm.app.ForceField
+        Modeller = openmm.app.Modeller
+        NoCutoff = openmm.app.NoCutoff
+        PDBFile = openmm.app.PDBFile
+        Simulation = openmm.app.Simulation
     except Exception as exc:
         return {"attempted": False, "ready": False, "error": _short_error(exc)}
 

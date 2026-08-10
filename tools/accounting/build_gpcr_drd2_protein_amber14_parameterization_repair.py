@@ -10,6 +10,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
+from benchmarks.oracles.openmm import load_openmm
 from tools.lib.artifacts import (
     ROOT,
     artifact as _artifact,
@@ -130,7 +131,11 @@ def _openmm_probe(protein_pdb: str | Path, *, attempt_build: bool = True) -> dic
     if not attempt_build:
         return {"attempted": False, "raw_ready": False, "add_hydrogens_ready": False, "error": "build_attempt_disabled"}
     try:
-        from openmm.app import ForceField, Modeller, NoCutoff, PDBFile  # type: ignore
+        app = load_openmm().app
+        ForceField = app.ForceField
+        Modeller = app.Modeller
+        NoCutoff = app.NoCutoff
+        PDBFile = app.PDBFile
 
         pdb = PDBFile(str(path))
         forcefield = ForceField("amber14-all.xml")

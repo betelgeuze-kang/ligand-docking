@@ -61,3 +61,42 @@ tools/bin/**
 *.tar.gz
 *.tgz
 *.zip
+
+# External solver adapters and their historical benchmark entrypoints never
+# enter the customer/product image. Keep these rules after the broad !tools/**
+# inclusion above so Docker's last-match rule remains fail-closed.
+benchmarks
+benchmarks/**
+tools/generate_openmm_ca_md_references.py
+tools/product/generate_openmm_ca_md_references.py
+tools/build_gpcr_drd2_full_forcefield_minimization_readiness.py
+tools/accounting/build_gpcr_drd2_full_forcefield_minimization_readiness.py
+tools/build_gpcr_drd2_openmm_forcefield_parameterization_probe.py
+tools/accounting/build_gpcr_drd2_openmm_forcefield_parameterization_probe.py
+tools/build_gpcr_drd2_protein_amber14_parameterization_repair.py
+tools/accounting/build_gpcr_drd2_protein_amber14_parameterization_repair.py
+tools/build_gpcr_drd2_full_forcefield_local_minimization_survival.py
+tools/gpcr_replay/build_gpcr_drd2_full_forcefield_local_minimization_survival.py
+tools/build_gpcr_drd2_local_minimization_survival.py
+tools/gpcr_replay/build_gpcr_drd2_local_minimization_survival.py
+tools/build_wetlab_tcruzi_pde_atomized_parameterization_minimization_packet.py
+tools/wetlab/build_wetlab_tcruzi_pde_atomized_parameterization_minimization_packet.py
+tools/run_engine_v2_public_redocking_300.py
+tools/accounting/build_gpcr_drd2_full_forcefield_local_minimization_survival.py
+tools/accounting/build_gpcr_drd2_local_minimization_survival.py
+tools/accounting/build_tcruzi_pde_strict_external_manifest.py
+tools/accounting/build_wetlab_tcruzi_pde_atomized_parameterization_minimization_packet.py
+tools/build_engine_v2_solo_stage0_evidence.py
+tools/build_engine_v2_solo_stage0_policy.py
+tools/build_tcruzi_pde_strict_external_manifest.py
+tools/cleanup/maintain_live_unseen_archives.py
+tools/maintain_live_unseen_archives.py
+tools/product/run_live_unseen_protein_learning_loop.py
+tools/product/run_openmm_2bead_rebench.py
+tools/product/run_openmm_2bead_strict_release.py
+tools/product/run_strict_release_with_regression_gate.py
+tools/run_live_unseen_protein_learning_loop.py
+tools/run_openmm_2bead_rebench.py
+tools/run_openmm_2bead_strict_release.py
+tools/run_strict_release_with_regression_gate.py
+tools/wetlab/build_tcruzi_pde_strict_external_manifest.py
