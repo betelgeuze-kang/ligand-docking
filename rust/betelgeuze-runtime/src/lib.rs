@@ -3,8 +3,13 @@
 //! The raw handles and pointers remain private to this crate. All system input
 //! is copied into native-owned structure-of-arrays storage.
 
+mod dynamics;
 mod forcefield;
 
+pub use dynamics::{
+    DistanceConstraint, DistanceConstraints, DynamicsReport, Integrator, MinimizationReport,
+    MinimizerOptions, Simulation, SimulationOptions,
+};
 pub use forcefield::{
     AtomNonbonded, EnergyComponents, Evaluation, ForceField, ForceFieldInput, ForceSoaOwned,
     HarmonicAngle, HarmonicBond, NonbondedSettings, OrthorhombicCell, PairExclusion, PairScale,
@@ -49,6 +54,7 @@ pub struct CanonicalUnits {
     pub angle: &'static str,
     pub time: &'static str,
     pub velocity: &'static str,
+    pub temperature: &'static str,
     pub coulomb_constant_kcal_angstrom_per_mol_e2: f64,
 }
 
@@ -61,6 +67,7 @@ pub const CANONICAL_UNITS: CanonicalUnits = CanonicalUnits {
     angle: "radian",
     time: "femtosecond",
     velocity: "angstrom/femtosecond",
+    temperature: "kelvin",
     coulomb_constant_kcal_angstrom_per_mol_e2: sys::BG_COULOMB_CONSTANT_KCAL_ANGSTROM_PER_MOL_E2,
 };
 
@@ -622,6 +629,7 @@ impl System {
     }
 
     pub fn snapshot(&self) -> Result<ParticleSnapshot> {
+        let expected_count = self.len()?;
         let mut view = MaybeUninit::<sys::bg_particle_soa_view>::uninit();
         // SAFETY: view points to correctly sized writable storage.
         status_result(unsafe { sys::bg_particle_soa_view_init(view.as_mut_ptr()) })?;
@@ -629,13 +637,20 @@ impl System {
         let mut view = unsafe { view.assume_init() };
         // SAFETY: The private system handle remains live for all copies below.
         status_result(unsafe { sys::bg_system_get_particles(self.handle.as_ptr(), &mut view) })?;
+        if view.struct_size as usize != std::mem::size_of::<sys::bg_particle_soa_view>()
+            || view.abi_version != sys::BG_ABI_VERSION
+            || view.unit_system != sys::BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL
+            || view.reserved0 != 0
+            || view.reserved != [0; 4]
+            || view.particle_count != checked_count(expected_count)?
+        {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native system returned an invalid particle view descriptor",
+            ));
+        }
         UnitSystem::from_raw(view.unit_system)?;
-        let count = usize::try_from(view.particle_count).map_err(|_| {
-            Error::local(
-                ErrorCode::CapacityOverflow,
-                "native particle count does not fit usize",
-            )
-        })?;
+        let count = expected_count;
 
         // SAFETY: Successful native views contain count readable doubles per
         // non-empty channel and remain valid while self is immutably borrowed.

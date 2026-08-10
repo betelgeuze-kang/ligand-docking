@@ -39,3 +39,21 @@ BETELGEUZE_ENGINE_1.1 {
         bg_forcefield_get_atom_count;
         bg_context_evaluate;
 } BETELGEUZE_ENGINE_1.0;
+
+BETELGEUZE_ENGINE_1.3 {
+    global:
+        bg_distance_constraints_v1_init;
+        bg_simulation_options_v1_init;
+        bg_minimizer_options_v1_init;
+        bg_minimization_report_v1_init;
+        bg_dynamics_report_v1_init;
+        bg_simulation_create;
+        bg_simulation_destroy;
+        bg_simulation_get_particles;
+        bg_simulation_get_absolute_step;
+        bg_context_minimize;
+        bg_context_integrate;
+        bg_simulation_checkpoint_size;
+        bg_simulation_checkpoint_write;
+        bg_simulation_checkpoint_load;
+} BETELGEUZE_ENGINE_1.1;

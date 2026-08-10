@@ -8,7 +8,12 @@ fn canonical_units_are_explicit_and_exact() {
     assert_eq!(CANONICAL_UNITS.length, "angstrom");
     assert_eq!(CANONICAL_UNITS.energy, "kcal/mol");
     assert_eq!(CANONICAL_UNITS.force, "kcal/(mol*angstrom)");
+    assert_eq!(CANONICAL_UNITS.charge, "elementary_charge");
+    assert_eq!(CANONICAL_UNITS.mass, "dalton");
+    assert_eq!(CANONICAL_UNITS.angle, "radian");
     assert_eq!(CANONICAL_UNITS.time, "femtosecond");
+    assert_eq!(CANONICAL_UNITS.velocity, "angstrom/femtosecond");
+    assert_eq!(CANONICAL_UNITS.temperature, "kelvin");
     assert_eq!(
         CANONICAL_UNITS.coulomb_constant_kcal_angstrom_per_mol_e2,
         332.063_713_299

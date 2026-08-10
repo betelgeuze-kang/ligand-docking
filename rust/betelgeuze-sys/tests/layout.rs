@@ -5,11 +5,12 @@ use betelgeuze_sys::*;
 #[test]
 fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(BG_ABI_VERSION_MAJOR, 1);
-    assert_eq!(BG_ABI_VERSION_MINOR, 2);
+    assert_eq!(BG_ABI_VERSION_MINOR, 3);
     assert_eq!(BG_ABI_VERSION, 1);
     assert_eq!(size_of::<bg_status>(), 4);
     assert_eq!(size_of::<bg_backend>(), 4);
     assert_eq!(size_of::<bg_unit_system>(), 4);
+    assert_eq!(size_of::<bg_integrator>(), 4);
     assert_eq!(BG_STATUS_OK, 0);
     assert_eq!(BG_STATUS_INTERNAL_ERROR, 9);
     assert_eq!(BG_STATUS_NUMERICAL_ERROR, 10);
@@ -17,6 +18,8 @@ fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(BG_BACKEND_CPU, 1);
     assert_eq!(BG_BACKEND_HIP, 2);
     assert_eq!(BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL, 1);
+    assert_eq!(BG_INTEGRATOR_VELOCITY_VERLET, 1);
+    assert_eq!(BG_INTEGRATOR_LANGEVIN_BAOAB, 2);
     assert_eq!(BG_PERIODIC_AXIS_X, 1);
     assert_eq!(BG_PERIODIC_AXIS_Y, 2);
     assert_eq!(BG_PERIODIC_AXIS_Z, 4);
@@ -217,9 +220,139 @@ fn energy_components_v1_layout_matches_the_c_header() {
     assert_eq!(offset_of!(bg_energy_components_v1, reserved), 64);
 }
 
+#[cfg(target_pointer_width = "64")]
+#[test]
+fn distance_constraints_v1_layout_matches_the_c_header() {
+    assert_eq!(size_of::<bg_distance_constraints_v1>(), 104);
+    assert_eq!(align_of::<bg_distance_constraints_v1>(), 8);
+    assert_eq!(offset_of!(bg_distance_constraints_v1, struct_size), 0);
+    assert_eq!(offset_of!(bg_distance_constraints_v1, abi_version), 4);
+    assert_eq!(offset_of!(bg_distance_constraints_v1, constraint_count), 8);
+    assert_eq!(offset_of!(bg_distance_constraints_v1, unit_system), 16);
+    assert_eq!(offset_of!(bg_distance_constraints_v1, reserved0), 20);
+    assert_eq!(offset_of!(bg_distance_constraints_v1, atom_i), 24);
+    assert_eq!(offset_of!(bg_distance_constraints_v1, atom_j), 32);
+    assert_eq!(
+        offset_of!(bg_distance_constraints_v1, distance_angstrom),
+        40
+    );
+    assert_eq!(
+        offset_of!(bg_distance_constraints_v1, tolerance_angstrom),
+        48
+    );
+    assert_eq!(
+        offset_of!(
+            bg_distance_constraints_v1,
+            velocity_tolerance_angstrom_per_femtosecond
+        ),
+        56
+    );
+    assert_eq!(offset_of!(bg_distance_constraints_v1, max_iterations), 64);
+    assert_eq!(offset_of!(bg_distance_constraints_v1, reserved1), 68);
+    assert_eq!(offset_of!(bg_distance_constraints_v1, reserved), 72);
+}
+
+#[test]
+fn simulation_options_v1_layout_matches_the_c_header() {
+    assert_eq!(size_of::<bg_simulation_options_v1>(), 80);
+    assert_eq!(align_of::<bg_simulation_options_v1>(), 8);
+    assert_eq!(offset_of!(bg_simulation_options_v1, struct_size), 0);
+    assert_eq!(offset_of!(bg_simulation_options_v1, abi_version), 4);
+    assert_eq!(offset_of!(bg_simulation_options_v1, unit_system), 8);
+    assert_eq!(offset_of!(bg_simulation_options_v1, integrator), 12);
+    assert_eq!(
+        offset_of!(bg_simulation_options_v1, timestep_femtoseconds),
+        16
+    );
+    assert_eq!(offset_of!(bg_simulation_options_v1, temperature_kelvin), 24);
+    assert_eq!(
+        offset_of!(bg_simulation_options_v1, friction_per_femtosecond),
+        32
+    );
+    assert_eq!(offset_of!(bg_simulation_options_v1, random_seed), 40);
+    assert_eq!(offset_of!(bg_simulation_options_v1, reserved), 48);
+}
+
+#[test]
+fn minimizer_options_v1_layout_matches_the_c_header() {
+    assert_eq!(size_of::<bg_minimizer_options_v1>(), 112);
+    assert_eq!(align_of::<bg_minimizer_options_v1>(), 8);
+    assert_eq!(offset_of!(bg_minimizer_options_v1, struct_size), 0);
+    assert_eq!(offset_of!(bg_minimizer_options_v1, abi_version), 4);
+    assert_eq!(offset_of!(bg_minimizer_options_v1, unit_system), 8);
+    assert_eq!(offset_of!(bg_minimizer_options_v1, reserved0), 12);
+    assert_eq!(offset_of!(bg_minimizer_options_v1, max_iterations), 16);
+    assert_eq!(
+        offset_of!(bg_minimizer_options_v1, max_line_search_steps),
+        24
+    );
+    assert_eq!(offset_of!(bg_minimizer_options_v1, reserved1), 28);
+    assert_eq!(
+        offset_of!(bg_minimizer_options_v1, initial_step_angstrom2_mol_per_kcal),
+        32
+    );
+    assert_eq!(
+        offset_of!(bg_minimizer_options_v1, minimum_step_angstrom2_mol_per_kcal),
+        40
+    );
+    assert_eq!(
+        offset_of!(bg_minimizer_options_v1, energy_tolerance_kcal_per_mol),
+        48
+    );
+    assert_eq!(
+        offset_of!(
+            bg_minimizer_options_v1,
+            force_tolerance_kcal_per_mol_angstrom
+        ),
+        56
+    );
+    assert_eq!(offset_of!(bg_minimizer_options_v1, armijo_coefficient), 64);
+    assert_eq!(offset_of!(bg_minimizer_options_v1, backtrack_factor), 72);
+    assert_eq!(offset_of!(bg_minimizer_options_v1, reserved), 80);
+}
+
+#[test]
+fn dynamics_report_layouts_match_the_c_header() {
+    assert_eq!(size_of::<bg_minimization_report_v1>(), 88);
+    assert_eq!(align_of::<bg_minimization_report_v1>(), 8);
+    assert_eq!(offset_of!(bg_minimization_report_v1, iterations), 16);
+    assert_eq!(offset_of!(bg_minimization_report_v1, converged), 24);
+    assert_eq!(
+        offset_of!(bg_minimization_report_v1, initial_potential_kcal_per_mol),
+        32
+    );
+    assert_eq!(
+        offset_of!(bg_minimization_report_v1, final_potential_kcal_per_mol),
+        40
+    );
+    assert_eq!(
+        offset_of!(
+            bg_minimization_report_v1,
+            maximum_force_kcal_per_mol_angstrom
+        ),
+        48
+    );
+    assert_eq!(offset_of!(bg_minimization_report_v1, reserved), 56);
+
+    assert_eq!(size_of::<bg_dynamics_report_v1>(), 104);
+    assert_eq!(align_of::<bg_dynamics_report_v1>(), 8);
+    assert_eq!(offset_of!(bg_dynamics_report_v1, steps_completed), 16);
+    assert_eq!(offset_of!(bg_dynamics_report_v1, absolute_step), 24);
+    assert_eq!(offset_of!(bg_dynamics_report_v1, degrees_of_freedom), 32);
+    assert_eq!(
+        offset_of!(bg_dynamics_report_v1, potential_kcal_per_mol),
+        40
+    );
+    assert_eq!(offset_of!(bg_dynamics_report_v1, kinetic_kcal_per_mol), 48);
+    assert_eq!(offset_of!(bg_dynamics_report_v1, total_kcal_per_mol), 56);
+    assert_eq!(offset_of!(bg_dynamics_report_v1, temperature_kelvin), 64);
+    assert_eq!(offset_of!(bg_dynamics_report_v1, reserved), 72);
+}
+
 #[test]
 fn opaque_handles_are_only_used_behind_pointers() {
     assert_eq!(size_of::<*mut bg_context>(), size_of::<usize>());
     assert_eq!(size_of::<*mut bg_system>(), size_of::<usize>());
     assert_eq!(size_of::<*mut bg_forcefield>(), size_of::<usize>());
+    assert_eq!(size_of::<*mut bg_simulation>(), size_of::<usize>());
 }

@@ -282,6 +282,10 @@ impl ForceField {
     pub fn is_empty(&self) -> Result<bool> {
         self.len().map(|length| length == 0)
     }
+
+    pub(crate) fn raw_handle(&self) -> *mut sys::bg_forcefield {
+        self.handle.as_ptr()
+    }
 }
 
 impl Drop for ForceField {

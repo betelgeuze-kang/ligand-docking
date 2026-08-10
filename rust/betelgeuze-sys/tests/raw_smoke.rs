@@ -28,6 +28,13 @@ fn native_abi_identity_and_canonical_units_match_the_header() {
     }
     assert_eq!(BG_CANONICAL_LENGTH_UNIT, b"angstrom\0");
     assert_eq!(BG_CANONICAL_ENERGY_UNIT, b"kcal/mol\0");
+    assert_eq!(BG_CANONICAL_FORCE_UNIT, b"kcal/(mol*angstrom)\0");
+    assert_eq!(BG_CANONICAL_CHARGE_UNIT, b"elementary_charge\0");
+    assert_eq!(BG_CANONICAL_MASS_UNIT, b"dalton\0");
+    assert_eq!(BG_CANONICAL_ANGLE_UNIT, b"radian\0");
+    assert_eq!(BG_CANONICAL_TIME_UNIT, b"femtosecond\0");
+    assert_eq!(BG_CANONICAL_VELOCITY_UNIT, b"angstrom/femtosecond\0");
+    assert_eq!(BG_CANONICAL_TEMPERATURE_UNIT, b"kelvin\0");
     assert_eq!(
         BG_COULOMB_CONSTANT_KCAL_ANGSTROM_PER_MOL_E2,
         332.063_713_299
@@ -75,6 +82,71 @@ fn descriptor_initializers_bind_size_version_and_units() {
         );
         assert_eq!(positions.abi_version, BG_ABI_VERSION);
         assert_eq!(positions.unit_system, BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL);
+
+        let mut constraints = core::mem::MaybeUninit::<bg_distance_constraints_v1>::uninit();
+        assert_eq!(
+            bg_distance_constraints_v1_init(constraints.as_mut_ptr()),
+            BG_STATUS_OK
+        );
+        let constraints = constraints.assume_init();
+        assert_eq!(
+            constraints.struct_size as usize,
+            core::mem::size_of_val(&constraints)
+        );
+        assert_eq!(constraints.abi_version, BG_ABI_VERSION);
+        assert_eq!(constraints.unit_system, BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL);
+        assert!(constraints.tolerance_angstrom > 0.0);
+        assert!(constraints.velocity_tolerance_angstrom_per_femtosecond > 0.0);
+        assert!(constraints.max_iterations > 0);
+
+        let mut simulation = core::mem::MaybeUninit::<bg_simulation_options_v1>::uninit();
+        assert_eq!(
+            bg_simulation_options_v1_init(simulation.as_mut_ptr()),
+            BG_STATUS_OK
+        );
+        let simulation = simulation.assume_init();
+        assert_eq!(
+            simulation.struct_size as usize,
+            core::mem::size_of_val(&simulation)
+        );
+        assert_eq!(simulation.abi_version, BG_ABI_VERSION);
+        assert_eq!(simulation.unit_system, BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL);
+        assert_eq!(simulation.integrator, BG_INTEGRATOR_VELOCITY_VERLET);
+
+        let mut minimizer = core::mem::MaybeUninit::<bg_minimizer_options_v1>::uninit();
+        assert_eq!(
+            bg_minimizer_options_v1_init(minimizer.as_mut_ptr()),
+            BG_STATUS_OK
+        );
+        let minimizer = minimizer.assume_init();
+        assert_eq!(
+            minimizer.struct_size as usize,
+            core::mem::size_of_val(&minimizer)
+        );
+        assert_eq!(minimizer.abi_version, BG_ABI_VERSION);
+        assert_eq!(minimizer.unit_system, BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL);
+
+        let mut minimization_report = core::mem::MaybeUninit::<bg_minimization_report_v1>::uninit();
+        assert_eq!(
+            bg_minimization_report_v1_init(minimization_report.as_mut_ptr()),
+            BG_STATUS_OK
+        );
+        let minimization_report = minimization_report.assume_init();
+        assert_eq!(
+            minimization_report.struct_size as usize,
+            core::mem::size_of_val(&minimization_report)
+        );
+
+        let mut dynamics_report = core::mem::MaybeUninit::<bg_dynamics_report_v1>::uninit();
+        assert_eq!(
+            bg_dynamics_report_v1_init(dynamics_report.as_mut_ptr()),
+            BG_STATUS_OK
+        );
+        let dynamics_report = dynamics_report.assume_init();
+        assert_eq!(
+            dynamics_report.struct_size as usize,
+            core::mem::size_of_val(&dynamics_report)
+        );
     }
 }
 

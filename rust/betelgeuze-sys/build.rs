@@ -20,6 +20,13 @@ fn main() {
     let system_source = repository_root.join("native/src/system.cpp");
     let cpu_evaluator_header = repository_root.join("native/src/cpu/evaluator.hpp");
     let cpu_evaluator_source = repository_root.join("native/src/cpu/evaluator.cpp");
+    let dynamics_header = repository_root.join("native/src/dynamics/dynamics.hpp");
+    let dynamics_api_source = repository_root.join("native/src/dynamics/api.cpp");
+    let dynamics_checkpoint_source = repository_root.join("native/src/dynamics/checkpoint.cpp");
+    let dynamics_common_source = repository_root.join("native/src/dynamics/common.cpp");
+    let dynamics_integrator_source = repository_root.join("native/src/dynamics/integrator.cpp");
+    let dynamics_sha256_header = repository_root.join("native/src/dynamics/sha256.hpp");
+    let dynamics_sha256_source = repository_root.join("native/src/dynamics/sha256.cpp");
     let hip_backend_header = repository_root.join("native/src/hip/backend.hpp");
     let hip_backend_source = repository_root.join("native/src/hip/backend.hip");
     let hip_planning_header = repository_root.join("native/src/hip/planning.hpp");
@@ -35,6 +42,13 @@ fn main() {
     track(&system_source);
     track(&cpu_evaluator_header);
     track(&cpu_evaluator_source);
+    track(&dynamics_header);
+    track(&dynamics_api_source);
+    track(&dynamics_checkpoint_source);
+    track(&dynamics_common_source);
+    track(&dynamics_integrator_source);
+    track(&dynamics_sha256_header);
+    track(&dynamics_sha256_source);
     track(&hip_backend_header);
     track(&hip_backend_source);
     track(&hip_planning_header);
@@ -52,6 +66,11 @@ fn main() {
         .file(&forcefield_source)
         .file(&system_source)
         .file(&cpu_evaluator_source)
+        .file(&dynamics_api_source)
+        .file(&dynamics_checkpoint_source)
+        .file(&dynamics_common_source)
+        .file(&dynamics_integrator_source)
+        .file(&dynamics_sha256_source)
         .warnings(true)
         .warnings_into_errors(true);
     let hip_enabled = std::env::var_os("CARGO_FEATURE_HIP").is_some();

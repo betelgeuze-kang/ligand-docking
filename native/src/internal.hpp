@@ -98,6 +98,28 @@ struct bg_forcefield final {
     double minimum_pair_distance = 1.0e-6;
 };
 
+struct bg_simulation final {
+    struct DistanceConstraint final {
+        std::size_t atom_i = 0;
+        std::size_t atom_j = 0;
+        double distance = 0.0;
+    };
+
+    bg_system system;
+    bg_forcefield forcefield;
+    std::vector<DistanceConstraint> constraints;
+    double constraint_tolerance = 1.0e-10;
+    double constraint_velocity_tolerance = 1.0e-10;
+    uint32_t constraint_max_iterations = UINT32_C(100);
+    bg_integrator integrator = BG_INTEGRATOR_VELOCITY_VERLET;
+    double timestep_femtoseconds = 1.0;
+    double temperature_kelvin = 300.0;
+    double friction_per_femtosecond = 0.001;
+    uint64_t random_seed = UINT64_C(0);
+    uint64_t absolute_step = UINT64_C(0);
+    std::array<uint8_t, 32> static_fingerprint{};
+};
+
 namespace betelgeuze::native {
 
 inline constexpr std::size_t kLastErrorCapacity = 1024;
