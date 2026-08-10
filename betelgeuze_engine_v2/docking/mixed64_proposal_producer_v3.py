@@ -223,6 +223,25 @@ def _sha256(value: object) -> str:
     return hashlib.sha256(_canonical_bytes(value)).hexdigest()
 
 
+def _seal_projection(value: object) -> tuple[bytes, str]:
+    payload = _canonical_bytes(value)
+    return payload, hashlib.sha256(payload).hexdigest()
+
+
+def _unseal_projection(payload: bytes) -> dict[str, object]:
+    document = json.loads(payload)
+    if type(document) is not dict:
+        _fail(SOURCE_PAYLOAD_CROSS_WIRING, "sealed projection is not an object")
+    return document
+
+
+def _verify_sealed_receipt(payload: bytes, expected: str, *, name: str) -> str:
+    observed = hashlib.sha256(payload).hexdigest()
+    if observed != expected:
+        _fail(SOURCE_PAYLOAD_CROSS_WIRING, f"{name} sealed projection changed")
+    return observed
+
+
 def _digest(value: object, *, name: str) -> str:
     if type(value) is not str or _SHA256_RE.fullmatch(value) is None:
         _fail(SOURCE_PAYLOAD_CROSS_WIRING, f"{name} must be a lowercase SHA-256")
@@ -377,6 +396,7 @@ class Mixed64CoordinateSourcePayloadV1:
     _source_receipt_sha256: str = field(init=False, repr=False)
     _coordinate_sha256: str = field(init=False, repr=False)
     _proposal_lineage_sha256: str | None = field(init=False, repr=False)
+    _canonical_projection_bytes: bytes = field(init=False, repr=False)
     _receipt_sha256: str = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -432,7 +452,9 @@ class Mixed64CoordinateSourcePayloadV1:
         object.__setattr__(self, "_source_receipt_sha256", source_receipt_sha256)
         object.__setattr__(self, "_coordinate_sha256", coordinate_sha256(coordinates))
         object.__setattr__(self, "_proposal_lineage_sha256", lineage_sha256)
-        object.__setattr__(self, "_receipt_sha256", _sha256(self._projection()))
+        sealed, receipt_sha256 = _seal_projection(self._projection())
+        object.__setattr__(self, "_canonical_projection_bytes", sealed)
+        object.__setattr__(self, "_receipt_sha256", receipt_sha256)
 
     @property
     def proposal_sha256(self) -> str:
@@ -482,13 +504,17 @@ class Mixed64CoordinateSourcePayloadV1:
 
     @property
     def receipt_sha256(self) -> str:
-        observed = _sha256(self._projection())
-        if observed != self._receipt_sha256:
-            _fail(SOURCE_PAYLOAD_CROSS_WIRING, "coordinate source payload changed")
-        return observed
+        return _verify_sealed_receipt(
+            self._canonical_projection_bytes,
+            self._receipt_sha256,
+            name="coordinate source payload",
+        )
 
     def to_dict(self) -> dict[str, object]:
-        return {**self._projection(), "receipt_sha256": self.receipt_sha256}
+        return {
+            **_unseal_projection(self._canonical_projection_bytes),
+            "receipt_sha256": self.receipt_sha256,
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -511,6 +537,7 @@ class Mixed64ProposalSourceBundleV1:
     schema_id: str = MIXED64_PROPOSAL_SOURCE_BUNDLE_SCHEMA_ID
     _receptor_source_receipt_sha256: str = field(init=False, repr=False)
     _receptor_coordinate_sha256: str = field(init=False, repr=False)
+    _canonical_projection_bytes: bytes = field(init=False, repr=False)
     _receipt_sha256: str = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -685,7 +712,9 @@ class Mixed64ProposalSourceBundleV1:
         object.__setattr__(self, "pocket_radius", radius)
         object.__setattr__(self, "_receptor_source_receipt_sha256", receptor_source_sha)
         object.__setattr__(self, "_receptor_coordinate_sha256", receptor_coordinate_sha)
-        object.__setattr__(self, "_receipt_sha256", _sha256(self._projection()))
+        sealed, receipt_sha256 = _seal_projection(self._projection())
+        object.__setattr__(self, "_canonical_projection_bytes", sealed)
+        object.__setattr__(self, "_receipt_sha256", receipt_sha256)
 
     @property
     def receptor_source_receipt_sha256(self) -> str:
@@ -741,13 +770,17 @@ class Mixed64ProposalSourceBundleV1:
 
     @property
     def receipt_sha256(self) -> str:
-        observed = _sha256(self._projection())
-        if observed != self._receipt_sha256:
-            _fail(SOURCE_PAYLOAD_CROSS_WIRING, "proposal source bundle changed")
-        return observed
+        return _verify_sealed_receipt(
+            self._canonical_projection_bytes,
+            self._receipt_sha256,
+            name="proposal source bundle",
+        )
 
     def to_dict(self) -> dict[str, object]:
-        return {**self._projection(), "receipt_sha256": self.receipt_sha256}
+        return {
+            **_unseal_projection(self._canonical_projection_bytes),
+            "receipt_sha256": self.receipt_sha256,
+        }
 
 
 def frozen_mixed64_producer_policy() -> dict[str, object]:
@@ -808,6 +841,7 @@ class ExactPassthroughPlacementReceiptV1:
     slot_index: int
     source_payload: Mixed64CoordinateSourcePayloadV1 = field(repr=False)
     schema_id: str = MIXED64_EXACT_PASSTHROUGH_SCHEMA_ID
+    _canonical_projection_bytes: bytes = field(init=False, repr=False)
     _receipt_sha256: str = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -856,7 +890,9 @@ class ExactPassthroughPlacementReceiptV1:
             or slot.generation_parent_role != GENERATION_PARENT_EXACT_PASSTHROUGH
         ):
             _fail(SOURCE_PAYLOAD_CROSS_WIRING, "passthrough source changed")
-        object.__setattr__(self, "_receipt_sha256", _sha256(self._projection()))
+        sealed, receipt_sha256 = _seal_projection(self._projection())
+        object.__setattr__(self, "_canonical_projection_bytes", sealed)
+        object.__setattr__(self, "_receipt_sha256", receipt_sha256)
 
     @property
     def output_coordinates(self) -> Coordinates:
@@ -889,13 +925,17 @@ class ExactPassthroughPlacementReceiptV1:
 
     @property
     def receipt_sha256(self) -> str:
-        observed = _sha256(self._projection())
-        if observed != self._receipt_sha256:
-            _fail(SOURCE_PAYLOAD_CROSS_WIRING, "passthrough receipt changed")
-        return observed
+        return _verify_sealed_receipt(
+            self._canonical_projection_bytes,
+            self._receipt_sha256,
+            name="passthrough receipt",
+        )
 
     def to_dict(self) -> dict[str, object]:
-        return {**self._projection(), "receipt_sha256": self.receipt_sha256}
+        return {
+            **_unseal_projection(self._canonical_projection_bytes),
+            "receipt_sha256": self.receipt_sha256,
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -908,6 +948,7 @@ class ProposalGenerationFailureReceiptV1:
     attempted_source_payload_receipt_sha256: str | None = None
     geometry_error_message: str | None = None
     schema_id: str = MIXED64_GENERATION_FAILURE_SCHEMA_ID
+    _canonical_projection_bytes: bytes = field(init=False, repr=False)
     _receipt_sha256: str = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -941,7 +982,9 @@ class ProposalGenerationFailureReceiptV1:
             or len(self.geometry_error_message.encode("utf-8")) > 4096
         ):
             _fail(SOURCE_PAYLOAD_CROSS_WIRING, "geometry error message is invalid")
-        object.__setattr__(self, "_receipt_sha256", _sha256(self._projection()))
+        sealed, receipt_sha256 = _seal_projection(self._projection())
+        object.__setattr__(self, "_canonical_projection_bytes", sealed)
+        object.__setattr__(self, "_receipt_sha256", receipt_sha256)
 
     def _projection(self) -> dict[str, object]:
         slot = self.allocation.slots[self.slot_index]
@@ -970,13 +1013,17 @@ class ProposalGenerationFailureReceiptV1:
 
     @property
     def receipt_sha256(self) -> str:
-        observed = _sha256(self._projection())
-        if observed != self._receipt_sha256:
-            _fail(SOURCE_PAYLOAD_CROSS_WIRING, "generation failure receipt changed")
-        return observed
+        return _verify_sealed_receipt(
+            self._canonical_projection_bytes,
+            self._receipt_sha256,
+            name="generation failure receipt",
+        )
 
     def to_dict(self) -> dict[str, object]:
-        return {**self._projection(), "receipt_sha256": self.receipt_sha256}
+        return {
+            **_unseal_projection(self._canonical_projection_bytes),
+            "receipt_sha256": self.receipt_sha256,
+        }
 
 
 PlacementReceipt = (
@@ -1000,6 +1047,7 @@ class Mixed64ProposalGenerationRecordV1:
     failure_receipt: ProposalGenerationFailureReceiptV1 | None
     _factory_seal: InitVar[object | None] = None
     schema_id: str = MIXED64_GENERATION_RECORD_SCHEMA_ID
+    _canonical_projection_bytes: bytes = field(init=False, repr=False)
     _receipt_sha256: str = field(init=False, repr=False)
 
     def __post_init__(self, _factory_seal: object | None) -> None:
@@ -1095,7 +1143,9 @@ class Mixed64ProposalGenerationRecordV1:
                 _fail(SOURCE_PAYLOAD_CROSS_WIRING, "failure source bundle changed")
         else:
             _fail(SOURCE_PAYLOAD_CROSS_WIRING, "generation record status is invalid")
-        object.__setattr__(self, "_receipt_sha256", _sha256(self._projection()))
+        sealed, receipt_sha256 = _seal_projection(self._projection())
+        object.__setattr__(self, "_canonical_projection_bytes", sealed)
+        object.__setattr__(self, "_receipt_sha256", receipt_sha256)
 
     @property
     def generated(self) -> bool:
@@ -1134,13 +1184,17 @@ class Mixed64ProposalGenerationRecordV1:
 
     @property
     def receipt_sha256(self) -> str:
-        observed = _sha256(self._projection())
-        if observed != self._receipt_sha256:
-            _fail(SOURCE_PAYLOAD_CROSS_WIRING, "generation record changed")
-        return observed
+        return _verify_sealed_receipt(
+            self._canonical_projection_bytes,
+            self._receipt_sha256,
+            name="generation record",
+        )
 
     def to_dict(self) -> dict[str, object]:
-        return {**self._projection(), "receipt_sha256": self.receipt_sha256}
+        return {
+            **_unseal_projection(self._canonical_projection_bytes),
+            "receipt_sha256": self.receipt_sha256,
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -1153,6 +1207,7 @@ class Mixed64ProposalProducerBatchV1:
     _factory_seal: InitVar[object | None] = None
     profile_id: str = MIXED64_PRODUCER_PROFILE_ID
     schema_id: str = MIXED64_PRODUCER_BATCH_SCHEMA_ID
+    _canonical_projection_bytes: bytes = field(init=False, repr=False)
     _receipt_sha256: str = field(init=False, repr=False)
 
     def __post_init__(self, _factory_seal: object | None) -> None:
@@ -1205,7 +1260,9 @@ class Mixed64ProposalProducerBatchV1:
                 != self.producer_implementation_source_sha256
             ):
                 _fail(SOURCE_PAYLOAD_CROSS_WIRING, "producer source binding changed")
-        object.__setattr__(self, "_receipt_sha256", _sha256(self._projection()))
+        sealed, receipt_sha256 = _seal_projection(self._projection())
+        object.__setattr__(self, "_canonical_projection_bytes", sealed)
+        object.__setattr__(self, "_receipt_sha256", receipt_sha256)
 
     @property
     def generated_count(self) -> int:
@@ -1262,13 +1319,17 @@ class Mixed64ProposalProducerBatchV1:
 
     @property
     def receipt_sha256(self) -> str:
-        observed = _sha256(self._projection())
-        if observed != self._receipt_sha256:
-            _fail(SOURCE_PAYLOAD_CROSS_WIRING, "producer batch changed")
-        return observed
+        return _verify_sealed_receipt(
+            self._canonical_projection_bytes,
+            self._receipt_sha256,
+            name="producer batch",
+        )
 
     def to_dict(self) -> dict[str, object]:
-        return {**self._projection(), "receipt_sha256": self.receipt_sha256}
+        return {
+            **_unseal_projection(self._canonical_projection_bytes),
+            "receipt_sha256": self.receipt_sha256,
+        }
 
 
 def _stable_source_sha256(path: Path) -> str:
