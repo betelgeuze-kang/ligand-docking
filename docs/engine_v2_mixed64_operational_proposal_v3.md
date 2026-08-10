@@ -49,6 +49,8 @@ validity evaluator, molecular case, reservation service, Historical/Fresh
 cohort, product rank, Stage 0 gate, public benchmark, or HIP backend. Producer
 attestation and activation eligibility remain false.
 
-The next implementation stage must execute the frozen V7 refiner from these
-exact proposals, replay geometric admission on every post-refinement coordinate,
-and preserve typed refinement failures before Scorer V1 or validity is called.
+The next stage is implemented by the synthetic-only current-V7 post-admission
+v3 component. It executes the frozen V7 refiner from these exact proposals,
+replays geometric admission on every post-refinement coordinate, and preserves
+typed refinement failures before Scorer V1 or validity is called. That stage
+still grants no molecular, cohort, reservation, product, or claim authority.
