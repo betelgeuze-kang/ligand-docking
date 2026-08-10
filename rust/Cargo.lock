@@ -3,6 +3,10 @@
 version = 4
 
 [[package]]
+name = "betelgeuze-reference-physics"
+version = "0.1.0"
+
+[[package]]
 name = "betelgeuze-runtime"
 version = "0.1.0"
 dependencies = [
