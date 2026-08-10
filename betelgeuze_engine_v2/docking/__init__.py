@@ -360,6 +360,13 @@ from .pipeline import (  # noqa: E402
     SyntheticD0FixtureAdmissionV1,
     repository_synthetic_d0_fixture_admission,
 )
+from .standalone_scientific_core_v3 import (  # noqa: E402
+    STANDALONE_SCIENTIFIC_CORE_BLOCKERS,
+    STANDALONE_SCIENTIFIC_CORE_COMPONENT_IDS,
+    StandaloneScientificCoreReceiptV1,
+    StandaloneScientificCoreV3Error,
+    execute_repository_synthetic_d0_standalone_scientific_core,
+)
 from .consumers import (  # noqa: E402
     CONSUMER_ENVELOPE_SCHEMA_ID,
     DIAGNOSTIC_BENCHMARK_SCOPE,
@@ -678,6 +685,11 @@ __all__ = [
     "ProposalGenerationPlanV1",
     "SyntheticD0FixtureAdmissionV1",
     "repository_synthetic_d0_fixture_admission",
+    "STANDALONE_SCIENTIFIC_CORE_BLOCKERS",
+    "STANDALONE_SCIENTIFIC_CORE_COMPONENT_IDS",
+    "StandaloneScientificCoreReceiptV1",
+    "StandaloneScientificCoreV3Error",
+    "execute_repository_synthetic_d0_standalone_scientific_core",
     "CONSUMER_ENVELOPE_SCHEMA_ID",
     "DIAGNOSTIC_BENCHMARK_SCOPE",
     "StandaloneConsumerEnvelopeV1",

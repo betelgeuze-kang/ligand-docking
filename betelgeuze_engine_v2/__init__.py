@@ -216,6 +216,12 @@ from .docking.pipeline import (
     SyntheticD0FixtureAdmissionV1,
     repository_synthetic_d0_fixture_admission,
 )
+from .docking.standalone_scientific_core_v3 import (
+    STANDALONE_SCIENTIFIC_CORE_BLOCKERS,
+    StandaloneScientificCoreReceiptV1,
+    StandaloneScientificCoreV3Error,
+    execute_repository_synthetic_d0_standalone_scientific_core,
+)
 from .docking.consumers import (
     DIAGNOSTIC_BENCHMARK_SCOPE,
     StandaloneConsumerEnvelopeV1,
@@ -299,6 +305,10 @@ __all__ = [
     "UNVERIFIED_SIDE_EFFECT_BLOCKER",
     "SyntheticD0FixtureAdmissionV1",
     "repository_synthetic_d0_fixture_admission",
+    "STANDALONE_SCIENTIFIC_CORE_BLOCKERS",
+    "StandaloneScientificCoreReceiptV1",
+    "StandaloneScientificCoreV3Error",
+    "execute_repository_synthetic_d0_standalone_scientific_core",
     "DIAGNOSTIC_BENCHMARK_SCOPE",
     "StandaloneConsumerEnvelopeV1",
     "StandaloneDiagnosticBenchmarkAdapter",

@@ -216,9 +216,16 @@ EXTERNAL_RESERVATION_REQUIRED_TOKENS = (
 STANDALONE_PIPELINE_CONTRACT_PATHS = (
     "betelgeuze_engine_v2/docking/pipeline.py",
     "betelgeuze_engine_v2/docking/synthetic_d0_fixture_admission.json",
+    "betelgeuze_engine_v2/docking/standalone_scientific_core_policy_v3.py",
+    "betelgeuze_engine_v2/docking/standalone_scientific_core_v3.py",
+    "config/engine_v2_standalone_scientific_core_v3.json",
 )
 STANDALONE_PIPELINE_REQUIRED_TOKENS = (
     "tests/unit/test_engine_v2_standalone_pipeline_core.py",
+    "config/engine_v2_standalone_scientific_core_v3.json",
+    "tools/verify_engine_v2_standalone_scientific_core_v3.py",
+    "tests/unit/test_engine_v2_standalone_scientific_core_v3.py",
+    "tests/unit/test_verify_engine_v2_standalone_scientific_core_v3.py",
 )
 STANDALONE_CONSUMER_CONTRACT_PATHS = (
     "betelgeuze_engine_v2/docking/consumers.py",
