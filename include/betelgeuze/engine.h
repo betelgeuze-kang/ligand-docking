@@ -54,7 +54,7 @@ extern "C" {
 #endif
 
 #define BG_ABI_VERSION_MAJOR UINT32_C(1)
-#define BG_ABI_VERSION_MINOR UINT32_C(1)
+#define BG_ABI_VERSION_MINOR UINT32_C(2)
 #define BG_ABI_VERSION UINT32_C(1)
 
 #define BG_CANONICAL_LENGTH_UNIT "angstrom"
@@ -342,7 +342,15 @@ BG_API bg_status BG_CALL bg_force_soa_v1_init(
 BG_API bg_status BG_CALL bg_energy_components_v1_init(
     bg_energy_components_v1 *energy) BG_NOEXCEPT;
 
-/* Backend selection is explicit.  An unavailable HIP request never runs CPU. */
+/*
+ * Backend selection is explicit.  AUTO remains the deterministic CPU backend
+ * in ABI v1.2.  HIP is reported available only when the native library was
+ * built with its HIP provider, the requested runtime device supports
+ * binary64, and the library contains a compatible device code object.
+ * An explicit unavailable HIP request never runs CPU.  The availability
+ * output is initialized to zero; HIP runtime discovery failures are returned
+ * as an error status instead of being reported as an unavailable device.
+ */
 BG_API bg_status BG_CALL bg_backend_is_available(
     bg_backend backend,
     int32_t device_ordinal,
@@ -396,10 +404,14 @@ BG_API bg_status BG_CALL bg_forcefield_get_atom_count(
     uint64_t *atom_count) BG_NOEXCEPT;
 
 /*
- * Dispatch through the explicitly selected context backend.  CPU evaluation
- * is scalar binary64 with a fixed serial accumulation order and analytic
- * forces defined as -dU/d(position).  Output buffers are transactional: no output value changes unless
- * the complete evaluation succeeds.  Energy-only evaluation does not require
+ * Dispatch through the backend owned by the context.  CPU evaluation is
+ * scalar binary64 with a fixed serial accumulation order.  HIP evaluation is
+ * binary64 data-parallel execution on the explicitly selected device; it does
+ * not silently dispatch to CPU.  Both backends return analytic forces defined
+ * as -dU/d(position).
+ *
+ * Output buffers are transactional: no output value changes unless the
+ * complete evaluation succeeds.  Energy-only evaluation does not require
  * differentiability of a zero-length harmonic bond; requesting forces for
  * that geometry returns BG_STATUS_NUMERICAL_ERROR.
  */

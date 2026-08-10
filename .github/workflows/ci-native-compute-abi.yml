@@ -67,3 +67,153 @@ jobs:
 
       - name: Test Rust C++ boundary
         run: cargo test --manifest-path rust/Cargo.toml --workspace --locked
+
+  trusted-rocm-hip-parity:
+    if: >-
+      ${{ vars.TRUSTED_SELF_HOSTED_CI_ENABLED == 'true'
+      && ((github.event_name == 'push' && github.ref == 'refs/heads/main')
+      || (github.event_name == 'workflow_dispatch'
+      && github.ref == 'refs/heads/main')) }}
+    runs-on: [self-hosted, linux, rocm]
+    timeout-minutes: 60
+    env:
+      BG_REQUIRE_HIP_DEVICE: "1"
+      CUDA_VISIBLE_DEVICES: ""
+      HIP_VISIBLE_DEVICES: "0"
+      ROCR_VISIBLE_DEVICES: "0"
+    steps:
+      - name: Check out trusted native compute sources
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          path: native-hip-ci-checkout
+          persist-credentials: false
+          clean: true
+          fetch-depth: 1
+          sparse-checkout: |
+            CMakeLists.txt
+            LICENSE
+            include
+            native
+            rust
+          show-progress: false
+
+      - name: Detect the runner ROCm toolchain and GPU architecture
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          hipconfig_path="$(command -v hipconfig || true)"
+          if [[ -z "${hipconfig_path}" ]]; then
+            for candidate in /opt/rocm/bin/hipconfig /opt/rocm-*/bin/hipconfig; do
+              if [[ -x "${candidate}" ]]; then
+                hipconfig_path="${candidate}"
+                break
+              fi
+            done
+          fi
+          if [[ ! -x "${hipconfig_path}" ]]; then
+            echo "A ROCm hipconfig executable was not found on the trusted runner" >&2
+            exit 1
+          fi
+
+          rocm_path="$("${hipconfig_path}" --path)"
+          if [[ "${rocm_path}" != /* || ! -d "${rocm_path}" ]]; then
+            echo "hipconfig returned an invalid ROCm path: ${rocm_path}" >&2
+            exit 1
+          fi
+          rocm_path="$(readlink -f "${rocm_path}")"
+          hipcc_path="${rocm_path}/bin/hipcc"
+          hip_compiler="${rocm_path}/llvm/bin/clang++"
+          if [[ ! -x "${hipcc_path}" || ! -x "${hip_compiler}" ]]; then
+            echo "The detected ROCm root lacks hipcc or the HIP clang++ compiler" >&2
+            exit 1
+          fi
+
+          device_lib_path=""
+          clang_resource_dir="$("${hip_compiler}" --print-resource-dir)"
+          for candidate in \
+            "${rocm_path}/amdgcn/bitcode" \
+            "${rocm_path}/lib/llvm/amdgcn/bitcode" \
+            "${clang_resource_dir}/lib/amdgcn" \
+            /usr/lib/x86_64-linux-gnu/amdgcn/bitcode \
+            /usr/lib/amdgcn/bitcode; do
+            if [[ -d "${candidate}" ]] && compgen -G "${candidate}/*.bc" > /dev/null; then
+              device_lib_path="$(readlink -f "${candidate}")"
+              break
+            fi
+          done
+          if [[ -z "${device_lib_path}" ]]; then
+            echo "Matching ROCm device bitcode libraries were not found" >&2
+            exit 1
+          fi
+
+          agent_enumerator="$(command -v rocm_agent_enumerator || true)"
+          if [[ -z "${agent_enumerator}" && -x "${rocm_path}/bin/rocm_agent_enumerator" ]]; then
+            agent_enumerator="${rocm_path}/bin/rocm_agent_enumerator"
+          fi
+          if [[ ! -x "${agent_enumerator}" ]]; then
+            echo "rocm_agent_enumerator was not found on the trusted runner" >&2
+            exit 1
+          fi
+          hip_architecture=""
+          while IFS= read -r candidate; do
+            candidate="${candidate%%:*}"
+            if [[ "${candidate}" =~ ^gfx[0-9a-f]+$ && "${candidate}" != "gfx000" ]]; then
+              hip_architecture="${candidate}"
+              break
+            fi
+          done < <("${agent_enumerator}")
+          if [[ -z "${hip_architecture}" ]]; then
+            echo "No executable AMD GPU architecture was detected" >&2
+            exit 1
+          fi
+
+          {
+            echo "HIP_PATH=${rocm_path}"
+            echo "ROCM_PATH=${rocm_path}"
+            echo "ROCM_DEVICE_LIB_PATH=${device_lib_path}"
+            echo "BG_HIP_ARCHITECTURE=${hip_architecture}"
+            echo "BG_CMAKE_HIP_COMPILER=${hip_compiler}"
+            echo "LD_LIBRARY_PATH=${rocm_path}/lib:${rocm_path}/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+          } >> "${GITHUB_ENV}"
+          {
+            echo "${rocm_path}/bin"
+            echo "${rocm_path}/llvm/bin"
+          } >> "${GITHUB_PATH}"
+
+          "${hipcc_path}" --version
+          echo "ROCm root: ${rocm_path}"
+          echo "ROCm device libraries: ${device_lib_path}"
+          echo "HIP architecture: ${hip_architecture}"
+
+      - name: Build and run required native HIP parity
+        working-directory: native-hip-ci-checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake -S . -B build/native-hip \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=ON \
+            -DBG_ENABLE_HIP=ON \
+            -DCMAKE_HIP_COMPILER="${BG_CMAKE_HIP_COMPILER}" \
+            -DCMAKE_HIP_ARCHITECTURES="${BG_HIP_ARCHITECTURE}" \
+            -DCMAKE_PREFIX_PATH="${ROCM_PATH}" \
+            "-DCMAKE_HIP_FLAGS=--rocm-device-lib-path=${ROCM_DEVICE_LIB_PATH}"
+          cmake --build build/native-hip --parallel 2
+          ctest --test-dir build/native-hip --output-on-failure --no-tests=error
+
+      - name: Run required Rust HIP feature parity
+        working-directory: native-hip-ci-checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo test --manifest-path rust/Cargo.toml \
+            -p betelgeuze-sys --features hip --all-targets --locked
+          cargo test --manifest-path rust/Cargo.toml \
+            -p betelgeuze-runtime --features hip --all-targets --locked
+          cargo clippy --manifest-path rust/Cargo.toml \
+            -p betelgeuze-sys --features hip --all-targets --locked -- \
+            -D warnings
+          cargo clippy --manifest-path rust/Cargo.toml \
+            -p betelgeuze-runtime --features hip --all-targets --locked -- \
+            -D warnings

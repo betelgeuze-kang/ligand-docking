@@ -122,6 +122,7 @@ fn explicit_cpu_context_round_trips_without_fallback() {
 }
 
 #[test]
+#[cfg(not(feature = "hip"))]
 fn explicit_hip_request_is_unavailable_and_never_falls_back_to_cpu() {
     // SAFETY: All outputs point to live writable values. A failed create must
     // leave the output null, so there is no handle to destroy.
@@ -144,6 +145,42 @@ fn explicit_hip_request_is_unavailable_and_never_falls_back_to_cpu() {
             BG_STATUS_BACKEND_UNAVAILABLE
         );
         assert!(context.is_null());
+    }
+}
+
+#[test]
+#[cfg(feature = "hip")]
+fn explicit_hip_request_round_trips_without_cpu_fallback() {
+    // SAFETY: All outputs point to live writable values, and the returned
+    // context is destroyed exactly once after the backend query.
+    unsafe {
+        let mut available = 0_u8;
+        assert_eq!(
+            bg_backend_is_available(BG_BACKEND_HIP, 0, &mut available),
+            BG_STATUS_OK
+        );
+        if available == 0 {
+            assert_ne!(
+                std::env::var("BG_REQUIRE_HIP_DEVICE").as_deref(),
+                Ok("1"),
+                "BG_REQUIRE_HIP_DEVICE=1 but no HIP device is available at ordinal zero"
+            );
+            eprintln!("SKIP: HIP feature was compiled without a visible device zero");
+            return;
+        }
+
+        let mut options = core::mem::MaybeUninit::<bg_context_options>::uninit();
+        assert_eq!(bg_context_options_init(options.as_mut_ptr()), BG_STATUS_OK);
+        let mut options = options.assume_init();
+        options.backend = BG_BACKEND_HIP;
+
+        let mut context = ptr::null_mut();
+        assert_eq!(bg_context_create(&options, &mut context), BG_STATUS_OK);
+        assert!(!context.is_null());
+        let mut backend = BG_BACKEND_AUTO;
+        assert_eq!(bg_context_get_backend(context, &mut backend), BG_STATUS_OK);
+        assert_eq!(backend, BG_BACKEND_HIP);
+        bg_context_destroy(context);
     }
 }
 

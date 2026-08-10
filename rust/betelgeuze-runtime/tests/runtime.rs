@@ -25,11 +25,30 @@ fn explicit_cpu_context_reports_the_selected_backend() {
 }
 
 #[test]
+#[cfg(not(feature = "hip"))]
 fn unavailable_hip_is_not_silently_replaced_with_cpu() {
     assert!(!Context::backend_available(Backend::Hip, 0).unwrap());
     let error = Context::new(ContextOptions::hip(0)).err().unwrap();
     assert_eq!(error.code, ErrorCode::BackendUnavailable);
     assert!(error.message.contains("fallback is forbidden"));
+}
+
+#[test]
+#[cfg(feature = "hip")]
+fn explicit_hip_context_reports_the_selected_device_without_fallback() {
+    if !Context::backend_available(Backend::Hip, 0).unwrap() {
+        assert_ne!(
+            std::env::var("BG_REQUIRE_HIP_DEVICE").as_deref(),
+            Ok("1"),
+            "BG_REQUIRE_HIP_DEVICE=1 but no HIP device is available at ordinal zero"
+        );
+        eprintln!("SKIP: HIP feature was compiled without a visible device zero");
+        return;
+    }
+    let context = Context::new(ContextOptions::hip(0)).unwrap();
+    assert_eq!(context.backend().unwrap(), Backend::Hip);
+    assert_eq!(context.device_ordinal().unwrap(), 0);
+    assert_eq!(context.unit_system().unwrap(), UnitSystem::AngstromKcalMol);
 }
 
 #[test]

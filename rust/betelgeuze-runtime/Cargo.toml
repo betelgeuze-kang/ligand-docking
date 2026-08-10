@@ -6,6 +6,10 @@ rust-version.workspace = true
 license-file.workspace = true
 publish = false
 
+[features]
+default = []
+hip = ["betelgeuze-sys/hip"]
+
 [dependencies]
 betelgeuze-sys = { version = "0.1.0", path = "../betelgeuze-sys" }
 
