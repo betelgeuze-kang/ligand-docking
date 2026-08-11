@@ -309,17 +309,16 @@ fn explicit_rust_cpu_context_round_trips_without_cpp_fallback() {
 }
 
 #[test]
-#[cfg(not(feature = "hip"))]
-fn explicit_hip_request_is_unavailable_and_never_falls_back_to_cpu() {
-    // SAFETY: All outputs point to live writable values. A failed create must
-    // leave the output null, so there is no handle to destroy.
+fn explicit_hip_safe_request_never_falls_back_to_cpu() {
+    // SAFETY: All outputs point to live writable values. A successful context
+    // is queried and destroyed exactly once; a failed create leaves it null.
     unsafe {
-        let mut available = 1_u8;
+        let mut available = 0_u8;
         assert_eq!(
-            bg_backend_is_available(BG_BACKEND_HIP, 0, &mut available),
+            bg_backend_is_available(BG_BACKEND_HIP_SAFE, 0, &mut available),
             BG_STATUS_OK
         );
-        assert_eq!(available, 0);
+        let hip_safe_available = available == 1;
 
         let mut options = core::mem::MaybeUninit::<bg_context_options>::uninit();
         assert_eq!(
@@ -327,14 +326,30 @@ fn explicit_hip_request_is_unavailable_and_never_falls_back_to_cpu() {
             BG_STATUS_OK
         );
         let mut options = options.assume_init();
-        options.backend = BG_BACKEND_HIP;
+        options.backend = BG_BACKEND_HIP_SAFE;
 
-        let mut context = ptr::dangling_mut::<bg_context>();
-        assert_eq!(
-            bg_context_create(&options, &mut context),
-            BG_STATUS_BACKEND_UNAVAILABLE
-        );
-        assert!(context.is_null());
+        let mut context = ptr::null_mut::<bg_context>();
+        let status = bg_context_create(&options, &mut context);
+        if hip_safe_available {
+            assert_eq!(status, BG_STATUS_OK);
+            assert!(!context.is_null());
+            let mut selected = BG_BACKEND_AUTO;
+            assert_eq!(bg_context_get_backend(context, &mut selected), BG_STATUS_OK);
+            assert_eq!(selected, BG_BACKEND_HIP_SAFE);
+            bg_context_destroy(context);
+        } else {
+            assert_eq!(status, BG_STATUS_BACKEND_UNAVAILABLE);
+            assert!(context.is_null());
+        }
+
+        #[cfg(not(feature = "hip"))]
+        {
+            assert_eq!(
+                bg_backend_is_available(BG_BACKEND_HIP_FAST, 0, &mut available),
+                BG_STATUS_OK
+            );
+            assert_eq!(available, 0);
+        }
     }
 }
 

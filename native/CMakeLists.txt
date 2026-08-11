@@ -10,6 +10,7 @@ add_library(betelgeuze_engine SHARED
     src/forcefield.cpp
     src/system.cpp
     src/cpu/evaluator.cpp
+    src/hip/evaluator.cpp
     src/rust/evaluator.cpp
     src/dynamics/api.cpp
     src/dynamics/checkpoint.cpp
@@ -63,6 +64,187 @@ add_dependencies(
 )
 add_dependencies(betelgeuze_engine betelgeuze_rust_cpu_provider_build)
 target_link_libraries(betelgeuze_engine PRIVATE betelgeuze_rust_cpu_provider)
+
+set(BG_ENABLE_HIP_SAFE "AUTO" CACHE STRING
+    "Build the deterministic HIP provider: AUTO, ON, or OFF")
+set_property(CACHE BG_ENABLE_HIP_SAFE PROPERTY STRINGS AUTO ON OFF)
+set(BG_HIP_SAFE_ARCHITECTURES "gfx1030" CACHE STRING
+    "Semicolon-separated AMD GPU targets compiled into hip_safe")
+set(BG_HIP_DEVICE_LIB_PATH "" CACHE PATH
+    "ROCm device-library bitcode directory used by hip_safe")
+string(TOUPPER "${BG_ENABLE_HIP_SAFE}" BG_ENABLE_HIP_SAFE_NORMALIZED)
+if(NOT BG_ENABLE_HIP_SAFE_NORMALIZED MATCHES "^(AUTO|ON|OFF)$")
+    message(FATAL_ERROR "BG_ENABLE_HIP_SAFE must be AUTO, ON, or OFF")
+endif()
+
+set(_BG_ROCM_HINTS)
+if(DEFINED ENV{ROCM_PATH} AND NOT "$ENV{ROCM_PATH}" STREQUAL "")
+    list(APPEND _BG_ROCM_HINTS "$ENV{ROCM_PATH}")
+endif()
+if(DEFINED ENV{HIP_PATH} AND NOT "$ENV{HIP_PATH}" STREQUAL "")
+    list(APPEND _BG_ROCM_HINTS "$ENV{HIP_PATH}")
+endif()
+list(APPEND _BG_ROCM_HINTS "/opt/rocm")
+set(_BG_HIPCC_HINTS)
+set(_BG_HIP_LIBRARY_HINTS)
+foreach(_BG_ROCM_HINT IN LISTS _BG_ROCM_HINTS)
+    list(APPEND _BG_HIPCC_HINTS "${_BG_ROCM_HINT}/bin")
+    list(APPEND _BG_HIP_LIBRARY_HINTS
+        "${_BG_ROCM_HINT}/lib"
+        "${_BG_ROCM_HINT}/lib64")
+endforeach()
+find_program(BG_HIPCC_EXECUTABLE NAMES hipcc HINTS ${_BG_HIPCC_HINTS})
+find_library(BG_AMDHIP64_LIBRARY NAMES amdhip64 HINTS ${_BG_HIP_LIBRARY_HINTS})
+
+if(BG_HIPCC_EXECUTABLE)
+    get_filename_component(_BG_HIPCC_BIN_DIR
+        "${BG_HIPCC_EXECUTABLE}" DIRECTORY)
+    get_filename_component(BG_HIP_ROCM_ROOT
+        "${_BG_HIPCC_BIN_DIR}" DIRECTORY)
+endif()
+set(BG_HIP_SAFE_ROCM_RELEASE_MATCH FALSE)
+if(BG_HIP_ROCM_ROOT AND
+   EXISTS "${BG_HIP_ROCM_ROOT}/.info/version")
+    file(READ "${BG_HIP_ROCM_ROOT}/.info/version"
+        BG_HIP_ROCM_RELEASE_OBSERVED)
+    string(STRIP "${BG_HIP_ROCM_RELEASE_OBSERVED}"
+        BG_HIP_ROCM_RELEASE_OBSERVED)
+    if(BG_HIP_ROCM_RELEASE_OBSERVED MATCHES "^6\\.0\\.2-")
+        set(BG_HIP_SAFE_ROCM_RELEASE_MATCH TRUE)
+    endif()
+endif()
+if(NOT BG_HIP_DEVICE_LIB_PATH STREQUAL "" AND
+   NOT IS_ABSOLUTE "${BG_HIP_DEVICE_LIB_PATH}")
+    message(FATAL_ERROR "BG_HIP_DEVICE_LIB_PATH must be absolute")
+endif()
+if(NOT BG_HIP_DEVICE_LIB_PATH STREQUAL "" AND
+   EXISTS "${BG_HIP_DEVICE_LIB_PATH}")
+    file(REAL_PATH "${BG_HIP_DEVICE_LIB_PATH}"
+        BG_HIP_DEVICE_LIB_PATH_REAL)
+    file(REAL_PATH "${PROJECT_SOURCE_DIR}/third_party"
+        BG_LEGACY_THIRD_PARTY_ROOT_REAL)
+    string(FIND
+        "${BG_HIP_DEVICE_LIB_PATH_REAL}/"
+        "${BG_LEGACY_THIRD_PARTY_ROOT_REAL}/"
+        BG_HIP_DEVICE_LIB_LEGACY_PREFIX)
+    if(BG_HIP_DEVICE_LIB_LEGACY_PREFIX EQUAL 0)
+        message(FATAL_ERROR
+            "hip_safe rejects repository legacy ROCm device libraries")
+    endif()
+endif()
+if(BG_HIP_DEVICE_LIB_PATH STREQUAL "" AND BG_HIP_ROCM_ROOT)
+    file(GLOB _BG_HIP_DEVICE_LIB_CANDIDATES LIST_DIRECTORIES TRUE
+        "${BG_HIP_ROCM_ROOT}/lib/llvm/lib/clang/*/lib/amdgcn"
+        "${BG_HIP_ROCM_ROOT}/amdgcn/bitcode")
+    foreach(_BG_HIP_DEVICE_LIB_CANDIDATE
+            IN LISTS _BG_HIP_DEVICE_LIB_CANDIDATES)
+        if(EXISTS "${_BG_HIP_DEVICE_LIB_CANDIDATE}/ocml.bc" AND
+           EXISTS "${_BG_HIP_DEVICE_LIB_CANDIDATE}/ockl.bc")
+            set(BG_HIP_DEVICE_LIB_PATH
+                "${_BG_HIP_DEVICE_LIB_CANDIDATE}")
+            break()
+        endif()
+    endforeach()
+endif()
+set(BG_HIP_DEVICE_LIBS_FOUND FALSE)
+if(NOT BG_HIP_DEVICE_LIB_PATH STREQUAL "" AND
+   EXISTS "${BG_HIP_DEVICE_LIB_PATH}/ocml.bc" AND
+   EXISTS "${BG_HIP_DEVICE_LIB_PATH}/ockl.bc")
+    set(BG_HIP_DEVICE_LIBS_FOUND TRUE)
+endif()
+
+set(BG_HIP_SAFE_COMPILED FALSE)
+if(NOT BG_ENABLE_HIP_SAFE_NORMALIZED STREQUAL "OFF" AND
+   BG_HIPCC_EXECUTABLE AND BG_AMDHIP64_LIBRARY AND
+   BG_HIP_DEVICE_LIBS_FOUND AND BG_HIP_SAFE_ROCM_RELEASE_MATCH)
+    set(BG_HIP_SAFE_COMPILED TRUE)
+elseif(BG_ENABLE_HIP_SAFE_NORMALIZED STREQUAL "ON")
+    message(FATAL_ERROR
+        "BG_ENABLE_HIP_SAFE=ON requires ROCm 6.0.2, hipcc, libamdhip64, and matching ROCm device libraries")
+endif()
+
+if(BG_HIP_SAFE_COMPILED)
+    if(BG_HIP_SAFE_ARCHITECTURES STREQUAL "")
+        message(FATAL_ERROR
+            "BG_HIP_SAFE_ARCHITECTURES must identify at least one GPU target")
+    endif()
+    set(BG_HIP_SAFE_ARCH_FLAGS)
+    foreach(BG_HIP_SAFE_ARCH IN LISTS BG_HIP_SAFE_ARCHITECTURES)
+        if(NOT BG_HIP_SAFE_ARCH MATCHES "^gfx[0-9A-Za-z_]+$")
+            message(FATAL_ERROR
+                "hip_safe architecture identifiers must match gfx[0-9A-Za-z_]+")
+        endif()
+        list(APPEND BG_HIP_SAFE_ARCH_FLAGS
+            "--offload-arch=${BG_HIP_SAFE_ARCH}")
+    endforeach()
+    string(REPLACE ";" "," BG_HIP_SAFE_ARCHITECTURES_CSV
+        "${BG_HIP_SAFE_ARCHITECTURES}")
+    set(BG_HIP_SAFE_OBJECT
+        "${CMAKE_CURRENT_BINARY_DIR}/hip-safe-provider.o")
+    set(BG_HIP_SAFE_STATIC_LIBRARY
+        "${CMAKE_CURRENT_BINARY_DIR}/libbetelgeuze_hip_safe_provider.a")
+    add_custom_command(
+        OUTPUT "${BG_HIP_SAFE_OBJECT}"
+        COMMAND ${BG_HIPCC_EXECUTABLE}
+            -c "${CMAKE_CURRENT_SOURCE_DIR}/src/hip/provider.hip"
+            -o "${BG_HIP_SAFE_OBJECT}"
+            -std=c++17
+            -O2
+            -fPIC
+            -fno-fast-math
+            -ffp-contract=off
+            -Wall
+            -Wextra
+            -Wpedantic
+            -Werror
+            ${BG_HIP_SAFE_ARCH_FLAGS}
+            "-DBG_HIP_SAFE_QUALIFIED_ARCHITECTURES=\"${BG_HIP_SAFE_ARCHITECTURES_CSV}\""
+            "--rocm-path=${BG_HIP_ROCM_ROOT}"
+            "--rocm-device-lib-path=${BG_HIP_DEVICE_LIB_PATH}"
+            "-I${PROJECT_SOURCE_DIR}/include"
+            "-I${CMAKE_CURRENT_SOURCE_DIR}/src/hip"
+        DEPENDS
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/hip/provider.hip"
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/hip/provider.h"
+            "${PROJECT_SOURCE_DIR}/include/betelgeuze/engine.h"
+        COMMENT "Building deterministic hip_safe provider"
+        VERBATIM
+    )
+    add_custom_command(
+        OUTPUT "${BG_HIP_SAFE_STATIC_LIBRARY}"
+        COMMAND ${CMAKE_AR} rcs
+            "${BG_HIP_SAFE_STATIC_LIBRARY}"
+            "${BG_HIP_SAFE_OBJECT}"
+        DEPENDS "${BG_HIP_SAFE_OBJECT}"
+        COMMENT "Archiving deterministic hip_safe provider"
+        VERBATIM
+    )
+    add_custom_target(
+        betelgeuze_hip_safe_provider_build
+        DEPENDS "${BG_HIP_SAFE_STATIC_LIBRARY}"
+    )
+    add_library(betelgeuze_hip_safe_provider STATIC IMPORTED GLOBAL)
+    set_target_properties(betelgeuze_hip_safe_provider PROPERTIES
+        IMPORTED_LOCATION "${BG_HIP_SAFE_STATIC_LIBRARY}"
+    )
+    add_dependencies(
+        betelgeuze_hip_safe_provider
+        betelgeuze_hip_safe_provider_build
+    )
+    add_dependencies(betelgeuze_engine betelgeuze_hip_safe_provider_build)
+    target_compile_definitions(
+        betelgeuze_engine PRIVATE BG_HAS_HIP_SAFE_PROVIDER=1)
+    target_link_libraries(
+        betelgeuze_engine
+        PRIVATE betelgeuze_hip_safe_provider "${BG_AMDHIP64_LIBRARY}")
+    message(STATUS
+        "hip_safe enabled for architectures: ${BG_HIP_SAFE_ARCHITECTURES}")
+else()
+    target_compile_definitions(
+        betelgeuze_engine PRIVATE BG_HAS_HIP_SAFE_PROVIDER=0)
+    message(STATUS "hip_safe disabled; fail-closed stub will be linked")
+endif()
+
 if(UNIX)
     find_package(Threads REQUIRED)
     target_link_libraries(
@@ -332,11 +514,19 @@ if(BUILD_TESTING)
                 src/forcefield.cpp
                 src/system.cpp
                 src/cpu/evaluator.cpp
+                src/hip/evaluator.cpp
                 src/hip/backend.hip
+                src/rust/evaluator.cpp
             )
             target_compile_definitions(
                 ${BG_HIP_INTERNAL_TARGET}
-                PRIVATE BG_ENABLE_HIP=1
+                PRIVATE
+                    BG_ENABLE_HIP=1
+                    BG_HAS_HIP_SAFE_PROVIDER=0
+            )
+            target_link_libraries(
+                ${BG_HIP_INTERNAL_TARGET}
+                PRIVATE betelgeuze_rust_cpu_provider
             )
             target_include_directories(
                 ${BG_HIP_INTERNAL_TARGET}

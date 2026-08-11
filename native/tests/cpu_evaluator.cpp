@@ -404,6 +404,47 @@ void require_evaluation_bitwise_equal(
     }
 }
 
+void require_evaluation_near(
+    const Evaluation &actual,
+    const Evaluation &expected,
+    double absolute_tolerance,
+    double relative_tolerance,
+    const char *message) {
+    const auto actual_energy = energy_values(actual.energy);
+    const auto expected_energy = energy_values(expected.energy);
+    for (std::size_t index = 0; index < actual_energy.size(); ++index) {
+        require_near(
+            actual_energy[index],
+            expected_energy[index],
+            absolute_tolerance,
+            relative_tolerance,
+            message);
+    }
+    require(actual.force_x.size() == expected.force_x.size(), message);
+    require(actual.force_y.size() == expected.force_y.size(), message);
+    require(actual.force_z.size() == expected.force_z.size(), message);
+    for (std::size_t atom = 0; atom < actual.force_x.size(); ++atom) {
+        require_near(
+            actual.force_x[atom],
+            expected.force_x[atom],
+            absolute_tolerance,
+            relative_tolerance,
+            message);
+        require_near(
+            actual.force_y[atom],
+            expected.force_y[atom],
+            absolute_tolerance,
+            relative_tolerance,
+            message);
+        require_near(
+            actual.force_z[atom],
+            expected.force_z[atom],
+            absolute_tolerance,
+            relative_tolerance,
+            message);
+    }
+}
+
 void set_energy_sentinel(bg_energy_components_v1 *energy) {
     require_status(
         bg_energy_components_v1_init(energy),
@@ -577,7 +618,7 @@ void test_exact_lennard_jones(const bg_context *context) {
     require_exact(result.force_x[1], -expected_force, "opposite LJ force differed");
 }
 
-void test_combined_finite_difference_and_determinism(
+Evaluation test_combined_finite_difference_and_determinism(
     const bg_context *context) {
     ParticleData particles{
         {-1.1, 0.0, 1.2, 2.0},
@@ -699,6 +740,7 @@ void test_combined_finite_difference_and_determinism(
         restored,
         baseline,
         "restoring coordinates did not restore bitwise outputs");
+    return baseline;
 }
 
 void test_periodic_image_parity(const bg_context *context) {
@@ -1214,14 +1256,39 @@ void test_numerical_failures_are_transactional(const bg_context *context) {
 
 int main() {
     test_descriptor_and_count_failures();
-    for (const bg_backend backend : {
-             BG_BACKEND_CPP_CPU_REFERENCE,
-             BG_BACKEND_RUST_CPU,
-         }) {
+    std::vector<bg_backend> backends{
+        BG_BACKEND_CPP_CPU_REFERENCE,
+        BG_BACKEND_RUST_CPU,
+    };
+    uint8_t hip_safe_available = UINT8_C(0);
+    require_status(
+        bg_backend_is_available(
+            BG_BACKEND_HIP_SAFE, 0, &hip_safe_available),
+        BG_STATUS_OK,
+        "hip_safe availability query failed");
+    if (hip_safe_available == UINT8_C(1)) {
+        backends.push_back(BG_BACKEND_HIP_SAFE);
+    }
+    Evaluation cpp_reference_combined;
+    bool has_cpp_reference_combined = false;
+    for (const bg_backend backend : backends) {
         const ContextPtr context = make_cpu_context(backend);
         test_descriptor_initializers_and_exact_bond(context.get());
         test_exact_lennard_jones(context.get());
-        test_combined_finite_difference_and_determinism(context.get());
+        const Evaluation combined =
+            test_combined_finite_difference_and_determinism(context.get());
+        if (backend == BG_BACKEND_CPP_CPU_REFERENCE) {
+            cpp_reference_combined = combined;
+            has_cpp_reference_combined = true;
+        } else {
+            require(has_cpp_reference_combined, "C++ parity baseline is absent");
+            require_evaluation_near(
+                combined,
+                cpp_reference_combined,
+                2.0e-12,
+                2.0e-12,
+                "native backend exceeded the frozen safe parity tolerance");
+        }
         test_periodic_image_parity(context.get());
         test_excluded_coincident_pair(context.get());
         test_output_validation_and_transactionality(context.get());

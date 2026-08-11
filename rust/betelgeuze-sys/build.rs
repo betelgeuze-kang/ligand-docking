@@ -1,5 +1,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
+
+const QUALIFIED_ROCM_RELEASE_PREFIX: &str = "6.0.2-";
 
 const VENDORED_FILES: &[&str] = &[
     "include/betelgeuze/engine.h",
@@ -20,6 +23,10 @@ const VENDORED_FILES: &[&str] = &[
     "native/src/dynamics/integrator.cpp",
     "native/src/dynamics/sha256.hpp",
     "native/src/dynamics/sha256.cpp",
+    "native/src/hip/provider.h",
+    "native/src/hip/provider.hip",
+    "native/src/hip/evaluator.hpp",
+    "native/src/hip/evaluator.cpp",
     "native/src/hip/backend.hpp",
     "native/src/hip/backend.hip",
     "native/src/hip/planning.hpp",
@@ -73,6 +80,144 @@ fn verify_workspace_vendor(manifest_dir: &Path) {
     }
 }
 
+struct HipSafeLink {
+    output_dir: PathBuf,
+    rocm_root: PathBuf,
+}
+
+fn required_env_path(name: &str) -> PathBuf {
+    let value = std::env::var_os(name).unwrap_or_else(|| panic!("{name} must be set"));
+    let path = PathBuf::from(value);
+    assert!(path.is_absolute(), "{name} must be an absolute path");
+    path
+}
+
+fn build_hip_safe_provider(
+    manifest_dir: &Path,
+    include_dir: &Path,
+    provider_source: &Path,
+) -> Option<HipSafeLink> {
+    println!("cargo:rerun-if-env-changed=BETELGEUZE_HIP_SAFE");
+    println!("cargo:rerun-if-env-changed=ROCM_PATH");
+    println!("cargo:rerun-if-env-changed=HIP_PATH");
+    println!("cargo:rerun-if-env-changed=BG_HIP_SAFE_ARCHITECTURES");
+    println!("cargo:rerun-if-env-changed=BG_HIP_DEVICE_LIB_PATH");
+    let enabled = match std::env::var("BETELGEUZE_HIP_SAFE") {
+        Err(std::env::VarError::NotPresent) => false,
+        Ok(value) if value == "0" => false,
+        Ok(value) if value == "1" => true,
+        Ok(_) | Err(std::env::VarError::NotUnicode(_)) => {
+            panic!("BETELGEUZE_HIP_SAFE must be exactly 0 or 1")
+        }
+    };
+    if !enabled {
+        return None;
+    }
+
+    let rocm_root = std::env::var_os("ROCM_PATH")
+        .or_else(|| std::env::var_os("HIP_PATH"))
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("/opt/rocm"));
+    assert!(rocm_root.is_absolute(), "ROCM_PATH must be absolute");
+    let release = std::fs::read_to_string(rocm_root.join(".info/version"))
+        .expect("ROCM_PATH must contain .info/version");
+    assert!(
+        release.trim().starts_with(QUALIFIED_ROCM_RELEASE_PREFIX),
+        "hip_safe is qualified only for ROCm 6.0.2"
+    );
+    let hipcc = rocm_root.join("bin/hipcc");
+    assert!(hipcc.is_file(), "hipcc is absent at {}", hipcc.display());
+    let device_lib_path = required_env_path("BG_HIP_DEVICE_LIB_PATH")
+        .canonicalize()
+        .expect("BG_HIP_DEVICE_LIB_PATH must resolve");
+    if let Ok(legacy_root) = manifest_dir.join("../../third_party").canonicalize() {
+        assert!(
+            !device_lib_path.starts_with(&legacy_root),
+            "hip_safe rejects repository legacy ROCm device libraries"
+        );
+    }
+    assert!(
+        device_lib_path.join("ocml.bc").is_file() && device_lib_path.join("ockl.bc").is_file(),
+        "BG_HIP_DEVICE_LIB_PATH lacks ocml.bc or ockl.bc"
+    );
+    let architecture_source =
+        std::env::var("BG_HIP_SAFE_ARCHITECTURES").unwrap_or_else(|_| "gfx1030".to_owned());
+    let architectures: Vec<&str> = architecture_source
+        .split([',', ';'])
+        .filter(|value| !value.is_empty())
+        .collect();
+    assert!(!architectures.is_empty(), "HIP architecture set is empty");
+    assert!(
+        architectures.iter().all(|value| {
+            value.starts_with("gfx")
+                && value.len() > 3
+                && value
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+        }),
+        "HIP architectures must start with gfx and contain only ASCII alphanumeric characters and underscore"
+    );
+    let architecture_csv = architectures.join(",");
+    let output_dir = PathBuf::from(std::env::var_os("OUT_DIR").expect("OUT_DIR is set by Cargo"));
+    let object = output_dir.join("hip_safe_provider.o");
+    let archive = output_dir.join("libbetelgeuze_hip_safe_provider.a");
+
+    let mut compiler = Command::new(&hipcc);
+    compiler
+        .arg("-c")
+        .arg(provider_source)
+        .arg("-o")
+        .arg(&object)
+        .args([
+            "-std=c++17",
+            "-O2",
+            "-fPIC",
+            "-fno-fast-math",
+            "-ffp-contract=off",
+            "-Wall",
+            "-Wextra",
+            "-Wpedantic",
+            "-Werror",
+        ])
+        .arg(format!(
+            "-DBG_HIP_SAFE_QUALIFIED_ARCHITECTURES=\"{architecture_csv}\""
+        ))
+        .arg(format!("--rocm-path={}", rocm_root.display()))
+        .arg(format!(
+            "--rocm-device-lib-path={}",
+            device_lib_path.display()
+        ))
+        .arg(format!("-I{}", include_dir.display()))
+        .arg(format!(
+            "-I{}",
+            provider_source
+                .parent()
+                .expect("hip_safe provider source has a parent")
+                .display()
+        ));
+    for architecture in &architectures {
+        compiler.arg(format!("--offload-arch={architecture}"));
+    }
+    let compile_status = compiler.status().expect("hipcc must launch");
+    assert!(
+        compile_status.success(),
+        "hip_safe provider compilation failed"
+    );
+
+    let archiver = std::env::var_os("AR").unwrap_or_else(|| "ar".into());
+    let archive_status = Command::new(archiver)
+        .arg("rcs")
+        .arg(&archive)
+        .arg(&object)
+        .status()
+        .expect("HIP provider archiver must launch");
+    assert!(archive_status.success(), "hip_safe provider archive failed");
+    Some(HipSafeLink {
+        output_dir,
+        rocm_root,
+    })
+}
+
 fn main() {
     let manifest_dir = PathBuf::from(
         std::env::var_os("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR is set by Cargo"),
@@ -102,6 +247,8 @@ fn main() {
     let dynamics_common_source = vendor_root.join("native/src/dynamics/common.cpp");
     let dynamics_integrator_source = vendor_root.join("native/src/dynamics/integrator.cpp");
     let dynamics_sha256_source = vendor_root.join("native/src/dynamics/sha256.cpp");
+    let hip_provider_source = vendor_root.join("native/src/hip/provider.hip");
+    let hip_evaluator_source = vendor_root.join("native/src/hip/evaluator.cpp");
     let hip_backend_source = vendor_root.join("native/src/hip/backend.hip");
     let hip_stub_source = vendor_root.join("native/src/hip/stub.cpp");
     let c_header_probe = manifest_dir.join("abi/header_c11.c");
@@ -109,6 +256,7 @@ fn main() {
     track(&c_header_probe);
     track(&cpp_layout_probe);
 
+    let hip_safe_link = build_hip_safe_provider(&manifest_dir, &include_dir, &hip_provider_source);
     let mut native_build = cc::Build::new();
     native_build
         .cpp(true)
@@ -119,6 +267,11 @@ fn main() {
         .file(&forcefield_source)
         .file(&system_source)
         .file(&cpu_evaluator_source)
+        .define(
+            "BG_HAS_HIP_SAFE_PROVIDER",
+            if hip_safe_link.is_some() { "1" } else { "0" },
+        )
+        .file(&hip_evaluator_source)
         .file(&rust_evaluator_source)
         .file(&dynamics_api_source)
         .file(&dynamics_checkpoint_source)
@@ -192,6 +345,22 @@ fn main() {
             .flag_if_supported("-fno-fast-math");
     }
     native_build.compile("betelgeuze_engine");
+    if let Some(link) = hip_safe_link {
+        println!(
+            "cargo:rustc-link-search=native={}",
+            link.output_dir.display()
+        );
+        println!("cargo:rustc-link-lib=static=betelgeuze_hip_safe_provider");
+        println!(
+            "cargo:rustc-link-search=native={}/lib",
+            link.rocm_root.display()
+        );
+        println!(
+            "cargo:rustc-link-search=native={}/lib64",
+            link.rocm_root.display()
+        );
+        println!("cargo:rustc-link-lib=dylib=amdhip64");
+    }
 
     cc::Build::new()
         .include(&include_dir)
