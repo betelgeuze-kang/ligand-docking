@@ -142,6 +142,61 @@ impl NativeFixed64ValidityConfig {
     }
 
     #[must_use]
+    pub const fn bond_length_tolerance_angstrom(&self) -> f64 {
+        self.bond_length_tolerance_angstrom
+    }
+
+    #[must_use]
+    pub const fn ligand_self_clash_angstrom(&self) -> f64 {
+        self.ligand_self_clash_angstrom
+    }
+
+    #[must_use]
+    pub const fn receptor_ligand_clash_angstrom(&self) -> f64 {
+        self.receptor_ligand_clash_angstrom
+    }
+
+    #[must_use]
+    pub const fn rotation_tolerance(&self) -> f64 {
+        self.rotation_tolerance
+    }
+
+    #[must_use]
+    pub const fn chirality_volume_tolerance(&self) -> f64 {
+        self.chirality_volume_tolerance
+    }
+
+    #[must_use]
+    pub const fn severe_overlap_scale(&self) -> f64 {
+        self.severe_overlap_scale
+    }
+
+    #[must_use]
+    pub const fn contact_cell_size_angstrom(&self) -> f64 {
+        self.contact_cell_size_angstrom
+    }
+
+    #[must_use]
+    pub const fn max_pair_checks(&self) -> usize {
+        self.max_pair_checks
+    }
+
+    #[must_use]
+    pub const fn max_cross_checks(&self) -> usize {
+        self.max_cross_checks
+    }
+
+    #[must_use]
+    pub const fn max_element_ligand_pair_checks(&self) -> usize {
+        self.max_element_ligand_pair_checks
+    }
+
+    #[must_use]
+    pub const fn max_element_receptor_candidate_pairs(&self) -> usize {
+        self.max_element_receptor_candidate_pairs
+    }
+
+    #[must_use]
     pub fn has_valid_receipt(&self) -> bool {
         validate_config(self).is_ok() && config_sha256(self) == self.receipt_sha256
     }
@@ -272,8 +327,78 @@ impl NativeFixed64ValidityContext {
     }
 
     #[must_use]
+    pub const fn authority_input_receipt_sha256(&self) -> [u8; 32] {
+        self.authority_input_receipt_sha256
+    }
+
+    #[must_use]
+    pub const fn receptor_system_sha256(&self) -> [u8; 32] {
+        self.receptor_system_sha256
+    }
+
+    #[must_use]
+    pub const fn ligand_system_sha256(&self) -> [u8; 32] {
+        self.ligand_system_sha256
+    }
+
+    #[must_use]
     pub const fn scorer_context_receipt_sha256(&self) -> [u8; 32] {
         self.scorer_context_receipt_sha256
+    }
+
+    #[must_use]
+    pub const fn backend_receipt_sha256(&self) -> [u8; 32] {
+        self.backend_receipt_sha256
+    }
+
+    #[must_use]
+    pub const fn contact_policy_sha256(&self) -> [u8; 32] {
+        self.contact_policy_sha256
+    }
+
+    #[must_use]
+    pub fn reference_coordinates_angstrom(&self) -> &[Vec3] {
+        &self.reference_coordinates_angstrom
+    }
+
+    #[must_use]
+    pub fn receptor_coordinates_angstrom(&self) -> &[Vec3] {
+        &self.receptor_coordinates_angstrom
+    }
+
+    #[must_use]
+    pub fn ligand_vdw_radii_angstrom(&self) -> &[f64] {
+        &self.ligand_vdw_radii_angstrom
+    }
+
+    #[must_use]
+    pub fn receptor_vdw_radii_angstrom(&self) -> &[f64] {
+        &self.receptor_vdw_radii_angstrom
+    }
+
+    #[must_use]
+    pub fn bond_pairs(&self) -> &[[usize; 2]] {
+        &self.bond_pairs
+    }
+
+    #[must_use]
+    pub fn excluded_nonbonded_pairs(&self) -> &[[usize; 2]] {
+        &self.excluded_nonbonded_pairs
+    }
+
+    #[must_use]
+    pub fn chirality_centers(&self) -> &[[usize; 4]] {
+        &self.chirality_centers
+    }
+
+    #[must_use]
+    pub const fn pocket_center_angstrom(&self) -> Vec3 {
+        self.pocket_center_angstrom
+    }
+
+    #[must_use]
+    pub const fn pocket_radius_angstrom(&self) -> f64 {
+        self.pocket_radius_angstrom
     }
 
     #[must_use]
@@ -297,6 +422,59 @@ impl NativeFixed64ValidityContext {
                     .map(|pair| (pair[0], pair[1]))
                     .collect()
             && context_sha256(self) == self.receipt_sha256
+    }
+
+    pub fn evaluate_coordinates(
+        &self,
+        coordinates_angstrom: &[Vec3],
+        quaternion: Quaternion,
+    ) -> Result<NativeFixed64ValidityKernelOutcome, NativeFixed64ValidityError> {
+        Ok(self
+            .prepare_rust_cpu_kernel()?
+            .evaluate_coordinates(coordinates_angstrom, quaternion))
+    }
+
+    pub fn prepare_rust_cpu_kernel(
+        &self,
+    ) -> Result<NativeFixed64ValidityRustCpuKernel<'_>, NativeFixed64ValidityError> {
+        if !self.has_valid_receipt() {
+            return Err(context_error("pose validity context receipt is invalid"));
+        }
+        if self.backend != NativeFixed64ValidityBackend::RustCpu {
+            return Err(cross_wired(
+                "Rust pose validity kernel cannot claim an unexecuted backend",
+            ));
+        }
+        Ok(NativeFixed64ValidityRustCpuKernel { context: self })
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct NativeFixed64ValidityRustCpuKernel<'context> {
+    context: &'context NativeFixed64ValidityContext,
+}
+
+impl NativeFixed64ValidityRustCpuKernel<'_> {
+    #[must_use]
+    pub fn evaluate_coordinates(
+        &self,
+        coordinates_angstrom: &[Vec3],
+        quaternion: Quaternion,
+    ) -> NativeFixed64ValidityKernelOutcome {
+        match evaluate_candidate(coordinates_angstrom, quaternion, self.context) {
+            Ok((checks, measurements)) => NativeFixed64ValidityKernelOutcome::Evaluated {
+                checks,
+                measurements,
+            },
+            Err((failure_code, observed_count)) => {
+                NativeFixed64ValidityKernelOutcome::TypedFailure(
+                    NativeFixed64ValidityKernelFailure {
+                        failure_code,
+                        observed_count,
+                    },
+                )
+            }
+        }
     }
 }
 
@@ -694,6 +872,33 @@ impl NativeFixed64ValidityFailureCode {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct NativeFixed64ValidityKernelFailure {
+    failure_code: NativeFixed64ValidityFailureCode,
+    observed_count: usize,
+}
+
+impl NativeFixed64ValidityKernelFailure {
+    #[must_use]
+    pub const fn failure_code(self) -> NativeFixed64ValidityFailureCode {
+        self.failure_code
+    }
+
+    #[must_use]
+    pub const fn observed_count(self) -> usize {
+        self.observed_count
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum NativeFixed64ValidityKernelOutcome {
+    Evaluated {
+        checks: NativeFixed64ValidityChecks,
+        measurements: NativeFixed64ValidityMeasurements,
+    },
+    TypedFailure(NativeFixed64ValidityKernelFailure),
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NativeFixed64ValidityFailure {
     proposal_record_receipt_sha256: [u8; 32],
@@ -1084,6 +1289,7 @@ fn build_rows(
     scorer_batch: &NativeScorerV1Batch,
     context: &NativeFixed64ValidityContext,
 ) -> Result<Box<[NativeFixed64ValidityRow; FIXED64_CANDIDATE_COUNT]>, NativeFixed64ValidityError> {
+    let kernel = context.prepare_rust_cpu_kernel()?;
     let proposals = scorer_batch
         .admission()
         .proposal_batch()
@@ -1119,8 +1325,11 @@ fn build_rows(
             .placement()
             .map(placement_quaternion)
             .ok_or_else(|| cross_wired("scored row lacks placement evidence"))?;
-        match evaluate_candidate(coordinates, quaternion, context) {
-            Ok((checks, measurements)) => rows.push(result_row(
+        match kernel.evaluate_coordinates(coordinates, quaternion) {
+            NativeFixed64ValidityKernelOutcome::Evaluated {
+                checks,
+                measurements,
+            } => rows.push(result_row(
                 slot_index,
                 proposal.receipt_sha256(),
                 scorer_row.receipt_sha256(),
@@ -1130,14 +1339,14 @@ fn build_rows(
                 measurements,
                 context,
             )),
-            Err(failure) => rows.push(failure_row(
+            NativeFixed64ValidityKernelOutcome::TypedFailure(failure) => rows.push(failure_row(
                 slot_index,
                 proposal.receipt_sha256(),
                 scorer_row.receipt_sha256(),
                 NativeFixed64ValidityRowStatus::TypedFailure,
-                failure.0,
+                failure.failure_code(),
                 None,
-                failure.1,
+                failure.observed_count(),
             )),
         }
     }

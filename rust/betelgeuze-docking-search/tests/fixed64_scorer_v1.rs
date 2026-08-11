@@ -8,9 +8,10 @@ use betelgeuze_docking_search::{
     Fixed64ProposalFailureCode, Fixed64ProposalSourceBundle, NativeFixed64Consumer,
     NativeFixed64PipelineStage, NativeFixed64ValidityBackend, NativeFixed64ValidityConfig,
     NativeFixed64ValidityContext, NativeFixed64ValidityErrorCode, NativeFixed64ValidityFailureCode,
-    NativeFixed64ValidityRowStatus, NativeScorerV1Atom, NativeScorerV1Backend,
-    NativeScorerV1Config, NativeScorerV1Context, NativeScorerV1Donor, NativeScorerV1ErrorCode,
-    NativeScorerV1FailureCode, NativeScorerV1KernelOutcome, NativeScorerV1RowStatus, Vec3,
+    NativeFixed64ValidityKernelOutcome, NativeFixed64ValidityRowStatus, NativeScorerV1Atom,
+    NativeScorerV1Backend, NativeScorerV1Config, NativeScorerV1Context, NativeScorerV1Donor,
+    NativeScorerV1ErrorCode, NativeScorerV1FailureCode, NativeScorerV1KernelOutcome,
+    NativeScorerV1RowStatus, Quaternion, Vec3,
 };
 
 fn digest(marker: u8) -> [u8; 32] {
@@ -354,6 +355,60 @@ fn validity_context(
         config,
     )
     .unwrap()
+}
+
+#[test]
+fn reusable_rust_validity_kernel_is_repeat_stable_and_fail_closed() {
+    let scorer_context = context(digest(1), NativeScorerV1Config::default());
+    let rust_context = validity_context(
+        &scorer_context,
+        NativeFixed64ValidityBackend::RustCpu,
+        NativeFixed64ValidityConfig::default(),
+    );
+    let quaternion = Quaternion::new(0.0, 0.0, 0.0, 1.0);
+    let first = rust_context
+        .evaluate_coordinates(&ligand(), quaternion)
+        .unwrap();
+    let second = rust_context
+        .prepare_rust_cpu_kernel()
+        .unwrap()
+        .evaluate_coordinates(&ligand(), quaternion);
+    assert_eq!(first, second);
+    let NativeFixed64ValidityKernelOutcome::Evaluated {
+        checks,
+        measurements,
+    } = first
+    else {
+        panic!("expected evaluated validity evidence");
+    };
+    assert!(checks.all());
+    assert_eq!(measurements.atom_count(), ligand().len());
+
+    let failure = rust_context
+        .prepare_rust_cpu_kernel()
+        .unwrap()
+        .evaluate_coordinates(&ligand()[..3], quaternion);
+    let NativeFixed64ValidityKernelOutcome::TypedFailure(failure) = failure else {
+        panic!("expected typed coordinate failure");
+    };
+    assert_eq!(
+        failure.failure_code(),
+        NativeFixed64ValidityFailureCode::InvalidCandidateCoordinates
+    );
+    assert_eq!(failure.observed_count(), 3);
+
+    let hip_context = validity_context(
+        &scorer_context,
+        NativeFixed64ValidityBackend::HipSafe,
+        NativeFixed64ValidityConfig::default(),
+    );
+    let error = hip_context
+        .evaluate_coordinates(&ligand(), quaternion)
+        .unwrap_err();
+    assert_eq!(
+        error.code(),
+        NativeFixed64ValidityErrorCode::UpstreamCrossWired
+    );
 }
 
 #[test]
