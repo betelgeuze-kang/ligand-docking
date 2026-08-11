@@ -56,7 +56,7 @@ extern "C" {
 #endif
 
 #define BG_ABI_VERSION_MAJOR UINT32_C(1)
-#define BG_ABI_VERSION_MINOR UINT32_C(8)
+#define BG_ABI_VERSION_MINOR UINT32_C(9)
 #define BG_ABI_VERSION UINT32_C(1)
 
 #define BG_CANONICAL_LENGTH_UNIT "angstrom"
@@ -118,6 +118,7 @@ enum {
 #define BG_DOCKING_SCORER_V1_TERM_COUNT UINT32_C(8)
 #define BG_DOCKING_STABLE_TOP_K_LIMIT UINT32_C(5)
 #define BG_DOCKING_RMSD_CLUSTER_TOP_K_LIMIT UINT32_C(5)
+#define BG_DOCKING_TORSION_V7_MAX_MOVES UINT32_C(8)
 
 typedef int32_t bg_docking_scorer_v1_candidate_state;
 enum {
@@ -189,6 +190,45 @@ enum {
     BG_DOCKING_RMSD_CLUSTER_ROW_UPSTREAM_NOT_VALID = 2
 };
 
+typedef int32_t bg_docking_torsion_v7_candidate_state;
+enum {
+    BG_DOCKING_TORSION_V7_CANDIDATE_INACTIVE = 0,
+    BG_DOCKING_TORSION_V7_CANDIDATE_REFINE = 1
+};
+
+typedef int32_t bg_docking_torsion_v7_row_status;
+enum {
+    BG_DOCKING_TORSION_V7_ROW_REFINED = 1,
+    BG_DOCKING_TORSION_V7_ROW_TYPED_FAILURE = 2
+};
+
+typedef int32_t bg_docking_torsion_v7_failure;
+enum {
+    BG_DOCKING_TORSION_V7_FAILURE_NONE = 0,
+    BG_DOCKING_TORSION_V7_FAILURE_UPSTREAM_NOT_ELIGIBLE = 1,
+    BG_DOCKING_TORSION_V7_FAILURE_INVALID_INPUT = 2,
+    BG_DOCKING_TORSION_V7_FAILURE_PAIR_BUDGET = 3,
+    BG_DOCKING_TORSION_V7_FAILURE_DEGENERATE_ROTOR = 4,
+    BG_DOCKING_TORSION_V7_FAILURE_NONFINITE_DERIVED_VALUE = 5
+};
+
+typedef int32_t bg_docking_torsion_v7_skip_reason;
+enum {
+    BG_DOCKING_TORSION_V7_SKIP_NONE = 0,
+    BG_DOCKING_TORSION_V7_SKIP_NOT_ELIGIBLE = 1,
+    BG_DOCKING_TORSION_V7_SKIP_NO_AUTHORITY_ROTOR = 2,
+    BG_DOCKING_TORSION_V7_SKIP_NO_REMAINING_STEP_BUDGET = 3,
+    BG_DOCKING_TORSION_V7_SKIP_OBJECTIVE_AT_OR_BELOW_TOLERANCE = 4,
+    BG_DOCKING_TORSION_V7_SKIP_SELECTION_WINDOW_UNREACHABLE = 5
+};
+
+typedef int32_t bg_docking_torsion_v7_selection_reason;
+enum {
+    BG_DOCKING_TORSION_V7_SELECTION_FINAL_PENALTY_WINDOW = 1,
+    BG_DOCKING_TORSION_V7_SELECTION_V6_RETAINED_OUTSIDE_WINDOW = 2,
+    BG_DOCKING_TORSION_V7_SELECTION_V6_RETAINED_NO_REDUCTION = 3
+};
+
 /* Incomplete declarations are the only public handle representation. */
 typedef struct bg_context bg_context;
 typedef struct bg_system bg_system;
@@ -197,6 +237,7 @@ typedef struct bg_simulation bg_simulation;
 typedef struct bg_docking_scorer_v1 bg_docking_scorer_v1;
 typedef struct bg_docking_pose_validity_v1 bg_docking_pose_validity_v1;
 typedef struct bg_docking_stable_top_k_v1 bg_docking_stable_top_k_v1;
+typedef struct bg_docking_torsion_v7 bg_docking_torsion_v7;
 
 typedef struct bg_context_options {
     uint32_t struct_size;
@@ -895,6 +936,157 @@ typedef struct bg_docking_rmsd_cluster_output_v1 {
     uint64_t reserved[4];
 } bg_docking_rmsd_cluster_output_v1;
 
+/*
+ * Persistent interaction-aware torsion/contact V7 context. All coordinate,
+ * radius, topology, and frozen configuration channels are deep-copied at
+ * creation. Parent rows form one rooted tree. Rotor indices and internal
+ * i<j pairs are unique, strictly increasing, and in range. This numerical
+ * boundary grants no molecular-execution or product authority.
+ */
+typedef struct bg_docking_torsion_v7_context_soa_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    bg_unit_system unit_system;
+    uint32_t reserved0;
+    uint64_t receptor_atom_count;
+    uint64_t ligand_atom_count;
+    uint64_t rotor_count;
+    uint64_t internal_pair_count;
+    const double *receptor_x_angstrom;
+    const double *receptor_y_angstrom;
+    const double *receptor_z_angstrom;
+    const double *receptor_vdw_radius_angstrom;
+    const double *ligand_vdw_radius_angstrom;
+    double pocket_center_angstrom[3];
+    const int32_t *parent_atom_index;
+    const uint64_t *rotatable_child_atom_index;
+    const uint64_t *internal_pair_atom_i;
+    const uint64_t *internal_pair_atom_j;
+    double receptor_overlap_scale;
+    double internal_overlap_scale;
+    double internal_overlap_weight;
+    uint64_t maximum_baseline_v6_steps;
+    uint64_t maximum_torsions_evaluated;
+    uint64_t maximum_torsion_steps;
+    uint64_t maximum_backtracking_evaluations;
+    double maximum_torsion_step_radians;
+    double minimum_torsion_step_radians;
+    double maximum_total_torsion_path_radians;
+    double maximum_centroid_offset_angstrom;
+    double minimum_selected_final_receptor_penalty;
+    double maximum_selected_final_receptor_penalty;
+    double penalty_tolerance;
+    double epsilon_angstrom;
+    uint64_t reserved[8];
+} bg_docking_torsion_v7_context_soa_v1;
+
+/* Candidate-major source/V6 coordinate and torsion-angle SoA. Inactive rows
+ * remain in the exact 64-slot denominator and their numerical channels are
+ * not interpreted. */
+typedef struct bg_docking_torsion_v7_candidate_batch_soa_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    uint64_t candidate_count;
+    uint64_t ligand_atom_count;
+    bg_unit_system unit_system;
+    uint32_t reserved0;
+    const bg_docking_torsion_v7_candidate_state *candidate_state;
+    const uint8_t *proposal_is_torsion_eligible;
+    const uint64_t *max_steps;
+    const uint64_t *baseline_v6_accepted_steps;
+    const double *source_x_angstrom;
+    const double *source_y_angstrom;
+    const double *source_z_angstrom;
+    const double *baseline_v6_x_angstrom;
+    const double *baseline_v6_y_angstrom;
+    const double *baseline_v6_z_angstrom;
+    const double *baseline_v6_torsion_angles_radians;
+    uint64_t reserved[8];
+} bg_docking_torsion_v7_candidate_batch_soa_v1;
+
+typedef struct bg_docking_torsion_v7_row_v1 {
+    uint32_t slot_index;
+    bg_docking_torsion_v7_row_status status;
+    bg_docking_torsion_v7_failure failure_code;
+    bg_docking_torsion_v7_skip_reason skip_reason;
+    bg_docking_torsion_v7_selection_reason selection_reason;
+    uint8_t selection_window_reachable;
+    uint8_t evaluation_stopped_after_selection_window_became_unreachable;
+    uint8_t torsion_evaluated;
+    uint8_t torsion_variant_available;
+    uint8_t torsion_selected;
+    uint8_t reserved0[3];
+    uint64_t torsion_step_budget;
+    uint64_t fixed_objective_evaluation_count;
+    uint64_t torsion_trial_objective_evaluation_count;
+    uint64_t evaluated_torsion_steps;
+    uint64_t accepted_torsion_steps;
+    uint64_t baseline_v6_accepted_steps;
+    double source_receptor_penalty;
+    double source_internal_penalty;
+    double source_combined_penalty;
+    double baseline_receptor_penalty;
+    double baseline_internal_penalty;
+    double baseline_combined_penalty;
+    double optimized_receptor_penalty;
+    double optimized_internal_penalty;
+    double optimized_combined_penalty;
+    double final_receptor_penalty;
+    double final_internal_penalty;
+    double final_combined_penalty;
+    double evaluated_total_torsion_path_radians;
+    double accepted_total_torsion_path_radians;
+    uint64_t reserved[8];
+} bg_docking_torsion_v7_row_v1;
+
+/* Every candidate owns exactly BG_DOCKING_TORSION_V7_MAX_MOVES rows. The
+ * evaluated flag distinguishes unused evidence slots. */
+typedef struct bg_docking_torsion_v7_move_v1 {
+    uint32_t slot_index;
+    uint32_t move_index;
+    uint8_t evaluated;
+    uint8_t selected;
+    uint16_t reserved0;
+    uint64_t rotatable_child_atom_index;
+    double delta_radians;
+    double receptor_penalty;
+    double internal_penalty;
+    double combined_penalty;
+    uint64_t reserved[4];
+} bg_docking_torsion_v7_move_v1;
+
+/* Caller-owned transactional output. Rows, move rows, and all optimized/final
+ * channels are committed together. Required capacities are 64, 64*8, and
+ * 64*ligand_atom_count respectively. Every authority flag is always false. */
+typedef struct bg_docking_torsion_v7_output_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    uint64_t row_capacity;
+    uint64_t row_count;
+    uint64_t move_capacity;
+    uint64_t move_count;
+    uint64_t coordinate_capacity;
+    uint64_t coordinate_count;
+    bg_unit_system unit_system;
+    uint32_t reserved0;
+    bg_docking_torsion_v7_row_v1 *rows;
+    bg_docking_torsion_v7_move_v1 *moves;
+    double *optimized_x_angstrom;
+    double *optimized_y_angstrom;
+    double *optimized_z_angstrom;
+    double *optimized_torsion_angles_radians;
+    double *final_x_angstrom;
+    double *final_y_angstrom;
+    double *final_z_angstrom;
+    double *final_torsion_angles_radians;
+    uint8_t molecular_execution_authorized;
+    uint8_t existing_rank_auto_change_authorized;
+    uint8_t customer_pose_emission_authorized;
+    uint8_t production_claim_authorized;
+    uint32_t reserved1;
+    uint64_t reserved[8];
+} bg_docking_torsion_v7_output_v1;
+
 /* ABI and diagnostics. */
 BG_API uint32_t BG_CALL bg_abi_version(void) BG_NOEXCEPT;
 BG_API uint32_t BG_CALL bg_abi_version_major(void) BG_NOEXCEPT;
@@ -1015,6 +1207,18 @@ BG_API bg_status BG_CALL bg_docking_rmsd_cluster_output_v1_init(
     bg_docking_rmsd_cluster_output_v1 *output,
     size_t caller_struct_size,
     uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_torsion_v7_context_soa_v1_init(
+    bg_docking_torsion_v7_context_soa_v1 *descriptor,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_torsion_v7_candidate_batch_soa_v1_init(
+    bg_docking_torsion_v7_candidate_batch_soa_v1 *batch,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_torsion_v7_output_v1_init(
+    bg_docking_torsion_v7_output_v1 *output,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
 
 #if !defined(BG_DISABLE_DESCRIPTOR_INIT_CONVENIENCE_MACROS)
 #  define bg_context_options_init(options) \
@@ -1099,6 +1303,19 @@ BG_API bg_status BG_CALL bg_docking_rmsd_cluster_output_v1_init(
 #  define bg_docking_rmsd_cluster_output_v1_init(output) \
     bg_docking_rmsd_cluster_output_v1_init( \
         (output), sizeof(bg_docking_rmsd_cluster_output_v1), BG_ABI_VERSION)
+#  define bg_docking_torsion_v7_context_soa_v1_init(descriptor) \
+    bg_docking_torsion_v7_context_soa_v1_init( \
+        (descriptor), \
+        sizeof(bg_docking_torsion_v7_context_soa_v1), \
+        BG_ABI_VERSION)
+#  define bg_docking_torsion_v7_candidate_batch_soa_v1_init(batch) \
+    bg_docking_torsion_v7_candidate_batch_soa_v1_init( \
+        (batch), \
+        sizeof(bg_docking_torsion_v7_candidate_batch_soa_v1), \
+        BG_ABI_VERSION)
+#  define bg_docking_torsion_v7_output_v1_init(output) \
+    bg_docking_torsion_v7_output_v1_init( \
+        (output), sizeof(bg_docking_torsion_v7_output_v1), BG_ABI_VERSION)
 #endif
 
 /*
@@ -1198,6 +1415,25 @@ BG_API bg_status BG_CALL bg_docking_stable_top_k_v1_cluster_direct_rmsd_fixed64(
     const bg_docking_stable_top_k_v1 *ranker,
     const bg_docking_rmsd_cluster_input_v1 *input,
     bg_docking_rmsd_cluster_output_v1 *output) BG_NOEXCEPT;
+
+/* V7 uses the same explicit backend/device binding. CPP_CPU_REFERENCE and
+ * RUST_CPU are independently implemented; HIP_SAFE/HIP_FAST never fall back.
+ * All 64 candidates and all eight move-evidence slots per candidate remain in
+ * the returned denominator, including typed failures. */
+BG_API bg_status BG_CALL bg_docking_torsion_v7_create(
+    const bg_context *context,
+    const bg_docking_torsion_v7_context_soa_v1 *descriptor,
+    bg_docking_torsion_v7 **out_refiner) BG_NOEXCEPT;
+BG_API void BG_CALL bg_docking_torsion_v7_destroy(
+    bg_docking_torsion_v7 *refiner) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_torsion_v7_get_backend(
+    const bg_docking_torsion_v7 *refiner,
+    bg_backend *backend) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_torsion_v7_refine_fixed64(
+    const bg_context *context,
+    const bg_docking_torsion_v7 *refiner,
+    const bg_docking_torsion_v7_candidate_batch_soa_v1 *candidates,
+    bg_docking_torsion_v7_output_v1 *output) BG_NOEXCEPT;
 
 /* A system owns its host SoA and has no parent-handle lifetime dependency. */
 BG_API bg_status BG_CALL bg_system_create(

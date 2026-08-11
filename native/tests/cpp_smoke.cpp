@@ -42,9 +42,18 @@ int main() {
         std::is_standard_layout_v<bg_docking_pose_validity_row_v1>);
     static_assert(
         std::is_standard_layout_v<bg_docking_pose_validity_output_v1>);
+    static_assert(
+        std::is_standard_layout_v<bg_docking_torsion_v7_context_soa_v1>);
+    static_assert(std::is_standard_layout_v<
+                  bg_docking_torsion_v7_candidate_batch_soa_v1>);
+    static_assert(std::is_standard_layout_v<bg_docking_torsion_v7_row_v1>);
+    static_assert(std::is_standard_layout_v<bg_docking_torsion_v7_move_v1>);
+    static_assert(
+        std::is_standard_layout_v<bg_docking_torsion_v7_output_v1>);
     static_assert(noexcept(bg_abi_version()));
     static_assert(noexcept(bg_context_destroy(nullptr)));
     static_assert(noexcept(bg_system_destroy(nullptr)));
+    static_assert(noexcept(bg_docking_torsion_v7_destroy(nullptr)));
     static_assert(std::is_same_v<
                   decltype(&bg_context_options_init),
                   ContextOptionsInitializer>);

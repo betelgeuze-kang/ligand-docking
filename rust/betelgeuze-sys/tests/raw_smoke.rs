@@ -88,6 +88,9 @@ fn descriptor_initializers_reject_incompatible_callers_without_writing() {
         assert_initializer_exact(bg_docking_stable_top_k_output_v1_init);
         assert_initializer_exact(bg_docking_rmsd_cluster_input_v1_init);
         assert_initializer_exact(bg_docking_rmsd_cluster_output_v1_init);
+        assert_initializer_exact(bg_docking_torsion_v7_context_soa_v1_init);
+        assert_initializer_exact(bg_docking_torsion_v7_candidate_batch_soa_v1_init);
+        assert_initializer_exact(bg_docking_torsion_v7_output_v1_init);
     }
 }
 
