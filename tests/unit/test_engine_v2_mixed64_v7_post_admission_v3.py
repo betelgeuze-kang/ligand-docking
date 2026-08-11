@@ -348,6 +348,14 @@ def _fixture(*, legacy_exact_identity: bool = False):
     )
     prepared_ligand_topology_sha256 = _digest("ligand-topology")
     prepared_receptor_topology_sha256 = _digest("receptor-topology")
+    contact_policy = authority.validity_context.contact_policy
+    ligand_vdw_radii = tuple(
+        contact_policy.radius(atom.element) for atom in ligand.atoms
+    )
+    ligand_heavy_atom_mask = tuple(atom.element != "H" for atom in ligand.atoms)
+    receptor_vdw_radii = tuple(
+        contact_policy.radius(atom.element) for atom in receptor.atoms
+    )
     exact_source_evidence = Mixed64ExactV11SourceEvidence(
         source_receipt_sha256=exact.source_receipt_sha256,
         proposal_sha256=exact.proposal_sha256,
@@ -355,6 +363,15 @@ def _fixture(*, legacy_exact_identity: bool = False):
         receptor_coordinate_sha256=coordinate_sha256(receptor_coordinates),
         prepared_ligand_topology_sha256=prepared_ligand_topology_sha256,
         prepared_receptor_topology_sha256=prepared_receptor_topology_sha256,
+        ligand_vdw_radii_sha256=hashlib.sha256(
+            _canonical([value.hex() for value in ligand_vdw_radii])
+        ).hexdigest(),
+        ligand_heavy_atom_mask_sha256=hashlib.sha256(
+            _canonical(list(ligand_heavy_atom_mask))
+        ).hexdigest(),
+        receptor_vdw_radii_sha256=hashlib.sha256(
+            _canonical([value.hex() for value in receptor_vdw_radii])
+        ).hexdigest(),
     )
     features = Mixed64FeatureEvidence(
         exact_v11_source_receipt_sha256=exact.source_receipt_sha256,
@@ -398,19 +415,16 @@ def _fixture(*, legacy_exact_identity: bool = False):
         ),
     )
     allocation = build_fixed_mixed64_allocation(features)
-    policy = authority.validity_context.contact_policy
     bundle = Mixed64ProposalSourceBundleV1(
         allocation=allocation,
         exact_v11_source=exact,
         v7_control_sources=controls,
         conformer_sources=conformers,
         retained_sources=retained,
-        ligand_vdw_radii=tuple(policy.radius(atom.element) for atom in ligand.atoms),
-        ligand_heavy_atom_mask=tuple(atom.element != "H" for atom in ligand.atoms),
+        ligand_vdw_radii=ligand_vdw_radii,
+        ligand_heavy_atom_mask=ligand_heavy_atom_mask,
         receptor_coordinates=receptor_coordinates,
-        receptor_vdw_radii=tuple(
-            policy.radius(atom.element) for atom in receptor.atoms
-        ),
+        receptor_vdw_radii=receptor_vdw_radii,
         receptor_source_receipt_canonical_json=exact.source_receipt_canonical_json,
         pocket_center=tuple(float(value) for value in pocket.center.tolist()),
         pocket_normal=(0.0, 0.0, 1.0),

@@ -9,11 +9,11 @@ is a native or product execution fallback.
 
 The canonical policy is
 `config/engine_v2_mixed64_v7_post_admission_v3.json`, with SHA-256
-`e19f58ea6015d4695fb8aab7015d0162f6fa359da9627dd6ea8739d6bd20a8a9`.
+`9c56b18e1010d693b88d7d17f2faf71ed804542838e708b99f96145abf8fd007`.
 It binds operational-proposal policy SHA-256
-`9535730901a27ab3009e7b6fff12e532dd5d995e8fa33a038f4d321593885de9`.
+`615234d10ff967856592b253e7bc45b640b4ca68b86d70e8eb3890ac6308e210`.
 The post-refinement gate also binds geometric-admission v3 policy SHA-256
-`feb9c00eb71bb45fe07479c6f5b8e6faa171b9968fa4dbb2370e518c71290526`.
+`bd2329f58b4f735af6daaa87eaf627127c34c81e5cd129c37c4bd00d04364aca`.
 Complete V7 evidence uses a separate 256 MiB canonical receipt ceiling so it
 can contain a valid 128 MiB-bounded operational receipt without narrowing the
 upstream contract.
