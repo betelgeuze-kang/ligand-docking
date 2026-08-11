@@ -7,15 +7,18 @@ the full-Cartesian geometric admission on every successful refined coordinate.
 
 The canonical policy is
 `config/engine_v2_mixed64_v7_post_admission_v3.json`, with SHA-256
-`b23d517b1b5d477129670c70fd9894219f14eb5f7bdb4ab06805ff0243e93beb`.
+`7fdaff5b56fe9ddb0baebe60187f0ad067a2e54f7b6db9da9117440dee4d153d`.
 It binds operational-proposal policy SHA-256
-`dcf594a97648abce918ddac4c45f7f88108d6db4981e03893e4a82638fded354`.
+`9b028cc5ec0d32a6b28538d1a91955f2766fe796f488b38888fdd20819611d9a`.
 
 ## Frozen refinement boundary
 
 - The caller supplies only the sealed operational batch and one exact V7
   refiner. There are no coordinate, score, validity, rank, threshold, outcome,
   reservation, or authority inputs.
+- The operational batch is recursively checked before refinement, after all
+  attempts, and after output finalization. Every materialized proposal index
+  must equal its fixed64 slot.
 - V7 torsion eligibility remains slot indices 24 through 43, and every
   materialized slot receives exactly one call with `max_steps=24`.
 - A refiner with preexisting receipts, a different problem/profile, or an
@@ -25,8 +28,9 @@ It binds operational-proposal policy SHA-256
   vdW radii must exactly match the geometric-admission context before execution.
 - The source file is hashed before execution and again after the batch. A source
   change aborts the receipt.
-- Numerical refiner failures become typed per-slot failures. They are not
-  retried, replaced, or reallocated.
+- Only `TorsionContactRefinementError`, the declared numerical/domain failure,
+  becomes a typed per-slot failure. Unexpected runtime/programming failures
+  abort the call. Declared failures are not retried, replaced, or reallocated.
 
 ## Failure-complete post-admission
 
@@ -40,6 +44,9 @@ cannot enter ranking.
 The batch checks the maximum exact pair work before any refiner call. Receipts
 bind the input batch, V7 configuration, checked-out V7 source, per-slot source
 and result identities, full geometric metrics, status, and rank eligibility.
+Finalization recursively revalidates every source and result proposal tensor,
+refinement receipt, metric, record projection, and the 64-slot batch. The same
+check is available to the scoring/validity stage before it consumes the output.
 
 ## Authority boundary
 

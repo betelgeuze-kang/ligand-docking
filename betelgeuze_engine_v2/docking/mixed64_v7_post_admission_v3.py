@@ -32,6 +32,7 @@ from .mixed64_operational_proposal_v3 import (
     MATERIALIZED_STATUS,
     Mixed64OperationalProposalBatchV1,
     Mixed64OperationalProposalRecordV1,
+    Mixed64OperationalProposalV3Error,
 )
 from .mixed64_proposal_geometry_v3 import coordinate_sha256
 from .mixed64_v7_post_admission_policy_v3 import (
@@ -50,10 +51,11 @@ from .mixed64_v7_post_admission_policy_v3 import (
     V7_TORSION_ELIGIBLE_SLOT_INDICES,
     frozen_mixed64_v7_post_admission_policy,
 )
-from .proposals import DockingProposal
+from .proposals import DockingProposal, DockingProposalError
 from .torsion_contact_refinement import (
     INTERACTION_AWARE_TORSION_CONTACT_RECEIPT_V7_SCHEMA_ID,
     InteractionAwareTorsionContactEnsembleRefinerV7,
+    TorsionContactRefinementError,
 )
 from . import torsion_contact_refinement as _refinement_module
 
@@ -130,6 +132,19 @@ def _verify_sealed_receipt(payload: bytes, expected: str, *, name: str) -> str:
     observed = hashlib.sha256(payload).hexdigest()
     if observed != expected:
         raise Mixed64V7PostAdmissionV3Error(f"{name} sealed receipt changed")
+    return observed
+
+
+def _verify_live_sealed_projection(
+    payload: bytes,
+    expected: str,
+    projection: object,
+    *,
+    name: str,
+) -> str:
+    observed = _verify_sealed_receipt(payload, expected, name=name)
+    if _canonical_bytes(projection) != payload:
+        raise Mixed64V7PostAdmissionV3Error(f"{name} live projection changed")
     return observed
 
 
@@ -371,6 +386,34 @@ class Mixed64V7PostAdmissionRecordV1:
             name="V7 post-admission record",
         )
 
+    def assert_live_integrity(self) -> str:
+        return self._assert_live_integrity(operational_already_verified=False)
+
+    def _assert_live_integrity(self, *, operational_already_verified: bool) -> str:
+        try:
+            if not operational_already_verified:
+                self.materialization_record.assert_live_integrity()
+            if self.result_proposal is not None:
+                self.result_proposal.assert_integrity()
+            if self.post_refinement_metrics is not None:
+                _ = self.post_refinement_metrics.receipt_sha256
+            return _verify_live_sealed_projection(
+                self._canonical_projection_bytes,
+                self._receipt_sha256,
+                self._projection(),
+                name="V7 post-admission record",
+            )
+        except Mixed64V7PostAdmissionV3Error:
+            raise
+        except (
+            DockingProposalError,
+            GeometricAdmissionV2Error,
+            Mixed64OperationalProposalV3Error,
+        ) as exc:
+            raise Mixed64V7PostAdmissionV3Error(
+                "V7 post-admission record live integrity failed"
+            ) from exc
+
     def to_dict(self) -> dict[str, object]:
         return {
             **_unseal_projection(self._canonical_projection_bytes),
@@ -509,6 +552,24 @@ class Mixed64V7PostAdmissionBatchV1:
             name="V7 post-admission batch",
         )
 
+    def assert_live_integrity(self) -> str:
+        try:
+            self.operational_batch.assert_live_integrity()
+            for record in self.records:
+                record._assert_live_integrity(operational_already_verified=True)
+            return _verify_live_sealed_projection(
+                self._canonical_projection_bytes,
+                self._receipt_sha256,
+                self._projection(),
+                name="V7 post-admission batch",
+            )
+        except Mixed64V7PostAdmissionV3Error:
+            raise
+        except Mixed64OperationalProposalV3Error as exc:
+            raise Mixed64V7PostAdmissionV3Error(
+                "V7 post-admission batch live integrity failed"
+            ) from exc
+
     def to_dict(self) -> dict[str, object]:
         return {
             **_unseal_projection(self._canonical_projection_bytes),
@@ -527,6 +588,12 @@ def execute_synthetic_mixed64_v7_post_admission(
         raise TypeError("operational_batch must be exact")
     if type(refiner) is not InteractionAwareTorsionContactEnsembleRefinerV7:
         raise TypeError("refiner must be exact current V7")
+    try:
+        operational_batch.assert_live_integrity()
+    except Mixed64OperationalProposalV3Error as exc:
+        raise Mixed64V7PostAdmissionV3Error(
+            "operational batch live integrity preflight failed"
+        ) from exc
     if tuple(refiner._v3_proposal_indices) != V7_TORSION_ELIGIBLE_SLOT_INDICES:
         raise Mixed64V7PostAdmissionV3Error(
             "V7 torsion-eligible slot profile is cross-wired"
@@ -548,6 +615,17 @@ def execute_synthetic_mixed64_v7_post_admission(
     ) != len(proposals):
         raise Mixed64V7PostAdmissionV3Error(
             "materialized operational proposals are absent or duplicated"
+        )
+    if any(
+        proposal.proposal_index != materialization.slot_index
+        for materialization, proposal in zip(
+            materialized,
+            proposals,
+            strict=True,
+        )
+    ):
+        raise Mixed64V7PostAdmissionV3Error(
+            "materialized operational proposal index is not the fixed64 slot"
         )
     problem_identities = {value.problem_fingerprint_sha256 for value in proposals}
     if problem_identities and problem_identities != {refiner.problem_fingerprint_sha256}:
@@ -602,7 +680,7 @@ def execute_synthetic_mixed64_v7_post_admission(
                 proposal,
                 max_steps=V7_REFINEMENT_MAX_STEPS,
             )
-        except Exception:
+        except TorsionContactRefinementError:
             outcomes[proposal.fingerprint_sha256] = None
             continue
         if (
@@ -618,6 +696,12 @@ def execute_synthetic_mixed64_v7_post_admission(
                 "V7 result proposal identity is cross-wired"
             )
         outcomes[proposal.fingerprint_sha256] = result
+    try:
+        operational_batch.assert_live_integrity()
+    except Mixed64OperationalProposalV3Error as exc:
+        raise Mixed64V7PostAdmissionV3Error(
+            "operational batch live integrity postflight failed"
+        ) from exc
     if _stable_source_sha256(source_path) != implementation_source_sha256:
         raise Mixed64V7PostAdmissionV3Error(
             "V7 implementation source changed during the batch"
@@ -647,7 +731,10 @@ def execute_synthetic_mixed64_v7_post_admission(
             )
             continue
         source = materialization.operational_proposal
-        assert source is not None
+        if source is None:
+            raise Mixed64V7PostAdmissionV3Error(
+                "materialized operational proposal disappeared"
+            )
         result = outcomes[source.fingerprint_sha256]
         if result is None:
             records.append(
@@ -702,13 +789,20 @@ def execute_synthetic_mixed64_v7_post_admission(
                 _factory_seal=_RECORD_FACTORY_SEAL,
             )
         )
-    return Mixed64V7PostAdmissionBatchV1(
+    batch = Mixed64V7PostAdmissionBatchV1(
         operational_batch=operational_batch,
         records=tuple(records),
         refiner_config_sha256=config_sha256,
         refiner_implementation_source_sha256=implementation_source_sha256,
         _factory_seal=_BATCH_FACTORY_SEAL,
     )
+    try:
+        batch.assert_live_integrity()
+    except Mixed64V7PostAdmissionV3Error as exc:
+        raise Mixed64V7PostAdmissionV3Error(
+            "V7 post-admission output live integrity finalization failed"
+        ) from exc
+    return batch
 
 
 __all__ = [

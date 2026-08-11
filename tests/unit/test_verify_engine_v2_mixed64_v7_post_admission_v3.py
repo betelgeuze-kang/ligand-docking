@@ -41,6 +41,8 @@ def test_current_policy_verifies_without_authority() -> None:
     ("path", "value"),
     (
         (("candidate_denominator",), 63),
+        (("operational_input_integrity", "recursive_preflight_required"), False),
+        (("output_live_integrity", "recursive_finalization_required"), False),
         (("refinement", "max_steps"), 25),
         (("refinement", "result_dependent_retry_allowed"), True),
         (
@@ -48,6 +50,7 @@ def test_current_policy_verifies_without_authority() -> None:
             (0.50).hex(),
         ),
         (("failure_semantics", "slot_reallocation_allowed"), True),
+        (("failure_semantics", "unexpected_runtime_failure_typed"), True),
         (("authority", "molecular_cohort_execution_authorized"), True),
     ),
 )

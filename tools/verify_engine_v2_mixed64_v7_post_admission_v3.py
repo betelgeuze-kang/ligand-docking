@@ -144,6 +144,26 @@ def _verify_executor_source() -> None:
         raise Mixed64V7PostAdmissionPolicyVerificationError(
             "V7 refinement budget is no longer frozen in the executor"
         )
+    refinement_try_blocks = tuple(
+        node
+        for node in ast.walk(function)
+        if isinstance(node, ast.Try)
+        and any(
+            candidate is refine_calls[0]
+            for statement in node.body
+            for candidate in ast.walk(statement)
+        )
+    )
+    if (
+        len(refinement_try_blocks) != 1
+        or len(refinement_try_blocks[0].handlers) != 1
+        or not isinstance(refinement_try_blocks[0].handlers[0].type, ast.Name)
+        or refinement_try_blocks[0].handlers[0].type.id
+        != "TorsionContactRefinementError"
+    ):
+        raise Mixed64V7PostAdmissionPolicyVerificationError(
+            "V7 refinement exception boundary is not the declared domain error"
+        )
     admission_calls = tuple(
         node
         for node in ast.walk(function)
@@ -211,10 +231,28 @@ def verify_policy(path: Path = DEFAULT_POLICY_PATH) -> dict[str, object]:
         raise Mixed64V7PostAdmissionPolicyVerificationError(
             "V7, fixed64, or post-admission contract changed"
         )
+    if document.get("operational_input_integrity") != {
+        "recursive_preflight_required": True,
+        "recursive_postflight_required": True,
+        "recursive_finalization_check_required": True,
+        "operational_proposal_index_is_fixed64_slot": True,
+    }:
+        raise Mixed64V7PostAdmissionPolicyVerificationError(
+            "V7 operational input-integrity boundary changed"
+        )
+    if document.get("output_live_integrity") != {
+        "recursive_finalization_required": True,
+        "recursive_downstream_verifier_available": True,
+    }:
+        raise Mixed64V7PostAdmissionPolicyVerificationError(
+            "V7 output live-integrity boundary changed"
+        )
     failure_semantics = document.get("failure_semantics")
     if type(failure_semantics) is not dict or failure_semantics != {
         "upstream_nonmaterialized_refined": False,
         "typed_refinement_failure_preserved": True,
+        "declared_typed_error": "TorsionContactRefinementError",
+        "unexpected_runtime_failure_typed": False,
         "failed_slot_retried": False,
         "slot_reallocation_allowed": False,
         "post_rejection_deleted": False,

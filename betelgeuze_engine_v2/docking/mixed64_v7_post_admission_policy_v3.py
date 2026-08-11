@@ -23,7 +23,7 @@ MIXED64_V7_POST_ADMISSION_PROFILE_ID: Final = (
     "betelgeuze.engine_v2_fixed64_current_v7_then_post_geometric_admission/1.0.0"
 )
 BOUND_OPERATIONAL_PROPOSAL_POLICY_SHA256: Final = (
-    "dcf594a97648abce918ddac4c45f7f88108d6db4981e03893e4a82638fded354"
+    "9b028cc5ec0d32a6b28538d1a91955f2766fe796f488b38888fdd20819611d9a"
 )
 V7_REFINEMENT_MAX_STEPS: Final = 24
 V7_TORSION_ELIGIBLE_SLOT_INDICES: Final = tuple(range(24, 44))
@@ -44,6 +44,16 @@ def frozen_mixed64_v7_post_admission_policy() -> dict[str, object]:
             BOUND_OPERATIONAL_PROPOSAL_POLICY_SHA256
         ),
         "candidate_denominator": 64,
+        "operational_input_integrity": {
+            "recursive_preflight_required": True,
+            "recursive_postflight_required": True,
+            "recursive_finalization_check_required": True,
+            "operational_proposal_index_is_fixed64_slot": True,
+        },
+        "output_live_integrity": {
+            "recursive_finalization_required": True,
+            "recursive_downstream_verifier_available": True,
+        },
         "refinement": {
             "refiner": "InteractionAwareTorsionContactEnsembleRefinerV7",
             "max_steps": V7_REFINEMENT_MAX_STEPS,
@@ -75,6 +85,8 @@ def frozen_mixed64_v7_post_admission_policy() -> dict[str, object]:
         "failure_semantics": {
             "upstream_nonmaterialized_refined": False,
             "typed_refinement_failure_preserved": True,
+            "declared_typed_error": "TorsionContactRefinementError",
+            "unexpected_runtime_failure_typed": False,
             "failed_slot_retried": False,
             "slot_reallocation_allowed": False,
             "post_rejection_deleted": False,

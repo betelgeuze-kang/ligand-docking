@@ -76,6 +76,7 @@ from betelgeuze_engine_v2.docking.mixed64_v7_post_admission_policy_v3 import (
 from betelgeuze_engine_v2.docking.proposals import bind_docking_proposal_state
 from betelgeuze_engine_v2.docking.torsion_contact_refinement import (
     InteractionAwareTorsionContactEnsembleRefinerV7,
+    TorsionContactRefinementError,
 )
 def _digest(label: str) -> str:
     return hashlib.sha256(label.encode("ascii")).hexdigest()
@@ -470,6 +471,16 @@ def test_success_records_bind_v7_lineage_metrics_and_rank_eligibility() -> None:
             POST_REFINEMENT_REJECTED_STATUS,
         }
 
+    target = next(
+        value for value in result.records if value.result_proposal is not None
+    )
+    target.result_proposal.coordinates[0, 0] += 1.0
+    with pytest.raises(
+        Mixed64V7PostAdmissionV3Error,
+        match="record live integrity failed",
+    ):
+        result.assert_live_integrity()
+
 
 def test_nonoperational_upstream_slots_are_never_sent_to_v7() -> None:
     authority, receptor, ligand, operational = _fixture(legacy_exact_identity=True)
@@ -487,7 +498,7 @@ def test_nonoperational_upstream_slots_are_never_sent_to_v7() -> None:
     )
 
 
-def test_one_refinement_exception_is_typed_without_retry(
+def test_one_declared_refinement_error_is_typed_without_retry(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     authority, receptor, ligand, operational = _fixture()
@@ -499,7 +510,7 @@ def test_one_refinement_exception_is_typed_without_retry(
     def refine(self, proposal, *, max_steps):
         attempts.append(proposal.proposal_index)
         if proposal.proposal_index == first_slot:
-            raise RuntimeError("synthetic failure")
+            raise TorsionContactRefinementError("synthetic numerical failure")
         return original(self, proposal, max_steps=max_steps)
 
     monkeypatch.setattr(InteractionAwareTorsionContactEnsembleRefinerV7, "refine", refine)
@@ -517,6 +528,65 @@ def test_one_refinement_exception_is_typed_without_retry(
     assert attempts.count(first_slot) == 1
     assert failed[0].result_proposal is None
     assert failed[0].post_refinement_metrics is None
+
+
+def test_unexpected_refinement_runtime_error_aborts_instead_of_becoming_evidence(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    authority, receptor, ligand, operational = _fixture()
+    refiner = _refiner(authority, receptor, ligand)
+    attempts = 0
+
+    def refine(self, proposal, *, max_steps):
+        nonlocal attempts
+        attempts += 1
+        raise RuntimeError("unexpected refiner implementation failure")
+
+    monkeypatch.setattr(
+        InteractionAwareTorsionContactEnsembleRefinerV7,
+        "refine",
+        refine,
+    )
+    with pytest.raises(
+        RuntimeError,
+        match="unexpected refiner implementation failure",
+    ):
+        execute_synthetic_mixed64_v7_post_admission(
+            operational,
+            refiner=refiner,
+        )
+    assert attempts == 1
+
+
+def test_operational_live_mutation_fails_before_any_refinement(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    authority, receptor, ligand, operational = _fixture()
+    refiner = _refiner(authority, receptor, ligand)
+    target = next(value for value in operational.records if value.materialized)
+    assert target.operational_proposal is not None
+    target.operational_proposal.coordinates[0, 0] += 1.0
+    attempts = 0
+
+    def refine(self, proposal, *, max_steps):
+        nonlocal attempts
+        attempts += 1
+        raise AssertionError("refinement must not start")
+
+    monkeypatch.setattr(
+        InteractionAwareTorsionContactEnsembleRefinerV7,
+        "refine",
+        refine,
+    )
+    with pytest.raises(
+        Mixed64V7PostAdmissionV3Error,
+        match="live integrity preflight",
+    ):
+        execute_synthetic_mixed64_v7_post_admission(
+            operational,
+            refiner=refiner,
+        )
+    assert attempts == 0
 
 
 def test_pair_bound_is_checked_before_any_refinement(
@@ -610,6 +680,7 @@ def test_record_factory_policy_signature_and_authority_are_frozen() -> None:
     assert len(MIXED64_V7_POST_ADMISSION_POLICY_SHA256) == 64
     assert policy["refinement"]["max_steps"] == V7_REFINEMENT_MAX_STEPS == 24
     assert policy["refinement"]["torsion_eligible_slot_indices"] == list(range(24, 44))
+    assert policy["failure_semantics"]["unexpected_runtime_failure_typed"] is False
     assert all(value is False for value in policy["authority"].values())
     parameters = set(
         inspect.signature(execute_synthetic_mixed64_v7_post_admission).parameters
