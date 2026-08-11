@@ -85,7 +85,7 @@ int main() {
 
     bg_context_options options{};
     require_status(
-        bg_context_options_init(&options),
+        bg_context_options_init(&options, sizeof(options), BG_ABI_VERSION),
         BG_STATUS_OK,
         "context option initialization failed");
     options.backend = BG_BACKEND_HIP;
@@ -103,7 +103,7 @@ int main() {
     const std::array<double, 2> charge = {0.25, -0.25};
     bg_particle_soa particles{};
     require_status(
-        bg_particle_soa_init(&particles),
+        bg_particle_soa_init(&particles, sizeof(particles), BG_ABI_VERSION),
         BG_STATUS_OK,
         "particle descriptor initialization failed");
     particles.particle_count = UINT64_C(2);
@@ -122,7 +122,8 @@ int main() {
     const std::array<double, 2> epsilon = {0.2, 0.3};
     bg_forcefield_soa_v1 parameters{};
     require_status(
-        bg_forcefield_soa_v1_init(&parameters),
+        bg_forcefield_soa_v1_init(
+            &parameters, sizeof(parameters), BG_ABI_VERSION),
         BG_STATUS_OK,
         "force-field descriptor initialization failed");
     parameters.atom_count = UINT64_C(2);
@@ -136,7 +137,7 @@ int main() {
 
     bg_energy_components_v1 energy{};
     require_status(
-        bg_energy_components_v1_init(&energy),
+        bg_energy_components_v1_init(&energy, sizeof(energy), BG_ABI_VERSION),
         BG_STATUS_OK,
         "energy descriptor initialization failed");
     energy.harmonic_bond_kcal_per_mol = 101.25;
@@ -155,7 +156,7 @@ int main() {
     const std::vector<double> force_z_before = force_z;
     bg_force_soa_v1 forces{};
     require_status(
-        bg_force_soa_v1_init(&forces),
+        bg_force_soa_v1_init(&forces, sizeof(forces), BG_ABI_VERSION),
         BG_STATUS_OK,
         "force descriptor initialization failed");
     forces.particle_capacity = UINT64_C(2);

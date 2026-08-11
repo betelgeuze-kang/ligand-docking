@@ -56,7 +56,7 @@ extern "C" {
 #endif
 
 #define BG_ABI_VERSION_MAJOR UINT32_C(1)
-#define BG_ABI_VERSION_MINOR UINT32_C(4)
+#define BG_ABI_VERSION_MINOR UINT32_C(8)
 #define BG_ABI_VERSION UINT32_C(1)
 
 #define BG_CANONICAL_LENGTH_UNIT "angstrom"
@@ -113,11 +113,90 @@ enum {
     BG_INTEGRATOR_LANGEVIN_BAOAB = 2
 };
 
+/* Frozen Engine V2 ScorerV1 batch dimensions and row semantics. */
+#define BG_DOCKING_FIXED64_CANDIDATE_COUNT UINT32_C(64)
+#define BG_DOCKING_SCORER_V1_TERM_COUNT UINT32_C(8)
+#define BG_DOCKING_STABLE_TOP_K_LIMIT UINT32_C(5)
+#define BG_DOCKING_RMSD_CLUSTER_TOP_K_LIMIT UINT32_C(5)
+
+typedef int32_t bg_docking_scorer_v1_candidate_state;
+enum {
+    BG_DOCKING_SCORER_V1_CANDIDATE_INACTIVE = 0,
+    BG_DOCKING_SCORER_V1_CANDIDATE_ACTIVE = 1
+};
+
+typedef int32_t bg_docking_scorer_v1_row_status;
+enum {
+    BG_DOCKING_SCORER_V1_ROW_SCORED = 1,
+    BG_DOCKING_SCORER_V1_ROW_TYPED_FAILURE = 2
+};
+
+typedef int32_t bg_docking_scorer_v1_failure;
+enum {
+    BG_DOCKING_SCORER_V1_FAILURE_NONE = 0,
+    BG_DOCKING_SCORER_V1_FAILURE_UPSTREAM_NOT_ADMITTED = 1,
+    BG_DOCKING_SCORER_V1_FAILURE_INVALID_CANDIDATE_COORDINATES = 2,
+    BG_DOCKING_SCORER_V1_FAILURE_RECEPTOR_PAIR_CAPACITY = 3,
+    BG_DOCKING_SCORER_V1_FAILURE_LIGAND_PAIR_CAPACITY = 4,
+    BG_DOCKING_SCORER_V1_FAILURE_DEGENERATE_ROTOR = 5,
+    BG_DOCKING_SCORER_V1_FAILURE_NONFINITE_SCORE = 6
+};
+
+/* Frozen Engine V2 pose-validity candidate, row, and check semantics. */
+#define BG_DOCKING_POSE_VALIDITY_CHECK_COUNT UINT32_C(8)
+
+typedef int32_t bg_docking_pose_validity_candidate_state;
+enum {
+    BG_DOCKING_POSE_VALIDITY_CANDIDATE_UPSTREAM_FAILURE = 0,
+    BG_DOCKING_POSE_VALIDITY_CANDIDATE_EVALUATE = 1
+};
+
+typedef int32_t bg_docking_pose_validity_row_status;
+enum {
+    BG_DOCKING_POSE_VALIDITY_ROW_EVALUATED = 1,
+    BG_DOCKING_POSE_VALIDITY_ROW_UPSTREAM_SCORER_FAILURE = 2,
+    BG_DOCKING_POSE_VALIDITY_ROW_TYPED_FAILURE = 3
+};
+
+typedef int32_t bg_docking_pose_validity_failure;
+enum {
+    BG_DOCKING_POSE_VALIDITY_FAILURE_NONE = 0,
+    BG_DOCKING_POSE_VALIDITY_FAILURE_UPSTREAM_SCORER = 1,
+    BG_DOCKING_POSE_VALIDITY_FAILURE_INVALID_CANDIDATE_COORDINATES = 2,
+    BG_DOCKING_POSE_VALIDITY_FAILURE_LIGAND_PAIR_CAPACITY = 3,
+    BG_DOCKING_POSE_VALIDITY_FAILURE_RECEPTOR_CROSS_CAPACITY = 4,
+    BG_DOCKING_POSE_VALIDITY_FAILURE_ELEMENT_LIGAND_PAIR_CAPACITY = 5,
+    BG_DOCKING_POSE_VALIDITY_FAILURE_ELEMENT_RECEPTOR_CANDIDATE_CAPACITY = 6,
+    BG_DOCKING_POSE_VALIDITY_FAILURE_NONFINITE_DERIVED_MEASUREMENT = 7
+};
+
+typedef uint32_t bg_docking_pose_validity_check_mask;
+enum {
+    BG_DOCKING_POSE_VALIDITY_CHECK_PROPER_ROTATION = UINT32_C(1) << 0,
+    BG_DOCKING_POSE_VALIDITY_CHECK_BOND_LENGTHS = UINT32_C(1) << 1,
+    BG_DOCKING_POSE_VALIDITY_CHECK_LIGAND_SELF_CLASH = UINT32_C(1) << 2,
+    BG_DOCKING_POSE_VALIDITY_CHECK_RECEPTOR_LIGAND_CLASH = UINT32_C(1) << 3,
+    BG_DOCKING_POSE_VALIDITY_CHECK_CHIRALITY = UINT32_C(1) << 4,
+    BG_DOCKING_POSE_VALIDITY_CHECK_DECLARED_POCKET = UINT32_C(1) << 5,
+    BG_DOCKING_POSE_VALIDITY_CHECK_ELEMENT_LIGAND_VDW = UINT32_C(1) << 6,
+    BG_DOCKING_POSE_VALIDITY_CHECK_ELEMENT_RECEPTOR_VDW = UINT32_C(1) << 7,
+    BG_DOCKING_POSE_VALIDITY_CHECK_ALL = UINT32_C(0xff)
+};
+
+typedef int32_t bg_docking_rmsd_cluster_row_status;
+enum {
+    BG_DOCKING_RMSD_CLUSTER_ROW_CLUSTERED = 1,
+    BG_DOCKING_RMSD_CLUSTER_ROW_UPSTREAM_NOT_VALID = 2
+};
+
 /* Incomplete declarations are the only public handle representation. */
 typedef struct bg_context bg_context;
 typedef struct bg_system bg_system;
 typedef struct bg_forcefield bg_forcefield;
 typedef struct bg_simulation bg_simulation;
+typedef struct bg_docking_scorer_v1 bg_docking_scorer_v1;
+typedef struct bg_docking_pose_validity_v1 bg_docking_pose_validity_v1;
+typedef struct bg_docking_stable_top_k_v1 bg_docking_stable_top_k_v1;
 
 typedef struct bg_context_options {
     uint32_t struct_size;
@@ -439,6 +518,383 @@ typedef struct bg_dynamics_report_v1 {
     uint64_t reserved[4];
 } bg_dynamics_report_v1;
 
+/*
+ * Persistent Engine V2 ScorerV1 context input.  All channels and the four
+ * identity digests are deep-copied by bg_docking_scorer_v1_create.  The
+ * ligand reference geometry fixes internal-vdW and rotor strain baselines.
+ * Donor rows are sorted lexicographically by donor/hydrogen, exclusion rows
+ * are unique canonical first<second pairs, and rotor rows are unique.  Atom
+ * boolean channels contain exactly 0 or 1.  This numerical ABI binds evidence
+ * identities but does not grant molecular-execution or production authority.
+ */
+typedef struct bg_docking_scorer_v1_context_soa_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    bg_unit_system unit_system;
+    uint32_t reserved0;
+
+    uint64_t receptor_atom_count;
+    uint64_t ligand_atom_count;
+
+    const double *receptor_x_angstrom;
+    const double *receptor_y_angstrom;
+    const double *receptor_z_angstrom;
+    const double *receptor_charge_elementary;
+    const double *receptor_vdw_radius_angstrom;
+    const double *receptor_epsilon_kcal_per_mol;
+    const uint8_t *receptor_hydrophobic;
+    const uint8_t *receptor_acceptor;
+
+    const double *ligand_reference_x_angstrom;
+    const double *ligand_reference_y_angstrom;
+    const double *ligand_reference_z_angstrom;
+    const double *ligand_charge_elementary;
+    const double *ligand_vdw_radius_angstrom;
+    const double *ligand_epsilon_kcal_per_mol;
+    const uint8_t *ligand_hydrophobic;
+    const uint8_t *ligand_acceptor;
+
+    uint64_t receptor_donor_count;
+    const uint64_t *receptor_donor_atom_index;
+    const uint64_t *receptor_hydrogen_atom_index;
+    uint64_t ligand_donor_count;
+    const uint64_t *ligand_donor_atom_index;
+    const uint64_t *ligand_hydrogen_atom_index;
+
+    uint64_t ligand_exclusion_count;
+    const uint64_t *ligand_exclusion_atom_i;
+    const uint64_t *ligand_exclusion_atom_j;
+
+    uint64_t rotor_count;
+    const uint64_t *rotor_atom_i;
+    const uint64_t *rotor_atom_j;
+    const uint64_t *rotor_atom_k;
+    const uint64_t *rotor_atom_l;
+
+    double pocket_center_angstrom[3];
+    double pocket_radius_angstrom;
+    double weights[BG_DOCKING_SCORER_V1_TERM_COUNT];
+    double electrostatic_dielectric;
+    double pair_cutoff_angstrom;
+    double hbond_distance_max_angstrom;
+    double polar_burial_distance_angstrom;
+    uint64_t max_receptor_candidate_pairs;
+    uint64_t max_ligand_pair_checks;
+
+    uint8_t authority_input_receipt_sha256[32];
+    uint8_t receptor_system_sha256[32];
+    uint8_t ligand_system_sha256[32];
+    uint8_t backend_receipt_sha256[32];
+    uint64_t reserved[8];
+} bg_docking_scorer_v1_context_soa_v1;
+
+/* Candidate-major fixed64 coordinate SoA.  Every batch preserves 64 slots.
+ * Inactive rows retain the denominator and produce the typed upstream failure
+ * without interpreting their coordinate values. */
+typedef struct bg_docking_scorer_v1_candidate_batch_soa_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    uint64_t candidate_count;
+    uint64_t ligand_atom_count;
+    bg_unit_system unit_system;
+    uint32_t reserved0;
+    const bg_docking_scorer_v1_candidate_state *candidate_state;
+    const double *x_angstrom;
+    const double *y_angstrom;
+    const double *z_angstrom;
+    uint64_t reserved[4];
+} bg_docking_scorer_v1_candidate_batch_soa_v1;
+
+/* Frozen ScorerV1 term order: typed-vdW, electrostatics,
+ * directional-H-bond, hydrophobic-contact, desolvation-proxy,
+ * torsion-energy, ligand-strain, weak-pocket-prior. */
+typedef struct bg_docking_scorer_v1_row_v1 {
+    uint32_t slot_index;
+    bg_docking_scorer_v1_row_status status;
+    bg_docking_scorer_v1_failure failure_code;
+    uint32_t reserved0;
+    double weighted_terms[BG_DOCKING_SCORER_V1_TERM_COUNT];
+    double total_score;
+    uint64_t receptor_candidate_pair_count;
+    uint64_t ligand_pair_count;
+    uint64_t hbond_count;
+    uint64_t hydrophobic_contact_count;
+    uint64_t buried_polar_count;
+    uint64_t reserved[4];
+} bg_docking_scorer_v1_row_v1;
+
+/* Caller-owned fixed64 output.  capacity and rows are inputs; row_count is
+ * committed only after the complete batch succeeds. */
+typedef struct bg_docking_scorer_v1_output_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    uint64_t row_capacity;
+    uint64_t row_count;
+    bg_unit_system unit_system;
+    uint32_t reserved0;
+    bg_docking_scorer_v1_row_v1 *rows;
+    uint64_t reserved[4];
+} bg_docking_scorer_v1_output_v1;
+
+/*
+ * Persistent Engine V2 pose-validity context. All channels and six identity
+ * digests are deep-copied. Bond and exclusion rows are unique sorted
+ * canonical i<j pairs; each chirality row contains four distinct in-range
+ * ligand atom indices. This numerical ABI records no product, molecular-
+ * execution, benchmark, or reservation authority.
+ */
+typedef struct bg_docking_pose_validity_context_soa_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    bg_unit_system unit_system;
+    uint32_t reserved0;
+
+    uint64_t receptor_atom_count;
+    uint64_t ligand_atom_count;
+    const double *receptor_x_angstrom;
+    const double *receptor_y_angstrom;
+    const double *receptor_z_angstrom;
+    const double *receptor_vdw_radius_angstrom;
+    const double *ligand_reference_x_angstrom;
+    const double *ligand_reference_y_angstrom;
+    const double *ligand_reference_z_angstrom;
+    const double *ligand_vdw_radius_angstrom;
+
+    uint64_t bond_count;
+    const uint64_t *bond_atom_i;
+    const uint64_t *bond_atom_j;
+    uint64_t ligand_exclusion_count;
+    const uint64_t *ligand_exclusion_atom_i;
+    const uint64_t *ligand_exclusion_atom_j;
+    uint64_t chirality_center_count;
+    const uint64_t *chirality_center_atom;
+    const uint64_t *chirality_atom_i;
+    const uint64_t *chirality_atom_j;
+    const uint64_t *chirality_atom_k;
+
+    double pocket_center_angstrom[3];
+    double pocket_radius_angstrom;
+    double bond_length_tolerance_angstrom;
+    double ligand_self_clash_angstrom;
+    double receptor_ligand_clash_angstrom;
+    double rotation_tolerance;
+    double chirality_volume_tolerance;
+    double severe_overlap_scale;
+    double contact_cell_size_angstrom;
+    uint64_t max_pair_checks;
+    uint64_t max_cross_checks;
+    uint64_t max_element_ligand_pair_checks;
+    uint64_t max_element_receptor_candidate_pairs;
+
+    uint8_t authority_input_receipt_sha256[32];
+    uint8_t receptor_system_sha256[32];
+    uint8_t ligand_system_sha256[32];
+    uint8_t scorer_context_receipt_sha256[32];
+    uint8_t backend_receipt_sha256[32];
+    uint8_t contact_policy_sha256[32];
+    uint64_t reserved[8];
+} bg_docking_pose_validity_context_soa_v1;
+
+/* Candidate-major fixed64 coordinates and explicit (x,y,z,w) rotation
+ * evidence. Upstream-failure rows retain the denominator and exact ScorerV1
+ * failure code; their coordinate and quaternion values are not interpreted. */
+typedef struct bg_docking_pose_validity_candidate_batch_soa_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    uint64_t candidate_count;
+    uint64_t ligand_atom_count;
+    bg_unit_system unit_system;
+    uint32_t reserved0;
+    const bg_docking_pose_validity_candidate_state *candidate_state;
+    const bg_docking_scorer_v1_failure *upstream_scorer_failure_code;
+    const double *quaternion_x;
+    const double *quaternion_y;
+    const double *quaternion_z;
+    const double *quaternion_w;
+    const double *x_angstrom;
+    const double *y_angstrom;
+    const double *z_angstrom;
+    uint64_t reserved[4];
+} bg_docking_pose_validity_candidate_batch_soa_v1;
+
+typedef struct bg_docking_pose_validity_row_v1 {
+    uint32_t slot_index;
+    bg_docking_pose_validity_row_status status;
+    bg_docking_pose_validity_failure failure_code;
+    bg_docking_scorer_v1_failure upstream_scorer_failure_code;
+    bg_docking_pose_validity_check_mask passed_check_mask;
+    bg_docking_pose_validity_check_mask blocker_mask;
+    uint64_t observed_count;
+
+    uint64_t atom_count;
+    double rotation_orthogonality_max_error;
+    double rotation_determinant;
+    double max_bond_length_delta_angstrom;
+    double minimum_ligand_nonbonded_distance_angstrom;
+    uint64_t evaluated_ligand_nonbonded_pair_count;
+    uint64_t excluded_ligand_pair_count;
+    double minimum_receptor_ligand_distance_angstrom;
+    uint64_t evaluated_receptor_ligand_pair_count;
+    double minimum_declared_chiral_volume;
+    uint64_t declared_chirality_center_count;
+    double maximum_pocket_center_distance_angstrom;
+    uint64_t element_vdw_ligand_pair_count;
+    uint64_t element_vdw_ligand_severe_overlap_count;
+    double element_vdw_ligand_minimum_distance_angstrom;
+    double element_vdw_ligand_minimum_ratio;
+    uint64_t element_vdw_receptor_candidate_pair_count;
+    uint64_t element_vdw_receptor_full_cartesian_pair_count;
+    uint64_t element_vdw_receptor_cell_count;
+    uint64_t element_vdw_receptor_severe_overlap_count;
+    double element_vdw_receptor_minimum_distance_angstrom;
+    double element_vdw_receptor_minimum_ratio;
+    uint64_t reserved[4];
+} bg_docking_pose_validity_row_v1;
+
+typedef struct bg_docking_pose_validity_output_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    uint64_t row_capacity;
+    uint64_t row_count;
+    bg_unit_system unit_system;
+    uint32_t reserved0;
+    bg_docking_pose_validity_row_v1 *rows;
+    uint64_t reserved[4];
+} bg_docking_pose_validity_output_v1;
+
+/*
+ * Receipt-free input to the fixed64 stable ranking kernel. Coordinate
+ * identities are 64 consecutive SHA-256 digests. A scored row requires a
+ * non-zero digest; a typed scorer failure requires an all-zero digest. The
+ * scorer and validity row arrays must preserve slot identity and exact
+ * failure binding. The frozen order is total score ascending, then slot index
+ * ascending, then coordinate digest lexicographic. Slot identity is unique,
+ * so the final tie-break remains declared evidence rather than an opportunity
+ * for result-dependent ordering.
+ */
+typedef struct bg_docking_stable_top_k_input_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    uint64_t candidate_count;
+    uint32_t top_k_limit;
+    bg_unit_system unit_system;
+    const bg_docking_scorer_v1_row_v1 *scorer_rows;
+    const bg_docking_pose_validity_row_v1 *validity_rows;
+    const uint8_t *coordinate_sha256;
+    uint64_t reserved[4];
+} bg_docking_stable_top_k_input_v1;
+
+/* Rank zero is the explicit not-ranked sentinel. Ineligible rows carry zero
+ * score and coordinate identity. These numerical rows grant no product-rank,
+ * customer-emission, or production-claim authority. */
+typedef struct bg_docking_stable_top_k_row_v1 {
+    uint32_t slot_index;
+    uint8_t rank_eligible;
+    uint8_t valid_rank_eligible;
+    uint16_t reserved0;
+    uint32_t stable_rank;
+    uint32_t stable_valid_rank;
+    double total_score;
+    uint8_t coordinate_sha256[32];
+    uint64_t reserved[4];
+} bg_docking_stable_top_k_row_v1;
+
+/* Caller-owned transactional output. Both ranking-index buffers need capacity
+ * 64; count fields and authority flags are committed only after the complete
+ * result has passed backend-independent validation. */
+typedef struct bg_docking_stable_top_k_output_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    uint64_t row_capacity;
+    uint64_t row_count;
+    uint64_t primary_index_capacity;
+    uint64_t primary_index_count;
+    uint64_t valid_index_capacity;
+    uint64_t valid_index_count;
+    bg_unit_system unit_system;
+    uint32_t reserved0;
+    bg_docking_stable_top_k_row_v1 *rows;
+    uint32_t *primary_slot_indices;
+    uint32_t *valid_slot_indices;
+    uint8_t existing_rank_auto_change_authorized;
+    uint8_t customer_pose_emission_authorized;
+    uint8_t production_claim_authorized;
+    uint8_t reserved1;
+    uint32_t reserved2;
+    uint64_t reserved[4];
+} bg_docking_stable_top_k_output_v1;
+
+/*
+ * Candidate-major direct-coordinate RMSD clustering input. The stable Top-K
+ * rows and valid index list must be the complete, mutually consistent output
+ * of bg_docking_stable_top_k_v1_rank_fixed64. Coordinates use three separate
+ * arrays of exactly 64 * ligand_atom_count values. Only valid-ranked slots are
+ * interpreted. Traversal is stable-valid-rank order; the first representative
+ * within the inclusive threshold wins. No alignment or symmetry permutation
+ * is performed by this v1 kernel.
+ */
+typedef struct bg_docking_rmsd_cluster_input_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    uint64_t candidate_count;
+    uint64_t ligand_atom_count;
+    uint64_t valid_index_count;
+    uint32_t top_k_limit;
+    bg_unit_system unit_system;
+    double rmsd_threshold_angstrom;
+    const bg_docking_stable_top_k_row_v1 *ranking_rows;
+    const uint32_t *valid_slot_indices;
+    const double *x_angstrom;
+    const double *y_angstrom;
+    const double *z_angstrom;
+    uint64_t reserved[4];
+} bg_docking_rmsd_cluster_input_v1;
+
+/* Zero is the not-clustered sentinel for every rank/id/count field. Upstream
+ * rows retain the fixed64 denominator and no coordinate or RMSD evidence. */
+typedef struct bg_docking_rmsd_cluster_row_v1 {
+    uint32_t slot_index;
+    bg_docking_rmsd_cluster_row_status status;
+    uint8_t cluster_eligible;
+    uint8_t representative;
+    uint8_t top_k_representative;
+    uint8_t reserved0;
+    uint32_t stable_valid_rank;
+    uint32_t cluster_id;
+    uint32_t representative_slot_index;
+    uint32_t cluster_rank;
+    uint32_t top_k_rank;
+    uint32_t cluster_size;
+    uint32_t reserved1;
+    double direct_rmsd_to_representative_angstrom;
+    uint8_t coordinate_sha256[32];
+    uint64_t reserved[4];
+} bg_docking_rmsd_cluster_row_v1;
+
+/* Caller-owned transactional output. Representative capacity must be 64 and
+ * Top-K capacity must be 5. All authority flags are always committed false. */
+typedef struct bg_docking_rmsd_cluster_output_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    uint64_t row_capacity;
+    uint64_t row_count;
+    uint64_t representative_index_capacity;
+    uint64_t representative_index_count;
+    uint64_t top_k_index_capacity;
+    uint64_t top_k_index_count;
+    bg_unit_system unit_system;
+    uint32_t reserved0;
+    bg_docking_rmsd_cluster_row_v1 *rows;
+    uint32_t *representative_slot_indices;
+    uint32_t *top_k_slot_indices;
+    uint8_t existing_rank_auto_change_authorized;
+    uint8_t customer_pose_emission_authorized;
+    uint8_t production_claim_authorized;
+    uint8_t reserved1;
+    uint32_t reserved2;
+    uint64_t reserved[4];
+} bg_docking_rmsd_cluster_output_v1;
+
 /* ABI and diagnostics. */
 BG_API uint32_t BG_CALL bg_abi_version(void) BG_NOEXCEPT;
 BG_API uint32_t BG_CALL bg_abi_version_major(void) BG_NOEXCEPT;
@@ -519,6 +975,46 @@ BG_API bg_status BG_CALL bg_dynamics_report_v1_init(
     bg_dynamics_report_v1 *report,
     size_t caller_struct_size,
     uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_scorer_v1_context_soa_v1_init(
+    bg_docking_scorer_v1_context_soa_v1 *descriptor,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_scorer_v1_candidate_batch_soa_v1_init(
+    bg_docking_scorer_v1_candidate_batch_soa_v1 *batch,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_scorer_v1_output_v1_init(
+    bg_docking_scorer_v1_output_v1 *output,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_pose_validity_context_soa_v1_init(
+    bg_docking_pose_validity_context_soa_v1 *descriptor,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_pose_validity_candidate_batch_soa_v1_init(
+    bg_docking_pose_validity_candidate_batch_soa_v1 *batch,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_pose_validity_output_v1_init(
+    bg_docking_pose_validity_output_v1 *output,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_stable_top_k_input_v1_init(
+    bg_docking_stable_top_k_input_v1 *input,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_stable_top_k_output_v1_init(
+    bg_docking_stable_top_k_output_v1 *output,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_rmsd_cluster_input_v1_init(
+    bg_docking_rmsd_cluster_input_v1 *input,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_rmsd_cluster_output_v1_init(
+    bg_docking_rmsd_cluster_output_v1 *output,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
 
 #if !defined(BG_DISABLE_DESCRIPTOR_INIT_CONVENIENCE_MACROS)
 #  define bg_context_options_init(options) \
@@ -565,6 +1061,44 @@ BG_API bg_status BG_CALL bg_dynamics_report_v1_init(
 #  define bg_dynamics_report_v1_init(report) \
     bg_dynamics_report_v1_init( \
         (report), sizeof(bg_dynamics_report_v1), BG_ABI_VERSION)
+#  define bg_docking_scorer_v1_context_soa_v1_init(descriptor) \
+    bg_docking_scorer_v1_context_soa_v1_init( \
+        (descriptor), \
+        sizeof(bg_docking_scorer_v1_context_soa_v1), \
+        BG_ABI_VERSION)
+#  define bg_docking_scorer_v1_candidate_batch_soa_v1_init(batch) \
+    bg_docking_scorer_v1_candidate_batch_soa_v1_init( \
+        (batch), \
+        sizeof(bg_docking_scorer_v1_candidate_batch_soa_v1), \
+        BG_ABI_VERSION)
+#  define bg_docking_scorer_v1_output_v1_init(output) \
+    bg_docking_scorer_v1_output_v1_init( \
+        (output), sizeof(bg_docking_scorer_v1_output_v1), BG_ABI_VERSION)
+#  define bg_docking_pose_validity_context_soa_v1_init(descriptor) \
+    bg_docking_pose_validity_context_soa_v1_init( \
+        (descriptor), \
+        sizeof(bg_docking_pose_validity_context_soa_v1), \
+        BG_ABI_VERSION)
+#  define bg_docking_pose_validity_candidate_batch_soa_v1_init(batch) \
+    bg_docking_pose_validity_candidate_batch_soa_v1_init( \
+        (batch), \
+        sizeof(bg_docking_pose_validity_candidate_batch_soa_v1), \
+        BG_ABI_VERSION)
+#  define bg_docking_pose_validity_output_v1_init(output) \
+    bg_docking_pose_validity_output_v1_init( \
+        (output), sizeof(bg_docking_pose_validity_output_v1), BG_ABI_VERSION)
+#  define bg_docking_stable_top_k_input_v1_init(input) \
+    bg_docking_stable_top_k_input_v1_init( \
+        (input), sizeof(bg_docking_stable_top_k_input_v1), BG_ABI_VERSION)
+#  define bg_docking_stable_top_k_output_v1_init(output) \
+    bg_docking_stable_top_k_output_v1_init( \
+        (output), sizeof(bg_docking_stable_top_k_output_v1), BG_ABI_VERSION)
+#  define bg_docking_rmsd_cluster_input_v1_init(input) \
+    bg_docking_rmsd_cluster_input_v1_init( \
+        (input), sizeof(bg_docking_rmsd_cluster_input_v1), BG_ABI_VERSION)
+#  define bg_docking_rmsd_cluster_output_v1_init(output) \
+    bg_docking_rmsd_cluster_output_v1_init( \
+        (output), sizeof(bg_docking_rmsd_cluster_output_v1), BG_ABI_VERSION)
 #endif
 
 /*
@@ -593,6 +1127,77 @@ BG_API bg_status BG_CALL bg_context_get_device_ordinal(
 BG_API bg_status BG_CALL bg_context_get_unit_system(
     const bg_context *context,
     bg_unit_system *unit_system) BG_NOEXCEPT;
+
+/*
+ * Create a persistent ScorerV1 context for the explicitly selected backend.
+ * CPP_CPU_REFERENCE is qualification-only.  RUST_CPU is the product CPU
+ * implementation.  HIP_SAFE and HIP_FAST never fall back; until their
+ * ScorerV1 providers are compiled and qualified these calls fail closed with
+ * BG_STATUS_BACKEND_UNAVAILABLE.  The scorer owns all copied context state and
+ * has no parent-context lifetime dependency, while score calls still require a
+ * context with the exact backend/device binding used at creation.
+ */
+BG_API bg_status BG_CALL bg_docking_scorer_v1_create(
+    const bg_context *context,
+    const bg_docking_scorer_v1_context_soa_v1 *descriptor,
+    bg_docking_scorer_v1 **out_scorer) BG_NOEXCEPT;
+BG_API void BG_CALL bg_docking_scorer_v1_destroy(
+    bg_docking_scorer_v1 *scorer) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_scorer_v1_get_backend(
+    const bg_docking_scorer_v1 *scorer,
+    bg_backend *backend) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_scorer_v1_score_fixed64(
+    const bg_context *context,
+    const bg_docking_scorer_v1 *scorer,
+    const bg_docking_scorer_v1_candidate_batch_soa_v1 *candidates,
+    bg_docking_scorer_v1_output_v1 *out_rows) BG_NOEXCEPT;
+
+/*
+ * Pose validity uses the same explicit backend/device binding as ScorerV1.
+ * CPP_CPU_REFERENCE is qualification-only, RUST_CPU is the product CPU path,
+ * and HIP_SAFE/HIP_FAST never fall back. Candidate rows remain fixed at 64;
+ * upstream scorer failures and candidate-local capacity failures are emitted
+ * as typed rows rather than removed from the denominator.
+ */
+BG_API bg_status BG_CALL bg_docking_pose_validity_v1_create(
+    const bg_context *context,
+    const bg_docking_pose_validity_context_soa_v1 *descriptor,
+    bg_docking_pose_validity_v1 **out_validity) BG_NOEXCEPT;
+BG_API void BG_CALL bg_docking_pose_validity_v1_destroy(
+    bg_docking_pose_validity_v1 *validity) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_pose_validity_v1_get_backend(
+    const bg_docking_pose_validity_v1 *validity,
+    bg_backend *backend) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_pose_validity_v1_evaluate_fixed64(
+    const bg_context *context,
+    const bg_docking_pose_validity_v1 *validity,
+    const bg_docking_pose_validity_candidate_batch_soa_v1 *candidates,
+    bg_docking_pose_validity_output_v1 *out_rows) BG_NOEXCEPT;
+
+/* Stable Top-K uses the same explicit backend/device binding. Primary ranking
+ * includes every successfully scored row; valid-only ranking is the primary
+ * order filtered by a complete all-checks-passed validity row. No backend may
+ * silently fall back, and all three product authority flags remain false. */
+BG_API bg_status BG_CALL bg_docking_stable_top_k_v1_create(
+    const bg_context *context,
+    bg_docking_stable_top_k_v1 **out_ranker) BG_NOEXCEPT;
+BG_API void BG_CALL bg_docking_stable_top_k_v1_destroy(
+    bg_docking_stable_top_k_v1 *ranker) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_stable_top_k_v1_get_backend(
+    const bg_docking_stable_top_k_v1 *ranker,
+    bg_backend *backend) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_stable_top_k_v1_rank_fixed64(
+    const bg_context *context,
+    const bg_docking_stable_top_k_v1 *ranker,
+    const bg_docking_stable_top_k_input_v1 *input,
+    bg_docking_stable_top_k_output_v1 *output) BG_NOEXCEPT;
+/* Direct RMSD clustering reuses the explicitly bound stable Top-K provider.
+ * It preserves all 64 slots and never changes product rank or emits poses. */
+BG_API bg_status BG_CALL bg_docking_stable_top_k_v1_cluster_direct_rmsd_fixed64(
+    const bg_context *context,
+    const bg_docking_stable_top_k_v1 *ranker,
+    const bg_docking_rmsd_cluster_input_v1 *input,
+    bg_docking_rmsd_cluster_output_v1 *output) BG_NOEXCEPT;
 
 /* A system owns its host SoA and has no parent-handle lifetime dependency. */
 BG_API bg_status BG_CALL bg_system_create(

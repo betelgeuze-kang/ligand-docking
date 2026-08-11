@@ -383,6 +383,15 @@ from .consumers import (  # noqa: E402
     StandaloneProductShadowAdapter,
     run_standalone_docking,
 )
+from .native_fixed64_consumers import (  # noqa: E402
+    NativeFixed64CliAdapter,
+    NativeFixed64ConsumerError,
+    NativeFixed64DiagnosticBenchmarkAdapter,
+    NativeFixed64EvidenceV1,
+    NativeFixed64ProductShadowAdapter,
+    NativeFixed64PythonApi,
+    run_native_fixed64_surface,
+)
 
 __all__ = [
     "DOCKING_SEARCH_V2_ALGORITHM_ID",
@@ -711,4 +720,11 @@ __all__ = [
     "StandaloneDockingPythonApi",
     "StandaloneProductShadowAdapter",
     "run_standalone_docking",
+    "NativeFixed64CliAdapter",
+    "NativeFixed64ConsumerError",
+    "NativeFixed64DiagnosticBenchmarkAdapter",
+    "NativeFixed64EvidenceV1",
+    "NativeFixed64ProductShadowAdapter",
+    "NativeFixed64PythonApi",
+    "run_native_fixed64_surface",
 ]

@@ -1236,7 +1236,15 @@ class ChemistryPoseScorerV1:
             dtype=np.float64,
         )
         return self._native_module.NativeScorerContext(
+            self._authority.input_receipt_sha256,
+            self._authority.receptor_system_sha256,
+            self._authority.ligand_system_sha256,
+            self._backend_receipt.receipt_sha256,
             receptor_coordinates,
+            np.ascontiguousarray(
+                self._ligand_reference.detach().cpu().numpy(),
+                dtype=np.float64,
+            ),
             np.asarray(self._context.receptor_partial_charges_e, dtype=np.float64),
             np.asarray(self._context.ligand_partial_charges_e, dtype=np.float64),
             receptor_radii,
@@ -1257,8 +1265,6 @@ class ChemistryPoseScorerV1:
             index_rows(self._context.ligand_donors, 2),
             index_rows(tuple(sorted(self._validity.excluded_nonbonded_pairs)), 2),
             index_rows(self._rotor_quads, 4),
-            np.asarray(self._reference_dihedrals, dtype=np.float64),
-            float(self._reference_internal_vdw),
             np.ascontiguousarray(
                 self._authority.pocket.center.detach().cpu().numpy(),
                 dtype=np.float64,

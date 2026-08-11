@@ -12,6 +12,9 @@ add_library(betelgeuze_engine SHARED
     src/cpu/evaluator.cpp
     src/hip/evaluator.cpp
     src/rust/evaluator.cpp
+    src/docking/pose_validity.cpp
+    src/docking/scorer_v1.cpp
+    src/docking/stable_top_k.cpp
     src/dynamics/api.cpp
     src/dynamics/checkpoint.cpp
     src/dynamics/common.cpp
@@ -31,7 +34,8 @@ else()
         "${BG_RUST_CPU_TARGET_DIR}/release/libbetelgeuze_cpu_kernel.a")
 endif()
 file(GLOB_RECURSE BG_RUST_CPU_SOURCES CONFIGURE_DEPENDS
-    "${PROJECT_SOURCE_DIR}/rust/cpu-kernel/src/*.rs")
+    "${PROJECT_SOURCE_DIR}/rust/cpu-kernel/src/*.rs"
+    "${PROJECT_SOURCE_DIR}/rust/betelgeuze-docking-search/src/*.rs")
 add_custom_command(
     OUTPUT "${BG_RUST_CPU_STATIC_LIBRARY}"
     COMMAND ${CMAKE_COMMAND} -E env
@@ -46,6 +50,7 @@ add_custom_command(
         "${PROJECT_SOURCE_DIR}/rust/Cargo.toml"
         "${PROJECT_SOURCE_DIR}/rust/Cargo.lock"
         "${PROJECT_SOURCE_DIR}/rust/cpu-kernel/Cargo.toml"
+        "${PROJECT_SOURCE_DIR}/rust/betelgeuze-docking-search/Cargo.toml"
         ${BG_RUST_CPU_SOURCES}
     COMMENT "Building deterministic Rust CPU provider"
     VERBATIM
@@ -205,6 +210,9 @@ if(BG_HIP_SAFE_COMPILED)
             "-I${CMAKE_CURRENT_SOURCE_DIR}/src/hip"
         DEPENDS
             "${CMAKE_CURRENT_SOURCE_DIR}/src/hip/provider.hip"
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/hip/docking_scorer.hip"
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/hip/docking_pose_validity.hip"
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/hip/docking_stable_top_k.hip"
             "${CMAKE_CURRENT_SOURCE_DIR}/src/hip/provider.h"
             "${PROJECT_SOURCE_DIR}/include/betelgeuze/engine.h"
         COMMENT "Building deterministic hip_safe provider"
@@ -400,6 +408,115 @@ if(BUILD_TESTING)
     )
 
     add_executable(
+        betelgeuze_engine_docking_scorer_v1
+        tests/docking_scorer_v1.cpp
+    )
+    target_link_libraries(
+        betelgeuze_engine_docking_scorer_v1
+        PRIVATE betelgeuze_engine
+    )
+    target_compile_features(
+        betelgeuze_engine_docking_scorer_v1
+        PRIVATE cxx_std_17
+    )
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(betelgeuze_engine_docking_scorer_v1 PRIVATE
+            -Wall
+            -Wextra
+            -Wpedantic
+            -Wconversion
+            -Wsign-conversion
+            -Werror
+            -UNDEBUG
+            -ffp-contract=off
+            -fno-fast-math
+        )
+    elseif(MSVC)
+        target_compile_options(
+            betelgeuze_engine_docking_scorer_v1
+            PRIVATE /W4 /WX /UNDEBUG /fp:strict
+        )
+    endif()
+    add_test(
+        NAME betelgeuze_engine_docking_scorer_v1
+        COMMAND betelgeuze_engine_docking_scorer_v1
+    )
+
+    add_executable(
+        betelgeuze_engine_docking_pose_validity
+        tests/docking_pose_validity.cpp
+    )
+    target_link_libraries(
+        betelgeuze_engine_docking_pose_validity
+        PRIVATE betelgeuze_engine
+    )
+    target_compile_features(
+        betelgeuze_engine_docking_pose_validity
+        PRIVATE cxx_std_17
+    )
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(
+            betelgeuze_engine_docking_pose_validity
+            PRIVATE
+                -Wall
+                -Wextra
+                -Wpedantic
+                -Wconversion
+                -Wsign-conversion
+                -Werror
+                -UNDEBUG
+                -ffp-contract=off
+                -fno-fast-math
+        )
+    elseif(MSVC)
+        target_compile_options(
+            betelgeuze_engine_docking_pose_validity
+            PRIVATE /W4 /WX /UNDEBUG /fp:strict
+        )
+    endif()
+    add_test(
+        NAME betelgeuze_engine_docking_pose_validity
+        COMMAND betelgeuze_engine_docking_pose_validity
+    )
+
+    add_executable(
+        betelgeuze_engine_docking_stable_top_k
+        tests/docking_stable_top_k.cpp
+    )
+    target_link_libraries(
+        betelgeuze_engine_docking_stable_top_k
+        PRIVATE betelgeuze_engine
+    )
+    target_compile_features(
+        betelgeuze_engine_docking_stable_top_k
+        PRIVATE cxx_std_17
+    )
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(
+            betelgeuze_engine_docking_stable_top_k
+            PRIVATE
+                -Wall
+                -Wextra
+                -Wpedantic
+                -Wconversion
+                -Wsign-conversion
+                -Werror
+                -UNDEBUG
+                -ffp-contract=off
+                -fno-fast-math
+        )
+    elseif(MSVC)
+        target_compile_options(
+            betelgeuze_engine_docking_stable_top_k
+            PRIVATE /W4 /WX /UNDEBUG /fp:strict
+        )
+    endif()
+    add_test(
+        NAME betelgeuze_engine_docking_stable_top_k
+        COMMAND betelgeuze_engine_docking_stable_top_k
+    )
+
+    add_executable(
         betelgeuze_engine_dynamics
         tests/dynamics.cpp
     )
@@ -523,6 +640,7 @@ if(BUILD_TESTING)
                 PRIVATE
                     BG_ENABLE_HIP=1
                     BG_HAS_HIP_SAFE_PROVIDER=0
+                    BG_DISABLE_DESCRIPTOR_INIT_CONVENIENCE_MACROS
             )
             target_link_libraries(
                 ${BG_HIP_INTERNAL_TARGET}

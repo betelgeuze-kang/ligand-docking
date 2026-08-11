@@ -13,6 +13,7 @@ dynamic = ["dependencies"]
 betelgeuze-product = "betelgeuze_product.cli:main"
 betelgeuze-cameo = "betelgeuze_cameo.cli:main"
 betelgeuze-cleanup = "betelgeuze_cleanup.cli:main"
+betelgeuze-dock = "betelgeuze_engine_v2.standalone_cli:main"
 
 [tool.setuptools.packages.find]
 include = [

@@ -1,13 +1,18 @@
 #![allow(non_local_definitions)]
 
 mod docking_v2;
+mod fixed64_pipeline;
 
+use betelgeuze_docking_search::{
+    NativeScorerV1Atom, NativeScorerV1Backend, NativeScorerV1Config, NativeScorerV1Context,
+    NativeScorerV1Donor, NativeScorerV1KernelOutcome, NativeScorerV1RustCpuKernel, Vec3,
+};
 use numpy::{PyReadonlyArray1, PyReadonlyArray2, PyReadonlyArray3};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use rayon::prelude::*;
 use rayon::{ThreadPool, ThreadPoolBuilder};
-use std::collections::{BTreeMap, HashSet};
+use std::collections::BTreeMap;
 
 const MAX_BATCH_SIZE: usize = 64;
 const GEOMETRIC_ADMISSION_METRICS_KERNEL_ID: &str =
@@ -22,17 +27,6 @@ const MAX_GEOMETRIC_ABSOLUTE_COORDINATE_ANGSTROM: f64 = 100_000.0;
 const MIN_GEOMETRIC_VDW_RADIUS_ANGSTROM: f64 = 0.1;
 const MAX_GEOMETRIC_VDW_RADIUS_ANGSTROM: f64 = 10.0;
 const MAX_GEOMETRIC_POCKET_RADIUS_ANGSTROM: f64 = 1_000.0;
-
-#[derive(Clone, Copy)]
-struct Config {
-    dielectric: f64,
-    pair_cutoff: f64,
-    hbond_cutoff: f64,
-    polar_burial_cutoff: f64,
-    max_receptor_pairs: usize,
-    max_ligand_pairs: usize,
-    weights: [f64; 8],
-}
 
 #[pyclass(frozen)]
 struct NativeScoreRow {
@@ -95,27 +89,8 @@ struct NativeGeometricAdmissionMetrics {
 
 #[pyclass]
 struct NativeScorerContext {
-    receptor: Vec<[f64; 3]>,
-    receptor_cells: BTreeMap<(i64, i64, i64), Vec<usize>>,
-    receptor_charges: Vec<f64>,
-    ligand_charges: Vec<f64>,
-    receptor_radii: Vec<f64>,
-    ligand_radii: Vec<f64>,
-    receptor_epsilons: Vec<f64>,
-    ligand_epsilons: Vec<f64>,
-    receptor_hydrophobic: Vec<bool>,
-    ligand_hydrophobic: Vec<bool>,
-    receptor_acceptors: Vec<bool>,
-    ligand_acceptors: Vec<bool>,
-    receptor_donor_by_hydrogen: Vec<Option<usize>>,
-    ligand_donor_by_hydrogen: Vec<Option<usize>>,
-    ligand_exclusions: HashSet<(usize, usize)>,
-    rotor_quads: Vec<[usize; 4]>,
-    reference_dihedrals: Vec<f64>,
-    reference_internal_vdw: f64,
-    pocket_center: [f64; 3],
-    pocket_radius: f64,
-    config: Config,
+    core: NativeScorerV1Context,
+    ligand_atom_count: usize,
     pool: ThreadPool,
 }
 
@@ -216,32 +191,43 @@ fn index_rows<const N: usize>(
         .collect()
 }
 
-fn subtract(first: [f64; 3], second: [f64; 3]) -> [f64; 3] {
-    [
-        first[0] - second[0],
-        first[1] - second[1],
-        first[2] - second[2],
-    ]
+fn canonical_sha256(value: &str, name: &str) -> PyResult<[u8; 32]> {
+    let bytes = value.as_bytes();
+    if bytes.len() != 64
+        || bytes
+            .iter()
+            .any(|byte| !byte.is_ascii_digit() && !(b'a'..=b'f').contains(byte))
+    {
+        return Err(PyValueError::new_err(format!(
+            "{name} must be 64 lowercase hexadecimal characters"
+        )));
+    }
+    let mut digest = [0u8; 32];
+    for (index, pair) in bytes.chunks_exact(2).enumerate() {
+        let high = if pair[0].is_ascii_digit() {
+            pair[0] - b'0'
+        } else {
+            pair[0] - b'a' + 10
+        };
+        let low = if pair[1].is_ascii_digit() {
+            pair[1] - b'0'
+        } else {
+            pair[1] - b'a' + 10
+        };
+        digest[index] = (high << 4) | low;
+    }
+    if digest == [0; 32] {
+        return Err(PyValueError::new_err(format!(
+            "{name} must not be the all-zero digest"
+        )));
+    }
+    Ok(digest)
 }
 
-fn dot(first: [f64; 3], second: [f64; 3]) -> f64 {
-    first[0] * second[0] + first[1] * second[1] + first[2] * second[2]
-}
-
-fn norm(value: [f64; 3]) -> f64 {
-    dot(value, value).sqrt()
-}
-
-fn cross(first: [f64; 3], second: [f64; 3]) -> [f64; 3] {
-    [
-        first[1] * second[2] - first[2] * second[1],
-        first[2] * second[0] - first[0] * second[2],
-        first[0] * second[1] - first[1] * second[0],
-    ]
-}
-
-fn scale(value: [f64; 3], factor: f64) -> [f64; 3] {
-    [value[0] * factor, value[1] * factor, value[2] * factor]
+fn native_coordinates(rows: &[[f64; 3]]) -> Vec<Vec3> {
+    rows.iter()
+        .map(|row| Vec3::new(row[0], row[1], row[2]))
+        .collect()
 }
 
 fn validate_geometric_coordinates(
@@ -453,242 +439,31 @@ fn evaluate_geometric_admission_metrics_one(
     })
 }
 
-fn lj(first_epsilon: f64, second_epsilon: f64, sigma: f64, distance: f64) -> f64 {
-    if distance <= 1.0e-8 {
-        return 1.0e6;
-    }
-    let ratio = (sigma / distance).min(2.0);
-    let sixth = ratio.powi(6);
-    (first_epsilon * second_epsilon).sqrt() * (sixth * sixth - 2.0 * sixth)
-}
-
-fn dihedral(coordinates: &[[f64; 3]], atoms: [usize; 4]) -> Result<f64, &'static str> {
-    let first = coordinates[atoms[0]];
-    let second = coordinates[atoms[1]];
-    let third = coordinates[atoms[2]];
-    let fourth = coordinates[atoms[3]];
-    let middle = subtract(third, second);
-    let middle_norm = norm(middle);
-    if middle_norm <= 1.0e-12 {
-        return Err("degenerate_rotor_geometry");
-    }
-    let axis = scale(middle, 1.0 / middle_norm);
-    let mut left = subtract(first, second);
-    let mut right = subtract(fourth, third);
-    left = subtract(left, scale(axis, dot(left, axis)));
-    right = subtract(right, scale(axis, dot(right, axis)));
-    let left_norm = norm(left);
-    let right_norm = norm(right);
-    if left_norm.min(right_norm) <= 1.0e-12 {
-        return Err("degenerate_rotor_geometry");
-    }
-    left = scale(left, 1.0 / left_norm);
-    right = scale(right, 1.0 / right_norm);
-    Ok(dot(cross(left, right), axis).atan2(dot(left, right)))
-}
-
-fn hbond_reward(donor: [f64; 3], hydrogen: [f64; 3], acceptor: [f64; 3], cutoff: f64) -> f64 {
-    let distance = norm(subtract(hydrogen, acceptor));
-    if distance > cutoff || distance <= 1.0e-8 {
-        return 0.0;
-    }
-    let first = subtract(donor, hydrogen);
-    let second = subtract(acceptor, hydrogen);
-    let denominator = norm(first) * norm(second);
-    if denominator <= 1.0e-12 {
-        return 0.0;
-    }
-    let cosine = dot(first, second) / denominator;
-    let angular = ((-cosine - 0.5) / 0.5).clamp(0.0, 1.0);
-    let radial = (1.0 - distance / cutoff).max(0.0);
-    angular * radial
-}
-
 impl NativeScorerContext {
-    fn score_one(&self, pose: &[[f64; 3]]) -> NativeScoreRow {
-        if pose.len() != self.ligand_charges.len()
-            || pose.iter().flatten().any(|value| !value.is_finite())
-        {
-            return NativeScoreRow::failure("invalid_candidate_coordinates", 0, 0);
-        }
-        let mut typed_vdw_raw = 0.0;
-        let mut electro_raw = 0.0;
-        let mut hydrophobic_raw = 0.0;
-        let mut hydrophobic_count = 0usize;
-        let mut candidate_count = 0usize;
-        let mut polar_buried = vec![false; pose.len()];
-        let mut polar_satisfied = vec![false; pose.len()];
-        let mut accepted_pairs: Vec<(usize, usize)> = Vec::new();
-        for (ligand_index, coordinate) in pose.iter().copied().enumerate() {
-            let center = (
-                (coordinate[0] / self.config.pair_cutoff).floor() as i64,
-                (coordinate[1] / self.config.pair_cutoff).floor() as i64,
-                (coordinate[2] / self.config.pair_cutoff).floor() as i64,
-            );
-            for x in (center.0 - 1)..=(center.0 + 1) {
-                for y in (center.1 - 1)..=(center.1 + 1) {
-                    for z in (center.2 - 1)..=(center.2 + 1) {
-                        if let Some(indices) = self.receptor_cells.get(&(x, y, z)) {
-                            for receptor_index in indices.iter().copied() {
-                                candidate_count += 1;
-                                if candidate_count > self.config.max_receptor_pairs {
-                                    return NativeScoreRow::failure(
-                                        "receptor_candidate_pair_capacity_exceeded",
-                                        candidate_count,
-                                        0,
-                                    );
-                                }
-                                let distance =
-                                    norm(subtract(coordinate, self.receptor[receptor_index]));
-                                if distance > self.config.pair_cutoff {
-                                    continue;
-                                }
-                                accepted_pairs.push((ligand_index, receptor_index));
-                                let sigma = self.ligand_radii[ligand_index]
-                                    + self.receptor_radii[receptor_index];
-                                typed_vdw_raw += lj(
-                                    self.ligand_epsilons[ligand_index],
-                                    self.receptor_epsilons[receptor_index],
-                                    sigma,
-                                    distance,
-                                );
-                                electro_raw += self.ligand_charges[ligand_index]
-                                    * self.receptor_charges[receptor_index]
-                                    / (self.config.dielectric * distance.max(0.5));
-                                if self.ligand_hydrophobic[ligand_index]
-                                    && self.receptor_hydrophobic[receptor_index]
-                                    && distance <= 1.25 * sigma
-                                {
-                                    hydrophobic_count += 1;
-                                    hydrophobic_raw += (1.0 - distance / (1.25 * sigma)).max(0.0);
-                                }
-                                let ligand_polar = self.ligand_acceptors[ligand_index]
-                                    || self.ligand_donor_by_hydrogen.iter().any(|donor| {
-                                        donor.map(|value| value == ligand_index).unwrap_or(false)
-                                    });
-                                if ligand_polar && distance <= self.config.polar_burial_cutoff {
-                                    polar_buried[ligand_index] = true;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        let mut hbond_raw = 0.0;
-        let mut hbond_count = 0usize;
-        for (ligand_index, receptor_index) in accepted_pairs.iter().copied() {
-            if let Some(donor) = self.ligand_donor_by_hydrogen[ligand_index] {
-                if self.receptor_acceptors[receptor_index] {
-                    let reward = hbond_reward(
-                        pose[donor],
-                        pose[ligand_index],
-                        self.receptor[receptor_index],
-                        self.config.hbond_cutoff,
-                    );
-                    if reward > 0.0 {
-                        hbond_raw += reward;
-                        hbond_count += 1;
-                        polar_satisfied[donor] = true;
-                    }
-                }
-            }
-            if let Some(donor) = self.receptor_donor_by_hydrogen[receptor_index] {
-                if self.ligand_acceptors[ligand_index] {
-                    let reward = hbond_reward(
-                        self.receptor[donor],
-                        self.receptor[receptor_index],
-                        pose[ligand_index],
-                        self.config.hbond_cutoff,
-                    );
-                    if reward > 0.0 {
-                        hbond_raw += reward;
-                        hbond_count += 1;
-                        polar_satisfied[ligand_index] = true;
-                    }
-                }
-            }
-        }
-
-        let mut internal = 0.0;
-        let mut ligand_pair_count = 0usize;
-        for first in 0..pose.len() {
-            for second in (first + 1)..pose.len() {
-                if self.ligand_exclusions.contains(&(first, second)) {
-                    continue;
-                }
-                ligand_pair_count += 1;
-                if ligand_pair_count > self.config.max_ligand_pairs {
-                    return NativeScoreRow::failure(
-                        "ligand_pair_capacity_exceeded",
-                        candidate_count,
-                        ligand_pair_count,
-                    );
-                }
-                internal += lj(
-                    self.ligand_epsilons[first],
-                    self.ligand_epsilons[second],
-                    self.ligand_radii[first] + self.ligand_radii[second],
-                    norm(subtract(pose[first], pose[second])),
-                );
-            }
-        }
-        let strain_raw = (internal - self.reference_internal_vdw).max(0.0);
-        let mut torsion_raw = 0.0;
-        for (quad, reference) in self.rotor_quads.iter().zip(self.reference_dihedrals.iter()) {
-            let observed = match dihedral(pose, *quad) {
-                Ok(value) => value,
-                Err(code) => {
-                    return NativeScoreRow::failure(code, candidate_count, ligand_pair_count)
-                }
-            };
-            let delta = (observed - reference)
-                .sin()
-                .atan2((observed - reference).cos());
-            torsion_raw += 0.5 * (1.0 - (3.0 * delta).cos());
-        }
-        let centroid = [
-            pose.iter().map(|row| row[0]).sum::<f64>() / pose.len() as f64,
-            pose.iter().map(|row| row[1]).sum::<f64>() / pose.len() as f64,
-            pose.iter().map(|row| row[2]).sum::<f64>() / pose.len() as f64,
-        ];
-        let pocket_raw =
-            (norm(subtract(centroid, self.pocket_center)) / self.pocket_radius).powi(2);
-        let buried_polar_count = polar_buried
+    fn score_one(kernel: &NativeScorerV1RustCpuKernel<'_>, pose: &[[f64; 3]]) -> NativeScoreRow {
+        let coordinates = pose
             .iter()
-            .zip(polar_satisfied.iter())
-            .filter(|(buried, satisfied)| **buried && !**satisfied)
-            .count();
-        let raw = [
-            typed_vdw_raw,
-            electro_raw,
-            -hbond_raw,
-            -hydrophobic_raw,
-            buried_polar_count as f64,
-            torsion_raw,
-            strain_raw,
-            pocket_raw,
-        ];
-        let weighted: Vec<f64> = raw
-            .iter()
-            .zip(self.config.weights.iter())
-            .map(|(value, weight)| value * weight)
-            .collect();
-        let total = weighted.iter().sum();
-        let mut terms = weighted;
-        terms.push(total);
-        if terms.iter().any(|value| !value.is_finite()) {
-            return NativeScoreRow::failure("nonfinite_score", candidate_count, ligand_pair_count);
-        }
-        NativeScoreRow {
-            terms,
-            receptor_candidate_pair_count: candidate_count,
-            ligand_pair_count,
-            hbond_count,
-            hydrophobic_contact_count: hydrophobic_count,
-            buried_polar_count: polar_buried.iter().filter(|value| **value).count(),
-            error_code: None,
+            .map(|row| Vec3::new(row[0], row[1], row[2]))
+            .collect::<Vec<_>>();
+        match kernel.score_coordinates(&coordinates) {
+            NativeScorerV1KernelOutcome::Scored(scored) => {
+                let mut terms = scored.weighted_terms().to_vec();
+                terms.push(scored.total_score());
+                NativeScoreRow {
+                    terms,
+                    receptor_candidate_pair_count: scored.receptor_candidate_pair_count(),
+                    ligand_pair_count: scored.ligand_pair_count(),
+                    hbond_count: scored.hbond_count(),
+                    hydrophobic_contact_count: scored.hydrophobic_contact_count(),
+                    buried_polar_count: scored.buried_polar_count(),
+                    error_code: None,
+                }
+            }
+            NativeScorerV1KernelOutcome::TypedFailure(failure) => NativeScoreRow::failure(
+                failure.failure_code().id(),
+                failure.receptor_candidate_pair_count(),
+                failure.ligand_pair_count(),
+            ),
         }
     }
 }
@@ -697,7 +472,12 @@ impl NativeScorerContext {
 impl NativeScorerContext {
     #[new]
     #[pyo3(signature = (
+        authority_input_receipt_sha256,
+        receptor_system_sha256,
+        ligand_system_sha256,
+        backend_receipt_sha256,
         receptor_coordinates,
+        ligand_reference_coordinates,
         receptor_charges,
         ligand_charges,
         receptor_radii,
@@ -712,8 +492,6 @@ impl NativeScorerContext {
         ligand_donors,
         ligand_exclusions,
         rotor_quads,
-        reference_dihedrals,
-        reference_internal_vdw,
         pocket_center,
         pocket_radius,
         config_values,
@@ -724,7 +502,12 @@ impl NativeScorerContext {
     ))]
     #[allow(clippy::too_many_arguments)]
     fn new(
+        authority_input_receipt_sha256: &str,
+        receptor_system_sha256: &str,
+        ligand_system_sha256: &str,
+        backend_receipt_sha256: &str,
         receptor_coordinates: PyReadonlyArray2<'_, f64>,
+        ligand_reference_coordinates: PyReadonlyArray2<'_, f64>,
         receptor_charges: PyReadonlyArray1<'_, f64>,
         ligand_charges: PyReadonlyArray1<'_, f64>,
         receptor_radii: PyReadonlyArray1<'_, f64>,
@@ -739,8 +522,6 @@ impl NativeScorerContext {
         ligand_donors: PyReadonlyArray2<'_, i32>,
         ligand_exclusions: PyReadonlyArray2<'_, i32>,
         rotor_quads: PyReadonlyArray2<'_, i32>,
-        reference_dihedrals: PyReadonlyArray1<'_, f64>,
-        reference_internal_vdw: f64,
         pocket_center: PyReadonlyArray1<'_, f64>,
         pocket_radius: f64,
         config_values: PyReadonlyArray1<'_, f64>,
@@ -750,8 +531,9 @@ impl NativeScorerContext {
         thread_count: usize,
     ) -> PyResult<Self> {
         let receptor = rows3(receptor_coordinates, "receptor_coordinates")?;
+        let ligand_reference = rows3(ligand_reference_coordinates, "ligand_reference_coordinates")?;
         let receptor_count = receptor.len();
-        let ligand_count = ligand_charges.len();
+        let ligand_count = ligand_reference.len();
         if receptor_count == 0 || ligand_count == 0 {
             return Err(PyValueError::new_err("atom counts must be non-zero"));
         }
@@ -778,74 +560,102 @@ impl NativeScorerContext {
         let ligand_donor_rows = index_rows::<2>(ligand_donors, ligand_count, "ligand_donors")?;
         let exclusions = index_rows::<2>(ligand_exclusions, ligand_count, "ligand_exclusions")?;
         let rotors = index_rows::<4>(rotor_quads, ligand_count, "rotor_quads")?;
-        let references = reference_dihedrals.as_slice()?.to_vec();
-        if references.len() != rotors.len() {
-            return Err(PyValueError::new_err("reference_dihedrals length mismatch"));
-        }
-        require_finite(references.iter().copied(), "reference_dihedrals")?;
         let center_slice = pocket_center.as_slice()?;
         if center_slice.len() != 3 {
             return Err(PyValueError::new_err("pocket_center must have length 3"));
         }
         require_finite(center_slice.iter().copied(), "pocket_center")?;
-        let config = Config {
-            dielectric: config_slice[0],
-            pair_cutoff: config_slice[1],
-            hbond_cutoff: config_slice[2],
-            polar_burial_cutoff: config_slice[3],
+        let receptor_charges = vec_f64(receptor_charges, receptor_count, "receptor_charges")?;
+        let ligand_charges = vec_f64(ligand_charges, ligand_count, "ligand_charges")?;
+        let receptor_radii = vec_f64(receptor_radii, receptor_count, "receptor_radii")?;
+        let ligand_radii = vec_f64(ligand_radii, ligand_count, "ligand_radii")?;
+        let receptor_epsilons = vec_f64(receptor_epsilons, receptor_count, "receptor_epsilons")?;
+        let ligand_epsilons = vec_f64(ligand_epsilons, ligand_count, "ligand_epsilons")?;
+        let receptor_hydrophobic =
+            vec_mask(receptor_hydrophobic, receptor_count, "receptor_hydrophobic")?;
+        let ligand_hydrophobic = vec_mask(ligand_hydrophobic, ligand_count, "ligand_hydrophobic")?;
+        let receptor_acceptors =
+            vec_mask(receptor_acceptors, receptor_count, "receptor_acceptors")?;
+        let ligand_acceptors = vec_mask(ligand_acceptors, ligand_count, "ligand_acceptors")?;
+        let receptor_atoms = (0..receptor_count)
+            .map(|index| NativeScorerV1Atom {
+                charge_elementary: receptor_charges[index],
+                vdw_radius_angstrom: receptor_radii[index],
+                epsilon_kcal_per_mol: receptor_epsilons[index],
+                hydrophobic: receptor_hydrophobic[index],
+                acceptor: receptor_acceptors[index],
+            })
+            .collect();
+        let ligand_atoms = (0..ligand_count)
+            .map(|index| NativeScorerV1Atom {
+                charge_elementary: ligand_charges[index],
+                vdw_radius_angstrom: ligand_radii[index],
+                epsilon_kcal_per_mol: ligand_epsilons[index],
+                hydrophobic: ligand_hydrophobic[index],
+                acceptor: ligand_acceptors[index],
+            })
+            .collect();
+        let mut receptor_donors = receptor_donor_rows
+            .into_iter()
+            .map(
+                |[donor_atom_index, hydrogen_atom_index]| NativeScorerV1Donor {
+                    donor_atom_index,
+                    hydrogen_atom_index,
+                },
+            )
+            .collect::<Vec<_>>();
+        receptor_donors.sort_unstable();
+        let mut ligand_donors = ligand_donor_rows
+            .into_iter()
+            .map(
+                |[donor_atom_index, hydrogen_atom_index]| NativeScorerV1Donor {
+                    donor_atom_index,
+                    hydrogen_atom_index,
+                },
+            )
+            .collect::<Vec<_>>();
+        ligand_donors.sort_unstable();
+        let mut scorer_weights = [0.0; 8];
+        scorer_weights.copy_from_slice(weights_slice);
+        let config = NativeScorerV1Config::new(
+            scorer_weights,
+            config_slice[0],
+            config_slice[1],
+            config_slice[2],
+            config_slice[3],
             max_receptor_pairs,
             max_ligand_pairs,
-            weights: weights_slice.try_into().expect("checked weight length"),
-        };
-        let mut receptor_cells: BTreeMap<(i64, i64, i64), Vec<usize>> = BTreeMap::new();
-        for (index, coordinate) in receptor.iter().copied().enumerate() {
-            receptor_cells
-                .entry((
-                    (coordinate[0] / config.pair_cutoff).floor() as i64,
-                    (coordinate[1] / config.pair_cutoff).floor() as i64,
-                    (coordinate[2] / config.pair_cutoff).floor() as i64,
-                ))
-                .or_default()
-                .push(index);
-        }
-        let mut receptor_donor_by_hydrogen = vec![None; receptor_count];
-        for [donor, hydrogen] in receptor_donor_rows {
-            receptor_donor_by_hydrogen[hydrogen] = Some(donor);
-        }
-        let mut ligand_donor_by_hydrogen = vec![None; ligand_count];
-        for [donor, hydrogen] in ligand_donor_rows {
-            ligand_donor_by_hydrogen[hydrogen] = Some(donor);
-        }
+        )
+        .map_err(|error| PyValueError::new_err(error.to_string()))?;
+        let core = NativeScorerV1Context::new(
+            canonical_sha256(
+                authority_input_receipt_sha256,
+                "authority_input_receipt_sha256",
+            )?,
+            canonical_sha256(receptor_system_sha256, "receptor_system_sha256")?,
+            canonical_sha256(ligand_system_sha256, "ligand_system_sha256")?,
+            NativeScorerV1Backend::RustCpu,
+            canonical_sha256(backend_receipt_sha256, "backend_receipt_sha256")?,
+            native_coordinates(&receptor),
+            receptor_atoms,
+            native_coordinates(&ligand_reference),
+            ligand_atoms,
+            receptor_donors,
+            ligand_donors,
+            exclusions,
+            rotors,
+            Vec3::new(center_slice[0], center_slice[1], center_slice[2]),
+            pocket_radius,
+            config,
+        )
+        .map_err(|error| PyValueError::new_err(error.to_string()))?;
         let pool = ThreadPoolBuilder::new()
             .num_threads(thread_count)
             .build()
             .map_err(|error| PyValueError::new_err(error.to_string()))?;
         Ok(Self {
-            receptor,
-            receptor_cells,
-            receptor_charges: vec_f64(receptor_charges, receptor_count, "receptor_charges")?,
-            ligand_charges: vec_f64(ligand_charges, ligand_count, "ligand_charges")?,
-            receptor_radii: vec_f64(receptor_radii, receptor_count, "receptor_radii")?,
-            ligand_radii: vec_f64(ligand_radii, ligand_count, "ligand_radii")?,
-            receptor_epsilons: vec_f64(receptor_epsilons, receptor_count, "receptor_epsilons")?,
-            ligand_epsilons: vec_f64(ligand_epsilons, ligand_count, "ligand_epsilons")?,
-            receptor_hydrophobic: vec_mask(
-                receptor_hydrophobic,
-                receptor_count,
-                "receptor_hydrophobic",
-            )?,
-            ligand_hydrophobic: vec_mask(ligand_hydrophobic, ligand_count, "ligand_hydrophobic")?,
-            receptor_acceptors: vec_mask(receptor_acceptors, receptor_count, "receptor_acceptors")?,
-            ligand_acceptors: vec_mask(ligand_acceptors, ligand_count, "ligand_acceptors")?,
-            receptor_donor_by_hydrogen,
-            ligand_donor_by_hydrogen,
-            ligand_exclusions: exclusions.into_iter().map(|row| (row[0], row[1])).collect(),
-            rotor_quads: rotors,
-            reference_dihedrals: references,
-            reference_internal_vdw,
-            pocket_center: [center_slice[0], center_slice[1], center_slice[2]],
-            pocket_radius,
-            config,
+            core,
+            ligand_atom_count: ligand_count,
             pool,
         })
     }
@@ -860,7 +670,7 @@ impl NativeScorerContext {
         if shape.len() != 3
             || shape[0] == 0
             || shape[0] > MAX_BATCH_SIZE
-            || shape[1] != self.ligand_charges.len()
+            || shape[1] != self.ligand_atom_count
             || shape[2] != 3
         {
             return Err(PyValueError::new_err(
@@ -876,9 +686,17 @@ impl NativeScorerContext {
                     .collect()
             })
             .collect();
+        let kernel = self
+            .core
+            .prepare_rust_cpu_kernel()
+            .map_err(|error| PyValueError::new_err(error.to_string()))?;
         Ok(py.allow_threads(|| {
-            self.pool
-                .install(|| poses.par_iter().map(|pose| self.score_one(pose)).collect())
+            self.pool.install(|| {
+                poses
+                    .par_iter()
+                    .map(|pose| Self::score_one(&kernel, pose))
+                    .collect()
+            })
         }))
     }
 }
@@ -1135,6 +953,7 @@ fn betelgeuze_engine_v2_native(_py: Python<'_>, module: &PyModule) -> PyResult<(
         GEOMETRIC_ADMISSION_PAIR_TRAVERSAL_ORDER,
     )?;
     docking_v2::register(module)?;
+    fixed64_pipeline::register(module)?;
     Ok(())
 }
 
@@ -1412,20 +1231,6 @@ mod tests {
         )
         .is_err());
     }
-
-    #[test]
-    fn lj_is_bounded_at_overlap() {
-        assert_eq!(lj(0.12, 0.12, 3.4, 0.0), 1.0e6);
-    }
-
-    #[test]
-    fn hbond_rejects_out_of_range_geometry() {
-        assert_eq!(
-            hbond_reward([0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [8.0, 0.0, 0.0], 3.0),
-            0.0
-        );
-    }
-
     #[test]
     fn geometric_and_docking_build_receipts_are_separate() {
         let geometric = build_info();

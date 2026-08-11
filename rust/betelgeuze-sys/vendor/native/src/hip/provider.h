@@ -12,6 +12,7 @@ extern "C" {
 
 #define BG_HIP_SAFE_PROVIDER_ABI_VERSION UINT32_C(1)
 #define BG_HIP_SAFE_ERROR_CAPACITY UINT32_C(256)
+#define BG_DOCKING_SCORER_PROVIDER_ABI_VERSION UINT32_C(1)
 
 typedef struct bg_hip_safe_system_v1 {
     uint32_t struct_size;
@@ -110,6 +111,20 @@ typedef struct bg_hip_safe_force_output_v1 {
     uint64_t reserved[4];
 } bg_hip_safe_force_output_v1;
 
+/* Host-derived immutable ScorerV1 state. The public descriptor has already
+ * passed the independent C++ qualification validator before this private
+ * provider boundary is entered. */
+typedef struct bg_docking_scorer_derived_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    const double *reference_dihedrals_radians;
+    double reference_internal_vdw;
+    const size_t *receptor_donor_by_hydrogen;
+    const size_t *ligand_donor_by_hydrogen;
+    const uint8_t *ligand_donor_heavy_mask;
+    uint64_t reserved[4];
+} bg_docking_scorer_derived_v1;
+
 int32_t bg_hip_safe_provider_is_available_v1(
     int32_t device_ordinal,
     uint8_t *available,
@@ -123,6 +138,132 @@ int32_t bg_hip_safe_evaluate_v1(
     uint8_t compute_forces,
     bg_hip_safe_energy_v1 *out_energy,
     bg_hip_safe_force_output_v1 *out_forces,
+    char *error_message,
+    size_t error_capacity);
+
+int32_t bg_hip_safe_docking_scorer_v1_create(
+    int32_t device_ordinal,
+    const bg_docking_scorer_v1_context_soa_v1 *descriptor,
+    const bg_docking_scorer_derived_v1 *derived,
+    void **out_state,
+    char *error_message,
+    size_t error_capacity);
+
+void bg_hip_safe_docking_scorer_v1_destroy(void *state);
+
+int32_t bg_hip_safe_docking_scorer_v1_score_fixed64(
+    const void *state,
+    const bg_docking_scorer_v1_candidate_batch_soa_v1 *candidates,
+    bg_docking_scorer_v1_row_v1 *out_rows,
+    char *error_message,
+    size_t error_capacity);
+
+int32_t bg_hip_safe_docking_pose_validity_v1_create(
+    int32_t device_ordinal,
+    const bg_docking_pose_validity_context_soa_v1 *descriptor,
+    void **out_state,
+    char *error_message,
+    size_t error_capacity);
+
+void bg_hip_safe_docking_pose_validity_v1_destroy(void *state);
+
+int32_t bg_hip_safe_docking_pose_validity_v1_evaluate_fixed64(
+    const void *state,
+    const bg_docking_pose_validity_candidate_batch_soa_v1 *candidates,
+    bg_docking_pose_validity_row_v1 *out_rows,
+    char *error_message,
+    size_t error_capacity);
+
+int32_t bg_hip_safe_docking_stable_top_k_v1_create(
+    int32_t device_ordinal,
+    void **out_state,
+    char *error_message,
+    size_t error_capacity);
+
+void bg_hip_safe_docking_stable_top_k_v1_destroy(void *state);
+
+int32_t bg_hip_safe_docking_stable_top_k_v1_rank_fixed64(
+    const void *state,
+    const bg_docking_stable_top_k_input_v1 *input,
+    bg_docking_stable_top_k_row_v1 *out_rows,
+    uint32_t *out_primary_slot_indices,
+    uint64_t *out_primary_count,
+    uint32_t *out_valid_slot_indices,
+    uint64_t *out_valid_count,
+    char *error_message,
+    size_t error_capacity);
+
+int32_t bg_hip_safe_docking_stable_top_k_v1_cluster_direct_rmsd_fixed64(
+    const void *state,
+    const bg_docking_rmsd_cluster_input_v1 *input,
+    bg_docking_rmsd_cluster_row_v1 *out_rows,
+    uint32_t *out_representative_slot_indices,
+    uint64_t *out_cluster_count,
+    uint32_t *out_top_k_slot_indices,
+    uint64_t *out_top_k_count,
+    char *error_message,
+    size_t error_capacity);
+
+int32_t bg_hip_fast_docking_scorer_v1_create(
+    int32_t device_ordinal,
+    const bg_docking_scorer_v1_context_soa_v1 *descriptor,
+    const bg_docking_scorer_derived_v1 *derived,
+    void **out_state,
+    char *error_message,
+    size_t error_capacity);
+
+void bg_hip_fast_docking_scorer_v1_destroy(void *state);
+
+int32_t bg_hip_fast_docking_scorer_v1_score_fixed64(
+    const void *state,
+    const bg_docking_scorer_v1_candidate_batch_soa_v1 *candidates,
+    bg_docking_scorer_v1_row_v1 *out_rows,
+    char *error_message,
+    size_t error_capacity);
+
+int32_t bg_hip_fast_docking_pose_validity_v1_create(
+    int32_t device_ordinal,
+    const bg_docking_pose_validity_context_soa_v1 *descriptor,
+    void **out_state,
+    char *error_message,
+    size_t error_capacity);
+
+void bg_hip_fast_docking_pose_validity_v1_destroy(void *state);
+
+int32_t bg_hip_fast_docking_pose_validity_v1_evaluate_fixed64(
+    const void *state,
+    const bg_docking_pose_validity_candidate_batch_soa_v1 *candidates,
+    bg_docking_pose_validity_row_v1 *out_rows,
+    char *error_message,
+    size_t error_capacity);
+
+int32_t bg_hip_fast_docking_stable_top_k_v1_create(
+    int32_t device_ordinal,
+    void **out_state,
+    char *error_message,
+    size_t error_capacity);
+
+void bg_hip_fast_docking_stable_top_k_v1_destroy(void *state);
+
+int32_t bg_hip_fast_docking_stable_top_k_v1_rank_fixed64(
+    const void *state,
+    const bg_docking_stable_top_k_input_v1 *input,
+    bg_docking_stable_top_k_row_v1 *out_rows,
+    uint32_t *out_primary_slot_indices,
+    uint64_t *out_primary_count,
+    uint32_t *out_valid_slot_indices,
+    uint64_t *out_valid_count,
+    char *error_message,
+    size_t error_capacity);
+
+int32_t bg_hip_fast_docking_stable_top_k_v1_cluster_direct_rmsd_fixed64(
+    const void *state,
+    const bg_docking_rmsd_cluster_input_v1 *input,
+    bg_docking_rmsd_cluster_row_v1 *out_rows,
+    uint32_t *out_representative_slot_indices,
+    uint64_t *out_cluster_count,
+    uint32_t *out_top_k_slot_indices,
+    uint64_t *out_top_k_count,
     char *error_message,
     size_t error_capacity);
 

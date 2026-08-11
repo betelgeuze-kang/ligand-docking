@@ -224,6 +224,15 @@ from .docking.consumers import (
     StandaloneProductShadowAdapter,
     run_standalone_docking,
 )
+from .docking.native_fixed64_consumers import (
+    NativeFixed64CliAdapter,
+    NativeFixed64ConsumerError,
+    NativeFixed64DiagnosticBenchmarkAdapter,
+    NativeFixed64EvidenceV1,
+    NativeFixed64ProductShadowAdapter,
+    NativeFixed64PythonApi,
+    run_native_fixed64_surface,
+)
 
 __version__ = ENGINE_API_VERSION
 
@@ -305,6 +314,13 @@ __all__ = [
     "StandaloneDockingPythonApi",
     "StandaloneProductShadowAdapter",
     "run_standalone_docking",
+    "NativeFixed64CliAdapter",
+    "NativeFixed64ConsumerError",
+    "NativeFixed64DiagnosticBenchmarkAdapter",
+    "NativeFixed64EvidenceV1",
+    "NativeFixed64ProductShadowAdapter",
+    "NativeFixed64PythonApi",
+    "run_native_fixed64_surface",
     "IndependentPhysicsProvider",
     "KinematicResult",
     "LocalEnergyConfig",

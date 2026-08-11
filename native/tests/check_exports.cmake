@@ -38,6 +38,37 @@ set(v1_3_symbols
     bg_simulation_checkpoint_write
     bg_simulation_checkpoint_load
 )
+set(v1_5_symbols
+    bg_docking_scorer_v1_context_soa_v1_init
+    bg_docking_scorer_v1_candidate_batch_soa_v1_init
+    bg_docking_scorer_v1_output_v1_init
+    bg_docking_scorer_v1_create
+    bg_docking_scorer_v1_destroy
+    bg_docking_scorer_v1_get_backend
+    bg_docking_scorer_v1_score_fixed64
+)
+set(v1_6_symbols
+    bg_docking_pose_validity_context_soa_v1_init
+    bg_docking_pose_validity_candidate_batch_soa_v1_init
+    bg_docking_pose_validity_output_v1_init
+    bg_docking_pose_validity_v1_create
+    bg_docking_pose_validity_v1_destroy
+    bg_docking_pose_validity_v1_get_backend
+    bg_docking_pose_validity_v1_evaluate_fixed64
+)
+set(v1_7_symbols
+    bg_docking_stable_top_k_input_v1_init
+    bg_docking_stable_top_k_output_v1_init
+    bg_docking_stable_top_k_v1_create
+    bg_docking_stable_top_k_v1_destroy
+    bg_docking_stable_top_k_v1_get_backend
+    bg_docking_stable_top_k_v1_rank_fixed64
+)
+set(v1_8_symbols
+    bg_docking_rmsd_cluster_input_v1_init
+    bg_docking_rmsd_cluster_output_v1_init
+    bg_docking_stable_top_k_v1_cluster_direct_rmsd_fixed64
+)
 foreach(line IN LISTS nm_lines)
     if(line STREQUAL "")
         continue()
@@ -47,13 +78,29 @@ foreach(line IN LISTS nm_lines)
     if(NOT unversioned MATCHES "^bg_" AND
        NOT unversioned STREQUAL "BETELGEUZE_ENGINE_1.0" AND
        NOT unversioned STREQUAL "BETELGEUZE_ENGINE_1.1" AND
-       NOT unversioned STREQUAL "BETELGEUZE_ENGINE_1.3")
+       NOT unversioned STREQUAL "BETELGEUZE_ENGINE_1.3" AND
+       NOT unversioned STREQUAL "BETELGEUZE_ENGINE_1.5" AND
+       NOT unversioned STREQUAL "BETELGEUZE_ENGINE_1.6" AND
+       NOT unversioned STREQUAL "BETELGEUZE_ENGINE_1.7" AND
+       NOT unversioned STREQUAL "BETELGEUZE_ENGINE_1.8")
         message(FATAL_ERROR "unexpected exported symbol: ${symbol}")
     endif()
     if(unversioned MATCHES "^bg_")
+        list(FIND v1_8_symbols "${unversioned}" v1_8_index)
+        list(FIND v1_7_symbols "${unversioned}" v1_7_index)
+        list(FIND v1_6_symbols "${unversioned}" v1_6_index)
+        list(FIND v1_5_symbols "${unversioned}" v1_5_index)
         list(FIND v1_3_symbols "${unversioned}" v1_3_index)
         list(FIND v1_1_symbols "${unversioned}" v1_1_index)
-        if(NOT v1_3_index EQUAL -1)
+        if(NOT v1_8_index EQUAL -1)
+            set(expected_version "BETELGEUZE_ENGINE_1.8")
+        elseif(NOT v1_7_index EQUAL -1)
+            set(expected_version "BETELGEUZE_ENGINE_1.7")
+        elseif(NOT v1_6_index EQUAL -1)
+            set(expected_version "BETELGEUZE_ENGINE_1.6")
+        elseif(NOT v1_5_index EQUAL -1)
+            set(expected_version "BETELGEUZE_ENGINE_1.5")
+        elseif(NOT v1_3_index EQUAL -1)
             set(expected_version "BETELGEUZE_ENGINE_1.3")
         elseif(NOT v1_1_index EQUAL -1)
             set(expected_version "BETELGEUZE_ENGINE_1.1")

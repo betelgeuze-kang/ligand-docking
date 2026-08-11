@@ -8,12 +8,24 @@
 mod anchors;
 mod cluster;
 mod error;
+mod fixed64;
+mod fixed64_cluster;
+mod fixed64_pipeline;
+mod fixed64_placement;
+mod fixed64_producer;
+mod fixed64_ranking;
+mod fixed64_single_anchor;
+mod fixed64_validity;
+mod geometric_admission;
 mod geometry;
 mod identity;
 mod model;
+mod native_hash;
 mod prune;
 mod receipt;
 mod refine;
+mod rigid_refinement;
+mod scorer_v1;
 mod search;
 mod sha256;
 mod short_range;
@@ -22,6 +34,84 @@ mod surface;
 mod validity;
 
 pub use error::{EvaluationError, SearchError, SearchErrorCode};
+pub use fixed64::{
+    Fixed64Allocation, Fixed64AllocationError, Fixed64AnchorKind, Fixed64AtomicFeatureEvidence,
+    Fixed64ConformerSourceEvidence, Fixed64ExactV11SourceEvidence, Fixed64FeatureInventory,
+    Fixed64FeatureKind, Fixed64GenerationParent, Fixed64GenerationParentRole,
+    Fixed64IndexedSourceEvidence, Fixed64Lane, Fixed64MissingFeature, Fixed64Requirement,
+    Fixed64Slot, Fixed64SourceEvidence, FIXED64_CANDIDATE_COUNT, FIXED64_LANE_RANGES,
+    FIXED64_PROFILE_ID, NATIVE_FIXED64_ALLOCATION_SCHEMA_ID, NATIVE_FIXED64_SLOT_SCHEMA_ID,
+    RETAINED_SOURCE_INDICES, TRUE_CONFORMER_SLOT_RANKS,
+};
+pub use fixed64_cluster::{
+    cluster_native_fixed64_direct_rmsd_kernel, NativeFixed64RmsdClusterError,
+    NativeFixed64RmsdClusterErrorCode, NativeFixed64RmsdClusterInputRow,
+    NativeFixed64RmsdClusterKernelOutcome, NativeFixed64RmsdClusterRow,
+    NATIVE_FIXED64_DIRECT_RMSD_CLUSTER_ALGORITHM_ID,
+};
+pub use fixed64_pipeline::{
+    run_native_fixed64_pipeline, NativeFixed64AuthorityBlocker, NativeFixed64Consumer,
+    NativeFixed64ConsumerView, NativeFixed64PipelineError, NativeFixed64PipelineReceipt,
+    NativeFixed64PipelineStage, NATIVE_FIXED64_AUTHORITY_BLOCKERS,
+    NATIVE_FIXED64_CONSUMER_VIEW_SCHEMA_ID, NATIVE_FIXED64_PIPELINE_ID,
+    NATIVE_FIXED64_PIPELINE_SCHEMA_ID,
+};
+pub use fixed64_placement::{
+    generate_native_fixed64_indexed_so3, Fixed64FeatureGeometry, Fixed64FeatureGeometryInventory,
+    Fixed64IndexedSo3Placement, Fixed64PlacementError, Fixed64PlacementErrorCode,
+    Fixed64PlacementSource, NATIVE_FIXED64_FEATURE_GEOMETRY_SCHEMA_ID,
+    NATIVE_FIXED64_INDEXED_SO3_PROFILE_ID, NATIVE_FIXED64_INDEXED_SO3_SCHEMA_ID,
+    NATIVE_FIXED64_SINGLE_ANCHOR_PROFILE_ID, NATIVE_FIXED64_SINGLE_ANCHOR_SCHEMA_ID,
+};
+pub use fixed64_producer::{
+    native_fixed64_producer_policy_sha256, produce_native_fixed64_proposals,
+    Fixed64CoordinateSourceKind, Fixed64CoordinateSourcePayload, Fixed64PassthroughPlacement,
+    Fixed64ProducerError, Fixed64ProducerErrorCode, Fixed64ProposalBatch,
+    Fixed64ProposalFailureCode, Fixed64ProposalGenerationFailure, Fixed64ProposalPlacement,
+    Fixed64ProposalRecord, Fixed64ProposalSourceBundle, Fixed64ProposalStatus,
+    NATIVE_FIXED64_COORDINATE_SOURCE_SCHEMA_ID, NATIVE_FIXED64_GENERATION_FAILURE_SCHEMA_ID,
+    NATIVE_FIXED64_PASSTHROUGH_SCHEMA_ID, NATIVE_FIXED64_PRODUCER_BATCH_SCHEMA_ID,
+    NATIVE_FIXED64_PRODUCER_PROFILE_ID, NATIVE_FIXED64_PROPOSAL_RECORD_SCHEMA_ID,
+    NATIVE_FIXED64_SOURCE_BUNDLE_SCHEMA_ID,
+};
+pub use fixed64_ranking::{
+    rank_native_fixed64_stable_top_k_kernel, rank_native_fixed64_top_k, NativeFixed64RankingBatch,
+    NativeFixed64RankingError, NativeFixed64RankingErrorCode, NativeFixed64RankingRecord,
+    NativeFixed64StableTopKInputRow, NativeFixed64StableTopKKernelOutcome,
+    NATIVE_FIXED64_PRIMARY_RANKING_SEMANTICS, NATIVE_FIXED64_RANKING_ALGORITHM_ID,
+    NATIVE_FIXED64_RANKING_BATCH_SCHEMA_ID, NATIVE_FIXED64_RANKING_RECORD_SCHEMA_ID,
+    NATIVE_FIXED64_TOP_K_LIMIT, NATIVE_FIXED64_VALID_RANKING_SEMANTICS,
+};
+pub use fixed64_single_anchor::{
+    generate_native_fixed64_single_anchor, Fixed64SingleAnchorPlacement,
+};
+pub use fixed64_validity::{
+    evaluate_native_fixed64_pose_validity, NativeFixed64ValidityBackend,
+    NativeFixed64ValidityBatch, NativeFixed64ValidityBlocker, NativeFixed64ValidityChecks,
+    NativeFixed64ValidityConfig, NativeFixed64ValidityContext, NativeFixed64ValidityError,
+    NativeFixed64ValidityErrorCode, NativeFixed64ValidityFailure, NativeFixed64ValidityFailureCode,
+    NativeFixed64ValidityKernelFailure, NativeFixed64ValidityKernelOutcome,
+    NativeFixed64ValidityMeasurements, NativeFixed64ValidityResult, NativeFixed64ValidityRow,
+    NativeFixed64ValidityRowStatus, NativeFixed64ValidityRustCpuKernel,
+    NATIVE_FIXED64_ELEMENT_RECEPTOR_TRAVERSAL_ID, NATIVE_FIXED64_VALIDITY_ALGORITHM_ID,
+    NATIVE_FIXED64_VALIDITY_BATCH_SCHEMA_ID, NATIVE_FIXED64_VALIDITY_CONFIG_SCHEMA_ID,
+    NATIVE_FIXED64_VALIDITY_CONTEXT_SCHEMA_ID, NATIVE_FIXED64_VALIDITY_FAILURE_SCHEMA_ID,
+    NATIVE_FIXED64_VALIDITY_MAX_CHIRALITY_CENTERS, NATIVE_FIXED64_VALIDITY_MAX_CROSS_CHECKS,
+    NATIVE_FIXED64_VALIDITY_MAX_PAIR_CHECKS, NATIVE_FIXED64_VALIDITY_RECEPTOR_TRAVERSAL_ID,
+    NATIVE_FIXED64_VALIDITY_RESULT_SCHEMA_ID, NATIVE_FIXED64_VALIDITY_ROW_SCHEMA_ID,
+};
+pub use geometric_admission::{
+    evaluate_fixed64_geometric_metrics, native_fixed64_coordinate_sha256,
+    native_fixed64_heavy_atom_mask_sha256, native_fixed64_radii_sha256, Fixed64GeometricBatch,
+    Fixed64GeometricDecision, Fixed64GeometricError, Fixed64GeometricErrorCode,
+    Fixed64GeometricInput, Fixed64GeometricMetrics, Fixed64GeometricStatus,
+    FIXED64_MAX_ABSOLUTE_COORDINATE_ANGSTROM, FIXED64_MAX_BATCH_EXACT_PAIR_EVALUATIONS,
+    FIXED64_MAX_LIGAND_ATOMS, FIXED64_MAX_POCKET_RADIUS_ANGSTROM, FIXED64_MAX_RECEPTOR_ATOMS,
+    FIXED64_MAX_VDW_RADIUS_ANGSTROM, FIXED64_MIN_VDW_RADIUS_ANGSTROM,
+    HARD_REJECTION_MINIMUM_VDW_RATIO, NATIVE_FIXED64_GEOMETRIC_BATCH_SCHEMA_ID,
+    NATIVE_FIXED64_GEOMETRIC_DECISION_SCHEMA_ID, NATIVE_FIXED64_GEOMETRIC_INPUT_SCHEMA_ID,
+    NATIVE_FIXED64_GEOMETRIC_METRICS_SCHEMA_ID,
+};
 pub use geometry::{Quaternion, Vec3};
 pub use model::{
     AnchorId, AnchorKind, CandidateKey, CandidateReason, CandidateRow, CandidateStatus,
@@ -33,6 +123,27 @@ pub use model::{
     MAX_SURFACE_SAMPLES, MAX_TOP_K,
 };
 pub use receipt::SearchReceipt;
+pub use rigid_refinement::{
+    refine_interaction_aware_rigid_v2, refine_interaction_aware_rigid_v3,
+    refine_interaction_aware_rigid_v6, NativeRigidRefinementContext, NativeRigidRefinementError,
+    NativeRigidRefinementErrorCode, NativeRigidRefinementOutcome, NativeRigidRefinementProfile,
+    NativeRigidV2Config, NativeRigidV3Config, NativeRigidV6Outcome,
+    NATIVE_RIGID_REFINEMENT_MAX_LIGAND_ATOMS, NATIVE_RIGID_REFINEMENT_MAX_PAIR_EVALUATIONS,
+    NATIVE_RIGID_REFINEMENT_MAX_RECEPTOR_ATOMS, NATIVE_RIGID_REFINEMENT_MAX_STEPS,
+};
+pub use scorer_v1::{
+    score_native_fixed64_scorer_v1, NativeScorerV1Atom, NativeScorerV1Backend, NativeScorerV1Batch,
+    NativeScorerV1Config, NativeScorerV1Context, NativeScorerV1Donor, NativeScorerV1Error,
+    NativeScorerV1ErrorCode, NativeScorerV1Failure, NativeScorerV1FailureCode,
+    NativeScorerV1KernelFailure, NativeScorerV1KernelOutcome, NativeScorerV1KernelTerms,
+    NativeScorerV1Row, NativeScorerV1RowStatus, NativeScorerV1RustCpuKernel, NativeScorerV1Terms,
+    NATIVE_SCORER_V1_ALGORITHM_ID, NATIVE_SCORER_V1_BATCH_SCHEMA_ID,
+    NATIVE_SCORER_V1_CONFIG_SCHEMA_ID, NATIVE_SCORER_V1_CONTEXT_SCHEMA_ID,
+    NATIVE_SCORER_V1_FAILURE_SCHEMA_ID, NATIVE_SCORER_V1_MAX_LIGAND_PAIR_CHECKS,
+    NATIVE_SCORER_V1_MAX_RECEPTOR_CANDIDATE_PAIRS, NATIVE_SCORER_V1_MAX_ROTORS,
+    NATIVE_SCORER_V1_PAIR_TRAVERSAL_ID, NATIVE_SCORER_V1_ROW_SCHEMA_ID, NATIVE_SCORER_V1_SCORE_ID,
+    NATIVE_SCORER_V1_TERMS_SCHEMA_ID,
+};
 pub use search::{search, search_default, search_short_range};
 pub use short_range::{ShortRangeConfig, ShortRangeEvaluator};
 pub use so3::{orientations, Orientation};

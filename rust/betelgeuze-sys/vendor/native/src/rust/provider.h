@@ -1,6 +1,8 @@
 #ifndef BETELGEUZE_NATIVE_RUST_PROVIDER_H
 #define BETELGEUZE_NATIVE_RUST_PROVIDER_H
 
+#include "betelgeuze/engine.h"
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -123,6 +125,58 @@ int32_t bg_rust_cpu_evaluate_v1(
     uint8_t compute_forces,
     bg_rust_cpu_energy_v1 *out_energy,
     bg_rust_cpu_force_output_v1 *out_forces,
+    bg_rust_cpu_error_v1 *out_error);
+
+int32_t bg_rust_cpu_docking_scorer_v1_create(
+    const bg_docking_scorer_v1_context_soa_v1 *descriptor,
+    void **out_state,
+    bg_rust_cpu_error_v1 *out_error);
+
+void bg_rust_cpu_docking_scorer_v1_destroy(void *state);
+
+int32_t bg_rust_cpu_docking_scorer_v1_score_fixed64(
+    const void *state,
+    const bg_docking_scorer_v1_candidate_batch_soa_v1 *candidates,
+    bg_docking_scorer_v1_row_v1 *out_rows,
+    bg_rust_cpu_error_v1 *out_error);
+
+int32_t bg_rust_cpu_docking_pose_validity_v1_create(
+    const bg_docking_pose_validity_context_soa_v1 *descriptor,
+    void **out_state,
+    bg_rust_cpu_error_v1 *out_error);
+
+void bg_rust_cpu_docking_pose_validity_v1_destroy(void *state);
+
+int32_t bg_rust_cpu_docking_pose_validity_v1_evaluate_fixed64(
+    const void *state,
+    const bg_docking_pose_validity_candidate_batch_soa_v1 *candidates,
+    bg_docking_pose_validity_row_v1 *out_rows,
+    bg_rust_cpu_error_v1 *out_error);
+
+int32_t bg_rust_cpu_docking_stable_top_k_v1_create(
+    void **out_state,
+    bg_rust_cpu_error_v1 *out_error);
+
+void bg_rust_cpu_docking_stable_top_k_v1_destroy(void *state);
+
+int32_t bg_rust_cpu_docking_stable_top_k_v1_rank_fixed64(
+    const void *state,
+    const bg_docking_stable_top_k_input_v1 *input,
+    bg_docking_stable_top_k_row_v1 *out_rows,
+    uint32_t *out_primary_slot_indices,
+    uint64_t *out_primary_count,
+    uint32_t *out_valid_slot_indices,
+    uint64_t *out_valid_count,
+    bg_rust_cpu_error_v1 *out_error);
+
+int32_t bg_rust_cpu_docking_stable_top_k_v1_cluster_direct_rmsd_fixed64(
+    const void *state,
+    const bg_docking_rmsd_cluster_input_v1 *input,
+    bg_docking_rmsd_cluster_row_v1 *out_rows,
+    uint32_t *out_representative_slot_indices,
+    uint64_t *out_cluster_count,
+    uint32_t *out_top_k_slot_indices,
+    uint64_t *out_top_k_count,
     bg_rust_cpu_error_v1 *out_error);
 
 #if defined(__cplusplus)
