@@ -92,6 +92,20 @@ def test_noncanonical_policy_fails_closed(tmp_path: Path) -> None:
         verify_policy(path)
 
 
+@pytest.mark.parametrize("constant", ("NaN", "Infinity", "-Infinity"))
+def test_nonfinite_json_constants_fail_closed(
+    tmp_path: Path,
+    constant: str,
+) -> None:
+    path = tmp_path / "nonfinite.json"
+    path.write_text(f'{{"nonfinite":{constant}}}\n', encoding="ascii")
+    with pytest.raises(
+        Mixed64OperationalProposalPolicyVerificationError,
+        match="invalid JSON",
+    ):
+        verify_policy(path)
+
+
 def test_cli_runs_in_isolated_mode_outside_repository(tmp_path: Path) -> None:
     tool = (
         Path(__file__).resolve().parents[2]

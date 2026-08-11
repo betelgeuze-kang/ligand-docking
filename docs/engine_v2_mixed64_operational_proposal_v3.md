@@ -8,9 +8,9 @@ fingerprints, candidate IDs, scores, results, or authority.
 
 The canonical policy is
 `config/engine_v2_mixed64_operational_proposal_v3.json`, with SHA-256
-`9535730901a27ab3009e7b6fff12e532dd5d995e8fa33a038f4d321593885de9`.
+`615234d10ff967856592b253e7bc45b640b4ca68b86d70e8eb3890ac6308e210`.
 It binds geometric-admission v3 policy SHA-256
-`feb9c00eb71bb45fe07479c6f5b8e6faa171b9968fa4dbb2370e518c71290526`.
+`bd2329f58b4f735af6daaa87eaf627127c34c81e5cd129c37c4bd00d04364aca`.
 
 Source proposal identity payloads remain capped at 4 MiB. Complete sealed
 operational evidence receipts use a separate 128 MiB fail-closed ceiling so a

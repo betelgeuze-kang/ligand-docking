@@ -158,6 +158,15 @@ def _operational_fixture(
         prepared_receptor_topology_sha256=(
             original_features.prepared_receptor_topology_sha256
         ),
+        ligand_vdw_radii_sha256=(
+            original_features.exact_v11_source.ligand_vdw_radii_sha256
+        ),
+        ligand_heavy_atom_mask_sha256=(
+            original_features.exact_v11_source.ligand_heavy_atom_mask_sha256
+        ),
+        receptor_vdw_radii_sha256=(
+            original_features.exact_v11_source.receptor_vdw_radii_sha256
+        ),
     )
     features = Mixed64FeatureEvidence(
         exact_v11_source_receipt_sha256=operational_exact.source_receipt_sha256,
@@ -454,6 +463,24 @@ def test_operational_batch_detects_live_proposal_tensor_mutation() -> None:
     record = next(value for value in batch.records if value.materialized)
     assert record.operational_proposal is not None
     record.operational_proposal.coordinates[0, 0] += 1.0
+
+    with pytest.raises(
+        Mixed64OperationalProposalV3Error,
+        match="record live integrity failed",
+    ):
+        batch.assert_live_integrity()
+
+
+def test_operational_batch_normalizes_live_proposal_type_mutation() -> None:
+    _allocation, _bundle, _producer, admission = _operational_fixture()
+    batch = materialize_mixed64_operational_proposals(admission)
+    record = next(value for value in batch.records if value.materialized)
+    assert record.operational_proposal is not None
+    object.__setattr__(
+        record.operational_proposal,
+        "coordinates",
+        "tampered-not-a-tensor",
+    )
 
     with pytest.raises(
         Mixed64OperationalProposalV3Error,

@@ -45,7 +45,6 @@ from .mixed64_proposal_producer_v3 import (
     GENERATION_STATUS_SUCCESS,
     ExactPassthroughPlacementReceiptV1,
     Mixed64CoordinateSourcePayloadV1,
-    Mixed64ProposalProducerError,
 )
 from .mixed64_operational_proposal_policy_v3 import (
     BOUND_GEOMETRIC_ADMISSION_V3_POLICY_SHA256,
@@ -246,7 +245,20 @@ def _float_vector(
 def _coordinates_tensor(
     coordinates: tuple[tuple[float, float, float], ...],
 ) -> torch.Tensor:
-    if not coordinates or len(coordinates) > _MAX_LIGAND_ATOMS:
+    if (
+        type(coordinates) is not tuple
+        or not coordinates
+        or len(coordinates) > _MAX_LIGAND_ATOMS
+        or any(
+            type(point) is not tuple
+            or len(point) != 3
+            or any(
+                type(component) is not float or not math.isfinite(component)
+                for component in point
+            )
+            for point in coordinates
+        )
+    ):
         _fail(
             SOURCE_OPERATIONAL_COORDINATE_CROSS_WIRED,
             "coordinate denominator is invalid",
@@ -267,13 +279,25 @@ def _source_for_slot(
     if type(placement) is ExactPassthroughPlacementReceiptV1:
         return placement.source_payload
     if slot.lane in {LANE_POCKET_CENTERED_CONTROLS, LANE_UNIFORM_SOURCE_CONTROLS}:
-        assert slot.v7_control_source_index is not None
+        if type(slot.v7_control_source_index) is not int:
+            _fail(
+                SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED,
+                "control source index is absent",
+            )
         source = bundle.v7_control_for_index(slot.v7_control_source_index)
     elif slot.lane == LANE_TRUE_CONFORMER_INDEPENDENT_SO3:
-        assert slot.true_conformer_rank is not None
+        if type(slot.true_conformer_rank) is not int:
+            _fail(
+                SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED,
+                "conformer source rank is absent",
+            )
         source = bundle.conformer_for_rank(slot.true_conformer_rank)
     elif slot.lane == LANE_PAIRED_RETAINED_CONTROLS:
-        assert slot.retained_source_index is not None
+        if type(slot.retained_source_index) is not int:
+            _fail(
+                SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED,
+                "retained source index is absent",
+            )
         source = bundle.retained_for_index(slot.retained_source_index)
     else:
         source = bundle.exact_v11_source
@@ -392,6 +416,18 @@ def _parse_source_proposal(
 def _rotation_matrix(
     quaternion: tuple[float, float, float, float],
 ) -> torch.Tensor:
+    if (
+        type(quaternion) is not tuple
+        or len(quaternion) != 4
+        or any(
+            type(component) is not float or not math.isfinite(component)
+            for component in quaternion
+        )
+    ):
+        _fail(
+            PLACEMENT_TRANSFORM_CROSS_WIRED,
+            "placement quaternion is not finite binary64",
+        )
     x, y, z, w = quaternion
     norm = math.sqrt(x * x + y * y + z * z + w * w)
     if not math.isfinite(norm) or norm <= 1.0e-15:
@@ -415,6 +451,18 @@ def _placement_rigid_transform(
     """Rederive the row-vector affine transform encoded by one placement."""
 
     placement_rotation = _rotation_matrix(placement.quaternion)
+    if (
+        type(placement.translation) is not tuple
+        or len(placement.translation) != 3
+        or any(
+            type(component) is not float or not math.isfinite(component)
+            for component in placement.translation
+        )
+    ):
+        _fail(
+            PLACEMENT_TRANSFORM_CROSS_WIRED,
+            "placement translation is not finite binary64",
+        )
     placement_translation = torch.tensor(
         placement.translation,
         dtype=torch.float64,
@@ -701,9 +749,12 @@ class Mixed64OperationalProposalRecordV1:
         except Mixed64OperationalProposalV3Error:
             raise
         except (
-            DockingProposalError,
-            GeometricAdmissionV3Error,
-            Mixed64ProposalProducerError,
+            AttributeError,
+            IndexError,
+            KeyError,
+            TypeError,
+            UnicodeError,
+            ValueError,
         ) as exc:
             raise Mixed64OperationalProposalV3Error(
                 SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED,
@@ -863,6 +914,11 @@ class Mixed64OperationalProposalBatchV1:
             raise Mixed64OperationalProposalV3Error(
                 SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED,
                 "operational proposal batch live integrity failed",
+            ) from exc
+        except (AttributeError, IndexError, KeyError, TypeError, UnicodeError, ValueError) as exc:
+            raise Mixed64OperationalProposalV3Error(
+                SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED,
+                "operational proposal batch live projection changed",
             ) from exc
 
     def to_dict(self) -> dict[str, object]:

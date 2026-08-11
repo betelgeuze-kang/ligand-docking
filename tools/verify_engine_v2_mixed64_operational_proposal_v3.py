@@ -72,6 +72,10 @@ class Mixed64OperationalProposalPolicyVerificationError(ValueError):
     pass
 
 
+def _reject_nonfinite_json_constant(value: str) -> object:
+    raise ValueError(f"non-finite JSON constant is forbidden: {value}")
+
+
 def _canonical_bytes(value: object) -> bytes:
     return json.dumps(
         value,
@@ -110,11 +114,24 @@ def _function_parameters(path: Path, function_name: str) -> set[str]:
     }
 
 
+def _contains_runtime_assert(path: Path) -> bool:
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    except (OSError, UnicodeError, SyntaxError) as exc:
+        raise Mixed64OperationalProposalPolicyVerificationError(
+            "operational proposal implementation source is unreadable"
+        ) from exc
+    return any(isinstance(node, ast.Assert) for node in ast.walk(tree))
+
+
 def verify_policy(path: Path = DEFAULT_POLICY_PATH) -> dict[str, object]:
     try:
         raw = path.read_bytes()
-        document = json.loads(raw)
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        document = json.loads(
+            raw,
+            parse_constant=_reject_nonfinite_json_constant,
+        )
+    except (OSError, UnicodeError, ValueError) as exc:
         raise Mixed64OperationalProposalPolicyVerificationError(
             "operational proposal policy is unreadable or invalid JSON"
         ) from exc
@@ -122,7 +139,12 @@ def verify_policy(path: Path = DEFAULT_POLICY_PATH) -> dict[str, object]:
         raise Mixed64OperationalProposalPolicyVerificationError(
             "operational proposal policy must be one JSON object"
         )
-    canonical = _canonical_bytes(document)
+    try:
+        canonical = _canonical_bytes(document)
+    except (TypeError, ValueError, UnicodeError) as exc:
+        raise Mixed64OperationalProposalPolicyVerificationError(
+            "operational proposal policy is not canonical JSON"
+        ) from exc
     if raw != canonical + b"\n":
         raise Mixed64OperationalProposalPolicyVerificationError(
             "operational proposal policy is not canonical JSON"
@@ -210,17 +232,24 @@ def verify_policy(path: Path = DEFAULT_POLICY_PATH) -> dict[str, object]:
         raise Mixed64OperationalProposalPolicyVerificationError(
             "operational proposal authority must remain exact false"
         )
-    materializer_parameters = _function_parameters(
+    materializer_path = (
         _REPO_ROOT
         / "betelgeuze_engine_v2"
         / "docking"
-        / "mixed64_operational_proposal_v3.py",
+        / "mixed64_operational_proposal_v3.py"
+    )
+    materializer_parameters = _function_parameters(
+        materializer_path,
         "materialize_mixed64_operational_proposals",
     )
     proposal_factory_parameters = _function_parameters(
         _REPO_ROOT / "betelgeuze_engine_v2" / "docking" / "proposals.py",
         "bind_docking_proposal_state",
     )
+    if _contains_runtime_assert(materializer_path):
+        raise Mixed64OperationalProposalPolicyVerificationError(
+            "operational proposal implementation contains optimizable runtime asserts"
+        )
     if (
         materializer_parameters != {"admission_batch"}
         or materializer_parameters & _FORBIDDEN_PARAMETERS
