@@ -120,6 +120,16 @@ def verify_policy(path: Path = DEFAULT_POLICY_PATH) -> dict[str, object]:
         raise GeometricAdmissionV3PolicyVerificationError(
             "geometric-admission failure semantics changed"
         )
+    producer_integrity = document.get("producer_integrity")
+    if producer_integrity != {
+        "recursive_live_projection_preflight": True,
+        "kernel_inputs_restored_from_sealed_projection": True,
+        "recursive_live_projection_postflight": True,
+        "decision_projection_rechecked_against_sealed_snapshot": True,
+    }:
+        raise GeometricAdmissionV3PolicyVerificationError(
+            "geometric-admission producer integrity boundary changed"
+        )
     authority = document.get("authority")
     if type(authority) is not dict or not authority or any(
         type(value) is not bool or value for value in authority.values()

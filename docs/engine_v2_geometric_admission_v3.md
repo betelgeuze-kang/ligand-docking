@@ -7,7 +7,7 @@ scores, ranks, validity outcomes, reservations, or authority.
 
 The canonical policy is
 `config/engine_v2_geometric_admission_v3.json`, with SHA-256
-`0d3203daeb245d29fe4b03a73204d8cddb25ce84b310b008d61729d89659a2c6`.
+`8cb92904947c9bcb14fc378e2755b9b88d862b25eba4f942fd02299dd0271825`.
 It binds producer policy SHA-256
 `a5cc354ef227d6d187d565dfbc6d0cfc631218e201198ed5b8a61b43baf6ad6d`.
 
@@ -36,6 +36,18 @@ Decision and batch projections are canonicalized once when their frozen
 dataclasses are constructed. Receipt checks hash this immutable byte snapshot,
 and `to_dict()` returns a decoded copy. This avoids repeatedly rebuilding the
 same nested 64-slot evidence while preserving byte-identical receipts.
+
+Before any pair-work bound or metric traversal, admission recursively compares
+every live producer source, placement, generation record, source bundle, and
+batch projection with its sealed bytes. Kernel coordinates, radii, masks, and
+pocket geometry are then restored only from that sealed projection, rather
+than read from live dataclass fields. Recursive postflight checks run before
+decision construction and again after batch finalization. Persistent mutation
+therefore fails closed, while a mutate-and-restore race cannot alter the
+scientific kernel inputs.
+Each constructed decision is also rechecked against the sealed record, slot,
+coordinate identity, metric receipt, and draft disposition before the batch is
+sealed.
 
 This component does not refine, score, rank, evaluate final pose validity, or
 authorize an experiment. Reservation, molecular execution, D0/D1/Fresh,

@@ -180,6 +180,113 @@ def test_batch_pair_limit_is_checked_before_metric_traversal(
         GeometricAdmissionV3().admit_producer_batch(producer)
 
 
+def test_live_record_mutation_fails_before_metric_traversal(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import betelgeuze_engine_v2.docking.geometric_admission_v3 as module
+
+    allocation, bundle, *_ = _fixture()
+    producer = produce_fixed_mixed64_proposals(allocation, source_bundle=bundle)
+    record = producer.records[0]
+    assert record.output_coordinates is not None
+    object.__setattr__(
+        record,
+        "output_coordinates",
+        tuple((x + 1.0, y, z) for x, y, z in record.output_coordinates),
+    )
+
+    def unexpected_metric_traversal(*_args, **_kwargs):
+        raise AssertionError("metric traversal must not start")
+
+    monkeypatch.setattr(
+        module,
+        "evaluate_geometric_admission_metrics_one_python",
+        unexpected_metric_traversal,
+    )
+
+    with pytest.raises(GeometricAdmissionV3Error, match="integrity preflight"):
+        GeometricAdmissionV3().admit_producer_batch(producer)
+
+
+@pytest.mark.parametrize(
+    "field_name,replacement",
+    (
+        ("receptor_coordinates", ((999.0, 999.0, 999.0),)),
+        ("ligand_vdw_radii", (9.0,)),
+        ("pocket_center", (9.0, 9.0, 9.0)),
+    ),
+)
+def test_live_source_bundle_mutation_fails_closed(
+    field_name: str,
+    replacement: object,
+) -> None:
+    allocation, bundle, *_ = _fixture()
+    producer = produce_fixed_mixed64_proposals(allocation, source_bundle=bundle)
+    object.__setattr__(producer.source_bundle, field_name, replacement)
+
+    with pytest.raises(GeometricAdmissionV3Error, match="integrity preflight"):
+        GeometricAdmissionV3().admit_producer_batch(producer)
+
+
+def test_nested_source_payload_live_mutation_is_checked_recursively() -> None:
+    allocation, bundle, *_ = _fixture()
+    producer = produce_fixed_mixed64_proposals(allocation, source_bundle=bundle)
+    source = producer.source_bundle.v7_control_sources[0]
+    object.__setattr__(source, "coordinates", ((999.0, 999.0, 999.0),))
+
+    with pytest.raises(GeometricAdmissionV3Error, match="integrity preflight"):
+        GeometricAdmissionV3().admit_producer_batch(producer)
+
+
+def test_nested_placement_receipt_live_mutation_is_checked_recursively() -> None:
+    allocation, bundle, *_ = _fixture()
+    producer = produce_fixed_mixed64_proposals(allocation, source_bundle=bundle)
+    placement = producer.records[44].placement_receipt
+    assert placement is not None
+    object.__setattr__(placement, "output_coordinates", ((999.0, 999.0, 999.0),))
+
+    with pytest.raises(GeometricAdmissionV3Error, match="integrity preflight"):
+        GeometricAdmissionV3().admit_producer_batch(producer)
+
+
+def test_transient_live_record_mutation_cannot_change_sealed_kernel_inputs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import betelgeuze_engine_v2.docking.geometric_admission_v3 as module
+
+    allocation, bundle, *_ = _fixture()
+    producer = produce_fixed_mixed64_proposals(allocation, source_bundle=bundle)
+    baseline = GeometricAdmissionV3().admit_producer_batch(producer)
+    target = producer.records[1]
+    original_coordinates = target.output_coordinates
+    assert original_coordinates is not None
+    poisoned_coordinates = tuple(
+        (x + 50.0, y - 50.0, z + 25.0) for x, y, z in original_coordinates
+    )
+    original_kernel = module.evaluate_geometric_admission_metrics_one_python
+    call_count = 0
+
+    def transient_mutation_kernel(*args, **kwargs):
+        nonlocal call_count
+        if call_count == 0:
+            object.__setattr__(target, "output_coordinates", poisoned_coordinates)
+        elif call_count == 1:
+            object.__setattr__(target, "output_coordinates", original_coordinates)
+        call_count += 1
+        return original_kernel(*args, **kwargs)
+
+    monkeypatch.setattr(
+        module,
+        "evaluate_geometric_admission_metrics_one_python",
+        transient_mutation_kernel,
+    )
+    observed = GeometricAdmissionV3().admit_producer_batch(producer)
+
+    assert call_count == 64
+    assert target.output_coordinates == original_coordinates
+    assert observed.receipt_sha256 == baseline.receipt_sha256
+
+
 def test_decision_cannot_be_forged_without_factory() -> None:
     allocation, bundle, *_ = _fixture()
     producer, admission = _admit(allocation, bundle)
@@ -201,6 +308,7 @@ def test_policy_freezes_threshold_failure_semantics_and_zero_authority() -> None
     assert policy["candidate_denominator"] == 64
     assert policy["hard_rejection"]["threshold_binary64_hex"] == (0.55).hex()
     assert policy["failure_semantics"]["slot_reallocation_allowed"] is False
+    assert all(policy["producer_integrity"].values())
     assert all(value is False for value in policy["authority"].values())
 
 

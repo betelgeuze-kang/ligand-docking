@@ -43,6 +43,7 @@ def test_current_policy_verifies_without_authority() -> None:
         (("candidate_denominator",), 63),
         (("hard_rejection", "threshold_binary64_hex"), (0.50).hex()),
         (("failure_semantics", "slot_reallocation_allowed"), True),
+        (("producer_integrity", "recursive_live_projection_preflight"), False),
         (("authority", "molecular_execution_authorized"), True),
     ),
 )

@@ -242,6 +242,19 @@ def _verify_sealed_receipt(payload: bytes, expected: str, *, name: str) -> str:
     return observed
 
 
+def _verify_live_sealed_projection(
+    payload: bytes,
+    expected: str,
+    projection: object,
+    *,
+    name: str,
+) -> str:
+    observed = _verify_sealed_receipt(payload, expected, name=name)
+    if _canonical_bytes(projection) != payload:
+        _fail(SOURCE_PAYLOAD_CROSS_WIRING, f"{name} live projection changed")
+    return observed
+
+
 def _digest(value: object, *, name: str) -> str:
     if type(value) is not str or _SHA256_RE.fullmatch(value) is None:
         _fail(SOURCE_PAYLOAD_CROSS_WIRING, f"{name} must be a lowercase SHA-256")
@@ -507,6 +520,14 @@ class Mixed64CoordinateSourcePayloadV1:
         return _verify_sealed_receipt(
             self._canonical_projection_bytes,
             self._receipt_sha256,
+            name="coordinate source payload",
+        )
+
+    def assert_live_integrity(self) -> str:
+        return _verify_live_sealed_projection(
+            self._canonical_projection_bytes,
+            self._receipt_sha256,
+            self._projection(),
             name="coordinate source payload",
         )
 
@@ -776,6 +797,22 @@ class Mixed64ProposalSourceBundleV1:
             name="proposal source bundle",
         )
 
+    def assert_live_integrity(self) -> str:
+        if self.exact_v11_source is not None:
+            self.exact_v11_source.assert_live_integrity()
+        for source in (
+            *self.v7_control_sources,
+            *self.conformer_sources,
+            *self.retained_sources,
+        ):
+            source.assert_live_integrity()
+        return _verify_live_sealed_projection(
+            self._canonical_projection_bytes,
+            self._receipt_sha256,
+            self._projection(),
+            name="proposal source bundle",
+        )
+
     def to_dict(self) -> dict[str, object]:
         return {
             **_unseal_projection(self._canonical_projection_bytes),
@@ -931,6 +968,15 @@ class ExactPassthroughPlacementReceiptV1:
             name="passthrough receipt",
         )
 
+    def assert_live_integrity(self) -> str:
+        self.source_payload.assert_live_integrity()
+        return _verify_live_sealed_projection(
+            self._canonical_projection_bytes,
+            self._receipt_sha256,
+            self._projection(),
+            name="passthrough receipt",
+        )
+
     def to_dict(self) -> dict[str, object]:
         return {
             **_unseal_projection(self._canonical_projection_bytes),
@@ -1016,6 +1062,14 @@ class ProposalGenerationFailureReceiptV1:
         return _verify_sealed_receipt(
             self._canonical_projection_bytes,
             self._receipt_sha256,
+            name="generation failure receipt",
+        )
+
+    def assert_live_integrity(self) -> str:
+        return _verify_live_sealed_projection(
+            self._canonical_projection_bytes,
+            self._receipt_sha256,
+            self._projection(),
             name="generation failure receipt",
         )
 
@@ -1190,6 +1244,22 @@ class Mixed64ProposalGenerationRecordV1:
             name="generation record",
         )
 
+    def assert_live_integrity(self) -> str:
+        if type(self.placement_receipt) is ExactPassthroughPlacementReceiptV1:
+            self.placement_receipt.assert_live_integrity()
+        elif self.placement_receipt is not None:
+            _ = self.placement_receipt.receipt_sha256
+        if self.proposal_execution_receipt is not None:
+            _ = self.proposal_execution_receipt.receipt_sha256
+        if self.failure_receipt is not None:
+            self.failure_receipt.assert_live_integrity()
+        return _verify_live_sealed_projection(
+            self._canonical_projection_bytes,
+            self._receipt_sha256,
+            self._projection(),
+            name="generation record",
+        )
+
     def to_dict(self) -> dict[str, object]:
         return {
             **_unseal_projection(self._canonical_projection_bytes),
@@ -1324,6 +1394,27 @@ class Mixed64ProposalProducerBatchV1:
             self._receipt_sha256,
             name="producer batch",
         )
+
+    def assert_live_integrity(self) -> str:
+        """Validate the sealed batch and every live field projected into it."""
+
+        try:
+            self.source_bundle.assert_live_integrity()
+            for record in self.records:
+                record.assert_live_integrity()
+            return _verify_live_sealed_projection(
+                self._canonical_projection_bytes,
+                self._receipt_sha256,
+                self._projection(),
+                name="producer batch",
+            )
+        except Mixed64ProposalProducerError:
+            raise
+        except ValueError as exc:
+            raise Mixed64ProposalProducerError(
+                SOURCE_PAYLOAD_CROSS_WIRING,
+                "producer batch nested live projection changed",
+            ) from exc
 
     def to_dict(self) -> dict[str, object]:
         return {

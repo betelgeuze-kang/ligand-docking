@@ -14,6 +14,7 @@ from __future__ import annotations
 from dataclasses import InitVar, dataclass, field
 import hashlib
 import json
+import math
 import re
 from typing import Final
 
@@ -21,6 +22,7 @@ from .geometric_admission_v2 import (
     HARD_REJECTION_MINIMUM_VDW_RATIO,
     MAX_BATCH_EXACT_PAIR_EVALUATIONS,
     SEVERE_PENETRATION_REJECTION_CODE,
+    Coordinates,
     GeometricAdmissionMetricsV2,
     GeometricAdmissionV2Error,
     evaluate_geometric_admission_metrics_one_python,
@@ -31,9 +33,10 @@ from .mixed64_proposal_producer_v3 import (
     GENERATION_STATUS_SUCCESS,
     MIXED64_PRODUCER_POLICY_SHA256,
     Mixed64ProposalGenerationRecordV1,
+    Mixed64ProposalProducerError,
     Mixed64ProposalProducerBatchV1,
 )
-from .mixed64_proposal_geometry_v3 import SingleAnchorPlacementReceiptV1
+from .mixed64_proposal_geometry_v3 import MIXED64_SINGLE_ANCHOR_SCHEMA_ID
 
 
 GEOMETRIC_ADMISSION_V3_COMPONENT_ID: Final = (
@@ -142,6 +145,12 @@ def frozen_geometric_admission_v3_policy() -> dict[str, object]:
             ),
             "generated_candidates_only": True,
         },
+        "producer_integrity": {
+            "recursive_live_projection_preflight": True,
+            "kernel_inputs_restored_from_sealed_projection": True,
+            "recursive_live_projection_postflight": True,
+            "decision_projection_rechecked_against_sealed_snapshot": True,
+        },
         "authority": {
             "reservation_allowed": False,
             "molecular_execution_authorized": False,
@@ -161,6 +170,84 @@ def frozen_geometric_admission_v3_policy() -> dict[str, object]:
 GEOMETRIC_ADMISSION_V3_POLICY_SHA256: Final = _sha256(
     frozen_geometric_admission_v3_policy()
 )
+
+
+@dataclass(frozen=True, slots=True)
+class _AdmissionDecisionDraft:
+    metrics: GeometricAdmissionMetricsV2 | None
+    status: str
+    rejection_code: str | None
+    rank_eligible: bool
+
+
+def _projection_dict(value: object, *, name: str) -> dict[str, object]:
+    if type(value) is not dict:
+        raise GeometricAdmissionV3Error(f"sealed {name} is not an object")
+    return value
+
+
+def _projection_list(value: object, *, name: str) -> list[object]:
+    if type(value) is not list:
+        raise GeometricAdmissionV3Error(f"sealed {name} is not an array")
+    return value
+
+
+def _binary64(value: object, *, name: str) -> float:
+    if type(value) is not str:
+        raise GeometricAdmissionV3Error(f"sealed {name} is not binary64 hex")
+    try:
+        observed = float.fromhex(value)
+    except ValueError as exc:
+        raise GeometricAdmissionV3Error(
+            f"sealed {name} is not binary64 hex"
+        ) from exc
+    if not math.isfinite(observed):
+        raise GeometricAdmissionV3Error(f"sealed {name} is not finite")
+    return observed
+
+
+def _projection_coordinates(value: object, *, name: str) -> Coordinates:
+    rows = _projection_list(value, name=name)
+    coordinates: list[tuple[float, float, float]] = []
+    for row_index, raw_row in enumerate(rows):
+        row = _projection_list(raw_row, name=f"{name}[{row_index}]")
+        if len(row) != 3:
+            raise GeometricAdmissionV3Error(
+                f"sealed {name}[{row_index}] is not a vector3"
+            )
+        coordinates.append(
+            (
+                _binary64(row[0], name=f"{name}[{row_index}][0]"),
+                _binary64(row[1], name=f"{name}[{row_index}][1]"),
+                _binary64(row[2], name=f"{name}[{row_index}][2]"),
+            )
+        )
+    return tuple(coordinates)
+
+
+def _projection_vector(value: object, *, name: str) -> tuple[float, float, float]:
+    row = _projection_list(value, name=name)
+    if len(row) != 3:
+        raise GeometricAdmissionV3Error(f"sealed {name} is not a vector3")
+    return (
+        _binary64(row[0], name=f"{name}[0]"),
+        _binary64(row[1], name=f"{name}[1]"),
+        _binary64(row[2], name=f"{name}[2]"),
+    )
+
+
+def _projection_radii(value: object, *, name: str) -> tuple[float, ...]:
+    return tuple(
+        _binary64(item, name=f"{name}[{index}]")
+        for index, item in enumerate(_projection_list(value, name=name))
+    )
+
+
+def _projection_mask(value: object, *, name: str) -> tuple[bool, ...]:
+    items = _projection_list(value, name=name)
+    if any(type(item) is not bool for item in items):
+        raise GeometricAdmissionV3Error(f"sealed {name} is not a boolean array")
+    return tuple(items)
 
 
 @dataclass(frozen=True, slots=True)
@@ -425,82 +512,251 @@ class GeometricAdmissionV3:
     ) -> GeometricAdmissionBatchV3:
         if type(producer_batch) is not Mixed64ProposalProducerBatchV1:
             raise TypeError("producer_batch must be exact")
-        bundle = producer_batch.source_bundle
-        generated_count = producer_batch.generated_count
+        try:
+            producer_batch.assert_live_integrity()
+            producer_projection = producer_batch.to_dict()
+        except Mixed64ProposalProducerError as exc:
+            raise GeometricAdmissionV3Error(
+                "producer live integrity preflight failed"
+            ) from exc
+        bundle_projection = _projection_dict(
+            producer_projection.get("source_bundle"),
+            name="producer source bundle",
+        )
+        record_projections = _projection_list(
+            producer_projection.get("records"),
+            name="producer records",
+        )
+        allocation_projection = _projection_dict(
+            producer_projection.get("allocation"),
+            name="producer allocation",
+        )
+        slot_projections = _projection_list(
+            allocation_projection.get("slots"),
+            name="producer allocation slots",
+        )
+        if (
+            len(record_projections) != FIXED_MIXED64_CANDIDATE_COUNT
+            or len(slot_projections) != FIXED_MIXED64_CANDIDATE_COUNT
+        ):
+            raise GeometricAdmissionV3Error(
+                "sealed producer denominator is not fixed64"
+            )
+        ligand_vdw_radii = _projection_radii(
+            bundle_projection.get("ligand_vdw_radii_binary64_hex"),
+            name="ligand vdW radii",
+        )
+        ligand_heavy_atom_mask = _projection_mask(
+            bundle_projection.get("ligand_heavy_atom_mask"),
+            name="ligand heavy-atom mask",
+        )
+        receptor_coordinates = _projection_coordinates(
+            bundle_projection.get("receptor_coordinates_binary64_hex"),
+            name="receptor coordinates",
+        )
+        receptor_vdw_radii = _projection_radii(
+            bundle_projection.get("receptor_vdw_radii_binary64_hex"),
+            name="receptor vdW radii",
+        )
+        pocket_center = _projection_vector(
+            bundle_projection.get("pocket_center_binary64_hex"),
+            name="pocket center",
+        )
+        pocket_radius = _binary64(
+            bundle_projection.get("pocket_radius_binary64_hex"),
+            name="pocket radius",
+        )
+        normalized_records: list[dict[str, object]] = []
+        generated_count = 0
+        for index, raw_record in enumerate(record_projections):
+            record_projection = _projection_dict(
+                raw_record,
+                name=f"producer record {index}",
+            )
+            if record_projection.get("slot_index") != index:
+                raise GeometricAdmissionV3Error(
+                    "sealed producer record order changed"
+                )
+            status = record_projection.get("status")
+            if status == GENERATION_STATUS_SUCCESS:
+                generated_count += 1
+            elif status != GENERATION_STATUS_FAILURE:
+                raise GeometricAdmissionV3Error(
+                    "sealed producer generation status is invalid"
+                )
+            normalized_records.append(record_projection)
         pair_work = (
             generated_count
-            * len(bundle.ligand_vdw_radii)
-            * len(bundle.receptor_coordinates)
+            * len(ligand_vdw_radii)
+            * len(receptor_coordinates)
         )
         if pair_work > MAX_BATCH_EXACT_PAIR_EVALUATIONS:
             raise GeometricAdmissionV3Error(
                 "fixed64 generated exact pair work exceeds the fail-closed limit"
             )
-        decisions: list[GeometricAdmissionDecisionV3] = []
-        for record in producer_batch.records:
-            if record.status == GENERATION_STATUS_FAILURE:
-                slot = record.allocation.slots[record.slot_index]
-                failure = record.failure_receipt
-                if failure is None:
-                    raise GeometricAdmissionV3Error("producer failure receipt is absent")
-                decisions.append(
-                    GeometricAdmissionDecisionV3(
-                        producer_record=record,
+        drafts: list[_AdmissionDecisionDraft] = []
+        for index, record_projection in enumerate(normalized_records):
+            slot_projection = _projection_dict(
+                slot_projections[index],
+                name=f"producer allocation slot {index}",
+            )
+            if slot_projection.get("slot_index") != index:
+                raise GeometricAdmissionV3Error(
+                    "sealed producer allocation slot order changed"
+                )
+            generation_eligible = slot_projection.get("generation_eligible")
+            if type(generation_eligible) is not bool:
+                raise GeometricAdmissionV3Error(
+                    "sealed allocation eligibility is not boolean"
+                )
+            if record_projection["status"] == GENERATION_STATUS_FAILURE:
+                failure_projection = _projection_dict(
+                    record_projection.get("failure_receipt"),
+                    name=f"producer failure receipt {index}",
+                )
+                failure_code = failure_projection.get("failure_code")
+                if type(failure_code) is not str:
+                    raise GeometricAdmissionV3Error(
+                        "sealed producer failure code is absent"
+                    )
+                drafts.append(
+                    _AdmissionDecisionDraft(
                         metrics=None,
                         status=(
                             TYPED_ALLOCATION_FAILURE_STATUS
-                            if not slot.generation_eligible
+                            if not generation_eligible
                             else TYPED_PROPOSAL_GENERATION_FAILURE_STATUS
                         ),
-                        rejection_code=failure.failure_code,
+                        rejection_code=failure_code,
                         rank_eligible=False,
-                        _factory_seal=_DECISION_FACTORY_SEAL,
                     )
                 )
                 continue
-            if record.status != GENERATION_STATUS_SUCCESS or record.output_coordinates is None:
-                raise GeometricAdmissionV3Error("producer generation status is invalid")
+            output_coordinates = _projection_coordinates(
+                record_projection.get("output_coordinates_binary64_hex"),
+                name=f"producer output coordinates {index}",
+            )
             try:
                 metrics = evaluate_geometric_admission_metrics_one_python(
-                    record.output_coordinates,
-                    ligand_vdw_radii=bundle.ligand_vdw_radii,
-                    ligand_heavy_atom_mask=bundle.ligand_heavy_atom_mask,
-                    receptor_coordinates=bundle.receptor_coordinates,
-                    receptor_vdw_radii=bundle.receptor_vdw_radii,
-                    pocket_center=bundle.pocket_center,
-                    pocket_radius=bundle.pocket_radius,
+                    output_coordinates,
+                    ligand_vdw_radii=ligand_vdw_radii,
+                    ligand_heavy_atom_mask=ligand_heavy_atom_mask,
+                    receptor_coordinates=receptor_coordinates,
+                    receptor_vdw_radii=receptor_vdw_radii,
+                    pocket_center=pocket_center,
+                    pocket_radius=pocket_radius,
                 )
             except GeometricAdmissionV2Error as exc:
                 raise GeometricAdmissionV3Error(
                     "producer coordinates failed the bounded geometric kernel"
                 ) from exc
-            placement = record.placement_receipt
-            if (
-                type(placement) is SingleAnchorPlacementReceiptV1
-                and placement.geometric_metrics.receipt_sha256
-                != metrics.receipt_sha256
-            ):
-                raise GeometricAdmissionV3Error(
-                    "single-anchor precheck disagrees with admission replay"
+            placement_projection = _projection_dict(
+                record_projection.get("placement_receipt"),
+                name=f"producer placement receipt {index}",
+            )
+            if placement_projection.get("schema_id") == MIXED64_SINGLE_ANCHOR_SCHEMA_ID:
+                precheck_projection = _projection_dict(
+                    placement_projection.get("geometric_precheck"),
+                    name=f"single-anchor geometric precheck {index}",
                 )
+                if precheck_projection.get("receipt_sha256") != metrics.receipt_sha256:
+                    raise GeometricAdmissionV3Error(
+                        "single-anchor precheck disagrees with admission replay"
+                    )
             accepted = metrics.minimum_vdw_ratio >= HARD_REJECTION_MINIMUM_VDW_RATIO
-            decisions.append(
-                GeometricAdmissionDecisionV3(
-                    producer_record=record,
+            drafts.append(
+                _AdmissionDecisionDraft(
                     metrics=metrics,
                     status=ACCEPTED_STATUS if accepted else REJECTED_STATUS,
                     rejection_code=(
                         None if accepted else SEVERE_PENETRATION_REJECTION_CODE
                     ),
                     rank_eligible=accepted,
-                    _factory_seal=_DECISION_FACTORY_SEAL,
                 )
             )
-        return GeometricAdmissionBatchV3(
+        try:
+            producer_batch.assert_live_integrity()
+        except Mixed64ProposalProducerError as exc:
+            raise GeometricAdmissionV3Error(
+                "producer live integrity postflight failed"
+            ) from exc
+        records = tuple(producer_batch.records)
+        decisions = tuple(
+            GeometricAdmissionDecisionV3(
+                producer_record=record,
+                metrics=draft.metrics,
+                status=draft.status,
+                rejection_code=draft.rejection_code,
+                rank_eligible=draft.rank_eligible,
+                _factory_seal=_DECISION_FACTORY_SEAL,
+            )
+            for record, draft in zip(records, drafts, strict=True)
+        )
+        for index, (decision, draft, record_projection) in enumerate(
+            zip(decisions, drafts, normalized_records, strict=True)
+        ):
+            decision_projection = decision.to_dict()
+            slot_projection = _projection_dict(
+                slot_projections[index],
+                name=f"producer allocation slot {index}",
+            )
+            metrics_projection = decision_projection.get("metrics")
+            observed_metrics_receipt = (
+                None
+                if metrics_projection is None
+                else _projection_dict(
+                    metrics_projection,
+                    name=f"admission decision metrics {index}",
+                ).get("receipt_sha256")
+            )
+            expected_metrics_receipt = (
+                None if draft.metrics is None else draft.metrics.receipt_sha256
+            )
+            if (
+                decision_projection.get("slot_index") != index
+                or decision_projection.get(
+                    "producer_generation_record_receipt_sha256"
+                )
+                != record_projection.get("receipt_sha256")
+                or decision_projection.get("producer_generation_status")
+                != record_projection.get("status")
+                or decision_projection.get("candidate_coordinate_sha256")
+                != record_projection.get("source_coordinate_sha256")
+                or decision_projection.get("allocation_generation_eligible")
+                != slot_projection.get("generation_eligible")
+                or observed_metrics_receipt != expected_metrics_receipt
+                or decision_projection.get("status") != draft.status
+                or decision_projection.get("rejection_code")
+                != draft.rejection_code
+                or decision_projection.get("rank_eligible")
+                is not draft.rank_eligible
+            ):
+                raise GeometricAdmissionV3Error(
+                    "admission decision disagrees with the sealed producer snapshot"
+                )
+        batch = GeometricAdmissionBatchV3(
             producer_batch=producer_batch,
-            decisions=tuple(decisions),
+            decisions=decisions,
             _factory_seal=_BATCH_FACTORY_SEAL,
         )
+        try:
+            producer_batch.assert_live_integrity()
+        except Mixed64ProposalProducerError as exc:
+            raise GeometricAdmissionV3Error(
+                "producer live integrity finalization failed"
+            ) from exc
+        if any(
+            current is not captured
+            for current, captured in zip(
+                producer_batch.records,
+                records,
+                strict=True,
+            )
+        ):
+            raise GeometricAdmissionV3Error(
+                "producer record identities changed during admission"
+            )
+        return batch
 
 
 __all__ = [
