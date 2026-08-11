@@ -1,4 +1,5 @@
 #include "../internal.hpp"
+#include "../hip/provider.h"
 #include "../rust/provider.h"
 
 #include <algorithm>
@@ -7,6 +8,13 @@
 #include <cstring>
 #include <memory>
 #include <tuple>
+
+#ifndef BG_HAS_HIP_SAFE_PROVIDER
+#  define BG_HAS_HIP_SAFE_PROVIDER 0
+#endif
+#ifndef BG_ENABLE_HIP
+#  define BG_ENABLE_HIP 0
+#endif
 
 namespace betelgeuze::native::docking::rigid_refinement {
 namespace {
@@ -1405,6 +1413,80 @@ void initialize_rust_error(bg_rust_cpu_error_v1 *error) noexcept {
     return fail(mapped, error.message[0] == '\0' ? fallback : error.message);
 }
 
+[[nodiscard]] bg_status hip_failure(
+    int32_t raw_status,
+    const std::array<char, BG_HIP_SAFE_ERROR_CAPACITY> &error,
+    const char *fallback) noexcept {
+    const char *message = error[0] == '\0' ? fallback : error.data();
+    switch (raw_status) {
+        case BG_STATUS_INVALID_ARGUMENT:
+        case BG_STATUS_ABI_MISMATCH:
+        case BG_STATUS_UNSUPPORTED_BACKEND:
+        case BG_STATUS_BACKEND_UNAVAILABLE:
+        case BG_STATUS_OUT_OF_MEMORY:
+        case BG_STATUS_CAPACITY_OVERFLOW:
+        case BG_STATUS_BUFFER_TOO_SMALL:
+        case BG_STATUS_BACKEND_ERROR:
+        case BG_STATUS_INTERNAL_ERROR:
+        case BG_STATUS_NUMERICAL_ERROR:
+            return fail(static_cast<bg_status>(raw_status), message);
+        default:
+            return fail(BG_STATUS_INTERNAL_ERROR, fallback);
+    }
+}
+
+[[nodiscard]] bg_status create_hip_backend(
+    ProviderEnvelope *state,
+    bg_backend backend,
+    int32_t device_ordinal,
+    const bg_docking_rigid_refinement_context_soa_v1 &descriptor) {
+    static_cast<void>(device_ordinal);
+    static_cast<void>(descriptor);
+    if (state == nullptr) {
+        return fail(BG_STATUS_INTERNAL_ERROR, "rigid HIP state is null");
+    }
+    std::array<char, BG_HIP_SAFE_ERROR_CAPACITY> error{};
+    void *provider_state = nullptr;
+    int32_t raw_status = BG_STATUS_BACKEND_UNAVAILABLE;
+    if (backend == BG_BACKEND_HIP_SAFE) {
+#if BG_HAS_HIP_SAFE_PROVIDER
+        raw_status = bg_hip_safe_docking_rigid_refinement_create(
+            device_ordinal,
+            &descriptor,
+            &provider_state,
+            error.data(),
+            error.size());
+#else
+        return fail(
+            BG_STATUS_BACKEND_UNAVAILABLE,
+            "hip_safe rigid refinement provider is not compiled; fallback is forbidden");
+#endif
+    } else if (backend == BG_BACKEND_HIP_FAST) {
+#if BG_ENABLE_HIP
+        raw_status = bg_hip_fast_docking_rigid_refinement_create(
+            device_ordinal,
+            &descriptor,
+            &provider_state,
+            error.data(),
+            error.size());
+#else
+        return fail(
+            BG_STATUS_BACKEND_UNAVAILABLE,
+            "hip_fast rigid refinement provider is not compiled; fallback is forbidden");
+#endif
+    } else {
+        return fail(
+            BG_STATUS_UNSUPPORTED_BACKEND,
+            "rigid refinement HIP provider received a non-HIP backend");
+    }
+    if (raw_status != BG_STATUS_OK) {
+        return hip_failure(
+            raw_status, error, "native HIP rigid refinement creation failed");
+    }
+    state->backend_state = provider_state;
+    return BG_STATUS_OK;
+}
+
 [[nodiscard]] bg_rust_cpu_rigid_v2_config_v1 rust_v2(
     const V2Config &source) noexcept {
     bg_rust_cpu_rigid_v2_config_v1 result{};
@@ -1590,6 +1672,84 @@ void initialize_rust_error(bg_rust_cpu_error_v1 *error) noexcept {
     return BG_STATUS_OK;
 }
 
+[[nodiscard]] bg_status refine_hip_fixed64(
+    const ProviderEnvelope &state,
+    bg_backend backend,
+    const bg_docking_rigid_refinement_candidate_batch_soa_v1 &batch,
+    std::size_t coordinate_count,
+    BatchResult *output) {
+    static_cast<void>(batch);
+    if (state.backend_state == nullptr || output == nullptr) {
+        return fail(
+            BG_STATUS_INTERNAL_ERROR,
+            "native HIP rigid refinement state or output is null");
+    }
+    BatchResult result = empty_batch(coordinate_count);
+    std::array<char, BG_HIP_SAFE_ERROR_CAPACITY> error{};
+    int32_t raw_status = BG_STATUS_BACKEND_UNAVAILABLE;
+    if (backend == BG_BACKEND_HIP_SAFE) {
+#if BG_HAS_HIP_SAFE_PROVIDER
+        raw_status = bg_hip_safe_docking_rigid_refinement_fixed64(
+            state.backend_state,
+            &batch,
+            result.rows.data(),
+            result.selected_x.data(),
+            result.selected_y.data(),
+            result.selected_z.data(),
+            result.comparison_v2_x.data(),
+            result.comparison_v2_y.data(),
+            result.comparison_v2_z.data(),
+            result.baseline_v3_x.data(),
+            result.baseline_v3_y.data(),
+            result.baseline_v3_z.data(),
+            result.clearance_v4_x.data(),
+            result.clearance_v4_y.data(),
+            result.clearance_v4_z.data(),
+            error.data(),
+            error.size());
+#else
+        return fail(
+            BG_STATUS_BACKEND_UNAVAILABLE,
+            "hip_safe rigid refinement provider is not compiled; fallback is forbidden");
+#endif
+    } else if (backend == BG_BACKEND_HIP_FAST) {
+#if BG_ENABLE_HIP
+        raw_status = bg_hip_fast_docking_rigid_refinement_fixed64(
+            state.backend_state,
+            &batch,
+            result.rows.data(),
+            result.selected_x.data(),
+            result.selected_y.data(),
+            result.selected_z.data(),
+            result.comparison_v2_x.data(),
+            result.comparison_v2_y.data(),
+            result.comparison_v2_z.data(),
+            result.baseline_v3_x.data(),
+            result.baseline_v3_y.data(),
+            result.baseline_v3_z.data(),
+            result.clearance_v4_x.data(),
+            result.clearance_v4_y.data(),
+            result.clearance_v4_z.data(),
+            error.data(),
+            error.size());
+#else
+        return fail(
+            BG_STATUS_BACKEND_UNAVAILABLE,
+            "hip_fast rigid refinement provider is not compiled; fallback is forbidden");
+#endif
+    } else {
+        return fail(
+            BG_STATUS_UNSUPPORTED_BACKEND,
+            "rigid refinement HIP dispatch received a non-HIP backend");
+    }
+    if (raw_status != BG_STATUS_OK) {
+        return hip_failure(
+            raw_status, error, "native HIP rigid refinement batch failed");
+    }
+    *output = std::move(result);
+    return BG_STATUS_OK;
+}
+
 [[nodiscard]] bool finite_evidence(
     const bg_docking_rigid_refinement_evidence_v1 &value) noexcept {
     const std::array<double, 13> values = {
@@ -1746,6 +1906,16 @@ void destroy_provider(bg_docking_rigid_refinement *refiner) noexcept {
     if (refiner->backend == BG_BACKEND_RUST_CPU &&
         state->backend_state != nullptr) {
         bg_rust_cpu_docking_rigid_refinement_destroy(state->backend_state);
+    } else if (refiner->backend == BG_BACKEND_HIP_SAFE &&
+               state->backend_state != nullptr) {
+#if BG_HAS_HIP_SAFE_PROVIDER
+        bg_hip_safe_docking_rigid_refinement_destroy(state->backend_state);
+#endif
+    } else if (refiner->backend == BG_BACKEND_HIP_FAST &&
+               state->backend_state != nullptr) {
+#if BG_ENABLE_HIP
+        bg_hip_fast_docking_rigid_refinement_destroy(state->backend_state);
+#endif
     }
     delete state;
     refiner->provider_state = nullptr;
@@ -1884,13 +2054,22 @@ extern "C" BG_API bg_status BG_CALL bg_docking_rigid_refinement_create(
             if (status != BG_STATUS_OK) {
                 return status;
             }
-        } else if (context->backend != BG_BACKEND_CPP_CPU_REFERENCE) {
+        } else if (context->backend == BG_BACKEND_CPP_CPU_REFERENCE) {
+            status = BG_STATUS_OK;
+        } else if (context->backend == BG_BACKEND_HIP_SAFE ||
+                   context->backend == BG_BACKEND_HIP_FAST) {
+            status = create_hip_backend(
+                state.get(),
+                context->backend,
+                context->device_ordinal,
+                *descriptor);
+            if (status != BG_STATUS_OK) {
+                return status;
+            }
+        } else {
             return fail(
-                context->backend == BG_BACKEND_HIP_SAFE ||
-                        context->backend == BG_BACKEND_HIP_FAST
-                    ? BG_STATUS_BACKEND_UNAVAILABLE
-                    : BG_STATUS_UNSUPPORTED_BACKEND,
-                "selected backend has no rigid refinement kernel; fallback is forbidden");
+                BG_STATUS_UNSUPPORTED_BACKEND,
+                "rigid refinement backend is unsupported");
         }
         auto refiner = std::make_unique<bg_docking_rigid_refinement>();
         refiner->backend = context->backend;
@@ -1963,6 +2142,17 @@ extern "C" BG_API bg_status BG_CALL bg_docking_rigid_refinement_fixed64(
         } else if (refiner->backend == BG_BACKEND_RUST_CPU) {
             status = refine_rust_fixed64(
                 *state, *candidates, coordinate_count, &result);
+            if (status != BG_STATUS_OK) {
+                return status;
+            }
+        } else if (refiner->backend == BG_BACKEND_HIP_SAFE ||
+                   refiner->backend == BG_BACKEND_HIP_FAST) {
+            status = refine_hip_fixed64(
+                *state,
+                refiner->backend,
+                *candidates,
+                coordinate_count,
+                &result);
             if (status != BG_STATUS_OK) {
                 return status;
             }

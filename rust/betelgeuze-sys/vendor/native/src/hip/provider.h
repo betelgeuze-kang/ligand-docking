@@ -204,6 +204,34 @@ int32_t bg_hip_safe_docking_stable_top_k_v1_cluster_direct_rmsd_fixed64(
     char *error_message,
     size_t error_capacity);
 
+int32_t bg_hip_safe_docking_rigid_refinement_create(
+    int32_t device_ordinal,
+    const bg_docking_rigid_refinement_context_soa_v1 *descriptor,
+    void **out_state,
+    char *error_message,
+    size_t error_capacity);
+
+void bg_hip_safe_docking_rigid_refinement_destroy(void *state);
+
+int32_t bg_hip_safe_docking_rigid_refinement_fixed64(
+    const void *state,
+    const bg_docking_rigid_refinement_candidate_batch_soa_v1 *candidates,
+    bg_docking_rigid_refinement_row_v1 *out_rows,
+    double *out_selected_x,
+    double *out_selected_y,
+    double *out_selected_z,
+    double *out_comparison_v2_x,
+    double *out_comparison_v2_y,
+    double *out_comparison_v2_z,
+    double *out_baseline_v3_x,
+    double *out_baseline_v3_y,
+    double *out_baseline_v3_z,
+    double *out_clearance_v4_x,
+    double *out_clearance_v4_y,
+    double *out_clearance_v4_z,
+    char *error_message,
+    size_t error_capacity);
+
 int32_t bg_hip_safe_docking_torsion_v7_create(
     int32_t device_ordinal,
     const bg_docking_torsion_v7_context_soa_v1 *descriptor,
@@ -289,6 +317,34 @@ int32_t bg_hip_fast_docking_stable_top_k_v1_cluster_direct_rmsd_fixed64(
     uint64_t *out_cluster_count,
     uint32_t *out_top_k_slot_indices,
     uint64_t *out_top_k_count,
+    char *error_message,
+    size_t error_capacity);
+
+int32_t bg_hip_fast_docking_rigid_refinement_create(
+    int32_t device_ordinal,
+    const bg_docking_rigid_refinement_context_soa_v1 *descriptor,
+    void **out_state,
+    char *error_message,
+    size_t error_capacity);
+
+void bg_hip_fast_docking_rigid_refinement_destroy(void *state);
+
+int32_t bg_hip_fast_docking_rigid_refinement_fixed64(
+    const void *state,
+    const bg_docking_rigid_refinement_candidate_batch_soa_v1 *candidates,
+    bg_docking_rigid_refinement_row_v1 *out_rows,
+    double *out_selected_x,
+    double *out_selected_y,
+    double *out_selected_z,
+    double *out_comparison_v2_x,
+    double *out_comparison_v2_y,
+    double *out_comparison_v2_z,
+    double *out_baseline_v3_x,
+    double *out_baseline_v3_y,
+    double *out_baseline_v3_z,
+    double *out_clearance_v4_x,
+    double *out_clearance_v4_y,
+    double *out_clearance_v4_z,
     char *error_message,
     size_t error_capacity);
 

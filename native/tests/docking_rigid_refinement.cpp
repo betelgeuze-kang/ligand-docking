@@ -269,6 +269,149 @@ void assert_parity(const OutputStorage &left, const OutputStorage &right) {
     }
 }
 
+void test_hip_parity_when_device_is_available(bg_backend backend) {
+    uint8_t available = UINT8_C(0);
+    assert(bg_backend_is_available(backend, 0, &available) == BG_STATUS_OK);
+    if (available == UINT8_C(0)) {
+        return;
+    }
+
+    ContextFixture context_fixture;
+    const auto context_descriptor = context_fixture.descriptor();
+    bg_context *rust_context = create_context(BG_BACKEND_RUST_CPU);
+    bg_context *hip_context = create_context(backend);
+    bg_docking_rigid_refinement *rust_refiner =
+        create_refiner(rust_context, context_descriptor);
+    bg_docking_rigid_refinement *hip_refiner =
+        create_refiner(hip_context, context_descriptor);
+
+    bg_backend observed_backend = BG_BACKEND_CPP_CPU_REFERENCE;
+    assert(
+        bg_docking_rigid_refinement_get_backend(
+            hip_refiner, &observed_backend) == BG_STATUS_OK);
+    assert(observed_backend == backend);
+
+    context_fixture.receptor_x.fill(-1'000.0);
+    context_fixture.receptor_radii.fill(99.0);
+    context_fixture.ligand_radii.fill(99.0);
+
+    BatchFixture batch_fixture;
+    const auto batch = batch_fixture.descriptor();
+    OutputStorage rust_output;
+    OutputStorage hip_output;
+    OutputStorage repeated_hip_output;
+    auto rust_descriptor = rust_output.descriptor();
+    auto hip_descriptor = hip_output.descriptor();
+    auto repeated_hip_descriptor = repeated_hip_output.descriptor();
+    assert(
+        bg_docking_rigid_refinement_fixed64(
+            rust_context, rust_refiner, &batch, &rust_descriptor) ==
+        BG_STATUS_OK);
+    assert(
+        bg_docking_rigid_refinement_fixed64(
+            hip_context, hip_refiner, &batch, &hip_descriptor) ==
+        BG_STATUS_OK);
+    assert(
+        bg_docking_rigid_refinement_fixed64(
+            hip_context, hip_refiner, &batch, &repeated_hip_descriptor) ==
+        BG_STATUS_OK);
+    assert(hip_descriptor.row_count == kSlots);
+    assert(hip_descriptor.coordinate_count == kCoordinates);
+    assert(hip_descriptor.molecular_execution_authorized == UINT8_C(0));
+    assert(
+        hip_descriptor.existing_rank_auto_change_authorized == UINT8_C(0));
+    assert(hip_descriptor.customer_pose_emission_authorized == UINT8_C(0));
+    assert(hip_descriptor.production_claim_authorized == UINT8_C(0));
+    assert_parity(rust_output, hip_output);
+    assert_parity(hip_output, repeated_hip_output);
+
+    bg_docking_rigid_refinement_destroy(hip_refiner);
+    bg_docking_rigid_refinement_destroy(rust_refiner);
+    bg_context_destroy(hip_context);
+    bg_context_destroy(rust_context);
+}
+
+void test_v3_rotation_path_when_device_is_available(bg_backend backend) {
+    uint8_t available = UINT8_C(0);
+    assert(bg_backend_is_available(backend, 0, &available) == BG_STATUS_OK);
+    if (available == UINT8_C(0)) {
+        return;
+    }
+
+    const std::array<double, 2> receptor_x = {-2.0, 2.0};
+    const std::array<double, 2> receptor_y = {0.2, -0.2};
+    const std::array<double, 2> receptor_z = {0.0, 0.0};
+    const std::array<double, 2> receptor_radii = {1.7, 1.7};
+    const std::array<double, kAtoms> ligand_radii = {1.7, 1.7, 1.7};
+    bg_docking_rigid_refinement_context_soa_v1 context_descriptor{};
+    assert(
+        bg_docking_rigid_refinement_context_soa_v1_init(
+            &context_descriptor) == BG_STATUS_OK);
+    context_descriptor.receptor_atom_count = receptor_x.size();
+    context_descriptor.ligand_atom_count = ligand_radii.size();
+    context_descriptor.receptor_x_angstrom = receptor_x.data();
+    context_descriptor.receptor_y_angstrom = receptor_y.data();
+    context_descriptor.receptor_z_angstrom = receptor_z.data();
+    context_descriptor.receptor_vdw_radius_angstrom = receptor_radii.data();
+    context_descriptor.ligand_vdw_radius_angstrom = ligand_radii.data();
+    context_descriptor.pocket_radius_angstrom = 8.0;
+    context_descriptor.v3.v2.maximum_step_angstrom =
+        context_descriptor.v3.v2.minimum_step_angstrom;
+    context_descriptor.v3.v2.maximum_total_translation_angstrom =
+        context_descriptor.v3.v2.minimum_step_angstrom;
+
+    std::array<bg_docking_rigid_refinement_candidate_mode, kSlots> modes{};
+    std::array<uint64_t, kSlots> max_steps{};
+    std::array<double, kCoordinates> x{};
+    std::array<double, kCoordinates> y{};
+    std::array<double, kCoordinates> z{};
+    modes.fill(BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_INACTIVE);
+    max_steps.fill(UINT64_C(8));
+    modes[0] =
+        BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V3_TRANSLATION_ROTATION;
+    for (std::size_t slot = 0; slot < kSlots; ++slot) {
+        x[slot * kAtoms] = -2.0;
+        x[slot * kAtoms + 1] = 0.0;
+        x[slot * kAtoms + 2] = 2.0;
+    }
+    bg_docking_rigid_refinement_candidate_batch_soa_v1 batch{};
+    assert(
+        bg_docking_rigid_refinement_candidate_batch_soa_v1_init(&batch) ==
+        BG_STATUS_OK);
+    batch.ligand_atom_count = kAtoms;
+    batch.candidate_mode = modes.data();
+    batch.max_steps = max_steps.data();
+    batch.x_angstrom = x.data();
+    batch.y_angstrom = y.data();
+    batch.z_angstrom = z.data();
+
+    bg_context *rust_context = create_context(BG_BACKEND_RUST_CPU);
+    bg_context *hip_context = create_context(backend);
+    bg_docking_rigid_refinement *rust_refiner =
+        create_refiner(rust_context, context_descriptor);
+    bg_docking_rigid_refinement *hip_refiner =
+        create_refiner(hip_context, context_descriptor);
+    OutputStorage rust_output;
+    OutputStorage hip_output;
+    auto rust_descriptor = rust_output.descriptor();
+    auto hip_descriptor = hip_output.descriptor();
+    assert(
+        bg_docking_rigid_refinement_fixed64(
+            rust_context, rust_refiner, &batch, &rust_descriptor) ==
+        BG_STATUS_OK);
+    assert(
+        bg_docking_rigid_refinement_fixed64(
+            hip_context, hip_refiner, &batch, &hip_descriptor) ==
+        BG_STATUS_OK);
+    assert(rust_output.rows[0].selected.accepted_rotation_steps > 0);
+    assert_parity(rust_output, hip_output);
+
+    bg_docking_rigid_refinement_destroy(hip_refiner);
+    bg_docking_rigid_refinement_destroy(rust_refiner);
+    bg_context_destroy(hip_context);
+    bg_context_destroy(rust_context);
+}
+
 }  // namespace
 
 int main() {
@@ -342,5 +485,9 @@ int main() {
     bg_docking_rigid_refinement_destroy(cpp_refiner);
     bg_context_destroy(rust_context);
     bg_context_destroy(cpp_context);
+    test_hip_parity_when_device_is_available(BG_BACKEND_HIP_SAFE);
+    test_hip_parity_when_device_is_available(BG_BACKEND_HIP_FAST);
+    test_v3_rotation_path_when_device_is_available(BG_BACKEND_HIP_SAFE);
+    test_v3_rotation_path_when_device_is_available(BG_BACKEND_HIP_FAST);
     return 0;
 }
