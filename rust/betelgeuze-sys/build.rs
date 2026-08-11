@@ -33,6 +33,7 @@ const VENDORED_FILES: &[&str] = &[
     "native/src/hip/docking_scorer.hip",
     "native/src/hip/docking_pose_validity.hip",
     "native/src/hip/docking_stable_top_k.hip",
+    "native/src/hip/docking_rigid_refinement.hip",
     "native/src/hip/docking_torsion_v7.hip",
     "native/src/hip/evaluator.hpp",
     "native/src/hip/evaluator.cpp",

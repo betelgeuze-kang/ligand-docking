@@ -43,6 +43,7 @@ include = [
     "vendor/native/src/hip/docking_scorer.hip",
     "vendor/native/src/hip/docking_pose_validity.hip",
     "vendor/native/src/hip/docking_stable_top_k.hip",
+    "vendor/native/src/hip/docking_rigid_refinement.hip",
     "vendor/native/src/hip/docking_torsion_v7.hip",
     "vendor/native/src/hip/evaluator.hpp",
     "vendor/native/src/hip/evaluator.cpp",
