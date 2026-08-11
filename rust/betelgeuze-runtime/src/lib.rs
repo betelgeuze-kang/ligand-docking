@@ -74,24 +74,38 @@ pub const CANONICAL_UNITS: CanonicalUnits = CanonicalUnits {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Backend {
     Auto,
-    Cpu,
-    Hip,
+    CppCpuReference,
+    RustCpu,
+    HipFast,
+    HipSafe,
 }
 
 impl Backend {
+    /// Frozen source-compatible alias for the qualification-only C++ lane.
+    #[allow(non_upper_case_globals)]
+    pub const Cpu: Self = Self::CppCpuReference;
+
+    /// Frozen source-compatible alias for the historical parallel HIP lane.
+    #[allow(non_upper_case_globals)]
+    pub const Hip: Self = Self::HipFast;
+
     const fn as_raw(self) -> sys::bg_backend {
         match self {
             Self::Auto => sys::BG_BACKEND_AUTO,
-            Self::Cpu => sys::BG_BACKEND_CPU,
-            Self::Hip => sys::BG_BACKEND_HIP,
+            Self::CppCpuReference => sys::BG_BACKEND_CPP_CPU_REFERENCE,
+            Self::RustCpu => sys::BG_BACKEND_RUST_CPU,
+            Self::HipFast => sys::BG_BACKEND_HIP_FAST,
+            Self::HipSafe => sys::BG_BACKEND_HIP_SAFE,
         }
     }
 
     fn from_raw(raw: sys::bg_backend) -> Result<Self> {
         match raw {
             sys::BG_BACKEND_AUTO => Ok(Self::Auto),
-            sys::BG_BACKEND_CPU => Ok(Self::Cpu),
-            sys::BG_BACKEND_HIP => Ok(Self::Hip),
+            sys::BG_BACKEND_CPP_CPU_REFERENCE => Ok(Self::CppCpuReference),
+            sys::BG_BACKEND_RUST_CPU => Ok(Self::RustCpu),
+            sys::BG_BACKEND_HIP_FAST => Ok(Self::HipFast),
+            sys::BG_BACKEND_HIP_SAFE => Ok(Self::HipSafe),
             other => Err(Error::local(
                 ErrorCode::AbiMismatch,
                 format!("native library returned unknown backend {other}"),
@@ -107,16 +121,42 @@ pub struct ContextOptions {
 }
 
 impl ContextOptions {
-    pub const fn cpu() -> Self {
+    /// Qualification-only C++ reference lane.
+    pub const fn cpu_reference() -> Self {
         Self {
-            backend: Backend::Cpu,
+            backend: Backend::CppCpuReference,
             device_ordinal: 0,
         }
     }
 
-    pub const fn hip(device_ordinal: i32) -> Self {
+    /// Product-default deterministic native Rust CPU lane.
+    pub const fn rust_cpu() -> Self {
         Self {
-            backend: Backend::Hip,
+            backend: Backend::RustCpu,
+            device_ordinal: 0,
+        }
+    }
+
+    /// Frozen compatibility constructor for `cpu_reference()`.
+    pub const fn cpu() -> Self {
+        Self::cpu_reference()
+    }
+
+    /// Frozen compatibility constructor for `hip_fast()`.
+    pub const fn hip(device_ordinal: i32) -> Self {
+        Self::hip_fast(device_ordinal)
+    }
+
+    pub const fn hip_fast(device_ordinal: i32) -> Self {
+        Self {
+            backend: Backend::HipFast,
+            device_ordinal,
+        }
+    }
+
+    pub const fn hip_safe(device_ordinal: i32) -> Self {
+        Self {
+            backend: Backend::HipSafe,
             device_ordinal,
         }
     }
@@ -131,7 +171,7 @@ impl ContextOptions {
 
 impl Default for ContextOptions {
     fn default() -> Self {
-        Self::cpu()
+        Self::rust_cpu()
     }
 }
 

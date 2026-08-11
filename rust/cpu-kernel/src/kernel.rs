@@ -1,0 +1,650 @@
+const STATUS_INVALID_ARGUMENT: i32 = 1;
+const STATUS_OUT_OF_MEMORY: i32 = 5;
+const STATUS_INTERNAL_ERROR: i32 = 9;
+const STATUS_NUMERICAL_ERROR: i32 = 10;
+
+const COULOMB_CONSTANT: f64 = 332.063_713_299;
+const DEGENERATE_SQUARED_ANGSTROM2: f64 = 1.0e-24;
+const ANGLE_COSINE_MARGIN: f64 = 1.0e-12;
+
+#[derive(Clone, Copy, Default)]
+struct Vector3 {
+    x: f64,
+    y: f64,
+    z: f64,
+}
+
+impl Vector3 {
+    fn dot(self, other: Self) -> f64 {
+        self.x * other.x + self.y * other.y + self.z * other.z
+    }
+
+    fn cross(self, other: Self) -> Self {
+        Self {
+            x: self.y * other.z - self.z * other.y,
+            y: self.z * other.x - self.x * other.z,
+            z: self.x * other.y - self.y * other.x,
+        }
+    }
+
+    fn squared_norm(self) -> f64 {
+        self.dot(self)
+    }
+
+    fn scaled(self, factor: f64) -> Self {
+        Self {
+            x: self.x * factor,
+            y: self.y * factor,
+            z: self.z * factor,
+        }
+    }
+
+    fn plus(self, other: Self) -> Self {
+        Self {
+            x: self.x + other.x,
+            y: self.y + other.y,
+            z: self.z + other.z,
+        }
+    }
+
+    fn minus(self, other: Self) -> Self {
+        Self {
+            x: self.x - other.x,
+            y: self.y - other.y,
+            z: self.z - other.z,
+        }
+    }
+
+    fn is_finite(self) -> bool {
+        self.x.is_finite() && self.y.is_finite() && self.z.is_finite()
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub(crate) struct Pair {
+    pub atom_i: usize,
+    pub atom_j: usize,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub(crate) struct PairScale {
+    pub atom_i: usize,
+    pub atom_j: usize,
+    pub lennard_jones: f64,
+    pub coulomb: f64,
+}
+
+pub(crate) struct System<'a> {
+    pub position_x: &'a [f64],
+    pub position_y: &'a [f64],
+    pub position_z: &'a [f64],
+    pub charge: &'a [f64],
+}
+
+pub(crate) struct BondSoa<'a> {
+    pub atom_i: &'a [usize],
+    pub atom_j: &'a [usize],
+    pub equilibrium: &'a [f64],
+    pub force_constant: &'a [f64],
+}
+
+pub(crate) struct AngleSoa<'a> {
+    pub atom_i: &'a [usize],
+    pub atom_j: &'a [usize],
+    pub atom_k: &'a [usize],
+    pub equilibrium: &'a [f64],
+    pub force_constant: &'a [f64],
+}
+
+pub(crate) struct TorsionSoa<'a> {
+    pub atom_i: &'a [usize],
+    pub atom_j: &'a [usize],
+    pub atom_k: &'a [usize],
+    pub atom_l: &'a [usize],
+    pub periodicity: &'a [u32],
+    pub phase: &'a [f64],
+    pub amplitude: &'a [f64],
+}
+
+pub(crate) struct ForceField<'a> {
+    pub atom_count: usize,
+    pub sigma: &'a [f64],
+    pub epsilon: &'a [f64],
+    pub bonds: BondSoa<'a>,
+    pub angles: AngleSoa<'a>,
+    pub torsions: TorsionSoa<'a>,
+    pub exclusions: &'a [Pair],
+    pub pair_scales: &'a [PairScale],
+    pub periodic_axes_mask: u32,
+    pub cell_lengths: [f64; 3],
+    pub cutoff: f64,
+    pub switch_start: f64,
+    pub dielectric: f64,
+    pub screening_kappa: f64,
+    pub minimum_pair_distance: f64,
+}
+
+#[derive(Clone, Copy, Default)]
+pub(crate) struct Energy {
+    pub harmonic_bond: f64,
+    pub harmonic_angle: f64,
+    pub periodic_torsion: f64,
+    pub lennard_jones: f64,
+    pub coulomb: f64,
+    pub total: f64,
+}
+
+pub(crate) struct Evaluation {
+    pub energy: Energy,
+    pub force_x: Vec<f64>,
+    pub force_y: Vec<f64>,
+    pub force_z: Vec<f64>,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct KernelError {
+    pub status: i32,
+    pub message: &'static str,
+}
+
+impl KernelError {
+    const fn invalid(message: &'static str) -> Self {
+        Self {
+            status: STATUS_INVALID_ARGUMENT,
+            message,
+        }
+    }
+
+    const fn internal(message: &'static str) -> Self {
+        Self {
+            status: STATUS_INTERNAL_ERROR,
+            message,
+        }
+    }
+
+    const fn out_of_memory(message: &'static str) -> Self {
+        Self {
+            status: STATUS_OUT_OF_MEMORY,
+            message,
+        }
+    }
+
+    const fn numerical(message: &'static str) -> Self {
+        Self {
+            status: STATUS_NUMERICAL_ERROR,
+            message,
+        }
+    }
+}
+
+struct SwitchValue {
+    value: f64,
+    derivative: f64,
+}
+
+fn displacement(
+    system: &System<'_>,
+    forcefield: &ForceField<'_>,
+    atom_i: usize,
+    atom_j: usize,
+) -> Result<Vector3, KernelError> {
+    if atom_i >= forcefield.atom_count || atom_j >= forcefield.atom_count {
+        return Err(KernelError::internal(
+            "force-field atom index is out of range",
+        ));
+    }
+    let mut result = Vector3 {
+        x: system.position_x[atom_i] - system.position_x[atom_j],
+        y: system.position_y[atom_i] - system.position_y[atom_j],
+        z: system.position_z[atom_i] - system.position_z[atom_j],
+    };
+    let bits = [1_u32, 2_u32, 4_u32];
+    let mut components = [&mut result.x, &mut result.y, &mut result.z];
+    for axis in 0..3 {
+        if forcefield.periodic_axes_mask & bits[axis] != 0 {
+            let length = forcefield.cell_lengths[axis];
+            let component = &mut components[axis];
+            **component -= length * (**component / length + 0.5).floor();
+        }
+    }
+    let squared = result.squared_norm();
+    if !result.is_finite() || !squared.is_finite() {
+        return Err(KernelError::numerical("displacement is not finite"));
+    }
+    Ok(result)
+}
+
+fn checked_accumulate(
+    target: &mut f64,
+    value: f64,
+    message: &'static str,
+) -> Result<(), KernelError> {
+    let updated = *target + value;
+    if !value.is_finite() || !updated.is_finite() {
+        return Err(KernelError::numerical(message));
+    }
+    *target = updated;
+    Ok(())
+}
+
+fn checked_accumulate_force(
+    evaluation: &mut Evaluation,
+    atom: usize,
+    value: Vector3,
+    message: &'static str,
+) -> Result<(), KernelError> {
+    let updated_x = evaluation.force_x[atom] + value.x;
+    let updated_y = evaluation.force_y[atom] + value.y;
+    let updated_z = evaluation.force_z[atom] + value.z;
+    if !value.is_finite()
+        || !updated_x.is_finite()
+        || !updated_y.is_finite()
+        || !updated_z.is_finite()
+    {
+        return Err(KernelError::numerical(message));
+    }
+    evaluation.force_x[atom] = updated_x;
+    evaluation.force_y[atom] = updated_y;
+    evaluation.force_z[atom] = updated_z;
+    Ok(())
+}
+
+fn pair_is_excluded(forcefield: &ForceField<'_>, atom_i: usize, atom_j: usize) -> bool {
+    forcefield
+        .exclusions
+        .binary_search_by_key(&(atom_i, atom_j), |pair| (pair.atom_i, pair.atom_j))
+        .is_ok()
+}
+
+fn pair_scales(forcefield: &ForceField<'_>, atom_i: usize, atom_j: usize) -> (f64, f64) {
+    forcefield
+        .pair_scales
+        .binary_search_by_key(&(atom_i, atom_j), |scale| (scale.atom_i, scale.atom_j))
+        .map(|index| {
+            let scale = forcefield.pair_scales[index];
+            (scale.lennard_jones, scale.coulomb)
+        })
+        .unwrap_or((1.0, 1.0))
+}
+
+fn switching_value(distance: f64, start: f64, cutoff: f64) -> SwitchValue {
+    if distance <= start {
+        return SwitchValue {
+            value: 1.0,
+            derivative: 0.0,
+        };
+    }
+    if distance >= cutoff {
+        return SwitchValue {
+            value: 0.0,
+            derivative: 0.0,
+        };
+    }
+    let width = cutoff - start;
+    let x = (distance - start) / width;
+    let x2 = x * x;
+    let x3 = x2 * x;
+    let x4 = x3 * x;
+    let x5 = x4 * x;
+    SwitchValue {
+        value: 1.0 - 10.0 * x3 + 15.0 * x4 - 6.0 * x5,
+        derivative: (-30.0 * x2 + 60.0 * x3 - 30.0 * x4) / width,
+    }
+}
+
+fn evaluate_bonds(
+    system: &System<'_>,
+    forcefield: &ForceField<'_>,
+    compute_forces: bool,
+    evaluation: &mut Evaluation,
+) -> Result<(), KernelError> {
+    for row in 0..forcefield.bonds.atom_i.len() {
+        let atom_i = forcefield.bonds.atom_i[row];
+        let atom_j = forcefield.bonds.atom_j[row];
+        let delta = displacement(system, forcefield, atom_i, atom_j)?;
+        let squared_distance = delta.squared_norm();
+        if compute_forces && squared_distance <= 0.0 {
+            return Err(KernelError::numerical("bond has zero-length geometry"));
+        }
+        let distance = squared_distance.sqrt();
+        let difference = distance - forcefield.bonds.equilibrium[row];
+        let force_constant = forcefield.bonds.force_constant[row];
+        let energy = 0.5 * force_constant * difference * difference;
+        checked_accumulate(
+            &mut evaluation.energy.harmonic_bond,
+            energy,
+            "bond produced a non-finite energy",
+        )?;
+        if compute_forces {
+            let force = delta.scaled(-force_constant * difference / distance);
+            checked_accumulate_force(
+                evaluation,
+                atom_i,
+                force,
+                "bond produced a non-finite force",
+            )?;
+            checked_accumulate_force(
+                evaluation,
+                atom_j,
+                force.scaled(-1.0),
+                "bond produced a non-finite force",
+            )?;
+        }
+    }
+    Ok(())
+}
+
+fn evaluate_angles(
+    system: &System<'_>,
+    forcefield: &ForceField<'_>,
+    compute_forces: bool,
+    evaluation: &mut Evaluation,
+) -> Result<(), KernelError> {
+    for row in 0..forcefield.angles.atom_i.len() {
+        let atom_i = forcefield.angles.atom_i[row];
+        let atom_j = forcefield.angles.atom_j[row];
+        let atom_k = forcefield.angles.atom_k[row];
+        let first = displacement(system, forcefield, atom_i, atom_j)?;
+        let second = displacement(system, forcefield, atom_k, atom_j)?;
+        let first_squared = first.squared_norm();
+        let second_squared = second.squared_norm();
+        if first_squared <= DEGENERATE_SQUARED_ANGSTROM2
+            || second_squared <= DEGENERATE_SQUARED_ANGSTROM2
+        {
+            return Err(KernelError::numerical("angle has a zero-length arm"));
+        }
+        let first_length = first_squared.sqrt();
+        let second_length = second_squared.sqrt();
+        let raw_cosine = first.dot(second) / (first_length * second_length);
+        if !raw_cosine.is_finite() {
+            return Err(KernelError::numerical("angle cosine is not finite"));
+        }
+        let lower = -1.0 + ANGLE_COSINE_MARGIN;
+        let upper = 1.0 - ANGLE_COSINE_MARGIN;
+        let cosine = raw_cosine.clamp(lower, upper);
+        let angle = cosine.acos();
+        let difference = angle - forcefield.angles.equilibrium[row];
+        let force_constant = forcefield.angles.force_constant[row];
+        let energy = 0.5 * force_constant * difference * difference;
+        checked_accumulate(
+            &mut evaluation.energy.harmonic_angle,
+            energy,
+            "angle produced a non-finite energy",
+        )?;
+        if !compute_forces || raw_cosine <= lower || raw_cosine >= upper {
+            continue;
+        }
+        let sine = (1.0 - cosine * cosine).sqrt();
+        let first_unit = first.scaled(1.0 / first_length);
+        let second_unit = second.scaled(1.0 / second_length);
+        let derivative = force_constant * difference;
+        let force_i = second_unit
+            .minus(first_unit.scaled(cosine))
+            .scaled(derivative / (first_length * sine));
+        let force_k = first_unit
+            .minus(second_unit.scaled(cosine))
+            .scaled(derivative / (second_length * sine));
+        let force_j = force_i.plus(force_k).scaled(-1.0);
+        checked_accumulate_force(
+            evaluation,
+            atom_i,
+            force_i,
+            "angle produced a non-finite force",
+        )?;
+        checked_accumulate_force(
+            evaluation,
+            atom_j,
+            force_j,
+            "angle produced a non-finite force",
+        )?;
+        checked_accumulate_force(
+            evaluation,
+            atom_k,
+            force_k,
+            "angle produced a non-finite force",
+        )?;
+    }
+    Ok(())
+}
+
+fn evaluate_torsions(
+    system: &System<'_>,
+    forcefield: &ForceField<'_>,
+    compute_forces: bool,
+    evaluation: &mut Evaluation,
+) -> Result<(), KernelError> {
+    for row in 0..forcefield.torsions.atom_i.len() {
+        let atom_i = forcefield.torsions.atom_i[row];
+        let atom_j = forcefield.torsions.atom_j[row];
+        let atom_k = forcefield.torsions.atom_k[row];
+        let atom_l = forcefield.torsions.atom_l[row];
+        let b0 = displacement(system, forcefield, atom_i, atom_j)?;
+        let b1 = displacement(system, forcefield, atom_k, atom_j)?;
+        let b2 = displacement(system, forcefield, atom_l, atom_k)?;
+        let central_squared = b1.squared_norm();
+        if central_squared <= DEGENERATE_SQUARED_ANGSTROM2 {
+            return Err(KernelError::numerical(
+                "torsion central bond has zero length",
+            ));
+        }
+        let central_length = central_squared.sqrt();
+        let axis = b1.scaled(1.0 / central_length);
+        let v = b0.minus(axis.scaled(b0.dot(axis)));
+        let w = b2.minus(axis.scaled(b2.dot(axis)));
+        let v_squared = v.squared_norm();
+        let w_squared = w.squared_norm();
+        if !axis.is_finite()
+            || !v.is_finite()
+            || !w.is_finite()
+            || !v_squared.is_finite()
+            || !w_squared.is_finite()
+            || v_squared <= DEGENERATE_SQUARED_ANGSTROM2
+            || w_squared <= DEGENERATE_SQUARED_ANGSTROM2
+        {
+            return Err(KernelError::numerical(
+                "torsion is undefined for collinear adjacent atoms",
+            ));
+        }
+        let sine_numerator = axis.cross(v).dot(w);
+        let cosine_numerator = v.dot(w);
+        let phi = sine_numerator.atan2(cosine_numerator);
+        let periodicity = f64::from(forcefield.torsions.periodicity[row]);
+        let argument = periodicity * phi - forcefield.torsions.phase[row];
+        let amplitude = forcefield.torsions.amplitude[row];
+        let energy = amplitude * (1.0 + argument.cos());
+        checked_accumulate(
+            &mut evaluation.energy.periodic_torsion,
+            energy,
+            "torsion produced a non-finite energy",
+        )?;
+        if !compute_forces {
+            continue;
+        }
+        let gradient_b0 = axis.cross(v).scaled(-1.0 / v_squared);
+        let gradient_b2 = axis.cross(w).scaled(1.0 / w_squared);
+        let gradient_b1 = gradient_b0
+            .scaled(-b0.dot(b1) / central_squared)
+            .plus(gradient_b2.scaled(-b2.dot(b1) / central_squared));
+        let gradient_i = gradient_b0;
+        let gradient_j = gradient_b0.plus(gradient_b1).scaled(-1.0);
+        let gradient_k = gradient_b1.minus(gradient_b2);
+        let gradient_l = gradient_b2;
+        let force_factor = amplitude * periodicity * argument.sin();
+        for (atom, gradient) in [
+            (atom_i, gradient_i),
+            (atom_j, gradient_j),
+            (atom_k, gradient_k),
+            (atom_l, gradient_l),
+        ] {
+            checked_accumulate_force(
+                evaluation,
+                atom,
+                gradient.scaled(force_factor),
+                "torsion produced a non-finite force",
+            )?;
+        }
+    }
+    Ok(())
+}
+
+fn evaluate_nonbonded(
+    system: &System<'_>,
+    forcefield: &ForceField<'_>,
+    compute_forces: bool,
+    evaluation: &mut Evaluation,
+) -> Result<(), KernelError> {
+    for atom_i in 0..forcefield.atom_count {
+        for atom_j in (atom_i + 1)..forcefield.atom_count {
+            if pair_is_excluded(forcefield, atom_i, atom_j) {
+                continue;
+            }
+            let delta = displacement(system, forcefield, atom_i, atom_j)?;
+            let distance = delta.squared_norm().sqrt();
+            if distance < forcefield.minimum_pair_distance {
+                return Err(KernelError::numerical(
+                    "nonbonded pair is below minimum_pair_distance",
+                ));
+            }
+            if distance > forcefield.cutoff {
+                continue;
+            }
+            let (lj_scale, coulomb_scale) = pair_scales(forcefield, atom_i, atom_j);
+            let sigma = 0.5 * (forcefield.sigma[atom_i] + forcefield.sigma[atom_j]);
+            let epsilon = (forcefield.epsilon[atom_i] * forcefield.epsilon[atom_j]).sqrt();
+            let ratio = sigma / distance;
+            let ratio2 = ratio * ratio;
+            let ratio6 = ratio2 * ratio2 * ratio2;
+            let ratio12 = ratio6 * ratio6;
+            let lennard_jones = 4.0 * epsilon * (ratio12 - ratio6) * lj_scale;
+            let screened_charge = system.charge[atom_i]
+                * system.charge[atom_j]
+                * (-forcefield.screening_kappa * distance).exp();
+            let coulomb = COULOMB_CONSTANT * screened_charge / (forcefield.dielectric * distance)
+                * coulomb_scale;
+            let switching = switching_value(distance, forcefield.switch_start, forcefield.cutoff);
+            checked_accumulate(
+                &mut evaluation.energy.lennard_jones,
+                lennard_jones * switching.value,
+                "Lennard-Jones pair produced a non-finite energy",
+            )?;
+            checked_accumulate(
+                &mut evaluation.energy.coulomb,
+                coulomb * switching.value,
+                "Coulomb pair produced a non-finite energy",
+            )?;
+            if !compute_forces {
+                continue;
+            }
+            let lennard_jones_derivative =
+                24.0 * epsilon * lj_scale * (ratio6 - 2.0 * ratio12) / distance;
+            let coulomb_derivative = coulomb * (-forcefield.screening_kappa - 1.0 / distance);
+            let radial_derivative = lennard_jones_derivative * switching.value
+                + lennard_jones * switching.derivative
+                + coulomb_derivative * switching.value
+                + coulomb * switching.derivative;
+            let force = delta.scaled(-radial_derivative / distance);
+            checked_accumulate_force(
+                evaluation,
+                atom_i,
+                force,
+                "nonbonded pair produced a non-finite force",
+            )?;
+            checked_accumulate_force(
+                evaluation,
+                atom_j,
+                force.scaled(-1.0),
+                "nonbonded pair produced a non-finite force",
+            )?;
+        }
+    }
+    Ok(())
+}
+
+fn storage_is_consistent(system: &System<'_>, forcefield: &ForceField<'_>) -> bool {
+    let atom_count = system.position_x.len();
+    atom_count > 0
+        && system.position_y.len() == atom_count
+        && system.position_z.len() == atom_count
+        && system.charge.len() == atom_count
+        && forcefield.atom_count == atom_count
+        && forcefield.sigma.len() == atom_count
+        && forcefield.epsilon.len() == atom_count
+        && forcefield.bonds.atom_i.len() == forcefield.bonds.atom_j.len()
+        && forcefield.bonds.atom_i.len() == forcefield.bonds.equilibrium.len()
+        && forcefield.bonds.atom_i.len() == forcefield.bonds.force_constant.len()
+        && forcefield.angles.atom_i.len() == forcefield.angles.atom_j.len()
+        && forcefield.angles.atom_i.len() == forcefield.angles.atom_k.len()
+        && forcefield.angles.atom_i.len() == forcefield.angles.equilibrium.len()
+        && forcefield.angles.atom_i.len() == forcefield.angles.force_constant.len()
+        && forcefield.torsions.atom_i.len() == forcefield.torsions.atom_j.len()
+        && forcefield.torsions.atom_i.len() == forcefield.torsions.atom_k.len()
+        && forcefield.torsions.atom_i.len() == forcefield.torsions.atom_l.len()
+        && forcefield.torsions.atom_i.len() == forcefield.torsions.periodicity.len()
+        && forcefield.torsions.atom_i.len() == forcefield.torsions.phase.len()
+        && forcefield.torsions.atom_i.len() == forcefield.torsions.amplitude.len()
+}
+
+fn zeroed_force_channel(atom_count: usize) -> Result<Vec<f64>, KernelError> {
+    let mut values = Vec::new();
+    values
+        .try_reserve_exact(atom_count)
+        .map_err(|_| KernelError::out_of_memory("rust_cpu force allocation failed"))?;
+    values.resize(atom_count, 0.0);
+    Ok(values)
+}
+
+pub(crate) fn evaluate(
+    system: &System<'_>,
+    forcefield: &ForceField<'_>,
+    compute_forces: bool,
+) -> Result<Evaluation, KernelError> {
+    if !storage_is_consistent(system, forcefield) {
+        return Err(KernelError::invalid(
+            "system and force-field atom storage do not match",
+        ));
+    }
+    let atom_count = forcefield.atom_count;
+    let mut evaluation = Evaluation {
+        energy: Energy::default(),
+        force_x: if compute_forces {
+            zeroed_force_channel(atom_count)?
+        } else {
+            Vec::new()
+        },
+        force_y: if compute_forces {
+            zeroed_force_channel(atom_count)?
+        } else {
+            Vec::new()
+        },
+        force_z: if compute_forces {
+            zeroed_force_channel(atom_count)?
+        } else {
+            Vec::new()
+        },
+    };
+    evaluate_bonds(system, forcefield, compute_forces, &mut evaluation)?;
+    evaluate_angles(system, forcefield, compute_forces, &mut evaluation)?;
+    evaluate_torsions(system, forcefield, compute_forces, &mut evaluation)?;
+    evaluate_nonbonded(system, forcefield, compute_forces, &mut evaluation)?;
+    evaluation.energy.total = evaluation.energy.harmonic_bond
+        + evaluation.energy.harmonic_angle
+        + evaluation.energy.periodic_torsion
+        + evaluation.energy.lennard_jones
+        + evaluation.energy.coulomb;
+    if !evaluation.energy.total.is_finite() {
+        return Err(KernelError::numerical("total energy is not finite"));
+    }
+    if compute_forces
+        && evaluation
+            .force_x
+            .iter()
+            .chain(&evaluation.force_y)
+            .chain(&evaluation.force_z)
+            .any(|value| !value.is_finite())
+    {
+        return Err(KernelError::numerical("force output is not finite"));
+    }
+    Ok(evaluation)
+}

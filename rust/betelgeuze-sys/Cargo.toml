@@ -23,6 +23,9 @@ include = [
     "vendor/native/src/system.cpp",
     "vendor/native/src/cpu/evaluator.hpp",
     "vendor/native/src/cpu/evaluator.cpp",
+    "vendor/native/src/rust/provider.h",
+    "vendor/native/src/rust/evaluator.hpp",
+    "vendor/native/src/rust/evaluator.cpp",
     "vendor/native/src/dynamics/dynamics.hpp",
     "vendor/native/src/dynamics/api.cpp",
     "vendor/native/src/dynamics/checkpoint.cpp",
@@ -39,6 +42,9 @@ include = [
 [features]
 default = []
 hip = []
+
+[dependencies]
+betelgeuze-cpu-kernel = { path = "../cpu-kernel" }
 
 [build-dependencies]
 cc = "1.2"

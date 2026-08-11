@@ -5,11 +5,15 @@
 
 _Static_assert(BG_ABI_VERSION == UINT32_C(1), "unexpected ABI version");
 _Static_assert(BG_ABI_VERSION_MAJOR == UINT32_C(1), "unexpected ABI major version");
-_Static_assert(BG_ABI_VERSION_MINOR == UINT32_C(3), "unexpected ABI minor version");
+_Static_assert(BG_ABI_VERSION_MINOR == UINT32_C(4), "unexpected ABI minor version");
 _Static_assert(BG_STATUS_OK == 0, "unexpected success status");
 _Static_assert(BG_STATUS_NUMERICAL_ERROR == 10, "unexpected numerical status");
 _Static_assert(BG_BACKEND_CPU == 1, "unexpected CPU backend value");
 _Static_assert(BG_BACKEND_HIP == 2, "unexpected HIP backend value");
+_Static_assert(BG_BACKEND_CPP_CPU_REFERENCE == 1, "unexpected C++ CPU backend value");
+_Static_assert(BG_BACKEND_HIP_FAST == 2, "unexpected fast HIP backend value");
+_Static_assert(BG_BACKEND_RUST_CPU == 3, "unexpected Rust CPU backend value");
+_Static_assert(BG_BACKEND_HIP_SAFE == 4, "unexpected safe HIP backend value");
 _Static_assert(
     BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL == 1,
     "unexpected canonical unit-system value");

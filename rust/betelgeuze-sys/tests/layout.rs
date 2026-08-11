@@ -5,7 +5,7 @@ use betelgeuze_sys::*;
 #[test]
 fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(BG_ABI_VERSION_MAJOR, 1);
-    assert_eq!(BG_ABI_VERSION_MINOR, 3);
+    assert_eq!(BG_ABI_VERSION_MINOR, 4);
     assert_eq!(BG_ABI_VERSION, 1);
     assert_eq!(size_of::<bg_status>(), 4);
     assert_eq!(size_of::<bg_backend>(), 4);
@@ -17,6 +17,10 @@ fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(BG_BACKEND_AUTO, 0);
     assert_eq!(BG_BACKEND_CPU, 1);
     assert_eq!(BG_BACKEND_HIP, 2);
+    assert_eq!(BG_BACKEND_CPP_CPU_REFERENCE, 1);
+    assert_eq!(BG_BACKEND_HIP_FAST, 2);
+    assert_eq!(BG_BACKEND_RUST_CPU, 3);
+    assert_eq!(BG_BACKEND_HIP_SAFE, 4);
     assert_eq!(BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL, 1);
     assert_eq!(BG_INTEGRATOR_VELOCITY_VERLET, 1);
     assert_eq!(BG_INTEGRATOR_LANGEVIN_BAOAB, 2);

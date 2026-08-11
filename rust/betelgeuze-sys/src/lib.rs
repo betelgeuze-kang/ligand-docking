@@ -15,8 +15,12 @@
 
 use core::ffi::c_char;
 
+#[used]
+static BG_RUST_CPU_PROVIDER_LINK_ANCHOR: extern "C" fn() -> u32 =
+    betelgeuze_cpu_kernel::bg_rust_cpu_provider_abi_version_v1;
+
 pub const BG_ABI_VERSION_MAJOR: u32 = 1;
-pub const BG_ABI_VERSION_MINOR: u32 = 3;
+pub const BG_ABI_VERSION_MINOR: u32 = 4;
 pub const BG_ABI_VERSION: u32 = 1;
 
 pub const BG_CANONICAL_LENGTH_UNIT: &[u8] = b"angstrom\0";
@@ -46,8 +50,12 @@ pub const BG_STATUS_NUMERICAL_ERROR: bg_status = 10;
 
 pub type bg_backend = i32;
 pub const BG_BACKEND_AUTO: bg_backend = 0;
-pub const BG_BACKEND_CPU: bg_backend = 1;
-pub const BG_BACKEND_HIP: bg_backend = 2;
+pub const BG_BACKEND_CPP_CPU_REFERENCE: bg_backend = 1;
+pub const BG_BACKEND_HIP_FAST: bg_backend = 2;
+pub const BG_BACKEND_RUST_CPU: bg_backend = 3;
+pub const BG_BACKEND_HIP_SAFE: bg_backend = 4;
+pub const BG_BACKEND_CPU: bg_backend = BG_BACKEND_CPP_CPU_REFERENCE;
+pub const BG_BACKEND_HIP: bg_backend = BG_BACKEND_HIP_FAST;
 
 pub type bg_unit_system = i32;
 pub const BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL: bg_unit_system = 1;

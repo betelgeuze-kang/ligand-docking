@@ -60,18 +60,30 @@ static void test_context_contract(void) {
     assert(bg_abi_version() == BG_ABI_VERSION);
     assert(bg_abi_version_major() == BG_ABI_VERSION_MAJOR);
     assert(bg_abi_version_minor() == BG_ABI_VERSION_MINOR);
-    assert(strcmp(bg_abi_version_string(), "1.3") == 0);
+    assert(strcmp(bg_abi_version_string(), "1.4") == 0);
     assert(strcmp(BG_CANONICAL_TEMPERATURE_UNIT, "kelvin") == 0);
     assert(strcmp(bg_status_string(BG_STATUS_OK), "ok") == 0);
-    assert(strcmp(bg_backend_string(BG_BACKEND_CPU), "cpu") == 0);
+    assert(strcmp(
+               bg_backend_string(BG_BACKEND_CPP_CPU_REFERENCE),
+               "cpp_cpu_reference") == 0);
+    assert(strcmp(bg_backend_string(BG_BACKEND_RUST_CPU), "rust_cpu") == 0);
+    assert(strcmp(bg_backend_string(BG_BACKEND_HIP_SAFE), "hip_safe") == 0);
+    assert(strcmp(bg_backend_string(BG_BACKEND_HIP_FAST), "hip_fast") == 0);
     assert(strcmp(
                bg_unit_system_string(BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL),
                "angstrom_kcal_mol") == 0);
 
     uint8_t available = 0;
-    assert(bg_backend_is_available(BG_BACKEND_CPU, 0, &available) ==
+    assert(bg_backend_is_available(
+               BG_BACKEND_CPP_CPU_REFERENCE, 0, &available) ==
            BG_STATUS_OK);
     assert(available == 1);
+    assert(bg_backend_is_available(BG_BACKEND_RUST_CPU, 0, &available) ==
+           BG_STATUS_OK);
+    assert(available == 1);
+    assert(bg_backend_is_available(BG_BACKEND_HIP_SAFE, 0, &available) ==
+           BG_STATUS_OK);
+    assert(available == 0);
     assert(bg_backend_is_available(BG_BACKEND_HIP, 0, &available) ==
            BG_STATUS_OK);
     const uint8_t hip_available = available;
@@ -89,11 +101,27 @@ static void test_context_contract(void) {
     bg_unit_system units = 0;
     int32_t ordinal = -1;
     assert(bg_context_get_backend(context, &selected) == BG_STATUS_OK);
-    assert(selected == BG_BACKEND_CPU);
+    assert(selected == BG_BACKEND_RUST_CPU);
     assert(bg_context_get_unit_system(context, &units) == BG_STATUS_OK);
     assert(units == BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL);
     assert(bg_context_get_device_ordinal(context, &ordinal) == BG_STATUS_OK);
     assert(ordinal == 0);
+    bg_context_destroy(context);
+
+    options.backend = BG_BACKEND_CPP_CPU_REFERENCE;
+    context = NULL;
+    assert(bg_context_create(&options, &context) == BG_STATUS_OK);
+    assert(context != NULL);
+    assert(bg_context_get_backend(context, &selected) == BG_STATUS_OK);
+    assert(selected == BG_BACKEND_CPP_CPU_REFERENCE);
+    bg_context_destroy(context);
+
+    options.backend = BG_BACKEND_RUST_CPU;
+    context = NULL;
+    assert(bg_context_create(&options, &context) == BG_STATUS_OK);
+    assert(context != NULL);
+    assert(bg_context_get_backend(context, &selected) == BG_STATUS_OK);
+    assert(selected == BG_BACKEND_RUST_CPU);
     bg_context_destroy(context);
 
     options.backend = BG_BACKEND_HIP;

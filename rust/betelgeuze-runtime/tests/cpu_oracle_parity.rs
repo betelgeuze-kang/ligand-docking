@@ -4,6 +4,9 @@ use betelgeuze_runtime as runtime;
 const ENERGY_TOLERANCE: f64 = 1.0e-10;
 const FORCE_DIFFERENCE_STEP_ANGSTROM: f64 = 1.0e-5;
 const FORCE_TOLERANCE: f64 = 2.0e-4;
+const CROSS_BACKEND_TOLERANCE: f64 = 2.0e-12;
+const CPU_BACKENDS: [runtime::Backend; 2] =
+    [runtime::Backend::CppCpuReference, runtime::Backend::RustCpu];
 
 #[derive(Clone)]
 struct Fixture {
@@ -29,30 +32,39 @@ fn cpu_energy_components_match_the_independent_rust_oracle() {
     for fixture in fixtures() {
         let expected = oracle::evaluate(&fixture.input)
             .unwrap_or_else(|error| panic!("{} oracle evaluation failed: {error}", fixture.name));
-        let native = native_fixture(&fixture);
-        let actual = native
-            .context
-            .evaluate(&native.system, &native.forcefield)
-            .unwrap_or_else(|error| panic!("{} CPU evaluation failed: {error}", fixture.name));
-        let energy_only = native
-            .context
-            .evaluate_energy(&native.system, &native.forcefield)
-            .unwrap_or_else(|error| {
-                panic!(
-                    "{} CPU energy-only evaluation failed: {error}",
-                    fixture.name
-                )
-            });
+        for backend in CPU_BACKENDS {
+            let native = native_fixture(&fixture, backend);
+            let actual = native
+                .context
+                .evaluate(&native.system, &native.forcefield)
+                .unwrap_or_else(|error| {
+                    panic!(
+                        "{} {} evaluation failed: {error}",
+                        fixture.name,
+                        backend_name(backend)
+                    )
+                });
+            let energy_only = native
+                .context
+                .evaluate_energy(&native.system, &native.forcefield)
+                .unwrap_or_else(|error| {
+                    panic!(
+                        "{} {} energy-only evaluation failed: {error}",
+                        fixture.name,
+                        backend_name(backend)
+                    )
+                });
 
-        assert_energy_close(fixture.name, actual.energy, expected);
-        assert_runtime_energy_bits_equal(
-            fixture.name,
-            "full and energy-only evaluation",
-            actual.energy,
-            energy_only,
-        );
-        if let Some(exact) = fixture.exact {
-            assert_exact_algebraic_fixture(fixture.name, exact, actual.energy, expected);
+            assert_energy_close(fixture.name, actual.energy, expected);
+            assert_runtime_energy_bits_equal(
+                fixture.name,
+                "full and energy-only evaluation",
+                actual.energy,
+                energy_only,
+            );
+            if let Some(exact) = fixture.exact {
+                assert_exact_algebraic_fixture(fixture.name, exact, actual.energy, expected);
+            }
         }
     }
 }
@@ -60,24 +72,33 @@ fn cpu_energy_components_match_the_independent_rust_oracle() {
 #[test]
 fn every_analytic_force_component_matches_oracle_central_differences() {
     for fixture in fixtures() {
-        let native = native_fixture(&fixture);
-        let actual = native
-            .context
-            .evaluate(&native.system, &native.forcefield)
-            .unwrap_or_else(|error| panic!("{} CPU evaluation failed: {error}", fixture.name));
+        for backend in CPU_BACKENDS {
+            let native = native_fixture(&fixture, backend);
+            let actual = native
+                .context
+                .evaluate(&native.system, &native.forcefield)
+                .unwrap_or_else(|error| {
+                    panic!(
+                        "{} {} evaluation failed: {error}",
+                        fixture.name,
+                        backend_name(backend)
+                    )
+                });
 
-        for atom in 0..fixture.input.positions.len() {
-            for axis in 0..3 {
-                let expected = finite_difference_force(&fixture, atom, axis);
-                let observed = native_force_component(&actual.forces, atom, axis);
-                let difference = (observed - expected).abs();
-                assert!(
-                    difference <= FORCE_TOLERANCE,
-                    "{} force atom {atom} axis {axis}: CPU={observed:.17e}, \
-                     oracle finite difference={expected:.17e}, |delta|={difference:.3e} > \
-                     {FORCE_TOLERANCE:.3e}",
-                    fixture.name
-                );
+            for atom in 0..fixture.input.positions.len() {
+                for axis in 0..3 {
+                    let expected = finite_difference_force(&fixture, atom, axis);
+                    let observed = native_force_component(&actual.forces, atom, axis);
+                    let difference = (observed - expected).abs();
+                    assert!(
+                        difference <= FORCE_TOLERANCE,
+                        "{} {} force atom {atom} axis {axis}: observed={observed:.17e}, \
+                         oracle finite difference={expected:.17e}, |delta|={difference:.3e} > \
+                         {FORCE_TOLERANCE:.3e}",
+                        fixture.name,
+                        backend_name(backend)
+                    );
+                }
             }
         }
     }
@@ -86,48 +107,93 @@ fn every_analytic_force_component_matches_oracle_central_differences() {
 #[test]
 fn cpu_evaluation_is_bit_deterministic_and_conserves_net_force() {
     for fixture in fixtures() {
-        let native = native_fixture(&fixture);
-        let first = native
-            .context
-            .evaluate(&native.system, &native.forcefield)
-            .unwrap_or_else(|error| {
-                panic!("{} first CPU evaluation failed: {error}", fixture.name)
-            });
-        let second = native
-            .context
-            .evaluate(&native.system, &native.forcefield)
-            .unwrap_or_else(|error| {
-                panic!("{} repeated CPU evaluation failed: {error}", fixture.name)
-            });
+        for backend in CPU_BACKENDS {
+            let native = native_fixture(&fixture, backend);
+            let first = native
+                .context
+                .evaluate(&native.system, &native.forcefield)
+                .unwrap_or_else(|error| {
+                    panic!(
+                        "{} first {} evaluation failed: {error}",
+                        fixture.name,
+                        backend_name(backend)
+                    )
+                });
+            let second = native
+                .context
+                .evaluate(&native.system, &native.forcefield)
+                .unwrap_or_else(|error| {
+                    panic!(
+                        "{} repeated {} evaluation failed: {error}",
+                        fixture.name,
+                        backend_name(backend)
+                    )
+                });
 
-        assert_runtime_energy_bits_equal(
-            fixture.name,
-            "repeated full evaluation",
-            first.energy,
-            second.energy,
-        );
-        for axis in 0..3 {
-            let first_channel = force_channel(&first.forces, axis);
-            let second_channel = force_channel(&second.forces, axis);
-            assert_eq!(first_channel.len(), second_channel.len());
-            for (atom, (left, right)) in first_channel.iter().zip(second_channel.iter()).enumerate()
-            {
-                assert_eq!(
-                    left.to_bits(),
-                    right.to_bits(),
-                    "{} repeated force changed bits at atom {atom}, axis {axis}",
-                    fixture.name
+            assert_runtime_energy_bits_equal(
+                fixture.name,
+                "repeated full evaluation",
+                first.energy,
+                second.energy,
+            );
+            for axis in 0..3 {
+                let first_channel = force_channel(&first.forces, axis);
+                let second_channel = force_channel(&second.forces, axis);
+                assert_eq!(first_channel.len(), second_channel.len());
+                for (atom, (left, right)) in
+                    first_channel.iter().zip(second_channel.iter()).enumerate()
+                {
+                    assert_eq!(
+                        left.to_bits(),
+                        right.to_bits(),
+                        "{} repeated {} force changed bits at atom {atom}, axis {axis}",
+                        fixture.name,
+                        backend_name(backend)
+                    );
+                }
+
+                let net: f64 = first_channel.iter().sum();
+                let magnitude_sum: f64 = first_channel.iter().map(|value| value.abs()).sum();
+                let tolerance = 1.0e-12 * (1.0 + magnitude_sum);
+                assert!(
+                    net.abs() <= tolerance,
+                    "{} {} net force axis {axis} is {net:.17e}, tolerance {tolerance:.3e}",
+                    fixture.name,
+                    backend_name(backend)
                 );
             }
+        }
+    }
+}
 
-            let net: f64 = first_channel.iter().sum();
-            let magnitude_sum: f64 = first_channel.iter().map(|value| value.abs()).sum();
-            let tolerance = 1.0e-12 * (1.0 + magnitude_sum);
-            assert!(
-                net.abs() <= tolerance,
-                "{} net force axis {axis} is {net:.17e}, tolerance {tolerance:.3e}",
-                fixture.name
-            );
+#[test]
+fn rust_cpu_matches_cpp_reference_within_the_frozen_safe_tolerance() {
+    for fixture in fixtures() {
+        let cpp = native_fixture(&fixture, runtime::Backend::CppCpuReference);
+        let rust = native_fixture(&fixture, runtime::Backend::RustCpu);
+        let cpp_result = cpp
+            .context
+            .evaluate(&cpp.system, &cpp.forcefield)
+            .expect("C++ reference evaluation succeeds");
+        let rust_result = rust
+            .context
+            .evaluate(&rust.system, &rust.forcefield)
+            .expect("Rust CPU evaluation succeeds");
+        for ((name, left), (_, right)) in runtime_energy_values(cpp_result.energy)
+            .into_iter()
+            .zip(runtime_energy_values(rust_result.energy))
+        {
+            assert_close_cross_backend(fixture.name, name, left, right);
+        }
+        for axis in 0..3 {
+            for (atom, (left, right)) in force_channel(&cpp_result.forces, axis)
+                .iter()
+                .zip(force_channel(&rust_result.forces, axis))
+                .enumerate()
+            {
+                let field = format!("force[{atom}][{axis}]");
+                assert_close_cross_backend(fixture.name, &field, *left, *right);
+            }
         }
     }
 }
@@ -187,7 +253,7 @@ fn hip_matches_the_cpu_and_independent_oracle_without_fallback() {
     for fixture in fixtures() {
         let expected = oracle::evaluate(&fixture.input)
             .unwrap_or_else(|error| panic!("{} oracle evaluation failed: {error}", fixture.name));
-        let native = native_fixture(&fixture);
+        let native = native_fixture(&fixture, runtime::Backend::CppCpuReference);
         let cpu = native
             .context
             .evaluate(&native.system, &native.forcefield)
@@ -484,7 +550,7 @@ const fn settings(
     }
 }
 
-fn native_fixture(fixture: &Fixture) -> NativeFixture {
+fn native_fixture(fixture: &Fixture, backend: runtime::Backend) -> NativeFixture {
     let input = &fixture.input;
     let x: Vec<_> = input
         .positions
@@ -593,7 +659,12 @@ fn native_fixture(fixture: &Fixture) -> NativeFixture {
     forcefield_input.nonbonded = nonbonded;
     let forcefield = runtime::ForceField::new(forcefield_input)
         .unwrap_or_else(|error| panic!("{} force-field conversion failed: {error}", fixture.name));
-    let context = runtime::Context::new(runtime::ContextOptions::cpu())
+    let options = match backend {
+        runtime::Backend::CppCpuReference => runtime::ContextOptions::cpu_reference(),
+        runtime::Backend::RustCpu => runtime::ContextOptions::rust_cpu(),
+        _ => panic!("non-CPU backend passed to native_fixture"),
+    };
+    let context = runtime::Context::new(options)
         .unwrap_or_else(|error| panic!("{} CPU context failed: {error}", fixture.name));
 
     NativeFixture {
@@ -601,6 +672,26 @@ fn native_fixture(fixture: &Fixture) -> NativeFixture {
         system,
         forcefield,
     }
+}
+
+const fn backend_name(backend: runtime::Backend) -> &'static str {
+    match backend {
+        runtime::Backend::CppCpuReference => "cpp_cpu_reference",
+        runtime::Backend::RustCpu => "rust_cpu",
+        runtime::Backend::Auto => "auto",
+        runtime::Backend::HipSafe => "hip_safe",
+        runtime::Backend::HipFast => "hip_fast",
+    }
+}
+
+fn assert_close_cross_backend(fixture: &str, field: &str, left: f64, right: f64) {
+    let difference = (left - right).abs();
+    let tolerance = CROSS_BACKEND_TOLERANCE * (1.0 + left.abs().max(right.abs()));
+    assert!(
+        difference <= tolerance,
+        "{fixture} {field}: cpp_cpu_reference={left:.17e}, rust_cpu={right:.17e}, \
+         |delta|={difference:.3e} > {tolerance:.3e}"
+    );
 }
 
 fn assert_energy_close(

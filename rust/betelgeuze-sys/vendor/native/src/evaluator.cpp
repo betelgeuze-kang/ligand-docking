@@ -1,6 +1,7 @@
 #include "cpu/evaluator.hpp"
 #include "hip/backend.hpp"
 #include "internal.hpp"
+#include "rust/evaluator.hpp"
 
 #include <algorithm>
 #include <cstddef>
@@ -175,14 +176,21 @@ extern "C" BG_API bg_status BG_CALL bg_context_evaluate(
         }
         cpu::Evaluation evaluation;
         switch (context->backend) {
-            case BG_BACKEND_CPU:
+            case BG_BACKEND_CPP_CPU_REFERENCE:
                 status = cpu::evaluate(
                     *system,
                     *forcefield,
                     out_forces != nullptr,
                     &evaluation);
                 break;
-            case BG_BACKEND_HIP:
+            case BG_BACKEND_RUST_CPU:
+                status = rust_cpu::evaluate(
+                    *system,
+                    *forcefield,
+                    out_forces != nullptr,
+                    &evaluation);
+                break;
+            case BG_BACKEND_HIP_FAST:
                 status = hip::evaluate(
                     *context,
                     *system,

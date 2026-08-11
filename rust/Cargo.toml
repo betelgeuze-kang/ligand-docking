@@ -1,5 +1,10 @@
 [workspace]
-members = ["betelgeuze-*", "reference-dynamics", "reference-physics"]
+members = [
+    "betelgeuze-*",
+    "cpu-kernel",
+    "reference-dynamics",
+    "reference-physics",
+]
 resolver = "2"
 
 [workspace.package]
