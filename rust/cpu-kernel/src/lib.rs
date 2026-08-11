@@ -4,6 +4,7 @@
 //! crate supplies an independently implemented scalar kernel and a versioned,
 //! hidden provider boundary used by the C++ dispatcher.
 
+mod docking_torsion_v7;
 mod kernel;
 
 use core::mem::{align_of, size_of};
