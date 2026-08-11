@@ -78,6 +78,9 @@ fn descriptor_initializers_reject_incompatible_callers_without_writing() {
         assert_initializer_exact(bg_minimizer_options_v1_init);
         assert_initializer_exact(bg_minimization_report_v1_init);
         assert_initializer_exact(bg_dynamics_report_v1_init);
+        assert_initializer_exact(bg_docking_geometric_admission_context_soa_v1_init);
+        assert_initializer_exact(bg_docking_geometric_admission_candidate_batch_soa_v1_init);
+        assert_initializer_exact(bg_docking_geometric_admission_output_v1_init);
         assert_initializer_exact(bg_docking_scorer_v1_context_soa_v1_init);
         assert_initializer_exact(bg_docking_scorer_v1_candidate_batch_soa_v1_init);
         assert_initializer_exact(bg_docking_scorer_v1_output_v1_init);
@@ -247,6 +250,65 @@ fn descriptor_initializers_bind_size_version_and_units() {
             dynamics_report.struct_size as usize,
             core::mem::size_of_val(&dynamics_report)
         );
+
+        let mut geometric_context =
+            core::mem::MaybeUninit::<bg_docking_geometric_admission_context_soa_v1>::uninit();
+        assert_eq!(
+            initialize(
+                bg_docking_geometric_admission_context_soa_v1_init,
+                geometric_context.as_mut_ptr(),
+            ),
+            BG_STATUS_OK
+        );
+        let geometric_context = geometric_context.assume_init();
+        assert_eq!(
+            geometric_context.unit_system,
+            BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL
+        );
+        assert_eq!(geometric_context.hard_rejection_minimum_vdw_ratio, 0.55);
+        assert_eq!(
+            geometric_context.max_batch_exact_pair_evaluations,
+            16_777_216
+        );
+
+        let mut geometric_batch = core::mem::MaybeUninit::<
+            bg_docking_geometric_admission_candidate_batch_soa_v1,
+        >::uninit();
+        assert_eq!(
+            initialize(
+                bg_docking_geometric_admission_candidate_batch_soa_v1_init,
+                geometric_batch.as_mut_ptr(),
+            ),
+            BG_STATUS_OK
+        );
+        let geometric_batch = geometric_batch.assume_init();
+        assert_eq!(geometric_batch.candidate_count, 64);
+        assert_eq!(
+            geometric_batch.unit_system,
+            BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL
+        );
+
+        let mut geometric_output =
+            core::mem::MaybeUninit::<bg_docking_geometric_admission_output_v1>::uninit();
+        assert_eq!(
+            initialize(
+                bg_docking_geometric_admission_output_v1_init,
+                geometric_output.as_mut_ptr(),
+            ),
+            BG_STATUS_OK
+        );
+        let geometric_output = geometric_output.assume_init();
+        assert_eq!(
+            geometric_output.unit_system,
+            BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL
+        );
+        assert_eq!(geometric_output.molecular_execution_authorized, 0);
+        assert_eq!(geometric_output.reservation_authorized, 0);
+        assert_eq!(geometric_output.benchmark_execution_authorized, 0);
+        assert_eq!(geometric_output.existing_rank_auto_change_authorized, 0);
+        assert_eq!(geometric_output.customer_pose_emission_authorized, 0);
+        assert_eq!(geometric_output.production_claim_authorized, 0);
+        assert_eq!(geometric_output.scientific_claim_authorized, 0);
 
         let mut ranking_input =
             core::mem::MaybeUninit::<bg_docking_stable_top_k_input_v1>::uninit();
@@ -443,6 +505,134 @@ fn explicit_rust_cpu_context_round_trips_without_cpp_fallback() {
         let mut selected = BG_BACKEND_AUTO;
         assert_eq!(bg_context_get_backend(context, &mut selected), BG_STATUS_OK);
         assert_eq!(selected, BG_BACKEND_RUST_CPU);
+        bg_context_destroy(context);
+    }
+}
+
+#[test]
+fn rust_cpu_geometric_admission_preserves_fixed64_and_authority_false() {
+    // SAFETY: Every descriptor channel remains live for the call, all outputs
+    // have exact fixed64 capacity, and both native handles are destroyed once.
+    unsafe {
+        let mut options = core::mem::MaybeUninit::<bg_context_options>::uninit();
+        assert_eq!(
+            initialize(bg_context_options_init, options.as_mut_ptr()),
+            BG_STATUS_OK
+        );
+        let mut options = options.assume_init();
+        options.backend = BG_BACKEND_RUST_CPU;
+        let mut context = ptr::null_mut();
+        assert_eq!(bg_context_create(&options, &mut context), BG_STATUS_OK);
+
+        let receptor_x = [0.0];
+        let receptor_y = [0.0];
+        let receptor_z = [0.0];
+        let receptor_radius = [1.0];
+        let ligand_radius = [1.0];
+        let ligand_heavy = [1_u8];
+        let mut descriptor =
+            core::mem::MaybeUninit::<bg_docking_geometric_admission_context_soa_v1>::uninit();
+        assert_eq!(
+            initialize(
+                bg_docking_geometric_admission_context_soa_v1_init,
+                descriptor.as_mut_ptr(),
+            ),
+            BG_STATUS_OK
+        );
+        let mut descriptor = descriptor.assume_init();
+        descriptor.receptor_atom_count = 1;
+        descriptor.ligand_atom_count = 1;
+        descriptor.receptor_x_angstrom = receptor_x.as_ptr();
+        descriptor.receptor_y_angstrom = receptor_y.as_ptr();
+        descriptor.receptor_z_angstrom = receptor_z.as_ptr();
+        descriptor.receptor_vdw_radius_angstrom = receptor_radius.as_ptr();
+        descriptor.ligand_vdw_radius_angstrom = ligand_radius.as_ptr();
+        descriptor.ligand_heavy_atom_mask = ligand_heavy.as_ptr();
+        descriptor.pocket_radius_angstrom = 10.0;
+        descriptor.authority_input_receipt_sha256.fill(0x11);
+        descriptor.receptor_system_sha256.fill(0x22);
+        descriptor.ligand_system_sha256.fill(0x33);
+        descriptor.backend_receipt_sha256.fill(0x44);
+        let mut admission = ptr::null_mut();
+        assert_eq!(
+            bg_docking_geometric_admission_v1_create(context, &descriptor, &mut admission,),
+            BG_STATUS_OK
+        );
+        assert!(!admission.is_null());
+        let mut observed_backend = BG_BACKEND_AUTO;
+        assert_eq!(
+            bg_docking_geometric_admission_v1_get_backend(admission, &mut observed_backend,),
+            BG_STATUS_OK
+        );
+        assert_eq!(observed_backend, BG_BACKEND_RUST_CPU);
+
+        let mut states = [BG_DOCKING_GEOMETRIC_ADMISSION_CANDIDATE_UPSTREAM_FAILURE;
+            BG_DOCKING_FIXED64_CANDIDATE_COUNT as usize];
+        states[0] = BG_DOCKING_GEOMETRIC_ADMISSION_CANDIDATE_EVALUATE;
+        let mut x = [5.0; BG_DOCKING_FIXED64_CANDIDATE_COUNT as usize];
+        let y = [0.0; BG_DOCKING_FIXED64_CANDIDATE_COUNT as usize];
+        let z = [0.0; BG_DOCKING_FIXED64_CANDIDATE_COUNT as usize];
+        x[0] = 1.1;
+        let mut batch = core::mem::MaybeUninit::<
+            bg_docking_geometric_admission_candidate_batch_soa_v1,
+        >::uninit();
+        assert_eq!(
+            initialize(
+                bg_docking_geometric_admission_candidate_batch_soa_v1_init,
+                batch.as_mut_ptr(),
+            ),
+            BG_STATUS_OK
+        );
+        let mut batch = batch.assume_init();
+        batch.ligand_atom_count = 1;
+        batch.candidate_state = states.as_ptr();
+        batch.x_angstrom = x.as_ptr();
+        batch.y_angstrom = y.as_ptr();
+        batch.z_angstrom = z.as_ptr();
+        let mut rows = [core::mem::zeroed::<bg_docking_geometric_admission_row_v1>();
+            BG_DOCKING_FIXED64_CANDIDATE_COUNT as usize];
+        let mut output =
+            core::mem::MaybeUninit::<bg_docking_geometric_admission_output_v1>::uninit();
+        assert_eq!(
+            initialize(
+                bg_docking_geometric_admission_output_v1_init,
+                output.as_mut_ptr(),
+            ),
+            BG_STATUS_OK
+        );
+        let mut output = output.assume_init();
+        output.row_capacity = rows.len() as u64;
+        output.rows = rows.as_mut_ptr();
+        assert_eq!(
+            bg_docking_geometric_admission_v1_evaluate_fixed64(
+                context,
+                admission,
+                &batch,
+                &mut output,
+            ),
+            BG_STATUS_OK
+        );
+        assert_eq!(output.row_count, 64);
+        assert_eq!(rows[0].status, BG_DOCKING_GEOMETRIC_ADMISSION_ROW_EVALUATED);
+        assert_eq!(
+            rows[0].decision,
+            BG_DOCKING_GEOMETRIC_ADMISSION_DECISION_ACCEPTED
+        );
+        assert_eq!(rows[0].rank_eligible, 1);
+        assert_eq!(rows[0].minimum_vdw_ratio, 0.55);
+        assert_eq!(
+            rows[1].status,
+            BG_DOCKING_GEOMETRIC_ADMISSION_ROW_UPSTREAM_FAILURE
+        );
+        assert_eq!(output.molecular_execution_authorized, 0);
+        assert_eq!(output.reservation_authorized, 0);
+        assert_eq!(output.benchmark_execution_authorized, 0);
+        assert_eq!(output.existing_rank_auto_change_authorized, 0);
+        assert_eq!(output.customer_pose_emission_authorized, 0);
+        assert_eq!(output.production_claim_authorized, 0);
+        assert_eq!(output.scientific_claim_authorized, 0);
+
+        bg_docking_geometric_admission_v1_destroy(admission);
         bg_context_destroy(context);
     }
 }

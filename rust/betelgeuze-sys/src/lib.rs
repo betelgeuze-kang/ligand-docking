@@ -20,7 +20,7 @@ static BG_RUST_CPU_PROVIDER_LINK_ANCHOR: extern "C" fn() -> u32 =
     betelgeuze_cpu_kernel::bg_rust_cpu_provider_abi_version_v1;
 
 pub const BG_ABI_VERSION_MAJOR: u32 = 1;
-pub const BG_ABI_VERSION_MINOR: u32 = 12;
+pub const BG_ABI_VERSION_MINOR: u32 = 13;
 pub const BG_ABI_VERSION: u32 = 1;
 
 pub const BG_CANONICAL_LENGTH_UNIT: &[u8] = b"angstrom\0";
@@ -69,6 +69,34 @@ pub const BG_DOCKING_SCORER_V1_TERM_COUNT: u32 = 8;
 pub const BG_DOCKING_STABLE_TOP_K_LIMIT: u32 = 5;
 pub const BG_DOCKING_RMSD_CLUSTER_TOP_K_LIMIT: u32 = 5;
 pub const BG_DOCKING_TORSION_V7_MAX_MOVES: u32 = 8;
+
+pub type bg_docking_geometric_admission_candidate_state = i32;
+pub const BG_DOCKING_GEOMETRIC_ADMISSION_CANDIDATE_UPSTREAM_FAILURE:
+    bg_docking_geometric_admission_candidate_state = 0;
+pub const BG_DOCKING_GEOMETRIC_ADMISSION_CANDIDATE_EVALUATE:
+    bg_docking_geometric_admission_candidate_state = 1;
+pub type bg_docking_geometric_admission_row_status = i32;
+pub const BG_DOCKING_GEOMETRIC_ADMISSION_ROW_EVALUATED: bg_docking_geometric_admission_row_status =
+    1;
+pub const BG_DOCKING_GEOMETRIC_ADMISSION_ROW_UPSTREAM_FAILURE:
+    bg_docking_geometric_admission_row_status = 2;
+pub const BG_DOCKING_GEOMETRIC_ADMISSION_ROW_TYPED_FAILURE:
+    bg_docking_geometric_admission_row_status = 3;
+pub type bg_docking_geometric_admission_failure = i32;
+pub const BG_DOCKING_GEOMETRIC_ADMISSION_FAILURE_NONE: bg_docking_geometric_admission_failure = 0;
+pub const BG_DOCKING_GEOMETRIC_ADMISSION_FAILURE_UPSTREAM_NOT_AVAILABLE:
+    bg_docking_geometric_admission_failure = 1;
+pub const BG_DOCKING_GEOMETRIC_ADMISSION_FAILURE_INVALID_CANDIDATE_COORDINATES:
+    bg_docking_geometric_admission_failure = 2;
+pub const BG_DOCKING_GEOMETRIC_ADMISSION_FAILURE_NONFINITE_DERIVED_MEASUREMENT:
+    bg_docking_geometric_admission_failure = 3;
+pub type bg_docking_geometric_admission_decision = i32;
+pub const BG_DOCKING_GEOMETRIC_ADMISSION_DECISION_NOT_EVALUATED:
+    bg_docking_geometric_admission_decision = 0;
+pub const BG_DOCKING_GEOMETRIC_ADMISSION_DECISION_ACCEPTED:
+    bg_docking_geometric_admission_decision = 1;
+pub const BG_DOCKING_GEOMETRIC_ADMISSION_DECISION_SEVERE_PENETRATION_REJECTED:
+    bg_docking_geometric_admission_decision = 2;
 
 pub type bg_docking_scorer_v1_candidate_state = i32;
 pub const BG_DOCKING_SCORER_V1_CANDIDATE_INACTIVE: bg_docking_scorer_v1_candidate_state = 0;
@@ -253,6 +281,12 @@ pub struct bg_forcefield {
 /// Opaque native simulation. Its representation is intentionally unavailable.
 #[repr(C)]
 pub struct bg_simulation {
+    _private: [u8; 0],
+}
+
+/// Opaque persistent fixed64 geometric-admission provider.
+#[repr(C)]
+pub struct bg_docking_geometric_admission_v1 {
     _private: [u8; 0],
 }
 
@@ -526,6 +560,93 @@ pub struct bg_dynamics_report_v1 {
     pub kinetic_kcal_per_mol: f64,
     pub total_kcal_per_mol: f64,
     pub temperature_kelvin: f64,
+    pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_geometric_admission_context_soa_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub unit_system: bg_unit_system,
+    pub reserved0: u32,
+    pub receptor_atom_count: u64,
+    pub ligand_atom_count: u64,
+    pub receptor_x_angstrom: *const f64,
+    pub receptor_y_angstrom: *const f64,
+    pub receptor_z_angstrom: *const f64,
+    pub receptor_vdw_radius_angstrom: *const f64,
+    pub ligand_vdw_radius_angstrom: *const f64,
+    pub ligand_heavy_atom_mask: *const u8,
+    pub pocket_center_angstrom: [f64; 3],
+    pub pocket_radius_angstrom: f64,
+    pub hard_rejection_minimum_vdw_ratio: f64,
+    pub max_batch_exact_pair_evaluations: u64,
+    pub authority_input_receipt_sha256: [u8; 32],
+    pub receptor_system_sha256: [u8; 32],
+    pub ligand_system_sha256: [u8; 32],
+    pub backend_receipt_sha256: [u8; 32],
+    pub reserved: [u64; 8],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_geometric_admission_candidate_batch_soa_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub candidate_count: u64,
+    pub ligand_atom_count: u64,
+    pub unit_system: bg_unit_system,
+    pub reserved0: u32,
+    pub candidate_state: *const bg_docking_geometric_admission_candidate_state,
+    pub x_angstrom: *const f64,
+    pub y_angstrom: *const f64,
+    pub z_angstrom: *const f64,
+    pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_geometric_admission_row_v1 {
+    pub slot_index: u32,
+    pub status: bg_docking_geometric_admission_row_status,
+    pub failure_code: bg_docking_geometric_admission_failure,
+    pub decision: bg_docking_geometric_admission_decision,
+    pub rank_eligible: u8,
+    pub reserved0: [u8; 3],
+    pub reserved1: u32,
+    pub ligand_atom_count: u64,
+    pub receptor_atom_count: u64,
+    pub exact_pair_count: u64,
+    pub penetration_pair_count: u64,
+    pub unique_ligand_penetration_atom_count: u64,
+    pub unique_ligand_heavy_atom_penetration_count: u64,
+    pub raw_minimum_distance_angstrom: f64,
+    pub minimum_vdw_surface_gap_angstrom: f64,
+    pub minimum_vdw_ratio: f64,
+    pub sphere_overlap_proxy_angstrom3: f64,
+    pub pocket_escape_angstrom: f64,
+    pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_geometric_admission_output_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub row_capacity: u64,
+    pub row_count: u64,
+    pub unit_system: bg_unit_system,
+    pub reserved0: u32,
+    pub rows: *mut bg_docking_geometric_admission_row_v1,
+    pub molecular_execution_authorized: u8,
+    pub reservation_authorized: u8,
+    pub benchmark_execution_authorized: u8,
+    pub existing_rank_auto_change_authorized: u8,
+    pub customer_pose_emission_authorized: u8,
+    pub production_claim_authorized: u8,
+    pub scientific_claim_authorized: u8,
+    pub reserved1: u8,
     pub reserved: [u64; 4],
 }
 
@@ -1300,6 +1421,21 @@ unsafe extern "C" {
         caller_struct_size: usize,
         caller_abi_version: u32,
     ) -> bg_status;
+    pub fn bg_docking_geometric_admission_context_soa_v1_init(
+        descriptor: *mut bg_docking_geometric_admission_context_soa_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_docking_geometric_admission_candidate_batch_soa_v1_init(
+        batch: *mut bg_docking_geometric_admission_candidate_batch_soa_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_docking_geometric_admission_output_v1_init(
+        output: *mut bg_docking_geometric_admission_output_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
     pub fn bg_docking_scorer_v1_context_soa_v1_init(
         descriptor: *mut bg_docking_scorer_v1_context_soa_v1,
         caller_struct_size: usize,
@@ -1412,6 +1548,25 @@ unsafe extern "C" {
     pub fn bg_context_get_unit_system(
         context: *const bg_context,
         unit_system: *mut bg_unit_system,
+    ) -> bg_status;
+
+    pub fn bg_docking_geometric_admission_v1_create(
+        context: *const bg_context,
+        descriptor: *const bg_docking_geometric_admission_context_soa_v1,
+        out_admission: *mut *mut bg_docking_geometric_admission_v1,
+    ) -> bg_status;
+    pub fn bg_docking_geometric_admission_v1_destroy(
+        admission: *mut bg_docking_geometric_admission_v1,
+    );
+    pub fn bg_docking_geometric_admission_v1_get_backend(
+        admission: *const bg_docking_geometric_admission_v1,
+        backend: *mut bg_backend,
+    ) -> bg_status;
+    pub fn bg_docking_geometric_admission_v1_evaluate_fixed64(
+        context: *const bg_context,
+        admission: *const bg_docking_geometric_admission_v1,
+        candidates: *const bg_docking_geometric_admission_candidate_batch_soa_v1,
+        output: *mut bg_docking_geometric_admission_output_v1,
     ) -> bg_status;
 
     pub fn bg_docking_scorer_v1_create(

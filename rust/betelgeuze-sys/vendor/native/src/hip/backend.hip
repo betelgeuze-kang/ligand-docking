@@ -3553,6 +3553,19 @@ uint64_t live_allocation_count(const bg_context &context) noexcept {
 
 }  // namespace betelgeuze::native::hip
 
+#define BG_DOCKING_GEOMETRIC_CREATE \
+    bg_hip_fast_docking_geometric_admission_v1_create
+#define BG_DOCKING_GEOMETRIC_DESTROY \
+    bg_hip_fast_docking_geometric_admission_v1_destroy
+#define BG_DOCKING_GEOMETRIC_EVALUATE_FIXED64 \
+    bg_hip_fast_docking_geometric_admission_v1_evaluate_fixed64
+#define BG_DOCKING_GEOMETRIC_LANE "hip_fast"
+#include "docking_geometric_admission.hip"
+#undef BG_DOCKING_GEOMETRIC_LANE
+#undef BG_DOCKING_GEOMETRIC_EVALUATE_FIXED64
+#undef BG_DOCKING_GEOMETRIC_DESTROY
+#undef BG_DOCKING_GEOMETRIC_CREATE
+
 #define BG_DOCKING_SCORER_CREATE bg_hip_fast_docking_scorer_v1_create
 #define BG_DOCKING_SCORER_DESTROY bg_hip_fast_docking_scorer_v1_destroy
 #define BG_DOCKING_SCORER_SCORE_FIXED64 \

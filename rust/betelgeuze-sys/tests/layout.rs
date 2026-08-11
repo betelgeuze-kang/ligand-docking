@@ -5,12 +5,19 @@ use betelgeuze_sys::*;
 #[test]
 fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(BG_ABI_VERSION_MAJOR, 1);
-    assert_eq!(BG_ABI_VERSION_MINOR, 12);
+    assert_eq!(BG_ABI_VERSION_MINOR, 13);
     assert_eq!(BG_ABI_VERSION, 1);
     assert_eq!(size_of::<bg_status>(), 4);
     assert_eq!(size_of::<bg_backend>(), 4);
     assert_eq!(size_of::<bg_unit_system>(), 4);
     assert_eq!(size_of::<bg_integrator>(), 4);
+    assert_eq!(
+        size_of::<bg_docking_geometric_admission_candidate_state>(),
+        4
+    );
+    assert_eq!(size_of::<bg_docking_geometric_admission_row_status>(), 4);
+    assert_eq!(size_of::<bg_docking_geometric_admission_failure>(), 4);
+    assert_eq!(size_of::<bg_docking_geometric_admission_decision>(), 4);
     assert_eq!(size_of::<bg_docking_scorer_v1_candidate_state>(), 4);
     assert_eq!(size_of::<bg_docking_scorer_v1_row_status>(), 4);
     assert_eq!(size_of::<bg_docking_scorer_v1_failure>(), 4);
@@ -47,6 +54,104 @@ fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(BG_PERIODIC_AXIS_Y, 2);
     assert_eq!(BG_PERIODIC_AXIS_Z, 4);
     assert_eq!(BG_PERIODIC_AXES_ALL, 7);
+}
+
+#[test]
+fn docking_geometric_admission_layouts_match_the_c_header() {
+    assert_eq!(
+        size_of::<bg_docking_geometric_admission_context_soa_v1>(),
+        320
+    );
+    assert_eq!(
+        align_of::<bg_docking_geometric_admission_context_soa_v1>(),
+        8
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_geometric_admission_context_soa_v1,
+            receptor_atom_count
+        ),
+        16
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_geometric_admission_context_soa_v1,
+            receptor_x_angstrom
+        ),
+        32
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_geometric_admission_context_soa_v1,
+            pocket_center_angstrom
+        ),
+        80
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_geometric_admission_context_soa_v1,
+            authority_input_receipt_sha256
+        ),
+        128
+    );
+    assert_eq!(
+        offset_of!(bg_docking_geometric_admission_context_soa_v1, reserved),
+        256
+    );
+    assert_eq!(
+        size_of::<bg_docking_geometric_admission_candidate_batch_soa_v1>(),
+        96
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_geometric_admission_candidate_batch_soa_v1,
+            candidate_state
+        ),
+        32
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_geometric_admission_candidate_batch_soa_v1,
+            reserved
+        ),
+        64
+    );
+    assert_eq!(size_of::<bg_docking_geometric_admission_row_v1>(), 144);
+    assert_eq!(
+        offset_of!(bg_docking_geometric_admission_row_v1, rank_eligible),
+        16
+    );
+    assert_eq!(
+        offset_of!(bg_docking_geometric_admission_row_v1, ligand_atom_count),
+        24
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_geometric_admission_row_v1,
+            raw_minimum_distance_angstrom
+        ),
+        72
+    );
+    assert_eq!(
+        offset_of!(bg_docking_geometric_admission_row_v1, reserved),
+        112
+    );
+    assert_eq!(size_of::<bg_docking_geometric_admission_output_v1>(), 80);
+    assert_eq!(
+        offset_of!(bg_docking_geometric_admission_output_v1, rows),
+        32
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_geometric_admission_output_v1,
+            molecular_execution_authorized
+        ),
+        40
+    );
+    assert_eq!(
+        offset_of!(bg_docking_geometric_admission_output_v1, reserved),
+        48
+    );
 }
 
 #[test]

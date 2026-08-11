@@ -56,7 +56,7 @@ extern "C" {
 #endif
 
 #define BG_ABI_VERSION_MAJOR UINT32_C(1)
-#define BG_ABI_VERSION_MINOR UINT32_C(12)
+#define BG_ABI_VERSION_MINOR UINT32_C(13)
 #define BG_ABI_VERSION UINT32_C(1)
 
 #define BG_CANONICAL_LENGTH_UNIT "angstrom"
@@ -119,6 +119,35 @@ enum {
 #define BG_DOCKING_STABLE_TOP_K_LIMIT UINT32_C(5)
 #define BG_DOCKING_RMSD_CLUSTER_TOP_K_LIMIT UINT32_C(5)
 #define BG_DOCKING_TORSION_V7_MAX_MOVES UINT32_C(8)
+
+/* Frozen fixed64 pre/post-refinement geometric-admission semantics. */
+typedef int32_t bg_docking_geometric_admission_candidate_state;
+enum {
+    BG_DOCKING_GEOMETRIC_ADMISSION_CANDIDATE_UPSTREAM_FAILURE = 0,
+    BG_DOCKING_GEOMETRIC_ADMISSION_CANDIDATE_EVALUATE = 1
+};
+
+typedef int32_t bg_docking_geometric_admission_row_status;
+enum {
+    BG_DOCKING_GEOMETRIC_ADMISSION_ROW_EVALUATED = 1,
+    BG_DOCKING_GEOMETRIC_ADMISSION_ROW_UPSTREAM_FAILURE = 2,
+    BG_DOCKING_GEOMETRIC_ADMISSION_ROW_TYPED_FAILURE = 3
+};
+
+typedef int32_t bg_docking_geometric_admission_failure;
+enum {
+    BG_DOCKING_GEOMETRIC_ADMISSION_FAILURE_NONE = 0,
+    BG_DOCKING_GEOMETRIC_ADMISSION_FAILURE_UPSTREAM_NOT_AVAILABLE = 1,
+    BG_DOCKING_GEOMETRIC_ADMISSION_FAILURE_INVALID_CANDIDATE_COORDINATES = 2,
+    BG_DOCKING_GEOMETRIC_ADMISSION_FAILURE_NONFINITE_DERIVED_MEASUREMENT = 3
+};
+
+typedef int32_t bg_docking_geometric_admission_decision;
+enum {
+    BG_DOCKING_GEOMETRIC_ADMISSION_DECISION_NOT_EVALUATED = 0,
+    BG_DOCKING_GEOMETRIC_ADMISSION_DECISION_ACCEPTED = 1,
+    BG_DOCKING_GEOMETRIC_ADMISSION_DECISION_SEVERE_PENETRATION_REJECTED = 2
+};
 
 typedef int32_t bg_docking_scorer_v1_candidate_state;
 enum {
@@ -290,6 +319,8 @@ typedef struct bg_context bg_context;
 typedef struct bg_system bg_system;
 typedef struct bg_forcefield bg_forcefield;
 typedef struct bg_simulation bg_simulation;
+typedef struct bg_docking_geometric_admission_v1
+    bg_docking_geometric_admission_v1;
 typedef struct bg_docking_scorer_v1 bg_docking_scorer_v1;
 typedef struct bg_docking_pose_validity_v1 bg_docking_pose_validity_v1;
 typedef struct bg_docking_stable_top_k_v1 bg_docking_stable_top_k_v1;
@@ -619,6 +650,97 @@ typedef struct bg_dynamics_report_v1 {
     double temperature_kelvin;
     uint64_t reserved[4];
 } bg_dynamics_report_v1;
+
+/*
+ * Persistent fixed64 geometric-admission context. All receptor coordinates,
+ * vdW radii, heavy-atom flags, pocket geometry, and four identity digests are
+ * deep-copied. The frozen full-Cartesian traversal evaluates at most
+ * 16,777,216 receptor-ligand pairs per batch and rejects a candidate only
+ * when minimum_vdw_ratio is strictly below 0.55. Typed upstream and numerical
+ * failures remain present in the exact 64-row denominator.
+ */
+typedef struct bg_docking_geometric_admission_context_soa_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    bg_unit_system unit_system;
+    uint32_t reserved0;
+
+    uint64_t receptor_atom_count;
+    uint64_t ligand_atom_count;
+    const double *receptor_x_angstrom;
+    const double *receptor_y_angstrom;
+    const double *receptor_z_angstrom;
+    const double *receptor_vdw_radius_angstrom;
+    const double *ligand_vdw_radius_angstrom;
+    const uint8_t *ligand_heavy_atom_mask;
+
+    double pocket_center_angstrom[3];
+    double pocket_radius_angstrom;
+    double hard_rejection_minimum_vdw_ratio;
+    uint64_t max_batch_exact_pair_evaluations;
+
+    uint8_t authority_input_receipt_sha256[32];
+    uint8_t receptor_system_sha256[32];
+    uint8_t ligand_system_sha256[32];
+    uint8_t backend_receipt_sha256[32];
+    uint64_t reserved[8];
+} bg_docking_geometric_admission_context_soa_v1;
+
+typedef struct bg_docking_geometric_admission_candidate_batch_soa_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    uint64_t candidate_count;
+    uint64_t ligand_atom_count;
+    bg_unit_system unit_system;
+    uint32_t reserved0;
+    const bg_docking_geometric_admission_candidate_state *candidate_state;
+    const double *x_angstrom;
+    const double *y_angstrom;
+    const double *z_angstrom;
+    uint64_t reserved[4];
+} bg_docking_geometric_admission_candidate_batch_soa_v1;
+
+typedef struct bg_docking_geometric_admission_row_v1 {
+    uint32_t slot_index;
+    bg_docking_geometric_admission_row_status status;
+    bg_docking_geometric_admission_failure failure_code;
+    bg_docking_geometric_admission_decision decision;
+    uint8_t rank_eligible;
+    uint8_t reserved0[3];
+    uint32_t reserved1;
+
+    uint64_t ligand_atom_count;
+    uint64_t receptor_atom_count;
+    uint64_t exact_pair_count;
+    uint64_t penetration_pair_count;
+    uint64_t unique_ligand_penetration_atom_count;
+    uint64_t unique_ligand_heavy_atom_penetration_count;
+    double raw_minimum_distance_angstrom;
+    double minimum_vdw_surface_gap_angstrom;
+    double minimum_vdw_ratio;
+    double sphere_overlap_proxy_angstrom3;
+    double pocket_escape_angstrom;
+    uint64_t reserved[4];
+} bg_docking_geometric_admission_row_v1;
+
+typedef struct bg_docking_geometric_admission_output_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    uint64_t row_capacity;
+    uint64_t row_count;
+    bg_unit_system unit_system;
+    uint32_t reserved0;
+    bg_docking_geometric_admission_row_v1 *rows;
+    uint8_t molecular_execution_authorized;
+    uint8_t reservation_authorized;
+    uint8_t benchmark_execution_authorized;
+    uint8_t existing_rank_auto_change_authorized;
+    uint8_t customer_pose_emission_authorized;
+    uint8_t production_claim_authorized;
+    uint8_t scientific_claim_authorized;
+    uint8_t reserved1;
+    uint64_t reserved[4];
+} bg_docking_geometric_admission_output_v1;
 
 /*
  * Persistent Engine V2 ScorerV1 context input.  All channels and the four
@@ -1456,6 +1578,19 @@ BG_API bg_status BG_CALL bg_dynamics_report_v1_init(
     bg_dynamics_report_v1 *report,
     size_t caller_struct_size,
     uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_geometric_admission_context_soa_v1_init(
+    bg_docking_geometric_admission_context_soa_v1 *descriptor,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL
+bg_docking_geometric_admission_candidate_batch_soa_v1_init(
+    bg_docking_geometric_admission_candidate_batch_soa_v1 *batch,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_geometric_admission_output_v1_init(
+    bg_docking_geometric_admission_output_v1 *output,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
 BG_API bg_status BG_CALL bg_docking_scorer_v1_context_soa_v1_init(
     bg_docking_scorer_v1_context_soa_v1 *descriptor,
     size_t caller_struct_size,
@@ -1575,6 +1710,21 @@ BG_API bg_status BG_CALL bg_docking_fixed64_refinement_output_v1_init(
 #  define bg_dynamics_report_v1_init(report) \
     bg_dynamics_report_v1_init( \
         (report), sizeof(bg_dynamics_report_v1), BG_ABI_VERSION)
+#  define bg_docking_geometric_admission_context_soa_v1_init(descriptor) \
+    bg_docking_geometric_admission_context_soa_v1_init( \
+        (descriptor), \
+        sizeof(bg_docking_geometric_admission_context_soa_v1), \
+        BG_ABI_VERSION)
+#  define bg_docking_geometric_admission_candidate_batch_soa_v1_init(batch) \
+    bg_docking_geometric_admission_candidate_batch_soa_v1_init( \
+        (batch), \
+        sizeof(bg_docking_geometric_admission_candidate_batch_soa_v1), \
+        BG_ABI_VERSION)
+#  define bg_docking_geometric_admission_output_v1_init(output) \
+    bg_docking_geometric_admission_output_v1_init( \
+        (output), \
+        sizeof(bg_docking_geometric_admission_output_v1), \
+        BG_ABI_VERSION)
 #  define bg_docking_scorer_v1_context_soa_v1_init(descriptor) \
     bg_docking_scorer_v1_context_soa_v1_init( \
         (descriptor), \
@@ -1679,6 +1829,29 @@ BG_API bg_status BG_CALL bg_context_get_device_ordinal(
 BG_API bg_status BG_CALL bg_context_get_unit_system(
     const bg_context *context,
     bg_unit_system *unit_system) BG_NOEXCEPT;
+
+/*
+ * The same persistent full-Cartesian geometric gate is used before and after
+ * refinement. CPP_CPU_REFERENCE and RUST_CPU are independent native
+ * implementations. HIP_SAFE/HIP_FAST execute on their explicitly selected
+ * device and never fall back. Every call returns exactly 64 typed rows and
+ * grants no molecular, reservation, benchmark, rank-mutation, pose-emission,
+ * or claim authority.
+ */
+BG_API bg_status BG_CALL bg_docking_geometric_admission_v1_create(
+    const bg_context *context,
+    const bg_docking_geometric_admission_context_soa_v1 *descriptor,
+    bg_docking_geometric_admission_v1 **out_admission) BG_NOEXCEPT;
+BG_API void BG_CALL bg_docking_geometric_admission_v1_destroy(
+    bg_docking_geometric_admission_v1 *admission) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_geometric_admission_v1_get_backend(
+    const bg_docking_geometric_admission_v1 *admission,
+    bg_backend *backend) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_geometric_admission_v1_evaluate_fixed64(
+    const bg_context *context,
+    const bg_docking_geometric_admission_v1 *admission,
+    const bg_docking_geometric_admission_candidate_batch_soa_v1 *candidates,
+    bg_docking_geometric_admission_output_v1 *output) BG_NOEXCEPT;
 
 /*
  * Create a persistent ScorerV1 context for the explicitly selected backend.

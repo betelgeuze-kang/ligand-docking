@@ -18,6 +18,7 @@ const VENDORED_FILES: &[&str] = &[
     "native/src/rust/evaluator.cpp",
     "native/src/docking/fixed64_downstream.cpp",
     "native/src/docking/fixed64_refinement_pipeline.cpp",
+    "native/src/docking/geometric_admission.cpp",
     "native/src/docking/pose_validity.cpp",
     "native/src/docking/rigid_refinement.cpp",
     "native/src/docking/scorer_v1.cpp",
@@ -32,6 +33,7 @@ const VENDORED_FILES: &[&str] = &[
     "native/src/dynamics/sha256.cpp",
     "native/src/hip/provider.h",
     "native/src/hip/provider.hip",
+    "native/src/hip/docking_geometric_admission.hip",
     "native/src/hip/docking_scorer.hip",
     "native/src/hip/docking_pose_validity.hip",
     "native/src/hip/docking_stable_top_k.hip",
@@ -258,6 +260,8 @@ fn main() {
         vendor_root.join("native/src/docking/fixed64_downstream.cpp");
     let docking_fixed64_refinement_pipeline_source =
         vendor_root.join("native/src/docking/fixed64_refinement_pipeline.cpp");
+    let docking_geometric_admission_source =
+        vendor_root.join("native/src/docking/geometric_admission.cpp");
     let docking_scorer_source = vendor_root.join("native/src/docking/scorer_v1.cpp");
     let docking_pose_validity_source = vendor_root.join("native/src/docking/pose_validity.cpp");
     let docking_rigid_refinement_source =
@@ -297,6 +301,7 @@ fn main() {
         .file(&rust_evaluator_source)
         .file(&docking_fixed64_downstream_source)
         .file(&docking_fixed64_refinement_pipeline_source)
+        .file(&docking_geometric_admission_source)
         .file(&docking_pose_validity_source)
         .file(&docking_rigid_refinement_source)
         .file(&docking_scorer_source)

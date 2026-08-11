@@ -14,6 +14,7 @@ add_library(betelgeuze_engine SHARED
     src/rust/evaluator.cpp
     src/docking/fixed64_downstream.cpp
     src/docking/fixed64_refinement_pipeline.cpp
+    src/docking/geometric_admission.cpp
     src/docking/pose_validity.cpp
     src/docking/rigid_refinement.cpp
     src/docking/scorer_v1.cpp
@@ -214,6 +215,7 @@ if(BG_HIP_SAFE_COMPILED)
             "-I${CMAKE_CURRENT_SOURCE_DIR}/src/hip"
         DEPENDS
             "${CMAKE_CURRENT_SOURCE_DIR}/src/hip/provider.hip"
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/hip/docking_geometric_admission.hip"
             "${CMAKE_CURRENT_SOURCE_DIR}/src/hip/docking_scorer.hip"
             "${CMAKE_CURRENT_SOURCE_DIR}/src/hip/docking_pose_validity.hip"
             "${CMAKE_CURRENT_SOURCE_DIR}/src/hip/docking_stable_top_k.hip"
@@ -411,6 +413,43 @@ if(BUILD_TESTING)
     add_test(
         NAME betelgeuze_engine_cpu_evaluator
         COMMAND betelgeuze_engine_cpu_evaluator
+    )
+
+    add_executable(
+        betelgeuze_engine_docking_geometric_admission
+        tests/docking_geometric_admission.cpp
+    )
+    target_link_libraries(
+        betelgeuze_engine_docking_geometric_admission
+        PRIVATE betelgeuze_engine
+    )
+    target_compile_features(
+        betelgeuze_engine_docking_geometric_admission
+        PRIVATE cxx_std_17
+    )
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(
+            betelgeuze_engine_docking_geometric_admission
+            PRIVATE
+                -Wall
+                -Wextra
+                -Wpedantic
+                -Wconversion
+                -Wsign-conversion
+                -Werror
+                -UNDEBUG
+                -ffp-contract=off
+                -fno-fast-math
+        )
+    elseif(MSVC)
+        target_compile_options(
+            betelgeuze_engine_docking_geometric_admission
+            PRIVATE /W4 /WX /UNDEBUG /fp:strict
+        )
+    endif()
+    add_test(
+        NAME betelgeuze_engine_docking_geometric_admission
+        COMMAND betelgeuze_engine_docking_geometric_admission
     )
 
     add_executable(

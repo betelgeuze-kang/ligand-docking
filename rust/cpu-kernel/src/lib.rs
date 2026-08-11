@@ -14,7 +14,8 @@ use std::ffi::c_void;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use betelgeuze_docking_search::{
-    cluster_native_fixed64_direct_rmsd_kernel, rank_native_fixed64_stable_top_k_kernel,
+    cluster_native_fixed64_direct_rmsd_kernel, evaluate_fixed64_geometric_metrics,
+    rank_native_fixed64_stable_top_k_kernel, Fixed64GeometricErrorCode, Fixed64GeometricInput,
     NativeFixed64RmsdClusterErrorCode, NativeFixed64RmsdClusterInputRow,
     NativeFixed64StableTopKInputRow, NativeFixed64ValidityBackend, NativeFixed64ValidityChecks,
     NativeFixed64ValidityConfig, NativeFixed64ValidityContext, NativeFixed64ValidityFailureCode,
@@ -22,7 +23,9 @@ use betelgeuze_docking_search::{
     NativeFixed64ValidityRowStatus, NativeScorerV1Atom, NativeScorerV1Backend,
     NativeScorerV1Config, NativeScorerV1Context, NativeScorerV1Donor, NativeScorerV1FailureCode,
     NativeScorerV1KernelOutcome, NativeScorerV1RowStatus, Quaternion, Vec3,
-    FIXED64_CANDIDATE_COUNT, NATIVE_FIXED64_TOP_K_LIMIT,
+    FIXED64_CANDIDATE_COUNT, FIXED64_MAX_ABSOLUTE_COORDINATE_ANGSTROM,
+    FIXED64_MAX_BATCH_EXACT_PAIR_EVALUATIONS, FIXED64_MAX_LIGAND_ATOMS, FIXED64_MAX_RECEPTOR_ATOMS,
+    HARD_REJECTION_MINIMUM_VDW_RATIO, NATIVE_FIXED64_TOP_K_LIMIT,
 };
 use kernel::{AngleSoa, BondSoa, ForceField, Pair, PairScale, System, TorsionSoa};
 
@@ -71,6 +74,18 @@ const VALIDITY_CHECK_ALL: u32 = 0xff;
 const STABLE_TOP_K_LIMIT: u32 = NATIVE_FIXED64_TOP_K_LIMIT as u32;
 const RMSD_CLUSTER_ROW_CLUSTERED: i32 = 1;
 const RMSD_CLUSTER_ROW_UPSTREAM_NOT_VALID: i32 = 2;
+const GEOMETRIC_CANDIDATE_UPSTREAM_FAILURE: i32 = 0;
+const GEOMETRIC_CANDIDATE_EVALUATE: i32 = 1;
+const GEOMETRIC_ROW_EVALUATED: i32 = 1;
+const GEOMETRIC_ROW_UPSTREAM_FAILURE: i32 = 2;
+const GEOMETRIC_ROW_TYPED_FAILURE: i32 = 3;
+const GEOMETRIC_FAILURE_NONE: i32 = 0;
+const GEOMETRIC_FAILURE_UPSTREAM_NOT_AVAILABLE: i32 = 1;
+const GEOMETRIC_FAILURE_INVALID_CANDIDATE_COORDINATES: i32 = 2;
+const GEOMETRIC_FAILURE_NONFINITE_DERIVED_MEASUREMENT: i32 = 3;
+const GEOMETRIC_DECISION_NOT_EVALUATED: i32 = 0;
+const GEOMETRIC_DECISION_ACCEPTED: i32 = 1;
+const GEOMETRIC_DECISION_SEVERE_PENETRATION_REJECTED: i32 = 2;
 
 #[repr(C)]
 pub struct SystemV1 {
@@ -170,6 +185,77 @@ pub struct ErrorV1 {
     abi_version: u32,
     message: [u8; ERROR_CAPACITY],
     reserved: [u64; 4],
+}
+
+#[repr(C)]
+pub struct DockingGeometricAdmissionContextSoaV1 {
+    struct_size: u32,
+    abi_version: u32,
+    unit_system: i32,
+    reserved0: u32,
+    receptor_atom_count: u64,
+    ligand_atom_count: u64,
+    receptor_x_angstrom: *const f64,
+    receptor_y_angstrom: *const f64,
+    receptor_z_angstrom: *const f64,
+    receptor_vdw_radius_angstrom: *const f64,
+    ligand_vdw_radius_angstrom: *const f64,
+    ligand_heavy_atom_mask: *const u8,
+    pocket_center_angstrom: [f64; 3],
+    pocket_radius_angstrom: f64,
+    hard_rejection_minimum_vdw_ratio: f64,
+    max_batch_exact_pair_evaluations: u64,
+    authority_input_receipt_sha256: [u8; 32],
+    receptor_system_sha256: [u8; 32],
+    ligand_system_sha256: [u8; 32],
+    backend_receipt_sha256: [u8; 32],
+    reserved: [u64; 8],
+}
+
+#[repr(C)]
+pub struct DockingGeometricAdmissionCandidateBatchSoaV1 {
+    struct_size: u32,
+    abi_version: u32,
+    candidate_count: u64,
+    ligand_atom_count: u64,
+    unit_system: i32,
+    reserved0: u32,
+    candidate_state: *const i32,
+    x_angstrom: *const f64,
+    y_angstrom: *const f64,
+    z_angstrom: *const f64,
+    reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct DockingGeometricAdmissionRowV1 {
+    slot_index: u32,
+    status: i32,
+    failure_code: i32,
+    decision: i32,
+    rank_eligible: u8,
+    reserved0: [u8; 3],
+    reserved1: u32,
+    ligand_atom_count: u64,
+    receptor_atom_count: u64,
+    exact_pair_count: u64,
+    penetration_pair_count: u64,
+    unique_ligand_penetration_atom_count: u64,
+    unique_ligand_heavy_atom_penetration_count: u64,
+    raw_minimum_distance_angstrom: f64,
+    minimum_vdw_surface_gap_angstrom: f64,
+    minimum_vdw_ratio: f64,
+    sphere_overlap_proxy_angstrom3: f64,
+    pocket_escape_angstrom: f64,
+    reserved: [u64; 4],
+}
+
+struct GeometricAdmissionState {
+    input: Fixed64GeometricInput,
+    ligand_atom_count: usize,
+    receptor_atom_count: usize,
+    max_batch_exact_pair_evaluations: usize,
 }
 
 #[repr(C)]
@@ -969,6 +1055,319 @@ fn write_error(error: &mut ErrorV1, message: &str) {
 
 fn checked_usize(value: u64, message: &'static str) -> Result<usize, ProviderError> {
     usize::try_from(value).map_err(|_| ProviderError::capacity(message))
+}
+
+fn digest_present(value: &[u8; 32]) -> bool {
+    value.iter().any(|byte| *byte != 0)
+}
+
+unsafe fn build_geometric_admission_state(
+    descriptor: &DockingGeometricAdmissionContextSoaV1,
+) -> Result<GeometricAdmissionState, ProviderError> {
+    validate_header::<DockingGeometricAdmissionContextSoaV1>(
+        descriptor.struct_size,
+        descriptor.abi_version,
+        "rust_cpu geometric-admission context descriptor size mismatch",
+    )?;
+    if descriptor.unit_system != UNIT_SYSTEM_ANGSTROM_KCAL_MOL
+        || descriptor.reserved0 != 0
+        || !reserved_is_zero(&descriptor.reserved)
+        || descriptor.hard_rejection_minimum_vdw_ratio != HARD_REJECTION_MINIMUM_VDW_RATIO
+        || descriptor.max_batch_exact_pair_evaluations
+            != FIXED64_MAX_BATCH_EXACT_PAIR_EVALUATIONS as u64
+        || !digest_present(&descriptor.authority_input_receipt_sha256)
+        || !digest_present(&descriptor.receptor_system_sha256)
+        || !digest_present(&descriptor.ligand_system_sha256)
+        || !digest_present(&descriptor.backend_receipt_sha256)
+    {
+        return Err(ProviderError::invalid(
+            "rust_cpu geometric-admission policy, identity, units, or reserved fields are invalid",
+        ));
+    }
+    let receptor_count = checked_usize(
+        descriptor.receptor_atom_count,
+        "rust_cpu geometric-admission receptor count exceeds the host address space",
+    )?;
+    let ligand_count = checked_usize(
+        descriptor.ligand_atom_count,
+        "rust_cpu geometric-admission ligand count exceeds the host address space",
+    )?;
+    if receptor_count == 0
+        || receptor_count > FIXED64_MAX_RECEPTOR_ATOMS
+        || ligand_count == 0
+        || ligand_count > FIXED64_MAX_LIGAND_ATOMS
+    {
+        return Err(ProviderError::capacity(
+            "rust_cpu geometric-admission atom denominator is outside fixed bounds",
+        ));
+    }
+    // SAFETY: Counts are bounded and checked_slice validates pointer identity,
+    // alignment, and addressable byte length before forming each shared slice.
+    let receptor_x = unsafe {
+        checked_slice(
+            descriptor.receptor_x_angstrom,
+            receptor_count,
+            "rust_cpu geometric-admission receptor x channel is null",
+        )?
+    };
+    let receptor_y = unsafe {
+        checked_slice(
+            descriptor.receptor_y_angstrom,
+            receptor_count,
+            "rust_cpu geometric-admission receptor y channel is null",
+        )?
+    };
+    let receptor_z = unsafe {
+        checked_slice(
+            descriptor.receptor_z_angstrom,
+            receptor_count,
+            "rust_cpu geometric-admission receptor z channel is null",
+        )?
+    };
+    let receptor_radii = unsafe {
+        checked_slice(
+            descriptor.receptor_vdw_radius_angstrom,
+            receptor_count,
+            "rust_cpu geometric-admission receptor radii are null",
+        )?
+    };
+    let ligand_radii = unsafe {
+        checked_slice(
+            descriptor.ligand_vdw_radius_angstrom,
+            ligand_count,
+            "rust_cpu geometric-admission ligand radii are null",
+        )?
+    };
+    let ligand_heavy = unsafe {
+        checked_slice(
+            descriptor.ligand_heavy_atom_mask,
+            ligand_count,
+            "rust_cpu geometric-admission heavy-atom mask is null",
+        )?
+    };
+    if ligand_heavy.iter().any(|value| *value > 1) {
+        return Err(ProviderError::invalid(
+            "rust_cpu geometric-admission heavy-atom mask is not boolean",
+        ));
+    }
+    let receptor_coordinates = receptor_x
+        .iter()
+        .zip(receptor_y)
+        .zip(receptor_z)
+        .map(|((x, y), z)| Vec3::new(*x, *y, *z))
+        .collect();
+    let input = Fixed64GeometricInput::new(
+        ligand_radii.to_vec(),
+        ligand_heavy.iter().map(|value| *value == 1).collect(),
+        receptor_coordinates,
+        receptor_radii.to_vec(),
+        Vec3::new(
+            descriptor.pocket_center_angstrom[0],
+            descriptor.pocket_center_angstrom[1],
+            descriptor.pocket_center_angstrom[2],
+        ),
+        descriptor.pocket_radius_angstrom,
+    )
+    .map_err(|error| match error.code() {
+        Fixed64GeometricErrorCode::PairBudgetExceeded => {
+            ProviderError::capacity("rust_cpu geometric-admission context exceeds the pair budget")
+        }
+        _ => ProviderError::invalid("rust_cpu geometric-admission context geometry is invalid"),
+    })?;
+    Ok(GeometricAdmissionState {
+        input,
+        ligand_atom_count: ligand_count,
+        receptor_atom_count: receptor_count,
+        max_batch_exact_pair_evaluations: FIXED64_MAX_BATCH_EXACT_PAIR_EVALUATIONS,
+    })
+}
+
+fn geometric_failure_row(
+    slot_index: usize,
+    status: i32,
+    failure_code: i32,
+) -> DockingGeometricAdmissionRowV1 {
+    DockingGeometricAdmissionRowV1 {
+        slot_index: slot_index as u32,
+        status,
+        failure_code,
+        decision: GEOMETRIC_DECISION_NOT_EVALUATED,
+        rank_eligible: 0,
+        reserved0: [0; 3],
+        reserved1: 0,
+        ligand_atom_count: 0,
+        receptor_atom_count: 0,
+        exact_pair_count: 0,
+        penetration_pair_count: 0,
+        unique_ligand_penetration_atom_count: 0,
+        unique_ligand_heavy_atom_penetration_count: 0,
+        raw_minimum_distance_angstrom: 0.0,
+        minimum_vdw_surface_gap_angstrom: 0.0,
+        minimum_vdw_ratio: 0.0,
+        sphere_overlap_proxy_angstrom3: 0.0,
+        pocket_escape_angstrom: 0.0,
+        reserved: [0; 4],
+    }
+}
+
+unsafe fn evaluate_geometric_admission_fixed64(
+    state: &GeometricAdmissionState,
+    candidates: &DockingGeometricAdmissionCandidateBatchSoaV1,
+) -> Result<[DockingGeometricAdmissionRowV1; FIXED64_CANDIDATE_COUNT], ProviderError> {
+    validate_header::<DockingGeometricAdmissionCandidateBatchSoaV1>(
+        candidates.struct_size,
+        candidates.abi_version,
+        "rust_cpu geometric-admission candidate descriptor size mismatch",
+    )?;
+    if candidates.candidate_count != FIXED64_CANDIDATE_COUNT as u64
+        || checked_usize(
+            candidates.ligand_atom_count,
+            "rust_cpu geometric-admission candidate ligand count exceeds the host address space",
+        )? != state.ligand_atom_count
+        || candidates.unit_system != UNIT_SYSTEM_ANGSTROM_KCAL_MOL
+        || candidates.reserved0 != 0
+        || !reserved_is_zero(&candidates.reserved)
+    {
+        return Err(ProviderError::invalid(
+            "rust_cpu geometric-admission candidate denominator, units, or reserved fields are invalid",
+        ));
+    }
+    let coordinate_count = FIXED64_CANDIDATE_COUNT
+        .checked_mul(state.ligand_atom_count)
+        .ok_or_else(|| {
+            ProviderError::capacity("rust_cpu geometric-admission coordinate count overflowed")
+        })?;
+    // SAFETY: The public dispatcher has validated disjoint fixed64 channels;
+    // the provider independently checks all pointer identities and lengths.
+    let candidate_state = unsafe {
+        checked_slice(
+            candidates.candidate_state,
+            FIXED64_CANDIDATE_COUNT,
+            "rust_cpu geometric-admission candidate-state channel is null",
+        )?
+    };
+    let x = unsafe {
+        checked_slice(
+            candidates.x_angstrom,
+            coordinate_count,
+            "rust_cpu geometric-admission x channel is null",
+        )?
+    };
+    let y = unsafe {
+        checked_slice(
+            candidates.y_angstrom,
+            coordinate_count,
+            "rust_cpu geometric-admission y channel is null",
+        )?
+    };
+    let z = unsafe {
+        checked_slice(
+            candidates.z_angstrom,
+            coordinate_count,
+            "rust_cpu geometric-admission z channel is null",
+        )?
+    };
+    if candidate_state.iter().any(|value| {
+        *value != GEOMETRIC_CANDIDATE_UPSTREAM_FAILURE && *value != GEOMETRIC_CANDIDATE_EVALUATE
+    }) {
+        return Err(ProviderError::invalid(
+            "rust_cpu geometric-admission candidate state is invalid",
+        ));
+    }
+    let active_count = candidate_state
+        .iter()
+        .filter(|value| **value == GEOMETRIC_CANDIDATE_EVALUATE)
+        .count();
+    let batch_pairs = active_count
+        .checked_mul(state.ligand_atom_count)
+        .and_then(|value| value.checked_mul(state.receptor_atom_count))
+        .ok_or_else(|| {
+            ProviderError::capacity("rust_cpu geometric-admission batch pair count overflowed")
+        })?;
+    if batch_pairs > state.max_batch_exact_pair_evaluations {
+        return Err(ProviderError::capacity(
+            "rust_cpu geometric-admission batch pair work exceeds the frozen cap",
+        ));
+    }
+
+    let mut rows = [geometric_failure_row(
+        0,
+        GEOMETRIC_ROW_UPSTREAM_FAILURE,
+        GEOMETRIC_FAILURE_UPSTREAM_NOT_AVAILABLE,
+    ); FIXED64_CANDIDATE_COUNT];
+    for slot in 0..FIXED64_CANDIDATE_COUNT {
+        if candidate_state[slot] == GEOMETRIC_CANDIDATE_UPSTREAM_FAILURE {
+            rows[slot] = geometric_failure_row(
+                slot,
+                GEOMETRIC_ROW_UPSTREAM_FAILURE,
+                GEOMETRIC_FAILURE_UPSTREAM_NOT_AVAILABLE,
+            );
+            continue;
+        }
+        let begin = slot * state.ligand_atom_count;
+        let end = begin + state.ligand_atom_count;
+        let coordinates: Vec<Vec3> = (begin..end)
+            .map(|index| Vec3::new(x[index], y[index], z[index]))
+            .collect();
+        if coordinates.iter().any(|coordinate| {
+            !coordinate.is_finite()
+                || coordinate.x.abs() > FIXED64_MAX_ABSOLUTE_COORDINATE_ANGSTROM
+                || coordinate.y.abs() > FIXED64_MAX_ABSOLUTE_COORDINATE_ANGSTROM
+                || coordinate.z.abs() > FIXED64_MAX_ABSOLUTE_COORDINATE_ANGSTROM
+        }) {
+            rows[slot] = geometric_failure_row(
+                slot,
+                GEOMETRIC_ROW_TYPED_FAILURE,
+                GEOMETRIC_FAILURE_INVALID_CANDIDATE_COORDINATES,
+            );
+            continue;
+        }
+        let metrics = match evaluate_fixed64_geometric_metrics(&coordinates, &state.input) {
+            Ok(metrics) => metrics,
+            Err(error) => {
+                rows[slot] = geometric_failure_row(
+                    slot,
+                    GEOMETRIC_ROW_TYPED_FAILURE,
+                    if error.code() == Fixed64GeometricErrorCode::InvalidInput {
+                        GEOMETRIC_FAILURE_INVALID_CANDIDATE_COORDINATES
+                    } else {
+                        GEOMETRIC_FAILURE_NONFINITE_DERIVED_MEASUREMENT
+                    },
+                );
+                continue;
+            }
+        };
+        let rank_eligible = metrics.minimum_vdw_ratio() >= HARD_REJECTION_MINIMUM_VDW_RATIO;
+        rows[slot] = DockingGeometricAdmissionRowV1 {
+            slot_index: slot as u32,
+            status: GEOMETRIC_ROW_EVALUATED,
+            failure_code: GEOMETRIC_FAILURE_NONE,
+            decision: if rank_eligible {
+                GEOMETRIC_DECISION_ACCEPTED
+            } else {
+                GEOMETRIC_DECISION_SEVERE_PENETRATION_REJECTED
+            },
+            rank_eligible: u8::from(rank_eligible),
+            reserved0: [0; 3],
+            reserved1: 0,
+            ligand_atom_count: metrics.ligand_atom_count() as u64,
+            receptor_atom_count: metrics.receptor_atom_count() as u64,
+            exact_pair_count: metrics.exact_pair_count() as u64,
+            penetration_pair_count: metrics.penetration_pair_count() as u64,
+            unique_ligand_penetration_atom_count: metrics.unique_ligand_penetration_atom_count()
+                as u64,
+            unique_ligand_heavy_atom_penetration_count: metrics
+                .unique_ligand_heavy_atom_penetration_count()
+                as u64,
+            raw_minimum_distance_angstrom: metrics.raw_minimum_distance_angstrom(),
+            minimum_vdw_surface_gap_angstrom: metrics.minimum_vdw_surface_gap_angstrom(),
+            minimum_vdw_ratio: metrics.minimum_vdw_ratio(),
+            sphere_overlap_proxy_angstrom3: metrics.sphere_overlap_proxy_angstrom3(),
+            pocket_escape_angstrom: metrics.pocket_escape_angstrom(),
+            reserved: [0; 4],
+        };
+    }
+    Ok(rows)
 }
 
 fn docking_failure_code(code: NativeScorerV1FailureCode) -> i32 {
@@ -2536,6 +2935,155 @@ pub unsafe extern "C" fn bg_rust_cpu_evaluate_v1(
         }
         Err(_) => {
             write_error(error, "rust_cpu provider panicked");
+            STATUS_INTERNAL_ERROR
+        }
+    }
+}
+
+/// Construct a persistent Rust geometric-admission context.
+///
+/// # Safety
+/// The descriptor and all declared channels must remain readable for this
+/// call. `out_state` and `out_error` must be writable and correctly aligned.
+#[no_mangle]
+pub unsafe extern "C" fn bg_rust_cpu_docking_geometric_admission_v1_create(
+    descriptor: *const DockingGeometricAdmissionContextSoaV1,
+    out_state: *mut *mut c_void,
+    out_error: *mut ErrorV1,
+) -> i32 {
+    let error = unsafe {
+        match out_error.as_mut() {
+            Some(error) => error,
+            None => return STATUS_INVALID_ARGUMENT,
+        }
+    };
+    if validate_header::<ErrorV1>(
+        error.struct_size,
+        error.abi_version,
+        "rust_cpu error output size mismatch",
+    )
+    .is_err()
+        || !reserved_is_zero(&error.reserved)
+    {
+        return STATUS_ABI_MISMATCH;
+    }
+    clear_error(error);
+    let state_output = unsafe {
+        match out_state.as_mut() {
+            Some(output) => output,
+            None => {
+                write_error(error, "rust_cpu geometric-admission state output is null");
+                return STATUS_INVALID_ARGUMENT;
+            }
+        }
+    };
+    *state_output = ptr::null_mut();
+    let descriptor = unsafe {
+        match descriptor.as_ref() {
+            Some(descriptor) => descriptor,
+            None => {
+                write_error(
+                    error,
+                    "rust_cpu geometric-admission context descriptor is null",
+                );
+                return STATUS_INVALID_ARGUMENT;
+            }
+        }
+    };
+    let result = catch_unwind(AssertUnwindSafe(|| unsafe {
+        build_geometric_admission_state(descriptor)
+    }));
+    match result {
+        Ok(Ok(state)) => {
+            *state_output = Box::into_raw(Box::new(state)).cast::<c_void>();
+            STATUS_OK
+        }
+        Ok(Err(provider_error)) => {
+            write_error(error, provider_error.message);
+            provider_error.status
+        }
+        Err(_) => {
+            write_error(
+                error,
+                "rust_cpu geometric-admission context creation panicked",
+            );
+            STATUS_INTERNAL_ERROR
+        }
+    }
+}
+
+/// Destroy a Rust geometric-admission context.
+///
+/// # Safety
+/// A non-null pointer must be the unique state returned by the matching create
+/// function and must not be used after this call.
+#[no_mangle]
+pub unsafe extern "C" fn bg_rust_cpu_docking_geometric_admission_v1_destroy(state: *mut c_void) {
+    if !state.is_null() {
+        // SAFETY: The private dispatcher passes the unique Box pointer once.
+        drop(unsafe { Box::from_raw(state.cast::<GeometricAdmissionState>()) });
+    }
+}
+
+/// Evaluate all 64 fixed slots through the Rust geometric-admission kernel.
+///
+/// # Safety
+/// `state` must be live, candidate channels must be readable for their fixed
+/// denominators, and `out_rows` must address 64 writable aligned rows.
+#[no_mangle]
+pub unsafe extern "C" fn bg_rust_cpu_docking_geometric_admission_v1_evaluate_fixed64(
+    state: *const c_void,
+    candidates: *const DockingGeometricAdmissionCandidateBatchSoaV1,
+    out_rows: *mut DockingGeometricAdmissionRowV1,
+    out_error: *mut ErrorV1,
+) -> i32 {
+    let error = unsafe {
+        match out_error.as_mut() {
+            Some(error) => error,
+            None => return STATUS_INVALID_ARGUMENT,
+        }
+    };
+    if validate_header::<ErrorV1>(
+        error.struct_size,
+        error.abi_version,
+        "rust_cpu error output size mismatch",
+    )
+    .is_err()
+        || !reserved_is_zero(&error.reserved)
+    {
+        return STATUS_ABI_MISMATCH;
+    }
+    clear_error(error);
+    if state.is_null() || candidates.is_null() || out_rows.is_null() {
+        write_error(error, "rust_cpu geometric-admission batch pointer is null");
+        return STATUS_INVALID_ARGUMENT;
+    }
+    if (out_rows as usize) % align_of::<DockingGeometricAdmissionRowV1>() != 0 {
+        write_error(
+            error,
+            "rust_cpu geometric-admission row output is misaligned",
+        );
+        return STATUS_INVALID_ARGUMENT;
+    }
+    let state = unsafe { &*state.cast::<GeometricAdmissionState>() };
+    let candidates = unsafe { &*candidates };
+    let result = catch_unwind(AssertUnwindSafe(|| unsafe {
+        evaluate_geometric_admission_fixed64(state, candidates)
+    }));
+    match result {
+        Ok(Ok(rows)) => {
+            // SAFETY: The dispatcher supplies a disjoint private fixed64 array.
+            unsafe {
+                ptr::copy_nonoverlapping(rows.as_ptr(), out_rows, FIXED64_CANDIDATE_COUNT);
+            }
+            STATUS_OK
+        }
+        Ok(Err(provider_error)) => {
+            write_error(error, provider_error.message);
+            provider_error.status
+        }
+        Err(_) => {
+            write_error(error, "rust_cpu geometric-admission batch panicked");
             STATUS_INTERNAL_ERROR
         }
     }

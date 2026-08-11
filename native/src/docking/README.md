@@ -60,6 +60,18 @@ creation; overlapping buffers fail before work. The 64 rows retain the exact
 failure stage and coordinate origin, while execution, reservation, benchmark,
 rank-mutation, pose-emission, and claim authority remain false.
 
+ABI 1.13 adds one persistent full-Cartesian geometric-admission handle for the
+same fixed64 coordinates before or after refinement. Each evaluated row records
+raw minimum distance, minimum vdW surface gap and ratio, exact pair count,
+penetrating pair and unique ligand/heavy-atom counts, pairwise sphere-overlap
+volume, and pocket escape. The frozen hard rejection is strictly
+`minimum_vdw_ratio < 0.55`; equality remains admitted. Upstream and numerical
+failures stay in the 64-row denominator. C++, Rust CPU, `hip_safe`, and
+`hip_fast` keep independent persistent implementations, reject work above
+16,777,216 exact batch pairs, commit output transactionally, and grant no
+execution, reservation, benchmark, product mutation, pose-emission, or claim
+authority.
+
 The term order is:
 
 1. typed van der Waals

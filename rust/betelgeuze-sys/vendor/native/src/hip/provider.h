@@ -141,6 +141,22 @@ int32_t bg_hip_safe_evaluate_v1(
     char *error_message,
     size_t error_capacity);
 
+int32_t bg_hip_safe_docking_geometric_admission_v1_create(
+    int32_t device_ordinal,
+    const bg_docking_geometric_admission_context_soa_v1 *descriptor,
+    void **out_state,
+    char *error_message,
+    size_t error_capacity);
+
+void bg_hip_safe_docking_geometric_admission_v1_destroy(void *state);
+
+int32_t bg_hip_safe_docking_geometric_admission_v1_evaluate_fixed64(
+    const void *state,
+    const bg_docking_geometric_admission_candidate_batch_soa_v1 *candidates,
+    bg_docking_geometric_admission_row_v1 *out_rows,
+    char *error_message,
+    size_t error_capacity);
+
 int32_t bg_hip_safe_docking_scorer_v1_create(
     int32_t device_ordinal,
     const bg_docking_scorer_v1_context_soa_v1 *descriptor,
@@ -254,6 +270,22 @@ int32_t bg_hip_safe_docking_torsion_v7_refine_fixed64(
     double *out_final_y_angstrom,
     double *out_final_z_angstrom,
     double *out_final_torsion_angles_radians,
+    char *error_message,
+    size_t error_capacity);
+
+int32_t bg_hip_fast_docking_geometric_admission_v1_create(
+    int32_t device_ordinal,
+    const bg_docking_geometric_admission_context_soa_v1 *descriptor,
+    void **out_state,
+    char *error_message,
+    size_t error_capacity);
+
+void bg_hip_fast_docking_geometric_admission_v1_destroy(void *state);
+
+int32_t bg_hip_fast_docking_geometric_admission_v1_evaluate_fixed64(
+    const void *state,
+    const bg_docking_geometric_admission_candidate_batch_soa_v1 *candidates,
+    bg_docking_geometric_admission_row_v1 *out_rows,
     char *error_message,
     size_t error_capacity);
 
