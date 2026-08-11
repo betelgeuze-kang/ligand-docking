@@ -35,6 +35,14 @@ def _use_isolated_state_home(
     monkeypatch.setattr(v3, "_account_home_directory", lambda: tmp_path)
 
 
+def _allow_synthetic_test_double_execution(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Bypass only the environment guard for mocked, non-measuring unit paths."""
+
+    monkeypatch.setattr(v3, "_require_live_execution_environment_v3", lambda: None)
+
+
 def _reserve_test_attempt(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -246,6 +254,7 @@ def test_live_result_is_unforgeable_and_blocked_runner_never_launches(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    _allow_synthetic_test_double_execution(monkeypatch)
     with pytest.raises(v3.CPUPerformanceQualificationV3Error, match="caller"):
         v3.LiveCPUPerformanceRunResultV3()
 
@@ -270,6 +279,7 @@ def test_total_budget_starts_before_activation_and_profile_load(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    _allow_synthetic_test_double_execution(monkeypatch)
     attempt = _reserve_test_attempt(
         tmp_path, monkeypatch, output_name="timeout.json"
     )
@@ -301,6 +311,7 @@ def test_last_child_timeout_discards_all_measurements(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    _allow_synthetic_test_double_execution(monkeypatch)
     attempt = _reserve_test_attempt(
         tmp_path, monkeypatch, output_name="last-child-timeout.json"
     )
@@ -351,6 +362,7 @@ def test_source_postflight_drift_discards_all_measurements(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    _allow_synthetic_test_double_execution(monkeypatch)
     attempt = _reserve_test_attempt(
         tmp_path, monkeypatch, output_name="source-drift.json"
     )
@@ -381,6 +393,7 @@ def test_host_postflight_drift_discards_all_measurements(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    _allow_synthetic_test_double_execution(monkeypatch)
     attempt = _reserve_test_attempt(
         tmp_path, monkeypatch, output_name="host-drift.json"
     )
@@ -524,6 +537,7 @@ def test_artifact_reader_rejects_symlink_and_oversized_input() -> None:
 def test_exactly_once_transaction_persists_before_returning_decision(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    _allow_synthetic_test_double_execution(monkeypatch)
     with tempfile.TemporaryDirectory(
         prefix="engine-v2-v3-transaction-", dir="/tmp"
     ) as raw_directory:
@@ -570,6 +584,7 @@ def test_exactly_once_transaction_persists_before_returning_decision(
 def test_terminal_failure_burns_attempt_without_returning_decision(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    _allow_synthetic_test_double_execution(monkeypatch)
     with tempfile.TemporaryDirectory(
         prefix="engine-v2-v3-terminal-failure-", dir="/tmp"
     ) as raw_directory:
