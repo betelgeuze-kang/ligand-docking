@@ -57,6 +57,10 @@ from .docking.pipeline import (
 from .docking.interaction_refinement import (
     INTERACTION_AWARE_RIGID_HYBRID_ENSEMBLE_RECEIPT_V6_SCHEMA_ID,
 )
+from .docking.native_fixed64_consumers import (
+    NativeFixed64CliAdapter,
+    NativeFixed64ConsumerError,
+)
 from .docking.scorer_v1 import SCORER_V1_SCORE_ID, SCORER_V1_TERMS_SCHEMA_ID
 from .docking.torsion_contact_refinement import (
     INTERACTION_AWARE_TORSION_CONTACT_RECEIPT_V7_SCHEMA_ID,
@@ -910,6 +914,20 @@ def dock(
         raise StandaloneDockCliError(
             "synthetic D0 request failed exact package admission"
         ) from exc
+
+
+def dock_native_fixed64(input_path: Path) -> dict[str, object]:
+    """Run the strict versioned native fixed64 input without Python science."""
+
+    document = _load_canonical_json(
+        input_path,
+        name="native fixed64 input",
+        maximum=MAX_CLI_INPUT_BYTES,
+    )
+    try:
+        return NativeFixed64CliAdapter().run(document).to_dict()
+    except NativeFixed64ConsumerError as exc:
+        raise StandaloneDockCliError("native fixed64 docking failed closed") from exc
 
 
 def _load_canonical_json(path: Path, *, name: str, maximum: int) -> dict[str, object]:
@@ -2247,10 +2265,11 @@ def _parser() -> argparse.ArgumentParser:
     pocket.add_argument("--overwrite", action="store_true")
 
     docking = commands.add_parser("dock")
-    docking.add_argument("--receptor", type=Path, required=True)
-    docking.add_argument("--ligand", type=Path, required=True)
-    docking.add_argument("--pocket", type=Path, required=True)
-    docking.add_argument("--seed", type=int, required=True)
+    docking.add_argument("--receptor", type=Path)
+    docking.add_argument("--ligand", type=Path)
+    docking.add_argument("--pocket", type=Path)
+    docking.add_argument("--seed", type=int)
+    docking.add_argument("--native-fixed64-input", type=Path)
     docking.add_argument("--test-only-synthetic", action="store_true")
     docking.add_argument("--output", type=Path, required=True)
     docking.add_argument("--overwrite", action="store_true")
@@ -2295,22 +2314,52 @@ def main(argv: Sequence[str] | None = None) -> int:
                 input_paths=source_paths,
             )
         elif arguments.command == "dock":
-            document = dock(
-                receptor_path=arguments.receptor,
-                ligand_path=arguments.ligand,
-                pocket_path=arguments.pocket,
-                seed=arguments.seed,
-                synthetic_acknowledged=arguments.test_only_synthetic,
-            )
+            if arguments.native_fixed64_input is not None:
+                if any(
+                    value is not None
+                    for value in (
+                        arguments.receptor,
+                        arguments.ligand,
+                        arguments.pocket,
+                        arguments.seed,
+                    )
+                ) or arguments.test_only_synthetic:
+                    raise StandaloneDockCliError(
+                        "--native-fixed64-input cannot be combined with legacy dock inputs"
+                    )
+                document = dock_native_fixed64(arguments.native_fixed64_input)
+                input_paths = (arguments.native_fixed64_input,)
+            else:
+                if any(
+                    value is None
+                    for value in (
+                        arguments.receptor,
+                        arguments.ligand,
+                        arguments.pocket,
+                        arguments.seed,
+                    )
+                ):
+                    raise StandaloneDockCliError(
+                        "dock requires receptor, ligand, pocket, and seed unless "
+                        "--native-fixed64-input is used"
+                    )
+                document = dock(
+                    receptor_path=arguments.receptor,
+                    ligand_path=arguments.ligand,
+                    pocket_path=arguments.pocket,
+                    seed=arguments.seed,
+                    synthetic_acknowledged=arguments.test_only_synthetic,
+                )
+                input_paths = (
+                    arguments.receptor,
+                    arguments.ligand,
+                    arguments.pocket,
+                )
             _write_output(
                 document,
                 arguments.output,
                 overwrite=arguments.overwrite,
-                input_paths=(
-                    arguments.receptor,
-                    arguments.ligand,
-                    arguments.pocket,
-                ),
+                input_paths=input_paths,
             )
         elif arguments.command in {"verify", "report"}:
             result = _load_canonical_json(
@@ -2348,6 +2397,7 @@ __all__ = [
     "LIGAND_MANIFEST_SCHEMA_ID",
     "PIPELINE_REPORT_SCHEMA_ID",
     "PIPELINE_VERIFICATION_SCHEMA_ID",
+    "dock_native_fixed64",
     "STANDALONE_CLI_ID",
     "StandaloneDockCliError",
     "define_explicit_pocket",

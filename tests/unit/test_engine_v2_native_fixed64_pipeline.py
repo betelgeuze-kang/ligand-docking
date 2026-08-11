@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 import hashlib
+import json
 
 import pytest
 
@@ -11,6 +12,7 @@ from betelgeuze_engine_v2.docking.native_fixed64_consumers import (
     NativeFixed64ProductShadowAdapter,
     NativeFixed64PythonApi,
 )
+from betelgeuze_engine_v2.standalone_cli import main as standalone_main
 
 
 def _digest(marker: int) -> str:
@@ -258,6 +260,46 @@ def test_python_surfaces_are_thin_views_over_one_native_receipt(native) -> None:
         assert document["customer_pose_emission_authorized"] is False
         assert document["existing_rank_auto_change_authorized"] is False
         assert document["production_claim_authorized"] is False
+
+
+def test_betelgeuze_dock_command_routes_versioned_input_to_native_core(
+    native,
+    tmp_path,
+) -> None:
+    input_path = tmp_path / "native-fixed64-input.json"
+    output_path = tmp_path / "native-fixed64-output.json"
+    input_path.write_text(
+        json.dumps(
+            _input(),
+            allow_nan=False,
+            ensure_ascii=True,
+            separators=(",", ":"),
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="ascii",
+    )
+
+    status = standalone_main(
+        [
+            "dock",
+            "--native-fixed64-input",
+            str(input_path),
+            "--output",
+            str(output_path),
+        ]
+    )
+
+    assert status == 0
+    result = json.loads(output_path.read_text(encoding="ascii"))
+    assert result["consumer"] == "cli"
+    assert result["candidate_denominator"] == 64
+    assert result["pipeline_receipt_sha256"] == (
+        native.native_fixed64_exact_source_pipeline_v1(_input())[
+            "pipeline_receipt_sha256"
+        ]
+    )
+    assert result["customer_pose_emission_authorized"] is False
 
 
 def test_native_fixed64_source_groups_fill_only_their_predeclared_lanes(native) -> None:
