@@ -88,6 +88,9 @@ fn descriptor_initializers_reject_incompatible_callers_without_writing() {
         assert_initializer_exact(bg_docking_stable_top_k_output_v1_init);
         assert_initializer_exact(bg_docking_rmsd_cluster_input_v1_init);
         assert_initializer_exact(bg_docking_rmsd_cluster_output_v1_init);
+        assert_initializer_exact(bg_docking_rigid_refinement_context_soa_v1_init);
+        assert_initializer_exact(bg_docking_rigid_refinement_candidate_batch_soa_v1_init);
+        assert_initializer_exact(bg_docking_rigid_refinement_output_v1_init);
         assert_initializer_exact(bg_docking_torsion_v7_context_soa_v1_init);
         assert_initializer_exact(bg_docking_torsion_v7_candidate_batch_soa_v1_init);
         assert_initializer_exact(bg_docking_torsion_v7_output_v1_init);
@@ -319,6 +322,50 @@ fn descriptor_initializers_bind_size_version_and_units() {
         assert_eq!(cluster_output.existing_rank_auto_change_authorized, 0);
         assert_eq!(cluster_output.customer_pose_emission_authorized, 0);
         assert_eq!(cluster_output.production_claim_authorized, 0);
+
+        let mut rigid_context =
+            core::mem::MaybeUninit::<bg_docking_rigid_refinement_context_soa_v1>::uninit();
+        assert_eq!(
+            initialize(
+                bg_docking_rigid_refinement_context_soa_v1_init,
+                rigid_context.as_mut_ptr(),
+            ),
+            BG_STATUS_OK
+        );
+        let rigid_context = rigid_context.assume_init();
+        assert_eq!(rigid_context.unit_system, BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL);
+        assert_eq!(rigid_context.v2.maximum_backtracking_evaluations, 6);
+        assert_eq!(rigid_context.v3.maximum_rotation_steps, 2);
+        assert_eq!(rigid_context.clearance_v4.maximum_rotation_steps, 6);
+
+        let mut rigid_batch =
+            core::mem::MaybeUninit::<bg_docking_rigid_refinement_candidate_batch_soa_v1>::uninit();
+        assert_eq!(
+            initialize(
+                bg_docking_rigid_refinement_candidate_batch_soa_v1_init,
+                rigid_batch.as_mut_ptr(),
+            ),
+            BG_STATUS_OK
+        );
+        let rigid_batch = rigid_batch.assume_init();
+        assert_eq!(rigid_batch.candidate_count, 64);
+        assert_eq!(rigid_batch.unit_system, BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL);
+
+        let mut rigid_output =
+            core::mem::MaybeUninit::<bg_docking_rigid_refinement_output_v1>::uninit();
+        assert_eq!(
+            initialize(
+                bg_docking_rigid_refinement_output_v1_init,
+                rigid_output.as_mut_ptr(),
+            ),
+            BG_STATUS_OK
+        );
+        let rigid_output = rigid_output.assume_init();
+        assert_eq!(rigid_output.unit_system, BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL);
+        assert_eq!(rigid_output.molecular_execution_authorized, 0);
+        assert_eq!(rigid_output.existing_rank_auto_change_authorized, 0);
+        assert_eq!(rigid_output.customer_pose_emission_authorized, 0);
+        assert_eq!(rigid_output.production_claim_authorized, 0);
     }
 }
 

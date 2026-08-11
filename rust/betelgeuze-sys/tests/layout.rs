@@ -5,7 +5,7 @@ use betelgeuze_sys::*;
 #[test]
 fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(BG_ABI_VERSION_MAJOR, 1);
-    assert_eq!(BG_ABI_VERSION_MINOR, 9);
+    assert_eq!(BG_ABI_VERSION_MINOR, 10);
     assert_eq!(BG_ABI_VERSION, 1);
     assert_eq!(size_of::<bg_status>(), 4);
     assert_eq!(size_of::<bg_backend>(), 4);
@@ -18,6 +18,10 @@ fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(size_of::<bg_docking_pose_validity_row_status>(), 4);
     assert_eq!(size_of::<bg_docking_pose_validity_failure>(), 4);
     assert_eq!(size_of::<bg_docking_rmsd_cluster_row_status>(), 4);
+    assert_eq!(size_of::<bg_docking_rigid_refinement_candidate_mode>(), 4);
+    assert_eq!(size_of::<bg_docking_rigid_refinement_row_status>(), 4);
+    assert_eq!(size_of::<bg_docking_rigid_refinement_failure>(), 4);
+    assert_eq!(size_of::<bg_docking_rigid_refinement_profile>(), 4);
     assert_eq!(size_of::<bg_docking_torsion_v7_candidate_state>(), 4);
     assert_eq!(size_of::<bg_docking_torsion_v7_row_status>(), 4);
     assert_eq!(size_of::<bg_docking_torsion_v7_failure>(), 4);
@@ -43,6 +47,101 @@ fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(BG_PERIODIC_AXIS_Y, 2);
     assert_eq!(BG_PERIODIC_AXIS_Z, 4);
     assert_eq!(BG_PERIODIC_AXES_ALL, 7);
+}
+
+#[test]
+fn docking_rigid_refinement_layouts_match_the_c_header() {
+    assert_eq!(size_of::<bg_docking_rigid_v2_config_v1>(), 88);
+    assert_eq!(size_of::<bg_docking_rigid_v3_config_v1>(), 168);
+    assert_eq!(size_of::<bg_docking_rigid_refinement_context_soa_v1>(), 592);
+    assert_eq!(
+        offset_of!(
+            bg_docking_rigid_refinement_context_soa_v1,
+            receptor_atom_count
+        ),
+        16
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_rigid_refinement_context_soa_v1,
+            receptor_x_angstrom
+        ),
+        32
+    );
+    assert_eq!(
+        offset_of!(bg_docking_rigid_refinement_context_soa_v1, v2),
+        104
+    );
+    assert_eq!(
+        offset_of!(bg_docking_rigid_refinement_context_soa_v1, v3),
+        192
+    );
+    assert_eq!(
+        offset_of!(bg_docking_rigid_refinement_context_soa_v1, clearance_v4),
+        360
+    );
+    assert_eq!(
+        offset_of!(bg_docking_rigid_refinement_context_soa_v1, reserved),
+        528
+    );
+
+    assert_eq!(
+        size_of::<bg_docking_rigid_refinement_candidate_batch_soa_v1>(),
+        136
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_rigid_refinement_candidate_batch_soa_v1,
+            candidate_mode
+        ),
+        32
+    );
+    assert_eq!(
+        offset_of!(bg_docking_rigid_refinement_candidate_batch_soa_v1, reserved),
+        72
+    );
+
+    assert_eq!(size_of::<bg_docking_rigid_refinement_evidence_v1>(), 176);
+    assert_eq!(
+        offset_of!(bg_docking_rigid_refinement_evidence_v1, accepted_steps),
+        8
+    );
+    assert_eq!(
+        offset_of!(bg_docking_rigid_refinement_evidence_v1, initial_penalty),
+        48
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_rigid_refinement_evidence_v1,
+            total_translation_angstrom
+        ),
+        64
+    );
+    assert_eq!(
+        offset_of!(bg_docking_rigid_refinement_evidence_v1, reserved),
+        144
+    );
+
+    assert_eq!(size_of::<bg_docking_rigid_refinement_row_v1>(), 792);
+    assert_eq!(offset_of!(bg_docking_rigid_refinement_row_v1, selected), 24);
+    assert_eq!(
+        offset_of!(bg_docking_rigid_refinement_row_v1, reserved),
+        728
+    );
+
+    assert_eq!(size_of::<bg_docking_rigid_refinement_output_v1>(), 224);
+    assert_eq!(offset_of!(bg_docking_rigid_refinement_output_v1, rows), 48);
+    assert_eq!(
+        offset_of!(
+            bg_docking_rigid_refinement_output_v1,
+            molecular_execution_authorized
+        ),
+        152
+    );
+    assert_eq!(
+        offset_of!(bg_docking_rigid_refinement_output_v1, reserved),
+        160
+    );
 }
 
 #[test]
@@ -791,6 +890,10 @@ fn opaque_handles_are_only_used_behind_pointers() {
     );
     assert_eq!(
         size_of::<*mut bg_docking_stable_top_k_v1>(),
+        size_of::<usize>()
+    );
+    assert_eq!(
+        size_of::<*mut bg_docking_rigid_refinement>(),
         size_of::<usize>()
     );
 }

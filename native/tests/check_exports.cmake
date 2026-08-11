@@ -78,6 +78,15 @@ set(v1_9_symbols
     bg_docking_torsion_v7_get_backend
     bg_docking_torsion_v7_refine_fixed64
 )
+set(v1_10_symbols
+    bg_docking_rigid_refinement_context_soa_v1_init
+    bg_docking_rigid_refinement_candidate_batch_soa_v1_init
+    bg_docking_rigid_refinement_output_v1_init
+    bg_docking_rigid_refinement_create
+    bg_docking_rigid_refinement_destroy
+    bg_docking_rigid_refinement_get_backend
+    bg_docking_rigid_refinement_fixed64
+)
 foreach(line IN LISTS nm_lines)
     if(line STREQUAL "")
         continue()
@@ -92,10 +101,12 @@ foreach(line IN LISTS nm_lines)
        NOT unversioned STREQUAL "BETELGEUZE_ENGINE_1.6" AND
        NOT unversioned STREQUAL "BETELGEUZE_ENGINE_1.7" AND
        NOT unversioned STREQUAL "BETELGEUZE_ENGINE_1.8" AND
-       NOT unversioned STREQUAL "BETELGEUZE_ENGINE_1.9")
+       NOT unversioned STREQUAL "BETELGEUZE_ENGINE_1.9" AND
+       NOT unversioned STREQUAL "BETELGEUZE_ENGINE_1.10")
         message(FATAL_ERROR "unexpected exported symbol: ${symbol}")
     endif()
     if(unversioned MATCHES "^bg_")
+        list(FIND v1_10_symbols "${unversioned}" v1_10_index)
         list(FIND v1_9_symbols "${unversioned}" v1_9_index)
         list(FIND v1_8_symbols "${unversioned}" v1_8_index)
         list(FIND v1_7_symbols "${unversioned}" v1_7_index)
@@ -103,7 +114,9 @@ foreach(line IN LISTS nm_lines)
         list(FIND v1_5_symbols "${unversioned}" v1_5_index)
         list(FIND v1_3_symbols "${unversioned}" v1_3_index)
         list(FIND v1_1_symbols "${unversioned}" v1_1_index)
-        if(NOT v1_9_index EQUAL -1)
+        if(NOT v1_10_index EQUAL -1)
+            set(expected_version "BETELGEUZE_ENGINE_1.10")
+        elseif(NOT v1_9_index EQUAL -1)
             set(expected_version "BETELGEUZE_ENGINE_1.9")
         elseif(NOT v1_8_index EQUAL -1)
             set(expected_version "BETELGEUZE_ENGINE_1.8")

@@ -17,6 +17,7 @@ const VENDORED_FILES: &[&str] = &[
     "native/src/rust/evaluator.hpp",
     "native/src/rust/evaluator.cpp",
     "native/src/docking/pose_validity.cpp",
+    "native/src/docking/rigid_refinement.cpp",
     "native/src/docking/scorer_v1.cpp",
     "native/src/docking/stable_top_k.cpp",
     "native/src/docking/torsion_v7.cpp",
@@ -252,6 +253,8 @@ fn main() {
     let rust_evaluator_source = vendor_root.join("native/src/rust/evaluator.cpp");
     let docking_scorer_source = vendor_root.join("native/src/docking/scorer_v1.cpp");
     let docking_pose_validity_source = vendor_root.join("native/src/docking/pose_validity.cpp");
+    let docking_rigid_refinement_source =
+        vendor_root.join("native/src/docking/rigid_refinement.cpp");
     let docking_stable_top_k_source = vendor_root.join("native/src/docking/stable_top_k.cpp");
     let docking_torsion_v7_source = vendor_root.join("native/src/docking/torsion_v7.cpp");
     let dynamics_api_source = vendor_root.join("native/src/dynamics/api.cpp");
@@ -286,6 +289,7 @@ fn main() {
         .file(&hip_evaluator_source)
         .file(&rust_evaluator_source)
         .file(&docking_pose_validity_source)
+        .file(&docking_rigid_refinement_source)
         .file(&docking_scorer_source)
         .file(&docking_stable_top_k_source)
         .file(&docking_torsion_v7_source)
