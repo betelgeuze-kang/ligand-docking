@@ -47,6 +47,7 @@ def test_current_policy_verifies_without_authority() -> None:
         (("operational_input_integrity", "recursive_preflight_required"), False),
         (("output_live_integrity", "recursive_finalization_required"), False),
         (("refinement", "max_steps"), 25),
+        (("refinement", "execution_role"), "product_execution"),
         (("refinement", "result_dependent_retry_allowed"), True),
         (
             (
@@ -65,7 +66,9 @@ def test_current_policy_verifies_without_authority() -> None:
         (("failure_semantics", "typed_refinement_failure_reason_preserved"), False),
         (("failure_semantics", "slot_reallocation_allowed"), True),
         (("failure_semantics", "unexpected_runtime_failure_typed"), True),
+        (("post_refinement_geometric_admission", "kernel_backend"), "hip_safe"),
         (("authority", "molecular_cohort_execution_authorized"), True),
+        (("status",), "product_ready"),
     ),
 )
 def test_policy_tamper_fails_closed(

@@ -69,6 +69,8 @@ def frozen_mixed64_v7_post_admission_policy() -> dict[str, object]:
         },
         "refinement": {
             "refiner": "InteractionAwareTorsionContactEnsembleRefinerV7",
+            "execution_backend": "python_reference",
+            "execution_role": "independent_verifier_oracle_only",
             "max_steps": V7_REFINEMENT_MAX_STEPS,
             "torsion_eligible_slot_indices": list(V7_TORSION_ELIGIBLE_SLOT_INDICES),
             "implementation_source_binding": (
@@ -84,6 +86,8 @@ def frozen_mixed64_v7_post_admission_policy() -> dict[str, object]:
             "result_dependent_retry_allowed": False,
         },
         "post_refinement_geometric_admission": {
+            "kernel_backend": "python_reference",
+            "execution_role": "independent_verifier_oracle_only",
             "geometric_admission_v3_policy_sha256": (
                 BOUND_GEOMETRIC_ADMISSION_V3_POLICY_SHA256
             ),
@@ -124,7 +128,7 @@ def frozen_mixed64_v7_post_admission_policy() -> dict[str, object]:
             "github_actions_production_authority_allowed": False,
             "test_double_production_authority_allowed": False,
         },
-        "status": "synthetic_fixture_execution_only",
+        "status": "synthetic_python_oracle_fixture_only",
     }
 
 

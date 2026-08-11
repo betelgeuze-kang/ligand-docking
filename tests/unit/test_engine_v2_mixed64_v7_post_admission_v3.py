@@ -790,6 +790,10 @@ def test_record_factory_policy_signature_and_authority_are_frozen() -> None:
     policy = frozen_mixed64_v7_post_admission_policy()
     assert len(MIXED64_V7_POST_ADMISSION_POLICY_SHA256) == 64
     assert policy["refinement"]["max_steps"] == V7_REFINEMENT_MAX_STEPS == 24
+    assert policy["refinement"]["execution_role"] == "independent_verifier_oracle_only"
+    assert policy["post_refinement_geometric_admission"]["execution_role"] == (
+        "independent_verifier_oracle_only"
+    )
     assert policy["refinement"]["torsion_eligible_slot_indices"] == list(range(24, 44))
     assert policy["failure_semantics"]["unexpected_runtime_failure_typed"] is False
     assert all(value is False for value in policy["authority"].values())

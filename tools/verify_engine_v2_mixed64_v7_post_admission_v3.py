@@ -255,6 +255,8 @@ def verify_policy(path: Path = DEFAULT_POLICY_PATH) -> dict[str, object]:
         or document.get("operational_proposal_policy_sha256")
         != BOUND_OPERATIONAL_PROPOSAL_POLICY_SHA256
         or type(refinement) is not dict
+        or refinement.get("execution_backend") != "python_reference"
+        or refinement.get("execution_role") != "independent_verifier_oracle_only"
         or refinement.get("max_steps") != V7_REFINEMENT_MAX_STEPS == 24
         or refinement.get("maximum_implementation_source_bytes")
         != MAX_V7_IMPLEMENTATION_SOURCE_BYTES
@@ -271,6 +273,8 @@ def verify_policy(path: Path = DEFAULT_POLICY_PATH) -> dict[str, object]:
         or refinement.get("one_refinement_attempt_per_materialized_slot") is not True
         or refinement.get("result_dependent_retry_allowed") is not False
         or type(admission) is not dict
+        or admission.get("kernel_backend") != "python_reference"
+        or admission.get("execution_role") != "independent_verifier_oracle_only"
         or admission.get("geometric_admission_v3_policy_sha256")
         != BOUND_GEOMETRIC_ADMISSION_V3_POLICY_SHA256
         or admission.get("hard_rejection_threshold_binary64_hex")
@@ -328,6 +332,7 @@ def verify_policy(path: Path = DEFAULT_POLICY_PATH) -> dict[str, object]:
         type(authority) is not dict
         or not authority
         or any(type(value) is not bool or value for value in authority.values())
+        or document.get("status") != "synthetic_python_oracle_fixture_only"
     ):
         raise Mixed64V7PostAdmissionPolicyVerificationError(
             "V7 post-admission authority must remain exact false"
