@@ -82,3 +82,6 @@ jobs:
 
       - name: Test Rust C++ boundary
         run: cargo test --manifest-path rust/Cargo.toml --workspace --locked
+
+      - name: Test optimized Rust reference semantics
+        run: cargo test --manifest-path rust/Cargo.toml --workspace --locked --release
