@@ -100,7 +100,7 @@ jobs:
             numpy==1.26.4 \
             pandas==2.3.3 \
             PyYAML==6.0.3 \
-            rdkit-pypi==2022.9.5 \
+            rdkit==2022.9.5 \
             posebusters==0.3.1 \
             ruff==0.12.4 \
             torch==2.6.0

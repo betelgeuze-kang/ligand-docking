@@ -1091,7 +1091,7 @@ def _native_build_receipt(
     test_double: bool,
 ) -> Mapping[str, object]:
     try:
-        raw = module.build_info()  # type: ignore[attr-defined]
+        raw = module.docking_search_build_info()  # type: ignore[attr-defined]
     except Exception as exc:
         raise DockingSearchV2Error(
             "native docking-search build receipt is unavailable"

@@ -73,8 +73,9 @@ PRODUCT_ENTRYPOINTS = frozenset(
 )
 
 # This is the complete reverse import closure of external-oracle tooling, plus
-# historical dynamic-import compatibility shims.  The files remain available
-# in source for benchmark reproduction but never enter the product context.
+# benchmark-only qualification loaders and historical dynamic-import
+# compatibility shims.  The files remain available in source for benchmark
+# reproduction but never enter the product context.
 LEGACY_BENCHMARK_DOCKER_EXCLUSIONS = frozenset(
     {
         "tools/accounting/build_gpcr_drd2_full_forcefield_local_minimization_survival.py",
@@ -105,6 +106,8 @@ LEGACY_BENCHMARK_DOCKER_EXCLUSIONS = frozenset(
         "tools/product/run_openmm_2bead_rebench.py",
         "tools/product/run_openmm_2bead_strict_release.py",
         "tools/product/run_strict_release_with_regression_gate.py",
+        "tools/run_engine_v2_cpu_performance_qualification.py",
+        "tools/run_engine_v2_cpu_performance_qualification_v3.py",
         "tools/run_engine_v2_public_redocking_300.py",
         "tools/run_docking_search_v2_development_cohort.py",
         "tools/run_live_unseen_protein_learning_loop.py",

@@ -94,7 +94,9 @@ def test_h4_hosted_workflow_covers_tier_alpha_runtime_binding_contract() -> None
 
     assert "tests/unit/test_api_validated_runner_adapter.py" in pull_request_paths
     assert "tests/unit/test_api_worker_deploy_artifacts.py" in pull_request_paths
-    assert "tests/unit/test_api_validated_runner_adapter.py" not in adjacent_test_command
+    assert (
+        "tests/unit/test_api_validated_runner_adapter.py" not in adjacent_test_command
+    )
     assert "tests/unit/test_api_worker_deploy_artifacts.py" not in adjacent_test_command
     assert (
         "test_validated_runner_child_environment_excludes_service_secrets"
@@ -119,7 +121,9 @@ def test_h4_hosted_workflow_covers_tier_alpha_runtime_binding_contract() -> None
 
 
 @pytest.mark.parametrize("workflow_name", sorted(TRUSTED_WORKFLOWS))
-def test_trusted_workflow_files_have_no_pull_request_trigger(workflow_name: str) -> None:
+def test_trusted_workflow_files_have_no_pull_request_trigger(
+    workflow_name: str,
+) -> None:
     workflow = yaml.load(
         (WORKFLOW_DIR / workflow_name).read_text(encoding="utf-8"),
         Loader=yaml.BaseLoader,
@@ -127,6 +131,25 @@ def test_trusted_workflow_files_have_no_pull_request_trigger(workflow_name: str)
 
     assert "pull_request" not in workflow["on"]
     assert "pull_request_target" not in workflow["on"]
+
+
+def test_native_hip_qualification_is_manual_read_only_and_secret_free() -> None:
+    path = WORKFLOW_DIR / "ci-native-hip-safe-trusted.yml"
+    workflow = yaml.load(path.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+    source = path.read_text(encoding="utf-8")
+    job = workflow["jobs"]["synthetic-hip-safe-parity"]
+    checkout = job["steps"][0]
+
+    assert set(workflow["on"]) == {"workflow_dispatch"}
+    assert workflow["permissions"] == {"contents": "read"}
+    assert job["runs-on"] == ["self-hosted", "linux", "rocm"]
+    assert checkout["uses"].startswith("actions/checkout@")
+    assert checkout["with"]["persist-credentials"] == "false"
+    assert checkout["with"]["clean"] == "true"
+    assert "pull_request" not in source
+    assert "pull_request_target" not in source
+    assert "secrets." not in source
+    assert "id-token: write" not in source
 
 
 def test_policy_rejects_a_self_hosted_pull_request_runner(tmp_path: Path) -> None:

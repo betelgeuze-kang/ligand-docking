@@ -62,9 +62,11 @@ def test_repository_satisfies_external_oracle_boundary() -> None:
     )
 
 
-def test_docking_search_v2_operator_tools_are_product_image_exclusions() -> None:
+def test_scientific_qualification_tools_are_product_image_exclusions() -> None:
     assert {
         "tools/run_docking_search_v2_development_cohort.py",
+        "tools/run_engine_v2_cpu_performance_qualification.py",
+        "tools/run_engine_v2_cpu_performance_qualification_v3.py",
         "tools/benchmarking/__init__.py",
         "tools/benchmarking/build_docking_search_v2_development_evidence.py",
     }.issubset(architecture.LEGACY_BENCHMARK_DOCKER_EXCLUSIONS)

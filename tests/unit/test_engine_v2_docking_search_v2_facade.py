@@ -276,7 +276,7 @@ class _FakeNative:
         self._build_overrides = dict(build_overrides or {})
         self.calls = 0
 
-    def build_info(self) -> dict[str, str]:
+    def docking_search_build_info(self) -> dict[str, str]:
         result = {
             "backend_id": "rust_cpu_required",
             "backend_version": "0.2.0-rc.6",
