@@ -135,9 +135,9 @@ fn dual_transform(
         .plus(translation)
         .minus(target_secondary)
         .norm();
-    let fit_rmsd =
-        ((primary_residual * primary_residual + secondary_residual * secondary_residual) * 0.5)
-            .sqrt();
+    let fit_rmsd = libm::sqrt(
+        (primary_residual * primary_residual + secondary_residual * secondary_residual) * 0.5,
+    );
     Ok((rotation, translation, fit_rmsd))
 }
 

@@ -8,6 +8,7 @@ publish = false
 description = "Deterministic native docking-search core for Betelgeuze"
 
 [dependencies]
+libm = { version = "=0.2.16", default-features = false }
 
 [lints.rust]
 unsafe_code = "forbid"

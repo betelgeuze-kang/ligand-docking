@@ -89,15 +89,19 @@ fn low_discrepancy_quaternion(
     let unit = core::array::from_fn::<_, 3, _>(|index| {
         (radical_inverse(raw_index, LOW_DISCREPANCY_BASES[index]) + offsets[index]).fract()
     });
-    let first_radius = (1.0 - unit[0]).max(0.0).sqrt();
-    let second_radius = unit[0].max(0.0).sqrt();
+    // Receipt identities bind the exact f64 quaternion bits.  The platform
+    // libm supplied by the execution host is therefore not part of this ABI:
+    // use the pinned pure-Rust implementation for every transcendental in the
+    // low-discrepancy sequence.
+    let first_radius = libm::sqrt((1.0 - unit[0]).max(0.0));
+    let second_radius = libm::sqrt(unit[0].max(0.0));
     let first_angle = 2.0 * core::f64::consts::PI * unit[1];
     let second_angle = 2.0 * core::f64::consts::PI * unit[2];
     Quaternion::new(
-        first_radius * first_angle.sin(),
-        first_radius * first_angle.cos(),
-        second_radius * second_angle.sin(),
-        second_radius * second_angle.cos(),
+        first_radius * libm::sin(first_angle),
+        first_radius * libm::cos(first_angle),
+        second_radius * libm::sin(second_angle),
+        second_radius * libm::cos(second_angle),
     )
     .canonicalized()
 }
@@ -113,12 +117,12 @@ fn quaternion_geodesic_distance(left: Quaternion, right: Quaternion) -> f64 {
     let sy = left.y + sign * right.y;
     let sz = left.z + sign * right.z;
     let sw = left.w + sign * right.w;
-    let difference = (dx * dx + dy * dy + dz * dz + dw * dw).sqrt();
-    let sum = (sx * sx + sy * sy + sz * sz + sw * sw).sqrt();
+    let difference = libm::sqrt(dx * dx + dy * dy + dz * dz + dw * dw);
+    let sum = libm::sqrt(sx * sx + sy * sy + sz * sz + sw * sw);
     if difference <= GEOMETRY_EPSILON && sum <= GEOMETRY_EPSILON {
         0.0
     } else {
-        4.0 * difference.atan2(sum)
+        4.0 * libm::atan2(difference, sum)
     }
 }
 

@@ -94,5 +94,5 @@ fn coordinate_rmsd(left: &[crate::Vec3], right: &[crate::Vec3]) -> f64 {
         .zip(right)
         .map(|(left, right)| left.minus(*right).norm_squared())
         .sum::<f64>();
-    (squared_sum / left.len() as f64).sqrt()
+    libm::sqrt(squared_sum / left.len() as f64)
 }

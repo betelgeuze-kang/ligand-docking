@@ -35,8 +35,12 @@ def test_external_oracle_ci_pins_composite_runtime_and_sandbox() -> None:
     )
 
     source = WORKFLOW.read_text(encoding="utf-8")
-    assert "util-linux libseccomp2" in source
+    assert "command -v unshare" in source
+    assert "unshare --version" in source
+    assert 'ctypes.util.find_library("seccomp")' in source
     assert 'library.endswith(".so.2")' in source
+    assert "sudo apt-get" not in source
+    assert "sudo apt " not in source
     assert "--require-hashes" in source
     assert "--only-binary=:all:" in source
     assert "openmm_runtime_dependency_distributions_sha256" in source

@@ -215,6 +215,27 @@ def test_native_manifest_release_profile_is_exactly_frozen() -> None:
     _verify_manifest_profile(Path("rust_engine_v2/Cargo.toml"))
 
 
+def test_docking_search_pins_portable_pure_rust_transcendentals() -> None:
+    manifest = tomllib.loads(
+        Path("rust/betelgeuze-docking-search/Cargo.toml").read_text(encoding="utf-8")
+    )
+    assert manifest["dependencies"]["libm"] == {
+        "version": "=0.2.16",
+        "default-features": False,
+    }
+
+    platform_math = re.compile(
+        r"\.(?:sin|cos|sqrt|hypot|atan2|acos|asin|tan|exp|ln|powf)\("
+    )
+    for source_path in sorted(
+        Path("rust/betelgeuze-docking-search/src").glob("*.rs")
+    ):
+        production_source = source_path.read_text(encoding="utf-8").split(
+            "#[cfg(test)]", 1
+        )[0]
+        assert platform_math.search(production_source) is None, source_path
+
+
 def test_native_wheel_member_guard_accepts_only_separate_extension(
     tmp_path: Path,
 ) -> None:

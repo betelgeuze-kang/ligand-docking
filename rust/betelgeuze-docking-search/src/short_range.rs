@@ -220,12 +220,12 @@ fn accumulate_receptor(
             if distance >= config.cutoff_angstrom {
                 continue;
             }
-            let soft_distance = distance.hypot(config.softcore_angstrom);
+            let soft_distance = libm::hypot(distance, config.softcore_angstrom);
             let contact_distance =
                 ligand_atom.vdw_radius_angstrom + receptor_atom.vdw_radius_angstrom;
             let sigma = contact_distance / TWO_TO_ONE_SIXTH;
             let epsilon =
-                (ligand_atom.epsilon_kcal_per_mol * receptor_atom.epsilon_kcal_per_mol).sqrt();
+                libm::sqrt(ligand_atom.epsilon_kcal_per_mol * receptor_atom.epsilon_kcal_per_mol);
             let sigma_over_r = sigma / soft_distance;
             let sr2 = sigma_over_r * sigma_over_r;
             let sr6 = sr2 * sr2 * sr2;
