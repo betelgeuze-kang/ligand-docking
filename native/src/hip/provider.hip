@@ -1152,6 +1152,19 @@ extern "C" int32_t bg_hip_safe_evaluate_v1(
 #undef BG_HIP_COPY_INPUT
 }
 
+#define BG_DOCKING_GEOMETRIC_CREATE \
+    bg_hip_safe_docking_geometric_admission_v1_create
+#define BG_DOCKING_GEOMETRIC_DESTROY \
+    bg_hip_safe_docking_geometric_admission_v1_destroy
+#define BG_DOCKING_GEOMETRIC_EVALUATE_FIXED64 \
+    bg_hip_safe_docking_geometric_admission_v1_evaluate_fixed64
+#define BG_DOCKING_GEOMETRIC_LANE "hip_safe"
+#include "docking_geometric_admission.hip"
+#undef BG_DOCKING_GEOMETRIC_LANE
+#undef BG_DOCKING_GEOMETRIC_EVALUATE_FIXED64
+#undef BG_DOCKING_GEOMETRIC_DESTROY
+#undef BG_DOCKING_GEOMETRIC_CREATE
+
 #define BG_DOCKING_SCORER_CREATE bg_hip_safe_docking_scorer_v1_create
 #define BG_DOCKING_SCORER_DESTROY bg_hip_safe_docking_scorer_v1_destroy
 #define BG_DOCKING_SCORER_SCORE_FIXED64 \

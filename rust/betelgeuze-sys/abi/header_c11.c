@@ -5,7 +5,7 @@
 
 _Static_assert(BG_ABI_VERSION == UINT32_C(1), "unexpected ABI version");
 _Static_assert(BG_ABI_VERSION_MAJOR == UINT32_C(1), "unexpected ABI major version");
-_Static_assert(BG_ABI_VERSION_MINOR == UINT32_C(12), "unexpected ABI minor version");
+_Static_assert(BG_ABI_VERSION_MINOR == UINT32_C(13), "unexpected ABI minor version");
 _Static_assert(BG_STATUS_OK == 0, "unexpected success status");
 _Static_assert(BG_STATUS_NUMERICAL_ERROR == 10, "unexpected numerical status");
 _Static_assert(BG_BACKEND_CPU == 1, "unexpected CPU backend value");
@@ -23,6 +23,18 @@ _Static_assert(
     sizeof(bg_unit_system) == sizeof(int32_t),
     "bg_unit_system width changed");
 _Static_assert(sizeof(bg_integrator) == sizeof(int32_t), "bg_integrator width changed");
+_Static_assert(
+    sizeof(bg_docking_geometric_admission_candidate_state) == sizeof(int32_t),
+    "geometric-admission candidate state width changed");
+_Static_assert(
+    sizeof(bg_docking_geometric_admission_row_status) == sizeof(int32_t),
+    "geometric-admission row status width changed");
+_Static_assert(
+    sizeof(bg_docking_geometric_admission_failure) == sizeof(int32_t),
+    "geometric-admission failure width changed");
+_Static_assert(
+    sizeof(bg_docking_geometric_admission_decision) == sizeof(int32_t),
+    "geometric-admission decision width changed");
 _Static_assert(
     sizeof(bg_docking_scorer_v1_candidate_state) == sizeof(int32_t),
     "ScorerV1 candidate state width changed");
@@ -88,6 +100,18 @@ _Static_assert(BG_PERIODIC_AXIS_Z == UINT32_C(4), "unexpected periodic Z bit");
 _Static_assert(BG_PERIODIC_AXES_ALL == UINT32_C(7), "unexpected periodic axes mask");
 
 #if UINTPTR_MAX == UINT64_MAX
+_Static_assert(
+    sizeof(bg_docking_geometric_admission_context_soa_v1) == 320,
+    "geometric-admission context ABI changed");
+_Static_assert(
+    sizeof(bg_docking_geometric_admission_candidate_batch_soa_v1) == 96,
+    "geometric-admission candidate batch ABI changed");
+_Static_assert(
+    sizeof(bg_docking_geometric_admission_row_v1) == 144,
+    "geometric-admission row ABI changed");
+_Static_assert(
+    sizeof(bg_docking_geometric_admission_output_v1) == 80,
+    "geometric-admission output ABI changed");
 _Static_assert(
     sizeof(bg_docking_scorer_v1_context_soa_v1) == 608,
     "ScorerV1 context ABI changed");

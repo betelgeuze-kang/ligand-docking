@@ -22,6 +22,14 @@ static_assert(std::is_standard_layout<bg_simulation_options_v1>::value);
 static_assert(std::is_standard_layout<bg_minimizer_options_v1>::value);
 static_assert(std::is_standard_layout<bg_minimization_report_v1>::value);
 static_assert(std::is_standard_layout<bg_dynamics_report_v1>::value);
+static_assert(std::is_standard_layout<
+              bg_docking_geometric_admission_context_soa_v1>::value);
+static_assert(std::is_standard_layout<
+              bg_docking_geometric_admission_candidate_batch_soa_v1>::value);
+static_assert(
+    std::is_standard_layout<bg_docking_geometric_admission_row_v1>::value);
+static_assert(
+    std::is_standard_layout<bg_docking_geometric_admission_output_v1>::value);
 static_assert(std::is_standard_layout<bg_docking_scorer_v1_context_soa_v1>::value);
 static_assert(
     std::is_standard_layout<bg_docking_scorer_v1_candidate_batch_soa_v1>::value);
@@ -69,6 +77,7 @@ static_assert(!is_complete<bg_context>::value);
 static_assert(!is_complete<bg_system>::value);
 static_assert(!is_complete<bg_forcefield>::value);
 static_assert(!is_complete<bg_simulation>::value);
+static_assert(!is_complete<bg_docking_geometric_admission_v1>::value);
 static_assert(!is_complete<bg_docking_scorer_v1>::value);
 static_assert(!is_complete<bg_docking_pose_validity_v1>::value);
 static_assert(!is_complete<bg_docking_stable_top_k_v1>::value);
@@ -88,6 +97,47 @@ static_assert(offsetof(bg_context_options, flags) == 24);
 static_assert(offsetof(bg_context_options, reserved) == 32);
 
 #if INTPTR_MAX == INT64_MAX
+static_assert(sizeof(bg_docking_geometric_admission_context_soa_v1) == 320);
+static_assert(alignof(bg_docking_geometric_admission_context_soa_v1) == 8);
+static_assert(offsetof(
+                  bg_docking_geometric_admission_context_soa_v1,
+                  receptor_atom_count) == 16);
+static_assert(offsetof(
+                  bg_docking_geometric_admission_context_soa_v1,
+                  receptor_x_angstrom) == 32);
+static_assert(offsetof(
+                  bg_docking_geometric_admission_context_soa_v1,
+                  pocket_center_angstrom) == 80);
+static_assert(offsetof(
+                  bg_docking_geometric_admission_context_soa_v1,
+                  authority_input_receipt_sha256) == 128);
+static_assert(offsetof(
+                  bg_docking_geometric_admission_context_soa_v1,
+                  reserved) == 256);
+static_assert(
+    sizeof(bg_docking_geometric_admission_candidate_batch_soa_v1) == 96);
+static_assert(offsetof(
+                  bg_docking_geometric_admission_candidate_batch_soa_v1,
+                  candidate_state) == 32);
+static_assert(offsetof(
+                  bg_docking_geometric_admission_candidate_batch_soa_v1,
+                  reserved) == 64);
+static_assert(sizeof(bg_docking_geometric_admission_row_v1) == 144);
+static_assert(offsetof(bg_docking_geometric_admission_row_v1, rank_eligible) == 16);
+static_assert(offsetof(
+                  bg_docking_geometric_admission_row_v1,
+                  ligand_atom_count) == 24);
+static_assert(offsetof(
+                  bg_docking_geometric_admission_row_v1,
+                  raw_minimum_distance_angstrom) == 72);
+static_assert(offsetof(bg_docking_geometric_admission_row_v1, reserved) == 112);
+static_assert(sizeof(bg_docking_geometric_admission_output_v1) == 80);
+static_assert(offsetof(bg_docking_geometric_admission_output_v1, rows) == 32);
+static_assert(offsetof(
+                  bg_docking_geometric_admission_output_v1,
+                  molecular_execution_authorized) == 40);
+static_assert(offsetof(bg_docking_geometric_admission_output_v1, reserved) == 48);
+
 static_assert(sizeof(bg_docking_scorer_v1_context_soa_v1) == 608);
 static_assert(alignof(bg_docking_scorer_v1_context_soa_v1) == 8);
 static_assert(offsetof(bg_docking_scorer_v1_context_soa_v1, receptor_atom_count) == 16);

@@ -47,3 +47,10 @@ host orchestration derives V7 eligibility, baseline step counts, final
 coordinate selection, and quaternion composition once for every backend. Rust
 therefore executes the same fixed64 refinement-to-ranking-and-clustering graph
 as C++ and HIP without a Python callback or backend relabeling.
+
+ABI 1.13 adds an independent persistent Rust geometric-admission provider. It
+uses the canonical Rust full-Cartesian metric kernel for every active fixed64
+slot, retains upstream and coordinate failures as typed rows, applies the
+strict-below-0.55 rejection boundary, and enforces the frozen batch pair cap.
+Its private FFI copies all context state and commits no rows until the complete
+batch succeeds; no execution or product authority is introduced.

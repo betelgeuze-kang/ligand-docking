@@ -18,9 +18,10 @@ The repository's legacy ROCm 5.7.1 bitcode fallback is intentionally never
 searched or accepted by this provider.
 
 The native fixed64 docking slice now covers Scorer v1, pose validity, stable
-Top-K/direct-RMSD clustering, and bounded torsion V7 in both `hip_safe` and
-`hip_fast`. Torsion V7 keeps the receptor/topology context resident on the
-selected device, evaluates all 64 candidate rows without denominator deletion,
+Top-K/direct-RMSD clustering, geometric admission, and bounded torsion V7 in
+both `hip_safe` and `hip_fast`. Torsion V7 keeps the receptor/topology context
+resident on the selected device, evaluates all 64 candidate rows without
+denominator deletion,
 returns typed per-row failures and complete move/coordinate evidence, and
 leaves molecular execution, rank mutation, pose emission, and claim authority
 false. The C++ reference and Rust CPU providers remain independent parity
@@ -41,6 +42,14 @@ while a shared host selection step preserves all 64 rows and commits every
 output transactionally. Device parity covers final coordinates, quaternions,
 failure stages, score terms, validity, rank, cluster membership, and stable
 representative evidence.
+
+ABI 1.13 adds a persistent pre/post-refinement geometric-admission device
+context. One serial thread per fixed64 slot performs the frozen full-Cartesian
+vdW traversal, sphere-overlap proxy, and pocket-escape calculation without
+atomics or denominator deletion. The exact 0.55 boundary, typed failure codes,
+all integer counts, floating metrics within the qualified binary64 envelope,
+and bit-identical repeated device rows are checked against the independent CPU
+implementations.
 
 Builds without a complete ROCm compiler/runtime link a fail-closed stub and
 report the backend unavailable. A compiled provider still reports unavailable
