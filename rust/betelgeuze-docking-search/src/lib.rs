@@ -11,7 +11,9 @@ mod error;
 mod fixed64;
 mod fixed64_placement;
 mod fixed64_producer;
+mod fixed64_ranking;
 mod fixed64_single_anchor;
+mod fixed64_validity;
 mod geometric_admission;
 mod geometry;
 mod identity;
@@ -56,8 +58,29 @@ pub use fixed64_producer::{
     NATIVE_FIXED64_PRODUCER_PROFILE_ID, NATIVE_FIXED64_PROPOSAL_RECORD_SCHEMA_ID,
     NATIVE_FIXED64_SOURCE_BUNDLE_SCHEMA_ID,
 };
+pub use fixed64_ranking::{
+    rank_native_fixed64_top_k, NativeFixed64RankingBatch, NativeFixed64RankingError,
+    NativeFixed64RankingErrorCode, NativeFixed64RankingRecord,
+    NATIVE_FIXED64_PRIMARY_RANKING_SEMANTICS, NATIVE_FIXED64_RANKING_ALGORITHM_ID,
+    NATIVE_FIXED64_RANKING_BATCH_SCHEMA_ID, NATIVE_FIXED64_RANKING_RECORD_SCHEMA_ID,
+    NATIVE_FIXED64_TOP_K_LIMIT, NATIVE_FIXED64_VALID_RANKING_SEMANTICS,
+};
 pub use fixed64_single_anchor::{
     generate_native_fixed64_single_anchor, Fixed64SingleAnchorPlacement,
+};
+pub use fixed64_validity::{
+    evaluate_native_fixed64_pose_validity, NativeFixed64ValidityBackend,
+    NativeFixed64ValidityBatch, NativeFixed64ValidityBlocker, NativeFixed64ValidityChecks,
+    NativeFixed64ValidityConfig, NativeFixed64ValidityContext, NativeFixed64ValidityError,
+    NativeFixed64ValidityErrorCode, NativeFixed64ValidityFailure, NativeFixed64ValidityFailureCode,
+    NativeFixed64ValidityMeasurements, NativeFixed64ValidityResult, NativeFixed64ValidityRow,
+    NativeFixed64ValidityRowStatus, NATIVE_FIXED64_ELEMENT_RECEPTOR_TRAVERSAL_ID,
+    NATIVE_FIXED64_VALIDITY_ALGORITHM_ID, NATIVE_FIXED64_VALIDITY_BATCH_SCHEMA_ID,
+    NATIVE_FIXED64_VALIDITY_CONFIG_SCHEMA_ID, NATIVE_FIXED64_VALIDITY_CONTEXT_SCHEMA_ID,
+    NATIVE_FIXED64_VALIDITY_FAILURE_SCHEMA_ID, NATIVE_FIXED64_VALIDITY_MAX_CHIRALITY_CENTERS,
+    NATIVE_FIXED64_VALIDITY_MAX_CROSS_CHECKS, NATIVE_FIXED64_VALIDITY_MAX_PAIR_CHECKS,
+    NATIVE_FIXED64_VALIDITY_RECEPTOR_TRAVERSAL_ID, NATIVE_FIXED64_VALIDITY_RESULT_SCHEMA_ID,
+    NATIVE_FIXED64_VALIDITY_ROW_SCHEMA_ID,
 };
 pub use geometric_admission::{
     evaluate_fixed64_geometric_metrics, native_fixed64_coordinate_sha256,

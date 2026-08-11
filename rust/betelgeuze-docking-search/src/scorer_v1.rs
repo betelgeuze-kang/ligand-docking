@@ -354,6 +354,21 @@ impl NativeScorerV1Context {
     }
 
     #[must_use]
+    pub fn ligand_exclusions(&self) -> &[[usize; 2]] {
+        &self.ligand_exclusions
+    }
+
+    #[must_use]
+    pub const fn pocket_center_angstrom(&self) -> Vec3 {
+        self.pocket_center_angstrom
+    }
+
+    #[must_use]
+    pub const fn pocket_radius_angstrom(&self) -> f64 {
+        self.pocket_radius_angstrom
+    }
+
+    #[must_use]
     pub fn config(&self) -> &NativeScorerV1Config {
         &self.config
     }

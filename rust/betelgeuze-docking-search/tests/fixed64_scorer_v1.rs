@@ -1,12 +1,15 @@
 use betelgeuze_docking_search::{
-    native_fixed64_coordinate_sha256, native_fixed64_heavy_atom_mask_sha256,
-    native_fixed64_radii_sha256, produce_native_fixed64_proposals, score_native_fixed64_scorer_v1,
+    evaluate_native_fixed64_pose_validity, native_fixed64_coordinate_sha256,
+    native_fixed64_heavy_atom_mask_sha256, native_fixed64_radii_sha256,
+    produce_native_fixed64_proposals, rank_native_fixed64_top_k, score_native_fixed64_scorer_v1,
     Fixed64Allocation, Fixed64CoordinateSourceKind, Fixed64CoordinateSourcePayload,
     Fixed64ExactV11SourceEvidence, Fixed64FeatureGeometryInventory, Fixed64FeatureInventory,
     Fixed64GeometricBatch, Fixed64GeometricInput, Fixed64ProposalFailureCode,
-    Fixed64ProposalSourceBundle, NativeScorerV1Atom, NativeScorerV1Backend, NativeScorerV1Config,
-    NativeScorerV1Context, NativeScorerV1Donor, NativeScorerV1ErrorCode, NativeScorerV1FailureCode,
-    NativeScorerV1KernelOutcome, NativeScorerV1RowStatus, Vec3,
+    Fixed64ProposalSourceBundle, NativeFixed64ValidityBackend, NativeFixed64ValidityConfig,
+    NativeFixed64ValidityContext, NativeFixed64ValidityErrorCode, NativeFixed64ValidityFailureCode,
+    NativeFixed64ValidityRowStatus, NativeScorerV1Atom, NativeScorerV1Backend,
+    NativeScorerV1Config, NativeScorerV1Context, NativeScorerV1Donor, NativeScorerV1ErrorCode,
+    NativeScorerV1FailureCode, NativeScorerV1KernelOutcome, NativeScorerV1RowStatus, Vec3,
 };
 
 fn digest(marker: u8) -> [u8; 32] {
@@ -328,4 +331,238 @@ fn invalid_context_rows_and_config_fail_closed() {
     )
     .unwrap_err();
     assert_eq!(error.code(), NativeScorerV1ErrorCode::InvalidContext);
+}
+
+fn validity_context(
+    scorer: &NativeScorerV1Context,
+    backend: NativeFixed64ValidityBackend,
+    config: NativeFixed64ValidityConfig,
+) -> NativeFixed64ValidityContext {
+    NativeFixed64ValidityContext::from_scorer_context(
+        scorer,
+        backend,
+        digest(13),
+        digest(14),
+        vec![[0, 1], [1, 2], [2, 3]],
+        vec![[0, 1, 2, 3]],
+        config,
+    )
+    .unwrap()
+}
+
+#[test]
+fn native_validity_preserves_64_rows_and_complete_element_aware_evidence() {
+    let scorer_context = context(digest(1), NativeScorerV1Config::default());
+    let scorer_batch = score_native_fixed64_scorer_v1(admission(), scorer_context.clone()).unwrap();
+    let validity_context = validity_context(
+        &scorer_context,
+        NativeFixed64ValidityBackend::RustCpu,
+        NativeFixed64ValidityConfig::default(),
+    );
+    assert!(validity_context.has_valid_receipt());
+    assert!(validity_context.backend().product_eligible());
+
+    let first =
+        evaluate_native_fixed64_pose_validity(scorer_batch.clone(), validity_context.clone())
+            .unwrap();
+    let second = evaluate_native_fixed64_pose_validity(scorer_batch, validity_context).unwrap();
+
+    assert_eq!(first, second);
+    assert_eq!(first.rows().len(), 64);
+    assert_eq!(first.evaluated_count(), 12);
+    assert_eq!(first.valid_count(), 12);
+    assert!(first.has_valid_receipt());
+    assert!(!first.molecular_execution_authorized());
+    assert!(!first.production_claim_authorized());
+    for row in &first.rows()[24..36] {
+        assert_eq!(row.status(), NativeFixed64ValidityRowStatus::Evaluated);
+        let result = row.result().unwrap();
+        assert!(result.complete());
+        assert!(result.valid());
+        assert!(result.checks().all());
+        assert!(result.blockers().is_empty());
+        assert!(
+            result
+                .measurements()
+                .element_vdw_receptor_candidate_pair_count()
+                <= 8
+        );
+        assert_eq!(
+            result
+                .measurements()
+                .element_vdw_receptor_severe_overlap_count(),
+            0
+        );
+        assert!(result.has_valid_receipt());
+    }
+    for row in first.rows()[..24].iter().chain(&first.rows()[36..]) {
+        assert_eq!(
+            row.status(),
+            NativeFixed64ValidityRowStatus::UpstreamScorerFailure
+        );
+        let failure = row.failure().unwrap();
+        assert_eq!(
+            failure.failure_code(),
+            NativeFixed64ValidityFailureCode::UpstreamScorerFailure
+        );
+        assert_eq!(
+            failure.upstream_scorer_failure_code(),
+            Some(NativeScorerV1FailureCode::ProposalGenerationFailure)
+        );
+        assert!(failure.has_valid_receipt());
+    }
+}
+
+#[test]
+fn native_validity_capacity_is_candidate_local_and_hip_mislabel_fails_closed() {
+    let scorer_context = context(digest(1), NativeScorerV1Config::default());
+    let scorer_batch = score_native_fixed64_scorer_v1(admission(), scorer_context.clone()).unwrap();
+    let default = NativeFixed64ValidityConfig::default();
+    let limited = NativeFixed64ValidityConfig::new(
+        0.15, 0.75, 0.8, 1.0e-6, 1.0e-8, 0.55, 3.5, 250_000, 1, 250_000, 1_000_000,
+    )
+    .unwrap();
+    assert_ne!(limited.receipt_sha256(), default.receipt_sha256());
+    let batch = evaluate_native_fixed64_pose_validity(
+        scorer_batch.clone(),
+        validity_context(
+            &scorer_context,
+            NativeFixed64ValidityBackend::RustCpu,
+            limited,
+        ),
+    )
+    .unwrap();
+    assert_eq!(batch.evaluated_count(), 0);
+    for row in &batch.rows()[24..36] {
+        assert_eq!(row.status(), NativeFixed64ValidityRowStatus::TypedFailure);
+        let failure = row.failure().unwrap();
+        assert_eq!(
+            failure.failure_code(),
+            NativeFixed64ValidityFailureCode::ReceptorCrossCapacityExceeded
+        );
+        assert_eq!(failure.observed_count(), 8);
+    }
+    assert!(batch.has_valid_receipt());
+
+    let error = evaluate_native_fixed64_pose_validity(
+        scorer_batch,
+        validity_context(
+            &scorer_context,
+            NativeFixed64ValidityBackend::HipSafe,
+            default,
+        ),
+    )
+    .unwrap_err();
+    assert_eq!(
+        error.code(),
+        NativeFixed64ValidityErrorCode::UpstreamCrossWired
+    );
+}
+
+#[test]
+fn native_validity_rejects_scorer_context_cross_wiring() {
+    let scorer_context = context(digest(1), NativeScorerV1Config::default());
+    let scorer_batch = score_native_fixed64_scorer_v1(admission(), scorer_context.clone()).unwrap();
+    let other = context(digest(99), NativeScorerV1Config::default());
+    let error = evaluate_native_fixed64_pose_validity(
+        scorer_batch,
+        validity_context(
+            &other,
+            NativeFixed64ValidityBackend::RustCpu,
+            NativeFixed64ValidityConfig::default(),
+        ),
+    )
+    .unwrap_err();
+    assert_eq!(
+        error.code(),
+        NativeFixed64ValidityErrorCode::UpstreamCrossWired
+    );
+}
+
+#[test]
+fn native_stable_top_k_rederives_primary_and_valid_only_rankings() {
+    let scorer_context = context(digest(1), NativeScorerV1Config::default());
+    let scorer_batch = score_native_fixed64_scorer_v1(admission(), scorer_context.clone()).unwrap();
+    let validity = evaluate_native_fixed64_pose_validity(
+        scorer_batch,
+        validity_context(
+            &scorer_context,
+            NativeFixed64ValidityBackend::RustCpu,
+            NativeFixed64ValidityConfig::default(),
+        ),
+    )
+    .unwrap();
+
+    let first = rank_native_fixed64_top_k(validity.clone()).unwrap();
+    let second = rank_native_fixed64_top_k(validity).unwrap();
+
+    assert_eq!(first, second);
+    assert_eq!(first.primary_ranking_slot_indices().len(), 12);
+    assert_eq!(
+        first.primary_ranking_slot_indices(),
+        first.valid_ranking_slot_indices()
+    );
+    assert_eq!(first.top5_slot_indices().len(), 5);
+    assert_eq!(first.valid_top5_slot_indices(), first.top5_slot_indices());
+    assert_eq!(first.top1_slot_index(), first.valid_top1_slot_index());
+    assert!(first.has_valid_receipt());
+    assert!(!first.existing_rank_auto_change_authorized());
+    assert!(!first.customer_pose_emission_authorized());
+    assert!(!first.production_claim_authorized());
+
+    for (offset, slot_index) in first
+        .primary_ranking_slot_indices()
+        .iter()
+        .copied()
+        .enumerate()
+    {
+        let record = &first.records()[slot_index];
+        assert!(record.rank_eligible());
+        assert!(record.valid_rank_eligible());
+        assert_eq!(record.stable_rank(), Some(offset + 1));
+        assert_eq!(record.stable_valid_rank(), Some(offset + 1));
+        assert!(record.total_score().unwrap().is_finite());
+        assert!(record.coordinate_sha256().is_some());
+        assert!(record.has_valid_receipt());
+    }
+    for record in first.records().iter().filter(|row| !row.rank_eligible()) {
+        assert_eq!(record.stable_rank(), None);
+        assert_eq!(record.stable_valid_rank(), None);
+        assert_eq!(record.total_score(), None);
+        assert_eq!(record.coordinate_sha256(), None);
+    }
+}
+
+#[test]
+fn native_primary_rank_survives_typed_validity_unavailability_without_valid_rank() {
+    let scorer_context = context(digest(1), NativeScorerV1Config::default());
+    let scorer_batch = score_native_fixed64_scorer_v1(admission(), scorer_context.clone()).unwrap();
+    let limited = NativeFixed64ValidityConfig::new(
+        0.15, 0.75, 0.8, 1.0e-6, 1.0e-8, 0.55, 3.5, 250_000, 1, 250_000, 1_000_000,
+    )
+    .unwrap();
+    let validity = evaluate_native_fixed64_pose_validity(
+        scorer_batch,
+        validity_context(
+            &scorer_context,
+            NativeFixed64ValidityBackend::RustCpu,
+            limited,
+        ),
+    )
+    .unwrap();
+    let ranking = rank_native_fixed64_top_k(validity).unwrap();
+
+    assert_eq!(ranking.primary_ranking_slot_indices().len(), 12);
+    assert!(ranking.valid_ranking_slot_indices().is_empty());
+    assert_eq!(ranking.top5_slot_indices().len(), 5);
+    assert!(ranking.valid_top5_slot_indices().is_empty());
+    assert!(ranking.valid_top1_slot_index().is_none());
+    for slot_index in ranking.primary_ranking_slot_indices() {
+        let record = &ranking.records()[*slot_index];
+        assert!(record.rank_eligible());
+        assert!(!record.valid_rank_eligible());
+        assert!(record.stable_rank().is_some());
+        assert!(record.stable_valid_rank().is_none());
+    }
+    assert!(ranking.has_valid_receipt());
 }

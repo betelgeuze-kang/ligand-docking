@@ -598,13 +598,13 @@ impl Fixed64ProposalRecord {
     }
 
     #[must_use]
-    pub fn output_coordinates_angstrom(&self) -> Option<&[Vec3]> {
-        self.output_coordinates_angstrom.as_deref()
+    pub const fn placement(&self) -> Option<&Fixed64ProposalPlacement> {
+        self.placement.as_ref()
     }
 
     #[must_use]
-    pub fn placement(&self) -> Option<&Fixed64ProposalPlacement> {
-        self.placement.as_ref()
+    pub fn output_coordinates_angstrom(&self) -> Option<&[Vec3]> {
+        self.output_coordinates_angstrom.as_deref()
     }
 
     #[must_use]
