@@ -7,9 +7,14 @@ the full-Cartesian geometric admission on every successful refined coordinate.
 
 The canonical policy is
 `config/engine_v2_mixed64_v7_post_admission_v3.json`, with SHA-256
-`7fdaff5b56fe9ddb0baebe60187f0ad067a2e54f7b6db9da9117440dee4d153d`.
+`5e7fcba3df775d516a9fbd5e3d368108c0b95d86cad01fca544bc7c604792c59`.
 It binds operational-proposal policy SHA-256
-`9b028cc5ec0d32a6b28538d1a91955f2766fe796f488b38888fdd20819611d9a`.
+`9535730901a27ab3009e7b6fff12e532dd5d995e8fa33a038f4d321593885de9`.
+The post-refinement gate also binds geometric-admission v3 policy SHA-256
+`feb9c00eb71bb45fe07479c6f5b8e6faa171b9968fa4dbb2370e518c71290526`.
+Complete V7 evidence uses a separate 256 MiB canonical receipt ceiling so it
+can contain a valid 128 MiB-bounded operational receipt without narrowing the
+upstream contract.
 
 ## Frozen refinement boundary
 
@@ -30,7 +35,8 @@ It binds operational-proposal policy SHA-256
   change aborts the receipt.
 - Only `TorsionContactRefinementError`, the declared numerical/domain failure,
   becomes a typed per-slot failure. Unexpected runtime/programming failures
-  abort the call. Declared failures are not retried, replaced, or reallocated.
+  abort the call. The exact bounded UTF-8 failure reason is retained with its
+  SHA-256. Declared failures are not retried, replaced, or reallocated.
 
 ## Failure-complete post-admission
 
@@ -44,6 +50,8 @@ cannot enter ranking.
 The batch checks the maximum exact pair work before any refiner call. Receipts
 bind the input batch, V7 configuration, checked-out V7 source, per-slot source
 and result identities, full geometric metrics, status, and rank eligibility.
+The result lineage must name the exact V7 refiner ID and version, and the summed
+pair count must equal successful slots × ligand atoms × receptor atoms.
 Finalization recursively revalidates every source and result proposal tensor,
 refinement receipt, metric, record projection, and the 64-slot batch. The same
 check is available to the scoring/validity stage before it consumes the output.

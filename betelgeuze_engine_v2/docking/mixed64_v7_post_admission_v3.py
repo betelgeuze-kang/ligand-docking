@@ -25,9 +25,11 @@ from .geometric_admission_v2 import (
     GeometricAdmissionV2Error,
     evaluate_geometric_admission_metrics_one_python,
 )
+from .geometric_admission_v3 import GEOMETRIC_ADMISSION_V3_POLICY_SHA256
 from .mixed64_operational_proposal_policy_v3 import (
     MIXED64_OPERATIONAL_PROPOSAL_POLICY_SHA256,
 )
+from .mixed64_allocation import FIXED_MIXED64_CANDIDATE_COUNT
 from .mixed64_operational_proposal_v3 import (
     MATERIALIZED_STATUS,
     Mixed64OperationalProposalBatchV1,
@@ -36,13 +38,18 @@ from .mixed64_operational_proposal_v3 import (
 )
 from .mixed64_proposal_geometry_v3 import coordinate_sha256
 from .mixed64_v7_post_admission_policy_v3 import (
+    BOUND_GEOMETRIC_ADMISSION_V3_POLICY_SHA256,
     BOUND_OPERATIONAL_PROPOSAL_POLICY_SHA256,
+    MAX_TYPED_V7_FAILURE_REASON_UTF8_BYTES,
+    MAX_V7_POST_ADMISSION_RECEIPT_CANONICAL_BYTES,
     MIXED64_V7_POST_ADMISSION_BATCH_SCHEMA_ID,
     MIXED64_V7_POST_ADMISSION_COMPONENT_ID,
     MIXED64_V7_POST_ADMISSION_POLICY_SHA256,
     MIXED64_V7_POST_ADMISSION_PROFILE_ID,
     MIXED64_V7_POST_ADMISSION_RECORD_SCHEMA_ID,
     POST_REFINEMENT_ACCEPTED_STATUS,
+    POST_REFINEMENT_HARD_REJECTION_MINIMUM_VDW_RATIO,
+    POST_REFINEMENT_MAX_BATCH_EXACT_PAIR_EVALUATIONS,
     POST_REFINEMENT_REJECTED_STATUS,
     TYPED_V7_REFINEMENT_FAILURE_CODE,
     TYPED_V7_REFINEMENT_FAILURE_STATUS,
@@ -54,6 +61,8 @@ from .mixed64_v7_post_admission_policy_v3 import (
 from .proposals import DockingProposal, DockingProposalError
 from .torsion_contact_refinement import (
     INTERACTION_AWARE_TORSION_CONTACT_RECEIPT_V7_SCHEMA_ID,
+    INTERACTION_AWARE_TORSION_CONTACT_REFINER_V7_ID,
+    INTERACTION_AWARE_TORSION_CONTACT_REFINER_V7_VERSION,
     InteractionAwareTorsionContactEnsembleRefinerV7,
     TorsionContactRefinementError,
 )
@@ -69,13 +78,20 @@ _STATUSES: Final = {
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 _RECORD_FACTORY_SEAL = object()
 _BATCH_FACTORY_SEAL = object()
-_MAX_CANONICAL_RECEIPT_BYTES: Final = 64 * 1024 * 1024
 
 if (
     MIXED64_OPERATIONAL_PROPOSAL_POLICY_SHA256
     != BOUND_OPERATIONAL_PROPOSAL_POLICY_SHA256
 ):
     raise RuntimeError("V7 post-admission operational policy binding changed")
+if (
+    GEOMETRIC_ADMISSION_V3_POLICY_SHA256 != BOUND_GEOMETRIC_ADMISSION_V3_POLICY_SHA256
+    or HARD_REJECTION_MINIMUM_VDW_RATIO
+    != POST_REFINEMENT_HARD_REJECTION_MINIMUM_VDW_RATIO
+    or MAX_BATCH_EXACT_PAIR_EVALUATIONS
+    != POST_REFINEMENT_MAX_BATCH_EXACT_PAIR_EVALUATIONS
+):
+    raise RuntimeError("V7 post-admission geometric policy binding changed")
 
 
 class Mixed64V7PostAdmissionV3Error(ValueError):
@@ -103,7 +119,7 @@ def _canonical_bytes(value: object) -> bytes:
         raise Mixed64V7PostAdmissionV3Error(
             "V7 post-admission receipt is not canonical JSON"
         ) from exc
-    if len(payload) > _MAX_CANONICAL_RECEIPT_BYTES:
+    if len(payload) > MAX_V7_POST_ADMISSION_RECEIPT_CANONICAL_BYTES:
         raise Mixed64V7PostAdmissionV3Error(
             "V7 post-admission receipt exceeds the byte bound"
         )
@@ -154,6 +170,24 @@ def _digest(value: object, *, name: str) -> str:
     return value
 
 
+def _typed_failure_reason(value: object) -> str:
+    if type(value) is not str or not value.strip():
+        raise Mixed64V7PostAdmissionV3Error(
+            "typed V7 refinement failure reason is absent"
+        )
+    try:
+        encoded = value.encode("utf-8")
+    except UnicodeError as exc:
+        raise Mixed64V7PostAdmissionV3Error(
+            "typed V7 refinement failure reason is not UTF-8"
+        ) from exc
+    if len(encoded) > MAX_TYPED_V7_FAILURE_REASON_UTF8_BYTES:
+        raise Mixed64V7PostAdmissionV3Error(
+            "typed V7 refinement failure reason exceeds the byte bound"
+        )
+    return value
+
+
 def _stable_source_sha256(path: Path) -> str:
     try:
         before = path.stat()
@@ -165,11 +199,12 @@ def _stable_source_sha256(path: Path) -> str:
         raise Mixed64V7PostAdmissionV3Error(
             "V7 implementation source is unavailable"
         ) from exc
-    if (
-        len(payload) != before.st_size
-        or (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns)
-        != (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns)
-    ):
+    if len(payload) != before.st_size or (
+        before.st_dev,
+        before.st_ino,
+        before.st_size,
+        before.st_mtime_ns,
+    ) != (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns):
         raise Mixed64V7PostAdmissionV3Error(
             "V7 implementation source changed during read"
         )
@@ -217,10 +252,11 @@ def _validate_refinement_receipt(
     if (
         result.parent_proposal_fingerprint_sha256 != source.fingerprint_sha256
         or result.refinement_receipt_sha256 != embedded
+        or result.refiner_id != INTERACTION_AWARE_TORSION_CONTACT_REFINER_V7_ID
+        or result.refiner_version
+        != INTERACTION_AWARE_TORSION_CONTACT_REFINER_V7_VERSION
     ):
-        raise Mixed64V7PostAdmissionV3Error(
-            "V7 result proposal lineage is cross-wired"
-        )
+        raise Mixed64V7PostAdmissionV3Error("V7 result proposal lineage is cross-wired")
     return {**document, "receipt_sha256": embedded}
 
 
@@ -232,6 +268,7 @@ class Mixed64V7PostAdmissionRecordV1:
     post_refinement_metrics: GeometricAdmissionMetricsV2 | None
     status: str
     failure_code: str | None
+    failure_reason: str | None
     rejection_code: str | None
     _factory_seal: InitVar[object | None] = None
     schema_id: str = MIXED64_V7_POST_ADMISSION_RECORD_SCHEMA_ID
@@ -261,23 +298,21 @@ class Mixed64V7PostAdmissionRecordV1:
                 or not isinstance(self.refinement_receipt, Mapping)
                 or type(self.post_refinement_metrics) is not GeometricAdmissionMetricsV2
                 or self.failure_code is not None
+                or self.failure_reason is not None
             ):
                 raise Mixed64V7PostAdmissionV3Error(
                     "successful V7 record lacks exact result evidence"
                 )
             accepted = (
                 self.post_refinement_metrics.minimum_vdw_ratio
-                >= HARD_REJECTION_MINIMUM_VDW_RATIO
+                >= POST_REFINEMENT_HARD_REJECTION_MINIMUM_VDW_RATIO
             )
-            if (
-                self.status
-                != (
-                    POST_REFINEMENT_ACCEPTED_STATUS
-                    if accepted
-                    else POST_REFINEMENT_REJECTED_STATUS
-                )
-                or self.rejection_code
-                != (None if accepted else SEVERE_PENETRATION_REJECTION_CODE)
+            if self.status != (
+                POST_REFINEMENT_ACCEPTED_STATUS
+                if accepted
+                else POST_REFINEMENT_REJECTED_STATUS
+            ) or self.rejection_code != (
+                None if accepted else SEVERE_PENETRATION_REJECTION_CODE
             ):
                 raise Mixed64V7PostAdmissionV3Error(
                     "post-refinement rejection semantics changed"
@@ -286,6 +321,7 @@ class Mixed64V7PostAdmissionRecordV1:
             if (
                 not self.materialization_record.materialized
                 or self.failure_code != TYPED_V7_REFINEMENT_FAILURE_CODE
+                or _typed_failure_reason(self.failure_reason) != self.failure_reason
                 or any(
                     value is not None
                     for value in (
@@ -299,17 +335,15 @@ class Mixed64V7PostAdmissionRecordV1:
                 raise Mixed64V7PostAdmissionV3Error(
                     "typed V7 refinement failure fabricated result evidence"
                 )
-        elif (
-            self.materialization_record.materialized
-            or any(
-                value is not None
-                for value in (
-                    self.result_proposal,
-                    self.refinement_receipt,
-                    self.post_refinement_metrics,
-                    self.failure_code,
-                    self.rejection_code,
-                )
+        elif self.materialization_record.materialized or any(
+            value is not None
+            for value in (
+                self.result_proposal,
+                self.refinement_receipt,
+                self.post_refinement_metrics,
+                self.failure_code,
+                self.failure_reason,
+                self.rejection_code,
             )
         ):
             raise Mixed64V7PostAdmissionV3Error(
@@ -358,7 +392,9 @@ class Mixed64V7PostAdmissionRecordV1:
                 None if result is None else result.identity_payload()
             ),
             "refinement_receipt": (
-                None if self.refinement_receipt is None else _thaw(self.refinement_receipt)
+                None
+                if self.refinement_receipt is None
+                else _thaw(self.refinement_receipt)
             ),
             "post_refinement_geometric_metrics": (
                 None
@@ -367,6 +403,12 @@ class Mixed64V7PostAdmissionRecordV1:
             ),
             "status": self.status,
             "failure_code": self.failure_code,
+            "failure_reason": self.failure_reason,
+            "failure_reason_sha256": (
+                None
+                if self.failure_reason is None
+                else hashlib.sha256(self.failure_reason.encode("utf-8")).hexdigest()
+            ),
             "rejection_code": self.rejection_code,
             "rank_eligible": self.rank_eligible,
             "slot_preserved_in_denominator": True,
@@ -449,18 +491,42 @@ class Mixed64V7PostAdmissionBatchV1:
             raise TypeError("operational_batch must be exact")
         if (
             type(self.records) is not tuple
-            or len(self.records) != 64
-            or any(type(value) is not Mixed64V7PostAdmissionRecordV1 for value in self.records)
-            or tuple(value.slot_index for value in self.records) != tuple(range(64))
+            or len(self.records) != FIXED_MIXED64_CANDIDATE_COUNT
+            or any(
+                type(value) is not Mixed64V7PostAdmissionRecordV1
+                for value in self.records
+            )
+            or tuple(value.slot_index for value in self.records)
+            != tuple(range(FIXED_MIXED64_CANDIDATE_COUNT))
         ):
             raise Mixed64V7PostAdmissionV3Error(
                 "V7 post-admission denominator or order changed"
             )
-        for source, record in zip(self.operational_batch.records, self.records, strict=True):
+        for source, record in zip(
+            self.operational_batch.records, self.records, strict=True
+        ):
             if source.receipt_sha256 != record.materialization_record.receipt_sha256:
                 raise Mixed64V7PostAdmissionV3Error(
                     "V7 post-admission source record is cross-wired"
                 )
+        bundle = self.operational_batch.admission_batch.producer_batch.source_bundle
+        successful_count = sum(
+            value.status
+            in {POST_REFINEMENT_ACCEPTED_STATUS, POST_REFINEMENT_REJECTED_STATUS}
+            for value in self.records
+        )
+        expected_pair_evaluations = (
+            successful_count
+            * len(bundle.ligand_vdw_radii)
+            * len(bundle.receptor_coordinates)
+        )
+        if (
+            expected_pair_evaluations > POST_REFINEMENT_MAX_BATCH_EXACT_PAIR_EVALUATIONS
+            or self.exact_pair_evaluation_count != expected_pair_evaluations
+        ):
+            raise Mixed64V7PostAdmissionV3Error(
+                "V7 post-admission exact pair denominator changed"
+            )
         object.__setattr__(
             self,
             "refiner_config_sha256",
@@ -481,32 +547,33 @@ class Mixed64V7PostAdmissionBatchV1:
     @property
     def post_refinement_accepted_count(self) -> int:
         return sum(
-            value.status == POST_REFINEMENT_ACCEPTED_STATUS
-            for value in self.records
+            value.status == POST_REFINEMENT_ACCEPTED_STATUS for value in self.records
         )
 
     @property
     def post_refinement_rejected_count(self) -> int:
         return sum(
-            value.status == POST_REFINEMENT_REJECTED_STATUS
-            for value in self.records
+            value.status == POST_REFINEMENT_REJECTED_STATUS for value in self.records
         )
 
     @property
     def typed_refinement_failure_count(self) -> int:
         return sum(
-            value.status == TYPED_V7_REFINEMENT_FAILURE_STATUS
-            for value in self.records
+            value.status == TYPED_V7_REFINEMENT_FAILURE_STATUS for value in self.records
         )
 
     @property
     def upstream_not_refined_count(self) -> int:
-        return sum(value.status == UPSTREAM_NOT_REFINED_STATUS for value in self.records)
+        return sum(
+            value.status == UPSTREAM_NOT_REFINED_STATUS for value in self.records
+        )
 
     @property
     def exact_pair_evaluation_count(self) -> int:
         return sum(
-            0 if value.post_refinement_metrics is None else value.post_refinement_metrics.exact_pair_count
+            0
+            if value.post_refinement_metrics is None
+            else value.post_refinement_metrics.exact_pair_count
             for value in self.records
         )
 
@@ -599,9 +666,7 @@ def execute_synthetic_mixed64_v7_post_admission(
             "V7 torsion-eligible slot profile is cross-wired"
         )
     if refiner.receipts:
-        raise Mixed64V7PostAdmissionV3Error(
-            "V7 refiner contains preexisting receipts"
-        )
+        raise Mixed64V7PostAdmissionV3Error("V7 refiner contains preexisting receipts")
     materialized = tuple(
         value for value in operational_batch.records if value.materialized
     )
@@ -628,13 +693,13 @@ def execute_synthetic_mixed64_v7_post_admission(
             "materialized operational proposal index is not the fixed64 slot"
         )
     problem_identities = {value.problem_fingerprint_sha256 for value in proposals}
-    if problem_identities and problem_identities != {refiner.problem_fingerprint_sha256}:
+    if problem_identities and problem_identities != {
+        refiner.problem_fingerprint_sha256
+    }:
         raise Mixed64V7PostAdmissionV3Error(
             "V7 refiner problem identity is cross-wired"
         )
-    search_identities = {
-        value.search_space_fingerprint_sha256 for value in proposals
-    }
+    search_identities = {value.search_space_fingerprint_sha256 for value in proposals}
     if search_identities and search_identities != {
         refiner._search_space.fingerprint_sha256
     }:
@@ -658,11 +723,9 @@ def execute_synthetic_mixed64_v7_post_admission(
             "V7 refiner and geometric-admission context are cross-wired"
         )
     pair_work = (
-        len(proposals)
-        * len(bundle.ligand_vdw_radii)
-        * len(bundle.receptor_coordinates)
+        len(proposals) * len(bundle.ligand_vdw_radii) * len(bundle.receptor_coordinates)
     )
-    if pair_work > MAX_BATCH_EXACT_PAIR_EVALUATIONS:
+    if pair_work > POST_REFINEMENT_MAX_BATCH_EXACT_PAIR_EVALUATIONS:
         raise Mixed64V7PostAdmissionV3Error(
             "post-refinement exact pair work exceeds the fail-closed limit"
         )
@@ -674,19 +737,22 @@ def execute_synthetic_mixed64_v7_post_admission(
         )
     config_sha256 = refiner.config_fingerprint_sha256
     outcomes: dict[str, DockingProposal | None] = {}
+    failure_reasons: dict[str, str] = {}
     for proposal in proposals:
         try:
             result = refiner.refine(
                 proposal,
                 max_steps=V7_REFINEMENT_MAX_STEPS,
             )
-        except TorsionContactRefinementError:
+        except TorsionContactRefinementError as exc:
             outcomes[proposal.fingerprint_sha256] = None
+            failure_reasons[proposal.fingerprint_sha256] = _typed_failure_reason(
+                str(exc)
+            )
             continue
         if (
             type(result) is not DockingProposal
-            or result.problem_fingerprint_sha256
-            != proposal.problem_fingerprint_sha256
+            or result.problem_fingerprint_sha256 != proposal.problem_fingerprint_sha256
             or result.search_space_fingerprint_sha256
             != proposal.search_space_fingerprint_sha256
             or result.proposal_index != proposal.proposal_index
@@ -702,14 +768,22 @@ def execute_synthetic_mixed64_v7_post_admission(
         raise Mixed64V7PostAdmissionV3Error(
             "operational batch live integrity postflight failed"
         ) from exc
-    if _stable_source_sha256(source_path) != implementation_source_sha256:
+    if (
+        _stable_source_sha256(source_path) != implementation_source_sha256
+        or refiner.config_fingerprint_sha256 != config_sha256
+    ):
         raise Mixed64V7PostAdmissionV3Error(
-            "V7 implementation source changed during the batch"
+            "V7 implementation source or config changed during the batch"
         )
     receipts = refiner.receipts
     successful_fingerprints = {
         fingerprint for fingerprint, result in outcomes.items() if result is not None
     }
+    failed_fingerprints = set(outcomes) - successful_fingerprints
+    if set(failure_reasons) != failed_fingerprints:
+        raise Mixed64V7PostAdmissionV3Error(
+            "typed V7 failure-reason denominator changed"
+        )
     if set(receipts) != successful_fingerprints:
         raise Mixed64V7PostAdmissionV3Error(
             "V7 receipt denominator disagrees with successful attempts"
@@ -725,6 +799,7 @@ def execute_synthetic_mixed64_v7_post_admission(
                     post_refinement_metrics=None,
                     status=UPSTREAM_NOT_REFINED_STATUS,
                     failure_code=None,
+                    failure_reason=None,
                     rejection_code=None,
                     _factory_seal=_RECORD_FACTORY_SEAL,
                 )
@@ -745,6 +820,7 @@ def execute_synthetic_mixed64_v7_post_admission(
                     post_refinement_metrics=None,
                     status=TYPED_V7_REFINEMENT_FAILURE_STATUS,
                     failure_code=TYPED_V7_REFINEMENT_FAILURE_CODE,
+                    failure_reason=failure_reasons[source.fingerprint_sha256],
                     rejection_code=None,
                     _factory_seal=_RECORD_FACTORY_SEAL,
                 )
@@ -770,7 +846,10 @@ def execute_synthetic_mixed64_v7_post_admission(
             raise Mixed64V7PostAdmissionV3Error(
                 "V7 result failed the bounded geometric kernel"
             ) from exc
-        accepted = metrics.minimum_vdw_ratio >= HARD_REJECTION_MINIMUM_VDW_RATIO
+        accepted = (
+            metrics.minimum_vdw_ratio
+            >= POST_REFINEMENT_HARD_REJECTION_MINIMUM_VDW_RATIO
+        )
         records.append(
             Mixed64V7PostAdmissionRecordV1(
                 materialization_record=materialization,
@@ -783,6 +862,7 @@ def execute_synthetic_mixed64_v7_post_admission(
                     else POST_REFINEMENT_REJECTED_STATUS
                 ),
                 failure_code=None,
+                failure_reason=None,
                 rejection_code=(
                     None if accepted else SEVERE_PENETRATION_REJECTION_CODE
                 ),
@@ -802,6 +882,13 @@ def execute_synthetic_mixed64_v7_post_admission(
         raise Mixed64V7PostAdmissionV3Error(
             "V7 post-admission output live integrity finalization failed"
         ) from exc
+    if (
+        _stable_source_sha256(source_path) != implementation_source_sha256
+        or refiner.config_fingerprint_sha256 != config_sha256
+    ):
+        raise Mixed64V7PostAdmissionV3Error(
+            "V7 implementation source or config changed during finalization"
+        )
     return batch
 
 

@@ -23,10 +23,17 @@ MIXED64_V7_POST_ADMISSION_PROFILE_ID: Final = (
     "betelgeuze.engine_v2_fixed64_current_v7_then_post_geometric_admission/1.0.0"
 )
 BOUND_OPERATIONAL_PROPOSAL_POLICY_SHA256: Final = (
-    "9b028cc5ec0d32a6b28538d1a91955f2766fe796f488b38888fdd20819611d9a"
+    "9535730901a27ab3009e7b6fff12e532dd5d995e8fa33a038f4d321593885de9"
+)
+BOUND_GEOMETRIC_ADMISSION_V3_POLICY_SHA256: Final = (
+    "feb9c00eb71bb45fe07479c6f5b8e6faa171b9968fa4dbb2370e518c71290526"
 )
 V7_REFINEMENT_MAX_STEPS: Final = 24
 V7_TORSION_ELIGIBLE_SLOT_INDICES: Final = tuple(range(24, 44))
+POST_REFINEMENT_HARD_REJECTION_MINIMUM_VDW_RATIO: Final = 0.55
+POST_REFINEMENT_MAX_BATCH_EXACT_PAIR_EVALUATIONS: Final = 16_777_216
+MAX_V7_POST_ADMISSION_RECEIPT_CANONICAL_BYTES: Final = 256 * 1024 * 1024
+MAX_TYPED_V7_FAILURE_REASON_UTF8_BYTES: Final = 4 * 1024
 
 POST_REFINEMENT_ACCEPTED_STATUS: Final = "post_refinement_accepted"
 POST_REFINEMENT_REJECTED_STATUS: Final = "post_refinement_geometric_rejection"
@@ -44,6 +51,11 @@ def frozen_mixed64_v7_post_admission_policy() -> dict[str, object]:
             BOUND_OPERATIONAL_PROPOSAL_POLICY_SHA256
         ),
         "candidate_denominator": 64,
+        "receipt_integrity": {
+            "maximum_canonical_bytes": (MAX_V7_POST_ADMISSION_RECEIPT_CANONICAL_BYTES),
+            "sealed_snapshot_required": True,
+            "recursive_live_integrity_required": True,
+        },
         "operational_input_integrity": {
             "recursive_preflight_required": True,
             "recursive_postflight_required": True,
@@ -57,9 +69,7 @@ def frozen_mixed64_v7_post_admission_policy() -> dict[str, object]:
         "refinement": {
             "refiner": "InteractionAwareTorsionContactEnsembleRefinerV7",
             "max_steps": V7_REFINEMENT_MAX_STEPS,
-            "torsion_eligible_slot_indices": list(
-                V7_TORSION_ELIGIBLE_SLOT_INDICES
-            ),
+            "torsion_eligible_slot_indices": list(V7_TORSION_ELIGIBLE_SLOT_INDICES),
             "implementation_source_binding": (
                 "stable_file_sha256_before_and_after_batch"
             ),
@@ -70,21 +80,28 @@ def frozen_mixed64_v7_post_admission_policy() -> dict[str, object]:
             "result_dependent_retry_allowed": False,
         },
         "post_refinement_geometric_admission": {
-            "traversal": (
-                "full_cartesian_ligand_index_major_receptor_index_minor"
+            "geometric_admission_v3_policy_sha256": (
+                BOUND_GEOMETRIC_ADMISSION_V3_POLICY_SHA256
             ),
+            "traversal": ("full_cartesian_ligand_index_major_receptor_index_minor"),
             "hard_rejection_metric": "minimum_vdw_ratio",
             "hard_rejection_operator": "strictly_less_than",
-            "hard_rejection_threshold_binary64_hex": (0.55).hex(),
-            "hard_rejection_code": (
-                "severe_receptor_penetration_min_vdw_ratio"
+            "hard_rejection_threshold_binary64_hex": (
+                POST_REFINEMENT_HARD_REJECTION_MINIMUM_VDW_RATIO.hex()
             ),
-            "maximum_batch_exact_pair_evaluations": 16_777_216,
+            "hard_rejection_code": ("severe_receptor_penetration_min_vdw_ratio"),
+            "maximum_batch_exact_pair_evaluations": (
+                POST_REFINEMENT_MAX_BATCH_EXACT_PAIR_EVALUATIONS
+            ),
             "pair_bound_checked_before_refinement": True,
         },
         "failure_semantics": {
             "upstream_nonmaterialized_refined": False,
             "typed_refinement_failure_preserved": True,
+            "typed_refinement_failure_reason_preserved": True,
+            "maximum_typed_failure_reason_utf8_bytes": (
+                MAX_TYPED_V7_FAILURE_REASON_UTF8_BYTES
+            ),
             "declared_typed_error": "TorsionContactRefinementError",
             "unexpected_runtime_failure_typed": False,
             "failed_slot_retried": False,
@@ -123,7 +140,10 @@ MIXED64_V7_POST_ADMISSION_POLICY_SHA256: Final = hashlib.sha256(
 
 
 __all__ = [
+    "BOUND_GEOMETRIC_ADMISSION_V3_POLICY_SHA256",
     "BOUND_OPERATIONAL_PROPOSAL_POLICY_SHA256",
+    "MAX_TYPED_V7_FAILURE_REASON_UTF8_BYTES",
+    "MAX_V7_POST_ADMISSION_RECEIPT_CANONICAL_BYTES",
     "MIXED64_V7_POST_ADMISSION_BATCH_SCHEMA_ID",
     "MIXED64_V7_POST_ADMISSION_COMPONENT_ID",
     "MIXED64_V7_POST_ADMISSION_POLICY_SCHEMA_ID",
@@ -131,6 +151,8 @@ __all__ = [
     "MIXED64_V7_POST_ADMISSION_PROFILE_ID",
     "MIXED64_V7_POST_ADMISSION_RECORD_SCHEMA_ID",
     "POST_REFINEMENT_ACCEPTED_STATUS",
+    "POST_REFINEMENT_HARD_REJECTION_MINIMUM_VDW_RATIO",
+    "POST_REFINEMENT_MAX_BATCH_EXACT_PAIR_EVALUATIONS",
     "POST_REFINEMENT_REJECTED_STATUS",
     "TYPED_V7_REFINEMENT_FAILURE_CODE",
     "TYPED_V7_REFINEMENT_FAILURE_STATUS",

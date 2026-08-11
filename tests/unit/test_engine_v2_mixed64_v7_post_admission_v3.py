@@ -40,10 +40,14 @@ from betelgeuze_engine_v2.docking.mixed64_allocation import (
     V7_CONTROL_SOURCE_INDICES,
     Mixed64AtomicFeatureEvidence,
     Mixed64ConformerSourceEvidence,
+    Mixed64ExactV11SourceEvidence,
     Mixed64FeatureEvidence,
     Mixed64RetainedSourceEvidence,
     Mixed64V7ControlSourceEvidence,
     build_fixed_mixed64_allocation,
+)
+from betelgeuze_engine_v2.docking.mixed64_proposal_geometry_v3 import (
+    coordinate_sha256,
 )
 from betelgeuze_engine_v2.docking.mixed64_operational_proposal_v3 import (
     MATERIALIZED_STATUS,
@@ -78,6 +82,8 @@ from betelgeuze_engine_v2.docking.torsion_contact_refinement import (
     InteractionAwareTorsionContactEnsembleRefinerV7,
     TorsionContactRefinementError,
 )
+
+
 def _digest(label: str) -> str:
     return hashlib.sha256(label.encode("ascii")).hexdigest()
 
@@ -335,10 +341,25 @@ def _fixture(*, legacy_exact_identity: bool = False):
         )
         for index in RETAINED_SOURCE_INDICES
     )
+    receptor_coordinates = tuple(
+        tuple(float(component) for component in point)
+        for point in receptor.coordinates[0].tolist()
+    )
+    prepared_ligand_topology_sha256 = _digest("ligand-topology")
+    prepared_receptor_topology_sha256 = _digest("receptor-topology")
+    exact_source_evidence = Mixed64ExactV11SourceEvidence(
+        source_receipt_sha256=exact.source_receipt_sha256,
+        proposal_sha256=exact.proposal_sha256,
+        ligand_coordinate_sha256=exact.coordinate_sha256,
+        receptor_coordinate_sha256=coordinate_sha256(receptor_coordinates),
+        prepared_ligand_topology_sha256=prepared_ligand_topology_sha256,
+        prepared_receptor_topology_sha256=prepared_receptor_topology_sha256,
+    )
     features = Mixed64FeatureEvidence(
         exact_v11_source_receipt_sha256=exact.source_receipt_sha256,
-        prepared_ligand_topology_sha256=_digest("ligand-topology"),
-        prepared_receptor_topology_sha256=_digest("receptor-topology"),
+        prepared_ligand_topology_sha256=prepared_ligand_topology_sha256,
+        prepared_receptor_topology_sha256=prepared_receptor_topology_sha256,
+        exact_v11_source=exact_source_evidence,
         feature_extractor_policy_sha256=_digest("feature-policy"),
         atomic_features=_feature_evidence(),
         v7_control_sources=tuple(
@@ -376,10 +397,6 @@ def _fixture(*, legacy_exact_identity: bool = False):
         ),
     )
     allocation = build_fixed_mixed64_allocation(features)
-    receptor_coordinates = tuple(
-        tuple(float(component) for component in point)
-        for point in receptor.coordinates[0].tolist()
-    )
     policy = authority.validity_context.contact_policy
     bundle = Mixed64ProposalSourceBundleV1(
         allocation=allocation,
@@ -390,7 +407,9 @@ def _fixture(*, legacy_exact_identity: bool = False):
         ligand_vdw_radii=tuple(policy.radius(atom.element) for atom in ligand.atoms),
         ligand_heavy_atom_mask=tuple(atom.element != "H" for atom in ligand.atoms),
         receptor_coordinates=receptor_coordinates,
-        receptor_vdw_radii=tuple(policy.radius(atom.element) for atom in receptor.atoms),
+        receptor_vdw_radii=tuple(
+            policy.radius(atom.element) for atom in receptor.atoms
+        ),
         receptor_source_receipt_canonical_json=exact.source_receipt_canonical_json,
         pocket_center=tuple(float(value) for value in pocket.center.tolist()),
         pocket_normal=(0.0, 0.0, 1.0),
@@ -432,14 +451,15 @@ def test_exact_operational_batch_runs_v7_and_post_admission_once() -> None:
     )
     assert result.typed_refinement_failure_count == 0
     assert (
-        result.post_refinement_accepted_count
-        + result.post_refinement_rejected_count
+        result.post_refinement_accepted_count + result.post_refinement_rejected_count
         == operational.materialized_count
     )
     assert result.exact_pair_evaluation_count == (
         operational.materialized_count
         * len(operational.admission_batch.producer_batch.source_bundle.ligand_vdw_radii)
-        * len(operational.admission_batch.producer_batch.source_bundle.receptor_coordinates)
+        * len(
+            operational.admission_batch.producer_batch.source_bundle.receptor_coordinates
+        )
     )
 
 
@@ -482,6 +502,52 @@ def test_success_records_bind_v7_lineage_metrics_and_rank_eligibility() -> None:
         result.assert_live_integrity()
 
 
+def test_result_refiner_identity_must_match_exact_v7(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    authority, receptor, ligand, operational = _fixture()
+    refiner = _refiner(authority, receptor, ligand)
+    original = InteractionAwareTorsionContactEnsembleRefinerV7.refine
+    replaced = False
+
+    def refine(self, proposal, *, max_steps):
+        nonlocal replaced
+        result = original(self, proposal, max_steps=max_steps)
+        if replaced:
+            return result
+        replaced = True
+        return bind_docking_proposal_state(
+            coordinates=result.coordinates,
+            torsion_angles=result.torsion_angles,
+            rotation=result.rotation,
+            translation=result.translation,
+            proposal_index=result.proposal_index,
+            seed=result.seed,
+            problem_fingerprint_sha256=result.problem_fingerprint_sha256,
+            search_space_fingerprint_sha256=(result.search_space_fingerprint_sha256),
+            parent_proposal_fingerprint_sha256=(
+                result.parent_proposal_fingerprint_sha256
+            ),
+            refiner_id="wrong-v7-refiner",
+            refiner_version=result.refiner_version,
+            refinement_receipt_sha256=result.refinement_receipt_sha256,
+        )
+
+    monkeypatch.setattr(
+        InteractionAwareTorsionContactEnsembleRefinerV7,
+        "refine",
+        refine,
+    )
+    with pytest.raises(
+        Mixed64V7PostAdmissionV3Error,
+        match="result proposal lineage is cross-wired",
+    ):
+        execute_synthetic_mixed64_v7_post_admission(
+            operational,
+            refiner=refiner,
+        )
+
+
 def test_nonoperational_upstream_slots_are_never_sent_to_v7() -> None:
     authority, receptor, ligand, operational = _fixture(legacy_exact_identity=True)
     materialized_count = operational.materialized_count
@@ -504,7 +570,9 @@ def test_one_declared_refinement_error_is_typed_without_retry(
     authority, receptor, ligand, operational = _fixture()
     refiner = _refiner(authority, receptor, ligand)
     original = InteractionAwareTorsionContactEnsembleRefinerV7.refine
-    first_slot = next(value.slot_index for value in operational.records if value.materialized)
+    first_slot = next(
+        value.slot_index for value in operational.records if value.materialized
+    )
     attempts: list[int] = []
 
     def refine(self, proposal, *, max_steps):
@@ -513,7 +581,9 @@ def test_one_declared_refinement_error_is_typed_without_retry(
             raise TorsionContactRefinementError("synthetic numerical failure")
         return original(self, proposal, max_steps=max_steps)
 
-    monkeypatch.setattr(InteractionAwareTorsionContactEnsembleRefinerV7, "refine", refine)
+    monkeypatch.setattr(
+        InteractionAwareTorsionContactEnsembleRefinerV7, "refine", refine
+    )
     result = execute_synthetic_mixed64_v7_post_admission(
         operational,
         refiner=refiner,
@@ -528,6 +598,11 @@ def test_one_declared_refinement_error_is_typed_without_retry(
     assert attempts.count(first_slot) == 1
     assert failed[0].result_proposal is None
     assert failed[0].post_refinement_metrics is None
+    assert failed[0].failure_reason == "synthetic numerical failure"
+    assert (
+        failed[0].to_dict()["failure_reason_sha256"]
+        == hashlib.sha256(b"synthetic numerical failure").hexdigest()
+    )
 
 
 def test_unexpected_refinement_runtime_error_aborts_instead_of_becoming_evidence(
@@ -556,6 +631,34 @@ def test_unexpected_refinement_runtime_error_aborts_instead_of_becoming_evidence
             refiner=refiner,
         )
     assert attempts == 1
+
+
+def test_oversized_typed_failure_reason_aborts_instead_of_truncating_evidence(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import betelgeuze_engine_v2.docking.mixed64_v7_post_admission_v3 as module
+
+    authority, receptor, ligand, operational = _fixture()
+    refiner = _refiner(authority, receptor, ligand)
+
+    def refine(self, proposal, *, max_steps):
+        raise TorsionContactRefinementError(
+            "x" * (module.MAX_TYPED_V7_FAILURE_REASON_UTF8_BYTES + 1)
+        )
+
+    monkeypatch.setattr(
+        InteractionAwareTorsionContactEnsembleRefinerV7,
+        "refine",
+        refine,
+    )
+    with pytest.raises(
+        Mixed64V7PostAdmissionV3Error,
+        match="failure reason exceeds the byte bound",
+    ):
+        execute_synthetic_mixed64_v7_post_admission(
+            operational,
+            refiner=refiner,
+        )
 
 
 def test_operational_live_mutation_fails_before_any_refinement(
@@ -603,8 +706,14 @@ def test_pair_bound_is_checked_before_any_refinement(
         attempts += 1
         raise AssertionError("must not run")
 
-    monkeypatch.setattr(module, "MAX_BATCH_EXACT_PAIR_EVALUATIONS", 1)
-    monkeypatch.setattr(InteractionAwareTorsionContactEnsembleRefinerV7, "refine", refine)
+    monkeypatch.setattr(
+        module,
+        "POST_REFINEMENT_MAX_BATCH_EXACT_PAIR_EVALUATIONS",
+        1,
+    )
+    monkeypatch.setattr(
+        InteractionAwareTorsionContactEnsembleRefinerV7, "refine", refine
+    )
     with pytest.raises(Mixed64V7PostAdmissionV3Error, match="pair work"):
         execute_synthetic_mixed64_v7_post_admission(
             operational,
@@ -674,6 +783,7 @@ def test_record_factory_policy_signature_and_authority_are_frozen() -> None:
             post_refinement_metrics=None,
             status=UPSTREAM_NOT_REFINED_STATUS,
             failure_code=None,
+            failure_reason=None,
             rejection_code=None,
         )
     policy = frozen_mixed64_v7_post_admission_policy()

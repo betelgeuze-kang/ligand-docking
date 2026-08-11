@@ -6,35 +6,57 @@ from __future__ import annotations
 import argparse
 import ast
 import hashlib
+import importlib.util
 import json
 from pathlib import Path
-import sys
-import types
 from typing import Final
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
-for _package_name, _package_path in (
-    ("betelgeuze_engine_v2", _REPO_ROOT / "betelgeuze_engine_v2"),
-    (
-        "betelgeuze_engine_v2.docking",
-        _REPO_ROOT / "betelgeuze_engine_v2" / "docking",
-    ),
-):
-    if _package_name not in sys.modules:
-        _package = types.ModuleType(_package_name)
-        _package.__package__ = _package_name
-        _package.__path__ = [str(_package_path)]  # type: ignore[attr-defined]
-        sys.modules[_package_name] = _package
 
-from betelgeuze_engine_v2.docking.mixed64_v7_post_admission_policy_v3 import (  # noqa: E402
-    BOUND_OPERATIONAL_PROPOSAL_POLICY_SHA256,
-    MIXED64_V7_POST_ADMISSION_POLICY_SHA256,
-    V7_REFINEMENT_MAX_STEPS,
-    V7_TORSION_ELIGIBLE_SLOT_INDICES,
-    frozen_mixed64_v7_post_admission_policy,
+
+def _load_policy_module():
+    path = (
+        _REPO_ROOT
+        / "betelgeuze_engine_v2"
+        / "docking"
+        / "mixed64_v7_post_admission_policy_v3.py"
+    )
+    spec = importlib.util.spec_from_file_location(
+        "_engine_v2_mixed64_v7_post_admission_policy_v3",
+        path,
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError("mixed64 V7 post-admission policy is unavailable")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+_POLICY = _load_policy_module()
+BOUND_GEOMETRIC_ADMISSION_V3_POLICY_SHA256 = (
+    _POLICY.BOUND_GEOMETRIC_ADMISSION_V3_POLICY_SHA256
+)
+BOUND_OPERATIONAL_PROPOSAL_POLICY_SHA256 = (
+    _POLICY.BOUND_OPERATIONAL_PROPOSAL_POLICY_SHA256
+)
+MAX_TYPED_V7_FAILURE_REASON_UTF8_BYTES = _POLICY.MAX_TYPED_V7_FAILURE_REASON_UTF8_BYTES
+MAX_V7_POST_ADMISSION_RECEIPT_CANONICAL_BYTES = (
+    _POLICY.MAX_V7_POST_ADMISSION_RECEIPT_CANONICAL_BYTES
+)
+MIXED64_V7_POST_ADMISSION_POLICY_SHA256 = (
+    _POLICY.MIXED64_V7_POST_ADMISSION_POLICY_SHA256
+)
+POST_REFINEMENT_HARD_REJECTION_MINIMUM_VDW_RATIO = (
+    _POLICY.POST_REFINEMENT_HARD_REJECTION_MINIMUM_VDW_RATIO
+)
+POST_REFINEMENT_MAX_BATCH_EXACT_PAIR_EVALUATIONS = (
+    _POLICY.POST_REFINEMENT_MAX_BATCH_EXACT_PAIR_EVALUATIONS
+)
+V7_REFINEMENT_MAX_STEPS = _POLICY.V7_REFINEMENT_MAX_STEPS
+V7_TORSION_ELIGIBLE_SLOT_INDICES = _POLICY.V7_TORSION_ELIGIBLE_SLOT_INDICES
+frozen_mixed64_v7_post_admission_policy = (
+    _POLICY.frozen_mixed64_v7_post_admission_policy
 )
 
 
@@ -42,10 +64,7 @@ DEFAULT_POLICY_PATH: Final = (
     _REPO_ROOT / "config" / "engine_v2_mixed64_v7_post_admission_v3.json"
 )
 _EXECUTOR_PATH: Final = (
-    _REPO_ROOT
-    / "betelgeuze_engine_v2"
-    / "docking"
-    / "mixed64_v7_post_admission_v3.py"
+    _REPO_ROOT / "betelgeuze_engine_v2" / "docking" / "mixed64_v7_post_admission_v3.py"
 )
 _EXECUTOR_NAME: Final = "execute_synthetic_mixed64_v7_post_admission"
 _FORBIDDEN_PARAMETERS: Final = {
@@ -215,17 +234,19 @@ def verify_policy(path: Path = DEFAULT_POLICY_PATH) -> dict[str, object]:
         != list(V7_TORSION_ELIGIBLE_SLOT_INDICES)
         or refinement.get("preexisting_refiner_receipts_allowed") is not False
         or (
-            refinement.get(
-                "problem_and_search_space_identity_exact_match_required"
-            )
+            refinement.get("problem_and_search_space_identity_exact_match_required")
             is not True
         )
         or refinement.get("geometric_context_exact_match_required") is not True
         or refinement.get("one_refinement_attempt_per_materialized_slot") is not True
         or refinement.get("result_dependent_retry_allowed") is not False
         or type(admission) is not dict
-        or admission.get("hard_rejection_threshold_binary64_hex") != (0.55).hex()
-        or admission.get("maximum_batch_exact_pair_evaluations") != 16_777_216
+        or admission.get("geometric_admission_v3_policy_sha256")
+        != BOUND_GEOMETRIC_ADMISSION_V3_POLICY_SHA256
+        or admission.get("hard_rejection_threshold_binary64_hex")
+        != POST_REFINEMENT_HARD_REJECTION_MINIMUM_VDW_RATIO.hex()
+        or admission.get("maximum_batch_exact_pair_evaluations")
+        != POST_REFINEMENT_MAX_BATCH_EXACT_PAIR_EVALUATIONS
         or admission.get("pair_bound_checked_before_refinement") is not True
     ):
         raise Mixed64V7PostAdmissionPolicyVerificationError(
@@ -247,10 +268,22 @@ def verify_policy(path: Path = DEFAULT_POLICY_PATH) -> dict[str, object]:
         raise Mixed64V7PostAdmissionPolicyVerificationError(
             "V7 output live-integrity boundary changed"
         )
+    if document.get("receipt_integrity") != {
+        "maximum_canonical_bytes": (MAX_V7_POST_ADMISSION_RECEIPT_CANONICAL_BYTES),
+        "sealed_snapshot_required": True,
+        "recursive_live_integrity_required": True,
+    }:
+        raise Mixed64V7PostAdmissionPolicyVerificationError(
+            "V7 post-admission receipt bound changed"
+        )
     failure_semantics = document.get("failure_semantics")
     if type(failure_semantics) is not dict or failure_semantics != {
         "upstream_nonmaterialized_refined": False,
         "typed_refinement_failure_preserved": True,
+        "typed_refinement_failure_reason_preserved": True,
+        "maximum_typed_failure_reason_utf8_bytes": (
+            MAX_TYPED_V7_FAILURE_REASON_UTF8_BYTES
+        ),
         "declared_typed_error": "TorsionContactRefinementError",
         "unexpected_runtime_failure_typed": False,
         "failed_slot_retried": False,
@@ -261,8 +294,10 @@ def verify_policy(path: Path = DEFAULT_POLICY_PATH) -> dict[str, object]:
             "V7 post-admission failure semantics changed"
         )
     authority = document.get("authority")
-    if type(authority) is not dict or not authority or any(
-        type(value) is not bool or value for value in authority.values()
+    if (
+        type(authority) is not dict
+        or not authority
+        or any(type(value) is not bool or value for value in authority.values())
     ):
         raise Mixed64V7PostAdmissionPolicyVerificationError(
             "V7 post-admission authority must remain exact false"
