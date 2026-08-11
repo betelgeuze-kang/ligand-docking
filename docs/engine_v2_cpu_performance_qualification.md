@@ -185,19 +185,73 @@ python3 tools/verify_engine_v2_cpu_performance_profile_v3.py
 python3 tools/preflight_engine_v2_cpu_performance_v3.py
 ```
 
-Passing this preflight only proves that the host contract can be read. The
-full v3 measurement runner and a one-shot terminal result remain separate
-downstream work.
+Passing this preflight only proves that the host contract can be read.
+
+## Profile v3 runner activation
+
+The separate v3 runner activation binds the v3 profile, terminal v2 record,
+host reader, inherited v2 measurement core, runner, and verifier source. The
+runner has no caller-supplied probe or fixture input. It reuses the unchanged
+three synthetic fixtures and fixed 210-observation schedule, performs pre/post
+host and source checks, discards partial measurements, and transactionally
+publishes one owner-only absent-only artifact plus one terminal state.
+
+The supported live API requires the artifact output path and validates that
+path before it consumes anything. It then creates the fixed account-scoped
+attempt marker with `O_EXCL` before host preflight or child launch. The state
+directory is derived from the login account database, not `$HOME`, at
+`.betelgeuze-engine-v2/qualification/<profile-sha256>/`. It is created and
+opened component-by-component with owner-only permissions and no-follow
+descriptors. A second process, thread, or supported direct caller therefore
+cannot acquire another ordinal-one attempt for the same account and profile.
+
+After measurement, the runner claims its opaque process-local result exactly
+once, atomically publishes the artifact, replays it through the bounded
+owner-only reader, and writes an absent-only terminal record. The terminal
+record binds the exact attempt bytes and receipt, run nonce, output-path hash,
+artifact bytes and receipt, decision, numeric outcome, blockers, and false
+authority. Only after all three records reverify does the public API return a
+`PersistedCPUPerformanceRunV3`, whose live capability and qualification
+authority are false. If any step after attempt creation fails, the attempt
+marker remains and no decision object is returned; recovery cannot rerun the
+profile.
+
+GitHub Actions may verify the activation and offline artifacts but is
+explicitly denied live execution. The activation does not authorize molecular,
+historical, Fresh-128, public benchmark, scientific-claim, or product-claim
+work:
+
+```bash
+python3 tools/run_engine_v2_cpu_performance_qualification_v3.py \
+  --verify-activation
+```
+
+This activation PR does not consume the exactly-once v3 profile attempt. A
+subsequent approved clean exact-main operation may invoke `--run-output` once.
+Live execution requires the exact CPython 3.10.12 virtual environment and the
+stdlib-only `-I -S -B` bootstrap; a normal package import is not an equivalent
+lane:
+
+```bash
+/approved/engine-v2-qualification-venv/bin/python -I -S -B \
+  tools/run_engine_v2_cpu_performance_qualification_v3.py \
+  --run-output /approved/local/path/geometric-cpu-qualification-v3.json
+```
+
+GitHub Actions is rejected both by the bootstrap and by the underlying runner
+before state-directory creation. CI may only use `--verify-activation` and
+offline `--verify-artifact`; the latter rejects symlinked, non-owner-only,
+multi-link, or oversized inputs before parsing.
 
 ## Live versus offline evidence
 
-`run_sealed_local_performance_runner()` is the only live entry point and has no
-arguments. It returns a `LiveCPUPerformanceRunResult` admitted by a private,
-process-local registry. Registry membership is only a supported-API capability
-boundary inside that process. It is not a cryptographic attestation, is not
-portable to another process, and grants no production or external authority.
-A complete live run may report a local synthetic `GO` or `NO_GO`; all external
-and product/scientific authority remains false.
+The predecessor v2 `run_sealed_local_performance_runner()` API returned a
+process-local `LiveCPUPerformanceRunResult`. Profile v3 retains an opaque live
+object only as an internal handoff between the reserved executor and its
+single-use writer; it is absent from the public export surface. The public v3
+entry point returns only after artifact and terminal persistence. Neither the
+internal registry nor the local attempt ledger is a cryptographic attestation,
+and neither grants production, scientific, molecular, or external authority.
 
 Persisted JSON explicitly records `offline_replay_only=true`,
 `offline_artifact_gate_eligible=false`,

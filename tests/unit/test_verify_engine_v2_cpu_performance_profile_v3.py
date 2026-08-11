@@ -56,7 +56,6 @@ def test_current_profile_v3_is_exact_non_consuming_successor() -> None:
             "scientific_claim_authorized": False,
             "stage0_admission_authorized": False,
         },
-        "live_run_capability": False,
         "molecular_execution": False,
         "non_consuming_preflight_only": True,
         "numeric_contract_changed": False,
@@ -67,10 +66,12 @@ def test_current_profile_v3_is_exact_non_consuming_successor() -> None:
             "047f157c8d5d3228c180aca6af392eb8cf13d828659b9a83c38c74c34cc0cf0f"
         ),
         "profile_id": "engine_v2_ryzen_5900x_geometric_kernel_synthetic_v3",
+        "profile_contract_live_run_capability": False,
         "profile_sha256": (
             "21facfc62956b402d4a43e5b68389083bacaa3d3afd753eb6b1da3578c8bb6b3"
         ),
         "profile_verified": True,
+        "runner_activation_separate": True,
     }
     completed = subprocess.run(
         [sys.executable, str(_VERIFIER)],

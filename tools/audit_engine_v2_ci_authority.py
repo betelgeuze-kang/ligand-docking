@@ -99,10 +99,14 @@ MIXED64_V2_FORBIDDEN_TRUE_AUTHORITY_KEYS = (
 )
 CPU_PERFORMANCE_CONTRACT_PATHS = (
     "betelgeuze_engine_v2/docking/performance_sidecar.py",
+    "betelgeuze_engine_v2/docking/performance_host_preflight_v3.py",
+    "betelgeuze_engine_v2/docking/performance_qualification_v3.py",
     "config/engine_v2_cpu_performance_profile.json",
     "config/engine_v2_cpu_performance_v2_terminal_decision.json",
     "config/engine_v2_cpu_performance_profile_v3.json",
+    "config/engine_v2_cpu_performance_v3_runner_activation.json",
     "tools/run_engine_v2_cpu_performance_qualification.py",
+    "tools/run_engine_v2_cpu_performance_qualification_v3.py",
     "tools/verify_engine_v2_cpu_performance_profile.py",
     "tools/verify_engine_v2_cpu_performance_v2_terminal_decision.py",
     "tools/verify_engine_v2_cpu_performance_profile_v3.py",
@@ -111,15 +115,20 @@ CPU_PERFORMANCE_CONTRACT_PATHS = (
     "tests/unit/test_verify_engine_v2_cpu_performance_profile.py",
     "tests/unit/test_verify_engine_v2_cpu_performance_v2_terminal_decision.py",
     "tests/unit/test_engine_v2_cpu_performance_host_preflight_v3.py",
+    "tests/unit/test_engine_v2_cpu_performance_qualification_v3.py",
     "tests/unit/test_verify_engine_v2_cpu_performance_profile_v3.py",
     "tests/unit/test_engine_v2_native_geometric_admission.py",
     "docs/engine_v2_cpu_performance_qualification.md",
 )
 CPU_PERFORMANCE_REQUIRED_TOKEN_COUNTS = {
+    "betelgeuze_engine_v2/docking/performance_host_preflight_v3.py": 1,
+    "betelgeuze_engine_v2/docking/performance_qualification_v3.py": 1,
     "config/engine_v2_cpu_performance_profile.json": 2,
     "config/engine_v2_cpu_performance_v2_terminal_decision.json": 2,
     "config/engine_v2_cpu_performance_profile_v3.json": 2,
+    "config/engine_v2_cpu_performance_v3_runner_activation.json": 2,
     "tools/run_engine_v2_cpu_performance_qualification.py": 3,
+    "tools/run_engine_v2_cpu_performance_qualification_v3.py": 4,
     "tools/verify_engine_v2_cpu_performance_profile.py": 4,
     "tools/verify_engine_v2_cpu_performance_v2_terminal_decision.py": 3,
     "tools/verify_engine_v2_cpu_performance_profile_v3.py": 3,
@@ -128,9 +137,12 @@ CPU_PERFORMANCE_REQUIRED_TOKEN_COUNTS = {
     "tests/unit/test_verify_engine_v2_cpu_performance_profile.py": 2,
     "tests/unit/test_verify_engine_v2_cpu_performance_v2_terminal_decision.py": 2,
     "tests/unit/test_engine_v2_cpu_performance_host_preflight_v3.py": 2,
+    "tests/unit/test_engine_v2_cpu_performance_qualification_v3.py": 2,
     "tests/unit/test_verify_engine_v2_cpu_performance_profile_v3.py": 2,
     "tests/unit/test_engine_v2_native_geometric_admission.py": 2,
     "docs/engine_v2_cpu_performance_qualification.md": 1,
+    "import betelgeuze_engine_v2.docking.performance_host_preflight_v3": 1,
+    "import betelgeuze_engine_v2.docking.performance_qualification_v3": 1,
     "import betelgeuze_engine_v2.docking.performance_sidecar": 1,
 }
 CPU_PERFORMANCE_REQUIRED_TOKENS = tuple(CPU_PERFORMANCE_REQUIRED_TOKEN_COUNTS)
@@ -444,7 +456,7 @@ def _cpu_performance_authority_is_fail_closed(repo_root: Path) -> bool:
         if type(host_preflight) is dict
         else None
     )
-    return bool(
+    profile_v3_fail_closed = bool(
         type(authority_v3) is dict
         and set(authority_v3) == set(CPU_PERFORMANCE_FALSE_AUTHORITY_KEYS)
         and all(
@@ -470,6 +482,105 @@ def _cpu_performance_authority_is_fail_closed(repo_root: Path) -> bool:
         and reader.get("nofollow_required") is True
         and reader.get("group_or_world_writable_allowed") is False
         and reader.get("stable_value_read_count") == 2
+    )
+    if not profile_v3_fail_closed:
+        return False
+
+    activation_path = (
+        repo_root / "config/engine_v2_cpu_performance_v3_runner_activation.json"
+    )
+    try:
+        activation_raw = activation_path.read_bytes()
+        if not activation_raw.endswith(b"\n") or activation_raw.endswith(b"\n\n"):
+            return False
+        activation = json.loads(
+            activation_raw[:-1].decode("ascii"),
+            object_pairs_hook=reject_duplicate_keys,
+            parse_float=reject_float,
+            parse_constant=reject_float,
+        )
+    except (OSError, UnicodeError, ValueError):
+        return False
+    expected_activation_bytes = (
+        json.dumps(
+            activation,
+            indent=2,
+            sort_keys=True,
+            ensure_ascii=True,
+            allow_nan=False,
+        ).encode("ascii")
+        + b"\n"
+    )
+    if (
+        type(activation) is not dict
+        or activation.get("schema_id")
+        != "betelgeuze.engine_v2_cpu_performance_runner_activation/3.0.0"
+        or activation_raw != expected_activation_bytes
+        or activation.get("status")
+        != "implementation_admitted_execution_not_attested"
+    ):
+        return False
+    activation_authority = activation.get("authority")
+    activation_restrictions = activation.get("restrictions")
+    runner = activation.get("runner")
+    expected_restrictions = {
+        "actual_molecular_execution_allowed",
+        "contains_molecular_cases",
+        "fresh_or_historical_case_input_allowed",
+        "github_actions_production_authority_allowed",
+        "public_or_scientific_performance_claim_allowed",
+        "reservation_allowed",
+        "test_double_production_authority_allowed",
+    }
+    expected_runner_keys = {
+        "attempt_ledger_policy",
+        "caller_supplied_probe_allowed",
+        "decision_return_policy",
+        "exactly_once_profile_attempt",
+        "execution_state_recorded_only_by_terminal_decision",
+        "github_actions_live_execution_allowed",
+        "isolated_live_entrypoint_required",
+        "live_synthetic_local_execution_implemented",
+        "molecular_execution_allowed",
+        "output_policy",
+        "reservation_created",
+        "result_dependent_configuration_allowed",
+        "terminal_state_policy",
+        "test_double_execution_authority",
+    }
+    return bool(
+        type(activation_authority) is dict
+        and set(activation_authority) == set(CPU_PERFORMANCE_FALSE_AUTHORITY_KEYS)
+        and all(
+            activation_authority.get(key) is False
+            for key in CPU_PERFORMANCE_FALSE_AUTHORITY_KEYS
+        )
+        and type(activation_restrictions) is dict
+        and set(activation_restrictions) == expected_restrictions
+        and all(
+            activation_restrictions.get(key) is False
+            for key in expected_restrictions
+        )
+        and type(runner) is dict
+        and set(runner) == expected_runner_keys
+        and runner.get("attempt_ledger_policy")
+        == "fixed_account_scoped_profile_sha_o_excl_before_preflight"
+        and runner.get("caller_supplied_probe_allowed") is False
+        and runner.get("decision_return_policy")
+        == "artifact_and_terminal_persisted_before_return"
+        and runner.get("exactly_once_profile_attempt") is True
+        and runner.get("execution_state_recorded_only_by_terminal_decision") is True
+        and runner.get("github_actions_live_execution_allowed") is False
+        and runner.get("isolated_live_entrypoint_required") is True
+        and runner.get("live_synthetic_local_execution_implemented") is True
+        and runner.get("molecular_execution_allowed") is False
+        and runner.get("output_policy")
+        == "owner_only_absent_only_single_artifact_plus_terminal"
+        and runner.get("reservation_created") is False
+        and runner.get("result_dependent_configuration_allowed") is False
+        and runner.get("terminal_state_policy")
+        == "owner_only_absent_only_attempt_and_artifact_bound"
+        and runner.get("test_double_execution_authority") is False
     )
 
 

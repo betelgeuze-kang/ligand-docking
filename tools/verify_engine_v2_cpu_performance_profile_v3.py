@@ -238,15 +238,16 @@ def verify_cpu_performance_profile_v3(
     profile_sha256 = hashlib.sha256(raw).hexdigest()
     return {
         "authority": dict(v2.AUTHORITY_FALSE),
-        "live_run_capability": False,
         "molecular_execution": False,
         "non_consuming_preflight_only": True,
         "numeric_contract_changed": False,
         "predecessor_profile_sha256": _PROFILE_V2_SHA256,
         "predecessor_terminal_decision_sha256": _TERMINAL_V2_SHA256,
         "profile_id": document["profile_id"],
+        "profile_contract_live_run_capability": False,
         "profile_sha256": profile_sha256,
         "profile_verified": True,
+        "runner_activation_separate": True,
     }
 
 
