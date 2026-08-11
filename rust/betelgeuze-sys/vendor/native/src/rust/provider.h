@@ -153,6 +153,22 @@ int32_t bg_rust_cpu_docking_pose_validity_v1_evaluate_fixed64(
     bg_docking_pose_validity_row_v1 *out_rows,
     bg_rust_cpu_error_v1 *out_error);
 
+int32_t bg_rust_cpu_docking_stable_top_k_v1_create(
+    void **out_state,
+    bg_rust_cpu_error_v1 *out_error);
+
+void bg_rust_cpu_docking_stable_top_k_v1_destroy(void *state);
+
+int32_t bg_rust_cpu_docking_stable_top_k_v1_rank_fixed64(
+    const void *state,
+    const bg_docking_stable_top_k_input_v1 *input,
+    bg_docking_stable_top_k_row_v1 *out_rows,
+    uint32_t *out_primary_slot_indices,
+    uint64_t *out_primary_count,
+    uint32_t *out_valid_slot_indices,
+    uint64_t *out_valid_count,
+    bg_rust_cpu_error_v1 *out_error);
+
 #if defined(__cplusplus)
 }
 #endif

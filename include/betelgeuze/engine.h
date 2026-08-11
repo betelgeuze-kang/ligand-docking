@@ -56,7 +56,7 @@ extern "C" {
 #endif
 
 #define BG_ABI_VERSION_MAJOR UINT32_C(1)
-#define BG_ABI_VERSION_MINOR UINT32_C(6)
+#define BG_ABI_VERSION_MINOR UINT32_C(7)
 #define BG_ABI_VERSION UINT32_C(1)
 
 #define BG_CANONICAL_LENGTH_UNIT "angstrom"
@@ -116,6 +116,7 @@ enum {
 /* Frozen Engine V2 ScorerV1 batch dimensions and row semantics. */
 #define BG_DOCKING_FIXED64_CANDIDATE_COUNT UINT32_C(64)
 #define BG_DOCKING_SCORER_V1_TERM_COUNT UINT32_C(8)
+#define BG_DOCKING_STABLE_TOP_K_LIMIT UINT32_C(5)
 
 typedef int32_t bg_docking_scorer_v1_candidate_state;
 enum {
@@ -188,6 +189,7 @@ typedef struct bg_forcefield bg_forcefield;
 typedef struct bg_simulation bg_simulation;
 typedef struct bg_docking_scorer_v1 bg_docking_scorer_v1;
 typedef struct bg_docking_pose_validity_v1 bg_docking_pose_validity_v1;
+typedef struct bg_docking_stable_top_k_v1 bg_docking_stable_top_k_v1;
 
 typedef struct bg_context_options {
     uint32_t struct_size;
@@ -753,6 +755,68 @@ typedef struct bg_docking_pose_validity_output_v1 {
     uint64_t reserved[4];
 } bg_docking_pose_validity_output_v1;
 
+/*
+ * Receipt-free input to the fixed64 stable ranking kernel. Coordinate
+ * identities are 64 consecutive SHA-256 digests. A scored row requires a
+ * non-zero digest; a typed scorer failure requires an all-zero digest. The
+ * scorer and validity row arrays must preserve slot identity and exact
+ * failure binding. The frozen order is total score ascending, then slot index
+ * ascending, then coordinate digest lexicographic. Slot identity is unique,
+ * so the final tie-break remains declared evidence rather than an opportunity
+ * for result-dependent ordering.
+ */
+typedef struct bg_docking_stable_top_k_input_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    uint64_t candidate_count;
+    uint32_t top_k_limit;
+    bg_unit_system unit_system;
+    const bg_docking_scorer_v1_row_v1 *scorer_rows;
+    const bg_docking_pose_validity_row_v1 *validity_rows;
+    const uint8_t *coordinate_sha256;
+    uint64_t reserved[4];
+} bg_docking_stable_top_k_input_v1;
+
+/* Rank zero is the explicit not-ranked sentinel. Ineligible rows carry zero
+ * score and coordinate identity. These numerical rows grant no product-rank,
+ * customer-emission, or production-claim authority. */
+typedef struct bg_docking_stable_top_k_row_v1 {
+    uint32_t slot_index;
+    uint8_t rank_eligible;
+    uint8_t valid_rank_eligible;
+    uint16_t reserved0;
+    uint32_t stable_rank;
+    uint32_t stable_valid_rank;
+    double total_score;
+    uint8_t coordinate_sha256[32];
+    uint64_t reserved[4];
+} bg_docking_stable_top_k_row_v1;
+
+/* Caller-owned transactional output. Both ranking-index buffers need capacity
+ * 64; count fields and authority flags are committed only after the complete
+ * result has passed backend-independent validation. */
+typedef struct bg_docking_stable_top_k_output_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    uint64_t row_capacity;
+    uint64_t row_count;
+    uint64_t primary_index_capacity;
+    uint64_t primary_index_count;
+    uint64_t valid_index_capacity;
+    uint64_t valid_index_count;
+    bg_unit_system unit_system;
+    uint32_t reserved0;
+    bg_docking_stable_top_k_row_v1 *rows;
+    uint32_t *primary_slot_indices;
+    uint32_t *valid_slot_indices;
+    uint8_t existing_rank_auto_change_authorized;
+    uint8_t customer_pose_emission_authorized;
+    uint8_t production_claim_authorized;
+    uint8_t reserved1;
+    uint32_t reserved2;
+    uint64_t reserved[4];
+} bg_docking_stable_top_k_output_v1;
+
 /* ABI and diagnostics. */
 BG_API uint32_t BG_CALL bg_abi_version(void) BG_NOEXCEPT;
 BG_API uint32_t BG_CALL bg_abi_version_major(void) BG_NOEXCEPT;
@@ -857,6 +921,14 @@ BG_API bg_status BG_CALL bg_docking_pose_validity_output_v1_init(
     bg_docking_pose_validity_output_v1 *output,
     size_t caller_struct_size,
     uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_stable_top_k_input_v1_init(
+    bg_docking_stable_top_k_input_v1 *input,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_stable_top_k_output_v1_init(
+    bg_docking_stable_top_k_output_v1 *output,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
 
 #if !defined(BG_DISABLE_DESCRIPTOR_INIT_CONVENIENCE_MACROS)
 #  define bg_context_options_init(options) \
@@ -929,6 +1001,12 @@ BG_API bg_status BG_CALL bg_docking_pose_validity_output_v1_init(
 #  define bg_docking_pose_validity_output_v1_init(output) \
     bg_docking_pose_validity_output_v1_init( \
         (output), sizeof(bg_docking_pose_validity_output_v1), BG_ABI_VERSION)
+#  define bg_docking_stable_top_k_input_v1_init(input) \
+    bg_docking_stable_top_k_input_v1_init( \
+        (input), sizeof(bg_docking_stable_top_k_input_v1), BG_ABI_VERSION)
+#  define bg_docking_stable_top_k_output_v1_init(output) \
+    bg_docking_stable_top_k_output_v1_init( \
+        (output), sizeof(bg_docking_stable_top_k_output_v1), BG_ABI_VERSION)
 #endif
 
 /*
@@ -1003,6 +1081,24 @@ BG_API bg_status BG_CALL bg_docking_pose_validity_v1_evaluate_fixed64(
     const bg_docking_pose_validity_v1 *validity,
     const bg_docking_pose_validity_candidate_batch_soa_v1 *candidates,
     bg_docking_pose_validity_output_v1 *out_rows) BG_NOEXCEPT;
+
+/* Stable Top-K uses the same explicit backend/device binding. Primary ranking
+ * includes every successfully scored row; valid-only ranking is the primary
+ * order filtered by a complete all-checks-passed validity row. No backend may
+ * silently fall back, and all three product authority flags remain false. */
+BG_API bg_status BG_CALL bg_docking_stable_top_k_v1_create(
+    const bg_context *context,
+    bg_docking_stable_top_k_v1 **out_ranker) BG_NOEXCEPT;
+BG_API void BG_CALL bg_docking_stable_top_k_v1_destroy(
+    bg_docking_stable_top_k_v1 *ranker) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_stable_top_k_v1_get_backend(
+    const bg_docking_stable_top_k_v1 *ranker,
+    bg_backend *backend) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_stable_top_k_v1_rank_fixed64(
+    const bg_context *context,
+    const bg_docking_stable_top_k_v1 *ranker,
+    const bg_docking_stable_top_k_input_v1 *input,
+    bg_docking_stable_top_k_output_v1 *output) BG_NOEXCEPT;
 
 /* A system owns its host SoA and has no parent-handle lifetime dependency. */
 BG_API bg_status BG_CALL bg_system_create(

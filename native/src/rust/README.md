@@ -23,3 +23,8 @@ ABI 1.6 also routes fixed64 pose validity through a persistent Rust context.
 The private provider calls the reusable canonical Rust validity kernel and
 returns the complete check mask, blocker mask, 22 measurements, and typed
 failure evidence without dropping any slot or relabeling another backend.
+
+ABI 1.7 routes stable Top-K through the reusable fixed-width Rust ranking
+kernel as well. The private provider revalidates scorer/validity binding and
+coordinate identities, returns both complete ordering arrays transactionally,
+and keeps all product authority flags false.

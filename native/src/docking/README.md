@@ -13,7 +13,17 @@ output preserves all eight frozen checks and all 22 measurements; capacity or
 non-finite failures stay candidate-local and transactional. The qualification
 C++ implementation and product Rust CPU implementation are independent but
 share the public numerical contract. HIP lanes remain fail-closed until their
-dedicated device validity providers pass parity.
+dedicated device providers are compiled; both now contain deterministic
+fixed64 validity kernels and expose parity tests when a qualified device is
+available.
+
+ABI 1.7 adds the persistent stable Top-K handle. It consumes the complete
+ScorerV1 and pose-validity rows plus 64 coordinate SHA-256 identities, derives
+the primary score order and the validity-filtered order with a bounded
+allocation-free insertion sort, and returns explicit rank-zero sentinels for
+ineligible rows. C++, Rust, `hip_safe`, and `hip_fast` share the frozen
+score-then-slot ordering and never authorize automatic product-rank changes,
+customer pose emission, or production claims.
 
 The term order is:
 

@@ -20,7 +20,7 @@ static BG_RUST_CPU_PROVIDER_LINK_ANCHOR: extern "C" fn() -> u32 =
     betelgeuze_cpu_kernel::bg_rust_cpu_provider_abi_version_v1;
 
 pub const BG_ABI_VERSION_MAJOR: u32 = 1;
-pub const BG_ABI_VERSION_MINOR: u32 = 6;
+pub const BG_ABI_VERSION_MINOR: u32 = 7;
 pub const BG_ABI_VERSION: u32 = 1;
 
 pub const BG_CANONICAL_LENGTH_UNIT: &[u8] = b"angstrom\0";
@@ -66,6 +66,7 @@ pub const BG_INTEGRATOR_LANGEVIN_BAOAB: bg_integrator = 2;
 
 pub const BG_DOCKING_FIXED64_CANDIDATE_COUNT: u32 = 64;
 pub const BG_DOCKING_SCORER_V1_TERM_COUNT: u32 = 8;
+pub const BG_DOCKING_STABLE_TOP_K_LIMIT: u32 = 5;
 
 pub type bg_docking_scorer_v1_candidate_state = i32;
 pub const BG_DOCKING_SCORER_V1_CANDIDATE_INACTIVE: bg_docking_scorer_v1_candidate_state = 0;
@@ -160,6 +161,12 @@ pub struct bg_docking_scorer_v1 {
 /// Opaque persistent Engine V2 pose-validity context.
 #[repr(C)]
 pub struct bg_docking_pose_validity_v1 {
+    _private: [u8; 0],
+}
+
+/// Opaque persistent Engine V2 stable Top-K provider.
+#[repr(C)]
+pub struct bg_docking_stable_top_k_v1 {
     _private: [u8; 0],
 }
 
@@ -614,6 +621,58 @@ pub struct bg_docking_pose_validity_output_v1 {
     pub reserved: [u64; 4],
 }
 
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_stable_top_k_input_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub candidate_count: u64,
+    pub top_k_limit: u32,
+    pub unit_system: bg_unit_system,
+    pub scorer_rows: *const bg_docking_scorer_v1_row_v1,
+    pub validity_rows: *const bg_docking_pose_validity_row_v1,
+    pub coordinate_sha256: *const u8,
+    pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_stable_top_k_row_v1 {
+    pub slot_index: u32,
+    pub rank_eligible: u8,
+    pub valid_rank_eligible: u8,
+    pub reserved0: u16,
+    pub stable_rank: u32,
+    pub stable_valid_rank: u32,
+    pub total_score: f64,
+    pub coordinate_sha256: [u8; 32],
+    pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_stable_top_k_output_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub row_capacity: u64,
+    pub row_count: u64,
+    pub primary_index_capacity: u64,
+    pub primary_index_count: u64,
+    pub valid_index_capacity: u64,
+    pub valid_index_count: u64,
+    pub unit_system: bg_unit_system,
+    pub reserved0: u32,
+    pub rows: *mut bg_docking_stable_top_k_row_v1,
+    pub primary_slot_indices: *mut u32,
+    pub valid_slot_indices: *mut u32,
+    pub existing_rank_auto_change_authorized: u8,
+    pub customer_pose_emission_authorized: u8,
+    pub production_claim_authorized: u8,
+    pub reserved1: u8,
+    pub reserved2: u32,
+    pub reserved: [u64; 4],
+}
+
 unsafe extern "C" {
     pub fn bg_abi_version() -> u32;
     pub fn bg_abi_version_major() -> u32;
@@ -720,6 +779,16 @@ unsafe extern "C" {
         caller_struct_size: usize,
         caller_abi_version: u32,
     ) -> bg_status;
+    pub fn bg_docking_stable_top_k_input_v1_init(
+        input: *mut bg_docking_stable_top_k_input_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_docking_stable_top_k_output_v1_init(
+        output: *mut bg_docking_stable_top_k_output_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
 
     pub fn bg_backend_is_available(
         backend: bg_backend,
@@ -775,6 +844,21 @@ unsafe extern "C" {
         validity: *const bg_docking_pose_validity_v1,
         candidates: *const bg_docking_pose_validity_candidate_batch_soa_v1,
         out_rows: *mut bg_docking_pose_validity_output_v1,
+    ) -> bg_status;
+    pub fn bg_docking_stable_top_k_v1_create(
+        context: *const bg_context,
+        out_ranker: *mut *mut bg_docking_stable_top_k_v1,
+    ) -> bg_status;
+    pub fn bg_docking_stable_top_k_v1_destroy(ranker: *mut bg_docking_stable_top_k_v1);
+    pub fn bg_docking_stable_top_k_v1_get_backend(
+        ranker: *const bg_docking_stable_top_k_v1,
+        backend: *mut bg_backend,
+    ) -> bg_status;
+    pub fn bg_docking_stable_top_k_v1_rank_fixed64(
+        context: *const bg_context,
+        ranker: *const bg_docking_stable_top_k_v1,
+        input: *const bg_docking_stable_top_k_input_v1,
+        output: *mut bg_docking_stable_top_k_output_v1,
     ) -> bg_status;
 
     pub fn bg_system_create(

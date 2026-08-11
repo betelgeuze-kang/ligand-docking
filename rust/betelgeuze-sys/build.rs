@@ -18,6 +18,7 @@ const VENDORED_FILES: &[&str] = &[
     "native/src/rust/evaluator.cpp",
     "native/src/docking/pose_validity.cpp",
     "native/src/docking/scorer_v1.cpp",
+    "native/src/docking/stable_top_k.cpp",
     "native/src/dynamics/dynamics.hpp",
     "native/src/dynamics/api.cpp",
     "native/src/dynamics/checkpoint.cpp",
@@ -29,6 +30,7 @@ const VENDORED_FILES: &[&str] = &[
     "native/src/hip/provider.hip",
     "native/src/hip/docking_scorer.hip",
     "native/src/hip/docking_pose_validity.hip",
+    "native/src/hip/docking_stable_top_k.hip",
     "native/src/hip/evaluator.hpp",
     "native/src/hip/evaluator.cpp",
     "native/src/hip/backend.hpp",
@@ -248,6 +250,7 @@ fn main() {
     let rust_evaluator_source = vendor_root.join("native/src/rust/evaluator.cpp");
     let docking_scorer_source = vendor_root.join("native/src/docking/scorer_v1.cpp");
     let docking_pose_validity_source = vendor_root.join("native/src/docking/pose_validity.cpp");
+    let docking_stable_top_k_source = vendor_root.join("native/src/docking/stable_top_k.cpp");
     let dynamics_api_source = vendor_root.join("native/src/dynamics/api.cpp");
     let dynamics_checkpoint_source = vendor_root.join("native/src/dynamics/checkpoint.cpp");
     let dynamics_common_source = vendor_root.join("native/src/dynamics/common.cpp");
@@ -281,6 +284,7 @@ fn main() {
         .file(&rust_evaluator_source)
         .file(&docking_pose_validity_source)
         .file(&docking_scorer_source)
+        .file(&docking_stable_top_k_source)
         .file(&dynamics_api_source)
         .file(&dynamics_checkpoint_source)
         .file(&dynamics_common_source)

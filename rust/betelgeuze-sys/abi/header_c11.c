@@ -5,7 +5,7 @@
 
 _Static_assert(BG_ABI_VERSION == UINT32_C(1), "unexpected ABI version");
 _Static_assert(BG_ABI_VERSION_MAJOR == UINT32_C(1), "unexpected ABI major version");
-_Static_assert(BG_ABI_VERSION_MINOR == UINT32_C(6), "unexpected ABI minor version");
+_Static_assert(BG_ABI_VERSION_MINOR == UINT32_C(7), "unexpected ABI minor version");
 _Static_assert(BG_STATUS_OK == 0, "unexpected success status");
 _Static_assert(BG_STATUS_NUMERICAL_ERROR == 10, "unexpected numerical status");
 _Static_assert(BG_BACKEND_CPU == 1, "unexpected CPU backend value");
@@ -43,6 +43,7 @@ _Static_assert(
     "pose-validity failure width changed");
 _Static_assert(BG_DOCKING_FIXED64_CANDIDATE_COUNT == 64, "bad fixed64 denominator");
 _Static_assert(BG_DOCKING_SCORER_V1_TERM_COUNT == 8, "bad ScorerV1 term count");
+_Static_assert(BG_DOCKING_STABLE_TOP_K_LIMIT == 5, "bad stable Top-K limit");
 _Static_assert(BG_INTEGRATOR_VELOCITY_VERLET == 1, "unexpected Verlet value");
 _Static_assert(BG_INTEGRATOR_LANGEVIN_BAOAB == 2, "unexpected BAOAB value");
 _Static_assert(sizeof(bg_context_options) == 64, "context options ABI changed");
@@ -76,6 +77,15 @@ _Static_assert(
 _Static_assert(
     sizeof(bg_docking_pose_validity_output_v1) == 72,
     "pose-validity output ABI changed");
+_Static_assert(
+    sizeof(bg_docking_stable_top_k_input_v1) == 80,
+    "stable Top-K input ABI changed");
+_Static_assert(
+    sizeof(bg_docking_stable_top_k_row_v1) == 88,
+    "stable Top-K row ABI changed");
+_Static_assert(
+    sizeof(bg_docking_stable_top_k_output_v1) == 128,
+    "stable Top-K output ABI changed");
 _Static_assert(sizeof(bg_forcefield_soa_v1) == 352, "force-field SoA ABI changed");
 _Static_assert(offsetof(bg_forcefield_soa_v1, struct_size) == 0, "bad struct_size offset");
 _Static_assert(offsetof(bg_forcefield_soa_v1, abi_version) == 4, "bad abi_version offset");

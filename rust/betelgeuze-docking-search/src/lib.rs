@@ -67,8 +67,9 @@ pub use fixed64_producer::{
     NATIVE_FIXED64_SOURCE_BUNDLE_SCHEMA_ID,
 };
 pub use fixed64_ranking::{
-    rank_native_fixed64_top_k, NativeFixed64RankingBatch, NativeFixed64RankingError,
-    NativeFixed64RankingErrorCode, NativeFixed64RankingRecord,
+    rank_native_fixed64_stable_top_k_kernel, rank_native_fixed64_top_k, NativeFixed64RankingBatch,
+    NativeFixed64RankingError, NativeFixed64RankingErrorCode, NativeFixed64RankingRecord,
+    NativeFixed64StableTopKInputRow, NativeFixed64StableTopKKernelOutcome,
     NATIVE_FIXED64_PRIMARY_RANKING_SEMANTICS, NATIVE_FIXED64_RANKING_ALGORITHM_ID,
     NATIVE_FIXED64_RANKING_BATCH_SCHEMA_ID, NATIVE_FIXED64_RANKING_RECORD_SCHEMA_ID,
     NATIVE_FIXED64_TOP_K_LIMIT, NATIVE_FIXED64_VALID_RANKING_SEMANTICS,

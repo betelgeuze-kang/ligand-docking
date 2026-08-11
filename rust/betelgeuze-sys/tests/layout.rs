@@ -5,7 +5,7 @@ use betelgeuze_sys::*;
 #[test]
 fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(BG_ABI_VERSION_MAJOR, 1);
-    assert_eq!(BG_ABI_VERSION_MINOR, 6);
+    assert_eq!(BG_ABI_VERSION_MINOR, 7);
     assert_eq!(BG_ABI_VERSION, 1);
     assert_eq!(size_of::<bg_status>(), 4);
     assert_eq!(size_of::<bg_backend>(), 4);
@@ -19,6 +19,7 @@ fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(size_of::<bg_docking_pose_validity_failure>(), 4);
     assert_eq!(BG_DOCKING_FIXED64_CANDIDATE_COUNT, 64);
     assert_eq!(BG_DOCKING_SCORER_V1_TERM_COUNT, 8);
+    assert_eq!(BG_DOCKING_STABLE_TOP_K_LIMIT, 5);
     assert_eq!(BG_STATUS_OK, 0);
     assert_eq!(BG_STATUS_INTERNAL_ERROR, 9);
     assert_eq!(BG_STATUS_NUMERICAL_ERROR, 10);
@@ -36,6 +37,47 @@ fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(BG_PERIODIC_AXIS_Y, 2);
     assert_eq!(BG_PERIODIC_AXIS_Z, 4);
     assert_eq!(BG_PERIODIC_AXES_ALL, 7);
+}
+
+#[test]
+fn docking_stable_top_k_layouts_match_the_c_header() {
+    assert_eq!(size_of::<bg_docking_stable_top_k_input_v1>(), 80);
+    assert_eq!(align_of::<bg_docking_stable_top_k_input_v1>(), 8);
+    assert_eq!(
+        offset_of!(bg_docking_stable_top_k_input_v1, candidate_count),
+        8
+    );
+    assert_eq!(
+        offset_of!(bg_docking_stable_top_k_input_v1, scorer_rows),
+        24
+    );
+    assert_eq!(
+        offset_of!(bg_docking_stable_top_k_input_v1, coordinate_sha256),
+        40
+    );
+    assert_eq!(offset_of!(bg_docking_stable_top_k_input_v1, reserved), 48);
+    assert_eq!(size_of::<bg_docking_stable_top_k_row_v1>(), 88);
+    assert_eq!(offset_of!(bg_docking_stable_top_k_row_v1, stable_rank), 8);
+    assert_eq!(offset_of!(bg_docking_stable_top_k_row_v1, total_score), 16);
+    assert_eq!(
+        offset_of!(bg_docking_stable_top_k_row_v1, coordinate_sha256),
+        24
+    );
+    assert_eq!(offset_of!(bg_docking_stable_top_k_row_v1, reserved), 56);
+    assert_eq!(size_of::<bg_docking_stable_top_k_output_v1>(), 128);
+    assert_eq!(
+        offset_of!(bg_docking_stable_top_k_output_v1, unit_system),
+        56
+    );
+    assert_eq!(offset_of!(bg_docking_stable_top_k_output_v1, rows), 64);
+    assert_eq!(
+        offset_of!(
+            bg_docking_stable_top_k_output_v1,
+            existing_rank_auto_change_authorized
+        ),
+        88
+    );
+    assert_eq!(offset_of!(bg_docking_stable_top_k_output_v1, reserved), 96);
 }
 
 #[test]
@@ -542,4 +584,12 @@ fn opaque_handles_are_only_used_behind_pointers() {
     assert_eq!(size_of::<*mut bg_forcefield>(), size_of::<usize>());
     assert_eq!(size_of::<*mut bg_simulation>(), size_of::<usize>());
     assert_eq!(size_of::<*mut bg_docking_scorer_v1>(), size_of::<usize>());
+    assert_eq!(
+        size_of::<*mut bg_docking_pose_validity_v1>(),
+        size_of::<usize>()
+    );
+    assert_eq!(
+        size_of::<*mut bg_docking_stable_top_k_v1>(),
+        size_of::<usize>()
+    );
 }

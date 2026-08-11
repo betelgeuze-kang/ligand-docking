@@ -12,12 +12,14 @@ use std::ffi::c_void;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use betelgeuze_docking_search::{
+    rank_native_fixed64_stable_top_k_kernel, NativeFixed64StableTopKInputRow,
     NativeFixed64ValidityBackend, NativeFixed64ValidityChecks, NativeFixed64ValidityConfig,
     NativeFixed64ValidityContext, NativeFixed64ValidityFailureCode,
-    NativeFixed64ValidityKernelOutcome, NativeFixed64ValidityMeasurements, NativeScorerV1Atom,
-    NativeScorerV1Backend, NativeScorerV1Config, NativeScorerV1Context, NativeScorerV1Donor,
-    NativeScorerV1FailureCode, NativeScorerV1KernelOutcome, Quaternion, Vec3,
-    FIXED64_CANDIDATE_COUNT,
+    NativeFixed64ValidityKernelOutcome, NativeFixed64ValidityMeasurements,
+    NativeFixed64ValidityRowStatus, NativeScorerV1Atom, NativeScorerV1Backend,
+    NativeScorerV1Config, NativeScorerV1Context, NativeScorerV1Donor, NativeScorerV1FailureCode,
+    NativeScorerV1KernelOutcome, NativeScorerV1RowStatus, Quaternion, Vec3,
+    FIXED64_CANDIDATE_COUNT, NATIVE_FIXED64_TOP_K_LIMIT,
 };
 use kernel::{AngleSoa, BondSoa, ForceField, Pair, PairScale, System, TorsionSoa};
 
@@ -62,6 +64,7 @@ const VALIDITY_CHECK_DECLARED_POCKET: u32 = 1 << 5;
 const VALIDITY_CHECK_ELEMENT_LIGAND_VDW: u32 = 1 << 6;
 const VALIDITY_CHECK_ELEMENT_RECEPTOR_VDW: u32 = 1 << 7;
 const VALIDITY_CHECK_ALL: u32 = 0xff;
+const STABLE_TOP_K_LIMIT: u32 = NATIVE_FIXED64_TOP_K_LIMIT as u32;
 
 #[repr(C)]
 pub struct SystemV1 {
@@ -352,6 +355,35 @@ pub struct DockingPoseValidityRowV1 {
     element_vdw_receptor_minimum_ratio: f64,
     reserved: [u64; 4],
 }
+
+#[repr(C)]
+pub struct DockingStableTopKInputV1 {
+    struct_size: u32,
+    abi_version: u32,
+    candidate_count: u64,
+    top_k_limit: u32,
+    unit_system: i32,
+    scorer_rows: *const DockingScorerRowV1,
+    validity_rows: *const DockingPoseValidityRowV1,
+    coordinate_sha256: *const u8,
+    reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct DockingStableTopKRowV1 {
+    slot_index: u32,
+    rank_eligible: u8,
+    valid_rank_eligible: u8,
+    reserved0: u16,
+    stable_rank: u32,
+    stable_valid_rank: u32,
+    total_score: f64,
+    coordinate_sha256: [u8; 32],
+    reserved: [u64; 4],
+}
+
+struct StableTopKState;
 
 #[derive(Clone, Copy)]
 struct ProviderError {
@@ -1915,6 +1947,212 @@ unsafe fn evaluate_pose_validity_fixed64(
     })
 }
 
+struct StableTopKProviderOutput {
+    rows: [DockingStableTopKRowV1; FIXED64_CANDIDATE_COUNT],
+    primary_slot_indices: [u32; FIXED64_CANDIDATE_COUNT],
+    primary_count: u64,
+    valid_slot_indices: [u32; FIXED64_CANDIDATE_COUNT],
+    valid_count: u64,
+}
+
+fn digest_is_zero(digest: &[u8; 32]) -> bool {
+    digest.iter().all(|value| *value == 0)
+}
+
+unsafe fn rank_stable_top_k_fixed64(
+    input: &DockingStableTopKInputV1,
+) -> Result<StableTopKProviderOutput, ProviderError> {
+    validate_header::<DockingStableTopKInputV1>(
+        input.struct_size,
+        input.abi_version,
+        "rust_cpu stable Top-K input size mismatch",
+    )?;
+    if input.candidate_count != FIXED64_CANDIDATE_COUNT as u64
+        || input.top_k_limit != STABLE_TOP_K_LIMIT
+        || input.unit_system != UNIT_SYSTEM_ANGSTROM_KCAL_MOL
+        || !reserved_is_zero(&input.reserved)
+    {
+        return Err(ProviderError::invalid(
+            "rust_cpu stable Top-K input identity is invalid",
+        ));
+    }
+    let scorer_rows = unsafe {
+        checked_slice(
+            input.scorer_rows,
+            FIXED64_CANDIDATE_COUNT,
+            "rust_cpu stable Top-K scorer rows are null",
+        )?
+    };
+    let validity_rows = unsafe {
+        checked_slice(
+            input.validity_rows,
+            FIXED64_CANDIDATE_COUNT,
+            "rust_cpu stable Top-K validity rows are null",
+        )?
+    };
+    let coordinate_digests = unsafe {
+        checked_slice(
+            input.coordinate_sha256,
+            FIXED64_CANDIDATE_COUNT * 32,
+            "rust_cpu stable Top-K coordinate identities are null",
+        )?
+    };
+    let mut kernel_rows = Vec::with_capacity(FIXED64_CANDIDATE_COUNT);
+    for slot in 0..FIXED64_CANDIDATE_COUNT {
+        let scorer = scorer_rows[slot];
+        let validity = validity_rows[slot];
+        if scorer.slot_index != slot as u32
+            || validity.slot_index != slot as u32
+            || scorer.reserved0 != 0
+            || !reserved_is_zero(&scorer.reserved)
+            || !reserved_is_zero(&validity.reserved)
+        {
+            return Err(ProviderError::invalid(
+                "rust_cpu stable Top-K input slots are cross-wired",
+            ));
+        }
+        let digest_slice = &coordinate_digests[slot * 32..(slot + 1) * 32];
+        let mut digest = [0u8; 32];
+        digest.copy_from_slice(digest_slice);
+        let (scorer_status, total_score, coordinate_sha256) = match scorer.status {
+            DOCKING_ROW_SCORED => {
+                if scorer.failure_code != DOCKING_FAILURE_NONE
+                    || !scorer.total_score.is_finite()
+                    || scorer.weighted_terms.iter().any(|value| !value.is_finite())
+                    || digest_is_zero(&digest)
+                {
+                    return Err(ProviderError::invalid(
+                        "rust_cpu stable Top-K scored evidence is invalid",
+                    ));
+                }
+                (
+                    NativeScorerV1RowStatus::Scored,
+                    Some(scorer.total_score),
+                    Some(digest),
+                )
+            }
+            DOCKING_ROW_TYPED_FAILURE => {
+                if !(DOCKING_FAILURE_UPSTREAM_NOT_ADMITTED..=DOCKING_FAILURE_NONFINITE_SCORE)
+                    .contains(&scorer.failure_code)
+                    || !digest_is_zero(&digest)
+                {
+                    return Err(ProviderError::invalid(
+                        "rust_cpu stable Top-K scorer failure is invalid",
+                    ));
+                }
+                (NativeScorerV1RowStatus::TypedFailure, None, None)
+            }
+            _ => {
+                return Err(ProviderError::invalid(
+                    "rust_cpu stable Top-K scorer status is invalid",
+                ));
+            }
+        };
+        let (validity_status, valid) = match validity.status {
+            VALIDITY_ROW_EVALUATED => {
+                if validity.failure_code != VALIDITY_FAILURE_NONE
+                    || validity.upstream_scorer_failure_code != DOCKING_FAILURE_NONE
+                    || validity.passed_check_mask & !VALIDITY_CHECK_ALL != 0
+                    || validity.blocker_mask != (VALIDITY_CHECK_ALL ^ validity.passed_check_mask)
+                {
+                    return Err(ProviderError::invalid(
+                        "rust_cpu stable Top-K evaluated validity row is invalid",
+                    ));
+                }
+                (
+                    NativeFixed64ValidityRowStatus::Evaluated,
+                    validity.passed_check_mask == VALIDITY_CHECK_ALL,
+                )
+            }
+            VALIDITY_ROW_UPSTREAM_SCORER_FAILURE => {
+                if validity.failure_code != VALIDITY_FAILURE_UPSTREAM_SCORER
+                    || validity.upstream_scorer_failure_code != scorer.failure_code
+                {
+                    return Err(ProviderError::invalid(
+                        "rust_cpu stable Top-K upstream failure is cross-wired",
+                    ));
+                }
+                (NativeFixed64ValidityRowStatus::UpstreamScorerFailure, false)
+            }
+            VALIDITY_ROW_TYPED_FAILURE => {
+                if !(VALIDITY_FAILURE_INVALID_CANDIDATE_COORDINATES
+                    ..=VALIDITY_FAILURE_NONFINITE_DERIVED_MEASUREMENT)
+                    .contains(&validity.failure_code)
+                    || validity.upstream_scorer_failure_code != DOCKING_FAILURE_NONE
+                {
+                    return Err(ProviderError::invalid(
+                        "rust_cpu stable Top-K typed validity failure is invalid",
+                    ));
+                }
+                (NativeFixed64ValidityRowStatus::TypedFailure, false)
+            }
+            _ => {
+                return Err(ProviderError::invalid(
+                    "rust_cpu stable Top-K validity status is invalid",
+                ));
+            }
+        };
+        kernel_rows.push(
+            NativeFixed64StableTopKInputRow::new(
+                slot,
+                scorer_status,
+                validity_status,
+                total_score,
+                coordinate_sha256,
+                valid,
+            )
+            .map_err(|_| {
+                ProviderError::invalid("rust_cpu stable Top-K scorer/validity binding is invalid")
+            })?,
+        );
+    }
+    let kernel_rows: [NativeFixed64StableTopKInputRow; FIXED64_CANDIDATE_COUNT] =
+        kernel_rows.try_into().map_err(|_| ProviderError {
+            status: STATUS_INTERNAL_ERROR,
+            message: "rust_cpu stable Top-K denominator changed internally",
+        })?;
+    let ranking = rank_native_fixed64_stable_top_k_kernel(&kernel_rows).map_err(|_| {
+        ProviderError::invalid("rust_cpu stable Top-K kernel rejected input binding")
+    })?;
+    let rows = core::array::from_fn(|slot| {
+        let input_row = kernel_rows[slot];
+        let rank_eligible = input_row.scorer_status() == NativeScorerV1RowStatus::Scored;
+        let valid_rank_eligible = ranking.stable_valid_rank(slot).is_some();
+        DockingStableTopKRowV1 {
+            slot_index: slot as u32,
+            rank_eligible: u8::from(rank_eligible),
+            valid_rank_eligible: u8::from(valid_rank_eligible),
+            reserved0: 0,
+            stable_rank: ranking.stable_rank(slot).unwrap_or(0) as u32,
+            stable_valid_rank: ranking.stable_valid_rank(slot).unwrap_or(0) as u32,
+            total_score: input_row.total_score().unwrap_or(0.0),
+            coordinate_sha256: input_row.coordinate_sha256().unwrap_or([0; 32]),
+            reserved: [0; 4],
+        }
+    });
+    let mut primary_slot_indices = [0u32; FIXED64_CANDIDATE_COUNT];
+    for (destination, source) in primary_slot_indices
+        .iter_mut()
+        .zip(ranking.primary_slot_indices())
+    {
+        *destination = *source as u32;
+    }
+    let mut valid_slot_indices = [0u32; FIXED64_CANDIDATE_COUNT];
+    for (destination, source) in valid_slot_indices
+        .iter_mut()
+        .zip(ranking.valid_slot_indices())
+    {
+        *destination = *source as u32;
+    }
+    Ok(StableTopKProviderOutput {
+        rows,
+        primary_slot_indices,
+        primary_count: ranking.primary_slot_indices().len() as u64,
+        valid_slot_indices,
+        valid_count: ranking.valid_slot_indices().len() as u64,
+    })
+}
+
 unsafe fn evaluate_impl(
     system: *const SystemV1,
     forcefield: *const ForceFieldV1,
@@ -2321,6 +2559,142 @@ pub unsafe extern "C" fn bg_rust_cpu_docking_pose_validity_v1_evaluate_fixed64(
     }
 }
 
+/// Construct the stateless Rust stable Top-K provider marker.
+///
+/// # Safety
+/// `out_state` and `out_error` must be writable, correctly aligned, and
+/// disjoint.
+#[no_mangle]
+pub unsafe extern "C" fn bg_rust_cpu_docking_stable_top_k_v1_create(
+    out_state: *mut *mut c_void,
+    out_error: *mut ErrorV1,
+) -> i32 {
+    let error = unsafe {
+        match out_error.as_mut() {
+            Some(error) => error,
+            None => return STATUS_INVALID_ARGUMENT,
+        }
+    };
+    if validate_header::<ErrorV1>(
+        error.struct_size,
+        error.abi_version,
+        "rust_cpu error output size mismatch",
+    )
+    .is_err()
+        || !reserved_is_zero(&error.reserved)
+    {
+        return STATUS_ABI_MISMATCH;
+    }
+    clear_error(error);
+    let state_output = unsafe {
+        match out_state.as_mut() {
+            Some(output) => output,
+            None => {
+                write_error(error, "rust_cpu stable Top-K state output is null");
+                return STATUS_INVALID_ARGUMENT;
+            }
+        }
+    };
+    *state_output = Box::into_raw(Box::new(StableTopKState)).cast::<c_void>();
+    STATUS_OK
+}
+
+/// Destroy a stable Top-K provider marker.
+///
+/// # Safety
+/// A non-null pointer must be the unique live marker returned by the matching
+/// create function and must not be reused.
+#[no_mangle]
+pub unsafe extern "C" fn bg_rust_cpu_docking_stable_top_k_v1_destroy(state: *mut c_void) {
+    if !state.is_null() {
+        drop(unsafe { Box::from_raw(state.cast::<StableTopKState>()) });
+    }
+}
+
+/// Derive primary and valid-only fixed64 stable rankings.
+///
+/// # Safety
+/// The input and all three fixed64 output arrays must remain readable or
+/// writable for the call, be correctly aligned, and not overlap. Count and
+/// error outputs must also be writable and disjoint.
+#[no_mangle]
+pub unsafe extern "C" fn bg_rust_cpu_docking_stable_top_k_v1_rank_fixed64(
+    state: *const c_void,
+    input: *const DockingStableTopKInputV1,
+    out_rows: *mut DockingStableTopKRowV1,
+    out_primary_slot_indices: *mut u32,
+    out_primary_count: *mut u64,
+    out_valid_slot_indices: *mut u32,
+    out_valid_count: *mut u64,
+    out_error: *mut ErrorV1,
+) -> i32 {
+    let error = unsafe {
+        match out_error.as_mut() {
+            Some(error) => error,
+            None => return STATUS_INVALID_ARGUMENT,
+        }
+    };
+    if validate_header::<ErrorV1>(
+        error.struct_size,
+        error.abi_version,
+        "rust_cpu error output size mismatch",
+    )
+    .is_err()
+        || !reserved_is_zero(&error.reserved)
+    {
+        return STATUS_ABI_MISMATCH;
+    }
+    clear_error(error);
+    if state.is_null()
+        || input.is_null()
+        || out_rows.is_null()
+        || out_primary_slot_indices.is_null()
+        || out_primary_count.is_null()
+        || out_valid_slot_indices.is_null()
+        || out_valid_count.is_null()
+        || (out_rows as usize) % align_of::<DockingStableTopKRowV1>() != 0
+        || (out_primary_slot_indices as usize) % align_of::<u32>() != 0
+        || (out_primary_count as usize) % align_of::<u64>() != 0
+        || (out_valid_slot_indices as usize) % align_of::<u32>() != 0
+        || (out_valid_count as usize) % align_of::<u64>() != 0
+    {
+        write_error(error, "rust_cpu stable Top-K pointer is null or misaligned");
+        return STATUS_INVALID_ARGUMENT;
+    }
+    let input = unsafe { &*input };
+    let result = catch_unwind(AssertUnwindSafe(|| unsafe {
+        rank_stable_top_k_fixed64(input)
+    }));
+    match result {
+        Ok(Ok(output)) => {
+            unsafe {
+                ptr::copy_nonoverlapping(output.rows.as_ptr(), out_rows, FIXED64_CANDIDATE_COUNT);
+                ptr::copy_nonoverlapping(
+                    output.primary_slot_indices.as_ptr(),
+                    out_primary_slot_indices,
+                    FIXED64_CANDIDATE_COUNT,
+                );
+                ptr::copy_nonoverlapping(
+                    output.valid_slot_indices.as_ptr(),
+                    out_valid_slot_indices,
+                    FIXED64_CANDIDATE_COUNT,
+                );
+                ptr::write(out_primary_count, output.primary_count);
+                ptr::write(out_valid_count, output.valid_count);
+            }
+            STATUS_OK
+        }
+        Ok(Err(provider_error)) => {
+            write_error(error, provider_error.message);
+            provider_error.status
+        }
+        Err(_) => {
+            write_error(error, "rust_cpu stable Top-K batch panicked");
+            STATUS_INTERNAL_ERROR
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2435,6 +2809,8 @@ mod tests {
         assert_eq!(size_of::<DockingPoseValidityContextSoaV1>(), 560);
         assert_eq!(size_of::<DockingPoseValidityCandidateBatchSoaV1>(), 136);
         assert_eq!(size_of::<DockingPoseValidityRowV1>(), 240);
+        assert_eq!(size_of::<DockingStableTopKInputV1>(), 80);
+        assert_eq!(size_of::<DockingStableTopKRowV1>(), 88);
     }
 
     #[test]

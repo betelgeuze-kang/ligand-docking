@@ -79,3 +79,13 @@ BETELGEUZE_ENGINE_1.6 {
         bg_docking_pose_validity_v1_get_backend;
         bg_docking_pose_validity_v1_evaluate_fixed64;
 } BETELGEUZE_ENGINE_1.5;
+
+BETELGEUZE_ENGINE_1.7 {
+    global:
+        bg_docking_stable_top_k_input_v1_init;
+        bg_docking_stable_top_k_output_v1_init;
+        bg_docking_stable_top_k_v1_create;
+        bg_docking_stable_top_k_v1_destroy;
+        bg_docking_stable_top_k_v1_get_backend;
+        bg_docking_stable_top_k_v1_rank_fixed64;
+} BETELGEUZE_ENGINE_1.6;

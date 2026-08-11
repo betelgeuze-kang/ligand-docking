@@ -84,6 +84,8 @@ fn descriptor_initializers_reject_incompatible_callers_without_writing() {
         assert_initializer_exact(bg_docking_pose_validity_context_soa_v1_init);
         assert_initializer_exact(bg_docking_pose_validity_candidate_batch_soa_v1_init);
         assert_initializer_exact(bg_docking_pose_validity_output_v1_init);
+        assert_initializer_exact(bg_docking_stable_top_k_input_v1_init);
+        assert_initializer_exact(bg_docking_stable_top_k_output_v1_init);
     }
 }
 
@@ -235,6 +237,43 @@ fn descriptor_initializers_bind_size_version_and_units() {
             dynamics_report.struct_size as usize,
             core::mem::size_of_val(&dynamics_report)
         );
+
+        let mut ranking_input =
+            core::mem::MaybeUninit::<bg_docking_stable_top_k_input_v1>::uninit();
+        assert_eq!(
+            initialize(
+                bg_docking_stable_top_k_input_v1_init,
+                ranking_input.as_mut_ptr(),
+            ),
+            BG_STATUS_OK
+        );
+        let ranking_input = ranking_input.assume_init();
+        assert_eq!(
+            ranking_input.struct_size as usize,
+            core::mem::size_of_val(&ranking_input)
+        );
+        assert_eq!(ranking_input.candidate_count, 64);
+        assert_eq!(ranking_input.top_k_limit, BG_DOCKING_STABLE_TOP_K_LIMIT);
+        assert_eq!(ranking_input.unit_system, BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL);
+
+        let mut ranking_output =
+            core::mem::MaybeUninit::<bg_docking_stable_top_k_output_v1>::uninit();
+        assert_eq!(
+            initialize(
+                bg_docking_stable_top_k_output_v1_init,
+                ranking_output.as_mut_ptr(),
+            ),
+            BG_STATUS_OK
+        );
+        let ranking_output = ranking_output.assume_init();
+        assert_eq!(
+            ranking_output.struct_size as usize,
+            core::mem::size_of_val(&ranking_output)
+        );
+        assert_eq!(ranking_output.unit_system, BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL);
+        assert_eq!(ranking_output.existing_rank_auto_change_authorized, 0);
+        assert_eq!(ranking_output.customer_pose_emission_authorized, 0);
+        assert_eq!(ranking_output.production_claim_authorized, 0);
     }
 }
 
