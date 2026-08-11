@@ -1,6 +1,7 @@
 #include "dynamics.hpp"
 
 #include "../hip/backend.hpp"
+#include "../hip/evaluator.hpp"
 #include "../rust/evaluator.hpp"
 #include "sha256.hpp"
 
@@ -60,6 +61,13 @@ bg_status evaluate(
         case BG_BACKEND_RUST_CPU:
             return rust_cpu::evaluate(
                 system, forcefield, compute_forces, out_evaluation);
+        case BG_BACKEND_HIP_SAFE:
+            return hip_safe::evaluate(
+                context.device_ordinal,
+                system,
+                forcefield,
+                compute_forces,
+                out_evaluation);
         case BG_BACKEND_HIP_FAST:
             return hip::evaluate(
                 context, system, forcefield, compute_forces, out_evaluation);

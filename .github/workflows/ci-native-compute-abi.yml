@@ -9,6 +9,7 @@ on:
       - "native/**"
       - "rust/**"
       - ".github/workflows/ci-native-compute-abi.yml"
+      - ".github/workflows/ci-native-hip-safe-trusted.yml"
   pull_request:
     paths:
       - "CMakeLists.txt"
@@ -16,6 +17,7 @@ on:
       - "native/**"
       - "rust/**"
       - ".github/workflows/ci-native-compute-abi.yml"
+      - ".github/workflows/ci-native-hip-safe-trusted.yml"
   workflow_dispatch:
 
 permissions:
@@ -55,9 +57,37 @@ jobs:
 
       - name: Build and test the C ABI
         run: |
-          cmake -S . -B build/native -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+          cmake -S . -B build/native \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=ON \
+            -DBG_ENABLE_HIP_SAFE=OFF
           cmake --build build/native --parallel 2
           ctest --test-dir build/native --output-on-failure
+
+      - name: Exercise native ABI under ASan and UBSan
+        env:
+          ASAN_OPTIONS: detect_leaks=1
+          UBSAN_OPTIONS: halt_on_error=1
+        run: |
+          cmake -S . -B build/native-sanitize \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DBUILD_TESTING=ON \
+            -DBG_ENABLE_HIP_SAFE=OFF \
+            -DCMAKE_C_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
+            -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined" \
+            -DCMAKE_SHARED_LINKER_FLAGS="-fsanitize=address,undefined"
+          cmake --build build/native-sanitize --parallel 2
+          ctest --test-dir build/native-sanitize --output-on-failure
+
+      - name: Guard deterministic HIP source policy
+        run: |
+          if grep -R -n -E -- '-ffast-math|-munsafe-fp-atomics|atomic(Add|Sub|Exch|CAS)' \
+            native/src/hip/provider.hip native/src/hip/evaluator.cpp \
+            native/src/hip/evaluator.hpp native/src/hip/provider.h; then
+            echo "hip_safe contains a forbidden fast-math or floating-atomic primitive" >&2
+            exit 1
+          fi
 
       - name: Check Rust formatting
         run: cargo fmt --manifest-path rust/Cargo.toml --all -- --check
@@ -70,9 +100,11 @@ jobs:
 
       - name: Verify standalone Rust packages
         run: |
-          cargo package --manifest-path rust/betelgeuze-sys/Cargo.toml --locked
+          cargo package --manifest-path rust/betelgeuze-sys/Cargo.toml --locked \
+            --config 'patch.crates-io.betelgeuze-cpu-kernel.path="rust/cpu-kernel"'
           cargo package --manifest-path rust/betelgeuze-runtime/Cargo.toml --locked \
             --config 'patch.crates-io.betelgeuze-sys.path="rust/betelgeuze-sys"' \
+            --config 'patch.crates-io.betelgeuze-cpu-kernel.path="rust/cpu-kernel"' \
             --config 'patch.crates-io.betelgeuze-reference-physics.path="rust/reference-physics"' \
             --config 'patch.crates-io.betelgeuze-reference-dynamics.path="rust/reference-dynamics"'
 

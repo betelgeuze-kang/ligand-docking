@@ -1,5 +1,6 @@
 #include "hip/backend.hpp"
 #include "internal.hpp"
+#include "hip/evaluator.hpp"
 #include "rust/provider.h"
 
 #include <cstring>
@@ -65,9 +66,8 @@ bool rust_cpu_is_available(int32_t device_ordinal) noexcept {
                BG_RUST_CPU_PROVIDER_ABI_VERSION;
 }
 
-/* hip_safe remains unavailable until the strict serial provider is linked. */
-bool hip_safe_is_available(int32_t /*device_ordinal*/) noexcept {
-    return false;
+bool hip_safe_is_available(int32_t device_ordinal) noexcept {
+    return hip_safe::is_available(device_ordinal);
 }
 
 }  // namespace
@@ -385,10 +385,12 @@ extern "C" BG_API bg_status BG_CALL bg_context_create(
                     BG_STATUS_BACKEND_UNAVAILABLE,
                     "hip_fast backend is unavailable; fallback is forbidden");
             }
-        } else if (!hip_safe_is_available(options->device_ordinal)) {
-            return fail(
-                BG_STATUS_BACKEND_UNAVAILABLE,
-                "hip_safe backend is unavailable; fallback is forbidden");
+        } else if (selected_backend == BG_BACKEND_HIP_SAFE) {
+            if (!hip_safe_is_available(options->device_ordinal)) {
+                return fail(
+                    BG_STATUS_BACKEND_UNAVAILABLE,
+                    "hip_safe backend is unavailable; CPU fallback is forbidden");
+            }
         }
 
         auto context = std::make_unique<bg_context>();

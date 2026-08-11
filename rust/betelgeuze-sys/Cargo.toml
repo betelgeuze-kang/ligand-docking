@@ -33,6 +33,10 @@ include = [
     "vendor/native/src/dynamics/integrator.cpp",
     "vendor/native/src/dynamics/sha256.hpp",
     "vendor/native/src/dynamics/sha256.cpp",
+    "vendor/native/src/hip/provider.h",
+    "vendor/native/src/hip/provider.hip",
+    "vendor/native/src/hip/evaluator.hpp",
+    "vendor/native/src/hip/evaluator.cpp",
     "vendor/native/src/hip/backend.hpp",
     "vendor/native/src/hip/backend.hip",
     "vendor/native/src/hip/planning.hpp",
@@ -44,7 +48,7 @@ default = []
 hip = []
 
 [dependencies]
-betelgeuze-cpu-kernel = { path = "../cpu-kernel" }
+betelgeuze-cpu-kernel = { version = "=0.1.0", path = "../cpu-kernel" }
 
 [build-dependencies]
 cc = "1.2"

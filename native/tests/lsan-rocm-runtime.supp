@@ -1,0 +1,5 @@
+# ROCm 6.0 HSA/COMGR retain process-lifetime runtime and ISA metadata caches.
+# Keep LeakSanitizer enabled for native engine allocations while excluding only
+# allocations whose stacks remain inside these external runtime modules.
+leak:libhsa-runtime64.so
+leak:libamd_comgr.so

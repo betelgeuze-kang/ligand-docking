@@ -1,0 +1,147 @@
+name: ci-native-hip-safe-trusted
+
+on:
+  workflow_dispatch:
+    inputs:
+      architecture:
+        description: "Exact AMD GPU architecture under synthetic qualification"
+        required: true
+        type: choice
+        default: gfx1030
+        options:
+          - gfx1030
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-native-hip-safe-trusted-${{ github.ref }}-${{ inputs.architecture }}
+  cancel-in-progress: false
+
+jobs:
+  synthetic-hip-safe-parity:
+    runs-on: [self-hosted, linux, rocm]
+    timeout-minutes: 20
+    env:
+      HIP_VISIBLE_DEVICES: "0"
+      ROCR_VISIBLE_DEVICES: "0"
+      BG_ROCM_ROOT: /opt/rocm
+      BG_DEVICE_LIB_SHA256: 02feb9e107c7b3c567e73bab6671c3c67c94376cb1e93dd598f069e961f6ea81
+      BG_DEVICE_LIB_URL: https://repo.radeon.com/rocm/apt/6.0.2/pool/main/r/rocm-device-libs/rocm-device-libs_1.0.0.60002-115~22.04_amd64.deb
+    steps:
+      - name: Check out native compute sources
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          clean: true
+          sparse-checkout: |
+            CMakeLists.txt
+            LICENSE
+            include
+            native
+            rust
+
+      - name: Verify exact ROCm and device identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -x "${BG_ROCM_ROOT}/bin/hipcc"
+          grep -q '^6\.0\.2-' "${BG_ROCM_ROOT}/.info/version"
+          "${BG_ROCM_ROOT}/bin/hipcc" --version
+          rocminfo | tee "${RUNNER_TEMP}/hip-safe-rocminfo.log"
+          grep -Eq 'Name:[[:space:]]+${{ inputs.architecture }}([[:space:]]|$)' \
+            "${RUNNER_TEMP}/hip-safe-rocminfo.log"
+
+      - name: Materialize matching pinned device libraries
+        shell: bash
+        run: |
+          set -euo pipefail
+          device_root="${RUNNER_TEMP}/hip-safe-device-libs-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          mkdir -p "${device_root}"
+          package="${device_root}/rocm-device-libs.deb"
+          curl --fail --location --silent --show-error \
+            "${BG_DEVICE_LIB_URL}" --output "${package}"
+          printf '%s  %s\n' "${BG_DEVICE_LIB_SHA256}" "${package}" | sha256sum -c -
+          dpkg-deb -x "${package}" "${device_root}/extracted"
+          device_lib_path="$(dirname "$(find "${device_root}/extracted" -type f -name ocml.bc -print -quit)")"
+          test -f "${device_lib_path}/ockl.bc"
+          echo "BG_HIP_DEVICE_LIB_PATH=${device_lib_path}" >> "${GITHUB_ENV}"
+
+      - name: Guard deterministic HIP source policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -R -n -E -- '-ffast-math|-munsafe-fp-atomics|atomic(Add|Sub|Exch|CAS)' \
+            native/src/hip/provider.hip native/src/hip/evaluator.cpp \
+            native/src/hip/evaluator.hpp native/src/hip/provider.h; then
+            echo "hip_safe contains a forbidden fast-math or floating-atomic primitive" >&2
+            exit 1
+          fi
+
+      - name: Build and execute synthetic device parity
+        shell: bash
+        run: |
+          set -euo pipefail
+          build_root="${RUNNER_TEMP}/native-hip-safe-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          cmake -S . -B "${build_root}" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=ON \
+            -DBG_ENABLE_HIP_SAFE=ON \
+            -DBG_HIP_SAFE_ARCHITECTURES=${{ inputs.architecture }} \
+            -DBG_HIP_DEVICE_LIB_PATH="${BG_HIP_DEVICE_LIB_PATH}" \
+            2>&1 | tee "${RUNNER_TEMP}/hip-safe-configure.log"
+          cmake --build "${build_root}" --parallel 2 \
+            2>&1 | tee "${RUNNER_TEMP}/hip-safe-build.log"
+          ctest --test-dir "${build_root}" --output-on-failure \
+            2>&1 | tee "${RUNNER_TEMP}/hip-safe-ctest.log"
+
+      - name: Exercise the Rust API on hip_safe
+        shell: bash
+        env:
+          BETELGEUZE_HIP_SAFE: "1"
+          BG_HIP_SAFE_ARCHITECTURES: ${{ inputs.architecture }}
+          LD_LIBRARY_PATH: /opt/rocm/lib:/opt/rocm/lib64
+        run: |
+          set -euo pipefail
+          cargo fmt --manifest-path rust/Cargo.toml --all -- --check
+          cargo clippy --manifest-path rust/Cargo.toml \
+            --workspace --all-targets --locked -- -D warnings \
+            2>&1 | tee "${RUNNER_TEMP}/hip-safe-rust-clippy.log"
+          cargo test --manifest-path rust/Cargo.toml --workspace --locked \
+            2>&1 | tee "${RUNNER_TEMP}/hip-safe-rust-test.log"
+          cargo test --manifest-path rust/Cargo.toml --workspace --locked --release \
+            2>&1 | tee "${RUNNER_TEMP}/hip-safe-rust-release-test.log"
+
+      - name: Exercise host boundary under ASan and UBSan
+        shell: bash
+        run: |
+          set -euo pipefail
+          build_root="${RUNNER_TEMP}/native-hip-safe-sanitize-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          cmake -S . -B "${build_root}" \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DBUILD_TESTING=ON \
+            -DBG_ENABLE_HIP_SAFE=ON \
+            -DBG_HIP_SAFE_ARCHITECTURES=${{ inputs.architecture }} \
+            -DBG_HIP_DEVICE_LIB_PATH="${BG_HIP_DEVICE_LIB_PATH}" \
+            -DCMAKE_C_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
+            -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined" \
+            -DCMAKE_SHARED_LINKER_FLAGS="-fsanitize=address,undefined" \
+            2>&1 | tee "${RUNNER_TEMP}/hip-safe-sanitize-configure.log"
+          cmake --build "${build_root}" --parallel 2 \
+            2>&1 | tee "${RUNNER_TEMP}/hip-safe-sanitize-build.log"
+          ASAN_OPTIONS=detect_leaks=1 \
+          LSAN_OPTIONS="suppressions=${GITHUB_WORKSPACE}/native/tests/lsan-rocm-runtime.supp:print_suppressions=1" \
+          UBSAN_OPTIONS=halt_on_error=1 \
+            ctest --test-dir "${build_root}" --output-on-failure \
+            2>&1 | tee "${RUNNER_TEMP}/hip-safe-sanitize-ctest.log"
+
+      - name: Upload synthetic qualification diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: native-hip-safe-${{ inputs.architecture }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/hip-safe-*.log
+          if-no-files-found: error
+          retention-days: 14
