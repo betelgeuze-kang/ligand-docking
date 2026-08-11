@@ -1854,3 +1854,26 @@ const fn cross_wired(message: &'static str) -> NativeScorerV1Error {
 const fn internal(message: &'static str) -> NativeScorerV1Error {
     NativeScorerV1Error::new(NativeScorerV1ErrorCode::InternalInvariant, message)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{hbond_reward, typed_lj, Vec3};
+
+    #[test]
+    fn typed_lj_is_bounded_at_overlap() {
+        assert_eq!(typed_lj(0.12, 0.12, 3.4, 0.0), 1.0e6);
+    }
+
+    #[test]
+    fn hbond_rejects_out_of_range_geometry() {
+        assert_eq!(
+            hbond_reward(
+                Vec3::new(0.0, 0.0, 0.0),
+                Vec3::new(1.0, 0.0, 0.0),
+                Vec3::new(8.0, 0.0, 0.0),
+                3.0,
+            ),
+            0.0,
+        );
+    }
+}

@@ -1232,19 +1232,6 @@ mod tests {
         .is_err());
     }
     #[test]
-    fn lj_is_bounded_at_overlap() {
-        assert_eq!(lj(0.12, 0.12, 3.4, 0.0), 1.0e6);
-    }
-
-    #[test]
-    fn hbond_rejects_out_of_range_geometry() {
-        assert_eq!(
-            hbond_reward([0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [8.0, 0.0, 0.0], 3.0),
-            0.0
-        );
-    }
-
-    #[test]
     fn geometric_and_docking_build_receipts_are_separate() {
         let geometric = build_info();
         let docking = docking_search_build_info();
