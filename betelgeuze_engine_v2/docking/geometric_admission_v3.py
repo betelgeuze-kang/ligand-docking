@@ -385,8 +385,12 @@ class GeometricAdmissionDecisionV3:
         )
 
     def assert_live_integrity(self) -> str:
+        return self._assert_live_integrity(producer_already_verified=False)
+
+    def _assert_live_integrity(self, *, producer_already_verified: bool) -> str:
         try:
-            self.producer_record.assert_live_integrity()
+            if not producer_already_verified:
+                self.producer_record.assert_live_integrity()
             if self.metrics is not None:
                 _ = self.metrics.receipt_sha256
             return _verify_live_sealed_projection(
@@ -528,7 +532,7 @@ class GeometricAdmissionBatchV3:
         try:
             self.producer_batch.assert_live_integrity()
             for decision in self.decisions:
-                decision.assert_live_integrity()
+                decision._assert_live_integrity(producer_already_verified=True)
             return _verify_live_sealed_projection(
                 self._canonical_projection_bytes,
                 self._receipt_sha256,
