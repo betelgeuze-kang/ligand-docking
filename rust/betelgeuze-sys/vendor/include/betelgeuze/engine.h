@@ -56,7 +56,7 @@ extern "C" {
 #endif
 
 #define BG_ABI_VERSION_MAJOR UINT32_C(1)
-#define BG_ABI_VERSION_MINOR UINT32_C(9)
+#define BG_ABI_VERSION_MINOR UINT32_C(10)
 #define BG_ABI_VERSION UINT32_C(1)
 
 #define BG_CANONICAL_LENGTH_UNIT "angstrom"
@@ -229,6 +229,42 @@ enum {
     BG_DOCKING_TORSION_V7_SELECTION_V6_RETAINED_NO_REDUCTION = 3
 };
 
+/* Frozen Engine V2 interaction-aware rigid-refinement modes and evidence. */
+typedef int32_t bg_docking_rigid_refinement_candidate_mode;
+enum {
+    BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_INACTIVE = 0,
+    BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V2_TRANSLATION = 1,
+    BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V3_TRANSLATION_ROTATION = 2,
+    BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V6_BASELINE_V2_LANE = 3,
+    BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V6_BASELINE_V3_LANE = 4
+};
+
+typedef int32_t bg_docking_rigid_refinement_row_status;
+enum {
+    BG_DOCKING_RIGID_REFINEMENT_ROW_REFINED = 1,
+    BG_DOCKING_RIGID_REFINEMENT_ROW_TYPED_FAILURE = 2
+};
+
+typedef int32_t bg_docking_rigid_refinement_failure;
+enum {
+    BG_DOCKING_RIGID_REFINEMENT_FAILURE_NONE = 0,
+    BG_DOCKING_RIGID_REFINEMENT_FAILURE_UPSTREAM_NOT_ELIGIBLE = 1,
+    BG_DOCKING_RIGID_REFINEMENT_FAILURE_INVALID_INPUT = 2,
+    BG_DOCKING_RIGID_REFINEMENT_FAILURE_NONFINITE_INPUT = 3,
+    BG_DOCKING_RIGID_REFINEMENT_FAILURE_PAIR_BUDGET = 4,
+    BG_DOCKING_RIGID_REFINEMENT_FAILURE_NONFINITE_DERIVED_VALUE = 5
+};
+
+typedef int32_t bg_docking_rigid_refinement_profile;
+enum {
+    BG_DOCKING_RIGID_REFINEMENT_PROFILE_NONE = 0,
+    BG_DOCKING_RIGID_REFINEMENT_PROFILE_V2_TRANSLATION = 1,
+    BG_DOCKING_RIGID_REFINEMENT_PROFILE_V3_TRANSLATION_ROTATION = 2,
+    BG_DOCKING_RIGID_REFINEMENT_PROFILE_V6_BASELINE_V2 = 3,
+    BG_DOCKING_RIGID_REFINEMENT_PROFILE_V6_BASELINE_V3 = 4,
+    BG_DOCKING_RIGID_REFINEMENT_PROFILE_V6_CLEARANCE_V4 = 5
+};
+
 /* Incomplete declarations are the only public handle representation. */
 typedef struct bg_context bg_context;
 typedef struct bg_system bg_system;
@@ -237,6 +273,7 @@ typedef struct bg_simulation bg_simulation;
 typedef struct bg_docking_scorer_v1 bg_docking_scorer_v1;
 typedef struct bg_docking_pose_validity_v1 bg_docking_pose_validity_v1;
 typedef struct bg_docking_stable_top_k_v1 bg_docking_stable_top_k_v1;
+typedef struct bg_docking_rigid_refinement bg_docking_rigid_refinement;
 typedef struct bg_docking_torsion_v7 bg_docking_torsion_v7;
 
 typedef struct bg_context_options {
@@ -936,6 +973,140 @@ typedef struct bg_docking_rmsd_cluster_output_v1 {
     uint64_t reserved[4];
 } bg_docking_rmsd_cluster_output_v1;
 
+typedef struct bg_docking_rigid_v2_config_v1 {
+    double overlap_scale;
+    double maximum_step_angstrom;
+    double minimum_step_angstrom;
+    double maximum_total_translation_angstrom;
+    uint64_t maximum_backtracking_evaluations;
+    double penalty_tolerance;
+    double epsilon_angstrom;
+    uint64_t reserved[4];
+} bg_docking_rigid_v2_config_v1;
+
+typedef struct bg_docking_rigid_v3_config_v1 {
+    bg_docking_rigid_v2_config_v1 v2;
+    double maximum_rotation_step_radians;
+    double minimum_rotation_step_radians;
+    double maximum_total_rotation_radians;
+    uint64_t maximum_rotation_steps;
+    double minimum_rotation_relative_penalty_reduction;
+    double maximum_centroid_offset_angstrom;
+    uint64_t reserved[4];
+} bg_docking_rigid_v3_config_v1;
+
+/* Persistent context. Every coordinate, radius, pocket, and configuration
+ * value is deep-copied at creation. The exact receptor*ligand pair count is
+ * bounded before a provider is created. This numerical boundary grants no
+ * molecular-execution or product authority. */
+typedef struct bg_docking_rigid_refinement_context_soa_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    bg_unit_system unit_system;
+    uint32_t reserved0;
+    uint64_t receptor_atom_count;
+    uint64_t ligand_atom_count;
+    const double *receptor_x_angstrom;
+    const double *receptor_y_angstrom;
+    const double *receptor_z_angstrom;
+    const double *receptor_vdw_radius_angstrom;
+    const double *ligand_vdw_radius_angstrom;
+    double pocket_center_angstrom[3];
+    double pocket_radius_angstrom;
+    bg_docking_rigid_v2_config_v1 v2;
+    bg_docking_rigid_v3_config_v1 v3;
+    bg_docking_rigid_v3_config_v1 clearance_v4;
+    uint64_t reserved[8];
+} bg_docking_rigid_refinement_context_soa_v1;
+
+/* Candidate-major SoA with an exact 64-slot denominator. Inactive rows remain
+ * typed upstream failures. A malformed active row is isolated to that slot;
+ * malformed batch identity or capacity rejects the complete call. */
+typedef struct bg_docking_rigid_refinement_candidate_batch_soa_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    uint64_t candidate_count;
+    uint64_t ligand_atom_count;
+    bg_unit_system unit_system;
+    uint32_t reserved0;
+    const bg_docking_rigid_refinement_candidate_mode *candidate_mode;
+    const uint64_t *max_steps;
+    const double *x_angstrom;
+    const double *y_angstrom;
+    const double *z_angstrom;
+    uint64_t reserved[8];
+} bg_docking_rigid_refinement_candidate_batch_soa_v1;
+
+typedef struct bg_docking_rigid_refinement_evidence_v1 {
+    bg_docking_rigid_refinement_profile profile;
+    uint8_t available;
+    uint8_t reserved0[3];
+    uint64_t accepted_steps;
+    uint64_t accepted_translation_steps;
+    uint64_t accepted_rotation_steps;
+    uint64_t line_search_evaluation_count;
+    uint64_t fallback_direction_step_count;
+    double initial_penalty;
+    double final_penalty;
+    double total_translation_angstrom[3];
+    double total_rotation_vector_radians[3];
+    double total_rotation_path_radians;
+    double initial_centroid_offset_angstrom;
+    double final_centroid_offset_angstrom;
+    double maximum_centroid_offset_angstrom;
+    uint64_t reserved[4];
+} bg_docking_rigid_refinement_evidence_v1;
+
+typedef struct bg_docking_rigid_refinement_row_v1 {
+    uint32_t slot_index;
+    bg_docking_rigid_refinement_row_status status;
+    bg_docking_rigid_refinement_failure failure_code;
+    bg_docking_rigid_refinement_candidate_mode candidate_mode;
+    bg_docking_rigid_refinement_profile selected_profile;
+    uint8_t baseline_duplicate_of_v2;
+    uint8_t clearance_evaluated;
+    uint8_t clearance_selected;
+    uint8_t reserved0;
+    bg_docking_rigid_refinement_evidence_v1 selected;
+    bg_docking_rigid_refinement_evidence_v1 comparison_v2;
+    bg_docking_rigid_refinement_evidence_v1 baseline_v3;
+    bg_docking_rigid_refinement_evidence_v1 clearance_v4;
+    uint64_t reserved[8];
+} bg_docking_rigid_refinement_row_v1;
+
+/* Caller-owned transactional output. Each coordinate capacity is the same
+ * exact 64*ligand_atom_count value. Unavailable comparison channels are zero.
+ * All authority flags are always committed false. */
+typedef struct bg_docking_rigid_refinement_output_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    uint64_t row_capacity;
+    uint64_t row_count;
+    uint64_t coordinate_capacity;
+    uint64_t coordinate_count;
+    bg_unit_system unit_system;
+    uint32_t reserved0;
+    bg_docking_rigid_refinement_row_v1 *rows;
+    double *selected_x_angstrom;
+    double *selected_y_angstrom;
+    double *selected_z_angstrom;
+    double *comparison_v2_x_angstrom;
+    double *comparison_v2_y_angstrom;
+    double *comparison_v2_z_angstrom;
+    double *baseline_v3_x_angstrom;
+    double *baseline_v3_y_angstrom;
+    double *baseline_v3_z_angstrom;
+    double *clearance_v4_x_angstrom;
+    double *clearance_v4_y_angstrom;
+    double *clearance_v4_z_angstrom;
+    uint8_t molecular_execution_authorized;
+    uint8_t existing_rank_auto_change_authorized;
+    uint8_t customer_pose_emission_authorized;
+    uint8_t production_claim_authorized;
+    uint32_t reserved1;
+    uint64_t reserved[8];
+} bg_docking_rigid_refinement_output_v1;
+
 /*
  * Persistent interaction-aware torsion/contact V7 context. All coordinate,
  * radius, topology, and frozen configuration channels are deep-copied at
@@ -1207,6 +1378,19 @@ BG_API bg_status BG_CALL bg_docking_rmsd_cluster_output_v1_init(
     bg_docking_rmsd_cluster_output_v1 *output,
     size_t caller_struct_size,
     uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_rigid_refinement_context_soa_v1_init(
+    bg_docking_rigid_refinement_context_soa_v1 *descriptor,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL
+bg_docking_rigid_refinement_candidate_batch_soa_v1_init(
+    bg_docking_rigid_refinement_candidate_batch_soa_v1 *batch,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_rigid_refinement_output_v1_init(
+    bg_docking_rigid_refinement_output_v1 *output,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
 BG_API bg_status BG_CALL bg_docking_torsion_v7_context_soa_v1_init(
     bg_docking_torsion_v7_context_soa_v1 *descriptor,
     size_t caller_struct_size,
@@ -1303,6 +1487,21 @@ BG_API bg_status BG_CALL bg_docking_torsion_v7_output_v1_init(
 #  define bg_docking_rmsd_cluster_output_v1_init(output) \
     bg_docking_rmsd_cluster_output_v1_init( \
         (output), sizeof(bg_docking_rmsd_cluster_output_v1), BG_ABI_VERSION)
+#  define bg_docking_rigid_refinement_context_soa_v1_init(descriptor) \
+    bg_docking_rigid_refinement_context_soa_v1_init( \
+        (descriptor), \
+        sizeof(bg_docking_rigid_refinement_context_soa_v1), \
+        BG_ABI_VERSION)
+#  define bg_docking_rigid_refinement_candidate_batch_soa_v1_init(batch) \
+    bg_docking_rigid_refinement_candidate_batch_soa_v1_init( \
+        (batch), \
+        sizeof(bg_docking_rigid_refinement_candidate_batch_soa_v1), \
+        BG_ABI_VERSION)
+#  define bg_docking_rigid_refinement_output_v1_init(output) \
+    bg_docking_rigid_refinement_output_v1_init( \
+        (output), \
+        sizeof(bg_docking_rigid_refinement_output_v1), \
+        BG_ABI_VERSION)
 #  define bg_docking_torsion_v7_context_soa_v1_init(descriptor) \
     bg_docking_torsion_v7_context_soa_v1_init( \
         (descriptor), \
@@ -1415,6 +1614,25 @@ BG_API bg_status BG_CALL bg_docking_stable_top_k_v1_cluster_direct_rmsd_fixed64(
     const bg_docking_stable_top_k_v1 *ranker,
     const bg_docking_rmsd_cluster_input_v1 *input,
     bg_docking_rmsd_cluster_output_v1 *output) BG_NOEXCEPT;
+
+/* V2/V3/V6 rigid refinement uses one exact fixed64 boundary. The C++ and Rust
+ * CPU providers are independent qualification implementations. HIP lanes, when
+ * compiled, are explicit and never fall back. V6 comparison states are kept as
+ * first-class evidence rather than collapsed into the selected coordinates. */
+BG_API bg_status BG_CALL bg_docking_rigid_refinement_create(
+    const bg_context *context,
+    const bg_docking_rigid_refinement_context_soa_v1 *descriptor,
+    bg_docking_rigid_refinement **out_refiner) BG_NOEXCEPT;
+BG_API void BG_CALL bg_docking_rigid_refinement_destroy(
+    bg_docking_rigid_refinement *refiner) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_rigid_refinement_get_backend(
+    const bg_docking_rigid_refinement *refiner,
+    bg_backend *backend) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_rigid_refinement_fixed64(
+    const bg_context *context,
+    const bg_docking_rigid_refinement *refiner,
+    const bg_docking_rigid_refinement_candidate_batch_soa_v1 *candidates,
+    bg_docking_rigid_refinement_output_v1 *output) BG_NOEXCEPT;
 
 /* V7 uses the same explicit backend/device binding. CPP_CPU_REFERENCE and
  * RUST_CPU are independently implemented; HIP_SAFE/HIP_FAST never fall back.

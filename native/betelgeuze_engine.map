@@ -107,3 +107,14 @@ BETELGEUZE_ENGINE_1.9 {
         bg_docking_torsion_v7_get_backend;
         bg_docking_torsion_v7_refine_fixed64;
 } BETELGEUZE_ENGINE_1.8;
+
+BETELGEUZE_ENGINE_1.10 {
+    global:
+        bg_docking_rigid_refinement_context_soa_v1_init;
+        bg_docking_rigid_refinement_candidate_batch_soa_v1_init;
+        bg_docking_rigid_refinement_output_v1_init;
+        bg_docking_rigid_refinement_create;
+        bg_docking_rigid_refinement_destroy;
+        bg_docking_rigid_refinement_get_backend;
+        bg_docking_rigid_refinement_fixed64;
+} BETELGEUZE_ENGINE_1.9;

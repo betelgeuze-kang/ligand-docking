@@ -179,6 +179,121 @@ int32_t bg_rust_cpu_docking_stable_top_k_v1_cluster_direct_rmsd_fixed64(
     uint64_t *out_top_k_count,
     bg_rust_cpu_error_v1 *out_error);
 
+typedef struct bg_rust_cpu_rigid_v2_config_v1 {
+    double overlap_scale;
+    double maximum_step_angstrom;
+    double minimum_step_angstrom;
+    double maximum_total_translation_angstrom;
+    size_t maximum_backtracking_evaluations;
+    double penalty_tolerance;
+    double epsilon_angstrom;
+    uint64_t reserved[4];
+} bg_rust_cpu_rigid_v2_config_v1;
+
+typedef struct bg_rust_cpu_rigid_v3_config_v1 {
+    bg_rust_cpu_rigid_v2_config_v1 v2;
+    double maximum_rotation_step_radians;
+    double minimum_rotation_step_radians;
+    double maximum_total_rotation_radians;
+    size_t maximum_rotation_steps;
+    double minimum_rotation_relative_penalty_reduction;
+    double maximum_centroid_offset_angstrom;
+    uint64_t reserved[4];
+} bg_rust_cpu_rigid_v3_config_v1;
+
+typedef struct bg_rust_cpu_rigid_context_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    size_t receptor_atom_count;
+    size_t ligand_atom_count;
+    const double *receptor_x_angstrom;
+    const double *receptor_y_angstrom;
+    const double *receptor_z_angstrom;
+    const double *receptor_vdw_radius_angstrom;
+    const double *ligand_vdw_radius_angstrom;
+    double pocket_center_angstrom[3];
+    double pocket_radius_angstrom;
+    bg_rust_cpu_rigid_v2_config_v1 v2;
+    bg_rust_cpu_rigid_v3_config_v1 v3;
+    bg_rust_cpu_rigid_v3_config_v1 clearance_v4;
+    uint64_t reserved[8];
+} bg_rust_cpu_rigid_context_v1;
+
+typedef struct bg_rust_cpu_rigid_batch_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    size_t candidate_count;
+    size_t ligand_atom_count;
+    const int32_t *candidate_mode;
+    const size_t *max_steps;
+    const double *x_angstrom;
+    const double *y_angstrom;
+    const double *z_angstrom;
+    uint64_t reserved[8];
+} bg_rust_cpu_rigid_batch_v1;
+
+typedef struct bg_rust_cpu_rigid_evidence_v1 {
+    int32_t profile;
+    uint8_t available;
+    uint8_t reserved0[3];
+    size_t accepted_steps;
+    size_t accepted_translation_steps;
+    size_t accepted_rotation_steps;
+    size_t line_search_evaluation_count;
+    size_t fallback_direction_step_count;
+    double initial_penalty;
+    double final_penalty;
+    double total_translation_angstrom[3];
+    double total_rotation_vector_radians[3];
+    double total_rotation_path_radians;
+    double initial_centroid_offset_angstrom;
+    double final_centroid_offset_angstrom;
+    double maximum_centroid_offset_angstrom;
+    uint64_t reserved[4];
+} bg_rust_cpu_rigid_evidence_v1;
+
+typedef struct bg_rust_cpu_rigid_row_v1 {
+    uint32_t slot_index;
+    int32_t status;
+    int32_t failure_code;
+    int32_t candidate_mode;
+    int32_t selected_profile;
+    uint8_t baseline_duplicate_of_v2;
+    uint8_t clearance_evaluated;
+    uint8_t clearance_selected;
+    uint8_t reserved0;
+    bg_rust_cpu_rigid_evidence_v1 selected;
+    bg_rust_cpu_rigid_evidence_v1 comparison_v2;
+    bg_rust_cpu_rigid_evidence_v1 baseline_v3;
+    bg_rust_cpu_rigid_evidence_v1 clearance_v4;
+    uint64_t reserved[8];
+} bg_rust_cpu_rigid_row_v1;
+
+int32_t bg_rust_cpu_docking_rigid_refinement_create(
+    const bg_rust_cpu_rigid_context_v1 *descriptor,
+    void **out_state,
+    bg_rust_cpu_error_v1 *out_error);
+
+void bg_rust_cpu_docking_rigid_refinement_destroy(void *state);
+
+int32_t bg_rust_cpu_docking_rigid_refinement_fixed64(
+    const void *state,
+    const bg_rust_cpu_rigid_batch_v1 *batch,
+    bg_rust_cpu_rigid_row_v1 *out_rows,
+    double *out_selected_x,
+    double *out_selected_y,
+    double *out_selected_z,
+    double *out_comparison_v2_x,
+    double *out_comparison_v2_y,
+    double *out_comparison_v2_z,
+    double *out_baseline_v3_x,
+    double *out_baseline_v3_y,
+    double *out_baseline_v3_z,
+    double *out_clearance_v4_x,
+    double *out_clearance_v4_y,
+    double *out_clearance_v4_z,
+    bg_rust_cpu_error_v1 *out_error);
+
 #define BG_RUST_CPU_TORSION_V7_MAX_MOVES UINT32_C(8)
 
 typedef struct bg_rust_cpu_torsion_v7_context_v1 {

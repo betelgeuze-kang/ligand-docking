@@ -5,7 +5,7 @@
 
 _Static_assert(BG_ABI_VERSION == UINT32_C(1), "unexpected ABI version");
 _Static_assert(BG_ABI_VERSION_MAJOR == UINT32_C(1), "unexpected ABI major version");
-_Static_assert(BG_ABI_VERSION_MINOR == UINT32_C(9), "unexpected ABI minor version");
+_Static_assert(BG_ABI_VERSION_MINOR == UINT32_C(10), "unexpected ABI minor version");
 _Static_assert(BG_STATUS_OK == 0, "unexpected success status");
 _Static_assert(BG_STATUS_NUMERICAL_ERROR == 10, "unexpected numerical status");
 _Static_assert(BG_BACKEND_CPU == 1, "unexpected CPU backend value");
@@ -44,6 +44,18 @@ _Static_assert(
 _Static_assert(
     sizeof(bg_docking_rmsd_cluster_row_status) == sizeof(int32_t),
     "RMSD-cluster row status width changed");
+_Static_assert(
+    sizeof(bg_docking_rigid_refinement_candidate_mode) == sizeof(int32_t),
+    "rigid-refinement candidate mode width changed");
+_Static_assert(
+    sizeof(bg_docking_rigid_refinement_row_status) == sizeof(int32_t),
+    "rigid-refinement row status width changed");
+_Static_assert(
+    sizeof(bg_docking_rigid_refinement_failure) == sizeof(int32_t),
+    "rigid-refinement failure width changed");
+_Static_assert(
+    sizeof(bg_docking_rigid_refinement_profile) == sizeof(int32_t),
+    "rigid-refinement profile width changed");
 _Static_assert(
     sizeof(bg_docking_torsion_v7_candidate_state) == sizeof(int32_t),
     "torsion V7 candidate state width changed");
@@ -112,6 +124,27 @@ _Static_assert(
 _Static_assert(
     sizeof(bg_docking_rmsd_cluster_output_v1) == 128,
     "RMSD-cluster output ABI changed");
+_Static_assert(
+    sizeof(bg_docking_rigid_v2_config_v1) == 88,
+    "rigid V2 config ABI changed");
+_Static_assert(
+    sizeof(bg_docking_rigid_v3_config_v1) == 168,
+    "rigid V3 config ABI changed");
+_Static_assert(
+    sizeof(bg_docking_rigid_refinement_context_soa_v1) == 592,
+    "rigid-refinement context ABI changed");
+_Static_assert(
+    sizeof(bg_docking_rigid_refinement_candidate_batch_soa_v1) == 136,
+    "rigid-refinement batch ABI changed");
+_Static_assert(
+    sizeof(bg_docking_rigid_refinement_evidence_v1) == 176,
+    "rigid-refinement evidence ABI changed");
+_Static_assert(
+    sizeof(bg_docking_rigid_refinement_row_v1) == 792,
+    "rigid-refinement row ABI changed");
+_Static_assert(
+    sizeof(bg_docking_rigid_refinement_output_v1) == 224,
+    "rigid-refinement output ABI changed");
 _Static_assert(
     sizeof(bg_docking_torsion_v7_context_soa_v1) == 328,
     "torsion V7 context ABI changed");

@@ -50,6 +50,13 @@ struct bg_docking_stable_top_k_v1 final {
     void *provider_state = nullptr;
 };
 
+struct bg_docking_rigid_refinement final {
+    bg_backend backend = BG_BACKEND_RUST_CPU;
+    int32_t device_ordinal = 0;
+    uint64_t ligand_atom_count = 0;
+    void *provider_state = nullptr;
+};
+
 struct bg_docking_torsion_v7 final {
     bg_backend backend = BG_BACKEND_RUST_CPU;
     int32_t device_ordinal = 0;
