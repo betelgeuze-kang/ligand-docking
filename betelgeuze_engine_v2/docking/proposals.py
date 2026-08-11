@@ -21,6 +21,7 @@ MAX_DOCKING_TORSIONS = 64
 MAX_DOCKING_CANDIDATES = 4096
 MAX_DOCKING_TOP_K = 128
 MAX_DOCKING_REFINEMENT_STEPS = 256
+PROPOSAL_NUMERIC_POLICY_ID = "betelgeuze.engine_v2_proposal_numeric_identity/1.0.0"
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
@@ -28,7 +29,9 @@ class DockingProposalError(ValueError):
     """A docking proposal request exceeds the supported bounded scaffold."""
 
 
-def _require_digest(value: object, *, field_name: str, allow_empty: bool = False) -> str:
+def _require_digest(
+    value: object, *, field_name: str, allow_empty: bool = False
+) -> str:
     text = str(value or "").strip().lower()
     if allow_empty and not text:
         return ""
@@ -50,15 +53,15 @@ def _finite_cpu_floating(value: torch.Tensor, *, name: str) -> None:
         raise DockingProposalError(f"{name} must be finite")
 
 
-def _tensor_payload(tensor: torch.Tensor) -> list[float]:
-    return [
-        float(value)
-        for value in tensor.detach()
-        .to(dtype=torch.float64, device="cpu")
-        .contiguous()
-        .reshape(-1)
-        .tolist()
-    ]
+def _proposal_tensor_identity_payload(tensor: torch.Tensor) -> dict[str, object]:
+    value = tensor.detach().to(device="cpu").contiguous()
+    return {
+        "dtype": str(value.dtype).removeprefix("torch."),
+        "shape": [int(size) for size in value.shape],
+        "values_binary64_hex": [
+            float(item).hex() for item in value.reshape(-1).tolist()
+        ],
+    }
 
 
 def _proposal_fingerprint(
@@ -76,8 +79,47 @@ def _proposal_fingerprint(
     refiner_version: str = "",
     refinement_receipt_sha256: str = "",
 ) -> str:
-    payload = {
-        "schema_id": "betelgeuze.engine_v2_docking_proposal/2.1.0",
+    payload = _proposal_identity_payload(
+        proposal_index=proposal_index,
+        seed=seed,
+        torsion_angles=torsion_angles,
+        rotation=rotation,
+        translation=translation,
+        problem_fingerprint_sha256=problem_fingerprint_sha256,
+        search_space_fingerprint_sha256=search_space_fingerprint_sha256,
+        coordinate_fingerprint_sha256=coordinate_fingerprint_sha256,
+        parent_proposal_fingerprint_sha256=parent_proposal_fingerprint_sha256,
+        refiner_id=refiner_id,
+        refiner_version=refiner_version,
+        refinement_receipt_sha256=refinement_receipt_sha256,
+    )
+    encoded = json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _proposal_identity_payload(
+    *,
+    proposal_index: int,
+    seed: int,
+    torsion_angles: torch.Tensor,
+    rotation: torch.Tensor,
+    translation: torch.Tensor,
+    problem_fingerprint_sha256: str,
+    search_space_fingerprint_sha256: str,
+    coordinate_fingerprint_sha256: str,
+    parent_proposal_fingerprint_sha256: str = "",
+    refiner_id: str = "",
+    refiner_version: str = "",
+    refinement_receipt_sha256: str = "",
+) -> dict[str, object]:
+    return {
+        "schema_id": "betelgeuze.engine_v2_docking_proposal/3.0.0",
+        "numeric_policy_id": PROPOSAL_NUMERIC_POLICY_ID,
         "proposal_index": int(proposal_index),
         "seed": int(seed),
         "problem_fingerprint_sha256": problem_fingerprint_sha256,
@@ -87,17 +129,10 @@ def _proposal_fingerprint(
         "refiner_id": refiner_id,
         "refiner_version": refiner_version,
         "refinement_receipt_sha256": refinement_receipt_sha256,
-        "torsion_angles": _tensor_payload(torsion_angles),
-        "rotation": _tensor_payload(rotation),
-        "translation": _tensor_payload(translation),
+        "torsion_angles": _proposal_tensor_identity_payload(torsion_angles),
+        "rotation": _proposal_tensor_identity_payload(rotation),
+        "translation": _proposal_tensor_identity_payload(translation),
     }
-    encoded = json.dumps(
-        payload,
-        sort_keys=True,
-        separators=(",", ":"),
-        allow_nan=False,
-    ).encode("utf-8")
-    return hashlib.sha256(encoded).hexdigest()
 
 
 @dataclass(frozen=True)
@@ -181,9 +216,7 @@ class TorsionSearchSpace:
         if local_axes.shape != (atom_count, 3):
             raise DockingProposalError("local_axes must have shape [N,3]")
         if rotatable_mask.shape != (atom_count,) or rotatable_mask.dtype != torch.bool:
-            raise DockingProposalError(
-                "rotatable_mask must be boolean with shape [N]"
-            )
+            raise DockingProposalError("rotatable_mask must be boolean with shape [N]")
         _finite_cpu_floating(local_offsets, name="local_offsets")
         _finite_cpu_floating(local_axes, name="local_axes")
         if local_offsets.dtype != local_axes.dtype:
@@ -191,9 +224,7 @@ class TorsionSearchSpace:
                 "local_offsets and local_axes must share a dtype"
             )
         if parent.device.type != "cpu" or rotatable_mask.device.type != "cpu":
-            raise DockingProposalError(
-                "bounded docking proposal scaffold is CPU-only"
-            )
+            raise DockingProposalError("bounded docking proposal scaffold is CPU-only")
 
         roots = parent == -1
         root_count = int(roots.sum().item())
@@ -211,7 +242,11 @@ class TorsionSearchSpace:
             else _frozen_tensor(self.root_positions, name="root_positions")
         )
         if root_positions is not None:
-            if root_positions.ndim == 1 and root_count == 1 and root_positions.shape == (3,):
+            if (
+                root_positions.ndim == 1
+                and root_count == 1
+                and root_positions.shape == (3,)
+            ):
                 root_positions = root_positions.unsqueeze(0).contiguous()
             if root_positions.shape != (root_count, 3):
                 raise DockingProposalError(
@@ -298,17 +333,11 @@ class DockingProposal:
         translation = _frozen_tensor(self.translation, name="translation")
         atom_count = int(coordinates.shape[0]) if coordinates.ndim == 2 else -1
         if atom_count < 1 or coordinates.shape != (atom_count, 3):
-            raise DockingProposalError(
-                "proposal coordinates must have shape [N,3]"
-            )
+            raise DockingProposalError("proposal coordinates must have shape [N,3]")
         if torsion_angles.shape != (atom_count,):
-            raise DockingProposalError(
-                "proposal torsion_angles must have shape [N]"
-            )
+            raise DockingProposalError("proposal torsion_angles must have shape [N]")
         if rotation.shape != (3, 3) or translation.shape != (3,):
-            raise DockingProposalError(
-                "proposal rigid transform has invalid shape"
-            )
+            raise DockingProposalError("proposal rigid transform has invalid shape")
         tensors = (coordinates, torsion_angles, rotation, translation)
         for name, value in zip(
             ("coordinates", "torsion_angles", "rotation", "translation"),
@@ -418,6 +447,27 @@ class DockingProposal:
     def refined(self) -> bool:
         return bool(self.parent_proposal_fingerprint_sha256)
 
+    def identity_payload(self) -> dict[str, object]:
+        """Return the complete canonical payload whose SHA is the fingerprint."""
+
+        self.assert_integrity()
+        return _proposal_identity_payload(
+            proposal_index=self.proposal_index,
+            seed=self.seed,
+            torsion_angles=self.torsion_angles,
+            rotation=self.rotation,
+            translation=self.translation,
+            problem_fingerprint_sha256=self.problem_fingerprint_sha256,
+            search_space_fingerprint_sha256=self.search_space_fingerprint_sha256,
+            coordinate_fingerprint_sha256=self.coordinate_fingerprint_sha256,
+            parent_proposal_fingerprint_sha256=(
+                self.parent_proposal_fingerprint_sha256
+            ),
+            refiner_id=self.refiner_id,
+            refiner_version=self.refiner_version,
+            refinement_receipt_sha256=self.refinement_receipt_sha256,
+        )
+
     def assert_integrity(self) -> None:
         coordinate_digest = coordinate_fingerprint(self.coordinates)
         if coordinate_digest != self.coordinate_fingerprint_sha256:
@@ -441,9 +491,7 @@ class DockingProposal:
             refinement_receipt_sha256=self.refinement_receipt_sha256,
         )
         if observed != self.fingerprint_sha256:
-            raise DockingProposalError(
-                "proposal state changed after construction"
-            )
+            raise DockingProposalError("proposal state changed after construction")
 
     def with_refined_coordinates(
         self,
@@ -522,6 +570,59 @@ class DockingProposal:
             refiner_version=normalized_refiner_version,
             refinement_receipt_sha256=receipt,
         )
+
+
+def bind_docking_proposal_state(
+    *,
+    coordinates: torch.Tensor,
+    torsion_angles: torch.Tensor,
+    rotation: torch.Tensor,
+    translation: torch.Tensor,
+    proposal_index: int,
+    seed: int,
+    problem_fingerprint_sha256: str,
+    search_space_fingerprint_sha256: str,
+    parent_proposal_fingerprint_sha256: str = "",
+    refiner_id: str = "",
+    refiner_version: str = "",
+    refinement_receipt_sha256: str = "",
+) -> DockingProposal:
+    """Bind a complete proposal state without accepting caller fingerprint claims."""
+
+    if not isinstance(coordinates, torch.Tensor):
+        raise DockingProposalError("coordinates must be a torch.Tensor")
+    coordinate_digest = coordinate_fingerprint(coordinates)
+    fingerprint = _proposal_fingerprint(
+        proposal_index=proposal_index,
+        seed=seed,
+        torsion_angles=torsion_angles,
+        rotation=rotation,
+        translation=translation,
+        problem_fingerprint_sha256=problem_fingerprint_sha256,
+        search_space_fingerprint_sha256=search_space_fingerprint_sha256,
+        coordinate_fingerprint_sha256=coordinate_digest,
+        parent_proposal_fingerprint_sha256=parent_proposal_fingerprint_sha256,
+        refiner_id=refiner_id,
+        refiner_version=refiner_version,
+        refinement_receipt_sha256=refinement_receipt_sha256,
+    )
+    return DockingProposal(
+        candidate_id=f"pose-{proposal_index:05d}-{fingerprint[:12]}",
+        coordinates=coordinates,
+        torsion_angles=torsion_angles,
+        rotation=rotation,
+        translation=translation,
+        proposal_index=proposal_index,
+        seed=seed,
+        fingerprint_sha256=fingerprint,
+        problem_fingerprint_sha256=problem_fingerprint_sha256,
+        search_space_fingerprint_sha256=search_space_fingerprint_sha256,
+        coordinate_fingerprint_sha256=coordinate_digest,
+        parent_proposal_fingerprint_sha256=parent_proposal_fingerprint_sha256,
+        refiner_id=refiner_id,
+        refiner_version=refiner_version,
+        refinement_receipt_sha256=refinement_receipt_sha256,
+    )
 
 
 def _random_unit_axis(generator: torch.Generator, dtype: torch.dtype) -> torch.Tensor:
@@ -603,12 +704,8 @@ def generate_bounded_docking_proposals(
                 rigid_angle.unsqueeze(0),
             )[0]
             direction = _random_unit_axis(generator, dtype)
-            radius = torch.rand((), generator=generator, dtype=dtype) ** (
-                1.0 / 3.0
-            )
-            offset = (
-                direction * radius * budget.translation_radius_angstrom
-            )
+            radius = torch.rand((), generator=generator, dtype=dtype) ** (1.0 / 3.0)
+            offset = direction * radius * budget.translation_radius_angstrom
         if center is None:
             translation = offset
             coordinates = kinematic.coordinates @ rotation.T + translation
@@ -651,9 +748,11 @@ __all__ = [
     "MAX_DOCKING_REFINEMENT_STEPS",
     "MAX_DOCKING_TOP_K",
     "MAX_DOCKING_TORSIONS",
+    "PROPOSAL_NUMERIC_POLICY_ID",
     "DockingBudget",
     "DockingProposal",
     "DockingProposalError",
     "TorsionSearchSpace",
+    "bind_docking_proposal_state",
     "generate_bounded_docking_proposals",
 ]

@@ -59,6 +59,8 @@ benchmark, and scientific claims all remain false.
 
 ## Remaining downstream work
 
+- operational proposal v3 now rederives complete source proposal identities and
+  binds transformed coordinates to refiner-compatible `DockingProposal` state;
 - bind a second geometric-admission decision to each post-refinement coordinate;
 - execute Scorer V1 terms and pose validity from the exact admitted lineage;
 - preserve all failure slots through rank/evidence recording;
