@@ -23,7 +23,7 @@ permissions:
 
 concurrency:
   group: ci-native-compute-abi-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   hosted-cpu-abi:
@@ -58,6 +58,21 @@ jobs:
           cmake -S . -B build/native -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
           cmake --build build/native --parallel 2
           ctest --test-dir build/native --output-on-failure
+
+      - name: Exercise native ABI under ASan and UBSan
+        env:
+          ASAN_OPTIONS: detect_leaks=1
+          UBSAN_OPTIONS: halt_on_error=1
+        run: |
+          cmake -S . -B build/native-sanitize \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DBUILD_TESTING=ON \
+            -DCMAKE_C_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
+            -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined" \
+            -DCMAKE_SHARED_LINKER_FLAGS="-fsanitize=address,undefined"
+          cmake --build build/native-sanitize --parallel 2
+          ctest --test-dir build/native-sanitize --output-on-failure
 
       - name: Check Rust formatting
         run: cargo fmt --manifest-path rust/Cargo.toml --all -- --check

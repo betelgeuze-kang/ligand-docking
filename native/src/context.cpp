@@ -41,8 +41,9 @@ bg_status validate_context_options(const bg_context_options &options) noexcept {
     }
     switch (options.backend) {
         case BG_BACKEND_AUTO:
-        case BG_BACKEND_CPU:
-        case BG_BACKEND_HIP:
+        case BG_BACKEND_RUST_CPU:
+        case BG_BACKEND_HIP_SAFE:
+        case BG_BACKEND_HIP_FAST:
             return BG_STATUS_OK;
         default:
             return fail(
@@ -114,10 +115,12 @@ extern "C" BG_API const char *BG_CALL bg_backend_string(
     switch (backend) {
         case BG_BACKEND_AUTO:
             return "auto";
-        case BG_BACKEND_CPU:
-            return "cpu";
-        case BG_BACKEND_HIP:
-            return "hip";
+        case BG_BACKEND_RUST_CPU:
+            return "rust_cpu";
+        case BG_BACKEND_HIP_SAFE:
+            return "hip_safe";
+        case BG_BACKEND_HIP_FAST:
+            return "hip_fast";
         default:
             return "unknown_backend";
     }
@@ -165,13 +168,21 @@ extern "C" BG_API bg_status BG_CALL bg_last_error_message_copy(
 }
 
 extern "C" BG_API bg_status BG_CALL bg_context_options_init(
-    bg_context_options *options) BG_NOEXCEPT {
+    bg_context_options *options,
+    std::size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT {
     using namespace betelgeuze::native;
     return guarded_status([&]() -> bg_status {
-        if (options == nullptr) {
-            return fail(
-                BG_STATUS_INVALID_ARGUMENT,
-                "bg_context_options pointer must not be null");
+        const bg_status status = validate_initializer_compatibility(
+            options,
+            caller_struct_size,
+            sizeof(bg_context_options),
+            caller_abi_version,
+            "bg_context_options pointer must not be null",
+            "bg_context_options initializer size does not match the native ABI",
+            "bg_context_options initializer ABI version does not match");
+        if (status != BG_STATUS_OK) {
+            return status;
         }
         *options = bg_context_options{};
         options->struct_size = static_cast<uint32_t>(sizeof(bg_context_options));
@@ -184,13 +195,21 @@ extern "C" BG_API bg_status BG_CALL bg_context_options_init(
 }
 
 extern "C" BG_API bg_status BG_CALL bg_particle_soa_init(
-    bg_particle_soa *particles) BG_NOEXCEPT {
+    bg_particle_soa *particles,
+    std::size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT {
     using namespace betelgeuze::native;
     return guarded_status([&]() -> bg_status {
-        if (particles == nullptr) {
-            return fail(
-                BG_STATUS_INVALID_ARGUMENT,
-                "bg_particle_soa pointer must not be null");
+        const bg_status status = validate_initializer_compatibility(
+            particles,
+            caller_struct_size,
+            sizeof(bg_particle_soa),
+            caller_abi_version,
+            "bg_particle_soa pointer must not be null",
+            "bg_particle_soa initializer size does not match the native ABI",
+            "bg_particle_soa initializer ABI version does not match");
+        if (status != BG_STATUS_OK) {
+            return status;
         }
         *particles = bg_particle_soa{};
         particles->struct_size = static_cast<uint32_t>(sizeof(bg_particle_soa));
@@ -201,13 +220,21 @@ extern "C" BG_API bg_status BG_CALL bg_particle_soa_init(
 }
 
 extern "C" BG_API bg_status BG_CALL bg_particle_soa_view_init(
-    bg_particle_soa_view *view) BG_NOEXCEPT {
+    bg_particle_soa_view *view,
+    std::size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT {
     using namespace betelgeuze::native;
     return guarded_status([&]() -> bg_status {
-        if (view == nullptr) {
-            return fail(
-                BG_STATUS_INVALID_ARGUMENT,
-                "bg_particle_soa_view pointer must not be null");
+        const bg_status status = validate_initializer_compatibility(
+            view,
+            caller_struct_size,
+            sizeof(bg_particle_soa_view),
+            caller_abi_version,
+            "bg_particle_soa_view pointer must not be null",
+            "bg_particle_soa_view initializer size does not match the native ABI",
+            "bg_particle_soa_view initializer ABI version does not match");
+        if (status != BG_STATUS_OK) {
+            return status;
         }
         *view = bg_particle_soa_view{};
         view->struct_size = static_cast<uint32_t>(sizeof(bg_particle_soa_view));
@@ -218,13 +245,21 @@ extern "C" BG_API bg_status BG_CALL bg_particle_soa_view_init(
 }
 
 extern "C" BG_API bg_status BG_CALL bg_position_soa_init(
-    bg_position_soa *positions) BG_NOEXCEPT {
+    bg_position_soa *positions,
+    std::size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT {
     using namespace betelgeuze::native;
     return guarded_status([&]() -> bg_status {
-        if (positions == nullptr) {
-            return fail(
-                BG_STATUS_INVALID_ARGUMENT,
-                "bg_position_soa pointer must not be null");
+        const bg_status status = validate_initializer_compatibility(
+            positions,
+            caller_struct_size,
+            sizeof(bg_position_soa),
+            caller_abi_version,
+            "bg_position_soa pointer must not be null",
+            "bg_position_soa initializer size does not match the native ABI",
+            "bg_position_soa initializer ABI version does not match");
+        if (status != BG_STATUS_OK) {
+            return status;
         }
         *positions = bg_position_soa{};
         positions->struct_size = static_cast<uint32_t>(sizeof(bg_position_soa));
@@ -253,11 +288,12 @@ extern "C" BG_API bg_status BG_CALL bg_backend_is_available(
         }
         switch (backend) {
             case BG_BACKEND_AUTO:
-            case BG_BACKEND_CPU:
+            case BG_BACKEND_RUST_CPU:
                 *available = cpu_is_available(device_ordinal) ? UINT8_C(1)
                                                                : UINT8_C(0);
                 return BG_STATUS_OK;
-            case BG_BACKEND_HIP:
+            case BG_BACKEND_HIP_SAFE:
+            case BG_BACKEND_HIP_FAST:
                 *available = hip_is_available(device_ordinal) ? UINT8_C(1)
                                                                : UINT8_C(0);
                 return BG_STATUS_OK;
@@ -299,8 +335,8 @@ extern "C" BG_API bg_status BG_CALL bg_context_create(
                     BG_STATUS_BACKEND_UNAVAILABLE,
                     "no backend is available at the requested device ordinal");
             }
-            selected_backend = BG_BACKEND_CPU;
-        } else if (selected_backend == BG_BACKEND_CPU) {
+            selected_backend = BG_BACKEND_RUST_CPU;
+        } else if (selected_backend == BG_BACKEND_RUST_CPU) {
             if (!cpu_is_available(options->device_ordinal)) {
                 return fail(
                     BG_STATUS_BACKEND_UNAVAILABLE,

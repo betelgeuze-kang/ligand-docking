@@ -11,7 +11,9 @@ static void test_context_contract(void) {
     assert(bg_abi_version_minor() == BG_ABI_VERSION_MINOR);
     assert(strcmp(bg_abi_version_string(), "1.0") == 0);
     assert(strcmp(bg_status_string(BG_STATUS_OK), "ok") == 0);
-    assert(strcmp(bg_backend_string(BG_BACKEND_CPU), "cpu") == 0);
+    assert(strcmp(bg_backend_string(BG_BACKEND_RUST_CPU), "rust_cpu") == 0);
+    assert(strcmp(bg_backend_string(BG_BACKEND_HIP_SAFE), "hip_safe") == 0);
+    assert(strcmp(bg_backend_string(BG_BACKEND_HIP_FAST), "hip_fast") == 0);
     assert(strcmp(
                bg_unit_system_string(BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL),
                "angstrom_kcal_mol") == 0);
@@ -68,6 +70,43 @@ static void test_context_contract(void) {
     options.abi_version += 1;
     assert(bg_context_create(&options, &context) == BG_STATUS_ABI_MISMATCH);
     assert(context == NULL);
+}
+
+static void test_tensor_and_stream_contract(void) {
+    const double values[6] = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
+    bg_tensor_view_v1 tensor;
+    assert(bg_tensor_view_v1_init(&tensor) == BG_STATUS_OK);
+    tensor.data = values;
+    tensor.byte_capacity = sizeof(values);
+    tensor.scalar_type = BG_SCALAR_F64;
+    tensor.rank = 2;
+    tensor.shape[0] = 2;
+    tensor.shape[1] = 3;
+    tensor.stride_bytes[0] = 3 * (int64_t)sizeof(double);
+    tensor.stride_bytes[1] = (int64_t)sizeof(double);
+    uint64_t element_count = 0;
+    uint64_t required_bytes = 0;
+    assert(bg_tensor_view_v1_validate(
+               &tensor, &element_count, &required_bytes) == BG_STATUS_OK);
+    assert(element_count == 6);
+    assert(required_bytes == sizeof(values));
+
+    tensor.stride_bytes[0] = (int64_t)sizeof(double);
+    assert(bg_tensor_view_v1_validate(
+               &tensor, &element_count, &required_bytes) ==
+           BG_STATUS_INVALID_ARGUMENT);
+    assert(element_count == 0);
+    assert(required_bytes == 0);
+
+    bg_stream_v1 stream;
+    assert(bg_stream_v1_init(&stream) == BG_STATUS_OK);
+    assert(stream.backend == BG_BACKEND_RUST_CPU);
+    assert(bg_stream_v1_validate(&stream) == BG_STATUS_OK);
+    stream.backend = BG_BACKEND_HIP_SAFE;
+    stream.native_handle = 1;
+    assert(bg_stream_v1_validate(&stream) == BG_STATUS_INVALID_ARGUMENT);
+    stream.flags = BG_STREAM_FLAG_BORROWED;
+    assert(bg_stream_v1_validate(&stream) == BG_STATUS_OK);
 }
 
 static void test_owned_soa_and_transactional_update(void) {
@@ -218,6 +257,7 @@ static void test_empty_and_invalid_systems(void) {
 
 int main(void) {
     test_context_contract();
+    test_tensor_and_stream_contract();
     test_owned_soa_and_transactional_update();
     test_empty_and_invalid_systems();
     return 0;

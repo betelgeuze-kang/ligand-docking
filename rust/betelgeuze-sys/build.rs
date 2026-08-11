@@ -16,6 +16,7 @@ fn main() {
     let internal_header = repository_root.join("native/src/internal.hpp");
     let context_source = repository_root.join("native/src/context.cpp");
     let system_source = repository_root.join("native/src/system.cpp");
+    let tensor_source = repository_root.join("native/src/tensor.cpp");
     let c_header_probe = manifest_dir.join("abi/header_c11.c");
     let cpp_layout_probe = manifest_dir.join("abi/layout_assertions.cpp");
 
@@ -23,6 +24,7 @@ fn main() {
     track(&internal_header);
     track(&context_source);
     track(&system_source);
+    track(&tensor_source);
     track(&c_header_probe);
     track(&cpp_layout_probe);
 
@@ -32,6 +34,8 @@ fn main() {
         .include(&include_dir)
         .file(&context_source)
         .file(&system_source)
+        .file(&tensor_source)
+        .define("BG_DISABLE_DESCRIPTOR_INIT_CONVENIENCE_MACROS", None)
         .flag_if_supported("-fvisibility=hidden")
         .warnings(true)
         .warnings_into_errors(true)

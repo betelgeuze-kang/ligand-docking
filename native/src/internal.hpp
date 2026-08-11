@@ -1,7 +1,15 @@
 #ifndef BETELGEUZE_NATIVE_INTERNAL_HPP
 #define BETELGEUZE_NATIVE_INTERNAL_HPP
 
+#if !defined(BG_DISABLE_DESCRIPTOR_INIT_CONVENIENCE_MACROS)
+#  define BG_DISABLE_DESCRIPTOR_INIT_CONVENIENCE_MACROS
+#  define BG_INTERNAL_UNDEF_DESCRIPTOR_INIT_MACRO_GUARD
+#endif
 #include "betelgeuze/engine.h"
+#if defined(BG_INTERNAL_UNDEF_DESCRIPTOR_INIT_MACRO_GUARD)
+#  undef BG_DISABLE_DESCRIPTOR_INIT_CONVENIENCE_MACROS
+#  undef BG_INTERNAL_UNDEF_DESCRIPTOR_INIT_MACRO_GUARD
+#endif
 
 #include <array>
 #include <cmath>
@@ -15,7 +23,7 @@
 #include <vector>
 
 struct bg_context final {
-    bg_backend backend = BG_BACKEND_CPU;
+    bg_backend backend = BG_BACKEND_RUST_CPU;
     bg_unit_system unit_system = BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL;
     int32_t device_ordinal = 0;
 };
@@ -90,6 +98,28 @@ inline bg_status validate_descriptor_header(
         return fail(BG_STATUS_ABI_MISMATCH, size_error);
     }
     if (observed_version != BG_ABI_VERSION) {
+        return fail(BG_STATUS_ABI_MISMATCH, version_error);
+    }
+    return BG_STATUS_OK;
+}
+
+/* Check the caller's compiled layout before dereferencing its descriptor. */
+inline bg_status validate_initializer_compatibility(
+    const void *descriptor,
+    std::size_t caller_struct_size,
+    std::size_t native_struct_size,
+    uint32_t caller_abi_version,
+    const char *null_error,
+    const char *size_error,
+    const char *version_error) noexcept {
+    if (descriptor == nullptr) {
+        return fail(BG_STATUS_INVALID_ARGUMENT, null_error);
+    }
+    if (native_struct_size > std::numeric_limits<uint32_t>::max() ||
+        caller_struct_size != native_struct_size) {
+        return fail(BG_STATUS_ABI_MISMATCH, size_error);
+    }
+    if (caller_abi_version != BG_ABI_VERSION) {
         return fail(BG_STATUS_ABI_MISMATCH, version_error);
     }
     return BG_STATUS_OK;

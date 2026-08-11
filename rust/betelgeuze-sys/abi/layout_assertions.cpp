@@ -8,6 +8,9 @@ static_assert(std::is_standard_layout<bg_context_options>::value);
 static_assert(std::is_standard_layout<bg_particle_soa>::value);
 static_assert(std::is_standard_layout<bg_particle_soa_view>::value);
 static_assert(std::is_standard_layout<bg_position_soa>::value);
+static_assert(std::is_standard_layout<bg_tensor_view_v1>::value);
+static_assert(std::is_standard_layout<bg_mutable_tensor_view_v1>::value);
+static_assert(std::is_standard_layout<bg_stream_v1>::value);
 
 static_assert(sizeof(bg_context_options) == 64);
 static_assert(alignof(bg_context_options) == alignof(uint64_t));
@@ -19,6 +22,14 @@ static_assert(offsetof(bg_context_options, device_ordinal) == 16);
 static_assert(offsetof(bg_context_options, reserved0) == 20);
 static_assert(offsetof(bg_context_options, flags) == 24);
 static_assert(offsetof(bg_context_options, reserved) == 32);
+
+static_assert(sizeof(bg_stream_v1) == 64);
+static_assert(alignof(bg_stream_v1) == alignof(uint64_t));
+static_assert(offsetof(bg_stream_v1, backend) == 8);
+static_assert(offsetof(bg_stream_v1, device_ordinal) == 12);
+static_assert(offsetof(bg_stream_v1, native_handle) == 16);
+static_assert(offsetof(bg_stream_v1, flags) == 24);
+static_assert(offsetof(bg_stream_v1, reserved) == 32);
 
 #if INTPTR_MAX == INT64_MAX
 static_assert(sizeof(bg_particle_soa) == 120);
@@ -56,6 +67,20 @@ static_assert(offsetof(bg_position_soa, x_angstrom) == 24);
 static_assert(offsetof(bg_position_soa, y_angstrom) == 32);
 static_assert(offsetof(bg_position_soa, z_angstrom) == 40);
 static_assert(offsetof(bg_position_soa, reserved) == 48);
+
+static_assert(sizeof(bg_tensor_view_v1) == 144);
+static_assert(sizeof(bg_mutable_tensor_view_v1) == 144);
+static_assert(alignof(bg_tensor_view_v1) == 8);
+static_assert(offsetof(bg_tensor_view_v1, data) == 8);
+static_assert(offsetof(bg_tensor_view_v1, byte_capacity) == 16);
+static_assert(offsetof(bg_tensor_view_v1, scalar_type) == 24);
+static_assert(offsetof(bg_tensor_view_v1, memory_kind) == 28);
+static_assert(offsetof(bg_tensor_view_v1, device_ordinal) == 32);
+static_assert(offsetof(bg_tensor_view_v1, rank) == 36);
+static_assert(offsetof(bg_tensor_view_v1, shape) == 40);
+static_assert(offsetof(bg_tensor_view_v1, stride_bytes) == 72);
+static_assert(offsetof(bg_tensor_view_v1, flags) == 104);
+static_assert(offsetof(bg_tensor_view_v1, reserved) == 112);
 #endif
 
 static_assert(noexcept(bg_abi_version()));

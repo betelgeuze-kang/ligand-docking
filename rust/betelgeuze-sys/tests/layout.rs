@@ -12,6 +12,9 @@ fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(BG_BACKEND_AUTO, 0);
     assert_eq!(BG_BACKEND_CPU, 1);
     assert_eq!(BG_BACKEND_HIP, 2);
+    assert_eq!(BG_BACKEND_HIP_FAST, 3);
+    assert_eq!(BG_SCALAR_F64, 2);
+    assert_eq!(BG_MEMORY_HIP_DEVICE, 2);
     assert_eq!(BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL, 1);
 }
 
@@ -80,6 +83,32 @@ fn position_soa_layout_matches_the_c_header() {
     assert_eq!(offset_of!(bg_position_soa, y_angstrom), 32);
     assert_eq!(offset_of!(bg_position_soa, z_angstrom), 40);
     assert_eq!(offset_of!(bg_position_soa, reserved), 48);
+}
+
+#[cfg(target_pointer_width = "64")]
+#[test]
+fn tensor_and_stream_layouts_match_the_c_header() {
+    assert_eq!(size_of::<bg_tensor_view_v1>(), 144);
+    assert_eq!(size_of::<bg_mutable_tensor_view_v1>(), 144);
+    assert_eq!(align_of::<bg_tensor_view_v1>(), 8);
+    assert_eq!(offset_of!(bg_tensor_view_v1, data), 8);
+    assert_eq!(offset_of!(bg_tensor_view_v1, byte_capacity), 16);
+    assert_eq!(offset_of!(bg_tensor_view_v1, scalar_type), 24);
+    assert_eq!(offset_of!(bg_tensor_view_v1, memory_kind), 28);
+    assert_eq!(offset_of!(bg_tensor_view_v1, device_ordinal), 32);
+    assert_eq!(offset_of!(bg_tensor_view_v1, rank), 36);
+    assert_eq!(offset_of!(bg_tensor_view_v1, shape), 40);
+    assert_eq!(offset_of!(bg_tensor_view_v1, stride_bytes), 72);
+    assert_eq!(offset_of!(bg_tensor_view_v1, flags), 104);
+    assert_eq!(offset_of!(bg_tensor_view_v1, reserved), 112);
+
+    assert_eq!(size_of::<bg_stream_v1>(), 64);
+    assert_eq!(align_of::<bg_stream_v1>(), 8);
+    assert_eq!(offset_of!(bg_stream_v1, backend), 8);
+    assert_eq!(offset_of!(bg_stream_v1, device_ordinal), 12);
+    assert_eq!(offset_of!(bg_stream_v1, native_handle), 16);
+    assert_eq!(offset_of!(bg_stream_v1, flags), 24);
+    assert_eq!(offset_of!(bg_stream_v1, reserved), 32);
 }
 
 #[test]

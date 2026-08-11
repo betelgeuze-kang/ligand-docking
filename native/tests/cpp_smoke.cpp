@@ -27,6 +27,9 @@ int main() {
     static_assert(std::is_standard_layout_v<bg_particle_soa>);
     static_assert(std::is_standard_layout_v<bg_particle_soa_view>);
     static_assert(std::is_standard_layout_v<bg_position_soa>);
+    static_assert(std::is_standard_layout_v<bg_tensor_view_v1>);
+    static_assert(std::is_standard_layout_v<bg_mutable_tensor_view_v1>);
+    static_assert(std::is_standard_layout_v<bg_stream_v1>);
     static_assert(noexcept(bg_abi_version()));
     static_assert(noexcept(bg_context_destroy(nullptr)));
     static_assert(noexcept(bg_system_destroy(nullptr)));

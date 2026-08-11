@@ -27,6 +27,7 @@
  * enlarge the structs below.  A new major layout requires a new ABI/SOVERSION.
  */
 
+#include <stddef.h>
 #include <stdint.h>
 
 #if defined(_WIN32)
@@ -86,9 +87,15 @@ enum {
 typedef int32_t bg_backend;
 enum {
     BG_BACKEND_AUTO = 0,
-    BG_BACKEND_CPU = 1,
-    BG_BACKEND_HIP = 2
+    BG_BACKEND_RUST_CPU = 1,
+    BG_BACKEND_HIP_SAFE = 2,
+    BG_BACKEND_HIP_FAST = 3,
+    /* Source-compatibility aliases; new receipts use the explicit names. */
+    BG_BACKEND_CPU = BG_BACKEND_RUST_CPU,
+    BG_BACKEND_HIP = BG_BACKEND_HIP_SAFE
 };
+
+/* python_reference remains outside the native ABI and is verifier-only. */
 
 typedef int32_t bg_unit_system;
 enum {
@@ -177,6 +184,80 @@ typedef struct bg_position_soa {
     uint64_t reserved[4];
 } bg_position_soa;
 
+#define BG_TENSOR_MAX_RANK UINT32_C(4)
+
+typedef int32_t bg_scalar_type;
+enum {
+    BG_SCALAR_F32 = 1,
+    BG_SCALAR_F64 = 2,
+    BG_SCALAR_I32 = 3,
+    BG_SCALAR_I64 = 4,
+    BG_SCALAR_U8 = 5
+};
+
+typedef int32_t bg_memory_kind;
+enum {
+    BG_MEMORY_HOST = 1,
+    BG_MEMORY_HIP_DEVICE = 2,
+    BG_MEMORY_HIP_MANAGED = 3
+};
+
+#define BG_TENSOR_FLAG_C_CONTIGUOUS UINT64_C(1)
+#define BG_STREAM_FLAG_BORROWED UINT64_C(1)
+
+/*
+ * Versioned tensor/stream descriptors are the common boundary for Rust CPU
+ * and ROCm/HIP kernels. ABI v1 admits only exact compact C-contiguous tensors.
+ * byte_capacity must equal the derived tensor byte count; empty tensors use a
+ * null data pointer. shape/stride entries outside rank and every reserved field
+ * must be zero. Validation is structural and never dereferences data.
+ */
+typedef struct bg_tensor_view_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    const void *data;
+    uint64_t byte_capacity;
+    bg_scalar_type scalar_type;
+    bg_memory_kind memory_kind;
+    int32_t device_ordinal;
+    uint32_t rank;
+    uint64_t shape[BG_TENSOR_MAX_RANK];
+    int64_t stride_bytes[BG_TENSOR_MAX_RANK];
+    uint64_t flags;
+    uint64_t reserved[4];
+} bg_tensor_view_v1;
+
+typedef struct bg_mutable_tensor_view_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    void *data;
+    uint64_t byte_capacity;
+    bg_scalar_type scalar_type;
+    bg_memory_kind memory_kind;
+    int32_t device_ordinal;
+    uint32_t rank;
+    uint64_t shape[BG_TENSOR_MAX_RANK];
+    int64_t stride_bytes[BG_TENSOR_MAX_RANK];
+    uint64_t flags;
+    uint64_t reserved[4];
+} bg_mutable_tensor_view_v1;
+
+/*
+ * native_handle encodes a borrowed hipStream_t for HIP backends. A zero handle
+ * means the backend default stream and requires flags == 0. A non-zero handle
+ * requires BG_STREAM_FLAG_BORROWED. Rust CPU requires ordinal/handle/flags 0.
+ * The ABI never destroys a borrowed stream.
+ */
+typedef struct bg_stream_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    bg_backend backend;
+    int32_t device_ordinal;
+    uint64_t native_handle;
+    uint64_t flags;
+    uint64_t reserved[4];
+} bg_stream_v1;
+
 /* ABI and diagnostics. */
 BG_API uint32_t BG_CALL bg_abi_version(void) BG_NOEXCEPT;
 BG_API uint32_t BG_CALL bg_abi_version_major(void) BG_NOEXCEPT;
@@ -198,15 +279,78 @@ BG_API bg_status BG_CALL bg_last_error_message_copy(
     uint64_t buffer_capacity,
     uint64_t *required_size) BG_NOEXCEPT;
 
-/* Descriptor initializers set the current size/version and canonical units. */
+/*
+ * Descriptor initializers set the current size/version and canonical units.
+ * The exported functions receive the descriptor identity compiled into the
+ * caller and reject a mismatch without reading or writing descriptor storage.
+ * This prevents a newer library from overwriting an older caller's smaller
+ * object. Define BG_DISABLE_DESCRIPTOR_INIT_CONVENIENCE_MACROS when direct
+ * three-argument calls are required (for example, from generated bindings).
+ */
 BG_API bg_status BG_CALL bg_context_options_init(
-    bg_context_options *options) BG_NOEXCEPT;
+    bg_context_options *options,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
 BG_API bg_status BG_CALL bg_particle_soa_init(
-    bg_particle_soa *particles) BG_NOEXCEPT;
+    bg_particle_soa *particles,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
 BG_API bg_status BG_CALL bg_particle_soa_view_init(
-    bg_particle_soa_view *view) BG_NOEXCEPT;
+    bg_particle_soa_view *view,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
 BG_API bg_status BG_CALL bg_position_soa_init(
-    bg_position_soa *positions) BG_NOEXCEPT;
+    bg_position_soa *positions,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_tensor_view_v1_init(
+    bg_tensor_view_v1 *tensor,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_mutable_tensor_view_v1_init(
+    bg_mutable_tensor_view_v1 *tensor,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_stream_v1_init(
+    bg_stream_v1 *stream,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
+
+#if !defined(BG_DISABLE_DESCRIPTOR_INIT_CONVENIENCE_MACROS)
+#  define bg_context_options_init(options) \
+    bg_context_options_init( \
+        (options), sizeof(bg_context_options), BG_ABI_VERSION)
+#  define bg_particle_soa_init(particles) \
+    bg_particle_soa_init( \
+        (particles), sizeof(bg_particle_soa), BG_ABI_VERSION)
+#  define bg_particle_soa_view_init(view) \
+    bg_particle_soa_view_init( \
+        (view), sizeof(bg_particle_soa_view), BG_ABI_VERSION)
+#  define bg_position_soa_init(positions) \
+    bg_position_soa_init( \
+        (positions), sizeof(bg_position_soa), BG_ABI_VERSION)
+#  define bg_tensor_view_v1_init(tensor) \
+    bg_tensor_view_v1_init( \
+        (tensor), sizeof(bg_tensor_view_v1), BG_ABI_VERSION)
+#  define bg_mutable_tensor_view_v1_init(tensor) \
+    bg_mutable_tensor_view_v1_init( \
+        (tensor), sizeof(bg_mutable_tensor_view_v1), BG_ABI_VERSION)
+#  define bg_stream_v1_init(stream) \
+    bg_stream_v1_init( \
+        (stream), sizeof(bg_stream_v1), BG_ABI_VERSION)
+#endif
+
+/* Structural validation never reads tensor payload bytes or submits work. */
+BG_API bg_status BG_CALL bg_tensor_view_v1_validate(
+    const bg_tensor_view_v1 *tensor,
+    uint64_t *element_count,
+    uint64_t *required_bytes) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_mutable_tensor_view_v1_validate(
+    const bg_mutable_tensor_view_v1 *tensor,
+    uint64_t *element_count,
+    uint64_t *required_bytes) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_stream_v1_validate(
+    const bg_stream_v1 *stream) BG_NOEXCEPT;
 
 /* Backend selection is explicit.  An unavailable HIP request never runs CPU. */
 BG_API bg_status BG_CALL bg_backend_is_available(

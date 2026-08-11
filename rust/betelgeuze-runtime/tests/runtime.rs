@@ -1,6 +1,6 @@
 use betelgeuze_runtime::{
-    Backend, Context, ContextOptions, ErrorCode, ParticleSoa, PositionSoa, System, UnitSystem,
-    VelocitySoa, CANONICAL_UNITS,
+    Backend, Context, ContextOptions, ErrorCode, HostTensorView, HostTensorViewMut, ParticleSoa,
+    PositionSoa, Stream, System, UnitSystem, VelocitySoa, CANONICAL_UNITS,
 };
 
 #[test]
@@ -16,18 +16,60 @@ fn canonical_units_are_explicit_and_exact() {
 }
 
 #[test]
+fn host_tensor_and_stream_adapters_preserve_exact_layout() {
+    let values = [1.0_f64, 2.0, 3.0, 4.0, 5.0, 6.0];
+    let tensor = HostTensorView::new(&values, &[2, 3]).unwrap();
+    assert_eq!(tensor.as_slice(), values);
+    assert_eq!(tensor.metadata().shape, vec![2, 3]);
+    assert_eq!(tensor.metadata().stride_bytes, vec![24, 8]);
+    assert_eq!(tensor.metadata().element_count, 6);
+    assert_eq!(tensor.metadata().required_bytes, 48);
+
+    let mut output = [0_i32; 6];
+    let mut tensor = HostTensorViewMut::new(&mut output, &[2, 3]).unwrap();
+    tensor.as_mut_slice()[5] = 7;
+    assert_eq!(tensor.as_slice()[5], 7);
+    assert_eq!(tensor.metadata().stride_bytes, vec![12, 4]);
+
+    let stream = Stream::rust_cpu().unwrap();
+    assert_eq!(stream.backend().unwrap(), Backend::RustCpu);
+    assert_eq!(stream.device_ordinal(), 0);
+    let stream = Stream::hip_default(Backend::HipSafe, 2).unwrap();
+    assert_eq!(stream.backend().unwrap(), Backend::HipSafe);
+    assert_eq!(stream.device_ordinal(), 2);
+    // SAFETY: This test validates descriptor ownership semantics only; it does
+    // not submit work or dereference the synthetic handle.
+    let stream = unsafe { Stream::hip_borrowed(Backend::HipFast, 0, 0x1234) }.unwrap();
+    assert_eq!(stream.backend().unwrap(), Backend::HipFast);
+}
+
+#[test]
+fn tensor_adapters_reject_shape_and_capacity_errors() {
+    let values = [1_u8, 2, 3];
+    let error = HostTensorView::new(&values, &[2, 2]).err().unwrap();
+    assert_eq!(error.code, ErrorCode::InvalidArgument);
+    let error = HostTensorView::new(&values, &[1, 1, 1, 1, 3])
+        .err()
+        .unwrap();
+    assert_eq!(error.code, ErrorCode::InvalidArgument);
+    let error = Stream::hip_default(Backend::RustCpu, 0).err().unwrap();
+    assert_eq!(error.code, ErrorCode::InvalidArgument);
+}
+
+#[test]
 fn explicit_cpu_context_reports_the_selected_backend() {
-    assert!(Context::backend_available(Backend::Cpu, 0).unwrap());
+    assert!(Context::backend_available(Backend::RustCpu, 0).unwrap());
     let context = Context::new(ContextOptions::cpu()).unwrap();
-    assert_eq!(context.backend().unwrap(), Backend::Cpu);
+    assert_eq!(context.backend().unwrap(), Backend::RustCpu);
     assert_eq!(context.device_ordinal().unwrap(), 0);
     assert_eq!(context.unit_system().unwrap(), UnitSystem::AngstromKcalMol);
 }
 
 #[test]
-fn unavailable_hip_is_not_silently_replaced_with_cpu() {
-    assert!(!Context::backend_available(Backend::Hip, 0).unwrap());
-    let error = Context::new(ContextOptions::hip(0)).err().unwrap();
+fn unavailable_hip_backends_are_not_silently_replaced_with_cpu() {
+    assert!(!Context::backend_available(Backend::HipSafe, 0).unwrap());
+    assert!(!Context::backend_available(Backend::HipFast, 0).unwrap());
+    let error = Context::new(ContextOptions::hip_safe(0)).err().unwrap();
     assert_eq!(error.code, ErrorCode::BackendUnavailable);
     assert!(error.message.contains("fallback is forbidden"));
 }
@@ -131,7 +173,7 @@ fn safe_layer_rejects_invalid_lengths_values_masses_and_devices() {
     .unwrap();
     assert_eq!(error.code, ErrorCode::InvalidArgument);
 
-    let error = Context::new(ContextOptions::hip(-1)).err().unwrap();
+    let error = Context::new(ContextOptions::hip_safe(-1)).err().unwrap();
     assert_eq!(error.code, ErrorCode::InvalidArgument);
     assert_eq!(ErrorCode::from_raw(12345), Some(ErrorCode::Unknown(12345)));
     assert_eq!(ErrorCode::Unknown(12345).as_raw(), 12345);
@@ -141,7 +183,7 @@ fn safe_layer_rejects_invalid_lengths_values_masses_and_devices() {
 fn repeated_raii_lifecycle_is_stable() {
     for _ in 0..256 {
         let context = Context::new(ContextOptions::default()).unwrap();
-        assert_eq!(context.backend().unwrap(), Backend::Cpu);
+        assert_eq!(context.backend().unwrap(), Backend::RustCpu);
         let system =
             System::new(ParticleSoa::new(PositionSoa::new(&[], &[], &[]), &[], &[])).unwrap();
         assert!(system.is_empty().unwrap());

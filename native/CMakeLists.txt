@@ -1,6 +1,7 @@
 add_library(betelgeuze_engine SHARED
     src/context.cpp
     src/system.cpp
+    src/tensor.cpp
 )
 
 target_compile_features(betelgeuze_engine PUBLIC cxx_std_17)

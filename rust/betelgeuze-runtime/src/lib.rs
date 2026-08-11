@@ -59,24 +59,27 @@ pub const CANONICAL_UNITS: CanonicalUnits = CanonicalUnits {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Backend {
     Auto,
-    Cpu,
-    Hip,
+    RustCpu,
+    HipSafe,
+    HipFast,
 }
 
 impl Backend {
     const fn as_raw(self) -> sys::bg_backend {
         match self {
             Self::Auto => sys::BG_BACKEND_AUTO,
-            Self::Cpu => sys::BG_BACKEND_CPU,
-            Self::Hip => sys::BG_BACKEND_HIP,
+            Self::RustCpu => sys::BG_BACKEND_RUST_CPU,
+            Self::HipSafe => sys::BG_BACKEND_HIP_SAFE,
+            Self::HipFast => sys::BG_BACKEND_HIP_FAST,
         }
     }
 
     fn from_raw(raw: sys::bg_backend) -> Result<Self> {
         match raw {
             sys::BG_BACKEND_AUTO => Ok(Self::Auto),
-            sys::BG_BACKEND_CPU => Ok(Self::Cpu),
-            sys::BG_BACKEND_HIP => Ok(Self::Hip),
+            sys::BG_BACKEND_RUST_CPU => Ok(Self::RustCpu),
+            sys::BG_BACKEND_HIP_SAFE => Ok(Self::HipSafe),
+            sys::BG_BACKEND_HIP_FAST => Ok(Self::HipFast),
             other => Err(Error::local(
                 ErrorCode::AbiMismatch,
                 format!("native library returned unknown backend {other}"),
@@ -94,14 +97,21 @@ pub struct ContextOptions {
 impl ContextOptions {
     pub const fn cpu() -> Self {
         Self {
-            backend: Backend::Cpu,
+            backend: Backend::RustCpu,
             device_ordinal: 0,
         }
     }
 
-    pub const fn hip(device_ordinal: i32) -> Self {
+    pub const fn hip_safe(device_ordinal: i32) -> Self {
         Self {
-            backend: Backend::Hip,
+            backend: Backend::HipSafe,
+            device_ordinal,
+        }
+    }
+
+    pub const fn hip_fast(device_ordinal: i32) -> Self {
+        Self {
+            backend: Backend::HipFast,
             device_ordinal,
         }
     }
@@ -283,6 +293,322 @@ fn channel_pointer(values: &[f64]) -> *const f64 {
     }
 }
 
+mod tensor_element_sealed {
+    pub trait Sealed {}
+    impl Sealed for f32 {}
+    impl Sealed for f64 {}
+    impl Sealed for i32 {}
+    impl Sealed for i64 {}
+    impl Sealed for u8 {}
+}
+
+/// Scalar types admitted by native tensor ABI v1.
+pub trait TensorElement: tensor_element_sealed::Sealed {
+    const SCALAR_TYPE: sys::bg_scalar_type;
+}
+
+impl TensorElement for f32 {
+    const SCALAR_TYPE: sys::bg_scalar_type = sys::BG_SCALAR_F32;
+}
+impl TensorElement for f64 {
+    const SCALAR_TYPE: sys::bg_scalar_type = sys::BG_SCALAR_F64;
+}
+impl TensorElement for i32 {
+    const SCALAR_TYPE: sys::bg_scalar_type = sys::BG_SCALAR_I32;
+}
+impl TensorElement for i64 {
+    const SCALAR_TYPE: sys::bg_scalar_type = sys::BG_SCALAR_I64;
+}
+impl TensorElement for u8 {
+    const SCALAR_TYPE: sys::bg_scalar_type = sys::BG_SCALAR_U8;
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TensorMetadata {
+    pub shape: Vec<u64>,
+    pub stride_bytes: Vec<i64>,
+    pub element_count: u64,
+    pub required_bytes: u64,
+}
+
+fn tensor_metadata<T: TensorElement>(shape: &[u64], length: usize) -> Result<TensorMetadata> {
+    if shape.len() > sys::BG_TENSOR_MAX_RANK as usize {
+        return Err(invalid("tensor rank exceeds ABI v1 capacity"));
+    }
+    let scalar_size = u64::try_from(std::mem::size_of::<T>()).map_err(|_| {
+        Error::local(
+            ErrorCode::CapacityOverflow,
+            "scalar size does not fit uint64",
+        )
+    })?;
+    let mut count = 1_u64;
+    let mut expected_stride = scalar_size;
+    let mut strides = vec![0_i64; shape.len()];
+    for index in (0..shape.len()).rev() {
+        strides[index] = i64::try_from(expected_stride).map_err(|_| {
+            Error::local(
+                ErrorCode::CapacityOverflow,
+                "tensor contiguous stride exceeds int64 capacity",
+            )
+        })?;
+        count = count.checked_mul(shape[index]).ok_or_else(|| {
+            Error::local(
+                ErrorCode::CapacityOverflow,
+                "tensor element count overflows uint64",
+            )
+        })?;
+        expected_stride = expected_stride.checked_mul(shape[index]).ok_or_else(|| {
+            Error::local(
+                ErrorCode::CapacityOverflow,
+                "tensor contiguous stride overflows uint64",
+            )
+        })?;
+    }
+    let observed_length = u64::try_from(length).map_err(|_| {
+        Error::local(
+            ErrorCode::CapacityOverflow,
+            "tensor slice length does not fit uint64",
+        )
+    })?;
+    if observed_length != count {
+        return Err(invalid("tensor shape product must equal the slice length"));
+    }
+    let required_bytes = count.checked_mul(scalar_size).ok_or_else(|| {
+        Error::local(
+            ErrorCode::CapacityOverflow,
+            "tensor byte count overflows uint64",
+        )
+    })?;
+    Ok(TensorMetadata {
+        shape: shape.to_vec(),
+        stride_bytes: strides,
+        element_count: count,
+        required_bytes,
+    })
+}
+
+fn populate_tensor_shape(
+    raw_shape: &mut [u64; sys::BG_TENSOR_MAX_RANK as usize],
+    raw_strides: &mut [i64; sys::BG_TENSOR_MAX_RANK as usize],
+    metadata: &TensorMetadata,
+) {
+    raw_shape[..metadata.shape.len()].copy_from_slice(&metadata.shape);
+    raw_strides[..metadata.stride_bytes.len()].copy_from_slice(&metadata.stride_bytes);
+}
+
+/// Borrowed, exact C-contiguous host tensor validated by the native ABI.
+pub struct HostTensorView<'a, T: TensorElement> {
+    data: &'a [T],
+    raw: sys::bg_tensor_view_v1,
+    metadata: TensorMetadata,
+}
+
+impl<'a, T: TensorElement> HostTensorView<'a, T> {
+    pub fn new(data: &'a [T], shape: &[u64]) -> Result<Self> {
+        ensure_abi_compatibility()?;
+        let metadata = tensor_metadata::<T>(shape, data.len())?;
+        let mut raw = MaybeUninit::<sys::bg_tensor_view_v1>::uninit();
+        // SAFETY: raw points to exact writable descriptor storage.
+        status_result(unsafe {
+            sys::bg_tensor_view_v1_init(
+                raw.as_mut_ptr(),
+                std::mem::size_of::<sys::bg_tensor_view_v1>(),
+                sys::BG_ABI_VERSION,
+            )
+        })?;
+        // SAFETY: The successful initializer wrote every field.
+        let mut raw = unsafe { raw.assume_init() };
+        raw.data = if data.is_empty() {
+            ptr::null()
+        } else {
+            data.as_ptr().cast()
+        };
+        raw.byte_capacity = metadata.required_bytes;
+        raw.scalar_type = T::SCALAR_TYPE;
+        raw.rank = u32::try_from(shape.len()).expect("rank was bounded above");
+        populate_tensor_shape(&mut raw.shape, &mut raw.stride_bytes, &metadata);
+        let mut element_count = 0;
+        let mut required_bytes = 0;
+        // SAFETY: raw and both outputs remain live for this structural call.
+        status_result(unsafe {
+            sys::bg_tensor_view_v1_validate(&raw, &mut element_count, &mut required_bytes)
+        })?;
+        if element_count != metadata.element_count || required_bytes != metadata.required_bytes {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native tensor derivation disagrees with the Rust adapter",
+            ));
+        }
+        Ok(Self {
+            data,
+            raw,
+            metadata,
+        })
+    }
+
+    pub fn as_slice(&self) -> &[T] {
+        self.data
+    }
+
+    pub fn metadata(&self) -> &TensorMetadata {
+        &self.metadata
+    }
+
+    #[doc(hidden)]
+    pub fn native_descriptor(&self) -> &sys::bg_tensor_view_v1 {
+        &self.raw
+    }
+}
+
+/// Mutably borrowed, exact C-contiguous host tensor validated by the native ABI.
+pub struct HostTensorViewMut<'a, T: TensorElement> {
+    data: &'a mut [T],
+    raw: sys::bg_mutable_tensor_view_v1,
+    metadata: TensorMetadata,
+}
+
+impl<'a, T: TensorElement> HostTensorViewMut<'a, T> {
+    pub fn new(data: &'a mut [T], shape: &[u64]) -> Result<Self> {
+        ensure_abi_compatibility()?;
+        let metadata = tensor_metadata::<T>(shape, data.len())?;
+        let mut raw = MaybeUninit::<sys::bg_mutable_tensor_view_v1>::uninit();
+        // SAFETY: raw points to exact writable descriptor storage.
+        status_result(unsafe {
+            sys::bg_mutable_tensor_view_v1_init(
+                raw.as_mut_ptr(),
+                std::mem::size_of::<sys::bg_mutable_tensor_view_v1>(),
+                sys::BG_ABI_VERSION,
+            )
+        })?;
+        // SAFETY: The successful initializer wrote every field.
+        let mut raw = unsafe { raw.assume_init() };
+        raw.data = if data.is_empty() {
+            ptr::null_mut()
+        } else {
+            data.as_mut_ptr().cast()
+        };
+        raw.byte_capacity = metadata.required_bytes;
+        raw.scalar_type = T::SCALAR_TYPE;
+        raw.rank = u32::try_from(shape.len()).expect("rank was bounded above");
+        populate_tensor_shape(&mut raw.shape, &mut raw.stride_bytes, &metadata);
+        let mut element_count = 0;
+        let mut required_bytes = 0;
+        // SAFETY: raw and both outputs remain live for this structural call.
+        status_result(unsafe {
+            sys::bg_mutable_tensor_view_v1_validate(&raw, &mut element_count, &mut required_bytes)
+        })?;
+        if element_count != metadata.element_count || required_bytes != metadata.required_bytes {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native mutable tensor derivation disagrees with the Rust adapter",
+            ));
+        }
+        Ok(Self {
+            data,
+            raw,
+            metadata,
+        })
+    }
+
+    pub fn as_slice(&self) -> &[T] {
+        self.data
+    }
+
+    pub fn as_mut_slice(&mut self) -> &mut [T] {
+        self.data
+    }
+
+    pub fn metadata(&self) -> &TensorMetadata {
+        &self.metadata
+    }
+
+    #[doc(hidden)]
+    pub fn native_descriptor(&self) -> &sys::bg_mutable_tensor_view_v1 {
+        &self.raw
+    }
+}
+
+/// Structurally validated execution stream descriptor.
+pub struct Stream {
+    raw: sys::bg_stream_v1,
+    _not_send_or_sync: PhantomData<Rc<()>>,
+}
+
+impl Stream {
+    pub fn rust_cpu() -> Result<Self> {
+        Self::new(Backend::RustCpu, 0, 0, 0)
+    }
+
+    pub fn hip_default(backend: Backend, device_ordinal: i32) -> Result<Self> {
+        match backend {
+            Backend::HipSafe | Backend::HipFast => Self::new(backend, device_ordinal, 0, 0),
+            _ => Err(invalid("HIP stream backend must be HipSafe or HipFast")),
+        }
+    }
+
+    /// Wrap a non-default HIP stream without taking ownership.
+    ///
+    /// # Safety
+    /// `native_handle` must encode a live `hipStream_t` on `device_ordinal` and
+    /// must outlive every native submission that uses this descriptor.
+    pub unsafe fn hip_borrowed(
+        backend: Backend,
+        device_ordinal: i32,
+        native_handle: u64,
+    ) -> Result<Self> {
+        match backend {
+            Backend::HipSafe | Backend::HipFast if native_handle != 0 => Self::new(
+                backend,
+                device_ordinal,
+                native_handle,
+                sys::BG_STREAM_FLAG_BORROWED,
+            ),
+            Backend::HipSafe | Backend::HipFast => {
+                Err(invalid("borrowed HIP stream handle must be non-zero"))
+            }
+            _ => Err(invalid("HIP stream backend must be HipSafe or HipFast")),
+        }
+    }
+
+    fn new(backend: Backend, device_ordinal: i32, native_handle: u64, flags: u64) -> Result<Self> {
+        ensure_abi_compatibility()?;
+        let mut raw = MaybeUninit::<sys::bg_stream_v1>::uninit();
+        // SAFETY: raw points to exact writable descriptor storage.
+        status_result(unsafe {
+            sys::bg_stream_v1_init(
+                raw.as_mut_ptr(),
+                std::mem::size_of::<sys::bg_stream_v1>(),
+                sys::BG_ABI_VERSION,
+            )
+        })?;
+        // SAFETY: The successful initializer wrote every field.
+        let mut raw = unsafe { raw.assume_init() };
+        raw.backend = backend.as_raw();
+        raw.device_ordinal = device_ordinal;
+        raw.native_handle = native_handle;
+        raw.flags = flags;
+        // SAFETY: raw remains live for this structural call.
+        status_result(unsafe { sys::bg_stream_v1_validate(&raw) })?;
+        Ok(Self {
+            raw,
+            _not_send_or_sync: PhantomData,
+        })
+    }
+
+    pub fn backend(&self) -> Result<Backend> {
+        Backend::from_raw(self.raw.backend)
+    }
+
+    pub fn device_ordinal(&self) -> i32 {
+        self.raw.device_ordinal
+    }
+
+    #[doc(hidden)]
+    pub fn native_descriptor(&self) -> &sys::bg_stream_v1 {
+        &self.raw
+    }
+}
+
 pub struct Context {
     handle: NonNull<sys::bg_context>,
     // The ABI does not yet promise concurrent context operations.
@@ -298,7 +624,13 @@ impl Context {
 
         let mut raw_options = MaybeUninit::<sys::bg_context_options>::uninit();
         // SAFETY: raw_options points to correctly sized writable storage.
-        status_result(unsafe { sys::bg_context_options_init(raw_options.as_mut_ptr()) })?;
+        status_result(unsafe {
+            sys::bg_context_options_init(
+                raw_options.as_mut_ptr(),
+                std::mem::size_of::<sys::bg_context_options>(),
+                sys::BG_ABI_VERSION,
+            )
+        })?;
         // SAFETY: The successful initializer wrote every field.
         let mut raw_options = unsafe { raw_options.assume_init() };
         raw_options.backend = options.backend.as_raw();
@@ -549,7 +881,13 @@ impl System {
 
         let mut raw = MaybeUninit::<sys::bg_particle_soa>::uninit();
         // SAFETY: raw points to correctly sized writable storage.
-        status_result(unsafe { sys::bg_particle_soa_init(raw.as_mut_ptr()) })?;
+        status_result(unsafe {
+            sys::bg_particle_soa_init(
+                raw.as_mut_ptr(),
+                std::mem::size_of::<sys::bg_particle_soa>(),
+                sys::BG_ABI_VERSION,
+            )
+        })?;
         // SAFETY: The successful initializer wrote every field.
         let mut raw = unsafe { raw.assume_init() };
         raw.particle_count = particle_count;
@@ -613,7 +951,13 @@ impl System {
     pub fn snapshot(&self) -> Result<ParticleSnapshot> {
         let mut view = MaybeUninit::<sys::bg_particle_soa_view>::uninit();
         // SAFETY: view points to correctly sized writable storage.
-        status_result(unsafe { sys::bg_particle_soa_view_init(view.as_mut_ptr()) })?;
+        status_result(unsafe {
+            sys::bg_particle_soa_view_init(
+                view.as_mut_ptr(),
+                std::mem::size_of::<sys::bg_particle_soa_view>(),
+                sys::BG_ABI_VERSION,
+            )
+        })?;
         // SAFETY: The successful initializer wrote every field.
         let mut view = unsafe { view.assume_init() };
         // SAFETY: The private system handle remains live for all copies below.
@@ -663,7 +1007,13 @@ impl System {
 
         let mut raw = MaybeUninit::<sys::bg_position_soa>::uninit();
         // SAFETY: raw points to correctly sized writable storage.
-        status_result(unsafe { sys::bg_position_soa_init(raw.as_mut_ptr()) })?;
+        status_result(unsafe {
+            sys::bg_position_soa_init(
+                raw.as_mut_ptr(),
+                std::mem::size_of::<sys::bg_position_soa>(),
+                sys::BG_ABI_VERSION,
+            )
+        })?;
         // SAFETY: The successful initializer wrote every field.
         let mut raw = unsafe { raw.assume_init() };
         raw.particle_count = checked_count(count)?;
