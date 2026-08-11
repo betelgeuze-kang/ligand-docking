@@ -56,7 +56,7 @@ extern "C" {
 #endif
 
 #define BG_ABI_VERSION_MAJOR UINT32_C(1)
-#define BG_ABI_VERSION_MINOR UINT32_C(3)
+#define BG_ABI_VERSION_MINOR UINT32_C(4)
 #define BG_ABI_VERSION UINT32_C(1)
 
 #define BG_CANONICAL_LENGTH_UNIT "angstrom"
@@ -90,9 +90,17 @@ enum {
 typedef int32_t bg_backend;
 enum {
     BG_BACKEND_AUTO = 0,
-    BG_BACKEND_CPU = 1,
-    BG_BACKEND_HIP = 2
+    BG_BACKEND_CPP_CPU_REFERENCE = 1,
+    /* ABI v1.0-v1.3 exposed backend value 2 as the parallel HIP lane. */
+    BG_BACKEND_HIP_FAST = 2,
+    BG_BACKEND_RUST_CPU = 3,
+    BG_BACKEND_HIP_SAFE = 4,
+    /* Frozen legacy aliases. New product code must use an explicit lane. */
+    BG_BACKEND_CPU = BG_BACKEND_CPP_CPU_REFERENCE,
+    BG_BACKEND_HIP = BG_BACKEND_HIP_FAST
 };
+
+/* python_reference remains outside the native ABI and is verifier-only. */
 
 typedef int32_t bg_unit_system;
 enum {

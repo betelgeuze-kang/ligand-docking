@@ -10,6 +10,9 @@ const VENDORED_FILES: &[&str] = &[
     "native/src/system.cpp",
     "native/src/cpu/evaluator.hpp",
     "native/src/cpu/evaluator.cpp",
+    "native/src/rust/provider.h",
+    "native/src/rust/evaluator.hpp",
+    "native/src/rust/evaluator.cpp",
     "native/src/dynamics/dynamics.hpp",
     "native/src/dynamics/api.cpp",
     "native/src/dynamics/checkpoint.cpp",
@@ -93,6 +96,7 @@ fn main() {
     let forcefield_source = vendor_root.join("native/src/forcefield.cpp");
     let system_source = vendor_root.join("native/src/system.cpp");
     let cpu_evaluator_source = vendor_root.join("native/src/cpu/evaluator.cpp");
+    let rust_evaluator_source = vendor_root.join("native/src/rust/evaluator.cpp");
     let dynamics_api_source = vendor_root.join("native/src/dynamics/api.cpp");
     let dynamics_checkpoint_source = vendor_root.join("native/src/dynamics/checkpoint.cpp");
     let dynamics_common_source = vendor_root.join("native/src/dynamics/common.cpp");
@@ -102,7 +106,6 @@ fn main() {
     let hip_stub_source = vendor_root.join("native/src/hip/stub.cpp");
     let c_header_probe = manifest_dir.join("abi/header_c11.c");
     let cpp_layout_probe = manifest_dir.join("abi/layout_assertions.cpp");
-
     track(&c_header_probe);
     track(&cpp_layout_probe);
 
@@ -116,6 +119,7 @@ fn main() {
         .file(&forcefield_source)
         .file(&system_source)
         .file(&cpu_evaluator_source)
+        .file(&rust_evaluator_source)
         .file(&dynamics_api_source)
         .file(&dynamics_checkpoint_source)
         .file(&dynamics_common_source)

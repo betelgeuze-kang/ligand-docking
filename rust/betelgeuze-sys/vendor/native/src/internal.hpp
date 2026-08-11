@@ -23,7 +23,7 @@
 #include <vector>
 
 struct bg_context final {
-    bg_backend backend = BG_BACKEND_CPU;
+    bg_backend backend = BG_BACKEND_RUST_CPU;
     bg_unit_system unit_system = BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL;
     int32_t device_ordinal = 0;
     /* Backend-private ownership.  Public callers only ever see bg_context as

@@ -1,5 +1,6 @@
 #include "hip/backend.hpp"
 #include "internal.hpp"
+#include "rust/provider.h"
 
 #include <cstring>
 #include <memory>
@@ -42,8 +43,10 @@ bg_status validate_context_options(const bg_context_options &options) noexcept {
     }
     switch (options.backend) {
         case BG_BACKEND_AUTO:
-        case BG_BACKEND_CPU:
-        case BG_BACKEND_HIP:
+        case BG_BACKEND_CPP_CPU_REFERENCE:
+        case BG_BACKEND_HIP_FAST:
+        case BG_BACKEND_RUST_CPU:
+        case BG_BACKEND_HIP_SAFE:
             return BG_STATUS_OK;
         default:
             return fail(
@@ -52,8 +55,19 @@ bg_status validate_context_options(const bg_context_options &options) noexcept {
     }
 }
 
-bool cpu_is_available(int32_t device_ordinal) noexcept {
+bool cpp_cpu_reference_is_available(int32_t device_ordinal) noexcept {
     return device_ordinal == 0;
+}
+
+bool rust_cpu_is_available(int32_t device_ordinal) noexcept {
+    return device_ordinal == 0 &&
+           bg_rust_cpu_provider_abi_version_v1() ==
+               BG_RUST_CPU_PROVIDER_ABI_VERSION;
+}
+
+/* hip_safe remains unavailable until the strict serial provider is linked. */
+bool hip_safe_is_available(int32_t /*device_ordinal*/) noexcept {
+    return false;
 }
 
 }  // namespace
@@ -72,7 +86,7 @@ extern "C" BG_API uint32_t BG_CALL bg_abi_version_minor(void) BG_NOEXCEPT {
 }
 
 extern "C" BG_API const char *BG_CALL bg_abi_version_string(void) BG_NOEXCEPT {
-    return "1.3";
+    return "1.4";
 }
 
 extern "C" BG_API const char *BG_CALL bg_status_string(
@@ -110,10 +124,14 @@ extern "C" BG_API const char *BG_CALL bg_backend_string(
     switch (backend) {
         case BG_BACKEND_AUTO:
             return "auto";
-        case BG_BACKEND_CPU:
-            return "cpu";
-        case BG_BACKEND_HIP:
-            return "hip";
+        case BG_BACKEND_CPP_CPU_REFERENCE:
+            return "cpp_cpu_reference";
+        case BG_BACKEND_HIP_FAST:
+            return "hip_fast";
+        case BG_BACKEND_RUST_CPU:
+            return "rust_cpu";
+        case BG_BACKEND_HIP_SAFE:
+            return "hip_safe";
         default:
             return "unknown_backend";
     }
@@ -281,11 +299,16 @@ extern "C" BG_API bg_status BG_CALL bg_backend_is_available(
         }
         switch (backend) {
             case BG_BACKEND_AUTO:
-            case BG_BACKEND_CPU:
-                *available = cpu_is_available(device_ordinal) ? UINT8_C(1)
-                                                               : UINT8_C(0);
+            case BG_BACKEND_RUST_CPU:
+                *available = rust_cpu_is_available(device_ordinal) ? UINT8_C(1)
+                                                                    : UINT8_C(0);
                 return BG_STATUS_OK;
-            case BG_BACKEND_HIP: {
+            case BG_BACKEND_CPP_CPU_REFERENCE:
+                *available = cpp_cpu_reference_is_available(device_ordinal)
+                                 ? UINT8_C(1)
+                                 : UINT8_C(0);
+                return BG_STATUS_OK;
+            case BG_BACKEND_HIP_FAST: {
                 bool hip_available = false;
                 const bg_status status = hip::query_availability(
                     device_ordinal, &hip_available);
@@ -295,6 +318,10 @@ extern "C" BG_API bg_status BG_CALL bg_backend_is_available(
                 *available = hip_available ? UINT8_C(1) : UINT8_C(0);
                 return BG_STATUS_OK;
             }
+            case BG_BACKEND_HIP_SAFE:
+                *available = hip_safe_is_available(device_ordinal) ? UINT8_C(1)
+                                                                    : UINT8_C(0);
+                return BG_STATUS_OK;
             default:
                 return fail(
                     BG_STATUS_UNSUPPORTED_BACKEND,
@@ -328,19 +355,25 @@ extern "C" BG_API bg_status BG_CALL bg_context_create(
 
         bg_backend selected_backend = options->backend;
         if (selected_backend == BG_BACKEND_AUTO) {
-            if (!cpu_is_available(options->device_ordinal)) {
+            if (!rust_cpu_is_available(options->device_ordinal)) {
                 return fail(
                     BG_STATUS_BACKEND_UNAVAILABLE,
-                    "no backend is available at the requested device ordinal");
+                    "default rust_cpu backend is unavailable; fallback is forbidden");
             }
-            selected_backend = BG_BACKEND_CPU;
-        } else if (selected_backend == BG_BACKEND_CPU) {
-            if (!cpu_is_available(options->device_ordinal)) {
+            selected_backend = BG_BACKEND_RUST_CPU;
+        } else if (selected_backend == BG_BACKEND_CPP_CPU_REFERENCE) {
+            if (!cpp_cpu_reference_is_available(options->device_ordinal)) {
                 return fail(
                     BG_STATUS_BACKEND_UNAVAILABLE,
-                    "requested CPU device ordinal is unavailable");
+                    "requested C++ CPU reference ordinal is unavailable");
             }
-        } else {
+        } else if (selected_backend == BG_BACKEND_RUST_CPU) {
+            if (!rust_cpu_is_available(options->device_ordinal)) {
+                return fail(
+                    BG_STATUS_BACKEND_UNAVAILABLE,
+                    "rust_cpu backend is unavailable; fallback is forbidden");
+            }
+        } else if (selected_backend == BG_BACKEND_HIP_FAST) {
             bool hip_available = false;
             status = hip::query_availability(
                 options->device_ordinal, &hip_available);
@@ -350,15 +383,19 @@ extern "C" BG_API bg_status BG_CALL bg_context_create(
             if (!hip_available) {
                 return fail(
                     BG_STATUS_BACKEND_UNAVAILABLE,
-                    "HIP backend is unavailable; CPU fallback is forbidden");
+                    "hip_fast backend is unavailable; fallback is forbidden");
             }
+        } else if (!hip_safe_is_available(options->device_ordinal)) {
+            return fail(
+                BG_STATUS_BACKEND_UNAVAILABLE,
+                "hip_safe backend is unavailable; fallback is forbidden");
         }
 
         auto context = std::make_unique<bg_context>();
         context->backend = selected_backend;
         context->unit_system = options->unit_system;
         context->device_ordinal = options->device_ordinal;
-        if (selected_backend == BG_BACKEND_HIP) {
+        if (selected_backend == BG_BACKEND_HIP_FAST) {
             status = hip::initialize(context.get());
             if (status != BG_STATUS_OK) {
                 hip::shutdown(context.get());
@@ -372,7 +409,7 @@ extern "C" BG_API bg_status BG_CALL bg_context_create(
 
 extern "C" BG_API void BG_CALL bg_context_destroy(
     bg_context *context) BG_NOEXCEPT {
-    if (context != nullptr && context->backend == BG_BACKEND_HIP) {
+    if (context != nullptr && context->backend == BG_BACKEND_HIP_FAST) {
         betelgeuze::native::hip::shutdown(context);
     }
     delete context;

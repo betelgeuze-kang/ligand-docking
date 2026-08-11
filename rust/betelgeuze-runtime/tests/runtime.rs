@@ -30,10 +30,19 @@ fn explicit_cpu_context_reports_the_selected_backend() {
 }
 
 #[test]
+fn explicit_rust_cpu_context_reports_the_selected_backend() {
+    assert!(Context::backend_available(Backend::RustCpu, 0).unwrap());
+    let context = Context::new(ContextOptions::rust_cpu()).unwrap();
+    assert_eq!(context.backend().unwrap(), Backend::RustCpu);
+    assert_eq!(context.device_ordinal().unwrap(), 0);
+    assert_eq!(context.unit_system().unwrap(), UnitSystem::AngstromKcalMol);
+}
+
+#[test]
 #[cfg(not(feature = "hip"))]
 fn unavailable_hip_is_not_silently_replaced_with_cpu() {
-    assert!(!Context::backend_available(Backend::Hip, 0).unwrap());
-    let error = Context::new(ContextOptions::hip(0)).err().unwrap();
+    assert!(!Context::backend_available(Backend::HipFast, 0).unwrap());
+    let error = Context::new(ContextOptions::hip_fast(0)).err().unwrap();
     assert_eq!(error.code, ErrorCode::BackendUnavailable);
     assert!(error.message.contains("fallback is forbidden"));
 }
@@ -165,7 +174,7 @@ fn safe_layer_rejects_invalid_lengths_values_masses_and_devices() {
 fn repeated_raii_lifecycle_is_stable() {
     for _ in 0..256 {
         let context = Context::new(ContextOptions::default()).unwrap();
-        assert_eq!(context.backend().unwrap(), Backend::Cpu);
+        assert_eq!(context.backend().unwrap(), Backend::RustCpu);
         let system =
             System::new(ParticleSoa::new(PositionSoa::new(&[], &[], &[]), &[], &[])).unwrap();
         assert!(system.is_empty().unwrap());
