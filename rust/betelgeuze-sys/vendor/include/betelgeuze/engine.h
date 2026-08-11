@@ -56,7 +56,7 @@ extern "C" {
 #endif
 
 #define BG_ABI_VERSION_MAJOR UINT32_C(1)
-#define BG_ABI_VERSION_MINOR UINT32_C(11)
+#define BG_ABI_VERSION_MINOR UINT32_C(12)
 #define BG_ABI_VERSION UINT32_C(1)
 
 #define BG_CANONICAL_LENGTH_UNIT "angstrom"
@@ -265,6 +265,26 @@ enum {
     BG_DOCKING_RIGID_REFINEMENT_PROFILE_V6_CLEARANCE_V4 = 5
 };
 
+typedef int32_t bg_docking_fixed64_refinement_row_status;
+enum {
+    BG_DOCKING_FIXED64_REFINEMENT_ROW_COORDINATE_READY = 1,
+    BG_DOCKING_FIXED64_REFINEMENT_ROW_TYPED_FAILURE = 2
+};
+
+typedef int32_t bg_docking_fixed64_refinement_failure_stage;
+enum {
+    BG_DOCKING_FIXED64_REFINEMENT_FAILURE_STAGE_NONE = 0,
+    BG_DOCKING_FIXED64_REFINEMENT_FAILURE_STAGE_RIGID = 1,
+    BG_DOCKING_FIXED64_REFINEMENT_FAILURE_STAGE_TORSION_V7 = 2
+};
+
+typedef int32_t bg_docking_fixed64_refinement_coordinate_origin;
+enum {
+    BG_DOCKING_FIXED64_REFINEMENT_COORDINATE_NONE = 0,
+    BG_DOCKING_FIXED64_REFINEMENT_COORDINATE_RIGID_SELECTED = 1,
+    BG_DOCKING_FIXED64_REFINEMENT_COORDINATE_TORSION_V7_FINAL = 2
+};
+
 /* Incomplete declarations are the only public handle representation. */
 typedef struct bg_context bg_context;
 typedef struct bg_system bg_system;
@@ -275,6 +295,8 @@ typedef struct bg_docking_pose_validity_v1 bg_docking_pose_validity_v1;
 typedef struct bg_docking_stable_top_k_v1 bg_docking_stable_top_k_v1;
 typedef struct bg_docking_fixed64_downstream_v1
     bg_docking_fixed64_downstream_v1;
+typedef struct bg_docking_fixed64_refinement_pipeline_v1
+    bg_docking_fixed64_refinement_pipeline_v1;
 typedef struct bg_docking_rigid_refinement bg_docking_rigid_refinement;
 typedef struct bg_docking_torsion_v7 bg_docking_torsion_v7;
 
@@ -1267,6 +1289,90 @@ typedef struct bg_docking_torsion_v7_output_v1 {
     uint64_t reserved[8];
 } bg_docking_torsion_v7_output_v1;
 
+/*
+ * Exact fixed64 source input for the persistent refinement pipeline. Rigid
+ * modes and both step budgets are predeclared per slot. torsion_max_steps is
+ * the total V6+V7 accepted-step budget; the pipeline subtracts the selected
+ * rigid V6 accepted steps before V7. Source coordinates, torsion angles, and
+ * quaternions remain caller-owned for the duration of one call. Inactive rows
+ * stay in the denominator and their numerical channels are not interpreted.
+ * Torsion V7 is considered only for successful V6 rows; V2/V3 rows flow
+ * directly from rigid refinement to downstream scoring.
+ */
+typedef struct bg_docking_fixed64_refinement_input_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    uint64_t candidate_count;
+    uint64_t ligand_atom_count;
+    bg_unit_system unit_system;
+    uint32_t reserved0;
+    const bg_docking_rigid_refinement_candidate_mode *candidate_mode;
+    const uint64_t *rigid_max_steps;
+    const uint8_t *proposal_is_torsion_eligible;
+    const uint64_t *torsion_max_steps;
+    const double *source_x_angstrom;
+    const double *source_y_angstrom;
+    const double *source_z_angstrom;
+    const double *baseline_torsion_angles_radians;
+    const double *source_quaternion_x;
+    const double *source_quaternion_y;
+    const double *source_quaternion_z;
+    const double *source_quaternion_w;
+    uint64_t reserved[8];
+} bg_docking_fixed64_refinement_input_v1;
+
+typedef struct bg_docking_fixed64_refinement_row_v1 {
+    uint32_t slot_index;
+    bg_docking_fixed64_refinement_row_status status;
+    bg_docking_fixed64_refinement_failure_stage failure_stage;
+    bg_docking_fixed64_refinement_coordinate_origin coordinate_origin;
+    bg_docking_rigid_refinement_failure rigid_failure_code;
+    bg_docking_torsion_v7_failure torsion_v7_failure_code;
+    bg_docking_rigid_refinement_profile selected_rigid_profile;
+    bg_docking_scorer_v1_candidate_state downstream_candidate_state;
+    uint8_t torsion_v7_applicable;
+    uint8_t torsion_v7_selected;
+    uint8_t coordinate_available;
+    uint8_t reserved0;
+    uint8_t coordinate_sha256[32];
+    uint64_t reserved[4];
+} bg_docking_fixed64_refinement_row_v1;
+
+/* Caller-owned final selection output. All capacities are exact: rows and
+ * quaternion channels are 64, while coordinate channels are
+ * 64*ligand_atom_count. This output and every component output supplied to
+ * the run call are committed together only after the entire pipeline passes
+ * backend-independent validation. No product or execution authority is
+ * granted. */
+typedef struct bg_docking_fixed64_refinement_output_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    uint64_t row_capacity;
+    uint64_t row_count;
+    uint64_t coordinate_capacity;
+    uint64_t coordinate_count;
+    uint64_t quaternion_capacity;
+    uint64_t quaternion_count;
+    bg_unit_system unit_system;
+    uint32_t reserved0;
+    bg_docking_fixed64_refinement_row_v1 *rows;
+    double *final_x_angstrom;
+    double *final_y_angstrom;
+    double *final_z_angstrom;
+    double *final_quaternion_x;
+    double *final_quaternion_y;
+    double *final_quaternion_z;
+    double *final_quaternion_w;
+    uint8_t molecular_execution_authorized;
+    uint8_t reservation_authorized;
+    uint8_t benchmark_execution_authorized;
+    uint8_t existing_rank_auto_change_authorized;
+    uint8_t customer_pose_emission_authorized;
+    uint8_t production_claim_authorized;
+    uint8_t reserved1[2];
+    uint64_t reserved[8];
+} bg_docking_fixed64_refinement_output_v1;
+
 /* ABI and diagnostics. */
 BG_API uint32_t BG_CALL bg_abi_version(void) BG_NOEXCEPT;
 BG_API uint32_t BG_CALL bg_abi_version_major(void) BG_NOEXCEPT;
@@ -1412,6 +1518,14 @@ BG_API bg_status BG_CALL bg_docking_torsion_v7_output_v1_init(
     bg_docking_torsion_v7_output_v1 *output,
     size_t caller_struct_size,
     uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_fixed64_refinement_input_v1_init(
+    bg_docking_fixed64_refinement_input_v1 *input,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_fixed64_refinement_output_v1_init(
+    bg_docking_fixed64_refinement_output_v1 *output,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
 
 #if !defined(BG_DISABLE_DESCRIPTOR_INIT_CONVENIENCE_MACROS)
 #  define bg_context_options_init(options) \
@@ -1524,6 +1638,16 @@ BG_API bg_status BG_CALL bg_docking_torsion_v7_output_v1_init(
 #  define bg_docking_torsion_v7_output_v1_init(output) \
     bg_docking_torsion_v7_output_v1_init( \
         (output), sizeof(bg_docking_torsion_v7_output_v1), BG_ABI_VERSION)
+#  define bg_docking_fixed64_refinement_input_v1_init(input) \
+    bg_docking_fixed64_refinement_input_v1_init( \
+        (input), \
+        sizeof(bg_docking_fixed64_refinement_input_v1), \
+        BG_ABI_VERSION)
+#  define bg_docking_fixed64_refinement_output_v1_init(output) \
+    bg_docking_fixed64_refinement_output_v1_init( \
+        (output), \
+        sizeof(bg_docking_fixed64_refinement_output_v1), \
+        BG_ABI_VERSION)
 #endif
 
 /*
@@ -1695,6 +1819,38 @@ BG_API bg_status BG_CALL bg_docking_torsion_v7_refine_fixed64(
     const bg_docking_torsion_v7 *refiner,
     const bg_docking_torsion_v7_candidate_batch_soa_v1 *candidates,
     bg_docking_torsion_v7_output_v1 *output) BG_NOEXCEPT;
+
+/* Persistent refinement-to-ranking composition. Creation verifies that all
+ * four molecular contexts describe the same exact receptor, ligand radii,
+ * pocket, backend, device, and unit system before it owns rigid, torsion V7,
+ * ScorerV1, validity, and stable Top-K providers. Run derives the V7 baseline
+ * from rigid V6 evidence, derives final quaternions from the accepted rigid
+ * rotation, and commits every component output plus the final-selection
+ * output transactionally. It never falls back and grants no execution,
+ * reservation, benchmark, rank-mutation, customer-emission, or claim
+ * authority. */
+BG_API bg_status BG_CALL bg_docking_fixed64_refinement_pipeline_v1_create(
+    const bg_context *context,
+    const bg_docking_rigid_refinement_context_soa_v1 *rigid_descriptor,
+    const bg_docking_torsion_v7_context_soa_v1 *torsion_descriptor,
+    const bg_docking_scorer_v1_context_soa_v1 *scorer_descriptor,
+    const bg_docking_pose_validity_context_soa_v1 *validity_descriptor,
+    bg_docking_fixed64_refinement_pipeline_v1 **out_pipeline) BG_NOEXCEPT;
+BG_API void BG_CALL bg_docking_fixed64_refinement_pipeline_v1_destroy(
+    bg_docking_fixed64_refinement_pipeline_v1 *pipeline) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_fixed64_refinement_pipeline_v1_get_backend(
+    const bg_docking_fixed64_refinement_pipeline_v1 *pipeline,
+    bg_backend *backend) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_fixed64_refinement_pipeline_v1_run(
+    const bg_context *context,
+    const bg_docking_fixed64_refinement_pipeline_v1 *pipeline,
+    const bg_docking_fixed64_refinement_input_v1 *input,
+    bg_docking_rigid_refinement_output_v1 *rigid_output,
+    bg_docking_torsion_v7_output_v1 *torsion_output,
+    bg_docking_scorer_v1_output_v1 *scorer_output,
+    bg_docking_pose_validity_output_v1 *validity_output,
+    bg_docking_stable_top_k_output_v1 *ranking_output,
+    bg_docking_fixed64_refinement_output_v1 *pipeline_output) BG_NOEXCEPT;
 
 /* A system owns its host SoA and has no parent-handle lifetime dependency. */
 BG_API bg_status BG_CALL bg_system_create(

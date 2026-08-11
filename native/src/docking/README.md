@@ -48,6 +48,17 @@ counts observed before failure. Downstream validity binds those rows as typed
 upstream failures, and Top-K accepts the pair-count receipt while requiring
 zero score/contact evidence and keeping the slot rank-ineligible.
 
+ABI 1.12 adds the persistent fixed64 refinement pipeline. It owns the existing
+V2/V3/V6 rigid, V7 torsion, and ABI 1.11 downstream handles on one exact
+backend/device. V7 baselines and accepted-step evidence are derived from the
+rigid result, final quaternions include the accepted rigid rotation, and V2/V3
+rows bypass V7 without bypassing the fixed denominator. All component outputs
+and the final coordinate-selection rows commit together after complete
+validation. Cross-wired receptor, ligand-radius, or pocket contexts fail at
+creation; overlapping buffers fail before work. The 64 rows retain the exact
+failure stage and coordinate origin, while execution, reservation, benchmark,
+rank-mutation, pose-emission, and claim authority remain false.
+
 The term order is:
 
 1. typed van der Waals

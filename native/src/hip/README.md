@@ -33,6 +33,14 @@ all three device stages must succeed before any caller output is committed.
 The gfx1030 suite compares the complete composed result with `rust_cpu` and
 requires bit-identical repeated device runs.
 
+ABI 1.12 places the existing rigid, V7, and downstream device providers behind
+one persistent refinement-to-ranking handle. The wrapper never copies a stage
+to a CPU fallback: each selected HIP lane executes rigid -> V7 -> ScorerV1 ->
+validity -> Top-K on its own compiled providers, while a shared host selection
+step preserves all 64 rows and commits every output transactionally. Device
+parity covers final coordinates, quaternions, failure stages, score terms,
+validity, and rank evidence.
+
 Builds without a complete ROCm compiler/runtime link a fail-closed stub and
 report the backend unavailable. A compiled provider still reports unavailable
 unless the requested device ordinal is visible to the HIP runtime. Synthetic
