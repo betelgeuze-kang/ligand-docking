@@ -95,6 +95,9 @@ def _features(*, available: bool, slot_zero_coordinate: float = 5.0):
         receptor_coordinate_sha256=_digest("v11-receptor-coordinate"),
         prepared_ligand_topology_sha256=ligand_topology_sha256,
         prepared_receptor_topology_sha256=receptor_topology_sha256,
+        ligand_vdw_radii_sha256=_digest("ligand-vdw-radii"),
+        ligand_heavy_atom_mask_sha256=_digest("ligand-heavy-atom-mask"),
+        receptor_vdw_radii_sha256=_digest("receptor-vdw-radii"),
     )
     return Mixed64FeatureEvidence(
         exact_v11_source_receipt_sha256=exact_source.source_receipt_sha256,
@@ -137,7 +140,11 @@ def _features(*, available: bool, slot_zero_coordinate: float = 5.0):
                 Mixed64ConformerSourceEvidence(
                     rank=rank,
                     proposal_sha256=_digest(f"conformer-proposal-{rank}"),
-                    coordinate_sha256=_digest(f"conformer-coordinate-{rank}"),
+                    coordinate_sha256=(
+                        _coordinate_digest(8.6)
+                        if rank == 2
+                        else _digest(f"conformer-coordinate-{rank}")
+                    ),
                     source_receipt_sha256=_digest(f"conformer-receipt-{rank}"),
                 )
                 for rank in TRUE_CONFORMER_RANKS
@@ -442,12 +449,19 @@ def test_exact64_success_rederives_stable_rank_top1_top5_and_authority_false() -
         assert candidate.proposal_execution_receipt.generation_parent_coordinate_sha256 == (
             slot.selected_generation_parent_coordinate_sha256
         )
-        assert candidate.source_proposal_sha256 != (
-            slot.selected_generation_parent_proposal_sha256
+        assert (
+            candidate.source_proposal_sha256,
+            candidate.source_coordinate_sha256,
+        ) != (
+            slot.selected_generation_parent_proposal_sha256,
+            slot.selected_generation_parent_coordinate_sha256,
         )
-        assert candidate.source_coordinate_sha256 != (
-            slot.selected_generation_parent_coordinate_sha256
-        )
+    assert batch.candidates[36].source_coordinate_sha256 == (
+        allocation.slots[36].selected_generation_parent_coordinate_sha256
+    )
+    assert batch.candidates[36].source_proposal_sha256 != (
+        allocation.slots[36].selected_generation_parent_proposal_sha256
+    )
     assert all(
         candidate["proposal_execution_receipt"]["producer_attested"] is False
         and candidate["scorer_v1_evidence"]["producer_attested"] is False

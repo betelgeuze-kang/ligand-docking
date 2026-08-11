@@ -27,10 +27,10 @@ FIXED_MIXED64_SLOT_SCHEMA_ID: Final = (
     "betelgeuze.engine_v2_global_orientation_fixed_mixed64_slot/2.0.0"
 )
 FIXED_MIXED64_FEATURE_SCHEMA_ID: Final = (
-    "betelgeuze.engine_v2_global_orientation_fixed_mixed64_feature_evidence/4.0.0"
+    "betelgeuze.engine_v2_global_orientation_fixed_mixed64_feature_evidence/5.0.0"
 )
 FIXED_MIXED64_EXACT_V11_SOURCE_SCHEMA_ID: Final = (
-    "betelgeuze.engine_v2_global_orientation_exact_v11_source/1.0.0"
+    "betelgeuze.engine_v2_global_orientation_exact_v11_source/2.0.0"
 )
 FIXED_MIXED64_ATOMIC_FEATURE_SCHEMA_ID: Final = (
     "betelgeuze.engine_v2_global_orientation_atomic_feature/1.0.0"
@@ -459,6 +459,9 @@ class Mixed64ExactV11SourceEvidence:
     receptor_coordinate_sha256: str
     prepared_ligand_topology_sha256: str
     prepared_receptor_topology_sha256: str
+    ligand_vdw_radii_sha256: str
+    ligand_heavy_atom_mask_sha256: str
+    receptor_vdw_radii_sha256: str
     schema_id: str = FIXED_MIXED64_EXACT_V11_SOURCE_SCHEMA_ID
     _receipt_sha256: str = field(init=False, repr=False)
 
@@ -474,6 +477,9 @@ class Mixed64ExactV11SourceEvidence:
             "receptor_coordinate_sha256",
             "prepared_ligand_topology_sha256",
             "prepared_receptor_topology_sha256",
+            "ligand_vdw_radii_sha256",
+            "ligand_heavy_atom_mask_sha256",
+            "receptor_vdw_radii_sha256",
         ):
             object.__setattr__(
                 self,
@@ -495,6 +501,10 @@ class Mixed64ExactV11SourceEvidence:
             "prepared_receptor_topology_sha256": (
                 self.prepared_receptor_topology_sha256
             ),
+            "ligand_vdw_radii_sha256": self.ligand_vdw_radii_sha256,
+            "ligand_heavy_atom_mask_sha256": self.ligand_heavy_atom_mask_sha256,
+            "receptor_vdw_radii_sha256": self.receptor_vdw_radii_sha256,
+            "topology_parameter_hashes_bound_before_result": True,
             "proposal_and_coordinates_bound_before_result": True,
             "result_fields_consumed": False,
         }

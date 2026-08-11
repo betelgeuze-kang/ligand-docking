@@ -45,7 +45,7 @@ def test_current_mixed64_geometric_candidate_evidence_contract_verifies() -> Non
     observed = verify_contract(_contract())
 
     assert len(observed) == 64
-    assert _contract()["schema_id"].endswith("/2.0.0")
+    assert _contract()["schema_id"].endswith("/3.0.0")
     allocation = _contract()["allocation"]
     assert allocation["candidate_denominator"] == 64
     assert [item["count"] for item in allocation["lane_ranges_inclusive"]] == [
@@ -57,8 +57,8 @@ def test_current_mixed64_geometric_candidate_evidence_contract_verifies() -> Non
     )
     assert allocation["allocation_schema_id"].endswith("/2.0.0")
     assert allocation["slot_schema_id"].endswith("/2.0.0")
-    assert allocation["feature_evidence_schema_id"].endswith("/4.0.0")
-    assert allocation["exact_v11_source_schema_id"].endswith("/1.0.0")
+    assert allocation["feature_evidence_schema_id"].endswith("/5.0.0")
+    assert allocation["exact_v11_source_schema_id"].endswith("/2.0.0")
     assert allocation["v7_control_source_schema_id"].endswith("/2.0.0")
     assert allocation["v7_control_source_namespace"] == (
         "current_v7_source_proposal_index"

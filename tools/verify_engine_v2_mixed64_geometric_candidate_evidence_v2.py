@@ -12,7 +12,7 @@ from typing import Any, Mapping
 
 SCHEMA_ID = (
     "betelgeuze.engine_v2_mixed64_geometric_candidate_evidence_v2_contract/"
-    "2.0.0"
+    "3.0.0"
 )
 STATUS = "implemented_synthetic_validation_only"
 CANDIDATE_DENOMINATOR = 64
@@ -25,10 +25,10 @@ EXPECTED_SLOT_SCHEMA_ID = (
 )
 EXPECTED_FEATURE_EVIDENCE_SCHEMA_ID = (
     "betelgeuze.engine_v2_global_orientation_fixed_mixed64_"
-    "feature_evidence/4.0.0"
+    "feature_evidence/5.0.0"
 )
 EXPECTED_EXACT_V11_SOURCE_SCHEMA_ID = (
-    "betelgeuze.engine_v2_global_orientation_exact_v11_source/1.0.0"
+    "betelgeuze.engine_v2_global_orientation_exact_v11_source/2.0.0"
 )
 EXPECTED_V7_CONTROL_SOURCE_SCHEMA_ID = (
     "betelgeuze.engine_v2_global_orientation_v7_control_source/2.0.0"
@@ -90,6 +90,9 @@ EXPECTED_EXACT_V11_SOURCE_FIELDS = (
     "receptor_coordinate_sha256",
     "prepared_ligand_topology_sha256",
     "prepared_receptor_topology_sha256",
+    "ligand_vdw_radii_sha256",
+    "ligand_heavy_atom_mask_sha256",
+    "receptor_vdw_radii_sha256",
 )
 EXPECTED_ATOMIC_FEATURE_FIELDS = (
     "kind",

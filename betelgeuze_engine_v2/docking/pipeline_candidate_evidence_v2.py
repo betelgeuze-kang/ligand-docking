@@ -537,7 +537,7 @@ def _verify_proposal_generation_parent_binding(
     elif allocation_slot.generation_parent_role == GENERATION_PARENT_GENERATOR_INPUT:
         if (
             source_proposal_sha256 == expected_parent[0]
-            or source_coordinate_sha256 == expected_parent[1]
+            and source_coordinate_sha256 == expected_parent[1]
         ):
             raise PipelineCandidateEvidenceV2Error(
                 "generator output did not preserve transformed semantics"

@@ -31,14 +31,16 @@ charge/aromatic/shape split. Every allocation receipt keeps the complete
 64-slot denominator, including typed missing-feature failures. Feature
 availability is source-bound evidence, not caller truth: its receipt embeds a
 typed exact-V1.1 evidence receipt binding source-receipt, proposal, ligand and
-receptor coordinate, and prepared ligand/receptor topology identities. It also
+receptor coordinate, prepared ligand/receptor topology identities, and the
+canonical ligand/receptor vdW-radius and ligand heavy-atom-mask hashes. It also
 binds feature-extractor policy identity, atomic features, conformer sources,
 and retained sources before it can determine slot readiness. These parent
 receipts remain opaque SHA-256 identities in this synthetic structural layer;
 their payloads are not rederived here and `producer_attested` remains false. Atomic
 features bind their atom indices to source and geometry receipt identities.
-The allocation, slot, feature-evidence, and V7-control-source schema versions
-are respectively 2.0.0, 2.0.0, 4.0.0, and 2.0.0. Slots 0–23 require an exact,
+The allocation, slot, feature-evidence, exact-source, and V7-control-source
+schema versions are respectively 2.0.0, 2.0.0, 5.0.0, 2.0.0, and 2.0.0. Slots
+0–23 require an exact,
 typed V7 source receipt in the frozen
 `current_v7_source_proposal_index` namespace. A missing source preserves its
 slot with `missing_v7_control_source:<source_index>`. Each V7 source also binds

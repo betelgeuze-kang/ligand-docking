@@ -53,7 +53,7 @@ MIXED64_COORDINATE_SOURCE_PAYLOAD_SCHEMA_ID: Final = (
     "betelgeuze.engine_v2_mixed64_coordinate_source_payload/1.0.0"
 )
 MIXED64_PROPOSAL_SOURCE_BUNDLE_SCHEMA_ID: Final = (
-    "betelgeuze.engine_v2_mixed64_proposal_source_bundle/1.0.0"
+    "betelgeuze.engine_v2_mixed64_proposal_source_bundle/2.0.0"
 )
 MIXED64_EXACT_PASSTHROUGH_SCHEMA_ID: Final = (
     "betelgeuze.engine_v2_mixed64_exact_passthrough_placement/1.0.0"
@@ -634,6 +634,9 @@ class Mixed64ProposalSourceBundleV1:
             name="receptor_vdw_radii",
             expected_count=len(receptor),
         )
+        ligand_radii_sha256 = _sha256([value.hex() for value in ligand_radii])
+        ligand_heavy_atom_mask_sha256 = _sha256(list(heavy_mask))
+        receptor_radii_sha256 = _sha256([value.hex() for value in receptor_radii])
         receptor_source_bytes = _canonical_payload_bytes(
             self.receptor_source_receipt_canonical_json,
             name="receptor source receipt",
@@ -647,10 +650,14 @@ class Mixed64ProposalSourceBundleV1:
         if (
             receptor_source_sha != exact_evidence.source_receipt_sha256
             or receptor_coordinate_sha != exact_evidence.receptor_coordinate_sha256
+            or ligand_radii_sha256 != exact_evidence.ligand_vdw_radii_sha256
+            or ligand_heavy_atom_mask_sha256
+            != exact_evidence.ligand_heavy_atom_mask_sha256
+            or receptor_radii_sha256 != exact_evidence.receptor_vdw_radii_sha256
         ):
             _fail(
                 SOURCE_PAYLOAD_CROSS_WIRING,
-                "receptor receipt or coordinates are not exact V1.1 evidence",
+                "receptor or topology-derived parameters are not exact V1.1 evidence",
             )
         center = _vector(self.pocket_center, name="pocket_center")
         normal = _vector(self.pocket_normal, name="pocket_normal")
@@ -708,7 +715,11 @@ class Mixed64ProposalSourceBundleV1:
             "conformer_sources": [value.to_dict() for value in self.conformer_sources],
             "retained_sources": [value.to_dict() for value in self.retained_sources],
             "ligand_vdw_radii_binary64_hex": [value.hex() for value in self.ligand_vdw_radii],
+            "ligand_vdw_radii_sha256": _sha256(
+                [value.hex() for value in self.ligand_vdw_radii]
+            ),
             "ligand_heavy_atom_mask": list(self.ligand_heavy_atom_mask),
+            "ligand_heavy_atom_mask_sha256": _sha256(list(self.ligand_heavy_atom_mask)),
             "receptor_source_receipt_sha256": self.receptor_source_receipt_sha256,
             "receptor_source_receipt": _parse_canonical_payload(
                 self.receptor_source_receipt_canonical_json,
@@ -717,6 +728,9 @@ class Mixed64ProposalSourceBundleV1:
             "receptor_coordinate_sha256": self.receptor_coordinate_sha256,
             "receptor_coordinates_binary64_hex": _projection_coordinates(self.receptor_coordinates),
             "receptor_vdw_radii_binary64_hex": [value.hex() for value in self.receptor_vdw_radii],
+            "receptor_vdw_radii_sha256": _sha256(
+                [value.hex() for value in self.receptor_vdw_radii]
+            ),
             "pocket_center_binary64_hex": _projection_vector(self.pocket_center),
             "pocket_normal_binary64_hex": _projection_vector(self.pocket_normal),
             "pocket_radius_binary64_hex": self.pocket_radius.hex(),
@@ -757,6 +771,7 @@ def frozen_mixed64_producer_policy() -> dict[str, object]:
             "exact_v11_receipt_proposal_ligand_coordinates_bound": True,
             "exact_v11_receptor_coordinates_bound": True,
             "prepared_ligand_receptor_topologies_bound": True,
+            "topology_parameter_hashes_bound_in_exact_v11_evidence": True,
             "exact_v11_binding_pre_result": True,
         },
         "failure_semantics": {

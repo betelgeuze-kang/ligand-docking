@@ -63,10 +63,10 @@ SLOT_SCHEMA: Final = (
     "betelgeuze.engine_v2_global_orientation_fixed_mixed64_slot/2.0.0"
 )
 FEATURE_SCHEMA: Final = (
-    "betelgeuze.engine_v2_global_orientation_fixed_mixed64_feature_evidence/4.0.0"
+    "betelgeuze.engine_v2_global_orientation_fixed_mixed64_feature_evidence/5.0.0"
 )
 EXACT_V11_SOURCE_SCHEMA: Final = (
-    "betelgeuze.engine_v2_global_orientation_exact_v11_source/1.0.0"
+    "betelgeuze.engine_v2_global_orientation_exact_v11_source/2.0.0"
 )
 ATOMIC_FEATURE_SCHEMA: Final = (
     "betelgeuze.engine_v2_global_orientation_atomic_feature/1.0.0"
@@ -563,6 +563,10 @@ def _verify_exact_v11_source(value: object, path: str) -> dict[str, object]:
             "receptor_coordinate_sha256",
             "prepared_ligand_topology_sha256",
             "prepared_receptor_topology_sha256",
+            "ligand_vdw_radii_sha256",
+            "ligand_heavy_atom_mask_sha256",
+            "receptor_vdw_radii_sha256",
+            "topology_parameter_hashes_bound_before_result",
             "proposal_and_coordinates_bound_before_result",
             "result_fields_consumed",
             "receipt_sha256",
@@ -578,8 +582,16 @@ def _verify_exact_v11_source(value: object, path: str) -> dict[str, object]:
         "receptor_coordinate_sha256",
         "prepared_ligand_topology_sha256",
         "prepared_receptor_topology_sha256",
+        "ligand_vdw_radii_sha256",
+        "ligand_heavy_atom_mask_sha256",
+        "receptor_vdw_radii_sha256",
     ):
         _digest(document[key], f"{path}.{key}")
+    _exact_bool(
+        document["topology_parameter_hashes_bound_before_result"],
+        f"{path}.topology_parameter_hashes_bound_before_result",
+        True,
+    )
     _exact_bool(
         document["proposal_and_coordinates_bound_before_result"],
         f"{path}.proposal_and_coordinates_bound_before_result",
@@ -1086,7 +1098,12 @@ def _verify_allocation(value: object, path: str) -> dict[str, Any]:
         _exact_bool(document[key], f"{path}.{key}", False)
     _exact_bool(document["failed_slots_preserved_in_denominator"], f"{path}.failed_slots_preserved_in_denominator", True)
     receipt = _verify_receipt(document, path)
-    return {"document": document, "slots": slots, "receipt": receipt}
+    return {
+        "document": document,
+        "slots": slots,
+        "receipt": receipt,
+        "exact_source": features["exact_source"],
+    }
 
 
 def _parse_coordinates(value: object, path: str, maximum: int) -> tuple[tuple[float, float, float], ...]:
@@ -1284,6 +1301,9 @@ def _verify_geometric(value: object, path: str, allocation: dict[str, Any]) -> d
 
     expected_ligand_radii_sha = _sha256(list(inputs["ligand_vdw_radii_binary64_hex"]))
     expected_heavy_sha = _sha256(list(heavy_mask))
+    expected_receptor_radii_sha = _sha256(
+        list(inputs["receptor_vdw_radii_binary64_hex"])
+    )
     expected_receptor_sha = _sha256({
         "coordinates_binary64_hex": inputs["receptor_coordinates_binary64_hex"],
         "vdw_radii_binary64_hex": inputs["receptor_vdw_radii_binary64_hex"],
@@ -1301,6 +1321,17 @@ def _verify_geometric(value: object, path: str, allocation: dict[str, Any]) -> d
     ):
         if document[key] != expected:
             _fail(f"{path}.{key}", "exact-input binding does not rederive")
+    exact_source = allocation["exact_source"]
+    for key, expected in (
+        ("ligand_vdw_radii_sha256", expected_ligand_radii_sha),
+        ("ligand_heavy_atom_mask_sha256", expected_heavy_sha),
+        ("receptor_vdw_radii_sha256", expected_receptor_radii_sha),
+    ):
+        if exact_source[key] != expected:
+            _fail(
+                f"{path}.exact_inputs",
+                "topology-derived parameters are cross-wired to exact V1.1 source",
+            )
     if document["hard_rejection_minimum_vdw_ratio_binary64_hex"] != HARD_REJECTION_MINIMUM_VDW_RATIO.hex():
         _fail(path, "hard rejection threshold changed")
 

@@ -8,7 +8,7 @@ authority.
 
 The canonical policy is
 `config/engine_v2_mixed64_proposal_producer_v3.json`, with SHA-256
-`da9c29b03670d70706050914e57a01a7947fca48d49f89999199adc4a208f825`.
+`1bde275ef62ada47611acec9fcba27868ecc928ba9e74a057a075f86ae77bcf7`.
 It binds the proposal-geometry policy SHA-256
 `1ee6e474e042eadb882542346b9beff4408d1f60e004686320ee657f8e23a8d9`.
 
@@ -26,12 +26,14 @@ Every supplied V7 control, true conformer, and retained control includes:
 The allocation contains a typed exact-V1.1 evidence receipt that jointly binds
 the exact source-receipt SHA, proposal identity, ligand-coordinate identity,
 receptor-coordinate identity, and both prepared topology identities before any
-result exists. Slots 24–35 and 44–59 retain the exact proposal and ligand
+result exists. That same exact-source evidence now binds canonical hashes of
+the ligand/receptor vdW radii and ligand heavy-atom mask to the prepared
+topology identities. Slots 24–35 and 44–59 retain the exact proposal and ligand
 coordinate as their generator parent even when an anchor feature is absent.
-The bundle rederives the complete exact ligand and receptor payloads and
-verifies them against that evidence. It also binds ligand/receptor vdW radii,
-the heavy-atom mask, and pocket geometry. Cross-wired or noncanonical payloads
-fail the whole input before generation.
+The bundle rederives the complete exact ligand and receptor payloads plus all
+three topology-derived parameter hashes and verifies them against that
+evidence. It separately binds pocket geometry. Cross-wired or noncanonical
+payloads fail the whole input before generation.
 An absent otherwise-declared payload does not reallocate a slot; it becomes a
 typed per-slot generation failure.
 
@@ -51,6 +53,11 @@ implementation-source SHA, and component ID. Generated proposal identities
 bind the slot, source payload, placement receipt, and output coordinate
 identity. Pass-through proposal identities remain exactly their parent
 identities.
+
+A generated proposal remains a transformed output when the proposal/coordinate
+identity pair differs from its parent. A legitimate zero-motion placement may
+therefore retain the parent coordinate hash while carrying its independently
+derived generated-proposal identity; only an unchanged pair is rejected.
 
 ## Failure completeness
 

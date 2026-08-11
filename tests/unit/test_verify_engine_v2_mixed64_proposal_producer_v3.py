@@ -64,6 +64,42 @@ def test_noncanonical_policy_fails_closed(tmp_path: Path) -> None:
         verify_policy(path)
 
 
+@pytest.mark.parametrize("constant", ("NaN", "Infinity", "-Infinity"))
+def test_nonfinite_policy_constant_returns_structured_failure(
+    tmp_path: Path,
+    constant: str,
+) -> None:
+    path = tmp_path / "nonfinite.json"
+    path.write_text(
+        '{"candidate_denominator":' + constant + "}\n",
+        encoding="ascii",
+    )
+    with pytest.raises(
+        Mixed64ProposalProducerPolicyVerificationError,
+        match="non-canonical values",
+    ):
+        verify_policy(path)
+
+    tool = (
+        Path(__file__).resolve().parents[2]
+        / "tools"
+        / "verify_engine_v2_mixed64_proposal_producer_v3.py"
+    )
+    completed = subprocess.run(
+        [sys.executable, "-I", str(tool), "--policy", str(path)],
+        cwd=tmp_path,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.returncode == 1
+    result = json.loads(completed.stdout)
+    assert result["verified"] is False
+    assert result["verification_blockers"] == [
+        "producer policy contains non-canonical values"
+    ]
+
+
 def test_cli_runs_in_isolated_mode_outside_repository(tmp_path: Path) -> None:
     tool = (
         Path(__file__).resolve().parents[2]

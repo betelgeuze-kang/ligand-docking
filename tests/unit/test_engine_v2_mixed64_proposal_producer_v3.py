@@ -245,6 +245,9 @@ def _fixture(
         receptor_coordinate_sha256=coordinate_sha256(RECEPTOR),
         prepared_ligand_topology_sha256=ligand_topology_sha256,
         prepared_receptor_topology_sha256=receptor_topology_sha256,
+        ligand_vdw_radii_sha256=_digest([float(1.2).hex()] * len(LIGAND)),
+        ligand_heavy_atom_mask_sha256=_digest([True] * len(LIGAND)),
+        receptor_vdw_radii_sha256=_digest([float(1.2).hex()] * len(RECEPTOR)),
     )
     features = Mixed64FeatureEvidence(
         exact_v11_source_receipt_sha256=exact.source_receipt_sha256,
@@ -503,6 +506,27 @@ def test_exact_source_proposal_coordinate_and_receptor_cross_wires_fail_closed()
 
     with pytest.raises(Mixed64ProposalProducerError) as captured:
         replace(bundle, receptor_coordinates=_shifted(RECEPTOR, 0.125))
+    assert captured.value.code == SOURCE_PAYLOAD_CROSS_WIRING
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (
+        ("ligand_vdw_radii", (1.3,) * len(LIGAND)),
+        (
+            "ligand_heavy_atom_mask",
+            (False,) + (True,) * (len(LIGAND) - 1),
+        ),
+        ("receptor_vdw_radii", (1.3,) * len(RECEPTOR)),
+    ),
+)
+def test_topology_derived_parameter_cross_wires_fail_closed(
+    field: str,
+    value: object,
+) -> None:
+    _allocation, bundle, *_ = _fixture()
+    with pytest.raises(Mixed64ProposalProducerError) as captured:
+        replace(bundle, **{field: value})
     assert captured.value.code == SOURCE_PAYLOAD_CROSS_WIRING
 
 

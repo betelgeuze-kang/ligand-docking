@@ -66,6 +66,9 @@ def _allocation(*, all_available: bool = True):
         receptor_coordinate_sha256=digest("v11-receptor-coordinate"),
         prepared_ligand_topology_sha256=ligand_topology_sha256,
         prepared_receptor_topology_sha256=receptor_topology_sha256,
+        ligand_vdw_radii_sha256=digest("ligand-vdw-radii"),
+        ligand_heavy_atom_mask_sha256=digest("ligand-heavy-atom-mask"),
+        receptor_vdw_radii_sha256=digest("receptor-vdw-radii"),
     )
     return build_fixed_mixed64_allocation(
         Mixed64FeatureEvidence(

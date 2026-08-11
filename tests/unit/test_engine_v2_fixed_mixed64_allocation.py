@@ -50,6 +50,9 @@ def _features(*, all_available: bool) -> Mixed64FeatureEvidence:
         receptor_coordinate_sha256=_digest("v11-receptor-coordinate"),
         prepared_ligand_topology_sha256=ligand_topology_sha256,
         prepared_receptor_topology_sha256=receptor_topology_sha256,
+        ligand_vdw_radii_sha256=_digest("ligand-vdw-radii"),
+        ligand_heavy_atom_mask_sha256=_digest("ligand-heavy-atom-mask"),
+        receptor_vdw_radii_sha256=_digest("receptor-vdw-radii"),
     )
     feature_rows = (
         ("ligand_acceptor", (2,)),

@@ -92,7 +92,12 @@ def verify_policy(path: Path = DEFAULT_POLICY_PATH) -> dict[str, object]:
         raise Mixed64ProposalProducerPolicyVerificationError(
             "producer policy must be one JSON object"
         )
-    canonical = _canonical_bytes(document)
+    try:
+        canonical = _canonical_bytes(document)
+    except (TypeError, ValueError, UnicodeError) as exc:
+        raise Mixed64ProposalProducerPolicyVerificationError(
+            "producer policy contains non-canonical values"
+        ) from exc
     if raw != canonical + b"\n":
         raise Mixed64ProposalProducerPolicyVerificationError(
             "producer policy is not canonical JSON"
