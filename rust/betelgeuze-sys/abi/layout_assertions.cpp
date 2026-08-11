@@ -39,6 +39,13 @@ static_assert(std::is_standard_layout<bg_docking_stable_top_k_output_v1>::value)
 static_assert(std::is_standard_layout<bg_docking_rmsd_cluster_input_v1>::value);
 static_assert(std::is_standard_layout<bg_docking_rmsd_cluster_row_v1>::value);
 static_assert(std::is_standard_layout<bg_docking_rmsd_cluster_output_v1>::value);
+static_assert(
+    std::is_standard_layout<bg_docking_torsion_v7_context_soa_v1>::value);
+static_assert(std::is_standard_layout<
+              bg_docking_torsion_v7_candidate_batch_soa_v1>::value);
+static_assert(std::is_standard_layout<bg_docking_torsion_v7_row_v1>::value);
+static_assert(std::is_standard_layout<bg_docking_torsion_v7_move_v1>::value);
+static_assert(std::is_standard_layout<bg_docking_torsion_v7_output_v1>::value);
 
 static_assert(!is_complete<bg_context>::value);
 static_assert(!is_complete<bg_system>::value);
@@ -47,6 +54,7 @@ static_assert(!is_complete<bg_simulation>::value);
 static_assert(!is_complete<bg_docking_scorer_v1>::value);
 static_assert(!is_complete<bg_docking_pose_validity_v1>::value);
 static_assert(!is_complete<bg_docking_stable_top_k_v1>::value);
+static_assert(!is_complete<bg_docking_torsion_v7>::value);
 
 static_assert(sizeof(bg_context_options) == 64);
 static_assert(alignof(bg_context_options) == alignof(uint64_t));
@@ -187,6 +195,82 @@ static_assert(offsetof(
                   bg_docking_rmsd_cluster_output_v1,
                   existing_rank_auto_change_authorized) == 88);
 static_assert(offsetof(bg_docking_rmsd_cluster_output_v1, reserved) == 96);
+
+static_assert(sizeof(bg_docking_torsion_v7_context_soa_v1) == 328);
+static_assert(alignof(bg_docking_torsion_v7_context_soa_v1) == 8);
+static_assert(offsetof(
+                  bg_docking_torsion_v7_context_soa_v1,
+                  receptor_atom_count) == 16);
+static_assert(offsetof(
+                  bg_docking_torsion_v7_context_soa_v1,
+                  receptor_x_angstrom) == 48);
+static_assert(offsetof(
+                  bg_docking_torsion_v7_context_soa_v1,
+                  pocket_center_angstrom) == 88);
+static_assert(offsetof(
+                  bg_docking_torsion_v7_context_soa_v1,
+                  parent_atom_index) == 112);
+static_assert(offsetof(
+                  bg_docking_torsion_v7_context_soa_v1,
+                  receptor_overlap_scale) == 144);
+static_assert(offsetof(
+                  bg_docking_torsion_v7_context_soa_v1,
+                  maximum_baseline_v6_steps) == 168);
+static_assert(offsetof(
+                  bg_docking_torsion_v7_context_soa_v1,
+                  maximum_torsion_step_radians) == 200);
+static_assert(offsetof(bg_docking_torsion_v7_context_soa_v1, reserved) == 264);
+
+static_assert(sizeof(bg_docking_torsion_v7_candidate_batch_soa_v1) == 184);
+static_assert(alignof(bg_docking_torsion_v7_candidate_batch_soa_v1) == 8);
+static_assert(offsetof(
+                  bg_docking_torsion_v7_candidate_batch_soa_v1,
+                  candidate_count) == 8);
+static_assert(offsetof(
+                  bg_docking_torsion_v7_candidate_batch_soa_v1,
+                  candidate_state) == 32);
+static_assert(offsetof(
+                  bg_docking_torsion_v7_candidate_batch_soa_v1,
+                  source_x_angstrom) == 64);
+static_assert(offsetof(
+                  bg_docking_torsion_v7_candidate_batch_soa_v1,
+                  baseline_v6_torsion_angles_radians) == 112);
+static_assert(offsetof(
+                  bg_docking_torsion_v7_candidate_batch_soa_v1,
+                  reserved) == 120);
+
+static_assert(sizeof(bg_docking_torsion_v7_row_v1) == 256);
+static_assert(alignof(bg_docking_torsion_v7_row_v1) == 8);
+static_assert(offsetof(bg_docking_torsion_v7_row_v1, status) == 4);
+static_assert(offsetof(
+                  bg_docking_torsion_v7_row_v1,
+                  selection_window_reachable) == 20);
+static_assert(offsetof(
+                  bg_docking_torsion_v7_row_v1,
+                  torsion_step_budget) == 32);
+static_assert(offsetof(
+                  bg_docking_torsion_v7_row_v1,
+                  source_receptor_penalty) == 80);
+static_assert(offsetof(bg_docking_torsion_v7_row_v1, reserved) == 192);
+
+static_assert(sizeof(bg_docking_torsion_v7_move_v1) == 88);
+static_assert(alignof(bg_docking_torsion_v7_move_v1) == 8);
+static_assert(offsetof(bg_docking_torsion_v7_move_v1, evaluated) == 8);
+static_assert(offsetof(
+                  bg_docking_torsion_v7_move_v1,
+                  rotatable_child_atom_index) == 16);
+static_assert(offsetof(bg_docking_torsion_v7_move_v1, delta_radians) == 24);
+static_assert(offsetof(bg_docking_torsion_v7_move_v1, reserved) == 56);
+
+static_assert(sizeof(bg_docking_torsion_v7_output_v1) == 216);
+static_assert(alignof(bg_docking_torsion_v7_output_v1) == 8);
+static_assert(offsetof(bg_docking_torsion_v7_output_v1, row_capacity) == 8);
+static_assert(offsetof(bg_docking_torsion_v7_output_v1, unit_system) == 56);
+static_assert(offsetof(bg_docking_torsion_v7_output_v1, rows) == 64);
+static_assert(offsetof(
+                  bg_docking_torsion_v7_output_v1,
+                  molecular_execution_authorized) == 144);
+static_assert(offsetof(bg_docking_torsion_v7_output_v1, reserved) == 152);
 
 static_assert(sizeof(bg_particle_soa) == 120);
 static_assert(alignof(bg_particle_soa) == 8);

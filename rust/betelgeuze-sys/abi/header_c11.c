@@ -5,7 +5,7 @@
 
 _Static_assert(BG_ABI_VERSION == UINT32_C(1), "unexpected ABI version");
 _Static_assert(BG_ABI_VERSION_MAJOR == UINT32_C(1), "unexpected ABI major version");
-_Static_assert(BG_ABI_VERSION_MINOR == UINT32_C(8), "unexpected ABI minor version");
+_Static_assert(BG_ABI_VERSION_MINOR == UINT32_C(9), "unexpected ABI minor version");
 _Static_assert(BG_STATUS_OK == 0, "unexpected success status");
 _Static_assert(BG_STATUS_NUMERICAL_ERROR == 10, "unexpected numerical status");
 _Static_assert(BG_BACKEND_CPU == 1, "unexpected CPU backend value");
@@ -44,10 +44,20 @@ _Static_assert(
 _Static_assert(
     sizeof(bg_docking_rmsd_cluster_row_status) == sizeof(int32_t),
     "RMSD-cluster row status width changed");
+_Static_assert(
+    sizeof(bg_docking_torsion_v7_candidate_state) == sizeof(int32_t),
+    "torsion V7 candidate state width changed");
+_Static_assert(
+    sizeof(bg_docking_torsion_v7_row_status) == sizeof(int32_t),
+    "torsion V7 row status width changed");
+_Static_assert(
+    sizeof(bg_docking_torsion_v7_failure) == sizeof(int32_t),
+    "torsion V7 failure width changed");
 _Static_assert(BG_DOCKING_FIXED64_CANDIDATE_COUNT == 64, "bad fixed64 denominator");
 _Static_assert(BG_DOCKING_SCORER_V1_TERM_COUNT == 8, "bad ScorerV1 term count");
 _Static_assert(BG_DOCKING_STABLE_TOP_K_LIMIT == 5, "bad stable Top-K limit");
 _Static_assert(BG_DOCKING_RMSD_CLUSTER_TOP_K_LIMIT == 5, "bad RMSD-cluster Top-K limit");
+_Static_assert(BG_DOCKING_TORSION_V7_MAX_MOVES == 8, "bad torsion V7 move count");
 _Static_assert(BG_INTEGRATOR_VELOCITY_VERLET == 1, "unexpected Verlet value");
 _Static_assert(BG_INTEGRATOR_LANGEVIN_BAOAB == 2, "unexpected BAOAB value");
 _Static_assert(sizeof(bg_context_options) == 64, "context options ABI changed");
@@ -102,6 +112,21 @@ _Static_assert(
 _Static_assert(
     sizeof(bg_docking_rmsd_cluster_output_v1) == 128,
     "RMSD-cluster output ABI changed");
+_Static_assert(
+    sizeof(bg_docking_torsion_v7_context_soa_v1) == 328,
+    "torsion V7 context ABI changed");
+_Static_assert(
+    sizeof(bg_docking_torsion_v7_candidate_batch_soa_v1) == 184,
+    "torsion V7 candidate batch ABI changed");
+_Static_assert(
+    sizeof(bg_docking_torsion_v7_row_v1) == 256,
+    "torsion V7 row ABI changed");
+_Static_assert(
+    sizeof(bg_docking_torsion_v7_move_v1) == 88,
+    "torsion V7 move ABI changed");
+_Static_assert(
+    sizeof(bg_docking_torsion_v7_output_v1) == 216,
+    "torsion V7 output ABI changed");
 _Static_assert(sizeof(bg_forcefield_soa_v1) == 352, "force-field SoA ABI changed");
 _Static_assert(offsetof(bg_forcefield_soa_v1, struct_size) == 0, "bad struct_size offset");
 _Static_assert(offsetof(bg_forcefield_soa_v1, abi_version) == 4, "bad abi_version offset");

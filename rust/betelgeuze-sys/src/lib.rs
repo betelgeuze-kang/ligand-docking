@@ -20,7 +20,7 @@ static BG_RUST_CPU_PROVIDER_LINK_ANCHOR: extern "C" fn() -> u32 =
     betelgeuze_cpu_kernel::bg_rust_cpu_provider_abi_version_v1;
 
 pub const BG_ABI_VERSION_MAJOR: u32 = 1;
-pub const BG_ABI_VERSION_MINOR: u32 = 8;
+pub const BG_ABI_VERSION_MINOR: u32 = 9;
 pub const BG_ABI_VERSION: u32 = 1;
 
 pub const BG_CANONICAL_LENGTH_UNIT: &[u8] = b"angstrom\0";
@@ -68,6 +68,7 @@ pub const BG_DOCKING_FIXED64_CANDIDATE_COUNT: u32 = 64;
 pub const BG_DOCKING_SCORER_V1_TERM_COUNT: u32 = 8;
 pub const BG_DOCKING_STABLE_TOP_K_LIMIT: u32 = 5;
 pub const BG_DOCKING_RMSD_CLUSTER_TOP_K_LIMIT: u32 = 5;
+pub const BG_DOCKING_TORSION_V7_MAX_MOVES: u32 = 8;
 
 pub type bg_docking_scorer_v1_candidate_state = i32;
 pub const BG_DOCKING_SCORER_V1_CANDIDATE_INACTIVE: bg_docking_scorer_v1_candidate_state = 0;
@@ -133,6 +134,41 @@ pub type bg_docking_rmsd_cluster_row_status = i32;
 pub const BG_DOCKING_RMSD_CLUSTER_ROW_CLUSTERED: bg_docking_rmsd_cluster_row_status = 1;
 pub const BG_DOCKING_RMSD_CLUSTER_ROW_UPSTREAM_NOT_VALID: bg_docking_rmsd_cluster_row_status = 2;
 
+pub type bg_docking_torsion_v7_candidate_state = i32;
+pub const BG_DOCKING_TORSION_V7_CANDIDATE_INACTIVE: bg_docking_torsion_v7_candidate_state = 0;
+pub const BG_DOCKING_TORSION_V7_CANDIDATE_REFINE: bg_docking_torsion_v7_candidate_state = 1;
+
+pub type bg_docking_torsion_v7_row_status = i32;
+pub const BG_DOCKING_TORSION_V7_ROW_REFINED: bg_docking_torsion_v7_row_status = 1;
+pub const BG_DOCKING_TORSION_V7_ROW_TYPED_FAILURE: bg_docking_torsion_v7_row_status = 2;
+
+pub type bg_docking_torsion_v7_failure = i32;
+pub const BG_DOCKING_TORSION_V7_FAILURE_NONE: bg_docking_torsion_v7_failure = 0;
+pub const BG_DOCKING_TORSION_V7_FAILURE_UPSTREAM_NOT_ELIGIBLE: bg_docking_torsion_v7_failure = 1;
+pub const BG_DOCKING_TORSION_V7_FAILURE_INVALID_INPUT: bg_docking_torsion_v7_failure = 2;
+pub const BG_DOCKING_TORSION_V7_FAILURE_PAIR_BUDGET: bg_docking_torsion_v7_failure = 3;
+pub const BG_DOCKING_TORSION_V7_FAILURE_DEGENERATE_ROTOR: bg_docking_torsion_v7_failure = 4;
+pub const BG_DOCKING_TORSION_V7_FAILURE_NONFINITE_DERIVED_VALUE: bg_docking_torsion_v7_failure = 5;
+
+pub type bg_docking_torsion_v7_skip_reason = i32;
+pub const BG_DOCKING_TORSION_V7_SKIP_NONE: bg_docking_torsion_v7_skip_reason = 0;
+pub const BG_DOCKING_TORSION_V7_SKIP_NOT_ELIGIBLE: bg_docking_torsion_v7_skip_reason = 1;
+pub const BG_DOCKING_TORSION_V7_SKIP_NO_AUTHORITY_ROTOR: bg_docking_torsion_v7_skip_reason = 2;
+pub const BG_DOCKING_TORSION_V7_SKIP_NO_REMAINING_STEP_BUDGET: bg_docking_torsion_v7_skip_reason =
+    3;
+pub const BG_DOCKING_TORSION_V7_SKIP_OBJECTIVE_AT_OR_BELOW_TOLERANCE:
+    bg_docking_torsion_v7_skip_reason = 4;
+pub const BG_DOCKING_TORSION_V7_SKIP_SELECTION_WINDOW_UNREACHABLE:
+    bg_docking_torsion_v7_skip_reason = 5;
+
+pub type bg_docking_torsion_v7_selection_reason = i32;
+pub const BG_DOCKING_TORSION_V7_SELECTION_FINAL_PENALTY_WINDOW:
+    bg_docking_torsion_v7_selection_reason = 1;
+pub const BG_DOCKING_TORSION_V7_SELECTION_V6_RETAINED_OUTSIDE_WINDOW:
+    bg_docking_torsion_v7_selection_reason = 2;
+pub const BG_DOCKING_TORSION_V7_SELECTION_V6_RETAINED_NO_REDUCTION:
+    bg_docking_torsion_v7_selection_reason = 3;
+
 /// Opaque native context. Its representation is intentionally unavailable.
 #[repr(C)]
 pub struct bg_context {
@@ -172,6 +208,12 @@ pub struct bg_docking_pose_validity_v1 {
 /// Opaque persistent Engine V2 stable Top-K provider.
 #[repr(C)]
 pub struct bg_docking_stable_top_k_v1 {
+    _private: [u8; 0],
+}
+
+/// Opaque persistent interaction-aware torsion/contact V7 provider.
+#[repr(C)]
+pub struct bg_docking_torsion_v7 {
     _private: [u8; 0],
 }
 
@@ -742,6 +784,152 @@ pub struct bg_docking_rmsd_cluster_output_v1 {
     pub reserved: [u64; 4],
 }
 
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_torsion_v7_context_soa_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub unit_system: bg_unit_system,
+    pub reserved0: u32,
+    pub receptor_atom_count: u64,
+    pub ligand_atom_count: u64,
+    pub rotor_count: u64,
+    pub internal_pair_count: u64,
+    pub receptor_x_angstrom: *const f64,
+    pub receptor_y_angstrom: *const f64,
+    pub receptor_z_angstrom: *const f64,
+    pub receptor_vdw_radius_angstrom: *const f64,
+    pub ligand_vdw_radius_angstrom: *const f64,
+    pub pocket_center_angstrom: [f64; 3],
+    pub parent_atom_index: *const i32,
+    pub rotatable_child_atom_index: *const u64,
+    pub internal_pair_atom_i: *const u64,
+    pub internal_pair_atom_j: *const u64,
+    pub receptor_overlap_scale: f64,
+    pub internal_overlap_scale: f64,
+    pub internal_overlap_weight: f64,
+    pub maximum_baseline_v6_steps: u64,
+    pub maximum_torsions_evaluated: u64,
+    pub maximum_torsion_steps: u64,
+    pub maximum_backtracking_evaluations: u64,
+    pub maximum_torsion_step_radians: f64,
+    pub minimum_torsion_step_radians: f64,
+    pub maximum_total_torsion_path_radians: f64,
+    pub maximum_centroid_offset_angstrom: f64,
+    pub minimum_selected_final_receptor_penalty: f64,
+    pub maximum_selected_final_receptor_penalty: f64,
+    pub penalty_tolerance: f64,
+    pub epsilon_angstrom: f64,
+    pub reserved: [u64; 8],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_torsion_v7_candidate_batch_soa_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub candidate_count: u64,
+    pub ligand_atom_count: u64,
+    pub unit_system: bg_unit_system,
+    pub reserved0: u32,
+    pub candidate_state: *const bg_docking_torsion_v7_candidate_state,
+    pub proposal_is_torsion_eligible: *const u8,
+    pub max_steps: *const u64,
+    pub baseline_v6_accepted_steps: *const u64,
+    pub source_x_angstrom: *const f64,
+    pub source_y_angstrom: *const f64,
+    pub source_z_angstrom: *const f64,
+    pub baseline_v6_x_angstrom: *const f64,
+    pub baseline_v6_y_angstrom: *const f64,
+    pub baseline_v6_z_angstrom: *const f64,
+    pub baseline_v6_torsion_angles_radians: *const f64,
+    pub reserved: [u64; 8],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_torsion_v7_row_v1 {
+    pub slot_index: u32,
+    pub status: bg_docking_torsion_v7_row_status,
+    pub failure_code: bg_docking_torsion_v7_failure,
+    pub skip_reason: bg_docking_torsion_v7_skip_reason,
+    pub selection_reason: bg_docking_torsion_v7_selection_reason,
+    pub selection_window_reachable: u8,
+    pub evaluation_stopped_after_selection_window_became_unreachable: u8,
+    pub torsion_evaluated: u8,
+    pub torsion_variant_available: u8,
+    pub torsion_selected: u8,
+    pub reserved0: [u8; 3],
+    pub torsion_step_budget: u64,
+    pub fixed_objective_evaluation_count: u64,
+    pub torsion_trial_objective_evaluation_count: u64,
+    pub evaluated_torsion_steps: u64,
+    pub accepted_torsion_steps: u64,
+    pub baseline_v6_accepted_steps: u64,
+    pub source_receptor_penalty: f64,
+    pub source_internal_penalty: f64,
+    pub source_combined_penalty: f64,
+    pub baseline_receptor_penalty: f64,
+    pub baseline_internal_penalty: f64,
+    pub baseline_combined_penalty: f64,
+    pub optimized_receptor_penalty: f64,
+    pub optimized_internal_penalty: f64,
+    pub optimized_combined_penalty: f64,
+    pub final_receptor_penalty: f64,
+    pub final_internal_penalty: f64,
+    pub final_combined_penalty: f64,
+    pub evaluated_total_torsion_path_radians: f64,
+    pub accepted_total_torsion_path_radians: f64,
+    pub reserved: [u64; 8],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_torsion_v7_move_v1 {
+    pub slot_index: u32,
+    pub move_index: u32,
+    pub evaluated: u8,
+    pub selected: u8,
+    pub reserved0: u16,
+    pub rotatable_child_atom_index: u64,
+    pub delta_radians: f64,
+    pub receptor_penalty: f64,
+    pub internal_penalty: f64,
+    pub combined_penalty: f64,
+    pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_torsion_v7_output_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub row_capacity: u64,
+    pub row_count: u64,
+    pub move_capacity: u64,
+    pub move_count: u64,
+    pub coordinate_capacity: u64,
+    pub coordinate_count: u64,
+    pub unit_system: bg_unit_system,
+    pub reserved0: u32,
+    pub rows: *mut bg_docking_torsion_v7_row_v1,
+    pub moves: *mut bg_docking_torsion_v7_move_v1,
+    pub optimized_x_angstrom: *mut f64,
+    pub optimized_y_angstrom: *mut f64,
+    pub optimized_z_angstrom: *mut f64,
+    pub optimized_torsion_angles_radians: *mut f64,
+    pub final_x_angstrom: *mut f64,
+    pub final_y_angstrom: *mut f64,
+    pub final_z_angstrom: *mut f64,
+    pub final_torsion_angles_radians: *mut f64,
+    pub molecular_execution_authorized: u8,
+    pub existing_rank_auto_change_authorized: u8,
+    pub customer_pose_emission_authorized: u8,
+    pub production_claim_authorized: u8,
+    pub reserved1: u32,
+    pub reserved: [u64; 8],
+}
+
 unsafe extern "C" {
     pub fn bg_abi_version() -> u32;
     pub fn bg_abi_version_major() -> u32;
@@ -868,6 +1056,21 @@ unsafe extern "C" {
         caller_struct_size: usize,
         caller_abi_version: u32,
     ) -> bg_status;
+    pub fn bg_docking_torsion_v7_context_soa_v1_init(
+        descriptor: *mut bg_docking_torsion_v7_context_soa_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_docking_torsion_v7_candidate_batch_soa_v1_init(
+        batch: *mut bg_docking_torsion_v7_candidate_batch_soa_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_docking_torsion_v7_output_v1_init(
+        output: *mut bg_docking_torsion_v7_output_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
 
     pub fn bg_backend_is_available(
         backend: bg_backend,
@@ -944,6 +1147,22 @@ unsafe extern "C" {
         ranker: *const bg_docking_stable_top_k_v1,
         input: *const bg_docking_rmsd_cluster_input_v1,
         output: *mut bg_docking_rmsd_cluster_output_v1,
+    ) -> bg_status;
+    pub fn bg_docking_torsion_v7_create(
+        context: *const bg_context,
+        descriptor: *const bg_docking_torsion_v7_context_soa_v1,
+        out_refiner: *mut *mut bg_docking_torsion_v7,
+    ) -> bg_status;
+    pub fn bg_docking_torsion_v7_destroy(refiner: *mut bg_docking_torsion_v7);
+    pub fn bg_docking_torsion_v7_get_backend(
+        refiner: *const bg_docking_torsion_v7,
+        backend: *mut bg_backend,
+    ) -> bg_status;
+    pub fn bg_docking_torsion_v7_refine_fixed64(
+        context: *const bg_context,
+        refiner: *const bg_docking_torsion_v7,
+        candidates: *const bg_docking_torsion_v7_candidate_batch_soa_v1,
+        output: *mut bg_docking_torsion_v7_output_v1,
     ) -> bg_status;
 
     pub fn bg_system_create(

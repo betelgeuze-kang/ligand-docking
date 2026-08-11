@@ -15,6 +15,7 @@ add_library(betelgeuze_engine SHARED
     src/docking/pose_validity.cpp
     src/docking/scorer_v1.cpp
     src/docking/stable_top_k.cpp
+    src/docking/torsion_v7.cpp
     src/dynamics/api.cpp
     src/dynamics/checkpoint.cpp
     src/dynamics/common.cpp
@@ -514,6 +515,43 @@ if(BUILD_TESTING)
     add_test(
         NAME betelgeuze_engine_docking_stable_top_k
         COMMAND betelgeuze_engine_docking_stable_top_k
+    )
+
+    add_executable(
+        betelgeuze_engine_docking_torsion_v7
+        tests/docking_torsion_v7.cpp
+    )
+    target_link_libraries(
+        betelgeuze_engine_docking_torsion_v7
+        PRIVATE betelgeuze_engine
+    )
+    target_compile_features(
+        betelgeuze_engine_docking_torsion_v7
+        PRIVATE cxx_std_17
+    )
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(
+            betelgeuze_engine_docking_torsion_v7
+            PRIVATE
+                -Wall
+                -Wextra
+                -Wpedantic
+                -Wconversion
+                -Wsign-conversion
+                -Werror
+                -UNDEBUG
+                -ffp-contract=off
+                -fno-fast-math
+        )
+    elseif(MSVC)
+        target_compile_options(
+            betelgeuze_engine_docking_torsion_v7
+            PRIVATE /W4 /WX /UNDEBUG /fp:strict
+        )
+    endif()
+    add_test(
+        NAME betelgeuze_engine_docking_torsion_v7
+        COMMAND betelgeuze_engine_docking_torsion_v7
     )
 
     add_executable(
