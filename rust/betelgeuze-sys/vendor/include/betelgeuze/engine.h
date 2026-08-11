@@ -56,7 +56,7 @@ extern "C" {
 #endif
 
 #define BG_ABI_VERSION_MAJOR UINT32_C(1)
-#define BG_ABI_VERSION_MINOR UINT32_C(10)
+#define BG_ABI_VERSION_MINOR UINT32_C(11)
 #define BG_ABI_VERSION UINT32_C(1)
 
 #define BG_CANONICAL_LENGTH_UNIT "angstrom"
@@ -273,6 +273,8 @@ typedef struct bg_simulation bg_simulation;
 typedef struct bg_docking_scorer_v1 bg_docking_scorer_v1;
 typedef struct bg_docking_pose_validity_v1 bg_docking_pose_validity_v1;
 typedef struct bg_docking_stable_top_k_v1 bg_docking_stable_top_k_v1;
+typedef struct bg_docking_fixed64_downstream_v1
+    bg_docking_fixed64_downstream_v1;
 typedef struct bg_docking_rigid_refinement bg_docking_rigid_refinement;
 typedef struct bg_docking_torsion_v7 bg_docking_torsion_v7;
 
@@ -685,7 +687,9 @@ typedef struct bg_docking_scorer_v1_candidate_batch_soa_v1 {
 
 /* Frozen ScorerV1 term order: typed-vdW, electrostatics,
  * directional-H-bond, hydrophobic-contact, desolvation-proxy,
- * torsion-energy, ligand-strain, weak-pocket-prior. */
+ * torsion-energy, ligand-strain, weak-pocket-prior. Typed failures zero all
+ * score/contact evidence but retain the receptor and ligand pair counts
+ * observed before the failure, when that failure occurs after pair traversal. */
 typedef struct bg_docking_scorer_v1_row_v1 {
     uint32_t slot_index;
     bg_docking_scorer_v1_row_status status;
@@ -1612,6 +1616,40 @@ BG_API bg_status BG_CALL bg_docking_stable_top_k_v1_rank_fixed64(
     const bg_docking_stable_top_k_v1 *ranker,
     const bg_docking_stable_top_k_input_v1 *input,
     bg_docking_stable_top_k_output_v1 *output) BG_NOEXCEPT;
+
+/*
+ * Persistent fixed64 downstream pipeline. Creation deep-copies and validates
+ * both component descriptors, rejects cross-wired receptor/ligand identities
+ * or numerical systems, and owns one ScorerV1, pose-validity, and stable
+ * Top-K provider on the context's exact backend/device. The run entry point
+ * derives validity state/failure bindings and canonical coordinate SHA-256
+ * identities internally, then commits all three caller-owned outputs only
+ * after score -> validity -> rank succeeds in full. It preserves all 64
+ * slots, never falls back to another backend, and grants no reservation,
+ * molecular-execution, benchmark, rank-mutation, customer-emission, or
+ * production-claim authority.
+ */
+BG_API bg_status BG_CALL bg_docking_fixed64_downstream_v1_create(
+    const bg_context *context,
+    const bg_docking_scorer_v1_context_soa_v1 *scorer_descriptor,
+    const bg_docking_pose_validity_context_soa_v1 *validity_descriptor,
+    bg_docking_fixed64_downstream_v1 **out_pipeline) BG_NOEXCEPT;
+BG_API void BG_CALL bg_docking_fixed64_downstream_v1_destroy(
+    bg_docking_fixed64_downstream_v1 *pipeline) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_fixed64_downstream_v1_get_backend(
+    const bg_docking_fixed64_downstream_v1 *pipeline,
+    bg_backend *backend) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_fixed64_downstream_v1_run(
+    const bg_context *context,
+    const bg_docking_fixed64_downstream_v1 *pipeline,
+    const bg_docking_scorer_v1_candidate_batch_soa_v1 *candidates,
+    const double *quaternion_x,
+    const double *quaternion_y,
+    const double *quaternion_z,
+    const double *quaternion_w,
+    bg_docking_scorer_v1_output_v1 *scorer_output,
+    bg_docking_pose_validity_output_v1 *validity_output,
+    bg_docking_stable_top_k_output_v1 *ranking_output) BG_NOEXCEPT;
 /* Direct RMSD clustering reuses the explicitly bound stable Top-K provider.
  * It preserves all 64 slots and never changes product rank or emits poses. */
 BG_API bg_status BG_CALL bg_docking_stable_top_k_v1_cluster_direct_rmsd_fixed64(

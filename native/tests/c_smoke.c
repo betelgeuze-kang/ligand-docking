@@ -108,7 +108,7 @@ static void test_context_contract(void) {
     assert(bg_abi_version() == BG_ABI_VERSION);
     assert(bg_abi_version_major() == BG_ABI_VERSION_MAJOR);
     assert(bg_abi_version_minor() == BG_ABI_VERSION_MINOR);
-    assert(strcmp(bg_abi_version_string(), "1.10") == 0);
+    assert(strcmp(bg_abi_version_string(), "1.11") == 0);
     assert(strcmp(BG_CANONICAL_TEMPERATURE_UNIT, "kelvin") == 0);
     assert(strcmp(bg_status_string(BG_STATUS_OK), "ok") == 0);
     assert(strcmp(
@@ -159,6 +159,7 @@ static void test_context_contract(void) {
     assert(bg_context_get_device_ordinal(context, &ordinal) == BG_STATUS_OK);
     assert(ordinal == 0);
     bg_context_destroy(context);
+    bg_docking_fixed64_downstream_v1_destroy(NULL);
 
     options.backend = BG_BACKEND_CPP_CPU_REFERENCE;
     context = NULL;

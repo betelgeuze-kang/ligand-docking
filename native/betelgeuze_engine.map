@@ -118,3 +118,11 @@ BETELGEUZE_ENGINE_1.10 {
         bg_docking_rigid_refinement_get_backend;
         bg_docking_rigid_refinement_fixed64;
 } BETELGEUZE_ENGINE_1.9;
+
+BETELGEUZE_ENGINE_1.11 {
+    global:
+        bg_docking_fixed64_downstream_v1_create;
+        bg_docking_fixed64_downstream_v1_destroy;
+        bg_docking_fixed64_downstream_v1_get_backend;
+        bg_docking_fixed64_downstream_v1_run;
+} BETELGEUZE_ENGINE_1.10;

@@ -5,7 +5,7 @@ use betelgeuze_sys::*;
 #[test]
 fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(BG_ABI_VERSION_MAJOR, 1);
-    assert_eq!(BG_ABI_VERSION_MINOR, 10);
+    assert_eq!(BG_ABI_VERSION_MINOR, 11);
     assert_eq!(BG_ABI_VERSION, 1);
     assert_eq!(size_of::<bg_status>(), 4);
     assert_eq!(size_of::<bg_backend>(), 4);
@@ -893,7 +893,12 @@ fn opaque_handles_are_only_used_behind_pointers() {
         size_of::<usize>()
     );
     assert_eq!(
+        size_of::<*mut bg_docking_fixed64_downstream_v1>(),
+        size_of::<usize>()
+    );
+    assert_eq!(
         size_of::<*mut bg_docking_rigid_refinement>(),
         size_of::<usize>()
     );
+    assert_eq!(size_of::<*mut bg_docking_torsion_v7>(), size_of::<usize>());
 }

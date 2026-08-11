@@ -26,6 +26,7 @@ include = [
     "vendor/native/src/rust/provider.h",
     "vendor/native/src/rust/evaluator.hpp",
     "vendor/native/src/rust/evaluator.cpp",
+    "vendor/native/src/docking/fixed64_downstream.cpp",
     "vendor/native/src/docking/pose_validity.cpp",
     "vendor/native/src/docking/rigid_refinement.cpp",
     "vendor/native/src/docking/scorer_v1.cpp",

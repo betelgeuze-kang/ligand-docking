@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(betelgeuze_native_engine VERSION 1.10.0 LANGUAGES C CXX)
+project(betelgeuze_native_engine VERSION 1.11.0 LANGUAGES C CXX)
 
 option(BG_ENABLE_HIP "Build the native ROCm/HIP compute backend" OFF)
 if(BG_ENABLE_HIP)
