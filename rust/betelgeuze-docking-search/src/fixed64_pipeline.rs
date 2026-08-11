@@ -184,7 +184,7 @@ impl NativeFixed64PipelineReceipt {
 
     #[must_use]
     pub const fn operator_second_opinion_authorized(&self) -> bool {
-        true
+        false
     }
 
     #[must_use]
@@ -336,7 +336,7 @@ impl NativeFixed64ConsumerView {
 
     #[must_use]
     pub const fn operator_second_opinion_authorized(&self) -> bool {
-        true
+        matches!(self.consumer, NativeFixed64Consumer::ProductShadow)
     }
 
     #[must_use]
@@ -516,7 +516,7 @@ fn pipeline_sha256(ranking: &NativeFixed64RankingBatch) -> [u8; 32] {
         hash.string(blocker.id());
     }
     hash.bool(true);
-    hash.bool(true);
+    hash.bool(false);
     hash.bool(false);
     hash.bool(false);
     hash.bool(false);
@@ -541,7 +541,7 @@ fn consumer_view_sha256(value: &NativeFixed64ConsumerView) -> [u8; 32] {
         hash.usize(*slot_index);
     }
     hash.bool(true);
-    hash.bool(true);
+    hash.bool(value.operator_second_opinion_authorized());
     hash.bool(false);
     hash.bool(false);
     hash.bool(false);

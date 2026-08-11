@@ -598,6 +598,17 @@ pub enum NativeFixed64ValidityRowStatus {
     TypedFailure,
 }
 
+impl NativeFixed64ValidityRowStatus {
+    #[must_use]
+    pub const fn id(self) -> &'static str {
+        match self {
+            Self::Evaluated => "evaluated",
+            Self::UpstreamScorerFailure => "upstream_scorer_failure",
+            Self::TypedFailure => "typed_failure",
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct NativeFixed64ValidityRow {
     slot_index: usize,

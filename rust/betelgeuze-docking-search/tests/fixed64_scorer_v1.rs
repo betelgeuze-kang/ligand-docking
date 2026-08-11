@@ -605,7 +605,7 @@ fn native_fixed64_pipeline_composes_one_repeat_stable_receipt_graph() {
     assert_eq!(first.ranking().records().len(), 64);
     assert!(first.has_valid_receipt());
     assert!(first.evidence_display_authorized());
-    assert!(first.operator_second_opinion_authorized());
+    assert!(!first.operator_second_opinion_authorized());
     assert!(!first.reservation_authorized());
     assert!(!first.molecular_execution_authorized());
     assert!(!first.existing_rank_auto_change_authorized());
@@ -644,7 +644,10 @@ fn native_fixed64_consumers_share_core_receipt_and_cannot_mutate_product_rank() 
             pipeline.ranking().valid_top5_slot_indices()
         );
         assert!(view.evidence_display_authorized());
-        assert!(view.operator_second_opinion_authorized());
+        assert_eq!(
+            view.operator_second_opinion_authorized(),
+            view.consumer() == NativeFixed64Consumer::ProductShadow
+        );
         assert!(!view.existing_rank_auto_change_authorized());
         assert!(!view.customer_pose_emission_authorized());
         assert!(!view.production_claim_authorized());

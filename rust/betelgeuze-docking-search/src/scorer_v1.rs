@@ -751,6 +751,16 @@ pub enum NativeScorerV1RowStatus {
     TypedFailure,
 }
 
+impl NativeScorerV1RowStatus {
+    #[must_use]
+    pub const fn id(self) -> &'static str {
+        match self {
+            Self::Scored => "scored",
+            Self::TypedFailure => "typed_failure",
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct NativeScorerV1Row {
     slot_index: usize,

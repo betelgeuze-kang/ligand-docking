@@ -1,6 +1,7 @@
 #![allow(non_local_definitions)]
 
 mod docking_v2;
+mod fixed64_pipeline;
 
 use betelgeuze_docking_search::{
     NativeScorerV1Atom, NativeScorerV1Backend, NativeScorerV1Config, NativeScorerV1Context,
@@ -952,6 +953,7 @@ fn betelgeuze_engine_v2_native(_py: Python<'_>, module: &PyModule) -> PyResult<(
         GEOMETRIC_ADMISSION_PAIR_TRAVERSAL_ORDER,
     )?;
     docking_v2::register(module)?;
+    fixed64_pipeline::register(module)?;
     Ok(())
 }
 

@@ -506,6 +506,22 @@ pub enum Fixed64ProposalFailureCode {
     Placement(Fixed64PlacementErrorCode),
 }
 
+impl Fixed64ProposalFailureCode {
+    #[must_use]
+    pub const fn id(self) -> &'static str {
+        match self {
+            Self::AllocationMissingFeature => "allocation_missing_feature",
+            Self::MissingExactV11Source => "missing_exact_v11_source",
+            Self::MissingV7ControlSource => "missing_v7_control_source",
+            Self::MissingConformerSource => "missing_conformer_source",
+            Self::MissingRetainedSource => "missing_retained_source",
+            Self::LigandAtomDenominatorMismatch => "ligand_atom_denominator_mismatch",
+            Self::SourcePayloadCrossWired => "source_payload_cross_wired",
+            Self::Placement(code) => code.id(),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Fixed64ProposalGenerationFailure {
     slot_index: usize,
@@ -548,6 +564,16 @@ impl Fixed64ProposalGenerationFailure {
 pub enum Fixed64ProposalStatus {
     Generated,
     TypedGenerationFailure,
+}
+
+impl Fixed64ProposalStatus {
+    #[must_use]
+    pub const fn id(self) -> &'static str {
+        match self {
+            Self::Generated => "generated",
+            Self::TypedGenerationFailure => "typed_generation_failure",
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]

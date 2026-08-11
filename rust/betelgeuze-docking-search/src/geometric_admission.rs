@@ -270,6 +270,17 @@ pub enum Fixed64GeometricStatus {
     TypedGenerationFailure,
 }
 
+impl Fixed64GeometricStatus {
+    #[must_use]
+    pub const fn id(self) -> &'static str {
+        match self {
+            Self::Accepted => "accepted",
+            Self::SeverePenetrationRejected => "severe_penetration_rejected",
+            Self::TypedGenerationFailure => "typed_generation_failure",
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Fixed64GeometricDecision {
     slot_index: usize,

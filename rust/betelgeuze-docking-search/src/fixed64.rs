@@ -90,6 +90,24 @@ pub enum Fixed64FeatureKind {
 }
 
 impl Fixed64FeatureKind {
+    #[must_use]
+    pub const fn id(self) -> &'static str {
+        match self {
+            Self::LigandDonor => "ligand_donor",
+            Self::LigandAcceptor => "ligand_acceptor",
+            Self::ReceptorDonor => "receptor_donor",
+            Self::ReceptorAcceptor => "receptor_acceptor",
+            Self::LigandPositiveSite => "ligand_positive_site",
+            Self::LigandNegativeSite => "ligand_negative_site",
+            Self::ReceptorPositiveSite => "receptor_positive_site",
+            Self::ReceptorNegativeSite => "receptor_negative_site",
+            Self::LigandAromaticPlane => "ligand_aromatic_plane",
+            Self::ReceptorAromaticPlane => "receptor_aromatic_plane",
+            Self::LigandShapeAxis => "ligand_shape_axis",
+            Self::PocketShapeAxis => "pocket_shape_axis",
+        }
+    }
+
     const fn tag(self) -> u8 {
         match self {
             Self::LigandDonor => 0,

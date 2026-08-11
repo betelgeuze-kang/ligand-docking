@@ -39,6 +39,28 @@ pub enum Fixed64PlacementErrorCode {
     InternalInvariant,
 }
 
+impl Fixed64PlacementErrorCode {
+    #[must_use]
+    pub const fn id(self) -> &'static str {
+        match self {
+            Self::InvalidInput => "invalid_input",
+            Self::AllocationSlotNotEligible => "allocation_slot_not_eligible",
+            Self::UnsupportedLane => "unsupported_lane",
+            Self::SourceIdentityMismatch => "source_identity_mismatch",
+            Self::FeatureCrossWired => "feature_cross_wired",
+            Self::FeatureAtomIndexOutOfRange => "feature_atom_index_out_of_range",
+            Self::DegenerateSo3SourceGeometry => "degenerate_so3_source_geometry",
+            Self::DegenerateLigandDirection => "degenerate_ligand_direction",
+            Self::DegenerateReceptorDirection => "degenerate_receptor_direction",
+            Self::DegenerateLocalSurfaceNormal => "degenerate_local_surface_normal",
+            Self::DegenerateAromaticPlane => "degenerate_aromatic_plane",
+            Self::DegeneratePrincipalAxis => "degenerate_principal_axis",
+            Self::GeometricPrecheckFailed => "geometric_precheck_failed",
+            Self::InternalInvariant => "internal_invariant",
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Fixed64PlacementError {
     code: Fixed64PlacementErrorCode,
