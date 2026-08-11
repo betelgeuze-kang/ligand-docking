@@ -31,6 +31,7 @@ mod sha256;
 mod short_range;
 mod so3;
 mod surface;
+mod torsion_refinement;
 mod validity;
 
 pub use error::{EvaluationError, SearchError, SearchErrorCode};
@@ -147,6 +148,14 @@ pub use scorer_v1::{
 pub use search::{search, search_default, search_short_range};
 pub use short_range::{ShortRangeConfig, ShortRangeEvaluator};
 pub use so3::{orientations, Orientation};
+pub use torsion_refinement::{
+    refine_interaction_aware_torsion_contact_v7, NativeTorsionV7Config, NativeTorsionV7Context,
+    NativeTorsionV7Error, NativeTorsionV7ErrorCode, NativeTorsionV7Move, NativeTorsionV7Objective,
+    NativeTorsionV7Outcome, NativeTorsionV7Request, NativeTorsionV7SelectionReason,
+    NativeTorsionV7SkipReason, NATIVE_TORSION_V7_ALGORITHM_ID, NATIVE_TORSION_V7_CONFIG_SCHEMA_ID,
+    NATIVE_TORSION_V7_MAX_CALLER_STEPS, NATIVE_TORSION_V7_MAX_LIGAND_ATOMS,
+    NATIVE_TORSION_V7_MAX_RECEPTOR_ATOMS, NATIVE_TORSION_V7_MAX_TOTAL_PAIR_EVALUATIONS,
+};
 
 /// Frozen contract for deterministic search inputs, stage ordering, and receipts.
 pub const SEARCH_SCHEMA_ID: &str = "betelgeuze.docking_search/2.0.0";
