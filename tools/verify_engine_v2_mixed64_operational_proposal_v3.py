@@ -136,6 +136,14 @@ def verify_policy(path: Path = DEFAULT_POLICY_PATH) -> dict[str, object]:
         raise Mixed64OperationalProposalPolicyVerificationError(
             "operational proposal identity contract changed"
         )
+    if document.get("admission_live_integrity") != {
+        "recursive_preflight_required": True,
+        "recursive_postflight_required": True,
+        "recursive_finalization_check_required": True,
+    }:
+        raise Mixed64OperationalProposalPolicyVerificationError(
+            "operational proposal admission live-integrity boundary changed"
+        )
     transformed_identity = document.get("transformed_identity")
     if type(transformed_identity) is not dict or any(
         transformed_identity.get(key) is not True

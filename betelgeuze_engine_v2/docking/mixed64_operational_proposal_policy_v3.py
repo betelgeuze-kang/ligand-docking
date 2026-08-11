@@ -29,7 +29,7 @@ REQUIRED_PROPOSAL_NUMERIC_POLICY_ID: Final = (
     "betelgeuze.engine_v2_proposal_numeric_identity/1.0.0"
 )
 BOUND_GEOMETRIC_ADMISSION_V3_POLICY_SHA256: Final = (
-    "0d3203daeb245d29fe4b03a73204d8cddb25ce84b310b008d61729d89659a2c6"
+    "ef78d3655743c40c5c7fe8524742c178b2f6a6c4120bef445288c056d59d6648"
 )
 
 MATERIALIZED_STATUS: Final = "materialized"
@@ -57,6 +57,11 @@ def frozen_mixed64_operational_proposal_policy() -> dict[str, object]:
             BOUND_GEOMETRIC_ADMISSION_V3_POLICY_SHA256
         ),
         "candidate_denominator": 64,
+        "admission_live_integrity": {
+            "recursive_preflight_required": True,
+            "recursive_postflight_required": True,
+            "recursive_finalization_check_required": True,
+        },
         "source_identity": {
             "required_schema_id": DOCKING_PROPOSAL_IDENTITY_SCHEMA_ID,
             "required_numeric_policy_id": REQUIRED_PROPOSAL_NUMERIC_POLICY_ID,

@@ -346,6 +346,29 @@ def test_unexpected_runtime_failure_is_not_relabeled_as_typed_slot_failure(
         materialize_mixed64_operational_proposals(admission)
 
 
+def test_admission_live_mutation_fails_before_operational_materialization(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import betelgeuze_engine_v2.docking.mixed64_operational_proposal_v3 as module
+
+    _allocation, _bundle, _producer, admission = _operational_fixture()
+    object.__setattr__(admission.decisions[0], "status", "tampered")
+
+    def unexpected_materialization(**_kwargs):
+        raise AssertionError("proposal materialization must not start")
+
+    monkeypatch.setattr(
+        module,
+        "bind_docking_proposal_state",
+        unexpected_materialization,
+    )
+    with pytest.raises(
+        Mixed64OperationalProposalV3Error,
+        match="live integrity preflight",
+    ):
+        materialize_mixed64_operational_proposals(admission)
+
+
 def test_historical_nonoperational_source_identity_is_typed_not_guessed() -> None:
     allocation, bundle, *_ = _fixture()
     producer = produce_fixed_mixed64_proposals(allocation, source_bundle=bundle)

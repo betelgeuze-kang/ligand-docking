@@ -8,9 +8,9 @@ fingerprints, candidate IDs, scores, results, or authority.
 
 The canonical policy is
 `config/engine_v2_mixed64_operational_proposal_v3.json`, with SHA-256
-`c08eba08e0ca82dac1815562f2a65da96949294270f18c6af242c77f0a8bd7c1`.
+`b56c05b83accf99d8c978f3a1d5f0810943d4c70f0457762a72f6278b9e2443d`.
 It binds geometric-admission v3 policy SHA-256
-`0d3203daeb245d29fe4b03a73204d8cddb25ce84b310b008d61729d89659a2c6`.
+`ef78d3655743c40c5c7fe8524742c178b2f6a6c4120bef445288c056d59d6648`.
 
 ## Exact source reconstruction
 
@@ -20,6 +20,9 @@ Every source payload must be the canonical identity projection for
 The bridge rederives its SHA, coordinate fingerprint, problem identity,
 search-space identity, torsion state, transform, seed, and optional refinement
 lineage by constructing the exact `DockingProposal` type.
+The complete admission decision, metric, producer, and source hierarchy is
+recursively checked before materialization, after all 64 records, and after
+batch finalization; persistent live-field mutation aborts the whole call.
 
 Historical payloads that contain only a narrative or legacy proposal identity
 are not guessed or discarded. Every admitted dependent slot receives

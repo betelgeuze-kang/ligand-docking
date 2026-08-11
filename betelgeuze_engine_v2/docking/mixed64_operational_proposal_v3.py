@@ -26,6 +26,7 @@ from .geometric_admission_v3 import (
     GEOMETRIC_ADMISSION_V3_POLICY_SHA256,
     GeometricAdmissionBatchV3,
     GeometricAdmissionDecisionV3,
+    GeometricAdmissionV3Error,
 )
 from .mixed64_allocation import (
     FIXED_MIXED64_CANDIDATE_COUNT,
@@ -840,14 +841,50 @@ def materialize_mixed64_operational_proposals(
 
     if type(admission_batch) is not GeometricAdmissionBatchV3:
         raise TypeError("admission_batch must be exact GeometricAdmissionBatchV3")
-    return Mixed64OperationalProposalBatchV1(
+    try:
+        admission_batch.assert_live_integrity()
+    except GeometricAdmissionV3Error as exc:
+        raise Mixed64OperationalProposalV3Error(
+            SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED,
+            "admission batch live integrity preflight failed",
+        ) from exc
+    decisions = tuple(admission_batch.decisions)
+    records = tuple(
+        _materialize_record(admission_batch, decision)
+        for decision in decisions
+    )
+    try:
+        admission_batch.assert_live_integrity()
+    except GeometricAdmissionV3Error as exc:
+        raise Mixed64OperationalProposalV3Error(
+            SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED,
+            "admission batch live integrity postflight failed",
+        ) from exc
+    if any(
+        current is not captured
+        for current, captured in zip(
+            admission_batch.decisions,
+            decisions,
+            strict=True,
+        )
+    ):
+        _fail(
+            SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED,
+            "admission decision identities changed during materialization",
+        )
+    batch = Mixed64OperationalProposalBatchV1(
         admission_batch=admission_batch,
-        records=tuple(
-            _materialize_record(admission_batch, decision)
-            for decision in admission_batch.decisions
-        ),
+        records=records,
         _factory_seal=_BATCH_FACTORY_SEAL,
     )
+    try:
+        admission_batch.assert_live_integrity()
+    except GeometricAdmissionV3Error as exc:
+        raise Mixed64OperationalProposalV3Error(
+            SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED,
+            "admission batch live integrity finalization failed",
+        ) from exc
+    return batch
 
 
 __all__ = [
