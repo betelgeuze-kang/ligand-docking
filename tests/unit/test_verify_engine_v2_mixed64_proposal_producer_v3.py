@@ -81,3 +81,35 @@ def test_cli_runs_in_isolated_mode_outside_repository(tmp_path: Path) -> None:
     result = json.loads(completed.stdout)
     assert result["verified"] is True
     assert result["producer_attested"] is False
+
+
+def test_verifier_import_does_not_poison_canonical_package(tmp_path: Path) -> None:
+    tool = (
+        Path(__file__).resolve().parents[2]
+        / "tools"
+        / "verify_engine_v2_mixed64_proposal_producer_v3.py"
+    )
+    script = """
+import importlib.util
+import pathlib
+import sys
+
+tool = pathlib.Path(sys.argv[1])
+assert "betelgeuze_engine_v2" not in sys.modules
+spec = importlib.util.spec_from_file_location("isolated_producer_verifier", tool)
+assert spec is not None and spec.loader is not None
+module = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = module
+spec.loader.exec_module(module)
+assert "betelgeuze_engine_v2" not in sys.modules
+assert "betelgeuze_engine_v2.docking" not in sys.modules
+assert module.verify_policy()["verified"] is True
+"""
+    completed = subprocess.run(
+        [sys.executable, "-I", "-c", script, str(tool)],
+        cwd=tmp_path,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.returncode == 0, completed.stderr

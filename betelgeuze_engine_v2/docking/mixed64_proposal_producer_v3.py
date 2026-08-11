@@ -800,7 +800,10 @@ class ExactPassthroughPlacementReceiptV1:
             _fail(SOURCE_PAYLOAD_CROSS_WIRING, "passthrough schema changed")
         if type(self.allocation) is not FixedMixed64Allocation:
             raise TypeError("allocation must be exact")
-        if type(self.slot_index) is not int or not 0 <= self.slot_index < 64:
+        if (
+            type(self.slot_index) is not int
+            or not 0 <= self.slot_index < FIXED_MIXED64_CANDIDATE_COUNT
+        ):
             _fail(SOURCE_PAYLOAD_CROSS_WIRING, "passthrough slot is invalid")
         slot = self.allocation.slots[self.slot_index]
         if slot.lane not in _PASSTHROUGH_LANES or not slot.generation_eligible:
@@ -989,6 +992,10 @@ class Mixed64ProposalGenerationRecordV1:
             _fail(SOURCE_PAYLOAD_CROSS_WIRING, "generation record requires factory")
         if self.schema_id != MIXED64_GENERATION_RECORD_SCHEMA_ID:
             _fail(SOURCE_PAYLOAD_CROSS_WIRING, "generation record schema changed")
+        if type(self.allocation) is not FixedMixed64Allocation:
+            raise TypeError("generation record allocation must be exact")
+        if type(self.slot_index) is not int or not 0 <= self.slot_index < 64:
+            _fail(SOURCE_PAYLOAD_CROSS_WIRING, "generation record slot is invalid")
         _digest(self.source_bundle_receipt_sha256, name="source bundle receipt")
         slot = self.allocation.slots[self.slot_index]
         if self.status == GENERATION_STATUS_SUCCESS:
@@ -1001,6 +1008,16 @@ class Mixed64ProposalGenerationRecordV1:
                 or self.failure_receipt is not None
             ):
                 _fail(SOURCE_PAYLOAD_CROSS_WIRING, "success record is incomplete")
+            if type(self.placement_receipt) not in {
+                ExactPassthroughPlacementReceiptV1,
+                IndexedSO3PlacementReceiptV1,
+                SingleAnchorPlacementReceiptV1,
+            }:
+                raise TypeError("success placement receipt must be exact")
+            from .pipeline_candidate_evidence_v2 import ProposalExecutionReceiptV2
+
+            if type(self.proposal_execution_receipt) is not ProposalExecutionReceiptV2:
+                raise TypeError("proposal execution receipt must be exact")
             _digest(self.source_proposal_sha256, name="generated proposal")
             _digest(self.source_coordinate_sha256, name="generated coordinate")
             coordinates = _coordinates(
@@ -1008,7 +1025,10 @@ class Mixed64ProposalGenerationRecordV1:
                 name="generated coordinates",
                 maximum_count=MAX_LIGAND_ATOMS,
             )
-            if coordinate_sha256(coordinates) != self.source_coordinate_sha256:
+            if (
+                coordinate_sha256(coordinates) != self.source_coordinate_sha256
+                or coordinates != self.placement_receipt.output_coordinates
+            ):
                 _fail(SOURCE_PAYLOAD_CROSS_WIRING, "generated coordinates changed")
             if (
                 self.placement_receipt.slot_index != self.slot_index
@@ -1045,7 +1065,13 @@ class Mixed64ProposalGenerationRecordV1:
                 )
             ) or self.failure_receipt is None:
                 _fail(SOURCE_PAYLOAD_CROSS_WIRING, "failure record fabricated output")
-            if self.failure_receipt.slot_index != self.slot_index:
+            if type(self.failure_receipt) is not ProposalGenerationFailureReceiptV1:
+                raise TypeError("generation failure receipt must be exact")
+            if (
+                self.failure_receipt.slot_index != self.slot_index
+                or self.failure_receipt.allocation.receipt_sha256
+                != self.allocation.receipt_sha256
+            ):
                 _fail(SOURCE_PAYLOAD_CROSS_WIRING, "failure receipt slot changed")
             if (
                 self.failure_receipt.source_bundle_receipt_sha256
@@ -1117,17 +1143,31 @@ class Mixed64ProposalProducerBatchV1:
     def __post_init__(self, _factory_seal: object | None) -> None:
         if _factory_seal is not _BATCH_FACTORY_SEAL:
             _fail(SOURCE_PAYLOAD_CROSS_WIRING, "producer batch requires factory")
-        if self.schema_id != MIXED64_PRODUCER_BATCH_SCHEMA_ID or self.profile_id != MIXED64_PRODUCER_PROFILE_ID:
+        if (
+            self.schema_id != MIXED64_PRODUCER_BATCH_SCHEMA_ID
+            or self.profile_id != MIXED64_PRODUCER_PROFILE_ID
+        ):
             _fail(SOURCE_PAYLOAD_CROSS_WIRING, "producer batch identity changed")
-        if type(self.allocation) is not FixedMixed64Allocation or type(self.source_bundle) is not Mixed64ProposalSourceBundleV1:
+        if (
+            type(self.allocation) is not FixedMixed64Allocation
+            or type(self.source_bundle) is not Mixed64ProposalSourceBundleV1
+        ):
             raise TypeError("producer batch inputs must be exact")
         if self.source_bundle.allocation.receipt_sha256 != self.allocation.receipt_sha256:
             _fail(SOURCE_PAYLOAD_CROSS_WIRING, "source bundle allocation changed")
-        if type(self.records) is not tuple or len(self.records) != FIXED_MIXED64_CANDIDATE_COUNT:
+        if (
+            type(self.records) is not tuple
+            or len(self.records) != FIXED_MIXED64_CANDIDATE_COUNT
+        ):
             _fail(SOURCE_PAYLOAD_CROSS_WIRING, "producer denominator is not fixed64")
-        if any(type(record) is not Mixed64ProposalGenerationRecordV1 for record in self.records):
+        if any(
+            type(record) is not Mixed64ProposalGenerationRecordV1
+            for record in self.records
+        ):
             raise TypeError("producer records must be exact")
-        if tuple(record.slot_index for record in self.records) != tuple(range(64)):
+        if tuple(record.slot_index for record in self.records) != tuple(
+            range(FIXED_MIXED64_CANDIDATE_COUNT)
+        ):
             _fail(SOURCE_PAYLOAD_CROSS_WIRING, "producer slot order changed")
         for name in (
             "producer_implementation_source_sha256",
@@ -1172,14 +1212,20 @@ class Mixed64ProposalProducerBatchV1:
             "producer_policy": frozen_mixed64_producer_policy(),
             "producer_policy_sha256": MIXED64_PRODUCER_POLICY_SHA256,
             "geometry_policy_sha256": MIXED64_PROPOSAL_GEOMETRY_POLICY_SHA256,
-            "producer_implementation_source_sha256": self.producer_implementation_source_sha256,
-            "geometry_implementation_source_sha256": self.geometry_implementation_source_sha256,
+            "producer_implementation_source_sha256": (
+                self.producer_implementation_source_sha256
+            ),
+            "geometry_implementation_source_sha256": (
+                self.geometry_implementation_source_sha256
+            ),
             "allocation": self.allocation.to_dict(),
             "source_bundle": self.source_bundle.to_dict(),
             "candidate_denominator": len(self.records),
             "generated_count": self.generated_count,
             "typed_failure_count": self.typed_failure_count,
-            "generation_record_receipt_sha256s": [record.receipt_sha256 for record in self.records],
+            "generation_record_receipt_sha256s": [
+                record.receipt_sha256 for record in self.records
+            ],
             "records": [record.to_dict() for record in self.records],
             "denominator_failure_complete": True,
             "generation_scope_source_payloads_rederived": True,
@@ -1213,7 +1259,10 @@ class Mixed64ProposalProducerBatchV1:
 def _stable_source_sha256(path: Path) -> str:
     try:
         before = path.lstat()
-        if not stat.S_ISREG(before.st_mode) or before.st_size > MAX_PRODUCER_SOURCE_BYTES:
+        if (
+            not stat.S_ISREG(before.st_mode)
+            or not 0 < before.st_size <= MAX_PRODUCER_SOURCE_BYTES
+        ):
             _fail(PRODUCER_SOURCE_CHANGED, f"source {path.name} is not bounded regular data")
         payload = path.read_bytes()
         after = path.lstat()

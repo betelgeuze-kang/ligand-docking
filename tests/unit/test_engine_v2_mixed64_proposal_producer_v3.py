@@ -550,6 +550,41 @@ def test_source_postflight_drift_discards_the_batch(monkeypatch: pytest.MonkeyPa
     assert captured.value.code == "producer_implementation_source_changed"
 
 
+def test_generation_record_validates_exact_inputs_before_slot_lookup() -> None:
+    import betelgeuze_engine_v2.docking.mixed64_proposal_producer_v3 as producer
+
+    allocation, bundle, *_ = _fixture()
+    record = produce_fixed_mixed64_proposals(
+        allocation,
+        source_bundle=bundle,
+    ).records[0]
+
+    with pytest.raises(Mixed64ProposalProducerError) as captured:
+        replace(
+            record,
+            slot_index=64,
+            _factory_seal=producer._RECORD_FACTORY_SEAL,
+        )
+    assert captured.value.code == SOURCE_PAYLOAD_CROSS_WIRING
+
+    with pytest.raises(TypeError, match="allocation must be exact"):
+        replace(
+            record,
+            allocation=object(),
+            _factory_seal=producer._RECORD_FACTORY_SEAL,
+        )
+
+
+def test_stable_source_hash_rejects_empty_regular_data(tmp_path: Path) -> None:
+    import betelgeuze_engine_v2.docking.mixed64_proposal_producer_v3 as producer
+
+    empty = tmp_path / "empty.py"
+    empty.write_bytes(b"")
+    with pytest.raises(Mixed64ProposalProducerError) as captured:
+        producer._stable_source_sha256(empty)
+    assert captured.value.code == "producer_implementation_source_changed"
+
+
 def test_batch_authority_and_downstream_stages_remain_false() -> None:
     allocation, bundle, *_ = _fixture()
     document = produce_fixed_mixed64_proposals(

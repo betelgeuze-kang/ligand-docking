@@ -8,9 +8,9 @@ authority.
 
 The canonical policy is
 `config/engine_v2_mixed64_proposal_producer_v3.json`, with SHA-256
-`b3060f5d1a923db113a873f53e3bd5b9a9b24c9763c25334cea4bb0050b57879`.
+`da9c29b03670d70706050914e57a01a7947fca48d49f89999199adc4a208f825`.
 It binds the proposal-geometry policy SHA-256
-`77da86bb08f3fab6072d08f0c75c096723e68490db1c8bb794fb02e81302fc2d`.
+`1ee6e474e042eadb882542346b9beff4408d1f60e004686320ee657f8e23a8d9`.
 
 ## Complete source payloads
 
