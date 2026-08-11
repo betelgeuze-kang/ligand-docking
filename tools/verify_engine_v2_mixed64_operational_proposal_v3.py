@@ -140,6 +140,7 @@ def verify_policy(path: Path = DEFAULT_POLICY_PATH) -> dict[str, object]:
         "recursive_preflight_required": True,
         "recursive_postflight_required": True,
         "recursive_finalization_check_required": True,
+        "operational_output_recursive_finalization_check_required": True,
     }:
         raise Mixed64OperationalProposalPolicyVerificationError(
             "operational proposal admission live-integrity boundary changed"

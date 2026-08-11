@@ -61,6 +61,7 @@ def frozen_mixed64_operational_proposal_policy() -> dict[str, object]:
             "recursive_preflight_required": True,
             "recursive_postflight_required": True,
             "recursive_finalization_check_required": True,
+            "operational_output_recursive_finalization_check_required": True,
         },
         "source_identity": {
             "required_schema_id": DOCKING_PROPOSAL_IDENTITY_SCHEMA_ID,

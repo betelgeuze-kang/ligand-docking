@@ -369,6 +369,20 @@ def test_admission_live_mutation_fails_before_operational_materialization(
         materialize_mixed64_operational_proposals(admission)
 
 
+def test_operational_batch_detects_live_proposal_tensor_mutation() -> None:
+    _allocation, _bundle, _producer, admission = _operational_fixture()
+    batch = materialize_mixed64_operational_proposals(admission)
+    record = next(value for value in batch.records if value.materialized)
+    assert record.operational_proposal is not None
+    record.operational_proposal.coordinates[0, 0] += 1.0
+
+    with pytest.raises(
+        Mixed64OperationalProposalV3Error,
+        match="record live integrity failed",
+    ):
+        batch.assert_live_integrity()
+
+
 def test_historical_nonoperational_source_identity_is_typed_not_guessed() -> None:
     allocation, bundle, *_ = _fixture()
     producer = produce_fixed_mixed64_proposals(allocation, source_bundle=bundle)

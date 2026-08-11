@@ -8,7 +8,7 @@ fingerprints, candidate IDs, scores, results, or authority.
 
 The canonical policy is
 `config/engine_v2_mixed64_operational_proposal_v3.json`, with SHA-256
-`b56c05b83accf99d8c978f3a1d5f0810943d4c70f0457762a72f6278b9e2443d`.
+`9b028cc5ec0d32a6b28538d1a91955f2766fe796f488b38888fdd20819611d9a`.
 It binds geometric-admission v3 policy SHA-256
 `ef78d3655743c40c5c7fe8524742c178b2f6a6c4120bef445288c056d59d6648`.
 
@@ -22,7 +22,9 @@ search-space identity, torsion state, transform, seed, and optional refinement
 lineage by constructing the exact `DockingProposal` type.
 The complete admission decision, metric, producer, and source hierarchy is
 recursively checked before materialization, after all 64 records, and after
-batch finalization; persistent live-field mutation aborts the whole call.
+batch finalization. The final check also revalidates every emitted operational
+proposal tensor and record projection; persistent live-field mutation aborts
+the whole call.
 
 Historical payloads that contain only a narrative or legacy proposal identity
 are not guessed or discarded. Every admitted dependent slot receives

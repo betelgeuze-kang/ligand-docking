@@ -42,6 +42,13 @@ def test_current_policy_verifies_without_authority() -> None:
     (
         (("candidate_denominator",), 63),
         (("admission_live_integrity", "recursive_preflight_required"), False),
+        (
+            (
+                "admission_live_integrity",
+                "operational_output_recursive_finalization_check_required",
+            ),
+            False,
+        ),
         (("source_identity", "required_numeric_dtype"), "float32"),
         (("transformed_identity", "operational_proposal_index_is_fixed64_slot"), False),
         (("failure_semantics", "slot_reallocation_allowed"), True),

@@ -44,6 +44,7 @@ from .mixed64_proposal_producer_v3 import (
     GENERATION_STATUS_SUCCESS,
     ExactPassthroughPlacementReceiptV1,
     Mixed64CoordinateSourcePayloadV1,
+    Mixed64ProposalProducerError,
 )
 from .mixed64_operational_proposal_policy_v3 import (
     BOUND_GEOMETRIC_ADMISSION_V3_POLICY_SHA256,
@@ -168,6 +169,22 @@ def _verify_sealed_receipt(payload: bytes, expected: str, *, name: str) -> str:
     observed = hashlib.sha256(payload).hexdigest()
     if observed != expected:
         _fail(SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED, f"{name} sealed receipt changed")
+    return observed
+
+
+def _verify_live_sealed_projection(
+    payload: bytes,
+    expected: str,
+    projection: object,
+    *,
+    name: str,
+) -> str:
+    observed = _verify_sealed_receipt(payload, expected, name=name)
+    if _canonical_bytes(projection) != payload:
+        _fail(
+            SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED,
+            f"{name} live projection changed",
+        )
     return observed
 
 
@@ -581,6 +598,37 @@ class Mixed64OperationalProposalRecordV1:
             name="operational proposal record",
         )
 
+    def assert_live_integrity(self) -> str:
+        return self._assert_live_integrity(admission_already_verified=False)
+
+    def _assert_live_integrity(self, *, admission_already_verified: bool) -> str:
+        try:
+            if not admission_already_verified:
+                self.admission_decision.assert_live_integrity()
+            if self.source_payload is not None:
+                self.source_payload.assert_live_integrity()
+            if self.source_operational_proposal is not None:
+                self.source_operational_proposal.assert_integrity()
+            if self.operational_proposal is not None:
+                self.operational_proposal.assert_integrity()
+            return _verify_live_sealed_projection(
+                self._canonical_projection_bytes,
+                self._receipt_sha256,
+                self._projection(),
+                name="operational proposal record",
+            )
+        except Mixed64OperationalProposalV3Error:
+            raise
+        except (
+            DockingProposalError,
+            GeometricAdmissionV3Error,
+            Mixed64ProposalProducerError,
+        ) as exc:
+            raise Mixed64OperationalProposalV3Error(
+                SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED,
+                "operational proposal record live integrity failed",
+            ) from exc
+
     def to_dict(self) -> dict[str, object]:
         return {
             **_unseal_projection(self._canonical_projection_bytes),
@@ -690,6 +738,25 @@ class Mixed64OperationalProposalBatchV1:
             self._receipt_sha256,
             name="operational proposal batch",
         )
+
+    def assert_live_integrity(self) -> str:
+        try:
+            self.admission_batch.assert_live_integrity()
+            for record in self.records:
+                record._assert_live_integrity(admission_already_verified=True)
+            return _verify_live_sealed_projection(
+                self._canonical_projection_bytes,
+                self._receipt_sha256,
+                self._projection(),
+                name="operational proposal batch",
+            )
+        except Mixed64OperationalProposalV3Error:
+            raise
+        except GeometricAdmissionV3Error as exc:
+            raise Mixed64OperationalProposalV3Error(
+                SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED,
+                "operational proposal batch live integrity failed",
+            ) from exc
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -878,11 +945,11 @@ def materialize_mixed64_operational_proposals(
         _factory_seal=_BATCH_FACTORY_SEAL,
     )
     try:
-        admission_batch.assert_live_integrity()
-    except GeometricAdmissionV3Error as exc:
+        batch.assert_live_integrity()
+    except Mixed64OperationalProposalV3Error as exc:
         raise Mixed64OperationalProposalV3Error(
             SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED,
-            "admission batch live integrity finalization failed",
+            "operational batch live integrity finalization failed",
         ) from exc
     return batch
 
