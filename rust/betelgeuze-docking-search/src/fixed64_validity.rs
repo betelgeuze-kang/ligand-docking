@@ -1780,7 +1780,7 @@ fn signed_volume(coordinates: &[Vec3], indices: [usize; 4]) -> f64 {
 }
 
 fn distance(first: Vec3, second: Vec3) -> f64 {
-    first.minus(second).dot(first.minus(second)).sqrt()
+    libm::sqrt(first.minus(second).dot(first.minus(second)))
 }
 
 fn minimum_or_sentinel(value: f64) -> f64 {

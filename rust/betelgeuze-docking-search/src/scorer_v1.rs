@@ -1474,10 +1474,9 @@ fn score_kernel(
                 ligand_pair_count,
             )
         })?;
-        let delta = (observed - reference)
-            .sin()
-            .atan2((observed - reference).cos());
-        torsion_raw += 0.5 * (1.0 - (3.0 * delta).cos());
+        let observed_delta = observed - reference;
+        let delta = libm::atan2(libm::sin(observed_delta), libm::cos(observed_delta));
+        torsion_raw += 0.5 * (1.0 - libm::cos(3.0 * delta));
     }
     let inverse_count = 1.0 / pose.len() as f64;
     let centroid = pose
@@ -1563,7 +1562,7 @@ fn typed_lj(first_epsilon: f64, second_epsilon: f64, sigma: f64, distance: f64) 
     }
     let ratio = (sigma / distance).min(2.0);
     let sixth = ratio.powi(6);
-    (first_epsilon * second_epsilon).sqrt() * (sixth * sixth - 2.0 * sixth)
+    libm::sqrt(first_epsilon * second_epsilon) * (sixth * sixth - 2.0 * sixth)
 }
 
 fn hbond_reward(donor: Vec3, hydrogen: Vec3, acceptor: Vec3, cutoff: f64) -> f64 {
@@ -1605,11 +1604,11 @@ fn dihedral(coordinates: &[Vec3], atoms: [usize; 4]) -> Result<f64, ()> {
     }
     left = left.scale(1.0 / left_norm);
     right = right.scale(1.0 / right_norm);
-    Ok(left.cross(right).dot(axis).atan2(left.dot(right)))
+    Ok(libm::atan2(left.cross(right).dot(axis), left.dot(right)))
 }
 
 fn scorer_norm(value: Vec3) -> f64 {
-    value.dot(value).sqrt()
+    libm::sqrt(value.dot(value))
 }
 
 fn cell_key(value: Vec3, cell_size: f64) -> (i64, i64, i64) {

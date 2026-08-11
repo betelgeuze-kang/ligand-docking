@@ -368,7 +368,7 @@ fn direct_rmsd(left: &[Vec3], right: &[Vec3]) -> Result<f64, NativeFixed64RmsdCl
         let delta = left.minus(right);
         squared_sum += delta.x * delta.x + delta.y * delta.y + delta.z * delta.z;
     }
-    let rmsd = (squared_sum / left.len() as f64).sqrt();
+    let rmsd = libm::sqrt(squared_sum / left.len() as f64);
     if !rmsd.is_finite() {
         return Err(NativeFixed64RmsdClusterError::new(
             NativeFixed64RmsdClusterErrorCode::NonFiniteDerivedValue,

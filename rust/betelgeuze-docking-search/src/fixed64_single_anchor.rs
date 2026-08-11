@@ -783,9 +783,12 @@ fn principal_axis(coordinates: &[Vec3]) -> Result<Vec3, Fixed64PlacementError> {
         }
         let (first, second) = selected;
         let angle = 0.5
-            * (2.0 * matrix[first][second]).atan2(matrix[second][second] - matrix[first][first]);
-        let cosine = angle.cos();
-        let sine = angle.sin();
+            * libm::atan2(
+                2.0 * matrix[first][second],
+                matrix[second][second] - matrix[first][first],
+            );
+        let cosine = libm::cos(angle);
+        let sine = libm::sin(angle);
         let mut rotation = [[0.0; 3]; 3];
         for (index, row) in rotation.iter_mut().enumerate() {
             row[index] = 1.0;

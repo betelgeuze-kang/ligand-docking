@@ -884,8 +884,8 @@ fn rotate_about_centroid(
     }
     let axis = rotation_vector.scale(1.0 / angle);
     let center = centroid(coordinates);
-    let cosine = angle.cos();
-    let sine = angle.sin();
+    let cosine = libm::cos(angle);
+    let sine = libm::sin(angle);
     let mut output = Vec::with_capacity(coordinates.len());
     for coordinate in coordinates.iter().copied() {
         let centered = coordinate.minus(center);
@@ -938,7 +938,7 @@ fn vector_close(left: Vec3, right: Vec3, tolerance: f64) -> bool {
 }
 
 fn norm(value: Vec3) -> f64 {
-    (value.x * value.x + value.y * value.y + value.z * value.z).sqrt()
+    libm::sqrt(value.x * value.x + value.y * value.y + value.z * value.z)
 }
 
 fn canonical_zero(value: f64) -> f64 {
