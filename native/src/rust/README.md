@@ -28,3 +28,9 @@ ABI 1.7 routes stable Top-K through the reusable fixed-width Rust ranking
 kernel as well. The private provider revalidates scorer/validity binding and
 coordinate identities, returns both complete ordering arrays transactionally,
 and keeps all product authority flags false.
+
+ABI 1.8 routes direct-coordinate fixed64 RMSD clustering through the reusable
+Rust clustering kernel. The provider accepts only the complete stable-valid
+ordering, retains every failed slot, uses deterministic first-representative
+assignment with an inclusive threshold, and returns the same immutable rows
+as the independent C++ and HIP implementations.

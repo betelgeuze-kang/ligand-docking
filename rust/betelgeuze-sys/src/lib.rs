@@ -20,7 +20,7 @@ static BG_RUST_CPU_PROVIDER_LINK_ANCHOR: extern "C" fn() -> u32 =
     betelgeuze_cpu_kernel::bg_rust_cpu_provider_abi_version_v1;
 
 pub const BG_ABI_VERSION_MAJOR: u32 = 1;
-pub const BG_ABI_VERSION_MINOR: u32 = 7;
+pub const BG_ABI_VERSION_MINOR: u32 = 8;
 pub const BG_ABI_VERSION: u32 = 1;
 
 pub const BG_CANONICAL_LENGTH_UNIT: &[u8] = b"angstrom\0";
@@ -67,6 +67,7 @@ pub const BG_INTEGRATOR_LANGEVIN_BAOAB: bg_integrator = 2;
 pub const BG_DOCKING_FIXED64_CANDIDATE_COUNT: u32 = 64;
 pub const BG_DOCKING_SCORER_V1_TERM_COUNT: u32 = 8;
 pub const BG_DOCKING_STABLE_TOP_K_LIMIT: u32 = 5;
+pub const BG_DOCKING_RMSD_CLUSTER_TOP_K_LIMIT: u32 = 5;
 
 pub type bg_docking_scorer_v1_candidate_state = i32;
 pub const BG_DOCKING_SCORER_V1_CANDIDATE_INACTIVE: bg_docking_scorer_v1_candidate_state = 0;
@@ -127,6 +128,10 @@ pub const BG_DOCKING_POSE_VALIDITY_CHECK_ELEMENT_LIGAND_VDW: bg_docking_pose_val
 pub const BG_DOCKING_POSE_VALIDITY_CHECK_ELEMENT_RECEPTOR_VDW: bg_docking_pose_validity_check_mask =
     1 << 7;
 pub const BG_DOCKING_POSE_VALIDITY_CHECK_ALL: bg_docking_pose_validity_check_mask = 0xff;
+
+pub type bg_docking_rmsd_cluster_row_status = i32;
+pub const BG_DOCKING_RMSD_CLUSTER_ROW_CLUSTERED: bg_docking_rmsd_cluster_row_status = 1;
+pub const BG_DOCKING_RMSD_CLUSTER_ROW_UPSTREAM_NOT_VALID: bg_docking_rmsd_cluster_row_status = 2;
 
 /// Opaque native context. Its representation is intentionally unavailable.
 #[repr(C)]
@@ -673,6 +678,70 @@ pub struct bg_docking_stable_top_k_output_v1 {
     pub reserved: [u64; 4],
 }
 
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_rmsd_cluster_input_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub candidate_count: u64,
+    pub ligand_atom_count: u64,
+    pub valid_index_count: u64,
+    pub top_k_limit: u32,
+    pub unit_system: bg_unit_system,
+    pub rmsd_threshold_angstrom: f64,
+    pub ranking_rows: *const bg_docking_stable_top_k_row_v1,
+    pub valid_slot_indices: *const u32,
+    pub x_angstrom: *const f64,
+    pub y_angstrom: *const f64,
+    pub z_angstrom: *const f64,
+    pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_rmsd_cluster_row_v1 {
+    pub slot_index: u32,
+    pub status: bg_docking_rmsd_cluster_row_status,
+    pub cluster_eligible: u8,
+    pub representative: u8,
+    pub top_k_representative: u8,
+    pub reserved0: u8,
+    pub stable_valid_rank: u32,
+    pub cluster_id: u32,
+    pub representative_slot_index: u32,
+    pub cluster_rank: u32,
+    pub top_k_rank: u32,
+    pub cluster_size: u32,
+    pub reserved1: u32,
+    pub direct_rmsd_to_representative_angstrom: f64,
+    pub coordinate_sha256: [u8; 32],
+    pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_rmsd_cluster_output_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub row_capacity: u64,
+    pub row_count: u64,
+    pub representative_index_capacity: u64,
+    pub representative_index_count: u64,
+    pub top_k_index_capacity: u64,
+    pub top_k_index_count: u64,
+    pub unit_system: bg_unit_system,
+    pub reserved0: u32,
+    pub rows: *mut bg_docking_rmsd_cluster_row_v1,
+    pub representative_slot_indices: *mut u32,
+    pub top_k_slot_indices: *mut u32,
+    pub existing_rank_auto_change_authorized: u8,
+    pub customer_pose_emission_authorized: u8,
+    pub production_claim_authorized: u8,
+    pub reserved1: u8,
+    pub reserved2: u32,
+    pub reserved: [u64; 4],
+}
+
 unsafe extern "C" {
     pub fn bg_abi_version() -> u32;
     pub fn bg_abi_version_major() -> u32;
@@ -789,6 +858,16 @@ unsafe extern "C" {
         caller_struct_size: usize,
         caller_abi_version: u32,
     ) -> bg_status;
+    pub fn bg_docking_rmsd_cluster_input_v1_init(
+        input: *mut bg_docking_rmsd_cluster_input_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_docking_rmsd_cluster_output_v1_init(
+        output: *mut bg_docking_rmsd_cluster_output_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
 
     pub fn bg_backend_is_available(
         backend: bg_backend,
@@ -859,6 +938,12 @@ unsafe extern "C" {
         ranker: *const bg_docking_stable_top_k_v1,
         input: *const bg_docking_stable_top_k_input_v1,
         output: *mut bg_docking_stable_top_k_output_v1,
+    ) -> bg_status;
+    pub fn bg_docking_stable_top_k_v1_cluster_direct_rmsd_fixed64(
+        context: *const bg_context,
+        ranker: *const bg_docking_stable_top_k_v1,
+        input: *const bg_docking_rmsd_cluster_input_v1,
+        output: *mut bg_docking_rmsd_cluster_output_v1,
     ) -> bg_status;
 
     pub fn bg_system_create(

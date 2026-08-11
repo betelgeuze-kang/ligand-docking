@@ -25,6 +25,14 @@ ineligible rows. C++, Rust, `hip_safe`, and `hip_fast` share the frozen
 score-then-slot ordering and never authorize automatic product-rank changes,
 customer pose emission, or production claims.
 
+ABI 1.8 extends that same backend-bound handle with fixed64 direct-coordinate
+RMSD clustering. Valid candidates are traversed in stable-valid-rank order;
+the first representative within the inclusive threshold wins, and the first
+five representatives form the cluster Top-K. The v1 contract performs no
+alignment or symmetry permutation. C++, Rust, `hip_safe`, and `hip_fast`
+preserve all 64 rows, coordinate identities, typed upstream ineligibility, and
+false product-authority flags transactionally.
+
 The term order is:
 
 1. typed van der Waals

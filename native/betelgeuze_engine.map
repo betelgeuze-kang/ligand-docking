@@ -89,3 +89,10 @@ BETELGEUZE_ENGINE_1.7 {
         bg_docking_stable_top_k_v1_get_backend;
         bg_docking_stable_top_k_v1_rank_fixed64;
 } BETELGEUZE_ENGINE_1.6;
+
+BETELGEUZE_ENGINE_1.8 {
+    global:
+        bg_docking_rmsd_cluster_input_v1_init;
+        bg_docking_rmsd_cluster_output_v1_init;
+        bg_docking_stable_top_k_v1_cluster_direct_rmsd_fixed64;
+} BETELGEUZE_ENGINE_1.7;

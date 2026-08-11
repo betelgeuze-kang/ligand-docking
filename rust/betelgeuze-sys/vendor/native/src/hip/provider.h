@@ -193,6 +193,17 @@ int32_t bg_hip_safe_docking_stable_top_k_v1_rank_fixed64(
     char *error_message,
     size_t error_capacity);
 
+int32_t bg_hip_safe_docking_stable_top_k_v1_cluster_direct_rmsd_fixed64(
+    const void *state,
+    const bg_docking_rmsd_cluster_input_v1 *input,
+    bg_docking_rmsd_cluster_row_v1 *out_rows,
+    uint32_t *out_representative_slot_indices,
+    uint64_t *out_cluster_count,
+    uint32_t *out_top_k_slot_indices,
+    uint64_t *out_top_k_count,
+    char *error_message,
+    size_t error_capacity);
+
 int32_t bg_hip_fast_docking_scorer_v1_create(
     int32_t device_ordinal,
     const bg_docking_scorer_v1_context_soa_v1 *descriptor,
@@ -242,6 +253,17 @@ int32_t bg_hip_fast_docking_stable_top_k_v1_rank_fixed64(
     uint64_t *out_primary_count,
     uint32_t *out_valid_slot_indices,
     uint64_t *out_valid_count,
+    char *error_message,
+    size_t error_capacity);
+
+int32_t bg_hip_fast_docking_stable_top_k_v1_cluster_direct_rmsd_fixed64(
+    const void *state,
+    const bg_docking_rmsd_cluster_input_v1 *input,
+    bg_docking_rmsd_cluster_row_v1 *out_rows,
+    uint32_t *out_representative_slot_indices,
+    uint64_t *out_cluster_count,
+    uint32_t *out_top_k_slot_indices,
+    uint64_t *out_top_k_count,
     char *error_message,
     size_t error_capacity);
 

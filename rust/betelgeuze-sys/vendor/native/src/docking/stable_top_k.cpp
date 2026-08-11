@@ -24,6 +24,8 @@ namespace {
 constexpr std::size_t kCandidateCount =
     BG_DOCKING_FIXED64_CANDIDATE_COUNT;
 constexpr std::size_t kTopKLimit = BG_DOCKING_STABLE_TOP_K_LIMIT;
+constexpr std::size_t kClusterTopKLimit =
+    BG_DOCKING_RMSD_CLUSTER_TOP_K_LIMIT;
 constexpr std::size_t kDigestSize = 32;
 
 struct CppStableTopKState final {};
@@ -40,6 +42,15 @@ struct DerivedRanking final {
     std::size_t primary_count = 0;
     std::array<uint32_t, kCandidateCount> valid_slot_indices{};
     std::size_t valid_count = 0;
+};
+
+struct DerivedRmsdCluster final {
+    std::array<bg_docking_rmsd_cluster_row_v1, kCandidateCount> rows{};
+    std::array<uint32_t, kCandidateCount> representative_slot_indices{};
+    std::size_t cluster_count = 0;
+    std::array<uint32_t, kClusterTopKLimit> top_k_slot_indices{};
+    std::size_t top_k_count = 0;
+    bool numerical_failure = false;
 };
 
 [[nodiscard]] bool digest_is_zero(const uint8_t *digest) noexcept {
@@ -484,6 +495,376 @@ struct DerivedRanking final {
     return true;
 }
 
+[[nodiscard]] bool ranking_row_shape_is_valid(
+    const bg_docking_stable_top_k_row_v1 &row,
+    std::size_t slot) noexcept {
+    if (row.slot_index != slot || row.rank_eligible > UINT8_C(1) ||
+        row.valid_rank_eligible > UINT8_C(1) || row.reserved0 != 0 ||
+        !reserved_is_zero(row.reserved)) {
+        return false;
+    }
+    if (row.rank_eligible == UINT8_C(0)) {
+        return row.valid_rank_eligible == UINT8_C(0) &&
+               row.stable_rank == 0 && row.stable_valid_rank == 0 &&
+               row.total_score == 0.0 &&
+               digest_is_zero(row.coordinate_sha256);
+    }
+    if (row.stable_rank == 0 || !std::isfinite(row.total_score) ||
+        digest_is_zero(row.coordinate_sha256)) {
+        return false;
+    }
+    return (row.valid_rank_eligible == UINT8_C(1)) ==
+           (row.stable_valid_rank != 0);
+}
+
+[[nodiscard]] bg_status validate_cluster_input_and_output(
+    const bg_docking_rmsd_cluster_input_v1 &input,
+    const bg_docking_rmsd_cluster_output_v1 &output) noexcept {
+    bg_status status = validate_descriptor_header(
+        input.struct_size,
+        sizeof(input),
+        input.abi_version,
+        "RMSD cluster input size does not match ABI v1",
+        "RMSD cluster input ABI version does not match");
+    if (status != BG_STATUS_OK) {
+        return status;
+    }
+    status = validate_descriptor_header(
+        output.struct_size,
+        sizeof(output),
+        output.abi_version,
+        "RMSD cluster output size does not match ABI v1",
+        "RMSD cluster output ABI version does not match");
+    if (status != BG_STATUS_OK) {
+        return status;
+    }
+    if (validate_unit_system(input.unit_system) != BG_STATUS_OK ||
+        validate_unit_system(output.unit_system) != BG_STATUS_OK ||
+        input.candidate_count != kCandidateCount ||
+        input.ligand_atom_count == 0 || input.ligand_atom_count > 512 ||
+        input.valid_index_count > kCandidateCount ||
+        input.top_k_limit != kClusterTopKLimit ||
+        !std::isfinite(input.rmsd_threshold_angstrom) ||
+        input.rmsd_threshold_angstrom <= 0.0 ||
+        !reserved_is_zero(input.reserved) || output.reserved0 != 0 ||
+        output.reserved1 != 0 || output.reserved2 != 0 ||
+        !reserved_is_zero(output.reserved)) {
+        return fail(
+            BG_STATUS_INVALID_ARGUMENT,
+            "RMSD cluster denominator, units, threshold, or reserved fields are invalid");
+    }
+    const auto atom_count = static_cast<std::size_t>(input.ligand_atom_count);
+    if (atom_count > std::numeric_limits<std::size_t>::max() /
+                         kCandidateCount) {
+        return fail(
+            BG_STATUS_CAPACITY_OVERFLOW,
+            "RMSD cluster coordinate count overflowed");
+    }
+    const std::size_t coordinate_count = atom_count * kCandidateCount;
+    if (input.ranking_rows == nullptr ||
+        input.valid_slot_indices == nullptr || input.x_angstrom == nullptr ||
+        input.y_angstrom == nullptr || input.z_angstrom == nullptr ||
+        output.rows == nullptr ||
+        output.representative_slot_indices == nullptr ||
+        output.top_k_slot_indices == nullptr ||
+        !pointer_is_aligned(input.ranking_rows) ||
+        !pointer_is_aligned(input.valid_slot_indices) ||
+        !pointer_is_aligned(input.x_angstrom) ||
+        !pointer_is_aligned(input.y_angstrom) ||
+        !pointer_is_aligned(input.z_angstrom) ||
+        !pointer_is_aligned(output.rows) ||
+        !pointer_is_aligned(output.representative_slot_indices) ||
+        !pointer_is_aligned(output.top_k_slot_indices) ||
+        output.row_capacity < kCandidateCount ||
+        output.representative_index_capacity < kCandidateCount ||
+        output.top_k_index_capacity < kClusterTopKLimit) {
+        return fail(
+            BG_STATUS_INVALID_ARGUMENT,
+            "RMSD cluster input channel or output capacity is invalid");
+    }
+    const std::array<std::pair<const void *, std::size_t>, 5> inputs = {{
+        {input.ranking_rows,
+         kCandidateCount * sizeof(bg_docking_stable_top_k_row_v1)},
+        {input.valid_slot_indices,
+         static_cast<std::size_t>(input.valid_index_count) *
+             sizeof(uint32_t)},
+        {input.x_angstrom, coordinate_count * sizeof(double)},
+        {input.y_angstrom, coordinate_count * sizeof(double)},
+        {input.z_angstrom, coordinate_count * sizeof(double)},
+    }};
+    const std::array<std::pair<const void *, std::size_t>, 3> outputs = {{
+        {output.rows,
+         kCandidateCount * sizeof(bg_docking_rmsd_cluster_row_v1)},
+        {output.representative_slot_indices,
+         kCandidateCount * sizeof(uint32_t)},
+        {output.top_k_slot_indices, kClusterTopKLimit * sizeof(uint32_t)},
+    }};
+    for (std::size_t first = 0; first < outputs.size(); ++first) {
+        for (std::size_t second = first + 1; second < outputs.size();
+             ++second) {
+            if (ranges_overlap(
+                    outputs[first].first,
+                    outputs[first].second,
+                    outputs[second].first,
+                    outputs[second].second)) {
+                return fail(
+                    BG_STATUS_INVALID_ARGUMENT,
+                    "RMSD cluster output buffers overlap");
+            }
+        }
+        for (const auto &input_range : inputs) {
+            if (ranges_overlap(
+                    outputs[first].first,
+                    outputs[first].second,
+                    input_range.first,
+                    input_range.second)) {
+                return fail(
+                    BG_STATUS_INVALID_ARGUMENT,
+                    "RMSD cluster input and output buffers overlap");
+            }
+        }
+    }
+    std::array<uint8_t, kCandidateCount> valid_seen{};
+    for (std::size_t offset = 0;
+         offset < static_cast<std::size_t>(input.valid_index_count);
+         ++offset) {
+        const std::size_t slot = input.valid_slot_indices[offset];
+        if (slot >= kCandidateCount || valid_seen[slot] != 0) {
+            return fail(
+                BG_STATUS_INVALID_ARGUMENT,
+                "RMSD cluster valid index list is duplicated or out of range");
+        }
+        const auto &row = input.ranking_rows[slot];
+        if (row.valid_rank_eligible != UINT8_C(1) ||
+            row.stable_valid_rank != offset + 1) {
+            return fail(
+                BG_STATUS_INVALID_ARGUMENT,
+                "RMSD cluster valid index list is cross-wired");
+        }
+        valid_seen[slot] = UINT8_C(1);
+    }
+    for (std::size_t slot = 0; slot < kCandidateCount; ++slot) {
+        const auto &row = input.ranking_rows[slot];
+        if (!ranking_row_shape_is_valid(row, slot) ||
+            ((valid_seen[slot] != 0) !=
+             (row.valid_rank_eligible == UINT8_C(1)))) {
+            return fail(
+                BG_STATUS_INVALID_ARGUMENT,
+                "RMSD cluster ranking rows are inconsistent");
+        }
+        if (valid_seen[slot] == 0) {
+            continue;
+        }
+        const std::size_t begin = slot * atom_count;
+        for (std::size_t atom = 0; atom < atom_count; ++atom) {
+            const std::size_t index = begin + atom;
+            if (!std::isfinite(input.x_angstrom[index]) ||
+                !std::isfinite(input.y_angstrom[index]) ||
+                !std::isfinite(input.z_angstrom[index])) {
+                return fail(
+                    BG_STATUS_INVALID_ARGUMENT,
+                    "eligible RMSD cluster coordinates are non-finite");
+            }
+        }
+    }
+    return BG_STATUS_OK;
+}
+
+[[nodiscard]] double direct_rmsd(
+    const bg_docking_rmsd_cluster_input_v1 &input,
+    std::size_t left_slot,
+    std::size_t right_slot) noexcept {
+    const std::size_t atom_count =
+        static_cast<std::size_t>(input.ligand_atom_count);
+    const std::size_t left_begin = left_slot * atom_count;
+    const std::size_t right_begin = right_slot * atom_count;
+    double squared_sum = 0.0;
+    for (std::size_t atom = 0; atom < atom_count; ++atom) {
+        const double dx =
+            input.x_angstrom[left_begin + atom] -
+            input.x_angstrom[right_begin + atom];
+        const double dy =
+            input.y_angstrom[left_begin + atom] -
+            input.y_angstrom[right_begin + atom];
+        const double dz =
+            input.z_angstrom[left_begin + atom] -
+            input.z_angstrom[right_begin + atom];
+        squared_sum += dx * dx + dy * dy + dz * dz;
+    }
+    const double value =
+        std::sqrt(squared_sum / static_cast<double>(atom_count));
+    return value == 0.0 ? 0.0 : value;
+}
+
+[[nodiscard]] DerivedRmsdCluster derive_cluster_cpp(
+    const bg_docking_rmsd_cluster_input_v1 &input) noexcept {
+    DerivedRmsdCluster result{};
+    std::array<uint32_t, kCandidateCount> cluster_sizes{};
+    for (std::size_t offset = 0;
+         offset < static_cast<std::size_t>(input.valid_index_count);
+         ++offset) {
+        const std::size_t slot = input.valid_slot_indices[offset];
+        std::size_t cluster_offset = result.cluster_count;
+        std::size_t representative_slot = slot;
+        double rmsd = 0.0;
+        bool representative = true;
+        for (std::size_t existing = 0; existing < result.cluster_count;
+             ++existing) {
+            const std::size_t existing_slot =
+                result.representative_slot_indices[existing];
+            const double candidate_rmsd =
+                direct_rmsd(input, slot, existing_slot);
+            if (!std::isfinite(candidate_rmsd)) {
+                result.numerical_failure = true;
+                return result;
+            }
+            if (candidate_rmsd <= input.rmsd_threshold_angstrom) {
+                cluster_offset = existing;
+                representative_slot = existing_slot;
+                rmsd = candidate_rmsd;
+                representative = false;
+                break;
+            }
+        }
+        if (representative) {
+            result.representative_slot_indices[result.cluster_count] =
+                static_cast<uint32_t>(slot);
+            ++result.cluster_count;
+        }
+        ++cluster_sizes[cluster_offset];
+        auto &row = result.rows[slot];
+        row.slot_index = static_cast<uint32_t>(slot);
+        row.status = BG_DOCKING_RMSD_CLUSTER_ROW_CLUSTERED;
+        row.cluster_eligible = UINT8_C(1);
+        row.representative = representative ? UINT8_C(1) : UINT8_C(0);
+        row.top_k_representative =
+            representative && cluster_offset < kClusterTopKLimit
+                ? UINT8_C(1)
+                : UINT8_C(0);
+        row.stable_valid_rank = static_cast<uint32_t>(offset + 1);
+        row.cluster_id = static_cast<uint32_t>(cluster_offset + 1);
+        row.representative_slot_index =
+            static_cast<uint32_t>(representative_slot);
+        row.cluster_rank = static_cast<uint32_t>(cluster_offset + 1);
+        row.top_k_rank =
+            representative && cluster_offset < kClusterTopKLimit
+                ? static_cast<uint32_t>(cluster_offset + 1)
+                : 0;
+        row.direct_rmsd_to_representative_angstrom = rmsd;
+        std::copy_n(
+            input.ranking_rows[slot].coordinate_sha256,
+            kDigestSize,
+            row.coordinate_sha256);
+    }
+    for (std::size_t slot = 0; slot < kCandidateCount; ++slot) {
+        auto &row = result.rows[slot];
+        if (row.cluster_eligible == UINT8_C(0)) {
+            row.slot_index = static_cast<uint32_t>(slot);
+            row.status = BG_DOCKING_RMSD_CLUSTER_ROW_UPSTREAM_NOT_VALID;
+        } else {
+            row.cluster_size = cluster_sizes[row.cluster_id - 1];
+        }
+    }
+    result.top_k_count = std::min(result.cluster_count, kClusterTopKLimit);
+    std::copy_n(
+        result.representative_slot_indices.begin(),
+        result.top_k_count,
+        result.top_k_slot_indices.begin());
+    return result;
+}
+
+[[nodiscard]] bool cluster_shape_is_valid(
+    const DerivedRmsdCluster &result,
+    const bg_docking_rmsd_cluster_input_v1 &input) noexcept {
+    if (result.cluster_count > input.valid_index_count ||
+        result.top_k_count !=
+            std::min(result.cluster_count, kClusterTopKLimit)) {
+        return false;
+    }
+    std::array<uint8_t, kCandidateCount> valid_seen{};
+    std::array<uint32_t, kCandidateCount> observed_cluster_sizes{};
+    for (std::size_t offset = 0;
+         offset < static_cast<std::size_t>(input.valid_index_count);
+         ++offset) {
+        const std::size_t slot = input.valid_slot_indices[offset];
+        valid_seen[slot] = UINT8_C(1);
+        const auto &row = result.rows[slot];
+        if (row.slot_index != slot ||
+            row.status != BG_DOCKING_RMSD_CLUSTER_ROW_CLUSTERED ||
+            row.cluster_eligible != UINT8_C(1) ||
+            row.representative > UINT8_C(1) ||
+            row.top_k_representative > UINT8_C(1) || row.reserved0 != 0 ||
+            row.reserved1 != 0 ||
+            row.stable_valid_rank != offset + 1 || row.cluster_id == 0 ||
+            row.cluster_id > result.cluster_count ||
+            row.cluster_rank != row.cluster_id ||
+            row.representative_slot_index >= kCandidateCount ||
+            !std::isfinite(row.direct_rmsd_to_representative_angstrom) ||
+            row.direct_rmsd_to_representative_angstrom < 0.0 ||
+            std::memcmp(
+                row.coordinate_sha256,
+                input.ranking_rows[slot].coordinate_sha256,
+                kDigestSize) != 0 ||
+            !reserved_is_zero(row.reserved)) {
+            return false;
+        }
+        ++observed_cluster_sizes[row.cluster_id - 1];
+    }
+    for (std::size_t slot = 0; slot < kCandidateCount; ++slot) {
+        const auto &row = result.rows[slot];
+        if (valid_seen[slot] == 0 &&
+            (row.slot_index != slot ||
+             row.status !=
+                 BG_DOCKING_RMSD_CLUSTER_ROW_UPSTREAM_NOT_VALID ||
+             row.cluster_eligible != UINT8_C(0) ||
+             row.representative != UINT8_C(0) ||
+             row.top_k_representative != UINT8_C(0) ||
+             row.reserved0 != 0 || row.reserved1 != 0 ||
+             row.stable_valid_rank != 0 ||
+             row.cluster_id != 0 || row.representative_slot_index != 0 ||
+             row.cluster_rank != 0 || row.top_k_rank != 0 ||
+             row.cluster_size != 0 ||
+             row.direct_rmsd_to_representative_angstrom != 0.0 ||
+             !digest_is_zero(row.coordinate_sha256) ||
+             !reserved_is_zero(row.reserved))) {
+            return false;
+        }
+    }
+    for (std::size_t cluster = 0; cluster < result.cluster_count;
+         ++cluster) {
+        const std::size_t representative_slot =
+            result.representative_slot_indices[cluster];
+        if (representative_slot >= kCandidateCount) {
+            return false;
+        }
+        const auto &representative = result.rows[representative_slot];
+        const bool top_k = cluster < kClusterTopKLimit;
+        if (representative.representative != UINT8_C(1) ||
+            representative.cluster_id != cluster + 1 ||
+            representative.representative_slot_index !=
+                representative_slot ||
+            representative.direct_rmsd_to_representative_angstrom != 0.0 ||
+            representative.cluster_size != observed_cluster_sizes[cluster] ||
+            (representative.top_k_representative == UINT8_C(1)) != top_k ||
+            representative.top_k_rank !=
+                (top_k ? static_cast<uint32_t>(cluster + 1) : 0)) {
+            return false;
+        }
+        if (top_k && result.top_k_slot_indices[cluster] !=
+                         representative_slot) {
+            return false;
+        }
+    }
+    for (std::size_t slot = 0; slot < kCandidateCount; ++slot) {
+        const auto &row = result.rows[slot];
+        if (valid_seen[slot] != 0 &&
+            row.cluster_size != observed_cluster_sizes[row.cluster_id - 1]) {
+            return false;
+        }
+    }
+    return true;
+}
+
 [[nodiscard]] bg_status provider_failure(
     int32_t raw_status,
     const bg_rust_cpu_error_v1 &error,
@@ -559,6 +940,58 @@ extern "C" BG_API bg_status BG_CALL bg_docking_stable_top_k_output_v1_init(
             return status;
         }
         *output = bg_docking_stable_top_k_output_v1{};
+        output->struct_size = static_cast<uint32_t>(sizeof(*output));
+        output->abi_version = BG_ABI_VERSION;
+        output->unit_system = BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL;
+        return BG_STATUS_OK;
+    });
+}
+
+extern "C" BG_API bg_status BG_CALL bg_docking_rmsd_cluster_input_v1_init(
+    bg_docking_rmsd_cluster_input_v1 *input,
+    std::size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT {
+    using namespace betelgeuze::native;
+    return guarded_status([&]() -> bg_status {
+        const bg_status status = validate_initializer_compatibility(
+            input,
+            caller_struct_size,
+            sizeof(*input),
+            caller_abi_version,
+            "RMSD cluster input initializer pointer is null",
+            "RMSD cluster input initializer size does not match",
+            "RMSD cluster input initializer ABI version does not match");
+        if (status != BG_STATUS_OK) {
+            return status;
+        }
+        *input = bg_docking_rmsd_cluster_input_v1{};
+        input->struct_size = static_cast<uint32_t>(sizeof(*input));
+        input->abi_version = BG_ABI_VERSION;
+        input->candidate_count = BG_DOCKING_FIXED64_CANDIDATE_COUNT;
+        input->top_k_limit = BG_DOCKING_RMSD_CLUSTER_TOP_K_LIMIT;
+        input->unit_system = BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL;
+        return BG_STATUS_OK;
+    });
+}
+
+extern "C" BG_API bg_status BG_CALL bg_docking_rmsd_cluster_output_v1_init(
+    bg_docking_rmsd_cluster_output_v1 *output,
+    std::size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT {
+    using namespace betelgeuze::native;
+    return guarded_status([&]() -> bg_status {
+        const bg_status status = validate_initializer_compatibility(
+            output,
+            caller_struct_size,
+            sizeof(*output),
+            caller_abi_version,
+            "RMSD cluster output initializer pointer is null",
+            "RMSD cluster output initializer size does not match",
+            "RMSD cluster output initializer ABI version does not match");
+        if (status != BG_STATUS_OK) {
+            return status;
+        }
+        *output = bg_docking_rmsd_cluster_output_v1{};
         output->struct_size = static_cast<uint32_t>(sizeof(*output));
         output->abi_version = BG_ABI_VERSION;
         output->unit_system = BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL;
@@ -848,6 +1281,170 @@ bg_docking_stable_top_k_v1_rank_fixed64(
         output->row_count = kCandidateCount;
         output->primary_index_count = candidate.primary_count;
         output->valid_index_count = candidate.valid_count;
+        output->existing_rank_auto_change_authorized = UINT8_C(0);
+        output->customer_pose_emission_authorized = UINT8_C(0);
+        output->production_claim_authorized = UINT8_C(0);
+        return BG_STATUS_OK;
+    });
+}
+
+extern "C" BG_API bg_status BG_CALL
+bg_docking_stable_top_k_v1_cluster_direct_rmsd_fixed64(
+    const bg_context *context,
+    const bg_docking_stable_top_k_v1 *ranker,
+    const bg_docking_rmsd_cluster_input_v1 *input,
+    bg_docking_rmsd_cluster_output_v1 *output) BG_NOEXCEPT {
+    using namespace betelgeuze::native;
+    using namespace betelgeuze::native::docking::ranking;
+    return guarded_status([&]() -> bg_status {
+        if (context == nullptr || ranker == nullptr || input == nullptr ||
+            output == nullptr) {
+            return fail(
+                BG_STATUS_INVALID_ARGUMENT,
+                "RMSD cluster inputs and output must not be null");
+        }
+        if (context->backend != ranker->backend ||
+            context->device_ordinal != ranker->device_ordinal) {
+            return fail(
+                BG_STATUS_INVALID_ARGUMENT,
+                "RMSD cluster handle is cross-wired to another backend or device");
+        }
+        bg_status status =
+            validate_cluster_input_and_output(*input, *output);
+        if (status != BG_STATUS_OK) {
+            return status;
+        }
+        DerivedRmsdCluster candidate{};
+        if (ranker->backend == BG_BACKEND_CPP_CPU_REFERENCE) {
+            if (ranker->provider_state == nullptr) {
+                return fail(
+                    BG_STATUS_INTERNAL_ERROR,
+                    "RMSD cluster C++ provider state is null");
+            }
+            candidate = derive_cluster_cpp(*input);
+            if (candidate.numerical_failure) {
+                return fail(
+                    BG_STATUS_NUMERICAL_ERROR,
+                    "C++ RMSD cluster derived a non-finite distance");
+            }
+        } else if (ranker->backend == BG_BACKEND_RUST_CPU) {
+            bg_rust_cpu_error_v1 error{};
+            error.struct_size = sizeof(error);
+            error.abi_version = BG_RUST_CPU_PROVIDER_ABI_VERSION;
+            uint64_t cluster_count = 0;
+            uint64_t top_k_count = 0;
+            const int32_t raw_status =
+                bg_rust_cpu_docking_stable_top_k_v1_cluster_direct_rmsd_fixed64(
+                    ranker->provider_state,
+                    input,
+                    candidate.rows.data(),
+                    candidate.representative_slot_indices.data(),
+                    &cluster_count,
+                    candidate.top_k_slot_indices.data(),
+                    &top_k_count,
+                    &error);
+            if (raw_status != BG_STATUS_OK) {
+                return provider_failure(
+                    raw_status,
+                    error,
+                    "rust_cpu RMSD cluster batch failed");
+            }
+            if (cluster_count > kCandidateCount ||
+                top_k_count > kClusterTopKLimit) {
+                return fail(
+                    BG_STATUS_BACKEND_ERROR,
+                    "rust_cpu RMSD cluster counts exceed fixed bounds");
+            }
+            candidate.cluster_count =
+                static_cast<std::size_t>(cluster_count);
+            candidate.top_k_count = static_cast<std::size_t>(top_k_count);
+#if BG_HAS_HIP_SAFE_PROVIDER
+        } else if (ranker->backend == BG_BACKEND_HIP_SAFE) {
+            char provider_error[BG_HIP_SAFE_ERROR_CAPACITY]{};
+            uint64_t cluster_count = 0;
+            uint64_t top_k_count = 0;
+            const int32_t raw_status =
+                bg_hip_safe_docking_stable_top_k_v1_cluster_direct_rmsd_fixed64(
+                    ranker->provider_state,
+                    input,
+                    candidate.rows.data(),
+                    candidate.representative_slot_indices.data(),
+                    &cluster_count,
+                    candidate.top_k_slot_indices.data(),
+                    &top_k_count,
+                    provider_error,
+                    sizeof(provider_error));
+            if (raw_status != BG_STATUS_OK) {
+                return hip_provider_failure(
+                    raw_status,
+                    provider_error,
+                    "hip_safe RMSD cluster batch failed");
+            }
+            if (cluster_count > kCandidateCount ||
+                top_k_count > kClusterTopKLimit) {
+                return fail(
+                    BG_STATUS_BACKEND_ERROR,
+                    "hip_safe RMSD cluster counts exceed fixed bounds");
+            }
+            candidate.cluster_count =
+                static_cast<std::size_t>(cluster_count);
+            candidate.top_k_count = static_cast<std::size_t>(top_k_count);
+#endif
+#if BG_ENABLE_HIP
+        } else if (ranker->backend == BG_BACKEND_HIP_FAST) {
+            char provider_error[BG_HIP_SAFE_ERROR_CAPACITY]{};
+            uint64_t cluster_count = 0;
+            uint64_t top_k_count = 0;
+            const int32_t raw_status =
+                bg_hip_fast_docking_stable_top_k_v1_cluster_direct_rmsd_fixed64(
+                    ranker->provider_state,
+                    input,
+                    candidate.rows.data(),
+                    candidate.representative_slot_indices.data(),
+                    &cluster_count,
+                    candidate.top_k_slot_indices.data(),
+                    &top_k_count,
+                    provider_error,
+                    sizeof(provider_error));
+            if (raw_status != BG_STATUS_OK) {
+                return hip_provider_failure(
+                    raw_status,
+                    provider_error,
+                    "hip_fast RMSD cluster batch failed");
+            }
+            if (cluster_count > kCandidateCount ||
+                top_k_count > kClusterTopKLimit) {
+                return fail(
+                    BG_STATUS_BACKEND_ERROR,
+                    "hip_fast RMSD cluster counts exceed fixed bounds");
+            }
+            candidate.cluster_count =
+                static_cast<std::size_t>(cluster_count);
+            candidate.top_k_count = static_cast<std::size_t>(top_k_count);
+#endif
+        } else {
+            return fail(
+                BG_STATUS_BACKEND_UNAVAILABLE,
+                "selected backend has no RMSD cluster kernel; fallback is forbidden");
+        }
+        if (!cluster_shape_is_valid(candidate, *input)) {
+            return fail(
+                BG_STATUS_BACKEND_ERROR,
+                "RMSD cluster backend returned inconsistent evidence");
+        }
+        std::memcpy(
+            output->rows, candidate.rows.data(), sizeof(candidate.rows));
+        std::memcpy(
+            output->representative_slot_indices,
+            candidate.representative_slot_indices.data(),
+            sizeof(candidate.representative_slot_indices));
+        std::memcpy(
+            output->top_k_slot_indices,
+            candidate.top_k_slot_indices.data(),
+            sizeof(candidate.top_k_slot_indices));
+        output->row_count = kCandidateCount;
+        output->representative_index_count = candidate.cluster_count;
+        output->top_k_index_count = candidate.top_k_count;
         output->existing_rank_auto_change_authorized = UINT8_C(0);
         output->customer_pose_emission_authorized = UINT8_C(0);
         output->production_claim_authorized = UINT8_C(0);

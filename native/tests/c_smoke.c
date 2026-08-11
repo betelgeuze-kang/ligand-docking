@@ -72,13 +72,25 @@ static void test_descriptor_initializer_compatibility(void) {
     BG_TEST_EXACT_INITIALIZER(
         bg_docking_pose_validity_output_v1,
         bg_docking_pose_validity_output_v1_init);
+    BG_TEST_EXACT_INITIALIZER(
+        bg_docking_stable_top_k_input_v1,
+        bg_docking_stable_top_k_input_v1_init);
+    BG_TEST_EXACT_INITIALIZER(
+        bg_docking_stable_top_k_output_v1,
+        bg_docking_stable_top_k_output_v1_init);
+    BG_TEST_EXACT_INITIALIZER(
+        bg_docking_rmsd_cluster_input_v1,
+        bg_docking_rmsd_cluster_input_v1_init);
+    BG_TEST_EXACT_INITIALIZER(
+        bg_docking_rmsd_cluster_output_v1,
+        bg_docking_rmsd_cluster_output_v1_init);
 }
 
 static void test_context_contract(void) {
     assert(bg_abi_version() == BG_ABI_VERSION);
     assert(bg_abi_version_major() == BG_ABI_VERSION_MAJOR);
     assert(bg_abi_version_minor() == BG_ABI_VERSION_MINOR);
-    assert(strcmp(bg_abi_version_string(), "1.7") == 0);
+    assert(strcmp(bg_abi_version_string(), "1.8") == 0);
     assert(strcmp(BG_CANONICAL_TEMPERATURE_UNIT, "kelvin") == 0);
     assert(strcmp(bg_status_string(BG_STATUS_OK), "ok") == 0);
     assert(strcmp(

@@ -86,6 +86,8 @@ fn descriptor_initializers_reject_incompatible_callers_without_writing() {
         assert_initializer_exact(bg_docking_pose_validity_output_v1_init);
         assert_initializer_exact(bg_docking_stable_top_k_input_v1_init);
         assert_initializer_exact(bg_docking_stable_top_k_output_v1_init);
+        assert_initializer_exact(bg_docking_rmsd_cluster_input_v1_init);
+        assert_initializer_exact(bg_docking_rmsd_cluster_output_v1_init);
     }
 }
 
@@ -274,6 +276,46 @@ fn descriptor_initializers_bind_size_version_and_units() {
         assert_eq!(ranking_output.existing_rank_auto_change_authorized, 0);
         assert_eq!(ranking_output.customer_pose_emission_authorized, 0);
         assert_eq!(ranking_output.production_claim_authorized, 0);
+
+        let mut cluster_input =
+            core::mem::MaybeUninit::<bg_docking_rmsd_cluster_input_v1>::uninit();
+        assert_eq!(
+            initialize(
+                bg_docking_rmsd_cluster_input_v1_init,
+                cluster_input.as_mut_ptr(),
+            ),
+            BG_STATUS_OK
+        );
+        let cluster_input = cluster_input.assume_init();
+        assert_eq!(
+            cluster_input.struct_size as usize,
+            core::mem::size_of_val(&cluster_input)
+        );
+        assert_eq!(cluster_input.candidate_count, 64);
+        assert_eq!(
+            cluster_input.top_k_limit,
+            BG_DOCKING_RMSD_CLUSTER_TOP_K_LIMIT
+        );
+        assert_eq!(cluster_input.unit_system, BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL);
+
+        let mut cluster_output =
+            core::mem::MaybeUninit::<bg_docking_rmsd_cluster_output_v1>::uninit();
+        assert_eq!(
+            initialize(
+                bg_docking_rmsd_cluster_output_v1_init,
+                cluster_output.as_mut_ptr(),
+            ),
+            BG_STATUS_OK
+        );
+        let cluster_output = cluster_output.assume_init();
+        assert_eq!(
+            cluster_output.struct_size as usize,
+            core::mem::size_of_val(&cluster_output)
+        );
+        assert_eq!(cluster_output.unit_system, BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL);
+        assert_eq!(cluster_output.existing_rank_auto_change_authorized, 0);
+        assert_eq!(cluster_output.customer_pose_emission_authorized, 0);
+        assert_eq!(cluster_output.production_claim_authorized, 0);
     }
 }
 

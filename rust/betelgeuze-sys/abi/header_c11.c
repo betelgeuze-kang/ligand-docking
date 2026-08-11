@@ -5,7 +5,7 @@
 
 _Static_assert(BG_ABI_VERSION == UINT32_C(1), "unexpected ABI version");
 _Static_assert(BG_ABI_VERSION_MAJOR == UINT32_C(1), "unexpected ABI major version");
-_Static_assert(BG_ABI_VERSION_MINOR == UINT32_C(7), "unexpected ABI minor version");
+_Static_assert(BG_ABI_VERSION_MINOR == UINT32_C(8), "unexpected ABI minor version");
 _Static_assert(BG_STATUS_OK == 0, "unexpected success status");
 _Static_assert(BG_STATUS_NUMERICAL_ERROR == 10, "unexpected numerical status");
 _Static_assert(BG_BACKEND_CPU == 1, "unexpected CPU backend value");
@@ -41,9 +41,13 @@ _Static_assert(
 _Static_assert(
     sizeof(bg_docking_pose_validity_failure) == sizeof(int32_t),
     "pose-validity failure width changed");
+_Static_assert(
+    sizeof(bg_docking_rmsd_cluster_row_status) == sizeof(int32_t),
+    "RMSD-cluster row status width changed");
 _Static_assert(BG_DOCKING_FIXED64_CANDIDATE_COUNT == 64, "bad fixed64 denominator");
 _Static_assert(BG_DOCKING_SCORER_V1_TERM_COUNT == 8, "bad ScorerV1 term count");
 _Static_assert(BG_DOCKING_STABLE_TOP_K_LIMIT == 5, "bad stable Top-K limit");
+_Static_assert(BG_DOCKING_RMSD_CLUSTER_TOP_K_LIMIT == 5, "bad RMSD-cluster Top-K limit");
 _Static_assert(BG_INTEGRATOR_VELOCITY_VERLET == 1, "unexpected Verlet value");
 _Static_assert(BG_INTEGRATOR_LANGEVIN_BAOAB == 2, "unexpected BAOAB value");
 _Static_assert(sizeof(bg_context_options) == 64, "context options ABI changed");
@@ -86,6 +90,18 @@ _Static_assert(
 _Static_assert(
     sizeof(bg_docking_stable_top_k_output_v1) == 128,
     "stable Top-K output ABI changed");
+_Static_assert(
+    sizeof(bg_docking_rmsd_cluster_input_v1) == 120,
+    "RMSD-cluster input ABI changed");
+_Static_assert(
+    sizeof(bg_docking_rmsd_cluster_row_v1) == 112,
+    "RMSD-cluster row ABI changed");
+_Static_assert(
+    offsetof(bg_docking_rmsd_cluster_row_v1, reserved1) == 36,
+    "bad RMSD-cluster reserved1 offset");
+_Static_assert(
+    sizeof(bg_docking_rmsd_cluster_output_v1) == 128,
+    "RMSD-cluster output ABI changed");
 _Static_assert(sizeof(bg_forcefield_soa_v1) == 352, "force-field SoA ABI changed");
 _Static_assert(offsetof(bg_forcefield_soa_v1, struct_size) == 0, "bad struct_size offset");
 _Static_assert(offsetof(bg_forcefield_soa_v1, abi_version) == 4, "bad abi_version offset");
@@ -321,6 +337,15 @@ typedef bg_status(BG_CALL *bg_context_minimize_fn)(
     bg_minimization_report_v1 *);
 typedef bg_status(BG_CALL *bg_context_integrate_fn)(
     const bg_context *, bg_simulation *, uint64_t, bg_dynamics_report_v1 *);
+typedef bg_status(BG_CALL *bg_docking_rmsd_cluster_input_v1_init_fn)(
+    bg_docking_rmsd_cluster_input_v1 *, size_t, uint32_t);
+typedef bg_status(BG_CALL *bg_docking_rmsd_cluster_output_v1_init_fn)(
+    bg_docking_rmsd_cluster_output_v1 *, size_t, uint32_t);
+typedef bg_status(BG_CALL *bg_docking_cluster_direct_rmsd_fixed64_fn)(
+    const bg_context *,
+    const bg_docking_stable_top_k_v1 *,
+    const bg_docking_rmsd_cluster_input_v1 *,
+    bg_docking_rmsd_cluster_output_v1 *);
 
 void betelgeuze_sys_header_c11_typecheck(void) {
     bg_context *context = NULL;
@@ -339,6 +364,9 @@ void betelgeuze_sys_header_c11_typecheck(void) {
     bg_minimizer_options_v1 minimizer_options;
     bg_minimization_report_v1 minimization_report;
     bg_dynamics_report_v1 dynamics_report;
+    bg_docking_rmsd_cluster_input_v1 rmsd_cluster_input;
+    bg_docking_rmsd_cluster_row_v1 rmsd_cluster_row;
+    bg_docking_rmsd_cluster_output_v1 rmsd_cluster_output;
     bg_forcefield_soa_v1_init_fn forcefield_init = bg_forcefield_soa_v1_init;
     bg_force_soa_v1_init_fn forces_init = bg_force_soa_v1_init;
     bg_energy_components_v1_init_fn energy_init = bg_energy_components_v1_init;
@@ -350,6 +378,12 @@ void betelgeuze_sys_header_c11_typecheck(void) {
     bg_simulation_destroy_fn simulation_destroy = bg_simulation_destroy;
     bg_context_minimize_fn context_minimize = bg_context_minimize;
     bg_context_integrate_fn context_integrate = bg_context_integrate;
+    bg_docking_rmsd_cluster_input_v1_init_fn rmsd_cluster_input_init =
+        bg_docking_rmsd_cluster_input_v1_init;
+    bg_docking_rmsd_cluster_output_v1_init_fn rmsd_cluster_output_init =
+        bg_docking_rmsd_cluster_output_v1_init;
+    bg_docking_cluster_direct_rmsd_fixed64_fn rmsd_cluster =
+        bg_docking_stable_top_k_v1_cluster_direct_rmsd_fixed64;
     (void)context;
     (void)system;
     (void)forcefield;
@@ -366,6 +400,9 @@ void betelgeuze_sys_header_c11_typecheck(void) {
     (void)minimizer_options;
     (void)minimization_report;
     (void)dynamics_report;
+    (void)rmsd_cluster_input;
+    (void)rmsd_cluster_row;
+    (void)rmsd_cluster_output;
     (void)forcefield_init;
     (void)forces_init;
     (void)energy_init;
@@ -377,4 +414,7 @@ void betelgeuze_sys_header_c11_typecheck(void) {
     (void)simulation_destroy;
     (void)context_minimize;
     (void)context_integrate;
+    (void)rmsd_cluster_input_init;
+    (void)rmsd_cluster_output_init;
+    (void)rmsd_cluster;
 }

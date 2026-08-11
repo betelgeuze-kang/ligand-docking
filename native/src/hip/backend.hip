@@ -3583,9 +3583,12 @@ uint64_t live_allocation_count(const bg_context &context) noexcept {
     bg_hip_fast_docking_stable_top_k_v1_destroy
 #define BG_DOCKING_STABLE_TOP_K_RANK_FIXED64 \
     bg_hip_fast_docking_stable_top_k_v1_rank_fixed64
+#define BG_DOCKING_STABLE_TOP_K_CLUSTER_FIXED64 \
+    bg_hip_fast_docking_stable_top_k_v1_cluster_direct_rmsd_fixed64
 #define BG_DOCKING_STABLE_TOP_K_LANE "hip_fast"
 #include "docking_stable_top_k.hip"
 #undef BG_DOCKING_STABLE_TOP_K_LANE
+#undef BG_DOCKING_STABLE_TOP_K_CLUSTER_FIXED64
 #undef BG_DOCKING_STABLE_TOP_K_RANK_FIXED64
 #undef BG_DOCKING_STABLE_TOP_K_DESTROY
 #undef BG_DOCKING_STABLE_TOP_K_CREATE

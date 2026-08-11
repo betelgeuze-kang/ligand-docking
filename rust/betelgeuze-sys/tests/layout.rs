@@ -5,7 +5,7 @@ use betelgeuze_sys::*;
 #[test]
 fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(BG_ABI_VERSION_MAJOR, 1);
-    assert_eq!(BG_ABI_VERSION_MINOR, 7);
+    assert_eq!(BG_ABI_VERSION_MINOR, 8);
     assert_eq!(BG_ABI_VERSION, 1);
     assert_eq!(size_of::<bg_status>(), 4);
     assert_eq!(size_of::<bg_backend>(), 4);
@@ -17,9 +17,11 @@ fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(size_of::<bg_docking_pose_validity_candidate_state>(), 4);
     assert_eq!(size_of::<bg_docking_pose_validity_row_status>(), 4);
     assert_eq!(size_of::<bg_docking_pose_validity_failure>(), 4);
+    assert_eq!(size_of::<bg_docking_rmsd_cluster_row_status>(), 4);
     assert_eq!(BG_DOCKING_FIXED64_CANDIDATE_COUNT, 64);
     assert_eq!(BG_DOCKING_SCORER_V1_TERM_COUNT, 8);
     assert_eq!(BG_DOCKING_STABLE_TOP_K_LIMIT, 5);
+    assert_eq!(BG_DOCKING_RMSD_CLUSTER_TOP_K_LIMIT, 5);
     assert_eq!(BG_STATUS_OK, 0);
     assert_eq!(BG_STATUS_INTERNAL_ERROR, 9);
     assert_eq!(BG_STATUS_NUMERICAL_ERROR, 10);
@@ -37,6 +39,82 @@ fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(BG_PERIODIC_AXIS_Y, 2);
     assert_eq!(BG_PERIODIC_AXIS_Z, 4);
     assert_eq!(BG_PERIODIC_AXES_ALL, 7);
+}
+
+#[test]
+fn docking_rmsd_cluster_layouts_match_the_c_header() {
+    assert_eq!(size_of::<bg_docking_rmsd_cluster_input_v1>(), 120);
+    assert_eq!(align_of::<bg_docking_rmsd_cluster_input_v1>(), 8);
+    assert_eq!(
+        offset_of!(bg_docking_rmsd_cluster_input_v1, candidate_count),
+        8
+    );
+    assert_eq!(
+        offset_of!(bg_docking_rmsd_cluster_input_v1, ligand_atom_count),
+        16
+    );
+    assert_eq!(
+        offset_of!(bg_docking_rmsd_cluster_input_v1, valid_index_count),
+        24
+    );
+    assert_eq!(
+        offset_of!(bg_docking_rmsd_cluster_input_v1, rmsd_threshold_angstrom),
+        40
+    );
+    assert_eq!(
+        offset_of!(bg_docking_rmsd_cluster_input_v1, ranking_rows),
+        48
+    );
+    assert_eq!(offset_of!(bg_docking_rmsd_cluster_input_v1, reserved), 88);
+
+    assert_eq!(size_of::<bg_docking_rmsd_cluster_row_v1>(), 112);
+    assert_eq!(align_of::<bg_docking_rmsd_cluster_row_v1>(), 8);
+    assert_eq!(offset_of!(bg_docking_rmsd_cluster_row_v1, status), 4);
+    assert_eq!(
+        offset_of!(bg_docking_rmsd_cluster_row_v1, stable_valid_rank),
+        12
+    );
+    assert_eq!(offset_of!(bg_docking_rmsd_cluster_row_v1, cluster_size), 32);
+    assert_eq!(offset_of!(bg_docking_rmsd_cluster_row_v1, reserved1), 36);
+    assert_eq!(
+        offset_of!(
+            bg_docking_rmsd_cluster_row_v1,
+            direct_rmsd_to_representative_angstrom
+        ),
+        40
+    );
+    assert_eq!(
+        offset_of!(bg_docking_rmsd_cluster_row_v1, coordinate_sha256),
+        48
+    );
+    assert_eq!(offset_of!(bg_docking_rmsd_cluster_row_v1, reserved), 80);
+
+    assert_eq!(size_of::<bg_docking_rmsd_cluster_output_v1>(), 128);
+    assert_eq!(align_of::<bg_docking_rmsd_cluster_output_v1>(), 8);
+    assert_eq!(
+        offset_of!(
+            bg_docking_rmsd_cluster_output_v1,
+            representative_index_capacity
+        ),
+        24
+    );
+    assert_eq!(
+        offset_of!(bg_docking_rmsd_cluster_output_v1, top_k_index_capacity),
+        40
+    );
+    assert_eq!(
+        offset_of!(bg_docking_rmsd_cluster_output_v1, unit_system),
+        56
+    );
+    assert_eq!(offset_of!(bg_docking_rmsd_cluster_output_v1, rows), 64);
+    assert_eq!(
+        offset_of!(
+            bg_docking_rmsd_cluster_output_v1,
+            existing_rank_auto_change_authorized
+        ),
+        88
+    );
+    assert_eq!(offset_of!(bg_docking_rmsd_cluster_output_v1, reserved), 96);
 }
 
 #[test]

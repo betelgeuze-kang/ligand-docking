@@ -1182,9 +1182,12 @@ extern "C" int32_t bg_hip_safe_evaluate_v1(
     bg_hip_safe_docking_stable_top_k_v1_destroy
 #define BG_DOCKING_STABLE_TOP_K_RANK_FIXED64 \
     bg_hip_safe_docking_stable_top_k_v1_rank_fixed64
+#define BG_DOCKING_STABLE_TOP_K_CLUSTER_FIXED64 \
+    bg_hip_safe_docking_stable_top_k_v1_cluster_direct_rmsd_fixed64
 #define BG_DOCKING_STABLE_TOP_K_LANE "hip_safe"
 #include "docking_stable_top_k.hip"
 #undef BG_DOCKING_STABLE_TOP_K_LANE
+#undef BG_DOCKING_STABLE_TOP_K_CLUSTER_FIXED64
 #undef BG_DOCKING_STABLE_TOP_K_RANK_FIXED64
 #undef BG_DOCKING_STABLE_TOP_K_DESTROY
 #undef BG_DOCKING_STABLE_TOP_K_CREATE

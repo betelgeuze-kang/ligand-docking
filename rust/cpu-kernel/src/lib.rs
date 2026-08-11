@@ -12,9 +12,10 @@ use std::ffi::c_void;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use betelgeuze_docking_search::{
-    rank_native_fixed64_stable_top_k_kernel, NativeFixed64StableTopKInputRow,
-    NativeFixed64ValidityBackend, NativeFixed64ValidityChecks, NativeFixed64ValidityConfig,
-    NativeFixed64ValidityContext, NativeFixed64ValidityFailureCode,
+    cluster_native_fixed64_direct_rmsd_kernel, rank_native_fixed64_stable_top_k_kernel,
+    NativeFixed64RmsdClusterErrorCode, NativeFixed64RmsdClusterInputRow,
+    NativeFixed64StableTopKInputRow, NativeFixed64ValidityBackend, NativeFixed64ValidityChecks,
+    NativeFixed64ValidityConfig, NativeFixed64ValidityContext, NativeFixed64ValidityFailureCode,
     NativeFixed64ValidityKernelOutcome, NativeFixed64ValidityMeasurements,
     NativeFixed64ValidityRowStatus, NativeScorerV1Atom, NativeScorerV1Backend,
     NativeScorerV1Config, NativeScorerV1Context, NativeScorerV1Donor, NativeScorerV1FailureCode,
@@ -29,6 +30,7 @@ const STATUS_INVALID_ARGUMENT: i32 = 1;
 const STATUS_ABI_MISMATCH: i32 = 2;
 const STATUS_CAPACITY_OVERFLOW: i32 = 6;
 const STATUS_INTERNAL_ERROR: i32 = 9;
+const STATUS_NUMERICAL_ERROR: i32 = 10;
 const ERROR_CAPACITY: usize = 256;
 const UNIT_SYSTEM_ANGSTROM_KCAL_MOL: i32 = 1;
 const DOCKING_CANDIDATE_INACTIVE: i32 = 0;
@@ -65,6 +67,8 @@ const VALIDITY_CHECK_ELEMENT_LIGAND_VDW: u32 = 1 << 6;
 const VALIDITY_CHECK_ELEMENT_RECEPTOR_VDW: u32 = 1 << 7;
 const VALIDITY_CHECK_ALL: u32 = 0xff;
 const STABLE_TOP_K_LIMIT: u32 = NATIVE_FIXED64_TOP_K_LIMIT as u32;
+const RMSD_CLUSTER_ROW_CLUSTERED: i32 = 1;
+const RMSD_CLUSTER_ROW_UPSTREAM_NOT_VALID: i32 = 2;
 
 #[repr(C)]
 pub struct SystemV1 {
@@ -384,6 +388,45 @@ pub struct DockingStableTopKRowV1 {
 }
 
 struct StableTopKState;
+
+#[repr(C)]
+pub struct DockingRmsdClusterInputV1 {
+    struct_size: u32,
+    abi_version: u32,
+    candidate_count: u64,
+    ligand_atom_count: u64,
+    valid_index_count: u64,
+    top_k_limit: u32,
+    unit_system: i32,
+    rmsd_threshold_angstrom: f64,
+    ranking_rows: *const DockingStableTopKRowV1,
+    valid_slot_indices: *const u32,
+    x_angstrom: *const f64,
+    y_angstrom: *const f64,
+    z_angstrom: *const f64,
+    reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct DockingRmsdClusterRowV1 {
+    slot_index: u32,
+    status: i32,
+    cluster_eligible: u8,
+    representative: u8,
+    top_k_representative: u8,
+    reserved0: u8,
+    stable_valid_rank: u32,
+    cluster_id: u32,
+    representative_slot_index: u32,
+    cluster_rank: u32,
+    top_k_rank: u32,
+    cluster_size: u32,
+    reserved1: u32,
+    direct_rmsd_to_representative_angstrom: f64,
+    coordinate_sha256: [u8; 32],
+    reserved: [u64; 4],
+}
 
 #[derive(Clone, Copy)]
 struct ProviderError {
@@ -2153,6 +2196,211 @@ unsafe fn rank_stable_top_k_fixed64(
     })
 }
 
+struct RmsdClusterProviderOutput {
+    rows: [DockingRmsdClusterRowV1; FIXED64_CANDIDATE_COUNT],
+    representative_slot_indices: [u32; FIXED64_CANDIDATE_COUNT],
+    cluster_count: u64,
+    top_k_slot_indices: [u32; NATIVE_FIXED64_TOP_K_LIMIT],
+    top_k_count: u64,
+}
+
+unsafe fn cluster_direct_rmsd_fixed64(
+    input: &DockingRmsdClusterInputV1,
+) -> Result<RmsdClusterProviderOutput, ProviderError> {
+    validate_header::<DockingRmsdClusterInputV1>(
+        input.struct_size,
+        input.abi_version,
+        "rust_cpu RMSD cluster input size mismatch",
+    )?;
+    if input.candidate_count != FIXED64_CANDIDATE_COUNT as u64
+        || input.ligand_atom_count == 0
+        || input.ligand_atom_count > 512
+        || input.valid_index_count > FIXED64_CANDIDATE_COUNT as u64
+        || input.top_k_limit != STABLE_TOP_K_LIMIT
+        || input.unit_system != UNIT_SYSTEM_ANGSTROM_KCAL_MOL
+        || !input.rmsd_threshold_angstrom.is_finite()
+        || input.rmsd_threshold_angstrom <= 0.0
+        || !reserved_is_zero(&input.reserved)
+    {
+        return Err(ProviderError::invalid(
+            "rust_cpu RMSD cluster input identity is invalid",
+        ));
+    }
+    let atom_count = usize::try_from(input.ligand_atom_count).map_err(|_| {
+        ProviderError::invalid("rust_cpu RMSD cluster atom count does not fit usize")
+    })?;
+    let coordinate_count = FIXED64_CANDIDATE_COUNT
+        .checked_mul(atom_count)
+        .ok_or_else(|| ProviderError::invalid("rust_cpu RMSD coordinate count overflowed"))?;
+    let ranking_rows = unsafe {
+        checked_slice(
+            input.ranking_rows,
+            FIXED64_CANDIDATE_COUNT,
+            "rust_cpu RMSD ranking rows are null",
+        )?
+    };
+    let valid_count = usize::try_from(input.valid_index_count)
+        .map_err(|_| ProviderError::invalid("rust_cpu RMSD valid count does not fit usize"))?;
+    let valid_indices = unsafe {
+        checked_slice(
+            input.valid_slot_indices,
+            valid_count,
+            "rust_cpu RMSD valid index list is null",
+        )?
+    };
+    let x = unsafe {
+        checked_slice(
+            input.x_angstrom,
+            coordinate_count,
+            "rust_cpu RMSD x coordinates are null",
+        )?
+    };
+    let y = unsafe {
+        checked_slice(
+            input.y_angstrom,
+            coordinate_count,
+            "rust_cpu RMSD y coordinates are null",
+        )?
+    };
+    let z = unsafe {
+        checked_slice(
+            input.z_angstrom,
+            coordinate_count,
+            "rust_cpu RMSD z coordinates are null",
+        )?
+    };
+
+    let mut kernel_rows = Vec::with_capacity(FIXED64_CANDIDATE_COUNT);
+    let mut seen_valid = [false; FIXED64_CANDIDATE_COUNT];
+    for (offset, slot) in valid_indices.iter().copied().enumerate() {
+        let slot = usize::try_from(slot)
+            .map_err(|_| ProviderError::invalid("rust_cpu RMSD valid slot is invalid"))?;
+        if slot >= FIXED64_CANDIDATE_COUNT || seen_valid[slot] {
+            return Err(ProviderError::invalid(
+                "rust_cpu RMSD valid slot list is duplicated or out of range",
+            ));
+        }
+        seen_valid[slot] = true;
+        if ranking_rows[slot].stable_valid_rank != (offset + 1) as u32
+            || ranking_rows[slot].valid_rank_eligible != 1
+        {
+            return Err(ProviderError::invalid(
+                "rust_cpu RMSD valid slot list is cross-wired",
+            ));
+        }
+    }
+    for (slot, row) in ranking_rows.iter().copied().enumerate() {
+        if row.slot_index != slot as u32
+            || row.reserved0 != 0
+            || !reserved_is_zero(&row.reserved)
+            || row.rank_eligible > 1
+            || row.valid_rank_eligible > 1
+        {
+            return Err(ProviderError::invalid(
+                "rust_cpu RMSD ranking row identity is invalid",
+            ));
+        }
+        let eligible = seen_valid[slot];
+        if eligible {
+            if row.valid_rank_eligible != 1
+                || row.stable_valid_rank == 0
+                || digest_is_zero(&row.coordinate_sha256)
+            {
+                return Err(ProviderError::invalid(
+                    "rust_cpu RMSD eligible ranking evidence is invalid",
+                ));
+            }
+        } else if row.valid_rank_eligible != 0 || row.stable_valid_rank != 0 {
+            return Err(ProviderError::invalid(
+                "rust_cpu RMSD ineligible ranking evidence is invalid",
+            ));
+        }
+        kernel_rows.push(
+            NativeFixed64RmsdClusterInputRow::new(
+                slot,
+                eligible,
+                if eligible {
+                    row.stable_valid_rank as usize
+                } else {
+                    0
+                },
+                eligible.then_some(row.coordinate_sha256),
+            )
+            .map_err(|_| ProviderError::invalid("rust_cpu RMSD row binding is invalid"))?,
+        );
+    }
+    let kernel_rows: [NativeFixed64RmsdClusterInputRow; FIXED64_CANDIDATE_COUNT] =
+        kernel_rows.try_into().map_err(|_| ProviderError {
+            status: STATUS_INTERNAL_ERROR,
+            message: "rust_cpu RMSD denominator changed internally",
+        })?;
+    let coordinates = (0..coordinate_count)
+        .map(|index| Vec3::new(x[index], y[index], z[index]))
+        .collect::<Vec<_>>();
+    let clustered = cluster_native_fixed64_direct_rmsd_kernel(
+        &kernel_rows,
+        &coordinates,
+        atom_count,
+        input.rmsd_threshold_angstrom,
+    )
+    .map_err(|error| {
+        if error.code() == NativeFixed64RmsdClusterErrorCode::NonFiniteDerivedValue {
+            ProviderError {
+                status: STATUS_NUMERICAL_ERROR,
+                message: "rust_cpu RMSD cluster derived a non-finite distance",
+            }
+        } else {
+            ProviderError::invalid("rust_cpu RMSD kernel rejected input")
+        }
+    })?;
+    let rows = core::array::from_fn(|slot| {
+        let row = clustered.rows()[slot];
+        DockingRmsdClusterRowV1 {
+            slot_index: slot as u32,
+            status: if row.eligible() {
+                RMSD_CLUSTER_ROW_CLUSTERED
+            } else {
+                RMSD_CLUSTER_ROW_UPSTREAM_NOT_VALID
+            },
+            cluster_eligible: u8::from(row.eligible()),
+            representative: u8::from(row.representative()),
+            top_k_representative: u8::from(row.top_k_representative()),
+            reserved0: 0,
+            stable_valid_rank: row.stable_valid_rank() as u32,
+            cluster_id: row.cluster_id() as u32,
+            representative_slot_index: row.representative_slot_index() as u32,
+            cluster_rank: row.cluster_rank() as u32,
+            top_k_rank: row.top_k_rank() as u32,
+            cluster_size: row.cluster_size() as u32,
+            reserved1: 0,
+            direct_rmsd_to_representative_angstrom: row.direct_rmsd_to_representative_angstrom(),
+            coordinate_sha256: row.coordinate_sha256().unwrap_or([0; 32]),
+            reserved: [0; 4],
+        }
+    });
+    let mut representative_slot_indices = [0u32; FIXED64_CANDIDATE_COUNT];
+    for (destination, source) in representative_slot_indices
+        .iter_mut()
+        .zip(clustered.representative_slot_indices())
+    {
+        *destination = *source as u32;
+    }
+    let mut top_k_slot_indices = [0u32; NATIVE_FIXED64_TOP_K_LIMIT];
+    for (destination, source) in top_k_slot_indices
+        .iter_mut()
+        .zip(clustered.top_k_slot_indices())
+    {
+        *destination = *source as u32;
+    }
+    Ok(RmsdClusterProviderOutput {
+        rows,
+        representative_slot_indices,
+        cluster_count: clustered.cluster_count() as u64,
+        top_k_slot_indices,
+        top_k_count: clustered.top_k_slot_indices().len() as u64,
+    })
+}
+
 unsafe fn evaluate_impl(
     system: *const SystemV1,
     forcefield: *const ForceFieldV1,
@@ -2695,6 +2943,89 @@ pub unsafe extern "C" fn bg_rust_cpu_docking_stable_top_k_v1_rank_fixed64(
     }
 }
 
+/// Cluster the stable valid-only fixed64 ranking with direct binary64 RMSD.
+///
+/// # Safety
+/// The input graph and all output arrays/counts must be readable or writable,
+/// correctly aligned, and pairwise disjoint for the duration of this call.
+#[no_mangle]
+pub unsafe extern "C" fn bg_rust_cpu_docking_stable_top_k_v1_cluster_direct_rmsd_fixed64(
+    state: *const c_void,
+    input: *const DockingRmsdClusterInputV1,
+    out_rows: *mut DockingRmsdClusterRowV1,
+    out_representative_slot_indices: *mut u32,
+    out_cluster_count: *mut u64,
+    out_top_k_slot_indices: *mut u32,
+    out_top_k_count: *mut u64,
+    out_error: *mut ErrorV1,
+) -> i32 {
+    let error = unsafe {
+        match out_error.as_mut() {
+            Some(error) => error,
+            None => return STATUS_INVALID_ARGUMENT,
+        }
+    };
+    if validate_header::<ErrorV1>(
+        error.struct_size,
+        error.abi_version,
+        "rust_cpu error output size mismatch",
+    )
+    .is_err()
+        || !reserved_is_zero(&error.reserved)
+    {
+        return STATUS_ABI_MISMATCH;
+    }
+    clear_error(error);
+    if state.is_null()
+        || input.is_null()
+        || out_rows.is_null()
+        || out_representative_slot_indices.is_null()
+        || out_cluster_count.is_null()
+        || out_top_k_slot_indices.is_null()
+        || out_top_k_count.is_null()
+        || (out_rows as usize) % align_of::<DockingRmsdClusterRowV1>() != 0
+        || (out_representative_slot_indices as usize) % align_of::<u32>() != 0
+        || (out_cluster_count as usize) % align_of::<u64>() != 0
+        || (out_top_k_slot_indices as usize) % align_of::<u32>() != 0
+        || (out_top_k_count as usize) % align_of::<u64>() != 0
+    {
+        write_error(error, "rust_cpu RMSD cluster pointer is null or misaligned");
+        return STATUS_INVALID_ARGUMENT;
+    }
+    let input = unsafe { &*input };
+    let result = catch_unwind(AssertUnwindSafe(|| unsafe {
+        cluster_direct_rmsd_fixed64(input)
+    }));
+    match result {
+        Ok(Ok(output)) => {
+            unsafe {
+                ptr::copy_nonoverlapping(output.rows.as_ptr(), out_rows, FIXED64_CANDIDATE_COUNT);
+                ptr::copy_nonoverlapping(
+                    output.representative_slot_indices.as_ptr(),
+                    out_representative_slot_indices,
+                    FIXED64_CANDIDATE_COUNT,
+                );
+                ptr::copy_nonoverlapping(
+                    output.top_k_slot_indices.as_ptr(),
+                    out_top_k_slot_indices,
+                    NATIVE_FIXED64_TOP_K_LIMIT,
+                );
+                ptr::write(out_cluster_count, output.cluster_count);
+                ptr::write(out_top_k_count, output.top_k_count);
+            }
+            STATUS_OK
+        }
+        Ok(Err(provider_error)) => {
+            write_error(error, provider_error.message);
+            provider_error.status
+        }
+        Err(_) => {
+            write_error(error, "rust_cpu RMSD cluster batch panicked");
+            STATUS_INTERNAL_ERROR
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2811,6 +3142,8 @@ mod tests {
         assert_eq!(size_of::<DockingPoseValidityRowV1>(), 240);
         assert_eq!(size_of::<DockingStableTopKInputV1>(), 80);
         assert_eq!(size_of::<DockingStableTopKRowV1>(), 88);
+        assert_eq!(size_of::<DockingRmsdClusterInputV1>(), 120);
+        assert_eq!(size_of::<DockingRmsdClusterRowV1>(), 112);
     }
 
     #[test]

@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <limits>
 #include <type_traits>
 
 namespace {
@@ -97,6 +98,51 @@ struct RankingOutput final {
     uint8_t production_claim_authorized = UINT8_C(1);
 };
 
+struct ClusterFixture final {
+    static constexpr std::size_t kAtoms = 2;
+    std::array<double, kSlots * kAtoms> x{};
+    std::array<double, kSlots * kAtoms> y{};
+    std::array<double, kSlots * kAtoms> z{};
+
+    ClusterFixture() {
+        const auto set_pose = [&](std::size_t slot, double offset) {
+            x[slot * kAtoms] = offset;
+            x[slot * kAtoms + 1] = offset + 1.0;
+        };
+        set_pose(1, 0.0);
+        set_pose(2, 0.1);
+        set_pose(3, 4.0);
+        set_pose(0, 4.2);
+    }
+
+    bg_docking_rmsd_cluster_input_v1 input(
+        const RankingOutput &ranking) const {
+        bg_docking_rmsd_cluster_input_v1 value{};
+        assert(bg_docking_rmsd_cluster_input_v1_init(&value) == BG_STATUS_OK);
+        value.ligand_atom_count = kAtoms;
+        value.valid_index_count = ranking.valid_count;
+        value.rmsd_threshold_angstrom = 0.25;
+        value.ranking_rows = ranking.rows.data();
+        value.valid_slot_indices = ranking.valid.data();
+        value.x_angstrom = x.data();
+        value.y_angstrom = y.data();
+        value.z_angstrom = z.data();
+        return value;
+    }
+};
+
+struct ClusterOutput final {
+    std::array<bg_docking_rmsd_cluster_row_v1, kSlots> rows{};
+    std::array<uint32_t, kSlots> representatives{};
+    std::array<uint32_t, BG_DOCKING_RMSD_CLUSTER_TOP_K_LIMIT> top_k{};
+    uint64_t row_count = 0;
+    uint64_t cluster_count = 0;
+    uint64_t top_k_count = 0;
+    uint8_t existing_rank_auto_change_authorized = UINT8_C(1);
+    uint8_t customer_pose_emission_authorized = UINT8_C(1);
+    uint8_t production_claim_authorized = UINT8_C(1);
+};
+
 bg_context *create_context(bg_backend backend) {
     bg_context_options options{};
     assert(bg_context_options_init(&options) == BG_STATUS_OK);
@@ -168,6 +214,91 @@ void assert_output_equal(
     assert(
         left.production_claim_authorized ==
         right.production_claim_authorized);
+}
+
+ClusterOutput cluster(
+    bg_context *context,
+    bg_docking_stable_top_k_v1 *ranker,
+    const bg_docking_rmsd_cluster_input_v1 &input) {
+    ClusterOutput result{};
+    bg_docking_rmsd_cluster_output_v1 output{};
+    assert(bg_docking_rmsd_cluster_output_v1_init(&output) == BG_STATUS_OK);
+    output.row_capacity = kSlots;
+    output.representative_index_capacity = kSlots;
+    output.top_k_index_capacity = BG_DOCKING_RMSD_CLUSTER_TOP_K_LIMIT;
+    output.rows = result.rows.data();
+    output.representative_slot_indices = result.representatives.data();
+    output.top_k_slot_indices = result.top_k.data();
+    output.existing_rank_auto_change_authorized = UINT8_C(1);
+    output.customer_pose_emission_authorized = UINT8_C(1);
+    output.production_claim_authorized = UINT8_C(1);
+    assert(
+        bg_docking_stable_top_k_v1_cluster_direct_rmsd_fixed64(
+            context, ranker, &input, &output) == BG_STATUS_OK);
+    result.row_count = output.row_count;
+    result.cluster_count = output.representative_index_count;
+    result.top_k_count = output.top_k_index_count;
+    result.existing_rank_auto_change_authorized =
+        output.existing_rank_auto_change_authorized;
+    result.customer_pose_emission_authorized =
+        output.customer_pose_emission_authorized;
+    result.production_claim_authorized =
+        output.production_claim_authorized;
+    return result;
+}
+
+void assert_cluster_equal(
+    const ClusterOutput &left,
+    const ClusterOutput &right) {
+    assert(std::memcmp(left.rows.data(), right.rows.data(), sizeof(left.rows)) == 0);
+    assert(left.representatives == right.representatives);
+    assert(left.top_k == right.top_k);
+    assert(left.row_count == right.row_count);
+    assert(left.cluster_count == right.cluster_count);
+    assert(left.top_k_count == right.top_k_count);
+    assert(
+        left.existing_rank_auto_change_authorized ==
+        right.existing_rank_auto_change_authorized);
+    assert(
+        left.customer_pose_emission_authorized ==
+        right.customer_pose_emission_authorized);
+    assert(
+        left.production_claim_authorized ==
+        right.production_claim_authorized);
+}
+
+void assert_cluster_parity_with_tolerance(
+    const ClusterOutput &reference,
+    const ClusterOutput &observed,
+    double tolerance) {
+    for (std::size_t slot = 0; slot < kSlots; ++slot) {
+        const double reference_rmsd =
+            reference.rows[slot].direct_rmsd_to_representative_angstrom;
+        const double observed_rmsd =
+            observed.rows[slot].direct_rmsd_to_representative_angstrom;
+        const double scale = std::max(
+            {1.0, std::abs(reference_rmsd), std::abs(observed_rmsd)});
+        assert(std::abs(reference_rmsd - observed_rmsd) <= tolerance * scale);
+        auto reference_row = reference.rows[slot];
+        auto observed_row = observed.rows[slot];
+        reference_row.direct_rmsd_to_representative_angstrom = 0.0;
+        observed_row.direct_rmsd_to_representative_angstrom = 0.0;
+        assert(std::memcmp(&reference_row, &observed_row, sizeof(reference_row)) == 0);
+    }
+    assert(reference.representatives == observed.representatives);
+    assert(reference.top_k == observed.top_k);
+    assert(reference.row_count == observed.row_count);
+    assert(reference.cluster_count == observed.cluster_count);
+    assert(reference.top_k_count == observed.top_k_count);
+    assert(
+        reference.existing_rank_auto_change_authorized ==
+        observed.existing_rank_auto_change_authorized);
+    assert(
+        reference.customer_pose_emission_authorized ==
+        observed.customer_pose_emission_authorized);
+    assert(
+        reference.production_claim_authorized ==
+        observed.production_claim_authorized);
 }
 
 void test_cpu_parity_stable_order_and_authority_false() {
@@ -272,6 +403,145 @@ void test_invalid_binding_is_transactional_and_cross_wiring_fails() {
     bg_context_destroy(rust_context);
 }
 
+void test_direct_rmsd_cluster_cpu_parity_and_failure_preservation() {
+    const Fixture fixture;
+    const auto ranking_input = fixture.input();
+    bg_context *cpp_context = create_context(BG_BACKEND_CPP_CPU_REFERENCE);
+    bg_context *rust_context = create_context(BG_BACKEND_RUST_CPU);
+    bg_docking_stable_top_k_v1 *cpp_ranker = create_ranker(cpp_context);
+    bg_docking_stable_top_k_v1 *rust_ranker = create_ranker(rust_context);
+    const RankingOutput cpp_ranking = rank(cpp_context, cpp_ranker, ranking_input);
+    const RankingOutput rust_ranking = rank(rust_context, rust_ranker, ranking_input);
+    const ClusterFixture coordinates;
+    const auto cpp_input = coordinates.input(cpp_ranking);
+    const auto rust_input = coordinates.input(rust_ranking);
+    const ClusterOutput cpp = cluster(cpp_context, cpp_ranker, cpp_input);
+    const ClusterOutput rust = cluster(rust_context, rust_ranker, rust_input);
+    const ClusterOutput repeat = cluster(rust_context, rust_ranker, rust_input);
+    assert_cluster_equal(cpp, rust);
+    assert_cluster_equal(rust, repeat);
+    assert(cpp.row_count == kSlots);
+    assert(cpp.cluster_count == 2);
+    assert(cpp.top_k_count == 2);
+    assert(cpp.representatives[0] == 1);
+    assert(cpp.representatives[1] == 3);
+    assert(cpp.top_k[0] == 1);
+    assert(cpp.top_k[1] == 3);
+    assert(cpp.rows[1].representative == UINT8_C(1));
+    assert(cpp.rows[1].cluster_size == 2);
+    assert(cpp.rows[2].representative_slot_index == 1);
+    assert(cpp.rows[2].cluster_id == 1);
+    assert(cpp.rows[3].representative == UINT8_C(1));
+    assert(cpp.rows[0].representative_slot_index == 3);
+    assert(cpp.rows[4].status ==
+           BG_DOCKING_RMSD_CLUSTER_ROW_UPSTREAM_NOT_VALID);
+    assert(cpp.rows[4].cluster_eligible == UINT8_C(0));
+    assert(cpp.existing_rank_auto_change_authorized == UINT8_C(0));
+    assert(cpp.customer_pose_emission_authorized == UINT8_C(0));
+    assert(cpp.production_claim_authorized == UINT8_C(0));
+
+    bg_docking_stable_top_k_v1_destroy(cpp_ranker);
+    bg_docking_stable_top_k_v1_destroy(rust_ranker);
+    bg_context_destroy(cpp_context);
+    bg_context_destroy(rust_context);
+}
+
+void test_direct_rmsd_cluster_is_transactional() {
+    const Fixture fixture;
+    const auto ranking_input = fixture.input();
+    bg_context *context = create_context(BG_BACKEND_RUST_CPU);
+    bg_docking_stable_top_k_v1 *ranker = create_ranker(context);
+    const RankingOutput ranking = rank(context, ranker, ranking_input);
+    const ClusterFixture coordinates;
+    auto input = coordinates.input(ranking);
+    std::array<uint32_t, kSlots> cross_wired = ranking.valid;
+    std::swap(cross_wired[0], cross_wired[1]);
+    input.valid_slot_indices = cross_wired.data();
+
+    ClusterOutput result{};
+    std::memset(result.rows.data(), 0x5a, sizeof(result.rows));
+    result.representatives.fill(UINT32_C(0x5a5a5a5a));
+    result.top_k.fill(UINT32_C(0x6b6b6b6b));
+    const auto rows_before = result.rows;
+    const auto representatives_before = result.representatives;
+    const auto top_k_before = result.top_k;
+    bg_docking_rmsd_cluster_output_v1 output{};
+    assert(bg_docking_rmsd_cluster_output_v1_init(&output) == BG_STATUS_OK);
+    output.row_capacity = kSlots;
+    output.row_count = 17;
+    output.representative_index_capacity = kSlots;
+    output.representative_index_count = 19;
+    output.top_k_index_capacity = BG_DOCKING_RMSD_CLUSTER_TOP_K_LIMIT;
+    output.top_k_index_count = 23;
+    output.rows = result.rows.data();
+    output.representative_slot_indices = result.representatives.data();
+    output.top_k_slot_indices = result.top_k.data();
+    assert(
+        bg_docking_stable_top_k_v1_cluster_direct_rmsd_fixed64(
+            context, ranker, &input, &output) ==
+        BG_STATUS_INVALID_ARGUMENT);
+    assert(output.row_count == 17);
+    assert(output.representative_index_count == 19);
+    assert(output.top_k_index_count == 23);
+    assert(std::memcmp(result.rows.data(), rows_before.data(), sizeof(result.rows)) == 0);
+    assert(result.representatives == representatives_before);
+    assert(result.top_k == top_k_before);
+
+    bg_docking_stable_top_k_v1_destroy(ranker);
+    bg_context_destroy(context);
+}
+
+void test_direct_rmsd_overflow_fails_closed(bg_backend backend) {
+    uint8_t available = UINT8_C(0);
+    assert(bg_backend_is_available(backend, 0, &available) == BG_STATUS_OK);
+    if (available == UINT8_C(0)) {
+        return;
+    }
+    const Fixture fixture;
+    const auto ranking_input = fixture.input();
+    bg_context *context = create_context(backend);
+    bg_docking_stable_top_k_v1 *ranker = create_ranker(context);
+    const RankingOutput ranking = rank(context, ranker, ranking_input);
+    ClusterFixture coordinates;
+    coordinates.x[ClusterFixture::kAtoms] =
+        std::numeric_limits<double>::max();
+    coordinates.x[2 * ClusterFixture::kAtoms] =
+        -std::numeric_limits<double>::max();
+    const auto input = coordinates.input(ranking);
+
+    ClusterOutput result{};
+    std::memset(result.rows.data(), 0x5a, sizeof(result.rows));
+    result.representatives.fill(UINT32_C(0x5a5a5a5a));
+    result.top_k.fill(UINT32_C(0x6b6b6b6b));
+    const auto rows_before = result.rows;
+    const auto representatives_before = result.representatives;
+    const auto top_k_before = result.top_k;
+    bg_docking_rmsd_cluster_output_v1 output{};
+    assert(bg_docking_rmsd_cluster_output_v1_init(&output) == BG_STATUS_OK);
+    output.row_capacity = kSlots;
+    output.row_count = 17;
+    output.representative_index_capacity = kSlots;
+    output.representative_index_count = 19;
+    output.top_k_index_capacity = BG_DOCKING_RMSD_CLUSTER_TOP_K_LIMIT;
+    output.top_k_index_count = 23;
+    output.rows = result.rows.data();
+    output.representative_slot_indices = result.representatives.data();
+    output.top_k_slot_indices = result.top_k.data();
+    assert(
+        bg_docking_stable_top_k_v1_cluster_direct_rmsd_fixed64(
+            context, ranker, &input, &output) ==
+        BG_STATUS_NUMERICAL_ERROR);
+    assert(output.row_count == 17);
+    assert(output.representative_index_count == 19);
+    assert(output.top_k_index_count == 23);
+    assert(std::memcmp(result.rows.data(), rows_before.data(), sizeof(result.rows)) == 0);
+    assert(result.representatives == representatives_before);
+    assert(result.top_k == top_k_before);
+
+    bg_docking_stable_top_k_v1_destroy(ranker);
+    bg_context_destroy(context);
+}
+
 void test_hip_parity_when_device_is_available(bg_backend backend) {
     uint8_t available = UINT8_C(0);
     assert(bg_backend_is_available(backend, 0, &available) == BG_STATUS_OK);
@@ -289,6 +559,17 @@ void test_hip_parity_when_device_is_available(bg_backend backend) {
     const RankingOutput repeat = rank(hip_context, hip_ranker, input);
     assert_output_equal(rust, hip);
     assert_output_equal(hip, repeat);
+    const ClusterFixture coordinates;
+    const auto rust_cluster_input = coordinates.input(rust);
+    const auto hip_cluster_input = coordinates.input(hip);
+    const ClusterOutput rust_cluster =
+        cluster(rust_context, rust_ranker, rust_cluster_input);
+    const ClusterOutput hip_cluster =
+        cluster(hip_context, hip_ranker, hip_cluster_input);
+    const ClusterOutput hip_cluster_repeat =
+        cluster(hip_context, hip_ranker, hip_cluster_input);
+    assert_cluster_parity_with_tolerance(rust_cluster, hip_cluster, 1.0e-10);
+    assert_cluster_equal(hip_cluster, hip_cluster_repeat);
     bg_docking_stable_top_k_v1_destroy(rust_ranker);
     bg_docking_stable_top_k_v1_destroy(hip_ranker);
     bg_context_destroy(rust_context);
@@ -304,8 +585,20 @@ int main() {
         std::is_standard_layout_v<bg_docking_stable_top_k_row_v1>);
     static_assert(
         std::is_standard_layout_v<bg_docking_stable_top_k_output_v1>);
+    static_assert(
+        std::is_standard_layout_v<bg_docking_rmsd_cluster_input_v1>);
+    static_assert(
+        std::is_standard_layout_v<bg_docking_rmsd_cluster_row_v1>);
+    static_assert(
+        std::is_standard_layout_v<bg_docking_rmsd_cluster_output_v1>);
     test_cpu_parity_stable_order_and_authority_false();
     test_invalid_binding_is_transactional_and_cross_wiring_fails();
+    test_direct_rmsd_cluster_cpu_parity_and_failure_preservation();
+    test_direct_rmsd_cluster_is_transactional();
+    test_direct_rmsd_overflow_fails_closed(BG_BACKEND_CPP_CPU_REFERENCE);
+    test_direct_rmsd_overflow_fails_closed(BG_BACKEND_RUST_CPU);
+    test_direct_rmsd_overflow_fails_closed(BG_BACKEND_HIP_SAFE);
+    test_direct_rmsd_overflow_fails_closed(BG_BACKEND_HIP_FAST);
     test_hip_parity_when_device_is_available(BG_BACKEND_HIP_SAFE);
     test_hip_parity_when_device_is_available(BG_BACKEND_HIP_FAST);
     return 0;

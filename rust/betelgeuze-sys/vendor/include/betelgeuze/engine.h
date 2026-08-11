@@ -56,7 +56,7 @@ extern "C" {
 #endif
 
 #define BG_ABI_VERSION_MAJOR UINT32_C(1)
-#define BG_ABI_VERSION_MINOR UINT32_C(7)
+#define BG_ABI_VERSION_MINOR UINT32_C(8)
 #define BG_ABI_VERSION UINT32_C(1)
 
 #define BG_CANONICAL_LENGTH_UNIT "angstrom"
@@ -117,6 +117,7 @@ enum {
 #define BG_DOCKING_FIXED64_CANDIDATE_COUNT UINT32_C(64)
 #define BG_DOCKING_SCORER_V1_TERM_COUNT UINT32_C(8)
 #define BG_DOCKING_STABLE_TOP_K_LIMIT UINT32_C(5)
+#define BG_DOCKING_RMSD_CLUSTER_TOP_K_LIMIT UINT32_C(5)
 
 typedef int32_t bg_docking_scorer_v1_candidate_state;
 enum {
@@ -180,6 +181,12 @@ enum {
     BG_DOCKING_POSE_VALIDITY_CHECK_ELEMENT_LIGAND_VDW = UINT32_C(1) << 6,
     BG_DOCKING_POSE_VALIDITY_CHECK_ELEMENT_RECEPTOR_VDW = UINT32_C(1) << 7,
     BG_DOCKING_POSE_VALIDITY_CHECK_ALL = UINT32_C(0xff)
+};
+
+typedef int32_t bg_docking_rmsd_cluster_row_status;
+enum {
+    BG_DOCKING_RMSD_CLUSTER_ROW_CLUSTERED = 1,
+    BG_DOCKING_RMSD_CLUSTER_ROW_UPSTREAM_NOT_VALID = 2
 };
 
 /* Incomplete declarations are the only public handle representation. */
@@ -817,6 +824,77 @@ typedef struct bg_docking_stable_top_k_output_v1 {
     uint64_t reserved[4];
 } bg_docking_stable_top_k_output_v1;
 
+/*
+ * Candidate-major direct-coordinate RMSD clustering input. The stable Top-K
+ * rows and valid index list must be the complete, mutually consistent output
+ * of bg_docking_stable_top_k_v1_rank_fixed64. Coordinates use three separate
+ * arrays of exactly 64 * ligand_atom_count values. Only valid-ranked slots are
+ * interpreted. Traversal is stable-valid-rank order; the first representative
+ * within the inclusive threshold wins. No alignment or symmetry permutation
+ * is performed by this v1 kernel.
+ */
+typedef struct bg_docking_rmsd_cluster_input_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    uint64_t candidate_count;
+    uint64_t ligand_atom_count;
+    uint64_t valid_index_count;
+    uint32_t top_k_limit;
+    bg_unit_system unit_system;
+    double rmsd_threshold_angstrom;
+    const bg_docking_stable_top_k_row_v1 *ranking_rows;
+    const uint32_t *valid_slot_indices;
+    const double *x_angstrom;
+    const double *y_angstrom;
+    const double *z_angstrom;
+    uint64_t reserved[4];
+} bg_docking_rmsd_cluster_input_v1;
+
+/* Zero is the not-clustered sentinel for every rank/id/count field. Upstream
+ * rows retain the fixed64 denominator and no coordinate or RMSD evidence. */
+typedef struct bg_docking_rmsd_cluster_row_v1 {
+    uint32_t slot_index;
+    bg_docking_rmsd_cluster_row_status status;
+    uint8_t cluster_eligible;
+    uint8_t representative;
+    uint8_t top_k_representative;
+    uint8_t reserved0;
+    uint32_t stable_valid_rank;
+    uint32_t cluster_id;
+    uint32_t representative_slot_index;
+    uint32_t cluster_rank;
+    uint32_t top_k_rank;
+    uint32_t cluster_size;
+    uint32_t reserved1;
+    double direct_rmsd_to_representative_angstrom;
+    uint8_t coordinate_sha256[32];
+    uint64_t reserved[4];
+} bg_docking_rmsd_cluster_row_v1;
+
+/* Caller-owned transactional output. Representative capacity must be 64 and
+ * Top-K capacity must be 5. All authority flags are always committed false. */
+typedef struct bg_docking_rmsd_cluster_output_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    uint64_t row_capacity;
+    uint64_t row_count;
+    uint64_t representative_index_capacity;
+    uint64_t representative_index_count;
+    uint64_t top_k_index_capacity;
+    uint64_t top_k_index_count;
+    bg_unit_system unit_system;
+    uint32_t reserved0;
+    bg_docking_rmsd_cluster_row_v1 *rows;
+    uint32_t *representative_slot_indices;
+    uint32_t *top_k_slot_indices;
+    uint8_t existing_rank_auto_change_authorized;
+    uint8_t customer_pose_emission_authorized;
+    uint8_t production_claim_authorized;
+    uint8_t reserved1;
+    uint32_t reserved2;
+    uint64_t reserved[4];
+} bg_docking_rmsd_cluster_output_v1;
+
 /* ABI and diagnostics. */
 BG_API uint32_t BG_CALL bg_abi_version(void) BG_NOEXCEPT;
 BG_API uint32_t BG_CALL bg_abi_version_major(void) BG_NOEXCEPT;
@@ -929,6 +1007,14 @@ BG_API bg_status BG_CALL bg_docking_stable_top_k_output_v1_init(
     bg_docking_stable_top_k_output_v1 *output,
     size_t caller_struct_size,
     uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_rmsd_cluster_input_v1_init(
+    bg_docking_rmsd_cluster_input_v1 *input,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_rmsd_cluster_output_v1_init(
+    bg_docking_rmsd_cluster_output_v1 *output,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
 
 #if !defined(BG_DISABLE_DESCRIPTOR_INIT_CONVENIENCE_MACROS)
 #  define bg_context_options_init(options) \
@@ -1007,6 +1093,12 @@ BG_API bg_status BG_CALL bg_docking_stable_top_k_output_v1_init(
 #  define bg_docking_stable_top_k_output_v1_init(output) \
     bg_docking_stable_top_k_output_v1_init( \
         (output), sizeof(bg_docking_stable_top_k_output_v1), BG_ABI_VERSION)
+#  define bg_docking_rmsd_cluster_input_v1_init(input) \
+    bg_docking_rmsd_cluster_input_v1_init( \
+        (input), sizeof(bg_docking_rmsd_cluster_input_v1), BG_ABI_VERSION)
+#  define bg_docking_rmsd_cluster_output_v1_init(output) \
+    bg_docking_rmsd_cluster_output_v1_init( \
+        (output), sizeof(bg_docking_rmsd_cluster_output_v1), BG_ABI_VERSION)
 #endif
 
 /*
@@ -1099,6 +1191,13 @@ BG_API bg_status BG_CALL bg_docking_stable_top_k_v1_rank_fixed64(
     const bg_docking_stable_top_k_v1 *ranker,
     const bg_docking_stable_top_k_input_v1 *input,
     bg_docking_stable_top_k_output_v1 *output) BG_NOEXCEPT;
+/* Direct RMSD clustering reuses the explicitly bound stable Top-K provider.
+ * It preserves all 64 slots and never changes product rank or emits poses. */
+BG_API bg_status BG_CALL bg_docking_stable_top_k_v1_cluster_direct_rmsd_fixed64(
+    const bg_context *context,
+    const bg_docking_stable_top_k_v1 *ranker,
+    const bg_docking_rmsd_cluster_input_v1 *input,
+    bg_docking_rmsd_cluster_output_v1 *output) BG_NOEXCEPT;
 
 /* A system owns its host SoA and has no parent-handle lifetime dependency. */
 BG_API bg_status BG_CALL bg_system_create(

@@ -9,6 +9,7 @@ mod anchors;
 mod cluster;
 mod error;
 mod fixed64;
+mod fixed64_cluster;
 mod fixed64_pipeline;
 mod fixed64_placement;
 mod fixed64_producer;
@@ -41,6 +42,12 @@ pub use fixed64::{
     Fixed64Slot, Fixed64SourceEvidence, FIXED64_CANDIDATE_COUNT, FIXED64_LANE_RANGES,
     FIXED64_PROFILE_ID, NATIVE_FIXED64_ALLOCATION_SCHEMA_ID, NATIVE_FIXED64_SLOT_SCHEMA_ID,
     RETAINED_SOURCE_INDICES, TRUE_CONFORMER_SLOT_RANKS,
+};
+pub use fixed64_cluster::{
+    cluster_native_fixed64_direct_rmsd_kernel, NativeFixed64RmsdClusterError,
+    NativeFixed64RmsdClusterErrorCode, NativeFixed64RmsdClusterInputRow,
+    NativeFixed64RmsdClusterKernelOutcome, NativeFixed64RmsdClusterRow,
+    NATIVE_FIXED64_DIRECT_RMSD_CLUSTER_ALGORITHM_ID,
 };
 pub use fixed64_pipeline::{
     run_native_fixed64_pipeline, NativeFixed64AuthorityBlocker, NativeFixed64Consumer,

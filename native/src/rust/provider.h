@@ -169,6 +169,16 @@ int32_t bg_rust_cpu_docking_stable_top_k_v1_rank_fixed64(
     uint64_t *out_valid_count,
     bg_rust_cpu_error_v1 *out_error);
 
+int32_t bg_rust_cpu_docking_stable_top_k_v1_cluster_direct_rmsd_fixed64(
+    const void *state,
+    const bg_docking_rmsd_cluster_input_v1 *input,
+    bg_docking_rmsd_cluster_row_v1 *out_rows,
+    uint32_t *out_representative_slot_indices,
+    uint64_t *out_cluster_count,
+    uint32_t *out_top_k_slot_indices,
+    uint64_t *out_top_k_count,
+    bg_rust_cpu_error_v1 *out_error);
+
 #if defined(__cplusplus)
 }
 #endif
