@@ -6,6 +6,15 @@ is candidate-major float64 SoA with exactly 64 slots. Inactive upstream rows are
 not deleted; they return `UPSTREAM_NOT_ADMITTED`, so denominator and failure
 accounting remain intact.
 
+ABI 1.6 adds the matching persistent pose-validity handle. Its fixed64 input
+binds each evaluated coordinate row to explicit `(x,y,z,w)` rotation evidence
+and retains exact upstream ScorerV1 failure codes for inactive rows. The
+output preserves all eight frozen checks and all 22 measurements; capacity or
+non-finite failures stay candidate-local and transactional. The qualification
+C++ implementation and product Rust CPU implementation are independent but
+share the public numerical contract. HIP lanes remain fail-closed until their
+dedicated device validity providers pass parity.
+
 The term order is:
 
 1. typed van der Waals

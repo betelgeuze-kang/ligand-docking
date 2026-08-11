@@ -16,6 +16,7 @@ const VENDORED_FILES: &[&str] = &[
     "native/src/rust/provider.h",
     "native/src/rust/evaluator.hpp",
     "native/src/rust/evaluator.cpp",
+    "native/src/docking/pose_validity.cpp",
     "native/src/docking/scorer_v1.cpp",
     "native/src/dynamics/dynamics.hpp",
     "native/src/dynamics/api.cpp",
@@ -245,6 +246,7 @@ fn main() {
     let cpu_evaluator_source = vendor_root.join("native/src/cpu/evaluator.cpp");
     let rust_evaluator_source = vendor_root.join("native/src/rust/evaluator.cpp");
     let docking_scorer_source = vendor_root.join("native/src/docking/scorer_v1.cpp");
+    let docking_pose_validity_source = vendor_root.join("native/src/docking/pose_validity.cpp");
     let dynamics_api_source = vendor_root.join("native/src/dynamics/api.cpp");
     let dynamics_checkpoint_source = vendor_root.join("native/src/dynamics/checkpoint.cpp");
     let dynamics_common_source = vendor_root.join("native/src/dynamics/common.cpp");
@@ -276,6 +278,7 @@ fn main() {
         )
         .file(&hip_evaluator_source)
         .file(&rust_evaluator_source)
+        .file(&docking_pose_validity_source)
         .file(&docking_scorer_source)
         .file(&dynamics_api_source)
         .file(&dynamics_checkpoint_source)

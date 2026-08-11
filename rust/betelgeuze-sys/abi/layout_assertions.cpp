@@ -27,12 +27,19 @@ static_assert(
     std::is_standard_layout<bg_docking_scorer_v1_candidate_batch_soa_v1>::value);
 static_assert(std::is_standard_layout<bg_docking_scorer_v1_row_v1>::value);
 static_assert(std::is_standard_layout<bg_docking_scorer_v1_output_v1>::value);
+static_assert(
+    std::is_standard_layout<bg_docking_pose_validity_context_soa_v1>::value);
+static_assert(std::is_standard_layout<
+              bg_docking_pose_validity_candidate_batch_soa_v1>::value);
+static_assert(std::is_standard_layout<bg_docking_pose_validity_row_v1>::value);
+static_assert(std::is_standard_layout<bg_docking_pose_validity_output_v1>::value);
 
 static_assert(!is_complete<bg_context>::value);
 static_assert(!is_complete<bg_system>::value);
 static_assert(!is_complete<bg_forcefield>::value);
 static_assert(!is_complete<bg_simulation>::value);
 static_assert(!is_complete<bg_docking_scorer_v1>::value);
+static_assert(!is_complete<bg_docking_pose_validity_v1>::value);
 
 static_assert(sizeof(bg_context_options) == 64);
 static_assert(alignof(bg_context_options) == alignof(uint64_t));
@@ -76,6 +83,49 @@ static_assert(offsetof(bg_docking_scorer_v1_row_v1, reserved) == 128);
 static_assert(sizeof(bg_docking_scorer_v1_output_v1) == 72);
 static_assert(offsetof(bg_docking_scorer_v1_output_v1, rows) == 32);
 static_assert(offsetof(bg_docking_scorer_v1_output_v1, reserved) == 40);
+
+static_assert(sizeof(bg_docking_pose_validity_context_soa_v1) == 560);
+static_assert(alignof(bg_docking_pose_validity_context_soa_v1) == 8);
+static_assert(
+    offsetof(bg_docking_pose_validity_context_soa_v1, receptor_atom_count) == 16);
+static_assert(
+    offsetof(bg_docking_pose_validity_context_soa_v1, bond_count) == 96);
+static_assert(
+    offsetof(bg_docking_pose_validity_context_soa_v1, pocket_center_angstrom) == 184);
+static_assert(
+    offsetof(bg_docking_pose_validity_context_soa_v1, max_pair_checks) == 272);
+static_assert(offsetof(
+                  bg_docking_pose_validity_context_soa_v1,
+                  authority_input_receipt_sha256) == 304);
+static_assert(
+    offsetof(bg_docking_pose_validity_context_soa_v1, reserved) == 496);
+static_assert(sizeof(bg_docking_pose_validity_candidate_batch_soa_v1) == 136);
+static_assert(offsetof(
+                  bg_docking_pose_validity_candidate_batch_soa_v1,
+                  candidate_state) == 32);
+static_assert(offsetof(
+                  bg_docking_pose_validity_candidate_batch_soa_v1,
+                  quaternion_x) == 48);
+static_assert(offsetof(
+                  bg_docking_pose_validity_candidate_batch_soa_v1,
+                  x_angstrom) == 80);
+static_assert(offsetof(
+                  bg_docking_pose_validity_candidate_batch_soa_v1,
+                  reserved) == 104);
+static_assert(sizeof(bg_docking_pose_validity_row_v1) == 240);
+static_assert(
+    offsetof(bg_docking_pose_validity_row_v1, passed_check_mask) == 16);
+static_assert(
+    offsetof(bg_docking_pose_validity_row_v1, observed_count) == 24);
+static_assert(offsetof(bg_docking_pose_validity_row_v1, atom_count) == 32);
+static_assert(offsetof(
+                  bg_docking_pose_validity_row_v1,
+                  rotation_orthogonality_max_error) == 40);
+static_assert(
+    offsetof(bg_docking_pose_validity_row_v1, reserved) == 208);
+static_assert(sizeof(bg_docking_pose_validity_output_v1) == 72);
+static_assert(offsetof(bg_docking_pose_validity_output_v1, rows) == 32);
+static_assert(offsetof(bg_docking_pose_validity_output_v1, reserved) == 40);
 
 static_assert(sizeof(bg_particle_soa) == 120);
 static_assert(alignof(bg_particle_soa) == 8);

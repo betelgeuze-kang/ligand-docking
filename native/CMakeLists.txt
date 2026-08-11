@@ -12,6 +12,7 @@ add_library(betelgeuze_engine SHARED
     src/cpu/evaluator.cpp
     src/hip/evaluator.cpp
     src/rust/evaluator.cpp
+    src/docking/pose_validity.cpp
     src/docking/scorer_v1.cpp
     src/dynamics/api.cpp
     src/dynamics/checkpoint.cpp
@@ -436,6 +437,43 @@ if(BUILD_TESTING)
     add_test(
         NAME betelgeuze_engine_docking_scorer_v1
         COMMAND betelgeuze_engine_docking_scorer_v1
+    )
+
+    add_executable(
+        betelgeuze_engine_docking_pose_validity
+        tests/docking_pose_validity.cpp
+    )
+    target_link_libraries(
+        betelgeuze_engine_docking_pose_validity
+        PRIVATE betelgeuze_engine
+    )
+    target_compile_features(
+        betelgeuze_engine_docking_pose_validity
+        PRIVATE cxx_std_17
+    )
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(
+            betelgeuze_engine_docking_pose_validity
+            PRIVATE
+                -Wall
+                -Wextra
+                -Wpedantic
+                -Wconversion
+                -Wsign-conversion
+                -Werror
+                -UNDEBUG
+                -ffp-contract=off
+                -fno-fast-math
+        )
+    elseif(MSVC)
+        target_compile_options(
+            betelgeuze_engine_docking_pose_validity
+            PRIVATE /W4 /WX /UNDEBUG /fp:strict
+        )
+    endif()
+    add_test(
+        NAME betelgeuze_engine_docking_pose_validity
+        COMMAND betelgeuze_engine_docking_pose_validity
     )
 
     add_executable(

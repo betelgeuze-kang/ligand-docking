@@ -5,7 +5,7 @@ use betelgeuze_sys::*;
 #[test]
 fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(BG_ABI_VERSION_MAJOR, 1);
-    assert_eq!(BG_ABI_VERSION_MINOR, 5);
+    assert_eq!(BG_ABI_VERSION_MINOR, 6);
     assert_eq!(BG_ABI_VERSION, 1);
     assert_eq!(size_of::<bg_status>(), 4);
     assert_eq!(size_of::<bg_backend>(), 4);
@@ -14,6 +14,9 @@ fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(size_of::<bg_docking_scorer_v1_candidate_state>(), 4);
     assert_eq!(size_of::<bg_docking_scorer_v1_row_status>(), 4);
     assert_eq!(size_of::<bg_docking_scorer_v1_failure>(), 4);
+    assert_eq!(size_of::<bg_docking_pose_validity_candidate_state>(), 4);
+    assert_eq!(size_of::<bg_docking_pose_validity_row_status>(), 4);
+    assert_eq!(size_of::<bg_docking_pose_validity_failure>(), 4);
     assert_eq!(BG_DOCKING_FIXED64_CANDIDATE_COUNT, 64);
     assert_eq!(BG_DOCKING_SCORER_V1_TERM_COUNT, 8);
     assert_eq!(BG_STATUS_OK, 0);
@@ -33,6 +36,89 @@ fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(BG_PERIODIC_AXIS_Y, 2);
     assert_eq!(BG_PERIODIC_AXIS_Z, 4);
     assert_eq!(BG_PERIODIC_AXES_ALL, 7);
+}
+
+#[test]
+fn docking_pose_validity_layouts_match_the_c_header() {
+    assert_eq!(size_of::<bg_docking_pose_validity_context_soa_v1>(), 560);
+    assert_eq!(align_of::<bg_docking_pose_validity_context_soa_v1>(), 8);
+    assert_eq!(
+        offset_of!(bg_docking_pose_validity_context_soa_v1, receptor_atom_count),
+        16
+    );
+    assert_eq!(
+        offset_of!(bg_docking_pose_validity_context_soa_v1, bond_count),
+        96
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_pose_validity_context_soa_v1,
+            pocket_center_angstrom
+        ),
+        184
+    );
+    assert_eq!(
+        offset_of!(bg_docking_pose_validity_context_soa_v1, max_pair_checks),
+        272
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_pose_validity_context_soa_v1,
+            authority_input_receipt_sha256
+        ),
+        304
+    );
+    assert_eq!(
+        offset_of!(bg_docking_pose_validity_context_soa_v1, reserved),
+        496
+    );
+    assert_eq!(
+        size_of::<bg_docking_pose_validity_candidate_batch_soa_v1>(),
+        136
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_pose_validity_candidate_batch_soa_v1,
+            candidate_state
+        ),
+        32
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_pose_validity_candidate_batch_soa_v1,
+            quaternion_x
+        ),
+        48
+    );
+    assert_eq!(
+        offset_of!(bg_docking_pose_validity_candidate_batch_soa_v1, x_angstrom),
+        80
+    );
+    assert_eq!(
+        offset_of!(bg_docking_pose_validity_candidate_batch_soa_v1, reserved),
+        104
+    );
+    assert_eq!(size_of::<bg_docking_pose_validity_row_v1>(), 240);
+    assert_eq!(
+        offset_of!(bg_docking_pose_validity_row_v1, passed_check_mask),
+        16
+    );
+    assert_eq!(
+        offset_of!(bg_docking_pose_validity_row_v1, observed_count),
+        24
+    );
+    assert_eq!(offset_of!(bg_docking_pose_validity_row_v1, atom_count), 32);
+    assert_eq!(
+        offset_of!(
+            bg_docking_pose_validity_row_v1,
+            rotation_orthogonality_max_error
+        ),
+        40
+    );
+    assert_eq!(offset_of!(bg_docking_pose_validity_row_v1, reserved), 208);
+    assert_eq!(size_of::<bg_docking_pose_validity_output_v1>(), 72);
+    assert_eq!(offset_of!(bg_docking_pose_validity_output_v1, rows), 32);
+    assert_eq!(offset_of!(bg_docking_pose_validity_output_v1, reserved), 40);
 }
 
 #[test]

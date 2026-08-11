@@ -68,3 +68,14 @@ BETELGEUZE_ENGINE_1.5 {
         bg_docking_scorer_v1_get_backend;
         bg_docking_scorer_v1_score_fixed64;
 } BETELGEUZE_ENGINE_1.3;
+
+BETELGEUZE_ENGINE_1.6 {
+    global:
+        bg_docking_pose_validity_context_soa_v1_init;
+        bg_docking_pose_validity_candidate_batch_soa_v1_init;
+        bg_docking_pose_validity_output_v1_init;
+        bg_docking_pose_validity_v1_create;
+        bg_docking_pose_validity_v1_destroy;
+        bg_docking_pose_validity_v1_get_backend;
+        bg_docking_pose_validity_v1_evaluate_fixed64;
+} BETELGEUZE_ENGINE_1.5;

@@ -18,3 +18,8 @@ returns all eight weighted terms, total score, pair/contact counts, and typed
 candidate-local failures transactionally. The implementation calls the same
 Rust ScorerV1 kernel used by the higher-level native receipt core rather than a
 second scoring formula.
+
+ABI 1.6 also routes fixed64 pose validity through a persistent Rust context.
+The private provider calls the reusable canonical Rust validity kernel and
+returns the complete check mask, blocker mask, 22 measurements, and typed
+failure evidence without dropping any slot or relabeling another backend.

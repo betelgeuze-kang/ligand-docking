@@ -266,45 +266,42 @@ pub struct NativeFixed64ValidityContext {
 
 impl NativeFixed64ValidityContext {
     #[allow(clippy::too_many_arguments)]
-    pub fn from_scorer_context(
-        scorer_context: &NativeScorerV1Context,
+    pub fn new(
+        authority_input_receipt_sha256: [u8; 32],
+        receptor_system_sha256: [u8; 32],
+        ligand_system_sha256: [u8; 32],
+        scorer_context_receipt_sha256: [u8; 32],
         backend: NativeFixed64ValidityBackend,
         backend_receipt_sha256: [u8; 32],
         contact_policy_sha256: [u8; 32],
+        reference_coordinates_angstrom: Vec<Vec3>,
+        receptor_coordinates_angstrom: Vec<Vec3>,
+        ligand_vdw_radii_angstrom: Vec<f64>,
+        receptor_vdw_radii_angstrom: Vec<f64>,
         bond_pairs: Vec<[usize; 2]>,
+        excluded_nonbonded_pairs: Vec<[usize; 2]>,
         chirality_centers: Vec<[usize; 4]>,
+        pocket_center_angstrom: Vec3,
+        pocket_radius_angstrom: f64,
         config: NativeFixed64ValidityConfig,
     ) -> Result<Self, NativeFixed64ValidityError> {
-        if !scorer_context.has_valid_receipt() {
-            return Err(context_error("ScorerV1 context receipt is invalid"));
-        }
         let mut value = Self {
-            authority_input_receipt_sha256: scorer_context.authority_input_receipt_sha256(),
-            receptor_system_sha256: scorer_context.receptor_system_sha256(),
-            ligand_system_sha256: scorer_context.ligand_system_sha256(),
-            scorer_context_receipt_sha256: scorer_context.receipt_sha256(),
+            authority_input_receipt_sha256,
+            receptor_system_sha256,
+            ligand_system_sha256,
+            scorer_context_receipt_sha256,
             backend,
             backend_receipt_sha256,
             contact_policy_sha256,
-            reference_coordinates_angstrom: scorer_context
-                .ligand_reference_coordinates_angstrom()
-                .to_vec(),
-            receptor_coordinates_angstrom: scorer_context.receptor_coordinates_angstrom().to_vec(),
-            ligand_vdw_radii_angstrom: scorer_context
-                .ligand_atoms()
-                .iter()
-                .map(|atom| atom.vdw_radius_angstrom)
-                .collect(),
-            receptor_vdw_radii_angstrom: scorer_context
-                .receptor_atoms()
-                .iter()
-                .map(|atom| atom.vdw_radius_angstrom)
-                .collect(),
+            reference_coordinates_angstrom,
+            receptor_coordinates_angstrom,
+            ligand_vdw_radii_angstrom,
+            receptor_vdw_radii_angstrom,
             bond_pairs,
-            excluded_nonbonded_pairs: scorer_context.ligand_exclusions().to_vec(),
+            excluded_nonbonded_pairs,
             chirality_centers,
-            pocket_center_angstrom: scorer_context.pocket_center_angstrom(),
-            pocket_radius_angstrom: scorer_context.pocket_radius_angstrom(),
+            pocket_center_angstrom,
+            pocket_radius_angstrom,
             config,
             receptor_cells: BTreeMap::new(),
             exclusion_set: BTreeSet::new(),
@@ -319,6 +316,50 @@ impl NativeFixed64ValidityContext {
             .collect();
         value.receipt_sha256 = context_sha256(&value);
         Ok(value)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn from_scorer_context(
+        scorer_context: &NativeScorerV1Context,
+        backend: NativeFixed64ValidityBackend,
+        backend_receipt_sha256: [u8; 32],
+        contact_policy_sha256: [u8; 32],
+        bond_pairs: Vec<[usize; 2]>,
+        chirality_centers: Vec<[usize; 4]>,
+        config: NativeFixed64ValidityConfig,
+    ) -> Result<Self, NativeFixed64ValidityError> {
+        if !scorer_context.has_valid_receipt() {
+            return Err(context_error("ScorerV1 context receipt is invalid"));
+        }
+        Self::new(
+            scorer_context.authority_input_receipt_sha256(),
+            scorer_context.receptor_system_sha256(),
+            scorer_context.ligand_system_sha256(),
+            scorer_context.receipt_sha256(),
+            backend,
+            backend_receipt_sha256,
+            contact_policy_sha256,
+            scorer_context
+                .ligand_reference_coordinates_angstrom()
+                .to_vec(),
+            scorer_context.receptor_coordinates_angstrom().to_vec(),
+            scorer_context
+                .ligand_atoms()
+                .iter()
+                .map(|atom| atom.vdw_radius_angstrom)
+                .collect(),
+            scorer_context
+                .receptor_atoms()
+                .iter()
+                .map(|atom| atom.vdw_radius_angstrom)
+                .collect(),
+            bond_pairs,
+            scorer_context.ligand_exclusions().to_vec(),
+            chirality_centers,
+            scorer_context.pocket_center_angstrom(),
+            scorer_context.pocket_radius_angstrom(),
+            config,
+        )
     }
 
     #[must_use]

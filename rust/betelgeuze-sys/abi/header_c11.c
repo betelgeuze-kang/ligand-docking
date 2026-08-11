@@ -5,7 +5,7 @@
 
 _Static_assert(BG_ABI_VERSION == UINT32_C(1), "unexpected ABI version");
 _Static_assert(BG_ABI_VERSION_MAJOR == UINT32_C(1), "unexpected ABI major version");
-_Static_assert(BG_ABI_VERSION_MINOR == UINT32_C(5), "unexpected ABI minor version");
+_Static_assert(BG_ABI_VERSION_MINOR == UINT32_C(6), "unexpected ABI minor version");
 _Static_assert(BG_STATUS_OK == 0, "unexpected success status");
 _Static_assert(BG_STATUS_NUMERICAL_ERROR == 10, "unexpected numerical status");
 _Static_assert(BG_BACKEND_CPU == 1, "unexpected CPU backend value");
@@ -32,6 +32,15 @@ _Static_assert(
 _Static_assert(
     sizeof(bg_docking_scorer_v1_failure) == sizeof(int32_t),
     "ScorerV1 failure width changed");
+_Static_assert(
+    sizeof(bg_docking_pose_validity_candidate_state) == sizeof(int32_t),
+    "pose-validity candidate state width changed");
+_Static_assert(
+    sizeof(bg_docking_pose_validity_row_status) == sizeof(int32_t),
+    "pose-validity row status width changed");
+_Static_assert(
+    sizeof(bg_docking_pose_validity_failure) == sizeof(int32_t),
+    "pose-validity failure width changed");
 _Static_assert(BG_DOCKING_FIXED64_CANDIDATE_COUNT == 64, "bad fixed64 denominator");
 _Static_assert(BG_DOCKING_SCORER_V1_TERM_COUNT == 8, "bad ScorerV1 term count");
 _Static_assert(BG_INTEGRATOR_VELOCITY_VERLET == 1, "unexpected Verlet value");
@@ -55,6 +64,18 @@ _Static_assert(
 _Static_assert(
     sizeof(bg_docking_scorer_v1_output_v1) == 72,
     "ScorerV1 output ABI changed");
+_Static_assert(
+    sizeof(bg_docking_pose_validity_context_soa_v1) == 560,
+    "pose-validity context ABI changed");
+_Static_assert(
+    sizeof(bg_docking_pose_validity_candidate_batch_soa_v1) == 136,
+    "pose-validity candidate batch ABI changed");
+_Static_assert(
+    sizeof(bg_docking_pose_validity_row_v1) == 240,
+    "pose-validity row ABI changed");
+_Static_assert(
+    sizeof(bg_docking_pose_validity_output_v1) == 72,
+    "pose-validity output ABI changed");
 _Static_assert(sizeof(bg_forcefield_soa_v1) == 352, "force-field SoA ABI changed");
 _Static_assert(offsetof(bg_forcefield_soa_v1, struct_size) == 0, "bad struct_size offset");
 _Static_assert(offsetof(bg_forcefield_soa_v1, abi_version) == 4, "bad abi_version offset");

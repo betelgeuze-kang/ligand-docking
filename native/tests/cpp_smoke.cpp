@@ -34,6 +34,14 @@ int main() {
         std::is_standard_layout_v<bg_docking_scorer_v1_candidate_batch_soa_v1>);
     static_assert(std::is_standard_layout_v<bg_docking_scorer_v1_row_v1>);
     static_assert(std::is_standard_layout_v<bg_docking_scorer_v1_output_v1>);
+    static_assert(
+        std::is_standard_layout_v<bg_docking_pose_validity_context_soa_v1>);
+    static_assert(std::is_standard_layout_v<
+                  bg_docking_pose_validity_candidate_batch_soa_v1>);
+    static_assert(
+        std::is_standard_layout_v<bg_docking_pose_validity_row_v1>);
+    static_assert(
+        std::is_standard_layout_v<bg_docking_pose_validity_output_v1>);
     static_assert(noexcept(bg_abi_version()));
     static_assert(noexcept(bg_context_destroy(nullptr)));
     static_assert(noexcept(bg_system_destroy(nullptr)));

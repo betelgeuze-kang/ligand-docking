@@ -12,8 +12,11 @@ use std::ffi::c_void;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use betelgeuze_docking_search::{
-    NativeScorerV1Atom, NativeScorerV1Backend, NativeScorerV1Config, NativeScorerV1Context,
-    NativeScorerV1Donor, NativeScorerV1FailureCode, NativeScorerV1KernelOutcome, Vec3,
+    NativeFixed64ValidityBackend, NativeFixed64ValidityChecks, NativeFixed64ValidityConfig,
+    NativeFixed64ValidityContext, NativeFixed64ValidityFailureCode,
+    NativeFixed64ValidityKernelOutcome, NativeFixed64ValidityMeasurements, NativeScorerV1Atom,
+    NativeScorerV1Backend, NativeScorerV1Config, NativeScorerV1Context, NativeScorerV1Donor,
+    NativeScorerV1FailureCode, NativeScorerV1KernelOutcome, Quaternion, Vec3,
     FIXED64_CANDIDATE_COUNT,
 };
 use kernel::{AngleSoa, BondSoa, ForceField, Pair, PairScale, System, TorsionSoa};
@@ -37,6 +40,28 @@ const DOCKING_FAILURE_RECEPTOR_PAIR_CAPACITY: i32 = 3;
 const DOCKING_FAILURE_LIGAND_PAIR_CAPACITY: i32 = 4;
 const DOCKING_FAILURE_DEGENERATE_ROTOR: i32 = 5;
 const DOCKING_FAILURE_NONFINITE_SCORE: i32 = 6;
+const VALIDITY_CANDIDATE_UPSTREAM_FAILURE: i32 = 0;
+const VALIDITY_CANDIDATE_EVALUATE: i32 = 1;
+const VALIDITY_ROW_EVALUATED: i32 = 1;
+const VALIDITY_ROW_UPSTREAM_SCORER_FAILURE: i32 = 2;
+const VALIDITY_ROW_TYPED_FAILURE: i32 = 3;
+const VALIDITY_FAILURE_NONE: i32 = 0;
+const VALIDITY_FAILURE_UPSTREAM_SCORER: i32 = 1;
+const VALIDITY_FAILURE_INVALID_CANDIDATE_COORDINATES: i32 = 2;
+const VALIDITY_FAILURE_LIGAND_PAIR_CAPACITY: i32 = 3;
+const VALIDITY_FAILURE_RECEPTOR_CROSS_CAPACITY: i32 = 4;
+const VALIDITY_FAILURE_ELEMENT_LIGAND_PAIR_CAPACITY: i32 = 5;
+const VALIDITY_FAILURE_ELEMENT_RECEPTOR_CANDIDATE_CAPACITY: i32 = 6;
+const VALIDITY_FAILURE_NONFINITE_DERIVED_MEASUREMENT: i32 = 7;
+const VALIDITY_CHECK_PROPER_ROTATION: u32 = 1 << 0;
+const VALIDITY_CHECK_BOND_LENGTHS: u32 = 1 << 1;
+const VALIDITY_CHECK_LIGAND_SELF_CLASH: u32 = 1 << 2;
+const VALIDITY_CHECK_RECEPTOR_LIGAND_CLASH: u32 = 1 << 3;
+const VALIDITY_CHECK_CHIRALITY: u32 = 1 << 4;
+const VALIDITY_CHECK_DECLARED_POCKET: u32 = 1 << 5;
+const VALIDITY_CHECK_ELEMENT_LIGAND_VDW: u32 = 1 << 6;
+const VALIDITY_CHECK_ELEMENT_RECEPTOR_VDW: u32 = 1 << 7;
+const VALIDITY_CHECK_ALL: u32 = 0xff;
 
 #[repr(C)]
 pub struct SystemV1 {
@@ -221,6 +246,110 @@ pub struct DockingScorerRowV1 {
     hbond_count: u64,
     hydrophobic_contact_count: u64,
     buried_polar_count: u64,
+    reserved: [u64; 4],
+}
+
+#[repr(C)]
+pub struct DockingPoseValidityContextSoaV1 {
+    struct_size: u32,
+    abi_version: u32,
+    unit_system: i32,
+    reserved0: u32,
+    receptor_atom_count: u64,
+    ligand_atom_count: u64,
+    receptor_x_angstrom: *const f64,
+    receptor_y_angstrom: *const f64,
+    receptor_z_angstrom: *const f64,
+    receptor_vdw_radius_angstrom: *const f64,
+    ligand_reference_x_angstrom: *const f64,
+    ligand_reference_y_angstrom: *const f64,
+    ligand_reference_z_angstrom: *const f64,
+    ligand_vdw_radius_angstrom: *const f64,
+    bond_count: u64,
+    bond_atom_i: *const u64,
+    bond_atom_j: *const u64,
+    ligand_exclusion_count: u64,
+    ligand_exclusion_atom_i: *const u64,
+    ligand_exclusion_atom_j: *const u64,
+    chirality_center_count: u64,
+    chirality_center_atom: *const u64,
+    chirality_atom_i: *const u64,
+    chirality_atom_j: *const u64,
+    chirality_atom_k: *const u64,
+    pocket_center_angstrom: [f64; 3],
+    pocket_radius_angstrom: f64,
+    bond_length_tolerance_angstrom: f64,
+    ligand_self_clash_angstrom: f64,
+    receptor_ligand_clash_angstrom: f64,
+    rotation_tolerance: f64,
+    chirality_volume_tolerance: f64,
+    severe_overlap_scale: f64,
+    contact_cell_size_angstrom: f64,
+    max_pair_checks: u64,
+    max_cross_checks: u64,
+    max_element_ligand_pair_checks: u64,
+    max_element_receptor_candidate_pairs: u64,
+    authority_input_receipt_sha256: [u8; 32],
+    receptor_system_sha256: [u8; 32],
+    ligand_system_sha256: [u8; 32],
+    scorer_context_receipt_sha256: [u8; 32],
+    backend_receipt_sha256: [u8; 32],
+    contact_policy_sha256: [u8; 32],
+    reserved: [u64; 8],
+}
+
+#[repr(C)]
+pub struct DockingPoseValidityCandidateBatchSoaV1 {
+    struct_size: u32,
+    abi_version: u32,
+    candidate_count: u64,
+    ligand_atom_count: u64,
+    unit_system: i32,
+    reserved0: u32,
+    candidate_state: *const i32,
+    upstream_scorer_failure_code: *const i32,
+    quaternion_x: *const f64,
+    quaternion_y: *const f64,
+    quaternion_z: *const f64,
+    quaternion_w: *const f64,
+    x_angstrom: *const f64,
+    y_angstrom: *const f64,
+    z_angstrom: *const f64,
+    reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct DockingPoseValidityRowV1 {
+    slot_index: u32,
+    status: i32,
+    failure_code: i32,
+    upstream_scorer_failure_code: i32,
+    passed_check_mask: u32,
+    blocker_mask: u32,
+    observed_count: u64,
+    atom_count: u64,
+    rotation_orthogonality_max_error: f64,
+    rotation_determinant: f64,
+    max_bond_length_delta_angstrom: f64,
+    minimum_ligand_nonbonded_distance_angstrom: f64,
+    evaluated_ligand_nonbonded_pair_count: u64,
+    excluded_ligand_pair_count: u64,
+    minimum_receptor_ligand_distance_angstrom: f64,
+    evaluated_receptor_ligand_pair_count: u64,
+    minimum_declared_chiral_volume: f64,
+    declared_chirality_center_count: u64,
+    maximum_pocket_center_distance_angstrom: f64,
+    element_vdw_ligand_pair_count: u64,
+    element_vdw_ligand_severe_overlap_count: u64,
+    element_vdw_ligand_minimum_distance_angstrom: f64,
+    element_vdw_ligand_minimum_ratio: f64,
+    element_vdw_receptor_candidate_pair_count: u64,
+    element_vdw_receptor_full_cartesian_pair_count: u64,
+    element_vdw_receptor_cell_count: u64,
+    element_vdw_receptor_severe_overlap_count: u64,
+    element_vdw_receptor_minimum_distance_angstrom: f64,
+    element_vdw_receptor_minimum_ratio: f64,
     reserved: [u64; 4],
 }
 
@@ -1248,6 +1377,544 @@ unsafe fn score_docking_fixed64(
     })
 }
 
+fn validity_failure_code(code: NativeFixed64ValidityFailureCode) -> i32 {
+    match code {
+        NativeFixed64ValidityFailureCode::UpstreamScorerFailure => VALIDITY_FAILURE_UPSTREAM_SCORER,
+        NativeFixed64ValidityFailureCode::InvalidCandidateCoordinates => {
+            VALIDITY_FAILURE_INVALID_CANDIDATE_COORDINATES
+        }
+        NativeFixed64ValidityFailureCode::LigandPairCapacityExceeded => {
+            VALIDITY_FAILURE_LIGAND_PAIR_CAPACITY
+        }
+        NativeFixed64ValidityFailureCode::ReceptorCrossCapacityExceeded => {
+            VALIDITY_FAILURE_RECEPTOR_CROSS_CAPACITY
+        }
+        NativeFixed64ValidityFailureCode::ElementLigandPairCapacityExceeded => {
+            VALIDITY_FAILURE_ELEMENT_LIGAND_PAIR_CAPACITY
+        }
+        NativeFixed64ValidityFailureCode::ElementReceptorCandidateCapacityExceeded => {
+            VALIDITY_FAILURE_ELEMENT_RECEPTOR_CANDIDATE_CAPACITY
+        }
+        NativeFixed64ValidityFailureCode::NonfiniteDerivedMeasurement => {
+            VALIDITY_FAILURE_NONFINITE_DERIVED_MEASUREMENT
+        }
+    }
+}
+
+fn validity_passed_mask(checks: NativeFixed64ValidityChecks) -> u32 {
+    let mut mask = 0;
+    if checks.proper_rotation() {
+        mask |= VALIDITY_CHECK_PROPER_ROTATION;
+    }
+    if checks.bond_lengths_preserved() {
+        mask |= VALIDITY_CHECK_BOND_LENGTHS;
+    }
+    if checks.ligand_self_clash_free() {
+        mask |= VALIDITY_CHECK_LIGAND_SELF_CLASH;
+    }
+    if checks.receptor_ligand_clash_free() {
+        mask |= VALIDITY_CHECK_RECEPTOR_LIGAND_CLASH;
+    }
+    if checks.declared_chirality_preserved() {
+        mask |= VALIDITY_CHECK_CHIRALITY;
+    }
+    if checks.inside_declared_pocket() {
+        mask |= VALIDITY_CHECK_DECLARED_POCKET;
+    }
+    if checks.element_vdw_ligand_overlap_free() {
+        mask |= VALIDITY_CHECK_ELEMENT_LIGAND_VDW;
+    }
+    if checks.element_vdw_receptor_overlap_free() {
+        mask |= VALIDITY_CHECK_ELEMENT_RECEPTOR_VDW;
+    }
+    mask
+}
+
+fn validity_failure_row(
+    slot_index: usize,
+    status: i32,
+    failure_code: i32,
+    upstream_scorer_failure_code: i32,
+    observed_count: usize,
+) -> DockingPoseValidityRowV1 {
+    DockingPoseValidityRowV1 {
+        slot_index: u32::try_from(slot_index).unwrap_or(0),
+        status,
+        failure_code,
+        upstream_scorer_failure_code,
+        passed_check_mask: 0,
+        blocker_mask: 0,
+        observed_count: observed_count as u64,
+        atom_count: 0,
+        rotation_orthogonality_max_error: 0.0,
+        rotation_determinant: 0.0,
+        max_bond_length_delta_angstrom: 0.0,
+        minimum_ligand_nonbonded_distance_angstrom: 0.0,
+        evaluated_ligand_nonbonded_pair_count: 0,
+        excluded_ligand_pair_count: 0,
+        minimum_receptor_ligand_distance_angstrom: 0.0,
+        evaluated_receptor_ligand_pair_count: 0,
+        minimum_declared_chiral_volume: 0.0,
+        declared_chirality_center_count: 0,
+        maximum_pocket_center_distance_angstrom: 0.0,
+        element_vdw_ligand_pair_count: 0,
+        element_vdw_ligand_severe_overlap_count: 0,
+        element_vdw_ligand_minimum_distance_angstrom: 0.0,
+        element_vdw_ligand_minimum_ratio: 0.0,
+        element_vdw_receptor_candidate_pair_count: 0,
+        element_vdw_receptor_full_cartesian_pair_count: 0,
+        element_vdw_receptor_cell_count: 0,
+        element_vdw_receptor_severe_overlap_count: 0,
+        element_vdw_receptor_minimum_distance_angstrom: 0.0,
+        element_vdw_receptor_minimum_ratio: 0.0,
+        reserved: [0; 4],
+    }
+}
+
+fn validity_evaluated_row(
+    slot_index: usize,
+    checks: NativeFixed64ValidityChecks,
+    measurements: NativeFixed64ValidityMeasurements,
+) -> DockingPoseValidityRowV1 {
+    let passed_check_mask = validity_passed_mask(checks);
+    DockingPoseValidityRowV1 {
+        slot_index: u32::try_from(slot_index).unwrap_or(0),
+        status: VALIDITY_ROW_EVALUATED,
+        failure_code: VALIDITY_FAILURE_NONE,
+        upstream_scorer_failure_code: DOCKING_FAILURE_NONE,
+        passed_check_mask,
+        blocker_mask: VALIDITY_CHECK_ALL ^ passed_check_mask,
+        observed_count: 0,
+        atom_count: measurements.atom_count() as u64,
+        rotation_orthogonality_max_error: measurements.rotation_orthogonality_max_error(),
+        rotation_determinant: measurements.rotation_determinant(),
+        max_bond_length_delta_angstrom: measurements.max_bond_length_delta_angstrom(),
+        minimum_ligand_nonbonded_distance_angstrom: measurements
+            .minimum_ligand_nonbonded_distance_angstrom(),
+        evaluated_ligand_nonbonded_pair_count: measurements.evaluated_ligand_nonbonded_pair_count()
+            as u64,
+        excluded_ligand_pair_count: measurements.excluded_ligand_pair_count() as u64,
+        minimum_receptor_ligand_distance_angstrom: measurements
+            .minimum_receptor_ligand_distance_angstrom(),
+        evaluated_receptor_ligand_pair_count: measurements.evaluated_receptor_ligand_pair_count()
+            as u64,
+        minimum_declared_chiral_volume: measurements.minimum_declared_chiral_volume(),
+        declared_chirality_center_count: measurements.declared_chirality_center_count() as u64,
+        maximum_pocket_center_distance_angstrom: measurements
+            .maximum_pocket_center_distance_angstrom(),
+        element_vdw_ligand_pair_count: measurements.element_vdw_ligand_pair_count() as u64,
+        element_vdw_ligand_severe_overlap_count: measurements
+            .element_vdw_ligand_severe_overlap_count()
+            as u64,
+        element_vdw_ligand_minimum_distance_angstrom: measurements
+            .element_vdw_ligand_minimum_distance_angstrom(),
+        element_vdw_ligand_minimum_ratio: measurements.element_vdw_ligand_minimum_ratio(),
+        element_vdw_receptor_candidate_pair_count: measurements
+            .element_vdw_receptor_candidate_pair_count()
+            as u64,
+        element_vdw_receptor_full_cartesian_pair_count: measurements
+            .element_vdw_receptor_full_cartesian_pair_count()
+            as u64,
+        element_vdw_receptor_cell_count: measurements.element_vdw_receptor_cell_count() as u64,
+        element_vdw_receptor_severe_overlap_count: measurements
+            .element_vdw_receptor_severe_overlap_count()
+            as u64,
+        element_vdw_receptor_minimum_distance_angstrom: measurements
+            .element_vdw_receptor_minimum_distance_angstrom(),
+        element_vdw_receptor_minimum_ratio: measurements.element_vdw_receptor_minimum_ratio(),
+        reserved: [0; 4],
+    }
+}
+
+unsafe fn build_pose_validity_context(
+    descriptor: &DockingPoseValidityContextSoaV1,
+) -> Result<NativeFixed64ValidityContext, ProviderError> {
+    validate_header::<DockingPoseValidityContextSoaV1>(
+        descriptor.struct_size,
+        descriptor.abi_version,
+        "rust_cpu pose-validity context descriptor size mismatch",
+    )?;
+    if descriptor.unit_system != UNIT_SYSTEM_ANGSTROM_KCAL_MOL
+        || descriptor.reserved0 != 0
+        || !reserved_is_zero(&descriptor.reserved)
+    {
+        return Err(ProviderError::invalid(
+            "rust_cpu pose-validity context units or reserved fields are invalid",
+        ));
+    }
+    let receptor_count = checked_usize(
+        descriptor.receptor_atom_count,
+        "rust_cpu pose-validity receptor count exceeds host address space",
+    )?;
+    let ligand_count = checked_usize(
+        descriptor.ligand_atom_count,
+        "rust_cpu pose-validity ligand count exceeds host address space",
+    )?;
+    let bond_count = checked_usize(
+        descriptor.bond_count,
+        "rust_cpu pose-validity bond count exceeds host address space",
+    )?;
+    let exclusion_count = checked_usize(
+        descriptor.ligand_exclusion_count,
+        "rust_cpu pose-validity exclusion count exceeds host address space",
+    )?;
+    let chirality_count = checked_usize(
+        descriptor.chirality_center_count,
+        "rust_cpu pose-validity chirality count exceeds host address space",
+    )?;
+    let maximum_pairs = ligand_count.saturating_mul(ligand_count.saturating_sub(1)) / 2;
+    if receptor_count == 0
+        || receptor_count > 4_096
+        || ligand_count == 0
+        || ligand_count > 512
+        || bond_count > maximum_pairs
+        || exclusion_count > maximum_pairs
+        || chirality_count > ligand_count
+    {
+        return Err(ProviderError::capacity(
+            "rust_cpu pose-validity context denominator is outside fixed bounds",
+        ));
+    }
+
+    macro_rules! checked {
+        ($pointer:expr, $count:expr, $message:literal) => {{
+            // SAFETY: Counts are bounded above and checked_slice validates the
+            // pointer, alignment, and addressable byte range.
+            unsafe { checked_slice($pointer, $count, $message)? }
+        }};
+    }
+    let receptor_x = checked!(
+        descriptor.receptor_x_angstrom,
+        receptor_count,
+        "rust_cpu pose-validity receptor x channel is null"
+    );
+    let receptor_y = checked!(
+        descriptor.receptor_y_angstrom,
+        receptor_count,
+        "rust_cpu pose-validity receptor y channel is null"
+    );
+    let receptor_z = checked!(
+        descriptor.receptor_z_angstrom,
+        receptor_count,
+        "rust_cpu pose-validity receptor z channel is null"
+    );
+    let receptor_radius = checked!(
+        descriptor.receptor_vdw_radius_angstrom,
+        receptor_count,
+        "rust_cpu pose-validity receptor radius channel is null"
+    );
+    let ligand_x = checked!(
+        descriptor.ligand_reference_x_angstrom,
+        ligand_count,
+        "rust_cpu pose-validity ligand x channel is null"
+    );
+    let ligand_y = checked!(
+        descriptor.ligand_reference_y_angstrom,
+        ligand_count,
+        "rust_cpu pose-validity ligand y channel is null"
+    );
+    let ligand_z = checked!(
+        descriptor.ligand_reference_z_angstrom,
+        ligand_count,
+        "rust_cpu pose-validity ligand z channel is null"
+    );
+    let ligand_radius = checked!(
+        descriptor.ligand_vdw_radius_angstrom,
+        ligand_count,
+        "rust_cpu pose-validity ligand radius channel is null"
+    );
+    let bond_i = checked!(
+        descriptor.bond_atom_i,
+        bond_count,
+        "rust_cpu pose-validity bond i channel is null"
+    );
+    let bond_j = checked!(
+        descriptor.bond_atom_j,
+        bond_count,
+        "rust_cpu pose-validity bond j channel is null"
+    );
+    let exclusion_i = checked!(
+        descriptor.ligand_exclusion_atom_i,
+        exclusion_count,
+        "rust_cpu pose-validity exclusion i channel is null"
+    );
+    let exclusion_j = checked!(
+        descriptor.ligand_exclusion_atom_j,
+        exclusion_count,
+        "rust_cpu pose-validity exclusion j channel is null"
+    );
+    let chirality_center = checked!(
+        descriptor.chirality_center_atom,
+        chirality_count,
+        "rust_cpu pose-validity chirality center channel is null"
+    );
+    let chirality_i = checked!(
+        descriptor.chirality_atom_i,
+        chirality_count,
+        "rust_cpu pose-validity chirality i channel is null"
+    );
+    let chirality_j = checked!(
+        descriptor.chirality_atom_j,
+        chirality_count,
+        "rust_cpu pose-validity chirality j channel is null"
+    );
+    let chirality_k = checked!(
+        descriptor.chirality_atom_k,
+        chirality_count,
+        "rust_cpu pose-validity chirality k channel is null"
+    );
+
+    let receptor_coordinates = (0..receptor_count)
+        .map(|index| Vec3::new(receptor_x[index], receptor_y[index], receptor_z[index]))
+        .collect::<Vec<_>>();
+    let ligand_coordinates = (0..ligand_count)
+        .map(|index| Vec3::new(ligand_x[index], ligand_y[index], ligand_z[index]))
+        .collect::<Vec<_>>();
+    let pairs = |first: &[u64], second: &[u64], message| {
+        first
+            .iter()
+            .zip(second)
+            .map(|(left, right)| {
+                Ok([
+                    checked_usize(*left, message)?,
+                    checked_usize(*right, message)?,
+                ])
+            })
+            .collect::<Result<Vec<_>, ProviderError>>()
+    };
+    let bond_pairs = pairs(
+        bond_i,
+        bond_j,
+        "rust_cpu pose-validity bond index overflows",
+    )?;
+    let exclusions = pairs(
+        exclusion_i,
+        exclusion_j,
+        "rust_cpu pose-validity exclusion index overflows",
+    )?;
+    let chirality_centers = (0..chirality_count)
+        .map(|index| {
+            Ok([
+                checked_usize(
+                    chirality_center[index],
+                    "rust_cpu pose-validity chirality index overflows",
+                )?,
+                checked_usize(
+                    chirality_i[index],
+                    "rust_cpu pose-validity chirality index overflows",
+                )?,
+                checked_usize(
+                    chirality_j[index],
+                    "rust_cpu pose-validity chirality index overflows",
+                )?,
+                checked_usize(
+                    chirality_k[index],
+                    "rust_cpu pose-validity chirality index overflows",
+                )?,
+            ])
+        })
+        .collect::<Result<Vec<_>, ProviderError>>()?;
+    let config = NativeFixed64ValidityConfig::new(
+        descriptor.bond_length_tolerance_angstrom,
+        descriptor.ligand_self_clash_angstrom,
+        descriptor.receptor_ligand_clash_angstrom,
+        descriptor.rotation_tolerance,
+        descriptor.chirality_volume_tolerance,
+        descriptor.severe_overlap_scale,
+        descriptor.contact_cell_size_angstrom,
+        checked_usize(
+            descriptor.max_pair_checks,
+            "rust_cpu pose-validity pair capacity overflows",
+        )?,
+        checked_usize(
+            descriptor.max_cross_checks,
+            "rust_cpu pose-validity cross capacity overflows",
+        )?,
+        checked_usize(
+            descriptor.max_element_ligand_pair_checks,
+            "rust_cpu pose-validity element-ligand capacity overflows",
+        )?,
+        checked_usize(
+            descriptor.max_element_receptor_candidate_pairs,
+            "rust_cpu pose-validity element-receptor capacity overflows",
+        )?,
+    )
+    .map_err(|error| ProviderError::invalid(error.message()))?;
+
+    NativeFixed64ValidityContext::new(
+        descriptor.authority_input_receipt_sha256,
+        descriptor.receptor_system_sha256,
+        descriptor.ligand_system_sha256,
+        descriptor.scorer_context_receipt_sha256,
+        NativeFixed64ValidityBackend::RustCpu,
+        descriptor.backend_receipt_sha256,
+        descriptor.contact_policy_sha256,
+        ligand_coordinates,
+        receptor_coordinates,
+        ligand_radius.to_vec(),
+        receptor_radius.to_vec(),
+        bond_pairs,
+        exclusions,
+        chirality_centers,
+        Vec3::new(
+            descriptor.pocket_center_angstrom[0],
+            descriptor.pocket_center_angstrom[1],
+            descriptor.pocket_center_angstrom[2],
+        ),
+        descriptor.pocket_radius_angstrom,
+        config,
+    )
+    .map_err(|error| ProviderError::invalid(error.message()))
+}
+
+unsafe fn evaluate_pose_validity_fixed64(
+    context: &NativeFixed64ValidityContext,
+    candidates: &DockingPoseValidityCandidateBatchSoaV1,
+) -> Result<[DockingPoseValidityRowV1; FIXED64_CANDIDATE_COUNT], ProviderError> {
+    validate_header::<DockingPoseValidityCandidateBatchSoaV1>(
+        candidates.struct_size,
+        candidates.abi_version,
+        "rust_cpu pose-validity candidate batch size mismatch",
+    )?;
+    if candidates.unit_system != UNIT_SYSTEM_ANGSTROM_KCAL_MOL
+        || candidates.reserved0 != 0
+        || !reserved_is_zero(&candidates.reserved)
+        || candidates.candidate_count != FIXED64_CANDIDATE_COUNT as u64
+        || candidates.ligand_atom_count != context.reference_coordinates_angstrom().len() as u64
+    {
+        return Err(ProviderError::invalid(
+            "rust_cpu pose-validity candidate batch identity is invalid",
+        ));
+    }
+    let ligand_count = context.reference_coordinates_angstrom().len();
+    let coordinate_count = FIXED64_CANDIDATE_COUNT
+        .checked_mul(ligand_count)
+        .ok_or_else(|| {
+            ProviderError::capacity("rust_cpu pose-validity coordinate count overflows")
+        })?;
+    let states = unsafe {
+        checked_slice(
+            candidates.candidate_state,
+            FIXED64_CANDIDATE_COUNT,
+            "rust_cpu pose-validity candidate state channel is null",
+        )?
+    };
+    let upstream_failures = unsafe {
+        checked_slice(
+            candidates.upstream_scorer_failure_code,
+            FIXED64_CANDIDATE_COUNT,
+            "rust_cpu pose-validity upstream failure channel is null",
+        )?
+    };
+    let quaternion_x = unsafe {
+        checked_slice(
+            candidates.quaternion_x,
+            FIXED64_CANDIDATE_COUNT,
+            "rust_cpu pose-validity quaternion x channel is null",
+        )?
+    };
+    let quaternion_y = unsafe {
+        checked_slice(
+            candidates.quaternion_y,
+            FIXED64_CANDIDATE_COUNT,
+            "rust_cpu pose-validity quaternion y channel is null",
+        )?
+    };
+    let quaternion_z = unsafe {
+        checked_slice(
+            candidates.quaternion_z,
+            FIXED64_CANDIDATE_COUNT,
+            "rust_cpu pose-validity quaternion z channel is null",
+        )?
+    };
+    let quaternion_w = unsafe {
+        checked_slice(
+            candidates.quaternion_w,
+            FIXED64_CANDIDATE_COUNT,
+            "rust_cpu pose-validity quaternion w channel is null",
+        )?
+    };
+    let x = unsafe {
+        checked_slice(
+            candidates.x_angstrom,
+            coordinate_count,
+            "rust_cpu pose-validity candidate x channel is null",
+        )?
+    };
+    let y = unsafe {
+        checked_slice(
+            candidates.y_angstrom,
+            coordinate_count,
+            "rust_cpu pose-validity candidate y channel is null",
+        )?
+    };
+    let z = unsafe {
+        checked_slice(
+            candidates.z_angstrom,
+            coordinate_count,
+            "rust_cpu pose-validity candidate z channel is null",
+        )?
+    };
+    for (&state, &upstream) in states.iter().zip(upstream_failures) {
+        if (state == VALIDITY_CANDIDATE_UPSTREAM_FAILURE
+            && !(DOCKING_FAILURE_UPSTREAM_NOT_ADMITTED..=DOCKING_FAILURE_NONFINITE_SCORE)
+                .contains(&upstream))
+            || (state == VALIDITY_CANDIDATE_EVALUATE && upstream != DOCKING_FAILURE_NONE)
+            || (state != VALIDITY_CANDIDATE_UPSTREAM_FAILURE
+                && state != VALIDITY_CANDIDATE_EVALUATE)
+        {
+            return Err(ProviderError::invalid(
+                "rust_cpu pose-validity candidate state/failure binding is invalid",
+            ));
+        }
+    }
+    let kernel = context
+        .prepare_rust_cpu_kernel()
+        .map_err(|error| ProviderError::invalid(error.message()))?;
+    let mut rows = Vec::with_capacity(FIXED64_CANDIDATE_COUNT);
+    for slot in 0..FIXED64_CANDIDATE_COUNT {
+        if states[slot] == VALIDITY_CANDIDATE_UPSTREAM_FAILURE {
+            rows.push(validity_failure_row(
+                slot,
+                VALIDITY_ROW_UPSTREAM_SCORER_FAILURE,
+                VALIDITY_FAILURE_UPSTREAM_SCORER,
+                upstream_failures[slot],
+                0,
+            ));
+            continue;
+        }
+        let offset = slot * ligand_count;
+        let pose = (0..ligand_count)
+            .map(|atom| Vec3::new(x[offset + atom], y[offset + atom], z[offset + atom]))
+            .collect::<Vec<_>>();
+        let quaternion = Quaternion::new(
+            quaternion_x[slot],
+            quaternion_y[slot],
+            quaternion_z[slot],
+            quaternion_w[slot],
+        );
+        match kernel.evaluate_coordinates(&pose, quaternion) {
+            NativeFixed64ValidityKernelOutcome::Evaluated {
+                checks,
+                measurements,
+            } => rows.push(validity_evaluated_row(slot, checks, measurements)),
+            NativeFixed64ValidityKernelOutcome::TypedFailure(failure) => {
+                rows.push(validity_failure_row(
+                    slot,
+                    VALIDITY_ROW_TYPED_FAILURE,
+                    validity_failure_code(failure.failure_code()),
+                    DOCKING_FAILURE_NONE,
+                    failure.observed_count(),
+                ));
+            }
+        }
+    }
+    rows.try_into().map_err(|_| ProviderError {
+        status: STATUS_INTERNAL_ERROR,
+        message: "rust_cpu pose-validity fixed64 denominator changed internally",
+    })
+}
+
 unsafe fn evaluate_impl(
     system: *const SystemV1,
     forcefield: *const ForceFieldV1,
@@ -1507,6 +2174,153 @@ pub unsafe extern "C" fn bg_rust_cpu_docking_scorer_v1_score_fixed64(
     }
 }
 
+/// Construct the persistent Rust pose-validity context used by the public
+/// native docking ABI.
+///
+/// # Safety
+/// The descriptor and every declared channel must remain readable for the
+/// duration of the call. `out_state` and `out_error` must be writable,
+/// correctly aligned, and disjoint from all inputs.
+#[no_mangle]
+pub unsafe extern "C" fn bg_rust_cpu_docking_pose_validity_v1_create(
+    descriptor: *const DockingPoseValidityContextSoaV1,
+    out_state: *mut *mut c_void,
+    out_error: *mut ErrorV1,
+) -> i32 {
+    let error = unsafe {
+        match out_error.as_mut() {
+            Some(error) => error,
+            None => return STATUS_INVALID_ARGUMENT,
+        }
+    };
+    if validate_header::<ErrorV1>(
+        error.struct_size,
+        error.abi_version,
+        "rust_cpu error output size mismatch",
+    )
+    .is_err()
+        || !reserved_is_zero(&error.reserved)
+    {
+        return STATUS_ABI_MISMATCH;
+    }
+    clear_error(error);
+    let state_output = unsafe {
+        match out_state.as_mut() {
+            Some(output) => output,
+            None => {
+                write_error(error, "rust_cpu pose-validity state output is null");
+                return STATUS_INVALID_ARGUMENT;
+            }
+        }
+    };
+    *state_output = ptr::null_mut();
+    let descriptor = unsafe {
+        match descriptor.as_ref() {
+            Some(descriptor) => descriptor,
+            None => {
+                write_error(error, "rust_cpu pose-validity context descriptor is null");
+                return STATUS_INVALID_ARGUMENT;
+            }
+        }
+    };
+    let result = catch_unwind(AssertUnwindSafe(|| unsafe {
+        build_pose_validity_context(descriptor)
+    }));
+    match result {
+        Ok(Ok(context)) => {
+            *state_output = Box::into_raw(Box::new(context)).cast::<c_void>();
+            STATUS_OK
+        }
+        Ok(Err(provider_error)) => {
+            write_error(error, provider_error.message);
+            provider_error.status
+        }
+        Err(_) => {
+            write_error(error, "rust_cpu pose-validity context creation panicked");
+            STATUS_INTERNAL_ERROR
+        }
+    }
+}
+
+/// Destroy a pose-validity context returned by
+/// `bg_rust_cpu_docking_pose_validity_v1_create`.
+///
+/// # Safety
+/// A non-null pointer must be the unique live state returned by the matching
+/// create function and must not be used after this call.
+#[no_mangle]
+pub unsafe extern "C" fn bg_rust_cpu_docking_pose_validity_v1_destroy(state: *mut c_void) {
+    if !state.is_null() {
+        // SAFETY: The private C++ dispatcher passes the unique pointer returned
+        // by Box::into_raw above exactly once.
+        drop(unsafe { Box::from_raw(state.cast::<NativeFixed64ValidityContext>()) });
+    }
+}
+
+/// Evaluate all 64 slots through the persistent Rust pose-validity context.
+///
+/// # Safety
+/// `state` must be a live state created by the matching create function. The
+/// candidate descriptor and channels must remain readable throughout the
+/// call. `out_rows` must address 64 writable, aligned, non-overlapping rows,
+/// and `out_error` must be a writable private-provider error descriptor.
+#[no_mangle]
+pub unsafe extern "C" fn bg_rust_cpu_docking_pose_validity_v1_evaluate_fixed64(
+    state: *const c_void,
+    candidates: *const DockingPoseValidityCandidateBatchSoaV1,
+    out_rows: *mut DockingPoseValidityRowV1,
+    out_error: *mut ErrorV1,
+) -> i32 {
+    let error = unsafe {
+        match out_error.as_mut() {
+            Some(error) => error,
+            None => return STATUS_INVALID_ARGUMENT,
+        }
+    };
+    if validate_header::<ErrorV1>(
+        error.struct_size,
+        error.abi_version,
+        "rust_cpu error output size mismatch",
+    )
+    .is_err()
+        || !reserved_is_zero(&error.reserved)
+    {
+        return STATUS_ABI_MISMATCH;
+    }
+    clear_error(error);
+    if state.is_null() || candidates.is_null() || out_rows.is_null() {
+        write_error(error, "rust_cpu pose-validity evaluation pointer is null");
+        return STATUS_INVALID_ARGUMENT;
+    }
+    if (out_rows as usize) % align_of::<DockingPoseValidityRowV1>() != 0 {
+        write_error(error, "rust_cpu pose-validity row output is misaligned");
+        return STATUS_INVALID_ARGUMENT;
+    }
+    let context = unsafe { &*state.cast::<NativeFixed64ValidityContext>() };
+    let candidates = unsafe { &*candidates };
+    let result = catch_unwind(AssertUnwindSafe(|| unsafe {
+        evaluate_pose_validity_fixed64(context, candidates)
+    }));
+    match result {
+        Ok(Ok(rows)) => {
+            // SAFETY: The private dispatcher supplies a disjoint temporary
+            // fixed64 row array and no write occurs before complete success.
+            unsafe {
+                ptr::copy_nonoverlapping(rows.as_ptr(), out_rows, FIXED64_CANDIDATE_COUNT);
+            }
+            STATUS_OK
+        }
+        Ok(Err(provider_error)) => {
+            write_error(error, provider_error.message);
+            provider_error.status
+        }
+        Err(_) => {
+            write_error(error, "rust_cpu pose-validity batch panicked");
+            STATUS_INTERNAL_ERROR
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1618,6 +2432,9 @@ mod tests {
         assert_eq!(size_of::<DockingScorerContextSoaV1>(), 608);
         assert_eq!(size_of::<DockingScorerCandidateBatchSoaV1>(), 96);
         assert_eq!(size_of::<DockingScorerRowV1>(), 160);
+        assert_eq!(size_of::<DockingPoseValidityContextSoaV1>(), 560);
+        assert_eq!(size_of::<DockingPoseValidityCandidateBatchSoaV1>(), 136);
+        assert_eq!(size_of::<DockingPoseValidityRowV1>(), 240);
     }
 
     #[test]

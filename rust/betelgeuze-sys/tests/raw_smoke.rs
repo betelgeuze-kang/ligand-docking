@@ -81,6 +81,9 @@ fn descriptor_initializers_reject_incompatible_callers_without_writing() {
         assert_initializer_exact(bg_docking_scorer_v1_context_soa_v1_init);
         assert_initializer_exact(bg_docking_scorer_v1_candidate_batch_soa_v1_init);
         assert_initializer_exact(bg_docking_scorer_v1_output_v1_init);
+        assert_initializer_exact(bg_docking_pose_validity_context_soa_v1_init);
+        assert_initializer_exact(bg_docking_pose_validity_candidate_batch_soa_v1_init);
+        assert_initializer_exact(bg_docking_pose_validity_output_v1_init);
     }
 }
 
