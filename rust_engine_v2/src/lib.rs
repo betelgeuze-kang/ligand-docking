@@ -975,14 +975,6 @@ fn build_info() -> BTreeMap<&'static str, String> {
             "native_build_wrapper_sha256",
             env!("BETELGEUZE_NATIVE_BUILD_WRAPPER_SHA256").to_owned(),
         ),
-        (
-            "native_source_closure_sha256",
-            env!("BETELGEUZE_NATIVE_SOURCE_CLOSURE_SHA256").to_owned(),
-        ),
-        (
-            "native_source_closure_file_count",
-            env!("BETELGEUZE_NATIVE_SOURCE_CLOSURE_FILE_COUNT").to_owned(),
-        ),
         ("rustc_version", env!("BETELGEUZE_RUSTC_VERSION").to_owned()),
         (
             "rustc_verbose_sha256",
@@ -1043,6 +1035,42 @@ fn build_info() -> BTreeMap<&'static str, String> {
             "build_wrapper_control",
             env!("BETELGEUZE_BUILD_WRAPPER_CONTROL").to_owned(),
         ),
+        ("build_flags", env!("BETELGEUZE_BUILD_FLAGS").to_owned()),
+        ("implicit_fallback_allowed", "false".to_owned()),
+        (
+            "geometric_admission_metrics_kernel_id",
+            GEOMETRIC_ADMISSION_METRICS_KERNEL_ID.to_owned(),
+        ),
+        (
+            "geometric_admission_pair_traversal_order",
+            GEOMETRIC_ADMISSION_PAIR_TRAVERSAL_ORDER.to_owned(),
+        ),
+    ])
+}
+
+#[pyfunction]
+fn docking_search_build_info() -> BTreeMap<&'static str, String> {
+    BTreeMap::from([
+        ("backend_id", "rust_cpu_required".to_owned()),
+        ("backend_version", env!("CARGO_PKG_VERSION").to_owned()),
+        ("crate_name", env!("CARGO_PKG_NAME").to_owned()),
+        (
+            "cargo_lock_sha256",
+            env!("BETELGEUZE_CARGO_LOCK_SHA256").to_owned(),
+        ),
+        (
+            "native_source_closure_sha256",
+            env!("BETELGEUZE_NATIVE_SOURCE_CLOSURE_SHA256").to_owned(),
+        ),
+        (
+            "native_source_closure_file_count",
+            env!("BETELGEUZE_NATIVE_SOURCE_CLOSURE_FILE_COUNT").to_owned(),
+        ),
+        ("rustc_version", env!("BETELGEUZE_RUSTC_VERSION").to_owned()),
+        ("target_triple", env!("BETELGEUZE_TARGET_TRIPLE").to_owned()),
+        ("build_profile", env!("BETELGEUZE_BUILD_PROFILE").to_owned()),
+        ("opt_level", env!("BETELGEUZE_BUILD_OPT_LEVEL").to_owned()),
+        ("debug", env!("BETELGEUZE_BUILD_DEBUG").to_owned()),
         (
             "panic_strategy",
             if cfg!(panic = "abort") {
@@ -1052,7 +1080,19 @@ fn build_info() -> BTreeMap<&'static str, String> {
             }
             .to_owned(),
         ),
-        ("build_flags", env!("BETELGEUZE_BUILD_FLAGS").to_owned()),
+        (
+            "build_flags",
+            format!(
+                "profile={},codegen-units={},debug={},lto={},opt-level={},panic={},strip={}",
+                env!("BETELGEUZE_BUILD_PROFILE"),
+                env!("BETELGEUZE_RELEASE_CODEGEN_UNITS"),
+                env!("BETELGEUZE_BUILD_DEBUG"),
+                env!("BETELGEUZE_RELEASE_LTO"),
+                env!("BETELGEUZE_BUILD_OPT_LEVEL"),
+                env!("BETELGEUZE_RELEASE_PANIC"),
+                env!("BETELGEUZE_RELEASE_STRIP")
+            ),
+        ),
         (
             "cargo_features",
             if cfg!(feature = "extension-module") {
@@ -1063,14 +1103,6 @@ fn build_info() -> BTreeMap<&'static str, String> {
             .to_owned(),
         ),
         ("implicit_fallback_allowed", "false".to_owned()),
-        (
-            "geometric_admission_metrics_kernel_id",
-            GEOMETRIC_ADMISSION_METRICS_KERNEL_ID.to_owned(),
-        ),
-        (
-            "geometric_admission_pair_traversal_order",
-            GEOMETRIC_ADMISSION_PAIR_TRAVERSAL_ORDER.to_owned(),
-        ),
         (
             "docking_search_schema_id",
             betelgeuze_docking_search::SEARCH_SCHEMA_ID.to_owned(),
@@ -1092,6 +1124,7 @@ fn betelgeuze_engine_v2_native(_py: Python<'_>, module: &PyModule) -> PyResult<(
     module.add_class::<NativeScoreRow>()?;
     module.add_class::<NativeGeometricAdmissionMetrics>()?;
     module.add_function(wrap_pyfunction!(build_info, module)?)?;
+    module.add_function(wrap_pyfunction!(docking_search_build_info, module)?)?;
     module.add_function(wrap_pyfunction!(geometric_admission_metrics_one, module)?)?;
     module.add(
         "GEOMETRIC_ADMISSION_METRICS_KERNEL_ID",
@@ -1391,5 +1424,33 @@ mod tests {
             hbond_reward([0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [8.0, 0.0, 0.0], 3.0),
             0.0
         );
+    }
+
+    #[test]
+    fn geometric_and_docking_build_receipts_are_separate() {
+        let geometric = build_info();
+        let docking = docking_search_build_info();
+
+        for docking_only_key in [
+            "native_source_closure_sha256",
+            "native_source_closure_file_count",
+            "panic_strategy",
+            "cargo_features",
+            "docking_search_schema_id",
+            "docking_search_receipt_schema_id",
+            "docking_search_evaluator_id",
+        ] {
+            assert!(!geometric.contains_key(docking_only_key));
+            assert!(docking.contains_key(docking_only_key));
+        }
+        for geometric_only_key in [
+            "geometric_admission_metrics_kernel_id",
+            "geometric_admission_pair_traversal_order",
+            "native_build_wrapper_sha256",
+            "rustc_executable_sha256",
+        ] {
+            assert!(geometric.contains_key(geometric_only_key));
+            assert!(!docking.contains_key(geometric_only_key));
+        }
     }
 }

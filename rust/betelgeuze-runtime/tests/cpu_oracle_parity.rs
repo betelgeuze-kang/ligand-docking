@@ -728,10 +728,7 @@ fn assert_energy_close(
 ) {
     let actual_components = runtime_energy_values(actual);
     let expected_components = oracle_energy_values(expected);
-    for ((name, actual), (_, expected)) in actual_components
-        .into_iter()
-        .zip(expected_components.into_iter())
-    {
+    for ((name, actual), (_, expected)) in actual_components.into_iter().zip(expected_components) {
         let difference = (actual - expected).abs();
         let tolerance = ENERGY_TOLERANCE * (1.0 + actual.abs().max(expected.abs()));
         assert!(
