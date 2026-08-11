@@ -50,6 +50,16 @@ struct bg_docking_stable_top_k_v1 final {
     void *provider_state = nullptr;
 };
 
+struct bg_docking_fixed64_downstream_v1 final {
+    bg_backend backend = BG_BACKEND_RUST_CPU;
+    bg_unit_system unit_system = BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL;
+    int32_t device_ordinal = 0;
+    uint64_t ligand_atom_count = 0;
+    bg_docking_scorer_v1 *scorer = nullptr;
+    bg_docking_pose_validity_v1 *validity = nullptr;
+    bg_docking_stable_top_k_v1 *ranker = nullptr;
+};
+
 struct bg_docking_rigid_refinement final {
     bg_backend backend = BG_BACKEND_RUST_CPU;
     int32_t device_ordinal = 0;

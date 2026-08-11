@@ -63,6 +63,8 @@ int main() {
     static_assert(noexcept(bg_abi_version()));
     static_assert(noexcept(bg_context_destroy(nullptr)));
     static_assert(noexcept(bg_system_destroy(nullptr)));
+    static_assert(noexcept(
+        bg_docking_fixed64_downstream_v1_destroy(nullptr)));
     static_assert(noexcept(bg_docking_rigid_refinement_destroy(nullptr)));
     static_assert(noexcept(bg_docking_torsion_v7_destroy(nullptr)));
     static_assert(std::is_same_v<

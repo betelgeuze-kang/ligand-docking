@@ -20,7 +20,7 @@ static BG_RUST_CPU_PROVIDER_LINK_ANCHOR: extern "C" fn() -> u32 =
     betelgeuze_cpu_kernel::bg_rust_cpu_provider_abi_version_v1;
 
 pub const BG_ABI_VERSION_MAJOR: u32 = 1;
-pub const BG_ABI_VERSION_MINOR: u32 = 10;
+pub const BG_ABI_VERSION_MINOR: u32 = 11;
 pub const BG_ABI_VERSION: u32 = 1;
 
 pub const BG_CANONICAL_LENGTH_UNIT: &[u8] = b"angstrom\0";
@@ -249,6 +249,12 @@ pub struct bg_docking_pose_validity_v1 {
 /// Opaque persistent Engine V2 stable Top-K provider.
 #[repr(C)]
 pub struct bg_docking_stable_top_k_v1 {
+    _private: [u8; 0],
+}
+
+/// Opaque persistent fixed64 score-validity-ranking pipeline.
+#[repr(C)]
+pub struct bg_docking_fixed64_downstream_v1 {
     _private: [u8; 0],
 }
 
@@ -1341,6 +1347,31 @@ unsafe extern "C" {
         ranker: *const bg_docking_stable_top_k_v1,
         input: *const bg_docking_stable_top_k_input_v1,
         output: *mut bg_docking_stable_top_k_output_v1,
+    ) -> bg_status;
+    pub fn bg_docking_fixed64_downstream_v1_create(
+        context: *const bg_context,
+        scorer_descriptor: *const bg_docking_scorer_v1_context_soa_v1,
+        validity_descriptor: *const bg_docking_pose_validity_context_soa_v1,
+        out_pipeline: *mut *mut bg_docking_fixed64_downstream_v1,
+    ) -> bg_status;
+    pub fn bg_docking_fixed64_downstream_v1_destroy(
+        pipeline: *mut bg_docking_fixed64_downstream_v1,
+    );
+    pub fn bg_docking_fixed64_downstream_v1_get_backend(
+        pipeline: *const bg_docking_fixed64_downstream_v1,
+        backend: *mut bg_backend,
+    ) -> bg_status;
+    pub fn bg_docking_fixed64_downstream_v1_run(
+        context: *const bg_context,
+        pipeline: *const bg_docking_fixed64_downstream_v1,
+        candidates: *const bg_docking_scorer_v1_candidate_batch_soa_v1,
+        quaternion_x: *const f64,
+        quaternion_y: *const f64,
+        quaternion_z: *const f64,
+        quaternion_w: *const f64,
+        scorer_output: *mut bg_docking_scorer_v1_output_v1,
+        validity_output: *mut bg_docking_pose_validity_output_v1,
+        ranking_output: *mut bg_docking_stable_top_k_output_v1,
     ) -> bg_status;
     pub fn bg_docking_stable_top_k_v1_cluster_direct_rmsd_fixed64(
         context: *const bg_context,

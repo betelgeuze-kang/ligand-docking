@@ -62,6 +62,11 @@ struct Fixture final {
             validity.blocker_mask = 0;
             validity.atom_count = 4;
         }
+        scorer_rows[6].failure_code =
+            BG_DOCKING_SCORER_V1_FAILURE_RECEPTOR_PAIR_CAPACITY;
+        scorer_rows[6].receptor_candidate_pair_count = 9;
+        validity_rows[6].upstream_scorer_failure_code =
+            BG_DOCKING_SCORER_V1_FAILURE_RECEPTOR_PAIR_CAPACITY;
         validity_rows[4].passed_check_mask =
             BG_DOCKING_POSE_VALIDITY_CHECK_ALL ^
             BG_DOCKING_POSE_VALIDITY_CHECK_DECLARED_POCKET;
@@ -339,6 +344,7 @@ void test_cpu_parity_stable_order_and_authority_false() {
     assert(cpp.rows[4].valid_rank_eligible == UINT8_C(0));
     assert(cpp.rows[5].stable_valid_rank == 0);
     assert(cpp.rows[6].rank_eligible == UINT8_C(0));
+    assert(fixture.scorer_rows[6].receptor_candidate_pair_count == 9);
     assert(cpp.existing_rank_auto_change_authorized == UINT8_C(0));
     assert(cpp.customer_pose_emission_authorized == UINT8_C(0));
     assert(cpp.production_claim_authorized == UINT8_C(0));
@@ -389,6 +395,36 @@ void test_invalid_binding_is_transactional_and_cross_wiring_fails() {
     assert(std::memcmp(rows.data(), rows_before.data(), sizeof(rows)) == 0);
     assert(primary == primary_before);
     assert(valid == valid_before);
+
+    Fixture inconsistent_pair_evidence;
+    inconsistent_pair_evidence.scorer_rows[6].failure_code =
+        BG_DOCKING_SCORER_V1_FAILURE_UPSTREAM_NOT_ADMITTED;
+    inconsistent_pair_evidence.scorer_rows[6]
+        .receptor_candidate_pair_count = 1;
+    inconsistent_pair_evidence.validity_rows[6]
+        .upstream_scorer_failure_code =
+        BG_DOCKING_SCORER_V1_FAILURE_UPSTREAM_NOT_ADMITTED;
+    const auto inconsistent_pair_input = inconsistent_pair_evidence.input();
+    assert(
+        bg_docking_stable_top_k_v1_rank_fixed64(
+            cpp_context,
+            cpp_ranker,
+            &inconsistent_pair_input,
+            &output) == BG_STATUS_INVALID_ARGUMENT);
+    assert(output.row_count == 17);
+    assert(std::memcmp(rows.data(), rows_before.data(), sizeof(rows)) == 0);
+
+    Fixture retained_rank_evidence;
+    retained_rank_evidence.scorer_rows[6].weighted_terms[0] = 1.0;
+    const auto retained_rank_input = retained_rank_evidence.input();
+    assert(
+        bg_docking_stable_top_k_v1_rank_fixed64(
+            rust_context,
+            rust_ranker,
+            &retained_rank_input,
+            &output) == BG_STATUS_INVALID_ARGUMENT);
+    assert(output.row_count == 17);
+    assert(std::memcmp(rows.data(), rows_before.data(), sizeof(rows)) == 0);
 
     const Fixture valid_fixture;
     const auto valid_input = valid_fixture.input();

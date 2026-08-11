@@ -26,6 +26,13 @@ leaves molecular execution, rank mutation, pose emission, and claim authority
 false. The C++ reference and Rust CPU providers remain independent parity
 oracles; no HIP error may select either provider as a runtime fallback.
 
+ABI 1.11 also executes ScorerV1 -> pose validity -> stable Top-K through one
+persistent downstream handle on `hip_safe` or `hip_fast`. The host boundary
+derives the exact scorer-failure binding and canonical coordinate identities;
+all three device stages must succeed before any caller output is committed.
+The gfx1030 suite compares the complete composed result with `rust_cpu` and
+requires bit-identical repeated device runs.
+
 Builds without a complete ROCm compiler/runtime link a fail-closed stub and
 report the backend unavailable. A compiled provider still reports unavailable
 unless the requested device ordinal is visible to the HIP runtime. Synthetic

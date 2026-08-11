@@ -34,3 +34,9 @@ Rust clustering kernel. The provider accepts only the complete stable-valid
 ordering, retains every failed slot, uses deterministic first-representative
 assignment with an inclusive threshold, and returns the same immutable rows
 as the independent C++ and HIP implementations.
+
+ABI 1.11 composes the existing Rust scorer, validity, and ranking providers
+behind the shared persistent fixed64 downstream handle. The C++ orchestration
+layer derives failure and coordinate-identity channels once and commits the
+three Rust outputs transactionally; it does not reimplement any Rust
+scientific kernel or allow a Python/product fallback.

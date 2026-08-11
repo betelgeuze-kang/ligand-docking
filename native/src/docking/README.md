@@ -33,6 +33,21 @@ alignment or symmetry permutation. C++, Rust, `hip_safe`, and `hip_fast`
 preserve all 64 rows, coordinate identities, typed upstream ineligibility, and
 false product-authority flags transactionally.
 
+ABI 1.11 adds one persistent downstream handle that owns ScorerV1,
+pose-validity, and stable Top-K providers on a single explicit backend/device.
+Creation rejects receptor, ligand, pocket, exclusion, or receipt-identity
+cross-wiring before the handle is returned. A run derives scorer-to-validity
+failure bindings and the canonical Rust-compatible coordinate SHA-256 values
+internally, keeps all 64 rows, and commits score, validity, and ranking outputs
+as one transaction. `cpp_cpu_reference`, `rust_cpu`, `hip_safe`, and
+`hip_fast` execute the same composition without fallback; the pipeline still
+grants no molecular-execution or product authority.
+
+Scorer capacity, degenerate-rotor, and non-finite failures retain the pair
+counts observed before failure. Downstream validity binds those rows as typed
+upstream failures, and Top-K accepts the pair-count receipt while requiring
+zero score/contact evidence and keeping the slot rank-ineligible.
+
 The term order is:
 
 1. typed van der Waals

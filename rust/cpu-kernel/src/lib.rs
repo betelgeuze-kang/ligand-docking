@@ -2004,6 +2004,28 @@ fn digest_is_zero(digest: &[u8; 32]) -> bool {
     digest.iter().all(|value| *value == 0)
 }
 
+fn scorer_failure_rank_evidence_is_zero(row: &DockingScorerRowV1) -> bool {
+    row.weighted_terms.iter().all(|value| *value == 0.0)
+        && row.total_score == 0.0
+        && row.hbond_count == 0
+        && row.hydrophobic_contact_count == 0
+        && row.buried_polar_count == 0
+}
+
+fn scorer_failure_pair_evidence_is_valid(row: &DockingScorerRowV1) -> bool {
+    match row.failure_code {
+        DOCKING_FAILURE_UPSTREAM_NOT_ADMITTED | DOCKING_FAILURE_INVALID_CANDIDATE_COORDINATES => {
+            row.receptor_candidate_pair_count == 0 && row.ligand_pair_count == 0
+        }
+        DOCKING_FAILURE_RECEPTOR_PAIR_CAPACITY => {
+            row.receptor_candidate_pair_count > 0 && row.ligand_pair_count == 0
+        }
+        DOCKING_FAILURE_LIGAND_PAIR_CAPACITY => row.ligand_pair_count > 0,
+        DOCKING_FAILURE_DEGENERATE_ROTOR | DOCKING_FAILURE_NONFINITE_SCORE => true,
+        _ => false,
+    }
+}
+
 unsafe fn rank_stable_top_k_fixed64(
     input: &DockingStableTopKInputV1,
 ) -> Result<StableTopKProviderOutput, ProviderError> {
@@ -2061,9 +2083,11 @@ unsafe fn rank_stable_top_k_fixed64(
         digest.copy_from_slice(digest_slice);
         let (scorer_status, total_score, coordinate_sha256) = match scorer.status {
             DOCKING_ROW_SCORED => {
+                let score_term_sum = scorer.weighted_terms.iter().sum::<f64>();
                 if scorer.failure_code != DOCKING_FAILURE_NONE
                     || !scorer.total_score.is_finite()
                     || scorer.weighted_terms.iter().any(|value| !value.is_finite())
+                    || (score_term_sum - scorer.total_score).abs() > 1.0e-12
                     || digest_is_zero(&digest)
                 {
                     return Err(ProviderError::invalid(
@@ -2080,6 +2104,8 @@ unsafe fn rank_stable_top_k_fixed64(
                 if !(DOCKING_FAILURE_UPSTREAM_NOT_ADMITTED..=DOCKING_FAILURE_NONFINITE_SCORE)
                     .contains(&scorer.failure_code)
                     || !digest_is_zero(&digest)
+                    || !scorer_failure_rank_evidence_is_zero(&scorer)
+                    || !scorer_failure_pair_evidence_is_valid(&scorer)
                 {
                     return Err(ProviderError::invalid(
                         "rust_cpu stable Top-K scorer failure is invalid",

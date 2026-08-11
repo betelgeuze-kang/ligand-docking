@@ -68,16 +68,35 @@ struct DerivedRmsdCluster final {
     });
 }
 
-[[nodiscard]] bool scorer_failure_evidence_is_zero(
+[[nodiscard]] bool scorer_failure_rank_evidence_is_zero(
     const bg_docking_scorer_v1_row_v1 &row) noexcept {
     return all_zero(
                row.weighted_terms,
                BG_DOCKING_SCORER_V1_TERM_COUNT) &&
-           row.total_score == 0.0 &&
-           row.receptor_candidate_pair_count == 0 &&
-           row.ligand_pair_count == 0 && row.hbond_count == 0 &&
+           row.total_score == 0.0 && row.hbond_count == 0 &&
            row.hydrophobic_contact_count == 0 &&
            row.buried_polar_count == 0;
+}
+
+[[nodiscard]] bool scorer_failure_pair_evidence_is_valid(
+    const bg_docking_scorer_v1_row_v1 &row) noexcept {
+    switch (row.failure_code) {
+        case BG_DOCKING_SCORER_V1_FAILURE_UPSTREAM_NOT_ADMITTED:
+        case BG_DOCKING_SCORER_V1_FAILURE_INVALID_CANDIDATE_COORDINATES:
+            return row.receptor_candidate_pair_count == 0 &&
+                   row.ligand_pair_count == 0;
+        case BG_DOCKING_SCORER_V1_FAILURE_RECEPTOR_PAIR_CAPACITY:
+            return row.receptor_candidate_pair_count > 0 &&
+                   row.ligand_pair_count == 0;
+        case BG_DOCKING_SCORER_V1_FAILURE_LIGAND_PAIR_CAPACITY:
+            return row.ligand_pair_count > 0;
+        case BG_DOCKING_SCORER_V1_FAILURE_DEGENERATE_ROTOR:
+        case BG_DOCKING_SCORER_V1_FAILURE_NONFINITE_SCORE:
+            return true;
+        case BG_DOCKING_SCORER_V1_FAILURE_NONE:
+            return false;
+    }
+    return false;
 }
 
 [[nodiscard]] bool validity_measurements_are_finite(
@@ -184,7 +203,8 @@ struct DerivedRmsdCluster final {
             BG_DOCKING_SCORER_V1_FAILURE_UPSTREAM_NOT_ADMITTED ||
         row.failure_code > BG_DOCKING_SCORER_V1_FAILURE_NONFINITE_SCORE ||
         !digest_is_zero(coordinate_sha256) ||
-        !scorer_failure_evidence_is_zero(row)) {
+        !scorer_failure_rank_evidence_is_zero(row) ||
+        !scorer_failure_pair_evidence_is_valid(row)) {
         return fail(
             BG_STATUS_INVALID_ARGUMENT,
             "stable Top-K scorer failure evidence is invalid");
