@@ -41,6 +41,7 @@ bg_status validate_context_options(const bg_context_options &options) noexcept {
     }
     switch (options.backend) {
         case BG_BACKEND_AUTO:
+        case BG_BACKEND_CPP_CPU_REFERENCE:
         case BG_BACKEND_RUST_CPU:
         case BG_BACKEND_HIP_SAFE:
         case BG_BACKEND_HIP_FAST:
@@ -52,8 +53,13 @@ bg_status validate_context_options(const bg_context_options &options) noexcept {
     }
 }
 
-bool cpu_is_available(int32_t device_ordinal) noexcept {
+bool cpp_cpu_reference_is_available(int32_t device_ordinal) noexcept {
     return device_ordinal == 0;
+}
+
+/* rust_cpu becomes available only after the pure Rust kernels are linked. */
+bool rust_cpu_is_available(int32_t /*device_ordinal*/) noexcept {
+    return false;
 }
 
 /* No HIP provider is linked in ABI v1 yet.  Merely compiling with hipcc must
@@ -115,6 +121,8 @@ extern "C" BG_API const char *BG_CALL bg_backend_string(
     switch (backend) {
         case BG_BACKEND_AUTO:
             return "auto";
+        case BG_BACKEND_CPP_CPU_REFERENCE:
+            return "cpp_cpu_reference";
         case BG_BACKEND_RUST_CPU:
             return "rust_cpu";
         case BG_BACKEND_HIP_SAFE:
@@ -288,9 +296,14 @@ extern "C" BG_API bg_status BG_CALL bg_backend_is_available(
         }
         switch (backend) {
             case BG_BACKEND_AUTO:
+            case BG_BACKEND_CPP_CPU_REFERENCE:
+                *available = cpp_cpu_reference_is_available(device_ordinal)
+                                 ? UINT8_C(1)
+                                 : UINT8_C(0);
+                return BG_STATUS_OK;
             case BG_BACKEND_RUST_CPU:
-                *available = cpu_is_available(device_ordinal) ? UINT8_C(1)
-                                                               : UINT8_C(0);
+                *available = rust_cpu_is_available(device_ordinal) ? UINT8_C(1)
+                                                                    : UINT8_C(0);
                 return BG_STATUS_OK;
             case BG_BACKEND_HIP_SAFE:
             case BG_BACKEND_HIP_FAST:
@@ -330,18 +343,22 @@ extern "C" BG_API bg_status BG_CALL bg_context_create(
 
         bg_backend selected_backend = options->backend;
         if (selected_backend == BG_BACKEND_AUTO) {
-            if (!cpu_is_available(options->device_ordinal)) {
+            if (!cpp_cpu_reference_is_available(options->device_ordinal)) {
                 return fail(
                     BG_STATUS_BACKEND_UNAVAILABLE,
                     "no backend is available at the requested device ordinal");
             }
-            selected_backend = BG_BACKEND_RUST_CPU;
-        } else if (selected_backend == BG_BACKEND_RUST_CPU) {
-            if (!cpu_is_available(options->device_ordinal)) {
+            selected_backend = BG_BACKEND_CPP_CPU_REFERENCE;
+        } else if (selected_backend == BG_BACKEND_CPP_CPU_REFERENCE) {
+            if (!cpp_cpu_reference_is_available(options->device_ordinal)) {
                 return fail(
                     BG_STATUS_BACKEND_UNAVAILABLE,
-                    "requested CPU device ordinal is unavailable");
+                    "requested C++ CPU reference ordinal is unavailable");
             }
+        } else if (selected_backend == BG_BACKEND_RUST_CPU) {
+            return fail(
+                BG_STATUS_BACKEND_UNAVAILABLE,
+                "rust_cpu backend is unavailable; fallback is forbidden");
         } else if (!hip_is_available(options->device_ordinal)) {
             return fail(
                 BG_STATUS_BACKEND_UNAVAILABLE,

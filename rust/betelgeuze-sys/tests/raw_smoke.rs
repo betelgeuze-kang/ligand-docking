@@ -212,7 +212,7 @@ fn descriptor_initializers_bind_size_version_and_units() {
 }
 
 #[test]
-fn explicit_cpu_context_round_trips_without_fallback() {
+fn explicit_cpp_cpu_reference_context_round_trips_without_fallback() {
     // SAFETY: All outputs point to live writable values, and the returned
     // context is destroyed exactly once after the queries complete.
     unsafe {
@@ -254,6 +254,36 @@ fn explicit_cpu_context_round_trips_without_fallback() {
 
         bg_context_destroy(context);
         bg_context_destroy(ptr::null_mut());
+    }
+}
+
+#[test]
+fn explicit_rust_cpu_request_is_unavailable_without_the_rust_kernel() {
+    // SAFETY: Outputs and descriptor storage are live. Failure must leave the
+    // context output null and may not substitute the C++ reference backend.
+    unsafe {
+        let mut available = 1_u8;
+        assert_eq!(
+            bg_backend_is_available(BG_BACKEND_RUST_CPU, 0, &mut available),
+            BG_STATUS_OK
+        );
+        assert_eq!(available, 0);
+
+        let mut options = core::mem::MaybeUninit::<bg_context_options>::uninit();
+        assert_eq!(
+            initialize(bg_context_options_init, options.as_mut_ptr()),
+            BG_STATUS_OK
+        );
+        let mut options = options.assume_init();
+        options.backend = BG_BACKEND_RUST_CPU;
+
+        let mut context = ptr::dangling_mut::<bg_context>();
+        assert_eq!(
+            bg_context_create(&options, &mut context),
+            BG_STATUS_BACKEND_UNAVAILABLE
+        );
+        assert!(context.is_null());
+        assert!(owned_string(bg_last_error_message()).contains("fallback is forbidden"));
     }
 }
 

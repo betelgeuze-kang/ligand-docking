@@ -10,9 +10,10 @@ fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(BG_STATUS_OK, 0);
     assert_eq!(BG_STATUS_INTERNAL_ERROR, 9);
     assert_eq!(BG_BACKEND_AUTO, 0);
-    assert_eq!(BG_BACKEND_CPU, 1);
-    assert_eq!(BG_BACKEND_HIP, 2);
-    assert_eq!(BG_BACKEND_HIP_FAST, 3);
+    assert_eq!(BG_BACKEND_CPP_CPU_REFERENCE, 1);
+    assert_eq!(BG_BACKEND_RUST_CPU, 2);
+    assert_eq!(BG_BACKEND_HIP, 3);
+    assert_eq!(BG_BACKEND_HIP_FAST, 4);
     assert_eq!(BG_SCALAR_F64, 2);
     assert_eq!(BG_MEMORY_HIP_DEVICE, 2);
     assert_eq!(BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL, 1);

@@ -87,11 +87,12 @@ enum {
 typedef int32_t bg_backend;
 enum {
     BG_BACKEND_AUTO = 0,
-    BG_BACKEND_RUST_CPU = 1,
-    BG_BACKEND_HIP_SAFE = 2,
-    BG_BACKEND_HIP_FAST = 3,
-    /* Source-compatibility aliases; new receipts use the explicit names. */
-    BG_BACKEND_CPU = BG_BACKEND_RUST_CPU,
+    BG_BACKEND_CPP_CPU_REFERENCE = 1,
+    BG_BACKEND_RUST_CPU = 2,
+    BG_BACKEND_HIP_SAFE = 3,
+    BG_BACKEND_HIP_FAST = 4,
+    /* Legacy aliases identify the C++ reference and safe HIP lanes. */
+    BG_BACKEND_CPU = BG_BACKEND_CPP_CPU_REFERENCE,
     BG_BACKEND_HIP = BG_BACKEND_HIP_SAFE
 };
 

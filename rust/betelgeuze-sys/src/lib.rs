@@ -38,10 +38,11 @@ pub const BG_STATUS_INTERNAL_ERROR: bg_status = 9;
 
 pub type bg_backend = i32;
 pub const BG_BACKEND_AUTO: bg_backend = 0;
-pub const BG_BACKEND_RUST_CPU: bg_backend = 1;
-pub const BG_BACKEND_HIP_SAFE: bg_backend = 2;
-pub const BG_BACKEND_HIP_FAST: bg_backend = 3;
-pub const BG_BACKEND_CPU: bg_backend = BG_BACKEND_RUST_CPU;
+pub const BG_BACKEND_CPP_CPU_REFERENCE: bg_backend = 1;
+pub const BG_BACKEND_RUST_CPU: bg_backend = 2;
+pub const BG_BACKEND_HIP_SAFE: bg_backend = 3;
+pub const BG_BACKEND_HIP_FAST: bg_backend = 4;
+pub const BG_BACKEND_CPU: bg_backend = BG_BACKEND_CPP_CPU_REFERENCE;
 pub const BG_BACKEND_HIP: bg_backend = BG_BACKEND_HIP_SAFE;
 
 pub type bg_unit_system = i32;

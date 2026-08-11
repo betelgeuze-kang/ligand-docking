@@ -11,6 +11,9 @@ static void test_context_contract(void) {
     assert(bg_abi_version_minor() == BG_ABI_VERSION_MINOR);
     assert(strcmp(bg_abi_version_string(), "1.0") == 0);
     assert(strcmp(bg_status_string(BG_STATUS_OK), "ok") == 0);
+    assert(strcmp(
+               bg_backend_string(BG_BACKEND_CPP_CPU_REFERENCE),
+               "cpp_cpu_reference") == 0);
     assert(strcmp(bg_backend_string(BG_BACKEND_RUST_CPU), "rust_cpu") == 0);
     assert(strcmp(bg_backend_string(BG_BACKEND_HIP_SAFE), "hip_safe") == 0);
     assert(strcmp(bg_backend_string(BG_BACKEND_HIP_FAST), "hip_fast") == 0);
@@ -22,6 +25,9 @@ static void test_context_contract(void) {
     assert(bg_backend_is_available(BG_BACKEND_CPU, 0, &available) ==
            BG_STATUS_OK);
     assert(available == 1);
+    assert(bg_backend_is_available(BG_BACKEND_RUST_CPU, 0, &available) ==
+           BG_STATUS_OK);
+    assert(available == 0);
     assert(bg_backend_is_available(BG_BACKEND_HIP, 0, &available) ==
            BG_STATUS_OK);
     assert(available == 0);
@@ -42,6 +48,13 @@ static void test_context_contract(void) {
     assert(bg_context_get_device_ordinal(context, &ordinal) == BG_STATUS_OK);
     assert(ordinal == 0);
     bg_context_destroy(context);
+
+    options.backend = BG_BACKEND_RUST_CPU;
+    context = (bg_context *)(uintptr_t)1;
+    assert(bg_context_create(&options, &context) ==
+           BG_STATUS_BACKEND_UNAVAILABLE);
+    assert(context == NULL);
+    assert(strstr(bg_last_error_message(), "fallback is forbidden") != NULL);
 
     options.backend = BG_BACKEND_HIP;
     context = (bg_context *)(uintptr_t)1;

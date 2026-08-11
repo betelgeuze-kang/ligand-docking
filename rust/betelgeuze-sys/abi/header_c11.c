@@ -5,9 +5,12 @@
 
 _Static_assert(BG_ABI_VERSION == UINT32_C(1), "unexpected ABI version");
 _Static_assert(BG_STATUS_OK == 0, "unexpected success status");
-_Static_assert(BG_BACKEND_CPU == 1, "unexpected CPU backend value");
-_Static_assert(BG_BACKEND_HIP == 2, "unexpected HIP backend value");
-_Static_assert(BG_BACKEND_HIP_FAST == 3, "unexpected HIP fast backend value");
+_Static_assert(
+    BG_BACKEND_CPP_CPU_REFERENCE == 1,
+    "unexpected C++ CPU reference backend value");
+_Static_assert(BG_BACKEND_RUST_CPU == 2, "unexpected Rust CPU backend value");
+_Static_assert(BG_BACKEND_HIP == 3, "unexpected HIP backend value");
+_Static_assert(BG_BACKEND_HIP_FAST == 4, "unexpected HIP fast backend value");
 _Static_assert(
     BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL == 1,
     "unexpected canonical unit-system value");

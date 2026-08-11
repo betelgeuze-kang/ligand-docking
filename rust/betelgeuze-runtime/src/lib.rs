@@ -59,6 +59,7 @@ pub const CANONICAL_UNITS: CanonicalUnits = CanonicalUnits {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Backend {
     Auto,
+    CppCpuReference,
     RustCpu,
     HipSafe,
     HipFast,
@@ -68,6 +69,7 @@ impl Backend {
     const fn as_raw(self) -> sys::bg_backend {
         match self {
             Self::Auto => sys::BG_BACKEND_AUTO,
+            Self::CppCpuReference => sys::BG_BACKEND_CPP_CPU_REFERENCE,
             Self::RustCpu => sys::BG_BACKEND_RUST_CPU,
             Self::HipSafe => sys::BG_BACKEND_HIP_SAFE,
             Self::HipFast => sys::BG_BACKEND_HIP_FAST,
@@ -77,6 +79,7 @@ impl Backend {
     fn from_raw(raw: sys::bg_backend) -> Result<Self> {
         match raw {
             sys::BG_BACKEND_AUTO => Ok(Self::Auto),
+            sys::BG_BACKEND_CPP_CPU_REFERENCE => Ok(Self::CppCpuReference),
             sys::BG_BACKEND_RUST_CPU => Ok(Self::RustCpu),
             sys::BG_BACKEND_HIP_SAFE => Ok(Self::HipSafe),
             sys::BG_BACKEND_HIP_FAST => Ok(Self::HipFast),
@@ -95,7 +98,14 @@ pub struct ContextOptions {
 }
 
 impl ContextOptions {
-    pub const fn cpu() -> Self {
+    pub const fn cpu_reference() -> Self {
+        Self {
+            backend: Backend::CppCpuReference,
+            device_ordinal: 0,
+        }
+    }
+
+    pub const fn rust_cpu() -> Self {
         Self {
             backend: Backend::RustCpu,
             device_ordinal: 0,
@@ -126,7 +136,7 @@ impl ContextOptions {
 
 impl Default for ContextOptions {
     fn default() -> Self {
-        Self::cpu()
+        Self::cpu_reference()
     }
 }
 
