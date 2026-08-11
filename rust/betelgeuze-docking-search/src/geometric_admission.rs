@@ -517,6 +517,34 @@ pub fn native_fixed64_coordinate_sha256(
     Ok(coordinate_sha256_unchecked(coordinates_angstrom))
 }
 
+pub fn native_fixed64_radii_sha256(
+    radii_angstrom: &[f64],
+) -> Result<[u8; 32], Fixed64GeometricError> {
+    validate_radii(radii_angstrom, FIXED64_MAX_RECEPTOR_ATOMS)?;
+    let mut hash = CanonicalHash::new("betelgeuze.fixed64_vdw_radii/native-v1");
+    hash.usize(radii_angstrom.len());
+    for radius in radii_angstrom {
+        hash.f64(*radius);
+    }
+    Ok(hash.finish())
+}
+
+pub fn native_fixed64_heavy_atom_mask_sha256(
+    heavy_atom_mask: &[bool],
+) -> Result<[u8; 32], Fixed64GeometricError> {
+    if heavy_atom_mask.is_empty() || heavy_atom_mask.len() > FIXED64_MAX_LIGAND_ATOMS {
+        return Err(invalid(
+            "heavy-atom mask denominator is outside its frozen bounds",
+        ));
+    }
+    let mut hash = CanonicalHash::new("betelgeuze.fixed64_heavy_atom_mask/native-v1");
+    hash.usize(heavy_atom_mask.len());
+    for heavy in heavy_atom_mask {
+        hash.bool(*heavy);
+    }
+    Ok(hash.finish())
+}
+
 pub fn evaluate_fixed64_geometric_metrics(
     candidate_coordinates_angstrom: &[Vec3],
     input: &Fixed64GeometricInput,

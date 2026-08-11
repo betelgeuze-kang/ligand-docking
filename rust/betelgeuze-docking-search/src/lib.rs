@@ -9,6 +9,8 @@ mod anchors;
 mod cluster;
 mod error;
 mod fixed64;
+mod fixed64_placement;
+mod fixed64_single_anchor;
 mod geometric_admission;
 mod geometry;
 mod identity;
@@ -27,15 +29,26 @@ mod validity;
 pub use error::{EvaluationError, SearchError, SearchErrorCode};
 pub use fixed64::{
     Fixed64Allocation, Fixed64AllocationError, Fixed64AnchorKind, Fixed64AtomicFeatureEvidence,
-    Fixed64ConformerSourceEvidence, Fixed64FeatureInventory, Fixed64FeatureKind,
-    Fixed64GenerationParent, Fixed64GenerationParentRole, Fixed64IndexedSourceEvidence,
-    Fixed64Lane, Fixed64MissingFeature, Fixed64Requirement, Fixed64Slot, Fixed64SourceEvidence,
-    FIXED64_CANDIDATE_COUNT, FIXED64_LANE_RANGES, FIXED64_PROFILE_ID,
-    NATIVE_FIXED64_ALLOCATION_SCHEMA_ID, NATIVE_FIXED64_SLOT_SCHEMA_ID, RETAINED_SOURCE_INDICES,
-    TRUE_CONFORMER_SLOT_RANKS,
+    Fixed64ConformerSourceEvidence, Fixed64ExactV11SourceEvidence, Fixed64FeatureInventory,
+    Fixed64FeatureKind, Fixed64GenerationParent, Fixed64GenerationParentRole,
+    Fixed64IndexedSourceEvidence, Fixed64Lane, Fixed64MissingFeature, Fixed64Requirement,
+    Fixed64Slot, Fixed64SourceEvidence, FIXED64_CANDIDATE_COUNT, FIXED64_LANE_RANGES,
+    FIXED64_PROFILE_ID, NATIVE_FIXED64_ALLOCATION_SCHEMA_ID, NATIVE_FIXED64_SLOT_SCHEMA_ID,
+    RETAINED_SOURCE_INDICES, TRUE_CONFORMER_SLOT_RANKS,
+};
+pub use fixed64_placement::{
+    generate_native_fixed64_indexed_so3, Fixed64FeatureGeometry, Fixed64FeatureGeometryInventory,
+    Fixed64IndexedSo3Placement, Fixed64PlacementError, Fixed64PlacementErrorCode,
+    Fixed64PlacementSource, NATIVE_FIXED64_FEATURE_GEOMETRY_SCHEMA_ID,
+    NATIVE_FIXED64_INDEXED_SO3_PROFILE_ID, NATIVE_FIXED64_INDEXED_SO3_SCHEMA_ID,
+    NATIVE_FIXED64_SINGLE_ANCHOR_PROFILE_ID, NATIVE_FIXED64_SINGLE_ANCHOR_SCHEMA_ID,
+};
+pub use fixed64_single_anchor::{
+    generate_native_fixed64_single_anchor, Fixed64SingleAnchorPlacement,
 };
 pub use geometric_admission::{
-    evaluate_fixed64_geometric_metrics, native_fixed64_coordinate_sha256, Fixed64GeometricBatch,
+    evaluate_fixed64_geometric_metrics, native_fixed64_coordinate_sha256,
+    native_fixed64_heavy_atom_mask_sha256, native_fixed64_radii_sha256, Fixed64GeometricBatch,
     Fixed64GeometricDecision, Fixed64GeometricError, Fixed64GeometricErrorCode,
     Fixed64GeometricInput, Fixed64GeometricMetrics, Fixed64GeometricStatus,
     FIXED64_MAX_ABSOLUTE_COORDINATE_ANGSTROM, FIXED64_MAX_BATCH_EXACT_PAIR_EVALUATIONS,

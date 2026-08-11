@@ -168,6 +168,30 @@ pub struct Fixed64SourceEvidence {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Fixed64ExactV11SourceEvidence {
+    pub source_receipt_sha256: [u8; 32],
+    pub proposal_sha256: [u8; 32],
+    pub ligand_coordinate_sha256: [u8; 32],
+    pub receptor_coordinate_sha256: [u8; 32],
+    pub prepared_ligand_topology_sha256: [u8; 32],
+    pub prepared_receptor_topology_sha256: [u8; 32],
+    pub ligand_vdw_radii_sha256: [u8; 32],
+    pub ligand_heavy_atom_mask_sha256: [u8; 32],
+    pub receptor_vdw_radii_sha256: [u8; 32],
+}
+
+impl Fixed64ExactV11SourceEvidence {
+    #[must_use]
+    pub const fn ligand_source(self) -> Fixed64SourceEvidence {
+        Fixed64SourceEvidence {
+            receipt_sha256: self.source_receipt_sha256,
+            proposal_sha256: self.proposal_sha256,
+            coordinate_sha256: self.ligand_coordinate_sha256,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Fixed64IndexedSourceEvidence {
     pub source_index: u32,
     pub source: Fixed64SourceEvidence,
@@ -187,7 +211,7 @@ pub struct Fixed64AtomicFeatureEvidence {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Fixed64FeatureInventory {
-    exact_v11_source: Fixed64SourceEvidence,
+    exact_v11_source: Fixed64ExactV11SourceEvidence,
     atomic_features: Vec<Fixed64AtomicFeatureEvidence>,
     v7_control_sources: Vec<Fixed64IndexedSourceEvidence>,
     conformer_sources: Vec<Fixed64ConformerSourceEvidence>,
@@ -196,7 +220,7 @@ pub struct Fixed64FeatureInventory {
 
 impl Fixed64FeatureInventory {
     pub fn new(
-        exact_v11_source: Fixed64SourceEvidence,
+        exact_v11_source: Fixed64ExactV11SourceEvidence,
         atomic_features: Vec<Fixed64AtomicFeatureEvidence>,
         v7_control_sources: Vec<Fixed64IndexedSourceEvidence>,
         conformer_sources: Vec<Fixed64ConformerSourceEvidence>,
@@ -214,7 +238,7 @@ impl Fixed64FeatureInventory {
     }
 
     #[must_use]
-    pub const fn exact_v11_source(&self) -> Fixed64SourceEvidence {
+    pub const fn exact_v11_source(&self) -> Fixed64ExactV11SourceEvidence {
         self.exact_v11_source
     }
 
@@ -610,7 +634,7 @@ fn build_slot(inventory: &Fixed64FeatureInventory, slot_index: usize) -> Fixed64
         Fixed64Lane::DeterministicIndependentSo3 => {
             slot.so3_sequence_index = Some(lane_offset as u8);
             slot.generation_parent = Some(parent(
-                inventory.exact_v11_source,
+                inventory.exact_v11_source.ligand_source(),
                 Fixed64GenerationParentRole::GeneratorInputParent,
             ));
         }
@@ -776,7 +800,7 @@ fn push_feature_receipt(
 
 fn use_exact_parent(inventory: &Fixed64FeatureInventory, slot: &mut Fixed64Slot) {
     slot.generation_parent = Some(parent(
-        inventory.exact_v11_source,
+        inventory.exact_v11_source.ligand_source(),
         Fixed64GenerationParentRole::GeneratorInputParent,
     ));
 }
@@ -834,7 +858,7 @@ const fn all_feature_kinds() -> [Fixed64FeatureKind; 12] {
 
 fn inventory_sha256(inventory: &Fixed64FeatureInventory) -> [u8; 32] {
     let mut hash = CanonicalHash::new("betelgeuze.fixed64_feature_inventory/native-v1");
-    source_evidence(&mut hash, inventory.exact_v11_source);
+    exact_source_evidence(&mut hash, inventory.exact_v11_source);
     hash.usize(inventory.atomic_features.len());
     for feature in &inventory.atomic_features {
         hash.byte(feature.kind.tag());
@@ -862,6 +886,18 @@ fn source_evidence(hash: &mut CanonicalHash, source: Fixed64SourceEvidence) {
     hash.digest(source.receipt_sha256);
     hash.digest(source.proposal_sha256);
     hash.digest(source.coordinate_sha256);
+}
+
+fn exact_source_evidence(hash: &mut CanonicalHash, source: Fixed64ExactV11SourceEvidence) {
+    hash.digest(source.source_receipt_sha256);
+    hash.digest(source.proposal_sha256);
+    hash.digest(source.ligand_coordinate_sha256);
+    hash.digest(source.receptor_coordinate_sha256);
+    hash.digest(source.prepared_ligand_topology_sha256);
+    hash.digest(source.prepared_receptor_topology_sha256);
+    hash.digest(source.ligand_vdw_radii_sha256);
+    hash.digest(source.ligand_heavy_atom_mask_sha256);
+    hash.digest(source.receptor_vdw_radii_sha256);
 }
 
 fn slot_sha256(slot: &Fixed64Slot) -> [u8; 32] {

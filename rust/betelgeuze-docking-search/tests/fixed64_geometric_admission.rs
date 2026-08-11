@@ -1,8 +1,8 @@
 use betelgeuze_docking_search::{
     evaluate_fixed64_geometric_metrics, native_fixed64_coordinate_sha256, Fixed64Allocation,
-    Fixed64FeatureInventory, Fixed64GeometricBatch, Fixed64GeometricErrorCode,
-    Fixed64GeometricInput, Fixed64GeometricStatus, Fixed64MissingFeature, Fixed64SourceEvidence,
-    Vec3, FIXED64_CANDIDATE_COUNT, FIXED64_MAX_BATCH_EXACT_PAIR_EVALUATIONS,
+    Fixed64ExactV11SourceEvidence, Fixed64FeatureInventory, Fixed64GeometricBatch,
+    Fixed64GeometricErrorCode, Fixed64GeometricInput, Fixed64GeometricStatus,
+    Fixed64MissingFeature, Vec3, FIXED64_CANDIDATE_COUNT, FIXED64_MAX_BATCH_EXACT_PAIR_EVALUATIONS,
     HARD_REJECTION_MINIMUM_VDW_RATIO,
 };
 
@@ -10,11 +10,17 @@ fn digest(marker: u8) -> [u8; 32] {
     [marker; 32]
 }
 
-fn exact_source() -> Fixed64SourceEvidence {
-    Fixed64SourceEvidence {
-        receipt_sha256: digest(1),
+fn exact_source() -> Fixed64ExactV11SourceEvidence {
+    Fixed64ExactV11SourceEvidence {
+        source_receipt_sha256: digest(1),
         proposal_sha256: digest(2),
-        coordinate_sha256: digest(3),
+        ligand_coordinate_sha256: digest(3),
+        receptor_coordinate_sha256: digest(4),
+        prepared_ligand_topology_sha256: digest(5),
+        prepared_receptor_topology_sha256: digest(6),
+        ligand_vdw_radii_sha256: digest(7),
+        ligand_heavy_atom_mask_sha256: digest(8),
+        receptor_vdw_radii_sha256: digest(9),
     }
 }
 

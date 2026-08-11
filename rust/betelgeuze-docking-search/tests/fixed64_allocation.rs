@@ -2,10 +2,10 @@ use std::collections::BTreeMap;
 
 use betelgeuze_docking_search::{
     Fixed64Allocation, Fixed64AllocationError, Fixed64AtomicFeatureEvidence,
-    Fixed64ConformerSourceEvidence, Fixed64FeatureInventory, Fixed64FeatureKind,
-    Fixed64GenerationParentRole, Fixed64IndexedSourceEvidence, Fixed64MissingFeature,
-    Fixed64SourceEvidence, FIXED64_CANDIDATE_COUNT, FIXED64_LANE_RANGES, RETAINED_SOURCE_INDICES,
-    TRUE_CONFORMER_SLOT_RANKS,
+    Fixed64ConformerSourceEvidence, Fixed64ExactV11SourceEvidence, Fixed64FeatureInventory,
+    Fixed64FeatureKind, Fixed64GenerationParentRole, Fixed64IndexedSourceEvidence,
+    Fixed64MissingFeature, Fixed64SourceEvidence, FIXED64_CANDIDATE_COUNT, FIXED64_LANE_RANGES,
+    RETAINED_SOURCE_INDICES, TRUE_CONFORMER_SLOT_RANKS,
 };
 
 const FEATURE_KINDS: [Fixed64FeatureKind; 12] = [
@@ -35,8 +35,18 @@ fn source(marker: u8) -> Fixed64SourceEvidence {
     }
 }
 
-fn exact_source() -> Fixed64SourceEvidence {
-    source(240)
+fn exact_source() -> Fixed64ExactV11SourceEvidence {
+    Fixed64ExactV11SourceEvidence {
+        source_receipt_sha256: digest(240),
+        proposal_sha256: digest(241),
+        ligand_coordinate_sha256: digest(242),
+        receptor_coordinate_sha256: digest(243),
+        prepared_ligand_topology_sha256: digest(244),
+        prepared_receptor_topology_sha256: digest(245),
+        ligand_vdw_radii_sha256: digest(246),
+        ligand_heavy_atom_mask_sha256: digest(247),
+        receptor_vdw_radii_sha256: digest(248),
+    }
 }
 
 fn atomic_features() -> Vec<Fixed64AtomicFeatureEvidence> {
