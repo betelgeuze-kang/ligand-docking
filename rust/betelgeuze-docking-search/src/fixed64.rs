@@ -247,6 +247,21 @@ impl Fixed64FeatureInventory {
         &self.atomic_features
     }
 
+    #[must_use]
+    pub fn v7_control_source(&self, index: u32) -> Option<Fixed64SourceEvidence> {
+        self.v7_control(index)
+    }
+
+    #[must_use]
+    pub fn conformer_source(&self, rank: u8) -> Option<Fixed64SourceEvidence> {
+        self.conformer(rank)
+    }
+
+    #[must_use]
+    pub fn retained_source(&self, index: u32) -> Option<Fixed64SourceEvidence> {
+        self.retained(index)
+    }
+
     fn validate(&self) -> Result<(), Fixed64AllocationError> {
         if self.atomic_features.len() > 12 * 256 {
             return Err(Fixed64AllocationError::InvalidInventory(

@@ -1,7 +1,11 @@
 use std::fmt;
 
 use crate::native_hash::CanonicalHash;
-use crate::{Fixed64Allocation, Fixed64Lane, Fixed64MissingFeature, Vec3, FIXED64_CANDIDATE_COUNT};
+use crate::{
+    Fixed64Allocation, Fixed64Lane, Fixed64MissingFeature, Fixed64PlacementErrorCode,
+    Fixed64ProposalBatch, Fixed64ProposalFailureCode, Fixed64ProposalRecord, Fixed64ProposalStatus,
+    Vec3, FIXED64_CANDIDATE_COUNT,
+};
 
 pub const NATIVE_FIXED64_GEOMETRIC_INPUT_SCHEMA_ID: &str =
     "betelgeuze.engine_v2_geometric_admission_native_inputs/1.0.0";
@@ -273,6 +277,8 @@ pub struct Fixed64GeometricDecision {
     lane: Fixed64Lane,
     allocation_generation_eligible: bool,
     allocation_missing_features: Vec<Fixed64MissingFeature>,
+    proposal_record_receipt_sha256: Option<[u8; 32]>,
+    proposal_failure_code: Option<Fixed64ProposalFailureCode>,
     candidate_coordinate_sha256: Option<[u8; 32]>,
     metrics: Option<Fixed64GeometricMetrics>,
     status: Fixed64GeometricStatus,
@@ -299,6 +305,16 @@ impl Fixed64GeometricDecision {
     #[must_use]
     pub fn allocation_missing_features(&self) -> &[Fixed64MissingFeature] {
         &self.allocation_missing_features
+    }
+
+    #[must_use]
+    pub const fn proposal_record_receipt_sha256(&self) -> Option<[u8; 32]> {
+        self.proposal_record_receipt_sha256
+    }
+
+    #[must_use]
+    pub const fn proposal_failure_code(&self) -> Option<Fixed64ProposalFailureCode> {
+        self.proposal_failure_code
     }
 
     #[must_use]
@@ -339,6 +355,7 @@ impl Fixed64GeometricDecision {
 pub struct Fixed64GeometricBatch {
     allocation: Fixed64Allocation,
     input: Fixed64GeometricInput,
+    proposal_batch: Option<Fixed64ProposalBatch>,
     candidate_coordinates_angstrom: [Option<Vec<Vec3>>; FIXED64_CANDIDATE_COUNT],
     exact_input_sha256: [u8; 32],
     decisions: [Fixed64GeometricDecision; FIXED64_CANDIDATE_COUNT],
@@ -351,10 +368,50 @@ impl Fixed64GeometricBatch {
         input: Fixed64GeometricInput,
         candidate_coordinates_angstrom: [Option<Vec<Vec3>>; FIXED64_CANDIDATE_COUNT],
     ) -> Result<Self, Fixed64GeometricError> {
+        Self::evaluate_internal(allocation, input, None, candidate_coordinates_angstrom)
+    }
+
+    pub fn evaluate_proposals(
+        proposal_batch: Fixed64ProposalBatch,
+    ) -> Result<Self, Fixed64GeometricError> {
+        if !proposal_batch.has_valid_receipt() {
+            return Err(cross_wired("proposal batch receipt is invalid"));
+        }
+        let allocation = proposal_batch.allocation().clone();
+        let input = proposal_batch.source_bundle().geometric_input().clone();
+        let candidate_coordinates_angstrom = std::array::from_fn(|index| {
+            proposal_batch
+                .candidate_coordinates_angstrom(index)
+                .map(<[Vec3]>::to_vec)
+        });
+        Self::evaluate_internal(
+            &allocation,
+            input,
+            Some(proposal_batch),
+            candidate_coordinates_angstrom,
+        )
+    }
+
+    fn evaluate_internal(
+        allocation: &Fixed64Allocation,
+        input: Fixed64GeometricInput,
+        proposal_batch: Option<Fixed64ProposalBatch>,
+        candidate_coordinates_angstrom: [Option<Vec<Vec3>>; FIXED64_CANDIDATE_COUNT],
+    ) -> Result<Self, Fixed64GeometricError> {
         if !allocation.has_valid_receipt() || !input.has_valid_receipt() {
             return Err(cross_wired(
                 "allocation or geometric input receipt is invalid",
             ));
+        }
+        if let Some(proposals) = proposal_batch.as_ref() {
+            if !proposals.has_valid_receipt()
+                || proposals.allocation().receipt_sha256() != allocation.receipt_sha256()
+                || proposals.source_bundle().geometric_input() != &input
+            {
+                return Err(cross_wired(
+                    "proposal batch is cross-wired to another allocation or system",
+                ));
+            }
         }
         let ready_count = candidate_coordinates_angstrom
             .iter()
@@ -371,17 +428,26 @@ impl Fixed64GeometricBatch {
         }
 
         let mut decisions = Vec::with_capacity(FIXED64_CANDIDATE_COUNT);
-        for (slot, coordinates) in allocation
+        for (index, (slot, coordinates)) in allocation
             .slots()
             .iter()
             .zip(&candidate_coordinates_angstrom)
+            .enumerate()
         {
-            if slot.generation_eligible() != coordinates.is_some() {
+            let proposal_record = proposal_batch
+                .as_ref()
+                .map(|proposals| &proposals.records()[index]);
+            if proposal_record.is_none() && slot.generation_eligible() != coordinates.is_some() {
                 return Err(cross_wired(
                     "candidate presence disagrees with allocation generation eligibility",
                 ));
             }
-            decisions.push(build_decision(slot, coordinates.as_deref(), &input)?);
+            decisions.push(build_decision(
+                slot,
+                coordinates.as_deref(),
+                &input,
+                proposal_record,
+            )?);
         }
         let decisions: [Fixed64GeometricDecision; FIXED64_CANDIDATE_COUNT] =
             decisions
@@ -392,11 +458,15 @@ impl Fixed64GeometricBatch {
             &input,
             &candidate_coordinates_angstrom,
             exact_pair_evaluations,
+            proposal_batch
+                .as_ref()
+                .map(Fixed64ProposalBatch::receipt_sha256),
         );
         let receipt_sha256 = batch_sha256(allocation, exact_input_sha256, &decisions);
         Ok(Self {
             allocation: allocation.clone(),
             input,
+            proposal_batch,
             candidate_coordinates_angstrom,
             exact_input_sha256,
             decisions,
@@ -412,6 +482,11 @@ impl Fixed64GeometricBatch {
     #[must_use]
     pub fn input(&self) -> &Fixed64GeometricInput {
         &self.input
+    }
+
+    #[must_use]
+    pub fn proposal_batch(&self) -> Option<&Fixed64ProposalBatch> {
+        self.proposal_batch.as_ref()
     }
 
     #[must_use]
@@ -475,6 +550,20 @@ impl Fixed64GeometricBatch {
         if !self.allocation.has_valid_receipt() || !self.input.has_valid_receipt() {
             return false;
         }
+        if self.proposal_batch.as_ref().is_some_and(|proposals| {
+            !proposals.has_valid_receipt()
+                || proposals.allocation().receipt_sha256() != self.allocation.receipt_sha256()
+                || proposals.source_bundle().geometric_input() != &self.input
+                || proposals
+                    .records()
+                    .iter()
+                    .zip(&self.candidate_coordinates_angstrom)
+                    .any(|(record, coordinates)| {
+                        record.output_coordinates_angstrom() != coordinates.as_deref()
+                    })
+        }) {
+            return false;
+        }
         let exact_pair_evaluations = self
             .candidate_coordinates_angstrom
             .iter()
@@ -491,6 +580,9 @@ impl Fixed64GeometricBatch {
                 &self.input,
                 &self.candidate_coordinates_angstrom,
                 exact_pair_evaluations,
+                self.proposal_batch
+                    .as_ref()
+                    .map(Fixed64ProposalBatch::receipt_sha256),
             ) != self.exact_input_sha256
             || batch_sha256(&self.allocation, self.exact_input_sha256, &self.decisions)
                 != self.receipt_sha256
@@ -502,9 +594,14 @@ impl Fixed64GeometricBatch {
             .iter()
             .zip(&self.candidate_coordinates_angstrom)
             .zip(&self.decisions)
-            .all(|((slot, coordinates), observed)| {
-                slot.generation_eligible() == coordinates.is_some()
-                    && build_decision(slot, coordinates.as_deref(), &self.input)
+            .enumerate()
+            .all(|(index, ((slot, coordinates), observed))| {
+                let proposal_record = self
+                    .proposal_batch
+                    .as_ref()
+                    .map(|proposals| &proposals.records()[index]);
+                (proposal_record.is_some() || slot.generation_eligible() == coordinates.is_some())
+                    && build_decision(slot, coordinates.as_deref(), &self.input, proposal_record)
                         .is_ok_and(|expected| expected == *observed)
             })
     }
@@ -634,10 +731,41 @@ fn build_decision(
     slot: &crate::Fixed64Slot,
     coordinates: Option<&[Vec3]>,
     input: &Fixed64GeometricInput,
+    proposal_record: Option<&Fixed64ProposalRecord>,
 ) -> Result<Fixed64GeometricDecision, Fixed64GeometricError> {
-    let (candidate_coordinate_sha256, metrics, status, rank_eligible) = if slot
-        .generation_eligible()
-    {
+    let proposal_record_receipt_sha256 = proposal_record.map(Fixed64ProposalRecord::receipt_sha256);
+    let proposal_failure_code = proposal_record.and_then(Fixed64ProposalRecord::failure_code);
+    let generated = if let Some(record) = proposal_record {
+        if record.slot_index() != slot.slot_index()
+            || record.lane() != slot.lane()
+            || record.output_coordinates_angstrom() != coordinates
+        {
+            return Err(cross_wired(
+                "proposal record is cross-wired to another slot or coordinates",
+            ));
+        }
+        match record.status() {
+            Fixed64ProposalStatus::Generated => {
+                if proposal_failure_code.is_some() || coordinates.is_none() {
+                    return Err(cross_wired(
+                        "generated proposal record lacks its coordinates",
+                    ));
+                }
+                true
+            }
+            Fixed64ProposalStatus::TypedGenerationFailure => {
+                if proposal_failure_code.is_none() || coordinates.is_some() {
+                    return Err(cross_wired(
+                        "failed proposal record fabricated candidate coordinates",
+                    ));
+                }
+                false
+            }
+        }
+    } else {
+        slot.generation_eligible()
+    };
+    let (candidate_coordinate_sha256, metrics, status, rank_eligible) = if generated {
         let coordinates = coordinates
             .ok_or_else(|| cross_wired("generation-eligible slot lacks candidate coordinates"))?;
         let coordinate_sha256 = native_fixed64_coordinate_sha256(coordinates)?;
@@ -673,6 +801,8 @@ fn build_decision(
         lane: slot.lane(),
         allocation_generation_eligible: slot.generation_eligible(),
         allocation_missing_features: slot.missing_features().to_vec(),
+        proposal_record_receipt_sha256,
+        proposal_failure_code,
         candidate_coordinate_sha256,
         metrics,
         status,
@@ -808,6 +938,12 @@ fn decision_sha256(decision: &Fixed64GeometricDecision) -> [u8; 32] {
     for value in &decision.allocation_missing_features {
         missing_feature(&mut hash, *value);
     }
+    hash.option(decision.proposal_record_receipt_sha256, |hash, value| {
+        hash.digest(value)
+    });
+    hash.option(decision.proposal_failure_code, |hash, value| {
+        proposal_failure_code(hash, value)
+    });
     hash.option(decision.candidate_coordinate_sha256, |hash, value| {
         hash.digest(value)
     });
@@ -829,6 +965,7 @@ fn exact_input_sha256(
     input: &Fixed64GeometricInput,
     candidates: &[Option<Vec<Vec3>>; FIXED64_CANDIDATE_COUNT],
     exact_pair_evaluations: usize,
+    proposal_batch_receipt_sha256: Option<[u8; 32]>,
 ) -> [u8; 32] {
     let mut hash = CanonicalHash::new("betelgeuze.fixed64_geometric_exact_inputs/native-v1");
     hash.digest(allocation.receipt_sha256());
@@ -842,6 +979,9 @@ fn exact_input_sha256(
     }
     hash.usize(exact_pair_evaluations);
     hash.usize(FIXED64_MAX_BATCH_EXACT_PAIR_EVALUATIONS);
+    hash.option(proposal_batch_receipt_sha256, |hash, value| {
+        hash.digest(value)
+    });
     hash.finish()
 }
 
@@ -887,6 +1027,37 @@ fn missing_feature(hash: &mut CanonicalHash, value: Fixed64MissingFeature) {
         Fixed64MissingFeature::RetainedSource(index) => {
             hash.byte(11);
             hash.u32(index);
+        }
+    }
+}
+
+fn proposal_failure_code(hash: &mut CanonicalHash, value: Fixed64ProposalFailureCode) {
+    match value {
+        Fixed64ProposalFailureCode::AllocationMissingFeature => hash.byte(0),
+        Fixed64ProposalFailureCode::MissingExactV11Source => hash.byte(1),
+        Fixed64ProposalFailureCode::MissingV7ControlSource => hash.byte(2),
+        Fixed64ProposalFailureCode::MissingConformerSource => hash.byte(3),
+        Fixed64ProposalFailureCode::MissingRetainedSource => hash.byte(4),
+        Fixed64ProposalFailureCode::LigandAtomDenominatorMismatch => hash.byte(5),
+        Fixed64ProposalFailureCode::SourcePayloadCrossWired => hash.byte(6),
+        Fixed64ProposalFailureCode::Placement(code) => {
+            hash.byte(7);
+            hash.byte(match code {
+                Fixed64PlacementErrorCode::InvalidInput => 0,
+                Fixed64PlacementErrorCode::AllocationSlotNotEligible => 1,
+                Fixed64PlacementErrorCode::UnsupportedLane => 2,
+                Fixed64PlacementErrorCode::SourceIdentityMismatch => 3,
+                Fixed64PlacementErrorCode::FeatureCrossWired => 4,
+                Fixed64PlacementErrorCode::FeatureAtomIndexOutOfRange => 5,
+                Fixed64PlacementErrorCode::DegenerateSo3SourceGeometry => 6,
+                Fixed64PlacementErrorCode::DegenerateLigandDirection => 7,
+                Fixed64PlacementErrorCode::DegenerateReceptorDirection => 8,
+                Fixed64PlacementErrorCode::DegenerateLocalSurfaceNormal => 9,
+                Fixed64PlacementErrorCode::DegenerateAromaticPlane => 10,
+                Fixed64PlacementErrorCode::DegeneratePrincipalAxis => 11,
+                Fixed64PlacementErrorCode::GeometricPrecheckFailed => 12,
+                Fixed64PlacementErrorCode::InternalInvariant => 13,
+            });
         }
     }
 }

@@ -10,6 +10,7 @@ mod cluster;
 mod error;
 mod fixed64;
 mod fixed64_placement;
+mod fixed64_producer;
 mod fixed64_single_anchor;
 mod geometric_admission;
 mod geometry;
@@ -42,6 +43,17 @@ pub use fixed64_placement::{
     Fixed64PlacementSource, NATIVE_FIXED64_FEATURE_GEOMETRY_SCHEMA_ID,
     NATIVE_FIXED64_INDEXED_SO3_PROFILE_ID, NATIVE_FIXED64_INDEXED_SO3_SCHEMA_ID,
     NATIVE_FIXED64_SINGLE_ANCHOR_PROFILE_ID, NATIVE_FIXED64_SINGLE_ANCHOR_SCHEMA_ID,
+};
+pub use fixed64_producer::{
+    native_fixed64_producer_policy_sha256, produce_native_fixed64_proposals,
+    Fixed64CoordinateSourceKind, Fixed64CoordinateSourcePayload, Fixed64PassthroughPlacement,
+    Fixed64ProducerError, Fixed64ProducerErrorCode, Fixed64ProposalBatch,
+    Fixed64ProposalFailureCode, Fixed64ProposalGenerationFailure, Fixed64ProposalPlacement,
+    Fixed64ProposalRecord, Fixed64ProposalSourceBundle, Fixed64ProposalStatus,
+    NATIVE_FIXED64_COORDINATE_SOURCE_SCHEMA_ID, NATIVE_FIXED64_GENERATION_FAILURE_SCHEMA_ID,
+    NATIVE_FIXED64_PASSTHROUGH_SCHEMA_ID, NATIVE_FIXED64_PRODUCER_BATCH_SCHEMA_ID,
+    NATIVE_FIXED64_PRODUCER_PROFILE_ID, NATIVE_FIXED64_PROPOSAL_RECORD_SCHEMA_ID,
+    NATIVE_FIXED64_SOURCE_BUNDLE_SCHEMA_ID,
 };
 pub use fixed64_single_anchor::{
     generate_native_fixed64_single_anchor, Fixed64SingleAnchorPlacement,
