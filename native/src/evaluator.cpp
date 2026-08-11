@@ -2,9 +2,11 @@
 #include "internal.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <type_traits>
 
 namespace betelgeuze::native {
 namespace {
@@ -60,7 +62,10 @@ bg_status validate_energy_output(
 bg_status validate_force_output(
     const bg_force_soa_v1 &forces,
     const bg_energy_components_v1 *energy,
-    std::size_t atom_count) noexcept {
+    const bg_context &context,
+    const bg_system &system,
+    const bg_forcefield &forcefield) noexcept {
+    const std::size_t atom_count = forcefield.atom_count;
     bg_status status = validate_descriptor_header(
         forces.struct_size,
         sizeof(bg_force_soa_v1),
@@ -135,6 +140,124 @@ bg_status validate_force_output(
             BG_STATUS_INVALID_ARGUMENT,
             "force output channels and output descriptors must not overlap");
     }
+
+    const std::array<ByteRange, 5> output_ranges = {
+        x_range,
+        y_range,
+        z_range,
+        force_descriptor_range,
+        energy_descriptor_range,
+    };
+    const auto reject_native_overlap = [&](const void *pointer,
+                                           std::size_t bytes) -> bg_status {
+        if (bytes == 0) {
+            return BG_STATUS_OK;
+        }
+        ByteRange native_range;
+        if (!make_byte_range(pointer, bytes, &native_range)) {
+            return fail(
+                BG_STATUS_INTERNAL_ERROR,
+                "native-owned byte range is not representable");
+        }
+        for (const ByteRange &output_range : output_ranges) {
+            if (ranges_overlap(output_range, native_range)) {
+                return fail(
+                    BG_STATUS_INVALID_ARGUMENT,
+                    "output storage must not overlap native-owned state");
+            }
+        }
+        return BG_STATUS_OK;
+    };
+    const auto reject_vector_overlap = [&](const auto &values) -> bg_status {
+        using Value = typename std::decay_t<decltype(values)>::value_type;
+        return reject_native_overlap(
+            values.empty() ? nullptr : values.data(),
+            values.size() * sizeof(Value));
+    };
+
+    status = reject_native_overlap(&context, sizeof(context));
+    if (status != BG_STATUS_OK) {
+        return status;
+    }
+    status = reject_native_overlap(&system, sizeof(system));
+    if (status != BG_STATUS_OK) {
+        return status;
+    }
+    status = reject_native_overlap(&forcefield, sizeof(forcefield));
+    if (status != BG_STATUS_OK) {
+        return status;
+    }
+    for (const auto *values : {
+             &system.position_x,
+             &system.position_y,
+             &system.position_z,
+             &system.velocity_x,
+             &system.velocity_y,
+             &system.velocity_z,
+             &system.mass,
+             &system.charge,
+             &forcefield.sigma,
+             &forcefield.epsilon,
+             &forcefield.bonds.equilibrium,
+             &forcefield.bonds.force_constant,
+             &forcefield.angles.equilibrium,
+             &forcefield.angles.force_constant,
+             &forcefield.torsions.phase,
+             &forcefield.torsions.amplitude,
+         }) {
+        status = reject_vector_overlap(*values);
+        if (status != BG_STATUS_OK) {
+            return status;
+        }
+    }
+    status = reject_vector_overlap(forcefield.bonds.atom_i);
+    if (status != BG_STATUS_OK) {
+        return status;
+    }
+    status = reject_vector_overlap(forcefield.bonds.atom_j);
+    if (status != BG_STATUS_OK) {
+        return status;
+    }
+    status = reject_vector_overlap(forcefield.angles.atom_i);
+    if (status != BG_STATUS_OK) {
+        return status;
+    }
+    status = reject_vector_overlap(forcefield.angles.atom_j);
+    if (status != BG_STATUS_OK) {
+        return status;
+    }
+    status = reject_vector_overlap(forcefield.angles.atom_k);
+    if (status != BG_STATUS_OK) {
+        return status;
+    }
+    status = reject_vector_overlap(forcefield.torsions.atom_i);
+    if (status != BG_STATUS_OK) {
+        return status;
+    }
+    status = reject_vector_overlap(forcefield.torsions.atom_j);
+    if (status != BG_STATUS_OK) {
+        return status;
+    }
+    status = reject_vector_overlap(forcefield.torsions.atom_k);
+    if (status != BG_STATUS_OK) {
+        return status;
+    }
+    status = reject_vector_overlap(forcefield.torsions.atom_l);
+    if (status != BG_STATUS_OK) {
+        return status;
+    }
+    status = reject_vector_overlap(forcefield.torsions.periodicity);
+    if (status != BG_STATUS_OK) {
+        return status;
+    }
+    status = reject_vector_overlap(forcefield.exclusions);
+    if (status != BG_STATUS_OK) {
+        return status;
+    }
+    status = reject_vector_overlap(forcefield.pair_scales);
+    if (status != BG_STATUS_OK) {
+        return status;
+    }
     return BG_STATUS_OK;
 }
 
@@ -161,7 +284,11 @@ extern "C" BG_API bg_status BG_CALL bg_context_evaluate(
         }
         if (out_forces != nullptr) {
             status = validate_force_output(
-                *out_forces, out_energy, forcefield->atom_count);
+                *out_forces,
+                out_energy,
+                *context,
+                *system,
+                *forcefield);
             if (status != BG_STATUS_OK) {
                 return status;
             }
@@ -172,7 +299,7 @@ extern "C" BG_API bg_status BG_CALL bg_context_evaluate(
                 BG_STATUS_INVALID_ARGUMENT,
                 "context, system, and forcefield unit systems must match");
         }
-        if (context->backend != BG_BACKEND_CPU) {
+        if (context->backend != BG_BACKEND_CPP_CPU_REFERENCE) {
             return fail(
                 BG_STATUS_UNSUPPORTED_BACKEND,
                 "the selected backend has no evaluator implementation");

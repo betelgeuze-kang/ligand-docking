@@ -14,6 +14,7 @@ fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(BG_STATUS_INTERNAL_ERROR, 9);
     assert_eq!(BG_STATUS_NUMERICAL_ERROR, 10);
     assert_eq!(BG_BACKEND_AUTO, 0);
+    assert_eq!(BG_BACKEND_CPU, 1);
     assert_eq!(BG_BACKEND_CPP_CPU_REFERENCE, 1);
     assert_eq!(BG_BACKEND_RUST_CPU, 2);
     assert_eq!(BG_BACKEND_HIP, 3);

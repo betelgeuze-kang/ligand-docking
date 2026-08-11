@@ -358,7 +358,8 @@ typedef struct bg_forcefield_soa_v1 {
 /* Caller-owned force output.  capacity and all channels are input fields;
  * particle_count is committed on success.  A null descriptor requests energy
  * only.  For the first particle_count elements, x/y/z channels must be
- * mutually non-overlapping and must not overlap either output descriptor. */
+ * mutually non-overlapping and must not overlap either output descriptor or
+ * any context-, system-, or forcefield-owned storage. */
 typedef struct bg_force_soa_v1 {
     uint32_t struct_size;
     uint32_t abi_version;
@@ -502,7 +503,7 @@ BG_API bg_status BG_CALL bg_mutable_tensor_view_v1_validate(
 BG_API bg_status BG_CALL bg_stream_v1_validate(
     const bg_stream_v1 *stream) BG_NOEXCEPT;
 
-/* Backend selection is explicit.  An unavailable HIP request never runs CPU. */
+/* Backend selection is explicit. An unavailable request never falls back. */
 BG_API bg_status BG_CALL bg_backend_is_available(
     bg_backend backend,
     int32_t device_ordinal,
@@ -556,8 +557,8 @@ BG_API bg_status BG_CALL bg_forcefield_get_atom_count(
     uint64_t *atom_count) BG_NOEXCEPT;
 
 /*
- * Dispatch through the explicitly selected context backend.  CPU evaluation
- * is scalar binary64 with a fixed serial accumulation order and analytic
+ * Dispatch through the explicitly selected context backend. The C++ CPU
+ * reference is scalar binary64 with a fixed serial accumulation order and analytic
  * forces defined as -dU/d(position).  Output buffers are transactional: no output value changes unless
  * the complete evaluation succeeds.  Energy-only evaluation does not require
  * differentiability of a zero-length harmonic bond; requesting forces for

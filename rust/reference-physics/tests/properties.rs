@@ -346,6 +346,9 @@ fn exclusion_pairs_are_unordered_and_allow_coincident_atoms() {
 
     excluded.exclusions.clear();
     assert_error(&excluded, OracleErrorCode::PairBelowMinimumDistance);
+
+    excluded.nonbonded.minimum_pair_distance_angstrom = 1.0e-300;
+    assert_error(&excluded, OracleErrorCode::PairBelowMinimumDistance);
 }
 
 #[test]

@@ -11,6 +11,7 @@ _Static_assert(BG_STATUS_NUMERICAL_ERROR == 10, "unexpected numerical status");
 _Static_assert(
     BG_BACKEND_CPP_CPU_REFERENCE == 1,
     "unexpected C++ CPU reference backend value");
+_Static_assert(BG_BACKEND_CPU == 1, "unexpected CPU backend value");
 _Static_assert(BG_BACKEND_RUST_CPU == 2, "unexpected Rust CPU backend value");
 _Static_assert(BG_BACKEND_HIP == 3, "unexpected HIP backend value");
 _Static_assert(BG_BACKEND_HIP_FAST == 4, "unexpected HIP fast backend value");

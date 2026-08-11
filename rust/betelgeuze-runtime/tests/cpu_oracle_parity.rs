@@ -525,7 +525,7 @@ fn native_fixture(fixture: &Fixture) -> NativeFixture {
     forcefield_input.nonbonded = nonbonded;
     let forcefield = runtime::ForceField::new(forcefield_input)
         .unwrap_or_else(|error| panic!("{} force-field conversion failed: {error}", fixture.name));
-    let context = runtime::Context::new(runtime::ContextOptions::cpu())
+    let context = runtime::Context::new(runtime::ContextOptions::cpu_reference())
         .unwrap_or_else(|error| panic!("{} CPU context failed: {error}", fixture.name));
 
     NativeFixture {

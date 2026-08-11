@@ -1002,6 +1002,55 @@ void test_output_validation_and_transactionality(const bg_context *context) {
             shared == shared_before && z == z_before,
             "overlapping outputs changed force buffers");
     }
+    {
+        bg_particle_soa_view view{};
+        require_status(
+            bg_particle_soa_view_init(&view),
+            BG_STATUS_OK,
+            "particle view initializer failed");
+        require_status(
+            bg_system_get_particles(system.get(), &view),
+            BG_STATUS_OK,
+            "particle view query failed");
+        const std::array<double, 2> position_before = {
+            view.position_x_angstrom[0], view.position_x_angstrom[1]};
+        bg_energy_components_v1 energy{};
+        set_energy_sentinel(&energy);
+        const bg_energy_components_v1 energy_before = energy;
+        std::vector<double> y(2, 236.5);
+        std::vector<double> z(2, 237.5);
+        const std::vector<double> y_before = y;
+        const std::vector<double> z_before = z;
+        bg_force_soa_v1 forces{};
+        require_status(
+            bg_force_soa_v1_init(&forces),
+            BG_STATUS_OK,
+            "force descriptor initializer failed");
+        forces.particle_capacity = UINT64_C(2);
+        forces.particle_count = UINT64_C(778);
+        forces.x_kcal_per_mol_angstrom =
+            const_cast<double *>(view.position_x_angstrom);
+        forces.y_kcal_per_mol_angstrom = y.data();
+        forces.z_kcal_per_mol_angstrom = z.data();
+        require_status(
+            bg_context_evaluate(
+                context, system.get(), forcefield.get(), &energy, &forces),
+            BG_STATUS_INVALID_ARGUMENT,
+            "native-owned system storage was accepted as an output");
+        require(
+            std::strstr(bg_last_error_message(), "native-owned") != nullptr,
+            "native-owned output overlap returned the wrong failure reason");
+        require_energy_bitwise_equal(
+            energy, energy_before, "native-owned overlap changed energy");
+        require(
+            forces.particle_count == UINT64_C(778),
+            "native-owned overlap changed force count");
+        require(
+            view.position_x_angstrom[0] == position_before[0] &&
+                view.position_x_angstrom[1] == position_before[1] &&
+                y == y_before && z == z_before,
+            "native-owned overlap changed system or output storage");
+    }
 
     ForceFieldData three_parameters;
     three_parameters.sigma = {1.0, 1.0, 1.0};
@@ -1172,7 +1221,9 @@ void test_numerical_failures_are_transactional(const bg_context *context) {
     close_parameters.bond_j = {UINT64_C(1)};
     close_parameters.bond_equilibrium = {0.5};
     close_parameters.bond_force_constant = {2.0};
-    close_parameters.minimum_pair_distance = 0.25;
+    // Squaring this threshold underflows; the comparison must remain in
+    // distance space and still classify the coincident pair correctly.
+    close_parameters.minimum_pair_distance = 1.0e-300;
     const SystemPtr close_system = make_system(close_particles);
     const ForceFieldPtr close_forcefield = make_forcefield(close_parameters);
     bg_energy_components_v1 close_energy{};
@@ -1196,6 +1247,9 @@ void test_numerical_failures_are_transactional(const bg_context *context) {
             &close_forces),
         BG_STATUS_NUMERICAL_ERROR,
         "minimum pair distance violation was not rejected");
+    require(
+        std::strstr(bg_last_error_message(), "minimum_pair_distance") != nullptr,
+        "underflow-scale minimum distance returned the wrong failure reason");
     require_unchanged(
         close_energy,
         close_energy_before,

@@ -568,12 +568,12 @@ bg_status evaluate_nonbonded(
                 return status;
             }
             const double minimum = forcefield.minimum_pair_distance;
-            if (squared_distance < minimum * minimum) {
+            const double distance = std::sqrt(squared_distance);
+            if (distance < minimum) {
                 return fail(
                     BG_STATUS_NUMERICAL_ERROR,
                     "nonbonded pair is below minimum_pair_distance");
             }
-            const double distance = std::sqrt(squared_distance);
             if (distance > forcefield.cutoff) {
                 continue;
             }

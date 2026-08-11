@@ -82,13 +82,13 @@ pub fn evaluate(input: &OracleInput) -> Result<EnergyComponents, OracleError> {
             let delta = checked_displacement(input, atom_i, atom_j, "nonbonded displacement")?;
             let squared_distance = delta.squared_norm();
             let minimum = input.nonbonded.minimum_pair_distance_angstrom;
-            if squared_distance < minimum * minimum {
+            let distance = squared_distance.sqrt();
+            if distance < minimum {
                 return Err(OracleError::new(
                     OracleErrorCode::PairBelowMinimumDistance,
                     format!("nonbonded pair ({atom_i},{atom_j}) is below {minimum} angstrom"),
                 ));
             }
-            let distance = squared_distance.sqrt();
             if distance > input.nonbonded.cutoff_angstrom {
                 continue;
             }

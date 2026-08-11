@@ -970,6 +970,7 @@ impl System {
     }
 
     pub fn snapshot(&self) -> Result<ParticleSnapshot> {
+        let expected_count = self.len()?;
         let mut view = MaybeUninit::<sys::bg_particle_soa_view>::uninit();
         // SAFETY: view points to correctly sized writable storage.
         status_result(unsafe {
@@ -983,13 +984,20 @@ impl System {
         let mut view = unsafe { view.assume_init() };
         // SAFETY: The private system handle remains live for all copies below.
         status_result(unsafe { sys::bg_system_get_particles(self.handle.as_ptr(), &mut view) })?;
+        if view.struct_size as usize != std::mem::size_of::<sys::bg_particle_soa_view>()
+            || view.abi_version != sys::BG_ABI_VERSION
+            || view.unit_system != sys::BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL
+            || view.reserved0 != 0
+            || view.reserved != [0; 4]
+            || view.particle_count != checked_count(expected_count)?
+        {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native system returned an invalid particle view descriptor",
+            ));
+        }
         UnitSystem::from_raw(view.unit_system)?;
-        let count = usize::try_from(view.particle_count).map_err(|_| {
-            Error::local(
-                ErrorCode::CapacityOverflow,
-                "native particle count does not fit usize",
-            )
-        })?;
+        let count = expected_count;
 
         // SAFETY: Successful native views contain count readable doubles per
         // non-empty channel and remain valid while self is immutably borrowed.
