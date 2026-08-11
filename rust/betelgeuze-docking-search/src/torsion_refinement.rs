@@ -678,6 +678,16 @@ pub fn refine_interaction_aware_torsion_contact_v7(
     })
 }
 
+/// Validates a persistent V7 context without inventing candidate coordinates
+/// or evaluating a scientific objective.
+pub fn validate_interaction_aware_torsion_contact_v7_context(
+    context: NativeTorsionV7Context<'_>,
+    config: NativeTorsionV7Config,
+) -> Result<(), NativeTorsionV7Error> {
+    config.validate()?;
+    prepare_persistent_context(context, config).map(drop)
+}
+
 fn prepare_context<'a>(
     context: NativeTorsionV7Context<'a>,
     source_coordinates: &[Vec3],
@@ -688,29 +698,48 @@ fn prepare_context<'a>(
     config: NativeTorsionV7Config,
 ) -> Result<PreparedContext<'a>, NativeTorsionV7Error> {
     let atom_count = context.ligand_vdw_radii_angstrom.len();
-    if atom_count == 0
-        || atom_count > NATIVE_TORSION_V7_MAX_LIGAND_ATOMS
-        || source_coordinates.len() != atom_count
+    if source_coordinates.len() != atom_count
         || baseline_coordinates.len() != atom_count
         || baseline_torsion_angles.len() != atom_count
-        || context.parent_atom_indices.len() != atom_count
-        || context.receptor_coordinates_angstrom.is_empty()
-        || context.receptor_coordinates_angstrom.len() != context.receptor_vdw_radii_angstrom.len()
-        || context.receptor_coordinates_angstrom.len() > NATIVE_TORSION_V7_MAX_RECEPTOR_ATOMS
         || max_steps > NATIVE_TORSION_V7_MAX_CALLER_STEPS
         || baseline_accepted_steps > max_steps
         || baseline_accepted_steps > config.maximum_baseline_v6_steps
     {
         return Err(invalid("V7 request shape or step bound is invalid"));
     }
-    if !context.pocket_center_angstrom.is_finite()
-        || source_coordinates
-            .iter()
-            .chain(baseline_coordinates)
-            .any(|coordinate| !coordinate.is_finite())
+    if source_coordinates
+        .iter()
+        .chain(baseline_coordinates)
+        .any(|coordinate| !coordinate.is_finite())
         || baseline_torsion_angles
             .iter()
             .any(|angle| !angle.is_finite())
+    {
+        return Err(non_finite("V7 request contains non-finite values"));
+    }
+    prepare_persistent_context(context, config)
+}
+
+fn prepare_persistent_context<'a>(
+    context: NativeTorsionV7Context<'a>,
+    config: NativeTorsionV7Config,
+) -> Result<PreparedContext<'a>, NativeTorsionV7Error> {
+    let atom_count = context.ligand_vdw_radii_angstrom.len();
+    let maximum_internal_pairs = atom_count
+        .checked_mul(atom_count.saturating_sub(1))
+        .map(|value| value / 2)
+        .ok_or_else(|| budget("V7 internal pair bound overflowed"))?;
+    if atom_count == 0
+        || atom_count > NATIVE_TORSION_V7_MAX_LIGAND_ATOMS
+        || context.parent_atom_indices.len() != atom_count
+        || context.receptor_coordinates_angstrom.is_empty()
+        || context.receptor_coordinates_angstrom.len() != context.receptor_vdw_radii_angstrom.len()
+        || context.receptor_coordinates_angstrom.len() > NATIVE_TORSION_V7_MAX_RECEPTOR_ATOMS
+        || context.evaluated_internal_pairs.len() > maximum_internal_pairs
+    {
+        return Err(invalid("V7 persistent context shape is invalid"));
+    }
+    if !context.pocket_center_angstrom.is_finite()
         || context
             .receptor_coordinates_angstrom
             .iter()
@@ -721,7 +750,9 @@ fn prepare_context<'a>(
             .chain(context.ligand_vdw_radii_angstrom)
             .any(|radius| !radius.is_finite() || *radius <= 0.0)
     {
-        return Err(non_finite("V7 request contains non-finite values"));
+        return Err(non_finite(
+            "V7 persistent context contains non-finite values",
+        ));
     }
     validate_parent_tree(context.parent_atom_indices)?;
     let mut previous_rotor = None;

@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <limits>
 #include <type_traits>
 
@@ -510,9 +511,60 @@ void test_failures_are_transactional_and_cross_wiring_is_rejected() {
     assert(cross_wired_storage.rows[0].slot_index == UINT32_MAX);
     assert(cross_wired_storage.optimized_x[0] == 103.0);
 
+    batch = batch_fixture.descriptor();
+    OutputStorage descriptor_alias_storage(107.0);
+    auto descriptor_alias_output = descriptor_alias_storage.descriptor();
+    descriptor_alias_output.rows =
+        reinterpret_cast<bg_docking_torsion_v7_row_v1 *>(
+            &descriptor_alias_output);
+    const auto descriptor_alias_before = descriptor_alias_output;
+    assert(
+        bg_docking_torsion_v7_refine_fixed64(
+            cpp_context,
+            cpp_refiner,
+            &batch,
+            &descriptor_alias_output) == BG_STATUS_INVALID_ARGUMENT);
+    assert(
+        std::memcmp(
+            &descriptor_alias_output,
+            &descriptor_alias_before,
+            sizeof(descriptor_alias_output)) == 0);
+    assert(descriptor_alias_storage.moves[0].evaluated == UINT8_C(95));
+    assert(descriptor_alias_storage.optimized_x[0] == 107.0);
+
     bg_docking_torsion_v7_destroy(cpp_refiner);
     bg_context_destroy(cpp_context);
     bg_context_destroy(rust_context);
+}
+
+void test_context_pair_bound_and_coordinate_free_validation() {
+    ContextFixture fixture;
+    auto excessive_pairs = fixture.descriptor();
+    excessive_pairs.internal_pair_count = UINT64_C(7);
+
+    for (const bg_backend backend :
+         {BG_BACKEND_CPP_CPU_REFERENCE, BG_BACKEND_RUST_CPU}) {
+        bg_context *context = create_context(backend);
+        bg_docking_torsion_v7 *refiner = nullptr;
+        assert(
+            bg_docking_torsion_v7_create(
+                context, &excessive_pairs, &refiner) ==
+            BG_STATUS_CAPACITY_OVERFLOW);
+        assert(refiner == nullptr);
+        bg_context_destroy(context);
+    }
+
+    auto large_weight = fixture.descriptor();
+    large_weight.internal_overlap_weight =
+        std::numeric_limits<double>::max();
+    for (const bg_backend backend :
+         {BG_BACKEND_CPP_CPU_REFERENCE, BG_BACKEND_RUST_CPU}) {
+        bg_context *context = create_context(backend);
+        bg_docking_torsion_v7 *refiner =
+            create_refiner(context, large_weight);
+        bg_docking_torsion_v7_destroy(refiner);
+        bg_context_destroy(context);
+    }
 }
 
 void test_hip_parity_when_device_is_available(bg_backend backend) {
@@ -604,6 +656,7 @@ int main() {
     test_cpu_parity_fixed64_and_context_deep_copy();
     test_candidate_local_failure_preserves_denominator();
     test_failures_are_transactional_and_cross_wiring_is_rejected();
+    test_context_pair_bound_and_coordinate_free_validation();
     test_hip_parity_when_device_is_available(BG_BACKEND_HIP_SAFE);
     test_hip_parity_when_device_is_available(BG_BACKEND_HIP_FAST);
     return 0;

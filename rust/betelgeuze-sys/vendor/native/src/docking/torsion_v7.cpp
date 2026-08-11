@@ -372,6 +372,13 @@ template <typename Type>
             BG_STATUS_CAPACITY_OVERFLOW,
             "torsion V7 context denominator is outside native bounds");
     }
+    const std::size_t maximum_internal_pairs =
+        ligand_count * (ligand_count - 1) / 2;
+    if (pair_count > maximum_internal_pairs) {
+        return fail(
+            BG_STATUS_CAPACITY_OVERFLOW,
+            "torsion V7 internal pair denominator exceeds canonical maximum");
+    }
 #define BG_REQUIRE_TORSION_CHANNEL(pointer, count, message)                 \
     do {                                                                   \
         status = require_channel((pointer), (count), (message));           \
@@ -1235,7 +1242,8 @@ template <typename Type>
          *coordinate_count *
              sizeof(*candidates.baseline_v6_torsion_angles_radians)},
     }};
-    const std::array<std::pair<const void *, std::size_t>, 10> outputs = {{
+    const std::array<std::pair<const void *, std::size_t>, 11> outputs = {{
+        {&output, sizeof(output)},
         {output.rows, kCandidateCount * sizeof(*output.rows)},
         {output.moves, move_count * sizeof(*output.moves)},
         {output.optimized_x_angstrom,
