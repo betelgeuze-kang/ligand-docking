@@ -611,7 +611,7 @@ def test_installed_rc6_native_executes_full_search_when_available() -> None:
         ),
     )
     assert release_5sis.search_receipt["orientation_sha256"] == (
-        "006ee393989d4c99fed886492e640cd1c58c1e37f525c2cb61f52bbd64108e02"
+        "cbc59dd1e729d7e81947180f3d8955d26db3d91aef8a2183439fe8a39b749a3d"
     )
 
 

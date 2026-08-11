@@ -42,7 +42,7 @@ impl Vec3 {
 
     #[must_use]
     pub fn norm(self) -> f64 {
-        self.x.hypot(self.y).hypot(self.z)
+        libm::hypot(libm::hypot(self.x, self.y), self.z)
     }
 
     pub(crate) fn normalized(self, label: &str) -> Result<Self, SearchError> {
@@ -114,10 +114,13 @@ impl Quaternion {
                 "quaternion must be non-zero",
             ));
         }
-        let scaled_norm = (self.x / maximum)
-            .hypot(self.y / maximum)
-            .hypot(self.z / maximum)
-            .hypot(self.w / maximum);
+        let scaled_norm = libm::hypot(
+            libm::hypot(
+                libm::hypot(self.x / maximum, self.y / maximum),
+                self.z / maximum,
+            ),
+            self.w / maximum,
+        );
         let norm = maximum * scaled_norm;
         let inverse = if norm.is_finite() && (norm - 1.0).abs() <= 1.0e-15 {
             1.0
@@ -162,12 +165,12 @@ impl Quaternion {
             return Ok(Self::new(0.0, 0.0, 0.0, 1.0));
         }
         let half = 0.5 * angle;
-        let sine_over_angle = half.sin() / angle;
+        let sine_over_angle = libm::sin(half) / angle;
         Self::new(
             rotation.x * sine_over_angle,
             rotation.y * sine_over_angle,
             rotation.z * sine_over_angle,
-            half.cos(),
+            libm::cos(half),
         )
         .canonicalized()
     }

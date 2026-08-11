@@ -9,6 +9,9 @@ version = "0.1.0"
 [[package]]
 name = "betelgeuze-docking-search"
 version = "0.1.0"
+dependencies = [
+ "libm",
+]
 
 [[package]]
 name = "betelgeuze-reference-dynamics"
@@ -50,6 +53,12 @@ name = "find-msvc-tools"
 version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "26b73573e6edcd2af0cdf47bd6cb58f0b3839491263c314eaad1ccf24430e1de"
+
+[[package]]
+name = "libm"
+version = "0.2.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b6d2cec3eae94f9f509c767b45932f1ada8350c4bdb85af2fcab4a3c14807981"
 
 [[package]]
 name = "shlex"
