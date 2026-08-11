@@ -170,7 +170,7 @@ _Static_assert(
     sizeof(bg_docking_torsion_v7_output_v1) == 216,
     "torsion V7 output ABI changed");
 _Static_assert(
-    sizeof(bg_docking_fixed64_refinement_input_v1) == 192,
+    sizeof(bg_docking_fixed64_refinement_input_v1) == 200,
     "fixed64 refinement input ABI changed");
 _Static_assert(
     sizeof(bg_docking_fixed64_refinement_row_v1) == 104,

@@ -201,10 +201,12 @@ void destroy_components(
     if (input.candidate_count != kCandidateCount ||
         input.ligand_atom_count != pipeline.ligand_atom_count ||
         input.unit_system != pipeline.unit_system || input.reserved0 != 0 ||
+        !std::isfinite(input.rmsd_threshold_angstrom) ||
+        input.rmsd_threshold_angstrom <= 0.0 ||
         !reserved_is_zero(input.reserved)) {
         return fail(
             BG_STATUS_INVALID_ARGUMENT,
-            "fixed64 refinement input denominator, units, or reserved fields are invalid");
+            "fixed64 refinement input denominator, units, RMSD threshold, or reserved fields are invalid");
     }
     std::size_t ligand_count = 0;
     status = checked_element_count(
@@ -496,6 +498,50 @@ void destroy_components(
     return BG_STATUS_OK;
 }
 
+[[nodiscard]] bg_status validate_cluster_output(
+    const bg_docking_fixed64_refinement_pipeline_v1 &pipeline,
+    bg_docking_rmsd_cluster_output_v1 &output) noexcept {
+    bg_status status = validate_descriptor_header(
+        output.struct_size,
+        sizeof(output),
+        output.abi_version,
+        "fixed64 refinement cluster output size does not match ABI v1",
+        "fixed64 refinement cluster output ABI version does not match");
+    if (status != BG_STATUS_OK) {
+        return status;
+    }
+    if (output.row_capacity != kCandidateCount ||
+        output.representative_index_capacity != kCandidateCount ||
+        output.top_k_index_capacity != BG_DOCKING_STABLE_TOP_K_LIMIT ||
+        output.unit_system != pipeline.unit_system || output.reserved0 != 0 ||
+        output.existing_rank_auto_change_authorized != 0 ||
+        output.customer_pose_emission_authorized != 0 ||
+        output.production_claim_authorized != 0 || output.reserved1 != 0 ||
+        output.reserved2 != 0 || !reserved_is_zero(output.reserved)) {
+        return fail(
+            BG_STATUS_INVALID_ARGUMENT,
+            "fixed64 refinement cluster output capacity, units, authority, or reserved fields are invalid");
+    }
+    status = require_channel(
+        output.rows,
+        kCandidateCount,
+        "fixed64 refinement cluster rows are null or misaligned");
+    if (status != BG_STATUS_OK) {
+        return status;
+    }
+    status = require_channel(
+        output.representative_slot_indices,
+        kCandidateCount,
+        "fixed64 refinement cluster representatives are null or misaligned");
+    if (status != BG_STATUS_OK) {
+        return status;
+    }
+    return require_channel(
+        output.top_k_slot_indices,
+        BG_DOCKING_STABLE_TOP_K_LIMIT,
+        "fixed64 refinement cluster Top-K indices are null or misaligned");
+}
+
 [[nodiscard]] bg_status validate_no_overlap(
     const bg_context &context,
     const bg_docking_fixed64_refinement_pipeline_v1 &pipeline,
@@ -506,11 +552,12 @@ void destroy_components(
     bg_docking_scorer_v1_output_v1 &scorer,
     bg_docking_pose_validity_output_v1 &validity,
     bg_docking_stable_top_k_output_v1 &ranking,
+    bg_docking_rmsd_cluster_output_v1 &cluster,
     bg_docking_fixed64_refinement_output_v1 &output) {
     std::vector<MemoryRange> inputs;
     std::vector<MemoryRange> outputs;
     inputs.reserve(18);
-    outputs.reserve(40);
+    outputs.reserve(44);
     add_range(&inputs, &context, 1);
     add_range(&inputs, &pipeline, 1);
     add_range(&inputs, &input, 1);
@@ -569,6 +616,14 @@ void destroy_components(
     add_range(&outputs, ranking.rows, kCandidateCount);
     add_range(&outputs, ranking.primary_slot_indices, kCandidateCount);
     add_range(&outputs, ranking.valid_slot_indices, kCandidateCount);
+    add_range(&outputs, &cluster, 1);
+    add_range(&outputs, cluster.rows, kCandidateCount);
+    add_range(
+        &outputs, cluster.representative_slot_indices, kCandidateCount);
+    add_range(
+        &outputs,
+        cluster.top_k_slot_indices,
+        BG_DOCKING_STABLE_TOP_K_LIMIT);
     add_range(&outputs, &output, 1);
     add_range(&outputs, output.rows, kCandidateCount);
     add_range(&outputs, output.final_x_angstrom, coordinate_count);
@@ -801,13 +856,15 @@ bg_docking_fixed64_refinement_pipeline_v1_run(
     bg_docking_scorer_v1_output_v1 *scorer_output,
     bg_docking_pose_validity_output_v1 *validity_output,
     bg_docking_stable_top_k_output_v1 *ranking_output,
+    bg_docking_rmsd_cluster_output_v1 *cluster_output,
     bg_docking_fixed64_refinement_output_v1 *pipeline_output) BG_NOEXCEPT {
     using namespace betelgeuze::native::docking::refinement_pipeline;
     return guarded_status([&]() -> bg_status {
         if (context == nullptr || pipeline == nullptr || input == nullptr ||
             rigid_output == nullptr || torsion_output == nullptr ||
             scorer_output == nullptr || validity_output == nullptr ||
-            ranking_output == nullptr || pipeline_output == nullptr) {
+            ranking_output == nullptr || cluster_output == nullptr ||
+            pipeline_output == nullptr) {
             return fail(
                 BG_STATUS_INVALID_ARGUMENT,
                 "fixed64 refinement pipeline run inputs and outputs must not be null");
@@ -818,6 +875,7 @@ bg_docking_fixed64_refinement_pipeline_v1_run(
             !pointer_is_aligned(scorer_output) ||
             !pointer_is_aligned(validity_output) ||
             !pointer_is_aligned(ranking_output) ||
+            !pointer_is_aligned(cluster_output) ||
             !pointer_is_aligned(pipeline_output)) {
             return fail(
                 BG_STATUS_INVALID_ARGUMENT,
@@ -827,7 +885,8 @@ bg_docking_fixed64_refinement_pipeline_v1_run(
             context->unit_system != pipeline->unit_system ||
             context->device_ordinal != pipeline->device_ordinal ||
             pipeline->rigid == nullptr || pipeline->torsion == nullptr ||
-            pipeline->downstream == nullptr) {
+            pipeline->downstream == nullptr ||
+            pipeline->downstream->ranker == nullptr) {
             return fail(
                 BG_STATUS_INVALID_ARGUMENT,
                 "fixed64 refinement pipeline handle is cross-wired or invalid");
@@ -848,6 +907,10 @@ bg_docking_fixed64_refinement_pipeline_v1_run(
         if (status != BG_STATUS_OK) {
             return status;
         }
+        status = validate_cluster_output(*pipeline, *cluster_output);
+        if (status != BG_STATUS_OK) {
+            return status;
+        }
         status = validate_pipeline_output(
             *pipeline, *pipeline_output, coordinate_count);
         if (status != BG_STATUS_OK) {
@@ -863,6 +926,7 @@ bg_docking_fixed64_refinement_pipeline_v1_run(
             *scorer_output,
             *validity_output,
             *ranking_output,
+            *cluster_output,
             *pipeline_output);
         if (status != BG_STATUS_OK) {
             return status;
@@ -1123,6 +1187,46 @@ bg_docking_fixed64_refinement_pipeline_v1_run(
         if (status != BG_STATUS_OK) {
             return status;
         }
+
+        std::array<bg_docking_rmsd_cluster_row_v1, kCandidateCount>
+            cluster_rows{};
+        std::array<uint32_t, kCandidateCount> representative_indices{};
+        std::array<uint32_t, BG_DOCKING_STABLE_TOP_K_LIMIT>
+            cluster_top_k_indices{};
+        bg_docking_rmsd_cluster_output_v1 local_cluster{};
+        status = bg_docking_rmsd_cluster_output_v1_init(
+            &local_cluster, sizeof(local_cluster), BG_ABI_VERSION);
+        if (status != BG_STATUS_OK) return status;
+        local_cluster.row_capacity = kCandidateCount;
+        local_cluster.representative_index_capacity = kCandidateCount;
+        local_cluster.top_k_index_capacity = BG_DOCKING_STABLE_TOP_K_LIMIT;
+        local_cluster.rows = cluster_rows.data();
+        local_cluster.representative_slot_indices =
+            representative_indices.data();
+        local_cluster.top_k_slot_indices = cluster_top_k_indices.data();
+        bg_docking_rmsd_cluster_input_v1 cluster_input{};
+        status = bg_docking_rmsd_cluster_input_v1_init(
+            &cluster_input, sizeof(cluster_input), BG_ABI_VERSION);
+        if (status != BG_STATUS_OK) return status;
+        cluster_input.candidate_count = kCandidateCount;
+        cluster_input.ligand_atom_count = input->ligand_atom_count;
+        cluster_input.valid_index_count = local_ranking.valid_index_count;
+        cluster_input.top_k_limit = BG_DOCKING_STABLE_TOP_K_LIMIT;
+        cluster_input.rmsd_threshold_angstrom =
+            input->rmsd_threshold_angstrom;
+        cluster_input.ranking_rows = ranking_rows.data();
+        cluster_input.valid_slot_indices = valid_indices.data();
+        cluster_input.x_angstrom = final_coordinates[0].data();
+        cluster_input.y_angstrom = final_coordinates[1].data();
+        cluster_input.z_angstrom = final_coordinates[2].data();
+        status = bg_docking_stable_top_k_v1_cluster_direct_rmsd_fixed64(
+            context,
+            pipeline->downstream->ranker,
+            &cluster_input,
+            &local_cluster);
+        if (status != BG_STATUS_OK) {
+            return status;
+        }
         for (std::size_t slot = 0; slot < kCandidateCount; ++slot) {
             std::copy_n(
                 ranking_rows[slot].coordinate_sha256,
@@ -1195,6 +1299,20 @@ bg_docking_fixed64_refinement_pipeline_v1_run(
         ranking_output->row_count = kCandidateCount;
         ranking_output->primary_index_count = local_ranking.primary_index_count;
         ranking_output->valid_index_count = local_ranking.valid_index_count;
+
+        copy_values(cluster_output->rows, cluster_rows.data(), kCandidateCount);
+        copy_values(
+            cluster_output->representative_slot_indices,
+            representative_indices.data(),
+            local_cluster.representative_index_count);
+        copy_values(
+            cluster_output->top_k_slot_indices,
+            cluster_top_k_indices.data(),
+            local_cluster.top_k_index_count);
+        cluster_output->row_count = kCandidateCount;
+        cluster_output->representative_index_count =
+            local_cluster.representative_index_count;
+        cluster_output->top_k_index_count = local_cluster.top_k_index_count;
 
         copy_values(pipeline_output->rows, pipeline_rows.data(), kCandidateCount);
         copy_values(

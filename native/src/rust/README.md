@@ -45,5 +45,5 @@ ABI 1.12 composes that Rust downstream provider with the independent Rust
 V2/V3/V6 and V7 providers through one persistent native handle. The shared
 host orchestration derives V7 eligibility, baseline step counts, final
 coordinate selection, and quaternion composition once for every backend. Rust
-therefore executes the same fixed64 refinement-to-ranking graph as C++ and HIP
-without a Python callback or backend relabeling.
+therefore executes the same fixed64 refinement-to-ranking-and-clustering graph
+as C++ and HIP without a Python callback or backend relabeling.

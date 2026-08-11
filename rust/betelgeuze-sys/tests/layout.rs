@@ -266,27 +266,34 @@ fn docking_torsion_v7_layouts_match_the_c_header() {
 #[cfg(target_pointer_width = "64")]
 #[test]
 fn fixed64_refinement_pipeline_layouts_match_the_c_header() {
-    assert_eq!(size_of::<bg_docking_fixed64_refinement_input_v1>(), 192);
+    assert_eq!(size_of::<bg_docking_fixed64_refinement_input_v1>(), 200);
     assert_eq!(align_of::<bg_docking_fixed64_refinement_input_v1>(), 8);
     assert_eq!(
         offset_of!(bg_docking_fixed64_refinement_input_v1, candidate_count),
         8
     );
     assert_eq!(
-        offset_of!(bg_docking_fixed64_refinement_input_v1, candidate_mode),
+        offset_of!(
+            bg_docking_fixed64_refinement_input_v1,
+            rmsd_threshold_angstrom
+        ),
         32
     );
     assert_eq!(
+        offset_of!(bg_docking_fixed64_refinement_input_v1, candidate_mode),
+        40
+    );
+    assert_eq!(
         offset_of!(bg_docking_fixed64_refinement_input_v1, source_x_angstrom),
-        64
+        72
     );
     assert_eq!(
         offset_of!(bg_docking_fixed64_refinement_input_v1, source_quaternion_x),
-        96
+        104
     );
     assert_eq!(
         offset_of!(bg_docking_fixed64_refinement_input_v1, reserved),
-        128
+        136
     );
 
     assert_eq!(size_of::<bg_docking_fixed64_refinement_row_v1>(), 104);

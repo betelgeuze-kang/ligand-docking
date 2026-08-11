@@ -220,6 +220,7 @@ struct Fixture final {
         bg_docking_fixed64_refinement_input_v1 value{};
         assert(bg_docking_fixed64_refinement_input_v1_init(&value) == BG_STATUS_OK);
         value.ligand_atom_count = kAtoms;
+        value.rmsd_threshold_angstrom = 1.5;
         value.candidate_mode = modes.data();
         value.rigid_max_steps = rigid_steps.data();
         value.proposal_is_torsion_eligible = torsion_eligible.data();
@@ -247,6 +248,9 @@ struct Result final {
     std::array<bg_docking_stable_top_k_row_v1, kSlots> ranking_rows{};
     std::array<uint32_t, kSlots> primary{};
     std::array<uint32_t, kSlots> valid{};
+    std::array<bg_docking_rmsd_cluster_row_v1, kSlots> cluster_rows{};
+    std::array<uint32_t, kSlots> representatives{};
+    std::array<uint32_t, BG_DOCKING_STABLE_TOP_K_LIMIT> cluster_top_k{};
     std::array<bg_docking_fixed64_refinement_row_v1, kSlots> pipeline_rows{};
     std::array<std::array<double, kCoordinates>, 3> final_coordinates{};
     std::array<std::array<double, kSlots>, 4> final_quaternions{};
@@ -255,9 +259,12 @@ struct Result final {
     uint64_t scorer_count = 0;
     uint64_t validity_count = 0;
     uint64_t ranking_count = 0;
+    uint64_t cluster_count = 0;
     uint64_t pipeline_count = 0;
     uint64_t primary_count = 0;
     uint64_t valid_count = 0;
+    uint64_t representative_count = 0;
+    uint64_t cluster_top_k_count = 0;
 };
 
 bg_context *create_context(bg_backend backend) {
@@ -294,19 +301,22 @@ bg_status run_into(
     bg_docking_fixed64_refinement_pipeline_v1 *pipeline,
     const Fixture &fixture,
     Result *result,
-    bool overlap_final_x = false) {
+    bool overlap_final_x = false,
+    bool overlap_cluster_rows = false) {
     auto input = fixture.input();
     bg_docking_rigid_refinement_output_v1 rigid{};
     bg_docking_torsion_v7_output_v1 torsion{};
     bg_docking_scorer_v1_output_v1 scorer{};
     bg_docking_pose_validity_output_v1 validity{};
     bg_docking_stable_top_k_output_v1 ranking{};
+    bg_docking_rmsd_cluster_output_v1 cluster{};
     bg_docking_fixed64_refinement_output_v1 output{};
     assert(bg_docking_rigid_refinement_output_v1_init(&rigid) == BG_STATUS_OK);
     assert(bg_docking_torsion_v7_output_v1_init(&torsion) == BG_STATUS_OK);
     assert(bg_docking_scorer_v1_output_v1_init(&scorer) == BG_STATUS_OK);
     assert(bg_docking_pose_validity_output_v1_init(&validity) == BG_STATUS_OK);
     assert(bg_docking_stable_top_k_output_v1_init(&ranking) == BG_STATUS_OK);
+    assert(bg_docking_rmsd_cluster_output_v1_init(&cluster) == BG_STATUS_OK);
     assert(bg_docking_fixed64_refinement_output_v1_init(&output) == BG_STATUS_OK);
     rigid.row_capacity = kSlots;
     rigid.coordinate_capacity = kCoordinates;
@@ -346,6 +356,15 @@ bg_status run_into(
     ranking.rows = result->ranking_rows.data();
     ranking.primary_slot_indices = result->primary.data();
     ranking.valid_slot_indices = result->valid.data();
+    cluster.row_capacity = kSlots;
+    cluster.representative_index_capacity = kSlots;
+    cluster.top_k_index_capacity = BG_DOCKING_STABLE_TOP_K_LIMIT;
+    cluster.rows = overlap_cluster_rows
+        ? reinterpret_cast<bg_docking_rmsd_cluster_row_v1 *>(
+              result->ranking_rows.data())
+        : result->cluster_rows.data();
+    cluster.representative_slot_indices = result->representatives.data();
+    cluster.top_k_slot_indices = result->cluster_top_k.data();
     output.row_capacity = kSlots;
     output.coordinate_capacity = kCoordinates;
     output.quaternion_capacity = kSlots;
@@ -368,21 +387,28 @@ bg_status run_into(
         &scorer,
         &validity,
         &ranking,
+        &cluster,
         &output);
     result->rigid_count = rigid.row_count;
     result->torsion_count = torsion.row_count;
     result->scorer_count = scorer.row_count;
     result->validity_count = validity.row_count;
     result->ranking_count = ranking.row_count;
+    result->cluster_count = cluster.row_count;
     result->pipeline_count = output.row_count;
     result->primary_count = ranking.primary_index_count;
     result->valid_count = ranking.valid_index_count;
+    result->representative_count = cluster.representative_index_count;
+    result->cluster_top_k_count = cluster.top_k_index_count;
     assert(output.molecular_execution_authorized == UINT8_C(0));
     assert(output.reservation_authorized == UINT8_C(0));
     assert(output.benchmark_execution_authorized == UINT8_C(0));
     assert(output.existing_rank_auto_change_authorized == UINT8_C(0));
     assert(output.customer_pose_emission_authorized == UINT8_C(0));
     assert(output.production_claim_authorized == UINT8_C(0));
+    assert(cluster.existing_rank_auto_change_authorized == UINT8_C(0));
+    assert(cluster.customer_pose_emission_authorized == UINT8_C(0));
+    assert(cluster.production_claim_authorized == UINT8_C(0));
     return status;
 }
 
@@ -412,9 +438,12 @@ void assert_parity(const Result &left, const Result &right, double tolerance) {
     assert(left.scorer_count == right.scorer_count);
     assert(left.validity_count == right.validity_count);
     assert(left.ranking_count == right.ranking_count);
+    assert(left.cluster_count == right.cluster_count);
     assert(left.pipeline_count == right.pipeline_count);
     assert(left.primary_count == right.primary_count);
     assert(left.valid_count == right.valid_count);
+    assert(left.representative_count == right.representative_count);
+    assert(left.cluster_top_k_count == right.cluster_top_k_count);
     for (std::size_t slot = 0; slot < kSlots; ++slot) {
         assert(left.pipeline_rows[slot].slot_index == slot);
         assert(left.pipeline_rows[slot].status == right.pipeline_rows[slot].status);
@@ -432,12 +461,49 @@ void assert_parity(const Result &left, const Result &right, double tolerance) {
                 left.pipeline_rows[slot].coordinate_sha256,
                 right.pipeline_rows[slot].coordinate_sha256,
                 32) == 0);
+        assert(left.cluster_rows[slot].status == right.cluster_rows[slot].status);
+        assert(
+            left.cluster_rows[slot].cluster_eligible ==
+            right.cluster_rows[slot].cluster_eligible);
+        assert(
+            left.cluster_rows[slot].representative ==
+            right.cluster_rows[slot].representative);
+        assert(
+            left.cluster_rows[slot].stable_valid_rank ==
+            right.cluster_rows[slot].stable_valid_rank);
+        assert(
+            left.cluster_rows[slot].cluster_id ==
+            right.cluster_rows[slot].cluster_id);
+        assert(
+            left.cluster_rows[slot].representative_slot_index ==
+            right.cluster_rows[slot].representative_slot_index);
+        assert(
+            left.cluster_rows[slot].cluster_rank ==
+            right.cluster_rows[slot].cluster_rank);
+        assert(
+            left.cluster_rows[slot].top_k_rank ==
+            right.cluster_rows[slot].top_k_rank);
+        assert(close(
+            left.cluster_rows[slot].direct_rmsd_to_representative_angstrom,
+            right.cluster_rows[slot].direct_rmsd_to_representative_angstrom,
+            tolerance));
+        assert(
+            std::memcmp(
+                left.cluster_rows[slot].coordinate_sha256,
+                right.cluster_rows[slot].coordinate_sha256,
+                32) == 0);
         for (std::size_t axis = 0; axis < 4; ++axis) {
             assert(close(
                 left.final_quaternions[axis][slot],
                 right.final_quaternions[axis][slot],
                 tolerance));
         }
+    }
+    for (std::size_t index = 0; index < left.representative_count; ++index) {
+        assert(left.representatives[index] == right.representatives[index]);
+    }
+    for (std::size_t index = 0; index < left.cluster_top_k_count; ++index) {
+        assert(left.cluster_top_k[index] == right.cluster_top_k[index]);
     }
     for (std::size_t axis = 0; axis < 3; ++axis) {
         for (std::size_t index = 0; index < kCoordinates; ++index) {
@@ -459,6 +525,9 @@ void test_fixed64_flow_and_cpu_parity() {
     assert(cpp.scorer_count == kSlots);
     assert(cpp.validity_count == kSlots);
     assert(cpp.ranking_count == kSlots);
+    assert(cpp.cluster_count == kSlots);
+    assert(cpp.cluster_rows[3].status ==
+           BG_DOCKING_RMSD_CLUSTER_ROW_UPSTREAM_NOT_VALID);
     assert(cpp.pipeline_rows[0].status ==
            BG_DOCKING_FIXED64_REFINEMENT_ROW_COORDINATE_READY);
     assert(cpp.pipeline_rows[0].coordinate_origin ==
@@ -524,6 +593,7 @@ void test_cross_wiring_and_transactionality_fail_closed() {
     auto *pipeline = create_pipeline(context, fixture);
     Result result{};
     result.pipeline_rows[0].slot_index = UINT32_MAX;
+    result.cluster_rows[0].slot_index = UINT32_MAX;
     result.final_coordinates[0].fill(91.0);
     assert(
         run_into(context, pipeline, fixture, &result, true) ==
@@ -533,9 +603,28 @@ void test_cross_wiring_and_transactionality_fail_closed() {
     assert(result.scorer_count == 0);
     assert(result.validity_count == 0);
     assert(result.ranking_count == 0);
+    assert(result.cluster_count == 0);
     assert(result.pipeline_count == 0);
+    assert(result.representative_count == 0);
+    assert(result.cluster_top_k_count == 0);
     assert(result.pipeline_rows[0].slot_index == UINT32_MAX);
+    assert(result.cluster_rows[0].slot_index == UINT32_MAX);
     assert(result.final_coordinates[0][0] == 91.0);
+
+    Result cluster_overlap{};
+    cluster_overlap.ranking_rows[0].slot_index = UINT32_MAX;
+    assert(
+        run_into(
+            context,
+            pipeline,
+            fixture,
+            &cluster_overlap,
+            false,
+            true) == BG_STATUS_INVALID_ARGUMENT);
+    assert(cluster_overlap.ranking_count == 0);
+    assert(cluster_overlap.cluster_count == 0);
+    assert(cluster_overlap.pipeline_count == 0);
+    assert(cluster_overlap.ranking_rows[0].slot_index == UINT32_MAX);
     bg_docking_fixed64_refinement_pipeline_v1_destroy(pipeline);
     bg_context_destroy(context);
 }
