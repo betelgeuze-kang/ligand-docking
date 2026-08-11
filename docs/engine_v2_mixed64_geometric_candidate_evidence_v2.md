@@ -29,15 +29,18 @@ original slots. There is no fallback, reallocation, or multi-anchor lane.
 The interaction tail therefore preserves the declared 4/2/2
 charge/aromatic/shape split. Every allocation receipt keeps the complete
 64-slot denominator, including typed missing-feature failures. Feature
-availability is source-bound evidence, not caller truth: its receipt binds the
-exact V1.1 source-receipt identity, prepared ligand/receptor topology identities,
-feature-extractor policy identity, atomic features, conformer sources, and
-retained sources before it can determine slot readiness. These parent receipts
-remain opaque SHA-256 identities in this synthetic structural layer; their
-payloads are not rederived here and `producer_attested` remains false. Atomic
+availability is source-bound evidence, not caller truth: its receipt embeds a
+typed exact-V1.1 evidence receipt binding source-receipt, proposal, ligand and
+receptor coordinate, prepared ligand/receptor topology identities, and the
+canonical ligand/receptor vdW-radius and ligand heavy-atom-mask hashes. It also
+binds feature-extractor policy identity, atomic features, conformer sources,
+and retained sources before it can determine slot readiness. These parent
+receipts remain opaque SHA-256 identities in this synthetic structural layer;
+their payloads are not rederived here and `producer_attested` remains false. Atomic
 features bind their atom indices to source and geometry receipt identities.
-The allocation, slot, feature-evidence, and V7-control-source schema versions
-are respectively 2.0.0, 2.0.0, 3.0.0, and 2.0.0. Slots 0–23 require an exact,
+The allocation, slot, feature-evidence, exact-source, and V7-control-source
+schema versions are respectively 2.0.0, 2.0.0, 5.0.0, 2.0.0, and 2.0.0. Slots
+0–23 require an exact,
 typed V7 source receipt in the frozen
 `current_v7_source_proposal_index` namespace. A missing source preserves its
 slot with `missing_v7_control_source:<source_index>`. Each V7 source also binds
@@ -52,6 +55,8 @@ selected generation-parent proposal, coordinate, and one of two exact roles:
 `exact_passthrough_parent` or `generator_input_parent`. V7 controls and retained
 controls are exact pass-through parents; true conformers are generator inputs,
 so the generated source remains distinct while preserving its parent identity.
+The exact V1.1 proposal and ligand-coordinate identities are generator parents
+for slots 24–35 and 44–59, including typed missing-feature slots.
 Retained indices
 36, 45, 54, and 63 use the frozen namespace
 `current_v7_source_proposal_index`.
@@ -203,6 +208,12 @@ The pre-activation geometry primitives described in
 implement and unit-test those transforms with replayable inputs. They do not
 remove either blocker here because no admitted fixed64 producer yet binds the
 primitive receipts into all 64 generation outcomes.
+The subsequent
+[mixed64 fixed64 producer v3](engine_v2_mixed64_proposal_producer_v3.md)
+does bind all 64 generation outcomes and rederives present source payloads, but
+is deliberately not substituted into this v2 activation artifact: admission
+v2 cannot yet encode a runtime generation failure for an allocation-ready slot,
+and downstream refinement, score, validity, and attestation remain incomplete.
 The uniform-control lineage digest also needs its underlying source payload
 rederived before the lane name becomes activation evidence.
 The current artifact verifier replays identities, receipt hashes, the geometric

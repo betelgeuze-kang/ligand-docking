@@ -16,6 +16,7 @@ from betelgeuze_engine_v2.docking.mixed64_allocation import (
     TRUE_CONFORMER_RANKS,
     Mixed64AtomicFeatureEvidence,
     Mixed64ConformerSourceEvidence,
+    Mixed64ExactV11SourceEvidence,
     Mixed64FeatureEvidence,
     Mixed64RetainedSourceEvidence,
     Mixed64V7ControlSourceEvidence,
@@ -55,6 +56,10 @@ def _canonical(value: object) -> bytes:
     )
 
 
+def _value_digest(value: object) -> str:
+    return hashlib.sha256(_canonical(value)[:-1]).hexdigest()
+
+
 def _receipt(document: dict[str, object]) -> dict[str, object]:
     result = dict(document)
     result["receipt_sha256"] = hashlib.sha256(_canonical(document)[:-1]).hexdigest()
@@ -73,7 +78,13 @@ def _coordinate_digest(x: float) -> str:
     ).hexdigest()
 
 
-def _features(*, slot_zero_coordinate: float = 5.0) -> Mixed64FeatureEvidence:
+def _features(
+    *,
+    slot_zero_coordinate: float = 5.0,
+    ligand_vdw_radii_sha256: str | None = None,
+    ligand_heavy_atom_mask_sha256: str | None = None,
+    receptor_vdw_radii_sha256: str | None = None,
+) -> Mixed64FeatureEvidence:
     rows = tuple(
         sorted(
             (
@@ -90,10 +101,30 @@ def _features(*, slot_zero_coordinate: float = 5.0) -> Mixed64FeatureEvidence:
             )
         )
     )
+    ligand_topology_sha256 = _digest("ligand-topology")
+    receptor_topology_sha256 = _digest("receptor-topology")
+    exact_source = Mixed64ExactV11SourceEvidence(
+        source_receipt_sha256=_digest("v11-source"),
+        proposal_sha256=_digest("v11-proposal"),
+        ligand_coordinate_sha256=_digest("v11-ligand-coordinate"),
+        receptor_coordinate_sha256=_digest("v11-receptor-coordinate"),
+        prepared_ligand_topology_sha256=ligand_topology_sha256,
+        prepared_receptor_topology_sha256=receptor_topology_sha256,
+        ligand_vdw_radii_sha256=(
+            ligand_vdw_radii_sha256 or _value_digest([1.0.hex()])
+        ),
+        ligand_heavy_atom_mask_sha256=(
+            ligand_heavy_atom_mask_sha256 or _value_digest([True])
+        ),
+        receptor_vdw_radii_sha256=(
+            receptor_vdw_radii_sha256 or _value_digest([1.0.hex()])
+        ),
+    )
     return Mixed64FeatureEvidence(
-        exact_v11_source_receipt_sha256=_digest("v11-source"),
-        prepared_ligand_topology_sha256=_digest("ligand-topology"),
-        prepared_receptor_topology_sha256=_digest("receptor-topology"),
+        exact_v11_source_receipt_sha256=exact_source.source_receipt_sha256,
+        prepared_ligand_topology_sha256=ligand_topology_sha256,
+        prepared_receptor_topology_sha256=receptor_topology_sha256,
+        exact_v11_source=exact_source,
         feature_extractor_policy_sha256=_digest("feature-policy"),
         atomic_features=tuple(
             Mixed64AtomicFeatureEvidence(
@@ -444,6 +475,12 @@ def _tamper_resealed_exact_input(document: dict[str, object]) -> None:
     _reseal(document)
 
 
+def _tamper_resealed_exact_source_evidence(document: dict[str, object]) -> None:
+    exact_source = document["allocation"]["features"]["exact_v11_source"]
+    exact_source["proposal_sha256"] = _digest("cross-wired-exact-proposal")
+    _reseal(exact_source)
+
+
 def _tamper_resealed_generator_component(document: dict[str, object]) -> None:
     candidate = document["candidates"][0]
     proposal = candidate["proposal_execution_receipt"]
@@ -657,6 +694,61 @@ def test_fresh_process_replays_complete_persisted_artifact(
     ]
 
 
+@pytest.mark.parametrize(
+    "source_hash_field",
+    (
+        "ligand_vdw_radii_sha256",
+        "ligand_heavy_atom_mask_sha256",
+        "receptor_vdw_radii_sha256",
+    ),
+)
+def test_topology_parameter_cross_wiring_fails_independent_replay(
+    tmp_path: Path,
+    source_hash_field: str,
+) -> None:
+    allocation = build_fixed_mixed64_allocation(
+        _features(**{source_hash_field: _digest(f"wrong-{source_hash_field}")})
+    )
+    geometric = GeometricAdmissionV2().admit_fixed64(
+        tuple(
+            (((5.0 + slot.slot_index / 10.0), 0.0, 0.0),)
+            for slot in allocation.slots
+        ),
+        allocation=allocation,
+        ligand_vdw_radii=(1.0,),
+        ligand_heavy_atom_mask=(True,),
+        receptor_coordinates=((0.0, 0.0, 0.0),),
+        receptor_vdw_radii=(1.0,),
+        pocket_center=(0.0, 0.0, 0.0),
+        pocket_radius=100.0,
+    )
+    records = tuple(
+        _record(
+            slot_index,
+            allocation.slots[slot_index],
+            str(geometric.decisions[slot_index].candidate_coordinate_sha256),
+        )
+        for slot_index in range(64)
+    )
+    document = build_pipeline_candidate_evidence_v2(
+        allocation,
+        geometric,
+        records,
+    ).to_dict()
+    artifact = tmp_path / f"cross-wired-{source_hash_field}.json"
+    artifact.write_bytes(_canonical(document))
+
+    completed = _invoke(artifact)
+
+    assert completed.returncode == 1
+    result = json.loads(completed.stdout)
+    assert result["verified"] is False
+    assert result["authority_granted"] is False
+    assert "topology-derived parameters are cross-wired" in result[
+        "verification_blockers"
+    ][0]
+
+
 def test_fresh_process_replays_stage_specific_partial_failures(
     tmp_path: Path,
     partial_failure_artifact_document: dict[str, object],
@@ -714,7 +806,12 @@ def test_adversarial_artifact_tampering_fails_closed(
 
 @pytest.mark.parametrize(
     "tamper",
-    (_tamper_resealed_rank, _tamper_resealed_term, _tamper_resealed_exact_input),
+    (
+        _tamper_resealed_rank,
+        _tamper_resealed_term,
+        _tamper_resealed_exact_input,
+        _tamper_resealed_exact_source_evidence,
+    ),
 )
 def test_resealed_tampering_still_fails_independent_replay(
     tmp_path: Path,

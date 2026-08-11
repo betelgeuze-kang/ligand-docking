@@ -23,8 +23,9 @@ pocket center.
 The receipt embeds the exact source coordinate payload and binds:
 
 - allocation and slot receipts;
-- exact V1.1 source receipt, or the selected conformer receipt and parent;
-- source proposal and coordinate identities;
+- exact V1.1 source receipt, proposal, and ligand-coordinate evidence, or the
+  selected conformer receipt and parent;
+- source proposal and coordinate identities, rechecked against that evidence;
 - pocket center and normal;
 - source seed, raw and accepted sequence indices;
 - quaternion, translation, complete output coordinates, and upstream batch and
@@ -39,6 +40,11 @@ typed code before any output receipt is emitted.
 Slots 44–59 consume exactly the two feature receipts already selected by the
 allocation. No alternate feature or fallback lane can be chosen from geometric
 or scoring results.
+
+The same allocation-owned exact-V1.1 evidence also pins the receptor-coordinate
+identity used by every single-anchor placement. A caller cannot retain the
+source receipt while substituting another ligand proposal, ligand coordinate
+payload, or receptor coordinate payload.
 
 | Lane | Slots | Target distance | Twist variants |
 | --- | ---: | ---: | --- |
@@ -96,3 +102,9 @@ activation blockers remain in force until a later producer:
 GitHub Actions and synthetic fixtures have no production authority. This
 component does not create an external reservation and cannot run the historical
 one-shot A/B or Fresh-128.
+
+The follow-on
+[mixed64 fixed64 producer v3](engine_v2_mixed64_proposal_producer_v3.md)
+now binds these primitives into 64 denominator-preserving generation records.
+That producer remains pre-activation until failure-aware and post-refinement
+admission, score, validity, and independent attestation are connected.

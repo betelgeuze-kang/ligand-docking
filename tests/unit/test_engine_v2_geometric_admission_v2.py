@@ -27,6 +27,7 @@ from betelgeuze_engine_v2.docking.mixed64_allocation import (
     V7_CONTROL_SOURCE_INDICES,
     Mixed64AtomicFeatureEvidence,
     Mixed64ConformerSourceEvidence,
+    Mixed64ExactV11SourceEvidence,
     Mixed64FeatureEvidence,
     Mixed64RetainedSourceEvidence,
     Mixed64V7ControlSourceEvidence,
@@ -56,11 +57,25 @@ def _allocation(*, all_available: bool = True):
         ("receptor_donor", (10, 11)),
         ("receptor_negative_site", (13,)),
     )
+    ligand_topology_sha256 = digest("ligand-topology")
+    receptor_topology_sha256 = digest("receptor-topology")
+    exact_source = Mixed64ExactV11SourceEvidence(
+        source_receipt_sha256=digest("v11-source"),
+        proposal_sha256=digest("v11-proposal"),
+        ligand_coordinate_sha256=digest("v11-ligand-coordinate"),
+        receptor_coordinate_sha256=digest("v11-receptor-coordinate"),
+        prepared_ligand_topology_sha256=ligand_topology_sha256,
+        prepared_receptor_topology_sha256=receptor_topology_sha256,
+        ligand_vdw_radii_sha256=digest("ligand-vdw-radii"),
+        ligand_heavy_atom_mask_sha256=digest("ligand-heavy-atom-mask"),
+        receptor_vdw_radii_sha256=digest("receptor-vdw-radii"),
+    )
     return build_fixed_mixed64_allocation(
         Mixed64FeatureEvidence(
-            exact_v11_source_receipt_sha256=digest("v11-source"),
-            prepared_ligand_topology_sha256=digest("ligand-topology"),
-            prepared_receptor_topology_sha256=digest("receptor-topology"),
+            exact_v11_source_receipt_sha256=exact_source.source_receipt_sha256,
+            prepared_ligand_topology_sha256=ligand_topology_sha256,
+            prepared_receptor_topology_sha256=receptor_topology_sha256,
+            exact_v11_source=exact_source,
             feature_extractor_policy_sha256=digest("feature-policy"),
             v7_control_sources=(
                 tuple(
