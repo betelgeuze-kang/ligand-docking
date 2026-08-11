@@ -386,6 +386,14 @@ impl NativeScorerV1Context {
         &self,
         coordinates_angstrom: &[Vec3],
     ) -> Result<NativeScorerV1KernelOutcome, NativeScorerV1Error> {
+        Ok(self
+            .prepare_rust_cpu_kernel()?
+            .score_coordinates(coordinates_angstrom))
+    }
+
+    pub fn prepare_rust_cpu_kernel(
+        &self,
+    ) -> Result<NativeScorerV1RustCpuKernel<'_>, NativeScorerV1Error> {
         if !self.has_valid_receipt() {
             return Err(context_error("ScorerV1 context receipt is invalid"));
         }
@@ -394,10 +402,22 @@ impl NativeScorerV1Context {
                 "Rust ScorerV1 kernel cannot claim an unexecuted backend",
             ));
         }
-        Ok(match score_kernel(coordinates_angstrom, self) {
+        Ok(NativeScorerV1RustCpuKernel { context: self })
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct NativeScorerV1RustCpuKernel<'context> {
+    context: &'context NativeScorerV1Context,
+}
+
+impl NativeScorerV1RustCpuKernel<'_> {
+    #[must_use]
+    pub fn score_coordinates(&self, coordinates_angstrom: &[Vec3]) -> NativeScorerV1KernelOutcome {
+        match score_kernel(coordinates_angstrom, self.context) {
             Ok(terms) => NativeScorerV1KernelOutcome::Scored(terms),
             Err(failure) => NativeScorerV1KernelOutcome::TypedFailure(failure),
-        })
+        }
     }
 }
 
@@ -570,6 +590,23 @@ pub enum NativeScorerV1FailureCode {
     LigandPairCapacityExceeded,
     DegenerateRotorGeometry,
     NonfiniteScore,
+}
+
+impl NativeScorerV1FailureCode {
+    #[must_use]
+    pub const fn id(self) -> &'static str {
+        match self {
+            Self::ProposalGenerationFailure => "proposal_generation_failure",
+            Self::SeverePenetrationRejected => "severe_penetration_rejected",
+            Self::InvalidCandidateCoordinates => "invalid_candidate_coordinates",
+            Self::ReceptorCandidatePairCapacityExceeded => {
+                "receptor_candidate_pair_capacity_exceeded"
+            }
+            Self::LigandPairCapacityExceeded => "ligand_pair_capacity_exceeded",
+            Self::DegenerateRotorGeometry => "degenerate_rotor_geometry",
+            Self::NonfiniteScore => "nonfinite_score",
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
