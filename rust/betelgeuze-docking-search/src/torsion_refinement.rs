@@ -949,8 +949,8 @@ fn rotate_subtree(
         ));
     }
     let axis = axis_vector.scale(1.0 / axis_norm);
-    let cosine = delta_radians.cos();
-    let sine = delta_radians.sin();
+    let cosine = libm::cos(delta_radians);
+    let sine = libm::sin(delta_radians);
     let mut output = coordinates.to_vec();
     for index in context.descendants[rotor_position].iter().copied() {
         let vector = coordinates[index].minus(origin);
@@ -978,11 +978,11 @@ fn centroid(coordinates: &[Vec3]) -> Vec3 {
 }
 
 fn normalized_angle(value: f64) -> f64 {
-    canonical_zero(value.sin().atan2(value.cos()))
+    canonical_zero(libm::atan2(libm::sin(value), libm::cos(value)))
 }
 
 fn norm(value: Vec3) -> f64 {
-    (value.x * value.x + value.y * value.y + value.z * value.z).sqrt()
+    libm::sqrt(value.x * value.x + value.y * value.y + value.z * value.z)
 }
 
 fn compare_f64(left: f64, right: f64) -> Ordering {
