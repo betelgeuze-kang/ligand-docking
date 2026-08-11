@@ -1,11 +1,12 @@
 use betelgeuze_docking_search::{
     evaluate_native_fixed64_pose_validity, native_fixed64_coordinate_sha256,
     native_fixed64_heavy_atom_mask_sha256, native_fixed64_radii_sha256,
-    produce_native_fixed64_proposals, rank_native_fixed64_top_k, score_native_fixed64_scorer_v1,
-    Fixed64Allocation, Fixed64CoordinateSourceKind, Fixed64CoordinateSourcePayload,
-    Fixed64ExactV11SourceEvidence, Fixed64FeatureGeometryInventory, Fixed64FeatureInventory,
-    Fixed64GeometricBatch, Fixed64GeometricInput, Fixed64ProposalFailureCode,
-    Fixed64ProposalSourceBundle, NativeFixed64ValidityBackend, NativeFixed64ValidityConfig,
+    produce_native_fixed64_proposals, rank_native_fixed64_top_k, run_native_fixed64_pipeline,
+    score_native_fixed64_scorer_v1, Fixed64Allocation, Fixed64CoordinateSourceKind,
+    Fixed64CoordinateSourcePayload, Fixed64ExactV11SourceEvidence, Fixed64FeatureGeometryInventory,
+    Fixed64FeatureInventory, Fixed64GeometricBatch, Fixed64GeometricInput,
+    Fixed64ProposalFailureCode, Fixed64ProposalSourceBundle, NativeFixed64Consumer,
+    NativeFixed64PipelineStage, NativeFixed64ValidityBackend, NativeFixed64ValidityConfig,
     NativeFixed64ValidityContext, NativeFixed64ValidityErrorCode, NativeFixed64ValidityFailureCode,
     NativeFixed64ValidityRowStatus, NativeScorerV1Atom, NativeScorerV1Backend,
     NativeScorerV1Config, NativeScorerV1Context, NativeScorerV1Donor, NativeScorerV1ErrorCode,
@@ -46,6 +47,16 @@ fn exact_evidence() -> Fixed64ExactV11SourceEvidence {
 }
 
 fn admission() -> Fixed64GeometricBatch {
+    let source_bundle = pipeline_source_bundle();
+    let allocation = source_bundle.allocation().clone();
+    let proposals = produce_native_fixed64_proposals(&allocation, source_bundle).unwrap();
+    assert_eq!(proposals.generated_count(), 12);
+    let admission = Fixed64GeometricBatch::evaluate_proposals(proposals).unwrap();
+    assert_eq!(admission.accepted_count(), 12);
+    admission
+}
+
+fn pipeline_source_bundle() -> Fixed64ProposalSourceBundle {
     let ligand = ligand();
     let exact = exact_evidence();
     let allocation = Fixed64Allocation::build(
@@ -68,7 +79,7 @@ fn admission() -> Fixed64GeometricBatch {
         20.0,
     )
     .unwrap();
-    let source_bundle = Fixed64ProposalSourceBundle::new(
+    Fixed64ProposalSourceBundle::new(
         &allocation,
         Some(exact_source),
         vec![],
@@ -78,12 +89,7 @@ fn admission() -> Fixed64GeometricBatch {
         geometric_input,
         Vec3::new(0.0, 0.0, 1.0),
     )
-    .unwrap();
-    let proposals = produce_native_fixed64_proposals(&allocation, source_bundle).unwrap();
-    assert_eq!(proposals.generated_count(), 12);
-    let admission = Fixed64GeometricBatch::evaluate_proposals(proposals).unwrap();
-    assert_eq!(admission.accepted_count(), 12);
-    admission
+    .unwrap()
 }
 
 fn scorer_atoms() -> (Vec<NativeScorerV1Atom>, Vec<NativeScorerV1Atom>) {
@@ -565,4 +571,104 @@ fn native_primary_rank_survives_typed_validity_unavailability_without_valid_rank
         assert!(record.stable_valid_rank().is_none());
     }
     assert!(ranking.has_valid_receipt());
+}
+
+#[test]
+fn native_fixed64_pipeline_composes_one_repeat_stable_receipt_graph() {
+    let first_scorer = context(digest(1), NativeScorerV1Config::default());
+    let first_validity = validity_context(
+        &first_scorer,
+        NativeFixed64ValidityBackend::RustCpu,
+        NativeFixed64ValidityConfig::default(),
+    );
+    let first = run_native_fixed64_pipeline(pipeline_source_bundle(), first_scorer, first_validity)
+        .unwrap();
+
+    let second_scorer = context(digest(1), NativeScorerV1Config::default());
+    let second_validity = validity_context(
+        &second_scorer,
+        NativeFixed64ValidityBackend::RustCpu,
+        NativeFixed64ValidityConfig::default(),
+    );
+    let second =
+        run_native_fixed64_pipeline(pipeline_source_bundle(), second_scorer, second_validity)
+            .unwrap();
+
+    assert_eq!(first, second);
+    assert_eq!(first.receipt_sha256(), second.receipt_sha256());
+    assert_eq!(first.candidate_denominator(), 64);
+    assert_eq!(first.generated_count(), 12);
+    assert_eq!(first.accepted_count(), 12);
+    assert_eq!(first.scored_count(), 12);
+    assert_eq!(first.evaluated_count(), 12);
+    assert_eq!(first.valid_count(), 12);
+    assert_eq!(first.ranking().records().len(), 64);
+    assert!(first.has_valid_receipt());
+    assert!(first.evidence_display_authorized());
+    assert!(first.operator_second_opinion_authorized());
+    assert!(!first.reservation_authorized());
+    assert!(!first.molecular_execution_authorized());
+    assert!(!first.existing_rank_auto_change_authorized());
+    assert!(!first.customer_pose_emission_authorized());
+    assert!(!first.production_claim_authorized());
+    assert_eq!(first.authority_blockers().len(), 4);
+}
+
+#[test]
+fn native_fixed64_consumers_share_core_receipt_and_cannot_mutate_product_rank() {
+    let scorer = context(digest(1), NativeScorerV1Config::default());
+    let validity = validity_context(
+        &scorer,
+        NativeFixed64ValidityBackend::RustCpu,
+        NativeFixed64ValidityConfig::default(),
+    );
+    let pipeline = run_native_fixed64_pipeline(pipeline_source_bundle(), scorer, validity).unwrap();
+    let consumers = [
+        NativeFixed64Consumer::Cli,
+        NativeFixed64Consumer::Benchmark,
+        NativeFixed64Consumer::Api,
+        NativeFixed64Consumer::ProductShadow,
+    ];
+    let views = consumers.map(|consumer| pipeline.consumer_view(consumer));
+
+    for view in &views {
+        assert!(view.verifies_against(&pipeline));
+        assert_eq!(view.pipeline_receipt_sha256(), pipeline.receipt_sha256());
+        assert_eq!(view.candidate_denominator(), 64);
+        assert_eq!(
+            view.top5_slot_indices(),
+            pipeline.ranking().top5_slot_indices()
+        );
+        assert_eq!(
+            view.valid_top5_slot_indices(),
+            pipeline.ranking().valid_top5_slot_indices()
+        );
+        assert!(view.evidence_display_authorized());
+        assert!(view.operator_second_opinion_authorized());
+        assert!(!view.existing_rank_auto_change_authorized());
+        assert!(!view.customer_pose_emission_authorized());
+        assert!(!view.production_claim_authorized());
+    }
+    assert_ne!(views[0].receipt_sha256(), views[1].receipt_sha256());
+    assert_ne!(views[1].receipt_sha256(), views[2].receipt_sha256());
+    assert_ne!(views[2].receipt_sha256(), views[3].receipt_sha256());
+}
+
+#[test]
+fn native_fixed64_pipeline_rejects_cross_wired_validity_before_proposal_work() {
+    let scorer = context(digest(1), NativeScorerV1Config::default());
+    let other_scorer = context(digest(99), NativeScorerV1Config::default());
+    let cross_wired = validity_context(
+        &other_scorer,
+        NativeFixed64ValidityBackend::RustCpu,
+        NativeFixed64ValidityConfig::default(),
+    );
+    let error =
+        run_native_fixed64_pipeline(pipeline_source_bundle(), scorer, cross_wired).unwrap_err();
+
+    assert_eq!(error.stage(), NativeFixed64PipelineStage::Input);
+    assert_eq!(
+        error.message(),
+        "validity context is cross-wired to another scorer context"
+    );
 }
