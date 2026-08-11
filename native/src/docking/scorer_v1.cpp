@@ -1,4 +1,5 @@
 #include "../internal.hpp"
+#include "../hip/provider.h"
 #include "../rust/provider.h"
 
 #include <algorithm>
@@ -13,6 +14,10 @@
 #include <tuple>
 #include <utility>
 #include <vector>
+
+#ifndef BG_HAS_HIP_SAFE_PROVIDER
+#  define BG_HAS_HIP_SAFE_PROVIDER 0
+#endif
 
 namespace betelgeuze::native::docking {
 namespace {
@@ -978,6 +983,17 @@ void initialize_provider_error(bg_rust_cpu_error_v1 *error) noexcept {
     return fail(status, error->message[0] == '\0' ? fallback : error->message);
 }
 
+#if BG_HAS_HIP_SAFE_PROVIDER
+[[nodiscard]] bg_status hip_provider_failure(
+    int32_t raw_status,
+    char *error,
+    const char *fallback) noexcept {
+    const bg_status status = normalize_provider_status(raw_status);
+    error[BG_HIP_SAFE_ERROR_CAPACITY - 1U] = '\0';
+    return fail(status, error[0] == '\0' ? fallback : error);
+}
+#endif
+
 [[nodiscard]] bg_status validate_batch_and_output(
     const bg_docking_scorer_v1 *scorer,
     const bg_docking_scorer_v1_candidate_batch_soa_v1 &candidates,
@@ -1178,11 +1194,54 @@ extern "C" BG_API bg_status BG_CALL bg_docking_scorer_v1_create(
                     raw_status, &error, "rust_cpu ScorerV1 create failed");
             }
             status = BG_STATUS_OK;
-        } else if (context->backend == BG_BACKEND_HIP_SAFE ||
-                   context->backend == BG_BACKEND_HIP_FAST) {
+        } else if (context->backend == BG_BACKEND_HIP_SAFE) {
+#if BG_HAS_HIP_SAFE_PROVIDER
+            void *qualification_raw = nullptr;
+            status = create_cpp_context(*descriptor, &qualification_raw);
+            if (status != BG_STATUS_OK) {
+                return status;
+            }
+            std::unique_ptr<CppScorerContext> qualification(
+                static_cast<CppScorerContext *>(qualification_raw));
+            bg_hip_safe_docking_scorer_derived_v1 derived{};
+            derived.struct_size = static_cast<uint32_t>(sizeof(derived));
+            derived.abi_version = BG_HIP_SAFE_PROVIDER_ABI_VERSION;
+            derived.reference_dihedrals_radians =
+                qualification->reference_dihedrals.empty()
+                    ? nullptr
+                    : qualification->reference_dihedrals.data();
+            derived.reference_internal_vdw =
+                qualification->reference_internal_vdw;
+            derived.receptor_donor_by_hydrogen =
+                qualification->receptor_donor_by_hydrogen.data();
+            derived.ligand_donor_by_hydrogen =
+                qualification->ligand_donor_by_hydrogen.data();
+            derived.ligand_donor_heavy_mask =
+                qualification->ligand_donor_heavy_mask.data();
+            char provider_error[BG_HIP_SAFE_ERROR_CAPACITY]{};
+            const int32_t raw_status = bg_hip_safe_docking_scorer_v1_create(
+                context->device_ordinal,
+                descriptor,
+                &derived,
+                &scorer->provider_state,
+                provider_error,
+                sizeof(provider_error));
+            if (raw_status != BG_STATUS_OK) {
+                return hip_provider_failure(
+                    raw_status,
+                    provider_error,
+                    "hip_safe ScorerV1 create failed");
+            }
+            status = BG_STATUS_OK;
+#else
             return fail(
                 BG_STATUS_BACKEND_UNAVAILABLE,
-                "selected HIP backend has no qualified ScorerV1 provider; fallback is forbidden");
+                "hip_safe ScorerV1 provider is not compiled; fallback is forbidden");
+#endif
+        } else if (context->backend == BG_BACKEND_HIP_FAST) {
+            return fail(
+                BG_STATUS_BACKEND_UNAVAILABLE,
+                "hip_fast has no qualified ScorerV1 provider; fallback is forbidden");
         } else {
             return fail(
                 BG_STATUS_UNSUPPORTED_BACKEND,
@@ -1205,6 +1264,10 @@ extern "C" BG_API void BG_CALL bg_docking_scorer_v1_destroy(
         betelgeuze::native::docking::destroy_cpp_state(scorer->provider_state);
     } else if (scorer->backend == BG_BACKEND_RUST_CPU) {
         bg_rust_cpu_docking_scorer_v1_destroy(scorer->provider_state);
+#if BG_HAS_HIP_SAFE_PROVIDER
+    } else if (scorer->backend == BG_BACKEND_HIP_SAFE) {
+        bg_hip_safe_docking_scorer_v1_destroy(scorer->provider_state);
+#endif
     }
     delete scorer;
 }
@@ -1273,6 +1336,24 @@ extern "C" BG_API bg_status BG_CALL bg_docking_scorer_v1_score_fixed64(
                     raw_status, &error, "rust_cpu ScorerV1 batch failed");
             }
             status = BG_STATUS_OK;
+#if BG_HAS_HIP_SAFE_PROVIDER
+        } else if (scorer->backend == BG_BACKEND_HIP_SAFE) {
+            char provider_error[BG_HIP_SAFE_ERROR_CAPACITY]{};
+            const int32_t raw_status =
+                bg_hip_safe_docking_scorer_v1_score_fixed64(
+                    scorer->provider_state,
+                    candidates,
+                    candidate_rows.data(),
+                    provider_error,
+                    sizeof(provider_error));
+            if (raw_status != BG_STATUS_OK) {
+                return hip_provider_failure(
+                    raw_status,
+                    provider_error,
+                    "hip_safe ScorerV1 batch failed");
+            }
+            status = BG_STATUS_OK;
+#endif
         } else {
             return fail(
                 BG_STATUS_BACKEND_UNAVAILABLE,

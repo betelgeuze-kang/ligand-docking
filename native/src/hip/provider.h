@@ -110,6 +110,20 @@ typedef struct bg_hip_safe_force_output_v1 {
     uint64_t reserved[4];
 } bg_hip_safe_force_output_v1;
 
+/* Host-derived immutable ScorerV1 state. The public descriptor has already
+ * passed the independent C++ qualification validator before this private
+ * provider boundary is entered. */
+typedef struct bg_hip_safe_docking_scorer_derived_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    const double *reference_dihedrals_radians;
+    double reference_internal_vdw;
+    const size_t *receptor_donor_by_hydrogen;
+    const size_t *ligand_donor_by_hydrogen;
+    const uint8_t *ligand_donor_heavy_mask;
+    uint64_t reserved[4];
+} bg_hip_safe_docking_scorer_derived_v1;
+
 int32_t bg_hip_safe_provider_is_available_v1(
     int32_t device_ordinal,
     uint8_t *available,
@@ -123,6 +137,23 @@ int32_t bg_hip_safe_evaluate_v1(
     uint8_t compute_forces,
     bg_hip_safe_energy_v1 *out_energy,
     bg_hip_safe_force_output_v1 *out_forces,
+    char *error_message,
+    size_t error_capacity);
+
+int32_t bg_hip_safe_docking_scorer_v1_create(
+    int32_t device_ordinal,
+    const bg_docking_scorer_v1_context_soa_v1 *descriptor,
+    const bg_hip_safe_docking_scorer_derived_v1 *derived,
+    void **out_state,
+    char *error_message,
+    size_t error_capacity);
+
+void bg_hip_safe_docking_scorer_v1_destroy(void *state);
+
+int32_t bg_hip_safe_docking_scorer_v1_score_fixed64(
+    const void *state,
+    const bg_docking_scorer_v1_candidate_batch_soa_v1 *candidates,
+    bg_docking_scorer_v1_row_v1 *out_rows,
     char *error_message,
     size_t error_capacity);
 

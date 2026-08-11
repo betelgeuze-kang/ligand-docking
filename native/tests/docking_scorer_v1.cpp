@@ -176,26 +176,41 @@ std::array<bg_docking_scorer_v1_row_v1, kSlots> score(
     return rows;
 }
 
-bool close(double left, double right) {
+bool close_with_tolerance(double left, double right, double tolerance) {
     const double scale = std::max({1.0, std::abs(left), std::abs(right)});
-    return std::abs(left - right) <= 2.0e-12 * scale;
+    return std::abs(left - right) <= tolerance * scale;
+}
+
+void assert_row_parity_with_tolerance(
+    const bg_docking_scorer_v1_row_v1 &observed,
+    const bg_docking_scorer_v1_row_v1 &reference,
+    double tolerance) {
+    assert(observed.slot_index == reference.slot_index);
+    assert(observed.status == reference.status);
+    assert(observed.failure_code == reference.failure_code);
+    assert(
+        observed.receptor_candidate_pair_count ==
+        reference.receptor_candidate_pair_count);
+    assert(observed.ligand_pair_count == reference.ligand_pair_count);
+    assert(observed.hbond_count == reference.hbond_count);
+    assert(
+        observed.hydrophobic_contact_count ==
+        reference.hydrophobic_contact_count);
+    assert(observed.buried_polar_count == reference.buried_polar_count);
+    for (std::size_t term = 0; term < BG_DOCKING_SCORER_V1_TERM_COUNT; ++term) {
+        assert(close_with_tolerance(
+            observed.weighted_terms[term],
+            reference.weighted_terms[term],
+            tolerance));
+    }
+    assert(close_with_tolerance(
+        observed.total_score, reference.total_score, tolerance));
 }
 
 void assert_row_parity(
     const bg_docking_scorer_v1_row_v1 &cpp,
     const bg_docking_scorer_v1_row_v1 &rust) {
-    assert(cpp.slot_index == rust.slot_index);
-    assert(cpp.status == rust.status);
-    assert(cpp.failure_code == rust.failure_code);
-    assert(cpp.receptor_candidate_pair_count == rust.receptor_candidate_pair_count);
-    assert(cpp.ligand_pair_count == rust.ligand_pair_count);
-    assert(cpp.hbond_count == rust.hbond_count);
-    assert(cpp.hydrophobic_contact_count == rust.hydrophobic_contact_count);
-    assert(cpp.buried_polar_count == rust.buried_polar_count);
-    for (std::size_t term = 0; term < BG_DOCKING_SCORER_V1_TERM_COUNT; ++term) {
-        assert(close(cpp.weighted_terms[term], rust.weighted_terms[term]));
-    }
-    assert(close(cpp.total_score, rust.total_score));
+    assert_row_parity_with_tolerance(cpp, rust, 2.0e-12);
 }
 
 void test_cpu_backend_parity_and_fixed64_failure_preservation() {
@@ -315,6 +330,62 @@ void test_receptor_capacity_failure_and_transactionality() {
     bg_context_destroy(rust_context);
 }
 
+void assert_hip_safe_fixture_parity(
+    const Fixture &fixture,
+    uint64_t receptor_pair_capacity = 1000) {
+    const auto descriptor = fixture.context_descriptor(receptor_pair_capacity);
+    const auto batch = fixture.batch();
+    bg_context *rust_context = create_context(BG_BACKEND_RUST_CPU);
+    bg_context *hip_context = create_context(BG_BACKEND_HIP_SAFE);
+    bg_docking_scorer_v1 *rust_scorer = create_scorer(rust_context, descriptor);
+    bg_docking_scorer_v1 *hip_scorer = create_scorer(hip_context, descriptor);
+
+    bg_backend observed = BG_BACKEND_AUTO;
+    assert(bg_docking_scorer_v1_get_backend(hip_scorer, &observed) == BG_STATUS_OK);
+    assert(observed == BG_BACKEND_HIP_SAFE);
+
+    const auto rust_rows = score(rust_context, rust_scorer, batch);
+    const auto hip_rows = score(hip_context, hip_scorer, batch);
+    const auto hip_repeat = score(hip_context, hip_scorer, batch);
+    assert(std::memcmp(hip_rows.data(), hip_repeat.data(), sizeof(hip_rows)) == 0);
+    for (std::size_t slot = 0; slot < kSlots; ++slot) {
+        assert_row_parity_with_tolerance(hip_rows[slot], rust_rows[slot], 1.0e-10);
+    }
+
+    bg_docking_scorer_v1_destroy(rust_scorer);
+    bg_docking_scorer_v1_destroy(hip_scorer);
+    bg_context_destroy(rust_context);
+    bg_context_destroy(hip_context);
+}
+
+void test_hip_safe_scorer_parity_when_device_is_available() {
+    uint8_t available = UINT8_C(0);
+    assert(
+        bg_backend_is_available(BG_BACKEND_HIP_SAFE, 0, &available) ==
+        BG_STATUS_OK);
+    if (available == UINT8_C(0)) {
+        return;
+    }
+
+    const Fixture nominal;
+    assert_hip_safe_fixture_parity(nominal);
+
+    Fixture candidate_failures;
+    candidate_failures.states[2] = BG_DOCKING_SCORER_V1_CANDIDATE_ACTIVE;
+    candidate_failures.candidate_x[2 * kLigandAtoms] =
+        std::numeric_limits<double>::quiet_NaN();
+    candidate_failures.states[3] = BG_DOCKING_SCORER_V1_CANDIDATE_ACTIVE;
+    for (std::size_t atom = 0; atom < kLigandAtoms; ++atom) {
+        candidate_failures.candidate_x[3 * kLigandAtoms + atom] = 1.0;
+        candidate_failures.candidate_y[3 * kLigandAtoms + atom] = 1.0;
+        candidate_failures.candidate_z[3 * kLigandAtoms + atom] = 1.0;
+    }
+    assert_hip_safe_fixture_parity(candidate_failures);
+
+    const Fixture receptor_capacity;
+    assert_hip_safe_fixture_parity(receptor_capacity, 1);
+}
+
 }  // namespace
 
 int main() {
@@ -325,5 +396,6 @@ int main() {
     test_cpu_backend_parity_and_fixed64_failure_preservation();
     test_candidate_local_failures_match_without_changing_the_denominator();
     test_receptor_capacity_failure_and_transactionality();
+    test_hip_safe_scorer_parity_when_device_is_available();
     return 0;
 }

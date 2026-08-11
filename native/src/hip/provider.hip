@@ -1151,3 +1151,5 @@ extern "C" int32_t bg_hip_safe_evaluate_v1(
 
 #undef BG_HIP_COPY_INPUT
 }
+
+#include "docking_scorer.hip"

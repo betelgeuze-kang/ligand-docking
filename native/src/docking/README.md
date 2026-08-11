@@ -27,6 +27,13 @@ not batch aborts.
 qualification only. `rust_cpu` calls the canonical Rust ScorerV1 core through a
 private versioned provider. Synthetic parity requires equal status, failure,
 pair/contact counts, and tight binary64 term/total agreement; repeated runs
-require bit-identical rows. `hip_safe` and `hip_fast` currently fail closed at
-this new scorer boundary until their real kernels and parity suites land. No
-backend fallback and no execution or product authority are created here.
+require bit-identical rows.
+
+`hip_safe` has a native fixed64 kernel with one serial thread per candidate and
+persistent receptor/ligand device context. It is available only in an exact
+ROCm 6.0.2 build with an explicitly qualified architecture and a compatible
+runtime device. The device suite compares every typed failure/count exactly,
+uses a frozen binary64 tolerance for score terms, and requires bit-identical
+same-device repeats. `hip_fast` remains fail-closed until its separately named
+kernel and qualification suite land. No backend fallback and no execution or
+product authority are created here.

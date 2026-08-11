@@ -26,6 +26,7 @@ const VENDORED_FILES: &[&str] = &[
     "native/src/dynamics/sha256.cpp",
     "native/src/hip/provider.h",
     "native/src/hip/provider.hip",
+    "native/src/hip/docking_scorer.hip",
     "native/src/hip/evaluator.hpp",
     "native/src/hip/evaluator.cpp",
     "native/src/hip/backend.hpp",
