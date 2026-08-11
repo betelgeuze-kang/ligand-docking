@@ -10,6 +10,7 @@ import pytest
 from tools.verify_engine_v2_mixed64_operational_proposal_v3 import (
     DEFAULT_POLICY_PATH,
     Mixed64OperationalProposalPolicyVerificationError,
+    _function_parameters,
     verify_policy,
 )
 
@@ -155,3 +156,20 @@ assert module.verify_policy()["verified"] is True
         text=True,
     )
     assert completed.returncode == 0, completed.stderr
+
+
+@pytest.mark.parametrize("signature", ("*args", "**kwargs", "value, *args, **kwargs"))
+def test_verifier_rejects_variadic_api_parameters(
+    tmp_path: Path,
+    signature: str,
+) -> None:
+    source = tmp_path / "variadic.py"
+    source.write_text(
+        f"def target({signature}):\n    return None\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(
+        Mixed64OperationalProposalPolicyVerificationError,
+        match="must not accept variadic arguments",
+    ):
+        _function_parameters(source, "target")

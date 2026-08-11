@@ -104,6 +104,10 @@ def _function_parameters(path: Path, function_name: str) -> set[str]:
             f"{function_name} implementation is not unique"
         )
     arguments = functions[0].args
+    if arguments.vararg is not None or arguments.kwarg is not None:
+        raise Mixed64OperationalProposalPolicyVerificationError(
+            f"{function_name} must not accept variadic arguments"
+        )
     return {
         value.arg
         for value in (

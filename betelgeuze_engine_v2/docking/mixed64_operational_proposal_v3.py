@@ -22,6 +22,7 @@ from typing import Final
 
 import torch
 
+from .global_orientation import rotate_vector
 from .geometric_admission_v3 import (
     ACCEPTED_STATUS,
     GEOMETRIC_ADMISSION_V3_POLICY_SHA256,
@@ -501,6 +502,37 @@ def _materialization_seed(
     return int.from_bytes(hashlib.sha256(payload).digest()[:8], "big") & _MAX_SEED
 
 
+def _reproduce_placement_coordinates(
+    *,
+    source_coordinates: torch.Tensor,
+    quaternion: tuple[float, float, float, float],
+    translation: tuple[float, float, float],
+    center_source: bool,
+) -> torch.Tensor:
+    """Reproduce producer coordinates in the producer's scalar operation order."""
+
+    source = tuple(
+        tuple(float(component) for component in point)
+        for point in source_coordinates.tolist()
+    )
+    if center_source:
+        inverse = 1.0 / len(source)
+        centroid = tuple(
+            sum(point[axis] for point in source) * inverse for axis in range(3)
+        )
+        source = tuple(
+            tuple(point[axis] - centroid[axis] for axis in range(3))
+            for point in source
+        )
+    transformed = []
+    for point in source:
+        rotated = rotate_vector(point, quaternion)
+        transformed.append(
+            tuple(rotated[axis] + translation[axis] for axis in range(3))
+        )
+    return torch.tensor(tuple(transformed), dtype=torch.float64)
+
+
 @dataclass(frozen=True, slots=True)
 class Mixed64OperationalProposalRecordV1:
     admission_decision: GeometricAdmissionDecisionV3 = field(repr=False)
@@ -813,13 +845,20 @@ class Mixed64OperationalProposalBatchV1:
                     SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED,
                     "batch decision binding changed",
                 )
-        materialized = tuple(value for value in self.records if value.materialized)
+        identity_bound_proposals = tuple(
+            proposal
+            for record in self.records
+            for proposal in (
+                record.source_operational_proposal,
+                record.operational_proposal,
+            )
+            if proposal is not None
+        )
         if (
             len(
                 {
-                    value.operational_proposal.problem_fingerprint_sha256
-                    for value in materialized
-                    if value.operational_proposal is not None
+                    proposal.problem_fingerprint_sha256
+                    for proposal in identity_bound_proposals
                 }
             )
             > 1
@@ -831,9 +870,8 @@ class Mixed64OperationalProposalBatchV1:
         if (
             len(
                 {
-                    value.operational_proposal.search_space_fingerprint_sha256
-                    for value in materialized
-                    if value.operational_proposal is not None
+                    proposal.search_space_fingerprint_sha256
+                    for proposal in identity_bound_proposals
                 }
             )
             > 1
@@ -1015,7 +1053,12 @@ def _materialize_record(
                 placement,
                 source_coordinates=source_coordinates,
             )
-            expected = source_coordinates @ placement_rotation.T + placement_translation
+            expected = _reproduce_placement_coordinates(
+                source_coordinates=source_coordinates,
+                quaternion=placement.quaternion,
+                translation=placement.translation,
+                center_source=type(placement) is IndexedSO3PlacementReceiptV1,
+            )
             if not torch.equal(expected, output):
                 maximum_error = float(torch.max(torch.abs(expected - output)).item())
                 if maximum_error > COORDINATE_REPRODUCTION_ABSOLUTE_TOLERANCE:

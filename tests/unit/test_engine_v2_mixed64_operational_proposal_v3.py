@@ -8,6 +8,7 @@ import math
 import pytest
 import torch
 
+from betelgeuze_engine_v2.docking.global_orientation import rotate_vector
 from betelgeuze_engine_v2.docking.geometric_admission_v3 import GeometricAdmissionV3
 from betelgeuze_engine_v2.docking.mixed64_allocation import (
     Mixed64ConformerSourceEvidence,
@@ -37,7 +38,10 @@ from betelgeuze_engine_v2.docking.mixed64_proposal_producer_v3 import (
     Mixed64ProposalSourceBundleV1,
     produce_fixed_mixed64_proposals,
 )
-from betelgeuze_engine_v2.docking.proposals import bind_docking_proposal_state
+from betelgeuze_engine_v2.docking.proposals import (
+    DockingProposalError,
+    bind_docking_proposal_state,
+)
 from tests.unit.test_engine_v2_mixed64_proposal_producer_v3 import _fixture
 
 
@@ -389,6 +393,56 @@ def test_all_admitted_indexed_so3_slots_rederive_their_affine_transform() -> Non
         )
 
 
+def test_indexed_so3_reproduction_preserves_centered_order_at_large_offset() -> None:
+    import betelgeuze_engine_v2.docking.mixed64_operational_proposal_v3 as module
+
+    coordinates = (
+        (99_999.75, 99_999.5, 99_999.25),
+        (100_000.0, 99_999.875, 99_999.625),
+        (99_999.625, 100_000.0, 99_999.875),
+    )
+    quaternion = (0.123456789, -0.456789123, 0.234567891, 0.845678912)
+    translation = (17.25, -8.5, 3.75)
+    inverse = 1.0 / len(coordinates)
+    centroid = tuple(
+        sum(point[axis] for point in coordinates) * inverse for axis in range(3)
+    )
+    producer_order = torch.tensor(
+        tuple(
+            tuple(
+                rotate_vector(
+                    tuple(point[axis] - centroid[axis] for axis in range(3)),
+                    quaternion,
+                )[axis]
+                + translation[axis]
+                for axis in range(3)
+            )
+            for point in coordinates
+        ),
+        dtype=torch.float64,
+    )
+    source = torch.tensor(coordinates, dtype=torch.float64)
+    reproduced = module._reproduce_placement_coordinates(
+        source_coordinates=source,
+        quaternion=quaternion,
+        translation=translation,
+        center_source=True,
+    )
+    rotation = module._rotation_matrix(quaternion)
+    centroid_tensor = torch.tensor(centroid, dtype=torch.float64)
+    affine_translation = (
+        torch.tensor(translation, dtype=torch.float64)
+        - centroid_tensor @ rotation.T
+    )
+    cancellation_prone = source @ rotation.T + affine_translation
+
+    assert torch.equal(reproduced, producer_order)
+    assert (
+        float(torch.max(torch.abs(cancellation_prone - producer_order)).item())
+        > module.COORDINATE_REPRODUCTION_ABSOLUTE_TOLERANCE
+    )
+
+
 def test_unexpected_runtime_failure_is_not_relabeled_as_typed_slot_failure(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -543,6 +597,27 @@ def test_cross_wired_problem_identity_fails_the_whole_batch() -> None:
         crosswire_control_problem=True
     )
 
+    with pytest.raises(Mixed64OperationalProposalV3Error, match="problem identity"):
+        materialize_mixed64_operational_proposals(admission)
+
+
+def test_typed_records_remain_bound_by_batch_problem_identity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import betelgeuze_engine_v2.docking.mixed64_operational_proposal_v3 as module
+
+    _allocation, _bundle, _producer, admission = _operational_fixture(
+        crosswire_control_problem=True
+    )
+
+    def typed_construction_failure(**_kwargs):
+        raise DockingProposalError("forced typed construction failure")
+
+    monkeypatch.setattr(
+        module,
+        "bind_docking_proposal_state",
+        typed_construction_failure,
+    )
     with pytest.raises(Mixed64OperationalProposalV3Error, match="problem identity"):
         materialize_mixed64_operational_proposals(admission)
 
