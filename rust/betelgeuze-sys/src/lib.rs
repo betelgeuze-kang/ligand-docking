@@ -1158,6 +1158,7 @@ pub struct bg_docking_fixed64_refinement_input_v1 {
     pub ligand_atom_count: u64,
     pub unit_system: bg_unit_system,
     pub reserved0: u32,
+    pub rmsd_threshold_angstrom: f64,
     pub candidate_mode: *const bg_docking_rigid_refinement_candidate_mode,
     pub rigid_max_steps: *const u64,
     pub proposal_is_torsion_eligible: *const u8,
@@ -1547,6 +1548,7 @@ unsafe extern "C" {
         scorer_output: *mut bg_docking_scorer_v1_output_v1,
         validity_output: *mut bg_docking_pose_validity_output_v1,
         ranking_output: *mut bg_docking_stable_top_k_output_v1,
+        cluster_output: *mut bg_docking_rmsd_cluster_output_v1,
         pipeline_output: *mut bg_docking_fixed64_refinement_output_v1,
     ) -> bg_status;
 

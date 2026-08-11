@@ -341,13 +341,14 @@ static_assert(offsetof(
                   molecular_execution_authorized) == 144);
 static_assert(offsetof(bg_docking_torsion_v7_output_v1, reserved) == 152);
 
-static_assert(sizeof(bg_docking_fixed64_refinement_input_v1) == 192);
+static_assert(sizeof(bg_docking_fixed64_refinement_input_v1) == 200);
 static_assert(alignof(bg_docking_fixed64_refinement_input_v1) == 8);
 static_assert(offsetof(bg_docking_fixed64_refinement_input_v1, candidate_count) == 8);
-static_assert(offsetof(bg_docking_fixed64_refinement_input_v1, candidate_mode) == 32);
-static_assert(offsetof(bg_docking_fixed64_refinement_input_v1, source_x_angstrom) == 64);
-static_assert(offsetof(bg_docking_fixed64_refinement_input_v1, source_quaternion_x) == 96);
-static_assert(offsetof(bg_docking_fixed64_refinement_input_v1, reserved) == 128);
+static_assert(offsetof(bg_docking_fixed64_refinement_input_v1, rmsd_threshold_angstrom) == 32);
+static_assert(offsetof(bg_docking_fixed64_refinement_input_v1, candidate_mode) == 40);
+static_assert(offsetof(bg_docking_fixed64_refinement_input_v1, source_x_angstrom) == 72);
+static_assert(offsetof(bg_docking_fixed64_refinement_input_v1, source_quaternion_x) == 104);
+static_assert(offsetof(bg_docking_fixed64_refinement_input_v1, reserved) == 136);
 
 static_assert(sizeof(bg_docking_fixed64_refinement_row_v1) == 104);
 static_assert(alignof(bg_docking_fixed64_refinement_row_v1) == 8);
@@ -564,6 +565,7 @@ static_assert(noexcept(
 static_assert(noexcept(
     bg_docking_fixed64_refinement_pipeline_v1_get_backend(nullptr, nullptr)));
 static_assert(noexcept(bg_docking_fixed64_refinement_pipeline_v1_run(
+    nullptr,
     nullptr,
     nullptr,
     nullptr,

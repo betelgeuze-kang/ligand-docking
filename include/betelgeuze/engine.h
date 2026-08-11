@@ -1293,11 +1293,13 @@ typedef struct bg_docking_torsion_v7_output_v1 {
  * Exact fixed64 source input for the persistent refinement pipeline. Rigid
  * modes and both step budgets are predeclared per slot. torsion_max_steps is
  * the total V6+V7 accepted-step budget; the pipeline subtracts the selected
- * rigid V6 accepted steps before V7. Source coordinates, torsion angles, and
- * quaternions remain caller-owned for the duration of one call. Inactive rows
- * stay in the denominator and their numerical channels are not interpreted.
- * Torsion V7 is considered only for successful V6 rows; V2/V3 rows flow
- * directly from rigid refinement to downstream scoring.
+ * rigid V6 accepted steps before V7. rmsd_threshold_angstrom is the positive
+ * inclusive direct-coordinate cluster threshold applied after stable Top-K.
+ * Source coordinates, torsion angles, and quaternions remain caller-owned for
+ * the duration of one call. Inactive rows stay in the denominator and their
+ * numerical channels are not interpreted. Torsion V7 is considered only for
+ * successful V6 rows; V2/V3 rows flow directly from rigid refinement to
+ * downstream scoring.
  */
 typedef struct bg_docking_fixed64_refinement_input_v1 {
     uint32_t struct_size;
@@ -1306,6 +1308,7 @@ typedef struct bg_docking_fixed64_refinement_input_v1 {
     uint64_t ligand_atom_count;
     bg_unit_system unit_system;
     uint32_t reserved0;
+    double rmsd_threshold_angstrom;
     const bg_docking_rigid_refinement_candidate_mode *candidate_mode;
     const uint64_t *rigid_max_steps;
     const uint8_t *proposal_is_torsion_eligible;
@@ -1825,10 +1828,10 @@ BG_API bg_status BG_CALL bg_docking_torsion_v7_refine_fixed64(
  * pocket, backend, device, and unit system before it owns rigid, torsion V7,
  * ScorerV1, validity, and stable Top-K providers. Run derives the V7 baseline
  * from rigid V6 evidence, derives final quaternions from the accepted rigid
- * rotation, and commits every component output plus the final-selection
- * output transactionally. It never falls back and grants no execution,
- * reservation, benchmark, rank-mutation, customer-emission, or claim
- * authority. */
+ * rotation, clusters valid-ranked poses by direct RMSD, and commits every
+ * component output plus the final-selection and cluster outputs
+ * transactionally. It never falls back and grants no execution, reservation,
+ * benchmark, rank-mutation, customer-emission, or claim authority. */
 BG_API bg_status BG_CALL bg_docking_fixed64_refinement_pipeline_v1_create(
     const bg_context *context,
     const bg_docking_rigid_refinement_context_soa_v1 *rigid_descriptor,
@@ -1850,6 +1853,7 @@ BG_API bg_status BG_CALL bg_docking_fixed64_refinement_pipeline_v1_run(
     bg_docking_scorer_v1_output_v1 *scorer_output,
     bg_docking_pose_validity_output_v1 *validity_output,
     bg_docking_stable_top_k_output_v1 *ranking_output,
+    bg_docking_rmsd_cluster_output_v1 *cluster_output,
     bg_docking_fixed64_refinement_output_v1 *pipeline_output) BG_NOEXCEPT;
 
 /* A system owns its host SoA and has no parent-handle lifetime dependency. */
