@@ -21,6 +21,9 @@ fn main() {
     let tensor_source = repository_root.join("native/src/tensor.cpp");
     let cpu_evaluator_header = repository_root.join("native/src/cpu/evaluator.hpp");
     let cpu_evaluator_source = repository_root.join("native/src/cpu/evaluator.cpp");
+    let rust_provider_header = repository_root.join("native/src/rust/provider.h");
+    let rust_evaluator_header = repository_root.join("native/src/rust/evaluator.hpp");
+    let rust_evaluator_source = repository_root.join("native/src/rust/evaluator.cpp");
     let c_header_probe = manifest_dir.join("abi/header_c11.c");
     let cpp_layout_probe = manifest_dir.join("abi/layout_assertions.cpp");
 
@@ -33,6 +36,9 @@ fn main() {
     track(&tensor_source);
     track(&cpu_evaluator_header);
     track(&cpu_evaluator_source);
+    track(&rust_provider_header);
+    track(&rust_evaluator_header);
+    track(&rust_evaluator_source);
     track(&c_header_probe);
     track(&cpp_layout_probe);
 
@@ -48,6 +54,7 @@ fn main() {
         .file(&tensor_source)
         .define("BG_DISABLE_DESCRIPTOR_INIT_CONVENIENCE_MACROS", None)
         .file(&cpu_evaluator_source)
+        .file(&rust_evaluator_source)
         .warnings(true)
         .warnings_into_errors(true);
     if native_build.get_compiler().is_like_msvc() {

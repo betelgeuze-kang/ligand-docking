@@ -261,16 +261,16 @@ fn explicit_cpp_cpu_reference_context_round_trips_without_fallback() {
 }
 
 #[test]
-fn explicit_rust_cpu_request_is_unavailable_without_the_rust_kernel() {
-    // SAFETY: Outputs and descriptor storage are live. Failure must leave the
-    // context output null and may not substitute the C++ reference backend.
+fn explicit_rust_cpu_context_round_trips_without_cpp_fallback() {
+    // SAFETY: Outputs and descriptor storage are live; the returned context is
+    // queried and destroyed exactly once.
     unsafe {
-        let mut available = 1_u8;
+        let mut available = 0_u8;
         assert_eq!(
             bg_backend_is_available(BG_BACKEND_RUST_CPU, 0, &mut available),
             BG_STATUS_OK
         );
-        assert_eq!(available, 0);
+        assert_eq!(available, 1);
 
         let mut options = core::mem::MaybeUninit::<bg_context_options>::uninit();
         assert_eq!(
@@ -280,13 +280,13 @@ fn explicit_rust_cpu_request_is_unavailable_without_the_rust_kernel() {
         let mut options = options.assume_init();
         options.backend = BG_BACKEND_RUST_CPU;
 
-        let mut context = ptr::dangling_mut::<bg_context>();
-        assert_eq!(
-            bg_context_create(&options, &mut context),
-            BG_STATUS_BACKEND_UNAVAILABLE
-        );
-        assert!(context.is_null());
-        assert!(owned_string(bg_last_error_message()).contains("fallback is forbidden"));
+        let mut context = ptr::null_mut();
+        assert_eq!(bg_context_create(&options, &mut context), BG_STATUS_OK);
+        assert!(!context.is_null());
+        let mut selected = BG_BACKEND_AUTO;
+        assert_eq!(bg_context_get_backend(context, &mut selected), BG_STATUS_OK);
+        assert_eq!(selected, BG_BACKEND_RUST_CPU);
+        bg_context_destroy(context);
     }
 }
 

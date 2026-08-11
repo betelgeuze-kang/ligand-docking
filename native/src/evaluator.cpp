@@ -1,5 +1,6 @@
 #include "cpu/evaluator.hpp"
 #include "internal.hpp"
+#include "rust/evaluator.hpp"
 
 #include <algorithm>
 #include <array>
@@ -299,15 +300,21 @@ extern "C" BG_API bg_status BG_CALL bg_context_evaluate(
                 BG_STATUS_INVALID_ARGUMENT,
                 "context, system, and forcefield unit systems must match");
         }
-        if (context->backend != BG_BACKEND_CPP_CPU_REFERENCE) {
+        if (context->backend != BG_BACKEND_CPP_CPU_REFERENCE &&
+            context->backend != BG_BACKEND_RUST_CPU) {
             return fail(
                 BG_STATUS_UNSUPPORTED_BACKEND,
                 "the selected backend has no evaluator implementation");
         }
 
         cpu::Evaluation evaluation;
-        status = cpu::evaluate(
-            *system, *forcefield, out_forces != nullptr, &evaluation);
+        if (context->backend == BG_BACKEND_CPP_CPU_REFERENCE) {
+            status = cpu::evaluate(
+                *system, *forcefield, out_forces != nullptr, &evaluation);
+        } else {
+            status = rust_cpu::evaluate(
+                *system, *forcefield, out_forces != nullptr, &evaluation);
+        }
         if (status != BG_STATUS_OK) {
             return status;
         }

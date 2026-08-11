@@ -9,6 +9,10 @@
 
 use core::ffi::c_char;
 
+#[used]
+static BG_RUST_CPU_PROVIDER_LINK_ANCHOR: extern "C" fn() -> u32 =
+    betelgeuze_cpu_kernel::bg_rust_cpu_provider_abi_version_v1;
+
 pub const BG_ABI_VERSION_MAJOR: u32 = 1;
 pub const BG_ABI_VERSION_MINOR: u32 = 1;
 pub const BG_ABI_VERSION: u32 = 1;

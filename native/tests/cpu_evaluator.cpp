@@ -249,13 +249,13 @@ struct ForceFieldData final {
     }
 };
 
-ContextPtr make_cpu_context() {
+ContextPtr make_cpu_context(bg_backend backend) {
     bg_context_options options{};
     require_status(
         bg_context_options_init(&options),
         BG_STATUS_OK,
         "context options initializer failed");
-    options.backend = BG_BACKEND_CPU;
+    options.backend = backend;
     bg_context *raw = nullptr;
     require_status(
         bg_context_create(&options, &raw),
@@ -1267,14 +1267,19 @@ void test_numerical_failures_are_transactional(const bg_context *context) {
 }  // namespace
 
 int main() {
-    const ContextPtr context = make_cpu_context();
-    test_descriptor_initializers_and_exact_bond(context.get());
-    test_exact_lennard_jones(context.get());
-    test_combined_finite_difference_and_determinism(context.get());
-    test_periodic_image_parity(context.get());
-    test_excluded_coincident_pair(context.get());
     test_descriptor_and_count_failures();
-    test_output_validation_and_transactionality(context.get());
-    test_numerical_failures_are_transactional(context.get());
+    for (const bg_backend backend : {
+             BG_BACKEND_CPP_CPU_REFERENCE,
+             BG_BACKEND_RUST_CPU,
+         }) {
+        const ContextPtr context = make_cpu_context(backend);
+        test_descriptor_initializers_and_exact_bond(context.get());
+        test_exact_lennard_jones(context.get());
+        test_combined_finite_difference_and_determinism(context.get());
+        test_periodic_image_parity(context.get());
+        test_excluded_coincident_pair(context.get());
+        test_output_validation_and_transactionality(context.get());
+        test_numerical_failures_are_transactional(context.get());
+    }
     return 0;
 }

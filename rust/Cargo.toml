@@ -1,5 +1,5 @@
 [workspace]
-members = ["betelgeuze-*", "reference-physics"]
+members = ["betelgeuze-*", "cpu-kernel", "reference-physics"]
 resolver = "2"
 
 [workspace.package]

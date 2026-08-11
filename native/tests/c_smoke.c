@@ -27,7 +27,7 @@ static void test_context_contract(void) {
     assert(available == 1);
     assert(bg_backend_is_available(BG_BACKEND_RUST_CPU, 0, &available) ==
            BG_STATUS_OK);
-    assert(available == 0);
+    assert(available == 1);
     assert(bg_backend_is_available(BG_BACKEND_HIP, 0, &available) ==
            BG_STATUS_OK);
     assert(available == 0);
@@ -50,11 +50,12 @@ static void test_context_contract(void) {
     bg_context_destroy(context);
 
     options.backend = BG_BACKEND_RUST_CPU;
-    context = (bg_context *)(uintptr_t)1;
-    assert(bg_context_create(&options, &context) ==
-           BG_STATUS_BACKEND_UNAVAILABLE);
-    assert(context == NULL);
-    assert(strstr(bg_last_error_message(), "fallback is forbidden") != NULL);
+    context = NULL;
+    assert(bg_context_create(&options, &context) == BG_STATUS_OK);
+    assert(context != NULL);
+    assert(bg_context_get_backend(context, &selected) == BG_STATUS_OK);
+    assert(selected == BG_BACKEND_RUST_CPU);
+    bg_context_destroy(context);
 
     options.backend = BG_BACKEND_HIP;
     context = (bg_context *)(uintptr_t)1;

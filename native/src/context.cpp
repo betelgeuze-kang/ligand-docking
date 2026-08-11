@@ -1,4 +1,5 @@
 #include "internal.hpp"
+#include "rust/provider.h"
 
 #include <cstring>
 #include <memory>
@@ -57,9 +58,10 @@ bool cpp_cpu_reference_is_available(int32_t device_ordinal) noexcept {
     return device_ordinal == 0;
 }
 
-/* rust_cpu becomes available only after the pure Rust kernels are linked. */
-bool rust_cpu_is_available(int32_t /*device_ordinal*/) noexcept {
-    return false;
+bool rust_cpu_is_available(int32_t device_ordinal) noexcept {
+    return device_ordinal == 0 &&
+           bg_rust_cpu_provider_abi_version_v1() ==
+               BG_RUST_CPU_PROVIDER_ABI_VERSION;
 }
 
 /* No HIP provider is linked in ABI v1 yet.  Merely compiling with hipcc must
@@ -358,9 +360,11 @@ extern "C" BG_API bg_status BG_CALL bg_context_create(
                     "requested C++ CPU reference ordinal is unavailable");
             }
         } else if (selected_backend == BG_BACKEND_RUST_CPU) {
-            return fail(
-                BG_STATUS_BACKEND_UNAVAILABLE,
-                "rust_cpu backend is unavailable; fallback is forbidden");
+            if (!rust_cpu_is_available(options->device_ordinal)) {
+                return fail(
+                    BG_STATUS_BACKEND_UNAVAILABLE,
+                    "rust_cpu backend is unavailable; fallback is forbidden");
+            }
         } else if (!hip_is_available(options->device_ordinal)) {
             return fail(
                 BG_STATUS_BACKEND_UNAVAILABLE,

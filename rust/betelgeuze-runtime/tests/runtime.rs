@@ -66,11 +66,12 @@ fn explicit_cpp_cpu_reference_context_reports_the_selected_backend() {
 }
 
 #[test]
-fn unavailable_rust_cpu_is_not_silently_replaced_with_cpp_reference() {
-    assert!(!Context::backend_available(Backend::RustCpu, 0).unwrap());
-    let error = Context::new(ContextOptions::rust_cpu()).err().unwrap();
-    assert_eq!(error.code, ErrorCode::BackendUnavailable);
-    assert!(error.message.contains("fallback is forbidden"));
+fn explicit_rust_cpu_context_reports_the_selected_backend() {
+    assert!(Context::backend_available(Backend::RustCpu, 0).unwrap());
+    let context = Context::new(ContextOptions::rust_cpu()).unwrap();
+    assert_eq!(context.backend().unwrap(), Backend::RustCpu);
+    assert_eq!(context.device_ordinal().unwrap(), 0);
+    assert_eq!(context.unit_system().unwrap(), UnitSystem::AngstromKcalMol);
 }
 
 #[test]

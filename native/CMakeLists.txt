@@ -5,7 +5,63 @@ add_library(betelgeuze_engine SHARED
     src/system.cpp
     src/tensor.cpp
     src/cpu/evaluator.cpp
+    src/rust/evaluator.cpp
 )
+
+find_program(CARGO_EXECUTABLE cargo REQUIRED)
+set(BG_RUST_CPU_TARGET_DIR
+    "${CMAKE_CURRENT_BINARY_DIR}/rust-cpu-provider-target")
+if(WIN32)
+    set(BG_RUST_CPU_STATIC_LIBRARY
+        "${BG_RUST_CPU_TARGET_DIR}/release/betelgeuze_cpu_kernel.lib")
+else()
+    set(BG_RUST_CPU_STATIC_LIBRARY
+        "${BG_RUST_CPU_TARGET_DIR}/release/libbetelgeuze_cpu_kernel.a")
+endif()
+file(GLOB_RECURSE BG_RUST_CPU_SOURCES CONFIGURE_DEPENDS
+    "${PROJECT_SOURCE_DIR}/rust/cpu-kernel/src/*.rs")
+add_custom_command(
+    OUTPUT "${BG_RUST_CPU_STATIC_LIBRARY}"
+    COMMAND ${CMAKE_COMMAND} -E env
+        "CARGO_TARGET_DIR=${BG_RUST_CPU_TARGET_DIR}"
+        "RUSTFLAGS=-C target-feature=-fma -C relocation-model=pic"
+        ${CARGO_EXECUTABLE} build
+        --manifest-path "${PROJECT_SOURCE_DIR}/rust/Cargo.toml"
+        --package betelgeuze-cpu-kernel
+        --release
+        --locked
+    DEPENDS
+        "${PROJECT_SOURCE_DIR}/rust/Cargo.toml"
+        "${PROJECT_SOURCE_DIR}/rust/Cargo.lock"
+        "${PROJECT_SOURCE_DIR}/rust/cpu-kernel/Cargo.toml"
+        ${BG_RUST_CPU_SOURCES}
+    COMMENT "Building deterministic Rust CPU provider"
+    VERBATIM
+)
+add_custom_target(
+    betelgeuze_rust_cpu_provider_build
+    DEPENDS "${BG_RUST_CPU_STATIC_LIBRARY}"
+)
+add_library(betelgeuze_rust_cpu_provider STATIC IMPORTED GLOBAL)
+set_target_properties(betelgeuze_rust_cpu_provider PROPERTIES
+    IMPORTED_LOCATION "${BG_RUST_CPU_STATIC_LIBRARY}"
+)
+add_dependencies(
+    betelgeuze_rust_cpu_provider
+    betelgeuze_rust_cpu_provider_build
+)
+add_dependencies(betelgeuze_engine betelgeuze_rust_cpu_provider_build)
+target_link_libraries(betelgeuze_engine PRIVATE betelgeuze_rust_cpu_provider)
+if(UNIX)
+    find_package(Threads REQUIRED)
+    target_link_libraries(
+        betelgeuze_engine
+        PRIVATE Threads::Threads ${CMAKE_DL_LIBS} m
+    )
+    if(NOT APPLE)
+        target_link_libraries(betelgeuze_engine PRIVATE rt util)
+    endif()
+endif()
 
 target_compile_features(betelgeuze_engine PUBLIC cxx_std_17)
 target_compile_definitions(betelgeuze_engine PRIVATE BG_ENGINE_BUILD_SHARED)

@@ -8,5 +8,8 @@ publish = false
 links = "betelgeuze_engine"
 build = "build.rs"
 
+[dependencies]
+betelgeuze-cpu-kernel = { path = "../cpu-kernel" }
+
 [build-dependencies]
 cc = "1.2"
