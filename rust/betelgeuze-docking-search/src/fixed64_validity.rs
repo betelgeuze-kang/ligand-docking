@@ -394,8 +394,83 @@ pub struct NativeFixed64ValidityMeasurements {
 
 impl NativeFixed64ValidityMeasurements {
     #[must_use]
+    pub const fn atom_count(self) -> usize {
+        self.atom_count
+    }
+
+    #[must_use]
+    pub const fn rotation_orthogonality_max_error(self) -> f64 {
+        self.rotation_orthogonality_max_error
+    }
+
+    #[must_use]
+    pub const fn rotation_determinant(self) -> f64 {
+        self.rotation_determinant
+    }
+
+    #[must_use]
+    pub const fn max_bond_length_delta_angstrom(self) -> f64 {
+        self.max_bond_length_delta_angstrom
+    }
+
+    #[must_use]
+    pub const fn minimum_ligand_nonbonded_distance_angstrom(self) -> f64 {
+        self.minimum_ligand_nonbonded_distance_angstrom
+    }
+
+    #[must_use]
+    pub const fn evaluated_ligand_nonbonded_pair_count(self) -> usize {
+        self.evaluated_ligand_nonbonded_pair_count
+    }
+
+    #[must_use]
+    pub const fn excluded_ligand_pair_count(self) -> usize {
+        self.excluded_ligand_pair_count
+    }
+
+    #[must_use]
     pub const fn minimum_receptor_ligand_distance_angstrom(self) -> f64 {
         self.minimum_receptor_ligand_distance_angstrom
+    }
+
+    #[must_use]
+    pub const fn evaluated_receptor_ligand_pair_count(self) -> usize {
+        self.evaluated_receptor_ligand_pair_count
+    }
+
+    #[must_use]
+    pub const fn minimum_declared_chiral_volume(self) -> f64 {
+        self.minimum_declared_chiral_volume
+    }
+
+    #[must_use]
+    pub const fn declared_chirality_center_count(self) -> usize {
+        self.declared_chirality_center_count
+    }
+
+    #[must_use]
+    pub const fn maximum_pocket_center_distance_angstrom(self) -> f64 {
+        self.maximum_pocket_center_distance_angstrom
+    }
+
+    #[must_use]
+    pub const fn element_vdw_ligand_pair_count(self) -> usize {
+        self.element_vdw_ligand_pair_count
+    }
+
+    #[must_use]
+    pub const fn element_vdw_ligand_severe_overlap_count(self) -> usize {
+        self.element_vdw_ligand_severe_overlap_count
+    }
+
+    #[must_use]
+    pub const fn element_vdw_ligand_minimum_distance_angstrom(self) -> f64 {
+        self.element_vdw_ligand_minimum_distance_angstrom
+    }
+
+    #[must_use]
+    pub const fn element_vdw_ligand_minimum_ratio(self) -> f64 {
+        self.element_vdw_ligand_minimum_ratio
     }
 
     #[must_use]
@@ -406,6 +481,26 @@ impl NativeFixed64ValidityMeasurements {
     #[must_use]
     pub const fn element_vdw_receptor_candidate_pair_count(self) -> usize {
         self.element_vdw_receptor_candidate_pair_count
+    }
+
+    #[must_use]
+    pub const fn element_vdw_receptor_full_cartesian_pair_count(self) -> usize {
+        self.element_vdw_receptor_full_cartesian_pair_count
+    }
+
+    #[must_use]
+    pub const fn element_vdw_receptor_cell_count(self) -> usize {
+        self.element_vdw_receptor_cell_count
+    }
+
+    #[must_use]
+    pub const fn element_vdw_receptor_minimum_distance_angstrom(self) -> f64 {
+        self.element_vdw_receptor_minimum_distance_angstrom
+    }
+
+    #[must_use]
+    pub const fn element_vdw_receptor_minimum_ratio(self) -> f64 {
+        self.element_vdw_receptor_minimum_ratio
     }
 }
 
@@ -474,6 +569,51 @@ pub struct NativeFixed64ValidityResult {
 }
 
 impl NativeFixed64ValidityResult {
+    #[must_use]
+    pub const fn proposal_record_receipt_sha256(&self) -> [u8; 32] {
+        self.proposal_record_receipt_sha256
+    }
+
+    #[must_use]
+    pub const fn scorer_row_receipt_sha256(&self) -> [u8; 32] {
+        self.scorer_row_receipt_sha256
+    }
+
+    #[must_use]
+    pub const fn coordinate_sha256(&self) -> [u8; 32] {
+        self.coordinate_sha256
+    }
+
+    #[must_use]
+    pub const fn authority_input_receipt_sha256(&self) -> [u8; 32] {
+        self.authority_input_receipt_sha256
+    }
+
+    #[must_use]
+    pub const fn context_receipt_sha256(&self) -> [u8; 32] {
+        self.context_receipt_sha256
+    }
+
+    #[must_use]
+    pub const fn config_receipt_sha256(&self) -> [u8; 32] {
+        self.config_receipt_sha256
+    }
+
+    #[must_use]
+    pub const fn backend(&self) -> NativeFixed64ValidityBackend {
+        self.backend
+    }
+
+    #[must_use]
+    pub const fn backend_receipt_sha256(&self) -> [u8; 32] {
+        self.backend_receipt_sha256
+    }
+
+    #[must_use]
+    pub const fn contact_policy_sha256(&self) -> [u8; 32] {
+        self.contact_policy_sha256
+    }
+
     #[must_use]
     pub const fn checks(&self) -> NativeFixed64ValidityChecks {
         self.checks

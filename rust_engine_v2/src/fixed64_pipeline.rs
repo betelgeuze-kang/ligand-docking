@@ -501,6 +501,32 @@ fn pipeline_to_python(
         row.set_item("scorer_receipt_sha256", hex_digest(score.receipt_sha256()))?;
         if let Some(terms) = score.terms() {
             let evidence = PyDict::new(py);
+            evidence.set_item(
+                "proposal_record_receipt_sha256",
+                hex_digest(terms.proposal_record_receipt_sha256()),
+            )?;
+            evidence.set_item("proposal_sha256", hex_digest(terms.proposal_sha256()))?;
+            evidence.set_item(
+                "admission_decision_receipt_sha256",
+                hex_digest(terms.admission_decision_receipt_sha256()),
+            )?;
+            evidence.set_item(
+                "authority_input_receipt_sha256",
+                hex_digest(terms.authority_input_receipt_sha256()),
+            )?;
+            evidence.set_item(
+                "context_receipt_sha256",
+                hex_digest(terms.context_receipt_sha256()),
+            )?;
+            evidence.set_item(
+                "config_receipt_sha256",
+                hex_digest(terms.config_receipt_sha256()),
+            )?;
+            evidence.set_item("backend", terms.backend().id())?;
+            evidence.set_item(
+                "backend_receipt_sha256",
+                hex_digest(terms.backend_receipt_sha256()),
+            )?;
             evidence.set_item("typed_vdw", terms.typed_vdw())?;
             evidence.set_item("electrostatics", terms.electrostatics())?;
             evidence.set_item("directional_hbond", terms.directional_hbond())?;
@@ -548,6 +574,11 @@ fn pipeline_to_python(
                 })
                 .unwrap_or_default(),
         )?;
+        if let Some(result) = pose_validity.result() {
+            row.set_item("validity_evidence", validity_result_to_python(py, result)?)?;
+        } else {
+            row.set_item("validity_evidence", py.None())?;
+        }
         row.set_item(
             "validity_receipt_sha256",
             hex_digest(pose_validity.receipt_sha256()),
@@ -564,6 +595,164 @@ fn pipeline_to_python(
     }
     output.set_item("candidates", rows)?;
     Ok(output.into())
+}
+
+fn validity_result_to_python(
+    py: Python<'_>,
+    result: &betelgeuze_docking_search::NativeFixed64ValidityResult,
+) -> PyResult<PyObject> {
+    let evidence = PyDict::new(py);
+    evidence.set_item(
+        "proposal_record_receipt_sha256",
+        hex_digest(result.proposal_record_receipt_sha256()),
+    )?;
+    evidence.set_item(
+        "scorer_row_receipt_sha256",
+        hex_digest(result.scorer_row_receipt_sha256()),
+    )?;
+    evidence.set_item("coordinate_sha256", hex_digest(result.coordinate_sha256()))?;
+    evidence.set_item(
+        "authority_input_receipt_sha256",
+        hex_digest(result.authority_input_receipt_sha256()),
+    )?;
+    evidence.set_item(
+        "context_receipt_sha256",
+        hex_digest(result.context_receipt_sha256()),
+    )?;
+    evidence.set_item(
+        "config_receipt_sha256",
+        hex_digest(result.config_receipt_sha256()),
+    )?;
+    evidence.set_item("backend", result.backend().id())?;
+    evidence.set_item(
+        "backend_receipt_sha256",
+        hex_digest(result.backend_receipt_sha256()),
+    )?;
+    evidence.set_item(
+        "contact_policy_sha256",
+        hex_digest(result.contact_policy_sha256()),
+    )?;
+    evidence.set_item("complete", result.complete())?;
+    evidence.set_item("valid", result.valid())?;
+    evidence.set_item(
+        "blockers",
+        result
+            .blockers()
+            .iter()
+            .map(|blocker| blocker.id())
+            .collect::<Vec<_>>(),
+    )?;
+    let checks = result.checks();
+    let check_rows = PyDict::new(py);
+    check_rows.set_item("proper_rotation", checks.proper_rotation())?;
+    check_rows.set_item("bond_lengths_preserved", checks.bond_lengths_preserved())?;
+    check_rows.set_item("ligand_self_clash_free", checks.ligand_self_clash_free())?;
+    check_rows.set_item(
+        "receptor_ligand_clash_free",
+        checks.receptor_ligand_clash_free(),
+    )?;
+    check_rows.set_item(
+        "declared_chirality_preserved",
+        checks.declared_chirality_preserved(),
+    )?;
+    check_rows.set_item("inside_declared_pocket", checks.inside_declared_pocket())?;
+    check_rows.set_item(
+        "element_vdw_ligand_overlap_free",
+        checks.element_vdw_ligand_overlap_free(),
+    )?;
+    check_rows.set_item(
+        "element_vdw_receptor_overlap_free",
+        checks.element_vdw_receptor_overlap_free(),
+    )?;
+    evidence.set_item("checks", check_rows)?;
+
+    let values = result.measurements();
+    let measurements = PyDict::new(py);
+    measurements.set_item("atom_count", values.atom_count())?;
+    measurements.set_item(
+        "rotation_orthogonality_max_error",
+        values.rotation_orthogonality_max_error(),
+    )?;
+    measurements.set_item("rotation_determinant", values.rotation_determinant())?;
+    measurements.set_item(
+        "max_bond_length_delta_angstrom",
+        values.max_bond_length_delta_angstrom(),
+    )?;
+    measurements.set_item(
+        "minimum_ligand_nonbonded_distance_angstrom",
+        values.minimum_ligand_nonbonded_distance_angstrom(),
+    )?;
+    measurements.set_item(
+        "evaluated_ligand_nonbonded_pair_count",
+        values.evaluated_ligand_nonbonded_pair_count(),
+    )?;
+    measurements.set_item(
+        "excluded_ligand_pair_count",
+        values.excluded_ligand_pair_count(),
+    )?;
+    measurements.set_item(
+        "minimum_receptor_ligand_distance_angstrom",
+        values.minimum_receptor_ligand_distance_angstrom(),
+    )?;
+    measurements.set_item(
+        "evaluated_receptor_ligand_pair_count",
+        values.evaluated_receptor_ligand_pair_count(),
+    )?;
+    measurements.set_item(
+        "minimum_declared_chiral_volume",
+        values.minimum_declared_chiral_volume(),
+    )?;
+    measurements.set_item(
+        "declared_chirality_center_count",
+        values.declared_chirality_center_count(),
+    )?;
+    measurements.set_item(
+        "maximum_pocket_center_distance_angstrom",
+        values.maximum_pocket_center_distance_angstrom(),
+    )?;
+    measurements.set_item(
+        "element_vdw_ligand_pair_count",
+        values.element_vdw_ligand_pair_count(),
+    )?;
+    measurements.set_item(
+        "element_vdw_ligand_severe_overlap_count",
+        values.element_vdw_ligand_severe_overlap_count(),
+    )?;
+    measurements.set_item(
+        "element_vdw_ligand_minimum_distance_angstrom",
+        values.element_vdw_ligand_minimum_distance_angstrom(),
+    )?;
+    measurements.set_item(
+        "element_vdw_ligand_minimum_ratio",
+        values.element_vdw_ligand_minimum_ratio(),
+    )?;
+    measurements.set_item(
+        "element_vdw_receptor_candidate_pair_count",
+        values.element_vdw_receptor_candidate_pair_count(),
+    )?;
+    measurements.set_item(
+        "element_vdw_receptor_full_cartesian_pair_count",
+        values.element_vdw_receptor_full_cartesian_pair_count(),
+    )?;
+    measurements.set_item(
+        "element_vdw_receptor_cell_count",
+        values.element_vdw_receptor_cell_count(),
+    )?;
+    measurements.set_item(
+        "element_vdw_receptor_severe_overlap_count",
+        values.element_vdw_receptor_severe_overlap_count(),
+    )?;
+    measurements.set_item(
+        "element_vdw_receptor_minimum_distance_angstrom",
+        values.element_vdw_receptor_minimum_distance_angstrom(),
+    )?;
+    measurements.set_item(
+        "element_vdw_receptor_minimum_ratio",
+        values.element_vdw_receptor_minimum_ratio(),
+    )?;
+    evidence.set_item("measurements", measurements)?;
+    evidence.set_item("receipt_sha256", hex_digest(result.receipt_sha256()))?;
+    Ok(evidence.into())
 }
 
 fn indexed_sources(value: &PyAny, name: &str) -> PyResult<Vec<IndexedSourceInput>> {

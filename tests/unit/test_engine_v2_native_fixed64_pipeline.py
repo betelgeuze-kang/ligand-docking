@@ -217,6 +217,38 @@ def test_native_fixed64_entrypoint_runs_the_complete_exact_source_graph(native) 
     assert sum(row["scorer_terms"] is not None for row in first["candidates"]) == 12
     assert all(row["candidate_removed_from_denominator"] is False for row in first["candidates"])
     assert all(row["result_dependent_allocation"] is False for row in first["candidates"])
+    scored = next(row for row in first["candidates"] if row["scorer_terms"])
+    assert set(scored["scorer_terms"]) == {
+        "proposal_record_receipt_sha256",
+        "proposal_sha256",
+        "admission_decision_receipt_sha256",
+        "authority_input_receipt_sha256",
+        "context_receipt_sha256",
+        "config_receipt_sha256",
+        "backend",
+        "backend_receipt_sha256",
+        "typed_vdw",
+        "electrostatics",
+        "directional_hbond",
+        "hydrophobic_contact",
+        "desolvation_proxy",
+        "torsion_energy",
+        "ligand_strain",
+        "weak_pocket_prior",
+        "total_score",
+        "receptor_candidate_pair_count",
+        "ligand_pair_count",
+        "hbond_count",
+        "hydrophobic_contact_count",
+        "buried_polar_count",
+        "coordinate_sha256",
+        "receipt_sha256",
+    }
+    validity = scored["validity_evidence"]
+    assert validity["complete"] is True
+    assert len(validity["checks"]) == 8
+    assert len(validity["measurements"]) == 22
+    assert validity["backend"] == "rust_cpu"
 
 
 def test_native_fixed64_consumer_views_share_one_core_receipt(native) -> None:

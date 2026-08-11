@@ -493,8 +493,33 @@ impl NativeScorerV1Terms {
     }
 
     #[must_use]
+    pub const fn admission_decision_receipt_sha256(&self) -> [u8; 32] {
+        self.admission_decision_receipt_sha256
+    }
+
+    #[must_use]
+    pub const fn authority_input_receipt_sha256(&self) -> [u8; 32] {
+        self.authority_input_receipt_sha256
+    }
+
+    #[must_use]
+    pub const fn context_receipt_sha256(&self) -> [u8; 32] {
+        self.context_receipt_sha256
+    }
+
+    #[must_use]
+    pub const fn config_receipt_sha256(&self) -> [u8; 32] {
+        self.config_receipt_sha256
+    }
+
+    #[must_use]
     pub const fn backend(&self) -> NativeScorerV1Backend {
         self.backend
+    }
+
+    #[must_use]
+    pub const fn backend_receipt_sha256(&self) -> [u8; 32] {
+        self.backend_receipt_sha256
     }
 
     #[must_use]
