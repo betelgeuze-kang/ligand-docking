@@ -20,7 +20,7 @@ static BG_RUST_CPU_PROVIDER_LINK_ANCHOR: extern "C" fn() -> u32 =
     betelgeuze_cpu_kernel::bg_rust_cpu_provider_abi_version_v1;
 
 pub const BG_ABI_VERSION_MAJOR: u32 = 1;
-pub const BG_ABI_VERSION_MINOR: u32 = 11;
+pub const BG_ABI_VERSION_MINOR: u32 = 12;
 pub const BG_ABI_VERSION: u32 = 1;
 
 pub const BG_CANONICAL_LENGTH_UNIT: &[u8] = b"angstrom\0";
@@ -210,6 +210,28 @@ pub const BG_DOCKING_RIGID_REFINEMENT_PROFILE_V6_BASELINE_V3: bg_docking_rigid_r
 pub const BG_DOCKING_RIGID_REFINEMENT_PROFILE_V6_CLEARANCE_V4: bg_docking_rigid_refinement_profile =
     5;
 
+pub type bg_docking_fixed64_refinement_row_status = i32;
+pub const BG_DOCKING_FIXED64_REFINEMENT_ROW_COORDINATE_READY:
+    bg_docking_fixed64_refinement_row_status = 1;
+pub const BG_DOCKING_FIXED64_REFINEMENT_ROW_TYPED_FAILURE:
+    bg_docking_fixed64_refinement_row_status = 2;
+
+pub type bg_docking_fixed64_refinement_failure_stage = i32;
+pub const BG_DOCKING_FIXED64_REFINEMENT_FAILURE_STAGE_NONE:
+    bg_docking_fixed64_refinement_failure_stage = 0;
+pub const BG_DOCKING_FIXED64_REFINEMENT_FAILURE_STAGE_RIGID:
+    bg_docking_fixed64_refinement_failure_stage = 1;
+pub const BG_DOCKING_FIXED64_REFINEMENT_FAILURE_STAGE_TORSION_V7:
+    bg_docking_fixed64_refinement_failure_stage = 2;
+
+pub type bg_docking_fixed64_refinement_coordinate_origin = i32;
+pub const BG_DOCKING_FIXED64_REFINEMENT_COORDINATE_NONE:
+    bg_docking_fixed64_refinement_coordinate_origin = 0;
+pub const BG_DOCKING_FIXED64_REFINEMENT_COORDINATE_RIGID_SELECTED:
+    bg_docking_fixed64_refinement_coordinate_origin = 1;
+pub const BG_DOCKING_FIXED64_REFINEMENT_COORDINATE_TORSION_V7_FINAL:
+    bg_docking_fixed64_refinement_coordinate_origin = 2;
+
 /// Opaque native context. Its representation is intentionally unavailable.
 #[repr(C)]
 pub struct bg_context {
@@ -255,6 +277,12 @@ pub struct bg_docking_stable_top_k_v1 {
 /// Opaque persistent fixed64 score-validity-ranking pipeline.
 #[repr(C)]
 pub struct bg_docking_fixed64_downstream_v1 {
+    _private: [u8; 0],
+}
+
+/// Opaque persistent fixed64 refinement-to-ranking pipeline.
+#[repr(C)]
+pub struct bg_docking_fixed64_refinement_pipeline_v1 {
     _private: [u8; 0],
 }
 
@@ -1121,6 +1149,80 @@ pub struct bg_docking_torsion_v7_output_v1 {
     pub reserved: [u64; 8],
 }
 
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_fixed64_refinement_input_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub candidate_count: u64,
+    pub ligand_atom_count: u64,
+    pub unit_system: bg_unit_system,
+    pub reserved0: u32,
+    pub candidate_mode: *const bg_docking_rigid_refinement_candidate_mode,
+    pub rigid_max_steps: *const u64,
+    pub proposal_is_torsion_eligible: *const u8,
+    pub torsion_max_steps: *const u64,
+    pub source_x_angstrom: *const f64,
+    pub source_y_angstrom: *const f64,
+    pub source_z_angstrom: *const f64,
+    pub baseline_torsion_angles_radians: *const f64,
+    pub source_quaternion_x: *const f64,
+    pub source_quaternion_y: *const f64,
+    pub source_quaternion_z: *const f64,
+    pub source_quaternion_w: *const f64,
+    pub reserved: [u64; 8],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_fixed64_refinement_row_v1 {
+    pub slot_index: u32,
+    pub status: bg_docking_fixed64_refinement_row_status,
+    pub failure_stage: bg_docking_fixed64_refinement_failure_stage,
+    pub coordinate_origin: bg_docking_fixed64_refinement_coordinate_origin,
+    pub rigid_failure_code: bg_docking_rigid_refinement_failure,
+    pub torsion_v7_failure_code: bg_docking_torsion_v7_failure,
+    pub selected_rigid_profile: bg_docking_rigid_refinement_profile,
+    pub downstream_candidate_state: bg_docking_scorer_v1_candidate_state,
+    pub torsion_v7_applicable: u8,
+    pub torsion_v7_selected: u8,
+    pub coordinate_available: u8,
+    pub reserved0: u8,
+    pub coordinate_sha256: [u8; 32],
+    pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_fixed64_refinement_output_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub row_capacity: u64,
+    pub row_count: u64,
+    pub coordinate_capacity: u64,
+    pub coordinate_count: u64,
+    pub quaternion_capacity: u64,
+    pub quaternion_count: u64,
+    pub unit_system: bg_unit_system,
+    pub reserved0: u32,
+    pub rows: *mut bg_docking_fixed64_refinement_row_v1,
+    pub final_x_angstrom: *mut f64,
+    pub final_y_angstrom: *mut f64,
+    pub final_z_angstrom: *mut f64,
+    pub final_quaternion_x: *mut f64,
+    pub final_quaternion_y: *mut f64,
+    pub final_quaternion_z: *mut f64,
+    pub final_quaternion_w: *mut f64,
+    pub molecular_execution_authorized: u8,
+    pub reservation_authorized: u8,
+    pub benchmark_execution_authorized: u8,
+    pub existing_rank_auto_change_authorized: u8,
+    pub customer_pose_emission_authorized: u8,
+    pub production_claim_authorized: u8,
+    pub reserved1: [u8; 2],
+    pub reserved: [u64; 8],
+}
+
 unsafe extern "C" {
     pub fn bg_abi_version() -> u32;
     pub fn bg_abi_version_major() -> u32;
@@ -1277,6 +1379,16 @@ unsafe extern "C" {
         caller_struct_size: usize,
         caller_abi_version: u32,
     ) -> bg_status;
+    pub fn bg_docking_fixed64_refinement_input_v1_init(
+        input: *mut bg_docking_fixed64_refinement_input_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_docking_fixed64_refinement_output_v1_init(
+        output: *mut bg_docking_fixed64_refinement_output_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
 
     pub fn bg_backend_is_available(
         backend: bg_backend,
@@ -1410,6 +1522,32 @@ unsafe extern "C" {
         refiner: *const bg_docking_torsion_v7,
         candidates: *const bg_docking_torsion_v7_candidate_batch_soa_v1,
         output: *mut bg_docking_torsion_v7_output_v1,
+    ) -> bg_status;
+    pub fn bg_docking_fixed64_refinement_pipeline_v1_create(
+        context: *const bg_context,
+        rigid_descriptor: *const bg_docking_rigid_refinement_context_soa_v1,
+        torsion_descriptor: *const bg_docking_torsion_v7_context_soa_v1,
+        scorer_descriptor: *const bg_docking_scorer_v1_context_soa_v1,
+        validity_descriptor: *const bg_docking_pose_validity_context_soa_v1,
+        out_pipeline: *mut *mut bg_docking_fixed64_refinement_pipeline_v1,
+    ) -> bg_status;
+    pub fn bg_docking_fixed64_refinement_pipeline_v1_destroy(
+        pipeline: *mut bg_docking_fixed64_refinement_pipeline_v1,
+    );
+    pub fn bg_docking_fixed64_refinement_pipeline_v1_get_backend(
+        pipeline: *const bg_docking_fixed64_refinement_pipeline_v1,
+        backend: *mut bg_backend,
+    ) -> bg_status;
+    pub fn bg_docking_fixed64_refinement_pipeline_v1_run(
+        context: *const bg_context,
+        pipeline: *const bg_docking_fixed64_refinement_pipeline_v1,
+        input: *const bg_docking_fixed64_refinement_input_v1,
+        rigid_output: *mut bg_docking_rigid_refinement_output_v1,
+        torsion_output: *mut bg_docking_torsion_v7_output_v1,
+        scorer_output: *mut bg_docking_scorer_v1_output_v1,
+        validity_output: *mut bg_docking_pose_validity_output_v1,
+        ranking_output: *mut bg_docking_stable_top_k_output_v1,
+        pipeline_output: *mut bg_docking_fixed64_refinement_output_v1,
     ) -> bg_status;
 
     pub fn bg_system_create(

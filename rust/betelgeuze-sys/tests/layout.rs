@@ -5,7 +5,7 @@ use betelgeuze_sys::*;
 #[test]
 fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(BG_ABI_VERSION_MAJOR, 1);
-    assert_eq!(BG_ABI_VERSION_MINOR, 11);
+    assert_eq!(BG_ABI_VERSION_MINOR, 12);
     assert_eq!(BG_ABI_VERSION, 1);
     assert_eq!(size_of::<bg_status>(), 4);
     assert_eq!(size_of::<bg_backend>(), 4);
@@ -261,6 +261,78 @@ fn docking_torsion_v7_layouts_match_the_c_header() {
         144
     );
     assert_eq!(offset_of!(bg_docking_torsion_v7_output_v1, reserved), 152);
+}
+
+#[cfg(target_pointer_width = "64")]
+#[test]
+fn fixed64_refinement_pipeline_layouts_match_the_c_header() {
+    assert_eq!(size_of::<bg_docking_fixed64_refinement_input_v1>(), 192);
+    assert_eq!(align_of::<bg_docking_fixed64_refinement_input_v1>(), 8);
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_refinement_input_v1, candidate_count),
+        8
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_refinement_input_v1, candidate_mode),
+        32
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_refinement_input_v1, source_x_angstrom),
+        64
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_refinement_input_v1, source_quaternion_x),
+        96
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_refinement_input_v1, reserved),
+        128
+    );
+
+    assert_eq!(size_of::<bg_docking_fixed64_refinement_row_v1>(), 104);
+    assert_eq!(align_of::<bg_docking_fixed64_refinement_row_v1>(), 8);
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_refinement_row_v1, rigid_failure_code),
+        16
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_refinement_row_v1, torsion_v7_applicable),
+        32
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_refinement_row_v1, coordinate_sha256),
+        36
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_refinement_row_v1, reserved),
+        72
+    );
+
+    assert_eq!(size_of::<bg_docking_fixed64_refinement_output_v1>(), 200);
+    assert_eq!(align_of::<bg_docking_fixed64_refinement_output_v1>(), 8);
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_refinement_output_v1, row_capacity),
+        8
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_refinement_output_v1, unit_system),
+        56
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_refinement_output_v1, rows),
+        64
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_fixed64_refinement_output_v1,
+            molecular_execution_authorized
+        ),
+        128
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_refinement_output_v1, reserved),
+        136
+    );
 }
 
 #[test]
@@ -894,6 +966,10 @@ fn opaque_handles_are_only_used_behind_pointers() {
     );
     assert_eq!(
         size_of::<*mut bg_docking_fixed64_downstream_v1>(),
+        size_of::<usize>()
+    );
+    assert_eq!(
+        size_of::<*mut bg_docking_fixed64_refinement_pipeline_v1>(),
         size_of::<usize>()
     );
     assert_eq!(

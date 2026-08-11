@@ -58,6 +58,12 @@ static_assert(std::is_standard_layout<
 static_assert(std::is_standard_layout<bg_docking_torsion_v7_row_v1>::value);
 static_assert(std::is_standard_layout<bg_docking_torsion_v7_move_v1>::value);
 static_assert(std::is_standard_layout<bg_docking_torsion_v7_output_v1>::value);
+static_assert(
+    std::is_standard_layout<bg_docking_fixed64_refinement_input_v1>::value);
+static_assert(
+    std::is_standard_layout<bg_docking_fixed64_refinement_row_v1>::value);
+static_assert(
+    std::is_standard_layout<bg_docking_fixed64_refinement_output_v1>::value);
 
 static_assert(!is_complete<bg_context>::value);
 static_assert(!is_complete<bg_system>::value);
@@ -66,6 +72,7 @@ static_assert(!is_complete<bg_simulation>::value);
 static_assert(!is_complete<bg_docking_scorer_v1>::value);
 static_assert(!is_complete<bg_docking_pose_validity_v1>::value);
 static_assert(!is_complete<bg_docking_stable_top_k_v1>::value);
+static_assert(!is_complete<bg_docking_fixed64_refinement_pipeline_v1>::value);
 static_assert(!is_complete<bg_docking_rigid_refinement>::value);
 static_assert(!is_complete<bg_docking_torsion_v7>::value);
 
@@ -334,6 +341,30 @@ static_assert(offsetof(
                   molecular_execution_authorized) == 144);
 static_assert(offsetof(bg_docking_torsion_v7_output_v1, reserved) == 152);
 
+static_assert(sizeof(bg_docking_fixed64_refinement_input_v1) == 192);
+static_assert(alignof(bg_docking_fixed64_refinement_input_v1) == 8);
+static_assert(offsetof(bg_docking_fixed64_refinement_input_v1, candidate_count) == 8);
+static_assert(offsetof(bg_docking_fixed64_refinement_input_v1, candidate_mode) == 32);
+static_assert(offsetof(bg_docking_fixed64_refinement_input_v1, source_x_angstrom) == 64);
+static_assert(offsetof(bg_docking_fixed64_refinement_input_v1, source_quaternion_x) == 96);
+static_assert(offsetof(bg_docking_fixed64_refinement_input_v1, reserved) == 128);
+
+static_assert(sizeof(bg_docking_fixed64_refinement_row_v1) == 104);
+static_assert(alignof(bg_docking_fixed64_refinement_row_v1) == 8);
+static_assert(offsetof(bg_docking_fixed64_refinement_row_v1, status) == 4);
+static_assert(offsetof(bg_docking_fixed64_refinement_row_v1, rigid_failure_code) == 16);
+static_assert(offsetof(bg_docking_fixed64_refinement_row_v1, torsion_v7_applicable) == 32);
+static_assert(offsetof(bg_docking_fixed64_refinement_row_v1, coordinate_sha256) == 36);
+static_assert(offsetof(bg_docking_fixed64_refinement_row_v1, reserved) == 72);
+
+static_assert(sizeof(bg_docking_fixed64_refinement_output_v1) == 200);
+static_assert(alignof(bg_docking_fixed64_refinement_output_v1) == 8);
+static_assert(offsetof(bg_docking_fixed64_refinement_output_v1, row_capacity) == 8);
+static_assert(offsetof(bg_docking_fixed64_refinement_output_v1, unit_system) == 56);
+static_assert(offsetof(bg_docking_fixed64_refinement_output_v1, rows) == 64);
+static_assert(offsetof(bg_docking_fixed64_refinement_output_v1, molecular_execution_authorized) == 128);
+static_assert(offsetof(bg_docking_fixed64_refinement_output_v1, reserved) == 136);
+
 static_assert(sizeof(bg_particle_soa) == 120);
 static_assert(alignof(bg_particle_soa) == 8);
 static_assert(offsetof(bg_particle_soa, struct_size) == 0);
@@ -524,6 +555,24 @@ static_assert(noexcept(bg_simulation_options_v1_init(nullptr)));
 static_assert(noexcept(bg_minimizer_options_v1_init(nullptr)));
 static_assert(noexcept(bg_minimization_report_v1_init(nullptr)));
 static_assert(noexcept(bg_dynamics_report_v1_init(nullptr)));
+static_assert(noexcept(bg_docking_fixed64_refinement_input_v1_init(nullptr)));
+static_assert(noexcept(bg_docking_fixed64_refinement_output_v1_init(nullptr)));
+static_assert(noexcept(bg_docking_fixed64_refinement_pipeline_v1_create(
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr)));
+static_assert(noexcept(
+    bg_docking_fixed64_refinement_pipeline_v1_destroy(nullptr)));
+static_assert(noexcept(
+    bg_docking_fixed64_refinement_pipeline_v1_get_backend(nullptr, nullptr)));
+static_assert(noexcept(bg_docking_fixed64_refinement_pipeline_v1_run(
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr)));
 static_assert(noexcept(bg_simulation_create(nullptr, nullptr, nullptr, nullptr, nullptr)));
 static_assert(noexcept(bg_simulation_destroy(nullptr)));
 static_assert(noexcept(bg_simulation_get_particles(nullptr, nullptr)));
