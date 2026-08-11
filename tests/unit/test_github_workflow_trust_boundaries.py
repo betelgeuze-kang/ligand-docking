@@ -7,6 +7,7 @@ import pytest
 import yaml
 
 from tools.product.github_workflow_trust_boundaries import (
+    HOSTED_PR_RUNNERS,
     PR_WORKFLOWS,
     TRUSTED_WORKFLOWS,
     audit_workflow_trust_boundaries,
@@ -41,7 +42,7 @@ def test_pull_request_workflow_files_are_hosted_only(workflow_name: str) -> None
 
     assert set(workflow["on"]) == {"pull_request"}
     assert "self-hosted" not in path.read_text(encoding="utf-8").lower()
-    assert all(job["runs-on"] == "ubuntu-latest" for job in workflow["jobs"].values())
+    assert all(job["runs-on"] in HOSTED_PR_RUNNERS for job in workflow["jobs"].values())
 
 
 def test_h4_hosted_workflow_covers_tier_alpha_runtime_binding_contract() -> None:

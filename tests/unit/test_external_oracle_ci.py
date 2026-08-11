@@ -35,8 +35,21 @@ def test_external_oracle_ci_pins_composite_runtime_and_sandbox() -> None:
     )
 
     source = WORKFLOW.read_text(encoding="utf-8")
+    assert "runs-on: ubuntu-22.04" in source
     assert "command -v unshare" in source
     assert "unshare --version" in source
+    for namespace_flag in (
+        "--user",
+        "--map-current-user",
+        "--ipc",
+        "--net",
+        "--pid",
+        "--uts",
+        "--fork",
+        "--kill-child=SIGKILL",
+        "--mount-proc",
+    ):
+        assert namespace_flag in source
     assert 'ctypes.util.find_library("seccomp")' in source
     assert 'library.endswith(".so.2")' in source
     assert "sudo apt-get" not in source
