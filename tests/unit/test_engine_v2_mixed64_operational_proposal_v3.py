@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import inspect
 import json
+import math
 
 import pytest
 import torch
@@ -54,14 +55,28 @@ def _operational_source(
     *,
     coordinate_identity_override: str | None = None,
     problem_label: str = "problem",
+    nonidentity_transform: bool = False,
 ) -> Mixed64CoordinateSourcePayloadV1:
     coordinates = torch.tensor(source.coordinates, dtype=torch.float64)
     proposal_index = 0 if source.source_ordinal is None else source.source_ordinal
+    rotation = (
+        torch.tensor(
+            ((0.0, -1.0, 0.0), (1.0, 0.0, 0.0), (0.0, 0.0, 1.0)),
+            dtype=torch.float64,
+        )
+        if nonidentity_transform
+        else torch.eye(3, dtype=torch.float64)
+    )
+    translation = (
+        torch.tensor((2.0, -3.0, 5.0), dtype=torch.float64)
+        if nonidentity_transform
+        else torch.zeros(3, dtype=torch.float64)
+    )
     proposal = bind_docking_proposal_state(
         coordinates=coordinates,
         torsion_angles=torch.zeros(len(source.coordinates), dtype=torch.float64),
-        rotation=torch.eye(3, dtype=torch.float64),
-        translation=torch.zeros(3, dtype=torch.float64),
+        rotation=rotation,
+        translation=translation,
         proposal_index=proposal_index,
         seed=1000 + proposal_index,
         problem_fingerprint_sha256=_digest(problem_label),
@@ -84,6 +99,7 @@ def _operational_fixture(
     *,
     corrupt_exact_coordinate_identity: bool = False,
     crosswire_control_problem: bool = False,
+    nonidentity_source_transform: bool = False,
 ):
     original_allocation, original_bundle, exact, controls, conformers, retained = (
         _fixture()
@@ -95,6 +111,7 @@ def _operational_fixture(
             if corrupt_exact_coordinate_identity
             else None
         ),
+        nonidentity_transform=nonidentity_source_transform,
     )
     operational_controls = tuple(
         _operational_source(
@@ -104,11 +121,24 @@ def _operational_fixture(
                 if crosswire_control_problem and value.source_ordinal == 0
                 else "problem"
             ),
+            nonidentity_transform=nonidentity_source_transform,
         )
         for value in controls
     )
-    operational_conformers = tuple(_operational_source(value) for value in conformers)
-    operational_retained = tuple(_operational_source(value) for value in retained)
+    operational_conformers = tuple(
+        _operational_source(
+            value,
+            nonidentity_transform=nonidentity_source_transform,
+        )
+        for value in conformers
+    )
+    operational_retained = tuple(
+        _operational_source(
+            value,
+            nonidentity_transform=nonidentity_source_transform,
+        )
+        for value in retained
+    )
     original_features = original_allocation.features
     features = Mixed64FeatureEvidence(
         exact_v11_source_receipt_sha256=operational_exact.source_receipt_sha256,
@@ -208,11 +238,10 @@ def test_exact_operational_sources_materialize_all_admitted_slots_repeatably() -
                 tuple(float(component) for component in point)
                 for point in record.operational_proposal.coordinates.tolist()
             ) == producer_record.output_coordinates
-            if record.slot_index < 60 and record.slot_index >= 24:
-                assert record.operational_proposal.proposal_index == record.slot_index
+            assert record.operational_proposal.proposal_index == record.slot_index
 
 
-def test_passthrough_preserves_identity_and_transformed_lane_binds_new_identity() -> None:
+def test_passthrough_preserves_source_separately_and_binds_fixed64_slot_identity() -> None:
     _allocation, _bundle, producer, admission = _operational_fixture()
     batch = materialize_mixed64_operational_proposals(admission)
 
@@ -226,9 +255,10 @@ def test_passthrough_preserves_identity_and_transformed_lane_binds_new_identity(
         for value in batch.records
         if value.materialized and 24 <= value.slot_index < 60
     )
-    assert passthrough.operational_proposal.fingerprint_sha256 == (
+    assert passthrough.source_operational_proposal.fingerprint_sha256 == (
         producer.records[passthrough.slot_index].source_proposal_sha256
     )
+    assert passthrough.operational_proposal.proposal_index == passthrough.slot_index
     assert transformed.operational_proposal.fingerprint_sha256 != (
         producer.records[transformed.slot_index].source_proposal_sha256
     )
@@ -238,6 +268,82 @@ def test_passthrough_preserves_identity_and_transformed_lane_binds_new_identity(
     assert transformed.source_operational_proposal.problem_fingerprint_sha256 == (
         transformed.operational_proposal.problem_fingerprint_sha256
     )
+
+    retained = batch.records[60]
+    assert retained.source_operational_proposal.proposal_index == 36
+    assert retained.operational_proposal.proposal_index == 60
+    assert retained.source_operational_proposal.fingerprint_sha256 != (
+        retained.operational_proposal.fingerprint_sha256
+    )
+
+
+def test_transformed_lane_composes_source_then_placement_rigid_transform() -> None:
+    _allocation, _bundle, _producer, admission = _operational_fixture(
+        nonidentity_source_transform=True
+    )
+    batch = materialize_mixed64_operational_proposals(admission)
+    passthrough = next(value for value in batch.records[:24] if value.materialized)
+    assert torch.equal(
+        passthrough.operational_proposal.rotation,
+        passthrough.source_operational_proposal.rotation,
+    )
+    assert torch.equal(
+        passthrough.operational_proposal.translation,
+        passthrough.source_operational_proposal.translation,
+    )
+    record = next(
+        value
+        for value in batch.records[24:60]
+        if value.materialized
+    )
+    source = record.source_operational_proposal
+    operational = record.operational_proposal
+    placement = record.admission_decision.producer_record.placement_receipt
+    assert source is not None and operational is not None and placement is not None
+    x, y, z, w = placement.quaternion
+    norm = math.sqrt(x * x + y * y + z * z + w * w)
+    x, y, z, w = (value / norm for value in (x, y, z, w))
+    placement_rotation = torch.tensor(
+        (
+            (1.0 - 2.0 * (y * y + z * z), 2.0 * (x * y - z * w), 2.0 * (x * z + y * w)),
+            (2.0 * (x * y + z * w), 1.0 - 2.0 * (x * x + z * z), 2.0 * (y * z - x * w)),
+            (2.0 * (x * z - y * w), 2.0 * (y * z + x * w), 1.0 - 2.0 * (x * x + y * y)),
+        ),
+        dtype=torch.float64,
+    )
+    placement_translation = torch.tensor(
+        placement.translation,
+        dtype=torch.float64,
+    )
+
+    assert torch.equal(
+        operational.rotation,
+        placement_rotation @ source.rotation,
+    )
+    assert torch.equal(
+        operational.translation,
+        source.translation @ placement_rotation.T + placement_translation,
+    )
+    assert not torch.equal(operational.rotation, placement_rotation)
+
+
+def test_unexpected_runtime_failure_is_not_relabeled_as_typed_slot_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import betelgeuze_engine_v2.docking.mixed64_operational_proposal_v3 as module
+
+    _allocation, _bundle, _producer, admission = _operational_fixture()
+
+    def unexpected_runtime_failure(**_kwargs):
+        raise RuntimeError("unexpected materialization failure")
+
+    monkeypatch.setattr(
+        module,
+        "bind_docking_proposal_state",
+        unexpected_runtime_failure,
+    )
+    with pytest.raises(RuntimeError, match="unexpected materialization failure"):
+        materialize_mixed64_operational_proposals(admission)
 
 
 def test_historical_nonoperational_source_identity_is_typed_not_guessed() -> None:
@@ -337,6 +443,10 @@ def test_policy_and_output_keep_all_authority_false() -> None:
 
     assert len(MIXED64_OPERATIONAL_PROPOSAL_POLICY_SHA256) == 64
     assert policy["candidate_denominator"] == 64
+    assert policy["transformed_identity"][
+        "operational_proposal_index_is_fixed64_slot"
+    ] is True
+    assert policy["failure_semantics"]["unexpected_runtime_failure_typed"] is False
     assert all(value is False for value in policy["authority"].values())
     assert document["producer_attested"] is False
     assert document["admission_batch"]["receipt_sha256"] == (

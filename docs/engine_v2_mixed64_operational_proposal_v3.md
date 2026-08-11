@@ -8,7 +8,7 @@ fingerprints, candidate IDs, scores, results, or authority.
 
 The canonical policy is
 `config/engine_v2_mixed64_operational_proposal_v3.json`, with SHA-256
-`dcf594a97648abce918ddac4c45f7f88108d6db4981e03893e4a82638fded354`.
+`c08eba08e0ca82dac1815562f2a65da96949294270f18c6af242c77f0a8bd7c1`.
 It binds geometric-admission v3 policy SHA-256
 `0d3203daeb245d29fe4b03a73204d8cddb25ce84b310b008d61729d89659a2c6`.
 
@@ -28,15 +28,25 @@ batch, and contains no fabricated operational proposal.
 
 ## Transformed proposal identity
 
-Exact pass-through lanes retain their source operational fingerprint and source
-proposal index. For indexed SO(3) and single-anchor lanes, the bridge:
+Every materialized proposal uses its fixed64 slot as its operational proposal
+index. The exact source proposal remains separately preserved; this is
+especially important for retained control slots 60--62, whose source proposal
+indices are 36, 45, and 54. Exact pass-through lanes preserve source
+coordinates and the source rigid transform. For indexed SO(3) and single-anchor
+lanes, the bridge:
 
-- reuses the placement receipt's quaternion and translation;
+- composes the source transform followed by the placement transform using
+  row-vector semantics, `R_out = R_place @ R_source` and
+  `t_out = t_source @ R_place.T + t_place`;
 - numerically reproduces the producer output coordinates;
 - preserves source torsion, problem, and search-space state;
 - uses the fixed64 slot as the transformed proposal index;
 - derives a source-bound, result-independent seed;
 - derives both candidate ID and proposal fingerprint internally.
+
+Only declared proposal/materialization domain errors become typed per-slot
+failures. Unexpected runtime errors abort the materialization call instead of
+being relabeled as scientific slot evidence.
 
 The receipt preserves both the producer's evidence proposal/coordinate hashes
 and the operational `DockingProposal`/coordinate fingerprints. The batch rejects

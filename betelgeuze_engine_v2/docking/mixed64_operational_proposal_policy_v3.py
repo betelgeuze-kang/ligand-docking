@@ -70,14 +70,24 @@ def frozen_mixed64_operational_proposal_policy() -> dict[str, object]:
         "transformed_identity": {
             "placement_quaternion_reused": True,
             "placement_translation_reused": True,
+            "source_operational_identity_preserved_separately": True,
+            "passthrough_source_transform_preserved": True,
+            "row_vector_rotation_composition": (
+                "placement_rotation_matrix_multiply_source_rotation"
+            ),
+            "row_vector_translation_composition": (
+                "source_translation_multiply_placement_rotation_transpose_plus_placement_translation"
+            ),
             "torsion_state_preserved_from_source": True,
             "problem_and_search_identity_preserved_from_source": True,
-            "slot_index_stable": True,
+            "operational_proposal_index_is_fixed64_slot": True,
             "source_dependent_result_independent_seed": True,
         },
         "failure_semantics": {
             "upstream_nonaccepted_materialized": False,
             "typed_materialization_failure_preserved": True,
+            "only_declared_domain_failures_are_typed": True,
+            "unexpected_runtime_failure_typed": False,
             "slot_reallocation_allowed": False,
         },
         "authority": {

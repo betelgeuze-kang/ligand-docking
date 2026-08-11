@@ -333,7 +333,7 @@ def _parse_source_proposal(
                 allow_empty=True,
             ),
         )
-    except (DockingProposalError, TypeError, ValueError) as exc:
+    except DockingProposalError as exc:
         raise Mixed64OperationalProposalV3Error(
             SOURCE_PROPOSAL_IDENTITY_NOT_OPERATIONAL,
             "source DockingProposal identity does not rederive",
@@ -430,6 +430,58 @@ class Mixed64OperationalProposalRecordV1:
                 _fail(SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED, "materialized lineage is absent")
             self.source_operational_proposal.assert_integrity()
             self.operational_proposal.assert_integrity()
+            source = self.source_operational_proposal
+            operational = self.operational_proposal
+            placement = producer_record.placement_receipt
+            expected_seed = _materialization_seed(
+                source_receipt_sha256=self.source_payload.receipt_sha256,
+                slot_index=self.slot_index,
+            )
+            if (
+                source.fingerprint_sha256 != self.source_payload.proposal_sha256
+                or operational.proposal_index != self.slot_index
+                or operational.seed != expected_seed
+                or not torch.equal(operational.torsion_angles, source.torsion_angles)
+                or operational.problem_fingerprint_sha256
+                != source.problem_fingerprint_sha256
+                or operational.search_space_fingerprint_sha256
+                != source.search_space_fingerprint_sha256
+                or operational.refined
+            ):
+                _fail(
+                    SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED,
+                    "operational slot identity or source state changed",
+                )
+            if type(placement) is ExactPassthroughPlacementReceiptV1:
+                expected_rotation = source.rotation
+                expected_translation = source.translation
+            elif type(placement) in {
+                IndexedSO3PlacementReceiptV1,
+                SingleAnchorPlacementReceiptV1,
+            }:
+                placement_rotation = _rotation_matrix(placement.quaternion)
+                placement_translation = torch.tensor(
+                    placement.translation,
+                    dtype=torch.float64,
+                )
+                expected_rotation = placement_rotation @ source.rotation
+                expected_translation = (
+                    source.translation @ placement_rotation.T
+                    + placement_translation
+                )
+            else:
+                _fail(
+                    UNSUPPORTED_PLACEMENT_RECEIPT,
+                    "materialized placement receipt is not supported",
+                )
+            if not torch.equal(operational.rotation, expected_rotation) or not torch.equal(
+                operational.translation,
+                expected_translation,
+            ):
+                _fail(
+                    PLACEMENT_TRANSFORM_CROSS_WIRED,
+                    "operational rigid transform composition changed",
+                )
         elif self.status == TYPED_MATERIALIZATION_FAILURE_STATUS:
             if (
                 self.admission_decision.status != ACCEPTED_STATUS
@@ -483,11 +535,20 @@ class Mixed64OperationalProposalRecordV1:
             "source_operational_proposal_sha256": (
                 None if source is None else source.fingerprint_sha256
             ),
+            "source_operational_proposal_index": (
+                None if source is None else source.proposal_index
+            ),
             "source_operational_coordinate_fingerprint_sha256": (
                 None if source is None else source.coordinate_fingerprint_sha256
             ),
             "operational_proposal_sha256": (
                 None if operational is None else operational.fingerprint_sha256
+            ),
+            "operational_proposal_index": (
+                None if operational is None else operational.proposal_index
+            ),
+            "operational_proposal_seed": (
+                None if operational is None else operational.seed
             ),
             "operational_coordinate_fingerprint_sha256": (
                 None if operational is None else operational.coordinate_fingerprint_sha256
@@ -499,6 +560,10 @@ class Mixed64OperationalProposalRecordV1:
             "failure_code": self.failure_code,
             "upstream_status": self.admission_decision.status,
             "evidence_and_operational_coordinate_identities_both_preserved": True,
+            "source_operational_identity_preserved_separately": source is not None,
+            "operational_proposal_index_is_fixed64_slot": (
+                None if operational is None else operational.proposal_index == self.slot_index
+            ),
             "producer_attested": False,
             "activation_evidence_eligible": False,
             "molecular_execution_authorized": False,
@@ -676,33 +741,63 @@ def _materialize_record(
         if not placement_source_matches:
             _fail(SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED, "placement source is cross-wired")
         source_proposal = _parse_source_proposal(source)
+        source_coordinates = _coordinates_tensor(source.coordinates)
+        output = _coordinates_tensor(producer.output_coordinates)
+        materialization_seed = _materialization_seed(
+            source_receipt_sha256=source.receipt_sha256,
+            slot_index=decision.slot_index,
+        )
         if type(placement) is ExactPassthroughPlacementReceiptV1:
             if source_proposal.fingerprint_sha256 != producer.source_proposal_sha256:
                 _fail(SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED, "passthrough operational identity changed")
-            operational = source_proposal
+            if not torch.equal(source_coordinates, output):
+                _fail(
+                    SOURCE_OPERATIONAL_COORDINATE_CROSS_WIRED,
+                    "passthrough operational coordinates changed",
+                )
+            operational = bind_docking_proposal_state(
+                coordinates=output,
+                torsion_angles=source_proposal.torsion_angles,
+                rotation=source_proposal.rotation,
+                translation=source_proposal.translation,
+                proposal_index=decision.slot_index,
+                seed=materialization_seed,
+                problem_fingerprint_sha256=(
+                    source_proposal.problem_fingerprint_sha256
+                ),
+                search_space_fingerprint_sha256=(
+                    source_proposal.search_space_fingerprint_sha256
+                ),
+            )
         elif type(placement) in {
             IndexedSO3PlacementReceiptV1,
             SingleAnchorPlacementReceiptV1,
         }:
-            rotation = _rotation_matrix(placement.quaternion)
-            translation = torch.tensor(placement.translation, dtype=torch.float64)
-            source_coordinates = _coordinates_tensor(source.coordinates)
-            expected = source_coordinates @ rotation.T + translation
-            output = _coordinates_tensor(producer.output_coordinates)
+            placement_rotation = _rotation_matrix(placement.quaternion)
+            placement_translation = torch.tensor(
+                placement.translation,
+                dtype=torch.float64,
+            )
+            expected = (
+                source_coordinates @ placement_rotation.T
+                + placement_translation
+            )
             if not torch.equal(expected, output):
                 maximum_error = float(torch.max(torch.abs(expected - output)).item())
                 if maximum_error > 1.0e-12:
                     _fail(PLACEMENT_TRANSFORM_CROSS_WIRED, "placement transform does not reproduce output")
+            composed_rotation = placement_rotation @ source_proposal.rotation
+            composed_translation = (
+                source_proposal.translation @ placement_rotation.T
+                + placement_translation
+            )
             operational = bind_docking_proposal_state(
                 coordinates=output,
                 torsion_angles=source_proposal.torsion_angles,
-                rotation=rotation,
-                translation=translation,
+                rotation=composed_rotation,
+                translation=composed_translation,
                 proposal_index=decision.slot_index,
-                seed=_materialization_seed(
-                    source_receipt_sha256=source.receipt_sha256,
-                    slot_index=decision.slot_index,
-                ),
+                seed=materialization_seed,
                 problem_fingerprint_sha256=source_proposal.problem_fingerprint_sha256,
                 search_space_fingerprint_sha256=(
                     source_proposal.search_space_fingerprint_sha256
@@ -719,7 +814,7 @@ def _materialize_record(
             failure_code=None,
             _factory_seal=_RECORD_FACTORY_SEAL,
         )
-    except (DockingProposalError, TypeError, ValueError) as exc:
+    except (DockingProposalError, Mixed64OperationalProposalV3Error) as exc:
         if isinstance(exc, Mixed64OperationalProposalV3Error):
             failure = exc
         else:

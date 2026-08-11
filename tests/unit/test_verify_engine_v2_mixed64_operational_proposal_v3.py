@@ -42,7 +42,9 @@ def test_current_policy_verifies_without_authority() -> None:
     (
         (("candidate_denominator",), 63),
         (("source_identity", "required_numeric_dtype"), "float32"),
+        (("transformed_identity", "operational_proposal_index_is_fixed64_slot"), False),
         (("failure_semantics", "slot_reallocation_allowed"), True),
+        (("failure_semantics", "unexpected_runtime_failure_typed"), True),
         (("authority", "molecular_execution_authorized"), True),
     ),
 )

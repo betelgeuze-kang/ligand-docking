@@ -136,6 +136,30 @@ def verify_policy(path: Path = DEFAULT_POLICY_PATH) -> dict[str, object]:
         raise Mixed64OperationalProposalPolicyVerificationError(
             "operational proposal identity contract changed"
         )
+    transformed_identity = document.get("transformed_identity")
+    if type(transformed_identity) is not dict or any(
+        transformed_identity.get(key) is not True
+        for key in (
+            "source_operational_identity_preserved_separately",
+            "passthrough_source_transform_preserved",
+            "operational_proposal_index_is_fixed64_slot",
+        )
+    ) or transformed_identity.get("row_vector_rotation_composition") != (
+        "placement_rotation_matrix_multiply_source_rotation"
+    ) or transformed_identity.get("row_vector_translation_composition") != (
+        "source_translation_multiply_placement_rotation_transpose_plus_placement_translation"
+    ):
+        raise Mixed64OperationalProposalPolicyVerificationError(
+            "operational proposal transform composition changed"
+        )
+    failure_semantics = document.get("failure_semantics")
+    if type(failure_semantics) is not dict or (
+        failure_semantics.get("only_declared_domain_failures_are_typed") is not True
+        or failure_semantics.get("unexpected_runtime_failure_typed") is not False
+    ):
+        raise Mixed64OperationalProposalPolicyVerificationError(
+            "operational proposal failure boundary changed"
+        )
     authority = document.get("authority")
     if type(authority) is not dict or not authority or any(
         type(value) is not bool or value for value in authority.values()
