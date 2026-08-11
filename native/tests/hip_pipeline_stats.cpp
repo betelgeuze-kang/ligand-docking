@@ -89,7 +89,7 @@ struct Evaluation final {
 ContextPtr make_hip_context() {
     bg_context_options options{};
     require_status(
-        bg_context_options_init(&options),
+        bg_context_options_init(&options, sizeof(options), BG_ABI_VERSION),
         BG_STATUS_OK,
         "context option initialization failed");
     options.backend = BG_BACKEND_HIP;
@@ -141,7 +141,7 @@ SystemPtr make_grid_system(double translation = 0.0) {
 
     bg_particle_soa particles{};
     require_status(
-        bg_particle_soa_init(&particles),
+        bg_particle_soa_init(&particles, sizeof(particles), BG_ABI_VERSION),
         BG_STATUS_OK,
         "particle descriptor initialization failed");
     particles.particle_count = static_cast<uint64_t>(kAtomCount);
@@ -172,7 +172,8 @@ ForceFieldPtr make_zero_forcefield() {
 
     bg_forcefield_soa_v1 parameters{};
     require_status(
-        bg_forcefield_soa_v1_init(&parameters),
+        bg_forcefield_soa_v1_init(
+            &parameters, sizeof(parameters), BG_ABI_VERSION),
         BG_STATUS_OK,
         "force-field descriptor initialization failed");
     parameters.atom_count = static_cast<uint64_t>(kAtomCount);
@@ -219,12 +220,13 @@ Evaluation evaluate(
     result.force_z.assign(kAtomCount, 0.0);
 
     require_status(
-        bg_energy_components_v1_init(&result.energy),
+        bg_energy_components_v1_init(
+            &result.energy, sizeof(result.energy), BG_ABI_VERSION),
         BG_STATUS_OK,
         "energy descriptor initialization failed");
     bg_force_soa_v1 forces{};
     require_status(
-        bg_force_soa_v1_init(&forces),
+        bg_force_soa_v1_init(&forces, sizeof(forces), BG_ABI_VERSION),
         BG_STATUS_OK,
         "force descriptor initialization failed");
     forces.particle_capacity = static_cast<uint64_t>(kAtomCount);

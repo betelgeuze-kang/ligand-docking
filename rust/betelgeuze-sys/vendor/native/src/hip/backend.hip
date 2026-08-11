@@ -1,6 +1,7 @@
 #include "backend.hpp"
 
 #include "planning.hpp"
+#include "provider.h"
 #include "../cpu/evaluator.hpp"
 #include "../internal.hpp"
 
@@ -3551,3 +3552,14 @@ uint64_t live_allocation_count(const bg_context &context) noexcept {
 #endif
 
 }  // namespace betelgeuze::native::hip
+
+#define BG_DOCKING_SCORER_CREATE bg_hip_fast_docking_scorer_v1_create
+#define BG_DOCKING_SCORER_DESTROY bg_hip_fast_docking_scorer_v1_destroy
+#define BG_DOCKING_SCORER_SCORE_FIXED64 \
+    bg_hip_fast_docking_scorer_v1_score_fixed64
+#define BG_DOCKING_SCORER_LANE "hip_fast"
+#include "docking_scorer.hip"
+#undef BG_DOCKING_SCORER_LANE
+#undef BG_DOCKING_SCORER_SCORE_FIXED64
+#undef BG_DOCKING_SCORER_DESTROY
+#undef BG_DOCKING_SCORER_CREATE

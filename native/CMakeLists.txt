@@ -562,6 +562,7 @@ if(BUILD_TESTING)
                 PRIVATE
                     BG_ENABLE_HIP=1
                     BG_HAS_HIP_SAFE_PROVIDER=0
+                    BG_DISABLE_DESCRIPTOR_INIT_CONVENIENCE_MACROS
             )
             target_link_libraries(
                 ${BG_HIP_INTERNAL_TARGET}

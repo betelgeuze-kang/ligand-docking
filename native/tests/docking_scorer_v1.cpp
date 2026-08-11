@@ -330,19 +330,20 @@ void test_receptor_capacity_failure_and_transactionality() {
     bg_context_destroy(rust_context);
 }
 
-void assert_hip_safe_fixture_parity(
+void assert_hip_fixture_parity(
     const Fixture &fixture,
+    bg_backend backend,
     uint64_t receptor_pair_capacity = 1000) {
     const auto descriptor = fixture.context_descriptor(receptor_pair_capacity);
     const auto batch = fixture.batch();
     bg_context *rust_context = create_context(BG_BACKEND_RUST_CPU);
-    bg_context *hip_context = create_context(BG_BACKEND_HIP_SAFE);
+    bg_context *hip_context = create_context(backend);
     bg_docking_scorer_v1 *rust_scorer = create_scorer(rust_context, descriptor);
     bg_docking_scorer_v1 *hip_scorer = create_scorer(hip_context, descriptor);
 
     bg_backend observed = BG_BACKEND_AUTO;
     assert(bg_docking_scorer_v1_get_backend(hip_scorer, &observed) == BG_STATUS_OK);
-    assert(observed == BG_BACKEND_HIP_SAFE);
+    assert(observed == backend);
 
     const auto rust_rows = score(rust_context, rust_scorer, batch);
     const auto hip_rows = score(hip_context, hip_scorer, batch);
@@ -358,17 +359,15 @@ void assert_hip_safe_fixture_parity(
     bg_context_destroy(hip_context);
 }
 
-void test_hip_safe_scorer_parity_when_device_is_available() {
+void test_hip_scorer_parity_when_device_is_available(bg_backend backend) {
     uint8_t available = UINT8_C(0);
-    assert(
-        bg_backend_is_available(BG_BACKEND_HIP_SAFE, 0, &available) ==
-        BG_STATUS_OK);
+    assert(bg_backend_is_available(backend, 0, &available) == BG_STATUS_OK);
     if (available == UINT8_C(0)) {
         return;
     }
 
     const Fixture nominal;
-    assert_hip_safe_fixture_parity(nominal);
+    assert_hip_fixture_parity(nominal, backend);
 
     Fixture candidate_failures;
     candidate_failures.states[2] = BG_DOCKING_SCORER_V1_CANDIDATE_ACTIVE;
@@ -380,10 +379,10 @@ void test_hip_safe_scorer_parity_when_device_is_available() {
         candidate_failures.candidate_y[3 * kLigandAtoms + atom] = 1.0;
         candidate_failures.candidate_z[3 * kLigandAtoms + atom] = 1.0;
     }
-    assert_hip_safe_fixture_parity(candidate_failures);
+    assert_hip_fixture_parity(candidate_failures, backend);
 
     const Fixture receptor_capacity;
-    assert_hip_safe_fixture_parity(receptor_capacity, 1);
+    assert_hip_fixture_parity(receptor_capacity, backend, 1);
 }
 
 }  // namespace
@@ -396,6 +395,7 @@ int main() {
     test_cpu_backend_parity_and_fixed64_failure_preservation();
     test_candidate_local_failures_match_without_changing_the_denominator();
     test_receptor_capacity_failure_and_transactionality();
-    test_hip_safe_scorer_parity_when_device_is_available();
+    test_hip_scorer_parity_when_device_is_available(BG_BACKEND_HIP_SAFE);
+    test_hip_scorer_parity_when_device_is_available(BG_BACKEND_HIP_FAST);
     return 0;
 }

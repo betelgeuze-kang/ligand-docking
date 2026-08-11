@@ -1,11 +1,205 @@
+#include <hip/hip_runtime.h>
+
 #include <algorithm>
 #include <array>
+#include <cmath>
+#include <cstdio>
 #include <cstdint>
 #include <cstring>
+#include <limits>
 #include <memory>
 #include <new>
+#include <type_traits>
+
+#if !defined(BG_DOCKING_SCORER_CREATE) || \
+    !defined(BG_DOCKING_SCORER_DESTROY) || \
+    !defined(BG_DOCKING_SCORER_SCORE_FIXED64) || \
+    !defined(BG_DOCKING_SCORER_LANE)
+#  error "native HIP ScorerV1 provider identity is not configured"
+#endif
 
 namespace {
+
+void scorer_clear_error(char *message, size_t capacity) noexcept {
+    if (message != nullptr && capacity > 0) {
+        message[0] = '\0';
+    }
+}
+
+int32_t scorer_fail(
+    int32_t status,
+    char *message,
+    size_t capacity,
+    const char *detail) noexcept {
+    if (message != nullptr && capacity > 0) {
+        std::snprintf(message, capacity, "%s", detail == nullptr ? "" : detail);
+        message[capacity - 1] = '\0';
+    }
+    return status;
+}
+
+int32_t scorer_fail_hip(
+    hipError_t error,
+    char *message,
+    size_t capacity,
+    const char *operation) noexcept {
+    const int32_t status = error == hipErrorOutOfMemory
+                               ? BG_STATUS_OUT_OF_MEMORY
+                               : BG_STATUS_BACKEND_ERROR;
+    if (message != nullptr && capacity > 0) {
+        const char *const detail = hipGetErrorString(error);
+        std::snprintf(
+            message,
+            capacity,
+            "%s %s failed: %s",
+            BG_DOCKING_SCORER_LANE,
+            operation,
+            detail == nullptr ? "unknown HIP runtime error" : detail);
+        message[capacity - 1] = '\0';
+    }
+    return status;
+}
+
+template <typename Descriptor>
+bool scorer_valid_header(const Descriptor &descriptor) noexcept {
+    return descriptor.struct_size == sizeof(Descriptor) &&
+           descriptor.abi_version == BG_DOCKING_SCORER_PROVIDER_ABI_VERSION;
+}
+
+template <size_t Count>
+bool scorer_reserved_is_zero(const uint64_t (&values)[Count]) noexcept {
+    for (const uint64_t value : values) {
+        if (value != UINT64_C(0)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+template <typename Value>
+class ScorerDeviceBuffer final {
+public:
+    ScorerDeviceBuffer() = default;
+    ScorerDeviceBuffer(const ScorerDeviceBuffer &) = delete;
+    ScorerDeviceBuffer &operator=(const ScorerDeviceBuffer &) = delete;
+
+    ~ScorerDeviceBuffer() {
+        if (pointer_ != nullptr) {
+            static_cast<void>(hipFree(pointer_));
+        }
+    }
+
+    hipError_t copy_from(const Value *source, size_t count) noexcept {
+        if (count == 0) {
+            return hipSuccess;
+        }
+        if (source == nullptr ||
+            count > std::numeric_limits<size_t>::max() / sizeof(Value)) {
+            return hipErrorInvalidValue;
+        }
+        const size_t bytes = count * sizeof(Value);
+        hipError_t status =
+            hipMalloc(reinterpret_cast<void **>(&pointer_), bytes);
+        if (status != hipSuccess) {
+            return status;
+        }
+        return hipMemcpy(pointer_, source, bytes, hipMemcpyHostToDevice);
+    }
+
+    hipError_t allocate(size_t count) noexcept {
+        if (count == 0) {
+            return hipSuccess;
+        }
+        if (count > std::numeric_limits<size_t>::max() / sizeof(Value)) {
+            return hipErrorInvalidValue;
+        }
+        return hipMalloc(
+            reinterpret_cast<void **>(&pointer_), count * sizeof(Value));
+    }
+
+    hipError_t copy_to(Value *destination, size_t count) const noexcept {
+        if (count == 0) {
+            return hipSuccess;
+        }
+        if (destination == nullptr || pointer_ == nullptr ||
+            count > std::numeric_limits<size_t>::max() / sizeof(Value)) {
+            return hipErrorInvalidValue;
+        }
+        return hipMemcpy(
+            destination,
+            pointer_,
+            count * sizeof(Value),
+            hipMemcpyDeviceToHost);
+    }
+
+    Value *get() noexcept { return pointer_; }
+    const Value *get() const noexcept { return pointer_; }
+
+private:
+    Value *pointer_ = nullptr;
+};
+
+class ScorerDeviceGuard final {
+public:
+    ScorerDeviceGuard() noexcept {
+        if (hipGetDevice(&previous_) == hipSuccess) {
+            has_previous_ = true;
+        }
+    }
+
+    ScorerDeviceGuard(const ScorerDeviceGuard &) = delete;
+    ScorerDeviceGuard &operator=(const ScorerDeviceGuard &) = delete;
+
+    ~ScorerDeviceGuard() {
+        if (has_previous_) {
+            static_cast<void>(hipSetDevice(previous_));
+        }
+    }
+
+private:
+    int previous_ = 0;
+    bool has_previous_ = false;
+};
+
+struct ScorerVector3 final {
+    double x;
+    double y;
+    double z;
+};
+
+__device__ ScorerVector3 scorer_scaled(ScorerVector3 value, double factor) {
+    return {value.x * factor, value.y * factor, value.z * factor};
+}
+
+__device__ ScorerVector3 scorer_plus(
+    ScorerVector3 left,
+    ScorerVector3 right) {
+    return {left.x + right.x, left.y + right.y, left.z + right.z};
+}
+
+__device__ ScorerVector3 scorer_minus(
+    ScorerVector3 left,
+    ScorerVector3 right) {
+    return {left.x - right.x, left.y - right.y, left.z - right.z};
+}
+
+__device__ double scorer_dot(ScorerVector3 left, ScorerVector3 right) {
+    return left.x * right.x + left.y * right.y + left.z * right.z;
+}
+
+__device__ ScorerVector3 scorer_cross(
+    ScorerVector3 left,
+    ScorerVector3 right) {
+    return {
+        left.y * right.z - left.z * right.y,
+        left.z * right.x - left.x * right.z,
+        left.x * right.y - left.y * right.x,
+    };
+}
+
+__device__ bool scorer_finite_vector(ScorerVector3 value) {
+    return isfinite(value.x) && isfinite(value.y) && isfinite(value.z);
+}
 
 constexpr size_t kScorerCandidateCount = BG_DOCKING_FIXED64_CANDIDATE_COUNT;
 constexpr size_t kScorerTermCount = BG_DOCKING_SCORER_V1_TERM_COUNT;
@@ -54,32 +248,32 @@ struct ScorerDeviceContext final {
     size_t max_ligand_pair_checks;
 };
 
-struct HipSafeScorerState final {
+struct ScorerState final {
     int32_t device_ordinal = 0;
     ScorerDeviceContext context{};
-    DeviceBuffer<double> receptor_x;
-    DeviceBuffer<double> receptor_y;
-    DeviceBuffer<double> receptor_z;
-    DeviceBuffer<double> receptor_charge;
-    DeviceBuffer<double> receptor_radius;
-    DeviceBuffer<double> receptor_epsilon;
-    DeviceBuffer<uint8_t> receptor_hydrophobic;
-    DeviceBuffer<uint8_t> receptor_acceptor;
-    DeviceBuffer<size_t> receptor_donor_by_hydrogen;
-    DeviceBuffer<double> ligand_charge;
-    DeviceBuffer<double> ligand_radius;
-    DeviceBuffer<double> ligand_epsilon;
-    DeviceBuffer<uint8_t> ligand_hydrophobic;
-    DeviceBuffer<uint8_t> ligand_acceptor;
-    DeviceBuffer<size_t> ligand_donor_by_hydrogen;
-    DeviceBuffer<uint8_t> ligand_donor_heavy_mask;
-    DeviceBuffer<uint64_t> exclusion_i;
-    DeviceBuffer<uint64_t> exclusion_j;
-    DeviceBuffer<uint64_t> rotor_i;
-    DeviceBuffer<uint64_t> rotor_j;
-    DeviceBuffer<uint64_t> rotor_k;
-    DeviceBuffer<uint64_t> rotor_l;
-    DeviceBuffer<double> reference_dihedrals;
+    ScorerDeviceBuffer<double> receptor_x;
+    ScorerDeviceBuffer<double> receptor_y;
+    ScorerDeviceBuffer<double> receptor_z;
+    ScorerDeviceBuffer<double> receptor_charge;
+    ScorerDeviceBuffer<double> receptor_radius;
+    ScorerDeviceBuffer<double> receptor_epsilon;
+    ScorerDeviceBuffer<uint8_t> receptor_hydrophobic;
+    ScorerDeviceBuffer<uint8_t> receptor_acceptor;
+    ScorerDeviceBuffer<size_t> receptor_donor_by_hydrogen;
+    ScorerDeviceBuffer<double> ligand_charge;
+    ScorerDeviceBuffer<double> ligand_radius;
+    ScorerDeviceBuffer<double> ligand_epsilon;
+    ScorerDeviceBuffer<uint8_t> ligand_hydrophobic;
+    ScorerDeviceBuffer<uint8_t> ligand_acceptor;
+    ScorerDeviceBuffer<size_t> ligand_donor_by_hydrogen;
+    ScorerDeviceBuffer<uint8_t> ligand_donor_heavy_mask;
+    ScorerDeviceBuffer<uint64_t> exclusion_i;
+    ScorerDeviceBuffer<uint64_t> exclusion_j;
+    ScorerDeviceBuffer<uint64_t> rotor_i;
+    ScorerDeviceBuffer<uint64_t> rotor_j;
+    ScorerDeviceBuffer<uint64_t> rotor_k;
+    ScorerDeviceBuffer<uint64_t> rotor_l;
+    ScorerDeviceBuffer<double> reference_dihedrals;
 };
 
 template <typename Value>
@@ -87,7 +281,7 @@ bool scorer_pointer_valid(const Value *pointer, size_t count) noexcept {
     return count == 0 || pointer != nullptr;
 }
 
-__device__ Vector3 scorer_coordinate(
+__device__ ScorerVector3 scorer_coordinate(
     const double *x,
     const double *y,
     const double *z,
@@ -95,12 +289,12 @@ __device__ Vector3 scorer_coordinate(
     return {x[index], y[index], z[index]};
 }
 
-__device__ double scorer_norm(Vector3 value) {
-    return sqrt(dot(value, value));
+__device__ double scorer_norm(ScorerVector3 value) {
+    return sqrt(scorer_dot(value, value));
 }
 
-__device__ bool scorer_coordinate_is_valid(Vector3 value) {
-    return finite_vector(value) && fabs(value.x) <= kScorerMaxCoordinate &&
+__device__ bool scorer_coordinate_is_valid(ScorerVector3 value) {
+    return scorer_finite_vector(value) && fabs(value.x) <= kScorerMaxCoordinate &&
            fabs(value.y) <= kScorerMaxCoordinate &&
            fabs(value.z) <= kScorerMaxCoordinate;
 }
@@ -121,21 +315,21 @@ __device__ double scorer_typed_lj(
 }
 
 __device__ double scorer_hbond_reward(
-    Vector3 donor,
-    Vector3 hydrogen,
-    Vector3 acceptor,
+    ScorerVector3 donor,
+    ScorerVector3 hydrogen,
+    ScorerVector3 acceptor,
     double cutoff) {
-    const double distance = scorer_norm(minus(hydrogen, acceptor));
+    const double distance = scorer_norm(scorer_minus(hydrogen, acceptor));
     if (distance > cutoff || distance <= 1.0e-8) {
         return 0.0;
     }
-    const Vector3 first = minus(donor, hydrogen);
-    const Vector3 second = minus(acceptor, hydrogen);
+    const ScorerVector3 first = scorer_minus(donor, hydrogen);
+    const ScorerVector3 second = scorer_minus(acceptor, hydrogen);
     const double denominator = scorer_norm(first) * scorer_norm(second);
     if (denominator <= 1.0e-12) {
         return 0.0;
     }
-    const double cosine = dot(first, second) / denominator;
+    const double cosine = scorer_dot(first, second) / denominator;
     const double angular = fmin(fmax((-cosine - 0.5) / 0.5, 0.0), 1.0);
     const double radial = fmax(1.0 - distance / cutoff, 0.0);
     return angular * radial;
@@ -173,28 +367,28 @@ __device__ bool scorer_dihedral(
     uint64_t atom_k,
     uint64_t atom_l,
     double *out_value) {
-    const Vector3 first = scorer_coordinate(x, y, z, offset + atom_i);
-    const Vector3 second = scorer_coordinate(x, y, z, offset + atom_j);
-    const Vector3 third = scorer_coordinate(x, y, z, offset + atom_k);
-    const Vector3 fourth = scorer_coordinate(x, y, z, offset + atom_l);
-    const Vector3 middle = minus(third, second);
+    const ScorerVector3 first = scorer_coordinate(x, y, z, offset + atom_i);
+    const ScorerVector3 second = scorer_coordinate(x, y, z, offset + atom_j);
+    const ScorerVector3 third = scorer_coordinate(x, y, z, offset + atom_k);
+    const ScorerVector3 fourth = scorer_coordinate(x, y, z, offset + atom_l);
+    const ScorerVector3 middle = scorer_minus(third, second);
     const double middle_norm = scorer_norm(middle);
     if (middle_norm <= 1.0e-12) {
         return false;
     }
-    const Vector3 axis = scaled(middle, 1.0 / middle_norm);
-    Vector3 left = minus(first, second);
-    Vector3 right = minus(fourth, third);
-    left = minus(left, scaled(axis, dot(left, axis)));
-    right = minus(right, scaled(axis, dot(right, axis)));
+    const ScorerVector3 axis = scorer_scaled(middle, 1.0 / middle_norm);
+    ScorerVector3 left = scorer_minus(first, second);
+    ScorerVector3 right = scorer_minus(fourth, third);
+    left = scorer_minus(left, scorer_scaled(axis, scorer_dot(left, axis)));
+    right = scorer_minus(right, scorer_scaled(axis, scorer_dot(right, axis)));
     const double left_norm = scorer_norm(left);
     const double right_norm = scorer_norm(right);
     if (fmin(left_norm, right_norm) <= 1.0e-12) {
         return false;
     }
-    left = scaled(left, 1.0 / left_norm);
-    right = scaled(right, 1.0 / right_norm);
-    *out_value = atan2(dot(cross(left, right), axis), dot(left, right));
+    left = scorer_scaled(left, 1.0 / left_norm);
+    right = scorer_scaled(right, 1.0 / right_norm);
+    *out_value = atan2(scorer_dot(scorer_cross(left, right), axis), scorer_dot(left, right));
     return true;
 }
 
@@ -255,7 +449,7 @@ __global__ void scorer_fixed64_kernel(
     size_t receptor_pair_count = 0;
     for (size_t ligand_index = 0; ligand_index < context.ligand_atom_count;
          ++ligand_index) {
-        const Vector3 coordinate = scorer_coordinate(
+        const ScorerVector3 coordinate = scorer_coordinate(
             candidate_x, candidate_y, candidate_z, offset + ligand_index);
         const int64_t center_x =
             static_cast<int64_t>(floor(coordinate.x / context.pair_cutoff));
@@ -295,13 +489,13 @@ __global__ void scorer_fixed64_kernel(
                                 0);
                             return;
                         }
-                        const Vector3 receptor{
+                        const ScorerVector3 receptor{
                             context.receptor_x[receptor_index],
                             context.receptor_y[receptor_index],
                             context.receptor_z[receptor_index],
                         };
                         const double distance =
-                            scorer_norm(minus(coordinate, receptor));
+                            scorer_norm(scorer_minus(coordinate, receptor));
                         if (distance > context.pair_cutoff) {
                             continue;
                         }
@@ -351,7 +545,7 @@ __global__ void scorer_fixed64_kernel(
                             context.receptor_donor_by_hydrogen[receptor_index];
                         if (receptor_donor != kScorerNoDonor &&
                             context.ligand_acceptor[ligand_index] != 0) {
-                            const Vector3 donor{
+                            const ScorerVector3 donor{
                                 context.receptor_x[receptor_donor],
                                 context.receptor_y[receptor_donor],
                                 context.receptor_z[receptor_donor],
@@ -387,15 +581,15 @@ __global__ void scorer_fixed64_kernel(
                     ligand_pair_count);
                 return;
             }
-            const Vector3 first_coordinate = scorer_coordinate(
+            const ScorerVector3 first_coordinate = scorer_coordinate(
                 candidate_x, candidate_y, candidate_z, offset + first);
-            const Vector3 second_coordinate = scorer_coordinate(
+            const ScorerVector3 second_coordinate = scorer_coordinate(
                 candidate_x, candidate_y, candidate_z, offset + second);
             current_internal_vdw += scorer_typed_lj(
                 context.ligand_epsilon[first],
                 context.ligand_epsilon[second],
                 context.ligand_radius[first] + context.ligand_radius[second],
-                scorer_norm(minus(first_coordinate, second_coordinate)));
+                scorer_norm(scorer_minus(first_coordinate, second_coordinate)));
         }
     }
     const double ligand_strain_raw =
@@ -425,21 +619,21 @@ __global__ void scorer_fixed64_kernel(
         torsion_raw += 0.5 * (1.0 - cos(3.0 * delta));
     }
 
-    Vector3 centroid{0.0, 0.0, 0.0};
+    ScorerVector3 centroid{0.0, 0.0, 0.0};
     for (size_t atom = 0; atom < context.ligand_atom_count; ++atom) {
-        centroid = plus(
+        centroid = scorer_plus(
             centroid,
             scorer_coordinate(candidate_x, candidate_y, candidate_z, offset + atom));
     }
-    centroid = scaled(
+    centroid = scorer_scaled(
         centroid, 1.0 / static_cast<double>(context.ligand_atom_count));
-    const Vector3 pocket_center{
+    const ScorerVector3 pocket_center{
         context.pocket_center[0],
         context.pocket_center[1],
         context.pocket_center[2],
     };
     const double pocket_ratio =
-        scorer_norm(minus(centroid, pocket_center)) / context.pocket_radius;
+        scorer_norm(scorer_minus(centroid, pocket_center)) / context.pocket_radius;
     const double pocket_raw = pocket_ratio * pocket_ratio;
     size_t buried_polar_count = 0;
     size_t unsatisfied_buried_count = 0;
@@ -489,42 +683,116 @@ __global__ void scorer_fixed64_kernel(
     out_rows[slot] = row;
 }
 
+int32_t scorer_backend_is_available(
+    int32_t device_ordinal,
+    uint8_t *available,
+    char *error_message,
+    size_t error_capacity) noexcept {
+    if (available == nullptr || device_ordinal < 0) {
+        return scorer_fail(
+            BG_STATUS_INVALID_ARGUMENT,
+            error_message,
+            error_capacity,
+            BG_DOCKING_SCORER_LANE " ScorerV1 availability arguments are invalid");
+    }
+    *available = UINT8_C(0);
+    int device_count = 0;
+    const hipError_t count_status = hipGetDeviceCount(&device_count);
+    if (count_status == hipErrorNoDevice) {
+        static_cast<void>(hipGetLastError());
+        return BG_STATUS_OK;
+    }
+    if (count_status != hipSuccess) {
+        return scorer_fail_hip(
+            count_status,
+            error_message,
+            error_capacity,
+            "ScorerV1 device count query");
+    }
+    if (device_ordinal >= device_count) {
+        return BG_STATUS_OK;
+    }
+    hipDeviceProp_t properties{};
+    const hipError_t properties_status =
+        hipGetDeviceProperties(&properties, device_ordinal);
+    if (properties_status != hipSuccess) {
+        return scorer_fail_hip(
+            properties_status,
+            error_message,
+            error_capacity,
+            "ScorerV1 device property query");
+    }
+    if (properties.arch.hasDoubles == 0U) {
+        return BG_STATUS_OK;
+    }
+    ScorerDeviceGuard device_guard;
+    const hipError_t set_status = hipSetDevice(device_ordinal);
+    if (set_status != hipSuccess) {
+        return scorer_fail_hip(
+            set_status,
+            error_message,
+            error_capacity,
+            "ScorerV1 availability device selection");
+    }
+    hipFuncAttributes attributes{};
+    const hipError_t probe_status = hipFuncGetAttributes(
+        &attributes,
+        reinterpret_cast<const void *>(scorer_fixed64_kernel));
+    const bool incompatible_code_object =
+        probe_status == hipErrorNoBinaryForGpu ||
+        probe_status == hipErrorInvalidDeviceFunction ||
+        probe_status == hipErrorInvalidKernelFile;
+    if (incompatible_code_object) {
+        static_cast<void>(hipGetLastError());
+        return BG_STATUS_OK;
+    }
+    if (probe_status != hipSuccess) {
+        return scorer_fail_hip(
+            probe_status,
+            error_message,
+            error_capacity,
+            "ScorerV1 code-object probe");
+    }
+    *available = UINT8_C(1);
+    return BG_STATUS_OK;
+}
+
 int32_t validate_scorer_create(
     const bg_docking_scorer_v1_context_soa_v1 *descriptor,
-    const bg_hip_safe_docking_scorer_derived_v1 *derived,
+    const bg_docking_scorer_derived_v1 *derived,
     void **out_state,
     char *error_message,
     size_t error_capacity) noexcept {
     if (descriptor == nullptr || derived == nullptr || out_state == nullptr) {
-        return fail(
+        return scorer_fail(
             BG_STATUS_INVALID_ARGUMENT,
             error_message,
             error_capacity,
-            "hip_safe ScorerV1 create pointer is null");
+            BG_DOCKING_SCORER_LANE " ScorerV1 create pointer is null");
     }
     *out_state = nullptr;
     if (descriptor->struct_size != sizeof(*descriptor) ||
         descriptor->abi_version != BG_ABI_VERSION ||
-        !valid_header(*derived)) {
-        return fail(
+        !scorer_valid_header(*derived)) {
+        return scorer_fail(
             BG_STATUS_ABI_MISMATCH,
             error_message,
             error_capacity,
-            "hip_safe ScorerV1 descriptor ABI mismatch");
+            BG_DOCKING_SCORER_LANE " ScorerV1 descriptor ABI mismatch");
     }
     if (descriptor->unit_system != BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL ||
-        descriptor->reserved0 != 0 || !reserved_is_zero(descriptor->reserved) ||
-        !reserved_is_zero(derived->reserved) ||
+        descriptor->reserved0 != 0 || !scorer_reserved_is_zero(descriptor->reserved) ||
+        !scorer_reserved_is_zero(derived->reserved) ||
         descriptor->receptor_atom_count == 0 ||
         descriptor->receptor_atom_count > kScorerMaxReceptorAtoms ||
         descriptor->ligand_atom_count == 0 ||
         descriptor->ligand_atom_count > kScorerMaxLigandAtoms ||
         descriptor->rotor_count > descriptor->ligand_atom_count) {
-        return fail(
+        return scorer_fail(
             BG_STATUS_INVALID_ARGUMENT,
             error_message,
             error_capacity,
-            "hip_safe ScorerV1 descriptor identity is invalid");
+            BG_DOCKING_SCORER_LANE " ScorerV1 descriptor identity is invalid");
     }
     const size_t receptor_count = descriptor->receptor_atom_count;
     const size_t ligand_count = descriptor->ligand_atom_count;
@@ -562,11 +830,11 @@ int32_t validate_scorer_create(
         scorer_pointer_valid(derived->ligand_donor_by_hydrogen, ligand_count) &&
         scorer_pointer_valid(derived->ligand_donor_heavy_mask, ligand_count);
     if (!channels_valid || !std::isfinite(derived->reference_internal_vdw)) {
-        return fail(
+        return scorer_fail(
             BG_STATUS_INVALID_ARGUMENT,
             error_message,
             error_capacity,
-            "hip_safe ScorerV1 channel identity is invalid");
+            BG_DOCKING_SCORER_LANE " ScorerV1 channel identity is invalid");
     }
     return BG_STATUS_OK;
 }
@@ -575,7 +843,7 @@ bool scorer_host_row_is_valid(
     const bg_docking_scorer_v1_row_v1 &row,
     size_t slot) noexcept {
     if (row.slot_index != slot || row.reserved0 != 0 ||
-        !reserved_is_zero(row.reserved)) {
+        !scorer_reserved_is_zero(row.reserved)) {
         return false;
     }
     if (row.status == BG_DOCKING_SCORER_V1_ROW_TYPED_FAILURE) {
@@ -596,46 +864,46 @@ bool scorer_host_row_is_valid(
 
 }  // namespace
 
-extern "C" int32_t bg_hip_safe_docking_scorer_v1_create(
+extern "C" int32_t BG_DOCKING_SCORER_CREATE(
     int32_t device_ordinal,
     const bg_docking_scorer_v1_context_soa_v1 *descriptor,
-    const bg_hip_safe_docking_scorer_derived_v1 *derived,
+    const bg_docking_scorer_derived_v1 *derived,
     void **out_state,
     char *error_message,
     size_t error_capacity) {
-    clear_error(error_message, error_capacity);
+    scorer_clear_error(error_message, error_capacity);
     const int32_t validation_status = validate_scorer_create(
         descriptor, derived, out_state, error_message, error_capacity);
     if (validation_status != BG_STATUS_OK) {
         return validation_status;
     }
     uint8_t available = UINT8_C(0);
-    const int32_t availability_status = bg_hip_safe_provider_is_available_v1(
+    const int32_t availability_status = scorer_backend_is_available(
         device_ordinal, &available, error_message, error_capacity);
     if (availability_status != BG_STATUS_OK) {
         return availability_status;
     }
     if (available == UINT8_C(0)) {
-        return fail(
+        return scorer_fail(
             BG_STATUS_BACKEND_UNAVAILABLE,
             error_message,
             error_capacity,
-            "hip_safe ScorerV1 device ordinal is unavailable");
+            BG_DOCKING_SCORER_LANE " ScorerV1 device ordinal is unavailable");
     }
-    DeviceGuard device_guard;
+    ScorerDeviceGuard device_guard;
     const hipError_t set_status = hipSetDevice(device_ordinal);
     if (set_status != hipSuccess) {
-        return fail_hip(
+        return scorer_fail_hip(
             set_status, error_message, error_capacity, "ScorerV1 device selection");
     }
-    std::unique_ptr<HipSafeScorerState> state(
-        new (std::nothrow) HipSafeScorerState());
+    std::unique_ptr<ScorerState> state(
+        new (std::nothrow) ScorerState());
     if (state == nullptr) {
-        return fail(
+        return scorer_fail(
             BG_STATUS_OUT_OF_MEMORY,
             error_message,
             error_capacity,
-            "hip_safe ScorerV1 host context allocation failed");
+            BG_DOCKING_SCORER_LANE " ScorerV1 host context allocation failed");
     }
     state->device_ordinal = device_ordinal;
     const size_t receptor_count = descriptor->receptor_atom_count;
@@ -647,7 +915,7 @@ extern "C" int32_t bg_hip_safe_docking_scorer_v1_create(
     do {                                                                   \
         const hipError_t copy_status = (buffer).copy_from((source), (count)); \
         if (copy_status != hipSuccess) {                                   \
-            return fail_hip(                                               \
+            return scorer_fail_hip(                                               \
                 copy_status, error_message, error_capacity, (operation));  \
         }                                                                  \
     } while (false)
@@ -820,83 +1088,83 @@ extern "C" int32_t bg_hip_safe_docking_scorer_v1_create(
 #undef BG_HIP_SCORER_COPY
 }
 
-extern "C" void bg_hip_safe_docking_scorer_v1_destroy(void *state) {
-    auto *typed = static_cast<HipSafeScorerState *>(state);
+extern "C" void BG_DOCKING_SCORER_DESTROY(void *state) {
+    auto *typed = static_cast<ScorerState *>(state);
     if (typed == nullptr) {
         return;
     }
-    DeviceGuard device_guard;
+    ScorerDeviceGuard device_guard;
     static_cast<void>(hipSetDevice(typed->device_ordinal));
     delete typed;
 }
 
-extern "C" int32_t bg_hip_safe_docking_scorer_v1_score_fixed64(
+extern "C" int32_t BG_DOCKING_SCORER_SCORE_FIXED64(
     const void *state,
     const bg_docking_scorer_v1_candidate_batch_soa_v1 *candidates,
     bg_docking_scorer_v1_row_v1 *out_rows,
     char *error_message,
     size_t error_capacity) {
-    clear_error(error_message, error_capacity);
-    const auto *typed = static_cast<const HipSafeScorerState *>(state);
+    scorer_clear_error(error_message, error_capacity);
+    const auto *typed = static_cast<const ScorerState *>(state);
     if (typed == nullptr || candidates == nullptr || out_rows == nullptr) {
-        return fail(
+        return scorer_fail(
             BG_STATUS_INVALID_ARGUMENT,
             error_message,
             error_capacity,
-            "hip_safe ScorerV1 score pointer is null");
+            BG_DOCKING_SCORER_LANE " ScorerV1 score pointer is null");
     }
     if (candidates->struct_size != sizeof(*candidates) ||
         candidates->abi_version != BG_ABI_VERSION) {
-        return fail(
+        return scorer_fail(
             BG_STATUS_ABI_MISMATCH,
             error_message,
             error_capacity,
-            "hip_safe ScorerV1 candidate batch ABI mismatch");
+            BG_DOCKING_SCORER_LANE " ScorerV1 candidate batch ABI mismatch");
     }
     if (candidates->candidate_count != kScorerCandidateCount ||
         candidates->ligand_atom_count != typed->context.ligand_atom_count ||
         candidates->unit_system != BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL ||
-        candidates->reserved0 != 0 || !reserved_is_zero(candidates->reserved) ||
+        candidates->reserved0 != 0 || !scorer_reserved_is_zero(candidates->reserved) ||
         candidates->candidate_state == nullptr ||
         candidates->x_angstrom == nullptr || candidates->y_angstrom == nullptr ||
         candidates->z_angstrom == nullptr) {
-        return fail(
+        return scorer_fail(
             BG_STATUS_INVALID_ARGUMENT,
             error_message,
             error_capacity,
-            "hip_safe ScorerV1 candidate batch identity is invalid");
+            BG_DOCKING_SCORER_LANE " ScorerV1 candidate batch identity is invalid");
     }
     for (size_t slot = 0; slot < kScorerCandidateCount; ++slot) {
         if (candidates->candidate_state[slot] !=
                 BG_DOCKING_SCORER_V1_CANDIDATE_INACTIVE &&
             candidates->candidate_state[slot] !=
                 BG_DOCKING_SCORER_V1_CANDIDATE_ACTIVE) {
-            return fail(
+            return scorer_fail(
                 BG_STATUS_INVALID_ARGUMENT,
                 error_message,
                 error_capacity,
-                "hip_safe ScorerV1 candidate state is invalid");
+                BG_DOCKING_SCORER_LANE " ScorerV1 candidate state is invalid");
         }
     }
-    DeviceGuard device_guard;
+    ScorerDeviceGuard device_guard;
     const hipError_t set_status = hipSetDevice(typed->device_ordinal);
     if (set_status != hipSuccess) {
-        return fail_hip(
+        return scorer_fail_hip(
             set_status, error_message, error_capacity, "ScorerV1 device selection");
     }
     const size_t coordinate_count =
         kScorerCandidateCount * typed->context.ligand_atom_count;
-    DeviceBuffer<int32_t> device_states;
-    DeviceBuffer<double> device_x;
-    DeviceBuffer<double> device_y;
-    DeviceBuffer<double> device_z;
-    DeviceBuffer<bg_docking_scorer_v1_row_v1> device_rows;
+    ScorerDeviceBuffer<int32_t> device_states;
+    ScorerDeviceBuffer<double> device_x;
+    ScorerDeviceBuffer<double> device_y;
+    ScorerDeviceBuffer<double> device_z;
+    ScorerDeviceBuffer<bg_docking_scorer_v1_row_v1> device_rows;
 
 #define BG_HIP_SCORER_BATCH_COPY(buffer, source, count, operation)         \
     do {                                                                   \
         const hipError_t copy_status = (buffer).copy_from((source), (count)); \
         if (copy_status != hipSuccess) {                                   \
-            return fail_hip(                                               \
+            return scorer_fail_hip(                                               \
                 copy_status, error_message, error_capacity, (operation));  \
         }                                                                  \
     } while (false)
@@ -923,7 +1191,7 @@ extern "C" int32_t bg_hip_safe_docking_scorer_v1_score_fixed64(
         "ScorerV1 candidate z copy");
     const hipError_t allocation_status = device_rows.allocate(kScorerCandidateCount);
     if (allocation_status != hipSuccess) {
-        return fail_hip(
+        return scorer_fail_hip(
             allocation_status,
             error_message,
             error_capacity,
@@ -946,7 +1214,7 @@ extern "C" int32_t bg_hip_safe_docking_scorer_v1_score_fixed64(
         execution_status = hipDeviceSynchronize();
     }
     if (execution_status != hipSuccess) {
-        return fail_hip(
+        return scorer_fail_hip(
             execution_status,
             error_message,
             error_capacity,
@@ -956,7 +1224,7 @@ extern "C" int32_t bg_hip_safe_docking_scorer_v1_score_fixed64(
     const hipError_t copy_status =
         device_rows.copy_to(host_rows.data(), host_rows.size());
     if (copy_status != hipSuccess) {
-        return fail_hip(
+        return scorer_fail_hip(
             copy_status,
             error_message,
             error_capacity,
@@ -964,11 +1232,11 @@ extern "C" int32_t bg_hip_safe_docking_scorer_v1_score_fixed64(
     }
     for (size_t slot = 0; slot < host_rows.size(); ++slot) {
         if (!scorer_host_row_is_valid(host_rows[slot], slot)) {
-            return fail(
+            return scorer_fail(
                 BG_STATUS_BACKEND_ERROR,
                 error_message,
                 error_capacity,
-                "hip_safe ScorerV1 returned an invalid device row");
+                BG_DOCKING_SCORER_LANE " ScorerV1 returned an invalid device row");
         }
     }
     std::memcpy(out_rows, host_rows.data(), sizeof(host_rows));
