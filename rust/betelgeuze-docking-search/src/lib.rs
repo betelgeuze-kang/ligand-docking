@@ -23,6 +23,7 @@ mod native_hash;
 mod prune;
 mod receipt;
 mod refine;
+mod rigid_refinement;
 mod scorer_v1;
 mod search;
 mod sha256;
@@ -115,6 +116,14 @@ pub use model::{
     MAX_SURFACE_SAMPLES, MAX_TOP_K,
 };
 pub use receipt::SearchReceipt;
+pub use rigid_refinement::{
+    refine_interaction_aware_rigid_v2, refine_interaction_aware_rigid_v3,
+    refine_interaction_aware_rigid_v6, NativeRigidRefinementContext, NativeRigidRefinementError,
+    NativeRigidRefinementErrorCode, NativeRigidRefinementOutcome, NativeRigidRefinementProfile,
+    NativeRigidV2Config, NativeRigidV3Config, NativeRigidV6Outcome,
+    NATIVE_RIGID_REFINEMENT_MAX_LIGAND_ATOMS, NATIVE_RIGID_REFINEMENT_MAX_PAIR_EVALUATIONS,
+    NATIVE_RIGID_REFINEMENT_MAX_RECEPTOR_ATOMS, NATIVE_RIGID_REFINEMENT_MAX_STEPS,
+};
 pub use scorer_v1::{
     score_native_fixed64_scorer_v1, NativeScorerV1Atom, NativeScorerV1Backend, NativeScorerV1Batch,
     NativeScorerV1Config, NativeScorerV1Context, NativeScorerV1Donor, NativeScorerV1Error,
