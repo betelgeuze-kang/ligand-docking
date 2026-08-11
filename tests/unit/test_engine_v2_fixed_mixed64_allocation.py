@@ -23,6 +23,7 @@ from betelgeuze_engine_v2.docking.mixed64_allocation import (
     MISSING_FEATURE_STATUS,
     Mixed64AtomicFeatureEvidence,
     Mixed64ConformerSourceEvidence,
+    Mixed64ExactV11SourceEvidence,
     Mixed64FeatureEvidence,
     Mixed64RetainedSourceEvidence,
     Mixed64V7ControlSourceEvidence,
@@ -40,6 +41,16 @@ def _digest(label: str) -> str:
 
 
 def _features(*, all_available: bool) -> Mixed64FeatureEvidence:
+    ligand_topology_sha256 = _digest("ligand-topology")
+    receptor_topology_sha256 = _digest("receptor-topology")
+    exact_source = Mixed64ExactV11SourceEvidence(
+        source_receipt_sha256=_digest("v11-source"),
+        proposal_sha256=_digest("v11-proposal"),
+        ligand_coordinate_sha256=_digest("v11-ligand-coordinate"),
+        receptor_coordinate_sha256=_digest("v11-receptor-coordinate"),
+        prepared_ligand_topology_sha256=ligand_topology_sha256,
+        prepared_receptor_topology_sha256=receptor_topology_sha256,
+    )
     feature_rows = (
         ("ligand_acceptor", (2,)),
         ("ligand_aromatic_plane", (5, 6, 7)),
@@ -95,9 +106,10 @@ def _features(*, all_available: bool) -> Mixed64FeatureEvidence:
         for index in RETAINED_SOURCE_INDICES
     )
     return Mixed64FeatureEvidence(
-        exact_v11_source_receipt_sha256=_digest("v11-source"),
-        prepared_ligand_topology_sha256=_digest("ligand-topology"),
-        prepared_receptor_topology_sha256=_digest("receptor-topology"),
+        exact_v11_source_receipt_sha256=exact_source.source_receipt_sha256,
+        prepared_ligand_topology_sha256=ligand_topology_sha256,
+        prepared_receptor_topology_sha256=receptor_topology_sha256,
+        exact_v11_source=exact_source,
         feature_extractor_policy_sha256=_digest("feature-policy"),
         atomic_features=atomic if all_available else (),
         v7_control_sources=v7_controls if all_available else (),
@@ -412,6 +424,36 @@ def test_v7_control_evidence_and_parent_identity_are_exact_and_source_bound() ->
         retained.coordinate_sha256
     )
     assert retained_slot.generation_parent_role == GENERATION_PARENT_EXACT_PASSTHROUGH
+
+    exact = features.exact_v11_source
+    exact_generated_slots = allocation.slots[24:36] + allocation.slots[44:60]
+    assert all(
+        slot.selected_generation_parent_proposal_sha256 == exact.proposal_sha256
+        and slot.selected_generation_parent_coordinate_sha256
+        == exact.ligand_coordinate_sha256
+        and slot.generation_parent_role == GENERATION_PARENT_GENERATOR_INPUT
+        for slot in exact_generated_slots
+    )
+
+
+def test_exact_v11_evidence_cross_wiring_and_live_tamper_fail_closed() -> None:
+    features = _features(all_available=True)
+
+    with pytest.raises(FixedMixed64AllocationError, match="cross-wired"):
+        replace(
+            features,
+            exact_v11_source_receipt_sha256=_digest("other-source-receipt"),
+        )
+    with pytest.raises(FixedMixed64AllocationError, match="cross-wired"):
+        replace(
+            features,
+            prepared_receptor_topology_sha256=_digest("other-receptor-topology"),
+        )
+
+    exact = features.exact_v11_source
+    object.__setattr__(exact, "proposal_sha256", _digest("tampered-exact-proposal"))
+    with pytest.raises(FixedMixed64AllocationError, match="source evidence changed"):
+        features.to_dict()
 
 
 def test_v7_control_source_and_generation_parent_cross_wires_fail_closed() -> None:

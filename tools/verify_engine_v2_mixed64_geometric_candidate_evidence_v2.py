@@ -25,7 +25,10 @@ EXPECTED_SLOT_SCHEMA_ID = (
 )
 EXPECTED_FEATURE_EVIDENCE_SCHEMA_ID = (
     "betelgeuze.engine_v2_global_orientation_fixed_mixed64_"
-    "feature_evidence/3.0.0"
+    "feature_evidence/4.0.0"
+)
+EXPECTED_EXACT_V11_SOURCE_SCHEMA_ID = (
+    "betelgeuze.engine_v2_global_orientation_exact_v11_source/1.0.0"
 )
 EXPECTED_V7_CONTROL_SOURCE_SCHEMA_ID = (
     "betelgeuze.engine_v2_global_orientation_v7_control_source/2.0.0"
@@ -70,6 +73,8 @@ EXPECTED_CANDIDATE_BINDING_FIELDS = (
 )
 EXPECTED_FEATURE_EVIDENCE_FIELDS = (
     "exact_v11_source_receipt_sha256",
+    "exact_v11_source_evidence_receipt_sha256",
+    "exact_v11_source",
     "prepared_ligand_topology_sha256",
     "prepared_receptor_topology_sha256",
     "feature_extractor_policy_sha256",
@@ -77,6 +82,14 @@ EXPECTED_FEATURE_EVIDENCE_FIELDS = (
     "v7_control_sources",
     "conformer_sources",
     "retained_sources",
+)
+EXPECTED_EXACT_V11_SOURCE_FIELDS = (
+    "source_receipt_sha256",
+    "proposal_sha256",
+    "ligand_coordinate_sha256",
+    "receptor_coordinate_sha256",
+    "prepared_ligand_topology_sha256",
+    "prepared_receptor_topology_sha256",
 )
 EXPECTED_ATOMIC_FEATURE_FIELDS = (
     "kind",
@@ -453,6 +466,8 @@ def _verify_allocation(value: object) -> None:
             "conformer_source_required_fields",
             "failed_slots_preserved_in_denominator",
             "fallback_allowed",
+            "exact_v11_source_required_fields",
+            "exact_v11_source_schema_id",
             "feature_evidence_required_fields",
             "feature_evidence_schema_id",
             "feature_receipt_identity_binding_required",
@@ -528,6 +543,11 @@ def _verify_allocation(value: object) -> None:
             "feature evidence schema",
         ),
         (
+            "exact_v11_source_schema_id",
+            EXPECTED_EXACT_V11_SOURCE_SCHEMA_ID,
+            "exact V1.1 source schema",
+        ),
+        (
             "v7_control_source_schema_id",
             EXPECTED_V7_CONTROL_SOURCE_SCHEMA_ID,
             "V7 control source schema",
@@ -560,6 +580,11 @@ def _verify_allocation(value: object) -> None:
             "feature_evidence_required_fields",
             EXPECTED_FEATURE_EVIDENCE_FIELDS,
             "feature evidence fields",
+        ),
+        (
+            "exact_v11_source_required_fields",
+            EXPECTED_EXACT_V11_SOURCE_FIELDS,
+            "exact V1.1 source fields",
         ),
         (
             "atomic_feature_required_fields",

@@ -23,8 +23,9 @@ pocket center.
 The receipt embeds the exact source coordinate payload and binds:
 
 - allocation and slot receipts;
-- exact V1.1 source receipt, or the selected conformer receipt and parent;
-- source proposal and coordinate identities;
+- exact V1.1 source receipt, proposal, and ligand-coordinate evidence, or the
+  selected conformer receipt and parent;
+- source proposal and coordinate identities, rechecked against that evidence;
 - pocket center and normal;
 - source seed, raw and accepted sequence indices;
 - quaternion, translation, complete output coordinates, and upstream batch and
@@ -39,6 +40,11 @@ typed code before any output receipt is emitted.
 Slots 44–59 consume exactly the two feature receipts already selected by the
 allocation. No alternate feature or fallback lane can be chosen from geometric
 or scoring results.
+
+The same allocation-owned exact-V1.1 evidence also pins the receptor-coordinate
+identity used by every single-anchor placement. A caller cannot retain the
+source receipt while substituting another ligand proposal, ligand coordinate
+payload, or receptor coordinate payload.
 
 | Lane | Slots | Target distance | Twist variants |
 | --- | ---: | ---: | --- |

@@ -57,7 +57,8 @@ def test_current_mixed64_geometric_candidate_evidence_contract_verifies() -> Non
     )
     assert allocation["allocation_schema_id"].endswith("/2.0.0")
     assert allocation["slot_schema_id"].endswith("/2.0.0")
-    assert allocation["feature_evidence_schema_id"].endswith("/3.0.0")
+    assert allocation["feature_evidence_schema_id"].endswith("/4.0.0")
+    assert allocation["exact_v11_source_schema_id"].endswith("/1.0.0")
     assert allocation["v7_control_source_schema_id"].endswith("/2.0.0")
     assert allocation["v7_control_source_namespace"] == (
         "current_v7_source_proposal_index"
@@ -266,7 +267,7 @@ def test_parent_source_payload_rederivation_is_not_overclaimed() -> None:
         verify_contract(_reseal(changed))
 
 
-def test_resealed_feature_v3_schema_or_retained_namespace_drift_fails_closed() -> None:
+def test_resealed_feature_v4_schema_or_retained_namespace_drift_fails_closed() -> None:
     changed = _contract()
     changed["allocation"]["retained_source_namespace"] = "ambiguous_index"
 
@@ -291,6 +292,11 @@ def test_resealed_feature_v3_schema_or_retained_namespace_drift_fails_closed() -
     (
         ("allocation_schema_id", "legacy/1.0.0", "allocation schema"),
         ("slot_schema_id", "legacy/1.0.0", "slot schema"),
+        (
+            "exact_v11_source_schema_id",
+            "legacy/1.0.0",
+            "exact V1.1 source schema",
+        ),
         (
             "v7_control_source_schema_id",
             "legacy/1.0.0",
@@ -330,6 +336,11 @@ def test_resealed_allocation_v2_source_identity_contract_fails_closed(
             "feature_evidence_required_fields",
             "v7_control_sources",
             "feature evidence fields",
+        ),
+        (
+            "exact_v11_source_required_fields",
+            "receptor_coordinate_sha256",
+            "exact V1.1 source fields",
         ),
         (
             "v7_control_source_required_fields",

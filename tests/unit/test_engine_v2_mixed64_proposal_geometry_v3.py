@@ -22,6 +22,7 @@ from betelgeuze_engine_v2.docking.mixed64_allocation import (
     TRUE_CONFORMER_RANKS,
     Mixed64AtomicFeatureEvidence,
     Mixed64ConformerSourceEvidence,
+    Mixed64ExactV11SourceEvidence,
     Mixed64FeatureEvidence,
     build_fixed_mixed64_allocation,
 )
@@ -135,10 +136,21 @@ def _allocation(
         if conformers
         else ()
     )
+    ligand_topology_sha256 = _digest("ligand-topology")
+    receptor_topology_sha256 = _digest("receptor-topology")
+    exact_source = Mixed64ExactV11SourceEvidence(
+        source_receipt_sha256=SOURCE_RECEIPT,
+        proposal_sha256=SOURCE_PROPOSAL,
+        ligand_coordinate_sha256=coordinate_sha256(ligand),
+        receptor_coordinate_sha256=coordinate_sha256(RECEPTOR),
+        prepared_ligand_topology_sha256=ligand_topology_sha256,
+        prepared_receptor_topology_sha256=receptor_topology_sha256,
+    )
     features = Mixed64FeatureEvidence(
         exact_v11_source_receipt_sha256=SOURCE_RECEIPT,
-        prepared_ligand_topology_sha256=_digest("ligand-topology"),
-        prepared_receptor_topology_sha256=_digest("receptor-topology"),
+        prepared_ligand_topology_sha256=ligand_topology_sha256,
+        prepared_receptor_topology_sha256=receptor_topology_sha256,
+        exact_v11_source=exact_source,
         feature_extractor_policy_sha256=_digest("feature-policy"),
         atomic_features=_atomic_features(
             aromatic_degenerate=aromatic_degenerate,
@@ -241,7 +253,7 @@ def test_indexed_so3_seed_changes_with_exact_source_payload() -> None:
     allocation = _allocation()
     changed = (*LIGAND[:-1], (3.25, -0.1, 0.2))
     baseline = _so3(allocation)
-    other = _so3(allocation, ligand=changed)
+    other = _so3(_allocation(ligand=changed), ligand=changed)
 
     assert baseline.source_seed_sha256 != other.source_seed_sha256
     assert baseline.output_coordinate_sha256 != other.output_coordinate_sha256
@@ -278,6 +290,7 @@ def test_public_generators_bound_coordinate_iterables_before_materializing() -> 
 @pytest.mark.parametrize(
     ("override", "code"),
     [
+        ({"source_proposal_sha256": _digest("wrong-proposal")}, SOURCE_PROPOSAL_IDENTITY_MISMATCH),
         ({"source_receipt_sha256": _digest("wrong-source")}, SOURCE_RECEIPT_IDENTITY_MISMATCH),
         ({"source_coordinate_sha256": _digest("wrong-coordinate")}, SOURCE_COORDINATE_IDENTITY_MISMATCH),
     ],
@@ -412,7 +425,9 @@ def test_severe_penetration_is_preserved_as_precheck_evidence() -> None:
     ("allocation", "slot_index", "code", "ligand"),
     [
         (
-            _allocation(),
+            _allocation(
+                ligand=((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), *LIGAND[2:])
+            ),
             44,
             DEGENERATE_LIGAND_DIRECTION,
             ((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), *LIGAND[2:]),

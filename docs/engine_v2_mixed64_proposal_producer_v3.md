@@ -8,7 +8,7 @@ authority.
 
 The canonical policy is
 `config/engine_v2_mixed64_proposal_producer_v3.json`, with SHA-256
-`a5cc354ef227d6d187d565dfbc6d0cfc631218e201198ed5b8a61b43baf6ad6d`.
+`b3060f5d1a923db113a873f53e3bd5b9a9b24c9763c25334cea4bb0050b57879`.
 It binds the proposal-geometry policy SHA-256
 `77da86bb08f3fab6072d08f0c75c096723e68490db1c8bb794fb02e81302fc2d`.
 
@@ -23,10 +23,15 @@ Every supplied V7 control, true conformer, and retained control includes:
 - for V7 controls, the complete proposal-lineage payload and its rederived
   SHA.
 
-The bundle verifies these rederived identities against the allocation's typed
-source evidence. It also binds the exact V1.1 base source, receptor source and
-coordinates, ligand/receptor vdW radii, heavy-atom mask, and pocket geometry.
-Cross-wired or noncanonical payloads fail the whole input before generation.
+The allocation contains a typed exact-V1.1 evidence receipt that jointly binds
+the exact source-receipt SHA, proposal identity, ligand-coordinate identity,
+receptor-coordinate identity, and both prepared topology identities before any
+result exists. Slots 24–35 and 44–59 retain the exact proposal and ligand
+coordinate as their generator parent even when an anchor feature is absent.
+The bundle rederives the complete exact ligand and receptor payloads and
+verifies them against that evidence. It also binds ligand/receptor vdW radii,
+the heavy-atom mask, and pocket geometry. Cross-wired or noncanonical payloads
+fail the whole input before generation.
 An absent otherwise-declared payload does not reallocate a slot; it becomes a
 typed per-slot generation failure.
 

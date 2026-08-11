@@ -540,7 +540,7 @@ def _verify_proposal_generation_parent_binding(
             or source_coordinate_sha256 == expected_parent[1]
         ):
             raise PipelineCandidateEvidenceV2Error(
-                "true-conformer generator output did not preserve transformed semantics"
+                "generator output did not preserve transformed semantics"
             )
 
 

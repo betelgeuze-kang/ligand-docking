@@ -63,7 +63,10 @@ SLOT_SCHEMA: Final = (
     "betelgeuze.engine_v2_global_orientation_fixed_mixed64_slot/2.0.0"
 )
 FEATURE_SCHEMA: Final = (
-    "betelgeuze.engine_v2_global_orientation_fixed_mixed64_feature_evidence/3.0.0"
+    "betelgeuze.engine_v2_global_orientation_fixed_mixed64_feature_evidence/4.0.0"
+)
+EXACT_V11_SOURCE_SCHEMA: Final = (
+    "betelgeuze.engine_v2_global_orientation_exact_v11_source/1.0.0"
 )
 ATOMIC_FEATURE_SCHEMA: Final = (
     "betelgeuze.engine_v2_global_orientation_atomic_feature/1.0.0"
@@ -548,11 +551,56 @@ def _verify_atomic_feature(row: object, path: str) -> dict[str, object]:
     return document
 
 
+def _verify_exact_v11_source(value: object, path: str) -> dict[str, object]:
+    document = _mapping(value, path)
+    _exact_keys(
+        document,
+        {
+            "schema_id",
+            "source_receipt_sha256",
+            "proposal_sha256",
+            "ligand_coordinate_sha256",
+            "receptor_coordinate_sha256",
+            "prepared_ligand_topology_sha256",
+            "prepared_receptor_topology_sha256",
+            "proposal_and_coordinates_bound_before_result",
+            "result_fields_consumed",
+            "receipt_sha256",
+        },
+        path,
+    )
+    if document["schema_id"] != EXACT_V11_SOURCE_SCHEMA:
+        _fail(f"{path}.schema_id", "exact V1.1 source schema changed")
+    for key in (
+        "source_receipt_sha256",
+        "proposal_sha256",
+        "ligand_coordinate_sha256",
+        "receptor_coordinate_sha256",
+        "prepared_ligand_topology_sha256",
+        "prepared_receptor_topology_sha256",
+    ):
+        _digest(document[key], f"{path}.{key}")
+    _exact_bool(
+        document["proposal_and_coordinates_bound_before_result"],
+        f"{path}.proposal_and_coordinates_bound_before_result",
+        True,
+    )
+    _exact_bool(
+        document["result_fields_consumed"],
+        f"{path}.result_fields_consumed",
+        False,
+    )
+    _verify_receipt(document, path)
+    return document
+
+
 def _verify_features(value: object, path: str) -> dict[str, Any]:
     document = _mapping(value, path)
     expected_keys = {
         "schema_id",
         "exact_v11_source_receipt_sha256",
+        "exact_v11_source_evidence_receipt_sha256",
+        "exact_v11_source",
         "prepared_ligand_topology_sha256",
         "prepared_receptor_topology_sha256",
         "feature_extractor_policy_sha256",
@@ -589,11 +637,28 @@ def _verify_features(value: object, path: str) -> dict[str, Any]:
         _fail(f"{path}.schema_id", "feature-evidence schema changed")
     for key in (
         "exact_v11_source_receipt_sha256",
+        "exact_v11_source_evidence_receipt_sha256",
         "prepared_ligand_topology_sha256",
         "prepared_receptor_topology_sha256",
         "feature_extractor_policy_sha256",
     ):
         _digest(document[key], f"{path}.{key}")
+
+    exact_source = _verify_exact_v11_source(
+        document["exact_v11_source"],
+        f"{path}.exact_v11_source",
+    )
+    if (
+        document["exact_v11_source_evidence_receipt_sha256"]
+        != exact_source["receipt_sha256"]
+        or document["exact_v11_source_receipt_sha256"]
+        != exact_source["source_receipt_sha256"]
+        or document["prepared_ligand_topology_sha256"]
+        != exact_source["prepared_ligand_topology_sha256"]
+        or document["prepared_receptor_topology_sha256"]
+        != exact_source["prepared_receptor_topology_sha256"]
+    ):
+        _fail(path, "exact V1.1 source evidence is cross-wired")
 
     atomic_rows = _sequence(document["atomic_features"], f"{path}.atomic_features")
     if len(atomic_rows) > len(FEATURE_KINDS) * 256:
@@ -787,6 +852,7 @@ def _verify_features(value: object, path: str) -> dict[str, Any]:
         "conformers": conformers,
         "retained": retained,
         "available": available,
+        "exact_source": exact_source,
     }
 
 
@@ -804,6 +870,7 @@ def _slot_expected(feature_state: dict[str, Any], slot_index: int) -> dict[str, 
     v7_controls: dict[int, dict[str, object]] = feature_state["v7_controls"]
     conformers: dict[int, dict[str, object]] = feature_state["conformers"]
     retained: dict[int, dict[str, object]] = feature_state["retained"]
+    exact_source: dict[str, object] = feature_state["exact_source"]
     anchor: str | None = None
     required: tuple[str, ...] = ()
     missing: list[str] = []
@@ -858,6 +925,18 @@ def _slot_expected(feature_state: dict[str, Any], slot_index: int) -> dict[str, 
             parent_proposal = str(retained[retained_index]["proposal_sha256"])
             parent_coordinate = str(retained[retained_index]["coordinate_sha256"])
             parent_role = GENERATION_PARENT_EXACT_PASSTHROUGH
+
+    if lane in {
+        "deterministic_independent_so3",
+        "ligand_donor_to_receptor_acceptor",
+        "ligand_acceptor_to_receptor_donor",
+        "complementary_charge",
+        "aromatic_plane",
+        "principal_axis_shape",
+    }:
+        parent_proposal = str(exact_source["proposal_sha256"])
+        parent_coordinate = str(exact_source["ligand_coordinate_sha256"])
+        parent_role = GENERATION_PARENT_GENERATOR_INPUT
 
     if v7_index is not None:
         required = (f"v7_control_source_{v7_index}",)

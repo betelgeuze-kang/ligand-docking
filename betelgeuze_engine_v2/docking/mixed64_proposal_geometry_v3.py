@@ -681,11 +681,38 @@ def _validate_slot(
 def _validate_exact_source(
     allocation: FixedMixed64Allocation,
     *,
+    source_proposal_sha256: str,
+    source_coordinate_sha256: str,
     source_receipt_sha256: str,
+    receptor_coordinate_sha256: str | None = None,
 ) -> None:
+    proposal = _digest(source_proposal_sha256, name="source_proposal_sha256")
+    coordinate = _digest(source_coordinate_sha256, name="source_coordinate_sha256")
     source = _digest(source_receipt_sha256, name="source_receipt_sha256")
-    if source != allocation.features.exact_v11_source_receipt_sha256:
-        _fail(SOURCE_RECEIPT_IDENTITY_MISMATCH, "source is not the exact V1.1 receipt")
+    exact = allocation.features.exact_v11_source
+    if source != exact.source_receipt_sha256:
+        _fail(
+            SOURCE_RECEIPT_IDENTITY_MISMATCH,
+            "source is not the exact V1.1 receipt",
+        )
+    if proposal != exact.proposal_sha256:
+        _fail(
+            SOURCE_PROPOSAL_IDENTITY_MISMATCH,
+            "source proposal is not bound by the exact V1.1 evidence",
+        )
+    if coordinate != exact.ligand_coordinate_sha256:
+        _fail(
+            SOURCE_COORDINATE_IDENTITY_MISMATCH,
+            "source coordinates are not bound by the exact V1.1 evidence",
+        )
+    if receptor_coordinate_sha256 is not None and _digest(
+        receptor_coordinate_sha256,
+        name="receptor_coordinate_sha256",
+    ) != exact.receptor_coordinate_sha256:
+        _fail(
+            RECEPTOR_COORDINATE_IDENTITY_MISMATCH,
+            "receptor coordinates are not bound by the exact V1.1 evidence",
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -759,6 +786,8 @@ class IndexedSO3PlacementReceiptV1:
         else:
             _validate_exact_source(
                 self.allocation,
+                source_proposal_sha256=source_proposal,
+                source_coordinate_sha256=source_coordinate,
                 source_receipt_sha256=source_receipt,
             )
         center = _vector(self.pocket_center, name="pocket_center")
@@ -933,10 +962,6 @@ class SingleAnchorPlacementReceiptV1:
         slot = self.allocation.slots[self.slot_index]
         if slot.declared_anchor_kind != _ANCHOR_LANE_KIND[slot.lane]:
             _fail(UNSUPPORTED_GEOMETRY_LANE, "slot anchor identity changed")
-        _validate_exact_source(
-            self.allocation,
-            source_receipt_sha256=self.source_receipt_sha256,
-        )
         source_proposal = _digest(
             self.source_proposal_sha256,
             name="source_proposal_sha256",
@@ -948,6 +973,13 @@ class SingleAnchorPlacementReceiptV1:
         receptor_coordinate = _digest(
             self.receptor_coordinate_sha256,
             name="receptor_coordinate_sha256",
+        )
+        _validate_exact_source(
+            self.allocation,
+            source_proposal_sha256=source_proposal,
+            source_coordinate_sha256=source_coordinate,
+            source_receipt_sha256=self.source_receipt_sha256,
+            receptor_coordinate_sha256=receptor_coordinate,
         )
         ligand = _coordinates(
             self.ligand_coordinates,

@@ -18,10 +18,21 @@
       "coordinate_sha256",
       "source_receipt_sha256"
     ],
+    "exact_v11_source_required_fields": [
+      "source_receipt_sha256",
+      "proposal_sha256",
+      "ligand_coordinate_sha256",
+      "receptor_coordinate_sha256",
+      "prepared_ligand_topology_sha256",
+      "prepared_receptor_topology_sha256"
+    ],
+    "exact_v11_source_schema_id": "betelgeuze.engine_v2_global_orientation_exact_v11_source/1.0.0",
     "failed_slots_preserved_in_denominator": true,
     "fallback_allowed": false,
     "feature_evidence_required_fields": [
       "exact_v11_source_receipt_sha256",
+      "exact_v11_source_evidence_receipt_sha256",
+      "exact_v11_source",
       "prepared_ligand_topology_sha256",
       "prepared_receptor_topology_sha256",
       "feature_extractor_policy_sha256",
@@ -30,7 +41,7 @@
       "conformer_sources",
       "retained_sources"
     ],
-    "feature_evidence_schema_id": "betelgeuze.engine_v2_global_orientation_fixed_mixed64_feature_evidence/3.0.0",
+    "feature_evidence_schema_id": "betelgeuze.engine_v2_global_orientation_fixed_mixed64_feature_evidence/4.0.0",
     "feature_receipt_identity_binding_required": true,
     "feature_receipt_source_rederivation_required": false,
     "generation_parent_roles": [
@@ -489,7 +500,7 @@
     "validity_failure_score_evidence_required": true,
     "validity_is_post_score_ranking_evidence": true
   },
-  "contract_sha256": "48262da2e78a708066b74443b2d3d0d9eb8971fdc3ea8b6ee1ebdfce2149fa34",
+  "contract_sha256": "e81309bef473bac7de84cdb0c4bf42450f33ca1445800d6be1fd5aa0c564900c",
   "geometric_admission": {
     "batch_pair_work_fail_closed": true,
     "exact_input_payload_required": true,

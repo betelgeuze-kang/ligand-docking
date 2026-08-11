@@ -24,6 +24,7 @@ from betelgeuze_engine_v2.docking.mixed64_allocation import (
     V7_CONTROL_SOURCE_INDICES,
     Mixed64AtomicFeatureEvidence,
     Mixed64ConformerSourceEvidence,
+    Mixed64ExactV11SourceEvidence,
     Mixed64FeatureEvidence,
     Mixed64RetainedSourceEvidence,
     Mixed64V7ControlSourceEvidence,
@@ -32,6 +33,7 @@ from betelgeuze_engine_v2.docking.mixed64_allocation import (
 from betelgeuze_engine_v2.docking.mixed64_proposal_geometry_v3 import (
     IndexedSO3PlacementReceiptV1,
     SingleAnchorPlacementReceiptV1,
+    coordinate_sha256,
 )
 from betelgeuze_engine_v2.docking.mixed64_proposal_producer_v3 import (
     ALLOCATION_MISSING_FEATURE_FAILURE,
@@ -234,10 +236,21 @@ def _fixture(
         )
         for index in RETAINED_SOURCE_INDICES
     )
+    ligand_topology_sha256 = hashlib.sha256(b"ligand-topology").hexdigest()
+    receptor_topology_sha256 = hashlib.sha256(b"receptor-topology").hexdigest()
+    exact_evidence = Mixed64ExactV11SourceEvidence(
+        source_receipt_sha256=exact.source_receipt_sha256,
+        proposal_sha256=exact.proposal_sha256,
+        ligand_coordinate_sha256=exact.coordinate_sha256,
+        receptor_coordinate_sha256=coordinate_sha256(RECEPTOR),
+        prepared_ligand_topology_sha256=ligand_topology_sha256,
+        prepared_receptor_topology_sha256=receptor_topology_sha256,
+    )
     features = Mixed64FeatureEvidence(
         exact_v11_source_receipt_sha256=exact.source_receipt_sha256,
-        prepared_ligand_topology_sha256=hashlib.sha256(b"ligand-topology").hexdigest(),
-        prepared_receptor_topology_sha256=hashlib.sha256(b"receptor-topology").hexdigest(),
+        prepared_ligand_topology_sha256=ligand_topology_sha256,
+        prepared_receptor_topology_sha256=receptor_topology_sha256,
+        exact_v11_source=exact_evidence,
         feature_extractor_policy_sha256=hashlib.sha256(b"feature-policy").hexdigest(),
         atomic_features=_atomic_features(
             available=feature_available,
@@ -464,6 +477,32 @@ def test_source_cross_wiring_fails_before_generation() -> None:
     )
     with pytest.raises(Mixed64ProposalProducerError) as captured:
         replace(bundle, v7_control_sources=(changed, *bundle.v7_control_sources[1:]))
+    assert captured.value.code == SOURCE_PAYLOAD_CROSS_WIRING
+
+
+def test_exact_source_proposal_coordinate_and_receptor_cross_wires_fail_closed() -> None:
+    _allocation, bundle, *_ = _fixture()
+    exact = bundle.exact_v11_source
+    assert exact is not None
+
+    wrong_proposal = replace(
+        exact,
+        proposal_identity_payload_canonical_json=_proposal("cross-wired-exact"),
+    )
+    with pytest.raises(Mixed64ProposalProducerError) as captured:
+        replace(bundle, exact_v11_source=wrong_proposal)
+    assert captured.value.code == SOURCE_PAYLOAD_CROSS_WIRING
+
+    wrong_coordinates = replace(
+        exact,
+        coordinates=_shifted(exact.coordinates, 0.125),
+    )
+    with pytest.raises(Mixed64ProposalProducerError) as captured:
+        replace(bundle, exact_v11_source=wrong_coordinates)
+    assert captured.value.code == SOURCE_PAYLOAD_CROSS_WIRING
+
+    with pytest.raises(Mixed64ProposalProducerError) as captured:
+        replace(bundle, receptor_coordinates=_shifted(RECEPTOR, 0.125))
     assert captured.value.code == SOURCE_PAYLOAD_CROSS_WIRING
 
 

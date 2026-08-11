@@ -27,7 +27,10 @@ FIXED_MIXED64_SLOT_SCHEMA_ID: Final = (
     "betelgeuze.engine_v2_global_orientation_fixed_mixed64_slot/2.0.0"
 )
 FIXED_MIXED64_FEATURE_SCHEMA_ID: Final = (
-    "betelgeuze.engine_v2_global_orientation_fixed_mixed64_feature_evidence/3.0.0"
+    "betelgeuze.engine_v2_global_orientation_fixed_mixed64_feature_evidence/4.0.0"
+)
+FIXED_MIXED64_EXACT_V11_SOURCE_SCHEMA_ID: Final = (
+    "betelgeuze.engine_v2_global_orientation_exact_v11_source/1.0.0"
 )
 FIXED_MIXED64_ATOMIC_FEATURE_SCHEMA_ID: Final = (
     "betelgeuze.engine_v2_global_orientation_atomic_feature/1.0.0"
@@ -447,12 +450,76 @@ class Mixed64RetainedSourceEvidence:
 
 
 @dataclass(frozen=True, slots=True)
+class Mixed64ExactV11SourceEvidence:
+    """Pre-result identity binding for every exact-V1.1-derived lane."""
+
+    source_receipt_sha256: str
+    proposal_sha256: str
+    ligand_coordinate_sha256: str
+    receptor_coordinate_sha256: str
+    prepared_ligand_topology_sha256: str
+    prepared_receptor_topology_sha256: str
+    schema_id: str = FIXED_MIXED64_EXACT_V11_SOURCE_SCHEMA_ID
+    _receipt_sha256: str = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        if self.schema_id != FIXED_MIXED64_EXACT_V11_SOURCE_SCHEMA_ID:
+            raise FixedMixed64AllocationError(
+                "exact V1.1 source evidence schema is invalid"
+            )
+        for name in (
+            "source_receipt_sha256",
+            "proposal_sha256",
+            "ligand_coordinate_sha256",
+            "receptor_coordinate_sha256",
+            "prepared_ligand_topology_sha256",
+            "prepared_receptor_topology_sha256",
+        ):
+            object.__setattr__(
+                self,
+                name,
+                _require_digest(getattr(self, name), name=f"exact V1.1 {name}"),
+            )
+        object.__setattr__(self, "_receipt_sha256", _sha256(self._projection()))
+
+    def _projection(self) -> dict[str, object]:
+        return {
+            "schema_id": self.schema_id,
+            "source_receipt_sha256": self.source_receipt_sha256,
+            "proposal_sha256": self.proposal_sha256,
+            "ligand_coordinate_sha256": self.ligand_coordinate_sha256,
+            "receptor_coordinate_sha256": self.receptor_coordinate_sha256,
+            "prepared_ligand_topology_sha256": (
+                self.prepared_ligand_topology_sha256
+            ),
+            "prepared_receptor_topology_sha256": (
+                self.prepared_receptor_topology_sha256
+            ),
+            "proposal_and_coordinates_bound_before_result": True,
+            "result_fields_consumed": False,
+        }
+
+    @property
+    def receipt_sha256(self) -> str:
+        observed = _sha256(self._projection())
+        if observed != self._receipt_sha256:
+            raise FixedMixed64AllocationError(
+                "exact V1.1 source evidence changed"
+            )
+        return observed
+
+    def to_dict(self) -> dict[str, object]:
+        return {**self._projection(), "receipt_sha256": self.receipt_sha256}
+
+
+@dataclass(frozen=True, slots=True)
 class Mixed64FeatureEvidence:
     """Source-bound feature evidence; availability is always derived."""
 
     exact_v11_source_receipt_sha256: str
     prepared_ligand_topology_sha256: str
     prepared_receptor_topology_sha256: str
+    exact_v11_source: Mixed64ExactV11SourceEvidence
     feature_extractor_policy_sha256: str
     atomic_features: tuple[Mixed64AtomicFeatureEvidence, ...]
     v7_control_sources: tuple[Mixed64V7ControlSourceEvidence, ...]
@@ -476,6 +543,21 @@ class Mixed64FeatureEvidence:
                 self,
                 name,
                 _require_digest(getattr(self, name), name=name),
+            )
+        if type(self.exact_v11_source) is not Mixed64ExactV11SourceEvidence:
+            raise TypeError(
+                "exact_v11_source must be exact Mixed64ExactV11SourceEvidence"
+            )
+        if (
+            self.exact_v11_source.source_receipt_sha256
+            != self.exact_v11_source_receipt_sha256
+            or self.exact_v11_source.prepared_ligand_topology_sha256
+            != self.prepared_ligand_topology_sha256
+            or self.exact_v11_source.prepared_receptor_topology_sha256
+            != self.prepared_receptor_topology_sha256
+        ):
+            raise FixedMixed64AllocationError(
+                "exact V1.1 source evidence is cross-wired from feature evidence"
             )
         for name, values, expected_type in (
             ("atomic_features", self.atomic_features, Mixed64AtomicFeatureEvidence),
@@ -652,9 +734,13 @@ class Mixed64FeatureEvidence:
     def _projection(self) -> dict[str, object]:
         return {
             "schema_id": self.schema_id,
-            "exact_v11_source_receipt_sha256": self.exact_v11_source_receipt_sha256,
             "prepared_ligand_topology_sha256": self.prepared_ligand_topology_sha256,
             "prepared_receptor_topology_sha256": self.prepared_receptor_topology_sha256,
+            "exact_v11_source_receipt_sha256": self.exact_v11_source_receipt_sha256,
+            "exact_v11_source_evidence_receipt_sha256": (
+                self.exact_v11_source.receipt_sha256
+            ),
+            "exact_v11_source": self.exact_v11_source.to_dict(),
             "feature_extractor_policy_sha256": self.feature_extractor_policy_sha256,
             "true_conformer_available": self.true_conformer_available,
             "ligand_donor_available": self.ligand_donor_available,
@@ -1262,7 +1348,12 @@ def _selected_generation_parent(
                 GENERATION_PARENT_EXACT_PASSTHROUGH,
             )
         )
-    return None, None, None
+    exact = features.exact_v11_source
+    return (
+        exact.proposal_sha256,
+        exact.ligand_coordinate_sha256,
+        GENERATION_PARENT_GENERATOR_INPUT,
+    )
 
 
 def _build_slot_for_index(
@@ -1357,6 +1448,7 @@ __all__ = [
     "FIXED_MIXED64_ALLOCATION_SCHEMA_ID",
     "FIXED_MIXED64_CANDIDATE_COUNT",
     "FIXED_MIXED64_FEATURE_SCHEMA_ID",
+    "FIXED_MIXED64_EXACT_V11_SOURCE_SCHEMA_ID",
     "FIXED_MIXED64_ATOMIC_FEATURE_SCHEMA_ID",
     "FIXED_MIXED64_CONFORMER_SOURCE_SCHEMA_ID",
     "FIXED_MIXED64_V7_CONTROL_SOURCE_SCHEMA_ID",
@@ -1383,6 +1475,7 @@ __all__ = [
     "MISSING_FEATURE_STATUS",
     "Mixed64AtomicFeatureEvidence",
     "Mixed64ConformerSourceEvidence",
+    "Mixed64ExactV11SourceEvidence",
     "Mixed64FeatureEvidence",
     "Mixed64RetainedSourceEvidence",
     "Mixed64V7ControlSourceEvidence",

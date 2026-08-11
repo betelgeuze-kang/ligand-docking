@@ -523,11 +523,20 @@ class Mixed64ProposalSourceBundleV1:
                 raise TypeError("exact source must be exact coordinate source evidence")
             if self.exact_v11_source.source_kind != SOURCE_KIND_EXACT_V11_BASE:
                 _fail(SOURCE_PAYLOAD_CROSS_WIRING, "exact source kind changed")
+            exact_evidence = self.allocation.features.exact_v11_source
             if (
-                self.exact_v11_source.source_receipt_sha256
-                != self.allocation.features.exact_v11_source_receipt_sha256
+                self.exact_v11_source.source_receipt_sha256,
+                self.exact_v11_source.proposal_sha256,
+                self.exact_v11_source.coordinate_sha256,
+            ) != (
+                exact_evidence.source_receipt_sha256,
+                exact_evidence.proposal_sha256,
+                exact_evidence.ligand_coordinate_sha256,
             ):
-                _fail(SOURCE_PAYLOAD_CROSS_WIRING, "exact V1.1 receipt changed")
+                _fail(
+                    SOURCE_PAYLOAD_CROSS_WIRING,
+                    "exact V1.1 receipt, proposal, or ligand coordinates changed",
+                )
         normalized_groups: list[tuple[Mixed64CoordinateSourcePayloadV1, ...]] = []
         for name, values, kind in (
             ("v7_control_sources", self.v7_control_sources, SOURCE_KIND_V7_CONTROL),
@@ -633,8 +642,16 @@ class Mixed64ProposalSourceBundleV1:
             receptor_source_bytes,
             name="receptor source receipt",
         )
-        if receptor_source_sha != self.allocation.features.exact_v11_source_receipt_sha256:
-            _fail(SOURCE_PAYLOAD_CROSS_WIRING, "receptor source is not exact V1.1")
+        exact_evidence = self.allocation.features.exact_v11_source
+        receptor_coordinate_sha = coordinate_sha256(receptor)
+        if (
+            receptor_source_sha != exact_evidence.source_receipt_sha256
+            or receptor_coordinate_sha != exact_evidence.receptor_coordinate_sha256
+        ):
+            _fail(
+                SOURCE_PAYLOAD_CROSS_WIRING,
+                "receptor receipt or coordinates are not exact V1.1 evidence",
+            )
         center = _vector(self.pocket_center, name="pocket_center")
         normal = _vector(self.pocket_normal, name="pocket_normal")
         normal_length = math.sqrt(sum(value * value for value in normal))
@@ -660,7 +677,7 @@ class Mixed64ProposalSourceBundleV1:
         object.__setattr__(self, "pocket_normal", normal)
         object.__setattr__(self, "pocket_radius", radius)
         object.__setattr__(self, "_receptor_source_receipt_sha256", receptor_source_sha)
-        object.__setattr__(self, "_receptor_coordinate_sha256", coordinate_sha256(receptor))
+        object.__setattr__(self, "_receptor_coordinate_sha256", receptor_coordinate_sha)
         object.__setattr__(self, "_receipt_sha256", _sha256(self._projection()))
 
     @property
@@ -737,6 +754,10 @@ def frozen_mixed64_producer_policy() -> dict[str, object]:
             "coordinate_payload_required": True,
             "v7_lineage_payload_required": True,
             "payload_hashes_rederived": True,
+            "exact_v11_receipt_proposal_ligand_coordinates_bound": True,
+            "exact_v11_receptor_coordinates_bound": True,
+            "prepared_ligand_receptor_topologies_bound": True,
+            "exact_v11_binding_pre_result": True,
         },
         "failure_semantics": {
             "one_record_per_slot_required": True,

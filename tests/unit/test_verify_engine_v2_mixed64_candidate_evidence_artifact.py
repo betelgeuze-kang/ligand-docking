@@ -16,6 +16,7 @@ from betelgeuze_engine_v2.docking.mixed64_allocation import (
     TRUE_CONFORMER_RANKS,
     Mixed64AtomicFeatureEvidence,
     Mixed64ConformerSourceEvidence,
+    Mixed64ExactV11SourceEvidence,
     Mixed64FeatureEvidence,
     Mixed64RetainedSourceEvidence,
     Mixed64V7ControlSourceEvidence,
@@ -90,10 +91,21 @@ def _features(*, slot_zero_coordinate: float = 5.0) -> Mixed64FeatureEvidence:
             )
         )
     )
+    ligand_topology_sha256 = _digest("ligand-topology")
+    receptor_topology_sha256 = _digest("receptor-topology")
+    exact_source = Mixed64ExactV11SourceEvidence(
+        source_receipt_sha256=_digest("v11-source"),
+        proposal_sha256=_digest("v11-proposal"),
+        ligand_coordinate_sha256=_digest("v11-ligand-coordinate"),
+        receptor_coordinate_sha256=_digest("v11-receptor-coordinate"),
+        prepared_ligand_topology_sha256=ligand_topology_sha256,
+        prepared_receptor_topology_sha256=receptor_topology_sha256,
+    )
     return Mixed64FeatureEvidence(
-        exact_v11_source_receipt_sha256=_digest("v11-source"),
-        prepared_ligand_topology_sha256=_digest("ligand-topology"),
-        prepared_receptor_topology_sha256=_digest("receptor-topology"),
+        exact_v11_source_receipt_sha256=exact_source.source_receipt_sha256,
+        prepared_ligand_topology_sha256=ligand_topology_sha256,
+        prepared_receptor_topology_sha256=receptor_topology_sha256,
+        exact_v11_source=exact_source,
         feature_extractor_policy_sha256=_digest("feature-policy"),
         atomic_features=tuple(
             Mixed64AtomicFeatureEvidence(
@@ -444,6 +456,12 @@ def _tamper_resealed_exact_input(document: dict[str, object]) -> None:
     _reseal(document)
 
 
+def _tamper_resealed_exact_source_evidence(document: dict[str, object]) -> None:
+    exact_source = document["allocation"]["features"]["exact_v11_source"]
+    exact_source["proposal_sha256"] = _digest("cross-wired-exact-proposal")
+    _reseal(exact_source)
+
+
 def _tamper_resealed_generator_component(document: dict[str, object]) -> None:
     candidate = document["candidates"][0]
     proposal = candidate["proposal_execution_receipt"]
@@ -714,7 +732,12 @@ def test_adversarial_artifact_tampering_fails_closed(
 
 @pytest.mark.parametrize(
     "tamper",
-    (_tamper_resealed_rank, _tamper_resealed_term, _tamper_resealed_exact_input),
+    (
+        _tamper_resealed_rank,
+        _tamper_resealed_term,
+        _tamper_resealed_exact_input,
+        _tamper_resealed_exact_source_evidence,
+    ),
 )
 def test_resealed_tampering_still_fails_independent_replay(
     tmp_path: Path,
