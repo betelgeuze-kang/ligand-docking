@@ -6,34 +6,47 @@ from __future__ import annotations
 import argparse
 import ast
 import hashlib
+import importlib.util
 import json
 from pathlib import Path
-import sys
-import types
 from typing import Final
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
-for _package_name, _package_path in (
-    ("betelgeuze_engine_v2", _REPO_ROOT / "betelgeuze_engine_v2"),
-    (
-        "betelgeuze_engine_v2.docking",
-        _REPO_ROOT / "betelgeuze_engine_v2" / "docking",
-    ),
-):
-    if _package_name not in sys.modules:
-        _package = types.ModuleType(_package_name)
-        _package.__package__ = _package_name
-        _package.__path__ = [str(_package_path)]  # type: ignore[attr-defined]
-        sys.modules[_package_name] = _package
 
-from betelgeuze_engine_v2.docking.mixed64_operational_proposal_policy_v3 import (  # noqa: E402
-    DOCKING_PROPOSAL_IDENTITY_SCHEMA_ID,
-    MIXED64_OPERATIONAL_PROPOSAL_POLICY_SHA256,
-    REQUIRED_PROPOSAL_NUMERIC_POLICY_ID,
-    frozen_mixed64_operational_proposal_policy,
+
+def _load_policy_module():
+    path = (
+        _REPO_ROOT
+        / "betelgeuze_engine_v2"
+        / "docking"
+        / "mixed64_operational_proposal_policy_v3.py"
+    )
+    spec = importlib.util.spec_from_file_location(
+        "_engine_v2_mixed64_operational_proposal_policy_v3",
+        path,
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError("mixed64 operational proposal policy is unavailable")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+_POLICY = _load_policy_module()
+COORDINATE_REPRODUCTION_ABSOLUTE_TOLERANCE = (
+    _POLICY.COORDINATE_REPRODUCTION_ABSOLUTE_TOLERANCE
+)
+DOCKING_PROPOSAL_IDENTITY_SCHEMA_ID = _POLICY.DOCKING_PROPOSAL_IDENTITY_SCHEMA_ID
+MAX_OPERATIONAL_PROPOSAL_RECEIPT_CANONICAL_BYTES = (
+    _POLICY.MAX_OPERATIONAL_PROPOSAL_RECEIPT_CANONICAL_BYTES
+)
+MIXED64_OPERATIONAL_PROPOSAL_POLICY_SHA256 = (
+    _POLICY.MIXED64_OPERATIONAL_PROPOSAL_POLICY_SHA256
+)
+REQUIRED_PROPOSAL_NUMERIC_POLICY_ID = _POLICY.REQUIRED_PROPOSAL_NUMERIC_POLICY_ID
+frozen_mixed64_operational_proposal_policy = (
+    _POLICY.frozen_mixed64_operational_proposal_policy
 )
 
 
@@ -145,18 +158,37 @@ def verify_policy(path: Path = DEFAULT_POLICY_PATH) -> dict[str, object]:
         raise Mixed64OperationalProposalPolicyVerificationError(
             "operational proposal admission live-integrity boundary changed"
         )
-    transformed_identity = document.get("transformed_identity")
-    if type(transformed_identity) is not dict or any(
-        transformed_identity.get(key) is not True
-        for key in (
-            "source_operational_identity_preserved_separately",
-            "passthrough_source_transform_preserved",
-            "operational_proposal_index_is_fixed64_slot",
+    if document.get("receipt_integrity") != {
+        "maximum_canonical_bytes": (MAX_OPERATIONAL_PROPOSAL_RECEIPT_CANONICAL_BYTES),
+        "sealed_snapshot_required": True,
+        "recursive_live_integrity_required": True,
+    }:
+        raise Mixed64OperationalProposalPolicyVerificationError(
+            "operational proposal receipt bound changed"
         )
-    ) or transformed_identity.get("row_vector_rotation_composition") != (
-        "placement_rotation_matrix_multiply_source_rotation"
-    ) or transformed_identity.get("row_vector_translation_composition") != (
-        "source_translation_multiply_placement_rotation_transpose_plus_placement_translation"
+    transformed_identity = document.get("transformed_identity")
+    if (
+        type(transformed_identity) is not dict
+        or any(
+            transformed_identity.get(key) is not True
+            for key in (
+                "source_operational_identity_preserved_separately",
+                "passthrough_source_transform_preserved",
+                "operational_proposal_index_is_fixed64_slot",
+                "indexed_so3_target_centroid_rebased_to_affine_translation",
+                "single_anchor_affine_translation_reused",
+            )
+        )
+        or transformed_identity.get("row_vector_rotation_composition")
+        != ("placement_rotation_matrix_multiply_source_rotation")
+        or transformed_identity.get("row_vector_translation_composition")
+        != (
+            "source_translation_multiply_placement_rotation_transpose_plus_placement_affine_translation"
+        )
+        or transformed_identity.get(
+            "coordinate_reproduction_absolute_tolerance_binary64_hex"
+        )
+        != COORDINATE_REPRODUCTION_ABSOLUTE_TOLERANCE.hex()
     ):
         raise Mixed64OperationalProposalPolicyVerificationError(
             "operational proposal transform composition changed"
@@ -170,8 +202,10 @@ def verify_policy(path: Path = DEFAULT_POLICY_PATH) -> dict[str, object]:
             "operational proposal failure boundary changed"
         )
     authority = document.get("authority")
-    if type(authority) is not dict or not authority or any(
-        type(value) is not bool or value for value in authority.values()
+    if (
+        type(authority) is not dict
+        or not authority
+        or any(type(value) is not bool or value for value in authority.values())
     ):
         raise Mixed64OperationalProposalPolicyVerificationError(
             "operational proposal authority must remain exact false"

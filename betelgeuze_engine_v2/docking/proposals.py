@@ -21,9 +21,7 @@ MAX_DOCKING_TORSIONS = 64
 MAX_DOCKING_CANDIDATES = 4096
 MAX_DOCKING_TOP_K = 128
 MAX_DOCKING_REFINEMENT_STEPS = 256
-PROPOSAL_NUMERIC_POLICY_ID = (
-    "betelgeuze.engine_v2_proposal_numeric_identity/1.0.0"
-)
+PROPOSAL_NUMERIC_POLICY_ID = "betelgeuze.engine_v2_proposal_numeric_identity/1.0.0"
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
@@ -31,7 +29,9 @@ class DockingProposalError(ValueError):
     """A docking proposal request exceeds the supported bounded scaffold."""
 
 
-def _require_digest(value: object, *, field_name: str, allow_empty: bool = False) -> str:
+def _require_digest(
+    value: object, *, field_name: str, allow_empty: bool = False
+) -> str:
     text = str(value or "").strip().lower()
     if allow_empty and not text:
         return ""
@@ -51,17 +51,6 @@ def _finite_cpu_floating(value: torch.Tensor, *, name: str) -> None:
         raise DockingProposalError(f"{name} must be a CPU floating tensor")
     if not bool(torch.isfinite(value).all().item()):
         raise DockingProposalError(f"{name} must be finite")
-
-
-def _tensor_payload(tensor: torch.Tensor) -> list[float]:
-    return [
-        float(value)
-        for value in tensor.detach()
-        .to(dtype=torch.float64, device="cpu")
-        .contiguous()
-        .reshape(-1)
-        .tolist()
-    ]
 
 
 def _proposal_tensor_identity_payload(tensor: torch.Tensor) -> dict[str, object]:
@@ -227,9 +216,7 @@ class TorsionSearchSpace:
         if local_axes.shape != (atom_count, 3):
             raise DockingProposalError("local_axes must have shape [N,3]")
         if rotatable_mask.shape != (atom_count,) or rotatable_mask.dtype != torch.bool:
-            raise DockingProposalError(
-                "rotatable_mask must be boolean with shape [N]"
-            )
+            raise DockingProposalError("rotatable_mask must be boolean with shape [N]")
         _finite_cpu_floating(local_offsets, name="local_offsets")
         _finite_cpu_floating(local_axes, name="local_axes")
         if local_offsets.dtype != local_axes.dtype:
@@ -237,9 +224,7 @@ class TorsionSearchSpace:
                 "local_offsets and local_axes must share a dtype"
             )
         if parent.device.type != "cpu" or rotatable_mask.device.type != "cpu":
-            raise DockingProposalError(
-                "bounded docking proposal scaffold is CPU-only"
-            )
+            raise DockingProposalError("bounded docking proposal scaffold is CPU-only")
 
         roots = parent == -1
         root_count = int(roots.sum().item())
@@ -257,7 +242,11 @@ class TorsionSearchSpace:
             else _frozen_tensor(self.root_positions, name="root_positions")
         )
         if root_positions is not None:
-            if root_positions.ndim == 1 and root_count == 1 and root_positions.shape == (3,):
+            if (
+                root_positions.ndim == 1
+                and root_count == 1
+                and root_positions.shape == (3,)
+            ):
                 root_positions = root_positions.unsqueeze(0).contiguous()
             if root_positions.shape != (root_count, 3):
                 raise DockingProposalError(
@@ -344,17 +333,11 @@ class DockingProposal:
         translation = _frozen_tensor(self.translation, name="translation")
         atom_count = int(coordinates.shape[0]) if coordinates.ndim == 2 else -1
         if atom_count < 1 or coordinates.shape != (atom_count, 3):
-            raise DockingProposalError(
-                "proposal coordinates must have shape [N,3]"
-            )
+            raise DockingProposalError("proposal coordinates must have shape [N,3]")
         if torsion_angles.shape != (atom_count,):
-            raise DockingProposalError(
-                "proposal torsion_angles must have shape [N]"
-            )
+            raise DockingProposalError("proposal torsion_angles must have shape [N]")
         if rotation.shape != (3, 3) or translation.shape != (3,):
-            raise DockingProposalError(
-                "proposal rigid transform has invalid shape"
-            )
+            raise DockingProposalError("proposal rigid transform has invalid shape")
         tensors = (coordinates, torsion_angles, rotation, translation)
         for name, value in zip(
             ("coordinates", "torsion_angles", "rotation", "translation"),
@@ -508,9 +491,7 @@ class DockingProposal:
             refinement_receipt_sha256=self.refinement_receipt_sha256,
         )
         if observed != self.fingerprint_sha256:
-            raise DockingProposalError(
-                "proposal state changed after construction"
-            )
+            raise DockingProposalError("proposal state changed after construction")
 
     def with_refined_coordinates(
         self,
@@ -723,12 +704,8 @@ def generate_bounded_docking_proposals(
                 rigid_angle.unsqueeze(0),
             )[0]
             direction = _random_unit_axis(generator, dtype)
-            radius = torch.rand((), generator=generator, dtype=dtype) ** (
-                1.0 / 3.0
-            )
-            offset = (
-                direction * radius * budget.translation_radius_angstrom
-            )
+            radius = torch.rand((), generator=generator, dtype=dtype) ** (1.0 / 3.0)
+            offset = direction * radius * budget.translation_radius_angstrom
         if center is None:
             translation = offset
             coordinates = kinematic.coordinates @ rotation.T + translation

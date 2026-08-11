@@ -8,9 +8,13 @@ fingerprints, candidate IDs, scores, results, or authority.
 
 The canonical policy is
 `config/engine_v2_mixed64_operational_proposal_v3.json`, with SHA-256
-`9b028cc5ec0d32a6b28538d1a91955f2766fe796f488b38888fdd20819611d9a`.
+`9535730901a27ab3009e7b6fff12e532dd5d995e8fa33a038f4d321593885de9`.
 It binds geometric-admission v3 policy SHA-256
-`ef78d3655743c40c5c7fe8524742c178b2f6a6c4120bef445288c056d59d6648`.
+`feb9c00eb71bb45fe07479c6f5b8e6faa171b9968fa4dbb2370e518c71290526`.
+
+Source proposal identity payloads remain capped at 4 MiB. Complete sealed
+operational evidence receipts use a separate 128 MiB fail-closed ceiling so a
+valid fixed64 admission payload is not rejected by the smaller identity limit.
 
 ## Exact source reconstruction
 
@@ -42,7 +46,11 @@ lanes, the bridge:
 
 - composes the source transform followed by the placement transform using
   row-vector semantics, `R_out = R_place @ R_source` and
-  `t_out = t_source @ R_place.T + t_place`;
+  `t_out = t_source @ R_place.T + t_affine`;
+- treats the indexed SO(3) receipt translation as its declared target centroid
+  and rederives `t_affine = target_centroid - source_centroid @ R_place.T`;
+- reuses the single-anchor receipt translation as its conventional affine
+  translation;
 - numerically reproduces the producer output coordinates;
 - preserves source torsion, problem, and search-space state;
 - uses the fixed64 slot as the transformed proposal index;

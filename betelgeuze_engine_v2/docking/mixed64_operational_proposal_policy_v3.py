@@ -29,8 +29,10 @@ REQUIRED_PROPOSAL_NUMERIC_POLICY_ID: Final = (
     "betelgeuze.engine_v2_proposal_numeric_identity/1.0.0"
 )
 BOUND_GEOMETRIC_ADMISSION_V3_POLICY_SHA256: Final = (
-    "ef78d3655743c40c5c7fe8524742c178b2f6a6c4120bef445288c056d59d6648"
+    "feb9c00eb71bb45fe07479c6f5b8e6faa171b9968fa4dbb2370e518c71290526"
 )
+MAX_OPERATIONAL_PROPOSAL_RECEIPT_CANONICAL_BYTES: Final = 128 * 1024 * 1024
+COORDINATE_REPRODUCTION_ABSOLUTE_TOLERANCE: Final = 1.0e-12
 
 MATERIALIZED_STATUS: Final = "materialized"
 TYPED_MATERIALIZATION_FAILURE_STATUS: Final = "typed_materialization_failure"
@@ -57,6 +59,13 @@ def frozen_mixed64_operational_proposal_policy() -> dict[str, object]:
             BOUND_GEOMETRIC_ADMISSION_V3_POLICY_SHA256
         ),
         "candidate_denominator": 64,
+        "receipt_integrity": {
+            "maximum_canonical_bytes": (
+                MAX_OPERATIONAL_PROPOSAL_RECEIPT_CANONICAL_BYTES
+            ),
+            "sealed_snapshot_required": True,
+            "recursive_live_integrity_required": True,
+        },
         "admission_live_integrity": {
             "recursive_preflight_required": True,
             "recursive_postflight_required": True,
@@ -75,14 +84,18 @@ def frozen_mixed64_operational_proposal_policy() -> dict[str, object]:
         },
         "transformed_identity": {
             "placement_quaternion_reused": True,
-            "placement_translation_reused": True,
+            "indexed_so3_target_centroid_rebased_to_affine_translation": True,
+            "single_anchor_affine_translation_reused": True,
+            "coordinate_reproduction_absolute_tolerance_binary64_hex": (
+                COORDINATE_REPRODUCTION_ABSOLUTE_TOLERANCE.hex()
+            ),
             "source_operational_identity_preserved_separately": True,
             "passthrough_source_transform_preserved": True,
             "row_vector_rotation_composition": (
                 "placement_rotation_matrix_multiply_source_rotation"
             ),
             "row_vector_translation_composition": (
-                "source_translation_multiply_placement_rotation_transpose_plus_placement_translation"
+                "source_translation_multiply_placement_rotation_transpose_plus_placement_affine_translation"
             ),
             "torsion_state_preserved_from_source": True,
             "problem_and_search_identity_preserved_from_source": True,
@@ -129,6 +142,7 @@ MIXED64_OPERATIONAL_PROPOSAL_POLICY_SHA256: Final = hashlib.sha256(
 
 __all__ = [
     "BOUND_GEOMETRIC_ADMISSION_V3_POLICY_SHA256",
+    "COORDINATE_REPRODUCTION_ABSOLUTE_TOLERANCE",
     "DOCKING_PROPOSAL_IDENTITY_SCHEMA_ID",
     "MATERIALIZED_STATUS",
     "MIXED64_OPERATIONAL_PROPOSAL_BATCH_SCHEMA_ID",
@@ -137,6 +151,7 @@ __all__ = [
     "MIXED64_OPERATIONAL_PROPOSAL_POLICY_SHA256",
     "MIXED64_OPERATIONAL_PROPOSAL_PROFILE_ID",
     "MIXED64_OPERATIONAL_PROPOSAL_RECORD_SCHEMA_ID",
+    "MAX_OPERATIONAL_PROPOSAL_RECEIPT_CANONICAL_BYTES",
     "PLACEMENT_TRANSFORM_CROSS_WIRED",
     "REQUIRED_PROPOSAL_NUMERIC_POLICY_ID",
     "SOURCE_OPERATIONAL_COORDINATE_CROSS_WIRED",

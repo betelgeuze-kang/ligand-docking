@@ -11,6 +11,7 @@ import torch
 from betelgeuze_engine_v2.docking.geometric_admission_v3 import GeometricAdmissionV3
 from betelgeuze_engine_v2.docking.mixed64_allocation import (
     Mixed64ConformerSourceEvidence,
+    Mixed64ExactV11SourceEvidence,
     Mixed64FeatureEvidence,
     Mixed64RetainedSourceEvidence,
     Mixed64V7ControlSourceEvidence,
@@ -26,6 +27,10 @@ from betelgeuze_engine_v2.docking.mixed64_operational_proposal_v3 import (
     Mixed64OperationalProposalV3Error,
     frozen_mixed64_operational_proposal_policy,
     materialize_mixed64_operational_proposals,
+)
+from betelgeuze_engine_v2.docking.mixed64_proposal_geometry_v3 import (
+    IndexedSO3PlacementReceiptV1,
+    coordinate_sha256,
 )
 from betelgeuze_engine_v2.docking.mixed64_proposal_producer_v3 import (
     Mixed64CoordinateSourcePayloadV1,
@@ -107,9 +112,7 @@ def _operational_fixture(
     operational_exact = _operational_source(
         exact,
         coordinate_identity_override=(
-            _digest("wrong-coordinate")
-            if corrupt_exact_coordinate_identity
-            else None
+            _digest("wrong-coordinate") if corrupt_exact_coordinate_identity else None
         ),
         nonidentity_transform=nonidentity_source_transform,
     )
@@ -140,6 +143,22 @@ def _operational_fixture(
         for value in retained
     )
     original_features = original_allocation.features
+    distant_receptor = tuple(
+        (point[0], point[1], point[2] + 1_000.0)
+        for point in original_bundle.receptor_coordinates
+    )
+    exact_source = Mixed64ExactV11SourceEvidence(
+        source_receipt_sha256=operational_exact.source_receipt_sha256,
+        proposal_sha256=operational_exact.proposal_sha256,
+        ligand_coordinate_sha256=operational_exact.coordinate_sha256,
+        receptor_coordinate_sha256=coordinate_sha256(distant_receptor),
+        prepared_ligand_topology_sha256=(
+            original_features.prepared_ligand_topology_sha256
+        ),
+        prepared_receptor_topology_sha256=(
+            original_features.prepared_receptor_topology_sha256
+        ),
+    )
     features = Mixed64FeatureEvidence(
         exact_v11_source_receipt_sha256=operational_exact.source_receipt_sha256,
         prepared_ligand_topology_sha256=(
@@ -148,6 +167,7 @@ def _operational_fixture(
         prepared_receptor_topology_sha256=(
             original_features.prepared_receptor_topology_sha256
         ),
+        exact_v11_source=exact_source,
         feature_extractor_policy_sha256=(
             original_features.feature_extractor_policy_sha256
         ),
@@ -187,10 +207,6 @@ def _operational_fixture(
         ),
     )
     allocation = build_fixed_mixed64_allocation(features)
-    distant_receptor = tuple(
-        (point[0], point[1], point[2] + 100.0)
-        for point in original_bundle.receptor_coordinates
-    )
     bundle = Mixed64ProposalSourceBundleV1(
         allocation=allocation,
         exact_v11_source=operational_exact,
@@ -234,21 +250,24 @@ def test_exact_operational_sources_materialize_all_admitted_slots_repeatably() -
         )
         if record.status == MATERIALIZED_STATUS:
             assert record.operational_proposal is not None
-            assert tuple(
-                tuple(float(component) for component in point)
-                for point in record.operational_proposal.coordinates.tolist()
-            ) == producer_record.output_coordinates
+            assert (
+                tuple(
+                    tuple(float(component) for component in point)
+                    for point in record.operational_proposal.coordinates.tolist()
+                )
+                == producer_record.output_coordinates
+            )
             assert record.operational_proposal.proposal_index == record.slot_index
 
 
-def test_passthrough_preserves_source_separately_and_binds_fixed64_slot_identity() -> None:
+def test_passthrough_preserves_source_separately_and_binds_fixed64_slot_identity() -> (
+    None
+):
     _allocation, _bundle, producer, admission = _operational_fixture()
     batch = materialize_mixed64_operational_proposals(admission)
 
     passthrough = next(
-        value
-        for value in batch.records
-        if value.materialized and value.slot_index < 24
+        value for value in batch.records if value.materialized and value.slot_index < 24
     )
     transformed = next(
         value
@@ -291,11 +310,7 @@ def test_transformed_lane_composes_source_then_placement_rigid_transform() -> No
         passthrough.operational_proposal.translation,
         passthrough.source_operational_proposal.translation,
     )
-    record = next(
-        value
-        for value in batch.records[24:60]
-        if value.materialized
-    )
+    record = next(value for value in batch.records[24:60] if value.materialized)
     source = record.source_operational_proposal
     operational = record.operational_proposal
     placement = record.admission_decision.producer_record.placement_receipt
@@ -315,6 +330,18 @@ def test_transformed_lane_composes_source_then_placement_rigid_transform() -> No
         placement.translation,
         dtype=torch.float64,
     )
+    if type(placement) is IndexedSO3PlacementReceiptV1:
+        source_centroid = torch.tensor(
+            tuple(
+                sum(point[axis] for point in placement.source_coordinates)
+                / len(placement.source_coordinates)
+                for axis in range(3)
+            ),
+            dtype=torch.float64,
+        )
+        placement_translation = (
+            placement_translation - source_centroid @ placement_rotation.T
+        )
 
     assert torch.equal(
         operational.rotation,
@@ -325,6 +352,32 @@ def test_transformed_lane_composes_source_then_placement_rigid_transform() -> No
         source.translation @ placement_rotation.T + placement_translation,
     )
     assert not torch.equal(operational.rotation, placement_rotation)
+
+
+def test_all_admitted_indexed_so3_slots_rederive_their_affine_transform() -> None:
+    _allocation, _bundle, producer, admission = _operational_fixture()
+    batch = materialize_mixed64_operational_proposals(admission)
+    admitted_so3 = [
+        decision.slot_index
+        for decision in admission.decisions
+        if decision.status == "accepted"
+        and type(decision.producer_record.placement_receipt)
+        is IndexedSO3PlacementReceiptV1
+    ]
+
+    assert admitted_so3 == list(range(24, 44))
+    for slot_index in admitted_so3:
+        record = batch.records[slot_index]
+        assert record.status == MATERIALIZED_STATUS
+        assert record.failure_code is None
+        assert record.operational_proposal is not None
+        assert (
+            tuple(
+                tuple(float(component) for component in point)
+                for point in record.operational_proposal.coordinates.tolist()
+            )
+            == producer.records[slot_index].output_coordinates
+        )
 
 
 def test_unexpected_runtime_failure_is_not_relabeled_as_typed_slot_failure(
@@ -344,6 +397,32 @@ def test_unexpected_runtime_failure_is_not_relabeled_as_typed_slot_failure(
     )
     with pytest.raises(RuntimeError, match="unexpected materialization failure"):
         materialize_mixed64_operational_proposals(admission)
+
+
+def test_binary64_overflow_is_a_declared_identity_failure() -> None:
+    import betelgeuze_engine_v2.docking.mixed64_operational_proposal_v3 as module
+
+    with pytest.raises(Mixed64OperationalProposalV3Error) as captured:
+        module._float_vector(
+            {
+                "dtype": "float64",
+                "shape": [1],
+                "values_binary64_hex": ["0x1p+999999999"],
+            },
+            name="overflow",
+            expected_shape=(1,),
+        )
+    assert captured.value.code == SOURCE_PROPOSAL_IDENTITY_NOT_OPERATIONAL
+
+
+def test_receipt_capacity_is_distinct_from_source_identity_capacity() -> None:
+    import betelgeuze_engine_v2.docking.mixed64_operational_proposal_v3 as module
+
+    payload, receipt_sha256 = module._seal_projection(
+        {"payload": "x" * (4 * 1024 * 1024 + 1)}
+    )
+    assert len(payload) > 4 * 1024 * 1024
+    assert hashlib.sha256(payload).hexdigest() == receipt_sha256
 
 
 def test_admission_live_mutation_fails_before_operational_materialization(
@@ -415,7 +494,10 @@ def test_source_coordinate_identity_cross_wiring_is_typed_per_dependent_slot() -
     )
     assert failed
     assert all(value.operational_proposal is None for value in failed)
-    assert all(value.failure_code == SOURCE_PROPOSAL_IDENTITY_NOT_OPERATIONAL for value in failed)
+    assert all(
+        value.failure_code == SOURCE_PROPOSAL_IDENTITY_NOT_OPERATIONAL
+        for value in failed
+    )
 
 
 def test_upstream_rejections_never_materialize_proposal_state() -> None:
@@ -454,9 +536,10 @@ def test_public_proposal_factory_rederives_identity_without_fingerprint_input() 
     assert hashlib.sha256(_canonical(proposal.identity_payload())).hexdigest() == (
         proposal.fingerprint_sha256
     )
-    assert "fingerprint_sha256" not in inspect.signature(
-        bind_docking_proposal_state
-    ).parameters
+    assert (
+        "fingerprint_sha256"
+        not in inspect.signature(bind_docking_proposal_state).parameters
+    )
 
 
 def test_record_cannot_be_forged_without_factory() -> None:
@@ -480,15 +563,14 @@ def test_policy_and_output_keep_all_authority_false() -> None:
 
     assert len(MIXED64_OPERATIONAL_PROPOSAL_POLICY_SHA256) == 64
     assert policy["candidate_denominator"] == 64
-    assert policy["transformed_identity"][
-        "operational_proposal_index_is_fixed64_slot"
-    ] is True
+    assert (
+        policy["transformed_identity"]["operational_proposal_index_is_fixed64_slot"]
+        is True
+    )
     assert policy["failure_semantics"]["unexpected_runtime_failure_typed"] is False
     assert all(value is False for value in policy["authority"].values())
     assert document["producer_attested"] is False
-    assert document["admission_batch"]["receipt_sha256"] == (
-        admission.receipt_sha256
-    )
+    assert document["admission_batch"]["receipt_sha256"] == (admission.receipt_sha256)
     assert document["activation_evidence_eligible"] is False
     assert document["refinement_scoring_validity_executed"] is False
     assert document["molecular_execution_authorized"] is False

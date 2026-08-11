@@ -3,8 +3,9 @@
 The bridge consumes only one sealed geometric-admission v3 batch. Complete
 source proposal identity payloads are rederived as ``DockingProposal`` values;
 accepted transformed lanes receive the allocation-owned quaternion and
-translation. Unsupported historical identity payloads become typed slot
-failures instead of guessed proposal state.
+the lane-specific affine translation rederived from the placement receipt.
+Unsupported historical identity payloads become typed slot failures instead
+of guessed proposal state.
 
 This component does not refine, score, evaluate validity, reserve, or execute a
 molecular cohort. Its receipts are structural and non-authoritative.
@@ -48,8 +49,10 @@ from .mixed64_proposal_producer_v3 import (
 )
 from .mixed64_operational_proposal_policy_v3 import (
     BOUND_GEOMETRIC_ADMISSION_V3_POLICY_SHA256,
+    COORDINATE_REPRODUCTION_ABSOLUTE_TOLERANCE,
     DOCKING_PROPOSAL_IDENTITY_SCHEMA_ID,
     MATERIALIZED_STATUS,
+    MAX_OPERATIONAL_PROPOSAL_RECEIPT_CANONICAL_BYTES,
     MIXED64_OPERATIONAL_PROPOSAL_BATCH_SCHEMA_ID,
     MIXED64_OPERATIONAL_PROPOSAL_COMPONENT_ID,
     MIXED64_OPERATIONAL_PROPOSAL_POLICY_SCHEMA_ID,
@@ -127,7 +130,13 @@ def _fail(code: str, message: str) -> None:
     raise Mixed64OperationalProposalV3Error(code, message)
 
 
-def _canonical_bytes(value: object) -> bytes:
+def _canonical_bytes(
+    value: object,
+    *,
+    maximum_bytes: int = MAX_OPERATIONAL_PROPOSAL_RECEIPT_CANONICAL_BYTES,
+    error_code: str = SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED,
+    name: str = "operational proposal receipt",
+) -> bytes:
     try:
         payload = json.dumps(
             value,
@@ -138,13 +147,13 @@ def _canonical_bytes(value: object) -> bytes:
         ).encode("ascii")
     except (TypeError, ValueError, UnicodeError) as exc:
         raise Mixed64OperationalProposalV3Error(
-            SOURCE_PROPOSAL_IDENTITY_NOT_OPERATIONAL,
-            "proposal identity is not canonical JSON",
+            error_code,
+            f"{name} is not canonical JSON",
         ) from exc
-    if len(payload) > _MAX_IDENTITY_JSON_BYTES:
+    if len(payload) > maximum_bytes:
         _fail(
-            SOURCE_PROPOSAL_IDENTITY_NOT_OPERATIONAL,
-            "proposal identity exceeds the byte bound",
+            error_code,
+            f"{name} exceeds the byte bound",
         )
     return payload
 
@@ -161,7 +170,9 @@ def _seal_projection(value: object) -> tuple[bytes, str]:
 def _unseal_projection(payload: bytes) -> dict[str, object]:
     document = json.loads(payload)
     if type(document) is not dict:
-        _fail(SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED, "sealed receipt is not an object")
+        _fail(
+            SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED, "sealed receipt is not an object"
+        )
     return document
 
 
@@ -221,7 +232,7 @@ def _float_vector(
             _fail(SOURCE_PROPOSAL_IDENTITY_NOT_OPERATIONAL, f"{name} is not binary64")
         try:
             observed = float.fromhex(item)
-        except ValueError as exc:
+        except (OverflowError, ValueError) as exc:
             raise Mixed64OperationalProposalV3Error(
                 SOURCE_PROPOSAL_IDENTITY_NOT_OPERATIONAL,
                 f"{name} is not binary64",
@@ -236,7 +247,10 @@ def _coordinates_tensor(
     coordinates: tuple[tuple[float, float, float], ...],
 ) -> torch.Tensor:
     if not coordinates or len(coordinates) > _MAX_LIGAND_ATOMS:
-        _fail(SOURCE_OPERATIONAL_COORDINATE_CROSS_WIRED, "coordinate denominator is invalid")
+        _fail(
+            SOURCE_OPERATIONAL_COORDINATE_CROSS_WIRED,
+            "coordinate denominator is invalid",
+        )
     return torch.tensor(coordinates, dtype=torch.float64)
 
 
@@ -264,7 +278,9 @@ def _source_for_slot(
     else:
         source = bundle.exact_v11_source
     if source is None:
-        _fail(SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED, "producer source payload is absent")
+        _fail(
+            SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED, "producer source payload is absent"
+        )
     return source
 
 
@@ -284,7 +300,13 @@ def _parse_source_proposal(
         or set(document) != _EXPECTED_IDENTITY_KEYS
         or document.get("schema_id") != DOCKING_PROPOSAL_IDENTITY_SCHEMA_ID
         or document.get("numeric_policy_id") != PROPOSAL_NUMERIC_POLICY_ID
-        or _canonical_bytes(document) != raw
+        or _canonical_bytes(
+            document,
+            maximum_bytes=_MAX_IDENTITY_JSON_BYTES,
+            error_code=SOURCE_PROPOSAL_IDENTITY_NOT_OPERATIONAL,
+            name="proposal identity",
+        )
+        != raw
         or hashlib.sha256(raw).hexdigest() != source.proposal_sha256
     ):
         _fail(
@@ -299,7 +321,10 @@ def _parse_source_proposal(
         or type(seed) is not int
         or not 0 <= seed <= _MAX_SEED
     ):
-        _fail(SOURCE_PROPOSAL_IDENTITY_NOT_OPERATIONAL, "proposal index or seed is invalid")
+        _fail(
+            SOURCE_PROPOSAL_IDENTITY_NOT_OPERATIONAL,
+            "proposal index or seed is invalid",
+        )
     coordinates = _coordinates_tensor(source.coordinates)
     torsions = _float_vector(
         document["torsion_angles"],
@@ -357,7 +382,10 @@ def _parse_source_proposal(
             "source DockingProposal identity does not rederive",
         ) from exc
     if proposal.identity_payload() != document:
-        _fail(SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED, "source identity projection changed")
+        _fail(
+            SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED,
+            "source identity projection changed",
+        )
     return proposal
 
 
@@ -377,6 +405,37 @@ def _rotation_matrix(
         ),
         dtype=torch.float64,
     )
+
+
+def _placement_rigid_transform(
+    placement: IndexedSO3PlacementReceiptV1 | SingleAnchorPlacementReceiptV1,
+    *,
+    source_coordinates: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Rederive the row-vector affine transform encoded by one placement."""
+
+    placement_rotation = _rotation_matrix(placement.quaternion)
+    placement_translation = torch.tensor(
+        placement.translation,
+        dtype=torch.float64,
+    )
+    if type(placement) is IndexedSO3PlacementReceiptV1:
+        receipt_source = _coordinates_tensor(placement.source_coordinates)
+        if not torch.equal(receipt_source, source_coordinates):
+            _fail(
+                SOURCE_OPERATIONAL_COORDINATE_CROSS_WIRED,
+                "indexed SO3 source coordinates changed",
+            )
+        inverse = 1.0 / len(placement.source_coordinates)
+        centroid = torch.tensor(
+            tuple(
+                sum(point[axis] for point in placement.source_coordinates) * inverse
+                for axis in range(3)
+            ),
+            dtype=torch.float64,
+        )
+        placement_translation = placement_translation - centroid @ placement_rotation.T
+    return placement_rotation, placement_translation
 
 
 def _materialization_seed(
@@ -409,7 +468,10 @@ class Mixed64OperationalProposalRecordV1:
 
     def __post_init__(self, _factory_seal: object | None) -> None:
         if _factory_seal is not _RECORD_FACTORY_SEAL:
-            _fail(SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED, "record requires bounded factory")
+            _fail(
+                SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED,
+                "record requires bounded factory",
+            )
         if self.schema_id != MIXED64_OPERATIONAL_PROPOSAL_RECORD_SCHEMA_ID:
             _fail(SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED, "record schema changed")
         if type(self.admission_decision) is not GeometricAdmissionDecisionV3:
@@ -424,7 +486,10 @@ class Mixed64OperationalProposalRecordV1:
                 or type(self.operational_proposal) is not DockingProposal
                 or self.failure_code is not None
             ):
-                _fail(SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED, "materialized record is incomplete")
+                _fail(
+                    SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED,
+                    "materialized record is incomplete",
+                )
             producer_record = self.admission_decision.producer_record
             if (
                 producer_record.source_proposal_sha256 is None
@@ -445,7 +510,10 @@ class Mixed64OperationalProposalRecordV1:
                 )
                 != self.source_payload.coordinate_sha256
             ):
-                _fail(SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED, "materialized lineage is absent")
+                _fail(
+                    SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED,
+                    "materialized lineage is absent",
+                )
             self.source_operational_proposal.assert_integrity()
             self.operational_proposal.assert_integrity()
             source = self.source_operational_proposal
@@ -477,22 +545,22 @@ class Mixed64OperationalProposalRecordV1:
                 IndexedSO3PlacementReceiptV1,
                 SingleAnchorPlacementReceiptV1,
             }:
-                placement_rotation = _rotation_matrix(placement.quaternion)
-                placement_translation = torch.tensor(
-                    placement.translation,
-                    dtype=torch.float64,
+                placement_rotation, placement_translation = _placement_rigid_transform(
+                    placement,
+                    source_coordinates=source.coordinates,
                 )
                 expected_rotation = placement_rotation @ source.rotation
                 expected_translation = (
-                    source.translation @ placement_rotation.T
-                    + placement_translation
+                    source.translation @ placement_rotation.T + placement_translation
                 )
             else:
                 _fail(
                     UNSUPPORTED_PLACEMENT_RECEIPT,
                     "materialized placement receipt is not supported",
                 )
-            if not torch.equal(operational.rotation, expected_rotation) or not torch.equal(
+            if not torch.equal(
+                operational.rotation, expected_rotation
+            ) or not torch.equal(
                 operational.translation,
                 expected_translation,
             ):
@@ -503,24 +571,31 @@ class Mixed64OperationalProposalRecordV1:
         elif self.status == TYPED_MATERIALIZATION_FAILURE_STATUS:
             if (
                 self.admission_decision.status != ACCEPTED_STATUS
+                or type(self.source_payload) is not Mixed64CoordinateSourcePayloadV1
+                or (
+                    self.source_operational_proposal is not None
+                    and type(self.source_operational_proposal) is not DockingProposal
+                )
                 or self.operational_proposal is not None
                 or self.failure_code not in _MATERIALIZATION_FAILURE_CODES
             ):
-                _fail(SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED, "typed failure is invalid")
+                _fail(
+                    SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED, "typed failure is invalid"
+                )
         else:
-            if (
-                self.admission_decision.status == ACCEPTED_STATUS
-                or any(
-                    value is not None
-                    for value in (
-                        self.source_payload,
-                        self.source_operational_proposal,
-                        self.operational_proposal,
-                        self.failure_code,
-                    )
+            if self.admission_decision.status == ACCEPTED_STATUS or any(
+                value is not None
+                for value in (
+                    self.source_payload,
+                    self.source_operational_proposal,
+                    self.operational_proposal,
+                    self.failure_code,
                 )
             ):
-                _fail(SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED, "upstream record fabricated state")
+                _fail(
+                    SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED,
+                    "upstream record fabricated state",
+                )
         sealed, receipt_sha256 = _seal_projection(self._projection())
         object.__setattr__(self, "_canonical_projection_bytes", sealed)
         object.__setattr__(self, "_receipt_sha256", receipt_sha256)
@@ -548,7 +623,9 @@ class Mixed64OperationalProposalRecordV1:
             "producer_evidence_proposal_sha256": producer.source_proposal_sha256,
             "producer_coordinate_sha256": producer.source_coordinate_sha256,
             "source_payload_receipt_sha256": (
-                None if self.source_payload is None else self.source_payload.receipt_sha256
+                None
+                if self.source_payload is None
+                else self.source_payload.receipt_sha256
             ),
             "source_operational_proposal_sha256": (
                 None if source is None else source.fingerprint_sha256
@@ -569,7 +646,9 @@ class Mixed64OperationalProposalRecordV1:
                 None if operational is None else operational.seed
             ),
             "operational_coordinate_fingerprint_sha256": (
-                None if operational is None else operational.coordinate_fingerprint_sha256
+                None
+                if operational is None
+                else operational.coordinate_fingerprint_sha256
             ),
             "operational_proposal_identity": (
                 None if operational is None else operational.identity_payload()
@@ -580,7 +659,9 @@ class Mixed64OperationalProposalRecordV1:
             "evidence_and_operational_coordinate_identities_both_preserved": True,
             "source_operational_identity_preserved_separately": source is not None,
             "operational_proposal_index_is_fixed64_slot": (
-                None if operational is None else operational.proposal_index == self.slot_index
+                None
+                if operational is None
+                else operational.proposal_index == self.slot_index
             ),
             "producer_attested": False,
             "activation_evidence_eligible": False,
@@ -648,7 +729,10 @@ class Mixed64OperationalProposalBatchV1:
 
     def __post_init__(self, _factory_seal: object | None) -> None:
         if _factory_seal is not _BATCH_FACTORY_SEAL:
-            _fail(SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED, "batch requires bounded factory")
+            _fail(
+                SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED,
+                "batch requires bounded factory",
+            )
         if (
             self.schema_id != MIXED64_OPERATIONAL_PROPOSAL_BATCH_SCHEMA_ID
             or self.profile_id != MIXED64_OPERATIONAL_PROPOSAL_PROFILE_ID
@@ -659,30 +743,54 @@ class Mixed64OperationalProposalBatchV1:
         if (
             type(self.records) is not tuple
             or len(self.records) != FIXED_MIXED64_CANDIDATE_COUNT
-            or any(type(value) is not Mixed64OperationalProposalRecordV1 for value in self.records)
-            or tuple(value.slot_index for value in self.records) != tuple(range(64))
+            or any(
+                type(value) is not Mixed64OperationalProposalRecordV1
+                for value in self.records
+            )
+            or tuple(value.slot_index for value in self.records)
+            != tuple(range(FIXED_MIXED64_CANDIDATE_COUNT))
         ):
-            _fail(SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED, "batch denominator or order changed")
-        for decision, record in zip(self.admission_batch.decisions, self.records, strict=True):
+            _fail(
+                SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED,
+                "batch denominator or order changed",
+            )
+        for decision, record in zip(
+            self.admission_batch.decisions, self.records, strict=True
+        ):
             if decision.receipt_sha256 != record.admission_decision.receipt_sha256:
-                _fail(SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED, "batch decision binding changed")
+                _fail(
+                    SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED,
+                    "batch decision binding changed",
+                )
         materialized = tuple(value for value in self.records if value.materialized)
-        if len(
-            {
-                value.operational_proposal.problem_fingerprint_sha256
-                for value in materialized
-                if value.operational_proposal is not None
-            }
-        ) > 1:
-            _fail(SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED, "batch problem identity is cross-wired")
-        if len(
-            {
-                value.operational_proposal.search_space_fingerprint_sha256
-                for value in materialized
-                if value.operational_proposal is not None
-            }
-        ) > 1:
-            _fail(SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED, "batch search-space identity is cross-wired")
+        if (
+            len(
+                {
+                    value.operational_proposal.problem_fingerprint_sha256
+                    for value in materialized
+                    if value.operational_proposal is not None
+                }
+            )
+            > 1
+        ):
+            _fail(
+                SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED,
+                "batch problem identity is cross-wired",
+            )
+        if (
+            len(
+                {
+                    value.operational_proposal.search_space_fingerprint_sha256
+                    for value in materialized
+                    if value.operational_proposal is not None
+                }
+            )
+            > 1
+        ):
+            _fail(
+                SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED,
+                "batch search-space identity is cross-wired",
+            )
         sealed, receipt_sha256 = _seal_projection(self._projection())
         object.__setattr__(self, "_canonical_projection_bytes", sealed)
         object.__setattr__(self, "_receipt_sha256", receipt_sha256)
@@ -701,8 +809,7 @@ class Mixed64OperationalProposalBatchV1:
     @property
     def upstream_not_materialized_count(self) -> int:
         return sum(
-            value.status == UPSTREAM_NOT_MATERIALIZED_STATUS
-            for value in self.records
+            value.status == UPSTREAM_NOT_MATERIALIZED_STATUS for value in self.records
         )
 
     def _projection(self) -> dict[str, object]:
@@ -789,7 +896,10 @@ def _materialize_record(
             or producer.source_proposal_sha256 is None
             or producer.source_coordinate_sha256 is None
         ):
-            _fail(SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED, "accepted producer record is incomplete")
+            _fail(
+                SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED,
+                "accepted producer record is incomplete",
+            )
         source = _source_for_slot(admission_batch, slot_index=decision.slot_index)
         placement = producer.placement_receipt
         if type(placement) is ExactPassthroughPlacementReceiptV1:
@@ -807,7 +917,10 @@ def _materialize_record(
         else:
             placement_source_matches = False
         if not placement_source_matches:
-            _fail(SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED, "placement source is cross-wired")
+            _fail(
+                SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED,
+                "placement source is cross-wired",
+            )
         source_proposal = _parse_source_proposal(source)
         source_coordinates = _coordinates_tensor(source.coordinates)
         output = _coordinates_tensor(producer.output_coordinates)
@@ -817,7 +930,10 @@ def _materialize_record(
         )
         if type(placement) is ExactPassthroughPlacementReceiptV1:
             if source_proposal.fingerprint_sha256 != producer.source_proposal_sha256:
-                _fail(SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED, "passthrough operational identity changed")
+                _fail(
+                    SOURCE_OPERATIONAL_PROPOSAL_CROSS_WIRED,
+                    "passthrough operational identity changed",
+                )
             if not torch.equal(source_coordinates, output):
                 _fail(
                     SOURCE_OPERATIONAL_COORDINATE_CROSS_WIRED,
@@ -830,9 +946,7 @@ def _materialize_record(
                 translation=source_proposal.translation,
                 proposal_index=decision.slot_index,
                 seed=materialization_seed,
-                problem_fingerprint_sha256=(
-                    source_proposal.problem_fingerprint_sha256
-                ),
+                problem_fingerprint_sha256=(source_proposal.problem_fingerprint_sha256),
                 search_space_fingerprint_sha256=(
                     source_proposal.search_space_fingerprint_sha256
                 ),
@@ -841,19 +955,18 @@ def _materialize_record(
             IndexedSO3PlacementReceiptV1,
             SingleAnchorPlacementReceiptV1,
         }:
-            placement_rotation = _rotation_matrix(placement.quaternion)
-            placement_translation = torch.tensor(
-                placement.translation,
-                dtype=torch.float64,
+            placement_rotation, placement_translation = _placement_rigid_transform(
+                placement,
+                source_coordinates=source_coordinates,
             )
-            expected = (
-                source_coordinates @ placement_rotation.T
-                + placement_translation
-            )
+            expected = source_coordinates @ placement_rotation.T + placement_translation
             if not torch.equal(expected, output):
                 maximum_error = float(torch.max(torch.abs(expected - output)).item())
-                if maximum_error > 1.0e-12:
-                    _fail(PLACEMENT_TRANSFORM_CROSS_WIRED, "placement transform does not reproduce output")
+                if maximum_error > COORDINATE_REPRODUCTION_ABSOLUTE_TOLERANCE:
+                    _fail(
+                        PLACEMENT_TRANSFORM_CROSS_WIRED,
+                        "placement transform does not reproduce output",
+                    )
             composed_rotation = placement_rotation @ source_proposal.rotation
             composed_translation = (
                 source_proposal.translation @ placement_rotation.T
@@ -917,8 +1030,7 @@ def materialize_mixed64_operational_proposals(
         ) from exc
     decisions = tuple(admission_batch.decisions)
     records = tuple(
-        _materialize_record(admission_batch, decision)
-        for decision in decisions
+        _materialize_record(admission_batch, decision) for decision in decisions
     )
     try:
         admission_batch.assert_live_integrity()
