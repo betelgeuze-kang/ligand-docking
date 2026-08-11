@@ -359,21 +359,39 @@ fn periodic_constraint_uses_the_same_unwrapped_half_open_image_as_oracle() {
     assert!(actual.positions.x_angstrom[1] > 9.0);
 }
 
+#[test]
+fn hip_safe_short_dynamics_matches_rust_cpu_without_backend_fallback() {
+    if !runtime::Context::backend_available(runtime::Backend::HipSafe, 0).unwrap() {
+        eprintln!("SKIP: deterministic hip_safe device zero is unavailable");
+        return;
+    }
+    assert_native_backend_short_dynamics(runtime::Backend::HipSafe);
+}
+
 #[cfg(feature = "hip")]
 #[test]
-fn hip_short_dynamics_matches_cpu_without_backend_fallback() {
-    if !runtime::Context::backend_available(runtime::Backend::Hip, 0).unwrap() {
+fn hip_fast_short_dynamics_matches_rust_cpu_without_backend_fallback() {
+    if !runtime::Context::backend_available(runtime::Backend::HipFast, 0).unwrap() {
         assert_ne!(
             std::env::var("BG_REQUIRE_HIP_DEVICE").as_deref(),
             Ok("1"),
-            "BG_REQUIRE_HIP_DEVICE=1 but HIP device zero is unavailable"
+            "BG_REQUIRE_HIP_DEVICE=1 but hip_fast device zero is unavailable"
         );
-        eprintln!("SKIP: no compatible HIP device zero is visible");
+        eprintln!("SKIP: no compatible hip_fast device zero is visible");
         return;
     }
-    let cpu = runtime::Context::new(runtime::ContextOptions::cpu()).unwrap();
-    let hip = runtime::Context::new(runtime::ContextOptions::hip(0)).unwrap();
-    assert_eq!(hip.backend().unwrap(), runtime::Backend::Hip);
+    assert_native_backend_short_dynamics(runtime::Backend::HipFast);
+}
+
+fn assert_native_backend_short_dynamics(backend: runtime::Backend) {
+    let rust_cpu = runtime::Context::new(runtime::ContextOptions::rust_cpu()).unwrap();
+    let backend_options = match backend {
+        runtime::Backend::HipSafe => runtime::ContextOptions::hip_safe(0),
+        runtime::Backend::HipFast => runtime::ContextOptions::hip_fast(0),
+        _ => panic!("short dynamics parity requires an explicit HIP backend"),
+    };
+    let candidate = runtime::Context::new(backend_options).unwrap();
+    assert_eq!(candidate.backend().unwrap(), backend);
 
     for integrator in [
         runtime::Integrator::VelocityVerlet,
@@ -386,53 +404,66 @@ fn hip_short_dynamics_matches_cpu_without_backend_fallback() {
             friction_per_femtosecond: 0.01,
             random_seed: 0xa5a5_0123_dead_beef,
         };
-        let mut cpu_simulation = native_simulation(options);
-        let mut hip_simulation = native_simulation(options);
-        let cpu_report = cpu.integrate(&mut cpu_simulation, 24).unwrap();
-        let hip_report = hip.integrate(&mut hip_simulation, 24).unwrap();
-        assert_eq!(cpu_report.steps_completed, hip_report.steps_completed);
-        assert_eq!(cpu_report.absolute_step, hip_report.absolute_step);
-        assert_eq!(cpu_report.degrees_of_freedom, hip_report.degrees_of_freedom);
+        let mut rust_simulation = native_simulation(options);
+        let mut candidate_simulation = native_simulation(options);
+        let mut repeated_simulation = native_simulation(options);
+        let rust_report = rust_cpu.integrate(&mut rust_simulation, 24).unwrap();
+        let candidate_report = candidate.integrate(&mut candidate_simulation, 24).unwrap();
+        let repeated_report = candidate.integrate(&mut repeated_simulation, 24).unwrap();
+        assert_eq!(candidate_report, repeated_report);
+        assert_snapshot_bits_equal(
+            &candidate_simulation.snapshot().unwrap(),
+            &repeated_simulation.snapshot().unwrap(),
+        );
+        assert_eq!(
+            rust_report.steps_completed,
+            candidate_report.steps_completed
+        );
+        assert_eq!(rust_report.absolute_step, candidate_report.absolute_step);
+        assert_eq!(
+            rust_report.degrees_of_freedom,
+            candidate_report.degrees_of_freedom
+        );
         assert_close(
-            hip_report.potential_kcal_per_mol,
-            cpu_report.potential_kcal_per_mol,
+            candidate_report.potential_kcal_per_mol,
+            rust_report.potential_kcal_per_mol,
             2.0e-9,
         );
         assert_close(
-            hip_report.kinetic_kcal_per_mol,
-            cpu_report.kinetic_kcal_per_mol,
+            candidate_report.kinetic_kcal_per_mol,
+            rust_report.kinetic_kcal_per_mol,
             2.0e-9,
         );
-        let cpu_snapshot = cpu_simulation.snapshot().unwrap();
-        let hip_snapshot = hip_simulation.snapshot().unwrap();
-        for atom in 0..cpu_snapshot.len() {
-            for (cpu_value, hip_value) in [
+        let rust_snapshot = rust_simulation.snapshot().unwrap();
+        let candidate_snapshot = candidate_simulation.snapshot().unwrap();
+        for atom in 0..rust_snapshot.len() {
+            for (rust_value, candidate_value) in [
                 (
-                    cpu_snapshot.positions.x_angstrom[atom],
-                    hip_snapshot.positions.x_angstrom[atom],
+                    rust_snapshot.positions.x_angstrom[atom],
+                    candidate_snapshot.positions.x_angstrom[atom],
                 ),
                 (
-                    cpu_snapshot.positions.y_angstrom[atom],
-                    hip_snapshot.positions.y_angstrom[atom],
+                    rust_snapshot.positions.y_angstrom[atom],
+                    candidate_snapshot.positions.y_angstrom[atom],
                 ),
                 (
-                    cpu_snapshot.positions.z_angstrom[atom],
-                    hip_snapshot.positions.z_angstrom[atom],
+                    rust_snapshot.positions.z_angstrom[atom],
+                    candidate_snapshot.positions.z_angstrom[atom],
                 ),
                 (
-                    cpu_snapshot.velocities.x_angstrom_per_femtosecond[atom],
-                    hip_snapshot.velocities.x_angstrom_per_femtosecond[atom],
+                    rust_snapshot.velocities.x_angstrom_per_femtosecond[atom],
+                    candidate_snapshot.velocities.x_angstrom_per_femtosecond[atom],
                 ),
                 (
-                    cpu_snapshot.velocities.y_angstrom_per_femtosecond[atom],
-                    hip_snapshot.velocities.y_angstrom_per_femtosecond[atom],
+                    rust_snapshot.velocities.y_angstrom_per_femtosecond[atom],
+                    candidate_snapshot.velocities.y_angstrom_per_femtosecond[atom],
                 ),
                 (
-                    cpu_snapshot.velocities.z_angstrom_per_femtosecond[atom],
-                    hip_snapshot.velocities.z_angstrom_per_femtosecond[atom],
+                    rust_snapshot.velocities.z_angstrom_per_femtosecond[atom],
+                    candidate_snapshot.velocities.z_angstrom_per_femtosecond[atom],
                 ),
             ] {
-                assert_close(hip_value, cpu_value, 2.0e-9);
+                assert_close(candidate_value, rust_value, 2.0e-9);
             }
         }
     }
