@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 use std::fmt;
 
-use crate::sha256::Sha256;
+use crate::native_hash::CanonicalHash;
 
 pub const FIXED64_CANDIDATE_COUNT: usize = 64;
 pub const FIXED64_PROFILE_ID: &str = "betelgeuze.engine_v2_global_orientation_fixed_mixed64/1.0.0";
@@ -830,60 +830,6 @@ const fn all_feature_kinds() -> [Fixed64FeatureKind; 12] {
         Fixed64FeatureKind::LigandShapeAxis,
         Fixed64FeatureKind::PocketShapeAxis,
     ]
-}
-
-struct CanonicalHash {
-    inner: Sha256,
-}
-
-impl CanonicalHash {
-    fn new(domain: &str) -> Self {
-        let mut value = Self {
-            inner: Sha256::new(),
-        };
-        value.string(domain);
-        value
-    }
-
-    fn byte(&mut self, value: u8) {
-        self.inner.update(&[value]);
-    }
-
-    fn bool(&mut self, value: bool) {
-        self.byte(u8::from(value));
-    }
-
-    fn usize(&mut self, value: usize) {
-        self.inner.update(&(value as u64).to_be_bytes());
-    }
-
-    fn u32(&mut self, value: u32) {
-        self.inner.update(&value.to_be_bytes());
-    }
-
-    fn bytes(&mut self, value: &[u8]) {
-        self.usize(value.len());
-        self.inner.update(value);
-    }
-
-    fn string(&mut self, value: &str) {
-        self.bytes(value.as_bytes());
-    }
-
-    fn digest(&mut self, value: [u8; 32]) {
-        self.inner.update(&value);
-    }
-
-    fn option<T>(&mut self, value: Option<T>, encode: impl FnOnce(&mut Self, T)) {
-        self.bool(value.is_some());
-        if let Some(value) = value {
-            encode(self, value);
-        }
-    }
-
-    fn finish(self) -> [u8; 32] {
-        self.inner.finalize()
-    }
 }
 
 fn inventory_sha256(inventory: &Fixed64FeatureInventory) -> [u8; 32] {

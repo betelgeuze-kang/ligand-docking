@@ -9,9 +9,11 @@ mod anchors;
 mod cluster;
 mod error;
 mod fixed64;
+mod geometric_admission;
 mod geometry;
 mod identity;
 mod model;
+mod native_hash;
 mod prune;
 mod receipt;
 mod refine;
@@ -31,6 +33,17 @@ pub use fixed64::{
     FIXED64_CANDIDATE_COUNT, FIXED64_LANE_RANGES, FIXED64_PROFILE_ID,
     NATIVE_FIXED64_ALLOCATION_SCHEMA_ID, NATIVE_FIXED64_SLOT_SCHEMA_ID, RETAINED_SOURCE_INDICES,
     TRUE_CONFORMER_SLOT_RANKS,
+};
+pub use geometric_admission::{
+    evaluate_fixed64_geometric_metrics, native_fixed64_coordinate_sha256, Fixed64GeometricBatch,
+    Fixed64GeometricDecision, Fixed64GeometricError, Fixed64GeometricErrorCode,
+    Fixed64GeometricInput, Fixed64GeometricMetrics, Fixed64GeometricStatus,
+    FIXED64_MAX_ABSOLUTE_COORDINATE_ANGSTROM, FIXED64_MAX_BATCH_EXACT_PAIR_EVALUATIONS,
+    FIXED64_MAX_LIGAND_ATOMS, FIXED64_MAX_POCKET_RADIUS_ANGSTROM, FIXED64_MAX_RECEPTOR_ATOMS,
+    FIXED64_MAX_VDW_RADIUS_ANGSTROM, FIXED64_MIN_VDW_RADIUS_ANGSTROM,
+    HARD_REJECTION_MINIMUM_VDW_RATIO, NATIVE_FIXED64_GEOMETRIC_BATCH_SCHEMA_ID,
+    NATIVE_FIXED64_GEOMETRIC_DECISION_SCHEMA_ID, NATIVE_FIXED64_GEOMETRIC_INPUT_SCHEMA_ID,
+    NATIVE_FIXED64_GEOMETRIC_METRICS_SCHEMA_ID,
 };
 pub use geometry::{Quaternion, Vec3};
 pub use model::{
