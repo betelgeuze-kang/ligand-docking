@@ -1,4 +1,5 @@
 #include "internal.hpp"
+#include "hip/evaluator.hpp"
 #include "rust/provider.h"
 
 #include <cstring>
@@ -64,10 +65,13 @@ bool rust_cpu_is_available(int32_t device_ordinal) noexcept {
                BG_RUST_CPU_PROVIDER_ABI_VERSION;
 }
 
-/* No HIP provider is linked in ABI v1 yet.  Merely compiling with hipcc must
- * never make this return true; a provider must implement allocation, stream,
- * and execution ownership before it can be wired here. */
-bool hip_is_available(int32_t /*device_ordinal*/) noexcept {
+bool hip_safe_is_available(int32_t device_ordinal) noexcept {
+    return hip_safe::is_available(device_ordinal);
+}
+
+/* hip_fast remains unavailable until a parallel implementation passes the
+ * frozen hip_safe/Rust/C++ parity contract. */
+bool hip_fast_is_available(int32_t /*device_ordinal*/) noexcept {
     return false;
 }
 
@@ -310,9 +314,14 @@ extern "C" BG_API bg_status BG_CALL bg_backend_is_available(
                                                                     : UINT8_C(0);
                 return BG_STATUS_OK;
             case BG_BACKEND_HIP_SAFE:
+                *available = hip_safe_is_available(device_ordinal)
+                                 ? UINT8_C(1)
+                                 : UINT8_C(0);
+                return BG_STATUS_OK;
             case BG_BACKEND_HIP_FAST:
-                *available = hip_is_available(device_ordinal) ? UINT8_C(1)
-                                                               : UINT8_C(0);
+                *available = hip_fast_is_available(device_ordinal)
+                                 ? UINT8_C(1)
+                                 : UINT8_C(0);
                 return BG_STATUS_OK;
             default:
                 return fail(
@@ -365,10 +374,16 @@ extern "C" BG_API bg_status BG_CALL bg_context_create(
                     BG_STATUS_BACKEND_UNAVAILABLE,
                     "rust_cpu backend is unavailable; fallback is forbidden");
             }
-        } else if (!hip_is_available(options->device_ordinal)) {
+        } else if (selected_backend == BG_BACKEND_HIP_SAFE) {
+            if (!hip_safe_is_available(options->device_ordinal)) {
+                return fail(
+                    BG_STATUS_BACKEND_UNAVAILABLE,
+                    "hip_safe backend is unavailable; CPU fallback is forbidden");
+            }
+        } else if (!hip_fast_is_available(options->device_ordinal)) {
             return fail(
                 BG_STATUS_BACKEND_UNAVAILABLE,
-                "HIP backend is unavailable; CPU fallback is forbidden");
+                "hip_fast backend is unavailable; fallback is forbidden");
         }
 
         auto context = std::make_unique<bg_context>();

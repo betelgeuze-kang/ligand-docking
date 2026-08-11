@@ -30,6 +30,13 @@ static void test_context_contract(void) {
     assert(available == 1);
     assert(bg_backend_is_available(BG_BACKEND_HIP, 0, &available) ==
            BG_STATUS_OK);
+    const uint8_t hip_safe_available = available;
+    assert(bg_backend_is_available(BG_BACKEND_HIP_FAST, 0, &available) ==
+           BG_STATUS_OK);
+    assert(available == 0);
+    available = 1;
+    assert(bg_backend_is_available(BG_BACKEND_HIP_SAFE, INT32_MAX, &available) ==
+           BG_STATUS_OK);
     assert(available == 0);
 
     bg_context_options options;
@@ -58,6 +65,20 @@ static void test_context_contract(void) {
     bg_context_destroy(context);
 
     options.backend = BG_BACKEND_HIP;
+    context = NULL;
+    if (hip_safe_available == 1) {
+        assert(bg_context_create(&options, &context) == BG_STATUS_OK);
+        assert(context != NULL);
+        assert(bg_context_get_backend(context, &selected) == BG_STATUS_OK);
+        assert(selected == BG_BACKEND_HIP_SAFE);
+        bg_context_destroy(context);
+    } else {
+        assert(bg_context_create(&options, &context) ==
+               BG_STATUS_BACKEND_UNAVAILABLE);
+        assert(context == NULL);
+    }
+
+    options.backend = BG_BACKEND_HIP_FAST;
     context = (bg_context *)(uintptr_t)1;
     assert(bg_context_create(&options, &context) ==
            BG_STATUS_BACKEND_UNAVAILABLE);

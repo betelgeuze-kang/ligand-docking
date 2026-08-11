@@ -1,4 +1,5 @@
 #include "cpu/evaluator.hpp"
+#include "hip/evaluator.hpp"
 #include "internal.hpp"
 #include "rust/evaluator.hpp"
 
@@ -301,7 +302,8 @@ extern "C" BG_API bg_status BG_CALL bg_context_evaluate(
                 "context, system, and forcefield unit systems must match");
         }
         if (context->backend != BG_BACKEND_CPP_CPU_REFERENCE &&
-            context->backend != BG_BACKEND_RUST_CPU) {
+            context->backend != BG_BACKEND_RUST_CPU &&
+            context->backend != BG_BACKEND_HIP_SAFE) {
             return fail(
                 BG_STATUS_UNSUPPORTED_BACKEND,
                 "the selected backend has no evaluator implementation");
@@ -311,9 +313,16 @@ extern "C" BG_API bg_status BG_CALL bg_context_evaluate(
         if (context->backend == BG_BACKEND_CPP_CPU_REFERENCE) {
             status = cpu::evaluate(
                 *system, *forcefield, out_forces != nullptr, &evaluation);
-        } else {
+        } else if (context->backend == BG_BACKEND_RUST_CPU) {
             status = rust_cpu::evaluate(
                 *system, *forcefield, out_forces != nullptr, &evaluation);
+        } else {
+            status = hip_safe::evaluate(
+                context->device_ordinal,
+                *system,
+                *forcefield,
+                out_forces != nullptr,
+                &evaluation);
         }
         if (status != BG_STATUS_OK) {
             return status;

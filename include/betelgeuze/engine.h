@@ -558,11 +558,14 @@ BG_API bg_status BG_CALL bg_forcefield_get_atom_count(
 
 /*
  * Dispatch through the explicitly selected context backend. The C++ CPU
- * reference is scalar binary64 with a fixed serial accumulation order and analytic
- * forces defined as -dU/d(position).  Output buffers are transactional: no output value changes unless
- * the complete evaluation succeeds.  Energy-only evaluation does not require
- * differentiability of a zero-length harmonic bond; requesting forces for
- * that geometry returns BG_STATUS_NUMERICAL_ERROR.
+ * reference, independent Rust CPU backend, and hip_safe qualification backend
+ * use binary64 with a fixed serial accumulation order and analytic forces
+ * defined as -dU/d(position). hip_safe is available only when a compiled,
+ * explicitly qualified GPU architecture matches the requested runtime device;
+ * it never falls back to CPU. Output buffers are transactional: no output value
+ * changes unless the complete evaluation succeeds. Energy-only evaluation does
+ * not require differentiability of a zero-length harmonic bond; requesting
+ * forces for that geometry returns BG_STATUS_NUMERICAL_ERROR.
  */
 BG_API bg_status BG_CALL bg_context_evaluate(
     const bg_context *context,

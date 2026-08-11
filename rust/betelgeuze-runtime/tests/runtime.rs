@@ -75,10 +75,19 @@ fn explicit_rust_cpu_context_reports_the_selected_backend() {
 }
 
 #[test]
-fn unavailable_hip_backends_are_not_silently_replaced_with_cpu() {
-    assert!(!Context::backend_available(Backend::HipSafe, 0).unwrap());
+fn hip_backends_are_explicit_and_never_silently_replaced_with_cpu() {
+    let hip_safe_available = Context::backend_available(Backend::HipSafe, 0).unwrap();
     assert!(!Context::backend_available(Backend::HipFast, 0).unwrap());
-    let error = Context::new(ContextOptions::hip_safe(0)).err().unwrap();
+    if hip_safe_available {
+        let context = Context::new(ContextOptions::hip_safe(0)).unwrap();
+        assert_eq!(context.backend().unwrap(), Backend::HipSafe);
+        assert_eq!(context.device_ordinal().unwrap(), 0);
+    } else {
+        let error = Context::new(ContextOptions::hip_safe(0)).err().unwrap();
+        assert_eq!(error.code, ErrorCode::BackendUnavailable);
+        assert!(error.message.contains("fallback is forbidden"));
+    }
+    let error = Context::new(ContextOptions::hip_fast(0)).err().unwrap();
     assert_eq!(error.code, ErrorCode::BackendUnavailable);
     assert!(error.message.contains("fallback is forbidden"));
 }

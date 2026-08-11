@@ -5,8 +5,16 @@ const ENERGY_TOLERANCE: f64 = 1.0e-10;
 const FORCE_DIFFERENCE_STEP_ANGSTROM: f64 = 1.0e-5;
 const FORCE_TOLERANCE: f64 = 2.0e-4;
 const CROSS_BACKEND_TOLERANCE: f64 = 2.0e-12;
-const CPU_BACKENDS: [runtime::Backend; 2] =
-    [runtime::Backend::CppCpuReference, runtime::Backend::RustCpu];
+
+fn safe_backends() -> Vec<runtime::Backend> {
+    let mut backends = vec![runtime::Backend::CppCpuReference, runtime::Backend::RustCpu];
+    if runtime::Context::backend_available(runtime::Backend::HipSafe, 0)
+        .expect("hip_safe availability query succeeds")
+    {
+        backends.push(runtime::Backend::HipSafe);
+    }
+    backends
+}
 
 #[derive(Clone)]
 struct Fixture {
@@ -32,7 +40,7 @@ fn cpu_energy_components_match_the_independent_rust_oracle() {
     for fixture in fixtures() {
         let expected = oracle::evaluate(&fixture.input)
             .unwrap_or_else(|error| panic!("{} oracle evaluation failed: {error}", fixture.name));
-        for backend in CPU_BACKENDS {
+        for backend in safe_backends() {
             let native = native_fixture(&fixture, backend);
             let actual = native
                 .context
@@ -72,7 +80,7 @@ fn cpu_energy_components_match_the_independent_rust_oracle() {
 #[test]
 fn every_analytic_force_component_matches_oracle_central_differences() {
     for fixture in fixtures() {
-        for backend in CPU_BACKENDS {
+        for backend in safe_backends() {
             let native = native_fixture(&fixture, backend);
             let actual = native
                 .context
@@ -107,7 +115,7 @@ fn every_analytic_force_component_matches_oracle_central_differences() {
 #[test]
 fn cpu_evaluation_is_bit_deterministic_and_conserves_net_force() {
     for fixture in fixtures() {
-        for backend in CPU_BACKENDS {
+        for backend in safe_backends() {
             let native = native_fixture(&fixture, backend);
             let first = native
                 .context
@@ -167,32 +175,43 @@ fn cpu_evaluation_is_bit_deterministic_and_conserves_net_force() {
 }
 
 #[test]
-fn rust_cpu_matches_cpp_reference_within_the_frozen_safe_tolerance() {
+fn native_safe_backends_match_cpp_reference_within_the_frozen_tolerance() {
     for fixture in fixtures() {
         let cpp = native_fixture(&fixture, runtime::Backend::CppCpuReference);
-        let rust = native_fixture(&fixture, runtime::Backend::RustCpu);
         let cpp_result = cpp
             .context
             .evaluate(&cpp.system, &cpp.forcefield)
             .expect("C++ reference evaluation succeeds");
-        let rust_result = rust
-            .context
-            .evaluate(&rust.system, &rust.forcefield)
-            .expect("Rust CPU evaluation succeeds");
-        for ((name, left), (_, right)) in runtime_energy_values(cpp_result.energy)
+        for backend in safe_backends()
             .into_iter()
-            .zip(runtime_energy_values(rust_result.energy))
+            .filter(|backend| *backend != runtime::Backend::CppCpuReference)
         {
-            assert_close_cross_backend(fixture.name, name, left, right);
-        }
-        for axis in 0..3 {
-            for (atom, (left, right)) in force_channel(&cpp_result.forces, axis)
-                .iter()
-                .zip(force_channel(&rust_result.forces, axis))
-                .enumerate()
+            let candidate = native_fixture(&fixture, backend);
+            let candidate_result = candidate
+                .context
+                .evaluate(&candidate.system, &candidate.forcefield)
+                .unwrap_or_else(|error| {
+                    panic!(
+                        "{} {} evaluation failed: {error}",
+                        fixture.name,
+                        backend_name(backend)
+                    )
+                });
+            for ((name, left), (_, right)) in runtime_energy_values(cpp_result.energy)
+                .into_iter()
+                .zip(runtime_energy_values(candidate_result.energy))
             {
-                let field = format!("force[{atom}][{axis}]");
-                assert_close_cross_backend(fixture.name, &field, *left, *right);
+                assert_close_cross_backend(fixture.name, backend, name, left, right);
+            }
+            for axis in 0..3 {
+                for (atom, (left, right)) in force_channel(&cpp_result.forces, axis)
+                    .iter()
+                    .zip(force_channel(&candidate_result.forces, axis))
+                    .enumerate()
+                {
+                    let field = format!("force[{atom}][{axis}]");
+                    assert_close_cross_backend(fixture.name, backend, &field, *left, *right);
+                }
             }
         }
     }
@@ -594,10 +613,11 @@ fn native_fixture(fixture: &Fixture, backend: runtime::Backend) -> NativeFixture
     let options = match backend {
         runtime::Backend::CppCpuReference => runtime::ContextOptions::cpu_reference(),
         runtime::Backend::RustCpu => runtime::ContextOptions::rust_cpu(),
-        _ => panic!("non-CPU backend passed to native_fixture"),
+        runtime::Backend::HipSafe => runtime::ContextOptions::hip_safe(0),
+        _ => panic!("non-safe backend passed to native_fixture"),
     };
     let context = runtime::Context::new(options)
-        .unwrap_or_else(|error| panic!("{} CPU context failed: {error}", fixture.name));
+        .unwrap_or_else(|error| panic!("{} native context failed: {error}", fixture.name));
 
     NativeFixture {
         context,
@@ -616,13 +636,20 @@ const fn backend_name(backend: runtime::Backend) -> &'static str {
     }
 }
 
-fn assert_close_cross_backend(fixture: &str, field: &str, left: f64, right: f64) {
+fn assert_close_cross_backend(
+    fixture: &str,
+    backend: runtime::Backend,
+    field: &str,
+    left: f64,
+    right: f64,
+) {
     let difference = (left - right).abs();
     let tolerance = CROSS_BACKEND_TOLERANCE * (1.0 + left.abs().max(right.abs()));
     assert!(
         difference <= tolerance,
-        "{fixture} {field}: cpp_cpu_reference={left:.17e}, rust_cpu={right:.17e}, \
-         |delta|={difference:.3e} > {tolerance:.3e}"
+        "{fixture} {field}: cpp_cpu_reference={left:.17e}, {}={right:.17e}, \
+         |delta|={difference:.3e} > {tolerance:.3e}",
+        backend_name(backend)
     );
 }
 
