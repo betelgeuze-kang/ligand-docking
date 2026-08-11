@@ -179,6 +179,133 @@ int32_t bg_rust_cpu_docking_stable_top_k_v1_cluster_direct_rmsd_fixed64(
     uint64_t *out_top_k_count,
     bg_rust_cpu_error_v1 *out_error);
 
+#define BG_RUST_CPU_TORSION_V7_MAX_MOVES UINT32_C(8)
+
+typedef struct bg_rust_cpu_torsion_v7_context_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    size_t receptor_atom_count;
+    size_t ligand_atom_count;
+    size_t rotor_count;
+    size_t internal_pair_count;
+    const double *receptor_x_angstrom;
+    const double *receptor_y_angstrom;
+    const double *receptor_z_angstrom;
+    const double *receptor_vdw_radius_angstrom;
+    const double *ligand_vdw_radius_angstrom;
+    double pocket_center_angstrom[3];
+    const int32_t *parent_atom_index;
+    const size_t *rotatable_child_atom_index;
+    const size_t *internal_pair_atom_i;
+    const size_t *internal_pair_atom_j;
+    double receptor_overlap_scale;
+    double internal_overlap_scale;
+    double internal_overlap_weight;
+    size_t maximum_baseline_v6_steps;
+    size_t maximum_torsions_evaluated;
+    size_t maximum_torsion_steps;
+    size_t maximum_backtracking_evaluations;
+    double maximum_torsion_step_radians;
+    double minimum_torsion_step_radians;
+    double maximum_total_torsion_path_radians;
+    double maximum_centroid_offset_angstrom;
+    double minimum_selected_final_receptor_penalty;
+    double maximum_selected_final_receptor_penalty;
+    double penalty_tolerance;
+    double epsilon_angstrom;
+    uint64_t reserved[8];
+} bg_rust_cpu_torsion_v7_context_v1;
+
+typedef struct bg_rust_cpu_torsion_v7_batch_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    size_t candidate_count;
+    size_t ligand_atom_count;
+    const int32_t *candidate_state;
+    const uint8_t *proposal_is_torsion_eligible;
+    const size_t *max_steps;
+    const size_t *baseline_v6_accepted_steps;
+    const double *source_x_angstrom;
+    const double *source_y_angstrom;
+    const double *source_z_angstrom;
+    const double *baseline_v6_x_angstrom;
+    const double *baseline_v6_y_angstrom;
+    const double *baseline_v6_z_angstrom;
+    const double *baseline_v6_torsion_angles_radians;
+    uint64_t reserved[8];
+} bg_rust_cpu_torsion_v7_batch_v1;
+
+typedef struct bg_rust_cpu_torsion_v7_row_v1 {
+    uint32_t slot_index;
+    int32_t status;
+    int32_t failure_code;
+    int32_t skip_reason;
+    int32_t selection_reason;
+    uint8_t selection_window_reachable;
+    uint8_t evaluation_stopped_after_selection_window_became_unreachable;
+    uint8_t torsion_evaluated;
+    uint8_t torsion_variant_available;
+    uint8_t torsion_selected;
+    uint8_t reserved0[3];
+    size_t torsion_step_budget;
+    size_t fixed_objective_evaluation_count;
+    size_t torsion_trial_objective_evaluation_count;
+    size_t evaluated_torsion_steps;
+    size_t accepted_torsion_steps;
+    size_t baseline_v6_accepted_steps;
+    double source_receptor_penalty;
+    double source_internal_penalty;
+    double source_combined_penalty;
+    double baseline_receptor_penalty;
+    double baseline_internal_penalty;
+    double baseline_combined_penalty;
+    double optimized_receptor_penalty;
+    double optimized_internal_penalty;
+    double optimized_combined_penalty;
+    double final_receptor_penalty;
+    double final_internal_penalty;
+    double final_combined_penalty;
+    double evaluated_total_torsion_path_radians;
+    double accepted_total_torsion_path_radians;
+    uint64_t reserved[8];
+} bg_rust_cpu_torsion_v7_row_v1;
+
+typedef struct bg_rust_cpu_torsion_v7_move_v1 {
+    uint32_t slot_index;
+    uint32_t move_index;
+    uint8_t evaluated;
+    uint8_t selected;
+    uint16_t reserved0;
+    size_t rotatable_child_atom_index;
+    double delta_radians;
+    double receptor_penalty;
+    double internal_penalty;
+    double combined_penalty;
+    uint64_t reserved[4];
+} bg_rust_cpu_torsion_v7_move_v1;
+
+int32_t bg_rust_cpu_docking_torsion_v7_create(
+    const bg_rust_cpu_torsion_v7_context_v1 *descriptor,
+    void **out_state,
+    bg_rust_cpu_error_v1 *out_error);
+
+void bg_rust_cpu_docking_torsion_v7_destroy(void *state);
+
+int32_t bg_rust_cpu_docking_torsion_v7_refine_fixed64(
+    const void *state,
+    const bg_rust_cpu_torsion_v7_batch_v1 *batch,
+    bg_rust_cpu_torsion_v7_row_v1 *out_rows,
+    bg_rust_cpu_torsion_v7_move_v1 *out_moves,
+    double *out_optimized_x_angstrom,
+    double *out_optimized_y_angstrom,
+    double *out_optimized_z_angstrom,
+    double *out_optimized_torsion_angles_radians,
+    double *out_final_x_angstrom,
+    double *out_final_y_angstrom,
+    double *out_final_z_angstrom,
+    double *out_final_torsion_angles_radians,
+    bg_rust_cpu_error_v1 *out_error);
+
 #if defined(__cplusplus)
 }
 #endif
