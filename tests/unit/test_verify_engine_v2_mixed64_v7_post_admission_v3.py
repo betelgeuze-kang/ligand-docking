@@ -7,6 +7,8 @@ import sys
 
 import pytest
 
+import tools.verify_engine_v2_mixed64_v7_post_admission_v3 as verifier
+
 from tools.verify_engine_v2_mixed64_v7_post_admission_v3 import (
     DEFAULT_POLICY_PATH,
     Mixed64V7PostAdmissionPolicyVerificationError,
@@ -92,6 +94,47 @@ def test_noncanonical_policy_fails_closed(tmp_path: Path) -> None:
         match="not canonical",
     ):
         verify_policy(path)
+
+
+@pytest.mark.parametrize("nonfinite", ("NaN", "Infinity", "-Infinity", "1e10000"))
+def test_nonfinite_policy_number_fails_closed(
+    tmp_path: Path,
+    nonfinite: str,
+) -> None:
+    raw = DEFAULT_POLICY_PATH.read_text(encoding="ascii")
+    raw = raw.replace('"candidate_denominator":64', f'"candidate_denominator":{nonfinite}')
+    path = tmp_path / "nonfinite.json"
+    path.write_text(raw, encoding="ascii")
+    with pytest.raises(
+        Mixed64V7PostAdmissionPolicyVerificationError,
+        match="unreadable or invalid JSON",
+    ):
+        verify_policy(path)
+
+
+@pytest.mark.parametrize(
+    "signature",
+    (
+        "operational_batch: Mixed64OperationalProposalBatchV1, *args, refiner: InteractionAwareTorsionContactEnsembleRefinerV7,",
+        "operational_batch: Mixed64OperationalProposalBatchV1, *, refiner: InteractionAwareTorsionContactEnsembleRefinerV7, **kwargs,",
+    ),
+)
+def test_variadic_executor_input_fails_closed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    signature: str,
+) -> None:
+    source = verifier._EXECUTOR_PATH.read_text(encoding="utf-8")
+    frozen = "operational_batch: Mixed64OperationalProposalBatchV1,\n    *,\n    refiner: InteractionAwareTorsionContactEnsembleRefinerV7,"
+    assert frozen in source
+    candidate = tmp_path / "executor.py"
+    candidate.write_text(source.replace(frozen, signature), encoding="utf-8")
+    monkeypatch.setattr(verifier, "_EXECUTOR_PATH", candidate)
+    with pytest.raises(
+        Mixed64V7PostAdmissionPolicyVerificationError,
+        match="variadic input",
+    ):
+        verify_policy()
 
 
 def test_cli_runs_in_isolated_mode_outside_repository(tmp_path: Path) -> None:

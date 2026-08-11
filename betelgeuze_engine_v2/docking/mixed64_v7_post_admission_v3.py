@@ -12,6 +12,7 @@ from collections.abc import Mapping
 from dataclasses import InitVar, dataclass, field
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import stat
@@ -41,6 +42,7 @@ from .mixed64_v7_post_admission_policy_v3 import (
     BOUND_GEOMETRIC_ADMISSION_V3_POLICY_SHA256,
     BOUND_OPERATIONAL_PROPOSAL_POLICY_SHA256,
     MAX_TYPED_V7_FAILURE_REASON_UTF8_BYTES,
+    MAX_V7_IMPLEMENTATION_SOURCE_BYTES,
     MAX_V7_POST_ADMISSION_RECEIPT_CANONICAL_BYTES,
     MIXED64_V7_POST_ADMISSION_BATCH_SCHEMA_ID,
     MIXED64_V7_POST_ADMISSION_COMPONENT_ID,
@@ -189,22 +191,76 @@ def _typed_failure_reason(value: object) -> str:
 
 
 def _stable_source_sha256(path: Path) -> str:
+    descriptor: int | None = None
     try:
-        before = path.stat()
-        if not stat.S_ISREG(before.st_mode) or before.st_size <= 0:
+        before_path = path.lstat()
+        if (
+            stat.S_ISLNK(before_path.st_mode)
+            or not stat.S_ISREG(before_path.st_mode)
+            or before_path.st_size <= 0
+            or before_path.st_size > MAX_V7_IMPLEMENTATION_SOURCE_BYTES
+        ):
             raise OSError("source is not a regular file")
-        payload = path.read_bytes()
-        after = path.stat()
+        nofollow = getattr(os, "O_NOFOLLOW", None)
+        if nofollow is None:
+            raise OSError("no-follow source open is unavailable")
+        flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow
+        descriptor = os.open(path, flags)
+        before_fd = os.fstat(descriptor)
+        if (
+            not stat.S_ISREG(before_fd.st_mode)
+            or before_fd.st_size <= 0
+            or before_fd.st_size > MAX_V7_IMPLEMENTATION_SOURCE_BYTES
+            or (before_path.st_dev, before_path.st_ino)
+            != (before_fd.st_dev, before_fd.st_ino)
+        ):
+            raise OSError("source identity changed before read")
+        chunks: list[bytes] = []
+        total = 0
+        while True:
+            read_size = min(
+                1024 * 1024,
+                MAX_V7_IMPLEMENTATION_SOURCE_BYTES + 1 - total,
+            )
+            chunk = os.read(descriptor, read_size)
+            if not chunk:
+                break
+            chunks.append(chunk)
+            total += len(chunk)
+            if total > MAX_V7_IMPLEMENTATION_SOURCE_BYTES:
+                raise OSError("source exceeds the byte bound")
+        payload = b"".join(chunks)
+        after_fd = os.fstat(descriptor)
+        after_path = path.lstat()
     except OSError as exc:
         raise Mixed64V7PostAdmissionV3Error(
             "V7 implementation source is unavailable"
         ) from exc
-    if len(payload) != before.st_size or (
-        before.st_dev,
-        before.st_ino,
-        before.st_size,
-        before.st_mtime_ns,
-    ) != (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns):
+    finally:
+        if descriptor is not None:
+            try:
+                os.close(descriptor)
+            except OSError as exc:
+                raise Mixed64V7PostAdmissionV3Error(
+                    "V7 implementation source descriptor did not close"
+                ) from exc
+
+    def identity(value: os.stat_result) -> tuple[int, int, int, int, int, int]:
+        return (
+            value.st_dev,
+            value.st_ino,
+            value.st_mode,
+            value.st_size,
+            value.st_mtime_ns,
+            value.st_ctime_ns,
+        )
+
+    if (
+        len(payload) != before_fd.st_size
+        or identity(before_path) != identity(before_fd)
+        or identity(before_fd) != identity(after_fd)
+        or identity(after_fd) != identity(after_path)
+    ):
         raise Mixed64V7PostAdmissionV3Error(
             "V7 implementation source changed during read"
         )

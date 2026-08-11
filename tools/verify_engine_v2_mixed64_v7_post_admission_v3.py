@@ -8,6 +8,7 @@ import ast
 import hashlib
 import importlib.util
 import json
+import math
 from pathlib import Path
 from typing import Final
 
@@ -41,6 +42,7 @@ BOUND_OPERATIONAL_PROPOSAL_POLICY_SHA256 = (
     _POLICY.BOUND_OPERATIONAL_PROPOSAL_POLICY_SHA256
 )
 MAX_TYPED_V7_FAILURE_REASON_UTF8_BYTES = _POLICY.MAX_TYPED_V7_FAILURE_REASON_UTF8_BYTES
+MAX_V7_IMPLEMENTATION_SOURCE_BYTES = _POLICY.MAX_V7_IMPLEMENTATION_SOURCE_BYTES
 MAX_V7_POST_ADMISSION_RECEIPT_CANONICAL_BYTES = (
     _POLICY.MAX_V7_POST_ADMISSION_RECEIPT_CANONICAL_BYTES
 )
@@ -98,6 +100,17 @@ def _canonical_bytes(value: object) -> bytes:
     ).encode("ascii")
 
 
+def _reject_nonfinite_constant(value: str) -> object:
+    raise ValueError(f"non-finite JSON constant is forbidden: {value}")
+
+
+def _parse_finite_float(value: str) -> float:
+    parsed = float(value)
+    if not math.isfinite(parsed):
+        raise ValueError("non-finite JSON number is forbidden")
+    return parsed
+
+
 def _executor_contract() -> tuple[set[str], ast.FunctionDef | ast.AsyncFunctionDef]:
     try:
         tree = ast.parse(
@@ -120,6 +133,10 @@ def _executor_contract() -> tuple[set[str], ast.FunctionDef | ast.AsyncFunctionD
         )
     function = functions[0]
     arguments = function.args
+    if arguments.vararg is not None or arguments.kwarg is not None:
+        raise Mixed64V7PostAdmissionPolicyVerificationError(
+            "V7 post-admission API gained variadic input"
+        )
     parameters = {
         value.arg
         for value in (
@@ -199,8 +216,12 @@ def _verify_executor_source() -> None:
 def verify_policy(path: Path = DEFAULT_POLICY_PATH) -> dict[str, object]:
     try:
         raw = path.read_bytes()
-        document = json.loads(raw)
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        document = json.loads(
+            raw,
+            parse_constant=_reject_nonfinite_constant,
+            parse_float=_parse_finite_float,
+        )
+    except (OSError, UnicodeError, ValueError) as exc:
         raise Mixed64V7PostAdmissionPolicyVerificationError(
             "V7 post-admission policy is unreadable or invalid JSON"
         ) from exc
@@ -208,7 +229,12 @@ def verify_policy(path: Path = DEFAULT_POLICY_PATH) -> dict[str, object]:
         raise Mixed64V7PostAdmissionPolicyVerificationError(
             "V7 post-admission policy must be one JSON object"
         )
-    canonical = _canonical_bytes(document)
+    try:
+        canonical = _canonical_bytes(document)
+    except (TypeError, ValueError, UnicodeError) as exc:
+        raise Mixed64V7PostAdmissionPolicyVerificationError(
+            "V7 post-admission policy cannot be canonicalized"
+        ) from exc
     if raw != canonical + b"\n":
         raise Mixed64V7PostAdmissionPolicyVerificationError(
             "V7 post-admission policy is not canonical JSON"
@@ -230,6 +256,10 @@ def verify_policy(path: Path = DEFAULT_POLICY_PATH) -> dict[str, object]:
         != BOUND_OPERATIONAL_PROPOSAL_POLICY_SHA256
         or type(refinement) is not dict
         or refinement.get("max_steps") != V7_REFINEMENT_MAX_STEPS == 24
+        or refinement.get("maximum_implementation_source_bytes")
+        != MAX_V7_IMPLEMENTATION_SOURCE_BYTES
+        or refinement.get("implementation_source_binding")
+        != "single_fd_nofollow_stable_file_sha256_before_after_and_finalization"
         or refinement.get("torsion_eligible_slot_indices")
         != list(V7_TORSION_ELIGIBLE_SLOT_INDICES)
         or refinement.get("preexisting_refiner_receipts_allowed") is not False

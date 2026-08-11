@@ -7,7 +7,7 @@ the full-Cartesian geometric admission on every successful refined coordinate.
 
 The canonical policy is
 `config/engine_v2_mixed64_v7_post_admission_v3.json`, with SHA-256
-`5e7fcba3df775d516a9fbd5e3d368108c0b95d86cad01fca544bc7c604792c59`.
+`1ef70ebe3bd6e913c972a4a28f8a09e150e45bdfc4aa0e23724d0668c7e08da2`.
 It binds operational-proposal policy SHA-256
 `9535730901a27ab3009e7b6fff12e532dd5d995e8fa33a038f4d321593885de9`.
 The post-refinement gate also binds geometric-admission v3 policy SHA-256
@@ -31,8 +31,10 @@ upstream contract.
   before candidate execution.
 - The refiner search space, receptor coordinates, receptor vdW radii, and ligand
   vdW radii must exactly match the geometric-admission context before execution.
-- The source file is hashed before execution and again after the batch. A source
-  change aborts the receipt.
+- The source file must be a non-symlink regular file no larger than 8 MiB. One
+  no-follow descriptor is checked before and after each bounded read; the source
+  is hashed before execution, after the batch, and after finalization. An
+  identity, metadata, size, or content change aborts the receipt.
 - Only `TorsionContactRefinementError`, the declared numerical/domain failure,
   becomes a typed per-slot failure. Unexpected runtime/programming failures
   abort the call. The exact bounded UTF-8 failure reason is retained with its

@@ -34,6 +34,7 @@ POST_REFINEMENT_HARD_REJECTION_MINIMUM_VDW_RATIO: Final = 0.55
 POST_REFINEMENT_MAX_BATCH_EXACT_PAIR_EVALUATIONS: Final = 16_777_216
 MAX_V7_POST_ADMISSION_RECEIPT_CANONICAL_BYTES: Final = 256 * 1024 * 1024
 MAX_TYPED_V7_FAILURE_REASON_UTF8_BYTES: Final = 4 * 1024
+MAX_V7_IMPLEMENTATION_SOURCE_BYTES: Final = 8 * 1024 * 1024
 
 POST_REFINEMENT_ACCEPTED_STATUS: Final = "post_refinement_accepted"
 POST_REFINEMENT_REJECTED_STATUS: Final = "post_refinement_geometric_rejection"
@@ -71,7 +72,10 @@ def frozen_mixed64_v7_post_admission_policy() -> dict[str, object]:
             "max_steps": V7_REFINEMENT_MAX_STEPS,
             "torsion_eligible_slot_indices": list(V7_TORSION_ELIGIBLE_SLOT_INDICES),
             "implementation_source_binding": (
-                "stable_file_sha256_before_and_after_batch"
+                "single_fd_nofollow_stable_file_sha256_before_after_and_finalization"
+            ),
+            "maximum_implementation_source_bytes": (
+                MAX_V7_IMPLEMENTATION_SOURCE_BYTES
             ),
             "problem_and_search_space_identity_exact_match_required": True,
             "geometric_context_exact_match_required": True,
@@ -143,6 +147,7 @@ __all__ = [
     "BOUND_GEOMETRIC_ADMISSION_V3_POLICY_SHA256",
     "BOUND_OPERATIONAL_PROPOSAL_POLICY_SHA256",
     "MAX_TYPED_V7_FAILURE_REASON_UTF8_BYTES",
+    "MAX_V7_IMPLEMENTATION_SOURCE_BYTES",
     "MAX_V7_POST_ADMISSION_RECEIPT_CANONICAL_BYTES",
     "MIXED64_V7_POST_ADMISSION_BATCH_SCHEMA_ID",
     "MIXED64_V7_POST_ADMISSION_COMPONENT_ID",

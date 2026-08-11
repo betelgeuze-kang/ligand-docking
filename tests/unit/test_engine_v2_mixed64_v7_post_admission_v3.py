@@ -18,6 +18,7 @@ from betelgeuze_engine_v2 import (
     StructureProvenance,
 )
 import betelgeuze_engine_v2.docking.torsion_contact_refinement as refinement_module
+import betelgeuze_engine_v2.docking.mixed64_v7_post_admission_v3 as v7_module
 from betelgeuze_engine_v2.docking import (
     DockingScope,
     PocketDefinition,
@@ -805,3 +806,29 @@ def test_record_factory_policy_signature_and_authority_are_frozen() -> None:
         "reservation",
         "authority",
     }
+
+
+def test_implementation_source_snapshot_rejects_symlink(tmp_path: Path) -> None:
+    target = tmp_path / "refiner.py"
+    target.write_text("pass\n", encoding="ascii")
+    link = tmp_path / "refiner-link.py"
+    link.symlink_to(target)
+    with pytest.raises(
+        Mixed64V7PostAdmissionV3Error,
+        match="source is unavailable",
+    ):
+        v7_module._stable_source_sha256(link)
+
+
+def test_implementation_source_snapshot_enforces_byte_bound(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = tmp_path / "refiner.py"
+    source.write_bytes(b"12345")
+    monkeypatch.setattr(v7_module, "MAX_V7_IMPLEMENTATION_SOURCE_BYTES", 4)
+    with pytest.raises(
+        Mixed64V7PostAdmissionV3Error,
+        match="source is unavailable",
+    ):
+        v7_module._stable_source_sha256(source)
