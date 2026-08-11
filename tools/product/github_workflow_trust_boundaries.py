@@ -12,6 +12,7 @@ import yaml
 
 WORKFLOW_DIR = Path(".github/workflows")
 FULL_SHA_ACTION = re.compile(r"^[^@\s]+@[0-9a-f]{40}$")
+HOSTED_PR_RUNNERS = frozenset({"ubuntu-latest", "ubuntu-22.04"})
 
 PR_WORKFLOWS = {
     "ci-api-h4-hosted.yml": {"api-security"},
@@ -109,6 +110,10 @@ def _normalize(value: Any) -> str:
     return " ".join(str(value or "").split())
 
 
+def _is_hosted_pr_runner(value: Any) -> bool:
+    return isinstance(value, str) and value in HOSTED_PR_RUNNERS
+
+
 def _checkout_steps(job: dict[str, Any]) -> list[dict[str, Any]]:
     return [
         step
@@ -190,7 +195,7 @@ def audit_workflow_trust_boundaries(root: str | Path) -> list[str]:
                 continue
             if _normalize(job.get("if")) != "${{ github.event_name == 'pull_request' }}":
                 errors.append(f"{workflow_name}:{job_id}:condition_not_exact_pr")
-            if job.get("runs-on") != "ubuntu-latest":
+            if not _is_hosted_pr_runner(job.get("runs-on")):
                 errors.append(f"{workflow_name}:{job_id}:runner_not_hosted")
             if "uses" in job:
                 errors.append(f"{workflow_name}:{job_id}:reusable_workflow_forbidden")
@@ -273,7 +278,7 @@ def audit_workflow_trust_boundaries(root: str | Path) -> list[str]:
                 continue
             if "uses" in job:
                 errors.append(f"{path.name}:{job_id}:reusable_pr_job_forbidden")
-            if job.get("runs-on") != "ubuntu-latest":
+            if not _is_hosted_pr_runner(job.get("runs-on")):
                 errors.append(f"{path.name}:{job_id}:pr_runner_not_hosted")
             if "sudo" in _run_source(job).lower():
                 errors.append(f"{path.name}:{job_id}:sudo_in_pr_job")

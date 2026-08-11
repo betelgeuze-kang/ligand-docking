@@ -65,7 +65,10 @@ concurrency:
 
 jobs:
   offline-contract-and-boundary:
-    runs-on: ubuntu-latest
+    # Ubuntu 24.04 hosted runners restrict unprivileged user namespaces via
+    # AppArmor.  This high-assurance boundary requires the complete namespace
+    # set below and must fail closed instead of silently weakening isolation.
+    runs-on: ubuntu-22.04
     timeout-minutes: 25
     env:
       CUDA_VISIBLE_DEVICES: ""
@@ -93,6 +96,17 @@ jobs:
           set -euo pipefail
           command -v unshare
           unshare --version
+          unshare \
+            --user \
+            --map-current-user \
+            --ipc \
+            --net \
+            --pid \
+            --uts \
+            --fork \
+            --kill-child=SIGKILL \
+            --mount-proc \
+            true
           python - <<'PY'
           import ctypes
           import ctypes.util
