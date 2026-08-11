@@ -4,6 +4,7 @@
 //! crate supplies an independently implemented scalar kernel and a versioned,
 //! hidden provider boundary used by the C++ dispatcher.
 
+mod docking_rigid_refinement;
 mod docking_torsion_v7;
 mod kernel;
 
