@@ -1191,3 +1191,16 @@ extern "C" int32_t bg_hip_safe_evaluate_v1(
 #undef BG_DOCKING_STABLE_TOP_K_RANK_FIXED64
 #undef BG_DOCKING_STABLE_TOP_K_DESTROY
 #undef BG_DOCKING_STABLE_TOP_K_CREATE
+
+#define BG_DOCKING_TORSION_V7_CREATE \
+    bg_hip_safe_docking_torsion_v7_create
+#define BG_DOCKING_TORSION_V7_DESTROY \
+    bg_hip_safe_docking_torsion_v7_destroy
+#define BG_DOCKING_TORSION_V7_REFINE_FIXED64 \
+    bg_hip_safe_docking_torsion_v7_refine_fixed64
+#define BG_DOCKING_TORSION_V7_LANE "hip_safe"
+#include "docking_torsion_v7.hip"
+#undef BG_DOCKING_TORSION_V7_LANE
+#undef BG_DOCKING_TORSION_V7_REFINE_FIXED64
+#undef BG_DOCKING_TORSION_V7_DESTROY
+#undef BG_DOCKING_TORSION_V7_CREATE

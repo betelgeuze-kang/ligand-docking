@@ -73,6 +73,7 @@ jobs:
           set -euo pipefail
           if grep -R -n -E -- '-ffast-math|-munsafe-fp-atomics|atomic(Add|Sub|Exch|CAS)' \
             native/src/hip/provider.hip native/src/hip/docking_scorer.hip \
+            native/src/hip/docking_torsion_v7.hip \
             native/src/hip/evaluator.cpp \
             native/src/hip/evaluator.hpp native/src/hip/provider.h; then
             echo "hip_safe contains a forbidden fast-math or floating-atomic primitive" >&2

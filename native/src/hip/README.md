@@ -17,6 +17,15 @@ is `02feb9e107c7b3c567e73bab6671c3c67c94376cb1e93dd598f069e961f6ea81`.
 The repository's legacy ROCm 5.7.1 bitcode fallback is intentionally never
 searched or accepted by this provider.
 
+The native fixed64 docking slice now covers Scorer v1, pose validity, stable
+Top-K/direct-RMSD clustering, and bounded torsion V7 in both `hip_safe` and
+`hip_fast`. Torsion V7 keeps the receptor/topology context resident on the
+selected device, evaluates all 64 candidate rows without denominator deletion,
+returns typed per-row failures and complete move/coordinate evidence, and
+leaves molecular execution, rank mutation, pose emission, and claim authority
+false. The C++ reference and Rust CPU providers remain independent parity
+oracles; no HIP error may select either provider as a runtime fallback.
+
 Builds without a complete ROCm compiler/runtime link a fail-closed stub and
 report the backend unavailable. A compiled provider still reports unavailable
 unless the requested device ordinal is visible to the HIP runtime. Synthetic

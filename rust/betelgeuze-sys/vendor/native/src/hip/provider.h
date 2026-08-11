@@ -204,6 +204,31 @@ int32_t bg_hip_safe_docking_stable_top_k_v1_cluster_direct_rmsd_fixed64(
     char *error_message,
     size_t error_capacity);
 
+int32_t bg_hip_safe_docking_torsion_v7_create(
+    int32_t device_ordinal,
+    const bg_docking_torsion_v7_context_soa_v1 *descriptor,
+    void **out_state,
+    char *error_message,
+    size_t error_capacity);
+
+void bg_hip_safe_docking_torsion_v7_destroy(void *state);
+
+int32_t bg_hip_safe_docking_torsion_v7_refine_fixed64(
+    const void *state,
+    const bg_docking_torsion_v7_candidate_batch_soa_v1 *candidates,
+    bg_docking_torsion_v7_row_v1 *out_rows,
+    bg_docking_torsion_v7_move_v1 *out_moves,
+    double *out_optimized_x_angstrom,
+    double *out_optimized_y_angstrom,
+    double *out_optimized_z_angstrom,
+    double *out_optimized_torsion_angles_radians,
+    double *out_final_x_angstrom,
+    double *out_final_y_angstrom,
+    double *out_final_z_angstrom,
+    double *out_final_torsion_angles_radians,
+    char *error_message,
+    size_t error_capacity);
+
 int32_t bg_hip_fast_docking_scorer_v1_create(
     int32_t device_ordinal,
     const bg_docking_scorer_v1_context_soa_v1 *descriptor,
@@ -264,6 +289,31 @@ int32_t bg_hip_fast_docking_stable_top_k_v1_cluster_direct_rmsd_fixed64(
     uint64_t *out_cluster_count,
     uint32_t *out_top_k_slot_indices,
     uint64_t *out_top_k_count,
+    char *error_message,
+    size_t error_capacity);
+
+int32_t bg_hip_fast_docking_torsion_v7_create(
+    int32_t device_ordinal,
+    const bg_docking_torsion_v7_context_soa_v1 *descriptor,
+    void **out_state,
+    char *error_message,
+    size_t error_capacity);
+
+void bg_hip_fast_docking_torsion_v7_destroy(void *state);
+
+int32_t bg_hip_fast_docking_torsion_v7_refine_fixed64(
+    const void *state,
+    const bg_docking_torsion_v7_candidate_batch_soa_v1 *candidates,
+    bg_docking_torsion_v7_row_v1 *out_rows,
+    bg_docking_torsion_v7_move_v1 *out_moves,
+    double *out_optimized_x_angstrom,
+    double *out_optimized_y_angstrom,
+    double *out_optimized_z_angstrom,
+    double *out_optimized_torsion_angles_radians,
+    double *out_final_x_angstrom,
+    double *out_final_y_angstrom,
+    double *out_final_z_angstrom,
+    double *out_final_torsion_angles_radians,
     char *error_message,
     size_t error_capacity);
 
