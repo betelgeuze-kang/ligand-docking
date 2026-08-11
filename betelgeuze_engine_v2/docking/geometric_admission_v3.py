@@ -401,7 +401,14 @@ class GeometricAdmissionDecisionV3:
             )
         except GeometricAdmissionV3Error:
             raise
-        except (GeometricAdmissionV2Error, Mixed64ProposalProducerError) as exc:
+        except (
+            AttributeError,
+            GeometricAdmissionV2Error,
+            Mixed64ProposalProducerError,
+            TypeError,
+            UnicodeError,
+            ValueError,
+        ) as exc:
             raise GeometricAdmissionV3Error(
                 "geometric admission decision live integrity failed"
             ) from exc
@@ -546,7 +553,13 @@ class GeometricAdmissionBatchV3:
             )
         except GeometricAdmissionV3Error:
             raise
-        except Mixed64ProposalProducerError as exc:
+        except (
+            AttributeError,
+            Mixed64ProposalProducerError,
+            TypeError,
+            UnicodeError,
+            ValueError,
+        ) as exc:
             raise GeometricAdmissionV3Error(
                 "geometric admission batch live integrity failed"
             ) from exc

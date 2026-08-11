@@ -97,7 +97,12 @@ def verify_policy(path: Path = DEFAULT_POLICY_PATH) -> dict[str, object]:
         raise GeometricAdmissionV3PolicyVerificationError(
             "geometric-admission v3 policy must be one JSON object"
         )
-    canonical = _canonical_bytes(document)
+    try:
+        canonical = _canonical_bytes(document)
+    except (TypeError, ValueError, UnicodeError) as exc:
+        raise GeometricAdmissionV3PolicyVerificationError(
+            "geometric-admission v3 policy contains non-canonical values"
+        ) from exc
     if raw != canonical + b"\n":
         raise GeometricAdmissionV3PolicyVerificationError(
             "geometric-admission v3 policy is not canonical JSON"

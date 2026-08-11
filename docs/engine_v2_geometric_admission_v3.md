@@ -7,9 +7,9 @@ scores, ranks, validity outcomes, reservations, or authority.
 
 The canonical policy is
 `config/engine_v2_geometric_admission_v3.json`, with SHA-256
-`feb9c00eb71bb45fe07479c6f5b8e6faa171b9968fa4dbb2370e518c71290526`.
+`bd2329f58b4f735af6daaa87eaf627127c34c81e5cd129c37c4bd00d04364aca`.
 It binds producer policy SHA-256
-`da9c29b03670d70706050914e57a01a7947fca48d49f89999199adc4a208f825`.
+`1bde275ef62ada47611acec9fcba27868ecc928ba9e74a057a075f86ae77bcf7`.
 
 ## Failure-complete denominator
 

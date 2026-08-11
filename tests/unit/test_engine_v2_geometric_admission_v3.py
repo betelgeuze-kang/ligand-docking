@@ -136,9 +136,7 @@ def test_typed_geometry_failures_are_carried_without_metrics() -> None:
 
 
 def test_severe_penetration_is_typed_geometric_rejection_not_deletion() -> None:
-    allocation, bundle, *_ = _fixture()
-    penetrative = replace(
-        bundle,
+    allocation, penetrative, *_ = _fixture(
         ligand_vdw_radii=(10.0,) * len(LIGAND),
         receptor_vdw_radii=(10.0,) * len(RECEPTOR),
     )
@@ -224,6 +222,15 @@ def test_live_source_bundle_mutation_fails_closed(
     allocation, bundle, *_ = _fixture()
     producer = produce_fixed_mixed64_proposals(allocation, source_bundle=bundle)
     object.__setattr__(producer.source_bundle, field_name, replacement)
+
+    with pytest.raises(GeometricAdmissionV3Error, match="integrity preflight"):
+        GeometricAdmissionV3().admit_producer_batch(producer)
+
+
+def test_nonserializable_live_source_mutation_fails_with_domain_error() -> None:
+    allocation, bundle, *_ = _fixture()
+    producer = produce_fixed_mixed64_proposals(allocation, source_bundle=bundle)
+    object.__setattr__(producer.source_bundle, "pocket_center", object())
 
     with pytest.raises(GeometricAdmissionV3Error, match="integrity preflight"):
         GeometricAdmissionV3().admit_producer_batch(producer)
@@ -377,6 +384,15 @@ def test_admission_decision_live_mutation_fails_integrity_check() -> None:
     )
 
     with pytest.raises(GeometricAdmissionV3Error, match="live projection changed"):
+        admission.assert_live_integrity()
+
+
+def test_nonserializable_decision_mutation_fails_with_domain_error() -> None:
+    allocation, bundle, *_ = _fixture()
+    _producer, admission = _admit(allocation, bundle)
+    object.__setattr__(admission.decisions[0], "status", object())
+
+    with pytest.raises(GeometricAdmissionV3Error, match="live integrity failed"):
         admission.assert_live_integrity()
 
 

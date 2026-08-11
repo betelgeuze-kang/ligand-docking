@@ -75,6 +75,58 @@ def test_noncanonical_policy_fails_closed(tmp_path: Path) -> None:
         verify_policy(path)
 
 
+@pytest.mark.parametrize("invalid_value", (float("nan"), float("inf"), -float("inf")))
+def test_nonfinite_policy_value_fails_closed(
+    tmp_path: Path,
+    invalid_value: float,
+) -> None:
+    document = json.loads(DEFAULT_POLICY_PATH.read_text(encoding="ascii"))
+    document["candidate_denominator"] = invalid_value
+    path = tmp_path / "nonfinite.json"
+    path.write_text(
+        json.dumps(document, sort_keys=True, separators=(",", ":")) + "\n",
+        encoding="ascii",
+    )
+
+    with pytest.raises(
+        GeometricAdmissionV3PolicyVerificationError,
+        match="contains non-canonical values",
+    ):
+        verify_policy(path)
+
+
+def test_cli_reports_nonfinite_policy_as_structured_failure(tmp_path: Path) -> None:
+    document = json.loads(DEFAULT_POLICY_PATH.read_text(encoding="ascii"))
+    document["candidate_denominator"] = float("nan")
+    policy = tmp_path / "nonfinite.json"
+    policy.write_text(
+        json.dumps(document, sort_keys=True, separators=(",", ":")) + "\n",
+        encoding="ascii",
+    )
+    tool = (
+        Path(__file__).resolve().parents[2]
+        / "tools"
+        / "verify_engine_v2_geometric_admission_v3.py"
+    )
+
+    completed = subprocess.run(
+        [sys.executable, "-I", str(tool), "--policy", str(policy)],
+        cwd=tmp_path,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 1
+    assert completed.stderr == ""
+    result = json.loads(completed.stdout)
+    assert result["verified"] is False
+    assert result["verification_blockers"] == [
+        "geometric-admission v3 policy contains non-canonical values"
+    ]
+    assert result["molecular_execution_authorized"] is False
+
+
 def test_cli_runs_in_isolated_mode_outside_repository(tmp_path: Path) -> None:
     tool = (
         Path(__file__).resolve().parents[2]

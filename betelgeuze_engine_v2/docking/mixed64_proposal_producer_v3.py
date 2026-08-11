@@ -815,7 +815,7 @@ class Mixed64ProposalSourceBundleV1:
             )
         except Mixed64ProposalProducerError:
             raise
-        except ValueError as exc:
+        except (AttributeError, TypeError, UnicodeError, ValueError) as exc:
             raise Mixed64ProposalProducerError(
                 SOURCE_PAYLOAD_CROSS_WIRING,
                 "proposal source bundle nested live projection changed",
@@ -1270,7 +1270,7 @@ class Mixed64ProposalGenerationRecordV1:
             )
         except Mixed64ProposalProducerError:
             raise
-        except ValueError as exc:
+        except (AttributeError, TypeError, UnicodeError, ValueError) as exc:
             raise Mixed64ProposalProducerError(
                 SOURCE_PAYLOAD_CROSS_WIRING,
                 "generation record nested live projection changed",
@@ -1426,7 +1426,7 @@ class Mixed64ProposalProducerBatchV1:
             )
         except Mixed64ProposalProducerError:
             raise
-        except ValueError as exc:
+        except (AttributeError, TypeError, UnicodeError, ValueError) as exc:
             raise Mixed64ProposalProducerError(
                 SOURCE_PAYLOAD_CROSS_WIRING,
                 "producer batch nested live projection changed",
