@@ -20,6 +20,7 @@ mod native_hash;
 mod prune;
 mod receipt;
 mod refine;
+mod scorer_v1;
 mod search;
 mod sha256;
 mod short_range;
@@ -81,6 +82,18 @@ pub use model::{
     MAX_SURFACE_SAMPLES, MAX_TOP_K,
 };
 pub use receipt::SearchReceipt;
+pub use scorer_v1::{
+    score_native_fixed64_scorer_v1, NativeScorerV1Atom, NativeScorerV1Backend, NativeScorerV1Batch,
+    NativeScorerV1Config, NativeScorerV1Context, NativeScorerV1Donor, NativeScorerV1Error,
+    NativeScorerV1ErrorCode, NativeScorerV1Failure, NativeScorerV1FailureCode,
+    NativeScorerV1KernelFailure, NativeScorerV1KernelOutcome, NativeScorerV1KernelTerms,
+    NativeScorerV1Row, NativeScorerV1RowStatus, NativeScorerV1Terms, NATIVE_SCORER_V1_ALGORITHM_ID,
+    NATIVE_SCORER_V1_BATCH_SCHEMA_ID, NATIVE_SCORER_V1_CONFIG_SCHEMA_ID,
+    NATIVE_SCORER_V1_CONTEXT_SCHEMA_ID, NATIVE_SCORER_V1_FAILURE_SCHEMA_ID,
+    NATIVE_SCORER_V1_MAX_LIGAND_PAIR_CHECKS, NATIVE_SCORER_V1_MAX_RECEPTOR_CANDIDATE_PAIRS,
+    NATIVE_SCORER_V1_MAX_ROTORS, NATIVE_SCORER_V1_PAIR_TRAVERSAL_ID,
+    NATIVE_SCORER_V1_ROW_SCHEMA_ID, NATIVE_SCORER_V1_SCORE_ID, NATIVE_SCORER_V1_TERMS_SCHEMA_ID,
+};
 pub use search::{search, search_default, search_short_range};
 pub use short_range::{ShortRangeConfig, ShortRangeEvaluator};
 pub use so3::{orientations, Orientation};
