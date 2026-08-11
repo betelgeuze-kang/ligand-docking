@@ -12,6 +12,7 @@ add_library(betelgeuze_engine SHARED
     src/cpu/evaluator.cpp
     src/hip/evaluator.cpp
     src/rust/evaluator.cpp
+    src/docking/scorer_v1.cpp
     src/dynamics/api.cpp
     src/dynamics/checkpoint.cpp
     src/dynamics/common.cpp
@@ -31,7 +32,8 @@ else()
         "${BG_RUST_CPU_TARGET_DIR}/release/libbetelgeuze_cpu_kernel.a")
 endif()
 file(GLOB_RECURSE BG_RUST_CPU_SOURCES CONFIGURE_DEPENDS
-    "${PROJECT_SOURCE_DIR}/rust/cpu-kernel/src/*.rs")
+    "${PROJECT_SOURCE_DIR}/rust/cpu-kernel/src/*.rs"
+    "${PROJECT_SOURCE_DIR}/rust/betelgeuze-docking-search/src/*.rs")
 add_custom_command(
     OUTPUT "${BG_RUST_CPU_STATIC_LIBRARY}"
     COMMAND ${CMAKE_COMMAND} -E env
@@ -46,6 +48,7 @@ add_custom_command(
         "${PROJECT_SOURCE_DIR}/rust/Cargo.toml"
         "${PROJECT_SOURCE_DIR}/rust/Cargo.lock"
         "${PROJECT_SOURCE_DIR}/rust/cpu-kernel/Cargo.toml"
+        "${PROJECT_SOURCE_DIR}/rust/betelgeuze-docking-search/Cargo.toml"
         ${BG_RUST_CPU_SOURCES}
     COMMENT "Building deterministic Rust CPU provider"
     VERBATIM
@@ -397,6 +400,41 @@ if(BUILD_TESTING)
     add_test(
         NAME betelgeuze_engine_cpu_evaluator
         COMMAND betelgeuze_engine_cpu_evaluator
+    )
+
+    add_executable(
+        betelgeuze_engine_docking_scorer_v1
+        tests/docking_scorer_v1.cpp
+    )
+    target_link_libraries(
+        betelgeuze_engine_docking_scorer_v1
+        PRIVATE betelgeuze_engine
+    )
+    target_compile_features(
+        betelgeuze_engine_docking_scorer_v1
+        PRIVATE cxx_std_17
+    )
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(betelgeuze_engine_docking_scorer_v1 PRIVATE
+            -Wall
+            -Wextra
+            -Wpedantic
+            -Wconversion
+            -Wsign-conversion
+            -Werror
+            -UNDEBUG
+            -ffp-contract=off
+            -fno-fast-math
+        )
+    elseif(MSVC)
+        target_compile_options(
+            betelgeuze_engine_docking_scorer_v1
+            PRIVATE /W4 /WX /UNDEBUG /fp:strict
+        )
+    endif()
+    add_test(
+        NAME betelgeuze_engine_docking_scorer_v1
+        COMMAND betelgeuze_engine_docking_scorer_v1
     )
 
     add_executable(

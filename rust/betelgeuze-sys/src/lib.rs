@@ -20,7 +20,7 @@ static BG_RUST_CPU_PROVIDER_LINK_ANCHOR: extern "C" fn() -> u32 =
     betelgeuze_cpu_kernel::bg_rust_cpu_provider_abi_version_v1;
 
 pub const BG_ABI_VERSION_MAJOR: u32 = 1;
-pub const BG_ABI_VERSION_MINOR: u32 = 4;
+pub const BG_ABI_VERSION_MINOR: u32 = 5;
 pub const BG_ABI_VERSION: u32 = 1;
 
 pub const BG_CANONICAL_LENGTH_UNIT: &[u8] = b"angstrom\0";
@@ -64,6 +64,27 @@ pub type bg_integrator = i32;
 pub const BG_INTEGRATOR_VELOCITY_VERLET: bg_integrator = 1;
 pub const BG_INTEGRATOR_LANGEVIN_BAOAB: bg_integrator = 2;
 
+pub const BG_DOCKING_FIXED64_CANDIDATE_COUNT: u32 = 64;
+pub const BG_DOCKING_SCORER_V1_TERM_COUNT: u32 = 8;
+
+pub type bg_docking_scorer_v1_candidate_state = i32;
+pub const BG_DOCKING_SCORER_V1_CANDIDATE_INACTIVE: bg_docking_scorer_v1_candidate_state = 0;
+pub const BG_DOCKING_SCORER_V1_CANDIDATE_ACTIVE: bg_docking_scorer_v1_candidate_state = 1;
+
+pub type bg_docking_scorer_v1_row_status = i32;
+pub const BG_DOCKING_SCORER_V1_ROW_SCORED: bg_docking_scorer_v1_row_status = 1;
+pub const BG_DOCKING_SCORER_V1_ROW_TYPED_FAILURE: bg_docking_scorer_v1_row_status = 2;
+
+pub type bg_docking_scorer_v1_failure = i32;
+pub const BG_DOCKING_SCORER_V1_FAILURE_NONE: bg_docking_scorer_v1_failure = 0;
+pub const BG_DOCKING_SCORER_V1_FAILURE_UPSTREAM_NOT_ADMITTED: bg_docking_scorer_v1_failure = 1;
+pub const BG_DOCKING_SCORER_V1_FAILURE_INVALID_CANDIDATE_COORDINATES: bg_docking_scorer_v1_failure =
+    2;
+pub const BG_DOCKING_SCORER_V1_FAILURE_RECEPTOR_PAIR_CAPACITY: bg_docking_scorer_v1_failure = 3;
+pub const BG_DOCKING_SCORER_V1_FAILURE_LIGAND_PAIR_CAPACITY: bg_docking_scorer_v1_failure = 4;
+pub const BG_DOCKING_SCORER_V1_FAILURE_DEGENERATE_ROTOR: bg_docking_scorer_v1_failure = 5;
+pub const BG_DOCKING_SCORER_V1_FAILURE_NONFINITE_SCORE: bg_docking_scorer_v1_failure = 6;
+
 /// Opaque native context. Its representation is intentionally unavailable.
 #[repr(C)]
 pub struct bg_context {
@@ -85,6 +106,12 @@ pub struct bg_forcefield {
 /// Opaque native simulation. Its representation is intentionally unavailable.
 #[repr(C)]
 pub struct bg_simulation {
+    _private: [u8; 0],
+}
+
+/// Opaque persistent Engine V2 ScorerV1 context.
+#[repr(C)]
+pub struct bg_docking_scorer_v1 {
     _private: [u8; 0],
 }
 
@@ -319,6 +346,107 @@ pub struct bg_dynamics_report_v1 {
     pub reserved: [u64; 4],
 }
 
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_scorer_v1_context_soa_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub unit_system: bg_unit_system,
+    pub reserved0: u32,
+    pub receptor_atom_count: u64,
+    pub ligand_atom_count: u64,
+    pub receptor_x_angstrom: *const f64,
+    pub receptor_y_angstrom: *const f64,
+    pub receptor_z_angstrom: *const f64,
+    pub receptor_charge_elementary: *const f64,
+    pub receptor_vdw_radius_angstrom: *const f64,
+    pub receptor_epsilon_kcal_per_mol: *const f64,
+    pub receptor_hydrophobic: *const u8,
+    pub receptor_acceptor: *const u8,
+    pub ligand_reference_x_angstrom: *const f64,
+    pub ligand_reference_y_angstrom: *const f64,
+    pub ligand_reference_z_angstrom: *const f64,
+    pub ligand_charge_elementary: *const f64,
+    pub ligand_vdw_radius_angstrom: *const f64,
+    pub ligand_epsilon_kcal_per_mol: *const f64,
+    pub ligand_hydrophobic: *const u8,
+    pub ligand_acceptor: *const u8,
+    pub receptor_donor_count: u64,
+    pub receptor_donor_atom_index: *const u64,
+    pub receptor_hydrogen_atom_index: *const u64,
+    pub ligand_donor_count: u64,
+    pub ligand_donor_atom_index: *const u64,
+    pub ligand_hydrogen_atom_index: *const u64,
+    pub ligand_exclusion_count: u64,
+    pub ligand_exclusion_atom_i: *const u64,
+    pub ligand_exclusion_atom_j: *const u64,
+    pub rotor_count: u64,
+    pub rotor_atom_i: *const u64,
+    pub rotor_atom_j: *const u64,
+    pub rotor_atom_k: *const u64,
+    pub rotor_atom_l: *const u64,
+    pub pocket_center_angstrom: [f64; 3],
+    pub pocket_radius_angstrom: f64,
+    pub weights: [f64; BG_DOCKING_SCORER_V1_TERM_COUNT as usize],
+    pub electrostatic_dielectric: f64,
+    pub pair_cutoff_angstrom: f64,
+    pub hbond_distance_max_angstrom: f64,
+    pub polar_burial_distance_angstrom: f64,
+    pub max_receptor_candidate_pairs: u64,
+    pub max_ligand_pair_checks: u64,
+    pub authority_input_receipt_sha256: [u8; 32],
+    pub receptor_system_sha256: [u8; 32],
+    pub ligand_system_sha256: [u8; 32],
+    pub backend_receipt_sha256: [u8; 32],
+    pub reserved: [u64; 8],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_scorer_v1_candidate_batch_soa_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub candidate_count: u64,
+    pub ligand_atom_count: u64,
+    pub unit_system: bg_unit_system,
+    pub reserved0: u32,
+    pub candidate_state: *const bg_docking_scorer_v1_candidate_state,
+    pub x_angstrom: *const f64,
+    pub y_angstrom: *const f64,
+    pub z_angstrom: *const f64,
+    pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_scorer_v1_row_v1 {
+    pub slot_index: u32,
+    pub status: bg_docking_scorer_v1_row_status,
+    pub failure_code: bg_docking_scorer_v1_failure,
+    pub reserved0: u32,
+    pub weighted_terms: [f64; BG_DOCKING_SCORER_V1_TERM_COUNT as usize],
+    pub total_score: f64,
+    pub receptor_candidate_pair_count: u64,
+    pub ligand_pair_count: u64,
+    pub hbond_count: u64,
+    pub hydrophobic_contact_count: u64,
+    pub buried_polar_count: u64,
+    pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_scorer_v1_output_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub row_capacity: u64,
+    pub row_count: u64,
+    pub unit_system: bg_unit_system,
+    pub reserved0: u32,
+    pub rows: *mut bg_docking_scorer_v1_row_v1,
+    pub reserved: [u64; 4],
+}
+
 unsafe extern "C" {
     pub fn bg_abi_version() -> u32;
     pub fn bg_abi_version_major() -> u32;
@@ -395,6 +523,21 @@ unsafe extern "C" {
         caller_struct_size: usize,
         caller_abi_version: u32,
     ) -> bg_status;
+    pub fn bg_docking_scorer_v1_context_soa_v1_init(
+        descriptor: *mut bg_docking_scorer_v1_context_soa_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_docking_scorer_v1_candidate_batch_soa_v1_init(
+        batch: *mut bg_docking_scorer_v1_candidate_batch_soa_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_docking_scorer_v1_output_v1_init(
+        output: *mut bg_docking_scorer_v1_output_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
 
     pub fn bg_backend_is_available(
         backend: bg_backend,
@@ -417,6 +560,23 @@ unsafe extern "C" {
     pub fn bg_context_get_unit_system(
         context: *const bg_context,
         unit_system: *mut bg_unit_system,
+    ) -> bg_status;
+
+    pub fn bg_docking_scorer_v1_create(
+        context: *const bg_context,
+        descriptor: *const bg_docking_scorer_v1_context_soa_v1,
+        out_scorer: *mut *mut bg_docking_scorer_v1,
+    ) -> bg_status;
+    pub fn bg_docking_scorer_v1_destroy(scorer: *mut bg_docking_scorer_v1);
+    pub fn bg_docking_scorer_v1_get_backend(
+        scorer: *const bg_docking_scorer_v1,
+        backend: *mut bg_backend,
+    ) -> bg_status;
+    pub fn bg_docking_scorer_v1_score_fixed64(
+        context: *const bg_context,
+        scorer: *const bg_docking_scorer_v1,
+        candidates: *const bg_docking_scorer_v1_candidate_batch_soa_v1,
+        out_rows: *mut bg_docking_scorer_v1_output_v1,
     ) -> bg_status;
 
     pub fn bg_system_create(

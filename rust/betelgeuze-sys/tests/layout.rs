@@ -5,12 +5,17 @@ use betelgeuze_sys::*;
 #[test]
 fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(BG_ABI_VERSION_MAJOR, 1);
-    assert_eq!(BG_ABI_VERSION_MINOR, 4);
+    assert_eq!(BG_ABI_VERSION_MINOR, 5);
     assert_eq!(BG_ABI_VERSION, 1);
     assert_eq!(size_of::<bg_status>(), 4);
     assert_eq!(size_of::<bg_backend>(), 4);
     assert_eq!(size_of::<bg_unit_system>(), 4);
     assert_eq!(size_of::<bg_integrator>(), 4);
+    assert_eq!(size_of::<bg_docking_scorer_v1_candidate_state>(), 4);
+    assert_eq!(size_of::<bg_docking_scorer_v1_row_status>(), 4);
+    assert_eq!(size_of::<bg_docking_scorer_v1_failure>(), 4);
+    assert_eq!(BG_DOCKING_FIXED64_CANDIDATE_COUNT, 64);
+    assert_eq!(BG_DOCKING_SCORER_V1_TERM_COUNT, 8);
     assert_eq!(BG_STATUS_OK, 0);
     assert_eq!(BG_STATUS_INTERNAL_ERROR, 9);
     assert_eq!(BG_STATUS_NUMERICAL_ERROR, 10);
@@ -28,6 +33,97 @@ fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(BG_PERIODIC_AXIS_Y, 2);
     assert_eq!(BG_PERIODIC_AXIS_Z, 4);
     assert_eq!(BG_PERIODIC_AXES_ALL, 7);
+}
+
+#[test]
+fn docking_scorer_v1_layouts_match_the_c_header() {
+    assert_eq!(size_of::<bg_docking_scorer_v1_context_soa_v1>(), 608);
+    assert_eq!(align_of::<bg_docking_scorer_v1_context_soa_v1>(), 8);
+    assert_eq!(
+        offset_of!(bg_docking_scorer_v1_context_soa_v1, unit_system),
+        8
+    );
+    assert_eq!(
+        offset_of!(bg_docking_scorer_v1_context_soa_v1, receptor_atom_count),
+        16
+    );
+    assert_eq!(
+        offset_of!(bg_docking_scorer_v1_context_soa_v1, receptor_x_angstrom),
+        32
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_scorer_v1_context_soa_v1,
+            ligand_reference_x_angstrom
+        ),
+        96
+    );
+    assert_eq!(
+        offset_of!(bg_docking_scorer_v1_context_soa_v1, receptor_donor_count),
+        160
+    );
+    assert_eq!(
+        offset_of!(bg_docking_scorer_v1_context_soa_v1, ligand_exclusion_count),
+        208
+    );
+    assert_eq!(
+        offset_of!(bg_docking_scorer_v1_context_soa_v1, rotor_count),
+        232
+    );
+    assert_eq!(
+        offset_of!(bg_docking_scorer_v1_context_soa_v1, pocket_center_angstrom),
+        272
+    );
+    assert_eq!(
+        offset_of!(bg_docking_scorer_v1_context_soa_v1, weights),
+        304
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_scorer_v1_context_soa_v1,
+            max_receptor_candidate_pairs
+        ),
+        400
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_scorer_v1_context_soa_v1,
+            authority_input_receipt_sha256
+        ),
+        416
+    );
+    assert_eq!(
+        offset_of!(bg_docking_scorer_v1_context_soa_v1, reserved),
+        544
+    );
+
+    assert_eq!(size_of::<bg_docking_scorer_v1_candidate_batch_soa_v1>(), 96);
+    assert_eq!(
+        offset_of!(bg_docking_scorer_v1_candidate_batch_soa_v1, candidate_count),
+        8
+    );
+    assert_eq!(
+        offset_of!(bg_docking_scorer_v1_candidate_batch_soa_v1, candidate_state),
+        32
+    );
+    assert_eq!(
+        offset_of!(bg_docking_scorer_v1_candidate_batch_soa_v1, reserved),
+        64
+    );
+
+    assert_eq!(size_of::<bg_docking_scorer_v1_row_v1>(), 160);
+    assert_eq!(offset_of!(bg_docking_scorer_v1_row_v1, weighted_terms), 16);
+    assert_eq!(offset_of!(bg_docking_scorer_v1_row_v1, total_score), 80);
+    assert_eq!(
+        offset_of!(bg_docking_scorer_v1_row_v1, receptor_candidate_pair_count),
+        88
+    );
+    assert_eq!(offset_of!(bg_docking_scorer_v1_row_v1, reserved), 128);
+
+    assert_eq!(size_of::<bg_docking_scorer_v1_output_v1>(), 72);
+    assert_eq!(offset_of!(bg_docking_scorer_v1_output_v1, row_capacity), 8);
+    assert_eq!(offset_of!(bg_docking_scorer_v1_output_v1, rows), 32);
+    assert_eq!(offset_of!(bg_docking_scorer_v1_output_v1, reserved), 40);
 }
 
 #[test]
@@ -359,4 +455,5 @@ fn opaque_handles_are_only_used_behind_pointers() {
     assert_eq!(size_of::<*mut bg_system>(), size_of::<usize>());
     assert_eq!(size_of::<*mut bg_forcefield>(), size_of::<usize>());
     assert_eq!(size_of::<*mut bg_simulation>(), size_of::<usize>());
+    assert_eq!(size_of::<*mut bg_docking_scorer_v1>(), size_of::<usize>());
 }

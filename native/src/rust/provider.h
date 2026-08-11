@@ -1,6 +1,8 @@
 #ifndef BETELGEUZE_NATIVE_RUST_PROVIDER_H
 #define BETELGEUZE_NATIVE_RUST_PROVIDER_H
 
+#include "betelgeuze/engine.h"
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -123,6 +125,19 @@ int32_t bg_rust_cpu_evaluate_v1(
     uint8_t compute_forces,
     bg_rust_cpu_energy_v1 *out_energy,
     bg_rust_cpu_force_output_v1 *out_forces,
+    bg_rust_cpu_error_v1 *out_error);
+
+int32_t bg_rust_cpu_docking_scorer_v1_create(
+    const bg_docking_scorer_v1_context_soa_v1 *descriptor,
+    void **out_state,
+    bg_rust_cpu_error_v1 *out_error);
+
+void bg_rust_cpu_docking_scorer_v1_destroy(void *state);
+
+int32_t bg_rust_cpu_docking_scorer_v1_score_fixed64(
+    const void *state,
+    const bg_docking_scorer_v1_candidate_batch_soa_v1 *candidates,
+    bg_docking_scorer_v1_row_v1 *out_rows,
     bg_rust_cpu_error_v1 *out_error);
 
 #if defined(__cplusplus)

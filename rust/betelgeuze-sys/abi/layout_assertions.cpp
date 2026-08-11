@@ -22,11 +22,17 @@ static_assert(std::is_standard_layout<bg_simulation_options_v1>::value);
 static_assert(std::is_standard_layout<bg_minimizer_options_v1>::value);
 static_assert(std::is_standard_layout<bg_minimization_report_v1>::value);
 static_assert(std::is_standard_layout<bg_dynamics_report_v1>::value);
+static_assert(std::is_standard_layout<bg_docking_scorer_v1_context_soa_v1>::value);
+static_assert(
+    std::is_standard_layout<bg_docking_scorer_v1_candidate_batch_soa_v1>::value);
+static_assert(std::is_standard_layout<bg_docking_scorer_v1_row_v1>::value);
+static_assert(std::is_standard_layout<bg_docking_scorer_v1_output_v1>::value);
 
 static_assert(!is_complete<bg_context>::value);
 static_assert(!is_complete<bg_system>::value);
 static_assert(!is_complete<bg_forcefield>::value);
 static_assert(!is_complete<bg_simulation>::value);
+static_assert(!is_complete<bg_docking_scorer_v1>::value);
 
 static_assert(sizeof(bg_context_options) == 64);
 static_assert(alignof(bg_context_options) == alignof(uint64_t));
@@ -40,6 +46,37 @@ static_assert(offsetof(bg_context_options, flags) == 24);
 static_assert(offsetof(bg_context_options, reserved) == 32);
 
 #if INTPTR_MAX == INT64_MAX
+static_assert(sizeof(bg_docking_scorer_v1_context_soa_v1) == 608);
+static_assert(alignof(bg_docking_scorer_v1_context_soa_v1) == 8);
+static_assert(offsetof(bg_docking_scorer_v1_context_soa_v1, receptor_atom_count) == 16);
+static_assert(offsetof(bg_docking_scorer_v1_context_soa_v1, receptor_x_angstrom) == 32);
+static_assert(
+    offsetof(bg_docking_scorer_v1_context_soa_v1, ligand_reference_x_angstrom) == 96);
+static_assert(offsetof(bg_docking_scorer_v1_context_soa_v1, receptor_donor_count) == 160);
+static_assert(offsetof(bg_docking_scorer_v1_context_soa_v1, ligand_exclusion_count) == 208);
+static_assert(offsetof(bg_docking_scorer_v1_context_soa_v1, rotor_count) == 232);
+static_assert(offsetof(bg_docking_scorer_v1_context_soa_v1, pocket_center_angstrom) == 272);
+static_assert(offsetof(bg_docking_scorer_v1_context_soa_v1, weights) == 304);
+static_assert(
+    offsetof(bg_docking_scorer_v1_context_soa_v1, max_receptor_candidate_pairs) == 400);
+static_assert(
+    offsetof(bg_docking_scorer_v1_context_soa_v1, authority_input_receipt_sha256) == 416);
+static_assert(offsetof(bg_docking_scorer_v1_context_soa_v1, reserved) == 544);
+
+static_assert(sizeof(bg_docking_scorer_v1_candidate_batch_soa_v1) == 96);
+static_assert(
+    offsetof(bg_docking_scorer_v1_candidate_batch_soa_v1, candidate_state) == 32);
+static_assert(offsetof(bg_docking_scorer_v1_candidate_batch_soa_v1, reserved) == 64);
+static_assert(sizeof(bg_docking_scorer_v1_row_v1) == 160);
+static_assert(offsetof(bg_docking_scorer_v1_row_v1, weighted_terms) == 16);
+static_assert(offsetof(bg_docking_scorer_v1_row_v1, total_score) == 80);
+static_assert(
+    offsetof(bg_docking_scorer_v1_row_v1, receptor_candidate_pair_count) == 88);
+static_assert(offsetof(bg_docking_scorer_v1_row_v1, reserved) == 128);
+static_assert(sizeof(bg_docking_scorer_v1_output_v1) == 72);
+static_assert(offsetof(bg_docking_scorer_v1_output_v1, rows) == 32);
+static_assert(offsetof(bg_docking_scorer_v1_output_v1, reserved) == 40);
+
 static_assert(sizeof(bg_particle_soa) == 120);
 static_assert(alignof(bg_particle_soa) == 8);
 static_assert(offsetof(bg_particle_soa, struct_size) == 0);

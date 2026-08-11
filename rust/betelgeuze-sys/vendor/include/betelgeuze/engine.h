@@ -56,7 +56,7 @@ extern "C" {
 #endif
 
 #define BG_ABI_VERSION_MAJOR UINT32_C(1)
-#define BG_ABI_VERSION_MINOR UINT32_C(4)
+#define BG_ABI_VERSION_MINOR UINT32_C(5)
 #define BG_ABI_VERSION UINT32_C(1)
 
 #define BG_CANONICAL_LENGTH_UNIT "angstrom"
@@ -113,11 +113,39 @@ enum {
     BG_INTEGRATOR_LANGEVIN_BAOAB = 2
 };
 
+/* Frozen Engine V2 ScorerV1 batch dimensions and row semantics. */
+#define BG_DOCKING_FIXED64_CANDIDATE_COUNT UINT32_C(64)
+#define BG_DOCKING_SCORER_V1_TERM_COUNT UINT32_C(8)
+
+typedef int32_t bg_docking_scorer_v1_candidate_state;
+enum {
+    BG_DOCKING_SCORER_V1_CANDIDATE_INACTIVE = 0,
+    BG_DOCKING_SCORER_V1_CANDIDATE_ACTIVE = 1
+};
+
+typedef int32_t bg_docking_scorer_v1_row_status;
+enum {
+    BG_DOCKING_SCORER_V1_ROW_SCORED = 1,
+    BG_DOCKING_SCORER_V1_ROW_TYPED_FAILURE = 2
+};
+
+typedef int32_t bg_docking_scorer_v1_failure;
+enum {
+    BG_DOCKING_SCORER_V1_FAILURE_NONE = 0,
+    BG_DOCKING_SCORER_V1_FAILURE_UPSTREAM_NOT_ADMITTED = 1,
+    BG_DOCKING_SCORER_V1_FAILURE_INVALID_CANDIDATE_COORDINATES = 2,
+    BG_DOCKING_SCORER_V1_FAILURE_RECEPTOR_PAIR_CAPACITY = 3,
+    BG_DOCKING_SCORER_V1_FAILURE_LIGAND_PAIR_CAPACITY = 4,
+    BG_DOCKING_SCORER_V1_FAILURE_DEGENERATE_ROTOR = 5,
+    BG_DOCKING_SCORER_V1_FAILURE_NONFINITE_SCORE = 6
+};
+
 /* Incomplete declarations are the only public handle representation. */
 typedef struct bg_context bg_context;
 typedef struct bg_system bg_system;
 typedef struct bg_forcefield bg_forcefield;
 typedef struct bg_simulation bg_simulation;
+typedef struct bg_docking_scorer_v1 bg_docking_scorer_v1;
 
 typedef struct bg_context_options {
     uint32_t struct_size;
@@ -439,6 +467,124 @@ typedef struct bg_dynamics_report_v1 {
     uint64_t reserved[4];
 } bg_dynamics_report_v1;
 
+/*
+ * Persistent Engine V2 ScorerV1 context input.  All channels and the four
+ * identity digests are deep-copied by bg_docking_scorer_v1_create.  The
+ * ligand reference geometry fixes internal-vdW and rotor strain baselines.
+ * Donor rows are sorted lexicographically by donor/hydrogen, exclusion rows
+ * are unique canonical first<second pairs, and rotor rows are unique.  Atom
+ * boolean channels contain exactly 0 or 1.  This numerical ABI binds evidence
+ * identities but does not grant molecular-execution or production authority.
+ */
+typedef struct bg_docking_scorer_v1_context_soa_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    bg_unit_system unit_system;
+    uint32_t reserved0;
+
+    uint64_t receptor_atom_count;
+    uint64_t ligand_atom_count;
+
+    const double *receptor_x_angstrom;
+    const double *receptor_y_angstrom;
+    const double *receptor_z_angstrom;
+    const double *receptor_charge_elementary;
+    const double *receptor_vdw_radius_angstrom;
+    const double *receptor_epsilon_kcal_per_mol;
+    const uint8_t *receptor_hydrophobic;
+    const uint8_t *receptor_acceptor;
+
+    const double *ligand_reference_x_angstrom;
+    const double *ligand_reference_y_angstrom;
+    const double *ligand_reference_z_angstrom;
+    const double *ligand_charge_elementary;
+    const double *ligand_vdw_radius_angstrom;
+    const double *ligand_epsilon_kcal_per_mol;
+    const uint8_t *ligand_hydrophobic;
+    const uint8_t *ligand_acceptor;
+
+    uint64_t receptor_donor_count;
+    const uint64_t *receptor_donor_atom_index;
+    const uint64_t *receptor_hydrogen_atom_index;
+    uint64_t ligand_donor_count;
+    const uint64_t *ligand_donor_atom_index;
+    const uint64_t *ligand_hydrogen_atom_index;
+
+    uint64_t ligand_exclusion_count;
+    const uint64_t *ligand_exclusion_atom_i;
+    const uint64_t *ligand_exclusion_atom_j;
+
+    uint64_t rotor_count;
+    const uint64_t *rotor_atom_i;
+    const uint64_t *rotor_atom_j;
+    const uint64_t *rotor_atom_k;
+    const uint64_t *rotor_atom_l;
+
+    double pocket_center_angstrom[3];
+    double pocket_radius_angstrom;
+    double weights[BG_DOCKING_SCORER_V1_TERM_COUNT];
+    double electrostatic_dielectric;
+    double pair_cutoff_angstrom;
+    double hbond_distance_max_angstrom;
+    double polar_burial_distance_angstrom;
+    uint64_t max_receptor_candidate_pairs;
+    uint64_t max_ligand_pair_checks;
+
+    uint8_t authority_input_receipt_sha256[32];
+    uint8_t receptor_system_sha256[32];
+    uint8_t ligand_system_sha256[32];
+    uint8_t backend_receipt_sha256[32];
+    uint64_t reserved[8];
+} bg_docking_scorer_v1_context_soa_v1;
+
+/* Candidate-major fixed64 coordinate SoA.  Every batch preserves 64 slots.
+ * Inactive rows retain the denominator and produce the typed upstream failure
+ * without interpreting their coordinate values. */
+typedef struct bg_docking_scorer_v1_candidate_batch_soa_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    uint64_t candidate_count;
+    uint64_t ligand_atom_count;
+    bg_unit_system unit_system;
+    uint32_t reserved0;
+    const bg_docking_scorer_v1_candidate_state *candidate_state;
+    const double *x_angstrom;
+    const double *y_angstrom;
+    const double *z_angstrom;
+    uint64_t reserved[4];
+} bg_docking_scorer_v1_candidate_batch_soa_v1;
+
+/* Frozen ScorerV1 term order: typed-vdW, electrostatics,
+ * directional-H-bond, hydrophobic-contact, desolvation-proxy,
+ * torsion-energy, ligand-strain, weak-pocket-prior. */
+typedef struct bg_docking_scorer_v1_row_v1 {
+    uint32_t slot_index;
+    bg_docking_scorer_v1_row_status status;
+    bg_docking_scorer_v1_failure failure_code;
+    uint32_t reserved0;
+    double weighted_terms[BG_DOCKING_SCORER_V1_TERM_COUNT];
+    double total_score;
+    uint64_t receptor_candidate_pair_count;
+    uint64_t ligand_pair_count;
+    uint64_t hbond_count;
+    uint64_t hydrophobic_contact_count;
+    uint64_t buried_polar_count;
+    uint64_t reserved[4];
+} bg_docking_scorer_v1_row_v1;
+
+/* Caller-owned fixed64 output.  capacity and rows are inputs; row_count is
+ * committed only after the complete batch succeeds. */
+typedef struct bg_docking_scorer_v1_output_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    uint64_t row_capacity;
+    uint64_t row_count;
+    bg_unit_system unit_system;
+    uint32_t reserved0;
+    bg_docking_scorer_v1_row_v1 *rows;
+    uint64_t reserved[4];
+} bg_docking_scorer_v1_output_v1;
+
 /* ABI and diagnostics. */
 BG_API uint32_t BG_CALL bg_abi_version(void) BG_NOEXCEPT;
 BG_API uint32_t BG_CALL bg_abi_version_major(void) BG_NOEXCEPT;
@@ -519,6 +665,18 @@ BG_API bg_status BG_CALL bg_dynamics_report_v1_init(
     bg_dynamics_report_v1 *report,
     size_t caller_struct_size,
     uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_scorer_v1_context_soa_v1_init(
+    bg_docking_scorer_v1_context_soa_v1 *descriptor,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_scorer_v1_candidate_batch_soa_v1_init(
+    bg_docking_scorer_v1_candidate_batch_soa_v1 *batch,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_scorer_v1_output_v1_init(
+    bg_docking_scorer_v1_output_v1 *output,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
 
 #if !defined(BG_DISABLE_DESCRIPTOR_INIT_CONVENIENCE_MACROS)
 #  define bg_context_options_init(options) \
@@ -565,6 +723,19 @@ BG_API bg_status BG_CALL bg_dynamics_report_v1_init(
 #  define bg_dynamics_report_v1_init(report) \
     bg_dynamics_report_v1_init( \
         (report), sizeof(bg_dynamics_report_v1), BG_ABI_VERSION)
+#  define bg_docking_scorer_v1_context_soa_v1_init(descriptor) \
+    bg_docking_scorer_v1_context_soa_v1_init( \
+        (descriptor), \
+        sizeof(bg_docking_scorer_v1_context_soa_v1), \
+        BG_ABI_VERSION)
+#  define bg_docking_scorer_v1_candidate_batch_soa_v1_init(batch) \
+    bg_docking_scorer_v1_candidate_batch_soa_v1_init( \
+        (batch), \
+        sizeof(bg_docking_scorer_v1_candidate_batch_soa_v1), \
+        BG_ABI_VERSION)
+#  define bg_docking_scorer_v1_output_v1_init(output) \
+    bg_docking_scorer_v1_output_v1_init( \
+        (output), sizeof(bg_docking_scorer_v1_output_v1), BG_ABI_VERSION)
 #endif
 
 /*
@@ -593,6 +764,30 @@ BG_API bg_status BG_CALL bg_context_get_device_ordinal(
 BG_API bg_status BG_CALL bg_context_get_unit_system(
     const bg_context *context,
     bg_unit_system *unit_system) BG_NOEXCEPT;
+
+/*
+ * Create a persistent ScorerV1 context for the explicitly selected backend.
+ * CPP_CPU_REFERENCE is qualification-only.  RUST_CPU is the product CPU
+ * implementation.  HIP_SAFE and HIP_FAST never fall back; until their
+ * ScorerV1 providers are compiled and qualified these calls fail closed with
+ * BG_STATUS_BACKEND_UNAVAILABLE.  The scorer owns all copied context state and
+ * has no parent-context lifetime dependency, while score calls still require a
+ * context with the exact backend/device binding used at creation.
+ */
+BG_API bg_status BG_CALL bg_docking_scorer_v1_create(
+    const bg_context *context,
+    const bg_docking_scorer_v1_context_soa_v1 *descriptor,
+    bg_docking_scorer_v1 **out_scorer) BG_NOEXCEPT;
+BG_API void BG_CALL bg_docking_scorer_v1_destroy(
+    bg_docking_scorer_v1 *scorer) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_scorer_v1_get_backend(
+    const bg_docking_scorer_v1 *scorer,
+    bg_backend *backend) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_scorer_v1_score_fixed64(
+    const bg_context *context,
+    const bg_docking_scorer_v1 *scorer,
+    const bg_docking_scorer_v1_candidate_batch_soa_v1 *candidates,
+    bg_docking_scorer_v1_output_v1 *out_rows) BG_NOEXCEPT;
 
 /* A system owns its host SoA and has no parent-handle lifetime dependency. */
 BG_API bg_status BG_CALL bg_system_create(

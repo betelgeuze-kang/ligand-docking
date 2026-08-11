@@ -1,8 +1,10 @@
 # CPU evaluator contract
 
-The CPU evaluator is the first production implementation of
+The C++ CPU evaluator is the independent qualification implementation of
 `betelgeuze.reference_physics/1.0.0`. It owns no external solver code and uses
-only scalar binary64 C++ operations.
+only scalar binary64 C++ operations. Product CPU execution targets `rust_cpu`;
+the C++ lane exists to detect shared implementation errors and cannot be
+reported as a product backend.
 
 Evaluation order is frozen: input-order bonds, angles and torsions, followed by
 lexicographic nonbonded pairs `i < j`. Forces are closed-form negative energy
