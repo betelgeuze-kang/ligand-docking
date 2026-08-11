@@ -351,6 +351,44 @@ def test_sealed_batch_projection_corruption_fails_closed() -> None:
         _ = admission.receipt_sha256
 
 
+def test_admission_decision_live_mutation_fails_integrity_check() -> None:
+    allocation, bundle, *_ = _fixture()
+    _producer, admission = _admit(allocation, bundle)
+    decision = admission.decisions[0]
+    object.__setattr__(
+        decision,
+        "status",
+        REJECTED_STATUS if decision.status == ACCEPTED_STATUS else ACCEPTED_STATUS,
+    )
+
+    with pytest.raises(GeometricAdmissionV3Error, match="live projection changed"):
+        admission.assert_live_integrity()
+
+
+def test_admission_metric_live_mutation_fails_integrity_check() -> None:
+    allocation, bundle, *_ = _fixture()
+    _producer, admission = _admit(allocation, bundle)
+    decision = admission.decisions[0]
+    assert decision.metrics is not None
+    object.__setattr__(
+        decision.metrics,
+        "raw_minimum_distance_angstrom",
+        decision.metrics.raw_minimum_distance_angstrom + 1.0,
+    )
+
+    with pytest.raises(GeometricAdmissionV3Error, match="live integrity failed"):
+        admission.assert_live_integrity()
+
+
+def test_admission_batch_live_order_mutation_fails_integrity_check() -> None:
+    allocation, bundle, *_ = _fixture()
+    _producer, admission = _admit(allocation, bundle)
+    object.__setattr__(admission, "decisions", tuple(reversed(admission.decisions)))
+
+    with pytest.raises(GeometricAdmissionV3Error, match="live projection changed"):
+        admission.assert_live_integrity()
+
+
 def test_admission_signature_accepts_no_caller_coordinates_or_results() -> None:
     parameters = set(
         inspect.signature(GeometricAdmissionV3.admit_producer_batch).parameters

@@ -7,7 +7,7 @@ scores, ranks, validity outcomes, reservations, or authority.
 
 The canonical policy is
 `config/engine_v2_geometric_admission_v3.json`, with SHA-256
-`8cb92904947c9bcb14fc378e2755b9b88d862b25eba4f942fd02299dd0271825`.
+`ef78d3655743c40c5c7fe8524742c178b2f6a6c4120bef445288c056d59d6648`.
 It binds producer policy SHA-256
 `a5cc354ef227d6d187d565dfbc6d0cfc631218e201198ed5b8a61b43baf6ad6d`.
 
@@ -48,6 +48,9 @@ scientific kernel inputs.
 Each constructed decision is also rechecked against the sealed record, slot,
 coordinate identity, metric receipt, and draft disposition before the batch is
 sealed.
+Decision and batch objects expose the same recursive live-integrity check for
+the next sealed downstream consumer; mutating a status, metric, order, or bound
+producer field after construction cannot silently change downstream behavior.
 
 This component does not refine, score, rank, evaluate final pose validity, or
 authorize an experiment. Reservation, molecular execution, D0/D1/Fresh,

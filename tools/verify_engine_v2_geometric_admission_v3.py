@@ -126,6 +126,7 @@ def verify_policy(path: Path = DEFAULT_POLICY_PATH) -> dict[str, object]:
         "kernel_inputs_restored_from_sealed_projection": True,
         "recursive_live_projection_postflight": True,
         "decision_projection_rechecked_against_sealed_snapshot": True,
+        "admission_decision_and_batch_live_integrity_available": True,
     }:
         raise GeometricAdmissionV3PolicyVerificationError(
             "geometric-admission producer integrity boundary changed"

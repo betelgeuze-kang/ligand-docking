@@ -109,6 +109,19 @@ def _verify_sealed_receipt(payload: bytes, expected: str, *, name: str) -> str:
     return observed
 
 
+def _verify_live_sealed_projection(
+    payload: bytes,
+    expected: str,
+    projection: object,
+    *,
+    name: str,
+) -> str:
+    observed = _verify_sealed_receipt(payload, expected, name=name)
+    if _canonical_bytes(projection) != payload:
+        raise GeometricAdmissionV3Error(f"{name} live projection changed")
+    return observed
+
+
 def _digest(value: object, *, name: str) -> str:
     if type(value) is not str or _SHA256_RE.fullmatch(value) is None:
         raise GeometricAdmissionV3Error(f"{name} must be a lowercase SHA-256")
@@ -150,6 +163,7 @@ def frozen_geometric_admission_v3_policy() -> dict[str, object]:
             "kernel_inputs_restored_from_sealed_projection": True,
             "recursive_live_projection_postflight": True,
             "decision_projection_rechecked_against_sealed_snapshot": True,
+            "admission_decision_and_batch_live_integrity_available": True,
         },
         "authority": {
             "reservation_allowed": False,
@@ -370,6 +384,24 @@ class GeometricAdmissionDecisionV3:
             name="geometric admission decision",
         )
 
+    def assert_live_integrity(self) -> str:
+        try:
+            self.producer_record.assert_live_integrity()
+            if self.metrics is not None:
+                _ = self.metrics.receipt_sha256
+            return _verify_live_sealed_projection(
+                self._canonical_projection_bytes,
+                self._receipt_sha256,
+                self._projection(),
+                name="geometric admission decision",
+            )
+        except GeometricAdmissionV3Error:
+            raise
+        except (GeometricAdmissionV2Error, Mixed64ProposalProducerError) as exc:
+            raise GeometricAdmissionV3Error(
+                "geometric admission decision live integrity failed"
+            ) from exc
+
     def to_dict(self) -> dict[str, object]:
         return {
             **_unseal_projection(self._canonical_projection_bytes),
@@ -491,6 +523,24 @@ class GeometricAdmissionBatchV3:
             self._receipt_sha256,
             name="geometric admission batch",
         )
+
+    def assert_live_integrity(self) -> str:
+        try:
+            self.producer_batch.assert_live_integrity()
+            for decision in self.decisions:
+                decision.assert_live_integrity()
+            return _verify_live_sealed_projection(
+                self._canonical_projection_bytes,
+                self._receipt_sha256,
+                self._projection(),
+                name="geometric admission batch",
+            )
+        except GeometricAdmissionV3Error:
+            raise
+        except Mixed64ProposalProducerError as exc:
+            raise GeometricAdmissionV3Error(
+                "geometric admission batch live integrity failed"
+            ) from exc
 
     def to_dict(self) -> dict[str, object]:
         return {
