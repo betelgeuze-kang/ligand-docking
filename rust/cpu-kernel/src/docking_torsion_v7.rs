@@ -1,9 +1,10 @@
 use super::*;
 
 use betelgeuze_docking_search::{
-    refine_interaction_aware_torsion_contact_v7, NativeTorsionV7Config, NativeTorsionV7Context,
-    NativeTorsionV7ErrorCode, NativeTorsionV7Request, NativeTorsionV7SelectionReason,
-    NativeTorsionV7SkipReason, NATIVE_TORSION_V7_MAX_LIGAND_ATOMS,
+    refine_interaction_aware_torsion_contact_v7,
+    validate_interaction_aware_torsion_contact_v7_context, NativeTorsionV7Config,
+    NativeTorsionV7Context, NativeTorsionV7ErrorCode, NativeTorsionV7Request,
+    NativeTorsionV7SelectionReason, NativeTorsionV7SkipReason, NATIVE_TORSION_V7_MAX_LIGAND_ATOMS,
     NATIVE_TORSION_V7_MAX_RECEPTOR_ATOMS,
 };
 
@@ -265,6 +266,16 @@ unsafe fn build_state(descriptor: &TorsionV7ContextV1) -> Result<TorsionV7State,
             "rust_cpu torsion V7 context denominator is invalid",
         ));
     }
+    let maximum_internal_pairs = descriptor
+        .ligand_atom_count
+        .checked_mul(descriptor.ligand_atom_count - 1)
+        .map(|value| value / 2)
+        .ok_or_else(|| ProviderError::capacity("rust_cpu torsion V7 pair bound overflowed"))?;
+    if descriptor.internal_pair_count > maximum_internal_pairs {
+        return Err(ProviderError::capacity(
+            "rust_cpu torsion V7 pair denominator exceeds the canonical maximum",
+        ));
+    }
     let receptor_x = unsafe {
         checked_slice(
             descriptor.receptor_x_angstrom,
@@ -367,30 +378,18 @@ unsafe fn build_state(descriptor: &TorsionV7ContextV1) -> Result<TorsionV7State,
         },
     };
 
-    // Validate the complete persistent context without exercising a torsion.
-    // The product call will supply real source/baseline coordinates later.
-    let validation_coordinates = vec![state.pocket_center; state.ligand_radii.len()];
-    let validation_angles = vec![0.0; state.ligand_radii.len()];
-    refine_interaction_aware_torsion_contact_v7(
-        NativeTorsionV7Request {
-            context: context(&state),
-            source_coordinates_angstrom: &validation_coordinates,
-            baseline_v6_coordinates_angstrom: &validation_coordinates,
-            baseline_v6_torsion_angles_radians: &validation_angles,
-            proposal_is_torsion_eligible: false,
-            max_steps: 0,
-            baseline_v6_accepted_steps: 0,
+    validate_interaction_aware_torsion_contact_v7_context(context(&state), state.config).map_err(
+        |error| match error.code() {
+            NativeTorsionV7ErrorCode::PairBudgetExceeded => {
+                ProviderError::capacity(error.message())
+            }
+            NativeTorsionV7ErrorCode::NonFiniteDerivedValue => ProviderError {
+                status: STATUS_NUMERICAL_ERROR,
+                message: error.message(),
+            },
+            _ => ProviderError::invalid(error.message()),
         },
-        state.config,
-    )
-    .map_err(|error| match error.code() {
-        NativeTorsionV7ErrorCode::PairBudgetExceeded => ProviderError::capacity(error.message()),
-        NativeTorsionV7ErrorCode::NonFiniteDerivedValue => ProviderError {
-            status: STATUS_NUMERICAL_ERROR,
-            message: error.message(),
-        },
-        _ => ProviderError::invalid(error.message()),
-    })?;
+    )?;
     Ok(state)
 }
 
@@ -1165,5 +1164,35 @@ mod tests {
                 .count(),
             CANDIDATE_COUNT
         );
+    }
+
+    #[test]
+    fn create_rejects_impossible_pair_count_before_reading_pair_channels() {
+        let context_storage = ContextStorage::fixture();
+        let mut descriptor = context_storage.descriptor();
+        descriptor.internal_pair_count = 7;
+        let mut state = ptr::null_mut();
+        let mut error = error_output();
+        let status =
+            unsafe { bg_rust_cpu_docking_torsion_v7_create(&descriptor, &mut state, &mut error) };
+
+        assert_eq!(status, STATUS_CAPACITY_OVERFLOW);
+        assert!(state.is_null());
+        assert!(error_message(&error).contains("canonical maximum"));
+    }
+
+    #[test]
+    fn create_validates_context_without_synthetic_objective_evaluation() {
+        let context_storage = ContextStorage::fixture();
+        let mut descriptor = context_storage.descriptor();
+        descriptor.internal_overlap_weight = f64::MAX;
+        let mut state = ptr::null_mut();
+        let mut error = error_output();
+        let status =
+            unsafe { bg_rust_cpu_docking_torsion_v7_create(&descriptor, &mut state, &mut error) };
+
+        assert_eq!(status, STATUS_OK, "{}", error_message(&error));
+        assert!(!state.is_null());
+        unsafe { bg_rust_cpu_docking_torsion_v7_destroy(state) };
     }
 }

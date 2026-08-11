@@ -286,6 +286,9 @@ struct TorsionScratch final {
     double *current_receptor;
     double *trial_receptor;
     double *best_receptor;
+    double *current_internal;
+    double *trial_internal;
+    double *best_internal;
 };
 
 struct TorsionObjective final {
@@ -397,6 +400,7 @@ __device__ bool torsion_objective(
     const double *y,
     const double *z,
     double *receptor_by_atom,
+    double *internal_by_pair,
     TorsionObjective *output) {
     double receptor_total = 0.0;
     for (size_t ligand = 0; ligand < context.ligand_count; ++ligand) {
@@ -439,6 +443,9 @@ __device__ bool torsion_objective(
             torsion_internal_penalty(context, x, y, z, first, second);
         if (!isfinite(penalty)) {
             return false;
+        }
+        if (internal_by_pair != nullptr) {
+            internal_by_pair[pair] = penalty;
         }
         internal_total += penalty;
     }
@@ -548,11 +555,16 @@ __device__ void torsion_process_candidate(
     TorsionObjective source_objective{};
     TorsionObjective baseline_objective{};
     TorsionObjective current_objective{};
+    double *const current_internal =
+        context.internal_pair_count == 0
+            ? nullptr
+            : scratch.current_internal + slot * context.internal_pair_count;
     if (!torsion_objective(
             context,
             batch.source_x + start,
             batch.source_y + start,
             batch.source_z + start,
+            nullptr,
             nullptr,
             &source_objective) ||
         !torsion_objective(
@@ -561,6 +573,7 @@ __device__ void torsion_process_candidate(
             batch.baseline_y + start,
             batch.baseline_z + start,
             scratch.current_receptor + start,
+            current_internal,
             &baseline_objective)) {
         outputs.rows[slot] = torsion_failure_row(
             slot,
@@ -635,20 +648,8 @@ __device__ void torsion_process_candidate(
                     static_cast<size_t>(context.internal_j[pair]);
                 if (torsion_is_descendant(first, rotor, context) !=
                     torsion_is_descendant(second, rotor, context)) {
-                    const double penalty = torsion_internal_penalty(
-                        context,
-                        scratch.current_x + start,
-                        scratch.current_y + start,
-                        scratch.current_z + start,
-                        first,
-                        second);
-                    if (!isfinite(penalty)) {
-                        outputs.rows[slot] = torsion_failure_row(
-                            slot,
-                            BG_DOCKING_TORSION_V7_FAILURE_NONFINITE_DERIVED_VALUE);
-                        return;
-                    }
-                    internal += penalty;
+                    internal += scratch.current_internal[
+                        slot * context.internal_pair_count + pair];
                 }
             }
             priorities[position] = torsion_canonical_zero(
@@ -792,12 +793,18 @@ __device__ void torsion_process_candidate(
                         continue;
                     }
                     TorsionObjective trial_objective{};
+                    double *const trial_internal =
+                        context.internal_pair_count == 0
+                            ? nullptr
+                            : scratch.trial_internal +
+                                  slot * context.internal_pair_count;
                     if (!torsion_objective(
                             context,
                             scratch.trial_x + start,
                             scratch.trial_y + start,
                             scratch.trial_z + start,
                             scratch.trial_receptor + start,
+                            trial_internal,
                             &trial_objective)) {
                         outputs.rows[slot] = torsion_failure_row(
                             slot,
@@ -837,6 +844,14 @@ __device__ void torsion_process_candidate(
                             scratch.best_receptor[start + atom] =
                                 scratch.trial_receptor[start + atom];
                         }
+                        for (size_t pair = 0;
+                             pair < context.internal_pair_count;
+                             ++pair) {
+                            const size_t pair_index =
+                                slot * context.internal_pair_count + pair;
+                            scratch.best_internal[pair_index] =
+                                scratch.trial_internal[pair_index];
+                        }
                     }
                 }
             }
@@ -873,6 +888,12 @@ __device__ void torsion_process_candidate(
             scratch.current_z[start + atom] = scratch.best_z[start + atom];
             scratch.current_receptor[start + atom] =
                 scratch.best_receptor[start + atom];
+        }
+        for (size_t pair = 0; pair < context.internal_pair_count; ++pair) {
+            const size_t pair_index =
+                slot * context.internal_pair_count + pair;
+            scratch.current_internal[pair_index] =
+                scratch.best_internal[pair_index];
         }
         scratch.current_angles[start + best_rotor_atom] =
             torsion_canonical_zero(atan2(
@@ -1148,6 +1169,16 @@ int32_t torsion_validate_create(
     const size_t rotor_count = static_cast<size_t>(descriptor->rotor_count);
     const size_t pair_count =
         static_cast<size_t>(descriptor->internal_pair_count);
+    const size_t maximum_internal_pairs =
+        ligand_count * (ligand_count - 1) / 2;
+    if (pair_count > maximum_internal_pairs) {
+        return torsion_fail(
+            BG_STATUS_CAPACITY_OVERFLOW,
+            error_message,
+            error_capacity,
+            BG_DOCKING_TORSION_V7_LANE
+            " torsion V7 pair denominator exceeds canonical maximum");
+    }
     if (!torsion_pointer_valid(
             descriptor->receptor_x_angstrom, receptor_count) ||
         !torsion_pointer_valid(
@@ -1452,6 +1483,9 @@ extern "C" int32_t BG_DOCKING_TORSION_V7_REFINE_FIXED64(
     TorsionDeviceBuffer<double> current_receptor;
     TorsionDeviceBuffer<double> trial_receptor;
     TorsionDeviceBuffer<double> best_receptor;
+    TorsionDeviceBuffer<double> current_internal;
+    TorsionDeviceBuffer<double> trial_internal;
+    TorsionDeviceBuffer<double> best_internal;
 
 #define BG_HIP_TORSION_COPY(buffer, source, count, operation)              \
     do {                                                                   \
@@ -1559,6 +1593,14 @@ extern "C" int32_t BG_DOCKING_TORSION_V7_REFINE_FIXED64(
         trial_receptor, coordinate_count, "torsion V7 trial receptor");
     BG_HIP_TORSION_ALLOCATE(
         best_receptor, coordinate_count, "torsion V7 best receptor");
+    const size_t internal_count =
+        kTorsionCandidateCount * state->internal_pair_count;
+    BG_HIP_TORSION_ALLOCATE(
+        current_internal, internal_count, "torsion V7 current internal");
+    BG_HIP_TORSION_ALLOCATE(
+        trial_internal, internal_count, "torsion V7 trial internal");
+    BG_HIP_TORSION_ALLOCATE(
+        best_internal, internal_count, "torsion V7 best internal");
 #undef BG_HIP_TORSION_ALLOCATE
 #undef BG_HIP_TORSION_COPY
 
@@ -1601,6 +1643,9 @@ extern "C" int32_t BG_DOCKING_TORSION_V7_REFINE_FIXED64(
         current_receptor.get(),
         trial_receptor.get(),
         best_receptor.get(),
+        current_internal.get(),
+        trial_internal.get(),
+        best_internal.get(),
     };
     hipLaunchKernelGGL(
         torsion_fixed64_kernel,
