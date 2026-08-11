@@ -565,7 +565,7 @@ def _principal_axis(coordinates: Coordinates, *, role: str) -> Vector3:
             ),
         )
         off_diagonal = abs(matrix[first][second])
-        scale = max(1.0, *(abs(matrix[index][index]) for index in range(3)))
+        scale = max(abs(matrix[index][index]) for index in range(3))
         if off_diagonal <= _EPSILON * scale:
             break
         angle = 0.5 * math.atan2(
@@ -627,7 +627,7 @@ def _principal_axis(coordinates: Coordinates, *, role: str) -> Vector3:
     )  # type: ignore[assignment]
     rayleigh = _dot(vector, transformed)
     residual = _norm(_subtract(transformed, _scale(vector, rayleigh)))
-    if residual > _EPSILON * max(1.0, abs(rayleigh)):
+    if residual > _EPSILON * max(_EPSILON, abs(rayleigh)):
         _fail(DEGENERATE_PRINCIPAL_AXIS, f"{role} principal-axis solver did not converge")
     return _canonical_direction(
         vector,
