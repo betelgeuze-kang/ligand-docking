@@ -3563,3 +3563,16 @@ uint64_t live_allocation_count(const bg_context &context) noexcept {
 #undef BG_DOCKING_SCORER_SCORE_FIXED64
 #undef BG_DOCKING_SCORER_DESTROY
 #undef BG_DOCKING_SCORER_CREATE
+
+#define BG_DOCKING_VALIDITY_CREATE \
+    bg_hip_fast_docking_pose_validity_v1_create
+#define BG_DOCKING_VALIDITY_DESTROY \
+    bg_hip_fast_docking_pose_validity_v1_destroy
+#define BG_DOCKING_VALIDITY_EVALUATE_FIXED64 \
+    bg_hip_fast_docking_pose_validity_v1_evaluate_fixed64
+#define BG_DOCKING_VALIDITY_LANE "hip_fast"
+#include "docking_pose_validity.hip"
+#undef BG_DOCKING_VALIDITY_LANE
+#undef BG_DOCKING_VALIDITY_EVALUATE_FIXED64
+#undef BG_DOCKING_VALIDITY_DESTROY
+#undef BG_DOCKING_VALIDITY_CREATE

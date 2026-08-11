@@ -1,4 +1,5 @@
 #include "../internal.hpp"
+#include "../hip/provider.h"
 #include "../rust/provider.h"
 
 #include <algorithm>
@@ -13,6 +14,13 @@
 #include <tuple>
 #include <utility>
 #include <vector>
+
+#ifndef BG_HAS_HIP_SAFE_PROVIDER
+#  define BG_HAS_HIP_SAFE_PROVIDER 0
+#endif
+#ifndef BG_ENABLE_HIP
+#  define BG_ENABLE_HIP 0
+#endif
 
 namespace betelgeuze::native::docking::validity {
 namespace {
@@ -71,6 +79,19 @@ struct CandidateFailure final {
         BG_DOCKING_POSE_VALIDITY_FAILURE_NONE;
     std::size_t observed_count = 0;
 };
+
+#if BG_HAS_HIP_SAFE_PROVIDER || BG_ENABLE_HIP
+[[nodiscard]] bg_status hip_provider_failure(
+    int32_t raw_status,
+    const char *provider_error,
+    const char *fallback) noexcept {
+    return fail(
+        static_cast<bg_status>(raw_status),
+        provider_error != nullptr && provider_error[0] != '\0'
+            ? provider_error
+            : fallback);
+}
+#endif
 
 [[nodiscard]] bool digest_present(const uint8_t (&digest)[32]) noexcept {
     return std::any_of(
@@ -1153,13 +1174,63 @@ extern "C" BG_API bg_status BG_CALL bg_docking_pose_validity_v1_create(
             }
             status = BG_STATUS_OK;
         } else if (context->backend == BG_BACKEND_HIP_SAFE) {
+#if BG_HAS_HIP_SAFE_PROVIDER
+            void *qualification_state = nullptr;
+            status = create_cpp_context(*descriptor, &qualification_state);
+            if (status != BG_STATUS_OK) {
+                return status;
+            }
+            std::unique_ptr<CppValidityContext> qualification(
+                static_cast<CppValidityContext *>(qualification_state));
+            char provider_error[BG_HIP_SAFE_ERROR_CAPACITY]{};
+            const int32_t raw_status =
+                bg_hip_safe_docking_pose_validity_v1_create(
+                    context->device_ordinal,
+                    descriptor,
+                    &validity->provider_state,
+                    provider_error,
+                    sizeof(provider_error));
+            if (raw_status != BG_STATUS_OK) {
+                return hip_provider_failure(
+                    raw_status,
+                    provider_error,
+                    "hip_safe pose-validity create failed");
+            }
+            status = BG_STATUS_OK;
+#else
             return fail(
                 BG_STATUS_BACKEND_UNAVAILABLE,
                 "hip_safe pose-validity provider is not compiled; fallback is forbidden");
+#endif
         } else if (context->backend == BG_BACKEND_HIP_FAST) {
+#if BG_ENABLE_HIP
+            void *qualification_state = nullptr;
+            status = create_cpp_context(*descriptor, &qualification_state);
+            if (status != BG_STATUS_OK) {
+                return status;
+            }
+            std::unique_ptr<CppValidityContext> qualification(
+                static_cast<CppValidityContext *>(qualification_state));
+            char provider_error[BG_HIP_SAFE_ERROR_CAPACITY]{};
+            const int32_t raw_status =
+                bg_hip_fast_docking_pose_validity_v1_create(
+                    context->device_ordinal,
+                    descriptor,
+                    &validity->provider_state,
+                    provider_error,
+                    sizeof(provider_error));
+            if (raw_status != BG_STATUS_OK) {
+                return hip_provider_failure(
+                    raw_status,
+                    provider_error,
+                    "hip_fast pose-validity create failed");
+            }
+            status = BG_STATUS_OK;
+#else
             return fail(
                 BG_STATUS_BACKEND_UNAVAILABLE,
                 "hip_fast pose-validity provider is not compiled; fallback is forbidden");
+#endif
         } else {
             return fail(
                 BG_STATUS_UNSUPPORTED_BACKEND,
@@ -1184,6 +1255,16 @@ extern "C" BG_API void BG_CALL bg_docking_pose_validity_v1_destroy(
     } else if (validity->backend == BG_BACKEND_RUST_CPU) {
         bg_rust_cpu_docking_pose_validity_v1_destroy(
             validity->provider_state);
+#if BG_HAS_HIP_SAFE_PROVIDER
+    } else if (validity->backend == BG_BACKEND_HIP_SAFE) {
+        bg_hip_safe_docking_pose_validity_v1_destroy(
+            validity->provider_state);
+#endif
+#if BG_ENABLE_HIP
+    } else if (validity->backend == BG_BACKEND_HIP_FAST) {
+        bg_hip_fast_docking_pose_validity_v1_destroy(
+            validity->provider_state);
+#endif
     }
     delete validity;
 }
@@ -1262,6 +1343,42 @@ bg_docking_pose_validity_v1_evaluate_fixed64(
                         : error.message);
             }
             status = BG_STATUS_OK;
+#if BG_HAS_HIP_SAFE_PROVIDER
+        } else if (validity->backend == BG_BACKEND_HIP_SAFE) {
+            char provider_error[BG_HIP_SAFE_ERROR_CAPACITY]{};
+            const int32_t raw_status =
+                bg_hip_safe_docking_pose_validity_v1_evaluate_fixed64(
+                    validity->provider_state,
+                    candidates,
+                    candidate_rows.data(),
+                    provider_error,
+                    sizeof(provider_error));
+            if (raw_status != BG_STATUS_OK) {
+                return hip_provider_failure(
+                    raw_status,
+                    provider_error,
+                    "hip_safe pose-validity batch failed");
+            }
+            status = BG_STATUS_OK;
+#endif
+#if BG_ENABLE_HIP
+        } else if (validity->backend == BG_BACKEND_HIP_FAST) {
+            char provider_error[BG_HIP_SAFE_ERROR_CAPACITY]{};
+            const int32_t raw_status =
+                bg_hip_fast_docking_pose_validity_v1_evaluate_fixed64(
+                    validity->provider_state,
+                    candidates,
+                    candidate_rows.data(),
+                    provider_error,
+                    sizeof(provider_error));
+            if (raw_status != BG_STATUS_OK) {
+                return hip_provider_failure(
+                    raw_status,
+                    provider_error,
+                    "hip_fast pose-validity batch failed");
+            }
+            status = BG_STATUS_OK;
+#endif
         } else {
             return fail(
                 BG_STATUS_BACKEND_UNAVAILABLE,

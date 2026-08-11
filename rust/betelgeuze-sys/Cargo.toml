@@ -38,6 +38,7 @@ include = [
     "vendor/native/src/hip/provider.h",
     "vendor/native/src/hip/provider.hip",
     "vendor/native/src/hip/docking_scorer.hip",
+    "vendor/native/src/hip/docking_pose_validity.hip",
     "vendor/native/src/hip/evaluator.hpp",
     "vendor/native/src/hip/evaluator.cpp",
     "vendor/native/src/hip/backend.hpp",

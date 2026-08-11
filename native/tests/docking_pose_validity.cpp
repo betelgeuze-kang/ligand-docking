@@ -188,7 +188,8 @@ bool close_with_tolerance(double left, double right, double tolerance) {
 
 void assert_row_parity(
     const bg_docking_pose_validity_row_v1 &cpp,
-    const bg_docking_pose_validity_row_v1 &rust) {
+    const bg_docking_pose_validity_row_v1 &rust,
+    double tolerance = 2.0e-12) {
     assert(cpp.slot_index == rust.slot_index);
     assert(cpp.status == rust.status);
     assert(cpp.failure_code == rust.failure_code);
@@ -252,7 +253,7 @@ void assert_row_parity(
          rust.element_vdw_receptor_minimum_ratio},
     }};
     for (const auto &[left, right] : values) {
-        assert(close_with_tolerance(left, right, 2.0e-12));
+        assert(close_with_tolerance(left, right, tolerance));
     }
 }
 
@@ -357,6 +358,52 @@ void test_candidate_capacity_and_transactional_rejection() {
     bg_context_destroy(rust_context);
 }
 
+void assert_hip_fixture_parity(
+    const Fixture &fixture,
+    bg_backend backend,
+    uint64_t max_cross_checks = 1'000'000) {
+    const auto descriptor = fixture.context_descriptor(max_cross_checks);
+    const auto batch = fixture.batch();
+    bg_context *rust_context = create_context(BG_BACKEND_RUST_CPU);
+    bg_context *hip_context = create_context(backend);
+    bg_docking_pose_validity_v1 *rust_validity =
+        create_validity(rust_context, descriptor);
+    bg_docking_pose_validity_v1 *hip_validity =
+        create_validity(hip_context, descriptor);
+
+    bg_backend observed = BG_BACKEND_AUTO;
+    assert(
+        bg_docking_pose_validity_v1_get_backend(
+            hip_validity, &observed) == BG_STATUS_OK);
+    assert(observed == backend);
+
+    const auto rust_rows = evaluate(rust_context, rust_validity, batch);
+    const auto hip_rows = evaluate(hip_context, hip_validity, batch);
+    const auto hip_repeat = evaluate(hip_context, hip_validity, batch);
+    assert(
+        std::memcmp(
+            hip_rows.data(), hip_repeat.data(), sizeof(hip_rows)) == 0);
+    for (std::size_t slot = 0; slot < kSlots; ++slot) {
+        assert_row_parity(hip_rows[slot], rust_rows[slot], 1.0e-10);
+    }
+
+    bg_docking_pose_validity_v1_destroy(rust_validity);
+    bg_docking_pose_validity_v1_destroy(hip_validity);
+    bg_context_destroy(rust_context);
+    bg_context_destroy(hip_context);
+}
+
+void test_hip_validity_parity_when_device_is_available(bg_backend backend) {
+    uint8_t available = UINT8_C(0);
+    assert(bg_backend_is_available(backend, 0, &available) == BG_STATUS_OK);
+    if (available == UINT8_C(0)) {
+        return;
+    }
+    const Fixture nominal;
+    assert_hip_fixture_parity(nominal, backend);
+    assert_hip_fixture_parity(nominal, backend, 1);
+}
+
 }  // namespace
 
 int main() {
@@ -370,5 +417,7 @@ int main() {
         std::is_standard_layout_v<bg_docking_pose_validity_output_v1>);
     test_cpu_parity_repeat_stability_and_failure_preservation();
     test_candidate_capacity_and_transactional_rejection();
+    test_hip_validity_parity_when_device_is_available(BG_BACKEND_HIP_SAFE);
+    test_hip_validity_parity_when_device_is_available(BG_BACKEND_HIP_FAST);
     return 0;
 }
