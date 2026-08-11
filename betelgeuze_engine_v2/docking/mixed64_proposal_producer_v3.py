@@ -798,20 +798,28 @@ class Mixed64ProposalSourceBundleV1:
         )
 
     def assert_live_integrity(self) -> str:
-        if self.exact_v11_source is not None:
-            self.exact_v11_source.assert_live_integrity()
-        for source in (
-            *self.v7_control_sources,
-            *self.conformer_sources,
-            *self.retained_sources,
-        ):
-            source.assert_live_integrity()
-        return _verify_live_sealed_projection(
-            self._canonical_projection_bytes,
-            self._receipt_sha256,
-            self._projection(),
-            name="proposal source bundle",
-        )
+        try:
+            if self.exact_v11_source is not None:
+                self.exact_v11_source.assert_live_integrity()
+            for source in (
+                *self.v7_control_sources,
+                *self.conformer_sources,
+                *self.retained_sources,
+            ):
+                source.assert_live_integrity()
+            return _verify_live_sealed_projection(
+                self._canonical_projection_bytes,
+                self._receipt_sha256,
+                self._projection(),
+                name="proposal source bundle",
+            )
+        except Mixed64ProposalProducerError:
+            raise
+        except ValueError as exc:
+            raise Mixed64ProposalProducerError(
+                SOURCE_PAYLOAD_CROSS_WIRING,
+                "proposal source bundle nested live projection changed",
+            ) from exc
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -1245,20 +1253,28 @@ class Mixed64ProposalGenerationRecordV1:
         )
 
     def assert_live_integrity(self) -> str:
-        if type(self.placement_receipt) is ExactPassthroughPlacementReceiptV1:
-            self.placement_receipt.assert_live_integrity()
-        elif self.placement_receipt is not None:
-            _ = self.placement_receipt.receipt_sha256
-        if self.proposal_execution_receipt is not None:
-            _ = self.proposal_execution_receipt.receipt_sha256
-        if self.failure_receipt is not None:
-            self.failure_receipt.assert_live_integrity()
-        return _verify_live_sealed_projection(
-            self._canonical_projection_bytes,
-            self._receipt_sha256,
-            self._projection(),
-            name="generation record",
-        )
+        try:
+            if type(self.placement_receipt) is ExactPassthroughPlacementReceiptV1:
+                self.placement_receipt.assert_live_integrity()
+            elif self.placement_receipt is not None:
+                _ = self.placement_receipt.receipt_sha256
+            if self.proposal_execution_receipt is not None:
+                _ = self.proposal_execution_receipt.receipt_sha256
+            if self.failure_receipt is not None:
+                self.failure_receipt.assert_live_integrity()
+            return _verify_live_sealed_projection(
+                self._canonical_projection_bytes,
+                self._receipt_sha256,
+                self._projection(),
+                name="generation record",
+            )
+        except Mixed64ProposalProducerError:
+            raise
+        except ValueError as exc:
+            raise Mixed64ProposalProducerError(
+                SOURCE_PAYLOAD_CROSS_WIRING,
+                "generation record nested live projection changed",
+            ) from exc
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -1585,6 +1601,7 @@ def produce_fixed_mixed64_proposals(
         raise TypeError("allocation must be the exact FixedMixed64Allocation type")
     if type(source_bundle) is not Mixed64ProposalSourceBundleV1:
         raise TypeError("source_bundle must be exact")
+    source_bundle.assert_live_integrity()
     if source_bundle.allocation.receipt_sha256 != allocation.receipt_sha256:
         _fail(SOURCE_PAYLOAD_CROSS_WIRING, "source bundle belongs to another allocation")
     producer_path = Path(__file__)
@@ -1687,7 +1704,8 @@ def produce_fixed_mixed64_proposals(
         or _stable_source_sha256(geometry_path) != geometry_source_sha256
     ):
         _fail(PRODUCER_SOURCE_CHANGED, "producer or geometry source drifted")
-    return Mixed64ProposalProducerBatchV1(
+    source_bundle.assert_live_integrity()
+    batch = Mixed64ProposalProducerBatchV1(
         allocation=allocation,
         source_bundle=source_bundle,
         records=tuple(records),
@@ -1695,6 +1713,8 @@ def produce_fixed_mixed64_proposals(
         geometry_implementation_source_sha256=geometry_source_sha256,
         _factory_seal=_BATCH_FACTORY_SEAL,
     )
+    batch.assert_live_integrity()
+    return batch
 
 
 __all__ = [

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import inspect
 import json
 from pathlib import Path
@@ -14,25 +15,42 @@ from typing import Final
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
-for _package_name, _package_path in (
-    ("betelgeuze_engine_v2", _REPO_ROOT / "betelgeuze_engine_v2"),
-    (
-        "betelgeuze_engine_v2.docking",
-        _REPO_ROOT / "betelgeuze_engine_v2" / "docking",
-    ),
-):
-    if _package_name not in sys.modules:
-        _package = types.ModuleType(_package_name)
-        _package.__package__ = _package_name
-        _package.__path__ = [str(_package_path)]  # type: ignore[attr-defined]
-        sys.modules[_package_name] = _package
 
-from betelgeuze_engine_v2.docking.geometric_admission_v3 import (  # noqa: E402
-    GEOMETRIC_ADMISSION_V3_POLICY_SHA256,
-    GeometricAdmissionV3,
-    frozen_geometric_admission_v3_policy,
+
+def _load_admission_module():
+    package_name = "_engine_v2_geometric_admission_v3_verifier_policy"
+    package_path = _REPO_ROOT / "betelgeuze_engine_v2" / "docking"
+    package = types.ModuleType(package_name)
+    package.__package__ = package_name
+    package.__path__ = [str(package_path)]  # type: ignore[attr-defined]
+    sys.modules[package_name] = package
+    module_name = f"{package_name}.geometric_admission_v3"
+    try:
+        spec = importlib.util.spec_from_file_location(
+            module_name,
+            package_path / "geometric_admission_v3.py",
+        )
+        if spec is None or spec.loader is None:
+            raise RuntimeError("geometric admission v3 is unavailable")
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        spec.loader.exec_module(module)
+        return module
+    finally:
+        for loaded_name in tuple(sys.modules):
+            if loaded_name == package_name or loaded_name.startswith(
+                f"{package_name}."
+            ):
+                sys.modules.pop(loaded_name, None)
+
+
+_ADMISSION = _load_admission_module()
+GEOMETRIC_ADMISSION_V3_POLICY_SHA256 = (
+    _ADMISSION.GEOMETRIC_ADMISSION_V3_POLICY_SHA256
+)
+GeometricAdmissionV3 = _ADMISSION.GeometricAdmissionV3
+frozen_geometric_admission_v3_policy = (
+    _ADMISSION.frozen_geometric_admission_v3_policy
 )
 
 

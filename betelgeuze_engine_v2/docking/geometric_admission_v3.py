@@ -435,11 +435,16 @@ class GeometricAdmissionBatchV3:
             raise GeometricAdmissionV3Error("geometric admission batch identity changed")
         if type(self.producer_batch) is not Mixed64ProposalProducerBatchV1:
             raise TypeError("producer_batch must be exact")
-        if type(self.decisions) is not tuple or len(self.decisions) != 64:
+        if (
+            type(self.decisions) is not tuple
+            or len(self.decisions) != FIXED_MIXED64_CANDIDATE_COUNT
+        ):
             raise GeometricAdmissionV3Error("geometric admission denominator is not 64")
         if any(type(value) is not GeometricAdmissionDecisionV3 for value in self.decisions):
             raise TypeError("decisions must be exact")
-        if tuple(value.slot_index for value in self.decisions) != tuple(range(64)):
+        if tuple(value.slot_index for value in self.decisions) != tuple(
+            range(FIXED_MIXED64_CANDIDATE_COUNT)
+        ):
             raise GeometricAdmissionV3Error("geometric admission slot order changed")
         for record, decision in zip(
             self.producer_batch.records,

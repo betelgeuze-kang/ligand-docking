@@ -609,6 +609,15 @@ def test_stable_source_hash_rejects_empty_regular_data(tmp_path: Path) -> None:
     assert captured.value.code == "producer_implementation_source_changed"
 
 
+def test_producer_rejects_live_source_mutation_before_generation() -> None:
+    allocation, bundle, *_ = _fixture()
+    object.__setattr__(bundle, "pocket_center", (99.0, 99.0, 99.0))
+
+    with pytest.raises(Mixed64ProposalProducerError) as captured:
+        produce_fixed_mixed64_proposals(allocation, source_bundle=bundle)
+    assert captured.value.code == SOURCE_PAYLOAD_CROSS_WIRING
+
+
 def test_batch_authority_and_downstream_stages_remain_false() -> None:
     allocation, bundle, *_ = _fixture()
     document = produce_fixed_mixed64_proposals(

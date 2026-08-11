@@ -19,6 +19,7 @@ from betelgeuze_engine_v2.docking.geometric_admission_v3 import (
 from betelgeuze_engine_v2.docking.mixed64_proposal_producer_v3 import (
     MISSING_EXACT_V11_SOURCE_PAYLOAD,
     MISSING_V7_CONTROL_SOURCE_PAYLOAD,
+    Mixed64ProposalProducerError,
     produce_fixed_mixed64_proposals,
 )
 from tests.unit.test_engine_v2_mixed64_proposal_producer_v3 import (
@@ -247,6 +248,20 @@ def test_nested_placement_receipt_live_mutation_is_checked_recursively() -> None
 
     with pytest.raises(GeometricAdmissionV3Error, match="integrity preflight"):
         GeometricAdmissionV3().admit_producer_batch(producer)
+
+
+def test_direct_record_integrity_normalizes_nested_geometry_failure() -> None:
+    allocation, bundle, *_ = _fixture()
+    producer = produce_fixed_mixed64_proposals(allocation, source_bundle=bundle)
+    placement = producer.records[44].placement_receipt
+    assert placement is not None
+    object.__setattr__(placement, "output_coordinates", ((999.0, 999.0, 999.0),))
+
+    with pytest.raises(
+        Mixed64ProposalProducerError,
+        match="generation record nested live projection changed",
+    ):
+        producer.records[44].assert_live_integrity()
 
 
 def test_transient_live_record_mutation_cannot_change_sealed_kernel_inputs(
