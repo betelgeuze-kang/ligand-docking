@@ -8,6 +8,7 @@
 mod anchors;
 mod cluster;
 mod error;
+mod fixed64;
 mod geometry;
 mod identity;
 mod model;
@@ -22,6 +23,15 @@ mod surface;
 mod validity;
 
 pub use error::{EvaluationError, SearchError, SearchErrorCode};
+pub use fixed64::{
+    Fixed64Allocation, Fixed64AllocationError, Fixed64AnchorKind, Fixed64AtomicFeatureEvidence,
+    Fixed64ConformerSourceEvidence, Fixed64FeatureInventory, Fixed64FeatureKind,
+    Fixed64GenerationParent, Fixed64GenerationParentRole, Fixed64IndexedSourceEvidence,
+    Fixed64Lane, Fixed64MissingFeature, Fixed64Requirement, Fixed64Slot, Fixed64SourceEvidence,
+    FIXED64_CANDIDATE_COUNT, FIXED64_LANE_RANGES, FIXED64_PROFILE_ID,
+    NATIVE_FIXED64_ALLOCATION_SCHEMA_ID, NATIVE_FIXED64_SLOT_SCHEMA_ID, RETAINED_SOURCE_INDICES,
+    TRUE_CONFORMER_SLOT_RANKS,
+};
 pub use geometry::{Quaternion, Vec3};
 pub use model::{
     AnchorId, AnchorKind, CandidateKey, CandidateReason, CandidateRow, CandidateStatus,
