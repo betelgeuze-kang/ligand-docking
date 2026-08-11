@@ -3592,3 +3592,16 @@ uint64_t live_allocation_count(const bg_context &context) noexcept {
 #undef BG_DOCKING_STABLE_TOP_K_RANK_FIXED64
 #undef BG_DOCKING_STABLE_TOP_K_DESTROY
 #undef BG_DOCKING_STABLE_TOP_K_CREATE
+
+#define BG_DOCKING_TORSION_V7_CREATE \
+    bg_hip_fast_docking_torsion_v7_create
+#define BG_DOCKING_TORSION_V7_DESTROY \
+    bg_hip_fast_docking_torsion_v7_destroy
+#define BG_DOCKING_TORSION_V7_REFINE_FIXED64 \
+    bg_hip_fast_docking_torsion_v7_refine_fixed64
+#define BG_DOCKING_TORSION_V7_LANE "hip_fast"
+#include "docking_torsion_v7.hip"
+#undef BG_DOCKING_TORSION_V7_LANE
+#undef BG_DOCKING_TORSION_V7_REFINE_FIXED64
+#undef BG_DOCKING_TORSION_V7_DESTROY
+#undef BG_DOCKING_TORSION_V7_CREATE

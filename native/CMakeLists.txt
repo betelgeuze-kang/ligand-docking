@@ -214,6 +214,7 @@ if(BG_HIP_SAFE_COMPILED)
             "${CMAKE_CURRENT_SOURCE_DIR}/src/hip/docking_scorer.hip"
             "${CMAKE_CURRENT_SOURCE_DIR}/src/hip/docking_pose_validity.hip"
             "${CMAKE_CURRENT_SOURCE_DIR}/src/hip/docking_stable_top_k.hip"
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/hip/docking_torsion_v7.hip"
             "${CMAKE_CURRENT_SOURCE_DIR}/src/hip/provider.h"
             "${PROJECT_SOURCE_DIR}/include/betelgeuze/engine.h"
         COMMENT "Building deterministic hip_safe provider"

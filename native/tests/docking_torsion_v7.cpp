@@ -515,6 +515,81 @@ void test_failures_are_transactional_and_cross_wiring_is_rejected() {
     bg_context_destroy(rust_context);
 }
 
+void test_hip_parity_when_device_is_available(bg_backend backend) {
+    uint8_t available = UINT8_C(0);
+    assert(bg_backend_is_available(backend, 0, &available) == BG_STATUS_OK);
+    if (available == UINT8_C(0)) {
+        return;
+    }
+
+    ContextFixture context_fixture;
+    const auto context_descriptor = context_fixture.descriptor();
+    bg_context *rust_context = create_context(BG_BACKEND_RUST_CPU);
+    bg_context *hip_context = create_context(backend);
+    bg_docking_torsion_v7 *rust_refiner =
+        create_refiner(rust_context, context_descriptor);
+    bg_docking_torsion_v7 *hip_refiner =
+        create_refiner(hip_context, context_descriptor);
+
+    bg_backend observed = BG_BACKEND_AUTO;
+    assert(
+        bg_docking_torsion_v7_get_backend(hip_refiner, &observed) ==
+        BG_STATUS_OK);
+    assert(observed == backend);
+
+    context_fixture.parents[0] = 0;
+    context_fixture.receptor_x[0] =
+        std::numeric_limits<double>::quiet_NaN();
+    context_fixture.ligand_radii[0] =
+        std::numeric_limits<double>::quiet_NaN();
+
+    BatchFixture batch_fixture;
+    batch_fixture.states[1] = BG_DOCKING_TORSION_V7_CANDIDATE_REFINE;
+    batch_fixture.eligible[1] = UINT8_C(2);
+    const auto batch = batch_fixture.descriptor();
+    OutputStorage rust_storage;
+    OutputStorage hip_storage;
+    OutputStorage hip_repeat_storage;
+    auto rust_output = rust_storage.descriptor();
+    auto hip_output = hip_storage.descriptor();
+    auto hip_repeat_output = hip_repeat_storage.descriptor();
+    refine(
+        rust_context,
+        rust_refiner,
+        batch,
+        &rust_storage,
+        &rust_output);
+    refine(hip_context, hip_refiner, batch, &hip_storage, &hip_output);
+    refine(
+        hip_context,
+        hip_refiner,
+        batch,
+        &hip_repeat_storage,
+        &hip_repeat_output);
+
+    for (std::size_t slot = 0; slot < kSlots; ++slot) {
+        assert_row_parity(rust_storage.rows[slot], hip_storage.rows[slot]);
+        assert_row_parity(
+            hip_storage.rows[slot], hip_repeat_storage.rows[slot]);
+    }
+    for (std::size_t index = 0; index < kMoves; ++index) {
+        assert_move_parity(
+            rust_storage.moves[index], hip_storage.moves[index]);
+        assert_move_parity(
+            hip_storage.moves[index], hip_repeat_storage.moves[index]);
+    }
+    assert_coordinate_parity(rust_storage, hip_storage);
+    assert_coordinate_parity(hip_storage, hip_repeat_storage);
+    assert(
+        hip_storage.rows[1].failure_code ==
+        BG_DOCKING_TORSION_V7_FAILURE_INVALID_INPUT);
+
+    bg_docking_torsion_v7_destroy(rust_refiner);
+    bg_docking_torsion_v7_destroy(hip_refiner);
+    bg_context_destroy(rust_context);
+    bg_context_destroy(hip_context);
+}
+
 }  // namespace
 
 int main() {
@@ -529,5 +604,7 @@ int main() {
     test_cpu_parity_fixed64_and_context_deep_copy();
     test_candidate_local_failure_preserves_denominator();
     test_failures_are_transactional_and_cross_wiring_is_rejected();
+    test_hip_parity_when_device_is_available(BG_BACKEND_HIP_SAFE);
+    test_hip_parity_when_device_is_available(BG_BACKEND_HIP_FAST);
     return 0;
 }

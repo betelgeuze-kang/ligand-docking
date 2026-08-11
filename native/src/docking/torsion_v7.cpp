@@ -1,4 +1,5 @@
 #include "../internal.hpp"
+#include "../hip/provider.h"
 #include "../rust/provider.h"
 
 #include <algorithm>
@@ -11,6 +12,9 @@
 
 #ifndef BG_HAS_HIP_SAFE_PROVIDER
 #  define BG_HAS_HIP_SAFE_PROVIDER 0
+#endif
+#ifndef BG_ENABLE_HIP
+#  define BG_ENABLE_HIP 0
 #endif
 
 namespace betelgeuze::native::docking::torsion_v7 {
@@ -1502,6 +1506,143 @@ void initialize_rust_error(bg_rust_cpu_error_v1 *error) noexcept {
     return BG_STATUS_OK;
 }
 
+[[nodiscard]] bg_status hip_failure(
+    int32_t raw_status,
+    const std::array<char, BG_HIP_SAFE_ERROR_CAPACITY> &error,
+    const char *fallback) noexcept {
+    const char *message = error[0] == '\0' ? fallback : error.data();
+    switch (raw_status) {
+        case BG_STATUS_INVALID_ARGUMENT:
+        case BG_STATUS_ABI_MISMATCH:
+        case BG_STATUS_UNSUPPORTED_BACKEND:
+        case BG_STATUS_BACKEND_UNAVAILABLE:
+        case BG_STATUS_OUT_OF_MEMORY:
+        case BG_STATUS_CAPACITY_OVERFLOW:
+        case BG_STATUS_BUFFER_TOO_SMALL:
+        case BG_STATUS_BACKEND_ERROR:
+        case BG_STATUS_INTERNAL_ERROR:
+        case BG_STATUS_NUMERICAL_ERROR:
+            return fail(static_cast<bg_status>(raw_status), message);
+        default:
+            return fail(BG_STATUS_INTERNAL_ERROR, fallback);
+    }
+}
+
+[[nodiscard]] bg_status create_hip_backend(
+    ProviderEnvelope *state,
+    bg_backend backend,
+    int32_t device_ordinal) {
+    static_cast<void>(device_ordinal);
+    std::vector<double> receptor_x;
+    std::vector<double> receptor_y;
+    std::vector<double> receptor_z;
+    receptor_x.reserve(state->receptor.size());
+    receptor_y.reserve(state->receptor.size());
+    receptor_z.reserve(state->receptor.size());
+    for (const Vec3 coordinate : state->receptor) {
+        receptor_x.push_back(coordinate.x);
+        receptor_y.push_back(coordinate.y);
+        receptor_z.push_back(coordinate.z);
+    }
+    std::vector<uint64_t> rotors;
+    std::vector<uint64_t> pair_i;
+    std::vector<uint64_t> pair_j;
+    rotors.reserve(state->rotors.size());
+    pair_i.reserve(state->internal_pairs.size());
+    pair_j.reserve(state->internal_pairs.size());
+    for (const std::size_t rotor : state->rotors) {
+        rotors.push_back(static_cast<uint64_t>(rotor));
+    }
+    for (const auto &pair : state->internal_pairs) {
+        pair_i.push_back(static_cast<uint64_t>(pair.first));
+        pair_j.push_back(static_cast<uint64_t>(pair.second));
+    }
+    bg_docking_torsion_v7_context_soa_v1 descriptor{};
+    descriptor.struct_size = static_cast<uint32_t>(sizeof(descriptor));
+    descriptor.abi_version = BG_ABI_VERSION;
+    descriptor.unit_system = BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL;
+    descriptor.receptor_atom_count = state->receptor.size();
+    descriptor.ligand_atom_count = state->ligand_radii.size();
+    descriptor.rotor_count = state->rotors.size();
+    descriptor.internal_pair_count = state->internal_pairs.size();
+    descriptor.receptor_x_angstrom = receptor_x.data();
+    descriptor.receptor_y_angstrom = receptor_y.data();
+    descriptor.receptor_z_angstrom = receptor_z.data();
+    descriptor.receptor_vdw_radius_angstrom = state->receptor_radii.data();
+    descriptor.ligand_vdw_radius_angstrom = state->ligand_radii.data();
+    descriptor.pocket_center_angstrom[0] = state->pocket_center.x;
+    descriptor.pocket_center_angstrom[1] = state->pocket_center.y;
+    descriptor.pocket_center_angstrom[2] = state->pocket_center.z;
+    descriptor.parent_atom_index = state->parents.data();
+    descriptor.rotatable_child_atom_index = rotors.data();
+    descriptor.internal_pair_atom_i = pair_i.data();
+    descriptor.internal_pair_atom_j = pair_j.data();
+    descriptor.receptor_overlap_scale = state->config.receptor_overlap_scale;
+    descriptor.internal_overlap_scale = state->config.internal_overlap_scale;
+    descriptor.internal_overlap_weight = state->config.internal_overlap_weight;
+    descriptor.maximum_baseline_v6_steps =
+        state->config.maximum_baseline_v6_steps;
+    descriptor.maximum_torsions_evaluated =
+        state->config.maximum_torsions_evaluated;
+    descriptor.maximum_torsion_steps = state->config.maximum_torsion_steps;
+    descriptor.maximum_backtracking_evaluations =
+        state->config.maximum_backtracking_evaluations;
+    descriptor.maximum_torsion_step_radians =
+        state->config.maximum_torsion_step_radians;
+    descriptor.minimum_torsion_step_radians =
+        state->config.minimum_torsion_step_radians;
+    descriptor.maximum_total_torsion_path_radians =
+        state->config.maximum_total_torsion_path_radians;
+    descriptor.maximum_centroid_offset_angstrom =
+        state->config.maximum_centroid_offset_angstrom;
+    descriptor.minimum_selected_final_receptor_penalty =
+        state->config.minimum_selected_final_receptor_penalty;
+    descriptor.maximum_selected_final_receptor_penalty =
+        state->config.maximum_selected_final_receptor_penalty;
+    descriptor.penalty_tolerance = state->config.penalty_tolerance;
+    descriptor.epsilon_angstrom = state->config.epsilon_angstrom;
+    std::array<char, BG_HIP_SAFE_ERROR_CAPACITY> error{};
+    void *provider_state = nullptr;
+    int32_t raw_status = BG_STATUS_BACKEND_UNAVAILABLE;
+    if (backend == BG_BACKEND_HIP_SAFE) {
+#if BG_HAS_HIP_SAFE_PROVIDER
+        raw_status = bg_hip_safe_docking_torsion_v7_create(
+            device_ordinal,
+            &descriptor,
+            &provider_state,
+            error.data(),
+            error.size());
+#else
+        return fail(
+            BG_STATUS_BACKEND_UNAVAILABLE,
+            "hip_safe torsion V7 provider is not compiled; fallback is forbidden");
+#endif
+    } else if (backend == BG_BACKEND_HIP_FAST) {
+#if BG_ENABLE_HIP
+        raw_status = bg_hip_fast_docking_torsion_v7_create(
+            device_ordinal,
+            &descriptor,
+            &provider_state,
+            error.data(),
+            error.size());
+#else
+        return fail(
+            BG_STATUS_BACKEND_UNAVAILABLE,
+            "hip_fast torsion V7 provider is not compiled; fallback is forbidden");
+#endif
+    } else {
+        return fail(
+            BG_STATUS_UNSUPPORTED_BACKEND,
+            "torsion V7 HIP provider received a non-HIP backend");
+    }
+    if (raw_status != BG_STATUS_OK) {
+        return hip_failure(
+            raw_status, error, "native HIP torsion V7 creation failed");
+    }
+    state->backend_state = provider_state;
+    return BG_STATUS_OK;
+}
+
 [[nodiscard]] bg_docking_torsion_v7_row_v1 public_row(
     const bg_rust_cpu_torsion_v7_row_v1 &source) noexcept {
     bg_docking_torsion_v7_row_v1 row{};
@@ -1643,6 +1784,78 @@ void initialize_rust_error(bg_rust_cpu_error_v1 *error) noexcept {
     }
     for (std::size_t index = 0; index < moves.size(); ++index) {
         output.moves[index] = public_move(moves[index]);
+    }
+    *out_result = std::move(output);
+    return BG_STATUS_OK;
+}
+
+[[nodiscard]] bg_status refine_hip_fixed64(
+    const ProviderEnvelope &state,
+    bg_backend backend,
+    const bg_docking_torsion_v7_candidate_batch_soa_v1 &candidates,
+    std::size_t coordinate_count,
+    BatchResult *out_result) {
+    static_cast<void>(candidates);
+    if (state.backend_state == nullptr || out_result == nullptr) {
+        return fail(
+            BG_STATUS_INTERNAL_ERROR,
+            "native HIP torsion V7 state or output is null");
+    }
+    BatchResult output = make_empty_batch_result(coordinate_count);
+    std::array<char, BG_HIP_SAFE_ERROR_CAPACITY> error{};
+    int32_t raw_status = BG_STATUS_BACKEND_UNAVAILABLE;
+    if (backend == BG_BACKEND_HIP_SAFE) {
+#if BG_HAS_HIP_SAFE_PROVIDER
+        raw_status = bg_hip_safe_docking_torsion_v7_refine_fixed64(
+            state.backend_state,
+            &candidates,
+            output.rows.data(),
+            output.moves.data(),
+            output.optimized_x.data(),
+            output.optimized_y.data(),
+            output.optimized_z.data(),
+            output.optimized_angles.data(),
+            output.final_x.data(),
+            output.final_y.data(),
+            output.final_z.data(),
+            output.final_angles.data(),
+            error.data(),
+            error.size());
+#else
+        return fail(
+            BG_STATUS_BACKEND_UNAVAILABLE,
+            "hip_safe torsion V7 provider is not compiled; fallback is forbidden");
+#endif
+    } else if (backend == BG_BACKEND_HIP_FAST) {
+#if BG_ENABLE_HIP
+        raw_status = bg_hip_fast_docking_torsion_v7_refine_fixed64(
+            state.backend_state,
+            &candidates,
+            output.rows.data(),
+            output.moves.data(),
+            output.optimized_x.data(),
+            output.optimized_y.data(),
+            output.optimized_z.data(),
+            output.optimized_angles.data(),
+            output.final_x.data(),
+            output.final_y.data(),
+            output.final_z.data(),
+            output.final_angles.data(),
+            error.data(),
+            error.size());
+#else
+        return fail(
+            BG_STATUS_BACKEND_UNAVAILABLE,
+            "hip_fast torsion V7 provider is not compiled; fallback is forbidden");
+#endif
+    } else {
+        return fail(
+            BG_STATUS_UNSUPPORTED_BACKEND,
+            "torsion V7 HIP dispatch received a non-HIP backend");
+    }
+    if (raw_status != BG_STATUS_OK) {
+        return hip_failure(
+            raw_status, error, "native HIP torsion V7 batch failed");
     }
     *out_result = std::move(output);
     return BG_STATUS_OK;
@@ -1875,6 +2088,16 @@ void destroy_provider(bg_docking_torsion_v7 *refiner) noexcept {
     if (refiner->backend == BG_BACKEND_RUST_CPU &&
         state->backend_state != nullptr) {
         bg_rust_cpu_docking_torsion_v7_destroy(state->backend_state);
+    } else if (refiner->backend == BG_BACKEND_HIP_SAFE &&
+               state->backend_state != nullptr) {
+#if BG_HAS_HIP_SAFE_PROVIDER
+        bg_hip_safe_docking_torsion_v7_destroy(state->backend_state);
+#endif
+    } else if (refiner->backend == BG_BACKEND_HIP_FAST &&
+               state->backend_state != nullptr) {
+#if BG_ENABLE_HIP
+        bg_hip_fast_docking_torsion_v7_destroy(state->backend_state);
+#endif
     }
     delete state;
     refiner->provider_state = nullptr;
@@ -2011,9 +2234,11 @@ extern "C" BG_API bg_status BG_CALL bg_docking_torsion_v7_create(
             status = BG_STATUS_OK;
         } else if (context->backend == BG_BACKEND_HIP_SAFE ||
                    context->backend == BG_BACKEND_HIP_FAST) {
-            return fail(
-                BG_STATUS_BACKEND_UNAVAILABLE,
-                "selected HIP backend has no compiled torsion V7 provider; fallback is forbidden");
+            status = create_hip_backend(
+                state.get(), context->backend, context->device_ordinal);
+            if (status != BG_STATUS_OK) {
+                return status;
+            }
         } else {
             return fail(
                 BG_STATUS_UNSUPPORTED_BACKEND,
@@ -2090,6 +2315,17 @@ extern "C" BG_API bg_status BG_CALL bg_docking_torsion_v7_refine_fixed64(
         } else if (refiner->backend == BG_BACKEND_RUST_CPU) {
             status = refine_rust_fixed64(
                 *state, *candidates, coordinate_count, &result);
+            if (status != BG_STATUS_OK) {
+                return status;
+            }
+        } else if (refiner->backend == BG_BACKEND_HIP_SAFE ||
+                   refiner->backend == BG_BACKEND_HIP_FAST) {
+            status = refine_hip_fixed64(
+                *state,
+                refiner->backend,
+                *candidates,
+                coordinate_count,
+                &result);
             if (status != BG_STATUS_OK) {
                 return status;
             }
