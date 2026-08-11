@@ -7,6 +7,7 @@ import math
 
 import pytest
 
+import betelgeuze_engine_v2.docking.mixed64_proposal_geometry_v3 as geometry
 from betelgeuze_engine_v2.docking.mixed64_allocation import (
     FEATURE_LIGAND_ACCEPTOR,
     FEATURE_LIGAND_AROMATIC_PLANE,
@@ -28,6 +29,7 @@ from betelgeuze_engine_v2.docking.mixed64_proposal_geometry_v3 import (
     ALLOCATION_SLOT_NOT_ELIGIBLE,
     DEGENERATE_AROMATIC_PLANE,
     DEGENERATE_LIGAND_DIRECTION,
+    DEGENERATE_LOCAL_SURFACE_NORMAL,
     DEGENERATE_PRINCIPAL_AXIS,
     FEATURE_ATOM_INDEX_OUT_OF_RANGE,
     SOURCE_COORDINATE_IDENTITY_MISMATCH,
@@ -201,6 +203,21 @@ def _unit(value) -> tuple[float, float, float]:
     return tuple(component / length for component in value)
 
 
+class _BoundedEndlessRows:
+    def __init__(self, permitted_reads: int) -> None:
+        self.permitted_reads = permitted_reads
+        self.read_count = 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        self.read_count += 1
+        if self.read_count > self.permitted_reads:
+            raise AssertionError("coordinate iterable was consumed past its bound")
+        return (0.0, 0.0, 0.0)
+
+
 def test_indexed_so3_is_deterministic_source_bound_and_index_stable() -> None:
     allocation = _allocation()
     first = _so3(allocation, slot_index=24)
@@ -228,6 +245,34 @@ def test_indexed_so3_seed_changes_with_exact_source_payload() -> None:
 
     assert baseline.source_seed_sha256 != other.source_seed_sha256
     assert baseline.output_coordinate_sha256 != other.output_coordinate_sha256
+
+
+def test_public_generators_bound_coordinate_iterables_before_materializing() -> None:
+    so3_rows = _BoundedEndlessRows(geometry.MAX_LIGAND_ATOMS + 1)
+    with pytest.raises(Mixed64ProposalGeometryError) as captured:
+        _so3(_allocation(), source_coordinates=so3_rows)
+    assert captured.value.code == geometry.GEOMETRIC_PRECHECK_INPUT_INVALID
+    assert so3_rows.read_count == geometry.MAX_LIGAND_ATOMS + 1
+
+    ligand_rows = _BoundedEndlessRows(geometry.MAX_LIGAND_ATOMS + 1)
+    with pytest.raises(Mixed64ProposalGeometryError) as captured:
+        _anchor(
+            _allocation(),
+            slot_index=44,
+            ligand_coordinates=ligand_rows,
+        )
+    assert captured.value.code == geometry.GEOMETRIC_PRECHECK_INPUT_INVALID
+    assert ligand_rows.read_count == geometry.MAX_LIGAND_ATOMS + 1
+
+    receptor_rows = _BoundedEndlessRows(geometry.MAX_RECEPTOR_ATOMS + 1)
+    with pytest.raises(Mixed64ProposalGeometryError) as captured:
+        _anchor(
+            _allocation(),
+            slot_index=44,
+            receptor_coordinates=receptor_rows,
+        )
+    assert captured.value.code == geometry.GEOMETRIC_PRECHECK_INPUT_INVALID
+    assert receptor_rows.read_count == geometry.MAX_RECEPTOR_ATOMS + 1
 
 
 @pytest.mark.parametrize(
@@ -318,6 +363,34 @@ def test_lane_twists_are_predeclared_and_do_not_reallocate(start: int) -> None:
     )
     assert len({receipt.quaternion for receipt in receipts}) == width
     assert len({receipt.output_coordinate_sha256 for receipt in receipts}) == width
+
+
+def test_aromatic_normal_tangent_to_pocket_direction_fails_closed() -> None:
+    with pytest.raises(Mixed64ProposalGeometryError) as captured:
+        _anchor(
+            _allocation(),
+            slot_index=56,
+            pocket_center=(10.0, 0.0, 0.0),
+        )
+    assert captured.value.code == DEGENERATE_LOCAL_SURFACE_NORMAL
+
+
+def test_principal_axis_solver_finds_off_diagonal_dominant_mode() -> None:
+    dominant = _unit((1.0, 1.0, 0.0))
+    dominant_scale = math.sqrt(1.1 / 2.0)
+    secondary_scale = math.sqrt(1.0 / 2.0)
+    coordinates = (
+        tuple(dominant_scale * value for value in dominant),
+        tuple(-dominant_scale * value for value in dominant),
+        (0.0, 0.0, secondary_scale),
+        (0.0, 0.0, -secondary_scale),
+    )
+
+    observed = geometry._principal_axis(coordinates, role="test")
+
+    assert abs(sum(left * right for left, right in zip(observed, dominant))) == (
+        pytest.approx(1.0)
+    )
 
 
 def test_severe_penetration_is_preserved_as_precheck_evidence() -> None:

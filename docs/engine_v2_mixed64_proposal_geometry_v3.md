@@ -7,7 +7,7 @@ product, Stage 0, or public claim.
 
 The canonical policy is
 `config/engine_v2_mixed64_proposal_geometry_v3.json`, with SHA-256
-`77da86bb08f3fab6072d08f0c75c096723e68490db1c8bb794fb02e81302fc2d`.
+`1ee6e474e042eadb882542346b9beff4408d1f60e004686320ee657f8e23a8d9`.
 Every geometry receipt binds that policy identity, and the standalone verifier
 requires the checked-in JSON to equal the implementation's frozen projection.
 
@@ -51,8 +51,11 @@ or scoring results.
 Donor direction is donor-to-attached-hydrogen. Acceptor and charge direction
 is the selected site directed away from the ligand centroid. Aromatic normals
 come from the first non-collinear selected triplet. Shape axes are the
-deterministic dominant covariance eigenvector of the selected atoms. Vector
-signs, opposite-vector quaternion construction, and twist order are canonical.
+deterministic dominant covariance eigenvector of the selected atoms, computed
+with a fixed 64-rotation largest-off-diagonal symmetric Jacobi solver. This
+solver cannot miss a dominant off-diagonal mode because it diagonalizes the
+full covariance rather than depending on one start vector. Vector signs,
+opposite-vector quaternion construction, and twist order are canonical.
 
 The local receptor surface normal points toward the pocket for atom and charge
 sites. A receptor donor uses its donor-to-hydrogen direction. An aromatic
@@ -61,6 +64,14 @@ the pocket principal axis while retaining a separate centroid-to-pocket local
 surface normal. The ligand anchor is placed at the target distance along that
 normal; interaction directions point back along the approach vector, while
 plane and shape directions align to their corresponding receptor direction.
+An aromatic normal whose absolute pocket-facing cosine is at most `1e-12` is
+typed as a degenerate local surface normal instead of choosing an arbitrary
+side of a tangent plane.
+
+All public coordinate, radius, and heavy-atom-mask iterables are normalized
+through their fixed ligand/receptor capacities before materialization. An
+oversized or non-terminating input therefore consumes at most the declared
+capacity plus one sentinel item before failing closed.
 
 Every placement immediately runs the same full-Cartesian Python geometric
 kernel used by admission v2. The receipt retains both atom denominators, exact

@@ -105,6 +105,8 @@ MAX_RECEPTOR_ATOMS: Final = 4096
 MAX_ABSOLUTE_COORDINATE_ANGSTROM: Final = 100_000.0
 MAX_CANONICAL_RECEIPT_BYTES: Final = 32 * 1024 * 1024
 _EPSILON: Final = 1.0e-12
+_AROMATIC_POCKET_FACING_MINIMUM_ABSOLUTE_COSINE: Final = _EPSILON
+_PRINCIPAL_AXIS_JACOBI_MAX_ROTATIONS: Final = 64
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 Vector3 = tuple[float, float, float]
@@ -234,6 +236,14 @@ def frozen_mixed64_proposal_geometry_policy() -> dict[str, object]:
             "fallback_lane_allowed": False,
             "multi_anchor_allowed": False,
             "result_dependent_feature_selection_allowed": False,
+            "aromatic_pocket_facing_minimum_absolute_cosine_binary64_hex": (
+                _AROMATIC_POCKET_FACING_MINIMUM_ABSOLUTE_COSINE.hex()
+            ),
+            "principal_axis_solver": "symmetric_jacobi_largest_off_diagonal",
+            "principal_axis_jacobi_max_rotations": (
+                _PRINCIPAL_AXIS_JACOBI_MAX_ROTATIONS
+            ),
+            "principal_axis_relative_tolerance_binary64_hex": _EPSILON.hex(),
         },
         "evidence": {
             "complete_source_and_output_coordinates_required": True,
@@ -241,6 +251,9 @@ def frozen_mixed64_proposal_geometry_policy() -> dict[str, object]:
             "selected_feature_receipts_required": True,
             "target_distance_direction_surface_normal_approach_required": True,
             "exact_pair_count_required": True,
+            "bounded_iterable_normalization_before_materialization": True,
+            "maximum_ligand_atoms": MAX_LIGAND_ATOMS,
+            "maximum_receptor_atoms": MAX_RECEPTOR_ATOMS,
         },
         "authority": {
             "reservation_allowed": False,
@@ -535,20 +548,87 @@ def _principal_axis(coordinates: Coordinates, *, role: str) -> Vector3:
     diagonal = tuple(covariance[index][index] for index in range(3))
     if max(diagonal) <= _EPSILON:
         _fail(DEGENERATE_PRINCIPAL_AXIS, f"{role} principal-axis variance is zero")
-    start_index = max(range(3), key=lambda index: (diagonal[index], -index))
-    vector: Vector3 = tuple(
-        1.0 if index == start_index else 0.0 for index in range(3)
-    )  # type: ignore[assignment]
-    for _ in range(64):
-        transformed: Vector3 = tuple(
-            sum(covariance[row][column] * vector[column] for column in range(3))
-            for row in range(3)
-        )  # type: ignore[assignment]
-        vector = _normalize(
-            transformed,
-            code=DEGENERATE_PRINCIPAL_AXIS,
-            name=f"{role} principal axis",
+
+    matrix = [list(row) for row in covariance]
+    eigenvectors = [
+        [1.0 if row == column else 0.0 for column in range(3)]
+        for row in range(3)
+    ]
+    pairs = ((0, 1), (0, 2), (1, 2))
+    for _ in range(_PRINCIPAL_AXIS_JACOBI_MAX_ROTATIONS):
+        first, second = max(
+            pairs,
+            key=lambda pair: (
+                abs(matrix[pair[0]][pair[1]]),
+                -pair[0],
+                -pair[1],
+            ),
         )
+        off_diagonal = abs(matrix[first][second])
+        scale = max(1.0, *(abs(matrix[index][index]) for index in range(3)))
+        if off_diagonal <= _EPSILON * scale:
+            break
+        angle = 0.5 * math.atan2(
+            2.0 * matrix[first][second],
+            matrix[second][second] - matrix[first][first],
+        )
+        cosine = math.cos(angle)
+        sine = math.sin(angle)
+        rotation = [
+            [1.0 if row == column else 0.0 for column in range(3)]
+            for row in range(3)
+        ]
+        rotation[first][first] = cosine
+        rotation[second][second] = cosine
+        rotation[first][second] = sine
+        rotation[second][first] = -sine
+        right_product = [
+            [
+                sum(matrix[row][inner] * rotation[inner][column] for inner in range(3))
+                for column in range(3)
+            ]
+            for row in range(3)
+        ]
+        matrix = [
+            [
+                sum(
+                    rotation[inner][row] * right_product[inner][column]
+                    for inner in range(3)
+                )
+                for column in range(3)
+            ]
+            for row in range(3)
+        ]
+        eigenvectors = [
+            [
+                sum(
+                    eigenvectors[row][inner] * rotation[inner][column]
+                    for inner in range(3)
+                )
+                for column in range(3)
+            ]
+            for row in range(3)
+        ]
+    dominant_index = max(
+        range(3),
+        key=lambda index: (matrix[index][index], -index),
+    )
+    vector: Vector3 = tuple(
+        eigenvectors[row][dominant_index] for row in range(3)
+    )  # type: ignore[assignment]
+    vector = _normalize(
+        vector,
+        code=DEGENERATE_PRINCIPAL_AXIS,
+        name=f"{role} principal axis",
+    )
+    transformed: Vector3 = tuple(
+        sum(covariance[row][column] * vector[column] for column in range(3))
+        for row in range(3)
+    )  # type: ignore[assignment]
+    rayleigh = _dot(vector, transformed)
+    residual = _norm(_subtract(transformed, _scale(vector, rayleigh)))
+    if residual > _EPSILON * max(1.0, abs(rayleigh)):
+        _fail(DEGENERATE_PRINCIPAL_AXIS, f"{role} principal-axis solver did not converge")
     return _canonical_direction(
         vector,
         code=DEGENERATE_PRINCIPAL_AXIS,
@@ -1144,8 +1224,21 @@ def _derive_anchor_geometry(
             receptor_feature_coordinates,
             role="receptor",
         )
-        toward_pocket = _subtract(pocket_center, receptor_anchor)
-        if _dot(receptor_plane_normal, toward_pocket) < 0.0:
+        toward_pocket = _normalize(
+            _subtract(pocket_center, receptor_anchor),
+            code=DEGENERATE_LOCAL_SURFACE_NORMAL,
+            name="receptor aromatic pocket-facing direction",
+        )
+        pocket_facing_cosine = _dot(receptor_plane_normal, toward_pocket)
+        if (
+            abs(pocket_facing_cosine)
+            <= _AROMATIC_POCKET_FACING_MINIMUM_ABSOLUTE_COSINE
+        ):
+            _fail(
+                DEGENERATE_LOCAL_SURFACE_NORMAL,
+                "receptor aromatic normal is tangent to the pocket direction",
+            )
+        if pocket_facing_cosine < 0.0:
             receptor_plane_normal = _scale(receptor_plane_normal, -1.0)
         local_normal = _normalize(
             receptor_plane_normal,
@@ -1185,15 +1278,20 @@ def generate_indexed_so3_placement(
 ) -> IndexedSO3PlacementReceiptV1:
     """Generate and seal one fixed SO(3) slot without scoring or selection."""
 
+    coordinates = _coordinates(
+        source_coordinates,
+        name="source_coordinates",
+        maximum_count=MAX_LIGAND_ATOMS,
+    )
     return IndexedSO3PlacementReceiptV1(
         allocation=allocation,
         slot_index=slot_index,
         source_proposal_sha256=source_proposal_sha256,
         source_coordinate_sha256=source_coordinate_sha256,
         source_receipt_sha256=source_receipt_sha256,
-        source_coordinates=tuple(tuple(row) for row in source_coordinates),
-        pocket_center=tuple(pocket_center),  # type: ignore[arg-type]
-        pocket_normal=tuple(pocket_normal),  # type: ignore[arg-type]
+        source_coordinates=coordinates,
+        pocket_center=_vector(pocket_center, name="pocket_center"),
+        pocket_normal=_vector(pocket_normal, name="pocket_normal"),
     )
 
 
@@ -1215,19 +1313,41 @@ def generate_single_anchor_placement(
 ) -> SingleAnchorPlacementReceiptV1:
     """Generate and precheck one fixed single-anchor slot without deleting it."""
 
+    ligand = _coordinates(
+        ligand_coordinates,
+        name="ligand_coordinates",
+        maximum_count=MAX_LIGAND_ATOMS,
+    )
+    receptor = _coordinates(
+        receptor_coordinates,
+        name="receptor_coordinates",
+        maximum_count=MAX_RECEPTOR_ATOMS,
+    )
     return SingleAnchorPlacementReceiptV1(
         allocation=allocation,
         slot_index=slot_index,
         source_proposal_sha256=source_proposal_sha256,
         source_coordinate_sha256=source_coordinate_sha256,
         source_receipt_sha256=source_receipt_sha256,
-        ligand_coordinates=tuple(tuple(row) for row in ligand_coordinates),
-        ligand_vdw_radii=tuple(ligand_vdw_radii),
-        ligand_heavy_atom_mask=tuple(ligand_heavy_atom_mask),
+        ligand_coordinates=ligand,
+        ligand_vdw_radii=_float_tuple(
+            ligand_vdw_radii,
+            name="ligand_vdw_radii",
+            expected_count=len(ligand),
+        ),
+        ligand_heavy_atom_mask=_bool_tuple(
+            ligand_heavy_atom_mask,
+            name="ligand_heavy_atom_mask",
+            expected_count=len(ligand),
+        ),
         receptor_coordinate_sha256=receptor_coordinate_sha256,
-        receptor_coordinates=tuple(tuple(row) for row in receptor_coordinates),
-        receptor_vdw_radii=tuple(receptor_vdw_radii),
-        pocket_center=tuple(pocket_center),  # type: ignore[arg-type]
+        receptor_coordinates=receptor,
+        receptor_vdw_radii=_float_tuple(
+            receptor_vdw_radii,
+            name="receptor_vdw_radii",
+            expected_count=len(receptor),
+        ),
+        pocket_center=_vector(pocket_center, name="pocket_center"),
         pocket_radius=pocket_radius,
     )
 
