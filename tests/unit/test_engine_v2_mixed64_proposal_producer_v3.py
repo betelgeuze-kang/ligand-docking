@@ -198,9 +198,15 @@ def _fixture(
     feature_available: bool = True,
     conformer_available: bool = True,
     exact_coordinates=LIGAND,
+    ligand_vdw_radii: tuple[float, ...] | None = None,
+    receptor_vdw_radii: tuple[float, ...] | None = None,
     short_conformer_rank: int | None = None,
     out_of_range: bool = False,
 ):
+    if ligand_vdw_radii is None:
+        ligand_vdw_radii = (1.2,) * len(LIGAND)
+    if receptor_vdw_radii is None:
+        receptor_vdw_radii = (1.2,) * len(RECEPTOR)
     exact_receipt = _receipt("exact-v11")
     exact = _source(
         SOURCE_KIND_EXACT_V11_BASE,
@@ -245,9 +251,13 @@ def _fixture(
         receptor_coordinate_sha256=coordinate_sha256(RECEPTOR),
         prepared_ligand_topology_sha256=ligand_topology_sha256,
         prepared_receptor_topology_sha256=receptor_topology_sha256,
-        ligand_vdw_radii_sha256=_digest([float(1.2).hex()] * len(LIGAND)),
+        ligand_vdw_radii_sha256=_digest(
+            [value.hex() for value in ligand_vdw_radii]
+        ),
         ligand_heavy_atom_mask_sha256=_digest([True] * len(LIGAND)),
-        receptor_vdw_radii_sha256=_digest([float(1.2).hex()] * len(RECEPTOR)),
+        receptor_vdw_radii_sha256=_digest(
+            [value.hex() for value in receptor_vdw_radii]
+        ),
     )
     features = Mixed64FeatureEvidence(
         exact_v11_source_receipt_sha256=exact.source_receipt_sha256,
@@ -304,10 +314,10 @@ def _fixture(
         v7_control_sources=controls,
         conformer_sources=conformers if conformer_available else (),
         retained_sources=retained,
-        ligand_vdw_radii=(1.2,) * len(LIGAND),
+        ligand_vdw_radii=ligand_vdw_radii,
         ligand_heavy_atom_mask=(True,) * len(LIGAND),
         receptor_coordinates=RECEPTOR,
-        receptor_vdw_radii=(1.2,) * len(RECEPTOR),
+        receptor_vdw_radii=receptor_vdw_radii,
         receptor_source_receipt_canonical_json=exact_receipt,
         pocket_center=(0.0, 0.0, 10.0),
         pocket_normal=(0.0, 0.0, 1.0),
@@ -607,6 +617,15 @@ def test_stable_source_hash_rejects_empty_regular_data(tmp_path: Path) -> None:
     with pytest.raises(Mixed64ProposalProducerError) as captured:
         producer._stable_source_sha256(empty)
     assert captured.value.code == "producer_implementation_source_changed"
+
+
+def test_producer_rejects_live_source_mutation_before_generation() -> None:
+    allocation, bundle, *_ = _fixture()
+    object.__setattr__(bundle, "pocket_center", (99.0, 99.0, 99.0))
+
+    with pytest.raises(Mixed64ProposalProducerError) as captured:
+        produce_fixed_mixed64_proposals(allocation, source_bundle=bundle)
+    assert captured.value.code == SOURCE_PAYLOAD_CROSS_WIRING
 
 
 def test_batch_authority_and_downstream_stages_remain_false() -> None:

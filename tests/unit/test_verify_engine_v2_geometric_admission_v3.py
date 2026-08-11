@@ -1,0 +1,178 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+import subprocess
+import sys
+
+import pytest
+
+from tools.verify_engine_v2_geometric_admission_v3 import (
+    DEFAULT_POLICY_PATH,
+    GeometricAdmissionV3PolicyVerificationError,
+    verify_policy,
+)
+
+
+def _write(path: Path, document: object) -> None:
+    path.write_text(
+        json.dumps(
+            document,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+            allow_nan=False,
+        )
+        + "\n",
+        encoding="ascii",
+    )
+
+
+def test_current_policy_verifies_without_authority() -> None:
+    result = verify_policy()
+    assert result["verified"] is True
+    assert result["verification_blockers"] == []
+    assert result["activation_evidence_eligible"] is False
+    assert result["producer_attested"] is False
+    assert result["molecular_execution_authorized"] is False
+
+
+@pytest.mark.parametrize(
+    ("path", "value"),
+    (
+        (("candidate_denominator",), 63),
+        (("hard_rejection", "threshold_binary64_hex"), (0.50).hex()),
+        (("failure_semantics", "slot_reallocation_allowed"), True),
+        (("producer_integrity", "recursive_live_projection_preflight"), False),
+        (("authority", "molecular_execution_authorized"), True),
+    ),
+)
+def test_policy_tamper_fails_closed(
+    tmp_path: Path,
+    path: tuple[str, ...],
+    value: object,
+) -> None:
+    document = json.loads(DEFAULT_POLICY_PATH.read_text(encoding="ascii"))
+    target = document
+    for key in path[:-1]:
+        target = target[key]
+    target[path[-1]] = value
+    candidate = tmp_path / "tampered.json"
+    _write(candidate, document)
+
+    with pytest.raises(GeometricAdmissionV3PolicyVerificationError):
+        verify_policy(candidate)
+
+
+def test_noncanonical_policy_fails_closed(tmp_path: Path) -> None:
+    document = json.loads(DEFAULT_POLICY_PATH.read_text(encoding="ascii"))
+    path = tmp_path / "pretty.json"
+    path.write_text(json.dumps(document, indent=2) + "\n", encoding="ascii")
+    with pytest.raises(
+        GeometricAdmissionV3PolicyVerificationError,
+        match="not canonical",
+    ):
+        verify_policy(path)
+
+
+@pytest.mark.parametrize("invalid_value", (float("nan"), float("inf"), -float("inf")))
+def test_nonfinite_policy_value_fails_closed(
+    tmp_path: Path,
+    invalid_value: float,
+) -> None:
+    document = json.loads(DEFAULT_POLICY_PATH.read_text(encoding="ascii"))
+    document["candidate_denominator"] = invalid_value
+    path = tmp_path / "nonfinite.json"
+    path.write_text(
+        json.dumps(document, sort_keys=True, separators=(",", ":")) + "\n",
+        encoding="ascii",
+    )
+
+    with pytest.raises(
+        GeometricAdmissionV3PolicyVerificationError,
+        match="contains non-canonical values",
+    ):
+        verify_policy(path)
+
+
+def test_cli_reports_nonfinite_policy_as_structured_failure(tmp_path: Path) -> None:
+    document = json.loads(DEFAULT_POLICY_PATH.read_text(encoding="ascii"))
+    document["candidate_denominator"] = float("nan")
+    policy = tmp_path / "nonfinite.json"
+    policy.write_text(
+        json.dumps(document, sort_keys=True, separators=(",", ":")) + "\n",
+        encoding="ascii",
+    )
+    tool = (
+        Path(__file__).resolve().parents[2]
+        / "tools"
+        / "verify_engine_v2_geometric_admission_v3.py"
+    )
+
+    completed = subprocess.run(
+        [sys.executable, "-I", str(tool), "--policy", str(policy)],
+        cwd=tmp_path,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 1
+    assert completed.stderr == ""
+    result = json.loads(completed.stdout)
+    assert result["verified"] is False
+    assert result["verification_blockers"] == [
+        "geometric-admission v3 policy contains non-canonical values"
+    ]
+    assert result["molecular_execution_authorized"] is False
+
+
+def test_cli_runs_in_isolated_mode_outside_repository(tmp_path: Path) -> None:
+    tool = (
+        Path(__file__).resolve().parents[2]
+        / "tools"
+        / "verify_engine_v2_geometric_admission_v3.py"
+    )
+    completed = subprocess.run(
+        [sys.executable, "-I", str(tool)],
+        cwd=tmp_path,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.returncode == 0, completed.stderr
+    result = json.loads(completed.stdout)
+    assert result["verified"] is True
+    assert result["producer_attested"] is False
+
+
+def test_verifier_import_does_not_poison_canonical_package(tmp_path: Path) -> None:
+    tool = (
+        Path(__file__).resolve().parents[2]
+        / "tools"
+        / "verify_engine_v2_geometric_admission_v3.py"
+    )
+    script = """
+import importlib.util
+import pathlib
+import sys
+
+tool = pathlib.Path(sys.argv[1])
+assert "betelgeuze_engine_v2" not in sys.modules
+spec = importlib.util.spec_from_file_location("isolated_admission_verifier", tool)
+assert spec is not None and spec.loader is not None
+module = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = module
+spec.loader.exec_module(module)
+assert "betelgeuze_engine_v2" not in sys.modules
+assert "betelgeuze_engine_v2.docking" not in sys.modules
+assert module.verify_policy()["verified"] is True
+"""
+    completed = subprocess.run(
+        [sys.executable, "-I", "-c", script, str(tool)],
+        cwd=tmp_path,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.returncode == 0, completed.stderr
