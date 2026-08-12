@@ -397,6 +397,16 @@ find_conformer_source(
 [[nodiscard]] bg_status validate_source_bundle(
     const bg_docking_fixed64_producer_input_v1 &input) noexcept {
     const auto &allocation = *input.allocation_input;
+    if (input.v7_control_source_count > kMaximumV7Sources ||
+        input.conformer_source_count > kMaximumConformerSources ||
+        input.retained_source_count > kMaximumRetainedSources ||
+        allocation.v7_control_source_count > kMaximumV7Sources ||
+        allocation.conformer_source_count > kMaximumConformerSources ||
+        allocation.retained_source_count > kMaximumRetainedSources) {
+        return fail(
+            BG_STATUS_CAPACITY_OVERFLOW,
+            "fixed64 producer source count exceeds its frozen bound");
+    }
     if (input.exact_v11_source != nullptr) {
         if (!pointer_is_aligned(input.exact_v11_source)) {
             return fail(
@@ -599,6 +609,31 @@ find_conformer_source(
            std::memcmp(
                source.source.coordinate_sha256,
                row.generation_parent_coordinate_sha256, 32) == 0;
+}
+
+[[nodiscard]] bool selected_feature_geometry_available(
+    const bg_docking_fixed64_producer_input_v1 &input,
+    const bg_docking_fixed64_allocation_row_v1 &row) noexcept {
+    if (row.selected_source_receipt_count != 2) return false;
+    for (uint32_t selected = 0;
+         selected < row.selected_source_receipt_count;
+         ++selected) {
+        bool found = false;
+        for (uint64_t feature = 0;
+             feature < input.feature_geometry_count;
+             ++feature) {
+            if (std::memcmp(
+                    row.selected_source_receipt_sha256[selected],
+                    input.feature_geometry_rows[feature]
+                        .allocation_feature_receipt_sha256,
+                    32) == 0) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) return false;
+    }
+    return true;
 }
 
 [[nodiscard]] std::array<uint8_t, 32> passthrough_receipt(
@@ -1354,6 +1389,15 @@ template <typename Type>
                 BG_STATUS_INTERNAL_ERROR,
                 "fixed64 producer allocation row is not canonical");
         }
+        const auto *source = source_for_row(input, allocation);
+        if (source != nullptr) {
+            bind_source(*source, &row);
+            if (!source_matches_parent(*source, allocation)) {
+                return fail(
+                    BG_STATUS_INTERNAL_ERROR,
+                    "fixed64 producer source disagrees with allocation parent");
+            }
+        }
         if (allocation.status != BG_DOCKING_FIXED64_ALLOCATION_ROW_READY ||
             allocation.generation_eligible != UINT8_C(1)) {
             mark_failure(
@@ -1361,18 +1405,11 @@ template <typename Type>
                 0, &row);
             continue;
         }
-        const auto *source = source_for_row(input, allocation);
         if (source == nullptr) {
             mark_failure(
                 BG_DOCKING_FIXED64_PRODUCER_FAILURE_SOURCE_NOT_AVAILABLE,
                 0, &row);
             continue;
-        }
-        bind_source(*source, &row);
-        if (!source_matches_parent(*source, allocation)) {
-            return fail(
-                BG_STATUS_INTERNAL_ERROR,
-                "fixed64 producer source disagrees with allocation parent");
         }
         if (source->ligand_atom_count != validated.ligand_count) {
             mark_failure(
@@ -1413,7 +1450,7 @@ template <typename Type>
             status = place_indexed(
                 context, admission, validated, *source, slot,
                 x, y, z, &row);
-        } else if (input.feature_geometry_count == 0) {
+        } else if (!selected_feature_geometry_available(input, allocation)) {
             mark_failure(
                 BG_DOCKING_FIXED64_PRODUCER_FAILURE_FEATURE_GEOMETRY_NOT_AVAILABLE,
                 0, &row);

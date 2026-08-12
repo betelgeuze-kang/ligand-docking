@@ -524,9 +524,51 @@ void test_missing_feature_allocation_preserves_denominator() {
         assert(row.status == BG_DOCKING_FIXED64_PRODUCER_ROW_TYPED_FAILURE);
         assert(row.failure_code ==
                BG_DOCKING_FIXED64_PRODUCER_FAILURE_ALLOCATION_INELIGIBLE);
+        assert(row.source_identity_verified == 1);
+        assert(digest_present(row.source_payload_receipt_sha256));
+        assert(digest_present(row.source_proposal_sha256));
+        assert(digest_present(row.source_coordinate_sha256));
         assert(row.geometric_admission.status ==
                BG_DOCKING_GEOMETRIC_ADMISSION_ROW_UPSTREAM_FAILURE);
         assert(row.denominator_preserved == 1);
+    }
+    assert_authority_false(batch.output);
+    bg_docking_geometric_admission_v1_destroy(admission);
+    bg_context_destroy(context);
+}
+
+void test_partial_feature_geometry_only_fails_affected_slots() {
+    const Fixture fixture;
+    auto input = make_input(fixture);
+    input.feature_geometry_count = kFeatureCount - 1;
+    input.feature_atom_index_count =
+        fixture.feature_rows.back().atom_index_offset;
+    parse_digest(
+        "bde1cd992227894f7c0a8827ba738b3e13c59d7ade8ece6fd0c5e9dd24ea43c1",
+        input.feature_geometry_inventory_sha256);
+    bg_context *context = make_context(BG_BACKEND_CPP_CPU_REFERENCE);
+    assert(context != nullptr);
+    auto *admission = make_admission(fixture, context);
+    const Batch batch = produce(context, admission, input);
+    assert(batch.output.generated_count == 62);
+    assert(batch.output.typed_failure_count == 2);
+    for (std::size_t slot = 0; slot < kSlots; ++slot) {
+        const auto &row = batch.rows[slot];
+        if (slot == 58 || slot == 59) {
+            assert(row.status ==
+                   BG_DOCKING_FIXED64_PRODUCER_ROW_TYPED_FAILURE);
+            assert(row.failure_code ==
+                   BG_DOCKING_FIXED64_PRODUCER_FAILURE_FEATURE_GEOMETRY_NOT_AVAILABLE);
+            assert(row.coordinates_available == 0);
+            assert(row.source_identity_verified == 1);
+            assert(row.denominator_preserved == 1);
+            assert(row.geometric_admission.status ==
+                   BG_DOCKING_GEOMETRIC_ADMISSION_ROW_UPSTREAM_FAILURE);
+        } else {
+            assert(row.status == BG_DOCKING_FIXED64_PRODUCER_ROW_GENERATED);
+            assert(row.coordinates_available == 1);
+        }
+        assert(digest_present(row.row_receipt_sha256));
     }
     assert_authority_false(batch.output);
     bg_docking_geometric_admission_v1_destroy(admission);
@@ -659,14 +701,52 @@ void test_invalid_input_capacity_and_alias_are_transactional() {
     bg_context_destroy(context);
 }
 
+void test_oversized_source_count_is_rejected_before_narrowing() {
+    const Fixture fixture;
+    auto input = make_input(fixture);
+    input.v7_control_source_count = UINT64_MAX;
+    bg_context *context = make_context(BG_BACKEND_CPP_CPU_REFERENCE);
+    assert(context != nullptr);
+    auto *admission = make_admission(fixture, context);
+    Batch batch{};
+    assert(bg_docking_fixed64_producer_output_v1_init(&batch.output) ==
+           BG_STATUS_OK);
+    batch.output.row_capacity = batch.rows.size();
+    batch.output.coordinate_capacity = batch.x.size();
+    batch.output.rows = batch.rows.data();
+    batch.output.x_angstrom = batch.x.data();
+    batch.output.y_angstrom = batch.y.data();
+    batch.output.z_angstrom = batch.z.data();
+    std::memset(batch.rows.data(), 0xA5, sizeof(batch.rows));
+    std::fill(batch.x.begin(), batch.x.end(), 91.0);
+    std::fill(batch.y.begin(), batch.y.end(), 81.0);
+    std::fill(batch.z.begin(), batch.z.end(), 71.0);
+    const auto output_before = object_bytes(batch.output);
+    const auto rows_before = batch.rows;
+    const auto x_before = batch.x;
+    const auto y_before = batch.y;
+    const auto z_before = batch.z;
+    assert(bg_docking_fixed64_producer_v1_run(
+               context, admission, &input, &batch.output) ==
+           BG_STATUS_CAPACITY_OVERFLOW);
+    assert(object_bytes(batch.output) == output_before);
+    assert(std::memcmp(
+               batch.rows.data(), rows_before.data(), sizeof(batch.rows)) == 0);
+    assert(batch.x == x_before && batch.y == y_before && batch.z == z_before);
+    bg_docking_geometric_admission_v1_destroy(admission);
+    bg_context_destroy(context);
+}
+
 }  // namespace
 
 int main() {
     test_exact64_repeat_and_backend_parity();
     test_missing_source_is_typed_and_zero_filled();
     test_missing_feature_allocation_preserves_denominator();
+    test_partial_feature_geometry_only_fails_affected_slots();
     test_ready_anchor_without_geometry_is_typed();
     test_component_typed_failure_is_retained();
     test_invalid_input_capacity_and_alias_are_transactional();
+    test_oversized_source_count_is_rejected_before_narrowing();
     return 0;
 }
