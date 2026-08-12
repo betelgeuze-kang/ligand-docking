@@ -163,10 +163,10 @@ struct Fixture final {
             allocation.exact_v11_source.receptor_coordinate_sha256);
         fill_digest(
             allocation.exact_v11_source.prepared_ligand_topology_sha256,
-            0x12);
+            0x72);
         fill_digest(
             allocation.exact_v11_source.prepared_receptor_topology_sha256,
-            0x13);
+            0x71);
         parse_digest(
             "142a64fce99277370fc239fbbb59e85aee8c8c9472a6eb394231b8bff31981f6",
             allocation.exact_v11_source.ligand_vdw_radii_sha256);
@@ -1834,6 +1834,36 @@ void test_complete_pipeline_create_and_run_fail_closed() {
     assert(bg_docking_fixed64_pipeline_v1_get_backend(
                pipeline, reinterpret_cast<bg_backend *>(pipeline)) ==
            BG_STATUS_INVALID_ARGUMENT);
+
+    const auto expect_producer_topology_crosswire_rejected =
+        [&](bool crosswire_ligand) {
+            auto producer_input = make_input(fixture);
+            auto allocation = fixture.allocation;
+            if (crosswire_ligand) {
+                allocation.exact_v11_source
+                    .prepared_ligand_topology_sha256[0] ^= UINT8_C(1);
+            } else {
+                allocation.exact_v11_source
+                    .prepared_receptor_topology_sha256[0] ^= UINT8_C(1);
+            }
+            producer_input.allocation_input = &allocation;
+            CompletePipelineResult rejected{};
+            assert(run_complete_pipeline_into(
+                       context,
+                       pipeline,
+                       fixture,
+                       &rejected,
+                       false,
+                       false,
+                       false,
+                       &producer_input) == BG_STATUS_INVALID_ARGUMENT);
+            assert(rejected.producer.output.row_count == 0);
+            assert(rejected.output.row_count == 0);
+            assert(rejected.rows[0].slot_index == 0);
+        };
+    expect_producer_topology_crosswire_rejected(true);
+    expect_producer_topology_crosswire_rejected(false);
+
     CompletePipelineResult result{};
     result.producer.rows[0].slot_index = UINT32_MAX;
     result.rows[0].slot_index = UINT32_MAX;

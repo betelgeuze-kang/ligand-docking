@@ -563,6 +563,37 @@ template <typename Type>
             BG_STATUS_INVALID_ARGUMENT,
             "fixed64 complete pipeline input descriptor is invalid");
     }
+    status = validate_descriptor_header(
+        input.producer_input->struct_size,
+        sizeof(*input.producer_input),
+        input.producer_input->abi_version,
+        "fixed64 complete pipeline producer input size does not match ABI v1",
+        "fixed64 complete pipeline producer input ABI version does not match");
+    if (status != BG_STATUS_OK) return status;
+    if (input.producer_input->allocation_input == nullptr ||
+        !pointer_is_aligned(input.producer_input->allocation_input)) {
+        return fail(
+            BG_STATUS_INVALID_ARGUMENT,
+            "fixed64 complete pipeline producer allocation is null or misaligned");
+    }
+    const auto &allocation = *input.producer_input->allocation_input;
+    status = validate_descriptor_header(
+        allocation.struct_size,
+        sizeof(allocation),
+        allocation.abi_version,
+        "fixed64 complete pipeline allocation size does not match ABI v1",
+        "fixed64 complete pipeline allocation ABI version does not match");
+    if (status != BG_STATUS_OK) return status;
+    if (!same_digest(
+            pipeline.admission->ligand_system_sha256,
+            allocation.exact_v11_source.prepared_ligand_topology_sha256) ||
+        !same_digest(
+            pipeline.admission->receptor_system_sha256,
+            allocation.exact_v11_source.prepared_receptor_topology_sha256)) {
+        return fail(
+            BG_STATUS_INVALID_ARGUMENT,
+            "fixed64 complete pipeline producer topology identity is cross-wired");
+    }
     const std::array<const void *, 5> channels = {
         input.candidate_mode,
         input.rigid_max_steps,
