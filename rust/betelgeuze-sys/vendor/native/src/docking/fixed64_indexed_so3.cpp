@@ -31,8 +31,9 @@ constexpr std::size_t kOrientationCount =
 constexpr std::size_t kMaximumLigandAtoms = 512;
 constexpr double kMaximumCoordinateAngstrom = 100'000.0;
 constexpr double kGeometryEpsilon = 1.0e-12;
+constexpr double kDirectionRatioScale = 1'099'511'627'776.0;
 constexpr char kProfileId[] =
-    "betelgeuze.engine_v2_mixed64_indexed_source_bound_so3_native/1.1.1";
+    "betelgeuze.engine_v2_mixed64_indexed_source_bound_so3_native/1.1.2";
 constexpr char kPlacementSchema[] =
     "betelgeuze.engine_v2_native_fixed64_indexed_so3_placement/1.0.0";
 
@@ -193,6 +194,14 @@ template <typename Type>
     return BG_STATUS_OK;
 }
 
+[[nodiscard]] double canonical_direction_ratio(double value) noexcept {
+    const double magnitude =
+        std::floor(std::abs(value) * kDirectionRatioScale + 0.5);
+    const double quantized =
+        std::copysign(magnitude / kDirectionRatioScale, value);
+    return quantized == 0.0 ? 0.0 : quantized;
+}
+
 [[nodiscard]] bg_status validate_input(
     const bg_docking_fixed64_indexed_so3_input_v1 &input,
     std::size_t *ligand_count,
@@ -309,9 +318,9 @@ template <typename Type>
             BG_STATUS_INVALID_ARGUMENT,
             "indexed SO3 pocket normal is degenerate");
     }
-    const double x = normal.x / maximum;
-    const double y = normal.y / maximum;
-    const double z = normal.z / maximum;
+    const double x = canonical_direction_ratio(normal.x / maximum);
+    const double y = canonical_direction_ratio(normal.y / maximum);
+    const double z = canonical_direction_ratio(normal.z / maximum);
     const double scaled_norm = std::hypot(std::hypot(x, y), z);
     if (!std::isfinite(scaled_norm) || scaled_norm <= 0.0) {
         return fail(

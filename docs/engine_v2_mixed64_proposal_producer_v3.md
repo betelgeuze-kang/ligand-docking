@@ -91,11 +91,13 @@ single-anchor rows bind their component quaternion, and typed failures keep
 the channel all-zero. The quaternion is unit-checked before commit and is part
 of the row receipt, so downstream validity/refinement composition cannot
 silently invent or cross-wire rotation evidence. The exported frozen profile
-identifier is `betelgeuze.engine_v2_mixed64_native_fixed64_producer/1.1.1`.
-Patch profile 1.1.1 derives pocket-normal components from max-scaled ratios,
-so every finite positive scaling of one direction produces the same SO(3)
-seed, and preserves out-of-envelope transformed coordinates as typed
-`NONFINITE_OUTPUT` failures rather than dropping their fixed64 slots.
+identifier is `betelgeuze.engine_v2_mixed64_native_fixed64_producer/1.1.2`.
+Patch profile 1.1.2 quantizes each max-scaled pocket-normal ratio to 40
+fractional binary bits before unit normalization. This absorbs scale-product
+rounding drift such as `[1,1,5]` versus `[0.3,0.3,1.5]` consistently in the
+producer, indexed component, and independent Rust replay. It also preserves
+out-of-envelope transformed coordinates as typed `NONFINITE_OUTPUT` failures
+rather than dropping their fixed64 slots.
 
 The producer commits transactionally only after all nested backend evidence is
 validated. Synthetic CPU, sanitizer, and qualified-device parity tests cover

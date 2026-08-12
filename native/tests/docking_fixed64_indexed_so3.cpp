@@ -319,18 +319,33 @@ void test_oblique_normal_is_invariant_to_nonbinary_positive_scale() {
     scaled.pocket_normal[0] = 3.0;
     scaled.pocket_normal[1] = 3.0;
     scaled.pocket_normal[2] = 15.0;
+    auto rounded = baseline;
+    rounded.pocket_normal[0] = 0.3;
+    rounded.pocket_normal[1] = 0.3;
+    rounded.pocket_normal[2] = 1.5;
     const Placement first = place(context, baseline);
     const Placement second = place(context, scaled);
+    const Placement third = place(context, rounded);
     assert_placed(first, BG_BACKEND_CPP_CPU_REFERENCE, 24);
     assert_placed(second, BG_BACKEND_CPP_CPU_REFERENCE, 24);
+    assert_placed(third, BG_BACKEND_CPP_CPU_REFERENCE, 24);
     assert(first.x == second.x && first.y == second.y && first.z == second.z);
+    assert(first.x == third.x && first.y == third.y && first.z == third.z);
     assert(std::memcmp(
                first.output.source_seed_sha256,
                second.output.source_seed_sha256,
                32) == 0);
     assert(std::memcmp(
+               first.output.source_seed_sha256,
+               third.output.source_seed_sha256,
+               32) == 0);
+    assert(std::memcmp(
                first.output.placement_receipt_sha256,
                second.output.placement_receipt_sha256,
+               32) == 0);
+    assert(std::memcmp(
+               first.output.placement_receipt_sha256,
+               third.output.placement_receipt_sha256,
                32) == 0);
     bg_context_destroy(context);
 }

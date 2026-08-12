@@ -393,6 +393,14 @@ fn assert_safe_run_returns_complete_receipt(fixture: &SingleAtomFixture, options
         oblique_receipt,
         pipeline.run(nonbinary_scaled_oblique_normal).unwrap()
     );
+    let rounded_scaled_oblique_normal = Fixed64RunInput {
+        pocket_normal: [0.3, 0.3, 1.5],
+        ..run
+    };
+    assert_eq!(
+        oblique_receipt,
+        pipeline.run(rounded_scaled_oblique_normal).unwrap()
+    );
     let mut crosswired_source_evidence = run;
     crosswired_source_evidence
         .exact_source_evidence
@@ -674,7 +682,14 @@ fn assert_transformed_placements_are_independently_replayed(
             ..run
         })
         .unwrap();
+    let rounded_oblique = pipeline
+        .run(Fixed64RunInput {
+            pocket_normal: [0.3, 0.3, 1.5],
+            ..run
+        })
+        .unwrap();
     assert_eq!(oblique, scaled_oblique);
+    assert_eq!(oblique, rounded_oblique);
     assert_eq!(
         receipt.generated_count,
         if include_single_anchor { 52 } else { 48 }

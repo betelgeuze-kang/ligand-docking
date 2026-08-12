@@ -789,7 +789,7 @@ void assert_authority_false(const bg_docking_fixed64_producer_output_v1 &out) {
 void assert_complete(const Batch &batch, bg_backend backend) {
     assert(std::strcmp(
                bg_docking_fixed64_producer_v1_profile_id(),
-               "betelgeuze.engine_v2_mixed64_native_fixed64_producer/1.1.1") == 0);
+               "betelgeuze.engine_v2_mixed64_native_fixed64_producer/1.1.2") == 0);
     assert(batch.output.row_count == kSlots);
     assert(batch.output.coordinate_count == kCoordinates);
     assert(batch.output.generated_count == kSlots);

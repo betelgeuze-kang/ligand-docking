@@ -1995,6 +1995,18 @@ fn independent_rigid_v3_config(
 }
 
 fn canonical_pocket_normal(value: [f64; 3]) -> Result<[f64; 3]> {
+    const DIRECTION_RATIO_SCALE: f64 = 1_099_511_627_776.0;
+
+    fn canonical_direction_ratio(value: f64) -> f64 {
+        let magnitude = (value.abs() * DIRECTION_RATIO_SCALE + 0.5).floor();
+        let quantized = magnitude.copysign(value) / DIRECTION_RATIO_SCALE;
+        if quantized == 0.0 {
+            0.0
+        } else {
+            quantized
+        }
+    }
+
     if value.iter().any(|component| {
         !component.is_finite() || component.abs() > FIXED64_MAX_ABSOLUTE_COORDINATE_ANGSTROM
     }) {
@@ -2006,7 +2018,11 @@ fn canonical_pocket_normal(value: [f64; 3]) -> Result<[f64; 3]> {
     if maximum <= 1.0e-12 {
         return Err(invalid("fixed64 pocket normal is degenerate"));
     }
-    let scaled = Vec3::new(value[0] / maximum, value[1] / maximum, value[2] / maximum);
+    let scaled = Vec3::new(
+        canonical_direction_ratio(value[0] / maximum),
+        canonical_direction_ratio(value[1] / maximum),
+        canonical_direction_ratio(value[2] / maximum),
+    );
     // This receipt boundary mirrors the native C++ `std::hypot` sequence.
     // The dev-only search oracle deliberately uses `libm`, which can differ by
     // a few ULPs and therefore must not define the ABI digest here.
@@ -3858,7 +3874,7 @@ fn canonical_producer_row_receipt(
     row: &sys::bg_docking_fixed64_producer_row_v1,
 ) -> Sha256 {
     let mut hash = CanonicalHasher::new("betelgeuze.fixed64_producer_row_abi/native-v1");
-    hash.string("betelgeuze.engine_v2_mixed64_native_fixed64_producer/1.1.1");
+    hash.string("betelgeuze.engine_v2_mixed64_native_fixed64_producer/1.1.2");
     hash.digest(graph.allocation_receipt_sha256);
     hash.digest(graph.source_bundle_receipt_sha256);
     hash.digest(row.allocation_slot_receipt_sha256);
@@ -3911,7 +3927,7 @@ fn canonical_passthrough_placement_receipt(
     source: Fixed64CoordinateSource<'_>,
 ) -> Sha256 {
     let mut hash = CanonicalHasher::new("betelgeuze.fixed64_passthrough_abi/native-v1");
-    hash.string("betelgeuze.engine_v2_mixed64_native_fixed64_producer/1.1.1");
+    hash.string("betelgeuze.engine_v2_mixed64_native_fixed64_producer/1.1.2");
     hash.digest(graph.allocation_receipt_sha256);
     hash.digest(row.allocation_slot_receipt_sha256);
     hash.u32(row.slot_index);
@@ -3933,7 +3949,7 @@ fn canonical_generated_proposal_receipt(
     source: Fixed64CoordinateSource<'_>,
 ) -> Sha256 {
     let mut hash = CanonicalHasher::new("betelgeuze.fixed64_generated_proposal_abi/native-v1");
-    hash.string("betelgeuze.engine_v2_mixed64_native_fixed64_producer/1.1.1");
+    hash.string("betelgeuze.engine_v2_mixed64_native_fixed64_producer/1.1.2");
     hash.digest(graph.allocation_receipt_sha256);
     hash.digest(row.allocation_slot_receipt_sha256);
     hash.u32(row.slot_index);
@@ -3955,7 +3971,7 @@ fn canonical_producer_batch_receipt(
 ) -> Sha256 {
     let mut hash = CanonicalHasher::new("betelgeuze.fixed64_producer_batch_abi/native-v1");
     hash.string("betelgeuze.engine_v2_mixed64_native_fixed64_producer_batch/1.1.0");
-    hash.string("betelgeuze.engine_v2_mixed64_native_fixed64_producer/1.1.1");
+    hash.string("betelgeuze.engine_v2_mixed64_native_fixed64_producer/1.1.2");
     hash.u32(graph.backend.as_raw() as u32);
     hash.usize(sys::BG_DOCKING_FIXED64_CANDIDATE_COUNT as usize);
     hash.u64(generated_count);

@@ -124,7 +124,7 @@ fn native_abi_identity_and_canonical_units_match_the_header() {
         assert_eq!(owned_string(bg_abi_version_string()), "1.20");
         assert_eq!(
             owned_string(bg_docking_fixed64_producer_v1_profile_id()),
-            "betelgeuze.engine_v2_mixed64_native_fixed64_producer/1.1.1"
+            "betelgeuze.engine_v2_mixed64_native_fixed64_producer/1.1.2"
         );
         assert_eq!(
             owned_string(bg_docking_fixed64_pipeline_v1_profile_id()),

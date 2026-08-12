@@ -24,9 +24,10 @@ constexpr std::size_t kMaximumConformerSources = 7;
 constexpr std::size_t kMaximumRetainedSources = 4;
 constexpr double kMaximumCoordinateAngstrom = 100'000.0;
 constexpr double kGeometryEpsilon = 1.0e-12;
+constexpr double kDirectionRatioScale = 1'099'511'627'776.0;
 constexpr double kQuaternionNormTolerance = 1.0e-8;
 constexpr char kProfileId[] =
-    "betelgeuze.engine_v2_mixed64_native_fixed64_producer/1.1.1";
+    "betelgeuze.engine_v2_mixed64_native_fixed64_producer/1.1.2";
 constexpr char kBatchSchema[] =
     "betelgeuze.engine_v2_mixed64_native_fixed64_producer_batch/1.1.0";
 
@@ -160,13 +161,21 @@ template <typename Type>
            std::memcmp(left.coordinate_sha256, right.coordinate_sha256, 32) == 0;
 }
 
+[[nodiscard]] double canonical_direction_ratio(double value) noexcept {
+    const double magnitude =
+        std::floor(std::abs(value) * kDirectionRatioScale + 0.5);
+    const double quantized =
+        std::copysign(magnitude / kDirectionRatioScale, value);
+    return quantized == 0.0 ? 0.0 : quantized;
+}
+
 [[nodiscard]] bool normalize(Vec3 value, Vec3 *output) noexcept {
     const double maximum =
         std::max({std::abs(value.x), std::abs(value.y), std::abs(value.z)});
     if (!std::isfinite(maximum) || maximum <= kGeometryEpsilon) return false;
-    const double x = value.x / maximum;
-    const double y = value.y / maximum;
-    const double z = value.z / maximum;
+    const double x = canonical_direction_ratio(value.x / maximum);
+    const double y = canonical_direction_ratio(value.y / maximum);
+    const double z = canonical_direction_ratio(value.z / maximum);
     const double scaled_norm = std::hypot(std::hypot(x, y), z);
     if (!std::isfinite(scaled_norm) || scaled_norm <= 0.0) return false;
     const double inverse = 1.0 / scaled_norm;
