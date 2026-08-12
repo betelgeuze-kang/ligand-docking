@@ -217,6 +217,11 @@ fn assert_safe_run_returns_complete_receipt(fixture: &SingleAtomFixture, options
     let receipt = pipeline.run(run).unwrap();
     let repeated = pipeline.run(run).unwrap();
     assert_eq!(receipt, repeated);
+    let scaled_normal = Fixed64RunInput {
+        pocket_normal: [0.0, 0.0, 2.0],
+        ..run
+    };
+    assert_eq!(receipt, pipeline.run(scaled_normal).unwrap());
     let mut crosswired_source_evidence = run;
     crosswired_source_evidence
         .exact_source_evidence

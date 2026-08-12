@@ -13,7 +13,9 @@ use std::ptr::{self, NonNull};
 use std::rc::Rc;
 
 use betelgeuze_docking_search::{
-    evaluate_fixed64_geometric_metrics, Fixed64Allocation as IndependentFixed64Allocation,
+    evaluate_fixed64_geometric_metrics, refine_interaction_aware_rigid_v2,
+    refine_interaction_aware_rigid_v3, refine_interaction_aware_rigid_v6,
+    Fixed64Allocation as IndependentFixed64Allocation,
     Fixed64AtomicFeatureEvidence as IndependentFixed64AtomicFeature,
     Fixed64ConformerSourceEvidence as IndependentFixed64ConformerSource,
     Fixed64ExactV11SourceEvidence as IndependentFixed64ExactSource,
@@ -28,7 +30,18 @@ use betelgeuze_docking_search::{
     NativeFixed64ValidityContext as IndependentValidityContext,
     NativeFixed64ValidityFailureCode as IndependentValidityFailureCode,
     NativeFixed64ValidityKernelOutcome as IndependentValidityOutcome,
-    NativeFixed64ValidityMeasurements as IndependentValidityMeasurements, Quaternion, Vec3,
+    NativeFixed64ValidityMeasurements as IndependentValidityMeasurements,
+    NativeRigidRefinementContext as IndependentRigidContext,
+    NativeRigidRefinementOutcome as IndependentRigidOutcome,
+    NativeRigidRefinementProfile as IndependentRigidProfile,
+    NativeRigidV2Config as IndependentRigidV2Config,
+    NativeRigidV3Config as IndependentRigidV3Config, NativeScorerV1Atom as IndependentScorerAtom,
+    NativeScorerV1Backend as IndependentScorerBackend,
+    NativeScorerV1Config as IndependentScorerConfig,
+    NativeScorerV1Context as IndependentScorerContext,
+    NativeScorerV1Donor as IndependentScorerDonor,
+    NativeScorerV1KernelOutcome as IndependentScorerOutcome, Quaternion, Vec3,
+    FIXED64_MAX_ABSOLUTE_COORDINATE_ANGSTROM,
 };
 use betelgeuze_sys as sys;
 use sha2::{Digest, Sha256 as Sha256Hasher};
@@ -1698,6 +1711,10 @@ pub struct Fixed64Pipeline<'context> {
     geometric_hard_rejection_minimum_vdw_ratio: f64,
     geometric_max_batch_exact_pair_evaluations: u64,
     geometric_input: IndependentFixed64GeometricInput,
+    rigid_v2_config: IndependentRigidV2Config,
+    rigid_v3_config: IndependentRigidV3Config,
+    rigid_clearance_config: IndependentRigidV3Config,
+    scorer_context: IndependentScorerContext,
     maximum_torsion_steps: u64,
     receptor_system_sha256: Sha256,
     ligand_system_sha256: Sha256,
@@ -1799,6 +1816,107 @@ fn u64_pair_to_usize(pair: Fixed64Pair, label: &str) -> Result<[usize; 2]> {
             )
         })?,
     ])
+}
+
+fn u64_donor_to_usize(donor: Fixed64Donor, label: &str) -> Result<IndependentScorerDonor> {
+    Ok(IndependentScorerDonor {
+        donor_atom_index: usize::try_from(donor.donor_atom_index).map_err(|_| {
+            Error::local(
+                ErrorCode::CapacityOverflow,
+                format!("fixed64 {label} donor atom does not fit usize"),
+            )
+        })?,
+        hydrogen_atom_index: usize::try_from(donor.hydrogen_atom_index).map_err(|_| {
+            Error::local(
+                ErrorCode::CapacityOverflow,
+                format!("fixed64 {label} hydrogen atom does not fit usize"),
+            )
+        })?,
+    })
+}
+
+fn u64_rotor_to_usize(rotor: Fixed64Rotor) -> Result<[usize; 4]> {
+    let convert = |value| {
+        usize::try_from(value).map_err(|_| {
+            Error::local(
+                ErrorCode::CapacityOverflow,
+                "fixed64 scorer rotor atom does not fit usize",
+            )
+        })
+    };
+    Ok([
+        convert(rotor.atom_i)?,
+        convert(rotor.atom_j)?,
+        convert(rotor.atom_k)?,
+        convert(rotor.atom_l)?,
+    ])
+}
+
+fn independent_rigid_v2_config(
+    value: &sys::bg_docking_rigid_v2_config_v1,
+) -> Result<IndependentRigidV2Config> {
+    Ok(IndependentRigidV2Config {
+        overlap_scale: value.overlap_scale,
+        maximum_step_angstrom: value.maximum_step_angstrom,
+        minimum_step_angstrom: value.minimum_step_angstrom,
+        maximum_total_translation_angstrom: value.maximum_total_translation_angstrom,
+        maximum_backtracking_evaluations: usize::try_from(value.maximum_backtracking_evaluations)
+            .map_err(|_| {
+            Error::local(
+                ErrorCode::CapacityOverflow,
+                "fixed64 rigid backtracking budget does not fit usize",
+            )
+        })?,
+        penalty_tolerance: value.penalty_tolerance,
+        epsilon_angstrom: value.epsilon_angstrom,
+    })
+}
+
+fn independent_rigid_v3_config(
+    value: &sys::bg_docking_rigid_v3_config_v1,
+) -> Result<IndependentRigidV3Config> {
+    Ok(IndependentRigidV3Config {
+        v2: independent_rigid_v2_config(&value.v2)?,
+        maximum_rotation_step_radians: value.maximum_rotation_step_radians,
+        minimum_rotation_step_radians: value.minimum_rotation_step_radians,
+        maximum_total_rotation_radians: value.maximum_total_rotation_radians,
+        maximum_rotation_steps: usize::try_from(value.maximum_rotation_steps).map_err(|_| {
+            Error::local(
+                ErrorCode::CapacityOverflow,
+                "fixed64 rigid rotation budget does not fit usize",
+            )
+        })?,
+        minimum_rotation_relative_penalty_reduction: value
+            .minimum_rotation_relative_penalty_reduction,
+        maximum_centroid_offset_angstrom: value.maximum_centroid_offset_angstrom,
+    })
+}
+
+fn canonical_pocket_normal(value: [f64; 3]) -> Result<[f64; 3]> {
+    if value.iter().any(|component| {
+        !component.is_finite() || component.abs() > FIXED64_MAX_ABSOLUTE_COORDINATE_ANGSTROM
+    }) {
+        return Err(invalid(
+            "fixed64 pocket normal is outside its finite safety envelope",
+        ));
+    }
+    let maximum = value[0].abs().max(value[1].abs()).max(value[2].abs());
+    if maximum <= 1.0e-12 {
+        return Err(invalid("fixed64 pocket normal is degenerate"));
+    }
+    let scaled = Vec3::new(value[0] / maximum, value[1] / maximum, value[2] / maximum);
+    let scaled_norm = scaled.norm();
+    if !scaled_norm.is_finite() || scaled_norm <= 0.0 {
+        return Err(invalid("fixed64 pocket normal could not be normalized"));
+    }
+    let inverse = (1.0 / maximum) / scaled_norm;
+    let mut result = [value[0] * inverse, value[1] * inverse, value[2] * inverse];
+    for component in &mut result {
+        if *component == 0.0 {
+            *component = 0.0;
+        }
+    }
+    Ok(result)
 }
 
 impl<'context> Fixed64Pipeline<'context> {
@@ -2094,6 +2212,104 @@ impl<'context> Fixed64Pipeline<'context> {
                 format!("independent fixed64 geometric context rejected safe input: {error}"),
             )
         })?;
+        let rigid_v2_config = independent_rigid_v2_config(&rigid.v2)?;
+        let rigid_v3_config = independent_rigid_v3_config(&rigid.v3)?;
+        let rigid_clearance_config = independent_rigid_v3_config(&rigid.clearance_v4)?;
+        let scorer_config = IndependentScorerConfig::new(
+            scorer.weights,
+            scorer.electrostatic_dielectric,
+            scorer.pair_cutoff_angstrom,
+            scorer.hbond_distance_max_angstrom,
+            scorer.polar_burial_distance_angstrom,
+            usize::try_from(scorer.max_receptor_candidate_pairs).map_err(|_| {
+                Error::local(
+                    ErrorCode::CapacityOverflow,
+                    "fixed64 scorer receptor-pair capacity does not fit usize",
+                )
+            })?,
+            usize::try_from(scorer.max_ligand_pair_checks).map_err(|_| {
+                Error::local(
+                    ErrorCode::CapacityOverflow,
+                    "fixed64 scorer ligand-pair capacity does not fit usize",
+                )
+            })?,
+        )
+        .map_err(|error| {
+            Error::local(
+                ErrorCode::AbiMismatch,
+                format!("independent fixed64 scorer config rejected safe input: {error}"),
+            )
+        })?;
+        let receptor_atoms = (0..receptor_count)
+            .map(|atom| IndependentScorerAtom {
+                charge_elementary: scientific.receptor.charge_elementary[atom],
+                vdw_radius_angstrom: scientific.receptor.vdw_radius_angstrom[atom],
+                epsilon_kcal_per_mol: scientific.receptor.epsilon_kcal_per_mol[atom],
+                hydrophobic: scientific.receptor.hydrophobic_mask[atom] != 0,
+                acceptor: scientific.receptor.acceptor_mask[atom] != 0,
+            })
+            .collect::<Vec<_>>();
+        let ligand_atoms = (0..ligand_count)
+            .map(|atom| IndependentScorerAtom {
+                charge_elementary: scientific.ligand.charge_elementary[atom],
+                vdw_radius_angstrom: scientific.ligand.vdw_radius_angstrom[atom],
+                epsilon_kcal_per_mol: scientific.ligand.epsilon_kcal_per_mol[atom],
+                hydrophobic: scientific.ligand.hydrophobic_mask[atom] != 0,
+                acceptor: scientific.ligand.acceptor_mask[atom] != 0,
+            })
+            .collect::<Vec<_>>();
+        let receptor_donors = scientific
+            .receptor
+            .donors
+            .iter()
+            .map(|donor| u64_donor_to_usize(*donor, "receptor"))
+            .collect::<Result<Vec<_>>>()?;
+        let ligand_donors = scientific
+            .ligand
+            .donors
+            .iter()
+            .map(|donor| u64_donor_to_usize(*donor, "ligand"))
+            .collect::<Result<Vec<_>>>()?;
+        let scorer_exclusions = scientific
+            .ligand
+            .exclusions
+            .iter()
+            .map(|pair| u64_pair_to_usize(*pair, "scorer exclusion"))
+            .collect::<Result<Vec<_>>>()?;
+        let scorer_rotors = scientific
+            .ligand
+            .rotors
+            .iter()
+            .map(|rotor| u64_rotor_to_usize(*rotor))
+            .collect::<Result<Vec<_>>>()?;
+        let scorer_context = IndependentScorerContext::new(
+            scientific.identities.authority_input_receipt_sha256,
+            scientific.identities.receptor_system_sha256,
+            scientific.identities.ligand_system_sha256,
+            IndependentScorerBackend::RustCpu,
+            scientific.identities.backend_receipt_sha256,
+            receptor_coordinates.clone(),
+            receptor_atoms,
+            ligand_reference_coordinates.clone(),
+            ligand_atoms,
+            receptor_donors,
+            ligand_donors,
+            scorer_exclusions,
+            scorer_rotors,
+            Vec3::new(
+                scientific.pocket_center_angstrom[0],
+                scientific.pocket_center_angstrom[1],
+                scientific.pocket_center_angstrom[2],
+            ),
+            scientific.pocket_radius_angstrom,
+            scorer_config,
+        )
+        .map_err(|error| {
+            Error::local(
+                ErrorCode::AbiMismatch,
+                format!("independent fixed64 scorer context rejected safe input: {error}"),
+            )
+        })?;
         let validity_config = IndependentValidityConfig::new(
             validity.bond_length_tolerance_angstrom,
             validity.ligand_self_clash_angstrom,
@@ -2302,6 +2518,10 @@ impl<'context> Fixed64Pipeline<'context> {
             geometric_hard_rejection_minimum_vdw_ratio,
             geometric_max_batch_exact_pair_evaluations,
             geometric_input,
+            rigid_v2_config,
+            rigid_v3_config,
+            rigid_clearance_config,
+            scorer_context,
             maximum_torsion_steps,
             receptor_system_sha256: scientific.identities.receptor_system_sha256,
             ligand_system_sha256: scientific.identities.ligand_system_sha256,
@@ -2345,6 +2565,10 @@ impl<'context> Fixed64Pipeline<'context> {
             self.receptor_system_sha256,
             self.ligand_system_sha256,
         )?;
+        let input = Fixed64RunInput {
+            pocket_normal: canonical_pocket_normal(input.pocket_normal)?,
+            ..input
+        };
         let expected_sources: [Option<Fixed64CoordinateSource<'_>>; CANDIDATE_COUNT] =
             std::array::from_fn(|slot| fixed64_source_for_slot(input, slot));
         let coordinate_count = self
@@ -2748,6 +2972,9 @@ impl<'context> Fixed64Pipeline<'context> {
             self.ligand_heavy_atom_count,
             self.geometric_hard_rejection_minimum_vdw_ratio,
             &self.geometric_input,
+            self.rigid_v2_config,
+            self.rigid_v3_config,
+            self.rigid_clearance_config,
             self.maximum_torsion_steps,
             input.proposal_is_torsion_eligible,
             input.torsion_max_steps,
@@ -2757,6 +2984,7 @@ impl<'context> Fixed64Pipeline<'context> {
             self.validity_chirality_count,
             self.validity_contact_cell_size_angstrom,
             &self.validity_receptor_cells,
+            &self.scorer_context,
             &self.validity_context,
         )?;
 
@@ -3996,6 +4224,293 @@ fn validate_rigid_row_semantics(
     Ok(())
 }
 
+fn independent_rigid_profile_raw(
+    profile: IndependentRigidProfile,
+) -> sys::bg_docking_rigid_refinement_profile {
+    match profile {
+        IndependentRigidProfile::V2Translation => {
+            sys::BG_DOCKING_RIGID_REFINEMENT_PROFILE_V2_TRANSLATION
+        }
+        IndependentRigidProfile::V3TranslationRotation => {
+            sys::BG_DOCKING_RIGID_REFINEMENT_PROFILE_V3_TRANSLATION_ROTATION
+        }
+        IndependentRigidProfile::V6BaselineV2 => {
+            sys::BG_DOCKING_RIGID_REFINEMENT_PROFILE_V6_BASELINE_V2
+        }
+        IndependentRigidProfile::V6BaselineV3 => {
+            sys::BG_DOCKING_RIGID_REFINEMENT_PROFILE_V6_BASELINE_V3
+        }
+        IndependentRigidProfile::V6ClearanceV4 => {
+            sys::BG_DOCKING_RIGID_REFINEMENT_PROFILE_V6_CLEARANCE_V4
+        }
+    }
+}
+
+fn validate_independent_rigid_evidence(
+    backend: Backend,
+    observed: &sys::bg_docking_rigid_refinement_evidence_v1,
+    expected: &IndependentRigidOutcome,
+    coordinates: &[Vec<f64>; 12],
+    first_channel: usize,
+    slot: usize,
+    ligand_atom_count: usize,
+) -> Result<()> {
+    let expected_counts = [
+        expected.accepted_steps(),
+        expected.accepted_translation_steps(),
+        expected.accepted_rotation_steps(),
+        expected.line_search_evaluation_count(),
+        expected.fallback_direction_step_count(),
+    ];
+    let observed_counts = [
+        observed.accepted_steps,
+        observed.accepted_translation_steps,
+        observed.accepted_rotation_steps,
+        observed.line_search_evaluation_count,
+        observed.fallback_direction_step_count,
+    ];
+    let counts_match = expected_counts
+        .into_iter()
+        .zip(observed_counts)
+        .all(|(expected, observed)| u64::try_from(expected).ok() == Some(observed));
+    let expected_translation = expected.total_translation_angstrom();
+    let expected_rotation = expected.total_rotation_vector_radians();
+    let expected_values = [
+        expected.initial_penalty(),
+        expected.final_penalty(),
+        expected_translation.x,
+        expected_translation.y,
+        expected_translation.z,
+        expected_rotation.x,
+        expected_rotation.y,
+        expected_rotation.z,
+        expected.total_rotation_path_radians(),
+        expected.initial_centroid_offset_angstrom(),
+        expected.final_centroid_offset_angstrom(),
+        expected.maximum_centroid_offset_angstrom(),
+    ];
+    let observed_values = [
+        observed.initial_penalty,
+        observed.final_penalty,
+        observed.total_translation_angstrom[0],
+        observed.total_translation_angstrom[1],
+        observed.total_translation_angstrom[2],
+        observed.total_rotation_vector_radians[0],
+        observed.total_rotation_vector_radians[1],
+        observed.total_rotation_vector_radians[2],
+        observed.total_rotation_path_radians,
+        observed.initial_centroid_offset_angstrom,
+        observed.final_centroid_offset_angstrom,
+        observed.maximum_centroid_offset_angstrom,
+    ];
+    let values_match = expected_values
+        .into_iter()
+        .zip(observed_values)
+        .all(|(expected, observed)| numeric_matches(backend, expected, observed));
+    let begin = slot.checked_mul(ligand_atom_count).ok_or_else(|| {
+        Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 independent rigid coordinate offset overflowed",
+        )
+    })?;
+    let end = begin.checked_add(ligand_atom_count).ok_or_else(|| {
+        Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 independent rigid coordinate range overflowed",
+        )
+    })?;
+    let coordinate_channels = coordinates
+        .get(first_channel..first_channel + 3)
+        .ok_or_else(|| {
+            Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 independent rigid coordinate channel is absent",
+            )
+        })?;
+    let coordinates_match = expected.coordinates_angstrom().len() == ligand_atom_count
+        && coordinate_channels
+            .iter()
+            .all(|channel| channel.len() >= end)
+        && expected
+            .coordinates_angstrom()
+            .iter()
+            .enumerate()
+            .all(|(atom, expected)| {
+                numeric_matches(backend, expected.x, coordinate_channels[0][begin + atom])
+                    && numeric_matches(backend, expected.y, coordinate_channels[1][begin + atom])
+                    && numeric_matches(backend, expected.z, coordinate_channels[2][begin + atom])
+            });
+    if observed.available != 1
+        || observed.profile != independent_rigid_profile_raw(expected.profile())
+        || !counts_match
+        || !values_match
+        || !coordinates_match
+    {
+        return Err(Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 rigid evidence disagrees with independent source-pose replay",
+        ));
+    }
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn validate_independent_rigid_replay(
+    backend: Backend,
+    row: &sys::bg_docking_rigid_refinement_row_v1,
+    requested_mode: sys::bg_docking_rigid_refinement_candidate_mode,
+    requested_max_steps: u64,
+    producer_coordinates: [&[f64]; 3],
+    rigid_coordinates: &[Vec<f64>; 12],
+    slot: usize,
+    ligand_atom_count: u64,
+    geometric_input: &IndependentFixed64GeometricInput,
+    v2_config: IndependentRigidV2Config,
+    v3_config: IndependentRigidV3Config,
+    clearance_config: IndependentRigidV3Config,
+) -> Result<()> {
+    if row.status != sys::BG_DOCKING_RIGID_REFINEMENT_ROW_REFINED {
+        return Ok(());
+    }
+    let ligand_count = usize::try_from(ligand_atom_count).map_err(|_| {
+        Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 independent rigid ligand denominator does not fit usize",
+        )
+    })?;
+    let source = coordinate_segment(producer_coordinates, slot, ligand_count).ok_or_else(|| {
+        Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 independent rigid replay exceeds its producer coordinate buffer",
+        )
+    })?;
+    let source = (0..ligand_count)
+        .map(|atom| {
+            Vec3::new(
+                source.x_angstrom[atom],
+                source.y_angstrom[atom],
+                source.z_angstrom[atom],
+            )
+        })
+        .collect::<Vec<_>>();
+    let max_steps = usize::try_from(requested_max_steps).map_err(|_| {
+        Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 independent rigid step budget does not fit usize",
+        )
+    })?;
+    let context = IndependentRigidContext {
+        receptor_coordinates_angstrom: geometric_input.receptor_coordinates_angstrom(),
+        receptor_vdw_radii_angstrom: geometric_input.receptor_vdw_radii_angstrom(),
+        ligand_vdw_radii_angstrom: geometric_input.ligand_vdw_radii_angstrom(),
+        pocket_center_angstrom: geometric_input.pocket_center_angstrom(),
+        pocket_radius_angstrom: geometric_input.pocket_radius_angstrom(),
+    };
+    let replay_error = |error| {
+        Error::local(
+            ErrorCode::AbiMismatch,
+            format!("independent fixed64 rigid replay rejected native success: {error}"),
+        )
+    };
+    match requested_mode {
+        sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V2_TRANSLATION => {
+            let expected =
+                refine_interaction_aware_rigid_v2(context, &source, max_steps, v2_config)
+                    .map_err(replay_error)?;
+            validate_independent_rigid_evidence(
+                backend,
+                &row.selected,
+                &expected,
+                rigid_coordinates,
+                0,
+                slot,
+                ligand_count,
+            )?;
+        }
+        sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V3_TRANSLATION_ROTATION => {
+            let expected =
+                refine_interaction_aware_rigid_v3(context, &source, max_steps, v3_config)
+                    .map_err(replay_error)?;
+            validate_independent_rigid_evidence(
+                backend,
+                &row.selected,
+                &expected,
+                rigid_coordinates,
+                0,
+                slot,
+                ligand_count,
+            )?;
+        }
+        sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V6_BASELINE_V2_LANE
+        | sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V6_BASELINE_V3_LANE => {
+            let v3_lane =
+                requested_mode == sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V6_BASELINE_V3_LANE;
+            let expected = refine_interaction_aware_rigid_v6(
+                context,
+                &source,
+                max_steps,
+                v3_lane,
+                v2_config,
+                v3_config,
+                clearance_config,
+            )
+            .map_err(replay_error)?;
+            if bool_from_abi(
+                row.baseline_duplicate_of_v2,
+                "rigid replay baseline duplicate",
+            )? != expected.baseline_duplicate_of_v2()
+                || bool_from_abi(row.clearance_evaluated, "rigid replay clearance evaluation")?
+                    != expected.clearance_evaluated()
+                || bool_from_abi(row.clearance_selected, "rigid replay clearance selection")?
+                    != expected.clearance_selected()
+            {
+                return Err(Error::local(
+                    ErrorCode::AbiMismatch,
+                    "native fixed64 V6 decision flags disagree with independent source-pose replay",
+                ));
+            }
+            validate_independent_rigid_evidence(
+                backend,
+                &row.selected,
+                expected.selected(),
+                rigid_coordinates,
+                0,
+                slot,
+                ligand_count,
+            )?;
+            for (observed, expected, first_channel) in [
+                (&row.comparison_v2, expected.comparison_v2(), 3_usize),
+                (&row.baseline_v3, expected.baseline_v3(), 6_usize),
+                (&row.clearance_v4, expected.clearance_v4(), 9_usize),
+            ] {
+                if let Some(expected) = expected {
+                    validate_independent_rigid_evidence(
+                        backend,
+                        observed,
+                        expected,
+                        rigid_coordinates,
+                        first_channel,
+                        slot,
+                        ligand_count,
+                    )?;
+                } else if !rigid_evidence_is_zero(observed) {
+                    return Err(Error::local(
+                        ErrorCode::AbiMismatch,
+                        "native fixed64 V6 retained evidence absent from independent replay",
+                    ));
+                }
+            }
+        }
+        _ => {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 rigid success used an inactive candidate mode",
+            ));
+        }
+    }
+    Ok(())
+}
+
 fn torsion_row_values(row: &sys::bg_docking_torsion_v7_row_v1) -> [f64; 14] {
     [
         row.source_receptor_penalty,
@@ -4877,6 +5392,9 @@ fn validate_native_outputs(
     ligand_heavy_atom_count: u64,
     geometric_hard_rejection_minimum_vdw_ratio: f64,
     geometric_input: &IndependentFixed64GeometricInput,
+    rigid_v2_config: IndependentRigidV2Config,
+    rigid_v3_config: IndependentRigidV3Config,
+    rigid_clearance_config: IndependentRigidV3Config,
     maximum_torsion_steps: u64,
     proposal_is_torsion_eligible: &[u8],
     torsion_max_steps: &[u64],
@@ -4886,6 +5404,7 @@ fn validate_native_outputs(
     validity_chirality_count: u64,
     validity_contact_cell_size_angstrom: f64,
     validity_receptor_cells: &HashMap<(i64, i64, i64), u64>,
+    independent_scorer_context: &IndependentScorerContext,
     independent_validity_context: &IndependentValidityContext,
 ) -> Result<()> {
     let candidate_count = u64::from(sys::BG_DOCKING_FIXED64_CANDIDATE_COUNT);
@@ -5456,6 +5975,20 @@ fn validate_native_outputs(
             slot,
             ligand_atom_count,
         )?;
+        validate_independent_rigid_replay(
+            backend,
+            row,
+            requested_modes[slot],
+            rigid_max_steps[slot],
+            producer_coordinates,
+            rigid_coordinates,
+            slot,
+            ligand_atom_count,
+            geometric_input,
+            rigid_v2_config,
+            rigid_v3_config,
+            rigid_clearance_config,
+        )?;
     }
     for (label, invalid_order) in [
         (
@@ -5561,6 +6094,7 @@ fn validate_native_outputs(
         validity_receptor_cells,
         final_coordinates,
         final_quaternions,
+        independent_scorer_context,
         independent_validity_context,
         backend,
     )?;
@@ -6133,6 +6667,7 @@ fn validate_scorer_and_validity_evidence(
     receptor_cells: &HashMap<(i64, i64, i64), u64>,
     final_coordinates: [&[f64]; 3],
     final_quaternions: [&[f64]; 4],
+    independent_scorer_context: &IndependentScorerContext,
     independent_context: &IndependentValidityContext,
     backend: Backend,
 ) -> Result<()> {
@@ -6211,6 +6746,63 @@ fn validate_scorer_and_validity_evidence(
                 return Err(Error::local(
                     ErrorCode::AbiMismatch,
                     "native fixed64 scored row has invalid ScorerV1 term semantics",
+                ));
+            }
+            let ligand_count = usize::try_from(ligand_atom_count).map_err(|_| {
+                Error::local(
+                    ErrorCode::AbiMismatch,
+                    "native fixed64 scorer ligand denominator does not fit usize",
+                )
+            })?;
+            let owned =
+                coordinate_segment(final_coordinates, slot, ligand_count).ok_or_else(|| {
+                    Error::local(
+                        ErrorCode::AbiMismatch,
+                        "native fixed64 scorer coordinates exceed their owned buffer",
+                    )
+                })?;
+            let coordinates = (0..ligand_count)
+                .map(|atom| {
+                    Vec3::new(
+                        owned.x_angstrom[atom],
+                        owned.y_angstrom[atom],
+                        owned.z_angstrom[atom],
+                    )
+                })
+                .collect::<Vec<_>>();
+            let independent = independent_scorer_context
+                .score_coordinates(&coordinates)
+                .map_err(|error| {
+                    Error::local(
+                        ErrorCode::AbiMismatch,
+                        format!("independent fixed64 scorer evaluation failed: {error}"),
+                    )
+                })?;
+            let IndependentScorerOutcome::Scored(expected) = independent else {
+                return Err(Error::local(
+                    ErrorCode::AbiMismatch,
+                    "native fixed64 scorer reported scored evidence for an independent typed failure",
+                ));
+            };
+            let count_matches = [
+                (
+                    expected.receptor_candidate_pair_count(),
+                    scorer.receptor_candidate_pair_count,
+                ),
+                (expected.ligand_pair_count(), scorer.ligand_pair_count),
+                (expected.hbond_count(), scorer.hbond_count),
+                (
+                    expected.hydrophobic_contact_count(),
+                    scorer.hydrophobic_contact_count,
+                ),
+                (expected.buried_polar_count(), scorer.buried_polar_count),
+            ]
+            .into_iter()
+            .all(|(expected, observed)| u64::try_from(expected).ok() == Some(observed));
+            if !count_matches {
+                return Err(Error::local(
+                    ErrorCode::AbiMismatch,
+                    "native fixed64 scorer interaction counts disagree with independent replay",
                 ));
             }
         } else if scorer.status != sys::BG_DOCKING_SCORER_V1_ROW_TYPED_FAILURE
@@ -6928,6 +7520,7 @@ mod output_validation_tests {
         final_coordinates: [Vec<f64>; 3],
         final_quaternions: [Vec<f64>; 4],
         receptor_cells: HashMap<(i64, i64, i64), u64>,
+        scorer_context: IndependentScorerContext,
         validity_context: IndependentValidityContext,
     }
 
@@ -6945,6 +7538,38 @@ mod output_validation_tests {
             let mut final_quaternions: [Vec<f64>; 4] = std::array::from_fn(|_| vec![0.0; count]);
             final_quaternions[3].fill(1.0);
             final_quaternions[0][1] = 1.0;
+            let scorer_atom = IndependentScorerAtom {
+                charge_elementary: 0.0,
+                vdw_radius_angstrom: 0.5,
+                epsilon_kcal_per_mol: 0.1,
+                hydrophobic: false,
+                acceptor: false,
+            };
+            let scorer_context = IndependentScorerContext::new(
+                [1; 32],
+                [2; 32],
+                [3; 32],
+                IndependentScorerBackend::RustCpu,
+                [5; 32],
+                vec![Vec3::new(1.6, 0.0, 0.0)],
+                vec![scorer_atom],
+                vec![Vec3::new(0.0, 0.0, 0.0)],
+                vec![scorer_atom],
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                Vec3::new(0.0, 0.0, 0.0),
+                10.0,
+                IndependentScorerConfig::default(),
+            )
+            .expect("valid independent scorer fixture");
+            let IndependentScorerOutcome::Scored(scorer_counts) = scorer_context
+                .score_coordinates(&[Vec3::new(0.0, 0.0, 0.0)])
+                .expect("fixture scorer evaluation")
+            else {
+                panic!("fixture scorer evaluation unexpectedly failed");
+            };
             let validity_context = IndependentValidityContext::new(
                 [1; 32],
                 [2; 32],
@@ -6986,6 +7611,13 @@ mod output_validation_tests {
                 scorer_rows[slot].failure_code = sys::BG_DOCKING_SCORER_V1_FAILURE_NONE;
                 scorer_rows[slot].weighted_terms[0] = score;
                 scorer_rows[slot].total_score = score;
+                scorer_rows[slot].receptor_candidate_pair_count =
+                    scorer_counts.receptor_candidate_pair_count() as u64;
+                scorer_rows[slot].ligand_pair_count = scorer_counts.ligand_pair_count() as u64;
+                scorer_rows[slot].hbond_count = scorer_counts.hbond_count() as u64;
+                scorer_rows[slot].hydrophobic_contact_count =
+                    scorer_counts.hydrophobic_contact_count() as u64;
+                scorer_rows[slot].buried_polar_count = scorer_counts.buried_polar_count() as u64;
                 ranking_rows[slot].rank_eligible = 1;
                 ranking_rows[slot].stable_rank = slot as u32 + 1;
                 ranking_rows[slot].total_score = score;
@@ -7053,6 +7685,7 @@ mod output_validation_tests {
                 final_coordinates,
                 final_quaternions,
                 receptor_cells: HashMap::from([((0, 0, 0), 1)]),
+                scorer_context,
                 validity_context,
             }
         }
@@ -7079,6 +7712,7 @@ mod output_validation_tests {
                     self.final_quaternions[2].as_slice(),
                     self.final_quaternions[3].as_slice(),
                 ],
+                &self.scorer_context,
                 &self.validity_context,
                 Backend::RustCpu,
             )?;
@@ -7144,6 +7778,10 @@ mod output_validation_tests {
         let mut retained_failure_score = IndexFixture::valid();
         retained_failure_score.scorer_rows[2].total_score = 7.0;
         assert!(retained_failure_score.validate().is_err());
+
+        let mut fabricated_interaction_count = IndexFixture::valid();
+        fabricated_interaction_count.scorer_rows[0].receptor_candidate_pair_count += 1;
+        assert!(fabricated_interaction_count.validate().is_err());
     }
 
     #[test]
@@ -7787,6 +8425,59 @@ mod output_validation_tests {
             &coordinates,
             0,
             1,
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn rejects_rigid_coordinates_not_replayed_from_the_owned_producer_pose() {
+        let producer_coordinates = [vec![0.0], vec![0.0], vec![0.0]];
+        let producer_views = [
+            producer_coordinates[0].as_slice(),
+            producer_coordinates[1].as_slice(),
+            producer_coordinates[2].as_slice(),
+        ];
+        let mut rigid_coordinates: [Vec<f64>; 12] = std::array::from_fn(|_| vec![0.0]);
+        let geometric_input = IndependentFixed64GeometricInput::new(
+            vec![0.5],
+            vec![true],
+            vec![Vec3::new(5.0, 0.0, 0.0)],
+            vec![0.5],
+            Vec3::new(0.0, 0.0, 0.0),
+            10.0,
+        )
+        .expect("valid independent rigid replay fixture");
+        let row = valid_rigid_v2_row();
+        assert!(validate_independent_rigid_replay(
+            Backend::RustCpu,
+            &row,
+            sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V2_TRANSLATION,
+            1,
+            producer_views,
+            &rigid_coordinates,
+            0,
+            1,
+            &geometric_input,
+            IndependentRigidV2Config::default(),
+            IndependentRigidV3Config::default(),
+            IndependentRigidV3Config::clearance_v4(),
+        )
+        .is_ok());
+
+        rigid_coordinates[0][0] = 1.0;
+        assert!(validate_independent_rigid_replay(
+            Backend::RustCpu,
+            &row,
+            sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V2_TRANSLATION,
+            1,
+            producer_views,
+            &rigid_coordinates,
+            0,
+            1,
+            &geometric_input,
+            IndependentRigidV2Config::default(),
+            IndependentRigidV3Config::default(),
+            IndependentRigidV3Config::clearance_v4(),
         )
         .is_err());
     }
