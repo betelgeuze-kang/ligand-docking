@@ -84,17 +84,17 @@ void fill_source_evidence(
         source->proposal_sha256,
         static_cast<uint8_t>(marker + UINT8_C(64)));
     parse_digest(
-        "fe2cd37291f9fe4f48ee1379c7c7e4cabaf7bb8b6d216b4d6814e308d6ca286c",
+        "42bd9421b68e2e80a1b4d6b0e52173f6769feb8422b897d1b0131a124c35610a",
         source->coordinate_sha256);
 }
 
 struct Fixture final {
     std::array<double, kAtoms> source_x = {0.0, 1.0, 0.0, 0.0};
     std::array<double, kAtoms> source_y = {0.0, 0.0, 1.0, 0.0};
-    std::array<double, kAtoms> source_z = {0.0, 0.0, 0.0, 1.0};
+    std::array<double, kAtoms> source_z = {0.0, 0.0, 0.0, 1.5};
     std::array<double, kAtoms> receptor_x = {4.0, 3.5, 4.0, 4.0};
     std::array<double, kAtoms> receptor_y = {0.0, 0.0, 1.0, 0.0};
-    std::array<double, kAtoms> receptor_z = {0.0, 0.0, 0.0, 1.0};
+    std::array<double, kAtoms> receptor_z = {0.0, 0.0, 0.0, 1.25};
     std::array<double, kAtoms> ligand_radii = {1.5, 1.5, 1.5, 1.5};
     std::array<double, kAtoms> receptor_radii = {1.5, 1.5, 1.5, 1.5};
     std::array<uint8_t, kAtoms> heavy_mask = {1, 1, 1, 1};
@@ -124,10 +124,10 @@ struct Fixture final {
         fill_digest(allocation.exact_v11_source.source_receipt_sha256, 0x10);
         fill_digest(allocation.exact_v11_source.proposal_sha256, 0x11);
         parse_digest(
-            "fe2cd37291f9fe4f48ee1379c7c7e4cabaf7bb8b6d216b4d6814e308d6ca286c",
+            "42bd9421b68e2e80a1b4d6b0e52173f6769feb8422b897d1b0131a124c35610a",
             allocation.exact_v11_source.ligand_coordinate_sha256);
         parse_digest(
-            "8cb1e4a6f8ae2a82832c1d5ae36c914fcb15030faa20c4901b2f842e0348ca58",
+            "eec85cfe7d1e2cb444ed309e7b1861819ec8c6fd9391baa71c26db323fdc847c",
             allocation.exact_v11_source.receptor_coordinate_sha256);
         fill_digest(
             allocation.exact_v11_source.prepared_ligand_topology_sha256,
