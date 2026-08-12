@@ -130,13 +130,16 @@ static_assert(offsetof(
 static_assert(offsetof(
                   bg_docking_geometric_admission_row_v1,
                   raw_minimum_distance_angstrom) == 72);
-static_assert(offsetof(bg_docking_geometric_admission_row_v1, reserved) == 112);
+static_assert(
+    offsetof(bg_docking_geometric_admission_row_v1, row_receipt_sha256) == 112);
 static_assert(sizeof(bg_docking_geometric_admission_output_v1) == 80);
 static_assert(offsetof(bg_docking_geometric_admission_output_v1, rows) == 32);
 static_assert(offsetof(
                   bg_docking_geometric_admission_output_v1,
                   molecular_execution_authorized) == 40);
-static_assert(offsetof(bg_docking_geometric_admission_output_v1, reserved) == 48);
+static_assert(
+    offsetof(bg_docking_geometric_admission_output_v1, batch_receipt_sha256) ==
+    48);
 
 static_assert(sizeof(bg_docking_scorer_v1_context_soa_v1) == 608);
 static_assert(alignof(bg_docking_scorer_v1_context_soa_v1) == 8);

@@ -689,7 +689,7 @@ pub fn evaluate_fixed64_geometric_metrics(
             .iter()
             .zip(&input.receptor_vdw_radii_angstrom)
         {
-            let distance = coordinate.minus(*receptor_coordinate).norm();
+            let distance = canonical_geometric_distance(*coordinate, *receptor_coordinate);
             let radius_sum = ligand_radius + receptor_radius;
             raw_minimum_distance_angstrom = raw_minimum_distance_angstrom.min(distance);
             minimum_vdw_surface_gap_angstrom =
@@ -708,7 +708,8 @@ pub fn evaluate_fixed64_geometric_metrics(
                 unique_ligand_heavy_atom_penetration_count += 1;
             }
         }
-        let escape = coordinate.minus(input.pocket_center_angstrom).norm() + ligand_radius
+        let escape = canonical_geometric_distance(*coordinate, input.pocket_center_angstrom)
+            + ligand_radius
             - input.pocket_radius_angstrom;
         pocket_escape_angstrom = pocket_escape_angstrom.max(escape.max(0.0));
     }
@@ -736,6 +737,14 @@ pub fn evaluate_fixed64_geometric_metrics(
     };
     metrics.receipt_sha256 = metrics_sha256(&metrics);
     Ok(metrics)
+}
+
+fn canonical_geometric_distance(left: Vec3, right: Vec3) -> f64 {
+    let delta = left.minus(right);
+    // Coordinate validation bounds every component by 100,000 A, so this
+    // frozen left-associated sum cannot overflow. C++ and HIP use the same
+    // primitive to keep cutoff decisions backend-invariant.
+    libm::sqrt((delta.x * delta.x + delta.y * delta.y) + delta.z * delta.z)
 }
 
 fn build_decision(

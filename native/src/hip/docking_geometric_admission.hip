@@ -292,7 +292,8 @@ __global__ void geometric_fixed64_kernel(
             const double dx = x[index] - context.receptor_x[receptor];
             const double dy = y[index] - context.receptor_y[receptor];
             const double dz = z[index] - context.receptor_z[receptor];
-            const double distance = sqrt(dx * dx + dy * dy + dz * dz);
+            const double distance =
+                sqrt((dx * dx + dy * dy) + dz * dz);
             const double radius_sum = context.ligand_radius[ligand] +
                                       context.receptor_radius[receptor];
             row->raw_minimum_distance_angstrom =
@@ -322,7 +323,7 @@ __global__ void geometric_fixed64_kernel(
         const double pocket_dz = z[index] - context.pocket_center[2];
         const double escape =
             sqrt(
-                pocket_dx * pocket_dx + pocket_dy * pocket_dy +
+                (pocket_dx * pocket_dx + pocket_dy * pocket_dy) +
                 pocket_dz * pocket_dz) +
             context.ligand_radius[ligand] - context.pocket_radius;
         pocket_escape = fmax(pocket_escape, fmax(escape, 0.0));
@@ -351,7 +352,8 @@ bool geometric_row_is_valid(
     const bg_docking_geometric_admission_row_v1 &row,
     size_t slot) noexcept {
     if (row.slot_index != slot || row.reserved1 != 0 ||
-        !geometric_reserved_is_zero(row.reserved) || row.reserved0[0] != 0 ||
+        geometric_digest_present(row.row_receipt_sha256) ||
+        row.reserved0[0] != 0 ||
         row.reserved0[1] != 0 || row.reserved0[2] != 0) {
         return false;
     }

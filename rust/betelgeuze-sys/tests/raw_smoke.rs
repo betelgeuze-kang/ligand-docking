@@ -631,6 +631,10 @@ fn rust_cpu_geometric_admission_preserves_fixed64_and_authority_false() {
         assert_eq!(output.customer_pose_emission_authorized, 0);
         assert_eq!(output.production_claim_authorized, 0);
         assert_eq!(output.scientific_claim_authorized, 0);
+        assert!(output.batch_receipt_sha256.iter().any(|byte| *byte != 0));
+        assert!(rows
+            .iter()
+            .all(|row| row.row_receipt_sha256.iter().any(|byte| *byte != 0)));
 
         bg_docking_geometric_admission_v1_destroy(admission);
         bg_context_destroy(context);

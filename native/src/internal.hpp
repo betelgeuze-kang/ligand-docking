@@ -38,7 +38,15 @@ struct bg_docking_geometric_admission_v1 final {
     int32_t device_ordinal = 0;
     uint64_t receptor_atom_count = 0;
     uint64_t ligand_atom_count = 0;
+    uint64_t ligand_heavy_atom_count = 0;
     uint64_t max_batch_exact_pair_evaluations = 0;
+    std::array<double, 3> pocket_center_angstrom{};
+    double pocket_radius_angstrom = 0.0;
+    double hard_rejection_minimum_vdw_ratio = 0.0;
+    std::array<uint8_t, 32> authority_input_receipt_sha256{};
+    std::array<uint8_t, 32> receptor_system_sha256{};
+    std::array<uint8_t, 32> ligand_system_sha256{};
+    std::array<uint8_t, 32> backend_receipt_sha256{};
     void *provider_state = nullptr;
 };
 

@@ -15,6 +15,13 @@ namespace {
 constexpr std::size_t kSlots = BG_DOCKING_FIXED64_CANDIDATE_COUNT;
 constexpr std::size_t kLigandAtoms = 1;
 
+bool digest_present(const uint8_t (&digest)[32]) {
+    return std::any_of(
+        std::begin(digest), std::end(digest), [](uint8_t value) {
+            return value != UINT8_C(0);
+        });
+}
+
 struct Fixture final {
     std::array<double, 1> receptor_x = {0.0};
     std::array<double, 1> receptor_y = {0.0};
@@ -142,6 +149,10 @@ Evaluation evaluate(
     assert(value.output.customer_pose_emission_authorized == 0);
     assert(value.output.production_claim_authorized == 0);
     assert(value.output.scientific_claim_authorized == 0);
+    assert(digest_present(value.output.batch_receipt_sha256));
+    for (const auto &row : value.rows) {
+        assert(digest_present(row.row_receipt_sha256));
+    }
     return value;
 }
 
@@ -225,7 +236,7 @@ void assert_expected_rows(
 
 void test_cpu_parity_deep_copy_and_threshold_boundary() {
     Fixture fixture;
-    const auto descriptor = fixture.descriptor();
+    auto descriptor = fixture.descriptor();
     const auto batch = fixture.batch();
     bg_context *cpp_context = create_context(BG_BACKEND_CPP_CPU_REFERENCE);
     bg_context *rust_context = create_context(BG_BACKEND_RUST_CPU);
@@ -237,11 +248,25 @@ void test_cpu_parity_deep_copy_and_threshold_boundary() {
     assert(
         std::memcmp(
             rust.rows.data(), rust_repeat.rows.data(), sizeof(rust.rows)) == 0);
+    assert(
+        std::memcmp(
+            rust.output.batch_receipt_sha256,
+            rust_repeat.output.batch_receipt_sha256,
+            sizeof(rust.output.batch_receipt_sha256)) == 0);
+    assert(
+        std::memcmp(
+            cpp.output.batch_receipt_sha256,
+            rust.output.batch_receipt_sha256,
+            sizeof(cpp.output.batch_receipt_sha256)) != 0);
     for (std::size_t slot = 0; slot < kSlots; ++slot) {
         assert_row_parity(rust.rows[slot], cpp.rows[slot], 2.0e-12);
     }
     assert_expected_rows(cpp.rows);
 
+    descriptor.authority_input_receipt_sha256[0] ^= UINT8_C(0x7f);
+    descriptor.receptor_system_sha256[1] ^= UINT8_C(0x5a);
+    descriptor.ligand_system_sha256[2] ^= UINT8_C(0x3c);
+    descriptor.backend_receipt_sha256[3] ^= UINT8_C(0x1e);
     fixture.receptor_x[0] = 999.0;
     fixture.receptor_radius[0] = 9.0;
     fixture.ligand_radius[0] = 9.0;
@@ -260,6 +285,11 @@ void test_cpu_parity_deep_copy_and_threshold_boundary() {
             rust.rows.data(),
             rust_after_mutation.rows.data(),
             sizeof(rust.rows)) == 0);
+    assert(
+        std::memcmp(
+            rust.output.batch_receipt_sha256,
+            rust_after_mutation.output.batch_receipt_sha256,
+            sizeof(rust.output.batch_receipt_sha256)) == 0);
 
     bg_docking_geometric_admission_v1_destroy(cpp_admission);
     bg_docking_geometric_admission_v1_destroy(rust_admission);
@@ -283,12 +313,46 @@ void test_invalid_output_and_aliasing_are_transactional() {
     output.row_count = 17;
     output.rows = rows.data();
     output.production_claim_authorized = 1;
+    std::fill(
+        std::begin(output.batch_receipt_sha256),
+        std::end(output.batch_receipt_sha256),
+        UINT8_C(0x5c));
+    const auto output_before = output;
     assert(
         bg_docking_geometric_admission_v1_evaluate_fixed64(
             context, admission, &batch, &output) ==
         BG_STATUS_INVALID_ARGUMENT);
     assert(output.row_count == 17);
+    assert(
+        std::memcmp(
+            output.batch_receipt_sha256,
+            output_before.batch_receipt_sha256,
+            sizeof(output.batch_receipt_sha256)) == 0);
     assert(std::memcmp(rows.data(), before.data(), sizeof(rows)) == 0);
+
+    assert(bg_docking_geometric_admission_output_v1_init(&output) == BG_STATUS_OK);
+    output.row_capacity = rows.size();
+    output.rows = rows.data();
+    assert(
+        bg_docking_geometric_admission_v1_evaluate_fixed64(
+            context, admission, &batch, &output) == BG_STATUS_OK);
+    const auto committed_rows = rows;
+    const auto committed_output = output;
+    batch.reserved[0] = UINT64_C(1);
+    assert(
+        bg_docking_geometric_admission_v1_evaluate_fixed64(
+            context, admission, &batch, &output) ==
+        BG_STATUS_INVALID_ARGUMENT);
+    assert(
+        std::memcmp(
+            rows.data(), committed_rows.data(), sizeof(committed_rows)) == 0);
+    assert(output.row_count == committed_output.row_count);
+    assert(
+        std::memcmp(
+            output.batch_receipt_sha256,
+            committed_output.batch_receipt_sha256,
+            sizeof(output.batch_receipt_sha256)) == 0);
+    batch.reserved[0] = UINT64_C(0);
 
     alignas(bg_docking_geometric_admission_row_v1)
         std::array<std::byte, sizeof(rows)> shared{};
@@ -310,6 +374,81 @@ void test_invalid_output_and_aliasing_are_transactional() {
     assert(output.row_count == 9);
     assert(shared == shared_before);
 
+    bg_docking_geometric_admission_v1_destroy(admission);
+    bg_context_destroy(context);
+}
+
+void test_identity_and_coordinate_receipts_are_canonical() {
+    Fixture fixture;
+    auto descriptor = fixture.descriptor();
+    auto batch = fixture.batch();
+    bg_context *context = create_context(BG_BACKEND_RUST_CPU);
+    auto *admission = create_admission(context, descriptor);
+    const Evaluation baseline = evaluate(context, admission, batch);
+
+    fixture.y[0] = -0.0;
+    batch = fixture.batch();
+    const Evaluation negative_zero = evaluate(context, admission, batch);
+    assert(
+        std::memcmp(
+            baseline.rows[0].row_receipt_sha256,
+            negative_zero.rows[0].row_receipt_sha256,
+            sizeof(baseline.rows[0].row_receipt_sha256)) == 0);
+    assert(
+        std::memcmp(
+            baseline.output.batch_receipt_sha256,
+            negative_zero.output.batch_receipt_sha256,
+            sizeof(baseline.output.batch_receipt_sha256)) == 0);
+
+    descriptor = fixture.descriptor();
+    descriptor.authority_input_receipt_sha256[0] ^= UINT8_C(0x01);
+    descriptor.backend_receipt_sha256[31] ^= UINT8_C(0x80);
+    auto *identity_changed = create_admission(context, descriptor);
+    const Evaluation changed = evaluate(context, identity_changed, batch);
+    assert(
+        std::memcmp(
+            baseline.rows[0].row_receipt_sha256,
+            changed.rows[0].row_receipt_sha256,
+            sizeof(baseline.rows[0].row_receipt_sha256)) != 0);
+    assert(
+        std::memcmp(
+            baseline.output.batch_receipt_sha256,
+            changed.output.batch_receipt_sha256,
+            sizeof(baseline.output.batch_receipt_sha256)) != 0);
+
+    descriptor = fixture.descriptor();
+    descriptor.pocket_radius_angstrom = 11.0;
+    auto *policy_changed = create_admission(context, descriptor);
+    const Evaluation changed_policy = evaluate(context, policy_changed, batch);
+    assert(changed_policy.rows[0].pocket_escape_angstrom ==
+           baseline.rows[0].pocket_escape_angstrom);
+    assert(
+        std::memcmp(
+            baseline.rows[0].row_receipt_sha256,
+            changed_policy.rows[0].row_receipt_sha256,
+            sizeof(baseline.rows[0].row_receipt_sha256)) != 0);
+    assert(
+        std::memcmp(
+            baseline.output.batch_receipt_sha256,
+            changed_policy.output.batch_receipt_sha256,
+            sizeof(baseline.output.batch_receipt_sha256)) != 0);
+
+    fixture.x[0] = 1.2;
+    batch = fixture.batch();
+    const Evaluation coordinate_changed = evaluate(context, admission, batch);
+    assert(
+        std::memcmp(
+            baseline.rows[0].row_receipt_sha256,
+            coordinate_changed.rows[0].row_receipt_sha256,
+            sizeof(baseline.rows[0].row_receipt_sha256)) != 0);
+    assert(
+        std::memcmp(
+            baseline.output.batch_receipt_sha256,
+            coordinate_changed.output.batch_receipt_sha256,
+            sizeof(baseline.output.batch_receipt_sha256)) != 0);
+
+    bg_docking_geometric_admission_v1_destroy(identity_changed);
+    bg_docking_geometric_admission_v1_destroy(policy_changed);
     bg_docking_geometric_admission_v1_destroy(admission);
     bg_context_destroy(context);
 }
@@ -510,6 +649,40 @@ void test_available_hip_lanes_match_cpu_and_repeat_bitwise() {
     bg_context_destroy(reference_context);
 }
 
+void test_multiaxis_cutoff_rounding_is_backend_invariant() {
+    Fixture fixture;
+    fixture.receptor_radius[0] = 2.3096382244420406;
+    fixture.ligand_radius[0] = 6.520213539182638;
+    fixture.x[0] = -1.0208384923144727;
+    fixture.y[0] = 0.7366794691167272;
+    fixture.z[0] = 4.690414959050609;
+    const auto descriptor = fixture.descriptor();
+    const auto batch = fixture.batch();
+
+    for (const bg_backend backend : {
+             BG_BACKEND_CPP_CPU_REFERENCE,
+             BG_BACKEND_RUST_CPU,
+             BG_BACKEND_HIP_SAFE,
+             BG_BACKEND_HIP_FAST}) {
+        uint8_t available = 0;
+        assert(bg_backend_is_available(backend, 0, &available) == BG_STATUS_OK);
+        if (available == 0) {
+            continue;
+        }
+        bg_context *context = create_context(backend);
+        auto *admission = create_admission(context, descriptor);
+        const Evaluation result = evaluate(context, admission, batch);
+        assert(result.rows[0].minimum_vdw_ratio == 0.55);
+        assert(
+            result.rows[0].decision ==
+            BG_DOCKING_GEOMETRIC_ADMISSION_DECISION_ACCEPTED);
+        assert(result.rows[0].rank_eligible == 1);
+        assert(result.rows[0].penetration_pair_count == 1);
+        bg_docking_geometric_admission_v1_destroy(admission);
+        bg_context_destroy(context);
+    }
+}
+
 void test_policy_and_identity_fail_closed() {
     Fixture fixture;
     bg_context *context = create_context(BG_BACKEND_RUST_CPU);
@@ -537,9 +710,11 @@ void test_policy_and_identity_fail_closed() {
 int main() {
     test_cpu_parity_deep_copy_and_threshold_boundary();
     test_invalid_output_and_aliasing_are_transactional();
+    test_identity_and_coordinate_receipts_are_canonical();
     test_create_and_handle_aliasing_preserve_inputs();
     test_pair_budget_is_fail_closed_for_both_cpu_backends();
     test_available_hip_lanes_match_cpu_and_repeat_bitwise();
+    test_multiaxis_cutoff_rounding_is_backend_invariant();
     test_policy_and_identity_fail_closed();
     return 0;
 }

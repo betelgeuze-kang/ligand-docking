@@ -133,7 +133,7 @@ fn docking_geometric_admission_layouts_match_the_c_header() {
         72
     );
     assert_eq!(
-        offset_of!(bg_docking_geometric_admission_row_v1, reserved),
+        offset_of!(bg_docking_geometric_admission_row_v1, row_receipt_sha256),
         112
     );
     assert_eq!(size_of::<bg_docking_geometric_admission_output_v1>(), 80);
@@ -149,7 +149,10 @@ fn docking_geometric_admission_layouts_match_the_c_header() {
         40
     );
     assert_eq!(
-        offset_of!(bg_docking_geometric_admission_output_v1, reserved),
+        offset_of!(
+            bg_docking_geometric_admission_output_v1,
+            batch_receipt_sha256
+        ),
         48
     );
 }

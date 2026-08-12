@@ -1,3 +1,4 @@
+#include "../dynamics/sha256.hpp"
 #include "../internal.hpp"
 #include "../hip/provider.h"
 #include "../rust/provider.h"
@@ -32,6 +33,72 @@ constexpr double kMaximumVdwRadiusAngstrom = 10.0;
 constexpr double kMaximumPocketRadiusAngstrom = 1'000.0;
 constexpr double kHardRejectionMinimumVdwRatio = 0.55;
 constexpr double kPi = 3.141592653589793238462643383279502884;
+constexpr char kRowSchema[] =
+    "betelgeuze.engine_v2_native_geometric_admission_row/1.0.0";
+constexpr char kBatchSchema[] =
+    "betelgeuze.engine_v2_native_geometric_admission_batch/1.0.0";
+
+class CanonicalHash final {
+  public:
+    explicit CanonicalHash(const char *domain) noexcept { string(domain); }
+
+    void byte(uint8_t value) noexcept { hash_.update(&value, 1); }
+
+    void u32(uint32_t value) noexcept {
+        std::array<uint8_t, 4> bytes{};
+        for (std::size_t index = 0; index < bytes.size(); ++index) {
+            bytes[bytes.size() - 1U - index] = static_cast<uint8_t>(
+                value >> static_cast<uint32_t>(index * 8U));
+        }
+        hash_.update(bytes.data(), bytes.size());
+    }
+
+    void u64(uint64_t value) noexcept {
+        std::array<uint8_t, 8> bytes{};
+        for (std::size_t index = 0; index < bytes.size(); ++index) {
+            bytes[bytes.size() - 1U - index] = static_cast<uint8_t>(
+                value >> static_cast<uint32_t>(index * 8U));
+        }
+        hash_.update(bytes.data(), bytes.size());
+    }
+
+    void f64(double value) noexcept {
+        uint64_t bits = UINT64_C(0);
+        if (std::isnan(value)) {
+            bits = UINT64_C(0x7ff8000000000000);
+        } else if (value != 0.0) {
+            static_assert(sizeof(bits) == sizeof(value));
+            std::memcpy(&bits, &value, sizeof(bits));
+        }
+        u64(bits);
+    }
+
+    void bytes(const uint8_t *values, std::size_t count) noexcept {
+        u64(static_cast<uint64_t>(count));
+        hash_.update(values, count);
+    }
+
+    void string(const char *value) noexcept {
+        bytes(
+            reinterpret_cast<const uint8_t *>(value),
+            std::strlen(value));
+    }
+
+    void digest(const uint8_t (&value)[32]) noexcept {
+        hash_.update(value, 32);
+    }
+
+    void digest(const std::array<uint8_t, 32> &value) noexcept {
+        hash_.update(value.data(), value.size());
+    }
+
+    [[nodiscard]] std::array<uint8_t, 32> finish() noexcept {
+        return hash_.finish();
+    }
+
+  private:
+    dynamics::Sha256 hash_;
+};
 
 struct Vec3 final {
     double x = 0.0;
@@ -114,7 +181,10 @@ template <typename Type>
     const double x = left.x - right.x;
     const double y = left.y - right.y;
     const double z = left.z - right.z;
-    return std::sqrt(x * x + y * y + z * z);
+    // The 100,000 A coordinate envelope makes the frozen direct sum safe.
+    // Keep this exact left-associated primitive in C++, Rust, and HIP so a
+    // backend switch cannot move a row across the 0.55 rejection boundary.
+    return std::sqrt((x * x + y * y) + z * z);
 }
 
 [[nodiscard]] bool digest_present(const uint8_t (&digest)[32]) noexcept {
@@ -520,6 +590,232 @@ void failure_row(
     return BG_STATUS_OK;
 }
 
+[[nodiscard]] bool scientific_fields_are_zero(
+    const bg_docking_geometric_admission_row_v1 &row) noexcept {
+    return row.ligand_atom_count == 0 && row.receptor_atom_count == 0 &&
+           row.exact_pair_count == 0 && row.penetration_pair_count == 0 &&
+           row.unique_ligand_penetration_atom_count == 0 &&
+           row.unique_ligand_heavy_atom_penetration_count == 0 &&
+           row.raw_minimum_distance_angstrom == 0.0 &&
+           row.minimum_vdw_surface_gap_angstrom == 0.0 &&
+           row.minimum_vdw_ratio == 0.0 &&
+           row.sphere_overlap_proxy_angstrom3 == 0.0 &&
+           row.pocket_escape_angstrom == 0.0;
+}
+
+[[nodiscard]] bool evaluated_row_is_valid(
+    const bg_docking_geometric_admission_v1 &admission,
+    const bg_docking_geometric_admission_row_v1 &row) noexcept {
+    const uint64_t exact_pair_count =
+        admission.ligand_atom_count * admission.receptor_atom_count;
+    const bool accepted =
+        row.minimum_vdw_ratio >= admission.hard_rejection_minimum_vdw_ratio;
+    if (row.status != BG_DOCKING_GEOMETRIC_ADMISSION_ROW_EVALUATED ||
+        row.failure_code != BG_DOCKING_GEOMETRIC_ADMISSION_FAILURE_NONE ||
+        row.rank_eligible != static_cast<uint8_t>(accepted) ||
+        row.decision !=
+            (accepted
+                 ? BG_DOCKING_GEOMETRIC_ADMISSION_DECISION_ACCEPTED
+                 : BG_DOCKING_GEOMETRIC_ADMISSION_DECISION_SEVERE_PENETRATION_REJECTED) ||
+        row.ligand_atom_count != admission.ligand_atom_count ||
+        row.receptor_atom_count != admission.receptor_atom_count ||
+        row.exact_pair_count != exact_pair_count ||
+        row.penetration_pair_count > exact_pair_count ||
+        row.unique_ligand_penetration_atom_count >
+            admission.ligand_atom_count ||
+        row.unique_ligand_heavy_atom_penetration_count >
+            admission.ligand_heavy_atom_count ||
+        row.unique_ligand_heavy_atom_penetration_count >
+            row.unique_ligand_penetration_atom_count ||
+        !std::isfinite(row.raw_minimum_distance_angstrom) ||
+        !std::isfinite(row.minimum_vdw_surface_gap_angstrom) ||
+        !std::isfinite(row.minimum_vdw_ratio) ||
+        !std::isfinite(row.sphere_overlap_proxy_angstrom3) ||
+        !std::isfinite(row.pocket_escape_angstrom) ||
+        row.raw_minimum_distance_angstrom < 0.0 ||
+        row.minimum_vdw_surface_gap_angstrom <
+            -(2.0 * kMaximumVdwRadiusAngstrom) ||
+        row.minimum_vdw_ratio < 0.0 ||
+        row.sphere_overlap_proxy_angstrom3 < 0.0 ||
+        row.pocket_escape_angstrom < 0.0) {
+        return false;
+    }
+    if (row.penetration_pair_count == 0) {
+        return row.unique_ligand_penetration_atom_count == 0 &&
+               row.unique_ligand_heavy_atom_penetration_count == 0 &&
+               row.minimum_vdw_surface_gap_angstrom >= 0.0 &&
+               row.sphere_overlap_proxy_angstrom3 == 0.0;
+    }
+    return row.unique_ligand_penetration_atom_count > 0 &&
+           row.minimum_vdw_surface_gap_angstrom < 0.0 &&
+           row.sphere_overlap_proxy_angstrom3 > 0.0;
+}
+
+[[nodiscard]] bool provider_row_is_valid(
+    const bg_docking_geometric_admission_v1 &admission,
+    const bg_docking_geometric_admission_candidate_batch_soa_v1 &candidates,
+    const bg_docking_geometric_admission_row_v1 &row,
+    std::size_t slot) noexcept {
+    if (row.slot_index != slot || row.reserved0[0] != 0 ||
+        row.reserved0[1] != 0 || row.reserved0[2] != 0 ||
+        row.reserved1 != 0 || digest_present(row.row_receipt_sha256)) {
+        return false;
+    }
+    const auto candidate_state = candidates.candidate_state[slot];
+    if (candidate_state ==
+        BG_DOCKING_GEOMETRIC_ADMISSION_CANDIDATE_UPSTREAM_FAILURE) {
+        return row.status ==
+                   BG_DOCKING_GEOMETRIC_ADMISSION_ROW_UPSTREAM_FAILURE &&
+               row.failure_code ==
+                   BG_DOCKING_GEOMETRIC_ADMISSION_FAILURE_UPSTREAM_NOT_AVAILABLE &&
+               row.decision ==
+                   BG_DOCKING_GEOMETRIC_ADMISSION_DECISION_NOT_EVALUATED &&
+               row.rank_eligible == 0 && scientific_fields_are_zero(row);
+    }
+    if (candidate_state !=
+        BG_DOCKING_GEOMETRIC_ADMISSION_CANDIDATE_EVALUATE) {
+        return false;
+    }
+    if (row.status == BG_DOCKING_GEOMETRIC_ADMISSION_ROW_EVALUATED) {
+        return evaluated_row_is_valid(admission, row);
+    }
+    return row.status == BG_DOCKING_GEOMETRIC_ADMISSION_ROW_TYPED_FAILURE &&
+           (row.failure_code ==
+                BG_DOCKING_GEOMETRIC_ADMISSION_FAILURE_INVALID_CANDIDATE_COORDINATES ||
+            row.failure_code ==
+                BG_DOCKING_GEOMETRIC_ADMISSION_FAILURE_NONFINITE_DERIVED_MEASUREMENT) &&
+           row.decision ==
+               BG_DOCKING_GEOMETRIC_ADMISSION_DECISION_NOT_EVALUATED &&
+           row.rank_eligible == 0 && scientific_fields_are_zero(row);
+}
+
+[[nodiscard]] std::array<uint8_t, 32> coordinate_receipt(
+    const bg_docking_geometric_admission_candidate_batch_soa_v1 &candidates,
+    std::size_t ligand_atom_count,
+    std::size_t slot) noexcept {
+    CanonicalHash hash(
+        "betelgeuze.geometric_admission_coordinate/native-v1");
+    hash.u64(static_cast<uint64_t>(slot));
+    hash.u64(static_cast<uint64_t>(ligand_atom_count));
+    const std::size_t begin = slot * ligand_atom_count;
+    for (std::size_t atom = 0; atom < ligand_atom_count; ++atom) {
+        hash.f64(candidates.x_angstrom[begin + atom]);
+        hash.f64(candidates.y_angstrom[begin + atom]);
+        hash.f64(candidates.z_angstrom[begin + atom]);
+    }
+    return hash.finish();
+}
+
+[[nodiscard]] std::array<uint8_t, 32> row_receipt(
+    const bg_docking_geometric_admission_v1 &admission,
+    bg_docking_geometric_admission_candidate_state candidate_state,
+    const std::array<uint8_t, 32> &coordinate,
+    const bg_docking_geometric_admission_row_v1 &row) noexcept {
+    CanonicalHash hash("betelgeuze.geometric_admission_row/native-v1");
+    hash.string(kRowSchema);
+    hash.digest(admission.authority_input_receipt_sha256);
+    hash.digest(admission.receptor_system_sha256);
+    hash.digest(admission.ligand_system_sha256);
+    hash.digest(admission.backend_receipt_sha256);
+    hash.u32(static_cast<uint32_t>(admission.backend));
+    hash.u32(static_cast<uint32_t>(admission.unit_system));
+    hash.u64(admission.receptor_atom_count);
+    hash.u64(admission.ligand_atom_count);
+    hash.u64(admission.ligand_heavy_atom_count);
+    hash.u64(admission.max_batch_exact_pair_evaluations);
+    hash.f64(admission.pocket_center_angstrom[0]);
+    hash.f64(admission.pocket_center_angstrom[1]);
+    hash.f64(admission.pocket_center_angstrom[2]);
+    hash.f64(admission.pocket_radius_angstrom);
+    hash.f64(admission.hard_rejection_minimum_vdw_ratio);
+    hash.u32(static_cast<uint32_t>(candidate_state));
+    hash.digest(coordinate);
+    hash.u32(row.slot_index);
+    hash.u32(static_cast<uint32_t>(row.status));
+    hash.u32(static_cast<uint32_t>(row.failure_code));
+    hash.u32(static_cast<uint32_t>(row.decision));
+    hash.byte(row.rank_eligible);
+    hash.u64(row.ligand_atom_count);
+    hash.u64(row.receptor_atom_count);
+    hash.u64(row.exact_pair_count);
+    hash.u64(row.penetration_pair_count);
+    hash.u64(row.unique_ligand_penetration_atom_count);
+    hash.u64(row.unique_ligand_heavy_atom_penetration_count);
+    hash.f64(row.raw_minimum_distance_angstrom);
+    hash.f64(row.minimum_vdw_surface_gap_angstrom);
+    hash.f64(row.minimum_vdw_ratio);
+    hash.f64(row.sphere_overlap_proxy_angstrom3);
+    hash.f64(row.pocket_escape_angstrom);
+    return hash.finish();
+}
+
+[[nodiscard]] std::array<uint8_t, 32> batch_receipt(
+    const bg_docking_geometric_admission_v1 &admission,
+    const std::array<bg_docking_geometric_admission_row_v1, kCandidateCount>
+        &rows) noexcept {
+    CanonicalHash hash("betelgeuze.geometric_admission_batch/native-v1");
+    hash.string(kBatchSchema);
+    hash.digest(admission.authority_input_receipt_sha256);
+    hash.digest(admission.receptor_system_sha256);
+    hash.digest(admission.ligand_system_sha256);
+    hash.digest(admission.backend_receipt_sha256);
+    hash.u32(static_cast<uint32_t>(admission.backend));
+    hash.u32(static_cast<uint32_t>(admission.unit_system));
+    hash.u64(admission.receptor_atom_count);
+    hash.u64(admission.ligand_atom_count);
+    hash.u64(admission.ligand_heavy_atom_count);
+    hash.u64(admission.max_batch_exact_pair_evaluations);
+    hash.f64(admission.pocket_center_angstrom[0]);
+    hash.f64(admission.pocket_center_angstrom[1]);
+    hash.f64(admission.pocket_center_angstrom[2]);
+    hash.f64(admission.pocket_radius_angstrom);
+    hash.f64(admission.hard_rejection_minimum_vdw_ratio);
+    hash.u64(static_cast<uint64_t>(rows.size()));
+    for (const auto &row : rows) {
+        hash.digest(row.row_receipt_sha256);
+    }
+    hash.byte(UINT8_C(0));  // result-dependent input consumed
+    hash.byte(UINT8_C(1));  // denominator preserved
+    hash.byte(UINT8_C(0));  // molecular execution authority
+    hash.byte(UINT8_C(0));  // reservation authority
+    hash.byte(UINT8_C(0));  // benchmark authority
+    hash.byte(UINT8_C(0));  // existing-rank mutation authority
+    hash.byte(UINT8_C(0));  // customer-pose authority
+    hash.byte(UINT8_C(0));  // production-claim authority
+    hash.byte(UINT8_C(0));  // scientific-claim authority
+    return hash.finish();
+}
+
+[[nodiscard]] bg_status validate_and_bind_provider_rows(
+    const bg_docking_geometric_admission_v1 &admission,
+    const bg_docking_geometric_admission_candidate_batch_soa_v1 &candidates,
+    std::array<bg_docking_geometric_admission_row_v1, kCandidateCount> *rows,
+    std::array<uint8_t, 32> *out_batch_receipt) noexcept {
+    const std::array<uint8_t, 32> no_coordinate{};
+    for (std::size_t slot = 0; slot < rows->size(); ++slot) {
+        auto &row = (*rows)[slot];
+        if (!provider_row_is_valid(admission, candidates, row, slot)) {
+            return fail(
+                BG_STATUS_BACKEND_ERROR,
+                "geometric-admission backend returned a non-canonical fixed64 row");
+        }
+        const auto coordinate =
+            candidates.candidate_state[slot] ==
+                    BG_DOCKING_GEOMETRIC_ADMISSION_CANDIDATE_UPSTREAM_FAILURE
+                ? no_coordinate
+                : coordinate_receipt(
+                      candidates,
+                      static_cast<std::size_t>(admission.ligand_atom_count),
+                      slot);
+        const auto receipt = row_receipt(
+            admission, candidates.candidate_state[slot], coordinate, row);
+        std::copy(
+            receipt.begin(), receipt.end(), row.row_receipt_sha256);
+    }
+    *out_batch_receipt = batch_receipt(admission, *rows);
+    return BG_STATUS_OK;
+}
+
 [[nodiscard]] bg_status validate_batch_and_output(
     const bg_context &context,
     const bg_docking_geometric_admission_v1 &admission,
@@ -552,8 +848,7 @@ void failure_row(
         output.existing_rank_auto_change_authorized != 0 ||
         output.customer_pose_emission_authorized != 0 ||
         output.production_claim_authorized != 0 ||
-        output.scientific_claim_authorized != 0 || output.reserved1 != 0 ||
-        !reserved_is_zero(output.reserved)) {
+        output.scientific_claim_authorized != 0 || output.reserved1 != 0) {
         return fail(
             BG_STATUS_INVALID_ARGUMENT,
             "geometric-admission denominator, units, authority, or reserved fields are invalid");
@@ -814,8 +1109,38 @@ bg_docking_geometric_admission_v1_create(
         admission->device_ordinal = context->device_ordinal;
         admission->receptor_atom_count = descriptor->receptor_atom_count;
         admission->ligand_atom_count = descriptor->ligand_atom_count;
+        admission->ligand_heavy_atom_count = static_cast<uint64_t>(
+            std::count(
+                descriptor->ligand_heavy_atom_mask,
+                descriptor->ligand_heavy_atom_mask +
+                    static_cast<std::size_t>(descriptor->ligand_atom_count),
+                UINT8_C(1)));
         admission->max_batch_exact_pair_evaluations =
             descriptor->max_batch_exact_pair_evaluations;
+        std::copy_n(
+            descriptor->pocket_center_angstrom,
+            3,
+            admission->pocket_center_angstrom.begin());
+        admission->pocket_radius_angstrom =
+            descriptor->pocket_radius_angstrom;
+        admission->hard_rejection_minimum_vdw_ratio =
+            descriptor->hard_rejection_minimum_vdw_ratio;
+        std::copy_n(
+            descriptor->authority_input_receipt_sha256,
+            32,
+            admission->authority_input_receipt_sha256.begin());
+        std::copy_n(
+            descriptor->receptor_system_sha256,
+            32,
+            admission->receptor_system_sha256.begin());
+        std::copy_n(
+            descriptor->ligand_system_sha256,
+            32,
+            admission->ligand_system_sha256.begin());
+        std::copy_n(
+            descriptor->backend_receipt_sha256,
+            32,
+            admission->backend_receipt_sha256.begin());
         if (context->backend == BG_BACKEND_CPP_CPU_REFERENCE) {
             status = create_cpp_context(*descriptor, &admission->provider_state);
         } else if (context->backend == BG_BACKEND_RUST_CPU) {
@@ -1048,8 +1373,14 @@ bg_docking_geometric_admission_v1_evaluate_fixed64(
                 "selected backend has no geometric-admission kernel; fallback is forbidden");
         }
         if (status != BG_STATUS_OK) return status;
+        std::array<uint8_t, 32> receipt{};
+        status = validate_and_bind_provider_rows(
+            *admission, *candidates, &rows, &receipt);
+        if (status != BG_STATUS_OK) return status;
         std::memcpy(output->rows, rows.data(), sizeof(rows));
         output->row_count = kCandidateCount;
+        std::copy(
+            receipt.begin(), receipt.end(), output->batch_receipt_sha256);
         return BG_STATUS_OK;
     });
 }
