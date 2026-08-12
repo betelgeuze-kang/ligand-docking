@@ -151,6 +151,11 @@ def test_native_hip_qualification_is_manual_read_only_and_secret_free() -> None:
     assert "pull_request_target" not in source
     assert "secrets." not in source
     assert "id-token: write" not in source
+    assert "tools/build_engine_v2_native_wheel.py" in source
+    assert "--backend-profile hip-gfx1030-rocm602" in source
+    assert "--compatibility linux" in source
+    assert "--rocm-device-lib-path" in source
+    assert "python3 -m maturin --version | grep -Fx 'maturin 1.11.5'" in source
 
 
 def test_policy_rejects_a_self_hosted_pull_request_runner(tmp_path: Path) -> None:

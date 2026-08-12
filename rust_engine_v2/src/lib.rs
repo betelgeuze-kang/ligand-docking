@@ -767,7 +767,15 @@ fn geometric_admission_metrics_one(
 #[pyfunction]
 fn build_info() -> BTreeMap<&'static str, String> {
     BTreeMap::from([
-        ("backend_id", "rust_cpu_required".to_owned()),
+        (
+            "backend_id",
+            if cfg!(feature = "hip") {
+                "native_hip_gfx1030_required"
+            } else {
+                "rust_cpu_required"
+            }
+            .to_owned(),
+        ),
         ("backend_version", env!("CARGO_PKG_VERSION").to_owned()),
         ("crate_name", env!("CARGO_PKG_NAME").to_owned()),
         (
@@ -870,7 +878,15 @@ fn build_info() -> BTreeMap<&'static str, String> {
 #[pyfunction]
 fn docking_search_build_info() -> BTreeMap<&'static str, String> {
     BTreeMap::from([
-        ("backend_id", "rust_cpu_required".to_owned()),
+        (
+            "backend_id",
+            if cfg!(feature = "hip") {
+                "native_hip_gfx1030_required"
+            } else {
+                "rust_cpu_required"
+            }
+            .to_owned(),
+        ),
         ("backend_version", env!("CARGO_PKG_VERSION").to_owned()),
         ("crate_name", env!("CARGO_PKG_NAME").to_owned()),
         (
@@ -884,6 +900,30 @@ fn docking_search_build_info() -> BTreeMap<&'static str, String> {
         (
             "native_source_closure_file_count",
             env!("BETELGEUZE_NATIVE_SOURCE_CLOSURE_FILE_COUNT").to_owned(),
+        ),
+        (
+            "native_build_profile_id",
+            env!("BETELGEUZE_NATIVE_BUILD_PROFILE_ID").to_owned(),
+        ),
+        (
+            "native_toolchain_sha256",
+            env!("BETELGEUZE_NATIVE_TOOLCHAIN_SHA256").to_owned(),
+        ),
+        (
+            "build_wrapper_control",
+            env!("BETELGEUZE_BUILD_WRAPPER_CONTROL").to_owned(),
+        ),
+        (
+            "native_build_wrapper_sha256",
+            env!("BETELGEUZE_NATIVE_BUILD_WRAPPER_SHA256").to_owned(),
+        ),
+        (
+            "rustc_verbose_sha256",
+            env!("BETELGEUZE_RUSTC_VERBOSE_SHA256").to_owned(),
+        ),
+        (
+            "rustc_executable_sha256",
+            env!("BETELGEUZE_RUSTC_EXECUTABLE_SHA256").to_owned(),
         ),
         ("rustc_version", env!("BETELGEUZE_RUSTC_VERSION").to_owned()),
         ("target_triple", env!("BETELGEUZE_TARGET_TRIPLE").to_owned()),
@@ -914,12 +954,7 @@ fn docking_search_build_info() -> BTreeMap<&'static str, String> {
         ),
         (
             "cargo_features",
-            if cfg!(feature = "extension-module") {
-                "extension-module"
-            } else {
-                "none"
-            }
-            .to_owned(),
+            env!("BETELGEUZE_NATIVE_CARGO_FEATURES").to_owned(),
         ),
         ("implicit_fallback_allowed", "false".to_owned()),
         (
@@ -1241,6 +1276,8 @@ mod tests {
         for docking_only_key in [
             "native_source_closure_sha256",
             "native_source_closure_file_count",
+            "native_build_profile_id",
+            "native_toolchain_sha256",
             "panic_strategy",
             "cargo_features",
             "docking_search_schema_id",
@@ -1253,8 +1290,6 @@ mod tests {
         for geometric_only_key in [
             "geometric_admission_metrics_kernel_id",
             "geometric_admission_pair_traversal_order",
-            "native_build_wrapper_sha256",
-            "rustc_executable_sha256",
         ] {
             assert!(geometric.contains_key(geometric_only_key));
             assert!(!docking.contains_key(geometric_only_key));

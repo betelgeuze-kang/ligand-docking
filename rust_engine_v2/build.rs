@@ -62,6 +62,12 @@ fn main() {
         std::env::var("BETELGEUZE_EXPECTED_RUSTC_VERBOSE_SHA256").ok();
     let expected_native_build_wrapper_sha256 =
         std::env::var("BETELGEUZE_NATIVE_BUILD_WRAPPER_SHA256").ok();
+    let expected_native_build_profile_id =
+        std::env::var("BETELGEUZE_EXPECTED_NATIVE_BUILD_PROFILE_ID").ok();
+    let expected_native_cargo_features =
+        std::env::var("BETELGEUZE_EXPECTED_NATIVE_CARGO_FEATURES").ok();
+    let expected_native_toolchain_sha256 =
+        std::env::var("BETELGEUZE_EXPECTED_NATIVE_TOOLCHAIN_SHA256").ok();
     if let Some(expected) = &expected_rustc_executable_sha256 {
         assert_eq!(
             &rustc_executable_sha256, expected,
@@ -79,6 +85,40 @@ fn main() {
             &native_build_wrapper_sha256, expected,
             "native build wrapper changed after wrapper verification"
         );
+    }
+    if let Some(expected) = &expected_native_toolchain_sha256 {
+        assert!(
+            expected.len() == 64 && expected.bytes().all(|byte| byte.is_ascii_hexdigit()),
+            "native toolchain receipt must be a SHA-256 digest"
+        );
+    }
+    let actual_native_cargo_features = match (
+        std::env::var_os("CARGO_FEATURE_EXTENSION_MODULE").is_some(),
+        std::env::var_os("CARGO_FEATURE_HIP").is_some(),
+    ) {
+        (true, true) => "extension-module,hip",
+        (true, false) => "extension-module",
+        (false, true) => "hip",
+        (false, false) => "none",
+    };
+    if let Some(expected) = &expected_native_cargo_features {
+        assert_eq!(
+            actual_native_cargo_features, expected,
+            "native Cargo feature selection changed after wrapper verification"
+        );
+    }
+    if let Some(profile_id) = &expected_native_build_profile_id {
+        match profile_id.as_str() {
+            "cpu-manylinux_2_28-gcc14" => assert_eq!(
+                actual_native_cargo_features, "extension-module",
+                "CPU native profile must contain only the extension module feature"
+            ),
+            "hip-gfx1030-rocm602" => assert_eq!(
+                actual_native_cargo_features, "extension-module,hip",
+                "HIP native profile must contain the extension module and HIP features"
+            ),
+            _ => panic!("native build profile is not frozen"),
+        }
     }
     let target = std::env::var("TARGET").expect("Cargo TARGET is set");
     assert_eq!(target, FROZEN_TARGET, "native build target is not frozen");
@@ -104,6 +144,9 @@ fn main() {
     let wrapper_control = if expected_rustc_executable_sha256.is_some()
         && expected_rustc_verbose_sha256.is_some()
         && expected_native_build_wrapper_sha256.is_some()
+        && expected_native_build_profile_id.is_some()
+        && expected_native_cargo_features.is_some()
+        && expected_native_toolchain_sha256.is_some()
     {
         "verified_frozen_wrapper"
     } else {
@@ -188,6 +231,9 @@ fn main() {
     println!("cargo:rerun-if-env-changed=BETELGEUZE_EXPECTED_RUSTC_EXECUTABLE_SHA256");
     println!("cargo:rerun-if-env-changed=BETELGEUZE_EXPECTED_RUSTC_VERBOSE_SHA256");
     println!("cargo:rerun-if-env-changed=BETELGEUZE_NATIVE_BUILD_WRAPPER_SHA256");
+    println!("cargo:rerun-if-env-changed=BETELGEUZE_EXPECTED_NATIVE_BUILD_PROFILE_ID");
+    println!("cargo:rerun-if-env-changed=BETELGEUZE_EXPECTED_NATIVE_CARGO_FEATURES");
+    println!("cargo:rerun-if-env-changed=BETELGEUZE_EXPECTED_NATIVE_TOOLCHAIN_SHA256");
     println!("cargo:rustc-env=BETELGEUZE_CARGO_MANIFEST_SHA256={manifest_sha256}");
     println!("cargo:rustc-env=BETELGEUZE_NATIVE_PYPROJECT_SHA256={native_pyproject_sha256}");
     println!("cargo:rustc-env=BETELGEUZE_CARGO_LOCK_SHA256={lock_sha256}");
@@ -199,6 +245,19 @@ fn main() {
     );
     println!(
         "cargo:rustc-env=BETELGEUZE_NATIVE_BUILD_WRAPPER_SHA256={native_build_wrapper_sha256}"
+    );
+    println!(
+        "cargo:rustc-env=BETELGEUZE_NATIVE_BUILD_PROFILE_ID={}",
+        expected_native_build_profile_id
+            .as_deref()
+            .unwrap_or("direct-cargo-unattested")
+    );
+    println!("cargo:rustc-env=BETELGEUZE_NATIVE_CARGO_FEATURES={actual_native_cargo_features}");
+    println!(
+        "cargo:rustc-env=BETELGEUZE_NATIVE_TOOLCHAIN_SHA256={}",
+        expected_native_toolchain_sha256
+            .as_deref()
+            .unwrap_or("unattested")
     );
     println!("cargo:rustc-env=BETELGEUZE_RUSTC_VERSION={}", rustc_version);
     println!("cargo:rustc-env=BETELGEUZE_RUSTC_VERBOSE_SHA256={rustc_verbose_sha256}");

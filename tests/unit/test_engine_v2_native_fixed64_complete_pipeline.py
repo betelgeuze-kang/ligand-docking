@@ -3,6 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 import hashlib
 import json
+from pathlib import Path
 
 import pytest
 
@@ -112,6 +113,18 @@ def test_package_preloads_native_extension_before_legacy_imports(native) -> None
     import sys
 
     assert sys.modules.get("betelgeuze_engine_v2_native") is native
+
+
+def test_complete_native_work_releases_the_gil_before_pipeline_execution() -> None:
+    source = Path(
+        "rust_engine_v2/src/complete_fixed64_pipeline.rs"
+    ).read_text(encoding="utf-8")
+    allow_threads = source.index(".allow_threads(move ||")
+    context_creation = source.index("let context = Context::new(options)?", allow_threads)
+    pipeline_run = source.index("pipeline.run(run)", context_creation)
+    receipt_conversion = source.index("receipt_to_python(py", pipeline_run)
+
+    assert allow_threads < context_creation < pipeline_run < receipt_conversion
 
 
 def test_complete_entrypoint_uses_one_native_receipt_graph(native) -> None:

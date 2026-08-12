@@ -430,96 +430,101 @@ fn native_fixed64_complete_pipeline_v1(py: Python<'_>, input: &PyDict) -> PyResu
         )?,
         contact_policy_sha256: dict_digest(input, "contact_policy_sha256")?,
     };
+    // All Python-owned values have been copied above.  Parse the remaining
+    // scalars before releasing the GIL, then keep proposal generation through
+    // receipt production outside the Python critical section.
+    let feature_geometry_inventory_sha256 =
+        dict_digest_allow_zero(input, "feature_geometry_inventory_sha256")?;
+    let rmsd_threshold_angstrom = dict_f64(input, "rmsd_threshold_angstrom")?;
+    let predeclared_refinement_policy_sha256 =
+        dict_digest(input, "predeclared_refinement_policy_sha256")?;
+    let receipt = py
+        .allow_threads(move || {
+            let context = Context::new(options)?;
+            let scientific = Fixed64PipelineContext {
+                receptor: Fixed64Receptor {
+                    coordinates: receptor_coordinates.view(),
+                    vdw_radius_angstrom: &receptor_radii,
+                    charge_elementary: &receptor_charges,
+                    epsilon_kcal_per_mol: &receptor_epsilon,
+                    hydrophobic_mask: &receptor_hydrophobic,
+                    acceptor_mask: &receptor_acceptor,
+                    donors: &receptor_donors,
+                },
+                ligand: Fixed64Ligand {
+                    reference_coordinates: ligand_coordinates.view(),
+                    vdw_radius_angstrom: &ligand_radii,
+                    heavy_atom_mask: &ligand_heavy,
+                    charge_elementary: &ligand_charges,
+                    epsilon_kcal_per_mol: &ligand_epsilon,
+                    hydrophobic_mask: &ligand_hydrophobic,
+                    acceptor_mask: &ligand_acceptor,
+                    donors: &ligand_donors,
+                    exclusions: &ligand_exclusions,
+                    rotors: &rotors,
+                    bonds: &bonds,
+                    chirality_centers: &chirality_centers,
+                    parent_atom_index: &parent_atom_index,
+                    rotatable_child_atom_index: &rotatable_child_atom_index,
+                    internal_pairs: &internal_pairs,
+                },
+                pocket_center_angstrom: pocket_center,
+                pocket_radius_angstrom: pocket_radius,
+                identities,
+            };
+            let pipeline = Fixed64Pipeline::new(&context, scientific)?;
 
-    let context = Context::new(options).map_err(runtime_error)?;
-    let scientific = Fixed64PipelineContext {
-        receptor: Fixed64Receptor {
-            coordinates: receptor_coordinates.view(),
-            vdw_radius_angstrom: &receptor_radii,
-            charge_elementary: &receptor_charges,
-            epsilon_kcal_per_mol: &receptor_epsilon,
-            hydrophobic_mask: &receptor_hydrophobic,
-            acceptor_mask: &receptor_acceptor,
-            donors: &receptor_donors,
-        },
-        ligand: Fixed64Ligand {
-            reference_coordinates: ligand_coordinates.view(),
-            vdw_radius_angstrom: &ligand_radii,
-            heavy_atom_mask: &ligand_heavy,
-            charge_elementary: &ligand_charges,
-            epsilon_kcal_per_mol: &ligand_epsilon,
-            hydrophobic_mask: &ligand_hydrophobic,
-            acceptor_mask: &ligand_acceptor,
-            donors: &ligand_donors,
-            exclusions: &ligand_exclusions,
-            rotors: &rotors,
-            bonds: &bonds,
-            chirality_centers: &chirality_centers,
-            parent_atom_index: &parent_atom_index,
-            rotatable_child_atom_index: &rotatable_child_atom_index,
-            internal_pairs: &internal_pairs,
-        },
-        pocket_center_angstrom: pocket_center,
-        pocket_radius_angstrom: pocket_radius,
-        identities,
-    };
-    let pipeline = Fixed64Pipeline::new(&context, scientific).map_err(runtime_error)?;
-
-    let v7_views = v7_sources
-        .iter()
-        .map(|source| Fixed64IndexedCoordinateSource {
-            source_index: source.source_index,
-            source: source.source.view(),
+            let v7_views = v7_sources
+                .iter()
+                .map(|source| Fixed64IndexedCoordinateSource {
+                    source_index: source.source_index,
+                    source: source.source.view(),
+                })
+                .collect::<Vec<_>>();
+            let conformer_views = conformer_sources
+                .iter()
+                .map(|source| Fixed64ConformerCoordinateSource {
+                    rank: source.rank,
+                    source: source.source.view(),
+                })
+                .collect::<Vec<_>>();
+            let retained_views = retained_sources
+                .iter()
+                .map(|source| Fixed64IndexedCoordinateSource {
+                    source_index: source.source_index,
+                    source: source.source.view(),
+                })
+                .collect::<Vec<_>>();
+            let feature_views = feature_geometries
+                .iter()
+                .map(|feature| Fixed64FeatureGeometry {
+                    kind: feature.kind,
+                    allocation_feature_receipt_sha256: feature.allocation_feature_receipt_sha256,
+                    atom_indices: &feature.atom_indices,
+                    feature_geometry_receipt_sha256: feature.feature_geometry_receipt_sha256,
+                })
+                .collect::<Vec<_>>();
+            let run = Fixed64RunInput {
+                exact_source_evidence: exact_evidence,
+                exact_source: exact_source.view(),
+                atomic_features: &atomic_features,
+                v7_control_sources: &v7_views,
+                conformer_sources: &conformer_views,
+                retained_sources: &retained_views,
+                feature_geometries: &feature_views,
+                feature_geometry_inventory_sha256,
+                pocket_normal,
+                rmsd_threshold_angstrom,
+                candidate_modes: &candidate_modes,
+                rigid_max_steps: &rigid_max_steps,
+                proposal_is_torsion_eligible: &torsion_eligible,
+                torsion_max_steps: &torsion_max_steps,
+                baseline_torsion_angles_radians: &baseline_torsion_angles,
+                predeclared_refinement_policy_sha256,
+            };
+            pipeline.run(run)
         })
-        .collect::<Vec<_>>();
-    let conformer_views = conformer_sources
-        .iter()
-        .map(|source| Fixed64ConformerCoordinateSource {
-            rank: source.rank,
-            source: source.source.view(),
-        })
-        .collect::<Vec<_>>();
-    let retained_views = retained_sources
-        .iter()
-        .map(|source| Fixed64IndexedCoordinateSource {
-            source_index: source.source_index,
-            source: source.source.view(),
-        })
-        .collect::<Vec<_>>();
-    let feature_views = feature_geometries
-        .iter()
-        .map(|feature| Fixed64FeatureGeometry {
-            kind: feature.kind,
-            allocation_feature_receipt_sha256: feature.allocation_feature_receipt_sha256,
-            atom_indices: &feature.atom_indices,
-            feature_geometry_receipt_sha256: feature.feature_geometry_receipt_sha256,
-        })
-        .collect::<Vec<_>>();
-    let run = Fixed64RunInput {
-        exact_source_evidence: exact_evidence,
-        exact_source: exact_source.view(),
-        atomic_features: &atomic_features,
-        v7_control_sources: &v7_views,
-        conformer_sources: &conformer_views,
-        retained_sources: &retained_views,
-        feature_geometries: &feature_views,
-        feature_geometry_inventory_sha256: dict_digest_allow_zero(
-            input,
-            "feature_geometry_inventory_sha256",
-        )?,
-        pocket_normal,
-        rmsd_threshold_angstrom: dict_f64(input, "rmsd_threshold_angstrom")?,
-        candidate_modes: &candidate_modes,
-        rigid_max_steps: &rigid_max_steps,
-        proposal_is_torsion_eligible: &torsion_eligible,
-        torsion_max_steps: &torsion_max_steps,
-        baseline_torsion_angles_radians: &baseline_torsion_angles,
-        predeclared_refinement_policy_sha256: dict_digest(
-            input,
-            "predeclared_refinement_policy_sha256",
-        )?,
-    };
-    let receipt = pipeline.run(run).map_err(runtime_error)?;
+        .map_err(runtime_error)?;
     receipt_to_python(py, &receipt, consumer)
 }
 
