@@ -26,6 +26,8 @@ from tools.audit_engine_v2_ci_authority import (
     MIXED64_V2_REQUIRED_TOKENS,
     NATIVE_FIXED64_CPU_V4_CONTRACT_PATHS,
     NATIVE_FIXED64_CPU_V4_FALSE_AUTHORITY_KEYS,
+    NATIVE_FIXED64_CPU_V4_FALSE_RESTRICTION_KEYS,
+    NATIVE_FIXED64_CPU_V4_FORBIDDEN_WORKFLOW_TOKENS,
     NATIVE_FIXED64_CPU_V4_REQUIRED_TOKEN_COUNTS,
     NATIVE_FIXED64_CPU_V4_REQUIRED_TOKENS,
     ONE_SHOT_CONTRACT_PATHS,
@@ -713,9 +715,64 @@ def test_native_fixed64_cpu_v4_requires_authoritative_ci_and_false_authority(
     payload = build_inventory(tmp_path)
     assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is True
     assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is True
+    assert (
+        payload[
+            "native_fixed64_cpu_v4_live_qualification_absent_from_github_actions"
+        ]
+        is True
+    )
 
     (tmp_path / "docs/engine_v2_native_fixed64_cpu_qualification_v4.md").unlink()
     payload = build_inventory(tmp_path)
+    assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is False
+
+
+def test_native_fixed64_cpu_v4_missing_restriction_fails_ci_audit(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_native_fixed64_cpu_v4_contract(tmp_path)
+    profile_path = tmp_path / "config/engine_v2_native_fixed64_cpu_profile_v4.json"
+    profile = json.loads(profile_path.read_text(encoding="ascii"))
+    profile["restrictions"].pop("github_actions_live_qualification_allowed")
+    profile_path.write_text(
+        json.dumps(profile, indent=2, sort_keys=True) + "\n",
+        encoding="ascii",
+    )
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        encoding="utf-8",
+    )
+
+    payload = build_inventory(tmp_path)
+    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is False
+    assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is False
+
+
+def test_native_fixed64_cpu_v4_live_binary_is_forbidden_in_every_workflow(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_native_fixed64_cpu_v4_contract(tmp_path)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        encoding="utf-8",
+    )
+    unrelated = tmp_path / ".github/workflows/unrelated.yaml"
+    unrelated.write_text(
+        "jobs:\n  forbidden:\n    steps:\n"
+        "      - run: cargo run --bin betelgeuze-fixed64-cpu-probe-v4\n",
+        encoding="utf-8",
+    )
+
+    payload = build_inventory(tmp_path)
+    assert (
+        payload[
+            "native_fixed64_cpu_v4_live_qualification_absent_from_github_actions"
+        ]
+        is False
+    )
+    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is False
     assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is False
 
 
@@ -773,6 +830,21 @@ def test_native_fixed64_cpu_v4_inventory_constants_are_exact() -> None:
         "tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py",
         "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v4.py",
         "docs/engine_v2_native_fixed64_cpu_qualification_v4.md",
+    )
+    assert set(NATIVE_FIXED64_CPU_V4_FALSE_RESTRICTION_KEYS) == {
+        "actual_molecular_execution_allowed",
+        "contains_molecular_cases",
+        "fresh_or_historical_case_input_allowed",
+        "github_actions_live_qualification_allowed",
+        "github_actions_production_authority_allowed",
+        "hip_device_execution_allowed",
+        "public_or_scientific_performance_claim_allowed",
+        "reservation_allowed",
+        "result_dependent_configuration_allowed",
+        "test_double_production_authority_allowed",
+    }
+    assert NATIVE_FIXED64_CPU_V4_FORBIDDEN_WORKFLOW_TOKENS == (
+        "betelgeuze-fixed64-cpu-probe-v4",
     )
 
 

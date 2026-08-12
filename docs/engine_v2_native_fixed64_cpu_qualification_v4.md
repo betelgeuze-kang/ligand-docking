@@ -81,4 +81,6 @@ python3 tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py
 ```
 
 Do not invoke the native 25-sample binary from GitHub Actions or treat a unit
-probe as the exactly-once qualification result.
+probe as the exactly-once qualification result. The CI authority auditor scans
+every `.github/workflows/*.yml` and `*.yaml` file and fails closed if the live
+binary name appears in any workflow.

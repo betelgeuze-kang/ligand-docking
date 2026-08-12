@@ -186,6 +186,21 @@ NATIVE_FIXED64_CPU_V4_FALSE_AUTHORITY_KEYS = (
     "scientific_claim_authorized",
     "stage0_admission_authorized",
 )
+NATIVE_FIXED64_CPU_V4_FALSE_RESTRICTION_KEYS = (
+    "actual_molecular_execution_allowed",
+    "contains_molecular_cases",
+    "fresh_or_historical_case_input_allowed",
+    "github_actions_live_qualification_allowed",
+    "github_actions_production_authority_allowed",
+    "hip_device_execution_allowed",
+    "public_or_scientific_performance_claim_allowed",
+    "reservation_allowed",
+    "result_dependent_configuration_allowed",
+    "test_double_production_authority_allowed",
+)
+NATIVE_FIXED64_CPU_V4_FORBIDDEN_WORKFLOW_TOKENS = (
+    "betelgeuze-fixed64-cpu-probe-v4",
+)
 ONE_SHOT_CONTRACT_PATHS = (
     "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_ab.py",
     "config/engine_v2_source_paired_clearance_one_shot_ab.json",
@@ -672,8 +687,11 @@ def _native_fixed64_cpu_v4_authority_is_fail_closed(repo_root: Path) -> bool:
             for key in NATIVE_FIXED64_CPU_V4_FALSE_AUTHORITY_KEYS
         )
         and type(restrictions) is dict
-        and restrictions
-        and all(value is False for value in restrictions.values())
+        and set(restrictions) == set(NATIVE_FIXED64_CPU_V4_FALSE_RESTRICTION_KEYS)
+        and all(
+            restrictions.get(key) is False
+            for key in NATIVE_FIXED64_CPU_V4_FALSE_RESTRICTION_KEYS
+        )
         and type(backends) is dict
         and backends.get("reference") == "cpp_cpu_reference"
         and backends.get("comparison") == "rust_cpu"
@@ -702,6 +720,20 @@ def _native_fixed64_cpu_v4_authority_is_fail_closed(repo_root: Path) -> bool:
 
 def build_inventory(repo_root: Path) -> dict[str, Any]:
     workflow_root = repo_root / ".github/workflows"
+    github_workflows = tuple(
+        sorted(
+            {
+                path.relative_to(repo_root).as_posix()
+                for pattern in ("*.yml", "*.yaml")
+                for path in workflow_root.glob(pattern)
+                if path.is_file()
+            }
+        )
+    )
+    github_workflow_text = {
+        path: (repo_root / path).read_text(encoding="utf-8")
+        for path in github_workflows
+    }
     workflows = tuple(
         sorted(
             path.relative_to(repo_root).as_posix()
@@ -805,11 +837,17 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         (repo_root / path).is_file()
         for path in NATIVE_FIXED64_CPU_V4_CONTRACT_PATHS
     )
+    native_fixed64_cpu_v4_live_qualification_absent_from_github_actions = all(
+        token not in text
+        for text in github_workflow_text.values()
+        for token in NATIVE_FIXED64_CPU_V4_FORBIDDEN_WORKFLOW_TOKENS
+    )
     native_fixed64_cpu_v4_authority_fail_closed = (
         not native_fixed64_cpu_v4_contract_present
         or (
             native_fixed64_cpu_v4_contract_files_complete
             and _native_fixed64_cpu_v4_authority_is_fail_closed(repo_root)
+            and native_fixed64_cpu_v4_live_qualification_absent_from_github_actions
         )
     )
     native_fixed64_cpu_v4_contract_in_authoritative_ci = (
@@ -926,6 +964,9 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         ),
         "native_fixed64_cpu_v4_authority_fail_closed": (
             native_fixed64_cpu_v4_authority_fail_closed
+        ),
+        "native_fixed64_cpu_v4_live_qualification_absent_from_github_actions": (
+            native_fixed64_cpu_v4_live_qualification_absent_from_github_actions
         ),
         "one_shot_contract_in_authoritative_ci": (
             one_shot_contract_in_authoritative_ci
