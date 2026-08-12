@@ -108,6 +108,12 @@ def native():
     return pytest.importorskip("betelgeuze_engine_v2_native")
 
 
+def test_package_preloads_native_extension_before_legacy_imports(native) -> None:
+    import sys
+
+    assert sys.modules.get("betelgeuze_engine_v2_native") is native
+
+
 def test_complete_entrypoint_uses_one_native_receipt_graph(native) -> None:
     first = native.native_fixed64_complete_pipeline_v1(_input())
     second = native.native_fixed64_complete_pipeline_v1(_input())
