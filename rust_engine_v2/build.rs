@@ -251,17 +251,29 @@ fn source_closure(manifest: &Path) -> (String, usize, Vec<PathBuf>) {
     let repository = manifest
         .parent()
         .expect("native crate must be inside the repository");
-    let dependency = repository.join("rust/betelgeuze-docking-search");
+    let docking_search = repository.join("rust/betelgeuze-docking-search");
+    let runtime = repository.join("rust/betelgeuze-runtime");
+    let sys = repository.join("rust/betelgeuze-sys");
+    let cpu_kernel = repository.join("rust/cpu-kernel");
     let mut paths = vec![
         manifest.join("Cargo.toml"),
         manifest.join("Cargo.lock"),
         manifest.join("build.rs"),
         repository.join("rust/Cargo.toml"),
-        dependency.join("Cargo.toml"),
+        docking_search.join("Cargo.toml"),
+        runtime.join("Cargo.toml"),
+        sys.join("Cargo.toml"),
+        sys.join("build.rs"),
+        cpu_kernel.join("Cargo.toml"),
         repository.join("LICENSE"),
     ];
     collect_regular_files(&manifest.join("src"), &mut paths);
-    collect_regular_files(&dependency.join("src"), &mut paths);
+    collect_regular_files(&docking_search.join("src"), &mut paths);
+    collect_regular_files(&runtime.join("src"), &mut paths);
+    collect_regular_files(&sys.join("src"), &mut paths);
+    collect_regular_files(&sys.join("abi"), &mut paths);
+    collect_regular_files(&sys.join("vendor"), &mut paths);
+    collect_regular_files(&cpu_kernel.join("src"), &mut paths);
     paths.sort_by(|left, right| {
         closure_label(repository, left).cmp(&closure_label(repository, right))
     });

@@ -11,12 +11,15 @@ crate-type = ["cdylib"]
 [features]
 default = ["extension-module"]
 extension-module = ["pyo3/extension-module"]
+hip = ["betelgeuze-runtime/hip"]
 
 [dependencies]
 betelgeuze-docking-search = { path = "../rust/betelgeuze-docking-search" }
+betelgeuze-runtime = { path = "../rust/betelgeuze-runtime" }
 numpy = "0.20.0"
 pyo3 = "0.20.3"
 rayon = "1.10.0"
+sha2 = "0.10.9"
 
 [build-dependencies]
 sha2 = "0.10.9"

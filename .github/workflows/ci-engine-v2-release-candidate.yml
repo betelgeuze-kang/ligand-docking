@@ -9,7 +9,15 @@ on:
       - "packaging/engine-v2/**"
       - "rust_engine_v2/**"
       - "rust/betelgeuze-docking-search/**"
+      - "rust/betelgeuze-runtime/**"
+      - "rust/betelgeuze-sys/**"
+      - "rust/cpu-kernel/**"
+      - "rust/reference-dynamics/**"
+      - "rust/reference-physics/**"
       - "rust/Cargo.toml"
+      - "rust/Cargo.lock"
+      - "include/**"
+      - "native/**"
       - "LICENSE"
       - "tools/build_engine_v2_wheel.py"
       - "tools/build_engine_v2_native_wheel.py"
@@ -19,6 +27,8 @@ on:
       - "tests/unit/test_engine_v2_native_packaging.py"
       - "tests/unit/test_engine_v2_scorer_v1_stage5.py"
       - "tests/unit/test_engine_v2_native_geometric_admission.py"
+      - "tests/unit/test_engine_v2_native_fixed64_pipeline.py"
+      - "tests/unit/test_engine_v2_native_fixed64_complete_pipeline.py"
       - "config/engine_v2_cpu_performance_profile.json"
       - "tests/unit/test_engine_v2_docking_search_v2_facade.py"
       - "CHANGELOG.md"
@@ -51,7 +61,15 @@ jobs:
             packaging/engine-v2
             rust_engine_v2
             rust/betelgeuze-docking-search
+            rust/betelgeuze-runtime
+            rust/betelgeuze-sys
+            rust/cpu-kernel
+            rust/reference-dynamics
+            rust/reference-physics
             rust/Cargo.toml
+            rust/Cargo.lock
+            include
+            native
             LICENSE
             tools/build_engine_v2_wheel.py
             tools/build_engine_v2_native_wheel.py
@@ -128,7 +146,15 @@ jobs:
             packaging/engine-v2
             rust_engine_v2
             rust/betelgeuze-docking-search
+            rust/betelgeuze-runtime
+            rust/betelgeuze-sys
+            rust/cpu-kernel
+            rust/reference-dynamics
+            rust/reference-physics
             rust/Cargo.toml
+            rust/Cargo.lock
+            include
+            native
             LICENSE
             tools/build_engine_v2_wheel.py
             tools/build_engine_v2_native_wheel.py
@@ -279,7 +305,15 @@ jobs:
             betelgeuze_engine_v2
             rust_engine_v2
             rust/betelgeuze-docking-search
+            rust/betelgeuze-runtime
+            rust/betelgeuze-sys
+            rust/cpu-kernel
+            rust/reference-dynamics
+            rust/reference-physics
             rust/Cargo.toml
+            rust/Cargo.lock
+            include
+            native
             LICENSE
             tools/build_engine_v2_native_wheel.py
             tools/run_engine_v2_cpu_performance_qualification.py
@@ -287,6 +321,8 @@ jobs:
             tests/unit/test_engine_v2_native_packaging.py
             tests/unit/test_engine_v2_scorer_v1_stage5.py
             tests/unit/test_engine_v2_native_geometric_admission.py
+            tests/unit/test_engine_v2_native_fixed64_pipeline.py
+            tests/unit/test_engine_v2_native_fixed64_complete_pipeline.py
             config/engine_v2_cpu_performance_profile.json
             .github/workflows/ci-engine-v2-release-candidate.yml
             tests/unit/test_engine_v2_docking_search_v2_facade.py
@@ -322,7 +358,7 @@ jobs:
               bash -lc "set -euo pipefail
                 /opt/python/${{ matrix.abi }}/bin/python -m venv /tmp/native-venv
                 /tmp/native-venv/bin/python -m pip install --disable-pip-version-check maturin==1.11.5 >/tmp/maturin-install.log
-                PATH=/cargo/bin:/tmp/native-venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+                PATH=/opt/rh/gcc-toolset-14/root/usr/bin:/cargo/bin:/tmp/native-venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
                   /tmp/native-venv/bin/python tools/build_engine_v2_native_wheel.py --output-dir /output"
             git diff --exit-code
           done
@@ -349,6 +385,8 @@ jobs:
             tests/unit/test_engine_v2_native_packaging.py \
             tests/unit/test_engine_v2_scorer_v1_stage5.py \
             tests/unit/test_engine_v2_native_geometric_admission.py \
+            tests/unit/test_engine_v2_native_fixed64_pipeline.py \
+            tests/unit/test_engine_v2_native_fixed64_complete_pipeline.py \
             -k 'native or rust_cpu'
           python -m pytest -q tests/unit/test_engine_v2_docking_search_v2_facade.py
 

@@ -1,5 +1,6 @@
 #![allow(non_local_definitions)]
 
+mod complete_fixed64_pipeline;
 mod docking_v2;
 mod fixed64_pipeline;
 
@@ -954,6 +955,7 @@ fn betelgeuze_engine_v2_native(_py: Python<'_>, module: &PyModule) -> PyResult<(
     )?;
     docking_v2::register(module)?;
     fixed64_pipeline::register(module)?;
+    complete_fixed64_pipeline::register(module)?;
     Ok(())
 }
 
