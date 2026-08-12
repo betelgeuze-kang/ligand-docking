@@ -1354,7 +1354,8 @@ void copy_coordinates(
         "rigid refinement z channel is null or misaligned");
 #undef BG_REQUIRE_RIGID_BATCH_CHANNEL
 
-    const std::array<std::pair<const void *, std::size_t>, 5> inputs = {{
+    const std::array<std::pair<const void *, std::size_t>, 6> inputs = {{
+        {&batch, sizeof(batch)},
         {batch.candidate_mode,
          kCandidateCount * sizeof(*batch.candidate_mode)},
         {batch.max_steps, kCandidateCount * sizeof(*batch.max_steps)},
@@ -1362,11 +1363,12 @@ void copy_coordinates(
         {batch.y_angstrom, *coordinate_count * sizeof(*batch.y_angstrom)},
         {batch.z_angstrom, *coordinate_count * sizeof(*batch.z_angstrom)},
     }};
-    std::array<std::pair<const void *, std::size_t>, 13> outputs{};
-    outputs[0] = {output.rows, kCandidateCount * sizeof(*output.rows)};
-    for (std::size_t index = 1; index < outputs.size(); ++index) {
+    std::array<std::pair<const void *, std::size_t>, 14> outputs{};
+    outputs[0] = {&output, sizeof(output)};
+    outputs[1] = {output.rows, kCandidateCount * sizeof(*output.rows)};
+    for (std::size_t index = 2; index < outputs.size(); ++index) {
         outputs[index] = {
-            output_pointers[index],
+            output_pointers[index - 1],
             *coordinate_count * sizeof(double),
         };
     }

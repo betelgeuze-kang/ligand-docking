@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <limits>
 
 namespace {
@@ -475,6 +476,43 @@ int main() {
         BG_STATUS_INVALID_ARGUMENT);
     assert(transactional.rows[0].slot_index == UINT32_MAX);
     assert(transactional.selected_x[0] == 41.0);
+
+    OutputStorage descriptor_alias_storage(43.0);
+    auto descriptor_alias_output = descriptor_alias_storage.descriptor();
+    descriptor_alias_output.rows =
+        reinterpret_cast<bg_docking_rigid_refinement_row_v1 *>(
+            &descriptor_alias_output);
+    const auto descriptor_alias_before = descriptor_alias_output;
+    assert(
+        bg_docking_rigid_refinement_fixed64(
+            cpp_context,
+            cpp_refiner,
+            &batch,
+            &descriptor_alias_output) == BG_STATUS_INVALID_ARGUMENT);
+    assert(
+        std::memcmp(
+            &descriptor_alias_output,
+            &descriptor_alias_before,
+            sizeof(descriptor_alias_output)) == 0);
+    assert(descriptor_alias_storage.selected_x[0] == 43.0);
+
+    OutputStorage batch_alias_storage(47.0);
+    auto batch_alias_output = batch_alias_storage.descriptor();
+    auto batch_alias = batch;
+    batch_alias_output.rows =
+        reinterpret_cast<bg_docking_rigid_refinement_row_v1 *>(
+            &batch_alias);
+    const auto batch_alias_before = batch_alias;
+    assert(
+        bg_docking_rigid_refinement_fixed64(
+            cpp_context,
+            cpp_refiner,
+            &batch_alias,
+            &batch_alias_output) == BG_STATUS_INVALID_ARGUMENT);
+    assert(
+        std::memcmp(
+            &batch_alias, &batch_alias_before, sizeof(batch_alias)) == 0);
+    assert(batch_alias_storage.selected_x[0] == 47.0);
 
     assert(
         bg_docking_rigid_refinement_fixed64(
