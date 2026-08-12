@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 from pathlib import Path
 import re
+import subprocess
 import sys
 import zipfile
 
@@ -22,8 +23,11 @@ from tools.build_engine_v2_native_wheel import (
     _GCC_LINK_INPUT_NAMES,
     _GCC_PROGRAM_NAMES,
     _HIP_GCC_CLOSURE,
+    _HIP_PERL_CLOSURE,
+    _ROCM_FILE_SPECS,
     FrozenFileSpec,
     FrozenNativeToolchain,
+    FrozenPerlClosureSpec,
     FrozenRustToolchain,
     _directory_closure_sha256,
     _filesystem_tree_closure_sha256,
@@ -31,6 +35,7 @@ from tools.build_engine_v2_native_wheel import (
     _isolated_cargo_target_directory,
     _maturin_build_command,
     _reject_direct_build_overrides,
+    _perl_runtime_closure_receipt,
     _verify_cargo_configs,
     _verify_frozen_files,
     _verify_manifest_profile,
@@ -88,6 +93,13 @@ def test_native_release_version_surfaces_match_rc6() -> None:
         "TARGET_X86_64_UNKNOWN_LINUX_GNU_LDFLAGS",
         "CXXFLAGS_x86_64_unknown_linux_gnu",
         "HIPCC_COMPILE_FLAGS_APPEND",
+        "HIP_CLANG_HCC_COMPAT_MODE",
+        "HIP_COMPILE_CXX_AS_HIP",
+        "HIP_LIB_PATH",
+        "HIP_ROCCLR_HOME",
+        "HIPCC_VERBOSE",
+        "CUDA_PATH",
+        "DEVICE_LIB_PATH",
         "PERL5LIB",
         "PERL5OPT",
         "PERLLIB",
@@ -323,6 +335,82 @@ def test_canonical_profiles_bind_complete_gcc_host_closures() -> None:
     }.issubset(_GCC_LINK_INPUT_NAMES)
 
 
+def test_hip_profile_binds_complete_perl_module_search_closure() -> None:
+    assert _HIP_PERL_CLOSURE.perl == Path("/usr/bin/perl")
+    assert _HIP_PERL_CLOSURE.version == "v5.34.0"
+    assert _HIP_PERL_CLOSURE.archname == "x86_64-linux-gnu-thread-multi"
+    assert tuple(map(str, _HIP_PERL_CLOSURE.inc_paths)) == (
+        "/etc/perl",
+        "/usr/local/lib/x86_64-linux-gnu/perl/5.34.0",
+        "/usr/local/share/perl/5.34.0",
+        "/usr/lib/x86_64-linux-gnu/perl5/5.34",
+        "/usr/share/perl5",
+        "/usr/lib/x86_64-linux-gnu/perl-base",
+        "/usr/lib/x86_64-linux-gnu/perl/5.34",
+        "/usr/share/perl/5.34",
+        "/usr/local/lib/site_perl",
+    )
+    assert len(_HIP_PERL_CLOSURE.expected_sha256) == 64
+    assert set(_HIP_PERL_CLOSURE.expected_sha256) != {"0"}
+    assert _HIP_PERL_CLOSURE.expected_entry_count > 3_000
+    assert _HIP_PERL_CLOSURE.expected_total_bytes > 50_000_000
+
+
+def test_hip_profile_binds_linker_and_soname_runtime_symlinks() -> None:
+    specifications = {item.label: item for item in _ROCM_FILE_SPECS}
+    expected_target = Path("/opt/rocm-6.0.2/lib/libamdhip64.so.6.0.60002")
+    assert specifications["amdhip64_linker_name"].path == Path(
+        "/opt/rocm-6.0.2/lib/libamdhip64.so"
+    )
+    assert specifications["amdhip64_linker_name"].resolved_path == expected_target
+    assert specifications["amdhip64_linker_name"].symlink_target == "libamdhip64.so.6"
+    assert specifications["amdhip64_soname"].path == Path(
+        "/opt/rocm-6.0.2/lib/libamdhip64.so.6"
+    )
+    assert specifications["amdhip64_soname"].resolved_path == expected_target
+    assert (
+        specifications["amdhip64_soname"].symlink_target
+        == "libamdhip64.so.6.0.60002"
+    )
+
+
+def test_perl_module_closure_binds_module_bytes_and_absence(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    first_root = tmp_path / "first"
+    first_root.mkdir()
+    module = first_root / "Compiler.pm"
+    module.write_bytes(b"package Compiler; 1;\n")
+    absent_root = tmp_path / "absent"
+    lines = ["v5.34.0", "test-arch", str(first_root), str(absent_root)]
+    stdout = ("\n".join(lines) + "\n").encode("utf-8")
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *_args, **_kwargs: subprocess.CompletedProcess(
+            args=(), returncode=0, stdout=stdout, stderr=b""
+        ),
+    )
+    specification = FrozenPerlClosureSpec(
+        perl=Path("/frozen/perl"),
+        version="v5.34.0",
+        archname="test-arch",
+        inc_paths=(first_root, absent_root),
+        expected_sha256="0" * 64,
+        expected_entry_count=0,
+        expected_total_bytes=0,
+    )
+
+    first = _perl_runtime_closure_receipt(specification)
+    module.write_bytes(b"package Compiler; die 'injected';\n")
+    second = _perl_runtime_closure_receipt(specification)
+    absent_root.mkdir()
+    third = _perl_runtime_closure_receipt(specification)
+
+    assert first[0] != second[0]
+    assert second[0] != third[0]
+
+
 def test_native_toolchain_executable_digest_is_fail_closed(tmp_path: Path) -> None:
     executable = tmp_path / "compiler"
     executable.write_bytes(b"frozen compiler")
@@ -353,6 +441,30 @@ def test_native_toolchain_executable_path_is_fail_closed(tmp_path: Path) -> None
     )
 
     with pytest.raises(RuntimeError, match="path changed"):
+        _verify_frozen_files((specification,))
+
+
+def test_native_toolchain_linker_symlink_text_is_fail_closed(tmp_path: Path) -> None:
+    target = tmp_path / "libamdhip64.so.6.0.60002"
+    target.write_bytes(b"frozen runtime")
+    middle = tmp_path / "libamdhip64.so.6"
+    middle.symlink_to(target.name)
+    linker_name = tmp_path / "libamdhip64.so"
+    linker_name.symlink_to(middle.name)
+    specification = FrozenFileSpec(
+        label="amdhip64_linker_name",
+        path=linker_name,
+        resolved_path=target,
+        sha256=hashlib.sha256(target.read_bytes()).hexdigest(),
+        executable=False,
+        symlink_target=middle.name,
+    )
+
+    _verify_frozen_files((specification,))
+    linker_name.unlink()
+    linker_name.symlink_to(target.name)
+
+    with pytest.raises(RuntimeError, match="symlink changed"):
         _verify_frozen_files((specification,))
 
 

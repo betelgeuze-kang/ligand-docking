@@ -247,6 +247,8 @@ def current_stage0_native_backend() -> dict[str, Any]:
     build_info = module.build_info()
     if not isinstance(build_info, dict):
         raise Stage0AdmissionError(("native_backend_build_info_invalid",))
+    if _text(build_info.get("backend_id")) != "rust_cpu_required":
+        raise Stage0AdmissionError(("native_backend_not_rust_cpu_required",))
     try:
         distribution_version = metadata.version("betelgeuze-engine-v2-native")
     except metadata.PackageNotFoundError as exc:

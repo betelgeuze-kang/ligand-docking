@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import platform
 import subprocess
+from types import SimpleNamespace
 
 import pytest
 
@@ -22,6 +23,7 @@ from betelgeuze_engine_v2.benchmark.blind_stage0 import (
     compute_stage0_execution_profile_sha256,
     compute_stage0_policy_sha256,
     compute_stage0_review_subject_sha256,
+    current_stage0_native_backend,
     current_stage0_host_environment,
     stage0_development_source_receipt_binding,
     stage0_engine_implementation_sha256,
@@ -49,6 +51,27 @@ from tools.audit_engine_v2_ci_authority import (
     AUTHORITATIVE_WORKFLOWS,
     build_inventory,
 )
+
+
+def test_stage0_rejects_hip_native_wheel_before_recording_cpu_identity(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    extension = tmp_path / "betelgeuze_engine_v2_native.so"
+    extension.write_bytes(b"synthetic HIP extension")
+    module = SimpleNamespace(
+        betelgeuze_engine_v2_native=SimpleNamespace(__file__=str(extension)),
+        build_info=lambda: {"backend_id": "native_hip_gfx1030_required"},
+    )
+    monkeypatch.setattr(
+        blind_stage0_contract.importlib,
+        "import_module",
+        lambda _name: module,
+    )
+
+    with pytest.raises(Stage0AdmissionError) as raised:
+        current_stage0_native_backend()
+
+    assert raised.value.blockers == ("native_backend_not_rust_cpu_required",)
 
 
 def _version(name: str) -> str:

@@ -129,12 +129,24 @@ jobs:
             BG_HIP_ARCHITECTURE \
             BG_HIP_DEVICE_LIB_PATH \
             BG_HIP_SAFE_ARCHITECTURES \
+            CUDA_PATH \
+            DEVICE_LIB_PATH \
             HIP_CLANG_PATH \
+            HIP_CLANG_HCC_COMPAT_MODE \
             HIP_COMPILER \
+            HIP_COMPILE_CXX_AS_HIP \
+            HIP_LIB_PATH \
             HIP_PATH \
             HIP_PLATFORM \
+            HIP_ROCCLR_HOME \
             HIP_RUNTIME \
             HIP_USE_PERL_SCRIPTS \
+            HIPCC_COMPILE_FLAGS_APPEND \
+            HIPCC_LINK_FLAGS_APPEND \
+            HIPCC_VERBOSE \
+            PERL5LIB \
+            PERL5OPT \
+            PERLLIB \
             ROCM_DEVICE_LIB_PATH \
             ROCM_PATH
           target_root="${RUNNER_TEMP}/native-hip-wheel-target-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"

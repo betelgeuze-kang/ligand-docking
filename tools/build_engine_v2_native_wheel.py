@@ -81,12 +81,19 @@ _DIRECT_BUILD_OVERRIDE_NAMES = frozenset(
         "PERL5LIB",
         "PERL5OPT",
         "PERLLIB",
+        "CUDA_PATH",
+        "DEVICE_LIB_PATH",
         "HIP_CLANG_PATH",
+        "HIP_CLANG_HCC_COMPAT_MODE",
         "HIP_COMPILER",
+        "HIP_COMPILE_CXX_AS_HIP",
+        "HIP_LIB_PATH",
         "HIP_PATH",
         "HIP_PLATFORM",
+        "HIP_ROCCLR_HOME",
         "HIP_RUNTIME",
         "HIP_USE_PERL_SCRIPTS",
+        "HIPCC_VERBOSE",
         "HIPCC_COMPILE_FLAGS_APPEND",
         "HIPCC_LINK_FLAGS_APPEND",
         "PYO3_CONFIG_FILE",
@@ -121,6 +128,7 @@ _DIRECT_BUILD_OVERRIDE_PREFIXES = (
     "CXXFLAGS_",
     "LD_",
     "LDFLAGS_",
+    "PERL",
     "PYO3_",
     "RANLIB_",
 )
@@ -180,6 +188,7 @@ class FrozenFileSpec:
     resolved_path: Path
     sha256: str
     executable: bool = True
+    symlink_target: str | None = None
 
 
 @dataclass(frozen=True)
@@ -206,6 +215,17 @@ class FrozenGccClosureSpec:
     cxx: Path
     tree_roots: tuple[tuple[str, Path, bytes], ...]
     runtime_files: tuple[Path, ...]
+    expected_sha256: str
+    expected_entry_count: int
+    expected_total_bytes: int
+
+
+@dataclass(frozen=True)
+class FrozenPerlClosureSpec:
+    perl: Path
+    version: str
+    archname: str
+    inc_paths: tuple[Path, ...]
     expected_sha256: str
     expected_entry_count: int
     expected_total_bytes: int
@@ -417,6 +437,22 @@ _ROCM_FILE_SPECS = (
         executable=False,
     ),
     FrozenFileSpec(
+        "amdhip64_linker_name",
+        _ROCM_ROOT / "lib/libamdhip64.so",
+        _ROCM_ROOT / "lib/libamdhip64.so.6.0.60002",
+        "3210b3126e1bab3fbfe4eaaf5110562026494ab93a973daf03dbc1e603a8fceb",
+        executable=False,
+        symlink_target="libamdhip64.so.6",
+    ),
+    FrozenFileSpec(
+        "amdhip64_soname",
+        _ROCM_ROOT / "lib/libamdhip64.so.6",
+        _ROCM_ROOT / "lib/libamdhip64.so.6.0.60002",
+        "3210b3126e1bab3fbfe4eaaf5110562026494ab93a973daf03dbc1e603a8fceb",
+        executable=False,
+        symlink_target="libamdhip64.so.6.0.60002",
+    ),
+    FrozenFileSpec(
         "rocm_version",
         _ROCM_ROOT / ".info/version",
         _ROCM_ROOT / ".info/version",
@@ -526,15 +562,37 @@ _HIP_GCC_CLOSURE = FrozenGccClosureSpec(
         Path("/lib/x86_64-linux-gnu/libctf.so.0"),
         Path("/lib/x86_64-linux-gnu/libgmp.so.10"),
         Path("/lib/x86_64-linux-gnu/libisl.so.23"),
+        Path("/lib/x86_64-linux-gnu/libcrypt.so.1"),
+        Path("/lib/x86_64-linux-gnu/libm.so.6"),
         Path("/lib/x86_64-linux-gnu/libmpc.so.3"),
         Path("/lib/x86_64-linux-gnu/libmpfr.so.6"),
         Path("/lib/x86_64-linux-gnu/libopcodes-2.38-system.so"),
         Path("/lib/x86_64-linux-gnu/libz.so.1"),
         Path("/lib/x86_64-linux-gnu/libzstd.so.1"),
     ),
-    expected_sha256="7a1fb6a726e7b9510dac8685ad4ee568761c21741e586637bbef3a0a0b71b029",
-    expected_entry_count=6_541,
-    expected_total_bytes=371_592_006,
+    expected_sha256="5b654403752c59a3b6a4559ba63d8162fcaa463f6d3d98e6e921aa9fcc2803ee",
+    expected_entry_count=6_543,
+    expected_total_bytes=372_731_230,
+)
+
+_HIP_PERL_CLOSURE = FrozenPerlClosureSpec(
+    perl=Path("/usr/bin/perl"),
+    version="v5.34.0",
+    archname="x86_64-linux-gnu-thread-multi",
+    inc_paths=(
+        Path("/etc/perl"),
+        Path("/usr/local/lib/x86_64-linux-gnu/perl/5.34.0"),
+        Path("/usr/local/share/perl/5.34.0"),
+        Path("/usr/lib/x86_64-linux-gnu/perl5/5.34"),
+        Path("/usr/share/perl5"),
+        Path("/usr/lib/x86_64-linux-gnu/perl-base"),
+        Path("/usr/lib/x86_64-linux-gnu/perl/5.34"),
+        Path("/usr/share/perl/5.34"),
+        Path("/usr/local/lib/site_perl"),
+    ),
+    expected_sha256="d40d7eda024d78849f2bbe217ccf238af2785574379a3a1c4404dde0d18f3062",
+    expected_entry_count=3_485,
+    expected_total_bytes=53_292_185,
 )
 
 
@@ -549,6 +607,7 @@ def _sha256_path(path: Path) -> str:
 def _verify_frozen_files(specifications: tuple[FrozenFileSpec, ...]) -> None:
     for specification in specifications:
         try:
+            metadata = specification.path.lstat()
             resolved = specification.path.resolve(strict=True)
         except OSError as error:
             raise RuntimeError(
@@ -557,6 +616,13 @@ def _verify_frozen_files(specifications: tuple[FrozenFileSpec, ...]) -> None:
         if resolved != specification.resolved_path:
             raise RuntimeError(
                 f"frozen native tool path changed: {specification.label}"
+            )
+        if specification.symlink_target is not None and (
+            not stat.S_ISLNK(metadata.st_mode)
+            or os.readlink(specification.path) != specification.symlink_target
+        ):
+            raise RuntimeError(
+                f"frozen native tool symlink changed: {specification.label}"
             )
         if not resolved.is_file():
             raise RuntimeError(
@@ -728,6 +794,124 @@ def _filesystem_tree_closure_sha256(root: Path, domain: bytes) -> tuple[str, int
 
     visit(root, "", frozenset(), 0)
     return digest.hexdigest(), entry_count, total_bytes
+
+
+def _perl_runtime_closure_receipt(
+    spec: FrozenPerlClosureSpec,
+) -> tuple[str, int, int, Mapping[str, object]]:
+    probe_source = (
+        'print $^V, "\\n", $Config{archname}, "\\n", join("\\n", @INC), "\\n"'
+    )
+    completed = subprocess.run(
+        (str(spec.perl), "-T", "-MConfig", "-e", probe_source),
+        check=False,
+        capture_output=True,
+        env={
+            "HOME": "/nonexistent",
+            "LANG": "C",
+            "LC_ALL": "C",
+            "PATH": "/usr/bin:/bin",
+            "PERL5LIB": "",
+            "PERL5OPT": "",
+            "PERLLIB": "",
+        },
+    )
+    if completed.returncode != 0 or completed.stderr:
+        raise RuntimeError("frozen Perl runtime probe failed")
+    try:
+        lines = completed.stdout.decode("utf-8").splitlines()
+    except UnicodeError as error:
+        raise RuntimeError("frozen Perl runtime probe is not UTF-8") from error
+    expected_lines = [
+        spec.version,
+        spec.archname,
+        *(str(path) for path in spec.inc_paths),
+    ]
+    if lines != expected_lines or not completed.stdout.endswith(b"\n"):
+        raise RuntimeError("frozen Perl runtime search path changed")
+
+    entries: list[dict[str, object]] = []
+    entry_count = 1
+    total_bytes = len(completed.stdout)
+    for index, path in enumerate(spec.inc_paths):
+        try:
+            metadata = path.lstat()
+        except FileNotFoundError:
+            entries.append(
+                {
+                    "index": index,
+                    "path": str(path),
+                    "state": "absent",
+                }
+            )
+            entry_count += 1
+            continue
+        except OSError as error:
+            raise RuntimeError(
+                f"frozen Perl runtime path is unavailable: {path}"
+            ) from error
+        if not (stat.S_ISDIR(metadata.st_mode) or stat.S_ISLNK(metadata.st_mode)):
+            raise RuntimeError(f"frozen Perl runtime path is not a directory: {path}")
+        try:
+            resolved = path.resolve(strict=True)
+        except OSError as error:
+            raise RuntimeError(
+                f"frozen Perl runtime path cannot resolve: {path}"
+            ) from error
+        if not resolved.is_dir():
+            raise RuntimeError(f"frozen Perl runtime target is not a directory: {path}")
+        domain = (
+            b"betelgeuze.engine-v2.hip-perl-inc/v1\0"
+            + index.to_bytes(8, "big")
+            + str(path).encode("utf-8")
+        )
+        tree_sha256, tree_entries, tree_bytes = _filesystem_tree_closure_sha256(
+            resolved, domain
+        )
+        entries.append(
+            {
+                "index": index,
+                "path": str(path),
+                "state": "present",
+                "source_mode": stat.S_IMODE(metadata.st_mode),
+                "symlink_target": (
+                    os.readlink(path) if stat.S_ISLNK(metadata.st_mode) else None
+                ),
+                "resolved_path": str(resolved),
+                "tree_sha256": tree_sha256,
+                "entry_count": tree_entries,
+                "total_bytes": tree_bytes,
+            }
+        )
+        entry_count += tree_entries
+        total_bytes += tree_bytes
+    payload: Mapping[str, object] = {
+        "schema_id": "betelgeuze.engine_v2_hip_perl_runtime_closure/1.0.0",
+        "perl": str(spec.perl),
+        "version": spec.version,
+        "archname": spec.archname,
+        "probe_sha256": hashlib.sha256(completed.stdout).hexdigest(),
+        "entries": entries,
+        "entry_count": entry_count,
+        "total_bytes": total_bytes,
+    }
+    canonical = json.dumps(
+        payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True
+    ).encode("ascii")
+    return hashlib.sha256(canonical).hexdigest(), entry_count, total_bytes, payload
+
+
+def _require_perl_runtime_closure(
+    spec: FrozenPerlClosureSpec,
+) -> tuple[str, str, int]:
+    sha256, entry_count, total_bytes, _ = _perl_runtime_closure_receipt(spec)
+    if (
+        sha256 != spec.expected_sha256
+        or entry_count != spec.expected_entry_count
+        or total_bytes != spec.expected_total_bytes
+    ):
+        raise RuntimeError("frozen native HIP Perl runtime closure changed")
+    return "hip_perl_runtime", sha256, entry_count
 
 
 def _gcc_command(
@@ -905,7 +1089,7 @@ def _toolchain_manifest_sha256(
     closures: tuple[tuple[str, str, int], ...] = (),
 ) -> str:
     payload = {
-        "schema_id": "betelgeuze.engine_v2_native_toolchain/1.1.0",
+        "schema_id": "betelgeuze.engine_v2_native_toolchain/1.2.0",
         "profile_id": profile_id,
         "compatibility": compatibility,
         "cargo_features": list(cargo_features),
@@ -914,6 +1098,7 @@ def _toolchain_manifest_sha256(
                 "label": specification.label,
                 "path": str(specification.path),
                 "resolved_path": str(specification.resolved_path),
+                "symlink_target": specification.symlink_target,
                 "sha256": specification.sha256,
             }
             for specification in specifications
@@ -1004,6 +1189,7 @@ def _verify_native_toolchain(
     _verify_frozen_files(_HIP_HOST_FILE_SPECS + _ROCM_FILE_SPECS)
     closures = (
         _require_gcc_closure(_HIP_GCC_CLOSURE),
+        _require_perl_runtime_closure(_HIP_PERL_CLOSURE),
         _require_closure(
             _ROCM_ROOT / "include",
             domain=b"betelgeuze.engine-v2.rocm-include/v1",
