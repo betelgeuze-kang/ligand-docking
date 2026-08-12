@@ -891,20 +891,25 @@ void write_vec3(double (&output)[3], Vec3 value) noexcept {
 [[nodiscard]] bool aromatic_normal(
     const double *x, const double *y, const double *z,
     std::size_t count, Vec3 *output) noexcept {
-    for (std::size_t first = 0; first < count; ++first) {
-        const Vec3 first_point{x[first], y[first], z[first]};
-        for (std::size_t second = first + 1; second < count; ++second) {
-            const Vec3 second_point{x[second], y[second], z[second]};
-            for (std::size_t third = second + 1; third < count; ++third) {
-                const Vec3 third_point{x[third], y[third], z[third]};
-                Vec3 normal = cross(
-                    minus(second_point, first_point),
-                    minus(third_point, first_point));
-                if (norm(normal) > kGeometryEpsilon && normalize(normal, &normal)) {
-                    *output = canonical_direction(normal);
-                    return true;
-                }
-            }
+    if (count < 3) return false;
+    const Vec3 first_point{x[0], y[0], z[0]};
+    std::size_t second = 1;
+    for (; second < count; ++second) {
+        const Vec3 displacement = minus(
+            Vec3{x[second], y[second], z[second]}, first_point);
+        if (norm(displacement) > kGeometryEpsilon) break;
+    }
+    if (second == count) return false;
+    const Vec3 baseline = minus(
+        Vec3{x[second], y[second], z[second]}, first_point);
+    for (std::size_t third = 1; third < count; ++third) {
+        if (third == second) continue;
+        Vec3 normal = cross(
+            baseline,
+            minus(Vec3{x[third], y[third], z[third]}, first_point));
+        if (norm(normal) > kGeometryEpsilon && normalize(normal, &normal)) {
+            *output = canonical_direction(normal);
+            return true;
         }
     }
     return false;

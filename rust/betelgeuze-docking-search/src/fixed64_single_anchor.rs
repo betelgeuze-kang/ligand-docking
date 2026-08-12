@@ -8,7 +8,7 @@ use crate::{
     evaluate_fixed64_geometric_metrics, native_fixed64_coordinate_sha256,
     native_fixed64_heavy_atom_mask_sha256, native_fixed64_radii_sha256, Fixed64Allocation,
     Fixed64AnchorKind, Fixed64FeatureKind, Fixed64GeometricInput, Fixed64GeometricMetrics,
-    Fixed64Lane, Quaternion, Vec3, HARD_REJECTION_MINIMUM_VDW_RATIO,
+    Fixed64Lane, Quaternion, Vec3, FIXED64_MAX_LIGAND_ATOMS, HARD_REJECTION_MINIMUM_VDW_RATIO,
     NATIVE_FIXED64_SINGLE_ANCHOR_PROFILE_ID, NATIVE_FIXED64_SINGLE_ANCHOR_SCHEMA_ID,
 };
 
@@ -65,6 +65,60 @@ pub enum NativeFixed64SingleAnchorKernelOutcome {
     TypedFailure(Fixed64PlacementErrorCode),
 }
 
+const MAX_SINGLE_ANCHOR_FEATURE_COORDINATES: usize = 65_536;
+const MAX_ABSOLUTE_COORDINATE_ANGSTROM: f64 = 100_000.0;
+
+const fn anchor_kind_matches_lane(lane: Fixed64Lane, kind: Fixed64AnchorKind) -> bool {
+    matches!(
+        (lane, kind),
+        (
+            Fixed64Lane::LigandDonorToReceptorAcceptor,
+            Fixed64AnchorKind::LigandDonorToReceptorAcceptor
+        ) | (
+            Fixed64Lane::LigandAcceptorToReceptorDonor,
+            Fixed64AnchorKind::LigandAcceptorToReceptorDonor
+        ) | (
+            Fixed64Lane::ComplementaryCharge,
+            Fixed64AnchorKind::ComplementaryCharge
+        ) | (Fixed64Lane::AromaticPlane, Fixed64AnchorKind::AromaticPlane)
+            | (
+                Fixed64Lane::PrincipalAxisShape,
+                Fixed64AnchorKind::PrincipalAxisShape
+            )
+    )
+}
+
+const fn valid_kernel_feature_cardinality(
+    lane: Fixed64Lane,
+    ligand_count: usize,
+    receptor_count: usize,
+) -> bool {
+    match lane {
+        Fixed64Lane::LigandDonorToReceptorAcceptor => ligand_count == 2 && receptor_count == 1,
+        Fixed64Lane::LigandAcceptorToReceptorDonor => ligand_count == 1 && receptor_count == 2,
+        Fixed64Lane::ComplementaryCharge | Fixed64Lane::PrincipalAxisShape => {
+            ligand_count >= 1
+                && ligand_count <= MAX_SINGLE_ANCHOR_FEATURE_COORDINATES
+                && receptor_count >= 1
+                && receptor_count <= MAX_SINGLE_ANCHOR_FEATURE_COORDINATES
+        }
+        Fixed64Lane::AromaticPlane => {
+            ligand_count >= 3
+                && ligand_count <= MAX_SINGLE_ANCHOR_FEATURE_COORDINATES
+                && receptor_count >= 3
+                && receptor_count <= MAX_SINGLE_ANCHOR_FEATURE_COORDINATES
+        }
+        _ => false,
+    }
+}
+
+fn valid_kernel_coordinate(value: Vec3) -> bool {
+    value.is_finite()
+        && value.x.abs() <= MAX_ABSOLUTE_COORDINATE_ANGSTROM
+        && value.y.abs() <= MAX_ABSOLUTE_COORDINATE_ANGSTROM
+        && value.z.abs() <= MAX_ABSOLUTE_COORDINATE_ANGSTROM
+}
+
 pub fn native_fixed64_single_anchor_kernel(
     lane: Fixed64Lane,
     declared_anchor_kind: Fixed64AnchorKind,
@@ -74,6 +128,41 @@ pub fn native_fixed64_single_anchor_kernel(
     receptor_feature_coordinates_angstrom: &[Vec3],
     pocket_center_angstrom: Vec3,
 ) -> NativeFixed64SingleAnchorKernelOutcome {
+    if !is_anchor_lane(lane) {
+        return NativeFixed64SingleAnchorKernelOutcome::TypedFailure(
+            Fixed64PlacementErrorCode::UnsupportedLane,
+        );
+    }
+    if !anchor_kind_matches_lane(lane, declared_anchor_kind) {
+        return NativeFixed64SingleAnchorKernelOutcome::TypedFailure(
+            Fixed64PlacementErrorCode::FeatureCrossWired,
+        );
+    }
+    if source_coordinates_angstrom.is_empty()
+        || source_coordinates_angstrom.len() > FIXED64_MAX_LIGAND_ATOMS
+        || !valid_kernel_feature_cardinality(
+            lane,
+            ligand_feature_coordinates_angstrom.len(),
+            receptor_feature_coordinates_angstrom.len(),
+        )
+        || !valid_kernel_coordinate(pocket_center_angstrom)
+        || source_coordinates_angstrom
+            .iter()
+            .chain(ligand_feature_coordinates_angstrom)
+            .chain(receptor_feature_coordinates_angstrom)
+            .copied()
+            .any(|coordinate| !valid_kernel_coordinate(coordinate))
+    {
+        return NativeFixed64SingleAnchorKernelOutcome::TypedFailure(
+            Fixed64PlacementErrorCode::InvalidInput,
+        );
+    }
+    let lane_width = anchor_lane_width(lane);
+    if lane_offset >= lane_width {
+        return NativeFixed64SingleAnchorKernelOutcome::TypedFailure(
+            Fixed64PlacementErrorCode::InternalInvariant,
+        );
+    }
     let geometry = match derive_anchor_geometry(
         lane,
         source_coordinates_angstrom,
@@ -85,12 +174,6 @@ pub fn native_fixed64_single_anchor_kernel(
         Err(error) => return NativeFixed64SingleAnchorKernelOutcome::TypedFailure(error.code()),
     };
     let target_distance_angstrom = anchor_target_distance(declared_anchor_kind);
-    let lane_width = anchor_lane_width(lane);
-    if lane_width == 0 || lane_offset >= lane_width {
-        return NativeFixed64SingleAnchorKernelOutcome::TypedFailure(
-            Fixed64PlacementErrorCode::InternalInvariant,
-        );
-    }
     let target_anchor_point_angstrom = geometry.receptor_anchor_point.plus(
         geometry
             .local_surface_normal
@@ -833,20 +916,36 @@ fn canonical_direction(
 }
 
 fn aromatic_normal(coordinates: &[Vec3]) -> Result<Vec3, Fixed64PlacementError> {
-    for first in 0..coordinates.len() {
-        for second in first + 1..coordinates.len() {
-            for third in second + 1..coordinates.len() {
-                let normal = coordinates[second]
-                    .minus(coordinates[first])
-                    .cross(coordinates[third].minus(coordinates[first]));
-                if normal.norm() > GEOMETRY_EPSILON {
-                    return canonical_direction(
-                        normal,
-                        Fixed64PlacementErrorCode::DegenerateAromaticPlane,
-                        "aromatic plane is degenerate",
-                    );
-                }
-            }
+    let Some(first) = coordinates.first().copied() else {
+        return Err(error(
+            Fixed64PlacementErrorCode::DegenerateAromaticPlane,
+            "aromatic plane is empty",
+        ));
+    };
+    let Some((second_index, baseline)) = coordinates
+        .iter()
+        .copied()
+        .enumerate()
+        .skip(1)
+        .map(|(index, coordinate)| (index, coordinate.minus(first)))
+        .find(|(_, displacement)| displacement.norm() > GEOMETRY_EPSILON)
+    else {
+        return Err(error(
+            Fixed64PlacementErrorCode::DegenerateAromaticPlane,
+            "aromatic plane is collinear",
+        ));
+    };
+    for (index, coordinate) in coordinates.iter().copied().enumerate().skip(1) {
+        if index == second_index {
+            continue;
+        }
+        let normal = baseline.cross(coordinate.minus(first));
+        if normal.norm() > GEOMETRY_EPSILON {
+            return canonical_direction(
+                normal,
+                Fixed64PlacementErrorCode::DegenerateAromaticPlane,
+                "aromatic plane is degenerate",
+            );
         }
     }
     Err(error(

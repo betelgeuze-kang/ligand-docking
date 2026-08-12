@@ -144,6 +144,22 @@ fn expected_pair(lane: Fixed64Lane, anchor: Fixed64AnchorKind) -> bool {
     )
 }
 
+fn valid_feature_cardinality(
+    lane: Fixed64Lane,
+    ligand_count: usize,
+    receptor_count: usize,
+) -> bool {
+    match lane {
+        Fixed64Lane::LigandDonorToReceptorAcceptor => ligand_count == 2 && receptor_count == 1,
+        Fixed64Lane::LigandAcceptorToReceptorDonor => ligand_count == 1 && receptor_count == 2,
+        Fixed64Lane::ComplementaryCharge | Fixed64Lane::PrincipalAxisShape => {
+            ligand_count >= 1 && receptor_count >= 1
+        }
+        Fixed64Lane::AromaticPlane => ligand_count >= 3 && receptor_count >= 3,
+        _ => false,
+    }
+}
+
 fn vec3_channels(x: &[f64], y: &[f64], z: &[f64]) -> Vec<Vec3> {
     (0..x.len())
         .map(|index| Vec3::new(x[index], y[index], z[index]))
@@ -192,6 +208,11 @@ unsafe fn generate(input: &Fixed64SingleAnchorKernelInputV1) -> Result<Generated
     if !expected_pair(lane, anchor) {
         return Err(ProviderError::invalid(
             "rust_cpu single-anchor lane and kind are cross-wired",
+        ));
+    }
+    if !valid_feature_cardinality(lane, ligand_feature_count, receptor_feature_count) {
+        return Err(ProviderError::invalid(
+            "rust_cpu single-anchor feature cardinality is invalid for its lane",
         ));
     }
     let lane_width = if matches!(

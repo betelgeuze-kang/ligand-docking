@@ -105,6 +105,47 @@ bool fixed64_anchor_reserved_is_zero(const uint64_t (&values)[Count]) noexcept {
     return true;
 }
 
+bool fixed64_anchor_lane_kind_match(
+    bg_docking_fixed64_lane lane,
+    bg_docking_fixed64_anchor_kind kind) noexcept {
+    return
+        (lane == BG_DOCKING_FIXED64_LANE_LIGAND_DONOR_TO_RECEPTOR_ACCEPTOR &&
+         kind == BG_DOCKING_FIXED64_ANCHOR_LIGAND_DONOR_TO_RECEPTOR_ACCEPTOR) ||
+        (lane == BG_DOCKING_FIXED64_LANE_LIGAND_ACCEPTOR_TO_RECEPTOR_DONOR &&
+         kind == BG_DOCKING_FIXED64_ANCHOR_LIGAND_ACCEPTOR_TO_RECEPTOR_DONOR) ||
+        (lane == BG_DOCKING_FIXED64_LANE_COMPLEMENTARY_CHARGE &&
+         kind == BG_DOCKING_FIXED64_ANCHOR_COMPLEMENTARY_CHARGE) ||
+        (lane == BG_DOCKING_FIXED64_LANE_AROMATIC_PLANE &&
+         kind == BG_DOCKING_FIXED64_ANCHOR_AROMATIC_PLANE) ||
+        (lane == BG_DOCKING_FIXED64_LANE_PRINCIPAL_AXIS_SHAPE &&
+         kind == BG_DOCKING_FIXED64_ANCHOR_PRINCIPAL_AXIS_SHAPE);
+}
+
+bool fixed64_anchor_cardinality_valid(
+    bg_docking_fixed64_lane lane,
+    uint64_t ligand_count,
+    uint64_t receptor_count) noexcept {
+    if (lane == BG_DOCKING_FIXED64_LANE_LIGAND_DONOR_TO_RECEPTOR_ACCEPTOR) {
+        return ligand_count == 2 && receptor_count == 1;
+    }
+    if (lane == BG_DOCKING_FIXED64_LANE_LIGAND_ACCEPTOR_TO_RECEPTOR_DONOR) {
+        return ligand_count == 1 && receptor_count == 2;
+    }
+    if (lane == BG_DOCKING_FIXED64_LANE_AROMATIC_PLANE) {
+        return ligand_count >= 3 && receptor_count >= 3;
+    }
+    return ligand_count >= 1 && receptor_count >= 1;
+}
+
+uint32_t fixed64_anchor_lane_width(bg_docking_fixed64_lane lane) noexcept {
+    if (lane == BG_DOCKING_FIXED64_LANE_LIGAND_DONOR_TO_RECEPTOR_ACCEPTOR ||
+        lane == BG_DOCKING_FIXED64_LANE_LIGAND_ACCEPTOR_TO_RECEPTOR_DONOR ||
+        lane == BG_DOCKING_FIXED64_LANE_COMPLEMENTARY_CHARGE) {
+        return UINT32_C(4);
+    }
+    return UINT32_C(2);
+}
+
 __device__ HipAnchorVec3 anchor_plus(HipAnchorVec3 left, HipAnchorVec3 right) {
     return {left.x + right.x, left.y + right.y, left.z + right.z};
 }
@@ -284,21 +325,27 @@ __device__ bool anchor_aromatic_normal(
     const double *z,
     size_t count,
     HipAnchorVec3 *output) {
-    for (size_t first = 0; first < count; ++first) {
-        const HipAnchorVec3 first_point{x[first], y[first], z[first]};
-        for (size_t second = first + 1; second < count; ++second) {
-            const HipAnchorVec3 second_point{x[second], y[second], z[second]};
-            for (size_t third = second + 1; third < count; ++third) {
-                const HipAnchorVec3 third_point{x[third], y[third], z[third]};
-                HipAnchorVec3 normal = anchor_cross(
-                    anchor_minus(second_point, first_point),
-                    anchor_minus(third_point, first_point));
-                if (anchor_norm(normal) > kHipAnchorEpsilon &&
-                    anchor_normalize(normal, &normal)) {
-                    *output = anchor_canonical_direction(normal);
-                    return true;
-                }
-            }
+    if (count < 3) return false;
+    const HipAnchorVec3 first_point{x[0], y[0], z[0]};
+    size_t second = 1;
+    for (; second < count; ++second) {
+        const HipAnchorVec3 displacement = anchor_minus(
+            HipAnchorVec3{x[second], y[second], z[second]}, first_point);
+        if (anchor_norm(displacement) > kHipAnchorEpsilon) break;
+    }
+    if (second == count) return false;
+    const HipAnchorVec3 baseline = anchor_minus(
+        HipAnchorVec3{x[second], y[second], z[second]}, first_point);
+    for (size_t third = 1; third < count; ++third) {
+        if (third == second) continue;
+        HipAnchorVec3 normal = anchor_cross(
+            baseline,
+            anchor_minus(
+                HipAnchorVec3{x[third], y[third], z[third]}, first_point));
+        if (anchor_norm(normal) > kHipAnchorEpsilon &&
+            anchor_normalize(normal, &normal)) {
+            *output = anchor_canonical_direction(normal);
+            return true;
         }
     }
     return false;
@@ -627,6 +674,12 @@ extern "C" int32_t BG_DOCKING_FIXED64_SINGLE_ANCHOR_PLACE(
         input->ligand_atom_count == 0 || input->ligand_atom_count > kHipAnchorMaximumLigandAtoms ||
         input->ligand_feature_atom_count == 0 || input->ligand_feature_atom_count > kHipAnchorMaximumFeatureAtoms ||
         input->receptor_feature_atom_count == 0 || input->receptor_feature_atom_count > kHipAnchorMaximumFeatureAtoms ||
+        !fixed64_anchor_lane_kind_match(input->lane, input->anchor_kind) ||
+        !fixed64_anchor_cardinality_valid(
+            input->lane,
+            input->ligand_feature_atom_count,
+            input->receptor_feature_atom_count) ||
+        input->lane_offset >= fixed64_anchor_lane_width(input->lane) ||
         input->source_x_angstrom == nullptr || input->source_y_angstrom == nullptr || input->source_z_angstrom == nullptr ||
         input->ligand_feature_x_angstrom == nullptr || input->ligand_feature_y_angstrom == nullptr || input->ligand_feature_z_angstrom == nullptr ||
         input->receptor_feature_x_angstrom == nullptr || input->receptor_feature_y_angstrom == nullptr || input->receptor_feature_z_angstrom == nullptr) {
