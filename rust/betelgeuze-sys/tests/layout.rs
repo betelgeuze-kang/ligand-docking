@@ -5,12 +5,17 @@ use betelgeuze_sys::*;
 #[test]
 fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(BG_ABI_VERSION_MAJOR, 1);
-    assert_eq!(BG_ABI_VERSION_MINOR, 13);
+    assert_eq!(BG_ABI_VERSION_MINOR, 14);
     assert_eq!(BG_ABI_VERSION, 1);
     assert_eq!(size_of::<bg_status>(), 4);
     assert_eq!(size_of::<bg_backend>(), 4);
     assert_eq!(size_of::<bg_unit_system>(), 4);
     assert_eq!(size_of::<bg_integrator>(), 4);
+    assert_eq!(size_of::<bg_docking_fixed64_lane>(), 4);
+    assert_eq!(size_of::<bg_docking_fixed64_feature_kind>(), 4);
+    assert_eq!(size_of::<bg_docking_fixed64_anchor_kind>(), 4);
+    assert_eq!(size_of::<bg_docking_fixed64_parent_role>(), 4);
+    assert_eq!(size_of::<bg_docking_fixed64_allocation_row_status>(), 4);
     assert_eq!(
         size_of::<bg_docking_geometric_admission_candidate_state>(),
         4
@@ -54,6 +59,144 @@ fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(BG_PERIODIC_AXIS_Y, 2);
     assert_eq!(BG_PERIODIC_AXIS_Z, 4);
     assert_eq!(BG_PERIODIC_AXES_ALL, 7);
+}
+
+#[cfg(target_pointer_width = "64")]
+#[test]
+fn fixed64_allocation_layouts_match_the_c_header() {
+    assert_eq!(size_of::<bg_docking_fixed64_source_evidence_v1>(), 112);
+    assert_eq!(align_of::<bg_docking_fixed64_source_evidence_v1>(), 8);
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_source_evidence_v1, coordinate_sha256),
+        64
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_source_evidence_v1, reserved),
+        96
+    );
+    assert_eq!(
+        size_of::<bg_docking_fixed64_exact_source_evidence_v1>(),
+        320
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_fixed64_exact_source_evidence_v1,
+            receptor_vdw_radii_sha256
+        ),
+        256
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_exact_source_evidence_v1, reserved),
+        288
+    );
+    assert_eq!(
+        size_of::<bg_docking_fixed64_atomic_feature_evidence_v1>(),
+        56
+    );
+    assert_eq!(
+        size_of::<bg_docking_fixed64_indexed_source_evidence_v1>(),
+        136
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_indexed_source_evidence_v1, source),
+        8
+    );
+    assert_eq!(
+        size_of::<bg_docking_fixed64_conformer_source_evidence_v1>(),
+        136
+    );
+    assert_eq!(size_of::<bg_docking_fixed64_allocation_input_v1>(), 456);
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_allocation_input_v1, exact_v11_source),
+        8
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_allocation_input_v1, atomic_feature_count),
+        328
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_allocation_input_v1, atomic_features),
+        336
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_allocation_input_v1, retained_sources),
+        384
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_allocation_input_v1, reserved),
+        392
+    );
+    assert_eq!(size_of::<bg_docking_fixed64_requirement_v1>(), 24);
+    assert_eq!(size_of::<bg_docking_fixed64_missing_feature_v1>(), 24);
+    assert_eq!(size_of::<bg_docking_fixed64_allocation_row_v1>(), 384);
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_allocation_row_v1, requirements),
+        48
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_allocation_row_v1, missing_features),
+        96
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_fixed64_allocation_row_v1,
+            selected_source_receipt_sha256
+        ),
+        152
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_fixed64_allocation_row_v1,
+            generation_parent_receipt_sha256
+        ),
+        216
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_fixed64_allocation_row_v1,
+            generation_parent_proposal_sha256
+        ),
+        248
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_fixed64_allocation_row_v1,
+            generation_parent_coordinate_sha256
+        ),
+        280
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_allocation_row_v1, slot_receipt_sha256),
+        312
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_allocation_row_v1, generation_eligible),
+        344
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_allocation_row_v1, reserved),
+        352
+    );
+    assert_eq!(size_of::<bg_docking_fixed64_allocation_output_v1>(), 184);
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_allocation_output_v1, rows),
+        24
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_allocation_output_v1, inventory_sha256),
+        48
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_fixed64_allocation_output_v1,
+            result_dependent_allocation
+        ),
+        112
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_allocation_output_v1, reserved),
+        120
+    );
 }
 
 #[test]

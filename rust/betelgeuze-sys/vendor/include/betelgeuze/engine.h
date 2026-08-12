@@ -56,7 +56,7 @@ extern "C" {
 #endif
 
 #define BG_ABI_VERSION_MAJOR UINT32_C(1)
-#define BG_ABI_VERSION_MINOR UINT32_C(13)
+#define BG_ABI_VERSION_MINOR UINT32_C(14)
 #define BG_ABI_VERSION UINT32_C(1)
 
 #define BG_CANONICAL_LENGTH_UNIT "angstrom"
@@ -119,6 +119,89 @@ enum {
 #define BG_DOCKING_STABLE_TOP_K_LIMIT UINT32_C(5)
 #define BG_DOCKING_RMSD_CLUSTER_TOP_K_LIMIT UINT32_C(5)
 #define BG_DOCKING_TORSION_V7_MAX_MOVES UINT32_C(8)
+#define BG_DOCKING_FIXED64_FEATURE_KIND_COUNT UINT32_C(12)
+#define BG_DOCKING_FIXED64_MAX_REQUIREMENTS UINT32_C(2)
+#define BG_DOCKING_FIXED64_MAX_MISSING_FEATURES UINT32_C(2)
+#define BG_DOCKING_FIXED64_MAX_SELECTED_SOURCE_RECEIPTS UINT32_C(2)
+
+/* Frozen result-independent mixed64 proposal allocation. */
+typedef int32_t bg_docking_fixed64_lane;
+enum {
+    BG_DOCKING_FIXED64_LANE_POCKET_CENTERED_CONTROLS = 0,
+    BG_DOCKING_FIXED64_LANE_UNIFORM_SOURCE_CONTROLS = 1,
+    BG_DOCKING_FIXED64_LANE_DETERMINISTIC_INDEPENDENT_SO3 = 2,
+    BG_DOCKING_FIXED64_LANE_TRUE_CONFORMER_INDEPENDENT_SO3 = 3,
+    BG_DOCKING_FIXED64_LANE_LIGAND_DONOR_TO_RECEPTOR_ACCEPTOR = 4,
+    BG_DOCKING_FIXED64_LANE_LIGAND_ACCEPTOR_TO_RECEPTOR_DONOR = 5,
+    BG_DOCKING_FIXED64_LANE_COMPLEMENTARY_CHARGE = 6,
+    BG_DOCKING_FIXED64_LANE_AROMATIC_PLANE = 7,
+    BG_DOCKING_FIXED64_LANE_PRINCIPAL_AXIS_SHAPE = 8,
+    BG_DOCKING_FIXED64_LANE_PAIRED_RETAINED_CONTROLS = 9
+};
+
+typedef int32_t bg_docking_fixed64_feature_kind;
+enum {
+    BG_DOCKING_FIXED64_FEATURE_LIGAND_DONOR = 0,
+    BG_DOCKING_FIXED64_FEATURE_LIGAND_ACCEPTOR = 1,
+    BG_DOCKING_FIXED64_FEATURE_RECEPTOR_DONOR = 2,
+    BG_DOCKING_FIXED64_FEATURE_RECEPTOR_ACCEPTOR = 3,
+    BG_DOCKING_FIXED64_FEATURE_LIGAND_POSITIVE_SITE = 4,
+    BG_DOCKING_FIXED64_FEATURE_LIGAND_NEGATIVE_SITE = 5,
+    BG_DOCKING_FIXED64_FEATURE_RECEPTOR_POSITIVE_SITE = 6,
+    BG_DOCKING_FIXED64_FEATURE_RECEPTOR_NEGATIVE_SITE = 7,
+    BG_DOCKING_FIXED64_FEATURE_LIGAND_AROMATIC_PLANE = 8,
+    BG_DOCKING_FIXED64_FEATURE_RECEPTOR_AROMATIC_PLANE = 9,
+    BG_DOCKING_FIXED64_FEATURE_LIGAND_SHAPE_AXIS = 10,
+    BG_DOCKING_FIXED64_FEATURE_POCKET_SHAPE_AXIS = 11
+};
+
+typedef int32_t bg_docking_fixed64_anchor_kind;
+enum {
+    BG_DOCKING_FIXED64_ANCHOR_NONE = 0,
+    BG_DOCKING_FIXED64_ANCHOR_LIGAND_DONOR_TO_RECEPTOR_ACCEPTOR = 1,
+    BG_DOCKING_FIXED64_ANCHOR_LIGAND_ACCEPTOR_TO_RECEPTOR_DONOR = 2,
+    BG_DOCKING_FIXED64_ANCHOR_COMPLEMENTARY_CHARGE = 3,
+    BG_DOCKING_FIXED64_ANCHOR_AROMATIC_PLANE = 4,
+    BG_DOCKING_FIXED64_ANCHOR_PRINCIPAL_AXIS_SHAPE = 5
+};
+
+typedef int32_t bg_docking_fixed64_parent_role;
+enum {
+    BG_DOCKING_FIXED64_PARENT_NONE = 0,
+    BG_DOCKING_FIXED64_PARENT_EXACT_PASSTHROUGH = 1,
+    BG_DOCKING_FIXED64_PARENT_GENERATOR_INPUT = 2
+};
+
+typedef int32_t bg_docking_fixed64_requirement_kind;
+enum {
+    BG_DOCKING_FIXED64_REQUIREMENT_V7_CONTROL_SOURCE = 0,
+    BG_DOCKING_FIXED64_REQUIREMENT_TRUE_CONFORMER_RANK = 1,
+    BG_DOCKING_FIXED64_REQUIREMENT_FEATURE = 2,
+    BG_DOCKING_FIXED64_REQUIREMENT_COMPLEMENTARY_CHARGE_ANCHOR = 3,
+    BG_DOCKING_FIXED64_REQUIREMENT_RETAINED_SOURCE = 4
+};
+
+typedef int32_t bg_docking_fixed64_missing_feature_kind;
+enum {
+    BG_DOCKING_FIXED64_MISSING_V7_CONTROL_SOURCE = 0,
+    BG_DOCKING_FIXED64_MISSING_TRUE_CONFORMER = 1,
+    BG_DOCKING_FIXED64_MISSING_LIGAND_DONOR = 2,
+    BG_DOCKING_FIXED64_MISSING_RECEPTOR_ACCEPTOR = 3,
+    BG_DOCKING_FIXED64_MISSING_LIGAND_ACCEPTOR = 4,
+    BG_DOCKING_FIXED64_MISSING_RECEPTOR_DONOR = 5,
+    BG_DOCKING_FIXED64_MISSING_COMPLEMENTARY_CHARGE_ANCHOR = 6,
+    BG_DOCKING_FIXED64_MISSING_LIGAND_AROMATIC_PLANE = 7,
+    BG_DOCKING_FIXED64_MISSING_RECEPTOR_AROMATIC_PLANE = 8,
+    BG_DOCKING_FIXED64_MISSING_LIGAND_SHAPE_AXIS = 9,
+    BG_DOCKING_FIXED64_MISSING_POCKET_SHAPE_AXIS = 10,
+    BG_DOCKING_FIXED64_MISSING_RETAINED_SOURCE = 11
+};
+
+typedef int32_t bg_docking_fixed64_allocation_row_status;
+enum {
+    BG_DOCKING_FIXED64_ALLOCATION_ROW_READY = 1,
+    BG_DOCKING_FIXED64_ALLOCATION_ROW_TYPED_FAILURE = 2
+};
 
 /* Frozen fixed64 pre/post-refinement geometric-admission semantics. */
 typedef int32_t bg_docking_geometric_admission_candidate_state;
@@ -650,6 +733,142 @@ typedef struct bg_dynamics_report_v1 {
     double temperature_kelvin;
     uint64_t reserved[4];
 } bg_dynamics_report_v1;
+
+/*
+ * Result-independent mixed64 allocation input. All identity rows are caller-
+ * owned for one call. Atomic features are strictly ordered by kind then receipt;
+ * source rows are strictly ordered by index/rank and carry unique receipt
+ * identities within their list. Missing inputs create typed slot failures and
+ * never shrink or reassign the frozen 64-row denominator.
+ */
+typedef struct bg_docking_fixed64_source_evidence_v1 {
+    uint8_t receipt_sha256[32];
+    uint8_t proposal_sha256[32];
+    uint8_t coordinate_sha256[32];
+    uint64_t reserved[2];
+} bg_docking_fixed64_source_evidence_v1;
+
+typedef struct bg_docking_fixed64_exact_source_evidence_v1 {
+    uint8_t source_receipt_sha256[32];
+    uint8_t proposal_sha256[32];
+    uint8_t ligand_coordinate_sha256[32];
+    uint8_t receptor_coordinate_sha256[32];
+    uint8_t prepared_ligand_topology_sha256[32];
+    uint8_t prepared_receptor_topology_sha256[32];
+    uint8_t ligand_vdw_radii_sha256[32];
+    uint8_t ligand_heavy_atom_mask_sha256[32];
+    uint8_t receptor_vdw_radii_sha256[32];
+    uint64_t reserved[4];
+} bg_docking_fixed64_exact_source_evidence_v1;
+
+typedef struct bg_docking_fixed64_atomic_feature_evidence_v1 {
+    bg_docking_fixed64_feature_kind kind;
+    uint32_t reserved0;
+    uint8_t receipt_sha256[32];
+    uint64_t reserved[2];
+} bg_docking_fixed64_atomic_feature_evidence_v1;
+
+typedef struct bg_docking_fixed64_indexed_source_evidence_v1 {
+    uint32_t source_index;
+    uint32_t reserved0;
+    bg_docking_fixed64_source_evidence_v1 source;
+    uint64_t reserved[2];
+} bg_docking_fixed64_indexed_source_evidence_v1;
+
+typedef struct bg_docking_fixed64_conformer_source_evidence_v1 {
+    uint8_t rank;
+    uint8_t reserved0[7];
+    bg_docking_fixed64_source_evidence_v1 source;
+    uint64_t reserved[2];
+} bg_docking_fixed64_conformer_source_evidence_v1;
+
+typedef struct bg_docking_fixed64_allocation_input_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    bg_docking_fixed64_exact_source_evidence_v1 exact_v11_source;
+    uint64_t atomic_feature_count;
+    const bg_docking_fixed64_atomic_feature_evidence_v1 *atomic_features;
+    uint64_t v7_control_source_count;
+    const bg_docking_fixed64_indexed_source_evidence_v1 *v7_control_sources;
+    uint64_t conformer_source_count;
+    const bg_docking_fixed64_conformer_source_evidence_v1 *conformer_sources;
+    uint64_t retained_source_count;
+    const bg_docking_fixed64_indexed_source_evidence_v1 *retained_sources;
+    uint64_t reserved[8];
+} bg_docking_fixed64_allocation_input_v1;
+
+typedef struct bg_docking_fixed64_requirement_v1 {
+    bg_docking_fixed64_requirement_kind kind;
+    uint32_t value;
+    uint64_t reserved[2];
+} bg_docking_fixed64_requirement_v1;
+
+typedef struct bg_docking_fixed64_missing_feature_v1 {
+    bg_docking_fixed64_missing_feature_kind kind;
+    uint32_t value;
+    uint64_t reserved[2];
+} bg_docking_fixed64_missing_feature_v1;
+
+/* Every row is complete receipt evidence for one immutable slot mapping. */
+typedef struct bg_docking_fixed64_allocation_row_v1 {
+    uint32_t slot_index;
+    bg_docking_fixed64_lane lane;
+    uint32_t lane_offset;
+    bg_docking_fixed64_allocation_row_status status;
+    bg_docking_fixed64_anchor_kind declared_anchor_kind;
+    bg_docking_fixed64_parent_role generation_parent_role;
+    uint32_t requirement_count;
+    uint32_t missing_feature_count;
+    int32_t v7_control_source_index;
+    int32_t so3_sequence_index;
+    int32_t true_conformer_rank;
+    int32_t retained_source_index;
+    bg_docking_fixed64_requirement_v1
+        requirements[BG_DOCKING_FIXED64_MAX_REQUIREMENTS];
+    bg_docking_fixed64_missing_feature_v1
+        missing_features[BG_DOCKING_FIXED64_MAX_MISSING_FEATURES];
+    uint32_t selected_source_receipt_count;
+    uint32_t reserved0;
+    uint8_t selected_source_receipt_sha256
+        [BG_DOCKING_FIXED64_MAX_SELECTED_SOURCE_RECEIPTS][32];
+    /* Exact receipt/proposal/coordinate identity of the generation parent. */
+    uint8_t generation_parent_receipt_sha256[32];
+    uint8_t generation_parent_proposal_sha256[32];
+    uint8_t generation_parent_coordinate_sha256[32];
+    uint8_t slot_receipt_sha256[32];
+    uint8_t generation_eligible;
+    uint8_t fallback_allowed;
+    uint8_t multi_anchor_allowed;
+    uint8_t result_dependent_allocation;
+    uint8_t denominator_preserved;
+    uint8_t molecular_execution_authorized;
+    uint8_t reservation_authorized;
+    uint8_t benchmark_execution_authorized;
+    uint64_t reserved[4];
+} bg_docking_fixed64_allocation_row_v1;
+
+/* Caller-owned transactional output. The complete 64-row result and both
+ * receipts commit together. All execution and product authority remains false. */
+typedef struct bg_docking_fixed64_allocation_output_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    uint64_t row_capacity;
+    uint64_t row_count;
+    bg_docking_fixed64_allocation_row_v1 *rows;
+    uint64_t ready_count;
+    uint64_t typed_failure_count;
+    uint8_t inventory_sha256[32];
+    uint8_t allocation_receipt_sha256[32];
+    uint8_t result_dependent_allocation;
+    uint8_t molecular_execution_authorized;
+    uint8_t reservation_authorized;
+    uint8_t benchmark_execution_authorized;
+    uint8_t existing_rank_auto_change_authorized;
+    uint8_t customer_pose_emission_authorized;
+    uint8_t production_claim_authorized;
+    uint8_t reserved0;
+    uint64_t reserved[8];
+} bg_docking_fixed64_allocation_output_v1;
 
 /*
  * Persistent fixed64 geometric-admission context. All receptor coordinates,
@@ -1583,6 +1802,14 @@ BG_API bg_status BG_CALL bg_dynamics_report_v1_init(
     bg_dynamics_report_v1 *report,
     size_t caller_struct_size,
     uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_fixed64_allocation_input_v1_init(
+    bg_docking_fixed64_allocation_input_v1 *input,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_fixed64_allocation_output_v1_init(
+    bg_docking_fixed64_allocation_output_v1 *output,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
 BG_API bg_status BG_CALL bg_docking_geometric_admission_context_soa_v1_init(
     bg_docking_geometric_admission_context_soa_v1 *descriptor,
     size_t caller_struct_size,
@@ -1715,6 +1942,16 @@ BG_API bg_status BG_CALL bg_docking_fixed64_refinement_output_v1_init(
 #  define bg_dynamics_report_v1_init(report) \
     bg_dynamics_report_v1_init( \
         (report), sizeof(bg_dynamics_report_v1), BG_ABI_VERSION)
+#  define bg_docking_fixed64_allocation_input_v1_init(input) \
+    bg_docking_fixed64_allocation_input_v1_init( \
+        (input), \
+        sizeof(bg_docking_fixed64_allocation_input_v1), \
+        BG_ABI_VERSION)
+#  define bg_docking_fixed64_allocation_output_v1_init(output) \
+    bg_docking_fixed64_allocation_output_v1_init( \
+        (output), \
+        sizeof(bg_docking_fixed64_allocation_output_v1), \
+        BG_ABI_VERSION)
 #  define bg_docking_geometric_admission_context_soa_v1_init(descriptor) \
     bg_docking_geometric_admission_context_soa_v1_init( \
         (descriptor), \
@@ -1834,6 +2071,17 @@ BG_API bg_status BG_CALL bg_context_get_device_ordinal(
 BG_API bg_status BG_CALL bg_context_get_unit_system(
     const bg_context *context,
     bg_unit_system *unit_system) BG_NOEXCEPT;
+
+/*
+ * Build the immutable mixed64 lane allocation. This host control-plane kernel
+ * is independent of evaluator results and backend selection. It emits exactly
+ * 64 receipt-bound rows, keeps missing features as typed failures, and grants
+ * no reservation, molecular, benchmark, rank-mutation, pose, or claim
+ * authority. Numerical coordinate placement is a separate backend-bound ABI.
+ */
+BG_API bg_status BG_CALL bg_docking_fixed64_allocation_v1_build(
+    const bg_docking_fixed64_allocation_input_v1 *input,
+    bg_docking_fixed64_allocation_output_v1 *output) BG_NOEXCEPT;
 
 /*
  * The same persistent full-Cartesian geometric gate is used before and after

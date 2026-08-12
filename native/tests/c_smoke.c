@@ -55,6 +55,12 @@ static void test_descriptor_initializer_compatibility(void) {
     BG_TEST_EXACT_INITIALIZER(
         bg_dynamics_report_v1, bg_dynamics_report_v1_init);
     BG_TEST_EXACT_INITIALIZER(
+        bg_docking_fixed64_allocation_input_v1,
+        bg_docking_fixed64_allocation_input_v1_init);
+    BG_TEST_EXACT_INITIALIZER(
+        bg_docking_fixed64_allocation_output_v1,
+        bg_docking_fixed64_allocation_output_v1_init);
+    BG_TEST_EXACT_INITIALIZER(
         bg_docking_scorer_v1_context_soa_v1,
         bg_docking_scorer_v1_context_soa_v1_init);
     BG_TEST_EXACT_INITIALIZER(
@@ -114,7 +120,7 @@ static void test_context_contract(void) {
     assert(bg_abi_version() == BG_ABI_VERSION);
     assert(bg_abi_version_major() == BG_ABI_VERSION_MAJOR);
     assert(bg_abi_version_minor() == BG_ABI_VERSION_MINOR);
-    assert(strcmp(bg_abi_version_string(), "1.13") == 0);
+    assert(strcmp(bg_abi_version_string(), "1.14") == 0);
     assert(strcmp(BG_CANONICAL_TEMPERATURE_UNIT, "kelvin") == 0);
     assert(strcmp(bg_status_string(BG_STATUS_OK), "ok") == 0);
     assert(strcmp(

@@ -54,3 +54,10 @@ slot, retains upstream and coordinate failures as typed rows, applies the
 strict-below-0.55 rejection boundary, and enforces the frozen batch pair cap.
 Its private FFI copies all context state and commits no rows until the complete
 batch succeeds; no execution or product authority is introduced.
+
+ABI 1.14 also exposes the canonical Rust mixed64 allocation model through a
+private fixed64 provider. The public C++ boundary rebuilds the same allocation
+with an independent canonical encoder, compares the complete 64-row object
+representation and both aggregate receipts, and fails before output if any
+mapping or receipt differs. This is deterministic host control-plane work, not
+a relabeled GPU kernel, and all execution and product authority stays false.

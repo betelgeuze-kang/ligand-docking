@@ -147,3 +147,10 @@ BETELGEUZE_ENGINE_1.13 {
         bg_docking_geometric_admission_v1_get_backend;
         bg_docking_geometric_admission_v1_evaluate_fixed64;
 } BETELGEUZE_ENGINE_1.12;
+
+BETELGEUZE_ENGINE_1.14 {
+    global:
+        bg_docking_fixed64_allocation_input_v1_init;
+        bg_docking_fixed64_allocation_output_v1_init;
+        bg_docking_fixed64_allocation_v1_build;
+} BETELGEUZE_ENGINE_1.13;

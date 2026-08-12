@@ -6,9 +6,9 @@ use crate::native_hash::CanonicalHash;
 pub const FIXED64_CANDIDATE_COUNT: usize = 64;
 pub const FIXED64_PROFILE_ID: &str = "betelgeuze.engine_v2_global_orientation_fixed_mixed64/1.0.0";
 pub const NATIVE_FIXED64_ALLOCATION_SCHEMA_ID: &str =
-    "betelgeuze.engine_v2_global_orientation_fixed_mixed64_native_allocation/1.0.0";
+    "betelgeuze.engine_v2_global_orientation_fixed_mixed64_native_allocation/1.1.0";
 pub const NATIVE_FIXED64_SLOT_SCHEMA_ID: &str =
-    "betelgeuze.engine_v2_global_orientation_fixed_mixed64_native_slot/1.0.0";
+    "betelgeuze.engine_v2_global_orientation_fixed_mixed64_native_slot/1.1.0";
 
 pub const RETAINED_SOURCE_INDICES: [u32; 4] = [36, 45, 54, 63];
 pub const TRUE_CONFORMER_SLOT_RANKS: [u8; 8] = [2, 3, 4, 5, 6, 7, 8, 2];
@@ -281,6 +281,25 @@ impl Fixed64FeatureInventory {
     }
 
     fn validate(&self) -> Result<(), Fixed64AllocationError> {
+        let exact = self.exact_v11_source;
+        if [
+            exact.source_receipt_sha256,
+            exact.proposal_sha256,
+            exact.ligand_coordinate_sha256,
+            exact.receptor_coordinate_sha256,
+            exact.prepared_ligand_topology_sha256,
+            exact.prepared_receptor_topology_sha256,
+            exact.ligand_vdw_radii_sha256,
+            exact.ligand_heavy_atom_mask_sha256,
+            exact.receptor_vdw_radii_sha256,
+        ]
+        .iter()
+        .any(digest_is_zero)
+        {
+            return Err(Fixed64AllocationError::InvalidInventory(
+                "exact V1.1 source identities must be present",
+            ));
+        }
         if self.atomic_features.len() > 12 * 256 {
             return Err(Fixed64AllocationError::InvalidInventory(
                 "atomic feature capacity exceeded",
@@ -290,6 +309,10 @@ impl Fixed64FeatureInventory {
             .atomic_features
             .windows(2)
             .any(|rows| rows[0] >= rows[1])
+            || self
+                .atomic_features
+                .iter()
+                .any(|feature| digest_is_zero(&feature.receipt_sha256))
         {
             return Err(Fixed64AllocationError::InvalidInventory(
                 "atomic features must be unique and canonically ordered",
@@ -312,7 +335,7 @@ impl Fixed64FeatureInventory {
             || self
                 .conformer_sources
                 .iter()
-                .any(|row| !(2..=8).contains(&row.rank))
+                .any(|row| !(2..=8).contains(&row.rank) || !source_identities_present(row.source))
             || self
                 .conformer_sources
                 .windows(2)
@@ -376,8 +399,19 @@ impl Fixed64FeatureInventory {
     }
 }
 
+fn digest_is_zero(value: &[u8; 32]) -> bool {
+    value.iter().all(|byte| *byte == 0)
+}
+
+fn source_identities_present(source: Fixed64SourceEvidence) -> bool {
+    !digest_is_zero(&source.receipt_sha256)
+        && !digest_is_zero(&source.proposal_sha256)
+        && !digest_is_zero(&source.coordinate_sha256)
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Fixed64GenerationParent {
+    pub receipt_sha256: [u8; 32],
     pub proposal_sha256: [u8; 32],
     pub coordinate_sha256: [u8; 32],
     pub role: Fixed64GenerationParentRole,
@@ -843,6 +877,7 @@ const fn parent(
     role: Fixed64GenerationParentRole,
 ) -> Fixed64GenerationParent {
     Fixed64GenerationParent {
+        receipt_sha256: source.receipt_sha256,
         proposal_sha256: source.proposal_sha256,
         coordinate_sha256: source.coordinate_sha256,
         role,
@@ -856,7 +891,9 @@ fn validate_indexed_sources(
     message: &'static str,
 ) -> Result<(), Fixed64AllocationError> {
     if values.len() > maximum
-        || values.iter().any(|row| !allowed(row.source_index))
+        || values
+            .iter()
+            .any(|row| !allowed(row.source_index) || !source_identities_present(row.source))
         || values
             .windows(2)
             .any(|rows| rows[0].source_index >= rows[1].source_index)
@@ -959,6 +996,7 @@ fn slot_sha256(slot: &Fixed64Slot) -> [u8; 32] {
         hash.digest(*value);
     }
     hash.option(slot.generation_parent, |hash, value| {
+        hash.digest(value.receipt_sha256);
         hash.digest(value.proposal_sha256);
         hash.digest(value.coordinate_sha256);
         hash.byte(match value.role {
