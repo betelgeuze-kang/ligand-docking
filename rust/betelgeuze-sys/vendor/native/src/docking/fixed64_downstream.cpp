@@ -566,6 +566,24 @@ bg_docking_fixed64_downstream_v1_create(
                 BG_STATUS_INVALID_ARGUMENT,
                 "fixed64 downstream create inputs or output are misaligned");
         }
+        bg_status status = validate_descriptor_header(
+            scorer_descriptor->struct_size,
+            sizeof(*scorer_descriptor),
+            scorer_descriptor->abi_version,
+            "fixed64 downstream scorer descriptor size does not match ABI v1",
+            "fixed64 downstream scorer descriptor ABI version does not match");
+        if (status != BG_STATUS_OK) {
+            return status;
+        }
+        status = validate_descriptor_header(
+            validity_descriptor->struct_size,
+            sizeof(*validity_descriptor),
+            validity_descriptor->abi_version,
+            "fixed64 downstream validity descriptor size does not match ABI v1",
+            "fixed64 downstream validity descriptor ABI version does not match");
+        if (status != BG_STATUS_OK) {
+            return status;
+        }
         const bg_status output_status = validate_create_output_range(
             *context,
             *scorer_descriptor,
@@ -583,7 +601,7 @@ bg_docking_fixed64_downstream_v1_create(
         pipeline->device_ordinal = context->device_ordinal;
         pipeline->ligand_atom_count = scorer_descriptor->ligand_atom_count;
 
-        bg_status status = bg_docking_scorer_v1_create(
+        status = bg_docking_scorer_v1_create(
             context, scorer_descriptor, &pipeline->scorer);
         if (status != BG_STATUS_OK) {
             return status;
@@ -681,15 +699,28 @@ bg_docking_fixed64_downstream_v1_run(
                 BG_STATUS_INVALID_ARGUMENT,
                 "fixed64 downstream run descriptors or handles are misaligned");
         }
+        bg_status status = validate_descriptor_header(
+            candidates->struct_size,
+            sizeof(*candidates),
+            candidates->abi_version,
+            "fixed64 downstream candidate descriptor size does not match ABI v1",
+            "fixed64 downstream candidate descriptor ABI version does not match");
+        if (status != BG_STATUS_OK) {
+            return status;
+        }
         if (context->backend != pipeline->backend ||
             context->unit_system != pipeline->unit_system ||
             context->device_ordinal != pipeline->device_ordinal ||
-            candidates->ligand_atom_count != pipeline->ligand_atom_count) {
+            candidates->candidate_count != kCandidateCount ||
+            candidates->ligand_atom_count != pipeline->ligand_atom_count ||
+            candidates->unit_system != pipeline->unit_system ||
+            candidates->reserved0 != 0 ||
+            !reserved_is_zero(candidates->reserved)) {
             return fail(
                 BG_STATUS_INVALID_ARGUMENT,
-                "fixed64 downstream handle, context, or ligand denominator is cross-wired");
+                "fixed64 downstream handle, context, denominator, or units are cross-wired");
         }
-        bg_status status = validate_outputs(
+        status = validate_outputs(
             *context,
             *pipeline,
             *candidates,

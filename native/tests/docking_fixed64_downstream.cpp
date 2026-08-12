@@ -548,6 +548,35 @@ void test_cross_wiring_rejected_and_outputs_are_transactional() {
     bg_context *context = create_context(BG_BACKEND_RUST_CPU);
     const auto scorer_descriptor = fixture.scorer_descriptor();
     auto validity_descriptor = fixture.validity_descriptor();
+    auto short_scorer_descriptor = scorer_descriptor;
+    --short_scorer_descriptor.struct_size;
+    bg_docking_fixed64_downstream_v1 *header_rejected =
+        reinterpret_cast<bg_docking_fixed64_downstream_v1 *>(
+            static_cast<uintptr_t>(1));
+    assert(
+        bg_docking_fixed64_downstream_v1_create(
+            context,
+            &short_scorer_descriptor,
+            &validity_descriptor,
+            &header_rejected) == BG_STATUS_ABI_MISMATCH);
+    assert(
+        header_rejected ==
+        reinterpret_cast<bg_docking_fixed64_downstream_v1 *>(
+            static_cast<uintptr_t>(1)));
+
+    auto short_validity_descriptor = validity_descriptor;
+    --short_validity_descriptor.struct_size;
+    assert(
+        bg_docking_fixed64_downstream_v1_create(
+            context,
+            &scorer_descriptor,
+            &short_validity_descriptor,
+            &header_rejected) == BG_STATUS_ABI_MISMATCH);
+    assert(
+        header_rejected ==
+        reinterpret_cast<bg_docking_fixed64_downstream_v1 *>(
+            static_cast<uintptr_t>(1)));
+
     auto **context_alias =
         reinterpret_cast<bg_docking_fixed64_downstream_v1 **>(context);
     assert(
@@ -656,6 +685,37 @@ void test_cross_wiring_rejected_and_outputs_are_transactional() {
     ranking_output.existing_rank_auto_change_authorized = UINT8_C(1);
     ranking_output.customer_pose_emission_authorized = UINT8_C(1);
     ranking_output.production_claim_authorized = UINT8_C(1);
+    --batch.struct_size;
+    assert(
+        bg_docking_fixed64_downstream_v1_run(
+            context,
+            pipeline,
+            &batch,
+            fixture.quaternion_x.data(),
+            fixture.quaternion_y.data(),
+            fixture.quaternion_z.data(),
+            fixture.quaternion_w.data(),
+            &scorer_output,
+            &validity_output,
+            &ranking_output) == BG_STATUS_ABI_MISMATCH);
+    assert(
+        std::memcmp(
+            scorer_rows.data(), scorer_before.data(), sizeof(scorer_rows)) ==
+        0);
+    assert(
+        std::memcmp(
+            validity_rows.data(),
+            validity_before.data(),
+            sizeof(validity_rows)) == 0);
+    assert(
+        std::memcmp(
+            ranking_rows.data(),
+            ranking_before.data(),
+            sizeof(ranking_rows)) == 0);
+    assert(primary == primary_before);
+    assert(valid == valid_before);
+    ++batch.struct_size;
+
     assert(
         bg_docking_fixed64_downstream_v1_run(
             context,
