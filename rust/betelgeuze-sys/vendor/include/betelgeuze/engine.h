@@ -56,7 +56,7 @@ extern "C" {
 #endif
 
 #define BG_ABI_VERSION_MAJOR UINT32_C(1)
-#define BG_ABI_VERSION_MINOR UINT32_C(17)
+#define BG_ABI_VERSION_MINOR UINT32_C(18)
 #define BG_ABI_VERSION UINT32_C(1)
 
 #define BG_CANONICAL_LENGTH_UNIT "angstrom"
@@ -248,6 +248,32 @@ enum {
     BG_DOCKING_FIXED64_SINGLE_ANCHOR_FAILURE_DEGENERATE_AROMATIC_PLANE = 4,
     BG_DOCKING_FIXED64_SINGLE_ANCHOR_FAILURE_DEGENERATE_PRINCIPAL_AXIS = 5,
     BG_DOCKING_FIXED64_SINGLE_ANCHOR_FAILURE_NONFINITE_OUTPUT = 6
+};
+
+/* Canonical 64-slot native proposal-producer row semantics. */
+typedef int32_t bg_docking_fixed64_producer_row_status;
+enum {
+    BG_DOCKING_FIXED64_PRODUCER_ROW_GENERATED = 1,
+    BG_DOCKING_FIXED64_PRODUCER_ROW_TYPED_FAILURE = 2
+};
+
+typedef int32_t bg_docking_fixed64_producer_failure;
+enum {
+    BG_DOCKING_FIXED64_PRODUCER_FAILURE_NONE = 0,
+    BG_DOCKING_FIXED64_PRODUCER_FAILURE_ALLOCATION_INELIGIBLE = 1,
+    BG_DOCKING_FIXED64_PRODUCER_FAILURE_SOURCE_NOT_AVAILABLE = 2,
+    BG_DOCKING_FIXED64_PRODUCER_FAILURE_LIGAND_DENOMINATOR_MISMATCH = 3,
+    BG_DOCKING_FIXED64_PRODUCER_FAILURE_FEATURE_GEOMETRY_NOT_AVAILABLE = 4,
+    BG_DOCKING_FIXED64_PRODUCER_FAILURE_INDEXED_SO3_TYPED_FAILURE = 5,
+    BG_DOCKING_FIXED64_PRODUCER_FAILURE_SINGLE_ANCHOR_TYPED_FAILURE = 6
+};
+
+typedef int32_t bg_docking_fixed64_producer_placement_kind;
+enum {
+    BG_DOCKING_FIXED64_PRODUCER_PLACEMENT_NONE = 0,
+    BG_DOCKING_FIXED64_PRODUCER_PLACEMENT_EXACT_PASSTHROUGH = 1,
+    BG_DOCKING_FIXED64_PRODUCER_PLACEMENT_INDEXED_SO3 = 2,
+    BG_DOCKING_FIXED64_PRODUCER_PLACEMENT_SINGLE_ANCHOR = 3
 };
 
 /* Frozen fixed64 pre/post-refinement geometric-admission semantics. */
@@ -1247,6 +1273,139 @@ typedef struct bg_docking_fixed64_single_anchor_output_v1 {
 } bg_docking_fixed64_single_anchor_output_v1;
 
 /*
+ * Complete coordinate payload for one allocation-declared source. The native
+ * producer rederives coordinate identity before reading a row. Indexed and
+ * conformer wrappers keep source selection result-independent and canonical.
+ */
+typedef struct bg_docking_fixed64_coordinate_source_v1 {
+    bg_docking_fixed64_source_evidence_v1 source;
+    uint64_t ligand_atom_count;
+    const double *x_angstrom;
+    const double *y_angstrom;
+    const double *z_angstrom;
+    uint64_t reserved[4];
+} bg_docking_fixed64_coordinate_source_v1;
+
+typedef struct bg_docking_fixed64_indexed_coordinate_source_v1 {
+    uint32_t source_index;
+    uint32_t reserved0;
+    bg_docking_fixed64_coordinate_source_v1 payload;
+    uint64_t reserved[2];
+} bg_docking_fixed64_indexed_coordinate_source_v1;
+
+typedef struct bg_docking_fixed64_conformer_coordinate_source_v1 {
+    uint8_t rank;
+    uint8_t reserved0[7];
+    bg_docking_fixed64_coordinate_source_v1 payload;
+    uint64_t reserved[2];
+} bg_docking_fixed64_conformer_coordinate_source_v1;
+
+/*
+ * One immutable allocation plus the complete pre-result source bundle. Source
+ * payload groups are strict canonical subsets of allocation evidence; absence
+ * becomes a typed row failure and never reallocates or deletes a slot.
+ */
+typedef struct bg_docking_fixed64_producer_input_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    const bg_docking_fixed64_allocation_input_v1 *allocation_input;
+    const bg_docking_fixed64_coordinate_source_v1 *exact_v11_source;
+    uint64_t v7_control_source_count;
+    const bg_docking_fixed64_indexed_coordinate_source_v1 *v7_control_sources;
+    uint64_t conformer_source_count;
+    const bg_docking_fixed64_conformer_coordinate_source_v1 *conformer_sources;
+    uint64_t retained_source_count;
+    const bg_docking_fixed64_indexed_coordinate_source_v1 *retained_sources;
+    uint64_t feature_geometry_count;
+    const bg_docking_fixed64_feature_geometry_row_v1 *feature_geometry_rows;
+    uint64_t feature_atom_index_count;
+    const uint64_t *feature_atom_indices;
+    uint8_t feature_geometry_inventory_sha256[32];
+    double pocket_normal[3];
+    uint64_t reserved[8];
+} bg_docking_fixed64_producer_input_v1;
+
+typedef struct bg_docking_fixed64_producer_row_v1 {
+    uint32_t slot_index;
+    bg_docking_fixed64_lane lane;
+    bg_docking_fixed64_producer_row_status status;
+    bg_docking_fixed64_producer_failure failure_code;
+    bg_docking_fixed64_producer_placement_kind placement_kind;
+    int32_t component_failure_code;
+    bg_backend backend;
+    uint32_t reserved0;
+    uint64_t ligand_atom_count;
+    uint64_t coordinate_offset;
+    uint8_t allocation_slot_receipt_sha256[32];
+    uint8_t source_payload_receipt_sha256[32];
+    uint8_t source_proposal_sha256[32];
+    uint8_t source_coordinate_sha256[32];
+    uint8_t placement_receipt_sha256[32];
+    uint8_t output_proposal_sha256[32];
+    uint8_t output_coordinate_sha256[32];
+    bg_docking_geometric_admission_row_v1 geometric_admission;
+    uint8_t row_receipt_sha256[32];
+    uint8_t coordinates_available;
+    uint8_t steric_precheck_passed;
+    uint8_t source_identity_verified;
+    uint8_t allocation_identity_verified;
+    uint8_t geometric_identity_verified;
+    uint8_t result_dependent_input_consumed;
+    uint8_t fallback_allowed;
+    uint8_t multi_anchor_consumed;
+    uint8_t denominator_preserved;
+    uint8_t molecular_execution_authorized;
+    uint8_t reservation_authorized;
+    uint8_t benchmark_execution_authorized;
+    uint8_t existing_rank_auto_change_authorized;
+    uint8_t customer_pose_emission_authorized;
+    uint8_t production_claim_authorized;
+    uint8_t scientific_claim_authorized;
+    uint64_t reserved[4];
+} bg_docking_fixed64_producer_row_v1;
+
+/*
+ * Transactional exact-64 producer output. Coordinate channels always contain
+ * 64*ligand_atom_count slots; failed rows own a zero-filled segment that is
+ * explicitly unavailable. One shared admission batch evaluates every
+ * generated row while retaining every upstream failure.
+ */
+typedef struct bg_docking_fixed64_producer_output_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    uint64_t row_capacity;
+    uint64_t row_count;
+    uint64_t coordinate_capacity;
+    uint64_t coordinate_count;
+    bg_unit_system unit_system;
+    bg_backend backend;
+    bg_docking_fixed64_producer_row_v1 *rows;
+    double *x_angstrom;
+    double *y_angstrom;
+    double *z_angstrom;
+    uint64_t generated_count;
+    uint64_t typed_failure_count;
+    uint8_t allocation_inventory_sha256[32];
+    uint8_t allocation_receipt_sha256[32];
+    uint8_t source_bundle_receipt_sha256[32];
+    uint8_t geometric_admission_batch_receipt_sha256[32];
+    uint8_t producer_batch_receipt_sha256[32];
+    uint8_t result_dependent_input_consumed;
+    uint8_t fallback_allowed;
+    uint8_t multi_anchor_consumed;
+    uint8_t denominator_preserved;
+    uint8_t molecular_execution_authorized;
+    uint8_t reservation_authorized;
+    uint8_t benchmark_execution_authorized;
+    uint8_t existing_rank_auto_change_authorized;
+    uint8_t customer_pose_emission_authorized;
+    uint8_t production_claim_authorized;
+    uint8_t scientific_claim_authorized;
+    uint8_t reserved0[5];
+    uint64_t reserved[8];
+} bg_docking_fixed64_producer_output_v1;
+
+/*
  * Persistent Engine V2 ScorerV1 context input.  All channels and the four
  * identity digests are deep-copied by bg_docking_scorer_v1_create.  The
  * ligand reference geometry fixes internal-vdW and rotor strain baselines.
@@ -2114,6 +2273,14 @@ BG_API bg_status BG_CALL bg_docking_fixed64_single_anchor_output_v1_init(
     bg_docking_fixed64_single_anchor_output_v1 *output,
     size_t caller_struct_size,
     uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_fixed64_producer_input_v1_init(
+    bg_docking_fixed64_producer_input_v1 *input,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_fixed64_producer_output_v1_init(
+    bg_docking_fixed64_producer_output_v1 *output,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
 BG_API bg_status BG_CALL bg_docking_geometric_admission_context_soa_v1_init(
     bg_docking_geometric_admission_context_soa_v1 *descriptor,
     size_t caller_struct_size,
@@ -2286,6 +2453,16 @@ BG_API bg_status BG_CALL bg_docking_fixed64_refinement_output_v1_init(
         (output), \
         sizeof(bg_docking_fixed64_single_anchor_output_v1), \
         BG_ABI_VERSION)
+#  define bg_docking_fixed64_producer_input_v1_init(input) \
+    bg_docking_fixed64_producer_input_v1_init( \
+        (input), \
+        sizeof(bg_docking_fixed64_producer_input_v1), \
+        BG_ABI_VERSION)
+#  define bg_docking_fixed64_producer_output_v1_init(output) \
+    bg_docking_fixed64_producer_output_v1_init( \
+        (output), \
+        sizeof(bg_docking_fixed64_producer_output_v1), \
+        BG_ABI_VERSION)
 #  define bg_docking_geometric_admission_context_soa_v1_init(descriptor) \
     bg_docking_geometric_admission_context_soa_v1_init( \
         (descriptor), \
@@ -2450,6 +2627,18 @@ BG_API bg_status BG_CALL bg_docking_fixed64_single_anchor_v1_place(
     const bg_docking_geometric_admission_v1 *admission,
     const bg_docking_fixed64_single_anchor_input_v1 *input,
     bg_docking_fixed64_single_anchor_output_v1 *output) BG_NOEXCEPT;
+
+/*
+ * Materialize every frozen fixed64 lane through the explicit context backend,
+ * preserve typed generation failures, and run one shared surface-aware
+ * geometric-admission batch. This synthetic producer cannot reserve or execute
+ * a molecular case and cannot mutate product rank or emit a customer pose.
+ */
+BG_API bg_status BG_CALL bg_docking_fixed64_producer_v1_run(
+    const bg_context *context,
+    const bg_docking_geometric_admission_v1 *admission,
+    const bg_docking_fixed64_producer_input_v1 *input,
+    bg_docking_fixed64_producer_output_v1 *output) BG_NOEXCEPT;
 
 /*
  * The same persistent full-Cartesian geometric gate is used before and after

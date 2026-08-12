@@ -73,6 +73,27 @@ before work and again after all slots. Any source drift discards the batch.
 The batch embeds all 64 records and reports generated and typed-failure counts
 whose sum must remain 64.
 
+## Native ABI 1.18 mirror
+
+The versioned C ABI now exposes
+`bg_docking_fixed64_producer_v1_run`. It rebuilds the frozen allocation,
+rederives every supplied coordinate payload and exact admission-system
+identity, dispatches slots 24–43 and 44–59 to the explicitly selected C++,
+Rust CPU, `hip_safe`, or `hip_fast` numerical backend, and applies one shared
+fixed64 geometric-admission batch to the resulting 64 rows. Pass-through rows
+retain their parent proposal identity; generated rows bind placement and output
+coordinate receipts. Every failed row owns an unavailable, zero-filled
+coordinate segment instead of disappearing from the denominator.
+
+The producer commits transactionally only after all nested backend evidence is
+validated. Synthetic CPU, sanitizer, and qualified-device parity tests cover
+repeat stability, all lane mappings, missing source and feature evidence,
+component typed failures, severe-penetration retention, range alias rejection,
+and all false authority bits. Rust raw bindings carry compile-time C/C++ layout
+assertions and the crate packages the exact same vendored C++ implementation.
+This is a non-authoritative implementation mirror, not permission to execute a
+molecular corpus.
+
 ## Remaining activation boundary
 
 This producer closes the generation implementation gap only within its own

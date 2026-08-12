@@ -369,12 +369,14 @@ The canonical capability state is:
    modeled CI-authority disposition.
 9. **Later native tracks:** `cpp_hip_required` remains an explicit fail-closed
     unavailable product backend. The non-authoritative native ABI now includes
-    fixed64 allocation, deterministic SO(3), indexed placement, and
-    single-anchor placement with the shared surface-aware admission precheck;
+    fixed64 allocation, deterministic SO(3), indexed placement,
+    single-anchor placement, and an ABI 1.18 canonical 64-slot producer with
+    one shared surface-aware admission batch;
     C++, Rust CPU, `hip_safe`, and `hip_fast` paths are synthetic parity-test
     surfaces only and every execution, reservation, benchmark, product-rank,
     customer-pose, and claim authority bit remains false. These primitives are
-    not an admitted native candidate executor, and Rust RMSD/clustering,
+    a synthetic native candidate executor but not an admitted molecular or
+    Stage 0 executor. Rust RMSD/clustering,
     bounded native parsing, activation/downstream binding, and product shadow
     routing remain unavailable while the proposal, validity, and external
     authority gates fail.

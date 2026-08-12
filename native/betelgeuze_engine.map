@@ -175,3 +175,10 @@ BETELGEUZE_ENGINE_1.17 {
         bg_docking_fixed64_single_anchor_output_v1_init;
         bg_docking_fixed64_single_anchor_v1_place;
 } BETELGEUZE_ENGINE_1.16;
+
+BETELGEUZE_ENGINE_1.18 {
+    global:
+        bg_docking_fixed64_producer_input_v1_init;
+        bg_docking_fixed64_producer_output_v1_init;
+        bg_docking_fixed64_producer_v1_run;
+} BETELGEUZE_ENGINE_1.17;
