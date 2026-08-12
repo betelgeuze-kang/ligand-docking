@@ -56,7 +56,7 @@ extern "C" {
 #endif
 
 #define BG_ABI_VERSION_MAJOR UINT32_C(1)
-#define BG_ABI_VERSION_MINOR UINT32_C(18)
+#define BG_ABI_VERSION_MINOR UINT32_C(19)
 #define BG_ABI_VERSION UINT32_C(1)
 
 #define BG_CANONICAL_LENGTH_UNIT "angstrom"
@@ -1361,7 +1361,15 @@ typedef struct bg_docking_fixed64_producer_row_v1 {
     uint8_t customer_pose_emission_authorized;
     uint8_t production_claim_authorized;
     uint8_t scientific_claim_authorized;
-    uint64_t reserved[4];
+    /*
+     * Exact local rotation applied by this producer stage. Passthrough rows
+     * use the identity quaternion; indexed-SO(3) and single-anchor rows bind
+     * the component quaternion. Typed failures keep all four values zero.
+     */
+    double placement_quaternion_x;
+    double placement_quaternion_y;
+    double placement_quaternion_z;
+    double placement_quaternion_w;
 } bg_docking_fixed64_producer_row_v1;
 
 /*
@@ -2639,6 +2647,9 @@ BG_API bg_status BG_CALL bg_docking_fixed64_producer_v1_run(
     const bg_docking_geometric_admission_v1 *admission,
     const bg_docking_fixed64_producer_input_v1 *input,
     bg_docking_fixed64_producer_output_v1 *output) BG_NOEXCEPT;
+/* Frozen producer profile bound into row and batch receipts. */
+BG_API const char *BG_CALL bg_docking_fixed64_producer_v1_profile_id(
+    void) BG_NOEXCEPT;
 
 /*
  * The same persistent full-Cartesian geometric gate is used before and after

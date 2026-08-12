@@ -5,7 +5,7 @@ use betelgeuze_sys::*;
 #[test]
 fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(BG_ABI_VERSION_MAJOR, 1);
-    assert_eq!(BG_ABI_VERSION_MINOR, 18);
+    assert_eq!(BG_ABI_VERSION_MINOR, 19);
     assert_eq!(BG_ABI_VERSION, 1);
     assert_eq!(size_of::<bg_status>(), 4);
     assert_eq!(size_of::<bg_backend>(), 4);
@@ -545,8 +545,12 @@ fn fixed64_producer_layouts_match_the_c_header() {
         448
     );
     assert_eq!(
-        offset_of!(bg_docking_fixed64_producer_row_v1, reserved),
+        offset_of!(bg_docking_fixed64_producer_row_v1, placement_quaternion_x),
         464
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_producer_row_v1, placement_quaternion_w),
+        488
     );
     assert_eq!(size_of::<bg_docking_fixed64_producer_output_v1>(), 336);
     assert_eq!(align_of::<bg_docking_fixed64_producer_output_v1>(), 8);

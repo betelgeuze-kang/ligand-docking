@@ -73,7 +73,7 @@ before work and again after all slots. Any source drift discards the batch.
 The batch embeds all 64 records and reports generated and typed-failure counts
 whose sum must remain 64.
 
-## Native ABI 1.18 mirror
+## Native ABI 1.19 transform-bound mirror
 
 The versioned C ABI now exposes
 `bg_docking_fixed64_producer_v1_run`. It rebuilds the frozen allocation,
@@ -84,6 +84,14 @@ fixed64 geometric-admission batch to the resulting 64 rows. Pass-through rows
 retain their parent proposal identity; generated rows bind placement and output
 coordinate receipts. Every failed row owns an unavailable, zero-filled
 coordinate segment instead of disappearing from the denominator.
+
+ABI 1.19 also preserves the exact local placement quaternion in every
+generated row. Passthrough rows bind the identity rotation, indexed-SO(3) and
+single-anchor rows bind their component quaternion, and typed failures keep
+the channel all-zero. The quaternion is unit-checked before commit and is part
+of the row receipt, so downstream validity/refinement composition cannot
+silently invent or cross-wire rotation evidence. The exported frozen profile
+identifier is `betelgeuze.engine_v2_mixed64_native_fixed64_producer/1.1.0`.
 
 The producer commits transactionally only after all nested backend evidence is
 validated. Synthetic CPU, sanitizer, and qualified-device parity tests cover

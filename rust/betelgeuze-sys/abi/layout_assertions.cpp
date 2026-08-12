@@ -432,7 +432,10 @@ static_assert(offsetof(
                   coordinates_available) == 448);
 static_assert(offsetof(
                   bg_docking_fixed64_producer_row_v1,
-                  reserved) == 464);
+                  placement_quaternion_x) == 464);
+static_assert(offsetof(
+                  bg_docking_fixed64_producer_row_v1,
+                  placement_quaternion_w) == 488);
 static_assert(sizeof(bg_docking_fixed64_producer_output_v1) == 336);
 static_assert(alignof(bg_docking_fixed64_producer_output_v1) == 8);
 static_assert(offsetof(

@@ -182,3 +182,8 @@ BETELGEUZE_ENGINE_1.18 {
         bg_docking_fixed64_producer_output_v1_init;
         bg_docking_fixed64_producer_v1_run;
 } BETELGEUZE_ENGINE_1.17;
+
+BETELGEUZE_ENGINE_1.19 {
+    global:
+        bg_docking_fixed64_producer_v1_profile_id;
+} BETELGEUZE_ENGINE_1.18;

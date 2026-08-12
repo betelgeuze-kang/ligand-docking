@@ -24,10 +24,11 @@ constexpr std::size_t kMaximumConformerSources = 7;
 constexpr std::size_t kMaximumRetainedSources = 4;
 constexpr double kMaximumCoordinateAngstrom = 100'000.0;
 constexpr double kGeometryEpsilon = 1.0e-12;
+constexpr double kQuaternionNormTolerance = 1.0e-8;
 constexpr char kProfileId[] =
-    "betelgeuze.engine_v2_mixed64_native_fixed64_producer/1.0.0";
+    "betelgeuze.engine_v2_mixed64_native_fixed64_producer/1.1.0";
 constexpr char kBatchSchema[] =
-    "betelgeuze.engine_v2_mixed64_native_fixed64_producer_batch/1.0.0";
+    "betelgeuze.engine_v2_mixed64_native_fixed64_producer_batch/1.1.0";
 
 struct Vec3 final {
     double x = 0.0;
@@ -174,6 +175,23 @@ template <typename Type>
     if (output->y == 0.0) output->y = 0.0;
     if (output->z == 0.0) output->z = 0.0;
     return true;
+}
+
+[[nodiscard]] bool valid_placement_quaternion(
+    const bg_docking_fixed64_producer_row_v1 &row) noexcept {
+    const std::array<double, 4> values = {
+        row.placement_quaternion_x, row.placement_quaternion_y,
+        row.placement_quaternion_z, row.placement_quaternion_w};
+    if (!std::all_of(values.begin(), values.end(), [](double value) {
+            return std::isfinite(value);
+        })) {
+        return false;
+    }
+    const double norm = std::hypot(
+        std::hypot(values[0], values[1]),
+        std::hypot(values[2], values[3]));
+    return std::isfinite(norm) &&
+           std::abs(norm - 1.0) <= kQuaternionNormTolerance;
 }
 
 [[nodiscard]] std::array<uint8_t, 32> coordinate_sha256(
@@ -758,6 +776,10 @@ find_conformer_source(
     hash.digest(row.source_proposal_sha256);
     hash.digest(row.source_coordinate_sha256);
     hash.digest(row.placement_receipt_sha256);
+    hash.f64(row.placement_quaternion_x);
+    hash.f64(row.placement_quaternion_y);
+    hash.f64(row.placement_quaternion_z);
+    hash.f64(row.placement_quaternion_w);
     hash.digest(row.output_proposal_sha256);
     hash.digest(row.output_coordinate_sha256);
     hash.digest(row.geometric_admission.row_receipt_sha256);
@@ -1325,6 +1347,10 @@ template <typename Type>
     row->status = BG_DOCKING_FIXED64_PRODUCER_ROW_GENERATED;
     row->failure_code = BG_DOCKING_FIXED64_PRODUCER_FAILURE_NONE;
     row->coordinates_available = UINT8_C(1);
+    row->placement_quaternion_x = placed.quaternion_x;
+    row->placement_quaternion_y = placed.quaternion_y;
+    row->placement_quaternion_z = placed.quaternion_z;
+    row->placement_quaternion_w = placed.quaternion_w;
     std::copy_n(
         placed.output_coordinate_sha256, 32,
         row->output_coordinate_sha256);
@@ -1418,6 +1444,10 @@ template <typename Type>
     row->status = BG_DOCKING_FIXED64_PRODUCER_ROW_GENERATED;
     row->failure_code = BG_DOCKING_FIXED64_PRODUCER_FAILURE_NONE;
     row->coordinates_available = UINT8_C(1);
+    row->placement_quaternion_x = placed.quaternion_x;
+    row->placement_quaternion_y = placed.quaternion_y;
+    row->placement_quaternion_z = placed.quaternion_z;
+    row->placement_quaternion_w = placed.quaternion_w;
     std::copy_n(
         placed.output_coordinate_sha256, 32,
         row->output_coordinate_sha256);
@@ -1514,6 +1544,7 @@ template <typename Type>
             row.status = BG_DOCKING_FIXED64_PRODUCER_ROW_GENERATED;
             row.failure_code = BG_DOCKING_FIXED64_PRODUCER_FAILURE_NONE;
             row.coordinates_available = UINT8_C(1);
+            row.placement_quaternion_w = 1.0;
         } else if (row.placement_kind ==
                    BG_DOCKING_FIXED64_PRODUCER_PLACEMENT_INDEXED_SO3) {
             status = place_indexed(
@@ -1530,6 +1561,11 @@ template <typename Type>
         }
         if (status != BG_STATUS_OK) return status;
         if (row.status == BG_DOCKING_FIXED64_PRODUCER_ROW_GENERATED) {
+            if (!valid_placement_quaternion(row)) {
+                return fail(
+                    BG_STATUS_INTERNAL_ERROR,
+                    "fixed64 producer generated a non-unit placement quaternion");
+            }
             (*states)[slot] =
                 BG_DOCKING_GEOMETRIC_ADMISSION_CANDIDATE_EVALUATE;
             ++*generated_count;
@@ -1756,4 +1792,9 @@ extern "C" BG_API bg_status BG_CALL bg_docking_fixed64_producer_v1_run(
         }
         return run(*context, *admission, *input, output);
     });
+}
+
+extern "C" BG_API const char *BG_CALL
+bg_docking_fixed64_producer_v1_profile_id(void) BG_NOEXCEPT {
+    return betelgeuze::native::docking::fixed64_producer::kProfileId;
 }

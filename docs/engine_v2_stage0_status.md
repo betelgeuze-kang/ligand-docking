@@ -370,8 +370,9 @@ The canonical capability state is:
 9. **Later native tracks:** `cpp_hip_required` remains an explicit fail-closed
     unavailable product backend. The non-authoritative native ABI now includes
     fixed64 allocation, deterministic SO(3), indexed placement,
-    single-anchor placement, and an ABI 1.18 canonical 64-slot producer with
-    one shared surface-aware admission batch;
+    single-anchor placement, and an ABI 1.19 canonical 64-slot producer with
+    one shared surface-aware admission batch and receipt-bound placement
+    quaternions;
     C++, Rust CPU, `hip_safe`, and `hip_fast` paths are synthetic parity-test
     surfaces only and every execution, reservation, benchmark, product-rank,
     customer-pose, and claim authority bit remains false. These primitives are
