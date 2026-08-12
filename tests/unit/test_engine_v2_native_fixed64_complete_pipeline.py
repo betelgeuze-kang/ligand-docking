@@ -343,6 +343,39 @@ def test_complete_python_facade_rejects_cross_wired_receipt_graph(
         NativeFixed64EvidenceV1(surface="api", _document=document)
 
 
+@pytest.mark.parametrize(
+    ("public_field", "graph_field"),
+    (
+        ("allocation_receipt_sha256", "allocation_receipt_sha256"),
+        ("proposal_batch_receipt_sha256", "producer_batch_receipt_sha256"),
+        (
+            "geometric_admission_receipt_sha256",
+            "geometric_admission_batch_receipt_sha256",
+        ),
+        ("scorer_receipt_sha256", "scorer_batch_receipt_sha256"),
+        ("validity_receipt_sha256", "validity_batch_receipt_sha256"),
+        ("ranking_receipt_sha256", "ranking_batch_receipt_sha256"),
+        ("pipeline_receipt_sha256", "pipeline_batch_receipt_sha256"),
+    ),
+)
+def test_complete_python_facade_binds_public_receipts_to_complete_graph(
+    native,
+    public_field: str,
+    graph_field: str,
+) -> None:
+    document = native.native_fixed64_complete_pipeline_v1(_input())
+    assert document[public_field] == document["receipt_graph"][graph_field]
+
+    document[public_field] = _digest(119)
+    with pytest.raises(NativeFixed64ConsumerError, match="aliases are cross-wired"):
+        NativeFixed64EvidenceV1(surface="api", _document=document)
+
+    document = native.native_fixed64_complete_pipeline_v1(_input())
+    document["receipt_graph"][graph_field] = _digest(119)
+    with pytest.raises(NativeFixed64ConsumerError, match="aliases are cross-wired"):
+        NativeFixed64EvidenceV1(surface="api", _document=document)
+
+
 def test_cli_routes_complete_schema_without_python_science(native, tmp_path) -> None:
     input_path = tmp_path / "complete-native-input.json"
     output_path = tmp_path / "complete-native-output.json"

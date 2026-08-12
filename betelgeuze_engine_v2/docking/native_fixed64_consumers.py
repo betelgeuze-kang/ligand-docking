@@ -46,6 +46,18 @@ _RECEIPT_GRAPH_FIELDS = (
     "pipeline_batch_receipt_sha256",
 )
 
+_RECEIPT_GRAPH_ALIASES = {
+    "allocation_receipt_sha256": "allocation_receipt_sha256",
+    "proposal_batch_receipt_sha256": "producer_batch_receipt_sha256",
+    "geometric_admission_receipt_sha256": (
+        "geometric_admission_batch_receipt_sha256"
+    ),
+    "scorer_receipt_sha256": "scorer_batch_receipt_sha256",
+    "validity_receipt_sha256": "validity_batch_receipt_sha256",
+    "ranking_receipt_sha256": "ranking_batch_receipt_sha256",
+    "pipeline_receipt_sha256": "pipeline_batch_receipt_sha256",
+}
+
 
 def _freeze(value: object) -> object:
     if type(value) is dict:
@@ -182,6 +194,11 @@ class NativeFixed64EvidenceV1:
             ):
                 raise NativeFixed64ConsumerError(
                     f"native fixed64 receipt graph field {field} is invalid"
+                )
+        for public_field, graph_field in _RECEIPT_GRAPH_ALIASES.items():
+            if document.get(public_field) != receipt_graph.get(graph_field):
+                raise NativeFixed64ConsumerError(
+                    "native fixed64 public receipt aliases are cross-wired"
                 )
         object.__setattr__(self, "_document", _freeze(dict(document)))
 
