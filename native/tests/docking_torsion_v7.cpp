@@ -537,6 +537,92 @@ void test_failures_are_transactional_and_cross_wiring_is_rejected() {
     bg_context_destroy(rust_context);
 }
 
+void test_create_and_handle_aliasing_preserve_inputs() {
+    ContextFixture context_fixture;
+    BatchFixture batch_fixture;
+    auto context_descriptor = context_fixture.descriptor();
+    auto batch = batch_fixture.descriptor();
+    bg_context *context = create_context(BG_BACKEND_CPP_CPU_REFERENCE);
+
+    const auto receptor_x_before = context_fixture.receptor_x;
+    auto **const channel_alias = reinterpret_cast<bg_docking_torsion_v7 **>(
+        context_fixture.receptor_x.data());
+    assert(
+        bg_docking_torsion_v7_create(
+            context, &context_descriptor, channel_alias) ==
+        BG_STATUS_INVALID_ARGUMENT);
+    assert(context_fixture.receptor_x == receptor_x_before);
+
+    const auto context_descriptor_before = context_descriptor;
+    auto **const descriptor_alias = reinterpret_cast<bg_docking_torsion_v7 **>(
+        &context_descriptor);
+    assert(
+        bg_docking_torsion_v7_create(
+            context, &context_descriptor, descriptor_alias) ==
+        BG_STATUS_INVALID_ARGUMENT);
+    assert(
+        std::memcmp(
+            &context_descriptor,
+            &context_descriptor_before,
+            sizeof(context_descriptor)) == 0);
+
+    alignas(bg_docking_torsion_v7 *)
+        std::array<std::byte, sizeof(bg_docking_torsion_v7 *) + 1>
+            misaligned_storage{};
+    auto **const misaligned = reinterpret_cast<bg_docking_torsion_v7 **>(
+        misaligned_storage.data() + 1);
+    assert(
+        bg_docking_torsion_v7_create(
+            context, &context_descriptor, misaligned) ==
+        BG_STATUS_INVALID_ARGUMENT);
+
+    bg_docking_torsion_v7 *refiner =
+        create_refiner(context, context_descriptor);
+    assert(
+        bg_docking_torsion_v7_get_backend(
+            refiner, reinterpret_cast<bg_backend *>(refiner)) ==
+        BG_STATUS_INVALID_ARGUMENT);
+    bg_backend observed = BG_BACKEND_AUTO;
+    assert(
+        bg_docking_torsion_v7_get_backend(refiner, &observed) ==
+        BG_STATUS_OK);
+    assert(observed == BG_BACKEND_CPP_CPU_REFERENCE);
+
+    OutputStorage storage(109.0);
+    auto output = storage.descriptor();
+    output.row_count = UINT64_C(901);
+    output.rows = reinterpret_cast<bg_docking_torsion_v7_row_v1 *>(refiner);
+    assert(
+        bg_docking_torsion_v7_refine_fixed64(
+            context, refiner, &batch, &output) ==
+        BG_STATUS_INVALID_ARGUMENT);
+    assert(output.row_count == UINT64_C(901));
+    assert(
+        bg_docking_torsion_v7_get_backend(refiner, &observed) ==
+        BG_STATUS_OK);
+
+    output.rows = reinterpret_cast<bg_docking_torsion_v7_row_v1 *>(context);
+    assert(
+        bg_docking_torsion_v7_refine_fixed64(
+            context, refiner, &batch, &output) ==
+        BG_STATUS_INVALID_ARGUMENT);
+    bg_backend context_backend = BG_BACKEND_AUTO;
+    assert(
+        bg_context_get_backend(context, &context_backend) == BG_STATUS_OK);
+    assert(context_backend == BG_BACKEND_CPP_CPU_REFERENCE);
+
+    const auto batch_before = batch;
+    output.rows = reinterpret_cast<bg_docking_torsion_v7_row_v1 *>(&batch);
+    assert(
+        bg_docking_torsion_v7_refine_fixed64(
+            context, refiner, &batch, &output) ==
+        BG_STATUS_INVALID_ARGUMENT);
+    assert(std::memcmp(&batch, &batch_before, sizeof(batch)) == 0);
+
+    bg_docking_torsion_v7_destroy(refiner);
+    bg_context_destroy(context);
+}
+
 void test_context_pair_bound_and_coordinate_free_validation() {
     ContextFixture fixture;
     auto excessive_pairs = fixture.descriptor();
@@ -656,6 +742,7 @@ int main() {
     test_cpu_parity_fixed64_and_context_deep_copy();
     test_candidate_local_failure_preserves_denominator();
     test_failures_are_transactional_and_cross_wiring_is_rejected();
+    test_create_and_handle_aliasing_preserve_inputs();
     test_context_pair_bound_and_coordinate_free_validation();
     test_hip_parity_when_device_is_available(BG_BACKEND_HIP_SAFE);
     test_hip_parity_when_device_is_available(BG_BACKEND_HIP_FAST);
