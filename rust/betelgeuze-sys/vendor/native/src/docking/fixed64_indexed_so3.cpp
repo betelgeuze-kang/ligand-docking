@@ -32,7 +32,7 @@ constexpr std::size_t kMaximumLigandAtoms = 512;
 constexpr double kMaximumCoordinateAngstrom = 100'000.0;
 constexpr double kGeometryEpsilon = 1.0e-12;
 constexpr char kProfileId[] =
-    "betelgeuze.engine_v2_mixed64_indexed_source_bound_so3_native/1.0.0";
+    "betelgeuze.engine_v2_mixed64_indexed_source_bound_so3_native/1.1.0";
 constexpr char kPlacementSchema[] =
     "betelgeuze.engine_v2_native_fixed64_indexed_so3_placement/1.0.0";
 
@@ -184,7 +184,7 @@ template <typename Type>
 [[nodiscard]] bg_status checked_count(
     uint64_t value,
     std::size_t *count) noexcept {
-    if (value < 2 || value > kMaximumLigandAtoms) {
+    if (value == 0 || value > kMaximumLigandAtoms) {
         return fail(
             BG_STATUS_CAPACITY_OVERFLOW,
             "indexed SO3 ligand denominator is outside native bounds");

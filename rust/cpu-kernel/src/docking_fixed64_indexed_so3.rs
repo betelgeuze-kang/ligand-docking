@@ -57,7 +57,7 @@ struct Generated {
 fn checked_count(value: u64) -> Result<usize, ProviderError> {
     let count = usize::try_from(value)
         .map_err(|_| ProviderError::capacity("rust_cpu indexed SO3 count exceeds host size"))?;
-    if !(2..=MAX_LIGAND_ATOMS).contains(&count) {
+    if !(1..=MAX_LIGAND_ATOMS).contains(&count) {
         return Err(ProviderError::capacity(
             "rust_cpu indexed SO3 ligand count is outside native bounds",
         ));

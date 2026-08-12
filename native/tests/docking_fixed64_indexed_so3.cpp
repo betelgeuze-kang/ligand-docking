@@ -27,6 +27,12 @@ constexpr std::array<uint8_t, 32> kDegenerateCoordinateSha256 = {
     0xef, 0xeb, 0x7f, 0xc3, 0x2f, 0x36, 0x12, 0x07,
     0x8c, 0x13, 0xaa, 0xad, 0xf4, 0x16, 0x9d, 0xa3,
 };
+constexpr std::array<uint8_t, 32> kOneAtomCoordinateSha256 = {
+    0x25, 0x7e, 0x6f, 0x9e, 0x10, 0x8c, 0x5e, 0xef,
+    0x6f, 0xbe, 0xc9, 0x5e, 0x51, 0x69, 0x34, 0x83,
+    0x95, 0xe5, 0x7d, 0x17, 0x21, 0xe9, 0x26, 0xac,
+    0xfb, 0xe9, 0x55, 0xde, 0xf9, 0x05, 0x8b, 0x1b,
+};
 
 template <std::size_t Count>
 void fill_digest(uint8_t (&digest)[Count], uint8_t marker) {
@@ -335,6 +341,62 @@ void test_typed_degenerate_source_preserves_coordinate_channels() {
     bg_context_destroy(context);
 }
 
+void test_one_atom_source_is_typed_across_available_backends() {
+    const std::array<double, 1> source_x = {1.0};
+    const std::array<double, 1> source_y = {1.0};
+    const std::array<double, 1> source_z = {1.0};
+    const Allocation allocation = make_allocation(kOneAtomCoordinateSha256);
+    const auto input = make_input(
+        allocation,
+        source_x.data(),
+        source_y.data(),
+        source_z.data(),
+        source_x.size());
+    for (const bg_backend backend : {
+             BG_BACKEND_CPP_CPU_REFERENCE,
+             BG_BACKEND_RUST_CPU,
+             BG_BACKEND_HIP_SAFE,
+             BG_BACKEND_HIP_FAST,
+         }) {
+        bg_context *context = make_context(backend);
+        if (context == nullptr) continue;
+        std::array<double, 1> x = {91.0};
+        std::array<double, 1> y = {92.0};
+        std::array<double, 1> z = {93.0};
+        const auto x_before = x;
+        const auto y_before = y;
+        const auto z_before = z;
+        bg_docking_fixed64_indexed_so3_output_v1 output{};
+        assert(bg_docking_fixed64_indexed_so3_output_v1_init(&output) ==
+               BG_STATUS_OK);
+        output.coordinate_capacity = 1;
+        output.x_angstrom = x.data();
+        output.y_angstrom = y.data();
+        output.z_angstrom = z.data();
+        assert(bg_docking_fixed64_indexed_so3_v1_place(
+                   context, &input, &output) == BG_STATUS_OK);
+        assert(output.status ==
+               BG_DOCKING_FIXED64_INDEXED_SO3_TYPED_FAILURE);
+        assert(output.failure_code ==
+               BG_DOCKING_FIXED64_INDEXED_SO3_FAILURE_DEGENERATE_SOURCE_GEOMETRY);
+        assert(output.backend == backend);
+        assert(output.ligand_atom_count == 1);
+        assert(output.coordinates_written == 0);
+        assert(output.source_identity_verified == 1);
+        assert(output.allocation_identity_verified == 1);
+        assert(output.denominator_preserved == 1);
+        assert(output.molecular_execution_authorized == 0);
+        assert(output.reservation_authorized == 0);
+        assert(output.benchmark_execution_authorized == 0);
+        assert(output.production_claim_authorized == 0);
+        assert(x == x_before && y == y_before && z == z_before);
+        assert(digest_present(output.source_seed_sha256));
+        assert(digest_present(output.placement_receipt_sha256));
+        assert(!digest_present(output.output_coordinate_sha256));
+        bg_context_destroy(context);
+    }
+}
+
 void test_invalid_snapshot_and_capacity_are_transactional() {
     const std::array<double, kAtoms> source_x = {0.0, 1.0, 0.0, 0.0};
     const std::array<double, kAtoms> source_y = {0.0, 0.0, 1.0, 0.0};
@@ -414,6 +476,7 @@ void test_invalid_snapshot_and_capacity_are_transactional() {
 int main() {
     test_backend_parity_and_repeat();
     test_typed_degenerate_source_preserves_coordinate_channels();
+    test_one_atom_source_is_typed_across_available_backends();
     test_invalid_snapshot_and_capacity_are_transactional();
     return 0;
 }

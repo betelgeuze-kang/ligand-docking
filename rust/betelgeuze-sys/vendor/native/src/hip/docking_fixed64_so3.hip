@@ -661,7 +661,7 @@ extern "C" int32_t BG_DOCKING_FIXED64_INDEXED_SO3_PLACE(
     const size_t count = static_cast<size_t>(input->ligand_atom_count);
     if (input->struct_size != sizeof(*input) ||
         input->abi_version != UINT32_C(1) ||
-        count < 2 || count > 512 || input->sequence_index >= kHipSo3Count ||
+        count == 0 || count > 512 || input->sequence_index >= kHipSo3Count ||
         input->reserved0 != 0 ||
         !fixed64_so3_reserved_is_zero(input->reserved)) {
         return fixed64_so3_fail(
