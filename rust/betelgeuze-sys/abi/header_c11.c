@@ -5,7 +5,7 @@
 
 _Static_assert(BG_ABI_VERSION == UINT32_C(1), "unexpected ABI version");
 _Static_assert(BG_ABI_VERSION_MAJOR == UINT32_C(1), "unexpected ABI major version");
-_Static_assert(BG_ABI_VERSION_MINOR == UINT32_C(13), "unexpected ABI minor version");
+_Static_assert(BG_ABI_VERSION_MINOR == UINT32_C(14), "unexpected ABI minor version");
 _Static_assert(BG_STATUS_OK == 0, "unexpected success status");
 _Static_assert(BG_STATUS_NUMERICAL_ERROR == 10, "unexpected numerical status");
 _Static_assert(BG_BACKEND_CPU == 1, "unexpected CPU backend value");
@@ -22,6 +22,21 @@ _Static_assert(sizeof(bg_backend) == sizeof(int32_t), "bg_backend width changed"
 _Static_assert(
     sizeof(bg_unit_system) == sizeof(int32_t),
     "bg_unit_system width changed");
+_Static_assert(
+    sizeof(bg_docking_fixed64_lane) == sizeof(int32_t),
+    "fixed64 lane width changed");
+_Static_assert(
+    sizeof(bg_docking_fixed64_feature_kind) == sizeof(int32_t),
+    "fixed64 feature kind width changed");
+_Static_assert(
+    sizeof(bg_docking_fixed64_anchor_kind) == sizeof(int32_t),
+    "fixed64 anchor kind width changed");
+_Static_assert(
+    sizeof(bg_docking_fixed64_parent_role) == sizeof(int32_t),
+    "fixed64 parent role width changed");
+_Static_assert(
+    sizeof(bg_docking_fixed64_allocation_row_status) == sizeof(int32_t),
+    "fixed64 allocation row status width changed");
 _Static_assert(sizeof(bg_integrator) == sizeof(int32_t), "bg_integrator width changed");
 _Static_assert(
     sizeof(bg_docking_geometric_admission_candidate_state) == sizeof(int32_t),
@@ -100,6 +115,36 @@ _Static_assert(BG_PERIODIC_AXIS_Z == UINT32_C(4), "unexpected periodic Z bit");
 _Static_assert(BG_PERIODIC_AXES_ALL == UINT32_C(7), "unexpected periodic axes mask");
 
 #if UINTPTR_MAX == UINT64_MAX
+_Static_assert(
+    sizeof(bg_docking_fixed64_source_evidence_v1) == 112,
+    "fixed64 source evidence ABI changed");
+_Static_assert(
+    sizeof(bg_docking_fixed64_exact_source_evidence_v1) == 320,
+    "fixed64 exact source evidence ABI changed");
+_Static_assert(
+    sizeof(bg_docking_fixed64_atomic_feature_evidence_v1) == 56,
+    "fixed64 atomic feature evidence ABI changed");
+_Static_assert(
+    sizeof(bg_docking_fixed64_indexed_source_evidence_v1) == 136,
+    "fixed64 indexed source evidence ABI changed");
+_Static_assert(
+    sizeof(bg_docking_fixed64_conformer_source_evidence_v1) == 136,
+    "fixed64 conformer source evidence ABI changed");
+_Static_assert(
+    sizeof(bg_docking_fixed64_allocation_input_v1) == 456,
+    "fixed64 allocation input ABI changed");
+_Static_assert(
+    sizeof(bg_docking_fixed64_requirement_v1) == 24,
+    "fixed64 requirement ABI changed");
+_Static_assert(
+    sizeof(bg_docking_fixed64_missing_feature_v1) == 24,
+    "fixed64 missing feature ABI changed");
+_Static_assert(
+    sizeof(bg_docking_fixed64_allocation_row_v1) == 384,
+    "fixed64 allocation row ABI changed");
+_Static_assert(
+    sizeof(bg_docking_fixed64_allocation_output_v1) == 184,
+    "fixed64 allocation output ABI changed");
 _Static_assert(
     sizeof(bg_docking_geometric_admission_context_soa_v1) == 320,
     "geometric-admission context ABI changed");

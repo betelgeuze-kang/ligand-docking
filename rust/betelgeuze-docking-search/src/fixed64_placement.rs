@@ -500,7 +500,8 @@ fn validate_source_for_slot(
     let parent = slot
         .generation_parent()
         .ok_or_else(|| source_mismatch("slot lacks its generation parent"))?;
-    if source.evidence.proposal_sha256 != parent.proposal_sha256
+    if source.evidence.receipt_sha256 != parent.receipt_sha256
+        || source.evidence.proposal_sha256 != parent.proposal_sha256
         || source.evidence.coordinate_sha256 != parent.coordinate_sha256
     {
         return Err(source_mismatch(

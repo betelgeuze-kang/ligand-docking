@@ -5,7 +5,8 @@ use betelgeuze_docking_search::{
     Fixed64ConformerSourceEvidence, Fixed64ExactV11SourceEvidence, Fixed64FeatureInventory,
     Fixed64FeatureKind, Fixed64GenerationParentRole, Fixed64IndexedSourceEvidence,
     Fixed64MissingFeature, Fixed64SourceEvidence, FIXED64_CANDIDATE_COUNT, FIXED64_LANE_RANGES,
-    RETAINED_SOURCE_INDICES, TRUE_CONFORMER_SLOT_RANKS,
+    NATIVE_FIXED64_ALLOCATION_SCHEMA_ID, NATIVE_FIXED64_SLOT_SCHEMA_ID, RETAINED_SOURCE_INDICES,
+    TRUE_CONFORMER_SLOT_RANKS,
 };
 
 const FEATURE_KINDS: [Fixed64FeatureKind; 12] = [
@@ -98,6 +99,54 @@ fn inventory(complete: bool) -> Fixed64FeatureInventory {
         if complete { retained_sources() } else { vec![] },
     )
     .unwrap()
+}
+
+#[test]
+fn parent_bound_receipts_use_the_versioned_schema() {
+    assert_eq!(
+        NATIVE_FIXED64_SLOT_SCHEMA_ID,
+        "betelgeuze.engine_v2_global_orientation_fixed_mixed64_native_slot/1.1.0"
+    );
+    assert_eq!(
+        NATIVE_FIXED64_ALLOCATION_SCHEMA_ID,
+        "betelgeuze.engine_v2_global_orientation_fixed_mixed64_native_allocation/1.1.0"
+    );
+}
+
+#[test]
+fn zero_identity_sentinels_fail_closed() {
+    let mut exact = exact_source();
+    exact.source_receipt_sha256 = [0; 32];
+    assert!(Fixed64FeatureInventory::new(
+        exact,
+        atomic_features(),
+        v7_controls(),
+        conformers(),
+        retained_sources(),
+    )
+    .is_err());
+
+    let mut controls = v7_controls();
+    controls[0].source.coordinate_sha256 = [0; 32];
+    assert!(Fixed64FeatureInventory::new(
+        exact_source(),
+        atomic_features(),
+        controls,
+        conformers(),
+        retained_sources(),
+    )
+    .is_err());
+
+    let mut features = atomic_features();
+    features[0].receipt_sha256 = [0; 32];
+    assert!(Fixed64FeatureInventory::new(
+        exact_source(),
+        features,
+        v7_controls(),
+        conformers(),
+        retained_sources(),
+    )
+    .is_err());
 }
 
 #[test]

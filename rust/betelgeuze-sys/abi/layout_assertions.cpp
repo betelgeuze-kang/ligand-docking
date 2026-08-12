@@ -22,6 +22,26 @@ static_assert(std::is_standard_layout<bg_simulation_options_v1>::value);
 static_assert(std::is_standard_layout<bg_minimizer_options_v1>::value);
 static_assert(std::is_standard_layout<bg_minimization_report_v1>::value);
 static_assert(std::is_standard_layout<bg_dynamics_report_v1>::value);
+static_assert(
+    std::is_standard_layout<bg_docking_fixed64_source_evidence_v1>::value);
+static_assert(std::is_standard_layout<
+              bg_docking_fixed64_exact_source_evidence_v1>::value);
+static_assert(std::is_standard_layout<
+              bg_docking_fixed64_atomic_feature_evidence_v1>::value);
+static_assert(std::is_standard_layout<
+              bg_docking_fixed64_indexed_source_evidence_v1>::value);
+static_assert(std::is_standard_layout<
+              bg_docking_fixed64_conformer_source_evidence_v1>::value);
+static_assert(std::is_standard_layout<
+              bg_docking_fixed64_allocation_input_v1>::value);
+static_assert(
+    std::is_standard_layout<bg_docking_fixed64_requirement_v1>::value);
+static_assert(std::is_standard_layout<
+              bg_docking_fixed64_missing_feature_v1>::value);
+static_assert(
+    std::is_standard_layout<bg_docking_fixed64_allocation_row_v1>::value);
+static_assert(std::is_standard_layout<
+              bg_docking_fixed64_allocation_output_v1>::value);
 static_assert(std::is_standard_layout<
               bg_docking_geometric_admission_context_soa_v1>::value);
 static_assert(std::is_standard_layout<
@@ -97,6 +117,86 @@ static_assert(offsetof(bg_context_options, flags) == 24);
 static_assert(offsetof(bg_context_options, reserved) == 32);
 
 #if INTPTR_MAX == INT64_MAX
+static_assert(sizeof(bg_docking_fixed64_source_evidence_v1) == 112);
+static_assert(alignof(bg_docking_fixed64_source_evidence_v1) == 8);
+static_assert(offsetof(
+                  bg_docking_fixed64_source_evidence_v1,
+                  coordinate_sha256) == 64);
+static_assert(offsetof(bg_docking_fixed64_source_evidence_v1, reserved) == 96);
+static_assert(sizeof(bg_docking_fixed64_exact_source_evidence_v1) == 320);
+static_assert(offsetof(
+                  bg_docking_fixed64_exact_source_evidence_v1,
+                  receptor_vdw_radii_sha256) == 256);
+static_assert(offsetof(
+                  bg_docking_fixed64_exact_source_evidence_v1,
+                  reserved) == 288);
+static_assert(sizeof(bg_docking_fixed64_atomic_feature_evidence_v1) == 56);
+static_assert(offsetof(
+                  bg_docking_fixed64_atomic_feature_evidence_v1,
+                  receipt_sha256) == 8);
+static_assert(sizeof(bg_docking_fixed64_indexed_source_evidence_v1) == 136);
+static_assert(offsetof(
+                  bg_docking_fixed64_indexed_source_evidence_v1,
+                  source) == 8);
+static_assert(offsetof(
+                  bg_docking_fixed64_indexed_source_evidence_v1,
+                  reserved) == 120);
+static_assert(sizeof(bg_docking_fixed64_conformer_source_evidence_v1) == 136);
+static_assert(offsetof(
+                  bg_docking_fixed64_conformer_source_evidence_v1,
+                  source) == 8);
+static_assert(sizeof(bg_docking_fixed64_allocation_input_v1) == 456);
+static_assert(offsetof(
+                  bg_docking_fixed64_allocation_input_v1,
+                  exact_v11_source) == 8);
+static_assert(offsetof(
+                  bg_docking_fixed64_allocation_input_v1,
+                  atomic_feature_count) == 328);
+static_assert(offsetof(
+                  bg_docking_fixed64_allocation_input_v1,
+                  atomic_features) == 336);
+static_assert(offsetof(
+                  bg_docking_fixed64_allocation_input_v1,
+                  retained_sources) == 384);
+static_assert(offsetof(bg_docking_fixed64_allocation_input_v1, reserved) == 392);
+static_assert(sizeof(bg_docking_fixed64_requirement_v1) == 24);
+static_assert(sizeof(bg_docking_fixed64_missing_feature_v1) == 24);
+static_assert(sizeof(bg_docking_fixed64_allocation_row_v1) == 384);
+static_assert(offsetof(
+                  bg_docking_fixed64_allocation_row_v1,
+                  requirements) == 48);
+static_assert(offsetof(
+                  bg_docking_fixed64_allocation_row_v1,
+                  missing_features) == 96);
+static_assert(offsetof(
+                  bg_docking_fixed64_allocation_row_v1,
+                  selected_source_receipt_sha256) == 152);
+static_assert(offsetof(
+                  bg_docking_fixed64_allocation_row_v1,
+                  generation_parent_receipt_sha256) == 216);
+static_assert(offsetof(
+                  bg_docking_fixed64_allocation_row_v1,
+                  generation_parent_proposal_sha256) == 248);
+static_assert(offsetof(
+                  bg_docking_fixed64_allocation_row_v1,
+                  generation_parent_coordinate_sha256) == 280);
+static_assert(offsetof(
+                  bg_docking_fixed64_allocation_row_v1,
+                  slot_receipt_sha256) == 312);
+static_assert(offsetof(
+                  bg_docking_fixed64_allocation_row_v1,
+                  generation_eligible) == 344);
+static_assert(offsetof(bg_docking_fixed64_allocation_row_v1, reserved) == 352);
+static_assert(sizeof(bg_docking_fixed64_allocation_output_v1) == 184);
+static_assert(offsetof(bg_docking_fixed64_allocation_output_v1, rows) == 24);
+static_assert(offsetof(
+                  bg_docking_fixed64_allocation_output_v1,
+                  inventory_sha256) == 48);
+static_assert(offsetof(
+                  bg_docking_fixed64_allocation_output_v1,
+                  result_dependent_allocation) == 112);
+static_assert(offsetof(bg_docking_fixed64_allocation_output_v1, reserved) == 120);
+
 static_assert(sizeof(bg_docking_geometric_admission_context_soa_v1) == 320);
 static_assert(alignof(bg_docking_geometric_admission_context_soa_v1) == 8);
 static_assert(offsetof(

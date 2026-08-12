@@ -75,6 +75,16 @@ and scientific fields into one SHA-256 per row and one 64-row batch receipt
 before the transactional commit. It grants no execution, reservation,
 benchmark, product mutation, pose-emission, or claim authority.
 
+ABI 1.14 moves the frozen mixed64 lane allocation behind a public native
+control-plane boundary. It always emits exactly 64 rows, converts missing
+sources or atomic features into typed slot failures without reassignment, and
+binds exact V1.1 source, inventory, per-slot, and aggregate SHA-256 receipts.
+The C++ encoder and canonical Rust allocation model independently rebuild and
+compare every row and receipt before caller output commits. Allocation remains
+result-independent and grants no molecular, reservation, benchmark, product
+rank, pose-emission, or claim authority; coordinate generation is a later
+backend-bound numerical stage.
+
 The term order is:
 
 1. typed van der Waals

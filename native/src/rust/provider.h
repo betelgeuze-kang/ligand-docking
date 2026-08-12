@@ -140,6 +140,15 @@ int32_t bg_rust_cpu_docking_geometric_admission_v1_evaluate_fixed64(
     bg_docking_geometric_admission_row_v1 *out_rows,
     bg_rust_cpu_error_v1 *out_error);
 
+int32_t bg_rust_cpu_docking_fixed64_allocation_v1_build(
+    const bg_docking_fixed64_allocation_input_v1 *input,
+    bg_docking_fixed64_allocation_row_v1 *out_rows,
+    uint8_t *out_inventory_sha256,
+    uint8_t *out_allocation_sha256,
+    uint64_t *out_ready_count,
+    uint64_t *out_typed_failure_count,
+    bg_rust_cpu_error_v1 *out_error);
+
 int32_t bg_rust_cpu_docking_scorer_v1_create(
     const bg_docking_scorer_v1_context_soa_v1 *descriptor,
     void **out_state,

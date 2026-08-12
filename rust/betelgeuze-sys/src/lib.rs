@@ -20,7 +20,7 @@ static BG_RUST_CPU_PROVIDER_LINK_ANCHOR: extern "C" fn() -> u32 =
     betelgeuze_cpu_kernel::bg_rust_cpu_provider_abi_version_v1;
 
 pub const BG_ABI_VERSION_MAJOR: u32 = 1;
-pub const BG_ABI_VERSION_MINOR: u32 = 13;
+pub const BG_ABI_VERSION_MINOR: u32 = 14;
 pub const BG_ABI_VERSION: u32 = 1;
 
 pub const BG_CANONICAL_LENGTH_UNIT: &[u8] = b"angstrom\0";
@@ -69,6 +69,83 @@ pub const BG_DOCKING_SCORER_V1_TERM_COUNT: u32 = 8;
 pub const BG_DOCKING_STABLE_TOP_K_LIMIT: u32 = 5;
 pub const BG_DOCKING_RMSD_CLUSTER_TOP_K_LIMIT: u32 = 5;
 pub const BG_DOCKING_TORSION_V7_MAX_MOVES: u32 = 8;
+pub const BG_DOCKING_FIXED64_FEATURE_KIND_COUNT: u32 = 12;
+pub const BG_DOCKING_FIXED64_MAX_REQUIREMENTS: u32 = 2;
+pub const BG_DOCKING_FIXED64_MAX_MISSING_FEATURES: u32 = 2;
+pub const BG_DOCKING_FIXED64_MAX_SELECTED_SOURCE_RECEIPTS: u32 = 2;
+
+pub type bg_docking_fixed64_lane = i32;
+pub const BG_DOCKING_FIXED64_LANE_POCKET_CENTERED_CONTROLS: bg_docking_fixed64_lane = 0;
+pub const BG_DOCKING_FIXED64_LANE_UNIFORM_SOURCE_CONTROLS: bg_docking_fixed64_lane = 1;
+pub const BG_DOCKING_FIXED64_LANE_DETERMINISTIC_INDEPENDENT_SO3: bg_docking_fixed64_lane = 2;
+pub const BG_DOCKING_FIXED64_LANE_TRUE_CONFORMER_INDEPENDENT_SO3: bg_docking_fixed64_lane = 3;
+pub const BG_DOCKING_FIXED64_LANE_LIGAND_DONOR_TO_RECEPTOR_ACCEPTOR: bg_docking_fixed64_lane = 4;
+pub const BG_DOCKING_FIXED64_LANE_LIGAND_ACCEPTOR_TO_RECEPTOR_DONOR: bg_docking_fixed64_lane = 5;
+pub const BG_DOCKING_FIXED64_LANE_COMPLEMENTARY_CHARGE: bg_docking_fixed64_lane = 6;
+pub const BG_DOCKING_FIXED64_LANE_AROMATIC_PLANE: bg_docking_fixed64_lane = 7;
+pub const BG_DOCKING_FIXED64_LANE_PRINCIPAL_AXIS_SHAPE: bg_docking_fixed64_lane = 8;
+pub const BG_DOCKING_FIXED64_LANE_PAIRED_RETAINED_CONTROLS: bg_docking_fixed64_lane = 9;
+
+pub type bg_docking_fixed64_feature_kind = i32;
+pub const BG_DOCKING_FIXED64_FEATURE_LIGAND_DONOR: bg_docking_fixed64_feature_kind = 0;
+pub const BG_DOCKING_FIXED64_FEATURE_LIGAND_ACCEPTOR: bg_docking_fixed64_feature_kind = 1;
+pub const BG_DOCKING_FIXED64_FEATURE_RECEPTOR_DONOR: bg_docking_fixed64_feature_kind = 2;
+pub const BG_DOCKING_FIXED64_FEATURE_RECEPTOR_ACCEPTOR: bg_docking_fixed64_feature_kind = 3;
+pub const BG_DOCKING_FIXED64_FEATURE_LIGAND_POSITIVE_SITE: bg_docking_fixed64_feature_kind = 4;
+pub const BG_DOCKING_FIXED64_FEATURE_LIGAND_NEGATIVE_SITE: bg_docking_fixed64_feature_kind = 5;
+pub const BG_DOCKING_FIXED64_FEATURE_RECEPTOR_POSITIVE_SITE: bg_docking_fixed64_feature_kind = 6;
+pub const BG_DOCKING_FIXED64_FEATURE_RECEPTOR_NEGATIVE_SITE: bg_docking_fixed64_feature_kind = 7;
+pub const BG_DOCKING_FIXED64_FEATURE_LIGAND_AROMATIC_PLANE: bg_docking_fixed64_feature_kind = 8;
+pub const BG_DOCKING_FIXED64_FEATURE_RECEPTOR_AROMATIC_PLANE: bg_docking_fixed64_feature_kind = 9;
+pub const BG_DOCKING_FIXED64_FEATURE_LIGAND_SHAPE_AXIS: bg_docking_fixed64_feature_kind = 10;
+pub const BG_DOCKING_FIXED64_FEATURE_POCKET_SHAPE_AXIS: bg_docking_fixed64_feature_kind = 11;
+
+pub type bg_docking_fixed64_anchor_kind = i32;
+pub const BG_DOCKING_FIXED64_ANCHOR_NONE: bg_docking_fixed64_anchor_kind = 0;
+pub const BG_DOCKING_FIXED64_ANCHOR_LIGAND_DONOR_TO_RECEPTOR_ACCEPTOR:
+    bg_docking_fixed64_anchor_kind = 1;
+pub const BG_DOCKING_FIXED64_ANCHOR_LIGAND_ACCEPTOR_TO_RECEPTOR_DONOR:
+    bg_docking_fixed64_anchor_kind = 2;
+pub const BG_DOCKING_FIXED64_ANCHOR_COMPLEMENTARY_CHARGE: bg_docking_fixed64_anchor_kind = 3;
+pub const BG_DOCKING_FIXED64_ANCHOR_AROMATIC_PLANE: bg_docking_fixed64_anchor_kind = 4;
+pub const BG_DOCKING_FIXED64_ANCHOR_PRINCIPAL_AXIS_SHAPE: bg_docking_fixed64_anchor_kind = 5;
+
+pub type bg_docking_fixed64_parent_role = i32;
+pub const BG_DOCKING_FIXED64_PARENT_NONE: bg_docking_fixed64_parent_role = 0;
+pub const BG_DOCKING_FIXED64_PARENT_EXACT_PASSTHROUGH: bg_docking_fixed64_parent_role = 1;
+pub const BG_DOCKING_FIXED64_PARENT_GENERATOR_INPUT: bg_docking_fixed64_parent_role = 2;
+
+pub type bg_docking_fixed64_requirement_kind = i32;
+pub const BG_DOCKING_FIXED64_REQUIREMENT_V7_CONTROL_SOURCE: bg_docking_fixed64_requirement_kind = 0;
+pub const BG_DOCKING_FIXED64_REQUIREMENT_TRUE_CONFORMER_RANK: bg_docking_fixed64_requirement_kind =
+    1;
+pub const BG_DOCKING_FIXED64_REQUIREMENT_FEATURE: bg_docking_fixed64_requirement_kind = 2;
+pub const BG_DOCKING_FIXED64_REQUIREMENT_COMPLEMENTARY_CHARGE_ANCHOR:
+    bg_docking_fixed64_requirement_kind = 3;
+pub const BG_DOCKING_FIXED64_REQUIREMENT_RETAINED_SOURCE: bg_docking_fixed64_requirement_kind = 4;
+
+pub type bg_docking_fixed64_missing_feature_kind = i32;
+pub const BG_DOCKING_FIXED64_MISSING_V7_CONTROL_SOURCE: bg_docking_fixed64_missing_feature_kind = 0;
+pub const BG_DOCKING_FIXED64_MISSING_TRUE_CONFORMER: bg_docking_fixed64_missing_feature_kind = 1;
+pub const BG_DOCKING_FIXED64_MISSING_LIGAND_DONOR: bg_docking_fixed64_missing_feature_kind = 2;
+pub const BG_DOCKING_FIXED64_MISSING_RECEPTOR_ACCEPTOR: bg_docking_fixed64_missing_feature_kind = 3;
+pub const BG_DOCKING_FIXED64_MISSING_LIGAND_ACCEPTOR: bg_docking_fixed64_missing_feature_kind = 4;
+pub const BG_DOCKING_FIXED64_MISSING_RECEPTOR_DONOR: bg_docking_fixed64_missing_feature_kind = 5;
+pub const BG_DOCKING_FIXED64_MISSING_COMPLEMENTARY_CHARGE_ANCHOR:
+    bg_docking_fixed64_missing_feature_kind = 6;
+pub const BG_DOCKING_FIXED64_MISSING_LIGAND_AROMATIC_PLANE:
+    bg_docking_fixed64_missing_feature_kind = 7;
+pub const BG_DOCKING_FIXED64_MISSING_RECEPTOR_AROMATIC_PLANE:
+    bg_docking_fixed64_missing_feature_kind = 8;
+pub const BG_DOCKING_FIXED64_MISSING_LIGAND_SHAPE_AXIS: bg_docking_fixed64_missing_feature_kind = 9;
+pub const BG_DOCKING_FIXED64_MISSING_POCKET_SHAPE_AXIS: bg_docking_fixed64_missing_feature_kind =
+    10;
+pub const BG_DOCKING_FIXED64_MISSING_RETAINED_SOURCE: bg_docking_fixed64_missing_feature_kind = 11;
+
+pub type bg_docking_fixed64_allocation_row_status = i32;
+pub const BG_DOCKING_FIXED64_ALLOCATION_ROW_READY: bg_docking_fixed64_allocation_row_status = 1;
+pub const BG_DOCKING_FIXED64_ALLOCATION_ROW_TYPED_FAILURE:
+    bg_docking_fixed64_allocation_row_status = 2;
 
 pub type bg_docking_geometric_admission_candidate_state = i32;
 pub const BG_DOCKING_GEOMETRIC_ADMISSION_CANDIDATE_UPSTREAM_FAILURE:
@@ -561,6 +638,151 @@ pub struct bg_dynamics_report_v1 {
     pub total_kcal_per_mol: f64,
     pub temperature_kelvin: f64,
     pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_fixed64_source_evidence_v1 {
+    pub receipt_sha256: [u8; 32],
+    pub proposal_sha256: [u8; 32],
+    pub coordinate_sha256: [u8; 32],
+    pub reserved: [u64; 2],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_fixed64_exact_source_evidence_v1 {
+    pub source_receipt_sha256: [u8; 32],
+    pub proposal_sha256: [u8; 32],
+    pub ligand_coordinate_sha256: [u8; 32],
+    pub receptor_coordinate_sha256: [u8; 32],
+    pub prepared_ligand_topology_sha256: [u8; 32],
+    pub prepared_receptor_topology_sha256: [u8; 32],
+    pub ligand_vdw_radii_sha256: [u8; 32],
+    pub ligand_heavy_atom_mask_sha256: [u8; 32],
+    pub receptor_vdw_radii_sha256: [u8; 32],
+    pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_fixed64_atomic_feature_evidence_v1 {
+    pub kind: bg_docking_fixed64_feature_kind,
+    pub reserved0: u32,
+    pub receipt_sha256: [u8; 32],
+    pub reserved: [u64; 2],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_fixed64_indexed_source_evidence_v1 {
+    pub source_index: u32,
+    pub reserved0: u32,
+    pub source: bg_docking_fixed64_source_evidence_v1,
+    pub reserved: [u64; 2],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_fixed64_conformer_source_evidence_v1 {
+    pub rank: u8,
+    pub reserved0: [u8; 7],
+    pub source: bg_docking_fixed64_source_evidence_v1,
+    pub reserved: [u64; 2],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_fixed64_allocation_input_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub exact_v11_source: bg_docking_fixed64_exact_source_evidence_v1,
+    pub atomic_feature_count: u64,
+    pub atomic_features: *const bg_docking_fixed64_atomic_feature_evidence_v1,
+    pub v7_control_source_count: u64,
+    pub v7_control_sources: *const bg_docking_fixed64_indexed_source_evidence_v1,
+    pub conformer_source_count: u64,
+    pub conformer_sources: *const bg_docking_fixed64_conformer_source_evidence_v1,
+    pub retained_source_count: u64,
+    pub retained_sources: *const bg_docking_fixed64_indexed_source_evidence_v1,
+    pub reserved: [u64; 8],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_fixed64_requirement_v1 {
+    pub kind: bg_docking_fixed64_requirement_kind,
+    pub value: u32,
+    pub reserved: [u64; 2],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_fixed64_missing_feature_v1 {
+    pub kind: bg_docking_fixed64_missing_feature_kind,
+    pub value: u32,
+    pub reserved: [u64; 2],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_fixed64_allocation_row_v1 {
+    pub slot_index: u32,
+    pub lane: bg_docking_fixed64_lane,
+    pub lane_offset: u32,
+    pub status: bg_docking_fixed64_allocation_row_status,
+    pub declared_anchor_kind: bg_docking_fixed64_anchor_kind,
+    pub generation_parent_role: bg_docking_fixed64_parent_role,
+    pub requirement_count: u32,
+    pub missing_feature_count: u32,
+    pub v7_control_source_index: i32,
+    pub so3_sequence_index: i32,
+    pub true_conformer_rank: i32,
+    pub retained_source_index: i32,
+    pub requirements:
+        [bg_docking_fixed64_requirement_v1; BG_DOCKING_FIXED64_MAX_REQUIREMENTS as usize],
+    pub missing_features:
+        [bg_docking_fixed64_missing_feature_v1; BG_DOCKING_FIXED64_MAX_MISSING_FEATURES as usize],
+    pub selected_source_receipt_count: u32,
+    pub reserved0: u32,
+    pub selected_source_receipt_sha256:
+        [[u8; 32]; BG_DOCKING_FIXED64_MAX_SELECTED_SOURCE_RECEIPTS as usize],
+    pub generation_parent_receipt_sha256: [u8; 32],
+    pub generation_parent_proposal_sha256: [u8; 32],
+    pub generation_parent_coordinate_sha256: [u8; 32],
+    pub slot_receipt_sha256: [u8; 32],
+    pub generation_eligible: u8,
+    pub fallback_allowed: u8,
+    pub multi_anchor_allowed: u8,
+    pub result_dependent_allocation: u8,
+    pub denominator_preserved: u8,
+    pub molecular_execution_authorized: u8,
+    pub reservation_authorized: u8,
+    pub benchmark_execution_authorized: u8,
+    pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_fixed64_allocation_output_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub row_capacity: u64,
+    pub row_count: u64,
+    pub rows: *mut bg_docking_fixed64_allocation_row_v1,
+    pub ready_count: u64,
+    pub typed_failure_count: u64,
+    pub inventory_sha256: [u8; 32],
+    pub allocation_receipt_sha256: [u8; 32],
+    pub result_dependent_allocation: u8,
+    pub molecular_execution_authorized: u8,
+    pub reservation_authorized: u8,
+    pub benchmark_execution_authorized: u8,
+    pub existing_rank_auto_change_authorized: u8,
+    pub customer_pose_emission_authorized: u8,
+    pub production_claim_authorized: u8,
+    pub reserved0: u8,
+    pub reserved: [u64; 8],
 }
 
 #[repr(C)]
@@ -1421,6 +1643,16 @@ unsafe extern "C" {
         caller_struct_size: usize,
         caller_abi_version: u32,
     ) -> bg_status;
+    pub fn bg_docking_fixed64_allocation_input_v1_init(
+        input: *mut bg_docking_fixed64_allocation_input_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_docking_fixed64_allocation_output_v1_init(
+        output: *mut bg_docking_fixed64_allocation_output_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
     pub fn bg_docking_geometric_admission_context_soa_v1_init(
         descriptor: *mut bg_docking_geometric_admission_context_soa_v1,
         caller_struct_size: usize,
@@ -1548,6 +1780,11 @@ unsafe extern "C" {
     pub fn bg_context_get_unit_system(
         context: *const bg_context,
         unit_system: *mut bg_unit_system,
+    ) -> bg_status;
+
+    pub fn bg_docking_fixed64_allocation_v1_build(
+        input: *const bg_docking_fixed64_allocation_input_v1,
+        output: *mut bg_docking_fixed64_allocation_output_v1,
     ) -> bg_status;
 
     pub fn bg_docking_geometric_admission_v1_create(

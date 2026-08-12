@@ -86,7 +86,7 @@ extern "C" BG_API uint32_t BG_CALL bg_abi_version_minor(void) BG_NOEXCEPT {
 }
 
 extern "C" BG_API const char *BG_CALL bg_abi_version_string(void) BG_NOEXCEPT {
-    return "1.13";
+    return "1.14";
 }
 
 extern "C" BG_API const char *BG_CALL bg_status_string(
