@@ -615,25 +615,88 @@ find_conformer_source(
     const bg_docking_fixed64_producer_input_v1 &input,
     const bg_docking_fixed64_allocation_row_v1 &row) noexcept {
     if (row.selected_source_receipt_count != 2) return false;
-    for (uint32_t selected = 0;
-         selected < row.selected_source_receipt_count;
-         ++selected) {
-        bool found = false;
-        for (uint64_t feature = 0;
-             feature < input.feature_geometry_count;
-             ++feature) {
-            if (std::memcmp(
-                    row.selected_source_receipt_sha256[selected],
-                    input.feature_geometry_rows[feature]
-                        .allocation_feature_receipt_sha256,
-                    32) == 0) {
-                found = true;
-                break;
+    bg_docking_fixed64_feature_kind ligand_kind = -1;
+    bg_docking_fixed64_feature_kind receptor_kind = -1;
+    switch (row.lane) {
+        case BG_DOCKING_FIXED64_LANE_LIGAND_DONOR_TO_RECEPTOR_ACCEPTOR:
+            ligand_kind = BG_DOCKING_FIXED64_FEATURE_LIGAND_DONOR;
+            receptor_kind = BG_DOCKING_FIXED64_FEATURE_RECEPTOR_ACCEPTOR;
+            break;
+        case BG_DOCKING_FIXED64_LANE_LIGAND_ACCEPTOR_TO_RECEPTOR_DONOR:
+            ligand_kind = BG_DOCKING_FIXED64_FEATURE_LIGAND_ACCEPTOR;
+            receptor_kind = BG_DOCKING_FIXED64_FEATURE_RECEPTOR_DONOR;
+            break;
+        case BG_DOCKING_FIXED64_LANE_AROMATIC_PLANE:
+            ligand_kind = BG_DOCKING_FIXED64_FEATURE_LIGAND_AROMATIC_PLANE;
+            receptor_kind = BG_DOCKING_FIXED64_FEATURE_RECEPTOR_AROMATIC_PLANE;
+            break;
+        case BG_DOCKING_FIXED64_LANE_PRINCIPAL_AXIS_SHAPE:
+            ligand_kind = BG_DOCKING_FIXED64_FEATURE_LIGAND_SHAPE_AXIS;
+            receptor_kind = BG_DOCKING_FIXED64_FEATURE_POCKET_SHAPE_AXIS;
+            break;
+        case BG_DOCKING_FIXED64_LANE_COMPLEMENTARY_CHARGE: {
+            constexpr std::array<
+                std::pair<bg_docking_fixed64_feature_kind,
+                          bg_docking_fixed64_feature_kind>,
+                2>
+                pairs = {{
+                    {BG_DOCKING_FIXED64_FEATURE_LIGAND_POSITIVE_SITE,
+                     BG_DOCKING_FIXED64_FEATURE_RECEPTOR_NEGATIVE_SITE},
+                    {BG_DOCKING_FIXED64_FEATURE_LIGAND_NEGATIVE_SITE,
+                     BG_DOCKING_FIXED64_FEATURE_RECEPTOR_POSITIVE_SITE},
+                }};
+            const auto feature_count = [&input](
+                bg_docking_fixed64_feature_kind kind) noexcept {
+                std::size_t count = 0;
+                for (uint64_t index = 0;
+                     index < input.allocation_input->atomic_feature_count;
+                     ++index) {
+                    if (input.allocation_input->atomic_features[index].kind ==
+                        kind) {
+                        ++count;
+                    }
+                }
+                return count;
+            };
+            std::array<std::size_t, 2> available{};
+            std::size_t available_count = 0;
+            for (std::size_t pair = 0; pair < pairs.size(); ++pair) {
+                if (feature_count(pairs[pair].first) != 0 &&
+                    feature_count(pairs[pair].second) != 0) {
+                    available[available_count++] = pair;
+                }
             }
+            if (available_count == 0) return false;
+            const auto &selected =
+                pairs[available[row.lane_offset % available_count]];
+            ligand_kind = selected.first;
+            receptor_kind = selected.second;
+            break;
         }
-        if (!found) return false;
+        default:
+            return false;
     }
-    return true;
+    std::size_t ligand_count = 0;
+    std::size_t receptor_count = 0;
+    for (uint64_t feature = 0; feature < input.feature_geometry_count;
+         ++feature) {
+        const auto &geometry = input.feature_geometry_rows[feature];
+        if (std::memcmp(
+                row.selected_source_receipt_sha256[0],
+                geometry.allocation_feature_receipt_sha256,
+                32) == 0 &&
+            geometry.kind == ligand_kind) {
+            ++ligand_count;
+        }
+        if (std::memcmp(
+                row.selected_source_receipt_sha256[1],
+                geometry.allocation_feature_receipt_sha256,
+                32) == 0 &&
+            geometry.kind == receptor_kind) {
+            ++receptor_count;
+        }
+    }
+    return ligand_count == 1 && receptor_count == 1;
 }
 
 [[nodiscard]] std::array<uint8_t, 32> passthrough_receipt(
@@ -1123,7 +1186,7 @@ template <typename Type>
             BG_STATUS_INVALID_ARGUMENT,
             "fixed64 producer descriptors or context binding are invalid");
     }
-    if (admission.ligand_atom_count < 2 ||
+    if (admission.ligand_atom_count == 0 ||
         admission.ligand_atom_count > kMaximumLigandAtoms ||
         admission.receptor_atom_count == 0 ||
         admission.receptor_x_angstrom.size() !=
@@ -1312,8 +1375,9 @@ template <typename Type>
     placed.x_angstrom = x->data() + offset;
     placed.y_angstrom = y->data() + offset;
     placed.z_angstrom = z->data() + offset;
-    const bg_status status = bg_docking_fixed64_single_anchor_v1_place(
-        &context, &admission, &descriptor, &placed);
+    const bg_status status =
+        fixed64_single_anchor::place_for_shared_admission(
+            context, admission, descriptor, &placed);
     if (status != BG_STATUS_OK) return status;
     row->component_failure_code = placed.failure_code;
     std::copy_n(
@@ -1330,7 +1394,12 @@ template <typename Type>
         placed.source_identity_verified != UINT8_C(1) ||
         placed.allocation_identity_verified != UINT8_C(1) ||
         placed.feature_identity_verified != UINT8_C(1) ||
-        placed.geometric_identity_verified != UINT8_C(1) ||
+        placed.geometric_identity_verified != UINT8_C(0) ||
+        placed.steric_precheck_passed != UINT8_C(0) ||
+        digest_present(
+            placed.geometric_admission.row_receipt_sha256) ||
+        digest_present(
+            placed.geometric_admission_batch_receipt_sha256) ||
         placed.result_dependent_input_consumed != UINT8_C(0) ||
         placed.fallback_allowed != UINT8_C(0) ||
         placed.multi_anchor_consumed != UINT8_C(0) ||

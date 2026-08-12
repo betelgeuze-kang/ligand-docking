@@ -253,13 +253,14 @@ bg_context *make_context(bg_backend backend) {
 bg_docking_geometric_admission_v1 *make_admission(
     const Fixture &fixture,
     bg_context *context,
-    std::array<double, 3> pocket_center = {0.0, 0.0, 0.0}) {
+    std::array<double, 3> pocket_center = {0.0, 0.0, 0.0},
+    uint64_t ligand_atom_count = kAtoms) {
     bg_docking_geometric_admission_context_soa_v1 descriptor{};
     assert(bg_docking_geometric_admission_context_soa_v1_init(&descriptor) ==
            BG_STATUS_OK);
     descriptor.unit_system = BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL;
     descriptor.receptor_atom_count = kAtoms;
-    descriptor.ligand_atom_count = kAtoms;
+    descriptor.ligand_atom_count = ligand_atom_count;
     descriptor.receptor_x_angstrom = fixture.receptor_x.data();
     descriptor.receptor_y_angstrom = fixture.receptor_y.data();
     descriptor.receptor_z_angstrom = fixture.receptor_z.data();
@@ -575,6 +576,164 @@ void test_partial_feature_geometry_only_fails_affected_slots() {
     bg_context_destroy(context);
 }
 
+void test_equal_cross_kind_receipt_cannot_mask_missing_ligand_geometry() {
+    Fixture fixture;
+    std::copy_n(
+        fixture.atomic_features[0].receipt_sha256,
+        32,
+        fixture.atomic_features[3].receipt_sha256);
+    std::array<bg_docking_fixed64_feature_geometry_row_v1, kFeatureCount - 1>
+        feature_rows{};
+    std::vector<uint64_t> feature_indices;
+    for (std::size_t source = 1; source < kFeatureCount; ++source) {
+        auto &target = feature_rows[source - 1];
+        target = fixture.feature_rows[source];
+        target.atom_index_offset = feature_indices.size();
+        const auto first = static_cast<std::size_t>(
+            fixture.feature_rows[source].atom_index_offset);
+        const auto count = static_cast<std::size_t>(
+            fixture.feature_rows[source].atom_index_count);
+        feature_indices.insert(
+            feature_indices.end(),
+            fixture.feature_indices.data() + first,
+            fixture.feature_indices.data() + first + count);
+    }
+    std::copy_n(
+        fixture.atomic_features[0].receipt_sha256,
+        32,
+        feature_rows[2].allocation_feature_receipt_sha256);
+    parse_digest(
+        "d32faa67a5d4759e5c9e5679207a2b87f94a9ce1877f64a342970c552931fd84",
+        feature_rows[2].feature_geometry_receipt_sha256);
+
+    auto input = make_input(fixture);
+    input.feature_geometry_count = feature_rows.size();
+    input.feature_geometry_rows = feature_rows.data();
+    input.feature_atom_index_count = feature_indices.size();
+    input.feature_atom_indices = feature_indices.data();
+    parse_digest(
+        "2c7036e5304e5be45b38e3161fed44471392b168db2669c7675b26ce15f27981",
+        input.feature_geometry_inventory_sha256);
+    bg_context *context = make_context(BG_BACKEND_CPP_CPU_REFERENCE);
+    assert(context != nullptr);
+    auto *admission = make_admission(fixture, context);
+    const Batch batch = produce(context, admission, input);
+    assert(batch.output.generated_count == 60);
+    assert(batch.output.typed_failure_count == 4);
+    for (std::size_t slot = 0; slot < kSlots; ++slot) {
+        const auto &row = batch.rows[slot];
+        if (slot >= 44 && slot < 48) {
+            assert(row.status ==
+                   BG_DOCKING_FIXED64_PRODUCER_ROW_TYPED_FAILURE);
+            assert(row.failure_code ==
+                   BG_DOCKING_FIXED64_PRODUCER_FAILURE_FEATURE_GEOMETRY_NOT_AVAILABLE);
+            assert(row.source_identity_verified == UINT8_C(1));
+            assert(row.coordinates_available == UINT8_C(0));
+        } else {
+            assert(row.status == BG_DOCKING_FIXED64_PRODUCER_ROW_GENERATED);
+        }
+        assert(row.geometric_identity_verified == UINT8_C(1));
+        assert(digest_present(row.row_receipt_sha256));
+    }
+    assert_authority_false(batch.output);
+    bg_docking_geometric_admission_v1_destroy(admission);
+    bg_context_destroy(context);
+}
+
+void test_single_atom_ligand_preserves_all_fixed64_rows() {
+    Fixture fixture;
+    fixture.allocation.atomic_feature_count = 0;
+    fixture.allocation.atomic_features = nullptr;
+    parse_digest(
+        "70c6f2b5446c0652d7bbc81537a0ac8a93553e961ecb3c2c40fee2620de1545b",
+        fixture.allocation.exact_v11_source.ligand_coordinate_sha256);
+    parse_digest(
+        "d4379c8a5c7b2291893bd45b047e8736168136002dd646b705a735875a947919",
+        fixture.allocation.exact_v11_source.ligand_vdw_radii_sha256);
+    parse_digest(
+        "49e14fc025f4768dc72e02fe53803e4cd9906d5dc7c89c1f7b08c6fb39b9223a",
+        fixture.allocation.exact_v11_source.ligand_heavy_atom_mask_sha256);
+    fixture.exact_source.ligand_atom_count = 1;
+    std::copy_n(
+        fixture.allocation.exact_v11_source.ligand_coordinate_sha256,
+        32,
+        fixture.exact_source.source.coordinate_sha256);
+    for (std::size_t index = 0; index < fixture.v7_evidence.size(); ++index) {
+        fixture.v7_sources[index].payload.ligand_atom_count = 1;
+        std::copy_n(
+            fixture.allocation.exact_v11_source.ligand_coordinate_sha256,
+            32,
+            fixture.v7_evidence[index].source.coordinate_sha256);
+        std::copy_n(
+            fixture.allocation.exact_v11_source.ligand_coordinate_sha256,
+            32,
+            fixture.v7_sources[index].payload.source.coordinate_sha256);
+    }
+    for (std::size_t index = 0; index < fixture.conformer_evidence.size();
+         ++index) {
+        fixture.conformer_sources[index].payload.ligand_atom_count = 1;
+        std::copy_n(
+            fixture.allocation.exact_v11_source.ligand_coordinate_sha256,
+            32,
+            fixture.conformer_evidence[index].source.coordinate_sha256);
+        std::copy_n(
+            fixture.allocation.exact_v11_source.ligand_coordinate_sha256,
+            32,
+            fixture.conformer_sources[index].payload.source.coordinate_sha256);
+    }
+    for (std::size_t index = 0; index < fixture.retained_evidence.size();
+         ++index) {
+        fixture.retained_sources[index].payload.ligand_atom_count = 1;
+        std::copy_n(
+            fixture.allocation.exact_v11_source.ligand_coordinate_sha256,
+            32,
+            fixture.retained_evidence[index].source.coordinate_sha256);
+        std::copy_n(
+            fixture.allocation.exact_v11_source.ligand_coordinate_sha256,
+            32,
+            fixture.retained_sources[index].payload.source.coordinate_sha256);
+    }
+
+    auto input = make_input(fixture);
+    input.feature_geometry_count = 0;
+    input.feature_geometry_rows = nullptr;
+    input.feature_atom_index_count = 0;
+    input.feature_atom_indices = nullptr;
+    std::fill(
+        std::begin(input.feature_geometry_inventory_sha256),
+        std::end(input.feature_geometry_inventory_sha256),
+        UINT8_C(0));
+
+    bg_context *context = make_context(BG_BACKEND_CPP_CPU_REFERENCE);
+    assert(context != nullptr);
+    auto *admission = make_admission(fixture, context, {0.0, 0.0, 0.0}, 1);
+    const Batch batch = produce(context, admission, input);
+    assert(batch.output.row_count == kSlots);
+    assert(batch.output.coordinate_count == kSlots);
+    assert(batch.output.generated_count == 28);
+    assert(batch.output.typed_failure_count == 36);
+    for (std::size_t slot = 0; slot < kSlots; ++slot) {
+        const auto &row = batch.rows[slot];
+        assert(row.slot_index == slot);
+        assert(row.ligand_atom_count == 1);
+        assert(row.coordinate_offset == slot);
+        assert(row.denominator_preserved == UINT8_C(1));
+        assert(row.geometric_identity_verified == UINT8_C(1));
+        assert(digest_present(row.row_receipt_sha256));
+        if (slot < 24 || slot >= 60) {
+            assert(row.status == BG_DOCKING_FIXED64_PRODUCER_ROW_GENERATED);
+            assert(row.coordinates_available == UINT8_C(1));
+        } else {
+            assert(row.status ==
+                   BG_DOCKING_FIXED64_PRODUCER_ROW_TYPED_FAILURE);
+            assert(row.coordinates_available == UINT8_C(0));
+        }
+    }
+    assert_authority_false(batch.output);
+    bg_docking_geometric_admission_v1_destroy(admission);
+    bg_context_destroy(context);
+}
+
 void test_ready_anchor_without_geometry_is_typed() {
     const Fixture fixture;
     auto input = make_input(fixture);
@@ -744,6 +903,8 @@ int main() {
     test_missing_source_is_typed_and_zero_filled();
     test_missing_feature_allocation_preserves_denominator();
     test_partial_feature_geometry_only_fails_affected_slots();
+    test_equal_cross_kind_receipt_cannot_mask_missing_ligand_geometry();
+    test_single_atom_ligand_preserves_all_fixed64_rows();
     test_ready_anchor_without_geometry_is_typed();
     test_component_typed_failure_is_retained();
     test_invalid_input_capacity_and_alias_are_transactional();

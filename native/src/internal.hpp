@@ -30,6 +30,14 @@ namespace betelgeuze::native::docking::fixed64_allocation {
     std::size_t row_count) noexcept;
 }
 
+namespace betelgeuze::native::docking::fixed64_single_anchor {
+[[nodiscard]] bg_status place_for_shared_admission(
+    const bg_context &context,
+    const bg_docking_geometric_admission_v1 &admission,
+    const bg_docking_fixed64_single_anchor_input_v1 &input,
+    bg_docking_fixed64_single_anchor_output_v1 *output);
+}
+
 struct bg_context final {
     bg_backend backend = BG_BACKEND_RUST_CPU;
     bg_unit_system unit_system = BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL;

@@ -1620,7 +1620,8 @@ void write_vec3(double (&output)[3], Vec3 value) noexcept {
     const std::array<uint8_t, 32> &allocation_receipt,
     const std::array<uint8_t, 32> &coordinate,
     const bg_docking_geometric_admission_row_v1 &geometric,
-    const std::array<uint8_t, 32> &geometric_batch) noexcept {
+    const std::array<uint8_t, 32> &geometric_batch,
+    bool geometric_identity_verified) noexcept {
     const auto &result = generated.result;
     CanonicalHash hash("betelgeuze.fixed64_single_anchor_abi/native-v1");
     hash.string(kPlacementSchema);
@@ -1675,11 +1676,12 @@ void write_vec3(double (&output)[3], Vec3 value) noexcept {
     hash.digest(geometric.row_receipt_sha256);
     hash.digest(geometric_batch);
     hash.byte(result.coordinates_written);
-    hash.byte(geometric.rank_eligible);
+    hash.byte(
+        geometric_identity_verified ? geometric.rank_eligible : UINT8_C(0));
     hash.byte(UINT8_C(1));
     hash.byte(UINT8_C(1));
     hash.byte(UINT8_C(1));
-    hash.byte(UINT8_C(1));
+    hash.byte(geometric_identity_verified ? UINT8_C(1) : UINT8_C(0));
     hash.byte(UINT8_C(0));
     hash.byte(UINT8_C(0));
     hash.byte(UINT8_C(0));
@@ -1688,7 +1690,229 @@ void write_vec3(double (&output)[3], Vec3 value) noexcept {
     return hash.finish();
 }
 
+[[nodiscard]] bg_status place_impl(
+    const bg_context &context,
+    const bg_docking_geometric_admission_v1 &admission,
+    const bg_docking_fixed64_single_anchor_input_v1 &input,
+    bg_docking_fixed64_single_anchor_output_v1 *output,
+    bool run_geometric_precheck) {
+    std::array<bg_docking_fixed64_allocation_row_v1, kCandidateCount>
+        allocation_rows{};
+    std::array<uint8_t, 32> allocation_inventory{};
+    std::array<uint8_t, 32> allocation_receipt{};
+    SelectedFeatures selected{};
+    bg_status status = validate_input(
+        context,
+        admission,
+        input,
+        *output,
+        &allocation_rows,
+        &allocation_inventory,
+        &allocation_receipt,
+        &selected);
+    if (status != BG_STATUS_OK) return status;
+    const auto &slot = allocation_rows[input.slot_index];
+    std::vector<double> ligand_feature_x;
+    std::vector<double> ligand_feature_y;
+    std::vector<double> ligand_feature_z;
+    std::vector<double> receptor_feature_x;
+    std::vector<double> receptor_feature_y;
+    std::vector<double> receptor_feature_z;
+    const auto kernel = make_kernel_input(
+        input,
+        slot,
+        admission,
+        selected,
+        &ligand_feature_x,
+        &ligand_feature_y,
+        &ligand_feature_z,
+        &receptor_feature_x,
+        &receptor_feature_y,
+        &receptor_feature_z);
+    Generated generated{};
+    status = generate_backend(context, kernel, &generated);
+    if (status != BG_STATUS_OK) return status;
+    status = validate_generated(kernel, generated, context.backend);
+    if (status != BG_STATUS_OK) return status;
+
+    const bool placed = generated.result.coordinates_written != UINT8_C(0);
+    bg_docking_geometric_admission_row_v1 geometric{};
+    std::array<uint8_t, 32> geometric_batch{};
+    if (run_geometric_precheck) {
+        status = geometric_precheck(
+            context,
+            admission,
+            input.slot_index,
+            generated,
+            &geometric,
+            &geometric_batch);
+        if (status != BG_STATUS_OK) return status;
+        if ((placed &&
+             geometric.status != BG_DOCKING_GEOMETRIC_ADMISSION_ROW_EVALUATED) ||
+            (!placed &&
+             geometric.status !=
+                 BG_DOCKING_GEOMETRIC_ADMISSION_ROW_UPSTREAM_FAILURE)) {
+            return fail(
+                BG_STATUS_INTERNAL_ERROR,
+                "single-anchor geometric precheck did not preserve slot state");
+        }
+    }
+
+    std::array<uint8_t, 32> coordinate{};
+    if (placed) {
+        coordinate = coordinate_sha256(
+            generated.x.data(),
+            generated.y.data(),
+            generated.z.data(),
+            generated.x.size());
+    }
+    const auto receipt = placement_receipt(
+        input,
+        slot,
+        selected,
+        generated,
+        context.backend,
+        allocation_inventory,
+        allocation_receipt,
+        coordinate,
+        geometric,
+        geometric_batch,
+        run_geometric_precheck);
+
+    bg_docking_fixed64_single_anchor_output_v1 committed{};
+    committed.struct_size = output->struct_size;
+    committed.abi_version = output->abi_version;
+    committed.coordinate_capacity = output->coordinate_capacity;
+    committed.x_angstrom = output->x_angstrom;
+    committed.y_angstrom = output->y_angstrom;
+    committed.z_angstrom = output->z_angstrom;
+    committed.slot_index = input.slot_index;
+    committed.lane = slot.lane;
+    committed.lane_offset = slot.lane_offset;
+    committed.anchor_kind = slot.declared_anchor_kind;
+    committed.status = generated.result.status;
+    committed.failure_code = generated.result.failure_code;
+    committed.backend = context.backend;
+    committed.ligand_atom_count = input.ligand_atom_count;
+    std::copy_n(
+        generated.result.ligand_anchor_point_angstrom,
+        3,
+        committed.ligand_anchor_point_angstrom);
+    std::copy_n(
+        generated.result.receptor_anchor_point_angstrom,
+        3,
+        committed.receptor_anchor_point_angstrom);
+    std::copy_n(
+        generated.result.target_anchor_point_angstrom,
+        3,
+        committed.target_anchor_point_angstrom);
+    std::copy_n(
+        generated.result.local_surface_normal,
+        3,
+        committed.local_surface_normal);
+    std::copy_n(
+        generated.result.approach_vector,
+        3,
+        committed.approach_vector);
+    std::copy_n(
+        generated.result.ligand_direction,
+        3,
+        committed.ligand_direction);
+    std::copy_n(
+        generated.result.alignment_target_direction,
+        3,
+        committed.alignment_target_direction);
+    committed.target_distance_angstrom =
+        generated.result.target_distance_angstrom;
+    committed.twist_angle_radians = generated.result.twist_angle_radians;
+    committed.quaternion_x = generated.result.quaternion_x;
+    committed.quaternion_y = generated.result.quaternion_y;
+    committed.quaternion_z = generated.result.quaternion_z;
+    committed.quaternion_w = generated.result.quaternion_w;
+    std::copy_n(
+        generated.result.translation_angstrom,
+        3,
+        committed.translation_angstrom);
+    std::copy(
+        allocation_inventory.begin(),
+        allocation_inventory.end(),
+        committed.allocation_inventory_sha256);
+    std::copy(
+        allocation_receipt.begin(),
+        allocation_receipt.end(),
+        committed.allocation_receipt_sha256);
+    std::copy_n(
+        slot.slot_receipt_sha256,
+        32,
+        committed.allocation_slot_receipt_sha256);
+    std::copy_n(
+        input.source.receipt_sha256, 32, committed.source_receipt_sha256);
+    std::copy_n(
+        input.feature_geometry_inventory_sha256,
+        32,
+        committed.feature_geometry_inventory_sha256);
+    std::copy_n(
+        selected.ligand->feature_geometry_receipt_sha256,
+        32,
+        committed.selected_ligand_feature_geometry_sha256);
+    std::copy_n(
+        selected.receptor->feature_geometry_receipt_sha256,
+        32,
+        committed.selected_receptor_feature_geometry_sha256);
+    std::copy(
+        coordinate.begin(), coordinate.end(), committed.output_coordinate_sha256);
+    committed.geometric_admission = geometric;
+    std::copy(
+        geometric_batch.begin(),
+        geometric_batch.end(),
+        committed.geometric_admission_batch_receipt_sha256);
+    std::copy(
+        receipt.begin(), receipt.end(), committed.placement_receipt_sha256);
+    committed.coordinates_written = generated.result.coordinates_written;
+    committed.steric_precheck_passed = run_geometric_precheck
+        ? geometric.rank_eligible
+        : UINT8_C(0);
+    committed.source_identity_verified = UINT8_C(1);
+    committed.allocation_identity_verified = UINT8_C(1);
+    committed.feature_identity_verified = UINT8_C(1);
+    committed.geometric_identity_verified =
+        run_geometric_precheck ? UINT8_C(1) : UINT8_C(0);
+    committed.result_dependent_input_consumed = UINT8_C(0);
+    committed.fallback_allowed = UINT8_C(0);
+    committed.multi_anchor_consumed = UINT8_C(0);
+    committed.denominator_preserved = UINT8_C(1);
+    committed.molecular_execution_authorized = UINT8_C(0);
+    committed.reservation_authorized = UINT8_C(0);
+    committed.benchmark_execution_authorized = UINT8_C(0);
+    committed.existing_rank_auto_change_authorized = UINT8_C(0);
+    committed.customer_pose_emission_authorized = UINT8_C(0);
+    committed.production_claim_authorized = UINT8_C(0);
+    committed.scientific_claim_authorized = UINT8_C(0);
+    if (placed) {
+        const std::size_t bytes = generated.x.size() * sizeof(double);
+        std::memcpy(output->x_angstrom, generated.x.data(), bytes);
+        std::memcpy(output->y_angstrom, generated.y.data(), bytes);
+        std::memcpy(output->z_angstrom, generated.z.data(), bytes);
+    }
+    *output = committed;
+    return BG_STATUS_OK;
+}
+
 }  // namespace
+
+bg_status place_for_shared_admission(
+    const bg_context &context,
+    const bg_docking_geometric_admission_v1 &admission,
+    const bg_docking_fixed64_single_anchor_input_v1 &input,
+    bg_docking_fixed64_single_anchor_output_v1 *output) {
+    if (output == nullptr || !pointer_is_aligned(output)) {
+        return fail(
+            BG_STATUS_INVALID_ARGUMENT,
+            "single-anchor shared-admission output must be aligned");
+    }
+    return place_impl(context, admission, input, output, false);
+}
+
 }  // namespace betelgeuze::native::docking::fixed64_single_anchor
 
 using namespace betelgeuze::native;
@@ -1747,184 +1971,6 @@ bg_docking_fixed64_single_anchor_v1_place(
                 BG_STATUS_INVALID_ARGUMENT,
                 "single-anchor context, admission, input, and output must be aligned");
         }
-        std::array<bg_docking_fixed64_allocation_row_v1, kCandidateCount>
-            allocation_rows{};
-        std::array<uint8_t, 32> allocation_inventory{};
-        std::array<uint8_t, 32> allocation_receipt{};
-        SelectedFeatures selected{};
-        bg_status status = validate_input(
-            *context,
-            *admission,
-            *input,
-            *output,
-            &allocation_rows,
-            &allocation_inventory,
-            &allocation_receipt,
-            &selected);
-        if (status != BG_STATUS_OK) return status;
-        const auto &slot = allocation_rows[input->slot_index];
-        std::vector<double> ligand_feature_x;
-        std::vector<double> ligand_feature_y;
-        std::vector<double> ligand_feature_z;
-        std::vector<double> receptor_feature_x;
-        std::vector<double> receptor_feature_y;
-        std::vector<double> receptor_feature_z;
-        const auto kernel = make_kernel_input(
-            *input,
-            slot,
-            *admission,
-            selected,
-            &ligand_feature_x,
-            &ligand_feature_y,
-            &ligand_feature_z,
-            &receptor_feature_x,
-            &receptor_feature_y,
-            &receptor_feature_z);
-        Generated generated{};
-        status = generate_backend(*context, kernel, &generated);
-        if (status != BG_STATUS_OK) return status;
-        status = validate_generated(kernel, generated, context->backend);
-        if (status != BG_STATUS_OK) return status;
-        bg_docking_geometric_admission_row_v1 geometric{};
-        std::array<uint8_t, 32> geometric_batch{};
-        status = geometric_precheck(
-            *context,
-            *admission,
-            input->slot_index,
-            generated,
-            &geometric,
-            &geometric_batch);
-        if (status != BG_STATUS_OK) return status;
-        const bool placed =
-            generated.result.coordinates_written != UINT8_C(0);
-        if ((placed &&
-             geometric.status != BG_DOCKING_GEOMETRIC_ADMISSION_ROW_EVALUATED) ||
-            (!placed &&
-             geometric.status !=
-                 BG_DOCKING_GEOMETRIC_ADMISSION_ROW_UPSTREAM_FAILURE)) {
-            return fail(
-                BG_STATUS_INTERNAL_ERROR,
-                "single-anchor geometric precheck did not preserve slot state");
-        }
-        std::array<uint8_t, 32> coordinate{};
-        if (placed) {
-            coordinate = coordinate_sha256(
-                generated.x.data(),
-                generated.y.data(),
-                generated.z.data(),
-                generated.x.size());
-        }
-        const auto receipt = placement_receipt(
-            *input,
-            slot,
-            selected,
-            generated,
-            context->backend,
-            allocation_inventory,
-            allocation_receipt,
-            coordinate,
-            geometric,
-            geometric_batch);
-
-        bg_docking_fixed64_single_anchor_output_v1 committed{};
-        committed.struct_size = output->struct_size;
-        committed.abi_version = output->abi_version;
-        committed.coordinate_capacity = output->coordinate_capacity;
-        committed.x_angstrom = output->x_angstrom;
-        committed.y_angstrom = output->y_angstrom;
-        committed.z_angstrom = output->z_angstrom;
-        committed.slot_index = input->slot_index;
-        committed.lane = slot.lane;
-        committed.lane_offset = slot.lane_offset;
-        committed.anchor_kind = slot.declared_anchor_kind;
-        committed.status = generated.result.status;
-        committed.failure_code = generated.result.failure_code;
-        committed.backend = context->backend;
-        committed.ligand_atom_count = input->ligand_atom_count;
-        std::copy_n(
-            generated.result.ligand_anchor_point_angstrom,
-            3,
-            committed.ligand_anchor_point_angstrom);
-        std::copy_n(
-            generated.result.receptor_anchor_point_angstrom,
-            3,
-            committed.receptor_anchor_point_angstrom);
-        std::copy_n(
-            generated.result.target_anchor_point_angstrom,
-            3,
-            committed.target_anchor_point_angstrom);
-        std::copy_n(
-            generated.result.local_surface_normal,
-            3,
-            committed.local_surface_normal);
-        std::copy_n(
-            generated.result.approach_vector,
-            3,
-            committed.approach_vector);
-        std::copy_n(
-            generated.result.ligand_direction,
-            3,
-            committed.ligand_direction);
-        std::copy_n(
-            generated.result.alignment_target_direction,
-            3,
-            committed.alignment_target_direction);
-        committed.target_distance_angstrom =
-            generated.result.target_distance_angstrom;
-        committed.twist_angle_radians = generated.result.twist_angle_radians;
-        committed.quaternion_x = generated.result.quaternion_x;
-        committed.quaternion_y = generated.result.quaternion_y;
-        committed.quaternion_z = generated.result.quaternion_z;
-        committed.quaternion_w = generated.result.quaternion_w;
-        std::copy_n(
-            generated.result.translation_angstrom,
-            3,
-            committed.translation_angstrom);
-        std::copy(allocation_inventory.begin(), allocation_inventory.end(),
-                  committed.allocation_inventory_sha256);
-        std::copy(allocation_receipt.begin(), allocation_receipt.end(),
-                  committed.allocation_receipt_sha256);
-        std::copy_n(slot.slot_receipt_sha256, 32,
-                    committed.allocation_slot_receipt_sha256);
-        std::copy_n(input->source.receipt_sha256, 32,
-                    committed.source_receipt_sha256);
-        std::copy_n(input->feature_geometry_inventory_sha256, 32,
-                    committed.feature_geometry_inventory_sha256);
-        std::copy_n(selected.ligand->feature_geometry_receipt_sha256, 32,
-                    committed.selected_ligand_feature_geometry_sha256);
-        std::copy_n(selected.receptor->feature_geometry_receipt_sha256, 32,
-                    committed.selected_receptor_feature_geometry_sha256);
-        std::copy(coordinate.begin(), coordinate.end(),
-                  committed.output_coordinate_sha256);
-        committed.geometric_admission = geometric;
-        std::copy(geometric_batch.begin(), geometric_batch.end(),
-                  committed.geometric_admission_batch_receipt_sha256);
-        std::copy(receipt.begin(), receipt.end(),
-                  committed.placement_receipt_sha256);
-        committed.coordinates_written = generated.result.coordinates_written;
-        committed.steric_precheck_passed = geometric.rank_eligible;
-        committed.source_identity_verified = UINT8_C(1);
-        committed.allocation_identity_verified = UINT8_C(1);
-        committed.feature_identity_verified = UINT8_C(1);
-        committed.geometric_identity_verified = UINT8_C(1);
-        committed.result_dependent_input_consumed = UINT8_C(0);
-        committed.fallback_allowed = UINT8_C(0);
-        committed.multi_anchor_consumed = UINT8_C(0);
-        committed.denominator_preserved = UINT8_C(1);
-        committed.molecular_execution_authorized = UINT8_C(0);
-        committed.reservation_authorized = UINT8_C(0);
-        committed.benchmark_execution_authorized = UINT8_C(0);
-        committed.existing_rank_auto_change_authorized = UINT8_C(0);
-        committed.customer_pose_emission_authorized = UINT8_C(0);
-        committed.production_claim_authorized = UINT8_C(0);
-        committed.scientific_claim_authorized = UINT8_C(0);
-        if (placed) {
-            const std::size_t bytes = generated.x.size() * sizeof(double);
-            std::memcpy(output->x_angstrom, generated.x.data(), bytes);
-            std::memcpy(output->y_angstrom, generated.y.data(), bytes);
-            std::memcpy(output->z_angstrom, generated.z.data(), bytes);
-        }
-        *output = committed;
-        return BG_STATUS_OK;
+        return place_impl(*context, *admission, *input, output, true);
     });
 }
