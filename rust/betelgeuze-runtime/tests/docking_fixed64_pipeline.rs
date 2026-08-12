@@ -297,7 +297,10 @@ fn complete_pipeline_is_raii_bound_to_the_exact_native_context() {
     );
 }
 
-fn assert_safe_run_returns_complete_receipt(fixture: &SingleAtomFixture, options: ContextOptions) {
+fn assert_safe_run_returns_complete_receipt(
+    fixture: &SingleAtomFixture,
+    options: ContextOptions,
+) -> betelgeuze_runtime::Fixed64ScientificProjection {
     let v7 = (0_u8..24)
         .map(|index| Fixed64IndexedCoordinateSource {
             source_index: u32::from(index),
@@ -537,14 +540,37 @@ fn assert_safe_run_returns_complete_receipt(fixture: &SingleAtomFixture, options
         .rows
         .iter()
         .all(|row| row.row_receipt_sha256 != [0; 32]));
+    let projection = receipt.scientific_projection();
+    assert_eq!(projection, repeated.scientific_projection());
+    assert_eq!(projection.candidate_denominator, 64);
+    assert_eq!(projection.receptor_atom_count, 4);
+    assert_eq!(projection.ligand_atom_count, 1);
+    assert_eq!(projection.candidate_rows.len(), 64);
+    assert_eq!(projection.torsion_moves.len(), 512);
+    assert_ne!(projection.decision_sha256, [0; 32]);
+    assert_ne!(projection.sha256, [0; 32]);
+    assert!(projection.candidate_rows.iter().all(|row| {
+        if row.coordinates_available {
+            row.placement_receipt_sha256 != [0; 32]
+                && row.output_proposal_sha256 != [0; 32]
+                && row.output_coordinate_sha256 != [0; 32]
+        } else {
+            row.output_proposal_sha256 == [0; 32] && row.output_coordinate_sha256 == [0; 32]
+        }
+    }));
+    projection
 }
 
 #[test]
 fn safe_run_returns_complete_fixed64_receipt_and_preserves_typed_failures() {
     let fixture = SingleAtomFixture::new();
-    for options in [ContextOptions::cpu_reference(), ContextOptions::rust_cpu()] {
-        assert_safe_run_returns_complete_receipt(&fixture, options);
-    }
+    let cpp = assert_safe_run_returns_complete_receipt(&fixture, ContextOptions::cpu_reference());
+    let rust = assert_safe_run_returns_complete_receipt(&fixture, ContextOptions::rust_cpu());
+    assert_eq!(cpp.decision_sha256, rust.decision_sha256);
+    assert_eq!(cpp.candidate_denominator, rust.candidate_denominator);
+    assert_eq!(cpp.primary_slot_indices, rust.primary_slot_indices);
+    assert_eq!(cpp.valid_slot_indices, rust.valid_slot_indices);
+    assert_eq!(cpp.top_k_slot_indices, rust.top_k_slot_indices);
 }
 
 fn assert_transformed_placements_are_independently_replayed(
@@ -826,7 +852,7 @@ fn complete_pipeline_constructs_on_both_qualified_hip_lanes() {
         assert_eq!(pipeline.ligand_atom_count(), 1);
         drop(pipeline);
         drop(context);
-        assert_safe_run_returns_complete_receipt(&fixture, options);
+        let _ = assert_safe_run_returns_complete_receipt(&fixture, options);
     }
 }
 

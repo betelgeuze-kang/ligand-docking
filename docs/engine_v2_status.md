@@ -20,6 +20,14 @@ The current `main` branch contains:
 - matrix-free projection, torsion-tree, temporal, and physics-gate primitives;
 - a fail-closed CPU reference orchestrator and strict checkpoint contracts;
 - an independent `betelgeuze-engine-v2` wheel for Python 3.10–3.12;
+- an ABI 1.19 C++/Rust complete fixed64 candidate pipeline and a frozen,
+  non-consuming native CPU qualification-v4 profile. Two compiled synthetic
+  fixtures preserve all 64 slots across generated and typed-failure outcomes,
+  compare backend-independent decisions and all numeric scientific state, and
+  reuse persistent C++ reference and Rust CPU contexts. CI may compile,
+  unit-test, and statically verify this profile but may not consume its live
+  25-sample execution. This is engineering-only evidence and grants no
+  molecular, benchmark, Stage 0, product, HIP-device, or claim authority;
 - bounded single-model PDB and single-molecule SDF V2000 ingestion;
 - bounded single-block CIF syntax plus mmCIF entity/asym/polymer identity,
   zero-occupancy, altloc, nonpoly instance, component atom/bond, and selected

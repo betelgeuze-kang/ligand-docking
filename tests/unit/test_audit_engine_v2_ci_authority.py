@@ -24,6 +24,10 @@ from tools.audit_engine_v2_ci_authority import (
     MIXED64_V2_FORBIDDEN_TRUE_AUTHORITY_KEYS,
     MIXED64_V2_REQUIRED_TOKEN_COUNTS,
     MIXED64_V2_REQUIRED_TOKENS,
+    NATIVE_FIXED64_CPU_V4_CONTRACT_PATHS,
+    NATIVE_FIXED64_CPU_V4_FALSE_AUTHORITY_KEYS,
+    NATIVE_FIXED64_CPU_V4_REQUIRED_TOKEN_COUNTS,
+    NATIVE_FIXED64_CPU_V4_REQUIRED_TOKENS,
     ONE_SHOT_CONTRACT_PATHS,
     ONE_SHOT_REQUIRED_TOKENS,
     STANDALONE_PIPELINE_CONTRACT_PATHS,
@@ -100,6 +104,16 @@ def _cpu_performance_ci_tokens() -> tuple[str, ...]:
     )
 
 
+def _native_fixed64_cpu_v4_ci_tokens() -> tuple[str, ...]:
+    return tuple(
+        token
+        for token, minimum_count in (
+            NATIVE_FIXED64_CPU_V4_REQUIRED_TOKEN_COUNTS.items()
+        )
+        for _ in range(minimum_count)
+    )
+
+
 def _write_cpu_performance_contract(
     tmp_path: Path,
     *,
@@ -141,6 +155,16 @@ def _write_cpu_performance_contract(
         tmp_path / "config/engine_v2_cpu_performance_v3_runner_activation.json"
     )
     activation.write_bytes(activation_source.read_bytes())
+
+
+def _write_native_fixed64_cpu_v4_contract(tmp_path: Path) -> None:
+    _mark_complete_contract(tmp_path, NATIVE_FIXED64_CPU_V4_CONTRACT_PATHS)
+    source = (
+        Path(__file__).resolve().parents[2]
+        / "config/engine_v2_native_fixed64_cpu_profile_v4.json"
+    )
+    profile = tmp_path / "config/engine_v2_native_fixed64_cpu_profile_v4.json"
+    profile.write_bytes(source.read_bytes())
 
 
 def _write_mixed64_v2_contract(
@@ -477,6 +501,15 @@ def test_repository_has_no_specialized_one_shot_workflow() -> None:
     )
     assert inventory["cpu_performance_contract_in_authoritative_ci"] is True
     assert inventory["cpu_performance_authority_fail_closed"] is True
+    assert all(token in main_text for token in NATIVE_FIXED64_CPU_V4_REQUIRED_TOKENS)
+    assert all(
+        main_text.count(token) >= minimum_count
+        for token, minimum_count in (
+            NATIVE_FIXED64_CPU_V4_REQUIRED_TOKEN_COUNTS.items()
+        )
+    )
+    assert inventory["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is True
+    assert inventory["native_fixed64_cpu_v4_authority_fail_closed"] is True
 
 
 def test_mixed64_v2_contract_requires_complete_authoritative_main(
@@ -665,6 +698,82 @@ def test_cpu_performance_v3_runner_activation_escalation_fails_ci_audit(
     payload = build_inventory(tmp_path)
     assert payload["cpu_performance_authority_fail_closed"] is False
     assert payload["cpu_performance_contract_in_authoritative_ci"] is False
+
+
+def test_native_fixed64_cpu_v4_requires_authoritative_ci_and_false_authority(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_native_fixed64_cpu_v4_contract(tmp_path)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        encoding="utf-8",
+    )
+
+    payload = build_inventory(tmp_path)
+    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is True
+    assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is True
+
+    (tmp_path / "docs/engine_v2_native_fixed64_cpu_qualification_v4.md").unlink()
+    payload = build_inventory(tmp_path)
+    assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is False
+
+
+@pytest.mark.parametrize(
+    ("section", "field", "value"),
+    (
+        ("authority", "qualification_authority", True),
+        ("authority", "molecular_execution_authorized", True),
+        ("restrictions", "hip_device_execution_allowed", True),
+        ("restrictions", "reservation_allowed", True),
+        ("backends", "fallback_allowed", True),
+        ("measurement_core", "python_scientific_work_allowed", True),
+        ("performance", "performance_claim_authorized", True),
+    ),
+)
+def test_native_fixed64_cpu_v4_authority_escalation_fails_ci_audit(
+    tmp_path: Path,
+    section: str,
+    field: str,
+    value: object,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_native_fixed64_cpu_v4_contract(tmp_path)
+    profile_path = tmp_path / "config/engine_v2_native_fixed64_cpu_profile_v4.json"
+    profile = json.loads(profile_path.read_text(encoding="ascii"))
+    profile[section][field] = value
+    profile_path.write_text(
+        json.dumps(profile, indent=2, sort_keys=True) + "\n",
+        encoding="ascii",
+    )
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        encoding="utf-8",
+    )
+
+    payload = build_inventory(tmp_path)
+    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is False
+    assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is False
+
+
+def test_native_fixed64_cpu_v4_inventory_constants_are_exact() -> None:
+    assert set(NATIVE_FIXED64_CPU_V4_FALSE_AUTHORITY_KEYS) == {
+        "fresh_holdout_execution_authorized",
+        "historical_ab_execution_authorized",
+        "molecular_execution_authorized",
+        "product_performance_claim_authorized",
+        "public_benchmark_authorized",
+        "qualification_authority",
+        "reservation_authorized",
+        "scientific_claim_authorized",
+        "stage0_admission_authorized",
+    }
+    assert NATIVE_FIXED64_CPU_V4_REQUIRED_TOKENS == (
+        "config/engine_v2_native_fixed64_cpu_profile_v4.json",
+        "tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py",
+        "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v4.py",
+        "docs/engine_v2_native_fixed64_cpu_qualification_v4.md",
+    )
 
 
 def test_mixed64_v2_contract_requires_documented_contract_inventory(

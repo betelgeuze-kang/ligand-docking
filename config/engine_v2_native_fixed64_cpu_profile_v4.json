@@ -1,0 +1,105 @@
+{
+  "authority": {
+    "fresh_holdout_execution_authorized": false,
+    "historical_ab_execution_authorized": false,
+    "molecular_execution_authorized": false,
+    "product_performance_claim_authorized": false,
+    "public_benchmark_authorized": false,
+    "qualification_authority": false,
+    "reservation_authorized": false,
+    "scientific_claim_authorized": false,
+    "stage0_admission_authorized": false
+  },
+  "backends": {
+    "comparison": "rust_cpu",
+    "fallback_allowed": false,
+    "reference": "cpp_cpu_reference"
+  },
+  "fixtures": [
+    {
+      "candidate_denominator": 64,
+      "contains_molecular_data": false,
+      "expected_generated_count": 64,
+      "expected_typed_failure_count": 0,
+      "fixture_id": "synthetic_complete_64",
+      "fixture_source": "native_compiled_constant",
+      "ligand_atom_count": 12,
+      "receptor_atom_count": 12
+    },
+    {
+      "candidate_denominator": 64,
+      "contains_molecular_data": false,
+      "expected_generated_count": 48,
+      "expected_typed_failure_count": 16,
+      "fixture_id": "synthetic_feature_sparse_48_plus_16",
+      "fixture_source": "native_compiled_constant",
+      "ligand_atom_count": 12,
+      "receptor_atom_count": 12
+    }
+  ],
+  "gates": {
+    "authority_false_required": true,
+    "candidate_denominator_exact": 64,
+    "cpp_repeat_projection_exact_required": true,
+    "decision_sha256_exact_between_cpu_backends_required": true,
+    "failure_codes_exact_required": true,
+    "persistent_context_count_per_backend_exact": 1,
+    "rust_repeat_projection_exact_required": true,
+    "score_term_count_exact": 8,
+    "top1_top5_and_v7_decisions_exact_required": true,
+    "validity_decisions_exact_required": true
+  },
+  "measurement_core": {
+    "candidate_graph": [
+      "fixed64_proposal",
+      "geometric_admission",
+      "rigid_refinement",
+      "torsion_v7_refinement",
+      "scorer_v1_8_term",
+      "pose_validity",
+      "stable_top_k",
+      "direct_rmsd_clustering"
+    ],
+    "native_binary": "betelgeuze-fixed64-cpu-probe-v4",
+    "native_pipeline_profile_id": "betelgeuze.engine_v2_native_fixed64_complete_pipeline/1.0.0",
+    "python_scientific_work_allowed": false,
+    "receptor_context_recreated_inside_samples": false
+  },
+  "numeric_parity": {
+    "absolute_tolerance": 1e-11,
+    "all_coordinate_states_compared": true,
+    "all_refinement_objectives_compared": true,
+    "all_scorer_v1_terms_compared": true,
+    "all_validity_measurements_compared": true,
+    "nonfinite_values_allowed": false,
+    "relative_tolerance": 4e-12
+  },
+  "performance": {
+    "gate": "rust_cpu_median_div_cpp_cpu_reference_median_lte",
+    "maximum_ratio": 1.25,
+    "performance_claim_authorized": false,
+    "scope": "synthetic_development_non_regression_only"
+  },
+  "profile_id": "engine_v2_native_fixed64_cpu_synthetic_v4",
+  "restrictions": {
+    "actual_molecular_execution_allowed": false,
+    "contains_molecular_cases": false,
+    "fresh_or_historical_case_input_allowed": false,
+    "github_actions_live_qualification_allowed": false,
+    "github_actions_production_authority_allowed": false,
+    "hip_device_execution_allowed": false,
+    "public_or_scientific_performance_claim_allowed": false,
+    "reservation_allowed": false,
+    "result_dependent_configuration_allowed": false,
+    "test_double_production_authority_allowed": false
+  },
+  "sampling": {
+    "clock": "std_steady_instant",
+    "sample_rounds": 25,
+    "schedule": "paired_ab_ba",
+    "timed_scope": "persistent_pipeline_run_only",
+    "warmup_rounds": 5
+  },
+  "schema_id": "betelgeuze.engine_v2_native_fixed64_cpu_profile/4.0.0",
+  "status": "implementation_profile_frozen_execution_not_consumed"
+}

@@ -6,6 +6,16 @@ scientific claim from a package version.
 
 ## Unreleased
 
+- Froze a non-consuming native fixed64 CPU qualification-v4 profile for the
+  complete 64-slot proposal, geometric-admission, rigid/V7-refinement,
+  eight-term Scorer-v1, validity, stable-Top-K, and direct-RMSD-clustering
+  graph. Its compiled synthetic fixtures preserve both 64/0 and 48/16
+  generated/typed-failure denominators, compare backend-independent scientific
+  projections between the C++ reference and Rust CPU paths, require exact
+  repeat decisions and bounded numeric parity, and time persistent contexts in
+  paired AB/BA order. CI verifies and unit-tests the implementation but cannot
+  consume the 25-sample profile; all molecular, reservation, qualification,
+  benchmark, product, HIP-device, and claim authority remains false.
 - Hardened the synthetic CPU profile-v3 runner into an account-scoped
   exactly-once transaction: the attempt is atomically consumed before
   preflight, one live result can publish only once, and no decision is returned

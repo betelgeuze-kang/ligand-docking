@@ -6,6 +6,7 @@
 mod docking;
 mod dynamics;
 mod forcefield;
+mod qualification;
 
 pub use docking::{
     Fixed64AtomicFeature, Fixed64AuthorityDisposition, Fixed64BatchReceipts,
@@ -16,7 +17,8 @@ pub use docking::{
     Fixed64PipelineContext, Fixed64PipelineReceipt, Fixed64PipelineRow, Fixed64ProducerEvidence,
     Fixed64RankingEvidence, Fixed64Receptor, Fixed64RefinementEvidence, Fixed64RefinementMode,
     Fixed64RigidCoordinates, Fixed64RigidEvidence, Fixed64RigidProfileEvidence, Fixed64Rotor,
-    Fixed64RunInput, Fixed64ScorerEvidence, Fixed64SourceEvidence, Fixed64TorsionCoordinates,
+    Fixed64RunInput, Fixed64ScientificCandidateProjection, Fixed64ScientificProjection,
+    Fixed64ScorerEvidence, Fixed64SourceEvidence, Fixed64TorsionCoordinates,
     Fixed64TorsionEvidence, Fixed64TorsionMoveEvidence, Fixed64ValidityEvidence,
 };
 pub use dynamics::{
@@ -27,6 +29,11 @@ pub use forcefield::{
     AtomNonbonded, EnergyComponents, Evaluation, ForceField, ForceFieldInput, ForceSoaOwned,
     HarmonicAngle, HarmonicBond, NonbondedSettings, OrthorhombicCell, PairExclusion, PairScale,
     PeriodicTorsion,
+};
+pub use qualification::{
+    run_native_fixed64_cpu_probe_v4, Fixed64CpuFixtureProbeV4, Fixed64CpuProbeConfigV4,
+    Fixed64CpuProbeReportV4, Fixed64NumericParityV4, FIXED64_CPU_QUALIFICATION_V4_PROFILE_ID,
+    FIXED64_CPU_QUALIFICATION_V4_SCHEMA_ID,
 };
 
 use std::ffi::CStr;
