@@ -148,5 +148,10 @@ fn main() -> ExitCode {
         config.warmup_rounds,
         report.schema_id,
     );
-    ExitCode::SUCCESS
+    if report.gate_passed {
+        ExitCode::SUCCESS
+    } else {
+        eprintln!("fixed64 CPU probe v4 gates did not pass");
+        ExitCode::from(1)
+    }
 }

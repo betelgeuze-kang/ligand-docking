@@ -714,8 +714,41 @@ pub struct Fixed64ScientificCandidateProjection {
 }
 
 impl Fixed64PipelineReceipt {
-    #[must_use]
-    pub fn scientific_projection(&self) -> Fixed64ScientificProjection {
+    /// Derive a backend-independent scientific projection from a validated
+    /// fixed64 receipt graph.
+    ///
+    /// The receipt fields remain public for evidence serialization.  Reject a
+    /// caller-mutated graph before indexing its parallel row channels so a
+    /// malformed artifact cannot panic or silently truncate the denominator.
+    pub fn scientific_projection(&self) -> Result<Fixed64ScientificProjection> {
+        const CANDIDATE_COUNT: usize = sys::BG_DOCKING_FIXED64_CANDIDATE_COUNT as usize;
+        let row_channels = [
+            ("pipeline", self.rows.len()),
+            ("producer", self.producer_rows.len()),
+            ("rigid", self.rigid_rows.len()),
+            ("torsion", self.torsion_rows.len()),
+            ("refinement", self.refinement_rows.len()),
+            ("scorer", self.scorer_rows.len()),
+            ("validity", self.validity_rows.len()),
+            ("ranking", self.ranking_rows.len()),
+            ("cluster", self.cluster_rows.len()),
+        ];
+        if row_channels
+            .iter()
+            .any(|(_, length)| *length != CANDIDATE_COUNT)
+        {
+            let observed = row_channels
+                .iter()
+                .map(|(name, length)| format!("{name}={length}"))
+                .collect::<Vec<_>>()
+                .join(", ");
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                format!(
+                    "fixed64 scientific projection requires {CANDIDATE_COUNT} rows in every channel ({observed})"
+                ),
+            ));
+        }
         let candidate_rows = (0..self.rows.len())
             .map(|slot| {
                 let producer = self.producer_rows[slot];
@@ -800,7 +833,7 @@ impl Fixed64PipelineReceipt {
         };
         value.decision_sha256 = scientific_decision_sha256(&value);
         value.sha256 = scientific_projection_sha256(&value);
-        value
+        Ok(value)
     }
 }
 

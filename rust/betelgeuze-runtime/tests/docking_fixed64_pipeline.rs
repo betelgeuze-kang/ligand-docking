@@ -540,8 +540,13 @@ fn assert_safe_run_returns_complete_receipt(
         .rows
         .iter()
         .all(|row| row.row_receipt_sha256 != [0; 32]));
-    let projection = receipt.scientific_projection();
-    assert_eq!(projection, repeated.scientific_projection());
+    let mut malformed = receipt.clone();
+    malformed.scorer_rows.pop();
+    let error = malformed.scientific_projection().unwrap_err();
+    assert_eq!(error.code, ErrorCode::AbiMismatch);
+    assert!(error.message.contains("scorer=63"));
+    let projection = receipt.scientific_projection().unwrap();
+    assert_eq!(projection, repeated.scientific_projection().unwrap());
     assert_eq!(projection.candidate_denominator, 64);
     assert_eq!(projection.receptor_atom_count, 4);
     assert_eq!(projection.ligand_atom_count, 1);

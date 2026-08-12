@@ -677,7 +677,7 @@ fn timed_run(
             "fixed64 CPU probe duration exceeded uint64 nanoseconds",
         )
     })?;
-    let projection = receipt.scientific_projection();
+    let projection = receipt.scientific_projection()?;
     black_box(projection.sha256);
     Ok((elapsed, projection))
 }
@@ -886,10 +886,10 @@ fn run_fixture(
     );
     let cpp_median = median(&cpp_samples);
     let rust_median = median(&rust_samples);
-    if cpp_median == 0 {
+    if cpp_median == 0 || rust_median == 0 {
         return Err(Error::local(
             ErrorCode::InternalError,
-            "fixed64 CPU probe C++ median duration was zero",
+            "fixed64 CPU probe backend median duration was zero",
         ));
     }
     let ratio = rust_median as f64 / cpp_median as f64;
