@@ -80,7 +80,14 @@ Static verification is non-consuming:
 python3 tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py
 ```
 
+The verifier also reads the compiled Rust qualification gate and native probe
+entry point. It fails if the profile ID, denominator, fixture counts, sampling,
+numeric tolerances, performance ratio, or `qualification_profile()` call drifts
+from the canonical JSON.
+
 Do not invoke the native 25-sample binary from GitHub Actions or treat a unit
 probe as the exactly-once qualification result. The CI authority auditor scans
 every `.github/workflows/*.yml` and `*.yaml` file and fails closed if the live
-binary name appears in any workflow.
+binary name appears in any workflow. It also rejects tokenless `cargo run`
+forms anywhere in Actions; unrelated Cargo execution must select a different
+binary explicitly with `--bin`.

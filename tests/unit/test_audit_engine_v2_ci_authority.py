@@ -27,6 +27,8 @@ from tools.audit_engine_v2_ci_authority import (
     NATIVE_FIXED64_CPU_V4_CONTRACT_PATHS,
     NATIVE_FIXED64_CPU_V4_FALSE_AUTHORITY_KEYS,
     NATIVE_FIXED64_CPU_V4_FALSE_RESTRICTION_KEYS,
+    NATIVE_FIXED64_CPU_V4_CARGO_RUN_PATTERN,
+    NATIVE_FIXED64_CPU_V4_EXPLICIT_BIN_PATTERN,
     NATIVE_FIXED64_CPU_V4_FORBIDDEN_WORKFLOW_TOKENS,
     NATIVE_FIXED64_CPU_V4_REQUIRED_TOKEN_COUNTS,
     NATIVE_FIXED64_CPU_V4_REQUIRED_TOKENS,
@@ -749,8 +751,22 @@ def test_native_fixed64_cpu_v4_missing_restriction_fails_ci_audit(
     assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is False
 
 
+@pytest.mark.parametrize(
+    "command",
+    (
+        "cargo run --bin betelgeuze-fixed64-cpu-probe-v4",
+        "cargo run --manifest-path rust/betelgeuze-runtime/Cargo.toml",
+        "cargo run --manifest-path=rust/betelgeuze-runtime/Cargo.toml",
+        "cargo run --manifest-path "
+        + chr(92)
+        + "\n          rust/betelgeuze-runtime/Cargo.toml",
+        "cargo run -p betelgeuze-runtime",
+        "cargo run --package=betelgeuze-runtime",
+    ),
+)
 def test_native_fixed64_cpu_v4_live_binary_is_forbidden_in_every_workflow(
     tmp_path: Path,
+    command: str,
 ) -> None:
     _write_authoritative_workflows(tmp_path)
     _write_native_fixed64_cpu_v4_contract(tmp_path)
@@ -761,7 +777,7 @@ def test_native_fixed64_cpu_v4_live_binary_is_forbidden_in_every_workflow(
     unrelated = tmp_path / ".github/workflows/unrelated.yaml"
     unrelated.write_text(
         "jobs:\n  forbidden:\n    steps:\n"
-        "      - run: cargo run --bin betelgeuze-fixed64-cpu-probe-v4\n",
+        f"      - run: {command}\n",
         encoding="utf-8",
     )
 
@@ -774,6 +790,33 @@ def test_native_fixed64_cpu_v4_live_binary_is_forbidden_in_every_workflow(
     )
     assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is False
     assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is False
+
+
+def test_native_fixed64_cpu_v4_explicit_unrelated_binary_remains_allowed(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_native_fixed64_cpu_v4_contract(tmp_path)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        encoding="utf-8",
+    )
+    unrelated = tmp_path / ".github/workflows/unrelated.yaml"
+    unrelated.write_text(
+        "jobs:\n  explicit:\n    steps:\n"
+        "      - run: cargo run --bin unrelated-explicit-tool\n",
+        encoding="utf-8",
+    )
+
+    payload = build_inventory(tmp_path)
+    assert (
+        payload[
+            "native_fixed64_cpu_v4_live_qualification_absent_from_github_actions"
+        ]
+        is True
+    )
+    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is True
+    assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is True
 
 
 @pytest.mark.parametrize(
@@ -846,6 +889,8 @@ def test_native_fixed64_cpu_v4_inventory_constants_are_exact() -> None:
     assert NATIVE_FIXED64_CPU_V4_FORBIDDEN_WORKFLOW_TOKENS == (
         "betelgeuze-fixed64-cpu-probe-v4",
     )
+    assert NATIVE_FIXED64_CPU_V4_CARGO_RUN_PATTERN == r"\bcargo\s+run\b[^\n]*"
+    assert NATIVE_FIXED64_CPU_V4_EXPLICIT_BIN_PATTERN == r"(?:^|\s)--bin(?:=|\s+)"
 
 
 def test_mixed64_v2_contract_requires_documented_contract_inventory(

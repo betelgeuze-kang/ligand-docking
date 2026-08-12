@@ -545,6 +545,25 @@ fn assert_safe_run_returns_complete_receipt(
     let error = malformed.scientific_projection().unwrap_err();
     assert_eq!(error.code, ErrorCode::AbiMismatch);
     assert!(error.message.contains("scorer=63"));
+    let mut swapped = receipt.clone();
+    swapped.scorer_rows.swap(0, 1);
+    let error = swapped.scientific_projection().unwrap_err();
+    assert_eq!(error.code, ErrorCode::AbiMismatch);
+    assert!(error.message.contains("not aligned at slot 0"));
+    let mut cross_wired = receipt.clone();
+    cross_wired.scorer_rows[0].status ^= 1;
+    let error = cross_wired.scientific_projection().unwrap_err();
+    assert_eq!(error.code, ErrorCode::AbiMismatch);
+    assert!(error
+        .message
+        .contains("mirrored evidence changed at slot 0"));
+    let mut swapped_moves = receipt.clone();
+    swapped_moves.torsion_moves.swap(0, 1);
+    let error = swapped_moves.scientific_projection().unwrap_err();
+    assert_eq!(error.code, ErrorCode::AbiMismatch);
+    assert!(error
+        .message
+        .contains("torsion moves are not index-aligned"));
     let projection = receipt.scientific_projection().unwrap();
     assert_eq!(projection, repeated.scientific_projection().unwrap());
     assert_eq!(projection.candidate_denominator, 64);

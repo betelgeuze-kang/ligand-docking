@@ -721,34 +721,7 @@ impl Fixed64PipelineReceipt {
     /// caller-mutated graph before indexing its parallel row channels so a
     /// malformed artifact cannot panic or silently truncate the denominator.
     pub fn scientific_projection(&self) -> Result<Fixed64ScientificProjection> {
-        const CANDIDATE_COUNT: usize = sys::BG_DOCKING_FIXED64_CANDIDATE_COUNT as usize;
-        let row_channels = [
-            ("pipeline", self.rows.len()),
-            ("producer", self.producer_rows.len()),
-            ("rigid", self.rigid_rows.len()),
-            ("torsion", self.torsion_rows.len()),
-            ("refinement", self.refinement_rows.len()),
-            ("scorer", self.scorer_rows.len()),
-            ("validity", self.validity_rows.len()),
-            ("ranking", self.ranking_rows.len()),
-            ("cluster", self.cluster_rows.len()),
-        ];
-        if row_channels
-            .iter()
-            .any(|(_, length)| *length != CANDIDATE_COUNT)
-        {
-            let observed = row_channels
-                .iter()
-                .map(|(name, length)| format!("{name}={length}"))
-                .collect::<Vec<_>>()
-                .join(", ");
-            return Err(Error::local(
-                ErrorCode::AbiMismatch,
-                format!(
-                    "fixed64 scientific projection requires {CANDIDATE_COUNT} rows in every channel ({observed})"
-                ),
-            ));
-        }
+        self.validate_scientific_projection_receipt_graph()?;
         let candidate_rows = (0..self.rows.len())
             .map(|slot| {
                 let producer = self.producer_rows[slot];
@@ -834,6 +807,112 @@ impl Fixed64PipelineReceipt {
         value.decision_sha256 = scientific_decision_sha256(&value);
         value.sha256 = scientific_projection_sha256(&value);
         Ok(value)
+    }
+
+    fn validate_scientific_projection_receipt_graph(&self) -> Result<()> {
+        const CANDIDATE_COUNT: usize = sys::BG_DOCKING_FIXED64_CANDIDATE_COUNT as usize;
+        let row_channels = [
+            ("pipeline", self.rows.len()),
+            ("producer", self.producer_rows.len()),
+            ("rigid", self.rigid_rows.len()),
+            ("torsion", self.torsion_rows.len()),
+            ("refinement", self.refinement_rows.len()),
+            ("scorer", self.scorer_rows.len()),
+            ("validity", self.validity_rows.len()),
+            ("ranking", self.ranking_rows.len()),
+            ("cluster", self.cluster_rows.len()),
+        ];
+        if row_channels
+            .iter()
+            .any(|(_, length)| *length != CANDIDATE_COUNT)
+        {
+            let observed = row_channels
+                .iter()
+                .map(|(name, length)| format!("{name}={length}"))
+                .collect::<Vec<_>>()
+                .join(", ");
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                format!(
+                    "fixed64 scientific projection requires {CANDIDATE_COUNT} rows in every channel ({observed})"
+                ),
+            ));
+        }
+        for slot in 0..CANDIDATE_COUNT {
+            let expected_slot = u32::try_from(slot).expect("fixed64 slot fits u32");
+            let pipeline = self.rows[slot];
+            let producer = self.producer_rows[slot];
+            let rigid = self.rigid_rows[slot];
+            let torsion = self.torsion_rows[slot];
+            let refinement = self.refinement_rows[slot];
+            let scorer = self.scorer_rows[slot];
+            let validity = self.validity_rows[slot];
+            let ranking = self.ranking_rows[slot];
+            let cluster = self.cluster_rows[slot];
+            if [
+                pipeline.slot_index,
+                producer.slot_index,
+                rigid.slot_index,
+                torsion.slot_index,
+                refinement.slot_index,
+                scorer.slot_index,
+                validity.slot_index,
+                ranking.slot_index,
+                cluster.slot_index,
+            ]
+            .iter()
+            .any(|observed| *observed != expected_slot)
+            {
+                return Err(Error::local(
+                    ErrorCode::AbiMismatch,
+                    format!(
+                        "fixed64 scientific projection row channels are not aligned at slot {slot}"
+                    ),
+                ));
+            }
+            if pipeline.producer_status != producer.status
+                || pipeline.producer_failure_code != producer.failure_code
+                || pipeline.initial_admission_decision != producer.geometric.decision
+                || pipeline.effective_refinement_mode != rigid.candidate_mode
+                || pipeline.refinement_status != refinement.status
+                || pipeline.refinement_failure_stage != refinement.failure_stage
+                || pipeline.scorer_status != scorer.status
+                || pipeline.scorer_failure_code != scorer.failure_code
+                || pipeline.validity_status != validity.status
+                || pipeline.validity_failure_code != validity.failure_code
+                || pipeline.stable_rank != ranking.stable_rank
+                || pipeline.stable_valid_rank != ranking.stable_valid_rank
+                || pipeline.cluster_status != cluster.status
+                || pipeline.cluster_id != cluster.cluster_id
+                || pipeline.cluster_rank != cluster.cluster_rank
+                || pipeline.top_k_rank != cluster.top_k_rank
+                || pipeline.producer_row_receipt_sha256 != producer.row_receipt_sha256
+                || pipeline.final_coordinate_sha256 != refinement.coordinate_sha256
+            {
+                return Err(Error::local(
+                    ErrorCode::AbiMismatch,
+                    format!(
+                        "fixed64 scientific projection mirrored evidence changed at slot {slot}"
+                    ),
+                ));
+            }
+        }
+        const MOVES_PER_CANDIDATE: usize = sys::BG_DOCKING_TORSION_V7_MAX_MOVES as usize;
+        let expected_move_count = CANDIDATE_COUNT
+            .checked_mul(MOVES_PER_CANDIDATE)
+            .expect("fixed64 torsion move count fits usize");
+        if self.torsion_moves.len() != expected_move_count
+            || self.torsion_moves.iter().enumerate().any(|(index, row)| {
+                row.slot_index as usize != index / MOVES_PER_CANDIDATE
+                    || row.move_index as usize != index % MOVES_PER_CANDIDATE
+            })
+        {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "fixed64 scientific projection torsion moves are not index-aligned",
+            ));
+        }
+        Ok(())
     }
 }
 

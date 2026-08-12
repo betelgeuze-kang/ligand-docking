@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import re
 from typing import Any
 
 
@@ -201,6 +202,8 @@ NATIVE_FIXED64_CPU_V4_FALSE_RESTRICTION_KEYS = (
 NATIVE_FIXED64_CPU_V4_FORBIDDEN_WORKFLOW_TOKENS = (
     "betelgeuze-fixed64-cpu-probe-v4",
 )
+NATIVE_FIXED64_CPU_V4_CARGO_RUN_PATTERN = r"\bcargo\s+run\b[^\n]*"
+NATIVE_FIXED64_CPU_V4_EXPLICIT_BIN_PATTERN = r"(?:^|\s)--bin(?:=|\s+)"
 ONE_SHOT_CONTRACT_PATHS = (
     "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_ab.py",
     "config/engine_v2_source_paired_clearance_one_shot_ab.json",
@@ -317,6 +320,19 @@ def _canonical_bytes(value: object) -> bytes:
 
 def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _workflow_invokes_native_fixed64_cpu_v4_live_probe(text: str) -> bool:
+    logical = text.replace("\\\n", " ")
+    if any(
+        token in logical
+        for token in NATIVE_FIXED64_CPU_V4_FORBIDDEN_WORKFLOW_TOKENS
+    ):
+        return True
+    return any(
+        re.search(NATIVE_FIXED64_CPU_V4_EXPLICIT_BIN_PATTERN, command) is None
+        for command in re.findall(NATIVE_FIXED64_CPU_V4_CARGO_RUN_PATTERN, logical)
+    )
 
 
 def _mixed64_v2_authority_is_fail_closed(repo_root: Path) -> bool:
@@ -837,10 +853,9 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         (repo_root / path).is_file()
         for path in NATIVE_FIXED64_CPU_V4_CONTRACT_PATHS
     )
-    native_fixed64_cpu_v4_live_qualification_absent_from_github_actions = all(
-        token not in text
+    native_fixed64_cpu_v4_live_qualification_absent_from_github_actions = not any(
+        _workflow_invokes_native_fixed64_cpu_v4_live_probe(text)
         for text in github_workflow_text.values()
-        for token in NATIVE_FIXED64_CPU_V4_FORBIDDEN_WORKFLOW_TOKENS
     )
     native_fixed64_cpu_v4_authority_fail_closed = (
         not native_fixed64_cpu_v4_contract_present

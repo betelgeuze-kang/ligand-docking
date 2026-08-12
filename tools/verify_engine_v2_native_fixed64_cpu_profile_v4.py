@@ -6,12 +6,19 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+import re
 from typing import NoReturn
 
 
 SCHEMA_ID = "betelgeuze.engine_v2_native_fixed64_cpu_profile/4.0.0"
 PROFILE_ID = "engine_v2_native_fixed64_cpu_synthetic_v4"
 PROFILE_RELATIVE_PATH = Path("config/engine_v2_native_fixed64_cpu_profile_v4.json")
+QUALIFICATION_SOURCE_RELATIVE_PATH = Path(
+    "rust/betelgeuze-runtime/src/qualification.rs"
+)
+PROBE_SOURCE_RELATIVE_PATH = Path(
+    "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v4.rs"
+)
 
 
 class NativeFixed64CPUProfileV4Error(ValueError):
@@ -277,15 +284,132 @@ def require_profile_document(raw: bytes) -> dict[str, object]:
     return profile
 
 
+def require_compiled_profile_binding(
+    profile: dict[str, object],
+    qualification_source_raw: bytes,
+    probe_source_raw: bytes,
+) -> None:
+    """Bind the native gate constants and entry point to the frozen JSON."""
+
+    try:
+        source = qualification_source_raw.decode("ascii")
+        probe = probe_source_raw.decode("ascii")
+    except UnicodeError as exc:
+        raise NativeFixed64CPUProfileV4Error(
+            "native qualification sources must be ASCII"
+        ) from exc
+
+    profile_id_matches = re.findall(
+        r'pub const FIXED64_CPU_QUALIFICATION_V4_PROFILE_ID: &str\s*=\s*"([^"]+)";',
+        source,
+    )
+    if profile_id_matches != [PROFILE_ID]:
+        _fail("compiled qualification profile identity changed")
+
+    config_matches = re.findall(
+        r"pub const fn qualification_profile\(\) -> Self \{\s*"
+        r"Self \{\s*"
+        r"warmup_rounds:\s*(\d+),\s*"
+        r"sample_rounds:\s*(\d+),\s*"
+        r"absolute_tolerance:\s*([0-9.eE+-]+),\s*"
+        r"relative_tolerance:\s*([0-9.eE+-]+),\s*"
+        r"maximum_rust_to_cpp_median_ratio:\s*([0-9.eE+-]+),\s*"
+        r"\}\s*\}",
+        source,
+    )
+    if len(config_matches) != 1:
+        _fail("compiled qualification gate definition changed")
+    warmup, samples, absolute, relative, ratio = config_matches[0]
+    sampling = profile["sampling"]
+    numeric = profile["numeric_parity"]
+    performance = profile["performance"]
+    if type(sampling) is not dict or type(numeric) is not dict or type(performance) is not dict:
+        _fail("profile gate sections are unavailable for compiled binding")
+    try:
+        compiled_gate = {
+            "warmup_rounds": int(warmup),
+            "sample_rounds": int(samples),
+            "absolute_tolerance": float(absolute),
+            "relative_tolerance": float(relative),
+            "maximum_ratio": float(ratio),
+        }
+    except ValueError as exc:
+        raise NativeFixed64CPUProfileV4Error(
+            "compiled qualification gate is not numeric"
+        ) from exc
+    expected_gate = {
+        "warmup_rounds": sampling["warmup_rounds"],
+        "sample_rounds": sampling["sample_rounds"],
+        "absolute_tolerance": numeric["absolute_tolerance"],
+        "relative_tolerance": numeric["relative_tolerance"],
+        "maximum_ratio": performance["maximum_ratio"],
+    }
+    if compiled_gate != expected_gate:
+        _fail("compiled qualification gate drifted from the frozen profile")
+
+    slot_matches = re.findall(r"const SLOT_COUNT: usize = (\d+);", source)
+    atom_matches = re.findall(r"const LIGAND_ATOM_COUNT: usize = (\d+);", source)
+    fixtures = profile["fixtures"]
+    gates = profile["gates"]
+    if type(fixtures) is not list or type(gates) is not dict:
+        _fail("profile fixture or gate sections are unavailable for compiled binding")
+    expected_atoms = {
+        fixture["receptor_atom_count"]
+        for fixture in fixtures
+        if type(fixture) is dict
+    } | {
+        fixture["ligand_atom_count"]
+        for fixture in fixtures
+        if type(fixture) is dict
+    }
+    if len(expected_atoms) != 1:
+        _fail("frozen fixtures do not share one compiled atom denominator")
+    expected_atom_count = next(iter(expected_atoms))
+    if slot_matches != [str(gates["candidate_denominator_exact"])] or atom_matches != [
+        str(expected_atom_count)
+    ]:
+        _fail("compiled fixed64 or atom denominator drifted from the frozen profile")
+
+    expected_counts = [
+        (
+            fixture["expected_generated_count"],
+            fixture["expected_typed_failure_count"],
+        )
+        for fixture in fixtures
+        if type(fixture) is dict
+    ]
+    compiled_counts = [
+        tuple(int(value) for value in match)
+        for match in re.findall(
+            r"Self::(?:Complete|FeatureSparse) => \((\d+), (\d+)\)", source
+        )
+    ]
+    if compiled_counts != expected_counts:
+        _fail("compiled fixture counts drifted from the frozen profile")
+
+    if (
+        probe.count("Fixed64CpuProbeConfigV4::qualification_profile()") != 1
+        or "Fixed64CpuProbeConfigV4::unit_test()" in probe
+        or probe.count("run_native_fixed64_cpu_probe_v4(config)") != 1
+    ):
+        _fail("native probe entry point is not bound to the qualification profile")
+
+
 def main() -> int:
     root = Path(__file__).resolve().parents[1]
     raw = (root / PROFILE_RELATIVE_PATH).read_bytes()
-    require_profile_document(raw)
+    profile = require_profile_document(raw)
+    require_compiled_profile_binding(
+        profile,
+        (root / QUALIFICATION_SOURCE_RELATIVE_PATH).read_bytes(),
+        (root / PROBE_SOURCE_RELATIVE_PATH).read_bytes(),
+    )
     print(
         json.dumps(
             {
                 "all_authority_false": True,
                 "candidate_denominator": 64,
+                "compiled_profile_binding_verified": True,
                 "execution_consumed": False,
                 "fixture_count": 2,
                 "profile_id": PROFILE_ID,

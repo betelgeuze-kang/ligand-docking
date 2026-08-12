@@ -11,6 +11,7 @@ import pytest
 
 from tools.verify_engine_v2_native_fixed64_cpu_profile_v4 import (
     NativeFixed64CPUProfileV4Error,
+    require_compiled_profile_binding,
     require_profile_document,
 )
 
@@ -18,6 +19,11 @@ from tools.verify_engine_v2_native_fixed64_cpu_profile_v4 import (
 _ROOT = Path(__file__).resolve().parents[2]
 _PROFILE = _ROOT / "config/engine_v2_native_fixed64_cpu_profile_v4.json"
 _VERIFIER = _ROOT / "tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py"
+_QUALIFICATION_SOURCE = _ROOT / "rust/betelgeuze-runtime/src/qualification.rs"
+_PROBE_SOURCE = (
+    _ROOT
+    / "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v4.rs"
+)
 
 
 def _canonical(value: object) -> bytes:
@@ -57,6 +63,50 @@ def test_canonical_native_fixed64_cpu_profile_v4_is_frozen() -> None:
         12,
         12,
     ]
+    require_compiled_profile_binding(
+        profile,
+        _QUALIFICATION_SOURCE.read_bytes(),
+        _PROBE_SOURCE.read_bytes(),
+    )
+
+
+@pytest.mark.parametrize(
+    ("source_name", "old", "new"),
+    (
+        ("qualification", b"sample_rounds: 25", b"sample_rounds: 2"),
+        (
+            "qualification",
+            b"maximum_rust_to_cpp_median_ratio: 1.25",
+            b"maximum_rust_to_cpp_median_ratio: 2.0",
+        ),
+        ("qualification", b"const SLOT_COUNT: usize = 64", b"const SLOT_COUNT: usize = 63"),
+        (
+            "qualification",
+            b"Self::FeatureSparse => (48, 16)",
+            b"Self::FeatureSparse => (49, 15)",
+        ),
+        (
+            "probe",
+            b"Fixed64CpuProbeConfigV4::qualification_profile()",
+            b"Fixed64CpuProbeConfigV4::unit_test()",
+        ),
+    ),
+)
+def test_profile_v4_rejects_compiled_gate_drift(
+    source_name: str, old: bytes, new: bytes
+) -> None:
+    profile = require_profile_document(_PROFILE.read_bytes())
+    qualification = _QUALIFICATION_SOURCE.read_bytes()
+    probe = _PROBE_SOURCE.read_bytes()
+    if source_name == "qualification":
+        assert qualification.count(old) == 1
+        qualification = qualification.replace(old, new, 1)
+    else:
+        assert probe.count(old) == 1
+        probe = probe.replace(old, new, 1)
+
+    with pytest.raises(NativeFixed64CPUProfileV4Error, match="compiled|entry point"):
+        require_compiled_profile_binding(profile, qualification, probe)
 
 
 @pytest.mark.parametrize(
@@ -108,6 +158,7 @@ def test_profile_v4_cli_reports_non_consuming_authority_false() -> None:
     assert result == {
         "all_authority_false": True,
         "candidate_denominator": 64,
+        "compiled_profile_binding_verified": True,
         "execution_consumed": False,
         "fixture_count": 2,
         "profile_id": "engine_v2_native_fixed64_cpu_synthetic_v4",

@@ -522,6 +522,8 @@ jobs:
             > /tmp/engine-v2-native-fixed64-cpu-profile-v4.json
           grep -q '"all_authority_false":true' \
             /tmp/engine-v2-native-fixed64-cpu-profile-v4.json
+          grep -q '"compiled_profile_binding_verified":true' \
+            /tmp/engine-v2-native-fixed64-cpu-profile-v4.json
           grep -q '"execution_consumed":false' \
             /tmp/engine-v2-native-fixed64-cpu-profile-v4.json
 
