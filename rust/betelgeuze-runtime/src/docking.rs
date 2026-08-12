@@ -3859,16 +3859,16 @@ fn direct_coordinate_rmsd(
     }
     let mut squared_sum = 0.0;
     for atom in 0..ligand_count {
-        for channel in coordinates {
-            let delta = channel[left_begin + atom] - channel[right_begin + atom];
-            if !delta.is_finite() {
-                return Err(Error::local(
-                    ErrorCode::AbiMismatch,
-                    "native fixed64 RMSD coordinate delta is non-finite",
-                ));
-            }
-            squared_sum += delta * delta;
+        let dx = coordinates[0][left_begin + atom] - coordinates[0][right_begin + atom];
+        let dy = coordinates[1][left_begin + atom] - coordinates[1][right_begin + atom];
+        let dz = coordinates[2][left_begin + atom] - coordinates[2][right_begin + atom];
+        if !dx.is_finite() || !dy.is_finite() || !dz.is_finite() {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 RMSD coordinate delta is non-finite",
+            ));
         }
+        squared_sum += dx * dx + dy * dy + dz * dz;
     }
     let rmsd = (squared_sum / ligand_count as f64).sqrt();
     if !rmsd.is_finite() {
