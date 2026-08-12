@@ -1703,6 +1703,11 @@ impl<'context> Fixed64Pipeline<'context> {
             &cluster_rows,
             &refinement_rows,
             &pipeline_rows,
+            &primary_indices,
+            &valid_indices,
+            &representative_indices,
+            &top_k_indices,
+            &raw_modes,
         )?;
 
         primary_indices.truncate(usize::try_from(ranking_output.primary_index_count).map_err(
@@ -1914,6 +1919,11 @@ fn validate_native_outputs(
     cluster_rows: &[sys::bg_docking_rmsd_cluster_row_v1],
     refinement_rows: &[sys::bg_docking_fixed64_refinement_row_v1],
     pipeline_rows: &[sys::bg_docking_fixed64_pipeline_row_v1],
+    primary_indices: &[u32],
+    valid_indices: &[u32],
+    representative_indices: &[u32],
+    top_k_indices: &[u32],
+    requested_modes: &[sys::bg_docking_rigid_refinement_candidate_mode],
 ) -> Result<()> {
     let candidate_count = u64::from(sys::BG_DOCKING_FIXED64_CANDIDATE_COUNT);
     let move_count = candidate_count * u64::from(sys::BG_DOCKING_TORSION_V7_MAX_MOVES);
@@ -2087,7 +2097,37 @@ fn validate_native_outputs(
             ));
         }
     }
-    if pipeline.backend != backend.as_raw()
+    let generated_row_count = producer_rows
+        .iter()
+        .filter(|row| row.status == sys::BG_DOCKING_FIXED64_PRODUCER_ROW_GENERATED)
+        .count() as u64;
+    let typed_failure_row_count = producer_rows
+        .iter()
+        .filter(|row| row.status == sys::BG_DOCKING_FIXED64_PRODUCER_ROW_TYPED_FAILURE)
+        .count() as u64;
+    let initial_admitted_row_count = producer_rows
+        .iter()
+        .filter(|row| {
+            row.geometric_admission.decision
+                == sys::BG_DOCKING_GEOMETRIC_ADMISSION_DECISION_ACCEPTED
+        })
+        .count() as u64;
+    let refined_row_count = refinement_rows
+        .iter()
+        .filter(|row| row.status == sys::BG_DOCKING_FIXED64_REFINEMENT_ROW_COORDINATE_READY)
+        .count() as u64;
+    let scored_row_count = scorer_rows
+        .iter()
+        .filter(|row| row.status == sys::BG_DOCKING_SCORER_V1_ROW_SCORED)
+        .count() as u64;
+    let valid_row_count = validity_rows
+        .iter()
+        .filter(|row| {
+            row.status == sys::BG_DOCKING_POSE_VALIDITY_ROW_EVALUATED && row.blocker_mask == 0
+        })
+        .count() as u64;
+    if requested_modes.len() != candidate_count as usize
+        || pipeline.backend != backend.as_raw()
         || producer.backend != backend.as_raw()
         || [
             producer.unit_system,
@@ -2102,15 +2142,29 @@ fn validate_native_outputs(
         ]
         .iter()
         .any(|unit| *unit != sys::BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL)
-        || producer.generated_count + producer.typed_failure_count != candidate_count
+        || producer
+            .generated_count
+            .checked_add(producer.typed_failure_count)
+            != Some(candidate_count)
         || pipeline.generated_count != producer.generated_count
         || pipeline.allocation_receipt_sha256 != producer.allocation_receipt_sha256
         || pipeline.source_bundle_receipt_sha256 != producer.source_bundle_receipt_sha256
         || pipeline.producer_batch_receipt_sha256 != producer.producer_batch_receipt_sha256
+        || producer.generated_count != generated_row_count
+        || producer.typed_failure_count != typed_failure_row_count
+        || pipeline.generated_count != generated_row_count
+        || pipeline.initial_admitted_count != initial_admitted_row_count
+        || pipeline.refined_count != refined_row_count
+        || pipeline.scored_count != scored_row_count
+        || pipeline.valid_count != valid_row_count
+        || ranking.primary_index_count != pipeline.scored_count
+        || ranking.valid_index_count != pipeline.valid_count
+        || cluster.representative_index_count != pipeline.cluster_count
+        || cluster.top_k_index_count != pipeline.cluster_count.min(top_k_limit)
         || pipeline.initial_admitted_count > pipeline.generated_count
-        || pipeline.refined_count > pipeline.generated_count
-        || pipeline.scored_count > pipeline.generated_count
-        || pipeline.valid_count > pipeline.generated_count
+        || pipeline.refined_count > pipeline.initial_admitted_count
+        || pipeline.scored_count > pipeline.refined_count
+        || pipeline.valid_count > pipeline.scored_count
         || pipeline.cluster_count > pipeline.valid_count
     {
         return Err(Error::local(
@@ -2397,8 +2451,66 @@ fn validate_native_outputs(
             "native fixed64 torsion move order is invalid",
         ));
     }
+    validate_index_evidence(
+        ranking,
+        cluster,
+        scorer_rows,
+        validity_rows,
+        ranking_rows,
+        cluster_rows,
+        primary_indices,
+        valid_indices,
+        representative_indices,
+        top_k_indices,
+    )?;
     for (slot, row) in pipeline_rows.iter().enumerate() {
+        let producer_row = &producer_rows[slot];
+        let rigid_row = &rigid_rows[slot];
+        let refinement_row = &refinement_rows[slot];
+        let scorer_row = &scorer_rows[slot];
+        let validity_row = &validity_rows[slot];
+        let ranking_row = &ranking_rows[slot];
+        let cluster_row = &cluster_rows[slot];
+        let admitted = producer_row.status == sys::BG_DOCKING_FIXED64_PRODUCER_ROW_GENERATED
+            && producer_row.geometric_admission.decision
+                == sys::BG_DOCKING_GEOMETRIC_ADMISSION_DECISION_ACCEPTED
+            && bool_from_abi(
+                producer_row.geometric_admission.rank_eligible,
+                "geometric rank eligibility",
+            )?;
+        let expected_effective_mode = if admitted {
+            requested_modes[slot]
+        } else {
+            sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_INACTIVE
+        };
+        let ranking_has_coordinate = bool_from_abi(ranking_row.rank_eligible, "rank eligibility")?;
+        let cluster_has_coordinate =
+            bool_from_abi(cluster_row.cluster_eligible, "cluster eligibility")?;
         if row.slot_index as usize != slot
+            || row.producer_status != producer_row.status
+            || row.producer_failure_code != producer_row.failure_code
+            || row.initial_admission_decision != producer_row.geometric_admission.decision
+            || row.requested_refinement_mode != requested_modes[slot]
+            || row.effective_refinement_mode != expected_effective_mode
+            || rigid_row.candidate_mode != expected_effective_mode
+            || row.refinement_status != refinement_row.status
+            || row.refinement_failure_stage != refinement_row.failure_stage
+            || row.scorer_status != scorer_row.status
+            || row.scorer_failure_code != scorer_row.failure_code
+            || row.validity_status != validity_row.status
+            || row.validity_failure_code != validity_row.failure_code
+            || row.stable_rank != ranking_row.stable_rank
+            || row.stable_valid_rank != ranking_row.stable_valid_rank
+            || row.cluster_status != cluster_row.status
+            || row.cluster_id != cluster_row.cluster_id
+            || row.cluster_rank != cluster_row.cluster_rank
+            || row.top_k_rank != cluster_row.top_k_rank
+            || row.producer_row_receipt_sha256 != producer_row.row_receipt_sha256
+            || row.final_coordinate_sha256 != refinement_row.coordinate_sha256
+            || (ranking_has_coordinate
+                && ranking_row.coordinate_sha256 != refinement_row.coordinate_sha256)
+            || (cluster_has_coordinate
+                && cluster_row.coordinate_sha256 != ranking_row.coordinate_sha256)
             || [
                 row.producer_row_receipt_sha256,
                 row.refinement_evidence_sha256,
@@ -2444,6 +2556,410 @@ fn validate_native_outputs(
         }
     }
     Ok(())
+}
+
+fn counted_index_prefix<'a>(values: &'a [u32], count: u64, label: &str) -> Result<&'a [u32]> {
+    let count = usize::try_from(count).map_err(|_| {
+        Error::local(
+            ErrorCode::AbiMismatch,
+            format!("native fixed64 {label} count does not fit usize"),
+        )
+    })?;
+    values.get(..count).ok_or_else(|| {
+        Error::local(
+            ErrorCode::AbiMismatch,
+            format!("native fixed64 {label} count exceeds the supplied buffer"),
+        )
+    })
+}
+
+#[allow(clippy::too_many_arguments)]
+fn validate_index_evidence(
+    ranking: &sys::bg_docking_stable_top_k_output_v1,
+    cluster: &sys::bg_docking_rmsd_cluster_output_v1,
+    scorer_rows: &[sys::bg_docking_scorer_v1_row_v1],
+    validity_rows: &[sys::bg_docking_pose_validity_row_v1],
+    ranking_rows: &[sys::bg_docking_stable_top_k_row_v1],
+    cluster_rows: &[sys::bg_docking_rmsd_cluster_row_v1],
+    primary_indices: &[u32],
+    valid_indices: &[u32],
+    representative_indices: &[u32],
+    top_k_indices: &[u32],
+) -> Result<()> {
+    let candidate_count = sys::BG_DOCKING_FIXED64_CANDIDATE_COUNT as usize;
+    if scorer_rows.len() != candidate_count
+        || validity_rows.len() != candidate_count
+        || ranking_rows.len() != candidate_count
+        || cluster_rows.len() != candidate_count
+    {
+        return Err(Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 rank or cluster row denominator is invalid",
+        ));
+    }
+    let primary =
+        counted_index_prefix(primary_indices, ranking.primary_index_count, "primary rank")?;
+    let valid = counted_index_prefix(valid_indices, ranking.valid_index_count, "valid rank")?;
+    let representatives = counted_index_prefix(
+        representative_indices,
+        cluster.representative_index_count,
+        "cluster representative",
+    )?;
+    let top_k = counted_index_prefix(top_k_indices, cluster.top_k_index_count, "cluster Top-K")?;
+    let mut primary_seen = vec![false; candidate_count];
+    let mut previous_ranked: Option<(f64, usize)> = None;
+    for (offset, raw_slot) in primary.iter().copied().enumerate() {
+        let slot = usize::try_from(raw_slot).map_err(|_| {
+            Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 primary rank slot does not fit usize",
+            )
+        })?;
+        if slot >= candidate_count || primary_seen[slot] {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 primary rank slots are out of range or duplicated",
+            ));
+        }
+        let row = &ranking_rows[slot];
+        let score = row.total_score;
+        let incorrectly_ordered = previous_ranked.is_some_and(|(previous_score, previous_slot)| {
+            score < previous_score || (score == previous_score && slot < previous_slot)
+        });
+        if !score.is_finite()
+            || incorrectly_ordered
+            || !bool_from_abi(row.rank_eligible, "rank eligibility")?
+            || row.stable_rank as usize != offset + 1
+            || scorer_rows[slot].status != sys::BG_DOCKING_SCORER_V1_ROW_SCORED
+            || score != scorer_rows[slot].total_score
+        {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 primary rank slots disagree with scorer or ranking rows",
+            ));
+        }
+        primary_seen[slot] = true;
+        previous_ranked = Some((score, slot));
+    }
+    for (slot, row) in ranking_rows.iter().enumerate() {
+        let rank_eligible = bool_from_abi(row.rank_eligible, "rank eligibility")?;
+        if rank_eligible != primary_seen[slot]
+            || rank_eligible != (scorer_rows[slot].status == sys::BG_DOCKING_SCORER_V1_ROW_SCORED)
+            || (!rank_eligible && row.stable_rank != 0)
+        {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 primary rank membership is inconsistent",
+            ));
+        }
+    }
+
+    let mut valid_seen = vec![false; candidate_count];
+    for (offset, raw_slot) in valid.iter().copied().enumerate() {
+        let slot = usize::try_from(raw_slot).map_err(|_| {
+            Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 valid rank slot does not fit usize",
+            )
+        })?;
+        if slot >= candidate_count || valid_seen[slot] || !primary_seen[slot] {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 valid rank slots are out of range, duplicated, or unranked",
+            ));
+        }
+        let row = &ranking_rows[slot];
+        if !bool_from_abi(row.valid_rank_eligible, "valid-rank eligibility")?
+            || row.stable_valid_rank as usize != offset + 1
+            || validity_rows[slot].status != sys::BG_DOCKING_POSE_VALIDITY_ROW_EVALUATED
+            || validity_rows[slot].passed_check_mask != sys::BG_DOCKING_POSE_VALIDITY_CHECK_ALL
+        {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 valid rank slots disagree with validity or ranking rows",
+            ));
+        }
+        valid_seen[slot] = true;
+    }
+    for (slot, row) in ranking_rows.iter().enumerate() {
+        let valid_rank_eligible = bool_from_abi(row.valid_rank_eligible, "valid-rank eligibility")?;
+        let expected_valid = primary_seen[slot]
+            && validity_rows[slot].status == sys::BG_DOCKING_POSE_VALIDITY_ROW_EVALUATED
+            && validity_rows[slot].passed_check_mask == sys::BG_DOCKING_POSE_VALIDITY_CHECK_ALL;
+        if valid_rank_eligible != valid_seen[slot]
+            || valid_rank_eligible != expected_valid
+            || (!valid_rank_eligible && row.stable_valid_rank != 0)
+        {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 valid rank membership is inconsistent",
+            ));
+        }
+    }
+
+    let mut representative_seen = vec![false; candidate_count];
+    for (offset, raw_slot) in representatives.iter().copied().enumerate() {
+        let slot = usize::try_from(raw_slot).map_err(|_| {
+            Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 representative slot does not fit usize",
+            )
+        })?;
+        if slot >= candidate_count || representative_seen[slot] || !valid_seen[slot] {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 representative slots are out of range, duplicated, or invalid",
+            ));
+        }
+        let row = &cluster_rows[slot];
+        if !bool_from_abi(row.cluster_eligible, "cluster eligibility")?
+            || !bool_from_abi(row.representative, "cluster representative")?
+            || row.representative_slot_index as usize != slot
+            || row.cluster_id as usize != offset + 1
+            || row.cluster_rank as usize != offset + 1
+        {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 representative slots disagree with cluster rows",
+            ));
+        }
+        representative_seen[slot] = true;
+    }
+    let mut observed_cluster_sizes = vec![0_u32; representatives.len()];
+    for (slot, row) in cluster_rows.iter().enumerate() {
+        let eligible = bool_from_abi(row.cluster_eligible, "cluster eligibility")?;
+        let representative = bool_from_abi(row.representative, "cluster representative")?;
+        if eligible != valid_seen[slot] || representative != representative_seen[slot] {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 cluster membership is inconsistent",
+            ));
+        }
+        if eligible {
+            let cluster_id = usize::try_from(row.cluster_id).map_err(|_| {
+                Error::local(
+                    ErrorCode::AbiMismatch,
+                    "native fixed64 cluster id does not fit usize",
+                )
+            })?;
+            let representative_slot =
+                usize::try_from(row.representative_slot_index).map_err(|_| {
+                    Error::local(
+                        ErrorCode::AbiMismatch,
+                        "native fixed64 representative identity does not fit usize",
+                    )
+                })?;
+            if row.status != sys::BG_DOCKING_RMSD_CLUSTER_ROW_CLUSTERED
+                || row.stable_valid_rank != ranking_rows[slot].stable_valid_rank
+                || cluster_id == 0
+                || cluster_id > representatives.len()
+                || row.cluster_rank != row.cluster_id
+                || representative_slot >= candidate_count
+                || !representative_seen[representative_slot]
+                || representatives[cluster_id - 1] as usize != representative_slot
+                || row.coordinate_sha256 != ranking_rows[slot].coordinate_sha256
+            {
+                return Err(Error::local(
+                    ErrorCode::AbiMismatch,
+                    "native fixed64 clustered row is inconsistent with rank evidence",
+                ));
+            }
+            observed_cluster_sizes[cluster_id - 1] += 1;
+        } else if row.status != sys::BG_DOCKING_RMSD_CLUSTER_ROW_UPSTREAM_NOT_VALID
+            || row.stable_valid_rank != 0
+            || row.cluster_id != 0
+            || row.representative_slot_index != 0
+            || row.cluster_rank != 0
+            || row.top_k_rank != 0
+            || row.cluster_size != 0
+            || digest_present(&row.coordinate_sha256)
+        {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 non-clustered row retained cluster evidence",
+            ));
+        }
+    }
+    for row in cluster_rows
+        .iter()
+        .filter(|row| row.status == sys::BG_DOCKING_RMSD_CLUSTER_ROW_CLUSTERED)
+    {
+        if row.cluster_size != observed_cluster_sizes[row.cluster_id as usize - 1] {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 cluster size evidence is inconsistent",
+            ));
+        }
+    }
+
+    if top_k.len() > representatives.len() {
+        return Err(Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 Top-K count exceeds the representative count",
+        ));
+    }
+    let mut top_k_seen = vec![false; candidate_count];
+    for (offset, raw_slot) in top_k.iter().copied().enumerate() {
+        let slot = raw_slot as usize;
+        if slot >= candidate_count
+            || top_k_seen[slot]
+            || representatives.get(offset).copied() != Some(raw_slot)
+        {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 Top-K slots are out of range, duplicated, or reordered",
+            ));
+        }
+        let row = &cluster_rows[slot];
+        if !bool_from_abi(row.top_k_representative, "cluster Top-K representative")?
+            || row.top_k_rank as usize != offset + 1
+        {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 Top-K slots disagree with cluster rows",
+            ));
+        }
+        top_k_seen[slot] = true;
+    }
+    for (slot, row) in cluster_rows.iter().enumerate() {
+        let top_k_representative =
+            bool_from_abi(row.top_k_representative, "cluster Top-K representative")?;
+        if top_k_representative != top_k_seen[slot]
+            || (!top_k_representative && row.top_k_rank != 0)
+        {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 Top-K membership is inconsistent",
+            ));
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+#[allow(clippy::items_after_test_module)]
+mod output_validation_tests {
+    use super::*;
+
+    struct IndexFixture {
+        ranking: sys::bg_docking_stable_top_k_output_v1,
+        cluster: sys::bg_docking_rmsd_cluster_output_v1,
+        scorer_rows: Vec<sys::bg_docking_scorer_v1_row_v1>,
+        validity_rows: Vec<sys::bg_docking_pose_validity_row_v1>,
+        ranking_rows: Vec<sys::bg_docking_stable_top_k_row_v1>,
+        cluster_rows: Vec<sys::bg_docking_rmsd_cluster_row_v1>,
+        primary_indices: Vec<u32>,
+        valid_indices: Vec<u32>,
+        representative_indices: Vec<u32>,
+        top_k_indices: Vec<u32>,
+    }
+
+    impl IndexFixture {
+        fn valid() -> Self {
+            let count = sys::BG_DOCKING_FIXED64_CANDIDATE_COUNT as usize;
+            let mut scorer_rows = vec![zeroed_abi_value!(sys::bg_docking_scorer_v1_row_v1); count];
+            let mut validity_rows =
+                vec![zeroed_abi_value!(sys::bg_docking_pose_validity_row_v1); count];
+            let mut ranking_rows =
+                vec![zeroed_abi_value!(sys::bg_docking_stable_top_k_row_v1); count];
+            let mut cluster_rows =
+                vec![zeroed_abi_value!(sys::bg_docking_rmsd_cluster_row_v1); count];
+            for slot in 0..count {
+                scorer_rows[slot].slot_index = slot as u32;
+                scorer_rows[slot].status = sys::BG_DOCKING_SCORER_V1_ROW_TYPED_FAILURE;
+                validity_rows[slot].slot_index = slot as u32;
+                ranking_rows[slot].slot_index = slot as u32;
+                cluster_rows[slot].slot_index = slot as u32;
+                cluster_rows[slot].status = sys::BG_DOCKING_RMSD_CLUSTER_ROW_UPSTREAM_NOT_VALID;
+            }
+            for (slot, score) in [(0_usize, 1.0_f64), (1, 2.0)] {
+                scorer_rows[slot].status = sys::BG_DOCKING_SCORER_V1_ROW_SCORED;
+                scorer_rows[slot].total_score = score;
+                ranking_rows[slot].rank_eligible = 1;
+                ranking_rows[slot].stable_rank = slot as u32 + 1;
+                ranking_rows[slot].total_score = score;
+                ranking_rows[slot].coordinate_sha256 = [slot as u8 + 1; 32];
+            }
+            validity_rows[0].status = sys::BG_DOCKING_POSE_VALIDITY_ROW_EVALUATED;
+            validity_rows[0].passed_check_mask = sys::BG_DOCKING_POSE_VALIDITY_CHECK_ALL;
+            validity_rows[1].status = sys::BG_DOCKING_POSE_VALIDITY_ROW_EVALUATED;
+            ranking_rows[0].valid_rank_eligible = 1;
+            ranking_rows[0].stable_valid_rank = 1;
+            cluster_rows[0].status = sys::BG_DOCKING_RMSD_CLUSTER_ROW_CLUSTERED;
+            cluster_rows[0].cluster_eligible = 1;
+            cluster_rows[0].representative = 1;
+            cluster_rows[0].top_k_representative = 1;
+            cluster_rows[0].stable_valid_rank = 1;
+            cluster_rows[0].cluster_id = 1;
+            cluster_rows[0].representative_slot_index = 0;
+            cluster_rows[0].cluster_rank = 1;
+            cluster_rows[0].top_k_rank = 1;
+            cluster_rows[0].cluster_size = 1;
+            cluster_rows[0].coordinate_sha256 = ranking_rows[0].coordinate_sha256;
+            let mut ranking = zeroed_abi_value!(sys::bg_docking_stable_top_k_output_v1);
+            ranking.primary_index_count = 2;
+            ranking.valid_index_count = 1;
+            let mut cluster = zeroed_abi_value!(sys::bg_docking_rmsd_cluster_output_v1);
+            cluster.representative_index_count = 1;
+            cluster.top_k_index_count = 1;
+            let mut primary_indices = vec![0; count];
+            primary_indices[1] = 1;
+            Self {
+                ranking,
+                cluster,
+                scorer_rows,
+                validity_rows,
+                ranking_rows,
+                cluster_rows,
+                primary_indices,
+                valid_indices: vec![0; count],
+                representative_indices: vec![0; count],
+                top_k_indices: vec![0; sys::BG_DOCKING_STABLE_TOP_K_LIMIT as usize],
+            }
+        }
+
+        fn validate(&self) -> Result<()> {
+            validate_index_evidence(
+                &self.ranking,
+                &self.cluster,
+                &self.scorer_rows,
+                &self.validity_rows,
+                &self.ranking_rows,
+                &self.cluster_rows,
+                &self.primary_indices,
+                &self.valid_indices,
+                &self.representative_indices,
+                &self.top_k_indices,
+            )
+        }
+    }
+
+    #[test]
+    fn accepts_cross_bound_rank_and_cluster_indices() {
+        assert!(IndexFixture::valid().validate().is_ok());
+    }
+
+    #[test]
+    fn rejects_duplicate_or_out_of_range_rank_indices() {
+        let mut duplicate = IndexFixture::valid();
+        duplicate.primary_indices[1] = 0;
+        assert!(duplicate.validate().is_err());
+
+        let mut out_of_range = IndexFixture::valid();
+        out_of_range.primary_indices[1] = sys::BG_DOCKING_FIXED64_CANDIDATE_COUNT;
+        assert!(out_of_range.validate().is_err());
+    }
+
+    #[test]
+    fn rejects_reordered_or_component_cross_wired_indices() {
+        let mut reordered = IndexFixture::valid();
+        reordered.primary_indices.swap(0, 1);
+        assert!(reordered.validate().is_err());
+
+        let mut cross_wired = IndexFixture::valid();
+        cross_wired.cluster_rows[0].coordinate_sha256 = [9; 32];
+        assert!(cross_wired.validate().is_err());
+    }
 }
 
 fn require_authority_false(fields: &[(u8, &str)]) -> Result<()> {
