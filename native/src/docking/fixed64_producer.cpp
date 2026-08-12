@@ -26,7 +26,7 @@ constexpr double kMaximumCoordinateAngstrom = 100'000.0;
 constexpr double kGeometryEpsilon = 1.0e-12;
 constexpr double kQuaternionNormTolerance = 1.0e-8;
 constexpr char kProfileId[] =
-    "betelgeuze.engine_v2_mixed64_native_fixed64_producer/1.1.0";
+    "betelgeuze.engine_v2_mixed64_native_fixed64_producer/1.1.1";
 constexpr char kBatchSchema[] =
     "betelgeuze.engine_v2_mixed64_native_fixed64_producer_batch/1.1.0";
 
@@ -169,8 +169,8 @@ template <typename Type>
     const double z = value.z / maximum;
     const double scaled_norm = std::hypot(std::hypot(x, y), z);
     if (!std::isfinite(scaled_norm) || scaled_norm <= 0.0) return false;
-    const double inverse = (1.0 / maximum) / scaled_norm;
-    *output = {value.x * inverse, value.y * inverse, value.z * inverse};
+    const double inverse = 1.0 / scaled_norm;
+    *output = {x * inverse, y * inverse, z * inverse};
     if (output->x == 0.0) output->x = 0.0;
     if (output->y == 0.0) output->y = 0.0;
     if (output->z == 0.0) output->z = 0.0;

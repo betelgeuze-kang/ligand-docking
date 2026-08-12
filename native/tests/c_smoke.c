@@ -153,7 +153,7 @@ static void test_context_contract(void) {
     assert(strcmp(bg_abi_version_string(), "1.20") == 0);
     assert(strcmp(
                bg_docking_fixed64_producer_v1_profile_id(),
-               "betelgeuze.engine_v2_mixed64_native_fixed64_producer/1.1.0") == 0);
+               "betelgeuze.engine_v2_mixed64_native_fixed64_producer/1.1.1") == 0);
     assert(strcmp(BG_CANONICAL_TEMPERATURE_UNIT, "kelvin") == 0);
     assert(strcmp(bg_status_string(BG_STATUS_OK), "ok") == 0);
     assert(strcmp(

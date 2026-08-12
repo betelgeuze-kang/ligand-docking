@@ -2014,8 +2014,8 @@ fn canonical_pocket_normal(value: [f64; 3]) -> Result<[f64; 3]> {
     if !scaled_norm.is_finite() || scaled_norm <= 0.0 {
         return Err(invalid("fixed64 pocket normal could not be normalized"));
     }
-    let inverse = (1.0 / maximum) / scaled_norm;
-    let mut result = [value[0] * inverse, value[1] * inverse, value[2] * inverse];
+    let inverse = 1.0 / scaled_norm;
+    let mut result = [scaled.x * inverse, scaled.y * inverse, scaled.z * inverse];
     for component in &mut result {
         if *component == 0.0 {
             *component = 0.0;
@@ -3858,7 +3858,7 @@ fn canonical_producer_row_receipt(
     row: &sys::bg_docking_fixed64_producer_row_v1,
 ) -> Sha256 {
     let mut hash = CanonicalHasher::new("betelgeuze.fixed64_producer_row_abi/native-v1");
-    hash.string("betelgeuze.engine_v2_mixed64_native_fixed64_producer/1.1.0");
+    hash.string("betelgeuze.engine_v2_mixed64_native_fixed64_producer/1.1.1");
     hash.digest(graph.allocation_receipt_sha256);
     hash.digest(graph.source_bundle_receipt_sha256);
     hash.digest(row.allocation_slot_receipt_sha256);
@@ -3911,7 +3911,7 @@ fn canonical_passthrough_placement_receipt(
     source: Fixed64CoordinateSource<'_>,
 ) -> Sha256 {
     let mut hash = CanonicalHasher::new("betelgeuze.fixed64_passthrough_abi/native-v1");
-    hash.string("betelgeuze.engine_v2_mixed64_native_fixed64_producer/1.1.0");
+    hash.string("betelgeuze.engine_v2_mixed64_native_fixed64_producer/1.1.1");
     hash.digest(graph.allocation_receipt_sha256);
     hash.digest(row.allocation_slot_receipt_sha256);
     hash.u32(row.slot_index);
@@ -3933,7 +3933,7 @@ fn canonical_generated_proposal_receipt(
     source: Fixed64CoordinateSource<'_>,
 ) -> Sha256 {
     let mut hash = CanonicalHasher::new("betelgeuze.fixed64_generated_proposal_abi/native-v1");
-    hash.string("betelgeuze.engine_v2_mixed64_native_fixed64_producer/1.1.0");
+    hash.string("betelgeuze.engine_v2_mixed64_native_fixed64_producer/1.1.1");
     hash.digest(graph.allocation_receipt_sha256);
     hash.digest(row.allocation_slot_receipt_sha256);
     hash.u32(row.slot_index);
@@ -3955,7 +3955,7 @@ fn canonical_producer_batch_receipt(
 ) -> Sha256 {
     let mut hash = CanonicalHasher::new("betelgeuze.fixed64_producer_batch_abi/native-v1");
     hash.string("betelgeuze.engine_v2_mixed64_native_fixed64_producer_batch/1.1.0");
-    hash.string("betelgeuze.engine_v2_mixed64_native_fixed64_producer/1.1.0");
+    hash.string("betelgeuze.engine_v2_mixed64_native_fixed64_producer/1.1.1");
     hash.u32(graph.backend.as_raw() as u32);
     hash.usize(sys::BG_DOCKING_FIXED64_CANDIDATE_COUNT as usize);
     hash.u64(generated_count);
@@ -6071,10 +6071,20 @@ fn independent_indexed_so3_replay(
     }
     source_center = source_center.scale(1.0 / coordinates.len() as f64);
     let translation = pocket_center.minus(selected.quaternion.rotate(source_center));
-    let output = coordinates
+    let output: Vec<Vec3> = coordinates
         .iter()
         .map(|coordinate| selected.quaternion.rotate(*coordinate).plus(translation))
         .collect();
+    if output.iter().any(|coordinate| {
+        !coordinate.is_finite()
+            || coordinate.x.abs() > FIXED64_MAX_ABSOLUTE_COORDINATE_ANGSTROM
+            || coordinate.y.abs() > FIXED64_MAX_ABSOLUTE_COORDINATE_ANGSTROM
+            || coordinate.z.abs() > FIXED64_MAX_ABSOLUTE_COORDINATE_ANGSTROM
+    }) {
+        return Ok(Err(
+            sys::BG_DOCKING_FIXED64_INDEXED_SO3_FAILURE_NONFINITE_OUTPUT,
+        ));
+    }
     Ok(Ok(IndependentIndexedSo3Replay {
         coordinates: output,
         quaternion: selected.quaternion,

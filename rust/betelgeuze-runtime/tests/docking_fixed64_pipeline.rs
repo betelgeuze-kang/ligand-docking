@@ -155,6 +155,13 @@ impl TwoAtomFixture {
     }
 
     fn scientific_context(&self) -> Fixed64PipelineContext<'_> {
+        self.scientific_context_at([0.0, 0.0, 0.0])
+    }
+
+    fn scientific_context_at(
+        &self,
+        pocket_center_angstrom: [f64; 3],
+    ) -> Fixed64PipelineContext<'_> {
         Fixed64PipelineContext {
             receptor: Fixed64Receptor {
                 coordinates: PositionSoa::new(
@@ -190,7 +197,7 @@ impl TwoAtomFixture {
                 rotatable_child_atom_index: &[],
                 internal_pairs: &[],
             },
-            pocket_center_angstrom: [0.0, 0.0, 0.0],
+            pocket_center_angstrom,
             pocket_radius_angstrom: 10.0,
             identities: Fixed64Identities {
                 authority_input_receipt_sha256: [0x11; 32],
@@ -377,6 +384,14 @@ fn assert_safe_run_returns_complete_receipt(fixture: &SingleAtomFixture, options
     assert_eq!(
         oblique_receipt,
         pipeline.run(scaled_oblique_normal).unwrap()
+    );
+    let nonbinary_scaled_oblique_normal = Fixed64RunInput {
+        pocket_normal: [3.0, 3.0, 15.0],
+        ..run
+    };
+    assert_eq!(
+        oblique_receipt,
+        pipeline.run(nonbinary_scaled_oblique_normal).unwrap()
     );
     let mut crosswired_source_evidence = run;
     crosswired_source_evidence
@@ -655,7 +670,7 @@ fn assert_transformed_placements_are_independently_replayed(
         .unwrap();
     let scaled_oblique = pipeline
         .run(Fixed64RunInput {
-            pocket_normal: [2.0, 2.0, 10.0],
+            pocket_normal: [3.0, 3.0, 15.0],
             ..run
         })
         .unwrap();
@@ -689,6 +704,76 @@ fn transformed_indexed_so3_is_replayed_from_owned_sources() {
 fn transformed_single_anchor_is_replayed_from_owned_features() {
     for options in [ContextOptions::cpu_reference(), ContextOptions::rust_cpu()] {
         assert_transformed_placements_are_independently_replayed(options, true);
+    }
+}
+
+#[test]
+fn indexed_so3_out_of_envelope_output_remains_a_typed_failure() {
+    let mut fixture = TwoAtomFixture::new();
+    fixture.ligand_x = [-100_000.0, 100_000.0];
+    let exact_source = fixture.source(0x10);
+    let candidate_modes = [Fixed64RefinementMode::V2Translation; 64];
+    let rigid_steps = [0_u64; 64];
+    let torsion_eligible = [0_u8; 64];
+    let torsion_steps = [0_u64; 64];
+    let baseline_angles = [0.0_f64; 128];
+    let run = Fixed64RunInput {
+        exact_source_evidence: Fixed64ExactSourceEvidence {
+            source_receipt_sha256: exact_source.evidence.receipt_sha256,
+            proposal_sha256: exact_source.evidence.proposal_sha256,
+            ligand_coordinate_sha256: exact_source.evidence.coordinate_sha256,
+            receptor_coordinate_sha256: coordinate_digest(
+                &fixture.base.receptor_x,
+                &fixture.base.receptor_y,
+                &fixture.base.receptor_z,
+            ),
+            prepared_ligand_topology_sha256: [0x33; 32],
+            prepared_receptor_topology_sha256: [0x22; 32],
+            ligand_vdw_radii_sha256: radii_digest(&fixture.ligand_radii),
+            ligand_heavy_atom_mask_sha256: mask_digest(&fixture.heavy_mask),
+            receptor_vdw_radii_sha256: radii_digest(&fixture.base.receptor_radii),
+        },
+        exact_source,
+        atomic_features: &[],
+        v7_control_sources: &[],
+        conformer_sources: &[],
+        retained_sources: &[],
+        feature_geometries: &[],
+        feature_geometry_inventory_sha256: [0; 32],
+        pocket_normal: [1.0, 1.0, 5.0],
+        rmsd_threshold_angstrom: 1.5,
+        candidate_modes: &candidate_modes,
+        rigid_max_steps: &rigid_steps,
+        proposal_is_torsion_eligible: &torsion_eligible,
+        torsion_max_steps: &torsion_steps,
+        baseline_torsion_angles_radians: &baseline_angles,
+        predeclared_refinement_policy_sha256: [0x76; 32],
+    };
+    #[cfg(not(feature = "hip"))]
+    let backends = vec![ContextOptions::cpu_reference(), ContextOptions::rust_cpu()];
+    #[cfg(feature = "hip")]
+    let backends = {
+        let mut values = vec![ContextOptions::cpu_reference(), ContextOptions::rust_cpu()];
+        for options in [ContextOptions::hip_safe(0), ContextOptions::hip_fast(0)] {
+            if Context::backend_available(options.backend, options.device_ordinal).unwrap() {
+                values.push(options);
+            }
+        }
+        values
+    };
+    for options in backends {
+        let context = Context::new(options).unwrap();
+        let pipeline =
+            Fixed64Pipeline::new(&context, fixture.scientific_context_at([100_000.0; 3])).unwrap();
+        let receipt = pipeline.run(run).unwrap();
+        assert!(receipt.producer_rows[24..36].iter().all(|row| {
+            row.status != 0
+                && row.failure_code == 5
+                && row.component_failure_code == 2
+                && !row.coordinates_available
+                && row.placement_receipt_sha256 != [0; 32]
+                && row.output_coordinate_sha256 == [0; 32]
+        }));
     }
 }
 

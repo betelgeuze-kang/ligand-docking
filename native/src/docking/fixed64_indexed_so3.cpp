@@ -32,7 +32,7 @@ constexpr std::size_t kMaximumLigandAtoms = 512;
 constexpr double kMaximumCoordinateAngstrom = 100'000.0;
 constexpr double kGeometryEpsilon = 1.0e-12;
 constexpr char kProfileId[] =
-    "betelgeuze.engine_v2_mixed64_indexed_source_bound_so3_native/1.1.0";
+    "betelgeuze.engine_v2_mixed64_indexed_source_bound_so3_native/1.1.1";
 constexpr char kPlacementSchema[] =
     "betelgeuze.engine_v2_native_fixed64_indexed_so3_placement/1.0.0";
 
@@ -309,15 +309,24 @@ template <typename Type>
             BG_STATUS_INVALID_ARGUMENT,
             "indexed SO3 pocket normal is degenerate");
     }
-    const double scaled_norm = std::hypot(
-        std::hypot(normal.x / maximum, normal.y / maximum),
-        normal.z / maximum);
-    const double inverse = (1.0 / maximum) / scaled_norm;
+    const double x = normal.x / maximum;
+    const double y = normal.y / maximum;
+    const double z = normal.z / maximum;
+    const double scaled_norm = std::hypot(std::hypot(x, y), z);
+    if (!std::isfinite(scaled_norm) || scaled_norm <= 0.0) {
+        return fail(
+            BG_STATUS_INVALID_ARGUMENT,
+            "indexed SO3 pocket normal could not be normalized");
+    }
+    const double inverse = 1.0 / scaled_norm;
     *pocket_normal = {
-        normal.x * inverse,
-        normal.y * inverse,
-        normal.z * inverse,
+        x * inverse,
+        y * inverse,
+        z * inverse,
     };
+    if (pocket_normal->x == 0.0) pocket_normal->x = 0.0;
+    if (pocket_normal->y == 0.0) pocket_normal->y = 0.0;
+    if (pocket_normal->z == 0.0) pocket_normal->z = 0.0;
     return BG_STATUS_OK;
 }
 
