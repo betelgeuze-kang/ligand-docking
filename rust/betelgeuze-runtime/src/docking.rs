@@ -1047,6 +1047,8 @@ pub struct Fixed64Pipeline<'context> {
     backend: Backend,
     receptor_atom_count: usize,
     ligand_atom_count: usize,
+    ligand_heavy_atom_count: u64,
+    geometric_hard_rejection_minimum_vdw_ratio: f64,
     receptor_system_sha256: Sha256,
     ligand_system_sha256: Sha256,
     rotatable_child_atom_indices: Vec<u64>,
@@ -1360,6 +1362,15 @@ impl<'context> Fixed64Pipeline<'context> {
         validity.contact_policy_sha256 = scientific.identities.contact_policy_sha256;
         let validity_exclusion_count = checked_count(scientific.ligand.exclusions.len())?;
         let validity_chirality_count = checked_count(scientific.ligand.chirality_centers.len())?;
+        let ligand_heavy_atom_count = checked_count(
+            scientific
+                .ligand
+                .heavy_atom_mask
+                .iter()
+                .filter(|value| **value != 0)
+                .count(),
+        )?;
+        let geometric_hard_rejection_minimum_vdw_ratio = admission.hard_rejection_minimum_vdw_ratio;
         let validity_contact_cell_size_angstrom = validity.contact_cell_size_angstrom;
         let validity_receptor_cells = validity_receptor_cells(
             scientific.receptor.coordinates,
@@ -1400,6 +1411,8 @@ impl<'context> Fixed64Pipeline<'context> {
             backend,
             receptor_atom_count: receptor_count,
             ligand_atom_count: ligand_count,
+            ligand_heavy_atom_count,
+            geometric_hard_rejection_minimum_vdw_ratio,
             receptor_system_sha256: scientific.identities.receptor_system_sha256,
             ligand_system_sha256: scientific.identities.ligand_system_sha256,
             rotatable_child_atom_indices,
@@ -1784,6 +1797,8 @@ impl<'context> Fixed64Pipeline<'context> {
                 final_quaternions[3].as_slice(),
             ],
             input.rmsd_threshold_angstrom,
+            self.ligand_heavy_atom_count,
+            self.geometric_hard_rejection_minimum_vdw_ratio,
             &self.rotatable_child_atom_indices,
             self.validity_exclusion_count,
             self.validity_chirality_count,
@@ -2058,6 +2073,8 @@ fn validate_producer_row_semantics(
         && !digest_present(&row.source_proposal_sha256)
         && !digest_present(&row.source_coordinate_sha256);
     if row.reserved0 != 0
+        || row.placement_kind < sys::BG_DOCKING_FIXED64_PRODUCER_PLACEMENT_EXACT_PASSTHROUGH
+        || row.placement_kind > sys::BG_DOCKING_FIXED64_PRODUCER_PLACEMENT_SINGLE_ANCHOR
         || !digest_present(&row.allocation_slot_receipt_sha256)
         || !allocation_verified
         || !geometric_verified
@@ -2116,7 +2133,13 @@ fn validate_producer_row_semantics(
                 }
                 _ => false,
             };
+            let component_placement_failed = matches!(
+                row.failure_code,
+                sys::BG_DOCKING_FIXED64_PRODUCER_FAILURE_INDEXED_SO3_TYPED_FAILURE
+                    | sys::BG_DOCKING_FIXED64_PRODUCER_FAILURE_SINGLE_ANCHOR_TYPED_FAILURE
+            );
             if !valid_component_failure
+                || digest_present(&row.placement_receipt_sha256) != component_placement_failed
                 || coordinates_available
                 || digest_present(&row.output_proposal_sha256)
                 || digest_present(&row.output_coordinate_sha256)
@@ -2133,6 +2156,114 @@ fn validate_producer_row_semantics(
             return Err(Error::local(
                 ErrorCode::AbiMismatch,
                 "native fixed64 producer row status is unknown",
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn geometric_scientific_fields_are_zero(row: &sys::bg_docking_geometric_admission_row_v1) -> bool {
+    row.ligand_atom_count == 0
+        && row.receptor_atom_count == 0
+        && row.exact_pair_count == 0
+        && row.penetration_pair_count == 0
+        && row.unique_ligand_penetration_atom_count == 0
+        && row.unique_ligand_heavy_atom_penetration_count == 0
+        && row.raw_minimum_distance_angstrom == 0.0
+        && row.minimum_vdw_surface_gap_angstrom == 0.0
+        && row.minimum_vdw_ratio == 0.0
+        && row.sphere_overlap_proxy_angstrom3 == 0.0
+        && row.pocket_escape_angstrom == 0.0
+}
+
+#[allow(clippy::too_many_arguments)]
+fn validate_geometric_admission_row_semantics(
+    row: &sys::bg_docking_geometric_admission_row_v1,
+    producer_status: sys::bg_docking_fixed64_producer_row_status,
+    receptor_atom_count: u64,
+    ligand_atom_count: u64,
+    ligand_heavy_atom_count: u64,
+    exact_pair_count: u64,
+    hard_rejection_minimum_vdw_ratio: f64,
+) -> Result<()> {
+    let rank_eligible = bool_from_abi(row.rank_eligible, "geometric rank eligibility")?;
+    if row.reserved0.iter().any(|value| *value != 0)
+        || row.reserved1 != 0
+        || !digest_present(&row.row_receipt_sha256)
+    {
+        return Err(Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 geometric row metadata is non-canonical",
+        ));
+    }
+    match row.status {
+        sys::BG_DOCKING_GEOMETRIC_ADMISSION_ROW_EVALUATED => {
+            let values = [
+                row.raw_minimum_distance_angstrom,
+                row.minimum_vdw_surface_gap_angstrom,
+                row.minimum_vdw_ratio,
+                row.sphere_overlap_proxy_angstrom3,
+                row.pocket_escape_angstrom,
+            ];
+            let accepted = row.minimum_vdw_ratio >= hard_rejection_minimum_vdw_ratio;
+            let expected_decision = if accepted {
+                sys::BG_DOCKING_GEOMETRIC_ADMISSION_DECISION_ACCEPTED
+            } else {
+                sys::BG_DOCKING_GEOMETRIC_ADMISSION_DECISION_SEVERE_PENETRATION_REJECTED
+            };
+            let penetration_counts_valid = if row.penetration_pair_count == 0 {
+                row.unique_ligand_penetration_atom_count == 0
+                    && row.unique_ligand_heavy_atom_penetration_count == 0
+                    && row.minimum_vdw_surface_gap_angstrom >= 0.0
+                    && row.sphere_overlap_proxy_angstrom3 == 0.0
+            } else {
+                row.unique_ligand_penetration_atom_count > 0
+                    && row.minimum_vdw_surface_gap_angstrom < 0.0
+                    && row.sphere_overlap_proxy_angstrom3 > 0.0
+            };
+            if producer_status != sys::BG_DOCKING_FIXED64_PRODUCER_ROW_GENERATED
+                || row.failure_code != sys::BG_DOCKING_GEOMETRIC_ADMISSION_FAILURE_NONE
+                || row.decision != expected_decision
+                || rank_eligible != accepted
+                || row.ligand_atom_count != ligand_atom_count
+                || row.receptor_atom_count != receptor_atom_count
+                || row.exact_pair_count != exact_pair_count
+                || row.penetration_pair_count > exact_pair_count
+                || row.unique_ligand_penetration_atom_count > ligand_atom_count
+                || row.unique_ligand_heavy_atom_penetration_count > ligand_heavy_atom_count
+                || row.unique_ligand_heavy_atom_penetration_count
+                    > row.unique_ligand_penetration_atom_count
+                || values.iter().any(|value| !value.is_finite())
+                || row.raw_minimum_distance_angstrom < 0.0
+                || row.minimum_vdw_ratio < 0.0
+                || row.sphere_overlap_proxy_angstrom3 < 0.0
+                || row.pocket_escape_angstrom < 0.0
+                || !penetration_counts_valid
+            {
+                return Err(Error::local(
+                    ErrorCode::AbiMismatch,
+                    "native fixed64 evaluated geometric evidence is inconsistent",
+                ));
+            }
+        }
+        sys::BG_DOCKING_GEOMETRIC_ADMISSION_ROW_UPSTREAM_FAILURE => {
+            if producer_status != sys::BG_DOCKING_FIXED64_PRODUCER_ROW_TYPED_FAILURE
+                || row.failure_code
+                    != sys::BG_DOCKING_GEOMETRIC_ADMISSION_FAILURE_UPSTREAM_NOT_AVAILABLE
+                || row.decision != sys::BG_DOCKING_GEOMETRIC_ADMISSION_DECISION_NOT_EVALUATED
+                || rank_eligible
+                || !geometric_scientific_fields_are_zero(row)
+            {
+                return Err(Error::local(
+                    ErrorCode::AbiMismatch,
+                    "native fixed64 upstream geometric failure retained scientific evidence",
+                ));
+            }
+        }
+        _ => {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 geometric row status is invalid for producer output",
             ));
         }
     }
@@ -2736,6 +2867,8 @@ fn validate_native_outputs(
     final_coordinates: [&[f64]; 3],
     final_quaternions: [&[f64]; 4],
     rmsd_threshold_angstrom: f64,
+    ligand_heavy_atom_count: u64,
+    geometric_hard_rejection_minimum_vdw_ratio: f64,
     rotatable_child_atom_indices: &[u64],
     validity_exclusion_count: u64,
     validity_chirality_count: u64,
@@ -3193,34 +3326,15 @@ fn validate_native_outputs(
                 "native fixed64 producer row receipt is absent",
             ));
         }
-        let geometric = &row.geometric_admission;
-        let evaluated = geometric.status == sys::BG_DOCKING_GEOMETRIC_ADMISSION_ROW_EVALUATED;
-        let upstream_failure =
-            geometric.status == sys::BG_DOCKING_GEOMETRIC_ADMISSION_ROW_UPSTREAM_FAILURE;
-        let rank_eligible = bool_from_abi(geometric.rank_eligible, "geometric rank eligibility")?;
-        let accepted = geometric.decision == sys::BG_DOCKING_GEOMETRIC_ADMISSION_DECISION_ACCEPTED;
-        let penetration_rejected = geometric.decision
-            == sys::BG_DOCKING_GEOMETRIC_ADMISSION_DECISION_SEVERE_PENETRATION_REJECTED;
-        if (evaluated
-            && (geometric.ligand_atom_count != ligand_atom_count
-                || geometric.receptor_atom_count != receptor_atom_count
-                || geometric.exact_pair_count != expected_pair_count
-                || (!accepted && !penetration_rejected)
-                || rank_eligible != accepted))
-            || (upstream_failure
-                && (geometric.ligand_atom_count != 0
-                    || geometric.receptor_atom_count != 0
-                    || geometric.exact_pair_count != 0
-                    || geometric.decision
-                        != sys::BG_DOCKING_GEOMETRIC_ADMISSION_DECISION_NOT_EVALUATED
-                    || rank_eligible))
-            || (!evaluated && !upstream_failure)
-        {
-            return Err(Error::local(
-                ErrorCode::AbiMismatch,
-                "native fixed64 geometric atom or exact-pair denominator is invalid",
-            ));
-        }
+        validate_geometric_admission_row_semantics(
+            &row.geometric_admission,
+            row.status,
+            receptor_atom_count,
+            ligand_atom_count,
+            ligand_heavy_atom_count,
+            expected_pair_count,
+            geometric_hard_rejection_minimum_vdw_ratio,
+        )?;
         validate_producer_row_semantics(row, producer_coordinates, slot, ligand_atom_count)?;
     }
     for (slot, row) in rigid_rows.iter().enumerate() {
@@ -4458,6 +4572,117 @@ mod output_validation_tests {
         assert!(validate_producer_row_semantics(&failure, views, 0, 1).is_ok());
         failure.coordinates_available = 1;
         assert!(validate_producer_row_semantics(&failure, views, 0, 1).is_err());
+    }
+
+    fn accepted_geometric_row() -> sys::bg_docking_geometric_admission_row_v1 {
+        let mut row = zeroed_abi_value!(sys::bg_docking_geometric_admission_row_v1);
+        row.status = sys::BG_DOCKING_GEOMETRIC_ADMISSION_ROW_EVALUATED;
+        row.failure_code = sys::BG_DOCKING_GEOMETRIC_ADMISSION_FAILURE_NONE;
+        row.decision = sys::BG_DOCKING_GEOMETRIC_ADMISSION_DECISION_ACCEPTED;
+        row.rank_eligible = 1;
+        row.ligand_atom_count = 2;
+        row.receptor_atom_count = 3;
+        row.exact_pair_count = 6;
+        row.raw_minimum_distance_angstrom = 2.0;
+        row.minimum_vdw_surface_gap_angstrom = 0.1;
+        row.minimum_vdw_ratio = 0.6;
+        row.pocket_escape_angstrom = 0.0;
+        row.row_receipt_sha256 = [1; 32];
+        row
+    }
+
+    #[test]
+    fn rejects_malformed_geometric_admission_semantics() {
+        let valid = accepted_geometric_row();
+        assert!(validate_geometric_admission_row_semantics(
+            &valid,
+            sys::BG_DOCKING_FIXED64_PRODUCER_ROW_GENERATED,
+            3,
+            2,
+            1,
+            6,
+            0.55,
+        )
+        .is_ok());
+
+        let mut wrong_failure = accepted_geometric_row();
+        wrong_failure.failure_code =
+            sys::BG_DOCKING_GEOMETRIC_ADMISSION_FAILURE_UPSTREAM_NOT_AVAILABLE;
+        assert!(validate_geometric_admission_row_semantics(
+            &wrong_failure,
+            sys::BG_DOCKING_FIXED64_PRODUCER_ROW_GENERATED,
+            3,
+            2,
+            1,
+            6,
+            0.55,
+        )
+        .is_err());
+
+        let mut nonfinite = accepted_geometric_row();
+        nonfinite.sphere_overlap_proxy_angstrom3 = f64::NAN;
+        assert!(validate_geometric_admission_row_semantics(
+            &nonfinite,
+            sys::BG_DOCKING_FIXED64_PRODUCER_ROW_GENERATED,
+            3,
+            2,
+            1,
+            6,
+            0.55,
+        )
+        .is_err());
+
+        let mut inconsistent_penetration = accepted_geometric_row();
+        inconsistent_penetration.penetration_pair_count = 1;
+        assert!(validate_geometric_admission_row_semantics(
+            &inconsistent_penetration,
+            sys::BG_DOCKING_FIXED64_PRODUCER_ROW_GENERATED,
+            3,
+            2,
+            1,
+            6,
+            0.55,
+        )
+        .is_err());
+
+        let mut threshold_mismatch = accepted_geometric_row();
+        threshold_mismatch.minimum_vdw_ratio = 0.5;
+        assert!(validate_geometric_admission_row_semantics(
+            &threshold_mismatch,
+            sys::BG_DOCKING_FIXED64_PRODUCER_ROW_GENERATED,
+            3,
+            2,
+            1,
+            6,
+            0.55,
+        )
+        .is_err());
+
+        let mut upstream = zeroed_abi_value!(sys::bg_docking_geometric_admission_row_v1);
+        upstream.status = sys::BG_DOCKING_GEOMETRIC_ADMISSION_ROW_UPSTREAM_FAILURE;
+        upstream.failure_code = sys::BG_DOCKING_GEOMETRIC_ADMISSION_FAILURE_UPSTREAM_NOT_AVAILABLE;
+        upstream.decision = sys::BG_DOCKING_GEOMETRIC_ADMISSION_DECISION_NOT_EVALUATED;
+        upstream.row_receipt_sha256 = [1; 32];
+        assert!(validate_geometric_admission_row_semantics(
+            &upstream,
+            sys::BG_DOCKING_FIXED64_PRODUCER_ROW_TYPED_FAILURE,
+            3,
+            2,
+            1,
+            6,
+            0.55,
+        )
+        .is_ok());
+        assert!(validate_geometric_admission_row_semantics(
+            &upstream,
+            sys::BG_DOCKING_FIXED64_PRODUCER_ROW_GENERATED,
+            3,
+            2,
+            1,
+            6,
+            0.55,
+        )
+        .is_err());
     }
 
     fn valid_rigid_v2_row() -> sys::bg_docking_rigid_refinement_row_v1 {
