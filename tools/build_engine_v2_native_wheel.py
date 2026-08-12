@@ -12,6 +12,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -191,6 +192,38 @@ class FrozenNativeToolchain:
     cargo_features: tuple[str, ...]
     toolchain_sha256: str
     extra_environment: tuple[tuple[str, str], ...] = ()
+
+
+@dataclass(frozen=True)
+class FrozenGccClosureSpec:
+    label: str
+    cxx: Path
+    tree_roots: tuple[tuple[str, Path, bytes], ...]
+    runtime_files: tuple[Path, ...]
+    expected_sha256: str
+    expected_entry_count: int
+    expected_total_bytes: int
+
+
+_GCC_PROGRAM_NAMES = ("cc1", "cc1plus", "collect2", "lto1", "lto-wrapper")
+_GCC_LINK_INPUT_NAMES = (
+    "crt1.o",
+    "Scrt1.o",
+    "crti.o",
+    "crtn.o",
+    "crtbegin.o",
+    "crtbeginS.o",
+    "crtend.o",
+    "crtendS.o",
+    "libstdc++.so",
+    "libgcc.a",
+    "libgcc_s.so.1",
+    "libgcc_eh.a",
+    "libm.so",
+    "libc.so",
+)
+_MAX_GCC_CLOSURE_ENTRIES = 100_000
+_MAX_GCC_CLOSURE_BYTES = 2 * 1024 * 1024 * 1024
 
 
 _CPU_FILE_SPECS = (
@@ -388,14 +421,106 @@ _ROCM_FILE_SPECS = (
     ),
 )
 
-_ROCM_INCLUDE_SHA256 = "877bc7bbd9d97e4b94a28be34981b88d80428fc8d935dc14e75d873841a67c44"
+_ROCM_INCLUDE_SHA256 = (
+    "877bc7bbd9d97e4b94a28be34981b88d80428fc8d935dc14e75d873841a67c44"
+)
 _ROCM_INCLUDE_FILE_COUNT = 2_132
 _ROCM_CLANG_INCLUDE_SHA256 = (
     "fc07eee01077025fc646197ddd61330d99efe54c467ea105a1f22f7c2887da40"
 )
 _ROCM_CLANG_INCLUDE_FILE_COUNT = 207
-_ROCM_DEVICE_LIB_SHA256 = "82dedc002a0f2e2e9c72d08783d8e03737f86ceb8521c9a1810b6298ff2c75d8"
+_ROCM_DEVICE_LIB_SHA256 = (
+    "82dedc002a0f2e2e9c72d08783d8e03737f86ceb8521c9a1810b6298ff2c75d8"
+)
 _ROCM_DEVICE_LIB_FILE_COUNT = 57
+
+_CPU_GCC_CLOSURE = FrozenGccClosureSpec(
+    label="gcc14_manylinux_2_28_host_closure",
+    cxx=Path("/opt/rh/gcc-toolset-14/root/usr/bin/g++"),
+    tree_roots=(
+        (
+            "gcc_programs",
+            Path("/opt/rh/gcc-toolset-14/root/usr/libexec/gcc/x86_64-redhat-linux/14"),
+            b"betelgeuze.engine-v2.gcc14-programs/v1",
+        ),
+        (
+            "gcc_resources",
+            Path("/opt/rh/gcc-toolset-14/root/usr/lib/gcc/x86_64-redhat-linux/14"),
+            b"betelgeuze.engine-v2.gcc14-resources/v1",
+        ),
+        (
+            "toolset_includes",
+            Path("/opt/rh/gcc-toolset-14/root/usr/include"),
+            b"betelgeuze.engine-v2.gcc14-toolset-includes/v1",
+        ),
+        (
+            "system_includes",
+            Path("/usr/include"),
+            b"betelgeuze.engine-v2.manylinux-system-includes/v1",
+        ),
+        (
+            "local_includes",
+            Path("/usr/local/include"),
+            b"betelgeuze.engine-v2.manylinux-local-includes/v1",
+        ),
+    ),
+    runtime_files=(
+        Path("/lib64/ld-linux-x86-64.so.2"),
+        Path("/lib64/libc.so.6"),
+        Path("/lib64/libdl.so.2"),
+        Path("/lib64/libgmp.so.10"),
+        Path("/lib64/libjansson.so.4"),
+        Path("/lib64/libm.so.6"),
+        Path("/lib64/libmpc.so.3"),
+        Path("/lib64/libmpfr.so.4"),
+        Path("/lib64/libz.so.1"),
+        Path("/lib64/libzstd.so.1"),
+        Path("/opt/rh/gcc-toolset-14/root/usr/lib64/libbfd-2.41-4.el8_10.1.so"),
+        Path("/opt/rh/gcc-toolset-14/root/usr/lib64/libctf.so.0"),
+        Path("/opt/rh/gcc-toolset-14/root/usr/lib64/libsframe.so.1"),
+    ),
+    expected_sha256="861e5f755821699940f4d86f282be24f20fd4843ce4af3f9eef7a9793bd1a2c8",
+    expected_entry_count=4_025,
+    expected_total_bytes=351_054_768,
+)
+
+_HIP_GCC_CLOSURE = FrozenGccClosureSpec(
+    label="gcc11_ubuntu2204_host_closure",
+    cxx=Path("/usr/bin/x86_64-linux-gnu-g++-11"),
+    tree_roots=(
+        (
+            "gcc_resources",
+            Path("/usr/lib/gcc/x86_64-linux-gnu/11"),
+            b"betelgeuze.engine-v2.gcc11-resources/v1",
+        ),
+        (
+            "system_includes",
+            Path("/usr/include"),
+            b"betelgeuze.engine-v2.ubuntu-system-includes/v1",
+        ),
+        (
+            "local_includes",
+            Path("/usr/local/include"),
+            b"betelgeuze.engine-v2.ubuntu-local-includes/v1",
+        ),
+    ),
+    runtime_files=(
+        Path("/lib64/ld-linux-x86-64.so.2"),
+        Path("/lib/x86_64-linux-gnu/libbfd-2.38-system.so"),
+        Path("/lib/x86_64-linux-gnu/libc.so.6"),
+        Path("/lib/x86_64-linux-gnu/libctf.so.0"),
+        Path("/lib/x86_64-linux-gnu/libgmp.so.10"),
+        Path("/lib/x86_64-linux-gnu/libisl.so.23"),
+        Path("/lib/x86_64-linux-gnu/libmpc.so.3"),
+        Path("/lib/x86_64-linux-gnu/libmpfr.so.6"),
+        Path("/lib/x86_64-linux-gnu/libopcodes-2.38-system.so"),
+        Path("/lib/x86_64-linux-gnu/libz.so.1"),
+        Path("/lib/x86_64-linux-gnu/libzstd.so.1"),
+    ),
+    expected_sha256="9c83b786a878c92d4488482c52cf4824af0b04411ca9832a8960a6dc30702678",
+    expected_entry_count=6_537,
+    expected_total_bytes=370_551_592,
+)
 
 
 def _sha256_path(path: Path) -> str:
@@ -436,19 +561,27 @@ def _directory_closure_sha256(root: Path, domain: bytes) -> tuple[str, int]:
     try:
         root = root.resolve(strict=True)
     except OSError as error:
-        raise RuntimeError(f"native toolchain closure is unavailable: {root}") from error
+        raise RuntimeError(
+            f"native toolchain closure is unavailable: {root}"
+        ) from error
     if not root.is_dir():
         raise RuntimeError(f"native toolchain closure is not a directory: {root}")
     digest = hashlib.sha256()
     digest.update(domain + b"\0")
     count = 0
-    for path in sorted(root.rglob("*"), key=lambda item: item.relative_to(root).as_posix()):
+    for path in sorted(
+        root.rglob("*"), key=lambda item: item.relative_to(root).as_posix()
+    ):
         if path.is_symlink():
-            raise RuntimeError(f"native toolchain closure has a non-regular entry: {path}")
+            raise RuntimeError(
+                f"native toolchain closure has a non-regular entry: {path}"
+            )
         if path.is_dir():
             continue
         if not path.is_file():
-            raise RuntimeError(f"native toolchain closure has a non-regular entry: {path}")
+            raise RuntimeError(
+                f"native toolchain closure has a non-regular entry: {path}"
+            )
         relative = path.relative_to(root).as_posix().encode("utf-8")
         content = path.read_bytes()
         digest.update(b"F")
@@ -460,6 +593,294 @@ def _directory_closure_sha256(root: Path, domain: bytes) -> tuple[str, int]:
     return digest.hexdigest(), count
 
 
+def _digest_field(digest: "hashlib._Hash", tag: bytes, value: bytes) -> None:
+    digest.update(len(tag).to_bytes(8, "big"))
+    digest.update(tag)
+    digest.update(len(value).to_bytes(8, "big"))
+    digest.update(value)
+
+
+def _filesystem_tree_closure_sha256(root: Path, domain: bytes) -> tuple[str, int, int]:
+    """Hash a compiler search tree, including modes and followed symlink targets."""
+
+    root = root.absolute()
+    try:
+        root_metadata = root.lstat()
+    except OSError as error:
+        raise RuntimeError(f"GCC closure root is unavailable: {root}") from error
+    if stat.S_ISLNK(root_metadata.st_mode) or not stat.S_ISDIR(root_metadata.st_mode):
+        raise RuntimeError(f"GCC closure root must be a real directory: {root}")
+    digest = hashlib.sha256()
+    _digest_field(digest, b"domain", domain)
+    _digest_field(digest, b"root", str(root).encode("utf-8"))
+    entry_count = 0
+    total_bytes = 0
+
+    def account(size: int) -> None:
+        nonlocal entry_count, total_bytes
+        entry_count += 1
+        total_bytes += size
+        if entry_count > _MAX_GCC_CLOSURE_ENTRIES:
+            raise RuntimeError("GCC closure exceeds its entry bound")
+        if total_bytes > _MAX_GCC_CLOSURE_BYTES:
+            raise RuntimeError("GCC closure exceeds its byte bound")
+
+    def record_metadata(kind: bytes, relative: str, metadata: os.stat_result) -> None:
+        _digest_field(digest, b"kind", kind)
+        _digest_field(digest, b"path", relative.encode("utf-8"))
+        _digest_field(
+            digest,
+            b"mode",
+            stat.S_IMODE(metadata.st_mode).to_bytes(8, "big"),
+        )
+
+    def visit(
+        path: Path,
+        relative: str,
+        directory_ancestors: frozenset[tuple[int, int]],
+        depth: int,
+    ) -> None:
+        if depth > 128:
+            raise RuntimeError("GCC closure exceeds its symlink depth bound")
+        try:
+            metadata = path.lstat()
+        except OSError as error:
+            raise RuntimeError(f"GCC closure entry is unavailable: {path}") from error
+        if stat.S_ISLNK(metadata.st_mode):
+            try:
+                target = os.readlink(path)
+            except OSError as error:
+                raise RuntimeError(
+                    f"GCC closure symlink cannot be read: {path}"
+                ) from error
+            record_metadata(b"symlink", relative, metadata)
+            _digest_field(digest, b"link_target", os.fsencode(target))
+            try:
+                resolved = path.resolve(strict=True)
+                resolved_metadata = resolved.stat()
+            except FileNotFoundError:
+                resolved = path.resolve(strict=False)
+                _digest_field(digest, b"resolved_path", str(resolved).encode("utf-8"))
+                _digest_field(digest, b"target_state", b"absent")
+                account(0)
+                return
+            except OSError as error:
+                raise RuntimeError(f"GCC closure symlink is invalid: {path}") from error
+            _digest_field(digest, b"resolved_path", str(resolved).encode("utf-8"))
+            _digest_field(digest, b"target_state", b"present")
+            account(0)
+            if stat.S_ISREG(resolved_metadata.st_mode):
+                record_metadata(b"resolved_file", relative, resolved_metadata)
+                _digest_field(
+                    digest,
+                    b"size",
+                    resolved_metadata.st_size.to_bytes(8, "big"),
+                )
+                with resolved.open("rb") as handle:
+                    for chunk in iter(lambda: handle.read(1 << 20), b""):
+                        digest.update(chunk)
+                account(resolved_metadata.st_size)
+                return
+            if not stat.S_ISDIR(resolved_metadata.st_mode):
+                raise RuntimeError(f"GCC closure symlink target is not regular: {path}")
+            visit(resolved, relative, directory_ancestors, depth + 1)
+            return
+        if stat.S_ISREG(metadata.st_mode):
+            record_metadata(b"file", relative, metadata)
+            _digest_field(digest, b"size", metadata.st_size.to_bytes(8, "big"))
+            with path.open("rb") as handle:
+                for chunk in iter(lambda: handle.read(1 << 20), b""):
+                    digest.update(chunk)
+            account(metadata.st_size)
+            return
+        if not stat.S_ISDIR(metadata.st_mode):
+            raise RuntimeError(f"GCC closure has a non-regular entry: {path}")
+        identity = (metadata.st_dev, metadata.st_ino)
+        if identity in directory_ancestors:
+            raise RuntimeError(f"GCC closure contains a directory cycle: {path}")
+        record_metadata(b"directory", relative, metadata)
+        account(0)
+        next_ancestors = directory_ancestors | {identity}
+        try:
+            children = sorted(path.iterdir(), key=lambda child: child.name)
+        except OSError as error:
+            raise RuntimeError(
+                f"GCC closure directory cannot be read: {path}"
+            ) from error
+        for child in children:
+            child_relative = child.name if not relative else f"{relative}/{child.name}"
+            visit(child, child_relative, next_ancestors, depth + 1)
+
+    visit(root, "", frozenset(), 0)
+    return digest.hexdigest(), entry_count, total_bytes
+
+
+def _gcc_command(
+    cxx: Path, arguments: tuple[str, ...], *, stdin: bytes = b""
+) -> tuple[bytes, bytes]:
+    environment = {
+        "HOME": "/nonexistent",
+        "LANG": "C",
+        "LC_ALL": "C",
+        "PATH": os.pathsep.join((str(cxx.parent), "/usr/bin", "/bin")),
+        "SOURCE_DATE_EPOCH": str(DEFAULT_SOURCE_DATE_EPOCH),
+    }
+    completed = subprocess.run(
+        (str(cxx), *arguments),
+        input=stdin,
+        check=False,
+        capture_output=True,
+        env=environment,
+    )
+    if completed.returncode != 0:
+        raise RuntimeError(
+            "frozen GCC probe failed: " + " ".join((str(cxx), *arguments))
+        )
+    return completed.stdout, completed.stderr
+
+
+def _gcc_probe_sha256(cxx: Path) -> tuple[str, int]:
+    commands = (
+        ("--version",),
+        ("-dumpspecs",),
+        ("-print-search-dirs",),
+        ("-dumpmachine",),
+        ("-dumpfullversion", "-dumpversion"),
+        ("-print-sysroot",),
+        ("-print-multiarch",),
+        ("-print-multi-directory",),
+        ("-E", "-x", "c++", "-", "-v"),
+    )
+    digest = hashlib.sha256()
+    _digest_field(digest, b"domain", b"betelgeuze.engine-v2.gcc-probes/v1")
+    byte_count = 0
+    for arguments in commands:
+        stdout, stderr = _gcc_command(cxx, arguments)
+        encoded_arguments = b"\0".join(
+            argument.encode("ascii") for argument in arguments
+        )
+        _digest_field(digest, b"arguments", encoded_arguments)
+        _digest_field(digest, b"stdout", stdout)
+        _digest_field(digest, b"stderr", stderr)
+        byte_count += len(encoded_arguments) + len(stdout) + len(stderr)
+    return digest.hexdigest(), byte_count
+
+
+def _closure_file_record(*, label: str, path: Path) -> tuple[dict[str, object], int]:
+    if not path.is_absolute():
+        raise RuntimeError(f"GCC closure path is not absolute: {label}")
+    try:
+        metadata = path.lstat()
+        resolved = path.resolve(strict=True)
+        resolved_metadata = resolved.stat()
+    except OSError as error:
+        raise RuntimeError(f"GCC closure file is unavailable: {label}") from error
+    if not stat.S_ISREG(resolved_metadata.st_mode):
+        raise RuntimeError(f"GCC closure path is not a regular file: {label}")
+    return (
+        {
+            "label": label,
+            "path": str(path),
+            "resolved_path": str(resolved),
+            "symlink_target": (
+                os.readlink(path) if stat.S_ISLNK(metadata.st_mode) else None
+            ),
+            "mode": stat.S_IMODE(resolved_metadata.st_mode),
+            "size": resolved_metadata.st_size,
+            "sha256": _sha256_path(resolved),
+        },
+        resolved_metadata.st_size,
+    )
+
+
+def _gcc_reported_file(
+    spec: FrozenGccClosureSpec, *, category: str, name: str
+) -> tuple[dict[str, object], int]:
+    option = "-print-prog-name" if category == "program" else "-print-file-name"
+    stdout, stderr = _gcc_command(spec.cxx, (f"{option}={name}",))
+    if stderr or not stdout.endswith(b"\n") or stdout.count(b"\n") != 1:
+        raise RuntimeError(f"GCC {category} query is not canonical: {name}")
+    try:
+        reported = stdout[:-1].decode("utf-8")
+    except UnicodeError as error:
+        raise RuntimeError(f"GCC {category} query is not UTF-8: {name}") from error
+    if not reported or reported == name:
+        raise RuntimeError(f"GCC {category} query did not resolve: {name}")
+    return _closure_file_record(label=f"{category}:{name}", path=Path(reported))
+
+
+def _gcc_closure_receipt(
+    spec: FrozenGccClosureSpec,
+) -> tuple[str, int, int, Mapping[str, object]]:
+    probe_sha256, probe_bytes = _gcc_probe_sha256(spec.cxx)
+    tree_receipts: list[dict[str, object]] = []
+    entry_count = 0
+    total_bytes = probe_bytes
+    for label, root, domain in spec.tree_roots:
+        sha256, observed_entries, observed_bytes = _filesystem_tree_closure_sha256(
+            root, domain
+        )
+        tree_receipts.append(
+            {
+                "label": label,
+                "root": str(root),
+                "sha256": sha256,
+                "entry_count": observed_entries,
+                "total_bytes": observed_bytes,
+            }
+        )
+        entry_count += observed_entries
+        total_bytes += observed_bytes
+    programs: list[dict[str, object]] = []
+    for name in _GCC_PROGRAM_NAMES:
+        record, size = _gcc_reported_file(spec, category="program", name=name)
+        programs.append(record)
+        entry_count += 1
+        total_bytes += size
+    link_inputs: list[dict[str, object]] = []
+    for name in _GCC_LINK_INPUT_NAMES:
+        record, size = _gcc_reported_file(spec, category="link_input", name=name)
+        link_inputs.append(record)
+        entry_count += 1
+        total_bytes += size
+    runtime_files: list[dict[str, object]] = []
+    for path in spec.runtime_files:
+        record, size = _closure_file_record(label=f"runtime:{path}", path=path)
+        runtime_files.append(record)
+        entry_count += 1
+        total_bytes += size
+    payload: Mapping[str, object] = {
+        "schema_id": "betelgeuze.engine_v2_gcc_host_closure/1.0.0",
+        "label": spec.label,
+        "cxx": str(spec.cxx),
+        "probe_sha256": probe_sha256,
+        "probe_bytes": probe_bytes,
+        "trees": tree_receipts,
+        "programs": programs,
+        "link_inputs": link_inputs,
+        "runtime_files": runtime_files,
+        "entry_count": entry_count,
+        "total_bytes": total_bytes,
+    }
+    canonical = json.dumps(
+        payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True
+    ).encode("ascii")
+    return hashlib.sha256(canonical).hexdigest(), entry_count, total_bytes, payload
+
+
+def _require_gcc_closure(
+    spec: FrozenGccClosureSpec,
+) -> tuple[str, str, int]:
+    sha256, entry_count, total_bytes, _ = _gcc_closure_receipt(spec)
+    if (
+        sha256 != spec.expected_sha256
+        or entry_count != spec.expected_entry_count
+        or total_bytes != spec.expected_total_bytes
+    ):
+        raise RuntimeError(f"frozen native {spec.label} changed")
+    return spec.label, sha256, entry_count
+
+
 def _toolchain_manifest_sha256(
     *,
     profile_id: str,
@@ -469,7 +890,7 @@ def _toolchain_manifest_sha256(
     closures: tuple[tuple[str, str, int], ...] = (),
 ) -> str:
     payload = {
-        "schema_id": "betelgeuze.engine_v2_native_toolchain/1.0.0",
+        "schema_id": "betelgeuze.engine_v2_native_toolchain/1.1.0",
         "profile_id": profile_id,
         "compatibility": compatibility,
         "cargo_features": list(cargo_features),
@@ -516,17 +937,23 @@ def _verify_native_toolchain(
 ) -> FrozenNativeToolchain:
     if profile_id == CPU_PROFILE_ID:
         if compatibility != "manylinux_2_28":
-            raise RuntimeError("CPU native profile requires manylinux_2_28 compatibility")
+            raise RuntimeError(
+                "CPU native profile requires manylinux_2_28 compatibility"
+            )
         if rocm_root is not None or rocm_device_lib_path is not None:
             raise RuntimeError("CPU native profile rejects ROCm inputs")
         _verify_frozen_files(_CPU_FILE_SPECS)
+        closures = (_require_gcc_closure(_CPU_GCC_CLOSURE),)
         manifest_sha256 = _toolchain_manifest_sha256(
             profile_id=profile_id,
             compatibility=compatibility,
             cargo_features=("extension-module",),
             specifications=_CPU_FILE_SPECS,
+            closures=closures,
         )
-        tools = {specification.label: specification.path for specification in _CPU_FILE_SPECS}
+        tools = {
+            specification.label: specification.path for specification in _CPU_FILE_SPECS
+        }
         tool_directory = _CPU_FILE_SPECS[0].path.parent
         return FrozenNativeToolchain(
             profile_id=profile_id,
@@ -549,7 +976,9 @@ def _verify_native_toolchain(
     if compatibility != "linux":
         raise RuntimeError("HIP gfx1030 native profile requires linux compatibility")
     if rocm_root is None or rocm_device_lib_path is None:
-        raise RuntimeError("HIP gfx1030 native profile requires ROCm and device-lib paths")
+        raise RuntimeError(
+            "HIP gfx1030 native profile requires ROCm and device-lib paths"
+        )
     try:
         observed_rocm_root = rocm_root.resolve(strict=True)
         device_lib_path = rocm_device_lib_path.resolve(strict=True)
@@ -559,6 +988,7 @@ def _verify_native_toolchain(
         raise RuntimeError("HIP gfx1030 native profile requires exact ROCm 6.0.2 root")
     _verify_frozen_files(_HIP_HOST_FILE_SPECS + _ROCM_FILE_SPECS)
     closures = (
+        _require_gcc_closure(_HIP_GCC_CLOSURE),
         _require_closure(
             _ROCM_ROOT / "include",
             domain=b"betelgeuze.engine-v2.rocm-include/v1",
@@ -589,7 +1019,10 @@ def _verify_native_toolchain(
         specifications=specifications,
         closures=closures,
     )
-    tools = {specification.label: specification.path for specification in _HIP_HOST_FILE_SPECS}
+    tools = {
+        specification.label: specification.path
+        for specification in _HIP_HOST_FILE_SPECS
+    }
     return FrozenNativeToolchain(
         profile_id=profile_id,
         compatibility=compatibility,
@@ -700,7 +1133,11 @@ def _cargo_config_paths(
     # Cargo searches .cargo directories from its working directory through its
     # ancestors.  The manifest-local directory is included defensively because
     # changing the invocation cwd must not silently activate a new config.
-    roots = (repository_root / "rust_engine_v2", repository_root, *repository_root.parents)
+    roots = (
+        repository_root / "rust_engine_v2",
+        repository_root,
+        *repository_root.parents,
+    )
     for root in roots:
         candidates.extend((root / ".cargo/config.toml", root / ".cargo/config"))
     cargo_home_text = environment.get("CARGO_HOME", "").strip()
@@ -708,7 +1145,9 @@ def _cargo_config_paths(
         cargo_home = Path(cargo_home_text).expanduser()
     else:
         home_text = environment.get("HOME", "").strip()
-        cargo_home = (Path(home_text).expanduser() if home_text else Path.home()) / ".cargo"
+        cargo_home = (
+            Path(home_text).expanduser() if home_text else Path.home()
+        ) / ".cargo"
     candidates.extend((cargo_home / "config.toml", cargo_home / "config"))
     return tuple(dict.fromkeys(path.resolve(strict=False) for path in candidates))
 
@@ -765,7 +1204,12 @@ def _dangerous_cargo_config_keys(payload: object) -> tuple[str, ...]:
         )
     unstable = payload.get("unstable")
     if isinstance(unstable, dict):
-        for key in ("build-std", "build-std-features", "host-config", "target-applies-to-host"):
+        for key in (
+            "build-std",
+            "build-std-features",
+            "host-config",
+            "target-applies-to-host",
+        ):
             if key in unstable:
                 dangerous.append(f"unstable.{key}")
     return tuple(sorted(set(dangerous)))
@@ -900,7 +1344,9 @@ def _isolated_cargo_target_directory(
             try:
                 path.mkdir(mode=0o700)
             except OSError as error:
-                raise RuntimeError("CARGO_TARGET_DIR cannot be created safely") from error
+                raise RuntimeError(
+                    "CARGO_TARGET_DIR cannot be created safely"
+                ) from error
         yield path.resolve(strict=True)
         return
     with tempfile.TemporaryDirectory(prefix="betelgeuze-native-target-") as temporary:
@@ -908,9 +1354,10 @@ def _isolated_cargo_target_directory(
 
 
 def _validate_compatibility(compatibility: str) -> str:
-    if compatibility != "linux" and re.fullmatch(
-        r"manylinux_[0-9_]+", compatibility
-    ) is None:
+    if (
+        compatibility != "linux"
+        and re.fullmatch(r"manylinux_[0-9_]+", compatibility) is None
+    ):
         raise RuntimeError(f"unsupported native wheel compatibility: {compatibility}")
     return compatibility
 
@@ -961,7 +1408,9 @@ def _maturin_build_command(
     ]
     if native_toolchain.cargo_features:
         command.extend(("--features", ",".join(native_toolchain.cargo_features)))
-    command.extend(("--compatibility", compatibility, "--out", str(output_dir.resolve())))
+    command.extend(
+        ("--compatibility", compatibility, "--out", str(output_dir.resolve()))
+    )
     return tuple(command)
 
 
@@ -1012,7 +1461,9 @@ def build_native_wheel(
         )
         output_dir.mkdir(parents=True, exist_ok=True)
         if tuple(output_dir.glob("*.whl")):
-            raise RuntimeError("native wheel output directory must not contain prior wheels")
+            raise RuntimeError(
+                "native wheel output directory must not contain prior wheels"
+            )
         subprocess.run(
             _maturin_build_command(
                 manifest=manifest,
@@ -1043,7 +1494,9 @@ def main() -> int:
     parser.add_argument("--compatibility")
     parser.add_argument("--rocm-root")
     parser.add_argument("--rocm-device-lib-path")
-    parser.add_argument("--source-date-epoch", type=int, default=DEFAULT_SOURCE_DATE_EPOCH)
+    parser.add_argument(
+        "--source-date-epoch", type=int, default=DEFAULT_SOURCE_DATE_EPOCH
+    )
     arguments = parser.parse_args()
     wheel = build_native_wheel(
         Path(arguments.repository_root).resolve(),

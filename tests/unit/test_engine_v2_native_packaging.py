@@ -18,10 +18,15 @@ from tools.build_engine_v2_native_wheel import (
     CPU_PROFILE_ID,
     FROZEN_TARGET,
     HIP_GFX1030_PROFILE_ID,
+    _CPU_GCC_CLOSURE,
+    _GCC_LINK_INPUT_NAMES,
+    _GCC_PROGRAM_NAMES,
+    _HIP_GCC_CLOSURE,
     FrozenFileSpec,
     FrozenNativeToolchain,
     FrozenRustToolchain,
     _directory_closure_sha256,
+    _filesystem_tree_closure_sha256,
     _frozen_build_environment,
     _isolated_cargo_target_directory,
     _maturin_build_command,
@@ -38,9 +43,9 @@ def test_native_release_version_surfaces_match_rc6() -> None:
     native = tomllib.loads(
         Path("rust_engine_v2/pyproject.toml").read_text(encoding="utf-8")
     )
-    workflow = Path(
-        ".github/workflows/ci-engine-v2-release-candidate.yml"
-    ).read_text(encoding="utf-8")
+    workflow = Path(".github/workflows/ci-engine-v2-release-candidate.yml").read_text(
+        encoding="utf-8"
+    )
 
     assert NATIVE_VERSION == "0.2.0rc6"
     assert cargo["package"]["version"] == "0.2.0-rc.6"
@@ -222,9 +227,7 @@ def test_canonical_maturin_profiles_select_exact_features(tmp_path: Path) -> Non
 
     assert "--no-default-features" in cpu_command
     assert cpu_command[cpu_command.index("--features") + 1] == "extension-module"
-    assert hip_command[hip_command.index("--features") + 1] == (
-        "extension-module,hip"
-    )
+    assert hip_command[hip_command.index("--features") + 1] == ("extension-module,hip")
 
 
 def test_native_toolchain_directory_closure_is_content_bound(tmp_path: Path) -> None:
@@ -236,6 +239,74 @@ def test_native_toolchain_directory_closure_is_content_bound(tmp_path: Path) -> 
 
     assert first[1] == second[1] == 1
     assert first[0] != second[0]
+
+
+def test_gcc_filesystem_closure_binds_modes_symlinks_and_target_content(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "root"
+    root.mkdir()
+    target = root / "compiler-resource"
+    target.write_bytes(b"first")
+    target.chmod(0o640)
+    alias = root / "resource-alias"
+    alias.symlink_to("compiler-resource")
+
+    first = _filesystem_tree_closure_sha256(root, b"gcc-test-domain")
+    target.write_bytes(b"second")
+    second = _filesystem_tree_closure_sha256(root, b"gcc-test-domain")
+    target.chmod(0o600)
+    third = _filesystem_tree_closure_sha256(root, b"gcc-test-domain")
+
+    assert first[1] == second[1] == third[1] == 4
+    assert first[0] != second[0]
+    assert second[0] != third[0]
+
+
+def test_gcc_filesystem_closure_binds_broken_symlink_absence(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "root"
+    root.mkdir()
+    alias = root / "optional-linker"
+    alias.symlink_to("missing-ld.gold")
+
+    first = _filesystem_tree_closure_sha256(root, b"gcc-test-domain")
+    alias.unlink()
+    alias.symlink_to("different-missing-ld.gold")
+    second = _filesystem_tree_closure_sha256(root, b"gcc-test-domain")
+
+    assert first[1] == second[1] == 2
+    assert first[0] != second[0]
+
+
+def test_canonical_profiles_bind_complete_gcc_host_closures() -> None:
+    assert _CPU_GCC_CLOSURE.cxx == Path("/opt/rh/gcc-toolset-14/root/usr/bin/g++")
+    assert _HIP_GCC_CLOSURE.cxx == Path("/usr/bin/x86_64-linux-gnu-g++-11")
+    for profile in (_CPU_GCC_CLOSURE, _HIP_GCC_CLOSURE):
+        assert len(profile.expected_sha256) == 64
+        assert set(profile.expected_sha256) != {"0"}
+        assert profile.expected_entry_count > 4_000
+        assert profile.expected_total_bytes > 300_000_000
+        assert any(label == "system_includes" for label, _, _ in profile.tree_roots)
+        assert profile.runtime_files
+    assert _GCC_PROGRAM_NAMES == (
+        "cc1",
+        "cc1plus",
+        "collect2",
+        "lto1",
+        "lto-wrapper",
+    )
+    assert {
+        "crt1.o",
+        "crtbeginS.o",
+        "crtendS.o",
+        "libstdc++.so",
+        "libgcc.a",
+        "libgcc_s.so.1",
+        "libm.so",
+        "libc.so",
+    }.issubset(_GCC_LINK_INPUT_NAMES)
 
 
 def test_native_toolchain_executable_digest_is_fail_closed(tmp_path: Path) -> None:
@@ -366,9 +437,7 @@ def test_docking_search_pins_portable_pure_rust_transcendentals() -> None:
     platform_math = re.compile(
         r"\.(?:sin|cos|sqrt|hypot|atan2|acos|asin|tan|exp|ln|powf)\("
     )
-    for source_path in sorted(
-        Path("rust/betelgeuze-docking-search/src").glob("*.rs")
-    ):
+    for source_path in sorted(Path("rust/betelgeuze-docking-search/src").glob("*.rs")):
         production_source = source_path.read_text(encoding="utf-8").split(
             "#[cfg(test)]", 1
         )[0]
@@ -379,8 +448,7 @@ def test_native_wheel_member_guard_accepts_only_separate_extension(
     tmp_path: Path,
 ) -> None:
     wheel = tmp_path / (
-        "betelgeuze_engine_v2_native-0.2.0rc6-cp310-cp310-"
-        "manylinux_2_28_x86_64.whl"
+        "betelgeuze_engine_v2_native-0.2.0rc6-cp310-cp310-manylinux_2_28_x86_64.whl"
     )
     with zipfile.ZipFile(wheel, "w") as archive:
         archive.writestr(
@@ -398,8 +466,7 @@ def test_native_wheel_member_guard_rejects_bundled_python_package(
     tmp_path: Path,
 ) -> None:
     wheel = tmp_path / (
-        "betelgeuze_engine_v2_native-0.2.0rc6-cp310-cp310-"
-        "manylinux_2_28_x86_64.whl"
+        "betelgeuze_engine_v2_native-0.2.0rc6-cp310-cp310-manylinux_2_28_x86_64.whl"
     )
     with zipfile.ZipFile(wheel, "w") as archive:
         archive.writestr(
