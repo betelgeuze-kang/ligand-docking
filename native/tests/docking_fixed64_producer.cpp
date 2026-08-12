@@ -597,7 +597,8 @@ bg_status run_complete_pipeline_into(
     bool overlap_downstream_with_source = false,
     bool overlap_summary_with_pipeline = false,
     const bg_docking_fixed64_producer_input_v1 *producer_input_override =
-        nullptr) {
+        nullptr,
+    bool repeat_same_output_descriptors = false) {
     const auto default_producer_input = make_input(fixture);
     bg_docking_fixed64_pipeline_input_v1 input{};
     assert(bg_docking_fixed64_pipeline_input_v1_init(&input) == BG_STATUS_OK);
@@ -707,19 +708,42 @@ bg_status run_complete_pipeline_into(
         : overlap_summary_with_pipeline
             ? reinterpret_cast<bg_docking_fixed64_pipeline_row_v1 *>(pipeline)
             : result->rows.data();
-    return bg_docking_fixed64_pipeline_v1_run(
-        context,
-        pipeline,
-        &input,
-        &producer,
-        &rigid,
-        &torsion,
-        &scorer,
-        &validity,
-        &ranking,
-        &cluster,
-        &refinement,
-        &result->output);
+    const auto run = [&]() {
+        return bg_docking_fixed64_pipeline_v1_run(
+            context,
+            pipeline,
+            &input,
+            &producer,
+            &rigid,
+            &torsion,
+            &scorer,
+            &validity,
+            &ranking,
+            &cluster,
+            &refinement,
+            &result->output);
+    };
+    const bg_status first_status = run();
+    if (first_status != BG_STATUS_OK || !repeat_same_output_descriptors) {
+        return first_status;
+    }
+    const auto first_rows = result->rows;
+    std::array<uint8_t, 32> first_pipeline_receipt{};
+    std::copy_n(
+        result->output.pipeline_batch_receipt_sha256,
+        first_pipeline_receipt.size(),
+        first_pipeline_receipt.begin());
+    const bg_status repeated_status = run();
+    if (repeated_status == BG_STATUS_OK) {
+        assert(std::memcmp(
+                   first_rows.data(), result->rows.data(),
+                   sizeof(first_rows)) == 0);
+        assert(std::memcmp(
+                   first_pipeline_receipt.data(),
+                   result->output.pipeline_batch_receipt_sha256,
+                   first_pipeline_receipt.size()) == 0);
+    }
+    return repeated_status;
 }
 
 Batch produce(
@@ -1452,6 +1476,22 @@ void test_complete_pipeline_exact64_repeat_and_backend_parity() {
            0);
     const auto reference =
         run_complete_pipeline(BG_BACKEND_CPP_CPU_REFERENCE, fixture);
+    bg_context *reuse_context = make_context(BG_BACKEND_CPP_CPU_REFERENCE);
+    assert(reuse_context != nullptr);
+    auto *reused_pipeline = make_complete_pipeline(fixture, reuse_context);
+    CompletePipelineResult reused{};
+    assert(run_complete_pipeline_into(
+               reuse_context,
+               reused_pipeline,
+               fixture,
+               &reused,
+               false,
+               false,
+               false,
+               nullptr,
+               true) == BG_STATUS_OK);
+    bg_docking_fixed64_pipeline_v1_destroy(reused_pipeline);
+    bg_context_destroy(reuse_context);
     const auto repeated =
         run_complete_pipeline(BG_BACKEND_CPP_CPU_REFERENCE, fixture);
     assert(reference.output.row_count == kSlots);

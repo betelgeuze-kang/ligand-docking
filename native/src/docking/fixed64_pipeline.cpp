@@ -628,7 +628,7 @@ template <typename Type>
     if (output.unit_system != pipeline.unit_system ||
         output.result_dependent_input_consumed != UINT8_C(0) ||
         output.fallback_allowed != UINT8_C(0) ||
-        output.denominator_preserved != UINT8_C(0) ||
+        output.denominator_preserved > UINT8_C(1) ||
         output.molecular_execution_authorized != UINT8_C(0) ||
         output.reservation_authorized != UINT8_C(0) ||
         output.benchmark_execution_authorized != UINT8_C(0) ||
