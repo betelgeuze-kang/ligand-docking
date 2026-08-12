@@ -535,6 +535,59 @@ bg_docking_fixed64_pipeline_v1 *make_complete_pipeline(
     return pipeline;
 }
 
+bg_docking_fixed64_pipeline_v1 *make_single_atom_complete_pipeline(
+    const Fixture &fixture,
+    bg_context *context) {
+    auto admission = make_admission_descriptor(fixture);
+    auto rigid = make_rigid_descriptor(fixture);
+    auto torsion = make_torsion_descriptor(fixture);
+    auto scorer = make_scorer_descriptor(fixture);
+    auto validity = make_validity_descriptor(fixture);
+    admission.ligand_atom_count = 1;
+    rigid.ligand_atom_count = 1;
+    torsion.ligand_atom_count = 1;
+    torsion.rotor_count = 0;
+    torsion.rotatable_child_atom_index = nullptr;
+    torsion.internal_pair_count = 0;
+    torsion.internal_pair_atom_i = nullptr;
+    torsion.internal_pair_atom_j = nullptr;
+    scorer.ligand_atom_count = 1;
+    scorer.ligand_donor_count = 0;
+    scorer.ligand_donor_atom_index = nullptr;
+    scorer.ligand_hydrogen_atom_index = nullptr;
+    scorer.ligand_exclusion_count = 0;
+    scorer.ligand_exclusion_atom_i = nullptr;
+    scorer.ligand_exclusion_atom_j = nullptr;
+    scorer.rotor_count = 0;
+    scorer.rotor_atom_i = nullptr;
+    scorer.rotor_atom_j = nullptr;
+    scorer.rotor_atom_k = nullptr;
+    scorer.rotor_atom_l = nullptr;
+    validity.ligand_atom_count = 1;
+    validity.bond_count = 0;
+    validity.bond_atom_i = nullptr;
+    validity.bond_atom_j = nullptr;
+    validity.ligand_exclusion_count = 0;
+    validity.ligand_exclusion_atom_i = nullptr;
+    validity.ligand_exclusion_atom_j = nullptr;
+    validity.chirality_center_count = 0;
+    validity.chirality_center_atom = nullptr;
+    validity.chirality_atom_i = nullptr;
+    validity.chirality_atom_j = nullptr;
+    validity.chirality_atom_k = nullptr;
+    bg_docking_fixed64_pipeline_v1 *pipeline = nullptr;
+    assert(bg_docking_fixed64_pipeline_v1_create(
+               context,
+               &admission,
+               &rigid,
+               &torsion,
+               &scorer,
+               &validity,
+               &pipeline) == BG_STATUS_OK);
+    assert(pipeline != nullptr);
+    return pipeline;
+}
+
 bg_status run_complete_pipeline_into(
     bg_context *context,
     bg_docking_fixed64_pipeline_v1 *pipeline,
@@ -542,11 +595,15 @@ bg_status run_complete_pipeline_into(
     CompletePipelineResult *result,
     bool overlap_summary_rows = false,
     bool overlap_downstream_with_source = false,
-    bool overlap_summary_with_pipeline = false) {
-    const auto producer_input = make_input(fixture);
+    bool overlap_summary_with_pipeline = false,
+    const bg_docking_fixed64_producer_input_v1 *producer_input_override =
+        nullptr) {
+    const auto default_producer_input = make_input(fixture);
     bg_docking_fixed64_pipeline_input_v1 input{};
     assert(bg_docking_fixed64_pipeline_input_v1_init(&input) == BG_STATUS_OK);
-    input.producer_input = &producer_input;
+    input.producer_input = producer_input_override == nullptr
+        ? &default_producer_input
+        : producer_input_override;
     input.rmsd_threshold_angstrom = 1.5;
     input.candidate_mode = fixture.refinement_modes.data();
     input.rigid_max_steps = fixture.rigid_steps.data();
@@ -554,6 +611,8 @@ bg_status run_complete_pipeline_into(
     input.torsion_max_steps = fixture.torsion_steps.data();
     input.baseline_torsion_angles_radians = fixture.baseline_angles.data();
     fill_digest(input.predeclared_refinement_policy_sha256, 0x76);
+    const uint64_t output_coordinate_count =
+        input.producer_input->exact_v11_source->ligand_atom_count * kSlots;
 
     auto &producer = result->producer.output;
     bg_docking_rigid_refinement_output_v1 rigid{};
@@ -577,13 +636,13 @@ bg_status run_complete_pipeline_into(
            BG_STATUS_OK);
 
     producer.row_capacity = kSlots;
-    producer.coordinate_capacity = kCoordinates;
+    producer.coordinate_capacity = output_coordinate_count;
     producer.rows = result->producer.rows.data();
     producer.x_angstrom = result->producer.x.data();
     producer.y_angstrom = result->producer.y.data();
     producer.z_angstrom = result->producer.z.data();
     rigid.row_capacity = kSlots;
-    rigid.coordinate_capacity = kCoordinates;
+    rigid.coordinate_capacity = output_coordinate_count;
     rigid.rows = result->rigid_rows.data();
     rigid.selected_x_angstrom = overlap_downstream_with_source
         ? const_cast<double *>(fixture.source_x.data())
@@ -601,7 +660,7 @@ bg_status run_complete_pipeline_into(
     rigid.clearance_v4_z_angstrom = result->rigid_coordinates[11].data();
     torsion.row_capacity = kSlots;
     torsion.move_capacity = kMoves;
-    torsion.coordinate_capacity = kCoordinates;
+    torsion.coordinate_capacity = output_coordinate_count;
     torsion.rows = result->torsion_rows.data();
     torsion.moves = result->torsion_moves.data();
     torsion.optimized_x_angstrom = result->torsion_coordinates[0].data();
@@ -631,7 +690,7 @@ bg_status run_complete_pipeline_into(
     cluster.representative_slot_indices = result->representatives.data();
     cluster.top_k_slot_indices = result->cluster_top_k.data();
     refinement.row_capacity = kSlots;
-    refinement.coordinate_capacity = kCoordinates;
+    refinement.coordinate_capacity = output_coordinate_count;
     refinement.quaternion_capacity = kSlots;
     refinement.rows = result->refinement_rows.data();
     refinement.final_x_angstrom = result->final_coordinates[0].data();
@@ -1436,6 +1495,146 @@ void test_complete_pipeline_exact64_repeat_and_backend_parity() {
     }
 }
 
+void test_complete_pipeline_single_atom_preserves_denominator() {
+    Fixture fixture;
+    fixture.allocation.atomic_feature_count = 0;
+    fixture.allocation.atomic_features = nullptr;
+    parse_digest(
+        "70c6f2b5446c0652d7bbc81537a0ac8a93553e961ecb3c2c40fee2620de1545b",
+        fixture.allocation.exact_v11_source.ligand_coordinate_sha256);
+    parse_digest(
+        "d4379c8a5c7b2291893bd45b047e8736168136002dd646b705a735875a947919",
+        fixture.allocation.exact_v11_source.ligand_vdw_radii_sha256);
+    parse_digest(
+        "49e14fc025f4768dc72e02fe53803e4cd9906d5dc7c89c1f7b08c6fb39b9223a",
+        fixture.allocation.exact_v11_source.ligand_heavy_atom_mask_sha256);
+    fixture.exact_source.ligand_atom_count = 1;
+    std::copy_n(
+        fixture.allocation.exact_v11_source.ligand_coordinate_sha256,
+        32,
+        fixture.exact_source.source.coordinate_sha256);
+    for (std::size_t index = 0; index < fixture.v7_evidence.size(); ++index) {
+        fixture.v7_sources[index].payload.ligand_atom_count = 1;
+        std::copy_n(
+            fixture.allocation.exact_v11_source.ligand_coordinate_sha256,
+            32,
+            fixture.v7_evidence[index].source.coordinate_sha256);
+        std::copy_n(
+            fixture.allocation.exact_v11_source.ligand_coordinate_sha256,
+            32,
+            fixture.v7_sources[index].payload.source.coordinate_sha256);
+    }
+    for (std::size_t index = 0; index < fixture.conformer_evidence.size();
+         ++index) {
+        fixture.conformer_sources[index].payload.ligand_atom_count = 1;
+        std::copy_n(
+            fixture.allocation.exact_v11_source.ligand_coordinate_sha256,
+            32,
+            fixture.conformer_evidence[index].source.coordinate_sha256);
+        std::copy_n(
+            fixture.allocation.exact_v11_source.ligand_coordinate_sha256,
+            32,
+            fixture.conformer_sources[index].payload.source.coordinate_sha256);
+    }
+    for (std::size_t index = 0; index < fixture.retained_evidence.size();
+         ++index) {
+        fixture.retained_sources[index].payload.ligand_atom_count = 1;
+        std::copy_n(
+            fixture.allocation.exact_v11_source.ligand_coordinate_sha256,
+            32,
+            fixture.retained_evidence[index].source.coordinate_sha256);
+        std::copy_n(
+            fixture.allocation.exact_v11_source.ligand_coordinate_sha256,
+            32,
+            fixture.retained_sources[index].payload.source.coordinate_sha256);
+    }
+    std::fill(
+        fixture.refinement_modes.begin(),
+        fixture.refinement_modes.end(),
+        BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V2_TRANSLATION);
+    std::fill(
+        fixture.torsion_eligible.begin(), fixture.torsion_eligible.end(),
+        UINT8_C(0));
+    std::fill(
+        fixture.torsion_steps.begin(), fixture.torsion_steps.end(),
+        UINT64_C(0));
+
+    auto producer_input = make_input(fixture);
+    producer_input.feature_geometry_count = 0;
+    producer_input.feature_geometry_rows = nullptr;
+    producer_input.feature_atom_index_count = 0;
+    producer_input.feature_atom_indices = nullptr;
+    std::fill(
+        std::begin(producer_input.feature_geometry_inventory_sha256),
+        std::end(producer_input.feature_geometry_inventory_sha256),
+        UINT8_C(0));
+
+    for (const bg_backend backend : {
+             BG_BACKEND_CPP_CPU_REFERENCE, BG_BACKEND_RUST_CPU,
+             BG_BACKEND_HIP_SAFE, BG_BACKEND_HIP_FAST}) {
+        bg_context *context = make_context(backend);
+        if (context == nullptr) continue;
+        auto *pipeline = make_single_atom_complete_pipeline(fixture, context);
+        CompletePipelineResult result{};
+        const bg_status status = run_complete_pipeline_into(
+            context,
+            pipeline,
+            fixture,
+            &result,
+            false,
+            false,
+            false,
+            &producer_input);
+        if (status != BG_STATUS_OK) {
+            std::fprintf(
+                stderr,
+                "single-atom complete pipeline backend %d failed: %s\n",
+                backend,
+                bg_last_error_message());
+        }
+        assert(status == BG_STATUS_OK);
+        assert(result.output.row_count == kSlots);
+        assert(result.output.generated_count == 28);
+        assert(result.producer.output.row_count == kSlots);
+        assert(result.producer.output.coordinate_count == kSlots);
+        assert(result.producer.output.generated_count == 28);
+        assert(result.producer.output.typed_failure_count == 36);
+        assert(result.output.refined_count <= 28);
+        assert(result.output.scored_count <= 28);
+        assert(result.output.valid_count <= 28);
+        assert_complete_pipeline_authority_false(result.output);
+        for (std::size_t slot = 0; slot < kSlots; ++slot) {
+            const auto &producer_row = result.producer.rows[slot];
+            const auto &row = result.rows[slot];
+            assert(producer_row.slot_index == slot);
+            assert(producer_row.ligand_atom_count == 1);
+            assert(producer_row.coordinate_offset == slot);
+            assert(producer_row.denominator_preserved == UINT8_C(1));
+            assert(row.slot_index == slot);
+            assert(row.producer_status == producer_row.status);
+            assert(row.producer_failure_code == producer_row.failure_code);
+            assert(digest_present(row.producer_row_receipt_sha256));
+            assert(digest_present(row.refinement_evidence_sha256));
+            assert(digest_present(row.scorer_evidence_sha256));
+            assert(digest_present(row.validity_evidence_sha256));
+            assert(digest_present(row.ranking_evidence_sha256));
+            assert(digest_present(row.cluster_evidence_sha256));
+            assert(digest_present(row.row_receipt_sha256));
+            if (slot < 24 || slot >= 60) {
+                assert(producer_row.status ==
+                       BG_DOCKING_FIXED64_PRODUCER_ROW_GENERATED);
+            } else {
+                assert(producer_row.status ==
+                       BG_DOCKING_FIXED64_PRODUCER_ROW_TYPED_FAILURE);
+                assert(row.effective_refinement_mode ==
+                       BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_INACTIVE);
+            }
+        }
+        bg_docking_fixed64_pipeline_v1_destroy(pipeline);
+        bg_context_destroy(context);
+    }
+}
+
 void test_complete_pipeline_context_receipts_bind_configuration() {
     Fixture fixture;
     const auto reference =
@@ -1645,6 +1844,7 @@ int main(int argc, char **argv) {
     if (argc == 2 &&
         std::strcmp(argv[1], "--complete-pipeline") == 0) {
         test_complete_pipeline_exact64_repeat_and_backend_parity();
+        test_complete_pipeline_single_atom_preserves_denominator();
         test_complete_pipeline_context_receipts_bind_configuration();
         test_complete_pipeline_create_and_run_fail_closed();
         return 0;

@@ -207,7 +207,7 @@ template <typename Type>
         admission.receptor_atom_count != scorer.receptor_atom_count ||
         admission.ligand_atom_count != scorer.ligand_atom_count ||
         refinement.ligand_atom_count != scorer.ligand_atom_count ||
-        scorer.receptor_atom_count == 0 || scorer.ligand_atom_count < 2) {
+        scorer.receptor_atom_count == 0 || scorer.ligand_atom_count == 0) {
         return fail(
             BG_STATUS_INVALID_ARGUMENT,
             "fixed64 complete pipeline component denominators or backend binding are cross-wired");
