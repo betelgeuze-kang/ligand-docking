@@ -17,6 +17,7 @@ constexpr std::size_t kCandidateCount =
     BG_DOCKING_FIXED64_CANDIDATE_COUNT;
 constexpr std::size_t kDigestSize = 32;
 constexpr std::size_t kMaximumLigandAtomCount = 512;
+constexpr std::size_t kMaximumReceptorAtomCount = 4096;
 constexpr char kCoordinateHashDomain[] =
     "betelgeuze.fixed64_coordinates/native-v1";
 
@@ -172,6 +173,165 @@ struct LocalOutputs final {
     }
     return left_begin < right_begin + right_size &&
            right_begin < left_begin + left_size;
+}
+
+[[nodiscard]] bg_status validate_create_output_range(
+    const bg_context &context,
+    const bg_docking_scorer_v1_context_soa_v1 &scorer,
+    const bg_docking_pose_validity_context_soa_v1 &validity,
+    bg_docking_fixed64_downstream_v1 **out_pipeline) noexcept {
+    if (scorer.receptor_atom_count == 0 ||
+        scorer.receptor_atom_count > kMaximumReceptorAtomCount ||
+        scorer.ligand_atom_count == 0 ||
+        scorer.ligand_atom_count > kMaximumLigandAtomCount ||
+        scorer.receptor_donor_count > scorer.receptor_atom_count ||
+        scorer.ligand_donor_count > scorer.ligand_atom_count ||
+        scorer.rotor_count > scorer.ligand_atom_count ||
+        validity.receptor_atom_count == 0 ||
+        validity.receptor_atom_count > kMaximumReceptorAtomCount ||
+        validity.ligand_atom_count == 0 ||
+        validity.ligand_atom_count > kMaximumLigandAtomCount) {
+        return fail(
+            BG_STATUS_CAPACITY_OVERFLOW,
+            "fixed64 downstream create denominator is outside native bounds");
+    }
+    const uint64_t scorer_maximum_pairs =
+        scorer.ligand_atom_count * (scorer.ligand_atom_count - 1U) / 2U;
+    const uint64_t validity_maximum_pairs =
+        validity.ligand_atom_count * (validity.ligand_atom_count - 1U) / 2U;
+    if (scorer.ligand_exclusion_count > scorer_maximum_pairs ||
+        validity.bond_count > validity_maximum_pairs ||
+        validity.ligand_exclusion_count > validity_maximum_pairs ||
+        validity.chirality_center_count > validity.ligand_atom_count) {
+        return fail(
+            BG_STATUS_CAPACITY_OVERFLOW,
+            "fixed64 downstream create topology denominator is impossible");
+    }
+
+    const auto scorer_receptor_count =
+        static_cast<std::size_t>(scorer.receptor_atom_count);
+    const auto scorer_ligand_count =
+        static_cast<std::size_t>(scorer.ligand_atom_count);
+    const auto scorer_receptor_donor_count =
+        static_cast<std::size_t>(scorer.receptor_donor_count);
+    const auto scorer_ligand_donor_count =
+        static_cast<std::size_t>(scorer.ligand_donor_count);
+    const auto scorer_exclusion_count =
+        static_cast<std::size_t>(scorer.ligand_exclusion_count);
+    const auto scorer_rotor_count =
+        static_cast<std::size_t>(scorer.rotor_count);
+    const auto validity_receptor_count =
+        static_cast<std::size_t>(validity.receptor_atom_count);
+    const auto validity_ligand_count =
+        static_cast<std::size_t>(validity.ligand_atom_count);
+    const auto validity_bond_count =
+        static_cast<std::size_t>(validity.bond_count);
+    const auto validity_exclusion_count =
+        static_cast<std::size_t>(validity.ligand_exclusion_count);
+    const auto validity_chirality_count =
+        static_cast<std::size_t>(validity.chirality_center_count);
+
+    const std::array<std::pair<const void *, std::size_t>, 45> inputs = {{
+        {&context, sizeof(context)},
+        {&scorer, sizeof(scorer)},
+        {&validity, sizeof(validity)},
+        {scorer.receptor_x_angstrom,
+         scorer_receptor_count * sizeof(*scorer.receptor_x_angstrom)},
+        {scorer.receptor_y_angstrom,
+         scorer_receptor_count * sizeof(*scorer.receptor_y_angstrom)},
+        {scorer.receptor_z_angstrom,
+         scorer_receptor_count * sizeof(*scorer.receptor_z_angstrom)},
+        {scorer.receptor_charge_elementary,
+         scorer_receptor_count * sizeof(*scorer.receptor_charge_elementary)},
+        {scorer.receptor_vdw_radius_angstrom,
+         scorer_receptor_count * sizeof(*scorer.receptor_vdw_radius_angstrom)},
+        {scorer.receptor_epsilon_kcal_per_mol,
+         scorer_receptor_count * sizeof(*scorer.receptor_epsilon_kcal_per_mol)},
+        {scorer.receptor_hydrophobic,
+         scorer_receptor_count * sizeof(*scorer.receptor_hydrophobic)},
+        {scorer.receptor_acceptor,
+         scorer_receptor_count * sizeof(*scorer.receptor_acceptor)},
+        {scorer.ligand_reference_x_angstrom,
+         scorer_ligand_count * sizeof(*scorer.ligand_reference_x_angstrom)},
+        {scorer.ligand_reference_y_angstrom,
+         scorer_ligand_count * sizeof(*scorer.ligand_reference_y_angstrom)},
+        {scorer.ligand_reference_z_angstrom,
+         scorer_ligand_count * sizeof(*scorer.ligand_reference_z_angstrom)},
+        {scorer.ligand_charge_elementary,
+         scorer_ligand_count * sizeof(*scorer.ligand_charge_elementary)},
+        {scorer.ligand_vdw_radius_angstrom,
+         scorer_ligand_count * sizeof(*scorer.ligand_vdw_radius_angstrom)},
+        {scorer.ligand_epsilon_kcal_per_mol,
+         scorer_ligand_count * sizeof(*scorer.ligand_epsilon_kcal_per_mol)},
+        {scorer.ligand_hydrophobic,
+         scorer_ligand_count * sizeof(*scorer.ligand_hydrophobic)},
+        {scorer.ligand_acceptor,
+         scorer_ligand_count * sizeof(*scorer.ligand_acceptor)},
+        {scorer.receptor_donor_atom_index,
+         scorer_receptor_donor_count * sizeof(*scorer.receptor_donor_atom_index)},
+        {scorer.receptor_hydrogen_atom_index,
+         scorer_receptor_donor_count * sizeof(*scorer.receptor_hydrogen_atom_index)},
+        {scorer.ligand_donor_atom_index,
+         scorer_ligand_donor_count * sizeof(*scorer.ligand_donor_atom_index)},
+        {scorer.ligand_hydrogen_atom_index,
+         scorer_ligand_donor_count * sizeof(*scorer.ligand_hydrogen_atom_index)},
+        {scorer.ligand_exclusion_atom_i,
+         scorer_exclusion_count * sizeof(*scorer.ligand_exclusion_atom_i)},
+        {scorer.ligand_exclusion_atom_j,
+         scorer_exclusion_count * sizeof(*scorer.ligand_exclusion_atom_j)},
+        {scorer.rotor_atom_i,
+         scorer_rotor_count * sizeof(*scorer.rotor_atom_i)},
+        {scorer.rotor_atom_j,
+         scorer_rotor_count * sizeof(*scorer.rotor_atom_j)},
+        {scorer.rotor_atom_k,
+         scorer_rotor_count * sizeof(*scorer.rotor_atom_k)},
+        {scorer.rotor_atom_l,
+         scorer_rotor_count * sizeof(*scorer.rotor_atom_l)},
+        {validity.receptor_x_angstrom,
+         validity_receptor_count * sizeof(*validity.receptor_x_angstrom)},
+        {validity.receptor_y_angstrom,
+         validity_receptor_count * sizeof(*validity.receptor_y_angstrom)},
+        {validity.receptor_z_angstrom,
+         validity_receptor_count * sizeof(*validity.receptor_z_angstrom)},
+        {validity.receptor_vdw_radius_angstrom,
+         validity_receptor_count * sizeof(*validity.receptor_vdw_radius_angstrom)},
+        {validity.ligand_reference_x_angstrom,
+         validity_ligand_count * sizeof(*validity.ligand_reference_x_angstrom)},
+        {validity.ligand_reference_y_angstrom,
+         validity_ligand_count * sizeof(*validity.ligand_reference_y_angstrom)},
+        {validity.ligand_reference_z_angstrom,
+         validity_ligand_count * sizeof(*validity.ligand_reference_z_angstrom)},
+        {validity.ligand_vdw_radius_angstrom,
+         validity_ligand_count * sizeof(*validity.ligand_vdw_radius_angstrom)},
+        {validity.bond_atom_i,
+         validity_bond_count * sizeof(*validity.bond_atom_i)},
+        {validity.bond_atom_j,
+         validity_bond_count * sizeof(*validity.bond_atom_j)},
+        {validity.ligand_exclusion_atom_i,
+         validity_exclusion_count * sizeof(*validity.ligand_exclusion_atom_i)},
+        {validity.ligand_exclusion_atom_j,
+         validity_exclusion_count * sizeof(*validity.ligand_exclusion_atom_j)},
+        {validity.chirality_center_atom,
+         validity_chirality_count * sizeof(*validity.chirality_center_atom)},
+        {validity.chirality_atom_i,
+         validity_chirality_count * sizeof(*validity.chirality_atom_i)},
+        {validity.chirality_atom_j,
+         validity_chirality_count * sizeof(*validity.chirality_atom_j)},
+        {validity.chirality_atom_k,
+         validity_chirality_count * sizeof(*validity.chirality_atom_k)},
+    }};
+    for (const auto &input : inputs) {
+        if (ranges_overlap(
+                out_pipeline,
+                sizeof(*out_pipeline),
+                input.first,
+                input.second)) {
+            return fail(
+                BG_STATUS_INVALID_ARGUMENT,
+                "fixed64 downstream handle output overlaps a create input");
+        }
+    }
+    return BG_STATUS_OK;
 }
 
 [[nodiscard]] bg_status validate_outputs(
@@ -406,24 +566,13 @@ bg_docking_fixed64_downstream_v1_create(
                 BG_STATUS_INVALID_ARGUMENT,
                 "fixed64 downstream create inputs or output are misaligned");
         }
-        if (ranges_overlap(
-                out_pipeline,
-                sizeof(*out_pipeline),
-                context,
-                sizeof(*context)) ||
-            ranges_overlap(
-                out_pipeline,
-                sizeof(*out_pipeline),
-                scorer_descriptor,
-                sizeof(*scorer_descriptor)) ||
-            ranges_overlap(
-                out_pipeline,
-                sizeof(*out_pipeline),
-                validity_descriptor,
-                sizeof(*validity_descriptor))) {
-            return fail(
-                BG_STATUS_INVALID_ARGUMENT,
-                "fixed64 downstream handle output overlaps a component descriptor");
+        const bg_status output_status = validate_create_output_range(
+            *context,
+            *scorer_descriptor,
+            *validity_descriptor,
+            out_pipeline);
+        if (output_status != BG_STATUS_OK) {
+            return output_status;
         }
         *out_pipeline = nullptr;
 
@@ -475,6 +624,7 @@ bg_docking_fixed64_downstream_v1_get_backend(
     const bg_docking_fixed64_downstream_v1 *pipeline,
     bg_backend *backend) BG_NOEXCEPT {
     using namespace betelgeuze::native;
+    using namespace betelgeuze::native::docking::downstream;
     return guarded_status([&]() -> bg_status {
         if (pipeline == nullptr || backend == nullptr) {
             return fail(
@@ -485,6 +635,15 @@ bg_docking_fixed64_downstream_v1_get_backend(
             return fail(
                 BG_STATUS_INVALID_ARGUMENT,
                 "fixed64 downstream handle or backend output is misaligned");
+        }
+        if (ranges_overlap(
+                pipeline,
+                sizeof(*pipeline),
+                backend,
+                sizeof(*backend))) {
+            return fail(
+                BG_STATUS_INVALID_ARGUMENT,
+                "fixed64 downstream backend output overlaps its handle");
         }
         *backend = pipeline->backend;
         return BG_STATUS_OK;
