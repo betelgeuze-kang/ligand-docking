@@ -68,9 +68,12 @@ volume, and pocket escape. The frozen hard rejection is strictly
 `minimum_vdw_ratio < 0.55`; equality remains admitted. Upstream and numerical
 failures stay in the 64-row denominator. C++, Rust CPU, `hip_safe`, and
 `hip_fast` keep independent persistent implementations, reject work above
-16,777,216 exact batch pairs, commit output transactionally, and grant no
-execution, reservation, benchmark, product mutation, pose-emission, or claim
-authority.
+16,777,216 exact batch pairs, and return private unsigned rows to the common
+C++ boundary. That boundary rederives status/count/decision invariants and
+binds canonical coordinates, the four deep-copied identities, backend, policy,
+and scientific fields into one SHA-256 per row and one 64-row batch receipt
+before the transactional commit. It grants no execution, reservation,
+benchmark, product mutation, pose-emission, or claim authority.
 
 The term order is:
 

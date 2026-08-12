@@ -657,7 +657,10 @@ typedef struct bg_dynamics_report_v1 {
  * deep-copied. The frozen full-Cartesian traversal evaluates at most
  * 16,777,216 receptor-ligand pairs per batch and rejects a candidate only
  * when minimum_vdw_ratio is strictly below 0.55. Typed upstream and numerical
- * failures remain present in the exact 64-row denominator.
+ * failures remain present in the exact 64-row denominator. The public
+ * dispatcher independently validates every provider row and binds each row
+ * to the deep-copied identities, backend, policy, candidate state, and
+ * canonical coordinate receipt before committing the batch.
  */
 typedef struct bg_docking_geometric_admission_context_soa_v1 {
     uint32_t struct_size;
@@ -720,7 +723,8 @@ typedef struct bg_docking_geometric_admission_row_v1 {
     double minimum_vdw_ratio;
     double sphere_overlap_proxy_angstrom3;
     double pocket_escape_angstrom;
-    uint64_t reserved[4];
+    /* Commits identity, backend, policy, state, coordinates, and metrics. */
+    uint8_t row_receipt_sha256[32];
 } bg_docking_geometric_admission_row_v1;
 
 typedef struct bg_docking_geometric_admission_output_v1 {
@@ -739,7 +743,8 @@ typedef struct bg_docking_geometric_admission_output_v1 {
     uint8_t production_claim_authorized;
     uint8_t scientific_claim_authorized;
     uint8_t reserved1;
-    uint64_t reserved[4];
+    /* Commits all 64 row receipts and every false authority bit. */
+    uint8_t batch_receipt_sha256[32];
 } bg_docking_geometric_admission_output_v1;
 
 /*

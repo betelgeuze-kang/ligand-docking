@@ -248,7 +248,7 @@ pub struct DockingGeometricAdmissionRowV1 {
     minimum_vdw_ratio: f64,
     sphere_overlap_proxy_angstrom3: f64,
     pocket_escape_angstrom: f64,
-    reserved: [u64; 4],
+    row_receipt_sha256: [u8; 32],
 }
 
 struct GeometricAdmissionState {
@@ -1206,7 +1206,7 @@ fn geometric_failure_row(
         minimum_vdw_ratio: 0.0,
         sphere_overlap_proxy_angstrom3: 0.0,
         pocket_escape_angstrom: 0.0,
-        reserved: [0; 4],
+        row_receipt_sha256: [0; 32],
     }
 }
 
@@ -1364,7 +1364,7 @@ unsafe fn evaluate_geometric_admission_fixed64(
             minimum_vdw_ratio: metrics.minimum_vdw_ratio(),
             sphere_overlap_proxy_angstrom3: metrics.sphere_overlap_proxy_angstrom3(),
             pocket_escape_angstrom: metrics.pocket_escape_angstrom(),
-            reserved: [0; 4],
+            row_receipt_sha256: [0; 32],
         };
     }
     Ok(rows)

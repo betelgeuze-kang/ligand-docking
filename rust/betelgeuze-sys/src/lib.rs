@@ -626,7 +626,7 @@ pub struct bg_docking_geometric_admission_row_v1 {
     pub minimum_vdw_ratio: f64,
     pub sphere_overlap_proxy_angstrom3: f64,
     pub pocket_escape_angstrom: f64,
-    pub reserved: [u64; 4],
+    pub row_receipt_sha256: [u8; 32],
 }
 
 #[repr(C)]
@@ -647,7 +647,7 @@ pub struct bg_docking_geometric_admission_output_v1 {
     pub production_claim_authorized: u8,
     pub scientific_claim_authorized: u8,
     pub reserved1: u8,
-    pub reserved: [u64; 4],
+    pub batch_receipt_sha256: [u8; 32],
 }
 
 #[repr(C)]
