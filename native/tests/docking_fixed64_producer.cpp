@@ -20,6 +20,8 @@ namespace {
 constexpr std::size_t kAtoms = 4;
 constexpr std::size_t kSlots = BG_DOCKING_FIXED64_CANDIDATE_COUNT;
 constexpr std::size_t kCoordinates = kAtoms * kSlots;
+constexpr std::size_t kMoves =
+    kSlots * BG_DOCKING_TORSION_V7_MAX_MOVES;
 constexpr std::size_t kFeatureCount = BG_DOCKING_FIXED64_FEATURE_KIND_COUNT;
 constexpr std::array<uint32_t, 4> kRetainedIndices = {36, 45, 54, 63};
 constexpr std::array<const char *, kFeatureCount> kFeatureReceipts = {
@@ -84,20 +86,50 @@ void fill_source_evidence(
         source->proposal_sha256,
         static_cast<uint8_t>(marker + UINT8_C(64)));
     parse_digest(
-        "42bd9421b68e2e80a1b4d6b0e52173f6769feb8422b897d1b0131a124c35610a",
+        "ab01e8fe2a0e14b958827e710f1d262de82a886b279563aae8cedc946ef533c8",
         source->coordinate_sha256);
 }
 
 struct Fixture final {
-    std::array<double, kAtoms> source_x = {0.0, 1.0, 0.0, 0.0};
-    std::array<double, kAtoms> source_y = {0.0, 0.0, 1.0, 0.0};
-    std::array<double, kAtoms> source_z = {0.0, 0.0, 0.0, 1.5};
+    std::array<double, kCoordinates> source_x = {0.0, 1.0, 0.0, 0.0};
+    std::array<double, kCoordinates> source_y = {0.0, 0.0, 1.0, 0.0};
+    std::array<double, kCoordinates> source_z = {0.0, 0.0, 0.0, 1.0001};
     std::array<double, kAtoms> receptor_x = {4.0, 3.5, 4.0, 4.0};
     std::array<double, kAtoms> receptor_y = {0.0, 0.0, 1.0, 0.0};
-    std::array<double, kAtoms> receptor_z = {0.0, 0.0, 0.0, 1.25};
+    std::array<double, kAtoms> receptor_z = {0.0, 0.0, 0.0, 1.0002};
     std::array<double, kAtoms> ligand_radii = {1.5, 1.5, 1.5, 1.5};
     std::array<double, kAtoms> receptor_radii = {1.5, 1.5, 1.5, 1.5};
     std::array<uint8_t, kAtoms> heavy_mask = {1, 1, 1, 1};
+    std::array<double, kAtoms> receptor_charge = {-0.5, 0.2, 0.3, 0.0};
+    std::array<double, kAtoms> receptor_epsilon = {0.2, 0.18, 0.05, 0.25};
+    std::array<uint8_t, kAtoms> receptor_hydrophobic = {0, 0, 0, 1};
+    std::array<uint8_t, kAtoms> receptor_acceptor = {1, 0, 0, 0};
+    std::array<double, kAtoms> ligand_charge = {0.2, 0.25, -0.45, 0.0};
+    std::array<double, kAtoms> ligand_epsilon = {0.18, 0.05, 0.2, 0.25};
+    std::array<uint8_t, kAtoms> ligand_hydrophobic = {0, 0, 0, 1};
+    std::array<uint8_t, kAtoms> ligand_acceptor = {0, 0, 1, 1};
+    std::array<uint64_t, 1> receptor_donor = {0};
+    std::array<uint64_t, 1> receptor_hydrogen = {1};
+    std::array<uint64_t, 1> ligand_donor = {0};
+    std::array<uint64_t, 1> ligand_hydrogen = {1};
+    std::array<uint64_t, 3> bond_i = {0, 1, 2};
+    std::array<uint64_t, 3> bond_j = {1, 2, 3};
+    std::array<uint64_t, 3> exclusion_i = {0, 1, 2};
+    std::array<uint64_t, 3> exclusion_j = {1, 2, 3};
+    std::array<uint64_t, 1> scorer_rotor_i = {0};
+    std::array<uint64_t, 1> scorer_rotor_j = {1};
+    std::array<uint64_t, 1> scorer_rotor_k = {2};
+    std::array<uint64_t, 1> scorer_rotor_l = {3};
+    std::array<int32_t, kAtoms> parent = {-1, 0, 1, 2};
+    std::array<uint64_t, 1> rotatable_child = {2};
+    std::array<uint64_t, 3> internal_i = {0, 0, 1};
+    std::array<uint64_t, 3> internal_j = {2, 3, 3};
+    std::array<bg_docking_rigid_refinement_candidate_mode, kSlots>
+        refinement_modes{};
+    std::array<uint64_t, kSlots> rigid_steps{};
+    std::array<uint8_t, kSlots> torsion_eligible{};
+    std::array<uint64_t, kSlots> torsion_steps{};
+    std::array<double, kCoordinates> baseline_angles{};
     std::array<bg_docking_fixed64_atomic_feature_evidence_v1, kFeatureCount>
         atomic_features{};
     std::array<bg_docking_fixed64_feature_geometry_row_v1, kFeatureCount>
@@ -124,17 +156,17 @@ struct Fixture final {
         fill_digest(allocation.exact_v11_source.source_receipt_sha256, 0x10);
         fill_digest(allocation.exact_v11_source.proposal_sha256, 0x11);
         parse_digest(
-            "42bd9421b68e2e80a1b4d6b0e52173f6769feb8422b897d1b0131a124c35610a",
+            "ab01e8fe2a0e14b958827e710f1d262de82a886b279563aae8cedc946ef533c8",
             allocation.exact_v11_source.ligand_coordinate_sha256);
         parse_digest(
-            "eec85cfe7d1e2cb444ed309e7b1861819ec8c6fd9391baa71c26db323fdc847c",
+            "fc1a4a36a926d55049f0d6d06d3f61328f59ed6860899712dec2df39c6832ef5",
             allocation.exact_v11_source.receptor_coordinate_sha256);
         fill_digest(
             allocation.exact_v11_source.prepared_ligand_topology_sha256,
-            0x12);
+            0x72);
         fill_digest(
             allocation.exact_v11_source.prepared_receptor_topology_sha256,
-            0x13);
+            0x71);
         parse_digest(
             "142a64fce99277370fc239fbbb59e85aee8c8c9472a6eb394231b8bff31981f6",
             allocation.exact_v11_source.ligand_vdw_radii_sha256);
@@ -225,6 +257,31 @@ struct Fixture final {
         allocation.conformer_sources = conformer_evidence.data();
         allocation.retained_source_count = retained_evidence.size();
         allocation.retained_sources = retained_evidence.data();
+        for (std::size_t slot = 0; slot < kSlots; ++slot) {
+            switch (slot % 4U) {
+                case 0:
+                    refinement_modes[slot] =
+                        BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V2_TRANSLATION;
+                    break;
+                case 1:
+                    refinement_modes[slot] =
+                        BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V3_TRANSLATION_ROTATION;
+                    break;
+                case 2:
+                    refinement_modes[slot] =
+                        BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V6_BASELINE_V2_LANE;
+                    torsion_eligible[slot] = UINT8_C(1);
+                    torsion_steps[slot] = 4;
+                    break;
+                default:
+                    refinement_modes[slot] =
+                        BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V6_BASELINE_V3_LANE;
+                    torsion_eligible[slot] = UINT8_C(1);
+                    torsion_steps[slot] = 4;
+                    break;
+            }
+            rigid_steps[slot] = 4;
+        }
     }
 
     void assign_payload(
@@ -250,15 +307,13 @@ bg_context *make_context(bg_backend backend) {
     return context;
 }
 
-bg_docking_geometric_admission_v1 *make_admission(
+bg_docking_geometric_admission_context_soa_v1 make_admission_descriptor(
     const Fixture &fixture,
-    bg_context *context,
     std::array<double, 3> pocket_center = {0.0, 0.0, 0.0},
     uint64_t ligand_atom_count = kAtoms) {
     bg_docking_geometric_admission_context_soa_v1 descriptor{};
     assert(bg_docking_geometric_admission_context_soa_v1_init(&descriptor) ==
            BG_STATUS_OK);
-    descriptor.unit_system = BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL;
     descriptor.receptor_atom_count = kAtoms;
     descriptor.ligand_atom_count = ligand_atom_count;
     descriptor.receptor_x_angstrom = fixture.receptor_x.data();
@@ -277,10 +332,133 @@ bg_docking_geometric_admission_v1 *make_admission(
     fill_digest(descriptor.receptor_system_sha256, 0x71);
     fill_digest(descriptor.ligand_system_sha256, 0x72);
     fill_digest(descriptor.backend_receipt_sha256, 0x73);
+    return descriptor;
+}
+
+bg_docking_geometric_admission_v1 *make_admission(
+    const Fixture &fixture,
+    bg_context *context,
+    std::array<double, 3> pocket_center = {0.0, 0.0, 0.0},
+    uint64_t ligand_atom_count = kAtoms) {
+    const auto descriptor = make_admission_descriptor(
+        fixture, pocket_center, ligand_atom_count);
     bg_docking_geometric_admission_v1 *admission = nullptr;
     assert(bg_docking_geometric_admission_v1_create(
                context, &descriptor, &admission) == BG_STATUS_OK);
     return admission;
+}
+
+bg_docking_rigid_refinement_context_soa_v1 make_rigid_descriptor(
+    const Fixture &fixture) {
+    bg_docking_rigid_refinement_context_soa_v1 value{};
+    assert(bg_docking_rigid_refinement_context_soa_v1_init(&value) ==
+           BG_STATUS_OK);
+    value.receptor_atom_count = kAtoms;
+    value.ligand_atom_count = kAtoms;
+    value.receptor_x_angstrom = fixture.receptor_x.data();
+    value.receptor_y_angstrom = fixture.receptor_y.data();
+    value.receptor_z_angstrom = fixture.receptor_z.data();
+    value.receptor_vdw_radius_angstrom = fixture.receptor_radii.data();
+    value.ligand_vdw_radius_angstrom = fixture.ligand_radii.data();
+    value.pocket_radius_angstrom = 10.0;
+    return value;
+}
+
+bg_docking_torsion_v7_context_soa_v1 make_torsion_descriptor(
+    const Fixture &fixture) {
+    bg_docking_torsion_v7_context_soa_v1 value{};
+    assert(bg_docking_torsion_v7_context_soa_v1_init(&value) == BG_STATUS_OK);
+    value.receptor_atom_count = kAtoms;
+    value.ligand_atom_count = kAtoms;
+    value.rotor_count = fixture.rotatable_child.size();
+    value.internal_pair_count = fixture.internal_i.size();
+    value.receptor_x_angstrom = fixture.receptor_x.data();
+    value.receptor_y_angstrom = fixture.receptor_y.data();
+    value.receptor_z_angstrom = fixture.receptor_z.data();
+    value.receptor_vdw_radius_angstrom = fixture.receptor_radii.data();
+    value.ligand_vdw_radius_angstrom = fixture.ligand_radii.data();
+    value.parent_atom_index = fixture.parent.data();
+    value.rotatable_child_atom_index = fixture.rotatable_child.data();
+    value.internal_pair_atom_i = fixture.internal_i.data();
+    value.internal_pair_atom_j = fixture.internal_j.data();
+    value.minimum_selected_final_receptor_penalty = 0.0;
+    value.maximum_selected_final_receptor_penalty = 1'000'000.0;
+    return value;
+}
+
+bg_docking_scorer_v1_context_soa_v1 make_scorer_descriptor(
+    const Fixture &fixture) {
+    bg_docking_scorer_v1_context_soa_v1 value{};
+    assert(bg_docking_scorer_v1_context_soa_v1_init(&value) == BG_STATUS_OK);
+    value.receptor_atom_count = kAtoms;
+    value.ligand_atom_count = kAtoms;
+    value.receptor_x_angstrom = fixture.receptor_x.data();
+    value.receptor_y_angstrom = fixture.receptor_y.data();
+    value.receptor_z_angstrom = fixture.receptor_z.data();
+    value.receptor_charge_elementary = fixture.receptor_charge.data();
+    value.receptor_vdw_radius_angstrom = fixture.receptor_radii.data();
+    value.receptor_epsilon_kcal_per_mol = fixture.receptor_epsilon.data();
+    value.receptor_hydrophobic = fixture.receptor_hydrophobic.data();
+    value.receptor_acceptor = fixture.receptor_acceptor.data();
+    value.ligand_reference_x_angstrom = fixture.source_x.data();
+    value.ligand_reference_y_angstrom = fixture.source_y.data();
+    value.ligand_reference_z_angstrom = fixture.source_z.data();
+    value.ligand_charge_elementary = fixture.ligand_charge.data();
+    value.ligand_vdw_radius_angstrom = fixture.ligand_radii.data();
+    value.ligand_epsilon_kcal_per_mol = fixture.ligand_epsilon.data();
+    value.ligand_hydrophobic = fixture.ligand_hydrophobic.data();
+    value.ligand_acceptor = fixture.ligand_acceptor.data();
+    value.receptor_donor_count = fixture.receptor_donor.size();
+    value.receptor_donor_atom_index = fixture.receptor_donor.data();
+    value.receptor_hydrogen_atom_index = fixture.receptor_hydrogen.data();
+    value.ligand_donor_count = fixture.ligand_donor.size();
+    value.ligand_donor_atom_index = fixture.ligand_donor.data();
+    value.ligand_hydrogen_atom_index = fixture.ligand_hydrogen.data();
+    value.ligand_exclusion_count = fixture.exclusion_i.size();
+    value.ligand_exclusion_atom_i = fixture.exclusion_i.data();
+    value.ligand_exclusion_atom_j = fixture.exclusion_j.data();
+    value.rotor_count = fixture.scorer_rotor_i.size();
+    value.rotor_atom_i = fixture.scorer_rotor_i.data();
+    value.rotor_atom_j = fixture.scorer_rotor_j.data();
+    value.rotor_atom_k = fixture.scorer_rotor_k.data();
+    value.rotor_atom_l = fixture.scorer_rotor_l.data();
+    value.pocket_radius_angstrom = 10.0;
+    fill_digest(value.authority_input_receipt_sha256, 0x70);
+    fill_digest(value.receptor_system_sha256, 0x71);
+    fill_digest(value.ligand_system_sha256, 0x72);
+    fill_digest(value.backend_receipt_sha256, 0x73);
+    return value;
+}
+
+bg_docking_pose_validity_context_soa_v1 make_validity_descriptor(
+    const Fixture &fixture) {
+    bg_docking_pose_validity_context_soa_v1 value{};
+    assert(bg_docking_pose_validity_context_soa_v1_init(&value) ==
+           BG_STATUS_OK);
+    value.receptor_atom_count = kAtoms;
+    value.ligand_atom_count = kAtoms;
+    value.receptor_x_angstrom = fixture.receptor_x.data();
+    value.receptor_y_angstrom = fixture.receptor_y.data();
+    value.receptor_z_angstrom = fixture.receptor_z.data();
+    value.receptor_vdw_radius_angstrom = fixture.receptor_radii.data();
+    value.ligand_reference_x_angstrom = fixture.source_x.data();
+    value.ligand_reference_y_angstrom = fixture.source_y.data();
+    value.ligand_reference_z_angstrom = fixture.source_z.data();
+    value.ligand_vdw_radius_angstrom = fixture.ligand_radii.data();
+    value.bond_count = fixture.bond_i.size();
+    value.bond_atom_i = fixture.bond_i.data();
+    value.bond_atom_j = fixture.bond_j.data();
+    value.ligand_exclusion_count = fixture.exclusion_i.size();
+    value.ligand_exclusion_atom_i = fixture.exclusion_i.data();
+    value.ligand_exclusion_atom_j = fixture.exclusion_j.data();
+    value.pocket_radius_angstrom = 10.0;
+    fill_digest(value.authority_input_receipt_sha256, 0x70);
+    fill_digest(value.receptor_system_sha256, 0x71);
+    fill_digest(value.ligand_system_sha256, 0x72);
+    fill_digest(value.scorer_context_receipt_sha256, 0x74);
+    fill_digest(value.backend_receipt_sha256, 0x73);
+    fill_digest(value.contact_policy_sha256, 0x75);
+    return value;
 }
 
 bg_docking_fixed64_producer_input_v1 make_input(const Fixture &fixture) {
@@ -312,6 +490,261 @@ struct Batch final {
     std::array<double, kCoordinates> z{};
     bg_docking_fixed64_producer_output_v1 output{};
 };
+
+struct CompletePipelineResult final {
+    Batch producer{};
+    std::array<bg_docking_rigid_refinement_row_v1, kSlots> rigid_rows{};
+    std::array<std::array<double, kCoordinates>, 12> rigid_coordinates{};
+    std::array<bg_docking_torsion_v7_row_v1, kSlots> torsion_rows{};
+    std::array<bg_docking_torsion_v7_move_v1, kMoves> torsion_moves{};
+    std::array<std::array<double, kCoordinates>, 8> torsion_coordinates{};
+    std::array<bg_docking_scorer_v1_row_v1, kSlots> scorer_rows{};
+    std::array<bg_docking_pose_validity_row_v1, kSlots> validity_rows{};
+    std::array<bg_docking_stable_top_k_row_v1, kSlots> ranking_rows{};
+    std::array<uint32_t, kSlots> primary_indices{};
+    std::array<uint32_t, kSlots> valid_indices{};
+    std::array<bg_docking_rmsd_cluster_row_v1, kSlots> cluster_rows{};
+    std::array<uint32_t, kSlots> representatives{};
+    std::array<uint32_t, BG_DOCKING_STABLE_TOP_K_LIMIT> cluster_top_k{};
+    std::array<bg_docking_fixed64_refinement_row_v1, kSlots>
+        refinement_rows{};
+    std::array<std::array<double, kCoordinates>, 3> final_coordinates{};
+    std::array<std::array<double, kSlots>, 4> final_quaternions{};
+    std::array<bg_docking_fixed64_pipeline_row_v1, kSlots> rows{};
+    bg_docking_fixed64_pipeline_output_v1 output{};
+};
+
+bg_docking_fixed64_pipeline_v1 *make_complete_pipeline(
+    const Fixture &fixture,
+    bg_context *context) {
+    const auto admission = make_admission_descriptor(fixture);
+    const auto rigid = make_rigid_descriptor(fixture);
+    const auto torsion = make_torsion_descriptor(fixture);
+    const auto scorer = make_scorer_descriptor(fixture);
+    const auto validity = make_validity_descriptor(fixture);
+    bg_docking_fixed64_pipeline_v1 *pipeline = nullptr;
+    assert(bg_docking_fixed64_pipeline_v1_create(
+               context,
+               &admission,
+               &rigid,
+               &torsion,
+               &scorer,
+               &validity,
+               &pipeline) == BG_STATUS_OK);
+    assert(pipeline != nullptr);
+    return pipeline;
+}
+
+bg_docking_fixed64_pipeline_v1 *make_single_atom_complete_pipeline(
+    const Fixture &fixture,
+    bg_context *context) {
+    auto admission = make_admission_descriptor(fixture);
+    auto rigid = make_rigid_descriptor(fixture);
+    auto torsion = make_torsion_descriptor(fixture);
+    auto scorer = make_scorer_descriptor(fixture);
+    auto validity = make_validity_descriptor(fixture);
+    admission.ligand_atom_count = 1;
+    rigid.ligand_atom_count = 1;
+    torsion.ligand_atom_count = 1;
+    torsion.rotor_count = 0;
+    torsion.rotatable_child_atom_index = nullptr;
+    torsion.internal_pair_count = 0;
+    torsion.internal_pair_atom_i = nullptr;
+    torsion.internal_pair_atom_j = nullptr;
+    scorer.ligand_atom_count = 1;
+    scorer.ligand_donor_count = 0;
+    scorer.ligand_donor_atom_index = nullptr;
+    scorer.ligand_hydrogen_atom_index = nullptr;
+    scorer.ligand_exclusion_count = 0;
+    scorer.ligand_exclusion_atom_i = nullptr;
+    scorer.ligand_exclusion_atom_j = nullptr;
+    scorer.rotor_count = 0;
+    scorer.rotor_atom_i = nullptr;
+    scorer.rotor_atom_j = nullptr;
+    scorer.rotor_atom_k = nullptr;
+    scorer.rotor_atom_l = nullptr;
+    validity.ligand_atom_count = 1;
+    validity.bond_count = 0;
+    validity.bond_atom_i = nullptr;
+    validity.bond_atom_j = nullptr;
+    validity.ligand_exclusion_count = 0;
+    validity.ligand_exclusion_atom_i = nullptr;
+    validity.ligand_exclusion_atom_j = nullptr;
+    validity.chirality_center_count = 0;
+    validity.chirality_center_atom = nullptr;
+    validity.chirality_atom_i = nullptr;
+    validity.chirality_atom_j = nullptr;
+    validity.chirality_atom_k = nullptr;
+    bg_docking_fixed64_pipeline_v1 *pipeline = nullptr;
+    assert(bg_docking_fixed64_pipeline_v1_create(
+               context,
+               &admission,
+               &rigid,
+               &torsion,
+               &scorer,
+               &validity,
+               &pipeline) == BG_STATUS_OK);
+    assert(pipeline != nullptr);
+    return pipeline;
+}
+
+bg_status run_complete_pipeline_into(
+    bg_context *context,
+    bg_docking_fixed64_pipeline_v1 *pipeline,
+    const Fixture &fixture,
+    CompletePipelineResult *result,
+    bool overlap_summary_rows = false,
+    bool overlap_downstream_with_source = false,
+    bool overlap_summary_with_pipeline = false,
+    const bg_docking_fixed64_producer_input_v1 *producer_input_override =
+        nullptr,
+    bool repeat_same_output_descriptors = false) {
+    const auto default_producer_input = make_input(fixture);
+    bg_docking_fixed64_pipeline_input_v1 input{};
+    assert(bg_docking_fixed64_pipeline_input_v1_init(&input) == BG_STATUS_OK);
+    input.producer_input = producer_input_override == nullptr
+        ? &default_producer_input
+        : producer_input_override;
+    input.rmsd_threshold_angstrom = 1.5;
+    input.candidate_mode = fixture.refinement_modes.data();
+    input.rigid_max_steps = fixture.rigid_steps.data();
+    input.proposal_is_torsion_eligible = fixture.torsion_eligible.data();
+    input.torsion_max_steps = fixture.torsion_steps.data();
+    input.baseline_torsion_angles_radians = fixture.baseline_angles.data();
+    fill_digest(input.predeclared_refinement_policy_sha256, 0x76);
+    const uint64_t output_coordinate_count =
+        input.producer_input->exact_v11_source->ligand_atom_count * kSlots;
+
+    auto &producer = result->producer.output;
+    bg_docking_rigid_refinement_output_v1 rigid{};
+    bg_docking_torsion_v7_output_v1 torsion{};
+    bg_docking_scorer_v1_output_v1 scorer{};
+    bg_docking_pose_validity_output_v1 validity{};
+    bg_docking_stable_top_k_output_v1 ranking{};
+    bg_docking_rmsd_cluster_output_v1 cluster{};
+    bg_docking_fixed64_refinement_output_v1 refinement{};
+    assert(bg_docking_fixed64_producer_output_v1_init(&producer) ==
+           BG_STATUS_OK);
+    assert(bg_docking_rigid_refinement_output_v1_init(&rigid) == BG_STATUS_OK);
+    assert(bg_docking_torsion_v7_output_v1_init(&torsion) == BG_STATUS_OK);
+    assert(bg_docking_scorer_v1_output_v1_init(&scorer) == BG_STATUS_OK);
+    assert(bg_docking_pose_validity_output_v1_init(&validity) == BG_STATUS_OK);
+    assert(bg_docking_stable_top_k_output_v1_init(&ranking) == BG_STATUS_OK);
+    assert(bg_docking_rmsd_cluster_output_v1_init(&cluster) == BG_STATUS_OK);
+    assert(bg_docking_fixed64_refinement_output_v1_init(&refinement) ==
+           BG_STATUS_OK);
+    assert(bg_docking_fixed64_pipeline_output_v1_init(&result->output) ==
+           BG_STATUS_OK);
+
+    producer.row_capacity = kSlots;
+    producer.coordinate_capacity = output_coordinate_count;
+    producer.rows = result->producer.rows.data();
+    producer.x_angstrom = result->producer.x.data();
+    producer.y_angstrom = result->producer.y.data();
+    producer.z_angstrom = result->producer.z.data();
+    rigid.row_capacity = kSlots;
+    rigid.coordinate_capacity = output_coordinate_count;
+    rigid.rows = result->rigid_rows.data();
+    rigid.selected_x_angstrom = overlap_downstream_with_source
+        ? const_cast<double *>(fixture.source_x.data())
+        : result->rigid_coordinates[0].data();
+    rigid.selected_y_angstrom = result->rigid_coordinates[1].data();
+    rigid.selected_z_angstrom = result->rigid_coordinates[2].data();
+    rigid.comparison_v2_x_angstrom = result->rigid_coordinates[3].data();
+    rigid.comparison_v2_y_angstrom = result->rigid_coordinates[4].data();
+    rigid.comparison_v2_z_angstrom = result->rigid_coordinates[5].data();
+    rigid.baseline_v3_x_angstrom = result->rigid_coordinates[6].data();
+    rigid.baseline_v3_y_angstrom = result->rigid_coordinates[7].data();
+    rigid.baseline_v3_z_angstrom = result->rigid_coordinates[8].data();
+    rigid.clearance_v4_x_angstrom = result->rigid_coordinates[9].data();
+    rigid.clearance_v4_y_angstrom = result->rigid_coordinates[10].data();
+    rigid.clearance_v4_z_angstrom = result->rigid_coordinates[11].data();
+    torsion.row_capacity = kSlots;
+    torsion.move_capacity = kMoves;
+    torsion.coordinate_capacity = output_coordinate_count;
+    torsion.rows = result->torsion_rows.data();
+    torsion.moves = result->torsion_moves.data();
+    torsion.optimized_x_angstrom = result->torsion_coordinates[0].data();
+    torsion.optimized_y_angstrom = result->torsion_coordinates[1].data();
+    torsion.optimized_z_angstrom = result->torsion_coordinates[2].data();
+    torsion.optimized_torsion_angles_radians =
+        result->torsion_coordinates[3].data();
+    torsion.final_x_angstrom = result->torsion_coordinates[4].data();
+    torsion.final_y_angstrom = result->torsion_coordinates[5].data();
+    torsion.final_z_angstrom = result->torsion_coordinates[6].data();
+    torsion.final_torsion_angles_radians =
+        result->torsion_coordinates[7].data();
+    scorer.row_capacity = kSlots;
+    scorer.rows = result->scorer_rows.data();
+    validity.row_capacity = kSlots;
+    validity.rows = result->validity_rows.data();
+    ranking.row_capacity = kSlots;
+    ranking.primary_index_capacity = kSlots;
+    ranking.valid_index_capacity = kSlots;
+    ranking.rows = result->ranking_rows.data();
+    ranking.primary_slot_indices = result->primary_indices.data();
+    ranking.valid_slot_indices = result->valid_indices.data();
+    cluster.row_capacity = kSlots;
+    cluster.representative_index_capacity = kSlots;
+    cluster.top_k_index_capacity = BG_DOCKING_STABLE_TOP_K_LIMIT;
+    cluster.rows = result->cluster_rows.data();
+    cluster.representative_slot_indices = result->representatives.data();
+    cluster.top_k_slot_indices = result->cluster_top_k.data();
+    refinement.row_capacity = kSlots;
+    refinement.coordinate_capacity = output_coordinate_count;
+    refinement.quaternion_capacity = kSlots;
+    refinement.rows = result->refinement_rows.data();
+    refinement.final_x_angstrom = result->final_coordinates[0].data();
+    refinement.final_y_angstrom = result->final_coordinates[1].data();
+    refinement.final_z_angstrom = result->final_coordinates[2].data();
+    refinement.final_quaternion_x = result->final_quaternions[0].data();
+    refinement.final_quaternion_y = result->final_quaternions[1].data();
+    refinement.final_quaternion_z = result->final_quaternions[2].data();
+    refinement.final_quaternion_w = result->final_quaternions[3].data();
+    result->output.row_capacity = kSlots;
+    result->output.rows = overlap_summary_rows
+        ? reinterpret_cast<bg_docking_fixed64_pipeline_row_v1 *>(
+              result->producer.rows.data())
+        : overlap_summary_with_pipeline
+            ? reinterpret_cast<bg_docking_fixed64_pipeline_row_v1 *>(pipeline)
+            : result->rows.data();
+    const auto run = [&]() {
+        return bg_docking_fixed64_pipeline_v1_run(
+            context,
+            pipeline,
+            &input,
+            &producer,
+            &rigid,
+            &torsion,
+            &scorer,
+            &validity,
+            &ranking,
+            &cluster,
+            &refinement,
+            &result->output);
+    };
+    const bg_status first_status = run();
+    if (first_status != BG_STATUS_OK || !repeat_same_output_descriptors) {
+        return first_status;
+    }
+    const auto first_rows = result->rows;
+    std::array<uint8_t, 32> first_pipeline_receipt{};
+    std::copy_n(
+        result->output.pipeline_batch_receipt_sha256,
+        first_pipeline_receipt.size(),
+        first_pipeline_receipt.begin());
+    const bg_status repeated_status = run();
+    if (repeated_status == BG_STATUS_OK) {
+        assert(std::memcmp(
+                   first_rows.data(), result->rows.data(),
+                   sizeof(first_rows)) == 0);
+        assert(std::memcmp(
+                   first_pipeline_receipt.data(),
+                   result->output.pipeline_batch_receipt_sha256,
+                   first_pipeline_receipt.size()) == 0);
+    }
+    return repeated_status;
+}
 
 Batch produce(
     bg_context *context,
@@ -942,9 +1375,551 @@ void test_oversized_source_count_is_rejected_before_narrowing() {
     bg_context_destroy(context);
 }
 
+void assert_complete_pipeline_authority_false(
+    const bg_docking_fixed64_pipeline_output_v1 &output) {
+    assert(output.result_dependent_input_consumed == UINT8_C(0));
+    assert(output.fallback_allowed == UINT8_C(0));
+    assert(output.denominator_preserved == UINT8_C(1));
+    assert(output.molecular_execution_authorized == UINT8_C(0));
+    assert(output.reservation_authorized == UINT8_C(0));
+    assert(output.benchmark_execution_authorized == UINT8_C(0));
+    assert(output.existing_rank_auto_change_authorized == UINT8_C(0));
+    assert(output.customer_pose_emission_authorized == UINT8_C(0));
+    assert(output.production_claim_authorized == UINT8_C(0));
+    assert(output.scientific_claim_authorized == UINT8_C(0));
+}
+
+CompletePipelineResult run_complete_pipeline(
+    bg_backend backend,
+    const Fixture &fixture) {
+    bg_context *context = make_context(backend);
+    assert(context != nullptr);
+    auto *pipeline = make_complete_pipeline(fixture, context);
+    bg_backend observed = BG_BACKEND_AUTO;
+    assert(bg_docking_fixed64_pipeline_v1_get_backend(pipeline, &observed) ==
+           BG_STATUS_OK);
+    assert(observed == backend);
+    CompletePipelineResult result{};
+    const bg_status status =
+        run_complete_pipeline_into(context, pipeline, fixture, &result);
+    if (status != BG_STATUS_OK) {
+        std::fprintf(
+            stderr,
+            "complete pipeline backend %d failed: %s\n",
+            backend,
+            bg_last_error_message());
+    }
+    assert(status == BG_STATUS_OK);
+    bg_docking_fixed64_pipeline_v1_destroy(pipeline);
+    bg_context_destroy(context);
+    return result;
+}
+
+void assert_complete_pipeline_parity(
+    const CompletePipelineResult &reference,
+    const CompletePipelineResult &observed,
+    double tolerance) {
+    assert(reference.output.row_count == observed.output.row_count);
+    assert(reference.output.generated_count == observed.output.generated_count);
+    assert(
+        reference.output.initial_admitted_count ==
+        observed.output.initial_admitted_count);
+    assert(reference.output.refined_count == observed.output.refined_count);
+    assert(reference.output.scored_count == observed.output.scored_count);
+    assert(reference.output.valid_count == observed.output.valid_count);
+    assert(reference.output.cluster_count == observed.output.cluster_count);
+    for (std::size_t slot = 0; slot < kSlots; ++slot) {
+        const auto &left = reference.rows[slot];
+        const auto &right = observed.rows[slot];
+        assert(left.slot_index == slot);
+        assert(left.producer_status == right.producer_status);
+        assert(left.producer_failure_code == right.producer_failure_code);
+        assert(left.initial_admission_decision == right.initial_admission_decision);
+        assert(left.requested_refinement_mode == right.requested_refinement_mode);
+        assert(left.effective_refinement_mode == right.effective_refinement_mode);
+        assert(left.refinement_status == right.refinement_status);
+        assert(left.refinement_failure_stage == right.refinement_failure_stage);
+        assert(left.scorer_status == right.scorer_status);
+        assert(left.scorer_failure_code == right.scorer_failure_code);
+        assert(left.validity_status == right.validity_status);
+        assert(left.validity_failure_code == right.validity_failure_code);
+        assert(left.stable_rank == right.stable_rank);
+        assert(left.stable_valid_rank == right.stable_valid_rank);
+        assert(left.cluster_status == right.cluster_status);
+        assert(left.cluster_id == right.cluster_id);
+        assert(left.cluster_rank == right.cluster_rank);
+        assert(left.top_k_rank == right.top_k_rank);
+        assert(digest_present(left.producer_row_receipt_sha256));
+        assert(digest_present(left.refinement_evidence_sha256));
+        assert(digest_present(left.scorer_evidence_sha256));
+        assert(digest_present(left.validity_evidence_sha256));
+        assert(digest_present(left.ranking_evidence_sha256));
+        assert(digest_present(left.cluster_evidence_sha256));
+        assert(digest_present(left.row_receipt_sha256));
+        for (std::size_t axis = 0; axis < 3; ++axis) {
+            for (std::size_t atom = 0; atom < kAtoms; ++atom) {
+                const std::size_t index = slot * kAtoms + atom;
+                const double lhs = reference.final_coordinates[axis][index];
+                const double rhs = observed.final_coordinates[axis][index];
+                const double scale = std::max({1.0, std::abs(lhs), std::abs(rhs)});
+                assert(std::abs(lhs - rhs) <= tolerance * scale);
+            }
+        }
+    }
+}
+
+void test_complete_pipeline_exact64_repeat_and_backend_parity() {
+    const Fixture fixture;
+    assert(std::strcmp(
+               bg_docking_fixed64_pipeline_v1_profile_id(),
+               "betelgeuze.engine_v2_native_fixed64_complete_pipeline/1.0.0") ==
+           0);
+    const auto reference =
+        run_complete_pipeline(BG_BACKEND_CPP_CPU_REFERENCE, fixture);
+    bg_context *reuse_context = make_context(BG_BACKEND_CPP_CPU_REFERENCE);
+    assert(reuse_context != nullptr);
+    auto *reused_pipeline = make_complete_pipeline(fixture, reuse_context);
+    CompletePipelineResult reused{};
+    assert(run_complete_pipeline_into(
+               reuse_context,
+               reused_pipeline,
+               fixture,
+               &reused,
+               false,
+               false,
+               false,
+               nullptr,
+               true) == BG_STATUS_OK);
+    bg_docking_fixed64_pipeline_v1_destroy(reused_pipeline);
+    bg_context_destroy(reuse_context);
+    const auto repeated =
+        run_complete_pipeline(BG_BACKEND_CPP_CPU_REFERENCE, fixture);
+    assert(reference.output.row_count == kSlots);
+    assert(reference.output.generated_count == kSlots);
+    assert(reference.output.generated_count <= reference.output.row_count);
+    assert_complete_pipeline_authority_false(reference.output);
+    assert(digest_present(reference.output.allocation_receipt_sha256));
+    assert(digest_present(reference.output.source_bundle_receipt_sha256));
+    assert(digest_present(reference.output.admission_context_receipt_sha256));
+    assert(digest_present(reference.output.refinement_context_receipt_sha256));
+    assert(digest_present(reference.output.scorer_context_receipt_sha256));
+    assert(digest_present(reference.output.validity_context_receipt_sha256));
+    assert(digest_present(reference.output.component_binding_receipt_sha256));
+    assert(digest_present(reference.output.producer_batch_receipt_sha256));
+    assert(digest_present(reference.output.refinement_policy_receipt_sha256));
+    assert(digest_present(reference.output.refinement_batch_receipt_sha256));
+    assert(digest_present(reference.output.scorer_batch_receipt_sha256));
+    assert(digest_present(reference.output.validity_batch_receipt_sha256));
+    assert(digest_present(reference.output.ranking_batch_receipt_sha256));
+    assert(digest_present(reference.output.cluster_batch_receipt_sha256));
+    assert(digest_present(reference.output.pipeline_batch_receipt_sha256));
+    assert(std::memcmp(
+               reference.rows.data(),
+               repeated.rows.data(),
+               sizeof(reference.rows)) == 0);
+    assert(std::memcmp(
+               reference.output.pipeline_batch_receipt_sha256,
+               repeated.output.pipeline_batch_receipt_sha256,
+               32) == 0);
+    for (const bg_backend backend : {
+             BG_BACKEND_RUST_CPU, BG_BACKEND_HIP_SAFE, BG_BACKEND_HIP_FAST}) {
+        bg_context *availability = make_context(backend);
+        if (availability == nullptr) continue;
+        bg_context_destroy(availability);
+        const auto observed = run_complete_pipeline(backend, fixture);
+        assert_complete_pipeline_authority_false(observed.output);
+        assert_complete_pipeline_parity(
+            reference,
+            observed,
+            backend == BG_BACKEND_RUST_CPU ? 4.0e-12 : 8.0e-9);
+    }
+}
+
+void test_complete_pipeline_single_atom_preserves_denominator() {
+    Fixture fixture;
+    fixture.allocation.atomic_feature_count = 0;
+    fixture.allocation.atomic_features = nullptr;
+    parse_digest(
+        "70c6f2b5446c0652d7bbc81537a0ac8a93553e961ecb3c2c40fee2620de1545b",
+        fixture.allocation.exact_v11_source.ligand_coordinate_sha256);
+    parse_digest(
+        "d4379c8a5c7b2291893bd45b047e8736168136002dd646b705a735875a947919",
+        fixture.allocation.exact_v11_source.ligand_vdw_radii_sha256);
+    parse_digest(
+        "49e14fc025f4768dc72e02fe53803e4cd9906d5dc7c89c1f7b08c6fb39b9223a",
+        fixture.allocation.exact_v11_source.ligand_heavy_atom_mask_sha256);
+    fixture.exact_source.ligand_atom_count = 1;
+    std::copy_n(
+        fixture.allocation.exact_v11_source.ligand_coordinate_sha256,
+        32,
+        fixture.exact_source.source.coordinate_sha256);
+    for (std::size_t index = 0; index < fixture.v7_evidence.size(); ++index) {
+        fixture.v7_sources[index].payload.ligand_atom_count = 1;
+        std::copy_n(
+            fixture.allocation.exact_v11_source.ligand_coordinate_sha256,
+            32,
+            fixture.v7_evidence[index].source.coordinate_sha256);
+        std::copy_n(
+            fixture.allocation.exact_v11_source.ligand_coordinate_sha256,
+            32,
+            fixture.v7_sources[index].payload.source.coordinate_sha256);
+    }
+    for (std::size_t index = 0; index < fixture.conformer_evidence.size();
+         ++index) {
+        fixture.conformer_sources[index].payload.ligand_atom_count = 1;
+        std::copy_n(
+            fixture.allocation.exact_v11_source.ligand_coordinate_sha256,
+            32,
+            fixture.conformer_evidence[index].source.coordinate_sha256);
+        std::copy_n(
+            fixture.allocation.exact_v11_source.ligand_coordinate_sha256,
+            32,
+            fixture.conformer_sources[index].payload.source.coordinate_sha256);
+    }
+    for (std::size_t index = 0; index < fixture.retained_evidence.size();
+         ++index) {
+        fixture.retained_sources[index].payload.ligand_atom_count = 1;
+        std::copy_n(
+            fixture.allocation.exact_v11_source.ligand_coordinate_sha256,
+            32,
+            fixture.retained_evidence[index].source.coordinate_sha256);
+        std::copy_n(
+            fixture.allocation.exact_v11_source.ligand_coordinate_sha256,
+            32,
+            fixture.retained_sources[index].payload.source.coordinate_sha256);
+    }
+    std::fill(
+        fixture.refinement_modes.begin(),
+        fixture.refinement_modes.end(),
+        BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V2_TRANSLATION);
+    std::fill(
+        fixture.torsion_eligible.begin(), fixture.torsion_eligible.end(),
+        UINT8_C(0));
+    std::fill(
+        fixture.torsion_steps.begin(), fixture.torsion_steps.end(),
+        UINT64_C(0));
+
+    auto producer_input = make_input(fixture);
+    producer_input.feature_geometry_count = 0;
+    producer_input.feature_geometry_rows = nullptr;
+    producer_input.feature_atom_index_count = 0;
+    producer_input.feature_atom_indices = nullptr;
+    std::fill(
+        std::begin(producer_input.feature_geometry_inventory_sha256),
+        std::end(producer_input.feature_geometry_inventory_sha256),
+        UINT8_C(0));
+
+    for (const bg_backend backend : {
+             BG_BACKEND_CPP_CPU_REFERENCE, BG_BACKEND_RUST_CPU,
+             BG_BACKEND_HIP_SAFE, BG_BACKEND_HIP_FAST}) {
+        bg_context *context = make_context(backend);
+        if (context == nullptr) continue;
+        auto *pipeline = make_single_atom_complete_pipeline(fixture, context);
+        CompletePipelineResult result{};
+        const bg_status status = run_complete_pipeline_into(
+            context,
+            pipeline,
+            fixture,
+            &result,
+            false,
+            false,
+            false,
+            &producer_input);
+        if (status != BG_STATUS_OK) {
+            std::fprintf(
+                stderr,
+                "single-atom complete pipeline backend %d failed: %s\n",
+                backend,
+                bg_last_error_message());
+        }
+        assert(status == BG_STATUS_OK);
+        assert(result.output.row_count == kSlots);
+        assert(result.output.generated_count == 28);
+        assert(result.producer.output.row_count == kSlots);
+        assert(result.producer.output.coordinate_count == kSlots);
+        assert(result.producer.output.generated_count == 28);
+        assert(result.producer.output.typed_failure_count == 36);
+        assert(result.output.refined_count <= 28);
+        assert(result.output.scored_count <= 28);
+        assert(result.output.valid_count <= 28);
+        assert_complete_pipeline_authority_false(result.output);
+        for (std::size_t slot = 0; slot < kSlots; ++slot) {
+            const auto &producer_row = result.producer.rows[slot];
+            const auto &row = result.rows[slot];
+            assert(producer_row.slot_index == slot);
+            assert(producer_row.ligand_atom_count == 1);
+            assert(producer_row.coordinate_offset == slot);
+            assert(producer_row.denominator_preserved == UINT8_C(1));
+            assert(row.slot_index == slot);
+            assert(row.producer_status == producer_row.status);
+            assert(row.producer_failure_code == producer_row.failure_code);
+            assert(digest_present(row.producer_row_receipt_sha256));
+            assert(digest_present(row.refinement_evidence_sha256));
+            assert(digest_present(row.scorer_evidence_sha256));
+            assert(digest_present(row.validity_evidence_sha256));
+            assert(digest_present(row.ranking_evidence_sha256));
+            assert(digest_present(row.cluster_evidence_sha256));
+            assert(digest_present(row.row_receipt_sha256));
+            if (slot < 24 || slot >= 60) {
+                assert(producer_row.status ==
+                       BG_DOCKING_FIXED64_PRODUCER_ROW_GENERATED);
+            } else {
+                assert(producer_row.status ==
+                       BG_DOCKING_FIXED64_PRODUCER_ROW_TYPED_FAILURE);
+                assert(row.effective_refinement_mode ==
+                       BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_INACTIVE);
+            }
+        }
+        bg_docking_fixed64_pipeline_v1_destroy(pipeline);
+        bg_context_destroy(context);
+    }
+}
+
+void test_complete_pipeline_context_receipts_bind_configuration() {
+    Fixture fixture;
+    const auto reference =
+        run_complete_pipeline(BG_BACKEND_CPP_CPU_REFERENCE, fixture);
+    bg_context *context = make_context(BG_BACKEND_CPP_CPU_REFERENCE);
+    assert(context != nullptr);
+    const auto admission = make_admission_descriptor(fixture);
+    const auto rigid = make_rigid_descriptor(fixture);
+    const auto torsion = make_torsion_descriptor(fixture);
+    auto scorer = make_scorer_descriptor(fixture);
+    auto validity = make_validity_descriptor(fixture);
+    scorer.backend_receipt_sha256[0] ^= UINT8_C(1);
+    validity.backend_receipt_sha256[0] ^= UINT8_C(2);
+    bg_docking_fixed64_pipeline_v1 *pipeline = nullptr;
+    assert(bg_docking_fixed64_pipeline_v1_create(
+               context,
+               &admission,
+               &rigid,
+               &torsion,
+               &scorer,
+               &validity,
+               &pipeline) == BG_STATUS_OK);
+    CompletePipelineResult observed{};
+    assert(run_complete_pipeline_into(
+               context, pipeline, fixture, &observed) == BG_STATUS_OK);
+    assert(std::memcmp(
+               reference.output.admission_context_receipt_sha256,
+               observed.output.admission_context_receipt_sha256,
+               32) == 0);
+    assert(std::memcmp(
+               reference.output.refinement_context_receipt_sha256,
+               observed.output.refinement_context_receipt_sha256,
+               32) == 0);
+    assert(std::memcmp(
+               reference.output.scorer_context_receipt_sha256,
+               observed.output.scorer_context_receipt_sha256,
+               32) != 0);
+    assert(std::memcmp(
+               reference.output.validity_context_receipt_sha256,
+               observed.output.validity_context_receipt_sha256,
+               32) != 0);
+    assert(std::memcmp(
+               reference.output.component_binding_receipt_sha256,
+               observed.output.component_binding_receipt_sha256,
+               32) != 0);
+    assert(std::memcmp(
+               reference.output.producer_batch_receipt_sha256,
+               observed.output.producer_batch_receipt_sha256,
+               32) == 0);
+    assert(std::memcmp(
+               reference.output.pipeline_batch_receipt_sha256,
+               observed.output.pipeline_batch_receipt_sha256,
+               32) != 0);
+    assert(std::memcmp(
+               reference.rows[0].row_receipt_sha256,
+               observed.rows[0].row_receipt_sha256,
+               32) != 0);
+    bg_docking_fixed64_pipeline_v1_destroy(pipeline);
+    bg_context_destroy(context);
+}
+
+void test_complete_pipeline_create_and_run_fail_closed() {
+    Fixture fixture;
+    bg_context *context = make_context(BG_BACKEND_CPP_CPU_REFERENCE);
+    assert(context != nullptr);
+    auto admission = make_admission_descriptor(fixture);
+    auto rigid = make_rigid_descriptor(fixture);
+    auto torsion = make_torsion_descriptor(fixture);
+    auto scorer = make_scorer_descriptor(fixture);
+    auto validity = make_validity_descriptor(fixture);
+    auto short_admission = admission;
+    --short_admission.struct_size;
+    auto *header_sentinel = reinterpret_cast<bg_docking_fixed64_pipeline_v1 *>(
+        static_cast<uintptr_t>(1));
+    assert(bg_docking_fixed64_pipeline_v1_create(
+               context,
+               &short_admission,
+               &rigid,
+               &torsion,
+               &scorer,
+               &validity,
+               &header_sentinel) == BG_STATUS_ABI_MISMATCH);
+    assert(
+        header_sentinel ==
+        reinterpret_cast<bg_docking_fixed64_pipeline_v1 *>(
+            static_cast<uintptr_t>(1)));
+    const double receptor_before = fixture.receptor_x[0];
+    auto **alias = reinterpret_cast<bg_docking_fixed64_pipeline_v1 **>(
+        fixture.receptor_x.data());
+    assert(bg_docking_fixed64_pipeline_v1_create(
+               context,
+               &admission,
+               &rigid,
+               &torsion,
+               &scorer,
+               &validity,
+               alias) == BG_STATUS_INVALID_ARGUMENT);
+    assert(fixture.receptor_x[0] == receptor_before);
+
+    const auto expect_validity_crosswire_rejected =
+        [&](const bg_docking_pose_validity_context_soa_v1 &crosswired) {
+            auto *candidate =
+                reinterpret_cast<bg_docking_fixed64_pipeline_v1 *>(
+                    static_cast<uintptr_t>(1));
+            assert(bg_docking_fixed64_pipeline_v1_create(
+                       context,
+                       &admission,
+                       &rigid,
+                       &torsion,
+                       &scorer,
+                       &crosswired,
+                       &candidate) == BG_STATUS_INVALID_ARGUMENT);
+            assert(candidate == nullptr);
+        };
+
+    auto different_receptor_x = fixture.receptor_x;
+    different_receptor_x[0] += 0.125;
+    auto crosswired_validity = validity;
+    crosswired_validity.receptor_x_angstrom = different_receptor_x.data();
+    expect_validity_crosswire_rejected(crosswired_validity);
+
+    auto different_ligand_reference_x = fixture.source_x;
+    different_ligand_reference_x[0] += 0.125;
+    crosswired_validity = validity;
+    crosswired_validity.ligand_reference_x_angstrom =
+        different_ligand_reference_x.data();
+    expect_validity_crosswire_rejected(crosswired_validity);
+
+    crosswired_validity = validity;
+    crosswired_validity.pocket_center_angstrom[0] += 0.125;
+    expect_validity_crosswire_rejected(crosswired_validity);
+
+    crosswired_validity = validity;
+    crosswired_validity.authority_input_receipt_sha256[0] ^= UINT8_C(1);
+    expect_validity_crosswire_rejected(crosswired_validity);
+    crosswired_validity = validity;
+    crosswired_validity.receptor_system_sha256[0] ^= UINT8_C(1);
+    expect_validity_crosswire_rejected(crosswired_validity);
+    crosswired_validity = validity;
+    crosswired_validity.ligand_system_sha256[0] ^= UINT8_C(1);
+    expect_validity_crosswire_rejected(crosswired_validity);
+
+    scorer.authority_input_receipt_sha256[0] ^= UINT8_C(1);
+    auto *cross_wired = reinterpret_cast<bg_docking_fixed64_pipeline_v1 *>(
+        static_cast<uintptr_t>(1));
+    assert(bg_docking_fixed64_pipeline_v1_create(
+               context,
+               &admission,
+               &rigid,
+               &torsion,
+               &scorer,
+               &validity,
+               &cross_wired) == BG_STATUS_INVALID_ARGUMENT);
+    assert(cross_wired == nullptr);
+
+    auto *pipeline = make_complete_pipeline(fixture, context);
+    assert(bg_docking_fixed64_pipeline_v1_get_backend(
+               pipeline, reinterpret_cast<bg_backend *>(pipeline)) ==
+           BG_STATUS_INVALID_ARGUMENT);
+
+    const auto expect_producer_topology_crosswire_rejected =
+        [&](bool crosswire_ligand) {
+            auto producer_input = make_input(fixture);
+            auto allocation = fixture.allocation;
+            if (crosswire_ligand) {
+                allocation.exact_v11_source
+                    .prepared_ligand_topology_sha256[0] ^= UINT8_C(1);
+            } else {
+                allocation.exact_v11_source
+                    .prepared_receptor_topology_sha256[0] ^= UINT8_C(1);
+            }
+            producer_input.allocation_input = &allocation;
+            CompletePipelineResult rejected{};
+            assert(run_complete_pipeline_into(
+                       context,
+                       pipeline,
+                       fixture,
+                       &rejected,
+                       false,
+                       false,
+                       false,
+                       &producer_input) == BG_STATUS_INVALID_ARGUMENT);
+            assert(rejected.producer.output.row_count == 0);
+            assert(rejected.output.row_count == 0);
+            assert(rejected.rows[0].slot_index == 0);
+        };
+    expect_producer_topology_crosswire_rejected(true);
+    expect_producer_topology_crosswire_rejected(false);
+
+    CompletePipelineResult result{};
+    result.producer.rows[0].slot_index = UINT32_MAX;
+    result.rows[0].slot_index = UINT32_MAX;
+    assert(run_complete_pipeline_into(
+               context,
+               pipeline,
+               fixture,
+               &result,
+               true) == BG_STATUS_INVALID_ARGUMENT);
+    assert(result.producer.output.row_count == 0);
+    assert(result.output.row_count == 0);
+    assert(result.producer.rows[0].slot_index == UINT32_MAX);
+    assert(result.rows[0].slot_index == UINT32_MAX);
+
+    CompletePipelineResult source_overlap{};
+    const auto source_before = fixture.source_x;
+    assert(run_complete_pipeline_into(
+               context,
+               pipeline,
+               fixture,
+               &source_overlap,
+               false,
+               true) == BG_STATUS_INVALID_ARGUMENT);
+    assert(source_overlap.producer.output.row_count == 0);
+    assert(source_overlap.output.row_count == 0);
+    assert(fixture.source_x == source_before);
+
+    CompletePipelineResult handle_overlap{};
+    assert(run_complete_pipeline_into(
+               context,
+               pipeline,
+               fixture,
+               &handle_overlap,
+               false,
+               false,
+               true) == BG_STATUS_INVALID_ARGUMENT);
+    bg_backend intact_backend = BG_BACKEND_AUTO;
+    assert(bg_docking_fixed64_pipeline_v1_get_backend(
+               pipeline, &intact_backend) == BG_STATUS_OK);
+    assert(intact_backend == BG_BACKEND_CPP_CPU_REFERENCE);
+    bg_docking_fixed64_pipeline_v1_destroy(pipeline);
+    bg_context_destroy(context);
+}
+
 }  // namespace
 
-int main() {
+int main(int argc, char **argv) {
+    if (argc == 2 &&
+        std::strcmp(argv[1], "--complete-pipeline") == 0) {
+        test_complete_pipeline_exact64_repeat_and_backend_parity();
+        test_complete_pipeline_single_atom_preserves_denominator();
+        test_complete_pipeline_context_receipts_bind_configuration();
+        test_complete_pipeline_create_and_run_fail_closed();
+        return 0;
+    }
+    assert(argc == 1);
     test_exact64_repeat_and_backend_parity();
     test_missing_source_is_typed_and_zero_filled();
     test_missing_feature_allocation_preserves_denominator();

@@ -38,6 +38,28 @@ namespace betelgeuze::native::docking::fixed64_single_anchor {
     bg_docking_fixed64_single_anchor_output_v1 *output);
 }
 
+namespace betelgeuze::native::docking::fixed64_producer {
+[[nodiscard]] bg_status validate_for_composition(
+    const bg_context &context,
+    const bg_docking_geometric_admission_v1 &admission,
+    const bg_docking_fixed64_producer_input_v1 &input,
+    const bg_docking_fixed64_producer_output_v1 &output);
+}
+
+namespace betelgeuze::native::docking::refinement_pipeline {
+[[nodiscard]] bg_status validate_for_composition(
+    const bg_context &context,
+    const bg_docking_fixed64_refinement_pipeline_v1 &pipeline,
+    const bg_docking_fixed64_refinement_input_v1 &input,
+    bg_docking_rigid_refinement_output_v1 &rigid,
+    bg_docking_torsion_v7_output_v1 &torsion,
+    bg_docking_scorer_v1_output_v1 &scorer,
+    bg_docking_pose_validity_output_v1 &validity,
+    bg_docking_stable_top_k_output_v1 &ranking,
+    bg_docking_rmsd_cluster_output_v1 &cluster,
+    bg_docking_fixed64_refinement_output_v1 &output);
+}
+
 struct bg_context final {
     bg_backend backend = BG_BACKEND_RUST_CPU;
     bg_unit_system unit_system = BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL;
@@ -108,6 +130,21 @@ struct bg_docking_fixed64_refinement_pipeline_v1 final {
     bg_docking_rigid_refinement *rigid = nullptr;
     bg_docking_torsion_v7 *torsion = nullptr;
     bg_docking_fixed64_downstream_v1 *downstream = nullptr;
+};
+
+struct bg_docking_fixed64_pipeline_v1 final {
+    bg_backend backend = BG_BACKEND_RUST_CPU;
+    bg_unit_system unit_system = BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL;
+    int32_t device_ordinal = 0;
+    uint64_t receptor_atom_count = 0;
+    uint64_t ligand_atom_count = 0;
+    bg_docking_geometric_admission_v1 *admission = nullptr;
+    bg_docking_fixed64_refinement_pipeline_v1 *refinement = nullptr;
+    std::array<uint8_t, 32> admission_context_receipt_sha256{};
+    std::array<uint8_t, 32> refinement_context_receipt_sha256{};
+    std::array<uint8_t, 32> scorer_context_receipt_sha256{};
+    std::array<uint8_t, 32> validity_context_receipt_sha256{};
+    std::array<uint8_t, 32> component_binding_receipt_sha256{};
 };
 
 struct bg_docking_rigid_refinement final {

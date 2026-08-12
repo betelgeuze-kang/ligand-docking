@@ -93,6 +93,12 @@ void add_range(
     return true;
 }
 
+[[nodiscard]] bool digests_equal(
+    const uint8_t (&left)[32],
+    const uint8_t (&right)[32]) noexcept {
+    return std::memcmp(left, right, 32) == 0;
+}
+
 [[nodiscard]] bg_status validate_component_binding(
     const bg_context &context,
     const bg_docking_rigid_refinement_context_soa_v1 &rigid,
@@ -148,6 +154,21 @@ void add_range(
                 "fixed64 refinement torsion receptor is cross-wired");
         }
     }
+    const std::array<std::pair<const double *, const double *>, 4>
+        validity_scorer_receptor = {{
+            {validity.receptor_x_angstrom, scorer.receptor_x_angstrom},
+            {validity.receptor_y_angstrom, scorer.receptor_y_angstrom},
+            {validity.receptor_z_angstrom, scorer.receptor_z_angstrom},
+            {validity.receptor_vdw_radius_angstrom,
+             scorer.receptor_vdw_radius_angstrom},
+        }};
+    for (const auto &[left, right] : validity_scorer_receptor) {
+        if (!channels_equal(left, right, receptor_count)) {
+            return fail(
+                BG_STATUS_INVALID_ARGUMENT,
+                "fixed64 refinement validity receptor is cross-wired");
+        }
+    }
     if (!channels_equal(
             rigid.ligand_vdw_radius_angstrom,
             scorer.ligand_vdw_radius_angstrom,
@@ -164,6 +185,22 @@ void add_range(
             BG_STATUS_INVALID_ARGUMENT,
             "fixed64 refinement ligand radii are cross-wired");
     }
+    const std::array<std::pair<const double *, const double *>, 3>
+        validity_scorer_ligand_reference = {{
+            {validity.ligand_reference_x_angstrom,
+             scorer.ligand_reference_x_angstrom},
+            {validity.ligand_reference_y_angstrom,
+             scorer.ligand_reference_y_angstrom},
+            {validity.ligand_reference_z_angstrom,
+             scorer.ligand_reference_z_angstrom},
+        }};
+    for (const auto &[left, right] : validity_scorer_ligand_reference) {
+        if (!channels_equal(left, right, ligand_count)) {
+            return fail(
+                BG_STATUS_INVALID_ARGUMENT,
+                "fixed64 refinement validity ligand reference is cross-wired");
+        }
+    }
     if (!channels_equal(
             rigid.pocket_center_angstrom,
             scorer.pocket_center_angstrom,
@@ -172,11 +209,28 @@ void add_range(
             torsion.pocket_center_angstrom,
             scorer.pocket_center_angstrom,
             3) ||
+        !channels_equal(
+            validity.pocket_center_angstrom,
+            scorer.pocket_center_angstrom,
+            3) ||
         rigid.pocket_radius_angstrom != scorer.pocket_radius_angstrom ||
         validity.pocket_radius_angstrom != scorer.pocket_radius_angstrom) {
         return fail(
             BG_STATUS_INVALID_ARGUMENT,
             "fixed64 refinement pocket declaration is cross-wired");
+    }
+    if (!digests_equal(
+            validity.authority_input_receipt_sha256,
+            scorer.authority_input_receipt_sha256) ||
+        !digests_equal(
+            validity.receptor_system_sha256,
+            scorer.receptor_system_sha256) ||
+        !digests_equal(
+            validity.ligand_system_sha256,
+            scorer.ligand_system_sha256)) {
+        return fail(
+            BG_STATUS_INVALID_ARGUMENT,
+            "fixed64 refinement validity molecular identity is cross-wired");
     }
     return BG_STATUS_OK;
 }
@@ -921,6 +975,47 @@ void destroy_components(
 template <typename Type>
 void copy_values(Type *destination, const Type *source, std::size_t count) {
     std::copy_n(source, count, destination);
+}
+
+bg_status validate_for_composition(
+    const bg_context &context,
+    const bg_docking_fixed64_refinement_pipeline_v1 &pipeline,
+    const bg_docking_fixed64_refinement_input_v1 &input,
+    bg_docking_rigid_refinement_output_v1 &rigid,
+    bg_docking_torsion_v7_output_v1 &torsion,
+    bg_docking_scorer_v1_output_v1 &scorer,
+    bg_docking_pose_validity_output_v1 &validity,
+    bg_docking_stable_top_k_output_v1 &ranking,
+    bg_docking_rmsd_cluster_output_v1 &cluster,
+    bg_docking_fixed64_refinement_output_v1 &output) {
+    std::size_t coordinate_count = 0;
+    bg_status status = validate_input(pipeline, input, &coordinate_count);
+    if (status != BG_STATUS_OK) return status;
+    status = validate_component_outputs(
+        pipeline,
+        coordinate_count,
+        rigid,
+        torsion,
+        scorer,
+        validity,
+        ranking);
+    if (status != BG_STATUS_OK) return status;
+    status = validate_cluster_output(pipeline, cluster);
+    if (status != BG_STATUS_OK) return status;
+    status = validate_pipeline_output(pipeline, output, coordinate_count);
+    if (status != BG_STATUS_OK) return status;
+    return validate_no_overlap(
+        context,
+        pipeline,
+        input,
+        coordinate_count,
+        rigid,
+        torsion,
+        scorer,
+        validity,
+        ranking,
+        cluster,
+        output);
 }
 
 }  // namespace betelgeuze::native::docking::refinement_pipeline

@@ -71,6 +71,12 @@ static_assert(std::is_standard_layout<
 static_assert(std::is_standard_layout<
               bg_docking_fixed64_producer_output_v1>::value);
 static_assert(std::is_standard_layout<
+              bg_docking_fixed64_pipeline_input_v1>::value);
+static_assert(std::is_standard_layout<
+              bg_docking_fixed64_pipeline_row_v1>::value);
+static_assert(std::is_standard_layout<
+              bg_docking_fixed64_pipeline_output_v1>::value);
+static_assert(std::is_standard_layout<
               bg_docking_geometric_admission_context_soa_v1>::value);
 static_assert(std::is_standard_layout<
               bg_docking_geometric_admission_candidate_batch_soa_v1>::value);
@@ -453,6 +459,75 @@ static_assert(offsetof(
 static_assert(offsetof(
                   bg_docking_fixed64_producer_output_v1,
                   reserved) == 272);
+static_assert(sizeof(bg_docking_fixed64_pipeline_input_v1) == 160);
+static_assert(alignof(bg_docking_fixed64_pipeline_input_v1) == 8);
+static_assert(offsetof(
+                  bg_docking_fixed64_pipeline_input_v1,
+                  producer_input) == 8);
+static_assert(offsetof(
+                  bg_docking_fixed64_pipeline_input_v1,
+                  candidate_mode) == 24);
+static_assert(offsetof(
+                  bg_docking_fixed64_pipeline_input_v1,
+                  baseline_torsion_angles_radians) == 56);
+static_assert(offsetof(
+                  bg_docking_fixed64_pipeline_input_v1,
+                  predeclared_refinement_policy_sha256) == 64);
+static_assert(offsetof(
+                  bg_docking_fixed64_pipeline_input_v1,
+                  reserved) == 96);
+static_assert(sizeof(bg_docking_fixed64_pipeline_row_v1) == 360);
+static_assert(alignof(bg_docking_fixed64_pipeline_row_v1) == 8);
+static_assert(offsetof(
+                  bg_docking_fixed64_pipeline_row_v1,
+                  producer_status) == 4);
+static_assert(offsetof(
+                  bg_docking_fixed64_pipeline_row_v1,
+                  stable_rank) == 48);
+static_assert(offsetof(
+                  bg_docking_fixed64_pipeline_row_v1,
+                  producer_row_receipt_sha256) == 72);
+static_assert(offsetof(
+                  bg_docking_fixed64_pipeline_row_v1,
+                  refinement_evidence_sha256) == 136);
+static_assert(offsetof(
+                  bg_docking_fixed64_pipeline_row_v1,
+                  row_receipt_sha256) == 296);
+static_assert(offsetof(
+                  bg_docking_fixed64_pipeline_row_v1,
+                  reserved) == 328);
+static_assert(sizeof(bg_docking_fixed64_pipeline_output_v1) == 648);
+static_assert(alignof(bg_docking_fixed64_pipeline_output_v1) == 8);
+static_assert(offsetof(
+                  bg_docking_fixed64_pipeline_output_v1,
+                  row_capacity) == 8);
+static_assert(offsetof(
+                  bg_docking_fixed64_pipeline_output_v1,
+                  unit_system) == 24);
+static_assert(offsetof(
+                  bg_docking_fixed64_pipeline_output_v1,
+                  rows) == 32);
+static_assert(offsetof(
+                  bg_docking_fixed64_pipeline_output_v1,
+                  generated_count) == 40);
+static_assert(offsetof(
+                  bg_docking_fixed64_pipeline_output_v1,
+                  allocation_receipt_sha256) == 88);
+static_assert(offsetof(
+                  bg_docking_fixed64_pipeline_output_v1,
+                  admission_context_receipt_sha256) == 152);
+static_assert(offsetof(
+                  bg_docking_fixed64_pipeline_output_v1,
+                  component_binding_receipt_sha256) == 280);
+static_assert(offsetof(
+                  bg_docking_fixed64_pipeline_output_v1,
+                  pipeline_batch_receipt_sha256) == 536);
+static_assert(offsetof(
+                  bg_docking_fixed64_pipeline_output_v1,
+                  result_dependent_input_consumed) == 568);
+static_assert(offsetof(
+                  bg_docking_fixed64_pipeline_output_v1,
+                  reserved) == 584);
 
 static_assert(sizeof(bg_docking_geometric_admission_context_soa_v1) == 320);
 static_assert(alignof(bg_docking_geometric_admission_context_soa_v1) == 8);
@@ -968,6 +1043,27 @@ static_assert(noexcept(bg_minimization_report_v1_init(nullptr)));
 static_assert(noexcept(bg_dynamics_report_v1_init(nullptr)));
 static_assert(noexcept(bg_docking_fixed64_refinement_input_v1_init(nullptr)));
 static_assert(noexcept(bg_docking_fixed64_refinement_output_v1_init(nullptr)));
+static_assert(noexcept(bg_docking_fixed64_pipeline_input_v1_init(nullptr)));
+static_assert(noexcept(bg_docking_fixed64_pipeline_output_v1_init(nullptr)));
+static_assert(noexcept(bg_docking_fixed64_pipeline_v1_create(
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr)));
+static_assert(noexcept(bg_docking_fixed64_pipeline_v1_destroy(nullptr)));
+static_assert(noexcept(
+    bg_docking_fixed64_pipeline_v1_get_backend(nullptr, nullptr)));
+static_assert(noexcept(bg_docking_fixed64_pipeline_v1_profile_id()));
+static_assert(noexcept(bg_docking_fixed64_pipeline_v1_run(
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr)));
 static_assert(noexcept(bg_docking_fixed64_refinement_pipeline_v1_create(
     nullptr, nullptr, nullptr, nullptr, nullptr, nullptr)));
 static_assert(noexcept(
