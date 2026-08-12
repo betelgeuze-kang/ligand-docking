@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <cstring>
 #include <limits>
+#include <vector>
 
 namespace {
 
@@ -413,6 +414,59 @@ void test_v3_rotation_path_when_device_is_available(bg_backend backend) {
     bg_context_destroy(rust_context);
 }
 
+void test_fixed64_total_pair_work_is_bounded_before_provider_execution() {
+    auto run = [](std::size_t receptor_count, bg_status expected_status) {
+        std::vector<double> receptor_x(receptor_count, 1'000.0);
+        std::vector<double> receptor_y(receptor_count, 0.0);
+        std::vector<double> receptor_z(receptor_count, 0.0);
+        std::vector<double> receptor_radii(receptor_count, 1.7);
+        const std::array<double, kAtoms> ligand_radii = {1.6, 1.6, 1.6};
+        bg_docking_rigid_refinement_context_soa_v1 descriptor{};
+        assert(
+            bg_docking_rigid_refinement_context_soa_v1_init(&descriptor) ==
+            BG_STATUS_OK);
+        descriptor.receptor_atom_count = receptor_count;
+        descriptor.ligand_atom_count = ligand_radii.size();
+        descriptor.receptor_x_angstrom = receptor_x.data();
+        descriptor.receptor_y_angstrom = receptor_y.data();
+        descriptor.receptor_z_angstrom = receptor_z.data();
+        descriptor.receptor_vdw_radius_angstrom = receptor_radii.data();
+        descriptor.ligand_vdw_radius_angstrom = ligand_radii.data();
+        descriptor.pocket_radius_angstrom = 8.0;
+
+        bg_context *context = create_context(BG_BACKEND_CPP_CPU_REFERENCE);
+        bg_docking_rigid_refinement *refiner =
+            create_refiner(context, descriptor);
+        BatchFixture batch_fixture;
+        batch_fixture.modes.fill(
+            BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V6_BASELINE_V3_LANE);
+        batch_fixture.max_steps.fill(UINT64_C(128));
+        batch_fixture.x.fill(0.0);
+        batch_fixture.y.fill(0.0);
+        batch_fixture.z.fill(0.0);
+        const auto batch = batch_fixture.descriptor();
+        OutputStorage output_storage(53.0);
+        auto output = output_storage.descriptor();
+        const bg_status observed = bg_docking_rigid_refinement_fixed64(
+            context, refiner, &batch, &output);
+        assert(observed == expected_status);
+        if (expected_status == BG_STATUS_CAPACITY_OVERFLOW) {
+            assert(output.row_count == 0);
+            assert(output.coordinate_count == 0);
+            assert(output_storage.rows[0].slot_index == UINT32_MAX);
+            assert(output_storage.selected_x[0] == 53.0);
+        } else {
+            assert(output.row_count == kSlots);
+            assert(output.coordinate_count == kCoordinates);
+        }
+        bg_docking_rigid_refinement_destroy(refiner);
+        bg_context_destroy(context);
+    };
+
+    run(181, BG_STATUS_OK);
+    run(182, BG_STATUS_CAPACITY_OVERFLOW);
+}
+
 }  // namespace
 
 int main() {
@@ -420,10 +474,38 @@ int main() {
     const auto descriptor = context_fixture.descriptor();
     bg_context *cpp_context = create_context(BG_BACKEND_CPP_CPU_REFERENCE);
     bg_context *rust_context = create_context(BG_BACKEND_RUST_CPU);
+
+    const auto receptor_x_before = context_fixture.receptor_x;
+    auto **const channel_alias =
+        reinterpret_cast<bg_docking_rigid_refinement **>(
+            context_fixture.receptor_x.data());
+    assert(
+        bg_docking_rigid_refinement_create(
+            cpp_context, &descriptor, channel_alias) ==
+        BG_STATUS_INVALID_ARGUMENT);
+    assert(context_fixture.receptor_x == receptor_x_before);
+
+    auto descriptor_copy = descriptor;
+    const auto descriptor_before = descriptor_copy;
+    auto **const descriptor_alias =
+        reinterpret_cast<bg_docking_rigid_refinement **>(&descriptor_copy);
+    assert(
+        bg_docking_rigid_refinement_create(
+            cpp_context, &descriptor_copy, descriptor_alias) ==
+        BG_STATUS_INVALID_ARGUMENT);
+    assert(
+        std::memcmp(
+            &descriptor_copy, &descriptor_before, sizeof(descriptor_copy)) ==
+        0);
+
     bg_docking_rigid_refinement *cpp_refiner =
         create_refiner(cpp_context, descriptor);
     bg_docking_rigid_refinement *rust_refiner =
         create_refiner(rust_context, descriptor);
+    assert(
+        bg_docking_rigid_refinement_get_backend(
+            cpp_refiner, reinterpret_cast<bg_backend *>(cpp_refiner)) ==
+        BG_STATUS_INVALID_ARGUMENT);
 
     context_fixture.receptor_x.fill(-1'000.0);
     context_fixture.receptor_radii.fill(99.0);
@@ -514,6 +596,35 @@ int main() {
             &batch_alias, &batch_alias_before, sizeof(batch_alias)) == 0);
     assert(batch_alias_storage.selected_x[0] == 47.0);
 
+    OutputStorage handle_alias_storage(49.0);
+    auto handle_alias_output = handle_alias_storage.descriptor();
+    handle_alias_output.rows =
+        reinterpret_cast<bg_docking_rigid_refinement_row_v1 *>(cpp_refiner);
+    assert(
+        bg_docking_rigid_refinement_fixed64(
+            cpp_context,
+            cpp_refiner,
+            &batch,
+            &handle_alias_output) == BG_STATUS_INVALID_ARGUMENT);
+    bg_backend observed_backend = BG_BACKEND_AUTO;
+    assert(
+        bg_docking_rigid_refinement_get_backend(
+            cpp_refiner, &observed_backend) == BG_STATUS_OK);
+    assert(observed_backend == BG_BACKEND_CPP_CPU_REFERENCE);
+
+    handle_alias_output.rows =
+        reinterpret_cast<bg_docking_rigid_refinement_row_v1 *>(cpp_context);
+    assert(
+        bg_docking_rigid_refinement_fixed64(
+            cpp_context,
+            cpp_refiner,
+            &batch,
+            &handle_alias_output) == BG_STATUS_INVALID_ARGUMENT);
+    bg_backend context_backend = BG_BACKEND_AUTO;
+    assert(
+        bg_context_get_backend(cpp_context, &context_backend) == BG_STATUS_OK);
+    assert(context_backend == BG_BACKEND_CPP_CPU_REFERENCE);
+
     assert(
         bg_docking_rigid_refinement_fixed64(
             cpp_context, rust_refiner, &batch, &cpp_descriptor) ==
@@ -527,5 +638,6 @@ int main() {
     test_hip_parity_when_device_is_available(BG_BACKEND_HIP_FAST);
     test_v3_rotation_path_when_device_is_available(BG_BACKEND_HIP_SAFE);
     test_v3_rotation_path_when_device_is_available(BG_BACKEND_HIP_FAST);
+    test_fixed64_total_pair_work_is_bounded_before_provider_execution();
     return 0;
 }

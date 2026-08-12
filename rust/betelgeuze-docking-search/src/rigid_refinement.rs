@@ -469,7 +469,7 @@ pub fn refine_interaction_aware_rigid_v3(
         .maximum_centroid_offset_angstrom
         .min(context.pocket_radius_angstrom);
     let mut total_shift = Vec3::default();
-    let mut total_rotation_vector = Vec3::default();
+    let mut total_rotation = Quaternion::default();
     let mut total_rotation_path = 0.0;
     let mut accepted_steps = 0usize;
     let mut accepted_rotation_steps = 0usize;
@@ -525,7 +525,7 @@ pub fn refine_interaction_aware_rigid_v3(
                         backtracking_index,
                         coordinates: trial,
                         total_shift: trial_shift,
-                        total_rotation_vector,
+                        total_rotation,
                         total_rotation_path,
                     };
                     if best.as_ref().is_none_or(|current| candidate.less(current)) {
@@ -565,7 +565,7 @@ pub fn refine_interaction_aware_rigid_v3(
                     backtracking_index,
                     coordinates: trial,
                     total_shift,
-                    total_rotation_vector: total_rotation_vector.plus(rotation_step),
+                    total_rotation: compose_rotation(rotation_step, total_rotation)?,
                     total_rotation_path: total_rotation_path + angle,
                 };
                 if trial_penalty <= penalty - rotation_required_reduction
@@ -582,7 +582,7 @@ pub fn refine_interaction_aware_rigid_v3(
         };
         coordinates = best.coordinates;
         total_shift = best.total_shift;
-        total_rotation_vector = best.total_rotation_vector;
+        total_rotation = best.total_rotation;
         total_rotation_path = best.total_rotation_path;
         accepted_steps += 1;
         accepted_rotation_steps += usize::from(best.direction_index == 2);
@@ -601,7 +601,7 @@ pub fn refine_interaction_aware_rigid_v3(
         line_search_evaluation_count,
         fallback_direction_step_count,
         total_translation_angstrom: canonical_vec(total_shift),
-        total_rotation_vector_radians: canonical_vec(total_rotation_vector),
+        total_rotation_vector_radians: rotation_vector(total_rotation)?,
         total_rotation_path_radians: canonical_zero(total_rotation_path),
         initial_centroid_offset_angstrom: initial_centroid_offset,
         final_centroid_offset_angstrom: final_centroid_offset,
@@ -702,8 +702,27 @@ struct RigidTrial {
     backtracking_index: usize,
     coordinates: Vec<Vec3>,
     total_shift: Vec3,
-    total_rotation_vector: Vec3,
+    total_rotation: Quaternion,
     total_rotation_path: f64,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct Quaternion {
+    x: f64,
+    y: f64,
+    z: f64,
+    w: f64,
+}
+
+impl Default for Quaternion {
+    fn default() -> Self {
+        Self {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+        }
+    }
 }
 
 impl RigidTrial {
@@ -904,6 +923,78 @@ fn rotate_about_centroid(
     Ok(output)
 }
 
+fn normalize_quaternion(mut value: Quaternion) -> Result<Quaternion, NativeRigidRefinementError> {
+    let magnitude =
+        libm::sqrt(value.x * value.x + value.y * value.y + value.z * value.z + value.w * value.w);
+    if !magnitude.is_finite() || magnitude <= 1.0e-18 {
+        return Err(derived("rigid-refinement quaternion is non-finite"));
+    }
+    let inverse = 1.0 / magnitude;
+    value = Quaternion {
+        x: value.x * inverse,
+        y: value.y * inverse,
+        z: value.z * inverse,
+        w: value.w * inverse,
+    };
+    if value.w < 0.0 {
+        value = Quaternion {
+            x: -value.x,
+            y: -value.y,
+            z: -value.z,
+            w: -value.w,
+        };
+    }
+    value.x = canonical_zero(value.x);
+    value.y = canonical_zero(value.y);
+    value.z = canonical_zero(value.z);
+    value.w = canonical_zero(value.w);
+    Ok(value)
+}
+
+fn compose_rotation(
+    rotation_step: Vec3,
+    current: Quaternion,
+) -> Result<Quaternion, NativeRigidRefinementError> {
+    let angle = norm(rotation_step);
+    if !angle.is_finite() {
+        return Err(derived("rigid-refinement rotation composition overflowed"));
+    }
+    if angle <= 1.0e-18 {
+        return normalize_quaternion(current);
+    }
+    let half_angle = 0.5 * angle;
+    let scale = libm::sin(half_angle) / angle;
+    let step = Quaternion {
+        x: rotation_step.x * scale,
+        y: rotation_step.y * scale,
+        z: rotation_step.z * scale,
+        w: libm::cos(half_angle),
+    };
+    normalize_quaternion(Quaternion {
+        x: step.w * current.x + step.x * current.w + step.y * current.z - step.z * current.y,
+        y: step.w * current.y - step.x * current.z + step.y * current.w + step.z * current.x,
+        z: step.w * current.z + step.x * current.y - step.y * current.x + step.z * current.w,
+        w: step.w * current.w - step.x * current.x - step.y * current.y - step.z * current.z,
+    })
+}
+
+fn rotation_vector(value: Quaternion) -> Result<Vec3, NativeRigidRefinementError> {
+    let value = normalize_quaternion(value)?;
+    let sine_half = libm::sqrt(value.x * value.x + value.y * value.y + value.z * value.z);
+    if sine_half <= 1.0e-18 {
+        return Ok(Vec3::default());
+    }
+    let angle = 2.0 * libm::atan2(sine_half, value.w);
+    if !angle.is_finite() {
+        return Err(derived("rigid-refinement rotation log overflowed"));
+    }
+    Ok(canonical_vec(Vec3::new(
+        value.x * angle / sine_half,
+        value.y * angle / sine_half,
+        value.z * angle / sine_half,
+    )))
+}
+
 fn translated(coordinates: &[Vec3], step: Vec3) -> Vec<Vec3> {
     coordinates
         .iter()
@@ -1088,6 +1179,36 @@ mod tests {
             v3_lane.selected().profile(),
             NativeRigidRefinementProfile::V6ClearanceV4
         );
+    }
+
+    #[test]
+    fn ordered_quaternion_composition_reproduces_noncommuting_rotations() {
+        let source = [
+            Vec3::new(1.0, 0.0, 0.0),
+            Vec3::new(0.0, 1.0, 0.0),
+            Vec3::new(0.0, 0.0, 1.0),
+        ];
+        let x_step = Vec3::new(0.30, 0.0, 0.0);
+        let y_step = Vec3::new(0.0, 0.20, 0.0);
+        let after_x = rotate_about_centroid(&source, x_step).unwrap();
+        let sequential = rotate_about_centroid(&after_x, y_step).unwrap();
+
+        let composed = compose_rotation(
+            y_step,
+            compose_rotation(x_step, Quaternion::default()).unwrap(),
+        )
+        .unwrap();
+        let composed_vector = rotation_vector(composed).unwrap();
+        let reconstructed = rotate_about_centroid(&source, composed_vector).unwrap();
+        for (observed, expected) in reconstructed.iter().zip(&sequential) {
+            assert!(vector_close(*observed, *expected, 2.0e-15));
+        }
+
+        let additive = rotate_about_centroid(&source, x_step.plus(y_step)).unwrap();
+        assert!(additive
+            .iter()
+            .zip(&sequential)
+            .any(|(observed, expected)| !vector_close(*observed, *expected, 1.0e-5)));
     }
 
     #[test]

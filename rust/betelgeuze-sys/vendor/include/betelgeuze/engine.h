@@ -1021,7 +1021,11 @@ typedef struct bg_docking_rigid_refinement_context_soa_v1 {
 
 /* Candidate-major SoA with an exact 64-slot denominator. Inactive rows remain
  * typed upstream failures. A malformed active row is isolated to that slot;
- * malformed batch identity or capacity rejects the complete call. */
+ * malformed batch identity or capacity rejects the complete call. Before any
+ * provider work, the implementation also bounds total receptor-ligand pair
+ * visits across all 64 rows at 250,000,000. The conservative traversal counts
+ * are V2=2+S*(2+2B), V3=2+S*(3+3B), and a V6-V3 lane includes comparison V2,
+ * baseline V3, and clearance V3 regardless of its eventual selection. */
 typedef struct bg_docking_rigid_refinement_candidate_batch_soa_v1 {
     uint32_t struct_size;
     uint32_t abi_version;
@@ -1049,6 +1053,7 @@ typedef struct bg_docking_rigid_refinement_evidence_v1 {
     double initial_penalty;
     double final_penalty;
     double total_translation_angstrom[3];
+    /* Canonical axis-angle log of the ordered composed global rotations. */
     double total_rotation_vector_radians[3];
     double total_rotation_path_radians;
     double initial_centroid_offset_angstrom;

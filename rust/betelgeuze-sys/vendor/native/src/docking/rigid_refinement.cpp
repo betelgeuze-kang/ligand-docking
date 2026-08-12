@@ -34,6 +34,13 @@ struct Vec3 {
     double z = 0.0;
 };
 
+struct Quaternion {
+    double x = 0.0;
+    double y = 0.0;
+    double z = 0.0;
+    double w = 1.0;
+};
+
 struct V2Config {
     double overlap_scale = 0.75;
     double maximum_step_angstrom = 0.30;
@@ -112,7 +119,7 @@ struct RigidTrial {
     std::size_t backtracking_index = 0;
     std::vector<Vec3> coordinates;
     Vec3 total_shift;
-    Vec3 total_rotation_vector;
+    Quaternion total_rotation;
     double total_rotation_path = 0.0;
 };
 
@@ -181,6 +188,81 @@ struct BatchResult {
            std::isfinite(value.z);
 }
 
+[[nodiscard]] Quaternion normalized(Quaternion value) {
+    const double magnitude = std::sqrt(
+        value.x * value.x + value.y * value.y + value.z * value.z +
+        value.w * value.w);
+    if (!std::isfinite(magnitude) || magnitude <= 1.0e-18) {
+        throw LocalFailure{
+            BG_DOCKING_RIGID_REFINEMENT_FAILURE_NONFINITE_DERIVED_VALUE};
+    }
+    const double inverse = 1.0 / magnitude;
+    value = {
+        value.x * inverse,
+        value.y * inverse,
+        value.z * inverse,
+        value.w * inverse,
+    };
+    if (value.w < 0.0) {
+        value = {-value.x, -value.y, -value.z, -value.w};
+    }
+    value.x = canonical_zero(value.x);
+    value.y = canonical_zero(value.y);
+    value.z = canonical_zero(value.z);
+    value.w = canonical_zero(value.w);
+    return value;
+}
+
+[[nodiscard]] Quaternion compose_rotation(
+    Vec3 rotation_step,
+    Quaternion current) {
+    const double angle = norm(rotation_step);
+    if (!std::isfinite(angle)) {
+        throw LocalFailure{
+            BG_DOCKING_RIGID_REFINEMENT_FAILURE_NONFINITE_DERIVED_VALUE};
+    }
+    if (angle <= 1.0e-18) {
+        return normalized(current);
+    }
+    const double half_angle = 0.5 * angle;
+    const double scale_factor = std::sin(half_angle) / angle;
+    const Quaternion step{
+        rotation_step.x * scale_factor,
+        rotation_step.y * scale_factor,
+        rotation_step.z * scale_factor,
+        std::cos(half_angle),
+    };
+    return normalized({
+        step.w * current.x + step.x * current.w +
+            step.y * current.z - step.z * current.y,
+        step.w * current.y - step.x * current.z +
+            step.y * current.w + step.z * current.x,
+        step.w * current.z + step.x * current.y -
+            step.y * current.x + step.z * current.w,
+        step.w * current.w - step.x * current.x -
+            step.y * current.y - step.z * current.z,
+    });
+}
+
+[[nodiscard]] Vec3 rotation_vector(Quaternion value) {
+    value = normalized(value);
+    const double sine_half = std::sqrt(
+        value.x * value.x + value.y * value.y + value.z * value.z);
+    if (sine_half <= 1.0e-18) {
+        return {};
+    }
+    const double angle = 2.0 * std::atan2(sine_half, value.w);
+    if (!std::isfinite(angle)) {
+        throw LocalFailure{
+            BG_DOCKING_RIGID_REFINEMENT_FAILURE_NONFINITE_DERIVED_VALUE};
+    }
+    return canonical({
+        value.x * angle / sine_half,
+        value.y * angle / sine_half,
+        value.z * angle / sine_half,
+    });
+}
+
 [[nodiscard]] bool checked_multiply(
     std::size_t left,
     std::size_t right,
@@ -191,6 +273,18 @@ struct BatchResult {
         return false;
     }
     *output = left * right;
+    return true;
+}
+
+[[nodiscard]] bool checked_add(
+    std::size_t left,
+    std::size_t right,
+    std::size_t *output) noexcept {
+    if (output == nullptr ||
+        left > std::numeric_limits<std::size_t>::max() - right) {
+        return false;
+    }
+    *output = left + right;
     return true;
 }
 
@@ -460,6 +554,41 @@ template <typename Type>
         return status;
     }
     *output = std::move(state);
+    return BG_STATUS_OK;
+}
+
+[[nodiscard]] bg_status validate_create_output_range(
+    const bg_context &context,
+    const bg_docking_rigid_refinement_context_soa_v1 &descriptor,
+    const ProviderEnvelope &state,
+    bg_docking_rigid_refinement **out_refiner) noexcept {
+    const std::size_t receptor_count = state.receptor.size();
+    const std::size_t ligand_count = state.ligand_radii.size();
+    const std::array<std::pair<const void *, std::size_t>, 7> inputs = {{
+        {&context, sizeof(context)},
+        {&descriptor, sizeof(descriptor)},
+        {descriptor.receptor_x_angstrom,
+         receptor_count * sizeof(*descriptor.receptor_x_angstrom)},
+        {descriptor.receptor_y_angstrom,
+         receptor_count * sizeof(*descriptor.receptor_y_angstrom)},
+        {descriptor.receptor_z_angstrom,
+         receptor_count * sizeof(*descriptor.receptor_z_angstrom)},
+        {descriptor.receptor_vdw_radius_angstrom,
+         receptor_count * sizeof(*descriptor.receptor_vdw_radius_angstrom)},
+        {descriptor.ligand_vdw_radius_angstrom,
+         ligand_count * sizeof(*descriptor.ligand_vdw_radius_angstrom)},
+    }};
+    for (const auto &input : inputs) {
+        if (ranges_overlap(
+                out_refiner,
+                sizeof(*out_refiner),
+                input.first,
+                input.second)) {
+            return fail(
+                BG_STATUS_INVALID_ARGUMENT,
+                "rigid refinement handle output overlaps a create input");
+        }
+    }
     return BG_STATUS_OK;
 }
 
@@ -793,7 +922,7 @@ template <typename Type>
     const double maximum_centroid_offset =
         std::min(config.maximum_centroid_offset_angstrom, state.pocket_radius);
     Vec3 total_shift;
-    Vec3 total_rotation_vector;
+    Quaternion total_rotation;
     double total_rotation_path = 0.0;
     std::size_t accepted_steps = 0;
     std::size_t accepted_rotation_steps = 0;
@@ -860,7 +989,7 @@ template <typename Type>
                         backtracking,
                         std::move(trial_coordinates),
                         trial_shift,
-                        total_rotation_vector,
+                        total_rotation,
                         total_rotation_path,
                     };
                     if (!has_best || rigid_less(trial, best)) {
@@ -911,7 +1040,7 @@ template <typename Type>
                     backtracking,
                     std::move(trial_coordinates),
                     total_shift,
-                    plus(total_rotation_vector, rotation_step),
+                    compose_rotation(rotation_step, total_rotation),
                     total_rotation_path + angle,
                 };
                 if (trial_penalty <= penalty - rotation_reduction &&
@@ -927,7 +1056,7 @@ template <typename Type>
         }
         coordinates = std::move(best.coordinates);
         total_shift = best.total_shift;
-        total_rotation_vector = best.total_rotation_vector;
+        total_rotation = best.total_rotation;
         total_rotation_path = best.total_rotation_path;
         ++accepted_steps;
         accepted_rotation_steps +=
@@ -950,7 +1079,7 @@ template <typename Type>
         evaluations,
         fallback_steps,
         canonical(total_shift),
-        canonical(total_rotation_vector),
+        rotation_vector(total_rotation),
         canonical_zero(total_rotation_path),
         initial_centroid_offset,
         final_centroid_offset,
@@ -1232,6 +1361,7 @@ void copy_coordinates(
 }
 
 [[nodiscard]] bg_status validate_batch_and_output(
+    const bg_context *context,
     const bg_docking_rigid_refinement *refiner,
     const bg_docking_rigid_refinement_candidate_batch_soa_v1 &batch,
     const bg_docking_rigid_refinement_output_v1 &output,
@@ -1354,7 +1484,9 @@ void copy_coordinates(
         "rigid refinement z channel is null or misaligned");
 #undef BG_REQUIRE_RIGID_BATCH_CHANNEL
 
-    const std::array<std::pair<const void *, std::size_t>, 6> inputs = {{
+    const std::array<std::pair<const void *, std::size_t>, 8> inputs = {{
+        {context, sizeof(*context)},
+        {refiner, sizeof(*refiner)},
         {&batch, sizeof(batch)},
         {batch.candidate_mode,
          kCandidateCount * sizeof(*batch.candidate_mode)},
@@ -1394,6 +1526,108 @@ void copy_coordinates(
                     BG_STATUS_INVALID_ARGUMENT,
                     "rigid refinement input and output buffers overlap");
             }
+        }
+    }
+    return BG_STATUS_OK;
+}
+
+[[nodiscard]] bool v2_traversal_upper_bound(
+    std::size_t steps,
+    const V2Config &config,
+    std::size_t *output) noexcept {
+    std::size_t backtracking = 0;
+    std::size_t per_step = 0;
+    std::size_t iterative = 0;
+    return checked_multiply(
+               2U, config.maximum_backtracking_evaluations, &backtracking) &&
+           checked_add(2U, backtracking, &per_step) &&
+           checked_multiply(steps, per_step, &iterative) &&
+           checked_add(2U, iterative, output);
+}
+
+[[nodiscard]] bool v3_traversal_upper_bound(
+    std::size_t steps,
+    const V3Config &config,
+    std::size_t *output) noexcept {
+    std::size_t backtracking = 0;
+    std::size_t per_step = 0;
+    std::size_t iterative = 0;
+    return checked_multiply(
+               3U,
+               config.v2.maximum_backtracking_evaluations,
+               &backtracking) &&
+           checked_add(3U, backtracking, &per_step) &&
+           checked_multiply(steps, per_step, &iterative) &&
+           checked_add(2U, iterative, output);
+}
+
+[[nodiscard]] bg_status validate_total_pair_work(
+    const ProviderEnvelope &state,
+    const bg_docking_rigid_refinement_candidate_batch_soa_v1 &batch) noexcept {
+    std::size_t pair_count = 0;
+    if (!checked_multiply(
+            state.receptor.size(), state.ligand_radii.size(), &pair_count) ||
+        pair_count == 0) {
+        return fail(
+            BG_STATUS_CAPACITY_OVERFLOW,
+            "rigid refinement pair denominator overflows");
+    }
+    const std::size_t maximum_traversals =
+        kMaxPairEvaluations / pair_count;
+    std::size_t total_traversals = 0;
+    for (std::size_t slot = 0; slot < kCandidateCount; ++slot) {
+        const auto mode = batch.candidate_mode[slot];
+        if (mode == BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_INACTIVE ||
+            mode < BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V2_TRANSLATION ||
+            mode >
+                BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V6_BASELINE_V3_LANE ||
+            batch.max_steps[slot] < 1 ||
+            batch.max_steps[slot] > kMaxSteps) {
+            continue;
+        }
+        const auto steps =
+            static_cast<std::size_t>(batch.max_steps[slot]);
+        std::size_t candidate_traversals = 0;
+        bool valid_bound = false;
+        if (mode == BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V2_TRANSLATION ||
+            mode ==
+                BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V6_BASELINE_V2_LANE) {
+            valid_bound = v2_traversal_upper_bound(
+                steps, state.v2, &candidate_traversals);
+        } else if (
+            mode ==
+            BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V3_TRANSLATION_ROTATION) {
+            valid_bound = v3_traversal_upper_bound(
+                steps, state.v3, &candidate_traversals);
+        } else {
+            std::size_t comparison_v2 = 0;
+            std::size_t baseline_v3 = 0;
+            std::size_t clearance_v4 = 0;
+            std::size_t combined_v2_v3 = 0;
+            valid_bound = v2_traversal_upper_bound(
+                              steps, state.v2, &comparison_v2) &&
+                          v3_traversal_upper_bound(
+                              steps, state.v3, &baseline_v3) &&
+                          v3_traversal_upper_bound(
+                              steps, state.clearance_v4, &clearance_v4) &&
+                          checked_add(
+                              comparison_v2,
+                              baseline_v3,
+                              &combined_v2_v3) &&
+                          checked_add(
+                              combined_v2_v3,
+                              clearance_v4,
+                              &candidate_traversals);
+        }
+        if (!valid_bound ||
+            !checked_add(
+                total_traversals,
+                candidate_traversals,
+                &total_traversals) ||
+            total_traversals > maximum_traversals) {
+            return fail(
+                BG_STATUS_CAPACITY_OVERFLOW,
+                "rigid refinement fixed64 total pair-work budget exceeded");
         }
     }
     return BG_STATUS_OK;
@@ -1780,8 +2014,134 @@ void initialize_rust_error(bg_rust_cpu_error_v1 *error) noexcept {
     return std::memcmp(&value, &zero, sizeof(value)) == 0;
 }
 
+[[nodiscard]] bool consistent_evidence(
+    const bg_docking_rigid_refinement_evidence_v1 &value) noexcept {
+    if (!finite_evidence(value)) {
+        return false;
+    }
+    if (value.available == UINT8_C(0)) {
+        return zero_evidence(value);
+    }
+    if (value.available != UINT8_C(1) || value.reserved0[0] != 0 ||
+        value.reserved0[1] != 0 || value.reserved0[2] != 0 ||
+        !reserved_is_zero(value.reserved) ||
+        value.profile < BG_DOCKING_RIGID_REFINEMENT_PROFILE_V2_TRANSLATION ||
+        value.profile > BG_DOCKING_RIGID_REFINEMENT_PROFILE_V6_CLEARANCE_V4 ||
+        value.accepted_translation_steps > value.accepted_steps ||
+        value.accepted_rotation_steps !=
+            value.accepted_steps - value.accepted_translation_steps ||
+        value.initial_penalty < 0.0 || value.final_penalty < 0.0 ||
+        value.total_rotation_path_radians < 0.0) {
+        return false;
+    }
+    const Vec3 rotation{
+        value.total_rotation_vector_radians[0],
+        value.total_rotation_vector_radians[1],
+        value.total_rotation_vector_radians[2],
+    };
+    const double rotation_angle = norm(rotation);
+    if (!std::isfinite(rotation_angle) ||
+        rotation_angle > value.total_rotation_path_radians + 2.0e-12) {
+        return false;
+    }
+    if (value.accepted_rotation_steps == 0 &&
+        (rotation_angle != 0.0 || value.total_rotation_path_radians != 0.0)) {
+        return false;
+    }
+    return true;
+}
+
+[[nodiscard]] bool transform_matches(
+    const bg_docking_rigid_refinement_evidence_v1 &evidence,
+    const bg_docking_rigid_refinement_candidate_batch_soa_v1 &batch,
+    std::size_t slot,
+    std::size_t ligand_count,
+    const std::vector<double> &x,
+    const std::vector<double> &y,
+    const std::vector<double> &z) noexcept {
+    const std::size_t offset = slot * ligand_count;
+    if (evidence.available == UINT8_C(0)) {
+        for (std::size_t atom = 0; atom < ligand_count; ++atom) {
+            const std::size_t index = offset + atom;
+            if (x[index] != 0.0 || y[index] != 0.0 || z[index] != 0.0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    Vec3 source_centroid;
+    for (std::size_t atom = 0; atom < ligand_count; ++atom) {
+        const std::size_t index = offset + atom;
+        const Vec3 source{
+            batch.x_angstrom[index],
+            batch.y_angstrom[index],
+            batch.z_angstrom[index],
+        };
+        if (!finite(source)) {
+            return false;
+        }
+        source_centroid = plus(source_centroid, source);
+    }
+    source_centroid = scale(
+        source_centroid, 1.0 / static_cast<double>(ligand_count));
+    const Vec3 rotation{
+        evidence.total_rotation_vector_radians[0],
+        evidence.total_rotation_vector_radians[1],
+        evidence.total_rotation_vector_radians[2],
+    };
+    const Vec3 translation{
+        evidence.total_translation_angstrom[0],
+        evidence.total_translation_angstrom[1],
+        evidence.total_translation_angstrom[2],
+    };
+    const double angle = norm(rotation);
+    Vec3 axis;
+    double cosine = 1.0;
+    double sine = 0.0;
+    if (angle > 1.0e-18) {
+        axis = scale(rotation, 1.0 / angle);
+        cosine = std::cos(angle);
+        sine = std::sin(angle);
+    }
+    for (std::size_t atom = 0; atom < ligand_count; ++atom) {
+        const std::size_t index = offset + atom;
+        const Vec3 source{
+            batch.x_angstrom[index],
+            batch.y_angstrom[index],
+            batch.z_angstrom[index],
+        };
+        const Vec3 centered = minus(source, source_centroid);
+        Vec3 rotated = centered;
+        if (angle > 1.0e-18) {
+            rotated = plus(
+                plus(
+                    scale(centered, cosine),
+                    scale(cross(axis, centered), sine)),
+                scale(axis, dot(axis, centered) * (1.0 - cosine)));
+        }
+        const Vec3 expected = plus(
+            plus(rotated, source_centroid), translation);
+        const std::array<std::pair<double, double>, 3> coordinates = {{
+            {expected.x, x[index]},
+            {expected.y, y[index]},
+            {expected.z, z[index]},
+        }};
+        for (const auto &[expected_value, observed_value] : coordinates) {
+            const double magnitude = std::max(
+                {1.0, std::abs(expected_value), std::abs(observed_value)});
+            if (std::abs(expected_value - observed_value) >
+                2.0e-9 * magnitude) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 [[nodiscard]] bg_status validate_result(
     const BatchResult &result,
+    const bg_docking_rigid_refinement_candidate_batch_soa_v1 &batch,
     std::size_t ligand_count) noexcept {
     const std::size_t coordinate_count = kCandidateCount * ligand_count;
     const std::array<const std::vector<double> *, 12> channels = {
@@ -1815,10 +2175,42 @@ void initialize_rust_error(bg_rust_cpu_error_v1 *error) noexcept {
             row.baseline_duplicate_of_v2 > UINT8_C(1) ||
             row.clearance_evaluated > UINT8_C(1) ||
             row.clearance_selected > UINT8_C(1) ||
-            !finite_evidence(row.selected) ||
-            !finite_evidence(row.comparison_v2) ||
-            !finite_evidence(row.baseline_v3) ||
-            !finite_evidence(row.clearance_v4)) {
+            !consistent_evidence(row.selected) ||
+            !consistent_evidence(row.comparison_v2) ||
+            !consistent_evidence(row.baseline_v3) ||
+            !consistent_evidence(row.clearance_v4) ||
+            !transform_matches(
+                row.selected,
+                batch,
+                slot,
+                ligand_count,
+                result.selected_x,
+                result.selected_y,
+                result.selected_z) ||
+            !transform_matches(
+                row.comparison_v2,
+                batch,
+                slot,
+                ligand_count,
+                result.comparison_v2_x,
+                result.comparison_v2_y,
+                result.comparison_v2_z) ||
+            !transform_matches(
+                row.baseline_v3,
+                batch,
+                slot,
+                ligand_count,
+                result.baseline_v3_x,
+                result.baseline_v3_y,
+                result.baseline_v3_z) ||
+            !transform_matches(
+                row.clearance_v4,
+                batch,
+                slot,
+                ligand_count,
+                result.clearance_v4_x,
+                result.clearance_v4_y,
+                result.clearance_v4_z)) {
             return fail(
                 BG_STATUS_INTERNAL_ERROR,
                 "rigid provider returned malformed row evidence");
@@ -2040,7 +2432,13 @@ extern "C" BG_API bg_status BG_CALL bg_docking_rigid_refinement_create(
                 BG_STATUS_INVALID_ARGUMENT,
                 "rigid refinement create inputs and output must not be null");
         }
-        *out_refiner = nullptr;
+        if (!pointer_is_aligned(context) ||
+            !pointer_is_aligned(descriptor) ||
+            !pointer_is_aligned(out_refiner)) {
+            return fail(
+                BG_STATUS_INVALID_ARGUMENT,
+                "rigid refinement create pointers are misaligned");
+        }
         if (context->unit_system != descriptor->unit_system) {
             return fail(
                 BG_STATUS_INVALID_ARGUMENT,
@@ -2051,6 +2449,12 @@ extern "C" BG_API bg_status BG_CALL bg_docking_rigid_refinement_create(
         if (status != BG_STATUS_OK) {
             return status;
         }
+        status = validate_create_output_range(
+            *context, *descriptor, *state, out_refiner);
+        if (status != BG_STATUS_OK) {
+            return status;
+        }
+        *out_refiner = nullptr;
         if (context->backend == BG_BACKEND_RUST_CPU) {
             status = create_rust_backend(state.get());
             if (status != BG_STATUS_OK) {
@@ -2093,11 +2497,26 @@ extern "C" BG_API bg_status BG_CALL bg_docking_rigid_refinement_get_backend(
     const bg_docking_rigid_refinement *refiner,
     bg_backend *backend) BG_NOEXCEPT {
     using namespace betelgeuze::native;
+    using namespace betelgeuze::native::docking::rigid_refinement;
     return guarded_status([&]() -> bg_status {
         if (refiner == nullptr || backend == nullptr) {
             return fail(
                 BG_STATUS_INVALID_ARGUMENT,
                 "rigid refinement handle and backend output must not be null");
+        }
+        if (!pointer_is_aligned(refiner) || !pointer_is_aligned(backend)) {
+            return fail(
+                BG_STATUS_INVALID_ARGUMENT,
+                "rigid refinement handle or backend output is misaligned");
+        }
+        if (ranges_overlap(
+                refiner,
+                sizeof(*refiner),
+                backend,
+                sizeof(*backend))) {
+            return fail(
+                BG_STATUS_INVALID_ARGUMENT,
+                "rigid refinement backend output overlaps its handle");
         }
         *backend = refiner->backend;
         return BG_STATUS_OK;
@@ -2118,6 +2537,12 @@ extern "C" BG_API bg_status BG_CALL bg_docking_rigid_refinement_fixed64(
                 BG_STATUS_INVALID_ARGUMENT,
                 "rigid refinement inputs and output must not be null");
         }
+        if (!pointer_is_aligned(context) || !pointer_is_aligned(refiner) ||
+            !pointer_is_aligned(candidates) || !pointer_is_aligned(output)) {
+            return fail(
+                BG_STATUS_INVALID_ARGUMENT,
+                "rigid refinement descriptors or handles are misaligned");
+        }
         if (context->backend != refiner->backend ||
             context->device_ordinal != refiner->device_ordinal) {
             return fail(
@@ -2126,7 +2551,7 @@ extern "C" BG_API bg_status BG_CALL bg_docking_rigid_refinement_fixed64(
         }
         std::size_t coordinate_count = 0;
         bg_status status = validate_batch_and_output(
-            refiner, *candidates, *output, &coordinate_count);
+            context, refiner, *candidates, *output, &coordinate_count);
         if (status != BG_STATUS_OK) {
             return status;
         }
@@ -2137,6 +2562,10 @@ extern "C" BG_API bg_status BG_CALL bg_docking_rigid_refinement_fixed64(
             return fail(
                 BG_STATUS_INTERNAL_ERROR,
                 "rigid refinement persistent state is invalid");
+        }
+        status = validate_total_pair_work(*state, *candidates);
+        if (status != BG_STATUS_OK) {
+            return status;
         }
         BatchResult result;
         if (refiner->backend == BG_BACKEND_CPP_CPU_REFERENCE) {
@@ -2163,7 +2592,8 @@ extern "C" BG_API bg_status BG_CALL bg_docking_rigid_refinement_fixed64(
                 BG_STATUS_BACKEND_UNAVAILABLE,
                 "selected backend has no rigid refinement kernel; fallback is forbidden");
         }
-        status = validate_result(result, state->ligand_radii.size());
+        status = validate_result(
+            result, *candidates, state->ligand_radii.size());
         if (status != BG_STATUS_OK) {
             return status;
         }

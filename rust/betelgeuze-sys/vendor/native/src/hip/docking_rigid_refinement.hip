@@ -278,6 +278,13 @@ struct RigidVector3 final {
     double z;
 };
 
+struct RigidQuaternion final {
+    double x;
+    double y;
+    double z;
+    double w;
+};
+
 __device__ double rigid_canonical_zero(double value) {
     return value == 0.0 ? 0.0 : value;
 }
@@ -326,6 +333,95 @@ __device__ double rigid_norm(RigidVector3 value) {
 
 __device__ bool rigid_finite(RigidVector3 value) {
     return isfinite(value.x) && isfinite(value.y) && isfinite(value.z);
+}
+
+__device__ int32_t rigid_normalize_quaternion(
+    RigidQuaternion value,
+    RigidQuaternion *output) {
+    const double magnitude = sqrt(
+        value.x * value.x + value.y * value.y + value.z * value.z +
+        value.w * value.w);
+    if (output == nullptr || !isfinite(magnitude) || magnitude <= 1.0e-18) {
+        return BG_DOCKING_RIGID_REFINEMENT_FAILURE_NONFINITE_DERIVED_VALUE;
+    }
+    const double inverse = 1.0 / magnitude;
+    value = {
+        value.x * inverse,
+        value.y * inverse,
+        value.z * inverse,
+        value.w * inverse,
+    };
+    if (value.w < 0.0) {
+        value = {-value.x, -value.y, -value.z, -value.w};
+    }
+    *output = {
+        rigid_canonical_zero(value.x),
+        rigid_canonical_zero(value.y),
+        rigid_canonical_zero(value.z),
+        rigid_canonical_zero(value.w),
+    };
+    return BG_DOCKING_RIGID_REFINEMENT_FAILURE_NONE;
+}
+
+__device__ int32_t rigid_compose_rotation(
+    RigidVector3 rotation_step,
+    RigidQuaternion current,
+    RigidQuaternion *output) {
+    const double angle = rigid_norm(rotation_step);
+    if (!isfinite(angle)) {
+        return BG_DOCKING_RIGID_REFINEMENT_FAILURE_NONFINITE_DERIVED_VALUE;
+    }
+    if (angle <= 1.0e-18) {
+        return rigid_normalize_quaternion(current, output);
+    }
+    const double half_angle = 0.5 * angle;
+    const double scale = sin(half_angle) / angle;
+    const RigidQuaternion step{
+        rotation_step.x * scale,
+        rotation_step.y * scale,
+        rotation_step.z * scale,
+        cos(half_angle),
+    };
+    return rigid_normalize_quaternion(
+        {
+            step.w * current.x + step.x * current.w +
+                step.y * current.z - step.z * current.y,
+            step.w * current.y - step.x * current.z +
+                step.y * current.w + step.z * current.x,
+            step.w * current.z + step.x * current.y -
+                step.y * current.x + step.z * current.w,
+            step.w * current.w - step.x * current.x -
+                step.y * current.y - step.z * current.z,
+        },
+        output);
+}
+
+__device__ int32_t rigid_rotation_vector(
+    RigidQuaternion value,
+    RigidVector3 *output) {
+    RigidQuaternion normalized{};
+    int32_t failure = rigid_normalize_quaternion(value, &normalized);
+    if (failure != BG_DOCKING_RIGID_REFINEMENT_FAILURE_NONE ||
+        output == nullptr) {
+        return BG_DOCKING_RIGID_REFINEMENT_FAILURE_NONFINITE_DERIVED_VALUE;
+    }
+    const double sine_half = sqrt(
+        normalized.x * normalized.x + normalized.y * normalized.y +
+        normalized.z * normalized.z);
+    if (sine_half <= 1.0e-18) {
+        *output = {};
+        return BG_DOCKING_RIGID_REFINEMENT_FAILURE_NONE;
+    }
+    const double angle = 2.0 * atan2(sine_half, normalized.w);
+    if (!isfinite(angle)) {
+        return BG_DOCKING_RIGID_REFINEMENT_FAILURE_NONFINITE_DERIVED_VALUE;
+    }
+    *output = rigid_canonical({
+        normalized.x * angle / sine_half,
+        normalized.y * angle / sine_half,
+        normalized.z * angle / sine_half,
+    });
+    return BG_DOCKING_RIGID_REFINEMENT_FAILURE_NONE;
 }
 
 __device__ void rigid_copy_coordinates(
@@ -885,7 +981,7 @@ __device__ int32_t rigid_refine_v3(
     const double maximum_centroid_offset =
         fmin(config.maximum_centroid_offset_angstrom, context.pocket_radius);
     RigidVector3 total_shift{};
-    RigidVector3 total_rotation{};
+    RigidQuaternion total_rotation{0.0, 0.0, 0.0, 1.0};
     double total_rotation_path = 0.0;
     uint64_t accepted_steps = 0;
     uint64_t accepted_rotation_steps = 0;
@@ -936,7 +1032,7 @@ __device__ int32_t rigid_refine_v3(
         size_t best_direction = 0;
         size_t best_backtracking = 0;
         RigidVector3 best_shift{};
-        RigidVector3 best_rotation{};
+        RigidQuaternion best_rotation{};
         double best_rotation_path = 0.0;
         if (remaining_translation > config.v2.minimum_step_angstrom) {
             const double base_step =
@@ -1101,7 +1197,12 @@ __device__ int32_t rigid_refine_v3(
                     best_direction = direction;
                     best_backtracking = static_cast<size_t>(backtracking);
                     best_shift = total_shift;
-                    best_rotation = rigid_plus(total_rotation, rotation_step);
+                    failure = rigid_compose_rotation(
+                        rotation_step, total_rotation, &best_rotation);
+                    if (failure !=
+                        BG_DOCKING_RIGID_REFINEMENT_FAILURE_NONE) {
+                        return failure;
+                    }
                     best_rotation_path = total_rotation_path + angle;
                     rigid_copy_coordinates(
                         context.ligand_count,
@@ -1155,6 +1256,11 @@ __device__ int32_t rigid_refine_v3(
         {context.pocket_center[0],
          context.pocket_center[1],
          context.pocket_center[2]}));
+    RigidVector3 total_rotation_vector{};
+    failure = rigid_rotation_vector(total_rotation, &total_rotation_vector);
+    if (failure != BG_DOCKING_RIGID_REFINEMENT_FAILURE_NONE) {
+        return failure;
+    }
     rigid_copy_coordinates(
         context.ligand_count,
         scratch.current_x,
@@ -1181,11 +1287,11 @@ __device__ int32_t rigid_refine_v3(
     evidence->total_translation_angstrom[2] =
         rigid_canonical_zero(total_shift.z);
     evidence->total_rotation_vector_radians[0] =
-        rigid_canonical_zero(total_rotation.x);
+        rigid_canonical_zero(total_rotation_vector.x);
     evidence->total_rotation_vector_radians[1] =
-        rigid_canonical_zero(total_rotation.y);
+        rigid_canonical_zero(total_rotation_vector.y);
     evidence->total_rotation_vector_radians[2] =
-        rigid_canonical_zero(total_rotation.z);
+        rigid_canonical_zero(total_rotation_vector.z);
     evidence->total_rotation_path_radians =
         rigid_canonical_zero(total_rotation_path);
     evidence->initial_centroid_offset_angstrom = initial_centroid_offset;
