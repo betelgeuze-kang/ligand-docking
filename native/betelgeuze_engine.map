@@ -161,3 +161,10 @@ BETELGEUZE_ENGINE_1.15 {
         bg_docking_fixed64_so3_output_v1_init;
         bg_docking_fixed64_so3_v1_generate;
 } BETELGEUZE_ENGINE_1.14;
+
+BETELGEUZE_ENGINE_1.16 {
+    global:
+        bg_docking_fixed64_indexed_so3_input_v1_init;
+        bg_docking_fixed64_indexed_so3_output_v1_init;
+        bg_docking_fixed64_indexed_so3_v1_place;
+} BETELGEUZE_ENGINE_1.15;

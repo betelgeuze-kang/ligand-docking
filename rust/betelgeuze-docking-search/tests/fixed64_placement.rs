@@ -5,7 +5,7 @@ use betelgeuze_docking_search::{
     Fixed64ConformerSourceEvidence, Fixed64ExactV11SourceEvidence, Fixed64FeatureGeometry,
     Fixed64FeatureGeometryInventory, Fixed64FeatureInventory, Fixed64FeatureKind,
     Fixed64GeometricInput, Fixed64PlacementErrorCode, Fixed64PlacementSource,
-    Fixed64SourceEvidence, Vec3,
+    Fixed64SourceEvidence, Vec3, NATIVE_FIXED64_INDEXED_SO3_PROFILE_ID,
 };
 
 const FEATURE_KINDS: [Fixed64FeatureKind; 12] = [
@@ -281,6 +281,49 @@ fn seed_and_output_change_when_the_exact_source_changes() {
     )
     .unwrap();
 
+    assert_ne!(baseline.source_seed_sha256(), changed.source_seed_sha256());
+    assert_ne!(
+        baseline.output_coordinate_sha256(),
+        changed.output_coordinate_sha256()
+    );
+}
+
+#[test]
+fn indexed_so3_profile_versions_proposal_bound_seed_semantics() {
+    assert_eq!(
+        NATIVE_FIXED64_INDEXED_SO3_PROFILE_ID,
+        "betelgeuze.engine_v2_mixed64_indexed_source_bound_so3_native/1.1.0"
+    );
+    let ligand = ligand();
+    let baseline_exact = exact_evidence(&ligand);
+    let changed_exact = Fixed64ExactV11SourceEvidence {
+        proposal_sha256: digest(42),
+        ..baseline_exact
+    };
+    let baseline_allocation = Fixed64Allocation::build(
+        Fixed64FeatureInventory::new(baseline_exact, vec![], vec![], vec![], vec![]).unwrap(),
+    )
+    .unwrap();
+    let changed_allocation = Fixed64Allocation::build(
+        Fixed64FeatureInventory::new(changed_exact, vec![], vec![], vec![], vec![]).unwrap(),
+    )
+    .unwrap();
+    let baseline = generate_native_fixed64_indexed_so3(
+        &baseline_allocation,
+        24,
+        Fixed64PlacementSource::new(baseline_exact.ligand_source(), ligand.clone()).unwrap(),
+        Vec3::new(0.0, 0.0, 5.0),
+        Vec3::new(0.0, 0.0, 1.0),
+    )
+    .unwrap();
+    let changed = generate_native_fixed64_indexed_so3(
+        &changed_allocation,
+        24,
+        Fixed64PlacementSource::new(changed_exact.ligand_source(), ligand).unwrap(),
+        Vec3::new(0.0, 0.0, 5.0),
+        Vec3::new(0.0, 0.0, 1.0),
+    )
+    .unwrap();
     assert_ne!(baseline.source_seed_sha256(), changed.source_seed_sha256());
     assert_ne!(
         baseline.output_coordinate_sha256(),

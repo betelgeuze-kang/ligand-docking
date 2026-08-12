@@ -15,7 +15,7 @@ pub const NATIVE_FIXED64_SINGLE_ANCHOR_SCHEMA_ID: &str =
 pub const NATIVE_FIXED64_FEATURE_GEOMETRY_SCHEMA_ID: &str =
     "betelgeuze.engine_v2_mixed64_native_feature_geometry/1.0.0";
 pub const NATIVE_FIXED64_INDEXED_SO3_PROFILE_ID: &str =
-    "betelgeuze.engine_v2_mixed64_indexed_source_bound_so3_native/1.0.0";
+    "betelgeuze.engine_v2_mixed64_indexed_source_bound_so3_native/1.1.0";
 pub const NATIVE_FIXED64_SINGLE_ANCHOR_PROFILE_ID: &str =
     "betelgeuze.engine_v2_mixed64_single_anchor_rigid_native/1.0.0";
 
@@ -569,6 +569,7 @@ fn indexed_so3_source_seed_sha256(
 ) -> [u8; 32] {
     let mut hash = CanonicalHash::new("betelgeuze.fixed64_indexed_so3_seed/native-v1");
     hash.digest(source.receipt_sha256);
+    hash.digest(source.proposal_sha256);
     hash.digest(source.coordinate_sha256);
     hash.vec3(pocket_center_angstrom);
     hash.vec3(pocket_normal);

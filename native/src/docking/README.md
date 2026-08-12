@@ -93,6 +93,14 @@ actual device kernel and never fall back. Exact backend receipts commit only
 after the public boundary revalidates norm, canonical sign, monotonic raw
 indices, uniqueness, denominator preservation, and authority=false.
 
+ABI 1.16 binds one immutable ready SO(3) allocation row to its exact source
+receipt, proposal, and coordinate identities, then performs the indexed rigid
+placement on the explicitly selected C++, Rust CPU, `hip_safe`, or `hip_fast`
+backend. The full 64-row allocation snapshot is structurally and
+cryptographically revalidated before dispatch. Degenerate sources remain typed
+slot failures, coordinate channels commit transactionally, and all execution
+and product authority remains false.
+
 The term order is:
 
 1. typed van der Waals

@@ -3555,9 +3555,12 @@ uint64_t live_allocation_count(const bg_context &context) noexcept {
 
 #define BG_DOCKING_FIXED64_SO3_GENERATE \
     bg_hip_fast_docking_fixed64_so3_v1_generate
+#define BG_DOCKING_FIXED64_INDEXED_SO3_PLACE \
+    bg_hip_fast_docking_fixed64_indexed_so3_v1_place
 #define BG_DOCKING_FIXED64_SO3_LANE "hip_fast"
 #include "docking_fixed64_so3.hip"
 #undef BG_DOCKING_FIXED64_SO3_LANE
+#undef BG_DOCKING_FIXED64_INDEXED_SO3_PLACE
 #undef BG_DOCKING_FIXED64_SO3_GENERATE
 
 #define BG_DOCKING_GEOMETRIC_CREATE \

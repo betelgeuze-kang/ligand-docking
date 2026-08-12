@@ -1154,9 +1154,12 @@ extern "C" int32_t bg_hip_safe_evaluate_v1(
 
 #define BG_DOCKING_FIXED64_SO3_GENERATE \
     bg_hip_safe_docking_fixed64_so3_v1_generate
+#define BG_DOCKING_FIXED64_INDEXED_SO3_PLACE \
+    bg_hip_safe_docking_fixed64_indexed_so3_v1_place
 #define BG_DOCKING_FIXED64_SO3_LANE "hip_safe"
 #include "docking_fixed64_so3.hip"
 #undef BG_DOCKING_FIXED64_SO3_LANE
+#undef BG_DOCKING_FIXED64_INDEXED_SO3_PLACE
 #undef BG_DOCKING_FIXED64_SO3_GENERATE
 
 #define BG_DOCKING_GEOMETRIC_CREATE \

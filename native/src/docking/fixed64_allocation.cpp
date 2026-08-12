@@ -1027,7 +1027,410 @@ void hash_missing(
     return BG_STATUS_OK;
 }
 
+[[nodiscard]] bool requirement_is(
+    const bg_docking_fixed64_allocation_row_v1 &row,
+    std::size_t index,
+    bg_docking_fixed64_requirement_kind kind,
+    uint32_t value) noexcept {
+    return index < row.requirement_count &&
+           row.requirements[index].kind == kind &&
+           row.requirements[index].value == value &&
+           reserved_is_zero(row.requirements[index].reserved);
+}
+
+[[nodiscard]] bool missing_is(
+    const bg_docking_fixed64_allocation_row_v1 &row,
+    std::size_t index,
+    bg_docking_fixed64_missing_feature_kind kind,
+    uint32_t value) noexcept {
+    return index < row.missing_feature_count &&
+           row.missing_features[index].kind == kind &&
+           row.missing_features[index].value == value &&
+           reserved_is_zero(row.missing_features[index].reserved);
+}
+
+[[nodiscard]] bool missing_subset_is(
+    const bg_docking_fixed64_allocation_row_v1 &row,
+    bg_docking_fixed64_missing_feature_kind first,
+    bg_docking_fixed64_missing_feature_kind second) noexcept {
+    if (row.missing_feature_count > 2) return false;
+    bool first_seen = false;
+    bool second_seen = false;
+    for (std::size_t index = 0; index < row.missing_feature_count; ++index) {
+        const auto &missing = row.missing_features[index];
+        if (missing.value != 0 || !reserved_is_zero(missing.reserved)) {
+            return false;
+        }
+        if (missing.kind == first && !first_seen) {
+            first_seen = true;
+        } else if (missing.kind == second && !second_seen) {
+            second_seen = true;
+        } else {
+            return false;
+        }
+    }
+    return true;
+}
+
+[[nodiscard]] bool parent_shape_is_valid(
+    const bg_docking_fixed64_allocation_row_v1 &row) noexcept {
+    if (row.generation_parent_role < BG_DOCKING_FIXED64_PARENT_NONE ||
+        row.generation_parent_role >
+            BG_DOCKING_FIXED64_PARENT_GENERATOR_INPUT) {
+        return false;
+    }
+    const bool receipt_zero = zero_array(row.generation_parent_receipt_sha256);
+    const bool proposal_zero = zero_array(row.generation_parent_proposal_sha256);
+    const bool coordinate_zero =
+        zero_array(row.generation_parent_coordinate_sha256);
+    if (row.generation_parent_role == BG_DOCKING_FIXED64_PARENT_NONE) {
+        return receipt_zero && proposal_zero && coordinate_zero;
+    }
+    return !receipt_zero && !proposal_zero && !coordinate_zero;
+}
+
+[[nodiscard]] bool selected_receipts_are_present(
+    const bg_docking_fixed64_allocation_row_v1 &row) noexcept {
+    for (std::size_t index = 0;
+         index < row.selected_source_receipt_count;
+         ++index) {
+        if (zero_array(row.selected_source_receipt_sha256[index])) {
+            return false;
+        }
+    }
+    return true;
+}
+
+[[nodiscard]] bool lane_shape_is_valid(
+    const bg_docking_fixed64_allocation_row_v1 &row) noexcept {
+    const bool ready =
+        row.status == BG_DOCKING_FIXED64_ALLOCATION_ROW_READY;
+    const bool base_indexes_absent =
+        row.v7_control_source_index == -1 &&
+        row.so3_sequence_index == -1 &&
+        row.true_conformer_rank == -1 &&
+        row.retained_source_index == -1;
+    switch (row.lane) {
+        case BG_DOCKING_FIXED64_LANE_POCKET_CENTERED_CONTROLS:
+        case BG_DOCKING_FIXED64_LANE_UNIFORM_SOURCE_CONTROLS: {
+            const uint32_t source_index =
+                row.lane == BG_DOCKING_FIXED64_LANE_UNIFORM_SOURCE_CONTROLS
+                ? row.lane_offset + UINT32_C(8)
+                : row.lane_offset;
+            return row.requirement_count == 1 &&
+                   requirement_is(
+                       row,
+                       0,
+                       BG_DOCKING_FIXED64_REQUIREMENT_V7_CONTROL_SOURCE,
+                       source_index) &&
+                   row.v7_control_source_index ==
+                       static_cast<int32_t>(source_index) &&
+                   row.so3_sequence_index == -1 &&
+                   row.true_conformer_rank == -1 &&
+                   row.retained_source_index == -1 &&
+                   (ready
+                        ? row.missing_feature_count == 0 &&
+                              row.selected_source_receipt_count == 1 &&
+                              row.generation_parent_role ==
+                                  BG_DOCKING_FIXED64_PARENT_EXACT_PASSTHROUGH
+                        : row.missing_feature_count == 1 &&
+                              missing_is(
+                                  row,
+                                  0,
+                                  BG_DOCKING_FIXED64_MISSING_V7_CONTROL_SOURCE,
+                                  source_index) &&
+                              row.selected_source_receipt_count == 0 &&
+                              row.generation_parent_role ==
+                                  BG_DOCKING_FIXED64_PARENT_NONE);
+        }
+        case BG_DOCKING_FIXED64_LANE_DETERMINISTIC_INDEPENDENT_SO3:
+            return row.requirement_count == 0 &&
+                   row.missing_feature_count == 0 &&
+                   row.selected_source_receipt_count == 0 &&
+                   row.v7_control_source_index == -1 &&
+                   row.so3_sequence_index ==
+                       static_cast<int32_t>(row.lane_offset) &&
+                   row.true_conformer_rank == -1 &&
+                   row.retained_source_index == -1 && ready &&
+                   row.generation_parent_role ==
+                       BG_DOCKING_FIXED64_PARENT_GENERATOR_INPUT;
+        case BG_DOCKING_FIXED64_LANE_TRUE_CONFORMER_INDEPENDENT_SO3: {
+            const uint32_t rank = kTrueConformerRanks[row.lane_offset];
+            return row.requirement_count == 1 &&
+                   requirement_is(
+                       row,
+                       0,
+                       BG_DOCKING_FIXED64_REQUIREMENT_TRUE_CONFORMER_RANK,
+                       rank) &&
+                   row.v7_control_source_index == -1 &&
+                   row.so3_sequence_index ==
+                       static_cast<int32_t>(row.lane_offset) &&
+                   row.true_conformer_rank == static_cast<int32_t>(rank) &&
+                   row.retained_source_index == -1 &&
+                   (ready
+                        ? row.missing_feature_count == 0 &&
+                              row.selected_source_receipt_count == 1 &&
+                              row.generation_parent_role ==
+                                  BG_DOCKING_FIXED64_PARENT_GENERATOR_INPUT
+                        : row.missing_feature_count == 1 &&
+                              missing_is(
+                                  row,
+                                  0,
+                                  BG_DOCKING_FIXED64_MISSING_TRUE_CONFORMER,
+                                  rank) &&
+                              row.selected_source_receipt_count == 0 &&
+                              row.generation_parent_role ==
+                                  BG_DOCKING_FIXED64_PARENT_NONE);
+        }
+        case BG_DOCKING_FIXED64_LANE_LIGAND_DONOR_TO_RECEPTOR_ACCEPTOR:
+            return base_indexes_absent && row.requirement_count == 2 &&
+                   requirement_is(
+                       row,
+                       0,
+                       BG_DOCKING_FIXED64_REQUIREMENT_FEATURE,
+                       BG_DOCKING_FIXED64_FEATURE_LIGAND_DONOR) &&
+                   requirement_is(
+                       row,
+                       1,
+                       BG_DOCKING_FIXED64_REQUIREMENT_FEATURE,
+                       BG_DOCKING_FIXED64_FEATURE_RECEPTOR_ACCEPTOR) &&
+                   missing_subset_is(
+                       row,
+                       BG_DOCKING_FIXED64_MISSING_LIGAND_DONOR,
+                       BG_DOCKING_FIXED64_MISSING_RECEPTOR_ACCEPTOR) &&
+                   row.selected_source_receipt_count +
+                           row.missing_feature_count ==
+                       2 &&
+                   ready == (row.missing_feature_count == 0) &&
+                   row.generation_parent_role ==
+                       BG_DOCKING_FIXED64_PARENT_GENERATOR_INPUT;
+        case BG_DOCKING_FIXED64_LANE_LIGAND_ACCEPTOR_TO_RECEPTOR_DONOR:
+            return base_indexes_absent && row.requirement_count == 2 &&
+                   requirement_is(
+                       row,
+                       0,
+                       BG_DOCKING_FIXED64_REQUIREMENT_FEATURE,
+                       BG_DOCKING_FIXED64_FEATURE_LIGAND_ACCEPTOR) &&
+                   requirement_is(
+                       row,
+                       1,
+                       BG_DOCKING_FIXED64_REQUIREMENT_FEATURE,
+                       BG_DOCKING_FIXED64_FEATURE_RECEPTOR_DONOR) &&
+                   missing_subset_is(
+                       row,
+                       BG_DOCKING_FIXED64_MISSING_LIGAND_ACCEPTOR,
+                       BG_DOCKING_FIXED64_MISSING_RECEPTOR_DONOR) &&
+                   row.selected_source_receipt_count +
+                           row.missing_feature_count ==
+                       2 &&
+                   ready == (row.missing_feature_count == 0) &&
+                   row.generation_parent_role ==
+                       BG_DOCKING_FIXED64_PARENT_GENERATOR_INPUT;
+        case BG_DOCKING_FIXED64_LANE_COMPLEMENTARY_CHARGE:
+            return base_indexes_absent && row.requirement_count == 1 &&
+                   requirement_is(
+                       row,
+                       0,
+                       BG_DOCKING_FIXED64_REQUIREMENT_COMPLEMENTARY_CHARGE_ANCHOR,
+                       0) &&
+                   row.generation_parent_role ==
+                       BG_DOCKING_FIXED64_PARENT_GENERATOR_INPUT &&
+                   (ready
+                        ? row.missing_feature_count == 0 &&
+                              row.selected_source_receipt_count == 2
+                        : row.missing_feature_count == 1 &&
+                              missing_is(
+                                  row,
+                                  0,
+                                  BG_DOCKING_FIXED64_MISSING_COMPLEMENTARY_CHARGE_ANCHOR,
+                                  0) &&
+                              row.selected_source_receipt_count == 0);
+        case BG_DOCKING_FIXED64_LANE_AROMATIC_PLANE:
+            return base_indexes_absent && row.requirement_count == 2 &&
+                   requirement_is(
+                       row,
+                       0,
+                       BG_DOCKING_FIXED64_REQUIREMENT_FEATURE,
+                       BG_DOCKING_FIXED64_FEATURE_LIGAND_AROMATIC_PLANE) &&
+                   requirement_is(
+                       row,
+                       1,
+                       BG_DOCKING_FIXED64_REQUIREMENT_FEATURE,
+                       BG_DOCKING_FIXED64_FEATURE_RECEPTOR_AROMATIC_PLANE) &&
+                   missing_subset_is(
+                       row,
+                       BG_DOCKING_FIXED64_MISSING_LIGAND_AROMATIC_PLANE,
+                       BG_DOCKING_FIXED64_MISSING_RECEPTOR_AROMATIC_PLANE) &&
+                   row.selected_source_receipt_count +
+                           row.missing_feature_count ==
+                       2 &&
+                   ready == (row.missing_feature_count == 0) &&
+                   row.generation_parent_role ==
+                       BG_DOCKING_FIXED64_PARENT_GENERATOR_INPUT;
+        case BG_DOCKING_FIXED64_LANE_PRINCIPAL_AXIS_SHAPE:
+            return base_indexes_absent && row.requirement_count == 2 &&
+                   requirement_is(
+                       row,
+                       0,
+                       BG_DOCKING_FIXED64_REQUIREMENT_FEATURE,
+                       BG_DOCKING_FIXED64_FEATURE_LIGAND_SHAPE_AXIS) &&
+                   requirement_is(
+                       row,
+                       1,
+                       BG_DOCKING_FIXED64_REQUIREMENT_FEATURE,
+                       BG_DOCKING_FIXED64_FEATURE_POCKET_SHAPE_AXIS) &&
+                   missing_subset_is(
+                       row,
+                       BG_DOCKING_FIXED64_MISSING_LIGAND_SHAPE_AXIS,
+                       BG_DOCKING_FIXED64_MISSING_POCKET_SHAPE_AXIS) &&
+                   row.selected_source_receipt_count +
+                           row.missing_feature_count ==
+                       2 &&
+                   ready == (row.missing_feature_count == 0) &&
+                   row.generation_parent_role ==
+                       BG_DOCKING_FIXED64_PARENT_GENERATOR_INPUT;
+        case BG_DOCKING_FIXED64_LANE_PAIRED_RETAINED_CONTROLS: {
+            const uint32_t source_index =
+                kRetainedSourceIndices[row.lane_offset];
+            return row.requirement_count == 1 &&
+                   requirement_is(
+                       row,
+                       0,
+                       BG_DOCKING_FIXED64_REQUIREMENT_RETAINED_SOURCE,
+                       source_index) &&
+                   row.v7_control_source_index == -1 &&
+                   row.so3_sequence_index == -1 &&
+                   row.true_conformer_rank == -1 &&
+                   row.retained_source_index ==
+                       static_cast<int32_t>(source_index) &&
+                   (ready
+                        ? row.missing_feature_count == 0 &&
+                              row.selected_source_receipt_count == 1 &&
+                              row.generation_parent_role ==
+                                  BG_DOCKING_FIXED64_PARENT_EXACT_PASSTHROUGH
+                        : row.missing_feature_count == 1 &&
+                              missing_is(
+                                  row,
+                                  0,
+                                  BG_DOCKING_FIXED64_MISSING_RETAINED_SOURCE,
+                                  source_index) &&
+                              row.selected_source_receipt_count == 0 &&
+                              row.generation_parent_role ==
+                                  BG_DOCKING_FIXED64_PARENT_NONE);
+        }
+        default:
+            return false;
+    }
+}
+
 }  // namespace
+
+bg_status verify_snapshot(
+    const uint8_t (&inventory)[32],
+    const uint8_t (&allocation)[32],
+    const bg_docking_fixed64_allocation_row_v1 *rows,
+    std::size_t row_count) noexcept {
+    if (rows == nullptr || !pointer_is_aligned(rows) ||
+        row_count != kCandidateCount ||
+        std::all_of(std::begin(inventory), std::end(inventory),
+                    [](uint8_t value) { return value == UINT8_C(0); }) ||
+        std::all_of(std::begin(allocation), std::end(allocation),
+                    [](uint8_t value) { return value == UINT8_C(0); })) {
+        return fail(
+            BG_STATUS_INVALID_ARGUMENT,
+            "fixed64 allocation snapshot is absent or has the wrong denominator");
+    }
+    std::array<bg_docking_fixed64_allocation_row_v1, kCandidateCount>
+        snapshot{};
+    for (std::size_t index = 0; index < snapshot.size(); ++index) {
+        const auto &row = rows[index];
+        const auto [expected_lane, expected_offset] = lane_for_slot(index);
+        if (row.slot_index != index || row.lane != expected_lane ||
+            row.lane_offset != expected_offset ||
+            row.declared_anchor_kind != anchor_for_lane(expected_lane) ||
+            row.requirement_count > BG_DOCKING_FIXED64_MAX_REQUIREMENTS ||
+            row.missing_feature_count > BG_DOCKING_FIXED64_MAX_MISSING_FEATURES ||
+            row.selected_source_receipt_count >
+                BG_DOCKING_FIXED64_MAX_SELECTED_SOURCE_RECEIPTS ||
+            row.reserved0 != 0 || !reserved_is_zero(row.reserved) ||
+            row.fallback_allowed != UINT8_C(0) ||
+            row.multi_anchor_allowed != UINT8_C(0) ||
+            row.result_dependent_allocation != UINT8_C(0) ||
+            row.denominator_preserved != UINT8_C(1) ||
+            row.molecular_execution_authorized != UINT8_C(0) ||
+            row.reservation_authorized != UINT8_C(0) ||
+            row.benchmark_execution_authorized != UINT8_C(0) ||
+            !parent_shape_is_valid(row) ||
+            !selected_receipts_are_present(row) ||
+            !lane_shape_is_valid(row) ||
+            (row.status == BG_DOCKING_FIXED64_ALLOCATION_ROW_READY) !=
+                (row.generation_eligible == UINT8_C(1)) ||
+            (row.status == BG_DOCKING_FIXED64_ALLOCATION_ROW_TYPED_FAILURE) !=
+                (row.generation_eligible == UINT8_C(0)) ||
+            (row.generation_eligible == UINT8_C(1)) !=
+                (row.missing_feature_count == 0)) {
+            return fail(
+                BG_STATUS_INVALID_ARGUMENT,
+                "fixed64 allocation snapshot row violates frozen shape");
+        }
+        for (std::size_t requirement = row.requirement_count;
+             requirement < BG_DOCKING_FIXED64_MAX_REQUIREMENTS;
+             ++requirement) {
+            if (row.requirements[requirement].kind != 0 ||
+                row.requirements[requirement].value != 0 ||
+                !reserved_is_zero(row.requirements[requirement].reserved)) {
+                return fail(
+                    BG_STATUS_INVALID_ARGUMENT,
+                    "fixed64 allocation snapshot unused requirement is nonzero");
+            }
+        }
+        for (std::size_t missing = row.missing_feature_count;
+             missing < BG_DOCKING_FIXED64_MAX_MISSING_FEATURES;
+             ++missing) {
+            if (row.missing_features[missing].kind != 0 ||
+                row.missing_features[missing].value != 0 ||
+                !reserved_is_zero(row.missing_features[missing].reserved)) {
+                return fail(
+                    BG_STATUS_INVALID_ARGUMENT,
+                    "fixed64 allocation snapshot unused missing feature is nonzero");
+            }
+        }
+        for (std::size_t selected = row.selected_source_receipt_count;
+             selected < BG_DOCKING_FIXED64_MAX_SELECTED_SOURCE_RECEIPTS;
+             ++selected) {
+            if (!std::all_of(
+                    std::begin(row.selected_source_receipt_sha256[selected]),
+                    std::end(row.selected_source_receipt_sha256[selected]),
+                    [](uint8_t value) { return value == UINT8_C(0); })) {
+                return fail(
+                    BG_STATUS_INVALID_ARGUMENT,
+                    "fixed64 allocation snapshot unused receipt is nonzero");
+            }
+        }
+        const auto expected_receipt = slot_sha256(row);
+        if (std::memcmp(
+                expected_receipt.data(), row.slot_receipt_sha256, 32) != 0) {
+            return fail(
+                BG_STATUS_INVALID_ARGUMENT,
+                "fixed64 allocation snapshot slot receipt is invalid");
+        }
+        snapshot[index] = row;
+    }
+    const std::array<uint8_t, 32> inventory_value = [&]() {
+        std::array<uint8_t, 32> value{};
+        std::copy(std::begin(inventory), std::end(inventory), value.begin());
+        return value;
+    }();
+    const auto expected_allocation =
+        allocation_sha256(inventory_value, snapshot);
+    if (std::memcmp(expected_allocation.data(), allocation, 32) != 0) {
+        return fail(
+            BG_STATUS_INVALID_ARGUMENT,
+            "fixed64 allocation snapshot receipt is invalid");
+    }
+    return BG_STATUS_OK;
+}
+
 }  // namespace betelgeuze::native::docking::fixed64_allocation
 
 using namespace betelgeuze::native;

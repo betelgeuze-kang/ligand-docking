@@ -22,6 +22,14 @@
 #include <utility>
 #include <vector>
 
+namespace betelgeuze::native::docking::fixed64_allocation {
+[[nodiscard]] bg_status verify_snapshot(
+    const uint8_t (&inventory_sha256)[32],
+    const uint8_t (&allocation_sha256)[32],
+    const bg_docking_fixed64_allocation_row_v1 *rows,
+    std::size_t row_count) noexcept;
+}
+
 struct bg_context final {
     bg_backend backend = BG_BACKEND_RUST_CPU;
     bg_unit_system unit_system = BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL;

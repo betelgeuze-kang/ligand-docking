@@ -29,6 +29,8 @@ include = [
     "vendor/native/src/docking/fixed64_allocation.cpp",
     "vendor/native/src/docking/fixed64_so3.cpp",
     "vendor/native/src/docking/fixed64_so3_reference.hpp",
+    "vendor/native/src/docking/fixed64_indexed_so3_provider.h",
+    "vendor/native/src/docking/fixed64_indexed_so3.cpp",
     "vendor/native/src/docking/fixed64_downstream.cpp",
     "vendor/native/src/docking/fixed64_refinement_pipeline.cpp",
     "vendor/native/src/docking/geometric_admission.cpp",
