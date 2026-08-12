@@ -243,6 +243,10 @@ def run_native_fixed64_surface(
         raise NativeFixed64ConsumerError(
             "native fixed64 entrypoint returned a non-dict result"
         )
+    if result.get("backend") != payload.get("backend"):
+        raise NativeFixed64ConsumerError(
+            "native fixed64 evidence does not match the requested backend"
+        )
     return NativeFixed64EvidenceV1(surface=surface, _document=result)
 
 

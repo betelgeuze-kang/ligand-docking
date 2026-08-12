@@ -15,6 +15,7 @@ from betelgeuze_engine_v2.docking.native_fixed64_consumers import (
     NativeFixed64ProductShadowAdapter,
     NativeFixed64PythonApi,
 )
+import betelgeuze_engine_v2.docking.native_fixed64_consumers as native_consumers
 from betelgeuze_engine_v2.standalone_cli import main as standalone_main
 
 
@@ -298,6 +299,21 @@ def test_all_surfaces_share_complete_native_pipeline_receipt(native) -> None:
         item.to_dict()["existing_rank_auto_change_authorized"] is False
         for item in results
     )
+
+
+def test_complete_python_facade_binds_evidence_to_requested_backend(
+    native, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    document = native.native_fixed64_complete_pipeline_v1(_input())
+    document["backend"] = "hip_safe"
+    monkeypatch.setattr(
+        native_consumers,
+        "_native_entrypoint",
+        lambda: lambda _payload: deepcopy(document),
+    )
+
+    with pytest.raises(NativeFixed64ConsumerError, match="requested backend"):
+        NativeFixed64PythonApi().run(_input())
 
 
 @pytest.mark.parametrize(

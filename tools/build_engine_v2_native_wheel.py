@@ -74,6 +74,7 @@ _DIRECT_BUILD_OVERRIDE_NAMES = frozenset(
         "CXX",
         "CXXFLAGS",
         "AR",
+        "ARFLAGS",
         "AS",
         "BINDGEN_EXTRA_CLANG_ARGS",
         "LD",
@@ -117,6 +118,7 @@ _DIRECT_BUILD_OVERRIDE_NAMES = frozenset(
 )
 _DIRECT_BUILD_OVERRIDE_PREFIXES = (
     "AR_",
+    "ARFLAGS_",
     "CARGO_PROFILE_",
     "CARGO_TARGET_",
     "CARGO_UNSTABLE_",
@@ -134,6 +136,7 @@ _DIRECT_BUILD_OVERRIDE_PREFIXES = (
 )
 _NATIVE_TOOL_OVERRIDE_SUFFIXES = (
     "_AR",
+    "_ARFLAGS",
     "_CC",
     "_CFLAGS",
     "_CPP",

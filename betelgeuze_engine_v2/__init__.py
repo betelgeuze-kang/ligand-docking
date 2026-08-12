@@ -15,8 +15,13 @@ import importlib as _native_importlib
 
 try:
     _native_importlib.import_module("betelgeuze_engine_v2_native")
-except (ImportError, OSError):
-    pass
+except ModuleNotFoundError as _native_import_error:
+    # Absence of the optional wheel is permitted.  A dependency failure from
+    # an installed wheel is not: retrying after PyTorch has loaded another
+    # process-global HIP runtime could otherwise change the import outcome.
+    if _native_import_error.name != "betelgeuze_engine_v2_native":
+        raise
+    del _native_import_error
 del _native_importlib
 
 # Stack installers intentionally run before the public symbols they patch are

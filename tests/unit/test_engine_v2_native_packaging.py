@@ -89,6 +89,10 @@ def test_native_release_version_surfaces_match_rc6() -> None:
         "CC",
         "CFLAGS",
         "HOST_CC",
+        "ARFLAGS",
+        "ARFLAGS_x86_64_unknown_linux_gnu",
+        "HOST_ARFLAGS",
+        "TARGET_ARFLAGS",
         "PYO3_PYTHON",
         "TARGET_X86_64_UNKNOWN_LINUX_GNU_LDFLAGS",
         "CXXFLAGS_x86_64_unknown_linux_gnu",
@@ -110,7 +114,9 @@ def test_native_build_rejects_caller_build_overrides(name: str) -> None:
         _reject_direct_build_overrides({name: "attacker-controlled"})
 
 
-@pytest.mark.parametrize("name", ("RUSTFLAGS", "PERL5LIB", "PERL5OPT", "PERLLIB"))
+@pytest.mark.parametrize(
+    "name", ("RUSTFLAGS", "ARFLAGS", "PERL5LIB", "PERL5OPT", "PERLLIB")
+)
 def test_native_build_public_entrypoint_rejects_override_before_output_mutation(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, name: str
 ) -> None:
