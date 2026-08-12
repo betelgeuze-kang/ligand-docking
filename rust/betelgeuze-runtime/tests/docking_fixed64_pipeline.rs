@@ -217,6 +217,21 @@ fn assert_safe_run_returns_complete_receipt(fixture: &SingleAtomFixture, options
     let receipt = pipeline.run(run).unwrap();
     let repeated = pipeline.run(run).unwrap();
     assert_eq!(receipt, repeated);
+    let mut crosswired_source_evidence = run;
+    crosswired_source_evidence
+        .exact_source_evidence
+        .source_receipt_sha256[0] ^= 1;
+    let error = pipeline.run(crosswired_source_evidence).unwrap_err();
+    assert_eq!(error.code, ErrorCode::InvalidArgument);
+    assert!(error.message.contains("cross-wired"));
+
+    let mismatched_source_x = [1.0_f64];
+    let mut mismatched_source_coordinates = run;
+    mismatched_source_coordinates.exact_source.coordinates =
+        PositionSoa::new(&mismatched_source_x, &fixture.ligand_y, &fixture.ligand_z);
+    let error = pipeline.run(mismatched_source_coordinates).unwrap_err();
+    assert_eq!(error.code, ErrorCode::InvalidArgument);
+    assert!(error.message.contains("supplied coordinates"));
     for crosswire_ligand in [true, false] {
         let mut crosswired = run;
         if crosswire_ligand {

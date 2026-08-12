@@ -13,6 +13,7 @@ use std::ptr::{self, NonNull};
 use std::rc::Rc;
 
 use betelgeuze_sys as sys;
+use sha2::{Digest, Sha256 as Sha256Hasher};
 
 use super::{
     checked_count, finite, invalid, status_result, Backend, Context, Error, ErrorCode, PositionSoa,
@@ -697,6 +698,45 @@ fn digest_present(value: &Sha256) -> bool {
     value.iter().any(|byte| *byte != 0)
 }
 
+fn canonical_hash_domain(hasher: &mut Sha256Hasher, domain: &[u8]) {
+    hasher.update((domain.len() as u64).to_be_bytes());
+    hasher.update(domain);
+}
+
+fn canonical_coordinate_sha256(coordinates: PositionSoa<'_>) -> Sha256 {
+    let mut hasher = Sha256Hasher::new();
+    canonical_hash_domain(&mut hasher, b"betelgeuze.fixed64_coordinates/native-v1");
+    hasher.update((coordinates.x_angstrom.len() as u64).to_be_bytes());
+    for atom in 0..coordinates.x_angstrom.len() {
+        for value in [
+            coordinates.x_angstrom[atom],
+            coordinates.y_angstrom[atom],
+            coordinates.z_angstrom[atom],
+        ] {
+            let canonical = if value == 0.0 { 0.0 } else { value };
+            hasher.update(canonical.to_bits().to_be_bytes());
+        }
+    }
+    hasher.finalize().into()
+}
+
+fn canonical_source_payload_sha256(
+    source: Fixed64CoordinateSource<'_>,
+    ligand_atom_count: u64,
+) -> Sha256 {
+    let mut hasher = Sha256Hasher::new();
+    canonical_hash_domain(
+        &mut hasher,
+        b"betelgeuze.fixed64_coordinate_source_abi/native-v1",
+    );
+    hasher.update(source.evidence.receipt_sha256);
+    hasher.update(source.evidence.proposal_sha256);
+    hasher.update(source.evidence.coordinate_sha256);
+    hasher.update(ligand_atom_count.to_be_bytes());
+    hasher.update([1_u8, 0_u8]);
+    hasher.finalize().into()
+}
+
 fn validate_digests(identities: Fixed64Identities) -> Result<()> {
     let values = [
         (
@@ -864,6 +904,11 @@ fn validate_source(
             return Err(invalid(format!("{label} {name} SHA-256 is absent")));
         }
     }
+    if canonical_coordinate_sha256(value.coordinates) != value.evidence.coordinate_sha256 {
+        return Err(invalid(format!(
+            "{label} coordinate SHA-256 does not match its supplied coordinates"
+        )));
+    }
     Ok(())
 }
 
@@ -875,6 +920,17 @@ fn validate_run_input(
 ) -> Result<()> {
     const CANDIDATE_COUNT: usize = sys::BG_DOCKING_FIXED64_CANDIDATE_COUNT as usize;
     validate_source(input.exact_source, ligand_atom_count, "exact V1.1 source")?;
+    if input.exact_source.evidence.receipt_sha256
+        != input.exact_source_evidence.source_receipt_sha256
+        || input.exact_source.evidence.proposal_sha256
+            != input.exact_source_evidence.proposal_sha256
+        || input.exact_source.evidence.coordinate_sha256
+            != input.exact_source_evidence.ligand_coordinate_sha256
+    {
+        return Err(invalid(
+            "fixed64 exact source evidence and coordinate payload are cross-wired",
+        ));
+    }
     for (digest, label) in [
         (
             input.exact_source_evidence.source_receipt_sha256,
@@ -1446,6 +1502,8 @@ impl<'context> Fixed64Pipeline<'context> {
             self.receptor_system_sha256,
             self.ligand_system_sha256,
         )?;
+        let expected_sources: [Option<Fixed64CoordinateSource<'_>>; CANDIDATE_COUNT] =
+            std::array::from_fn(|slot| fixed64_source_for_slot(input, slot));
         let coordinate_count = self
             .ligand_atom_count
             .checked_mul(CANDIDATE_COUNT)
@@ -1765,6 +1823,7 @@ impl<'context> Fixed64Pipeline<'context> {
             &refinement_output,
             &pipeline_output,
             &producer_rows,
+            &expected_sources,
             &rigid_rows,
             &torsion_rows,
             &torsion_moves,
@@ -2094,11 +2153,73 @@ fn fixed64_lane_and_placement_for_slot(
     Some((lane, placement))
 }
 
+fn fixed64_source_for_slot(
+    input: Fixed64RunInput<'_>,
+    slot: usize,
+) -> Option<Fixed64CoordinateSource<'_>> {
+    const CONFORMER_RANKS: [u8; 8] = [2, 3, 4, 5, 6, 7, 8, 2];
+    const RETAINED_INDICES: [u32; 4] = [36, 45, 54, 63];
+    match slot {
+        0..=23 => input
+            .v7_control_sources
+            .iter()
+            .find(|source| source.source_index == slot as u32)
+            .map(|source| source.source),
+        24..=35 | 44..=59 => Some(input.exact_source),
+        36..=43 => {
+            let rank = CONFORMER_RANKS[slot - 36];
+            input
+                .conformer_sources
+                .iter()
+                .find(|source| source.rank == rank)
+                .map(|source| source.source)
+        }
+        60..=63 => {
+            let source_index = RETAINED_INDICES[slot - 60];
+            input
+                .retained_sources
+                .iter()
+                .find(|source| source.source_index == source_index)
+                .map(|source| source.source)
+        }
+        _ => None,
+    }
+}
+
+fn coordinate_segment_matches_source(
+    channels: [&[f64]; 3],
+    slot: usize,
+    source: Fixed64CoordinateSource<'_>,
+) -> bool {
+    let ligand_count = source.coordinates.x_angstrom.len();
+    let Some(begin) = slot.checked_mul(ligand_count) else {
+        return false;
+    };
+    let Some(end) = begin.checked_add(ligand_count) else {
+        return false;
+    };
+    let sources = [
+        source.coordinates.x_angstrom,
+        source.coordinates.y_angstrom,
+        source.coordinates.z_angstrom,
+    ];
+    channels.iter().zip(sources).all(|(channel, expected)| {
+        channel.get(begin..end).is_some_and(|observed| {
+            observed.len() == expected.len()
+                && observed
+                    .iter()
+                    .zip(expected)
+                    .all(|(left, right)| left.to_bits() == right.to_bits())
+        })
+    })
+}
+
 fn validate_producer_row_semantics(
     row: &sys::bg_docking_fixed64_producer_row_v1,
     coordinates: [&[f64]; 3],
     slot: usize,
     ligand_atom_count: u64,
+    expected_source: Option<Fixed64CoordinateSource<'_>>,
 ) -> Result<()> {
     let (expected_lane, expected_placement) = fixed64_lane_and_placement_for_slot(slot)
         .ok_or_else(|| {
@@ -2131,6 +2252,14 @@ fn validate_producer_row_semantics(
     let source_digests_zero = !digest_present(&row.source_payload_receipt_sha256)
         && !digest_present(&row.source_proposal_sha256)
         && !digest_present(&row.source_coordinate_sha256);
+    let source_evidence_matches =
+        expected_source.map_or(!source_verified && source_digests_zero, |source| {
+            source_verified
+                && row.source_payload_receipt_sha256
+                    == canonical_source_payload_sha256(source, ligand_atom_count)
+                && row.source_proposal_sha256 == source.evidence.proposal_sha256
+                && row.source_coordinate_sha256 == source.evidence.coordinate_sha256
+        });
     if row.reserved0 != 0
         || row.lane != expected_lane
         || row.placement_kind != expected_placement
@@ -2139,6 +2268,7 @@ fn validate_producer_row_semantics(
         || !geometric_verified
         || source_verified != source_digests_present
         || (!source_verified && !source_digests_zero)
+        || !source_evidence_matches
         || steric_precheck != rank_eligible
     {
         return Err(Error::local(
@@ -2156,9 +2286,12 @@ fn validate_producer_row_semantics(
         sys::BG_DOCKING_FIXED64_PRODUCER_ROW_GENERATED => {
             let exact_passthrough_evidence_matches = row.placement_kind
                 != sys::BG_DOCKING_FIXED64_PRODUCER_PLACEMENT_EXACT_PASSTHROUGH
-                || (quaternion == [0.0, 0.0, 0.0, 1.0]
-                    && row.output_proposal_sha256 == row.source_proposal_sha256
-                    && row.output_coordinate_sha256 == row.source_coordinate_sha256);
+                || expected_source.is_some_and(|source| {
+                    quaternion == [0.0, 0.0, 0.0, 1.0]
+                        && row.output_proposal_sha256 == source.evidence.proposal_sha256
+                        && row.output_coordinate_sha256 == source.evidence.coordinate_sha256
+                        && coordinate_segment_matches_source(coordinates, slot, source)
+                });
             if row.failure_code != sys::BG_DOCKING_FIXED64_PRODUCER_FAILURE_NONE
                 || row.component_failure_code != 0
                 || row.placement_kind < sys::BG_DOCKING_FIXED64_PRODUCER_PLACEMENT_EXACT_PASSTHROUGH
@@ -2181,20 +2314,28 @@ fn validate_producer_row_semantics(
         sys::BG_DOCKING_FIXED64_PRODUCER_ROW_TYPED_FAILURE => {
             let valid_component_failure = match row.failure_code {
                 sys::BG_DOCKING_FIXED64_PRODUCER_FAILURE_INDEXED_SO3_TYPED_FAILURE => {
-                    (sys::BG_DOCKING_FIXED64_INDEXED_SO3_FAILURE_DEGENERATE_SOURCE_GEOMETRY
-                        ..=sys::BG_DOCKING_FIXED64_INDEXED_SO3_FAILURE_NONFINITE_OUTPUT)
-                        .contains(&row.component_failure_code)
+                    expected_placement
+                        == sys::BG_DOCKING_FIXED64_PRODUCER_PLACEMENT_INDEXED_SO3
+                        && (sys::BG_DOCKING_FIXED64_INDEXED_SO3_FAILURE_DEGENERATE_SOURCE_GEOMETRY
+                            ..=sys::BG_DOCKING_FIXED64_INDEXED_SO3_FAILURE_NONFINITE_OUTPUT)
+                            .contains(&row.component_failure_code)
                 }
                 sys::BG_DOCKING_FIXED64_PRODUCER_FAILURE_SINGLE_ANCHOR_TYPED_FAILURE => {
-                    (sys::BG_DOCKING_FIXED64_SINGLE_ANCHOR_FAILURE_DEGENERATE_LIGAND_DIRECTION
-                        ..=sys::BG_DOCKING_FIXED64_SINGLE_ANCHOR_FAILURE_NONFINITE_OUTPUT)
-                        .contains(&row.component_failure_code)
+                    expected_placement
+                        == sys::BG_DOCKING_FIXED64_PRODUCER_PLACEMENT_SINGLE_ANCHOR
+                        && (sys::BG_DOCKING_FIXED64_SINGLE_ANCHOR_FAILURE_DEGENERATE_LIGAND_DIRECTION
+                            ..=sys::BG_DOCKING_FIXED64_SINGLE_ANCHOR_FAILURE_NONFINITE_OUTPUT)
+                            .contains(&row.component_failure_code)
                 }
                 sys::BG_DOCKING_FIXED64_PRODUCER_FAILURE_ALLOCATION_INELIGIBLE
                 | sys::BG_DOCKING_FIXED64_PRODUCER_FAILURE_SOURCE_NOT_AVAILABLE
-                | sys::BG_DOCKING_FIXED64_PRODUCER_FAILURE_LIGAND_DENOMINATOR_MISMATCH
-                | sys::BG_DOCKING_FIXED64_PRODUCER_FAILURE_FEATURE_GEOMETRY_NOT_AVAILABLE => {
+                | sys::BG_DOCKING_FIXED64_PRODUCER_FAILURE_LIGAND_DENOMINATOR_MISMATCH => {
                     row.component_failure_code == 0
+                }
+                sys::BG_DOCKING_FIXED64_PRODUCER_FAILURE_FEATURE_GEOMETRY_NOT_AVAILABLE => {
+                    expected_placement
+                        == sys::BG_DOCKING_FIXED64_PRODUCER_PLACEMENT_SINGLE_ANCHOR
+                        && row.component_failure_code == 0
                 }
                 _ => false,
             };
@@ -2913,6 +3054,7 @@ fn validate_native_outputs(
     refinement: &sys::bg_docking_fixed64_refinement_output_v1,
     pipeline: &sys::bg_docking_fixed64_pipeline_output_v1,
     producer_rows: &[sys::bg_docking_fixed64_producer_row_v1],
+    expected_sources: &[Option<Fixed64CoordinateSource<'_>>],
     rigid_rows: &[sys::bg_docking_rigid_refinement_row_v1],
     torsion_rows: &[sys::bg_docking_torsion_v7_row_v1],
     torsion_moves: &[sys::bg_docking_torsion_v7_move_v1],
@@ -3400,7 +3542,18 @@ fn validate_native_outputs(
             expected_pair_count,
             geometric_hard_rejection_minimum_vdw_ratio,
         )?;
-        validate_producer_row_semantics(row, producer_coordinates, slot, ligand_atom_count)?;
+        validate_producer_row_semantics(
+            row,
+            producer_coordinates,
+            slot,
+            ligand_atom_count,
+            expected_sources.get(slot).copied().ok_or_else(|| {
+                Error::local(
+                    ErrorCode::AbiMismatch,
+                    "native fixed64 expected-source inventory is incomplete",
+                )
+            })?,
+        )?;
     }
     for (slot, row) in rigid_rows.iter().enumerate() {
         validate_rigid_row_semantics(
@@ -4588,16 +4741,19 @@ mod output_validation_tests {
         assert!(wrong_candidate_pairs.validate().is_err());
     }
 
-    fn generated_producer_row() -> sys::bg_docking_fixed64_producer_row_v1 {
+    fn generated_producer_row(
+        source: Fixed64CoordinateSource<'_>,
+    ) -> sys::bg_docking_fixed64_producer_row_v1 {
         let mut row = zeroed_abi_value!(sys::bg_docking_fixed64_producer_row_v1);
         row.status = sys::BG_DOCKING_FIXED64_PRODUCER_ROW_GENERATED;
         row.failure_code = sys::BG_DOCKING_FIXED64_PRODUCER_FAILURE_NONE;
+        row.lane = sys::BG_DOCKING_FIXED64_LANE_POCKET_CENTERED_CONTROLS;
         row.placement_kind = sys::BG_DOCKING_FIXED64_PRODUCER_PLACEMENT_EXACT_PASSTHROUGH;
         row.ligand_atom_count = 1;
         row.allocation_slot_receipt_sha256 = [1; 32];
-        row.source_payload_receipt_sha256 = [2; 32];
-        row.source_proposal_sha256 = [3; 32];
-        row.source_coordinate_sha256 = [4; 32];
+        row.source_payload_receipt_sha256 = canonical_source_payload_sha256(source, 1);
+        row.source_proposal_sha256 = source.evidence.proposal_sha256;
+        row.source_coordinate_sha256 = source.evidence.coordinate_sha256;
         row.placement_receipt_sha256 = [5; 32];
         row.output_proposal_sha256 = row.source_proposal_sha256;
         row.output_coordinate_sha256 = row.source_coordinate_sha256;
@@ -4618,36 +4774,103 @@ mod output_validation_tests {
             coordinates[1].as_slice(),
             coordinates[2].as_slice(),
         ];
-        let valid = generated_producer_row();
-        assert!(validate_producer_row_semantics(&valid, views, 0, 1).is_ok());
+        let source_coordinates = PositionSoa::new(views[0], views[1], views[2]);
+        let source = Fixed64CoordinateSource {
+            evidence: Fixed64SourceEvidence {
+                receipt_sha256: [2; 32],
+                proposal_sha256: [3; 32],
+                coordinate_sha256: canonical_coordinate_sha256(source_coordinates),
+            },
+            coordinates: source_coordinates,
+        };
+        let valid = generated_producer_row(source);
+        assert!(validate_producer_row_semantics(&valid, views, 0, 1, Some(source)).is_ok());
 
-        let mut nonunit = generated_producer_row();
+        let mut nonunit = generated_producer_row(source);
         nonunit.placement_quaternion_w = 0.5;
-        assert!(validate_producer_row_semantics(&nonunit, views, 0, 1).is_err());
+        assert!(validate_producer_row_semantics(&nonunit, views, 0, 1, Some(source)).is_err());
 
-        let mut wrong_lane = generated_producer_row();
+        let mut wrong_lane = generated_producer_row(source);
         wrong_lane.lane = sys::BG_DOCKING_FIXED64_LANE_UNIFORM_SOURCE_CONTROLS;
-        assert!(validate_producer_row_semantics(&wrong_lane, views, 0, 1).is_err());
+        assert!(validate_producer_row_semantics(&wrong_lane, views, 0, 1, Some(source)).is_err());
 
-        let mut cross_wired_passthrough = generated_producer_row();
+        let mut cross_wired_passthrough = generated_producer_row(source);
         cross_wired_passthrough.output_coordinate_sha256 = [9; 32];
-        assert!(validate_producer_row_semantics(&cross_wired_passthrough, views, 0, 1).is_err());
+        assert!(validate_producer_row_semantics(
+            &cross_wired_passthrough,
+            views,
+            0,
+            1,
+            Some(source),
+        )
+        .is_err());
+
+        let mut cross_wired_source = generated_producer_row(source);
+        cross_wired_source.source_proposal_sha256 = [9; 32];
+        assert!(
+            validate_producer_row_semantics(&cross_wired_source, views, 0, 1, Some(source),)
+                .is_err()
+        );
+
+        let different_coordinates = [vec![1.0], vec![0.0], vec![0.0]];
+        let different_views = [
+            different_coordinates[0].as_slice(),
+            different_coordinates[1].as_slice(),
+            different_coordinates[2].as_slice(),
+        ];
+        assert!(
+            validate_producer_row_semantics(&valid, different_views, 0, 1, Some(source),).is_err()
+        );
 
         let mut failure = zeroed_abi_value!(sys::bg_docking_fixed64_producer_row_v1);
         failure.status = sys::BG_DOCKING_FIXED64_PRODUCER_ROW_TYPED_FAILURE;
         failure.failure_code = sys::BG_DOCKING_FIXED64_PRODUCER_FAILURE_SOURCE_NOT_AVAILABLE;
+        failure.lane = sys::BG_DOCKING_FIXED64_LANE_POCKET_CENTERED_CONTROLS;
         failure.placement_kind = sys::BG_DOCKING_FIXED64_PRODUCER_PLACEMENT_EXACT_PASSTHROUGH;
         failure.ligand_atom_count = 1;
         failure.allocation_slot_receipt_sha256 = [1; 32];
         failure.allocation_identity_verified = 1;
         failure.geometric_identity_verified = 1;
         failure.denominator_preserved = 1;
-        assert!(validate_producer_row_semantics(&failure, views, 0, 1).is_ok());
+        assert!(validate_producer_row_semantics(&failure, views, 0, 1, None).is_ok());
         let mut spurious_placement = failure;
         spurious_placement.placement_receipt_sha256 = [8; 32];
-        assert!(validate_producer_row_semantics(&spurious_placement, views, 0, 1).is_err());
+        assert!(validate_producer_row_semantics(&spurious_placement, views, 0, 1, None).is_err());
         failure.coordinates_available = 1;
-        assert!(validate_producer_row_semantics(&failure, views, 0, 1).is_err());
+        assert!(validate_producer_row_semantics(&failure, views, 0, 1, None).is_err());
+
+        let mut indexed_failure_on_passthrough = generated_producer_row(source);
+        indexed_failure_on_passthrough.status = sys::BG_DOCKING_FIXED64_PRODUCER_ROW_TYPED_FAILURE;
+        indexed_failure_on_passthrough.failure_code =
+            sys::BG_DOCKING_FIXED64_PRODUCER_FAILURE_INDEXED_SO3_TYPED_FAILURE;
+        indexed_failure_on_passthrough.component_failure_code =
+            sys::BG_DOCKING_FIXED64_INDEXED_SO3_FAILURE_DEGENERATE_SOURCE_GEOMETRY;
+        indexed_failure_on_passthrough.coordinates_available = 0;
+        indexed_failure_on_passthrough.output_proposal_sha256 = [0; 32];
+        indexed_failure_on_passthrough.output_coordinate_sha256 = [0; 32];
+        indexed_failure_on_passthrough.placement_quaternion_w = 0.0;
+        assert!(validate_producer_row_semantics(
+            &indexed_failure_on_passthrough,
+            views,
+            0,
+            1,
+            Some(source),
+        )
+        .is_err());
+
+        let mut feature_failure_on_passthrough = indexed_failure_on_passthrough;
+        feature_failure_on_passthrough.failure_code =
+            sys::BG_DOCKING_FIXED64_PRODUCER_FAILURE_FEATURE_GEOMETRY_NOT_AVAILABLE;
+        feature_failure_on_passthrough.component_failure_code = 0;
+        feature_failure_on_passthrough.placement_receipt_sha256 = [0; 32];
+        assert!(validate_producer_row_semantics(
+            &feature_failure_on_passthrough,
+            views,
+            0,
+            1,
+            Some(source),
+        )
+        .is_err());
     }
 
     fn accepted_geometric_row() -> sys::bg_docking_geometric_admission_row_v1 {
