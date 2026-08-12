@@ -43,6 +43,16 @@ static_assert(
 static_assert(std::is_standard_layout<
               bg_docking_fixed64_allocation_output_v1>::value);
 static_assert(std::is_standard_layout<
+              bg_docking_fixed64_so3_input_v1>::value);
+static_assert(std::is_standard_layout<
+              bg_docking_fixed64_so3_row_v1>::value);
+static_assert(std::is_standard_layout<
+              bg_docking_fixed64_so3_output_v1>::value);
+static_assert(std::is_standard_layout<
+              bg_docking_fixed64_indexed_so3_input_v1>::value);
+static_assert(std::is_standard_layout<
+              bg_docking_fixed64_indexed_so3_output_v1>::value);
+static_assert(std::is_standard_layout<
               bg_docking_geometric_admission_context_soa_v1>::value);
 static_assert(std::is_standard_layout<
               bg_docking_geometric_admission_candidate_batch_soa_v1>::value);
@@ -226,6 +236,59 @@ static_assert(offsetof(
                   bg_docking_fixed64_so3_output_v1,
                   result_dependent_input_consumed) == 72);
 static_assert(offsetof(bg_docking_fixed64_so3_output_v1, reserved) == 80);
+
+static_assert(sizeof(bg_docking_fixed64_indexed_so3_input_v1) == 352);
+static_assert(alignof(bg_docking_fixed64_indexed_so3_input_v1) == 8);
+static_assert(offsetof(
+                  bg_docking_fixed64_indexed_so3_input_v1,
+                  allocation_rows) == 80);
+static_assert(offsetof(
+                  bg_docking_fixed64_indexed_so3_input_v1,
+                  source) == 96);
+static_assert(offsetof(
+                  bg_docking_fixed64_indexed_so3_input_v1,
+                  ligand_atom_count) == 208);
+static_assert(offsetof(
+                  bg_docking_fixed64_indexed_so3_input_v1,
+                  source_x_angstrom) == 216);
+static_assert(offsetof(
+                  bg_docking_fixed64_indexed_so3_input_v1,
+                  pocket_center_angstrom) == 240);
+static_assert(offsetof(
+                  bg_docking_fixed64_indexed_so3_input_v1,
+                  pocket_normal) == 264);
+static_assert(offsetof(
+                  bg_docking_fixed64_indexed_so3_input_v1,
+                  reserved) == 288);
+static_assert(sizeof(bg_docking_fixed64_indexed_so3_output_v1) == 336);
+static_assert(alignof(bg_docking_fixed64_indexed_so3_output_v1) == 8);
+static_assert(offsetof(
+                  bg_docking_fixed64_indexed_so3_output_v1,
+                  x_angstrom) == 16);
+static_assert(offsetof(
+                  bg_docking_fixed64_indexed_so3_output_v1,
+                  slot_index) == 40);
+static_assert(offsetof(
+                  bg_docking_fixed64_indexed_so3_output_v1,
+                  backend) == 56);
+static_assert(offsetof(
+                  bg_docking_fixed64_indexed_so3_output_v1,
+                  ligand_atom_count) == 64);
+static_assert(offsetof(
+                  bg_docking_fixed64_indexed_so3_output_v1,
+                  quaternion_x) == 80);
+static_assert(offsetof(
+                  bg_docking_fixed64_indexed_so3_output_v1,
+                  translation_angstrom) == 112);
+static_assert(offsetof(
+                  bg_docking_fixed64_indexed_so3_output_v1,
+                  source_seed_sha256) == 160);
+static_assert(offsetof(
+                  bg_docking_fixed64_indexed_so3_output_v1,
+                  coordinates_written) == 256);
+static_assert(offsetof(
+                  bg_docking_fixed64_indexed_so3_output_v1,
+                  reserved) == 272);
 
 static_assert(sizeof(bg_docking_geometric_admission_context_soa_v1) == 320);
 static_assert(alignof(bg_docking_geometric_admission_context_soa_v1) == 8);

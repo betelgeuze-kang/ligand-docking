@@ -569,6 +569,7 @@ fn indexed_so3_source_seed_sha256(
 ) -> [u8; 32] {
     let mut hash = CanonicalHash::new("betelgeuze.fixed64_indexed_so3_seed/native-v1");
     hash.digest(source.receipt_sha256);
+    hash.digest(source.proposal_sha256);
     hash.digest(source.coordinate_sha256);
     hash.vec3(pocket_center_angstrom);
     hash.vec3(pocket_normal);

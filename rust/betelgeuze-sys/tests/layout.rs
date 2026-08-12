@@ -5,7 +5,7 @@ use betelgeuze_sys::*;
 #[test]
 fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(BG_ABI_VERSION_MAJOR, 1);
-    assert_eq!(BG_ABI_VERSION_MINOR, 15);
+    assert_eq!(BG_ABI_VERSION_MINOR, 16);
     assert_eq!(BG_ABI_VERSION, 1);
     assert_eq!(size_of::<bg_status>(), 4);
     assert_eq!(size_of::<bg_backend>(), 4);
@@ -18,6 +18,8 @@ fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(size_of::<bg_docking_fixed64_allocation_row_status>(), 4);
     assert_eq!(size_of::<bg_docking_fixed64_so3_row_status>(), 4);
     assert_eq!(size_of::<bg_docking_fixed64_so3_failure>(), 4);
+    assert_eq!(size_of::<bg_docking_fixed64_indexed_so3_status>(), 4);
+    assert_eq!(size_of::<bg_docking_fixed64_indexed_so3_failure>(), 4);
     assert_eq!(
         size_of::<bg_docking_geometric_admission_candidate_state>(),
         4
@@ -245,6 +247,89 @@ fn fixed64_so3_layouts_match_the_c_header() {
         72
     );
     assert_eq!(offset_of!(bg_docking_fixed64_so3_output_v1, reserved), 80);
+}
+
+#[cfg(target_pointer_width = "64")]
+#[test]
+fn fixed64_indexed_so3_layouts_match_the_c_header() {
+    assert_eq!(size_of::<bg_docking_fixed64_indexed_so3_input_v1>(), 352);
+    assert_eq!(align_of::<bg_docking_fixed64_indexed_so3_input_v1>(), 8);
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_indexed_so3_input_v1, allocation_rows),
+        80
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_indexed_so3_input_v1, source),
+        96
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_indexed_so3_input_v1, ligand_atom_count),
+        208
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_indexed_so3_input_v1, source_x_angstrom),
+        216
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_fixed64_indexed_so3_input_v1,
+            pocket_center_angstrom
+        ),
+        240
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_indexed_so3_input_v1, pocket_normal),
+        264
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_indexed_so3_input_v1, reserved),
+        288
+    );
+
+    assert_eq!(size_of::<bg_docking_fixed64_indexed_so3_output_v1>(), 336);
+    assert_eq!(align_of::<bg_docking_fixed64_indexed_so3_output_v1>(), 8);
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_indexed_so3_output_v1, x_angstrom),
+        16
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_indexed_so3_output_v1, slot_index),
+        40
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_indexed_so3_output_v1, backend),
+        56
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_indexed_so3_output_v1, ligand_atom_count),
+        64
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_indexed_so3_output_v1, quaternion_x),
+        80
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_fixed64_indexed_so3_output_v1,
+            translation_angstrom
+        ),
+        112
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_indexed_so3_output_v1, source_seed_sha256),
+        160
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_fixed64_indexed_so3_output_v1,
+            coordinates_written
+        ),
+        256
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_indexed_so3_output_v1, reserved),
+        272
+    );
 }
 
 #[test]

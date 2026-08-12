@@ -56,7 +56,7 @@ extern "C" {
 #endif
 
 #define BG_ABI_VERSION_MAJOR UINT32_C(1)
-#define BG_ABI_VERSION_MINOR UINT32_C(15)
+#define BG_ABI_VERSION_MINOR UINT32_C(16)
 #define BG_ABI_VERSION UINT32_C(1)
 
 #define BG_CANONICAL_LENGTH_UNIT "angstrom"
@@ -216,6 +216,20 @@ enum {
     BG_DOCKING_FIXED64_SO3_FAILURE_NONE = 0,
     BG_DOCKING_FIXED64_SO3_FAILURE_SEQUENCE_EXHAUSTED = 1,
     BG_DOCKING_FIXED64_SO3_FAILURE_NONFINITE_QUATERNION = 2
+};
+
+/* Source-bound rigid placement driven by one frozen fixed64 SO(3) slot. */
+typedef int32_t bg_docking_fixed64_indexed_so3_status;
+enum {
+    BG_DOCKING_FIXED64_INDEXED_SO3_PLACED = 1,
+    BG_DOCKING_FIXED64_INDEXED_SO3_TYPED_FAILURE = 2
+};
+
+typedef int32_t bg_docking_fixed64_indexed_so3_failure;
+enum {
+    BG_DOCKING_FIXED64_INDEXED_SO3_FAILURE_NONE = 0,
+    BG_DOCKING_FIXED64_INDEXED_SO3_FAILURE_DEGENERATE_SOURCE_GEOMETRY = 1,
+    BG_DOCKING_FIXED64_INDEXED_SO3_FAILURE_NONFINITE_OUTPUT = 2
 };
 
 /* Frozen fixed64 pre/post-refinement geometric-admission semantics. */
@@ -940,6 +954,73 @@ typedef struct bg_docking_fixed64_so3_output_v1 {
     uint8_t reserved1[2];
     uint64_t reserved[8];
 } bg_docking_fixed64_so3_output_v1;
+
+/*
+ * One exact source and one immutable ready allocation row. The selected row
+ * must be slot 24..43 from the deterministic-independent or true-conformer
+ * SO(3) lanes. Coordinates and all identities are caller-owned for one call.
+ */
+typedef struct bg_docking_fixed64_indexed_so3_input_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    uint8_t allocation_inventory_sha256[32];
+    uint8_t allocation_receipt_sha256[32];
+    uint64_t allocation_row_count;
+    const bg_docking_fixed64_allocation_row_v1 *allocation_rows;
+    uint32_t slot_index;
+    uint32_t reserved0;
+    bg_docking_fixed64_source_evidence_v1 source;
+    uint64_t ligand_atom_count;
+    const double *source_x_angstrom;
+    const double *source_y_angstrom;
+    const double *source_z_angstrom;
+    double pocket_center_angstrom[3];
+    double pocket_normal[3];
+    uint64_t reserved[8];
+} bg_docking_fixed64_indexed_so3_input_v1;
+
+/*
+ * Transactional single-slot placement output. Coordinate channels commit only
+ * after backend generation, identity revalidation, and finite-geometry checks
+ * all succeed. A degenerate but identity-valid source is a typed row failure
+ * and leaves coordinate channels untouched.
+ */
+typedef struct bg_docking_fixed64_indexed_so3_output_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    uint64_t coordinate_capacity;
+    double *x_angstrom;
+    double *y_angstrom;
+    double *z_angstrom;
+    uint32_t slot_index;
+    bg_docking_fixed64_lane lane;
+    bg_docking_fixed64_indexed_so3_status status;
+    bg_docking_fixed64_indexed_so3_failure failure_code;
+    bg_backend backend;
+    uint32_t accepted_sequence_index;
+    uint64_t ligand_atom_count;
+    uint64_t raw_sequence_index;
+    double quaternion_x;
+    double quaternion_y;
+    double quaternion_z;
+    double quaternion_w;
+    double translation_angstrom[3];
+    double source_centroid_angstrom[3];
+    uint8_t source_seed_sha256[32];
+    uint8_t output_coordinate_sha256[32];
+    uint8_t placement_receipt_sha256[32];
+    uint8_t coordinates_written;
+    uint8_t source_identity_verified;
+    uint8_t allocation_identity_verified;
+    uint8_t result_dependent_input_consumed;
+    uint8_t denominator_preserved;
+    uint8_t molecular_execution_authorized;
+    uint8_t reservation_authorized;
+    uint8_t benchmark_execution_authorized;
+    uint8_t production_claim_authorized;
+    uint8_t reserved0[7];
+    uint64_t reserved[8];
+} bg_docking_fixed64_indexed_so3_output_v1;
 
 /*
  * Persistent fixed64 geometric-admission context. All receptor coordinates,
@@ -1889,6 +1970,14 @@ BG_API bg_status BG_CALL bg_docking_fixed64_so3_output_v1_init(
     bg_docking_fixed64_so3_output_v1 *output,
     size_t caller_struct_size,
     uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_fixed64_indexed_so3_input_v1_init(
+    bg_docking_fixed64_indexed_so3_input_v1 *input,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_fixed64_indexed_so3_output_v1_init(
+    bg_docking_fixed64_indexed_so3_output_v1 *output,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
 BG_API bg_status BG_CALL bg_docking_geometric_admission_context_soa_v1_init(
     bg_docking_geometric_admission_context_soa_v1 *descriptor,
     size_t caller_struct_size,
@@ -2041,6 +2130,16 @@ BG_API bg_status BG_CALL bg_docking_fixed64_refinement_output_v1_init(
         (output), \
         sizeof(bg_docking_fixed64_so3_output_v1), \
         BG_ABI_VERSION)
+#  define bg_docking_fixed64_indexed_so3_input_v1_init(input) \
+    bg_docking_fixed64_indexed_so3_input_v1_init( \
+        (input), \
+        sizeof(bg_docking_fixed64_indexed_so3_input_v1), \
+        BG_ABI_VERSION)
+#  define bg_docking_fixed64_indexed_so3_output_v1_init(output) \
+    bg_docking_fixed64_indexed_so3_output_v1_init( \
+        (output), \
+        sizeof(bg_docking_fixed64_indexed_so3_output_v1), \
+        BG_ABI_VERSION)
 #  define bg_docking_geometric_admission_context_soa_v1_init(descriptor) \
     bg_docking_geometric_admission_context_soa_v1_init( \
         (descriptor), \
@@ -2182,6 +2281,16 @@ BG_API bg_status BG_CALL bg_docking_fixed64_so3_v1_generate(
     const bg_context *context,
     const bg_docking_fixed64_so3_input_v1 *input,
     bg_docking_fixed64_so3_output_v1 *output) BG_NOEXCEPT;
+
+/*
+ * Place one immutable fixed64 indexed-SO(3) row through the context's explicit
+ * C++, Rust, hip_safe, or hip_fast backend. The orientation prefix and rigid
+ * transform both execute on the selected backend; fallback is forbidden.
+ */
+BG_API bg_status BG_CALL bg_docking_fixed64_indexed_so3_v1_place(
+    const bg_context *context,
+    const bg_docking_fixed64_indexed_so3_input_v1 *input,
+    bg_docking_fixed64_indexed_so3_output_v1 *output) BG_NOEXCEPT;
 
 /*
  * The same persistent full-Cartesian geometric gate is used before and after

@@ -19,6 +19,8 @@ const VENDORED_FILES: &[&str] = &[
     "native/src/docking/fixed64_allocation.cpp",
     "native/src/docking/fixed64_so3.cpp",
     "native/src/docking/fixed64_so3_reference.hpp",
+    "native/src/docking/fixed64_indexed_so3_provider.h",
+    "native/src/docking/fixed64_indexed_so3.cpp",
     "native/src/docking/fixed64_downstream.cpp",
     "native/src/docking/fixed64_refinement_pipeline.cpp",
     "native/src/docking/geometric_admission.cpp",
@@ -263,6 +265,8 @@ fn main() {
     let docking_fixed64_allocation_source =
         vendor_root.join("native/src/docking/fixed64_allocation.cpp");
     let docking_fixed64_so3_source = vendor_root.join("native/src/docking/fixed64_so3.cpp");
+    let docking_fixed64_indexed_so3_source =
+        vendor_root.join("native/src/docking/fixed64_indexed_so3.cpp");
     let docking_fixed64_downstream_source =
         vendor_root.join("native/src/docking/fixed64_downstream.cpp");
     let docking_fixed64_refinement_pipeline_source =
@@ -308,6 +312,7 @@ fn main() {
         .file(&rust_evaluator_source)
         .file(&docking_fixed64_allocation_source)
         .file(&docking_fixed64_so3_source)
+        .file(&docking_fixed64_indexed_so3_source)
         .file(&docking_fixed64_downstream_source)
         .file(&docking_fixed64_refinement_pipeline_source)
         .file(&docking_geometric_admission_source)

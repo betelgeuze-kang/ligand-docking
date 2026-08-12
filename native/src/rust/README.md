@@ -66,3 +66,9 @@ ABI 1.15 exposes an independent Rust CPU implementation of the source-bound
 low-discrepancy SO(3) prefix. The public dispatcher validates canonical unit
 quaternions and geodesic uniqueness before receipt commit; C++ and HIP lanes
 do not call the Rust implementation.
+
+ABI 1.16 adds the independent Rust CPU indexed-placement kernel. It consumes
+only the private, already validated source geometry and sequence index, writes
+to caller-inaccessible staging channels, and returns typed degeneracy evidence
+without partial coordinate mutation. The public C++ boundary remains the sole
+authority for allocation/source identity and receipt validation.

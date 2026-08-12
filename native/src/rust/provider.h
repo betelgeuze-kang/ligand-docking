@@ -2,6 +2,7 @@
 #define BETELGEUZE_NATIVE_RUST_PROVIDER_H
 
 #include "betelgeuze/engine.h"
+#include "../docking/fixed64_indexed_so3_provider.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -152,6 +153,14 @@ int32_t bg_rust_cpu_docking_fixed64_allocation_v1_build(
 int32_t bg_rust_cpu_docking_fixed64_so3_v1_generate(
     const bg_docking_fixed64_so3_input_v1 *input,
     bg_docking_fixed64_so3_row_v1 *out_rows,
+    bg_rust_cpu_error_v1 *out_error);
+
+int32_t bg_rust_cpu_docking_fixed64_indexed_so3_v1_place(
+    const bg_native_fixed64_indexed_so3_kernel_input_v1 *input,
+    double *out_x_angstrom,
+    double *out_y_angstrom,
+    double *out_z_angstrom,
+    bg_native_fixed64_indexed_so3_kernel_result_v1 *out_result,
     bg_rust_cpu_error_v1 *out_error);
 
 int32_t bg_rust_cpu_docking_scorer_v1_create(

@@ -2,6 +2,7 @@
 #define BETELGEUZE_NATIVE_HIP_SAFE_PROVIDER_H
 
 #include "betelgeuze/engine.h"
+#include "../docking/fixed64_indexed_so3_provider.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -148,6 +149,16 @@ int32_t bg_hip_safe_docking_fixed64_so3_v1_generate(
     char *error_message,
     size_t error_capacity);
 
+int32_t bg_hip_safe_docking_fixed64_indexed_so3_v1_place(
+    int32_t device_ordinal,
+    const bg_native_fixed64_indexed_so3_kernel_input_v1 *input,
+    double *out_x_angstrom,
+    double *out_y_angstrom,
+    double *out_z_angstrom,
+    bg_native_fixed64_indexed_so3_kernel_result_v1 *out_result,
+    char *error_message,
+    size_t error_capacity);
+
 int32_t bg_hip_safe_docking_geometric_admission_v1_create(
     int32_t device_ordinal,
     const bg_docking_geometric_admission_context_soa_v1 *descriptor,
@@ -284,6 +295,16 @@ int32_t bg_hip_fast_docking_fixed64_so3_v1_generate(
     int32_t device_ordinal,
     const bg_docking_fixed64_so3_input_v1 *input,
     bg_docking_fixed64_so3_row_v1 *out_rows,
+    char *error_message,
+    size_t error_capacity);
+
+int32_t bg_hip_fast_docking_fixed64_indexed_so3_v1_place(
+    int32_t device_ordinal,
+    const bg_native_fixed64_indexed_so3_kernel_input_v1 *input,
+    double *out_x_angstrom,
+    double *out_y_angstrom,
+    double *out_z_angstrom,
+    bg_native_fixed64_indexed_so3_kernel_result_v1 *out_result,
     char *error_message,
     size_t error_capacity);
 
