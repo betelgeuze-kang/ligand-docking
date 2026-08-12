@@ -5,6 +5,7 @@
 //! scientific context, so safe callers cannot cross-wire admission, refinement,
 //! scoring, and validity inputs or reuse the handle with another native context.
 
+use std::collections::HashMap;
 use std::ffi::CStr;
 use std::marker::PhantomData;
 use std::mem::{size_of, MaybeUninit};
@@ -1048,6 +1049,11 @@ pub struct Fixed64Pipeline<'context> {
     ligand_atom_count: usize,
     receptor_system_sha256: Sha256,
     ligand_system_sha256: Sha256,
+    rotatable_child_atom_indices: Vec<u64>,
+    validity_exclusion_count: u64,
+    validity_chirality_count: u64,
+    validity_contact_cell_size_angstrom: f64,
+    validity_receptor_cells: HashMap<(i64, i64, i64), u64>,
     _not_send_or_sync: PhantomData<Rc<()>>,
 }
 
@@ -1066,6 +1072,45 @@ impl Drop for PipelineHandleGuard {
         // SAFETY: the guard owns this non-null handle until into_inner transfers it.
         unsafe { sys::bg_docking_fixed64_pipeline_v1_destroy(self.0.as_ptr()) };
     }
+}
+
+fn validity_cell_component(value: f64, cell_size: f64) -> Result<i64> {
+    let component = (value / cell_size).floor();
+    const I64_MIN_INCLUSIVE: f64 = -9_223_372_036_854_775_808.0;
+    const I64_MAX_EXCLUSIVE: f64 = 9_223_372_036_854_775_808.0;
+    if !component.is_finite() || !(I64_MIN_INCLUSIVE..I64_MAX_EXCLUSIVE).contains(&component) {
+        return Err(invalid(
+            "fixed64 receptor coordinate is outside the validity cell-key range",
+        ));
+    }
+    Ok(component as i64)
+}
+
+fn validity_receptor_cells(
+    coordinates: PositionSoa<'_>,
+    cell_size: f64,
+) -> Result<HashMap<(i64, i64, i64), u64>> {
+    if !cell_size.is_finite() || cell_size <= 0.0 {
+        return Err(invalid(
+            "fixed64 validity contact-cell size must be finite and positive",
+        ));
+    }
+    let mut cells = HashMap::new();
+    for atom in 0..coordinates.x_angstrom.len() {
+        let key = (
+            validity_cell_component(coordinates.x_angstrom[atom], cell_size)?,
+            validity_cell_component(coordinates.y_angstrom[atom], cell_size)?,
+            validity_cell_component(coordinates.z_angstrom[atom], cell_size)?,
+        );
+        let count = cells.entry(key).or_insert(0_u64);
+        *count = count.checked_add(1).ok_or_else(|| {
+            Error::local(
+                ErrorCode::CapacityOverflow,
+                "fixed64 validity receptor-cell occupancy overflowed",
+            )
+        })?;
+    }
+    Ok(cells)
 }
 
 impl<'context> Fixed64Pipeline<'context> {
@@ -1313,6 +1358,14 @@ impl<'context> Fixed64Pipeline<'context> {
             scientific.identities.validity_scorer_context_receipt_sha256;
         validity.backend_receipt_sha256 = scientific.identities.backend_receipt_sha256;
         validity.contact_policy_sha256 = scientific.identities.contact_policy_sha256;
+        let validity_exclusion_count = checked_count(scientific.ligand.exclusions.len())?;
+        let validity_chirality_count = checked_count(scientific.ligand.chirality_centers.len())?;
+        let validity_contact_cell_size_angstrom = validity.contact_cell_size_angstrom;
+        let validity_receptor_cells = validity_receptor_cells(
+            scientific.receptor.coordinates,
+            validity_contact_cell_size_angstrom,
+        )?;
+        let rotatable_child_atom_indices = scientific.ligand.rotatable_child_atom_index.to_vec();
 
         let mut handle = ptr::null_mut();
         // SAFETY: every descriptor points to validated slices that remain live
@@ -1349,6 +1402,11 @@ impl<'context> Fixed64Pipeline<'context> {
             ligand_atom_count: ligand_count,
             receptor_system_sha256: scientific.identities.receptor_system_sha256,
             ligand_system_sha256: scientific.identities.ligand_system_sha256,
+            rotatable_child_atom_indices,
+            validity_exclusion_count,
+            validity_chirality_count,
+            validity_contact_cell_size_angstrom,
+            validity_receptor_cells,
             _not_send_or_sync: PhantomData,
         })
     }
@@ -1708,6 +1766,29 @@ impl<'context> Fixed64Pipeline<'context> {
             &representative_indices,
             &top_k_indices,
             &raw_modes,
+            [
+                producer_x.as_slice(),
+                producer_y.as_slice(),
+                producer_z.as_slice(),
+            ],
+            &rigid_coordinates,
+            [
+                final_coordinates[0].as_slice(),
+                final_coordinates[1].as_slice(),
+                final_coordinates[2].as_slice(),
+            ],
+            [
+                final_quaternions[0].as_slice(),
+                final_quaternions[1].as_slice(),
+                final_quaternions[2].as_slice(),
+                final_quaternions[3].as_slice(),
+            ],
+            input.rmsd_threshold_angstrom,
+            &self.rotatable_child_atom_indices,
+            self.validity_exclusion_count,
+            self.validity_chirality_count,
+            self.validity_contact_cell_size_angstrom,
+            &self.validity_receptor_cells,
         )?;
 
         primary_indices.truncate(usize::try_from(ranking_output.primary_index_count).map_err(
@@ -1894,6 +1975,732 @@ impl Drop for Fixed64Pipeline<'_> {
     }
 }
 
+fn coordinate_segment_matches(
+    channels: &[&[f64]],
+    slot: usize,
+    ligand_atom_count: u64,
+    require_zero: bool,
+) -> Result<bool> {
+    let ligand_count = usize::try_from(ligand_atom_count).map_err(|_| {
+        Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 ligand denominator does not fit usize",
+        )
+    })?;
+    let begin = slot.checked_mul(ligand_count).ok_or_else(|| {
+        Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 coordinate segment offset overflowed",
+        )
+    })?;
+    let end = begin.checked_add(ligand_count).ok_or_else(|| {
+        Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 coordinate segment end overflowed",
+        )
+    })?;
+    for channel in channels {
+        let segment = channel.get(begin..end).ok_or_else(|| {
+            Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 coordinate segment exceeds its owned buffer",
+            )
+        })?;
+        if segment.iter().any(|value| {
+            if require_zero {
+                *value != 0.0
+            } else {
+                !value.is_finite()
+            }
+        }) {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
+
+fn unit_quaternion(values: [f64; 4]) -> bool {
+    if values.iter().any(|value| !value.is_finite()) {
+        return false;
+    }
+    let norm = values[0].hypot(values[1]).hypot(values[2].hypot(values[3]));
+    norm.is_finite() && (norm - 1.0).abs() <= 1.0e-8
+}
+
+fn validate_producer_row_semantics(
+    row: &sys::bg_docking_fixed64_producer_row_v1,
+    coordinates: [&[f64]; 3],
+    slot: usize,
+    ligand_atom_count: u64,
+) -> Result<()> {
+    let coordinates_available = bool_from_abi(
+        row.coordinates_available,
+        "producer coordinate availability",
+    )?;
+    let steric_precheck = bool_from_abi(row.steric_precheck_passed, "producer steric precheck")?;
+    let source_verified = bool_from_abi(row.source_identity_verified, "producer source identity")?;
+    let allocation_verified = bool_from_abi(
+        row.allocation_identity_verified,
+        "producer allocation identity",
+    )?;
+    let geometric_verified = bool_from_abi(
+        row.geometric_identity_verified,
+        "producer geometric identity",
+    )?;
+    let rank_eligible = bool_from_abi(
+        row.geometric_admission.rank_eligible,
+        "producer geometric rank eligibility",
+    )?;
+    let source_digests_present = digest_present(&row.source_payload_receipt_sha256)
+        && digest_present(&row.source_proposal_sha256)
+        && digest_present(&row.source_coordinate_sha256);
+    let source_digests_zero = !digest_present(&row.source_payload_receipt_sha256)
+        && !digest_present(&row.source_proposal_sha256)
+        && !digest_present(&row.source_coordinate_sha256);
+    if row.reserved0 != 0
+        || !digest_present(&row.allocation_slot_receipt_sha256)
+        || !allocation_verified
+        || !geometric_verified
+        || source_verified != source_digests_present
+        || (!source_verified && !source_digests_zero)
+        || steric_precheck != rank_eligible
+    {
+        return Err(Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 producer identity evidence is inconsistent",
+        ));
+    }
+    let quaternion = [
+        row.placement_quaternion_x,
+        row.placement_quaternion_y,
+        row.placement_quaternion_z,
+        row.placement_quaternion_w,
+    ];
+    match row.status {
+        sys::BG_DOCKING_FIXED64_PRODUCER_ROW_GENERATED => {
+            if row.failure_code != sys::BG_DOCKING_FIXED64_PRODUCER_FAILURE_NONE
+                || row.component_failure_code != 0
+                || row.placement_kind < sys::BG_DOCKING_FIXED64_PRODUCER_PLACEMENT_EXACT_PASSTHROUGH
+                || row.placement_kind > sys::BG_DOCKING_FIXED64_PRODUCER_PLACEMENT_SINGLE_ANCHOR
+                || !coordinates_available
+                || !source_verified
+                || !digest_present(&row.placement_receipt_sha256)
+                || !digest_present(&row.output_proposal_sha256)
+                || !digest_present(&row.output_coordinate_sha256)
+                || !unit_quaternion(quaternion)
+                || !coordinate_segment_matches(&coordinates, slot, ligand_atom_count, false)?
+            {
+                return Err(Error::local(
+                    ErrorCode::AbiMismatch,
+                    "native fixed64 generated producer row retained invalid success evidence",
+                ));
+            }
+        }
+        sys::BG_DOCKING_FIXED64_PRODUCER_ROW_TYPED_FAILURE => {
+            let valid_component_failure = match row.failure_code {
+                sys::BG_DOCKING_FIXED64_PRODUCER_FAILURE_INDEXED_SO3_TYPED_FAILURE => {
+                    (sys::BG_DOCKING_FIXED64_INDEXED_SO3_FAILURE_DEGENERATE_SOURCE_GEOMETRY
+                        ..=sys::BG_DOCKING_FIXED64_INDEXED_SO3_FAILURE_NONFINITE_OUTPUT)
+                        .contains(&row.component_failure_code)
+                }
+                sys::BG_DOCKING_FIXED64_PRODUCER_FAILURE_SINGLE_ANCHOR_TYPED_FAILURE => {
+                    (sys::BG_DOCKING_FIXED64_SINGLE_ANCHOR_FAILURE_DEGENERATE_LIGAND_DIRECTION
+                        ..=sys::BG_DOCKING_FIXED64_SINGLE_ANCHOR_FAILURE_NONFINITE_OUTPUT)
+                        .contains(&row.component_failure_code)
+                }
+                sys::BG_DOCKING_FIXED64_PRODUCER_FAILURE_ALLOCATION_INELIGIBLE
+                | sys::BG_DOCKING_FIXED64_PRODUCER_FAILURE_SOURCE_NOT_AVAILABLE
+                | sys::BG_DOCKING_FIXED64_PRODUCER_FAILURE_LIGAND_DENOMINATOR_MISMATCH
+                | sys::BG_DOCKING_FIXED64_PRODUCER_FAILURE_FEATURE_GEOMETRY_NOT_AVAILABLE => {
+                    row.component_failure_code == 0
+                }
+                _ => false,
+            };
+            if !valid_component_failure
+                || coordinates_available
+                || digest_present(&row.output_proposal_sha256)
+                || digest_present(&row.output_coordinate_sha256)
+                || quaternion.iter().any(|value| *value != 0.0)
+                || !coordinate_segment_matches(&coordinates, slot, ligand_atom_count, true)?
+            {
+                return Err(Error::local(
+                    ErrorCode::AbiMismatch,
+                    "native fixed64 producer typed failure retained output evidence",
+                ));
+            }
+        }
+        _ => {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 producer row status is unknown",
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn rigid_evidence_values(value: &sys::bg_docking_rigid_refinement_evidence_v1) -> [f64; 13] {
+    [
+        value.initial_penalty,
+        value.final_penalty,
+        value.total_translation_angstrom[0],
+        value.total_translation_angstrom[1],
+        value.total_translation_angstrom[2],
+        value.total_rotation_vector_radians[0],
+        value.total_rotation_vector_radians[1],
+        value.total_rotation_vector_radians[2],
+        value.total_rotation_path_radians,
+        value.initial_centroid_offset_angstrom,
+        value.final_centroid_offset_angstrom,
+        value.maximum_centroid_offset_angstrom,
+        value.accepted_steps as f64,
+    ]
+}
+
+fn rigid_evidence_is_zero(value: &sys::bg_docking_rigid_refinement_evidence_v1) -> bool {
+    value.profile == sys::BG_DOCKING_RIGID_REFINEMENT_PROFILE_NONE
+        && value.available == 0
+        && value.reserved0.iter().all(|item| *item == 0)
+        && value.accepted_steps == 0
+        && value.accepted_translation_steps == 0
+        && value.accepted_rotation_steps == 0
+        && value.line_search_evaluation_count == 0
+        && value.fallback_direction_step_count == 0
+        && rigid_evidence_values(value)
+            .iter()
+            .take(12)
+            .all(|item| *item == 0.0)
+        && value.reserved.iter().all(|item| *item == 0)
+}
+
+fn rigid_evidence_is_consistent(
+    value: &sys::bg_docking_rigid_refinement_evidence_v1,
+) -> Result<bool> {
+    let available = bool_from_abi(value.available, "rigid evidence availability")?;
+    if !available {
+        return Ok(rigid_evidence_is_zero(value));
+    }
+    let values = rigid_evidence_values(value);
+    let rotation_norm = values[5].hypot(values[6]).hypot(values[7]);
+    Ok(value.reserved0.iter().all(|item| *item == 0)
+        && value.reserved.iter().all(|item| *item == 0)
+        && value.profile >= sys::BG_DOCKING_RIGID_REFINEMENT_PROFILE_V2_TRANSLATION
+        && value.profile <= sys::BG_DOCKING_RIGID_REFINEMENT_PROFILE_V6_CLEARANCE_V4
+        && value.accepted_translation_steps <= value.accepted_steps
+        && value.accepted_rotation_steps == value.accepted_steps - value.accepted_translation_steps
+        && value.fallback_direction_step_count <= value.accepted_steps
+        && values.iter().all(|item| item.is_finite())
+        && value.initial_penalty >= 0.0
+        && value.final_penalty >= 0.0
+        && value.total_rotation_path_radians >= 0.0
+        && rotation_norm.is_finite()
+        && rotation_norm <= value.total_rotation_path_radians + 2.0e-12
+        && (value.accepted_rotation_steps != 0
+            || (rotation_norm == 0.0 && value.total_rotation_path_radians == 0.0)))
+}
+
+fn rigid_evidence_equal(
+    left: &sys::bg_docking_rigid_refinement_evidence_v1,
+    right: &sys::bg_docking_rigid_refinement_evidence_v1,
+) -> bool {
+    left.profile == right.profile
+        && left.available == right.available
+        && left.accepted_steps == right.accepted_steps
+        && left.accepted_translation_steps == right.accepted_translation_steps
+        && left.accepted_rotation_steps == right.accepted_rotation_steps
+        && left.line_search_evaluation_count == right.line_search_evaluation_count
+        && left.fallback_direction_step_count == right.fallback_direction_step_count
+        && rigid_evidence_values(left)[..12] == rigid_evidence_values(right)[..12]
+}
+
+fn validate_rigid_coordinate_channel(
+    evidence: &sys::bg_docking_rigid_refinement_evidence_v1,
+    coordinates: &[Vec<f64>; 12],
+    first_channel: usize,
+    slot: usize,
+    ligand_atom_count: u64,
+) -> Result<bool> {
+    let channels = [
+        coordinates[first_channel].as_slice(),
+        coordinates[first_channel + 1].as_slice(),
+        coordinates[first_channel + 2].as_slice(),
+    ];
+    coordinate_segment_matches(&channels, slot, ligand_atom_count, evidence.available == 0)
+}
+
+fn validate_rigid_row_semantics(
+    row: &sys::bg_docking_rigid_refinement_row_v1,
+    requested_mode: sys::bg_docking_rigid_refinement_candidate_mode,
+    coordinates: &[Vec<f64>; 12],
+    slot: usize,
+    ligand_atom_count: u64,
+) -> Result<()> {
+    let baseline_duplicate =
+        bool_from_abi(row.baseline_duplicate_of_v2, "rigid baseline duplicate")?;
+    let clearance_evaluated = bool_from_abi(row.clearance_evaluated, "rigid clearance evaluation")?;
+    let clearance_selected = bool_from_abi(row.clearance_selected, "rigid clearance selection")?;
+    if row.slot_index as usize != slot
+        || row.reserved0 != 0
+        || row.reserved.iter().any(|item| *item != 0)
+        || !rigid_evidence_is_consistent(&row.selected)?
+        || !rigid_evidence_is_consistent(&row.comparison_v2)?
+        || !rigid_evidence_is_consistent(&row.baseline_v3)?
+        || !rigid_evidence_is_consistent(&row.clearance_v4)?
+        || !validate_rigid_coordinate_channel(
+            &row.selected,
+            coordinates,
+            0,
+            slot,
+            ligand_atom_count,
+        )?
+        || !validate_rigid_coordinate_channel(
+            &row.comparison_v2,
+            coordinates,
+            3,
+            slot,
+            ligand_atom_count,
+        )?
+        || !validate_rigid_coordinate_channel(
+            &row.baseline_v3,
+            coordinates,
+            6,
+            slot,
+            ligand_atom_count,
+        )?
+        || !validate_rigid_coordinate_channel(
+            &row.clearance_v4,
+            coordinates,
+            9,
+            slot,
+            ligand_atom_count,
+        )?
+    {
+        return Err(Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 rigid row evidence is malformed",
+        ));
+    }
+    match row.status {
+        sys::BG_DOCKING_RIGID_REFINEMENT_ROW_TYPED_FAILURE => {
+            let active_mode = row.candidate_mode
+                >= sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V2_TRANSLATION
+                && row.candidate_mode
+                    <= sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V6_BASELINE_V3_LANE;
+            if row.failure_code < sys::BG_DOCKING_RIGID_REFINEMENT_FAILURE_UPSTREAM_NOT_ELIGIBLE
+                || row.failure_code
+                    > sys::BG_DOCKING_RIGID_REFINEMENT_FAILURE_NONFINITE_DERIVED_VALUE
+                || row.selected_profile != sys::BG_DOCKING_RIGID_REFINEMENT_PROFILE_NONE
+                || baseline_duplicate
+                || clearance_evaluated
+                || clearance_selected
+                || !rigid_evidence_is_zero(&row.selected)
+                || !rigid_evidence_is_zero(&row.comparison_v2)
+                || !rigid_evidence_is_zero(&row.baseline_v3)
+                || !rigid_evidence_is_zero(&row.clearance_v4)
+                || (row.candidate_mode == sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_INACTIVE
+                    && row.failure_code
+                        != sys::BG_DOCKING_RIGID_REFINEMENT_FAILURE_UPSTREAM_NOT_ELIGIBLE)
+                || (active_mode
+                    && row.failure_code
+                        == sys::BG_DOCKING_RIGID_REFINEMENT_FAILURE_UPSTREAM_NOT_ELIGIBLE)
+            {
+                return Err(Error::local(
+                    ErrorCode::AbiMismatch,
+                    "native fixed64 rigid typed failure retained refinement evidence",
+                ));
+            }
+        }
+        sys::BG_DOCKING_RIGID_REFINEMENT_ROW_REFINED => {
+            if row.failure_code != sys::BG_DOCKING_RIGID_REFINEMENT_FAILURE_NONE
+                || row.candidate_mode != requested_mode
+                || row.selected.available != 1
+                || row.selected.profile != row.selected_profile
+                || clearance_selected && !clearance_evaluated
+            {
+                return Err(Error::local(
+                    ErrorCode::AbiMismatch,
+                    "native fixed64 rigid success evidence is inconsistent",
+                ));
+            }
+            let channels_match_mode = match row.candidate_mode {
+                sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V2_TRANSLATION => {
+                    row.selected_profile == sys::BG_DOCKING_RIGID_REFINEMENT_PROFILE_V2_TRANSLATION
+                        && !baseline_duplicate
+                        && !clearance_evaluated
+                        && !clearance_selected
+                        && rigid_evidence_is_zero(&row.comparison_v2)
+                        && rigid_evidence_is_zero(&row.baseline_v3)
+                        && rigid_evidence_is_zero(&row.clearance_v4)
+                }
+                sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V3_TRANSLATION_ROTATION => {
+                    row.selected_profile
+                        == sys::BG_DOCKING_RIGID_REFINEMENT_PROFILE_V3_TRANSLATION_ROTATION
+                        && !baseline_duplicate
+                        && !clearance_evaluated
+                        && !clearance_selected
+                        && rigid_evidence_is_zero(&row.comparison_v2)
+                        && rigid_evidence_is_zero(&row.baseline_v3)
+                        && rigid_evidence_is_zero(&row.clearance_v4)
+                }
+                sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V6_BASELINE_V2_LANE => {
+                    row.selected_profile == sys::BG_DOCKING_RIGID_REFINEMENT_PROFILE_V6_BASELINE_V2
+                        && !baseline_duplicate
+                        && !clearance_evaluated
+                        && !clearance_selected
+                        && rigid_evidence_is_zero(&row.comparison_v2)
+                        && rigid_evidence_is_zero(&row.baseline_v3)
+                        && rigid_evidence_is_zero(&row.clearance_v4)
+                }
+                sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V6_BASELINE_V3_LANE => {
+                    row.comparison_v2.available == 1
+                        && row.comparison_v2.profile
+                            == sys::BG_DOCKING_RIGID_REFINEMENT_PROFILE_V2_TRANSLATION
+                        && row.baseline_v3.available == 1
+                        && row.baseline_v3.profile
+                            == sys::BG_DOCKING_RIGID_REFINEMENT_PROFILE_V6_BASELINE_V3
+                        && (clearance_evaluated == (row.clearance_v4.available == 1))
+                        && (!clearance_evaluated
+                            || row.clearance_v4.profile
+                                == sys::BG_DOCKING_RIGID_REFINEMENT_PROFILE_V6_CLEARANCE_V4)
+                        && rigid_evidence_equal(
+                            &row.selected,
+                            if clearance_selected {
+                                &row.clearance_v4
+                            } else {
+                                &row.baseline_v3
+                            },
+                        )
+                }
+                _ => false,
+            };
+            if !channels_match_mode {
+                return Err(Error::local(
+                    ErrorCode::AbiMismatch,
+                    "native fixed64 rigid evidence disagrees with its candidate mode",
+                ));
+            }
+        }
+        _ => {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 rigid row status is unknown",
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn torsion_row_values(row: &sys::bg_docking_torsion_v7_row_v1) -> [f64; 14] {
+    [
+        row.source_receptor_penalty,
+        row.source_internal_penalty,
+        row.source_combined_penalty,
+        row.baseline_receptor_penalty,
+        row.baseline_internal_penalty,
+        row.baseline_combined_penalty,
+        row.optimized_receptor_penalty,
+        row.optimized_internal_penalty,
+        row.optimized_combined_penalty,
+        row.final_receptor_penalty,
+        row.final_internal_penalty,
+        row.final_combined_penalty,
+        row.evaluated_total_torsion_path_radians,
+        row.accepted_total_torsion_path_radians,
+    ]
+}
+
+fn torsion_failure_evidence_is_zero(row: &sys::bg_docking_torsion_v7_row_v1) -> bool {
+    row.skip_reason == 0
+        && row.selection_reason == 0
+        && row.selection_window_reachable == 0
+        && row.evaluation_stopped_after_selection_window_became_unreachable == 0
+        && row.torsion_evaluated == 0
+        && row.torsion_variant_available == 0
+        && row.torsion_selected == 0
+        && row.torsion_step_budget == 0
+        && row.fixed_objective_evaluation_count == 0
+        && row.torsion_trial_objective_evaluation_count == 0
+        && row.evaluated_torsion_steps == 0
+        && row.accepted_torsion_steps == 0
+        && row.baseline_v6_accepted_steps == 0
+        && torsion_row_values(row).iter().all(|value| *value == 0.0)
+}
+
+fn torsion_move_is_zero(row: &sys::bg_docking_torsion_v7_move_v1) -> bool {
+    row.evaluated == 0
+        && row.selected == 0
+        && row.rotatable_child_atom_index == 0
+        && row.delta_radians == 0.0
+        && row.receptor_penalty == 0.0
+        && row.internal_penalty == 0.0
+        && row.combined_penalty == 0.0
+}
+
+fn validate_torsion_evidence(
+    rows: &[sys::bg_docking_torsion_v7_row_v1],
+    moves: &[sys::bg_docking_torsion_v7_move_v1],
+    rotatable_child_atom_indices: &[u64],
+) -> Result<()> {
+    let moves_per_slot = sys::BG_DOCKING_TORSION_V7_MAX_MOVES as usize;
+    if rows.len() != sys::BG_DOCKING_FIXED64_CANDIDATE_COUNT as usize
+        || moves.len() != rows.len() * moves_per_slot
+    {
+        return Err(Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 torsion denominator is invalid",
+        ));
+    }
+    for (slot, row) in rows.iter().enumerate() {
+        let window_reachable = bool_from_abi(
+            row.selection_window_reachable,
+            "torsion selection-window reachability",
+        )?;
+        let stopped = bool_from_abi(
+            row.evaluation_stopped_after_selection_window_became_unreachable,
+            "torsion evaluation stop",
+        )?;
+        let evaluated = bool_from_abi(row.torsion_evaluated, "torsion evaluation")?;
+        let variant_available = bool_from_abi(
+            row.torsion_variant_available,
+            "torsion variant availability",
+        )?;
+        let selected = bool_from_abi(row.torsion_selected, "torsion selection")?;
+        if row.slot_index as usize != slot
+            || row.reserved0.iter().any(|value| *value != 0)
+            || row.reserved.iter().any(|value| *value != 0)
+            || torsion_row_values(row)
+                .iter()
+                .any(|value| !value.is_finite())
+        {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 torsion row ABI shape or numeric evidence is invalid",
+            ));
+        }
+        match row.status {
+            sys::BG_DOCKING_TORSION_V7_ROW_TYPED_FAILURE => {
+                if row.failure_code < sys::BG_DOCKING_TORSION_V7_FAILURE_UPSTREAM_NOT_ELIGIBLE
+                    || row.failure_code > sys::BG_DOCKING_TORSION_V7_FAILURE_NONFINITE_DERIVED_VALUE
+                    || !torsion_failure_evidence_is_zero(row)
+                {
+                    return Err(Error::local(
+                        ErrorCode::AbiMismatch,
+                        "native fixed64 torsion typed failure retained optimization evidence",
+                    ));
+                }
+            }
+            sys::BG_DOCKING_TORSION_V7_ROW_REFINED => {
+                if row.failure_code != sys::BG_DOCKING_TORSION_V7_FAILURE_NONE
+                    || row.skip_reason < sys::BG_DOCKING_TORSION_V7_SKIP_NONE
+                    || row.skip_reason
+                        > sys::BG_DOCKING_TORSION_V7_SKIP_SELECTION_WINDOW_UNREACHABLE
+                    || row.selection_reason
+                        < sys::BG_DOCKING_TORSION_V7_SELECTION_FINAL_PENALTY_WINDOW
+                    || row.selection_reason
+                        > sys::BG_DOCKING_TORSION_V7_SELECTION_V6_RETAINED_NO_REDUCTION
+                    || row.fixed_objective_evaluation_count != 2
+                    || row.evaluated_torsion_steps > moves_per_slot as u64
+                    || row.evaluated_torsion_steps > row.torsion_step_budget
+                    || row.accepted_torsion_steps > row.evaluated_torsion_steps
+                    || evaluated != (row.skip_reason == sys::BG_DOCKING_TORSION_V7_SKIP_NONE)
+                    || variant_available != (row.evaluated_torsion_steps != 0)
+                    || (!evaluated && row.evaluated_torsion_steps != 0)
+                    || (selected && row.accepted_torsion_steps != row.evaluated_torsion_steps)
+                    || (!selected && row.accepted_torsion_steps != 0)
+                    || (selected
+                        && row.selection_reason
+                            != sys::BG_DOCKING_TORSION_V7_SELECTION_FINAL_PENALTY_WINDOW)
+                    || (!selected
+                        && row.selection_reason
+                            == sys::BG_DOCKING_TORSION_V7_SELECTION_FINAL_PENALTY_WINDOW)
+                    || (selected
+                        && row.accepted_total_torsion_path_radians
+                            != row.evaluated_total_torsion_path_radians)
+                    || (!selected && row.accepted_total_torsion_path_radians != 0.0)
+                    || row.evaluated_total_torsion_path_radians < 0.0
+                    || (stopped
+                        && (!window_reachable || !evaluated || row.evaluated_torsion_steps == 0))
+                {
+                    return Err(Error::local(
+                        ErrorCode::AbiMismatch,
+                        "native fixed64 torsion refinement evidence is inconsistent",
+                    ));
+                }
+            }
+            _ => {
+                return Err(Error::local(
+                    ErrorCode::AbiMismatch,
+                    "native fixed64 torsion row status is unknown",
+                ));
+            }
+        }
+        for move_index in 0..moves_per_slot {
+            let movement = &moves[slot * moves_per_slot + move_index];
+            let move_evaluated = bool_from_abi(movement.evaluated, "torsion move evaluation")?;
+            let move_selected = bool_from_abi(movement.selected, "torsion move selection")?;
+            let expected_evaluated = row.status == sys::BG_DOCKING_TORSION_V7_ROW_REFINED
+                && move_index < row.evaluated_torsion_steps as usize;
+            if movement.slot_index as usize != slot
+                || movement.move_index as usize != move_index
+                || movement.reserved0 != 0
+                || movement.reserved.iter().any(|value| *value != 0)
+                || [
+                    movement.delta_radians,
+                    movement.receptor_penalty,
+                    movement.internal_penalty,
+                    movement.combined_penalty,
+                ]
+                .iter()
+                .any(|value| !value.is_finite())
+                || move_evaluated != expected_evaluated
+                || (expected_evaluated
+                    && (!rotatable_child_atom_indices
+                        .contains(&movement.rotatable_child_atom_index)
+                        || movement.delta_radians == 0.0
+                        || movement.receptor_penalty < 0.0
+                        || movement.internal_penalty < 0.0
+                        || movement.combined_penalty < 0.0
+                        || move_selected != selected))
+                || (!expected_evaluated && !torsion_move_is_zero(movement))
+            {
+                return Err(Error::local(
+                    ErrorCode::AbiMismatch,
+                    "native fixed64 torsion move evidence disagrees with its parent row",
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn validate_refinement_evidence(
+    rows: &[sys::bg_docking_fixed64_refinement_row_v1],
+    rigid_rows: &[sys::bg_docking_rigid_refinement_row_v1],
+    torsion_rows: &[sys::bg_docking_torsion_v7_row_v1],
+    requested_modes: &[sys::bg_docking_rigid_refinement_candidate_mode],
+    coordinates: [&[f64]; 3],
+    quaternions: [&[f64]; 4],
+    ligand_atom_count: u64,
+) -> Result<()> {
+    if rows.len() != rigid_rows.len()
+        || rows.len() != torsion_rows.len()
+        || rows.len() != requested_modes.len()
+        || quaternions.iter().any(|values| values.len() != rows.len())
+    {
+        return Err(Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 refinement denominator is invalid",
+        ));
+    }
+    for (slot, row) in rows.iter().enumerate() {
+        let applicable = bool_from_abi(
+            row.torsion_v7_applicable,
+            "refinement torsion applicability",
+        )?;
+        let selected = bool_from_abi(row.torsion_v7_selected, "refinement torsion selection")?;
+        let coordinate_available = bool_from_abi(
+            row.coordinate_available,
+            "refinement coordinate availability",
+        )?;
+        let rigid = &rigid_rows[slot];
+        let torsion = &torsion_rows[slot];
+        let v6_mode = matches!(
+            rigid.candidate_mode,
+            sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V6_BASELINE_V2_LANE
+                | sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V6_BASELINE_V3_LANE
+        );
+        let quaternion = [
+            quaternions[0][slot],
+            quaternions[1][slot],
+            quaternions[2][slot],
+            quaternions[3][slot],
+        ];
+        if row.slot_index as usize != slot
+            || row.reserved0 != 0
+            || row.reserved.iter().any(|value| *value != 0)
+            || row.rigid_failure_code != rigid.failure_code
+            || row.selected_rigid_profile != rigid.selected_profile
+            || selected && !applicable
+        {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 refinement row identity is inconsistent",
+            ));
+        }
+        match row.status {
+            sys::BG_DOCKING_FIXED64_REFINEMENT_ROW_COORDINATE_READY => {
+                let expected_origin = if v6_mode {
+                    sys::BG_DOCKING_FIXED64_REFINEMENT_COORDINATE_TORSION_V7_FINAL
+                } else {
+                    sys::BG_DOCKING_FIXED64_REFINEMENT_COORDINATE_RIGID_SELECTED
+                };
+                if row.failure_stage != sys::BG_DOCKING_FIXED64_REFINEMENT_FAILURE_STAGE_NONE
+                    || row.coordinate_origin != expected_origin
+                    || rigid.status != sys::BG_DOCKING_RIGID_REFINEMENT_ROW_REFINED
+                    || rigid.failure_code != sys::BG_DOCKING_RIGID_REFINEMENT_FAILURE_NONE
+                    || row.downstream_candidate_state != sys::BG_DOCKING_SCORER_V1_CANDIDATE_ACTIVE
+                    || applicable != v6_mode
+                    || (v6_mode
+                        && (torsion.status != sys::BG_DOCKING_TORSION_V7_ROW_REFINED
+                            || row.torsion_v7_failure_code
+                                != sys::BG_DOCKING_TORSION_V7_FAILURE_NONE
+                            || selected != (torsion.torsion_selected == 1)))
+                    || (!v6_mode && (row.torsion_v7_failure_code != 0 || selected))
+                    || !coordinate_available
+                    || !digest_present(&row.coordinate_sha256)
+                    || !coordinate_segment_matches(&coordinates, slot, ligand_atom_count, false)?
+                    || !unit_quaternion(quaternion)
+                {
+                    return Err(Error::local(
+                        ErrorCode::AbiMismatch,
+                        "native fixed64 coordinate-ready refinement evidence is invalid",
+                    ));
+                }
+            }
+            sys::BG_DOCKING_FIXED64_REFINEMENT_ROW_TYPED_FAILURE => {
+                let rigid_failure = row.failure_stage
+                    == sys::BG_DOCKING_FIXED64_REFINEMENT_FAILURE_STAGE_RIGID
+                    && rigid.status == sys::BG_DOCKING_RIGID_REFINEMENT_ROW_TYPED_FAILURE
+                    && row.rigid_failure_code
+                        >= sys::BG_DOCKING_RIGID_REFINEMENT_FAILURE_UPSTREAM_NOT_ELIGIBLE
+                    && row.rigid_failure_code
+                        <= sys::BG_DOCKING_RIGID_REFINEMENT_FAILURE_NONFINITE_DERIVED_VALUE
+                    && row.torsion_v7_failure_code == 0
+                    && !applicable;
+                let torsion_failure = row.failure_stage
+                    == sys::BG_DOCKING_FIXED64_REFINEMENT_FAILURE_STAGE_TORSION_V7
+                    && rigid.status == sys::BG_DOCKING_RIGID_REFINEMENT_ROW_REFINED
+                    && v6_mode
+                    && applicable
+                    && torsion.status == sys::BG_DOCKING_TORSION_V7_ROW_TYPED_FAILURE
+                    && row.torsion_v7_failure_code == torsion.failure_code;
+                if (!rigid_failure && !torsion_failure)
+                    || row.coordinate_origin != sys::BG_DOCKING_FIXED64_REFINEMENT_COORDINATE_NONE
+                    || row.downstream_candidate_state
+                        != sys::BG_DOCKING_SCORER_V1_CANDIDATE_INACTIVE
+                    || selected
+                    || coordinate_available
+                    || digest_present(&row.coordinate_sha256)
+                    || !coordinate_segment_matches(&coordinates, slot, ligand_atom_count, true)?
+                    || quaternion.iter().any(|value| *value != 0.0)
+                {
+                    return Err(Error::local(
+                        ErrorCode::AbiMismatch,
+                        "native fixed64 refinement typed failure retained coordinate evidence",
+                    ));
+                }
+            }
+            _ => {
+                return Err(Error::local(
+                    ErrorCode::AbiMismatch,
+                    "native fixed64 refinement row status is unknown",
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
 #[allow(clippy::too_many_arguments)]
 fn validate_native_outputs(
     backend: Backend,
@@ -1924,6 +2731,16 @@ fn validate_native_outputs(
     representative_indices: &[u32],
     top_k_indices: &[u32],
     requested_modes: &[sys::bg_docking_rigid_refinement_candidate_mode],
+    producer_coordinates: [&[f64]; 3],
+    rigid_coordinates: &[Vec<f64>; 12],
+    final_coordinates: [&[f64]; 3],
+    final_quaternions: [&[f64]; 4],
+    rmsd_threshold_angstrom: f64,
+    rotatable_child_atom_indices: &[u64],
+    validity_exclusion_count: u64,
+    validity_chirality_count: u64,
+    validity_contact_cell_size_angstrom: f64,
+    validity_receptor_cells: &HashMap<(i64, i64, i64), u64>,
 ) -> Result<()> {
     let candidate_count = u64::from(sys::BG_DOCKING_FIXED64_CANDIDATE_COUNT);
     let move_count = candidate_count * u64::from(sys::BG_DOCKING_TORSION_V7_MAX_MOVES);
@@ -2404,15 +3221,18 @@ fn validate_native_outputs(
                 "native fixed64 geometric atom or exact-pair denominator is invalid",
             ));
         }
+        validate_producer_row_semantics(row, producer_coordinates, slot, ligand_atom_count)?;
+    }
+    for (slot, row) in rigid_rows.iter().enumerate() {
+        validate_rigid_row_semantics(
+            row,
+            requested_modes[slot],
+            rigid_coordinates,
+            slot,
+            ligand_atom_count,
+        )?;
     }
     for (label, invalid_order) in [
-        (
-            "rigid",
-            rigid_rows
-                .iter()
-                .enumerate()
-                .any(|(slot, row)| row.slot_index as usize != slot),
-        ),
         (
             "torsion",
             torsion_rows
@@ -2472,7 +3292,28 @@ fn validate_native_outputs(
             "native fixed64 torsion move order is invalid",
         ));
     }
-    validate_scorer_and_validity_evidence(scorer_rows, validity_rows, ranking_rows)?;
+    validate_torsion_evidence(torsion_rows, torsion_moves, rotatable_child_atom_indices)?;
+    validate_refinement_evidence(
+        refinement_rows,
+        rigid_rows,
+        torsion_rows,
+        requested_modes,
+        final_coordinates,
+        final_quaternions,
+        ligand_atom_count,
+    )?;
+    validate_scorer_and_validity_evidence(
+        scorer_rows,
+        validity_rows,
+        ranking_rows,
+        ligand_atom_count,
+        receptor_atom_count,
+        validity_exclusion_count,
+        validity_chirality_count,
+        validity_contact_cell_size_angstrom,
+        validity_receptor_cells,
+        final_coordinates,
+    )?;
     validate_index_evidence(
         ranking,
         cluster,
@@ -2484,6 +3325,9 @@ fn validate_native_outputs(
         valid_indices,
         representative_indices,
         top_k_indices,
+        rmsd_threshold_angstrom,
+        final_coordinates,
+        ligand_atom_count,
     )?;
     for (slot, row) in pipeline_rows.iter().enumerate() {
         let producer_row = &producer_rows[slot];
@@ -2664,10 +3508,116 @@ fn validity_failure_evidence_is_zero(row: &sys::bg_docking_pose_validity_row_v1)
         && row.element_vdw_receptor_minimum_ratio == 0.0
 }
 
+fn validity_receptor_candidate_pair_count(
+    coordinates: [&[f64]; 3],
+    slot: usize,
+    ligand_atom_count: u64,
+    cell_size: f64,
+    receptor_cells: &HashMap<(i64, i64, i64), u64>,
+) -> Result<u64> {
+    let ligand_count = usize::try_from(ligand_atom_count).map_err(|_| {
+        Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 validity ligand count does not fit usize",
+        )
+    })?;
+    let begin = slot.checked_mul(ligand_count).ok_or_else(|| {
+        Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 validity coordinate offset overflowed",
+        )
+    })?;
+    let end = begin.checked_add(ligand_count).ok_or_else(|| {
+        Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 validity coordinate end overflowed",
+        )
+    })?;
+    if coordinates
+        .iter()
+        .any(|channel| channel.get(begin..end).is_none())
+    {
+        return Err(Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 validity coordinate segment exceeds its buffer",
+        ));
+    }
+    let mut count = 0_u64;
+    for ((x, y), z) in coordinates[0][begin..end]
+        .iter()
+        .zip(&coordinates[1][begin..end])
+        .zip(&coordinates[2][begin..end])
+    {
+        let key = (
+            validity_cell_component(*x, cell_size).map_err(|_| {
+                Error::local(
+                    ErrorCode::AbiMismatch,
+                    "native fixed64 validity x coordinate has an invalid cell key",
+                )
+            })?,
+            validity_cell_component(*y, cell_size).map_err(|_| {
+                Error::local(
+                    ErrorCode::AbiMismatch,
+                    "native fixed64 validity y coordinate has an invalid cell key",
+                )
+            })?,
+            validity_cell_component(*z, cell_size).map_err(|_| {
+                Error::local(
+                    ErrorCode::AbiMismatch,
+                    "native fixed64 validity z coordinate has an invalid cell key",
+                )
+            })?,
+        );
+        for dx in -1_i64..=1 {
+            for dy in -1_i64..=1 {
+                for dz in -1_i64..=1 {
+                    let neighbor = (
+                        key.0.checked_add(dx).ok_or_else(|| {
+                            Error::local(
+                                ErrorCode::AbiMismatch,
+                                "native fixed64 validity x cell neighbor overflowed",
+                            )
+                        })?,
+                        key.1.checked_add(dy).ok_or_else(|| {
+                            Error::local(
+                                ErrorCode::AbiMismatch,
+                                "native fixed64 validity y cell neighbor overflowed",
+                            )
+                        })?,
+                        key.2.checked_add(dz).ok_or_else(|| {
+                            Error::local(
+                                ErrorCode::AbiMismatch,
+                                "native fixed64 validity z cell neighbor overflowed",
+                            )
+                        })?,
+                    );
+                    count = count
+                        .checked_add(receptor_cells.get(&neighbor).copied().unwrap_or(0))
+                        .ok_or_else(|| {
+                            Error::local(
+                                ErrorCode::AbiMismatch,
+                                "native fixed64 validity receptor candidate count overflowed",
+                            )
+                        })?;
+                }
+            }
+        }
+    }
+    Ok(count)
+}
+
+#[allow(clippy::too_many_arguments)]
 fn validate_scorer_and_validity_evidence(
     scorer_rows: &[sys::bg_docking_scorer_v1_row_v1],
     validity_rows: &[sys::bg_docking_pose_validity_row_v1],
     ranking_rows: &[sys::bg_docking_stable_top_k_row_v1],
+    ligand_atom_count: u64,
+    receptor_atom_count: u64,
+    exclusion_count: u64,
+    chirality_count: u64,
+    contact_cell_size_angstrom: f64,
+    receptor_cells: &HashMap<(i64, i64, i64), u64>,
+    final_coordinates: [&[f64]; 3],
 ) -> Result<()> {
     let candidate_count = sys::BG_DOCKING_FIXED64_CANDIDATE_COUNT as usize;
     if scorer_rows.len() != candidate_count
@@ -2679,6 +3629,43 @@ fn validate_scorer_and_validity_evidence(
             "native fixed64 scorer, validity, or ranking denominator is invalid",
         ));
     }
+    let total_ligand_pairs = ligand_atom_count
+        .checked_mul(ligand_atom_count.checked_sub(1).ok_or_else(|| {
+            Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 validity ligand denominator underflowed",
+            )
+        })?)
+        .and_then(|value| value.checked_div(2))
+        .ok_or_else(|| {
+            Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 validity ligand-pair denominator overflowed",
+            )
+        })?;
+    let evaluated_ligand_pairs =
+        total_ligand_pairs
+            .checked_sub(exclusion_count)
+            .ok_or_else(|| {
+                Error::local(
+                    ErrorCode::AbiMismatch,
+                    "native fixed64 validity exclusions exceed the ligand-pair denominator",
+                )
+            })?;
+    let receptor_pairs = ligand_atom_count
+        .checked_mul(receptor_atom_count)
+        .ok_or_else(|| {
+            Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 validity receptor-pair denominator overflowed",
+            )
+        })?;
+    let receptor_cell_count = u64::try_from(receptor_cells.len()).map_err(|_| {
+        Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 validity receptor-cell count does not fit u64",
+        )
+    })?;
     for slot in 0..candidate_count {
         let scorer = &scorer_rows[slot];
         let validity = &validity_rows[slot];
@@ -2730,12 +3717,35 @@ fn validate_scorer_and_validity_evidence(
                 || validity.blocker_mask
                     != (sys::BG_DOCKING_POSE_VALIDITY_CHECK_ALL ^ validity.passed_check_mask)
                 || validity.observed_count != 0
-                || validity.atom_count == 0
+                || validity.atom_count != ligand_atom_count
                 || !validity_measurements_are_finite(validity)
             {
                 return Err(Error::local(
                     ErrorCode::AbiMismatch,
                     "native fixed64 evaluated validity evidence is invalid",
+                ));
+            }
+            let receptor_candidate_pairs = validity_receptor_candidate_pair_count(
+                final_coordinates,
+                slot,
+                ligand_atom_count,
+                contact_cell_size_angstrom,
+                receptor_cells,
+            )?;
+            if validity.evaluated_ligand_nonbonded_pair_count != evaluated_ligand_pairs
+                || validity.excluded_ligand_pair_count != exclusion_count
+                || validity.element_vdw_ligand_pair_count != evaluated_ligand_pairs
+                || validity.element_vdw_ligand_severe_overlap_count > evaluated_ligand_pairs
+                || validity.evaluated_receptor_ligand_pair_count != receptor_pairs
+                || validity.declared_chirality_center_count != chirality_count
+                || validity.element_vdw_receptor_candidate_pair_count != receptor_candidate_pairs
+                || validity.element_vdw_receptor_full_cartesian_pair_count != receptor_pairs
+                || validity.element_vdw_receptor_cell_count != receptor_cell_count
+                || validity.element_vdw_receptor_severe_overlap_count > receptor_candidate_pairs
+            {
+                return Err(Error::local(
+                    ErrorCode::AbiMismatch,
+                    "native fixed64 validity measurement denominators are inconsistent",
                 ));
             }
         } else {
@@ -2800,6 +3810,76 @@ fn counted_index_prefix<'a>(values: &'a [u32], count: u64, label: &str) -> Resul
     })
 }
 
+fn direct_coordinate_rmsd(
+    coordinates: [&[f64]; 3],
+    ligand_atom_count: u64,
+    left_slot: usize,
+    right_slot: usize,
+) -> Result<f64> {
+    let ligand_count = usize::try_from(ligand_atom_count).map_err(|_| {
+        Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 RMSD ligand denominator does not fit usize",
+        )
+    })?;
+    if ligand_count == 0 {
+        return Err(Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 RMSD ligand denominator is zero",
+        ));
+    }
+    let left_begin = left_slot.checked_mul(ligand_count).ok_or_else(|| {
+        Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 left RMSD coordinate offset overflowed",
+        )
+    })?;
+    let right_begin = right_slot.checked_mul(ligand_count).ok_or_else(|| {
+        Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 right RMSD coordinate offset overflowed",
+        )
+    })?;
+    let coordinate_count = (sys::BG_DOCKING_FIXED64_CANDIDATE_COUNT as usize)
+        .checked_mul(ligand_count)
+        .ok_or_else(|| {
+            Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 RMSD coordinate denominator overflowed",
+            )
+        })?;
+    if coordinates
+        .iter()
+        .any(|channel| channel.len() != coordinate_count)
+    {
+        return Err(Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 RMSD coordinate denominator is invalid",
+        ));
+    }
+    let mut squared_sum = 0.0;
+    for atom in 0..ligand_count {
+        for channel in coordinates {
+            let delta = channel[left_begin + atom] - channel[right_begin + atom];
+            if !delta.is_finite() {
+                return Err(Error::local(
+                    ErrorCode::AbiMismatch,
+                    "native fixed64 RMSD coordinate delta is non-finite",
+                ));
+            }
+            squared_sum += delta * delta;
+        }
+    }
+    let rmsd = (squared_sum / ligand_count as f64).sqrt();
+    if !rmsd.is_finite() {
+        return Err(Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 direct-coordinate RMSD is non-finite",
+        ));
+    }
+    Ok(rmsd)
+}
+
 #[allow(clippy::too_many_arguments)]
 fn validate_index_evidence(
     ranking: &sys::bg_docking_stable_top_k_output_v1,
@@ -2812,6 +3892,9 @@ fn validate_index_evidence(
     valid_indices: &[u32],
     representative_indices: &[u32],
     top_k_indices: &[u32],
+    rmsd_threshold_angstrom: f64,
+    final_coordinates: [&[f64]; 3],
+    ligand_atom_count: u64,
 ) -> Result<()> {
     let candidate_count = sys::BG_DOCKING_FIXED64_CANDIDATE_COUNT as usize;
     if scorer_rows.len() != candidate_count
@@ -2822,6 +3905,12 @@ fn validate_index_evidence(
         return Err(Error::local(
             ErrorCode::AbiMismatch,
             "native fixed64 rank or cluster row denominator is invalid",
+        ));
+    }
+    if !rmsd_threshold_angstrom.is_finite() || rmsd_threshold_angstrom <= 0.0 {
+        return Err(Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 RMSD threshold is invalid",
         ));
     }
     let primary =
@@ -3000,6 +4089,27 @@ fn validate_index_evidence(
                     "native fixed64 clustered row is inconsistent with rank evidence",
                 ));
             }
+            let expected_rmsd = direct_coordinate_rmsd(
+                final_coordinates,
+                ligand_atom_count,
+                slot,
+                representative_slot,
+            )?;
+            let tolerance = 2.0e-12
+                * 1.0_f64
+                    .max(expected_rmsd.abs())
+                    .max(row.direct_rmsd_to_representative_angstrom.abs());
+            if !row.direct_rmsd_to_representative_angstrom.is_finite()
+                || row.direct_rmsd_to_representative_angstrom < 0.0
+                || row.direct_rmsd_to_representative_angstrom > rmsd_threshold_angstrom + tolerance
+                || (row.direct_rmsd_to_representative_angstrom - expected_rmsd).abs() > tolerance
+                || (representative && row.direct_rmsd_to_representative_angstrom != 0.0)
+            {
+                return Err(Error::local(
+                    ErrorCode::AbiMismatch,
+                    "native fixed64 cluster RMSD disagrees with final coordinates",
+                ));
+            }
             observed_cluster_sizes[cluster_id - 1] += 1;
         } else if row.status != sys::BG_DOCKING_RMSD_CLUSTER_ROW_UPSTREAM_NOT_VALID
             || row.stable_valid_rank != 0
@@ -3089,6 +4199,8 @@ mod output_validation_tests {
         valid_indices: Vec<u32>,
         representative_indices: Vec<u32>,
         top_k_indices: Vec<u32>,
+        final_coordinates: [Vec<f64>; 3],
+        receptor_cells: HashMap<(i64, i64, i64), u64>,
     }
 
     impl IndexFixture {
@@ -3132,11 +4244,19 @@ mod output_validation_tests {
             validity_rows[0].upstream_scorer_failure_code = sys::BG_DOCKING_SCORER_V1_FAILURE_NONE;
             validity_rows[0].passed_check_mask = sys::BG_DOCKING_POSE_VALIDITY_CHECK_ALL;
             validity_rows[0].atom_count = 1;
+            validity_rows[0].evaluated_receptor_ligand_pair_count = 1;
+            validity_rows[0].element_vdw_receptor_candidate_pair_count = 1;
+            validity_rows[0].element_vdw_receptor_full_cartesian_pair_count = 1;
+            validity_rows[0].element_vdw_receptor_cell_count = 1;
             validity_rows[1].status = sys::BG_DOCKING_POSE_VALIDITY_ROW_EVALUATED;
             validity_rows[1].failure_code = sys::BG_DOCKING_POSE_VALIDITY_FAILURE_NONE;
             validity_rows[1].upstream_scorer_failure_code = sys::BG_DOCKING_SCORER_V1_FAILURE_NONE;
             validity_rows[1].blocker_mask = sys::BG_DOCKING_POSE_VALIDITY_CHECK_ALL;
             validity_rows[1].atom_count = 1;
+            validity_rows[1].evaluated_receptor_ligand_pair_count = 1;
+            validity_rows[1].element_vdw_receptor_candidate_pair_count = 1;
+            validity_rows[1].element_vdw_receptor_full_cartesian_pair_count = 1;
+            validity_rows[1].element_vdw_receptor_cell_count = 1;
             ranking_rows[0].valid_rank_eligible = 1;
             ranking_rows[0].stable_valid_rank = 1;
             cluster_rows[0].status = sys::BG_DOCKING_RMSD_CLUSTER_ROW_CLUSTERED;
@@ -3169,6 +4289,8 @@ mod output_validation_tests {
                 valid_indices: vec![0; count],
                 representative_indices: vec![0; count],
                 top_k_indices: vec![0; sys::BG_DOCKING_STABLE_TOP_K_LIMIT as usize],
+                final_coordinates: std::array::from_fn(|_| vec![0.0; count]),
+                receptor_cells: HashMap::from([((0, 0, 0), 1)]),
             }
         }
 
@@ -3177,6 +4299,17 @@ mod output_validation_tests {
                 &self.scorer_rows,
                 &self.validity_rows,
                 &self.ranking_rows,
+                1,
+                1,
+                0,
+                0,
+                3.5,
+                &self.receptor_cells,
+                [
+                    self.final_coordinates[0].as_slice(),
+                    self.final_coordinates[1].as_slice(),
+                    self.final_coordinates[2].as_slice(),
+                ],
             )?;
             validate_index_evidence(
                 &self.ranking,
@@ -3189,6 +4322,13 @@ mod output_validation_tests {
                 &self.valid_indices,
                 &self.representative_indices,
                 &self.top_k_indices,
+                2.0,
+                [
+                    self.final_coordinates[0].as_slice(),
+                    self.final_coordinates[1].as_slice(),
+                    self.final_coordinates[2].as_slice(),
+                ],
+                1,
             )
         }
     }
@@ -3241,6 +4381,255 @@ mod output_validation_tests {
         fixture.validity_rows[0].blocker_mask =
             sys::BG_DOCKING_POSE_VALIDITY_CHECK_RECEPTOR_LIGAND_CLASH;
         assert!(fixture.validate().is_err());
+    }
+
+    #[test]
+    fn rejects_invalid_cluster_rmsd_evidence() {
+        let mut nonfinite = IndexFixture::valid();
+        nonfinite.cluster_rows[0].direct_rmsd_to_representative_angstrom = f64::NAN;
+        assert!(nonfinite.validate().is_err());
+
+        let mut representative_distance = IndexFixture::valid();
+        representative_distance.cluster_rows[0].direct_rmsd_to_representative_angstrom = 0.5;
+        assert!(representative_distance.validate().is_err());
+    }
+
+    #[test]
+    fn rejects_wrong_validity_measurement_denominators() {
+        let mut wrong_atom_count = IndexFixture::valid();
+        wrong_atom_count.validity_rows[0].atom_count = 2;
+        assert!(wrong_atom_count.validate().is_err());
+
+        let mut wrong_receptor_pairs = IndexFixture::valid();
+        wrong_receptor_pairs.validity_rows[0].evaluated_receptor_ligand_pair_count = 0;
+        assert!(wrong_receptor_pairs.validate().is_err());
+
+        let mut wrong_candidate_pairs = IndexFixture::valid();
+        wrong_candidate_pairs.validity_rows[0].element_vdw_receptor_candidate_pair_count = 0;
+        assert!(wrong_candidate_pairs.validate().is_err());
+    }
+
+    fn generated_producer_row() -> sys::bg_docking_fixed64_producer_row_v1 {
+        let mut row = zeroed_abi_value!(sys::bg_docking_fixed64_producer_row_v1);
+        row.status = sys::BG_DOCKING_FIXED64_PRODUCER_ROW_GENERATED;
+        row.failure_code = sys::BG_DOCKING_FIXED64_PRODUCER_FAILURE_NONE;
+        row.placement_kind = sys::BG_DOCKING_FIXED64_PRODUCER_PLACEMENT_EXACT_PASSTHROUGH;
+        row.ligand_atom_count = 1;
+        row.allocation_slot_receipt_sha256 = [1; 32];
+        row.source_payload_receipt_sha256 = [2; 32];
+        row.source_proposal_sha256 = [3; 32];
+        row.source_coordinate_sha256 = [4; 32];
+        row.placement_receipt_sha256 = [5; 32];
+        row.output_proposal_sha256 = [6; 32];
+        row.output_coordinate_sha256 = [7; 32];
+        row.coordinates_available = 1;
+        row.source_identity_verified = 1;
+        row.allocation_identity_verified = 1;
+        row.geometric_identity_verified = 1;
+        row.denominator_preserved = 1;
+        row.placement_quaternion_w = 1.0;
+        row
+    }
+
+    #[test]
+    fn rejects_producer_success_and_failure_sentinel_corruption() {
+        let coordinates = [vec![0.0], vec![0.0], vec![0.0]];
+        let views = [
+            coordinates[0].as_slice(),
+            coordinates[1].as_slice(),
+            coordinates[2].as_slice(),
+        ];
+        let valid = generated_producer_row();
+        assert!(validate_producer_row_semantics(&valid, views, 0, 1).is_ok());
+
+        let mut nonunit = generated_producer_row();
+        nonunit.placement_quaternion_w = 0.5;
+        assert!(validate_producer_row_semantics(&nonunit, views, 0, 1).is_err());
+
+        let mut failure = zeroed_abi_value!(sys::bg_docking_fixed64_producer_row_v1);
+        failure.status = sys::BG_DOCKING_FIXED64_PRODUCER_ROW_TYPED_FAILURE;
+        failure.failure_code = sys::BG_DOCKING_FIXED64_PRODUCER_FAILURE_SOURCE_NOT_AVAILABLE;
+        failure.placement_kind = sys::BG_DOCKING_FIXED64_PRODUCER_PLACEMENT_EXACT_PASSTHROUGH;
+        failure.ligand_atom_count = 1;
+        failure.allocation_slot_receipt_sha256 = [1; 32];
+        failure.allocation_identity_verified = 1;
+        failure.geometric_identity_verified = 1;
+        failure.denominator_preserved = 1;
+        assert!(validate_producer_row_semantics(&failure, views, 0, 1).is_ok());
+        failure.coordinates_available = 1;
+        assert!(validate_producer_row_semantics(&failure, views, 0, 1).is_err());
+    }
+
+    fn valid_rigid_v2_row() -> sys::bg_docking_rigid_refinement_row_v1 {
+        let mut row = zeroed_abi_value!(sys::bg_docking_rigid_refinement_row_v1);
+        row.status = sys::BG_DOCKING_RIGID_REFINEMENT_ROW_REFINED;
+        row.failure_code = sys::BG_DOCKING_RIGID_REFINEMENT_FAILURE_NONE;
+        row.candidate_mode = sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V2_TRANSLATION;
+        row.selected_profile = sys::BG_DOCKING_RIGID_REFINEMENT_PROFILE_V2_TRANSLATION;
+        row.selected.profile = sys::BG_DOCKING_RIGID_REFINEMENT_PROFILE_V2_TRANSLATION;
+        row.selected.available = 1;
+        row
+    }
+
+    #[test]
+    fn rejects_malformed_rigid_refinement_semantics() {
+        let coordinates: [Vec<f64>; 12] = std::array::from_fn(|_| vec![0.0]);
+        let valid = valid_rigid_v2_row();
+        assert!(validate_rigid_row_semantics(
+            &valid,
+            sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V2_TRANSLATION,
+            &coordinates,
+            0,
+            1,
+        )
+        .is_ok());
+
+        let mut nonfinite = valid_rigid_v2_row();
+        nonfinite.selected.final_penalty = f64::NAN;
+        assert!(validate_rigid_row_semantics(
+            &nonfinite,
+            sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V2_TRANSLATION,
+            &coordinates,
+            0,
+            1,
+        )
+        .is_err());
+
+        let mut mismatched_steps = valid_rigid_v2_row();
+        mismatched_steps.selected.accepted_steps = 1;
+        assert!(validate_rigid_row_semantics(
+            &mismatched_steps,
+            sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V2_TRANSLATION,
+            &coordinates,
+            0,
+            1,
+        )
+        .is_err());
+    }
+
+    fn refined_torsion_fixture() -> (
+        Vec<sys::bg_docking_torsion_v7_row_v1>,
+        Vec<sys::bg_docking_torsion_v7_move_v1>,
+    ) {
+        let candidate_count = sys::BG_DOCKING_FIXED64_CANDIDATE_COUNT as usize;
+        let moves_per_slot = sys::BG_DOCKING_TORSION_V7_MAX_MOVES as usize;
+        let mut rows = vec![zeroed_abi_value!(sys::bg_docking_torsion_v7_row_v1); candidate_count];
+        for (slot, candidate) in rows.iter_mut().enumerate() {
+            candidate.slot_index = slot as u32;
+            candidate.status = sys::BG_DOCKING_TORSION_V7_ROW_TYPED_FAILURE;
+            candidate.failure_code = sys::BG_DOCKING_TORSION_V7_FAILURE_UPSTREAM_NOT_ELIGIBLE;
+        }
+        let mut row = zeroed_abi_value!(sys::bg_docking_torsion_v7_row_v1);
+        row.status = sys::BG_DOCKING_TORSION_V7_ROW_REFINED;
+        row.failure_code = sys::BG_DOCKING_TORSION_V7_FAILURE_NONE;
+        row.skip_reason = sys::BG_DOCKING_TORSION_V7_SKIP_NONE;
+        row.selection_reason = sys::BG_DOCKING_TORSION_V7_SELECTION_V6_RETAINED_OUTSIDE_WINDOW;
+        row.selection_window_reachable = 1;
+        row.torsion_evaluated = 1;
+        row.torsion_variant_available = 1;
+        row.torsion_step_budget = 1;
+        row.fixed_objective_evaluation_count = 2;
+        row.evaluated_torsion_steps = 1;
+        row.evaluated_total_torsion_path_radians = 0.1;
+        rows[0] = row;
+        let mut moves = vec![
+            zeroed_abi_value!(sys::bg_docking_torsion_v7_move_v1);
+            candidate_count * moves_per_slot
+        ];
+        for (index, movement) in moves.iter_mut().enumerate() {
+            movement.slot_index = (index / moves_per_slot) as u32;
+            movement.move_index = (index % moves_per_slot) as u32;
+        }
+        moves[0].evaluated = 1;
+        moves[0].rotatable_child_atom_index = 5;
+        moves[0].delta_radians = 0.1;
+        (rows, moves)
+    }
+
+    #[test]
+    fn rejects_torsion_moves_cross_wired_from_parent_rows() {
+        let (rows, moves) = refined_torsion_fixture();
+        let validation = validate_torsion_evidence(&rows, &moves, &[5]);
+        assert!(validation.is_ok(), "{validation:?}");
+
+        let mut wrong_child = moves.clone();
+        wrong_child[0].rotatable_child_atom_index = 6;
+        assert!(validate_torsion_evidence(&rows, &wrong_child, &[5]).is_err());
+
+        let mut outside_prefix = moves;
+        outside_prefix[1].evaluated = 1;
+        outside_prefix[1].rotatable_child_atom_index = 5;
+        outside_prefix[1].delta_radians = 0.1;
+        assert!(validate_torsion_evidence(&rows, &outside_prefix, &[5]).is_err());
+    }
+
+    struct RefinementFixture {
+        rows: Vec<sys::bg_docking_fixed64_refinement_row_v1>,
+        rigid: Vec<sys::bg_docking_rigid_refinement_row_v1>,
+        torsion: Vec<sys::bg_docking_torsion_v7_row_v1>,
+        coordinates: [Vec<f64>; 3],
+        quaternions: [Vec<f64>; 4],
+    }
+
+    fn valid_refinement_fixture() -> RefinementFixture {
+        let mut row = zeroed_abi_value!(sys::bg_docking_fixed64_refinement_row_v1);
+        row.status = sys::BG_DOCKING_FIXED64_REFINEMENT_ROW_COORDINATE_READY;
+        row.failure_stage = sys::BG_DOCKING_FIXED64_REFINEMENT_FAILURE_STAGE_NONE;
+        row.coordinate_origin = sys::BG_DOCKING_FIXED64_REFINEMENT_COORDINATE_RIGID_SELECTED;
+        row.rigid_failure_code = sys::BG_DOCKING_RIGID_REFINEMENT_FAILURE_NONE;
+        row.selected_rigid_profile = sys::BG_DOCKING_RIGID_REFINEMENT_PROFILE_V2_TRANSLATION;
+        row.downstream_candidate_state = sys::BG_DOCKING_SCORER_V1_CANDIDATE_ACTIVE;
+        row.coordinate_available = 1;
+        row.coordinate_sha256 = [1; 32];
+        let rigid = valid_rigid_v2_row();
+        let mut torsion = zeroed_abi_value!(sys::bg_docking_torsion_v7_row_v1);
+        torsion.status = sys::BG_DOCKING_TORSION_V7_ROW_TYPED_FAILURE;
+        torsion.failure_code = sys::BG_DOCKING_TORSION_V7_FAILURE_UPSTREAM_NOT_ELIGIBLE;
+        RefinementFixture {
+            rows: vec![row],
+            rigid: vec![rigid],
+            torsion: vec![torsion],
+            coordinates: std::array::from_fn(|_| vec![0.0]),
+            quaternions: [vec![0.0], vec![0.0], vec![0.0], vec![1.0]],
+        }
+    }
+
+    #[test]
+    fn rejects_incomplete_coordinate_ready_refinement_evidence() {
+        let mut fixture = valid_refinement_fixture();
+        let coordinate_views = [
+            fixture.coordinates[0].as_slice(),
+            fixture.coordinates[1].as_slice(),
+            fixture.coordinates[2].as_slice(),
+        ];
+        let quaternion_views = [
+            fixture.quaternions[0].as_slice(),
+            fixture.quaternions[1].as_slice(),
+            fixture.quaternions[2].as_slice(),
+            fixture.quaternions[3].as_slice(),
+        ];
+        assert!(validate_refinement_evidence(
+            &fixture.rows,
+            &fixture.rigid,
+            &fixture.torsion,
+            &[sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V2_TRANSLATION],
+            coordinate_views,
+            quaternion_views,
+            1,
+        )
+        .is_ok());
+
+        fixture.rows[0].coordinate_available = 0;
+        assert!(validate_refinement_evidence(
+            &fixture.rows,
+            &fixture.rigid,
+            &fixture.torsion,
+            &[sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V2_TRANSLATION],
+            coordinate_views,
+            quaternion_views,
+            1,
+        )
+        .is_err());
     }
 }
 
