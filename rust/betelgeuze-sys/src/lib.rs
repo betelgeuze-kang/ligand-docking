@@ -20,7 +20,7 @@ static BG_RUST_CPU_PROVIDER_LINK_ANCHOR: extern "C" fn() -> u32 =
     betelgeuze_cpu_kernel::bg_rust_cpu_provider_abi_version_v1;
 
 pub const BG_ABI_VERSION_MAJOR: u32 = 1;
-pub const BG_ABI_VERSION_MINOR: u32 = 18;
+pub const BG_ABI_VERSION_MINOR: u32 = 19;
 pub const BG_ABI_VERSION: u32 = 1;
 
 pub const BG_CANONICAL_LENGTH_UNIT: &[u8] = b"angstrom\0";
@@ -1238,7 +1238,10 @@ pub struct bg_docking_fixed64_producer_row_v1 {
     pub customer_pose_emission_authorized: u8,
     pub production_claim_authorized: u8,
     pub scientific_claim_authorized: u8,
-    pub reserved: [u64; 4],
+    pub placement_quaternion_x: f64,
+    pub placement_quaternion_y: f64,
+    pub placement_quaternion_z: f64,
+    pub placement_quaternion_w: f64,
 }
 
 #[repr(C)]
@@ -2254,6 +2257,7 @@ unsafe extern "C" {
         input: *const bg_docking_fixed64_producer_input_v1,
         output: *mut bg_docking_fixed64_producer_output_v1,
     ) -> bg_status;
+    pub fn bg_docking_fixed64_producer_v1_profile_id() -> *const c_char;
 
     pub fn bg_docking_geometric_admission_v1_create(
         context: *const bg_context,

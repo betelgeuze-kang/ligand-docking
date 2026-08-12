@@ -354,6 +354,9 @@ void assert_authority_false(const bg_docking_fixed64_producer_output_v1 &out) {
 }
 
 void assert_complete(const Batch &batch, bg_backend backend) {
+    assert(std::strcmp(
+               bg_docking_fixed64_producer_v1_profile_id(),
+               "betelgeuze.engine_v2_mixed64_native_fixed64_producer/1.1.0") == 0);
     assert(batch.output.row_count == kSlots);
     assert(batch.output.coordinate_count == kCoordinates);
     assert(batch.output.generated_count == kSlots);
@@ -410,6 +413,21 @@ void assert_complete(const Batch &batch, bg_backend backend) {
                    ? BG_DOCKING_FIXED64_PRODUCER_PLACEMENT_INDEXED_SO3
                    : BG_DOCKING_FIXED64_PRODUCER_PLACEMENT_SINGLE_ANCHOR);
         assert(row.placement_kind == expected_kind);
+        const double quaternion_norm = std::hypot(
+            std::hypot(
+                row.placement_quaternion_x,
+                row.placement_quaternion_y),
+            std::hypot(
+                row.placement_quaternion_z,
+                row.placement_quaternion_w));
+        assert(std::abs(quaternion_norm - 1.0) <= 1.0e-8);
+        if (expected_kind ==
+            BG_DOCKING_FIXED64_PRODUCER_PLACEMENT_EXACT_PASSTHROUGH) {
+            assert(row.placement_quaternion_x == 0.0);
+            assert(row.placement_quaternion_y == 0.0);
+            assert(row.placement_quaternion_z == 0.0);
+            assert(row.placement_quaternion_w == 1.0);
+        }
     }
     assert(severe > 0);
 }
@@ -432,6 +450,22 @@ void assert_coordinate_parity(
                observed.rows[slot].steric_precheck_passed);
         assert(reference.rows[slot].geometric_admission.decision ==
                observed.rows[slot].geometric_admission.decision);
+        for (const auto &[left, right] : {
+                 std::pair{
+                     reference.rows[slot].placement_quaternion_x,
+                     observed.rows[slot].placement_quaternion_x},
+                 std::pair{
+                     reference.rows[slot].placement_quaternion_y,
+                     observed.rows[slot].placement_quaternion_y},
+                 std::pair{
+                     reference.rows[slot].placement_quaternion_z,
+                     observed.rows[slot].placement_quaternion_z},
+                 std::pair{
+                     reference.rows[slot].placement_quaternion_w,
+                     observed.rows[slot].placement_quaternion_w},
+             }) {
+            assert(std::abs(left - right) <= tolerance);
+        }
     }
 }
 
@@ -486,6 +520,10 @@ void test_missing_source_is_typed_and_zero_filled() {
     assert(row.failure_code ==
            BG_DOCKING_FIXED64_PRODUCER_FAILURE_SOURCE_NOT_AVAILABLE);
     assert(row.coordinates_available == 0);
+    assert(row.placement_quaternion_x == 0.0);
+    assert(row.placement_quaternion_y == 0.0);
+    assert(row.placement_quaternion_z == 0.0);
+    assert(row.placement_quaternion_w == 0.0);
     assert(row.source_identity_verified == 0);
     assert(row.geometric_identity_verified == 1);
     assert(row.geometric_admission.status ==
@@ -759,6 +797,10 @@ void test_ready_anchor_without_geometry_is_typed() {
                BG_DOCKING_FIXED64_PRODUCER_PLACEMENT_SINGLE_ANCHOR);
         assert(row.source_identity_verified == 1);
         assert(row.coordinates_available == 0);
+        assert(row.placement_quaternion_x == 0.0);
+        assert(row.placement_quaternion_y == 0.0);
+        assert(row.placement_quaternion_z == 0.0);
+        assert(row.placement_quaternion_w == 0.0);
         assert(row.geometric_admission.status ==
                BG_DOCKING_GEOMETRIC_ADMISSION_ROW_UPSTREAM_FAILURE);
         assert(digest_present(row.row_receipt_sha256));
@@ -794,6 +836,10 @@ void test_component_typed_failure_is_retained() {
             }
             found = true;
             assert(row.coordinates_available == 0);
+            assert(row.placement_quaternion_x == 0.0);
+            assert(row.placement_quaternion_y == 0.0);
+            assert(row.placement_quaternion_z == 0.0);
+            assert(row.placement_quaternion_w == 0.0);
             assert(row.component_failure_code != 0);
             assert(row.geometric_admission.status ==
                    BG_DOCKING_GEOMETRIC_ADMISSION_ROW_UPSTREAM_FAILURE);
