@@ -32,6 +32,8 @@ use betelgeuze_docking_search::{
     NativeFixed64ValidityKernelOutcome as IndependentValidityOutcome,
     NativeFixed64ValidityMeasurements as IndependentValidityMeasurements,
     NativeRigidRefinementContext as IndependentRigidContext,
+    NativeRigidRefinementError as IndependentRigidError,
+    NativeRigidRefinementErrorCode as IndependentRigidErrorCode,
     NativeRigidRefinementOutcome as IndependentRigidOutcome,
     NativeRigidRefinementProfile as IndependentRigidProfile,
     NativeRigidV2Config as IndependentRigidV2Config,
@@ -40,6 +42,7 @@ use betelgeuze_docking_search::{
     NativeScorerV1Config as IndependentScorerConfig,
     NativeScorerV1Context as IndependentScorerContext,
     NativeScorerV1Donor as IndependentScorerDonor,
+    NativeScorerV1FailureCode as IndependentScorerFailureCode,
     NativeScorerV1KernelOutcome as IndependentScorerOutcome, Quaternion, Vec3,
     FIXED64_MAX_ABSOLUTE_COORDINATE_ANGSTROM,
 };
@@ -1905,7 +1908,10 @@ fn canonical_pocket_normal(value: [f64; 3]) -> Result<[f64; 3]> {
         return Err(invalid("fixed64 pocket normal is degenerate"));
     }
     let scaled = Vec3::new(value[0] / maximum, value[1] / maximum, value[2] / maximum);
-    let scaled_norm = scaled.norm();
+    // This receipt boundary mirrors the native C++ `std::hypot` sequence.
+    // The dev-only search oracle deliberately uses `libm`, which can differ by
+    // a few ULPs and therefore must not define the ABI digest here.
+    let scaled_norm = scaled.x.hypot(scaled.y).hypot(scaled.z);
     if !scaled_norm.is_finite() || scaled_norm <= 0.0 {
         return Err(invalid("fixed64 pocket normal could not be normalized"));
     }
@@ -2565,6 +2571,7 @@ impl<'context> Fixed64Pipeline<'context> {
             self.receptor_system_sha256,
             self.ligand_system_sha256,
         )?;
+        let raw_pocket_normal = input.pocket_normal;
         let input = Fixed64RunInput {
             pocket_normal: canonical_pocket_normal(input.pocket_normal)?,
             ..input
@@ -2769,7 +2776,11 @@ impl<'context> Fixed64Pipeline<'context> {
         producer_input.feature_atom_index_count = checked_count(feature_atom_indices.len())?;
         producer_input.feature_atom_indices = slice_pointer(&feature_atom_indices);
         producer_input.feature_geometry_inventory_sha256 = input.feature_geometry_inventory_sha256;
-        producer_input.pocket_normal = input.pocket_normal;
+        // The native producer performs the same scale-stable normalization once.
+        // Preserve the caller vector here while the independent receipt graph uses
+        // the once-canonicalized copy above; feeding the canonical copy to native
+        // would normalize it twice and change some vectors by several ULPs.
+        producer_input.pocket_normal = raw_pocket_normal;
 
         let raw_modes = input
             .candidate_modes
@@ -4066,6 +4077,7 @@ fn validate_rigid_row_semantics(
     let clearance_evaluated = bool_from_abi(row.clearance_evaluated, "rigid clearance evaluation")?;
     let clearance_selected = bool_from_abi(row.clearance_selected, "rigid clearance selection")?;
     if row.slot_index as usize != slot
+        || row.candidate_mode != requested_mode
         || row.reserved0 != 0
         || row.reserved.iter().any(|item| *item != 0)
         || !rigid_evidence_is_consistent(&row.selected)?
@@ -4354,6 +4366,50 @@ fn validate_independent_rigid_evidence(
     Ok(())
 }
 
+fn independent_rigid_failure_code(code: IndependentRigidErrorCode) -> i32 {
+    match code {
+        IndependentRigidErrorCode::InvalidInput => {
+            sys::BG_DOCKING_RIGID_REFINEMENT_FAILURE_INVALID_INPUT
+        }
+        IndependentRigidErrorCode::NonFiniteInput => {
+            sys::BG_DOCKING_RIGID_REFINEMENT_FAILURE_NONFINITE_INPUT
+        }
+        IndependentRigidErrorCode::PairBudgetExceeded => {
+            sys::BG_DOCKING_RIGID_REFINEMENT_FAILURE_PAIR_BUDGET
+        }
+        IndependentRigidErrorCode::NonFiniteDerivedValue => {
+            sys::BG_DOCKING_RIGID_REFINEMENT_FAILURE_NONFINITE_DERIVED_VALUE
+        }
+    }
+}
+
+fn bind_independent_rigid_outcome<T>(
+    row: &sys::bg_docking_rigid_refinement_row_v1,
+    replay: std::result::Result<T, IndependentRigidError>,
+) -> Result<Option<T>> {
+    match replay {
+        Ok(expected) if row.status == sys::BG_DOCKING_RIGID_REFINEMENT_ROW_REFINED => {
+            Ok(Some(expected))
+        }
+        Ok(_) => Err(Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 rigid failure suppressed an independently successful refinement",
+        )),
+        Err(error)
+            if row.status == sys::BG_DOCKING_RIGID_REFINEMENT_ROW_TYPED_FAILURE
+                && row.failure_code == independent_rigid_failure_code(error.code()) =>
+        {
+            Ok(None)
+        }
+        Err(error) => Err(Error::local(
+            ErrorCode::AbiMismatch,
+            format!(
+                "native fixed64 rigid outcome disagrees with independent typed failure: {error}"
+            ),
+        )),
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 fn validate_independent_rigid_replay(
     backend: Backend,
@@ -4369,7 +4425,7 @@ fn validate_independent_rigid_replay(
     v3_config: IndependentRigidV3Config,
     clearance_config: IndependentRigidV3Config,
 ) -> Result<()> {
-    if row.status != sys::BG_DOCKING_RIGID_REFINEMENT_ROW_REFINED {
+    if requested_mode == sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_INACTIVE {
         return Ok(());
     }
     let ligand_count = usize::try_from(ligand_atom_count).map_err(|_| {
@@ -4406,17 +4462,15 @@ fn validate_independent_rigid_replay(
         pocket_center_angstrom: geometric_input.pocket_center_angstrom(),
         pocket_radius_angstrom: geometric_input.pocket_radius_angstrom(),
     };
-    let replay_error = |error| {
-        Error::local(
-            ErrorCode::AbiMismatch,
-            format!("independent fixed64 rigid replay rejected native success: {error}"),
-        )
-    };
     match requested_mode {
         sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V2_TRANSLATION => {
-            let expected =
-                refine_interaction_aware_rigid_v2(context, &source, max_steps, v2_config)
-                    .map_err(replay_error)?;
+            let Some(expected) = bind_independent_rigid_outcome(
+                row,
+                refine_interaction_aware_rigid_v2(context, &source, max_steps, v2_config),
+            )?
+            else {
+                return Ok(());
+            };
             validate_independent_rigid_evidence(
                 backend,
                 &row.selected,
@@ -4428,9 +4482,13 @@ fn validate_independent_rigid_replay(
             )?;
         }
         sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V3_TRANSLATION_ROTATION => {
-            let expected =
-                refine_interaction_aware_rigid_v3(context, &source, max_steps, v3_config)
-                    .map_err(replay_error)?;
+            let Some(expected) = bind_independent_rigid_outcome(
+                row,
+                refine_interaction_aware_rigid_v3(context, &source, max_steps, v3_config),
+            )?
+            else {
+                return Ok(());
+            };
             validate_independent_rigid_evidence(
                 backend,
                 &row.selected,
@@ -4445,16 +4503,21 @@ fn validate_independent_rigid_replay(
         | sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V6_BASELINE_V3_LANE => {
             let v3_lane =
                 requested_mode == sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V6_BASELINE_V3_LANE;
-            let expected = refine_interaction_aware_rigid_v6(
-                context,
-                &source,
-                max_steps,
-                v3_lane,
-                v2_config,
-                v3_config,
-                clearance_config,
-            )
-            .map_err(replay_error)?;
+            let Some(expected) = bind_independent_rigid_outcome(
+                row,
+                refine_interaction_aware_rigid_v6(
+                    context,
+                    &source,
+                    max_steps,
+                    v3_lane,
+                    v2_config,
+                    v3_config,
+                    clearance_config,
+                ),
+            )?
+            else {
+                return Ok(());
+            };
             if bool_from_abi(
                 row.baseline_duplicate_of_v2,
                 "rigid replay baseline duplicate",
@@ -4504,7 +4567,7 @@ fn validate_independent_rigid_replay(
         _ => {
             return Err(Error::local(
                 ErrorCode::AbiMismatch,
-                "native fixed64 rigid success used an inactive candidate mode",
+                "native fixed64 rigid replay used an unknown candidate mode",
             ));
         }
     }
@@ -4814,9 +4877,53 @@ fn validate_torsion_evidence(
     Ok(())
 }
 
+fn independently_composed_final_quaternion(
+    producer: &sys::bg_docking_fixed64_producer_row_v1,
+    rigid: &sys::bg_docking_rigid_refinement_row_v1,
+) -> Result<[f64; 4]> {
+    let source = [
+        producer.placement_quaternion_x,
+        producer.placement_quaternion_y,
+        producer.placement_quaternion_z,
+        producer.placement_quaternion_w,
+    ];
+    let rotation = rigid.selected.total_rotation_vector_radians;
+    let angle =
+        (rotation[0] * rotation[0] + rotation[1] * rotation[1] + rotation[2] * rotation[2]).sqrt();
+    if !angle.is_finite() {
+        return Err(Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 rigid rotation cannot produce a finite final quaternion",
+        ));
+    }
+    if angle == 0.0 {
+        return Ok(source);
+    }
+    let scale = (0.5 * angle).sin() / angle;
+    let delta = [
+        rotation[0] * scale,
+        rotation[1] * scale,
+        rotation[2] * scale,
+        (0.5 * angle).cos(),
+    ];
+    let mut result = [
+        delta[3] * source[0] + delta[0] * source[3] + delta[1] * source[2] - delta[2] * source[1],
+        delta[3] * source[1] - delta[0] * source[2] + delta[1] * source[3] + delta[2] * source[0],
+        delta[3] * source[2] + delta[0] * source[1] - delta[1] * source[0] + delta[2] * source[3],
+        delta[3] * source[3] - delta[0] * source[0] - delta[1] * source[1] - delta[2] * source[2],
+    ];
+    for component in &mut result {
+        if *component == 0.0 {
+            *component = 0.0;
+        }
+    }
+    Ok(result)
+}
+
 #[allow(clippy::too_many_arguments)]
 fn validate_refinement_evidence(
     rows: &[sys::bg_docking_fixed64_refinement_row_v1],
+    producer_rows: &[sys::bg_docking_fixed64_producer_row_v1],
     rigid_rows: &[sys::bg_docking_rigid_refinement_row_v1],
     torsion_rows: &[sys::bg_docking_torsion_v7_row_v1],
     requested_modes: &[sys::bg_docking_rigid_refinement_candidate_mode],
@@ -4825,8 +4932,10 @@ fn validate_refinement_evidence(
     final_coordinates: [&[f64]; 3],
     quaternions: [&[f64]; 4],
     ligand_atom_count: u64,
+    backend: Backend,
 ) -> Result<()> {
-    if rows.len() != rigid_rows.len()
+    if rows.len() != producer_rows.len()
+        || rows.len() != rigid_rows.len()
         || rows.len() != torsion_rows.len()
         || rows.len() != requested_modes.len()
         || quaternions.iter().any(|values| values.len() != rows.len())
@@ -4892,6 +5001,12 @@ fn validate_refinement_evidence(
                 let final_coordinate_digest =
                     coordinate_segment(final_coordinates, slot, ligand_count)
                         .map(canonical_coordinate_sha256);
+                let expected_quaternion =
+                    independently_composed_final_quaternion(&producer_rows[slot], rigid)?;
+                let quaternion_matches = expected_quaternion
+                    .into_iter()
+                    .zip(quaternion)
+                    .all(|(expected, observed)| numeric_matches(backend, expected, observed));
                 if row.failure_stage != sys::BG_DOCKING_FIXED64_REFINEMENT_FAILURE_STAGE_NONE
                     || row.coordinate_origin != expected_origin
                     || rigid.status != sys::BG_DOCKING_RIGID_REFINEMENT_ROW_REFINED
@@ -4920,6 +5035,7 @@ fn validate_refinement_evidence(
                         false,
                     )?
                     || !unit_quaternion(quaternion)
+                    || !quaternion_matches
                 {
                     return Err(Error::local(
                         ErrorCode::AbiMismatch,
@@ -5610,6 +5726,49 @@ fn validate_native_outputs(
                 && row.blocker_mask == 0
         })
         .count() as u64;
+    for (valid, label) in [
+        (
+            producer.source_bundle_receipt_sha256
+                == expected_receipt_graph.source_bundle_receipt_sha256,
+            "producer source-bundle receipt",
+        ),
+        (
+            pipeline.source_bundle_receipt_sha256
+                == expected_receipt_graph.source_bundle_receipt_sha256,
+            "pipeline source-bundle receipt",
+        ),
+        (
+            producer.generated_count == generated_row_count,
+            "producer generated count",
+        ),
+        (
+            producer.typed_failure_count == typed_failure_row_count,
+            "producer typed-failure count",
+        ),
+        (
+            pipeline.initial_admitted_count == initial_admitted_row_count,
+            "pipeline initial-admitted count",
+        ),
+        (
+            pipeline.refined_count == refined_row_count,
+            "pipeline refined count",
+        ),
+        (
+            pipeline.scored_count == scored_row_count,
+            "pipeline scored count",
+        ),
+        (
+            pipeline.valid_count == valid_row_count,
+            "pipeline valid count",
+        ),
+    ] {
+        if !valid {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                format!("native fixed64 {label} was not independently rederived"),
+            ));
+        }
+    }
     if requested_modes.len() != candidate_count as usize
         || rigid_max_steps.len() != candidate_count as usize
         || pipeline.backend != backend.as_raw()
@@ -5967,9 +6126,22 @@ fn validate_native_outputs(
         ));
     }
     for (slot, row) in rigid_rows.iter().enumerate() {
+        let producer_row = &producer_rows[slot];
+        let admitted = producer_row.status == sys::BG_DOCKING_FIXED64_PRODUCER_ROW_GENERATED
+            && producer_row.geometric_admission.decision
+                == sys::BG_DOCKING_GEOMETRIC_ADMISSION_DECISION_ACCEPTED
+            && bool_from_abi(
+                producer_row.geometric_admission.rank_eligible,
+                "geometric rank eligibility",
+            )?;
+        let effective_mode = if admitted {
+            requested_modes[slot]
+        } else {
+            sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_INACTIVE
+        };
         validate_rigid_row_semantics(
             row,
-            requested_modes[slot],
+            effective_mode,
             rigid_max_steps[slot],
             rigid_coordinates,
             slot,
@@ -5978,7 +6150,7 @@ fn validate_native_outputs(
         validate_independent_rigid_replay(
             backend,
             row,
-            requested_modes[slot],
+            effective_mode,
             rigid_max_steps[slot],
             producer_coordinates,
             rigid_coordinates,
@@ -6065,6 +6237,7 @@ fn validate_native_outputs(
     )?;
     validate_refinement_evidence(
         refinement_rows,
+        producer_rows,
         rigid_rows,
         torsion_rows,
         requested_modes,
@@ -6081,11 +6254,13 @@ fn validate_native_outputs(
         final_coordinates,
         final_quaternions,
         ligand_atom_count,
+        backend,
     )?;
     validate_scorer_and_validity_evidence(
         scorer_rows,
         validity_rows,
         ranking_rows,
+        refinement_rows,
         ligand_atom_count,
         receptor_atom_count,
         validity_exclusion_count,
@@ -6363,6 +6538,30 @@ fn scorer_failure_pair_evidence_is_valid(row: &sys::bg_docking_scorer_v1_row_v1)
         sys::BG_DOCKING_SCORER_V1_FAILURE_DEGENERATE_ROTOR
         | sys::BG_DOCKING_SCORER_V1_FAILURE_NONFINITE_SCORE => true,
         _ => false,
+    }
+}
+
+fn independent_scorer_failure_code(code: IndependentScorerFailureCode) -> i32 {
+    match code {
+        IndependentScorerFailureCode::ProposalGenerationFailure
+        | IndependentScorerFailureCode::SeverePenetrationRejected => {
+            sys::BG_DOCKING_SCORER_V1_FAILURE_UPSTREAM_NOT_ADMITTED
+        }
+        IndependentScorerFailureCode::InvalidCandidateCoordinates => {
+            sys::BG_DOCKING_SCORER_V1_FAILURE_INVALID_CANDIDATE_COORDINATES
+        }
+        IndependentScorerFailureCode::ReceptorCandidatePairCapacityExceeded => {
+            sys::BG_DOCKING_SCORER_V1_FAILURE_RECEPTOR_PAIR_CAPACITY
+        }
+        IndependentScorerFailureCode::LigandPairCapacityExceeded => {
+            sys::BG_DOCKING_SCORER_V1_FAILURE_LIGAND_PAIR_CAPACITY
+        }
+        IndependentScorerFailureCode::DegenerateRotorGeometry => {
+            sys::BG_DOCKING_SCORER_V1_FAILURE_DEGENERATE_ROTOR
+        }
+        IndependentScorerFailureCode::NonfiniteScore => {
+            sys::BG_DOCKING_SCORER_V1_FAILURE_NONFINITE_SCORE
+        }
     }
 }
 
@@ -6659,6 +6858,7 @@ fn validate_scorer_and_validity_evidence(
     scorer_rows: &[sys::bg_docking_scorer_v1_row_v1],
     validity_rows: &[sys::bg_docking_pose_validity_row_v1],
     ranking_rows: &[sys::bg_docking_stable_top_k_row_v1],
+    refinement_rows: &[sys::bg_docking_fixed64_refinement_row_v1],
     ligand_atom_count: u64,
     receptor_atom_count: u64,
     exclusion_count: u64,
@@ -6675,6 +6875,7 @@ fn validate_scorer_and_validity_evidence(
     if scorer_rows.len() != candidate_count
         || validity_rows.len() != candidate_count
         || ranking_rows.len() != candidate_count
+        || refinement_rows.len() != candidate_count
     {
         return Err(Error::local(
             ErrorCode::AbiMismatch,
@@ -6736,18 +6937,21 @@ fn validate_scorer_and_validity_evidence(
                 "native fixed64 scorer, validity, or ranking row ABI shape is invalid",
             ));
         }
-        if scorer.status == sys::BG_DOCKING_SCORER_V1_ROW_SCORED {
-            let term_sum = scorer.weighted_terms.iter().copied().sum::<f64>();
-            if scorer.failure_code != sys::BG_DOCKING_SCORER_V1_FAILURE_NONE
-                || !scorer.total_score.is_finite()
-                || scorer.weighted_terms.iter().any(|value| !value.is_finite())
-                || (term_sum - scorer.total_score).abs() > 1.0e-12
+        let coordinate_ready =
+            refinement_rows[slot].status == sys::BG_DOCKING_FIXED64_REFINEMENT_ROW_COORDINATE_READY;
+        if !coordinate_ready {
+            if scorer.status != sys::BG_DOCKING_SCORER_V1_ROW_TYPED_FAILURE
+                || scorer.failure_code != sys::BG_DOCKING_SCORER_V1_FAILURE_UPSTREAM_NOT_ADMITTED
+                || !scorer_failure_rank_evidence_is_zero(scorer)
+                || scorer.receptor_candidate_pair_count != 0
+                || scorer.ligand_pair_count != 0
             {
                 return Err(Error::local(
                     ErrorCode::AbiMismatch,
-                    "native fixed64 scored row has invalid ScorerV1 term semantics",
+                    "native fixed64 inactive scorer row disagrees with refinement eligibility",
                 ));
             }
+        } else {
             let ligand_count = usize::try_from(ligand_atom_count).map_err(|_| {
                 Error::local(
                     ErrorCode::AbiMismatch,
@@ -6778,43 +6982,63 @@ fn validate_scorer_and_validity_evidence(
                         format!("independent fixed64 scorer evaluation failed: {error}"),
                     )
                 })?;
-            let IndependentScorerOutcome::Scored(expected) = independent else {
-                return Err(Error::local(
-                    ErrorCode::AbiMismatch,
-                    "native fixed64 scorer reported scored evidence for an independent typed failure",
-                ));
-            };
-            let count_matches = [
-                (
-                    expected.receptor_candidate_pair_count(),
-                    scorer.receptor_candidate_pair_count,
-                ),
-                (expected.ligand_pair_count(), scorer.ligand_pair_count),
-                (expected.hbond_count(), scorer.hbond_count),
-                (
-                    expected.hydrophobic_contact_count(),
-                    scorer.hydrophobic_contact_count,
-                ),
-                (expected.buried_polar_count(), scorer.buried_polar_count),
-            ]
-            .into_iter()
-            .all(|(expected, observed)| u64::try_from(expected).ok() == Some(observed));
-            if !count_matches {
-                return Err(Error::local(
-                    ErrorCode::AbiMismatch,
-                    "native fixed64 scorer interaction counts disagree with independent replay",
-                ));
+            match independent {
+                IndependentScorerOutcome::Scored(expected) => {
+                    let term_sum = scorer.weighted_terms.iter().copied().sum::<f64>();
+                    let terms_match = expected
+                        .weighted_terms()
+                        .into_iter()
+                        .zip(scorer.weighted_terms)
+                        .all(|(expected, observed)| numeric_matches(backend, expected, observed));
+                    let count_matches = [
+                        (
+                            expected.receptor_candidate_pair_count(),
+                            scorer.receptor_candidate_pair_count,
+                        ),
+                        (expected.ligand_pair_count(), scorer.ligand_pair_count),
+                        (expected.hbond_count(), scorer.hbond_count),
+                        (
+                            expected.hydrophobic_contact_count(),
+                            scorer.hydrophobic_contact_count,
+                        ),
+                        (expected.buried_polar_count(), scorer.buried_polar_count),
+                    ]
+                    .into_iter()
+                    .all(|(expected, observed)| u64::try_from(expected).ok() == Some(observed));
+                    if scorer.status != sys::BG_DOCKING_SCORER_V1_ROW_SCORED
+                        || scorer.failure_code != sys::BG_DOCKING_SCORER_V1_FAILURE_NONE
+                        || !scorer.total_score.is_finite()
+                        || scorer.weighted_terms.iter().any(|value| !value.is_finite())
+                        || (term_sum - scorer.total_score).abs() > 1.0e-12
+                        || !terms_match
+                        || !numeric_matches(backend, expected.total_score(), scorer.total_score)
+                        || !count_matches
+                    {
+                        return Err(Error::local(
+                            ErrorCode::AbiMismatch,
+                            "native fixed64 scored terms, score, or counts disagree with independent replay",
+                        ));
+                    }
+                }
+                IndependentScorerOutcome::TypedFailure(expected) => {
+                    let receptor_count =
+                        u64::try_from(expected.receptor_candidate_pair_count()).ok();
+                    let ligand_count = u64::try_from(expected.ligand_pair_count()).ok();
+                    if scorer.status != sys::BG_DOCKING_SCORER_V1_ROW_TYPED_FAILURE
+                        || scorer.failure_code
+                            != independent_scorer_failure_code(expected.failure_code())
+                        || !scorer_failure_rank_evidence_is_zero(scorer)
+                        || !scorer_failure_pair_evidence_is_valid(scorer)
+                        || receptor_count != Some(scorer.receptor_candidate_pair_count)
+                        || ligand_count != Some(scorer.ligand_pair_count)
+                    {
+                        return Err(Error::local(
+                            ErrorCode::AbiMismatch,
+                            "native fixed64 scorer typed failure disagrees with independent replay",
+                        ));
+                    }
+                }
             }
-        } else if scorer.status != sys::BG_DOCKING_SCORER_V1_ROW_TYPED_FAILURE
-            || scorer.failure_code < sys::BG_DOCKING_SCORER_V1_FAILURE_UPSTREAM_NOT_ADMITTED
-            || scorer.failure_code > sys::BG_DOCKING_SCORER_V1_FAILURE_NONFINITE_SCORE
-            || !scorer_failure_rank_evidence_is_zero(scorer)
-            || !scorer_failure_pair_evidence_is_valid(scorer)
-        {
-            return Err(Error::local(
-                ErrorCode::AbiMismatch,
-                "native fixed64 typed scorer failure retained invalid evidence",
-            ));
         }
         if validity.status == sys::BG_DOCKING_POSE_VALIDITY_ROW_EVALUATED {
             let ligand_count = usize::try_from(ligand_atom_count).map_err(|_| {
@@ -7193,6 +7417,23 @@ fn validate_index_evidence(
         }
     }
 
+    let expected_valid = primary
+        .iter()
+        .copied()
+        .filter(|raw_slot| {
+            let slot = *raw_slot as usize;
+            validity_rows[slot].status == sys::BG_DOCKING_POSE_VALIDITY_ROW_EVALUATED
+                && validity_rows[slot].passed_check_mask == sys::BG_DOCKING_POSE_VALIDITY_CHECK_ALL
+                && validity_rows[slot].blocker_mask == 0
+        })
+        .collect::<Vec<_>>();
+    if valid != expected_valid.as_slice() {
+        return Err(Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 valid rank order is not the validity-filtered primary order",
+        ));
+    }
+
     let mut valid_seen = vec![false; candidate_count];
     for (offset, raw_slot) in valid.iter().copied().enumerate() {
         let slot = usize::try_from(raw_slot).map_err(|_| {
@@ -7512,6 +7753,7 @@ mod output_validation_tests {
         scorer_rows: Vec<sys::bg_docking_scorer_v1_row_v1>,
         validity_rows: Vec<sys::bg_docking_pose_validity_row_v1>,
         ranking_rows: Vec<sys::bg_docking_stable_top_k_row_v1>,
+        refinement_rows: Vec<sys::bg_docking_fixed64_refinement_row_v1>,
         cluster_rows: Vec<sys::bg_docking_rmsd_cluster_row_v1>,
         primary_indices: Vec<u32>,
         valid_indices: Vec<u32>,
@@ -7532,6 +7774,8 @@ mod output_validation_tests {
                 vec![zeroed_abi_value!(sys::bg_docking_pose_validity_row_v1); count];
             let mut ranking_rows =
                 vec![zeroed_abi_value!(sys::bg_docking_stable_top_k_row_v1); count];
+            let mut refinement_rows =
+                vec![zeroed_abi_value!(sys::bg_docking_fixed64_refinement_row_v1); count];
             let mut cluster_rows =
                 vec![zeroed_abi_value!(sys::bg_docking_rmsd_cluster_row_v1); count];
             let final_coordinates: [Vec<f64>; 3] = std::array::from_fn(|_| vec![0.0; count]);
@@ -7606,11 +7850,11 @@ mod output_validation_tests {
                 cluster_rows[slot].slot_index = slot as u32;
                 cluster_rows[slot].status = sys::BG_DOCKING_RMSD_CLUSTER_ROW_UPSTREAM_NOT_VALID;
             }
-            for (slot, score) in [(0_usize, 1.0_f64), (1, 2.0)] {
+            for slot in [0_usize, 1] {
                 scorer_rows[slot].status = sys::BG_DOCKING_SCORER_V1_ROW_SCORED;
                 scorer_rows[slot].failure_code = sys::BG_DOCKING_SCORER_V1_FAILURE_NONE;
-                scorer_rows[slot].weighted_terms[0] = score;
-                scorer_rows[slot].total_score = score;
+                scorer_rows[slot].weighted_terms = scorer_counts.weighted_terms();
+                scorer_rows[slot].total_score = scorer_counts.total_score();
                 scorer_rows[slot].receptor_candidate_pair_count =
                     scorer_counts.receptor_candidate_pair_count() as u64;
                 scorer_rows[slot].ligand_pair_count = scorer_counts.ligand_pair_count() as u64;
@@ -7620,8 +7864,10 @@ mod output_validation_tests {
                 scorer_rows[slot].buried_polar_count = scorer_counts.buried_polar_count() as u64;
                 ranking_rows[slot].rank_eligible = 1;
                 ranking_rows[slot].stable_rank = slot as u32 + 1;
-                ranking_rows[slot].total_score = score;
+                ranking_rows[slot].total_score = scorer_counts.total_score();
                 ranking_rows[slot].coordinate_sha256 = [slot as u8 + 1; 32];
+                refinement_rows[slot].status =
+                    sys::BG_DOCKING_FIXED64_REFINEMENT_ROW_COORDINATE_READY;
             }
             validity_rows[0].status = sys::BG_DOCKING_POSE_VALIDITY_ROW_EVALUATED;
             validity_rows[0].failure_code = sys::BG_DOCKING_POSE_VALIDITY_FAILURE_NONE;
@@ -7677,6 +7923,7 @@ mod output_validation_tests {
                 scorer_rows,
                 validity_rows,
                 ranking_rows,
+                refinement_rows,
                 cluster_rows,
                 primary_indices,
                 valid_indices: vec![0; count],
@@ -7695,6 +7942,7 @@ mod output_validation_tests {
                 &self.scorer_rows,
                 &self.validity_rows,
                 &self.ranking_rows,
+                &self.refinement_rows,
                 1,
                 1,
                 0,
@@ -7782,6 +8030,49 @@ mod output_validation_tests {
         let mut fabricated_interaction_count = IndexFixture::valid();
         fabricated_interaction_count.scorer_rows[0].receptor_candidate_pair_count += 1;
         assert!(fabricated_interaction_count.validate().is_err());
+
+        let mut fabricated_consistent_score = IndexFixture::valid();
+        fabricated_consistent_score.scorer_rows[0].weighted_terms[0] += 0.5;
+        fabricated_consistent_score.scorer_rows[0].total_score += 0.5;
+        fabricated_consistent_score.ranking_rows[0].total_score += 0.5;
+        assert!(fabricated_consistent_score.validate().is_err());
+
+        let mut suppressed_success = IndexFixture::valid();
+        suppressed_success.scorer_rows[0] = zeroed_abi_value!(sys::bg_docking_scorer_v1_row_v1);
+        suppressed_success.scorer_rows[0].status = sys::BG_DOCKING_SCORER_V1_ROW_TYPED_FAILURE;
+        suppressed_success.scorer_rows[0].failure_code =
+            sys::BG_DOCKING_SCORER_V1_FAILURE_UPSTREAM_NOT_ADMITTED;
+        assert!(suppressed_success.validate().is_err());
+    }
+
+    #[test]
+    fn rejects_valid_rank_reordered_independently_of_primary_rank() {
+        let mut fixture = IndexFixture::valid();
+        fixture.final_quaternions[0][1] = 0.0;
+        let IndependentValidityOutcome::Evaluated {
+            checks,
+            measurements,
+        } = fixture
+            .validity_context
+            .evaluate_coordinates(
+                &[Vec3::new(0.0, 0.0, 0.0)],
+                Quaternion::new(0.0, 0.0, 0.0, 1.0),
+            )
+            .expect("second valid-rank fixture evaluation")
+        else {
+            panic!("second valid-rank fixture unexpectedly failed");
+        };
+        assert!(checks.all());
+        fixture.validity_rows[1].passed_check_mask = independent_validity_check_mask(checks);
+        fixture.validity_rows[1].blocker_mask = 0;
+        assign_independent_validity_measurements(&mut fixture.validity_rows[1], measurements);
+        fixture.ranking.valid_index_count = 2;
+        fixture.valid_indices[0] = 1;
+        fixture.valid_indices[1] = 0;
+        fixture.ranking_rows[0].stable_valid_rank = 2;
+        fixture.ranking_rows[1].valid_rank_eligible = 1;
+        fixture.ranking_rows[1].stable_valid_rank = 1;
+        assert!(fixture.validate().is_err());
     }
 
     #[test]
@@ -8480,6 +8771,26 @@ mod output_validation_tests {
             IndependentRigidV3Config::clearance_v4(),
         )
         .is_err());
+
+        let mut suppressed = zeroed_abi_value!(sys::bg_docking_rigid_refinement_row_v1);
+        suppressed.status = sys::BG_DOCKING_RIGID_REFINEMENT_ROW_TYPED_FAILURE;
+        suppressed.failure_code = sys::BG_DOCKING_RIGID_REFINEMENT_FAILURE_INVALID_INPUT;
+        suppressed.candidate_mode = sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V2_TRANSLATION;
+        assert!(validate_independent_rigid_replay(
+            Backend::RustCpu,
+            &suppressed,
+            sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V2_TRANSLATION,
+            1,
+            producer_views,
+            &rigid_coordinates,
+            0,
+            1,
+            &geometric_input,
+            IndependentRigidV2Config::default(),
+            IndependentRigidV3Config::default(),
+            IndependentRigidV3Config::clearance_v4(),
+        )
+        .is_err());
     }
 
     fn refined_torsion_fixture() -> (
@@ -8674,6 +8985,7 @@ mod output_validation_tests {
 
     struct RefinementFixture {
         rows: Vec<sys::bg_docking_fixed64_refinement_row_v1>,
+        producer: Vec<sys::bg_docking_fixed64_producer_row_v1>,
         rigid: Vec<sys::bg_docking_rigid_refinement_row_v1>,
         torsion: Vec<sys::bg_docking_torsion_v7_row_v1>,
         coordinates: [Vec<f64>; 3],
@@ -8696,11 +9008,14 @@ mod output_validation_tests {
             &coordinates[2],
         ));
         let rigid = valid_rigid_v2_row();
+        let mut producer = zeroed_abi_value!(sys::bg_docking_fixed64_producer_row_v1);
+        producer.placement_quaternion_w = 1.0;
         let mut torsion = zeroed_abi_value!(sys::bg_docking_torsion_v7_row_v1);
         torsion.status = sys::BG_DOCKING_TORSION_V7_ROW_TYPED_FAILURE;
         torsion.failure_code = sys::BG_DOCKING_TORSION_V7_FAILURE_UPSTREAM_NOT_ELIGIBLE;
         RefinementFixture {
             rows: vec![row],
+            producer: vec![producer],
             rigid: vec![rigid],
             torsion: vec![torsion],
             coordinates,
@@ -8724,6 +9039,7 @@ mod output_validation_tests {
         ];
         assert!(validate_refinement_evidence(
             &fixture.rows,
+            &fixture.producer,
             &fixture.rigid,
             &fixture.torsion,
             &[sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V2_TRANSLATION],
@@ -8732,8 +9048,30 @@ mod output_validation_tests {
             coordinate_views,
             quaternion_views,
             1,
+            Backend::RustCpu,
         )
         .is_ok());
+
+        let substituted_quaternion = [vec![1.0], vec![0.0], vec![0.0], vec![0.0]];
+        assert!(validate_refinement_evidence(
+            &fixture.rows,
+            &fixture.producer,
+            &fixture.rigid,
+            &fixture.torsion,
+            &[sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V2_TRANSLATION],
+            coordinate_views,
+            coordinate_views,
+            coordinate_views,
+            [
+                substituted_quaternion[0].as_slice(),
+                substituted_quaternion[1].as_slice(),
+                substituted_quaternion[2].as_slice(),
+                substituted_quaternion[3].as_slice(),
+            ],
+            1,
+            Backend::RustCpu,
+        )
+        .is_err());
 
         let mismatched_origin = [vec![1.0], vec![0.0], vec![0.0]];
         let mismatched_origin_views = [
@@ -8743,6 +9081,7 @@ mod output_validation_tests {
         ];
         assert!(validate_refinement_evidence(
             &fixture.rows,
+            &fixture.producer,
             &fixture.rigid,
             &fixture.torsion,
             &[sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V2_TRANSLATION],
@@ -8751,12 +9090,14 @@ mod output_validation_tests {
             coordinate_views,
             quaternion_views,
             1,
+            Backend::RustCpu,
         )
         .is_err());
 
         fixture.rows[0].coordinate_available = 0;
         assert!(validate_refinement_evidence(
             &fixture.rows,
+            &fixture.producer,
             &fixture.rigid,
             &fixture.torsion,
             &[sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V2_TRANSLATION],
@@ -8765,6 +9106,7 @@ mod output_validation_tests {
             coordinate_views,
             quaternion_views,
             1,
+            Backend::RustCpu,
         )
         .is_err());
     }

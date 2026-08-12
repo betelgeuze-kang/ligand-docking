@@ -222,6 +222,19 @@ fn assert_safe_run_returns_complete_receipt(fixture: &SingleAtomFixture, options
         ..run
     };
     assert_eq!(receipt, pipeline.run(scaled_normal).unwrap());
+    let oblique_normal = Fixed64RunInput {
+        pocket_normal: [1.0, 1.0, 5.0],
+        ..run
+    };
+    let oblique_receipt = pipeline.run(oblique_normal).unwrap();
+    let scaled_oblique_normal = Fixed64RunInput {
+        pocket_normal: [2.0, 2.0, 10.0],
+        ..run
+    };
+    assert_eq!(
+        oblique_receipt,
+        pipeline.run(scaled_oblique_normal).unwrap()
+    );
     let mut crosswired_source_evidence = run;
     crosswired_source_evidence
         .exact_source_evidence
