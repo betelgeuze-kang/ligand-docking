@@ -217,6 +217,7 @@ if(BG_HIP_SAFE_COMPILED)
             "-I${CMAKE_CURRENT_SOURCE_DIR}/src/hip"
         DEPENDS
             "${CMAKE_CURRENT_SOURCE_DIR}/src/hip/provider.hip"
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/hip/docking_fixed64_so3.hip"
             "${CMAKE_CURRENT_SOURCE_DIR}/src/hip/docking_geometric_admission.hip"
             "${CMAKE_CURRENT_SOURCE_DIR}/src/hip/docking_scorer.hip"
             "${CMAKE_CURRENT_SOURCE_DIR}/src/hip/docking_pose_validity.hip"
