@@ -76,10 +76,10 @@ bool digest_present(const uint8_t (&digest)[32]) {
 struct Fixture final {
     std::array<double, kAtoms> source_x = {0.0, 1.0, 0.0, 0.0};
     std::array<double, kAtoms> source_y = {0.0, 0.0, 1.0, 0.0};
-    std::array<double, kAtoms> source_z = {0.0, 0.0, 0.0, 1.0};
+    std::array<double, kAtoms> source_z = {0.0, 0.0, 0.0, 1.5};
     std::array<double, kAtoms> receptor_x = {4.0, 3.5, 4.0, 4.0};
     std::array<double, kAtoms> receptor_y = {0.0, 0.0, 1.0, 0.0};
-    std::array<double, kAtoms> receptor_z = {0.0, 0.0, 0.0, 1.0};
+    std::array<double, kAtoms> receptor_z = {0.0, 0.0, 0.0, 1.25};
     std::array<double, kAtoms> ligand_radii = {1.5, 1.5, 1.5, 1.5};
     std::array<double, kAtoms> receptor_radii = {1.5, 1.5, 1.5, 1.5};
     std::array<uint8_t, kAtoms> heavy_mask = {1, 1, 1, 1};
@@ -96,10 +96,10 @@ struct Fixture final {
         fill_digest(allocation.exact_v11_source.source_receipt_sha256, 0x10);
         fill_digest(allocation.exact_v11_source.proposal_sha256, 0x11);
         parse_digest(
-            "fe2cd37291f9fe4f48ee1379c7c7e4cabaf7bb8b6d216b4d6814e308d6ca286c",
+            "42bd9421b68e2e80a1b4d6b0e52173f6769feb8422b897d1b0131a124c35610a",
             allocation.exact_v11_source.ligand_coordinate_sha256);
         parse_digest(
-            "8cb1e4a6f8ae2a82832c1d5ae36c914fcb15030faa20c4901b2f842e0348ca58",
+            "eec85cfe7d1e2cb444ed309e7b1861819ec8c6fd9391baa71c26db323fdc847c",
             allocation.exact_v11_source.receptor_coordinate_sha256);
         fill_digest(
             allocation.exact_v11_source.prepared_ligand_topology_sha256,
@@ -461,6 +461,75 @@ void test_crosswired_feature_is_transactional() {
     bg_context_destroy(context);
 }
 
+void test_equal_cross_kind_receipts_select_by_lane_kind() {
+    Fixture fixture;
+    std::copy_n(
+        fixture.atomic_features[0].receipt_sha256,
+        32,
+        fixture.atomic_features[3].receipt_sha256);
+    std::copy_n(
+        fixture.atomic_features[0].receipt_sha256,
+        32,
+        fixture.feature_rows[3].allocation_feature_receipt_sha256);
+    parse_digest(
+        "d32faa67a5d4759e5c9e5679207a2b87f94a9ce1877f64a342970c552931fd84",
+        fixture.feature_rows[3].feature_geometry_receipt_sha256);
+    auto input = make_input(fixture, 44);
+    parse_digest(
+        "96ac2973d499b73e65ad9e31920166eb71da4d522c1372899440ee46c00ea5f9",
+        input.feature_geometry_inventory_sha256);
+    for (const bg_backend backend : {
+             BG_BACKEND_CPP_CPU_REFERENCE,
+             BG_BACKEND_RUST_CPU,
+             BG_BACKEND_HIP_SAFE,
+             BG_BACKEND_HIP_FAST,
+         }) {
+        bg_context *context = make_context(backend);
+        if (context == nullptr) continue;
+        auto *admission = make_admission(fixture, context);
+        const Placement observed = place(context, admission, input);
+        assert_complete(observed, backend, 44);
+        bg_docking_geometric_admission_v1_destroy(admission);
+        bg_context_destroy(context);
+    }
+}
+
+void test_nonunique_principal_axis_is_typed_across_backends() {
+    Fixture fixture;
+    fixture.source_z[3] = 1.0;
+    fixture.receptor_z[3] = 1.0;
+    parse_digest(
+        "fe2cd37291f9fe4f48ee1379c7c7e4cabaf7bb8b6d216b4d6814e308d6ca286c",
+        fixture.allocation.exact_v11_source.ligand_coordinate_sha256);
+    parse_digest(
+        "8cb1e4a6f8ae2a82832c1d5ae36c914fcb15030faa20c4901b2f842e0348ca58",
+        fixture.allocation.exact_v11_source.receptor_coordinate_sha256);
+    for (const bg_backend backend : {
+             BG_BACKEND_CPP_CPU_REFERENCE,
+             BG_BACKEND_RUST_CPU,
+             BG_BACKEND_HIP_SAFE,
+             BG_BACKEND_HIP_FAST,
+         }) {
+        bg_context *context = make_context(backend);
+        if (context == nullptr) continue;
+        auto *admission = make_admission(fixture, context);
+        for (uint32_t slot : {UINT32_C(58), UINT32_C(59)}) {
+            const Placement observed =
+                place(context, admission, make_input(fixture, slot));
+            assert(observed.output.status ==
+                   BG_DOCKING_FIXED64_SINGLE_ANCHOR_TYPED_FAILURE);
+            assert(observed.output.failure_code ==
+                   BG_DOCKING_FIXED64_SINGLE_ANCHOR_FAILURE_DEGENERATE_PRINCIPAL_AXIS);
+            assert(observed.output.coordinates_written == UINT8_C(0));
+            assert(observed.output.denominator_preserved == UINT8_C(1));
+            assert(observed.output.geometric_admission.status ==
+                   BG_DOCKING_GEOMETRIC_ADMISSION_ROW_UPSTREAM_FAILURE);
+        }
+        bg_docking_geometric_admission_v1_destroy(admission);
+        bg_context_destroy(context);
+    }
+}
+
 void test_capacity_and_alias_are_transactional() {
     Fixture fixture;
     bg_context *context = make_context(BG_BACKEND_CPP_CPU_REFERENCE);
@@ -552,6 +621,8 @@ void test_typed_geometry_failure_preserves_denominator_and_coordinates() {
 int main() {
     test_all_anchor_lanes_repeat_and_backend_parity();
     test_crosswired_feature_is_transactional();
+    test_equal_cross_kind_receipts_select_by_lane_kind();
+    test_nonunique_principal_axis_is_typed_across_backends();
     test_capacity_and_alias_are_transactional();
     test_typed_geometry_failure_preserves_denominator_and_coordinates();
     return 0;

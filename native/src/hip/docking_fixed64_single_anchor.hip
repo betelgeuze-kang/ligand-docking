@@ -445,6 +445,21 @@ __device__ bool anchor_principal_axis(
     for (size_t index = 1; index < 3; ++index) {
         if (matrix[index][index] > matrix[dominant][dominant]) dominant = index;
     }
+    double second_largest = -INFINITY;
+    for (size_t index = 0; index < 3; ++index) {
+        if (index != dominant) {
+            second_largest = fmax(second_largest, matrix[index][index]);
+        }
+    }
+    const double dominant_value = matrix[dominant][dominant];
+    const double eigenvalue_scale = fmax(
+        kHipAnchorEpsilon,
+        fmax(fabs(dominant_value), fabs(second_largest)));
+    if (!isfinite(dominant_value) || !isfinite(second_largest) ||
+        dominant_value - second_largest <=
+            kHipAnchorEpsilon * eigenvalue_scale) {
+        return false;
+    }
     HipAnchorVec3 vector{
         eigenvectors[0][dominant], eigenvectors[1][dominant], eigenvectors[2][dominant]};
     if (!anchor_normalize(vector, &vector)) return false;

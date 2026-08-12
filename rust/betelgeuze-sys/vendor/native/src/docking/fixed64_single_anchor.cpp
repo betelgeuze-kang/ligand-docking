@@ -451,6 +451,45 @@ class CanonicalHash final {
             receptor == BG_DOCKING_FIXED64_FEATURE_POCKET_SHAPE_AXIS);
 }
 
+enum class FeaturePosition : uint8_t {
+    Ligand,
+    Receptor,
+};
+
+[[nodiscard]] bool feature_kind_matches_position(
+    bg_docking_fixed64_lane lane,
+    FeaturePosition position,
+    bg_docking_fixed64_feature_kind kind) noexcept {
+    if (position == FeaturePosition::Ligand) {
+        return (lane ==
+                    BG_DOCKING_FIXED64_LANE_LIGAND_DONOR_TO_RECEPTOR_ACCEPTOR &&
+                kind == BG_DOCKING_FIXED64_FEATURE_LIGAND_DONOR) ||
+               (lane ==
+                    BG_DOCKING_FIXED64_LANE_LIGAND_ACCEPTOR_TO_RECEPTOR_DONOR &&
+                kind == BG_DOCKING_FIXED64_FEATURE_LIGAND_ACCEPTOR) ||
+               (lane == BG_DOCKING_FIXED64_LANE_COMPLEMENTARY_CHARGE &&
+                (kind == BG_DOCKING_FIXED64_FEATURE_LIGAND_POSITIVE_SITE ||
+                 kind == BG_DOCKING_FIXED64_FEATURE_LIGAND_NEGATIVE_SITE)) ||
+               (lane == BG_DOCKING_FIXED64_LANE_AROMATIC_PLANE &&
+                kind == BG_DOCKING_FIXED64_FEATURE_LIGAND_AROMATIC_PLANE) ||
+               (lane == BG_DOCKING_FIXED64_LANE_PRINCIPAL_AXIS_SHAPE &&
+                kind == BG_DOCKING_FIXED64_FEATURE_LIGAND_SHAPE_AXIS);
+    }
+    return (lane ==
+                BG_DOCKING_FIXED64_LANE_LIGAND_DONOR_TO_RECEPTOR_ACCEPTOR &&
+            kind == BG_DOCKING_FIXED64_FEATURE_RECEPTOR_ACCEPTOR) ||
+           (lane ==
+                BG_DOCKING_FIXED64_LANE_LIGAND_ACCEPTOR_TO_RECEPTOR_DONOR &&
+            kind == BG_DOCKING_FIXED64_FEATURE_RECEPTOR_DONOR) ||
+           (lane == BG_DOCKING_FIXED64_LANE_COMPLEMENTARY_CHARGE &&
+            (kind == BG_DOCKING_FIXED64_FEATURE_RECEPTOR_POSITIVE_SITE ||
+             kind == BG_DOCKING_FIXED64_FEATURE_RECEPTOR_NEGATIVE_SITE)) ||
+           (lane == BG_DOCKING_FIXED64_LANE_AROMATIC_PLANE &&
+            kind == BG_DOCKING_FIXED64_FEATURE_RECEPTOR_AROMATIC_PLANE) ||
+           (lane == BG_DOCKING_FIXED64_LANE_PRINCIPAL_AXIS_SHAPE &&
+            kind == BG_DOCKING_FIXED64_FEATURE_POCKET_SHAPE_AXIS);
+}
+
 [[nodiscard]] bool allocation_contains_feature(
     const bg_docking_fixed64_allocation_input_v1 &allocation,
     const bg_docking_fixed64_feature_geometry_row_v1 &feature) noexcept {
@@ -547,12 +586,26 @@ class CanonicalHash final {
         }
         if (std::memcmp(
                 row.allocation_feature_receipt_sha256,
-                slot.selected_source_receipt_sha256[0], 32) == 0) {
+                slot.selected_source_receipt_sha256[0], 32) == 0 &&
+            feature_kind_matches_position(
+                slot.lane, FeaturePosition::Ligand, row.kind)) {
+            if (selected->ligand != nullptr) {
+                return fail(
+                    BG_STATUS_INVALID_ARGUMENT,
+                    "single-anchor ligand feature receipt is ambiguous");
+            }
             selected->ligand = &row;
         }
         if (std::memcmp(
                 row.allocation_feature_receipt_sha256,
-                slot.selected_source_receipt_sha256[1], 32) == 0) {
+                slot.selected_source_receipt_sha256[1], 32) == 0 &&
+            feature_kind_matches_position(
+                slot.lane, FeaturePosition::Receptor, row.kind)) {
+            if (selected->receptor != nullptr) {
+                return fail(
+                    BG_STATUS_INVALID_ARGUMENT,
+                    "single-anchor receptor feature receipt is ambiguous");
+            }
             selected->receptor = &row;
         }
         expected_offset += row.atom_index_count;
@@ -1009,6 +1062,21 @@ void write_vec3(double (&output)[3], Vec3 value) noexcept {
     std::size_t dominant = 0;
     for (std::size_t index = 1; index < 3; ++index) {
         if (matrix[index][index] > matrix[dominant][dominant]) dominant = index;
+    }
+    double second_largest = -std::numeric_limits<double>::infinity();
+    for (std::size_t index = 0; index < 3; ++index) {
+        if (index != dominant) {
+            second_largest = std::max(second_largest, matrix[index][index]);
+        }
+    }
+    const double dominant_value = matrix[dominant][dominant];
+    const double eigenvalue_scale = std::max(
+        {kGeometryEpsilon, std::abs(dominant_value),
+         std::abs(second_largest)});
+    if (!std::isfinite(dominant_value) || !std::isfinite(second_largest) ||
+        dominant_value - second_largest <=
+            kGeometryEpsilon * eigenvalue_scale) {
+        return false;
     }
     Vec3 vector{
         eigenvectors[0][dominant],

@@ -458,10 +458,22 @@ pub fn generate_native_fixed64_single_anchor(
             "single-anchor slot does not select exactly two features",
         ));
     }
-    let selected_ligand_feature =
-        selected_feature(allocation, feature_inventory, selected_receipts[0])?.clone();
-    let selected_receptor_feature =
-        selected_feature(allocation, feature_inventory, selected_receipts[1])?.clone();
+    let selected_ligand_feature = selected_feature(
+        allocation,
+        feature_inventory,
+        slot.lane(),
+        FeaturePosition::Ligand,
+        selected_receipts[0],
+    )?
+    .clone();
+    let selected_receptor_feature = selected_feature(
+        allocation,
+        feature_inventory,
+        slot.lane(),
+        FeaturePosition::Receptor,
+        selected_receipts[1],
+    )?
+    .clone();
     if !feature_pair_matches_lane(
         slot.lane(),
         selected_ligand_feature.kind(),
@@ -774,19 +786,86 @@ fn validate_exact_system_source(
     Ok(())
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum FeaturePosition {
+    Ligand,
+    Receptor,
+}
+
+const fn feature_kind_matches_position(
+    lane: Fixed64Lane,
+    position: FeaturePosition,
+    kind: Fixed64FeatureKind,
+) -> bool {
+    matches!(
+        (lane, position, kind),
+        (
+            Fixed64Lane::LigandDonorToReceptorAcceptor,
+            FeaturePosition::Ligand,
+            Fixed64FeatureKind::LigandDonor
+        ) | (
+            Fixed64Lane::LigandDonorToReceptorAcceptor,
+            FeaturePosition::Receptor,
+            Fixed64FeatureKind::ReceptorAcceptor
+        ) | (
+            Fixed64Lane::LigandAcceptorToReceptorDonor,
+            FeaturePosition::Ligand,
+            Fixed64FeatureKind::LigandAcceptor
+        ) | (
+            Fixed64Lane::LigandAcceptorToReceptorDonor,
+            FeaturePosition::Receptor,
+            Fixed64FeatureKind::ReceptorDonor
+        ) | (
+            Fixed64Lane::ComplementaryCharge,
+            FeaturePosition::Ligand,
+            Fixed64FeatureKind::LigandPositiveSite | Fixed64FeatureKind::LigandNegativeSite
+        ) | (
+            Fixed64Lane::ComplementaryCharge,
+            FeaturePosition::Receptor,
+            Fixed64FeatureKind::ReceptorPositiveSite | Fixed64FeatureKind::ReceptorNegativeSite
+        ) | (
+            Fixed64Lane::AromaticPlane,
+            FeaturePosition::Ligand,
+            Fixed64FeatureKind::LigandAromaticPlane
+        ) | (
+            Fixed64Lane::AromaticPlane,
+            FeaturePosition::Receptor,
+            Fixed64FeatureKind::ReceptorAromaticPlane
+        ) | (
+            Fixed64Lane::PrincipalAxisShape,
+            FeaturePosition::Ligand,
+            Fixed64FeatureKind::LigandShapeAxis
+        ) | (
+            Fixed64Lane::PrincipalAxisShape,
+            FeaturePosition::Receptor,
+            Fixed64FeatureKind::PocketShapeAxis
+        )
+    )
+}
+
 fn selected_feature<'a>(
     allocation: &Fixed64Allocation,
     inventory: &'a Fixed64FeatureGeometryInventory,
+    lane: Fixed64Lane,
+    position: FeaturePosition,
     receipt_sha256: [u8; 32],
 ) -> Result<&'a Fixed64FeatureGeometry, Fixed64PlacementError> {
-    let feature = inventory
-        .feature_for_allocation_receipt(receipt_sha256)
-        .ok_or_else(|| {
-            error(
-                Fixed64PlacementErrorCode::FeatureCrossWired,
-                "selected feature geometry is absent",
-            )
-        })?;
+    let mut matches = inventory.features().iter().filter(|feature| {
+        feature.allocation_feature_receipt_sha256() == receipt_sha256
+            && feature_kind_matches_position(lane, position, feature.kind())
+    });
+    let feature = matches.next().ok_or_else(|| {
+        error(
+            Fixed64PlacementErrorCode::FeatureCrossWired,
+            "selected feature geometry is absent",
+        )
+    })?;
+    if matches.next().is_some() {
+        return Err(error(
+            Fixed64PlacementErrorCode::FeatureCrossWired,
+            "selected feature geometry is ambiguous",
+        ));
+    }
     if !allocation
         .inventory()
         .atomic_features()
@@ -1049,6 +1128,23 @@ fn principal_axis(coordinates: &[Vec3]) -> Result<Vec3, Fixed64PlacementError> {
         if matrix[index][index] > matrix[dominant_index][dominant_index] {
             dominant_index = index;
         }
+    }
+    let dominant_value = matrix[dominant_index][dominant_index];
+    let second_largest = (0..3)
+        .filter(|index| *index != dominant_index)
+        .map(|index| matrix[index][index])
+        .fold(f64::NEG_INFINITY, f64::max);
+    let eigenvalue_scale = GEOMETRY_EPSILON
+        .max(dominant_value.abs())
+        .max(second_largest.abs());
+    if !dominant_value.is_finite()
+        || !second_largest.is_finite()
+        || dominant_value - second_largest <= GEOMETRY_EPSILON * eigenvalue_scale
+    {
+        return Err(error(
+            Fixed64PlacementErrorCode::DegeneratePrincipalAxis,
+            "principal-axis dominant eigenvalue is not unique",
+        ));
     }
     let vector = normalized_direction(
         Vec3::new(
