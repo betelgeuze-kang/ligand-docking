@@ -85,6 +85,12 @@ static void test_descriptor_initializer_compatibility(void) {
         bg_docking_fixed64_producer_output_v1,
         bg_docking_fixed64_producer_output_v1_init);
     BG_TEST_EXACT_INITIALIZER(
+        bg_docking_fixed64_pipeline_input_v1,
+        bg_docking_fixed64_pipeline_input_v1_init);
+    BG_TEST_EXACT_INITIALIZER(
+        bg_docking_fixed64_pipeline_output_v1,
+        bg_docking_fixed64_pipeline_output_v1_init);
+    BG_TEST_EXACT_INITIALIZER(
         bg_docking_scorer_v1_context_soa_v1,
         bg_docking_scorer_v1_context_soa_v1_init);
     BG_TEST_EXACT_INITIALIZER(
@@ -144,7 +150,7 @@ static void test_context_contract(void) {
     assert(bg_abi_version() == BG_ABI_VERSION);
     assert(bg_abi_version_major() == BG_ABI_VERSION_MAJOR);
     assert(bg_abi_version_minor() == BG_ABI_VERSION_MINOR);
-    assert(strcmp(bg_abi_version_string(), "1.19") == 0);
+    assert(strcmp(bg_abi_version_string(), "1.20") == 0);
     assert(strcmp(
                bg_docking_fixed64_producer_v1_profile_id(),
                "betelgeuze.engine_v2_mixed64_native_fixed64_producer/1.1.0") == 0);

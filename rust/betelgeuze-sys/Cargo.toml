@@ -31,6 +31,7 @@ include = [
     "vendor/native/src/docking/fixed64_so3_reference.hpp",
     "vendor/native/src/docking/fixed64_indexed_so3_provider.h",
     "vendor/native/src/docking/fixed64_indexed_so3.cpp",
+    "vendor/native/src/docking/fixed64_pipeline.cpp",
     "vendor/native/src/docking/fixed64_producer.cpp",
     "vendor/native/src/docking/fixed64_single_anchor_provider.h",
     "vendor/native/src/docking/fixed64_single_anchor.cpp",

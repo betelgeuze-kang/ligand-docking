@@ -20,7 +20,7 @@ static BG_RUST_CPU_PROVIDER_LINK_ANCHOR: extern "C" fn() -> u32 =
     betelgeuze_cpu_kernel::bg_rust_cpu_provider_abi_version_v1;
 
 pub const BG_ABI_VERSION_MAJOR: u32 = 1;
-pub const BG_ABI_VERSION_MINOR: u32 = 19;
+pub const BG_ABI_VERSION_MINOR: u32 = 20;
 pub const BG_ABI_VERSION: u32 = 1;
 
 pub const BG_CANONICAL_LENGTH_UNIT: &[u8] = b"angstrom\0";
@@ -460,6 +460,12 @@ pub struct bg_docking_fixed64_downstream_v1 {
 /// Opaque persistent fixed64 refinement-to-ranking pipeline.
 #[repr(C)]
 pub struct bg_docking_fixed64_refinement_pipeline_v1 {
+    _private: [u8; 0],
+}
+
+/// Opaque persistent fixed64 proposal-to-clustering pipeline.
+#[repr(C)]
+pub struct bg_docking_fixed64_pipeline_v1 {
     _private: [u8; 0],
 }
 
@@ -1278,6 +1284,99 @@ pub struct bg_docking_fixed64_producer_output_v1 {
     pub production_claim_authorized: u8,
     pub scientific_claim_authorized: u8,
     pub reserved0: [u8; 5],
+    pub reserved: [u64; 8],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_fixed64_pipeline_input_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub producer_input: *const bg_docking_fixed64_producer_input_v1,
+    pub rmsd_threshold_angstrom: f64,
+    pub candidate_mode: *const bg_docking_rigid_refinement_candidate_mode,
+    pub rigid_max_steps: *const u64,
+    pub proposal_is_torsion_eligible: *const u8,
+    pub torsion_max_steps: *const u64,
+    pub baseline_torsion_angles_radians: *const f64,
+    pub predeclared_refinement_policy_sha256: [u8; 32],
+    pub reserved: [u64; 8],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_fixed64_pipeline_row_v1 {
+    pub slot_index: u32,
+    pub producer_status: bg_docking_fixed64_producer_row_status,
+    pub producer_failure_code: bg_docking_fixed64_producer_failure,
+    pub initial_admission_decision: bg_docking_geometric_admission_decision,
+    pub requested_refinement_mode: bg_docking_rigid_refinement_candidate_mode,
+    pub effective_refinement_mode: bg_docking_rigid_refinement_candidate_mode,
+    pub refinement_status: bg_docking_fixed64_refinement_row_status,
+    pub refinement_failure_stage: bg_docking_fixed64_refinement_failure_stage,
+    pub scorer_status: bg_docking_scorer_v1_row_status,
+    pub scorer_failure_code: bg_docking_scorer_v1_failure,
+    pub validity_status: bg_docking_pose_validity_row_status,
+    pub validity_failure_code: bg_docking_pose_validity_failure,
+    pub stable_rank: u32,
+    pub stable_valid_rank: u32,
+    pub cluster_status: bg_docking_rmsd_cluster_row_status,
+    pub cluster_id: u32,
+    pub cluster_rank: u32,
+    pub top_k_rank: u32,
+    pub producer_row_receipt_sha256: [u8; 32],
+    pub final_coordinate_sha256: [u8; 32],
+    pub refinement_evidence_sha256: [u8; 32],
+    pub scorer_evidence_sha256: [u8; 32],
+    pub validity_evidence_sha256: [u8; 32],
+    pub ranking_evidence_sha256: [u8; 32],
+    pub cluster_evidence_sha256: [u8; 32],
+    pub row_receipt_sha256: [u8; 32],
+    pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_fixed64_pipeline_output_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub row_capacity: u64,
+    pub row_count: u64,
+    pub unit_system: bg_unit_system,
+    pub backend: bg_backend,
+    pub rows: *mut bg_docking_fixed64_pipeline_row_v1,
+    pub generated_count: u64,
+    pub initial_admitted_count: u64,
+    pub refined_count: u64,
+    pub scored_count: u64,
+    pub valid_count: u64,
+    pub cluster_count: u64,
+    pub allocation_receipt_sha256: [u8; 32],
+    pub source_bundle_receipt_sha256: [u8; 32],
+    pub admission_context_receipt_sha256: [u8; 32],
+    pub refinement_context_receipt_sha256: [u8; 32],
+    pub scorer_context_receipt_sha256: [u8; 32],
+    pub validity_context_receipt_sha256: [u8; 32],
+    pub component_binding_receipt_sha256: [u8; 32],
+    pub producer_batch_receipt_sha256: [u8; 32],
+    pub refinement_policy_receipt_sha256: [u8; 32],
+    pub refinement_batch_receipt_sha256: [u8; 32],
+    pub scorer_batch_receipt_sha256: [u8; 32],
+    pub validity_batch_receipt_sha256: [u8; 32],
+    pub ranking_batch_receipt_sha256: [u8; 32],
+    pub cluster_batch_receipt_sha256: [u8; 32],
+    pub pipeline_batch_receipt_sha256: [u8; 32],
+    pub result_dependent_input_consumed: u8,
+    pub fallback_allowed: u8,
+    pub denominator_preserved: u8,
+    pub molecular_execution_authorized: u8,
+    pub reservation_authorized: u8,
+    pub benchmark_execution_authorized: u8,
+    pub existing_rank_auto_change_authorized: u8,
+    pub customer_pose_emission_authorized: u8,
+    pub production_claim_authorized: u8,
+    pub scientific_claim_authorized: u8,
+    pub reserved0: [u8; 6],
     pub reserved: [u64; 8],
 }
 
@@ -2102,6 +2201,16 @@ unsafe extern "C" {
         caller_struct_size: usize,
         caller_abi_version: u32,
     ) -> bg_status;
+    pub fn bg_docking_fixed64_pipeline_input_v1_init(
+        input: *mut bg_docking_fixed64_pipeline_input_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_docking_fixed64_pipeline_output_v1_init(
+        output: *mut bg_docking_fixed64_pipeline_output_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
     pub fn bg_docking_geometric_admission_context_soa_v1_init(
         descriptor: *mut bg_docking_geometric_admission_context_soa_v1,
         caller_struct_size: usize,
@@ -2258,6 +2367,35 @@ unsafe extern "C" {
         output: *mut bg_docking_fixed64_producer_output_v1,
     ) -> bg_status;
     pub fn bg_docking_fixed64_producer_v1_profile_id() -> *const c_char;
+    pub fn bg_docking_fixed64_pipeline_v1_create(
+        context: *const bg_context,
+        admission_descriptor: *const bg_docking_geometric_admission_context_soa_v1,
+        rigid_descriptor: *const bg_docking_rigid_refinement_context_soa_v1,
+        torsion_descriptor: *const bg_docking_torsion_v7_context_soa_v1,
+        scorer_descriptor: *const bg_docking_scorer_v1_context_soa_v1,
+        validity_descriptor: *const bg_docking_pose_validity_context_soa_v1,
+        out_pipeline: *mut *mut bg_docking_fixed64_pipeline_v1,
+    ) -> bg_status;
+    pub fn bg_docking_fixed64_pipeline_v1_destroy(pipeline: *mut bg_docking_fixed64_pipeline_v1);
+    pub fn bg_docking_fixed64_pipeline_v1_get_backend(
+        pipeline: *const bg_docking_fixed64_pipeline_v1,
+        backend: *mut bg_backend,
+    ) -> bg_status;
+    pub fn bg_docking_fixed64_pipeline_v1_profile_id() -> *const c_char;
+    pub fn bg_docking_fixed64_pipeline_v1_run(
+        context: *const bg_context,
+        pipeline: *const bg_docking_fixed64_pipeline_v1,
+        input: *const bg_docking_fixed64_pipeline_input_v1,
+        producer_output: *mut bg_docking_fixed64_producer_output_v1,
+        rigid_output: *mut bg_docking_rigid_refinement_output_v1,
+        torsion_output: *mut bg_docking_torsion_v7_output_v1,
+        scorer_output: *mut bg_docking_scorer_v1_output_v1,
+        validity_output: *mut bg_docking_pose_validity_output_v1,
+        ranking_output: *mut bg_docking_stable_top_k_output_v1,
+        cluster_output: *mut bg_docking_rmsd_cluster_output_v1,
+        refinement_output: *mut bg_docking_fixed64_refinement_output_v1,
+        pipeline_output: *mut bg_docking_fixed64_pipeline_output_v1,
+    ) -> bg_status;
 
     pub fn bg_docking_geometric_admission_v1_create(
         context: *const bg_context,

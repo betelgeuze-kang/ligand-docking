@@ -14,6 +14,7 @@ add_library(betelgeuze_engine SHARED
     src/rust/evaluator.cpp
     src/docking/fixed64_allocation.cpp
     src/docking/fixed64_indexed_so3.cpp
+    src/docking/fixed64_pipeline.cpp
     src/docking/fixed64_producer.cpp
     src/docking/fixed64_single_anchor.cpp
     src/docking/fixed64_so3.cpp
@@ -570,6 +571,11 @@ if(BUILD_TESTING)
     add_test(
         NAME betelgeuze_engine_docking_fixed64_producer
         COMMAND betelgeuze_engine_docking_fixed64_producer
+    )
+    add_test(
+        NAME betelgeuze_engine_docking_fixed64_complete_pipeline
+        COMMAND betelgeuze_engine_docking_fixed64_producer
+            --complete-pipeline
     )
 
     add_executable(

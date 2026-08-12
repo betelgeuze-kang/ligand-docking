@@ -1733,6 +1733,17 @@ template <typename Type>
 }
 
 }  // namespace
+
+bg_status validate_for_composition(
+    const bg_context &context,
+    const bg_docking_geometric_admission_v1 &admission,
+    const bg_docking_fixed64_producer_input_v1 &input,
+    const bg_docking_fixed64_producer_output_v1 &output) {
+    ValidatedInput validated{};
+    return validate_descriptors(
+        context, admission, input, output, &validated);
+}
+
 }  // namespace betelgeuze::native::docking::fixed64_producer
 
 using namespace betelgeuze::native;
