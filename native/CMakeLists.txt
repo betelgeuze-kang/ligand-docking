@@ -14,6 +14,7 @@ add_library(betelgeuze_engine SHARED
     src/rust/evaluator.cpp
     src/docking/fixed64_allocation.cpp
     src/docking/fixed64_indexed_so3.cpp
+    src/docking/fixed64_single_anchor.cpp
     src/docking/fixed64_so3.cpp
     src/docking/fixed64_downstream.cpp
     src/docking/fixed64_refinement_pipeline.cpp
@@ -219,6 +220,7 @@ if(BG_HIP_SAFE_COMPILED)
         DEPENDS
             "${CMAKE_CURRENT_SOURCE_DIR}/src/hip/provider.hip"
             "${CMAKE_CURRENT_SOURCE_DIR}/src/hip/docking_fixed64_so3.hip"
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/hip/docking_fixed64_single_anchor.hip"
             "${CMAKE_CURRENT_SOURCE_DIR}/src/hip/docking_geometric_admission.hip"
             "${CMAKE_CURRENT_SOURCE_DIR}/src/hip/docking_scorer.hip"
             "${CMAKE_CURRENT_SOURCE_DIR}/src/hip/docking_pose_validity.hip"
@@ -493,6 +495,43 @@ if(BUILD_TESTING)
     add_test(
         NAME betelgeuze_engine_docking_fixed64_indexed_so3
         COMMAND betelgeuze_engine_docking_fixed64_indexed_so3
+    )
+
+    add_executable(
+        betelgeuze_engine_docking_fixed64_single_anchor
+        tests/docking_fixed64_single_anchor.cpp
+    )
+    target_link_libraries(
+        betelgeuze_engine_docking_fixed64_single_anchor
+        PRIVATE betelgeuze_engine
+    )
+    target_compile_features(
+        betelgeuze_engine_docking_fixed64_single_anchor
+        PRIVATE cxx_std_17
+    )
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(
+            betelgeuze_engine_docking_fixed64_single_anchor
+            PRIVATE
+                -Wall
+                -Wextra
+                -Wpedantic
+                -Wconversion
+                -Wsign-conversion
+                -Werror
+                -UNDEBUG
+                -ffp-contract=off
+                -fno-fast-math
+        )
+    elseif(MSVC)
+        target_compile_options(
+            betelgeuze_engine_docking_fixed64_single_anchor
+            PRIVATE /W4 /WX /UNDEBUG /fp:strict
+        )
+    endif()
+    add_test(
+        NAME betelgeuze_engine_docking_fixed64_single_anchor
+        COMMAND betelgeuze_engine_docking_fixed64_single_anchor
     )
 
     add_executable(

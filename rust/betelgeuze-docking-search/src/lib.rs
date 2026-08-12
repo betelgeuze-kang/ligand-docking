@@ -84,7 +84,9 @@ pub use fixed64_ranking::{
     NATIVE_FIXED64_TOP_K_LIMIT, NATIVE_FIXED64_VALID_RANKING_SEMANTICS,
 };
 pub use fixed64_single_anchor::{
-    generate_native_fixed64_single_anchor, Fixed64SingleAnchorPlacement,
+    generate_native_fixed64_single_anchor, native_fixed64_single_anchor_kernel,
+    Fixed64SingleAnchorPlacement, NativeFixed64SingleAnchorKernelOutcome,
+    NativeFixed64SingleAnchorKernelPlacement,
 };
 pub use fixed64_validity::{
     evaluate_native_fixed64_pose_validity, NativeFixed64ValidityBackend,

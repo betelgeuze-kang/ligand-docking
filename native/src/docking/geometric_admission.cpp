@@ -1125,6 +1125,28 @@ bg_docking_geometric_admission_v1_create(
             descriptor->pocket_radius_angstrom;
         admission->hard_rejection_minimum_vdw_ratio =
             descriptor->hard_rejection_minimum_vdw_ratio;
+        const std::size_t receptor_count =
+            static_cast<std::size_t>(descriptor->receptor_atom_count);
+        const std::size_t ligand_count =
+            static_cast<std::size_t>(descriptor->ligand_atom_count);
+        admission->receptor_x_angstrom.assign(
+            descriptor->receptor_x_angstrom,
+            descriptor->receptor_x_angstrom + receptor_count);
+        admission->receptor_y_angstrom.assign(
+            descriptor->receptor_y_angstrom,
+            descriptor->receptor_y_angstrom + receptor_count);
+        admission->receptor_z_angstrom.assign(
+            descriptor->receptor_z_angstrom,
+            descriptor->receptor_z_angstrom + receptor_count);
+        admission->receptor_vdw_radius_angstrom.assign(
+            descriptor->receptor_vdw_radius_angstrom,
+            descriptor->receptor_vdw_radius_angstrom + receptor_count);
+        admission->ligand_vdw_radius_angstrom.assign(
+            descriptor->ligand_vdw_radius_angstrom,
+            descriptor->ligand_vdw_radius_angstrom + ligand_count);
+        admission->ligand_heavy_atom_mask.assign(
+            descriptor->ligand_heavy_atom_mask,
+            descriptor->ligand_heavy_atom_mask + ligand_count);
         std::copy_n(
             descriptor->authority_input_receipt_sha256,
             32,

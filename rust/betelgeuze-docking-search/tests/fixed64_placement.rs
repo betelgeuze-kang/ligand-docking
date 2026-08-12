@@ -1,11 +1,12 @@
 use betelgeuze_docking_search::{
     generate_native_fixed64_indexed_so3, generate_native_fixed64_single_anchor,
     native_fixed64_coordinate_sha256, native_fixed64_heavy_atom_mask_sha256,
-    native_fixed64_radii_sha256, Fixed64Allocation, Fixed64AtomicFeatureEvidence,
-    Fixed64ConformerSourceEvidence, Fixed64ExactV11SourceEvidence, Fixed64FeatureGeometry,
-    Fixed64FeatureGeometryInventory, Fixed64FeatureInventory, Fixed64FeatureKind,
-    Fixed64GeometricInput, Fixed64PlacementErrorCode, Fixed64PlacementSource,
-    Fixed64SourceEvidence, Vec3, NATIVE_FIXED64_INDEXED_SO3_PROFILE_ID,
+    native_fixed64_radii_sha256, native_fixed64_single_anchor_kernel, Fixed64Allocation,
+    Fixed64AnchorKind, Fixed64AtomicFeatureEvidence, Fixed64ConformerSourceEvidence,
+    Fixed64ExactV11SourceEvidence, Fixed64FeatureGeometry, Fixed64FeatureGeometryInventory,
+    Fixed64FeatureInventory, Fixed64FeatureKind, Fixed64GeometricInput, Fixed64Lane,
+    Fixed64PlacementErrorCode, Fixed64PlacementSource, Fixed64SourceEvidence,
+    NativeFixed64SingleAnchorKernelOutcome, Vec3, NATIVE_FIXED64_INDEXED_SO3_PROFILE_ID,
 };
 
 const FEATURE_KINDS: [Fixed64FeatureKind; 12] = [
@@ -479,6 +480,230 @@ fn standard_anchor_fixture() -> (
         Vec3::new(0.0, 0.0, 10.0),
     );
     (ligand, receptor, allocation, source, geometry)
+}
+
+#[test]
+fn public_single_anchor_kernel_rejects_cross_wiring_and_short_features() {
+    let source = [
+        Vec3::new(0.0, 0.0, 0.0),
+        Vec3::new(1.0, 0.0, 0.0),
+        Vec3::new(0.0, 1.0, 0.0),
+    ];
+    let ligand_donor = [source[0], source[1]];
+    let receptor_acceptor = [Vec3::new(0.0, 0.0, 4.0)];
+    assert_eq!(
+        native_fixed64_single_anchor_kernel(
+            Fixed64Lane::LigandDonorToReceptorAcceptor,
+            Fixed64AnchorKind::AromaticPlane,
+            0,
+            &source,
+            &ligand_donor,
+            &receptor_acceptor,
+            Vec3::new(0.0, 0.0, 0.0),
+        ),
+        NativeFixed64SingleAnchorKernelOutcome::TypedFailure(
+            Fixed64PlacementErrorCode::FeatureCrossWired
+        )
+    );
+    assert_eq!(
+        native_fixed64_single_anchor_kernel(
+            Fixed64Lane::LigandDonorToReceptorAcceptor,
+            Fixed64AnchorKind::LigandDonorToReceptorAcceptor,
+            0,
+            &source,
+            &ligand_donor[..1],
+            &receptor_acceptor,
+            Vec3::new(0.0, 0.0, 0.0),
+        ),
+        NativeFixed64SingleAnchorKernelOutcome::TypedFailure(
+            Fixed64PlacementErrorCode::InvalidInput
+        )
+    );
+    assert_eq!(
+        native_fixed64_single_anchor_kernel(
+            Fixed64Lane::LigandAcceptorToReceptorDonor,
+            Fixed64AnchorKind::LigandAcceptorToReceptorDonor,
+            0,
+            &source,
+            &ligand_donor[..1],
+            &receptor_acceptor,
+            Vec3::new(0.0, 0.0, 0.0),
+        ),
+        NativeFixed64SingleAnchorKernelOutcome::TypedFailure(
+            Fixed64PlacementErrorCode::InvalidInput
+        )
+    );
+    assert_eq!(
+        native_fixed64_single_anchor_kernel(
+            Fixed64Lane::LigandDonorToReceptorAcceptor,
+            Fixed64AnchorKind::LigandDonorToReceptorAcceptor,
+            0,
+            &[],
+            &ligand_donor,
+            &receptor_acceptor,
+            Vec3::new(0.0, 0.0, 0.0),
+        ),
+        NativeFixed64SingleAnchorKernelOutcome::TypedFailure(
+            Fixed64PlacementErrorCode::InvalidInput
+        )
+    );
+    assert_eq!(
+        native_fixed64_single_anchor_kernel(
+            Fixed64Lane::ComplementaryCharge,
+            Fixed64AnchorKind::ComplementaryCharge,
+            0,
+            &source,
+            &[],
+            &receptor_acceptor,
+            Vec3::new(0.0, 0.0, 0.0),
+        ),
+        NativeFixed64SingleAnchorKernelOutcome::TypedFailure(
+            Fixed64PlacementErrorCode::InvalidInput
+        )
+    );
+    assert_eq!(
+        native_fixed64_single_anchor_kernel(
+            Fixed64Lane::AromaticPlane,
+            Fixed64AnchorKind::AromaticPlane,
+            0,
+            &source,
+            &ligand_donor,
+            &source,
+            Vec3::new(0.0, 0.0, 0.0),
+        ),
+        NativeFixed64SingleAnchorKernelOutcome::TypedFailure(
+            Fixed64PlacementErrorCode::InvalidInput
+        )
+    );
+    assert_eq!(
+        native_fixed64_single_anchor_kernel(
+            Fixed64Lane::PrincipalAxisShape,
+            Fixed64AnchorKind::PrincipalAxisShape,
+            0,
+            &source,
+            &ligand_donor,
+            &[],
+            Vec3::new(0.0, 0.0, 0.0),
+        ),
+        NativeFixed64SingleAnchorKernelOutcome::TypedFailure(
+            Fixed64PlacementErrorCode::InvalidInput
+        )
+    );
+    assert_eq!(
+        native_fixed64_single_anchor_kernel(
+            Fixed64Lane::PocketCenteredControls,
+            Fixed64AnchorKind::LigandDonorToReceptorAcceptor,
+            0,
+            &source,
+            &ligand_donor,
+            &receptor_acceptor,
+            Vec3::new(0.0, 0.0, 0.0),
+        ),
+        NativeFixed64SingleAnchorKernelOutcome::TypedFailure(
+            Fixed64PlacementErrorCode::UnsupportedLane
+        )
+    );
+}
+
+#[test]
+fn public_single_anchor_kernel_rejects_nonunique_principal_axis() {
+    let symmetric = [
+        Vec3::new(0.0, 0.0, 0.0),
+        Vec3::new(1.0, 0.0, 0.0),
+        Vec3::new(0.0, 1.0, 0.0),
+        Vec3::new(0.0, 0.0, 1.0),
+    ];
+    assert_eq!(
+        native_fixed64_single_anchor_kernel(
+            Fixed64Lane::PrincipalAxisShape,
+            Fixed64AnchorKind::PrincipalAxisShape,
+            0,
+            &symmetric,
+            &symmetric,
+            &symmetric,
+            Vec3::new(0.0, 0.0, 5.0),
+        ),
+        NativeFixed64SingleAnchorKernelOutcome::TypedFailure(
+            Fixed64PlacementErrorCode::DegeneratePrincipalAxis
+        )
+    );
+}
+
+#[test]
+fn equal_cross_kind_receipts_select_the_lane_specific_pair() {
+    let (ligand, _, _, source, geometry) = standard_anchor_fixture();
+    let mut evidence = atomic_features();
+    evidence[3].receipt_sha256 = evidence[0].receipt_sha256;
+    let allocation = Fixed64Allocation::build(
+        Fixed64FeatureInventory::new(exact_evidence(&ligand), evidence, vec![], vec![], vec![])
+            .unwrap(),
+    )
+    .unwrap();
+    let features = Fixed64FeatureGeometryInventory::new(
+        FEATURE_KINDS
+            .into_iter()
+            .enumerate()
+            .map(|(index, kind)| {
+                Fixed64FeatureGeometry::new(
+                    kind,
+                    if index == 3 {
+                        digest(80)
+                    } else {
+                        digest(80 + u8::try_from(index).unwrap())
+                    },
+                    feature_atom_indices(kind),
+                )
+                .unwrap()
+            })
+            .collect(),
+    )
+    .unwrap();
+    assert!(features
+        .feature_for_allocation_receipt(digest(80))
+        .is_none());
+    let placement =
+        generate_native_fixed64_single_anchor(&allocation, 44, source, &features, &geometry)
+            .unwrap();
+    assert_eq!(
+        placement.selected_ligand_feature().kind(),
+        Fixed64FeatureKind::LigandDonor
+    );
+    assert_eq!(
+        placement.selected_receptor_feature().kind(),
+        Fixed64FeatureKind::ReceptorAcceptor
+    );
+    assert!(placement.has_valid_receipt());
+}
+
+#[test]
+fn aromatic_degeneracy_scan_is_linear_at_feature_limit_scale() {
+    let source = [
+        Vec3::new(0.0, 0.0, 0.0),
+        Vec3::new(1.0, 0.0, 0.0),
+        Vec3::new(0.0, 1.0, 0.0),
+    ];
+    let collinear = (0_u32..4_096)
+        .map(|index| Vec3::new(f64::from(index), 0.0, 0.0))
+        .collect::<Vec<_>>();
+    let receptor_plane = [
+        Vec3::new(0.0, 0.0, 4.0),
+        Vec3::new(1.0, 0.0, 4.0),
+        Vec3::new(0.0, 1.0, 4.0),
+    ];
+    assert_eq!(
+        native_fixed64_single_anchor_kernel(
+            Fixed64Lane::AromaticPlane,
+            Fixed64AnchorKind::AromaticPlane,
+            0,
+            &source,
+            &collinear,
+            &receptor_plane,
+            Vec3::new(0.0, 0.0, 0.0),
+        ),
+        NativeFixed64SingleAnchorKernelOutcome::TypedFailure(
+            Fixed64PlacementErrorCode::DegenerateAromaticPlane
+        )
+    );
 }
 
 #[test]

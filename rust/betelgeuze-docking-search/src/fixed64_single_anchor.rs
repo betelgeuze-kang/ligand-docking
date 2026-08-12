@@ -8,7 +8,7 @@ use crate::{
     evaluate_fixed64_geometric_metrics, native_fixed64_coordinate_sha256,
     native_fixed64_heavy_atom_mask_sha256, native_fixed64_radii_sha256, Fixed64Allocation,
     Fixed64AnchorKind, Fixed64FeatureKind, Fixed64GeometricInput, Fixed64GeometricMetrics,
-    Fixed64Lane, Quaternion, Vec3, HARD_REJECTION_MINIMUM_VDW_RATIO,
+    Fixed64Lane, Quaternion, Vec3, FIXED64_MAX_LIGAND_ATOMS, HARD_REJECTION_MINIMUM_VDW_RATIO,
     NATIVE_FIXED64_SINGLE_ANCHOR_PROFILE_ID, NATIVE_FIXED64_SINGLE_ANCHOR_SCHEMA_ID,
 };
 
@@ -41,6 +41,210 @@ pub struct Fixed64SingleAnchorPlacement {
     geometric_metrics: Fixed64GeometricMetrics,
     steric_precheck_passed: bool,
     receipt_sha256: [u8; 32],
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct NativeFixed64SingleAnchorKernelPlacement {
+    pub ligand_anchor_point_angstrom: Vec3,
+    pub receptor_anchor_point_angstrom: Vec3,
+    pub target_anchor_point_angstrom: Vec3,
+    pub local_surface_normal: Vec3,
+    pub approach_vector: Vec3,
+    pub ligand_direction: Vec3,
+    pub alignment_target_direction: Vec3,
+    pub target_distance_angstrom: f64,
+    pub twist_angle_radians: f64,
+    pub quaternion: Quaternion,
+    pub translation_angstrom: Vec3,
+    pub output_coordinates_angstrom: Vec<Vec3>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum NativeFixed64SingleAnchorKernelOutcome {
+    Placed(Box<NativeFixed64SingleAnchorKernelPlacement>),
+    TypedFailure(Fixed64PlacementErrorCode),
+}
+
+const MAX_SINGLE_ANCHOR_FEATURE_COORDINATES: usize = 65_536;
+const MAX_ABSOLUTE_COORDINATE_ANGSTROM: f64 = 100_000.0;
+
+const fn anchor_kind_matches_lane(lane: Fixed64Lane, kind: Fixed64AnchorKind) -> bool {
+    matches!(
+        (lane, kind),
+        (
+            Fixed64Lane::LigandDonorToReceptorAcceptor,
+            Fixed64AnchorKind::LigandDonorToReceptorAcceptor
+        ) | (
+            Fixed64Lane::LigandAcceptorToReceptorDonor,
+            Fixed64AnchorKind::LigandAcceptorToReceptorDonor
+        ) | (
+            Fixed64Lane::ComplementaryCharge,
+            Fixed64AnchorKind::ComplementaryCharge
+        ) | (Fixed64Lane::AromaticPlane, Fixed64AnchorKind::AromaticPlane)
+            | (
+                Fixed64Lane::PrincipalAxisShape,
+                Fixed64AnchorKind::PrincipalAxisShape
+            )
+    )
+}
+
+const fn valid_kernel_feature_cardinality(
+    lane: Fixed64Lane,
+    ligand_count: usize,
+    receptor_count: usize,
+) -> bool {
+    match lane {
+        Fixed64Lane::LigandDonorToReceptorAcceptor => ligand_count == 2 && receptor_count == 1,
+        Fixed64Lane::LigandAcceptorToReceptorDonor => ligand_count == 1 && receptor_count == 2,
+        Fixed64Lane::ComplementaryCharge | Fixed64Lane::PrincipalAxisShape => {
+            ligand_count >= 1
+                && ligand_count <= MAX_SINGLE_ANCHOR_FEATURE_COORDINATES
+                && receptor_count >= 1
+                && receptor_count <= MAX_SINGLE_ANCHOR_FEATURE_COORDINATES
+        }
+        Fixed64Lane::AromaticPlane => {
+            ligand_count >= 3
+                && ligand_count <= MAX_SINGLE_ANCHOR_FEATURE_COORDINATES
+                && receptor_count >= 3
+                && receptor_count <= MAX_SINGLE_ANCHOR_FEATURE_COORDINATES
+        }
+        _ => false,
+    }
+}
+
+fn valid_kernel_coordinate(value: Vec3) -> bool {
+    value.is_finite()
+        && value.x.abs() <= MAX_ABSOLUTE_COORDINATE_ANGSTROM
+        && value.y.abs() <= MAX_ABSOLUTE_COORDINATE_ANGSTROM
+        && value.z.abs() <= MAX_ABSOLUTE_COORDINATE_ANGSTROM
+}
+
+pub fn native_fixed64_single_anchor_kernel(
+    lane: Fixed64Lane,
+    declared_anchor_kind: Fixed64AnchorKind,
+    lane_offset: usize,
+    source_coordinates_angstrom: &[Vec3],
+    ligand_feature_coordinates_angstrom: &[Vec3],
+    receptor_feature_coordinates_angstrom: &[Vec3],
+    pocket_center_angstrom: Vec3,
+) -> NativeFixed64SingleAnchorKernelOutcome {
+    if !is_anchor_lane(lane) {
+        return NativeFixed64SingleAnchorKernelOutcome::TypedFailure(
+            Fixed64PlacementErrorCode::UnsupportedLane,
+        );
+    }
+    if !anchor_kind_matches_lane(lane, declared_anchor_kind) {
+        return NativeFixed64SingleAnchorKernelOutcome::TypedFailure(
+            Fixed64PlacementErrorCode::FeatureCrossWired,
+        );
+    }
+    if source_coordinates_angstrom.is_empty()
+        || source_coordinates_angstrom.len() > FIXED64_MAX_LIGAND_ATOMS
+        || !valid_kernel_feature_cardinality(
+            lane,
+            ligand_feature_coordinates_angstrom.len(),
+            receptor_feature_coordinates_angstrom.len(),
+        )
+        || !valid_kernel_coordinate(pocket_center_angstrom)
+        || source_coordinates_angstrom
+            .iter()
+            .chain(ligand_feature_coordinates_angstrom)
+            .chain(receptor_feature_coordinates_angstrom)
+            .copied()
+            .any(|coordinate| !valid_kernel_coordinate(coordinate))
+    {
+        return NativeFixed64SingleAnchorKernelOutcome::TypedFailure(
+            Fixed64PlacementErrorCode::InvalidInput,
+        );
+    }
+    let lane_width = anchor_lane_width(lane);
+    if lane_offset >= lane_width {
+        return NativeFixed64SingleAnchorKernelOutcome::TypedFailure(
+            Fixed64PlacementErrorCode::InternalInvariant,
+        );
+    }
+    let geometry = match derive_anchor_geometry(
+        lane,
+        source_coordinates_angstrom,
+        ligand_feature_coordinates_angstrom,
+        receptor_feature_coordinates_angstrom,
+        pocket_center_angstrom,
+    ) {
+        Ok(value) => value,
+        Err(error) => return NativeFixed64SingleAnchorKernelOutcome::TypedFailure(error.code()),
+    };
+    let target_distance_angstrom = anchor_target_distance(declared_anchor_kind);
+    let target_anchor_point_angstrom = geometry.receptor_anchor_point.plus(
+        geometry
+            .local_surface_normal
+            .scale(target_distance_angstrom),
+    );
+    let base_quaternion = match Quaternion::between(
+        geometry.ligand_direction,
+        geometry.alignment_target_direction,
+    ) {
+        Ok(value) => value,
+        Err(_) => {
+            return NativeFixed64SingleAnchorKernelOutcome::TypedFailure(
+                Fixed64PlacementErrorCode::DegenerateLigandDirection,
+            )
+        }
+    };
+    let offset = f64::from(u32::try_from(lane_offset).expect("fixed64 lane offsets fit u32"));
+    let width = f64::from(u32::try_from(lane_width).expect("fixed64 lane widths fit u32"));
+    let twist_angle_radians = 2.0 * core::f64::consts::PI * offset / width;
+    let twist_quaternion = match Quaternion::from_rotation_vector(
+        geometry
+            .alignment_target_direction
+            .scale(twist_angle_radians),
+    ) {
+        Ok(value) => value,
+        Err(_) => {
+            return NativeFixed64SingleAnchorKernelOutcome::TypedFailure(
+                Fixed64PlacementErrorCode::InternalInvariant,
+            )
+        }
+    };
+    let quaternion = match twist_quaternion.multiply(base_quaternion) {
+        Ok(value) => value,
+        Err(_) => {
+            return NativeFixed64SingleAnchorKernelOutcome::TypedFailure(
+                Fixed64PlacementErrorCode::InternalInvariant,
+            )
+        }
+    };
+    let translation_angstrom =
+        target_anchor_point_angstrom.minus(quaternion.rotate(geometry.ligand_anchor_point));
+    let output_coordinates_angstrom = source_coordinates_angstrom
+        .iter()
+        .map(|coordinate| quaternion.rotate(*coordinate).plus(translation_angstrom))
+        .collect::<Vec<_>>();
+    if output_coordinates_angstrom.iter().any(|coordinate| {
+        !coordinate.is_finite()
+            || coordinate.x.abs() > 100_000.0
+            || coordinate.y.abs() > 100_000.0
+            || coordinate.z.abs() > 100_000.0
+    }) {
+        return NativeFixed64SingleAnchorKernelOutcome::TypedFailure(
+            Fixed64PlacementErrorCode::InternalInvariant,
+        );
+    }
+    NativeFixed64SingleAnchorKernelOutcome::Placed(Box::new(
+        NativeFixed64SingleAnchorKernelPlacement {
+            ligand_anchor_point_angstrom: geometry.ligand_anchor_point,
+            receptor_anchor_point_angstrom: geometry.receptor_anchor_point,
+            target_anchor_point_angstrom,
+            local_surface_normal: geometry.local_surface_normal,
+            approach_vector: geometry.local_surface_normal.scale(-1.0),
+            ligand_direction: geometry.ligand_direction,
+            alignment_target_direction: geometry.alignment_target_direction,
+            target_distance_angstrom,
+            twist_angle_radians,
+            quaternion,
+            translation_angstrom,
+            output_coordinates_angstrom,
+        },
+    ))
 }
 
 impl Fixed64SingleAnchorPlacement {
@@ -254,10 +458,22 @@ pub fn generate_native_fixed64_single_anchor(
             "single-anchor slot does not select exactly two features",
         ));
     }
-    let selected_ligand_feature =
-        selected_feature(allocation, feature_inventory, selected_receipts[0])?.clone();
-    let selected_receptor_feature =
-        selected_feature(allocation, feature_inventory, selected_receipts[1])?.clone();
+    let selected_ligand_feature = selected_feature(
+        allocation,
+        feature_inventory,
+        slot.lane(),
+        FeaturePosition::Ligand,
+        selected_receipts[0],
+    )?
+    .clone();
+    let selected_receptor_feature = selected_feature(
+        allocation,
+        feature_inventory,
+        slot.lane(),
+        FeaturePosition::Receptor,
+        selected_receipts[1],
+    )?
+    .clone();
     if !feature_pair_matches_lane(
         slot.lane(),
         selected_ligand_feature.kind(),
@@ -570,19 +786,86 @@ fn validate_exact_system_source(
     Ok(())
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum FeaturePosition {
+    Ligand,
+    Receptor,
+}
+
+const fn feature_kind_matches_position(
+    lane: Fixed64Lane,
+    position: FeaturePosition,
+    kind: Fixed64FeatureKind,
+) -> bool {
+    matches!(
+        (lane, position, kind),
+        (
+            Fixed64Lane::LigandDonorToReceptorAcceptor,
+            FeaturePosition::Ligand,
+            Fixed64FeatureKind::LigandDonor
+        ) | (
+            Fixed64Lane::LigandDonorToReceptorAcceptor,
+            FeaturePosition::Receptor,
+            Fixed64FeatureKind::ReceptorAcceptor
+        ) | (
+            Fixed64Lane::LigandAcceptorToReceptorDonor,
+            FeaturePosition::Ligand,
+            Fixed64FeatureKind::LigandAcceptor
+        ) | (
+            Fixed64Lane::LigandAcceptorToReceptorDonor,
+            FeaturePosition::Receptor,
+            Fixed64FeatureKind::ReceptorDonor
+        ) | (
+            Fixed64Lane::ComplementaryCharge,
+            FeaturePosition::Ligand,
+            Fixed64FeatureKind::LigandPositiveSite | Fixed64FeatureKind::LigandNegativeSite
+        ) | (
+            Fixed64Lane::ComplementaryCharge,
+            FeaturePosition::Receptor,
+            Fixed64FeatureKind::ReceptorPositiveSite | Fixed64FeatureKind::ReceptorNegativeSite
+        ) | (
+            Fixed64Lane::AromaticPlane,
+            FeaturePosition::Ligand,
+            Fixed64FeatureKind::LigandAromaticPlane
+        ) | (
+            Fixed64Lane::AromaticPlane,
+            FeaturePosition::Receptor,
+            Fixed64FeatureKind::ReceptorAromaticPlane
+        ) | (
+            Fixed64Lane::PrincipalAxisShape,
+            FeaturePosition::Ligand,
+            Fixed64FeatureKind::LigandShapeAxis
+        ) | (
+            Fixed64Lane::PrincipalAxisShape,
+            FeaturePosition::Receptor,
+            Fixed64FeatureKind::PocketShapeAxis
+        )
+    )
+}
+
 fn selected_feature<'a>(
     allocation: &Fixed64Allocation,
     inventory: &'a Fixed64FeatureGeometryInventory,
+    lane: Fixed64Lane,
+    position: FeaturePosition,
     receipt_sha256: [u8; 32],
 ) -> Result<&'a Fixed64FeatureGeometry, Fixed64PlacementError> {
-    let feature = inventory
-        .feature_for_allocation_receipt(receipt_sha256)
-        .ok_or_else(|| {
-            error(
-                Fixed64PlacementErrorCode::FeatureCrossWired,
-                "selected feature geometry is absent",
-            )
-        })?;
+    let mut matches = inventory.features().iter().filter(|feature| {
+        feature.allocation_feature_receipt_sha256() == receipt_sha256
+            && feature_kind_matches_position(lane, position, feature.kind())
+    });
+    let feature = matches.next().ok_or_else(|| {
+        error(
+            Fixed64PlacementErrorCode::FeatureCrossWired,
+            "selected feature geometry is absent",
+        )
+    })?;
+    if matches.next().is_some() {
+        return Err(error(
+            Fixed64PlacementErrorCode::FeatureCrossWired,
+            "selected feature geometry is ambiguous",
+        ));
+    }
     if !allocation
         .inventory()
         .atomic_features()
@@ -712,20 +995,36 @@ fn canonical_direction(
 }
 
 fn aromatic_normal(coordinates: &[Vec3]) -> Result<Vec3, Fixed64PlacementError> {
-    for first in 0..coordinates.len() {
-        for second in first + 1..coordinates.len() {
-            for third in second + 1..coordinates.len() {
-                let normal = coordinates[second]
-                    .minus(coordinates[first])
-                    .cross(coordinates[third].minus(coordinates[first]));
-                if normal.norm() > GEOMETRY_EPSILON {
-                    return canonical_direction(
-                        normal,
-                        Fixed64PlacementErrorCode::DegenerateAromaticPlane,
-                        "aromatic plane is degenerate",
-                    );
-                }
-            }
+    let Some(first) = coordinates.first().copied() else {
+        return Err(error(
+            Fixed64PlacementErrorCode::DegenerateAromaticPlane,
+            "aromatic plane is empty",
+        ));
+    };
+    let Some((second_index, baseline)) = coordinates
+        .iter()
+        .copied()
+        .enumerate()
+        .skip(1)
+        .map(|(index, coordinate)| (index, coordinate.minus(first)))
+        .find(|(_, displacement)| displacement.norm() > GEOMETRY_EPSILON)
+    else {
+        return Err(error(
+            Fixed64PlacementErrorCode::DegenerateAromaticPlane,
+            "aromatic plane is collinear",
+        ));
+    };
+    for (index, coordinate) in coordinates.iter().copied().enumerate().skip(1) {
+        if index == second_index {
+            continue;
+        }
+        let normal = baseline.cross(coordinate.minus(first));
+        if normal.norm() > GEOMETRY_EPSILON {
+            return canonical_direction(
+                normal,
+                Fixed64PlacementErrorCode::DegenerateAromaticPlane,
+                "aromatic plane is degenerate",
+            );
         }
     }
     Err(error(
@@ -829,6 +1128,23 @@ fn principal_axis(coordinates: &[Vec3]) -> Result<Vec3, Fixed64PlacementError> {
         if matrix[index][index] > matrix[dominant_index][dominant_index] {
             dominant_index = index;
         }
+    }
+    let dominant_value = matrix[dominant_index][dominant_index];
+    let second_largest = (0..3)
+        .filter(|index| *index != dominant_index)
+        .map(|index| matrix[index][index])
+        .fold(f64::NEG_INFINITY, f64::max);
+    let eigenvalue_scale = GEOMETRY_EPSILON
+        .max(dominant_value.abs())
+        .max(second_largest.abs());
+    if !dominant_value.is_finite()
+        || !second_largest.is_finite()
+        || dominant_value - second_largest <= GEOMETRY_EPSILON * eigenvalue_scale
+    {
+        return Err(error(
+            Fixed64PlacementErrorCode::DegeneratePrincipalAxis,
+            "principal-axis dominant eigenvalue is not unique",
+        ));
     }
     let vector = normalized_direction(
         Vec3::new(

@@ -84,6 +84,8 @@ fn descriptor_initializers_reject_incompatible_callers_without_writing() {
         assert_initializer_exact(bg_docking_fixed64_so3_output_v1_init);
         assert_initializer_exact(bg_docking_fixed64_indexed_so3_input_v1_init);
         assert_initializer_exact(bg_docking_fixed64_indexed_so3_output_v1_init);
+        assert_initializer_exact(bg_docking_fixed64_single_anchor_input_v1_init);
+        assert_initializer_exact(bg_docking_fixed64_single_anchor_output_v1_init);
         assert_initializer_exact(bg_docking_geometric_admission_context_soa_v1_init);
         assert_initializer_exact(bg_docking_geometric_admission_candidate_batch_soa_v1_init);
         assert_initializer_exact(bg_docking_geometric_admission_output_v1_init);
@@ -115,7 +117,7 @@ fn native_abi_identity_and_canonical_units_match_the_header() {
         assert_eq!(bg_abi_version(), BG_ABI_VERSION);
         assert_eq!(bg_abi_version_major(), BG_ABI_VERSION_MAJOR);
         assert_eq!(bg_abi_version_minor(), BG_ABI_VERSION_MINOR);
-        assert!(!owned_string(bg_abi_version_string()).is_empty());
+        assert_eq!(owned_string(bg_abi_version_string()), "1.17");
         assert!(!owned_string(bg_status_string(BG_STATUS_OK)).is_empty());
         assert!(!owned_string(bg_backend_string(BG_BACKEND_CPU)).is_empty());
         assert!(!owned_string(bg_unit_system_string(BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL)).is_empty());

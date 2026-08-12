@@ -232,13 +232,7 @@ impl Fixed64FeatureGeometryInventory {
         if features.windows(2).any(|rows| {
             (rows[0].kind, rows[0].allocation_feature_receipt_sha256)
                 >= (rows[1].kind, rows[1].allocation_feature_receipt_sha256)
-        }) || features
-            .iter()
-            .map(|feature| feature.allocation_feature_receipt_sha256)
-            .collect::<BTreeSet<_>>()
-            .len()
-            != features.len()
-            || features.iter().any(|feature| !feature.has_valid_receipt())
+        }) || features.iter().any(|feature| !feature.has_valid_receipt())
         {
             return Err(invalid(
                 "feature geometry inventory is duplicated or noncanonical",
@@ -262,9 +256,12 @@ impl Fixed64FeatureGeometryInventory {
         &self,
         receipt_sha256: [u8; 32],
     ) -> Option<&Fixed64FeatureGeometry> {
-        self.features
+        let mut matches = self
+            .features
             .iter()
-            .find(|feature| feature.allocation_feature_receipt_sha256 == receipt_sha256)
+            .filter(|feature| feature.allocation_feature_receipt_sha256 == receipt_sha256);
+        let feature = matches.next()?;
+        matches.next().is_none().then_some(feature)
     }
 
     #[must_use]

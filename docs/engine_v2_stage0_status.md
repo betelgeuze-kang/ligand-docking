@@ -368,10 +368,16 @@ The canonical capability state is:
    claims. The 40 specialized Engine V2 workflows still require the separately
    modeled CI-authority disposition.
 9. **Later native tracks:** `cpp_hip_required` remains an explicit fail-closed
-    unavailable backend. C++/HIP shadow work, Rust RMSD/clustering extraction,
-    the native candidate executor, and bounded native parser are not admitted
-    while current proposal and validity gates fail. Product shadow routing
-    remains disabled.
+    unavailable product backend. The non-authoritative native ABI now includes
+    fixed64 allocation, deterministic SO(3), indexed placement, and
+    single-anchor placement with the shared surface-aware admission precheck;
+    C++, Rust CPU, `hip_safe`, and `hip_fast` paths are synthetic parity-test
+    surfaces only and every execution, reservation, benchmark, product-rank,
+    customer-pose, and claim authority bit remains false. These primitives are
+    not an admitted native candidate executor, and Rust RMSD/clustering,
+    bounded native parsing, activation/downstream binding, and product shadow
+    routing remain unavailable while the proposal, validity, and external
+    authority gates fail.
 
 ## Exit condition
 
