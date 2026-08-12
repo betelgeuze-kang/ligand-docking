@@ -86,17 +86,17 @@ void fill_source_evidence(
         source->proposal_sha256,
         static_cast<uint8_t>(marker + UINT8_C(64)));
     parse_digest(
-        "42bd9421b68e2e80a1b4d6b0e52173f6769feb8422b897d1b0131a124c35610a",
+        "ab01e8fe2a0e14b958827e710f1d262de82a886b279563aae8cedc946ef533c8",
         source->coordinate_sha256);
 }
 
 struct Fixture final {
     std::array<double, kCoordinates> source_x = {0.0, 1.0, 0.0, 0.0};
     std::array<double, kCoordinates> source_y = {0.0, 0.0, 1.0, 0.0};
-    std::array<double, kCoordinates> source_z = {0.0, 0.0, 0.0, 1.5};
+    std::array<double, kCoordinates> source_z = {0.0, 0.0, 0.0, 1.0001};
     std::array<double, kAtoms> receptor_x = {4.0, 3.5, 4.0, 4.0};
     std::array<double, kAtoms> receptor_y = {0.0, 0.0, 1.0, 0.0};
-    std::array<double, kAtoms> receptor_z = {0.0, 0.0, 0.0, 1.25};
+    std::array<double, kAtoms> receptor_z = {0.0, 0.0, 0.0, 1.0002};
     std::array<double, kAtoms> ligand_radii = {1.5, 1.5, 1.5, 1.5};
     std::array<double, kAtoms> receptor_radii = {1.5, 1.5, 1.5, 1.5};
     std::array<uint8_t, kAtoms> heavy_mask = {1, 1, 1, 1};
@@ -156,10 +156,10 @@ struct Fixture final {
         fill_digest(allocation.exact_v11_source.source_receipt_sha256, 0x10);
         fill_digest(allocation.exact_v11_source.proposal_sha256, 0x11);
         parse_digest(
-            "42bd9421b68e2e80a1b4d6b0e52173f6769feb8422b897d1b0131a124c35610a",
+            "ab01e8fe2a0e14b958827e710f1d262de82a886b279563aae8cedc946ef533c8",
             allocation.exact_v11_source.ligand_coordinate_sha256);
         parse_digest(
-            "eec85cfe7d1e2cb444ed309e7b1861819ec8c6fd9391baa71c26db323fdc847c",
+            "fc1a4a36a926d55049f0d6d06d3f61328f59ed6860899712dec2df39c6832ef5",
             allocation.exact_v11_source.receptor_coordinate_sha256);
         fill_digest(
             allocation.exact_v11_source.prepared_ligand_topology_sha256,
@@ -1534,6 +1534,49 @@ void test_complete_pipeline_create_and_run_fail_closed() {
                &validity,
                alias) == BG_STATUS_INVALID_ARGUMENT);
     assert(fixture.receptor_x[0] == receptor_before);
+
+    const auto expect_validity_crosswire_rejected =
+        [&](const bg_docking_pose_validity_context_soa_v1 &crosswired) {
+            auto *candidate =
+                reinterpret_cast<bg_docking_fixed64_pipeline_v1 *>(
+                    static_cast<uintptr_t>(1));
+            assert(bg_docking_fixed64_pipeline_v1_create(
+                       context,
+                       &admission,
+                       &rigid,
+                       &torsion,
+                       &scorer,
+                       &crosswired,
+                       &candidate) == BG_STATUS_INVALID_ARGUMENT);
+            assert(candidate == nullptr);
+        };
+
+    auto different_receptor_x = fixture.receptor_x;
+    different_receptor_x[0] += 0.125;
+    auto crosswired_validity = validity;
+    crosswired_validity.receptor_x_angstrom = different_receptor_x.data();
+    expect_validity_crosswire_rejected(crosswired_validity);
+
+    auto different_ligand_reference_x = fixture.source_x;
+    different_ligand_reference_x[0] += 0.125;
+    crosswired_validity = validity;
+    crosswired_validity.ligand_reference_x_angstrom =
+        different_ligand_reference_x.data();
+    expect_validity_crosswire_rejected(crosswired_validity);
+
+    crosswired_validity = validity;
+    crosswired_validity.pocket_center_angstrom[0] += 0.125;
+    expect_validity_crosswire_rejected(crosswired_validity);
+
+    crosswired_validity = validity;
+    crosswired_validity.authority_input_receipt_sha256[0] ^= UINT8_C(1);
+    expect_validity_crosswire_rejected(crosswired_validity);
+    crosswired_validity = validity;
+    crosswired_validity.receptor_system_sha256[0] ^= UINT8_C(1);
+    expect_validity_crosswire_rejected(crosswired_validity);
+    crosswired_validity = validity;
+    crosswired_validity.ligand_system_sha256[0] ^= UINT8_C(1);
+    expect_validity_crosswire_rejected(crosswired_validity);
 
     scorer.authority_input_receipt_sha256[0] ^= UINT8_C(1);
     auto *cross_wired = reinterpret_cast<bg_docking_fixed64_pipeline_v1 *>(

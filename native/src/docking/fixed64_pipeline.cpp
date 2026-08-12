@@ -164,6 +164,12 @@ template <typename Type>
     return std::memcmp(left.data(), right, left.size()) == 0;
 }
 
+[[nodiscard]] bool same_digest(
+    const uint8_t (&left)[32],
+    const uint8_t (&right)[32]) noexcept {
+    return std::memcmp(left, right, 32) == 0;
+}
+
 [[nodiscard]] bool channels_equal(
     const double *left,
     const double *right,
@@ -190,7 +196,8 @@ template <typename Type>
     const bg_context &context,
     const bg_docking_geometric_admission_v1 &admission,
     const bg_docking_fixed64_refinement_pipeline_v1 &refinement,
-    const bg_docking_scorer_v1_context_soa_v1 &scorer) noexcept {
+    const bg_docking_scorer_v1_context_soa_v1 &scorer,
+    const bg_docking_pose_validity_context_soa_v1 &validity) noexcept {
     if (context.backend != admission.backend ||
         context.backend != refinement.backend ||
         context.unit_system != admission.unit_system ||
@@ -245,6 +252,51 @@ template <typename Type>
         return fail(
             BG_STATUS_INVALID_ARGUMENT,
             "fixed64 complete pipeline admission and refinement identities are cross-wired");
+    }
+    if (!channels_equal(
+            validity.receptor_x_angstrom,
+            scorer.receptor_x_angstrom,
+            receptor_count) ||
+        !channels_equal(
+            validity.receptor_y_angstrom,
+            scorer.receptor_y_angstrom,
+            receptor_count) ||
+        !channels_equal(
+            validity.receptor_z_angstrom,
+            scorer.receptor_z_angstrom,
+            receptor_count) ||
+        !channels_equal(
+            validity.receptor_vdw_radius_angstrom,
+            scorer.receptor_vdw_radius_angstrom,
+            receptor_count) ||
+        !channels_equal(
+            validity.ligand_reference_x_angstrom,
+            scorer.ligand_reference_x_angstrom,
+            ligand_count) ||
+        !channels_equal(
+            validity.ligand_reference_y_angstrom,
+            scorer.ligand_reference_y_angstrom,
+            ligand_count) ||
+        !channels_equal(
+            validity.ligand_reference_z_angstrom,
+            scorer.ligand_reference_z_angstrom,
+            ligand_count) ||
+        !channels_equal(
+            validity.pocket_center_angstrom,
+            scorer.pocket_center_angstrom,
+            3) ||
+        !same_digest(
+            validity.authority_input_receipt_sha256,
+            scorer.authority_input_receipt_sha256) ||
+        !same_digest(
+            validity.receptor_system_sha256,
+            scorer.receptor_system_sha256) ||
+        !same_digest(
+            validity.ligand_system_sha256,
+            scorer.ligand_system_sha256)) {
+        return fail(
+            BG_STATUS_INVALID_ARGUMENT,
+            "fixed64 complete pipeline validity molecular identity is cross-wired");
     }
     return BG_STATUS_OK;
 }
@@ -1621,7 +1673,8 @@ extern "C" BG_API bg_status BG_CALL bg_docking_fixed64_pipeline_v1_create(
             *context,
             *pipeline->admission,
             *pipeline->refinement,
-            *scorer_descriptor);
+            *scorer_descriptor,
+            *validity_descriptor);
         if (status != BG_STATUS_OK) {
             destroy_components(pipeline.get());
             return status;
