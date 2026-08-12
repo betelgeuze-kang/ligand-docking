@@ -576,6 +576,59 @@ void test_cross_wiring_and_transactionality_fail_closed() {
     auto torsion = fixture.torsion();
     auto scorer = fixture.scorer();
     auto validity = fixture.validity();
+    bg_docking_fixed64_refinement_pipeline_v1 *header_rejected =
+        reinterpret_cast<bg_docking_fixed64_refinement_pipeline_v1 *>(
+            static_cast<uintptr_t>(1));
+    auto short_rigid = rigid;
+    --short_rigid.struct_size;
+    assert(
+        bg_docking_fixed64_refinement_pipeline_v1_create(
+            context,
+            &short_rigid,
+            &torsion,
+            &scorer,
+            &validity,
+            &header_rejected) == BG_STATUS_ABI_MISMATCH);
+    assert(
+        header_rejected ==
+        reinterpret_cast<bg_docking_fixed64_refinement_pipeline_v1 *>(
+            static_cast<uintptr_t>(1)));
+
+    auto short_torsion = torsion;
+    --short_torsion.struct_size;
+    assert(
+        bg_docking_fixed64_refinement_pipeline_v1_create(
+            context,
+            &rigid,
+            &short_torsion,
+            &scorer,
+            &validity,
+            &header_rejected) == BG_STATUS_ABI_MISMATCH);
+    auto short_scorer = scorer;
+    --short_scorer.struct_size;
+    assert(
+        bg_docking_fixed64_refinement_pipeline_v1_create(
+            context,
+            &rigid,
+            &torsion,
+            &short_scorer,
+            &validity,
+            &header_rejected) == BG_STATUS_ABI_MISMATCH);
+    auto short_validity = validity;
+    --short_validity.struct_size;
+    assert(
+        bg_docking_fixed64_refinement_pipeline_v1_create(
+            context,
+            &rigid,
+            &torsion,
+            &scorer,
+            &short_validity,
+            &header_rejected) == BG_STATUS_ABI_MISMATCH);
+    assert(
+        header_rejected ==
+        reinterpret_cast<bg_docking_fixed64_refinement_pipeline_v1 *>(
+            static_cast<uintptr_t>(1)));
+
     std::array<double, 4> cross_wired_receptor = fixture.receptor_x;
     cross_wired_receptor[0] += 0.25;
     torsion.receptor_x_angstrom = cross_wired_receptor.data();

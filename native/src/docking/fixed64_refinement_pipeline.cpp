@@ -1008,7 +1008,43 @@ bg_docking_fixed64_refinement_pipeline_v1_create(
                 BG_STATUS_INVALID_ARGUMENT,
                 "fixed64 refinement pipeline create pointers are misaligned");
         }
-        bg_status status = validate_create_output_range(
+        bg_status status = betelgeuze::native::validate_descriptor_header(
+            rigid_descriptor->struct_size,
+            sizeof(*rigid_descriptor),
+            rigid_descriptor->abi_version,
+            "fixed64 refinement rigid descriptor size does not match ABI v1",
+            "fixed64 refinement rigid descriptor ABI version does not match");
+        if (status != BG_STATUS_OK) {
+            return status;
+        }
+        status = betelgeuze::native::validate_descriptor_header(
+            torsion_descriptor->struct_size,
+            sizeof(*torsion_descriptor),
+            torsion_descriptor->abi_version,
+            "fixed64 refinement torsion descriptor size does not match ABI v1",
+            "fixed64 refinement torsion descriptor ABI version does not match");
+        if (status != BG_STATUS_OK) {
+            return status;
+        }
+        status = betelgeuze::native::validate_descriptor_header(
+            scorer_descriptor->struct_size,
+            sizeof(*scorer_descriptor),
+            scorer_descriptor->abi_version,
+            "fixed64 refinement scorer descriptor size does not match ABI v1",
+            "fixed64 refinement scorer descriptor ABI version does not match");
+        if (status != BG_STATUS_OK) {
+            return status;
+        }
+        status = betelgeuze::native::validate_descriptor_header(
+            validity_descriptor->struct_size,
+            sizeof(*validity_descriptor),
+            validity_descriptor->abi_version,
+            "fixed64 refinement validity descriptor size does not match ABI v1",
+            "fixed64 refinement validity descriptor ABI version does not match");
+        if (status != BG_STATUS_OK) {
+            return status;
+        }
+        status = validate_create_output_range(
             *context,
             *rigid_descriptor,
             *torsion_descriptor,
