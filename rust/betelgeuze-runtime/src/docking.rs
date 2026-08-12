@@ -2123,7 +2123,9 @@ fn validate_native_outputs(
     let valid_row_count = validity_rows
         .iter()
         .filter(|row| {
-            row.status == sys::BG_DOCKING_POSE_VALIDITY_ROW_EVALUATED && row.blocker_mask == 0
+            row.status == sys::BG_DOCKING_POSE_VALIDITY_ROW_EVALUATED
+                && row.passed_check_mask == sys::BG_DOCKING_POSE_VALIDITY_CHECK_ALL
+                && row.blocker_mask == 0
         })
         .count() as u64;
     if requested_modes.len() != candidate_count as usize
@@ -2315,9 +2317,19 @@ fn validate_native_outputs(
             )
         })?;
     for (slot, row) in producer_rows.iter().enumerate() {
+        let expected_offset = u64::try_from(slot)
+            .ok()
+            .and_then(|slot| slot.checked_mul(ligand_atom_count))
+            .ok_or_else(|| {
+                Error::local(
+                    ErrorCode::AbiMismatch,
+                    "native fixed64 producer coordinate offset overflowed",
+                )
+            })?;
         if row.slot_index as usize != slot
             || row.backend != backend.as_raw()
             || row.ligand_atom_count != ligand_atom_count
+            || row.coordinate_offset != expected_offset
             || !bool_from_abi(row.denominator_preserved, "producer row denominator")?
         {
             return Err(Error::local(
@@ -2368,14 +2380,23 @@ fn validate_native_outputs(
         let evaluated = geometric.status == sys::BG_DOCKING_GEOMETRIC_ADMISSION_ROW_EVALUATED;
         let upstream_failure =
             geometric.status == sys::BG_DOCKING_GEOMETRIC_ADMISSION_ROW_UPSTREAM_FAILURE;
+        let rank_eligible = bool_from_abi(geometric.rank_eligible, "geometric rank eligibility")?;
+        let accepted = geometric.decision == sys::BG_DOCKING_GEOMETRIC_ADMISSION_DECISION_ACCEPTED;
+        let penetration_rejected = geometric.decision
+            == sys::BG_DOCKING_GEOMETRIC_ADMISSION_DECISION_SEVERE_PENETRATION_REJECTED;
         if (evaluated
             && (geometric.ligand_atom_count != ligand_atom_count
                 || geometric.receptor_atom_count != receptor_atom_count
-                || geometric.exact_pair_count != expected_pair_count))
+                || geometric.exact_pair_count != expected_pair_count
+                || (!accepted && !penetration_rejected)
+                || rank_eligible != accepted))
             || (upstream_failure
                 && (geometric.ligand_atom_count != 0
                     || geometric.receptor_atom_count != 0
-                    || geometric.exact_pair_count != 0))
+                    || geometric.exact_pair_count != 0
+                    || geometric.decision
+                        != sys::BG_DOCKING_GEOMETRIC_ADMISSION_DECISION_NOT_EVALUATED
+                    || rank_eligible))
             || (!evaluated && !upstream_failure)
         {
             return Err(Error::local(
@@ -2451,6 +2472,7 @@ fn validate_native_outputs(
             "native fixed64 torsion move order is invalid",
         ));
     }
+    validate_scorer_and_validity_evidence(scorer_rows, validity_rows, ranking_rows)?;
     validate_index_evidence(
         ranking,
         cluster,
@@ -2486,6 +2508,12 @@ fn validate_native_outputs(
         let ranking_has_coordinate = bool_from_abi(ranking_row.rank_eligible, "rank eligibility")?;
         let cluster_has_coordinate =
             bool_from_abi(cluster_row.cluster_eligible, "cluster eligibility")?;
+        let refinement_ready =
+            refinement_row.status == sys::BG_DOCKING_FIXED64_REFINEMENT_ROW_COORDINATE_READY;
+        let scored = scorer_row.status == sys::BG_DOCKING_SCORER_V1_ROW_SCORED;
+        let validity_evaluated = validity_row.status == sys::BG_DOCKING_POSE_VALIDITY_ROW_EVALUATED;
+        let valid_rank_eligible =
+            bool_from_abi(ranking_row.valid_rank_eligible, "valid-rank eligibility")?;
         if row.slot_index as usize != slot
             || row.producer_status != producer_row.status
             || row.producer_failure_code != producer_row.failure_code
@@ -2507,6 +2535,15 @@ fn validate_native_outputs(
             || row.top_k_rank != cluster_row.top_k_rank
             || row.producer_row_receipt_sha256 != producer_row.row_receipt_sha256
             || row.final_coordinate_sha256 != refinement_row.coordinate_sha256
+            || (refinement_ready && !admitted)
+            || (scored && !refinement_ready)
+            || (validity_evaluated && !scored)
+            || (ranking_has_coordinate && !scored)
+            || (valid_rank_eligible
+                && (!validity_evaluated
+                    || validity_row.passed_check_mask != sys::BG_DOCKING_POSE_VALIDITY_CHECK_ALL
+                    || validity_row.blocker_mask != 0))
+            || (cluster_has_coordinate && !valid_rank_eligible)
             || (ranking_has_coordinate
                 && ranking_row.coordinate_sha256 != refinement_row.coordinate_sha256)
             || (cluster_has_coordinate
@@ -2552,6 +2589,196 @@ fn validate_native_outputs(
             return Err(Error::local(
                 ErrorCode::AbiMismatch,
                 "native fixed64 batch receipt is absent",
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn scorer_failure_rank_evidence_is_zero(row: &sys::bg_docking_scorer_v1_row_v1) -> bool {
+    row.weighted_terms.iter().all(|value| *value == 0.0)
+        && row.total_score == 0.0
+        && row.hbond_count == 0
+        && row.hydrophobic_contact_count == 0
+        && row.buried_polar_count == 0
+}
+
+fn scorer_failure_pair_evidence_is_valid(row: &sys::bg_docking_scorer_v1_row_v1) -> bool {
+    match row.failure_code {
+        sys::BG_DOCKING_SCORER_V1_FAILURE_UPSTREAM_NOT_ADMITTED
+        | sys::BG_DOCKING_SCORER_V1_FAILURE_INVALID_CANDIDATE_COORDINATES => {
+            row.receptor_candidate_pair_count == 0 && row.ligand_pair_count == 0
+        }
+        sys::BG_DOCKING_SCORER_V1_FAILURE_RECEPTOR_PAIR_CAPACITY => {
+            row.receptor_candidate_pair_count > 0 && row.ligand_pair_count == 0
+        }
+        sys::BG_DOCKING_SCORER_V1_FAILURE_LIGAND_PAIR_CAPACITY => row.ligand_pair_count > 0,
+        sys::BG_DOCKING_SCORER_V1_FAILURE_DEGENERATE_ROTOR
+        | sys::BG_DOCKING_SCORER_V1_FAILURE_NONFINITE_SCORE => true,
+        _ => false,
+    }
+}
+
+fn validity_measurements_are_finite(row: &sys::bg_docking_pose_validity_row_v1) -> bool {
+    [
+        row.rotation_orthogonality_max_error,
+        row.rotation_determinant,
+        row.max_bond_length_delta_angstrom,
+        row.minimum_ligand_nonbonded_distance_angstrom,
+        row.minimum_receptor_ligand_distance_angstrom,
+        row.minimum_declared_chiral_volume,
+        row.maximum_pocket_center_distance_angstrom,
+        row.element_vdw_ligand_minimum_distance_angstrom,
+        row.element_vdw_ligand_minimum_ratio,
+        row.element_vdw_receptor_minimum_distance_angstrom,
+        row.element_vdw_receptor_minimum_ratio,
+    ]
+    .iter()
+    .all(|value| value.is_finite())
+}
+
+fn validity_failure_evidence_is_zero(row: &sys::bg_docking_pose_validity_row_v1) -> bool {
+    row.passed_check_mask == 0
+        && row.blocker_mask == 0
+        && row.atom_count == 0
+        && row.rotation_orthogonality_max_error == 0.0
+        && row.rotation_determinant == 0.0
+        && row.max_bond_length_delta_angstrom == 0.0
+        && row.minimum_ligand_nonbonded_distance_angstrom == 0.0
+        && row.evaluated_ligand_nonbonded_pair_count == 0
+        && row.excluded_ligand_pair_count == 0
+        && row.minimum_receptor_ligand_distance_angstrom == 0.0
+        && row.evaluated_receptor_ligand_pair_count == 0
+        && row.minimum_declared_chiral_volume == 0.0
+        && row.declared_chirality_center_count == 0
+        && row.maximum_pocket_center_distance_angstrom == 0.0
+        && row.element_vdw_ligand_pair_count == 0
+        && row.element_vdw_ligand_severe_overlap_count == 0
+        && row.element_vdw_ligand_minimum_distance_angstrom == 0.0
+        && row.element_vdw_ligand_minimum_ratio == 0.0
+        && row.element_vdw_receptor_candidate_pair_count == 0
+        && row.element_vdw_receptor_full_cartesian_pair_count == 0
+        && row.element_vdw_receptor_cell_count == 0
+        && row.element_vdw_receptor_severe_overlap_count == 0
+        && row.element_vdw_receptor_minimum_distance_angstrom == 0.0
+        && row.element_vdw_receptor_minimum_ratio == 0.0
+}
+
+fn validate_scorer_and_validity_evidence(
+    scorer_rows: &[sys::bg_docking_scorer_v1_row_v1],
+    validity_rows: &[sys::bg_docking_pose_validity_row_v1],
+    ranking_rows: &[sys::bg_docking_stable_top_k_row_v1],
+) -> Result<()> {
+    let candidate_count = sys::BG_DOCKING_FIXED64_CANDIDATE_COUNT as usize;
+    if scorer_rows.len() != candidate_count
+        || validity_rows.len() != candidate_count
+        || ranking_rows.len() != candidate_count
+    {
+        return Err(Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 scorer, validity, or ranking denominator is invalid",
+        ));
+    }
+    for slot in 0..candidate_count {
+        let scorer = &scorer_rows[slot];
+        let validity = &validity_rows[slot];
+        let ranking = &ranking_rows[slot];
+        if scorer.slot_index as usize != slot
+            || scorer.reserved0 != 0
+            || scorer.reserved.iter().any(|value| *value != 0)
+            || validity.slot_index as usize != slot
+            || validity.reserved.iter().any(|value| *value != 0)
+            || ranking.slot_index as usize != slot
+            || ranking.reserved0 != 0
+            || ranking.reserved.iter().any(|value| *value != 0)
+        {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 scorer, validity, or ranking row ABI shape is invalid",
+            ));
+        }
+        if scorer.status == sys::BG_DOCKING_SCORER_V1_ROW_SCORED {
+            let term_sum = scorer.weighted_terms.iter().copied().sum::<f64>();
+            if scorer.failure_code != sys::BG_DOCKING_SCORER_V1_FAILURE_NONE
+                || !scorer.total_score.is_finite()
+                || scorer.weighted_terms.iter().any(|value| !value.is_finite())
+                || (term_sum - scorer.total_score).abs() > 1.0e-12
+            {
+                return Err(Error::local(
+                    ErrorCode::AbiMismatch,
+                    "native fixed64 scored row has invalid ScorerV1 term semantics",
+                ));
+            }
+        } else if scorer.status != sys::BG_DOCKING_SCORER_V1_ROW_TYPED_FAILURE
+            || scorer.failure_code < sys::BG_DOCKING_SCORER_V1_FAILURE_UPSTREAM_NOT_ADMITTED
+            || scorer.failure_code > sys::BG_DOCKING_SCORER_V1_FAILURE_NONFINITE_SCORE
+            || !scorer_failure_rank_evidence_is_zero(scorer)
+            || !scorer_failure_pair_evidence_is_valid(scorer)
+        {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 typed scorer failure retained invalid evidence",
+            ));
+        }
+        if validity.status == sys::BG_DOCKING_POSE_VALIDITY_ROW_EVALUATED {
+            let unknown_checks =
+                validity.passed_check_mask & !sys::BG_DOCKING_POSE_VALIDITY_CHECK_ALL;
+            if scorer.status != sys::BG_DOCKING_SCORER_V1_ROW_SCORED
+                || validity.failure_code != sys::BG_DOCKING_POSE_VALIDITY_FAILURE_NONE
+                || validity.upstream_scorer_failure_code != sys::BG_DOCKING_SCORER_V1_FAILURE_NONE
+                || unknown_checks != 0
+                || validity.blocker_mask
+                    != (sys::BG_DOCKING_POSE_VALIDITY_CHECK_ALL ^ validity.passed_check_mask)
+                || validity.observed_count != 0
+                || validity.atom_count == 0
+                || !validity_measurements_are_finite(validity)
+            {
+                return Err(Error::local(
+                    ErrorCode::AbiMismatch,
+                    "native fixed64 evaluated validity evidence is invalid",
+                ));
+            }
+        } else {
+            if !validity_failure_evidence_is_zero(validity) {
+                return Err(Error::local(
+                    ErrorCode::AbiMismatch,
+                    "native fixed64 failed validity row retained measurements",
+                ));
+            }
+            let valid_upstream_failure = validity.status
+                == sys::BG_DOCKING_POSE_VALIDITY_ROW_UPSTREAM_SCORER_FAILURE
+                && scorer.status == sys::BG_DOCKING_SCORER_V1_ROW_TYPED_FAILURE
+                && validity.failure_code == sys::BG_DOCKING_POSE_VALIDITY_FAILURE_UPSTREAM_SCORER
+                && validity.upstream_scorer_failure_code == scorer.failure_code
+                && validity.observed_count == 0;
+            let valid_typed_failure = validity.status
+                == sys::BG_DOCKING_POSE_VALIDITY_ROW_TYPED_FAILURE
+                && scorer.status == sys::BG_DOCKING_SCORER_V1_ROW_SCORED
+                && validity.failure_code
+                    >= sys::BG_DOCKING_POSE_VALIDITY_FAILURE_INVALID_CANDIDATE_COORDINATES
+                && validity.failure_code
+                    <= sys::BG_DOCKING_POSE_VALIDITY_FAILURE_NONFINITE_DERIVED_MEASUREMENT
+                && validity.upstream_scorer_failure_code == sys::BG_DOCKING_SCORER_V1_FAILURE_NONE;
+            if !valid_upstream_failure && !valid_typed_failure {
+                return Err(Error::local(
+                    ErrorCode::AbiMismatch,
+                    "native fixed64 validity failure is cross-wired",
+                ));
+            }
+        }
+        let rank_eligible = bool_from_abi(ranking.rank_eligible, "rank eligibility")?;
+        let valid_rank_eligible =
+            bool_from_abi(ranking.valid_rank_eligible, "valid-rank eligibility")?;
+        if !rank_eligible
+            && (valid_rank_eligible
+                || ranking.stable_rank != 0
+                || ranking.stable_valid_rank != 0
+                || ranking.total_score != 0.0
+                || digest_present(&ranking.coordinate_sha256))
+        {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 ineligible ranking row retained score or coordinate evidence",
             ));
         }
     }
@@ -2673,6 +2900,7 @@ fn validate_index_evidence(
             || row.stable_valid_rank as usize != offset + 1
             || validity_rows[slot].status != sys::BG_DOCKING_POSE_VALIDITY_ROW_EVALUATED
             || validity_rows[slot].passed_check_mask != sys::BG_DOCKING_POSE_VALIDITY_CHECK_ALL
+            || validity_rows[slot].blocker_mask != 0
         {
             return Err(Error::local(
                 ErrorCode::AbiMismatch,
@@ -2685,7 +2913,8 @@ fn validate_index_evidence(
         let valid_rank_eligible = bool_from_abi(row.valid_rank_eligible, "valid-rank eligibility")?;
         let expected_valid = primary_seen[slot]
             && validity_rows[slot].status == sys::BG_DOCKING_POSE_VALIDITY_ROW_EVALUATED
-            && validity_rows[slot].passed_check_mask == sys::BG_DOCKING_POSE_VALIDITY_CHECK_ALL;
+            && validity_rows[slot].passed_check_mask == sys::BG_DOCKING_POSE_VALIDITY_CHECK_ALL
+            && validity_rows[slot].blocker_mask == 0;
         if valid_rank_eligible != valid_seen[slot]
             || valid_rank_eligible != expected_valid
             || (!valid_rank_eligible && row.stable_valid_rank != 0)
@@ -2727,6 +2956,13 @@ fn validate_index_evidence(
     }
     let mut observed_cluster_sizes = vec![0_u32; representatives.len()];
     for (slot, row) in cluster_rows.iter().enumerate() {
+        if row.reserved0 != 0 || row.reserved1 != 0 || row.reserved.iter().any(|value| *value != 0)
+        {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 cluster row ABI shape is invalid",
+            ));
+        }
         let eligible = bool_from_abi(row.cluster_eligible, "cluster eligibility")?;
         let representative = bool_from_abi(row.representative, "cluster representative")?;
         if eligible != valid_seen[slot] || representative != representative_seen[slot] {
@@ -2772,6 +3008,7 @@ fn validate_index_evidence(
             || row.cluster_rank != 0
             || row.top_k_rank != 0
             || row.cluster_size != 0
+            || row.direct_rmsd_to_representative_angstrom != 0.0
             || digest_present(&row.coordinate_sha256)
         {
             return Err(Error::local(
@@ -2867,13 +3104,23 @@ mod output_validation_tests {
             for slot in 0..count {
                 scorer_rows[slot].slot_index = slot as u32;
                 scorer_rows[slot].status = sys::BG_DOCKING_SCORER_V1_ROW_TYPED_FAILURE;
+                scorer_rows[slot].failure_code =
+                    sys::BG_DOCKING_SCORER_V1_FAILURE_UPSTREAM_NOT_ADMITTED;
                 validity_rows[slot].slot_index = slot as u32;
+                validity_rows[slot].status =
+                    sys::BG_DOCKING_POSE_VALIDITY_ROW_UPSTREAM_SCORER_FAILURE;
+                validity_rows[slot].failure_code =
+                    sys::BG_DOCKING_POSE_VALIDITY_FAILURE_UPSTREAM_SCORER;
+                validity_rows[slot].upstream_scorer_failure_code =
+                    sys::BG_DOCKING_SCORER_V1_FAILURE_UPSTREAM_NOT_ADMITTED;
                 ranking_rows[slot].slot_index = slot as u32;
                 cluster_rows[slot].slot_index = slot as u32;
                 cluster_rows[slot].status = sys::BG_DOCKING_RMSD_CLUSTER_ROW_UPSTREAM_NOT_VALID;
             }
             for (slot, score) in [(0_usize, 1.0_f64), (1, 2.0)] {
                 scorer_rows[slot].status = sys::BG_DOCKING_SCORER_V1_ROW_SCORED;
+                scorer_rows[slot].failure_code = sys::BG_DOCKING_SCORER_V1_FAILURE_NONE;
+                scorer_rows[slot].weighted_terms[0] = score;
                 scorer_rows[slot].total_score = score;
                 ranking_rows[slot].rank_eligible = 1;
                 ranking_rows[slot].stable_rank = slot as u32 + 1;
@@ -2881,8 +3128,15 @@ mod output_validation_tests {
                 ranking_rows[slot].coordinate_sha256 = [slot as u8 + 1; 32];
             }
             validity_rows[0].status = sys::BG_DOCKING_POSE_VALIDITY_ROW_EVALUATED;
+            validity_rows[0].failure_code = sys::BG_DOCKING_POSE_VALIDITY_FAILURE_NONE;
+            validity_rows[0].upstream_scorer_failure_code = sys::BG_DOCKING_SCORER_V1_FAILURE_NONE;
             validity_rows[0].passed_check_mask = sys::BG_DOCKING_POSE_VALIDITY_CHECK_ALL;
+            validity_rows[0].atom_count = 1;
             validity_rows[1].status = sys::BG_DOCKING_POSE_VALIDITY_ROW_EVALUATED;
+            validity_rows[1].failure_code = sys::BG_DOCKING_POSE_VALIDITY_FAILURE_NONE;
+            validity_rows[1].upstream_scorer_failure_code = sys::BG_DOCKING_SCORER_V1_FAILURE_NONE;
+            validity_rows[1].blocker_mask = sys::BG_DOCKING_POSE_VALIDITY_CHECK_ALL;
+            validity_rows[1].atom_count = 1;
             ranking_rows[0].valid_rank_eligible = 1;
             ranking_rows[0].stable_valid_rank = 1;
             cluster_rows[0].status = sys::BG_DOCKING_RMSD_CLUSTER_ROW_CLUSTERED;
@@ -2919,6 +3173,11 @@ mod output_validation_tests {
         }
 
         fn validate(&self) -> Result<()> {
+            validate_scorer_and_validity_evidence(
+                &self.scorer_rows,
+                &self.validity_rows,
+                &self.ranking_rows,
+            )?;
             validate_index_evidence(
                 &self.ranking,
                 &self.cluster,
@@ -2959,6 +3218,29 @@ mod output_validation_tests {
         let mut cross_wired = IndexFixture::valid();
         cross_wired.cluster_rows[0].coordinate_sha256 = [9; 32];
         assert!(cross_wired.validate().is_err());
+    }
+
+    #[test]
+    fn rejects_corrupt_scorer_terms_and_failure_sentinels() {
+        let mut nonfinite = IndexFixture::valid();
+        nonfinite.scorer_rows[0].weighted_terms[0] = f64::NAN;
+        assert!(nonfinite.validate().is_err());
+
+        let mut inconsistent_total = IndexFixture::valid();
+        inconsistent_total.scorer_rows[0].weighted_terms[0] = 0.5;
+        assert!(inconsistent_total.validate().is_err());
+
+        let mut retained_failure_score = IndexFixture::valid();
+        retained_failure_score.scorer_rows[2].total_score = 7.0;
+        assert!(retained_failure_score.validate().is_err());
+    }
+
+    #[test]
+    fn rejects_valid_rank_with_inconsistent_blocker_mask() {
+        let mut fixture = IndexFixture::valid();
+        fixture.validity_rows[0].blocker_mask =
+            sys::BG_DOCKING_POSE_VALIDITY_CHECK_RECEPTOR_LIGAND_CLASH;
+        assert!(fixture.validate().is_err());
     }
 }
 
