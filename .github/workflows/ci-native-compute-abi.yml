@@ -108,5 +108,6 @@ jobs:
           cargo package --manifest-path rust/betelgeuze-runtime/Cargo.toml --locked \
             --config 'patch.crates-io.betelgeuze-sys.path="rust/betelgeuze-sys"' \
             --config 'patch.crates-io.betelgeuze-cpu-kernel.path="rust/cpu-kernel"' \
+            --config 'patch.crates-io.betelgeuze-docking-search.path="rust/betelgeuze-docking-search"' \
             --config 'patch.crates-io.betelgeuze-reference-physics.path="rust/reference-physics"' \
             --config 'patch.crates-io.betelgeuze-reference-dynamics.path="rust/reference-dynamics"'

@@ -303,6 +303,53 @@ void test_backend_parity_and_repeat() {
     bg_context_destroy(rust);
 }
 
+void test_oblique_normal_is_invariant_to_nonbinary_positive_scale() {
+    const std::array<double, kAtoms> x = {-0.0, 1.0, 0.0, 0.0};
+    const std::array<double, kAtoms> y = {0.0, 0.0, 1.0, 0.0};
+    const std::array<double, kAtoms> z = {0.0, 0.0, 0.0, 1.0};
+    const Allocation allocation = make_allocation(kSourceCoordinateSha256);
+    bg_context *context = make_context(BG_BACKEND_CPP_CPU_REFERENCE);
+    assert(context != nullptr);
+    auto baseline = make_input(
+        allocation, x.data(), y.data(), z.data(), x.size());
+    baseline.pocket_normal[0] = 1.0;
+    baseline.pocket_normal[1] = 1.0;
+    baseline.pocket_normal[2] = 5.0;
+    auto scaled = baseline;
+    scaled.pocket_normal[0] = 3.0;
+    scaled.pocket_normal[1] = 3.0;
+    scaled.pocket_normal[2] = 15.0;
+    auto rounded = baseline;
+    rounded.pocket_normal[0] = 0.3;
+    rounded.pocket_normal[1] = 0.3;
+    rounded.pocket_normal[2] = 1.5;
+    const Placement first = place(context, baseline);
+    const Placement second = place(context, scaled);
+    const Placement third = place(context, rounded);
+    assert_placed(first, BG_BACKEND_CPP_CPU_REFERENCE, 24);
+    assert_placed(second, BG_BACKEND_CPP_CPU_REFERENCE, 24);
+    assert_placed(third, BG_BACKEND_CPP_CPU_REFERENCE, 24);
+    assert(first.x == second.x && first.y == second.y && first.z == second.z);
+    assert(first.x == third.x && first.y == third.y && first.z == third.z);
+    assert(std::memcmp(
+               first.output.source_seed_sha256,
+               second.output.source_seed_sha256,
+               32) == 0);
+    assert(std::memcmp(
+               first.output.source_seed_sha256,
+               third.output.source_seed_sha256,
+               32) == 0);
+    assert(std::memcmp(
+               first.output.placement_receipt_sha256,
+               second.output.placement_receipt_sha256,
+               32) == 0);
+    assert(std::memcmp(
+               first.output.placement_receipt_sha256,
+               third.output.placement_receipt_sha256,
+               32) == 0);
+    bg_context_destroy(context);
+}
+
 void test_typed_degenerate_source_preserves_coordinate_channels() {
     const std::array<double, 2> source_x = {1.0, 1.0};
     const std::array<double, 2> source_y = {1.0, 1.0};
@@ -475,6 +522,7 @@ void test_invalid_snapshot_and_capacity_are_transactional() {
 
 int main() {
     test_backend_parity_and_repeat();
+    test_oblique_normal_is_invariant_to_nonbinary_positive_scale();
     test_typed_degenerate_source_preserves_coordinate_channels();
     test_one_atom_source_is_typed_across_available_backends();
     test_invalid_snapshot_and_capacity_are_transactional();

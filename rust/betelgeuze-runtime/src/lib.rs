@@ -3,9 +3,22 @@
 //! The raw handles and pointers remain private to this crate. All system input
 //! is copied into native-owned structure-of-arrays storage.
 
+mod docking;
 mod dynamics;
 mod forcefield;
 
+pub use docking::{
+    Fixed64AtomicFeature, Fixed64AuthorityDisposition, Fixed64BatchReceipts,
+    Fixed64ChiralityCenter, Fixed64ClusterEvidence, Fixed64ConformerCoordinateSource,
+    Fixed64CoordinateSource, Fixed64Donor, Fixed64ExactSourceEvidence, Fixed64FeatureGeometry,
+    Fixed64FeatureKind, Fixed64GeometricEvidence, Fixed64Identities,
+    Fixed64IndexedCoordinateSource, Fixed64Ligand, Fixed64Pair, Fixed64Pipeline,
+    Fixed64PipelineContext, Fixed64PipelineReceipt, Fixed64PipelineRow, Fixed64ProducerEvidence,
+    Fixed64RankingEvidence, Fixed64Receptor, Fixed64RefinementEvidence, Fixed64RefinementMode,
+    Fixed64RigidCoordinates, Fixed64RigidEvidence, Fixed64RigidProfileEvidence, Fixed64Rotor,
+    Fixed64RunInput, Fixed64ScorerEvidence, Fixed64SourceEvidence, Fixed64TorsionCoordinates,
+    Fixed64TorsionEvidence, Fixed64TorsionMoveEvidence, Fixed64ValidityEvidence,
+};
 pub use dynamics::{
     DistanceConstraint, DistanceConstraints, DynamicsReport, Integrator, MinimizationReport,
     MinimizerOptions, Simulation, SimulationOptions,

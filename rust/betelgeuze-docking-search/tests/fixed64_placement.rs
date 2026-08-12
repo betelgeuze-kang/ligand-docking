@@ -293,7 +293,7 @@ fn seed_and_output_change_when_the_exact_source_changes() {
 fn indexed_so3_profile_versions_proposal_bound_seed_semantics() {
     assert_eq!(
         NATIVE_FIXED64_INDEXED_SO3_PROFILE_ID,
-        "betelgeuze.engine_v2_mixed64_indexed_source_bound_so3_native/1.1.0"
+        "betelgeuze.engine_v2_mixed64_indexed_source_bound_so3_native/1.1.2"
     );
     let ligand = ligand();
     let baseline_exact = exact_evidence(&ligand);
