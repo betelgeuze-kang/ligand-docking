@@ -627,6 +627,51 @@ template <typename Type>
     return BG_STATUS_OK;
 }
 
+[[nodiscard]] bg_status validate_create_output_range(
+    const bg_context &context,
+    const bg_docking_torsion_v7_context_soa_v1 &descriptor,
+    const ProviderEnvelope &state,
+    bg_docking_torsion_v7 **out_refiner) noexcept {
+    const std::size_t receptor_count = state.receptor.size();
+    const std::size_t ligand_count = state.ligand_radii.size();
+    const std::size_t rotor_count = state.rotors.size();
+    const std::size_t internal_pair_count = state.internal_pairs.size();
+    const std::array<std::pair<const void *, std::size_t>, 11> inputs = {{
+        {&context, sizeof(context)},
+        {&descriptor, sizeof(descriptor)},
+        {descriptor.receptor_x_angstrom,
+         receptor_count * sizeof(*descriptor.receptor_x_angstrom)},
+        {descriptor.receptor_y_angstrom,
+         receptor_count * sizeof(*descriptor.receptor_y_angstrom)},
+        {descriptor.receptor_z_angstrom,
+         receptor_count * sizeof(*descriptor.receptor_z_angstrom)},
+        {descriptor.receptor_vdw_radius_angstrom,
+         receptor_count * sizeof(*descriptor.receptor_vdw_radius_angstrom)},
+        {descriptor.ligand_vdw_radius_angstrom,
+         ligand_count * sizeof(*descriptor.ligand_vdw_radius_angstrom)},
+        {descriptor.parent_atom_index,
+         ligand_count * sizeof(*descriptor.parent_atom_index)},
+        {descriptor.rotatable_child_atom_index,
+         rotor_count * sizeof(*descriptor.rotatable_child_atom_index)},
+        {descriptor.internal_pair_atom_i,
+         internal_pair_count * sizeof(*descriptor.internal_pair_atom_i)},
+        {descriptor.internal_pair_atom_j,
+         internal_pair_count * sizeof(*descriptor.internal_pair_atom_j)},
+    }};
+    for (const auto &input : inputs) {
+        if (ranges_overlap(
+                out_refiner,
+                sizeof(*out_refiner),
+                input.first,
+                input.second)) {
+            return fail(
+                BG_STATUS_INVALID_ARGUMENT,
+                "torsion V7 handle output overlaps a create input");
+        }
+    }
+    return BG_STATUS_OK;
+}
+
 [[nodiscard]] ObjectiveState evaluate_objective(
     const ProviderEnvelope &state,
     const std::vector<Vec3> &coordinates) {
@@ -1076,6 +1121,7 @@ template <typename Type>
 }
 
 [[nodiscard]] bg_status validate_batch_and_output(
+    const bg_context *context,
     const bg_docking_torsion_v7 *refiner,
     const bg_docking_torsion_v7_candidate_batch_soa_v1 &candidates,
     const bg_docking_torsion_v7_output_v1 &output,
@@ -1218,7 +1264,10 @@ template <typename Type>
         }
     }
 
-    const std::array<std::pair<const void *, std::size_t>, 11> inputs = {{
+    const std::array<std::pair<const void *, std::size_t>, 14> inputs = {{
+        {context, sizeof(*context)},
+        {refiner, sizeof(*refiner)},
+        {&candidates, sizeof(candidates)},
         {candidates.candidate_state,
          kCandidateCount * sizeof(*candidates.candidate_state)},
         {candidates.proposal_is_torsion_eligible,
@@ -2222,7 +2271,13 @@ extern "C" BG_API bg_status BG_CALL bg_docking_torsion_v7_create(
                 BG_STATUS_INVALID_ARGUMENT,
                 "torsion V7 create inputs and output must not be null");
         }
-        *out_refiner = nullptr;
+        if (!pointer_is_aligned(context) ||
+            !pointer_is_aligned(descriptor) ||
+            !pointer_is_aligned(out_refiner)) {
+            return fail(
+                BG_STATUS_INVALID_ARGUMENT,
+                "torsion V7 create pointers are misaligned");
+        }
         if (context->unit_system != descriptor->unit_system) {
             return fail(
                 BG_STATUS_INVALID_ARGUMENT,
@@ -2233,6 +2288,12 @@ extern "C" BG_API bg_status BG_CALL bg_docking_torsion_v7_create(
         if (status != BG_STATUS_OK) {
             return status;
         }
+        status = validate_create_output_range(
+            *context, *descriptor, *state, out_refiner);
+        if (status != BG_STATUS_OK) {
+            return status;
+        }
+        *out_refiner = nullptr;
         if (context->backend == BG_BACKEND_RUST_CPU) {
             status = create_rust_backend(state.get());
             if (status != BG_STATUS_OK) {
@@ -2272,11 +2333,26 @@ extern "C" BG_API bg_status BG_CALL bg_docking_torsion_v7_get_backend(
     const bg_docking_torsion_v7 *refiner,
     bg_backend *backend) BG_NOEXCEPT {
     using namespace betelgeuze::native;
+    using namespace betelgeuze::native::docking::torsion_v7;
     return guarded_status([&]() -> bg_status {
         if (refiner == nullptr || backend == nullptr) {
             return fail(
                 BG_STATUS_INVALID_ARGUMENT,
                 "torsion V7 handle and backend output must not be null");
+        }
+        if (!pointer_is_aligned(refiner) || !pointer_is_aligned(backend)) {
+            return fail(
+                BG_STATUS_INVALID_ARGUMENT,
+                "torsion V7 handle or backend output is misaligned");
+        }
+        if (ranges_overlap(
+                refiner,
+                sizeof(*refiner),
+                backend,
+                sizeof(*backend))) {
+            return fail(
+                BG_STATUS_INVALID_ARGUMENT,
+                "torsion V7 backend output overlaps its handle");
         }
         *backend = refiner->backend;
         return BG_STATUS_OK;
@@ -2297,6 +2373,12 @@ extern "C" BG_API bg_status BG_CALL bg_docking_torsion_v7_refine_fixed64(
                 BG_STATUS_INVALID_ARGUMENT,
                 "torsion V7 refine inputs and output must not be null");
         }
+        if (!pointer_is_aligned(context) || !pointer_is_aligned(refiner) ||
+            !pointer_is_aligned(candidates) || !pointer_is_aligned(output)) {
+            return fail(
+                BG_STATUS_INVALID_ARGUMENT,
+                "torsion V7 refine descriptors are misaligned");
+        }
         if (context->backend != refiner->backend ||
             context->device_ordinal != refiner->device_ordinal) {
             return fail(
@@ -2305,7 +2387,7 @@ extern "C" BG_API bg_status BG_CALL bg_docking_torsion_v7_refine_fixed64(
         }
         std::size_t coordinate_count = 0;
         bg_status status = validate_batch_and_output(
-            refiner, *candidates, *output, &coordinate_count);
+            context, refiner, *candidates, *output, &coordinate_count);
         if (status != BG_STATUS_OK) {
             return status;
         }
