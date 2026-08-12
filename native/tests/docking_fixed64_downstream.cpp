@@ -561,6 +561,30 @@ void test_cross_wiring_rejected_and_outputs_are_transactional() {
         bg_context_get_backend(context, &context_backend) == BG_STATUS_OK);
     assert(context_backend == BG_BACKEND_RUST_CPU);
 
+    const auto receptor_charge_before = fixture.receptor_charge;
+    auto **scorer_channel_alias =
+        reinterpret_cast<bg_docking_fixed64_downstream_v1 **>(
+            fixture.receptor_charge.data());
+    assert(
+        bg_docking_fixed64_downstream_v1_create(
+            context,
+            &scorer_descriptor,
+            &validity_descriptor,
+            scorer_channel_alias) == BG_STATUS_INVALID_ARGUMENT);
+    assert(fixture.receptor_charge == receptor_charge_before);
+
+    const auto bonds_before = fixture.bond_i;
+    auto **validity_channel_alias =
+        reinterpret_cast<bg_docking_fixed64_downstream_v1 **>(
+            fixture.bond_i.data());
+    assert(
+        bg_docking_fixed64_downstream_v1_create(
+            context,
+            &scorer_descriptor,
+            &validity_descriptor,
+            validity_channel_alias) == BG_STATUS_INVALID_ARGUMENT);
+    assert(fixture.bond_i == bonds_before);
+
     auto cross_wired_receptor = fixture.receptor_x;
     cross_wired_receptor[0] += 0.01;
     validity_descriptor.receptor_x_angstrom = cross_wired_receptor.data();
@@ -577,6 +601,10 @@ void test_cross_wiring_rejected_and_outputs_are_transactional() {
 
     bg_docking_fixed64_downstream_v1 *pipeline =
         create_pipeline(context, fixture);
+    assert(
+        bg_docking_fixed64_downstream_v1_get_backend(
+            pipeline, reinterpret_cast<bg_backend *>(pipeline)) ==
+        BG_STATUS_INVALID_ARGUMENT);
     auto invalid_states = fixture.states;
     invalid_states[0] = 99;
     auto batch = fixture.batch();
