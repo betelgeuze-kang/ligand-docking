@@ -314,6 +314,92 @@ void test_invalid_output_and_aliasing_are_transactional() {
     bg_context_destroy(context);
 }
 
+void test_create_and_handle_aliasing_preserve_inputs() {
+    Fixture fixture;
+    auto descriptor = fixture.descriptor();
+    bg_context *context = create_context(BG_BACKEND_RUST_CPU);
+
+    const auto receptor_x_before = fixture.receptor_x;
+    auto **const channel_alias =
+        reinterpret_cast<bg_docking_geometric_admission_v1 **>(
+            fixture.receptor_x.data());
+    assert(
+        bg_docking_geometric_admission_v1_create(
+            context, &descriptor, channel_alias) ==
+        BG_STATUS_INVALID_ARGUMENT);
+    assert(fixture.receptor_x == receptor_x_before);
+
+    const auto descriptor_before = descriptor;
+    auto **const descriptor_alias =
+        reinterpret_cast<bg_docking_geometric_admission_v1 **>(
+            &descriptor);
+    assert(
+        bg_docking_geometric_admission_v1_create(
+            context, &descriptor, descriptor_alias) ==
+        BG_STATUS_INVALID_ARGUMENT);
+    assert(
+        std::memcmp(
+            &descriptor,
+            &descriptor_before,
+            sizeof(descriptor)) == 0);
+
+    alignas(bg_docking_geometric_admission_v1 *)
+        std::array<std::byte,
+                   sizeof(bg_docking_geometric_admission_v1 *) + 1>
+            misaligned_storage{};
+    auto **const misaligned =
+        reinterpret_cast<bg_docking_geometric_admission_v1 **>(
+            misaligned_storage.data() + 1);
+    assert(
+        bg_docking_geometric_admission_v1_create(
+            context, &descriptor, misaligned) ==
+        BG_STATUS_INVALID_ARGUMENT);
+
+    auto *admission = create_admission(context, descriptor);
+    assert(
+        bg_docking_geometric_admission_v1_get_backend(
+            admission, reinterpret_cast<bg_backend *>(admission)) ==
+        BG_STATUS_INVALID_ARGUMENT);
+    bg_backend observed = BG_BACKEND_AUTO;
+    assert(
+        bg_docking_geometric_admission_v1_get_backend(
+            admission, &observed) == BG_STATUS_OK);
+    assert(observed == BG_BACKEND_RUST_CPU);
+
+    const auto batch = fixture.batch();
+    bg_docking_geometric_admission_output_v1 output{};
+    assert(
+        bg_docking_geometric_admission_output_v1_init(&output) ==
+        BG_STATUS_OK);
+    output.row_capacity = kSlots;
+    output.row_count = 23;
+    output.rows =
+        reinterpret_cast<bg_docking_geometric_admission_row_v1 *>(
+            admission);
+    assert(
+        bg_docking_geometric_admission_v1_evaluate_fixed64(
+            context, admission, &batch, &output) ==
+        BG_STATUS_INVALID_ARGUMENT);
+    assert(output.row_count == 23);
+    assert(
+        bg_docking_geometric_admission_v1_get_backend(
+            admission, &observed) == BG_STATUS_OK);
+
+    output.rows =
+        reinterpret_cast<bg_docking_geometric_admission_row_v1 *>(context);
+    assert(
+        bg_docking_geometric_admission_v1_evaluate_fixed64(
+            context, admission, &batch, &output) ==
+        BG_STATUS_INVALID_ARGUMENT);
+    bg_backend context_backend = BG_BACKEND_AUTO;
+    assert(
+        bg_context_get_backend(context, &context_backend) == BG_STATUS_OK);
+    assert(context_backend == BG_BACKEND_RUST_CPU);
+
+    bg_docking_geometric_admission_v1_destroy(admission);
+    bg_context_destroy(context);
+}
+
 void test_pair_budget_is_fail_closed_for_both_cpu_backends() {
     constexpr std::size_t kLargeLigand = 512;
     constexpr std::size_t kLargeReceptor = 513;
@@ -451,6 +537,7 @@ void test_policy_and_identity_fail_closed() {
 int main() {
     test_cpu_parity_deep_copy_and_threshold_boundary();
     test_invalid_output_and_aliasing_are_transactional();
+    test_create_and_handle_aliasing_preserve_inputs();
     test_pair_budget_is_fail_closed_for_both_cpu_backends();
     test_available_hip_lanes_match_cpu_and_repeat_bitwise();
     test_policy_and_identity_fail_closed();
