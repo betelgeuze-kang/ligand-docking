@@ -5,7 +5,7 @@
 
 _Static_assert(BG_ABI_VERSION == UINT32_C(1), "unexpected ABI version");
 _Static_assert(BG_ABI_VERSION_MAJOR == UINT32_C(1), "unexpected ABI major version");
-_Static_assert(BG_ABI_VERSION_MINOR == UINT32_C(17), "unexpected ABI minor version");
+_Static_assert(BG_ABI_VERSION_MINOR == UINT32_C(18), "unexpected ABI minor version");
 _Static_assert(BG_STATUS_OK == 0, "unexpected success status");
 _Static_assert(BG_STATUS_NUMERICAL_ERROR == 10, "unexpected numerical status");
 _Static_assert(BG_BACKEND_CPU == 1, "unexpected CPU backend value");

@@ -20,7 +20,7 @@ static BG_RUST_CPU_PROVIDER_LINK_ANCHOR: extern "C" fn() -> u32 =
     betelgeuze_cpu_kernel::bg_rust_cpu_provider_abi_version_v1;
 
 pub const BG_ABI_VERSION_MAJOR: u32 = 1;
-pub const BG_ABI_VERSION_MINOR: u32 = 17;
+pub const BG_ABI_VERSION_MINOR: u32 = 18;
 pub const BG_ABI_VERSION: u32 = 1;
 
 pub const BG_CANONICAL_LENGTH_UNIT: &[u8] = b"angstrom\0";
@@ -185,6 +185,33 @@ pub const BG_DOCKING_FIXED64_SINGLE_ANCHOR_FAILURE_DEGENERATE_PRINCIPAL_AXIS:
     bg_docking_fixed64_single_anchor_failure = 5;
 pub const BG_DOCKING_FIXED64_SINGLE_ANCHOR_FAILURE_NONFINITE_OUTPUT:
     bg_docking_fixed64_single_anchor_failure = 6;
+
+pub type bg_docking_fixed64_producer_row_status = i32;
+pub const BG_DOCKING_FIXED64_PRODUCER_ROW_GENERATED: bg_docking_fixed64_producer_row_status = 1;
+pub const BG_DOCKING_FIXED64_PRODUCER_ROW_TYPED_FAILURE: bg_docking_fixed64_producer_row_status = 2;
+pub type bg_docking_fixed64_producer_failure = i32;
+pub const BG_DOCKING_FIXED64_PRODUCER_FAILURE_NONE: bg_docking_fixed64_producer_failure = 0;
+pub const BG_DOCKING_FIXED64_PRODUCER_FAILURE_ALLOCATION_INELIGIBLE:
+    bg_docking_fixed64_producer_failure = 1;
+pub const BG_DOCKING_FIXED64_PRODUCER_FAILURE_SOURCE_NOT_AVAILABLE:
+    bg_docking_fixed64_producer_failure = 2;
+pub const BG_DOCKING_FIXED64_PRODUCER_FAILURE_LIGAND_DENOMINATOR_MISMATCH:
+    bg_docking_fixed64_producer_failure = 3;
+pub const BG_DOCKING_FIXED64_PRODUCER_FAILURE_FEATURE_GEOMETRY_NOT_AVAILABLE:
+    bg_docking_fixed64_producer_failure = 4;
+pub const BG_DOCKING_FIXED64_PRODUCER_FAILURE_INDEXED_SO3_TYPED_FAILURE:
+    bg_docking_fixed64_producer_failure = 5;
+pub const BG_DOCKING_FIXED64_PRODUCER_FAILURE_SINGLE_ANCHOR_TYPED_FAILURE:
+    bg_docking_fixed64_producer_failure = 6;
+pub type bg_docking_fixed64_producer_placement_kind = i32;
+pub const BG_DOCKING_FIXED64_PRODUCER_PLACEMENT_NONE: bg_docking_fixed64_producer_placement_kind =
+    0;
+pub const BG_DOCKING_FIXED64_PRODUCER_PLACEMENT_EXACT_PASSTHROUGH:
+    bg_docking_fixed64_producer_placement_kind = 1;
+pub const BG_DOCKING_FIXED64_PRODUCER_PLACEMENT_INDEXED_SO3:
+    bg_docking_fixed64_producer_placement_kind = 2;
+pub const BG_DOCKING_FIXED64_PRODUCER_PLACEMENT_SINGLE_ANCHOR:
+    bg_docking_fixed64_producer_placement_kind = 3;
 
 pub type bg_docking_geometric_admission_candidate_state = i32;
 pub const BG_DOCKING_GEOMETRIC_ADMISSION_CANDIDATE_UPSTREAM_FAILURE:
@@ -1124,6 +1151,135 @@ pub struct bg_docking_fixed64_single_anchor_output_v1 {
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
+pub struct bg_docking_fixed64_coordinate_source_v1 {
+    pub source: bg_docking_fixed64_source_evidence_v1,
+    pub ligand_atom_count: u64,
+    pub x_angstrom: *const f64,
+    pub y_angstrom: *const f64,
+    pub z_angstrom: *const f64,
+    pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_fixed64_indexed_coordinate_source_v1 {
+    pub source_index: u32,
+    pub reserved0: u32,
+    pub payload: bg_docking_fixed64_coordinate_source_v1,
+    pub reserved: [u64; 2],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_fixed64_conformer_coordinate_source_v1 {
+    pub rank: u8,
+    pub reserved0: [u8; 7],
+    pub payload: bg_docking_fixed64_coordinate_source_v1,
+    pub reserved: [u64; 2],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_fixed64_producer_input_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub allocation_input: *const bg_docking_fixed64_allocation_input_v1,
+    pub exact_v11_source: *const bg_docking_fixed64_coordinate_source_v1,
+    pub v7_control_source_count: u64,
+    pub v7_control_sources: *const bg_docking_fixed64_indexed_coordinate_source_v1,
+    pub conformer_source_count: u64,
+    pub conformer_sources: *const bg_docking_fixed64_conformer_coordinate_source_v1,
+    pub retained_source_count: u64,
+    pub retained_sources: *const bg_docking_fixed64_indexed_coordinate_source_v1,
+    pub feature_geometry_count: u64,
+    pub feature_geometry_rows: *const bg_docking_fixed64_feature_geometry_row_v1,
+    pub feature_atom_index_count: u64,
+    pub feature_atom_indices: *const u64,
+    pub feature_geometry_inventory_sha256: [u8; 32],
+    pub pocket_normal: [f64; 3],
+    pub reserved: [u64; 8],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_fixed64_producer_row_v1 {
+    pub slot_index: u32,
+    pub lane: bg_docking_fixed64_lane,
+    pub status: bg_docking_fixed64_producer_row_status,
+    pub failure_code: bg_docking_fixed64_producer_failure,
+    pub placement_kind: bg_docking_fixed64_producer_placement_kind,
+    pub component_failure_code: i32,
+    pub backend: bg_backend,
+    pub reserved0: u32,
+    pub ligand_atom_count: u64,
+    pub coordinate_offset: u64,
+    pub allocation_slot_receipt_sha256: [u8; 32],
+    pub source_payload_receipt_sha256: [u8; 32],
+    pub source_proposal_sha256: [u8; 32],
+    pub source_coordinate_sha256: [u8; 32],
+    pub placement_receipt_sha256: [u8; 32],
+    pub output_proposal_sha256: [u8; 32],
+    pub output_coordinate_sha256: [u8; 32],
+    pub geometric_admission: bg_docking_geometric_admission_row_v1,
+    pub row_receipt_sha256: [u8; 32],
+    pub coordinates_available: u8,
+    pub steric_precheck_passed: u8,
+    pub source_identity_verified: u8,
+    pub allocation_identity_verified: u8,
+    pub geometric_identity_verified: u8,
+    pub result_dependent_input_consumed: u8,
+    pub fallback_allowed: u8,
+    pub multi_anchor_consumed: u8,
+    pub denominator_preserved: u8,
+    pub molecular_execution_authorized: u8,
+    pub reservation_authorized: u8,
+    pub benchmark_execution_authorized: u8,
+    pub existing_rank_auto_change_authorized: u8,
+    pub customer_pose_emission_authorized: u8,
+    pub production_claim_authorized: u8,
+    pub scientific_claim_authorized: u8,
+    pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_fixed64_producer_output_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub row_capacity: u64,
+    pub row_count: u64,
+    pub coordinate_capacity: u64,
+    pub coordinate_count: u64,
+    pub unit_system: bg_unit_system,
+    pub backend: bg_backend,
+    pub rows: *mut bg_docking_fixed64_producer_row_v1,
+    pub x_angstrom: *mut f64,
+    pub y_angstrom: *mut f64,
+    pub z_angstrom: *mut f64,
+    pub generated_count: u64,
+    pub typed_failure_count: u64,
+    pub allocation_inventory_sha256: [u8; 32],
+    pub allocation_receipt_sha256: [u8; 32],
+    pub source_bundle_receipt_sha256: [u8; 32],
+    pub geometric_admission_batch_receipt_sha256: [u8; 32],
+    pub producer_batch_receipt_sha256: [u8; 32],
+    pub result_dependent_input_consumed: u8,
+    pub fallback_allowed: u8,
+    pub multi_anchor_consumed: u8,
+    pub denominator_preserved: u8,
+    pub molecular_execution_authorized: u8,
+    pub reservation_authorized: u8,
+    pub benchmark_execution_authorized: u8,
+    pub existing_rank_auto_change_authorized: u8,
+    pub customer_pose_emission_authorized: u8,
+    pub production_claim_authorized: u8,
+    pub scientific_claim_authorized: u8,
+    pub reserved0: [u8; 5],
+    pub reserved: [u64; 8],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
 pub struct bg_docking_scorer_v1_context_soa_v1 {
     pub struct_size: u32,
     pub abi_version: u32,
@@ -1933,6 +2089,16 @@ unsafe extern "C" {
         caller_struct_size: usize,
         caller_abi_version: u32,
     ) -> bg_status;
+    pub fn bg_docking_fixed64_producer_input_v1_init(
+        input: *mut bg_docking_fixed64_producer_input_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_docking_fixed64_producer_output_v1_init(
+        output: *mut bg_docking_fixed64_producer_output_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
     pub fn bg_docking_geometric_admission_context_soa_v1_init(
         descriptor: *mut bg_docking_geometric_admission_context_soa_v1,
         caller_struct_size: usize,
@@ -2081,6 +2247,12 @@ unsafe extern "C" {
         admission: *const bg_docking_geometric_admission_v1,
         input: *const bg_docking_fixed64_single_anchor_input_v1,
         output: *mut bg_docking_fixed64_single_anchor_output_v1,
+    ) -> bg_status;
+    pub fn bg_docking_fixed64_producer_v1_run(
+        context: *const bg_context,
+        admission: *const bg_docking_geometric_admission_v1,
+        input: *const bg_docking_fixed64_producer_input_v1,
+        output: *mut bg_docking_fixed64_producer_output_v1,
     ) -> bg_status;
 
     pub fn bg_docking_geometric_admission_v1_create(
