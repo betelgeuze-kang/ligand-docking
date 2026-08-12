@@ -13,16 +13,21 @@ use std::ptr::{self, NonNull};
 use std::rc::Rc;
 
 use betelgeuze_docking_search::{
-    evaluate_fixed64_geometric_metrics, refine_interaction_aware_rigid_v2,
+    evaluate_fixed64_geometric_metrics, generate_native_fixed64_indexed_so3,
+    generate_native_fixed64_single_anchor, refine_interaction_aware_rigid_v2,
     refine_interaction_aware_rigid_v3, refine_interaction_aware_rigid_v6,
     Fixed64Allocation as IndependentFixed64Allocation,
     Fixed64AtomicFeatureEvidence as IndependentFixed64AtomicFeature,
     Fixed64ConformerSourceEvidence as IndependentFixed64ConformerSource,
     Fixed64ExactV11SourceEvidence as IndependentFixed64ExactSource,
+    Fixed64FeatureGeometry as IndependentFixed64FeatureGeometry,
+    Fixed64FeatureGeometryInventory as IndependentFixed64FeatureGeometryInventory,
     Fixed64FeatureInventory as IndependentFixed64FeatureInventory,
     Fixed64FeatureKind as IndependentFixed64FeatureKind,
     Fixed64GeometricInput as IndependentFixed64GeometricInput,
     Fixed64IndexedSourceEvidence as IndependentFixed64IndexedSource,
+    Fixed64PlacementErrorCode as IndependentFixed64PlacementErrorCode,
+    Fixed64PlacementSource as IndependentFixed64PlacementSource,
     Fixed64SourceEvidence as IndependentFixed64SourceEvidence,
     NativeFixed64ValidityBackend as IndependentValidityBackend,
     NativeFixed64ValidityChecks as IndependentValidityChecks,
@@ -44,7 +49,7 @@ use betelgeuze_docking_search::{
     NativeScorerV1Donor as IndependentScorerDonor,
     NativeScorerV1FailureCode as IndependentScorerFailureCode,
     NativeScorerV1KernelOutcome as IndependentScorerOutcome, Quaternion, Vec3,
-    FIXED64_MAX_ABSOLUTE_COORDINATE_ANGSTROM,
+    FIXED64_MAX_ABSOLUTE_COORDINATE_ANGSTROM, NATIVE_FIXED64_SINGLE_ANCHOR_PROFILE_ID,
 };
 use betelgeuze_sys as sys;
 use sha2::{Digest, Sha256 as Sha256Hasher};
@@ -781,6 +786,12 @@ impl CanonicalHasher {
     fn f64(&mut self, value: f64) {
         let canonical = if value == 0.0 { 0.0 } else { value };
         self.u64(canonical.to_bits());
+    }
+
+    fn vec3(&mut self, value: Vec3) {
+        self.f64(value.x);
+        self.f64(value.y);
+        self.f64(value.z);
     }
 
     fn bytes(&mut self, value: &[u8]) {
@@ -1694,6 +1705,76 @@ fn independent_allocation(input: Fixed64RunInput<'_>) -> Result<IndependentFixed
     })
 }
 
+fn independent_feature_geometry_inventory(
+    input: Fixed64RunInput<'_>,
+) -> Result<Option<IndependentFixed64FeatureGeometryInventory>> {
+    if input.feature_geometries.is_empty() {
+        return Ok(None);
+    }
+    let mut features = Vec::with_capacity(input.feature_geometries.len());
+    for geometry in input.feature_geometries {
+        let atom_indices = geometry
+            .atom_indices
+            .iter()
+            .copied()
+            .map(|index| {
+                usize::try_from(index).map_err(|_| {
+                    Error::local(
+                        ErrorCode::CapacityOverflow,
+                        "fixed64 feature-geometry atom index does not fit usize",
+                    )
+                })
+            })
+            .collect::<Result<Vec<_>>>()?;
+        let feature = IndependentFixed64FeatureGeometry::new(
+            geometry.kind.as_independent(),
+            geometry.allocation_feature_receipt_sha256,
+            atom_indices,
+        )
+        .map_err(|error| {
+            Error::local(
+                ErrorCode::AbiMismatch,
+                format!("independent fixed64 feature geometry rejected safe input: {error}"),
+            )
+        })?;
+        if feature.receipt_sha256() != geometry.feature_geometry_receipt_sha256 {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "fixed64 feature-geometry receipt was not independently rederived",
+            ));
+        }
+        features.push(feature);
+    }
+    let inventory = IndependentFixed64FeatureGeometryInventory::new(features).map_err(|error| {
+        Error::local(
+            ErrorCode::AbiMismatch,
+            format!("independent fixed64 feature inventory rejected safe input: {error}"),
+        )
+    })?;
+    if inventory.receipt_sha256() != input.feature_geometry_inventory_sha256 {
+        return Err(Error::local(
+            ErrorCode::AbiMismatch,
+            "fixed64 feature-geometry inventory receipt was not independently rederived",
+        ));
+    }
+    Ok(Some(inventory))
+}
+
+fn independent_placement_source(
+    source: Fixed64CoordinateSource<'_>,
+) -> Result<IndependentFixed64PlacementSource> {
+    IndependentFixed64PlacementSource::new(
+        independent_source_evidence(source.evidence),
+        position_soa_to_vec3(source.coordinates),
+    )
+    .map_err(|error| {
+        Error::local(
+            ErrorCode::AbiMismatch,
+            format!("independent fixed64 placement source rejected safe input: {error}"),
+        )
+    })
+}
+
 /// Owned complete fixed64 native pipeline tied to its creating context.
 ///
 /// The handle is deliberately neither `Send` nor `Sync`; the native ABI
@@ -1706,6 +1787,7 @@ fn independent_allocation(input: Fixed64RunInput<'_>) -> Result<IndependentFixed
 /// ```
 pub struct Fixed64Pipeline<'context> {
     handle: NonNull<sys::bg_docking_fixed64_pipeline_v1>,
+    replay_admission_handle: NonNull<sys::bg_docking_geometric_admission_v1>,
     _context: &'context Context,
     backend: Backend,
     receptor_atom_count: usize,
@@ -1752,6 +1834,23 @@ impl Drop for PipelineHandleGuard {
     fn drop(&mut self) {
         // SAFETY: the guard owns this non-null handle until into_inner transfers it.
         unsafe { sys::bg_docking_fixed64_pipeline_v1_destroy(self.0.as_ptr()) };
+    }
+}
+
+struct GeometricAdmissionHandleGuard(NonNull<sys::bg_docking_geometric_admission_v1>);
+
+impl GeometricAdmissionHandleGuard {
+    fn into_inner(self) -> NonNull<sys::bg_docking_geometric_admission_v1> {
+        let handle = self.0;
+        std::mem::forget(self);
+        handle
+    }
+}
+
+impl Drop for GeometricAdmissionHandleGuard {
+    fn drop(&mut self) {
+        // SAFETY: the guard owns this non-null handle until into_inner transfers it.
+        unsafe { sys::bg_docking_geometric_admission_v1_destroy(self.0.as_ptr()) };
     }
 }
 
@@ -2514,8 +2613,40 @@ impl<'context> Fixed64Pipeline<'context> {
                 "native fixed64 pipeline backend changed during construction",
             ));
         }
+        let mut replay_admission_handle = ptr::null_mut();
+        // SAFETY: the validated descriptor remains live for this call and the
+        // native constructor deep-copies every molecular channel.
+        status_result(unsafe {
+            sys::bg_docking_geometric_admission_v1_create(
+                context.handle.as_ptr(),
+                &admission,
+                &mut replay_admission_handle,
+            )
+        })?;
+        let replay_admission_handle = NonNull::new(replay_admission_handle).ok_or_else(|| {
+            Error::local(
+                ErrorCode::InternalError,
+                "native replay admission creation succeeded with a null handle",
+            )
+        })?;
+        let replay_admission_handle = GeometricAdmissionHandleGuard(replay_admission_handle);
+        let mut replay_backend = sys::BG_BACKEND_AUTO;
+        // SAFETY: the guarded handle is live and replay_backend is writable.
+        status_result(unsafe {
+            sys::bg_docking_geometric_admission_v1_get_backend(
+                replay_admission_handle.0.as_ptr(),
+                &mut replay_backend,
+            )
+        })?;
+        if Backend::from_raw(replay_backend)? != backend {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native replay admission backend changed during construction",
+            ));
+        }
         Ok(Self {
             handle: handle.into_inner(),
+            replay_admission_handle: replay_admission_handle.into_inner(),
             _context: context,
             backend,
             receptor_atom_count: receptor_count,
@@ -2591,6 +2722,7 @@ impl<'context> Fixed64Pipeline<'context> {
         let receptor_atom_count_u64 = checked_count(self.receptor_atom_count)?;
         let ligand_atom_count_u64 = checked_count(self.ligand_atom_count)?;
         let expected_allocation = independent_allocation(input)?;
+        let expected_feature_geometry_inventory = independent_feature_geometry_inventory(input)?;
         let source_bundle_receipt_sha256 = canonical_source_bundle_receipt(
             input,
             expected_allocation.receipt_sha256(),
@@ -2928,6 +3060,19 @@ impl<'context> Fixed64Pipeline<'context> {
                 &mut pipeline_output,
             )
         })?;
+        let native_placement_replays = replay_native_placements(
+            self._context,
+            self.replay_admission_handle,
+            &allocation,
+            &producer_input,
+            &expected_allocation,
+            expected_feature_geometry_inventory.as_ref(),
+            &expected_sources,
+            self.ligand_atom_count,
+            self.pocket_center_angstrom,
+            input.pocket_normal,
+            self.backend,
+        )?;
         validate_native_outputs(
             self.backend,
             &expected_receipt_graph,
@@ -2946,6 +3091,9 @@ impl<'context> Fixed64Pipeline<'context> {
             &pipeline_output,
             &producer_rows,
             &expected_sources,
+            expected_feature_geometry_inventory.as_ref(),
+            &native_placement_replays,
+            raw_pocket_normal,
             &rigid_rows,
             &torsion_rows,
             &torsion_moves,
@@ -3177,9 +3325,12 @@ impl<'context> Fixed64Pipeline<'context> {
 
 impl Drop for Fixed64Pipeline<'_> {
     fn drop(&mut self) {
-        // SAFETY: this object owns the non-null handle and destroys it once,
+        // SAFETY: this object owns both non-null handles and destroys each once,
         // before the borrowed native Context can be dropped.
-        unsafe { sys::bg_docking_fixed64_pipeline_v1_destroy(self.handle.as_ptr()) };
+        unsafe {
+            sys::bg_docking_fixed64_pipeline_v1_destroy(self.handle.as_ptr());
+            sys::bg_docking_geometric_admission_v1_destroy(self.replay_admission_handle.as_ptr());
+        }
     }
 }
 
@@ -5465,6 +5616,683 @@ fn validate_pipeline_receipt_bindings(
     Ok(())
 }
 
+const NATIVE_FIXED64_SINGLE_ANCHOR_ABI_SCHEMA_ID: &str =
+    "betelgeuze.engine_v2_native_fixed64_single_anchor_placement/1.0.0";
+
+#[derive(Debug, Clone, PartialEq)]
+struct NativePlacementReplay {
+    status: i32,
+    failure_code: i32,
+    coordinates: Vec<Vec3>,
+    quaternion: Quaternion,
+    output_coordinate_sha256: Sha256,
+    placement_receipt_sha256: Sha256,
+}
+
+fn canonical_single_anchor_shared_receipt(
+    output: &sys::bg_docking_fixed64_single_anchor_output_v1,
+    source: Fixed64SourceEvidence,
+) -> Sha256 {
+    let mut hash = CanonicalHasher::new("betelgeuze.fixed64_single_anchor_abi/native-v1");
+    hash.string(NATIVE_FIXED64_SINGLE_ANCHOR_ABI_SCHEMA_ID);
+    hash.string(NATIVE_FIXED64_SINGLE_ANCHOR_PROFILE_ID);
+    hash.digest(output.allocation_inventory_sha256);
+    hash.digest(output.allocation_receipt_sha256);
+    hash.digest(output.allocation_slot_receipt_sha256);
+    hash.u32(output.slot_index);
+    hash.u32(output.lane as u32);
+    hash.u32(output.lane_offset);
+    hash.u32(output.anchor_kind as u32);
+    hash.u32(output.backend as u32);
+    hash.digest(source.receipt_sha256);
+    hash.digest(source.proposal_sha256);
+    hash.digest(source.coordinate_sha256);
+    hash.digest(output.feature_geometry_inventory_sha256);
+    hash.digest(output.selected_ligand_feature_geometry_sha256);
+    hash.digest(output.selected_receptor_feature_geometry_sha256);
+    hash.u32(output.status as u32);
+    hash.u32(output.failure_code as u32);
+    for value in [
+        output.ligand_anchor_point_angstrom,
+        output.receptor_anchor_point_angstrom,
+        output.target_anchor_point_angstrom,
+        output.local_surface_normal,
+        output.approach_vector,
+        output.ligand_direction,
+        output.alignment_target_direction,
+    ] {
+        hash.vec3(Vec3::new(value[0], value[1], value[2]));
+    }
+    hash.f64(output.target_distance_angstrom);
+    hash.f64(output.twist_angle_radians);
+    hash.f64(output.quaternion_x);
+    hash.f64(output.quaternion_y);
+    hash.f64(output.quaternion_z);
+    hash.f64(output.quaternion_w);
+    hash.vec3(Vec3::new(
+        output.translation_angstrom[0],
+        output.translation_angstrom[1],
+        output.translation_angstrom[2],
+    ));
+    hash.digest(output.output_coordinate_sha256);
+    hash.digest([0; 32]);
+    hash.digest([0; 32]);
+    for value in [output.coordinates_written, 0, 1, 1, 1, 0, 0, 0, 0, 1] {
+        hash.byte(value);
+    }
+    for _ in 0..7 {
+        hash.byte(0);
+    }
+    hash.finish()
+}
+
+fn replay_coordinates(written: u8, x: &[f64], y: &[f64], z: &[f64]) -> Result<Vec<Vec3>> {
+    match written {
+        0 => Ok(Vec::new()),
+        1 => Ok(x
+            .iter()
+            .zip(y)
+            .zip(z)
+            .map(|((x, y), z)| Vec3::new(*x, *y, *z))
+            .collect()),
+        _ => Err(Error::local(
+            ErrorCode::AbiMismatch,
+            "native placement replay returned a non-boolean coordinate flag",
+        )),
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn replay_native_placements(
+    context: &Context,
+    admission: NonNull<sys::bg_docking_geometric_admission_v1>,
+    allocation_input: &sys::bg_docking_fixed64_allocation_input_v1,
+    producer_input: &sys::bg_docking_fixed64_producer_input_v1,
+    expected_allocation: &IndependentFixed64Allocation,
+    expected_feature_geometry_inventory: Option<&IndependentFixed64FeatureGeometryInventory>,
+    expected_sources: &[Option<Fixed64CoordinateSource<'_>>],
+    ligand_atom_count: usize,
+    pocket_center_angstrom: [f64; 3],
+    pocket_normal: [f64; 3],
+    backend: Backend,
+) -> Result<[Option<NativePlacementReplay>; 64]> {
+    const CANDIDATE_COUNT: usize = sys::BG_DOCKING_FIXED64_CANDIDATE_COUNT as usize;
+    let mut allocation_rows =
+        vec![zeroed_abi_value!(sys::bg_docking_fixed64_allocation_row_v1); CANDIDATE_COUNT];
+    let mut allocation_output = init(sys::bg_docking_fixed64_allocation_output_v1_init)?;
+    allocation_output.row_capacity = CANDIDATE_COUNT as u64;
+    allocation_output.rows = allocation_rows.as_mut_ptr();
+    // SAFETY: the input descriptor and exact-capacity output remain live for the call.
+    status_result(unsafe {
+        sys::bg_docking_fixed64_allocation_v1_build(allocation_input, &mut allocation_output)
+    })?;
+    if allocation_output.row_count != CANDIDATE_COUNT as u64
+        || allocation_output.inventory_sha256 != expected_allocation.inventory_sha256()
+        || allocation_output.allocation_receipt_sha256 != expected_allocation.receipt_sha256()
+    {
+        return Err(Error::local(
+            ErrorCode::AbiMismatch,
+            "native placement replay allocation disagrees with independent allocation",
+        ));
+    }
+    let ligand_atom_count_u64 = u64::try_from(ligand_atom_count).map_err(|_| {
+        Error::local(
+            ErrorCode::CapacityOverflow,
+            "native placement replay ligand denominator does not fit u64",
+        )
+    })?;
+    let mut replays: [Option<NativePlacementReplay>; CANDIDATE_COUNT] =
+        std::array::from_fn(|_| None);
+    for slot_index in 0..CANDIDATE_COUNT {
+        let Some((_, placement_kind)) = fixed64_lane_and_placement_for_slot(slot_index) else {
+            continue;
+        };
+        if !matches!(
+            placement_kind,
+            sys::BG_DOCKING_FIXED64_PRODUCER_PLACEMENT_INDEXED_SO3
+                | sys::BG_DOCKING_FIXED64_PRODUCER_PLACEMENT_SINGLE_ANCHOR
+        ) || !expected_allocation.slots()[slot_index].generation_eligible()
+        {
+            continue;
+        }
+        let Some(source) = expected_sources[slot_index] else {
+            continue;
+        };
+        if placement_kind == sys::BG_DOCKING_FIXED64_PRODUCER_PLACEMENT_SINGLE_ANCHOR
+            && !selected_feature_geometry_available(
+                &expected_allocation.slots()[slot_index],
+                expected_feature_geometry_inventory,
+            )
+        {
+            continue;
+        }
+        let source_input = raw_coordinate_source(source, ligand_atom_count_u64);
+        let mut x = vec![0.0; ligand_atom_count];
+        let mut y = vec![0.0; ligand_atom_count];
+        let mut z = vec![0.0; ligand_atom_count];
+        if placement_kind == sys::BG_DOCKING_FIXED64_PRODUCER_PLACEMENT_INDEXED_SO3 {
+            let mut input = init(sys::bg_docking_fixed64_indexed_so3_input_v1_init)?;
+            input.allocation_inventory_sha256 = allocation_output.inventory_sha256;
+            input.allocation_receipt_sha256 = allocation_output.allocation_receipt_sha256;
+            input.allocation_row_count = allocation_output.row_count;
+            input.allocation_rows = allocation_rows.as_ptr();
+            input.slot_index = slot_index as u32;
+            input.source = source_input.source;
+            input.ligand_atom_count = ligand_atom_count_u64;
+            input.source_x_angstrom = source_input.x_angstrom;
+            input.source_y_angstrom = source_input.y_angstrom;
+            input.source_z_angstrom = source_input.z_angstrom;
+            input.pocket_center_angstrom = pocket_center_angstrom;
+            input.pocket_normal = pocket_normal;
+            let mut output = init(sys::bg_docking_fixed64_indexed_so3_output_v1_init)?;
+            output.coordinate_capacity = ligand_atom_count_u64;
+            output.x_angstrom = x.as_mut_ptr();
+            output.y_angstrom = y.as_mut_ptr();
+            output.z_angstrom = z.as_mut_ptr();
+            // SAFETY: every descriptor and exact-capacity channel remains live.
+            status_result(unsafe {
+                sys::bg_docking_fixed64_indexed_so3_v1_place(
+                    context.handle.as_ptr(),
+                    &input,
+                    &mut output,
+                )
+            })?;
+            if output.slot_index as usize != slot_index
+                || output.backend != backend.as_raw()
+                || output.ligand_atom_count != ligand_atom_count_u64
+                || output.source_identity_verified != 1
+                || output.allocation_identity_verified != 1
+                || output.denominator_preserved != 1
+                || output.result_dependent_input_consumed != 0
+                || output.molecular_execution_authorized != 0
+                || output.reservation_authorized != 0
+                || output.benchmark_execution_authorized != 0
+                || output.production_claim_authorized != 0
+            {
+                return Err(Error::local(
+                    ErrorCode::AbiMismatch,
+                    "native indexed-SO3 replay violated its identity or authority boundary",
+                ));
+            }
+            replays[slot_index] = Some(NativePlacementReplay {
+                status: output.status,
+                failure_code: output.failure_code,
+                coordinates: replay_coordinates(output.coordinates_written, &x, &y, &z)?,
+                quaternion: Quaternion::new(
+                    output.quaternion_x,
+                    output.quaternion_y,
+                    output.quaternion_z,
+                    output.quaternion_w,
+                ),
+                output_coordinate_sha256: output.output_coordinate_sha256,
+                placement_receipt_sha256: output.placement_receipt_sha256,
+            });
+            continue;
+        }
+        let mut input = init(sys::bg_docking_fixed64_single_anchor_input_v1_init)?;
+        input.allocation_input = allocation_input;
+        input.slot_index = slot_index as u32;
+        input.source = source_input.source;
+        input.ligand_atom_count = ligand_atom_count_u64;
+        input.source_x_angstrom = source_input.x_angstrom;
+        input.source_y_angstrom = source_input.y_angstrom;
+        input.source_z_angstrom = source_input.z_angstrom;
+        input.feature_geometry_count = producer_input.feature_geometry_count;
+        input.feature_geometry_rows = producer_input.feature_geometry_rows;
+        input.feature_atom_index_count = producer_input.feature_atom_index_count;
+        input.feature_atom_indices = producer_input.feature_atom_indices;
+        input.feature_geometry_inventory_sha256 = producer_input.feature_geometry_inventory_sha256;
+        let mut output = init(sys::bg_docking_fixed64_single_anchor_output_v1_init)?;
+        output.coordinate_capacity = ligand_atom_count_u64;
+        output.x_angstrom = x.as_mut_ptr();
+        output.y_angstrom = y.as_mut_ptr();
+        output.z_angstrom = z.as_mut_ptr();
+        // SAFETY: every descriptor, persistent admission, and output remains live.
+        status_result(unsafe {
+            sys::bg_docking_fixed64_single_anchor_v1_place(
+                context.handle.as_ptr(),
+                admission.as_ptr(),
+                &input,
+                &mut output,
+            )
+        })?;
+        if output.slot_index as usize != slot_index
+            || output.backend != backend.as_raw()
+            || output.ligand_atom_count != ligand_atom_count_u64
+            || output.source_identity_verified != 1
+            || output.allocation_identity_verified != 1
+            || output.feature_identity_verified != 1
+            || output.geometric_identity_verified != 1
+            || output.denominator_preserved != 1
+            || output.result_dependent_input_consumed != 0
+            || output.fallback_allowed != 0
+            || output.multi_anchor_consumed != 0
+            || output.molecular_execution_authorized != 0
+            || output.reservation_authorized != 0
+            || output.benchmark_execution_authorized != 0
+            || output.existing_rank_auto_change_authorized != 0
+            || output.customer_pose_emission_authorized != 0
+            || output.production_claim_authorized != 0
+            || output.scientific_claim_authorized != 0
+        {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native single-anchor replay violated its identity or authority boundary",
+            ));
+        }
+        replays[slot_index] = Some(NativePlacementReplay {
+            status: output.status,
+            failure_code: output.failure_code,
+            coordinates: replay_coordinates(output.coordinates_written, &x, &y, &z)?,
+            quaternion: Quaternion::new(
+                output.quaternion_x,
+                output.quaternion_y,
+                output.quaternion_z,
+                output.quaternion_w,
+            ),
+            output_coordinate_sha256: output.output_coordinate_sha256,
+            placement_receipt_sha256: canonical_single_anchor_shared_receipt(
+                &output,
+                source.evidence,
+            ),
+        });
+    }
+    Ok(replays)
+}
+
+fn placement_tolerance(backend: Backend) -> f64 {
+    match backend {
+        Backend::HipFast => 2.0e-9,
+        Backend::HipSafe => 2.0e-10,
+        Backend::Auto | Backend::CppCpuReference | Backend::RustCpu => 2.0e-12,
+    }
+}
+
+fn placement_scalar_close(backend: Backend, observed: f64, expected: f64) -> bool {
+    let scale = 1.0_f64.max(observed.abs()).max(expected.abs());
+    observed.is_finite()
+        && expected.is_finite()
+        && (observed - expected).abs() <= placement_tolerance(backend) * scale
+}
+
+fn placement_coordinates_close(
+    backend: Backend,
+    observed: PositionSoa<'_>,
+    expected: &[Vec3],
+) -> bool {
+    observed.x_angstrom.len() == expected.len()
+        && observed.y_angstrom.len() == expected.len()
+        && observed.z_angstrom.len() == expected.len()
+        && expected.iter().enumerate().all(|(atom, expected)| {
+            placement_scalar_close(backend, observed.x_angstrom[atom], expected.x)
+                && placement_scalar_close(backend, observed.y_angstrom[atom], expected.y)
+                && placement_scalar_close(backend, observed.z_angstrom[atom], expected.z)
+        })
+}
+
+fn placement_quaternion_close(
+    backend: Backend,
+    row: &sys::bg_docking_fixed64_producer_row_v1,
+    expected: Quaternion,
+) -> bool {
+    [
+        (row.placement_quaternion_x, expected.x),
+        (row.placement_quaternion_y, expected.y),
+        (row.placement_quaternion_z, expected.z),
+        (row.placement_quaternion_w, expected.w),
+    ]
+    .into_iter()
+    .all(|(observed, expected)| placement_scalar_close(backend, observed, expected))
+}
+
+fn native_replay_coordinates_match(
+    observed: PositionSoa<'_>,
+    replay: &NativePlacementReplay,
+) -> bool {
+    observed.x_angstrom.len() == replay.coordinates.len()
+        && replay
+            .coordinates
+            .iter()
+            .enumerate()
+            .all(|(atom, expected)| {
+                observed.x_angstrom[atom].to_bits() == expected.x.to_bits()
+                    && observed.y_angstrom[atom].to_bits() == expected.y.to_bits()
+                    && observed.z_angstrom[atom].to_bits() == expected.z.to_bits()
+            })
+}
+
+fn native_replay_quaternion_matches(
+    row: &sys::bg_docking_fixed64_producer_row_v1,
+    replay: &NativePlacementReplay,
+) -> bool {
+    [
+        (row.placement_quaternion_x, replay.quaternion.x),
+        (row.placement_quaternion_y, replay.quaternion.y),
+        (row.placement_quaternion_z, replay.quaternion.z),
+        (row.placement_quaternion_w, replay.quaternion.w),
+    ]
+    .into_iter()
+    .all(|(observed, expected)| observed.to_bits() == expected.to_bits())
+}
+
+fn require_preplacement_failure(
+    row: &sys::bg_docking_fixed64_producer_row_v1,
+    failure_code: sys::bg_docking_fixed64_producer_failure,
+) -> Result<()> {
+    if row.status != sys::BG_DOCKING_FIXED64_PRODUCER_ROW_TYPED_FAILURE
+        || row.failure_code != failure_code
+        || row.component_failure_code != 0
+        || digest_present(&row.placement_receipt_sha256)
+    {
+        return Err(Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 pre-placement failure disagrees with independent replay",
+        ));
+    }
+    Ok(())
+}
+
+fn require_placement_failure(
+    row: &sys::bg_docking_fixed64_producer_row_v1,
+    producer_failure: sys::bg_docking_fixed64_producer_failure,
+    component_failure: i32,
+) -> Result<()> {
+    if row.status != sys::BG_DOCKING_FIXED64_PRODUCER_ROW_TYPED_FAILURE
+        || row.failure_code != producer_failure
+        || row.component_failure_code != component_failure
+        || !digest_present(&row.placement_receipt_sha256)
+    {
+        return Err(Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 placement failure disagrees with independent replay",
+        ));
+    }
+    Ok(())
+}
+
+fn indexed_component_failure(code: IndependentFixed64PlacementErrorCode) -> Option<i32> {
+    match code {
+        IndependentFixed64PlacementErrorCode::DegenerateSo3SourceGeometry => {
+            Some(sys::BG_DOCKING_FIXED64_INDEXED_SO3_FAILURE_DEGENERATE_SOURCE_GEOMETRY)
+        }
+        IndependentFixed64PlacementErrorCode::InternalInvariant => {
+            Some(sys::BG_DOCKING_FIXED64_INDEXED_SO3_FAILURE_NONFINITE_OUTPUT)
+        }
+        _ => None,
+    }
+}
+
+fn single_anchor_component_failure(code: IndependentFixed64PlacementErrorCode) -> Option<i32> {
+    match code {
+        IndependentFixed64PlacementErrorCode::DegenerateLigandDirection => {
+            Some(sys::BG_DOCKING_FIXED64_SINGLE_ANCHOR_FAILURE_DEGENERATE_LIGAND_DIRECTION)
+        }
+        IndependentFixed64PlacementErrorCode::DegenerateReceptorDirection => {
+            Some(sys::BG_DOCKING_FIXED64_SINGLE_ANCHOR_FAILURE_DEGENERATE_RECEPTOR_DIRECTION)
+        }
+        IndependentFixed64PlacementErrorCode::DegenerateLocalSurfaceNormal => {
+            Some(sys::BG_DOCKING_FIXED64_SINGLE_ANCHOR_FAILURE_DEGENERATE_LOCAL_SURFACE_NORMAL)
+        }
+        IndependentFixed64PlacementErrorCode::DegenerateAromaticPlane => {
+            Some(sys::BG_DOCKING_FIXED64_SINGLE_ANCHOR_FAILURE_DEGENERATE_AROMATIC_PLANE)
+        }
+        IndependentFixed64PlacementErrorCode::DegeneratePrincipalAxis => {
+            Some(sys::BG_DOCKING_FIXED64_SINGLE_ANCHOR_FAILURE_DEGENERATE_PRINCIPAL_AXIS)
+        }
+        IndependentFixed64PlacementErrorCode::InternalInvariant => {
+            Some(sys::BG_DOCKING_FIXED64_SINGLE_ANCHOR_FAILURE_NONFINITE_OUTPUT)
+        }
+        _ => None,
+    }
+}
+
+fn selected_feature_geometry_available(
+    slot: &betelgeuze_docking_search::Fixed64Slot,
+    inventory: Option<&IndependentFixed64FeatureGeometryInventory>,
+) -> bool {
+    let Some(inventory) = inventory else {
+        return false;
+    };
+    slot.selected_source_receipt_sha256s().len() == 2
+        && slot
+            .selected_source_receipt_sha256s()
+            .iter()
+            .all(|receipt| inventory.feature_for_allocation_receipt(*receipt).is_some())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn validate_independent_producer_placement(
+    backend: Backend,
+    allocation: &IndependentFixed64Allocation,
+    feature_inventory: Option<&IndependentFixed64FeatureGeometryInventory>,
+    geometric_input: &IndependentFixed64GeometricInput,
+    raw_pocket_normal: [f64; 3],
+    row: &sys::bg_docking_fixed64_producer_row_v1,
+    producer_coordinates: [&[f64]; 3],
+    slot_index: usize,
+    ligand_atom_count: usize,
+    expected_source: Option<Fixed64CoordinateSource<'_>>,
+    native_replay: Option<&NativePlacementReplay>,
+) -> Result<()> {
+    if !matches!(
+        row.placement_kind,
+        sys::BG_DOCKING_FIXED64_PRODUCER_PLACEMENT_INDEXED_SO3
+            | sys::BG_DOCKING_FIXED64_PRODUCER_PLACEMENT_SINGLE_ANCHOR
+    ) {
+        return Ok(());
+    }
+    let slot = allocation.slots().get(slot_index).ok_or_else(|| {
+        Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 placement slot is outside independent allocation",
+        )
+    })?;
+    if !slot.generation_eligible() {
+        if native_replay.is_some() {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native placement replay ran for an allocation-ineligible slot",
+            ));
+        }
+        return require_preplacement_failure(
+            row,
+            sys::BG_DOCKING_FIXED64_PRODUCER_FAILURE_ALLOCATION_INELIGIBLE,
+        );
+    }
+    let Some(source) = expected_source else {
+        if native_replay.is_some() {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native placement replay ran without a frozen source",
+            ));
+        }
+        return require_preplacement_failure(
+            row,
+            sys::BG_DOCKING_FIXED64_PRODUCER_FAILURE_SOURCE_NOT_AVAILABLE,
+        );
+    };
+    if row.placement_kind == sys::BG_DOCKING_FIXED64_PRODUCER_PLACEMENT_SINGLE_ANCHOR
+        && !selected_feature_geometry_available(slot, feature_inventory)
+    {
+        if native_replay.is_some() {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native placement replay ran without selected feature geometry",
+            ));
+        }
+        return require_preplacement_failure(
+            row,
+            sys::BG_DOCKING_FIXED64_PRODUCER_FAILURE_FEATURE_GEOMETRY_NOT_AVAILABLE,
+        );
+    }
+    let native_replay = native_replay.ok_or_else(|| {
+        Error::local(
+            ErrorCode::AbiMismatch,
+            "native placement replay is absent for an executed placement",
+        )
+    })?;
+    let source = independent_placement_source(source)?;
+    let observed = coordinate_segment(producer_coordinates, slot_index, ligand_atom_count)
+        .ok_or_else(|| {
+            Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 placement coordinate segment is absent",
+            )
+        })?;
+    if row.placement_kind == sys::BG_DOCKING_FIXED64_PRODUCER_PLACEMENT_INDEXED_SO3 {
+        match generate_native_fixed64_indexed_so3(
+            allocation,
+            slot_index,
+            source,
+            Vec3::new(
+                geometric_input.pocket_center_angstrom().x,
+                geometric_input.pocket_center_angstrom().y,
+                geometric_input.pocket_center_angstrom().z,
+            ),
+            Vec3::new(
+                raw_pocket_normal[0],
+                raw_pocket_normal[1],
+                raw_pocket_normal[2],
+            ),
+        ) {
+            Ok(placement) => {
+                let status_matches = row.status == sys::BG_DOCKING_FIXED64_PRODUCER_ROW_GENERATED;
+                let coordinates_match = placement_coordinates_close(
+                    backend,
+                    observed,
+                    placement.output_coordinates_angstrom(),
+                );
+                let quaternion_matches =
+                    placement_quaternion_close(backend, row, placement.quaternion());
+                let coordinate_receipt_matches =
+                    row.output_coordinate_sha256 == canonical_coordinate_sha256(observed);
+                let native_replay_matches = native_replay.status
+                    == sys::BG_DOCKING_FIXED64_INDEXED_SO3_PLACED
+                    && native_replay.failure_code
+                        == sys::BG_DOCKING_FIXED64_INDEXED_SO3_FAILURE_NONE
+                    && native_replay.output_coordinate_sha256 == row.output_coordinate_sha256
+                    && native_replay_coordinates_match(observed, native_replay)
+                    && native_replay_quaternion_matches(row, native_replay);
+                let placement_receipt_matches =
+                    row.placement_receipt_sha256 == native_replay.placement_receipt_sha256;
+                if !status_matches
+                    || !coordinates_match
+                    || !quaternion_matches
+                    || !coordinate_receipt_matches
+                    || !native_replay_matches
+                    || !placement_receipt_matches
+                {
+                    return Err(Error::local(
+                        ErrorCode::AbiMismatch,
+                        format!(
+                            "native fixed64 indexed-SO3 placement disagrees with independent replay: status={status_matches}, coordinates={coordinates_match}, quaternion={quaternion_matches}, coordinate_receipt={coordinate_receipt_matches}, native_replay={native_replay_matches}, placement_receipt={placement_receipt_matches}"
+                        ),
+                    ));
+                }
+            }
+            Err(error) => {
+                let component_failure =
+                    indexed_component_failure(error.code()).ok_or_else(|| {
+                        Error::local(
+                            ErrorCode::AbiMismatch,
+                            format!(
+                            "independent indexed-SO3 replay produced an impossible error: {error}"
+                        ),
+                        )
+                    })?;
+                if native_replay.status != sys::BG_DOCKING_FIXED64_INDEXED_SO3_TYPED_FAILURE
+                    || native_replay.failure_code != component_failure
+                    || !native_replay.coordinates.is_empty()
+                    || native_replay.output_coordinate_sha256 != [0; 32]
+                    || row.placement_receipt_sha256 != native_replay.placement_receipt_sha256
+                {
+                    return Err(Error::local(
+                        ErrorCode::AbiMismatch,
+                        "native fixed64 indexed-SO3 failure disagrees with native replay",
+                    ));
+                }
+                require_placement_failure(
+                    row,
+                    sys::BG_DOCKING_FIXED64_PRODUCER_FAILURE_INDEXED_SO3_TYPED_FAILURE,
+                    component_failure,
+                )?;
+            }
+        }
+        return Ok(());
+    }
+    let feature_inventory = feature_inventory.expect("feature availability was checked");
+    match generate_native_fixed64_single_anchor(
+        allocation,
+        slot_index,
+        source,
+        feature_inventory,
+        geometric_input,
+    ) {
+        Ok(placement) => {
+            let status_matches = row.status == sys::BG_DOCKING_FIXED64_PRODUCER_ROW_GENERATED;
+            let coordinates_match = placement_coordinates_close(
+                backend,
+                observed,
+                placement.output_coordinates_angstrom(),
+            );
+            let quaternion_matches =
+                placement_quaternion_close(backend, row, placement.quaternion());
+            let coordinate_receipt_matches =
+                row.output_coordinate_sha256 == canonical_coordinate_sha256(observed);
+            let native_replay_matches = native_replay.status
+                == sys::BG_DOCKING_FIXED64_SINGLE_ANCHOR_PLACED
+                && native_replay.failure_code == sys::BG_DOCKING_FIXED64_SINGLE_ANCHOR_FAILURE_NONE
+                && native_replay.output_coordinate_sha256 == row.output_coordinate_sha256
+                && native_replay_coordinates_match(observed, native_replay)
+                && native_replay_quaternion_matches(row, native_replay);
+            let placement_receipt_matches =
+                row.placement_receipt_sha256 == native_replay.placement_receipt_sha256;
+            if !status_matches
+                || !coordinates_match
+                || !quaternion_matches
+                || !coordinate_receipt_matches
+                || !native_replay_matches
+                || !placement_receipt_matches
+            {
+                return Err(Error::local(
+                    ErrorCode::AbiMismatch,
+                    format!(
+                        "native fixed64 single-anchor placement disagrees with independent replay: status={status_matches}, coordinates={coordinates_match}, quaternion={quaternion_matches}, coordinate_receipt={coordinate_receipt_matches}, native_replay={native_replay_matches}, placement_receipt={placement_receipt_matches}"
+                    ),
+                ));
+            }
+        }
+        Err(error) => {
+            let component_failure =
+                single_anchor_component_failure(error.code()).ok_or_else(|| {
+                    Error::local(
+                        ErrorCode::AbiMismatch,
+                        format!(
+                            "independent single-anchor replay produced an impossible error: {error}"
+                        ),
+                    )
+                })?;
+            if native_replay.status != sys::BG_DOCKING_FIXED64_SINGLE_ANCHOR_TYPED_FAILURE
+                || native_replay.failure_code != component_failure
+                || !native_replay.coordinates.is_empty()
+                || native_replay.output_coordinate_sha256 != [0; 32]
+                || row.placement_receipt_sha256 != native_replay.placement_receipt_sha256
+            {
+                return Err(Error::local(
+                    ErrorCode::AbiMismatch,
+                    "native fixed64 single-anchor failure disagrees with native replay",
+                ));
+            }
+            require_placement_failure(
+                row,
+                sys::BG_DOCKING_FIXED64_PRODUCER_FAILURE_SINGLE_ANCHOR_TYPED_FAILURE,
+                component_failure,
+            )?;
+        }
+    }
+    Ok(())
+}
+
 #[allow(clippy::too_many_arguments)]
 fn validate_native_outputs(
     backend: Backend,
@@ -5484,6 +6312,9 @@ fn validate_native_outputs(
     pipeline: &sys::bg_docking_fixed64_pipeline_output_v1,
     producer_rows: &[sys::bg_docking_fixed64_producer_row_v1],
     expected_sources: &[Option<Fixed64CoordinateSource<'_>>],
+    expected_feature_geometry_inventory: Option<&IndependentFixed64FeatureGeometryInventory>,
+    native_placement_replays: &[Option<NativePlacementReplay>],
+    raw_pocket_normal: [f64; 3],
     rigid_rows: &[sys::bg_docking_rigid_refinement_row_v1],
     torsion_rows: &[sys::bg_docking_torsion_v7_row_v1],
     torsion_moves: &[sys::bg_docking_torsion_v7_move_v1],
@@ -6065,6 +6896,24 @@ fn validate_native_outputs(
             slot,
             ligand_atom_count,
             expected_source,
+        )?;
+        validate_independent_producer_placement(
+            backend,
+            expected_allocation,
+            expected_feature_geometry_inventory,
+            geometric_input,
+            raw_pocket_normal,
+            row,
+            producer_coordinates,
+            slot,
+            usize::try_from(ligand_atom_count).map_err(|_| {
+                Error::local(
+                    ErrorCode::AbiMismatch,
+                    "native fixed64 producer ligand denominator does not fit usize",
+                )
+            })?,
+            expected_source,
+            native_placement_replays.get(slot).and_then(Option::as_ref),
         )?;
         if row.status == sys::BG_DOCKING_FIXED64_PRODUCER_ROW_GENERATED {
             let source = expected_source.ok_or_else(|| {
@@ -7659,10 +8508,13 @@ fn validate_index_evidence(
         }
     }
 
-    if top_k.len() > representatives.len() {
+    let expected_top_k_count = representatives
+        .len()
+        .min(sys::BG_DOCKING_STABLE_TOP_K_LIMIT as usize);
+    if top_k.len() != expected_top_k_count {
         return Err(Error::local(
             ErrorCode::AbiMismatch,
-            "native fixed64 Top-K count exceeds the representative count",
+            "native fixed64 Top-K count does not contain the complete frozen prefix",
         ));
     }
     let mut top_k_seen = vec![false; candidate_count];
@@ -7989,6 +8841,15 @@ mod output_validation_tests {
     #[test]
     fn accepts_cross_bound_rank_and_cluster_indices() {
         assert!(IndexFixture::valid().validate().is_ok());
+    }
+
+    #[test]
+    fn rejects_truncated_top_k_prefix() {
+        let mut truncated = IndexFixture::valid();
+        truncated.cluster.top_k_index_count = 0;
+        truncated.cluster_rows[0].top_k_representative = 0;
+        truncated.cluster_rows[0].top_k_rank = 0;
+        assert!(truncated.validate().is_err());
     }
 
     #[test]

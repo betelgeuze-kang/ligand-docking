@@ -1,9 +1,16 @@
-use betelgeuze_runtime::{
-    Backend, Context, ContextOptions, ErrorCode, Fixed64ConformerCoordinateSource,
-    Fixed64CoordinateSource, Fixed64ExactSourceEvidence, Fixed64Identities,
-    Fixed64IndexedCoordinateSource, Fixed64Ligand, Fixed64Pipeline, Fixed64PipelineContext,
-    Fixed64Receptor, Fixed64RefinementMode, Fixed64RunInput, Fixed64SourceEvidence, PositionSoa,
+use betelgeuze_docking_search::{
+    Fixed64FeatureGeometry as IndependentFeatureGeometry,
+    Fixed64FeatureGeometryInventory as IndependentFeatureGeometryInventory,
+    Fixed64FeatureKind as IndependentFeatureKind,
 };
+use betelgeuze_runtime::{
+    Backend, Context, ContextOptions, ErrorCode, Fixed64AtomicFeature,
+    Fixed64ConformerCoordinateSource, Fixed64CoordinateSource, Fixed64ExactSourceEvidence,
+    Fixed64FeatureGeometry, Fixed64FeatureKind, Fixed64Identities, Fixed64IndexedCoordinateSource,
+    Fixed64Ligand, Fixed64Pipeline, Fixed64PipelineContext, Fixed64Receptor, Fixed64RefinementMode,
+    Fixed64RunInput, Fixed64SourceEvidence, PositionSoa,
+};
+use sha2::{Digest, Sha256};
 
 struct SingleAtomFixture {
     receptor_x: [f64; 4],
@@ -116,6 +123,142 @@ impl SingleAtomFixture {
             coordinates: PositionSoa::new(&self.ligand_x, &self.ligand_y, &self.ligand_z),
         }
     }
+}
+
+struct TwoAtomFixture {
+    base: SingleAtomFixture,
+    ligand_x: [f64; 2],
+    ligand_y: [f64; 2],
+    ligand_z: [f64; 2],
+    ligand_radii: [f64; 2],
+    ligand_charges: [f64; 2],
+    ligand_epsilon: [f64; 2],
+    ligand_zero_mask: [u8; 2],
+    heavy_mask: [u8; 2],
+    parent: [i32; 2],
+}
+
+impl TwoAtomFixture {
+    fn new() -> Self {
+        Self {
+            base: SingleAtomFixture::new(),
+            ligand_x: [-0.5, 0.5],
+            ligand_y: [0.0, 0.0],
+            ligand_z: [0.0, 0.0],
+            ligand_radii: [1.5; 2],
+            ligand_charges: [0.2, -0.2],
+            ligand_epsilon: [0.18; 2],
+            ligand_zero_mask: [0; 2],
+            heavy_mask: [1; 2],
+            parent: [-1, 0],
+        }
+    }
+
+    fn scientific_context(&self) -> Fixed64PipelineContext<'_> {
+        Fixed64PipelineContext {
+            receptor: Fixed64Receptor {
+                coordinates: PositionSoa::new(
+                    &self.base.receptor_x,
+                    &self.base.receptor_y,
+                    &self.base.receptor_z,
+                ),
+                vdw_radius_angstrom: &self.base.receptor_radii,
+                charge_elementary: &self.base.receptor_charges,
+                epsilon_kcal_per_mol: &self.base.receptor_epsilon,
+                hydrophobic_mask: &self.base.receptor_zero_mask,
+                acceptor_mask: &self.base.receptor_zero_mask,
+                donors: &[],
+            },
+            ligand: Fixed64Ligand {
+                reference_coordinates: PositionSoa::new(
+                    &self.ligand_x,
+                    &self.ligand_y,
+                    &self.ligand_z,
+                ),
+                vdw_radius_angstrom: &self.ligand_radii,
+                heavy_atom_mask: &self.heavy_mask,
+                charge_elementary: &self.ligand_charges,
+                epsilon_kcal_per_mol: &self.ligand_epsilon,
+                hydrophobic_mask: &self.ligand_zero_mask,
+                acceptor_mask: &self.ligand_zero_mask,
+                donors: &[],
+                exclusions: &[],
+                rotors: &[],
+                bonds: &[],
+                chirality_centers: &[],
+                parent_atom_index: &self.parent,
+                rotatable_child_atom_index: &[],
+                internal_pairs: &[],
+            },
+            pocket_center_angstrom: [0.0, 0.0, 0.0],
+            pocket_radius_angstrom: 10.0,
+            identities: Fixed64Identities {
+                authority_input_receipt_sha256: [0x11; 32],
+                receptor_system_sha256: [0x22; 32],
+                ligand_system_sha256: [0x33; 32],
+                backend_receipt_sha256: [0x44; 32],
+                validity_scorer_context_receipt_sha256: [0x55; 32],
+                contact_policy_sha256: [0x66; 32],
+            },
+        }
+    }
+
+    fn source(&self, marker: u8) -> Fixed64CoordinateSource<'_> {
+        Fixed64CoordinateSource {
+            evidence: Fixed64SourceEvidence {
+                receipt_sha256: [marker; 32],
+                proposal_sha256: [marker.wrapping_add(64); 32],
+                coordinate_sha256: coordinate_digest(
+                    &self.ligand_x,
+                    &self.ligand_y,
+                    &self.ligand_z,
+                ),
+            },
+            coordinates: PositionSoa::new(&self.ligand_x, &self.ligand_y, &self.ligand_z),
+        }
+    }
+}
+
+fn canonical_hasher(domain: &str) -> Sha256 {
+    let mut hash = Sha256::new();
+    hash.update((domain.len() as u64).to_be_bytes());
+    hash.update(domain.as_bytes());
+    hash
+}
+
+fn canonical_f64(hash: &mut Sha256, value: f64) {
+    hash.update(
+        (if value == 0.0 { 0.0 } else { value })
+            .to_bits()
+            .to_be_bytes(),
+    );
+}
+
+fn coordinate_digest(x: &[f64], y: &[f64], z: &[f64]) -> [u8; 32] {
+    let mut hash = canonical_hasher("betelgeuze.fixed64_coordinates/native-v1");
+    hash.update((x.len() as u64).to_be_bytes());
+    for atom in 0..x.len() {
+        canonical_f64(&mut hash, x[atom]);
+        canonical_f64(&mut hash, y[atom]);
+        canonical_f64(&mut hash, z[atom]);
+    }
+    hash.finalize().into()
+}
+
+fn radii_digest(values: &[f64]) -> [u8; 32] {
+    let mut hash = canonical_hasher("betelgeuze.fixed64_vdw_radii/native-v1");
+    hash.update((values.len() as u64).to_be_bytes());
+    for value in values {
+        canonical_f64(&mut hash, *value);
+    }
+    hash.finalize().into()
+}
+
+fn mask_digest(values: &[u8]) -> [u8; 32] {
+    let mut hash = canonical_hasher("betelgeuze.fixed64_heavy_atom_mask/native-v1");
+    hash.update((values.len() as u64).to_be_bytes());
+    hash.update(values);
+    hash.finalize().into()
 }
 
 fn digest(value: &str) -> [u8; 32] {
@@ -378,6 +521,177 @@ fn safe_run_returns_complete_fixed64_receipt_and_preserves_typed_failures() {
     let fixture = SingleAtomFixture::new();
     for options in [ContextOptions::cpu_reference(), ContextOptions::rust_cpu()] {
         assert_safe_run_returns_complete_receipt(&fixture, options);
+    }
+}
+
+fn assert_transformed_placements_are_independently_replayed(
+    options: ContextOptions,
+    include_single_anchor: bool,
+) {
+    let fixture = TwoAtomFixture::new();
+    let v7 = (0_u8..24)
+        .map(|index| Fixed64IndexedCoordinateSource {
+            source_index: u32::from(index),
+            source: fixture.source(index + 1),
+        })
+        .collect::<Vec<_>>();
+    let conformers = (0_u8..7)
+        .map(|index| Fixed64ConformerCoordinateSource {
+            rank: index + 2,
+            source: fixture.source(34 + index),
+        })
+        .collect::<Vec<_>>();
+    let retained = [36_u32, 45, 54, 63]
+        .iter()
+        .enumerate()
+        .map(|(index, source_index)| Fixed64IndexedCoordinateSource {
+            source_index: *source_index,
+            source: fixture.source(48 + index as u8),
+        })
+        .collect::<Vec<_>>();
+    let candidate_modes = [Fixed64RefinementMode::V2Translation; 64];
+    let rigid_steps = [0_u64; 64];
+    let torsion_eligible = [0_u8; 64];
+    let torsion_steps = [0_u64; 64];
+    let baseline_angles = [0.0_f64; 128];
+    let exact_source = fixture.source(0x10);
+    let ligand_donor_indices = [0_u64, 1];
+    let receptor_acceptor_indices = [0_u64];
+    let ligand_donor_receipt = [0x81; 32];
+    let receptor_acceptor_receipt = [0x82; 32];
+    let independent_ligand_donor = IndependentFeatureGeometry::new(
+        IndependentFeatureKind::LigandDonor,
+        ligand_donor_receipt,
+        vec![0, 1],
+    )
+    .unwrap();
+    let independent_receptor_acceptor = IndependentFeatureGeometry::new(
+        IndependentFeatureKind::ReceptorAcceptor,
+        receptor_acceptor_receipt,
+        vec![0],
+    )
+    .unwrap();
+    let feature_geometry_inventory = IndependentFeatureGeometryInventory::new(vec![
+        independent_ligand_donor.clone(),
+        independent_receptor_acceptor.clone(),
+    ])
+    .unwrap();
+    let atomic_features = if include_single_anchor {
+        vec![
+            Fixed64AtomicFeature {
+                kind: Fixed64FeatureKind::LigandDonor,
+                receipt_sha256: ligand_donor_receipt,
+            },
+            Fixed64AtomicFeature {
+                kind: Fixed64FeatureKind::ReceptorAcceptor,
+                receipt_sha256: receptor_acceptor_receipt,
+            },
+        ]
+    } else {
+        Vec::new()
+    };
+    let feature_geometries = if include_single_anchor {
+        vec![
+            Fixed64FeatureGeometry {
+                kind: Fixed64FeatureKind::LigandDonor,
+                allocation_feature_receipt_sha256: ligand_donor_receipt,
+                atom_indices: &ligand_donor_indices,
+                feature_geometry_receipt_sha256: independent_ligand_donor.receipt_sha256(),
+            },
+            Fixed64FeatureGeometry {
+                kind: Fixed64FeatureKind::ReceptorAcceptor,
+                allocation_feature_receipt_sha256: receptor_acceptor_receipt,
+                atom_indices: &receptor_acceptor_indices,
+                feature_geometry_receipt_sha256: independent_receptor_acceptor.receipt_sha256(),
+            },
+        ]
+    } else {
+        Vec::new()
+    };
+    let run = Fixed64RunInput {
+        exact_source_evidence: Fixed64ExactSourceEvidence {
+            source_receipt_sha256: exact_source.evidence.receipt_sha256,
+            proposal_sha256: exact_source.evidence.proposal_sha256,
+            ligand_coordinate_sha256: exact_source.evidence.coordinate_sha256,
+            receptor_coordinate_sha256: coordinate_digest(
+                &fixture.base.receptor_x,
+                &fixture.base.receptor_y,
+                &fixture.base.receptor_z,
+            ),
+            prepared_ligand_topology_sha256: [0x33; 32],
+            prepared_receptor_topology_sha256: [0x22; 32],
+            ligand_vdw_radii_sha256: radii_digest(&fixture.ligand_radii),
+            ligand_heavy_atom_mask_sha256: mask_digest(&fixture.heavy_mask),
+            receptor_vdw_radii_sha256: radii_digest(&fixture.base.receptor_radii),
+        },
+        exact_source,
+        atomic_features: &atomic_features,
+        v7_control_sources: &v7,
+        conformer_sources: &conformers,
+        retained_sources: &retained,
+        feature_geometries: &feature_geometries,
+        feature_geometry_inventory_sha256: if include_single_anchor {
+            feature_geometry_inventory.receipt_sha256()
+        } else {
+            [0; 32]
+        },
+        pocket_normal: [0.0, 0.0, 1.0],
+        rmsd_threshold_angstrom: 1.5,
+        candidate_modes: &candidate_modes,
+        rigid_max_steps: &rigid_steps,
+        proposal_is_torsion_eligible: &torsion_eligible,
+        torsion_max_steps: &torsion_steps,
+        baseline_torsion_angles_radians: &baseline_angles,
+        predeclared_refinement_policy_sha256: [0x76; 32],
+    };
+    let context = Context::new(options).unwrap();
+    let pipeline = Fixed64Pipeline::new(&context, fixture.scientific_context()).unwrap();
+    let receipt = pipeline.run(run).unwrap();
+    assert_eq!(
+        receipt.generated_count,
+        if include_single_anchor { 52 } else { 48 }
+    );
+    assert!(receipt.producer_rows[24..44].iter().all(|row| {
+        row.coordinates_available
+            && row.component_failure_code == 0
+            && row.placement_receipt_sha256 != [0; 32]
+    }));
+    if include_single_anchor {
+        assert!(receipt.producer_rows[44..48].iter().all(|row| {
+            row.coordinates_available
+                && row.component_failure_code == 0
+                && row.placement_receipt_sha256 != [0; 32]
+        }));
+    }
+}
+
+#[test]
+fn transformed_indexed_so3_is_replayed_from_owned_sources() {
+    for options in [ContextOptions::cpu_reference(), ContextOptions::rust_cpu()] {
+        assert_transformed_placements_are_independently_replayed(options, false);
+    }
+}
+
+#[test]
+fn transformed_single_anchor_is_replayed_from_owned_features() {
+    for options in [ContextOptions::cpu_reference(), ContextOptions::rust_cpu()] {
+        assert_transformed_placements_are_independently_replayed(options, true);
+    }
+}
+
+#[cfg(feature = "hip")]
+#[test]
+fn transformed_placements_are_replayed_on_available_qualified_hip_lanes() {
+    let mut tested = 0;
+    for options in [ContextOptions::hip_safe(0), ContextOptions::hip_fast(0)] {
+        if Context::backend_available(options.backend, options.device_ordinal).unwrap() {
+            assert_transformed_placements_are_independently_replayed(options, false);
+            assert_transformed_placements_are_independently_replayed(options, true);
+            tested += 1;
+        }
+    }
+    if std::env::var("BG_REQUIRE_HIP_DEVICE").as_deref() == Ok("1") {
+        assert_eq!(tested, 2, "both qualified HIP lanes must be available");
     }
 }
 
