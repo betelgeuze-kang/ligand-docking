@@ -88,6 +88,9 @@ def test_native_release_version_surfaces_match_rc6() -> None:
         "TARGET_X86_64_UNKNOWN_LINUX_GNU_LDFLAGS",
         "CXXFLAGS_x86_64_unknown_linux_gnu",
         "HIPCC_COMPILE_FLAGS_APPEND",
+        "PERL5LIB",
+        "PERL5OPT",
+        "PERLLIB",
     ),
 )
 def test_native_build_rejects_caller_build_overrides(name: str) -> None:
@@ -95,13 +98,14 @@ def test_native_build_rejects_caller_build_overrides(name: str) -> None:
         _reject_direct_build_overrides({name: "attacker-controlled"})
 
 
+@pytest.mark.parametrize("name", ("RUSTFLAGS", "PERL5LIB", "PERL5OPT", "PERLLIB"))
 def test_native_build_public_entrypoint_rejects_override_before_output_mutation(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, name: str
 ) -> None:
-    output = tmp_path / "must-not-be-created"
-    monkeypatch.setenv("RUSTFLAGS", "-Ctarget-cpu=native")
+    output = tmp_path / f"must-not-be-created-{name}"
+    monkeypatch.setenv(name, "attacker-controlled")
 
-    with pytest.raises(RuntimeError, match="RUSTFLAGS"):
+    with pytest.raises(RuntimeError, match=name):
         build_native_wheel(Path.cwd(), output)
 
     assert not output.exists()
@@ -141,6 +145,9 @@ def test_native_build_preserves_cache_locations_and_sets_frozen_controls(
             "CARGO_HOME": str(cargo_home),
             "CARGO_TARGET_DIR": str(target_dir),
             "LD_LIBRARY_PATH": "/untrusted/runtime/linker/path",
+            "PERL5LIB": "",
+            "PERL5OPT": "",
+            "PERLLIB": "",
             "PYTHONPATH": "/untrusted/python/module/path",
             "RUSTFLAGS": "",
         },
@@ -151,6 +158,9 @@ def test_native_build_preserves_cache_locations_and_sets_frozen_controls(
     assert environment["CARGO_HOME"] == str(cargo_home)
     assert environment["CARGO_TARGET_DIR"] == str(target_dir)
     assert "LD_LIBRARY_PATH" not in environment
+    assert "PERL5LIB" not in environment
+    assert "PERL5OPT" not in environment
+    assert "PERLLIB" not in environment
     assert "PYTHONPATH" not in environment
     assert environment["CARGO_BUILD_TARGET"] == FROZEN_TARGET
     assert environment["RUSTC"] == str(rustc)
