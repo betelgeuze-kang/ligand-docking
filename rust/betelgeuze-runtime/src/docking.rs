@@ -13,10 +13,9 @@ use std::ptr::{self, NonNull};
 use std::rc::Rc;
 
 use betelgeuze_docking_search::{
-    evaluate_fixed64_geometric_metrics, generate_native_fixed64_indexed_so3,
-    generate_native_fixed64_single_anchor, refine_interaction_aware_rigid_v2,
-    refine_interaction_aware_rigid_v3, refine_interaction_aware_rigid_v6,
-    Fixed64Allocation as IndependentFixed64Allocation,
+    evaluate_fixed64_geometric_metrics, generate_native_fixed64_single_anchor, orientations,
+    refine_interaction_aware_rigid_v2, refine_interaction_aware_rigid_v3,
+    refine_interaction_aware_rigid_v6, Fixed64Allocation as IndependentFixed64Allocation,
     Fixed64AtomicFeatureEvidence as IndependentFixed64AtomicFeature,
     Fixed64ConformerSourceEvidence as IndependentFixed64ConformerSource,
     Fixed64ExactV11SourceEvidence as IndependentFixed64ExactSource,
@@ -49,7 +48,8 @@ use betelgeuze_docking_search::{
     NativeScorerV1Donor as IndependentScorerDonor,
     NativeScorerV1FailureCode as IndependentScorerFailureCode,
     NativeScorerV1KernelOutcome as IndependentScorerOutcome, Quaternion, Vec3,
-    FIXED64_MAX_ABSOLUTE_COORDINATE_ANGSTROM, NATIVE_FIXED64_SINGLE_ANCHOR_PROFILE_ID,
+    FIXED64_MAX_ABSOLUTE_COORDINATE_ANGSTROM, NATIVE_FIXED64_INDEXED_SO3_PROFILE_ID,
+    NATIVE_FIXED64_SINGLE_ANCHOR_PROFILE_ID,
 };
 use betelgeuze_sys as sys;
 use sha2::{Digest, Sha256 as Sha256Hasher};
@@ -2707,6 +2707,10 @@ impl<'context> Fixed64Pipeline<'context> {
             pocket_normal: canonical_pocket_normal(input.pocket_normal)?,
             ..input
         };
+        // The producer normalizes the caller vector once, then the indexed-SO3
+        // component normalizes that canonical producer value once more. Keep
+        // both stages explicit so replay uses the same frozen seed bits.
+        let component_pocket_normal = canonical_pocket_normal(input.pocket_normal)?;
         let expected_sources: [Option<Fixed64CoordinateSource<'_>>; CANDIDATE_COUNT] =
             std::array::from_fn(|slot| fixed64_source_for_slot(input, slot));
         let coordinate_count = self
@@ -3093,7 +3097,7 @@ impl<'context> Fixed64Pipeline<'context> {
             &expected_sources,
             expected_feature_geometry_inventory.as_ref(),
             &native_placement_replays,
-            raw_pocket_normal,
+            component_pocket_normal,
             &rigid_rows,
             &torsion_rows,
             &torsion_moves,
@@ -5975,6 +5979,108 @@ fn native_replay_quaternion_matches(
     .all(|(observed, expected)| observed.to_bits() == expected.to_bits())
 }
 
+#[derive(Debug, Clone, PartialEq)]
+struct IndependentIndexedSo3Replay {
+    coordinates: Vec<Vec3>,
+    quaternion: Quaternion,
+}
+
+fn independent_indexed_so3_replay(
+    allocation: &IndependentFixed64Allocation,
+    slot_index: usize,
+    source: &IndependentFixed64PlacementSource,
+    pocket_center: Vec3,
+    canonical_pocket_normal: Vec3,
+) -> Result<std::result::Result<IndependentIndexedSo3Replay, i32>> {
+    let slot = allocation.slots().get(slot_index).ok_or_else(|| {
+        Error::local(
+            ErrorCode::AbiMismatch,
+            "independent indexed-SO3 slot is outside fixed64",
+        )
+    })?;
+    let sequence_index = slot.so3_sequence_index().ok_or_else(|| {
+        Error::local(
+            ErrorCode::AbiMismatch,
+            "independent indexed-SO3 slot lacks its frozen sequence index",
+        )
+    })?;
+    let parent = slot.generation_parent().ok_or_else(|| {
+        Error::local(
+            ErrorCode::AbiMismatch,
+            "independent indexed-SO3 slot lacks its generation parent",
+        )
+    })?;
+    let evidence = source.evidence();
+    if parent.receipt_sha256 != evidence.receipt_sha256
+        || parent.proposal_sha256 != evidence.proposal_sha256
+        || parent.coordinate_sha256 != evidence.coordinate_sha256
+    {
+        return Err(Error::local(
+            ErrorCode::AbiMismatch,
+            "independent indexed-SO3 source is cross-wired to its allocation slot",
+        ));
+    }
+    let coordinates = source.coordinates_angstrom();
+    let first = coordinates[0];
+    if !coordinates[1..]
+        .iter()
+        .any(|coordinate| coordinate.minus(first).norm_squared() > 1.0e-12)
+    {
+        return Ok(Err(
+            sys::BG_DOCKING_FIXED64_INDEXED_SO3_FAILURE_DEGENERATE_SOURCE_GEOMETRY,
+        ));
+    }
+    if !canonical_pocket_normal.is_finite()
+        || (canonical_pocket_normal.norm() - 1.0).abs() > 1.0e-15
+    {
+        return Err(Error::local(
+            ErrorCode::AbiMismatch,
+            "independent indexed-SO3 pocket normal is not canonical",
+        ));
+    }
+    let mut seed = CanonicalHasher::new("betelgeuze.fixed64_indexed_so3_seed/native-v1");
+    seed.digest(evidence.receipt_sha256);
+    seed.digest(evidence.proposal_sha256);
+    seed.digest(evidence.coordinate_sha256);
+    seed.vec3(pocket_center);
+    seed.vec3(canonical_pocket_normal);
+    seed.string(NATIVE_FIXED64_INDEXED_SO3_PROFILE_ID);
+    let sequence = match orientations(seed.finish(), usize::from(sequence_index) + 1) {
+        Ok(sequence) => sequence,
+        Err(_) => {
+            return Ok(Err(
+                sys::BG_DOCKING_FIXED64_INDEXED_SO3_FAILURE_NONFINITE_OUTPUT,
+            ));
+        }
+    };
+    let selected = sequence.get(usize::from(sequence_index)).ok_or_else(|| {
+        Error::local(
+            ErrorCode::AbiMismatch,
+            "independent indexed-SO3 sequence selection is absent",
+        )
+    })?;
+    if selected.orientation_index != u32::from(sequence_index) {
+        return Err(Error::local(
+            ErrorCode::AbiMismatch,
+            "independent indexed-SO3 accepted sequence index changed",
+        ));
+    }
+    let mut source_center = Vec3::new(0.0, 0.0, 0.0);
+    for coordinate in coordinates {
+        source_center = source_center.plus(*coordinate);
+    }
+    source_center = source_center.scale(1.0 / coordinates.len() as f64);
+    let translation = pocket_center.minus(selected.quaternion.rotate(source_center));
+    let output = coordinates
+        .iter()
+        .map(|coordinate| selected.quaternion.rotate(*coordinate).plus(translation))
+        .collect();
+    Ok(Ok(IndependentIndexedSo3Replay {
+        coordinates: output,
+        quaternion: selected.quaternion,
+    }))
+}
+
 fn require_preplacement_failure(
     row: &sys::bg_docking_fixed64_producer_row_v1,
     failure_code: sys::bg_docking_fixed64_producer_failure,
@@ -6008,18 +6114,6 @@ fn require_placement_failure(
         ));
     }
     Ok(())
-}
-
-fn indexed_component_failure(code: IndependentFixed64PlacementErrorCode) -> Option<i32> {
-    match code {
-        IndependentFixed64PlacementErrorCode::DegenerateSo3SourceGeometry => {
-            Some(sys::BG_DOCKING_FIXED64_INDEXED_SO3_FAILURE_DEGENERATE_SOURCE_GEOMETRY)
-        }
-        IndependentFixed64PlacementErrorCode::InternalInvariant => {
-            Some(sys::BG_DOCKING_FIXED64_INDEXED_SO3_FAILURE_NONFINITE_OUTPUT)
-        }
-        _ => None,
-    }
 }
 
 fn single_anchor_component_failure(code: IndependentFixed64PlacementErrorCode) -> Option<i32> {
@@ -6066,7 +6160,7 @@ fn validate_independent_producer_placement(
     allocation: &IndependentFixed64Allocation,
     feature_inventory: Option<&IndependentFixed64FeatureGeometryInventory>,
     geometric_input: &IndependentFixed64GeometricInput,
-    raw_pocket_normal: [f64; 3],
+    canonical_pocket_normal: [f64; 3],
     row: &sys::bg_docking_fixed64_producer_row_v1,
     producer_coordinates: [&[f64]; 3],
     slot_index: usize,
@@ -6140,30 +6234,27 @@ fn validate_independent_producer_placement(
             )
         })?;
     if row.placement_kind == sys::BG_DOCKING_FIXED64_PRODUCER_PLACEMENT_INDEXED_SO3 {
-        match generate_native_fixed64_indexed_so3(
+        match independent_indexed_so3_replay(
             allocation,
             slot_index,
-            source,
+            &source,
             Vec3::new(
                 geometric_input.pocket_center_angstrom().x,
                 geometric_input.pocket_center_angstrom().y,
                 geometric_input.pocket_center_angstrom().z,
             ),
             Vec3::new(
-                raw_pocket_normal[0],
-                raw_pocket_normal[1],
-                raw_pocket_normal[2],
+                canonical_pocket_normal[0],
+                canonical_pocket_normal[1],
+                canonical_pocket_normal[2],
             ),
         ) {
-            Ok(placement) => {
+            Ok(Ok(placement)) => {
                 let status_matches = row.status == sys::BG_DOCKING_FIXED64_PRODUCER_ROW_GENERATED;
-                let coordinates_match = placement_coordinates_close(
-                    backend,
-                    observed,
-                    placement.output_coordinates_angstrom(),
-                );
+                let coordinates_match =
+                    placement_coordinates_close(backend, observed, &placement.coordinates);
                 let quaternion_matches =
-                    placement_quaternion_close(backend, row, placement.quaternion());
+                    placement_quaternion_close(backend, row, placement.quaternion);
                 let coordinate_receipt_matches =
                     row.output_coordinate_sha256 == canonical_coordinate_sha256(observed);
                 let native_replay_matches = native_replay.status
@@ -6190,16 +6281,7 @@ fn validate_independent_producer_placement(
                     ));
                 }
             }
-            Err(error) => {
-                let component_failure =
-                    indexed_component_failure(error.code()).ok_or_else(|| {
-                        Error::local(
-                            ErrorCode::AbiMismatch,
-                            format!(
-                            "independent indexed-SO3 replay produced an impossible error: {error}"
-                        ),
-                        )
-                    })?;
+            Ok(Err(component_failure)) => {
                 if native_replay.status != sys::BG_DOCKING_FIXED64_INDEXED_SO3_TYPED_FAILURE
                     || native_replay.failure_code != component_failure
                     || !native_replay.coordinates.is_empty()
@@ -6217,6 +6299,7 @@ fn validate_independent_producer_placement(
                     component_failure,
                 )?;
             }
+            Err(error) => return Err(error),
         }
         return Ok(());
     }
@@ -6314,7 +6397,7 @@ fn validate_native_outputs(
     expected_sources: &[Option<Fixed64CoordinateSource<'_>>],
     expected_feature_geometry_inventory: Option<&IndependentFixed64FeatureGeometryInventory>,
     native_placement_replays: &[Option<NativePlacementReplay>],
-    raw_pocket_normal: [f64; 3],
+    canonical_pocket_normal: [f64; 3],
     rigid_rows: &[sys::bg_docking_rigid_refinement_row_v1],
     torsion_rows: &[sys::bg_docking_torsion_v7_row_v1],
     torsion_moves: &[sys::bg_docking_torsion_v7_move_v1],
@@ -6902,7 +6985,7 @@ fn validate_native_outputs(
             expected_allocation,
             expected_feature_geometry_inventory,
             geometric_input,
-            raw_pocket_normal,
+            canonical_pocket_normal,
             row,
             producer_coordinates,
             slot,

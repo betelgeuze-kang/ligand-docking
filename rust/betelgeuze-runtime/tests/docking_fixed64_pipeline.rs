@@ -647,6 +647,19 @@ fn assert_transformed_placements_are_independently_replayed(
     let context = Context::new(options).unwrap();
     let pipeline = Fixed64Pipeline::new(&context, fixture.scientific_context()).unwrap();
     let receipt = pipeline.run(run).unwrap();
+    let oblique = pipeline
+        .run(Fixed64RunInput {
+            pocket_normal: [1.0, 1.0, 5.0],
+            ..run
+        })
+        .unwrap();
+    let scaled_oblique = pipeline
+        .run(Fixed64RunInput {
+            pocket_normal: [2.0, 2.0, 10.0],
+            ..run
+        })
+        .unwrap();
+    assert_eq!(oblique, scaled_oblique);
     assert_eq!(
         receipt.generated_count,
         if include_single_anchor { 52 } else { 48 }
