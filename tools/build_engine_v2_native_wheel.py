@@ -213,14 +213,18 @@ _GCC_LINK_INPUT_NAMES = (
     "crtn.o",
     "crtbegin.o",
     "crtbeginS.o",
+    "crtbeginT.o",
     "crtend.o",
     "crtendS.o",
     "libstdc++.so",
     "libgcc.a",
+    "libgcc_s.so",
     "libgcc_s.so.1",
     "libgcc_eh.a",
     "libm.so",
+    "libmvec.so.1",
     "libc.so",
+    "libc_nonshared.a",
 )
 _MAX_GCC_CLOSURE_ENTRIES = 100_000
 _MAX_GCC_CLOSURE_BYTES = 2 * 1024 * 1024 * 1024
@@ -471,17 +475,22 @@ _CPU_GCC_CLOSURE = FrozenGccClosureSpec(
         Path("/lib64/libgmp.so.10"),
         Path("/lib64/libjansson.so.4"),
         Path("/lib64/libm.so.6"),
+        Path("/lib64/libmvec_nonshared.a"),
+        Path("/lib64/libmvec.so.1"),
         Path("/lib64/libmpc.so.3"),
         Path("/lib64/libmpfr.so.4"),
+        Path("/lib64/libpthread.so.0"),
+        Path("/lib64/librt.so.1"),
+        Path("/lib64/libutil.so.1"),
         Path("/lib64/libz.so.1"),
         Path("/lib64/libzstd.so.1"),
         Path("/opt/rh/gcc-toolset-14/root/usr/lib64/libbfd-2.41-4.el8_10.1.so"),
         Path("/opt/rh/gcc-toolset-14/root/usr/lib64/libctf.so.0"),
         Path("/opt/rh/gcc-toolset-14/root/usr/lib64/libsframe.so.1"),
     ),
-    expected_sha256="861e5f755821699940f4d86f282be24f20fd4843ce4af3f9eef7a9793bd1a2c8",
-    expected_entry_count=4_025,
-    expected_total_bytes=351_054_768,
+    expected_sha256="96d2f48db36a2ee792e4cc5161c642d2014b1311813f413facc02f99155986c6",
+    expected_entry_count=4_034,
+    expected_total_bytes=351_758_451,
 )
 
 _HIP_GCC_CLOSURE = FrozenGccClosureSpec(
@@ -517,9 +526,9 @@ _HIP_GCC_CLOSURE = FrozenGccClosureSpec(
         Path("/lib/x86_64-linux-gnu/libz.so.1"),
         Path("/lib/x86_64-linux-gnu/libzstd.so.1"),
     ),
-    expected_sha256="9c83b786a878c92d4488482c52cf4824af0b04411ca9832a8960a6dc30702678",
-    expected_entry_count=6_537,
-    expected_total_bytes=370_551_592,
+    expected_sha256="7a1fb6a726e7b9510dac8685ad4ee568761c21741e586637bbef3a0a0b71b029",
+    expected_entry_count=6_541,
+    expected_total_bytes=371_592_006,
 )
 
 

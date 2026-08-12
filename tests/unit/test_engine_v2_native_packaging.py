@@ -300,12 +300,16 @@ def test_canonical_profiles_bind_complete_gcc_host_closures() -> None:
     assert {
         "crt1.o",
         "crtbeginS.o",
+        "crtbeginT.o",
         "crtendS.o",
         "libstdc++.so",
         "libgcc.a",
+        "libgcc_s.so",
         "libgcc_s.so.1",
         "libm.so",
+        "libmvec.so.1",
         "libc.so",
+        "libc_nonshared.a",
     }.issubset(_GCC_LINK_INPUT_NAMES)
 
 
