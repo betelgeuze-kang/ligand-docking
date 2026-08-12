@@ -75,6 +75,11 @@ struct BatchFixture final {
         modes[4] = 99;
         modes[5] = BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V2_TRANSLATION;
         x[5 * kAtoms] = std::numeric_limits<double>::quiet_NaN();
+        modes[7] =
+            BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V3_TRANSLATION_ROTATION;
+        for (std::size_t atom = 0; atom < kAtoms; ++atom) {
+            x[7 * kAtoms + atom] = 1.0e200;
+        }
     }
 
     bg_docking_rigid_refinement_candidate_batch_soa_v1 descriptor() const {
@@ -547,6 +552,12 @@ int main() {
     assert(
         cpp_output.rows[6].failure_code ==
         BG_DOCKING_RIGID_REFINEMENT_FAILURE_UPSTREAM_NOT_ELIGIBLE);
+    assert(
+        cpp_output.rows[7].status ==
+        BG_DOCKING_RIGID_REFINEMENT_ROW_TYPED_FAILURE);
+    assert(
+        cpp_output.rows[7].failure_code ==
+        BG_DOCKING_RIGID_REFINEMENT_FAILURE_NONFINITE_DERIVED_VALUE);
     assert_parity(cpp_output, rust_output);
 
     OutputStorage transactional(41.0);
