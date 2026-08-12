@@ -590,7 +590,57 @@ void test_cross_wiring_and_transactionality_fail_closed() {
             &rejected) == BG_STATUS_INVALID_ARGUMENT);
     assert(rejected == nullptr);
 
+    torsion = fixture.torsion();
+    const double receptor_x_before = fixture.receptor_x[0];
+    auto **channel_alias =
+        reinterpret_cast<bg_docking_fixed64_refinement_pipeline_v1 **>(
+            fixture.receptor_x.data());
+    assert(
+        bg_docking_fixed64_refinement_pipeline_v1_create(
+            context,
+            &rigid,
+            &torsion,
+            &scorer,
+            &validity,
+            channel_alias) == BG_STATUS_INVALID_ARGUMENT);
+    assert(fixture.receptor_x[0] == receptor_x_before);
+
+    const auto rigid_before = rigid;
+    auto **descriptor_alias =
+        reinterpret_cast<bg_docking_fixed64_refinement_pipeline_v1 **>(&rigid);
+    assert(
+        bg_docking_fixed64_refinement_pipeline_v1_create(
+            context,
+            &rigid,
+            &torsion,
+            &scorer,
+            &validity,
+            descriptor_alias) == BG_STATUS_INVALID_ARGUMENT);
+    assert(std::memcmp(&rigid, &rigid_before, sizeof(rigid)) == 0);
+
+    alignas(void *) std::array<std::byte, sizeof(void *) + 1> misaligned{};
+    auto **misaligned_output =
+        reinterpret_cast<bg_docking_fixed64_refinement_pipeline_v1 **>(
+            misaligned.data() + 1);
+    assert(
+        bg_docking_fixed64_refinement_pipeline_v1_create(
+            context,
+            &rigid,
+            &torsion,
+            &scorer,
+            &validity,
+            misaligned_output) == BG_STATUS_INVALID_ARGUMENT);
+
     auto *pipeline = create_pipeline(context, fixture);
+    assert(
+        bg_docking_fixed64_refinement_pipeline_v1_get_backend(
+            pipeline, reinterpret_cast<bg_backend *>(pipeline)) ==
+        BG_STATUS_INVALID_ARGUMENT);
+    bg_backend observed = BG_BACKEND_AUTO;
+    assert(
+        bg_docking_fixed64_refinement_pipeline_v1_get_backend(
+            pipeline, &observed) == BG_STATUS_OK);
+    assert(observed == BG_BACKEND_CPP_CPU_REFERENCE);
     Result result{};
     result.pipeline_rows[0].slot_index = UINT32_MAX;
     result.cluster_rows[0].slot_index = UINT32_MAX;
@@ -629,6 +679,42 @@ void test_cross_wiring_and_transactionality_fail_closed() {
     bg_context_destroy(context);
 }
 
+void test_success_zeroes_index_tails() {
+    const Fixture fixture;
+    bg_context *context = create_context(BG_BACKEND_CPP_CPU_REFERENCE);
+    auto *pipeline = create_pipeline(context, fixture);
+    Result result{};
+    result.primary.fill(UINT32_MAX);
+    result.valid.fill(UINT32_MAX);
+    result.representatives.fill(UINT32_MAX);
+    result.cluster_top_k.fill(UINT32_MAX);
+    assert(run_into(context, pipeline, fixture, &result) == BG_STATUS_OK);
+    assert(result.primary_count < result.primary.size());
+    assert(result.valid_count < result.valid.size());
+    assert(result.representative_count < result.representatives.size());
+    assert(result.cluster_top_k_count < result.cluster_top_k.size());
+    for (std::size_t index = result.primary_count; index < result.primary.size();
+         ++index) {
+        assert(result.primary[index] == 0U);
+    }
+    for (std::size_t index = result.valid_count; index < result.valid.size();
+         ++index) {
+        assert(result.valid[index] == 0U);
+    }
+    for (std::size_t index = result.representative_count;
+         index < result.representatives.size();
+         ++index) {
+        assert(result.representatives[index] == 0U);
+    }
+    for (std::size_t index = result.cluster_top_k_count;
+         index < result.cluster_top_k.size();
+         ++index) {
+        assert(result.cluster_top_k[index] == 0U);
+    }
+    bg_docking_fixed64_refinement_pipeline_v1_destroy(pipeline);
+    bg_context_destroy(context);
+}
+
 void test_optional_hip_parity() {
     const Fixture fixture;
     const Result reference = run(BG_BACKEND_CPP_CPU_REFERENCE, fixture);
@@ -646,6 +732,7 @@ void test_optional_hip_parity() {
 int main() {
     test_fixed64_flow_and_cpu_parity();
     test_cross_wiring_and_transactionality_fail_closed();
+    test_success_zeroes_index_tails();
     test_optional_hip_parity();
     return 0;
 }

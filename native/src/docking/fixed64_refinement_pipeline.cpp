@@ -8,6 +8,8 @@
 #include <cstring>
 #include <limits>
 #include <memory>
+#include <new>
+#include <stdexcept>
 #include <utility>
 #include <vector>
 
@@ -70,6 +72,13 @@ void add_range(
         throw std::length_error("fixed64 refinement range overflows");
     }
     ranges->push_back({pointer, count * sizeof(Type)});
+}
+
+[[nodiscard]] std::size_t checked_range_count(uint64_t count) {
+    if (count > std::numeric_limits<std::size_t>::max()) {
+        throw std::length_error("fixed64 refinement range count overflows");
+    }
+    return static_cast<std::size_t>(count);
 }
 
 [[nodiscard]] bool channels_equal(
@@ -170,6 +179,225 @@ void add_range(
             "fixed64 refinement pocket declaration is cross-wired");
     }
     return BG_STATUS_OK;
+}
+
+[[nodiscard]] bg_status validate_create_output_range(
+    const bg_context &context,
+    const bg_docking_rigid_refinement_context_soa_v1 &rigid,
+    const bg_docking_torsion_v7_context_soa_v1 &torsion,
+    const bg_docking_scorer_v1_context_soa_v1 &scorer,
+    const bg_docking_pose_validity_context_soa_v1 &validity,
+    bg_docking_fixed64_refinement_pipeline_v1 **out_pipeline) noexcept {
+    try {
+        std::vector<MemoryRange> inputs;
+        inputs.reserve(61);
+        add_range(&inputs, &context, 1);
+        add_range(&inputs, &rigid, 1);
+        add_range(&inputs, &torsion, 1);
+        add_range(&inputs, &scorer, 1);
+        add_range(&inputs, &validity, 1);
+
+        const auto rigid_receptor_count =
+            checked_range_count(rigid.receptor_atom_count);
+        const auto rigid_ligand_count =
+            checked_range_count(rigid.ligand_atom_count);
+        add_range(&inputs, rigid.receptor_x_angstrom, rigid_receptor_count);
+        add_range(&inputs, rigid.receptor_y_angstrom, rigid_receptor_count);
+        add_range(&inputs, rigid.receptor_z_angstrom, rigid_receptor_count);
+        add_range(
+            &inputs, rigid.receptor_vdw_radius_angstrom, rigid_receptor_count);
+        add_range(
+            &inputs, rigid.ligand_vdw_radius_angstrom, rigid_ligand_count);
+
+        const auto torsion_receptor_count =
+            checked_range_count(torsion.receptor_atom_count);
+        const auto torsion_ligand_count =
+            checked_range_count(torsion.ligand_atom_count);
+        const auto torsion_rotor_count =
+            checked_range_count(torsion.rotor_count);
+        const auto torsion_internal_pair_count =
+            checked_range_count(torsion.internal_pair_count);
+        add_range(&inputs, torsion.receptor_x_angstrom, torsion_receptor_count);
+        add_range(&inputs, torsion.receptor_y_angstrom, torsion_receptor_count);
+        add_range(&inputs, torsion.receptor_z_angstrom, torsion_receptor_count);
+        add_range(
+            &inputs,
+            torsion.receptor_vdw_radius_angstrom,
+            torsion_receptor_count);
+        add_range(
+            &inputs, torsion.ligand_vdw_radius_angstrom, torsion_ligand_count);
+        add_range(&inputs, torsion.parent_atom_index, torsion_ligand_count);
+        add_range(
+            &inputs, torsion.rotatable_child_atom_index, torsion_rotor_count);
+        add_range(
+            &inputs,
+            torsion.internal_pair_atom_i,
+            torsion_internal_pair_count);
+        add_range(
+            &inputs,
+            torsion.internal_pair_atom_j,
+            torsion_internal_pair_count);
+
+        const auto scorer_receptor_count =
+            checked_range_count(scorer.receptor_atom_count);
+        const auto scorer_ligand_count =
+            checked_range_count(scorer.ligand_atom_count);
+        const auto scorer_receptor_donor_count =
+            checked_range_count(scorer.receptor_donor_count);
+        const auto scorer_ligand_donor_count =
+            checked_range_count(scorer.ligand_donor_count);
+        const auto scorer_exclusion_count =
+            checked_range_count(scorer.ligand_exclusion_count);
+        const auto scorer_rotor_count =
+            checked_range_count(scorer.rotor_count);
+        add_range(&inputs, scorer.receptor_x_angstrom, scorer_receptor_count);
+        add_range(&inputs, scorer.receptor_y_angstrom, scorer_receptor_count);
+        add_range(&inputs, scorer.receptor_z_angstrom, scorer_receptor_count);
+        add_range(
+            &inputs,
+            scorer.receptor_charge_elementary,
+            scorer_receptor_count);
+        add_range(
+            &inputs,
+            scorer.receptor_vdw_radius_angstrom,
+            scorer_receptor_count);
+        add_range(
+            &inputs,
+            scorer.receptor_epsilon_kcal_per_mol,
+            scorer_receptor_count);
+        add_range(
+            &inputs, scorer.receptor_hydrophobic, scorer_receptor_count);
+        add_range(&inputs, scorer.receptor_acceptor, scorer_receptor_count);
+        add_range(
+            &inputs,
+            scorer.ligand_reference_x_angstrom,
+            scorer_ligand_count);
+        add_range(
+            &inputs,
+            scorer.ligand_reference_y_angstrom,
+            scorer_ligand_count);
+        add_range(
+            &inputs,
+            scorer.ligand_reference_z_angstrom,
+            scorer_ligand_count);
+        add_range(
+            &inputs,
+            scorer.ligand_charge_elementary,
+            scorer_ligand_count);
+        add_range(
+            &inputs,
+            scorer.ligand_vdw_radius_angstrom,
+            scorer_ligand_count);
+        add_range(
+            &inputs,
+            scorer.ligand_epsilon_kcal_per_mol,
+            scorer_ligand_count);
+        add_range(&inputs, scorer.ligand_hydrophobic, scorer_ligand_count);
+        add_range(&inputs, scorer.ligand_acceptor, scorer_ligand_count);
+        add_range(
+            &inputs,
+            scorer.receptor_donor_atom_index,
+            scorer_receptor_donor_count);
+        add_range(
+            &inputs,
+            scorer.receptor_hydrogen_atom_index,
+            scorer_receptor_donor_count);
+        add_range(
+            &inputs,
+            scorer.ligand_donor_atom_index,
+            scorer_ligand_donor_count);
+        add_range(
+            &inputs,
+            scorer.ligand_hydrogen_atom_index,
+            scorer_ligand_donor_count);
+        add_range(
+            &inputs,
+            scorer.ligand_exclusion_atom_i,
+            scorer_exclusion_count);
+        add_range(
+            &inputs,
+            scorer.ligand_exclusion_atom_j,
+            scorer_exclusion_count);
+        add_range(&inputs, scorer.rotor_atom_i, scorer_rotor_count);
+        add_range(&inputs, scorer.rotor_atom_j, scorer_rotor_count);
+        add_range(&inputs, scorer.rotor_atom_k, scorer_rotor_count);
+        add_range(&inputs, scorer.rotor_atom_l, scorer_rotor_count);
+
+        const auto validity_receptor_count =
+            checked_range_count(validity.receptor_atom_count);
+        const auto validity_ligand_count =
+            checked_range_count(validity.ligand_atom_count);
+        const auto validity_bond_count =
+            checked_range_count(validity.bond_count);
+        const auto validity_exclusion_count =
+            checked_range_count(validity.ligand_exclusion_count);
+        const auto validity_chirality_count =
+            checked_range_count(validity.chirality_center_count);
+        add_range(
+            &inputs, validity.receptor_x_angstrom, validity_receptor_count);
+        add_range(
+            &inputs, validity.receptor_y_angstrom, validity_receptor_count);
+        add_range(
+            &inputs, validity.receptor_z_angstrom, validity_receptor_count);
+        add_range(
+            &inputs,
+            validity.receptor_vdw_radius_angstrom,
+            validity_receptor_count);
+        add_range(
+            &inputs,
+            validity.ligand_reference_x_angstrom,
+            validity_ligand_count);
+        add_range(
+            &inputs,
+            validity.ligand_reference_y_angstrom,
+            validity_ligand_count);
+        add_range(
+            &inputs,
+            validity.ligand_reference_z_angstrom,
+            validity_ligand_count);
+        add_range(
+            &inputs,
+            validity.ligand_vdw_radius_angstrom,
+            validity_ligand_count);
+        add_range(&inputs, validity.bond_atom_i, validity_bond_count);
+        add_range(&inputs, validity.bond_atom_j, validity_bond_count);
+        add_range(
+            &inputs,
+            validity.ligand_exclusion_atom_i,
+            validity_exclusion_count);
+        add_range(
+            &inputs,
+            validity.ligand_exclusion_atom_j,
+            validity_exclusion_count);
+        add_range(
+            &inputs,
+            validity.chirality_center_atom,
+            validity_chirality_count);
+        add_range(
+            &inputs, validity.chirality_atom_i, validity_chirality_count);
+        add_range(
+            &inputs, validity.chirality_atom_j, validity_chirality_count);
+        add_range(
+            &inputs, validity.chirality_atom_k, validity_chirality_count);
+
+        const MemoryRange output{out_pipeline, sizeof(*out_pipeline)};
+        for (const MemoryRange &input : inputs) {
+            if (ranges_overlap(output, input)) {
+                return fail(
+                    BG_STATUS_INVALID_ARGUMENT,
+                    "fixed64 refinement pipeline handle output overlaps a create input");
+            }
+        }
+        return BG_STATUS_OK;
+    } catch (const std::bad_alloc &) {
+        return fail(
+            BG_STATUS_OUT_OF_MEMORY,
+            "fixed64 refinement create range validation ran out of memory");
+    } catch (const std::length_error &) {
+        return fail(
+            BG_STATUS_CAPACITY_OVERFLOW,
+            "fixed64 refinement create range denominator overflows");
+    }
 }
 
 void destroy_components(
@@ -780,6 +1008,16 @@ bg_docking_fixed64_refinement_pipeline_v1_create(
                 BG_STATUS_INVALID_ARGUMENT,
                 "fixed64 refinement pipeline create pointers are misaligned");
         }
+        bg_status status = validate_create_output_range(
+            *context,
+            *rigid_descriptor,
+            *torsion_descriptor,
+            *scorer_descriptor,
+            *validity_descriptor,
+            out_pipeline);
+        if (status != BG_STATUS_OK) {
+            return status;
+        }
         *out_pipeline = nullptr;
         auto pipeline =
             std::make_unique<bg_docking_fixed64_refinement_pipeline_v1>();
@@ -787,7 +1025,7 @@ bg_docking_fixed64_refinement_pipeline_v1_create(
         pipeline->unit_system = context->unit_system;
         pipeline->device_ordinal = context->device_ordinal;
         pipeline->ligand_atom_count = rigid_descriptor->ligand_atom_count;
-        bg_status status = bg_docking_rigid_refinement_create(
+        status = bg_docking_rigid_refinement_create(
             context, rigid_descriptor, &pipeline->rigid);
         if (status != BG_STATUS_OK) {
             return status;
@@ -834,12 +1072,20 @@ extern "C" BG_API bg_status BG_CALL
 bg_docking_fixed64_refinement_pipeline_v1_get_backend(
     const bg_docking_fixed64_refinement_pipeline_v1 *pipeline,
     bg_backend *backend) BG_NOEXCEPT {
+    using namespace betelgeuze::native::docking::refinement_pipeline;
     return guarded_status([&]() -> bg_status {
         if (pipeline == nullptr || backend == nullptr ||
             !pointer_is_aligned(pipeline) || !pointer_is_aligned(backend)) {
             return fail(
                 BG_STATUS_INVALID_ARGUMENT,
                 "fixed64 refinement pipeline handle and backend output are invalid");
+        }
+        if (ranges_overlap(
+                {pipeline, sizeof(*pipeline)},
+                {backend, sizeof(*backend)})) {
+            return fail(
+                BG_STATUS_INVALID_ARGUMENT,
+                "fixed64 refinement backend output overlaps the pipeline handle");
         }
         *backend = pipeline->backend;
         return BG_STATUS_OK;
@@ -1291,11 +1537,11 @@ bg_docking_fixed64_refinement_pipeline_v1_run(
         copy_values(
             ranking_output->primary_slot_indices,
             primary_indices.data(),
-            local_ranking.primary_index_count);
+            kCandidateCount);
         copy_values(
             ranking_output->valid_slot_indices,
             valid_indices.data(),
-            local_ranking.valid_index_count);
+            kCandidateCount);
         ranking_output->row_count = kCandidateCount;
         ranking_output->primary_index_count = local_ranking.primary_index_count;
         ranking_output->valid_index_count = local_ranking.valid_index_count;
@@ -1304,11 +1550,11 @@ bg_docking_fixed64_refinement_pipeline_v1_run(
         copy_values(
             cluster_output->representative_slot_indices,
             representative_indices.data(),
-            local_cluster.representative_index_count);
+            kCandidateCount);
         copy_values(
             cluster_output->top_k_slot_indices,
             cluster_top_k_indices.data(),
-            local_cluster.top_k_index_count);
+            BG_DOCKING_STABLE_TOP_K_LIMIT);
         cluster_output->row_count = kCandidateCount;
         cluster_output->representative_index_count =
             local_cluster.representative_index_count;
