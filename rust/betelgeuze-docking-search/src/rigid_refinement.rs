@@ -464,7 +464,7 @@ pub fn refine_interaction_aware_rigid_v3(
     let mut coordinates = coordinates_angstrom.to_vec();
     let initial_penalty = penalty_and_direction(context, &coordinates, config.v2)?.0;
     let initial_centroid_offset =
-        norm(centroid(&coordinates).minus(context.pocket_center_angstrom));
+        checked_centroid_offset(&coordinates, context.pocket_center_angstrom)?;
     let maximum_centroid_offset = config
         .maximum_centroid_offset_angstrom
         .min(context.pocket_radius_angstrom);
@@ -511,7 +511,7 @@ pub fn refine_interaction_aware_rigid_v3(
                     }
                     let trial = translated(&coordinates, step);
                     let trial_centroid_offset =
-                        norm(centroid(&trial).minus(context.pocket_center_angstrom));
+                        checked_centroid_offset(&trial, context.pocket_center_angstrom)?;
                     if trial_centroid_offset > maximum_centroid_offset + config.v2.epsilon_angstrom
                     {
                         step_size *= 0.5;
@@ -589,7 +589,8 @@ pub fn refine_interaction_aware_rigid_v3(
         fallback_direction_step_count += usize::from(best.direction_index == 1);
     }
     let final_penalty = penalty_and_direction(context, &coordinates, config.v2)?.0;
-    let final_centroid_offset = norm(centroid(&coordinates).minus(context.pocket_center_angstrom));
+    let final_centroid_offset =
+        checked_centroid_offset(&coordinates, context.pocket_center_angstrom)?;
     Ok(NativeRigidRefinementOutcome {
         profile: NativeRigidRefinementProfile::V3TranslationRotation,
         coordinates_angstrom: coordinates,
@@ -1013,6 +1014,17 @@ fn centroid(coordinates: &[Vec3]) -> Vec3 {
     )
 }
 
+fn checked_centroid_offset(
+    coordinates: &[Vec3],
+    pocket_center: Vec3,
+) -> Result<f64, NativeRigidRefinementError> {
+    let value = norm(centroid(coordinates).minus(pocket_center));
+    if !value.is_finite() {
+        return Err(derived("rigid-refinement centroid offset overflowed"));
+    }
+    Ok(canonical_zero(value))
+}
+
 fn coordinates_bit_equal(left: &[Vec3], right: &[Vec3]) -> bool {
     left.len() == right.len()
         && left.iter().zip(right).all(|(left, right)| {
@@ -1234,6 +1246,18 @@ mod tests {
         assert_eq!(
             bad_steps.code(),
             NativeRigidRefinementErrorCode::InvalidInput
+        );
+
+        let overflowed_centroid = refine_interaction_aware_rigid_v3(
+            context(&receptor, &receptor_radii, &ligand_radii),
+            &[Vec3::new(1.0e200, 0.0, 0.0)],
+            1,
+            NativeRigidV3Config::default(),
+        )
+        .unwrap_err();
+        assert_eq!(
+            overflowed_centroid.code(),
+            NativeRigidRefinementErrorCode::NonFiniteDerivedValue
         );
     }
 }

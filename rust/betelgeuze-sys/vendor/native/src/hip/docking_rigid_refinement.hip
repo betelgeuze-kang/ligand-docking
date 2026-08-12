@@ -978,6 +978,9 @@ __device__ int32_t rigid_refine_v3(
         {context.pocket_center[0],
          context.pocket_center[1],
          context.pocket_center[2]}));
+    if (!isfinite(initial_centroid_offset)) {
+        return BG_DOCKING_RIGID_REFINEMENT_FAILURE_NONFINITE_DERIVED_VALUE;
+    }
     const double maximum_centroid_offset =
         fmin(config.maximum_centroid_offset_angstrom, context.pocket_radius);
     RigidVector3 total_shift{};
@@ -1073,6 +1076,9 @@ __device__ int32_t rigid_refine_v3(
                         {context.pocket_center[0],
                          context.pocket_center[1],
                          context.pocket_center[2]}));
+                    if (!isfinite(centroid_offset)) {
+                        return BG_DOCKING_RIGID_REFINEMENT_FAILURE_NONFINITE_DERIVED_VALUE;
+                    }
                     if (centroid_offset >
                         maximum_centroid_offset + config.v2.epsilon_angstrom) {
                         step_size *= 0.5;
@@ -1256,6 +1262,9 @@ __device__ int32_t rigid_refine_v3(
         {context.pocket_center[0],
          context.pocket_center[1],
          context.pocket_center[2]}));
+    if (!isfinite(final_centroid_offset)) {
+        return BG_DOCKING_RIGID_REFINEMENT_FAILURE_NONFINITE_DERIVED_VALUE;
+    }
     RigidVector3 total_rotation_vector{};
     failure = rigid_rotation_vector(total_rotation, &total_rotation_vector);
     if (failure != BG_DOCKING_RIGID_REFINEMENT_FAILURE_NONE) {
@@ -1783,7 +1792,13 @@ extern "C" int32_t BG_DOCKING_RIGID_CREATE(
 }
 
 extern "C" void BG_DOCKING_RIGID_DESTROY(void *opaque_state) {
-    delete static_cast<RigidState *>(opaque_state);
+    auto *state = static_cast<RigidState *>(opaque_state);
+    if (state == nullptr) {
+        return;
+    }
+    RigidDeviceGuard guard;
+    static_cast<void>(hipSetDevice(state->device_ordinal));
+    delete state;
 }
 
 extern "C" int32_t BG_DOCKING_RIGID_REFINE_FIXED64(

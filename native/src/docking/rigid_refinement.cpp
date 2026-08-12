@@ -188,6 +188,20 @@ struct BatchResult {
            std::isfinite(value.z);
 }
 
+[[nodiscard]] Vec3 centroid(
+    const std::vector<Vec3> &coordinates) noexcept;
+
+[[nodiscard]] double checked_centroid_offset(
+    const std::vector<Vec3> &coordinates,
+    Vec3 pocket_center) {
+    const double value = norm(minus(centroid(coordinates), pocket_center));
+    if (!std::isfinite(value)) {
+        throw LocalFailure{
+            BG_DOCKING_RIGID_REFINEMENT_FAILURE_NONFINITE_DERIVED_VALUE};
+    }
+    return canonical_zero(value);
+}
+
 [[nodiscard]] Quaternion normalized(Quaternion value) {
     const double magnitude = std::sqrt(
         value.x * value.x + value.y * value.y + value.z * value.z +
@@ -918,7 +932,7 @@ template <typename Type>
     const double initial_penalty =
         penalty_and_direction(state, coordinates, config.v2).first;
     const double initial_centroid_offset =
-        norm(minus(centroid(coordinates), state.pocket_center));
+        checked_centroid_offset(coordinates, state.pocket_center);
     const double maximum_centroid_offset =
         std::min(config.maximum_centroid_offset_angstrom, state.pocket_radius);
     Vec3 total_shift;
@@ -970,8 +984,9 @@ template <typename Type>
                         continue;
                     }
                     auto trial_coordinates = translated(coordinates, step);
-                    const double trial_centroid_offset = norm(minus(
-                        centroid(trial_coordinates), state.pocket_center));
+                    const double trial_centroid_offset =
+                        checked_centroid_offset(
+                            trial_coordinates, state.pocket_center);
                     if (trial_centroid_offset >
                         maximum_centroid_offset + config.v2.epsilon_angstrom) {
                         step_size *= 0.5;
@@ -1067,7 +1082,7 @@ template <typename Type>
     const double final_penalty =
         penalty_and_direction(state, coordinates, config.v2).first;
     const double final_centroid_offset =
-        norm(minus(centroid(coordinates), state.pocket_center));
+        checked_centroid_offset(coordinates, state.pocket_center);
     return {
         BG_DOCKING_RIGID_REFINEMENT_PROFILE_V3_TRANSLATION_ROTATION,
         std::move(coordinates),
