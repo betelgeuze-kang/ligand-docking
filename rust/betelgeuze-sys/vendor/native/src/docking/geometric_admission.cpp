@@ -261,6 +261,89 @@ template <typename Type>
     return BG_STATUS_OK;
 }
 
+[[nodiscard]] bg_status validate_create_output_range(
+    const bg_context &context,
+    const bg_docking_geometric_admission_context_soa_v1 &descriptor,
+    bg_docking_geometric_admission_v1 **out_admission) {
+    const std::size_t receptor_count =
+        static_cast<std::size_t>(descriptor.receptor_atom_count);
+    const std::size_t ligand_count =
+        static_cast<std::size_t>(descriptor.ligand_atom_count);
+    std::vector<MemoryRange> inputs;
+    inputs.reserve(9);
+    bg_status status = add_range(
+        &inputs,
+        &context,
+        1,
+        "geometric-admission context range overflowed");
+    if (status != BG_STATUS_OK) return status;
+    status = add_range(
+        &inputs,
+        &descriptor,
+        1,
+        "geometric-admission descriptor range overflowed");
+    if (status != BG_STATUS_OK) return status;
+    const std::array<const double *, 4> receptor_channels = {
+        descriptor.receptor_x_angstrom,
+        descriptor.receptor_y_angstrom,
+        descriptor.receptor_z_angstrom,
+        descriptor.receptor_vdw_radius_angstrom,
+    };
+    for (const double *channel : receptor_channels) {
+        status = add_range(
+            &inputs,
+            channel,
+            receptor_count,
+            "geometric-admission receptor input range overflowed");
+        if (status != BG_STATUS_OK) return status;
+    }
+    status = add_range(
+        &inputs,
+        descriptor.ligand_vdw_radius_angstrom,
+        ligand_count,
+        "geometric-admission ligand-radius range overflowed");
+    if (status != BG_STATUS_OK) return status;
+    status = add_range(
+        &inputs,
+        descriptor.ligand_heavy_atom_mask,
+        ligand_count,
+        "geometric-admission heavy-atom range overflowed");
+    if (status != BG_STATUS_OK) return status;
+    MemoryRange output{};
+    if (!memory_range(out_admission, 1, &output)) {
+        return fail(
+            BG_STATUS_CAPACITY_OVERFLOW,
+            "geometric-admission handle output range overflowed");
+    }
+    for (const MemoryRange input : inputs) {
+        if (overlaps(output, input)) {
+            return fail(
+                BG_STATUS_INVALID_ARGUMENT,
+                "geometric-admission handle output overlaps an input");
+        }
+    }
+    return BG_STATUS_OK;
+}
+
+[[nodiscard]] bg_status validate_backend_output_range(
+    const bg_docking_geometric_admission_v1 *admission,
+    bg_backend *backend) noexcept {
+    MemoryRange handle_range{};
+    MemoryRange output_range{};
+    if (!memory_range(admission, 1, &handle_range) ||
+        !memory_range(backend, 1, &output_range)) {
+        return fail(
+            BG_STATUS_CAPACITY_OVERFLOW,
+            "geometric-admission backend output range overflowed");
+    }
+    if (overlaps(handle_range, output_range)) {
+        return fail(
+            BG_STATUS_INVALID_ARGUMENT,
+            "geometric-admission backend output overlaps its handle");
+    }
+    return BG_STATUS_OK;
+}
+
 [[nodiscard]] bg_status create_cpp_context(
     const bg_docking_geometric_admission_context_soa_v1 &descriptor,
     void **out_state) {
@@ -438,6 +521,7 @@ void failure_row(
 }
 
 [[nodiscard]] bg_status validate_batch_and_output(
+    const bg_context &context,
     const bg_docking_geometric_admission_v1 &admission,
     const bg_docking_geometric_admission_candidate_batch_soa_v1 &candidates,
     bg_docking_geometric_admission_output_v1 &output) {
@@ -527,8 +611,17 @@ void failure_row(
     }
     std::vector<MemoryRange> inputs;
     std::vector<MemoryRange> outputs;
-    inputs.reserve(5);
+    inputs.reserve(7);
     outputs.reserve(2);
+    status = add_range(
+        &inputs, &context, 1, "geometric-admission context range overflowed");
+    if (status != BG_STATUS_OK) return status;
+    status = add_range(
+        &inputs,
+        &admission,
+        1,
+        "geometric-admission handle range overflowed");
+    if (status != BG_STATUS_OK) return status;
     status = add_range(
         &inputs, &candidates, 1, "geometric-admission input range overflowed");
     if (status != BG_STATUS_OK) return status;
@@ -689,7 +782,6 @@ bg_docking_geometric_admission_v1_create(
     bg_docking_geometric_admission_v1 **out_admission) BG_NOEXCEPT {
     using namespace betelgeuze::native;
     using namespace betelgeuze::native::docking::geometric_admission;
-    if (out_admission != nullptr) *out_admission = nullptr;
     return guarded_status([&]() -> bg_status {
         if (context == nullptr || descriptor == nullptr ||
             out_admission == nullptr) {
@@ -697,8 +789,19 @@ bg_docking_geometric_admission_v1_create(
                 BG_STATUS_INVALID_ARGUMENT,
                 "geometric-admission create inputs and output must not be null");
         }
+        if (!pointer_is_aligned(context) ||
+            !pointer_is_aligned(descriptor) ||
+            !pointer_is_aligned(out_admission)) {
+            return fail(
+                BG_STATUS_INVALID_ARGUMENT,
+                "geometric-admission create pointers are misaligned");
+        }
         bg_status status = validate_context_descriptor(*descriptor);
         if (status != BG_STATUS_OK) return status;
+        status = validate_create_output_range(
+            *context, *descriptor, out_admission);
+        if (status != BG_STATUS_OK) return status;
+        *out_admission = nullptr;
         if (context->unit_system != descriptor->unit_system) {
             return fail(
                 BG_STATUS_INVALID_ARGUMENT,
@@ -823,12 +926,21 @@ bg_docking_geometric_admission_v1_get_backend(
     const bg_docking_geometric_admission_v1 *admission,
     bg_backend *backend) BG_NOEXCEPT {
     using namespace betelgeuze::native;
+    using namespace betelgeuze::native::docking::geometric_admission;
     return guarded_status([&]() -> bg_status {
         if (admission == nullptr || backend == nullptr) {
             return fail(
                 BG_STATUS_INVALID_ARGUMENT,
                 "geometric-admission handle and backend output must not be null");
         }
+        if (!pointer_is_aligned(admission) || !pointer_is_aligned(backend)) {
+            return fail(
+                BG_STATUS_INVALID_ARGUMENT,
+                "geometric-admission handle or backend output is misaligned");
+        }
+        const bg_status range_status =
+            validate_backend_output_range(admission, backend);
+        if (range_status != BG_STATUS_OK) return range_status;
         *backend = admission->backend;
         return BG_STATUS_OK;
     });
@@ -849,6 +961,14 @@ bg_docking_geometric_admission_v1_evaluate_fixed64(
                 BG_STATUS_INVALID_ARGUMENT,
                 "geometric-admission evaluation inputs and output must not be null");
         }
+        if (!pointer_is_aligned(context) ||
+            !pointer_is_aligned(admission) ||
+            !pointer_is_aligned(candidates) ||
+            !pointer_is_aligned(output)) {
+            return fail(
+                BG_STATUS_INVALID_ARGUMENT,
+                "geometric-admission evaluation descriptors are misaligned");
+        }
         if (context->backend != admission->backend ||
             context->unit_system != admission->unit_system ||
             context->device_ordinal != admission->device_ordinal ||
@@ -857,8 +977,8 @@ bg_docking_geometric_admission_v1_evaluate_fixed64(
                 BG_STATUS_INVALID_ARGUMENT,
                 "geometric-admission handle is cross-wired to another context");
         }
-        bg_status status =
-            validate_batch_and_output(*admission, *candidates, *output);
+        bg_status status = validate_batch_and_output(
+            *context, *admission, *candidates, *output);
         if (status != BG_STATUS_OK) return status;
         std::array<bg_docking_geometric_admission_row_v1, kCandidateCount>
             rows{};
