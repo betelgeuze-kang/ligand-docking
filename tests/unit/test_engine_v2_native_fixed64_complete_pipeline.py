@@ -8,7 +8,9 @@ import pytest
 
 from betelgeuze_engine_v2.docking.native_fixed64_consumers import (
     NativeFixed64CliAdapter,
+    NativeFixed64ConsumerError,
     NativeFixed64DiagnosticBenchmarkAdapter,
+    NativeFixed64EvidenceV1,
     NativeFixed64ProductShadowAdapter,
     NativeFixed64PythonApi,
 )
@@ -162,6 +164,43 @@ def test_all_surfaces_share_complete_native_pipeline_receipt(native) -> None:
     assert len({item.consumer_view_receipt_sha256 for item in results}) == 4
     assert results[-1].to_dict()["operator_second_opinion_authorized"] is True
     assert all(item.to_dict()["existing_rank_auto_change_authorized"] is False for item in results)
+
+
+@pytest.mark.parametrize(
+    ("field", "bad_value"),
+    (
+        ("backend", "auto"),
+        ("result_dependent_input_consumed", True),
+        ("fallback_allowed", True),
+        ("multi_anchor_consumed", True),
+        ("denominator_preserved", False),
+        ("benchmark_execution_authorized", True),
+        ("scientific_claim_authorized", True),
+    ),
+)
+def test_complete_python_facade_rejects_native_boundary_drift(
+    native,
+    field: str,
+    bad_value: object,
+) -> None:
+    document = native.native_fixed64_complete_pipeline_v1(_input())
+    document[field] = bad_value
+
+    with pytest.raises(NativeFixed64ConsumerError):
+        NativeFixed64EvidenceV1(surface="api", _document=document)
+
+
+def test_complete_python_facade_rejects_reordered_candidate_denominator(native) -> None:
+    document = native.native_fixed64_complete_pipeline_v1(_input())
+    document["candidates"][0]["slot_index"] = 1
+
+    with pytest.raises(NativeFixed64ConsumerError, match="reordered or incomplete"):
+        NativeFixed64EvidenceV1(surface="api", _document=document)
+
+    document = native.native_fixed64_complete_pipeline_v1(_input())
+    document["candidates"][0]["slot_index"] = False
+    with pytest.raises(NativeFixed64ConsumerError, match="reordered or incomplete"):
+        NativeFixed64EvidenceV1(surface="api", _document=document)
 
 
 def test_cli_routes_complete_schema_without_python_science(native, tmp_path) -> None:

@@ -73,20 +73,28 @@ class NativeFixed64EvidenceV1:
         if not isinstance(self._document, Mapping):
             raise TypeError("native evidence must be a mapping")
         document = self._document
+        schema_id = document.get("schema_id")
+        candidates = document.get("candidates")
         if (
-            document.get("schema_id")
+            schema_id
             not in {
                 _COMPLETE_EVIDENCE_SCHEMA_ID,
                 _COMPATIBILITY_EVIDENCE_SCHEMA_ID,
             }
             or document.get("consumer") != self.surface
+            or document.get("backend")
+            not in {"cpp_cpu_reference", "rust_cpu", "hip_safe", "hip_fast"}
             or document.get("candidate_denominator") != 64
-            or not isinstance(document.get("candidates"), (list, tuple))
-            or len(document["candidates"]) != 64  # type: ignore[arg-type]
+            or not isinstance(candidates, (list, tuple))
+            or len(candidates) != 64
             or document.get("evidence_display_authorized") is not True
             or document.get("operator_second_opinion_authorized") is not (self.surface == "product_shadow")
         ):
             raise NativeFixed64ConsumerError("native fixed64 consumer evidence is cross-wired")
+        for slot_index, candidate in enumerate(candidates):
+            observed_slot = candidate.get("slot_index") if isinstance(candidate, Mapping) else None
+            if type(observed_slot) is not int or observed_slot != slot_index:
+                raise NativeFixed64ConsumerError("native fixed64 candidate denominator is reordered or incomplete")
         for field in (
             "reservation_authorized",
             "molecular_execution_authorized",
@@ -96,6 +104,18 @@ class NativeFixed64EvidenceV1:
         ):
             if document.get(field) is not False:
                 raise NativeFixed64ConsumerError(f"native fixed64 authority field {field} changed")
+        if schema_id == _COMPLETE_EVIDENCE_SCHEMA_ID:
+            for field in (
+                "result_dependent_input_consumed",
+                "fallback_allowed",
+                "multi_anchor_consumed",
+                "benchmark_execution_authorized",
+                "scientific_claim_authorized",
+            ):
+                if document.get(field) is not False:
+                    raise NativeFixed64ConsumerError(f"native fixed64 authority field {field} changed")
+            if document.get("denominator_preserved") is not True:
+                raise NativeFixed64ConsumerError("native fixed64 denominator preservation changed")
         for field in (
             "pipeline_receipt_sha256",
             "consumer_view_receipt_sha256",
