@@ -38,7 +38,9 @@ dependencies = [
 name = "betelgeuze-runtime"
 version = "0.1.0"
 dependencies = [
+ "betelgeuze-docking-search",
  "betelgeuze-sys",
+ "sha2",
 ]
 
 [[package]]
