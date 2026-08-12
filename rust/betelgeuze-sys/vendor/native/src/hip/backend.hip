@@ -3553,6 +3553,13 @@ uint64_t live_allocation_count(const bg_context &context) noexcept {
 
 }  // namespace betelgeuze::native::hip
 
+#define BG_DOCKING_FIXED64_SO3_GENERATE \
+    bg_hip_fast_docking_fixed64_so3_v1_generate
+#define BG_DOCKING_FIXED64_SO3_LANE "hip_fast"
+#include "docking_fixed64_so3.hip"
+#undef BG_DOCKING_FIXED64_SO3_LANE
+#undef BG_DOCKING_FIXED64_SO3_GENERATE
+
 #define BG_DOCKING_GEOMETRIC_CREATE \
     bg_hip_fast_docking_geometric_admission_v1_create
 #define BG_DOCKING_GEOMETRIC_DESTROY \

@@ -20,7 +20,7 @@ static BG_RUST_CPU_PROVIDER_LINK_ANCHOR: extern "C" fn() -> u32 =
     betelgeuze_cpu_kernel::bg_rust_cpu_provider_abi_version_v1;
 
 pub const BG_ABI_VERSION_MAJOR: u32 = 1;
-pub const BG_ABI_VERSION_MINOR: u32 = 14;
+pub const BG_ABI_VERSION_MINOR: u32 = 15;
 pub const BG_ABI_VERSION: u32 = 1;
 
 pub const BG_CANONICAL_LENGTH_UNIT: &[u8] = b"angstrom\0";
@@ -73,6 +73,7 @@ pub const BG_DOCKING_FIXED64_FEATURE_KIND_COUNT: u32 = 12;
 pub const BG_DOCKING_FIXED64_MAX_REQUIREMENTS: u32 = 2;
 pub const BG_DOCKING_FIXED64_MAX_MISSING_FEATURES: u32 = 2;
 pub const BG_DOCKING_FIXED64_MAX_SELECTED_SOURCE_RECEIPTS: u32 = 2;
+pub const BG_DOCKING_FIXED64_SO3_ORIENTATION_COUNT: u32 = 64;
 
 pub type bg_docking_fixed64_lane = i32;
 pub const BG_DOCKING_FIXED64_LANE_POCKET_CENTERED_CONTROLS: bg_docking_fixed64_lane = 0;
@@ -146,6 +147,14 @@ pub type bg_docking_fixed64_allocation_row_status = i32;
 pub const BG_DOCKING_FIXED64_ALLOCATION_ROW_READY: bg_docking_fixed64_allocation_row_status = 1;
 pub const BG_DOCKING_FIXED64_ALLOCATION_ROW_TYPED_FAILURE:
     bg_docking_fixed64_allocation_row_status = 2;
+
+pub type bg_docking_fixed64_so3_row_status = i32;
+pub const BG_DOCKING_FIXED64_SO3_ROW_GENERATED: bg_docking_fixed64_so3_row_status = 1;
+pub const BG_DOCKING_FIXED64_SO3_ROW_TYPED_FAILURE: bg_docking_fixed64_so3_row_status = 2;
+pub type bg_docking_fixed64_so3_failure = i32;
+pub const BG_DOCKING_FIXED64_SO3_FAILURE_NONE: bg_docking_fixed64_so3_failure = 0;
+pub const BG_DOCKING_FIXED64_SO3_FAILURE_SEQUENCE_EXHAUSTED: bg_docking_fixed64_so3_failure = 1;
+pub const BG_DOCKING_FIXED64_SO3_FAILURE_NONFINITE_QUATERNION: bg_docking_fixed64_so3_failure = 2;
 
 pub type bg_docking_geometric_admission_candidate_state = i32;
 pub const BG_DOCKING_GEOMETRIC_ADMISSION_CANDIDATE_UPSTREAM_FAILURE:
@@ -782,6 +791,61 @@ pub struct bg_docking_fixed64_allocation_output_v1 {
     pub customer_pose_emission_authorized: u8,
     pub production_claim_authorized: u8,
     pub reserved0: u8,
+    pub reserved: [u64; 8],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_fixed64_so3_input_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub source_seed_sha256: [u8; 32],
+    pub reserved: [u64; 8],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_fixed64_so3_row_v1 {
+    pub orientation_index: u32,
+    pub status: bg_docking_fixed64_so3_row_status,
+    pub failure_code: bg_docking_fixed64_so3_failure,
+    pub reserved0: u32,
+    pub raw_sequence_index: u64,
+    pub quaternion_x: f64,
+    pub quaternion_y: f64,
+    pub quaternion_z: f64,
+    pub quaternion_w: f64,
+    pub norm_error: f64,
+    pub row_receipt_sha256: [u8; 32],
+    pub result_dependent_input_consumed: u8,
+    pub duplicate_orientation_emitted: u8,
+    pub denominator_preserved: u8,
+    pub molecular_execution_authorized: u8,
+    pub reservation_authorized: u8,
+    pub benchmark_execution_authorized: u8,
+    pub production_claim_authorized: u8,
+    pub reserved1: u8,
+    pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_docking_fixed64_so3_output_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub row_capacity: u64,
+    pub row_count: u64,
+    pub rows: *mut bg_docking_fixed64_so3_row_v1,
+    pub backend: bg_backend,
+    pub reserved0: u32,
+    pub batch_receipt_sha256: [u8; 32],
+    pub result_dependent_input_consumed: u8,
+    pub denominator_preserved: u8,
+    pub molecular_execution_authorized: u8,
+    pub reservation_authorized: u8,
+    pub benchmark_execution_authorized: u8,
+    pub production_claim_authorized: u8,
+    pub reserved1: [u8; 2],
     pub reserved: [u64; 8],
 }
 
@@ -1653,6 +1717,16 @@ unsafe extern "C" {
         caller_struct_size: usize,
         caller_abi_version: u32,
     ) -> bg_status;
+    pub fn bg_docking_fixed64_so3_input_v1_init(
+        input: *mut bg_docking_fixed64_so3_input_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_docking_fixed64_so3_output_v1_init(
+        output: *mut bg_docking_fixed64_so3_output_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
     pub fn bg_docking_geometric_admission_context_soa_v1_init(
         descriptor: *mut bg_docking_geometric_admission_context_soa_v1,
         caller_struct_size: usize,
@@ -1785,6 +1859,11 @@ unsafe extern "C" {
     pub fn bg_docking_fixed64_allocation_v1_build(
         input: *const bg_docking_fixed64_allocation_input_v1,
         output: *mut bg_docking_fixed64_allocation_output_v1,
+    ) -> bg_status;
+    pub fn bg_docking_fixed64_so3_v1_generate(
+        context: *const bg_context,
+        input: *const bg_docking_fixed64_so3_input_v1,
+        output: *mut bg_docking_fixed64_so3_output_v1,
     ) -> bg_status;
 
     pub fn bg_docking_geometric_admission_v1_create(

@@ -80,6 +80,8 @@ fn descriptor_initializers_reject_incompatible_callers_without_writing() {
         assert_initializer_exact(bg_dynamics_report_v1_init);
         assert_initializer_exact(bg_docking_fixed64_allocation_input_v1_init);
         assert_initializer_exact(bg_docking_fixed64_allocation_output_v1_init);
+        assert_initializer_exact(bg_docking_fixed64_so3_input_v1_init);
+        assert_initializer_exact(bg_docking_fixed64_so3_output_v1_init);
         assert_initializer_exact(bg_docking_geometric_admission_context_soa_v1_init);
         assert_initializer_exact(bg_docking_geometric_admission_candidate_batch_soa_v1_init);
         assert_initializer_exact(bg_docking_geometric_admission_output_v1_init);

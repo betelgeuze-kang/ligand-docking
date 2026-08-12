@@ -56,7 +56,7 @@ extern "C" {
 #endif
 
 #define BG_ABI_VERSION_MAJOR UINT32_C(1)
-#define BG_ABI_VERSION_MINOR UINT32_C(14)
+#define BG_ABI_VERSION_MINOR UINT32_C(15)
 #define BG_ABI_VERSION UINT32_C(1)
 
 #define BG_CANONICAL_LENGTH_UNIT "angstrom"
@@ -123,6 +123,7 @@ enum {
 #define BG_DOCKING_FIXED64_MAX_REQUIREMENTS UINT32_C(2)
 #define BG_DOCKING_FIXED64_MAX_MISSING_FEATURES UINT32_C(2)
 #define BG_DOCKING_FIXED64_MAX_SELECTED_SOURCE_RECEIPTS UINT32_C(2)
+#define BG_DOCKING_FIXED64_SO3_ORIENTATION_COUNT UINT32_C(64)
 
 /* Frozen result-independent mixed64 proposal allocation. */
 typedef int32_t bg_docking_fixed64_lane;
@@ -201,6 +202,20 @@ typedef int32_t bg_docking_fixed64_allocation_row_status;
 enum {
     BG_DOCKING_FIXED64_ALLOCATION_ROW_READY = 1,
     BG_DOCKING_FIXED64_ALLOCATION_ROW_TYPED_FAILURE = 2
+};
+
+/* Native low-discrepancy SO(3) sequence row. */
+typedef int32_t bg_docking_fixed64_so3_row_status;
+enum {
+    BG_DOCKING_FIXED64_SO3_ROW_GENERATED = 1,
+    BG_DOCKING_FIXED64_SO3_ROW_TYPED_FAILURE = 2
+};
+
+typedef int32_t bg_docking_fixed64_so3_failure;
+enum {
+    BG_DOCKING_FIXED64_SO3_FAILURE_NONE = 0,
+    BG_DOCKING_FIXED64_SO3_FAILURE_SEQUENCE_EXHAUSTED = 1,
+    BG_DOCKING_FIXED64_SO3_FAILURE_NONFINITE_QUATERNION = 2
 };
 
 /* Frozen fixed64 pre/post-refinement geometric-admission semantics. */
@@ -869,6 +884,62 @@ typedef struct bg_docking_fixed64_allocation_output_v1 {
     uint8_t reserved0;
     uint64_t reserved[8];
 } bg_docking_fixed64_allocation_output_v1;
+
+/*
+ * One source-bound, result-independent deterministic SO(3) prefix.  The seed
+ * is a caller-derived SHA-256 identity; the native kernel never consumes a
+ * score, validity result, rank, wall clock, or random device state.
+ */
+typedef struct bg_docking_fixed64_so3_input_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    uint8_t source_seed_sha256[32];
+    uint64_t reserved[8];
+} bg_docking_fixed64_so3_input_v1;
+
+typedef struct bg_docking_fixed64_so3_row_v1 {
+    uint32_t orientation_index;
+    bg_docking_fixed64_so3_row_status status;
+    bg_docking_fixed64_so3_failure failure_code;
+    uint32_t reserved0;
+    uint64_t raw_sequence_index;
+    double quaternion_x;
+    double quaternion_y;
+    double quaternion_z;
+    double quaternion_w;
+    double norm_error;
+    uint8_t row_receipt_sha256[32];
+    uint8_t result_dependent_input_consumed;
+    uint8_t duplicate_orientation_emitted;
+    uint8_t denominator_preserved;
+    uint8_t molecular_execution_authorized;
+    uint8_t reservation_authorized;
+    uint8_t benchmark_execution_authorized;
+    uint8_t production_claim_authorized;
+    uint8_t reserved1;
+    uint64_t reserved[4];
+} bg_docking_fixed64_so3_row_v1;
+
+/* Caller-owned transactional output. All 64 rows and the batch receipt commit
+ * together; failure leaves every caller byte unchanged. */
+typedef struct bg_docking_fixed64_so3_output_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    uint64_t row_capacity;
+    uint64_t row_count;
+    bg_docking_fixed64_so3_row_v1 *rows;
+    bg_backend backend;
+    uint32_t reserved0;
+    uint8_t batch_receipt_sha256[32];
+    uint8_t result_dependent_input_consumed;
+    uint8_t denominator_preserved;
+    uint8_t molecular_execution_authorized;
+    uint8_t reservation_authorized;
+    uint8_t benchmark_execution_authorized;
+    uint8_t production_claim_authorized;
+    uint8_t reserved1[2];
+    uint64_t reserved[8];
+} bg_docking_fixed64_so3_output_v1;
 
 /*
  * Persistent fixed64 geometric-admission context. All receptor coordinates,
@@ -1810,6 +1881,14 @@ BG_API bg_status BG_CALL bg_docking_fixed64_allocation_output_v1_init(
     bg_docking_fixed64_allocation_output_v1 *output,
     size_t caller_struct_size,
     uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_fixed64_so3_input_v1_init(
+    bg_docking_fixed64_so3_input_v1 *input,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_fixed64_so3_output_v1_init(
+    bg_docking_fixed64_so3_output_v1 *output,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
 BG_API bg_status BG_CALL bg_docking_geometric_admission_context_soa_v1_init(
     bg_docking_geometric_admission_context_soa_v1 *descriptor,
     size_t caller_struct_size,
@@ -1952,6 +2031,16 @@ BG_API bg_status BG_CALL bg_docking_fixed64_refinement_output_v1_init(
         (output), \
         sizeof(bg_docking_fixed64_allocation_output_v1), \
         BG_ABI_VERSION)
+#  define bg_docking_fixed64_so3_input_v1_init(input) \
+    bg_docking_fixed64_so3_input_v1_init( \
+        (input), \
+        sizeof(bg_docking_fixed64_so3_input_v1), \
+        BG_ABI_VERSION)
+#  define bg_docking_fixed64_so3_output_v1_init(output) \
+    bg_docking_fixed64_so3_output_v1_init( \
+        (output), \
+        sizeof(bg_docking_fixed64_so3_output_v1), \
+        BG_ABI_VERSION)
 #  define bg_docking_geometric_admission_context_soa_v1_init(descriptor) \
     bg_docking_geometric_admission_context_soa_v1_init( \
         (descriptor), \
@@ -2082,6 +2171,17 @@ BG_API bg_status BG_CALL bg_context_get_unit_system(
 BG_API bg_status BG_CALL bg_docking_fixed64_allocation_v1_build(
     const bg_docking_fixed64_allocation_input_v1 *input,
     bg_docking_fixed64_allocation_output_v1 *output) BG_NOEXCEPT;
+
+/*
+ * Generate the canonical 64-orientation low-discrepancy SO(3) prefix on the
+ * context's explicit C++, Rust, hip_safe, or hip_fast backend. HIP lanes run
+ * an actual device kernel and never fall back to CPU. Receipts bind the exact
+ * backend output while parity qualification compares quaternion semantics.
+ */
+BG_API bg_status BG_CALL bg_docking_fixed64_so3_v1_generate(
+    const bg_context *context,
+    const bg_docking_fixed64_so3_input_v1 *input,
+    bg_docking_fixed64_so3_output_v1 *output) BG_NOEXCEPT;
 
 /*
  * The same persistent full-Cartesian geometric gate is used before and after

@@ -149,6 +149,11 @@ int32_t bg_rust_cpu_docking_fixed64_allocation_v1_build(
     uint64_t *out_typed_failure_count,
     bg_rust_cpu_error_v1 *out_error);
 
+int32_t bg_rust_cpu_docking_fixed64_so3_v1_generate(
+    const bg_docking_fixed64_so3_input_v1 *input,
+    bg_docking_fixed64_so3_row_v1 *out_rows,
+    bg_rust_cpu_error_v1 *out_error);
+
 int32_t bg_rust_cpu_docking_scorer_v1_create(
     const bg_docking_scorer_v1_context_soa_v1 *descriptor,
     void **out_state,

@@ -85,6 +85,14 @@ result-independent and grants no molecular, reservation, benchmark, product
 rank, pose-emission, or claim authority; coordinate generation is a later
 backend-bound numerical stage.
 
+ABI 1.15 adds that first backend-bound global-orientation primitive. A
+source-derived SHA-256 seed drives a Halton 2/3/5 and Shoemake SO(3) prefix;
+every C++, Rust CPU, `hip_safe`, and `hip_fast` implementation emits 64
+index-stable, geodesically unique canonical quaternions. HIP lanes execute an
+actual device kernel and never fall back. Exact backend receipts commit only
+after the public boundary revalidates norm, canonical sign, monotonic raw
+indices, uniqueness, denominator preservation, and authority=false.
+
 The term order is:
 
 1. typed van der Waals

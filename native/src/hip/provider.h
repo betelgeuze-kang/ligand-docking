@@ -141,6 +141,13 @@ int32_t bg_hip_safe_evaluate_v1(
     char *error_message,
     size_t error_capacity);
 
+int32_t bg_hip_safe_docking_fixed64_so3_v1_generate(
+    int32_t device_ordinal,
+    const bg_docking_fixed64_so3_input_v1 *input,
+    bg_docking_fixed64_so3_row_v1 *out_rows,
+    char *error_message,
+    size_t error_capacity);
+
 int32_t bg_hip_safe_docking_geometric_admission_v1_create(
     int32_t device_ordinal,
     const bg_docking_geometric_admission_context_soa_v1 *descriptor,
@@ -270,6 +277,13 @@ int32_t bg_hip_safe_docking_torsion_v7_refine_fixed64(
     double *out_final_y_angstrom,
     double *out_final_z_angstrom,
     double *out_final_torsion_angles_radians,
+    char *error_message,
+    size_t error_capacity);
+
+int32_t bg_hip_fast_docking_fixed64_so3_v1_generate(
+    int32_t device_ordinal,
+    const bg_docking_fixed64_so3_input_v1 *input,
+    bg_docking_fixed64_so3_row_v1 *out_rows,
     char *error_message,
     size_t error_capacity);
 

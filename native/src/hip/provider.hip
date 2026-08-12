@@ -1152,6 +1152,13 @@ extern "C" int32_t bg_hip_safe_evaluate_v1(
 #undef BG_HIP_COPY_INPUT
 }
 
+#define BG_DOCKING_FIXED64_SO3_GENERATE \
+    bg_hip_safe_docking_fixed64_so3_v1_generate
+#define BG_DOCKING_FIXED64_SO3_LANE "hip_safe"
+#include "docking_fixed64_so3.hip"
+#undef BG_DOCKING_FIXED64_SO3_LANE
+#undef BG_DOCKING_FIXED64_SO3_GENERATE
+
 #define BG_DOCKING_GEOMETRIC_CREATE \
     bg_hip_safe_docking_geometric_admission_v1_create
 #define BG_DOCKING_GEOMETRIC_DESTROY \

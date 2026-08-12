@@ -5,7 +5,7 @@
 
 _Static_assert(BG_ABI_VERSION == UINT32_C(1), "unexpected ABI version");
 _Static_assert(BG_ABI_VERSION_MAJOR == UINT32_C(1), "unexpected ABI major version");
-_Static_assert(BG_ABI_VERSION_MINOR == UINT32_C(14), "unexpected ABI minor version");
+_Static_assert(BG_ABI_VERSION_MINOR == UINT32_C(15), "unexpected ABI minor version");
 _Static_assert(BG_STATUS_OK == 0, "unexpected success status");
 _Static_assert(BG_STATUS_NUMERICAL_ERROR == 10, "unexpected numerical status");
 _Static_assert(BG_BACKEND_CPU == 1, "unexpected CPU backend value");
@@ -37,6 +37,12 @@ _Static_assert(
 _Static_assert(
     sizeof(bg_docking_fixed64_allocation_row_status) == sizeof(int32_t),
     "fixed64 allocation row status width changed");
+_Static_assert(
+    sizeof(bg_docking_fixed64_so3_row_status) == sizeof(int32_t),
+    "fixed64 SO3 row status width changed");
+_Static_assert(
+    sizeof(bg_docking_fixed64_so3_failure) == sizeof(int32_t),
+    "fixed64 SO3 failure width changed");
 _Static_assert(sizeof(bg_integrator) == sizeof(int32_t), "bg_integrator width changed");
 _Static_assert(
     sizeof(bg_docking_geometric_admission_candidate_state) == sizeof(int32_t),
@@ -102,6 +108,7 @@ _Static_assert(
     sizeof(bg_docking_fixed64_refinement_coordinate_origin) == sizeof(int32_t),
     "fixed64 refinement coordinate origin width changed");
 _Static_assert(BG_DOCKING_FIXED64_CANDIDATE_COUNT == 64, "bad fixed64 denominator");
+_Static_assert(BG_DOCKING_FIXED64_SO3_ORIENTATION_COUNT == 64, "bad SO3 denominator");
 _Static_assert(BG_DOCKING_SCORER_V1_TERM_COUNT == 8, "bad ScorerV1 term count");
 _Static_assert(BG_DOCKING_STABLE_TOP_K_LIMIT == 5, "bad stable Top-K limit");
 _Static_assert(BG_DOCKING_RMSD_CLUSTER_TOP_K_LIMIT == 5, "bad RMSD-cluster Top-K limit");
@@ -145,6 +152,15 @@ _Static_assert(
 _Static_assert(
     sizeof(bg_docking_fixed64_allocation_output_v1) == 184,
     "fixed64 allocation output ABI changed");
+_Static_assert(
+    sizeof(bg_docking_fixed64_so3_input_v1) == 104,
+    "fixed64 SO3 input ABI changed");
+_Static_assert(
+    sizeof(bg_docking_fixed64_so3_row_v1) == 136,
+    "fixed64 SO3 row ABI changed");
+_Static_assert(
+    sizeof(bg_docking_fixed64_so3_output_v1) == 144,
+    "fixed64 SO3 output ABI changed");
 _Static_assert(
     sizeof(bg_docking_geometric_admission_context_soa_v1) == 320,
     "geometric-admission context ABI changed");
