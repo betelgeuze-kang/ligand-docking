@@ -932,7 +932,7 @@ fn parse_consumer(value: &str) -> PyResult<NativeFixed64Consumer> {
     }
 }
 
-fn require_exact_keys(dict: &PyDict, expected: &[&str], name: &str) -> PyResult<()> {
+pub(crate) fn require_exact_keys(dict: &PyDict, expected: &[&str], name: &str) -> PyResult<()> {
     let observed = dict
         .iter()
         .map(|(key, _)| {
@@ -951,18 +951,18 @@ fn require_exact_keys(dict: &PyDict, expected: &[&str], name: &str) -> PyResult<
     Ok(())
 }
 
-fn dict_value<'py>(dict: &'py PyDict, key: &str) -> PyResult<&'py PyAny> {
+pub(crate) fn dict_value<'py>(dict: &'py PyDict, key: &str) -> PyResult<&'py PyAny> {
     dict.get_item(key)?
         .ok_or_else(|| input_error(&format!("input field {key} is missing")))
 }
 
-fn dict_string<'py>(dict: &'py PyDict, key: &str) -> PyResult<&'py str> {
+pub(crate) fn dict_string<'py>(dict: &'py PyDict, key: &str) -> PyResult<&'py str> {
     dict_value(dict, key)?
         .extract::<&str>()
         .map_err(|_| input_error(&format!("{key} must be a string")))
 }
 
-fn dict_exact_bool(dict: &PyDict, key: &str) -> PyResult<bool> {
+pub(crate) fn dict_exact_bool(dict: &PyDict, key: &str) -> PyResult<bool> {
     let value = dict_value(dict, key)?;
     if !value.is_instance_of::<PyBool>() {
         return Err(input_error(&format!("{key} must be an exact bool")));
@@ -972,7 +972,7 @@ fn dict_exact_bool(dict: &PyDict, key: &str) -> PyResult<bool> {
         .map_err(|_| input_error(&format!("{key} must be an exact bool")))
 }
 
-fn dict_f64(dict: &PyDict, key: &str) -> PyResult<f64> {
+pub(crate) fn dict_f64(dict: &PyDict, key: &str) -> PyResult<f64> {
     let value = dict_value(dict, key)?;
     if value.is_instance_of::<PyBool>() {
         return Err(input_error(&format!("{key} must be numeric")));
@@ -986,7 +986,7 @@ fn dict_f64(dict: &PyDict, key: &str) -> PyResult<f64> {
     Ok(output)
 }
 
-fn dict_usize(dict: &PyDict, key: &str) -> PyResult<usize> {
+pub(crate) fn dict_usize(dict: &PyDict, key: &str) -> PyResult<usize> {
     let value = dict_value(dict, key)?;
     if value.is_instance_of::<PyBool>() {
         return Err(input_error(&format!("{key} must be an integer")));
@@ -996,19 +996,19 @@ fn dict_usize(dict: &PyDict, key: &str) -> PyResult<usize> {
         .map_err(|_| input_error(&format!("{key} must be an integer")))
 }
 
-fn dict_u32(dict: &PyDict, key: &str) -> PyResult<u32> {
+pub(crate) fn dict_u32(dict: &PyDict, key: &str) -> PyResult<u32> {
     u32::try_from(dict_usize(dict, key)?).map_err(|_| input_error(&format!("{key} exceeds u32")))
 }
 
-fn dict_u8(dict: &PyDict, key: &str) -> PyResult<u8> {
+pub(crate) fn dict_u8(dict: &PyDict, key: &str) -> PyResult<u8> {
     u8::try_from(dict_usize(dict, key)?).map_err(|_| input_error(&format!("{key} exceeds u8")))
 }
 
-fn dict_digest(dict: &PyDict, key: &str) -> PyResult<[u8; 32]> {
+pub(crate) fn dict_digest(dict: &PyDict, key: &str) -> PyResult<[u8; 32]> {
     decode_digest(dict_string(dict, key)?, key)
 }
 
-fn decode_digest(value: &str, name: &str) -> PyResult<[u8; 32]> {
+pub(crate) fn decode_digest(value: &str, name: &str) -> PyResult<[u8; 32]> {
     let bytes = value.as_bytes();
     if bytes.len() != 64
         || bytes
@@ -1039,7 +1039,7 @@ fn decode_digest(value: &str, name: &str) -> PyResult<[u8; 32]> {
     Ok(output)
 }
 
-fn rows3(value: &PyAny, name: &str) -> PyResult<Vec<Vec3>> {
+pub(crate) fn rows3(value: &PyAny, name: &str) -> PyResult<Vec<Vec3>> {
     if let Ok(array) = value.extract::<PyReadonlyArray2<'_, f64>>() {
         let view = array.as_array();
         if view.nrows() == 0 || view.ncols() != 3 {
@@ -1061,7 +1061,7 @@ fn rows3(value: &PyAny, name: &str) -> PyResult<Vec<Vec3>> {
         .collect()
 }
 
-fn vec3_value(value: &PyAny, name: &str) -> PyResult<Vec3> {
+pub(crate) fn vec3_value(value: &PyAny, name: &str) -> PyResult<Vec3> {
     let values = f64_values(value, 3, name)?;
     vec3([values[0], values[1], values[2]], name)
 }
@@ -1073,7 +1073,7 @@ fn vec3(values: [f64; 3], name: &str) -> PyResult<Vec3> {
     Ok(Vec3::new(values[0], values[1], values[2]))
 }
 
-fn f64_values(value: &PyAny, expected: usize, name: &str) -> PyResult<Vec<f64>> {
+pub(crate) fn f64_values(value: &PyAny, expected: usize, name: &str) -> PyResult<Vec<f64>> {
     let values = if let Ok(array) = value.extract::<PyReadonlyArray1<'_, f64>>() {
         array.as_slice()?.to_vec()
     } else {
@@ -1089,7 +1089,7 @@ fn f64_values(value: &PyAny, expected: usize, name: &str) -> PyResult<Vec<f64>> 
     Ok(values)
 }
 
-fn bool_values(value: &PyAny, expected: usize, name: &str) -> PyResult<Vec<bool>> {
+pub(crate) fn bool_values(value: &PyAny, expected: usize, name: &str) -> PyResult<Vec<bool>> {
     if let Ok(array) = value.extract::<PyReadonlyArray1<'_, u8>>() {
         let values = array.as_slice()?;
         if values.len() != expected || values.iter().any(|item| *item > 1) {
@@ -1106,7 +1106,7 @@ fn bool_values(value: &PyAny, expected: usize, name: &str) -> PyResult<Vec<bool>
     Ok(values)
 }
 
-fn index_rows<const N: usize>(
+pub(crate) fn index_rows<const N: usize>(
     value: &PyAny,
     bound: usize,
     name: &str,
@@ -1127,7 +1127,7 @@ fn index_rows<const N: usize>(
         .collect()
 }
 
-fn hex_digest(value: [u8; 32]) -> String {
+pub(crate) fn hex_digest(value: [u8; 32]) -> String {
     const HEX: &[u8; 16] = b"0123456789abcdef";
     let mut output = String::with_capacity(64);
     for byte in value {
@@ -1137,6 +1137,6 @@ fn hex_digest(value: [u8; 32]) -> String {
     output
 }
 
-fn input_error(message: &str) -> PyErr {
+pub(crate) fn input_error(message: &str) -> PyErr {
     PyValueError::new_err(format!("native_fixed64_exact_source_input: {message}"))
 }

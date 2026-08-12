@@ -5,6 +5,25 @@ primitives, and a fail-closed CPU orchestrator. It is not a calibrated docking,
 MD, free-energy, GPU, or product engine.
 """
 
+# A HIP-qualified native wheel must bind its reviewed ROCm runtime before the
+# legacy Python surface imports PyTorch. PyTorch distributions can bundle a
+# different libamdhip64 with the same process-global symbols; loading that
+# runtime first correctly makes hip_safe fail closed, but would also make the
+# canonical package entrypoint unusable. CPU-only or absent native wheels stay
+# optional here, while canonical native consumers still require the extension.
+import importlib as _native_importlib
+
+try:
+    _native_importlib.import_module("betelgeuze_engine_v2_native")
+except ModuleNotFoundError as _native_import_error:
+    # Absence of the optional wheel is permitted.  A dependency failure from
+    # an installed wheel is not: retrying after PyTorch has loaded another
+    # process-global HIP runtime could otherwise change the import outcome.
+    if _native_import_error.name != "betelgeuze_engine_v2_native":
+        raise
+    del _native_import_error
+del _native_importlib
+
 # Stack installers intentionally run before the public symbols they patch are
 # rebound below.
 # ruff: noqa: E402

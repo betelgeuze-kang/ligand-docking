@@ -28,7 +28,15 @@ on:
       - "packaging/engine-v2/**"
       - "rust_engine_v2/**"
       - "rust/betelgeuze-docking-search/**"
+      - "rust/betelgeuze-runtime/**"
+      - "rust/betelgeuze-sys/**"
+      - "rust/cpu-kernel/**"
+      - "rust/reference-dynamics/**"
+      - "rust/reference-physics/**"
       - "rust/Cargo.toml"
+      - "rust/Cargo.lock"
+      - "include/**"
+      - "native/**"
       - "LICENSE"
       - "config/independent_engine_v2_capabilities.yaml"
       - "config/engine_v2_public_redocking_contamination_registry.json"
@@ -153,7 +161,15 @@ jobs:
             packaging/engine-v2
             rust_engine_v2
             rust/betelgeuze-docking-search
+            rust/betelgeuze-runtime
+            rust/betelgeuze-sys
+            rust/cpu-kernel
+            rust/reference-dynamics
+            rust/reference-physics
             rust/Cargo.toml
+            rust/Cargo.lock
+            include
+            native
             LICENSE
             core/__init__.py
             core/ai_correction.py

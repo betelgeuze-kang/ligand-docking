@@ -8,6 +8,7 @@ import pytest
 
 from betelgeuze_engine_v2.docking.native_fixed64_consumers import (
     NativeFixed64CliAdapter,
+    NativeFixed64ConsumerError,
     NativeFixed64DiagnosticBenchmarkAdapter,
     NativeFixed64ProductShadowAdapter,
     NativeFixed64PythonApi,
@@ -25,9 +26,7 @@ def _label_digest(label: str) -> str:
 
 def _input(*, consumer: str = "api") -> dict[str, object]:
     return {
-        "schema_id": (
-            "betelgeuze.engine_v2_native_fixed64_exact_source_input/1.0.0"
-        ),
+        "schema_id": ("betelgeuze.engine_v2_native_fixed64_exact_source_input/1.0.0"),
         "consumer": consumer,
         "source_receipt_sha256": _digest(1),
         "proposal_sha256": _digest(2),
@@ -215,8 +214,13 @@ def test_native_fixed64_entrypoint_runs_the_complete_exact_source_graph(native) 
     assert first["customer_pose_emission_authorized"] is False
     assert first["production_claim_authorized"] is False
     assert sum(row["scorer_terms"] is not None for row in first["candidates"]) == 12
-    assert all(row["candidate_removed_from_denominator"] is False for row in first["candidates"])
-    assert all(row["result_dependent_allocation"] is False for row in first["candidates"])
+    assert all(
+        row["candidate_removed_from_denominator"] is False
+        for row in first["candidates"]
+    )
+    assert all(
+        row["result_dependent_allocation"] is False for row in first["candidates"]
+    )
     scored = next(row for row in first["candidates"] if row["scorer_terms"])
     assert set(scored["scorer_terms"]) == {
         "proposal_record_receipt_sha256",
@@ -268,33 +272,25 @@ def test_native_fixed64_consumer_views_share_one_core_receipt(native) -> None:
     assert len(view_receipts) == 4
 
 
-def test_python_surfaces_are_thin_views_over_one_native_receipt(native) -> None:
+def test_canonical_python_surfaces_reject_the_legacy_receipt_graph(native) -> None:
     source = _input()
     source_before = deepcopy(source)
-    results = (
-        NativeFixed64CliAdapter().run(source),
-        NativeFixed64DiagnosticBenchmarkAdapter().run(source),
-        NativeFixed64PythonApi().run(source),
-        NativeFixed64ProductShadowAdapter().run(source),
+    assert callable(native.native_fixed64_exact_source_pipeline_v1)
+    adapters = (
+        NativeFixed64CliAdapter(),
+        NativeFixed64DiagnosticBenchmarkAdapter(),
+        NativeFixed64PythonApi(),
+        NativeFixed64ProductShadowAdapter(),
     )
-
-    assert source == source_before
-    assert {result.pipeline_receipt_sha256 for result in results} == {
-        native.native_fixed64_exact_source_pipeline_v1(source)[
-            "pipeline_receipt_sha256"
-        ]
-    }
-    assert len({result.consumer_view_receipt_sha256 for result in results}) == 4
-    for result in results:
-        document = result.to_dict()
-        document["candidate_denominator"] = 1
-        assert result.to_dict()["candidate_denominator"] == 64
-        assert document["customer_pose_emission_authorized"] is False
-        assert document["existing_rank_auto_change_authorized"] is False
-        assert document["production_claim_authorized"] is False
+    for adapter in adapters:
+        with pytest.raises(
+            NativeFixed64ConsumerError, match="complete fixed64 input schema"
+        ):
+            adapter.run(source)
+        assert source == source_before
 
 
-def test_betelgeuze_dock_command_routes_versioned_input_to_native_core(
+def test_betelgeuze_dock_command_rejects_legacy_native_input(
     native,
     tmp_path,
 ) -> None:
@@ -322,16 +318,9 @@ def test_betelgeuze_dock_command_routes_versioned_input_to_native_core(
         ]
     )
 
-    assert status == 0
-    result = json.loads(output_path.read_text(encoding="ascii"))
-    assert result["consumer"] == "cli"
-    assert result["candidate_denominator"] == 64
-    assert result["pipeline_receipt_sha256"] == (
-        native.native_fixed64_exact_source_pipeline_v1(_input())[
-            "pipeline_receipt_sha256"
-        ]
-    )
-    assert result["customer_pose_emission_authorized"] is False
+    assert callable(native.native_fixed64_exact_source_pipeline_v1)
+    assert status == 2
+    assert not output_path.exists()
 
 
 def test_native_fixed64_source_groups_fill_only_their_predeclared_lanes(native) -> None:
@@ -382,9 +371,7 @@ def test_native_fixed64_source_groups_fill_only_their_predeclared_lanes(native) 
     )
     assert all(
         row["proposal_status"] == "generated"
-        for row in (
-            result["candidates"][:44] + result["candidates"][60:]
-        )
+        for row in (result["candidates"][:44] + result["candidates"][60:])
     )
 
 
@@ -393,13 +380,9 @@ def test_native_fixed64_complete_inventory_generates_all_64_slots(native) -> Non
 
     assert result["candidate_denominator"] == 64
     assert result["generated_count"] == 64
-    assert all(
-        row["proposal_status"] == "generated" for row in result["candidates"]
-    )
+    assert all(row["proposal_status"] == "generated" for row in result["candidates"])
     assert all(row["proposal_failure_code"] is None for row in result["candidates"])
-    assert {
-        row["lane"] for row in result["candidates"]
-    } == {
+    assert {row["lane"] for row in result["candidates"]} == {
         "pocket_centered_controls",
         "uniform_source_controls",
         "deterministic_independent_so3",
