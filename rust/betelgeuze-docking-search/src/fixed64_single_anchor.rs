@@ -43,6 +43,127 @@ pub struct Fixed64SingleAnchorPlacement {
     receipt_sha256: [u8; 32],
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct NativeFixed64SingleAnchorKernelPlacement {
+    pub ligand_anchor_point_angstrom: Vec3,
+    pub receptor_anchor_point_angstrom: Vec3,
+    pub target_anchor_point_angstrom: Vec3,
+    pub local_surface_normal: Vec3,
+    pub approach_vector: Vec3,
+    pub ligand_direction: Vec3,
+    pub alignment_target_direction: Vec3,
+    pub target_distance_angstrom: f64,
+    pub twist_angle_radians: f64,
+    pub quaternion: Quaternion,
+    pub translation_angstrom: Vec3,
+    pub output_coordinates_angstrom: Vec<Vec3>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum NativeFixed64SingleAnchorKernelOutcome {
+    Placed(Box<NativeFixed64SingleAnchorKernelPlacement>),
+    TypedFailure(Fixed64PlacementErrorCode),
+}
+
+pub fn native_fixed64_single_anchor_kernel(
+    lane: Fixed64Lane,
+    declared_anchor_kind: Fixed64AnchorKind,
+    lane_offset: usize,
+    source_coordinates_angstrom: &[Vec3],
+    ligand_feature_coordinates_angstrom: &[Vec3],
+    receptor_feature_coordinates_angstrom: &[Vec3],
+    pocket_center_angstrom: Vec3,
+) -> NativeFixed64SingleAnchorKernelOutcome {
+    let geometry = match derive_anchor_geometry(
+        lane,
+        source_coordinates_angstrom,
+        ligand_feature_coordinates_angstrom,
+        receptor_feature_coordinates_angstrom,
+        pocket_center_angstrom,
+    ) {
+        Ok(value) => value,
+        Err(error) => return NativeFixed64SingleAnchorKernelOutcome::TypedFailure(error.code()),
+    };
+    let target_distance_angstrom = anchor_target_distance(declared_anchor_kind);
+    let lane_width = anchor_lane_width(lane);
+    if lane_width == 0 || lane_offset >= lane_width {
+        return NativeFixed64SingleAnchorKernelOutcome::TypedFailure(
+            Fixed64PlacementErrorCode::InternalInvariant,
+        );
+    }
+    let target_anchor_point_angstrom = geometry.receptor_anchor_point.plus(
+        geometry
+            .local_surface_normal
+            .scale(target_distance_angstrom),
+    );
+    let base_quaternion = match Quaternion::between(
+        geometry.ligand_direction,
+        geometry.alignment_target_direction,
+    ) {
+        Ok(value) => value,
+        Err(_) => {
+            return NativeFixed64SingleAnchorKernelOutcome::TypedFailure(
+                Fixed64PlacementErrorCode::DegenerateLigandDirection,
+            )
+        }
+    };
+    let offset = f64::from(u32::try_from(lane_offset).expect("fixed64 lane offsets fit u32"));
+    let width = f64::from(u32::try_from(lane_width).expect("fixed64 lane widths fit u32"));
+    let twist_angle_radians = 2.0 * core::f64::consts::PI * offset / width;
+    let twist_quaternion = match Quaternion::from_rotation_vector(
+        geometry
+            .alignment_target_direction
+            .scale(twist_angle_radians),
+    ) {
+        Ok(value) => value,
+        Err(_) => {
+            return NativeFixed64SingleAnchorKernelOutcome::TypedFailure(
+                Fixed64PlacementErrorCode::InternalInvariant,
+            )
+        }
+    };
+    let quaternion = match twist_quaternion.multiply(base_quaternion) {
+        Ok(value) => value,
+        Err(_) => {
+            return NativeFixed64SingleAnchorKernelOutcome::TypedFailure(
+                Fixed64PlacementErrorCode::InternalInvariant,
+            )
+        }
+    };
+    let translation_angstrom =
+        target_anchor_point_angstrom.minus(quaternion.rotate(geometry.ligand_anchor_point));
+    let output_coordinates_angstrom = source_coordinates_angstrom
+        .iter()
+        .map(|coordinate| quaternion.rotate(*coordinate).plus(translation_angstrom))
+        .collect::<Vec<_>>();
+    if output_coordinates_angstrom.iter().any(|coordinate| {
+        !coordinate.is_finite()
+            || coordinate.x.abs() > 100_000.0
+            || coordinate.y.abs() > 100_000.0
+            || coordinate.z.abs() > 100_000.0
+    }) {
+        return NativeFixed64SingleAnchorKernelOutcome::TypedFailure(
+            Fixed64PlacementErrorCode::InternalInvariant,
+        );
+    }
+    NativeFixed64SingleAnchorKernelOutcome::Placed(Box::new(
+        NativeFixed64SingleAnchorKernelPlacement {
+            ligand_anchor_point_angstrom: geometry.ligand_anchor_point,
+            receptor_anchor_point_angstrom: geometry.receptor_anchor_point,
+            target_anchor_point_angstrom,
+            local_surface_normal: geometry.local_surface_normal,
+            approach_vector: geometry.local_surface_normal.scale(-1.0),
+            ligand_direction: geometry.ligand_direction,
+            alignment_target_direction: geometry.alignment_target_direction,
+            target_distance_angstrom,
+            twist_angle_radians,
+            quaternion,
+            translation_angstrom,
+            output_coordinates_angstrom,
+        },
+    ))
+}
+
 impl Fixed64SingleAnchorPlacement {
     #[must_use]
     pub const fn slot_index(&self) -> usize {

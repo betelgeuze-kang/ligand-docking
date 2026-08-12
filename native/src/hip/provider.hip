@@ -1162,6 +1162,13 @@ extern "C" int32_t bg_hip_safe_evaluate_v1(
 #undef BG_DOCKING_FIXED64_INDEXED_SO3_PLACE
 #undef BG_DOCKING_FIXED64_SO3_GENERATE
 
+#define BG_DOCKING_FIXED64_SINGLE_ANCHOR_PLACE \
+    bg_hip_safe_docking_fixed64_single_anchor_v1_place
+#define BG_DOCKING_FIXED64_SINGLE_ANCHOR_LANE "hip_safe"
+#include "docking_fixed64_single_anchor.hip"
+#undef BG_DOCKING_FIXED64_SINGLE_ANCHOR_LANE
+#undef BG_DOCKING_FIXED64_SINGLE_ANCHOR_PLACE
+
 #define BG_DOCKING_GEOMETRIC_CREATE \
     bg_hip_safe_docking_geometric_admission_v1_create
 #define BG_DOCKING_GEOMETRIC_DESTROY \

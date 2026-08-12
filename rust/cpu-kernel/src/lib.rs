@@ -6,6 +6,7 @@
 
 mod docking_fixed64_allocation;
 mod docking_fixed64_indexed_so3;
+mod docking_fixed64_single_anchor;
 mod docking_fixed64_so3;
 mod docking_rigid_refinement;
 mod docking_torsion_v7;

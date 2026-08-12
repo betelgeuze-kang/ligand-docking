@@ -67,6 +67,18 @@ static void test_descriptor_initializer_compatibility(void) {
         bg_docking_fixed64_so3_output_v1,
         bg_docking_fixed64_so3_output_v1_init);
     BG_TEST_EXACT_INITIALIZER(
+        bg_docking_fixed64_indexed_so3_input_v1,
+        bg_docking_fixed64_indexed_so3_input_v1_init);
+    BG_TEST_EXACT_INITIALIZER(
+        bg_docking_fixed64_indexed_so3_output_v1,
+        bg_docking_fixed64_indexed_so3_output_v1_init);
+    BG_TEST_EXACT_INITIALIZER(
+        bg_docking_fixed64_single_anchor_input_v1,
+        bg_docking_fixed64_single_anchor_input_v1_init);
+    BG_TEST_EXACT_INITIALIZER(
+        bg_docking_fixed64_single_anchor_output_v1,
+        bg_docking_fixed64_single_anchor_output_v1_init);
+    BG_TEST_EXACT_INITIALIZER(
         bg_docking_scorer_v1_context_soa_v1,
         bg_docking_scorer_v1_context_soa_v1_init);
     BG_TEST_EXACT_INITIALIZER(

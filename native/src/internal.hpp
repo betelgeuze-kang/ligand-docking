@@ -51,6 +51,12 @@ struct bg_docking_geometric_admission_v1 final {
     std::array<double, 3> pocket_center_angstrom{};
     double pocket_radius_angstrom = 0.0;
     double hard_rejection_minimum_vdw_ratio = 0.0;
+    std::vector<double> receptor_x_angstrom;
+    std::vector<double> receptor_y_angstrom;
+    std::vector<double> receptor_z_angstrom;
+    std::vector<double> receptor_vdw_radius_angstrom;
+    std::vector<double> ligand_vdw_radius_angstrom;
+    std::vector<uint8_t> ligand_heavy_atom_mask;
     std::array<uint8_t, 32> authority_input_receipt_sha256{};
     std::array<uint8_t, 32> receptor_system_sha256{};
     std::array<uint8_t, 32> ligand_system_sha256{};

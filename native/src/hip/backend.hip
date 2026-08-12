@@ -3563,6 +3563,13 @@ uint64_t live_allocation_count(const bg_context &context) noexcept {
 #undef BG_DOCKING_FIXED64_INDEXED_SO3_PLACE
 #undef BG_DOCKING_FIXED64_SO3_GENERATE
 
+#define BG_DOCKING_FIXED64_SINGLE_ANCHOR_PLACE \
+    bg_hip_fast_docking_fixed64_single_anchor_v1_place
+#define BG_DOCKING_FIXED64_SINGLE_ANCHOR_LANE "hip_fast"
+#include "docking_fixed64_single_anchor.hip"
+#undef BG_DOCKING_FIXED64_SINGLE_ANCHOR_LANE
+#undef BG_DOCKING_FIXED64_SINGLE_ANCHOR_PLACE
+
 #define BG_DOCKING_GEOMETRIC_CREATE \
     bg_hip_fast_docking_geometric_admission_v1_create
 #define BG_DOCKING_GEOMETRIC_DESTROY \

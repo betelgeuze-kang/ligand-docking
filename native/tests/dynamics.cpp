@@ -233,7 +233,7 @@ void assert_same_dynamic_state(
 }
 
 void test_initializers_and_invalid_rows() {
-    assert(bg_abi_version_minor() == UINT32_C(16));
+    assert(bg_abi_version_minor() == UINT32_C(17));
     bg_distance_constraints_v1 constraints;
     assert(bg_distance_constraints_v1_init(&constraints) == BG_STATUS_OK);
     assert(constraints.tolerance_angstrom > 0.0);
