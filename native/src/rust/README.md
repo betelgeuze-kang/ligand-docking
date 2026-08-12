@@ -61,3 +61,8 @@ with an independent canonical encoder, compares the complete 64-row object
 representation and both aggregate receipts, and fails before output if any
 mapping or receipt differs. This is deterministic host control-plane work, not
 a relabeled GPU kernel, and all execution and product authority stays false.
+
+ABI 1.15 exposes an independent Rust CPU implementation of the source-bound
+low-discrepancy SO(3) prefix. The public dispatcher validates canonical unit
+quaternions and geodesic uniqueness before receipt commit; C++ and HIP lanes
+do not call the Rust implementation.

@@ -154,3 +154,10 @@ BETELGEUZE_ENGINE_1.14 {
         bg_docking_fixed64_allocation_output_v1_init;
         bg_docking_fixed64_allocation_v1_build;
 } BETELGEUZE_ENGINE_1.13;
+
+BETELGEUZE_ENGINE_1.15 {
+    global:
+        bg_docking_fixed64_so3_input_v1_init;
+        bg_docking_fixed64_so3_output_v1_init;
+        bg_docking_fixed64_so3_v1_generate;
+} BETELGEUZE_ENGINE_1.14;
