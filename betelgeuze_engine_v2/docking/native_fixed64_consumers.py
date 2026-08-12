@@ -22,14 +22,36 @@ class NativeFixed64ConsumerError(RuntimeError):
 
 
 _COMPLETE_INPUT_SCHEMA_ID = "betelgeuze.engine_v2_native_fixed64_complete_input/1.0.0"
-_COMPLETE_EVIDENCE_SCHEMA_ID = "betelgeuze.engine_v2_native_fixed64_complete_python_evidence/1.0.0"
-_COMPATIBILITY_INPUT_SCHEMA_ID = "betelgeuze.engine_v2_native_fixed64_exact_source_input/1.0.0"
-_COMPATIBILITY_EVIDENCE_SCHEMA_ID = "betelgeuze.engine_v2_native_fixed64_python_evidence/1.0.0"
+_COMPLETE_EVIDENCE_SCHEMA_ID = (
+    "betelgeuze.engine_v2_native_fixed64_complete_python_evidence/1.0.0"
+)
+
+_RECEIPT_GRAPH_FIELDS = (
+    "allocation_inventory_sha256",
+    "allocation_receipt_sha256",
+    "source_bundle_receipt_sha256",
+    "geometric_admission_batch_receipt_sha256",
+    "admission_context_receipt_sha256",
+    "refinement_context_receipt_sha256",
+    "scorer_context_receipt_sha256",
+    "validity_context_receipt_sha256",
+    "component_binding_receipt_sha256",
+    "producer_batch_receipt_sha256",
+    "refinement_policy_receipt_sha256",
+    "refinement_batch_receipt_sha256",
+    "scorer_batch_receipt_sha256",
+    "validity_batch_receipt_sha256",
+    "ranking_batch_receipt_sha256",
+    "cluster_batch_receipt_sha256",
+    "pipeline_batch_receipt_sha256",
+)
 
 
 def _freeze(value: object) -> object:
     if type(value) is dict:
-        return MappingProxyType({str(key): _freeze(item) for key, item in value.items()})
+        return MappingProxyType(
+            {str(key): _freeze(item) for key, item in value.items()}
+        )
     if type(value) is list:
         return tuple(_freeze(item) for item in value)
     return value
@@ -43,20 +65,19 @@ def _thaw(value: object) -> object:
     return value
 
 
-def _native_entrypoint(input_schema_id: object):
+def _native_entrypoint():
     try:
         module = importlib.import_module("betelgeuze_engine_v2_native")
     except (ImportError, OSError) as exc:
-        raise NativeFixed64ConsumerError("native fixed64 extension is required; Python fallback is forbidden") from exc
-    if input_schema_id == _COMPLETE_INPUT_SCHEMA_ID:
-        name = "native_fixed64_complete_pipeline_v1"
-    elif input_schema_id == _COMPATIBILITY_INPUT_SCHEMA_ID:
-        name = "native_fixed64_exact_source_pipeline_v1"
-    else:
-        raise NativeFixed64ConsumerError("native fixed64 input schema is unsupported")
+        raise NativeFixed64ConsumerError(
+            "native fixed64 extension is required; Python fallback is forbidden"
+        ) from exc
+    name = "native_fixed64_complete_pipeline_v1"
     entrypoint = getattr(module, name, None)
     if not callable(entrypoint):
-        raise NativeFixed64ConsumerError(f"native fixed64 extension lacks the versioned entrypoint {name}")
+        raise NativeFixed64ConsumerError(
+            f"native fixed64 extension lacks the versioned entrypoint {name}"
+        )
     return entrypoint
 
 
@@ -76,11 +97,7 @@ class NativeFixed64EvidenceV1:
         schema_id = document.get("schema_id")
         candidates = document.get("candidates")
         if (
-            schema_id
-            not in {
-                _COMPLETE_EVIDENCE_SCHEMA_ID,
-                _COMPATIBILITY_EVIDENCE_SCHEMA_ID,
-            }
+            schema_id != _COMPLETE_EVIDENCE_SCHEMA_ID
             or document.get("consumer") != self.surface
             or document.get("backend")
             not in {"cpp_cpu_reference", "rust_cpu", "hip_safe", "hip_fast"}
@@ -88,13 +105,20 @@ class NativeFixed64EvidenceV1:
             or not isinstance(candidates, (list, tuple))
             or len(candidates) != 64
             or document.get("evidence_display_authorized") is not True
-            or document.get("operator_second_opinion_authorized") is not (self.surface == "product_shadow")
+            or document.get("operator_second_opinion_authorized")
+            is not (self.surface == "product_shadow")
         ):
-            raise NativeFixed64ConsumerError("native fixed64 consumer evidence is cross-wired")
+            raise NativeFixed64ConsumerError(
+                "native fixed64 consumer evidence is cross-wired"
+            )
         for slot_index, candidate in enumerate(candidates):
-            observed_slot = candidate.get("slot_index") if isinstance(candidate, Mapping) else None
+            observed_slot = (
+                candidate.get("slot_index") if isinstance(candidate, Mapping) else None
+            )
             if type(observed_slot) is not int or observed_slot != slot_index:
-                raise NativeFixed64ConsumerError("native fixed64 candidate denominator is reordered or incomplete")
+                raise NativeFixed64ConsumerError(
+                    "native fixed64 candidate denominator is reordered or incomplete"
+                )
         for field in (
             "reservation_authorized",
             "molecular_execution_authorized",
@@ -103,19 +127,24 @@ class NativeFixed64EvidenceV1:
             "production_claim_authorized",
         ):
             if document.get(field) is not False:
-                raise NativeFixed64ConsumerError(f"native fixed64 authority field {field} changed")
-        if schema_id == _COMPLETE_EVIDENCE_SCHEMA_ID:
-            for field in (
-                "result_dependent_input_consumed",
-                "fallback_allowed",
-                "multi_anchor_consumed",
-                "benchmark_execution_authorized",
-                "scientific_claim_authorized",
-            ):
-                if document.get(field) is not False:
-                    raise NativeFixed64ConsumerError(f"native fixed64 authority field {field} changed")
-            if document.get("denominator_preserved") is not True:
-                raise NativeFixed64ConsumerError("native fixed64 denominator preservation changed")
+                raise NativeFixed64ConsumerError(
+                    f"native fixed64 authority field {field} changed"
+                )
+        for field in (
+            "result_dependent_input_consumed",
+            "fallback_allowed",
+            "multi_anchor_consumed",
+            "benchmark_execution_authorized",
+            "scientific_claim_authorized",
+        ):
+            if document.get(field) is not False:
+                raise NativeFixed64ConsumerError(
+                    f"native fixed64 authority field {field} changed"
+                )
+        if document.get("denominator_preserved") is not True:
+            raise NativeFixed64ConsumerError(
+                "native fixed64 denominator preservation changed"
+            )
         for field in (
             "pipeline_receipt_sha256",
             "consumer_view_receipt_sha256",
@@ -132,7 +161,28 @@ class NativeFixed64EvidenceV1:
                 or len(value) != 64
                 or any(character not in "0123456789abcdef" for character in value)
             ):
-                raise NativeFixed64ConsumerError(f"native fixed64 receipt field {field} is invalid")
+                raise NativeFixed64ConsumerError(
+                    f"native fixed64 receipt field {field} is invalid"
+                )
+        receipt_graph = document.get("receipt_graph")
+        if (
+            not isinstance(receipt_graph, Mapping)
+            or len(receipt_graph) != len(_RECEIPT_GRAPH_FIELDS)
+            or set(receipt_graph) != set(_RECEIPT_GRAPH_FIELDS)
+        ):
+            raise NativeFixed64ConsumerError(
+                "native fixed64 receipt graph is incomplete or cross-wired"
+            )
+        for field in _RECEIPT_GRAPH_FIELDS:
+            value = receipt_graph.get(field)
+            if (
+                type(value) is not str
+                or len(value) != 64
+                or any(character not in "0123456789abcdef" for character in value)
+            ):
+                raise NativeFixed64ConsumerError(
+                    f"native fixed64 receipt graph field {field} is invalid"
+                )
         object.__setattr__(self, "_document", _freeze(dict(document)))
 
     @property
@@ -163,13 +213,19 @@ def run_native_fixed64_surface(
         raise NativeFixed64ConsumerError("native consumer surface is unsupported")
     payload = deepcopy(input_document)
     payload["consumer"] = surface
-    entrypoint = _native_entrypoint(payload.get("schema_id"))
+    if payload.get("schema_id") != _COMPLETE_INPUT_SCHEMA_ID:
+        raise NativeFixed64ConsumerError(
+            "canonical consumers require the complete fixed64 input schema"
+        )
+    entrypoint = _native_entrypoint()
     try:
         result = entrypoint(payload)
     except (TypeError, ValueError, RuntimeError) as exc:
         raise NativeFixed64ConsumerError(str(exc)) from exc
     if type(result) is not dict:
-        raise NativeFixed64ConsumerError("native fixed64 entrypoint returned a non-dict result")
+        raise NativeFixed64ConsumerError(
+            "native fixed64 entrypoint returned a non-dict result"
+        )
     return NativeFixed64EvidenceV1(surface=surface, _document=result)
 
 

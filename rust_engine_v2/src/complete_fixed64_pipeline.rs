@@ -843,6 +843,86 @@ fn consumer_view_digest(receipt: &Fixed64PipelineReceipt, consumer: Consumer) ->
     hash.finalize().into()
 }
 
+fn receipt_graph_to_python(
+    py: Python<'_>,
+    receipts: &betelgeuze_runtime::Fixed64BatchReceipts,
+) -> PyResult<PyObject> {
+    let output = PyDict::new(py);
+    for (name, digest) in [
+        (
+            "allocation_inventory_sha256",
+            receipts.allocation_inventory_sha256,
+        ),
+        (
+            "allocation_receipt_sha256",
+            receipts.allocation_receipt_sha256,
+        ),
+        (
+            "source_bundle_receipt_sha256",
+            receipts.source_bundle_receipt_sha256,
+        ),
+        (
+            "geometric_admission_batch_receipt_sha256",
+            receipts.geometric_admission_batch_receipt_sha256,
+        ),
+        (
+            "admission_context_receipt_sha256",
+            receipts.admission_context_receipt_sha256,
+        ),
+        (
+            "refinement_context_receipt_sha256",
+            receipts.refinement_context_receipt_sha256,
+        ),
+        (
+            "scorer_context_receipt_sha256",
+            receipts.scorer_context_receipt_sha256,
+        ),
+        (
+            "validity_context_receipt_sha256",
+            receipts.validity_context_receipt_sha256,
+        ),
+        (
+            "component_binding_receipt_sha256",
+            receipts.component_binding_receipt_sha256,
+        ),
+        (
+            "producer_batch_receipt_sha256",
+            receipts.producer_batch_receipt_sha256,
+        ),
+        (
+            "refinement_policy_receipt_sha256",
+            receipts.refinement_policy_receipt_sha256,
+        ),
+        (
+            "refinement_batch_receipt_sha256",
+            receipts.refinement_batch_receipt_sha256,
+        ),
+        (
+            "scorer_batch_receipt_sha256",
+            receipts.scorer_batch_receipt_sha256,
+        ),
+        (
+            "validity_batch_receipt_sha256",
+            receipts.validity_batch_receipt_sha256,
+        ),
+        (
+            "ranking_batch_receipt_sha256",
+            receipts.ranking_batch_receipt_sha256,
+        ),
+        (
+            "cluster_batch_receipt_sha256",
+            receipts.cluster_batch_receipt_sha256,
+        ),
+        (
+            "pipeline_batch_receipt_sha256",
+            receipts.pipeline_batch_receipt_sha256,
+        ),
+    ] {
+        output.set_item(name, hex_digest(digest))?;
+    }
+    Ok(output.into())
+}
+
 fn receipt_to_python(
     py: Python<'_>,
     receipt: &Fixed64PipelineReceipt,
@@ -899,6 +979,10 @@ fn receipt_to_python(
         "ranking_receipt_sha256",
         hex_digest(receipt.receipts.ranking_batch_receipt_sha256),
     )?;
+    output.set_item(
+        "receipt_graph",
+        receipt_graph_to_python(py, &receipt.receipts)?,
+    )?;
     output.set_item("primary_slot_indices", &receipt.primary_slot_indices)?;
     output.set_item("valid_slot_indices", &receipt.valid_slot_indices)?;
     output.set_item(
@@ -906,22 +990,52 @@ fn receipt_to_python(
         &receipt.representative_slot_indices,
     )?;
     output.set_item("top_k_slot_indices", &receipt.top_k_slot_indices)?;
-    output.set_item("result_dependent_input_consumed", false)?;
-    output.set_item("fallback_allowed", false)?;
-    output.set_item("multi_anchor_consumed", false)?;
-    output.set_item("denominator_preserved", true)?;
+    output.set_item(
+        "result_dependent_input_consumed",
+        receipt.authority.result_dependent_input_consumed,
+    )?;
+    output.set_item("fallback_allowed", receipt.authority.fallback_allowed)?;
+    output.set_item(
+        "multi_anchor_consumed",
+        receipt.authority.multi_anchor_consumed,
+    )?;
+    output.set_item(
+        "denominator_preserved",
+        receipt.authority.denominator_preserved,
+    )?;
     output.set_item("evidence_display_authorized", true)?;
     output.set_item(
         "operator_second_opinion_authorized",
         consumer.operator_second_opinion_authorized(),
     )?;
-    output.set_item("reservation_authorized", false)?;
-    output.set_item("molecular_execution_authorized", false)?;
-    output.set_item("benchmark_execution_authorized", false)?;
-    output.set_item("existing_rank_auto_change_authorized", false)?;
-    output.set_item("customer_pose_emission_authorized", false)?;
-    output.set_item("production_claim_authorized", false)?;
-    output.set_item("scientific_claim_authorized", false)?;
+    output.set_item(
+        "reservation_authorized",
+        receipt.authority.reservation_authorized,
+    )?;
+    output.set_item(
+        "molecular_execution_authorized",
+        receipt.authority.molecular_execution_authorized,
+    )?;
+    output.set_item(
+        "benchmark_execution_authorized",
+        receipt.authority.benchmark_execution_authorized,
+    )?;
+    output.set_item(
+        "existing_rank_auto_change_authorized",
+        receipt.authority.existing_rank_auto_change_authorized,
+    )?;
+    output.set_item(
+        "customer_pose_emission_authorized",
+        receipt.authority.customer_pose_emission_authorized,
+    )?;
+    output.set_item(
+        "production_claim_authorized",
+        receipt.authority.production_claim_authorized,
+    )?;
+    output.set_item(
+        "scientific_claim_authorized",
+        receipt.authority.scientific_claim_authorized,
+    )?;
 
     let rows = PyList::empty(py);
     for slot in 0..64 {
@@ -948,6 +1062,10 @@ fn candidate_to_python(
     row.set_item("producer_status", producer.status)?;
     row.set_item("producer_failure_code", producer.failure_code)?;
     row.set_item("placement_kind", producer.placement_kind)?;
+    row.set_item("component_failure_code", producer.component_failure_code)?;
+    row.set_item("producer_backend", backend_id(producer.backend))?;
+    row.set_item("ligand_atom_count", producer.ligand_atom_count)?;
+    row.set_item("coordinate_offset", producer.coordinate_offset)?;
     row.set_item("coordinates_available", producer.coordinates_available)?;
     row.set_item("steric_precheck_passed", producer.steric_precheck_passed)?;
     row.set_item(
@@ -964,6 +1082,32 @@ fn candidate_to_python(
     )?;
     row.set_item("denominator_preserved", producer.denominator_preserved)?;
     row.set_item("placement_quaternion", producer.placement_quaternion)?;
+    for (name, digest) in [
+        (
+            "allocation_slot_receipt_sha256",
+            producer.allocation_slot_receipt_sha256,
+        ),
+        (
+            "source_payload_receipt_sha256",
+            producer.source_payload_receipt_sha256,
+        ),
+        ("source_proposal_sha256", producer.source_proposal_sha256),
+        (
+            "source_coordinate_sha256",
+            producer.source_coordinate_sha256,
+        ),
+        (
+            "placement_receipt_sha256",
+            producer.placement_receipt_sha256,
+        ),
+        ("output_proposal_sha256", producer.output_proposal_sha256),
+        (
+            "output_coordinate_sha256",
+            producer.output_coordinate_sha256,
+        ),
+    ] {
+        row.set_item(name, hex_digest(digest))?;
+    }
     row.set_item(
         "producer_row_receipt_sha256",
         hex_digest(producer.row_receipt_sha256),
@@ -983,6 +1127,10 @@ fn candidate_to_python(
     geometric.set_item(
         "penetration_pair_count",
         producer.geometric.penetration_pair_count,
+    )?;
+    geometric.set_item(
+        "penetrating_atom_count",
+        producer.geometric.unique_ligand_penetration_atom_count,
     )?;
     geometric.set_item(
         "penetrating_heavy_atom_count",
@@ -1053,6 +1201,27 @@ fn candidate_to_python(
     validity_output.set_item("observed_count", validity.observed_count)?;
     validity_output.set_item("atom_count", validity.atom_count)?;
     validity_output.set_item(
+        "rotation_orthogonality_max_error",
+        validity.rotation_orthogonality_max_error,
+    )?;
+    validity_output.set_item("rotation_determinant", validity.rotation_determinant)?;
+    validity_output.set_item(
+        "max_bond_length_delta_angstrom",
+        validity.max_bond_length_delta_angstrom,
+    )?;
+    validity_output.set_item(
+        "minimum_ligand_nonbonded_distance_angstrom",
+        validity.minimum_ligand_nonbonded_distance_angstrom,
+    )?;
+    validity_output.set_item(
+        "evaluated_ligand_nonbonded_pair_count",
+        validity.evaluated_ligand_nonbonded_pair_count,
+    )?;
+    validity_output.set_item(
+        "excluded_ligand_pair_count",
+        validity.excluded_ligand_pair_count,
+    )?;
+    validity_output.set_item(
         "minimum_receptor_ligand_distance_angstrom",
         validity.minimum_receptor_ligand_distance_angstrom,
     )?;
@@ -1061,12 +1230,52 @@ fn candidate_to_python(
         validity.evaluated_receptor_ligand_pair_count,
     )?;
     validity_output.set_item(
+        "minimum_declared_chiral_volume",
+        validity.minimum_declared_chiral_volume,
+    )?;
+    validity_output.set_item(
+        "declared_chirality_center_count",
+        validity.declared_chirality_center_count,
+    )?;
+    validity_output.set_item(
+        "maximum_pocket_center_distance_angstrom",
+        validity.maximum_pocket_center_distance_angstrom,
+    )?;
+    validity_output.set_item(
+        "element_vdw_ligand_pair_count",
+        validity.element_vdw_ligand_pair_count,
+    )?;
+    validity_output.set_item(
+        "element_vdw_ligand_severe_overlap_count",
+        validity.element_vdw_ligand_severe_overlap_count,
+    )?;
+    validity_output.set_item(
+        "element_vdw_ligand_minimum_distance_angstrom",
+        validity.element_vdw_ligand_minimum_distance_angstrom,
+    )?;
+    validity_output.set_item(
+        "element_vdw_ligand_minimum_ratio",
+        validity.element_vdw_ligand_minimum_ratio,
+    )?;
+    validity_output.set_item(
+        "element_vdw_receptor_candidate_pair_count",
+        validity.element_vdw_receptor_candidate_pair_count,
+    )?;
+    validity_output.set_item(
         "element_vdw_receptor_full_cartesian_pair_count",
         validity.element_vdw_receptor_full_cartesian_pair_count,
     )?;
     validity_output.set_item(
         "element_vdw_receptor_severe_overlap_count",
         validity.element_vdw_receptor_severe_overlap_count,
+    )?;
+    validity_output.set_item(
+        "element_vdw_receptor_cell_count",
+        validity.element_vdw_receptor_cell_count,
+    )?;
+    validity_output.set_item(
+        "element_vdw_receptor_minimum_distance_angstrom",
+        validity.element_vdw_receptor_minimum_distance_angstrom,
     )?;
     validity_output.set_item(
         "element_vdw_receptor_minimum_ratio",
@@ -1088,7 +1297,12 @@ fn candidate_to_python(
     cluster_output.set_item("cluster_eligible", cluster.cluster_eligible)?;
     cluster_output.set_item("representative", cluster.representative)?;
     cluster_output.set_item("top_k_representative", cluster.top_k_representative)?;
+    cluster_output.set_item("stable_valid_rank", cluster.stable_valid_rank)?;
     cluster_output.set_item("cluster_id", cluster.cluster_id)?;
+    cluster_output.set_item(
+        "representative_slot_index",
+        cluster.representative_slot_index,
+    )?;
     cluster_output.set_item("cluster_rank", cluster.cluster_rank)?;
     cluster_output.set_item("top_k_rank", cluster.top_k_rank)?;
     cluster_output.set_item("cluster_size", cluster.cluster_size)?;
@@ -1096,6 +1310,7 @@ fn candidate_to_python(
         "direct_rmsd_to_representative_angstrom",
         cluster.direct_rmsd_to_representative_angstrom,
     )?;
+    cluster_output.set_item("coordinate_sha256", hex_digest(cluster.coordinate_sha256))?;
     row.set_item("cluster", cluster_output)?;
 
     let lineage = PyDict::new(py);
@@ -1284,6 +1499,10 @@ fn rigid_profile_to_python(
         "line_search_evaluation_count",
         evidence.line_search_evaluation_count,
     )?;
+    output.set_item(
+        "fallback_direction_step_count",
+        evidence.fallback_direction_step_count,
+    )?;
     output.set_item("initial_penalty", evidence.initial_penalty)?;
     output.set_item("final_penalty", evidence.final_penalty)?;
     output.set_item(
@@ -1298,6 +1517,18 @@ fn rigid_profile_to_python(
         "total_rotation_path_radians",
         evidence.total_rotation_path_radians,
     )?;
+    output.set_item(
+        "initial_centroid_offset_angstrom",
+        evidence.initial_centroid_offset_angstrom,
+    )?;
+    output.set_item(
+        "final_centroid_offset_angstrom",
+        evidence.final_centroid_offset_angstrom,
+    )?;
+    output.set_item(
+        "maximum_centroid_offset_angstrom",
+        evidence.maximum_centroid_offset_angstrom,
+    )?;
     Ok(output.into())
 }
 
@@ -1307,18 +1538,47 @@ fn torsion_to_python(
     slot: usize,
 ) -> PyResult<PyObject> {
     let row = &receipt.torsion_rows[slot];
+    let start = slot
+        .checked_mul(receipt.ligand_atom_count)
+        .ok_or_else(|| input_error("torsion-angle offset overflowed"))?;
+    let end = start
+        .checked_add(receipt.ligand_atom_count)
+        .ok_or_else(|| input_error("torsion-angle range overflowed"))?;
+    let optimized_angles = receipt
+        .torsion_coordinates
+        .optimized_torsion_angles_radians
+        .get(start..end)
+        .ok_or_else(|| input_error("optimized torsion-angle range is absent"))?;
+    let final_angles = receipt
+        .torsion_coordinates
+        .final_torsion_angles_radians
+        .get(start..end)
+        .ok_or_else(|| input_error("final torsion-angle range is absent"))?;
     let output = PyDict::new(py);
     output.set_item("status", row.status)?;
     output.set_item("failure_code", row.failure_code)?;
     output.set_item("skip_reason", row.skip_reason)?;
     output.set_item("selection_reason", row.selection_reason)?;
     output.set_item("selection_window_reachable", row.selection_window_reachable)?;
+    output.set_item(
+        "evaluation_stopped_after_selection_window_became_unreachable",
+        row.evaluation_stopped_after_selection_window_became_unreachable,
+    )?;
     output.set_item("torsion_evaluated", row.torsion_evaluated)?;
     output.set_item("torsion_variant_available", row.torsion_variant_available)?;
     output.set_item("torsion_selected", row.torsion_selected)?;
     output.set_item("torsion_step_budget", row.torsion_step_budget)?;
+    output.set_item(
+        "fixed_objective_evaluation_count",
+        row.fixed_objective_evaluation_count,
+    )?;
+    output.set_item(
+        "torsion_trial_objective_evaluation_count",
+        row.torsion_trial_objective_evaluation_count,
+    )?;
     output.set_item("evaluated_torsion_steps", row.evaluated_torsion_steps)?;
     output.set_item("accepted_torsion_steps", row.accepted_torsion_steps)?;
+    output.set_item("baseline_v6_accepted_steps", row.baseline_v6_accepted_steps)?;
     output.set_item("source_receptor_penalty", row.source_receptor_penalty)?;
     output.set_item("source_internal_penalty", row.source_internal_penalty)?;
     output.set_item("source_combined_penalty", row.source_combined_penalty)?;
@@ -1331,6 +1591,22 @@ fn torsion_to_python(
     output.set_item("final_receptor_penalty", row.final_receptor_penalty)?;
     output.set_item("final_internal_penalty", row.final_internal_penalty)?;
     output.set_item("final_combined_penalty", row.final_combined_penalty)?;
+    output.set_item(
+        "evaluated_total_torsion_path_radians",
+        row.evaluated_total_torsion_path_radians,
+    )?;
+    output.set_item(
+        "accepted_total_torsion_path_radians",
+        row.accepted_total_torsion_path_radians,
+    )?;
+    output.set_item(
+        "optimized_torsion_angles_radians",
+        PyList::new(py, optimized_angles),
+    )?;
+    output.set_item(
+        "final_torsion_angles_radians",
+        PyList::new(py, final_angles),
+    )?;
     let moves = PyList::empty(py);
     for evidence in &receipt.torsion_moves[slot * 8..slot * 8 + 8] {
         let item = PyDict::new(py);
