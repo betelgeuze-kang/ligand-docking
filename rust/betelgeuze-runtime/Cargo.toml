@@ -11,6 +11,7 @@ default = []
 hip = ["betelgeuze-sys/hip"]
 
 [dependencies]
+betelgeuze-docking-search = { version = "0.1.0", path = "../betelgeuze-docking-search" }
 betelgeuze-sys = { version = "0.1.0", path = "../betelgeuze-sys" }
 sha2 = "=0.10.9"
 

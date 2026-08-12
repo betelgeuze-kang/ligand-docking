@@ -28,6 +28,7 @@ version = "0.1.0"
 name = "betelgeuze-runtime"
 version = "0.1.0"
 dependencies = [
+ "betelgeuze-docking-search",
  "betelgeuze-reference-dynamics",
  "betelgeuze-reference-physics",
  "betelgeuze-sys",
