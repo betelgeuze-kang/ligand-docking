@@ -77,12 +77,16 @@ scientific, public benchmark, or acceleration claim.
 
 The checked-in profile is frozen but unconsumed. CI may compile and unit-test
 the measurement core and run the static profile verifier; CI must not execute
-the 25-sample live profile. The checked-in native binary has a compile-bound
-`activation_admitted = false` gate before `qualification_profile()` and exits
-without constructing the qualification configuration or calling the measurement
-core. A later activation must bind an exact merged source, native binary,
-toolchain, host preflight, absent-only output, and account-scoped exactly-once
-state before the single local execution is consumed.
+the 25-sample live profile. The library owns one compile-bound
+`activation_admitted = false` constant and rejects the frozen qualification
+profile before fixture construction; without activation, only the exact
+two-round unit-test profile is accepted, and arbitrary custom workloads are
+rejected. The checked-in native binary independently checks that same library
+gate before `qualification_profile()` and exits without constructing the
+qualification configuration or calling the measurement core. A later activation
+must bind an exact merged source, native binary, toolchain, host preflight,
+absent-only output, and account-scoped exactly-once state before the single local
+execution is consumed.
 
 Until that activation is reviewed and merged:
 
@@ -111,7 +115,9 @@ as the exactly-once qualification result. The CI authority auditor scans every
 workflow and every repository-local `**/action.yml` or `action.yaml` manifest,
 including each step's effective shell, expansion-enabled heredocs, nested
 shell/`timeout`/`eval` commands, and the declared Docker or Node action
-implementation files. Unsupported executable shells and incomplete local-action
-surfaces fail closed. The auditor fails closed on a live-probe invocation.
+implementation files. The authoritative workflow triggers on and checks out the
+complete repository so an implementation-only change cannot escape inspection.
+Unsupported executable shells and incomplete local-action surfaces fail closed.
+The auditor fails closed on a live-probe invocation.
 The binary gate is an independent defense: changing it requires a separately
 reviewed activation that replaces this unconsumed profile state.

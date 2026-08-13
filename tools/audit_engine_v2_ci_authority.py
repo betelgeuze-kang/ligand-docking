@@ -173,6 +173,8 @@ NATIVE_FIXED64_CPU_V4_CONTRACT_PATHS = (
     "docs/engine_v2_native_fixed64_cpu_qualification_v4.md",
 )
 NATIVE_FIXED64_CPU_V4_REQUIRED_TOKEN_COUNTS = {
+    '"**"': 1,
+    "            **": 1,
     "**/action.yml": 2,
     "**/action.yaml": 2,
     ".github/workflows/*.yml": 2,
@@ -216,6 +218,14 @@ NATIVE_FIXED64_CPU_V4_CARGO_RUN_PATTERN = (
     r"\bcargo\b[^\n]*?\b(?:run|r)\b[^\n]*"
 )
 NATIVE_FIXED64_CPU_V4_CARGO_RUN_SUBCOMMANDS = ("run", "r")
+NATIVE_FIXED64_CPU_V4_ALLOWED_CARGO_SUBCOMMANDS = (
+    "build",
+    "check",
+    "clippy",
+    "fmt",
+    "package",
+    "test",
+)
 NATIVE_FIXED64_CPU_V4_CARGO_GLOBAL_OPTIONS_WITH_VALUE = (
     "--color",
     "--config",
@@ -252,6 +262,30 @@ NATIVE_FIXED64_CPU_V4_SHELL_EXPANSION_MARKERS = (
     "]",
     "{",
     "}",
+)
+NATIVE_FIXED64_CPU_V4_EXECUTING_WRAPPERS = (
+    "chrt",
+    "ionice",
+    "nice",
+    "nohup",
+    "setsid",
+    "stdbuf",
+    "taskset",
+)
+NATIVE_FIXED64_CPU_V4_STDIN_INTERPRETERS = (
+    ".",
+    "bash",
+    "dash",
+    "ksh",
+    "node",
+    "nodejs",
+    "perl",
+    "python",
+    "python3",
+    "ruby",
+    "sh",
+    "source",
+    "zsh",
 )
 NATIVE_FIXED64_CPU_V4_FOLDED_RUN_PATTERN = re.compile(
     r"^(?P<indent>[ ]*)(?:-[ ]+)?run:[ ]*>[+-]?[1-9]?[+-]?[ ]*(?:#.*)?$"
@@ -644,6 +678,20 @@ def _shell_outer_command_word_index(segment: list[str]) -> int | None:
             index += 1
         if index >= len(segment):
             return None
+        if segment[index].rsplit("/", 1)[-1] == "builtin":
+            index += 1
+            while index < len(segment):
+                token = segment[index]
+                if token == "--":
+                    index += 1
+                    break
+                if token == "-s":
+                    index += 1
+                    continue
+                if token.startswith("-"):
+                    return _AMBIGUOUS_COMMAND_INDEX
+                break
+            continue
         if segment[index] == "command":
             index += 1
             if index < len(segment) and re.fullmatch(
@@ -804,8 +852,28 @@ def _shell_without_static_heredoc_bodies(script: str) -> str | None:
             index += 1
         return False
 
+    def receiver_interprets_standard_input(prefix: str) -> bool:
+        lexer = shlex.shlex(prefix, posix=True, punctuation_chars=";&|()\n")
+        lexer.whitespace_split = True
+        lexer.whitespace = " \t\r"
+        lexer.commenters = "#"
+        try:
+            segments = _shell_command_segments(list(lexer))
+        except ValueError:
+            return True
+        if not segments:
+            return True
+        segment = list(segments[-1])
+        command_index = _shell_command_word_index(segment)
+        if command_index is None or command_index == _AMBIGUOUS_COMMAND_INDEX:
+            return True
+        return (
+            segment[command_index].rsplit("/", 1)[-1]
+            in NATIVE_FIXED64_CPU_V4_STDIN_INTERPRETERS
+        )
+
     output: list[str] = []
-    pending_delimiters: list[tuple[str, bool, bool]] = []
+    pending_delimiters: list[tuple[str, bool, bool, bool, list[str]]] = []
     quote: str | None = None
     for line in script.splitlines(keepends=True):
         content = line
@@ -818,12 +886,26 @@ def _shell_without_static_heredoc_bodies(script: str) -> str | None:
                 newline = "\r\n"
 
         if pending_delimiters:
-            delimiter, strip_tabs, expansion_disabled = pending_delimiters[0]
+            (
+                delimiter,
+                strip_tabs,
+                expansion_disabled,
+                interpreted,
+                body,
+            ) = pending_delimiters[0]
             candidate = content.lstrip("\t") if strip_tabs else content
             if candidate == delimiter:
+                if interpreted and (
+                    _implementation_text_invokes_native_fixed64_cpu_v4_live_probe(
+                        "".join(body)
+                    )
+                ):
+                    return None
                 pending_delimiters.pop(0)
             elif not expansion_disabled and has_executable_expansion(content):
                 return None
+            else:
+                body.append(line)
             output.append(newline)
             continue
 
@@ -856,12 +938,21 @@ def _shell_without_static_heredoc_bodies(script: str) -> str | None:
                 content.startswith("<<", index)
                 and not content.startswith("<<<", index)
             ):
+                redirection_index = index
                 parsed = parse_delimiter(content, index + 2)
                 if parsed is None:
                     return None
                 delimiter, index, strip_tabs, expansion_disabled = parsed
                 pending_delimiters.append(
-                    (delimiter, strip_tabs, expansion_disabled)
+                    (
+                        delimiter,
+                        strip_tabs,
+                        expansion_disabled,
+                        receiver_interprets_standard_input(
+                            content[:redirection_index]
+                        ),
+                        [],
+                    )
                 )
                 continue
             index += 1
@@ -897,6 +988,20 @@ def _workflow_has_dynamic_cargo_run_command(tokens: list[str]) -> bool:
         if segment:
             command_index = _shell_command_word_index(segment)
             if command_index == _AMBIGUOUS_COMMAND_INDEX:
+                return True
+            if (
+                command_index is not None
+                and segment[command_index].rsplit("/", 1)[-1]
+                in NATIVE_FIXED64_CPU_V4_EXECUTING_WRAPPERS
+                and any(
+                    candidate.startswith("${{")
+                    or re.fullmatch(
+                        r"\$(?:[A-Za-z_][A-Za-z0-9_]*|\{[^{}]+\})",
+                        candidate,
+                    )
+                    for candidate in segment[command_index + 1 :]
+                )
+            ):
                 return True
             nonexecuting_display = (
                 command_index is not None
@@ -1185,6 +1290,14 @@ def _shell_tokens_invoke_native_fixed64_cpu_v4_live_probe(
             )
         ):
             return True
+        if (
+            subcommand_index is not None
+            and invocation[subcommand_index]
+            not in NATIVE_FIXED64_CPU_V4_CARGO_RUN_SUBCOMMANDS
+            and invocation[subcommand_index]
+            not in NATIVE_FIXED64_CPU_V4_ALLOWED_CARGO_SUBCOMMANDS
+        ):
+            return True
     return False
 
 
@@ -1207,6 +1320,8 @@ def _is_supported_bourne_shell(shell: str | None) -> bool:
 
 
 def _workflow_invokes_native_fixed64_cpu_v4_live_probe(text: str) -> bool:
+    if re.search(r"\bCARGO_ALIAS_[A-Za-z0-9_]+\s*(?:=|:)", text):
+        return True
     logical = text.replace("\\\n", " ")
     yaml_run_steps = _workflow_yaml_run_steps(logical)
     if yaml_run_steps is None:
@@ -1238,12 +1353,24 @@ def _workflow_invokes_native_fixed64_cpu_v4_live_probe(text: str) -> bool:
 def _implementation_text_invokes_native_fixed64_cpu_v4_live_probe(
     text: str,
 ) -> bool:
+    if re.search(r"\bCARGO_ALIAS_[A-Za-z0-9_]+\s*(?:=|:)", text):
+        return True
     if any(
         token in text
         for token in NATIVE_FIXED64_CPU_V4_FORBIDDEN_WORKFLOW_TOKENS
     ):
         return True
-    return re.search(NATIVE_FIXED64_CPU_V4_CARGO_RUN_PATTERN, text) is not None
+    normalized = re.sub(r"\s+", " ", text)
+    return (
+        re.search(NATIVE_FIXED64_CPU_V4_CARGO_RUN_PATTERN, normalized)
+        is not None
+        or re.search(
+            r"(?:\bcargo\b|\$(?:CARGO|\{CARGO\}))"
+            r".{0,4096}?\b(?:run|r)\b",
+            normalized,
+        )
+        is not None
+    )
 
 
 def _resolve_local_action_path(
@@ -1804,42 +1931,64 @@ def _native_fixed64_cpu_v4_authority_is_fail_closed(repo_root: Path) -> bool:
 
 
 def _native_fixed64_cpu_v4_binary_is_activation_blocked(repo_root: Path) -> bool:
-    path = (
+    probe_path = (
         repo_root
         / "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v4.rs"
     )
+    qualification_path = (
+        repo_root / "rust/betelgeuze-runtime/src/qualification.rs"
+    )
     try:
-        source = path.read_bytes().decode("ascii")
+        probe = probe_path.read_bytes().decode("ascii")
+        qualification = qualification_path.read_bytes().decode("ascii")
     except (OSError, UnicodeError):
         return False
     activation_constant = (
-        "const FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED: bool = false;"
+        "pub const FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED: bool = false;"
     )
     activation_function = re.compile(
-        r"const\s+fn\s+live_activation_admitted\(\)\s*->\s*bool\s*"
+        r"pub\s+const\s+fn\s+fixed64_cpu_v4_live_activation_admitted\(\)"
+        r"\s*->\s*bool\s*"
         r"\{\s*FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED\s*\}"
     )
-    activation_guard = "if !live_activation_admitted()"
+    activation_guard = "if !fixed64_cpu_v4_live_activation_admitted()"
+    unit_test_profile_gate = "if config != Fixed64CpuProbeConfigV4::unit_test()"
+    qualification_profile_gate = (
+        "if config != Fixed64CpuProbeConfigV4::qualification_profile()"
+    )
+    public_api_guard = "if !fixed64_cpu_v4_live_activation_admitted()"
+    fixture_construction = "let fixture = SyntheticFixture::new();"
     qualification_binding = (
         "let config = Fixed64CpuProbeConfigV4::qualification_profile();"
     )
     qualification_call = "Fixed64CpuProbeConfigV4::qualification_profile()"
     measurement_call = "run_native_fixed64_cpu_probe_v4(config)"
     return bool(
-        source.count(activation_constant) == 1
-        and "FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED: bool = true" not in source
-        and len(activation_function.findall(source)) == 1
-        and source.count(activation_guard) == 1
-        and source.count("return ExitCode::from(3);") == 1
-        and source.count(qualification_call) == 1
-        and source.count(qualification_binding) == 1
-        and source.count("Fixed64CpuProbeConfigV4") == 2
-        and "Fixed64CpuProbeConfigV4 {" not in source
-        and source.count(measurement_call) == 1
-        and source.count("run_native_fixed64_cpu_probe_v4") == 2
-        and source.index(activation_guard)
-        < source.index(qualification_binding)
-        < source.index(measurement_call)
+        qualification.count(activation_constant) == 1
+        and "FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED: bool = true"
+        not in qualification
+        and len(activation_function.findall(qualification)) == 1
+        and qualification.count(unit_test_profile_gate) == 1
+        and qualification.count(qualification_profile_gate) == 1
+        and qualification.count(public_api_guard) == 1
+        and qualification.count(fixture_construction) == 1
+        and qualification.index(unit_test_profile_gate)
+        < qualification.index(qualification_profile_gate)
+        < qualification.index(public_api_guard)
+        < qualification.index(fixture_construction)
+        and probe.count("fixed64_cpu_v4_live_activation_admitted") == 2
+        and "FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED" not in probe
+        and probe.count(activation_guard) == 1
+        and probe.count("return ExitCode::from(3);") == 1
+        and probe.count(qualification_call) == 1
+        and probe.count(qualification_binding) == 1
+        and probe.count("Fixed64CpuProbeConfigV4") == 2
+        and "Fixed64CpuProbeConfigV4 {" not in probe
+        and probe.count(measurement_call) == 1
+        and probe.count("run_native_fixed64_cpu_probe_v4") == 2
+        and probe.index(activation_guard)
+        < probe.index(qualification_binding)
+        < probe.index(measurement_call)
     )
 
 

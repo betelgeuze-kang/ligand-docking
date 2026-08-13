@@ -46,7 +46,7 @@ def test_canonical_native_fixed64_cpu_profile_v4_is_frozen() -> None:
     profile = require_profile_document(raw)
 
     assert hashlib.sha256(raw).hexdigest() == (
-        "659b76e4f89f359dda8e6a86dd324ad0d8424bb39186c15a7a423ba24db62998"
+        "4d40daf3f1365d1c1f284b6bc5f6e754e38aa22ba44f7ddb3792e844b2eaae5b"
     )
     assert profile["profile_id"] == "engine_v2_native_fixed64_cpu_synthetic_v4"
     assert all(value is False for value in profile["authority"].values())
@@ -120,16 +120,17 @@ def test_canonical_native_fixed64_cpu_profile_v4_is_frozen() -> None:
             b"Fixed64CpuProbeConfigV4::unit_test()",
         ),
         (
-            "probe",
-            b"const FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED: bool = false;",
-            b"const FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED: bool = true;",
+            "qualification",
+            b"pub const FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED: bool = false;",
+            b"pub const FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED: bool = true;",
         ),
         (
-            "probe",
-            b"const fn live_activation_admitted() -> bool {\n"
+            "qualification",
+            b"pub const fn fixed64_cpu_v4_live_activation_admitted() -> bool {\n"
             b"    FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED\n"
             b"}",
-            b"const fn live_activation_admitted() -> bool {\n    true\n}",
+            b"pub const fn fixed64_cpu_v4_live_activation_admitted() -> bool {\n"
+            b"    true\n}",
         ),
     ),
 )
@@ -168,7 +169,7 @@ def test_profile_v4_rejects_measurement_moved_before_activation_guard() -> None:
     profile = require_profile_document(_PROFILE.read_bytes())
     probe = _PROBE_SOURCE.read_bytes()
     measurement_call = b"run_native_fixed64_cpu_probe_v4(config)"
-    activation_guard = b"if !live_activation_admitted()"
+    activation_guard = b"if !fixed64_cpu_v4_live_activation_admitted()"
     assert probe.count(measurement_call) == 1
     assert probe.count(activation_guard) == 1
     probe = probe.replace(measurement_call, b"measurement_call_moved", 1)
@@ -245,7 +246,7 @@ def test_profile_v4_cli_reports_non_consuming_authority_false() -> None:
         "fixture_count": 2,
         "profile_id": "engine_v2_native_fixed64_cpu_synthetic_v4",
         "profile_sha256": (
-            "659b76e4f89f359dda8e6a86dd324ad0d8424bb39186c15a7a423ba24db62998"
+            "4d40daf3f1365d1c1f284b6bc5f6e754e38aa22ba44f7ddb3792e844b2eaae5b"
         ),
         "reservation_created": False,
         "status": "verified",

@@ -349,6 +349,35 @@ def require_compiled_profile_binding(
         "native_probe_source_sha256"
     ):
         _fail("compiled native probe source changed from the frozen profile")
+    library_activation_function = re.compile(
+        r"pub\s+const\s+fn\s+fixed64_cpu_v4_live_activation_admitted\(\)"
+        r"\s*->\s*bool\s*\{\s*FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED\s*\}"
+    )
+    unit_test_profile_gate = "if config != Fixed64CpuProbeConfigV4::unit_test()"
+    qualification_profile_gate = (
+        "if config != Fixed64CpuProbeConfigV4::qualification_profile()"
+    )
+    library_activation_guard = "if !fixed64_cpu_v4_live_activation_admitted()"
+    fixture_construction = "let fixture = SyntheticFixture::new();"
+    if (
+        source.count(
+            "pub const FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED: bool = false;"
+        )
+        != 1
+        or len(library_activation_function.findall(source)) != 1
+        or source.count(unit_test_profile_gate) != 1
+        or source.count(qualification_profile_gate) != 1
+        or source.count(library_activation_guard) != 1
+        or source.count(fixture_construction) != 1
+        or not (
+            source.index(unit_test_profile_gate)
+            < source.index(qualification_profile_gate)
+            < source.index(library_activation_guard)
+        )
+        or source.index(library_activation_guard)
+        > source.index(fixture_construction)
+    ):
+        _fail("compiled public qualification API is not activation-gated")
 
     native_pipeline_profile_id = core.get("native_pipeline_profile_id")
     rust_pipeline_id_matches = re.findall(
@@ -534,22 +563,15 @@ def require_compiled_profile_binding(
     ):
         _fail("compiled ScorerV1 term-count gate drifted from the frozen profile")
 
-    activation_function = re.compile(
-        r"const\s+fn\s+live_activation_admitted\(\)\s*->\s*bool\s*"
-        r"\{\s*FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED\s*\}"
-    )
-    activation_guard = "if !live_activation_admitted()"
+    activation_guard = "if !fixed64_cpu_v4_live_activation_admitted()"
     qualification_call = "Fixed64CpuProbeConfigV4::qualification_profile()"
     qualification_binding = (
         "let config = Fixed64CpuProbeConfigV4::qualification_profile();"
     )
     measurement_call = "run_native_fixed64_cpu_probe_v4(config)"
     if (
-        probe.count(
-            "const FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED: bool = false;"
-        )
-        != 1
-        or len(activation_function.findall(probe)) != 1
+        probe.count("fixed64_cpu_v4_live_activation_admitted") != 2
+        or "FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED" in probe
         or probe.count(activation_guard) != 1
         or probe.count("return ExitCode::from(3);") != 1
         or probe.count(qualification_call) != 1

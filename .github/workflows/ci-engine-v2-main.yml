@@ -4,6 +4,8 @@ on:
   push:
     branches: ["main"]
     paths:
+      # Local actions may declare executable implementation files at any tracked path.
+      - "**"
       - "betelgeuze_engine_v2/**"
       - "betelgeuze_engine_v2/benchmark/source_paired_clearance_activation.py"
       - "betelgeuze_engine_v2/benchmark/source_paired_clearance_external_reservation.py"
@@ -157,6 +159,8 @@ jobs:
           persist-credentials: false
           clean: true
           sparse-checkout: |
+            # Preserve the complete local-action implementation surface for auditing.
+            **
             .github/workflows/*.yml
             .github/workflows/*.yaml
             **/action.yml

@@ -29,12 +29,14 @@ from tools.audit_engine_v2_ci_authority import (
     NATIVE_FIXED64_CPU_V4_FALSE_RESTRICTION_KEYS,
     NATIVE_FIXED64_CPU_V4_CARGO_GLOBAL_OPTIONS_WITH_VALUE,
     NATIVE_FIXED64_CPU_V4_CARGO_GLOBAL_OPTIONS_WITHOUT_VALUE,
+    NATIVE_FIXED64_CPU_V4_ALLOWED_CARGO_SUBCOMMANDS,
     NATIVE_FIXED64_CPU_V4_CARGO_RUN_PATTERN,
     NATIVE_FIXED64_CPU_V4_CARGO_RUN_SUBCOMMANDS,
     NATIVE_FIXED64_CPU_V4_CARGO_TARGET_SELECTORS,
     NATIVE_FIXED64_CPU_V4_CARGO_TERMINAL_OPTIONS_WITH_VALUE,
     NATIVE_FIXED64_CPU_V4_CARGO_TERMINAL_OPTIONS_WITHOUT_VALUE,
     NATIVE_FIXED64_CPU_V4_FOLDED_RUN_PATTERN,
+    NATIVE_FIXED64_CPU_V4_EXECUTING_WRAPPERS,
     NATIVE_FIXED64_CPU_V4_MAX_WORKFLOW_UTF8_BYTES,
     NATIVE_FIXED64_CPU_V4_MAX_YAML_NODES,
     NATIVE_FIXED64_CPU_V4_FORBIDDEN_WORKFLOW_TOKENS,
@@ -187,6 +189,14 @@ def _write_native_fixed64_cpu_v4_contract(tmp_path: Path) -> None:
         "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v4.rs"
     )
     probe.write_bytes(probe_source.read_bytes())
+    qualification_source = (
+        Path(__file__).resolve().parents[2]
+        / "rust/betelgeuze-runtime/src/qualification.rs"
+    )
+    qualification = (
+        tmp_path / "rust/betelgeuze-runtime/src/qualification.rs"
+    )
+    qualification.write_bytes(qualification_source.read_bytes())
 
 
 def _write_mixed64_v2_contract(
@@ -752,14 +762,15 @@ def test_native_fixed64_cpu_v4_requires_authoritative_ci_and_false_authority(
     ("old", "new"),
     (
         (
-            "FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED: bool = false",
-            "FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED: bool = true",
+            "pub const FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED: bool = false",
+            "pub const FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED: bool = true",
         ),
         (
-            "const fn live_activation_admitted() -> bool {\n"
+            "pub const fn fixed64_cpu_v4_live_activation_admitted() -> bool {\n"
             "    FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED\n"
             "}",
-            "const fn live_activation_admitted() -> bool {\n    true\n}",
+            "pub const fn fixed64_cpu_v4_live_activation_admitted() -> bool {\n"
+            "    true\n}",
         ),
     ),
 )
@@ -774,12 +785,12 @@ def test_native_fixed64_cpu_v4_binary_activation_cannot_be_enabled(
         "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
         encoding="utf-8",
     )
-    probe = tmp_path / (
-        "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v4.rs"
+    qualification = tmp_path / (
+        "rust/betelgeuze-runtime/src/qualification.rs"
     )
-    source = probe.read_text(encoding="ascii")
+    source = qualification.read_text(encoding="ascii")
     assert old in source
-    probe.write_text(
+    qualification.write_text(
         source.replace(old, new, 1),
         encoding="ascii",
     )
@@ -804,7 +815,7 @@ def test_native_fixed64_cpu_v4_measurement_cannot_precede_activation_guard(
     )
     source = probe.read_text(encoding="ascii")
     measurement_call = "run_native_fixed64_cpu_probe_v4(config)"
-    activation_guard = "if !live_activation_admitted()"
+    activation_guard = "if !fixed64_cpu_v4_live_activation_admitted()"
     assert source.count(measurement_call) == 1
     assert source.count(activation_guard) == 1
     source = source.replace(measurement_call, "measurement_call_moved", 1)
@@ -814,6 +825,30 @@ def test_native_fixed64_cpu_v4_measurement_cannot_precede_activation_guard(
         1,
     )
     probe.write_text(source, encoding="ascii")
+
+    payload = build_inventory(tmp_path)
+    assert payload["native_fixed64_cpu_v4_binary_activation_blocked"] is False
+    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is False
+    assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is False
+
+
+def test_native_fixed64_cpu_v4_public_api_cannot_bypass_activation(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_native_fixed64_cpu_v4_contract(tmp_path)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        encoding="utf-8",
+    )
+    qualification = tmp_path / "rust/betelgeuze-runtime/src/qualification.rs"
+    source = qualification.read_text(encoding="ascii")
+    public_guard = "if !fixed64_cpu_v4_live_activation_admitted()"
+    assert source.count(public_guard) == 1
+    qualification.write_text(
+        source.replace(public_guard, "if false", 1),
+        encoding="ascii",
+    )
 
     payload = build_inventory(tmp_path)
     assert payload["native_fixed64_cpu_v4_binary_activation_blocked"] is False
@@ -892,6 +927,10 @@ def test_native_fixed64_cpu_v4_missing_restriction_fails_ci_audit(
         "timeout -vk 1 1 ${{ matrix.command }}",
         "env -- timeout 1 ${{ matrix.command }}",
         "eval 'cargo run -p betelgeuze-runtime'",
+        "builtin eval 'cargo run -p betelgeuze-runtime'",
+        "nice ${{ matrix.command }}",
+        "CARGO_ALIAS_QUALIFY='run -p betelgeuze-runtime' cargo qualify",
+        "cargo qualify",
         (
             "cargo run -p betelgeuze-runtime && "
             "cargo run --bin unrelated-explicit-tool"
@@ -1011,8 +1050,10 @@ def test_native_fixed64_cpu_v4_live_binary_is_forbidden_in_local_action_code(
         )
         implementation = action_dir / "index.js"
         implementation.write_text(
-            'require("node:child_process").execFileSync('
-            '"cargo", ["run", "-p", "betelgeuze-runtime"]);\n',
+            'require("node:child_process").execFileSync(\n'
+            '  "cargo",\n'
+            '  ["run", "-p", "betelgeuze-runtime"],\n'
+            ');\n',
             encoding="utf-8",
         )
 
@@ -1189,6 +1230,35 @@ def test_native_fixed64_cpu_v4_unquoted_heredoc_static_data_remains_allowed(
         ]
         is True
     )
+
+
+def test_native_fixed64_cpu_v4_shell_interpreter_heredoc_is_audited(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_native_fixed64_cpu_v4_contract(tmp_path)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        encoding="utf-8",
+    )
+    unrelated = tmp_path / ".github/workflows/unrelated.yaml"
+    unrelated.write_text(
+        "jobs:\n  interpreter:\n    steps:\n"
+        "      - run: |\n"
+        "          bash <<'EOF'\n"
+        "          cargo run -p betelgeuze-runtime\n"
+        "          EOF\n",
+        encoding="utf-8",
+    )
+
+    payload = build_inventory(tmp_path)
+    assert (
+        payload[
+            "native_fixed64_cpu_v4_live_qualification_absent_from_github_actions"
+        ]
+        is False
+    )
+    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is False
 
 
 def test_native_fixed64_cpu_v4_command_after_heredoc_is_still_audited(
@@ -1525,6 +1595,8 @@ def test_native_fixed64_cpu_v4_inventory_constants_are_exact() -> None:
         "stage0_admission_authorized",
     }
     assert NATIVE_FIXED64_CPU_V4_REQUIRED_TOKENS == (
+        '"**"',
+        "            **",
         "**/action.yml",
         "**/action.yaml",
         ".github/workflows/*.yml",
@@ -1554,6 +1626,14 @@ def test_native_fixed64_cpu_v4_inventory_constants_are_exact() -> None:
         r"\bcargo\b[^\n]*?\b(?:run|r)\b[^\n]*"
     )
     assert NATIVE_FIXED64_CPU_V4_CARGO_RUN_SUBCOMMANDS == ("run", "r")
+    assert NATIVE_FIXED64_CPU_V4_ALLOWED_CARGO_SUBCOMMANDS == (
+        "build",
+        "check",
+        "clippy",
+        "fmt",
+        "package",
+        "test",
+    )
     assert NATIVE_FIXED64_CPU_V4_CARGO_GLOBAL_OPTIONS_WITH_VALUE == (
         "--color",
         "--config",
@@ -1593,6 +1673,15 @@ def test_native_fixed64_cpu_v4_inventory_constants_are_exact() -> None:
         "{",
         "}",
     )
+    assert NATIVE_FIXED64_CPU_V4_EXECUTING_WRAPPERS == (
+        "chrt",
+        "ionice",
+        "nice",
+        "nohup",
+        "setsid",
+        "stdbuf",
+        "taskset",
+    )
     assert NATIVE_FIXED64_CPU_V4_FOLDED_RUN_PATTERN.fullmatch("      - run: >2-")
     assert NATIVE_FIXED64_CPU_V4_MAX_WORKFLOW_UTF8_BYTES == 1_048_576
     assert NATIVE_FIXED64_CPU_V4_MAX_YAML_NODES == 100_000
@@ -1606,6 +1695,8 @@ def test_authoritative_main_runs_for_every_workflow_change() -> None:
     assert workflow.count(".github/workflows/*.yaml") == 2
     assert workflow.count("**/action.yml") == 2
     assert workflow.count("**/action.yaml") == 2
+    assert workflow.count('      - "**"') == 1
+    assert workflow.count("            **\n") == 1
     assert workflow.count("sparse-checkout-cone-mode: false") == 1
     canonical_checkout = workflow.split(
         "- name: Check out canonical Engine v2 surface", 1

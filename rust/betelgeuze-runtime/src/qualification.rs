@@ -31,6 +31,12 @@ pub const FIXED64_CPU_QUALIFICATION_V4_PROFILE_ID: &str =
     "engine_v2_native_fixed64_cpu_synthetic_v4";
 pub const FIXED64_CPU_QUALIFICATION_V4_SCHEMA_ID: &str =
     "betelgeuze.engine_v2_native_fixed64_cpu_probe/4.0.0";
+pub const FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED: bool = false;
+
+#[must_use]
+pub const fn fixed64_cpu_v4_live_activation_admitted() -> bool {
+    FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED
+}
 
 const SLOT_COUNT: usize = 64;
 const LIGAND_ATOM_COUNT: usize = 12;
@@ -1224,6 +1230,20 @@ pub fn run_native_fixed64_cpu_probe_v4(
     config: Fixed64CpuProbeConfigV4,
 ) -> Result<Fixed64CpuProbeReportV4> {
     let config = config.validate()?;
+    if config != Fixed64CpuProbeConfigV4::unit_test() {
+        if config != Fixed64CpuProbeConfigV4::qualification_profile() {
+            return Err(Error::local(
+                ErrorCode::InvalidArgument,
+                "fixed64 CPU probe accepts only the unit-test or frozen qualification profile",
+            ));
+        }
+        if !fixed64_cpu_v4_live_activation_admitted() {
+            return Err(Error::local(
+                ErrorCode::BackendUnavailable,
+                "fixed64 CPU qualification profile failed closed: reviewed live activation is absent",
+            ));
+        }
+    }
     let fixture = SyntheticFixture::new();
     let fixtures = [FixtureVariant::Complete, FixtureVariant::FeatureSparse]
         .into_iter()
@@ -1293,5 +1313,30 @@ mod tests {
                 && fixture.persistent_cpp_context_count == 1
                 && fixture.persistent_rust_context_count == 1
         }));
+    }
+
+    #[test]
+    fn public_api_blocks_the_live_qualification_profile_before_fixture_work() {
+        let error =
+            run_native_fixed64_cpu_probe_v4(Fixed64CpuProbeConfigV4::qualification_profile())
+                .expect_err("unactivated live qualification profile must fail closed");
+        assert_eq!(error.code, ErrorCode::BackendUnavailable);
+        assert_eq!(
+            error.message,
+            "fixed64 CPU qualification profile failed closed: reviewed live activation is absent",
+        );
+    }
+
+    #[test]
+    fn public_api_rejects_custom_probe_workloads_before_fixture_work() {
+        let mut config = Fixed64CpuProbeConfigV4::unit_test();
+        config.sample_rounds = 24;
+        let error = run_native_fixed64_cpu_probe_v4(config)
+            .expect_err("custom probe workload must fail closed");
+        assert_eq!(error.code, ErrorCode::InvalidArgument);
+        assert_eq!(
+            error.message,
+            "fixed64 CPU probe accepts only the unit-test or frozen qualification profile",
+        );
     }
 }

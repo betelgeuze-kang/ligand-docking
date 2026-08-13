@@ -2,14 +2,9 @@ use std::fmt::Write as _;
 use std::process::ExitCode;
 
 use betelgeuze_runtime::{
-    run_native_fixed64_cpu_probe_v4, Fixed64CpuFixtureProbeV4, Fixed64CpuProbeConfigV4,
+    fixed64_cpu_v4_live_activation_admitted, run_native_fixed64_cpu_probe_v4,
+    Fixed64CpuFixtureProbeV4, Fixed64CpuProbeConfigV4,
 };
-
-const FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED: bool = false;
-
-const fn live_activation_admitted() -> bool {
-    FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED
-}
 
 fn digest(value: [u8; 32]) -> String {
     let mut output = String::with_capacity(64);
@@ -107,7 +102,7 @@ fn main() -> ExitCode {
         eprintln!("fixed64 CPU probe v4 accepts no caller-supplied arguments");
         return ExitCode::from(2);
     }
-    if !live_activation_admitted() {
+    if !fixed64_cpu_v4_live_activation_admitted() {
         eprintln!("fixed64 CPU probe v4 failed closed: reviewed live activation is absent");
         return ExitCode::from(3);
     }
