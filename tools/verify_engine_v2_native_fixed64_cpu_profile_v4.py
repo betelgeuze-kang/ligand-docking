@@ -888,15 +888,22 @@ def require_compiled_profile_binding(
     ):
         _fail("compiled public qualification API is not activation-gated")
 
-    constant_assertion = "assert!(!FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED);"
+    constant_observation = re.compile(
+        r"let\s+activation_constant\s*=\s*std::hint::black_box\("
+        r"\s*FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED\s*\);"
+    )
+    constant_observation_matches = list(constant_observation.finditer(activation_test))
+    constant_assertion = "assert!(!activation_constant);"
     function_assertion = "assert!(!fixed64_cpu_v4_live_activation_admitted());"
     binary_launch = 'Command::new(env!("CARGO_BIN_EXE_betelgeuze-fixed64-cpu-probe-v4"))'
     if (
-        activation_test.count(constant_assertion) != 1
+        len(constant_observation_matches) != 1
+        or activation_test.count(constant_assertion) != 1
         or activation_test.count(function_assertion) != 1
         or activation_test.count(binary_launch) != 1
         or not (
-            activation_test.index(constant_assertion)
+            constant_observation_matches[0].end()
+            < activation_test.index(constant_assertion)
             < activation_test.index(function_assertion)
             < activation_test.index(binary_launch)
         )

@@ -9,7 +9,8 @@ fn native_fixed64_cpu_probe_is_blocked_before_measurement() {
     // Integration tests link the ordinary non-test library artifact. Keep
     // these checks before spawning the binary so an activation-open build
     // fails without entering qualification configuration or measurement.
-    assert!(!FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED);
+    let activation_constant = std::hint::black_box(FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED);
+    assert!(!activation_constant);
     assert!(!fixed64_cpu_v4_live_activation_admitted());
 
     let output = Command::new(env!("CARGO_BIN_EXE_betelgeuze-fixed64-cpu-probe-v4"))

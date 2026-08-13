@@ -83,7 +83,7 @@ def test_canonical_native_fixed64_cpu_profile_v4_is_frozen() -> None:
     profile = require_profile_document(raw)
 
     assert hashlib.sha256(raw).hexdigest() == (
-        "a2a31ef2595c49bf19a9d9ec70afca8d4e3ad606ccc64b7ead81e52df0dfc224"
+        "4b2c45787fb0dfb995e5fce14146e25f0df4f3523208774e3c9eef15be8b2c08"
     )
     assert profile["profile_id"] == "engine_v2_native_fixed64_cpu_synthetic_v4"
     assert all(value is False for value in profile["authority"].values())
@@ -251,6 +251,37 @@ def test_profile_v4_rejects_measurement_moved_before_activation_guard() -> None:
             _DOCKING_SOURCE.read_bytes(),
             _NATIVE_PIPELINE_SOURCE.read_bytes(),
             probe,
+            changed,
+            _VENDOR_TREE_PATHS,
+            _RUST_SOURCE_TREE_PATHS,
+            _RUST_BUILD_SCRIPT_PATHS,
+        )
+
+
+def test_profile_v4_requires_runtime_observation_of_release_activation_constant() -> None:
+    profile = require_profile_document(_PROFILE.read_bytes())
+    changed = dict(_TRANSITIVE_SOURCES)
+    path = "rust/betelgeuze-runtime/tests/fixed64_cpu_probe_activation.rs"
+    old = b"std::hint::black_box(FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED)"
+    new = b"std::convert::identity(FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED)"
+    assert changed[path].count(old) == 1
+    changed[path] = changed[path].replace(old, new, 1)
+    core = profile["measurement_core"]
+    assert type(core) is dict
+    core["native_transitive_source_manifest_sha256"] = (
+        _transitive_source_manifest_sha256(changed)
+    )
+
+    with pytest.raises(
+        NativeFixed64CPUProfileV4Error,
+        match="release non-test activation artifact check",
+    ):
+        require_compiled_profile_binding(
+            profile,
+            _QUALIFICATION_SOURCE.read_bytes(),
+            _DOCKING_SOURCE.read_bytes(),
+            _NATIVE_PIPELINE_SOURCE.read_bytes(),
+            _PROBE_SOURCE.read_bytes(),
             changed,
             _VENDOR_TREE_PATHS,
             _RUST_SOURCE_TREE_PATHS,
@@ -729,7 +760,7 @@ def test_profile_v4_cli_reports_non_consuming_authority_false() -> None:
         "fixture_count": 2,
         "profile_id": "engine_v2_native_fixed64_cpu_synthetic_v4",
         "profile_sha256": (
-            "a2a31ef2595c49bf19a9d9ec70afca8d4e3ad606ccc64b7ead81e52df0dfc224"
+            "4b2c45787fb0dfb995e5fce14146e25f0df4f3523208774e3c9eef15be8b2c08"
         ),
         "reservation_created": False,
         "status": "verified",
