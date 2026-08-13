@@ -136,6 +136,7 @@
     "compiled_activation_profile_verified_at_build": true,
     "compiled_transitive_sources_verified_at_build": true,
     "live_execution_implemented": true,
+    "non_authoritative_package_build_activation_rejected": true,
     "output_path_utf8_required": true,
     "output_policy": "owner_only_absent_only_single_artifact_plus_terminal",
     "post_measurement_host_revalidation_required": true,
@@ -155,9 +156,9 @@
     "cargo_manifest_sha256": "d230b8a374197ab667dabb8fe89a7079fab2c12fcede14ef3de380e11ef6bce4",
     "native_binary_source_sha256": "4407b433ebbb6508f0caf2715d3fe2b34f0b6667e82601cd4f39f075a625a871",
     "native_qualification_source_sha256": "8d36897aa72c0608b5cb5ad6a06d2ab1c090cd00ebdf6f9d811b2f8afc80f9d7",
-    "native_runner_source_sha256": "9c05a17d93eea50ed5591c7b5137db827f82df24f2d055b45da2fcfa05350a98",
+    "native_runner_source_sha256": "5e62bb79cb32a6dee13dbd18239869aafd65c7667cc9c7310cb1c65368e31635",
     "predecessor_archive_sha256": "9e4042d08b4971cbd218f0afaa7a994892f89f3d256e32ed505129af078cd512",
-    "transitive_source_manifest_sha256": "23bcf8417e18dd397d8fe6a7075f8a15ae3acc322c82353147dc5b16b063b88a"
+    "transitive_source_manifest_sha256": "1d80a3415a4568930b5e92071da6471488c890ccf131ae9f2e6fbd761bfc43c9"
   },
   "status": "native_activation_implementation_frozen_execution_not_consumed"
 }

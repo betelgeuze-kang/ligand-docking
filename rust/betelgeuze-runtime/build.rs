@@ -16,7 +16,10 @@ const COMPILED_MANIFEST_ENV: &str = "BETELGEUZE_V6_COMPILED_SOURCE_MANIFEST_SHA2
 const COMPILED_SOURCE_COUNT_ENV: &str = "BETELGEUZE_V6_COMPILED_SOURCE_COUNT";
 const COMPILED_PROFILE_ENV: &str = "BETELGEUZE_V6_COMPILED_PROFILE_SHA256";
 const BUILD_COMMIT_ENV: &str = "BETELGEUZE_V6_BUILD_COMMIT_OID";
+const BUILD_COMMIT_BOUND_ENV: &str = "BETELGEUZE_V6_BUILD_COMMIT_BOUND";
 const VERIFIED_SOURCE_ROOT_ENV: &str = "BETELGEUZE_V6_VERIFIED_SOURCE_ROOT";
+const NON_AUTHORITATIVE_PACKAGE_BUILD_ENV: &str = "BETELGEUZE_V6_NON_AUTHORITATIVE_PACKAGE_BUILD";
+const UNBOUND_BUILD_COMMIT_OID: &str = "0000000000000000000000000000000000000000";
 
 #[derive(Debug)]
 struct SourceRow {
@@ -144,7 +147,43 @@ fn committed_blob(source_root: &Path, commit_oid: &str, relative: &str) -> Vec<u
     git_output(source_root, &["cat-file", "blob", &object])
 }
 
-fn bind_activation_snapshot(source_root: &Path, canonical_manifest: &[u8]) -> (String, String) {
+fn non_authoritative_package_build() -> bool {
+    println!("cargo:rerun-if-env-changed={NON_AUTHORITATIVE_PACKAGE_BUILD_ENV}");
+    match env::var(NON_AUTHORITATIVE_PACKAGE_BUILD_ENV) {
+        Ok(value) => {
+            assert_eq!(
+                value, "1",
+                "non-authoritative v6 package build opt-in must equal 1"
+            );
+            true
+        }
+        Err(env::VarError::NotPresent) => false,
+        Err(env::VarError::NotUnicode(_)) => {
+            panic!("non-authoritative v6 package build opt-in must be UTF-8")
+        }
+    }
+}
+
+fn bind_activation_snapshot(
+    source_root: &Path,
+    canonical_manifest: &[u8],
+    non_authoritative_package: bool,
+) -> (String, String, bool) {
+    let canonical_profile_path = source_root.join(PROFILE_RELATIVE_PATH);
+    println!(
+        "cargo:rerun-if-changed={}",
+        canonical_profile_path.display()
+    );
+    let canonical_profile =
+        fs::read(&canonical_profile_path).expect("canonical v6 profile is unavailable");
+    assert_eq!(
+        canonical_profile, PACKAGED_PROFILE_BYTES,
+        "packaged v6 activation profile drifted from the build checkout"
+    );
+    let profile_sha256 = sha256_hex(&canonical_profile);
+    if non_authoritative_package {
+        return (UNBOUND_BUILD_COMMIT_OID.to_owned(), profile_sha256, false);
+    }
     let raw_oid = git_output(source_root, &["rev-parse", "--verify", "HEAD"]);
     let commit_oid = std::str::from_utf8(&raw_oid)
         .expect("v6 build commit must be UTF-8")
@@ -161,23 +200,12 @@ fn bind_activation_snapshot(source_root: &Path, canonical_manifest: &[u8]) -> (S
         committed_blob(source_root, commit_oid, SOURCE_MANIFEST_RELATIVE_PATH),
         "v6 source manifest differs from the exact build commit"
     );
-    let canonical_profile_path = source_root.join(PROFILE_RELATIVE_PATH);
-    println!(
-        "cargo:rerun-if-changed={}",
-        canonical_profile_path.display()
-    );
-    let canonical_profile =
-        fs::read(&canonical_profile_path).expect("canonical v6 profile is unavailable");
     assert_eq!(
         canonical_profile,
         committed_blob(source_root, commit_oid, PROFILE_RELATIVE_PATH),
         "v6 activation profile differs from the exact build commit"
     );
-    assert_eq!(
-        canonical_profile, PACKAGED_PROFILE_BYTES,
-        "packaged v6 activation profile drifted from the build checkout"
-    );
-    (commit_oid.to_owned(), sha256_hex(&canonical_profile))
+    (commit_oid.to_owned(), profile_sha256, true)
 }
 
 fn bind_compiled_source_graph(source_root: &Path) -> (String, usize) {
@@ -232,8 +260,11 @@ fn main() {
     let (manifest_sha256, source_count) = bind_compiled_source_graph(&source_root);
     let canonical_manifest = fs::read(source_root.join(SOURCE_MANIFEST_RELATIVE_PATH))
         .expect("canonical v6 source manifest is unavailable");
-    let (build_commit_oid, profile_sha256) =
-        bind_activation_snapshot(&source_root, &canonical_manifest);
+    let (build_commit_oid, profile_sha256, build_commit_bound) = bind_activation_snapshot(
+        &source_root,
+        &canonical_manifest,
+        non_authoritative_package_build(),
+    );
     let source_root_text = source_root
         .to_str()
         .expect("v6 verified source root must be UTF-8");
@@ -241,5 +272,6 @@ fn main() {
     println!("cargo:rustc-env={COMPILED_SOURCE_COUNT_ENV}={source_count}");
     println!("cargo:rustc-env={COMPILED_PROFILE_ENV}={profile_sha256}");
     println!("cargo:rustc-env={BUILD_COMMIT_ENV}={build_commit_oid}");
+    println!("cargo:rustc-env={BUILD_COMMIT_BOUND_ENV}={build_commit_bound}");
     println!("cargo:rustc-env={VERIFIED_SOURCE_ROOT_ENV}={source_root_text}");
 }

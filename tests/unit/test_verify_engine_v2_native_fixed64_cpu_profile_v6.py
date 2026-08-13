@@ -298,6 +298,22 @@ def test_compile_time_activation_profile_and_commit_binding_is_required() -> Non
         require_activation_source_contract(sources)
 
 
+def test_non_authoritative_package_build_cannot_activate() -> None:
+    _, _, _, _, sources = _real_evidence()
+    sources = dict(sources)
+    key = verifier.RUNNER_SOURCE_RELATIVE_PATH.as_posix()
+    sources[key] = sources[key].replace(
+        b'BUILD_COMMIT_BOUND != "true"',
+        b'BUILD_COMMIT_BOUND == "invalid"',
+        1,
+    )
+    with pytest.raises(
+        NativeFixed64CPUProfileV6Error,
+        match="non-authoritative package rejection",
+    ):
+        require_activation_source_contract(sources)
+
+
 def test_binary_cannot_accept_caller_supplied_probe_configuration() -> None:
     _, _, _, _, sources = _real_evidence()
     sources = dict(sources)

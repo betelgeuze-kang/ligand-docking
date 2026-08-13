@@ -1139,6 +1139,30 @@ def test_native_fixed64_cpu_v6_hip_sparse_checkout_binds_compiled_profiles(
     assert payload["native_fixed64_cpu_v6_contract_in_authoritative_ci"] is False
 
 
+def test_native_fixed64_cpu_v6_gitless_wheel_is_explicitly_non_authoritative(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_native_fixed64_cpu_v6_contract(tmp_path)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_native_fixed64_cpu_v6_ci_tokens()),
+        encoding="utf-8",
+    )
+    workflow = tmp_path / ".github/workflows/ci-engine-v2-release-candidate.yml"
+    text = workflow.read_text(encoding="utf-8")
+    workflow.write_text(
+        text.replace(
+            "              -e BETELGEUZE_V6_NON_AUTHORITATIVE_PACKAGE_BUILD=1 \\\n",
+            "",
+            1,
+        ),
+        encoding="utf-8",
+    )
+    payload = build_inventory(tmp_path)
+    assert payload["native_fixed64_cpu_v6_authority_fail_closed"] is False
+    assert payload["native_fixed64_cpu_v6_contract_in_authoritative_ci"] is False
+
+
 def test_native_fixed64_cpu_v6_authority_escalation_fails_ci_audit(
     tmp_path: Path,
 ) -> None:

@@ -24,9 +24,9 @@ else:
 
 SCHEMA_ID = "betelgeuze.engine_v2_native_fixed64_cpu_profile/6.0.0"
 PROFILE_ID = "engine_v2_native_fixed64_cpu_synthetic_v6"
-PROFILE_SHA256 = "c2a6b244feca96dea45733ffd577e86fc648aa6529fe66837d4baff9e36f0204"
+PROFILE_SHA256 = "68c3b49bb5e5152c08afecdac76c959765162131ddefba2cf84e580228b1e1d7"
 SOURCE_MANIFEST_SHA256 = (
-    "23bcf8417e18dd397d8fe6a7075f8a15ae3acc322c82353147dc5b16b063b88a"
+    "1d80a3415a4568930b5e92071da6471488c890ccf131ae9f2e6fbd761bfc43c9"
 )
 SOURCE_COUNT = 192
 PROFILE_RELATIVE_PATH = Path("config/engine_v2_native_fixed64_cpu_profile_v6.json")
@@ -332,6 +332,7 @@ def require_profile_document_v6(
         "compiled_activation_profile_verified_at_build": True,
         "compiled_transitive_sources_verified_at_build": True,
         "live_execution_implemented": True,
+        "non_authoritative_package_build_activation_rejected": True,
         "output_path_utf8_required": True,
         "output_policy": "owner_only_absent_only_single_artifact_plus_terminal",
         "post_measurement_host_revalidation_required": True,
@@ -650,7 +651,10 @@ def require_activation_source_contract(sources: dict[str, bytes]) -> None:
         "cargo:rustc-env={COMPILED_MANIFEST_ENV}",
         "cargo:rustc-env={COMPILED_PROFILE_ENV}",
         "cargo:rustc-env={BUILD_COMMIT_ENV}",
+        "cargo:rustc-env={BUILD_COMMIT_BOUND_ENV}",
         "cargo:rustc-env={VERIFIED_SOURCE_ROOT_ENV}",
+        "BETELGEUZE_V6_NON_AUTHORITATIVE_PACKAGE_BUILD",
+        "UNBOUND_BUILD_COMMIT_OID",
         "committed_blob(source_root, commit_oid, PROFILE_RELATIVE_PATH)",
         "canonical_profile, PACKAGED_PROFILE_BYTES",
         "cargo:rerun-if-changed={}",
@@ -659,6 +663,12 @@ def require_activation_source_contract(sources: dict[str, bytes]) -> None:
     ):
         if token not in build_source:
             _fail(f"v6 compile-time source binding token is missing: {token}")
+    for token in (
+        'BUILD_COMMIT_BOUND != "true"',
+        "non-authoritative package build cannot activate",
+    ):
+        if token not in runner:
+            _fail(f"v6 non-authoritative package rejection token is missing: {token}")
     start = runner.find("pub fn run_native_fixed64_cpu_qualification_v6(")
     end = runner.find("\n#[cfg(test)]", start)
     if start < 0 or end < 0:

@@ -42,6 +42,7 @@ const COMPILED_SOURCE_MANIFEST_SHA256: &str = env!("BETELGEUZE_V6_COMPILED_SOURC
 const COMPILED_SOURCE_COUNT: &str = env!("BETELGEUZE_V6_COMPILED_SOURCE_COUNT");
 const COMPILED_PROFILE_SHA256: &str = env!("BETELGEUZE_V6_COMPILED_PROFILE_SHA256");
 const BUILD_COMMIT_OID: &str = env!("BETELGEUZE_V6_BUILD_COMMIT_OID");
+const BUILD_COMMIT_BOUND: &str = env!("BETELGEUZE_V6_BUILD_COMMIT_BOUND");
 const VERIFIED_SOURCE_ROOT: &str = env!("BETELGEUZE_V6_VERIFIED_SOURCE_ROOT");
 
 const ATTEMPT_SCHEMA_ID: &str = "betelgeuze.engine_v2_native_fixed64_cpu_attempt/6.0.0";
@@ -306,6 +307,10 @@ pub fn verify_native_fixed64_cpu_v6_activation() -> V6Result<Fixed64CpuActivatio
             "compiled activation profile",
         ),
         (
+            "\"non_authoritative_package_build_activation_rejected\": true",
+            "non-authoritative package activation boundary",
+        ),
+        (
             "\"output_path_utf8_required\": true",
             "output path encoding",
         ),
@@ -336,8 +341,14 @@ pub fn verify_native_fixed64_cpu_v6_activation() -> V6Result<Fixed64CpuActivatio
         TRANSITIVE_SOURCE_MANIFEST_BYTES,
     )?;
     let profile_sha256 = sha256_hex(PROFILE_BYTES);
+    if BUILD_COMMIT_BOUND != "true" {
+        return Err(NativeFixed64CpuQualificationV6Error::new(
+            "native fixed64 CPU v6 non-authoritative package build cannot activate",
+        ));
+    }
     if COMPILED_PROFILE_SHA256 != profile_sha256
         || BUILD_COMMIT_OID.len() != 40
+        || BUILD_COMMIT_OID == "0000000000000000000000000000000000000000"
         || !BUILD_COMMIT_OID
             .bytes()
             .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())

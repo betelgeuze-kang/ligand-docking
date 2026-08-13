@@ -9,12 +9,12 @@ unchanged.
 
 The profile is
 `config/engine_v2_native_fixed64_cpu_profile_v6.json`. Its exact SHA-256 is
-`c2a6b244feca96dea45733ffd577e86fc648aa6529fe66837d4baff9e36f0204`.
+`68c3b49bb5e5152c08afecdac76c959765162131ddefba2cf84e580228b1e1d7`.
 The 192-input native/Rust compiler manifest is
 `config/engine_v2_native_fixed64_cpu_profile_v6_sources.json`, SHA-256
-`23bcf8417e18dd397d8fe6a7075f8a15ae3acc322c82353147dc5b16b063b88a`.
+`1d80a3415a4568930b5e92071da6471488c890ccf131ae9f2e6fbd761bfc43c9`.
 The domain-bound activation SHA-256 is
-`7d95a36360b597ec4ba225de9aa0847d4e8a9dfff1182a14319ec36050f59547`.
+`513b67d190a00f00afda054b51d843e107a424b81b0207509d6b8b6defec0105`.
 
 The standalone `betelgeuze-runtime` crate packages byte-identical mirrors of
 the profile, predecessor archive, source manifest, original pre-normalization
@@ -22,6 +22,14 @@ Cargo manifest, and workspace lock under
 `rust/betelgeuze-runtime/assets/`. Both the profile verifier and CI authority
 audit reject any mirror drift; packaging the mirrors grants no execution or
 qualification authority.
+
+Git-less manylinux extension-wheel builds must opt into the explicit
+`BETELGEUZE_V6_NON_AUTHORITATIVE_PACKAGE_BUILD=1` compile mode. That mode still
+verifies the complete frozen source graph and packaged profile bytes, but
+embeds `build_commit_bound=false`; every v6 activation entry point therefore
+fails closed. Standalone qualification builds do not have this exception and
+must bind the exact Git commit plus its committed profile and source-manifest
+blobs.
 
 The crate build script verifies every one of the 192 manifest rows against the
 actual checkout used for compilation and embeds the verified manifest identity

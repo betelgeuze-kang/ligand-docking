@@ -997,6 +997,10 @@ def _native_fixed64_cpu_v6_authority_is_fail_closed(repo_root: Path) -> bool:
         is True
         and runner_contract.get("compiled_transitive_sources_verified_at_build")
         is True
+        and runner_contract.get(
+            "non_authoritative_package_build_activation_rejected"
+        )
+        is True
         and runner_contract.get("output_path_utf8_required") is True
         and runner_contract.get("post_measurement_host_revalidation_required")
         is True
@@ -1015,6 +1019,11 @@ def _native_fixed64_cpu_v6_authority_is_fail_closed(repo_root: Path) -> bool:
             hip_workflow.count(path) == 1
             for path in NATIVE_FIXED64_CPU_V6_COMPILE_BOUND_CONFIG_PATHS
         )
+        and release_workflow.count(
+            "-e BETELGEUZE_V6_NON_AUTHORITATIVE_PACKAGE_BUILD=1"
+        )
+        == 1
+        and "non-authoritative package build cannot activate" in release_workflow
         and re.search(
             r'\[\[package\]\]\nname = "betelgeuze-runtime"\n'
             r'version = "0\.1\.0"\ndependencies = \[\n'
@@ -1064,9 +1073,14 @@ def _native_fixed64_cpu_v6_authority_is_fail_closed(repo_root: Path) -> bool:
         and "cargo:rustc-env={COMPILED_MANIFEST_ENV}" in build_source
         and "cargo:rustc-env={COMPILED_PROFILE_ENV}" in build_source
         and "cargo:rustc-env={BUILD_COMMIT_ENV}" in build_source
+        and "cargo:rustc-env={BUILD_COMMIT_BOUND_ENV}" in build_source
         and "cargo:rustc-env={VERIFIED_SOURCE_ROOT_ENV}" in build_source
+        and "BETELGEUZE_V6_NON_AUTHORITATIVE_PACKAGE_BUILD" in build_source
+        and "UNBOUND_BUILD_COMMIT_OID" in build_source
         and "committed_blob(source_root, commit_oid, PROFILE_RELATIVE_PATH)"
         in build_source
+        and 'BUILD_COMMIT_BOUND != "true"' in runner
+        and "non-authoritative package build cannot activate" in runner
         and "decision_returned_only_after_terminal_persistence" in runner
         and runner.count("run_native_fixed64_cpu_qualification_successor(") == 1
         and "--verify-activation" in binary
