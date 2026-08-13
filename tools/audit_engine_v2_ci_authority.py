@@ -214,7 +214,9 @@ NATIVE_FIXED64_CPU_V6_CONTRACT_PATHS = (
     "rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v5_archive.json",
     "rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v6.json",
     "rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v6_sources.json",
+    "rust/betelgeuze-runtime/assets/original-Cargo.toml",
     "rust/betelgeuze-runtime/assets/workspace-Cargo.lock",
+    "rust/betelgeuze-runtime/build.rs",
     "rust/betelgeuze-runtime/src/lib.rs",
     "rust/betelgeuze-runtime/src/qualification.rs",
     "rust/betelgeuze-runtime/src/qualification_v6.rs",
@@ -238,7 +240,9 @@ NATIVE_FIXED64_CPU_V6_REQUIRED_TOKEN_COUNTS = {
     "rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v5_archive.json": 1,
     "rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v6.json": 1,
     "rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v6_sources.json": 1,
+    "rust/betelgeuze-runtime/assets/original-Cargo.toml": 1,
     "rust/betelgeuze-runtime/assets/workspace-Cargo.lock": 1,
+    "rust/betelgeuze-runtime/build.rs": 1,
     "tools/verify_engine_v2_native_fixed64_cpu_profile_v6.py": 4,
     "tools/verify_engine_v2_native_fixed64_cpu_v6_evidence.py": 4,
     "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v6.py": 3,
@@ -919,6 +923,15 @@ def _native_fixed64_cpu_v6_authority_is_fail_closed(repo_root: Path) -> bool:
             repo_root
             / "rust/betelgeuze-runtime/assets/workspace-Cargo.lock"
         ).read_bytes()
+        packaged_cargo_manifest_raw = (
+            repo_root / "rust/betelgeuze-runtime/assets/original-Cargo.toml"
+        ).read_bytes()
+        cargo_manifest_raw = (
+            repo_root / "rust/betelgeuze-runtime/Cargo.toml"
+        ).read_bytes()
+        build_source = (
+            repo_root / "rust/betelgeuze-runtime/build.rs"
+        ).read_text(encoding="utf-8")
         profile = json.loads(raw.decode("ascii"))
         runner = runner_path.read_text(encoding="utf-8")
         binary = binary_path.read_text(encoding="utf-8")
@@ -947,6 +960,7 @@ def _native_fixed64_cpu_v6_authority_is_fail_closed(repo_root: Path) -> bool:
         and packaged_v5_archive_raw == v5_archive_raw
         and packaged_source_manifest_raw == source_manifest_raw
         and packaged_cargo_lock_raw == cargo_lock_raw
+        and packaged_cargo_manifest_raw == cargo_manifest_raw
         and profile.get("schema_id")
         == "betelgeuze.engine_v2_native_fixed64_cpu_profile/6.0.0"
         and profile.get("profile_id")
@@ -972,6 +986,12 @@ def _native_fixed64_cpu_v6_authority_is_fail_closed(repo_root: Path) -> bool:
         and runner_contract.get("artifact_and_terminal_persisted_before_return")
         is True
         and runner_contract.get("caller_supplied_probe_allowed") is False
+        and runner_contract.get("build_source_root_bound") is True
+        and runner_contract.get("compiled_transitive_sources_verified_at_build")
+        is True
+        and runner_contract.get("output_path_utf8_required") is True
+        and runner_contract.get("post_measurement_host_revalidation_required")
+        is True
         and runner_contract.get("test_only_profile_execution_allowed") is False
         and type(source_bindings) is dict
         and len(source_bindings) == 7
@@ -1026,6 +1046,11 @@ def _native_fixed64_cpu_v6_authority_is_fail_closed(repo_root: Path) -> bool:
         and "../assets/engine_v2_native_fixed64_cpu_profile_v6_sources.json"
         in runner
         and "../assets/workspace-Cargo.lock" in runner
+        and "../assets/original-Cargo.toml" in runner
+        and "bind_compiled_source_graph(&source_root)" in build_source
+        and "BETELGEUZE_V6_SOURCE_ROOT" in build_source
+        and "cargo:rustc-env={COMPILED_MANIFEST_ENV}" in build_source
+        and "cargo:rustc-env={VERIFIED_SOURCE_ROOT_ENV}" in build_source
         and "decision_returned_only_after_terminal_persistence" in runner
         and runner.count("run_native_fixed64_cpu_qualification_successor(") == 1
         and "--verify-activation" in binary

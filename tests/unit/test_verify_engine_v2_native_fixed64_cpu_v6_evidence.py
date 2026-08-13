@@ -408,6 +408,69 @@ def test_blocked_evidence_accepts_rederivable_post_preflight_failures(
     _require_mutated_artifact_passes(artifact)
 
 
+def test_blocked_evidence_accepts_post_measurement_host_drift() -> None:
+    attempt_raw = _envelope(_attempt(), ATTEMPT_DOMAIN)
+    attempt_projection_raw = json.dumps(
+        _attempt(),
+        allow_nan=False,
+        ensure_ascii=True,
+        separators=(",", ":"),
+    ).encode("ascii")
+    artifact = _artifact(
+        attempt_raw,
+        _domain(ATTEMPT_DOMAIN, attempt_projection_raw),
+        passed=True,
+    )
+    artifact["blockers"] = ["post_measurement_host_invariant_failed"]
+    artifact["fixtures"] = []
+    execution = artifact["execution"]
+    assert isinstance(execution, dict)
+    execution["measurement_started"] = True
+    execution["recorded_decision"] = "BLOCKED"
+    execution["recorded_gate_passed"] = None
+    execution["recorded_numeric_gate_passed"] = None
+    _require_mutated_artifact_passes(artifact)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (
+        ("generated_count", None),
+        ("typed_failure_count", "0"),
+        ("persistent_cpp_context_count", -1),
+        ("candidate_denominator", True),
+    ),
+)
+def test_measured_fixture_rejects_impossible_scalar_types_and_ranges(
+    field: str,
+    value: object,
+) -> None:
+    attempt_raw = _envelope(_attempt(), ATTEMPT_DOMAIN)
+    attempt_projection_raw = json.dumps(
+        _attempt(),
+        allow_nan=False,
+        ensure_ascii=True,
+        separators=(",", ":"),
+    ).encode("ascii")
+    artifact = _artifact(
+        attempt_raw,
+        _domain(ATTEMPT_DOMAIN, attempt_projection_raw),
+        passed=True,
+    )
+    fixtures = artifact["fixtures"]
+    assert isinstance(fixtures, list)
+    fixture = fixtures[0]
+    assert isinstance(fixture, dict)
+    fixture[field] = value
+    fixture["gate_passed"] = False
+    artifact["blockers"] = ["native_qualification_gate_failed"]
+    execution = artifact["execution"]
+    assert isinstance(execution, dict)
+    execution["recorded_decision"] = "NO_GO"
+    execution["recorded_gate_passed"] = False
+    _require_mutated_artifact_fails(artifact, match="unsigned integer")
+
+
 def test_artifact_receipt_tamper_fails_closed() -> None:
     attempt_raw, artifact_raw, terminal_raw = _evidence(passed=False)
     artifact_raw = artifact_raw.replace(b'"source_checkout', b'"source_checkouu', 1)

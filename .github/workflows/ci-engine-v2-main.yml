@@ -187,7 +187,9 @@ jobs:
             rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v5_archive.json
             rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v6.json
             rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v6_sources.json
+            rust/betelgeuze-runtime/assets/original-Cargo.toml
             rust/betelgeuze-runtime/assets/workspace-Cargo.lock
+            rust/betelgeuze-runtime/build.rs
             rust/betelgeuze-sys
             rust/cpu-kernel
             rust/reference-dynamics

@@ -24,11 +24,11 @@ else:
 
 SCHEMA_ID = "betelgeuze.engine_v2_native_fixed64_cpu_profile/6.0.0"
 PROFILE_ID = "engine_v2_native_fixed64_cpu_synthetic_v6"
-PROFILE_SHA256 = "96a4df57ddd36e7a9a7ae89bce7099004674d684c936a1a7c031a6470efd120c"
+PROFILE_SHA256 = "e6f8cff7f6e2c86f9aae803402cbb73d086f20b17c53f091896f7b32aa883369"
 SOURCE_MANIFEST_SHA256 = (
-    "223be71afc97e80827aa5ae7e8d833f70e24e5cab5d85032b2c3656f96eff765"
+    "8f428c31e2151bb4a4e3d2211f63b11f9ec487bf7891fd2d28b94f94a7523921"
 )
-SOURCE_COUNT = 190
+SOURCE_COUNT = 192
 PROFILE_RELATIVE_PATH = Path("config/engine_v2_native_fixed64_cpu_profile_v6.json")
 SOURCE_MANIFEST_RELATIVE_PATH = Path(
     "config/engine_v2_native_fixed64_cpu_profile_v6_sources.json"
@@ -49,6 +49,7 @@ BINARY_SOURCE_RELATIVE_PATH = Path(
     "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-qualify-v6.rs"
 )
 CARGO_MANIFEST_RELATIVE_PATH = Path("rust/betelgeuze-runtime/Cargo.toml")
+BUILD_SOURCE_RELATIVE_PATH = Path("rust/betelgeuze-runtime/build.rs")
 CARGO_LOCK_RELATIVE_PATH = Path("rust/Cargo.lock")
 PACKAGED_PROFILE_RELATIVE_PATH = Path(
     "rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v6.json"
@@ -61,6 +62,9 @@ PACKAGED_SOURCE_MANIFEST_RELATIVE_PATH = Path(
 )
 PACKAGED_CARGO_LOCK_RELATIVE_PATH = Path(
     "rust/betelgeuze-runtime/assets/workspace-Cargo.lock"
+)
+PACKAGED_CARGO_MANIFEST_RELATIVE_PATH = Path(
+    "rust/betelgeuze-runtime/assets/original-Cargo.toml"
 )
 
 FALSE_AUTHORITY_KEYS = {
@@ -129,6 +133,7 @@ EXPECTED_CARGO_TARGETS = {
     "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v5.rs",
     "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-qualify-v6.rs",
     "rust/betelgeuze-runtime/src/lib.rs",
+    "rust/betelgeuze-runtime/build.rs",
     "rust/betelgeuze-runtime/tests/cpu_oracle_parity.rs",
     "rust/betelgeuze-runtime/tests/docking_fixed64_pipeline.rs",
     "rust/betelgeuze-runtime/tests/dynamics_oracle_parity.rs",
@@ -321,9 +326,13 @@ def require_profile_document_v6(
         "account_scoped_exactly_once": True,
         "artifact_and_terminal_persisted_before_return": True,
         "attempt_created_before_host_preflight": True,
+        "build_source_root_bound": True,
         "caller_supplied_probe_allowed": False,
+        "compiled_transitive_sources_verified_at_build": True,
         "live_execution_implemented": True,
+        "output_path_utf8_required": True,
         "output_policy": "owner_only_absent_only_single_artifact_plus_terminal",
+        "post_measurement_host_revalidation_required": True,
         "state_policy": "login_account_home_nofollow_o_excl",
         "test_only_profile_execution_allowed": False,
     }:
@@ -557,12 +566,14 @@ def require_packaged_activation_assets(
     v5_archive_raw: bytes,
     source_manifest_raw: bytes,
     cargo_lock_raw: bytes,
+    cargo_manifest_raw: bytes,
 ) -> None:
     expected = {
         PACKAGED_PROFILE_RELATIVE_PATH: profile_raw,
         PACKAGED_V5_ARCHIVE_RELATIVE_PATH: v5_archive_raw,
         PACKAGED_SOURCE_MANIFEST_RELATIVE_PATH: source_manifest_raw,
         PACKAGED_CARGO_LOCK_RELATIVE_PATH: cargo_lock_raw,
+        PACKAGED_CARGO_MANIFEST_RELATIVE_PATH: cargo_manifest_raw,
     }
     for relative, canonical_raw in expected.items():
         if read_bound_source_bytes(root, relative) != canonical_raw:
@@ -617,6 +628,7 @@ def require_activation_source_contract(sources: dict[str, bytes]) -> None:
         qualification = sources[QUALIFICATION_SOURCE_RELATIVE_PATH.as_posix()].decode("utf-8")
         runner = sources[RUNNER_SOURCE_RELATIVE_PATH.as_posix()].decode("utf-8")
         binary = sources[BINARY_SOURCE_RELATIVE_PATH.as_posix()].decode("utf-8")
+        build_source = sources[BUILD_SOURCE_RELATIVE_PATH.as_posix()].decode("utf-8")
     except (KeyError, UnicodeError) as exc:
         raise NativeFixed64CPUProfileV6Error(
             "v6 activation sources are unavailable"
@@ -630,6 +642,17 @@ def require_activation_source_contract(sources: dict[str, bytes]) -> None:
         _fail("v5 fail-closed gate or v6 internal successor boundary changed")
     if runner.count("run_native_fixed64_cpu_qualification_successor(") != 1:
         _fail("v6 native measurement core has an alternate or missing caller")
+    for token in (
+        "bind_compiled_source_graph(&source_root)",
+        "BETELGEUZE_V6_SOURCE_ROOT",
+        "cargo:rustc-env={COMPILED_MANIFEST_ENV}",
+        "cargo:rustc-env={VERIFIED_SOURCE_ROOT_ENV}",
+        "cargo:rerun-if-changed={}",
+        "sha256_hex(&raw)",
+        "row.sha256,",
+    ):
+        if token not in build_source:
+            _fail(f"v6 compile-time source binding token is missing: {token}")
     start = runner.find("pub fn run_native_fixed64_cpu_qualification_v6(")
     end = runner.find("\n#[cfg(test)]", start)
     if start < 0 or end < 0:
@@ -668,6 +691,11 @@ def require_activation_source_contract(sources: dict[str, bytes]) -> None:
         "output cannot cross-wire account state",
         "output parent binding changed",
         "output filename cannot support atomic staging",
+        "../assets/original-Cargo.toml",
+        "COMPILED_SOURCE_MANIFEST_SHA256",
+        "VERIFIED_SOURCE_ROOT",
+        "post_measurement_host_invariant_failed",
+        "path.to_str().is_none()",
         "profile state binding changed",
         "decision_returned_only_after_terminal_persistence",
         "qualification_authority\\\":false",
@@ -684,6 +712,7 @@ def require_activation_source_contract(sources: dict[str, bytes]) -> None:
         not in binary
         or "Fixed64CpuProbeConfigV5" in binary
         or "run_native_fixed64_cpu_probe_v5" in binary
+        or "to_string_lossy" in binary
     ):
         _fail("v6 binary accepted a custom probe or lost a sealed operation")
 
@@ -702,6 +731,7 @@ def main() -> int:
         v5_archive_raw=v5_archive_raw,
         source_manifest_raw=manifest_raw,
         cargo_lock_raw=sources[CARGO_LOCK_RELATIVE_PATH.as_posix()],
+        cargo_manifest_raw=sources[CARGO_MANIFEST_RELATIVE_PATH.as_posix()],
     )
     require_profile_document_v6(
         profile_raw,

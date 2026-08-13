@@ -209,10 +209,13 @@ def _write_native_fixed64_cpu_v6_contract(tmp_path: Path) -> None:
         "config/engine_v2_native_fixed64_cpu_profile_v6_sources.json",
         "rust/Cargo.lock",
         "rust_engine_v2/Cargo.lock",
+        "rust/betelgeuze-runtime/Cargo.toml",
         "rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v5_archive.json",
         "rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v6.json",
         "rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v6_sources.json",
+        "rust/betelgeuze-runtime/assets/original-Cargo.toml",
         "rust/betelgeuze-runtime/assets/workspace-Cargo.lock",
+        "rust/betelgeuze-runtime/build.rs",
         "rust/betelgeuze-runtime/src/qualification_v6.rs",
         "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-qualify-v6.rs",
     ):

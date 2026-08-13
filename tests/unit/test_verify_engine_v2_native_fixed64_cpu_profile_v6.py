@@ -68,6 +68,9 @@ def test_profile_v6_rederives_from_archived_v5_and_exact_sources() -> None:
         v5_archive_raw=v5_archive_raw,
         source_manifest_raw=manifest_raw,
         cargo_lock_raw=sources[verifier.CARGO_LOCK_RELATIVE_PATH.as_posix()],
+        cargo_manifest_raw=sources[
+            verifier.CARGO_MANIFEST_RELATIVE_PATH.as_posix()
+        ],
     )
     assert profile["profile_id"] == verifier.PROFILE_ID
     authority = profile["authority"]
@@ -85,6 +88,9 @@ def test_packaged_activation_asset_drift_fails_closed(tmp_path: Path) -> None:
         verifier.PACKAGED_SOURCE_MANIFEST_RELATIVE_PATH: _MANIFEST.read_bytes(),
         verifier.PACKAGED_CARGO_LOCK_RELATIVE_PATH: (
             _ROOT / verifier.CARGO_LOCK_RELATIVE_PATH
+        ).read_bytes(),
+        verifier.PACKAGED_CARGO_MANIFEST_RELATIVE_PATH: (
+            _ROOT / verifier.CARGO_MANIFEST_RELATIVE_PATH
         ).read_bytes(),
     }
     for relative, raw in expected.items():
@@ -104,6 +110,9 @@ def test_packaged_activation_asset_drift_fails_closed(tmp_path: Path) -> None:
             cargo_lock_raw=(
                 _ROOT / verifier.CARGO_LOCK_RELATIVE_PATH
             ).read_bytes(),
+            cargo_manifest_raw=(
+                _ROOT / verifier.CARGO_MANIFEST_RELATIVE_PATH
+            ).read_bytes(),
         )
 
 
@@ -121,7 +130,7 @@ def test_command_line_verifier_is_non_consuming_and_authority_false() -> None:
     assert payload["execution_consumed"] is False
     assert payload["non_consuming_preflight_only"] is True
     assert payload["all_authority_false"] is True
-    assert payload["source_count"] == 190
+    assert payload["source_count"] == 192
 
 
 def test_command_line_verifier_resolves_sibling_without_site_packages() -> None:
@@ -260,6 +269,19 @@ def test_attempt_before_preflight_order_is_static_authority_boundary() -> None:
         1,
     )
     with pytest.raises(NativeFixed64CPUProfileV6Error, match="ordering token"):
+        require_activation_source_contract(sources)
+
+
+def test_compile_time_transitive_source_binding_is_required() -> None:
+    _, _, _, _, sources = _real_evidence()
+    sources = dict(sources)
+    key = verifier.BUILD_SOURCE_RELATIVE_PATH.as_posix()
+    sources[key] = sources[key].replace(
+        b"bind_compiled_source_graph(&source_root)",
+        b"trust_declared_source_graph(&source_root)",
+        1,
+    )
+    with pytest.raises(NativeFixed64CPUProfileV6Error, match="compile-time source"):
         require_activation_source_contract(sources)
 
 

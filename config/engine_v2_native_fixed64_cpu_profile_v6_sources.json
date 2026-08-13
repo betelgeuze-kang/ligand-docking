@@ -456,9 +456,19 @@
       "sha256": "e719744eb9136a27c82b8136c6ee3df8acc8de813a2eb0e2f1b6db867e21fcdb"
     },
     {
-      "byte_count": 615,
+      "byte_count": 654,
       "path": "rust/betelgeuze-runtime/Cargo.toml",
-      "sha256": "2345f995a766336468bc795a1cee78438dab2d2943bad3f5e0b225acebc47e5e"
+      "sha256": "d230b8a374197ab667dabb8fe89a7079fab2c12fcede14ef3de380e11ef6bce4"
+    },
+    {
+      "byte_count": 654,
+      "path": "rust/betelgeuze-runtime/assets/original-Cargo.toml",
+      "sha256": "d230b8a374197ab667dabb8fe89a7079fab2c12fcede14ef3de380e11ef6bce4"
+    },
+    {
+      "byte_count": 6706,
+      "path": "rust/betelgeuze-runtime/build.rs",
+      "sha256": "03407fc57355c98838e69dcadc04b9982e54507b8313d60521bd764390a03f34"
     },
     {
       "byte_count": 5835,
@@ -466,9 +476,9 @@
       "sha256": "5c0ddd231e0378177425337610e2c29ae4d637703382e13e11cca044a380e885"
     },
     {
-      "byte_count": 5895,
+      "byte_count": 6060,
       "path": "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-qualify-v6.rs",
-      "sha256": "c5afb352ebcefe7bcb1d34f0dfbbd4ca6effd83a67b26ca6349e5f88453f7605"
+      "sha256": "4407b433ebbb6508f0caf2715d3fe2b34f0b6667e82601cd4f39f075a625a871"
     },
     {
       "byte_count": 501658,
@@ -496,9 +506,9 @@
       "sha256": "8d36897aa72c0608b5cb5ad6a06d2ab1c090cd00ebdf6f9d811b2f8afc80f9d7"
     },
     {
-      "byte_count": 77372,
+      "byte_count": 82264,
       "path": "rust/betelgeuze-runtime/src/qualification_v6.rs",
-      "sha256": "0e7438de5d6b9e42c23d45d88d4d0ce91f58349c6ff88685e6dcab8213f10be6"
+      "sha256": "c354aa60ff77fa61eab6f0c9f4981a578eed452db64e78eaa8ccc11fea99d331"
     },
     {
       "byte_count": 29008,
@@ -952,5 +962,5 @@
     }
   ],
   "schema_id": "betelgeuze.engine_v2_native_fixed64_cpu_source_manifest/6.0.0",
-  "source_count": 190
+  "source_count": 192
 }

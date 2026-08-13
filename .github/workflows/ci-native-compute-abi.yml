@@ -174,9 +174,23 @@ jobs:
         run: |
           cargo package --manifest-path rust/betelgeuze-sys/Cargo.toml --locked \
             --config 'patch.crates-io.betelgeuze-cpu-kernel.path="rust/cpu-kernel"'
+          BETELGEUZE_V6_SOURCE_ROOT="$GITHUB_WORKSPACE" \
           cargo package --manifest-path rust/betelgeuze-runtime/Cargo.toml --locked \
             --config 'patch.crates-io.betelgeuze-sys.path="rust/betelgeuze-sys"' \
             --config 'patch.crates-io.betelgeuze-cpu-kernel.path="rust/cpu-kernel"' \
             --config 'patch.crates-io.betelgeuze-docking-search.path="rust/betelgeuze-docking-search"' \
             --config 'patch.crates-io.betelgeuze-reference-physics.path="rust/reference-physics"' \
             --config 'patch.crates-io.betelgeuze-reference-dynamics.path="rust/reference-dynamics"'
+
+      - name: Verify normalized standalone v6 package activation
+        run: |
+          BETELGEUZE_V6_SOURCE_ROOT="$GITHUB_WORKSPACE" \
+          cargo run --offline --locked \
+            --manifest-path rust/target/package/betelgeuze-runtime-0.1.0/Cargo.toml \
+            --bin betelgeuze-fixed64-cpu-qualify-v6 \
+            --config "patch.crates-io.betelgeuze-sys.path=\"$GITHUB_WORKSPACE/rust/betelgeuze-sys\"" \
+            --config "patch.crates-io.betelgeuze-cpu-kernel.path=\"$GITHUB_WORKSPACE/rust/cpu-kernel\"" \
+            --config "patch.crates-io.betelgeuze-docking-search.path=\"$GITHUB_WORKSPACE/rust/betelgeuze-docking-search\"" \
+            --config "patch.crates-io.betelgeuze-reference-physics.path=\"$GITHUB_WORKSPACE/rust/reference-physics\"" \
+            --config "patch.crates-io.betelgeuze-reference-dynamics.path=\"$GITHUB_WORKSPACE/rust/reference-dynamics\"" \
+            -- --verify-activation

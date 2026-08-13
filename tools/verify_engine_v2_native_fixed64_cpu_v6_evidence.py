@@ -67,6 +67,7 @@ KNOWN_BLOCKERS = {
     "native_qualification_gate_failed",
     "post_pin_boost_not_disabled",
     "post_pin_process_task_count_not_one",
+    "post_measurement_host_invariant_failed",
     "process_task_count_not_one",
     "process_task_count_unavailable",
     "source_checkout_not_exact_main",
@@ -89,6 +90,7 @@ POST_PIN_BLOCKERS = {
 MEASUREMENT_BLOCKERS = {
     "native_measurement_failed",
     "native_measurement_report_contract_failed",
+    "post_measurement_host_invariant_failed",
 }
 ATTEMPT_KEYS = (
     "activation_sha256",
@@ -336,6 +338,30 @@ def _require_fixture(value: object, *, expected_id: str) -> dict[str, object]:
         "rust_projection_sha256",
     ):
         _require_digest(fixture[key], label=f"fixture {key}")
+    for key in (
+        "authority_false",
+        "cpp_repeat_stable",
+        "decision_parity",
+        "gate_passed",
+        "rust_repeat_stable",
+    ):
+        if type(fixture[key]) is not bool:
+            _fail(f"fixture {key} is not a boolean")
+    for key in (
+        "candidate_denominator",
+        "generated_count",
+        "ligand_atom_count",
+        "persistent_cpp_context_count",
+        "persistent_rust_context_count",
+        "receptor_atom_count",
+        "score_term_count",
+        "typed_failure_count",
+    ):
+        scalar = fixture[key]
+        if type(scalar) is not int or scalar < 0:
+            _fail(f"fixture {key} is not an unsigned integer")
+    if type(fixture["fixture_id"]) is not str:
+        _fail("fixture fixture_id is not a string")
     numeric = _require_ordered_keys(
         fixture["numeric_parity"],
         (
@@ -480,7 +506,7 @@ def _blocked_state_rederives(
     if measurement_started is False:
         return len(observed) == 1 and observed <= POST_PIN_BLOCKERS
     if measurement_started is True:
-        return len(observed) == 1 and observed <= MEASUREMENT_BLOCKERS
+        return bool(observed) and observed <= MEASUREMENT_BLOCKERS
     return False
 
 

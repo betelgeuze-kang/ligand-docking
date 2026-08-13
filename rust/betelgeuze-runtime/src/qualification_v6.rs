@@ -36,8 +36,11 @@ const TRANSITIVE_SOURCE_MANIFEST_BYTES: &[u8] =
 const QUALIFICATION_SOURCE_BYTES: &[u8] = include_bytes!("qualification.rs");
 const RUNNER_SOURCE_BYTES: &[u8] = include_bytes!("qualification_v6.rs");
 const BINARY_SOURCE_BYTES: &[u8] = include_bytes!("bin/betelgeuze-fixed64-cpu-qualify-v6.rs");
-const CARGO_MANIFEST_BYTES: &[u8] = include_bytes!("../Cargo.toml");
+const CARGO_MANIFEST_BYTES: &[u8] = include_bytes!("../assets/original-Cargo.toml");
 const CARGO_LOCK_BYTES: &[u8] = include_bytes!("../assets/workspace-Cargo.lock");
+const COMPILED_SOURCE_MANIFEST_SHA256: &str = env!("BETELGEUZE_V6_COMPILED_SOURCE_MANIFEST_SHA256");
+const COMPILED_SOURCE_COUNT: &str = env!("BETELGEUZE_V6_COMPILED_SOURCE_COUNT");
+const VERIFIED_SOURCE_ROOT: &str = env!("BETELGEUZE_V6_VERIFIED_SOURCE_ROOT");
 
 const ATTEMPT_SCHEMA_ID: &str = "betelgeuze.engine_v2_native_fixed64_cpu_attempt/6.0.0";
 const ARTIFACT_SCHEMA_ID: &str =
@@ -284,6 +287,22 @@ pub fn verify_native_fixed64_cpu_v6_activation() -> V6Result<Fixed64CpuActivatio
             "molecular execution boundary",
         ),
         ("\"account_scoped_exactly_once\": true", "exactly-once runner"),
+        (
+            "\"compiled_transitive_sources_verified_at_build\": true",
+            "compiled source graph",
+        ),
+        (
+            "\"build_source_root_bound\": true",
+            "verified build source root",
+        ),
+        (
+            "\"output_path_utf8_required\": true",
+            "output path encoding",
+        ),
+        (
+            "\"post_measurement_host_revalidation_required\": true",
+            "post-measurement host revalidation",
+        ),
     ] {
         require_profile_literal(profile, literal, label)?;
     }
@@ -306,6 +325,16 @@ pub fn verify_native_fixed64_cpu_v6_activation() -> V6Result<Fixed64CpuActivatio
         "transitive_source_manifest_sha256",
         TRANSITIVE_SOURCE_MANIFEST_BYTES,
     )?;
+    if COMPILED_SOURCE_MANIFEST_SHA256 != sha256_hex(TRANSITIVE_SOURCE_MANIFEST_BYTES)
+        || COMPILED_SOURCE_COUNT != "192"
+        || std::str::from_utf8(TRANSITIVE_SOURCE_MANIFEST_BYTES)
+            .ok()
+            .is_none_or(|manifest| manifest.matches("\"source_count\": 192").count() != 1)
+    {
+        return Err(NativeFixed64CpuQualificationV6Error::new(
+            "native fixed64 CPU v6 compiled transitive source graph is not exact",
+        ));
+    }
     let profile_sha256 = sha256_hex(PROFILE_BYTES);
     let activation_sha256 = domain_digest(ACTIVATION_DOMAIN, PROFILE_BYTES);
     Ok(Fixed64CpuActivationStatusV6 {
@@ -323,16 +352,12 @@ pub fn verify_native_fixed64_cpu_v6_activation() -> V6Result<Fixed64CpuActivatio
 }
 
 fn source_root() -> V6Result<PathBuf> {
-    let declared = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let root = declared
-        .parent()
-        .and_then(Path::parent)
-        .ok_or_else(|| {
-            NativeFixed64CpuQualificationV6Error::new(
-                "native fixed64 CPU v6 source root is invalid",
-            )
-        })?
-        .to_path_buf();
+    let root = PathBuf::from(VERIFIED_SOURCE_ROOT);
+    if !root.is_absolute() {
+        return Err(NativeFixed64CpuQualificationV6Error::new(
+            "native fixed64 CPU v6 verified source root is invalid",
+        ));
+    }
     let canonical = fs::canonicalize(&root).map_err(|_| {
         NativeFixed64CpuQualificationV6Error::new(
             "native fixed64 CPU v6 source root is unavailable",
@@ -474,6 +499,25 @@ fn cpu_is_set(set: &libc::cpu_set_t, ordinal: usize) -> bool {
     unsafe { libc::CPU_ISSET(ordinal, set) }
 }
 
+fn affinity_is_exact_measurement_cpu(set: &libc::cpu_set_t) -> bool {
+    // SAFETY: both values are fully initialized `cpu_set_t` objects and are
+    // compared over exactly their common object representation.
+    unsafe {
+        let mut expected: libc::cpu_set_t = std::mem::zeroed();
+        libc::CPU_ZERO(&mut expected);
+        libc::CPU_SET(MEASUREMENT_CPU_ORDINAL, &mut expected);
+        let observed_bytes = std::slice::from_raw_parts(
+            std::ptr::from_ref(set).cast::<u8>(),
+            std::mem::size_of::<libc::cpu_set_t>(),
+        );
+        let expected_bytes = std::slice::from_raw_parts(
+            std::ptr::from_ref(&expected).cast::<u8>(),
+            std::mem::size_of::<libc::cpu_set_t>(),
+        );
+        observed_bytes == expected_bytes
+    }
+}
+
 fn pin_measurement_cpu() -> V6Result<()> {
     // SAFETY: the zeroed `cpu_set_t` is initialized with the libc CPU macros
     // before being passed to sched_setaffinity for the current process.
@@ -493,7 +537,7 @@ fn pin_measurement_cpu() -> V6Result<()> {
         }
     }
     let observed = current_affinity()?;
-    if !cpu_is_set(&observed, MEASUREMENT_CPU_ORDINAL) {
+    if !affinity_is_exact_measurement_cpu(&observed) {
         return Err(NativeFixed64CpuQualificationV6Error::new(
             "native fixed64 CPU v6 measurement affinity did not persist",
         ));
@@ -854,6 +898,7 @@ fn path_exists_at(parent: RawFd, name: &CStr) -> V6Result<bool> {
 
 fn validate_absent_output(path: &Path) -> V6Result<ValidatedOutputTarget> {
     if !path.is_absolute()
+        || path.to_str().is_none()
         || path.as_os_str().as_bytes().len() > 4096
         || path.extension() != Some(OsStr::new("json"))
     {
@@ -889,7 +934,13 @@ fn validate_absent_output(path: &Path) -> V6Result<ValidatedOutputTarget> {
             "native fixed64 CPU v6 output cannot modify the source checkout",
         ));
     }
-    let account_state_root = login_account_home()?.join(STATE_ROOT_NAME);
+    let account_home = login_account_home()?;
+    if account_home.to_str().is_none() {
+        return Err(NativeFixed64CpuQualificationV6Error::new(
+            "native fixed64 CPU v6 account home path is not UTF-8",
+        ));
+    }
+    let account_state_root = account_home.join(STATE_ROOT_NAME);
     if path.starts_with(account_state_root)
         || name == OsStr::new(ATTEMPT_FILENAME)
         || name == OsStr::new(TERMINAL_FILENAME)
@@ -969,12 +1020,20 @@ fn require_output_parent_binding(target: &ValidatedOutputTarget) -> V6Result<()>
             "native fixed64 CPU v6 output parent path is unavailable",
         )
     })?;
+    // SAFETY: geteuid has no preconditions.
+    let uid = unsafe { libc::geteuid() };
     if metadata.st_dev != target.parent_device
         || metadata.st_ino != target.parent_inode
         || path.dev() != target.parent_device
         || path.ino() != target.parent_inode
         || !path.file_type().is_dir()
         || !is_directory_mode(metadata.st_mode)
+        || metadata.st_uid != uid
+        || path.uid() != uid
+        || metadata.st_mode & 0o022 != 0
+        || path.mode() & 0o022 != 0
+        || metadata.st_mode != path.mode()
+        || metadata.st_gid != path.gid()
     {
         return Err(NativeFixed64CpuQualificationV6Error::new(
             "native fixed64 CPU v6 output parent binding changed",
@@ -1523,7 +1582,7 @@ fn execute_measurement(preflight: &Fixed64CpuPreflightV6) -> MeasurementOutcomeV
         FIXED64_CPU_QUALIFICATION_V6_SCHEMA_ID,
         FIXED64_CPU_QUALIFICATION_V6_PROFILE_ID,
     );
-    let report = match result {
+    let mut report = match result {
         Ok(value) if report_contract_is_valid(&value) => Some(value),
         Ok(_) => {
             blockers.push("native_measurement_report_contract_failed".to_owned());
@@ -1534,6 +1593,18 @@ fn execute_measurement(preflight: &Fixed64CpuPreflightV6) -> MeasurementOutcomeV
             None
         }
     };
+    let post_measurement_host_valid = current_affinity()
+        .ok()
+        .as_ref()
+        .is_some_and(affinity_is_exact_measurement_cpu)
+        && read_boost_disabled().ok() == Some(true)
+        && process_task_count().ok() == Some(1)
+        && cpu_model().ok().as_ref() == preflight.cpu_model.as_ref()
+        && source_checkout_evidence().ok().as_ref() == preflight.source_commit_oid.as_ref();
+    if !post_measurement_host_valid {
+        blockers.push("post_measurement_host_invariant_failed".to_owned());
+        report = None;
+    }
     if report.as_ref().is_some_and(|value| !value.gate_passed) {
         blockers.push("native_qualification_gate_failed".to_owned());
     }
@@ -1882,6 +1953,8 @@ pub fn run_native_fixed64_cpu_qualification_v6(
 
 #[cfg(test)]
 mod tests {
+    use std::ffi::OsString;
+    use std::os::unix::ffi::OsStringExt as _;
     use std::os::unix::fs::PermissionsExt as _;
     use std::sync::{Arc, Barrier};
     use std::thread;
@@ -2000,6 +2073,15 @@ mod tests {
     }
 
     #[test]
+    fn output_validation_rejects_non_utf8_before_attempt_creation() {
+        let directory = TestDirectory::new();
+        let name = OsString::from_vec(b"result-\xff.json".to_vec());
+        let error = validate_absent_output(&directory.path.join(name))
+            .expect_err("non-UTF-8 output must be rejected before state creation");
+        assert!(error.message().contains("output path is invalid"));
+    }
+
+    #[test]
     fn output_parent_path_replacement_is_detected_after_descriptor_binding() {
         let directory = TestDirectory::new();
         let target = validate_absent_output(&directory.path.join("result.json"))
@@ -2014,6 +2096,34 @@ mod tests {
         assert!(error.message().contains("binding changed"));
         fs::remove_dir(&directory.path).expect("remove replacement directory");
         fs::rename(&displaced, &directory.path).expect("restore bound directory");
+    }
+
+    #[test]
+    fn output_parent_permission_drift_is_detected_after_descriptor_binding() {
+        let directory = TestDirectory::new();
+        let target = validate_absent_output(&directory.path.join("result.json"))
+            .expect("bind output target");
+        fs::set_permissions(&directory.path, fs::Permissions::from_mode(0o770))
+            .expect("make output parent group writable");
+        let error =
+            require_output_parent_binding(&target).expect_err("permission drift must be rejected");
+        assert!(error.message().contains("binding changed"));
+        fs::set_permissions(&directory.path, fs::Permissions::from_mode(0o700))
+            .expect("restore test directory permissions");
+    }
+
+    #[test]
+    fn measurement_affinity_requires_exactly_the_frozen_cpu() {
+        // SAFETY: the zeroed CPU sets are initialized only through libc's CPU
+        // macros before being passed by shared reference.
+        unsafe {
+            let mut exact: libc::cpu_set_t = std::mem::zeroed();
+            libc::CPU_ZERO(&mut exact);
+            libc::CPU_SET(MEASUREMENT_CPU_ORDINAL, &mut exact);
+            assert!(affinity_is_exact_measurement_cpu(&exact));
+            libc::CPU_SET(MEASUREMENT_CPU_ORDINAL + 1, &mut exact);
+            assert!(!affinity_is_exact_measurement_cpu(&exact));
+        }
     }
 
     #[test]

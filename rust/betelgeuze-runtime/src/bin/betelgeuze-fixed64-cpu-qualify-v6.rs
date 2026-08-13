@@ -58,6 +58,11 @@ fn optional_usize(value: Option<usize>) -> String {
     value.map_or_else(|| "null".to_owned(), |value| value.to_string())
 }
 
+fn validated_path_text(path: &Path) -> &str {
+    path.to_str()
+        .expect("v6 validates all returned paths as UTF-8 before consuming the attempt")
+}
+
 fn fail(message: &str) -> ExitCode {
     eprintln!("native fixed64 CPU qualification v6 failed closed: {message}");
     ExitCode::from(1)
@@ -145,13 +150,13 @@ fn main() -> ExitCode {
                 "\"terminal_state_path\":{},",
                 "\"terminal_state_sha256\":\"{}\"}}"
             ),
-            json_string(&result.artifact_path.to_string_lossy()),
+            json_string(validated_path_text(&result.artifact_path)),
             result.artifact_sha256,
-            json_string(&result.attempt_ledger_path.to_string_lossy()),
+            json_string(validated_path_text(&result.attempt_ledger_path)),
             string_array(&result.blockers),
             result.qualification_authority,
             json_string(&result.recorded_decision),
-            json_string(&result.terminal_state_path.to_string_lossy()),
+            json_string(validated_path_text(&result.terminal_state_path)),
             result.terminal_state_sha256,
         );
         return ExitCode::SUCCESS;
