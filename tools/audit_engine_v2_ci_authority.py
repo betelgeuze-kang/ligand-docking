@@ -214,23 +214,25 @@ NATIVE_FIXED64_CPU_V4_CARGO_RUN_SUBCOMMANDS = ("run", "r")
 NATIVE_FIXED64_CPU_V4_CARGO_GLOBAL_OPTIONS_WITH_VALUE = (
     "--color",
     "--config",
-    "--explain",
     "-C",
     "-Z",
 )
 NATIVE_FIXED64_CPU_V4_CARGO_GLOBAL_OPTIONS_WITHOUT_VALUE = (
     "--frozen",
-    "--help",
-    "--list",
     "--locked",
     "--offline",
     "--quiet",
     "--verbose",
+    "-q",
+    "-v",
+)
+NATIVE_FIXED64_CPU_V4_CARGO_TERMINAL_OPTIONS_WITH_VALUE = ("--explain",)
+NATIVE_FIXED64_CPU_V4_CARGO_TERMINAL_OPTIONS_WITHOUT_VALUE = (
+    "--help",
+    "--list",
     "--version",
     "-V",
     "-h",
-    "-q",
-    "-v",
 )
 NATIVE_FIXED64_CPU_V4_CARGO_TARGET_SELECTORS = ("--bin", "--example")
 NATIVE_FIXED64_CPU_V4_STATIC_TARGET_PATTERN = re.compile(
@@ -406,6 +408,15 @@ def _cargo_subcommand_index(invocation: list[str]) -> int | None:
         index += 1
     while index < len(invocation):
         token = invocation[index]
+        if (
+            token in NATIVE_FIXED64_CPU_V4_CARGO_TERMINAL_OPTIONS_WITHOUT_VALUE
+            or token in NATIVE_FIXED64_CPU_V4_CARGO_TERMINAL_OPTIONS_WITH_VALUE
+            or any(
+                token.startswith(option + "=")
+                for option in NATIVE_FIXED64_CPU_V4_CARGO_TERMINAL_OPTIONS_WITH_VALUE
+            )
+        ):
+            return -1
         if token in NATIVE_FIXED64_CPU_V4_CARGO_GLOBAL_OPTIONS_WITH_VALUE:
             index += 2
             continue
@@ -426,6 +437,72 @@ def _cargo_subcommand_index(invocation: list[str]) -> int | None:
             return None
         return index
     return None
+
+
+def _shell_command_word_index(segment: list[str]) -> int | None:
+    index = 0
+    while index < len(segment) and segment[index] in {
+        "!",
+        "do",
+        "elif",
+        "else",
+        "if",
+        "then",
+        "time",
+        "until",
+        "while",
+    }:
+        index += 1
+    while index < len(segment) and re.fullmatch(
+        r"[A-Za-z_][A-Za-z0-9_]*=.*", segment[index]
+    ):
+        index += 1
+    if index < len(segment) and segment[index] in {"command", "exec"}:
+        index += 1
+        while index < len(segment) and segment[index].startswith("-"):
+            index += 1
+    if index < len(segment) and segment[index] == "env":
+        index += 1
+        while index < len(segment):
+            token = segment[index]
+            if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*=.*", token):
+                index += 1
+                continue
+            if token in {"-u", "--unset", "-C", "--chdir"}:
+                index += 2
+                continue
+            if token.startswith(("--unset=", "--chdir=")) or token in {
+                "-i",
+                "--ignore-environment",
+                "-0",
+                "--null",
+            }:
+                index += 1
+                continue
+            break
+    return index if index < len(segment) else None
+
+
+def _workflow_has_dynamic_cargo_run_command(tokens: list[str]) -> bool:
+    segment: list[str] = []
+    for token in [*tokens, ";"]:
+        if token and set(token) <= set(";&|()"):
+            command_index = _shell_command_word_index(segment)
+            if (
+                command_index is not None
+                and any(
+                    marker in segment[command_index]
+                    for marker in NATIVE_FIXED64_CPU_V4_SHELL_EXPANSION_MARKERS
+                )
+                and command_index + 1 < len(segment)
+                and segment[command_index + 1]
+                in NATIVE_FIXED64_CPU_V4_CARGO_RUN_SUBCOMMANDS
+            ):
+                return True
+            segment = []
+        else:
+            segment.append(token)
+    return False
 
 
 def _cargo_run_has_static_non_probe_target(arguments: list[str]) -> bool:
@@ -506,6 +583,8 @@ def _workflow_invokes_native_fixed64_cpu_v4_live_probe(text: str) -> bool:
             if re.search(NATIVE_FIXED64_CPU_V4_CARGO_RUN_PATTERN, line):
                 return True
             continue
+        if _workflow_has_dynamic_cargo_run_command(tokens):
+            return True
         for index, token in enumerate(tokens):
             if token.rsplit("/", 1)[-1] != "cargo":
                 continue
@@ -518,6 +597,8 @@ def _workflow_invokes_native_fixed64_cpu_v4_live_probe(text: str) -> bool:
                     break
                 invocation.append(candidate)
             subcommand_index = _cargo_subcommand_index(invocation)
+            if subcommand_index == -1:
+                continue
             if subcommand_index is None and any(
                 command in invocation[1:]
                 for command in NATIVE_FIXED64_CPU_V4_CARGO_RUN_SUBCOMMANDS

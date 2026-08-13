@@ -32,6 +32,8 @@ from tools.audit_engine_v2_ci_authority import (
     NATIVE_FIXED64_CPU_V4_CARGO_RUN_PATTERN,
     NATIVE_FIXED64_CPU_V4_CARGO_RUN_SUBCOMMANDS,
     NATIVE_FIXED64_CPU_V4_CARGO_TARGET_SELECTORS,
+    NATIVE_FIXED64_CPU_V4_CARGO_TERMINAL_OPTIONS_WITH_VALUE,
+    NATIVE_FIXED64_CPU_V4_CARGO_TERMINAL_OPTIONS_WITHOUT_VALUE,
     NATIVE_FIXED64_CPU_V4_FOLDED_RUN_PATTERN,
     NATIVE_FIXED64_CPU_V4_MAX_WORKFLOW_UTF8_BYTES,
     NATIVE_FIXED64_CPU_V4_MAX_YAML_NODES,
@@ -781,6 +783,8 @@ def test_native_fixed64_cpu_v4_missing_restriction_fails_ci_audit(
         "cargo run -p betelgeuze-runtime --bin=$BINARY_NAME",
         "cargo run -p betelgeuze-runtime --bin unrelated-{one,two}",
         "cargo run -p betelgeuze-runtime --example=$EXAMPLE_NAME",
+        'CARGO=cargo; "$CARGO" run -p betelgeuze-runtime',
+        'env CARGO=cargo "$CARGO" r -p betelgeuze-runtime',
         (
             "cargo run -p betelgeuze-runtime && "
             "cargo run --bin unrelated-explicit-tool"
@@ -885,6 +889,47 @@ def test_native_fixed64_cpu_v4_run_test_filter_is_not_a_cargo_subcommand(
     unrelated = tmp_path / ".github/workflows/unrelated.yaml"
     unrelated.write_text(
         "jobs:\n  test-filter:\n    steps:\n"
+        f"      - run: {command}\n",
+        encoding="utf-8",
+    )
+
+    payload = build_inventory(tmp_path)
+    assert (
+        payload[
+            "native_fixed64_cpu_v4_live_qualification_absent_from_github_actions"
+        ]
+        is True
+    )
+    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is True
+    assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is True
+
+
+@pytest.mark.parametrize(
+    "command",
+    (
+        "cargo --version run",
+        "cargo -V r",
+        "cargo --help run",
+        "cargo -h r",
+        "cargo --list run",
+        "cargo --explain E0001 run",
+        "cargo --explain=E0001 r",
+        'echo "$CARGO" run -p betelgeuze-runtime',
+    ),
+)
+def test_native_fixed64_cpu_v4_nonexecuting_run_text_remains_allowed(
+    tmp_path: Path,
+    command: str,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_native_fixed64_cpu_v4_contract(tmp_path)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        encoding="utf-8",
+    )
+    unrelated = tmp_path / ".github/workflows/unrelated.yaml"
+    unrelated.write_text(
+        "jobs:\n  diagnostic:\n    steps:\n"
         f"      - run: {command}\n",
         encoding="utf-8",
     )
@@ -1110,23 +1155,27 @@ def test_native_fixed64_cpu_v4_inventory_constants_are_exact() -> None:
     assert NATIVE_FIXED64_CPU_V4_CARGO_GLOBAL_OPTIONS_WITH_VALUE == (
         "--color",
         "--config",
-        "--explain",
         "-C",
         "-Z",
     )
     assert NATIVE_FIXED64_CPU_V4_CARGO_GLOBAL_OPTIONS_WITHOUT_VALUE == (
         "--frozen",
-        "--help",
-        "--list",
         "--locked",
         "--offline",
         "--quiet",
         "--verbose",
+        "-q",
+        "-v",
+    )
+    assert NATIVE_FIXED64_CPU_V4_CARGO_TERMINAL_OPTIONS_WITH_VALUE == (
+        "--explain",
+    )
+    assert NATIVE_FIXED64_CPU_V4_CARGO_TERMINAL_OPTIONS_WITHOUT_VALUE == (
+        "--help",
+        "--list",
         "--version",
         "-V",
         "-h",
-        "-q",
-        "-v",
     )
     assert NATIVE_FIXED64_CPU_V4_CARGO_TARGET_SELECTORS == ("--bin", "--example")
     assert NATIVE_FIXED64_CPU_V4_STATIC_TARGET_PATTERN.pattern == (
