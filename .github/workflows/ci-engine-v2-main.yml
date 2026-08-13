@@ -399,6 +399,7 @@ jobs:
             .github/workflows/ci-engine-v2-mmcif-atom-site-model-policy.yml
             .github/workflows/ci-engine-v2-mmcif-biological-assembly-policy.yml
             .github/workflows/ci-engine-v2-mmcif-missing-atom-residue-policy.yml
+            .github/workflows/ci-native-compute-abi.yml
             .github/workflows/ci-engine-v2-main.yml
           sparse-checkout-cone-mode: false
           show-progress: false
