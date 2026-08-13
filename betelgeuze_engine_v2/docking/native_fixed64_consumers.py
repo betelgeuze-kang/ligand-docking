@@ -370,7 +370,8 @@ def run_native_fixed64_surface(
         raise TypeError("native fixed64 input must be an exact dict")
     if len(input_document) != _COMPLETE_INPUT_KEY_COUNT:
         raise NativeFixed64ConsumerError(
-            "native fixed64 input has an invalid top-level key count"
+            "canonical consumers require the complete fixed64 input schema: "
+            "invalid top-level key count"
         )
     if surface not in {"cli", "benchmark", "api", "product_shadow"}:
         raise NativeFixed64ConsumerError("native consumer surface is unsupported")
