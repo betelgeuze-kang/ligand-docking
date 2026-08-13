@@ -788,6 +788,11 @@ def test_native_fixed64_cpu_v4_missing_restriction_fails_ci_audit(
         'env -- CARGO=cargo "$CARGO" run -p betelgeuze-runtime',
         'env -uOLD CARGO=cargo "$CARGO" r -p betelgeuze-runtime',
         'command -- "$CARGO" run -p betelgeuze-runtime',
+        "env -S 'cargo run -p betelgeuze-runtime'",
+        "env --split-string='cargo r -p betelgeuze-runtime'",
+        'CARGO=cargo; exec -la cargo "$CARGO" run -p betelgeuze-runtime',
+        'CARGO=cargo; time -p "$CARGO" run -p betelgeuze-runtime',
+        'CARGO=cargo; timeout 1 "$CARGO" run -p betelgeuze-runtime',
         (
             "cargo run -p betelgeuze-runtime && "
             "cargo run --bin unrelated-explicit-tool"

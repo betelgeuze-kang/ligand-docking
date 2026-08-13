@@ -377,7 +377,7 @@ def _workflow_yaml_run_scalars(text: str) -> tuple[str, ...] | None:
     try:
         document = yaml.safe_load(text)
     except (yaml.YAMLError, RecursionError):
-        return ()
+        return None
     stack = [document]
     visited: set[int] = set()
     run_scalars: list[str] = []
@@ -460,7 +460,6 @@ def _shell_command_word_index(segment: list[str]) -> int | None:
                 "else",
                 "if",
                 "then",
-                "time",
                 "until",
                 "while",
             }
@@ -486,12 +485,19 @@ def _shell_command_word_index(segment: list[str]) -> int | None:
             index += 1
             while index < len(segment):
                 token = segment[index]
-                if token == "-a":
+                if token == "--":
+                    index += 1
+                elif token == "-a" or re.fullmatch(r"-[cl]*a[cl]*", token):
                     index += 2
-                elif token in {"--", "-c", "-l"}:
+                elif re.fullmatch(r"-[cl]+", token):
                     index += 1
                 else:
                     break
+            continue
+        if segment[index] == "time":
+            index += 1
+            while index < len(segment) and segment[index] in {"--", "-p"}:
+                index += 1
             continue
         if segment[index] == "env":
             index += 1
@@ -534,17 +540,28 @@ def _workflow_has_dynamic_cargo_run_command(tokens: list[str]) -> bool:
     for token in [*tokens, ";"]:
         if token and set(token) <= set(";&|()"):
             command_index = _shell_command_word_index(segment)
-            if (
+            nonexecuting_display = (
                 command_index is not None
-                and any(
-                    marker in segment[command_index]
-                    for marker in NATIVE_FIXED64_CPU_V4_SHELL_EXPANSION_MARKERS
-                )
-                and command_index + 1 < len(segment)
-                and segment[command_index + 1]
-                in NATIVE_FIXED64_CPU_V4_CARGO_RUN_SUBCOMMANDS
-            ):
-                return True
+                and segment[command_index].rsplit("/", 1)[-1] in {"echo", "printf"}
+            )
+            for index, candidate in enumerate(segment[:-1]):
+                if (
+                    any(
+                        marker in candidate
+                        for marker in NATIVE_FIXED64_CPU_V4_SHELL_EXPANSION_MARKERS
+                    )
+                    and segment[index + 1]
+                    in NATIVE_FIXED64_CPU_V4_CARGO_RUN_SUBCOMMANDS
+                    and not (
+                        nonexecuting_display
+                        and index > command_index
+                        and re.fullmatch(
+                            r"\$(?:[A-Za-z_][A-Za-z0-9_]*|\{[^{}]+\})",
+                            candidate,
+                        )
+                    )
+                ):
+                    return True
             segment = []
         else:
             segment.append(token)
@@ -585,6 +602,72 @@ def _cargo_run_has_static_non_probe_target(arguments: list[str]) -> bool:
     )
 
 
+def _shell_tokens_invoke_native_fixed64_cpu_v4_live_probe(
+    tokens: list[str],
+    *,
+    embedded_depth: int = 0,
+) -> bool:
+    if embedded_depth > 8:
+        return True
+    if _workflow_has_dynamic_cargo_run_command(tokens):
+        return True
+
+    for index, token in enumerate(tokens):
+        embedded: str | None = None
+        if token in {"-S", "--split-string"}:
+            if index + 1 >= len(tokens):
+                return True
+            embedded = tokens[index + 1]
+        elif token.startswith("--split-string="):
+            embedded = token.removeprefix("--split-string=")
+        elif token.startswith("-S") and len(token) > 2:
+            embedded = token[2:]
+        if embedded is None:
+            continue
+        lexer = shlex.shlex(embedded, posix=True, punctuation_chars=";&|()")
+        lexer.whitespace_split = True
+        lexer.commenters = "#"
+        try:
+            embedded_tokens = list(lexer)
+        except ValueError:
+            return True
+        if _shell_tokens_invoke_native_fixed64_cpu_v4_live_probe(
+            embedded_tokens,
+            embedded_depth=embedded_depth + 1,
+        ):
+            return True
+
+    for index, token in enumerate(tokens):
+        if token.rsplit("/", 1)[-1] != "cargo":
+            continue
+        invocation: list[str] = []
+        for candidate in tokens[index:]:
+            if invocation and (
+                candidate.rsplit("/", 1)[-1] == "cargo"
+                or (candidate and set(candidate) <= set(";&|()"))
+            ):
+                break
+            invocation.append(candidate)
+        subcommand_index = _cargo_subcommand_index(invocation)
+        if subcommand_index == -1:
+            continue
+        if subcommand_index is None and any(
+            command in invocation[1:]
+            for command in NATIVE_FIXED64_CPU_V4_CARGO_RUN_SUBCOMMANDS
+        ):
+            return True
+        if (
+            subcommand_index is not None
+            and invocation[subcommand_index]
+            in NATIVE_FIXED64_CPU_V4_CARGO_RUN_SUBCOMMANDS
+            and not _cargo_run_has_static_non_probe_target(
+                invocation[subcommand_index + 1 :]
+            )
+        ):
+            return True
+    return False
+
+
 def _workflow_invokes_native_fixed64_cpu_v4_live_probe(text: str) -> bool:
     logical = text.replace("\\\n", " ")
     if any(
@@ -592,73 +675,19 @@ def _workflow_invokes_native_fixed64_cpu_v4_live_probe(text: str) -> bool:
         for token in NATIVE_FIXED64_CPU_V4_FORBIDDEN_WORKFLOW_TOKENS
     ):
         return True
-    lines = logical.splitlines()
     yaml_run_scalars = _workflow_yaml_run_scalars(logical)
     if yaml_run_scalars is None:
         return True
-    shell_fragments = [*lines, *yaml_run_scalars]
-    for index, line in enumerate(lines):
-        folded = NATIVE_FIXED64_CPU_V4_FOLDED_RUN_PATTERN.match(line)
-        if folded is None:
-            continue
-        parent_indent = len(folded.group("indent"))
-        content: list[str] = []
-        content_indent: int | None = None
-        for candidate in lines[index + 1 :]:
-            stripped = candidate.strip()
-            if stripped:
-                candidate_indent = len(candidate) - len(candidate.lstrip(" "))
-                if content_indent is None:
-                    if candidate_indent <= parent_indent:
-                        break
-                    content_indent = candidate_indent
-                elif candidate_indent < content_indent:
-                    break
-            content.append(stripped if stripped else ";")
-        if content:
-            shell_fragments.append(" ".join(content))
-    for line in shell_fragments:
+    for line in yaml_run_scalars:
         lexer = shlex.shlex(line, posix=True, punctuation_chars=";&|()")
         lexer.whitespace_split = True
-        lexer.commenters = ""
+        lexer.commenters = "#"
         try:
             tokens = list(lexer)
         except ValueError:
-            # An unparsable shell fragment cannot earn a live-execution
-            # exemption.  Reject it conservatively when it names Cargo run.
-            if re.search(NATIVE_FIXED64_CPU_V4_CARGO_RUN_PATTERN, line):
-                return True
-            continue
-        if _workflow_has_dynamic_cargo_run_command(tokens):
             return True
-        for index, token in enumerate(tokens):
-            if token.rsplit("/", 1)[-1] != "cargo":
-                continue
-            invocation: list[str] = []
-            for candidate in tokens[index:]:
-                if invocation and (
-                    candidate.rsplit("/", 1)[-1] == "cargo"
-                    or (candidate and set(candidate) <= set(";&|()"))
-                ):
-                    break
-                invocation.append(candidate)
-            subcommand_index = _cargo_subcommand_index(invocation)
-            if subcommand_index == -1:
-                continue
-            if subcommand_index is None and any(
-                command in invocation[1:]
-                for command in NATIVE_FIXED64_CPU_V4_CARGO_RUN_SUBCOMMANDS
-            ):
-                return True
-            if (
-                subcommand_index is not None
-                and invocation[subcommand_index]
-                in NATIVE_FIXED64_CPU_V4_CARGO_RUN_SUBCOMMANDS
-                and not _cargo_run_has_static_non_probe_target(
-                    invocation[subcommand_index + 1 :]
-                )
-            ):
-                return True
+        if _shell_tokens_invoke_native_fixed64_cpu_v4_live_probe(tokens):
+            return True
     return False
 
 
