@@ -51,7 +51,10 @@ behavior, build routing, dependency identity, canonical/vendor equality, or
 guard-to-measurement control flow therefore fails static verification. Every
 file exposed in the compiled native vendor tree and in all four local Rust
 dependency source trees is bound; extra, missing, and symlinked source inputs or
-parent directories fail closed. Runtime tests independently
+parent directories fail closed. Every transitive compiler input is read through
+component-wise no-follow directory descriptors and a stable regular-file
+identity check. The exact default package-root build-script set is also frozen,
+so adding an implicit Cargo `build.rs` fails closed. Runtime tests independently
 rederive and compare the full payload digest.
 
 ## Parity boundary

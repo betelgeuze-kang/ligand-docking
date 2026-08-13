@@ -5,8 +5,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
+import stat
 from typing import NoReturn
 
 
@@ -88,6 +90,15 @@ RUST_COMPILED_SOURCE_TREE_ROOT_RELATIVE_PATHS = (
     Path("rust/betelgeuze-runtime/src"),
     Path("rust/betelgeuze-sys/src"),
     Path("rust/cpu-kernel/src"),
+)
+RUST_PACKAGE_ROOT_RELATIVE_PATHS = (
+    Path("rust/betelgeuze-docking-search"),
+    Path("rust/betelgeuze-runtime"),
+    Path("rust/betelgeuze-sys"),
+    Path("rust/cpu-kernel"),
+)
+RUST_BOUND_BUILD_SCRIPT_RELATIVE_PATHS = (
+    Path("rust/betelgeuze-sys/build.rs"),
 )
 NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS = (
     *NATIVE_VENDOR_CANONICAL_SOURCE_RELATIVE_PATHS,
@@ -255,6 +266,75 @@ def _require_directory_chain(root: Path, relative: Path, label: str) -> Path:
     return current
 
 
+def _stable_file_identity(value: os.stat_result) -> tuple[int, ...]:
+    return (
+        value.st_dev,
+        value.st_ino,
+        value.st_mode,
+        value.st_size,
+        value.st_mtime_ns,
+        value.st_ctime_ns,
+    )
+
+
+def read_bound_source_bytes(root: Path, relative: Path) -> bytes:
+    if relative.is_absolute() or not relative.parts or ".." in relative.parts:
+        _fail("bound compiler source path is not a canonical repository-relative path")
+    directory_flags = (
+        os.O_RDONLY
+        | getattr(os, "O_CLOEXEC", 0)
+        | getattr(os, "O_DIRECTORY", 0)
+        | getattr(os, "O_NOFOLLOW", 0)
+    )
+    file_flags = (
+        os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+    )
+    descriptors: list[int] = []
+    try:
+        descriptors.append(os.open(root, directory_flags))
+        for part in relative.parent.parts:
+            descriptors.append(os.open(part, directory_flags, dir_fd=descriptors[-1]))
+        descriptor = os.open(relative.name, file_flags, dir_fd=descriptors[-1])
+        descriptors.append(descriptor)
+        before = os.fstat(descriptor)
+        if not stat.S_ISREG(before.st_mode):
+            _fail("bound compiler source is invalid or symlinked")
+        chunks: list[bytes] = []
+        while True:
+            chunk = os.read(descriptor, 1024 * 1024)
+            if not chunk:
+                break
+            chunks.append(chunk)
+        after = os.fstat(descriptor)
+        leaf = os.stat(
+            relative.name,
+            dir_fd=descriptors[-2],
+            follow_symlinks=False,
+        )
+    except OSError as exc:
+        raise NativeFixed64CPUProfileV4Error(
+            "bound compiler source or parent is missing, unreadable, invalid, or symlinked"
+        ) from exc
+    finally:
+        for descriptor in reversed(descriptors):
+            os.close(descriptor)
+    if (
+        _stable_file_identity(before) != _stable_file_identity(after)
+        or _stable_file_identity(after) != _stable_file_identity(leaf)
+        or stat.S_ISLNK(leaf.st_mode)
+        or not stat.S_ISREG(leaf.st_mode)
+    ):
+        _fail("bound compiler source changed while it was read")
+    return b"".join(chunks)
+
+
+def read_bound_transitive_sources(root: Path) -> dict[str, bytes]:
+    return {
+        path.as_posix(): read_bound_source_bytes(root, path)
+        for path in NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS
+    }
+
+
 def discover_native_vendor_tree_paths(root: Path) -> tuple[str, ...]:
     vendor_base = Path("rust/betelgeuze-sys/vendor")
     _require_directory_chain(root, vendor_base, "native vendor root")
@@ -316,6 +396,38 @@ def discover_rust_compiled_source_tree_paths(root: Path) -> tuple[str, ...]:
         _fail("Rust compiled source tree contains an invalid Rust source")
     observed_paths = tuple(path.relative_to(root).as_posix() for path in source_entries)
     require_rust_compiled_source_tree_paths(observed_paths)
+    return observed_paths
+
+
+def require_rust_package_build_script_paths(
+    observed_paths: tuple[str, ...],
+) -> None:
+    expected_paths = tuple(
+        path.as_posix() for path in RUST_BOUND_BUILD_SCRIPT_RELATIVE_PATHS
+    )
+    if (
+        len(observed_paths) != len(set(observed_paths))
+        or tuple(sorted(observed_paths)) != tuple(sorted(expected_paths))
+    ):
+        _fail("Rust package build-script set contains an unbound or missing input")
+
+
+def discover_rust_package_build_script_paths(root: Path) -> tuple[str, ...]:
+    package_roots = tuple(
+        _require_directory_chain(root, relative, "Rust package root")
+        for relative in RUST_PACKAGE_ROOT_RELATIVE_PATHS
+    )
+    observed: list[str] = []
+    for package_root in package_roots:
+        candidate = package_root / "build.rs"
+        if candidate.is_symlink():
+            _fail("Rust package build script is symlinked")
+        if candidate.exists():
+            if not candidate.is_file():
+                _fail("Rust package build script is invalid")
+            observed.append(candidate.relative_to(root).as_posix())
+    observed_paths = tuple(observed)
+    require_rust_package_build_script_paths(observed_paths)
     return observed_paths
 
 
@@ -601,11 +713,13 @@ def require_compiled_profile_binding(
     transitive_sources_raw: dict[str, bytes],
     native_vendor_tree_paths: tuple[str, ...],
     rust_compiled_source_tree_paths: tuple[str, ...],
+    rust_package_build_script_paths: tuple[str, ...],
 ) -> None:
     """Bind the native gate constants and entry point to the frozen JSON."""
 
     require_native_vendor_tree_paths(native_vendor_tree_paths)
     require_rust_compiled_source_tree_paths(rust_compiled_source_tree_paths)
+    require_rust_package_build_script_paths(rust_package_build_script_paths)
     try:
         source = qualification_source_raw.decode("ascii")
         probe = probe_source_raw.decode("ascii")
@@ -909,18 +1023,18 @@ def main() -> int:
     profile = require_profile_document(raw)
     vendor_tree_paths = discover_native_vendor_tree_paths(root)
     rust_source_tree_paths = discover_rust_compiled_source_tree_paths(root)
+    rust_build_script_paths = discover_rust_package_build_script_paths(root)
+    transitive_sources = read_bound_transitive_sources(root)
     require_compiled_profile_binding(
         profile,
-        (root / QUALIFICATION_SOURCE_RELATIVE_PATH).read_bytes(),
-        (root / DOCKING_SOURCE_RELATIVE_PATH).read_bytes(),
-        (root / NATIVE_PIPELINE_SOURCE_RELATIVE_PATH).read_bytes(),
-        (root / PROBE_SOURCE_RELATIVE_PATH).read_bytes(),
-        {
-            path.as_posix(): (root / path).read_bytes()
-            for path in NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS
-        },
+        transitive_sources[QUALIFICATION_SOURCE_RELATIVE_PATH.as_posix()],
+        transitive_sources[DOCKING_SOURCE_RELATIVE_PATH.as_posix()],
+        transitive_sources[NATIVE_PIPELINE_SOURCE_RELATIVE_PATH.as_posix()],
+        transitive_sources[PROBE_SOURCE_RELATIVE_PATH.as_posix()],
+        transitive_sources,
         vendor_tree_paths,
         rust_source_tree_paths,
+        rust_build_script_paths,
     )
     print(
         json.dumps(

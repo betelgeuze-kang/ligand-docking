@@ -12,13 +12,18 @@ import pytest
 from tools.verify_engine_v2_native_fixed64_cpu_profile_v4 import (
     NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS,
     NATIVE_VENDOR_COPY_SOURCE_RELATIVE_PATHS,
+    RUST_BOUND_BUILD_SCRIPT_RELATIVE_PATHS,
     RUST_COMPILED_SOURCE_TREE_ROOT_RELATIVE_PATHS,
+    RUST_PACKAGE_ROOT_RELATIVE_PATHS,
     NativeFixed64CPUProfileV4Error,
     _transitive_source_manifest_sha256,
     discover_native_vendor_tree_paths,
     discover_rust_compiled_source_tree_paths,
+    discover_rust_package_build_script_paths,
+    read_bound_source_bytes,
     require_compiled_profile_binding,
     require_native_vendor_tree_paths,
+    require_rust_package_build_script_paths,
     require_rust_compiled_source_tree_paths,
     require_profile_document,
 )
@@ -49,6 +54,9 @@ _RUST_SOURCE_TREE_PATHS = tuple(
         path.is_relative_to(root)
         for root in RUST_COMPILED_SOURCE_TREE_ROOT_RELATIVE_PATHS
     )
+)
+_RUST_BUILD_SCRIPT_PATHS = tuple(
+    path.as_posix() for path in RUST_BOUND_BUILD_SCRIPT_RELATIVE_PATHS
 )
 
 
@@ -98,6 +106,7 @@ def test_canonical_native_fixed64_cpu_profile_v4_is_frozen() -> None:
         dict(_TRANSITIVE_SOURCES),
         _VENDOR_TREE_PATHS,
         _RUST_SOURCE_TREE_PATHS,
+        _RUST_BUILD_SCRIPT_PATHS,
     )
 
 
@@ -202,6 +211,7 @@ def test_profile_v4_rejects_compiled_gate_drift(
             dict(_TRANSITIVE_SOURCES),
             _VENDOR_TREE_PATHS,
             _RUST_SOURCE_TREE_PATHS,
+            _RUST_BUILD_SCRIPT_PATHS,
         )
 
 
@@ -239,6 +249,7 @@ def test_profile_v4_rejects_measurement_moved_before_activation_guard() -> None:
             changed,
             _VENDOR_TREE_PATHS,
             _RUST_SOURCE_TREE_PATHS,
+            _RUST_BUILD_SCRIPT_PATHS,
         )
 
 
@@ -269,6 +280,7 @@ def test_profile_v4_rejects_transitive_kernel_source_drift(target: str) -> None:
             changed,
             _VENDOR_TREE_PATHS,
             _RUST_SOURCE_TREE_PATHS,
+            _RUST_BUILD_SCRIPT_PATHS,
         )
 
 
@@ -290,6 +302,7 @@ def test_profile_v4_rejects_transitive_source_path_omission() -> None:
             changed,
             _VENDOR_TREE_PATHS,
             _RUST_SOURCE_TREE_PATHS,
+            _RUST_BUILD_SCRIPT_PATHS,
         )
 
 
@@ -315,6 +328,7 @@ def test_profile_v4_rejects_cross_wired_qualification_source() -> None:
             dict(_TRANSITIVE_SOURCES),
             _VENDOR_TREE_PATHS,
             _RUST_SOURCE_TREE_PATHS,
+            _RUST_BUILD_SCRIPT_PATHS,
         )
 
 
@@ -336,6 +350,7 @@ def test_profile_v4_rejects_abi_probe_source_drift() -> None:
             changed,
             _VENDOR_TREE_PATHS,
             _RUST_SOURCE_TREE_PATHS,
+            _RUST_BUILD_SCRIPT_PATHS,
         )
 
 
@@ -359,6 +374,7 @@ def test_profile_v4_rejects_vendor_source_drift() -> None:
             changed,
             _VENDOR_TREE_PATHS,
             _RUST_SOURCE_TREE_PATHS,
+            _RUST_BUILD_SCRIPT_PATHS,
         )
 
 
@@ -383,6 +399,7 @@ def test_profile_v4_rejects_vendor_equality_manifest_drift() -> None:
             changed,
             _VENDOR_TREE_PATHS,
             _RUST_SOURCE_TREE_PATHS,
+            _RUST_BUILD_SCRIPT_PATHS,
         )
 
 
@@ -411,6 +428,7 @@ def test_profile_v4_rejects_cfg_shadowed_vendor_declaration() -> None:
             changed,
             _VENDOR_TREE_PATHS,
             _RUST_SOURCE_TREE_PATHS,
+            _RUST_BUILD_SCRIPT_PATHS,
         )
 
 
@@ -484,6 +502,7 @@ def test_profile_v4_rejects_runtime_module_drift(target: str) -> None:
             changed,
             _VENDOR_TREE_PATHS,
             _RUST_SOURCE_TREE_PATHS,
+            _RUST_BUILD_SCRIPT_PATHS,
         )
 
 
@@ -519,6 +538,69 @@ def test_profile_v4_rejects_symlinked_rust_source_subdirectory(
         match="Rust compiled source tree contains a symlink",
     ):
         discover_rust_compiled_source_tree_paths(tmp_path)
+
+
+def test_profile_v4_discovers_exact_rust_package_build_scripts() -> None:
+    assert discover_rust_package_build_script_paths(_ROOT) == (
+        "rust/betelgeuze-sys/build.rs",
+    )
+
+
+def test_profile_v4_rejects_unbound_default_rust_build_script(
+    tmp_path: Path,
+) -> None:
+    for relative in RUST_PACKAGE_ROOT_RELATIVE_PATHS:
+        (tmp_path / relative).mkdir(parents=True)
+    (tmp_path / "rust/betelgeuze-sys/build.rs").write_bytes(b"fn main() {}\n")
+    (tmp_path / "rust/betelgeuze-runtime/build.rs").write_bytes(
+        b"fn main() {}\n"
+    )
+
+    with pytest.raises(
+        NativeFixed64CPUProfileV4Error,
+        match="build-script set contains an unbound",
+    ):
+        discover_rust_package_build_script_paths(tmp_path)
+
+
+def test_profile_v4_rejects_symlinked_compiler_input(tmp_path: Path) -> None:
+    rust_root = tmp_path / "rust"
+    rust_root.mkdir()
+    external = tmp_path / "external-Cargo.toml"
+    external.write_bytes(b"[workspace]\n")
+    (rust_root / "Cargo.toml").symlink_to(external)
+
+    with pytest.raises(
+        NativeFixed64CPUProfileV4Error,
+        match="compiler source or parent.*symlinked",
+    ):
+        read_bound_source_bytes(tmp_path, Path("rust/Cargo.toml"))
+
+
+def test_profile_v4_rejects_symlinked_compiler_input_parent(
+    tmp_path: Path,
+) -> None:
+    external = tmp_path / "external-rust"
+    external.mkdir()
+    (external / "Cargo.lock").write_bytes(b"")
+    (tmp_path / "rust").symlink_to(external, target_is_directory=True)
+
+    with pytest.raises(
+        NativeFixed64CPUProfileV4Error,
+        match="compiler source or parent.*symlinked",
+    ):
+        read_bound_source_bytes(tmp_path, Path("rust/Cargo.lock"))
+
+
+def test_profile_v4_rejects_build_script_inventory_drift() -> None:
+    with pytest.raises(
+        NativeFixed64CPUProfileV4Error,
+        match="build-script set contains an unbound",
+    ):
+        require_rust_package_build_script_paths(
+            _RUST_BUILD_SCRIPT_PATHS
+            + ("rust/betelgeuze-runtime/build.rs",)
+        )
 
 
 @pytest.mark.parametrize(
