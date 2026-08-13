@@ -956,6 +956,46 @@ def test_full_evidence_rejects_rehashed_numeric_projection_cross_wiring() -> Non
     _require_mutated_artifact_fails(artifact, match="not bound to numeric projection")
 
 
+@pytest.mark.parametrize(
+    "f64_index",
+    [
+        0,  # placement quaternion
+        14,  # rigid-profile objective
+        62,  # torsion objective
+        97,  # cluster RMSD
+        64 * 98,  # torsion-move stream
+        64 * 98 + 512 * 4,  # producer coordinates
+        26_752,  # optimized torsion angles
+        28_288,  # final quaternion channels
+    ],
+)
+def test_full_evidence_rejects_rehashed_unlabeled_numeric_drift(
+    f64_index: int,
+) -> None:
+    attempt_raw = _envelope(_attempt(), ATTEMPT_DOMAIN)
+    attempt_projection_raw = json.dumps(_attempt(), separators=(",", ":")).encode(
+        "ascii"
+    )
+    artifact = _artifact(
+        attempt_raw,
+        _domain(ATTEMPT_DOMAIN, attempt_projection_raw),
+        passed=True,
+    )
+    evidence = _first_cpp_backend_evidence(artifact)
+    numeric = evidence["numeric_projection"]
+    assert isinstance(numeric, dict)
+    raw = bytearray.fromhex(str(numeric["f64_be_hex"]))
+    raw[f64_index * 8 + 7] ^= 1
+    numeric["f64_be_hex"] = raw.hex()
+    numeric["sha256"] = _domain(
+        b"betelgeuze.engine_v2_native_fixed64_cpu_numeric_projection_v7\0",
+        bytes(raw),
+    )
+    _require_mutated_artifact_fails(
+        artifact, match="scientific projection digest does not rederive"
+    )
+
+
 def test_full_evidence_rejects_rehashed_decision_preimage_drift() -> None:
     attempt_raw = _envelope(_attempt(), ATTEMPT_DOMAIN)
     attempt_projection_raw = json.dumps(_attempt(), separators=(",", ":")).encode(
