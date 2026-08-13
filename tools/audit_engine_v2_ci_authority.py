@@ -207,6 +207,9 @@ NATIVE_FIXED64_CPU_V4_FORBIDDEN_WORKFLOW_TOKENS = (
 )
 NATIVE_FIXED64_CPU_V4_CARGO_RUN_PATTERN = r"\bcargo\b[^\n]*?\brun\b[^\n]*"
 NATIVE_FIXED64_CPU_V4_EXPLICIT_BIN_PATTERN = r"(?:^|\s)--bin(?:=|\s+)"
+NATIVE_FIXED64_CPU_V4_FOLDED_RUN_PATTERN = re.compile(
+    r"^(?P<indent>[ ]*)(?:-[ ]+)?run:[ ]*>[+-]?[1-9]?[+-]?[ ]*(?:#.*)?$"
+)
 ONE_SHOT_CONTRACT_PATHS = (
     "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_ab.py",
     "config/engine_v2_source_paired_clearance_one_shot_ab.json",
@@ -332,7 +335,22 @@ def _workflow_invokes_native_fixed64_cpu_v4_live_probe(text: str) -> bool:
         for token in NATIVE_FIXED64_CPU_V4_FORBIDDEN_WORKFLOW_TOKENS
     ):
         return True
-    for line in logical.splitlines():
+    lines = logical.splitlines()
+    shell_fragments = list(lines)
+    for index, line in enumerate(lines):
+        folded = NATIVE_FIXED64_CPU_V4_FOLDED_RUN_PATTERN.match(line)
+        if folded is None:
+            continue
+        parent_indent = len(folded.group("indent"))
+        content: list[str] = []
+        for candidate in lines[index + 1 :]:
+            stripped = candidate.strip()
+            if stripped and len(candidate) - len(candidate.lstrip(" ")) <= parent_indent:
+                break
+            content.append(stripped if stripped else ";")
+        if content:
+            shell_fragments.append(" ".join(content))
+    for line in shell_fragments:
         lexer = shlex.shlex(line, posix=True, punctuation_chars=";&|()")
         lexer.whitespace_split = True
         lexer.commenters = ""

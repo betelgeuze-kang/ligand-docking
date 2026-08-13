@@ -29,6 +29,7 @@ from tools.audit_engine_v2_ci_authority import (
     NATIVE_FIXED64_CPU_V4_FALSE_RESTRICTION_KEYS,
     NATIVE_FIXED64_CPU_V4_CARGO_RUN_PATTERN,
     NATIVE_FIXED64_CPU_V4_EXPLICIT_BIN_PATTERN,
+    NATIVE_FIXED64_CPU_V4_FOLDED_RUN_PATTERN,
     NATIVE_FIXED64_CPU_V4_FORBIDDEN_WORKFLOW_TOKENS,
     NATIVE_FIXED64_CPU_V4_REQUIRED_TOKEN_COUNTS,
     NATIVE_FIXED64_CPU_V4_REQUIRED_TOKENS,
@@ -865,6 +866,37 @@ def test_native_fixed64_cpu_v4_multiple_explicit_unrelated_binaries_are_allowed(
     assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is True
 
 
+@pytest.mark.parametrize("header", (">", ">-", ">+", ">2-"))
+def test_native_fixed64_cpu_v4_folded_yaml_cannot_hide_tokenless_cargo_run(
+    tmp_path: Path,
+    header: str,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_native_fixed64_cpu_v4_contract(tmp_path)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        encoding="utf-8",
+    )
+    unrelated = tmp_path / ".github/workflows/unrelated.yaml"
+    unrelated.write_text(
+        "jobs:\n  folded:\n    steps:\n"
+        f"      - run: {header}\n"
+        "          cargo --color always\n"
+        "          run --manifest-path rust/betelgeuze-runtime/Cargo.toml\n",
+        encoding="utf-8",
+    )
+
+    payload = build_inventory(tmp_path)
+    assert (
+        payload[
+            "native_fixed64_cpu_v4_live_qualification_absent_from_github_actions"
+        ]
+        is False
+    )
+    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is False
+    assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is False
+
+
 @pytest.mark.parametrize(
     ("section", "field", "value"),
     (
@@ -941,6 +973,7 @@ def test_native_fixed64_cpu_v4_inventory_constants_are_exact() -> None:
         r"\bcargo\b[^\n]*?\brun\b[^\n]*"
     )
     assert NATIVE_FIXED64_CPU_V4_EXPLICIT_BIN_PATTERN == r"(?:^|\s)--bin(?:=|\s+)"
+    assert NATIVE_FIXED64_CPU_V4_FOLDED_RUN_PATTERN.fullmatch("      - run: >2-")
 
 
 def test_authoritative_main_runs_for_every_workflow_change() -> None:
