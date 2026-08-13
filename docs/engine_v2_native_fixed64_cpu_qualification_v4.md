@@ -55,7 +55,8 @@ parent directories fail closed. Every transitive compiler input is read through
 component-wise no-follow directory descriptors and a stable regular-file
 identity check. The exact default package-root build-script set is also frozen,
 so adding an implicit Cargo `build.rs` fails closed. Repository and workspace
-Cargo configuration files are explicitly forbidden. A bound integration test
+Cargo configuration files and Rust toolchain override files are explicitly
+forbidden. A bound integration test
 links the ordinary non-test library artifact, proves both the exported constant
 and function remain false before launching the binary, and is repeated in
 release mode by native CI. Runtime tests independently

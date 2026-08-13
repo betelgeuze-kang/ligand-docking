@@ -113,6 +113,12 @@ REPOSITORY_CARGO_CONFIG_RELATIVE_PATHS = (
     Path("rust/.cargo/config"),
     Path("rust/.cargo/config.toml"),
 )
+REPOSITORY_RUST_TOOLCHAIN_OVERRIDE_RELATIVE_PATHS = (
+    Path("rust-toolchain"),
+    Path("rust-toolchain.toml"),
+    Path("rust/rust-toolchain"),
+    Path("rust/rust-toolchain.toml"),
+)
 NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS = (
     *NATIVE_VENDOR_CANONICAL_SOURCE_RELATIVE_PATHS,
     *NATIVE_VENDOR_COPY_SOURCE_RELATIVE_PATHS,
@@ -459,8 +465,12 @@ def discover_rust_package_build_script_paths(root: Path) -> tuple[str, ...]:
     return observed_paths
 
 
-def require_repository_cargo_configuration_absent(root: Path) -> None:
-    for relative in REPOSITORY_CARGO_CONFIG_RELATIVE_PATHS:
+def _require_repository_paths_absent(
+    root: Path,
+    relative_paths: tuple[Path, ...],
+    label: str,
+) -> None:
+    for relative in relative_paths:
         current = root
         for index, part in enumerate(relative.parts):
             current /= part
@@ -470,15 +480,31 @@ def require_repository_cargo_configuration_absent(root: Path) -> None:
                 break
             except OSError as exc:
                 raise NativeFixed64CPUProfileV4Error(
-                    "repository Cargo configuration path is unreadable"
+                    f"{label} path is unreadable"
                 ) from exc
             if stat.S_ISLNK(entry.st_mode):
-                _fail("repository Cargo configuration path is symlinked")
+                _fail(f"{label} path is symlinked")
             if index + 1 < len(relative.parts):
                 if not stat.S_ISDIR(entry.st_mode):
-                    _fail("repository Cargo configuration parent is invalid")
+                    _fail(f"{label} parent is invalid")
             else:
-                _fail("repository Cargo configuration is forbidden by the profile")
+                _fail(f"{label} is forbidden by the profile")
+
+
+def require_repository_cargo_configuration_absent(root: Path) -> None:
+    _require_repository_paths_absent(
+        root,
+        REPOSITORY_CARGO_CONFIG_RELATIVE_PATHS,
+        "repository Cargo configuration",
+    )
+
+
+def require_repository_rust_toolchain_override_absent(root: Path) -> None:
+    _require_repository_paths_absent(
+        root,
+        REPOSITORY_RUST_TOOLCHAIN_OVERRIDE_RELATIVE_PATHS,
+        "repository Rust toolchain override",
+    )
 
 
 def _exact_keys(value: object, expected: set[str], name: str) -> dict[str, object]:
@@ -1094,6 +1120,7 @@ def main() -> int:
     raw = (root / PROFILE_RELATIVE_PATH).read_bytes()
     profile = require_profile_document(raw)
     require_repository_cargo_configuration_absent(root)
+    require_repository_rust_toolchain_override_absent(root)
     vendor_tree_paths = discover_native_vendor_tree_paths(root)
     rust_source_tree_paths = discover_rust_compiled_source_tree_paths(root)
     rust_build_script_paths = discover_rust_package_build_script_paths(root)

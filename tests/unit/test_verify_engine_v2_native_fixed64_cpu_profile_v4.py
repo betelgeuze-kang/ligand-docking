@@ -13,6 +13,7 @@ from tools.verify_engine_v2_native_fixed64_cpu_profile_v4 import (
     NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS,
     NATIVE_VENDOR_COPY_SOURCE_RELATIVE_PATHS,
     REPOSITORY_CARGO_CONFIG_RELATIVE_PATHS,
+    REPOSITORY_RUST_TOOLCHAIN_OVERRIDE_RELATIVE_PATHS,
     RUST_BOUND_BUILD_SCRIPT_RELATIVE_PATHS,
     RUST_COMPILED_SOURCE_TREE_ROOT_RELATIVE_PATHS,
     RUST_PACKAGE_ROOT_RELATIVE_PATHS,
@@ -25,6 +26,7 @@ from tools.verify_engine_v2_native_fixed64_cpu_profile_v4 import (
     require_compiled_profile_binding,
     require_native_vendor_tree_paths,
     require_repository_cargo_configuration_absent,
+    require_repository_rust_toolchain_override_absent,
     require_rust_package_build_script_paths,
     require_rust_compiled_source_tree_paths,
     require_profile_document,
@@ -648,6 +650,29 @@ def test_profile_v4_rejects_symlinked_cargo_configuration_parent(
         match="Cargo configuration path is symlinked",
     ):
         require_repository_cargo_configuration_absent(tmp_path)
+
+
+def test_profile_v4_canonical_repository_has_no_rust_toolchain_override() -> None:
+    require_repository_rust_toolchain_override_absent(_ROOT)
+
+
+@pytest.mark.parametrize(
+    "relative",
+    REPOSITORY_RUST_TOOLCHAIN_OVERRIDE_RELATIVE_PATHS,
+)
+def test_profile_v4_rejects_repository_rust_toolchain_override(
+    tmp_path: Path,
+    relative: Path,
+) -> None:
+    path = tmp_path / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(b"[toolchain]\nchannel = 'nightly'\n")
+
+    with pytest.raises(
+        NativeFixed64CPUProfileV4Error,
+        match="Rust toolchain override is forbidden",
+    ):
+        require_repository_rust_toolchain_override_absent(tmp_path)
 
 
 @pytest.mark.parametrize(
