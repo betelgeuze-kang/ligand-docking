@@ -71,6 +71,25 @@ KNOWN_BLOCKERS = {
     "process_task_count_unavailable",
     "source_checkout_not_exact_main",
 }
+PREFLIGHT_BLOCKERS = {
+    "affinity_unavailable",
+    "boost_not_disabled",
+    "boost_state_unavailable",
+    "cpu_model_not_qualified",
+    "measurement_cpu_unavailable",
+    "process_task_count_not_one",
+    "process_task_count_unavailable",
+    "source_checkout_not_exact_main",
+}
+POST_PIN_BLOCKERS = {
+    "measurement_affinity_pin_failed",
+    "post_pin_boost_not_disabled",
+    "post_pin_process_task_count_not_one",
+}
+MEASUREMENT_BLOCKERS = {
+    "native_measurement_failed",
+    "native_measurement_report_contract_failed",
+}
 ATTEMPT_KEYS = (
     "activation_sha256",
     "attempt_ordinal",
@@ -330,16 +349,24 @@ def _require_fixture(value: object, *, expected_id: str) -> dict[str, object]:
     )
     cpp_samples = fixture["cpp_sample_nanoseconds"]
     rust_samples = fixture["rust_sample_nanoseconds"]
+    cpp_median = fixture["cpp_median_nanoseconds"]
+    rust_median = fixture["rust_median_nanoseconds"]
     if (
         type(cpp_samples) is not list
         or type(rust_samples) is not list
         or len(cpp_samples) != 25
         or len(rust_samples) != 25
         or any(type(item) is not int or item < 1 for item in cpp_samples + rust_samples)
-        or fixture["cpp_median_nanoseconds"] != _median(cpp_samples)
-        or fixture["rust_median_nanoseconds"] != _median(rust_samples)
+        or type(cpp_median) is not int
+        or type(rust_median) is not int
+        or cpp_median != _median(cpp_samples)
+        or rust_median != _median(rust_samples)
     ):
         _fail("fixture timing samples or medians are invalid")
+    assert isinstance(cpp_samples, list)
+    assert isinstance(rust_samples, list)
+    assert type(cpp_median) is int
+    assert type(rust_median) is int
     ratio = fixture["rust_to_cpp_median_ratio"]
     maximum_absolute = numeric["maximum_absolute_difference"]
     maximum_scaled = numeric["maximum_scaled_difference"]
@@ -347,14 +374,19 @@ def _require_fixture(value: object, *, expected_id: str) -> dict[str, object]:
         type(ratio) not in (int, float)
         or type(maximum_absolute) not in (int, float)
         or type(maximum_scaled) not in (int, float)
-        or not math.isfinite(ratio)
+    ):
+        _fail("fixture numeric evidence is non-finite or not rederivable")
+    assert isinstance(ratio, (int, float))
+    assert isinstance(maximum_absolute, (int, float))
+    assert isinstance(maximum_scaled, (int, float))
+    if (
+        not math.isfinite(ratio)
         or not math.isfinite(maximum_absolute)
         or not math.isfinite(maximum_scaled)
         or ratio <= 0
         or maximum_absolute < 0
         or maximum_scaled < 0
-        or ratio
-        != fixture["rust_median_nanoseconds"] / fixture["cpp_median_nanoseconds"]
+        or ratio != rust_median / cpp_median
     ):
         _fail("fixture numeric evidence is non-finite or not rederivable")
     violations = numeric["tolerance_violation_count"]
@@ -396,6 +428,60 @@ def _require_fixture(value: object, *, expected_id: str) -> dict[str, object]:
     if fixture["gate_passed"] is not expected_gate:
         _fail("fixture gate does not rederive from complete evidence")
     return fixture
+
+
+def _qualified_host(host: dict[str, object]) -> bool:
+    return bool(
+        host["boost_disabled"] is True
+        and host["cpu_model"] == "AMD Ryzen 9 5900X 12-Core Processor"
+        and host["measurement_cpu_available"] is True
+        and host["process_task_count"] == 1
+        and type(host["source_commit_oid"]) is str
+        and re.fullmatch(r"[0-9a-f]{40}", host["source_commit_oid"]) is not None
+    )
+
+
+def _expected_preflight_blockers(host: dict[str, object]) -> set[str]:
+    expected: set[str] = set()
+    if host["source_commit_oid"] is None:
+        expected.add("source_checkout_not_exact_main")
+    if host["cpu_model"] is None:
+        expected.add("cpu_model_not_qualified")
+    if host["boost_disabled"] is None:
+        expected.add("boost_state_unavailable")
+    elif host["boost_disabled"] is False:
+        expected.add("boost_not_disabled")
+    if host["measurement_cpu_available"] is False:
+        expected.add("measurement_cpu_unavailable")
+    if host["process_task_count"] is None:
+        expected.add("process_task_count_unavailable")
+    elif host["process_task_count"] != 1:
+        expected.add("process_task_count_not_one")
+    return expected
+
+
+def _blocked_state_rederives(
+    blockers: list[str],
+    execution: dict[str, object],
+    host: dict[str, object],
+) -> bool:
+    observed = set(blockers)
+    expected_preflight = _expected_preflight_blockers(host)
+    measurement_started = execution["measurement_started"]
+    if expected_preflight:
+        if measurement_started is not False:
+            return False
+        allowed = [expected_preflight]
+        if host["measurement_cpu_available"] is False:
+            allowed.append(expected_preflight | {"affinity_unavailable"})
+        return observed in allowed and observed <= PREFLIGHT_BLOCKERS
+    if not _qualified_host(host):
+        return False
+    if measurement_started is False:
+        return len(observed) == 1 and observed <= POST_PIN_BLOCKERS
+    if measurement_started is True:
+        return len(observed) == 1 and observed <= MEASUREMENT_BLOCKERS
+    return False
 
 
 def require_artifact_bytes(
@@ -492,6 +578,8 @@ def require_artifact_bytes(
     if type(fixtures) is not list:
         _fail("qualification artifact fixtures are not a list")
     if fixtures:
+        if not _qualified_host(host):
+            _fail("measured qualification artifact host is not exactly qualified")
         if len(fixtures) != 2:
             _fail("qualification artifact fixture denominator changed")
         verified = [
@@ -499,10 +587,12 @@ def require_artifact_bytes(
             for index, fixture_id in enumerate(EXPECTED_FIXTURES)
         ]
         recorded_gate = all(row["gate_passed"] is True for row in verified)
-        numeric_gate = all(
-            row["numeric_parity"]["tolerance_violation_count"] == 0
-            for row in verified
-        )
+        numeric_gate = True
+        for row in verified:
+            numeric_parity = row["numeric_parity"]
+            assert isinstance(numeric_parity, dict)
+            if numeric_parity["tolerance_violation_count"] != 0:
+                numeric_gate = False
         expected_decision = "PASS" if recorded_gate else "NO_GO"
         expected_blockers = [] if recorded_gate else ["native_qualification_gate_failed"]
         if (
@@ -517,10 +607,9 @@ def require_artifact_bytes(
         execution["recorded_decision"] != "BLOCKED"
         or execution["recorded_gate_passed"] is not None
         or execution["recorded_numeric_gate_passed"] is not None
-        or not blockers
-        or type(execution["measurement_started"]) is not bool
+        or not _blocked_state_rederives(blockers, execution, host)
     ):
-        _fail("blocked qualification artifact is not terminal and typed")
+        _fail("blocked qualification artifact state does not rederive")
     return artifact, receipt
 
 

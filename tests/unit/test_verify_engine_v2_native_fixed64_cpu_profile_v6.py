@@ -13,6 +13,7 @@ from tools.verify_engine_v2_native_fixed64_cpu_profile_v6 import (
     NativeFixed64CPUProfileV6Error,
     require_activation_source_contract,
     require_bound_source_tree,
+    require_packaged_activation_assets,
     require_profile_document_v6,
     require_source_manifest_document,
 )
@@ -61,9 +62,49 @@ def test_profile_v6_rederives_from_archived_v5_and_exact_sources() -> None:
         sources,
     )
     require_activation_source_contract(sources)
+    require_packaged_activation_assets(
+        _ROOT,
+        profile_raw=profile_raw,
+        v5_archive_raw=v5_archive_raw,
+        source_manifest_raw=manifest_raw,
+        cargo_lock_raw=sources[verifier.CARGO_LOCK_RELATIVE_PATH.as_posix()],
+    )
     assert profile["profile_id"] == verifier.PROFILE_ID
-    assert profile["authority"]["qualification_authority"] is False
-    assert profile["runner"]["account_scoped_exactly_once"] is True
+    authority = profile["authority"]
+    runner = profile["runner"]
+    assert isinstance(authority, dict)
+    assert isinstance(runner, dict)
+    assert authority["qualification_authority"] is False
+    assert runner["account_scoped_exactly_once"] is True
+
+
+def test_packaged_activation_asset_drift_fails_closed(tmp_path: Path) -> None:
+    expected = {
+        verifier.PACKAGED_PROFILE_RELATIVE_PATH: _PROFILE.read_bytes(),
+        verifier.PACKAGED_V5_ARCHIVE_RELATIVE_PATH: _V5_ARCHIVE.read_bytes(),
+        verifier.PACKAGED_SOURCE_MANIFEST_RELATIVE_PATH: _MANIFEST.read_bytes(),
+        verifier.PACKAGED_CARGO_LOCK_RELATIVE_PATH: (
+            _ROOT / verifier.CARGO_LOCK_RELATIVE_PATH
+        ).read_bytes(),
+    }
+    for relative, raw in expected.items():
+        target = tmp_path / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(raw)
+    (tmp_path / verifier.PACKAGED_PROFILE_RELATIVE_PATH).write_bytes(b"{}\n")
+    with pytest.raises(
+        NativeFixed64CPUProfileV6Error,
+        match="packaged v6 activation asset drifted",
+    ):
+        require_packaged_activation_assets(
+            tmp_path,
+            profile_raw=_PROFILE.read_bytes(),
+            v5_archive_raw=_V5_ARCHIVE.read_bytes(),
+            source_manifest_raw=_MANIFEST.read_bytes(),
+            cargo_lock_raw=(
+                _ROOT / verifier.CARGO_LOCK_RELATIVE_PATH
+            ).read_bytes(),
+        )
 
 
 def test_command_line_verifier_is_non_consuming_and_authority_false() -> None:

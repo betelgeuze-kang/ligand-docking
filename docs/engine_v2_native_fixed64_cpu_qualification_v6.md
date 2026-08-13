@@ -9,10 +9,18 @@ unchanged.
 
 The profile is
 `config/engine_v2_native_fixed64_cpu_profile_v6.json`. Its exact SHA-256 is
-`839f2f3a91ea2aeddfae2c02559a2f37ab550967318932ff6375d6f723de14c2`.
+`96a4df57ddd36e7a9a7ae89bce7099004674d684c936a1a7c031a6470efd120c`.
 The 190-input native/Rust compiler manifest is
 `config/engine_v2_native_fixed64_cpu_profile_v6_sources.json`, SHA-256
-`439fd9e44057771808a3a0a6142c50d10d2b75739d61d2b6712b812f4530cf36`.
+`223be71afc97e80827aa5ae7e8d833f70e24e5cab5d85032b2c3656f96eff765`.
+The domain-bound activation SHA-256 is
+`45fa03c14a8731a4371eb73afd543b63cbb81bf9a0f6567f7baa541f86e104d8`.
+
+The standalone `betelgeuze-runtime` crate packages byte-identical mirrors of
+the profile, predecessor archive, source manifest, and workspace lock under
+`rust/betelgeuze-runtime/assets/`. Both the profile verifier and CI authority
+audit reject any mirror drift; packaging the mirrors grants no execution or
+qualification authority.
 
 ## Transaction boundary
 

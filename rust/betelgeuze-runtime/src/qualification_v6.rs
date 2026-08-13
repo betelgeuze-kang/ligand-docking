@@ -28,16 +28,16 @@ pub const FIXED64_CPU_QUALIFICATION_V6_SCHEMA_ID: &str =
     "betelgeuze.engine_v2_native_fixed64_cpu_probe/6.0.0";
 
 const PROFILE_BYTES: &[u8] =
-    include_bytes!("../../../config/engine_v2_native_fixed64_cpu_profile_v6.json");
+    include_bytes!("../assets/engine_v2_native_fixed64_cpu_profile_v6.json");
 const PREDECESSOR_ARCHIVE_BYTES: &[u8] =
-    include_bytes!("../../../config/engine_v2_native_fixed64_cpu_profile_v5_archive.json");
+    include_bytes!("../assets/engine_v2_native_fixed64_cpu_profile_v5_archive.json");
 const TRANSITIVE_SOURCE_MANIFEST_BYTES: &[u8] =
-    include_bytes!("../../../config/engine_v2_native_fixed64_cpu_profile_v6_sources.json");
+    include_bytes!("../assets/engine_v2_native_fixed64_cpu_profile_v6_sources.json");
 const QUALIFICATION_SOURCE_BYTES: &[u8] = include_bytes!("qualification.rs");
 const RUNNER_SOURCE_BYTES: &[u8] = include_bytes!("qualification_v6.rs");
 const BINARY_SOURCE_BYTES: &[u8] = include_bytes!("bin/betelgeuze-fixed64-cpu-qualify-v6.rs");
 const CARGO_MANIFEST_BYTES: &[u8] = include_bytes!("../Cargo.toml");
-const CARGO_LOCK_BYTES: &[u8] = include_bytes!("../../Cargo.lock");
+const CARGO_LOCK_BYTES: &[u8] = include_bytes!("../assets/workspace-Cargo.lock");
 
 const ATTEMPT_SCHEMA_ID: &str = "betelgeuze.engine_v2_native_fixed64_cpu_attempt/6.0.0";
 const ARTIFACT_SCHEMA_ID: &str =
@@ -51,6 +51,7 @@ const MEASUREMENT_CPU_ORDINAL: usize = 2;
 const MAX_PROFILE_BYTES: usize = 32 * 1024;
 const MAX_STATE_BYTES: usize = 64 * 1024;
 const MAX_ARTIFACT_BYTES: usize = 4 * 1024 * 1024;
+const STAGING_NAME_OVERHEAD_BYTES: usize = 1 + 5 + 64;
 const ACTIVATION_DOMAIN: &[u8] = b"betelgeuze.engine_v2_native_fixed64_cpu_activation_v6\0";
 const ATTEMPT_DOMAIN: &[u8] = b"betelgeuze.engine_v2_native_fixed64_cpu_attempt_v6\0";
 const ARTIFACT_DOMAIN: &[u8] = b"betelgeuze.engine_v2_native_fixed64_cpu_artifact_v6\0";
@@ -922,6 +923,27 @@ fn validate_absent_output(path: &Path) -> V6Result<ValidatedOutputTarget> {
             "native fixed64 CPU v6 output filename contains NUL",
         )
     })?;
+    // SAFETY: fpathconf only reads the limit associated with this open
+    // directory descriptor.
+    let name_max = unsafe { libc::fpathconf(parent_descriptor.as_raw_fd(), libc::_PC_NAME_MAX) };
+    let staging_name_length = name
+        .as_bytes()
+        .len()
+        .checked_add(STAGING_NAME_OVERHEAD_BYTES)
+        .ok_or_else(|| {
+            NativeFixed64CpuQualificationV6Error::new(
+                "native fixed64 CPU v6 output staging filename length overflowed",
+            )
+        })?;
+    if name_max < 1
+        || usize::try_from(name_max)
+            .ok()
+            .is_none_or(|maximum| staging_name_length > maximum)
+    {
+        return Err(NativeFixed64CpuQualificationV6Error::new(
+            "native fixed64 CPU v6 output filename cannot support atomic staging",
+        ));
+    }
     if path_exists_at(parent_descriptor.as_raw_fd(), &raw_name)? {
         return Err(NativeFixed64CpuQualificationV6Error::new(
             "native fixed64 CPU v6 output must be absent",
@@ -1239,12 +1261,19 @@ fn publish_absent_file_at(
             "native fixed64 CPU v6 {label} target already exists"
         )));
     }
-    let target_text = target_name.to_string_lossy();
-    let temporary = CString::new(format!(
-        ".{target_text}.tmp.{}",
-        digest_hex(random_nonce()?)
-    ))
-    .expect("generated temporary filename contains no NUL");
+    let nonce = digest_hex(random_nonce()?);
+    let mut temporary_bytes = Vec::with_capacity(
+        target_name
+            .to_bytes()
+            .len()
+            .saturating_add(STAGING_NAME_OVERHEAD_BYTES),
+    );
+    temporary_bytes.push(b'.');
+    temporary_bytes.extend_from_slice(target_name.to_bytes());
+    temporary_bytes.extend_from_slice(b".tmp.");
+    temporary_bytes.extend_from_slice(nonce.as_bytes());
+    let temporary =
+        CString::new(temporary_bytes).expect("generated temporary filename contains no NUL");
     // SAFETY: directory is open, temporary is relative, and successful openat
     // returns one newly owned descriptor.
     let descriptor = unsafe {
@@ -1956,6 +1985,18 @@ mod tests {
                 .expect_err("state filename must be rejected");
             assert!(error.message().contains("cross-wire account state"));
         }
+    }
+
+    #[test]
+    fn output_validation_reserves_the_complete_atomic_staging_name() {
+        let directory = TestDirectory::new();
+        let exact_limit = format!("{}.json", "a".repeat(180));
+        validate_absent_output(&directory.path.join(exact_limit))
+            .expect("185-byte target leaves room for the staging suffix");
+        let too_long = format!("{}.json", "a".repeat(181));
+        let error = validate_absent_output(&directory.path.join(too_long))
+            .expect_err("186-byte target cannot be staged under NAME_MAX=255");
+        assert!(error.message().contains("cannot support atomic staging"));
     }
 
     #[test]

@@ -8,7 +8,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
-from typing import Any
+from typing import Any, cast
 
 
 SCHEMA_ID = "betelgeuze.engine_v2_ci_authority_inventory/1.0.0"
@@ -211,6 +211,10 @@ NATIVE_FIXED64_CPU_V6_CONTRACT_PATHS = (
     "rust/Cargo.lock",
     "rust_engine_v2/Cargo.lock",
     "rust/betelgeuze-runtime/Cargo.toml",
+    "rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v5_archive.json",
+    "rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v6.json",
+    "rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v6_sources.json",
+    "rust/betelgeuze-runtime/assets/workspace-Cargo.lock",
     "rust/betelgeuze-runtime/src/lib.rs",
     "rust/betelgeuze-runtime/src/qualification.rs",
     "rust/betelgeuze-runtime/src/qualification_v6.rs",
@@ -739,6 +743,7 @@ def _native_fixed64_cpu_v5_authority_is_fail_closed(repo_root: Path) -> bool:
     fixtures = profile.get("fixtures")
     core = profile.get("measurement_core")
     performance = profile.get("performance")
+    fixture_rows = cast(list[dict[str, object]], fixtures)
     return bool(
         type(authority) is dict
         and set(authority) == set(NATIVE_FIXED64_CPU_V5_FALSE_AUTHORITY_KEYS)
@@ -766,10 +771,12 @@ def _native_fixed64_cpu_v5_authority_is_fail_closed(repo_root: Path) -> bool:
                 row.get("expected_generated_count"),
                 row.get("expected_typed_failure_count"),
             )
-            for row in fixtures
+            for row in fixture_rows
         ]
         == [(64, 12, 12, 64, 0), (64, 12, 12, 48, 16)]
-        and all(row.get("contains_molecular_data") is False for row in fixtures)
+        and all(
+            row.get("contains_molecular_data") is False for row in fixture_rows
+        )
         and type(core) is dict
         and core.get("python_scientific_work_allowed") is False
         and core.get("receptor_context_recreated_inside_samples") is False
@@ -882,6 +889,31 @@ def _native_fixed64_cpu_v6_authority_is_fail_closed(repo_root: Path) -> bool:
     wrapper_lock_path = repo_root / "rust_engine_v2/Cargo.lock"
     try:
         raw = profile_path.read_bytes()
+        v5_archive_raw = (
+            repo_root
+            / "config/engine_v2_native_fixed64_cpu_profile_v5_archive.json"
+        ).read_bytes()
+        source_manifest_raw = (
+            repo_root
+            / "config/engine_v2_native_fixed64_cpu_profile_v6_sources.json"
+        ).read_bytes()
+        cargo_lock_raw = (repo_root / "rust/Cargo.lock").read_bytes()
+        packaged_profile_raw = (
+            repo_root
+            / "rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v6.json"
+        ).read_bytes()
+        packaged_v5_archive_raw = (
+            repo_root
+            / "rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v5_archive.json"
+        ).read_bytes()
+        packaged_source_manifest_raw = (
+            repo_root
+            / "rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v6_sources.json"
+        ).read_bytes()
+        packaged_cargo_lock_raw = (
+            repo_root
+            / "rust/betelgeuze-runtime/assets/workspace-Cargo.lock"
+        ).read_bytes()
         profile = json.loads(raw.decode("ascii"))
         runner = runner_path.read_text(encoding="utf-8")
         binary = binary_path.read_text(encoding="utf-8")
@@ -906,6 +938,10 @@ def _native_fixed64_cpu_v6_authority_is_fail_closed(repo_root: Path) -> bool:
     if not (
         type(profile) is dict
         and raw == expected
+        and packaged_profile_raw == raw
+        and packaged_v5_archive_raw == v5_archive_raw
+        and packaged_source_manifest_raw == source_manifest_raw
+        and packaged_cargo_lock_raw == cargo_lock_raw
         and profile.get("schema_id")
         == "betelgeuze.engine_v2_native_fixed64_cpu_profile/6.0.0"
         and profile.get("profile_id")
@@ -980,6 +1016,11 @@ def _native_fixed64_cpu_v6_authority_is_fail_closed(repo_root: Path) -> bool:
         cursor < artifact_publish < terminal_build < terminal_publish < returned
         and "libc::O_EXCL" in runner
         and "libc::O_NOFOLLOW" in runner
+        and "output filename cannot support atomic staging" in runner
+        and "../assets/engine_v2_native_fixed64_cpu_profile_v6.json" in runner
+        and "../assets/engine_v2_native_fixed64_cpu_profile_v6_sources.json"
+        in runner
+        and "../assets/workspace-Cargo.lock" in runner
         and "decision_returned_only_after_terminal_persistence" in runner
         and runner.count("run_native_fixed64_cpu_qualification_successor(") == 1
         and "--verify-activation" in binary
@@ -992,6 +1033,13 @@ def _native_fixed64_cpu_v6_authority_is_fail_closed(repo_root: Path) -> bool:
 
 def build_inventory(repo_root: Path) -> dict[str, Any]:
     workflow_root = repo_root / ".github/workflows"
+    all_action_workflows = tuple(
+        sorted(
+            path.relative_to(repo_root).as_posix()
+            for path in workflow_root.iterdir()
+            if path.is_file() and path.suffix in {".yml", ".yaml"}
+        )
+    )
     workflows = tuple(
         sorted(
             path.relative_to(repo_root).as_posix()
@@ -1006,7 +1054,8 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
     hashes = {path: _sha256(repo_root / path) for path in workflows}
     main_text = (repo_root / AUTHORITATIVE_WORKFLOWS[0]).read_text(encoding="utf-8")
     all_workflow_text = "\n".join(
-        (repo_root / path).read_text(encoding="utf-8") for path in workflows
+        (repo_root / path).read_text(encoding="utf-8")
+        for path in all_action_workflows
     )
     stage0_required_tokens = (
         "tools/__init__.py",

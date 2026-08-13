@@ -24,9 +24,9 @@ else:
 
 SCHEMA_ID = "betelgeuze.engine_v2_native_fixed64_cpu_profile/6.0.0"
 PROFILE_ID = "engine_v2_native_fixed64_cpu_synthetic_v6"
-PROFILE_SHA256 = "839f2f3a91ea2aeddfae2c02559a2f37ab550967318932ff6375d6f723de14c2"
+PROFILE_SHA256 = "96a4df57ddd36e7a9a7ae89bce7099004674d684c936a1a7c031a6470efd120c"
 SOURCE_MANIFEST_SHA256 = (
-    "439fd9e44057771808a3a0a6142c50d10d2b75739d61d2b6712b812f4530cf36"
+    "223be71afc97e80827aa5ae7e8d833f70e24e5cab5d85032b2c3656f96eff765"
 )
 SOURCE_COUNT = 190
 PROFILE_RELATIVE_PATH = Path("config/engine_v2_native_fixed64_cpu_profile_v6.json")
@@ -50,6 +50,18 @@ BINARY_SOURCE_RELATIVE_PATH = Path(
 )
 CARGO_MANIFEST_RELATIVE_PATH = Path("rust/betelgeuze-runtime/Cargo.toml")
 CARGO_LOCK_RELATIVE_PATH = Path("rust/Cargo.lock")
+PACKAGED_PROFILE_RELATIVE_PATH = Path(
+    "rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v6.json"
+)
+PACKAGED_V5_ARCHIVE_RELATIVE_PATH = Path(
+    "rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v5_archive.json"
+)
+PACKAGED_SOURCE_MANIFEST_RELATIVE_PATH = Path(
+    "rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v6_sources.json"
+)
+PACKAGED_CARGO_LOCK_RELATIVE_PATH = Path(
+    "rust/betelgeuze-runtime/assets/workspace-Cargo.lock"
+)
 
 FALSE_AUTHORITY_KEYS = {
     "fresh_holdout_execution_authorized",
@@ -261,7 +273,16 @@ def require_profile_document_v6(
     ):
         if profile[key] != v5[key]:
             _fail(f"v6 changed the frozen v5 scientific {key} contract")
-    v5_core = dict(_exact_keys(v5["measurement_core"], set(v5["measurement_core"]), label="v5 core"))
+    v5_measurement_core = v5["measurement_core"]
+    if type(v5_measurement_core) is not dict:
+        _fail("v5 measurement core is not an object")
+    v5_core = dict(
+        _exact_keys(
+            v5_measurement_core,
+            set(v5_measurement_core),
+            label="v5 core",
+        )
+    )
     for removed in (
         "native_cpp_pipeline_source_sha256",
         "native_probe_source_sha256",
@@ -529,6 +550,25 @@ def require_bound_source_tree(root: Path, manifest: dict[str, object]) -> dict[s
     return sources
 
 
+def require_packaged_activation_assets(
+    root: Path,
+    *,
+    profile_raw: bytes,
+    v5_archive_raw: bytes,
+    source_manifest_raw: bytes,
+    cargo_lock_raw: bytes,
+) -> None:
+    expected = {
+        PACKAGED_PROFILE_RELATIVE_PATH: profile_raw,
+        PACKAGED_V5_ARCHIVE_RELATIVE_PATH: v5_archive_raw,
+        PACKAGED_SOURCE_MANIFEST_RELATIVE_PATH: source_manifest_raw,
+        PACKAGED_CARGO_LOCK_RELATIVE_PATH: cargo_lock_raw,
+    }
+    for relative, canonical_raw in expected.items():
+        if read_bound_source_bytes(root, relative) != canonical_raw:
+            _fail(f"packaged v6 activation asset drifted: {relative}")
+
+
 def require_cargo_target_inventory(root: Path) -> None:
     try:
         completed = subprocess.run(
@@ -627,6 +667,7 @@ def require_activation_source_contract(sources: dict[str, bytes]) -> None:
         "require_account_state_binding(&state)?;",
         "output cannot cross-wire account state",
         "output parent binding changed",
+        "output filename cannot support atomic staging",
         "profile state binding changed",
         "decision_returned_only_after_terminal_persistence",
         "qualification_authority\\\":false",
@@ -655,6 +696,13 @@ def main() -> int:
     v5_archive_raw = read_bound_source_bytes(root, V5_ARCHIVE_RELATIVE_PATH)
     manifest = require_source_manifest_document(manifest_raw)
     sources = require_bound_source_tree(root, manifest)
+    require_packaged_activation_assets(
+        root,
+        profile_raw=profile_raw,
+        v5_archive_raw=v5_archive_raw,
+        source_manifest_raw=manifest_raw,
+        cargo_lock_raw=sources[CARGO_LOCK_RELATIVE_PATH.as_posix()],
+    )
     require_profile_document_v6(
         profile_raw,
         v5_profile_raw,

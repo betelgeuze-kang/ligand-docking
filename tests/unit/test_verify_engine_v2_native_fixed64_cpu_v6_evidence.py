@@ -24,6 +24,8 @@ from tools.verify_engine_v2_native_fixed64_cpu_v6_evidence import (
     NativeFixed64CPUV6EvidenceError,
     TERMINAL_DOMAIN,
     TERMINAL_SCHEMA_ID,
+    require_artifact_bytes,
+    require_attempt_bytes,
     require_persisted_evidence_bytes,
 )
 
@@ -243,6 +245,7 @@ def test_complete_blocked_and_pass_evidence_rederive(passed: bool) -> None:
         profile_raw=_PROFILE_RAW,
     )
     terminal = evidence["terminal"]
+    assert isinstance(terminal, dict)
     assert terminal["recorded_decision"] == ("PASS" if passed else "BLOCKED")
     assert terminal["qualification_authority"] is False
 
@@ -259,6 +262,150 @@ def test_evidence_help_resolves_sibling_chain_without_site_packages() -> None:
     assert "--artifact" in completed.stdout
     assert "--attempt" in completed.stdout
     assert "--terminal" in completed.stdout
+
+
+def _require_mutated_artifact_fails(
+    artifact: dict[str, object],
+    *,
+    match: str,
+) -> None:
+    attempt_projection = _attempt()
+    attempt_raw = _envelope(attempt_projection, ATTEMPT_DOMAIN)
+    attempt, attempt_receipt = require_attempt_bytes(
+        attempt_raw,
+        activation_sha256=_domain(ACTIVATION_DOMAIN, _PROFILE_RAW),
+        output_path_sha256=_OUTPUT_PATH_SHA256,
+    )
+    artifact["attempt_ledger_raw_sha256"] = hashlib.sha256(attempt_raw).hexdigest()
+    artifact["attempt_receipt_sha256"] = attempt_receipt
+    artifact_raw = _envelope(artifact, ARTIFACT_DOMAIN)
+    with pytest.raises(NativeFixed64CPUV6EvidenceError, match=match):
+        require_artifact_bytes(
+            artifact_raw,
+            attempt_raw=attempt_raw,
+            attempt=attempt,
+            attempt_receipt=attempt_receipt,
+            activation_sha256=_domain(ACTIVATION_DOMAIN, _PROFILE_RAW),
+            output_path_sha256=_OUTPUT_PATH_SHA256,
+        )
+
+
+def _require_mutated_artifact_passes(artifact: dict[str, object]) -> None:
+    attempt_projection = _attempt()
+    attempt_raw = _envelope(attempt_projection, ATTEMPT_DOMAIN)
+    attempt, attempt_receipt = require_attempt_bytes(
+        attempt_raw,
+        activation_sha256=_domain(ACTIVATION_DOMAIN, _PROFILE_RAW),
+        output_path_sha256=_OUTPUT_PATH_SHA256,
+    )
+    artifact["attempt_ledger_raw_sha256"] = hashlib.sha256(attempt_raw).hexdigest()
+    artifact["attempt_receipt_sha256"] = attempt_receipt
+    artifact_raw = _envelope(artifact, ARTIFACT_DOMAIN)
+    require_artifact_bytes(
+        artifact_raw,
+        attempt_raw=attempt_raw,
+        attempt=attempt,
+        attempt_receipt=attempt_receipt,
+        activation_sha256=_domain(ACTIVATION_DOMAIN, _PROFILE_RAW),
+        output_path_sha256=_OUTPUT_PATH_SHA256,
+    )
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (
+        ("boost_disabled", False),
+        ("cpu_model", None),
+        ("measurement_cpu_available", False),
+        ("process_task_count", 99),
+        ("source_commit_oid", None),
+    ),
+)
+def test_measured_evidence_requires_exact_qualified_host(
+    field: str,
+    value: object,
+) -> None:
+    attempt_raw = _envelope(_attempt(), ATTEMPT_DOMAIN)
+    attempt_projection_raw = json.dumps(
+        _attempt(),
+        allow_nan=False,
+        ensure_ascii=True,
+        separators=(",", ":"),
+    ).encode("ascii")
+    artifact = _artifact(
+        attempt_raw,
+        _domain(ATTEMPT_DOMAIN, attempt_projection_raw),
+        passed=True,
+    )
+    host = artifact["host"]
+    assert isinstance(host, dict)
+    host[field] = value
+    _require_mutated_artifact_fails(artifact, match="host is not exactly qualified")
+
+
+@pytest.mark.parametrize(
+    ("blocker", "measurement_started"),
+    (
+        ("native_qualification_gate_failed", False),
+        ("native_measurement_failed", False),
+        ("source_checkout_not_exact_main", True),
+    ),
+)
+def test_blocked_evidence_rejects_impossible_blocker_and_measurement_state(
+    blocker: str,
+    measurement_started: bool,
+) -> None:
+    attempt_raw = _envelope(_attempt(), ATTEMPT_DOMAIN)
+    attempt_projection_raw = json.dumps(
+        _attempt(),
+        allow_nan=False,
+        ensure_ascii=True,
+        separators=(",", ":"),
+    ).encode("ascii")
+    artifact = _artifact(
+        attempt_raw,
+        _domain(ATTEMPT_DOMAIN, attempt_projection_raw),
+        passed=False,
+    )
+    artifact["blockers"] = [blocker]
+    execution = artifact["execution"]
+    assert isinstance(execution, dict)
+    execution["measurement_started"] = measurement_started
+    _require_mutated_artifact_fails(artifact, match="state does not rederive")
+
+
+@pytest.mark.parametrize(
+    ("blocker", "measurement_started"),
+    (
+        ("measurement_affinity_pin_failed", False),
+        ("native_measurement_failed", True),
+    ),
+)
+def test_blocked_evidence_accepts_rederivable_post_preflight_failures(
+    blocker: str,
+    measurement_started: bool,
+) -> None:
+    attempt_raw = _envelope(_attempt(), ATTEMPT_DOMAIN)
+    attempt_projection_raw = json.dumps(
+        _attempt(),
+        allow_nan=False,
+        ensure_ascii=True,
+        separators=(",", ":"),
+    ).encode("ascii")
+    artifact = _artifact(
+        attempt_raw,
+        _domain(ATTEMPT_DOMAIN, attempt_projection_raw),
+        passed=True,
+    )
+    artifact["blockers"] = [blocker]
+    artifact["fixtures"] = []
+    execution = artifact["execution"]
+    assert isinstance(execution, dict)
+    execution["measurement_started"] = measurement_started
+    execution["recorded_decision"] = "BLOCKED"
+    execution["recorded_gate_passed"] = None
+    execution["recorded_numeric_gate_passed"] = None
+    _require_mutated_artifact_passes(artifact)
 
 
 def test_artifact_receipt_tamper_fails_closed() -> None:
@@ -313,7 +460,13 @@ def test_truncated_timing_denominator_fails_closed() -> None:
     ).encode("ascii")
     attempt_receipt = _domain(ATTEMPT_DOMAIN, attempt_projection_raw)
     artifact = _artifact(attempt_raw, attempt_receipt, passed=True)
-    artifact["fixtures"][0]["cpp_sample_nanoseconds"].pop()
+    fixtures = artifact["fixtures"]
+    assert isinstance(fixtures, list)
+    fixture = fixtures[0]
+    assert isinstance(fixture, dict)
+    cpp_samples = fixture["cpp_sample_nanoseconds"]
+    assert isinstance(cpp_samples, list)
+    cpp_samples.pop()
     artifact_raw = _envelope(artifact, ARTIFACT_DOMAIN)
     artifact_projection_raw = json.dumps(
         artifact, allow_nan=False, ensure_ascii=True, separators=(",", ":")
@@ -358,7 +511,9 @@ def test_terminal_authority_escalation_fails_even_with_recomputed_receipt() -> N
         _domain(ARTIFACT_DOMAIN, artifact_projection_raw),
         passed=False,
     )
-    terminal["authority"]["qualification_authority"] = True
+    authority = terminal["authority"]
+    assert isinstance(authority, dict)
+    authority["qualification_authority"] = True
     terminal_raw = _envelope(terminal, TERMINAL_DOMAIN)
     with pytest.raises(NativeFixed64CPUV6EvidenceError, match="authority"):
         require_persisted_evidence_bytes(

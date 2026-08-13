@@ -204,8 +204,15 @@ def _write_native_fixed64_cpu_v6_contract(tmp_path: Path) -> None:
     _mark_complete_contract(tmp_path, NATIVE_FIXED64_CPU_V6_CONTRACT_PATHS)
     for relative in (
         ".github/workflows/ci-engine-v2-release-candidate.yml",
+        "config/engine_v2_native_fixed64_cpu_profile_v5_archive.json",
         "config/engine_v2_native_fixed64_cpu_profile_v6.json",
+        "config/engine_v2_native_fixed64_cpu_profile_v6_sources.json",
+        "rust/Cargo.lock",
         "rust_engine_v2/Cargo.lock",
+        "rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v5_archive.json",
+        "rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v6.json",
+        "rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v6_sources.json",
+        "rust/betelgeuze-runtime/assets/workspace-Cargo.lock",
         "rust/betelgeuze-runtime/src/qualification_v6.rs",
         "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-qualify-v6.rs",
     ):
@@ -1048,13 +1055,32 @@ def test_native_fixed64_cpu_v6_live_invocation_is_forbidden_in_any_workflow(
         "\n".join(_native_fixed64_cpu_v6_ci_tokens()),
         encoding="utf-8",
     )
-    specialized = tmp_path / ".github/workflows/ci-engine-v2-untrusted.yml"
+    specialized = tmp_path / ".github/workflows/untrusted-native-runner.yaml"
     specialized.write_text("run: binary --run-output result.json\n", encoding="utf-8")
     payload = build_inventory(tmp_path)
     assert (
         payload["native_fixed64_cpu_v6_live_qualification_absent_from_github_actions"]
         is False
     )
+    assert payload["native_fixed64_cpu_v6_authority_fail_closed"] is False
+    assert payload["native_fixed64_cpu_v6_contract_in_authoritative_ci"] is False
+
+
+def test_native_fixed64_cpu_v6_packaged_asset_drift_fails_ci_audit(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_native_fixed64_cpu_v6_contract(tmp_path)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_native_fixed64_cpu_v6_ci_tokens()),
+        encoding="utf-8",
+    )
+    packaged_profile = tmp_path / (
+        "rust/betelgeuze-runtime/assets/"
+        "engine_v2_native_fixed64_cpu_profile_v6.json"
+    )
+    packaged_profile.write_bytes(b"{}\n")
+    payload = build_inventory(tmp_path)
     assert payload["native_fixed64_cpu_v6_authority_fail_closed"] is False
     assert payload["native_fixed64_cpu_v6_contract_in_authoritative_ci"] is False
 
