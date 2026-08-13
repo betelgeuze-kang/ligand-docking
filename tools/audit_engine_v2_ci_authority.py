@@ -415,6 +415,15 @@ def _cargo_subcommand_index(invocation: list[str]) -> int | None:
                 token.startswith(option + "=")
                 for option in NATIVE_FIXED64_CPU_V4_CARGO_TERMINAL_OPTIONS_WITH_VALUE
             )
+            or any(
+                token.startswith(option + "=")
+                for option in NATIVE_FIXED64_CPU_V4_CARGO_TERMINAL_OPTIONS_WITHOUT_VALUE
+                if option.startswith("--")
+            )
+            or (
+                re.fullmatch(r"-[qvVh]+", token) is not None
+                and ("V" in token or "h" in token)
+            )
         ):
             return -1
         if token in NATIVE_FIXED64_CPU_V4_CARGO_GLOBAL_OPTIONS_WITH_VALUE:
@@ -429,7 +438,7 @@ def _cargo_subcommand_index(invocation: list[str]) -> int | None:
             continue
         if (
             token in NATIVE_FIXED64_CPU_V4_CARGO_GLOBAL_OPTIONS_WITHOUT_VALUE
-            or re.fullmatch(r"-v+", token)
+            or re.fullmatch(r"-[qv]+", token)
         ):
             index += 1
             continue
@@ -441,46 +450,83 @@ def _cargo_subcommand_index(invocation: list[str]) -> int | None:
 
 def _shell_command_word_index(segment: list[str]) -> int | None:
     index = 0
-    while index < len(segment) and segment[index] in {
-        "!",
-        "do",
-        "elif",
-        "else",
-        "if",
-        "then",
-        "time",
-        "until",
-        "while",
-    }:
-        index += 1
-    while index < len(segment) and re.fullmatch(
-        r"[A-Za-z_][A-Za-z0-9_]*=.*", segment[index]
-    ):
-        index += 1
-    if index < len(segment) and segment[index] in {"command", "exec"}:
-        index += 1
-        while index < len(segment) and segment[index].startswith("-"):
+    while index < len(segment):
+        while index < len(segment) and (
+            segment[index]
+            in {
+                "!",
+                "do",
+                "elif",
+                "else",
+                "if",
+                "then",
+                "time",
+                "until",
+                "while",
+            }
+            or re.fullmatch(
+                r"[A-Za-z_][A-Za-z0-9_]*=.*", segment[index]
+            )
+        ):
             index += 1
-    if index < len(segment) and segment[index] == "env":
-        index += 1
-        while index < len(segment):
-            token = segment[index]
-            if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*=.*", token):
+        if index >= len(segment):
+            return None
+        if segment[index] == "command":
+            index += 1
+            if index < len(segment) and re.fullmatch(
+                r"-[pVv]*[Vv][pVv]*", segment[index]
+            ):
+                return None
+            while index < len(segment) and (
+                segment[index] == "--" or segment[index].startswith("-p")
+            ):
                 index += 1
-                continue
-            if token in {"-u", "--unset", "-C", "--chdir"}:
-                index += 2
-                continue
-            if token.startswith(("--unset=", "--chdir=")) or token in {
-                "-i",
-                "--ignore-environment",
-                "-0",
-                "--null",
-            }:
-                index += 1
-                continue
-            break
-    return index if index < len(segment) else None
+            continue
+        if segment[index] == "exec":
+            index += 1
+            while index < len(segment):
+                token = segment[index]
+                if token == "-a":
+                    index += 2
+                elif token in {"--", "-c", "-l"}:
+                    index += 1
+                else:
+                    break
+            continue
+        if segment[index] == "env":
+            index += 1
+            while index < len(segment):
+                token = segment[index]
+                if token in {"--help", "--version"}:
+                    return None
+                if token == "--":
+                    index += 1
+                    break
+                if token in {
+                    "-u",
+                    "--unset",
+                    "-C",
+                    "--chdir",
+                    "-S",
+                    "--split-string",
+                }:
+                    index += 2
+                elif token.startswith(
+                    ("-u", "-C", "--unset=", "--chdir=", "--split-string=")
+                ) or token in {
+                    "-i",
+                    "--ignore-environment",
+                    "-0",
+                    "--null",
+                    "-v",
+                    "--debug",
+                }:
+                    index += 1
+                else:
+                    break
+            continue
+        return index
+    return None
 
 
 def _workflow_has_dynamic_cargo_run_command(tokens: list[str]) -> bool:

@@ -785,6 +785,9 @@ def test_native_fixed64_cpu_v4_missing_restriction_fails_ci_audit(
         "cargo run -p betelgeuze-runtime --example=$EXAMPLE_NAME",
         'CARGO=cargo; "$CARGO" run -p betelgeuze-runtime',
         'env CARGO=cargo "$CARGO" r -p betelgeuze-runtime',
+        'env -- CARGO=cargo "$CARGO" run -p betelgeuze-runtime',
+        'env -uOLD CARGO=cargo "$CARGO" r -p betelgeuze-runtime',
+        'command -- "$CARGO" run -p betelgeuze-runtime',
         (
             "cargo run -p betelgeuze-runtime && "
             "cargo run --bin unrelated-explicit-tool"
@@ -837,6 +840,7 @@ def test_native_fixed64_cpu_v4_live_binary_is_forbidden_in_every_workflow(
         "cargo run --bin unrelated-explicit-tool",
         "cargo run --bin=unrelated-explicit-tool",
         "cargo +stable --locked r --example unrelated-static-example",
+        "cargo -qv run --bin unrelated-explicit-tool",
     ),
 )
 def test_native_fixed64_cpu_v4_explicit_unrelated_target_remains_allowed(
@@ -914,6 +918,12 @@ def test_native_fixed64_cpu_v4_run_test_filter_is_not_a_cargo_subcommand(
         "cargo --list run",
         "cargo --explain E0001 run",
         "cargo --explain=E0001 r",
+        "cargo -Vv run",
+        "cargo -qV r",
+        "cargo -vh run",
+        "cargo --version=diagnostic run",
+        "cargo --help=diagnostic r",
+        "cargo --list=diagnostic run",
         'echo "$CARGO" run -p betelgeuze-runtime',
     ),
 )
