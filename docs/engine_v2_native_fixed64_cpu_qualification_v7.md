@@ -67,9 +67,12 @@ metrics explicitly carry `authority=false`, `rank_mutated=false`, and
 
 Git-less wheel packaging uses only the explicit non-authoritative mode
 `BETELGEUZE_V7_NON_AUTHORITATIVE_PACKAGE_BUILD=1` plus an exact
-`BETELGEUZE_V7_SOURCE_ROOT`. That mode verifies the frozen source graph but
-embeds an unbound commit and rejects activation. Ordinary local and CI builds
-also reject activation.
+`BETELGEUZE_V7_SOURCE_ROOT`. After the one-shot v7 run was consumed, that mode
+verifies the frozen profile and source-manifest metadata only; it deliberately
+leaves the current source graph, build commit, and build configuration unbound
+and rejects activation. Ordinary local and CI builds use the same unbound
+post-qualification boundary and also reject activation. Historical source
+verification is performed separately from the exact consumed Git commit.
 
 An authoritative synthetic qualification binary can only be compiled from the
 exact committed source with the frozen toolchain and flags:
