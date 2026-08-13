@@ -86,6 +86,16 @@ def test_canonical_native_fixed64_cpu_profile_v4_is_frozen() -> None:
             b"Self::FeatureSparse => (49, 15)",
         ),
         (
+            "qualification",
+            b'Self::Complete => "synthetic_complete_64"',
+            b'Self::Complete => "synthetic_complete_drift"',
+        ),
+        (
+            "qualification",
+            b"const FROZEN_SCORER_V1_TERM_COUNT: usize = 8",
+            b"const FROZEN_SCORER_V1_TERM_COUNT: usize = 7",
+        ),
+        (
             "probe",
             b"Fixed64CpuProbeConfigV4::qualification_profile()",
             b"Fixed64CpuProbeConfigV4::unit_test()",

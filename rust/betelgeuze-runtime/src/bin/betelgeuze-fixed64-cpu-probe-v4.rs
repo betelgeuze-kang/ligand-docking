@@ -56,6 +56,7 @@ fn fixture_json(value: &Fixed64CpuFixtureProbeV4) -> String {
             "\"rust_repeat_stable\":{},",
             "\"rust_sample_nanoseconds\":{},",
             "\"rust_to_cpp_median_ratio\":{},",
+            "\"score_term_count\":{},",
             "\"typed_failure_count\":{}",
             "}}"
         ),
@@ -88,6 +89,7 @@ fn fixture_json(value: &Fixed64CpuFixtureProbeV4) -> String {
         value.rust_repeat_stable,
         integer_array(&value.rust_sample_nanoseconds),
         value.rust_to_cpp_median_ratio,
+        value.score_term_count,
         value.typed_failure_count,
     )
 }

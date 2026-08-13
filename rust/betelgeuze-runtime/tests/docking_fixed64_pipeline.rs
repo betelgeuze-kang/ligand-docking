@@ -564,6 +564,36 @@ fn assert_safe_run_returns_complete_receipt(
     assert!(error
         .message
         .contains("torsion moves are not index-aligned"));
+    let mut changed_scorer_terms = receipt.clone();
+    changed_scorer_terms.scorer_rows[0].weighted_terms[0] += 0.25;
+    let error = changed_scorer_terms.scientific_projection().unwrap_err();
+    assert_eq!(error.code, ErrorCode::AbiMismatch);
+    assert!(error
+        .message
+        .contains("component evidence changed at slot 0"));
+    let mut changed_producer_coordinate = receipt.clone();
+    changed_producer_coordinate.producer_coordinates.x_angstrom[0] += 0.25;
+    let error = changed_producer_coordinate
+        .scientific_projection()
+        .unwrap_err();
+    assert_eq!(error.code, ErrorCode::AbiMismatch);
+    assert!(error
+        .message
+        .contains("coordinate identity changed at slot 0"));
+    let mut changed_geometric_measurement = receipt.clone();
+    changed_geometric_measurement.producer_rows[0]
+        .geometric
+        .raw_minimum_distance_angstrom += 0.25;
+    let error = changed_geometric_measurement
+        .scientific_projection()
+        .unwrap_err();
+    assert_eq!(error.code, ErrorCode::AbiMismatch);
+    assert!(error.message.contains("changed after receipt issuance"));
+    let mut changed_projection_seal = receipt.clone();
+    changed_projection_seal.scientific_projection_sha256[0] ^= 1;
+    let error = changed_projection_seal.scientific_projection().unwrap_err();
+    assert_eq!(error.code, ErrorCode::AbiMismatch);
+    assert!(error.message.contains("changed after receipt issuance"));
     let projection = receipt.scientific_projection().unwrap();
     assert_eq!(projection, repeated.scientific_projection().unwrap());
     assert_eq!(projection.candidate_denominator, 64);

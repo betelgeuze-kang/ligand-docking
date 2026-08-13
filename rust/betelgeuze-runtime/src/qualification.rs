@@ -13,6 +13,7 @@ use betelgeuze_docking_search::{
     Fixed64FeatureGeometryInventory as IndependentFeatureGeometryInventory,
     Fixed64FeatureKind as IndependentFeatureKind, Vec3,
 };
+use betelgeuze_sys as sys;
 
 use crate::{
     Backend, Context, ContextOptions, Error, ErrorCode, Fixed64AtomicFeature,
@@ -32,6 +33,8 @@ pub const FIXED64_CPU_QUALIFICATION_V4_SCHEMA_ID: &str =
 const SLOT_COUNT: usize = 64;
 const LIGAND_ATOM_COUNT: usize = 12;
 const FEATURE_COUNT: usize = 12;
+const FROZEN_SCORER_V1_TERM_COUNT: usize = 8;
+const _: [(); FROZEN_SCORER_V1_TERM_COUNT] = [(); sys::BG_DOCKING_SCORER_V1_TERM_COUNT as usize];
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Fixed64CpuProbeConfigV4 {
@@ -107,6 +110,7 @@ pub struct Fixed64CpuFixtureProbeV4 {
     pub candidate_denominator: usize,
     pub receptor_atom_count: usize,
     pub ligand_atom_count: usize,
+    pub score_term_count: usize,
     pub generated_count: u64,
     pub typed_failure_count: u64,
     pub cpp_decision_sha256: [u8; 32],
@@ -908,6 +912,7 @@ fn run_fixture(
         && rust.receptor_atom_count == LIGAND_ATOM_COUNT
         && cpp.ligand_atom_count == LIGAND_ATOM_COUNT
         && rust.ligand_atom_count == LIGAND_ATOM_COUNT
+        && sys::BG_DOCKING_SCORER_V1_TERM_COUNT as usize == FROZEN_SCORER_V1_TERM_COUNT
         && cpp.generated_count == expected_generated
         && rust.generated_count == expected_generated
         && cpp.typed_failure_count == expected_failures
@@ -923,6 +928,7 @@ fn run_fixture(
         candidate_denominator: cpp.candidate_denominator,
         receptor_atom_count: cpp.receptor_atom_count,
         ligand_atom_count: cpp.ligand_atom_count,
+        score_term_count: sys::BG_DOCKING_SCORER_V1_TERM_COUNT as usize,
         generated_count: cpp.generated_count,
         typed_failure_count: cpp.typed_failure_count,
         cpp_decision_sha256: cpp.decision_sha256,
@@ -1005,6 +1011,7 @@ mod tests {
             fixture.candidate_denominator == 64
                 && fixture.receptor_atom_count == 12
                 && fixture.ligand_atom_count == 12
+                && fixture.score_term_count == 8
                 && fixture.cpp_repeat_stable
                 && fixture.rust_repeat_stable
                 && fixture.decision_parity

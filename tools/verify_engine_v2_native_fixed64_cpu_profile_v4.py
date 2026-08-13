@@ -387,6 +387,42 @@ def require_compiled_profile_binding(
     if compiled_counts != expected_counts:
         _fail("compiled fixture counts drifted from the frozen profile")
 
+    expected_fixture_ids = [
+        fixture["fixture_id"] for fixture in fixtures if type(fixture) is dict
+    ]
+    compiled_fixture_ids = [
+        fixture_id
+        for _, fixture_id in re.findall(
+            r'Self::(Complete|FeatureSparse)\s*=>\s*"([^"]+)"', source
+        )
+    ]
+    if compiled_fixture_ids != expected_fixture_ids:
+        _fail("compiled fixture identities drifted from the frozen profile")
+
+    scorer_term_matches = re.findall(
+        r"const FROZEN_SCORER_V1_TERM_COUNT: usize = (\d+);", source
+    )
+    scorer_term_assertions = re.findall(
+        r"const _:\s*\[\(\);\s*FROZEN_SCORER_V1_TERM_COUNT\]\s*=\s*"
+        r"\[\(\);\s*sys::BG_DOCKING_SCORER_V1_TERM_COUNT as usize\];",
+        source,
+    )
+    runtime_scorer_gate = (
+        "sys::BG_DOCKING_SCORER_V1_TERM_COUNT as usize "
+        "== FROZEN_SCORER_V1_TERM_COUNT"
+    )
+    if (
+        scorer_term_matches != [str(gates["score_term_count_exact"])]
+        or len(scorer_term_assertions) != 1
+        or source.count(runtime_scorer_gate) != 1
+        or source.count(
+            "score_term_count: sys::BG_DOCKING_SCORER_V1_TERM_COUNT as usize"
+        )
+        != 1
+        or probe.count("value.score_term_count") != 1
+    ):
+        _fail("compiled ScorerV1 term-count gate drifted from the frozen profile")
+
     if (
         probe.count("Fixed64CpuProbeConfigV4::qualification_profile()") != 1
         or "Fixed64CpuProbeConfigV4::unit_test()" in probe

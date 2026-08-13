@@ -762,6 +762,8 @@ def test_native_fixed64_cpu_v4_missing_restriction_fails_ci_audit(
         + "\n          rust/betelgeuze-runtime/Cargo.toml",
         "cargo run -p betelgeuze-runtime",
         "cargo run --package=betelgeuze-runtime",
+        "cargo --color always run --manifest-path rust/betelgeuze-runtime/Cargo.toml",
+        "cargo +stable --locked run -p betelgeuze-runtime",
     ),
 )
 def test_native_fixed64_cpu_v4_live_binary_is_forbidden_in_every_workflow(
@@ -869,6 +871,8 @@ def test_native_fixed64_cpu_v4_inventory_constants_are_exact() -> None:
         "stage0_admission_authorized",
     }
     assert NATIVE_FIXED64_CPU_V4_REQUIRED_TOKENS == (
+        ".github/workflows/*.yml",
+        ".github/workflows/*.yaml",
         "config/engine_v2_native_fixed64_cpu_profile_v4.json",
         "tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py",
         "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v4.py",
@@ -889,8 +893,18 @@ def test_native_fixed64_cpu_v4_inventory_constants_are_exact() -> None:
     assert NATIVE_FIXED64_CPU_V4_FORBIDDEN_WORKFLOW_TOKENS == (
         "betelgeuze-fixed64-cpu-probe-v4",
     )
-    assert NATIVE_FIXED64_CPU_V4_CARGO_RUN_PATTERN == r"\bcargo\s+run\b[^\n]*"
+    assert NATIVE_FIXED64_CPU_V4_CARGO_RUN_PATTERN == (
+        r"\bcargo\b[^\n]*?\brun\b[^\n]*"
+    )
     assert NATIVE_FIXED64_CPU_V4_EXPLICIT_BIN_PATTERN == r"(?:^|\s)--bin(?:=|\s+)"
+
+
+def test_authoritative_main_runs_for_every_workflow_change() -> None:
+    root = Path(__file__).resolve().parents[2]
+    workflow = (root / AUTHORITATIVE_WORKFLOWS[0]).read_text(encoding="utf-8")
+
+    assert workflow.count(".github/workflows/*.yml") == 2
+    assert workflow.count(".github/workflows/*.yaml") == 2
 
 
 def test_mixed64_v2_contract_requires_documented_contract_inventory(

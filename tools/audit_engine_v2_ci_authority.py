@@ -168,6 +168,8 @@ NATIVE_FIXED64_CPU_V4_CONTRACT_PATHS = (
     "docs/engine_v2_native_fixed64_cpu_qualification_v4.md",
 )
 NATIVE_FIXED64_CPU_V4_REQUIRED_TOKEN_COUNTS = {
+    ".github/workflows/*.yml": 2,
+    ".github/workflows/*.yaml": 2,
     "config/engine_v2_native_fixed64_cpu_profile_v4.json": 2,
     "tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py": 4,
     "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v4.py": 2,
@@ -202,7 +204,7 @@ NATIVE_FIXED64_CPU_V4_FALSE_RESTRICTION_KEYS = (
 NATIVE_FIXED64_CPU_V4_FORBIDDEN_WORKFLOW_TOKENS = (
     "betelgeuze-fixed64-cpu-probe-v4",
 )
-NATIVE_FIXED64_CPU_V4_CARGO_RUN_PATTERN = r"\bcargo\s+run\b[^\n]*"
+NATIVE_FIXED64_CPU_V4_CARGO_RUN_PATTERN = r"\bcargo\b[^\n]*?\brun\b[^\n]*"
 NATIVE_FIXED64_CPU_V4_EXPLICIT_BIN_PATTERN = r"(?:^|\s)--bin(?:=|\s+)"
 ONE_SHOT_CONTRACT_PATHS = (
     "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_ab.py",
