@@ -468,7 +468,7 @@
     {
       "byte_count": 23465,
       "path": "rust/betelgeuze-runtime/build.rs",
-      "sha256": "38ddf875bf0bafff4070883ec80a19d3df3e51900fbabe4b2ddcb9ad95c476cc"
+      "sha256": "e42e38d95d2b196649c0370670d67aa7f6311b1137ee7f122378053da843bd27"
     },
     {
       "byte_count": 5835,
@@ -508,7 +508,7 @@
     {
       "byte_count": 89234,
       "path": "rust/betelgeuze-runtime/src/qualification_v6.rs",
-      "sha256": "0ea2fc291202d846241450f3a053e99ef0a3f2e5733b53bff17d3d876f8be0cb"
+      "sha256": "1dad13e646342988815bdfbae15c4ff90e1a050d012f1d539e080a4a2e71dae6"
     },
     {
       "byte_count": 29008,
@@ -961,9 +961,9 @@
       "sha256": "268b2ab2e2197291aed02f02ecced9d7332b0586653a7d646100c3e4c3ac99bf"
     },
     {
-      "byte_count": 6096,
+      "byte_count": 6672,
       "path": "tools/verify_engine_v2_native_fixed64_cpu_v6_rustc_wrapper.py",
-      "sha256": "97cbf0ae815235be44e23f1fce2c34391e1d7c037be7d8e923daf0ed2c956c45"
+      "sha256": "b20611e0a302e4fc2f1230d07c7dd44cb93cd873ab730b6e69e7db87b530a5bf"
     }
   ],
   "schema_id": "betelgeuze.engine_v2_native_fixed64_cpu_source_manifest/6.0.0",

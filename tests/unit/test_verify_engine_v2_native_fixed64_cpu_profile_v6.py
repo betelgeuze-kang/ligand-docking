@@ -135,9 +135,11 @@ def test_command_line_verifier_is_non_consuming_and_authority_false() -> None:
     assert payload["source_count"] == 193
 
 
-def _invoke_rustc_wrapper(arguments: list[str]) -> subprocess.CompletedProcess[str]:
+def _invoke_rustc_wrapper(
+    arguments: list[str], *, rustc: str = "/bin/true"
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        [sys.executable, str(_RUSTC_WRAPPER), "/bin/true", *arguments],
+        [sys.executable, str(_RUSTC_WRAPPER), rustc, *arguments],
         cwd=_ROOT,
         check=False,
         capture_output=True,
@@ -163,8 +165,6 @@ def _runtime_rustc_arguments() -> list[str]:
         "-C",
         "panic=abort",
         "-C",
-        "linker-plugin-lto",
-        "-C",
         "codegen-units=1",
         "-C",
         "overflow-checks=on",
@@ -181,7 +181,7 @@ def _binary_rustc_arguments() -> list[str]:
         "betelgeuze_fixed64_cpu_qualify_v6"
     )
     arguments[arguments.index("lib")] = "bin"
-    arguments[arguments.index("linker-plugin-lto")] = "lto=fat"
+    arguments.extend(["-C", "lto=fat"])
     return arguments
 
 
@@ -192,11 +192,51 @@ def test_rustc_wrapper_accepts_only_the_frozen_effective_runtime_invocation() ->
     assert completed.stderr == ""
 
 
+def test_rustc_wrapper_injects_library_lto_after_validating_cargo_flags() -> None:
+    completed = _invoke_rustc_wrapper(_runtime_rustc_arguments(), rustc="/bin/echo")
+    assert completed.returncode == 0
+    assert completed.stderr == ""
+    assert completed.stdout.count("linker-plugin-lto") == 1
+    assert completed.stdout.count("betelgeuze_v6_effective_rust_flags_verified") == 3
+
+
+def test_rustc_wrapper_preserves_single_cargo_library_lto() -> None:
+    arguments = _runtime_rustc_arguments()
+    arguments.extend(["-C", "linker-plugin-lto"])
+    completed = _invoke_rustc_wrapper(arguments, rustc="/bin/echo")
+    assert completed.returncode == 0
+    assert completed.stderr == ""
+    assert completed.stdout.count("linker-plugin-lto") == 1
+
+
 def test_rustc_wrapper_accepts_only_the_frozen_effective_binary_invocation() -> None:
     completed = _invoke_rustc_wrapper(_binary_rustc_arguments())
     assert completed.returncode == 0
     assert completed.stdout == ""
     assert completed.stderr == ""
+
+
+def test_rustc_wrapper_does_not_inject_library_lto_into_final_binary() -> None:
+    completed = _invoke_rustc_wrapper(_binary_rustc_arguments(), rustc="/bin/echo")
+    assert completed.returncode == 0
+    assert completed.stderr == ""
+    assert "linker-plugin-lto" not in completed.stdout
+    assert completed.stdout.count("lto=fat") == 1
+
+
+@pytest.mark.parametrize("arguments", [["-vV"], ["--version"]])
+def test_rustc_wrapper_allows_only_frozen_identity_queries(
+    arguments: list[str],
+) -> None:
+    completed = _invoke_rustc_wrapper(arguments)
+    assert completed.returncode == 0
+    assert completed.stderr == ""
+
+
+def test_rustc_wrapper_rejects_unlisted_non_compile_query() -> None:
+    completed = _invoke_rustc_wrapper(["--print", "cfg"])
+    assert completed.returncode == 86
+    assert "rustc wrapper rejected build" in completed.stderr
 
 
 @pytest.mark.parametrize(
@@ -205,19 +245,28 @@ def test_rustc_wrapper_accepts_only_the_frozen_effective_binary_invocation() -> 
         "missing_lto",
         "native_cpu",
         "duplicate_metadata",
+        "duplicate_library_lto",
         "extra_cfg",
     ],
 )
 def test_rustc_wrapper_rejects_effective_flag_bypasses(mutation: str) -> None:
-    arguments = _runtime_rustc_arguments()
     if mutation == "missing_lto":
-        position = arguments.index("linker-plugin-lto")
+        arguments = _binary_rustc_arguments()
+        position = arguments.index("lto=fat")
         del arguments[position - 1 : position + 1]
     elif mutation == "native_cpu":
+        arguments = _runtime_rustc_arguments()
         arguments.extend(["-C", "target-cpu=native"])
     elif mutation == "duplicate_metadata":
+        arguments = _runtime_rustc_arguments()
         arguments.extend(["-C", "metadata=fedcba9876543210"])
+    elif mutation == "duplicate_library_lto":
+        arguments = _runtime_rustc_arguments()
+        arguments.extend(
+            ["-C", "linker-plugin-lto", "-C", "linker-plugin-lto"]
+        )
     else:
+        arguments = _runtime_rustc_arguments()
         arguments.extend(["--cfg", "result_dependent_fast_path"])
     completed = _invoke_rustc_wrapper(arguments)
     assert completed.returncode == 86
