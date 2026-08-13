@@ -311,15 +311,26 @@ NATIVE_FIXED64_CPU_V4_SHELL_STARTUP_ENV_KEYS = (
     "KSH_ENV",
     "ZDOTDIR",
 )
+NATIVE_FIXED64_CPU_V4_COMMAND_RESOLUTION_ENV_KEYS = (
+    "GITHUB_ENV",
+    "GITHUB_PATH",
+    "PATH",
+)
+NATIVE_FIXED64_CPU_V4_ALLOWED_GITHUB_ENV_KEYS = (
+    "BG_HIP_DEVICE_LIB_PATH",
+    "PRODUCT_IMAGE_RUNNER_SMOKE_DIR",
+    "SELF_HOSTED_RUNNER_QUALIFICATION_RECEIPT",
+)
 NATIVE_FIXED64_CPU_V4_DYNAMIC_ACTION_INPUT_PATTERN = re.compile(
     r"(?:\b(?:core\.)?getInput\s*\(|"
     r"\bprocess\.env(?:\.[A-Za-z_][A-Za-z0-9_]*|\s*\[)|"
     r"\b(?:getenv|std::env::var|env::var)\s*\()"
 )
 NATIVE_FIXED64_CPU_V4_DYNAMIC_PROCESS_PATTERN = re.compile(
-    r"(?:\b(?:exec|execSync|execFile|execFileSync|spawn|spawnSync|system|popen)\s*\(|"
-    r"\bsubprocess\.(?:run|Popen|call|check_call|check_output)\s*\(|"
-    r"\bCommand::new\s*\()"
+    r"(?:\b(?:exec|execSync|execFile|execFileSync|spawn|spawnSync|system|popen)\b|"
+    r"\b(?:node:)?child_process\b|\b@actions/exec\b|"
+    r"\bsubprocess\.(?:run|Popen|call|check_call|check_output)\b|"
+    r"\bCommand::new\b)"
 )
 NATIVE_FIXED64_CPU_V4_FOLDED_RUN_PATTERN = re.compile(
     r"^(?P<indent>[ ]*)(?:-[ ]+)?run:[ ]*>[+-]?[1-9]?[+-]?[ ]*(?:#.*)?$"
@@ -480,6 +491,8 @@ def _workflow_yaml_run_steps(
                     if not isinstance(child, dict) or any(
                         not isinstance(env_key, str)
                         or env_key in NATIVE_FIXED64_CPU_V4_SHELL_STARTUP_ENV_KEYS
+                        or env_key
+                        in NATIVE_FIXED64_CPU_V4_COMMAND_RESOLUTION_ENV_KEYS
                         for env_key in child
                     ):
                         return None
@@ -1064,11 +1077,21 @@ def _shell_without_static_heredoc_bodies(
             ) = pending_delimiters[0]
             candidate = content.lstrip("\t") if strip_tabs else content
             if candidate == delimiter:
-                if interpreted and _shell_script_invokes_native_fixed64_cpu_v4_live_probe(
-                    "".join(body),
-                    substitution_depth=analysis_depth + 1,
-                ):
-                    return None
+                if interpreted:
+                    interpreted_body = "".join(body)
+                    if (
+                        _implementation_text_invokes_native_fixed64_cpu_v4_live_probe(
+                            interpreted_body
+                        )
+                        or _implementation_has_dynamic_process_execution(
+                            interpreted_body
+                        )
+                        or _shell_script_invokes_native_fixed64_cpu_v4_live_probe(
+                            interpreted_body,
+                            substitution_depth=analysis_depth + 1,
+                        )
+                    ):
+                        return None
                 pending_delimiters.pop(0)
             elif not expansion_disabled and has_executable_expansion(content):
                 return None
@@ -1690,6 +1713,57 @@ def _shell_script_invokes_native_fixed64_cpu_v4_live_probe(
     )
 
 
+def _workflow_run_mutates_command_environment(script: str) -> bool:
+    if "GITHUB_PATH" in script:
+        return True
+    if "GITHUB_ENV" not in script:
+        return False
+    lexer = shlex.shlex(script, posix=True, punctuation_chars=";&|()<>\n")
+    lexer.whitespace_split = True
+    lexer.whitespace = " \t\r"
+    lexer.commenters = "#"
+    try:
+        segments = _shell_command_segments(list(lexer))
+    except ValueError:
+        return True
+    observed_reference = False
+    for immutable_segment in segments:
+        segment = list(immutable_segment)
+        if not any("GITHUB_ENV" in token for token in segment):
+            continue
+        command_index = _shell_command_word_index(segment)
+        if command_index is None or command_index == _AMBIGUOUS_COMMAND_INDEX:
+            return True
+        for index, token in enumerate(segment):
+            if "GITHUB_ENV" not in token:
+                continue
+            observed_reference = True
+            if (
+                token not in {"$GITHUB_ENV", "${GITHUB_ENV}"}
+                or index < 2
+                or segment[index - 1] not in {">", ">>"}
+                or segment[command_index].rsplit("/", 1)[-1] != "echo"
+            ):
+                return True
+            payload = segment[command_index + 1 : index - 1]
+            if len(payload) != 1:
+                return True
+            assignment = re.fullmatch(
+                r"([A-Za-z_][A-Za-z0-9_]*)=(.*)",
+                payload[0],
+                flags=re.DOTALL,
+            )
+            if (
+                assignment is None
+                or assignment.group(1)
+                not in NATIVE_FIXED64_CPU_V4_ALLOWED_GITHUB_ENV_KEYS
+                or "\n" in assignment.group(2)
+                or "\r" in assignment.group(2)
+            ):
+                return True
+    return not observed_reference
+
+
 def _workflow_invokes_native_fixed64_cpu_v4_live_probe(text: str) -> bool:
     if re.search(r"\bCARGO_ALIAS_[A-Za-z0-9_]+\s*(?:=|:)", text):
         return True
@@ -1704,6 +1778,8 @@ def _workflow_invokes_native_fixed64_cpu_v4_live_probe(text: str) -> bool:
         return True
     for line, shell in yaml_run_steps:
         if not _is_supported_bourne_shell(shell):
+            return True
+        if _workflow_run_mutates_command_environment(line):
             return True
         if _shell_script_invokes_native_fixed64_cpu_v4_live_probe(line):
             return True

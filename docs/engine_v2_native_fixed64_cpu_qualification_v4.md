@@ -122,13 +122,17 @@ workflow and every repository-local `**/action.yml` or `action.yaml` manifest,
 including each step's effective shell, expansion-enabled heredocs, nested
 command substitutions (including escaped legacy-backtick nesting),
 shell/`timeout`/`sudo`/`eval` commands, interpreter heredoc programs, shell
-startup-environment variables, local-action dynamic process inputs, and the
-declared Docker or Node action implementation files. Custom Bourne shells are
-accepted only as a bounded static script template using a known runner shell
-name or absolute system path; repository-relative shell executables, executable
-shell arguments, unsupported shells, and incomplete local-action surfaces fail
-closed. The authoritative workflow triggers on and checks out the complete
-repository so an implementation-only change cannot escape inspection.
+startup-environment variables, computed-property local-action process calls,
+dynamic process inputs, and the declared Docker or Node action implementation
+files. Custom Bourne shells are accepted only as a bounded static script
+template using a known runner shell name or absolute system path;
+repository-relative shell executables, executable shell arguments, `PATH` or
+`GITHUB_PATH` mutation, unsupported shells, and incomplete local-action
+surfaces fail closed. `GITHUB_ENV` writes are limited to three explicit
+non-command-resolution output names and one tokenized `echo NAME=value`
+assignment, so quote-concatenated startup variables are rejected. The
+authoritative workflow triggers on and checks out the complete repository so
+an implementation-only change cannot escape inspection.
 The auditor fails closed on a live-probe invocation.
 The binary gate is an independent defense: changing it requires a separately
 reviewed activation that replaces this unconsumed profile state.
