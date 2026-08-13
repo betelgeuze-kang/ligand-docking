@@ -204,10 +204,12 @@ NATIVE_FIXED64_CPU_V5_FALSE_RESTRICTION_KEYS = (
     "test_double_production_authority_allowed",
 )
 NATIVE_FIXED64_CPU_V6_CONTRACT_PATHS = (
+    ".github/workflows/ci-engine-v2-release-candidate.yml",
     "config/engine_v2_native_fixed64_cpu_profile_v5_archive.json",
     "config/engine_v2_native_fixed64_cpu_profile_v6.json",
     "config/engine_v2_native_fixed64_cpu_profile_v6_sources.json",
     "rust/Cargo.lock",
+    "rust_engine_v2/Cargo.lock",
     "rust/betelgeuze-runtime/Cargo.toml",
     "rust/betelgeuze-runtime/src/lib.rs",
     "rust/betelgeuze-runtime/src/qualification.rs",
@@ -218,6 +220,11 @@ NATIVE_FIXED64_CPU_V6_CONTRACT_PATHS = (
     "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v6.py",
     "tests/unit/test_verify_engine_v2_native_fixed64_cpu_v6_evidence.py",
     "docs/engine_v2_native_fixed64_cpu_qualification_v6.md",
+)
+NATIVE_FIXED64_CPU_V6_COMPILE_BOUND_CONFIG_PATHS = (
+    "config/engine_v2_native_fixed64_cpu_profile_v5_archive.json",
+    "config/engine_v2_native_fixed64_cpu_profile_v6.json",
+    "config/engine_v2_native_fixed64_cpu_profile_v6_sources.json",
 )
 NATIVE_FIXED64_CPU_V6_REQUIRED_TOKEN_COUNTS = {
     "config/engine_v2_native_fixed64_cpu_profile_v5_archive.json": 2,
@@ -869,11 +876,17 @@ def _native_fixed64_cpu_v6_authority_is_fail_closed(repo_root: Path) -> bool:
         repo_root
         / "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-qualify-v6.rs"
     )
+    release_workflow_path = (
+        repo_root / ".github/workflows/ci-engine-v2-release-candidate.yml"
+    )
+    wrapper_lock_path = repo_root / "rust_engine_v2/Cargo.lock"
     try:
         raw = profile_path.read_bytes()
         profile = json.loads(raw.decode("ascii"))
         runner = runner_path.read_text(encoding="utf-8")
         binary = binary_path.read_text(encoding="utf-8")
+        release_workflow = release_workflow_path.read_text(encoding="utf-8")
+        wrapper_lock = wrapper_lock_path.read_text(encoding="utf-8")
     except (OSError, UnicodeError, ValueError):
         return False
     expected = (
@@ -925,6 +938,17 @@ def _native_fixed64_cpu_v6_authority_is_fail_closed(repo_root: Path) -> bool:
             type(value) is str and re.fullmatch(r"[0-9a-f]{64}", value)
             for value in source_bindings.values()
         )
+        and all(
+            release_workflow.count(path) == 4
+            for path in NATIVE_FIXED64_CPU_V6_COMPILE_BOUND_CONFIG_PATHS
+        )
+        and re.search(
+            r'\[\[package\]\]\nname = "betelgeuze-runtime"\n'
+            r'version = "0\.1\.0"\ndependencies = \[\n'
+            r'(?: "[^"]+",\n)* "libc",\n',
+            wrapper_lock,
+        )
+        is not None
     ):
         return False
     start = runner.find("pub fn run_native_fixed64_cpu_qualification_v6(")
