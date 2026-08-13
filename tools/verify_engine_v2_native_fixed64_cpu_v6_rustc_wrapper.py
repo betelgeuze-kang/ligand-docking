@@ -34,6 +34,7 @@ CONTROLLED_CFG_VALUES = {
 }
 _RUSTC_METADATA = re.compile(r"[0-9a-f]{16}")
 _RUSTC_EXTRA_FILENAME = re.compile(r"-[0-9a-f]{16}")
+ALLOWED_QUERY_ARGUMENTS = {("-vV",), ("--version",)}
 
 
 def _fail(message: str) -> NoReturn:
@@ -89,6 +90,7 @@ def _codegen_options(arguments: list[str]) -> dict[str, list[str | None]]:
 
 def _require_frozen_codegen(arguments: list[str], *, binary: bool) -> None:
     options = _codegen_options(arguments)
+    library_lto = None if binary else options.pop("linker-plugin-lto", None)
     expected: dict[str, str | None] = {
         "opt-level": "3",
         "panic": "abort",
@@ -99,8 +101,6 @@ def _require_frozen_codegen(arguments: list[str], *, binary: bool) -> None:
     }
     if binary:
         expected["lto"] = "fat"
-    else:
-        expected["linker-plugin-lto"] = None
     if set(options) != set(expected):
         _fail("effective -C option names differ from the frozen profile")
     for key, value in expected.items():
@@ -118,6 +118,15 @@ def _require_frozen_codegen(arguments: list[str], *, binary: bool) -> None:
         or _RUSTC_EXTRA_FILENAME.fullmatch(extra_filename) is None
     ):
         _fail("Cargo identity codegen flags are not canonical")
+    if not binary:
+        if library_lto is None:
+            # Cargo 1.93 can omit this option from dependency invocations.
+            # Inject it only after rejecting every caller-supplied extra -C
+            # option, so the effective invocation still has exactly one LTO
+            # mode.
+            arguments.extend(["-C", "linker-plugin-lto"])
+        elif library_lto != [None]:
+            _fail("-C linker-plugin-lto must occur exactly once without a value")
 
 
 def _require_frozen_cfg(arguments: list[str], *, crate_name: str) -> None:
@@ -151,7 +160,7 @@ def main() -> NoReturn:
     if requested == "1":
         if any(argument == "-Z" or argument.startswith("-Z") for argument in arguments):
             _fail("unstable rustc options are forbidden")
-        if arguments != ["-vV"]:
+        if tuple(arguments) not in ALLOWED_QUERY_ARGUMENTS:
             crate_name = _single_option(arguments, "--crate-name")
             if crate_name in CONTROLLED_LIBRARY_CRATES:
                 _require_frozen_codegen(arguments, binary=False)

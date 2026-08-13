@@ -232,7 +232,7 @@ NATIVE_FIXED64_CPU_V6_CONTRACT_PATHS = (
     "docs/engine_v2_native_fixed64_cpu_qualification_v6.md",
 )
 NATIVE_FIXED64_CPU_V6_BUILD_CONFIGURATION_SHA256 = (
-    "28b7b3d8533456d27539b8cfb0fb2c03e9afe68198b81a60839a9f5e9c271c9f"
+    "792702860fdbc1a9d7b75c2b3fb3cba1f4ffb79b5d66350a6fe8546bd68dd2fd"
 )
 NATIVE_FIXED64_CPU_V6_QUALIFICATION_BUILD_ENV = (
     "BETELGEUZE_V6_QUALIFICATION_BUILD"
@@ -1131,9 +1131,11 @@ def _native_fixed64_cpu_v6_authority_is_fail_closed(repo_root: Path) -> bool:
         and 'std::env::var_os("RUSTC_WRAPPER")' in sys_build_source
         and "CONTROLLED_LIBRARY_CRATES" in rustc_wrapper_source
         and "CONTROLLED_CFG_VALUES" in rustc_wrapper_source
+        and "ALLOWED_QUERY_ARGUMENTS" in rustc_wrapper_source
         and '"opt-level": "3"' in rustc_wrapper_source
         and 'expected["lto"] = "fat"' in rustc_wrapper_source
-        and 'expected["linker-plugin-lto"] = None' in rustc_wrapper_source
+        and 'arguments.extend(["-C", "linker-plugin-lto"])'
+        in rustc_wrapper_source
         and "effective -C option names differ from the frozen profile"
         in rustc_wrapper_source
         and "cfg values differ from the frozen profile" in rustc_wrapper_source

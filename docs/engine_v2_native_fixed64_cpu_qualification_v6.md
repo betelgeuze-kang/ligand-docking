@@ -9,14 +9,14 @@ unchanged.
 
 The profile is
 `config/engine_v2_native_fixed64_cpu_profile_v6.json`. Its exact SHA-256 is
-`df3e616a4b873176a18fb37e10f8e70d68e6d248ba594f0db923a72af1f05107`.
-The 192-input native/Rust compiler manifest is
+`fd83f1f7f7c92bc0fc9ac6581cababb23d3ba5787412174a55b659f97fcc2928`.
+The 193-input native/Rust compiler manifest is
 `config/engine_v2_native_fixed64_cpu_profile_v6_sources.json`, SHA-256
-`5ceb27d2e2f6d09dfdc29e7a6b690b3ef3870ee85d483289a2ffd163f44a4fc8`.
+`988108202cceafff669930f804a8bc292ec2a364dd8c016bd9d4b7ecdb190f45`.
 The domain-bound activation SHA-256 is
-`1effbe2b3bea38879fa7ae4b3d488518a8df388a18fc0bf9e5bca2649e749382`.
+`76db91350dc5859fe56f03fb9d49685a1539567a27c3aeaa00f001b10082ea56`.
 The independently hashed frozen build configuration is
-`28b7b3d8533456d27539b8cfb0fb2c03e9afe68198b81a60839a9f5e9c271c9f`.
+`792702860fdbc1a9d7b75c2b3fb3cba1f4ffb79b5d66350a6fe8546bd68dd2fd`.
 
 The standalone `betelgeuze-runtime` crate packages byte-identical mirrors of
 the profile, predecessor archive, source manifest, original pre-normalization
@@ -48,10 +48,18 @@ The build fails unless the exact Rust 1.93.0 toolchain, GNU C++ 11.4.0 binary,
 x86_64 target, target features, panic/optimization profile, explicit strict-FP
 C++ flags, and absence of environment flag overrides all match the frozen
 configuration. The source-bound wrapper additionally checks the effective
-codegen and cfg arguments received by every controlled Rust crate. It rejects
-Cargo CLI profile overrides, appended `cargo rustc` codegen/cfg options,
+codegen and cfg arguments received by every controlled Rust crate. Cargo 1.93
+may omit an explicit library `linker-plugin-lto` option from some dependency
+invocations while supplying it to others. The wrapper first rejects every
+caller-supplied extra `-C` option, accepts at most one valueless Cargo-supplied
+library LTO option, and injects it only when absent. The effective rustc
+invocation therefore always contains exactly one library LTO mode.
+The final binary must still receive `lto=fat` directly from Cargo. The wrapper
+rejects Cargo CLI profile overrides, appended `cargo rustc` codegen/cfg options,
 unstable options, a substituted wrapper or interpreter, and any invocation that
-does not match the frozen library/binary LTO split. GitHub Actions is statically
+does not match the frozen library/binary LTO split. Non-compilation rustc calls
+are limited to exact `-vV` and `--version` identity queries needed by Cargo and
+dependency build scripts. GitHub Actions is statically
 forbidden from setting the qualification-build opt-in. The build must also bind
 the exact Git commit plus its committed profile and source-manifest blobs.
 

@@ -83,7 +83,7 @@
     "rustc_wrapper_interpreter_sha256": "7d51cd6b48b521277f5caa4610a82126e315fa2be4df069823a8b1eeb5bd4a86",
     "rustc_wrapper_relative_path": "tools/verify_engine_v2_native_fixed64_cpu_v6_rustc_wrapper.py",
     "rustc_wrapper_required": true,
-    "rustc_wrapper_sha256": "97cbf0ae815235be44e23f1fce2c34391e1d7c037be7d8e923daf0ed2c956c45",
+    "rustc_wrapper_sha256": "b20611e0a302e4fc2f1230d07c7dd44cb93cd873ab730b6e69e7db87b530a5bf",
     "schema_id": "betelgeuze.engine_v2_native_fixed64_cpu_build_configuration/1.0.0",
     "target_triple": "x86_64-unknown-linux-gnu"
   },
@@ -232,9 +232,9 @@
     "cargo_manifest_sha256": "d230b8a374197ab667dabb8fe89a7079fab2c12fcede14ef3de380e11ef6bce4",
     "native_binary_source_sha256": "b5b92d50be4ab443847989247a370947efcdf85d2459ac534ffb60e85712ffc7",
     "native_qualification_source_sha256": "4999bc7e574df50123376eca214415ba2798f350ae14095e5ade7800b559b0a4",
-    "native_runner_source_sha256": "0ea2fc291202d846241450f3a053e99ef0a3f2e5733b53bff17d3d876f8be0cb",
+    "native_runner_source_sha256": "1dad13e646342988815bdfbae15c4ff90e1a050d012f1d539e080a4a2e71dae6",
     "predecessor_archive_sha256": "9e4042d08b4971cbd218f0afaa7a994892f89f3d256e32ed505129af078cd512",
-    "transitive_source_manifest_sha256": "5ceb27d2e2f6d09dfdc29e7a6b690b3ef3870ee85d483289a2ffd163f44a4fc8"
+    "transitive_source_manifest_sha256": "988108202cceafff669930f804a8bc292ec2a364dd8c016bd9d4b7ecdb190f45"
   },
   "status": "native_activation_implementation_frozen_execution_not_consumed"
 }

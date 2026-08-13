@@ -24,12 +24,12 @@ else:
 
 SCHEMA_ID = "betelgeuze.engine_v2_native_fixed64_cpu_profile/6.0.0"
 PROFILE_ID = "engine_v2_native_fixed64_cpu_synthetic_v6"
-PROFILE_SHA256 = "df3e616a4b873176a18fb37e10f8e70d68e6d248ba594f0db923a72af1f05107"
+PROFILE_SHA256 = "fd83f1f7f7c92bc0fc9ac6581cababb23d3ba5787412174a55b659f97fcc2928"
 BUILD_CONFIGURATION_SHA256 = (
-    "28b7b3d8533456d27539b8cfb0fb2c03e9afe68198b81a60839a9f5e9c271c9f"
+    "792702860fdbc1a9d7b75c2b3fb3cba1f4ffb79b5d66350a6fe8546bd68dd2fd"
 )
 SOURCE_MANIFEST_SHA256 = (
-    "5ceb27d2e2f6d09dfdc29e7a6b690b3ef3870ee85d483289a2ffd163f44a4fc8"
+    "988108202cceafff669930f804a8bc292ec2a364dd8c016bd9d4b7ecdb190f45"
 )
 SOURCE_COUNT = 193
 PROFILE_RELATIVE_PATH = Path("config/engine_v2_native_fixed64_cpu_profile_v6.json")
@@ -222,7 +222,7 @@ EXPECTED_BUILD_CONFIGURATION = {
     "rustc_wrapper_interpreter_sha256": "7d51cd6b48b521277f5caa4610a82126e315fa2be4df069823a8b1eeb5bd4a86",
     "rustc_wrapper_relative_path": "tools/verify_engine_v2_native_fixed64_cpu_v6_rustc_wrapper.py",
     "rustc_wrapper_required": True,
-    "rustc_wrapper_sha256": "97cbf0ae815235be44e23f1fce2c34391e1d7c037be7d8e923daf0ed2c956c45",
+    "rustc_wrapper_sha256": "b20611e0a302e4fc2f1230d07c7dd44cb93cd873ab730b6e69e7db87b530a5bf",
     "schema_id": "betelgeuze.engine_v2_native_fixed64_cpu_build_configuration/1.0.0",
     "target_triple": "x86_64-unknown-linux-gnu",
 }
@@ -820,9 +820,10 @@ def require_activation_source_contract(sources: dict[str, bytes]) -> None:
     for token in (
         "CONTROLLED_LIBRARY_CRATES",
         "CONTROLLED_CFG_VALUES",
+        "ALLOWED_QUERY_ARGUMENTS",
         '"opt-level": "3"',
         'expected["lto"] = "fat"',
-        'expected["linker-plugin-lto"] = None',
+        'arguments.extend(["-C", "linker-plugin-lto"])',
         "effective -C option names differ from the frozen profile",
         "cfg values differ from the frozen profile",
         "os.execv(rustc",
