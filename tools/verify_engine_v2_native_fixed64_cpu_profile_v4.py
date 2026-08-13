@@ -6,7 +6,6 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
-import posixpath
 import re
 from typing import NoReturn
 
@@ -24,35 +23,69 @@ NATIVE_PIPELINE_SOURCE_RELATIVE_PATH = Path(
 PROBE_SOURCE_RELATIVE_PATH = Path(
     "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v4.rs"
 )
+NATIVE_VENDOR_CANONICAL_SOURCE_RELATIVE_PATHS = tuple(
+    Path(value)
+    for value in (
+        "include/betelgeuze/engine.h",
+        "native/src/internal.hpp",
+        "native/src/context.cpp",
+        "native/src/evaluator.cpp",
+        "native/src/forcefield.cpp",
+        "native/src/system.cpp",
+        "native/src/cpu/evaluator.hpp",
+        "native/src/cpu/evaluator.cpp",
+        "native/src/rust/provider.h",
+        "native/src/rust/evaluator.hpp",
+        "native/src/rust/evaluator.cpp",
+        "native/src/docking/fixed64_allocation.cpp",
+        "native/src/docking/fixed64_so3.cpp",
+        "native/src/docking/fixed64_so3_reference.hpp",
+        "native/src/docking/fixed64_indexed_so3_provider.h",
+        "native/src/docking/fixed64_indexed_so3.cpp",
+        "native/src/docking/fixed64_pipeline.cpp",
+        "native/src/docking/fixed64_producer.cpp",
+        "native/src/docking/fixed64_single_anchor_provider.h",
+        "native/src/docking/fixed64_single_anchor.cpp",
+        "native/src/docking/fixed64_downstream.cpp",
+        "native/src/docking/fixed64_refinement_pipeline.cpp",
+        "native/src/docking/geometric_admission.cpp",
+        "native/src/docking/pose_validity.cpp",
+        "native/src/docking/rigid_refinement.cpp",
+        "native/src/docking/scorer_v1.cpp",
+        "native/src/docking/stable_top_k.cpp",
+        "native/src/docking/torsion_v7.cpp",
+        "native/src/dynamics/dynamics.hpp",
+        "native/src/dynamics/api.cpp",
+        "native/src/dynamics/checkpoint.cpp",
+        "native/src/dynamics/common.cpp",
+        "native/src/dynamics/integrator.cpp",
+        "native/src/dynamics/sha256.hpp",
+        "native/src/dynamics/sha256.cpp",
+        "native/src/hip/provider.h",
+        "native/src/hip/provider.hip",
+        "native/src/hip/docking_fixed64_so3.hip",
+        "native/src/hip/docking_fixed64_single_anchor.hip",
+        "native/src/hip/docking_geometric_admission.hip",
+        "native/src/hip/docking_scorer.hip",
+        "native/src/hip/docking_pose_validity.hip",
+        "native/src/hip/docking_stable_top_k.hip",
+        "native/src/hip/docking_rigid_refinement.hip",
+        "native/src/hip/docking_torsion_v7.hip",
+        "native/src/hip/evaluator.hpp",
+        "native/src/hip/evaluator.cpp",
+        "native/src/hip/backend.hpp",
+        "native/src/hip/backend.hip",
+        "native/src/hip/planning.hpp",
+        "native/src/hip/stub.cpp",
+    )
+)
+NATIVE_VENDOR_COPY_SOURCE_RELATIVE_PATHS = tuple(
+    Path("rust/betelgeuze-sys/vendor") / path
+    for path in NATIVE_VENDOR_CANONICAL_SOURCE_RELATIVE_PATHS
+)
 NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS = (
-    Path("include/betelgeuze/engine.h"),
-    Path("native/src/context.cpp"),
-    Path("native/src/cpu/evaluator.hpp"),
-    Path("native/src/dynamics/sha256.cpp"),
-    Path("native/src/dynamics/sha256.hpp"),
-    Path("native/src/hip/backend.hpp"),
-    Path("native/src/hip/evaluator.hpp"),
-    Path("native/src/hip/provider.h"),
-    Path("native/src/hip/stub.cpp"),
-    Path("native/src/internal.hpp"),
-    Path("native/src/rust/provider.h"),
-    Path("native/src/docking/fixed64_allocation.cpp"),
-    Path("native/src/docking/fixed64_downstream.cpp"),
-    Path("native/src/docking/fixed64_indexed_so3.cpp"),
-    Path("native/src/docking/fixed64_indexed_so3_provider.h"),
-    Path("native/src/docking/fixed64_pipeline.cpp"),
-    Path("native/src/docking/fixed64_producer.cpp"),
-    Path("native/src/docking/fixed64_refinement_pipeline.cpp"),
-    Path("native/src/docking/fixed64_single_anchor.cpp"),
-    Path("native/src/docking/fixed64_single_anchor_provider.h"),
-    Path("native/src/docking/fixed64_so3.cpp"),
-    Path("native/src/docking/fixed64_so3_reference.hpp"),
-    Path("native/src/docking/geometric_admission.cpp"),
-    Path("native/src/docking/pose_validity.cpp"),
-    Path("native/src/docking/rigid_refinement.cpp"),
-    Path("native/src/docking/scorer_v1.cpp"),
-    Path("native/src/docking/stable_top_k.cpp"),
-    Path("native/src/docking/torsion_v7.cpp"),
+    *NATIVE_VENDOR_CANONICAL_SOURCE_RELATIVE_PATHS,
+    *NATIVE_VENDOR_COPY_SOURCE_RELATIVE_PATHS,
     Path("rust/Cargo.lock"),
     Path("rust/Cargo.toml"),
     Path("rust/betelgeuze-sys/Cargo.toml"),
@@ -147,28 +180,23 @@ def _transitive_source_manifest_sha256(sources: dict[str, bytes]) -> str:
         _fail("native transitive source manifest path set changed")
     if any(type(raw) is not bytes for raw in sources.values()):
         _fail("native transitive source manifest contains non-byte input")
-    include_pattern = re.compile(rb'^\s*#\s*include\s*"([^"\r\n]+)"', re.MULTILINE)
-    for source_path in expected_paths:
-        if not source_path.startswith(("include/", "native/")):
-            continue
-        for raw_include in include_pattern.findall(sources[source_path]):
-            try:
-                include = raw_include.decode("ascii")
-            except UnicodeError as exc:
-                raise NativeFixed64CPUProfileV4Error(
-                    "native transitive local include is not ASCII"
-                ) from exc
-            candidates = {
-                posixpath.normpath(
-                    posixpath.join(posixpath.dirname(source_path), include)
-                ),
-                posixpath.normpath(posixpath.join("include", include)),
-            }
-            if not candidates.intersection(sources):
-                _fail(
-                    "native transitive local include is not bound: "
-                    f"{source_path} -> {include}"
-                )
+    canonical_vendor_paths = tuple(
+        path.as_posix() for path in NATIVE_VENDOR_CANONICAL_SOURCE_RELATIVE_PATHS
+    )
+    expected_vendor_declaration = (
+        "const VENDORED_FILES: &[&str] = &[\n"
+        + "".join(f'    "{path}",\n' for path in canonical_vendor_paths)
+        + "];"
+    ).encode("ascii")
+    build_source = sources["rust/betelgeuze-sys/build.rs"]
+    if build_source.count(expected_vendor_declaration) != 1:
+        _fail("native vendor equality manifest changed")
+    for canonical_path in canonical_vendor_paths:
+        vendor_path = (
+            Path("rust/betelgeuze-sys/vendor") / canonical_path
+        ).as_posix()
+        if sources[canonical_path] != sources[vendor_path]:
+            _fail(f"native vendor source differs from canonical: {canonical_path}")
     identities = {
         path: hashlib.sha256(sources[path]).hexdigest() for path in expected_paths
     }
@@ -181,6 +209,17 @@ def _transitive_source_manifest_sha256(sources: dict[str, bytes]) -> str:
             sort_keys=True,
         ).encode("ascii")
     ).hexdigest()
+
+
+def require_native_vendor_tree_paths(observed_paths: tuple[str, ...]) -> None:
+    expected_paths = tuple(
+        path.as_posix() for path in NATIVE_VENDOR_COPY_SOURCE_RELATIVE_PATHS
+    )
+    if (
+        len(observed_paths) != len(set(observed_paths))
+        or tuple(sorted(observed_paths)) != tuple(sorted(expected_paths))
+    ):
+        _fail("native vendor tree contains an unbound or missing source")
 
 
 def _exact_keys(value: object, expected: set[str], name: str) -> dict[str, object]:
@@ -463,9 +502,11 @@ def require_compiled_profile_binding(
     native_pipeline_source_raw: bytes,
     probe_source_raw: bytes,
     transitive_sources_raw: dict[str, bytes],
+    native_vendor_tree_paths: tuple[str, ...],
 ) -> None:
     """Bind the native gate constants and entry point to the frozen JSON."""
 
+    require_native_vendor_tree_paths(native_vendor_tree_paths)
     try:
         source = qualification_source_raw.decode("ascii")
         probe = probe_source_raw.decode("ascii")
@@ -762,6 +803,23 @@ def main() -> int:
     root = Path(__file__).resolve().parents[1]
     raw = (root / PROFILE_RELATIVE_PATH).read_bytes()
     profile = require_profile_document(raw)
+    vendor_roots = (
+        root / "rust/betelgeuze-sys/vendor/include",
+        root / "rust/betelgeuze-sys/vendor/native",
+    )
+    vendor_entries = tuple(
+        sorted(
+            path
+            for vendor_root in vendor_roots
+            for path in vendor_root.rglob("*")
+            if path.is_file() or path.is_symlink()
+        )
+    )
+    if any(path.is_symlink() for path in vendor_entries):
+        _fail("native vendor tree contains a symlink")
+    require_native_vendor_tree_paths(
+        tuple(path.relative_to(root).as_posix() for path in vendor_entries)
+    )
     require_compiled_profile_binding(
         profile,
         (root / QUALIFICATION_SOURCE_RELATIVE_PATH).read_bytes(),
@@ -772,6 +830,7 @@ def main() -> int:
             path.as_posix(): (root / path).read_bytes()
             for path in NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS
         },
+        tuple(path.relative_to(root).as_posix() for path in vendor_entries),
     )
     print(
         json.dumps(
