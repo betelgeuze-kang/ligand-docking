@@ -7,7 +7,6 @@ that the returned permission boundary remains fail-closed.
 
 from __future__ import annotations
 
-from copy import deepcopy
 from dataclasses import dataclass
 import hashlib
 import importlib
@@ -36,6 +35,10 @@ _PREPARED_INPUT_RECEIPT_DOMAIN = (
     b"betelgeuze.engine-v2.native-fixed64-prepared-input-receipt/v1\0"
 )
 _PREPARED_INPUT_SCALAR_LIMIT = 8 * 1_024 * 1_024
+# Versioned v3 transport schema cardinality.  Bound the outer mapping before
+# making even a shallow transport copy; Rust then validates the exact key set
+# and bounds every nested collection before copying its values.
+_COMPLETE_INPUT_KEY_COUNT = 53
 
 _RECEIPT_GRAPH_FIELDS = (
     "allocation_inventory_sha256",
@@ -365,9 +368,16 @@ def run_native_fixed64_surface(
 
     if type(input_document) is not dict:
         raise TypeError("native fixed64 input must be an exact dict")
+    if len(input_document) != _COMPLETE_INPUT_KEY_COUNT:
+        raise NativeFixed64ConsumerError(
+            "native fixed64 input has an invalid top-level key count"
+        )
     if surface not in {"cli", "benchmark", "api", "product_shadow"}:
         raise NativeFixed64ConsumerError("native consumer surface is unsupported")
-    payload = deepcopy(input_document)
+    # Do not deepcopy caller-owned nested collections before the native bounded
+    # preflight.  The exact outer dict is small and a shallow copy is sufficient
+    # to bind the selected consumer without mutating the caller's document.
+    payload = input_document.copy()
     payload["consumer"] = surface
     if payload.get("schema_id") != _COMPLETE_INPUT_SCHEMA_ID:
         raise NativeFixed64ConsumerError(

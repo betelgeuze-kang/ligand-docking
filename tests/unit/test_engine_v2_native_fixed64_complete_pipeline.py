@@ -38,6 +38,11 @@ class _DictSubclass(dict):
     pass
 
 
+class _DeepcopyTrap:
+    def __deepcopy__(self, _memo):
+        raise AssertionError("canonical v3 consumer must not deep-copy nested input")
+
+
 def _source(marker: int, *, source_index: int | None = None, rank: int | None = None):
     row: dict[str, object] = {
         "receipt_sha256": _digest(marker),
@@ -372,7 +377,7 @@ def test_complete_entrypoint_uses_one_native_receipt_graph(native) -> None:
 
 
 def test_all_surfaces_share_complete_native_pipeline_receipt(native) -> None:
-    source = _input()
+    source = _input(consumer="cli")
     original = deepcopy(source)
     results = (
         NativeFixed64CliAdapter().run(source),
@@ -390,6 +395,37 @@ def test_all_surfaces_share_complete_native_pipeline_receipt(native) -> None:
         item.to_dict()["existing_rank_auto_change_authorized"] is False
         for item in results
     )
+
+
+def test_canonical_consumer_does_not_copy_nested_input_before_native_preflight(
+    native, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    document = native.native_fixed64_complete_pipeline_v3(_input())
+    source = _input(consumer="cli")
+    trap = _DeepcopyTrap()
+    source["ligand_charge_elementary"] = trap
+    observed: dict[str, object] = {}
+
+    def fake_entrypoint(payload):
+        observed["nested_identity"] = payload["ligand_charge_elementary"] is trap
+        observed["consumer"] = payload["consumer"]
+        return deepcopy(document)
+
+    monkeypatch.setattr(native_consumers, "_native_entrypoint", lambda: fake_entrypoint)
+
+    evidence = NativeFixed64PythonApi().run(source)
+
+    assert evidence.pipeline_receipt_sha256 == document["pipeline_receipt_sha256"]
+    assert observed == {"nested_identity": True, "consumer": "api"}
+    assert source["consumer"] == "cli"
+
+
+def test_canonical_consumer_bounds_outer_mapping_before_transport_copy() -> None:
+    source = _input()
+    source["unexpected"] = object()
+
+    with pytest.raises(NativeFixed64ConsumerError, match="top-level key count"):
+        NativeFixed64PythonApi().run(source)
 
 
 def test_complete_python_facade_binds_evidence_to_requested_backend(

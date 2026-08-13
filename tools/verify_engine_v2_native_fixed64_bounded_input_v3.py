@@ -218,6 +218,8 @@ def verify(
             'name = "native_fixed64_complete_pipeline_v3"',
             RECEIPT_DOMAIN,
             "_PREPARED_INPUT_SCALAR_LIMIT = 8 * 1_024 * 1_024",
+            "_COMPLETE_INPUT_KEY_COUNT = 53",
+            "payload = input_document.copy()",
             "NativeFixed64EvidenceV3",
         ),
         label="Python native consumer",
