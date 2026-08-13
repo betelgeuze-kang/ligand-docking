@@ -21,10 +21,11 @@ use crate::{
     Backend, Context, ContextOptions, Error, ErrorCode, Fixed64AtomicFeature,
     Fixed64ConformerCoordinateSource, Fixed64CoordinateSource, Fixed64Donor,
     Fixed64ExactSourceEvidence, Fixed64FeatureGeometry, Fixed64FeatureKind, Fixed64Identities,
-    Fixed64IndexedCoordinateSource, Fixed64Ligand, Fixed64Pair, Fixed64Pipeline,
-    Fixed64PipelineContext, Fixed64Receptor, Fixed64RefinementMode, Fixed64RigidProfileEvidence,
-    Fixed64Rotor, Fixed64RunInput, Fixed64ScientificProjection, Fixed64SourceEvidence, PositionSoa,
-    Result, FIXED64_NATIVE_PIPELINE_PROFILE_ID,
+    Fixed64IndexedCoordinateSource, Fixed64LaneMetricsReceipt, Fixed64LaneMetricsReference,
+    Fixed64Ligand, Fixed64Pair, Fixed64Pipeline, Fixed64PipelineContext, Fixed64Receptor,
+    Fixed64RefinementMode, Fixed64RigidProfileEvidence, Fixed64Rotor, Fixed64RunInput,
+    Fixed64ScientificProjection, Fixed64SourceEvidence, PositionSoa, Result,
+    FIXED64_NATIVE_PIPELINE_PROFILE_ID,
 };
 
 pub const FIXED64_CPU_QUALIFICATION_V5_PROFILE_ID: &str =
@@ -136,6 +137,14 @@ pub struct Fixed64CpuFixtureProbeV5 {
     pub rust_decision_sha256: [u8; 32],
     pub cpp_projection_sha256: [u8; 32],
     pub rust_projection_sha256: [u8; 32],
+    pub lane_metrics_reference_sha256: [u8; 32],
+    pub cpp_lane_metrics_decision_sha256: [u8; 32],
+    pub rust_lane_metrics_decision_sha256: [u8; 32],
+    pub cpp_lane_metrics_receipt_sha256: [u8; 32],
+    pub rust_lane_metrics_receipt_sha256: [u8; 32],
+    pub lane_metrics_decision_parity: bool,
+    pub lane_metrics_rederivable: bool,
+    pub lane_metrics_authority_false: bool,
     pub cpp_repeat_stable: bool,
     pub rust_repeat_stable: bool,
     pub decision_parity: bool,
@@ -149,6 +158,13 @@ pub struct Fixed64CpuFixtureProbeV5 {
     pub persistent_rust_context_count: u32,
     pub authority_false: bool,
     pub gate_passed: bool,
+    /// Complete backend-independent receipts retained for v7 persisted
+    /// scientific-evidence serialization. Older v5/v6 serializers deliberately
+    /// omit these fields and cannot grant v7 activation authority.
+    pub cpp_scientific_projection: Fixed64ScientificProjection,
+    pub rust_scientific_projection: Fixed64ScientificProjection,
+    pub cpp_lane_metrics: Fixed64LaneMetricsReceipt,
+    pub rust_lane_metrics: Fixed64LaneMetricsReceipt,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -812,7 +828,7 @@ fn append_positions(values: &mut Vec<f64>, positions: &crate::PositionSoaOwned) 
     values.extend(&positions.z_angstrom);
 }
 
-fn numeric_projection(value: &Fixed64ScientificProjection) -> Vec<f64> {
+pub(crate) fn numeric_projection(value: &Fixed64ScientificProjection) -> Vec<f64> {
     let mut numbers = Vec::new();
     for row in &value.candidate_rows {
         numbers.extend(row.placement_quaternion);
@@ -1166,6 +1182,35 @@ fn run_fixture(
             "fixed64 CPU probe produced no Rust sample",
         )
     })?;
+    let reference = Fixed64LaneMetricsReference::new(
+        variant.id(),
+        exact_evidence.source_receipt_sha256,
+        exact_evidence.prepared_ligand_topology_sha256,
+        PositionSoa::new(&fixture.ligand_x, &fixture.ligand_y, &fixture.ligand_z),
+        &fixture.heavy_mask,
+        &[(0..LIGAND_ATOM_COUNT as u32).collect::<Vec<_>>()],
+    )?;
+    let cpp_metrics_receipt = cpp_pipeline.run(input)?;
+    let cpp_metrics = Fixed64LaneMetricsReceipt::build(&cpp_metrics_receipt, reference.clone())?;
+    cpp_metrics.verify_against(&cpp_metrics_receipt)?;
+    let rust_metrics_receipt = rust_pipeline.run(input)?;
+    let rust_metrics = Fixed64LaneMetricsReceipt::build(&rust_metrics_receipt, reference.clone())?;
+    rust_metrics.verify_against(&rust_metrics_receipt)?;
+    let lane_metrics_decision_parity = cpp_metrics.decision_sha256 == rust_metrics.decision_sha256;
+    let lane_metrics_rederivable = cpp_metrics.observations.len() == SLOT_COUNT
+        && rust_metrics.observations.len() == SLOT_COUNT
+        && cpp_metrics.lane_summaries.len() == 10
+        && rust_metrics.lane_summaries.len() == 10
+        && cpp_metrics.candidate_denominator == SLOT_COUNT as u64
+        && rust_metrics.candidate_denominator == SLOT_COUNT as u64;
+    let lane_metrics_authority_false = !cpp_metrics.result_dependent_allocation_consumed
+        && !rust_metrics.result_dependent_allocation_consumed
+        && !cpp_metrics.metrics_used_to_change_rank
+        && !rust_metrics.metrics_used_to_change_rank
+        && !cpp_metrics.product_execution_authorized
+        && !rust_metrics.product_execution_authorized
+        && !cpp_metrics.public_or_scientific_claim_authorized
+        && !rust_metrics.public_or_scientific_claim_authorized;
     let numeric = numeric_parity(
         &cpp,
         &rust,
@@ -1204,6 +1249,9 @@ fn run_fixture(
         && cpp_repeat_stable
         && rust_repeat_stable
         && decision_parity
+        && lane_metrics_decision_parity
+        && lane_metrics_rederivable
+        && lane_metrics_authority_false
         && numeric.passed()
         && authority_false
         && ratio <= config.maximum_rust_to_cpp_median_ratio;
@@ -1224,6 +1272,14 @@ fn run_fixture(
         rust_decision_sha256: rust.decision_sha256,
         cpp_projection_sha256: cpp.sha256,
         rust_projection_sha256: rust.sha256,
+        lane_metrics_reference_sha256: reference.receipt_sha256,
+        cpp_lane_metrics_decision_sha256: cpp_metrics.decision_sha256,
+        rust_lane_metrics_decision_sha256: rust_metrics.decision_sha256,
+        cpp_lane_metrics_receipt_sha256: cpp_metrics.receipt_sha256,
+        rust_lane_metrics_receipt_sha256: rust_metrics.receipt_sha256,
+        lane_metrics_decision_parity,
+        lane_metrics_rederivable,
+        lane_metrics_authority_false,
         cpp_repeat_stable,
         rust_repeat_stable,
         decision_parity,
@@ -1237,6 +1293,10 @@ fn run_fixture(
         persistent_rust_context_count: 1,
         authority_false,
         gate_passed,
+        cpp_scientific_projection: cpp,
+        rust_scientific_projection: rust,
+        cpp_lane_metrics: cpp_metrics,
+        rust_lane_metrics: rust_metrics,
     })
 }
 
@@ -1359,6 +1419,14 @@ mod tests {
                 && fixture.cpp_repeat_stable
                 && fixture.rust_repeat_stable
                 && fixture.decision_parity
+                && fixture.lane_metrics_decision_parity
+                && fixture.lane_metrics_rederivable
+                && fixture.lane_metrics_authority_false
+                && fixture.cpp_lane_metrics_decision_sha256
+                    == fixture.rust_lane_metrics_decision_sha256
+                && fixture.lane_metrics_reference_sha256 != [0; 32]
+                && fixture.cpp_lane_metrics_receipt_sha256 != [0; 32]
+                && fixture.rust_lane_metrics_receipt_sha256 != [0; 32]
                 && fixture.numeric_parity.passed()
                 && fixture.numeric_parity.compared_f64_count == 28_544
                 && fixture.authority_false

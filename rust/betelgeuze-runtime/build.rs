@@ -8,27 +8,27 @@ use std::process::Command;
 use sha2::{Digest as _, Sha256};
 
 const SOURCE_MANIFEST_RELATIVE_PATH: &str =
-    "config/engine_v2_native_fixed64_cpu_profile_v6_sources.json";
-const PROFILE_RELATIVE_PATH: &str = "config/engine_v2_native_fixed64_cpu_profile_v6.json";
+    "config/engine_v2_native_fixed64_cpu_profile_v7_sources.json";
+const PROFILE_RELATIVE_PATH: &str = "config/engine_v2_native_fixed64_cpu_profile_v7.json";
 const PACKAGED_SOURCE_MANIFEST_BYTES: &[u8] =
-    include_bytes!("assets/engine_v2_native_fixed64_cpu_profile_v6_sources.json");
+    include_bytes!("assets/engine_v2_native_fixed64_cpu_profile_v7_sources.json");
 const PACKAGED_PROFILE_BYTES: &[u8] =
-    include_bytes!("assets/engine_v2_native_fixed64_cpu_profile_v6.json");
-const COMPILED_MANIFEST_ENV: &str = "BETELGEUZE_V6_COMPILED_SOURCE_MANIFEST_SHA256";
-const COMPILED_SOURCE_COUNT_ENV: &str = "BETELGEUZE_V6_COMPILED_SOURCE_COUNT";
-const COMPILED_PROFILE_ENV: &str = "BETELGEUZE_V6_COMPILED_PROFILE_SHA256";
-const BUILD_COMMIT_ENV: &str = "BETELGEUZE_V6_BUILD_COMMIT_OID";
-const BUILD_COMMIT_BOUND_ENV: &str = "BETELGEUZE_V6_BUILD_COMMIT_BOUND";
-const BUILD_CONFIGURATION_BOUND_ENV: &str = "BETELGEUZE_V6_BUILD_CONFIGURATION_BOUND";
-const BUILD_CONFIGURATION_SHA256_ENV: &str = "BETELGEUZE_V6_BUILD_CONFIGURATION_SHA256";
-const VERIFIED_SOURCE_ROOT_ENV: &str = "BETELGEUZE_V6_VERIFIED_SOURCE_ROOT";
-const NON_AUTHORITATIVE_PACKAGE_BUILD_ENV: &str = "BETELGEUZE_V6_NON_AUTHORITATIVE_PACKAGE_BUILD";
-const QUALIFICATION_BUILD_ENV: &str = "BETELGEUZE_V6_QUALIFICATION_BUILD";
+    include_bytes!("assets/engine_v2_native_fixed64_cpu_profile_v7.json");
+const COMPILED_MANIFEST_ENV: &str = "BETELGEUZE_V7_COMPILED_SOURCE_MANIFEST_SHA256";
+const COMPILED_SOURCE_COUNT_ENV: &str = "BETELGEUZE_V7_COMPILED_SOURCE_COUNT";
+const COMPILED_PROFILE_ENV: &str = "BETELGEUZE_V7_COMPILED_PROFILE_SHA256";
+const BUILD_COMMIT_ENV: &str = "BETELGEUZE_V7_BUILD_COMMIT_OID";
+const BUILD_COMMIT_BOUND_ENV: &str = "BETELGEUZE_V7_BUILD_COMMIT_BOUND";
+const BUILD_CONFIGURATION_BOUND_ENV: &str = "BETELGEUZE_V7_BUILD_CONFIGURATION_BOUND";
+const BUILD_CONFIGURATION_SHA256_ENV: &str = "BETELGEUZE_V7_BUILD_CONFIGURATION_SHA256";
+const VERIFIED_SOURCE_ROOT_ENV: &str = "BETELGEUZE_V7_VERIFIED_SOURCE_ROOT";
+const NON_AUTHORITATIVE_PACKAGE_BUILD_ENV: &str = "BETELGEUZE_V7_NON_AUTHORITATIVE_PACKAGE_BUILD";
+const QUALIFICATION_BUILD_ENV: &str = "BETELGEUZE_V7_QUALIFICATION_BUILD";
 const UNBOUND_BUILD_COMMIT_OID: &str = "0000000000000000000000000000000000000000";
 const UNBOUND_BUILD_CONFIGURATION_SHA256: &str =
     "0000000000000000000000000000000000000000000000000000000000000000";
 const EXPECTED_BUILD_CONFIGURATION_SHA256: &str =
-    "792702860fdbc1a9d7b75c2b3fb3cba1f4ffb79b5d66350a6fe8546bd68dd2fd";
+    "6e39e4e07bcb2f9324f242adcf3f48428191b2a91418d34520c6acc1cf046068";
 const EXPECTED_RUSTC_SHA256: &str =
     "d32249a7c3bfcfc67b471460386e46323accae7125e344567a12d5664d99bb57";
 const EXPECTED_CARGO_SHA256: &str =
@@ -37,9 +37,9 @@ const EXPECTED_CPP_PATH: &str = "/usr/bin/x86_64-linux-gnu-g++-11";
 const EXPECTED_CPP_SHA256: &str =
     "2360901d864cf10bfd6296e261cb2c14053552a80377761ab07146ec9ec9a2c0";
 const QUALIFICATION_RUSTC_WRAPPER_RELATIVE_PATH: &str =
-    "tools/verify_engine_v2_native_fixed64_cpu_v6_rustc_wrapper.py";
+    "tools/verify_engine_v2_native_fixed64_cpu_v7_rustc_wrapper.py";
 const EXPECTED_RUSTC_WRAPPER_SHA256: &str =
-    "b20611e0a302e4fc2f1230d07c7dd44cb93cd873ab730b6e69e7db87b530a5bf";
+    "bb95e65d3de3ba08cda1c022690895f8d9ec986eb3a59ecb6ba4127a2982f088";
 const EXPECTED_RUSTC_WRAPPER_INTERPRETER: &str = "/usr/bin/python3.10";
 const EXPECTED_RUSTC_WRAPPER_INTERPRETER_SHA256: &str =
     "7d51cd6b48b521277f5caa4610a82126e315fa2be4df069823a8b1eeb5bd4a86";
@@ -160,7 +160,7 @@ fn qualification_output_directory_is_exact(source_root: &Path) -> bool {
     let Some(canonical_out_dir) = out_dir.canonicalize().ok() else {
         return false;
     };
-    let expected_build_root = source_root.join("rust/target/qualification-v6/build");
+    let expected_build_root = source_root.join("rust/target/qualification-v7/build");
     let Some(relative) = canonical_out_dir.strip_prefix(expected_build_root).ok() else {
         return false;
     };
@@ -224,7 +224,7 @@ fn bind_build_configuration(source_root: &Path, non_authoritative_package: bool)
     }
     assert!(
         !non_authoritative_package,
-        "v6 qualification and non-authoritative package build modes are mutually exclusive"
+        "v7 qualification and non-authoritative package build modes are mutually exclusive"
     );
     let encoded_rustflags_empty =
         env::var_os("CARGO_ENCODED_RUSTFLAGS").is_none_or(|value| value.is_empty());
@@ -276,7 +276,7 @@ fn bind_build_configuration(source_root: &Path, non_authoritative_package: bool)
         && qualification_rustc_wrapper_is_exact(source_root);
     assert!(
         exact,
-        "v6 qualification build does not match the frozen compiler configuration"
+        "v7 qualification build does not match the frozen compiler configuration"
     );
     (EXPECTED_BUILD_CONFIGURATION_SHA256.to_owned(), true)
 }
@@ -285,38 +285,38 @@ fn parse_number_line(line: &str, prefix: &str, suffix: &str) -> usize {
     line.strip_prefix(prefix)
         .and_then(|value| value.strip_suffix(suffix))
         .and_then(|value| value.parse::<usize>().ok())
-        .unwrap_or_else(|| panic!("invalid v6 source manifest numeric line: {line}"))
+        .unwrap_or_else(|| panic!("invalid v7 source manifest numeric line: {line}"))
 }
 
 fn parse_string_line(line: &str, prefix: &str, suffix: &str) -> String {
     let value = line
         .strip_prefix(prefix)
         .and_then(|value| value.strip_suffix(suffix))
-        .unwrap_or_else(|| panic!("invalid v6 source manifest string line: {line}"));
+        .unwrap_or_else(|| panic!("invalid v7 source manifest string line: {line}"));
     assert!(
         !value.is_empty()
             && value.is_ascii()
             && !value.contains('\\')
             && !value.contains('"')
             && !value.split('/').any(|component| component == ".."),
-        "unsafe v6 source manifest value: {value}"
+        "unsafe v7 source manifest value: {value}"
     );
     value.to_owned()
 }
 
 fn parse_source_manifest(raw: &[u8]) -> Vec<SourceRow> {
-    let text = std::str::from_utf8(raw).expect("v6 source manifest must be UTF-8");
+    let text = std::str::from_utf8(raw).expect("v7 source manifest must be UTF-8");
     let lines = text.lines().map(str::trim).collect::<Vec<_>>();
     let declared_count = lines
         .iter()
         .find(|line| line.starts_with("\"source_count\":"))
         .map(|line| parse_number_line(line, "\"source_count\": ", ""))
-        .expect("v6 source manifest source_count is missing");
+        .expect("v7 source manifest source_count is missing");
     let mut rows = Vec::with_capacity(declared_count);
     let mut index = 0;
     while index < lines.len() {
         if lines[index].starts_with("\"byte_count\":") {
-            assert!(index + 2 < lines.len(), "truncated v6 source manifest row");
+            assert!(index + 2 < lines.len(), "truncated v7 source manifest row");
             rows.push(SourceRow {
                 byte_count: parse_number_line(lines[index], "\"byte_count\": ", ","),
                 path: parse_string_line(lines[index + 1], "\"path\": \"", "\","),
@@ -330,34 +330,34 @@ fn parse_source_manifest(raw: &[u8]) -> Vec<SourceRow> {
     assert_eq!(
         rows.len(),
         declared_count,
-        "v6 source manifest count changed"
+        "v7 source manifest count changed"
     );
     assert!(
         rows.windows(2).all(|pair| pair[0].path < pair[1].path),
-        "v6 source manifest paths are not strictly sorted"
+        "v7 source manifest paths are not strictly sorted"
     );
     rows
 }
 
 fn discover_source_root(manifest_dir: &Path) -> Option<PathBuf> {
-    println!("cargo:rerun-if-env-changed=BETELGEUZE_V6_SOURCE_ROOT");
-    if let Some(declared) = env::var_os("BETELGEUZE_V6_SOURCE_ROOT") {
+    println!("cargo:rerun-if-env-changed=BETELGEUZE_V7_SOURCE_ROOT");
+    if let Some(declared) = env::var_os("BETELGEUZE_V7_SOURCE_ROOT") {
         let declared = PathBuf::from(declared);
         assert!(
             declared.is_absolute(),
-            "BETELGEUZE_V6_SOURCE_ROOT is not absolute"
+            "BETELGEUZE_V7_SOURCE_ROOT is not absolute"
         );
         let canonical = declared
             .canonicalize()
-            .expect("BETELGEUZE_V6_SOURCE_ROOT is unavailable");
+            .expect("BETELGEUZE_V7_SOURCE_ROOT is unavailable");
         assert_eq!(
             declared, canonical,
-            "BETELGEUZE_V6_SOURCE_ROOT is not canonical"
+            "BETELGEUZE_V7_SOURCE_ROOT is not canonical"
         );
         assert!(
             canonical.join(SOURCE_MANIFEST_RELATIVE_PATH).is_file()
                 && canonical.join("rust/Cargo.toml").is_file(),
-            "BETELGEUZE_V6_SOURCE_ROOT lacks the frozen source graph"
+            "BETELGEUZE_V7_SOURCE_ROOT lacks the frozen source graph"
         );
         return Some(canonical);
     }
@@ -382,10 +382,10 @@ fn git_output(source_root: &Path, arguments: &[&str]) -> Vec<u8> {
         .env_remove("GIT_OBJECT_DIRECTORY")
         .env_remove("GIT_ALTERNATE_OBJECT_DIRECTORIES")
         .output()
-        .expect("git is required to bind the v6 build commit");
+        .expect("git is required to bind the v7 build commit");
     assert!(
         output.status.success() && output.stderr.is_empty(),
-        "v6 build git evidence failed closed"
+        "v7 build git evidence failed closed"
     );
     output.stdout
 }
@@ -393,11 +393,11 @@ fn git_output(source_root: &Path, arguments: &[&str]) -> Vec<u8> {
 fn git_path(source_root: &Path, git_relative: &str) -> PathBuf {
     let raw = git_output(source_root, &["rev-parse", "--git-path", git_relative]);
     let text = std::str::from_utf8(&raw)
-        .expect("v6 Git metadata path must be UTF-8")
+        .expect("v7 Git metadata path must be UTF-8")
         .trim_end_matches('\n');
     assert!(
         !text.is_empty() && !text.contains('\r') && !text.contains('\n'),
-        "v6 Git metadata path is invalid"
+        "v7 Git metadata path is invalid"
     );
     let path = PathBuf::from(text);
     if path.is_absolute() {
@@ -410,10 +410,10 @@ fn git_path(source_root: &Path, git_relative: &str) -> PathBuf {
 fn emit_rerun_if_changed(path: &Path, label: &str) {
     let text = path
         .to_str()
-        .unwrap_or_else(|| panic!("v6 {label} path must be UTF-8"));
+        .unwrap_or_else(|| panic!("v7 {label} path must be UTF-8"));
     assert!(
         !text.contains('\r') && !text.contains('\n'),
-        "v6 {label} path is invalid"
+        "v7 {label} path is invalid"
     );
     println!("cargo:rerun-if-changed={text}");
 }
@@ -421,13 +421,13 @@ fn emit_rerun_if_changed(path: &Path, label: &str) {
 fn track_git_commit_inputs(source_root: &Path) {
     let head_path = git_path(source_root, "HEAD");
     let head_metadata =
-        fs::symlink_metadata(&head_path).expect("v6 worktree HEAD metadata is unavailable");
+        fs::symlink_metadata(&head_path).expect("v7 worktree HEAD metadata is unavailable");
     assert!(
         head_metadata.file_type().is_file() && !head_metadata.file_type().is_symlink(),
-        "v6 worktree HEAD is not a regular file"
+        "v7 worktree HEAD is not a regular file"
     );
     emit_rerun_if_changed(&head_path, "worktree HEAD");
-    let head = fs::read_to_string(&head_path).expect("v6 worktree HEAD is unavailable");
+    let head = fs::read_to_string(&head_path).expect("v7 worktree HEAD is unavailable");
     if let Some(reference) = head.strip_prefix("ref: ") {
         let reference = reference.trim_end_matches('\n').trim_end_matches('\r');
         assert!(
@@ -435,7 +435,7 @@ fn track_git_commit_inputs(source_root: &Path) {
                 && reference.is_ascii()
                 && !reference.contains("..")
                 && !reference.contains('\\'),
-            "v6 symbolic HEAD reference is invalid"
+            "v7 symbolic HEAD reference is invalid"
         );
         let reference_path = git_path(source_root, reference);
         let packed_refs_path = git_path(source_root, "packed-refs");
@@ -444,7 +444,7 @@ fn track_git_commit_inputs(source_root: &Path) {
         } else {
             assert!(
                 packed_refs_path.is_file(),
-                "v6 symbolic HEAD target is unavailable"
+                "v7 symbolic HEAD target is unavailable"
             );
         }
         if packed_refs_path.is_file() {
@@ -464,13 +464,13 @@ fn non_authoritative_package_build() -> bool {
         Ok(value) => {
             assert_eq!(
                 value, "1",
-                "non-authoritative v6 package build opt-in must equal 1"
+                "non-authoritative v7 package build opt-in must equal 1"
             );
             true
         }
         Err(env::VarError::NotPresent) => false,
         Err(env::VarError::NotUnicode(_)) => {
-            panic!("non-authoritative v6 package build opt-in must be UTF-8")
+            panic!("non-authoritative v7 package build opt-in must be UTF-8")
         }
     }
 }
@@ -486,10 +486,10 @@ fn bind_activation_snapshot(
         canonical_profile_path.display()
     );
     let canonical_profile =
-        fs::read(&canonical_profile_path).expect("canonical v6 profile is unavailable");
+        fs::read(&canonical_profile_path).expect("canonical v7 profile is unavailable");
     assert_eq!(
         canonical_profile, PACKAGED_PROFILE_BYTES,
-        "packaged v6 activation profile drifted from the build checkout"
+        "packaged v7 activation profile drifted from the build checkout"
     );
     let profile_sha256 = sha256_hex(&canonical_profile);
     if non_authoritative_package {
@@ -498,24 +498,24 @@ fn bind_activation_snapshot(
     track_git_commit_inputs(source_root);
     let raw_oid = git_output(source_root, &["rev-parse", "--verify", "HEAD"]);
     let commit_oid = std::str::from_utf8(&raw_oid)
-        .expect("v6 build commit must be UTF-8")
+        .expect("v7 build commit must be UTF-8")
         .trim_end_matches('\n');
     assert!(
         commit_oid.len() == 40
             && commit_oid
                 .bytes()
                 .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase()),
-        "v6 build commit identity is invalid"
+        "v7 build commit identity is invalid"
     );
     assert_eq!(
         canonical_manifest,
         committed_blob(source_root, commit_oid, SOURCE_MANIFEST_RELATIVE_PATH),
-        "v6 source manifest differs from the exact build commit"
+        "v7 source manifest differs from the exact build commit"
     );
     assert_eq!(
         canonical_profile,
         committed_blob(source_root, commit_oid, PROFILE_RELATIVE_PATH),
-        "v6 activation profile differs from the exact build commit"
+        "v7 activation profile differs from the exact build commit"
     );
     (commit_oid.to_owned(), profile_sha256, true)
 }
@@ -527,34 +527,34 @@ fn bind_compiled_source_graph(source_root: &Path) -> (String, usize) {
         canonical_manifest_path.display()
     );
     let canonical_manifest =
-        fs::read(&canonical_manifest_path).expect("canonical v6 source manifest is unavailable");
+        fs::read(&canonical_manifest_path).expect("canonical v7 source manifest is unavailable");
     assert_eq!(
         canonical_manifest, PACKAGED_SOURCE_MANIFEST_BYTES,
-        "packaged v6 source manifest drifted from the build checkout"
+        "packaged v7 source manifest drifted from the build checkout"
     );
     let rows = parse_source_manifest(&canonical_manifest);
     for row in &rows {
         let path = source_root.join(&row.path);
         println!("cargo:rerun-if-changed={}", path.display());
         let metadata = fs::symlink_metadata(&path)
-            .unwrap_or_else(|error| panic!("v6 source {} is unavailable: {error}", row.path));
+            .unwrap_or_else(|error| panic!("v7 source {} is unavailable: {error}", row.path));
         assert!(
             metadata.file_type().is_file() && !metadata.file_type().is_symlink(),
-            "v6 source {} is not a regular file",
+            "v7 source {} is not a regular file",
             row.path
         );
         let raw = fs::read(&path)
-            .unwrap_or_else(|error| panic!("v6 source {} cannot be read: {error}", row.path));
+            .unwrap_or_else(|error| panic!("v7 source {} cannot be read: {error}", row.path));
         assert_eq!(
             raw.len(),
             row.byte_count,
-            "v6 source {} byte count changed",
+            "v7 source {} byte count changed",
             row.path
         );
         assert_eq!(
             sha256_hex(&raw),
             row.sha256,
-            "v6 source {} digest changed",
+            "v7 source {} digest changed",
             row.path
         );
     }
@@ -562,18 +562,23 @@ fn bind_compiled_source_graph(source_root: &Path) -> (String, usize) {
 }
 
 fn main() {
+    // The superseded v6 public verifier remains source-compatible but can
+    // never activate from a v7 build.  Emit an explicitly unbound identity so
+    // every v6 operation fails before preflight or state consumption.
     println!("cargo:rustc-check-cfg=cfg(betelgeuze_v6_qualification_build)");
     println!("cargo:rustc-check-cfg=cfg(betelgeuze_v6_effective_rust_flags_verified)");
-    println!("cargo:rerun-if-changed=assets/engine_v2_native_fixed64_cpu_profile_v6_sources.json");
+    println!("cargo:rustc-check-cfg=cfg(betelgeuze_v7_qualification_build)");
+    println!("cargo:rustc-check-cfg=cfg(betelgeuze_v7_effective_rust_flags_verified)");
+    println!("cargo:rerun-if-changed=assets/engine_v2_native_fixed64_cpu_profile_v7_sources.json");
     println!("cargo:rerun-if-changed=assets/original-Cargo.toml");
     let manifest_dir =
         PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR is required"));
     let source_root = discover_source_root(&manifest_dir).expect(
-        "v6 builds require the exact source checkout; set BETELGEUZE_V6_SOURCE_ROOT for packaged verification",
+        "v7 builds require the exact source checkout; set BETELGEUZE_V7_SOURCE_ROOT for packaged verification",
     );
     let (manifest_sha256, source_count) = bind_compiled_source_graph(&source_root);
     let canonical_manifest = fs::read(source_root.join(SOURCE_MANIFEST_RELATIVE_PATH))
-        .expect("canonical v6 source manifest is unavailable");
+        .expect("canonical v7 source manifest is unavailable");
     let non_authoritative_package = non_authoritative_package_build();
     let (build_configuration_sha256, build_configuration_bound) =
         bind_build_configuration(&source_root, non_authoritative_package);
@@ -581,16 +586,30 @@ fn main() {
         bind_activation_snapshot(&source_root, &canonical_manifest, non_authoritative_package);
     let source_root_text = source_root
         .to_str()
-        .expect("v6 verified source root must be UTF-8");
+        .expect("v7 verified source root must be UTF-8");
     println!("cargo:rustc-env={COMPILED_MANIFEST_ENV}={manifest_sha256}");
     println!("cargo:rustc-env={COMPILED_SOURCE_COUNT_ENV}={source_count}");
     println!("cargo:rustc-env={COMPILED_PROFILE_ENV}={profile_sha256}");
     println!("cargo:rustc-env={BUILD_COMMIT_ENV}={build_commit_oid}");
     println!("cargo:rustc-env={BUILD_COMMIT_BOUND_ENV}={build_commit_bound}");
     if build_configuration_bound {
-        println!("cargo:rustc-cfg=betelgeuze_v6_qualification_build");
+        println!("cargo:rustc-cfg=betelgeuze_v7_qualification_build");
     }
     println!("cargo:rustc-env={BUILD_CONFIGURATION_SHA256_ENV}={build_configuration_sha256}");
     println!("cargo:rustc-env={BUILD_CONFIGURATION_BOUND_ENV}={build_configuration_bound}");
     println!("cargo:rustc-env={VERIFIED_SOURCE_ROOT_ENV}={source_root_text}");
+    println!(
+        "cargo:rustc-env=BETELGEUZE_V6_COMPILED_SOURCE_MANIFEST_SHA256=988108202cceafff669930f804a8bc292ec2a364dd8c016bd9d4b7ecdb190f45"
+    );
+    println!("cargo:rustc-env=BETELGEUZE_V6_COMPILED_SOURCE_COUNT=193");
+    println!(
+        "cargo:rustc-env=BETELGEUZE_V6_COMPILED_PROFILE_SHA256=fd83f1f7f7c92bc0fc9ac6581cababb23d3ba5787412174a55b659f97fcc2928"
+    );
+    println!("cargo:rustc-env=BETELGEUZE_V6_BUILD_COMMIT_OID={UNBOUND_BUILD_COMMIT_OID}");
+    println!("cargo:rustc-env=BETELGEUZE_V6_BUILD_COMMIT_BOUND=false");
+    println!(
+        "cargo:rustc-env=BETELGEUZE_V6_BUILD_CONFIGURATION_SHA256={UNBOUND_BUILD_CONFIGURATION_SHA256}"
+    );
+    println!("cargo:rustc-env=BETELGEUZE_V6_BUILD_CONFIGURATION_BOUND=false");
+    println!("cargo:rustc-env=BETELGEUZE_V6_VERIFIED_SOURCE_ROOT={source_root_text}");
 }

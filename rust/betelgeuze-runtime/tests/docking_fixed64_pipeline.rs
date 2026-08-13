@@ -7,8 +7,9 @@ use betelgeuze_runtime::{
     Backend, Context, ContextOptions, ErrorCode, Fixed64AtomicFeature,
     Fixed64ConformerCoordinateSource, Fixed64CoordinateSource, Fixed64ExactSourceEvidence,
     Fixed64FeatureGeometry, Fixed64FeatureKind, Fixed64Identities, Fixed64IndexedCoordinateSource,
-    Fixed64Ligand, Fixed64Pipeline, Fixed64PipelineContext, Fixed64Receptor, Fixed64RefinementMode,
-    Fixed64RunInput, Fixed64SourceEvidence, PositionSoa,
+    Fixed64LaneMetricsReceipt, Fixed64LaneMetricsReference, Fixed64Ligand, Fixed64Pipeline,
+    Fixed64PipelineContext, Fixed64Receptor, Fixed64RefinementMode, Fixed64RunInput,
+    Fixed64ScientificProjection, Fixed64SourceEvidence, PositionSoa,
 };
 use betelgeuze_sys as sys;
 use sha2::{Digest, Sha256};
@@ -309,7 +310,7 @@ fn complete_pipeline_is_raii_bound_to_the_exact_native_context() {
 fn assert_safe_run_returns_complete_receipt(
     fixture: &SingleAtomFixture,
     options: ContextOptions,
-) -> betelgeuze_runtime::Fixed64ScientificProjection {
+) -> (Fixed64ScientificProjection, Fixed64LaneMetricsReceipt) {
     let v7 = (0_u8..24)
         .map(|index| Fixed64IndexedCoordinateSource {
             source_index: u32::from(index),
@@ -681,14 +682,67 @@ fn assert_safe_run_returns_complete_receipt(
             row.output_proposal_sha256 == [0; 32] && row.output_coordinate_sha256 == [0; 32]
         }
     }));
-    projection
+    let reference = Fixed64LaneMetricsReference::new(
+        "synthetic-single-atom",
+        [0x88; 32],
+        run.exact_source_evidence.prepared_ligand_topology_sha256,
+        PositionSoa::new(&fixture.ligand_x, &fixture.ligand_y, &fixture.ligand_z),
+        &fixture.heavy_mask,
+        &[vec![0]],
+    )
+    .unwrap();
+    let metrics = Fixed64LaneMetricsReceipt::build(&receipt, reference).unwrap();
+    metrics.verify_against(&receipt).unwrap();
+    assert_eq!(metrics.candidate_denominator, 64);
+    assert_eq!(metrics.observations.len(), 64);
+    assert_eq!(metrics.lane_summaries.len(), 10);
+    assert_eq!(
+        metrics
+            .lane_summaries
+            .iter()
+            .map(|lane| lane.slot_count)
+            .sum::<u64>(),
+        64
+    );
+    assert_eq!(
+        metrics
+            .lane_summaries
+            .iter()
+            .map(|lane| lane.generated_count + lane.typed_failure_count)
+            .sum::<u64>(),
+        64
+    );
+    assert_eq!(
+        metrics
+            .lane_summaries
+            .iter()
+            .map(|lane| lane.generated_count)
+            .sum::<u64>(),
+        receipt.generated_count
+    );
+    assert_eq!(metrics.rmsd_threshold_angstrom, 2.0);
+    assert!(!metrics.result_dependent_allocation_consumed);
+    assert!(!metrics.metrics_used_to_change_rank);
+    assert!(!metrics.product_execution_authorized);
+    assert!(!metrics.public_or_scientific_claim_authorized);
+    assert_ne!(metrics.reference.receipt_sha256, [0; 32]);
+    assert_ne!(metrics.decision_sha256, [0; 32]);
+    assert_ne!(metrics.receipt_sha256, [0; 32]);
+    let mut mutated = metrics.clone();
+    mutated.observations[0].oracle_2a ^= true;
+    let error = mutated.verify_against(&receipt).unwrap_err();
+    assert_eq!(error.code, ErrorCode::AbiMismatch);
+    assert!(error.message.contains("full pipeline rederivation"));
+    (projection, metrics)
 }
 
 #[test]
 fn safe_run_returns_complete_fixed64_receipt_and_preserves_typed_failures() {
     let fixture = SingleAtomFixture::new();
-    let cpp = assert_safe_run_returns_complete_receipt(&fixture, ContextOptions::cpu_reference());
-    let rust = assert_safe_run_returns_complete_receipt(&fixture, ContextOptions::rust_cpu());
+    let (cpp, cpp_metrics) =
+        assert_safe_run_returns_complete_receipt(&fixture, ContextOptions::cpu_reference());
+    let (rust, rust_metrics) =
+        assert_safe_run_returns_complete_receipt(&fixture, ContextOptions::rust_cpu());
     assert_eq!(cpp.decision_sha256, rust.decision_sha256);
     assert_eq!(cpp.candidate_denominator, rust.candidate_denominator);
     assert_eq!(cpp.primary_slot_indices, rust.primary_slot_indices);
@@ -698,6 +752,46 @@ fn safe_run_returns_complete_fixed64_receipt_and_preserves_typed_failures() {
     assert_eq!(cpp.post_rejected_count, rust.post_rejected_count);
     assert_eq!(cpp.scored_count, rust.scored_count);
     assert_eq!(cpp.valid_count, rust.valid_count);
+    assert_eq!(
+        cpp_metrics.candidate_denominator,
+        rust_metrics.candidate_denominator
+    );
+    assert_eq!(cpp_metrics.decision_sha256, rust_metrics.decision_sha256);
+    assert_eq!(cpp_metrics.lane_summaries, rust_metrics.lane_summaries);
+    assert_eq!(
+        cpp_metrics.oracle_selection.failure_class,
+        rust_metrics.oracle_selection.failure_class
+    );
+    assert_eq!(
+        cpp_metrics.oracle_selection.proposal_oracle_success,
+        rust_metrics.oracle_selection.proposal_oracle_success
+    );
+    assert_eq!(
+        cpp_metrics.oracle_selection.valid_proposal_oracle_success,
+        rust_metrics.oracle_selection.valid_proposal_oracle_success
+    );
+    assert_eq!(
+        cpp_metrics.conformer_orientation_interaction,
+        rust_metrics.conformer_orientation_interaction
+    );
+    for (cpp_row, rust_row) in cpp_metrics
+        .observations
+        .iter()
+        .zip(&rust_metrics.observations)
+    {
+        assert_eq!(cpp_row.slot_index, rust_row.slot_index);
+        assert_eq!(cpp_row.lane, rust_row.lane);
+        assert_eq!(cpp_row.coordinate_ready, rust_row.coordinate_ready);
+        assert_eq!(cpp_row.exact_valid, rust_row.exact_valid);
+        assert_eq!(cpp_row.oracle_2a, rust_row.oracle_2a);
+        assert_eq!(cpp_row.valid_oracle_2a, rust_row.valid_oracle_2a);
+        if cpp_row.rmsd_evaluated {
+            assert_numeric_parity(
+                cpp_row.symmetry_aware_direct_heavy_atom_rmsd_angstrom,
+                rust_row.symmetry_aware_direct_heavy_atom_rmsd_angstrom,
+            );
+        }
+    }
     for (cpp_row, rust_row) in cpp.candidate_rows.iter().zip(&rust.candidate_rows) {
         assert_eq!(cpp_row.slot_index, rust_row.slot_index);
         assert_eq!(

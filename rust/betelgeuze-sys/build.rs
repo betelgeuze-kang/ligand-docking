@@ -3,9 +3,9 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 const QUALIFIED_ROCM_RELEASE_PREFIX: &str = "6.0.2-";
-const QUALIFICATION_BUILD_ENV: &str = "BETELGEUZE_V6_QUALIFICATION_BUILD";
+const QUALIFICATION_BUILD_ENV: &str = "BETELGEUZE_V7_QUALIFICATION_BUILD";
 const QUALIFICATION_RUSTC_WRAPPER_RELATIVE_PATH: &str =
-    "tools/verify_engine_v2_native_fixed64_cpu_v6_rustc_wrapper.py";
+    "tools/verify_engine_v2_native_fixed64_cpu_v7_rustc_wrapper.py";
 const QUALIFICATION_CPP_COMPILER: &str = "/usr/bin/x86_64-linux-gnu-g++-11";
 const QUALIFICATION_CPP_FLAGS: &[&str] = &[
     "-std=c++17",
@@ -133,17 +133,17 @@ fn qualification_build_requested() -> bool {
     let workspace_root = manifest_dir
         .join("..")
         .canonicalize()
-        .expect("v6 native qualification workspace root must resolve");
+        .expect("v7 native qualification workspace root must resolve");
     let out_dir = PathBuf::from(std::env::var_os("OUT_DIR").expect("OUT_DIR is set by Cargo"))
         .canonicalize()
-        .expect("v6 native qualification OUT_DIR must resolve");
-    let expected_build_root = workspace_root.join("target/qualification-v6/build");
+        .expect("v7 native qualification OUT_DIR must resolve");
+    let expected_build_root = workspace_root.join("target/qualification-v7/build");
     let expected_wrapper = workspace_root
         .parent()
-        .expect("v6 native qualification repository root must exist")
+        .expect("v7 native qualification repository root must exist")
         .join(QUALIFICATION_RUSTC_WRAPPER_RELATIVE_PATH)
         .canonicalize()
-        .expect("v6 native qualification rustc wrapper must resolve");
+        .expect("v7 native qualification rustc wrapper must resolve");
     let wrapper_is_exact = std::env::var_os("RUSTC_WRAPPER")
         .map(PathBuf::from)
         .and_then(|path| path.canonicalize().ok())
@@ -220,7 +220,7 @@ fn qualification_build_requested() -> bool {
         .collect::<Vec<_>>();
     assert!(
         failures.is_empty(),
-        "v6 native qualification compiler configuration changed: {}",
+        "v7 native qualification compiler configuration changed: {}",
         failures.join(", ")
     );
     true
@@ -476,7 +476,7 @@ fn main() {
     let hip_safe_link = build_hip_safe_provider(&manifest_dir, &include_dir, &hip_provider_source);
     assert!(
         !qualification_build || hip_safe_link.is_none(),
-        "v6 CPU qualification build cannot link hip_safe"
+        "v7 CPU qualification build cannot link hip_safe"
     );
     let mut native_build = cc::Build::new();
     native_build
@@ -584,7 +584,7 @@ fn main() {
     if qualification_build {
         assert!(
             !native_build.get_compiler().is_like_msvc(),
-            "v6 CPU qualification compiler must be GNU C++"
+            "v7 CPU qualification compiler must be GNU C++"
         );
     } else if native_build.get_compiler().is_like_msvc() {
         native_build.flag_if_supported("/fp:strict");
