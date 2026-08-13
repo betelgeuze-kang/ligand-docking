@@ -83,6 +83,12 @@ NATIVE_VENDOR_COPY_SOURCE_RELATIVE_PATHS = tuple(
     Path("rust/betelgeuze-sys/vendor") / path
     for path in NATIVE_VENDOR_CANONICAL_SOURCE_RELATIVE_PATHS
 )
+RUST_COMPILED_SOURCE_TREE_ROOT_RELATIVE_PATHS = (
+    Path("rust/betelgeuze-docking-search/src"),
+    Path("rust/betelgeuze-runtime/src"),
+    Path("rust/betelgeuze-sys/src"),
+    Path("rust/cpu-kernel/src"),
+)
 NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS = (
     *NATIVE_VENDOR_CANONICAL_SOURCE_RELATIVE_PATHS,
     *NATIVE_VENDOR_COPY_SOURCE_RELATIVE_PATHS,
@@ -94,8 +100,12 @@ NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS = (
     Path("rust/betelgeuze-sys/build.rs"),
     Path("rust/betelgeuze-sys/src/lib.rs"),
     Path("rust/betelgeuze-runtime/Cargo.toml"),
+    Path("rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v4.rs"),
     Path("rust/betelgeuze-runtime/src/docking.rs"),
+    Path("rust/betelgeuze-runtime/src/dynamics.rs"),
+    Path("rust/betelgeuze-runtime/src/forcefield.rs"),
     Path("rust/betelgeuze-runtime/src/lib.rs"),
+    Path("rust/betelgeuze-runtime/src/qualification.rs"),
     Path("rust/cpu-kernel/Cargo.toml"),
     Path("rust/cpu-kernel/src/docking_fixed64_allocation.rs"),
     Path("rust/cpu-kernel/src/docking_fixed64_indexed_so3.rs"),
@@ -236,13 +246,26 @@ def require_native_vendor_tree_paths(observed_paths: tuple[str, ...]) -> None:
         _fail("native vendor tree contains an unbound or missing source")
 
 
+def _require_directory_chain(root: Path, relative: Path, label: str) -> Path:
+    current = root
+    for part in relative.parts:
+        current /= part
+        if current.is_symlink() or not current.is_dir():
+            _fail(f"{label} is missing, invalid, or symlinked")
+    return current
+
+
 def discover_native_vendor_tree_paths(root: Path) -> tuple[str, ...]:
-    vendor_roots = (
-        root / "rust/betelgeuze-sys/vendor/include",
-        root / "rust/betelgeuze-sys/vendor/native",
+    vendor_base = Path("rust/betelgeuze-sys/vendor")
+    _require_directory_chain(root, vendor_base, "native vendor root")
+    vendor_roots = tuple(
+        _require_directory_chain(
+            root,
+            vendor_base / child,
+            "native vendor root",
+        )
+        for child in ("include", "native")
     )
-    if any(vendor_root.is_symlink() or not vendor_root.is_dir() for vendor_root in vendor_roots):
-        _fail("native vendor root is missing, invalid, or symlinked")
     vendor_entries = tuple(
         sorted(
             path
@@ -255,6 +278,44 @@ def discover_native_vendor_tree_paths(root: Path) -> tuple[str, ...]:
         _fail("native vendor tree contains a symlink")
     observed_paths = tuple(path.relative_to(root).as_posix() for path in vendor_entries)
     require_native_vendor_tree_paths(observed_paths)
+    return observed_paths
+
+
+def require_rust_compiled_source_tree_paths(observed_paths: tuple[str, ...]) -> None:
+    roots = tuple(
+        f"{path.as_posix()}/" for path in RUST_COMPILED_SOURCE_TREE_ROOT_RELATIVE_PATHS
+    )
+    expected_paths = tuple(
+        path.as_posix()
+        for path in NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS
+        if path.suffix == ".rs" and path.as_posix().startswith(roots)
+    )
+    if (
+        len(observed_paths) != len(set(observed_paths))
+        or tuple(sorted(observed_paths)) != tuple(sorted(expected_paths))
+    ):
+        _fail("Rust compiled source tree contains an unbound or missing source")
+
+
+def discover_rust_compiled_source_tree_paths(root: Path) -> tuple[str, ...]:
+    source_roots = tuple(
+        _require_directory_chain(root, relative, "Rust compiled source root")
+        for relative in RUST_COMPILED_SOURCE_TREE_ROOT_RELATIVE_PATHS
+    )
+    tree_entries = tuple(
+        sorted(
+            path
+            for source_root in source_roots
+            for path in source_root.rglob("*")
+        )
+    )
+    if any(path.is_symlink() for path in tree_entries):
+        _fail("Rust compiled source tree contains a symlink")
+    source_entries = tuple(path for path in tree_entries if path.suffix == ".rs")
+    if any(not path.is_file() for path in source_entries):
+        _fail("Rust compiled source tree contains an invalid Rust source")
+    observed_paths = tuple(path.relative_to(root).as_posix() for path in source_entries)
+    require_rust_compiled_source_tree_paths(observed_paths)
     return observed_paths
 
 
@@ -539,10 +600,12 @@ def require_compiled_profile_binding(
     probe_source_raw: bytes,
     transitive_sources_raw: dict[str, bytes],
     native_vendor_tree_paths: tuple[str, ...],
+    rust_compiled_source_tree_paths: tuple[str, ...],
 ) -> None:
     """Bind the native gate constants and entry point to the frozen JSON."""
 
     require_native_vendor_tree_paths(native_vendor_tree_paths)
+    require_rust_compiled_source_tree_paths(rust_compiled_source_tree_paths)
     try:
         source = qualification_source_raw.decode("ascii")
         probe = probe_source_raw.decode("ascii")
@@ -587,10 +650,15 @@ def require_compiled_profile_binding(
     transitive_digest = _transitive_source_manifest_sha256(transitive_sources_raw)
     if transitive_digest != core.get("native_transitive_source_manifest_sha256"):
         _fail("compiled native transitive source manifest changed from the frozen profile")
-    if docking_source_raw != transitive_sources_raw.get(
-        DOCKING_SOURCE_RELATIVE_PATH.as_posix()
-    ) or native_pipeline_source_raw != transitive_sources_raw.get(
-        NATIVE_PIPELINE_SOURCE_RELATIVE_PATH.as_posix()
+    direct_sources = {
+        QUALIFICATION_SOURCE_RELATIVE_PATH.as_posix(): qualification_source_raw,
+        DOCKING_SOURCE_RELATIVE_PATH.as_posix(): docking_source_raw,
+        NATIVE_PIPELINE_SOURCE_RELATIVE_PATH.as_posix(): native_pipeline_source_raw,
+        PROBE_SOURCE_RELATIVE_PATH.as_posix(): probe_source_raw,
+    }
+    if any(
+        source_raw != transitive_sources_raw.get(path)
+        for path, source_raw in direct_sources.items()
     ):
         _fail("compiled pipeline source inputs are cross-wired from the transitive manifest")
     library_activation_function = re.compile(
@@ -840,6 +908,7 @@ def main() -> int:
     raw = (root / PROFILE_RELATIVE_PATH).read_bytes()
     profile = require_profile_document(raw)
     vendor_tree_paths = discover_native_vendor_tree_paths(root)
+    rust_source_tree_paths = discover_rust_compiled_source_tree_paths(root)
     require_compiled_profile_binding(
         profile,
         (root / QUALIFICATION_SOURCE_RELATIVE_PATH).read_bytes(),
@@ -851,6 +920,7 @@ def main() -> int:
             for path in NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS
         },
         vendor_tree_paths,
+        rust_source_tree_paths,
     )
     print(
         json.dumps(

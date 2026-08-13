@@ -41,7 +41,7 @@ lane allocation, and refinement parameter:
   `9c93753ae23363c20d2f957fb521eedd1fe4f92fc39282c03c53d1f2674610c2`.
 
 The frozen JSON also binds the exact qualification, native probe, Rust pipeline,
-and C++ pipeline implementation source SHA-256 identities. A 151-file canonical
+and C++ pipeline implementation source SHA-256 identities. A 155-file canonical
 and vendored transitive-source manifest additionally covers the native ABI and context,
 proposal/admission/refinement/scorer/validity/ranking/clustering kernels, the
 Rust CPU providers, the docking-search crate, Cargo manifests and lockfile, and
@@ -49,8 +49,9 @@ the vendored-native build binding. Changing a fixture literal, run-input
 construction, any measured kernel, scoring/refinement/projection/receipt
 behavior, build routing, dependency identity, canonical/vendor equality, or
 guard-to-measurement control flow therefore fails static verification. Every
-file exposed in the compiled native vendor tree is bound; extra and symlinked
-vendor inputs fail closed. Runtime tests independently
+file exposed in the compiled native vendor tree and in all four local Rust
+dependency source trees is bound; extra, missing, and symlinked source inputs or
+parent directories fail closed. Runtime tests independently
 rederive and compare the full payload digest.
 
 ## Parity boundary

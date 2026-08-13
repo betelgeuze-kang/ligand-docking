@@ -12,10 +12,14 @@ import pytest
 from tools.verify_engine_v2_native_fixed64_cpu_profile_v4 import (
     NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS,
     NATIVE_VENDOR_COPY_SOURCE_RELATIVE_PATHS,
+    RUST_COMPILED_SOURCE_TREE_ROOT_RELATIVE_PATHS,
     NativeFixed64CPUProfileV4Error,
+    _transitive_source_manifest_sha256,
     discover_native_vendor_tree_paths,
+    discover_rust_compiled_source_tree_paths,
     require_compiled_profile_binding,
     require_native_vendor_tree_paths,
+    require_rust_compiled_source_tree_paths,
     require_profile_document,
 )
 
@@ -37,6 +41,15 @@ _TRANSITIVE_SOURCES = {
 _VENDOR_TREE_PATHS = tuple(
     path.as_posix() for path in NATIVE_VENDOR_COPY_SOURCE_RELATIVE_PATHS
 )
+_RUST_SOURCE_TREE_PATHS = tuple(
+    path.as_posix()
+    for path in NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS
+    if path.suffix == ".rs"
+    and any(
+        path.is_relative_to(root)
+        for root in RUST_COMPILED_SOURCE_TREE_ROOT_RELATIVE_PATHS
+    )
+)
 
 
 def _canonical(value: object) -> bytes:
@@ -57,7 +70,7 @@ def test_canonical_native_fixed64_cpu_profile_v4_is_frozen() -> None:
     profile = require_profile_document(raw)
 
     assert hashlib.sha256(raw).hexdigest() == (
-        "2006f52041c39897f6f2d0b308f425f5ca7917919fdcd7388ae5ef372e0145e2"
+        "6050319c55441993fb9d35bfbda4408f823880e9909d29efae2a0dd19b0f4406"
     )
     assert profile["profile_id"] == "engine_v2_native_fixed64_cpu_synthetic_v4"
     assert all(value is False for value in profile["authority"].values())
@@ -84,6 +97,7 @@ def test_canonical_native_fixed64_cpu_profile_v4_is_frozen() -> None:
         _PROBE_SOURCE.read_bytes(),
         dict(_TRANSITIVE_SOURCES),
         _VENDOR_TREE_PATHS,
+        _RUST_SOURCE_TREE_PATHS,
     )
 
 
@@ -187,6 +201,7 @@ def test_profile_v4_rejects_compiled_gate_drift(
             probe,
             dict(_TRANSITIVE_SOURCES),
             _VENDOR_TREE_PATHS,
+            _RUST_SOURCE_TREE_PATHS,
         )
 
 
@@ -206,6 +221,13 @@ def test_profile_v4_rejects_measurement_moved_before_activation_guard() -> None:
     core = profile["measurement_core"]
     assert type(core) is dict
     core["native_probe_source_sha256"] = hashlib.sha256(probe).hexdigest()
+    changed = dict(_TRANSITIVE_SOURCES)
+    changed[
+        "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v4.rs"
+    ] = probe
+    core["native_transitive_source_manifest_sha256"] = (
+        _transitive_source_manifest_sha256(changed)
+    )
 
     with pytest.raises(NativeFixed64CPUProfileV4Error, match="entry point|precede"):
         require_compiled_profile_binding(
@@ -214,8 +236,9 @@ def test_profile_v4_rejects_measurement_moved_before_activation_guard() -> None:
             _DOCKING_SOURCE.read_bytes(),
             _NATIVE_PIPELINE_SOURCE.read_bytes(),
             probe,
-            dict(_TRANSITIVE_SOURCES),
+            changed,
             _VENDOR_TREE_PATHS,
+            _RUST_SOURCE_TREE_PATHS,
         )
 
 
@@ -245,6 +268,7 @@ def test_profile_v4_rejects_transitive_kernel_source_drift(target: str) -> None:
             _PROBE_SOURCE.read_bytes(),
             changed,
             _VENDOR_TREE_PATHS,
+            _RUST_SOURCE_TREE_PATHS,
         )
 
 
@@ -265,6 +289,32 @@ def test_profile_v4_rejects_transitive_source_path_omission() -> None:
             _PROBE_SOURCE.read_bytes(),
             changed,
             _VENDOR_TREE_PATHS,
+            _RUST_SOURCE_TREE_PATHS,
+        )
+
+
+def test_profile_v4_rejects_cross_wired_qualification_source() -> None:
+    profile = require_profile_document(_PROFILE.read_bytes())
+    qualification = _QUALIFICATION_SOURCE.read_bytes() + b"\n// direct-only drift\n"
+    core = profile["measurement_core"]
+    assert type(core) is dict
+    core["native_qualification_source_sha256"] = hashlib.sha256(
+        qualification
+    ).hexdigest()
+
+    with pytest.raises(
+        NativeFixed64CPUProfileV4Error,
+        match="cross-wired",
+    ):
+        require_compiled_profile_binding(
+            profile,
+            qualification,
+            _DOCKING_SOURCE.read_bytes(),
+            _NATIVE_PIPELINE_SOURCE.read_bytes(),
+            _PROBE_SOURCE.read_bytes(),
+            dict(_TRANSITIVE_SOURCES),
+            _VENDOR_TREE_PATHS,
+            _RUST_SOURCE_TREE_PATHS,
         )
 
 
@@ -285,6 +335,7 @@ def test_profile_v4_rejects_abi_probe_source_drift() -> None:
             _PROBE_SOURCE.read_bytes(),
             changed,
             _VENDOR_TREE_PATHS,
+            _RUST_SOURCE_TREE_PATHS,
         )
 
 
@@ -307,6 +358,7 @@ def test_profile_v4_rejects_vendor_source_drift() -> None:
             _PROBE_SOURCE.read_bytes(),
             changed,
             _VENDOR_TREE_PATHS,
+            _RUST_SOURCE_TREE_PATHS,
         )
 
 
@@ -330,6 +382,7 @@ def test_profile_v4_rejects_vendor_equality_manifest_drift() -> None:
             _PROBE_SOURCE.read_bytes(),
             changed,
             _VENDOR_TREE_PATHS,
+            _RUST_SOURCE_TREE_PATHS,
         )
 
 
@@ -357,6 +410,7 @@ def test_profile_v4_rejects_cfg_shadowed_vendor_declaration() -> None:
             _PROBE_SOURCE.read_bytes(),
             changed,
             _VENDOR_TREE_PATHS,
+            _RUST_SOURCE_TREE_PATHS,
         )
 
 
@@ -388,6 +442,83 @@ def test_profile_v4_rejects_symlinked_vendor_root(tmp_path: Path) -> None:
         match="vendor root is missing, invalid, or symlinked",
     ):
         discover_native_vendor_tree_paths(tmp_path)
+
+
+def test_profile_v4_rejects_symlinked_vendor_parent(tmp_path: Path) -> None:
+    external = tmp_path / "external-vendor"
+    (external / "include").mkdir(parents=True)
+    (external / "native").mkdir()
+    parent = tmp_path / "rust/betelgeuze-sys"
+    parent.mkdir(parents=True)
+    (parent / "vendor").symlink_to(external, target_is_directory=True)
+
+    with pytest.raises(
+        NativeFixed64CPUProfileV4Error,
+        match="vendor root is missing, invalid, or symlinked",
+    ):
+        discover_native_vendor_tree_paths(tmp_path)
+
+
+@pytest.mark.parametrize(
+    "target",
+    (
+        "rust/betelgeuze-runtime/src/dynamics.rs",
+        "rust/betelgeuze-runtime/src/forcefield.rs",
+    ),
+)
+def test_profile_v4_rejects_runtime_module_drift(target: str) -> None:
+    profile = require_profile_document(_PROFILE.read_bytes())
+    changed = dict(_TRANSITIVE_SOURCES)
+    changed[target] += b"\n// compiled runtime semantic drift\n"
+
+    with pytest.raises(
+        NativeFixed64CPUProfileV4Error,
+        match="transitive source manifest",
+    ):
+        require_compiled_profile_binding(
+            profile,
+            _QUALIFICATION_SOURCE.read_bytes(),
+            _DOCKING_SOURCE.read_bytes(),
+            _NATIVE_PIPELINE_SOURCE.read_bytes(),
+            _PROBE_SOURCE.read_bytes(),
+            changed,
+            _VENDOR_TREE_PATHS,
+            _RUST_SOURCE_TREE_PATHS,
+        )
+
+
+def test_profile_v4_rejects_unbound_rust_source() -> None:
+    with pytest.raises(
+        NativeFixed64CPUProfileV4Error,
+        match="Rust compiled source tree contains an unbound",
+    ):
+        require_rust_compiled_source_tree_paths(
+            _RUST_SOURCE_TREE_PATHS
+            + ("rust/betelgeuze-runtime/src/unbound_module.rs",)
+        )
+
+
+def test_profile_v4_discovers_exact_rust_source_tree() -> None:
+    assert discover_rust_compiled_source_tree_paths(_ROOT) == tuple(
+        sorted(_RUST_SOURCE_TREE_PATHS)
+    )
+
+
+def test_profile_v4_rejects_symlinked_rust_source_subdirectory(
+    tmp_path: Path,
+) -> None:
+    for relative in RUST_COMPILED_SOURCE_TREE_ROOT_RELATIVE_PATHS:
+        (tmp_path / relative).mkdir(parents=True)
+    external = tmp_path / "external-rust-source"
+    external.mkdir()
+    runtime_root = tmp_path / "rust/betelgeuze-runtime/src"
+    (runtime_root / "linked").symlink_to(external, target_is_directory=True)
+
+    with pytest.raises(
+        NativeFixed64CPUProfileV4Error,
+        match="Rust compiled source tree contains a symlink",
+    ):
+        discover_rust_compiled_source_tree_paths(tmp_path)
 
 
 @pytest.mark.parametrize(
@@ -444,7 +575,7 @@ def test_profile_v4_cli_reports_non_consuming_authority_false() -> None:
         "fixture_count": 2,
         "profile_id": "engine_v2_native_fixed64_cpu_synthetic_v4",
         "profile_sha256": (
-            "2006f52041c39897f6f2d0b308f425f5ca7917919fdcd7388ae5ef372e0145e2"
+            "6050319c55441993fb9d35bfbda4408f823880e9909d29efae2a0dd19b0f4406"
         ),
         "reservation_created": False,
         "status": "verified",
