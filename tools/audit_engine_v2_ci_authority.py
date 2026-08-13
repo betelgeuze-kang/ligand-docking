@@ -424,11 +424,13 @@ def _workflow_invokes_native_fixed64_cpu_v4_live_probe(text: str) -> bool:
             if any(
                 command in invocation
                 for command in NATIVE_FIXED64_CPU_V4_CARGO_RUN_SUBCOMMANDS
-            ) and re.search(
-                NATIVE_FIXED64_CPU_V4_EXPLICIT_BIN_PATTERN,
-                " ".join(invocation),
-            ) is None:
-                return True
+            ):
+                cargo_arguments = invocation[: invocation.index("--")] if "--" in invocation else invocation
+                if re.search(
+                    NATIVE_FIXED64_CPU_V4_EXPLICIT_BIN_PATTERN,
+                    " ".join(cargo_arguments),
+                ) is None:
+                    return True
     return False
 
 

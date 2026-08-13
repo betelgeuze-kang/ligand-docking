@@ -771,6 +771,8 @@ def test_native_fixed64_cpu_v4_missing_restriction_fails_ci_audit(
         "cargo r -p betelgeuze-runtime",
         "cargo --color always r --manifest-path rust/betelgeuze-runtime/Cargo.toml",
         "cargo +stable --locked r -p betelgeuze-runtime",
+        "cargo run -p betelgeuze-runtime -- --bin unrelated-binary-argument",
+        "cargo r -p betelgeuze-runtime -- --bin=unrelated-binary-argument",
         (
             "cargo run -p betelgeuze-runtime && "
             "cargo run --bin unrelated-explicit-tool"
