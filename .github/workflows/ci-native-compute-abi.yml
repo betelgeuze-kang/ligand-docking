@@ -123,6 +123,7 @@ jobs:
             config/engine_v2_native_fixed64_cpu_profile_v6_sources.json
             config/engine_v2_native_fixed64_cpu_profile_v7.json
             config/engine_v2_native_fixed64_cpu_profile_v7_sources.json
+            config/engine_v2_native_fixed64_cpu_post_qualification_build_boundary_v1.json
             config/engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt.json
             tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py
             tools/verify_engine_v2_native_fixed64_cpu_profile_v5.py
@@ -133,6 +134,12 @@ jobs:
             tools/verify_engine_v2_native_fixed64_cpu_v7_rustc_wrapper.py
             tools/verify_engine_v2_native_fixed64_cpu_v7_evidence.py
             tools/verify_engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt.py
+
+      - name: Fetch consumed native fixed64 CPU v7 source object
+        run: |
+          git fetch --no-tags --depth=1 origin 5c1e4791e988d4c75a5111f933feac85236ba821
+          test "$(git rev-parse --verify '5c1e4791e988d4c75a5111f933feac85236ba821^{commit}')" = \
+            "5c1e4791e988d4c75a5111f933feac85236ba821"
 
       - name: Report hosted toolchain
         run: |

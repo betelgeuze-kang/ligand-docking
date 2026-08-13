@@ -272,6 +272,7 @@ NATIVE_FIXED64_CPU_V6_FALSE_RESTRICTION_KEYS = (
     "test_double_production_authority_allowed",
 )
 NATIVE_FIXED64_CPU_V7_CONTRACT_PATHS = (
+    ".github/workflows/ci-native-compute-abi.yml",
     ".github/workflows/ci-native-hip-safe-trusted.yml",
     ".github/workflows/ci-engine-v2-release-candidate.yml",
     "config/engine_v2_native_fixed64_cpu_profile_v6_archive.json",
@@ -315,6 +316,9 @@ NATIVE_FIXED64_CPU_V7_COMPILE_BOUND_CONFIG_PATHS = (
     "config/engine_v2_native_fixed64_cpu_profile_v7_sources.json",
 )
 NATIVE_FIXED64_CPU_V7_REQUIRED_TOKEN_COUNTS = {
+    ".github/workflows/ci-native-compute-abi.yml": 1,
+    "git fetch --no-tags --depth=1 origin 5c1e4791e988d4c75a5111f933feac85236ba821": 1,
+    "git rev-parse --verify '5c1e4791e988d4c75a5111f933feac85236ba821^{commit}'": 1,
     "config/engine_v2_native_fixed64_cpu_profile_v6_archive.json": 2,
     "config/engine_v2_native_fixed64_cpu_profile_v7.json": 2,
     "config/engine_v2_native_fixed64_cpu_profile_v7_sources.json": 2,
@@ -1092,6 +1096,8 @@ def _native_fixed64_cpu_v7_authority_is_fail_closed(repo_root: Path) -> bool:
     release_workflow_path = (
         repo_root / ".github/workflows/ci-engine-v2-release-candidate.yml"
     )
+    main_workflow_path = repo_root / ".github/workflows/ci-engine-v2-main.yml"
+    native_workflow_path = repo_root / ".github/workflows/ci-native-compute-abi.yml"
     hip_workflow_path = repo_root / ".github/workflows/ci-native-hip-safe-trusted.yml"
     wrapper_lock_path = repo_root / "rust_engine_v2/Cargo.lock"
     try:
@@ -1167,6 +1173,8 @@ def _native_fixed64_cpu_v7_authority_is_fail_closed(repo_root: Path) -> bool:
         runner = runner_source_raw.decode("utf-8")
         binary = binary_source_raw.decode("utf-8")
         release_workflow = release_workflow_path.read_text(encoding="utf-8")
+        main_workflow = main_workflow_path.read_text(encoding="utf-8")
+        native_workflow = native_workflow_path.read_text(encoding="utf-8")
         hip_workflow = hip_workflow_path.read_text(encoding="utf-8")
         wrapper_lock = wrapper_lock_path.read_text(encoding="utf-8")
     except (
@@ -1351,6 +1359,17 @@ def _native_fixed64_cpu_v7_authority_is_fail_closed(repo_root: Path) -> bool:
         )
         and release_workflow.count("-e BETELGEUZE_V7_NON_AUTHORITATIVE_PACKAGE_BUILD=1")
         == 1
+        and all(
+            workflow.count(
+                "git fetch --no-tags --depth=1 origin 5c1e4791e988d4c75a5111f933feac85236ba821"
+            )
+            == 1
+            and workflow.count(
+                "git rev-parse --verify '5c1e4791e988d4c75a5111f933feac85236ba821^{commit}'"
+            )
+            == 1
+            for workflow in (main_workflow, native_workflow)
+        )
         and "non-authoritative package build cannot activate" in release_workflow
         and re.search(
             r'\[\[package\]\]\nname = "betelgeuze-runtime"\n'

@@ -1255,6 +1255,25 @@ def test_native_fixed64_cpu_v7_release_sparse_checkout_binds_compiled_profiles(
     assert payload["native_fixed64_cpu_v7_contract_in_authoritative_ci"] is False
 
 
+def test_native_fixed64_cpu_v7_historical_source_fetch_is_required() -> None:
+    root = Path(__file__).resolve().parents[2]
+    workflow = (root / ".github/workflows/ci-native-compute-abi.yml").read_text(
+        encoding="utf-8"
+    )
+    assert (
+        workflow.count(
+            "git fetch --no-tags --depth=1 origin 5c1e4791e988d4c75a5111f933feac85236ba821"
+        )
+        == 1
+    )
+    assert (
+        workflow.count(
+            "git rev-parse --verify '5c1e4791e988d4c75a5111f933feac85236ba821^{commit}'"
+        )
+        == 1
+    )
+
+
 def test_native_fixed64_cpu_v7_hip_sparse_checkout_binds_compiled_profiles(
     tmp_path: Path,
 ) -> None:
