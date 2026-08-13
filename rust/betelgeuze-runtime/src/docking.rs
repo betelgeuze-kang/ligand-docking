@@ -60,6 +60,8 @@ use super::{
 };
 
 pub type Sha256 = [u8; 32];
+pub const FIXED64_NATIVE_PIPELINE_PROFILE_ID: &str =
+    "betelgeuze.engine_v2_native_fixed64_complete_pipeline/1.0.0";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Fixed64Donor {
@@ -630,6 +632,501 @@ pub struct Fixed64PipelineReceipt {
     pub top_k_slot_indices: Vec<u32>,
     pub receipts: Fixed64BatchReceipts,
     pub authority: Fixed64AuthorityDisposition,
+    pub scientific_projection_sha256: Sha256,
+}
+
+/// Backend-independent scientific projection of one complete fixed64 run.
+///
+/// Native receipt identities intentionally bind the selected backend and must
+/// not be compared across providers.  This projection excludes those receipt
+/// identities while retaining every fixed-denominator decision, failure code,
+/// ScorerV1 term, validity measurement, stable rank, V7 selection, coordinate,
+/// and cluster result needed for CPU/HIP parity qualification.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Fixed64ScientificProjection {
+    pub candidate_denominator: usize,
+    pub receptor_atom_count: usize,
+    pub ligand_atom_count: usize,
+    pub generated_count: u64,
+    pub typed_failure_count: u64,
+    pub initial_admitted_count: u64,
+    pub refined_count: u64,
+    pub scored_count: u64,
+    pub valid_count: u64,
+    pub cluster_count: u64,
+    pub primary_slot_indices: Vec<u32>,
+    pub valid_slot_indices: Vec<u32>,
+    pub representative_slot_indices: Vec<u32>,
+    pub top_k_slot_indices: Vec<u32>,
+    pub candidate_rows: Vec<Fixed64ScientificCandidateProjection>,
+    pub torsion_moves: Vec<Fixed64TorsionMoveEvidence>,
+    pub producer_coordinates: super::PositionSoaOwned,
+    pub rigid_coordinates: Fixed64RigidCoordinates,
+    pub torsion_coordinates: Fixed64TorsionCoordinates,
+    pub final_coordinates: super::PositionSoaOwned,
+    pub final_quaternions: [Vec<f64>; 4],
+    pub authority: Fixed64AuthorityDisposition,
+    pub decision_sha256: Sha256,
+    pub sha256: Sha256,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Fixed64ScientificCandidateProjection {
+    pub slot_index: u32,
+    pub lane: i32,
+    pub producer_status: i32,
+    pub producer_failure_code: i32,
+    pub placement_kind: i32,
+    pub component_failure_code: i32,
+    pub coordinates_available: bool,
+    pub steric_precheck_passed: bool,
+    pub source_identity_verified: bool,
+    pub allocation_identity_verified: bool,
+    pub geometric_identity_verified: bool,
+    pub denominator_preserved: bool,
+    pub placement_quaternion: [f64; 4],
+    pub allocation_slot_receipt_sha256: Sha256,
+    pub source_payload_receipt_sha256: Sha256,
+    pub source_proposal_sha256: Sha256,
+    pub source_coordinate_sha256: Sha256,
+    pub placement_receipt_sha256: Sha256,
+    pub output_proposal_sha256: Sha256,
+    pub output_coordinate_sha256: Sha256,
+    pub geometric_status: i32,
+    pub geometric_failure_code: i32,
+    pub geometric_decision: i32,
+    pub geometric_rank_eligible: bool,
+    pub exact_pair_count: u64,
+    pub penetration_pair_count: u64,
+    pub penetrating_atom_count: u64,
+    pub penetrating_heavy_atom_count: u64,
+    pub raw_minimum_distance_angstrom: f64,
+    pub minimum_vdw_surface_gap_angstrom: f64,
+    pub minimum_vdw_ratio: f64,
+    pub sphere_overlap_proxy_angstrom3: f64,
+    pub pocket_escape_angstrom: f64,
+    pub requested_refinement_mode: i32,
+    pub effective_refinement_mode: i32,
+    pub rigid: Fixed64RigidEvidence,
+    pub torsion: Fixed64TorsionEvidence,
+    pub refinement: Fixed64RefinementEvidence,
+    pub scorer: Fixed64ScorerEvidence,
+    pub validity: Fixed64ValidityEvidence,
+    pub ranking: Fixed64RankingEvidence,
+    pub cluster: Fixed64ClusterEvidence,
+}
+
+impl Fixed64PipelineReceipt {
+    /// Derive a backend-independent scientific projection from a validated
+    /// fixed64 receipt graph.
+    ///
+    /// The receipt fields remain public for evidence serialization.  Reject a
+    /// caller-mutated graph before indexing its parallel row channels so a
+    /// malformed artifact cannot panic or silently truncate the denominator.
+    pub fn scientific_projection(&self) -> Result<Fixed64ScientificProjection> {
+        self.validate_scientific_projection_receipt_graph()?;
+        let value = self.derive_scientific_projection();
+        if self.scientific_projection_sha256 != value.sha256 {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "fixed64 scientific projection changed after receipt issuance",
+            ));
+        }
+        Ok(value)
+    }
+
+    fn derive_scientific_projection(&self) -> Fixed64ScientificProjection {
+        let candidate_rows = (0..self.rows.len())
+            .map(|slot| {
+                let producer = self.producer_rows[slot];
+                let pipeline = self.rows[slot];
+                Fixed64ScientificCandidateProjection {
+                    slot_index: pipeline.slot_index,
+                    lane: producer.lane,
+                    producer_status: pipeline.producer_status,
+                    producer_failure_code: pipeline.producer_failure_code,
+                    placement_kind: producer.placement_kind,
+                    component_failure_code: producer.component_failure_code,
+                    coordinates_available: producer.coordinates_available,
+                    steric_precheck_passed: producer.steric_precheck_passed,
+                    source_identity_verified: producer.source_identity_verified,
+                    allocation_identity_verified: producer.allocation_identity_verified,
+                    geometric_identity_verified: producer.geometric_identity_verified,
+                    denominator_preserved: producer.denominator_preserved,
+                    placement_quaternion: producer.placement_quaternion,
+                    allocation_slot_receipt_sha256: producer.allocation_slot_receipt_sha256,
+                    source_payload_receipt_sha256: producer.source_payload_receipt_sha256,
+                    source_proposal_sha256: producer.source_proposal_sha256,
+                    source_coordinate_sha256: producer.source_coordinate_sha256,
+                    placement_receipt_sha256: producer.placement_receipt_sha256,
+                    output_proposal_sha256: producer.output_proposal_sha256,
+                    output_coordinate_sha256: producer.output_coordinate_sha256,
+                    geometric_status: producer.geometric.status,
+                    geometric_failure_code: producer.geometric.failure_code,
+                    geometric_decision: producer.geometric.decision,
+                    geometric_rank_eligible: producer.geometric.rank_eligible,
+                    exact_pair_count: producer.geometric.exact_pair_count,
+                    penetration_pair_count: producer.geometric.penetration_pair_count,
+                    penetrating_atom_count: producer.geometric.unique_ligand_penetration_atom_count,
+                    penetrating_heavy_atom_count: producer
+                        .geometric
+                        .unique_ligand_heavy_atom_penetration_count,
+                    raw_minimum_distance_angstrom: producer.geometric.raw_minimum_distance_angstrom,
+                    minimum_vdw_surface_gap_angstrom: producer
+                        .geometric
+                        .minimum_vdw_surface_gap_angstrom,
+                    minimum_vdw_ratio: producer.geometric.minimum_vdw_ratio,
+                    sphere_overlap_proxy_angstrom3: producer
+                        .geometric
+                        .sphere_overlap_proxy_angstrom3,
+                    pocket_escape_angstrom: producer.geometric.pocket_escape_angstrom,
+                    requested_refinement_mode: pipeline.requested_refinement_mode,
+                    effective_refinement_mode: pipeline.effective_refinement_mode,
+                    rigid: self.rigid_rows[slot],
+                    torsion: self.torsion_rows[slot],
+                    refinement: self.refinement_rows[slot],
+                    scorer: self.scorer_rows[slot],
+                    validity: self.validity_rows[slot],
+                    ranking: self.ranking_rows[slot],
+                    cluster: self.cluster_rows[slot],
+                }
+            })
+            .collect::<Vec<_>>();
+        let mut value = Fixed64ScientificProjection {
+            candidate_denominator: self.rows.len(),
+            receptor_atom_count: self.receptor_atom_count,
+            ligand_atom_count: self.ligand_atom_count,
+            generated_count: self.generated_count,
+            typed_failure_count: self.typed_failure_count,
+            initial_admitted_count: self.initial_admitted_count,
+            refined_count: self.refined_count,
+            scored_count: self.scored_count,
+            valid_count: self.valid_count,
+            cluster_count: self.cluster_count,
+            primary_slot_indices: self.primary_slot_indices.clone(),
+            valid_slot_indices: self.valid_slot_indices.clone(),
+            representative_slot_indices: self.representative_slot_indices.clone(),
+            top_k_slot_indices: self.top_k_slot_indices.clone(),
+            candidate_rows,
+            torsion_moves: self.torsion_moves.clone(),
+            producer_coordinates: self.producer_coordinates.clone(),
+            rigid_coordinates: self.rigid_coordinates.clone(),
+            torsion_coordinates: self.torsion_coordinates.clone(),
+            final_coordinates: self.final_coordinates.clone(),
+            final_quaternions: self.final_quaternions.clone(),
+            authority: self.authority,
+            decision_sha256: [0; 32],
+            sha256: [0; 32],
+        };
+        value.decision_sha256 = scientific_decision_sha256(&value);
+        value.sha256 = scientific_projection_sha256(&value);
+        value
+    }
+
+    fn validate_scientific_projection_receipt_graph(&self) -> Result<()> {
+        const CANDIDATE_COUNT: usize = sys::BG_DOCKING_FIXED64_CANDIDATE_COUNT as usize;
+        let row_channels = [
+            ("pipeline", self.rows.len()),
+            ("producer", self.producer_rows.len()),
+            ("rigid", self.rigid_rows.len()),
+            ("torsion", self.torsion_rows.len()),
+            ("refinement", self.refinement_rows.len()),
+            ("scorer", self.scorer_rows.len()),
+            ("validity", self.validity_rows.len()),
+            ("ranking", self.ranking_rows.len()),
+            ("cluster", self.cluster_rows.len()),
+        ];
+        if row_channels
+            .iter()
+            .any(|(_, length)| *length != CANDIDATE_COUNT)
+        {
+            let observed = row_channels
+                .iter()
+                .map(|(name, length)| format!("{name}={length}"))
+                .collect::<Vec<_>>()
+                .join(", ");
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                format!(
+                    "fixed64 scientific projection requires {CANDIDATE_COUNT} rows in every channel ({observed})"
+                ),
+            ));
+        }
+        const MOVES_PER_CANDIDATE: usize = sys::BG_DOCKING_TORSION_V7_MAX_MOVES as usize;
+        let expected_move_count = CANDIDATE_COUNT
+            .checked_mul(MOVES_PER_CANDIDATE)
+            .expect("fixed64 torsion move count fits usize");
+        if self.torsion_moves.len() != expected_move_count
+            || self.torsion_moves.iter().enumerate().any(|(index, row)| {
+                row.slot_index as usize != index / MOVES_PER_CANDIDATE
+                    || row.move_index as usize != index % MOVES_PER_CANDIDATE
+            })
+        {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "fixed64 scientific projection torsion moves are not index-aligned",
+            ));
+        }
+        let expected_coordinate_count = CANDIDATE_COUNT
+            .checked_mul(self.ligand_atom_count)
+            .ok_or_else(|| {
+                Error::local(
+                    ErrorCode::CapacityOverflow,
+                    "fixed64 scientific projection coordinate denominator overflowed",
+                )
+            })?;
+        let coordinate_channels = [
+            &self.producer_coordinates,
+            &self.rigid_coordinates.selected,
+            &self.rigid_coordinates.comparison_v2,
+            &self.rigid_coordinates.baseline_v3,
+            &self.rigid_coordinates.clearance_v4,
+            &self.torsion_coordinates.optimized,
+            &self.torsion_coordinates.final_state,
+            &self.final_coordinates,
+        ];
+        if coordinate_channels.iter().any(|coordinates| {
+            coordinates.x_angstrom.len() != expected_coordinate_count
+                || coordinates.y_angstrom.len() != expected_coordinate_count
+                || coordinates.z_angstrom.len() != expected_coordinate_count
+        }) || self
+            .torsion_coordinates
+            .optimized_torsion_angles_radians
+            .len()
+            != expected_coordinate_count
+            || self.torsion_coordinates.final_torsion_angles_radians.len()
+                != expected_coordinate_count
+            || self
+                .final_quaternions
+                .iter()
+                .any(|values| values.len() != CANDIDATE_COUNT)
+        {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "fixed64 scientific projection coordinate channels changed length",
+            ));
+        }
+        let producer_coordinates = [
+            self.producer_coordinates.x_angstrom.as_slice(),
+            self.producer_coordinates.y_angstrom.as_slice(),
+            self.producer_coordinates.z_angstrom.as_slice(),
+        ];
+        let rigid_coordinates = [
+            self.rigid_coordinates.selected.x_angstrom.as_slice(),
+            self.rigid_coordinates.selected.y_angstrom.as_slice(),
+            self.rigid_coordinates.selected.z_angstrom.as_slice(),
+            self.rigid_coordinates.comparison_v2.x_angstrom.as_slice(),
+            self.rigid_coordinates.comparison_v2.y_angstrom.as_slice(),
+            self.rigid_coordinates.comparison_v2.z_angstrom.as_slice(),
+            self.rigid_coordinates.baseline_v3.x_angstrom.as_slice(),
+            self.rigid_coordinates.baseline_v3.y_angstrom.as_slice(),
+            self.rigid_coordinates.baseline_v3.z_angstrom.as_slice(),
+            self.rigid_coordinates.clearance_v4.x_angstrom.as_slice(),
+            self.rigid_coordinates.clearance_v4.y_angstrom.as_slice(),
+            self.rigid_coordinates.clearance_v4.z_angstrom.as_slice(),
+        ];
+        let torsion_coordinates = [
+            self.torsion_coordinates.optimized.x_angstrom.as_slice(),
+            self.torsion_coordinates.optimized.y_angstrom.as_slice(),
+            self.torsion_coordinates.optimized.z_angstrom.as_slice(),
+            self.torsion_coordinates
+                .optimized_torsion_angles_radians
+                .as_slice(),
+            self.torsion_coordinates.final_state.x_angstrom.as_slice(),
+            self.torsion_coordinates.final_state.y_angstrom.as_slice(),
+            self.torsion_coordinates.final_state.z_angstrom.as_slice(),
+            self.torsion_coordinates
+                .final_torsion_angles_radians
+                .as_slice(),
+        ];
+        let final_coordinates = [
+            self.final_coordinates.x_angstrom.as_slice(),
+            self.final_coordinates.y_angstrom.as_slice(),
+            self.final_coordinates.z_angstrom.as_slice(),
+        ];
+        let final_quaternions = [
+            self.final_quaternions[0].as_slice(),
+            self.final_quaternions[1].as_slice(),
+            self.final_quaternions[2].as_slice(),
+            self.final_quaternions[3].as_slice(),
+        ];
+        let abi_torsion_moves = self
+            .torsion_moves
+            .iter()
+            .copied()
+            .map(abi_torsion_move_from_evidence)
+            .collect::<Vec<_>>();
+        let ligand_count_u64 = u64::try_from(self.ligand_atom_count).map_err(|_| {
+            Error::local(
+                ErrorCode::CapacityOverflow,
+                "fixed64 scientific projection ligand denominator does not fit u64",
+            )
+        })?;
+        for slot in 0..CANDIDATE_COUNT {
+            let expected_slot = u32::try_from(slot).expect("fixed64 slot fits u32");
+            let pipeline = self.rows[slot];
+            let producer = self.producer_rows[slot];
+            let rigid = self.rigid_rows[slot];
+            let torsion = self.torsion_rows[slot];
+            let refinement = self.refinement_rows[slot];
+            let scorer = self.scorer_rows[slot];
+            let validity = self.validity_rows[slot];
+            let ranking = self.ranking_rows[slot];
+            let cluster = self.cluster_rows[slot];
+            if [
+                pipeline.slot_index,
+                producer.slot_index,
+                rigid.slot_index,
+                torsion.slot_index,
+                refinement.slot_index,
+                scorer.slot_index,
+                validity.slot_index,
+                ranking.slot_index,
+                cluster.slot_index,
+            ]
+            .iter()
+            .any(|observed| *observed != expected_slot)
+            {
+                return Err(Error::local(
+                    ErrorCode::AbiMismatch,
+                    format!(
+                        "fixed64 scientific projection row channels are not aligned at slot {slot}"
+                    ),
+                ));
+            }
+            if pipeline.producer_status != producer.status
+                || pipeline.producer_failure_code != producer.failure_code
+                || pipeline.initial_admission_decision != producer.geometric.decision
+                || pipeline.effective_refinement_mode != rigid.candidate_mode
+                || pipeline.refinement_status != refinement.status
+                || pipeline.refinement_failure_stage != refinement.failure_stage
+                || pipeline.scorer_status != scorer.status
+                || pipeline.scorer_failure_code != scorer.failure_code
+                || pipeline.validity_status != validity.status
+                || pipeline.validity_failure_code != validity.failure_code
+                || pipeline.stable_rank != ranking.stable_rank
+                || pipeline.stable_valid_rank != ranking.stable_valid_rank
+                || pipeline.cluster_status != cluster.status
+                || pipeline.cluster_id != cluster.cluster_id
+                || pipeline.cluster_rank != cluster.cluster_rank
+                || pipeline.top_k_rank != cluster.top_k_rank
+                || pipeline.producer_row_receipt_sha256 != producer.row_receipt_sha256
+                || pipeline.final_coordinate_sha256 != refinement.coordinate_sha256
+            {
+                return Err(Error::local(
+                    ErrorCode::AbiMismatch,
+                    format!(
+                        "fixed64 scientific projection mirrored evidence changed at slot {slot}"
+                    ),
+                ));
+            }
+            let producer_segment =
+                coordinate_segment(producer_coordinates, slot, self.ligand_atom_count).ok_or_else(
+                    || {
+                        Error::local(
+                            ErrorCode::AbiMismatch,
+                            format!("fixed64 producer coordinate segment is absent at slot {slot}"),
+                        )
+                    },
+                )?;
+            let producer_coordinate_identity_matches = if producer.coordinates_available {
+                digest_present(&producer.output_coordinate_sha256)
+                    && canonical_coordinate_sha256(producer_segment)
+                        == producer.output_coordinate_sha256
+                    && coordinate_segment_matches(
+                        &producer_coordinates,
+                        slot,
+                        ligand_count_u64,
+                        false,
+                    )?
+            } else {
+                !digest_present(&producer.output_coordinate_sha256)
+                    && coordinate_segment_matches(
+                        &producer_coordinates,
+                        slot,
+                        ligand_count_u64,
+                        true,
+                    )?
+            };
+            let final_segment = coordinate_segment(final_coordinates, slot, self.ligand_atom_count)
+                .ok_or_else(|| {
+                    Error::local(
+                        ErrorCode::AbiMismatch,
+                        format!("fixed64 final coordinate segment is absent at slot {slot}"),
+                    )
+                })?;
+            let final_coordinate_identity_matches = if refinement.coordinate_available {
+                digest_present(&refinement.coordinate_sha256)
+                    && canonical_coordinate_sha256(final_segment) == refinement.coordinate_sha256
+                    && coordinate_segment_matches(
+                        &final_coordinates,
+                        slot,
+                        ligand_count_u64,
+                        false,
+                    )?
+            } else {
+                !digest_present(&refinement.coordinate_sha256)
+                    && coordinate_segment_matches(&final_coordinates, slot, ligand_count_u64, true)?
+            };
+            if !producer_coordinate_identity_matches || !final_coordinate_identity_matches {
+                return Err(Error::local(
+                    ErrorCode::AbiMismatch,
+                    format!(
+                        "fixed64 scientific projection coordinate identity changed at slot {slot}"
+                    ),
+                ));
+            }
+            let abi_rigid = abi_rigid_row_from_evidence(rigid);
+            let abi_torsion = abi_torsion_row_from_evidence(torsion);
+            let abi_refinement = abi_refinement_row_from_evidence(refinement);
+            let abi_scorer = abi_scorer_row_from_evidence(scorer);
+            let abi_validity = abi_validity_row_from_evidence(validity);
+            let abi_ranking = abi_ranking_row_from_evidence(ranking);
+            let abi_cluster = abi_cluster_row_from_evidence(cluster);
+            let abi_pipeline = abi_pipeline_row_from_evidence(pipeline);
+            let expected_refinement_evidence = canonical_refinement_evidence(
+                slot,
+                self.ligand_atom_count,
+                &abi_rigid,
+                &abi_torsion,
+                &abi_torsion_moves,
+                &abi_refinement,
+                rigid_coordinates,
+                torsion_coordinates,
+                final_coordinates,
+                final_quaternions,
+            )?;
+            let expected_scorer_evidence = canonical_scorer_evidence(&abi_scorer);
+            let expected_validity_evidence = canonical_validity_evidence(&abi_validity);
+            let expected_ranking_evidence = canonical_ranking_evidence(&abi_ranking);
+            let expected_cluster_evidence = canonical_cluster_evidence(&abi_cluster);
+            let expected_pipeline_receipt = canonical_pipeline_row_receipt(
+                &abi_pipeline,
+                self.receipts.component_binding_receipt_sha256,
+                self.receipts.refinement_policy_receipt_sha256,
+                expected_refinement_evidence,
+                expected_scorer_evidence,
+                expected_validity_evidence,
+                expected_ranking_evidence,
+                expected_cluster_evidence,
+            );
+            if pipeline.refinement_evidence_sha256 != expected_refinement_evidence
+                || pipeline.scorer_evidence_sha256 != expected_scorer_evidence
+                || pipeline.validity_evidence_sha256 != expected_validity_evidence
+                || pipeline.ranking_evidence_sha256 != expected_ranking_evidence
+                || pipeline.cluster_evidence_sha256 != expected_cluster_evidence
+                || pipeline.row_receipt_sha256 != expected_pipeline_receipt
+            {
+                return Err(Error::local(
+                    ErrorCode::AbiMismatch,
+                    format!(
+                        "fixed64 scientific projection component evidence changed at slot {slot}"
+                    ),
+                ));
+            }
+        }
+        Ok(())
+    }
 }
 
 struct ValidatedContext {
@@ -754,60 +1251,60 @@ fn digest_present(value: &Sha256) -> bool {
     value.iter().any(|byte| *byte != 0)
 }
 
-struct CanonicalHasher(Sha256Hasher);
+pub(crate) struct CanonicalHasher(Sha256Hasher);
 
 impl CanonicalHasher {
-    fn new(domain: &str) -> Self {
+    pub(crate) fn new(domain: &str) -> Self {
         let mut hasher = Self(Sha256Hasher::new());
         hasher.string(domain);
         hasher
     }
 
-    fn byte(&mut self, value: u8) {
+    pub(crate) fn byte(&mut self, value: u8) {
         self.0.update([value]);
     }
 
-    fn u32(&mut self, value: u32) {
+    pub(crate) fn u32(&mut self, value: u32) {
         self.0.update(value.to_be_bytes());
     }
 
-    fn i32(&mut self, value: i32) {
+    pub(crate) fn i32(&mut self, value: i32) {
         self.u32(value as u32);
     }
 
-    fn u64(&mut self, value: u64) {
+    pub(crate) fn u64(&mut self, value: u64) {
         self.0.update(value.to_be_bytes());
     }
 
-    fn usize(&mut self, value: usize) {
+    pub(crate) fn usize(&mut self, value: usize) {
         self.u64(u64::try_from(value).expect("bounded native receipt length fits u64"));
     }
 
-    fn f64(&mut self, value: f64) {
+    pub(crate) fn f64(&mut self, value: f64) {
         let canonical = if value == 0.0 { 0.0 } else { value };
         self.u64(canonical.to_bits());
     }
 
-    fn vec3(&mut self, value: Vec3) {
+    pub(crate) fn vec3(&mut self, value: Vec3) {
         self.f64(value.x);
         self.f64(value.y);
         self.f64(value.z);
     }
 
-    fn bytes(&mut self, value: &[u8]) {
+    pub(crate) fn bytes(&mut self, value: &[u8]) {
         self.usize(value.len());
         self.0.update(value);
     }
 
-    fn string(&mut self, value: &str) {
+    pub(crate) fn string(&mut self, value: &str) {
         self.bytes(value.as_bytes());
     }
 
-    fn digest(&mut self, value: Sha256) {
+    pub(crate) fn digest(&mut self, value: Sha256) {
         self.0.update(value);
     }
 
-    fn finish(self) -> Sha256 {
+    pub(crate) fn finish(self) -> Sha256 {
         self.0.finalize().into()
     }
 }
@@ -838,6 +1335,319 @@ fn hash_i32_channel(hash: &mut CanonicalHasher, values: &[i32]) {
     for value in values {
         hash.i32(*value);
     }
+}
+
+fn hash_u32_channel(hash: &mut CanonicalHasher, values: &[u32]) {
+    hash.usize(values.len());
+    for value in values {
+        hash.u32(*value);
+    }
+}
+
+fn hash_bool(hash: &mut CanonicalHasher, value: bool) {
+    hash.byte(u8::from(value));
+}
+
+fn hash_position_soa_owned(hash: &mut CanonicalHasher, value: &super::PositionSoaOwned) {
+    hash_f64_channel(hash, &value.x_angstrom);
+    hash_f64_channel(hash, &value.y_angstrom);
+    hash_f64_channel(hash, &value.z_angstrom);
+}
+
+fn hash_rigid_profile_decision(hash: &mut CanonicalHasher, value: Fixed64RigidProfileEvidence) {
+    hash.i32(value.profile);
+    hash_bool(hash, value.available);
+    hash.u64(value.accepted_steps);
+    hash.u64(value.accepted_translation_steps);
+    hash.u64(value.accepted_rotation_steps);
+    hash.u64(value.line_search_evaluation_count);
+    hash.u64(value.fallback_direction_step_count);
+}
+
+fn hash_rigid_profile_numeric(hash: &mut CanonicalHasher, value: Fixed64RigidProfileEvidence) {
+    hash.f64(value.initial_penalty);
+    hash.f64(value.final_penalty);
+    hash_f64_channel(hash, &value.total_translation_angstrom);
+    hash_f64_channel(hash, &value.total_rotation_vector_radians);
+    hash.f64(value.total_rotation_path_radians);
+    hash.f64(value.initial_centroid_offset_angstrom);
+    hash.f64(value.final_centroid_offset_angstrom);
+    hash.f64(value.maximum_centroid_offset_angstrom);
+}
+
+fn hash_authority_decision(hash: &mut CanonicalHasher, value: Fixed64AuthorityDisposition) {
+    hash_bool(hash, value.result_dependent_input_consumed);
+    hash_bool(hash, value.fallback_allowed);
+    hash_bool(hash, value.multi_anchor_consumed);
+    hash_bool(hash, value.denominator_preserved);
+    hash_bool(hash, value.molecular_execution_authorized);
+    hash_bool(hash, value.reservation_authorized);
+    hash_bool(hash, value.benchmark_execution_authorized);
+    hash_bool(hash, value.existing_rank_auto_change_authorized);
+    hash_bool(hash, value.customer_pose_emission_authorized);
+    hash_bool(hash, value.production_claim_authorized);
+    hash_bool(hash, value.scientific_claim_authorized);
+}
+
+fn scientific_decision_sha256(value: &Fixed64ScientificProjection) -> Sha256 {
+    let mut hash =
+        CanonicalHasher::new("betelgeuze.engine_v2_native_fixed64_scientific_decision/1.0.0");
+    hash.usize(value.candidate_denominator);
+    hash.usize(value.receptor_atom_count);
+    hash.usize(value.ligand_atom_count);
+    hash.u64(value.generated_count);
+    hash.u64(value.typed_failure_count);
+    hash.u64(value.initial_admitted_count);
+    hash.u64(value.refined_count);
+    hash.u64(value.scored_count);
+    hash.u64(value.valid_count);
+    hash.u64(value.cluster_count);
+    hash_u32_channel(&mut hash, &value.primary_slot_indices);
+    hash_u32_channel(&mut hash, &value.valid_slot_indices);
+    hash_u32_channel(&mut hash, &value.representative_slot_indices);
+    hash_u32_channel(&mut hash, &value.top_k_slot_indices);
+    hash_authority_decision(&mut hash, value.authority);
+    hash.usize(value.candidate_rows.len());
+    for row in &value.candidate_rows {
+        hash.u32(row.slot_index);
+        hash.i32(row.lane);
+        hash.i32(row.producer_status);
+        hash.i32(row.producer_failure_code);
+        hash.i32(row.placement_kind);
+        hash.i32(row.component_failure_code);
+        hash_bool(&mut hash, row.coordinates_available);
+        hash_bool(&mut hash, row.steric_precheck_passed);
+        hash_bool(&mut hash, row.source_identity_verified);
+        hash_bool(&mut hash, row.allocation_identity_verified);
+        hash_bool(&mut hash, row.geometric_identity_verified);
+        hash_bool(&mut hash, row.denominator_preserved);
+        hash.digest(row.allocation_slot_receipt_sha256);
+        hash.digest(row.source_payload_receipt_sha256);
+        hash.digest(row.source_proposal_sha256);
+        hash.digest(row.source_coordinate_sha256);
+        hash.i32(row.geometric_status);
+        hash.i32(row.geometric_failure_code);
+        hash.i32(row.geometric_decision);
+        hash_bool(&mut hash, row.geometric_rank_eligible);
+        hash.u64(row.exact_pair_count);
+        hash.u64(row.penetration_pair_count);
+        hash.u64(row.penetrating_atom_count);
+        hash.u64(row.penetrating_heavy_atom_count);
+        hash.i32(row.requested_refinement_mode);
+        hash.i32(row.effective_refinement_mode);
+
+        let rigid = row.rigid;
+        hash.u32(rigid.slot_index);
+        hash.i32(rigid.status);
+        hash.i32(rigid.failure_code);
+        hash.i32(rigid.candidate_mode);
+        hash.i32(rigid.selected_profile);
+        hash_bool(&mut hash, rigid.baseline_duplicate_of_v2);
+        hash_bool(&mut hash, rigid.clearance_evaluated);
+        hash_bool(&mut hash, rigid.clearance_selected);
+        for profile in [
+            rigid.selected,
+            rigid.comparison_v2,
+            rigid.baseline_v3,
+            rigid.clearance_v4,
+        ] {
+            hash_rigid_profile_decision(&mut hash, profile);
+        }
+
+        let torsion = row.torsion;
+        hash.u32(torsion.slot_index);
+        hash.i32(torsion.status);
+        hash.i32(torsion.failure_code);
+        hash.i32(torsion.skip_reason);
+        hash.i32(torsion.selection_reason);
+        hash_bool(&mut hash, torsion.selection_window_reachable);
+        hash_bool(
+            &mut hash,
+            torsion.evaluation_stopped_after_selection_window_became_unreachable,
+        );
+        hash_bool(&mut hash, torsion.torsion_evaluated);
+        hash_bool(&mut hash, torsion.torsion_variant_available);
+        hash_bool(&mut hash, torsion.torsion_selected);
+        hash.u64(torsion.torsion_step_budget);
+        hash.u64(torsion.fixed_objective_evaluation_count);
+        hash.u64(torsion.torsion_trial_objective_evaluation_count);
+        hash.u64(torsion.evaluated_torsion_steps);
+        hash.u64(torsion.accepted_torsion_steps);
+        hash.u64(torsion.baseline_v6_accepted_steps);
+
+        let refinement = row.refinement;
+        hash.u32(refinement.slot_index);
+        hash.i32(refinement.status);
+        hash.i32(refinement.failure_stage);
+        hash.i32(refinement.coordinate_origin);
+        hash.i32(refinement.rigid_failure_code);
+        hash.i32(refinement.torsion_v7_failure_code);
+        hash.i32(refinement.selected_rigid_profile);
+        hash.i32(refinement.downstream_candidate_state);
+        hash_bool(&mut hash, refinement.torsion_v7_applicable);
+        hash_bool(&mut hash, refinement.torsion_v7_selected);
+        hash_bool(&mut hash, refinement.coordinate_available);
+
+        let scorer = row.scorer;
+        hash.u32(scorer.slot_index);
+        hash.i32(scorer.status);
+        hash.i32(scorer.failure_code);
+        hash.u64(scorer.receptor_candidate_pair_count);
+        hash.u64(scorer.ligand_pair_count);
+        hash.u64(scorer.hbond_count);
+        hash.u64(scorer.hydrophobic_contact_count);
+        hash.u64(scorer.buried_polar_count);
+
+        let validity = row.validity;
+        hash.u32(validity.slot_index);
+        hash.i32(validity.status);
+        hash.i32(validity.failure_code);
+        hash.i32(validity.upstream_scorer_failure_code);
+        hash.u32(validity.passed_check_mask);
+        hash.u32(validity.blocker_mask);
+        hash.u64(validity.observed_count);
+        hash.u64(validity.atom_count);
+        hash.u64(validity.evaluated_ligand_nonbonded_pair_count);
+        hash.u64(validity.excluded_ligand_pair_count);
+        hash.u64(validity.evaluated_receptor_ligand_pair_count);
+        hash.u64(validity.declared_chirality_center_count);
+        hash.u64(validity.element_vdw_ligand_pair_count);
+        hash.u64(validity.element_vdw_ligand_severe_overlap_count);
+        hash.u64(validity.element_vdw_receptor_candidate_pair_count);
+        hash.u64(validity.element_vdw_receptor_full_cartesian_pair_count);
+        hash.u64(validity.element_vdw_receptor_cell_count);
+        hash.u64(validity.element_vdw_receptor_severe_overlap_count);
+
+        let ranking = row.ranking;
+        hash.u32(ranking.slot_index);
+        hash_bool(&mut hash, ranking.rank_eligible);
+        hash_bool(&mut hash, ranking.valid_rank_eligible);
+        hash.u32(ranking.stable_rank);
+        hash.u32(ranking.stable_valid_rank);
+
+        let cluster = row.cluster;
+        hash.u32(cluster.slot_index);
+        hash.i32(cluster.status);
+        hash_bool(&mut hash, cluster.cluster_eligible);
+        hash_bool(&mut hash, cluster.representative);
+        hash_bool(&mut hash, cluster.top_k_representative);
+        hash.u32(cluster.stable_valid_rank);
+        hash.u32(cluster.cluster_id);
+        hash.u32(cluster.representative_slot_index);
+        hash.u32(cluster.cluster_rank);
+        hash.u32(cluster.top_k_rank);
+        hash.u32(cluster.cluster_size);
+    }
+    hash.usize(value.torsion_moves.len());
+    for movement in &value.torsion_moves {
+        hash.u32(movement.slot_index);
+        hash.u32(movement.move_index);
+        hash_bool(&mut hash, movement.evaluated);
+        hash_bool(&mut hash, movement.selected);
+        hash.u64(movement.rotatable_child_atom_index);
+    }
+    hash.finish()
+}
+
+fn scientific_projection_sha256(value: &Fixed64ScientificProjection) -> Sha256 {
+    let mut hash =
+        CanonicalHasher::new("betelgeuze.engine_v2_native_fixed64_scientific_projection/1.0.0");
+    hash.digest(value.decision_sha256);
+    for row in &value.candidate_rows {
+        hash.digest(row.placement_receipt_sha256);
+        hash.digest(row.output_proposal_sha256);
+        hash.digest(row.output_coordinate_sha256);
+        hash_f64_channel(&mut hash, &row.placement_quaternion);
+        for measurement in [
+            row.raw_minimum_distance_angstrom,
+            row.minimum_vdw_surface_gap_angstrom,
+            row.minimum_vdw_ratio,
+            row.sphere_overlap_proxy_angstrom3,
+            row.pocket_escape_angstrom,
+        ] {
+            hash.f64(measurement);
+        }
+        for profile in [
+            row.rigid.selected,
+            row.rigid.comparison_v2,
+            row.rigid.baseline_v3,
+            row.rigid.clearance_v4,
+        ] {
+            hash_rigid_profile_numeric(&mut hash, profile);
+        }
+        let torsion = row.torsion;
+        for objective in [
+            torsion.source_receptor_penalty,
+            torsion.source_internal_penalty,
+            torsion.source_combined_penalty,
+            torsion.baseline_receptor_penalty,
+            torsion.baseline_internal_penalty,
+            torsion.baseline_combined_penalty,
+            torsion.optimized_receptor_penalty,
+            torsion.optimized_internal_penalty,
+            torsion.optimized_combined_penalty,
+            torsion.final_receptor_penalty,
+            torsion.final_internal_penalty,
+            torsion.final_combined_penalty,
+            torsion.evaluated_total_torsion_path_radians,
+            torsion.accepted_total_torsion_path_radians,
+        ] {
+            hash.f64(objective);
+        }
+        hash_f64_channel(&mut hash, &row.scorer.weighted_terms);
+        hash.f64(row.scorer.total_score);
+        let validity = row.validity;
+        for measurement in [
+            validity.rotation_orthogonality_max_error,
+            validity.rotation_determinant,
+            validity.max_bond_length_delta_angstrom,
+            validity.minimum_ligand_nonbonded_distance_angstrom,
+            validity.minimum_receptor_ligand_distance_angstrom,
+            validity.minimum_declared_chiral_volume,
+            validity.maximum_pocket_center_distance_angstrom,
+            validity.element_vdw_ligand_minimum_distance_angstrom,
+            validity.element_vdw_ligand_minimum_ratio,
+            validity.element_vdw_receptor_minimum_distance_angstrom,
+            validity.element_vdw_receptor_minimum_ratio,
+        ] {
+            hash.f64(measurement);
+        }
+        hash.f64(row.ranking.total_score);
+        hash.digest(row.refinement.coordinate_sha256);
+        hash.digest(row.ranking.coordinate_sha256);
+        hash.f64(row.cluster.direct_rmsd_to_representative_angstrom);
+        hash.digest(row.cluster.coordinate_sha256);
+    }
+    for movement in &value.torsion_moves {
+        hash.f64(movement.delta_radians);
+        hash.f64(movement.receptor_penalty);
+        hash.f64(movement.internal_penalty);
+        hash.f64(movement.combined_penalty);
+    }
+    hash_position_soa_owned(&mut hash, &value.producer_coordinates);
+    for coordinates in [
+        &value.rigid_coordinates.selected,
+        &value.rigid_coordinates.comparison_v2,
+        &value.rigid_coordinates.baseline_v3,
+        &value.rigid_coordinates.clearance_v4,
+    ] {
+        hash_position_soa_owned(&mut hash, coordinates);
+    }
+    hash_position_soa_owned(&mut hash, &value.torsion_coordinates.optimized);
+    hash_f64_channel(
+        &mut hash,
+        &value.torsion_coordinates.optimized_torsion_angles_radians,
+    );
+    hash_position_soa_owned(&mut hash, &value.torsion_coordinates.final_state);
+    hash_f64_channel(
+        &mut hash,
+        &value.torsion_coordinates.final_torsion_angles_radians,
+    );
+    hash_position_soa_owned(&mut hash, &value.final_coordinates);
+    for quaternion_channel in &value.final_quaternions {
+        hash_f64_channel(&mut hash, quaternion_channel);
+    }
+    hash.finish()
 }
 
 fn hash_rigid_v2_config(hash: &mut CanonicalHasher, config: &sys::bg_docking_rigid_v2_config_v1) {
@@ -1118,7 +1928,7 @@ fn canonical_component_binding_receipt(
 ) -> Sha256 {
     let mut hash =
         CanonicalHasher::new("betelgeuze.engine_v2_native_fixed64_component_binding/1.0.0");
-    hash.string("betelgeuze.engine_v2_native_fixed64_complete_pipeline/1.0.0");
+    hash.string(FIXED64_NATIVE_PIPELINE_PROFILE_ID);
     hash.i32(backend.as_raw());
     hash.i32(sys::BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL);
     hash.i32(device_ordinal);
@@ -1263,7 +2073,7 @@ fn canonical_refinement_policy_receipt(
 ) -> Sha256 {
     let mut hash =
         CanonicalHasher::new("betelgeuze.engine_v2_native_fixed64_refinement_policy_receipt/1.0.0");
-    hash.string("betelgeuze.engine_v2_native_fixed64_complete_pipeline/1.0.0");
+    hash.string(FIXED64_NATIVE_PIPELINE_PROFILE_ID);
     hash.digest(refinement_context_receipt_sha256);
     hash.digest(component_binding_receipt_sha256);
     hash.digest(input.predeclared_refinement_policy_sha256);
@@ -2042,6 +2852,7 @@ fn canonical_pocket_normal(value: [f64; 3]) -> Result<[f64; 3]> {
 
 impl<'context> Fixed64Pipeline<'context> {
     pub fn new(context: &'context Context, scientific: Fixed64PipelineContext<'_>) -> Result<Self> {
+        Self::profile_id()?;
         let counts = scientific.validate()?;
         let expected_backend = context.backend()?;
         let device_ordinal = context.device_ordinal()?;
@@ -3204,7 +4015,7 @@ impl<'context> Fixed64Pipeline<'context> {
         let [torsion_optimized_x, torsion_optimized_y, torsion_optimized_z, torsion_optimized_angles, torsion_final_x, torsion_final_y, torsion_final_z, torsion_final_angles] =
             torsion_coordinates;
         let [final_x, final_y, final_z] = final_coordinates;
-        Ok(Fixed64PipelineReceipt {
+        let mut receipt = Fixed64PipelineReceipt {
             backend: self.backend,
             unit_system: UnitSystem::from_raw(pipeline_output.unit_system)?,
             receptor_atom_count: self.receptor_atom_count,
@@ -3320,7 +4131,10 @@ impl<'context> Fixed64Pipeline<'context> {
                 pipeline_batch_receipt_sha256: pipeline_output.pipeline_batch_receipt_sha256,
             },
             authority: authority_disposition(&pipeline_output, &producer_output)?,
-        })
+            scientific_projection_sha256: [0; 32],
+        };
+        receipt.scientific_projection_sha256 = receipt.derive_scientific_projection().sha256;
+        Ok(receipt)
     }
 
     pub fn profile_id() -> Result<&'static str> {
@@ -3334,12 +4148,19 @@ impl<'context> Fixed64Pipeline<'context> {
             ));
         }
         // SAFETY: non-null pointer follows the native static-string contract.
-        unsafe { CStr::from_ptr(pointer) }.to_str().map_err(|_| {
+        let profile_id = unsafe { CStr::from_ptr(pointer) }.to_str().map_err(|_| {
             Error::local(
                 ErrorCode::AbiMismatch,
                 "native fixed64 pipeline profile id is not UTF-8",
             )
-        })
+        })?;
+        if profile_id != FIXED64_NATIVE_PIPELINE_PROFILE_ID {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 pipeline profile id changed",
+            ));
+        }
+        Ok(profile_id)
     }
 }
 
@@ -5315,6 +6136,262 @@ fn hash_scalar_segment(
     Ok(())
 }
 
+fn abi_rigid_profile_from_evidence(
+    value: Fixed64RigidProfileEvidence,
+) -> sys::bg_docking_rigid_refinement_evidence_v1 {
+    sys::bg_docking_rigid_refinement_evidence_v1 {
+        profile: value.profile,
+        available: u8::from(value.available),
+        reserved0: [0; 3],
+        accepted_steps: value.accepted_steps,
+        accepted_translation_steps: value.accepted_translation_steps,
+        accepted_rotation_steps: value.accepted_rotation_steps,
+        line_search_evaluation_count: value.line_search_evaluation_count,
+        fallback_direction_step_count: value.fallback_direction_step_count,
+        initial_penalty: value.initial_penalty,
+        final_penalty: value.final_penalty,
+        total_translation_angstrom: value.total_translation_angstrom,
+        total_rotation_vector_radians: value.total_rotation_vector_radians,
+        total_rotation_path_radians: value.total_rotation_path_radians,
+        initial_centroid_offset_angstrom: value.initial_centroid_offset_angstrom,
+        final_centroid_offset_angstrom: value.final_centroid_offset_angstrom,
+        maximum_centroid_offset_angstrom: value.maximum_centroid_offset_angstrom,
+        reserved: [0; 4],
+    }
+}
+
+fn abi_rigid_row_from_evidence(
+    value: Fixed64RigidEvidence,
+) -> sys::bg_docking_rigid_refinement_row_v1 {
+    sys::bg_docking_rigid_refinement_row_v1 {
+        slot_index: value.slot_index,
+        status: value.status,
+        failure_code: value.failure_code,
+        candidate_mode: value.candidate_mode,
+        selected_profile: value.selected_profile,
+        baseline_duplicate_of_v2: u8::from(value.baseline_duplicate_of_v2),
+        clearance_evaluated: u8::from(value.clearance_evaluated),
+        clearance_selected: u8::from(value.clearance_selected),
+        reserved0: 0,
+        selected: abi_rigid_profile_from_evidence(value.selected),
+        comparison_v2: abi_rigid_profile_from_evidence(value.comparison_v2),
+        baseline_v3: abi_rigid_profile_from_evidence(value.baseline_v3),
+        clearance_v4: abi_rigid_profile_from_evidence(value.clearance_v4),
+        reserved: [0; 8],
+    }
+}
+
+fn abi_torsion_row_from_evidence(
+    value: Fixed64TorsionEvidence,
+) -> sys::bg_docking_torsion_v7_row_v1 {
+    sys::bg_docking_torsion_v7_row_v1 {
+        slot_index: value.slot_index,
+        status: value.status,
+        failure_code: value.failure_code,
+        skip_reason: value.skip_reason,
+        selection_reason: value.selection_reason,
+        selection_window_reachable: u8::from(value.selection_window_reachable),
+        evaluation_stopped_after_selection_window_became_unreachable: u8::from(
+            value.evaluation_stopped_after_selection_window_became_unreachable,
+        ),
+        torsion_evaluated: u8::from(value.torsion_evaluated),
+        torsion_variant_available: u8::from(value.torsion_variant_available),
+        torsion_selected: u8::from(value.torsion_selected),
+        reserved0: [0; 3],
+        torsion_step_budget: value.torsion_step_budget,
+        fixed_objective_evaluation_count: value.fixed_objective_evaluation_count,
+        torsion_trial_objective_evaluation_count: value.torsion_trial_objective_evaluation_count,
+        evaluated_torsion_steps: value.evaluated_torsion_steps,
+        accepted_torsion_steps: value.accepted_torsion_steps,
+        baseline_v6_accepted_steps: value.baseline_v6_accepted_steps,
+        source_receptor_penalty: value.source_receptor_penalty,
+        source_internal_penalty: value.source_internal_penalty,
+        source_combined_penalty: value.source_combined_penalty,
+        baseline_receptor_penalty: value.baseline_receptor_penalty,
+        baseline_internal_penalty: value.baseline_internal_penalty,
+        baseline_combined_penalty: value.baseline_combined_penalty,
+        optimized_receptor_penalty: value.optimized_receptor_penalty,
+        optimized_internal_penalty: value.optimized_internal_penalty,
+        optimized_combined_penalty: value.optimized_combined_penalty,
+        final_receptor_penalty: value.final_receptor_penalty,
+        final_internal_penalty: value.final_internal_penalty,
+        final_combined_penalty: value.final_combined_penalty,
+        evaluated_total_torsion_path_radians: value.evaluated_total_torsion_path_radians,
+        accepted_total_torsion_path_radians: value.accepted_total_torsion_path_radians,
+        reserved: [0; 8],
+    }
+}
+
+fn abi_torsion_move_from_evidence(
+    value: Fixed64TorsionMoveEvidence,
+) -> sys::bg_docking_torsion_v7_move_v1 {
+    sys::bg_docking_torsion_v7_move_v1 {
+        slot_index: value.slot_index,
+        move_index: value.move_index,
+        evaluated: u8::from(value.evaluated),
+        selected: u8::from(value.selected),
+        reserved0: 0,
+        rotatable_child_atom_index: value.rotatable_child_atom_index,
+        delta_radians: value.delta_radians,
+        receptor_penalty: value.receptor_penalty,
+        internal_penalty: value.internal_penalty,
+        combined_penalty: value.combined_penalty,
+        reserved: [0; 4],
+    }
+}
+
+fn abi_refinement_row_from_evidence(
+    value: Fixed64RefinementEvidence,
+) -> sys::bg_docking_fixed64_refinement_row_v1 {
+    sys::bg_docking_fixed64_refinement_row_v1 {
+        slot_index: value.slot_index,
+        status: value.status,
+        failure_stage: value.failure_stage,
+        coordinate_origin: value.coordinate_origin,
+        rigid_failure_code: value.rigid_failure_code,
+        torsion_v7_failure_code: value.torsion_v7_failure_code,
+        selected_rigid_profile: value.selected_rigid_profile,
+        downstream_candidate_state: value.downstream_candidate_state,
+        torsion_v7_applicable: u8::from(value.torsion_v7_applicable),
+        torsion_v7_selected: u8::from(value.torsion_v7_selected),
+        coordinate_available: u8::from(value.coordinate_available),
+        reserved0: 0,
+        coordinate_sha256: value.coordinate_sha256,
+        reserved: [0; 4],
+    }
+}
+
+fn abi_scorer_row_from_evidence(value: Fixed64ScorerEvidence) -> sys::bg_docking_scorer_v1_row_v1 {
+    sys::bg_docking_scorer_v1_row_v1 {
+        slot_index: value.slot_index,
+        status: value.status,
+        failure_code: value.failure_code,
+        reserved0: 0,
+        weighted_terms: value.weighted_terms,
+        total_score: value.total_score,
+        receptor_candidate_pair_count: value.receptor_candidate_pair_count,
+        ligand_pair_count: value.ligand_pair_count,
+        hbond_count: value.hbond_count,
+        hydrophobic_contact_count: value.hydrophobic_contact_count,
+        buried_polar_count: value.buried_polar_count,
+        reserved: [0; 4],
+    }
+}
+
+fn abi_validity_row_from_evidence(
+    value: Fixed64ValidityEvidence,
+) -> sys::bg_docking_pose_validity_row_v1 {
+    sys::bg_docking_pose_validity_row_v1 {
+        slot_index: value.slot_index,
+        status: value.status,
+        failure_code: value.failure_code,
+        upstream_scorer_failure_code: value.upstream_scorer_failure_code,
+        passed_check_mask: value.passed_check_mask,
+        blocker_mask: value.blocker_mask,
+        observed_count: value.observed_count,
+        atom_count: value.atom_count,
+        rotation_orthogonality_max_error: value.rotation_orthogonality_max_error,
+        rotation_determinant: value.rotation_determinant,
+        max_bond_length_delta_angstrom: value.max_bond_length_delta_angstrom,
+        minimum_ligand_nonbonded_distance_angstrom: value
+            .minimum_ligand_nonbonded_distance_angstrom,
+        evaluated_ligand_nonbonded_pair_count: value.evaluated_ligand_nonbonded_pair_count,
+        excluded_ligand_pair_count: value.excluded_ligand_pair_count,
+        minimum_receptor_ligand_distance_angstrom: value.minimum_receptor_ligand_distance_angstrom,
+        evaluated_receptor_ligand_pair_count: value.evaluated_receptor_ligand_pair_count,
+        minimum_declared_chiral_volume: value.minimum_declared_chiral_volume,
+        declared_chirality_center_count: value.declared_chirality_center_count,
+        maximum_pocket_center_distance_angstrom: value.maximum_pocket_center_distance_angstrom,
+        element_vdw_ligand_pair_count: value.element_vdw_ligand_pair_count,
+        element_vdw_ligand_severe_overlap_count: value.element_vdw_ligand_severe_overlap_count,
+        element_vdw_ligand_minimum_distance_angstrom: value
+            .element_vdw_ligand_minimum_distance_angstrom,
+        element_vdw_ligand_minimum_ratio: value.element_vdw_ligand_minimum_ratio,
+        element_vdw_receptor_candidate_pair_count: value.element_vdw_receptor_candidate_pair_count,
+        element_vdw_receptor_full_cartesian_pair_count: value
+            .element_vdw_receptor_full_cartesian_pair_count,
+        element_vdw_receptor_cell_count: value.element_vdw_receptor_cell_count,
+        element_vdw_receptor_severe_overlap_count: value.element_vdw_receptor_severe_overlap_count,
+        element_vdw_receptor_minimum_distance_angstrom: value
+            .element_vdw_receptor_minimum_distance_angstrom,
+        element_vdw_receptor_minimum_ratio: value.element_vdw_receptor_minimum_ratio,
+        reserved: [0; 4],
+    }
+}
+
+fn abi_ranking_row_from_evidence(
+    value: Fixed64RankingEvidence,
+) -> sys::bg_docking_stable_top_k_row_v1 {
+    sys::bg_docking_stable_top_k_row_v1 {
+        slot_index: value.slot_index,
+        rank_eligible: u8::from(value.rank_eligible),
+        valid_rank_eligible: u8::from(value.valid_rank_eligible),
+        reserved0: 0,
+        stable_rank: value.stable_rank,
+        stable_valid_rank: value.stable_valid_rank,
+        total_score: value.total_score,
+        coordinate_sha256: value.coordinate_sha256,
+        reserved: [0; 4],
+    }
+}
+
+fn abi_cluster_row_from_evidence(
+    value: Fixed64ClusterEvidence,
+) -> sys::bg_docking_rmsd_cluster_row_v1 {
+    sys::bg_docking_rmsd_cluster_row_v1 {
+        slot_index: value.slot_index,
+        status: value.status,
+        cluster_eligible: u8::from(value.cluster_eligible),
+        representative: u8::from(value.representative),
+        top_k_representative: u8::from(value.top_k_representative),
+        reserved0: 0,
+        stable_valid_rank: value.stable_valid_rank,
+        cluster_id: value.cluster_id,
+        representative_slot_index: value.representative_slot_index,
+        cluster_rank: value.cluster_rank,
+        top_k_rank: value.top_k_rank,
+        cluster_size: value.cluster_size,
+        reserved1: 0,
+        direct_rmsd_to_representative_angstrom: value.direct_rmsd_to_representative_angstrom,
+        coordinate_sha256: value.coordinate_sha256,
+        reserved: [0; 4],
+    }
+}
+
+fn abi_pipeline_row_from_evidence(
+    value: Fixed64PipelineRow,
+) -> sys::bg_docking_fixed64_pipeline_row_v1 {
+    sys::bg_docking_fixed64_pipeline_row_v1 {
+        slot_index: value.slot_index,
+        producer_status: value.producer_status,
+        producer_failure_code: value.producer_failure_code,
+        initial_admission_decision: value.initial_admission_decision,
+        requested_refinement_mode: value.requested_refinement_mode,
+        effective_refinement_mode: value.effective_refinement_mode,
+        refinement_status: value.refinement_status,
+        refinement_failure_stage: value.refinement_failure_stage,
+        scorer_status: value.scorer_status,
+        scorer_failure_code: value.scorer_failure_code,
+        validity_status: value.validity_status,
+        validity_failure_code: value.validity_failure_code,
+        stable_rank: value.stable_rank,
+        stable_valid_rank: value.stable_valid_rank,
+        cluster_status: value.cluster_status,
+        cluster_id: value.cluster_id,
+        cluster_rank: value.cluster_rank,
+        top_k_rank: value.top_k_rank,
+        producer_row_receipt_sha256: value.producer_row_receipt_sha256,
+        final_coordinate_sha256: value.final_coordinate_sha256,
+        refinement_evidence_sha256: value.refinement_evidence_sha256,
+        scorer_evidence_sha256: value.scorer_evidence_sha256,
+        validity_evidence_sha256: value.validity_evidence_sha256,
+        ranking_evidence_sha256: value.ranking_evidence_sha256,
+        cluster_evidence_sha256: value.cluster_evidence_sha256,
+        row_receipt_sha256: value.row_receipt_sha256,
+        reserved: [0; 4],
+    }
+}
+
 fn hash_rigid_evidence(
     hash: &mut CanonicalHasher,
     value: &sys::bg_docking_rigid_refinement_evidence_v1,
@@ -5348,8 +6425,8 @@ fn canonical_refinement_evidence(
     torsion_row: &sys::bg_docking_torsion_v7_row_v1,
     torsion_moves: &[sys::bg_docking_torsion_v7_move_v1],
     refinement_row: &sys::bg_docking_fixed64_refinement_row_v1,
-    rigid_coordinates: &[Vec<f64>; 12],
-    torsion_coordinates: &[Vec<f64>; 8],
+    rigid_coordinates: [&[f64]; 12],
+    torsion_coordinates: [&[f64]; 8],
     final_coordinates: [&[f64]; 3],
     final_quaternions: [&[f64]; 4],
 ) -> Result<Sha256> {
@@ -5371,9 +6448,9 @@ fn canonical_refinement_evidence(
         hash_coordinate_segment(
             &mut hash,
             [
-                rigid_coordinates[offset].as_slice(),
-                rigid_coordinates[offset + 1].as_slice(),
-                rigid_coordinates[offset + 2].as_slice(),
+                rigid_coordinates[offset],
+                rigid_coordinates[offset + 1],
+                rigid_coordinates[offset + 2],
             ],
             slot,
             ligand_count,
@@ -5429,25 +6506,25 @@ fn canonical_refinement_evidence(
     hash_coordinate_segment(
         &mut hash,
         [
-            torsion_coordinates[0].as_slice(),
-            torsion_coordinates[1].as_slice(),
-            torsion_coordinates[2].as_slice(),
+            torsion_coordinates[0],
+            torsion_coordinates[1],
+            torsion_coordinates[2],
         ],
         slot,
         ligand_count,
     )?;
-    hash_scalar_segment(&mut hash, &torsion_coordinates[3], slot, ligand_count)?;
+    hash_scalar_segment(&mut hash, torsion_coordinates[3], slot, ligand_count)?;
     hash_coordinate_segment(
         &mut hash,
         [
-            torsion_coordinates[4].as_slice(),
-            torsion_coordinates[5].as_slice(),
-            torsion_coordinates[6].as_slice(),
+            torsion_coordinates[4],
+            torsion_coordinates[5],
+            torsion_coordinates[6],
         ],
         slot,
         ligand_count,
     )?;
-    hash_scalar_segment(&mut hash, &torsion_coordinates[7], slot, ligand_count)?;
+    hash_scalar_segment(&mut hash, torsion_coordinates[7], slot, ligand_count)?;
     hash.i32(refinement_row.status);
     hash.i32(refinement_row.failure_stage);
     hash.i32(refinement_row.coordinate_origin);
@@ -5565,7 +6642,7 @@ fn canonical_pipeline_row_receipt(
 ) -> Sha256 {
     let mut hash =
         CanonicalHasher::new("betelgeuze.engine_v2_native_fixed64_complete_pipeline_row/1.0.0");
-    hash.string("betelgeuze.engine_v2_native_fixed64_complete_pipeline/1.0.0");
+    hash.string(FIXED64_NATIVE_PIPELINE_PROFILE_ID);
     hash.digest(component_binding_receipt);
     hash.digest(refinement_policy_receipt);
     hash.u32(row.slot_index);
@@ -7303,8 +8380,8 @@ fn validate_native_outputs(
             &torsion_rows[slot],
             torsion_moves,
             refinement_row,
-            rigid_coordinates,
-            torsion_coordinates,
+            std::array::from_fn(|index| rigid_coordinates[index].as_slice()),
+            std::array::from_fn(|index| torsion_coordinates[index].as_slice()),
             final_coordinates,
             final_quaternions,
         )?;
@@ -7429,7 +8506,7 @@ fn validate_native_outputs(
     let cluster_batch_receipt_sha256 = cluster_batch.finish();
     let mut pipeline_batch =
         CanonicalHasher::new("betelgeuze.engine_v2_native_fixed64_complete_pipeline_batch/1.0.0");
-    pipeline_batch.string("betelgeuze.engine_v2_native_fixed64_complete_pipeline/1.0.0");
+    pipeline_batch.string(FIXED64_NATIVE_PIPELINE_PROFILE_ID);
     pipeline_batch.i32(backend.as_raw());
     pipeline_batch.i32(sys::BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL);
     pipeline_batch.usize(sys::BG_DOCKING_FIXED64_CANDIDATE_COUNT as usize);

@@ -260,6 +260,16 @@ The canonical capability state is:
   byte-identical. The 64-candidate synthetic qualification fixture measured
   12.2x scorer speedup while preserving exact rank/Top-5 and 1e-12 term parity;
   this is engineering evidence, not development-corpus qualification.
+- PR #303 merged the ABI 1.19 complete fixed64 consumer bridge at
+  `a03ded315857ebc842cb9821c7fb480ee1fe247f`. The subsequent native CPU
+  qualification-v4 implementation covers the full 64-slot proposal,
+  geometric-admission, rigid/V7-refinement, eight-term Scorer-v1, validity,
+  stable-Top-K, and direct-RMSD-clustering graph for two compiled synthetic
+  fixtures. It preserves typed failed slots, compares backend-independent
+  C++/Rust scientific projections, and reuses one persistent context per
+  backend. Its frozen 25-sample execution remains unconsumed and cannot be run
+  by CI; it establishes no molecular, qualification, Stage 0, product,
+  benchmark, HIP-device, or claim authority.
 - A fail-closed Stage 0 policy verifier covers seven acceptance axes, paired
   baseline CI interpretation, descriptive-only runtime, diagnostic branching,
   source hashes, exact environment, artifact counts, full-suite classification,
@@ -372,13 +382,15 @@ The canonical capability state is:
     fixed64 allocation, deterministic SO(3), indexed placement,
     single-anchor placement, and an ABI 1.19 canonical 64-slot producer with
     one shared surface-aware admission batch and receipt-bound placement
-    quaternions;
-    C++, Rust CPU, `hip_safe`, and `hip_fast` paths are synthetic parity-test
+    quaternions. A Rust-owned complete fixed64 pipeline now carries native
+    rigid/V7 refinement, eight Scorer-v1 terms, validity, stable Top-K, and
+    direct-RMSD clustering, with a claim-blocked C++/Rust qualification-v4
+    projection. C++, Rust CPU, `hip_safe`, and `hip_fast` paths are synthetic parity-test
     surfaces only and every execution, reservation, benchmark, product-rank,
     customer-pose, and claim authority bit remains false. These primitives are
     a synthetic native candidate executor but not an admitted molecular or
-    Stage 0 executor. Rust RMSD/clustering,
-    bounded native parsing, activation/downstream binding, and product shadow
+    Stage 0 executor. Bounded native parsing, exactly-once qualification
+    activation/downstream binding, and product shadow
     routing remain unavailable while the proposal, validity, and external
     authority gates fail.
 

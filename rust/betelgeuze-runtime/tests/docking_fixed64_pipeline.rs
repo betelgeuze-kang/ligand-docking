@@ -297,7 +297,10 @@ fn complete_pipeline_is_raii_bound_to_the_exact_native_context() {
     );
 }
 
-fn assert_safe_run_returns_complete_receipt(fixture: &SingleAtomFixture, options: ContextOptions) {
+fn assert_safe_run_returns_complete_receipt(
+    fixture: &SingleAtomFixture,
+    options: ContextOptions,
+) -> betelgeuze_runtime::Fixed64ScientificProjection {
     let v7 = (0_u8..24)
         .map(|index| Fixed64IndexedCoordinateSource {
             source_index: u32::from(index),
@@ -537,14 +540,91 @@ fn assert_safe_run_returns_complete_receipt(fixture: &SingleAtomFixture, options
         .rows
         .iter()
         .all(|row| row.row_receipt_sha256 != [0; 32]));
+    let mut malformed = receipt.clone();
+    malformed.scorer_rows.pop();
+    let error = malformed.scientific_projection().unwrap_err();
+    assert_eq!(error.code, ErrorCode::AbiMismatch);
+    assert!(error.message.contains("scorer=63"));
+    let mut swapped = receipt.clone();
+    swapped.scorer_rows.swap(0, 1);
+    let error = swapped.scientific_projection().unwrap_err();
+    assert_eq!(error.code, ErrorCode::AbiMismatch);
+    assert!(error.message.contains("not aligned at slot 0"));
+    let mut cross_wired = receipt.clone();
+    cross_wired.scorer_rows[0].status ^= 1;
+    let error = cross_wired.scientific_projection().unwrap_err();
+    assert_eq!(error.code, ErrorCode::AbiMismatch);
+    assert!(error
+        .message
+        .contains("mirrored evidence changed at slot 0"));
+    let mut swapped_moves = receipt.clone();
+    swapped_moves.torsion_moves.swap(0, 1);
+    let error = swapped_moves.scientific_projection().unwrap_err();
+    assert_eq!(error.code, ErrorCode::AbiMismatch);
+    assert!(error
+        .message
+        .contains("torsion moves are not index-aligned"));
+    let mut changed_scorer_terms = receipt.clone();
+    changed_scorer_terms.scorer_rows[0].weighted_terms[0] += 0.25;
+    let error = changed_scorer_terms.scientific_projection().unwrap_err();
+    assert_eq!(error.code, ErrorCode::AbiMismatch);
+    assert!(error
+        .message
+        .contains("component evidence changed at slot 0"));
+    let mut changed_producer_coordinate = receipt.clone();
+    changed_producer_coordinate.producer_coordinates.x_angstrom[0] += 0.25;
+    let error = changed_producer_coordinate
+        .scientific_projection()
+        .unwrap_err();
+    assert_eq!(error.code, ErrorCode::AbiMismatch);
+    assert!(error
+        .message
+        .contains("coordinate identity changed at slot 0"));
+    let mut changed_geometric_measurement = receipt.clone();
+    changed_geometric_measurement.producer_rows[0]
+        .geometric
+        .raw_minimum_distance_angstrom += 0.25;
+    let error = changed_geometric_measurement
+        .scientific_projection()
+        .unwrap_err();
+    assert_eq!(error.code, ErrorCode::AbiMismatch);
+    assert!(error.message.contains("changed after receipt issuance"));
+    let mut changed_projection_seal = receipt.clone();
+    changed_projection_seal.scientific_projection_sha256[0] ^= 1;
+    let error = changed_projection_seal.scientific_projection().unwrap_err();
+    assert_eq!(error.code, ErrorCode::AbiMismatch);
+    assert!(error.message.contains("changed after receipt issuance"));
+    let projection = receipt.scientific_projection().unwrap();
+    assert_eq!(projection, repeated.scientific_projection().unwrap());
+    assert_eq!(projection.candidate_denominator, 64);
+    assert_eq!(projection.receptor_atom_count, 4);
+    assert_eq!(projection.ligand_atom_count, 1);
+    assert_eq!(projection.candidate_rows.len(), 64);
+    assert_eq!(projection.torsion_moves.len(), 512);
+    assert_ne!(projection.decision_sha256, [0; 32]);
+    assert_ne!(projection.sha256, [0; 32]);
+    assert!(projection.candidate_rows.iter().all(|row| {
+        if row.coordinates_available {
+            row.placement_receipt_sha256 != [0; 32]
+                && row.output_proposal_sha256 != [0; 32]
+                && row.output_coordinate_sha256 != [0; 32]
+        } else {
+            row.output_proposal_sha256 == [0; 32] && row.output_coordinate_sha256 == [0; 32]
+        }
+    }));
+    projection
 }
 
 #[test]
 fn safe_run_returns_complete_fixed64_receipt_and_preserves_typed_failures() {
     let fixture = SingleAtomFixture::new();
-    for options in [ContextOptions::cpu_reference(), ContextOptions::rust_cpu()] {
-        assert_safe_run_returns_complete_receipt(&fixture, options);
-    }
+    let cpp = assert_safe_run_returns_complete_receipt(&fixture, ContextOptions::cpu_reference());
+    let rust = assert_safe_run_returns_complete_receipt(&fixture, ContextOptions::rust_cpu());
+    assert_eq!(cpp.decision_sha256, rust.decision_sha256);
+    assert_eq!(cpp.candidate_denominator, rust.candidate_denominator);
+    assert_eq!(cpp.primary_slot_indices, rust.primary_slot_indices);
+    assert_eq!(cpp.valid_slot_indices, rust.valid_slot_indices);
+    assert_eq!(cpp.top_k_slot_indices, rust.top_k_slot_indices);
 }
 
 fn assert_transformed_placements_are_independently_replayed(
@@ -826,7 +906,7 @@ fn complete_pipeline_constructs_on_both_qualified_hip_lanes() {
         assert_eq!(pipeline.ligand_atom_count(), 1);
         drop(pipeline);
         drop(context);
-        assert_safe_run_returns_complete_receipt(&fixture, options);
+        let _ = assert_safe_run_returns_complete_receipt(&fixture, options);
     }
 }
 

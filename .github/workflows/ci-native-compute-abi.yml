@@ -8,6 +8,13 @@ on:
       - "include/betelgeuze/**"
       - "native/**"
       - "rust/**"
+      - ".cargo"
+      - ".cargo/config"
+      - ".cargo/config.toml"
+      - "rust-toolchain"
+      - "rust-toolchain.toml"
+      - "config/engine_v2_native_fixed64_cpu_profile_v4.json"
+      - "tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py"
       - ".github/workflows/ci-native-compute-abi.yml"
       - ".github/workflows/ci-native-hip-safe-trusted.yml"
   pull_request:
@@ -16,6 +23,13 @@ on:
       - "include/betelgeuze/**"
       - "native/**"
       - "rust/**"
+      - ".cargo"
+      - ".cargo/config"
+      - ".cargo/config.toml"
+      - "rust-toolchain"
+      - "rust-toolchain.toml"
+      - "config/engine_v2_native_fixed64_cpu_profile_v4.json"
+      - "tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py"
       - ".github/workflows/ci-native-compute-abi.yml"
       - ".github/workflows/ci-native-hip-safe-trusted.yml"
   workflow_dispatch:
@@ -47,6 +61,13 @@ jobs:
             include
             native
             rust
+            .cargo
+            .cargo/config
+            .cargo/config.toml
+            rust-toolchain
+            rust-toolchain.toml
+            config/engine_v2_native_fixed64_cpu_profile_v4.json
+            tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py
 
       - name: Report hosted toolchain
         run: |
@@ -54,6 +75,9 @@ jobs:
           c++ --version
           rustc --version
           cargo --version
+
+      - name: Verify frozen native fixed64 CPU profile v4
+        run: python3 tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py
 
       - name: Build and test the C ABI
         run: |
@@ -100,6 +124,14 @@ jobs:
 
       - name: Test Rust C++ boundary
         run: cargo test --manifest-path rust/Cargo.toml --workspace --locked
+
+      - name: Verify release non-test activation artifact is blocked
+        run: >-
+          cargo test --release --manifest-path rust/Cargo.toml
+          -p betelgeuze-runtime
+          --test fixed64_cpu_probe_activation
+          --locked --
+          --exact native_fixed64_cpu_probe_is_blocked_before_measurement
 
       - name: Verify standalone Rust packages
         run: |

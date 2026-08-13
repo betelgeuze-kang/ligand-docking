@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import re
 from typing import Any
 
 
@@ -154,6 +155,51 @@ CPU_PERFORMANCE_FALSE_AUTHORITY_KEYS = (
     "public_benchmark_authorized",
     "scientific_claim_authorized",
     "stage0_admission_authorized",
+)
+NATIVE_FIXED64_CPU_V4_CONTRACT_PATHS = (
+    "config/engine_v2_native_fixed64_cpu_profile_v4.json",
+    "rust/betelgeuze-runtime/src/docking.rs",
+    "rust/betelgeuze-runtime/src/lib.rs",
+    "rust/betelgeuze-runtime/src/qualification.rs",
+    "native/src/docking/fixed64_pipeline.cpp",
+    "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v4.rs",
+    "rust/betelgeuze-runtime/tests/docking_fixed64_pipeline.rs",
+    "rust/betelgeuze-runtime/tests/fixed64_cpu_probe_activation.rs",
+    "tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py",
+    "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v4.py",
+    "docs/engine_v2_native_fixed64_cpu_qualification_v4.md",
+)
+NATIVE_FIXED64_CPU_V4_REQUIRED_TOKEN_COUNTS = {
+    "config/engine_v2_native_fixed64_cpu_profile_v4.json": 2,
+    "tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py": 4,
+    "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v4.py": 2,
+    "docs/engine_v2_native_fixed64_cpu_qualification_v4.md": 1,
+}
+NATIVE_FIXED64_CPU_V4_REQUIRED_TOKENS = tuple(
+    NATIVE_FIXED64_CPU_V4_REQUIRED_TOKEN_COUNTS
+)
+NATIVE_FIXED64_CPU_V4_FALSE_AUTHORITY_KEYS = (
+    "fresh_holdout_execution_authorized",
+    "historical_ab_execution_authorized",
+    "molecular_execution_authorized",
+    "product_performance_claim_authorized",
+    "public_benchmark_authorized",
+    "qualification_authority",
+    "reservation_authorized",
+    "scientific_claim_authorized",
+    "stage0_admission_authorized",
+)
+NATIVE_FIXED64_CPU_V4_FALSE_RESTRICTION_KEYS = (
+    "actual_molecular_execution_allowed",
+    "contains_molecular_cases",
+    "fresh_or_historical_case_input_allowed",
+    "github_actions_live_qualification_allowed",
+    "github_actions_production_authority_allowed",
+    "hip_device_execution_allowed",
+    "public_or_scientific_performance_claim_allowed",
+    "reservation_allowed",
+    "result_dependent_configuration_allowed",
+    "test_double_production_authority_allowed",
 )
 ONE_SHOT_CONTRACT_PATHS = (
     "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_ab.py",
@@ -584,6 +630,156 @@ def _cpu_performance_authority_is_fail_closed(repo_root: Path) -> bool:
     )
 
 
+def _native_fixed64_cpu_v4_authority_is_fail_closed(repo_root: Path) -> bool:
+    def reject_duplicate_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
+        observed: dict[str, object] = {}
+        for key, value in pairs:
+            if key in observed:
+                raise ValueError(f"duplicate JSON key: {key}")
+            observed[key] = value
+        return observed
+
+    def reject_nonfinite(value: str) -> object:
+        raise ValueError(f"non-finite JSON constant: {value}")
+
+    path = repo_root / "config/engine_v2_native_fixed64_cpu_profile_v4.json"
+    try:
+        raw = path.read_bytes()
+        profile = json.loads(
+            raw.decode("ascii"),
+            object_pairs_hook=reject_duplicate_keys,
+            parse_constant=reject_nonfinite,
+        )
+    except (OSError, UnicodeError, ValueError):
+        return False
+    expected = (
+        json.dumps(
+            profile,
+            indent=2,
+            sort_keys=True,
+            ensure_ascii=True,
+            allow_nan=False,
+        ).encode("ascii")
+        + b"\n"
+    )
+    if (
+        type(profile) is not dict
+        or raw != expected
+        or profile.get("schema_id")
+        != "betelgeuze.engine_v2_native_fixed64_cpu_profile/4.0.0"
+        or profile.get("profile_id")
+        != "engine_v2_native_fixed64_cpu_synthetic_v4"
+        or profile.get("status")
+        != "implementation_profile_frozen_execution_not_consumed"
+    ):
+        return False
+    authority = profile.get("authority")
+    restrictions = profile.get("restrictions")
+    backends = profile.get("backends")
+    fixtures = profile.get("fixtures")
+    core = profile.get("measurement_core")
+    performance = profile.get("performance")
+    return bool(
+        type(authority) is dict
+        and set(authority) == set(NATIVE_FIXED64_CPU_V4_FALSE_AUTHORITY_KEYS)
+        and all(
+            authority.get(key) is False
+            for key in NATIVE_FIXED64_CPU_V4_FALSE_AUTHORITY_KEYS
+        )
+        and type(restrictions) is dict
+        and set(restrictions) == set(NATIVE_FIXED64_CPU_V4_FALSE_RESTRICTION_KEYS)
+        and all(
+            restrictions.get(key) is False
+            for key in NATIVE_FIXED64_CPU_V4_FALSE_RESTRICTION_KEYS
+        )
+        and type(backends) is dict
+        and backends.get("reference") == "cpp_cpu_reference"
+        and backends.get("comparison") == "rust_cpu"
+        and backends.get("fallback_allowed") is False
+        and type(fixtures) is list
+        and all(type(row) is dict for row in fixtures)
+        and [
+            (
+                row.get("candidate_denominator"),
+                row.get("receptor_atom_count"),
+                row.get("ligand_atom_count"),
+                row.get("expected_generated_count"),
+                row.get("expected_typed_failure_count"),
+            )
+            for row in fixtures
+        ]
+        == [(64, 12, 12, 64, 0), (64, 12, 12, 48, 16)]
+        and all(row.get("contains_molecular_data") is False for row in fixtures)
+        and type(core) is dict
+        and core.get("python_scientific_work_allowed") is False
+        and core.get("receptor_context_recreated_inside_samples") is False
+        and type(performance) is dict
+        and performance.get("performance_claim_authorized") is False
+    )
+
+
+def _native_fixed64_cpu_v4_binary_is_activation_blocked(repo_root: Path) -> bool:
+    probe_path = (
+        repo_root
+        / "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v4.rs"
+    )
+    qualification_path = (
+        repo_root / "rust/betelgeuze-runtime/src/qualification.rs"
+    )
+    try:
+        probe = probe_path.read_bytes().decode("ascii")
+        qualification = qualification_path.read_bytes().decode("ascii")
+    except (OSError, UnicodeError):
+        return False
+    activation_constant = (
+        "pub const FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED: bool = false;"
+    )
+    activation_function = re.compile(
+        r"pub\s+const\s+fn\s+fixed64_cpu_v4_live_activation_admitted\(\)"
+        r"\s*->\s*bool\s*"
+        r"\{\s*FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED\s*\}"
+    )
+    activation_guard = "if !fixed64_cpu_v4_live_activation_admitted()"
+    unit_test_profile_gate = "if config != Fixed64CpuProbeConfigV4::unit_test()"
+    qualification_profile_gate = (
+        "if config != Fixed64CpuProbeConfigV4::qualification_profile()"
+    )
+    public_api_guard = "if !fixed64_cpu_v4_live_activation_admitted()"
+    fixture_construction = "let fixture = SyntheticFixture::new();"
+    qualification_binding = (
+        "let config = Fixed64CpuProbeConfigV4::qualification_profile();"
+    )
+    qualification_call = "Fixed64CpuProbeConfigV4::qualification_profile()"
+    measurement_call = "run_native_fixed64_cpu_probe_v4(config)"
+    return bool(
+        qualification.count(activation_constant) == 1
+        and "FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED: bool = true"
+        not in qualification
+        and len(activation_function.findall(qualification)) == 1
+        and qualification.count(unit_test_profile_gate) == 1
+        and qualification.count(qualification_profile_gate) == 1
+        and qualification.count(public_api_guard) == 1
+        and qualification.count(fixture_construction) == 1
+        and qualification.index(unit_test_profile_gate)
+        < qualification.index(qualification_profile_gate)
+        < qualification.index(public_api_guard)
+        < qualification.index(fixture_construction)
+        and probe.count("fixed64_cpu_v4_live_activation_admitted") == 2
+        and "FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED" not in probe
+        and probe.count(activation_guard) == 1
+        and probe.count("return ExitCode::from(3);") == 1
+        and probe.count(qualification_call) == 1
+        and probe.count(qualification_binding) == 1
+        and probe.count("Fixed64CpuProbeConfigV4") == 2
+        and "Fixed64CpuProbeConfigV4 {" not in probe
+        and probe.count(measurement_call) == 1
+        and probe.count("run_native_fixed64_cpu_probe_v4") == 2
+        and probe.index(activation_guard)
+        < probe.index(qualification_binding)
+        < probe.index(measurement_call)
+    )
+
+
 def build_inventory(repo_root: Path) -> dict[str, Any]:
     workflow_root = repo_root / ".github/workflows"
     workflows = tuple(
@@ -676,6 +872,48 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
                 main_text.count(token) >= minimum_count
                 for token, minimum_count in (
                     CPU_PERFORMANCE_REQUIRED_TOKEN_COUNTS.items()
+                )
+            )
+        )
+    )
+
+    native_fixed64_cpu_v4_contract_present = any(
+        (repo_root / path).is_file()
+        for path in NATIVE_FIXED64_CPU_V4_CONTRACT_PATHS
+    )
+    native_fixed64_cpu_v4_contract_files_complete = all(
+        (repo_root / path).is_file()
+        for path in NATIVE_FIXED64_CPU_V4_CONTRACT_PATHS
+    )
+    native_fixed64_cpu_v4_binary_activation_blocked = (
+        _native_fixed64_cpu_v4_binary_is_activation_blocked(repo_root)
+    )
+    native_fixed64_cpu_v4_profile_authority_false = (
+        not native_fixed64_cpu_v4_contract_present
+        or (
+            native_fixed64_cpu_v4_contract_files_complete
+            and _native_fixed64_cpu_v4_authority_is_fail_closed(repo_root)
+        )
+    )
+    native_fixed64_cpu_v4_qualification_admission_authority_false = (
+        not native_fixed64_cpu_v4_contract_present
+        or (
+            native_fixed64_cpu_v4_profile_authority_false
+            and native_fixed64_cpu_v4_binary_activation_blocked
+        )
+    )
+    native_fixed64_cpu_v4_authority_fail_closed = (
+        native_fixed64_cpu_v4_qualification_admission_authority_false
+    )
+    native_fixed64_cpu_v4_contract_in_authoritative_ci = (
+        not native_fixed64_cpu_v4_contract_present
+        or (
+            native_fixed64_cpu_v4_contract_files_complete
+            and native_fixed64_cpu_v4_authority_fail_closed
+            and all(
+                main_text.count(token) >= minimum_count
+                for token, minimum_count in (
+                    NATIVE_FIXED64_CPU_V4_REQUIRED_TOKEN_COUNTS.items()
                 )
             )
         )
@@ -775,6 +1013,24 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         ),
         "cpu_performance_authority_fail_closed": (
             cpu_performance_authority_fail_closed
+        ),
+        "native_fixed64_cpu_v4_contract_in_authoritative_ci": (
+            native_fixed64_cpu_v4_contract_in_authoritative_ci
+        ),
+        "native_fixed64_cpu_v4_authority_fail_closed": (
+            native_fixed64_cpu_v4_authority_fail_closed
+        ),
+        "native_fixed64_cpu_v4_binary_activation_blocked": (
+            native_fixed64_cpu_v4_binary_activation_blocked
+        ),
+        "native_fixed64_cpu_v4_github_actions_production_authority_false": (
+            native_fixed64_cpu_v4_profile_authority_false
+        ),
+        "native_fixed64_cpu_v4_qualification_admission_authority_false": (
+            native_fixed64_cpu_v4_qualification_admission_authority_false
+        ),
+        "native_fixed64_cpu_v4_test_double_production_authority_false": (
+            native_fixed64_cpu_v4_profile_authority_false
         ),
         "one_shot_contract_in_authoritative_ci": (
             one_shot_contract_in_authoritative_ci
