@@ -258,5 +258,5 @@ jobs:
           test "$activation_status" -eq 1
           test ! -s /tmp/v7-normalized-package.stdout
           grep -F \
-            'non-authoritative package build cannot activate' \
+            'native fixed64 CPU v7 non-authoritative build cannot activate' \
             /tmp/v7-normalized-package.stderr

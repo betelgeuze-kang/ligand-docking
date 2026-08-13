@@ -1370,7 +1370,8 @@ def _native_fixed64_cpu_v7_authority_is_fail_closed(repo_root: Path) -> bool:
             == 1
             for workflow in (main_workflow, native_workflow)
         )
-        and "non-authoritative package build cannot activate" in release_workflow
+        and "native fixed64 CPU v7 non-authoritative build cannot activate"
+        in release_workflow
         and re.search(
             r'\[\[package\]\]\nname = "betelgeuze-runtime"\n'
             r'version = "0\.1\.0"\ndependencies = \[\n'
