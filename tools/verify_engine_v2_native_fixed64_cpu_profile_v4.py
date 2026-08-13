@@ -93,7 +93,6 @@ NATIVE_VENDOR_COPY_SOURCE_RELATIVE_PATHS = tuple(
 RUST_COMPILED_SOURCE_TREE_ROOT_RELATIVE_PATHS = (
     Path("rust/betelgeuze-docking-search/src"),
     Path("rust/betelgeuze-docking-search/tests"),
-    Path("rust/betelgeuze-docking-search/examples"),
     Path("rust/betelgeuze-runtime/src"),
     Path("rust/betelgeuze-runtime/tests"),
     Path("rust/betelgeuze-sys/src"),

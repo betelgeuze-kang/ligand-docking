@@ -569,6 +569,13 @@ def test_profile_v4_discovers_exact_rust_source_tree() -> None:
     )
 
 
+def test_profile_v4_scans_only_present_nonempty_rust_source_roots() -> None:
+    for relative in RUST_COMPILED_SOURCE_TREE_ROOT_RELATIVE_PATHS:
+        source_root = _ROOT / relative
+        assert source_root.is_dir()
+        assert any(path.suffix == ".rs" for path in source_root.rglob("*.rs"))
+
+
 def test_profile_v4_discovers_exact_cargo_target_sources() -> None:
     assert (
         discover_rust_cargo_target_source_paths(_ROOT)
