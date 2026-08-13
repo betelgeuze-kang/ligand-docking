@@ -1287,21 +1287,43 @@ fn digest_present(value: &Sha256) -> bool {
     value.iter().any(|byte| *byte != 0)
 }
 
-pub(crate) struct CanonicalHasher(Sha256Hasher);
+pub(crate) struct CanonicalHasher {
+    digest: Sha256Hasher,
+    transcript: Option<Vec<u8>>,
+}
 
 impl CanonicalHasher {
     pub(crate) fn new(domain: &str) -> Self {
-        let mut hasher = Self(Sha256Hasher::new());
+        let mut hasher = Self {
+            digest: Sha256Hasher::new(),
+            transcript: None,
+        };
         hasher.string(domain);
         hasher
     }
 
+    pub(crate) fn new_recording(domain: &str) -> Self {
+        let mut hasher = Self {
+            digest: Sha256Hasher::new(),
+            transcript: Some(Vec::new()),
+        };
+        hasher.string(domain);
+        hasher
+    }
+
+    fn update(&mut self, bytes: &[u8]) {
+        self.digest.update(bytes);
+        if let Some(transcript) = &mut self.transcript {
+            transcript.extend_from_slice(bytes);
+        }
+    }
+
     pub(crate) fn byte(&mut self, value: u8) {
-        self.0.update([value]);
+        self.update(&[value]);
     }
 
     pub(crate) fn u32(&mut self, value: u32) {
-        self.0.update(value.to_be_bytes());
+        self.update(&value.to_be_bytes());
     }
 
     pub(crate) fn i32(&mut self, value: i32) {
@@ -1309,7 +1331,7 @@ impl CanonicalHasher {
     }
 
     pub(crate) fn u64(&mut self, value: u64) {
-        self.0.update(value.to_be_bytes());
+        self.update(&value.to_be_bytes());
     }
 
     pub(crate) fn usize(&mut self, value: usize) {
@@ -1329,7 +1351,7 @@ impl CanonicalHasher {
 
     pub(crate) fn bytes(&mut self, value: &[u8]) {
         self.usize(value.len());
-        self.0.update(value);
+        self.update(value);
     }
 
     pub(crate) fn string(&mut self, value: &str) {
@@ -1337,11 +1359,18 @@ impl CanonicalHasher {
     }
 
     pub(crate) fn digest(&mut self, value: Sha256) {
-        self.0.update(value);
+        self.update(&value);
     }
 
     pub(crate) fn finish(self) -> Sha256 {
-        self.0.finalize().into()
+        self.digest.finalize().into()
+    }
+
+    pub(crate) fn finish_recording(self) -> (Sha256, Vec<u8>) {
+        let transcript = self
+            .transcript
+            .expect("recording canonical hasher retains its transcript");
+        (self.digest.finalize().into(), transcript)
     }
 }
 
@@ -1425,9 +1454,7 @@ fn hash_authority_decision(hash: &mut CanonicalHasher, value: Fixed64AuthorityDi
     hash_bool(hash, value.scientific_claim_authorized);
 }
 
-fn scientific_decision_sha256(value: &Fixed64ScientificProjection) -> Sha256 {
-    let mut hash =
-        CanonicalHasher::new("betelgeuze.engine_v2_native_fixed64_scientific_decision/2.0.0");
+fn append_scientific_decision(hash: &mut CanonicalHasher, value: &Fixed64ScientificProjection) {
     hash.usize(value.candidate_denominator);
     hash.usize(value.receptor_atom_count);
     hash.usize(value.ligand_atom_count);
@@ -1440,11 +1467,11 @@ fn scientific_decision_sha256(value: &Fixed64ScientificProjection) -> Sha256 {
     hash.u64(value.scored_count);
     hash.u64(value.valid_count);
     hash.u64(value.cluster_count);
-    hash_u32_channel(&mut hash, &value.primary_slot_indices);
-    hash_u32_channel(&mut hash, &value.valid_slot_indices);
-    hash_u32_channel(&mut hash, &value.representative_slot_indices);
-    hash_u32_channel(&mut hash, &value.top_k_slot_indices);
-    hash_authority_decision(&mut hash, value.authority);
+    hash_u32_channel(hash, &value.primary_slot_indices);
+    hash_u32_channel(hash, &value.valid_slot_indices);
+    hash_u32_channel(hash, &value.representative_slot_indices);
+    hash_u32_channel(hash, &value.top_k_slot_indices);
+    hash_authority_decision(hash, value.authority);
     hash.usize(value.candidate_rows.len());
     for row in &value.candidate_rows {
         hash.u32(row.slot_index);
@@ -1453,12 +1480,12 @@ fn scientific_decision_sha256(value: &Fixed64ScientificProjection) -> Sha256 {
         hash.i32(row.producer_failure_code);
         hash.i32(row.placement_kind);
         hash.i32(row.component_failure_code);
-        hash_bool(&mut hash, row.coordinates_available);
-        hash_bool(&mut hash, row.steric_precheck_passed);
-        hash_bool(&mut hash, row.source_identity_verified);
-        hash_bool(&mut hash, row.allocation_identity_verified);
-        hash_bool(&mut hash, row.geometric_identity_verified);
-        hash_bool(&mut hash, row.denominator_preserved);
+        hash_bool(hash, row.coordinates_available);
+        hash_bool(hash, row.steric_precheck_passed);
+        hash_bool(hash, row.source_identity_verified);
+        hash_bool(hash, row.allocation_identity_verified);
+        hash_bool(hash, row.geometric_identity_verified);
+        hash_bool(hash, row.denominator_preserved);
         hash.digest(row.allocation_slot_receipt_sha256);
         hash.digest(row.source_payload_receipt_sha256);
         hash.digest(row.source_proposal_sha256);
@@ -1466,7 +1493,7 @@ fn scientific_decision_sha256(value: &Fixed64ScientificProjection) -> Sha256 {
         hash.i32(row.geometric_status);
         hash.i32(row.geometric_failure_code);
         hash.i32(row.geometric_decision);
-        hash_bool(&mut hash, row.geometric_rank_eligible);
+        hash_bool(hash, row.geometric_rank_eligible);
         hash.u64(row.exact_pair_count);
         hash.u64(row.penetration_pair_count);
         hash.u64(row.penetrating_atom_count);
@@ -1480,16 +1507,16 @@ fn scientific_decision_sha256(value: &Fixed64ScientificProjection) -> Sha256 {
         hash.i32(rigid.failure_code);
         hash.i32(rigid.candidate_mode);
         hash.i32(rigid.selected_profile);
-        hash_bool(&mut hash, rigid.baseline_duplicate_of_v2);
-        hash_bool(&mut hash, rigid.clearance_evaluated);
-        hash_bool(&mut hash, rigid.clearance_selected);
+        hash_bool(hash, rigid.baseline_duplicate_of_v2);
+        hash_bool(hash, rigid.clearance_evaluated);
+        hash_bool(hash, rigid.clearance_selected);
         for profile in [
             rigid.selected,
             rigid.comparison_v2,
             rigid.baseline_v3,
             rigid.clearance_v4,
         ] {
-            hash_rigid_profile_decision(&mut hash, profile);
+            hash_rigid_profile_decision(hash, profile);
         }
 
         let torsion = row.torsion;
@@ -1498,14 +1525,14 @@ fn scientific_decision_sha256(value: &Fixed64ScientificProjection) -> Sha256 {
         hash.i32(torsion.failure_code);
         hash.i32(torsion.skip_reason);
         hash.i32(torsion.selection_reason);
-        hash_bool(&mut hash, torsion.selection_window_reachable);
+        hash_bool(hash, torsion.selection_window_reachable);
         hash_bool(
-            &mut hash,
+            hash,
             torsion.evaluation_stopped_after_selection_window_became_unreachable,
         );
-        hash_bool(&mut hash, torsion.torsion_evaluated);
-        hash_bool(&mut hash, torsion.torsion_variant_available);
-        hash_bool(&mut hash, torsion.torsion_selected);
+        hash_bool(hash, torsion.torsion_evaluated);
+        hash_bool(hash, torsion.torsion_variant_available);
+        hash_bool(hash, torsion.torsion_selected);
         hash.u64(torsion.torsion_step_budget);
         hash.u64(torsion.fixed_objective_evaluation_count);
         hash.u64(torsion.torsion_trial_objective_evaluation_count);
@@ -1522,16 +1549,16 @@ fn scientific_decision_sha256(value: &Fixed64ScientificProjection) -> Sha256 {
         hash.i32(refinement.torsion_v7_failure_code);
         hash.i32(refinement.selected_rigid_profile);
         hash.i32(refinement.downstream_candidate_state);
-        hash_bool(&mut hash, refinement.torsion_v7_applicable);
-        hash_bool(&mut hash, refinement.torsion_v7_selected);
-        hash_bool(&mut hash, refinement.coordinate_available);
+        hash_bool(hash, refinement.torsion_v7_applicable);
+        hash_bool(hash, refinement.torsion_v7_selected);
+        hash_bool(hash, refinement.coordinate_available);
 
         let post_admission = row.post_admission;
         hash.u32(post_admission.slot_index);
         hash.i32(post_admission.status);
         hash.i32(post_admission.failure_code);
         hash.i32(post_admission.decision);
-        hash_bool(&mut hash, post_admission.rank_eligible);
+        hash_bool(hash, post_admission.rank_eligible);
         hash.u64(post_admission.ligand_atom_count);
         hash.u64(post_admission.receptor_atom_count);
         hash.u64(post_admission.exact_pair_count);
@@ -1571,17 +1598,17 @@ fn scientific_decision_sha256(value: &Fixed64ScientificProjection) -> Sha256 {
 
         let ranking = row.ranking;
         hash.u32(ranking.slot_index);
-        hash_bool(&mut hash, ranking.rank_eligible);
-        hash_bool(&mut hash, ranking.valid_rank_eligible);
+        hash_bool(hash, ranking.rank_eligible);
+        hash_bool(hash, ranking.valid_rank_eligible);
         hash.u32(ranking.stable_rank);
         hash.u32(ranking.stable_valid_rank);
 
         let cluster = row.cluster;
         hash.u32(cluster.slot_index);
         hash.i32(cluster.status);
-        hash_bool(&mut hash, cluster.cluster_eligible);
-        hash_bool(&mut hash, cluster.representative);
-        hash_bool(&mut hash, cluster.top_k_representative);
+        hash_bool(hash, cluster.cluster_eligible);
+        hash_bool(hash, cluster.representative);
+        hash_bool(hash, cluster.top_k_representative);
         hash.u32(cluster.stable_valid_rank);
         hash.u32(cluster.cluster_id);
         hash.u32(cluster.representative_slot_index);
@@ -1593,11 +1620,27 @@ fn scientific_decision_sha256(value: &Fixed64ScientificProjection) -> Sha256 {
     for movement in &value.torsion_moves {
         hash.u32(movement.slot_index);
         hash.u32(movement.move_index);
-        hash_bool(&mut hash, movement.evaluated);
-        hash_bool(&mut hash, movement.selected);
+        hash_bool(hash, movement.evaluated);
+        hash_bool(hash, movement.selected);
         hash.u64(movement.rotatable_child_atom_index);
     }
+}
+
+fn scientific_decision_sha256(value: &Fixed64ScientificProjection) -> Sha256 {
+    let mut hash =
+        CanonicalHasher::new("betelgeuze.engine_v2_native_fixed64_scientific_decision/2.0.0");
+    append_scientific_decision(&mut hash, value);
     hash.finish()
+}
+
+pub(crate) fn scientific_decision_preimage(
+    value: &Fixed64ScientificProjection,
+) -> (Sha256, Vec<u8>) {
+    let mut hash = CanonicalHasher::new_recording(
+        "betelgeuze.engine_v2_native_fixed64_scientific_decision/2.0.0",
+    );
+    append_scientific_decision(&mut hash, value);
+    hash.finish_recording()
 }
 
 fn scientific_projection_sha256(value: &Fixed64ScientificProjection) -> Sha256 {

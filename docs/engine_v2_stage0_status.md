@@ -297,6 +297,20 @@ The canonical capability state is:
 - All 218 nonpassing outcomes have a provisional row-level category and failure
   message SHA-256. The verifier recomputes row count, outcome-kind totals, and
   category totals from those rows. Raw failure text is not copied to the receipt.
+- Native fixed64 CPU profile v6 was merged at
+  `12b220e096665ec5664e729d3d60baf577578c56` and archived without a
+  reservation or consuming execution. Its v7 successor leaves the frozen
+  candidate graph, fixtures, 64-slot denominator, ScorerV1/validity semantics,
+  numeric tolerances, and selection decisions unchanged while adding
+  downstream-only, independently rederivable 64-observation/10-lane metrics
+  and symmetry-aware 2 A oracle receipts. The v7 artifact also preserves each
+  backend's canonical decision preimage, complete 28,544-value numeric stream,
+  ordered proposal/coordinate digest stream, and labeled eight-term
+  ScorerV1/validity rows so the independent verifier can reconstruct the full
+  scientific-projection digest instead of trusting an opaque receipt. Both
+  profiles keep every authority bit false. This synthetic CPU evidence does not
+  close any Stage 0 gate, authorize molecular execution, or establish HIP
+  parity.
 - New Stage 0 tests are wired into the existing authoritative
   `ci-engine-v2-main` workflow; no additional workflow was created.
 - The CI inventory exposes 43 Engine V2 workflows: three authoritative and 40

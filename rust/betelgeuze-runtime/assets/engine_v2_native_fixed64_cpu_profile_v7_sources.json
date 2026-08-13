@@ -1,0 +1,986 @@
+{
+  "files": [
+    {
+      "byte_count": 1151,
+      "path": "config/engine_v2_native_fixed64_cpu_profile_v6_archive.json",
+      "sha256": "efb3efd0d863fb6797e9651bf7ba5ef63ab7eb09d5bcc3eef947b7fcd4709551"
+    },
+    {
+      "byte_count": 140091,
+      "path": "include/betelgeuze/engine.h",
+      "sha256": "e02930253757d73e1e56dcdb16058ac6789c1cd8b08dea54fe3d87701f58c57c"
+    },
+    {
+      "byte_count": 16633,
+      "path": "native/src/context.cpp",
+      "sha256": "80de77f79f0dcfbb436256a3999473cb1d61448f8263b2686e59efe835a4d581"
+    },
+    {
+      "byte_count": 27053,
+      "path": "native/src/cpu/evaluator.cpp",
+      "sha256": "96cc78e672dcb01937461fff7594f48b03d83b70f345d02413dcf38819f00733"
+    },
+    {
+      "byte_count": 577,
+      "path": "native/src/cpu/evaluator.hpp",
+      "sha256": "a3a1e78f0a0a261ecdadb157ed4b1c3332d2fd45ef436208f08bf598c644a7c0"
+    },
+    {
+      "byte_count": 63402,
+      "path": "native/src/docking/fixed64_allocation.cpp",
+      "sha256": "db11c155e7527934d3a5e44bbb125b3bd735b52bfccd85cacc8a1fcca92b50e8"
+    },
+    {
+      "byte_count": 37519,
+      "path": "native/src/docking/fixed64_downstream.cpp",
+      "sha256": "2154834d7eae6e1186d74b20db7cffa50b4ab59303ff65fd40cede9858010498"
+    },
+    {
+      "byte_count": 40822,
+      "path": "native/src/docking/fixed64_indexed_so3.cpp",
+      "sha256": "f27011c45524b590999001e58a9d67cb281365bc32f2dd25dc5cc09a8c0ed789"
+    },
+    {
+      "byte_count": 1230,
+      "path": "native/src/docking/fixed64_indexed_so3_provider.h",
+      "sha256": "e51be5d5519d02a34725d365d5cb65d73196117b4e9a0b09897f3c543cabf1f1"
+    },
+    {
+      "byte_count": 168937,
+      "path": "native/src/docking/fixed64_pipeline.cpp",
+      "sha256": "758b113bdc867f6093128979192a6f4c71c3210b2e8eba0e7851e43e834321e4"
+    },
+    {
+      "byte_count": 78251,
+      "path": "native/src/docking/fixed64_producer.cpp",
+      "sha256": "2fb06ff886586fa4bd3ee2ea619162470512486e56aa5a5c3e812a6e87591a80"
+    },
+    {
+      "byte_count": 94179,
+      "path": "native/src/docking/fixed64_refinement_pipeline.cpp",
+      "sha256": "4377e084ee638b2acb2777e69f83c85a5c66c359b708025dfcb0368a4e82967a"
+    },
+    {
+      "byte_count": 81348,
+      "path": "native/src/docking/fixed64_single_anchor.cpp",
+      "sha256": "72f33571cffa420679afefe544251df479a8c3e9aa550cc35e132fc18c70439e"
+    },
+    {
+      "byte_count": 1856,
+      "path": "native/src/docking/fixed64_single_anchor_provider.h",
+      "sha256": "6def0373995207935a910b51f7883047929c532859b6e519bbf2d07f50879a61"
+    },
+    {
+      "byte_count": 25845,
+      "path": "native/src/docking/fixed64_so3.cpp",
+      "sha256": "0afbd39480d7e879e0837039634ba0fa5d60899b21bdcc875caad3d2fe29938e"
+    },
+    {
+      "byte_count": 354,
+      "path": "native/src/docking/fixed64_so3_reference.hpp",
+      "sha256": "5c90ba9145e8deee3d21320ddd3e4fd96290077f32fa63426967770676937a0f"
+    },
+    {
+      "byte_count": 59085,
+      "path": "native/src/docking/geometric_admission.cpp",
+      "sha256": "7d1fe9527d6bc16da3dbfa7cc7426883c17c20261905faf3ad7461c86dc6940e"
+    },
+    {
+      "byte_count": 54351,
+      "path": "native/src/docking/pose_validity.cpp",
+      "sha256": "d56e1c4e8a146aafd62cdf1d056d9885347faadaadd40361d0b29099a9561fc5"
+    },
+    {
+      "byte_count": 102133,
+      "path": "native/src/docking/rigid_refinement.cpp",
+      "sha256": "2b92055255c69f07a6e6e94b3514982024ac74bcf735c6a578953e630b5cf47c"
+    },
+    {
+      "byte_count": 55705,
+      "path": "native/src/docking/scorer_v1.cpp",
+      "sha256": "c2c8cd23db42306fe72f45789a005361776e63639cbc567ce4e48fbcd2b01cd7"
+    },
+    {
+      "byte_count": 60673,
+      "path": "native/src/docking/stable_top_k.cpp",
+      "sha256": "b878b260ce4d9d31cc825b60e0335b9353add4101a5de582749948825bdf0f39"
+    },
+    {
+      "byte_count": 102467,
+      "path": "native/src/docking/torsion_v7.cpp",
+      "sha256": "822a1e696cc86ad257b0d8c940031c259047bf7a15ae979501b80d01d77377e7"
+    },
+    {
+      "byte_count": 29434,
+      "path": "native/src/dynamics/api.cpp",
+      "sha256": "6a3cdad6f24fecb10ee64ae4d423a263f67103bafe9c2629dcc4fc3a73ae7025"
+    },
+    {
+      "byte_count": 16400,
+      "path": "native/src/dynamics/checkpoint.cpp",
+      "sha256": "5d66706129b407091a9cf0b431c8ec40fbc2cfd9af0853d21a1c9f41e6d2d19c"
+    },
+    {
+      "byte_count": 6123,
+      "path": "native/src/dynamics/common.cpp",
+      "sha256": "20e4feb8dcc0cc01261e936e7388f6fadc89a5180c2dbbe565bae8565522bee3"
+    },
+    {
+      "byte_count": 1344,
+      "path": "native/src/dynamics/dynamics.hpp",
+      "sha256": "c3307178a8655042b62cfb5398573b50822b449603bea41876e54d75d7bf0680"
+    },
+    {
+      "byte_count": 44817,
+      "path": "native/src/dynamics/integrator.cpp",
+      "sha256": "7a6ddce26a8039d57b66c9cf70f7634497dd401f5751412dec0adef1de1f41db"
+    },
+    {
+      "byte_count": 7257,
+      "path": "native/src/dynamics/sha256.cpp",
+      "sha256": "e22588ec5726230d38337506fc584f21656335a05cf8541d515db7f5c000778b"
+    },
+    {
+      "byte_count": 1024,
+      "path": "native/src/dynamics/sha256.hpp",
+      "sha256": "e8962e70506eae8ba7a9fbfd54b76045ca465c272f741a18d606439a4eb2d68f"
+    },
+    {
+      "byte_count": 8467,
+      "path": "native/src/evaluator.cpp",
+      "sha256": "91ee1516414ef11ba9757a564891413917c45a708a74b55b44204d560920be4c"
+    },
+    {
+      "byte_count": 31434,
+      "path": "native/src/forcefield.cpp",
+      "sha256": "2ac4f1e8283e2582fd584458c73624d760d29fa9d06e2e0896dd419c68747c67"
+    },
+    {
+      "byte_count": 130342,
+      "path": "native/src/hip/backend.hip",
+      "sha256": "9cd27649caeaf267a18599bf707b225ca4fd32fd408db589116b5c25c18970ee"
+    },
+    {
+      "byte_count": 1827,
+      "path": "native/src/hip/backend.hpp",
+      "sha256": "7ccb4d7503e89f8ee16936a400cc203a83c8804438792264471d8aabc63bb48e"
+    },
+    {
+      "byte_count": 34553,
+      "path": "native/src/hip/docking_fixed64_single_anchor.hip",
+      "sha256": "7d1a2cbbed93ee76281570adc57d0db85c3f00e78d1d66c21a2953ac82fa3702"
+    },
+    {
+      "byte_count": 27911,
+      "path": "native/src/hip/docking_fixed64_so3.hip",
+      "sha256": "cde401efbf1f19f88ff67d28a0d29651a8eeb1ca460656aeab93fa7a40054e68"
+    },
+    {
+      "byte_count": 30254,
+      "path": "native/src/hip/docking_geometric_admission.hip",
+      "sha256": "f3d3976646927d9c1a31ed15ae72e7edb48e14e1ea3e9a896040e87210459c50"
+    },
+    {
+      "byte_count": 48686,
+      "path": "native/src/hip/docking_pose_validity.hip",
+      "sha256": "eaa55835816e695c6cc5fec4c3b5a3806e402c9c04d00f71d660b52ea6f7c131"
+    },
+    {
+      "byte_count": 74649,
+      "path": "native/src/hip/docking_rigid_refinement.hip",
+      "sha256": "6c7519924772fd4a2dd8e12abb257addb95cf536f1fd4806ede25f2a22b81082"
+    },
+    {
+      "byte_count": 47730,
+      "path": "native/src/hip/docking_scorer.hip",
+      "sha256": "fc7f89315f09fc82ad80a45b8c9e32839160ef28654b23299cd9507954c3117a"
+    },
+    {
+      "byte_count": 28199,
+      "path": "native/src/hip/docking_stable_top_k.hip",
+      "sha256": "2e991b56e1459c4ee770a6113e47e8d2f6e984043f5981103121626317cc0a8c"
+    },
+    {
+      "byte_count": 68322,
+      "path": "native/src/hip/docking_torsion_v7.hip",
+      "sha256": "76d51fdd4f35442229e534f3ac79e6c97220c8afc36fb9a9b3c16d633a890100"
+    },
+    {
+      "byte_count": 8858,
+      "path": "native/src/hip/evaluator.cpp",
+      "sha256": "0adb6d7b3cec8baffaabb5f654346ea8552f5dd0c3e0756686ab8ee5bc97bd12"
+    },
+    {
+      "byte_count": 523,
+      "path": "native/src/hip/evaluator.hpp",
+      "sha256": "1ddf6e0c32e346d236fc906e291c457afb590927aa0c3c1420b697c66692207e"
+    },
+    {
+      "byte_count": 6113,
+      "path": "native/src/hip/planning.hpp",
+      "sha256": "0a0d0727386951a87fe94c4f8f0c0d82d446a6c49cd05042514adcdf0cd94d81"
+    },
+    {
+      "byte_count": 14855,
+      "path": "native/src/hip/provider.h",
+      "sha256": "5072ebddc1dc58c0a8b96f9905ea78f155fe9aa316d6dffb4f5ab2db5fff5992"
+    },
+    {
+      "byte_count": 46434,
+      "path": "native/src/hip/provider.hip",
+      "sha256": "74af36c6c54593bdc4f75258fca658ea3c37e90c2c469fcd5d4435964f03574f"
+    },
+    {
+      "byte_count": 2072,
+      "path": "native/src/hip/stub.cpp",
+      "sha256": "7ee0b03076189f9a40fd729fabcd9a8c6583fe964dcf867d1debbb6e8b9de36f"
+    },
+    {
+      "byte_count": 17030,
+      "path": "native/src/internal.hpp",
+      "sha256": "20b92893af14bd0c28c4fbc7a24cd75fc8b99f87d8afcc959ec79534ede3c5f1"
+    },
+    {
+      "byte_count": 8314,
+      "path": "native/src/rust/evaluator.cpp",
+      "sha256": "c29dc62b51bee393af38a9aa378f0df23901a393bb33a5576ddfdbaba0bdccfb"
+    },
+    {
+      "byte_count": 410,
+      "path": "native/src/rust/evaluator.hpp",
+      "sha256": "62873c2df470f7879bb0ab080b43c440bdb1e988c26fda99ada51fc7d06b37af"
+    },
+    {
+      "byte_count": 15241,
+      "path": "native/src/rust/provider.h",
+      "sha256": "590a608c3d61b7f3c630df9fd2bf0977098eb9bc787b25ccdd4bd1be074036e2"
+    },
+    {
+      "byte_count": 13247,
+      "path": "native/src/system.cpp",
+      "sha256": "e439421809d2f592d0e520ff1249d15afcfe231b3b09cba91afc8ddce4530858"
+    },
+    {
+      "byte_count": 3790,
+      "path": "rust/Cargo.lock",
+      "sha256": "b4f9534bc51bccd72157b0be73ce12c939411821c10c11e70b00996e1f82baac"
+    },
+    {
+      "byte_count": 648,
+      "path": "rust/Cargo.toml",
+      "sha256": "4a0b23729baeec10cc0e57abd4fb199c762531124fabfa400c34b8475592281c"
+    },
+    {
+      "byte_count": 353,
+      "path": "rust/betelgeuze-docking-search/Cargo.toml",
+      "sha256": "cf5e29bdfd74902fb0c623ae03bf4157a05128ca13f3ff29ec2267c58484c5ec"
+    },
+    {
+      "byte_count": 5798,
+      "path": "rust/betelgeuze-docking-search/src/anchors.rs",
+      "sha256": "b4ede4a238f4db96c318f794be128995e219b7a9e17e1cebbbcc4225468a3316"
+    },
+    {
+      "byte_count": 3444,
+      "path": "rust/betelgeuze-docking-search/src/cluster.rs",
+      "sha256": "2fc7a11c746774b377280784bddf23b3efd13c64acfa12f1a0f9018139243d23"
+    },
+    {
+      "byte_count": 1930,
+      "path": "rust/betelgeuze-docking-search/src/error.rs",
+      "sha256": "59b1fc464e77d209e0c56c2c1c0a24d6e83f961d87f686b5bbe6316675eaee86"
+    },
+    {
+      "byte_count": 36140,
+      "path": "rust/betelgeuze-docking-search/src/fixed64.rs",
+      "sha256": "8715c859fbf3de1a01f62fdb3ae2df9d5d4b95f1baed276ceccb1874f8a23680"
+    },
+    {
+      "byte_count": 16616,
+      "path": "rust/betelgeuze-docking-search/src/fixed64_cluster.rs",
+      "sha256": "449aa3853f1d58d7346ccef7ff1fc217bf6c2522dbb2c6da877b4f050c36ed4b"
+    },
+    {
+      "byte_count": 17978,
+      "path": "rust/betelgeuze-docking-search/src/fixed64_pipeline.rs",
+      "sha256": "362bb69660f4d811999729ec7fbb1492dd302467f69ae74891fe7049a18e6d47"
+    },
+    {
+      "byte_count": 22027,
+      "path": "rust/betelgeuze-docking-search/src/fixed64_placement.rs",
+      "sha256": "343ced7bd276d2cf9fbcc4c4febb98002df664dceef805c7cac5af3781a69a6d"
+    },
+    {
+      "byte_count": 51005,
+      "path": "rust/betelgeuze-docking-search/src/fixed64_producer.rs",
+      "sha256": "07846863f0a4415dfb22e1f717d5a2348814ecb6e1b147a85834199d5628e47d"
+    },
+    {
+      "byte_count": 22889,
+      "path": "rust/betelgeuze-docking-search/src/fixed64_ranking.rs",
+      "sha256": "aa8712e4133b77d9d55a9d0c64833b634c3c0e2bcc17ec1b461ce002b73b53da"
+    },
+    {
+      "byte_count": 44149,
+      "path": "rust/betelgeuze-docking-search/src/fixed64_single_anchor.rs",
+      "sha256": "6970a2c06aac40884735e78d4b6aa0bfb246daaef9b29e1bbdd5bb239eb562db"
+    },
+    {
+      "byte_count": 70275,
+      "path": "rust/betelgeuze-docking-search/src/fixed64_validity.rs",
+      "sha256": "44ab27310b5ef6a595a9306356977738e8ab3e2216e4bec96a5060c7d7726918"
+    },
+    {
+      "byte_count": 39622,
+      "path": "rust/betelgeuze-docking-search/src/geometric_admission.rs",
+      "sha256": "8e3c70b0a748a0a961f0bdf39747da6983fa8084478999aad9877d7e1feb4e42"
+    },
+    {
+      "byte_count": 8702,
+      "path": "rust/betelgeuze-docking-search/src/geometry.rs",
+      "sha256": "8af100f560c3ff5ed68d9b7778632b13157f2f7c3a8ee4edb20a7b9804b9fc07"
+    },
+    {
+      "byte_count": 14335,
+      "path": "rust/betelgeuze-docking-search/src/identity.rs",
+      "sha256": "194130fe344d8fb71e0a0ec0b77a1dddc68f38134a8c424faf9f6ea2c95fc5c2"
+    },
+    {
+      "byte_count": 9580,
+      "path": "rust/betelgeuze-docking-search/src/lib.rs",
+      "sha256": "bd63d9d7d2ef6df7b9f6af34f99195d35d4bc1cbecd8da5d4725b66ebddfee80"
+    },
+    {
+      "byte_count": 17499,
+      "path": "rust/betelgeuze-docking-search/src/model.rs",
+      "sha256": "fcf21fdb17a5fae2184558a88879699fa8c4b7b3431a20f484bb56df64e679c6"
+    },
+    {
+      "byte_count": 1760,
+      "path": "rust/betelgeuze-docking-search/src/native_hash.rs",
+      "sha256": "4ff41fb10dcb508539a2b2b57abc32af3f2b5bd95ff5f66deb43a6f544e28cb7"
+    },
+    {
+      "byte_count": 3675,
+      "path": "rust/betelgeuze-docking-search/src/prune.rs",
+      "sha256": "c445e89d9351b674dbd0724dbeca4983605952161e6b366ba28feb851b65f446"
+    },
+    {
+      "byte_count": 5785,
+      "path": "rust/betelgeuze-docking-search/src/receipt.rs",
+      "sha256": "c8d27a8f8e7dc05338efb45b629e7b565d257a1d6d5f98a6b829476ce59bede7"
+    },
+    {
+      "byte_count": 4367,
+      "path": "rust/betelgeuze-docking-search/src/refine.rs",
+      "sha256": "f509220154917360c0319b360eb0d7496045cfbea6a1c54ff51692997c392612"
+    },
+    {
+      "byte_count": 45090,
+      "path": "rust/betelgeuze-docking-search/src/rigid_refinement.rs",
+      "sha256": "850ddde24d40d998d2f3e69227b140ba35a608d0e12ce503081f09b4c748bfcf"
+    },
+    {
+      "byte_count": 63864,
+      "path": "rust/betelgeuze-docking-search/src/scorer_v1.rs",
+      "sha256": "92371709d682f564c1c82ed32dae876ed4735ac5ff868e78698d716f1523b65e"
+    },
+    {
+      "byte_count": 27552,
+      "path": "rust/betelgeuze-docking-search/src/search.rs",
+      "sha256": "51e3d15abb9a5e479e6fde2871e9974bccc7f97ca7d35cf53f6cab2b2db3509a"
+    },
+    {
+      "byte_count": 6392,
+      "path": "rust/betelgeuze-docking-search/src/sha256.rs",
+      "sha256": "ecfe49651b5aca6031f4250cb1c6c1770c2b6f90c6ec86f6870f8467f9774e81"
+    },
+    {
+      "byte_count": 14331,
+      "path": "rust/betelgeuze-docking-search/src/short_range.rs",
+      "sha256": "393c0d22d284bd830b745c2e31cbdb140e6ac18c186cb649d6efeccb6c01d1f9"
+    },
+    {
+      "byte_count": 6604,
+      "path": "rust/betelgeuze-docking-search/src/so3.rs",
+      "sha256": "975bb1c7065489a1d4fce7e591ec8b0e8424d301bcd4ec199026bf4f758364fb"
+    },
+    {
+      "byte_count": 6951,
+      "path": "rust/betelgeuze-docking-search/src/surface.rs",
+      "sha256": "13d596c5c4c98faf87e0746d7a69f715fe2051f86564451aa2e7fefdf9b93a15"
+    },
+    {
+      "byte_count": 50007,
+      "path": "rust/betelgeuze-docking-search/src/torsion_refinement.rs",
+      "sha256": "ec03c4b896d65feccd32555dfe15508a645223ca281eb1b552dd58272e50bfd8"
+    },
+    {
+      "byte_count": 1975,
+      "path": "rust/betelgeuze-docking-search/src/validity.rs",
+      "sha256": "e3675604bd3493a2b22139548db302dd4eceec9795492d174f94e119327a6630"
+    },
+    {
+      "byte_count": 14867,
+      "path": "rust/betelgeuze-docking-search/tests/fixed64_allocation.rs",
+      "sha256": "8a940202cbc78cf8ca8943fd4e478ca2f6b2e3c555522f4fcade300860b77e06"
+    },
+    {
+      "byte_count": 9871,
+      "path": "rust/betelgeuze-docking-search/tests/fixed64_geometric_admission.rs",
+      "sha256": "01fa25b83f4c2e2948bb528ab3b3f9c2e0c4fe52f779ceb05038c5c40ad400f0"
+    },
+    {
+      "byte_count": 32504,
+      "path": "rust/betelgeuze-docking-search/tests/fixed64_placement.rs",
+      "sha256": "1b042b164beb16dba24b457cd5217b993debf4606b363f4ad12703c8b8323496"
+    },
+    {
+      "byte_count": 18792,
+      "path": "rust/betelgeuze-docking-search/tests/fixed64_producer.rs",
+      "sha256": "696773c9eae758a8e1ac5a31c2b07a729c8594fd2fd03a26cfb48a934732f501"
+    },
+    {
+      "byte_count": 26198,
+      "path": "rust/betelgeuze-docking-search/tests/fixed64_scorer_v1.rs",
+      "sha256": "9004aa28d9fb7233e9e1f77ef38c69acbfd6665e74c674d05cf32324cbb1bed6"
+    },
+    {
+      "byte_count": 26456,
+      "path": "rust/betelgeuze-docking-search/tests/search_contract.rs",
+      "sha256": "76b12ce7c610f7f74b669ec2966d4b1fe0a426788e1851a1cc56cbb008acaa3c"
+    },
+    {
+      "byte_count": 8445,
+      "path": "rust/betelgeuze-docking-search/tests/short_range.rs",
+      "sha256": "e719744eb9136a27c82b8136c6ee3df8acc8de813a2eb0e2f1b6db867e21fcdb"
+    },
+    {
+      "byte_count": 654,
+      "path": "rust/betelgeuze-runtime/Cargo.toml",
+      "sha256": "d230b8a374197ab667dabb8fe89a7079fab2c12fcede14ef3de380e11ef6bce4"
+    },
+    {
+      "byte_count": 654,
+      "path": "rust/betelgeuze-runtime/assets/original-Cargo.toml",
+      "sha256": "d230b8a374197ab667dabb8fe89a7079fab2c12fcede14ef3de380e11ef6bce4"
+    },
+    {
+      "byte_count": 24691,
+      "path": "rust/betelgeuze-runtime/build.rs",
+      "sha256": "aecda0e1077965fe49651b8dff9aacc4787edd37c4496da11f8b3c62297bba87"
+    },
+    {
+      "byte_count": 5835,
+      "path": "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v5.rs",
+      "sha256": "5c0ddd231e0378177425337610e2c29ae4d637703382e13e11cca044a380e885"
+    },
+    {
+      "byte_count": 6273,
+      "path": "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-qualify-v6.rs",
+      "sha256": "b5b92d50be4ab443847989247a370947efcdf85d2459ac534ffb60e85712ffc7"
+    },
+    {
+      "byte_count": 6273,
+      "path": "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-qualify-v7.rs",
+      "sha256": "a374dbe8adc0563416559ef8a8e9a4642655bc545a286133f7b350400371abb2"
+    },
+    {
+      "byte_count": 502764,
+      "path": "rust/betelgeuze-runtime/src/docking.rs",
+      "sha256": "ada1a9d89e8e90964c2d885e55e7ea02c110c9b79de9cddff85cd646c5dc3027"
+    },
+    {
+      "byte_count": 23776,
+      "path": "rust/betelgeuze-runtime/src/dynamics.rs",
+      "sha256": "5624415c361564073e3f0257f1fa7d9cb1a710d4cc8fb75c05e6fe5800e7ecdd"
+    },
+    {
+      "byte_count": 52709,
+      "path": "rust/betelgeuze-runtime/src/fixed64_lane_metrics.rs",
+      "sha256": "b3754ddb7a3c03a38c6de9d9540f642582fd488081701f96a610b28c7bd2bb5a"
+    },
+    {
+      "byte_count": 17195,
+      "path": "rust/betelgeuze-runtime/src/forcefield.rs",
+      "sha256": "81fcf9316b9fdc386754f0438db9605ecb080221ae31a4e89734db06fc10e830"
+    },
+    {
+      "byte_count": 29971,
+      "path": "rust/betelgeuze-runtime/src/lib.rs",
+      "sha256": "dc002ad76cf7f374bcdf940909204324a35043b3271c202457464c9b14216628"
+    },
+    {
+      "byte_count": 56395,
+      "path": "rust/betelgeuze-runtime/src/qualification.rs",
+      "sha256": "aa15145fa5c91ec50e9d4a9857a283c7a40d1170cbfddb96dea55ac8b60e0167"
+    },
+    {
+      "byte_count": 88560,
+      "path": "rust/betelgeuze-runtime/src/qualification_v6.rs",
+      "sha256": "9693e0429659afc685a562e14d4f2b20df377f665dcbd057c9252b32b97e5975"
+    },
+    {
+      "byte_count": 115010,
+      "path": "rust/betelgeuze-runtime/src/qualification_v7.rs",
+      "sha256": "c60891b1927f368da03c209ec8781d4838159490340d5ab2a22646352289bccf"
+    },
+    {
+      "byte_count": 29008,
+      "path": "rust/betelgeuze-runtime/tests/cpu_oracle_parity.rs",
+      "sha256": "96cb40d6fa3e8edfb7c2ade3ecfddae9c861fff81e13ac344259f2c575bf5daa"
+    },
+    {
+      "byte_count": 46505,
+      "path": "rust/betelgeuze-runtime/tests/docking_fixed64_pipeline.rs",
+      "sha256": "e185650820f394b94e5044e9a0e27e6991a393f1c9491d434e8c48c7c50842a5"
+    },
+    {
+      "byte_count": 26076,
+      "path": "rust/betelgeuze-runtime/tests/dynamics_oracle_parity.rs",
+      "sha256": "ba76345b0d3a77a26b9368bbf5f6f4ac0911653f2fe4ecf9a172c7c7778b9293"
+    },
+    {
+      "byte_count": 1061,
+      "path": "rust/betelgeuze-runtime/tests/fixed64_cpu_probe_v5_activation.rs",
+      "sha256": "1ea01abe200bd0f0b4c01347ac1ed25eb691da3c9e875e2d474d69af99e73ce2"
+    },
+    {
+      "byte_count": 7261,
+      "path": "rust/betelgeuze-runtime/tests/runtime.rs",
+      "sha256": "4cab9a26c25873415c36cd5deb7c753fef0988c4519188790ca07ea2aad4c97d"
+    },
+    {
+      "byte_count": 3022,
+      "path": "rust/betelgeuze-sys/Cargo.toml",
+      "sha256": "4d042e65d4d3aeb7cfd9ea11fb6a2e3a8ea2d06b80c6569696ce8bfcadc395b1"
+    },
+    {
+      "byte_count": 27059,
+      "path": "rust/betelgeuze-sys/abi/header_c11.c",
+      "sha256": "f99fbdf5b4730fc8f539a9cabf103ded057c1037e96baee1069fa16ff08a5641"
+    },
+    {
+      "byte_count": 60509,
+      "path": "rust/betelgeuze-sys/abi/layout_assertions.cpp",
+      "sha256": "02c84ac307d1b678635cfc5231a303b58074574cba085cbef9f6ef03733907da"
+    },
+    {
+      "byte_count": 24007,
+      "path": "rust/betelgeuze-sys/build.rs",
+      "sha256": "92fa2c7192288ea3a9318db8614afff21d815637322e5b80b4161a737ac30e08"
+    },
+    {
+      "byte_count": 109962,
+      "path": "rust/betelgeuze-sys/src/lib.rs",
+      "sha256": "eec5322c322ce745d8fd6f1e36e814ef40d35bdfea9cd0c2e8cc715b36ab1ec5"
+    },
+    {
+      "byte_count": 59386,
+      "path": "rust/betelgeuze-sys/tests/layout.rs",
+      "sha256": "3cd1573b1bd7bc738e5c4119f77d8283764bd2f4e66d9dc693f133576bdbb443"
+    },
+    {
+      "byte_count": 36257,
+      "path": "rust/betelgeuze-sys/tests/raw_smoke.rs",
+      "sha256": "08c42dad9d9988b1ca1dadbd3f84b939b5153f3ac6343430a6f784dc34eb7a46"
+    },
+    {
+      "byte_count": 140091,
+      "path": "rust/betelgeuze-sys/vendor/include/betelgeuze/engine.h",
+      "sha256": "e02930253757d73e1e56dcdb16058ac6789c1cd8b08dea54fe3d87701f58c57c"
+    },
+    {
+      "byte_count": 16633,
+      "path": "rust/betelgeuze-sys/vendor/native/src/context.cpp",
+      "sha256": "80de77f79f0dcfbb436256a3999473cb1d61448f8263b2686e59efe835a4d581"
+    },
+    {
+      "byte_count": 27053,
+      "path": "rust/betelgeuze-sys/vendor/native/src/cpu/evaluator.cpp",
+      "sha256": "96cc78e672dcb01937461fff7594f48b03d83b70f345d02413dcf38819f00733"
+    },
+    {
+      "byte_count": 577,
+      "path": "rust/betelgeuze-sys/vendor/native/src/cpu/evaluator.hpp",
+      "sha256": "a3a1e78f0a0a261ecdadb157ed4b1c3332d2fd45ef436208f08bf598c644a7c0"
+    },
+    {
+      "byte_count": 63402,
+      "path": "rust/betelgeuze-sys/vendor/native/src/docking/fixed64_allocation.cpp",
+      "sha256": "db11c155e7527934d3a5e44bbb125b3bd735b52bfccd85cacc8a1fcca92b50e8"
+    },
+    {
+      "byte_count": 37519,
+      "path": "rust/betelgeuze-sys/vendor/native/src/docking/fixed64_downstream.cpp",
+      "sha256": "2154834d7eae6e1186d74b20db7cffa50b4ab59303ff65fd40cede9858010498"
+    },
+    {
+      "byte_count": 40822,
+      "path": "rust/betelgeuze-sys/vendor/native/src/docking/fixed64_indexed_so3.cpp",
+      "sha256": "f27011c45524b590999001e58a9d67cb281365bc32f2dd25dc5cc09a8c0ed789"
+    },
+    {
+      "byte_count": 1230,
+      "path": "rust/betelgeuze-sys/vendor/native/src/docking/fixed64_indexed_so3_provider.h",
+      "sha256": "e51be5d5519d02a34725d365d5cb65d73196117b4e9a0b09897f3c543cabf1f1"
+    },
+    {
+      "byte_count": 168937,
+      "path": "rust/betelgeuze-sys/vendor/native/src/docking/fixed64_pipeline.cpp",
+      "sha256": "758b113bdc867f6093128979192a6f4c71c3210b2e8eba0e7851e43e834321e4"
+    },
+    {
+      "byte_count": 78251,
+      "path": "rust/betelgeuze-sys/vendor/native/src/docking/fixed64_producer.cpp",
+      "sha256": "2fb06ff886586fa4bd3ee2ea619162470512486e56aa5a5c3e812a6e87591a80"
+    },
+    {
+      "byte_count": 94179,
+      "path": "rust/betelgeuze-sys/vendor/native/src/docking/fixed64_refinement_pipeline.cpp",
+      "sha256": "4377e084ee638b2acb2777e69f83c85a5c66c359b708025dfcb0368a4e82967a"
+    },
+    {
+      "byte_count": 81348,
+      "path": "rust/betelgeuze-sys/vendor/native/src/docking/fixed64_single_anchor.cpp",
+      "sha256": "72f33571cffa420679afefe544251df479a8c3e9aa550cc35e132fc18c70439e"
+    },
+    {
+      "byte_count": 1856,
+      "path": "rust/betelgeuze-sys/vendor/native/src/docking/fixed64_single_anchor_provider.h",
+      "sha256": "6def0373995207935a910b51f7883047929c532859b6e519bbf2d07f50879a61"
+    },
+    {
+      "byte_count": 25845,
+      "path": "rust/betelgeuze-sys/vendor/native/src/docking/fixed64_so3.cpp",
+      "sha256": "0afbd39480d7e879e0837039634ba0fa5d60899b21bdcc875caad3d2fe29938e"
+    },
+    {
+      "byte_count": 354,
+      "path": "rust/betelgeuze-sys/vendor/native/src/docking/fixed64_so3_reference.hpp",
+      "sha256": "5c90ba9145e8deee3d21320ddd3e4fd96290077f32fa63426967770676937a0f"
+    },
+    {
+      "byte_count": 59085,
+      "path": "rust/betelgeuze-sys/vendor/native/src/docking/geometric_admission.cpp",
+      "sha256": "7d1fe9527d6bc16da3dbfa7cc7426883c17c20261905faf3ad7461c86dc6940e"
+    },
+    {
+      "byte_count": 54351,
+      "path": "rust/betelgeuze-sys/vendor/native/src/docking/pose_validity.cpp",
+      "sha256": "d56e1c4e8a146aafd62cdf1d056d9885347faadaadd40361d0b29099a9561fc5"
+    },
+    {
+      "byte_count": 102133,
+      "path": "rust/betelgeuze-sys/vendor/native/src/docking/rigid_refinement.cpp",
+      "sha256": "2b92055255c69f07a6e6e94b3514982024ac74bcf735c6a578953e630b5cf47c"
+    },
+    {
+      "byte_count": 55705,
+      "path": "rust/betelgeuze-sys/vendor/native/src/docking/scorer_v1.cpp",
+      "sha256": "c2c8cd23db42306fe72f45789a005361776e63639cbc567ce4e48fbcd2b01cd7"
+    },
+    {
+      "byte_count": 60673,
+      "path": "rust/betelgeuze-sys/vendor/native/src/docking/stable_top_k.cpp",
+      "sha256": "b878b260ce4d9d31cc825b60e0335b9353add4101a5de582749948825bdf0f39"
+    },
+    {
+      "byte_count": 102467,
+      "path": "rust/betelgeuze-sys/vendor/native/src/docking/torsion_v7.cpp",
+      "sha256": "822a1e696cc86ad257b0d8c940031c259047bf7a15ae979501b80d01d77377e7"
+    },
+    {
+      "byte_count": 29434,
+      "path": "rust/betelgeuze-sys/vendor/native/src/dynamics/api.cpp",
+      "sha256": "6a3cdad6f24fecb10ee64ae4d423a263f67103bafe9c2629dcc4fc3a73ae7025"
+    },
+    {
+      "byte_count": 16400,
+      "path": "rust/betelgeuze-sys/vendor/native/src/dynamics/checkpoint.cpp",
+      "sha256": "5d66706129b407091a9cf0b431c8ec40fbc2cfd9af0853d21a1c9f41e6d2d19c"
+    },
+    {
+      "byte_count": 6123,
+      "path": "rust/betelgeuze-sys/vendor/native/src/dynamics/common.cpp",
+      "sha256": "20e4feb8dcc0cc01261e936e7388f6fadc89a5180c2dbbe565bae8565522bee3"
+    },
+    {
+      "byte_count": 1344,
+      "path": "rust/betelgeuze-sys/vendor/native/src/dynamics/dynamics.hpp",
+      "sha256": "c3307178a8655042b62cfb5398573b50822b449603bea41876e54d75d7bf0680"
+    },
+    {
+      "byte_count": 44817,
+      "path": "rust/betelgeuze-sys/vendor/native/src/dynamics/integrator.cpp",
+      "sha256": "7a6ddce26a8039d57b66c9cf70f7634497dd401f5751412dec0adef1de1f41db"
+    },
+    {
+      "byte_count": 7257,
+      "path": "rust/betelgeuze-sys/vendor/native/src/dynamics/sha256.cpp",
+      "sha256": "e22588ec5726230d38337506fc584f21656335a05cf8541d515db7f5c000778b"
+    },
+    {
+      "byte_count": 1024,
+      "path": "rust/betelgeuze-sys/vendor/native/src/dynamics/sha256.hpp",
+      "sha256": "e8962e70506eae8ba7a9fbfd54b76045ca465c272f741a18d606439a4eb2d68f"
+    },
+    {
+      "byte_count": 8467,
+      "path": "rust/betelgeuze-sys/vendor/native/src/evaluator.cpp",
+      "sha256": "91ee1516414ef11ba9757a564891413917c45a708a74b55b44204d560920be4c"
+    },
+    {
+      "byte_count": 31434,
+      "path": "rust/betelgeuze-sys/vendor/native/src/forcefield.cpp",
+      "sha256": "2ac4f1e8283e2582fd584458c73624d760d29fa9d06e2e0896dd419c68747c67"
+    },
+    {
+      "byte_count": 130342,
+      "path": "rust/betelgeuze-sys/vendor/native/src/hip/backend.hip",
+      "sha256": "9cd27649caeaf267a18599bf707b225ca4fd32fd408db589116b5c25c18970ee"
+    },
+    {
+      "byte_count": 1827,
+      "path": "rust/betelgeuze-sys/vendor/native/src/hip/backend.hpp",
+      "sha256": "7ccb4d7503e89f8ee16936a400cc203a83c8804438792264471d8aabc63bb48e"
+    },
+    {
+      "byte_count": 34553,
+      "path": "rust/betelgeuze-sys/vendor/native/src/hip/docking_fixed64_single_anchor.hip",
+      "sha256": "7d1a2cbbed93ee76281570adc57d0db85c3f00e78d1d66c21a2953ac82fa3702"
+    },
+    {
+      "byte_count": 27911,
+      "path": "rust/betelgeuze-sys/vendor/native/src/hip/docking_fixed64_so3.hip",
+      "sha256": "cde401efbf1f19f88ff67d28a0d29651a8eeb1ca460656aeab93fa7a40054e68"
+    },
+    {
+      "byte_count": 30254,
+      "path": "rust/betelgeuze-sys/vendor/native/src/hip/docking_geometric_admission.hip",
+      "sha256": "f3d3976646927d9c1a31ed15ae72e7edb48e14e1ea3e9a896040e87210459c50"
+    },
+    {
+      "byte_count": 48686,
+      "path": "rust/betelgeuze-sys/vendor/native/src/hip/docking_pose_validity.hip",
+      "sha256": "eaa55835816e695c6cc5fec4c3b5a3806e402c9c04d00f71d660b52ea6f7c131"
+    },
+    {
+      "byte_count": 74649,
+      "path": "rust/betelgeuze-sys/vendor/native/src/hip/docking_rigid_refinement.hip",
+      "sha256": "6c7519924772fd4a2dd8e12abb257addb95cf536f1fd4806ede25f2a22b81082"
+    },
+    {
+      "byte_count": 47730,
+      "path": "rust/betelgeuze-sys/vendor/native/src/hip/docking_scorer.hip",
+      "sha256": "fc7f89315f09fc82ad80a45b8c9e32839160ef28654b23299cd9507954c3117a"
+    },
+    {
+      "byte_count": 28199,
+      "path": "rust/betelgeuze-sys/vendor/native/src/hip/docking_stable_top_k.hip",
+      "sha256": "2e991b56e1459c4ee770a6113e47e8d2f6e984043f5981103121626317cc0a8c"
+    },
+    {
+      "byte_count": 68322,
+      "path": "rust/betelgeuze-sys/vendor/native/src/hip/docking_torsion_v7.hip",
+      "sha256": "76d51fdd4f35442229e534f3ac79e6c97220c8afc36fb9a9b3c16d633a890100"
+    },
+    {
+      "byte_count": 8858,
+      "path": "rust/betelgeuze-sys/vendor/native/src/hip/evaluator.cpp",
+      "sha256": "0adb6d7b3cec8baffaabb5f654346ea8552f5dd0c3e0756686ab8ee5bc97bd12"
+    },
+    {
+      "byte_count": 523,
+      "path": "rust/betelgeuze-sys/vendor/native/src/hip/evaluator.hpp",
+      "sha256": "1ddf6e0c32e346d236fc906e291c457afb590927aa0c3c1420b697c66692207e"
+    },
+    {
+      "byte_count": 6113,
+      "path": "rust/betelgeuze-sys/vendor/native/src/hip/planning.hpp",
+      "sha256": "0a0d0727386951a87fe94c4f8f0c0d82d446a6c49cd05042514adcdf0cd94d81"
+    },
+    {
+      "byte_count": 14855,
+      "path": "rust/betelgeuze-sys/vendor/native/src/hip/provider.h",
+      "sha256": "5072ebddc1dc58c0a8b96f9905ea78f155fe9aa316d6dffb4f5ab2db5fff5992"
+    },
+    {
+      "byte_count": 46434,
+      "path": "rust/betelgeuze-sys/vendor/native/src/hip/provider.hip",
+      "sha256": "74af36c6c54593bdc4f75258fca658ea3c37e90c2c469fcd5d4435964f03574f"
+    },
+    {
+      "byte_count": 2072,
+      "path": "rust/betelgeuze-sys/vendor/native/src/hip/stub.cpp",
+      "sha256": "7ee0b03076189f9a40fd729fabcd9a8c6583fe964dcf867d1debbb6e8b9de36f"
+    },
+    {
+      "byte_count": 17030,
+      "path": "rust/betelgeuze-sys/vendor/native/src/internal.hpp",
+      "sha256": "20b92893af14bd0c28c4fbc7a24cd75fc8b99f87d8afcc959ec79534ede3c5f1"
+    },
+    {
+      "byte_count": 8314,
+      "path": "rust/betelgeuze-sys/vendor/native/src/rust/evaluator.cpp",
+      "sha256": "c29dc62b51bee393af38a9aa378f0df23901a393bb33a5576ddfdbaba0bdccfb"
+    },
+    {
+      "byte_count": 410,
+      "path": "rust/betelgeuze-sys/vendor/native/src/rust/evaluator.hpp",
+      "sha256": "62873c2df470f7879bb0ab080b43c440bdb1e988c26fda99ada51fc7d06b37af"
+    },
+    {
+      "byte_count": 15241,
+      "path": "rust/betelgeuze-sys/vendor/native/src/rust/provider.h",
+      "sha256": "590a608c3d61b7f3c630df9fd2bf0977098eb9bc787b25ccdd4bd1be074036e2"
+    },
+    {
+      "byte_count": 13247,
+      "path": "rust/betelgeuze-sys/vendor/native/src/system.cpp",
+      "sha256": "e439421809d2f592d0e520ff1249d15afcfe231b3b09cba91afc8ddce4530858"
+    },
+    {
+      "byte_count": 341,
+      "path": "rust/cpu-kernel/Cargo.toml",
+      "sha256": "cc52cd49aedeb8da2021222ed840c52eaf24f59b4fac30f0dfbe0c1c6d1ff174"
+    },
+    {
+      "byte_count": 23575,
+      "path": "rust/cpu-kernel/src/docking_fixed64_allocation.rs",
+      "sha256": "04d1c168fd2a950130cc797106c8b48d262a31141fcd27c715eef18245d1447a"
+    },
+    {
+      "byte_count": 11189,
+      "path": "rust/cpu-kernel/src/docking_fixed64_indexed_so3.rs",
+      "sha256": "7417781927a14f1653e29f55b79be213cfcd8b361de7d6d32edda3d762cf6657"
+    },
+    {
+      "byte_count": 17513,
+      "path": "rust/cpu-kernel/src/docking_fixed64_single_anchor.rs",
+      "sha256": "8a7ca66fa86cd47efa02a3ea0443720e467c6b9faa665476cac8db8bf574ac8a"
+    },
+    {
+      "byte_count": 4728,
+      "path": "rust/cpu-kernel/src/docking_fixed64_so3.rs",
+      "sha256": "bcdd744383027761faf501e32bb756fa68a573c3c19b8e8d797490343117bf3d"
+    },
+    {
+      "byte_count": 32871,
+      "path": "rust/cpu-kernel/src/docking_rigid_refinement.rs",
+      "sha256": "4548eeabe6ccf29a0a67a69f18a3bd041668dc3329914fa67b5b2d6c55568c5f"
+    },
+    {
+      "byte_count": 45764,
+      "path": "rust/cpu-kernel/src/docking_torsion_v7.rs",
+      "sha256": "4ed52b6c6bd326db2a924f6ae9f023efe682a2d2e40e2e7ecd916c6a8d7bacaa"
+    },
+    {
+      "byte_count": 21836,
+      "path": "rust/cpu-kernel/src/kernel.rs",
+      "sha256": "8ef37f59193365b847c80eae310aee755b45025419d94c1983c5fc5336bd1ff6"
+    },
+    {
+      "byte_count": 137675,
+      "path": "rust/cpu-kernel/src/lib.rs",
+      "sha256": "6b7a46c4e147248ff0a3341aec74c323c5de828bc404111138f756111105cf7b"
+    },
+    {
+      "byte_count": 308,
+      "path": "rust/reference-dynamics/Cargo.toml",
+      "sha256": "3655ef40f00057bffe127d783e2b4abccf23fc6b969d7058bb5be87cdda9c402"
+    },
+    {
+      "byte_count": 663,
+      "path": "rust/reference-dynamics/fixtures/dynamics_v1.tsv",
+      "sha256": "02ea08436a8fedb66641e4ddbbcf334a9d684b3cf3036aafe22e7131220e2a0e"
+    },
+    {
+      "byte_count": 12692,
+      "path": "rust/reference-dynamics/src/checkpoint.rs",
+      "sha256": "b90ea506d6ceee552684d4ec33d8fa7a49c782f44426e291536ce9495c39341a"
+    },
+    {
+      "byte_count": 14149,
+      "path": "rust/reference-dynamics/src/constraints.rs",
+      "sha256": "0b7b2110a49fe56f11b2d9c37409300953a57639090a083fd47607be686122e8"
+    },
+    {
+      "byte_count": 24029,
+      "path": "rust/reference-dynamics/src/dynamics.rs",
+      "sha256": "e806ab4dee7887da15291b4238e0b8e385f13b5d5d674e708735d99e2ab07ab7"
+    },
+    {
+      "byte_count": 1387,
+      "path": "rust/reference-dynamics/src/lib.rs",
+      "sha256": "4922d4d205b7fd6805ec9b3c2f1bd35d02969c22282f0da7c39c5b369fb101fe"
+    },
+    {
+      "byte_count": 15181,
+      "path": "rust/reference-dynamics/src/model.rs",
+      "sha256": "0a538fc086f54c5cd8ac64c7684c8e064575a0da0d95c108ee69219fac970e2b"
+    },
+    {
+      "byte_count": 2280,
+      "path": "rust/reference-dynamics/src/rng.rs",
+      "sha256": "b329f0fdbebb6cc9d878e191cdf42dfa35956481b5fb5653f1c026f3bfcbd27a"
+    },
+    {
+      "byte_count": 7014,
+      "path": "rust/reference-dynamics/tests/frozen_fixtures.rs",
+      "sha256": "c3b51b8787a25681797fa3ae0464b6687c2097108238c07c02480a45cfb62ece"
+    },
+    {
+      "byte_count": 21309,
+      "path": "rust/reference-dynamics/tests/properties.rs",
+      "sha256": "e97b3c45eeee6b89f4dc371c8a75c311100f6fef45fd218613b0e61ede76de7e"
+    },
+    {
+      "byte_count": 305,
+      "path": "rust/reference-physics/Cargo.toml",
+      "sha256": "3cb33d9193e09848a3f4eae1ae9963316b04532aed3a7da1164e8d4aedfc18cd"
+    },
+    {
+      "byte_count": 1122,
+      "path": "rust/reference-physics/fixtures/exact_energy_v1.tsv",
+      "sha256": "2b3cdb58e215776b59e0e39c98b38430381df2043e35f32f71ad7e337a77bdc9"
+    },
+    {
+      "byte_count": 4093,
+      "path": "rust/reference-physics/src/geometry.rs",
+      "sha256": "c1466215b7232a338044de5039045f91f26054e78be7ca2fcab4677f89aa0549"
+    },
+    {
+      "byte_count": 985,
+      "path": "rust/reference-physics/src/lib.rs",
+      "sha256": "fb67493c439d61c67caab31fd4b5630e5976a37ffb139a0e41508123415a8a92"
+    },
+    {
+      "byte_count": 6019,
+      "path": "rust/reference-physics/src/model.rs",
+      "sha256": "0320c973597e0932fc2b6a7a15e34590145af55b9154950433a23f7011fa0f32"
+    },
+    {
+      "byte_count": 18230,
+      "path": "rust/reference-physics/src/oracle.rs",
+      "sha256": "390fbd1e1207312074af5bd651ce8447a7c0017ca939b1215f08049b8bd66c66"
+    },
+    {
+      "byte_count": 11091,
+      "path": "rust/reference-physics/tests/frozen_fixtures.rs",
+      "sha256": "5ff7e5fdd73394a6a78799038d126128e081c206b05d252065391d05f3de9cea"
+    },
+    {
+      "byte_count": 21043,
+      "path": "rust/reference-physics/tests/properties.rs",
+      "sha256": "268b2ab2e2197291aed02f02ecced9d7332b0586653a7d646100c3e4c3ac99bf"
+    },
+    {
+      "byte_count": 6672,
+      "path": "tools/verify_engine_v2_native_fixed64_cpu_v7_rustc_wrapper.py",
+      "sha256": "bb95e65d3de3ba08cda1c022690895f8d9ec986eb3a59ecb6ba4127a2982f088"
+    }
+  ],
+  "schema_id": "betelgeuze.engine_v2_native_fixed64_cpu_source_manifest/7.0.0",
+  "source_count": 196
+}

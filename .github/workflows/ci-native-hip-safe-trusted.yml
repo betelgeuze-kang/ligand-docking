@@ -43,8 +43,12 @@ jobs:
             rust_engine_v2
             config/engine_v2_native_fixed64_cpu_profile_v5_archive.json
             config/engine_v2_native_fixed64_cpu_profile_v6.json
+            config/engine_v2_native_fixed64_cpu_profile_v6_archive.json
             config/engine_v2_native_fixed64_cpu_profile_v6_sources.json
             tools/verify_engine_v2_native_fixed64_cpu_v6_rustc_wrapper.py
+            config/engine_v2_native_fixed64_cpu_profile_v7.json
+            config/engine_v2_native_fixed64_cpu_profile_v7_sources.json
+            tools/verify_engine_v2_native_fixed64_cpu_v7_rustc_wrapper.py
             tools/build_engine_v2_native_wheel.py
 
       - name: Verify exact ROCm and device identity

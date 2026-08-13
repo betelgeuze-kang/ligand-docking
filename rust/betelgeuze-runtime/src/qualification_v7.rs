@@ -2,7 +2,7 @@
 //!
 //! The measured graph remains native C++/Rust and contains no molecular input.
 //! This module owns the local attempt ledger and publication transaction so a
-//! caller cannot bypass it to obtain admitted v6 execution evidence.
+//! caller cannot bypass it to obtain admitted v7 execution evidence.
 
 use std::env;
 use std::ffi::{CStr, CString, OsStr};
@@ -17,13 +17,20 @@ use std::process::Command;
 
 use sha2::{Digest as _, Sha256};
 
+use crate::docking::scientific_decision_preimage;
 use crate::qualification::{
-    run_native_fixed64_cpu_qualification_successor, Fixed64CpuFixtureProbeV5,
+    numeric_projection, run_native_fixed64_cpu_qualification_successor, Fixed64CpuFixtureProbeV5,
     Fixed64CpuProbeReportV5,
+};
+use crate::{
+    Fixed64AuthorityDisposition, Fixed64ConformerOrientationInteraction, Fixed64CoordinateEntropy,
+    Fixed64LaneMetricObservation, Fixed64LaneMetricSummary, Fixed64LaneMetricsReceipt,
+    Fixed64MetricRate, Fixed64OracleFailureClass, Fixed64OracleSelectionSummary,
+    Fixed64ScientificCandidateProjection, Fixed64ScientificProjection, PositionSoaOwned,
 };
 
 #[cfg(all(
-    betelgeuze_v6_qualification_build,
+    betelgeuze_v7_qualification_build,
     any(
         not(target_os = "linux"),
         not(target_arch = "x86_64"),
@@ -33,45 +40,45 @@ use crate::qualification::{
         debug_assertions,
     )
 ))]
-compile_error!("v6 qualification Rust target configuration is not frozen");
+compile_error!("v7 qualification Rust target configuration is not frozen");
 
 #[cfg(all(
-    betelgeuze_v6_qualification_build,
-    not(betelgeuze_v6_effective_rust_flags_verified)
+    betelgeuze_v7_qualification_build,
+    not(betelgeuze_v7_effective_rust_flags_verified)
 ))]
-compile_error!("v6 qualification effective rustc flags were not wrapper-verified");
+compile_error!("v7 qualification effective rustc flags were not wrapper-verified");
 
-pub const FIXED64_CPU_QUALIFICATION_V6_PROFILE_ID: &str =
-    "engine_v2_native_fixed64_cpu_synthetic_v6";
-pub const FIXED64_CPU_QUALIFICATION_V6_SCHEMA_ID: &str =
-    "betelgeuze.engine_v2_native_fixed64_cpu_probe/6.0.0";
+pub const FIXED64_CPU_QUALIFICATION_V7_PROFILE_ID: &str =
+    "engine_v2_native_fixed64_cpu_synthetic_v7";
+pub const FIXED64_CPU_QUALIFICATION_V7_SCHEMA_ID: &str =
+    "betelgeuze.engine_v2_native_fixed64_cpu_probe/7.0.0";
 
 const PROFILE_BYTES: &[u8] =
-    include_bytes!("../assets/engine_v2_native_fixed64_cpu_profile_v6.json");
+    include_bytes!("../assets/engine_v2_native_fixed64_cpu_profile_v7.json");
 const PREDECESSOR_ARCHIVE_BYTES: &[u8] =
-    include_bytes!("../assets/engine_v2_native_fixed64_cpu_profile_v5_archive.json");
+    include_bytes!("../assets/engine_v2_native_fixed64_cpu_profile_v6_archive.json");
 const TRANSITIVE_SOURCE_MANIFEST_BYTES: &[u8] =
-    include_bytes!("../assets/engine_v2_native_fixed64_cpu_profile_v6_sources.json");
+    include_bytes!("../assets/engine_v2_native_fixed64_cpu_profile_v7_sources.json");
 const QUALIFICATION_SOURCE_BYTES: &[u8] = include_bytes!("qualification.rs");
-const RUNNER_SOURCE_BYTES: &[u8] = include_bytes!("qualification_v6.rs");
-const BINARY_SOURCE_BYTES: &[u8] = include_bytes!("bin/betelgeuze-fixed64-cpu-qualify-v6.rs");
+const RUNNER_SOURCE_BYTES: &[u8] = include_bytes!("qualification_v7.rs");
+const BINARY_SOURCE_BYTES: &[u8] = include_bytes!("bin/betelgeuze-fixed64-cpu-qualify-v7.rs");
 const CARGO_MANIFEST_BYTES: &[u8] = include_bytes!("../assets/original-Cargo.toml");
 const CARGO_LOCK_BYTES: &[u8] = include_bytes!("../assets/workspace-Cargo.lock");
-const COMPILED_SOURCE_MANIFEST_SHA256: &str = env!("BETELGEUZE_V6_COMPILED_SOURCE_MANIFEST_SHA256");
-const COMPILED_SOURCE_COUNT: &str = env!("BETELGEUZE_V6_COMPILED_SOURCE_COUNT");
-const COMPILED_PROFILE_SHA256: &str = env!("BETELGEUZE_V6_COMPILED_PROFILE_SHA256");
-const BUILD_COMMIT_OID: &str = env!("BETELGEUZE_V6_BUILD_COMMIT_OID");
-const BUILD_COMMIT_BOUND: &str = env!("BETELGEUZE_V6_BUILD_COMMIT_BOUND");
-const BUILD_CONFIGURATION_SHA256: &str = env!("BETELGEUZE_V6_BUILD_CONFIGURATION_SHA256");
-const BUILD_CONFIGURATION_BOUND: &str = env!("BETELGEUZE_V6_BUILD_CONFIGURATION_BOUND");
-const VERIFIED_SOURCE_ROOT: &str = env!("BETELGEUZE_V6_VERIFIED_SOURCE_ROOT");
+const COMPILED_SOURCE_MANIFEST_SHA256: &str = env!("BETELGEUZE_V7_COMPILED_SOURCE_MANIFEST_SHA256");
+const COMPILED_SOURCE_COUNT: &str = env!("BETELGEUZE_V7_COMPILED_SOURCE_COUNT");
+const COMPILED_PROFILE_SHA256: &str = env!("BETELGEUZE_V7_COMPILED_PROFILE_SHA256");
+const BUILD_COMMIT_OID: &str = env!("BETELGEUZE_V7_BUILD_COMMIT_OID");
+const BUILD_COMMIT_BOUND: &str = env!("BETELGEUZE_V7_BUILD_COMMIT_BOUND");
+const BUILD_CONFIGURATION_SHA256: &str = env!("BETELGEUZE_V7_BUILD_CONFIGURATION_SHA256");
+const BUILD_CONFIGURATION_BOUND: &str = env!("BETELGEUZE_V7_BUILD_CONFIGURATION_BOUND");
+const VERIFIED_SOURCE_ROOT: &str = env!("BETELGEUZE_V7_VERIFIED_SOURCE_ROOT");
 const EXPECTED_BUILD_CONFIGURATION_SHA256: &str =
-    "792702860fdbc1a9d7b75c2b3fb3cba1f4ffb79b5d66350a6fe8546bd68dd2fd";
+    "6e39e4e07bcb2f9324f242adcf3f48428191b2a91418d34520c6acc1cf046068";
 
-const ATTEMPT_SCHEMA_ID: &str = "betelgeuze.engine_v2_native_fixed64_cpu_attempt/6.0.0";
+const ATTEMPT_SCHEMA_ID: &str = "betelgeuze.engine_v2_native_fixed64_cpu_attempt/7.0.0";
 const ARTIFACT_SCHEMA_ID: &str =
-    "betelgeuze.engine_v2_native_fixed64_cpu_qualification_artifact/6.0.0";
-const TERMINAL_SCHEMA_ID: &str = "betelgeuze.engine_v2_native_fixed64_cpu_terminal/6.0.0";
+    "betelgeuze.engine_v2_native_fixed64_cpu_qualification_artifact/7.0.0";
+const TERMINAL_SCHEMA_ID: &str = "betelgeuze.engine_v2_native_fixed64_cpu_terminal/7.0.0";
 const STATE_ROOT_NAME: &str = ".betelgeuze-engine-v2";
 const STATE_QUALIFICATION_NAME: &str = "native-fixed64-qualification";
 const ATTEMPT_FILENAME: &str = "attempt.json";
@@ -81,10 +88,10 @@ const MAX_PROFILE_BYTES: usize = 32 * 1024;
 const MAX_STATE_BYTES: usize = 64 * 1024;
 const MAX_ARTIFACT_BYTES: usize = 4 * 1024 * 1024;
 const STAGING_NAME_OVERHEAD_BYTES: usize = 1 + 5 + 64;
-const ACTIVATION_DOMAIN: &[u8] = b"betelgeuze.engine_v2_native_fixed64_cpu_activation_v6\0";
-const ATTEMPT_DOMAIN: &[u8] = b"betelgeuze.engine_v2_native_fixed64_cpu_attempt_v6\0";
-const ARTIFACT_DOMAIN: &[u8] = b"betelgeuze.engine_v2_native_fixed64_cpu_artifact_v6\0";
-const TERMINAL_DOMAIN: &[u8] = b"betelgeuze.engine_v2_native_fixed64_cpu_terminal_v6\0";
+const ACTIVATION_DOMAIN: &[u8] = b"betelgeuze.engine_v2_native_fixed64_cpu_activation_v7\0";
+const ATTEMPT_DOMAIN: &[u8] = b"betelgeuze.engine_v2_native_fixed64_cpu_attempt_v7\0";
+const ARTIFACT_DOMAIN: &[u8] = b"betelgeuze.engine_v2_native_fixed64_cpu_artifact_v7\0";
+const TERMINAL_DOMAIN: &[u8] = b"betelgeuze.engine_v2_native_fixed64_cpu_terminal_v7\0";
 
 const AUTHORITY_FALSE_JSON: &str = concat!(
     "{\"fresh_holdout_execution_authorized\":false,",
@@ -111,11 +118,11 @@ const RESTRICTIONS_JSON: &str = concat!(
 );
 
 #[derive(Debug)]
-pub struct NativeFixed64CpuQualificationV6Error {
+pub struct NativeFixed64CpuQualificationV7Error {
     message: String,
 }
 
-impl NativeFixed64CpuQualificationV6Error {
+impl NativeFixed64CpuQualificationV7Error {
     fn new(message: impl Into<String>) -> Self {
         Self {
             message: message.into(),
@@ -128,18 +135,18 @@ impl NativeFixed64CpuQualificationV6Error {
     }
 }
 
-impl fmt::Display for NativeFixed64CpuQualificationV6Error {
+impl fmt::Display for NativeFixed64CpuQualificationV7Error {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str(&self.message)
     }
 }
 
-impl std::error::Error for NativeFixed64CpuQualificationV6Error {}
+impl std::error::Error for NativeFixed64CpuQualificationV7Error {}
 
-type V6Result<T> = std::result::Result<T, NativeFixed64CpuQualificationV6Error>;
+type V7Result<T> = std::result::Result<T, NativeFixed64CpuQualificationV7Error>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Fixed64CpuActivationStatusV6 {
+pub struct Fixed64CpuActivationStatusV7 {
     pub profile_id: &'static str,
     pub profile_sha256: String,
     pub activation_sha256: String,
@@ -154,7 +161,7 @@ pub struct Fixed64CpuActivationStatusV6 {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Fixed64CpuPreflightV6 {
+pub struct Fixed64CpuPreflightV7 {
     pub profile_sha256: String,
     pub activation_sha256: String,
     pub build_configuration_sha256: String,
@@ -166,7 +173,7 @@ pub struct Fixed64CpuPreflightV6 {
     pub blockers: Vec<String>,
 }
 
-impl Fixed64CpuPreflightV6 {
+impl Fixed64CpuPreflightV7 {
     #[must_use]
     pub fn ready(&self) -> bool {
         self.blockers.is_empty()
@@ -174,7 +181,7 @@ impl Fixed64CpuPreflightV6 {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Fixed64CpuPersistedQualificationV6 {
+pub struct Fixed64CpuPersistedQualificationV7 {
     pub artifact_path: PathBuf,
     pub attempt_ledger_path: PathBuf,
     pub terminal_state_path: PathBuf,
@@ -204,7 +211,7 @@ struct ValidatedOutputTarget {
 }
 
 #[derive(Debug)]
-struct AttemptLeaseV6 {
+struct AttemptLeaseV7 {
     raw: Vec<u8>,
     raw_sha256: String,
     receipt_sha256: String,
@@ -213,14 +220,14 @@ struct AttemptLeaseV6 {
 }
 
 #[derive(Debug)]
-struct MeasurementOutcomeV6 {
+struct MeasurementOutcomeV7 {
     report: Option<Fixed64CpuProbeReportV5>,
     measurement_started: bool,
     blockers: Vec<String>,
 }
 
 #[derive(Debug)]
-struct ArtifactDocumentV6 {
+struct ArtifactDocumentV7 {
     raw: Vec<u8>,
     receipt_sha256: String,
     recorded_decision: String,
@@ -251,51 +258,51 @@ fn domain_digest(domain: &[u8], bytes: &[u8]) -> String {
     digest_hex(hash.finalize().into())
 }
 
-fn profile_text() -> V6Result<&'static str> {
+fn profile_text() -> V7Result<&'static str> {
     if PROFILE_BYTES.len() > MAX_PROFILE_BYTES || !PROFILE_BYTES.ends_with(b"}\n") {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 profile byte envelope changed",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 profile byte envelope changed",
         ));
     }
     std::str::from_utf8(PROFILE_BYTES).map_err(|_| {
-        NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 profile is not canonical UTF-8",
+        NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 profile is not canonical UTF-8",
         )
     })
 }
 
-fn require_profile_literal(profile: &str, literal: &str, label: &str) -> V6Result<()> {
+fn require_profile_literal(profile: &str, literal: &str, label: &str) -> V7Result<()> {
     if profile.matches(literal).count() != 1 {
-        return Err(NativeFixed64CpuQualificationV6Error::new(format!(
-            "native fixed64 CPU v6 {label} binding changed"
+        return Err(NativeFixed64CpuQualificationV7Error::new(format!(
+            "native fixed64 CPU v7 {label} binding changed"
         )));
     }
     Ok(())
 }
 
-fn require_source_binding(profile: &str, key: &str, source_bytes: &[u8]) -> V6Result<()> {
+fn require_source_binding(profile: &str, key: &str, source_bytes: &[u8]) -> V7Result<()> {
     let expected = format!("\"{key}\": \"{}\"", sha256_hex(source_bytes));
     require_profile_literal(profile, &expected, key)
 }
 
-/// Verify the compile-bound, non-consuming v6 activation contract.
-pub fn verify_native_fixed64_cpu_v6_activation() -> V6Result<Fixed64CpuActivationStatusV6> {
+/// Verify the compile-bound, non-consuming v7 activation contract.
+pub fn verify_native_fixed64_cpu_v7_activation() -> V7Result<Fixed64CpuActivationStatusV7> {
     let profile = profile_text()?;
     for (literal, label) in [
         (
-            "\"schema_id\": \"betelgeuze.engine_v2_native_fixed64_cpu_profile/6.0.0\"",
+            "\"schema_id\": \"betelgeuze.engine_v2_native_fixed64_cpu_profile/7.0.0\"",
             "schema",
         ),
         (
-            "\"profile_id\": \"engine_v2_native_fixed64_cpu_synthetic_v6\"",
+            "\"profile_id\": \"engine_v2_native_fixed64_cpu_synthetic_v7\"",
             "profile identity",
         ),
         (
-            "\"status\": \"native_activation_implementation_frozen_execution_not_consumed\"",
+            "\"status\": \"native_lane_metrics_activation_frozen_execution_not_consumed\"",
             "execution state",
         ),
         (
-            "\"predecessor_profile_sha256\": \"f5b3f288b432a15a1382a175b70821c1c57e8d41a986de2dea8898712374aece\"",
+            "\"predecessor_profile_sha256\": \"fd83f1f7f7c92bc0fc9ac6581cababb23d3ba5787412174a55b659f97fcc2928\"",
             "predecessor profile",
         ),
         ("\"native_abi_version\": \"1.21\"", "native ABI"),
@@ -356,7 +363,7 @@ pub fn verify_native_fixed64_cpu_v6_activation() -> V6Result<Fixed64CpuActivatio
             "qualification build opt-in",
         ),
         (
-            "\"cargo_profile\": \"qualification-v6\"",
+            "\"cargo_profile\": \"qualification-v7\"",
             "qualification Cargo profile",
         ),
         (
@@ -387,15 +394,15 @@ pub fn verify_native_fixed64_cpu_v6_activation() -> V6Result<Fixed64CpuActivatio
     )?;
     let profile_sha256 = sha256_hex(PROFILE_BYTES);
     if BUILD_COMMIT_BOUND != "true" {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 non-authoritative package build cannot activate",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 non-authoritative package build cannot activate",
         ));
     }
     if BUILD_CONFIGURATION_BOUND != "true"
         || BUILD_CONFIGURATION_SHA256 != EXPECTED_BUILD_CONFIGURATION_SHA256
     {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 build configuration is not frozen",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 build configuration is not frozen",
         ));
     }
     if COMPILED_PROFILE_SHA256 != profile_sha256
@@ -405,18 +412,18 @@ pub fn verify_native_fixed64_cpu_v6_activation() -> V6Result<Fixed64CpuActivatio
             .bytes()
             .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
         || COMPILED_SOURCE_MANIFEST_SHA256 != sha256_hex(TRANSITIVE_SOURCE_MANIFEST_BYTES)
-        || COMPILED_SOURCE_COUNT != "193"
+        || COMPILED_SOURCE_COUNT != "196"
         || std::str::from_utf8(TRANSITIVE_SOURCE_MANIFEST_BYTES)
             .ok()
-            .is_none_or(|manifest| manifest.matches("\"source_count\": 193").count() != 1)
+            .is_none_or(|manifest| manifest.matches("\"source_count\": 196").count() != 1)
     {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 compiled transitive source graph is not exact",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 compiled transitive source graph is not exact",
         ));
     }
     let activation_sha256 = domain_digest(ACTIVATION_DOMAIN, PROFILE_BYTES);
-    Ok(Fixed64CpuActivationStatusV6 {
-        profile_id: FIXED64_CPU_QUALIFICATION_V6_PROFILE_ID,
+    Ok(Fixed64CpuActivationStatusV7 {
+        profile_id: FIXED64_CPU_QUALIFICATION_V7_PROFILE_ID,
         profile_sha256,
         activation_sha256,
         build_configuration_sha256: BUILD_CONFIGURATION_SHA256.to_owned(),
@@ -430,27 +437,27 @@ pub fn verify_native_fixed64_cpu_v6_activation() -> V6Result<Fixed64CpuActivatio
     })
 }
 
-fn source_root() -> V6Result<PathBuf> {
+fn source_root() -> V7Result<PathBuf> {
     let root = PathBuf::from(VERIFIED_SOURCE_ROOT);
     if !root.is_absolute() {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 verified source root is invalid",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 verified source root is invalid",
         ));
     }
     let canonical = fs::canonicalize(&root).map_err(|_| {
-        NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 source root is unavailable",
+        NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 source root is unavailable",
         )
     })?;
     if canonical != root {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 source root traverses a symlink",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 source root traverses a symlink",
         ));
     }
     Ok(root)
 }
 
-fn exact_command(root: &Path, args: &[&str]) -> V6Result<String> {
+fn exact_command(root: &Path, args: &[&str]) -> V7Result<String> {
     let output = Command::new(args[0])
         .args(&args[1..])
         .current_dir(root)
@@ -461,29 +468,29 @@ fn exact_command(root: &Path, args: &[&str]) -> V6Result<String> {
         .env_remove("GIT_ALTERNATE_OBJECT_DIRECTORIES")
         .output()
         .map_err(|_| {
-            NativeFixed64CpuQualificationV6Error::new(
-                "native fixed64 CPU v6 source command is unavailable",
+            NativeFixed64CpuQualificationV7Error::new(
+                "native fixed64 CPU v7 source command is unavailable",
             )
         })?;
     if !output.status.success() || !output.stderr.is_empty() {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 source command failed closed",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 source command failed closed",
         ));
     }
     let value = std::str::from_utf8(&output.stdout).map_err(|_| {
-        NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 source command returned non-UTF-8 output",
+        NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 source command returned non-UTF-8 output",
         )
     })?;
     Ok(value.trim_end_matches('\n').to_owned())
 }
 
-fn source_checkout_evidence() -> V6Result<String> {
+fn source_checkout_evidence() -> V7Result<String> {
     let root = source_root()?;
     let reported_root = exact_command(&root, &["git", "rev-parse", "--show-toplevel"])?;
     if Path::new(&reported_root) != root {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 source checkout root changed",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 source checkout root changed",
         ));
     }
     let branch = exact_command(
@@ -491,8 +498,8 @@ fn source_checkout_evidence() -> V6Result<String> {
         &["git", "symbolic-ref", "--quiet", "--short", "HEAD"],
     )?;
     if branch != "main" {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 live execution requires branch main",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 live execution requires branch main",
         ));
     }
     let status = exact_command(
@@ -505,61 +512,61 @@ fn source_checkout_evidence() -> V6Result<String> {
         ],
     )?;
     if !status.is_empty() {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 live execution requires a clean checkout",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 live execution requires a clean checkout",
         ));
     }
     let oid = exact_command(&root, &["git", "rev-parse", "HEAD"])?;
     if oid.len() != 40 || !oid.bytes().all(|byte| byte.is_ascii_hexdigit()) {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 source commit identity is invalid",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 source commit identity is invalid",
         ));
     }
     let oid = oid.to_ascii_lowercase();
     if oid != BUILD_COMMIT_OID {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 source commit differs from the verified build commit",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 source commit differs from the verified build commit",
         ));
     }
     Ok(oid)
 }
 
-fn cpu_model() -> V6Result<String> {
+fn cpu_model() -> V7Result<String> {
     let raw = fs::read_to_string("/proc/cpuinfo").map_err(|_| {
-        NativeFixed64CpuQualificationV6Error::new("native fixed64 CPU v6 CPU model is unavailable")
+        NativeFixed64CpuQualificationV7Error::new("native fixed64 CPU v7 CPU model is unavailable")
     })?;
     let mut models = raw
         .lines()
         .filter_map(|line| line.strip_prefix("model name\t: "));
     let first = models.next().ok_or_else(|| {
-        NativeFixed64CpuQualificationV6Error::new("native fixed64 CPU v6 CPU model is missing")
+        NativeFixed64CpuQualificationV7Error::new("native fixed64 CPU v7 CPU model is missing")
     })?;
     if first != "AMD Ryzen 9 5900X 12-Core Processor" || models.any(|value| value != first) {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 CPU model is not qualified",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 CPU model is not qualified",
         ));
     }
     Ok(first.to_owned())
 }
 
-fn process_task_count() -> V6Result<usize> {
+fn process_task_count() -> V7Result<usize> {
     let count = fs::read_dir("/proc/self/task")
         .map_err(|_| {
-            NativeFixed64CpuQualificationV6Error::new(
-                "native fixed64 CPU v6 task inventory is unavailable",
+            NativeFixed64CpuQualificationV7Error::new(
+                "native fixed64 CPU v7 task inventory is unavailable",
             )
         })?
         .filter_map(std::result::Result::ok)
         .count();
     if count == 0 {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 task inventory is empty",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 task inventory is empty",
         ));
     }
     Ok(count)
 }
 
-fn current_affinity() -> V6Result<libc::cpu_set_t> {
+fn current_affinity() -> V7Result<libc::cpu_set_t> {
     // SAFETY: `cpu_set_t` is plain data, and sched_getaffinity writes exactly
     // the provided initialized object for the current process.
     unsafe {
@@ -570,8 +577,8 @@ fn current_affinity() -> V6Result<libc::cpu_set_t> {
             std::ptr::addr_of_mut!(set),
         ) != 0
         {
-            return Err(NativeFixed64CpuQualificationV6Error::new(
-                "native fixed64 CPU v6 affinity is unavailable",
+            return Err(NativeFixed64CpuQualificationV7Error::new(
+                "native fixed64 CPU v7 affinity is unavailable",
             ));
         }
         Ok(set)
@@ -603,7 +610,7 @@ fn affinity_is_exact_measurement_cpu(set: &libc::cpu_set_t) -> bool {
     }
 }
 
-fn pin_measurement_cpu() -> V6Result<()> {
+fn pin_measurement_cpu() -> V7Result<()> {
     // SAFETY: the zeroed `cpu_set_t` is initialized with the libc CPU macros
     // before being passed to sched_setaffinity for the current process.
     unsafe {
@@ -616,21 +623,21 @@ fn pin_measurement_cpu() -> V6Result<()> {
             std::ptr::addr_of!(set),
         ) != 0
         {
-            return Err(NativeFixed64CpuQualificationV6Error::new(
-                "native fixed64 CPU v6 measurement affinity cannot be pinned",
+            return Err(NativeFixed64CpuQualificationV7Error::new(
+                "native fixed64 CPU v7 measurement affinity cannot be pinned",
             ));
         }
     }
     let observed = current_affinity()?;
     if !affinity_is_exact_measurement_cpu(&observed) {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 measurement affinity did not persist",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 measurement affinity did not persist",
         ));
     }
     Ok(())
 }
 
-fn read_boost_disabled() -> V6Result<bool> {
+fn read_boost_disabled() -> V7Result<bool> {
     let path =
         CString::new("/sys/devices/system/cpu/cpufreq/boost").expect("static path contains no NUL");
     // SAFETY: the static C string is valid for the duration of open.
@@ -641,15 +648,15 @@ fn read_boost_disabled() -> V6Result<bool> {
         )
     };
     if raw_fd < 0 {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 boost state is unavailable",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 boost state is unavailable",
         ));
     }
     // SAFETY: a successful open returns an owned descriptor.
     let mut file = unsafe { fs::File::from_raw_fd(raw_fd) };
     let metadata = file.metadata().map_err(|_| {
-        NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 boost metadata is unavailable",
+        NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 boost metadata is unavailable",
         )
     })?;
     if !metadata.file_type().is_file()
@@ -657,8 +664,8 @@ fn read_boost_disabled() -> V6Result<bool> {
         || metadata.nlink() != 1
         || metadata.mode() & 0o022 != 0
     {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 boost state identity is untrusted",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 boost state identity is untrusted",
         ));
     }
     let mut raw = Vec::with_capacity(32);
@@ -666,20 +673,20 @@ fn read_boost_disabled() -> V6Result<bool> {
         .take(33)
         .read_to_end(&mut raw)
         .map_err(|_| {
-            NativeFixed64CpuQualificationV6Error::new(
-                "native fixed64 CPU v6 boost state cannot be read",
+            NativeFixed64CpuQualificationV7Error::new(
+                "native fixed64 CPU v7 boost state cannot be read",
             )
         })?;
     match raw.as_slice() {
         b"0" | b"0\n" => Ok(true),
         b"1" | b"1\n" => Ok(false),
-        _ => Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 boost state payload is invalid",
+        _ => Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 boost state payload is invalid",
         )),
     }
 }
 
-fn blocker_from<T>(result: V6Result<T>, blockers: &mut Vec<String>, code: &str) -> Option<T> {
+fn blocker_from<T>(result: V7Result<T>, blockers: &mut Vec<String>, code: &str) -> Option<T> {
     match result {
         Ok(value) => Some(value),
         Err(_) => {
@@ -690,8 +697,8 @@ fn blocker_from<T>(result: V6Result<T>, blockers: &mut Vec<String>, code: &str) 
 }
 
 /// Run the non-consuming host and source preflight. It never creates state.
-pub fn preflight_native_fixed64_cpu_v6() -> V6Result<Fixed64CpuPreflightV6> {
-    let activation = verify_native_fixed64_cpu_v6_activation()?;
+pub fn preflight_native_fixed64_cpu_v7() -> V7Result<Fixed64CpuPreflightV7> {
+    let activation = verify_native_fixed64_cpu_v7_activation()?;
     let mut blockers = Vec::new();
     let source_commit_oid = blocker_from(
         source_checkout_evidence(),
@@ -724,7 +731,7 @@ pub fn preflight_native_fixed64_cpu_v6() -> V6Result<Fixed64CpuPreflightV6> {
     }
     blockers.sort();
     blockers.dedup();
-    Ok(Fixed64CpuPreflightV6 {
+    Ok(Fixed64CpuPreflightV7 {
         profile_sha256: activation.profile_sha256,
         activation_sha256: activation.activation_sha256,
         build_configuration_sha256: activation.build_configuration_sha256,
@@ -737,21 +744,21 @@ pub fn preflight_native_fixed64_cpu_v6() -> V6Result<Fixed64CpuPreflightV6> {
     })
 }
 
-fn c_string_path(path: &Path, label: &str) -> V6Result<CString> {
+fn c_string_path(path: &Path, label: &str) -> V7Result<CString> {
     CString::new(path.as_os_str().as_bytes()).map_err(|_| {
-        NativeFixed64CpuQualificationV6Error::new(format!(
-            "native fixed64 CPU v6 {label} contains NUL"
+        NativeFixed64CpuQualificationV7Error::new(format!(
+            "native fixed64 CPU v7 {label} contains NUL"
         ))
     })
 }
 
-fn fstat_descriptor(descriptor: RawFd, label: &str) -> V6Result<libc::stat> {
+fn fstat_descriptor(descriptor: RawFd, label: &str) -> V7Result<libc::stat> {
     // SAFETY: fstat initializes the supplied stat buffer for a valid descriptor.
     unsafe {
         let mut metadata: libc::stat = std::mem::zeroed();
         if libc::fstat(descriptor, std::ptr::addr_of_mut!(metadata)) != 0 {
-            return Err(NativeFixed64CpuQualificationV6Error::new(format!(
-                "native fixed64 CPU v6 {label} metadata is unavailable"
+            return Err(NativeFixed64CpuQualificationV7Error::new(format!(
+                "native fixed64 CPU v7 {label} metadata is unavailable"
             )));
         }
         Ok(metadata)
@@ -766,7 +773,7 @@ fn is_regular_mode(mode: libc::mode_t) -> bool {
     mode & libc::S_IFMT == libc::S_IFREG
 }
 
-fn login_account_home() -> V6Result<PathBuf> {
+fn login_account_home() -> V7Result<PathBuf> {
     // SAFETY: getpwuid_r receives an initialized passwd and an owned scratch
     // buffer; result is used only while the scratch buffer remains alive.
     unsafe {
@@ -790,22 +797,22 @@ fn login_account_home() -> V6Result<PathBuf> {
             std::ptr::addr_of_mut!(result),
         );
         if status != 0 || result.is_null() || passwd.pw_dir.is_null() || passwd.pw_uid != uid {
-            return Err(NativeFixed64CpuQualificationV6Error::new(
-                "native fixed64 CPU v6 login account home is unavailable",
+            return Err(NativeFixed64CpuQualificationV7Error::new(
+                "native fixed64 CPU v7 login account home is unavailable",
             ));
         }
         let bytes = CStr::from_ptr(passwd.pw_dir).to_bytes().to_vec();
         let home = PathBuf::from(std::ffi::OsString::from_vec(bytes));
         if !home.is_absolute() || fs::canonicalize(&home).ok().as_ref() != Some(&home) {
-            return Err(NativeFixed64CpuQualificationV6Error::new(
-                "native fixed64 CPU v6 login account home is not canonical",
+            return Err(NativeFixed64CpuQualificationV7Error::new(
+                "native fixed64 CPU v7 login account home is not canonical",
             ));
         }
         Ok(home)
     }
 }
 
-fn open_owned_directory(path: &Path, exact_owner_only: bool, label: &str) -> V6Result<OwnedFd> {
+fn open_owned_directory(path: &Path, exact_owner_only: bool, label: &str) -> V7Result<OwnedFd> {
     let raw_path = c_string_path(path, label)?;
     // SAFETY: raw_path is a valid NUL-terminated path and a successful open
     // returns one owned descriptor.
@@ -816,8 +823,8 @@ fn open_owned_directory(path: &Path, exact_owner_only: bool, label: &str) -> V6R
         )
     };
     if descriptor < 0 {
-        return Err(NativeFixed64CpuQualificationV6Error::new(format!(
-            "native fixed64 CPU v6 {label} cannot be opened safely"
+        return Err(NativeFixed64CpuQualificationV7Error::new(format!(
+            "native fixed64 CPU v7 {label} cannot be opened safely"
         )));
     }
     // SAFETY: descriptor was returned by open and is now uniquely owned.
@@ -832,17 +839,17 @@ fn open_owned_directory(path: &Path, exact_owner_only: bool, label: &str) -> V6R
         || permissions & 0o022 != 0
         || (exact_owner_only && permissions != 0o700)
     {
-        return Err(NativeFixed64CpuQualificationV6Error::new(format!(
-            "native fixed64 CPU v6 {label} identity is untrusted"
+        return Err(NativeFixed64CpuQualificationV7Error::new(format!(
+            "native fixed64 CPU v7 {label} identity is untrusted"
         )));
     }
     Ok(owned)
 }
 
-fn open_or_create_owner_directory(parent: RawFd, name: &str, label: &str) -> V6Result<OwnedFd> {
+fn open_or_create_owner_directory(parent: RawFd, name: &str, label: &str) -> V7Result<OwnedFd> {
     let raw_name = CString::new(name).map_err(|_| {
-        NativeFixed64CpuQualificationV6Error::new(format!(
-            "native fixed64 CPU v6 {label} name is invalid"
+        NativeFixed64CpuQualificationV7Error::new(format!(
+            "native fixed64 CPU v7 {label} name is invalid"
         ))
     })?;
     // SAFETY: parent is an open directory and raw_name is a single component.
@@ -850,8 +857,8 @@ fn open_or_create_owner_directory(parent: RawFd, name: &str, label: &str) -> V6R
     if !created {
         let error = io::Error::last_os_error();
         if error.raw_os_error() != Some(libc::EEXIST) {
-            return Err(NativeFixed64CpuQualificationV6Error::new(format!(
-                "native fixed64 CPU v6 {label} cannot be created"
+            return Err(NativeFixed64CpuQualificationV7Error::new(format!(
+                "native fixed64 CPU v7 {label} cannot be created"
             )));
         }
     }
@@ -864,8 +871,8 @@ fn open_or_create_owner_directory(parent: RawFd, name: &str, label: &str) -> V6R
         )
     };
     if descriptor < 0 {
-        return Err(NativeFixed64CpuQualificationV6Error::new(format!(
-            "native fixed64 CPU v6 {label} cannot be opened safely"
+        return Err(NativeFixed64CpuQualificationV7Error::new(format!(
+            "native fixed64 CPU v7 {label} cannot be opened safely"
         )));
     }
     // SAFETY: descriptor was returned by openat and is now uniquely owned.
@@ -873,8 +880,8 @@ fn open_or_create_owner_directory(parent: RawFd, name: &str, label: &str) -> V6R
     if created {
         // SAFETY: descriptor is open and the mode contains only permission bits.
         if unsafe { libc::fchmod(owned.as_raw_fd(), 0o700) } != 0 {
-            return Err(NativeFixed64CpuQualificationV6Error::new(format!(
-                "native fixed64 CPU v6 {label} permissions cannot be sealed"
+            return Err(NativeFixed64CpuQualificationV7Error::new(format!(
+                "native fixed64 CPU v7 {label} permissions cannot be sealed"
             )));
         }
     }
@@ -886,23 +893,23 @@ fn open_or_create_owner_directory(parent: RawFd, name: &str, label: &str) -> V6R
         || metadata.st_nlink < 2
         || metadata.st_mode & 0o777 != 0o700
     {
-        return Err(NativeFixed64CpuQualificationV6Error::new(format!(
-            "native fixed64 CPU v6 {label} identity is untrusted"
+        return Err(NativeFixed64CpuQualificationV7Error::new(format!(
+            "native fixed64 CPU v7 {label} identity is untrusted"
         )));
     }
     // SAFETY: fsync on an open directory persists its entries on Linux.
     if created && unsafe { libc::fsync(parent) } != 0 {
-        return Err(NativeFixed64CpuQualificationV6Error::new(format!(
-            "native fixed64 CPU v6 {label} parent cannot be synchronized"
+        return Err(NativeFixed64CpuQualificationV7Error::new(format!(
+            "native fixed64 CPU v7 {label} parent cannot be synchronized"
         )));
     }
     Ok(owned)
 }
 
-fn open_account_state(profile_sha256: &str) -> V6Result<AccountStateDirectory> {
+fn open_account_state(profile_sha256: &str) -> V7Result<AccountStateDirectory> {
     if profile_sha256.len() != 64 || !profile_sha256.bytes().all(|byte| byte.is_ascii_hexdigit()) {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 profile digest is invalid",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 profile digest is invalid",
         ));
     }
     let home = login_account_home()?;
@@ -934,11 +941,11 @@ fn open_account_state(profile_sha256: &str) -> V6Result<AccountStateDirectory> {
     })
 }
 
-fn require_account_state_binding(state: &AccountStateDirectory) -> V6Result<()> {
+fn require_account_state_binding(state: &AccountStateDirectory) -> V7Result<()> {
     let descriptor = fstat_descriptor(state.descriptor.as_raw_fd(), "profile state directory")?;
     let path = fs::symlink_metadata(&state.path).map_err(|_| {
-        NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 profile state path is unavailable",
+        NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 profile state path is unavailable",
         )
     })?;
     // SAFETY: geteuid has no preconditions.
@@ -951,14 +958,14 @@ fn require_account_state_binding(state: &AccountStateDirectory) -> V6Result<()> 
         || path.uid() != uid
         || path.mode() & 0o777 != 0o700
     {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 profile state binding changed",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 profile state binding changed",
         ));
     }
     Ok(())
 }
 
-fn path_exists_at(parent: RawFd, name: &CStr) -> V6Result<bool> {
+fn path_exists_at(parent: RawFd, name: &CStr) -> V7Result<bool> {
     // SAFETY: fstatat initializes metadata when the fixed relative name exists.
     unsafe {
         let mut metadata: libc::stat = std::mem::zeroed();
@@ -976,57 +983,57 @@ fn path_exists_at(parent: RawFd, name: &CStr) -> V6Result<bool> {
     if error.raw_os_error() == Some(libc::ENOENT) {
         Ok(false)
     } else {
-        Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 path state is ambiguous",
+        Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 path state is ambiguous",
         ))
     }
 }
 
-fn validate_absent_output(path: &Path) -> V6Result<ValidatedOutputTarget> {
+fn validate_absent_output(path: &Path) -> V7Result<ValidatedOutputTarget> {
     if !path.is_absolute()
         || path.to_str().is_none()
         || path.as_os_str().as_bytes().len() > 4096
         || path.extension() != Some(OsStr::new("json"))
     {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 output path is invalid",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 output path is invalid",
         ));
     }
     let name = path.file_name().ok_or_else(|| {
-        NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 output filename is invalid",
+        NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 output filename is invalid",
         )
     })?;
     if name.as_bytes().is_empty() || name.as_bytes().len() > 240 {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 output filename is invalid",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 output filename is invalid",
         ));
     }
     let parent = path.parent().ok_or_else(|| {
-        NativeFixed64CpuQualificationV6Error::new("native fixed64 CPU v6 output parent is invalid")
+        NativeFixed64CpuQualificationV7Error::new("native fixed64 CPU v7 output parent is invalid")
     })?;
     let canonical_parent = fs::canonicalize(parent).map_err(|_| {
-        NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 output parent is unavailable",
+        NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 output parent is unavailable",
         )
     })?;
     let canonical_target = canonical_parent.join(name);
     if canonical_parent != parent
         || path.as_os_str().as_bytes() != canonical_target.as_os_str().as_bytes()
     {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 output path is not lexically canonical",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 output path is not lexically canonical",
         ));
     }
     if path.starts_with(source_root()?) {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 output cannot modify the source checkout",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 output cannot modify the source checkout",
         ));
     }
     let account_home = login_account_home()?;
     if account_home.to_str().is_none() {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 account home path is not UTF-8",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 account home path is not UTF-8",
         ));
     }
     let account_state_root = account_home.join(STATE_ROOT_NAME);
@@ -1034,33 +1041,33 @@ fn validate_absent_output(path: &Path) -> V6Result<ValidatedOutputTarget> {
         || name == OsStr::new(ATTEMPT_FILENAME)
         || name == OsStr::new(TERMINAL_FILENAME)
     {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 output cannot cross-wire account state",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 output cannot cross-wire account state",
         ));
     }
     let metadata = fs::symlink_metadata(&canonical_parent).map_err(|_| {
-        NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 output parent metadata is unavailable",
+        NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 output parent metadata is unavailable",
         )
     })?;
     // SAFETY: geteuid has no preconditions.
     let uid = unsafe { libc::geteuid() };
     if !metadata.file_type().is_dir() || metadata.uid() != uid || metadata.mode() & 0o022 != 0 {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 output parent is not owner controlled",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 output parent is not owner controlled",
         ));
     }
     let parent_descriptor =
         open_owned_directory(&canonical_parent, false, "output parent directory")?;
     let bound = fstat_descriptor(parent_descriptor.as_raw_fd(), "output parent directory")?;
     if bound.st_dev != metadata.dev() || bound.st_ino != metadata.ino() {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 output parent changed during binding",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 output parent changed during binding",
         ));
     }
     let raw_name = CString::new(name.as_bytes()).map_err(|_| {
-        NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 output filename contains NUL",
+        NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 output filename contains NUL",
         )
     })?;
     // SAFETY: fpathconf only reads the limit associated with this open
@@ -1071,8 +1078,8 @@ fn validate_absent_output(path: &Path) -> V6Result<ValidatedOutputTarget> {
         .len()
         .checked_add(STAGING_NAME_OVERHEAD_BYTES)
         .ok_or_else(|| {
-            NativeFixed64CpuQualificationV6Error::new(
-                "native fixed64 CPU v6 output staging filename length overflowed",
+            NativeFixed64CpuQualificationV7Error::new(
+                "native fixed64 CPU v7 output staging filename length overflowed",
             )
         })?;
     if name_max < 1
@@ -1080,13 +1087,13 @@ fn validate_absent_output(path: &Path) -> V6Result<ValidatedOutputTarget> {
             .ok()
             .is_none_or(|maximum| staging_name_length > maximum)
     {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 output filename cannot support atomic staging",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 output filename cannot support atomic staging",
         ));
     }
     if path_exists_at(parent_descriptor.as_raw_fd(), &raw_name)? {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 output must be absent",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 output must be absent",
         ));
     }
     Ok(ValidatedOutputTarget {
@@ -1099,14 +1106,14 @@ fn validate_absent_output(path: &Path) -> V6Result<ValidatedOutputTarget> {
     })
 }
 
-fn require_output_parent_binding(target: &ValidatedOutputTarget) -> V6Result<()> {
+fn require_output_parent_binding(target: &ValidatedOutputTarget) -> V7Result<()> {
     let metadata = fstat_descriptor(
         target.parent_descriptor.as_raw_fd(),
         "output parent directory",
     )?;
     let path = fs::symlink_metadata(&target.parent_path).map_err(|_| {
-        NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 output parent path is unavailable",
+        NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 output parent path is unavailable",
         )
     })?;
     // SAFETY: geteuid has no preconditions.
@@ -1124,14 +1131,14 @@ fn require_output_parent_binding(target: &ValidatedOutputTarget) -> V6Result<()>
         || metadata.st_mode != path.mode()
         || metadata.st_gid != path.gid()
     {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 output parent binding changed",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 output parent binding changed",
         ));
     }
     Ok(())
 }
 
-fn random_nonce() -> V6Result<[u8; 32]> {
+fn random_nonce() -> V7Result<[u8; 32]> {
     let mut nonce = [0_u8; 32];
     let mut offset = 0;
     while offset < nonce.len() {
@@ -1140,42 +1147,42 @@ fn random_nonce() -> V6Result<[u8; 32]> {
             libc::getrandom(nonce[offset..].as_mut_ptr().cast(), nonce.len() - offset, 0)
         };
         if received <= 0 {
-            return Err(NativeFixed64CpuQualificationV6Error::new(
-                "native fixed64 CPU v6 run nonce is unavailable",
+            return Err(NativeFixed64CpuQualificationV7Error::new(
+                "native fixed64 CPU v7 run nonce is unavailable",
             ));
         }
         offset += usize::try_from(received).map_err(|_| {
-            NativeFixed64CpuQualificationV6Error::new(
-                "native fixed64 CPU v6 run nonce length is invalid",
+            NativeFixed64CpuQualificationV7Error::new(
+                "native fixed64 CPU v7 run nonce length is invalid",
             )
         })?;
     }
     Ok(nonce)
 }
 
-fn process_start_ticks() -> V6Result<u64> {
+fn process_start_ticks() -> V7Result<u64> {
     let raw = fs::read_to_string("/proc/self/stat").map_err(|_| {
-        NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 process identity is unavailable",
+        NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 process identity is unavailable",
         )
     })?;
     let close = raw.rfind(") ").ok_or_else(|| {
-        NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 process identity is invalid",
+        NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 process identity is invalid",
         )
     })?;
     raw[close + 2..]
         .split_ascii_whitespace()
         .nth(19)
         .ok_or_else(|| {
-            NativeFixed64CpuQualificationV6Error::new(
-                "native fixed64 CPU v6 process start time is missing",
+            NativeFixed64CpuQualificationV7Error::new(
+                "native fixed64 CPU v7 process start time is missing",
             )
         })?
         .parse::<u64>()
         .map_err(|_| {
-            NativeFixed64CpuQualificationV6Error::new(
-                "native fixed64 CPU v6 process start time is invalid",
+            NativeFixed64CpuQualificationV7Error::new(
+                "native fixed64 CPU v7 process start time is invalid",
             )
         })
 }
@@ -1237,19 +1244,641 @@ fn json_u64_array(values: &[u64]) -> String {
     format!("[{body}]")
 }
 
-fn json_f64(value: f64) -> V6Result<String> {
+fn json_f64(value: f64) -> V7Result<String> {
     if !value.is_finite() {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 evidence contains a non-finite number",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 evidence contains a non-finite number",
         ));
     }
     Ok(value.to_string())
 }
 
-fn write_exclusive_state_file(directory: RawFd, filename: &str, raw: &[u8]) -> V6Result<()> {
+fn json_f64_array(values: &[f64]) -> V7Result<String> {
+    Ok(format!(
+        "[{}]",
+        values
+            .iter()
+            .map(|value| json_f64(*value))
+            .collect::<V7Result<Vec<_>>>()?
+            .join(",")
+    ))
+}
+
+fn json_u8_array(values: &[u8]) -> String {
+    format!(
+        "[{}]",
+        values
+            .iter()
+            .map(u8::to_string)
+            .collect::<Vec<_>>()
+            .join(",")
+    )
+}
+
+fn json_u32_array(values: &[u32]) -> String {
+    format!(
+        "[{}]",
+        values
+            .iter()
+            .map(u32::to_string)
+            .collect::<Vec<_>>()
+            .join(",")
+    )
+}
+
+fn position_json(value: &PositionSoaOwned) -> V7Result<String> {
+    Ok(format!(
+        "{{\"x_angstrom\":{},\"y_angstrom\":{},\"z_angstrom\":{}}}",
+        json_f64_array(&value.x_angstrom)?,
+        json_f64_array(&value.y_angstrom)?,
+        json_f64_array(&value.z_angstrom)?,
+    ))
+}
+
+fn metric_rate_json(value: Fixed64MetricRate) -> String {
+    format!(
+        "{{\"denominator\":{},\"numerator\":{}}}",
+        value.denominator, value.numerator
+    )
+}
+
+fn coordinate_entropy_json(value: Fixed64CoordinateEntropy) -> String {
+    format!(
+        concat!(
+            "{{\"coordinate_ready_count\":{},",
+            "\"distinct_coordinate_count\":{},",
+            "\"entropy_q32_denominator\":{},",
+            "\"entropy_q32_numerator\":{},",
+            "\"maximum_entropy_q32\":{}}}"
+        ),
+        value.coordinate_ready_count,
+        value.distinct_coordinate_count,
+        value.entropy_q32_denominator,
+        value.entropy_q32_numerator,
+        value.maximum_entropy_q32,
+    )
+}
+
+fn lane_authority_json(value: Fixed64AuthorityDisposition) -> String {
+    format!(
+        concat!(
+            "{{\"benchmark_execution_authorized\":{},",
+            "\"customer_pose_emission_authorized\":{},",
+            "\"denominator_preserved\":{},",
+            "\"existing_rank_auto_change_authorized\":{},",
+            "\"fallback_allowed\":{},",
+            "\"molecular_execution_authorized\":{},",
+            "\"multi_anchor_consumed\":{},",
+            "\"production_claim_authorized\":{},",
+            "\"reservation_authorized\":{},",
+            "\"result_dependent_input_consumed\":{},",
+            "\"scientific_claim_authorized\":{}}}"
+        ),
+        value.benchmark_execution_authorized,
+        value.customer_pose_emission_authorized,
+        value.denominator_preserved,
+        value.existing_rank_auto_change_authorized,
+        value.fallback_allowed,
+        value.molecular_execution_authorized,
+        value.multi_anchor_consumed,
+        value.production_claim_authorized,
+        value.reservation_authorized,
+        value.result_dependent_input_consumed,
+        value.scientific_claim_authorized,
+    )
+}
+
+fn observation_json(value: &Fixed64LaneMetricObservation) -> V7Result<String> {
+    Ok(format!(
+        concat!(
+            "{{\"canonical_orientation_sha256\":\"{}\",",
+            "\"coordinate_ready\":{},",
+            "\"exact_valid\":{},",
+            "\"final_coordinate_sha256\":\"{}\",",
+            "\"initial_severe_penetration\":{},",
+            "\"lane\":{},",
+            "\"oracle_2a\":{},",
+            "\"orientation_available\":{},",
+            "\"post_refinement_severe_penetration\":{},",
+            "\"receipt_sha256\":\"{}\",",
+            "\"rmsd_evaluated\":{},",
+            "\"slot_index\":{},",
+            "\"stable_rank\":{},",
+            "\"stable_valid_rank\":{},",
+            "\"symmetry_aware_direct_heavy_atom_rmsd_angstrom\":{},",
+            "\"symmetry_permutation_index\":{},",
+            "\"valid_oracle_2a\":{}}}"
+        ),
+        digest_hex(value.canonical_orientation_sha256),
+        value.coordinate_ready,
+        value.exact_valid,
+        digest_hex(value.final_coordinate_sha256),
+        value.initial_severe_penetration,
+        json_string(value.lane.id()),
+        value.oracle_2a,
+        value.orientation_available,
+        value.post_refinement_severe_penetration,
+        digest_hex(value.receipt_sha256),
+        value.rmsd_evaluated,
+        value.slot_index,
+        value.stable_rank,
+        value.stable_valid_rank,
+        json_f64(value.symmetry_aware_direct_heavy_atom_rmsd_angstrom)?,
+        value.symmetry_permutation_index,
+        value.valid_oracle_2a,
+    ))
+}
+
+fn lane_summary_json(value: &Fixed64LaneMetricSummary) -> String {
+    format!(
+        concat!(
+            "{{\"cluster_eligible_count\":{},",
+            "\"coordinate_entropy\":{},",
+            "\"coordinate_ready_count\":{},",
+            "\"exact_coordinate_duplicate_count\":{},",
+            "\"exact_coordinate_unique_count\":{},",
+            "\"exact_coordinate_unique_rate\":{},",
+            "\"exact_valid_contribution\":{},",
+            "\"exact_valid_count\":{},",
+            "\"first_slot_index\":{},",
+            "\"generated_count\":{},",
+            "\"incremental_oracle_case_recovery\":{},",
+            "\"incremental_valid_oracle_case_recovery\":{},",
+            "\"initial_geometric_evaluated_count\":{},",
+            "\"initial_severe_penetration_count\":{},",
+            "\"initial_severe_penetration_rate\":{},",
+            "\"lane\":{},",
+            "\"oracle_2a_count\":{},",
+            "\"oracle_contribution\":{},",
+            "\"orientation_available_count\":{},",
+            "\"orientation_duplicate_count\":{},",
+            "\"orientation_duplicate_rate\":{},",
+            "\"post_geometric_evaluated_count\":{},",
+            "\"post_severe_penetration_count\":{},",
+            "\"post_severe_penetration_rate\":{},",
+            "\"receipt_sha256\":\"{}\",",
+            "\"slot_count\":{},",
+            "\"typed_failure_count\":{},",
+            "\"unique_orientation_count\":{},",
+            "\"unique_valid_pose_cluster_count\":{},",
+            "\"unique_valid_pose_rate\":{},",
+            "\"valid_oracle_2a_count\":{},",
+            "\"valid_oracle_contribution\":{}}}"
+        ),
+        value.cluster_eligible_count,
+        coordinate_entropy_json(value.coordinate_entropy),
+        value.coordinate_ready_count,
+        value.exact_coordinate_duplicate_count,
+        value.exact_coordinate_unique_count,
+        metric_rate_json(value.exact_coordinate_unique_rate),
+        metric_rate_json(value.exact_valid_contribution),
+        value.exact_valid_count,
+        value.first_slot_index,
+        value.generated_count,
+        value.incremental_oracle_case_recovery,
+        value.incremental_valid_oracle_case_recovery,
+        value.initial_geometric_evaluated_count,
+        value.initial_severe_penetration_count,
+        metric_rate_json(value.initial_severe_penetration_rate),
+        json_string(value.lane.id()),
+        value.oracle_2a_count,
+        metric_rate_json(value.oracle_contribution),
+        value.orientation_available_count,
+        value.orientation_duplicate_count,
+        metric_rate_json(value.orientation_duplicate_rate),
+        value.post_geometric_evaluated_count,
+        value.post_severe_penetration_count,
+        metric_rate_json(value.post_severe_penetration_rate),
+        digest_hex(value.receipt_sha256),
+        value.slot_count,
+        value.typed_failure_count,
+        value.unique_orientation_count,
+        value.unique_valid_pose_cluster_count,
+        metric_rate_json(value.unique_valid_pose_rate),
+        value.valid_oracle_2a_count,
+        metric_rate_json(value.valid_oracle_contribution),
+    )
+}
+
+fn oracle_failure_class(value: Fixed64OracleFailureClass) -> &'static str {
+    match value {
+        Fixed64OracleFailureClass::Success => "success",
+        Fixed64OracleFailureClass::ProposalFailure => "proposal_failure",
+        Fixed64OracleFailureClass::ValidityFailure => "validity_failure",
+        Fixed64OracleFailureClass::RankingFailure => "ranking_failure",
+    }
+}
+
+fn oracle_selection_json(value: Fixed64OracleSelectionSummary) -> V7Result<String> {
+    Ok(format!(
+        concat!(
+            "{{\"failure_class\":{},",
+            "\"proposal_oracle_rmsd_angstrom\":{},",
+            "\"proposal_oracle_slot_index\":{},",
+            "\"proposal_oracle_success\":{},",
+            "\"receipt_sha256\":\"{}\",",
+            "\"selected_top1_exact_valid\":{},",
+            "\"selected_top1_oracle_success\":{},",
+            "\"selected_top1_rmsd_angstrom\":{},",
+            "\"selected_top1_rmsd_evaluated\":{},",
+            "\"selected_top1_slot_index\":{},",
+            "\"selected_top5_oracle_present\":{},",
+            "\"selected_top5_valid_oracle_present\":{},",
+            "\"valid_proposal_oracle_rmsd_angstrom\":{},",
+            "\"valid_proposal_oracle_slot_index\":{},",
+            "\"valid_proposal_oracle_success\":{}}}"
+        ),
+        json_string(oracle_failure_class(value.failure_class)),
+        json_f64(value.proposal_oracle_rmsd_angstrom)?,
+        value.proposal_oracle_slot_index,
+        value.proposal_oracle_success,
+        digest_hex(value.receipt_sha256),
+        value.selected_top1_exact_valid,
+        value.selected_top1_oracle_success,
+        json_f64(value.selected_top1_rmsd_angstrom)?,
+        value.selected_top1_rmsd_evaluated,
+        value.selected_top1_slot_index,
+        value.selected_top5_oracle_present,
+        value.selected_top5_valid_oracle_present,
+        json_f64(value.valid_proposal_oracle_rmsd_angstrom)?,
+        value.valid_proposal_oracle_slot_index,
+        value.valid_proposal_oracle_success,
+    ))
+}
+
+fn conformer_interaction_json(value: Fixed64ConformerOrientationInteraction) -> String {
+    format!(
+        concat!(
+            "{{\"both_coordinate_ready_count\":{},",
+            "\"both_oracle_count\":{},",
+            "\"conformer_lower_rmsd_count\":{},",
+            "\"conformer_oracle_gain_count\":{},",
+            "\"conformer_oracle_loss_count\":{},",
+            "\"conformer_valid_oracle_gain_count\":{},",
+            "\"conformer_valid_oracle_loss_count\":{},",
+            "\"neither_oracle_count\":{},",
+            "\"predeclared_pair_count\":{},",
+            "\"receipt_sha256\":\"{}\",",
+            "\"rmsd_tie_count\":{},",
+            "\"source_lower_rmsd_count\":{}}}"
+        ),
+        value.both_coordinate_ready_count,
+        value.both_oracle_count,
+        value.conformer_lower_rmsd_count,
+        value.conformer_oracle_gain_count,
+        value.conformer_oracle_loss_count,
+        value.conformer_valid_oracle_gain_count,
+        value.conformer_valid_oracle_loss_count,
+        value.neither_oracle_count,
+        value.predeclared_pair_count,
+        digest_hex(value.receipt_sha256),
+        value.rmsd_tie_count,
+        value.source_lower_rmsd_count,
+    )
+}
+
+fn lane_source_row_json(value: &Fixed64ScientificCandidateProjection) -> V7Result<String> {
+    Ok(format!(
+        concat!(
+            "{{\"cluster_eligible\":{},",
+            "\"cluster_id\":{},",
+            "\"coordinates_available\":{},",
+            "\"geometric_decision\":{},",
+            "\"geometric_status\":{},",
+            "\"lane\":{},",
+            "\"placement_quaternion\":{},",
+            "\"post_admission_decision\":{},",
+            "\"post_admission_status\":{},",
+            "\"refinement_coordinate_available\":{},",
+            "\"refinement_coordinate_sha256\":\"{}\",",
+            "\"refinement_status\":{},",
+            "\"slot_index\":{},",
+            "\"stable_rank\":{},",
+            "\"stable_valid_rank\":{},",
+            "\"valid_rank_eligible\":{},",
+            "\"validity_blocker_mask\":{},",
+            "\"validity_passed_check_mask\":{},",
+            "\"validity_status\":{}}}"
+        ),
+        value.cluster.cluster_eligible,
+        value.cluster.cluster_id,
+        value.coordinates_available,
+        value.geometric_decision,
+        value.geometric_status,
+        value.lane,
+        json_f64_array(&value.placement_quaternion)?,
+        value.post_admission.decision,
+        value.post_admission.status,
+        value.refinement.coordinate_available,
+        digest_hex(value.refinement.coordinate_sha256),
+        value.refinement.status,
+        value.slot_index,
+        value.ranking.stable_rank,
+        value.ranking.stable_valid_rank,
+        value.ranking.valid_rank_eligible,
+        value.validity.blocker_mask,
+        value.validity.passed_check_mask,
+        value.validity.status,
+    ))
+}
+
+fn scorer_validity_row_json(value: &Fixed64ScientificCandidateProjection) -> V7Result<String> {
+    let scorer = value.scorer;
+    let validity = value.validity;
+    let ranking = value.ranking;
+    let validity_counts = [
+        validity.observed_count,
+        validity.atom_count,
+        validity.evaluated_ligand_nonbonded_pair_count,
+        validity.excluded_ligand_pair_count,
+        validity.evaluated_receptor_ligand_pair_count,
+        validity.declared_chirality_center_count,
+        validity.element_vdw_ligand_pair_count,
+        validity.element_vdw_ligand_severe_overlap_count,
+        validity.element_vdw_receptor_candidate_pair_count,
+        validity.element_vdw_receptor_full_cartesian_pair_count,
+        validity.element_vdw_receptor_cell_count,
+        validity.element_vdw_receptor_severe_overlap_count,
+    ];
+    let validity_measurements = [
+        validity.rotation_orthogonality_max_error,
+        validity.rotation_determinant,
+        validity.max_bond_length_delta_angstrom,
+        validity.minimum_ligand_nonbonded_distance_angstrom,
+        validity.minimum_receptor_ligand_distance_angstrom,
+        validity.minimum_declared_chiral_volume,
+        validity.maximum_pocket_center_distance_angstrom,
+        validity.element_vdw_ligand_minimum_distance_angstrom,
+        validity.element_vdw_ligand_minimum_ratio,
+        validity.element_vdw_receptor_minimum_distance_angstrom,
+        validity.element_vdw_receptor_minimum_ratio,
+    ];
+    Ok(format!(
+        concat!(
+            "{{\"ranking\":{{",
+            "\"rank_eligible\":{},",
+            "\"stable_rank\":{},",
+            "\"stable_valid_rank\":{},",
+            "\"total_score\":{},",
+            "\"valid_rank_eligible\":{}",
+            "}},",
+            "\"scorer\":{{",
+            "\"counts\":{},",
+            "\"failure_code\":{},",
+            "\"status\":{},",
+            "\"total_score\":{},",
+            "\"weighted_terms\":{}",
+            "}},",
+            "\"slot_index\":{},",
+            "\"validity\":{{",
+            "\"blocker_mask\":{},",
+            "\"counts\":{},",
+            "\"failure_code\":{},",
+            "\"measurements\":{},",
+            "\"passed_check_mask\":{},",
+            "\"status\":{},",
+            "\"upstream_scorer_failure_code\":{}",
+            "}}}}"
+        ),
+        ranking.rank_eligible,
+        ranking.stable_rank,
+        ranking.stable_valid_rank,
+        json_f64(ranking.total_score)?,
+        ranking.valid_rank_eligible,
+        json_u64_array(&[
+            scorer.receptor_candidate_pair_count,
+            scorer.ligand_pair_count,
+            scorer.hbond_count,
+            scorer.hydrophobic_contact_count,
+            scorer.buried_polar_count,
+        ]),
+        scorer.failure_code,
+        scorer.status,
+        json_f64(scorer.total_score)?,
+        json_f64_array(&scorer.weighted_terms)?,
+        value.slot_index,
+        validity.blocker_mask,
+        json_u64_array(&validity_counts),
+        validity.failure_code,
+        json_f64_array(&validity_measurements)?,
+        validity.passed_check_mask,
+        validity.status,
+        validity.upstream_scorer_failure_code,
+    ))
+}
+
+fn numeric_projection_json(value: &Fixed64ScientificProjection) -> V7Result<String> {
+    let values = numeric_projection(value);
+    let mut raw = Vec::with_capacity(values.len() * 8);
+    let mut hexadecimal = String::with_capacity(values.len() * 16);
+    for value in values {
+        if !value.is_finite() {
+            return Err(NativeFixed64CpuQualificationV7Error::new(
+                "native fixed64 CPU v7 numeric projection is not finite",
+            ));
+        }
+        let canonical = if value == 0.0 { 0.0 } else { value };
+        let bits = canonical.to_bits();
+        raw.extend_from_slice(&bits.to_be_bytes());
+        write!(&mut hexadecimal, "{bits:016x}").expect("writing to String cannot fail");
+    }
+    let sha256 = domain_digest(
+        b"betelgeuze.engine_v2_native_fixed64_cpu_numeric_projection_v7\0",
+        &raw,
+    );
+    Ok(format!(
+        "{{\"f64_be_hex\":{},\"f64_count\":{},\"sha256\":\"{}\"}}",
+        json_string(&hexadecimal),
+        raw.len() / 8,
+        sha256,
+    ))
+}
+
+fn canonical_bytes_json(raw: &[u8], domain: &[u8]) -> String {
+    let mut hexadecimal = String::with_capacity(raw.len() * 2);
+    for byte in raw {
+        write!(&mut hexadecimal, "{byte:02x}").expect("writing to String cannot fail");
+    }
+    format!(
+        "{{\"byte_count\":{},\"hex\":{},\"sha256\":\"{}\"}}",
+        raw.len(),
+        json_string(&hexadecimal),
+        domain_digest(domain, raw),
+    )
+}
+
+fn decision_preimage_json(value: &Fixed64ScientificProjection) -> V7Result<String> {
+    let (digest, raw) = scientific_decision_preimage(value);
+    if digest != value.decision_sha256 {
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 decision preimage does not bind the projection",
+        ));
+    }
+    Ok(canonical_bytes_json(&raw, b""))
+}
+
+fn projection_digest_stream_json(value: &Fixed64ScientificProjection) -> String {
+    let mut raw = Vec::with_capacity(64 * 6 * 32);
+    for row in &value.candidate_rows {
+        for digest in [
+            row.placement_receipt_sha256,
+            row.output_proposal_sha256,
+            row.output_coordinate_sha256,
+            row.refinement.coordinate_sha256,
+            row.ranking.coordinate_sha256,
+            row.cluster.coordinate_sha256,
+        ] {
+            raw.extend_from_slice(&digest);
+        }
+    }
+    canonical_bytes_json(
+        &raw,
+        b"betelgeuze.engine_v2_native_fixed64_cpu_projection_digest_stream_v7\0",
+    )
+}
+
+fn lane_metrics_reference_json(value: &Fixed64LaneMetricsReceipt) -> V7Result<String> {
+    let reference = &value.reference;
+    let permutations = reference
+        .symmetry_permutations
+        .iter()
+        .map(|permutation| json_u32_array(permutation))
+        .collect::<Vec<_>>()
+        .join(",");
+    Ok(format!(
+        concat!(
+            "{{\"case_id\":{},",
+            "\"heavy_atom_mask\":{},",
+            "\"prepared_ligand_topology_sha256\":\"{}\",",
+            "\"receipt_sha256\":\"{}\",",
+            "\"reference_coordinates\":{},",
+            "\"reference_pose_source_receipt_sha256\":\"{}\",",
+            "\"symmetry_permutations\":[{}]}}"
+        ),
+        json_string(&reference.case_id),
+        json_u8_array(&reference.heavy_atom_mask),
+        digest_hex(reference.prepared_ligand_topology_sha256),
+        digest_hex(reference.receipt_sha256),
+        position_json(&reference.reference_coordinates)?,
+        digest_hex(reference.reference_pose_source_receipt_sha256),
+        permutations,
+    ))
+}
+
+fn lane_metrics_json(
+    projection: &Fixed64ScientificProjection,
+    value: &Fixed64LaneMetricsReceipt,
+) -> V7Result<String> {
+    if value.scientific_projection_sha256 != projection.sha256
+        || value.observations.len() != 64
+        || value.lane_summaries.len() != 10
+    {
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 full lane evidence is cross-wired",
+        ));
+    }
+    let observations = value
+        .observations
+        .iter()
+        .map(observation_json)
+        .collect::<V7Result<Vec<_>>>()?
+        .join(",");
+    let summaries = value
+        .lane_summaries
+        .iter()
+        .map(lane_summary_json)
+        .collect::<Vec<_>>()
+        .join(",");
+    let source_rows = projection
+        .candidate_rows
+        .iter()
+        .map(lane_source_row_json)
+        .collect::<V7Result<Vec<_>>>()?
+        .join(",");
+    Ok(format!(
+        concat!(
+            "{{\"authority\":{},",
+            "\"candidate_denominator\":{},",
+            "\"conformer_orientation_interaction\":{},",
+            "\"decision_sha256\":\"{}\",",
+            "\"final_coordinates\":{},",
+            "\"global_coordinate_entropy\":{},",
+            "\"lane_summaries\":[{}],",
+            "\"metrics_used_to_change_rank\":{},",
+            "\"observations\":[{}],",
+            "\"oracle_selection\":{},",
+            "\"pipeline_cluster_batch_receipt_sha256\":\"{}\",",
+            "\"pipeline_source_bundle_receipt_sha256\":\"{}\",",
+            "\"primary_slot_indices\":{},",
+            "\"product_execution_authorized\":{},",
+            "\"public_or_scientific_claim_authorized\":{},",
+            "\"receipt_sha256\":\"{}\",",
+            "\"reference\":{},",
+            "\"result_dependent_allocation_consumed\":{},",
+            "\"rmsd_threshold_angstrom\":{},",
+            "\"scientific_projection_sha256\":\"{}\",",
+            "\"schema_id\":\"betelgeuze.engine_v2_native_fixed64_lane_metrics/1.0.0\",",
+            "\"source_rows\":[{}]}}"
+        ),
+        lane_authority_json(value.authority),
+        value.candidate_denominator,
+        conformer_interaction_json(value.conformer_orientation_interaction),
+        digest_hex(value.decision_sha256),
+        position_json(&projection.final_coordinates)?,
+        coordinate_entropy_json(value.global_coordinate_entropy),
+        summaries,
+        value.metrics_used_to_change_rank,
+        observations,
+        oracle_selection_json(value.oracle_selection)?,
+        digest_hex(value.pipeline_cluster_batch_receipt_sha256),
+        digest_hex(value.pipeline_source_bundle_receipt_sha256),
+        json_u32_array(&projection.primary_slot_indices),
+        value.product_execution_authorized,
+        value.public_or_scientific_claim_authorized,
+        digest_hex(value.receipt_sha256),
+        lane_metrics_reference_json(value)?,
+        value.result_dependent_allocation_consumed,
+        json_f64(value.rmsd_threshold_angstrom)?,
+        digest_hex(value.scientific_projection_sha256),
+        source_rows,
+    ))
+}
+
+fn backend_rederivable_evidence_json(
+    projection: &Fixed64ScientificProjection,
+    metrics: &Fixed64LaneMetricsReceipt,
+) -> V7Result<String> {
+    let rows = projection
+        .candidate_rows
+        .iter()
+        .map(scorer_validity_row_json)
+        .collect::<V7Result<Vec<_>>>()?
+        .join(",");
+    Ok(format!(
+        concat!(
+            "{{\"decision_preimage\":{},",
+            "\"lane_metrics\":{},",
+            "\"numeric_projection\":{},",
+            "\"projection_decision_sha256\":\"{}\",",
+            "\"projection_digest_stream\":{},",
+            "\"projection_sha256\":\"{}\",",
+            "\"schema_id\":\"betelgeuze.engine_v2_native_fixed64_cpu_backend_evidence/7.0.0\",",
+            "\"scorer_validity_rows\":[{}]}}"
+        ),
+        decision_preimage_json(projection)?,
+        lane_metrics_json(projection, metrics)?,
+        numeric_projection_json(projection)?,
+        digest_hex(projection.decision_sha256),
+        projection_digest_stream_json(projection),
+        digest_hex(projection.sha256),
+        rows,
+    ))
+}
+
+fn write_exclusive_state_file(directory: RawFd, filename: &str, raw: &[u8]) -> V7Result<()> {
     if raw.is_empty() || raw.len() > MAX_STATE_BYTES {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 state bytes are outside the envelope",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 state bytes are outside the envelope",
         ));
     }
     let name = CString::new(filename).expect("fixed state filename contains no NUL");
@@ -1266,18 +1895,18 @@ fn write_exclusive_state_file(directory: RawFd, filename: &str, raw: &[u8]) -> V
     if descriptor < 0 {
         let error = io::Error::last_os_error();
         let message = if error.raw_os_error() == Some(libc::EEXIST) {
-            "native fixed64 CPU v6 exactly-once state was already consumed"
+            "native fixed64 CPU v7 exactly-once state was already consumed"
         } else {
-            "native fixed64 CPU v6 state cannot be created atomically"
+            "native fixed64 CPU v7 state cannot be created atomically"
         };
-        return Err(NativeFixed64CpuQualificationV6Error::new(message));
+        return Err(NativeFixed64CpuQualificationV7Error::new(message));
     }
     // SAFETY: descriptor was returned by openat and is now uniquely owned.
     let owned = unsafe { OwnedFd::from_raw_fd(descriptor) };
     // SAFETY: descriptor is valid and the mode contains only permission bits.
     if unsafe { libc::fchmod(owned.as_raw_fd(), 0o600) } != 0 {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 state permissions cannot be sealed",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 state permissions cannot be sealed",
         ));
     }
     let initial = fstat_descriptor(owned.as_raw_fd(), "state file")?;
@@ -1289,17 +1918,17 @@ fn write_exclusive_state_file(directory: RawFd, filename: &str, raw: &[u8]) -> V
         || initial.st_size != 0
         || initial.st_mode & 0o777 != 0o600
     {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 initial state identity is invalid",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 initial state identity is invalid",
         ));
     }
     let mut file = fs::File::from(owned);
     file.write_all(raw).map_err(|_| {
-        NativeFixed64CpuQualificationV6Error::new("native fixed64 CPU v6 state write failed")
+        NativeFixed64CpuQualificationV7Error::new("native fixed64 CPU v7 state write failed")
     })?;
     file.sync_all().map_err(|_| {
-        NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 state cannot be synchronized",
+        NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 state cannot be synchronized",
         )
     })?;
     let final_metadata = fstat_descriptor(file.as_raw_fd(), "state file")?;
@@ -1309,14 +1938,14 @@ fn write_exclusive_state_file(directory: RawFd, filename: &str, raw: &[u8]) -> V
         || final_metadata.st_size != i64::try_from(raw.len()).unwrap_or(-1)
         || final_metadata.st_mode & 0o777 != 0o600
     {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 final state identity is invalid",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 final state identity is invalid",
         ));
     }
     // SAFETY: fsync on an open directory persists its entries on Linux.
     if unsafe { libc::fsync(directory) } != 0 {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 state directory cannot be synchronized",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 state directory cannot be synchronized",
         ));
     }
     Ok(())
@@ -1327,7 +1956,7 @@ fn read_bounded_file_at(
     name: &CStr,
     maximum: usize,
     label: &str,
-) -> V6Result<Vec<u8>> {
+) -> V7Result<Vec<u8>> {
     // SAFETY: directory is open, name is relative, and a successful openat
     // returns one newly owned descriptor.
     let descriptor = unsafe {
@@ -1338,8 +1967,8 @@ fn read_bounded_file_at(
         )
     };
     if descriptor < 0 {
-        return Err(NativeFixed64CpuQualificationV6Error::new(format!(
-            "native fixed64 CPU v6 {label} cannot be opened safely"
+        return Err(NativeFixed64CpuQualificationV7Error::new(format!(
+            "native fixed64 CPU v7 {label} cannot be opened safely"
         )));
     }
     // SAFETY: descriptor was returned by openat and is now uniquely owned.
@@ -1356,8 +1985,8 @@ fn read_bounded_file_at(
             .ok()
             .is_none_or(|size| size > maximum)
     {
-        return Err(NativeFixed64CpuQualificationV6Error::new(format!(
-            "native fixed64 CPU v6 {label} identity is invalid"
+        return Err(NativeFixed64CpuQualificationV7Error::new(format!(
+            "native fixed64 CPU v7 {label} identity is invalid"
         )));
     }
     let mut file = fs::File::from(owned);
@@ -1366,8 +1995,8 @@ fn read_bounded_file_at(
         .take(u64::try_from(maximum).unwrap_or(u64::MAX) + 1)
         .read_to_end(&mut raw)
         .map_err(|_| {
-            NativeFixed64CpuQualificationV6Error::new(format!(
-                "native fixed64 CPU v6 {label} cannot be read"
+            NativeFixed64CpuQualificationV7Error::new(format!(
+                "native fixed64 CPU v7 {label} cannot be read"
             ))
         })?;
     let after = fstat_descriptor(file.as_raw_fd(), label)?;
@@ -1385,8 +2014,8 @@ fn read_bounded_file_at(
         || before.st_ctime != after.st_ctime
         || before.st_ctime_nsec != after.st_ctime_nsec
     {
-        return Err(NativeFixed64CpuQualificationV6Error::new(format!(
-            "native fixed64 CPU v6 {label} changed while read"
+        return Err(NativeFixed64CpuQualificationV7Error::new(format!(
+            "native fixed64 CPU v7 {label} changed while read"
         )));
     }
     Ok(raw)
@@ -1398,15 +2027,15 @@ fn publish_absent_file_at(
     raw: &[u8],
     maximum: usize,
     label: &str,
-) -> V6Result<Vec<u8>> {
+) -> V7Result<Vec<u8>> {
     if raw.is_empty() || raw.len() > maximum {
-        return Err(NativeFixed64CpuQualificationV6Error::new(format!(
-            "native fixed64 CPU v6 {label} bytes are outside the envelope"
+        return Err(NativeFixed64CpuQualificationV7Error::new(format!(
+            "native fixed64 CPU v7 {label} bytes are outside the envelope"
         )));
     }
     if path_exists_at(directory, target_name)? {
-        return Err(NativeFixed64CpuQualificationV6Error::new(format!(
-            "native fixed64 CPU v6 {label} target already exists"
+        return Err(NativeFixed64CpuQualificationV7Error::new(format!(
+            "native fixed64 CPU v7 {label} target already exists"
         )));
     }
     let nonce = digest_hex(random_nonce()?);
@@ -1433,8 +2062,8 @@ fn publish_absent_file_at(
         )
     };
     if descriptor < 0 {
-        return Err(NativeFixed64CpuQualificationV6Error::new(format!(
-            "native fixed64 CPU v6 {label} staging file cannot be created"
+        return Err(NativeFixed64CpuQualificationV7Error::new(format!(
+            "native fixed64 CPU v7 {label} staging file cannot be created"
         )));
     }
     // SAFETY: descriptor was returned by openat and is now uniquely owned.
@@ -1443,30 +2072,30 @@ fn publish_absent_file_at(
     if unsafe { libc::fchmod(owned.as_raw_fd(), 0o600) } != 0 {
         // SAFETY: temporary is the exact file just created in this directory.
         unsafe { libc::unlinkat(directory, temporary.as_ptr(), 0) };
-        return Err(NativeFixed64CpuQualificationV6Error::new(format!(
-            "native fixed64 CPU v6 {label} staging permissions cannot be sealed"
+        return Err(NativeFixed64CpuQualificationV7Error::new(format!(
+            "native fixed64 CPU v7 {label} staging permissions cannot be sealed"
         )));
     }
     let initial = fstat_descriptor(owned.as_raw_fd(), label)?;
     let mut file = fs::File::from(owned);
-    let write_result = (|| -> V6Result<()> {
+    let write_result = (|| -> V7Result<()> {
         if !is_regular_mode(initial.st_mode)
             || initial.st_nlink != 1
             || initial.st_size != 0
             || initial.st_mode & 0o777 != 0o600
         {
-            return Err(NativeFixed64CpuQualificationV6Error::new(format!(
-                "native fixed64 CPU v6 {label} staging identity is invalid"
+            return Err(NativeFixed64CpuQualificationV7Error::new(format!(
+                "native fixed64 CPU v7 {label} staging identity is invalid"
             )));
         }
         file.write_all(raw).map_err(|_| {
-            NativeFixed64CpuQualificationV6Error::new(format!(
-                "native fixed64 CPU v6 {label} write failed"
+            NativeFixed64CpuQualificationV7Error::new(format!(
+                "native fixed64 CPU v7 {label} write failed"
             ))
         })?;
         file.sync_all().map_err(|_| {
-            NativeFixed64CpuQualificationV6Error::new(format!(
-                "native fixed64 CPU v6 {label} cannot be synchronized"
+            NativeFixed64CpuQualificationV7Error::new(format!(
+                "native fixed64 CPU v7 {label} cannot be synchronized"
             ))
         })?;
         let final_metadata = fstat_descriptor(file.as_raw_fd(), label)?;
@@ -1476,8 +2105,8 @@ fn publish_absent_file_at(
             || final_metadata.st_size != i64::try_from(raw.len()).unwrap_or(-1)
             || final_metadata.st_mode & 0o777 != 0o600
         {
-            return Err(NativeFixed64CpuQualificationV6Error::new(format!(
-                "native fixed64 CPU v6 {label} staging identity changed"
+            return Err(NativeFixed64CpuQualificationV7Error::new(format!(
+                "native fixed64 CPU v7 {label} staging identity changed"
             )));
         }
         Ok(())
@@ -1500,8 +2129,8 @@ fn publish_absent_file_at(
     {
         // SAFETY: temporary still names the staging inode owned by this call.
         unsafe { libc::unlinkat(directory, temporary.as_ptr(), 0) };
-        return Err(NativeFixed64CpuQualificationV6Error::new(format!(
-            "native fixed64 CPU v6 {label} cannot be published atomically"
+        return Err(NativeFixed64CpuQualificationV7Error::new(format!(
+            "native fixed64 CPU v7 {label} cannot be published atomically"
         )));
     }
     let linked = fstat_descriptor(file.as_raw_fd(), label)?;
@@ -1511,33 +2140,33 @@ fn publish_absent_file_at(
             libc::unlinkat(directory, target_name.as_ptr(), 0);
             libc::unlinkat(directory, temporary.as_ptr(), 0);
         }
-        return Err(NativeFixed64CpuQualificationV6Error::new(format!(
-            "native fixed64 CPU v6 {label} published link identity is invalid"
+        return Err(NativeFixed64CpuQualificationV7Error::new(format!(
+            "native fixed64 CPU v7 {label} published link identity is invalid"
         )));
     }
     // SAFETY: temporary is the staging name owned by this call.
     if unsafe { libc::unlinkat(directory, temporary.as_ptr(), 0) } != 0 {
         // Leave both links as fail-closed ambiguous evidence rather than risk
         // deleting a target whose state cannot be proved.
-        return Err(NativeFixed64CpuQualificationV6Error::new(format!(
-            "native fixed64 CPU v6 {label} staging name cannot be retired"
+        return Err(NativeFixed64CpuQualificationV7Error::new(format!(
+            "native fixed64 CPU v7 {label} staging name cannot be retired"
         )));
     }
     if fstat_descriptor(file.as_raw_fd(), label)?.st_nlink != 1 {
-        return Err(NativeFixed64CpuQualificationV6Error::new(format!(
-            "native fixed64 CPU v6 {label} final link identity is invalid"
+        return Err(NativeFixed64CpuQualificationV7Error::new(format!(
+            "native fixed64 CPU v7 {label} final link identity is invalid"
         )));
     }
     // SAFETY: fsync on an open directory persists its entries on Linux.
     if unsafe { libc::fsync(directory) } != 0 {
-        return Err(NativeFixed64CpuQualificationV6Error::new(format!(
-            "native fixed64 CPU v6 {label} directory cannot be synchronized"
+        return Err(NativeFixed64CpuQualificationV7Error::new(format!(
+            "native fixed64 CPU v7 {label} directory cannot be synchronized"
         )));
     }
     let observed = read_bounded_file_at(directory, target_name, maximum, label)?;
     if observed != raw {
-        return Err(NativeFixed64CpuQualificationV6Error::new(format!(
-            "native fixed64 CPU v6 {label} published bytes changed"
+        return Err(NativeFixed64CpuQualificationV7Error::new(format!(
+            "native fixed64 CPU v7 {label} published bytes changed"
         )));
     }
     Ok(observed)
@@ -1545,19 +2174,19 @@ fn publish_absent_file_at(
 
 fn create_attempt(
     state_directory: RawFd,
-    activation: &Fixed64CpuActivationStatusV6,
+    activation: &Fixed64CpuActivationStatusV7,
     output_path_sha256: String,
-) -> V6Result<AttemptLeaseV6> {
+) -> V7Result<AttemptLeaseV7> {
     let attempt_name = CString::new(ATTEMPT_FILENAME).expect("fixed filename contains no NUL");
     let terminal_name = CString::new(TERMINAL_FILENAME).expect("fixed filename contains no NUL");
     if path_exists_at(state_directory, &attempt_name)? {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 exactly-once profile attempt was already consumed",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 exactly-once profile attempt was already consumed",
         ));
     }
     if path_exists_at(state_directory, &terminal_name)? {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 terminal exists without an available attempt",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 terminal exists without an available attempt",
         ));
     }
     let run_nonce = digest_hex(random_nonce()?);
@@ -1605,11 +2234,11 @@ fn create_attempt(
         "attempt ledger",
     )?;
     if observed != raw {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 attempt ledger changed after creation",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 attempt ledger changed after creation",
         ));
     }
-    Ok(AttemptLeaseV6 {
+    Ok(AttemptLeaseV7 {
         raw_sha256: sha256_hex(&raw),
         raw,
         receipt_sha256,
@@ -1619,8 +2248,8 @@ fn create_attempt(
 }
 
 fn report_contract_is_valid(report: &Fixed64CpuProbeReportV5) -> bool {
-    report.schema_id == FIXED64_CPU_QUALIFICATION_V6_SCHEMA_ID
-        && report.profile_id == FIXED64_CPU_QUALIFICATION_V6_PROFILE_ID
+    report.schema_id == FIXED64_CPU_QUALIFICATION_V7_SCHEMA_ID
+        && report.profile_id == FIXED64_CPU_QUALIFICATION_V7_PROFILE_ID
         && !report.qualification_authority
         && !report.molecular_execution_authorized
         && !report.reservation_authorized
@@ -1637,13 +2266,21 @@ fn report_contract_is_valid(report: &Fixed64CpuProbeReportV5) -> bool {
                 && fixture.cpp_generated_count + fixture.cpp_typed_failure_count == 64
                 && fixture.rust_generated_count + fixture.rust_typed_failure_count == 64
                 && fixture.authority_false
+                && fixture.lane_metrics_decision_parity
+                && fixture.lane_metrics_rederivable
+                && fixture.lane_metrics_authority_false
+                && fixture.cpp_lane_metrics_decision_sha256
+                    == fixture.rust_lane_metrics_decision_sha256
+                && fixture.lane_metrics_reference_sha256 != [0; 32]
+                && fixture.cpp_lane_metrics_receipt_sha256 != [0; 32]
+                && fixture.rust_lane_metrics_receipt_sha256 != [0; 32]
         })
 }
 
-fn execute_measurement(preflight: &Fixed64CpuPreflightV6) -> MeasurementOutcomeV6 {
+fn execute_measurement(preflight: &Fixed64CpuPreflightV7) -> MeasurementOutcomeV7 {
     let mut blockers = preflight.blockers.clone();
     if !preflight.ready() {
-        return MeasurementOutcomeV6 {
+        return MeasurementOutcomeV7 {
             report: None,
             measurement_started: false,
             blockers,
@@ -1651,7 +2288,7 @@ fn execute_measurement(preflight: &Fixed64CpuPreflightV6) -> MeasurementOutcomeV
     }
     if pin_measurement_cpu().is_err() {
         blockers.push("measurement_affinity_pin_failed".to_owned());
-        return MeasurementOutcomeV6 {
+        return MeasurementOutcomeV7 {
             report: None,
             measurement_started: false,
             blockers,
@@ -1659,7 +2296,7 @@ fn execute_measurement(preflight: &Fixed64CpuPreflightV6) -> MeasurementOutcomeV
     }
     if process_task_count().ok() != Some(1) {
         blockers.push("post_pin_process_task_count_not_one".to_owned());
-        return MeasurementOutcomeV6 {
+        return MeasurementOutcomeV7 {
             report: None,
             measurement_started: false,
             blockers,
@@ -1667,15 +2304,15 @@ fn execute_measurement(preflight: &Fixed64CpuPreflightV6) -> MeasurementOutcomeV
     }
     if read_boost_disabled().ok() != Some(true) {
         blockers.push("post_pin_boost_not_disabled".to_owned());
-        return MeasurementOutcomeV6 {
+        return MeasurementOutcomeV7 {
             report: None,
             measurement_started: false,
             blockers,
         };
     }
     let result = run_native_fixed64_cpu_qualification_successor(
-        FIXED64_CPU_QUALIFICATION_V6_SCHEMA_ID,
-        FIXED64_CPU_QUALIFICATION_V6_PROFILE_ID,
+        FIXED64_CPU_QUALIFICATION_V7_SCHEMA_ID,
+        FIXED64_CPU_QUALIFICATION_V7_PROFILE_ID,
     );
     let mut report = match result {
         Ok(value) if report_contract_is_valid(&value) => Some(value),
@@ -1705,26 +2342,37 @@ fn execute_measurement(preflight: &Fixed64CpuPreflightV6) -> MeasurementOutcomeV
     }
     blockers.sort();
     blockers.dedup();
-    MeasurementOutcomeV6 {
+    MeasurementOutcomeV7 {
         report,
         measurement_started: true,
         blockers,
     }
 }
 
-fn fixture_json(value: &Fixed64CpuFixtureProbeV5) -> V6Result<String> {
+fn fixture_json(value: &Fixed64CpuFixtureProbeV5) -> V7Result<String> {
     let first_violation = value
         .numeric_parity
         .first_violation_index
         .map_or_else(|| "null".to_owned(), |index| index.to_string());
+    let cpp_rederivable_evidence = backend_rederivable_evidence_json(
+        &value.cpp_scientific_projection,
+        &value.cpp_lane_metrics,
+    )?;
+    let rust_rederivable_evidence = backend_rederivable_evidence_json(
+        &value.rust_scientific_projection,
+        &value.rust_lane_metrics,
+    )?;
     Ok(format!(
         concat!(
             "{{\"authority_false\":{},",
             "\"candidate_denominator\":{},",
             "\"cpp_decision_sha256\":\"{}\",",
             "\"cpp_generated_count\":{},",
+            "\"cpp_lane_metrics_decision_sha256\":\"{}\",",
+            "\"cpp_lane_metrics_receipt_sha256\":\"{}\",",
             "\"cpp_median_nanoseconds\":{},",
             "\"cpp_projection_sha256\":\"{}\",",
+            "\"cpp_rederivable_evidence\":{},",
             "\"cpp_repeat_stable\":{},",
             "\"cpp_sample_nanoseconds\":{},",
             "\"cpp_typed_failure_count\":{},",
@@ -1732,6 +2380,10 @@ fn fixture_json(value: &Fixed64CpuFixtureProbeV5) -> V6Result<String> {
             "\"fixture_id\":{},",
             "\"fixture_payload_sha256\":\"{}\",",
             "\"gate_passed\":{},",
+            "\"lane_metrics_authority_false\":{},",
+            "\"lane_metrics_decision_parity\":{},",
+            "\"lane_metrics_rederivable\":{},",
+            "\"lane_metrics_reference_sha256\":\"{}\",",
             "\"ligand_atom_count\":{},",
             "\"numeric_parity\":{{",
             "\"compared_f64_count\":{},",
@@ -1745,8 +2397,11 @@ fn fixture_json(value: &Fixed64CpuFixtureProbeV5) -> V6Result<String> {
             "\"receptor_atom_count\":{},",
             "\"rust_decision_sha256\":\"{}\",",
             "\"rust_generated_count\":{},",
+            "\"rust_lane_metrics_decision_sha256\":\"{}\",",
+            "\"rust_lane_metrics_receipt_sha256\":\"{}\",",
             "\"rust_median_nanoseconds\":{},",
             "\"rust_projection_sha256\":\"{}\",",
+            "\"rust_rederivable_evidence\":{},",
             "\"rust_repeat_stable\":{},",
             "\"rust_sample_nanoseconds\":{},",
             "\"rust_to_cpp_median_ratio\":{},",
@@ -1758,8 +2413,11 @@ fn fixture_json(value: &Fixed64CpuFixtureProbeV5) -> V6Result<String> {
         value.candidate_denominator,
         digest_hex(value.cpp_decision_sha256),
         value.cpp_generated_count,
+        digest_hex(value.cpp_lane_metrics_decision_sha256),
+        digest_hex(value.cpp_lane_metrics_receipt_sha256),
         value.cpp_median_nanoseconds,
         digest_hex(value.cpp_projection_sha256),
+        cpp_rederivable_evidence,
         value.cpp_repeat_stable,
         json_u64_array(&value.cpp_sample_nanoseconds),
         value.cpp_typed_failure_count,
@@ -1767,6 +2425,10 @@ fn fixture_json(value: &Fixed64CpuFixtureProbeV5) -> V6Result<String> {
         json_string(value.fixture_id),
         digest_hex(value.fixture_payload_sha256),
         value.gate_passed,
+        value.lane_metrics_authority_false,
+        value.lane_metrics_decision_parity,
+        value.lane_metrics_rederivable,
+        digest_hex(value.lane_metrics_reference_sha256),
         value.ligand_atom_count,
         value.numeric_parity.compared_f64_count,
         first_violation,
@@ -1778,8 +2440,11 @@ fn fixture_json(value: &Fixed64CpuFixtureProbeV5) -> V6Result<String> {
         value.receptor_atom_count,
         digest_hex(value.rust_decision_sha256),
         value.rust_generated_count,
+        digest_hex(value.rust_lane_metrics_decision_sha256),
+        digest_hex(value.rust_lane_metrics_receipt_sha256),
         value.rust_median_nanoseconds,
         digest_hex(value.rust_projection_sha256),
+        rust_rederivable_evidence,
         value.rust_repeat_stable,
         json_u64_array(&value.rust_sample_nanoseconds),
         json_f64(value.rust_to_cpp_median_ratio)?,
@@ -1789,11 +2454,11 @@ fn fixture_json(value: &Fixed64CpuFixtureProbeV5) -> V6Result<String> {
 }
 
 fn build_artifact(
-    activation: &Fixed64CpuActivationStatusV6,
-    attempt: &AttemptLeaseV6,
-    preflight: &Fixed64CpuPreflightV6,
-    outcome: MeasurementOutcomeV6,
-) -> V6Result<ArtifactDocumentV6> {
+    activation: &Fixed64CpuActivationStatusV7,
+    attempt: &AttemptLeaseV7,
+    preflight: &Fixed64CpuPreflightV7,
+    outcome: MeasurementOutcomeV7,
+) -> V7Result<ArtifactDocumentV7> {
     let report = outcome.report.as_ref();
     let recorded_gate_passed = report.map(|value| value.gate_passed);
     let recorded_numeric_gate_passed = report.map(|value| {
@@ -1817,7 +2482,7 @@ fn build_artifact(
                 .fixtures
                 .iter()
                 .map(fixture_json)
-                .collect::<V6Result<Vec<_>>>()
+                .collect::<V7Result<Vec<_>>>()
         })
         .transpose()?
         .unwrap_or_default()
@@ -1887,11 +2552,11 @@ fn build_artifact(
     )
     .into_bytes();
     if raw.len() > MAX_ARTIFACT_BYTES {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 artifact exceeds its byte envelope",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 artifact exceeds its byte envelope",
         ));
     }
-    Ok(ArtifactDocumentV6 {
+    Ok(ArtifactDocumentV7 {
         raw,
         receipt_sha256,
         recorded_decision,
@@ -1901,10 +2566,10 @@ fn build_artifact(
 }
 
 fn build_terminal(
-    activation: &Fixed64CpuActivationStatusV6,
-    attempt: &AttemptLeaseV6,
-    artifact: &ArtifactDocumentV6,
-) -> V6Result<Vec<u8>> {
+    activation: &Fixed64CpuActivationStatusV7,
+    attempt: &AttemptLeaseV7,
+    artifact: &ArtifactDocumentV7,
+) -> V7Result<Vec<u8>> {
     let projection = format!(
         concat!(
             "{{\"activation_sha256\":\"{}\",",
@@ -1956,31 +2621,31 @@ fn build_terminal(
     )
     .into_bytes();
     if raw.len() > MAX_STATE_BYTES {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 terminal exceeds its byte envelope",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 terminal exceeds its byte envelope",
         ));
     }
     Ok(raw)
 }
 
-fn deny_github_actions_live_execution() -> V6Result<()> {
+fn deny_github_actions_live_execution() -> V7Result<()> {
     if env::var_os("GITHUB_ACTIONS").is_some() {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 GitHub Actions live execution is forbidden",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 GitHub Actions live execution is forbidden",
         ));
     }
     Ok(())
 }
 
-/// Consume the v6 local profile exactly once and persist artifact plus terminal.
+/// Consume the v7 local profile exactly once and persist artifact plus terminal.
 ///
 /// This operation contains no molecular input, creates no external reservation,
 /// and grants no qualification, product, public benchmark, or HIP authority.
-pub fn run_native_fixed64_cpu_qualification_v6(
+pub fn run_native_fixed64_cpu_qualification_v7(
     output_path: &Path,
-) -> V6Result<Fixed64CpuPersistedQualificationV6> {
+) -> V7Result<Fixed64CpuPersistedQualificationV7> {
     deny_github_actions_live_execution()?;
-    let activation = verify_native_fixed64_cpu_v6_activation()?;
+    let activation = verify_native_fixed64_cpu_v7_activation()?;
     let target = validate_absent_output(output_path)?;
     let state = open_account_state(&activation.profile_sha256)?;
     require_account_state_binding(&state)?;
@@ -1990,13 +2655,13 @@ pub fn run_native_fixed64_cpu_qualification_v6(
         &activation,
         output_path_sha256,
     )?;
-    let preflight = preflight_native_fixed64_cpu_v6()?;
+    let preflight = preflight_native_fixed64_cpu_v7()?;
     if preflight.profile_sha256 != activation.profile_sha256
         || preflight.activation_sha256 != activation.activation_sha256
         || preflight.build_configuration_sha256 != activation.build_configuration_sha256
     {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 preflight activation identity changed",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 preflight activation identity changed",
         ));
     }
     let measurement = execute_measurement(&preflight);
@@ -2010,8 +2675,8 @@ pub fn run_native_fixed64_cpu_qualification_v6(
         "qualification artifact",
     )?;
     if persisted_artifact != artifact.raw {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 artifact changed after publication",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 artifact changed after publication",
         ));
     }
     let attempt_name = CString::new(ATTEMPT_FILENAME).expect("fixed filename contains no NUL");
@@ -2022,8 +2687,8 @@ pub fn run_native_fixed64_cpu_qualification_v6(
         "attempt ledger",
     )?;
     if persisted_attempt != attempt.raw {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 attempt ledger changed during execution",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 attempt ledger changed during execution",
         ));
     }
     let terminal_raw = build_terminal(&activation, &attempt, &artifact)?;
@@ -2037,13 +2702,13 @@ pub fn run_native_fixed64_cpu_qualification_v6(
         "terminal state",
     )?;
     if persisted_terminal != terminal_raw {
-        return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 terminal changed after publication",
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 terminal changed after publication",
         ));
     }
     require_account_state_binding(&state)?;
     require_output_parent_binding(&target)?;
-    Ok(Fixed64CpuPersistedQualificationV6 {
+    Ok(Fixed64CpuPersistedQualificationV7 {
         artifact_path: target.path,
         attempt_ledger_path: state.path.join(ATTEMPT_FILENAME),
         terminal_state_path: state.path.join(TERMINAL_FILENAME),
@@ -2073,7 +2738,7 @@ mod tests {
     impl TestDirectory {
         fn new() -> Self {
             let path = PathBuf::from(format!(
-                "/tmp/betelgeuze-fixed64-v6-test-{}-{}",
+                "/tmp/betelgeuze-fixed64-v7-test-{}-{}",
                 std::process::id(),
                 digest_hex(random_nonce().expect("test nonce"))
             ));
@@ -2092,9 +2757,9 @@ mod tests {
         }
     }
 
-    fn test_activation() -> Fixed64CpuActivationStatusV6 {
-        Fixed64CpuActivationStatusV6 {
-            profile_id: FIXED64_CPU_QUALIFICATION_V6_PROFILE_ID,
+    fn test_activation() -> Fixed64CpuActivationStatusV7 {
+        Fixed64CpuActivationStatusV7 {
+            profile_id: FIXED64_CPU_QUALIFICATION_V7_PROFILE_ID,
             profile_sha256: "11".repeat(32),
             activation_sha256: "22".repeat(32),
             build_configuration_sha256: "33".repeat(32),
@@ -2120,25 +2785,43 @@ mod tests {
             assert!(text.contains("\"cpp_typed_failure_count\":"));
             assert!(text.contains("\"rust_generated_count\":"));
             assert!(text.contains("\"rust_typed_failure_count\":"));
-            assert!(!text.contains("\"generated_count\":"));
-            assert!(!text.contains("\"typed_failure_count\":"));
+            assert!(text.contains("\"cpp_rederivable_evidence\":"));
+            assert!(text.contains("\"rust_rederivable_evidence\":"));
+            assert!(text.contains("\"scorer_validity_rows\":["));
+            assert!(text.contains("\"lane_metrics\":{"));
             assert!(!text.contains(",}"));
+            if env::var_os("BETELGEUZE_V7_EMIT_TEST_FIXTURE").is_some() {
+                println!("BETELGEUZE_V7_TEST_FIXTURE={text}");
+            }
         }
     }
 
     #[test]
-    fn archived_v6_activation_remains_fail_closed_without_its_exact_build() {
-        let error = verify_native_fixed64_cpu_v6_activation()
-            .expect_err("the archived v6 profile must not activate from the v7 source graph");
-        assert!(
-            error.message().contains("binding changed")
-                || error.message().contains("non-authoritative package build")
-                || error
+    fn activation_requires_the_compile_bound_frozen_build_configuration() {
+        if BUILD_COMMIT_BOUND == "true" && BUILD_CONFIGURATION_BOUND == "true" {
+            let status = verify_native_fixed64_cpu_v7_activation().expect("activation contract");
+            assert_eq!(
+                status.build_configuration_sha256,
+                EXPECTED_BUILD_CONFIGURATION_SHA256
+            );
+            assert!(status.live_execution_implemented);
+            assert!(!status.execution_consumed);
+            assert!(!status.qualification_authority);
+            assert!(!status.molecular_execution_authorized);
+            assert!(!status.public_benchmark_authorized);
+            assert!(!status.product_performance_claim_authorized);
+            assert!(!status.hip_device_execution_authorized);
+        } else {
+            let error = verify_native_fixed64_cpu_v7_activation()
+                .expect_err("ordinary and non-authoritative builds must fail activation");
+            if BUILD_COMMIT_BOUND != "true" {
+                assert!(error.message().contains("non-authoritative package build"));
+            } else {
+                assert!(error
                     .message()
-                    .contains("build configuration is not frozen"),
-            "unexpected archived-v6 fail-closed reason: {}",
-            error.message()
-        );
+                    .contains("build configuration is not frozen"));
+            }
+        }
     }
 
     #[test]
@@ -2309,14 +2992,14 @@ mod tests {
     #[test]
     fn blocked_artifact_is_terminal_and_never_grants_authority() {
         let activation = test_activation();
-        let attempt = AttemptLeaseV6 {
+        let attempt = AttemptLeaseV7 {
             raw: b"attempt\n".to_vec(),
             raw_sha256: sha256_hex(b"attempt\n"),
             receipt_sha256: "55".repeat(32),
             run_nonce: "66".repeat(32),
             output_path_sha256: "77".repeat(32),
         };
-        let preflight = Fixed64CpuPreflightV6 {
+        let preflight = Fixed64CpuPreflightV7 {
             profile_sha256: activation.profile_sha256.clone(),
             activation_sha256: activation.activation_sha256.clone(),
             build_configuration_sha256: activation.build_configuration_sha256.clone(),
@@ -2327,7 +3010,7 @@ mod tests {
             process_task_count: None,
             blockers: vec!["source_checkout_not_exact_main".to_owned()],
         };
-        let outcome = MeasurementOutcomeV6 {
+        let outcome = MeasurementOutcomeV7 {
             report: None,
             measurement_started: false,
             blockers: preflight.blockers.clone(),

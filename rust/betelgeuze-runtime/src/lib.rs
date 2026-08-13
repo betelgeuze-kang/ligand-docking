@@ -5,10 +5,13 @@
 
 mod docking;
 mod dynamics;
+mod fixed64_lane_metrics;
 mod forcefield;
 mod qualification;
 mod qualification_v6;
+mod qualification_v7;
 
+pub use betelgeuze_docking_search::Fixed64Lane;
 pub use docking::{
     Fixed64AtomicFeature, Fixed64AuthorityDisposition, Fixed64BatchReceipts,
     Fixed64ChiralityCenter, Fixed64ClusterEvidence, Fixed64ConformerCoordinateSource,
@@ -27,6 +30,14 @@ pub use dynamics::{
     DistanceConstraint, DistanceConstraints, DynamicsReport, Integrator, MinimizationReport,
     MinimizerOptions, Simulation, SimulationOptions,
 };
+pub use fixed64_lane_metrics::{
+    Fixed64ConformerOrientationInteraction, Fixed64CoordinateEntropy, Fixed64LaneMetricObservation,
+    Fixed64LaneMetricSummary, Fixed64LaneMetricsReceipt, Fixed64LaneMetricsReference,
+    Fixed64MetricRate, Fixed64OracleFailureClass, Fixed64OracleSelectionSummary,
+    FIXED64_LANE_METRICS_OBSERVATION_SCHEMA_ID, FIXED64_LANE_METRICS_REFERENCE_SCHEMA_ID,
+    FIXED64_LANE_METRICS_SCHEMA_ID, FIXED64_MAX_SYMMETRY_PERMUTATIONS,
+    FIXED64_ORACLE_RMSD_THRESHOLD_ANGSTROM,
+};
 pub use forcefield::{
     AtomNonbonded, EnergyComponents, Evaluation, ForceField, ForceFieldInput, ForceSoaOwned,
     HarmonicAngle, HarmonicBond, NonbondedSettings, OrthorhombicCell, PairExclusion, PairScale,
@@ -44,6 +55,13 @@ pub use qualification_v6::{
     Fixed64CpuPersistedQualificationV6, Fixed64CpuPreflightV6,
     NativeFixed64CpuQualificationV6Error, FIXED64_CPU_QUALIFICATION_V6_PROFILE_ID,
     FIXED64_CPU_QUALIFICATION_V6_SCHEMA_ID,
+};
+pub use qualification_v7::{
+    preflight_native_fixed64_cpu_v7, run_native_fixed64_cpu_qualification_v7,
+    verify_native_fixed64_cpu_v7_activation, Fixed64CpuActivationStatusV7,
+    Fixed64CpuPersistedQualificationV7, Fixed64CpuPreflightV7,
+    NativeFixed64CpuQualificationV7Error, FIXED64_CPU_QUALIFICATION_V7_PROFILE_ID,
+    FIXED64_CPU_QUALIFICATION_V7_SCHEMA_ID,
 };
 
 use std::ffi::CStr;

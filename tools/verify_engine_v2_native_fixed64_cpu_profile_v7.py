@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify native fixed64 CPU v6 activation without consuming it."""
+"""Verify native fixed64 CPU v7 activation without consuming it."""
 
 from __future__ import annotations
 
@@ -13,61 +13,58 @@ import subprocess
 from typing import NoReturn
 
 if __package__:
-    from .verify_engine_v2_native_fixed64_cpu_profile_v5 import (
-        require_archived_profile_v5,
+    from .verify_engine_v2_native_fixed64_cpu_profile_v6 import (
+        require_archived_profile_v6,
     )
 else:
-    from verify_engine_v2_native_fixed64_cpu_profile_v5 import (
-        require_archived_profile_v5,
+    from verify_engine_v2_native_fixed64_cpu_profile_v6 import (
+        require_archived_profile_v6,
     )
 
 
-SCHEMA_ID = "betelgeuze.engine_v2_native_fixed64_cpu_profile/6.0.0"
-PROFILE_ID = "engine_v2_native_fixed64_cpu_synthetic_v6"
-PROFILE_SHA256 = "fd83f1f7f7c92bc0fc9ac6581cababb23d3ba5787412174a55b659f97fcc2928"
+SCHEMA_ID = "betelgeuze.engine_v2_native_fixed64_cpu_profile/7.0.0"
+PROFILE_ID = "engine_v2_native_fixed64_cpu_synthetic_v7"
+PROFILE_SHA256 = "50c3e609a23e3bf0641a900f71dc360dcadc1a52c3bde66cdfa74b8c1affcd5d"
 BUILD_CONFIGURATION_SHA256 = (
-    "792702860fdbc1a9d7b75c2b3fb3cba1f4ffb79b5d66350a6fe8546bd68dd2fd"
+    "6e39e4e07bcb2f9324f242adcf3f48428191b2a91418d34520c6acc1cf046068"
 )
 SOURCE_MANIFEST_SHA256 = (
-    "988108202cceafff669930f804a8bc292ec2a364dd8c016bd9d4b7ecdb190f45"
+    "ecb009ac228652c6c6cbdefcdd70828ce3d9aeea5a5e31d0fff0246d4d5f932e"
 )
-SOURCE_COUNT = 193
-PROFILE_RELATIVE_PATH = Path("config/engine_v2_native_fixed64_cpu_profile_v6.json")
-ARCHIVE_RELATIVE_PATH = Path(
-    "config/engine_v2_native_fixed64_cpu_profile_v6_archive.json"
-)
+SOURCE_COUNT = 196
+PROFILE_RELATIVE_PATH = Path("config/engine_v2_native_fixed64_cpu_profile_v7.json")
 SOURCE_MANIFEST_RELATIVE_PATH = Path(
-    "config/engine_v2_native_fixed64_cpu_profile_v6_sources.json"
+    "config/engine_v2_native_fixed64_cpu_profile_v7_sources.json"
 )
-V5_PROFILE_RELATIVE_PATH = Path("config/engine_v2_native_fixed64_cpu_profile_v5.json")
-V5_ARCHIVE_RELATIVE_PATH = Path(
-    "config/engine_v2_native_fixed64_cpu_profile_v5_archive.json"
+V6_PROFILE_RELATIVE_PATH = Path("config/engine_v2_native_fixed64_cpu_profile_v6.json")
+V6_ARCHIVE_RELATIVE_PATH = Path(
+    "config/engine_v2_native_fixed64_cpu_profile_v6_archive.json"
 )
 QUALIFICATION_SOURCE_RELATIVE_PATH = Path(
     "rust/betelgeuze-runtime/src/qualification.rs"
 )
-RUNNER_SOURCE_RELATIVE_PATH = Path("rust/betelgeuze-runtime/src/qualification_v6.rs")
+RUNNER_SOURCE_RELATIVE_PATH = Path("rust/betelgeuze-runtime/src/qualification_v7.rs")
 BINARY_SOURCE_RELATIVE_PATH = Path(
-    "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-qualify-v6.rs"
+    "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-qualify-v7.rs"
+)
+LANE_METRICS_SOURCE_RELATIVE_PATH = Path(
+    "rust/betelgeuze-runtime/src/fixed64_lane_metrics.rs"
 )
 CARGO_MANIFEST_RELATIVE_PATH = Path("rust/betelgeuze-runtime/Cargo.toml")
 BUILD_SOURCE_RELATIVE_PATH = Path("rust/betelgeuze-runtime/build.rs")
 SYS_BUILD_SOURCE_RELATIVE_PATH = Path("rust/betelgeuze-sys/build.rs")
 RUSTC_WRAPPER_RELATIVE_PATH = Path(
-    "tools/verify_engine_v2_native_fixed64_cpu_v6_rustc_wrapper.py"
+    "tools/verify_engine_v2_native_fixed64_cpu_v7_rustc_wrapper.py"
 )
 CARGO_LOCK_RELATIVE_PATH = Path("rust/Cargo.lock")
 PACKAGED_PROFILE_RELATIVE_PATH = Path(
-    "rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v6.json"
+    "rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v7.json"
 )
 PACKAGED_V6_ARCHIVE_RELATIVE_PATH = Path(
     "rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v6_archive.json"
 )
-PACKAGED_V5_ARCHIVE_RELATIVE_PATH = Path(
-    "rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v5_archive.json"
-)
 PACKAGED_SOURCE_MANIFEST_RELATIVE_PATH = Path(
-    "rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v6_sources.json"
+    "rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v7_sources.json"
 )
 PACKAGED_CARGO_LOCK_RELATIVE_PATH = Path(
     "rust/betelgeuze-runtime/assets/workspace-Cargo.lock"
@@ -99,9 +96,6 @@ FALSE_RESTRICTION_KEYS = {
     "result_dependent_configuration_allowed",
     "test_double_production_authority_allowed",
 }
-ARCHIVE_SCHEMA_ID = "betelgeuze.engine_v2_native_fixed64_cpu_profile_archive/1.0.0"
-MERGE_COMMIT_OID = "12b220e096665ec5664e729d3d60baf577578c56"
-REVIEWED_HEAD_OID = "0c4d0b911fbc6e75b1e806620d36a282fc24893a"
 RUST_SOURCE_ROOTS = (
     Path("rust/betelgeuze-docking-search/src"),
     Path("rust/betelgeuze-docking-search/tests"),
@@ -144,6 +138,7 @@ EXPECTED_CARGO_TARGETS = {
     "rust/betelgeuze-docking-search/tests/short_range.rs",
     "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v5.rs",
     "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-qualify-v6.rs",
+    "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-qualify-v7.rs",
     "rust/betelgeuze-runtime/src/lib.rs",
     "rust/betelgeuze-runtime/build.rs",
     "rust/betelgeuze-runtime/tests/cpu_oracle_parity.rs",
@@ -176,10 +171,10 @@ EXPECTED_BUILD_CONFIGURATION = {
     "cargo_opt_level": 3,
     "cargo_overflow_checks": True,
     "cargo_panic": "abort",
-    "cargo_profile": "qualification-v6",
+    "cargo_profile": "qualification-v7",
     "cargo_release": "1.93.0",
     "cargo_strip": "none",
-    "cargo_target_directory": "rust/target/qualification-v6",
+    "cargo_target_directory": "rust/target/qualification-v7",
     "cpp_compiler_canonical_path": "/usr/bin/x86_64-linux-gnu-g++-11",
     "cpp_compiler_sha256": "2360901d864cf10bfd6296e261cb2c14053552a80377761ab07146ec9ec9a2c0",
     "cpp_dumpfullversion": "11.4.0",
@@ -202,7 +197,7 @@ EXPECTED_BUILD_CONFIGURATION = {
     "environment_flag_overrides_allowed": False,
     "hip_feature_allowed": False,
     "host_triple": "x86_64-unknown-linux-gnu",
-    "qualification_build_opt_in": "BETELGEUZE_V6_QUALIFICATION_BUILD=1",
+    "qualification_build_opt_in": "BETELGEUZE_V7_QUALIFICATION_BUILD=1",
     "rust_target_features": ["fxsr", "sse", "sse2"],
     "rustc_binary_effective_codegen_flags": [
         "opt-level=3",
@@ -222,23 +217,23 @@ EXPECTED_BUILD_CONFIGURATION = {
     ],
     "rustc_llvm_version": "21.1.8",
     "rustc_release": "1.93.0",
-    "rustc_wrapper_cfg": "betelgeuze_v6_effective_rust_flags_verified",
+    "rustc_wrapper_cfg": "betelgeuze_v7_effective_rust_flags_verified",
     "rustc_wrapper_interpreter_canonical_path": "/usr/bin/python3.10",
     "rustc_wrapper_interpreter_sha256": "7d51cd6b48b521277f5caa4610a82126e315fa2be4df069823a8b1eeb5bd4a86",
-    "rustc_wrapper_relative_path": "tools/verify_engine_v2_native_fixed64_cpu_v6_rustc_wrapper.py",
+    "rustc_wrapper_relative_path": "tools/verify_engine_v2_native_fixed64_cpu_v7_rustc_wrapper.py",
     "rustc_wrapper_required": True,
-    "rustc_wrapper_sha256": "b20611e0a302e4fc2f1230d07c7dd44cb93cd873ab730b6e69e7db87b530a5bf",
+    "rustc_wrapper_sha256": "bb95e65d3de3ba08cda1c022690895f8d9ec986eb3a59ecb6ba4127a2982f088",
     "schema_id": "betelgeuze.engine_v2_native_fixed64_cpu_build_configuration/1.0.0",
     "target_triple": "x86_64-unknown-linux-gnu",
 }
 
 
-class NativeFixed64CPUProfileV6Error(ValueError):
-    """The frozen native fixed64 CPU v6 activation failed closed."""
+class NativeFixed64CPUProfileV7Error(ValueError):
+    """The frozen native fixed64 CPU v7 activation failed closed."""
 
 
 def _fail(message: str) -> NoReturn:
-    raise NativeFixed64CPUProfileV6Error(message)
+    raise NativeFixed64CPUProfileV7Error(message)
 
 
 def _duplicate_rejector(pairs: list[tuple[str, object]]) -> dict[str, object]:
@@ -285,7 +280,7 @@ def _load_canonical_object(raw: bytes, *, label: str) -> dict[str, object]:
             parse_constant=_reject_constant,
         )
     except (UnicodeError, json.JSONDecodeError) as exc:
-        raise NativeFixed64CPUProfileV6Error(
+        raise NativeFixed64CPUProfileV7Error(
             f"{label} is not canonical ASCII JSON"
         ) from exc
     if type(value) is not dict or raw != _canonical_bytes(value):
@@ -305,95 +300,27 @@ def _require_digest(value: object, *, label: str) -> str:
     return value
 
 
-def require_archived_profile_v6(
-    profile_raw: bytes, archive_raw: bytes
-) -> dict[str, object]:
-    """Verify the immutable, merge-anchored v6 predecessor record."""
-
-    profile = _load_canonical_object(profile_raw, label="v6 profile")
-    archive = _load_canonical_object(archive_raw, label="v6 archive")
-    profile_sha256 = hashlib.sha256(profile_raw).hexdigest()
-    if profile_sha256 != PROFILE_SHA256:
-        _fail("v6 profile bytes changed from the merge-anchored identity")
-    if (
-        profile.get("profile_id") != PROFILE_ID
-        or profile.get("schema_id") != SCHEMA_ID
-        or profile.get("status")
-        != "native_activation_implementation_frozen_execution_not_consumed"
-    ):
-        _fail("v6 profile identity or terminal state changed")
-    profile_authority = profile.get("authority")
-    if (
-        type(profile_authority) is not dict
-        or set(profile_authority) != FALSE_AUTHORITY_KEYS
-        or any(value is not False for value in profile_authority.values())
-    ):
-        _fail("v6 profile authority is not entirely false")
-
-    if set(archive) != {
-        "authority",
-        "execution_consumed",
-        "implementation_main_commit_oid",
-        "profile_id",
-        "profile_sha256",
-        "reservation_created",
-        "review",
-        "schema_id",
-        "status",
-        "transitive_source_count",
-        "transitive_source_manifest_sha256",
-    }:
-        _fail("v6 archive field set changed")
-    authority = archive["authority"]
-    review = archive["review"]
-    if (
-        type(authority) is not dict
-        or set(authority) != FALSE_AUTHORITY_KEYS
-        or any(value is not False for value in authority.values())
-        or type(review) is not dict
-        or review
-        != {
-            "required_checks_success": 33,
-            "reviewed_head_oid": REVIEWED_HEAD_OID,
-            "unresolved_review_threads": 0,
-        }
-        or archive["execution_consumed"] is not False
-        or archive["reservation_created"] is not False
-        or archive["implementation_main_commit_oid"] != MERGE_COMMIT_OID
-        or archive["profile_id"] != PROFILE_ID
-        or archive["profile_sha256"] != profile_sha256
-        or archive["schema_id"] != ARCHIVE_SCHEMA_ID
-        or archive["status"] != "archived_frozen_superseded_by_v7_lane_metrics"
-        or archive["transitive_source_count"] != SOURCE_COUNT
-        or archive["transitive_source_manifest_sha256"] != SOURCE_MANIFEST_SHA256
-        or re.fullmatch(r"[0-9a-f]{40}", str(archive["implementation_main_commit_oid"]))
-        is None
-    ):
-        _fail("v6 archive evidence changed")
-    return archive
-
-
-def require_profile_document_v6(
+def require_profile_document_v7(
     profile_raw: bytes,
-    v5_profile_raw: bytes,
-    v5_archive_raw: bytes,
+    v6_profile_raw: bytes,
+    v6_archive_raw: bytes,
     source_manifest_raw: bytes,
     source_bytes: dict[str, bytes],
 ) -> dict[str, object]:
-    profile = _load_canonical_object(profile_raw, label="v6 profile")
-    v5 = _load_canonical_object(v5_profile_raw, label="v5 profile")
-    require_archived_profile_v5(v5_profile_raw, v5_archive_raw)
+    profile = _load_canonical_object(profile_raw, label="v7 profile")
+    v6 = _load_canonical_object(v6_profile_raw, label="v6 profile")
+    require_archived_profile_v6(v6_profile_raw, v6_archive_raw)
     if hashlib.sha256(profile_raw).hexdigest() != PROFILE_SHA256:
-        _fail("v6 profile bytes changed from the frozen activation identity")
+        _fail("v7 profile bytes changed from the frozen activation identity")
     if hashlib.sha256(source_manifest_raw).hexdigest() != SOURCE_MANIFEST_SHA256:
-        _fail("v6 transitive source manifest bytes changed")
+        _fail("v7 transitive source manifest bytes changed")
     if (
         profile.get("schema_id") != SCHEMA_ID
         or profile.get("profile_id") != PROFILE_ID
         or profile.get("status")
-        != "native_activation_implementation_frozen_execution_not_consumed"
+        != "native_lane_metrics_activation_frozen_execution_not_consumed"
     ):
-        _fail("v6 profile identity or execution state changed")
+        _fail("v7 profile identity or execution state changed")
     expected_top_keys = {
         "authority",
         "backends",
@@ -413,75 +340,106 @@ def require_profile_document_v6(
         "source_bindings",
         "status",
     }
-    _exact_keys(profile, expected_top_keys, label="v6 profile")
+    _exact_keys(profile, expected_top_keys, label="v7 profile")
     authority = _exact_keys(
-        profile["authority"], FALSE_AUTHORITY_KEYS, label="v6 authority"
+        profile["authority"], FALSE_AUTHORITY_KEYS, label="v7 authority"
     )
     restrictions = _exact_keys(
         profile["restrictions"],
         FALSE_RESTRICTION_KEYS,
-        label="v6 restrictions",
+        label="v7 restrictions",
     )
     if any(value is not False for value in authority.values()):
-        _fail("v6 authority is not entirely false")
+        _fail("v7 authority is not entirely false")
     if any(value is not False for value in restrictions.values()):
-        _fail("v6 restrictions are not entirely false")
+        _fail("v7 restrictions are not entirely false")
     build_configuration = _exact_keys(
         profile["build_configuration"],
         set(EXPECTED_BUILD_CONFIGURATION),
-        label="v6 build configuration",
+        label="v7 build configuration",
     )
     if (
         build_configuration != EXPECTED_BUILD_CONFIGURATION
         or hashlib.sha256(_compact_canonical_bytes(build_configuration)).hexdigest()
         != BUILD_CONFIGURATION_SHA256
     ):
-        _fail("v6 frozen build configuration changed")
+        _fail("v7 frozen build configuration changed")
 
     for key in (
         "backends",
         "fixtures",
-        "gates",
         "numeric_parity",
         "performance",
         "sampling",
     ):
-        if profile[key] != v5[key]:
-            _fail(f"v6 changed the frozen v5 scientific {key} contract")
-    v5_measurement_core = v5["measurement_core"]
-    if type(v5_measurement_core) is not dict:
-        _fail("v5 measurement core is not an object")
-    v5_core = dict(
-        _exact_keys(
-            v5_measurement_core,
-            set(v5_measurement_core),
-            label="v5 core",
-        )
+        if profile[key] != v6[key]:
+            _fail(f"v7 changed the frozen v6 scientific {key} contract")
+
+    expected_gates = dict(v6["gates"])
+    expected_gates.update(
+        {
+            "lane_metrics_authority_false_required": True,
+            "lane_metrics_candidate_denominator_exact": 64,
+            "lane_metrics_decision_sha256_exact_between_cpu_backends_required": True,
+            "lane_metrics_full_receipts_recorded_required": True,
+            "lane_metrics_lane_count_exact": 10,
+            "lane_metrics_observation_count_exact": 64,
+            "lane_metrics_rank_mutation_forbidden": True,
+            "lane_metrics_receipt_rederivable_required": True,
+            "lane_metrics_result_dependent_allocation_forbidden": True,
+            "oracle_rmsd_definition": "symmetry_aware_direct_heavy_atom_no_alignment",
+            "oracle_rmsd_threshold_angstrom_exact": 2.0,
+            "symmetry_permutation_limit_exact": 1024,
+            "typed_failures_preserved_in_lane_metrics_required": True,
+        }
     )
-    for removed in (
-        "native_cpp_pipeline_source_sha256",
-        "native_probe_source_sha256",
-        "native_qualification_source_sha256",
-        "native_rust_pipeline_source_sha256",
-        "native_transitive_source_count",
-        "native_transitive_source_manifest_sha256",
-    ):
-        v5_core.pop(removed)
-    v5_core["native_binary"] = "betelgeuze-fixed64-cpu-qualify-v6"
-    if profile["measurement_core"] != v5_core:
-        _fail("v6 changed the frozen v5 measurement graph or evidence semantics")
+    if profile["gates"] != expected_gates:
+        _fail("v7 lane-metrics scientific gates changed")
+
+    v6_measurement_core = v6["measurement_core"]
+    if type(v6_measurement_core) is not dict:
+        _fail("v6 measurement core is not an object")
+    expected_core = dict(v6_measurement_core)
+    expected_core.update(
+        {
+            "conformer_orientation_pairs": [
+                "24:36",
+                "25:37",
+                "26:38",
+                "27:39",
+                "28:40",
+                "29:41",
+                "30:42",
+                "31:43",
+            ],
+            "lane_metrics_downstream_only": True,
+            "lane_metrics_observation_schema_id": "betelgeuze.engine_v2_native_fixed64_lane_metric_observation/1.0.0",
+            "lane_metrics_reference_materialized": True,
+            "lane_metrics_reference_receipt_and_topology_bound": True,
+            "lane_metrics_reference_schema_id": "betelgeuze.engine_v2_native_fixed64_lane_metrics_reference/1.0.0",
+            "lane_metrics_reports_exact_unique_pose_orientation_penetration_validity_oracle_entropy": True,
+            "lane_metrics_schema_id": "betelgeuze.engine_v2_native_fixed64_lane_metrics/1.0.0",
+            "lane_metrics_symmetry_mapping": "reference_position_to_candidate_position",
+            "lane_metrics_symmetry_permutations_canonical_unique_identity_required": True,
+            "native_binary": "betelgeuze-fixed64-cpu-qualify-v7",
+        }
+    )
+    if profile["measurement_core"] != expected_core:
+        _fail("v7 changed the frozen v6 graph beyond downstream lane metrics")
 
     if profile["change_control"] != {
         "candidate_graph_changed": False,
+        "evidence_contract_changed": True,
         "fixture_payloads_changed": False,
+        "metric_contract_changed": True,
         "numeric_contract_changed": False,
         "predecessor_execution_consumed": False,
-        "predecessor_main_commit_oid": "50c6a0e633b6edc90a5e4fae3d7740c5957816ea",
-        "predecessor_profile_id": "engine_v2_native_fixed64_cpu_synthetic_v5",
-        "predecessor_profile_sha256": "f5b3f288b432a15a1382a175b70821c1c57e8d41a986de2dea8898712374aece",
-        "successor_change_reason": "add_native_account_scoped_exactly_once_activation_and_persistence",
+        "predecessor_main_commit_oid": "12b220e096665ec5664e729d3d60baf577578c56",
+        "predecessor_profile_id": "engine_v2_native_fixed64_cpu_synthetic_v6",
+        "predecessor_profile_sha256": "fd83f1f7f7c92bc0fc9ac6581cababb23d3ba5787412174a55b659f97fcc2928",
+        "successor_change_reason": "add_rederivable_fixed64_lane_metrics_and_oracle_selection_receipts",
     }:
-        _fail("v6 change-control declaration changed")
+        _fail("v7 change-control declaration changed")
     if profile["host_preflight"] != {
         "boost_disabled_required": True,
         "boost_state_path": "/sys/devices/system/cpu/cpufreq/boost",
@@ -491,7 +449,7 @@ def require_profile_document_v6(
         "measurement_cpu_ordinal": 2,
         "process_task_count_exact": 1,
     }:
-        _fail("v6 host preflight contract changed")
+        _fail("v7 host preflight contract changed")
     if profile["runner"] != {
         "account_scoped_exactly_once": True,
         "artifact_and_terminal_persisted_before_return": True,
@@ -513,20 +471,21 @@ def require_profile_document_v6(
         "state_policy": "login_account_home_nofollow_o_excl",
         "test_only_profile_execution_allowed": False,
     }:
-        _fail("v6 exactly-once runner contract changed")
+        _fail("v7 exactly-once runner contract changed")
 
     bindings = _exact_keys(
         profile["source_bindings"],
         {
             "cargo_lock_sha256",
             "cargo_manifest_sha256",
+            "lane_metrics_source_sha256",
             "native_binary_source_sha256",
             "native_qualification_source_sha256",
             "native_runner_source_sha256",
             "predecessor_archive_sha256",
             "transitive_source_manifest_sha256",
         },
-        label="v6 source bindings",
+        label="v7 source bindings",
     )
     expected_bindings = {
         "cargo_lock_sha256": hashlib.sha256(
@@ -534,6 +493,9 @@ def require_profile_document_v6(
         ).hexdigest(),
         "cargo_manifest_sha256": hashlib.sha256(
             source_bytes[CARGO_MANIFEST_RELATIVE_PATH.as_posix()]
+        ).hexdigest(),
+        "lane_metrics_source_sha256": hashlib.sha256(
+            source_bytes[LANE_METRICS_SOURCE_RELATIVE_PATH.as_posix()]
         ).hexdigest(),
         "native_binary_source_sha256": hashlib.sha256(
             source_bytes[BINARY_SOURCE_RELATIVE_PATH.as_posix()]
@@ -544,32 +506,32 @@ def require_profile_document_v6(
         "native_runner_source_sha256": hashlib.sha256(
             source_bytes[RUNNER_SOURCE_RELATIVE_PATH.as_posix()]
         ).hexdigest(),
-        "predecessor_archive_sha256": hashlib.sha256(v5_archive_raw).hexdigest(),
+        "predecessor_archive_sha256": hashlib.sha256(v6_archive_raw).hexdigest(),
         "transitive_source_manifest_sha256": hashlib.sha256(
             source_manifest_raw
         ).hexdigest(),
     }
     if bindings != expected_bindings:
-        _fail("v6 profile source bindings do not rederive from exact inputs")
+        _fail("v7 profile source bindings do not rederive from exact inputs")
     for key, value in bindings.items():
-        _require_digest(value, label=f"v6 {key}")
+        _require_digest(value, label=f"v7 {key}")
     return profile
 
 
 def require_source_manifest_document(raw: bytes) -> dict[str, object]:
-    document = _load_canonical_object(raw, label="v6 source manifest")
+    document = _load_canonical_object(raw, label="v7 source manifest")
     if hashlib.sha256(raw).hexdigest() != SOURCE_MANIFEST_SHA256:
-        _fail("v6 source manifest identity changed")
+        _fail("v7 source manifest identity changed")
     if set(document) != {"files", "schema_id", "source_count"}:
-        _fail("v6 source manifest field set changed")
+        _fail("v7 source manifest field set changed")
     if (
         document["schema_id"]
-        != "betelgeuze.engine_v2_native_fixed64_cpu_source_manifest/6.0.0"
+        != "betelgeuze.engine_v2_native_fixed64_cpu_source_manifest/7.0.0"
         or document["source_count"] != SOURCE_COUNT
         or type(document["files"]) is not list
         or len(document["files"]) != SOURCE_COUNT
     ):
-        _fail("v6 source manifest envelope changed")
+        _fail("v7 source manifest envelope changed")
     paths: list[str] = []
     for row in document["files"]:
         row = _exact_keys(
@@ -584,11 +546,11 @@ def require_source_manifest_document(raw: bytes) -> dict[str, object]:
             or type(row["byte_count"]) is not int
             or row["byte_count"] < 1
         ):
-            _fail("v6 source manifest row path or size is invalid")
+            _fail("v7 source manifest row path or size is invalid")
         _require_digest(row["sha256"], label=f"source {path}")
         paths.append(path)
     if paths != sorted(paths) or len(set(paths)) != len(paths):
-        _fail("v6 source manifest paths are not unique and sorted")
+        _fail("v7 source manifest paths are not unique and sorted")
     return document
 
 
@@ -618,7 +580,7 @@ def read_bound_source_bytes(root: Path, relative: Path) -> bytes:
             os.O_RDONLY | os.O_CLOEXEC | os.O_DIRECTORY | os.O_NOFOLLOW,
         )
     except OSError as exc:
-        raise NativeFixed64CPUProfileV6Error(
+        raise NativeFixed64CPUProfileV7Error(
             "repository root cannot be opened safely"
         ) from exc
     descriptors = [root_fd]
@@ -631,7 +593,7 @@ def read_bound_source_bytes(root: Path, relative: Path) -> bytes:
                     dir_fd=descriptors[-1],
                 )
             except OSError as exc:
-                raise NativeFixed64CPUProfileV6Error(
+                raise NativeFixed64CPUProfileV7Error(
                     f"bound source parent cannot be opened safely: {relative}"
                 ) from exc
             descriptors.append(descriptor)
@@ -642,7 +604,7 @@ def read_bound_source_bytes(root: Path, relative: Path) -> bytes:
                 dir_fd=descriptors[-1],
             )
         except OSError as exc:
-            raise NativeFixed64CPUProfileV6Error(
+            raise NativeFixed64CPUProfileV7Error(
                 f"bound source cannot be opened safely: {relative}"
             ) from exc
         try:
@@ -737,7 +699,7 @@ def require_bound_source_tree(
         except FileNotFoundError:
             continue
         except OSError as exc:
-            raise NativeFixed64CPUProfileV6Error(
+            raise NativeFixed64CPUProfileV7Error(
                 f"forbidden configuration state is ambiguous: {forbidden}"
             ) from exc
         _fail(f"forbidden repository compiler override exists: {forbidden}")
@@ -757,21 +719,21 @@ def require_packaged_activation_assets(
     root: Path,
     *,
     profile_raw: bytes,
-    v5_archive_raw: bytes,
+    v6_archive_raw: bytes,
     source_manifest_raw: bytes,
     cargo_lock_raw: bytes,
     cargo_manifest_raw: bytes,
 ) -> None:
     expected = {
         PACKAGED_PROFILE_RELATIVE_PATH: profile_raw,
-        PACKAGED_V5_ARCHIVE_RELATIVE_PATH: v5_archive_raw,
+        PACKAGED_V6_ARCHIVE_RELATIVE_PATH: v6_archive_raw,
         PACKAGED_SOURCE_MANIFEST_RELATIVE_PATH: source_manifest_raw,
         PACKAGED_CARGO_LOCK_RELATIVE_PATH: cargo_lock_raw,
         PACKAGED_CARGO_MANIFEST_RELATIVE_PATH: cargo_manifest_raw,
     }
     for relative, canonical_raw in expected.items():
         if read_bound_source_bytes(root, relative) != canonical_raw:
-            _fail(f"packaged v6 activation asset drifted: {relative}")
+            _fail(f"packaged v7 activation asset drifted: {relative}")
 
 
 def require_cargo_target_inventory(root: Path) -> None:
@@ -799,20 +761,20 @@ def require_cargo_target_inventory(root: Path) -> None:
             },
         )
     except OSError as exc:
-        raise NativeFixed64CPUProfileV6Error("cargo metadata is unavailable") from exc
+        raise NativeFixed64CPUProfileV7Error("cargo metadata is unavailable") from exc
     if completed.returncode != 0 or completed.stderr:
         _fail("offline locked cargo metadata failed closed")
     try:
         metadata = json.loads(completed.stdout)
     except (UnicodeError, json.JSONDecodeError) as exc:
-        raise NativeFixed64CPUProfileV6Error("cargo metadata is invalid") from exc
+        raise NativeFixed64CPUProfileV7Error("cargo metadata is invalid") from exc
     observed: set[str] = set()
     for package in metadata.get("packages", []):
         for target in package.get("targets", []):
             try:
                 observed.add(Path(target["src_path"]).relative_to(root).as_posix())
             except (KeyError, TypeError, ValueError) as exc:
-                raise NativeFixed64CPUProfileV6Error(
+                raise NativeFixed64CPUProfileV7Error(
                     "cargo target escaped the repository"
                 ) from exc
     if observed != EXPECTED_CARGO_TARGETS:
@@ -822,6 +784,9 @@ def require_cargo_target_inventory(root: Path) -> None:
 def require_activation_source_contract(sources: dict[str, bytes]) -> None:
     try:
         qualification = sources[QUALIFICATION_SOURCE_RELATIVE_PATH.as_posix()].decode(
+            "utf-8"
+        )
+        lane_metrics = sources[LANE_METRICS_SOURCE_RELATIVE_PATH.as_posix()].decode(
             "utf-8"
         )
         runner = sources[RUNNER_SOURCE_RELATIVE_PATH.as_posix()].decode("utf-8")
@@ -834,8 +799,8 @@ def require_activation_source_contract(sources: dict[str, bytes]) -> None:
             "utf-8"
         )
     except (KeyError, UnicodeError) as exc:
-        raise NativeFixed64CPUProfileV6Error(
-            "v6 activation sources are unavailable"
+        raise NativeFixed64CPUProfileV7Error(
+            "v7 activation sources are unavailable"
         ) from exc
     if (
         "pub const FIXED64_CPU_V5_LIVE_ACTIVATION_ADMITTED: bool = false;"
@@ -844,12 +809,59 @@ def require_activation_source_contract(sources: dict[str, bytes]) -> None:
         not in qualification
         or "pub fn run_native_fixed64_cpu_qualification_successor" in qualification
     ):
-        _fail("v5 fail-closed gate or v6 internal successor boundary changed")
+        _fail("v5 fail-closed gate or v7 internal successor boundary changed")
     if runner.count("run_native_fixed64_cpu_qualification_successor(") != 1:
-        _fail("v6 native measurement core has an alternate or missing caller")
+        _fail("v7 native measurement core has an alternate or missing caller")
+    for token in (
+        "FIXED64_LANE_METRICS_SCHEMA_ID",
+        "FIXED64_LANE_METRICS_REFERENCE_SCHEMA_ID",
+        "FIXED64_LANE_METRICS_OBSERVATION_SCHEMA_ID",
+        "FIXED64_ORACLE_RMSD_THRESHOLD_ANGSTROM: f64 = 2.0",
+        "FIXED64_MAX_SYMMETRY_PERMUTATIONS: usize = 1024",
+        "Mapping direction is reference-position -> candidate-position",
+        "projection.candidate_denominator != FIXED64_CANDIDATE_COUNT",
+        "metrics_used_to_change_rank: false",
+        "result_dependent_allocation_consumed: false",
+        "public_or_scientific_claim_authorized: false",
+        "verify_against(&self, pipeline: &Fixed64PipelineReceipt)",
+        "canonical_orientation_sha256",
+        "symmetry_aware_direct_heavy_atom_rmsd",
+        "CONFORMER_ORIENTATION_PAIRS",
+        "FIXED64_LANE_RANGES",
+        "lane_metrics_decision_sha256",
+        "lane_metrics_sha256",
+    ):
+        if token not in lane_metrics:
+            _fail(f"v7 lane-metrics source contract token is missing: {token}")
+    for token in (
+        "Fixed64LaneMetricsReceipt::build",
+        "cpp_metrics.verify_against(&cpp_metrics_receipt)",
+        "rust_metrics.verify_against(&rust_metrics_receipt)",
+        "lane_metrics_decision_parity",
+        "lane_metrics_rederivable",
+        "lane_metrics_authority_false",
+        "cpp_scientific_projection",
+        "rust_scientific_projection",
+        "cpp_lane_metrics",
+        "rust_lane_metrics",
+    ):
+        if token not in qualification:
+            _fail(f"v7 qualification lane-metrics token is missing: {token}")
+    for token in (
+        "cpp_rederivable_evidence",
+        "rust_rederivable_evidence",
+        "backend_rederivable_evidence_json",
+        "decision_preimage_json",
+        "lane_metrics_json",
+        "numeric_projection_json",
+        "projection_digest_stream_json",
+        "scorer_validity_rows",
+    ):
+        if token not in runner:
+            _fail(f"v7 rederivable evidence token is missing: {token}")
     for token in (
         "bind_compiled_source_graph(&source_root)",
-        "BETELGEUZE_V6_SOURCE_ROOT",
+        "BETELGEUZE_V7_SOURCE_ROOT",
         "cargo:rustc-env={COMPILED_MANIFEST_ENV}",
         "cargo:rustc-env={COMPILED_PROFILE_ENV}",
         "cargo:rustc-env={BUILD_COMMIT_ENV}",
@@ -857,8 +869,8 @@ def require_activation_source_contract(sources: dict[str, bytes]) -> None:
         "cargo:rustc-env={BUILD_CONFIGURATION_SHA256_ENV}",
         "cargo:rustc-env={BUILD_CONFIGURATION_BOUND_ENV}",
         "cargo:rustc-env={VERIFIED_SOURCE_ROOT_ENV}",
-        "BETELGEUZE_V6_NON_AUTHORITATIVE_PACKAGE_BUILD",
-        "BETELGEUZE_V6_QUALIFICATION_BUILD",
+        "BETELGEUZE_V7_NON_AUTHORITATIVE_PACKAGE_BUILD",
+        "BETELGEUZE_V7_QUALIFICATION_BUILD",
         "EXPECTED_BUILD_CONFIGURATION_SHA256",
         "EXPECTED_RUSTC_SHA256",
         "EXPECTED_CARGO_SHA256",
@@ -866,7 +878,7 @@ def require_activation_source_contract(sources: dict[str, bytes]) -> None:
         "EXPECTED_RUSTC_WRAPPER_SHA256",
         "EXPECTED_RUSTC_WRAPPER_INTERPRETER_SHA256",
         "qualification_rustc_wrapper_is_exact",
-        "betelgeuze_v6_effective_rust_flags_verified",
+        "betelgeuze_v7_effective_rust_flags_verified",
         "CARGO_ENCODED_RUSTFLAGS",
         "CARGO_CFG_TARGET_FEATURE",
         "FORBIDDEN_BUILD_ENVIRONMENT",
@@ -882,11 +894,11 @@ def require_activation_source_contract(sources: dict[str, bytes]) -> None:
         "row.sha256,",
     ):
         if token not in build_source:
-            _fail(f"v6 compile-time source binding token is missing: {token}")
-    activation_start = runner.find("pub fn verify_native_fixed64_cpu_v6_activation(")
+            _fail(f"v7 compile-time source binding token is missing: {token}")
+    activation_start = runner.find("pub fn verify_native_fixed64_cpu_v7_activation(")
     activation_end = runner.find("\nfn source_root()", activation_start)
     if activation_start < 0 or activation_end < 0:
-        _fail("v6 activation verification entry point is unavailable")
+        _fail("v7 activation verification entry point is unavailable")
     activation_body = runner[activation_start:activation_end]
     for token in (
         'BUILD_COMMIT_BOUND != "true"',
@@ -896,7 +908,15 @@ def require_activation_source_contract(sources: dict[str, bytes]) -> None:
         "build_configuration_sha256",
     ):
         if token not in activation_body:
-            _fail(f"v6 non-authoritative package rejection token is missing: {token}")
+            _fail(f"v7 non-authoritative package rejection token is missing: {token}")
+    for token in (
+        "native_lane_metrics_activation_frozen_execution_not_consumed",
+        "fd83f1f7f7c92bc0fc9ac6581cababb23d3ba5787412174a55b659f97fcc2928",
+        'COMPILED_SOURCE_COUNT != "196"',
+        'manifest.matches("\\"source_count\\": 196").count() != 1',
+    ):
+        if token not in activation_body:
+            _fail(f"v7 activation exact identity token is missing: {token}")
     for token in (
         'const QUALIFICATION_CPP_COMPILER: &str = "/usr/bin/x86_64-linux-gnu-g++-11";',
         "const QUALIFICATION_CPP_FLAGS: &[&str]",
@@ -906,12 +926,12 @@ def require_activation_source_contract(sources: dict[str, bytes]) -> None:
         '"-fno-fast-math"',
         '"-Werror"',
         "QUALIFICATION_FORBIDDEN_ENVIRONMENT",
-        "v6 CPU qualification build cannot link hip_safe",
+        "v7 CPU qualification build cannot link hip_safe",
         "QUALIFICATION_RUSTC_WRAPPER_RELATIVE_PATH",
         'std::env::var_os("RUSTC_WRAPPER")',
     ):
         if token not in sys_build_source:
-            _fail(f"v6 frozen C++ build token is missing: {token}")
+            _fail(f"v7 frozen C++ build token is missing: {token}")
     for token in (
         "CONTROLLED_LIBRARY_CRATES",
         "CONTROLLED_CFG_VALUES",
@@ -923,22 +943,22 @@ def require_activation_source_contract(sources: dict[str, bytes]) -> None:
         "cfg values differ from the frozen profile",
         "os.execv(rustc",
         "unstable rustc options are forbidden",
-        "betelgeuze_v6_effective_rust_flags_verified",
+        "betelgeuze_v7_effective_rust_flags_verified",
     ):
         if token not in rustc_wrapper_source:
-            _fail(f"v6 effective rustc wrapper token is missing: {token}")
-    start = runner.find("pub fn run_native_fixed64_cpu_qualification_v6(")
+            _fail(f"v7 effective rustc wrapper token is missing: {token}")
+    start = runner.find("pub fn run_native_fixed64_cpu_qualification_v7(")
     end = runner.find("\n#[cfg(test)]", start)
     if start < 0 or end < 0:
-        _fail("v6 public transaction entry point is unavailable")
+        _fail("v7 public transaction entry point is unavailable")
     body = runner[start:end]
     ordered = [
         "deny_github_actions_live_execution()?;",
-        "verify_native_fixed64_cpu_v6_activation()?;",
+        "verify_native_fixed64_cpu_v7_activation()?;",
         "validate_absent_output(output_path)?;",
         "open_account_state(&activation.profile_sha256)?;",
         "create_attempt(",
-        "preflight_native_fixed64_cpu_v6()?;",
+        "preflight_native_fixed64_cpu_v7()?;",
         "execute_measurement(&preflight);",
         "build_artifact(",
     ]
@@ -946,14 +966,14 @@ def require_activation_source_contract(sources: dict[str, bytes]) -> None:
     for token in ordered:
         position = body.find(token, cursor + 1)
         if position < 0:
-            _fail(f"v6 transaction ordering token is missing: {token}")
+            _fail(f"v7 transaction ordering token is missing: {token}")
         cursor = position
     artifact_publish = body.find("publish_absent_file_at(", cursor + 1)
     terminal_build = body.find("build_terminal(", artifact_publish + 1)
     terminal_publish = body.find("publish_absent_file_at(", terminal_build + 1)
-    returned = body.rfind("Ok(Fixed64CpuPersistedQualificationV6")
+    returned = body.rfind("Ok(Fixed64CpuPersistedQualificationV7")
     if not cursor < artifact_publish < terminal_build < terminal_publish < returned:
-        _fail("v6 artifact/terminal/return transaction order changed")
+        _fail("v7 artifact/terminal/return transaction order changed")
     for token in (
         "libc::O_EXCL",
         "libc::O_NOFOLLOW",
@@ -970,7 +990,7 @@ def require_activation_source_contract(sources: dict[str, bytes]) -> None:
         "COMPILED_PROFILE_SHA256",
         "BUILD_COMMIT_OID",
         "BUILD_CONFIGURATION_SHA256",
-        "v6 qualification effective rustc flags were not wrapper-verified",
+        "v7 qualification effective rustc flags were not wrapper-verified",
         "VERIFIED_SOURCE_ROOT",
         "source commit differs from the verified build commit",
         "post_measurement_host_invariant_failed",
@@ -982,41 +1002,59 @@ def require_activation_source_contract(sources: dict[str, bytes]) -> None:
         'actual_molecular_execution_allowed\\":false',
     ):
         if token not in runner:
-            _fail(f"v6 fail-closed transaction token is missing: {token}")
+            _fail(f"v7 fail-closed transaction token is missing: {token}")
     if (
         "--verify-activation" not in binary
         or "--preflight" not in binary
         or "--run-output" not in binary
-        or "run_native_fixed64_cpu_qualification_v6(Path::new(&arguments[2]))"
+        or "run_native_fixed64_cpu_qualification_v7(Path::new(&arguments[2]))"
         not in binary
         or "Fixed64CpuProbeConfigV5" in binary
         or "run_native_fixed64_cpu_probe_v5" in binary
         or "to_string_lossy" in binary
     ):
-        _fail("v6 binary accepted a custom probe or lost a sealed operation")
+        _fail("v7 binary accepted a custom probe or lost a sealed operation")
 
 
 def main() -> int:
     root = Path(__file__).resolve().parents[1]
     profile_raw = read_bound_source_bytes(root, PROFILE_RELATIVE_PATH)
-    archive_raw = read_bound_source_bytes(root, ARCHIVE_RELATIVE_PATH)
-    if read_bound_source_bytes(root, PACKAGED_V6_ARCHIVE_RELATIVE_PATH) != archive_raw:
-        _fail("packaged v6 archive drifted")
-    archive = require_archived_profile_v6(profile_raw, archive_raw)
+    manifest_raw = read_bound_source_bytes(root, SOURCE_MANIFEST_RELATIVE_PATH)
+    v6_profile_raw = read_bound_source_bytes(root, V6_PROFILE_RELATIVE_PATH)
+    v6_archive_raw = read_bound_source_bytes(root, V6_ARCHIVE_RELATIVE_PATH)
+    manifest = require_source_manifest_document(manifest_raw)
+    sources = require_bound_source_tree(root, manifest)
+    require_packaged_activation_assets(
+        root,
+        profile_raw=profile_raw,
+        v6_archive_raw=v6_archive_raw,
+        source_manifest_raw=manifest_raw,
+        cargo_lock_raw=sources[CARGO_LOCK_RELATIVE_PATH.as_posix()],
+        cargo_manifest_raw=sources[CARGO_MANIFEST_RELATIVE_PATH.as_posix()],
+    )
+    require_profile_document_v7(
+        profile_raw,
+        v6_profile_raw,
+        v6_archive_raw,
+        manifest_raw,
+        sources,
+    )
+    require_cargo_target_inventory(root)
+    require_activation_source_contract(sources)
     print(
         json.dumps(
             {
                 "all_authority_false": True,
-                "archived": True,
-                "compiled_profile_binding_verified": False,
+                "compiled_profile_binding_verified": True,
+                "build_configuration_sha256": BUILD_CONFIGURATION_SHA256,
                 "execution_consumed": False,
-                "implementation_main_commit_oid": archive[
-                    "implementation_main_commit_oid"
-                ],
+                "live_execution_implemented": True,
+                "non_consuming_preflight_only": True,
                 "profile_id": PROFILE_ID,
                 "profile_sha256": PROFILE_SHA256,
-                "reservation_created": False,
-                "status": archive["status"],
+                "source_count": SOURCE_COUNT,
+                "source_manifest_sha256": SOURCE_MANIFEST_SHA256,
+                "status": "native_lane_metrics_activation_frozen_execution_not_consumed",
             },
             allow_nan=False,
             ensure_ascii=True,
