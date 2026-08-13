@@ -55,8 +55,8 @@ use betelgeuze_sys as sys;
 use sha2::{Digest, Sha256 as Sha256Hasher};
 
 use super::{
-    checked_count, finite, invalid, status_result, Backend, Context, Error, ErrorCode, PositionSoa,
-    Result, UnitSystem,
+    checked_count, finite, invalid, status_result, Backend, Context, ContextInner, Error,
+    ErrorCode, PositionSoa, Result, UnitSystem,
 };
 
 pub type Sha256 = [u8; 32];
@@ -2715,7 +2715,7 @@ fn independent_placement_source(
     })
 }
 
-/// Owned complete fixed64 native pipeline tied to its creating context.
+/// Owned complete fixed64 native pipeline with a lease on its creating context.
 ///
 /// The handle is deliberately neither `Send` nor `Sync`; the native ABI
 /// requires external synchronization and exact context identity.
@@ -2723,12 +2723,12 @@ fn independent_placement_source(
 /// ```compile_fail
 /// use betelgeuze_runtime::Fixed64Pipeline;
 /// fn require_send_sync<T: Send + Sync>() {}
-/// require_send_sync::<Fixed64Pipeline<'static>>();
+/// require_send_sync::<Fixed64Pipeline>();
 /// ```
-pub struct Fixed64Pipeline<'context> {
+pub struct Fixed64Pipeline {
     handle: NonNull<sys::bg_docking_fixed64_pipeline_v2>,
     replay_admission_handle: NonNull<sys::bg_docking_geometric_admission_v1>,
-    _context: &'context Context,
+    context_lease: Rc<ContextInner>,
     backend: Backend,
     receptor_atom_count: usize,
     ligand_atom_count: usize,
@@ -2980,8 +2980,8 @@ fn canonical_pocket_normal(value: [f64; 3]) -> Result<[f64; 3]> {
     Ok(result)
 }
 
-impl<'context> Fixed64Pipeline<'context> {
-    pub fn new(context: &'context Context, scientific: Fixed64PipelineContext<'_>) -> Result<Self> {
+impl Fixed64Pipeline {
+    pub fn new(context: &Context, scientific: Fixed64PipelineContext<'_>) -> Result<Self> {
         Self::profile_id()?;
         let counts = scientific.validate()?;
         let expected_backend = context.backend()?;
@@ -3542,7 +3542,7 @@ impl<'context> Fixed64Pipeline<'context> {
         // for this call; the native constructor deep-copies all channels.
         status_result(unsafe {
             sys::bg_docking_fixed64_pipeline_v2_create(
-                context.handle.as_ptr(),
+                context.raw_handle(),
                 &admission,
                 &rigid,
                 &torsion,
@@ -3575,7 +3575,7 @@ impl<'context> Fixed64Pipeline<'context> {
         // native constructor deep-copies every molecular channel.
         status_result(unsafe {
             sys::bg_docking_geometric_admission_v1_create(
-                context.handle.as_ptr(),
+                context.raw_handle(),
                 &admission,
                 &mut replay_admission_handle,
             )
@@ -3604,7 +3604,7 @@ impl<'context> Fixed64Pipeline<'context> {
         Ok(Self {
             handle: handle.into_inner(),
             replay_admission_handle: replay_admission_handle.into_inner(),
-            _context: context,
+            context_lease: context.lease(),
             backend,
             receptor_atom_count: receptor_count,
             ligand_atom_count: ligand_count,
@@ -4022,7 +4022,7 @@ impl<'context> Fixed64Pipeline<'context> {
         // borrowed for the call. Their exact capacities were validated above.
         status_result(unsafe {
             sys::bg_docking_fixed64_pipeline_v2_run(
-                self._context.handle.as_ptr(),
+                self.context_lease.raw_handle(),
                 self.handle.as_ptr(),
                 &pipeline_input,
                 &mut producer_output,
@@ -4038,7 +4038,7 @@ impl<'context> Fixed64Pipeline<'context> {
             )
         })?;
         let native_placement_replays = replay_native_placements(
-            self._context,
+            self.context_lease.as_ref(),
             self.replay_admission_handle,
             &allocation,
             &producer_input,
@@ -4325,10 +4325,10 @@ impl<'context> Fixed64Pipeline<'context> {
     }
 }
 
-impl Drop for Fixed64Pipeline<'_> {
+impl Drop for Fixed64Pipeline {
     fn drop(&mut self) {
         // SAFETY: this object owns both non-null handles and destroys each once,
-        // before the borrowed native Context can be dropped.
+        // before this object's context lease can release the native Context.
         unsafe {
             sys::bg_docking_fixed64_pipeline_v2_destroy(self.handle.as_ptr());
             sys::bg_docking_geometric_admission_v1_destroy(self.replay_admission_handle.as_ptr());
@@ -7020,7 +7020,7 @@ fn replay_coordinates(written: u8, x: &[f64], y: &[f64], z: &[f64]) -> Result<Ve
 
 #[allow(clippy::too_many_arguments)]
 fn replay_native_placements(
-    context: &Context,
+    context: &ContextInner,
     admission: NonNull<sys::bg_docking_geometric_admission_v1>,
     allocation_input: &sys::bg_docking_fixed64_allocation_input_v1,
     producer_input: &sys::bg_docking_fixed64_producer_input_v1,
@@ -7108,7 +7108,7 @@ fn replay_native_placements(
             // SAFETY: every descriptor and exact-capacity channel remains live.
             status_result(unsafe {
                 sys::bg_docking_fixed64_indexed_so3_v1_place(
-                    context.handle.as_ptr(),
+                    context.raw_handle(),
                     &input,
                     &mut output,
                 )
@@ -7166,7 +7166,7 @@ fn replay_native_placements(
         // SAFETY: every descriptor, persistent admission, and output remains live.
         status_result(unsafe {
             sys::bg_docking_fixed64_single_anchor_v1_place(
-                context.handle.as_ptr(),
+                context.raw_handle(),
                 admission.as_ptr(),
                 &input,
                 &mut output,

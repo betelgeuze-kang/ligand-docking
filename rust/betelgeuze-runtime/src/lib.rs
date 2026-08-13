@@ -389,10 +389,31 @@ fn channel_pointer(values: &[f64]) -> *const f64 {
     }
 }
 
+/// Shared private owner for the exact native context handle.
+pub(crate) struct ContextInner {
+    handle: NonNull<sys::bg_context>,
+}
+
+impl ContextInner {
+    pub(crate) fn raw_handle(&self) -> *mut sys::bg_context {
+        self.handle.as_ptr()
+    }
+}
+
+impl Drop for ContextInner {
+    fn drop(&mut self) {
+        // SAFETY: the last context lease owns this non-null handle and destroys
+        // it exactly once after every dependent native object has been dropped.
+        unsafe { sys::bg_context_destroy(self.handle.as_ptr()) };
+    }
+}
+
 /// Owned native execution context.
 ///
 /// Context operations are intentionally confined to their creating thread
 /// until the native ABI publishes a stronger synchronization contract.
+/// Fixed64 pipelines retain a private lease on this context, so dropping this
+/// public wrapper does not invalidate a pipeline that was created from it.
 ///
 /// ```compile_fail
 /// use betelgeuze_runtime::Context;
@@ -400,9 +421,7 @@ fn channel_pointer(values: &[f64]) -> *const f64 {
 /// require_send_sync::<Context>();
 /// ```
 pub struct Context {
-    handle: NonNull<sys::bg_context>,
-    // The ABI does not yet promise concurrent context operations.
-    _not_send_or_sync: PhantomData<Rc<()>>,
+    inner: Rc<ContextInner>,
 }
 
 impl Context {
@@ -436,8 +455,7 @@ impl Context {
             )
         })?;
         Ok(Self {
-            handle,
-            _not_send_or_sync: PhantomData,
+            inner: Rc::new(ContextInner { handle }),
         })
     }
 
@@ -464,7 +482,7 @@ impl Context {
     pub fn backend(&self) -> Result<Backend> {
         let mut backend = sys::BG_BACKEND_AUTO;
         // SAFETY: The private handle is live and backend is writable.
-        status_result(unsafe { sys::bg_context_get_backend(self.handle.as_ptr(), &mut backend) })?;
+        status_result(unsafe { sys::bg_context_get_backend(self.raw_handle(), &mut backend) })?;
         Backend::from_raw(backend)
     }
 
@@ -472,7 +490,7 @@ impl Context {
         let mut device_ordinal = -1;
         // SAFETY: The private handle is live and device_ordinal is writable.
         status_result(unsafe {
-            sys::bg_context_get_device_ordinal(self.handle.as_ptr(), &mut device_ordinal)
+            sys::bg_context_get_device_ordinal(self.raw_handle(), &mut device_ordinal)
         })?;
         Ok(device_ordinal)
     }
@@ -481,16 +499,17 @@ impl Context {
         let mut unit_system = 0;
         // SAFETY: The private handle is live and unit_system is writable.
         status_result(unsafe {
-            sys::bg_context_get_unit_system(self.handle.as_ptr(), &mut unit_system)
+            sys::bg_context_get_unit_system(self.raw_handle(), &mut unit_system)
         })?;
         UnitSystem::from_raw(unit_system)
     }
-}
 
-impl Drop for Context {
-    fn drop(&mut self) {
-        // SAFETY: Context owns this non-null handle and destroys it exactly once.
-        unsafe { sys::bg_context_destroy(self.handle.as_ptr()) };
+    pub(crate) fn raw_handle(&self) -> *mut sys::bg_context {
+        self.inner.raw_handle()
+    }
+
+    pub(crate) fn lease(&self) -> Rc<ContextInner> {
+        Rc::clone(&self.inner)
     }
 }
 

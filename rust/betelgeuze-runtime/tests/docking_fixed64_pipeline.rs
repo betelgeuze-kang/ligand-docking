@@ -307,6 +307,25 @@ fn complete_pipeline_is_raii_bound_to_the_exact_native_context() {
     );
 }
 
+#[test]
+fn multiple_pipelines_keep_the_shared_context_alive_after_wrapper_drop() {
+    let fixture = SingleAtomFixture::new();
+    for options in [ContextOptions::cpu_reference(), ContextOptions::rust_cpu()] {
+        let (first, second) = {
+            let context = Context::new(options).unwrap();
+            (
+                Fixed64Pipeline::new(&context, fixture.scientific_context()).unwrap(),
+                Fixed64Pipeline::new(&context, fixture.scientific_context()).unwrap(),
+            )
+        };
+        assert_eq!(first.backend(), second.backend());
+        drop(first);
+        assert_eq!(second.receptor_atom_count(), 4);
+        assert_eq!(second.ligand_atom_count(), 1);
+        drop(second);
+    }
+}
+
 fn assert_safe_run_returns_complete_receipt(
     fixture: &SingleAtomFixture,
     options: ContextOptions,
@@ -376,9 +395,18 @@ fn assert_safe_run_returns_complete_receipt(
         predeclared_refinement_policy_sha256: [0x76; 32],
         predeclared_post_refinement_admission_policy_sha256: [0x77; 32],
     };
-    let context = Context::new(options).unwrap();
-    let pipeline = Fixed64Pipeline::new(&context, fixture.scientific_context()).unwrap();
+    let (pipeline, sibling_pipeline) = {
+        let context = Context::new(options).unwrap();
+        (
+            Fixed64Pipeline::new(&context, fixture.scientific_context()).unwrap(),
+            Fixed64Pipeline::new(&context, fixture.scientific_context()).unwrap(),
+        )
+    };
+    // The public Context wrapper is already gone. Both private Rc leases must
+    // keep the exact native context alive through every run below.
     let receipt = pipeline.run(run).unwrap();
+    let sibling_receipt = sibling_pipeline.run(run).unwrap();
+    assert_eq!(receipt, sibling_receipt);
     let repeated = pipeline.run(run).unwrap();
     assert_eq!(receipt, repeated);
     let scaled_normal = Fixed64RunInput {
@@ -733,6 +761,8 @@ fn assert_safe_run_returns_complete_receipt(
     let error = mutated.verify_against(&receipt).unwrap_err();
     assert_eq!(error.code, ErrorCode::AbiMismatch);
     assert!(error.message.contains("full pipeline rederivation"));
+    drop(pipeline);
+    assert_eq!(sibling_receipt, sibling_pipeline.run(run).unwrap());
     (projection, metrics)
 }
 

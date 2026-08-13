@@ -442,7 +442,7 @@ impl Context {
         // simulation prevents safe concurrent access to its mutable state.
         status_result(unsafe {
             sys::bg_context_minimize(
-                self.handle.as_ptr(),
+                self.raw_handle(),
                 simulation.handle.as_ptr(),
                 &raw_options,
                 &mut raw_report,
@@ -488,7 +488,7 @@ impl Context {
         // SAFETY: Both private handles remain live and simulation is exclusively borrowed.
         status_result(unsafe {
             sys::bg_context_integrate(
-                self.handle.as_ptr(),
+                self.raw_handle(),
                 simulation.handle.as_ptr(),
                 step_count,
                 &mut raw_report,

@@ -355,7 +355,7 @@ impl Context {
         // and force buffers remain writable for the duration of the call.
         status_result(unsafe {
             sys::bg_context_evaluate(
-                self.handle.as_ptr(),
+                self.raw_handle(),
                 system.handle.as_ptr(),
                 forcefield.handle.as_ptr(),
                 &mut raw_energy,
@@ -391,7 +391,7 @@ impl Context {
         // null force descriptor explicitly requests energy-only output.
         status_result(unsafe {
             sys::bg_context_evaluate(
-                self.handle.as_ptr(),
+                self.raw_handle(),
                 system.handle.as_ptr(),
                 forcefield.handle.as_ptr(),
                 &mut raw_energy,
