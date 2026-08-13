@@ -62,7 +62,9 @@ scientific, public benchmark, or acceleration claim.
 
 The checked-in profile is frozen but unconsumed. CI may compile and unit-test
 the measurement core and run the static profile verifier; CI must not execute
-the 25-sample live profile. A later activation must bind an exact merged source,
+the 25-sample live profile. The checked-in native binary has a compile-bound
+`activation_admitted = false` gate before `qualification_profile()` and exits
+without starting a measurement. A later activation must bind an exact merged source,
 native binary, toolchain, host preflight, absent-only output, and account-scoped
 exactly-once state before the single local execution is consumed.
 
@@ -85,9 +87,9 @@ entry point. It fails if the profile ID, denominator, fixture counts, sampling,
 numeric tolerances, performance ratio, or `qualification_profile()` call drifts
 from the canonical JSON.
 
-Do not invoke the native 25-sample binary from GitHub Actions or treat a unit
-probe as the exactly-once qualification result. The CI authority auditor scans
-every `.github/workflows/*.yml` and `*.yaml` file and fails closed if the live
-binary name appears in any workflow. It also rejects tokenless `cargo run`
-forms anywhere in Actions; unrelated Cargo execution must select a different
-binary explicitly with `--bin`.
+Do not invoke the native binary from GitHub Actions or treat a blocked/unit probe
+as the exactly-once qualification result. The CI authority auditor scans every
+workflow and every repository-local `**/action.yml` or `action.yaml` manifest,
+including nested shell commands, and fails closed on a live-probe invocation.
+The binary gate is an independent defense: changing it requires a separately
+reviewed activation that replaces this unconsumed profile state.

@@ -100,6 +100,18 @@ def test_canonical_native_fixed64_cpu_profile_v4_is_frozen() -> None:
             b"Fixed64CpuProbeConfigV4::qualification_profile()",
             b"Fixed64CpuProbeConfigV4::unit_test()",
         ),
+        (
+            "probe",
+            b"const FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED: bool = false;",
+            b"const FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED: bool = true;",
+        ),
+        (
+            "probe",
+            b"const fn live_activation_admitted() -> bool {\n"
+            b"    FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED\n"
+            b"}",
+            b"const fn live_activation_admitted() -> bool {\n    true\n}",
+        ),
     ),
 )
 def test_profile_v4_rejects_compiled_gate_drift(

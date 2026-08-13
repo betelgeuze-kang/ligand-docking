@@ -166,6 +166,7 @@ NATIVE_FIXED64_CPU_V4_CONTRACT_PATHS = (
     "rust/betelgeuze-runtime/src/qualification.rs",
     "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v4.rs",
     "rust/betelgeuze-runtime/tests/docking_fixed64_pipeline.rs",
+    "rust/betelgeuze-runtime/tests/fixed64_cpu_probe_activation.rs",
     "tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py",
     "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v4.py",
     "docs/engine_v2_native_fixed64_cpu_qualification_v4.md",
@@ -1229,6 +1230,35 @@ def _native_fixed64_cpu_v4_authority_is_fail_closed(repo_root: Path) -> bool:
     )
 
 
+def _native_fixed64_cpu_v4_binary_is_activation_blocked(repo_root: Path) -> bool:
+    path = (
+        repo_root
+        / "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v4.rs"
+    )
+    try:
+        source = path.read_bytes().decode("ascii")
+    except (OSError, UnicodeError):
+        return False
+    activation_constant = (
+        "const FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED: bool = false;"
+    )
+    activation_function = re.compile(
+        r"const\s+fn\s+live_activation_admitted\(\)\s*->\s*bool\s*"
+        r"\{\s*FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED\s*\}"
+    )
+    activation_guard = "if !live_activation_admitted()"
+    qualification_call = "Fixed64CpuProbeConfigV4::qualification_profile()"
+    return bool(
+        source.count(activation_constant) == 1
+        and "FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED: bool = true" not in source
+        and len(activation_function.findall(source)) == 1
+        and source.count(activation_guard) == 1
+        and source.count("return ExitCode::from(3);") == 1
+        and source.count(qualification_call) == 1
+        and source.index(activation_guard) < source.index(qualification_call)
+    )
+
+
 def build_inventory(repo_root: Path) -> dict[str, Any]:
     workflow_root = repo_root / ".github/workflows"
     github_workflows = tuple(
@@ -1374,11 +1404,15 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         _workflow_invokes_native_fixed64_cpu_v4_live_probe(text)
         for text in (*github_workflow_text.values(), *github_action_text.values())
     ) and github_action_surface_complete
+    native_fixed64_cpu_v4_binary_activation_blocked = (
+        _native_fixed64_cpu_v4_binary_is_activation_blocked(repo_root)
+    )
     native_fixed64_cpu_v4_authority_fail_closed = (
         not native_fixed64_cpu_v4_contract_present
         or (
             native_fixed64_cpu_v4_contract_files_complete
             and _native_fixed64_cpu_v4_authority_is_fail_closed(repo_root)
+            and native_fixed64_cpu_v4_binary_activation_blocked
             and native_fixed64_cpu_v4_live_qualification_absent_from_github_actions
         )
     )
@@ -1496,6 +1530,9 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         ),
         "native_fixed64_cpu_v4_authority_fail_closed": (
             native_fixed64_cpu_v4_authority_fail_closed
+        ),
+        "native_fixed64_cpu_v4_binary_activation_blocked": (
+            native_fixed64_cpu_v4_binary_activation_blocked
         ),
         "native_fixed64_cpu_v4_live_qualification_absent_from_github_actions": (
             native_fixed64_cpu_v4_live_qualification_absent_from_github_actions

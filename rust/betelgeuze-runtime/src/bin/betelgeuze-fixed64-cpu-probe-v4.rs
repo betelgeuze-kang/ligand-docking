@@ -5,6 +5,12 @@ use betelgeuze_runtime::{
     run_native_fixed64_cpu_probe_v4, Fixed64CpuFixtureProbeV4, Fixed64CpuProbeConfigV4,
 };
 
+const FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED: bool = false;
+
+const fn live_activation_admitted() -> bool {
+    FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED
+}
+
 fn digest(value: [u8; 32]) -> String {
     let mut output = String::with_capacity(64);
     for byte in value {
@@ -98,6 +104,10 @@ fn main() -> ExitCode {
     if std::env::args_os().count() != 1 {
         eprintln!("fixed64 CPU probe v4 accepts no caller-supplied arguments");
         return ExitCode::from(2);
+    }
+    if !live_activation_admitted() {
+        eprintln!("fixed64 CPU probe v4 failed closed: reviewed live activation is absent");
+        return ExitCode::from(3);
     }
     let config = Fixed64CpuProbeConfigV4::qualification_profile();
     let report = match run_native_fixed64_cpu_probe_v4(config) {

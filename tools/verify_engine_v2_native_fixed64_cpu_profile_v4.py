@@ -423,12 +423,27 @@ def require_compiled_profile_binding(
     ):
         _fail("compiled ScorerV1 term-count gate drifted from the frozen profile")
 
+    activation_function = re.compile(
+        r"const\s+fn\s+live_activation_admitted\(\)\s*->\s*bool\s*"
+        r"\{\s*FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED\s*\}"
+    )
+    activation_guard = "if !live_activation_admitted()"
+    qualification_call = "Fixed64CpuProbeConfigV4::qualification_profile()"
     if (
-        probe.count("Fixed64CpuProbeConfigV4::qualification_profile()") != 1
+        probe.count(
+            "const FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED: bool = false;"
+        )
+        != 1
+        or len(activation_function.findall(probe)) != 1
+        or probe.count(activation_guard) != 1
+        or probe.count("return ExitCode::from(3);") != 1
+        or probe.count(qualification_call) != 1
         or "Fixed64CpuProbeConfigV4::unit_test()" in probe
         or probe.count("run_native_fixed64_cpu_probe_v4(config)") != 1
     ):
         _fail("native probe entry point is not bound to the qualification profile")
+    if probe.index(activation_guard) > probe.index(qualification_call):
+        _fail("native probe activation gate occurs after the qualification call")
 
 
 def main() -> int:

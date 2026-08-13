@@ -179,6 +179,14 @@ def _write_native_fixed64_cpu_v4_contract(tmp_path: Path) -> None:
     )
     profile = tmp_path / "config/engine_v2_native_fixed64_cpu_profile_v4.json"
     profile.write_bytes(source.read_bytes())
+    probe_source = (
+        Path(__file__).resolve().parents[2]
+        / "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v4.rs"
+    )
+    probe = tmp_path / (
+        "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v4.rs"
+    )
+    probe.write_bytes(probe_source.read_bytes())
 
 
 def _write_mixed64_v2_contract(
@@ -726,6 +734,7 @@ def test_native_fixed64_cpu_v4_requires_authoritative_ci_and_false_authority(
 
     payload = build_inventory(tmp_path)
     assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is True
+    assert payload["native_fixed64_cpu_v4_binary_activation_blocked"] is True
     assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is True
     assert (
         payload[
@@ -736,6 +745,48 @@ def test_native_fixed64_cpu_v4_requires_authoritative_ci_and_false_authority(
 
     (tmp_path / "docs/engine_v2_native_fixed64_cpu_qualification_v4.md").unlink()
     payload = build_inventory(tmp_path)
+    assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is False
+
+
+@pytest.mark.parametrize(
+    ("old", "new"),
+    (
+        (
+            "FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED: bool = false",
+            "FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED: bool = true",
+        ),
+        (
+            "const fn live_activation_admitted() -> bool {\n"
+            "    FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED\n"
+            "}",
+            "const fn live_activation_admitted() -> bool {\n    true\n}",
+        ),
+    ),
+)
+def test_native_fixed64_cpu_v4_binary_activation_cannot_be_enabled(
+    tmp_path: Path,
+    old: str,
+    new: str,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_native_fixed64_cpu_v4_contract(tmp_path)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        encoding="utf-8",
+    )
+    probe = tmp_path / (
+        "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v4.rs"
+    )
+    source = probe.read_text(encoding="ascii")
+    assert old in source
+    probe.write_text(
+        source.replace(old, new, 1),
+        encoding="ascii",
+    )
+
+    payload = build_inventory(tmp_path)
+    assert payload["native_fixed64_cpu_v4_binary_activation_blocked"] is False
+    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is False
     assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is False
 
 
