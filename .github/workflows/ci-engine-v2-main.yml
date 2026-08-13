@@ -184,6 +184,10 @@ jobs:
             rust_engine_v2
             rust/betelgeuze-docking-search
             rust/betelgeuze-runtime
+            rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v5_archive.json
+            rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v6.json
+            rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v6_sources.json
+            rust/betelgeuze-runtime/assets/workspace-Cargo.lock
             rust/betelgeuze-sys
             rust/cpu-kernel
             rust/reference-dynamics
@@ -229,6 +233,7 @@ jobs:
             config/engine_v2_native_fixed64_cpu_profile_v5_archive.json
             config/engine_v2_native_fixed64_cpu_profile_v6.json
             config/engine_v2_native_fixed64_cpu_profile_v6_sources.json
+            docs/engine_v2_native_fixed64_cpu_qualification_v6.md
             config/engine_v2_native_fixed64_cpu_profile_v4.json
             config/engine_v2_native_fixed64_cpu_profile_v4_archive.json
             config/engine_v2_public_redocking_stage0_threshold_evidence.json
