@@ -145,6 +145,50 @@ RUST_BOUND_CARGO_TARGET_SOURCE_RELATIVE_PATHS = tuple(
         "rust/reference-physics/tests/properties.rs",
     )
 )
+RUST_BOUND_LOCAL_DEPENDENCY_BINDINGS = (
+    (
+        "betelgeuze-cpu-kernel",
+        "betelgeuze-docking-search",
+        "normal",
+        "",
+        "rust/betelgeuze-docking-search",
+    ),
+    (
+        "betelgeuze-runtime",
+        "betelgeuze-docking-search",
+        "normal",
+        "",
+        "rust/betelgeuze-docking-search",
+    ),
+    (
+        "betelgeuze-runtime",
+        "betelgeuze-reference-dynamics",
+        "dev",
+        "",
+        "rust/reference-dynamics",
+    ),
+    (
+        "betelgeuze-runtime",
+        "betelgeuze-reference-physics",
+        "dev",
+        "",
+        "rust/reference-physics",
+    ),
+    (
+        "betelgeuze-runtime",
+        "betelgeuze-sys",
+        "normal",
+        "",
+        "rust/betelgeuze-sys",
+    ),
+    (
+        "betelgeuze-sys",
+        "betelgeuze-cpu-kernel",
+        "normal",
+        "",
+        "rust/cpu-kernel",
+    ),
+)
 REPOSITORY_CARGO_CONFIG_RELATIVE_PATHS = (
     Path(".cargo/config"),
     Path(".cargo/config.toml"),
@@ -542,6 +586,22 @@ def require_rust_cargo_target_source_paths(
         _fail("Cargo target source is absent from the transitive manifest")
 
 
+def require_rust_local_dependency_bindings(
+    observed_bindings: tuple[tuple[str, str, str, str, str], ...],
+) -> None:
+    expected_bindings = tuple(sorted(RUST_BOUND_LOCAL_DEPENDENCY_BINDINGS))
+    if (
+        len(observed_bindings) != len(set(observed_bindings))
+        or tuple(sorted(observed_bindings)) != expected_bindings
+    ):
+        _fail("Cargo local dependency graph contains an unbound or missing input")
+    expected_roots = {
+        path.as_posix() for path in RUST_PACKAGE_ROOT_RELATIVE_PATHS
+    }
+    if any(binding[4] not in expected_roots for binding in observed_bindings):
+        _fail("Cargo local dependency escapes the bound package roots")
+
+
 def discover_rust_cargo_target_source_paths(root: Path) -> tuple[str, ...]:
     rust_root = _require_directory_chain(root, Path("rust"), "Cargo workspace root")
     manifest_paths = (
@@ -614,16 +674,64 @@ def discover_rust_cargo_target_source_paths(root: Path) -> tuple[str, ...]:
     }
     observed_manifests: set[str] = set()
     observed_paths: list[str] = []
+    local_dependency_bindings: list[tuple[str, str, str, str, str]] = []
     probe_bindings: list[tuple[str, tuple[str, ...], str]] = []
     activation_bindings: list[tuple[str, tuple[str, ...], str]] = []
     for package in metadata["packages"]:
-        if type(package) is not dict or type(package.get("targets")) is not list:
+        if (
+            type(package) is not dict
+            or type(package.get("targets")) is not list
+            or type(package.get("dependencies")) is not list
+        ):
             _fail("Cargo package target metadata schema is invalid")
         package_name = package.get("name")
         manifest_path = package.get("manifest_path")
         if type(package_name) is not str or type(manifest_path) is not str:
             _fail("Cargo package identity metadata is invalid")
         observed_manifests.add(manifest_path)
+        for dependency in package["dependencies"]:
+            if type(dependency) is not dict:
+                _fail("Cargo dependency metadata row is invalid")
+            dependency_name = dependency.get("name")
+            dependency_path = dependency.get("path")
+            dependency_source = dependency.get("source")
+            dependency_kind = dependency.get("kind")
+            dependency_rename = dependency.get("rename")
+            if (
+                type(dependency_name) is not str
+                or (dependency_path is not None and type(dependency_path) is not str)
+                or (dependency_source is not None and type(dependency_source) is not str)
+                or (dependency_kind is not None and type(dependency_kind) is not str)
+                or (dependency_rename is not None and type(dependency_rename) is not str)
+            ):
+                _fail("Cargo dependency identity metadata is invalid")
+            if dependency_path is None:
+                if dependency_source is None:
+                    _fail("Cargo dependency has neither a bound path nor a source")
+                continue
+            if dependency_source is not None:
+                _fail("Cargo local dependency has an unexpected source identity")
+            local_root = Path(dependency_path)
+            if not local_root.is_absolute():
+                _fail("Cargo local dependency path is not absolute")
+            try:
+                local_relative = local_root.relative_to(root)
+            except ValueError:
+                _fail("Cargo local dependency escapes the repository")
+            _require_directory_chain(
+                root,
+                local_relative,
+                "Cargo local dependency root",
+            )
+            local_dependency_bindings.append(
+                (
+                    package_name,
+                    dependency_name,
+                    dependency_kind or "normal",
+                    dependency_rename or "",
+                    local_relative.as_posix(),
+                )
+            )
         for target in package["targets"]:
             if type(target) is not dict:
                 _fail("Cargo target metadata row is invalid")
@@ -654,6 +762,7 @@ def discover_rust_cargo_target_source_paths(root: Path) -> tuple[str, ...]:
                 activation_bindings.append(binding)
     if observed_manifests != expected_manifests:
         _fail("Cargo workspace package manifest set is cross-wired")
+    require_rust_local_dependency_bindings(tuple(local_dependency_bindings))
     expected_probe = (
         "betelgeuze-runtime",
         ("bin",),

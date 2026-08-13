@@ -4,6 +4,7 @@ from copy import deepcopy
 import hashlib
 import json
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 
@@ -16,6 +17,7 @@ from tools.verify_engine_v2_native_fixed64_cpu_profile_v4 import (
     REPOSITORY_RUST_TOOLCHAIN_OVERRIDE_RELATIVE_PATHS,
     RUST_BOUND_CARGO_TARGET_SOURCE_RELATIVE_PATHS,
     RUST_BOUND_BUILD_SCRIPT_RELATIVE_PATHS,
+    RUST_BOUND_LOCAL_DEPENDENCY_BINDINGS,
     RUST_COMPILED_SOURCE_TREE_ROOT_RELATIVE_PATHS,
     RUST_PACKAGE_ROOT_RELATIVE_PATHS,
     NativeFixed64CPUProfileV4Error,
@@ -30,6 +32,7 @@ from tools.verify_engine_v2_native_fixed64_cpu_profile_v4 import (
     require_repository_cargo_configuration_absent,
     require_repository_rust_toolchain_override_absent,
     require_rust_cargo_target_source_paths,
+    require_rust_local_dependency_bindings,
     require_rust_package_build_script_paths,
     require_rust_compiled_source_tree_paths,
     require_profile_document,
@@ -596,6 +599,55 @@ def test_profile_v4_rejects_package_root_probe_target() -> None:
         match="Cargo target source set contains an unbound",
     ):
         require_rust_cargo_target_source_paths(changed)
+
+
+def test_profile_v4_rejects_unbound_local_dependency_root() -> None:
+    changed = tuple(
+        (*binding[:4], "external/betelgeuze-docking-search")
+        if binding[:2]
+        == ("betelgeuze-runtime", "betelgeuze-docking-search")
+        else binding
+        for binding in RUST_BOUND_LOCAL_DEPENDENCY_BINDINGS
+    )
+    with pytest.raises(
+        NativeFixed64CPUProfileV4Error,
+        match="local dependency graph contains an unbound",
+    ):
+        require_rust_local_dependency_bindings(changed)
+
+
+def test_profile_v4_rejects_external_local_dependency_from_cargo_metadata(
+    tmp_path: Path,
+) -> None:
+    copied_root = tmp_path / "copied-repository"
+    shutil.copytree(
+        _ROOT / "rust",
+        copied_root / "rust",
+        ignore=shutil.ignore_patterns("target"),
+    )
+    external_workspace = tmp_path / "external-workspace"
+    shutil.copytree(
+        _ROOT / "rust",
+        external_workspace / "rust",
+        ignore=shutil.ignore_patterns("target"),
+    )
+    external_dependency = (
+        external_workspace / "rust/betelgeuze-docking-search"
+    )
+    runtime_manifest = copied_root / "rust/betelgeuze-runtime/Cargo.toml"
+    raw = runtime_manifest.read_text(encoding="utf-8")
+    original = 'path = "../betelgeuze-docking-search"'
+    assert raw.count(original) == 1
+    runtime_manifest.write_text(
+        raw.replace(original, f'path = "{external_dependency}"', 1),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        NativeFixed64CPUProfileV4Error,
+        match="local dependency escapes the repository",
+    ):
+        discover_rust_cargo_target_source_paths(copied_root)
 
 
 def test_profile_v4_rejects_symlinked_rust_source_subdirectory(
