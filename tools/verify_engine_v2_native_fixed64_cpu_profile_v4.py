@@ -280,14 +280,16 @@ def _stable_file_identity(value: os.stat_result) -> tuple[int, ...]:
 def read_bound_source_bytes(root: Path, relative: Path) -> bytes:
     if relative.is_absolute() or not relative.parts or ".." in relative.parts:
         _fail("bound compiler source path is not a canonical repository-relative path")
+    if not hasattr(os, "O_DIRECTORY") or not hasattr(os, "O_NOFOLLOW"):
+        _fail("platform lacks required no-follow compiler-source primitives")
     directory_flags = (
         os.O_RDONLY
         | getattr(os, "O_CLOEXEC", 0)
-        | getattr(os, "O_DIRECTORY", 0)
-        | getattr(os, "O_NOFOLLOW", 0)
+        | os.O_DIRECTORY
+        | os.O_NOFOLLOW
     )
     file_flags = (
-        os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+        os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | os.O_NOFOLLOW
     )
     descriptors: list[int] = []
     try:
