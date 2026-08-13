@@ -9,6 +9,8 @@ import os
 from pathlib import Path
 import re
 import stat
+import subprocess
+import tempfile
 from typing import NoReturn
 
 
@@ -90,11 +92,17 @@ NATIVE_VENDOR_COPY_SOURCE_RELATIVE_PATHS = tuple(
 )
 RUST_COMPILED_SOURCE_TREE_ROOT_RELATIVE_PATHS = (
     Path("rust/betelgeuze-docking-search/src"),
+    Path("rust/betelgeuze-docking-search/tests"),
+    Path("rust/betelgeuze-docking-search/examples"),
     Path("rust/betelgeuze-runtime/src"),
+    Path("rust/betelgeuze-runtime/tests"),
     Path("rust/betelgeuze-sys/src"),
+    Path("rust/betelgeuze-sys/tests"),
     Path("rust/cpu-kernel/src"),
     Path("rust/reference-dynamics/src"),
+    Path("rust/reference-dynamics/tests"),
     Path("rust/reference-physics/src"),
+    Path("rust/reference-physics/tests"),
 )
 RUST_PACKAGE_ROOT_RELATIVE_PATHS = (
     Path("rust/betelgeuze-docking-search"),
@@ -106,6 +114,37 @@ RUST_PACKAGE_ROOT_RELATIVE_PATHS = (
 )
 RUST_BOUND_BUILD_SCRIPT_RELATIVE_PATHS = (
     Path("rust/betelgeuze-sys/build.rs"),
+)
+RUST_BOUND_CARGO_TARGET_SOURCE_RELATIVE_PATHS = tuple(
+    Path(value)
+    for value in (
+        "rust/betelgeuze-docking-search/src/lib.rs",
+        "rust/betelgeuze-docking-search/tests/fixed64_allocation.rs",
+        "rust/betelgeuze-docking-search/tests/fixed64_geometric_admission.rs",
+        "rust/betelgeuze-docking-search/tests/fixed64_placement.rs",
+        "rust/betelgeuze-docking-search/tests/fixed64_producer.rs",
+        "rust/betelgeuze-docking-search/tests/fixed64_scorer_v1.rs",
+        "rust/betelgeuze-docking-search/tests/search_contract.rs",
+        "rust/betelgeuze-docking-search/tests/short_range.rs",
+        "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v4.rs",
+        "rust/betelgeuze-runtime/src/lib.rs",
+        "rust/betelgeuze-runtime/tests/cpu_oracle_parity.rs",
+        "rust/betelgeuze-runtime/tests/docking_fixed64_pipeline.rs",
+        "rust/betelgeuze-runtime/tests/dynamics_oracle_parity.rs",
+        "rust/betelgeuze-runtime/tests/fixed64_cpu_probe_activation.rs",
+        "rust/betelgeuze-runtime/tests/runtime.rs",
+        "rust/betelgeuze-sys/build.rs",
+        "rust/betelgeuze-sys/src/lib.rs",
+        "rust/betelgeuze-sys/tests/layout.rs",
+        "rust/betelgeuze-sys/tests/raw_smoke.rs",
+        "rust/cpu-kernel/src/lib.rs",
+        "rust/reference-dynamics/src/lib.rs",
+        "rust/reference-dynamics/tests/frozen_fixtures.rs",
+        "rust/reference-dynamics/tests/properties.rs",
+        "rust/reference-physics/src/lib.rs",
+        "rust/reference-physics/tests/frozen_fixtures.rs",
+        "rust/reference-physics/tests/properties.rs",
+    )
 )
 REPOSITORY_CARGO_CONFIG_RELATIVE_PATHS = (
     Path(".cargo/config"),
@@ -129,6 +168,8 @@ NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS = (
     Path("rust/betelgeuze-sys/Cargo.toml"),
     Path("rust/betelgeuze-sys/build.rs"),
     Path("rust/betelgeuze-sys/src/lib.rs"),
+    Path("rust/betelgeuze-sys/tests/layout.rs"),
+    Path("rust/betelgeuze-sys/tests/raw_smoke.rs"),
     Path("rust/betelgeuze-runtime/Cargo.toml"),
     Path("rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v4.rs"),
     Path("rust/betelgeuze-runtime/src/docking.rs"),
@@ -136,7 +177,11 @@ NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS = (
     Path("rust/betelgeuze-runtime/src/forcefield.rs"),
     Path("rust/betelgeuze-runtime/src/lib.rs"),
     Path("rust/betelgeuze-runtime/src/qualification.rs"),
+    Path("rust/betelgeuze-runtime/tests/cpu_oracle_parity.rs"),
+    Path("rust/betelgeuze-runtime/tests/docking_fixed64_pipeline.rs"),
+    Path("rust/betelgeuze-runtime/tests/dynamics_oracle_parity.rs"),
     ACTIVATION_TEST_RELATIVE_PATH,
+    Path("rust/betelgeuze-runtime/tests/runtime.rs"),
     Path("rust/cpu-kernel/Cargo.toml"),
     Path("rust/cpu-kernel/src/docking_fixed64_allocation.rs"),
     Path("rust/cpu-kernel/src/docking_fixed64_indexed_so3.rs"),
@@ -176,6 +221,13 @@ NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS = (
     Path("rust/betelgeuze-docking-search/src/surface.rs"),
     Path("rust/betelgeuze-docking-search/src/torsion_refinement.rs"),
     Path("rust/betelgeuze-docking-search/src/validity.rs"),
+    Path("rust/betelgeuze-docking-search/tests/fixed64_allocation.rs"),
+    Path("rust/betelgeuze-docking-search/tests/fixed64_geometric_admission.rs"),
+    Path("rust/betelgeuze-docking-search/tests/fixed64_placement.rs"),
+    Path("rust/betelgeuze-docking-search/tests/fixed64_producer.rs"),
+    Path("rust/betelgeuze-docking-search/tests/fixed64_scorer_v1.rs"),
+    Path("rust/betelgeuze-docking-search/tests/search_contract.rs"),
+    Path("rust/betelgeuze-docking-search/tests/short_range.rs"),
     Path("rust/reference-dynamics/Cargo.toml"),
     Path("rust/reference-dynamics/src/checkpoint.rs"),
     Path("rust/reference-dynamics/src/constraints.rs"),
@@ -183,11 +235,15 @@ NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS = (
     Path("rust/reference-dynamics/src/lib.rs"),
     Path("rust/reference-dynamics/src/model.rs"),
     Path("rust/reference-dynamics/src/rng.rs"),
+    Path("rust/reference-dynamics/tests/frozen_fixtures.rs"),
+    Path("rust/reference-dynamics/tests/properties.rs"),
     Path("rust/reference-physics/Cargo.toml"),
     Path("rust/reference-physics/src/geometry.rs"),
     Path("rust/reference-physics/src/lib.rs"),
     Path("rust/reference-physics/src/model.rs"),
     Path("rust/reference-physics/src/oracle.rs"),
+    Path("rust/reference-physics/tests/frozen_fixtures.rs"),
+    Path("rust/reference-physics/tests/properties.rs"),
 )
 
 
@@ -463,6 +519,159 @@ def discover_rust_package_build_script_paths(root: Path) -> tuple[str, ...]:
     observed_paths = tuple(observed)
     require_rust_package_build_script_paths(observed_paths)
     return observed_paths
+
+
+def require_rust_cargo_target_source_paths(
+    observed_paths: tuple[str, ...],
+) -> None:
+    expected_paths = tuple(
+        sorted(
+            path.as_posix()
+            for path in RUST_BOUND_CARGO_TARGET_SOURCE_RELATIVE_PATHS
+        )
+    )
+    if (
+        len(observed_paths) != len(set(observed_paths))
+        or tuple(sorted(observed_paths)) != expected_paths
+    ):
+        _fail("Cargo target source set contains an unbound or missing input")
+    bound_sources = {
+        path.as_posix()
+        for path in NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS
+    }
+    if any(path not in bound_sources for path in observed_paths):
+        _fail("Cargo target source is absent from the transitive manifest")
+
+
+def discover_rust_cargo_target_source_paths(root: Path) -> tuple[str, ...]:
+    rust_root = _require_directory_chain(root, Path("rust"), "Cargo workspace root")
+    manifest_paths = (
+        Path("rust/Cargo.toml"),
+        *(path / "Cargo.toml" for path in RUST_PACKAGE_ROOT_RELATIVE_PATHS),
+    )
+    for relative in (*manifest_paths, Path("rust/Cargo.lock")):
+        read_bound_source_bytes(root, relative)
+    environment = {
+        key: value
+        for key, value in os.environ.items()
+        if not key.startswith("CARGO_")
+        and key
+        not in {
+            "RUSTC",
+            "RUSTDOC",
+            "RUSTFLAGS",
+            "RUSTDOCFLAGS",
+            "RUSTUP_TOOLCHAIN",
+        }
+    }
+    try:
+        with tempfile.TemporaryDirectory(
+            prefix="betelgeuze-cargo-metadata-"
+        ) as metadata_sandbox:
+            cargo_home = Path(metadata_sandbox) / "cargo-home"
+            cargo_home.mkdir(mode=0o700)
+            environment["CARGO_HOME"] = str(cargo_home)
+            environment["CARGO_NET_OFFLINE"] = "true"
+            process = subprocess.run(
+                (
+                    "cargo",
+                    "metadata",
+                    "--manifest-path",
+                    str(rust_root / "Cargo.toml"),
+                    "--format-version=1",
+                    "--no-deps",
+                    "--locked",
+                    "--offline",
+                ),
+                cwd=metadata_sandbox,
+                env=environment,
+                check=False,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=30,
+            )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise NativeFixed64CPUProfileV4Error(
+            "Cargo target metadata could not be derived fail-closed"
+        ) from exc
+    if process.returncode != 0:
+        _fail("Cargo target metadata derivation failed")
+    try:
+        metadata = json.loads(
+            process.stdout.decode("utf-8"),
+            object_pairs_hook=_duplicate_rejector,
+            parse_constant=_reject_constant,
+        )
+    except (UnicodeError, json.JSONDecodeError) as exc:
+        raise NativeFixed64CPUProfileV4Error(
+            "Cargo target metadata is not canonical JSON"
+        ) from exc
+    if type(metadata) is not dict or type(metadata.get("packages")) is not list:
+        _fail("Cargo target metadata schema is invalid")
+    if metadata.get("workspace_root") != str(rust_root):
+        _fail("Cargo target metadata workspace root is cross-wired")
+    expected_manifests = {
+        str(root / relative) for relative in manifest_paths[1:]
+    }
+    observed_manifests: set[str] = set()
+    observed_paths: list[str] = []
+    probe_bindings: list[tuple[str, tuple[str, ...], str]] = []
+    activation_bindings: list[tuple[str, tuple[str, ...], str]] = []
+    for package in metadata["packages"]:
+        if type(package) is not dict or type(package.get("targets")) is not list:
+            _fail("Cargo package target metadata schema is invalid")
+        package_name = package.get("name")
+        manifest_path = package.get("manifest_path")
+        if type(package_name) is not str or type(manifest_path) is not str:
+            _fail("Cargo package identity metadata is invalid")
+        observed_manifests.add(manifest_path)
+        for target in package["targets"]:
+            if type(target) is not dict:
+                _fail("Cargo target metadata row is invalid")
+            target_name = target.get("name")
+            kinds = target.get("kind")
+            source_path = target.get("src_path")
+            if (
+                type(target_name) is not str
+                or type(kinds) is not list
+                or any(type(kind) is not str for kind in kinds)
+                or type(source_path) is not str
+            ):
+                _fail("Cargo target identity metadata is invalid")
+            source = Path(source_path)
+            if not source.is_absolute():
+                _fail("Cargo target source path is not absolute")
+            try:
+                relative = source.relative_to(root)
+            except ValueError:
+                _fail("Cargo target source escapes the repository")
+            relative_path = relative.as_posix()
+            read_bound_source_bytes(root, relative)
+            observed_paths.append(relative_path)
+            binding = (package_name, tuple(kinds), relative_path)
+            if target_name == "betelgeuze-fixed64-cpu-probe-v4":
+                probe_bindings.append(binding)
+            if target_name == "fixed64_cpu_probe_activation":
+                activation_bindings.append(binding)
+    if observed_manifests != expected_manifests:
+        _fail("Cargo workspace package manifest set is cross-wired")
+    expected_probe = (
+        "betelgeuze-runtime",
+        ("bin",),
+        PROBE_SOURCE_RELATIVE_PATH.as_posix(),
+    )
+    if probe_bindings != [expected_probe]:
+        _fail("qualification probe Cargo target binding changed")
+    expected_activation = (
+        "betelgeuze-runtime",
+        ("test",),
+        ACTIVATION_TEST_RELATIVE_PATH.as_posix(),
+    )
+    if activation_bindings != [expected_activation]:
+        _fail("release activation-test Cargo target binding changed")
+    observed = tuple(sorted(observed_paths))
+    require_rust_cargo_target_source_paths(observed)
+    return observed
 
 
 def _require_repository_paths_absent(
@@ -790,12 +999,17 @@ def require_compiled_profile_binding(
     native_vendor_tree_paths: tuple[str, ...],
     rust_compiled_source_tree_paths: tuple[str, ...],
     rust_package_build_script_paths: tuple[str, ...],
+    rust_cargo_target_source_paths: tuple[str, ...] = tuple(
+        path.as_posix()
+        for path in RUST_BOUND_CARGO_TARGET_SOURCE_RELATIVE_PATHS
+    ),
 ) -> None:
     """Bind the native gate constants and entry point to the frozen JSON."""
 
     require_native_vendor_tree_paths(native_vendor_tree_paths)
     require_rust_compiled_source_tree_paths(rust_compiled_source_tree_paths)
     require_rust_package_build_script_paths(rust_package_build_script_paths)
+    require_rust_cargo_target_source_paths(rust_cargo_target_source_paths)
     try:
         source = qualification_source_raw.decode("ascii")
         probe = probe_source_raw.decode("ascii")
@@ -1131,6 +1345,7 @@ def main() -> int:
     vendor_tree_paths = discover_native_vendor_tree_paths(root)
     rust_source_tree_paths = discover_rust_compiled_source_tree_paths(root)
     rust_build_script_paths = discover_rust_package_build_script_paths(root)
+    rust_cargo_target_paths = discover_rust_cargo_target_source_paths(root)
     transitive_sources = read_bound_transitive_sources(root)
     require_compiled_profile_binding(
         profile,
@@ -1142,6 +1357,7 @@ def main() -> int:
         vendor_tree_paths,
         rust_source_tree_paths,
         rust_build_script_paths,
+        rust_cargo_target_paths,
     )
     print(
         json.dumps(

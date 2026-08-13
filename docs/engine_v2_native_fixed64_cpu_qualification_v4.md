@@ -41,7 +41,7 @@ lane allocation, and refinement parameter:
   `9c93753ae23363c20d2f957fb521eedd1fe4f92fc39282c03c53d1f2674610c2`.
 
 The frozen JSON also binds the exact qualification, native probe, Rust pipeline,
-and C++ pipeline implementation source SHA-256 identities. A 168-file canonical
+and C++ pipeline implementation source SHA-256 identities. A 185-file canonical
 and vendored transitive-source manifest additionally covers the native ABI and context,
 proposal/admission/refinement/scorer/validity/ranking/clustering kernels, the
 Rust CPU providers, the docking-search crate, Cargo manifests and lockfile, and
@@ -50,8 +50,11 @@ construction, any measured kernel, scoring/refinement/projection/receipt
 behavior, build routing, dependency identity, canonical/vendor equality, or
 guard-to-measurement control flow therefore fails static verification. Every
 file exposed in the compiled native vendor tree and in all six local Rust
-dependency source trees is bound; extra, missing, and symlinked source inputs or
-parent directories fail closed. Every transitive compiler input is read through
+dependency source/test trees is bound; extra, missing, and symlinked source
+inputs or parent directories fail closed. Offline `cargo metadata` must resolve
+the exact frozen 26-target source set, including the qualification probe and
+release activation test at their canonical paths; an explicit target outside
+the inventoried trees fails closed. Every transitive compiler input is read through
 component-wise no-follow directory descriptors and a stable regular-file
 identity check. The exact default package-root build-script set is also frozen,
 so adding an implicit Cargo `build.rs` fails closed. Repository and workspace

@@ -14,12 +14,14 @@ from tools.verify_engine_v2_native_fixed64_cpu_profile_v4 import (
     NATIVE_VENDOR_COPY_SOURCE_RELATIVE_PATHS,
     REPOSITORY_CARGO_CONFIG_RELATIVE_PATHS,
     REPOSITORY_RUST_TOOLCHAIN_OVERRIDE_RELATIVE_PATHS,
+    RUST_BOUND_CARGO_TARGET_SOURCE_RELATIVE_PATHS,
     RUST_BOUND_BUILD_SCRIPT_RELATIVE_PATHS,
     RUST_COMPILED_SOURCE_TREE_ROOT_RELATIVE_PATHS,
     RUST_PACKAGE_ROOT_RELATIVE_PATHS,
     NativeFixed64CPUProfileV4Error,
     _transitive_source_manifest_sha256,
     discover_native_vendor_tree_paths,
+    discover_rust_cargo_target_source_paths,
     discover_rust_compiled_source_tree_paths,
     discover_rust_package_build_script_paths,
     read_bound_source_bytes,
@@ -27,6 +29,7 @@ from tools.verify_engine_v2_native_fixed64_cpu_profile_v4 import (
     require_native_vendor_tree_paths,
     require_repository_cargo_configuration_absent,
     require_repository_rust_toolchain_override_absent,
+    require_rust_cargo_target_source_paths,
     require_rust_package_build_script_paths,
     require_rust_compiled_source_tree_paths,
     require_profile_document,
@@ -64,6 +67,12 @@ _RUST_SOURCE_TREE_PATHS = tuple(
 _RUST_BUILD_SCRIPT_PATHS = tuple(
     path.as_posix() for path in RUST_BOUND_BUILD_SCRIPT_RELATIVE_PATHS
 )
+_RUST_CARGO_TARGET_SOURCE_PATHS = tuple(
+    sorted(
+        path.as_posix()
+        for path in RUST_BOUND_CARGO_TARGET_SOURCE_RELATIVE_PATHS
+    )
+)
 
 
 def _canonical(value: object) -> bytes:
@@ -84,7 +93,7 @@ def test_canonical_native_fixed64_cpu_profile_v4_is_frozen() -> None:
     profile = require_profile_document(raw)
 
     assert hashlib.sha256(raw).hexdigest() == (
-        "4b2c45787fb0dfb995e5fce14146e25f0df4f3523208774e3c9eef15be8b2c08"
+        "af7fba661a6f7dbb1ad8b01e37e34121e286115c4a67531a411134fd37cdbf7a"
     )
     assert profile["profile_id"] == "engine_v2_native_fixed64_cpu_synthetic_v4"
     assert all(value is False for value in profile["authority"].values())
@@ -560,6 +569,28 @@ def test_profile_v4_discovers_exact_rust_source_tree() -> None:
     )
 
 
+def test_profile_v4_discovers_exact_cargo_target_sources() -> None:
+    assert (
+        discover_rust_cargo_target_source_paths(_ROOT)
+        == _RUST_CARGO_TARGET_SOURCE_PATHS
+    )
+
+
+def test_profile_v4_rejects_package_root_probe_target() -> None:
+    changed = tuple(
+        "rust/betelgeuze-runtime/probe.rs"
+        if path
+        == "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v4.rs"
+        else path
+        for path in _RUST_CARGO_TARGET_SOURCE_PATHS
+    )
+    with pytest.raises(
+        NativeFixed64CPUProfileV4Error,
+        match="Cargo target source set contains an unbound",
+    ):
+        require_rust_cargo_target_source_paths(changed)
+
+
 def test_profile_v4_rejects_symlinked_rust_source_subdirectory(
     tmp_path: Path,
 ) -> None:
@@ -768,7 +799,7 @@ def test_profile_v4_cli_reports_non_consuming_authority_false() -> None:
         "fixture_count": 2,
         "profile_id": "engine_v2_native_fixed64_cpu_synthetic_v4",
         "profile_sha256": (
-            "4b2c45787fb0dfb995e5fce14146e25f0df4f3523208774e3c9eef15be8b2c08"
+                "af7fba661a6f7dbb1ad8b01e37e34121e286115c4a67531a411134fd37cdbf7a"
         ),
         "reservation_created": False,
         "status": "verified",
