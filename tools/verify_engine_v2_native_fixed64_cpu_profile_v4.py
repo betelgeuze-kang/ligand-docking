@@ -624,6 +624,42 @@ _RUST_STATIC_INCLUDE_MACRO = re.compile(
 _RUST_PATH_ATTRIBUTE = re.compile(r"#\s*\[[^\]]*\bpath\s*=", re.DOTALL)
 
 
+def _rust_character_literal_end(source: str, start: int) -> int | None:
+    if start >= len(source) or source[start] != "'":
+        return None
+    content = start + 1
+    if content >= len(source) or source[content] in {"'", "\n", "\r", "\t"}:
+        return None
+    if source[content] != "\\":
+        closing = content + 1
+    else:
+        escape = content + 1
+        if escape >= len(source):
+            return None
+        if source[escape] in {"n", "r", "t", "\\", "0", "'", '"'}:
+            closing = escape + 1
+        elif source[escape] == "x":
+            digits = source[escape + 1 : escape + 3]
+            if re.fullmatch(r"[0-9A-Fa-f]{2}", digits) is None:
+                return None
+            closing = escape + 3
+        elif source.startswith("u{", escape):
+            brace = source.find("}", escape + 2)
+            if brace < 0:
+                return None
+            digits = source[escape + 2 : brace].replace("_", "")
+            if not 1 <= len(digits) <= 6 or re.fullmatch(
+                r"[0-9A-Fa-f]+", digits
+            ) is None:
+                return None
+            closing = brace + 1
+        else:
+            return None
+    if closing >= len(source) or source[closing] != "'":
+        return None
+    return closing + 1
+
+
 def _rust_source_lexical_views(source: str) -> tuple[str, str]:
     normalized = list(source)
     code_only = list(source)
@@ -645,6 +681,12 @@ def _rust_source_lexical_views(source: str) -> tuple[str, str]:
             index = end + len(terminator)
             blank(code_only, start, index)
             continue
+        if source[index] == "'":
+            end = _rust_character_literal_end(source, index)
+            if end is not None:
+                blank(code_only, index, end)
+                index = end
+                continue
         if source[index] == '"':
             start = index
             index += 1

@@ -898,6 +898,39 @@ def test_profile_v4_rejects_comment_separated_rust_include_input(
         discover_rust_compiled_source_tree_paths(copied_root)
 
 
+@pytest.mark.parametrize(
+    ("character_type", "character_literal"),
+    (("char", "'\"'"), ("u8", "b'\"'")),
+)
+def test_profile_v4_rejects_include_between_rust_character_literals(
+    tmp_path: Path,
+    character_type: str,
+    character_literal: str,
+) -> None:
+    copied_root = tmp_path / "copied-repository"
+    shutil.copytree(
+        _ROOT / "rust",
+        copied_root / "rust",
+        ignore=shutil.ignore_patterns("target"),
+    )
+    runtime_root = copied_root / "rust/betelgeuze-runtime"
+    (runtime_root / "unbound.rs").write_text("pub const VALUE: u8 = 1;\n")
+    crate_root = runtime_root / "src/lib.rs"
+    crate_root.write_text(
+        f"const Q1: {character_type} = {character_literal};\n"
+        'const _: &str = include_str!("../unbound.rs");\n'
+        f"const Q2: {character_type} = {character_literal};\n"
+        + crate_root.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        NativeFixed64CPUProfileV4Error,
+        match="embedded compiler input binding set changed",
+    ):
+        discover_rust_compiled_source_tree_paths(copied_root)
+
+
 def test_profile_v4_ignores_include_tokens_inside_comments_and_raw_strings(
     tmp_path: Path,
 ) -> None:
