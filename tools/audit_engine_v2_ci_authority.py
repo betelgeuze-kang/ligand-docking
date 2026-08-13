@@ -207,7 +207,10 @@ NATIVE_FIXED64_CPU_V4_FALSE_RESTRICTION_KEYS = (
 NATIVE_FIXED64_CPU_V4_FORBIDDEN_WORKFLOW_TOKENS = (
     "betelgeuze-fixed64-cpu-probe-v4",
 )
-NATIVE_FIXED64_CPU_V4_CARGO_RUN_PATTERN = r"\bcargo\b[^\n]*?\brun\b[^\n]*"
+NATIVE_FIXED64_CPU_V4_CARGO_RUN_PATTERN = (
+    r"\bcargo\b[^\n]*?\b(?:run|r)\b[^\n]*"
+)
+NATIVE_FIXED64_CPU_V4_CARGO_RUN_SUBCOMMANDS = ("run", "r")
 NATIVE_FIXED64_CPU_V4_EXPLICIT_BIN_PATTERN = r"(?:^|\s)--bin(?:=|\s+)"
 NATIVE_FIXED64_CPU_V4_FOLDED_RUN_PATTERN = re.compile(
     r"^(?P<indent>[ ]*)(?:-[ ]+)?run:[ ]*>[+-]?[1-9]?[+-]?[ ]*(?:#.*)?$"
@@ -418,7 +421,10 @@ def _workflow_invokes_native_fixed64_cpu_v4_live_probe(text: str) -> bool:
                 ):
                     break
                 invocation.append(candidate)
-            if "run" in invocation and re.search(
+            if any(
+                command in invocation
+                for command in NATIVE_FIXED64_CPU_V4_CARGO_RUN_SUBCOMMANDS
+            ) and re.search(
                 NATIVE_FIXED64_CPU_V4_EXPLICIT_BIN_PATTERN,
                 " ".join(invocation),
             ) is None:

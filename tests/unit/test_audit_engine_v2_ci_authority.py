@@ -28,6 +28,7 @@ from tools.audit_engine_v2_ci_authority import (
     NATIVE_FIXED64_CPU_V4_FALSE_AUTHORITY_KEYS,
     NATIVE_FIXED64_CPU_V4_FALSE_RESTRICTION_KEYS,
     NATIVE_FIXED64_CPU_V4_CARGO_RUN_PATTERN,
+    NATIVE_FIXED64_CPU_V4_CARGO_RUN_SUBCOMMANDS,
     NATIVE_FIXED64_CPU_V4_EXPLICIT_BIN_PATTERN,
     NATIVE_FIXED64_CPU_V4_FOLDED_RUN_PATTERN,
     NATIVE_FIXED64_CPU_V4_MAX_WORKFLOW_UTF8_BYTES,
@@ -767,6 +768,9 @@ def test_native_fixed64_cpu_v4_missing_restriction_fails_ci_audit(
         "cargo run --package=betelgeuze-runtime",
         "cargo --color always run --manifest-path rust/betelgeuze-runtime/Cargo.toml",
         "cargo +stable --locked run -p betelgeuze-runtime",
+        "cargo r -p betelgeuze-runtime",
+        "cargo --color always r --manifest-path rust/betelgeuze-runtime/Cargo.toml",
+        "cargo +stable --locked r -p betelgeuze-runtime",
         (
             "cargo run -p betelgeuze-runtime && "
             "cargo run --bin unrelated-explicit-tool"
@@ -853,7 +857,7 @@ def test_native_fixed64_cpu_v4_multiple_explicit_unrelated_binaries_are_allowed(
     unrelated.write_text(
         "jobs:\n  explicit:\n    steps:\n"
         "      - run: cargo run --bin first-unrelated && "
-        "cargo run --bin second-unrelated\n",
+        "cargo r --bin second-unrelated\n",
         encoding="utf-8",
     )
 
@@ -1044,8 +1048,9 @@ def test_native_fixed64_cpu_v4_inventory_constants_are_exact() -> None:
         "betelgeuze-fixed64-cpu-probe-v4",
     )
     assert NATIVE_FIXED64_CPU_V4_CARGO_RUN_PATTERN == (
-        r"\bcargo\b[^\n]*?\brun\b[^\n]*"
+        r"\bcargo\b[^\n]*?\b(?:run|r)\b[^\n]*"
     )
+    assert NATIVE_FIXED64_CPU_V4_CARGO_RUN_SUBCOMMANDS == ("run", "r")
     assert NATIVE_FIXED64_CPU_V4_EXPLICIT_BIN_PATTERN == r"(?:^|\s)--bin(?:=|\s+)"
     assert NATIVE_FIXED64_CPU_V4_FOLDED_RUN_PATTERN.fullmatch("      - run: >2-")
     assert NATIVE_FIXED64_CPU_V4_MAX_WORKFLOW_UTF8_BYTES == 1_048_576
