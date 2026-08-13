@@ -1121,12 +1121,38 @@ def test_native_fixed64_cpu_v7_requires_static_ci_and_false_authority(
     payload = build_inventory(tmp_path)
     assert payload["native_fixed64_cpu_v7_contract_in_authoritative_ci"] is True
     assert payload["native_fixed64_cpu_v7_authority_fail_closed"] is True
-    assert payload["native_fixed64_cpu_v7_execution_consumed"] is False
+    assert payload["native_fixed64_cpu_v7_execution_consumed"] is True
+    assert payload["native_fixed64_cpu_v7_execution_receipt_verified"] is True
     assert payload["native_fixed64_cpu_v7_qualification_authority_false"] is True
     assert (
         payload["native_fixed64_cpu_v7_live_qualification_absent_from_github_actions"]
         is True
     )
+
+
+def test_native_fixed64_cpu_v7_execution_receipt_mutation_fails_ci_audit(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_native_fixed64_cpu_v7_contract(tmp_path)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_native_fixed64_cpu_v7_ci_tokens()),
+        encoding="utf-8",
+    )
+    receipt = tmp_path / (
+        "config/engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt.json"
+    )
+    receipt.write_text(
+        receipt.read_text(encoding="ascii").replace(
+            '"execution_consumed": true', '"execution_consumed": false'
+        ),
+        encoding="ascii",
+    )
+    payload = build_inventory(tmp_path)
+    assert payload["native_fixed64_cpu_v7_execution_consumed"] is False
+    assert payload["native_fixed64_cpu_v7_execution_receipt_verified"] is False
+    assert payload["native_fixed64_cpu_v7_authority_fail_closed"] is False
+    assert payload["native_fixed64_cpu_v7_contract_in_authoritative_ci"] is False
 
 
 def test_native_fixed64_cpu_v7_live_invocation_is_forbidden_in_any_workflow(
