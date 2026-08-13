@@ -28,9 +28,10 @@ use crate::fixed64_pipeline::{
     vec3_value,
 };
 
-pub(crate) const INPUT_SCHEMA_ID: &str = "betelgeuze.engine_v2_native_fixed64_complete_input/1.0.0";
+const LEGACY_INPUT_SCHEMA_ID: &str = "betelgeuze.engine_v2_native_fixed64_complete_input/1.0.0";
+pub(crate) const INPUT_SCHEMA_ID: &str = "betelgeuze.engine_v2_native_fixed64_complete_input/2.0.0";
 pub(crate) const EVIDENCE_SCHEMA_ID: &str =
-    "betelgeuze.engine_v2_native_fixed64_complete_python_evidence/1.0.0";
+    "betelgeuze.engine_v2_native_fixed64_complete_python_evidence/2.0.0";
 
 const INPUT_KEYS: &[&str] = &[
     "schema_id",
@@ -84,6 +85,7 @@ const INPUT_KEYS: &[&str] = &[
     "torsion_max_steps",
     "baseline_torsion_angles_radians",
     "predeclared_refinement_policy_sha256",
+    "predeclared_post_refinement_admission_policy_sha256",
     "test_only",
 ];
 
@@ -206,16 +208,39 @@ pub(crate) fn register(module: &PyModule) -> PyResult<()> {
         native_fixed64_complete_pipeline_v1,
         module
     )?)?;
+    module.add_function(wrap_pyfunction!(
+        native_fixed64_complete_pipeline_v2,
+        module
+    )?)?;
     module.add("NATIVE_FIXED64_COMPLETE_INPUT_SCHEMA_ID", INPUT_SCHEMA_ID)?;
     module.add(
+        "NATIVE_FIXED64_COMPLETE_INPUT_SCHEMA_ID_V1",
+        LEGACY_INPUT_SCHEMA_ID,
+    )?;
+    module.add(
+        "NATIVE_FIXED64_COMPLETE_INPUT_SCHEMA_ID_V2",
+        INPUT_SCHEMA_ID,
+    )?;
+    module.add(
         "NATIVE_FIXED64_COMPLETE_EVIDENCE_SCHEMA_ID",
+        EVIDENCE_SCHEMA_ID,
+    )?;
+    module.add(
+        "NATIVE_FIXED64_COMPLETE_EVIDENCE_SCHEMA_ID_V2",
         EVIDENCE_SCHEMA_ID,
     )?;
     Ok(())
 }
 
 #[pyfunction]
-fn native_fixed64_complete_pipeline_v1(py: Python<'_>, input: &PyDict) -> PyResult<PyObject> {
+fn native_fixed64_complete_pipeline_v1(_py: Python<'_>, _input: &PyDict) -> PyResult<PyObject> {
+    Err(input_error(
+        "complete pipeline v1 is retired because it cannot bind post-refinement admission; use v2",
+    ))
+}
+
+#[pyfunction]
+fn native_fixed64_complete_pipeline_v2(py: Python<'_>, input: &PyDict) -> PyResult<PyObject> {
     require_exact_keys(input, INPUT_KEYS, "native fixed64 complete input")?;
     if dict_string(input, "schema_id")? != INPUT_SCHEMA_ID {
         return Err(input_error("complete input schema_id is unsupported"));
@@ -438,6 +463,8 @@ fn native_fixed64_complete_pipeline_v1(py: Python<'_>, input: &PyDict) -> PyResu
     let rmsd_threshold_angstrom = dict_f64(input, "rmsd_threshold_angstrom")?;
     let predeclared_refinement_policy_sha256 =
         dict_digest(input, "predeclared_refinement_policy_sha256")?;
+    let predeclared_post_refinement_admission_policy_sha256 =
+        dict_digest(input, "predeclared_post_refinement_admission_policy_sha256")?;
     let receipt = py
         .allow_threads(move || {
             let context = Context::new(options)?;
@@ -521,6 +548,7 @@ fn native_fixed64_complete_pipeline_v1(py: Python<'_>, input: &PyDict) -> PyResu
                 torsion_max_steps: &torsion_max_steps,
                 baseline_torsion_angles_radians: &baseline_torsion_angles,
                 predeclared_refinement_policy_sha256,
+                predeclared_post_refinement_admission_policy_sha256,
             };
             pipeline.run(run)
         })
@@ -903,6 +931,14 @@ fn receipt_graph_to_python(
             receipts.refinement_batch_receipt_sha256,
         ),
         (
+            "post_admission_policy_receipt_sha256",
+            receipts.post_admission_policy_receipt_sha256,
+        ),
+        (
+            "post_admission_batch_receipt_sha256",
+            receipts.post_admission_batch_receipt_sha256,
+        ),
+        (
             "scorer_batch_receipt_sha256",
             receipts.scorer_batch_receipt_sha256,
         ),
@@ -949,6 +985,8 @@ fn receipt_to_python(
     output.set_item("typed_failure_count", receipt.typed_failure_count)?;
     output.set_item("initial_admitted_count", receipt.initial_admitted_count)?;
     output.set_item("refined_count", receipt.refined_count)?;
+    output.set_item("post_admitted_count", receipt.post_admitted_count)?;
+    output.set_item("post_rejected_count", receipt.post_rejected_count)?;
     output.set_item("scored_count", receipt.scored_count)?;
     output.set_item("valid_count", receipt.valid_count)?;
     output.set_item("cluster_count", receipt.cluster_count)?;
@@ -973,6 +1011,10 @@ fn receipt_to_python(
         hex_digest(receipt.receipts.geometric_admission_batch_receipt_sha256),
     )?;
     output.set_item(
+        "post_refinement_admission_receipt_sha256",
+        hex_digest(receipt.receipts.post_admission_batch_receipt_sha256),
+    )?;
+    output.set_item(
         "scorer_receipt_sha256",
         hex_digest(receipt.receipts.scorer_batch_receipt_sha256),
     )?;
@@ -983,6 +1025,10 @@ fn receipt_to_python(
     output.set_item(
         "ranking_receipt_sha256",
         hex_digest(receipt.receipts.ranking_batch_receipt_sha256),
+    )?;
+    output.set_item(
+        "scientific_projection_sha256",
+        hex_digest(receipt.scientific_projection_sha256),
     )?;
     output.set_item(
         "receipt_graph",
@@ -1175,6 +1221,10 @@ fn candidate_to_python(
         "refinement",
         refinement_to_python(py, &receipt.refinement_rows[slot])?,
     )?;
+    row.set_item(
+        "post_refinement_geometric_admission",
+        geometric_to_python(py, &receipt.post_admission_rows[slot])?,
+    )?;
 
     let scoring = PyDict::new(py);
     scoring.set_item("status", scorer.status)?;
@@ -1332,6 +1382,10 @@ fn candidate_to_python(
         hex_digest(pipeline.refinement_evidence_sha256),
     )?;
     lineage.set_item(
+        "post_admission_row_receipt_sha256",
+        hex_digest(pipeline.post_admission_row_receipt_sha256),
+    )?;
+    lineage.set_item(
         "scorer_evidence_sha256",
         hex_digest(pipeline.scorer_evidence_sha256),
     )?;
@@ -1437,6 +1491,45 @@ fn candidate_to_python(
         ],
     )?;
     Ok(row.into())
+}
+
+fn geometric_to_python(
+    py: Python<'_>,
+    evidence: &betelgeuze_runtime::Fixed64GeometricEvidence,
+) -> PyResult<PyObject> {
+    let output = PyDict::new(py);
+    output.set_item("status", evidence.status)?;
+    output.set_item("failure_code", evidence.failure_code)?;
+    output.set_item("decision", evidence.decision)?;
+    output.set_item("rank_eligible", evidence.rank_eligible)?;
+    output.set_item("ligand_atom_count", evidence.ligand_atom_count)?;
+    output.set_item("receptor_atom_count", evidence.receptor_atom_count)?;
+    output.set_item("exact_pair_count", evidence.exact_pair_count)?;
+    output.set_item("penetration_pair_count", evidence.penetration_pair_count)?;
+    output.set_item(
+        "penetrating_atom_count",
+        evidence.unique_ligand_penetration_atom_count,
+    )?;
+    output.set_item(
+        "penetrating_heavy_atom_count",
+        evidence.unique_ligand_heavy_atom_penetration_count,
+    )?;
+    output.set_item(
+        "raw_minimum_distance_angstrom",
+        evidence.raw_minimum_distance_angstrom,
+    )?;
+    output.set_item(
+        "minimum_vdw_surface_gap_angstrom",
+        evidence.minimum_vdw_surface_gap_angstrom,
+    )?;
+    output.set_item("minimum_vdw_ratio", evidence.minimum_vdw_ratio)?;
+    output.set_item(
+        "sphere_overlap_proxy_angstrom3",
+        evidence.sphere_overlap_proxy_angstrom3,
+    )?;
+    output.set_item("pocket_escape_angstrom", evidence.pocket_escape_angstrom)?;
+    output.set_item("receipt_sha256", hex_digest(evidence.row_receipt_sha256))?;
+    Ok(output.into())
 }
 
 fn coordinate_rows(

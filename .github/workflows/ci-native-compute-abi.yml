@@ -14,7 +14,10 @@ on:
       - "rust-toolchain"
       - "rust-toolchain.toml"
       - "config/engine_v2_native_fixed64_cpu_profile_v4.json"
+      - "config/engine_v2_native_fixed64_cpu_profile_v4_archive.json"
+      - "config/engine_v2_native_fixed64_cpu_profile_v5.json"
       - "tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py"
+      - "tools/verify_engine_v2_native_fixed64_cpu_profile_v5.py"
       - ".github/workflows/ci-native-compute-abi.yml"
       - ".github/workflows/ci-native-hip-safe-trusted.yml"
   pull_request:
@@ -29,7 +32,10 @@ on:
       - "rust-toolchain"
       - "rust-toolchain.toml"
       - "config/engine_v2_native_fixed64_cpu_profile_v4.json"
+      - "config/engine_v2_native_fixed64_cpu_profile_v4_archive.json"
+      - "config/engine_v2_native_fixed64_cpu_profile_v5.json"
       - "tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py"
+      - "tools/verify_engine_v2_native_fixed64_cpu_profile_v5.py"
       - ".github/workflows/ci-native-compute-abi.yml"
       - ".github/workflows/ci-native-hip-safe-trusted.yml"
   workflow_dispatch:
@@ -67,7 +73,10 @@ jobs:
             rust-toolchain
             rust-toolchain.toml
             config/engine_v2_native_fixed64_cpu_profile_v4.json
+            config/engine_v2_native_fixed64_cpu_profile_v4_archive.json
+            config/engine_v2_native_fixed64_cpu_profile_v5.json
             tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py
+            tools/verify_engine_v2_native_fixed64_cpu_profile_v5.py
 
       - name: Report hosted toolchain
         run: |
@@ -76,8 +85,11 @@ jobs:
           rustc --version
           cargo --version
 
-      - name: Verify frozen native fixed64 CPU profile v4
+      - name: Verify archived native fixed64 CPU profile v4
         run: python3 tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py
+
+      - name: Verify frozen native fixed64 CPU profile v5
+        run: python3 tools/verify_engine_v2_native_fixed64_cpu_profile_v5.py
 
       - name: Build and test the C ABI
         run: |
@@ -129,7 +141,7 @@ jobs:
         run: >-
           cargo test --release --manifest-path rust/Cargo.toml
           -p betelgeuze-runtime
-          --test fixed64_cpu_probe_activation
+          --test fixed64_cpu_probe_v5_activation
           --locked --
           --exact native_fixed64_cpu_probe_is_blocked_before_measurement
 

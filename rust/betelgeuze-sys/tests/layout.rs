@@ -5,7 +5,7 @@ use betelgeuze_sys::*;
 #[test]
 fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(BG_ABI_VERSION_MAJOR, 1);
-    assert_eq!(BG_ABI_VERSION_MINOR, 20);
+    assert_eq!(BG_ABI_VERSION_MINOR, 21);
     assert_eq!(BG_ABI_VERSION, 1);
     assert_eq!(size_of::<bg_status>(), 4);
     assert_eq!(size_of::<bg_backend>(), 4);
@@ -697,6 +697,120 @@ fn fixed64_complete_pipeline_layouts_match_the_c_header() {
     assert_eq!(
         offset_of!(bg_docking_fixed64_pipeline_output_v1, reserved),
         584
+    );
+}
+
+#[cfg(target_pointer_width = "64")]
+#[test]
+fn fixed64_complete_pipeline_v2_layouts_match_the_c_header() {
+    assert_eq!(size_of::<bg_docking_fixed64_pipeline_input_v2>(), 192);
+    assert_eq!(align_of::<bg_docking_fixed64_pipeline_input_v2>(), 8);
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_pipeline_input_v2, producer_input),
+        8
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_pipeline_input_v2, candidate_mode),
+        24
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_fixed64_pipeline_input_v2,
+            predeclared_refinement_policy_sha256
+        ),
+        64
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_fixed64_pipeline_input_v2,
+            predeclared_post_refinement_admission_policy_sha256
+        ),
+        96
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_pipeline_input_v2, reserved),
+        128
+    );
+
+    assert_eq!(size_of::<bg_docking_fixed64_pipeline_row_v2>(), 408);
+    assert_eq!(align_of::<bg_docking_fixed64_pipeline_row_v2>(), 8);
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_pipeline_row_v2, post_admission_status),
+        32
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_pipeline_row_v2, scorer_status),
+        48
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_pipeline_row_v2, stable_rank),
+        64
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_fixed64_pipeline_row_v2,
+            producer_row_receipt_sha256
+        ),
+        88
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_fixed64_pipeline_row_v2,
+            post_admission_row_receipt_sha256
+        ),
+        184
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_pipeline_row_v2, row_receipt_sha256),
+        344
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_pipeline_row_v2, reserved),
+        376
+    );
+
+    assert_eq!(size_of::<bg_docking_fixed64_pipeline_output_v2>(), 728);
+    assert_eq!(align_of::<bg_docking_fixed64_pipeline_output_v2>(), 8);
+    assert_eq!(offset_of!(bg_docking_fixed64_pipeline_output_v2, rows), 32);
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_pipeline_output_v2, generated_count),
+        40
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_pipeline_output_v2, post_admitted_count),
+        64
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_fixed64_pipeline_output_v2,
+            allocation_receipt_sha256
+        ),
+        104
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_fixed64_pipeline_output_v2,
+            post_admission_policy_receipt_sha256
+        ),
+        424
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_fixed64_pipeline_output_v2,
+            pipeline_batch_receipt_sha256
+        ),
+        616
+    );
+    assert_eq!(
+        offset_of!(
+            bg_docking_fixed64_pipeline_output_v2,
+            result_dependent_input_consumed
+        ),
+        648
+    );
+    assert_eq!(
+        offset_of!(bg_docking_fixed64_pipeline_output_v2, reserved),
+        664
     );
 }
 

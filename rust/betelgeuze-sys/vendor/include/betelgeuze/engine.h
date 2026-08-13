@@ -56,7 +56,7 @@ extern "C" {
 #endif
 
 #define BG_ABI_VERSION_MAJOR UINT32_C(1)
-#define BG_ABI_VERSION_MINOR UINT32_C(20)
+#define BG_ABI_VERSION_MINOR UINT32_C(21)
 #define BG_ABI_VERSION UINT32_C(1)
 
 #define BG_CANONICAL_LENGTH_UNIT "angstrom"
@@ -486,6 +486,8 @@ typedef struct bg_docking_fixed64_refinement_pipeline_v1
     bg_docking_fixed64_refinement_pipeline_v1;
 typedef struct bg_docking_fixed64_pipeline_v1
     bg_docking_fixed64_pipeline_v1;
+typedef struct bg_docking_fixed64_pipeline_v2
+    bg_docking_fixed64_pipeline_v2;
 typedef struct bg_docking_rigid_refinement bg_docking_rigid_refinement;
 typedef struct bg_docking_torsion_v7 bg_docking_torsion_v7;
 
@@ -1529,6 +1531,123 @@ typedef struct bg_docking_fixed64_pipeline_output_v1 {
 } bg_docking_fixed64_pipeline_output_v1;
 
 /*
+ * ABI 1.21 canonical complete-pipeline input. The initial producer admission
+ * and the post-refinement admission use the same persistent geometric context.
+ * Both policy identities are non-zero, predeclared inputs and are bound into
+ * distinct receipts. No score, validity, rank, result, or execution authority
+ * is accepted from the caller.
+ */
+typedef struct bg_docking_fixed64_pipeline_input_v2 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    const bg_docking_fixed64_producer_input_v1 *producer_input;
+    double rmsd_threshold_angstrom;
+    const bg_docking_rigid_refinement_candidate_mode *candidate_mode;
+    const uint64_t *rigid_max_steps;
+    const uint8_t *proposal_is_torsion_eligible;
+    const uint64_t *torsion_max_steps;
+    const double *baseline_torsion_angles_radians;
+    uint8_t predeclared_refinement_policy_sha256[32];
+    uint8_t predeclared_post_refinement_admission_policy_sha256[32];
+    uint64_t reserved[8];
+} bg_docking_fixed64_pipeline_input_v2;
+
+/* One failure-complete v2 evidence row. The complete post-refinement metric
+ * record remains available in the caller-owned geometric-admission output;
+ * this row binds its typed status, decision, rank eligibility, and receipt
+ * into the final scorer/validity/ranking receipt graph. */
+typedef struct bg_docking_fixed64_pipeline_row_v2 {
+    uint32_t slot_index;
+    bg_docking_fixed64_producer_row_status producer_status;
+    bg_docking_fixed64_producer_failure producer_failure_code;
+    bg_docking_geometric_admission_decision initial_admission_decision;
+    bg_docking_rigid_refinement_candidate_mode requested_refinement_mode;
+    bg_docking_rigid_refinement_candidate_mode effective_refinement_mode;
+    bg_docking_fixed64_refinement_row_status refinement_status;
+    bg_docking_fixed64_refinement_failure_stage refinement_failure_stage;
+    bg_docking_geometric_admission_row_status post_admission_status;
+    bg_docking_geometric_admission_failure post_admission_failure_code;
+    bg_docking_geometric_admission_decision post_admission_decision;
+    uint8_t post_admission_rank_eligible;
+    uint8_t reserved0[3];
+    bg_docking_scorer_v1_row_status scorer_status;
+    bg_docking_scorer_v1_failure scorer_failure_code;
+    bg_docking_pose_validity_row_status validity_status;
+    bg_docking_pose_validity_failure validity_failure_code;
+    uint32_t stable_rank;
+    uint32_t stable_valid_rank;
+    bg_docking_rmsd_cluster_row_status cluster_status;
+    uint32_t cluster_id;
+    uint32_t cluster_rank;
+    uint32_t top_k_rank;
+    uint8_t producer_row_receipt_sha256[32];
+    uint8_t final_coordinate_sha256[32];
+    uint8_t refinement_evidence_sha256[32];
+    uint8_t post_admission_row_receipt_sha256[32];
+    uint8_t scorer_evidence_sha256[32];
+    uint8_t validity_evidence_sha256[32];
+    uint8_t ranking_evidence_sha256[32];
+    uint8_t cluster_evidence_sha256[32];
+    uint8_t row_receipt_sha256[32];
+    uint64_t reserved[4];
+} bg_docking_fixed64_pipeline_row_v2;
+
+/*
+ * Transactional ABI 1.21 summary. Every post-refinement coordinate-ready row
+ * is evaluated by the same full-Cartesian admission provider before ScorerV1.
+ * Rejected and upstream-failed rows remain in the exact 64-row denominator and
+ * reach ScorerV1 only as typed inactive rows. The caller-owned post-admission
+ * output carries all raw distances, surface gaps, penetration counts, pair
+ * counts, and the canonical admission receipt.
+ */
+typedef struct bg_docking_fixed64_pipeline_output_v2 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    uint64_t row_capacity;
+    uint64_t row_count;
+    bg_unit_system unit_system;
+    bg_backend backend;
+    bg_docking_fixed64_pipeline_row_v2 *rows;
+    uint64_t generated_count;
+    uint64_t initial_admitted_count;
+    uint64_t refined_count;
+    uint64_t post_admitted_count;
+    uint64_t post_rejected_count;
+    uint64_t scored_count;
+    uint64_t valid_count;
+    uint64_t cluster_count;
+    uint8_t allocation_receipt_sha256[32];
+    uint8_t source_bundle_receipt_sha256[32];
+    uint8_t admission_context_receipt_sha256[32];
+    uint8_t refinement_context_receipt_sha256[32];
+    uint8_t scorer_context_receipt_sha256[32];
+    uint8_t validity_context_receipt_sha256[32];
+    uint8_t component_binding_receipt_sha256[32];
+    uint8_t producer_batch_receipt_sha256[32];
+    uint8_t refinement_policy_receipt_sha256[32];
+    uint8_t refinement_batch_receipt_sha256[32];
+    uint8_t post_admission_policy_receipt_sha256[32];
+    uint8_t post_admission_batch_receipt_sha256[32];
+    uint8_t scorer_batch_receipt_sha256[32];
+    uint8_t validity_batch_receipt_sha256[32];
+    uint8_t ranking_batch_receipt_sha256[32];
+    uint8_t cluster_batch_receipt_sha256[32];
+    uint8_t pipeline_batch_receipt_sha256[32];
+    uint8_t result_dependent_input_consumed;
+    uint8_t fallback_allowed;
+    uint8_t denominator_preserved;
+    uint8_t molecular_execution_authorized;
+    uint8_t reservation_authorized;
+    uint8_t benchmark_execution_authorized;
+    uint8_t existing_rank_auto_change_authorized;
+    uint8_t customer_pose_emission_authorized;
+    uint8_t production_claim_authorized;
+    uint8_t scientific_claim_authorized;
+    uint8_t reserved1[6];
+    uint64_t reserved[8];
+} bg_docking_fixed64_pipeline_output_v2;
+
+/*
  * Persistent Engine V2 ScorerV1 context input.  All channels and the four
  * identity digests are deep-copied by bg_docking_scorer_v1_create.  The
  * ligand reference geometry fixes internal-vdW and rotor strain baselines.
@@ -2412,6 +2531,14 @@ BG_API bg_status BG_CALL bg_docking_fixed64_pipeline_output_v1_init(
     bg_docking_fixed64_pipeline_output_v1 *output,
     size_t caller_struct_size,
     uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_fixed64_pipeline_input_v2_init(
+    bg_docking_fixed64_pipeline_input_v2 *input,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_fixed64_pipeline_output_v2_init(
+    bg_docking_fixed64_pipeline_output_v2 *output,
+    size_t caller_struct_size,
+    uint32_t caller_abi_version) BG_NOEXCEPT;
 BG_API bg_status BG_CALL bg_docking_geometric_admission_context_soa_v1_init(
     bg_docking_geometric_admission_context_soa_v1 *descriptor,
     size_t caller_struct_size,
@@ -2603,6 +2730,16 @@ BG_API bg_status BG_CALL bg_docking_fixed64_refinement_output_v1_init(
     bg_docking_fixed64_pipeline_output_v1_init( \
         (output), \
         sizeof(bg_docking_fixed64_pipeline_output_v1), \
+        BG_ABI_VERSION)
+#  define bg_docking_fixed64_pipeline_input_v2_init(input) \
+    bg_docking_fixed64_pipeline_input_v2_init( \
+        (input), \
+        sizeof(bg_docking_fixed64_pipeline_input_v2), \
+        BG_ABI_VERSION)
+#  define bg_docking_fixed64_pipeline_output_v2_init(output) \
+    bg_docking_fixed64_pipeline_output_v2_init( \
+        (output), \
+        sizeof(bg_docking_fixed64_pipeline_output_v2), \
         BG_ABI_VERSION)
 #  define bg_docking_geometric_admission_context_soa_v1_init(descriptor) \
     bg_docking_geometric_admission_context_soa_v1_init( \
@@ -3022,6 +3159,40 @@ BG_API bg_status BG_CALL bg_docking_fixed64_pipeline_v1_run(
     bg_docking_rmsd_cluster_output_v1 *cluster_output,
     bg_docking_fixed64_refinement_output_v1 *refinement_output,
     bg_docking_fixed64_pipeline_output_v1 *pipeline_output) BG_NOEXCEPT;
+
+/* ABI 1.21 post-refinement admission composition. The same persistent
+ * admission context is reused before and after refinement. The post gate runs
+ * before any ScorerV1 work; rejected rows are passed to downstream only as
+ * typed inactive states and therefore cannot occupy primary or valid ranks. */
+BG_API bg_status BG_CALL bg_docking_fixed64_pipeline_v2_create(
+    const bg_context *context,
+    const bg_docking_geometric_admission_context_soa_v1 *admission_descriptor,
+    const bg_docking_rigid_refinement_context_soa_v1 *rigid_descriptor,
+    const bg_docking_torsion_v7_context_soa_v1 *torsion_descriptor,
+    const bg_docking_scorer_v1_context_soa_v1 *scorer_descriptor,
+    const bg_docking_pose_validity_context_soa_v1 *validity_descriptor,
+    bg_docking_fixed64_pipeline_v2 **out_pipeline) BG_NOEXCEPT;
+BG_API void BG_CALL bg_docking_fixed64_pipeline_v2_destroy(
+    bg_docking_fixed64_pipeline_v2 *pipeline) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_fixed64_pipeline_v2_get_backend(
+    const bg_docking_fixed64_pipeline_v2 *pipeline,
+    bg_backend *backend) BG_NOEXCEPT;
+BG_API const char *BG_CALL bg_docking_fixed64_pipeline_v2_profile_id(
+    void) BG_NOEXCEPT;
+BG_API bg_status BG_CALL bg_docking_fixed64_pipeline_v2_run(
+    const bg_context *context,
+    const bg_docking_fixed64_pipeline_v2 *pipeline,
+    const bg_docking_fixed64_pipeline_input_v2 *input,
+    bg_docking_fixed64_producer_output_v1 *producer_output,
+    bg_docking_rigid_refinement_output_v1 *rigid_output,
+    bg_docking_torsion_v7_output_v1 *torsion_output,
+    bg_docking_fixed64_refinement_output_v1 *refinement_output,
+    bg_docking_geometric_admission_output_v1 *post_admission_output,
+    bg_docking_scorer_v1_output_v1 *scorer_output,
+    bg_docking_pose_validity_output_v1 *validity_output,
+    bg_docking_stable_top_k_output_v1 *ranking_output,
+    bg_docking_rmsd_cluster_output_v1 *cluster_output,
+    bg_docking_fixed64_pipeline_output_v2 *pipeline_output) BG_NOEXCEPT;
 
 /* A system owns its host SoA and has no parent-handle lifetime dependency. */
 BG_API bg_status BG_CALL bg_system_create(

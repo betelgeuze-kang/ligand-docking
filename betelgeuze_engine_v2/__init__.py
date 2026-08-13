@@ -143,9 +143,7 @@ from .stack_round1_minimization_compat import (
     install_stack_round1_minimization_compat as _install_stack_round1_minimization_compat,
 )
 
-STACK_ROUND1_MINIMIZATION_COMPAT_SHA256 = (
-    _install_stack_round1_minimization_compat()
-)
+STACK_ROUND1_MINIMIZATION_COMPAT_SHA256 = _install_stack_round1_minimization_compat()
 
 from .stack_round2_evaluator import (
     install_stack_round2_evaluator as _install_stack_round2_evaluator,
@@ -164,9 +162,7 @@ from .stack_round3_integrity_compat import (
     install_stack_round3_integrity_compat as _install_stack_round3_integrity_compat,
 )
 
-STACK_ROUND3_INTEGRITY_COMPAT_SHA256 = (
-    _install_stack_round3_integrity_compat()
-)
+STACK_ROUND3_INTEGRITY_COMPAT_SHA256 = _install_stack_round3_integrity_compat()
 
 from .stack_round3_list_compat import (
     install_stack_round3_list_compat as _install_stack_round3_list_compat,
@@ -192,9 +188,7 @@ from .execution_parameter_attestation import (
     install_execution_parameter_attestation as _install_execution_parameter_attestation,
 )
 
-EXECUTION_PARAMETER_ATTESTATION_SHA256 = (
-    _install_execution_parameter_attestation()
-)
+EXECUTION_PARAMETER_ATTESTATION_SHA256 = _install_execution_parameter_attestation()
 
 from .scorer_source_observation import (
     SCORER_SOURCE_OBSERVATION_MODE,
@@ -248,6 +242,7 @@ from .docking.native_fixed64_consumers import (
     NativeFixed64ConsumerError,
     NativeFixed64DiagnosticBenchmarkAdapter,
     NativeFixed64EvidenceV1,
+    NativeFixed64EvidenceV2,
     NativeFixed64ProductShadowAdapter,
     NativeFixed64PythonApi,
     run_native_fixed64_surface,
@@ -337,6 +332,7 @@ __all__ = [
     "NativeFixed64ConsumerError",
     "NativeFixed64DiagnosticBenchmarkAdapter",
     "NativeFixed64EvidenceV1",
+    "NativeFixed64EvidenceV2",
     "NativeFixed64ProductShadowAdapter",
     "NativeFixed64PythonApi",
     "run_native_fixed64_surface",

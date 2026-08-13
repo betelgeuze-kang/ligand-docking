@@ -2,8 +2,8 @@ use std::fmt::Write as _;
 use std::process::ExitCode;
 
 use betelgeuze_runtime::{
-    fixed64_cpu_v4_live_activation_admitted, run_native_fixed64_cpu_probe_v4,
-    Fixed64CpuFixtureProbeV4, Fixed64CpuProbeConfigV4,
+    fixed64_cpu_v5_live_activation_admitted, run_native_fixed64_cpu_probe_v5,
+    Fixed64CpuFixtureProbeV5, Fixed64CpuProbeConfigV5,
 };
 
 fn digest(value: [u8; 32]) -> String {
@@ -26,7 +26,7 @@ fn integer_array(values: &[u64]) -> String {
     output
 }
 
-fn fixture_json(value: &Fixed64CpuFixtureProbeV4) -> String {
+fn fixture_json(value: &Fixed64CpuFixtureProbeV5) -> String {
     format!(
         concat!(
             "{{\"authority_false\":{},",
@@ -99,18 +99,18 @@ fn fixture_json(value: &Fixed64CpuFixtureProbeV4) -> String {
 
 fn main() -> ExitCode {
     if std::env::args_os().count() != 1 {
-        eprintln!("fixed64 CPU probe v4 accepts no caller-supplied arguments");
+        eprintln!("fixed64 CPU probe v5 accepts no caller-supplied arguments");
         return ExitCode::from(2);
     }
-    if !fixed64_cpu_v4_live_activation_admitted() {
-        eprintln!("fixed64 CPU probe v4 failed closed: reviewed live activation is absent");
+    if !fixed64_cpu_v5_live_activation_admitted() {
+        eprintln!("fixed64 CPU probe v5 failed closed: reviewed live activation is absent");
         return ExitCode::from(3);
     }
-    let config = Fixed64CpuProbeConfigV4::qualification_profile();
-    let report = match run_native_fixed64_cpu_probe_v4(config) {
+    let config = Fixed64CpuProbeConfigV5::qualification_profile();
+    let report = match run_native_fixed64_cpu_probe_v5(config) {
         Ok(report) => report,
         Err(error) => {
-            eprintln!("fixed64 CPU probe v4 failed closed: {error}");
+            eprintln!("fixed64 CPU probe v5 failed closed: {error}");
             return ExitCode::from(1);
         }
     };
@@ -160,7 +160,7 @@ fn main() -> ExitCode {
     if report.gate_passed {
         ExitCode::SUCCESS
     } else {
-        eprintln!("fixed64 CPU probe v4 gates did not pass");
+        eprintln!("fixed64 CPU probe v5 gates did not pass");
         ExitCode::from(1)
     }
 }

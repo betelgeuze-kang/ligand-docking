@@ -61,6 +61,8 @@ use super::{
 
 pub type Sha256 = [u8; 32];
 pub const FIXED64_NATIVE_PIPELINE_PROFILE_ID: &str =
+    "betelgeuze.engine_v2_native_fixed64_complete_pipeline/2.0.0";
+const FIXED64_NATIVE_COMPONENT_BINDING_PROFILE_ID: &str =
     "betelgeuze.engine_v2_native_fixed64_complete_pipeline/1.0.0";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -292,10 +294,12 @@ pub struct Fixed64RunInput<'a> {
     pub torsion_max_steps: &'a [u64],
     pub baseline_torsion_angles_radians: &'a [f64],
     pub predeclared_refinement_policy_sha256: Sha256,
+    pub predeclared_post_refinement_admission_policy_sha256: Sha256,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Fixed64GeometricEvidence {
+    pub slot_index: u32,
     pub status: i32,
     pub failure_code: i32,
     pub decision: i32,
@@ -542,6 +546,10 @@ pub struct Fixed64PipelineRow {
     pub effective_refinement_mode: i32,
     pub refinement_status: i32,
     pub refinement_failure_stage: i32,
+    pub post_admission_status: i32,
+    pub post_admission_failure_code: i32,
+    pub post_admission_decision: i32,
+    pub post_admission_rank_eligible: bool,
     pub scorer_status: i32,
     pub scorer_failure_code: i32,
     pub validity_status: i32,
@@ -555,6 +563,7 @@ pub struct Fixed64PipelineRow {
     pub producer_row_receipt_sha256: Sha256,
     pub final_coordinate_sha256: Sha256,
     pub refinement_evidence_sha256: Sha256,
+    pub post_admission_row_receipt_sha256: Sha256,
     pub scorer_evidence_sha256: Sha256,
     pub validity_evidence_sha256: Sha256,
     pub ranking_evidence_sha256: Sha256,
@@ -591,6 +600,8 @@ pub struct Fixed64BatchReceipts {
     pub producer_batch_receipt_sha256: Sha256,
     pub refinement_policy_receipt_sha256: Sha256,
     pub refinement_batch_receipt_sha256: Sha256,
+    pub post_admission_policy_receipt_sha256: Sha256,
+    pub post_admission_batch_receipt_sha256: Sha256,
     pub scorer_batch_receipt_sha256: Sha256,
     pub validity_batch_receipt_sha256: Sha256,
     pub ranking_batch_receipt_sha256: Sha256,
@@ -608,6 +619,8 @@ pub struct Fixed64PipelineReceipt {
     pub typed_failure_count: u64,
     pub initial_admitted_count: u64,
     pub refined_count: u64,
+    pub post_admitted_count: u64,
+    pub post_rejected_count: u64,
     pub scored_count: u64,
     pub valid_count: u64,
     pub cluster_count: u64,
@@ -621,6 +634,7 @@ pub struct Fixed64PipelineReceipt {
     pub torsion_rows: Vec<Fixed64TorsionEvidence>,
     pub torsion_moves: Vec<Fixed64TorsionMoveEvidence>,
     pub refinement_rows: Vec<Fixed64RefinementEvidence>,
+    pub post_admission_rows: Vec<Fixed64GeometricEvidence>,
     pub scorer_rows: Vec<Fixed64ScorerEvidence>,
     pub validity_rows: Vec<Fixed64ValidityEvidence>,
     pub ranking_rows: Vec<Fixed64RankingEvidence>,
@@ -651,6 +665,8 @@ pub struct Fixed64ScientificProjection {
     pub typed_failure_count: u64,
     pub initial_admitted_count: u64,
     pub refined_count: u64,
+    pub post_admitted_count: u64,
+    pub post_rejected_count: u64,
     pub scored_count: u64,
     pub valid_count: u64,
     pub cluster_count: u64,
@@ -710,6 +726,7 @@ pub struct Fixed64ScientificCandidateProjection {
     pub rigid: Fixed64RigidEvidence,
     pub torsion: Fixed64TorsionEvidence,
     pub refinement: Fixed64RefinementEvidence,
+    pub post_admission: Fixed64GeometricEvidence,
     pub scorer: Fixed64ScorerEvidence,
     pub validity: Fixed64ValidityEvidence,
     pub ranking: Fixed64RankingEvidence,
@@ -785,6 +802,7 @@ impl Fixed64PipelineReceipt {
                     rigid: self.rigid_rows[slot],
                     torsion: self.torsion_rows[slot],
                     refinement: self.refinement_rows[slot],
+                    post_admission: self.post_admission_rows[slot],
                     scorer: self.scorer_rows[slot],
                     validity: self.validity_rows[slot],
                     ranking: self.ranking_rows[slot],
@@ -800,6 +818,8 @@ impl Fixed64PipelineReceipt {
             typed_failure_count: self.typed_failure_count,
             initial_admitted_count: self.initial_admitted_count,
             refined_count: self.refined_count,
+            post_admitted_count: self.post_admitted_count,
+            post_rejected_count: self.post_rejected_count,
             scored_count: self.scored_count,
             valid_count: self.valid_count,
             cluster_count: self.cluster_count,
@@ -831,6 +851,7 @@ impl Fixed64PipelineReceipt {
             ("rigid", self.rigid_rows.len()),
             ("torsion", self.torsion_rows.len()),
             ("refinement", self.refinement_rows.len()),
+            ("post-admission", self.post_admission_rows.len()),
             ("scorer", self.scorer_rows.len()),
             ("validity", self.validity_rows.len()),
             ("ranking", self.ranking_rows.len()),
@@ -969,6 +990,7 @@ impl Fixed64PipelineReceipt {
             let rigid = self.rigid_rows[slot];
             let torsion = self.torsion_rows[slot];
             let refinement = self.refinement_rows[slot];
+            let post_admission = self.post_admission_rows[slot];
             let scorer = self.scorer_rows[slot];
             let validity = self.validity_rows[slot];
             let ranking = self.ranking_rows[slot];
@@ -979,6 +1001,7 @@ impl Fixed64PipelineReceipt {
                 rigid.slot_index,
                 torsion.slot_index,
                 refinement.slot_index,
+                post_admission.slot_index,
                 scorer.slot_index,
                 validity.slot_index,
                 ranking.slot_index,
@@ -1000,6 +1023,10 @@ impl Fixed64PipelineReceipt {
                 || pipeline.effective_refinement_mode != rigid.candidate_mode
                 || pipeline.refinement_status != refinement.status
                 || pipeline.refinement_failure_stage != refinement.failure_stage
+                || pipeline.post_admission_status != post_admission.status
+                || pipeline.post_admission_failure_code != post_admission.failure_code
+                || pipeline.post_admission_decision != post_admission.decision
+                || pipeline.post_admission_rank_eligible != post_admission.rank_eligible
                 || pipeline.scorer_status != scorer.status
                 || pipeline.scorer_failure_code != scorer.failure_code
                 || pipeline.validity_status != validity.status
@@ -1012,6 +1039,7 @@ impl Fixed64PipelineReceipt {
                 || pipeline.top_k_rank != cluster.top_k_rank
                 || pipeline.producer_row_receipt_sha256 != producer.row_receipt_sha256
                 || pipeline.final_coordinate_sha256 != refinement.coordinate_sha256
+                || pipeline.post_admission_row_receipt_sha256 != post_admission.row_receipt_sha256
             {
                 return Err(Error::local(
                     ErrorCode::AbiMismatch,
@@ -1079,6 +1107,7 @@ impl Fixed64PipelineReceipt {
             let abi_rigid = abi_rigid_row_from_evidence(rigid);
             let abi_torsion = abi_torsion_row_from_evidence(torsion);
             let abi_refinement = abi_refinement_row_from_evidence(refinement);
+            let abi_post_admission = abi_geometric_row_from_evidence(post_admission);
             let abi_scorer = abi_scorer_row_from_evidence(scorer);
             let abi_validity = abi_validity_row_from_evidence(validity);
             let abi_ranking = abi_ranking_row_from_evidence(ranking);
@@ -1104,6 +1133,7 @@ impl Fixed64PipelineReceipt {
                 &abi_pipeline,
                 self.receipts.component_binding_receipt_sha256,
                 self.receipts.refinement_policy_receipt_sha256,
+                self.receipts.post_admission_policy_receipt_sha256,
                 expected_refinement_evidence,
                 expected_scorer_evidence,
                 expected_validity_evidence,
@@ -1111,6 +1141,12 @@ impl Fixed64PipelineReceipt {
                 expected_cluster_evidence,
             );
             if pipeline.refinement_evidence_sha256 != expected_refinement_evidence
+                || abi_pipeline.post_admission_status != abi_post_admission.status
+                || abi_pipeline.post_admission_failure_code != abi_post_admission.failure_code
+                || abi_pipeline.post_admission_decision != abi_post_admission.decision
+                || abi_pipeline.post_admission_rank_eligible != abi_post_admission.rank_eligible
+                || abi_pipeline.post_admission_row_receipt_sha256
+                    != abi_post_admission.row_receipt_sha256
                 || pipeline.scorer_evidence_sha256 != expected_scorer_evidence
                 || pipeline.validity_evidence_sha256 != expected_validity_evidence
                 || pipeline.ranking_evidence_sha256 != expected_ranking_evidence
@@ -1391,7 +1427,7 @@ fn hash_authority_decision(hash: &mut CanonicalHasher, value: Fixed64AuthorityDi
 
 fn scientific_decision_sha256(value: &Fixed64ScientificProjection) -> Sha256 {
     let mut hash =
-        CanonicalHasher::new("betelgeuze.engine_v2_native_fixed64_scientific_decision/1.0.0");
+        CanonicalHasher::new("betelgeuze.engine_v2_native_fixed64_scientific_decision/2.0.0");
     hash.usize(value.candidate_denominator);
     hash.usize(value.receptor_atom_count);
     hash.usize(value.ligand_atom_count);
@@ -1399,6 +1435,8 @@ fn scientific_decision_sha256(value: &Fixed64ScientificProjection) -> Sha256 {
     hash.u64(value.typed_failure_count);
     hash.u64(value.initial_admitted_count);
     hash.u64(value.refined_count);
+    hash.u64(value.post_admitted_count);
+    hash.u64(value.post_rejected_count);
     hash.u64(value.scored_count);
     hash.u64(value.valid_count);
     hash.u64(value.cluster_count);
@@ -1488,6 +1526,19 @@ fn scientific_decision_sha256(value: &Fixed64ScientificProjection) -> Sha256 {
         hash_bool(&mut hash, refinement.torsion_v7_selected);
         hash_bool(&mut hash, refinement.coordinate_available);
 
+        let post_admission = row.post_admission;
+        hash.u32(post_admission.slot_index);
+        hash.i32(post_admission.status);
+        hash.i32(post_admission.failure_code);
+        hash.i32(post_admission.decision);
+        hash_bool(&mut hash, post_admission.rank_eligible);
+        hash.u64(post_admission.ligand_atom_count);
+        hash.u64(post_admission.receptor_atom_count);
+        hash.u64(post_admission.exact_pair_count);
+        hash.u64(post_admission.penetration_pair_count);
+        hash.u64(post_admission.unique_ligand_penetration_atom_count);
+        hash.u64(post_admission.unique_ligand_heavy_atom_penetration_count);
+
         let scorer = row.scorer;
         hash.u32(scorer.slot_index);
         hash.i32(scorer.status);
@@ -1551,7 +1602,7 @@ fn scientific_decision_sha256(value: &Fixed64ScientificProjection) -> Sha256 {
 
 fn scientific_projection_sha256(value: &Fixed64ScientificProjection) -> Sha256 {
     let mut hash =
-        CanonicalHasher::new("betelgeuze.engine_v2_native_fixed64_scientific_projection/1.0.0");
+        CanonicalHasher::new("betelgeuze.engine_v2_native_fixed64_scientific_projection/2.0.0");
     hash.digest(value.decision_sha256);
     for row in &value.candidate_rows {
         hash.digest(row.placement_receipt_sha256);
@@ -1564,6 +1615,15 @@ fn scientific_projection_sha256(value: &Fixed64ScientificProjection) -> Sha256 {
             row.minimum_vdw_ratio,
             row.sphere_overlap_proxy_angstrom3,
             row.pocket_escape_angstrom,
+        ] {
+            hash.f64(measurement);
+        }
+        for measurement in [
+            row.post_admission.raw_minimum_distance_angstrom,
+            row.post_admission.minimum_vdw_surface_gap_angstrom,
+            row.post_admission.minimum_vdw_ratio,
+            row.post_admission.sphere_overlap_proxy_angstrom3,
+            row.post_admission.pocket_escape_angstrom,
         ] {
             hash.f64(measurement);
         }
@@ -1928,7 +1988,7 @@ fn canonical_component_binding_receipt(
 ) -> Sha256 {
     let mut hash =
         CanonicalHasher::new("betelgeuze.engine_v2_native_fixed64_component_binding/1.0.0");
-    hash.string(FIXED64_NATIVE_PIPELINE_PROFILE_ID);
+    hash.string(FIXED64_NATIVE_COMPONENT_BINDING_PROFILE_ID);
     hash.i32(backend.as_raw());
     hash.i32(sys::BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL);
     hash.i32(device_ordinal);
@@ -1979,6 +2039,7 @@ struct ExpectedPipelineReceiptGraph {
     validity_context_receipt_sha256: Sha256,
     component_binding_receipt_sha256: Sha256,
     refinement_policy_receipt_sha256: Sha256,
+    post_admission_policy_receipt_sha256: Sha256,
     authority_input_receipt_sha256: Sha256,
     receptor_system_sha256: Sha256,
     ligand_system_sha256: Sha256,
@@ -2090,6 +2151,28 @@ fn canonical_refinement_policy_receipt(
     for value in input.baseline_torsion_angles_radians {
         hash.f64(*value);
     }
+    hash.byte(0);
+    hash.finish()
+}
+
+fn canonical_post_admission_policy_receipt(
+    admission_context_receipt_sha256: Sha256,
+    component_binding_receipt_sha256: Sha256,
+    refinement_policy_receipt_sha256: Sha256,
+    allocation_receipt_sha256: Sha256,
+    input: Fixed64RunInput<'_>,
+) -> Sha256 {
+    let mut hash = CanonicalHasher::new(
+        "betelgeuze.engine_v2_native_fixed64_post_admission_policy_receipt/2.0.0",
+    );
+    hash.string(FIXED64_NATIVE_PIPELINE_PROFILE_ID);
+    hash.digest(admission_context_receipt_sha256);
+    hash.digest(component_binding_receipt_sha256);
+    hash.digest(refinement_policy_receipt_sha256);
+    hash.digest(input.predeclared_post_refinement_admission_policy_sha256);
+    hash.digest(allocation_receipt_sha256);
+    hash.usize(sys::BG_DOCKING_FIXED64_CANDIDATE_COUNT as usize);
+    hash.byte(0);
     hash.byte(0);
     hash.finish()
 }
@@ -2330,6 +2413,10 @@ fn validate_run_input(
         (
             input.predeclared_refinement_policy_sha256,
             "predeclared refinement policy",
+        ),
+        (
+            input.predeclared_post_refinement_admission_policy_sha256,
+            "predeclared post-refinement admission policy",
         ),
     ] {
         if !digest_present(&digest) {
@@ -2596,7 +2683,7 @@ fn independent_placement_source(
 /// require_send_sync::<Fixed64Pipeline<'static>>();
 /// ```
 pub struct Fixed64Pipeline<'context> {
-    handle: NonNull<sys::bg_docking_fixed64_pipeline_v1>,
+    handle: NonNull<sys::bg_docking_fixed64_pipeline_v2>,
     replay_admission_handle: NonNull<sys::bg_docking_geometric_admission_v1>,
     _context: &'context Context,
     backend: Backend,
@@ -2630,10 +2717,10 @@ pub struct Fixed64Pipeline<'context> {
     _not_send_or_sync: PhantomData<Rc<()>>,
 }
 
-struct PipelineHandleGuard(NonNull<sys::bg_docking_fixed64_pipeline_v1>);
+struct PipelineHandleGuard(NonNull<sys::bg_docking_fixed64_pipeline_v2>);
 
 impl PipelineHandleGuard {
-    fn into_inner(self) -> NonNull<sys::bg_docking_fixed64_pipeline_v1> {
+    fn into_inner(self) -> NonNull<sys::bg_docking_fixed64_pipeline_v2> {
         let handle = self.0;
         std::mem::forget(self);
         handle
@@ -2643,7 +2730,7 @@ impl PipelineHandleGuard {
 impl Drop for PipelineHandleGuard {
     fn drop(&mut self) {
         // SAFETY: the guard owns this non-null handle until into_inner transfers it.
-        unsafe { sys::bg_docking_fixed64_pipeline_v1_destroy(self.0.as_ptr()) };
+        unsafe { sys::bg_docking_fixed64_pipeline_v2_destroy(self.0.as_ptr()) };
     }
 }
 
@@ -3411,7 +3498,7 @@ impl<'context> Fixed64Pipeline<'context> {
         // SAFETY: every descriptor points to validated slices that remain live
         // for this call; the native constructor deep-copies all channels.
         status_result(unsafe {
-            sys::bg_docking_fixed64_pipeline_v1_create(
+            sys::bg_docking_fixed64_pipeline_v2_create(
                 context.handle.as_ptr(),
                 &admission,
                 &rigid,
@@ -3431,7 +3518,7 @@ impl<'context> Fixed64Pipeline<'context> {
         let mut raw_backend = sys::BG_BACKEND_AUTO;
         // SAFETY: handle is live and raw_backend is valid writable storage.
         status_result(unsafe {
-            sys::bg_docking_fixed64_pipeline_v1_get_backend(handle.0.as_ptr(), &mut raw_backend)
+            sys::bg_docking_fixed64_pipeline_v2_get_backend(handle.0.as_ptr(), &mut raw_backend)
         })?;
         let backend = Backend::from_raw(raw_backend)?;
         if backend != expected_backend {
@@ -3570,6 +3657,13 @@ impl<'context> Fixed64Pipeline<'context> {
             expected_allocation.receipt_sha256(),
             input,
         );
+        let post_admission_policy_receipt_sha256 = canonical_post_admission_policy_receipt(
+            self.expected_admission_context_receipt_sha256,
+            self.expected_component_binding_receipt_sha256,
+            refinement_policy_receipt_sha256,
+            expected_allocation.receipt_sha256(),
+            input,
+        );
         let expected_receipt_graph = ExpectedPipelineReceiptGraph {
             allocation_inventory_sha256: expected_allocation.inventory_sha256(),
             allocation_receipt_sha256: expected_allocation.receipt_sha256(),
@@ -3580,6 +3674,7 @@ impl<'context> Fixed64Pipeline<'context> {
             validity_context_receipt_sha256: self.expected_validity_context_receipt_sha256,
             component_binding_receipt_sha256: self.expected_component_binding_receipt_sha256,
             refinement_policy_receipt_sha256,
+            post_admission_policy_receipt_sha256,
             authority_input_receipt_sha256: self.authority_input_receipt_sha256,
             receptor_system_sha256: self.receptor_system_sha256,
             ligand_system_sha256: self.ligand_system_sha256,
@@ -3750,7 +3845,7 @@ impl<'context> Fixed64Pipeline<'context> {
             .iter()
             .map(|mode| mode.as_raw())
             .collect::<Vec<_>>();
-        let mut pipeline_input = init(sys::bg_docking_fixed64_pipeline_input_v1_init)?;
+        let mut pipeline_input = init(sys::bg_docking_fixed64_pipeline_input_v2_init)?;
         pipeline_input.producer_input = &producer_input;
         pipeline_input.rmsd_threshold_angstrom = input.rmsd_threshold_angstrom;
         pipeline_input.candidate_mode = raw_modes.as_ptr();
@@ -3761,6 +3856,8 @@ impl<'context> Fixed64Pipeline<'context> {
             input.baseline_torsion_angles_radians.as_ptr();
         pipeline_input.predeclared_refinement_policy_sha256 =
             input.predeclared_refinement_policy_sha256;
+        pipeline_input.predeclared_post_refinement_admission_policy_sha256 =
+            input.predeclared_post_refinement_admission_policy_sha256;
 
         let mut producer_rows =
             vec![zeroed_abi_value!(sys::bg_docking_fixed64_producer_row_v1); CANDIDATE_COUNT];
@@ -3867,27 +3964,33 @@ impl<'context> Fixed64Pipeline<'context> {
         refinement_output.final_quaternion_y = final_quaternions[1].as_mut_ptr();
         refinement_output.final_quaternion_z = final_quaternions[2].as_mut_ptr();
         refinement_output.final_quaternion_w = final_quaternions[3].as_mut_ptr();
+        let mut post_admission_rows =
+            vec![zeroed_abi_value!(sys::bg_docking_geometric_admission_row_v1); CANDIDATE_COUNT];
+        let mut post_admission_output = init(sys::bg_docking_geometric_admission_output_v1_init)?;
+        post_admission_output.row_capacity = CANDIDATE_COUNT as u64;
+        post_admission_output.rows = post_admission_rows.as_mut_ptr();
         let mut pipeline_rows =
-            vec![zeroed_abi_value!(sys::bg_docking_fixed64_pipeline_row_v1); CANDIDATE_COUNT];
-        let mut pipeline_output = init(sys::bg_docking_fixed64_pipeline_output_v1_init)?;
+            vec![zeroed_abi_value!(sys::bg_docking_fixed64_pipeline_row_v2); CANDIDATE_COUNT];
+        let mut pipeline_output = init(sys::bg_docking_fixed64_pipeline_output_v2_init)?;
         pipeline_output.row_capacity = CANDIDATE_COUNT as u64;
         pipeline_output.rows = pipeline_rows.as_mut_ptr();
 
         // SAFETY: all descriptors and output buffers remain live and uniquely
         // borrowed for the call. Their exact capacities were validated above.
         status_result(unsafe {
-            sys::bg_docking_fixed64_pipeline_v1_run(
+            sys::bg_docking_fixed64_pipeline_v2_run(
                 self._context.handle.as_ptr(),
                 self.handle.as_ptr(),
                 &pipeline_input,
                 &mut producer_output,
                 &mut rigid_output,
                 &mut torsion_output,
+                &mut refinement_output,
+                &mut post_admission_output,
                 &mut scorer_output,
                 &mut validity_output,
                 &mut ranking_output,
                 &mut cluster_output,
-                &mut refinement_output,
                 &mut pipeline_output,
             )
         })?;
@@ -3919,6 +4022,7 @@ impl<'context> Fixed64Pipeline<'context> {
             &ranking_output,
             &cluster_output,
             &refinement_output,
+            &post_admission_output,
             &pipeline_output,
             &producer_rows,
             &expected_sources,
@@ -3933,6 +4037,7 @@ impl<'context> Fixed64Pipeline<'context> {
             &ranking_rows,
             &cluster_rows,
             &refinement_rows,
+            &post_admission_rows,
             &pipeline_rows,
             &primary_indices,
             &valid_indices,
@@ -4024,6 +4129,8 @@ impl<'context> Fixed64Pipeline<'context> {
             typed_failure_count: producer_output.typed_failure_count,
             initial_admitted_count: pipeline_output.initial_admitted_count,
             refined_count: pipeline_output.refined_count,
+            post_admitted_count: pipeline_output.post_admitted_count,
+            post_rejected_count: pipeline_output.post_rejected_count,
             scored_count: pipeline_output.scored_count,
             valid_count: pipeline_output.valid_count,
             cluster_count: pipeline_output.cluster_count,
@@ -4094,6 +4201,10 @@ impl<'context> Fixed64Pipeline<'context> {
                 .iter()
                 .map(refinement_evidence)
                 .collect::<Result<Vec<_>>>()?,
+            post_admission_rows: post_admission_rows
+                .iter()
+                .map(geometric_evidence)
+                .collect::<Result<Vec<_>>>()?,
             scorer_rows: scorer_rows.iter().map(scorer_evidence).collect(),
             validity_rows: validity_rows.iter().map(validity_evidence).collect(),
             ranking_rows: ranking_rows
@@ -4104,7 +4215,10 @@ impl<'context> Fixed64Pipeline<'context> {
                 .iter()
                 .map(cluster_evidence)
                 .collect::<Result<Vec<_>>>()?,
-            rows: pipeline_rows.iter().map(pipeline_row).collect(),
+            rows: pipeline_rows
+                .iter()
+                .map(pipeline_row)
+                .collect::<Result<Vec<_>>>()?,
             primary_slot_indices: primary_indices,
             valid_slot_indices: valid_indices,
             representative_slot_indices: representative_indices,
@@ -4124,6 +4238,10 @@ impl<'context> Fixed64Pipeline<'context> {
                 producer_batch_receipt_sha256: pipeline_output.producer_batch_receipt_sha256,
                 refinement_policy_receipt_sha256: pipeline_output.refinement_policy_receipt_sha256,
                 refinement_batch_receipt_sha256: pipeline_output.refinement_batch_receipt_sha256,
+                post_admission_policy_receipt_sha256: pipeline_output
+                    .post_admission_policy_receipt_sha256,
+                post_admission_batch_receipt_sha256: pipeline_output
+                    .post_admission_batch_receipt_sha256,
                 scorer_batch_receipt_sha256: pipeline_output.scorer_batch_receipt_sha256,
                 validity_batch_receipt_sha256: pipeline_output.validity_batch_receipt_sha256,
                 ranking_batch_receipt_sha256: pipeline_output.ranking_batch_receipt_sha256,
@@ -4140,7 +4258,7 @@ impl<'context> Fixed64Pipeline<'context> {
     pub fn profile_id() -> Result<&'static str> {
         // SAFETY: the native function returns a process-lifetime NUL-terminated
         // static string or null on an ABI violation.
-        let pointer = unsafe { sys::bg_docking_fixed64_pipeline_v1_profile_id() };
+        let pointer = unsafe { sys::bg_docking_fixed64_pipeline_v2_profile_id() };
         if pointer.is_null() {
             return Err(Error::local(
                 ErrorCode::InternalError,
@@ -4169,7 +4287,7 @@ impl Drop for Fixed64Pipeline<'_> {
         // SAFETY: this object owns both non-null handles and destroys each once,
         // before the borrowed native Context can be dropped.
         unsafe {
-            sys::bg_docking_fixed64_pipeline_v1_destroy(self.handle.as_ptr());
+            sys::bg_docking_fixed64_pipeline_v2_destroy(self.handle.as_ptr());
             sys::bg_docking_geometric_admission_v1_destroy(self.replay_admission_handle.as_ptr());
         }
     }
@@ -4677,12 +4795,23 @@ fn canonical_geometric_batch_receipt(
     graph: &ExpectedPipelineReceiptGraph,
     rows: &[sys::bg_docking_fixed64_producer_row_v1],
 ) -> Sha256 {
+    let admission_rows = rows
+        .iter()
+        .map(|row| row.geometric_admission)
+        .collect::<Vec<_>>();
+    canonical_geometric_batch_receipt_rows(graph, &admission_rows)
+}
+
+fn canonical_geometric_batch_receipt_rows(
+    graph: &ExpectedPipelineReceiptGraph,
+    rows: &[sys::bg_docking_geometric_admission_row_v1],
+) -> Sha256 {
     let mut hash = CanonicalHasher::new("betelgeuze.geometric_admission_batch/native-v1");
     hash.string("betelgeuze.engine_v2_native_geometric_admission_batch/1.0.0");
     hash_geometric_context(&mut hash, graph);
     hash.usize(rows.len());
     for row in rows {
-        hash.digest(row.geometric_admission.row_receipt_sha256);
+        hash.digest(row.row_receipt_sha256);
     }
     for value in [0_u8, 1, 0, 0, 0, 0, 0, 0, 0] {
         hash.byte(value);
@@ -6261,6 +6390,33 @@ fn abi_refinement_row_from_evidence(
     }
 }
 
+fn abi_geometric_row_from_evidence(
+    value: Fixed64GeometricEvidence,
+) -> sys::bg_docking_geometric_admission_row_v1 {
+    sys::bg_docking_geometric_admission_row_v1 {
+        slot_index: value.slot_index,
+        status: value.status,
+        failure_code: value.failure_code,
+        decision: value.decision,
+        rank_eligible: u8::from(value.rank_eligible),
+        reserved0: [0; 3],
+        ligand_atom_count: value.ligand_atom_count,
+        receptor_atom_count: value.receptor_atom_count,
+        exact_pair_count: value.exact_pair_count,
+        penetration_pair_count: value.penetration_pair_count,
+        unique_ligand_penetration_atom_count: value.unique_ligand_penetration_atom_count,
+        unique_ligand_heavy_atom_penetration_count: value
+            .unique_ligand_heavy_atom_penetration_count,
+        raw_minimum_distance_angstrom: value.raw_minimum_distance_angstrom,
+        minimum_vdw_surface_gap_angstrom: value.minimum_vdw_surface_gap_angstrom,
+        minimum_vdw_ratio: value.minimum_vdw_ratio,
+        sphere_overlap_proxy_angstrom3: value.sphere_overlap_proxy_angstrom3,
+        pocket_escape_angstrom: value.pocket_escape_angstrom,
+        row_receipt_sha256: value.row_receipt_sha256,
+        reserved1: 0,
+    }
+}
+
 fn abi_scorer_row_from_evidence(value: Fixed64ScorerEvidence) -> sys::bg_docking_scorer_v1_row_v1 {
     sys::bg_docking_scorer_v1_row_v1 {
         slot_index: value.slot_index,
@@ -6360,8 +6516,8 @@ fn abi_cluster_row_from_evidence(
 
 fn abi_pipeline_row_from_evidence(
     value: Fixed64PipelineRow,
-) -> sys::bg_docking_fixed64_pipeline_row_v1 {
-    sys::bg_docking_fixed64_pipeline_row_v1 {
+) -> sys::bg_docking_fixed64_pipeline_row_v2 {
+    sys::bg_docking_fixed64_pipeline_row_v2 {
         slot_index: value.slot_index,
         producer_status: value.producer_status,
         producer_failure_code: value.producer_failure_code,
@@ -6370,6 +6526,11 @@ fn abi_pipeline_row_from_evidence(
         effective_refinement_mode: value.effective_refinement_mode,
         refinement_status: value.refinement_status,
         refinement_failure_stage: value.refinement_failure_stage,
+        post_admission_status: value.post_admission_status,
+        post_admission_failure_code: value.post_admission_failure_code,
+        post_admission_decision: value.post_admission_decision,
+        post_admission_rank_eligible: u8::from(value.post_admission_rank_eligible),
+        reserved0: [0; 3],
         scorer_status: value.scorer_status,
         scorer_failure_code: value.scorer_failure_code,
         validity_status: value.validity_status,
@@ -6383,6 +6544,7 @@ fn abi_pipeline_row_from_evidence(
         producer_row_receipt_sha256: value.producer_row_receipt_sha256,
         final_coordinate_sha256: value.final_coordinate_sha256,
         refinement_evidence_sha256: value.refinement_evidence_sha256,
+        post_admission_row_receipt_sha256: value.post_admission_row_receipt_sha256,
         scorer_evidence_sha256: value.scorer_evidence_sha256,
         validity_evidence_sha256: value.validity_evidence_sha256,
         ranking_evidence_sha256: value.ranking_evidence_sha256,
@@ -6631,9 +6793,10 @@ fn canonical_cluster_evidence(row: &sys::bg_docking_rmsd_cluster_row_v1) -> Sha2
 
 #[allow(clippy::too_many_arguments)]
 fn canonical_pipeline_row_receipt(
-    row: &sys::bg_docking_fixed64_pipeline_row_v1,
+    row: &sys::bg_docking_fixed64_pipeline_row_v2,
     component_binding_receipt: Sha256,
     refinement_policy_receipt: Sha256,
+    post_admission_policy_receipt: Sha256,
     refinement_evidence: Sha256,
     scorer_evidence: Sha256,
     validity_evidence: Sha256,
@@ -6641,10 +6804,11 @@ fn canonical_pipeline_row_receipt(
     cluster_evidence: Sha256,
 ) -> Sha256 {
     let mut hash =
-        CanonicalHasher::new("betelgeuze.engine_v2_native_fixed64_complete_pipeline_row/1.0.0");
+        CanonicalHasher::new("betelgeuze.engine_v2_native_fixed64_complete_pipeline_row/2.0.0");
     hash.string(FIXED64_NATIVE_PIPELINE_PROFILE_ID);
     hash.digest(component_binding_receipt);
     hash.digest(refinement_policy_receipt);
+    hash.digest(post_admission_policy_receipt);
     hash.u32(row.slot_index);
     for value in [
         row.producer_status,
@@ -6654,6 +6818,14 @@ fn canonical_pipeline_row_receipt(
         row.effective_refinement_mode,
         row.refinement_status,
         row.refinement_failure_stage,
+        row.post_admission_status,
+        row.post_admission_failure_code,
+        row.post_admission_decision,
+    ] {
+        hash.i32(value);
+    }
+    hash.byte(row.post_admission_rank_eligible);
+    for value in [
         row.scorer_status,
         row.scorer_failure_code,
         row.validity_status,
@@ -6670,6 +6842,7 @@ fn canonical_pipeline_row_receipt(
     hash.digest(row.producer_row_receipt_sha256);
     hash.digest(row.final_coordinate_sha256);
     hash.digest(refinement_evidence);
+    hash.digest(row.post_admission_row_receipt_sha256);
     hash.digest(scorer_evidence);
     hash.digest(validity_evidence);
     hash.digest(ranking_evidence);
@@ -6679,9 +6852,10 @@ fn canonical_pipeline_row_receipt(
 
 #[allow(clippy::too_many_arguments)]
 fn validate_pipeline_receipt_bindings(
-    row: &sys::bg_docking_fixed64_pipeline_row_v1,
+    row: &sys::bg_docking_fixed64_pipeline_row_v2,
     component_binding_receipt: Sha256,
     refinement_policy_receipt: Sha256,
+    post_admission_policy_receipt: Sha256,
     expected_refinement_evidence: Sha256,
     expected_scorer_evidence: Sha256,
     expected_validity_evidence: Sha256,
@@ -6692,6 +6866,7 @@ fn validate_pipeline_receipt_bindings(
         row,
         component_binding_receipt,
         refinement_policy_receipt,
+        post_admission_policy_receipt,
         expected_refinement_evidence,
         expected_scorer_evidence,
         expected_validity_evidence,
@@ -6699,6 +6874,7 @@ fn validate_pipeline_receipt_bindings(
         expected_cluster_evidence,
     );
     if row.refinement_evidence_sha256 != expected_refinement_evidence
+        || !digest_present(&row.post_admission_row_receipt_sha256)
         || row.scorer_evidence_sha256 != expected_scorer_evidence
         || row.validity_evidence_sha256 != expected_validity_evidence
         || row.ranking_evidence_sha256 != expected_ranking_evidence
@@ -7495,7 +7671,8 @@ fn validate_native_outputs(
     ranking: &sys::bg_docking_stable_top_k_output_v1,
     cluster: &sys::bg_docking_rmsd_cluster_output_v1,
     refinement: &sys::bg_docking_fixed64_refinement_output_v1,
-    pipeline: &sys::bg_docking_fixed64_pipeline_output_v1,
+    post_admission: &sys::bg_docking_geometric_admission_output_v1,
+    pipeline: &sys::bg_docking_fixed64_pipeline_output_v2,
     producer_rows: &[sys::bg_docking_fixed64_producer_row_v1],
     expected_sources: &[Option<Fixed64CoordinateSource<'_>>],
     expected_feature_geometry_inventory: Option<&IndependentFixed64FeatureGeometryInventory>,
@@ -7509,7 +7686,8 @@ fn validate_native_outputs(
     ranking_rows: &[sys::bg_docking_stable_top_k_row_v1],
     cluster_rows: &[sys::bg_docking_rmsd_cluster_row_v1],
     refinement_rows: &[sys::bg_docking_fixed64_refinement_row_v1],
-    pipeline_rows: &[sys::bg_docking_fixed64_pipeline_row_v1],
+    post_admission_rows: &[sys::bg_docking_geometric_admission_row_v1],
+    pipeline_rows: &[sys::bg_docking_fixed64_pipeline_row_v2],
     primary_indices: &[u32],
     valid_indices: &[u32],
     representative_indices: &[u32],
@@ -7623,6 +7801,11 @@ fn validate_native_outputs(
             "refinement quaternion capacity",
         ),
         (
+            post_admission.row_capacity,
+            candidate_count,
+            "post-admission row capacity",
+        ),
+        (
             pipeline.row_capacity,
             candidate_count,
             "pipeline row capacity",
@@ -7673,6 +7856,11 @@ fn validate_native_outputs(
             refinement.quaternion_count,
             candidate_count,
             "refinement quaternion count",
+        ),
+        (
+            post_admission.row_count,
+            candidate_count,
+            "post-admission row count",
         ),
         (pipeline.row_count, candidate_count, "pipeline row count"),
     ] {
@@ -7731,6 +7919,24 @@ fn validate_native_outputs(
         .iter()
         .filter(|row| row.status == sys::BG_DOCKING_FIXED64_REFINEMENT_ROW_COORDINATE_READY)
         .count() as u64;
+    let post_admitted_row_count = post_admission_rows
+        .iter()
+        .filter(|row| {
+            row.status == sys::BG_DOCKING_GEOMETRIC_ADMISSION_ROW_EVALUATED
+                && row.decision == sys::BG_DOCKING_GEOMETRIC_ADMISSION_DECISION_ACCEPTED
+                && row.rank_eligible == 1
+        })
+        .count() as u64;
+    let post_rejected_row_count = refinement_rows
+        .iter()
+        .zip(post_admission_rows)
+        .filter(|(refinement, post)| {
+            refinement.status == sys::BG_DOCKING_FIXED64_REFINEMENT_ROW_COORDINATE_READY
+                && !(post.status == sys::BG_DOCKING_GEOMETRIC_ADMISSION_ROW_EVALUATED
+                    && post.decision == sys::BG_DOCKING_GEOMETRIC_ADMISSION_DECISION_ACCEPTED
+                    && post.rank_eligible == 1)
+        })
+        .count() as u64;
     let scored_row_count = scorer_rows
         .iter()
         .filter(|row| row.status == sys::BG_DOCKING_SCORER_V1_ROW_SCORED)
@@ -7771,6 +7977,14 @@ fn validate_native_outputs(
             "pipeline refined count",
         ),
         (
+            pipeline.post_admitted_count == post_admitted_row_count,
+            "pipeline post-admitted count",
+        ),
+        (
+            pipeline.post_rejected_count == post_rejected_row_count,
+            "pipeline post-rejected count",
+        ),
+        (
             pipeline.scored_count == scored_row_count,
             "pipeline scored count",
         ),
@@ -7786,72 +8000,211 @@ fn validate_native_outputs(
             ));
         }
     }
-    if requested_modes.len() != candidate_count as usize
-        || rigid_max_steps.len() != candidate_count as usize
-        || pipeline.backend != backend.as_raw()
-        || producer.backend != backend.as_raw()
-        || [
-            producer.unit_system,
-            rigid.unit_system,
-            torsion.unit_system,
-            scorer.unit_system,
-            validity.unit_system,
-            ranking.unit_system,
-            cluster.unit_system,
-            refinement.unit_system,
-            pipeline.unit_system,
-        ]
-        .iter()
-        .any(|unit| *unit != sys::BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL)
-        || producer
-            .generated_count
-            .checked_add(producer.typed_failure_count)
-            != Some(candidate_count)
-        || pipeline.generated_count != producer.generated_count
-        || pipeline.allocation_receipt_sha256 != producer.allocation_receipt_sha256
-        || pipeline.source_bundle_receipt_sha256 != producer.source_bundle_receipt_sha256
-        || pipeline.producer_batch_receipt_sha256 != producer.producer_batch_receipt_sha256
-        || producer.allocation_inventory_sha256
-            != expected_receipt_graph.allocation_inventory_sha256
-        || producer.allocation_receipt_sha256 != expected_receipt_graph.allocation_receipt_sha256
-        || producer.source_bundle_receipt_sha256
-            != expected_receipt_graph.source_bundle_receipt_sha256
-        || pipeline.allocation_receipt_sha256 != expected_receipt_graph.allocation_receipt_sha256
-        || pipeline.source_bundle_receipt_sha256
-            != expected_receipt_graph.source_bundle_receipt_sha256
-        || pipeline.admission_context_receipt_sha256
-            != expected_receipt_graph.admission_context_receipt_sha256
-        || pipeline.refinement_context_receipt_sha256
-            != expected_receipt_graph.refinement_context_receipt_sha256
-        || pipeline.scorer_context_receipt_sha256
-            != expected_receipt_graph.scorer_context_receipt_sha256
-        || pipeline.validity_context_receipt_sha256
-            != expected_receipt_graph.validity_context_receipt_sha256
-        || pipeline.component_binding_receipt_sha256
-            != expected_receipt_graph.component_binding_receipt_sha256
-        || pipeline.refinement_policy_receipt_sha256
-            != expected_receipt_graph.refinement_policy_receipt_sha256
-        || producer.generated_count != generated_row_count
-        || producer.typed_failure_count != typed_failure_row_count
-        || pipeline.generated_count != generated_row_count
-        || pipeline.initial_admitted_count != initial_admitted_row_count
-        || pipeline.refined_count != refined_row_count
-        || pipeline.scored_count != scored_row_count
-        || pipeline.valid_count != valid_row_count
-        || ranking.primary_index_count != pipeline.scored_count
-        || ranking.valid_index_count != pipeline.valid_count
-        || cluster.representative_index_count != pipeline.cluster_count
-        || cluster.top_k_index_count != pipeline.cluster_count.min(top_k_limit)
-        || pipeline.initial_admitted_count > pipeline.generated_count
-        || pipeline.refined_count > pipeline.initial_admitted_count
-        || pipeline.scored_count > pipeline.refined_count
-        || pipeline.valid_count > pipeline.scored_count
-        || pipeline.cluster_count > pipeline.valid_count
-    {
-        return Err(Error::local(
-            ErrorCode::AbiMismatch,
-            "native fixed64 batch counts, backend, or denominator are inconsistent",
-        ));
+    let unit_systems_match = [
+        producer.unit_system,
+        rigid.unit_system,
+        torsion.unit_system,
+        scorer.unit_system,
+        validity.unit_system,
+        ranking.unit_system,
+        cluster.unit_system,
+        refinement.unit_system,
+        post_admission.unit_system,
+        pipeline.unit_system,
+    ]
+    .iter()
+    .all(|unit| *unit == sys::BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL);
+    for (valid, label) in [
+        (
+            requested_modes.len() == candidate_count as usize,
+            "requested-mode denominator",
+        ),
+        (
+            rigid_max_steps.len() == candidate_count as usize,
+            "rigid-step denominator",
+        ),
+        (pipeline.backend == backend.as_raw(), "pipeline backend"),
+        (producer.backend == backend.as_raw(), "producer backend"),
+        (unit_systems_match, "unit systems"),
+        (
+            producer
+                .generated_count
+                .checked_add(producer.typed_failure_count)
+                == Some(candidate_count),
+            "producer denominator",
+        ),
+        (
+            pipeline.generated_count == producer.generated_count,
+            "producer/pipeline generated count",
+        ),
+        (
+            pipeline.allocation_receipt_sha256 == producer.allocation_receipt_sha256,
+            "producer/pipeline allocation receipt",
+        ),
+        (
+            pipeline.source_bundle_receipt_sha256 == producer.source_bundle_receipt_sha256,
+            "producer/pipeline source-bundle receipt",
+        ),
+        (
+            pipeline.producer_batch_receipt_sha256 == producer.producer_batch_receipt_sha256,
+            "producer/pipeline batch receipt",
+        ),
+        (
+            producer.allocation_inventory_sha256
+                == expected_receipt_graph.allocation_inventory_sha256,
+            "producer allocation inventory",
+        ),
+        (
+            producer.allocation_receipt_sha256 == expected_receipt_graph.allocation_receipt_sha256,
+            "producer allocation receipt",
+        ),
+        (
+            producer.source_bundle_receipt_sha256
+                == expected_receipt_graph.source_bundle_receipt_sha256,
+            "producer source-bundle receipt",
+        ),
+        (
+            pipeline.allocation_receipt_sha256 == expected_receipt_graph.allocation_receipt_sha256,
+            "pipeline allocation receipt",
+        ),
+        (
+            pipeline.source_bundle_receipt_sha256
+                == expected_receipt_graph.source_bundle_receipt_sha256,
+            "pipeline source-bundle receipt",
+        ),
+        (
+            pipeline.admission_context_receipt_sha256
+                == expected_receipt_graph.admission_context_receipt_sha256,
+            "pipeline admission-context receipt",
+        ),
+        (
+            pipeline.refinement_context_receipt_sha256
+                == expected_receipt_graph.refinement_context_receipt_sha256,
+            "pipeline refinement-context receipt",
+        ),
+        (
+            pipeline.scorer_context_receipt_sha256
+                == expected_receipt_graph.scorer_context_receipt_sha256,
+            "pipeline scorer-context receipt",
+        ),
+        (
+            pipeline.validity_context_receipt_sha256
+                == expected_receipt_graph.validity_context_receipt_sha256,
+            "pipeline validity-context receipt",
+        ),
+        (
+            pipeline.component_binding_receipt_sha256
+                == expected_receipt_graph.component_binding_receipt_sha256,
+            "pipeline component-binding receipt",
+        ),
+        (
+            pipeline.refinement_policy_receipt_sha256
+                == expected_receipt_graph.refinement_policy_receipt_sha256,
+            "pipeline refinement-policy receipt",
+        ),
+        (
+            pipeline.post_admission_policy_receipt_sha256
+                == expected_receipt_graph.post_admission_policy_receipt_sha256,
+            "pipeline post-admission-policy receipt",
+        ),
+        (
+            pipeline.post_admission_batch_receipt_sha256 == post_admission.batch_receipt_sha256,
+            "pipeline post-admission batch receipt",
+        ),
+        (
+            producer.generated_count == generated_row_count,
+            "producer generated-row count",
+        ),
+        (
+            producer.typed_failure_count == typed_failure_row_count,
+            "producer typed-failure-row count",
+        ),
+        (
+            pipeline.generated_count == generated_row_count,
+            "pipeline generated-row count",
+        ),
+        (
+            pipeline.initial_admitted_count == initial_admitted_row_count,
+            "pipeline initial-admitted-row count",
+        ),
+        (
+            pipeline.refined_count == refined_row_count,
+            "pipeline refined-row count",
+        ),
+        (
+            pipeline.post_admitted_count == post_admitted_row_count,
+            "pipeline post-admitted-row count",
+        ),
+        (
+            pipeline.post_rejected_count == post_rejected_row_count,
+            "pipeline post-rejected-row count",
+        ),
+        (
+            pipeline.scored_count == scored_row_count,
+            "pipeline scored-row count",
+        ),
+        (
+            pipeline.valid_count == valid_row_count,
+            "pipeline valid-row count",
+        ),
+        (
+            ranking.primary_index_count == pipeline.scored_count,
+            "ranking/scored count",
+        ),
+        (
+            ranking.valid_index_count == pipeline.valid_count,
+            "ranking/valid count",
+        ),
+        (
+            cluster.representative_index_count == pipeline.cluster_count,
+            "cluster representative count",
+        ),
+        (
+            cluster.top_k_index_count == pipeline.cluster_count.min(top_k_limit),
+            "cluster Top-K count",
+        ),
+        (
+            pipeline.initial_admitted_count <= pipeline.generated_count,
+            "initial-admitted/generated monotonicity",
+        ),
+        (
+            pipeline.refined_count <= pipeline.initial_admitted_count,
+            "refined/initial-admitted monotonicity",
+        ),
+        (
+            pipeline.post_admitted_count <= pipeline.refined_count,
+            "post-admitted/refined monotonicity",
+        ),
+        (
+            pipeline.post_rejected_count <= pipeline.refined_count,
+            "post-rejected/refined monotonicity",
+        ),
+        (
+            pipeline
+                .post_admitted_count
+                .checked_add(pipeline.post_rejected_count)
+                == Some(pipeline.refined_count),
+            "post-admission denominator",
+        ),
+        (
+            pipeline.scored_count <= pipeline.post_admitted_count,
+            "scored/post-admitted monotonicity",
+        ),
+        (
+            pipeline.valid_count <= pipeline.scored_count,
+            "valid/scored monotonicity",
+        ),
+        (
+            pipeline.cluster_count <= pipeline.valid_count,
+            "cluster/valid monotonicity",
+        ),
+    ] {
+        if !valid {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                format!("native fixed64 batch invariant failed: {label}"),
+            ));
+        }
     }
     let authority = authority_disposition(pipeline, producer)?;
     if authority
@@ -7955,6 +8308,34 @@ fn validate_native_outputs(
         (
             refinement.production_claim_authorized,
             "refinement production claim",
+        ),
+        (
+            post_admission.molecular_execution_authorized,
+            "post-admission molecular execution",
+        ),
+        (
+            post_admission.reservation_authorized,
+            "post-admission reservation",
+        ),
+        (
+            post_admission.benchmark_execution_authorized,
+            "post-admission benchmark execution",
+        ),
+        (
+            post_admission.existing_rank_auto_change_authorized,
+            "post-admission rank mutation",
+        ),
+        (
+            post_admission.customer_pose_emission_authorized,
+            "post-admission pose emission",
+        ),
+        (
+            post_admission.production_claim_authorized,
+            "post-admission production claim",
+        ),
+        (
+            post_admission.scientific_claim_authorized,
+            "post-admission scientific claim",
         ),
         (
             ranking.existing_rank_auto_change_authorized,
@@ -8291,11 +8672,69 @@ fn validate_native_outputs(
         ligand_atom_count,
         backend,
     )?;
+    if post_admission_rows.len() != candidate_count as usize {
+        return Err(Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 post-admission denominator is invalid",
+        ));
+    }
+    for (slot, row) in post_admission_rows.iter().enumerate() {
+        let coordinate_ready = refinement_rows[slot].status
+            == sys::BG_DOCKING_FIXED64_REFINEMENT_ROW_COORDINATE_READY
+            && refinement_rows[slot].coordinate_available == 1;
+        let synthetic_producer_status = if coordinate_ready {
+            sys::BG_DOCKING_FIXED64_PRODUCER_ROW_GENERATED
+        } else {
+            sys::BG_DOCKING_FIXED64_PRODUCER_ROW_TYPED_FAILURE
+        };
+        validate_geometric_admission_row_semantics(
+            row,
+            synthetic_producer_status,
+            receptor_atom_count,
+            ligand_atom_count,
+            ligand_heavy_atom_count,
+            ligand_atom_count
+                .checked_mul(receptor_atom_count)
+                .ok_or_else(|| {
+                    Error::local(
+                        ErrorCode::AbiMismatch,
+                        "native fixed64 post-admission pair denominator overflowed",
+                    )
+                })?,
+            geometric_hard_rejection_minimum_vdw_ratio,
+            backend,
+            geometric_input,
+            final_coordinates,
+            slot,
+        )?;
+        let expected_row_receipt = canonical_geometric_row_receipt(
+            expected_receipt_graph,
+            synthetic_producer_status,
+            final_coordinates,
+            slot,
+            row,
+        )?;
+        if row.row_receipt_sha256 != expected_row_receipt {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 post-admission row receipt was not independently rederived",
+            ));
+        }
+    }
+    let expected_post_admission_batch_receipt =
+        canonical_geometric_batch_receipt_rows(expected_receipt_graph, post_admission_rows);
+    if post_admission.batch_receipt_sha256 != expected_post_admission_batch_receipt {
+        return Err(Error::local(
+            ErrorCode::AbiMismatch,
+            "native fixed64 post-admission batch receipt was not independently rederived",
+        ));
+    }
     validate_scorer_and_validity_evidence(
         scorer_rows,
         validity_rows,
         ranking_rows,
         refinement_rows,
+        post_admission_rows,
         ligand_atom_count,
         receptor_atom_count,
         validity_exclusion_count,
@@ -8348,6 +8787,7 @@ fn validate_native_outputs(
         let producer_row = &producer_rows[slot];
         let rigid_row = &rigid_rows[slot];
         let refinement_row = &refinement_rows[slot];
+        let post_row = &post_admission_rows[slot];
         let scorer_row = &scorer_rows[slot];
         let validity_row = &validity_rows[slot];
         let ranking_row = &ranking_rows[slot];
@@ -8369,6 +8809,9 @@ fn validate_native_outputs(
             bool_from_abi(cluster_row.cluster_eligible, "cluster eligibility")?;
         let refinement_ready =
             refinement_row.status == sys::BG_DOCKING_FIXED64_REFINEMENT_ROW_COORDINATE_READY;
+        let post_admitted = post_row.status == sys::BG_DOCKING_GEOMETRIC_ADMISSION_ROW_EVALUATED
+            && post_row.decision == sys::BG_DOCKING_GEOMETRIC_ADMISSION_DECISION_ACCEPTED
+            && bool_from_abi(post_row.rank_eligible, "post-admission rank eligibility")?;
         let scored = scorer_row.status == sys::BG_DOCKING_SCORER_V1_ROW_SCORED;
         let validity_evaluated = validity_row.status == sys::BG_DOCKING_POSE_VALIDITY_ROW_EVALUATED;
         let valid_rank_eligible =
@@ -8398,6 +8841,7 @@ fn validate_native_outputs(
             row,
             pipeline.component_binding_receipt_sha256,
             pipeline.refinement_policy_receipt_sha256,
+            pipeline.post_admission_policy_receipt_sha256,
             expected_refinement_evidence,
             expected_scorer_evidence,
             expected_validity_evidence,
@@ -8405,6 +8849,7 @@ fn validate_native_outputs(
             expected_cluster_evidence,
         )?;
         if row.slot_index as usize != slot
+            || row.reserved0.iter().any(|value| *value != 0)
             || row.reserved.iter().any(|value| *value != 0)
             || row.producer_status != producer_row.status
             || row.producer_failure_code != producer_row.failure_code
@@ -8414,6 +8859,10 @@ fn validate_native_outputs(
             || rigid_row.candidate_mode != expected_effective_mode
             || row.refinement_status != refinement_row.status
             || row.refinement_failure_stage != refinement_row.failure_stage
+            || row.post_admission_status != post_row.status
+            || row.post_admission_failure_code != post_row.failure_code
+            || row.post_admission_decision != post_row.decision
+            || row.post_admission_rank_eligible != post_row.rank_eligible
             || row.scorer_status != scorer_row.status
             || row.scorer_failure_code != scorer_row.failure_code
             || row.validity_status != validity_row.status
@@ -8426,8 +8875,10 @@ fn validate_native_outputs(
             || row.top_k_rank != cluster_row.top_k_rank
             || row.producer_row_receipt_sha256 != producer_row.row_receipt_sha256
             || row.final_coordinate_sha256 != refinement_row.coordinate_sha256
+            || row.post_admission_row_receipt_sha256 != post_row.row_receipt_sha256
             || (refinement_ready && !admitted)
-            || (scored && !refinement_ready)
+            || (post_admitted && !refinement_ready)
+            || (scored && !post_admitted)
             || (validity_evaluated && !scored)
             || (ranking_has_coordinate && !scored)
             || (valid_rank_eligible
@@ -8442,6 +8893,7 @@ fn validate_native_outputs(
             || [
                 row.producer_row_receipt_sha256,
                 row.refinement_evidence_sha256,
+                row.post_admission_row_receipt_sha256,
                 row.scorer_evidence_sha256,
                 row.validity_evidence_sha256,
                 row.ranking_evidence_sha256,
@@ -8505,7 +8957,7 @@ fn validate_native_outputs(
     let ranking_batch_receipt_sha256 = ranking_batch.finish();
     let cluster_batch_receipt_sha256 = cluster_batch.finish();
     let mut pipeline_batch =
-        CanonicalHasher::new("betelgeuze.engine_v2_native_fixed64_complete_pipeline_batch/1.0.0");
+        CanonicalHasher::new("betelgeuze.engine_v2_native_fixed64_complete_pipeline_batch/2.0.0");
     pipeline_batch.string(FIXED64_NATIVE_PIPELINE_PROFILE_ID);
     pipeline_batch.i32(backend.as_raw());
     pipeline_batch.i32(sys::BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL);
@@ -8520,6 +8972,8 @@ fn validate_native_outputs(
     pipeline_batch.digest(expected_producer_batch_receipt);
     pipeline_batch.digest(expected_receipt_graph.refinement_policy_receipt_sha256);
     pipeline_batch.digest(refinement_batch_receipt_sha256);
+    pipeline_batch.digest(expected_receipt_graph.post_admission_policy_receipt_sha256);
+    pipeline_batch.digest(expected_post_admission_batch_receipt);
     pipeline_batch.digest(scorer_batch_receipt_sha256);
     pipeline_batch.digest(validity_batch_receipt_sha256);
     pipeline_batch.digest(ranking_batch_receipt_sha256);
@@ -8527,6 +8981,8 @@ fn validate_native_outputs(
     pipeline_batch.u64(generated_row_count);
     pipeline_batch.u64(initial_admitted_row_count);
     pipeline_batch.u64(refined_row_count);
+    pipeline_batch.u64(post_admitted_row_count);
+    pipeline_batch.u64(post_rejected_row_count);
     pipeline_batch.u64(scored_row_count);
     pipeline_batch.u64(valid_row_count);
     pipeline_batch.u64(cluster.representative_index_count);
@@ -8894,6 +9350,7 @@ fn validate_scorer_and_validity_evidence(
     validity_rows: &[sys::bg_docking_pose_validity_row_v1],
     ranking_rows: &[sys::bg_docking_stable_top_k_row_v1],
     refinement_rows: &[sys::bg_docking_fixed64_refinement_row_v1],
+    post_admission_rows: &[sys::bg_docking_geometric_admission_row_v1],
     ligand_atom_count: u64,
     receptor_atom_count: u64,
     exclusion_count: u64,
@@ -8911,6 +9368,7 @@ fn validate_scorer_and_validity_evidence(
         || validity_rows.len() != candidate_count
         || ranking_rows.len() != candidate_count
         || refinement_rows.len() != candidate_count
+        || post_admission_rows.len() != candidate_count
     {
         return Err(Error::local(
             ErrorCode::AbiMismatch,
@@ -8974,7 +9432,13 @@ fn validate_scorer_and_validity_evidence(
         }
         let coordinate_ready =
             refinement_rows[slot].status == sys::BG_DOCKING_FIXED64_REFINEMENT_ROW_COORDINATE_READY;
-        if !coordinate_ready {
+        let post_admitted = coordinate_ready
+            && post_admission_rows[slot].status
+                == sys::BG_DOCKING_GEOMETRIC_ADMISSION_ROW_EVALUATED
+            && post_admission_rows[slot].decision
+                == sys::BG_DOCKING_GEOMETRIC_ADMISSION_DECISION_ACCEPTED
+            && post_admission_rows[slot].rank_eligible == 1;
+        if !post_admitted {
             if scorer.status != sys::BG_DOCKING_SCORER_V1_ROW_TYPED_FAILURE
                 || scorer.failure_code != sys::BG_DOCKING_SCORER_V1_FAILURE_UPSTREAM_NOT_ADMITTED
                 || !scorer_failure_rank_evidence_is_zero(scorer)
@@ -9792,6 +10256,7 @@ mod output_validation_tests {
         validity_rows: Vec<sys::bg_docking_pose_validity_row_v1>,
         ranking_rows: Vec<sys::bg_docking_stable_top_k_row_v1>,
         refinement_rows: Vec<sys::bg_docking_fixed64_refinement_row_v1>,
+        post_admission_rows: Vec<sys::bg_docking_geometric_admission_row_v1>,
         cluster_rows: Vec<sys::bg_docking_rmsd_cluster_row_v1>,
         primary_indices: Vec<u32>,
         valid_indices: Vec<u32>,
@@ -9814,6 +10279,8 @@ mod output_validation_tests {
                 vec![zeroed_abi_value!(sys::bg_docking_stable_top_k_row_v1); count];
             let mut refinement_rows =
                 vec![zeroed_abi_value!(sys::bg_docking_fixed64_refinement_row_v1); count];
+            let mut post_admission_rows =
+                vec![zeroed_abi_value!(sys::bg_docking_geometric_admission_row_v1); count];
             let mut cluster_rows =
                 vec![zeroed_abi_value!(sys::bg_docking_rmsd_cluster_row_v1); count];
             let final_coordinates: [Vec<f64>; 3] = std::array::from_fn(|_| vec![0.0; count]);
@@ -9885,6 +10352,13 @@ mod output_validation_tests {
                 validity_rows[slot].upstream_scorer_failure_code =
                     sys::BG_DOCKING_SCORER_V1_FAILURE_UPSTREAM_NOT_ADMITTED;
                 ranking_rows[slot].slot_index = slot as u32;
+                post_admission_rows[slot].slot_index = slot as u32;
+                post_admission_rows[slot].status =
+                    sys::BG_DOCKING_GEOMETRIC_ADMISSION_ROW_UPSTREAM_FAILURE;
+                post_admission_rows[slot].failure_code =
+                    sys::BG_DOCKING_GEOMETRIC_ADMISSION_FAILURE_UPSTREAM_NOT_AVAILABLE;
+                post_admission_rows[slot].decision =
+                    sys::BG_DOCKING_GEOMETRIC_ADMISSION_DECISION_NOT_EVALUATED;
                 cluster_rows[slot].slot_index = slot as u32;
                 cluster_rows[slot].status = sys::BG_DOCKING_RMSD_CLUSTER_ROW_UPSTREAM_NOT_VALID;
             }
@@ -9906,6 +10380,13 @@ mod output_validation_tests {
                 ranking_rows[slot].coordinate_sha256 = [slot as u8 + 1; 32];
                 refinement_rows[slot].status =
                     sys::BG_DOCKING_FIXED64_REFINEMENT_ROW_COORDINATE_READY;
+                post_admission_rows[slot].status =
+                    sys::BG_DOCKING_GEOMETRIC_ADMISSION_ROW_EVALUATED;
+                post_admission_rows[slot].failure_code =
+                    sys::BG_DOCKING_GEOMETRIC_ADMISSION_FAILURE_NONE;
+                post_admission_rows[slot].decision =
+                    sys::BG_DOCKING_GEOMETRIC_ADMISSION_DECISION_ACCEPTED;
+                post_admission_rows[slot].rank_eligible = 1;
             }
             validity_rows[0].status = sys::BG_DOCKING_POSE_VALIDITY_ROW_EVALUATED;
             validity_rows[0].failure_code = sys::BG_DOCKING_POSE_VALIDITY_FAILURE_NONE;
@@ -9962,6 +10443,7 @@ mod output_validation_tests {
                 validity_rows,
                 ranking_rows,
                 refinement_rows,
+                post_admission_rows,
                 cluster_rows,
                 primary_indices,
                 valid_indices: vec![0; count],
@@ -9981,6 +10463,7 @@ mod output_validation_tests {
                 &self.validity_rows,
                 &self.ranking_rows,
                 &self.refinement_rows,
+                &self.post_admission_rows,
                 1,
                 1,
                 0,
@@ -10257,7 +10740,7 @@ mod output_validation_tests {
 
     #[test]
     fn rejects_component_and_pipeline_receipt_substitution() {
-        let mut row = zeroed_abi_value!(sys::bg_docking_fixed64_pipeline_row_v1);
+        let mut row = zeroed_abi_value!(sys::bg_docking_fixed64_pipeline_row_v2);
         let component_binding = [1; 32];
         let policy = [2; 32];
         let refinement = [3; 32];
@@ -10265,6 +10748,8 @@ mod output_validation_tests {
         let validity = [5; 32];
         let ranking = [6; 32];
         let cluster = [7; 32];
+        let post_policy = [8; 32];
+        row.post_admission_row_receipt_sha256 = [9; 32];
         row.refinement_evidence_sha256 = refinement;
         row.scorer_evidence_sha256 = scorer;
         row.validity_evidence_sha256 = validity;
@@ -10274,6 +10759,7 @@ mod output_validation_tests {
             &row,
             component_binding,
             policy,
+            post_policy,
             refinement,
             scorer,
             validity,
@@ -10284,6 +10770,7 @@ mod output_validation_tests {
             &row,
             component_binding,
             policy,
+            post_policy,
             refinement,
             scorer,
             validity,
@@ -10293,11 +10780,12 @@ mod output_validation_tests {
         .is_ok());
 
         let mut substituted_component = row;
-        substituted_component.scorer_evidence_sha256 = [9; 32];
+        substituted_component.scorer_evidence_sha256 = [10; 32];
         assert!(validate_pipeline_receipt_bindings(
             &substituted_component,
             component_binding,
             policy,
+            post_policy,
             refinement,
             scorer,
             validity,
@@ -10307,11 +10795,12 @@ mod output_validation_tests {
         .is_err());
 
         let mut substituted_row = row;
-        substituted_row.row_receipt_sha256 = [9; 32];
+        substituted_row.row_receipt_sha256 = [11; 32];
         assert!(validate_pipeline_receipt_bindings(
             &substituted_row,
             component_binding,
             policy,
+            post_policy,
             refinement,
             scorer,
             validity,
@@ -11172,7 +11661,7 @@ fn require_authority_false(fields: &[(u8, &str)]) -> Result<()> {
 }
 
 fn authority_disposition(
-    output: &sys::bg_docking_fixed64_pipeline_output_v1,
+    output: &sys::bg_docking_fixed64_pipeline_output_v2,
     producer: &sys::bg_docking_fixed64_producer_output_v1,
 ) -> Result<Fixed64AuthorityDisposition> {
     Ok(Fixed64AuthorityDisposition {
@@ -11211,6 +11700,30 @@ fn authority_disposition(
             output.scientific_claim_authorized,
             "scientific claim",
         )?,
+    })
+}
+
+fn geometric_evidence(
+    row: &sys::bg_docking_geometric_admission_row_v1,
+) -> Result<Fixed64GeometricEvidence> {
+    Ok(Fixed64GeometricEvidence {
+        slot_index: row.slot_index,
+        status: row.status,
+        failure_code: row.failure_code,
+        decision: row.decision,
+        rank_eligible: bool_from_abi(row.rank_eligible, "geometric rank eligibility")?,
+        ligand_atom_count: row.ligand_atom_count,
+        receptor_atom_count: row.receptor_atom_count,
+        exact_pair_count: row.exact_pair_count,
+        penetration_pair_count: row.penetration_pair_count,
+        unique_ligand_penetration_atom_count: row.unique_ligand_penetration_atom_count,
+        unique_ligand_heavy_atom_penetration_count: row.unique_ligand_heavy_atom_penetration_count,
+        raw_minimum_distance_angstrom: row.raw_minimum_distance_angstrom,
+        minimum_vdw_surface_gap_angstrom: row.minimum_vdw_surface_gap_angstrom,
+        minimum_vdw_ratio: row.minimum_vdw_ratio,
+        sphere_overlap_proxy_angstrom3: row.sphere_overlap_proxy_angstrom3,
+        pocket_escape_angstrom: row.pocket_escape_angstrom,
+        row_receipt_sha256: row.row_receipt_sha256,
     })
 }
 
@@ -11265,33 +11778,7 @@ fn producer_evidence(
         output_proposal_sha256: row.output_proposal_sha256,
         output_coordinate_sha256: row.output_coordinate_sha256,
         row_receipt_sha256: row.row_receipt_sha256,
-        geometric: Fixed64GeometricEvidence {
-            status: row.geometric_admission.status,
-            failure_code: row.geometric_admission.failure_code,
-            decision: row.geometric_admission.decision,
-            rank_eligible: bool_from_abi(
-                row.geometric_admission.rank_eligible,
-                "geometric rank eligibility",
-            )?,
-            ligand_atom_count: row.geometric_admission.ligand_atom_count,
-            receptor_atom_count: row.geometric_admission.receptor_atom_count,
-            exact_pair_count: row.geometric_admission.exact_pair_count,
-            penetration_pair_count: row.geometric_admission.penetration_pair_count,
-            unique_ligand_penetration_atom_count: row
-                .geometric_admission
-                .unique_ligand_penetration_atom_count,
-            unique_ligand_heavy_atom_penetration_count: row
-                .geometric_admission
-                .unique_ligand_heavy_atom_penetration_count,
-            raw_minimum_distance_angstrom: row.geometric_admission.raw_minimum_distance_angstrom,
-            minimum_vdw_surface_gap_angstrom: row
-                .geometric_admission
-                .minimum_vdw_surface_gap_angstrom,
-            minimum_vdw_ratio: row.geometric_admission.minimum_vdw_ratio,
-            sphere_overlap_proxy_angstrom3: row.geometric_admission.sphere_overlap_proxy_angstrom3,
-            pocket_escape_angstrom: row.geometric_admission.pocket_escape_angstrom,
-            row_receipt_sha256: row.geometric_admission.row_receipt_sha256,
-        },
+        geometric: geometric_evidence(&row.geometric_admission)?,
     })
 }
 
@@ -11507,8 +11994,8 @@ fn cluster_evidence(row: &sys::bg_docking_rmsd_cluster_row_v1) -> Result<Fixed64
     })
 }
 
-fn pipeline_row(row: &sys::bg_docking_fixed64_pipeline_row_v1) -> Fixed64PipelineRow {
-    Fixed64PipelineRow {
+fn pipeline_row(row: &sys::bg_docking_fixed64_pipeline_row_v2) -> Result<Fixed64PipelineRow> {
+    Ok(Fixed64PipelineRow {
         slot_index: row.slot_index,
         producer_status: row.producer_status,
         producer_failure_code: row.producer_failure_code,
@@ -11517,6 +12004,13 @@ fn pipeline_row(row: &sys::bg_docking_fixed64_pipeline_row_v1) -> Fixed64Pipelin
         effective_refinement_mode: row.effective_refinement_mode,
         refinement_status: row.refinement_status,
         refinement_failure_stage: row.refinement_failure_stage,
+        post_admission_status: row.post_admission_status,
+        post_admission_failure_code: row.post_admission_failure_code,
+        post_admission_decision: row.post_admission_decision,
+        post_admission_rank_eligible: bool_from_abi(
+            row.post_admission_rank_eligible,
+            "post-admission rank eligibility",
+        )?,
         scorer_status: row.scorer_status,
         scorer_failure_code: row.scorer_failure_code,
         validity_status: row.validity_status,
@@ -11530,12 +12024,13 @@ fn pipeline_row(row: &sys::bg_docking_fixed64_pipeline_row_v1) -> Fixed64Pipelin
         producer_row_receipt_sha256: row.producer_row_receipt_sha256,
         final_coordinate_sha256: row.final_coordinate_sha256,
         refinement_evidence_sha256: row.refinement_evidence_sha256,
+        post_admission_row_receipt_sha256: row.post_admission_row_receipt_sha256,
         scorer_evidence_sha256: row.scorer_evidence_sha256,
         validity_evidence_sha256: row.validity_evidence_sha256,
         ranking_evidence_sha256: row.ranking_evidence_sha256,
         cluster_evidence_sha256: row.cluster_evidence_sha256,
         row_receipt_sha256: row.row_receipt_sha256,
-    }
+    })
 }
 
 fn assign_shared_identities(

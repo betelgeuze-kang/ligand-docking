@@ -977,6 +977,407 @@ void copy_values(Type *destination, const Type *source, std::size_t count) {
     std::copy_n(source, count, destination);
 }
 
+[[nodiscard]] bg_status validate_stage_outputs(
+    const bg_docking_fixed64_refinement_pipeline_v1 &pipeline,
+    std::size_t coordinate_count,
+    bg_docking_rigid_refinement_output_v1 &rigid,
+    bg_docking_torsion_v7_output_v1 &torsion,
+    bg_docking_fixed64_refinement_output_v1 &output) noexcept {
+    bg_status status = validate_descriptor_header(
+        rigid.struct_size,
+        sizeof(rigid),
+        rigid.abi_version,
+        "fixed64 refinement-stage rigid output size does not match ABI v1",
+        "fixed64 refinement-stage rigid output ABI version does not match");
+    if (status != BG_STATUS_OK) return status;
+    status = validate_descriptor_header(
+        torsion.struct_size,
+        sizeof(torsion),
+        torsion.abi_version,
+        "fixed64 refinement-stage torsion output size does not match ABI v1",
+        "fixed64 refinement-stage torsion output ABI version does not match");
+    if (status != BG_STATUS_OK) return status;
+    status = validate_pipeline_output(pipeline, output, coordinate_count);
+    if (status != BG_STATUS_OK) return status;
+    if (rigid.row_capacity != kCandidateCount ||
+        rigid.coordinate_capacity != coordinate_count ||
+        rigid.unit_system != pipeline.unit_system ||
+        torsion.row_capacity != kCandidateCount ||
+        torsion.move_capacity != kCandidateCount * kMovesPerCandidate ||
+        torsion.coordinate_capacity != coordinate_count ||
+        torsion.unit_system != pipeline.unit_system || rigid.reserved0 != 0 ||
+        rigid.reserved1 != 0 || torsion.reserved0 != 0 ||
+        torsion.reserved1 != 0 ||
+        rigid.molecular_execution_authorized != UINT8_C(0) ||
+        rigid.existing_rank_auto_change_authorized != UINT8_C(0) ||
+        rigid.customer_pose_emission_authorized != UINT8_C(0) ||
+        rigid.production_claim_authorized != UINT8_C(0) ||
+        torsion.molecular_execution_authorized != UINT8_C(0) ||
+        torsion.existing_rank_auto_change_authorized != UINT8_C(0) ||
+        torsion.customer_pose_emission_authorized != UINT8_C(0) ||
+        torsion.production_claim_authorized != UINT8_C(0) ||
+        !reserved_is_zero(rigid.reserved) ||
+        !reserved_is_zero(torsion.reserved)) {
+        return fail(
+            BG_STATUS_INVALID_ARGUMENT,
+            "fixed64 refinement-stage output capacities, units, authority, or reserved fields are invalid");
+    }
+    status = require_channel(
+        rigid.rows,
+        kCandidateCount,
+        "fixed64 refinement-stage rigid rows are null or misaligned");
+    if (status != BG_STATUS_OK) return status;
+    for (double *channel : {
+             rigid.selected_x_angstrom,
+             rigid.selected_y_angstrom,
+             rigid.selected_z_angstrom,
+             rigid.comparison_v2_x_angstrom,
+             rigid.comparison_v2_y_angstrom,
+             rigid.comparison_v2_z_angstrom,
+             rigid.baseline_v3_x_angstrom,
+             rigid.baseline_v3_y_angstrom,
+             rigid.baseline_v3_z_angstrom,
+             rigid.clearance_v4_x_angstrom,
+             rigid.clearance_v4_y_angstrom,
+             rigid.clearance_v4_z_angstrom}) {
+        status = require_channel(
+            channel,
+            coordinate_count,
+            "fixed64 refinement-stage rigid coordinate is null or misaligned");
+        if (status != BG_STATUS_OK) return status;
+    }
+    status = require_channel(
+        torsion.rows,
+        kCandidateCount,
+        "fixed64 refinement-stage torsion rows are null or misaligned");
+    if (status != BG_STATUS_OK) return status;
+    status = require_channel(
+        torsion.moves,
+        kCandidateCount * kMovesPerCandidate,
+        "fixed64 refinement-stage torsion moves are null or misaligned");
+    if (status != BG_STATUS_OK) return status;
+    for (double *channel : {
+             torsion.optimized_x_angstrom,
+             torsion.optimized_y_angstrom,
+             torsion.optimized_z_angstrom,
+             torsion.optimized_torsion_angles_radians,
+             torsion.final_x_angstrom,
+             torsion.final_y_angstrom,
+             torsion.final_z_angstrom,
+             torsion.final_torsion_angles_radians}) {
+        status = require_channel(
+            channel,
+            coordinate_count,
+            "fixed64 refinement-stage torsion coordinate is null or misaligned");
+        if (status != BG_STATUS_OK) return status;
+    }
+    return BG_STATUS_OK;
+}
+
+bg_status run_stage_for_composition(
+    const bg_context &context,
+    const bg_docking_fixed64_refinement_pipeline_v1 &pipeline,
+    const bg_docking_fixed64_refinement_input_v1 &input,
+    bg_docking_rigid_refinement_output_v1 &rigid,
+    bg_docking_torsion_v7_output_v1 &torsion,
+    bg_docking_fixed64_refinement_output_v1 &output) {
+    if (context.backend != pipeline.backend ||
+        context.unit_system != pipeline.unit_system ||
+        context.device_ordinal != pipeline.device_ordinal ||
+        pipeline.rigid == nullptr || pipeline.torsion == nullptr) {
+        return fail(
+            BG_STATUS_INVALID_ARGUMENT,
+            "fixed64 refinement-stage context binding is invalid");
+    }
+    std::size_t coordinate_count = 0;
+    bg_status status = validate_input(pipeline, input, &coordinate_count);
+    if (status != BG_STATUS_OK) return status;
+    status = validate_stage_outputs(
+        pipeline, coordinate_count, rigid, torsion, output);
+    if (status != BG_STATUS_OK) return status;
+
+    std::array<bg_docking_rigid_refinement_row_v1, kCandidateCount>
+        rigid_rows{};
+    std::array<std::vector<double>, 12> rigid_coordinates;
+    for (auto &values : rigid_coordinates) values.resize(coordinate_count);
+    bg_docking_rigid_refinement_output_v1 local_rigid{};
+    status = bg_docking_rigid_refinement_output_v1_init(
+        &local_rigid, sizeof(local_rigid), BG_ABI_VERSION);
+    if (status != BG_STATUS_OK) return status;
+    local_rigid.row_capacity = kCandidateCount;
+    local_rigid.coordinate_capacity = coordinate_count;
+    local_rigid.rows = rigid_rows.data();
+    local_rigid.selected_x_angstrom = rigid_coordinates[0].data();
+    local_rigid.selected_y_angstrom = rigid_coordinates[1].data();
+    local_rigid.selected_z_angstrom = rigid_coordinates[2].data();
+    local_rigid.comparison_v2_x_angstrom = rigid_coordinates[3].data();
+    local_rigid.comparison_v2_y_angstrom = rigid_coordinates[4].data();
+    local_rigid.comparison_v2_z_angstrom = rigid_coordinates[5].data();
+    local_rigid.baseline_v3_x_angstrom = rigid_coordinates[6].data();
+    local_rigid.baseline_v3_y_angstrom = rigid_coordinates[7].data();
+    local_rigid.baseline_v3_z_angstrom = rigid_coordinates[8].data();
+    local_rigid.clearance_v4_x_angstrom = rigid_coordinates[9].data();
+    local_rigid.clearance_v4_y_angstrom = rigid_coordinates[10].data();
+    local_rigid.clearance_v4_z_angstrom = rigid_coordinates[11].data();
+    bg_docking_rigid_refinement_candidate_batch_soa_v1 rigid_batch{};
+    status = bg_docking_rigid_refinement_candidate_batch_soa_v1_init(
+        &rigid_batch, sizeof(rigid_batch), BG_ABI_VERSION);
+    if (status != BG_STATUS_OK) return status;
+    rigid_batch.ligand_atom_count = input.ligand_atom_count;
+    rigid_batch.candidate_mode = input.candidate_mode;
+    rigid_batch.max_steps = input.rigid_max_steps;
+    rigid_batch.x_angstrom = input.source_x_angstrom;
+    rigid_batch.y_angstrom = input.source_y_angstrom;
+    rigid_batch.z_angstrom = input.source_z_angstrom;
+    status = bg_docking_rigid_refinement_fixed64(
+        &context, pipeline.rigid, &rigid_batch, &local_rigid);
+    if (status != BG_STATUS_OK) return status;
+
+    std::array<bg_docking_torsion_v7_candidate_state, kCandidateCount>
+        torsion_states{};
+    std::array<uint64_t, kCandidateCount> baseline_steps{};
+    for (std::size_t slot = 0; slot < kCandidateCount; ++slot) {
+        const auto mode = input.candidate_mode[slot];
+        const bool v6_mode =
+            mode ==
+                BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V6_BASELINE_V2_LANE ||
+            mode ==
+                BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V6_BASELINE_V3_LANE;
+        if (rigid_rows[slot].status ==
+                BG_DOCKING_RIGID_REFINEMENT_ROW_REFINED &&
+            v6_mode) {
+            torsion_states[slot] = BG_DOCKING_TORSION_V7_CANDIDATE_REFINE;
+            baseline_steps[slot] = rigid_rows[slot].selected.accepted_steps;
+        }
+    }
+    std::array<bg_docking_torsion_v7_row_v1, kCandidateCount> torsion_rows{};
+    std::array<
+        bg_docking_torsion_v7_move_v1,
+        kCandidateCount * kMovesPerCandidate>
+        torsion_moves{};
+    std::array<std::vector<double>, 8> torsion_coordinates;
+    for (auto &values : torsion_coordinates) values.resize(coordinate_count);
+    bg_docking_torsion_v7_output_v1 local_torsion{};
+    status = bg_docking_torsion_v7_output_v1_init(
+        &local_torsion, sizeof(local_torsion), BG_ABI_VERSION);
+    if (status != BG_STATUS_OK) return status;
+    local_torsion.row_capacity = kCandidateCount;
+    local_torsion.move_capacity = torsion_moves.size();
+    local_torsion.coordinate_capacity = coordinate_count;
+    local_torsion.rows = torsion_rows.data();
+    local_torsion.moves = torsion_moves.data();
+    local_torsion.optimized_x_angstrom = torsion_coordinates[0].data();
+    local_torsion.optimized_y_angstrom = torsion_coordinates[1].data();
+    local_torsion.optimized_z_angstrom = torsion_coordinates[2].data();
+    local_torsion.optimized_torsion_angles_radians =
+        torsion_coordinates[3].data();
+    local_torsion.final_x_angstrom = torsion_coordinates[4].data();
+    local_torsion.final_y_angstrom = torsion_coordinates[5].data();
+    local_torsion.final_z_angstrom = torsion_coordinates[6].data();
+    local_torsion.final_torsion_angles_radians =
+        torsion_coordinates[7].data();
+    bg_docking_torsion_v7_candidate_batch_soa_v1 torsion_batch{};
+    status = bg_docking_torsion_v7_candidate_batch_soa_v1_init(
+        &torsion_batch, sizeof(torsion_batch), BG_ABI_VERSION);
+    if (status != BG_STATUS_OK) return status;
+    torsion_batch.ligand_atom_count = input.ligand_atom_count;
+    torsion_batch.candidate_state = torsion_states.data();
+    torsion_batch.proposal_is_torsion_eligible =
+        input.proposal_is_torsion_eligible;
+    torsion_batch.max_steps = input.torsion_max_steps;
+    torsion_batch.baseline_v6_accepted_steps = baseline_steps.data();
+    torsion_batch.source_x_angstrom = input.source_x_angstrom;
+    torsion_batch.source_y_angstrom = input.source_y_angstrom;
+    torsion_batch.source_z_angstrom = input.source_z_angstrom;
+    torsion_batch.baseline_v6_x_angstrom = rigid_coordinates[0].data();
+    torsion_batch.baseline_v6_y_angstrom = rigid_coordinates[1].data();
+    torsion_batch.baseline_v6_z_angstrom = rigid_coordinates[2].data();
+    torsion_batch.baseline_v6_torsion_angles_radians =
+        input.baseline_torsion_angles_radians;
+    status = bg_docking_torsion_v7_refine_fixed64(
+        &context, pipeline.torsion, &torsion_batch, &local_torsion);
+    if (status != BG_STATUS_OK) return status;
+
+    std::array<bg_docking_fixed64_refinement_row_v1, kCandidateCount> rows{};
+    std::array<bg_docking_scorer_v1_candidate_state, kCandidateCount>
+        downstream_states{};
+    std::array<std::vector<double>, 3> final_coordinates;
+    for (auto &values : final_coordinates) values.resize(coordinate_count);
+    std::array<std::array<double, kCandidateCount>, 4> final_quaternions{};
+    const auto ligand_count = static_cast<std::size_t>(input.ligand_atom_count);
+    for (std::size_t slot = 0; slot < kCandidateCount; ++slot) {
+        auto &row = rows[slot];
+        row.slot_index = static_cast<uint32_t>(slot);
+        row.rigid_failure_code = rigid_rows[slot].failure_code;
+        row.selected_rigid_profile = rigid_rows[slot].selected_profile;
+        const bool rigid_ready =
+            rigid_rows[slot].status == BG_DOCKING_RIGID_REFINEMENT_ROW_REFINED;
+        const bool v6_mode =
+            input.candidate_mode[slot] ==
+                BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V6_BASELINE_V2_LANE ||
+            input.candidate_mode[slot] ==
+                BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V6_BASELINE_V3_LANE;
+        row.torsion_v7_applicable =
+            static_cast<uint8_t>(rigid_ready && v6_mode);
+        const double *selected_x = nullptr;
+        const double *selected_y = nullptr;
+        const double *selected_z = nullptr;
+        if (!rigid_ready) {
+            row.status = BG_DOCKING_FIXED64_REFINEMENT_ROW_TYPED_FAILURE;
+            row.failure_stage =
+                BG_DOCKING_FIXED64_REFINEMENT_FAILURE_STAGE_RIGID;
+        } else if (
+            v6_mode &&
+            torsion_rows[slot].status != BG_DOCKING_TORSION_V7_ROW_REFINED) {
+            row.status = BG_DOCKING_FIXED64_REFINEMENT_ROW_TYPED_FAILURE;
+            row.failure_stage =
+                BG_DOCKING_FIXED64_REFINEMENT_FAILURE_STAGE_TORSION_V7;
+            row.torsion_v7_failure_code = torsion_rows[slot].failure_code;
+        } else {
+            row.status = BG_DOCKING_FIXED64_REFINEMENT_ROW_COORDINATE_READY;
+            row.failure_stage = BG_DOCKING_FIXED64_REFINEMENT_FAILURE_STAGE_NONE;
+            row.coordinate_available = UINT8_C(1);
+            row.downstream_candidate_state =
+                BG_DOCKING_SCORER_V1_CANDIDATE_ACTIVE;
+            downstream_states[slot] = BG_DOCKING_SCORER_V1_CANDIDATE_ACTIVE;
+            if (v6_mode) {
+                row.coordinate_origin =
+                    BG_DOCKING_FIXED64_REFINEMENT_COORDINATE_TORSION_V7_FINAL;
+                row.torsion_v7_selected = torsion_rows[slot].torsion_selected;
+                selected_x = torsion_coordinates[4].data();
+                selected_y = torsion_coordinates[5].data();
+                selected_z = torsion_coordinates[6].data();
+            } else {
+                row.coordinate_origin =
+                    BG_DOCKING_FIXED64_REFINEMENT_COORDINATE_RIGID_SELECTED;
+                selected_x = rigid_coordinates[0].data();
+                selected_y = rigid_coordinates[1].data();
+                selected_z = rigid_coordinates[2].data();
+            }
+            const std::size_t begin = slot * ligand_count;
+            std::copy_n(
+                selected_x + begin,
+                ligand_count,
+                final_coordinates[0].data() + begin);
+            std::copy_n(
+                selected_y + begin,
+                ligand_count,
+                final_coordinates[1].data() + begin);
+            std::copy_n(
+                selected_z + begin,
+                ligand_count,
+                final_coordinates[2].data() + begin);
+            const Quaternion final = compose_quaternion(
+                {
+                    input.source_quaternion_x[slot],
+                    input.source_quaternion_y[slot],
+                    input.source_quaternion_z[slot],
+                    input.source_quaternion_w[slot],
+                },
+                rigid_rows[slot].selected.total_rotation_vector_radians);
+            final_quaternions[0][slot] = final.x;
+            final_quaternions[1][slot] = final.y;
+            final_quaternions[2][slot] = final.z;
+            final_quaternions[3][slot] = final.w;
+        }
+    }
+    bg_docking_scorer_v1_candidate_batch_soa_v1 digest_batch{};
+    digest_batch.x_angstrom = final_coordinates[0].data();
+    digest_batch.y_angstrom = final_coordinates[1].data();
+    digest_batch.z_angstrom = final_coordinates[2].data();
+    for (std::size_t slot = 0; slot < kCandidateCount; ++slot) {
+        if (downstream_states[slot] !=
+            BG_DOCKING_SCORER_V1_CANDIDATE_ACTIVE) {
+            continue;
+        }
+        const auto digest =
+            betelgeuze::native::docking::downstream::
+                coordinate_digest_for_composition(
+                    digest_batch, ligand_count, slot);
+        std::copy(digest.begin(), digest.end(), rows[slot].coordinate_sha256);
+    }
+
+    copy_values(rigid.rows, rigid_rows.data(), kCandidateCount);
+    const std::array<double *, 12> rigid_destinations = {
+        rigid.selected_x_angstrom,
+        rigid.selected_y_angstrom,
+        rigid.selected_z_angstrom,
+        rigid.comparison_v2_x_angstrom,
+        rigid.comparison_v2_y_angstrom,
+        rigid.comparison_v2_z_angstrom,
+        rigid.baseline_v3_x_angstrom,
+        rigid.baseline_v3_y_angstrom,
+        rigid.baseline_v3_z_angstrom,
+        rigid.clearance_v4_x_angstrom,
+        rigid.clearance_v4_y_angstrom,
+        rigid.clearance_v4_z_angstrom,
+    };
+    for (std::size_t index = 0; index < rigid_destinations.size(); ++index) {
+        copy_values(
+            rigid_destinations[index],
+            rigid_coordinates[index].data(),
+            coordinate_count);
+    }
+    rigid.row_count = kCandidateCount;
+    rigid.coordinate_count = coordinate_count;
+
+    copy_values(torsion.rows, torsion_rows.data(), kCandidateCount);
+    copy_values(torsion.moves, torsion_moves.data(), torsion_moves.size());
+    const std::array<double *, 8> torsion_destinations = {
+        torsion.optimized_x_angstrom,
+        torsion.optimized_y_angstrom,
+        torsion.optimized_z_angstrom,
+        torsion.optimized_torsion_angles_radians,
+        torsion.final_x_angstrom,
+        torsion.final_y_angstrom,
+        torsion.final_z_angstrom,
+        torsion.final_torsion_angles_radians,
+    };
+    for (std::size_t index = 0; index < torsion_destinations.size(); ++index) {
+        copy_values(
+            torsion_destinations[index],
+            torsion_coordinates[index].data(),
+            coordinate_count);
+    }
+    torsion.row_count = kCandidateCount;
+    torsion.move_count = torsion_moves.size();
+    torsion.coordinate_count = coordinate_count;
+
+    copy_values(output.rows, rows.data(), kCandidateCount);
+    copy_values(
+        output.final_x_angstrom,
+        final_coordinates[0].data(),
+        coordinate_count);
+    copy_values(
+        output.final_y_angstrom,
+        final_coordinates[1].data(),
+        coordinate_count);
+    copy_values(
+        output.final_z_angstrom,
+        final_coordinates[2].data(),
+        coordinate_count);
+    copy_values(
+        output.final_quaternion_x,
+        final_quaternions[0].data(),
+        kCandidateCount);
+    copy_values(
+        output.final_quaternion_y,
+        final_quaternions[1].data(),
+        kCandidateCount);
+    copy_values(
+        output.final_quaternion_z,
+        final_quaternions[2].data(),
+        kCandidateCount);
+    copy_values(
+        output.final_quaternion_w,
+        final_quaternions[3].data(),
+        kCandidateCount);
+    output.row_count = kCandidateCount;
+    output.coordinate_count = coordinate_count;
+    output.quaternion_count = kCandidateCount;
+    return BG_STATUS_OK;
+}
+
 bg_status validate_for_composition(
     const bg_context &context,
     const bg_docking_fixed64_refinement_pipeline_v1 &pipeline,

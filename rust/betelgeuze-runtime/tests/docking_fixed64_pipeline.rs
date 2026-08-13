@@ -10,6 +10,7 @@ use betelgeuze_runtime::{
     Fixed64Ligand, Fixed64Pipeline, Fixed64PipelineContext, Fixed64Receptor, Fixed64RefinementMode,
     Fixed64RunInput, Fixed64SourceEvidence, PositionSoa,
 };
+use betelgeuze_sys as sys;
 use sha2::{Digest, Sha256};
 
 struct SingleAtomFixture {
@@ -277,6 +278,14 @@ fn digest(value: &str) -> [u8; 32] {
     result
 }
 
+fn assert_numeric_parity(left: f64, right: f64) {
+    let scale = left.abs().max(right.abs()).max(1.0);
+    assert!(
+        (left - right).abs() <= 1.0e-10 * scale,
+        "numeric parity mismatch: left={left:?}, right={right:?}"
+    );
+}
+
 #[test]
 fn complete_pipeline_is_raii_bound_to_the_exact_native_context() {
     let fixture = SingleAtomFixture::new();
@@ -293,7 +302,7 @@ fn complete_pipeline_is_raii_bound_to_the_exact_native_context() {
     }
     assert_eq!(
         Fixed64Pipeline::profile_id().unwrap(),
-        "betelgeuze.engine_v2_native_fixed64_complete_pipeline/1.0.0"
+        "betelgeuze.engine_v2_native_fixed64_complete_pipeline/2.0.0"
     );
 }
 
@@ -364,6 +373,7 @@ fn assert_safe_run_returns_complete_receipt(
         torsion_max_steps: &torsion_steps,
         baseline_torsion_angles_radians: &baseline_angles,
         predeclared_refinement_policy_sha256: [0x76; 32],
+        predeclared_post_refinement_admission_policy_sha256: [0x77; 32],
     };
     let context = Context::new(options).unwrap();
     let pipeline = Fixed64Pipeline::new(&context, fixture.scientific_context()).unwrap();
@@ -419,6 +429,11 @@ fn assert_safe_run_returns_complete_receipt(
     let error = pipeline.run(mismatched_source_coordinates).unwrap_err();
     assert_eq!(error.code, ErrorCode::InvalidArgument);
     assert!(error.message.contains("supplied coordinates"));
+    let mut absent_post_admission_policy = run;
+    absent_post_admission_policy.predeclared_post_refinement_admission_policy_sha256 = [0; 32];
+    let error = pipeline.run(absent_post_admission_policy).unwrap_err();
+    assert_eq!(error.code, ErrorCode::InvalidArgument);
+    assert!(error.message.contains("post-refinement admission policy"));
     for crosswire_ligand in [true, false] {
         let mut crosswired = run;
         if crosswire_ligand {
@@ -446,11 +461,18 @@ fn assert_safe_run_returns_complete_receipt(
     assert_eq!(receipt.torsion_rows.len(), 64);
     assert_eq!(receipt.torsion_moves.len(), 512);
     assert_eq!(receipt.refinement_rows.len(), 64);
+    assert_eq!(receipt.post_admission_rows.len(), 64);
     assert_eq!(receipt.rows.len(), 64);
     assert_eq!(receipt.scorer_rows.len(), 64);
     assert_eq!(receipt.validity_rows.len(), 64);
     assert_eq!(receipt.generated_count, 28);
     assert_eq!(receipt.typed_failure_count, 36);
+    assert_eq!(
+        receipt.post_admitted_count + receipt.post_rejected_count,
+        receipt.refined_count
+    );
+    assert!(receipt.scored_count <= receipt.post_admitted_count);
+    assert!(receipt.valid_count <= receipt.scored_count);
     for coordinates in [
         &receipt.producer_coordinates,
         &receipt.rigid_coordinates.selected,
@@ -501,6 +523,42 @@ fn assert_safe_run_returns_complete_receipt(
         .scorer_rows
         .iter()
         .all(|row| row.weighted_terms.iter().all(|term| term.is_finite())));
+    for slot in 0..64 {
+        let post = receipt.post_admission_rows[slot];
+        assert_eq!(post.slot_index, slot as u32);
+        assert_ne!(post.row_receipt_sha256, [0; 32]);
+        if post.status == sys::BG_DOCKING_GEOMETRIC_ADMISSION_ROW_EVALUATED {
+            assert_eq!(
+                post.failure_code,
+                sys::BG_DOCKING_GEOMETRIC_ADMISSION_FAILURE_NONE
+            );
+            assert_eq!(post.ligand_atom_count, 1);
+            assert_eq!(post.receptor_atom_count, 4);
+            assert_eq!(post.exact_pair_count, 4);
+            assert!(post.penetration_pair_count <= post.exact_pair_count);
+            assert!(post.raw_minimum_distance_angstrom.is_finite());
+            assert!(post.minimum_vdw_surface_gap_angstrom.is_finite());
+            assert!(post.minimum_vdw_ratio.is_finite());
+            assert!(post.sphere_overlap_proxy_angstrom3.is_finite());
+            assert!(post.pocket_escape_angstrom.is_finite());
+        }
+        let coordinate_ready = receipt.refinement_rows[slot].status
+            == sys::BG_DOCKING_FIXED64_REFINEMENT_ROW_COORDINATE_READY;
+        let admitted = post.status == sys::BG_DOCKING_GEOMETRIC_ADMISSION_ROW_EVALUATED
+            && post.decision == sys::BG_DOCKING_GEOMETRIC_ADMISSION_DECISION_ACCEPTED
+            && post.rank_eligible;
+        if coordinate_ready && !admitted {
+            assert_eq!(
+                receipt.scorer_rows[slot].status,
+                sys::BG_DOCKING_SCORER_V1_ROW_TYPED_FAILURE
+            );
+            assert_eq!(
+                receipt.scorer_rows[slot].failure_code,
+                sys::BG_DOCKING_SCORER_V1_FAILURE_UPSTREAM_NOT_ADMITTED
+            );
+            assert!(!receipt.ranking_rows[slot].rank_eligible);
+        }
+    }
     assert!(receipt
         .torsion_moves
         .iter()
@@ -528,6 +586,8 @@ fn assert_safe_run_returns_complete_receipt(
         receipt.receipts.producer_batch_receipt_sha256,
         receipt.receipts.refinement_policy_receipt_sha256,
         receipt.receipts.refinement_batch_receipt_sha256,
+        receipt.receipts.post_admission_policy_receipt_sha256,
+        receipt.receipts.post_admission_batch_receipt_sha256,
         receipt.receipts.scorer_batch_receipt_sha256,
         receipt.receipts.validity_batch_receipt_sha256,
         receipt.receipts.ranking_batch_receipt_sha256,
@@ -589,6 +649,13 @@ fn assert_safe_run_returns_complete_receipt(
         .unwrap_err();
     assert_eq!(error.code, ErrorCode::AbiMismatch);
     assert!(error.message.contains("changed after receipt issuance"));
+    let mut changed_post_admission_measurement = receipt.clone();
+    changed_post_admission_measurement.post_admission_rows[0].raw_minimum_distance_angstrom += 0.25;
+    let error = changed_post_admission_measurement
+        .scientific_projection()
+        .unwrap_err();
+    assert_eq!(error.code, ErrorCode::AbiMismatch);
+    assert!(error.message.contains("changed after receipt issuance"));
     let mut changed_projection_seal = receipt.clone();
     changed_projection_seal.scientific_projection_sha256[0] ^= 1;
     let error = changed_projection_seal.scientific_projection().unwrap_err();
@@ -600,6 +667,8 @@ fn assert_safe_run_returns_complete_receipt(
     assert_eq!(projection.receptor_atom_count, 4);
     assert_eq!(projection.ligand_atom_count, 1);
     assert_eq!(projection.candidate_rows.len(), 64);
+    assert_eq!(projection.post_admitted_count, receipt.post_admitted_count);
+    assert_eq!(projection.post_rejected_count, receipt.post_rejected_count);
     assert_eq!(projection.torsion_moves.len(), 512);
     assert_ne!(projection.decision_sha256, [0; 32]);
     assert_ne!(projection.sha256, [0; 32]);
@@ -625,6 +694,76 @@ fn safe_run_returns_complete_fixed64_receipt_and_preserves_typed_failures() {
     assert_eq!(cpp.primary_slot_indices, rust.primary_slot_indices);
     assert_eq!(cpp.valid_slot_indices, rust.valid_slot_indices);
     assert_eq!(cpp.top_k_slot_indices, rust.top_k_slot_indices);
+    assert_eq!(cpp.post_admitted_count, rust.post_admitted_count);
+    assert_eq!(cpp.post_rejected_count, rust.post_rejected_count);
+    assert_eq!(cpp.scored_count, rust.scored_count);
+    assert_eq!(cpp.valid_count, rust.valid_count);
+    for (cpp_row, rust_row) in cpp.candidate_rows.iter().zip(&rust.candidate_rows) {
+        assert_eq!(cpp_row.slot_index, rust_row.slot_index);
+        assert_eq!(
+            cpp_row.post_admission.status,
+            rust_row.post_admission.status
+        );
+        assert_eq!(
+            cpp_row.post_admission.failure_code,
+            rust_row.post_admission.failure_code
+        );
+        assert_eq!(
+            cpp_row.post_admission.decision,
+            rust_row.post_admission.decision
+        );
+        assert_eq!(
+            cpp_row.post_admission.rank_eligible,
+            rust_row.post_admission.rank_eligible
+        );
+        assert_eq!(
+            cpp_row.post_admission.exact_pair_count,
+            rust_row.post_admission.exact_pair_count
+        );
+        assert_eq!(
+            cpp_row.post_admission.penetration_pair_count,
+            rust_row.post_admission.penetration_pair_count
+        );
+        assert_numeric_parity(
+            cpp_row.post_admission.raw_minimum_distance_angstrom,
+            rust_row.post_admission.raw_minimum_distance_angstrom,
+        );
+        assert_numeric_parity(
+            cpp_row.post_admission.minimum_vdw_surface_gap_angstrom,
+            rust_row.post_admission.minimum_vdw_surface_gap_angstrom,
+        );
+        assert_numeric_parity(
+            cpp_row.post_admission.minimum_vdw_ratio,
+            rust_row.post_admission.minimum_vdw_ratio,
+        );
+        for (cpp_term, rust_term) in cpp_row
+            .scorer
+            .weighted_terms
+            .iter()
+            .zip(rust_row.scorer.weighted_terms)
+        {
+            assert_numeric_parity(*cpp_term, rust_term);
+        }
+        assert_numeric_parity(cpp_row.scorer.total_score, rust_row.scorer.total_score);
+        assert_eq!(cpp_row.validity.status, rust_row.validity.status);
+        assert_eq!(
+            cpp_row.validity.failure_code,
+            rust_row.validity.failure_code
+        );
+        assert_eq!(
+            cpp_row.validity.passed_check_mask,
+            rust_row.validity.passed_check_mask
+        );
+        assert_eq!(
+            cpp_row.validity.blocker_mask,
+            rust_row.validity.blocker_mask
+        );
+        assert_eq!(cpp_row.ranking.stable_rank, rust_row.ranking.stable_rank);
+        assert_eq!(
+            cpp_row.ranking.stable_valid_rank,
+            rust_row.ranking.stable_valid_rank
+        );
+    }
 }
 
 fn assert_transformed_placements_are_independently_replayed(
@@ -746,6 +885,7 @@ fn assert_transformed_placements_are_independently_replayed(
         torsion_max_steps: &torsion_steps,
         baseline_torsion_angles_radians: &baseline_angles,
         predeclared_refinement_policy_sha256: [0x76; 32],
+        predeclared_post_refinement_admission_policy_sha256: [0x77; 32],
     };
     let context = Context::new(options).unwrap();
     let pipeline = Fixed64Pipeline::new(&context, fixture.scientific_context()).unwrap();
@@ -843,6 +983,7 @@ fn indexed_so3_out_of_envelope_output_remains_a_typed_failure() {
         torsion_max_steps: &torsion_steps,
         baseline_torsion_angles_radians: &baseline_angles,
         predeclared_refinement_policy_sha256: [0x76; 32],
+        predeclared_post_refinement_admission_policy_sha256: [0x77; 32],
     };
     #[cfg(not(feature = "hip"))]
     let backends = vec![ContextOptions::cpu_reference(), ContextOptions::rust_cpu()];

@@ -90,6 +90,8 @@ fn descriptor_initializers_reject_incompatible_callers_without_writing() {
         assert_initializer_exact(bg_docking_fixed64_producer_output_v1_init);
         assert_initializer_exact(bg_docking_fixed64_pipeline_input_v1_init);
         assert_initializer_exact(bg_docking_fixed64_pipeline_output_v1_init);
+        assert_initializer_exact(bg_docking_fixed64_pipeline_input_v2_init);
+        assert_initializer_exact(bg_docking_fixed64_pipeline_output_v2_init);
         assert_initializer_exact(bg_docking_geometric_admission_context_soa_v1_init);
         assert_initializer_exact(bg_docking_geometric_admission_candidate_batch_soa_v1_init);
         assert_initializer_exact(bg_docking_geometric_admission_output_v1_init);
@@ -121,7 +123,7 @@ fn native_abi_identity_and_canonical_units_match_the_header() {
         assert_eq!(bg_abi_version(), BG_ABI_VERSION);
         assert_eq!(bg_abi_version_major(), BG_ABI_VERSION_MAJOR);
         assert_eq!(bg_abi_version_minor(), BG_ABI_VERSION_MINOR);
-        assert_eq!(owned_string(bg_abi_version_string()), "1.20");
+        assert_eq!(owned_string(bg_abi_version_string()), "1.21");
         assert_eq!(
             owned_string(bg_docking_fixed64_producer_v1_profile_id()),
             "betelgeuze.engine_v2_mixed64_native_fixed64_producer/1.1.2"
@@ -129,6 +131,10 @@ fn native_abi_identity_and_canonical_units_match_the_header() {
         assert_eq!(
             owned_string(bg_docking_fixed64_pipeline_v1_profile_id()),
             "betelgeuze.engine_v2_native_fixed64_complete_pipeline/1.0.0"
+        );
+        assert_eq!(
+            owned_string(bg_docking_fixed64_pipeline_v2_profile_id()),
+            "betelgeuze.engine_v2_native_fixed64_complete_pipeline/2.0.0"
         );
         assert!(!owned_string(bg_status_string(BG_STATUS_OK)).is_empty());
         assert!(!owned_string(bg_backend_string(BG_BACKEND_CPU)).is_empty());

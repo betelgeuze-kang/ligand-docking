@@ -46,7 +46,21 @@ namespace betelgeuze::native::docking::fixed64_producer {
     const bg_docking_fixed64_producer_output_v1 &output);
 }
 
+namespace betelgeuze::native::docking::downstream {
+[[nodiscard]] std::array<uint8_t, 32> coordinate_digest_for_composition(
+    const bg_docking_scorer_v1_candidate_batch_soa_v1 &candidates,
+    std::size_t ligand_count,
+    std::size_t slot) noexcept;
+}
+
 namespace betelgeuze::native::docking::refinement_pipeline {
+[[nodiscard]] bg_status run_stage_for_composition(
+    const bg_context &context,
+    const bg_docking_fixed64_refinement_pipeline_v1 &pipeline,
+    const bg_docking_fixed64_refinement_input_v1 &input,
+    bg_docking_rigid_refinement_output_v1 &rigid,
+    bg_docking_torsion_v7_output_v1 &torsion,
+    bg_docking_fixed64_refinement_output_v1 &output);
 [[nodiscard]] bg_status validate_for_composition(
     const bg_context &context,
     const bg_docking_fixed64_refinement_pipeline_v1 &pipeline,
@@ -145,6 +159,10 @@ struct bg_docking_fixed64_pipeline_v1 final {
     std::array<uint8_t, 32> scorer_context_receipt_sha256{};
     std::array<uint8_t, 32> validity_context_receipt_sha256{};
     std::array<uint8_t, 32> component_binding_receipt_sha256{};
+};
+
+struct bg_docking_fixed64_pipeline_v2 final {
+    bg_docking_fixed64_pipeline_v1 *components = nullptr;
 };
 
 struct bg_docking_rigid_refinement final {

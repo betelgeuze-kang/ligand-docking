@@ -57,7 +57,9 @@ on:
       - "config/engine_v2_cpu_performance_v2_terminal_decision.json"
       - "config/engine_v2_cpu_performance_profile_v3.json"
       - "config/engine_v2_cpu_performance_v3_runner_activation.json"
+      - "config/engine_v2_native_fixed64_cpu_profile_v5.json"
       - "config/engine_v2_native_fixed64_cpu_profile_v4.json"
+      - "config/engine_v2_native_fixed64_cpu_profile_v4_archive.json"
       - "tools/build_engine_v2_wheel.py"
       - "tools/build_engine_v2_native_wheel.py"
       - "tools/run_engine_v2_cpu_performance_qualification.py"
@@ -87,12 +89,14 @@ on:
       - "tools/verify_engine_v2_cpu_performance_profile_v3.py"
       - "tools/preflight_engine_v2_cpu_performance_v3.py"
       - "tools/run_engine_v2_cpu_performance_qualification_v3.py"
+      - "tools/verify_engine_v2_native_fixed64_cpu_profile_v5.py"
       - "tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py"
       - "config/engine_v2_public_redocking_stage0_*.json"
       - "tests/unit/test_engine_v2_*.py"
       - "tests/unit/test_classify_engine_v2_stage0_full_suite.py"
       - "tests/unit/test_reconcile_engine_v2_stage0_full_suites.py"
       - "tests/unit/test_audit_engine_v2_ci_authority.py"
+      - "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v5.py"
       - "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v4.py"
       - "tests/unit/test_build_engine_v2_source_paired_failure_atlas.py"
       - "tests/unit/test_build_engine_v2_receipt_bound_scale_feasibility_audit.py"
@@ -212,7 +216,9 @@ jobs:
             config/engine_v2_cpu_performance_v2_terminal_decision.json
             config/engine_v2_cpu_performance_profile_v3.json
             config/engine_v2_cpu_performance_v3_runner_activation.json
+            config/engine_v2_native_fixed64_cpu_profile_v5.json
             config/engine_v2_native_fixed64_cpu_profile_v4.json
+            config/engine_v2_native_fixed64_cpu_profile_v4_archive.json
             config/engine_v2_public_redocking_stage0_threshold_evidence.json
             tools/__init__.py
             tools/build_engine_v2_wheel.py
@@ -248,6 +254,7 @@ jobs:
             tools/verify_engine_v2_cpu_performance_profile_v3.py
             tools/preflight_engine_v2_cpu_performance_v3.py
             tools/run_engine_v2_cpu_performance_qualification_v3.py
+            tools/verify_engine_v2_native_fixed64_cpu_profile_v5.py
             tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py
             config/engine_v2_public_redocking_stage0_freeze.template.json
             config/engine_v2_public_redocking_stage0_attestation.template.json
@@ -283,6 +290,7 @@ jobs:
             tests/unit/test_engine_v2_cpu_performance_host_preflight_v3.py
             tests/unit/test_verify_engine_v2_cpu_performance_profile_v3.py
             tests/unit/test_engine_v2_cpu_performance_qualification_v3.py
+            tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v5.py
             tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v4.py
             tests/unit/test_engine_v2_native_geometric_admission.py
             tests/unit/test_engine_v2_oracle_selection_metrics.py
@@ -385,6 +393,7 @@ jobs:
             docs/engine_v2_global_orientation_design.md
             docs/engine_v2_mixed64_geometric_candidate_evidence_v2.md
             docs/engine_v2_cpu_performance_qualification.md
+            docs/engine_v2_native_fixed64_cpu_qualification_v5.md
             docs/engine_v2_native_fixed64_cpu_qualification_v4.md
             docs/engine_v2_stage0_status.md
             docs/independent_engine_v2_commercial_roadmap.ko.md
@@ -461,6 +470,7 @@ jobs:
             tools/verify_engine_v2_cpu_performance_profile_v3.py \
             tools/preflight_engine_v2_cpu_performance_v3.py \
             tools/run_engine_v2_cpu_performance_qualification_v3.py \
+            tools/verify_engine_v2_native_fixed64_cpu_profile_v5.py \
             tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py \
             tools/run_engine_v2_cpu_performance_qualification.py
           python tools/check_engine_v2_architecture.py
@@ -532,13 +542,19 @@ jobs:
           grep -q '"molecular_execution":false' \
             /tmp/engine-v2-cpu-performance-runner-v3.json
           python tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py \
-            > /tmp/engine-v2-native-fixed64-cpu-profile-v4.json
-          grep -q '"all_authority_false":true' \
-            /tmp/engine-v2-native-fixed64-cpu-profile-v4.json
-          grep -q '"compiled_profile_binding_verified":true' \
-            /tmp/engine-v2-native-fixed64-cpu-profile-v4.json
+            > /tmp/engine-v2-native-fixed64-cpu-profile-v4-archive.json
+          grep -q '"archived":true' \
+            /tmp/engine-v2-native-fixed64-cpu-profile-v4-archive.json
           grep -q '"execution_consumed":false' \
-            /tmp/engine-v2-native-fixed64-cpu-profile-v4.json
+            /tmp/engine-v2-native-fixed64-cpu-profile-v4-archive.json
+          python tools/verify_engine_v2_native_fixed64_cpu_profile_v5.py \
+            > /tmp/engine-v2-native-fixed64-cpu-profile-v5.json
+          grep -q '"all_authority_false":true' \
+            /tmp/engine-v2-native-fixed64-cpu-profile-v5.json
+          grep -q '"compiled_profile_binding_verified":true' \
+            /tmp/engine-v2-native-fixed64-cpu-profile-v5.json
+          grep -q '"execution_consumed":false' \
+            /tmp/engine-v2-native-fixed64-cpu-profile-v5.json
 
       - name: Run complete focused Engine v2 CPU suite
         shell: bash
@@ -664,6 +680,7 @@ jobs:
             tests/unit/test_engine_v2_cpu_performance_host_preflight_v3.py \
             tests/unit/test_verify_engine_v2_cpu_performance_profile_v3.py \
             tests/unit/test_engine_v2_cpu_performance_qualification_v3.py \
+            tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v5.py \
             tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v4.py \
             tests/unit/test_engine_v2_native_geometric_admission.py \
             tests/unit/test_engine_v2_oracle_selection_metrics.py \
