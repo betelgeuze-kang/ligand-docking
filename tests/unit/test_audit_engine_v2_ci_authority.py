@@ -897,6 +897,35 @@ def test_native_fixed64_cpu_v4_folded_yaml_cannot_hide_tokenless_cargo_run(
     assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is False
 
 
+def test_native_fixed64_cpu_v4_folded_yaml_stops_before_sibling_bin_text(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_native_fixed64_cpu_v4_contract(tmp_path)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        encoding="utf-8",
+    )
+    unrelated = tmp_path / ".github/workflows/unrelated.yaml"
+    unrelated.write_text(
+        "jobs:\n  folded:\n    steps:\n"
+        "      - run: >\n"
+        "          cargo --color always\n"
+        "          run --manifest-path rust/betelgeuze-runtime/Cargo.toml\n"
+        "        name: --bin unrelated-text-is-not-part-of-run\n",
+        encoding="utf-8",
+    )
+
+    payload = build_inventory(tmp_path)
+    assert (
+        payload[
+            "native_fixed64_cpu_v4_live_qualification_absent_from_github_actions"
+        ]
+        is False
+    )
+    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is False
+
+
 @pytest.mark.parametrize(
     ("section", "field", "value"),
     (

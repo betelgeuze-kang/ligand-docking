@@ -343,10 +343,17 @@ def _workflow_invokes_native_fixed64_cpu_v4_live_probe(text: str) -> bool:
             continue
         parent_indent = len(folded.group("indent"))
         content: list[str] = []
+        content_indent: int | None = None
         for candidate in lines[index + 1 :]:
             stripped = candidate.strip()
-            if stripped and len(candidate) - len(candidate.lstrip(" ")) <= parent_indent:
-                break
+            if stripped:
+                candidate_indent = len(candidate) - len(candidate.lstrip(" "))
+                if content_indent is None:
+                    if candidate_indent <= parent_indent:
+                        break
+                    content_indent = candidate_indent
+                elif candidate_indent < content_indent:
+                    break
             content.append(stripped if stripped else ";")
         if content:
             shell_fragments.append(" ".join(content))
