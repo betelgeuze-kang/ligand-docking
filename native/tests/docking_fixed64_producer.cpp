@@ -2358,6 +2358,14 @@ void test_complete_pipeline_v2_invalid_input_and_alias_are_transactional() {
                reinterpret_cast<bg_backend *>(pipeline)) ==
            BG_STATUS_INVALID_ARGUMENT);
     bg_backend intact_backend = BG_BACKEND_AUTO;
+    alignas(void *) std::array<std::byte, sizeof(void *) + 1>
+        misaligned_pipeline_storage{};
+    const auto *misaligned_pipeline =
+        reinterpret_cast<const bg_docking_fixed64_pipeline_v2 *>(
+            misaligned_pipeline_storage.data() + 1);
+    assert(bg_docking_fixed64_pipeline_v2_get_backend(
+               misaligned_pipeline, &intact_backend) ==
+           BG_STATUS_INVALID_ARGUMENT);
     assert(bg_docking_fixed64_pipeline_v2_get_backend(
                pipeline, &intact_backend) == BG_STATUS_OK);
     assert(intact_backend == BG_BACKEND_CPP_CPU_REFERENCE);

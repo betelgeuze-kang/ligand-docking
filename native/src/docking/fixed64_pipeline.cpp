@@ -2305,12 +2305,16 @@ extern "C" BG_API bg_status BG_CALL bg_docking_fixed64_pipeline_v2_get_backend(
     const bg_docking_fixed64_pipeline_v2 *pipeline,
     bg_backend *backend) BG_NOEXCEPT {
     return guarded_status([&]() -> bg_status {
-        if (pipeline == nullptr || pipeline->components == nullptr ||
-            backend == nullptr || !pointer_is_aligned(pipeline) ||
-            !pointer_is_aligned(backend)) {
+        if (pipeline == nullptr || backend == nullptr ||
+            !pointer_is_aligned(pipeline) || !pointer_is_aligned(backend)) {
             return fail(
                 BG_STATUS_INVALID_ARGUMENT,
                 "fixed64 complete pipeline v2 and backend output are null, invalid, or misaligned");
+        }
+        if (pipeline->components == nullptr) {
+            return fail(
+                BG_STATUS_INVALID_ARGUMENT,
+                "fixed64 complete pipeline v2 component handle is null");
         }
         betelgeuze::native::docking::fixed64_pipeline::MemoryRange
             pipeline_range{};

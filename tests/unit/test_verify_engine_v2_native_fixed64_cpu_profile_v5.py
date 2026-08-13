@@ -96,7 +96,7 @@ def test_canonical_native_fixed64_cpu_profile_v5_is_frozen() -> None:
     profile = require_profile_document(raw)
 
     assert hashlib.sha256(raw).hexdigest() == (
-        "00bb24be122194f348c1fb7f86bab90c8bf1373c8e3e983058771f31cf04d52b"
+        "f5b3f288b432a15a1382a175b70821c1c57e8d41a986de2dea8898712374aece"
     )
     assert profile["profile_id"] == "engine_v2_native_fixed64_cpu_synthetic_v5"
     assert all(value is False for value in profile["authority"].values())
@@ -1199,7 +1199,7 @@ def test_profile_v5_cli_reports_non_consuming_authority_false() -> None:
         "fixture_count": 2,
         "profile_id": "engine_v2_native_fixed64_cpu_synthetic_v5",
         "profile_sha256": (
-            "00bb24be122194f348c1fb7f86bab90c8bf1373c8e3e983058771f31cf04d52b"
+            "f5b3f288b432a15a1382a175b70821c1c57e8d41a986de2dea8898712374aece"
         ),
         "reservation_created": False,
         "status": "verified",
