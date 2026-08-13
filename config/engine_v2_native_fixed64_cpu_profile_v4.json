@@ -63,9 +63,11 @@
       "direct_rmsd_clustering"
     ],
     "native_binary": "betelgeuze-fixed64-cpu-probe-v4",
+    "native_cpp_pipeline_source_sha256": "f8588a7196f74e6b4ac7a8a0807d7dc3122476ffc63cd7221bdc6300be47e870",
     "native_pipeline_profile_id": "betelgeuze.engine_v2_native_fixed64_complete_pipeline/1.0.0",
     "native_probe_source_sha256": "09f0dcb8351464e3b04383ea5828ce2fe4b202b37cafd62dabf0a22db75c7d71",
     "native_qualification_source_sha256": "659df3daff5dcc5667359ffd9f2a8fc9c779de45a3b9de0068575a32c540ae02",
+    "native_rust_pipeline_source_sha256": "2c625b7b5136ed842e4050d42d4f883d4f9a22b386bed90d80029c5f9a4c7735",
     "python_scientific_work_allowed": false,
     "receptor_context_recreated_inside_samples": false
   },

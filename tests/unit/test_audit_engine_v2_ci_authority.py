@@ -929,6 +929,10 @@ def test_native_fixed64_cpu_v4_missing_restriction_fails_ci_audit(
         "eval 'cargo run -p betelgeuze-runtime'",
         "builtin eval 'cargo run -p betelgeuze-runtime'",
         "nice ${{ matrix.command }}",
+        "sudo ${{ matrix.command }}",
+        "sudo -u root -- ${{ matrix.command }}",
+        'echo "$(cargo run -p betelgeuze-runtime)"',
+        "echo `cargo run -p betelgeuze-runtime`",
         "CARGO_ALIAS_QUALIFY='run -p betelgeuze-runtime' cargo qualify",
         "cargo qualify",
         (
@@ -1112,6 +1116,60 @@ def test_native_fixed64_cpu_v4_unsupported_step_shell_fails_closed(
         is False
     )
     assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is False
+
+
+def test_native_fixed64_cpu_v4_custom_shell_command_template_fails_closed(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_native_fixed64_cpu_v4_contract(tmp_path)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        encoding="utf-8",
+    )
+    unrelated = tmp_path / ".github/workflows/unrelated.yaml"
+    unrelated.write_text(
+        "jobs:\n  custom-shell:\n    steps:\n"
+        "      - shell: bash -c 'cargo run -p betelgeuze-runtime' {0}\n"
+        "        run: echo ready\n",
+        encoding="utf-8",
+    )
+
+    payload = build_inventory(tmp_path)
+    assert (
+        payload[
+            "native_fixed64_cpu_v4_live_qualification_absent_from_github_actions"
+        ]
+        is False
+    )
+    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is False
+
+
+def test_native_fixed64_cpu_v4_safe_static_shell_template_remains_allowed(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_native_fixed64_cpu_v4_contract(tmp_path)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        encoding="utf-8",
+    )
+    unrelated = tmp_path / ".github/workflows/unrelated.yaml"
+    unrelated.write_text(
+        "jobs:\n  static-shell:\n    steps:\n"
+        "      - shell: bash -eo pipefail {0}\n"
+        '        run: echo "$(find . -maxdepth 0 -print -quit)"\n',
+        encoding="utf-8",
+    )
+
+    payload = build_inventory(tmp_path)
+    assert (
+        payload[
+            "native_fixed64_cpu_v4_live_qualification_absent_from_github_actions"
+        ]
+        is True
+    )
+    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is True
 
 
 def test_native_fixed64_cpu_v4_multiline_run_preserves_command_boundaries(
@@ -1680,6 +1738,7 @@ def test_native_fixed64_cpu_v4_inventory_constants_are_exact() -> None:
         "nohup",
         "setsid",
         "stdbuf",
+        "sudo",
         "taskset",
     )
     assert NATIVE_FIXED64_CPU_V4_FOLDED_RUN_PATTERN.fullmatch("      - run: >2-")

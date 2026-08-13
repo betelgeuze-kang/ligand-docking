@@ -46,7 +46,7 @@ def test_canonical_native_fixed64_cpu_profile_v4_is_frozen() -> None:
     profile = require_profile_document(raw)
 
     assert hashlib.sha256(raw).hexdigest() == (
-        "4d40daf3f1365d1c1f284b6bc5f6e754e38aa22ba44f7ddb3792e844b2eaae5b"
+        "6d819dce8f618652b9bd4af3960690825ed6e592735e6354bdeb0308b70e1780"
     )
     assert profile["profile_id"] == "engine_v2_native_fixed64_cpu_synthetic_v4"
     assert all(value is False for value in profile["authority"].values())
@@ -113,6 +113,16 @@ def test_canonical_native_fixed64_cpu_profile_v4_is_frozen() -> None:
             "native_pipeline",
             b"betelgeuze.engine_v2_native_fixed64_complete_pipeline/1.0.0",
             b"betelgeuze.engine_v2_native_fixed64_complete_pipeline/1.0.1",
+        ),
+        (
+            "docking",
+            b"hash_bool(hash, value.denominator_preserved);",
+            b"hash_bool(hash, false);",
+        ),
+        (
+            "native_pipeline",
+            b"committed.denominator_preserved = UINT8_C(1);",
+            b"committed.denominator_preserved = UINT8_C(0);",
         ),
         (
             "probe",
@@ -246,7 +256,7 @@ def test_profile_v4_cli_reports_non_consuming_authority_false() -> None:
         "fixture_count": 2,
         "profile_id": "engine_v2_native_fixed64_cpu_synthetic_v4",
         "profile_sha256": (
-            "4d40daf3f1365d1c1f284b6bc5f6e754e38aa22ba44f7ddb3792e844b2eaae5b"
+            "6d819dce8f618652b9bd4af3960690825ed6e592735e6354bdeb0308b70e1780"
         ),
         "reservation_created": False,
         "status": "verified",

@@ -196,9 +196,11 @@ def require_profile_document(raw: bytes) -> dict[str, object]:
         {
             "candidate_graph",
             "native_binary",
+            "native_cpp_pipeline_source_sha256",
             "native_pipeline_profile_id",
             "native_probe_source_sha256",
             "native_qualification_source_sha256",
+            "native_rust_pipeline_source_sha256",
             "python_scientific_work_allowed",
             "receptor_context_recreated_inside_samples",
         },
@@ -206,13 +208,19 @@ def require_profile_document(raw: bytes) -> dict[str, object]:
     )
     qualification_source_sha256 = core["native_qualification_source_sha256"]
     probe_source_sha256 = core["native_probe_source_sha256"]
+    rust_pipeline_source_sha256 = core["native_rust_pipeline_source_sha256"]
+    cpp_pipeline_source_sha256 = core["native_cpp_pipeline_source_sha256"]
     if (
         type(qualification_source_sha256) is not str
         or re.fullmatch(r"[0-9a-f]{64}", qualification_source_sha256) is None
         or type(probe_source_sha256) is not str
         or re.fullmatch(r"[0-9a-f]{64}", probe_source_sha256) is None
+        or type(rust_pipeline_source_sha256) is not str
+        or re.fullmatch(r"[0-9a-f]{64}", rust_pipeline_source_sha256) is None
+        or type(cpp_pipeline_source_sha256) is not str
+        or re.fullmatch(r"[0-9a-f]{64}", cpp_pipeline_source_sha256) is None
     ):
-        _fail("native qualification/probe source identity is not canonical SHA-256")
+        _fail("native measured source identity is not canonical SHA-256")
     if core != {
         "candidate_graph": [
             "fixed64_proposal",
@@ -225,11 +233,13 @@ def require_profile_document(raw: bytes) -> dict[str, object]:
             "direct_rmsd_clustering",
         ],
         "native_binary": "betelgeuze-fixed64-cpu-probe-v4",
+        "native_cpp_pipeline_source_sha256": cpp_pipeline_source_sha256,
         "native_pipeline_profile_id": (
             "betelgeuze.engine_v2_native_fixed64_complete_pipeline/1.0.0"
         ),
         "native_probe_source_sha256": probe_source_sha256,
         "native_qualification_source_sha256": qualification_source_sha256,
+        "native_rust_pipeline_source_sha256": rust_pipeline_source_sha256,
         "python_scientific_work_allowed": False,
         "receptor_context_recreated_inside_samples": False,
     }:
@@ -349,6 +359,14 @@ def require_compiled_profile_binding(
         "native_probe_source_sha256"
     ):
         _fail("compiled native probe source changed from the frozen profile")
+    if hashlib.sha256(docking_source_raw).hexdigest() != core.get(
+        "native_rust_pipeline_source_sha256"
+    ):
+        _fail("compiled native Rust pipeline source changed from the frozen profile")
+    if hashlib.sha256(native_pipeline_source_raw).hexdigest() != core.get(
+        "native_cpp_pipeline_source_sha256"
+    ):
+        _fail("compiled native C++ pipeline source changed from the frozen profile")
     library_activation_function = re.compile(
         r"pub\s+const\s+fn\s+fixed64_cpu_v4_live_activation_admitted\(\)"
         r"\s*->\s*bool\s*\{\s*FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED\s*\}"

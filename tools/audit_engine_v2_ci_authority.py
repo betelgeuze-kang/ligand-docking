@@ -270,6 +270,7 @@ NATIVE_FIXED64_CPU_V4_EXECUTING_WRAPPERS = (
     "nohup",
     "setsid",
     "stdbuf",
+    "sudo",
     "taskset",
 )
 NATIVE_FIXED64_CPU_V4_STDIN_INTERPRETERS = (
@@ -656,6 +657,121 @@ def _timeout_wrapped_command_index(
     return index + 1
 
 
+def _sudo_wrapped_command_index(
+    segment: list[str],
+    sudo_index: int,
+) -> int | None:
+    value_options = {
+        "--auth-type",
+        "--chdir",
+        "--chroot",
+        "--close-from",
+        "--command-timeout",
+        "--group",
+        "--host",
+        "--prompt",
+        "--role",
+        "--type",
+        "--user",
+        "-a",
+        "-C",
+        "-D",
+        "-g",
+        "-h",
+        "-p",
+        "-R",
+        "-r",
+        "-t",
+        "-T",
+        "-u",
+        "-U",
+    }
+    long_value_prefixes = tuple(
+        option + "=" for option in value_options if option.startswith("--")
+    )
+    flag_options = {
+        "--askpass",
+        "--background",
+        "--edit",
+        "--help",
+        "--login",
+        "--non-interactive",
+        "--preserve-env",
+        "--preserve-groups",
+        "--remove-timestamp",
+        "--reset-timestamp",
+        "--set-home",
+        "--shell",
+        "--stdin",
+        "--validate",
+        "--version",
+        "-A",
+        "-b",
+        "-E",
+        "-e",
+        "-H",
+        "-i",
+        "-K",
+        "-k",
+        "-l",
+        "-n",
+        "-P",
+        "-S",
+        "-s",
+        "-V",
+        "-v",
+    }
+    value_short_options = {
+        option[1:] for option in value_options if len(option) == 2
+    }
+    flag_short_options = {
+        option[1:] for option in flag_options if len(option) == 2
+    }
+
+    index = sudo_index + 1
+    while index < len(segment):
+        token = segment[index]
+        if token == "--":
+            index += 1
+            break
+        if token in value_options:
+            if index + 1 >= len(segment):
+                return _AMBIGUOUS_COMMAND_INDEX
+            index += 2
+            continue
+        if token.startswith(long_value_prefixes):
+            index += 1
+            continue
+        if token in flag_options or token.startswith("--preserve-env="):
+            index += 1
+            continue
+        if token.startswith("--"):
+            return _AMBIGUOUS_COMMAND_INDEX
+        if token.startswith("-") and token != "-":
+            cluster = token[1:]
+            cluster_index = 0
+            while cluster_index < len(cluster):
+                option = cluster[cluster_index]
+                if option in flag_short_options:
+                    cluster_index += 1
+                    continue
+                if option in value_short_options:
+                    if (
+                        cluster_index + 1 == len(cluster)
+                        and index + 1 >= len(segment)
+                    ):
+                        return _AMBIGUOUS_COMMAND_INDEX
+                    if cluster_index + 1 == len(cluster):
+                        index += 1
+                    cluster_index = len(cluster)
+                    continue
+                return _AMBIGUOUS_COMMAND_INDEX
+            index += 1
+            continue
+        break
+    return index if index < len(segment) else None
+
+
 def _shell_outer_command_word_index(segment: list[str]) -> int | None:
     index = 0
     while index < len(segment):
@@ -723,6 +839,12 @@ def _shell_outer_command_word_index(segment: list[str]) -> int | None:
             continue
         if segment[index].rsplit("/", 1)[-1] == "timeout":
             nested_index = _timeout_wrapped_command_index(segment, index)
+            if nested_index is None or nested_index == _AMBIGUOUS_COMMAND_INDEX:
+                return nested_index
+            index = nested_index
+            continue
+        if segment[index].rsplit("/", 1)[-1] == "sudo":
+            nested_index = _sudo_wrapped_command_index(segment, index)
             if nested_index is None or nested_index == _AMBIGUOUS_COMMAND_INDEX:
                 return nested_index
             index = nested_index
@@ -980,6 +1102,139 @@ def _shell_command_segments(tokens: list[str]) -> tuple[tuple[str, ...], ...]:
         if token in {"]]", "))"} and conditional_depth:
             conditional_depth -= 1
     return tuple(segments)
+
+
+def _shell_command_substitution_bodies(script: str) -> tuple[str, ...] | None:
+    """Return executable command-substitution bodies, or fail on ambiguity."""
+
+    def comment_starts(index: int) -> bool:
+        return index == 0 or script[index - 1] in " \t\r\n;&|()"
+
+    def backtick_end(start: int) -> int | None:
+        index = start + 1
+        while index < len(script):
+            if script[index] == "\\":
+                index += 2
+                continue
+            if script[index] == "`":
+                return index + 1
+            index += 1
+        return None
+
+    def dollar_paren_end(start: int) -> int | None:
+        index = start + 2
+        quote: str | None = None
+        plain_parenthesis_depth = 0
+        while index < len(script):
+            character = script[index]
+            if quote == "'":
+                if character == "'":
+                    quote = None
+                index += 1
+                continue
+            if character == "\\":
+                index += 2
+                continue
+            if quote == '"':
+                if character == '"':
+                    quote = None
+                    index += 1
+                    continue
+                if script.startswith("$((", index):
+                    return None
+                if script.startswith("$(", index):
+                    nested_end = dollar_paren_end(index)
+                    if nested_end is None:
+                        return None
+                    index = nested_end
+                    continue
+                if character == "`":
+                    nested_end = backtick_end(index)
+                    if nested_end is None:
+                        return None
+                    index = nested_end
+                    continue
+                index += 1
+                continue
+            if character == "#" and comment_starts(index):
+                newline = script.find("\n", index)
+                if newline == -1:
+                    return None
+                index = newline + 1
+                continue
+            if character in {"'", '"'}:
+                quote = character
+                index += 1
+                continue
+            if script.startswith("$((", index):
+                return None
+            if script.startswith("$(", index):
+                nested_end = dollar_paren_end(index)
+                if nested_end is None:
+                    return None
+                index = nested_end
+                continue
+            if character == "`":
+                nested_end = backtick_end(index)
+                if nested_end is None:
+                    return None
+                index = nested_end
+                continue
+            if character == "(":
+                plain_parenthesis_depth += 1
+            elif character == ")":
+                if plain_parenthesis_depth == 0:
+                    return index + 1
+                plain_parenthesis_depth -= 1
+            index += 1
+        return None
+
+    bodies: list[str] = []
+    index = 0
+    quote: str | None = None
+    while index < len(script):
+        character = script[index]
+        if quote == "'":
+            if character == "'":
+                quote = None
+            index += 1
+            continue
+        if character == "\\":
+            index += 2
+            continue
+        if quote == '"':
+            if character == '"':
+                quote = None
+                index += 1
+                continue
+        elif character == "#" and comment_starts(index):
+            newline = script.find("\n", index)
+            if newline == -1:
+                break
+            index = newline + 1
+            continue
+        elif character in {"'", '"'}:
+            quote = character
+            index += 1
+            continue
+        if script.startswith("$((", index):
+            return None
+        if script.startswith("$(", index):
+            end = dollar_paren_end(index)
+            if end is None:
+                return None
+            bodies.append(script[index + 2 : end - 1])
+            index = end
+            continue
+        if character == "`":
+            end = backtick_end(index)
+            if end is None:
+                return None
+            bodies.append(script[index + 1 : end - 1])
+            index = end
+            continue
+        index += 1
+    return tuple(bodies)
 
 
 def _workflow_has_dynamic_cargo_run_command(tokens: list[str]) -> bool:
@@ -1310,13 +1565,64 @@ def _is_supported_bourne_shell(shell: str | None) -> bool:
         tokens = shlex.split(shell, posix=True)
     except ValueError:
         return False
-    return bool(tokens) and tokens[0].rsplit("/", 1)[-1] in {
+    if not tokens or tokens[0].rsplit("/", 1)[-1] not in {
         "bash",
         "dash",
         "ksh",
         "sh",
         "zsh",
+    }:
+        return False
+    return tuple(tokens[1:]) in {
+        (),
+        ("{0}",),
+        ("-e", "{0}"),
+        ("-eo", "pipefail", "{0}"),
+        ("-e", "-o", "pipefail", "{0}"),
+        ("--noprofile", "--norc", "-e", "{0}"),
+        ("--noprofile", "--norc", "-eo", "pipefail", "{0}"),
+        ("--noprofile", "--norc", "-e", "-o", "pipefail", "{0}"),
     }
+
+
+def _shell_script_invokes_native_fixed64_cpu_v4_live_probe(
+    script: str,
+    *,
+    substitution_depth: int = 0,
+) -> bool:
+    if substitution_depth > 8:
+        return True
+    executable = _shell_without_static_heredoc_bodies(script)
+    if executable is None:
+        return True
+    if any(
+        token in executable
+        for token in NATIVE_FIXED64_CPU_V4_FORBIDDEN_WORKFLOW_TOKENS
+    ):
+        return True
+    substitution_bodies = _shell_command_substitution_bodies(executable)
+    if substitution_bodies is None:
+        return True
+    if any(
+        _shell_script_invokes_native_fixed64_cpu_v4_live_probe(
+            body,
+            substitution_depth=substitution_depth + 1,
+        )
+        for body in substitution_bodies
+    ):
+        return True
+    lexer = shlex.shlex(executable, posix=True, punctuation_chars=";&|()\n")
+    lexer.whitespace_split = True
+    lexer.whitespace = " \t\r"
+    lexer.commenters = "#"
+    try:
+        tokens = list(lexer)
+    except ValueError:
+        return True
+    return _shell_tokens_invoke_native_fixed64_cpu_v4_live_probe(
+        tokens,
+        embedded_depth=substitution_depth,
+    )
 
 
 def _workflow_invokes_native_fixed64_cpu_v4_live_probe(text: str) -> bool:
@@ -1329,23 +1635,7 @@ def _workflow_invokes_native_fixed64_cpu_v4_live_probe(text: str) -> bool:
     for line, shell in yaml_run_steps:
         if not _is_supported_bourne_shell(shell):
             return True
-        executable = _shell_without_static_heredoc_bodies(line)
-        if executable is None:
-            return True
-        if any(
-            token in executable
-            for token in NATIVE_FIXED64_CPU_V4_FORBIDDEN_WORKFLOW_TOKENS
-        ):
-            return True
-        lexer = shlex.shlex(executable, posix=True, punctuation_chars=";&|()\n")
-        lexer.whitespace_split = True
-        lexer.whitespace = " \t\r"
-        lexer.commenters = "#"
-        try:
-            tokens = list(lexer)
-        except ValueError:
-            return True
-        if _shell_tokens_invoke_native_fixed64_cpu_v4_live_probe(tokens):
+        if _shell_script_invokes_native_fixed64_cpu_v4_live_probe(line):
             return True
     return False
 
