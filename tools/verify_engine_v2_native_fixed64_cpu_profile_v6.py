@@ -12,9 +12,14 @@ import stat
 import subprocess
 from typing import NoReturn
 
-from tools.verify_engine_v2_native_fixed64_cpu_profile_v5 import (
-    require_archived_profile_v5,
-)
+if __package__:
+    from .verify_engine_v2_native_fixed64_cpu_profile_v5 import (
+        require_archived_profile_v5,
+    )
+else:
+    from verify_engine_v2_native_fixed64_cpu_profile_v5 import (
+        require_archived_profile_v5,
+    )
 
 
 SCHEMA_ID = "betelgeuze.engine_v2_native_fixed64_cpu_profile/6.0.0"

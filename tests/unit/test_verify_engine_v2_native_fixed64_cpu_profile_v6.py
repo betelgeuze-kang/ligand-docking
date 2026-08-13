@@ -83,6 +83,20 @@ def test_command_line_verifier_is_non_consuming_and_authority_false() -> None:
     assert payload["source_count"] == 190
 
 
+def test_command_line_verifier_resolves_sibling_without_site_packages() -> None:
+    completed = subprocess.run(
+        [sys.executable, "-S", str(_TOOL)],
+        cwd=_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(completed.stdout)
+    assert completed.stderr == ""
+    assert payload["profile_id"] == verifier.PROFILE_ID
+    assert payload["compiled_profile_binding_verified"] is True
+
+
 def test_duplicate_profile_key_fails_closed() -> None:
     raw = _PROFILE.read_bytes().replace(
         b'{\n  "authority": {',

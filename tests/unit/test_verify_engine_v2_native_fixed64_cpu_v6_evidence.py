@@ -3,6 +3,8 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+import subprocess
+import sys
 
 import pytest
 
@@ -30,6 +32,7 @@ _ROOT = Path(__file__).resolve().parents[2]
 _PROFILE_RAW = (
     _ROOT / "config/engine_v2_native_fixed64_cpu_profile_v6.json"
 ).read_bytes()
+_VERIFIER = _ROOT / "tools/verify_engine_v2_native_fixed64_cpu_v6_evidence.py"
 _OUTPUT_PATH_SHA256 = "a1" * 32
 
 
@@ -242,6 +245,20 @@ def test_complete_blocked_and_pass_evidence_rederive(passed: bool) -> None:
     terminal = evidence["terminal"]
     assert terminal["recorded_decision"] == ("PASS" if passed else "BLOCKED")
     assert terminal["qualification_authority"] is False
+
+
+def test_evidence_help_resolves_sibling_chain_without_site_packages() -> None:
+    completed = subprocess.run(
+        [sys.executable, "-S", str(_VERIFIER), "--help"],
+        cwd=_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.stderr == ""
+    assert "--artifact" in completed.stdout
+    assert "--attempt" in completed.stdout
+    assert "--terminal" in completed.stdout
 
 
 def test_artifact_receipt_tamper_fails_closed() -> None:

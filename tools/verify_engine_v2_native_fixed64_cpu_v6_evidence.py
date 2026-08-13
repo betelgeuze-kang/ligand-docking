@@ -14,13 +14,22 @@ import re
 import stat
 from typing import NoReturn
 
-from tools.verify_engine_v2_native_fixed64_cpu_profile_v6 import (
-    FALSE_AUTHORITY_KEYS,
-    FALSE_RESTRICTION_KEYS,
-    PROFILE_ID,
-    PROFILE_RELATIVE_PATH,
-    PROFILE_SHA256,
-)
+if __package__:
+    from .verify_engine_v2_native_fixed64_cpu_profile_v6 import (
+        FALSE_AUTHORITY_KEYS,
+        FALSE_RESTRICTION_KEYS,
+        PROFILE_ID,
+        PROFILE_RELATIVE_PATH,
+        PROFILE_SHA256,
+    )
+else:
+    from verify_engine_v2_native_fixed64_cpu_profile_v6 import (
+        FALSE_AUTHORITY_KEYS,
+        FALSE_RESTRICTION_KEYS,
+        PROFILE_ID,
+        PROFILE_RELATIVE_PATH,
+        PROFILE_SHA256,
+    )
 
 
 ATTEMPT_SCHEMA_ID = "betelgeuze.engine_v2_native_fixed64_cpu_attempt/6.0.0"
