@@ -1,0 +1,27 @@
+{
+  "authority": {
+    "fresh_holdout_execution_authorized": false,
+    "historical_ab_execution_authorized": false,
+    "molecular_execution_authorized": false,
+    "product_performance_claim_authorized": false,
+    "public_benchmark_authorized": false,
+    "qualification_authority": false,
+    "reservation_authorized": false,
+    "scientific_claim_authorized": false,
+    "stage0_admission_authorized": false
+  },
+  "execution_consumed": false,
+  "implementation_main_commit_oid": "5b6e007466542f616348fa83dc57deaac3650df9",
+  "profile_id": "engine_v2_native_fixed64_cpu_synthetic_v4",
+  "profile_sha256": "09a7d27446c7b6283798c6f1c6ba6a3c36ac63582c65b4897657e409ed4536c8",
+  "reservation_created": false,
+  "review": {
+    "required_checks_success": 85,
+    "reviewed_head_oid": "8859c3b6e138cd4a969209b749db16d8980318c1",
+    "unresolved_review_threads": 0
+  },
+  "schema_id": "betelgeuze.engine_v2_native_fixed64_cpu_profile_archive/1.0.0",
+  "status": "archived_frozen_superseded_by_v5",
+  "transitive_source_count": 187,
+  "transitive_source_manifest_sha256": "757dbe9270e2494e3eb420e14d00788da38dba7d1dafdcfbf9d5f64ce2a9a729"
+}

@@ -32,10 +32,10 @@ pub use forcefield::{
     PeriodicTorsion,
 };
 pub use qualification::{
-    fixed64_cpu_v4_live_activation_admitted, run_native_fixed64_cpu_probe_v4,
-    Fixed64CpuFixtureProbeV4, Fixed64CpuProbeConfigV4, Fixed64CpuProbeReportV4,
-    Fixed64NumericParityV4, FIXED64_CPU_QUALIFICATION_V4_PROFILE_ID,
-    FIXED64_CPU_QUALIFICATION_V4_SCHEMA_ID, FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED,
+    fixed64_cpu_v5_live_activation_admitted, run_native_fixed64_cpu_probe_v5,
+    Fixed64CpuFixtureProbeV5, Fixed64CpuProbeConfigV5, Fixed64CpuProbeReportV5,
+    Fixed64NumericParityV5, FIXED64_CPU_QUALIFICATION_V5_PROFILE_ID,
+    FIXED64_CPU_QUALIFICATION_V5_SCHEMA_ID, FIXED64_CPU_V5_LIVE_ACTIVATION_ADMITTED,
 };
 
 use std::ffi::CStr;

@@ -24,11 +24,11 @@ from tools.audit_engine_v2_ci_authority import (
     MIXED64_V2_FORBIDDEN_TRUE_AUTHORITY_KEYS,
     MIXED64_V2_REQUIRED_TOKEN_COUNTS,
     MIXED64_V2_REQUIRED_TOKENS,
-    NATIVE_FIXED64_CPU_V4_CONTRACT_PATHS,
-    NATIVE_FIXED64_CPU_V4_FALSE_AUTHORITY_KEYS,
-    NATIVE_FIXED64_CPU_V4_FALSE_RESTRICTION_KEYS,
-    NATIVE_FIXED64_CPU_V4_REQUIRED_TOKEN_COUNTS,
-    NATIVE_FIXED64_CPU_V4_REQUIRED_TOKENS,
+    NATIVE_FIXED64_CPU_V5_CONTRACT_PATHS,
+    NATIVE_FIXED64_CPU_V5_FALSE_AUTHORITY_KEYS,
+    NATIVE_FIXED64_CPU_V5_FALSE_RESTRICTION_KEYS,
+    NATIVE_FIXED64_CPU_V5_REQUIRED_TOKEN_COUNTS,
+    NATIVE_FIXED64_CPU_V5_REQUIRED_TOKENS,
     ONE_SHOT_CONTRACT_PATHS,
     ONE_SHOT_REQUIRED_TOKENS,
     STANDALONE_PIPELINE_CONTRACT_PATHS,
@@ -105,11 +105,11 @@ def _cpu_performance_ci_tokens() -> tuple[str, ...]:
     )
 
 
-def _native_fixed64_cpu_v4_ci_tokens() -> tuple[str, ...]:
+def _native_fixed64_cpu_v5_ci_tokens() -> tuple[str, ...]:
     return tuple(
         f"# {token}"
         for token, minimum_count in (
-            NATIVE_FIXED64_CPU_V4_REQUIRED_TOKEN_COUNTS.items()
+            NATIVE_FIXED64_CPU_V5_REQUIRED_TOKEN_COUNTS.items()
         )
         for _ in range(minimum_count)
     )
@@ -158,20 +158,20 @@ def _write_cpu_performance_contract(
     activation.write_bytes(activation_source.read_bytes())
 
 
-def _write_native_fixed64_cpu_v4_contract(tmp_path: Path) -> None:
-    _mark_complete_contract(tmp_path, NATIVE_FIXED64_CPU_V4_CONTRACT_PATHS)
+def _write_native_fixed64_cpu_v5_contract(tmp_path: Path) -> None:
+    _mark_complete_contract(tmp_path, NATIVE_FIXED64_CPU_V5_CONTRACT_PATHS)
     source = (
         Path(__file__).resolve().parents[2]
-        / "config/engine_v2_native_fixed64_cpu_profile_v4.json"
+        / "config/engine_v2_native_fixed64_cpu_profile_v5.json"
     )
-    profile = tmp_path / "config/engine_v2_native_fixed64_cpu_profile_v4.json"
+    profile = tmp_path / "config/engine_v2_native_fixed64_cpu_profile_v5.json"
     profile.write_bytes(source.read_bytes())
     probe_source = (
         Path(__file__).resolve().parents[2]
-        / "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v4.rs"
+        / "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v5.rs"
     )
     probe = tmp_path / (
-        "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v4.rs"
+        "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v5.rs"
     )
     probe.write_bytes(probe_source.read_bytes())
     qualification_source = (
@@ -518,15 +518,15 @@ def test_repository_has_no_specialized_one_shot_workflow() -> None:
     )
     assert inventory["cpu_performance_contract_in_authoritative_ci"] is True
     assert inventory["cpu_performance_authority_fail_closed"] is True
-    assert all(token in main_text for token in NATIVE_FIXED64_CPU_V4_REQUIRED_TOKENS)
+    assert all(token in main_text for token in NATIVE_FIXED64_CPU_V5_REQUIRED_TOKENS)
     assert all(
         main_text.count(token) >= minimum_count
         for token, minimum_count in (
-            NATIVE_FIXED64_CPU_V4_REQUIRED_TOKEN_COUNTS.items()
+            NATIVE_FIXED64_CPU_V5_REQUIRED_TOKEN_COUNTS.items()
         )
     )
-    assert inventory["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is True
-    assert inventory["native_fixed64_cpu_v4_authority_fail_closed"] is True
+    assert inventory["native_fixed64_cpu_v5_contract_in_authoritative_ci"] is True
+    assert inventory["native_fixed64_cpu_v5_authority_fail_closed"] is True
 
 
 def test_mixed64_v2_contract_requires_complete_authoritative_main(
@@ -717,60 +717,60 @@ def test_cpu_performance_v3_runner_activation_escalation_fails_ci_audit(
     assert payload["cpu_performance_contract_in_authoritative_ci"] is False
 
 
-def test_native_fixed64_cpu_v4_requires_authoritative_ci_and_false_authority(
+def test_native_fixed64_cpu_v5_requires_authoritative_ci_and_false_authority(
     tmp_path: Path,
 ) -> None:
     _write_authoritative_workflows(tmp_path)
-    _write_native_fixed64_cpu_v4_contract(tmp_path)
+    _write_native_fixed64_cpu_v5_contract(tmp_path)
     (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
-        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        "\n".join(_native_fixed64_cpu_v5_ci_tokens()),
         encoding="utf-8",
     )
 
     payload = build_inventory(tmp_path)
-    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is True
-    assert payload["native_fixed64_cpu_v4_binary_activation_blocked"] is True
-    assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is True
+    assert payload["native_fixed64_cpu_v5_authority_fail_closed"] is True
+    assert payload["native_fixed64_cpu_v5_binary_activation_blocked"] is True
+    assert payload["native_fixed64_cpu_v5_contract_in_authoritative_ci"] is True
     assert payload[
-        "native_fixed64_cpu_v4_github_actions_production_authority_false"
+        "native_fixed64_cpu_v5_github_actions_production_authority_false"
     ] is True
     assert payload[
-        "native_fixed64_cpu_v4_test_double_production_authority_false"
+        "native_fixed64_cpu_v5_test_double_production_authority_false"
     ] is True
     assert payload[
-        "native_fixed64_cpu_v4_qualification_admission_authority_false"
+        "native_fixed64_cpu_v5_qualification_admission_authority_false"
     ] is True
 
-    (tmp_path / "docs/engine_v2_native_fixed64_cpu_qualification_v4.md").unlink()
+    (tmp_path / "docs/engine_v2_native_fixed64_cpu_qualification_v5.md").unlink()
     payload = build_inventory(tmp_path)
-    assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is False
+    assert payload["native_fixed64_cpu_v5_contract_in_authoritative_ci"] is False
 
 
 @pytest.mark.parametrize(
     ("old", "new"),
     (
         (
-            "pub const FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED: bool = false",
-            "pub const FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED: bool = true",
+            "pub const FIXED64_CPU_V5_LIVE_ACTIVATION_ADMITTED: bool = false",
+            "pub const FIXED64_CPU_V5_LIVE_ACTIVATION_ADMITTED: bool = true",
         ),
         (
-            "pub const fn fixed64_cpu_v4_live_activation_admitted() -> bool {\n"
-            "    FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED\n"
+            "pub const fn fixed64_cpu_v5_live_activation_admitted() -> bool {\n"
+            "    FIXED64_CPU_V5_LIVE_ACTIVATION_ADMITTED\n"
             "}",
-            "pub const fn fixed64_cpu_v4_live_activation_admitted() -> bool {\n"
+            "pub const fn fixed64_cpu_v5_live_activation_admitted() -> bool {\n"
             "    true\n}",
         ),
     ),
 )
-def test_native_fixed64_cpu_v4_binary_activation_cannot_be_enabled(
+def test_native_fixed64_cpu_v5_binary_activation_cannot_be_enabled(
     tmp_path: Path,
     old: str,
     new: str,
 ) -> None:
     _write_authoritative_workflows(tmp_path)
-    _write_native_fixed64_cpu_v4_contract(tmp_path)
+    _write_native_fixed64_cpu_v5_contract(tmp_path)
     (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
-        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        "\n".join(_native_fixed64_cpu_v5_ci_tokens()),
         encoding="utf-8",
     )
     qualification = tmp_path / (
@@ -784,26 +784,26 @@ def test_native_fixed64_cpu_v4_binary_activation_cannot_be_enabled(
     )
 
     payload = build_inventory(tmp_path)
-    assert payload["native_fixed64_cpu_v4_binary_activation_blocked"] is False
-    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is False
-    assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is False
+    assert payload["native_fixed64_cpu_v5_binary_activation_blocked"] is False
+    assert payload["native_fixed64_cpu_v5_authority_fail_closed"] is False
+    assert payload["native_fixed64_cpu_v5_contract_in_authoritative_ci"] is False
 
 
-def test_native_fixed64_cpu_v4_measurement_cannot_precede_activation_guard(
+def test_native_fixed64_cpu_v5_measurement_cannot_precede_activation_guard(
     tmp_path: Path,
 ) -> None:
     _write_authoritative_workflows(tmp_path)
-    _write_native_fixed64_cpu_v4_contract(tmp_path)
+    _write_native_fixed64_cpu_v5_contract(tmp_path)
     (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
-        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        "\n".join(_native_fixed64_cpu_v5_ci_tokens()),
         encoding="utf-8",
     )
     probe = tmp_path / (
-        "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v4.rs"
+        "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v5.rs"
     )
     source = probe.read_text(encoding="ascii")
-    measurement_call = "run_native_fixed64_cpu_probe_v4(config)"
-    activation_guard = "if !fixed64_cpu_v4_live_activation_admitted()"
+    measurement_call = "run_native_fixed64_cpu_probe_v5(config)"
+    activation_guard = "if !fixed64_cpu_v5_live_activation_admitted()"
     assert source.count(measurement_call) == 1
     assert source.count(activation_guard) == 1
     source = source.replace(measurement_call, "measurement_call_moved", 1)
@@ -815,23 +815,23 @@ def test_native_fixed64_cpu_v4_measurement_cannot_precede_activation_guard(
     probe.write_text(source, encoding="ascii")
 
     payload = build_inventory(tmp_path)
-    assert payload["native_fixed64_cpu_v4_binary_activation_blocked"] is False
-    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is False
-    assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is False
+    assert payload["native_fixed64_cpu_v5_binary_activation_blocked"] is False
+    assert payload["native_fixed64_cpu_v5_authority_fail_closed"] is False
+    assert payload["native_fixed64_cpu_v5_contract_in_authoritative_ci"] is False
 
 
-def test_native_fixed64_cpu_v4_public_api_cannot_bypass_activation(
+def test_native_fixed64_cpu_v5_public_api_cannot_bypass_activation(
     tmp_path: Path,
 ) -> None:
     _write_authoritative_workflows(tmp_path)
-    _write_native_fixed64_cpu_v4_contract(tmp_path)
+    _write_native_fixed64_cpu_v5_contract(tmp_path)
     (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
-        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        "\n".join(_native_fixed64_cpu_v5_ci_tokens()),
         encoding="utf-8",
     )
     qualification = tmp_path / "rust/betelgeuze-runtime/src/qualification.rs"
     source = qualification.read_text(encoding="ascii")
-    public_guard = "if !fixed64_cpu_v4_live_activation_admitted()"
+    public_guard = "if !fixed64_cpu_v5_live_activation_admitted()"
     assert source.count(public_guard) == 1
     qualification.write_text(
         source.replace(public_guard, "if false", 1),
@@ -839,17 +839,17 @@ def test_native_fixed64_cpu_v4_public_api_cannot_bypass_activation(
     )
 
     payload = build_inventory(tmp_path)
-    assert payload["native_fixed64_cpu_v4_binary_activation_blocked"] is False
-    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is False
-    assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is False
+    assert payload["native_fixed64_cpu_v5_binary_activation_blocked"] is False
+    assert payload["native_fixed64_cpu_v5_authority_fail_closed"] is False
+    assert payload["native_fixed64_cpu_v5_contract_in_authoritative_ci"] is False
 
 
-def test_native_fixed64_cpu_v4_missing_restriction_fails_ci_audit(
+def test_native_fixed64_cpu_v5_missing_restriction_fails_ci_audit(
     tmp_path: Path,
 ) -> None:
     _write_authoritative_workflows(tmp_path)
-    _write_native_fixed64_cpu_v4_contract(tmp_path)
-    profile_path = tmp_path / "config/engine_v2_native_fixed64_cpu_profile_v4.json"
+    _write_native_fixed64_cpu_v5_contract(tmp_path)
+    profile_path = tmp_path / "config/engine_v2_native_fixed64_cpu_profile_v5.json"
     profile = json.loads(profile_path.read_text(encoding="ascii"))
     profile["restrictions"].pop("github_actions_live_qualification_allowed")
     profile_path.write_text(
@@ -857,49 +857,49 @@ def test_native_fixed64_cpu_v4_missing_restriction_fails_ci_audit(
         encoding="ascii",
     )
     (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
-        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        "\n".join(_native_fixed64_cpu_v5_ci_tokens()),
         encoding="utf-8",
     )
 
     payload = build_inventory(tmp_path)
-    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is False
-    assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is False
+    assert payload["native_fixed64_cpu_v5_authority_fail_closed"] is False
+    assert payload["native_fixed64_cpu_v5_contract_in_authoritative_ci"] is False
 
 
-def test_native_fixed64_cpu_v4_workflow_text_has_no_admission_authority(
+def test_native_fixed64_cpu_v5_workflow_text_has_no_admission_authority(
     tmp_path: Path,
 ) -> None:
     _write_authoritative_workflows(tmp_path)
-    _write_native_fixed64_cpu_v4_contract(tmp_path)
+    _write_native_fixed64_cpu_v5_contract(tmp_path)
     (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
-        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        "\n".join(_native_fixed64_cpu_v5_ci_tokens()),
         encoding="utf-8",
     )
     unrelated = tmp_path / ".github/workflows/unrelated.yaml"
     unrelated.write_text(
         "jobs:\n  non_authoritative:\n    steps:\n"
-        "      - run: cargo run --bin betelgeuze-fixed64-cpu-probe-v4\n",
+        "      - run: cargo run --bin betelgeuze-fixed64-cpu-probe-v5\n",
         encoding="utf-8",
     )
 
     payload = build_inventory(tmp_path)
 
     assert (
-        "native_fixed64_cpu_v4_live_qualification_absent_from_github_actions"
+        "native_fixed64_cpu_v5_live_qualification_absent_from_github_actions"
         not in payload
     )
     assert payload[
-        "native_fixed64_cpu_v4_github_actions_production_authority_false"
+        "native_fixed64_cpu_v5_github_actions_production_authority_false"
     ] is True
     assert payload[
-        "native_fixed64_cpu_v4_test_double_production_authority_false"
+        "native_fixed64_cpu_v5_test_double_production_authority_false"
     ] is True
     assert payload[
-        "native_fixed64_cpu_v4_qualification_admission_authority_false"
+        "native_fixed64_cpu_v5_qualification_admission_authority_false"
     ] is True
-    assert payload["native_fixed64_cpu_v4_binary_activation_blocked"] is True
-    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is True
-    assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is True
+    assert payload["native_fixed64_cpu_v5_binary_activation_blocked"] is True
+    assert payload["native_fixed64_cpu_v5_authority_fail_closed"] is True
+    assert payload["native_fixed64_cpu_v5_contract_in_authoritative_ci"] is True
 
 
 @pytest.mark.parametrize(
@@ -917,15 +917,15 @@ def test_native_fixed64_cpu_v4_workflow_text_has_no_admission_authority(
         ("performance", "performance_claim_authorized", True),
     ),
 )
-def test_native_fixed64_cpu_v4_authority_escalation_fails_ci_audit(
+def test_native_fixed64_cpu_v5_authority_escalation_fails_ci_audit(
     tmp_path: Path,
     section: str,
     field: str,
     value: object,
 ) -> None:
     _write_authoritative_workflows(tmp_path)
-    _write_native_fixed64_cpu_v4_contract(tmp_path)
-    profile_path = tmp_path / "config/engine_v2_native_fixed64_cpu_profile_v4.json"
+    _write_native_fixed64_cpu_v5_contract(tmp_path)
+    profile_path = tmp_path / "config/engine_v2_native_fixed64_cpu_profile_v5.json"
     profile = json.loads(profile_path.read_text(encoding="ascii"))
     profile[section][field] = value
     profile_path.write_text(
@@ -933,20 +933,20 @@ def test_native_fixed64_cpu_v4_authority_escalation_fails_ci_audit(
         encoding="ascii",
     )
     (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
-        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        "\n".join(_native_fixed64_cpu_v5_ci_tokens()),
         encoding="utf-8",
     )
 
     payload = build_inventory(tmp_path)
-    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is False
+    assert payload["native_fixed64_cpu_v5_authority_fail_closed"] is False
     assert payload[
-        "native_fixed64_cpu_v4_qualification_admission_authority_false"
+        "native_fixed64_cpu_v5_qualification_admission_authority_false"
     ] is False
-    assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is False
+    assert payload["native_fixed64_cpu_v5_contract_in_authoritative_ci"] is False
 
 
-def test_native_fixed64_cpu_v4_inventory_constants_are_exact() -> None:
-    assert set(NATIVE_FIXED64_CPU_V4_FALSE_AUTHORITY_KEYS) == {
+def test_native_fixed64_cpu_v5_inventory_constants_are_exact() -> None:
+    assert set(NATIVE_FIXED64_CPU_V5_FALSE_AUTHORITY_KEYS) == {
         "fresh_holdout_execution_authorized",
         "historical_ab_execution_authorized",
         "molecular_execution_authorized",
@@ -957,13 +957,13 @@ def test_native_fixed64_cpu_v4_inventory_constants_are_exact() -> None:
         "scientific_claim_authorized",
         "stage0_admission_authorized",
     }
-    assert NATIVE_FIXED64_CPU_V4_REQUIRED_TOKENS == (
-        "config/engine_v2_native_fixed64_cpu_profile_v4.json",
-        "tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py",
-        "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v4.py",
-        "docs/engine_v2_native_fixed64_cpu_qualification_v4.md",
+    assert NATIVE_FIXED64_CPU_V5_REQUIRED_TOKENS == (
+        "config/engine_v2_native_fixed64_cpu_profile_v5.json",
+        "tools/verify_engine_v2_native_fixed64_cpu_profile_v5.py",
+        "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v5.py",
+        "docs/engine_v2_native_fixed64_cpu_qualification_v5.md",
     )
-    assert set(NATIVE_FIXED64_CPU_V4_FALSE_RESTRICTION_KEYS) == {
+    assert set(NATIVE_FIXED64_CPU_V5_FALSE_RESTRICTION_KEYS) == {
         "actual_molecular_execution_allowed",
         "contains_molecular_cases",
         "fresh_or_historical_case_input_allowed",
@@ -983,7 +983,7 @@ def test_authoritative_main_watches_native_profile_verifier_tests() -> None:
     trigger = workflow.split("  pull_request:", 1)[0]
 
     assert trigger.count(
-        '      - "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v4.py"'
+        '      - "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v5.py"'
     ) == 1
 
 

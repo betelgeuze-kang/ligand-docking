@@ -27,15 +27,15 @@ use crate::{
     Result, FIXED64_NATIVE_PIPELINE_PROFILE_ID,
 };
 
-pub const FIXED64_CPU_QUALIFICATION_V4_PROFILE_ID: &str =
-    "engine_v2_native_fixed64_cpu_synthetic_v4";
-pub const FIXED64_CPU_QUALIFICATION_V4_SCHEMA_ID: &str =
-    "betelgeuze.engine_v2_native_fixed64_cpu_probe/4.0.0";
-pub const FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED: bool = false;
+pub const FIXED64_CPU_QUALIFICATION_V5_PROFILE_ID: &str =
+    "engine_v2_native_fixed64_cpu_synthetic_v5";
+pub const FIXED64_CPU_QUALIFICATION_V5_SCHEMA_ID: &str =
+    "betelgeuze.engine_v2_native_fixed64_cpu_probe/5.0.0";
+pub const FIXED64_CPU_V5_LIVE_ACTIVATION_ADMITTED: bool = false;
 
 #[must_use]
-pub const fn fixed64_cpu_v4_live_activation_admitted() -> bool {
-    FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED
+pub const fn fixed64_cpu_v5_live_activation_admitted() -> bool {
+    FIXED64_CPU_V5_LIVE_ACTIVATION_ADMITTED
 }
 
 const SLOT_COUNT: usize = 64;
@@ -44,12 +44,12 @@ const FEATURE_COUNT: usize = 12;
 const FROZEN_SCORER_V1_TERM_COUNT: usize = 8;
 const _: [(); FROZEN_SCORER_V1_TERM_COUNT] = [(); sys::BG_DOCKING_SCORER_V1_TERM_COUNT as usize];
 const COMPLETE_FIXTURE_PAYLOAD_SHA256_HEX: &str =
-    "76fc1bffc0570df82521e6cbba2975809d9581e0c1f9cb099b6e255d03fb41b2";
+    "5e17b3a292a068115f223c5c433d5ec40557be50a05cc1dbaa07461d9aed7fb8";
 const FEATURE_SPARSE_FIXTURE_PAYLOAD_SHA256_HEX: &str =
-    "9951ef03a9bc4cc792066fc34122a83356666bb5f92b8683a1914e316a38eba5";
+    "fca0d6dbdc0f188e332929b9ea220f1d3ecaa37e9939c49aa80bf0629c14f1fb";
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Fixed64CpuProbeConfigV4 {
+pub struct Fixed64CpuProbeConfigV5 {
     pub warmup_rounds: u32,
     pub sample_rounds: u32,
     pub absolute_tolerance: f64,
@@ -57,7 +57,7 @@ pub struct Fixed64CpuProbeConfigV4 {
     pub maximum_rust_to_cpp_median_ratio: f64,
 }
 
-impl Fixed64CpuProbeConfigV4 {
+impl Fixed64CpuProbeConfigV5 {
     #[must_use]
     pub const fn qualification_profile() -> Self {
         Self {
@@ -101,7 +101,7 @@ impl Fixed64CpuProbeConfigV4 {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Fixed64NumericParityV4 {
+pub struct Fixed64NumericParityV5 {
     pub compared_f64_count: usize,
     pub maximum_absolute_difference: f64,
     pub maximum_scaled_difference: f64,
@@ -109,7 +109,7 @@ pub struct Fixed64NumericParityV4 {
     pub first_violation_index: Option<usize>,
 }
 
-impl Fixed64NumericParityV4 {
+impl Fixed64NumericParityV5 {
     #[must_use]
     pub const fn passed(&self) -> bool {
         self.tolerance_violation_count == 0 && self.compared_f64_count != 0
@@ -117,7 +117,7 @@ impl Fixed64NumericParityV4 {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Fixed64CpuFixtureProbeV4 {
+pub struct Fixed64CpuFixtureProbeV5 {
     pub fixture_id: &'static str,
     pub fixture_payload_sha256: [u8; 32],
     pub candidate_denominator: usize,
@@ -133,7 +133,7 @@ pub struct Fixed64CpuFixtureProbeV4 {
     pub cpp_repeat_stable: bool,
     pub rust_repeat_stable: bool,
     pub decision_parity: bool,
-    pub numeric_parity: Fixed64NumericParityV4,
+    pub numeric_parity: Fixed64NumericParityV5,
     pub cpp_sample_nanoseconds: Vec<u64>,
     pub rust_sample_nanoseconds: Vec<u64>,
     pub cpp_median_nanoseconds: u64,
@@ -146,7 +146,7 @@ pub struct Fixed64CpuFixtureProbeV4 {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Fixed64CpuProbeReportV4 {
+pub struct Fixed64CpuProbeReportV5 {
     pub schema_id: &'static str,
     pub profile_id: &'static str,
     pub qualification_authority: bool,
@@ -154,7 +154,7 @@ pub struct Fixed64CpuProbeReportV4 {
     pub reservation_authorized: bool,
     pub public_benchmark_authorized: bool,
     pub product_performance_claim_authorized: bool,
-    pub fixtures: Vec<Fixed64CpuFixtureProbeV4>,
+    pub fixtures: Vec<Fixed64CpuFixtureProbeV5>,
     pub gate_passed: bool,
 }
 
@@ -590,8 +590,8 @@ fn canonical_fixture_payload_sha256(
     input: Fixed64RunInput<'_>,
 ) -> [u8; 32] {
     let mut hash =
-        CanonicalHasher::new("betelgeuze.engine_v2_native_fixed64_cpu_fixture_payload/4.0.0");
-    hash.string(FIXED64_CPU_QUALIFICATION_V4_PROFILE_ID);
+        CanonicalHasher::new("betelgeuze.engine_v2_native_fixed64_cpu_fixture_payload/5.0.0");
+    hash.string(FIXED64_CPU_QUALIFICATION_V5_PROFILE_ID);
     hash.string(FIXED64_NATIVE_PIPELINE_PROFILE_ID);
     hash.string(variant.id());
 
@@ -899,10 +899,10 @@ fn numeric_parity(
     observed: &Fixed64ScientificProjection,
     absolute_tolerance: f64,
     relative_tolerance: f64,
-) -> Fixed64NumericParityV4 {
+) -> Fixed64NumericParityV5 {
     let reference = numeric_projection(reference);
     let observed = numeric_projection(observed);
-    let mut result = Fixed64NumericParityV4 {
+    let mut result = Fixed64NumericParityV5 {
         compared_f64_count: reference.len().min(observed.len()),
         maximum_absolute_difference: 0.0,
         maximum_scaled_difference: 0.0,
@@ -952,8 +952,8 @@ fn timed_run(
 fn run_fixture(
     fixture: &SyntheticFixture,
     variant: FixtureVariant,
-    config: Fixed64CpuProbeConfigV4,
-) -> Result<Fixed64CpuFixtureProbeV4> {
+    config: Fixed64CpuProbeConfigV5,
+) -> Result<Fixed64CpuFixtureProbeV5> {
     let exact = fixture.source(0x10)?;
     let v7 = (0_u8..24)
         .map(|index| {
@@ -1201,7 +1201,7 @@ fn run_fixture(
         && numeric.passed()
         && authority_false
         && ratio <= config.maximum_rust_to_cpp_median_ratio;
-    Ok(Fixed64CpuFixtureProbeV4 {
+    Ok(Fixed64CpuFixtureProbeV5 {
         fixture_id: variant.id(),
         fixture_payload_sha256,
         candidate_denominator: cpp.candidate_denominator,
@@ -1233,19 +1233,19 @@ fn run_fixture(
 /// Run a repeatable, non-consuming, synthetic native CPU probe.
 ///
 /// This function deliberately returns all execution and claim authorities as
-/// false.  Calling it does not consume or qualify the sealed v4 profile.
-pub fn run_native_fixed64_cpu_probe_v4(
-    config: Fixed64CpuProbeConfigV4,
-) -> Result<Fixed64CpuProbeReportV4> {
+/// false.  Calling it does not consume or qualify the sealed v5 profile.
+pub fn run_native_fixed64_cpu_probe_v5(
+    config: Fixed64CpuProbeConfigV5,
+) -> Result<Fixed64CpuProbeReportV5> {
     let config = config.validate()?;
-    if config != Fixed64CpuProbeConfigV4::unit_test() {
-        if config != Fixed64CpuProbeConfigV4::qualification_profile() {
+    if config != Fixed64CpuProbeConfigV5::unit_test() {
+        if config != Fixed64CpuProbeConfigV5::qualification_profile() {
             return Err(Error::local(
                 ErrorCode::InvalidArgument,
                 "fixed64 CPU probe accepts only the unit-test or frozen qualification profile",
             ));
         }
-        if !fixed64_cpu_v4_live_activation_admitted() {
+        if !fixed64_cpu_v5_live_activation_admitted() {
             return Err(Error::local(
                 ErrorCode::BackendUnavailable,
                 "fixed64 CPU qualification profile failed closed: reviewed live activation is absent",
@@ -1258,9 +1258,9 @@ pub fn run_native_fixed64_cpu_probe_v4(
         .map(|variant| run_fixture(&fixture, variant, config))
         .collect::<Result<Vec<_>>>()?;
     let gate_passed = fixtures.iter().all(|fixture| fixture.gate_passed);
-    Ok(Fixed64CpuProbeReportV4 {
-        schema_id: FIXED64_CPU_QUALIFICATION_V4_SCHEMA_ID,
-        profile_id: FIXED64_CPU_QUALIFICATION_V4_PROFILE_ID,
+    Ok(Fixed64CpuProbeReportV5 {
+        schema_id: FIXED64_CPU_QUALIFICATION_V5_SCHEMA_ID,
+        profile_id: FIXED64_CPU_QUALIFICATION_V5_PROFILE_ID,
         qualification_authority: false,
         molecular_execution_authorized: false,
         reservation_authorized: false,
@@ -1277,17 +1277,17 @@ mod tests {
 
     #[test]
     fn rejects_unbounded_or_single_sample_probe_configuration() {
-        let mut config = Fixed64CpuProbeConfigV4::unit_test();
+        let mut config = Fixed64CpuProbeConfigV5::unit_test();
         config.sample_rounds = 1;
-        assert!(run_native_fixed64_cpu_probe_v4(config).is_err());
+        assert!(run_native_fixed64_cpu_probe_v5(config).is_err());
         config.sample_rounds = 2;
         config.maximum_rust_to_cpp_median_ratio = f64::NAN;
-        assert!(run_native_fixed64_cpu_probe_v4(config).is_err());
+        assert!(run_native_fixed64_cpu_probe_v5(config).is_err());
     }
 
     #[test]
     fn complete_and_sparse_probes_preserve_fixed64_cpu_parity() {
-        let report = run_native_fixed64_cpu_probe_v4(Fixed64CpuProbeConfigV4::unit_test())
+        let report = run_native_fixed64_cpu_probe_v5(Fixed64CpuProbeConfigV5::unit_test())
             .expect("synthetic native fixed64 CPU probe");
         assert_eq!(report.fixtures.len(), 2);
         assert!(report.gate_passed);
@@ -1327,7 +1327,7 @@ mod tests {
     #[test]
     fn public_api_blocks_the_live_qualification_profile_before_fixture_work() {
         let error =
-            run_native_fixed64_cpu_probe_v4(Fixed64CpuProbeConfigV4::qualification_profile())
+            run_native_fixed64_cpu_probe_v5(Fixed64CpuProbeConfigV5::qualification_profile())
                 .expect_err("unactivated live qualification profile must fail closed");
         assert_eq!(error.code, ErrorCode::BackendUnavailable);
         assert_eq!(
@@ -1338,9 +1338,9 @@ mod tests {
 
     #[test]
     fn public_api_rejects_custom_probe_workloads_before_fixture_work() {
-        let mut config = Fixed64CpuProbeConfigV4::unit_test();
+        let mut config = Fixed64CpuProbeConfigV5::unit_test();
         config.sample_rounds = 24;
-        let error = run_native_fixed64_cpu_probe_v4(config)
+        let error = run_native_fixed64_cpu_probe_v5(config)
             .expect_err("custom probe workload must fail closed");
         assert_eq!(error.code, ErrorCode::InvalidArgument);
         assert_eq!(

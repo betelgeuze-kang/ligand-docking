@@ -1,26 +1,26 @@
-# Engine V2 native fixed64 CPU qualification v4
+# Engine V2 native fixed64 CPU qualification v5
 
-> **Archived:** v4 was frozen and reviewed in PR #304, merged as
-> `5b6e007466542f616348fa83dc57deaac3650df9`, and never consumed. Its exact
-> profile and 187-file source manifest are preserved by
-> `config/engine_v2_native_fixed64_cpu_profile_v4_archive.json`. The current
-> source-bound successor is v5/ABI 1.21; v4 must not be rebound to later source.
-
-Profile v4 qualifies the complete native fixed64 candidate graph rather than
+Profile v5 qualifies the complete native fixed64 candidate graph rather than
 the predecessor's one-candidate Python geometric-kernel sidecar. The frozen
 profile is
-`config/engine_v2_native_fixed64_cpu_profile_v4.json` and its measurement core
-is the Rust binary `betelgeuze-fixed64-cpu-probe-v4`.
+`config/engine_v2_native_fixed64_cpu_profile_v5.json` and its measurement core
+is the Rust binary `betelgeuze-fixed64-cpu-probe-v5`.
 
 The measured graph is:
 
 1. fixed64 proposal generation;
-2. geometric admission;
+2. initial geometric admission;
 3. rigid and V7 torsion refinement;
-4. all eight ScorerV1 terms;
-5. pose validity;
-6. stable Top-K;
-7. direct-RMSD clustering.
+4. post-refinement geometric admission over the final coordinates;
+5. all eight ScorerV1 terms for post-admitted rows only;
+6. pose validity;
+7. stable Top-K;
+8. direct-RMSD clustering.
+
+Profile v5 is the ABI 1.21 successor to the merge-anchored v4 profile. It does
+not rewrite v4. The second admission pass is required to run before ScorerV1;
+every rejected or upstream-failed slot remains in the 64-row denominator as a
+typed inactive downstream row and cannot occupy a score or validity rank.
 
 ## Frozen fixtures and denominator
 
@@ -42,12 +42,12 @@ coordinate and chemistry channel, topology, source receipt, feature geometry,
 lane allocation, and refinement parameter:
 
 - `synthetic_complete_64`:
-  `8478682324df3bd10e5fa6e2988436cec4c59e815dcf3444eaf3009f1a373df5`;
+  `5e17b3a292a068115f223c5c433d5ec40557be50a05cc1dbaa07461d9aed7fb8`;
 - `synthetic_feature_sparse_48_plus_16`:
-  `9c93753ae23363c20d2f957fb521eedd1fe4f92fc39282c03c53d1f2674610c2`.
+  `fca0d6dbdc0f188e332929b9ea220f1d3ecaa37e9939c49aa80bf0629c14f1fb`.
 
 The frozen JSON also binds the exact qualification, native probe, Rust pipeline,
-and C++ pipeline implementation source SHA-256 identities. A 185-file canonical
+and C++ pipeline implementation source SHA-256 identities. A 187-file canonical
 and vendored transitive-source manifest additionally covers the native ABI and context,
 proposal/admission/refinement/scorer/validity/ranking/clustering kernels, the
 Rust CPU providers, the docking-search crate, Cargo manifests and lockfile, and
@@ -82,10 +82,14 @@ identities:
   validity masks, V7 selection, stable ranks, Top-1/Top-5 membership, clustering,
   the exact 64-slot denominator, and authority disposition;
 - `sha256` additionally covers every coordinate state, quaternion, refinement
-  objective, ScorerV1 term, validity measurement, torsion move, score, and RMSD.
+  objective, both initial and post-refinement clearance measurements, ScorerV1
+  term, validity measurement, torsion move, score, and RMSD.
 
 The C++ reference and Rust CPU decision hashes must be identical. Every numeric
-value is compared with the frozen absolute and relative tolerances. Repeated
+value is compared with the frozen absolute and relative tolerances. Exactly
+28,544 floating values are compared per synthetic fixture, including raw
+post-refinement minimum distance, minimum vdW surface gap and ratio, overlap
+proxy, and pocket escape for all 64 slots. Repeated
 runs of each backend must reproduce its full projection hash exactly.
 
 ## Persistent context and timing
@@ -101,15 +105,20 @@ scientific, public benchmark, or acceleration claim.
 
 ## Execution state
 
-The v4 profile is frozen, unconsumed, and terminally archived. At its merge,
-both the library and native binary were compile-bound to
-`activation_admitted = false`, and the exact 25-sample profile could not run.
-The current tree intentionally does not present v4 as a live measurement core;
-the archive verifier reports `compiled_profile_binding_verified=false` and
-authenticates the exact merge evidence instead. Any future qualification must
-use a separately reviewed successor profile and cannot consume or relabel v4.
+The checked-in profile is frozen but unconsumed. CI may compile and unit-test
+the measurement core and run the static profile verifier; CI must not execute
+the 25-sample live profile. The library owns one compile-bound
+`activation_admitted = false` constant and rejects the frozen qualification
+profile before fixture construction; without activation, only the exact
+two-round unit-test profile is accepted, and arbitrary custom workloads are
+rejected. The checked-in native binary independently checks that same library
+gate before `qualification_profile()` and exits without constructing the
+qualification configuration or calling the measurement core. A later activation
+must bind an exact merged source, native binary, toolchain, host preflight,
+absent-only output, and account-scoped exactly-once state before the single local
+execution is consumed.
 
-For the archived v4 record:
+Until that activation is reviewed and merged:
 
 - qualification authority remains false;
 - reservation and molecular execution remain forbidden;
@@ -120,14 +129,18 @@ For the archived v4 record:
 Static verification is non-consuming:
 
 ```bash
-python3 tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py
+python3 tools/verify_engine_v2_native_fixed64_cpu_profile_v5.py
 ```
 
-The current verifier checks the exact v4 profile bytes, profile SHA-256, #304
-merge and reviewed-head identities, 85/85 check count, zero unresolved review
-threads, 187-file manifest identity, unconsumed state, and every false authority
-field. The original compiled-source proof remains anchored to the immutable
-merge commit rather than being silently recomputed against successor source.
+The verifier also reads the compiled Rust qualification gate, Rust receipt
+domains, ABI 1.21 header, C++ v2 pipeline constant, and native probe entry
+point. One pipeline profile constant feeds every Rust receipt domain and is
+checked against the C++ v2 ABI identity before pipeline construction. Source
+ordering checks require post-refinement admission, typed inactive mapping, and
+only then the downstream ScorerV1 call. Verification fails if the profile
+ID, complete fixture payload, source identity, denominator, fixture counts,
+sampling, numeric tolerances, performance ratio, or guard-to-measurement order
+drifts from the canonical JSON.
 
 Do not treat any GitHub Actions or test-double invocation as the exactly-once
 qualification result. The CI inventory deliberately makes no claim that a
@@ -149,7 +162,8 @@ checked:
   verifier and unit tests; it does not possess an admission path that can turn
   output into qualification evidence.
 
-Consequently, no current invocation can produce an admitted v4 receipt.
-Patching source, the profile, or the archive changes an authenticated identity
-and fails closed. Successor v5 likewise remains non-consuming and authority
-false unless a separate exactly-once activation contract is reviewed later.
+Consequently, invoking the canonical binary exits before measurement. Patching
+source or configuration at workflow runtime changes the exact source/profile
+identity and still cannot produce an admitted v5 receipt. A future activation
+must be a separately reviewed, versioned contract that replaces this unconsumed
+state and supplies its own exactly-once admission authority.
