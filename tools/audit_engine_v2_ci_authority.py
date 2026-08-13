@@ -211,7 +211,41 @@ NATIVE_FIXED64_CPU_V4_CARGO_RUN_PATTERN = (
     r"\bcargo\b[^\n]*?\b(?:run|r)\b[^\n]*"
 )
 NATIVE_FIXED64_CPU_V4_CARGO_RUN_SUBCOMMANDS = ("run", "r")
-NATIVE_FIXED64_CPU_V4_EXPLICIT_BIN_PATTERN = r"(?:^|\s)--bin(?:=|\s+)"
+NATIVE_FIXED64_CPU_V4_CARGO_GLOBAL_OPTIONS_WITH_VALUE = (
+    "--color",
+    "--config",
+    "--explain",
+    "-C",
+    "-Z",
+)
+NATIVE_FIXED64_CPU_V4_CARGO_GLOBAL_OPTIONS_WITHOUT_VALUE = (
+    "--frozen",
+    "--help",
+    "--list",
+    "--locked",
+    "--offline",
+    "--quiet",
+    "--verbose",
+    "--version",
+    "-V",
+    "-h",
+    "-q",
+    "-v",
+)
+NATIVE_FIXED64_CPU_V4_CARGO_TARGET_SELECTORS = ("--bin", "--example")
+NATIVE_FIXED64_CPU_V4_STATIC_TARGET_PATTERN = re.compile(
+    r"^[A-Za-z0-9][A-Za-z0-9_.-]*$"
+)
+NATIVE_FIXED64_CPU_V4_SHELL_EXPANSION_MARKERS = (
+    "$",
+    "`",
+    "*",
+    "?",
+    "[",
+    "]",
+    "{",
+    "}",
+)
 NATIVE_FIXED64_CPU_V4_FOLDED_RUN_PATTERN = re.compile(
     r"^(?P<indent>[ ]*)(?:-[ ]+)?run:[ ]*>[+-]?[1-9]?[+-]?[ ]*(?:#.*)?$"
 )
@@ -366,6 +400,68 @@ def _workflow_yaml_run_scalars(text: str) -> tuple[str, ...] | None:
     return tuple(run_scalars)
 
 
+def _cargo_subcommand_index(invocation: list[str]) -> int | None:
+    index = 1
+    if index < len(invocation) and invocation[index].startswith("+"):
+        index += 1
+    while index < len(invocation):
+        token = invocation[index]
+        if token in NATIVE_FIXED64_CPU_V4_CARGO_GLOBAL_OPTIONS_WITH_VALUE:
+            index += 2
+            continue
+        if any(
+            token.startswith(option + "=")
+            for option in NATIVE_FIXED64_CPU_V4_CARGO_GLOBAL_OPTIONS_WITH_VALUE
+            if option.startswith("--")
+        ) or (token.startswith(("-C", "-Z")) and len(token) > 2):
+            index += 1
+            continue
+        if (
+            token in NATIVE_FIXED64_CPU_V4_CARGO_GLOBAL_OPTIONS_WITHOUT_VALUE
+            or re.fullmatch(r"-v+", token)
+        ):
+            index += 1
+            continue
+        if token.startswith("-"):
+            return None
+        return index
+    return None
+
+
+def _cargo_run_has_static_non_probe_target(arguments: list[str]) -> bool:
+    pre_separator = arguments[: arguments.index("--")] if "--" in arguments else arguments
+    if any(
+        marker in token
+        for token in pre_separator
+        for marker in NATIVE_FIXED64_CPU_V4_SHELL_EXPANSION_MARKERS
+    ):
+        return False
+
+    targets: list[str] = []
+    index = 0
+    while index < len(pre_separator):
+        token = pre_separator[index]
+        if token in NATIVE_FIXED64_CPU_V4_CARGO_TARGET_SELECTORS:
+            if index + 1 >= len(pre_separator):
+                return False
+            targets.append(pre_separator[index + 1])
+            index += 2
+            continue
+        for selector in NATIVE_FIXED64_CPU_V4_CARGO_TARGET_SELECTORS:
+            prefix = selector + "="
+            if token.startswith(prefix):
+                targets.append(token[len(prefix) :])
+                break
+        index += 1
+
+    return (
+        len(targets) == 1
+        and NATIVE_FIXED64_CPU_V4_STATIC_TARGET_PATTERN.fullmatch(targets[0])
+        is not None
+        and targets[0] not in NATIVE_FIXED64_CPU_V4_FORBIDDEN_WORKFLOW_TOKENS
+    )
+
+
 def _workflow_invokes_native_fixed64_cpu_v4_live_probe(text: str) -> bool:
     logical = text.replace("\\\n", " ")
     if any(
@@ -421,16 +517,21 @@ def _workflow_invokes_native_fixed64_cpu_v4_live_probe(text: str) -> bool:
                 ):
                     break
                 invocation.append(candidate)
-            if any(
-                command in invocation
+            subcommand_index = _cargo_subcommand_index(invocation)
+            if subcommand_index is None and any(
+                command in invocation[1:]
                 for command in NATIVE_FIXED64_CPU_V4_CARGO_RUN_SUBCOMMANDS
             ):
-                cargo_arguments = invocation[: invocation.index("--")] if "--" in invocation else invocation
-                if re.search(
-                    NATIVE_FIXED64_CPU_V4_EXPLICIT_BIN_PATTERN,
-                    " ".join(cargo_arguments),
-                ) is None:
-                    return True
+                return True
+            if (
+                subcommand_index is not None
+                and invocation[subcommand_index]
+                in NATIVE_FIXED64_CPU_V4_CARGO_RUN_SUBCOMMANDS
+                and not _cargo_run_has_static_non_probe_target(
+                    invocation[subcommand_index + 1 :]
+                )
+            ):
+                return True
     return False
 
 

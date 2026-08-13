@@ -27,15 +27,19 @@ from tools.audit_engine_v2_ci_authority import (
     NATIVE_FIXED64_CPU_V4_CONTRACT_PATHS,
     NATIVE_FIXED64_CPU_V4_FALSE_AUTHORITY_KEYS,
     NATIVE_FIXED64_CPU_V4_FALSE_RESTRICTION_KEYS,
+    NATIVE_FIXED64_CPU_V4_CARGO_GLOBAL_OPTIONS_WITH_VALUE,
+    NATIVE_FIXED64_CPU_V4_CARGO_GLOBAL_OPTIONS_WITHOUT_VALUE,
     NATIVE_FIXED64_CPU_V4_CARGO_RUN_PATTERN,
     NATIVE_FIXED64_CPU_V4_CARGO_RUN_SUBCOMMANDS,
-    NATIVE_FIXED64_CPU_V4_EXPLICIT_BIN_PATTERN,
+    NATIVE_FIXED64_CPU_V4_CARGO_TARGET_SELECTORS,
     NATIVE_FIXED64_CPU_V4_FOLDED_RUN_PATTERN,
     NATIVE_FIXED64_CPU_V4_MAX_WORKFLOW_UTF8_BYTES,
     NATIVE_FIXED64_CPU_V4_MAX_YAML_NODES,
     NATIVE_FIXED64_CPU_V4_FORBIDDEN_WORKFLOW_TOKENS,
     NATIVE_FIXED64_CPU_V4_REQUIRED_TOKEN_COUNTS,
     NATIVE_FIXED64_CPU_V4_REQUIRED_TOKENS,
+    NATIVE_FIXED64_CPU_V4_SHELL_EXPANSION_MARKERS,
+    NATIVE_FIXED64_CPU_V4_STATIC_TARGET_PATTERN,
     ONE_SHOT_CONTRACT_PATHS,
     ONE_SHOT_REQUIRED_TOKENS,
     STANDALONE_PIPELINE_CONTRACT_PATHS,
@@ -773,6 +777,10 @@ def test_native_fixed64_cpu_v4_missing_restriction_fails_ci_audit(
         "cargo +stable --locked r -p betelgeuze-runtime",
         "cargo run -p betelgeuze-runtime -- --bin unrelated-binary-argument",
         "cargo r -p betelgeuze-runtime -- --bin=unrelated-binary-argument",
+        "cargo run -p betelgeuze-runtime $'--' --bin unrelated-binary-argument",
+        "cargo run -p betelgeuze-runtime --bin=$BINARY_NAME",
+        "cargo run -p betelgeuze-runtime --bin unrelated-{one,two}",
+        "cargo run -p betelgeuze-runtime --example=$EXAMPLE_NAME",
         (
             "cargo run -p betelgeuze-runtime && "
             "cargo run --bin unrelated-explicit-tool"
@@ -819,8 +827,17 @@ def test_native_fixed64_cpu_v4_live_binary_is_forbidden_in_every_workflow(
     assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is False
 
 
-def test_native_fixed64_cpu_v4_explicit_unrelated_binary_remains_allowed(
+@pytest.mark.parametrize(
+    "command",
+    (
+        "cargo run --bin unrelated-explicit-tool",
+        "cargo run --bin=unrelated-explicit-tool",
+        "cargo +stable --locked r --example unrelated-static-example",
+    ),
+)
+def test_native_fixed64_cpu_v4_explicit_unrelated_target_remains_allowed(
     tmp_path: Path,
+    command: str,
 ) -> None:
     _write_authoritative_workflows(tmp_path)
     _write_native_fixed64_cpu_v4_contract(tmp_path)
@@ -831,7 +848,44 @@ def test_native_fixed64_cpu_v4_explicit_unrelated_binary_remains_allowed(
     unrelated = tmp_path / ".github/workflows/unrelated.yaml"
     unrelated.write_text(
         "jobs:\n  explicit:\n    steps:\n"
-        "      - run: cargo run --bin unrelated-explicit-tool\n",
+        f"      - run: {command}\n",
+        encoding="utf-8",
+    )
+
+    payload = build_inventory(tmp_path)
+    assert (
+        payload[
+            "native_fixed64_cpu_v4_live_qualification_absent_from_github_actions"
+        ]
+        is True
+    )
+    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is True
+    assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is True
+
+
+@pytest.mark.parametrize(
+    "command",
+    (
+        "cargo test -p betelgeuze-runtime run",
+        "cargo +stable --locked test -p betelgeuze-runtime r",
+        "cargo --color always test --manifest-path "
+        "rust/betelgeuze-runtime/Cargo.toml run",
+    ),
+)
+def test_native_fixed64_cpu_v4_run_test_filter_is_not_a_cargo_subcommand(
+    tmp_path: Path,
+    command: str,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_native_fixed64_cpu_v4_contract(tmp_path)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        encoding="utf-8",
+    )
+    unrelated = tmp_path / ".github/workflows/unrelated.yaml"
+    unrelated.write_text(
+        "jobs:\n  test-filter:\n    steps:\n"
+        f"      - run: {command}\n",
         encoding="utf-8",
     )
 
@@ -1053,7 +1107,41 @@ def test_native_fixed64_cpu_v4_inventory_constants_are_exact() -> None:
         r"\bcargo\b[^\n]*?\b(?:run|r)\b[^\n]*"
     )
     assert NATIVE_FIXED64_CPU_V4_CARGO_RUN_SUBCOMMANDS == ("run", "r")
-    assert NATIVE_FIXED64_CPU_V4_EXPLICIT_BIN_PATTERN == r"(?:^|\s)--bin(?:=|\s+)"
+    assert NATIVE_FIXED64_CPU_V4_CARGO_GLOBAL_OPTIONS_WITH_VALUE == (
+        "--color",
+        "--config",
+        "--explain",
+        "-C",
+        "-Z",
+    )
+    assert NATIVE_FIXED64_CPU_V4_CARGO_GLOBAL_OPTIONS_WITHOUT_VALUE == (
+        "--frozen",
+        "--help",
+        "--list",
+        "--locked",
+        "--offline",
+        "--quiet",
+        "--verbose",
+        "--version",
+        "-V",
+        "-h",
+        "-q",
+        "-v",
+    )
+    assert NATIVE_FIXED64_CPU_V4_CARGO_TARGET_SELECTORS == ("--bin", "--example")
+    assert NATIVE_FIXED64_CPU_V4_STATIC_TARGET_PATTERN.pattern == (
+        r"^[A-Za-z0-9][A-Za-z0-9_.-]*$"
+    )
+    assert NATIVE_FIXED64_CPU_V4_SHELL_EXPANSION_MARKERS == (
+        "$",
+        "`",
+        "*",
+        "?",
+        "[",
+        "]",
+        "{",
+        "}",
+    )
     assert NATIVE_FIXED64_CPU_V4_FOLDED_RUN_PATTERN.fullmatch("      - run: >2-")
     assert NATIVE_FIXED64_CPU_V4_MAX_WORKFLOW_UTF8_BYTES == 1_048_576
     assert NATIVE_FIXED64_CPU_V4_MAX_YAML_NODES == 100_000
