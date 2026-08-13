@@ -977,6 +977,16 @@ def test_native_fixed64_cpu_v4_inventory_constants_are_exact() -> None:
     }
 
 
+def test_authoritative_main_watches_native_profile_verifier_tests() -> None:
+    root = Path(__file__).resolve().parents[2]
+    workflow = (root / AUTHORITATIVE_WORKFLOWS[0]).read_text(encoding="utf-8")
+    trigger = workflow.split("  pull_request:", 1)[0]
+
+    assert trigger.count(
+        '      - "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v4.py"'
+    ) == 1
+
+
 def test_mixed64_v2_contract_requires_documented_contract_inventory(
     tmp_path: Path,
 ) -> None:

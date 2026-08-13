@@ -26,6 +26,7 @@ PROBE_SOURCE_RELATIVE_PATH = Path(
 NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS = (
     Path("include/betelgeuze/engine.h"),
     Path("native/src/context.cpp"),
+    Path("native/src/cpu/evaluator.hpp"),
     Path("native/src/dynamics/sha256.cpp"),
     Path("native/src/dynamics/sha256.hpp"),
     Path("native/src/hip/backend.hpp"),

@@ -68,8 +68,8 @@
     "native_probe_source_sha256": "09f0dcb8351464e3b04383ea5828ce2fe4b202b37cafd62dabf0a22db75c7d71",
     "native_qualification_source_sha256": "659df3daff5dcc5667359ffd9f2a8fc9c779de45a3b9de0068575a32c540ae02",
     "native_rust_pipeline_source_sha256": "2c625b7b5136ed842e4050d42d4f883d4f9a22b386bed90d80029c5f9a4c7735",
-    "native_transitive_source_count": 74,
-    "native_transitive_source_manifest_sha256": "2935c92ea5a80946ecd7f35bd6e7f8290b45f8f0ebb26ebbc3e54d3ee4484e4f",
+    "native_transitive_source_count": 75,
+    "native_transitive_source_manifest_sha256": "cedf7f2b9001ffaa36f8f94ee100587afc08c4eac4e526be3dd66dc954bd7757",
     "python_scientific_work_allowed": false,
     "receptor_context_recreated_inside_samples": false
   },

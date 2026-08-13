@@ -51,7 +51,7 @@ def test_canonical_native_fixed64_cpu_profile_v4_is_frozen() -> None:
     profile = require_profile_document(raw)
 
     assert hashlib.sha256(raw).hexdigest() == (
-        "c2a221b6ff18c990abff8c505ac0af87e4c8a05aa25aece20a477eca5cc114cb"
+        "ae46a801548c81a23661c0f6a5584c304e98b9691bd7e6a5f62145677207fabd"
     )
     assert profile["profile_id"] == "engine_v2_native_fixed64_cpu_synthetic_v4"
     assert all(value is False for value in profile["authority"].values())
@@ -210,10 +210,16 @@ def test_profile_v4_rejects_measurement_moved_before_activation_guard() -> None:
         )
 
 
-def test_profile_v4_rejects_transitive_kernel_source_drift() -> None:
+@pytest.mark.parametrize(
+    "target",
+    (
+        "native/src/cpu/evaluator.hpp",
+        "native/src/docking/scorer_v1.cpp",
+    ),
+)
+def test_profile_v4_rejects_transitive_kernel_source_drift(target: str) -> None:
     profile = require_profile_document(_PROFILE.read_bytes())
     changed = dict(_TRANSITIVE_SOURCES)
-    target = "native/src/docking/scorer_v1.cpp"
     changed[target] += b"\n// semantic drift\n"
 
     with pytest.raises(
@@ -303,7 +309,7 @@ def test_profile_v4_cli_reports_non_consuming_authority_false() -> None:
         "fixture_count": 2,
         "profile_id": "engine_v2_native_fixed64_cpu_synthetic_v4",
         "profile_sha256": (
-            "c2a221b6ff18c990abff8c505ac0af87e4c8a05aa25aece20a477eca5cc114cb"
+            "ae46a801548c81a23661c0f6a5584c304e98b9691bd7e6a5f62145677207fabd"
         ),
         "reservation_created": False,
         "status": "verified",
