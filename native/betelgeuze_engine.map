@@ -198,3 +198,14 @@ BETELGEUZE_ENGINE_1.20 {
         bg_docking_fixed64_pipeline_v1_profile_id;
         bg_docking_fixed64_pipeline_v1_run;
 } BETELGEUZE_ENGINE_1.19;
+
+BETELGEUZE_ENGINE_1.21 {
+    global:
+        bg_docking_fixed64_pipeline_input_v2_init;
+        bg_docking_fixed64_pipeline_output_v2_init;
+        bg_docking_fixed64_pipeline_v2_create;
+        bg_docking_fixed64_pipeline_v2_destroy;
+        bg_docking_fixed64_pipeline_v2_get_backend;
+        bg_docking_fixed64_pipeline_v2_profile_id;
+        bg_docking_fixed64_pipeline_v2_run;
+} BETELGEUZE_ENGINE_1.20;

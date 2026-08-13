@@ -5,7 +5,7 @@
 
 _Static_assert(BG_ABI_VERSION == UINT32_C(1), "unexpected ABI version");
 _Static_assert(BG_ABI_VERSION_MAJOR == UINT32_C(1), "unexpected ABI major version");
-_Static_assert(BG_ABI_VERSION_MINOR == UINT32_C(20), "unexpected ABI minor version");
+_Static_assert(BG_ABI_VERSION_MINOR == UINT32_C(21), "unexpected ABI minor version");
 _Static_assert(BG_STATUS_OK == 0, "unexpected success status");
 _Static_assert(BG_STATUS_NUMERICAL_ERROR == 10, "unexpected numerical status");
 _Static_assert(BG_BACKEND_CPU == 1, "unexpected CPU backend value");
@@ -131,6 +131,15 @@ _Static_assert(
 _Static_assert(
     sizeof(bg_docking_fixed64_pipeline_output_v1) == 648,
     "fixed64 complete-pipeline output ABI changed");
+_Static_assert(
+    sizeof(bg_docking_fixed64_pipeline_input_v2) == 192,
+    "fixed64 complete-pipeline v2 input ABI changed");
+_Static_assert(
+    sizeof(bg_docking_fixed64_pipeline_row_v2) == 408,
+    "fixed64 complete-pipeline v2 row ABI changed");
+_Static_assert(
+    sizeof(bg_docking_fixed64_pipeline_output_v2) == 728,
+    "fixed64 complete-pipeline v2 output ABI changed");
 _Static_assert(BG_PERIODIC_AXIS_X == UINT32_C(1), "unexpected periodic X bit");
 _Static_assert(BG_PERIODIC_AXIS_Y == UINT32_C(2), "unexpected periodic Y bit");
 _Static_assert(BG_PERIODIC_AXIS_Z == UINT32_C(4), "unexpected periodic Z bit");

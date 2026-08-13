@@ -44,9 +44,9 @@ const FEATURE_COUNT: usize = 12;
 const FROZEN_SCORER_V1_TERM_COUNT: usize = 8;
 const _: [(); FROZEN_SCORER_V1_TERM_COUNT] = [(); sys::BG_DOCKING_SCORER_V1_TERM_COUNT as usize];
 const COMPLETE_FIXTURE_PAYLOAD_SHA256_HEX: &str =
-    "8478682324df3bd10e5fa6e2988436cec4c59e815dcf3444eaf3009f1a373df5";
+    "76fc1bffc0570df82521e6cbba2975809d9581e0c1f9cb099b6e255d03fb41b2";
 const FEATURE_SPARSE_FIXTURE_PAYLOAD_SHA256_HEX: &str =
-    "9c93753ae23363c20d2f957fb521eedd1fe4f92fc39282c03c53d1f2674610c2";
+    "9951ef03a9bc4cc792066fc34122a83356666bb5f92b8683a1914e316a38eba5";
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Fixed64CpuProbeConfigV4 {
@@ -817,6 +817,13 @@ fn numeric_projection(value: &Fixed64ScientificProjection) -> Vec<f64> {
             row.sphere_overlap_proxy_angstrom3,
             row.pocket_escape_angstrom,
         ]);
+        numbers.extend([
+            row.post_admission.raw_minimum_distance_angstrom,
+            row.post_admission.minimum_vdw_surface_gap_angstrom,
+            row.post_admission.minimum_vdw_ratio,
+            row.post_admission.sphere_overlap_proxy_angstrom3,
+            row.post_admission.pocket_escape_angstrom,
+        ]);
         for profile in [
             row.rigid.selected,
             row.rigid.comparison_v2,
@@ -1072,6 +1079,7 @@ fn run_fixture(
         torsion_max_steps: &torsion_steps,
         baseline_torsion_angles_radians: &baseline_angles,
         predeclared_refinement_policy_sha256: [0x76; 32],
+        predeclared_post_refinement_admission_policy_sha256: [0x77; 32],
     };
     let scientific_context = fixture.scientific_context();
     let fixture_payload_sha256 =
@@ -1309,6 +1317,7 @@ mod tests {
                 && fixture.rust_repeat_stable
                 && fixture.decision_parity
                 && fixture.numeric_parity.passed()
+                && fixture.numeric_parity.compared_f64_count == 28_544
                 && fixture.authority_false
                 && fixture.persistent_cpp_context_count == 1
                 && fixture.persistent_rust_context_count == 1

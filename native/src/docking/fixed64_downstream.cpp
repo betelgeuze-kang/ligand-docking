@@ -541,6 +541,14 @@ void destroy_components(bg_docking_fixed64_downstream_v1 *pipeline) noexcept {
 }
 
 }  // namespace
+
+std::array<uint8_t, 32> coordinate_digest_for_composition(
+    const bg_docking_scorer_v1_candidate_batch_soa_v1 &candidates,
+    std::size_t ligand_count,
+    std::size_t slot) noexcept {
+    return coordinate_digest(candidates, ligand_count, slot);
+}
+
 }  // namespace betelgeuze::native::docking::downstream
 
 extern "C" BG_API bg_status BG_CALL
