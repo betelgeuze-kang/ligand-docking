@@ -37,6 +37,7 @@ _ROOT = Path(__file__).resolve().parents[2]
 _PROFILE = _ROOT / "config/engine_v2_native_fixed64_cpu_profile_v4.json"
 _VERIFIER = _ROOT / "tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py"
 _NATIVE_WORKFLOW = _ROOT / ".github/workflows/ci-native-compute-abi.yml"
+_FOCUSED_WORKFLOW = _ROOT / ".github/workflows/ci-engine-v2-main.yml"
 _QUALIFICATION_SOURCE = _ROOT / "rust/betelgeuze-runtime/src/qualification.rs"
 _DOCKING_SOURCE = _ROOT / "rust/betelgeuze-runtime/src/docking.rs"
 _NATIVE_PIPELINE_SOURCE = _ROOT / "native/src/docking/fixed64_pipeline.cpp"
@@ -650,6 +651,13 @@ def test_profile_v4_release_non_test_activation_check_is_in_native_ci() -> None:
     assert source.count("--test fixed64_cpu_probe_activation") == 1
     assert source.count(
         "--exact native_fixed64_cpu_probe_is_blocked_before_measurement"
+    ) == 1
+
+
+def test_profile_v4_native_workflow_change_triggers_focused_suite() -> None:
+    source = _FOCUSED_WORKFLOW.read_text(encoding="utf-8")
+    assert source.count(
+        '- ".github/workflows/ci-native-compute-abi.yml"'
     ) == 1
 
 
