@@ -16,8 +16,15 @@ on:
       - "config/engine_v2_native_fixed64_cpu_profile_v4.json"
       - "config/engine_v2_native_fixed64_cpu_profile_v4_archive.json"
       - "config/engine_v2_native_fixed64_cpu_profile_v5.json"
+      - "config/engine_v2_native_fixed64_cpu_profile_v5_archive.json"
+      - "config/engine_v2_native_fixed64_cpu_profile_v6.json"
+      - "config/engine_v2_native_fixed64_cpu_profile_v6_sources.json"
       - "tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py"
       - "tools/verify_engine_v2_native_fixed64_cpu_profile_v5.py"
+      - "tools/verify_engine_v2_native_fixed64_cpu_profile_v6.py"
+      - "tools/verify_engine_v2_native_fixed64_cpu_v6_evidence.py"
+      - "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v6.py"
+      - "tests/unit/test_verify_engine_v2_native_fixed64_cpu_v6_evidence.py"
       - ".github/workflows/ci-native-compute-abi.yml"
       - ".github/workflows/ci-native-hip-safe-trusted.yml"
   pull_request:
@@ -34,8 +41,15 @@ on:
       - "config/engine_v2_native_fixed64_cpu_profile_v4.json"
       - "config/engine_v2_native_fixed64_cpu_profile_v4_archive.json"
       - "config/engine_v2_native_fixed64_cpu_profile_v5.json"
+      - "config/engine_v2_native_fixed64_cpu_profile_v5_archive.json"
+      - "config/engine_v2_native_fixed64_cpu_profile_v6.json"
+      - "config/engine_v2_native_fixed64_cpu_profile_v6_sources.json"
       - "tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py"
       - "tools/verify_engine_v2_native_fixed64_cpu_profile_v5.py"
+      - "tools/verify_engine_v2_native_fixed64_cpu_profile_v6.py"
+      - "tools/verify_engine_v2_native_fixed64_cpu_v6_evidence.py"
+      - "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v6.py"
+      - "tests/unit/test_verify_engine_v2_native_fixed64_cpu_v6_evidence.py"
       - ".github/workflows/ci-native-compute-abi.yml"
       - ".github/workflows/ci-native-hip-safe-trusted.yml"
   workflow_dispatch:
@@ -75,8 +89,13 @@ jobs:
             config/engine_v2_native_fixed64_cpu_profile_v4.json
             config/engine_v2_native_fixed64_cpu_profile_v4_archive.json
             config/engine_v2_native_fixed64_cpu_profile_v5.json
+            config/engine_v2_native_fixed64_cpu_profile_v5_archive.json
+            config/engine_v2_native_fixed64_cpu_profile_v6.json
+            config/engine_v2_native_fixed64_cpu_profile_v6_sources.json
             tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py
             tools/verify_engine_v2_native_fixed64_cpu_profile_v5.py
+            tools/verify_engine_v2_native_fixed64_cpu_profile_v6.py
+            tools/verify_engine_v2_native_fixed64_cpu_v6_evidence.py
 
       - name: Report hosted toolchain
         run: |
@@ -88,8 +107,14 @@ jobs:
       - name: Verify archived native fixed64 CPU profile v4
         run: python3 tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py
 
-      - name: Verify frozen native fixed64 CPU profile v5
+      - name: Verify archived native fixed64 CPU profile v5
         run: python3 tools/verify_engine_v2_native_fixed64_cpu_profile_v5.py
+
+      - name: Verify non-consuming native fixed64 CPU activation v6
+        run: python3 tools/verify_engine_v2_native_fixed64_cpu_profile_v6.py
+
+      - name: Verify native fixed64 CPU evidence verifier interface
+        run: python3 tools/verify_engine_v2_native_fixed64_cpu_v6_evidence.py --help
 
       - name: Build and test the C ABI
         run: |

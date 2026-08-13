@@ -32,6 +32,7 @@ dependencies = [
  "betelgeuze-reference-dynamics",
  "betelgeuze-reference-physics",
  "betelgeuze-sys",
+ "libc",
  "sha2",
 ]
 

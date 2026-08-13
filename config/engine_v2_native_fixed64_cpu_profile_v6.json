@@ -1,0 +1,157 @@
+{
+  "authority": {
+    "fresh_holdout_execution_authorized": false,
+    "historical_ab_execution_authorized": false,
+    "molecular_execution_authorized": false,
+    "product_performance_claim_authorized": false,
+    "public_benchmark_authorized": false,
+    "qualification_authority": false,
+    "reservation_authorized": false,
+    "scientific_claim_authorized": false,
+    "stage0_admission_authorized": false
+  },
+  "backends": {
+    "comparison": "rust_cpu",
+    "fallback_allowed": false,
+    "reference": "cpp_cpu_reference"
+  },
+  "change_control": {
+    "candidate_graph_changed": false,
+    "fixture_payloads_changed": false,
+    "numeric_contract_changed": false,
+    "predecessor_execution_consumed": false,
+    "predecessor_main_commit_oid": "50c6a0e633b6edc90a5e4fae3d7740c5957816ea",
+    "predecessor_profile_id": "engine_v2_native_fixed64_cpu_synthetic_v5",
+    "predecessor_profile_sha256": "f5b3f288b432a15a1382a175b70821c1c57e8d41a986de2dea8898712374aece",
+    "successor_change_reason": "add_native_account_scoped_exactly_once_activation_and_persistence"
+  },
+  "fixtures": [
+    {
+      "candidate_denominator": 64,
+      "contains_molecular_data": false,
+      "expected_generated_count": 64,
+      "expected_typed_failure_count": 0,
+      "fixture_id": "synthetic_complete_64",
+      "fixture_payload_sha256": "5e17b3a292a068115f223c5c433d5ec40557be50a05cc1dbaa07461d9aed7fb8",
+      "fixture_source": "native_compiled_constant",
+      "ligand_atom_count": 12,
+      "receptor_atom_count": 12
+    },
+    {
+      "candidate_denominator": 64,
+      "contains_molecular_data": false,
+      "expected_generated_count": 48,
+      "expected_typed_failure_count": 16,
+      "fixture_id": "synthetic_feature_sparse_48_plus_16",
+      "fixture_payload_sha256": "fca0d6dbdc0f188e332929b9ea220f1d3ecaa37e9939c49aa80bf0629c14f1fb",
+      "fixture_source": "native_compiled_constant",
+      "ligand_atom_count": 12,
+      "receptor_atom_count": 12
+    }
+  ],
+  "gates": {
+    "authority_false_required": true,
+    "candidate_denominator_exact": 64,
+    "cpp_repeat_projection_exact_required": true,
+    "decision_sha256_exact_between_cpu_backends_required": true,
+    "failure_codes_exact_required": true,
+    "persistent_context_count_per_backend_exact": 1,
+    "post_refinement_admission_decisions_exact_required": true,
+    "post_refinement_admission_failure_codes_exact_required": true,
+    "post_refinement_rejected_rows_cannot_rank_required": true,
+    "rust_repeat_projection_exact_required": true,
+    "score_term_count_exact": 8,
+    "scorer_v1_terms_rederivable_required": true,
+    "top1_top5_and_v7_decisions_exact_required": true,
+    "validity_decisions_exact_required": true,
+    "validity_measurements_rederivable_required": true
+  },
+  "host_preflight": {
+    "boost_disabled_required": true,
+    "boost_state_path": "/sys/devices/system/cpu/cpufreq/boost",
+    "cpu_model_exact": "AMD Ryzen 9 5900X 12-Core Processor",
+    "linux_only": true,
+    "main_branch_clean_checkout_required": true,
+    "measurement_cpu_ordinal": 2,
+    "process_task_count_exact": 1
+  },
+  "measurement_core": {
+    "candidate_graph": [
+      "fixed64_proposal",
+      "initial_geometric_admission",
+      "rigid_refinement",
+      "torsion_v7_refinement",
+      "post_refinement_geometric_admission",
+      "scorer_v1_8_term",
+      "pose_validity",
+      "stable_top_k",
+      "direct_rmsd_clustering"
+    ],
+    "complete_rederivable_evidence_required": true,
+    "native_abi_version": "1.21",
+    "native_binary": "betelgeuze-fixed64-cpu-qualify-v6",
+    "native_pipeline_profile_id": "betelgeuze.engine_v2_native_fixed64_complete_pipeline/2.0.0",
+    "post_refinement_admission_before_scorer_required": true,
+    "post_refinement_rejected_rows_typed_inactive_before_scorer_required": true,
+    "python_scientific_work_allowed": false,
+    "receptor_context_recreated_inside_samples": false
+  },
+  "numeric_parity": {
+    "absolute_tolerance": 1e-11,
+    "all_coordinate_states_compared": true,
+    "all_post_refinement_admission_measurements_compared": true,
+    "all_refinement_objectives_compared": true,
+    "all_scorer_v1_terms_compared": true,
+    "all_validity_measurements_compared": true,
+    "compared_f64_count_exact": 28544,
+    "nonfinite_values_allowed": false,
+    "relative_tolerance": 4e-12
+  },
+  "performance": {
+    "gate": "rust_cpu_median_div_cpp_cpu_reference_median_lte",
+    "maximum_ratio": 1.25,
+    "performance_claim_authorized": false,
+    "scope": "synthetic_development_non_regression_only"
+  },
+  "profile_id": "engine_v2_native_fixed64_cpu_synthetic_v6",
+  "restrictions": {
+    "actual_molecular_execution_allowed": false,
+    "contains_molecular_cases": false,
+    "fresh_or_historical_case_input_allowed": false,
+    "github_actions_live_qualification_allowed": false,
+    "github_actions_production_authority_allowed": false,
+    "hip_device_execution_allowed": false,
+    "public_or_scientific_performance_claim_allowed": false,
+    "reservation_allowed": false,
+    "result_dependent_configuration_allowed": false,
+    "test_double_production_authority_allowed": false
+  },
+  "runner": {
+    "account_scoped_exactly_once": true,
+    "artifact_and_terminal_persisted_before_return": true,
+    "attempt_created_before_host_preflight": true,
+    "caller_supplied_probe_allowed": false,
+    "live_execution_implemented": true,
+    "output_policy": "owner_only_absent_only_single_artifact_plus_terminal",
+    "state_policy": "login_account_home_nofollow_o_excl",
+    "test_only_profile_execution_allowed": false
+  },
+  "sampling": {
+    "clock": "std_steady_instant",
+    "sample_rounds": 25,
+    "schedule": "paired_ab_ba",
+    "timed_scope": "persistent_pipeline_run_only",
+    "warmup_rounds": 5
+  },
+  "schema_id": "betelgeuze.engine_v2_native_fixed64_cpu_profile/6.0.0",
+  "source_bindings": {
+    "cargo_lock_sha256": "b4f9534bc51bccd72157b0be73ce12c939411821c10c11e70b00996e1f82baac",
+    "cargo_manifest_sha256": "2345f995a766336468bc795a1cee78438dab2d2943bad3f5e0b225acebc47e5e",
+    "native_binary_source_sha256": "c5afb352ebcefe7bcb1d34f0dfbbd4ca6effd83a67b26ca6349e5f88453f7605",
+    "native_qualification_source_sha256": "8d36897aa72c0608b5cb5ad6a06d2ab1c090cd00ebdf6f9d811b2f8afc80f9d7",
+    "native_runner_source_sha256": "451274ca96be92710f33868a4c71d6cb9bdfb784e6d5f514b2ef19bed443c8ba",
+    "predecessor_archive_sha256": "9e4042d08b4971cbd218f0afaa7a994892f89f3d256e32ed505129af078cd512",
+    "transitive_source_manifest_sha256": "439fd9e44057771808a3a0a6142c50d10d2b75739d61d2b6712b812f4530cf36"
+  },
+  "status": "native_activation_implementation_frozen_execution_not_consumed"
+}

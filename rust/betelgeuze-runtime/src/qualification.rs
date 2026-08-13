@@ -1234,23 +1234,18 @@ fn run_fixture(
 ///
 /// This function deliberately returns all execution and claim authorities as
 /// false.  Calling it does not consume or qualify the sealed v5 profile.
-pub fn run_native_fixed64_cpu_probe_v5(
+fn run_native_fixed64_cpu_probe_with_identity(
     config: Fixed64CpuProbeConfigV5,
+    schema_id: &'static str,
+    profile_id: &'static str,
 ) -> Result<Fixed64CpuProbeReportV5> {
-    let config = config.validate()?;
-    if config != Fixed64CpuProbeConfigV5::unit_test() {
-        if config != Fixed64CpuProbeConfigV5::qualification_profile() {
-            return Err(Error::local(
-                ErrorCode::InvalidArgument,
-                "fixed64 CPU probe accepts only the unit-test or frozen qualification profile",
-            ));
-        }
-        if !fixed64_cpu_v5_live_activation_admitted() {
-            return Err(Error::local(
-                ErrorCode::BackendUnavailable,
-                "fixed64 CPU qualification profile failed closed: reviewed live activation is absent",
-            ));
-        }
+    if config != Fixed64CpuProbeConfigV5::unit_test()
+        && config != Fixed64CpuProbeConfigV5::qualification_profile()
+    {
+        return Err(Error::local(
+            ErrorCode::InvalidArgument,
+            "fixed64 CPU probe accepts only the unit-test or frozen qualification profile",
+        ));
     }
     let fixture = SyntheticFixture::new();
     let fixtures = [FixtureVariant::Complete, FixtureVariant::FeatureSparse]
@@ -1259,8 +1254,8 @@ pub fn run_native_fixed64_cpu_probe_v5(
         .collect::<Result<Vec<_>>>()?;
     let gate_passed = fixtures.iter().all(|fixture| fixture.gate_passed);
     Ok(Fixed64CpuProbeReportV5 {
-        schema_id: FIXED64_CPU_QUALIFICATION_V5_SCHEMA_ID,
-        profile_id: FIXED64_CPU_QUALIFICATION_V5_PROFILE_ID,
+        schema_id,
+        profile_id,
         qualification_authority: false,
         molecular_execution_authorized: false,
         reservation_authorized: false,
@@ -1269,6 +1264,36 @@ pub fn run_native_fixed64_cpu_probe_v5(
         fixtures,
         gate_passed,
     })
+}
+
+pub fn run_native_fixed64_cpu_probe_v5(
+    config: Fixed64CpuProbeConfigV5,
+) -> Result<Fixed64CpuProbeReportV5> {
+    let config = config.validate()?;
+    if config == Fixed64CpuProbeConfigV5::qualification_profile()
+        && !fixed64_cpu_v5_live_activation_admitted()
+    {
+        return Err(Error::local(
+            ErrorCode::BackendUnavailable,
+            "fixed64 CPU qualification profile failed closed: reviewed live activation is absent",
+        ));
+    }
+    run_native_fixed64_cpu_probe_with_identity(
+        config,
+        FIXED64_CPU_QUALIFICATION_V5_SCHEMA_ID,
+        FIXED64_CPU_QUALIFICATION_V5_PROFILE_ID,
+    )
+}
+
+pub(crate) fn run_native_fixed64_cpu_qualification_successor(
+    schema_id: &'static str,
+    profile_id: &'static str,
+) -> Result<Fixed64CpuProbeReportV5> {
+    run_native_fixed64_cpu_probe_with_identity(
+        Fixed64CpuProbeConfigV5::qualification_profile(),
+        schema_id,
+        profile_id,
+    )
 }
 
 #[cfg(test)]

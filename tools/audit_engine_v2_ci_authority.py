@@ -158,6 +158,7 @@ CPU_PERFORMANCE_FALSE_AUTHORITY_KEYS = (
 )
 NATIVE_FIXED64_CPU_V5_CONTRACT_PATHS = (
     "config/engine_v2_native_fixed64_cpu_profile_v5.json",
+    "config/engine_v2_native_fixed64_cpu_profile_v5_archive.json",
     "rust/betelgeuze-runtime/src/docking.rs",
     "rust/betelgeuze-runtime/src/lib.rs",
     "rust/betelgeuze-runtime/src/qualification.rs",
@@ -171,6 +172,7 @@ NATIVE_FIXED64_CPU_V5_CONTRACT_PATHS = (
 )
 NATIVE_FIXED64_CPU_V5_REQUIRED_TOKEN_COUNTS = {
     "config/engine_v2_native_fixed64_cpu_profile_v5.json": 2,
+    "config/engine_v2_native_fixed64_cpu_profile_v5_archive.json": 2,
     "tools/verify_engine_v2_native_fixed64_cpu_profile_v5.py": 4,
     "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v5.py": 2,
     "docs/engine_v2_native_fixed64_cpu_qualification_v5.md": 1,
@@ -190,6 +192,57 @@ NATIVE_FIXED64_CPU_V5_FALSE_AUTHORITY_KEYS = (
     "stage0_admission_authorized",
 )
 NATIVE_FIXED64_CPU_V5_FALSE_RESTRICTION_KEYS = (
+    "actual_molecular_execution_allowed",
+    "contains_molecular_cases",
+    "fresh_or_historical_case_input_allowed",
+    "github_actions_live_qualification_allowed",
+    "github_actions_production_authority_allowed",
+    "hip_device_execution_allowed",
+    "public_or_scientific_performance_claim_allowed",
+    "reservation_allowed",
+    "result_dependent_configuration_allowed",
+    "test_double_production_authority_allowed",
+)
+NATIVE_FIXED64_CPU_V6_CONTRACT_PATHS = (
+    "config/engine_v2_native_fixed64_cpu_profile_v5_archive.json",
+    "config/engine_v2_native_fixed64_cpu_profile_v6.json",
+    "config/engine_v2_native_fixed64_cpu_profile_v6_sources.json",
+    "rust/Cargo.lock",
+    "rust/betelgeuze-runtime/Cargo.toml",
+    "rust/betelgeuze-runtime/src/lib.rs",
+    "rust/betelgeuze-runtime/src/qualification.rs",
+    "rust/betelgeuze-runtime/src/qualification_v6.rs",
+    "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-qualify-v6.rs",
+    "tools/verify_engine_v2_native_fixed64_cpu_profile_v6.py",
+    "tools/verify_engine_v2_native_fixed64_cpu_v6_evidence.py",
+    "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v6.py",
+    "tests/unit/test_verify_engine_v2_native_fixed64_cpu_v6_evidence.py",
+    "docs/engine_v2_native_fixed64_cpu_qualification_v6.md",
+)
+NATIVE_FIXED64_CPU_V6_REQUIRED_TOKEN_COUNTS = {
+    "config/engine_v2_native_fixed64_cpu_profile_v5_archive.json": 2,
+    "config/engine_v2_native_fixed64_cpu_profile_v6.json": 2,
+    "config/engine_v2_native_fixed64_cpu_profile_v6_sources.json": 2,
+    "tools/verify_engine_v2_native_fixed64_cpu_profile_v6.py": 4,
+    "tools/verify_engine_v2_native_fixed64_cpu_v6_evidence.py": 4,
+    "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v6.py": 3,
+    "tests/unit/test_verify_engine_v2_native_fixed64_cpu_v6_evidence.py": 3,
+}
+NATIVE_FIXED64_CPU_V6_REQUIRED_TOKENS = tuple(
+    NATIVE_FIXED64_CPU_V6_REQUIRED_TOKEN_COUNTS
+)
+NATIVE_FIXED64_CPU_V6_FALSE_AUTHORITY_KEYS = (
+    "fresh_holdout_execution_authorized",
+    "historical_ab_execution_authorized",
+    "molecular_execution_authorized",
+    "product_performance_claim_authorized",
+    "public_benchmark_authorized",
+    "qualification_authority",
+    "reservation_authorized",
+    "scientific_claim_authorized",
+    "stage0_admission_authorized",
+)
+NATIVE_FIXED64_CPU_V6_FALSE_RESTRICTION_KEYS = (
     "actual_molecular_execution_allowed",
     "contains_molecular_cases",
     "fresh_or_historical_case_input_allowed",
@@ -742,28 +795,57 @@ def _native_fixed64_cpu_v5_binary_is_activation_blocked(repo_root: Path) -> bool
     activation_guard = "if !fixed64_cpu_v5_live_activation_admitted()"
     unit_test_profile_gate = "if config != Fixed64CpuProbeConfigV5::unit_test()"
     qualification_profile_gate = (
-        "if config != Fixed64CpuProbeConfigV5::qualification_profile()"
+        "&& config != Fixed64CpuProbeConfigV5::qualification_profile()"
     )
-    public_api_guard = "if !fixed64_cpu_v5_live_activation_admitted()"
     fixture_construction = "let fixture = SyntheticFixture::new();"
     qualification_binding = (
         "let config = Fixed64CpuProbeConfigV5::qualification_profile();"
     )
     qualification_call = "Fixed64CpuProbeConfigV5::qualification_profile()"
     measurement_call = "run_native_fixed64_cpu_probe_v5(config)"
+    public_start = qualification.find("pub fn run_native_fixed64_cpu_probe_v5(")
+    successor_start = qualification.find(
+        "pub(crate) fn run_native_fixed64_cpu_qualification_successor("
+    )
+    if public_start < 0 or successor_start < public_start:
+        return False
+    public_body = qualification[public_start:successor_start]
+    public_profile_gate = (
+        "if config == Fixed64CpuProbeConfigV5::qualification_profile()"
+    )
+    public_activation_gate = "&& !fixed64_cpu_v5_live_activation_admitted()"
+    public_rejection = "fixed64 CPU qualification profile failed closed"
+    private_start = qualification.find("fn run_native_fixed64_cpu_probe_with_identity(")
+    private_end = public_start
+    if private_start < 0 or private_end < private_start:
+        return False
+    private_body = qualification[private_start:private_end]
+    successor_end = qualification.find("\n#[cfg(test)]", successor_start)
+    if successor_end < successor_start:
+        return False
+    successor_body = qualification[successor_start:successor_end]
     return bool(
         qualification.count(activation_constant) == 1
         and "FIXED64_CPU_V5_LIVE_ACTIVATION_ADMITTED: bool = true"
         not in qualification
         and len(activation_function.findall(qualification)) == 1
-        and qualification.count(unit_test_profile_gate) == 1
-        and qualification.count(qualification_profile_gate) == 1
-        and qualification.count(public_api_guard) == 1
+        and private_body.count(unit_test_profile_gate) == 1
+        and private_body.count(qualification_profile_gate) == 1
         and qualification.count(fixture_construction) == 1
-        and qualification.index(unit_test_profile_gate)
-        < qualification.index(qualification_profile_gate)
-        < qualification.index(public_api_guard)
-        < qualification.index(fixture_construction)
+        and private_body.index(unit_test_profile_gate)
+        < private_body.index(qualification_profile_gate)
+        < qualification.index(fixture_construction) - private_start
+        and public_body.count(public_profile_gate) == 1
+        and public_body.count(public_activation_gate) == 1
+        and public_body.count(public_rejection) == 1
+        and public_body.index(public_profile_gate)
+        < public_body.index(public_activation_gate)
+        < public_body.index(public_rejection)
+        < public_body.rindex("run_native_fixed64_cpu_probe_with_identity(")
+        and "pub fn run_native_fixed64_cpu_qualification_successor" not in qualification
+        and successor_body.count("Fixed64CpuProbeConfigV5::qualification_profile()")
+        == 1
+        and successor_body.count("run_native_fixed64_cpu_probe_with_identity(") == 1
         and probe.count("fixed64_cpu_v5_live_activation_admitted") == 2
         and "FIXED64_CPU_V5_LIVE_ACTIVATION_ADMITTED" not in probe
         and probe.count(activation_guard) == 1
@@ -777,6 +859,110 @@ def _native_fixed64_cpu_v5_binary_is_activation_blocked(repo_root: Path) -> bool
         and probe.index(activation_guard)
         < probe.index(qualification_binding)
         < probe.index(measurement_call)
+    )
+
+
+def _native_fixed64_cpu_v6_authority_is_fail_closed(repo_root: Path) -> bool:
+    profile_path = repo_root / "config/engine_v2_native_fixed64_cpu_profile_v6.json"
+    runner_path = repo_root / "rust/betelgeuze-runtime/src/qualification_v6.rs"
+    binary_path = (
+        repo_root
+        / "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-qualify-v6.rs"
+    )
+    try:
+        raw = profile_path.read_bytes()
+        profile = json.loads(raw.decode("ascii"))
+        runner = runner_path.read_text(encoding="utf-8")
+        binary = binary_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError, ValueError):
+        return False
+    expected = (
+        json.dumps(
+            profile,
+            indent=2,
+            sort_keys=True,
+            ensure_ascii=True,
+            allow_nan=False,
+        ).encode("ascii")
+        + b"\n"
+    )
+    authority = profile.get("authority")
+    restrictions = profile.get("restrictions")
+    runner_contract = profile.get("runner")
+    source_bindings = profile.get("source_bindings")
+    if not (
+        type(profile) is dict
+        and raw == expected
+        and profile.get("schema_id")
+        == "betelgeuze.engine_v2_native_fixed64_cpu_profile/6.0.0"
+        and profile.get("profile_id")
+        == "engine_v2_native_fixed64_cpu_synthetic_v6"
+        and profile.get("status")
+        == "native_activation_implementation_frozen_execution_not_consumed"
+        and type(authority) is dict
+        and set(authority) == set(NATIVE_FIXED64_CPU_V6_FALSE_AUTHORITY_KEYS)
+        and all(
+            authority.get(key) is False
+            for key in NATIVE_FIXED64_CPU_V6_FALSE_AUTHORITY_KEYS
+        )
+        and type(restrictions) is dict
+        and set(restrictions)
+        == set(NATIVE_FIXED64_CPU_V6_FALSE_RESTRICTION_KEYS)
+        and all(
+            restrictions.get(key) is False
+            for key in NATIVE_FIXED64_CPU_V6_FALSE_RESTRICTION_KEYS
+        )
+        and type(runner_contract) is dict
+        and runner_contract.get("account_scoped_exactly_once") is True
+        and runner_contract.get("attempt_created_before_host_preflight") is True
+        and runner_contract.get("artifact_and_terminal_persisted_before_return")
+        is True
+        and runner_contract.get("caller_supplied_probe_allowed") is False
+        and runner_contract.get("test_only_profile_execution_allowed") is False
+        and type(source_bindings) is dict
+        and len(source_bindings) == 7
+        and all(
+            type(value) is str and re.fullmatch(r"[0-9a-f]{64}", value)
+            for value in source_bindings.values()
+        )
+    ):
+        return False
+    start = runner.find("pub fn run_native_fixed64_cpu_qualification_v6(")
+    end = runner.find("\n#[cfg(test)]", start)
+    if start < 0 or end < 0:
+        return False
+    body = runner[start:end]
+    ordered = (
+        "deny_github_actions_live_execution()?;",
+        "verify_native_fixed64_cpu_v6_activation()?;",
+        "validate_absent_output(output_path)?;",
+        "open_account_state(&activation.profile_sha256)?;",
+        "create_attempt(",
+        "preflight_native_fixed64_cpu_v6()?;",
+        "execute_measurement(&preflight);",
+        "build_artifact(",
+    )
+    cursor = -1
+    for token in ordered:
+        position = body.find(token, cursor + 1)
+        if position < 0:
+            return False
+        cursor = position
+    artifact_publish = body.find("publish_absent_file_at(", cursor + 1)
+    terminal_build = body.find("build_terminal(", artifact_publish + 1)
+    terminal_publish = body.find("publish_absent_file_at(", terminal_build + 1)
+    returned = body.rfind("Ok(Fixed64CpuPersistedQualificationV6")
+    return bool(
+        cursor < artifact_publish < terminal_build < terminal_publish < returned
+        and "libc::O_EXCL" in runner
+        and "libc::O_NOFOLLOW" in runner
+        and "decision_returned_only_after_terminal_persistence" in runner
+        and runner.count("run_native_fixed64_cpu_qualification_successor(") == 1
+        and "--verify-activation" in binary
+        and "--preflight" in binary
+        and "--run-output" in binary
+        and "Fixed64CpuProbeConfigV5" not in binary
+        and "run_native_fixed64_cpu_probe_v5" not in binary
     )
 
 
@@ -795,6 +981,9 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
     )
     hashes = {path: _sha256(repo_root / path) for path in workflows}
     main_text = (repo_root / AUTHORITATIVE_WORKFLOWS[0]).read_text(encoding="utf-8")
+    all_workflow_text = "\n".join(
+        (repo_root / path).read_text(encoding="utf-8") for path in workflows
+    )
     stage0_required_tokens = (
         "tools/__init__.py",
         "config/engine_v2_public_redocking_stage0_threshold_evidence.json",
@@ -919,6 +1108,43 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         )
     )
 
+    native_fixed64_cpu_v6_contract_present = any(
+        (repo_root / path).is_file()
+        for path in NATIVE_FIXED64_CPU_V6_CONTRACT_PATHS
+    )
+    native_fixed64_cpu_v6_contract_files_complete = all(
+        (repo_root / path).is_file()
+        for path in NATIVE_FIXED64_CPU_V6_CONTRACT_PATHS
+    )
+    native_fixed64_cpu_v6_profile_authority_false = (
+        not native_fixed64_cpu_v6_contract_present
+        or (
+            native_fixed64_cpu_v6_contract_files_complete
+            and _native_fixed64_cpu_v6_authority_is_fail_closed(repo_root)
+        )
+    )
+    native_fixed64_cpu_v6_live_qualification_absent_from_github_actions = (
+        "--run-output" not in all_workflow_text
+        and "run_native_fixed64_cpu_qualification_v6" not in all_workflow_text
+    )
+    native_fixed64_cpu_v6_authority_fail_closed = (
+        native_fixed64_cpu_v6_profile_authority_false
+        and native_fixed64_cpu_v6_live_qualification_absent_from_github_actions
+    )
+    native_fixed64_cpu_v6_contract_in_authoritative_ci = (
+        not native_fixed64_cpu_v6_contract_present
+        or (
+            native_fixed64_cpu_v6_contract_files_complete
+            and native_fixed64_cpu_v6_authority_fail_closed
+            and all(
+                main_text.count(token) >= minimum_count
+                for token, minimum_count in (
+                    NATIVE_FIXED64_CPU_V6_REQUIRED_TOKEN_COUNTS.items()
+                )
+            )
+        )
+    )
+
     one_shot_contract_present = any(
         (repo_root / path).is_file() for path in ONE_SHOT_CONTRACT_PATHS
     )
@@ -1031,6 +1257,25 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         ),
         "native_fixed64_cpu_v5_test_double_production_authority_false": (
             native_fixed64_cpu_v5_profile_authority_false
+        ),
+        "native_fixed64_cpu_v6_contract_in_authoritative_ci": (
+            native_fixed64_cpu_v6_contract_in_authoritative_ci
+        ),
+        "native_fixed64_cpu_v6_authority_fail_closed": (
+            native_fixed64_cpu_v6_authority_fail_closed
+        ),
+        "native_fixed64_cpu_v6_execution_consumed": False,
+        "native_fixed64_cpu_v6_github_actions_production_authority_false": (
+            native_fixed64_cpu_v6_profile_authority_false
+        ),
+        "native_fixed64_cpu_v6_live_qualification_absent_from_github_actions": (
+            native_fixed64_cpu_v6_live_qualification_absent_from_github_actions
+        ),
+        "native_fixed64_cpu_v6_qualification_authority_false": (
+            native_fixed64_cpu_v6_profile_authority_false
+        ),
+        "native_fixed64_cpu_v6_test_double_production_authority_false": (
+            native_fixed64_cpu_v6_profile_authority_false
         ),
         "one_shot_contract_in_authoritative_ci": (
             one_shot_contract_in_authoritative_ci
