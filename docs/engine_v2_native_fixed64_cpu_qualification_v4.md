@@ -30,6 +30,21 @@ coordinate identities remain in the scientific projection.
 The fixtures are compiled native constants. They contain no historical,
 Fresh-128, customer, or other molecular-corpus case.
 
+Each fixture also carries a domain-separated payload SHA-256 rederived from the
+complete `Fixed64PipelineContext` and `Fixed64RunInput`, including every
+coordinate and chemistry channel, topology, source receipt, feature geometry,
+lane allocation, and refinement parameter:
+
+- `synthetic_complete_64`:
+  `8478682324df3bd10e5fa6e2988436cec4c59e815dcf3444eaf3009f1a373df5`;
+- `synthetic_feature_sparse_48_plus_16`:
+  `9c93753ae23363c20d2f957fb521eedd1fe4f92fc39282c03c53d1f2674610c2`.
+
+The frozen JSON also binds the exact qualification and native probe source
+SHA-256 identities. Changing a fixture literal, its run-input construction, or
+the guard-to-measurement control flow therefore fails static verification,
+while runtime tests independently rederive and compare the full payload digest.
+
 ## Parity boundary
 
 Native ABI receipts bind their backend and therefore are not compared directly
@@ -64,9 +79,10 @@ The checked-in profile is frozen but unconsumed. CI may compile and unit-test
 the measurement core and run the static profile verifier; CI must not execute
 the 25-sample live profile. The checked-in native binary has a compile-bound
 `activation_admitted = false` gate before `qualification_profile()` and exits
-without starting a measurement. A later activation must bind an exact merged source,
-native binary, toolchain, host preflight, absent-only output, and account-scoped
-exactly-once state before the single local execution is consumed.
+without constructing the qualification configuration or calling the measurement
+core. A later activation must bind an exact merged source, native binary,
+toolchain, host preflight, absent-only output, and account-scoped exactly-once
+state before the single local execution is consumed.
 
 Until that activation is reviewed and merged:
 
@@ -82,14 +98,20 @@ Static verification is non-consuming:
 python3 tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py
 ```
 
-The verifier also reads the compiled Rust qualification gate and native probe
-entry point. It fails if the profile ID, denominator, fixture counts, sampling,
-numeric tolerances, performance ratio, or `qualification_profile()` call drifts
-from the canonical JSON.
+The verifier also reads the compiled Rust qualification gate, Rust receipt
+domains, C++ pipeline constant, and native probe entry point. One pipeline
+profile constant feeds every Rust receipt domain and is checked against the C++
+ABI identity before pipeline construction. Verification fails if the profile
+ID, complete fixture payload, source identity, denominator, fixture counts,
+sampling, numeric tolerances, performance ratio, or guard-to-measurement order
+drifts from the canonical JSON.
 
 Do not invoke the native binary from GitHub Actions or treat a blocked/unit probe
 as the exactly-once qualification result. The CI authority auditor scans every
 workflow and every repository-local `**/action.yml` or `action.yaml` manifest,
-including nested shell commands, and fails closed on a live-probe invocation.
+including each step's effective shell, expansion-enabled heredocs, nested
+shell/`timeout`/`eval` commands, and the declared Docker or Node action
+implementation files. Unsupported executable shells and incomplete local-action
+surfaces fail closed. The auditor fails closed on a live-probe invocation.
 The binary gate is an independent defense: changing it requires a separately
 reviewed activation that replaces this unconsumed profile state.

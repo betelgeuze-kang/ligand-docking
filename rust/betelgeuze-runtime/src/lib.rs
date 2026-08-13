@@ -20,6 +20,7 @@ pub use docking::{
     Fixed64RunInput, Fixed64ScientificCandidateProjection, Fixed64ScientificProjection,
     Fixed64ScorerEvidence, Fixed64SourceEvidence, Fixed64TorsionCoordinates,
     Fixed64TorsionEvidence, Fixed64TorsionMoveEvidence, Fixed64ValidityEvidence,
+    FIXED64_NATIVE_PIPELINE_PROFILE_ID,
 };
 pub use dynamics::{
     DistanceConstraint, DistanceConstraints, DynamicsReport, Integrator, MinimizationReport,

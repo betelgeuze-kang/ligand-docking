@@ -60,6 +60,8 @@ use super::{
 };
 
 pub type Sha256 = [u8; 32];
+pub const FIXED64_NATIVE_PIPELINE_PROFILE_ID: &str =
+    "betelgeuze.engine_v2_native_fixed64_complete_pipeline/1.0.0";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Fixed64Donor {
@@ -1249,60 +1251,60 @@ fn digest_present(value: &Sha256) -> bool {
     value.iter().any(|byte| *byte != 0)
 }
 
-struct CanonicalHasher(Sha256Hasher);
+pub(crate) struct CanonicalHasher(Sha256Hasher);
 
 impl CanonicalHasher {
-    fn new(domain: &str) -> Self {
+    pub(crate) fn new(domain: &str) -> Self {
         let mut hasher = Self(Sha256Hasher::new());
         hasher.string(domain);
         hasher
     }
 
-    fn byte(&mut self, value: u8) {
+    pub(crate) fn byte(&mut self, value: u8) {
         self.0.update([value]);
     }
 
-    fn u32(&mut self, value: u32) {
+    pub(crate) fn u32(&mut self, value: u32) {
         self.0.update(value.to_be_bytes());
     }
 
-    fn i32(&mut self, value: i32) {
+    pub(crate) fn i32(&mut self, value: i32) {
         self.u32(value as u32);
     }
 
-    fn u64(&mut self, value: u64) {
+    pub(crate) fn u64(&mut self, value: u64) {
         self.0.update(value.to_be_bytes());
     }
 
-    fn usize(&mut self, value: usize) {
+    pub(crate) fn usize(&mut self, value: usize) {
         self.u64(u64::try_from(value).expect("bounded native receipt length fits u64"));
     }
 
-    fn f64(&mut self, value: f64) {
+    pub(crate) fn f64(&mut self, value: f64) {
         let canonical = if value == 0.0 { 0.0 } else { value };
         self.u64(canonical.to_bits());
     }
 
-    fn vec3(&mut self, value: Vec3) {
+    pub(crate) fn vec3(&mut self, value: Vec3) {
         self.f64(value.x);
         self.f64(value.y);
         self.f64(value.z);
     }
 
-    fn bytes(&mut self, value: &[u8]) {
+    pub(crate) fn bytes(&mut self, value: &[u8]) {
         self.usize(value.len());
         self.0.update(value);
     }
 
-    fn string(&mut self, value: &str) {
+    pub(crate) fn string(&mut self, value: &str) {
         self.bytes(value.as_bytes());
     }
 
-    fn digest(&mut self, value: Sha256) {
+    pub(crate) fn digest(&mut self, value: Sha256) {
         self.0.update(value);
     }
 
-    fn finish(self) -> Sha256 {
+    pub(crate) fn finish(self) -> Sha256 {
         self.0.finalize().into()
     }
 }
@@ -1926,7 +1928,7 @@ fn canonical_component_binding_receipt(
 ) -> Sha256 {
     let mut hash =
         CanonicalHasher::new("betelgeuze.engine_v2_native_fixed64_component_binding/1.0.0");
-    hash.string("betelgeuze.engine_v2_native_fixed64_complete_pipeline/1.0.0");
+    hash.string(FIXED64_NATIVE_PIPELINE_PROFILE_ID);
     hash.i32(backend.as_raw());
     hash.i32(sys::BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL);
     hash.i32(device_ordinal);
@@ -2071,7 +2073,7 @@ fn canonical_refinement_policy_receipt(
 ) -> Sha256 {
     let mut hash =
         CanonicalHasher::new("betelgeuze.engine_v2_native_fixed64_refinement_policy_receipt/1.0.0");
-    hash.string("betelgeuze.engine_v2_native_fixed64_complete_pipeline/1.0.0");
+    hash.string(FIXED64_NATIVE_PIPELINE_PROFILE_ID);
     hash.digest(refinement_context_receipt_sha256);
     hash.digest(component_binding_receipt_sha256);
     hash.digest(input.predeclared_refinement_policy_sha256);
@@ -2850,6 +2852,7 @@ fn canonical_pocket_normal(value: [f64; 3]) -> Result<[f64; 3]> {
 
 impl<'context> Fixed64Pipeline<'context> {
     pub fn new(context: &'context Context, scientific: Fixed64PipelineContext<'_>) -> Result<Self> {
+        Self::profile_id()?;
         let counts = scientific.validate()?;
         let expected_backend = context.backend()?;
         let device_ordinal = context.device_ordinal()?;
@@ -4145,12 +4148,19 @@ impl<'context> Fixed64Pipeline<'context> {
             ));
         }
         // SAFETY: non-null pointer follows the native static-string contract.
-        unsafe { CStr::from_ptr(pointer) }.to_str().map_err(|_| {
+        let profile_id = unsafe { CStr::from_ptr(pointer) }.to_str().map_err(|_| {
             Error::local(
                 ErrorCode::AbiMismatch,
                 "native fixed64 pipeline profile id is not UTF-8",
             )
-        })
+        })?;
+        if profile_id != FIXED64_NATIVE_PIPELINE_PROFILE_ID {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "native fixed64 pipeline profile id changed",
+            ));
+        }
+        Ok(profile_id)
     }
 }
 
@@ -6632,7 +6642,7 @@ fn canonical_pipeline_row_receipt(
 ) -> Sha256 {
     let mut hash =
         CanonicalHasher::new("betelgeuze.engine_v2_native_fixed64_complete_pipeline_row/1.0.0");
-    hash.string("betelgeuze.engine_v2_native_fixed64_complete_pipeline/1.0.0");
+    hash.string(FIXED64_NATIVE_PIPELINE_PROFILE_ID);
     hash.digest(component_binding_receipt);
     hash.digest(refinement_policy_receipt);
     hash.u32(row.slot_index);
@@ -8496,7 +8506,7 @@ fn validate_native_outputs(
     let cluster_batch_receipt_sha256 = cluster_batch.finish();
     let mut pipeline_batch =
         CanonicalHasher::new("betelgeuze.engine_v2_native_fixed64_complete_pipeline_batch/1.0.0");
-    pipeline_batch.string("betelgeuze.engine_v2_native_fixed64_complete_pipeline/1.0.0");
+    pipeline_batch.string(FIXED64_NATIVE_PIPELINE_PROFILE_ID);
     pipeline_batch.i32(backend.as_raw());
     pipeline_batch.i32(sys::BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL);
     pipeline_batch.usize(sys::BG_DOCKING_FIXED64_CANDIDATE_COUNT as usize);

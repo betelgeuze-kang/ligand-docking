@@ -164,6 +164,7 @@ NATIVE_FIXED64_CPU_V4_CONTRACT_PATHS = (
     "rust/betelgeuze-runtime/src/docking.rs",
     "rust/betelgeuze-runtime/src/lib.rs",
     "rust/betelgeuze-runtime/src/qualification.rs",
+    "native/src/docking/fixed64_pipeline.cpp",
     "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v4.rs",
     "rust/betelgeuze-runtime/tests/docking_fixed64_pipeline.rs",
     "rust/betelgeuze-runtime/tests/fixed64_cpu_probe_activation.rs",
@@ -257,6 +258,11 @@ NATIVE_FIXED64_CPU_V4_FOLDED_RUN_PATTERN = re.compile(
 )
 NATIVE_FIXED64_CPU_V4_MAX_WORKFLOW_UTF8_BYTES = 1_048_576
 NATIVE_FIXED64_CPU_V4_MAX_YAML_NODES = 100_000
+NATIVE_FIXED64_CPU_V4_MAX_LOCAL_ACTION_FILES = 1_000
+NATIVE_FIXED64_CPU_V4_MAX_LOCAL_ACTION_UTF8_BYTES = 8_388_608
+_INVALID_SHELL = object()
+_AMBIGUOUS_COMMAND_INDEX = -1
+_UNSUPPORTED_DEFAULT_SHELL = "__betelgeuze_unsupported_default_shell__"
 ONE_SHOT_CONTRACT_PATHS = (
     "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_ab.py",
     "config/engine_v2_source_paired_clearance_one_shot_ab.json",
@@ -375,7 +381,9 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _workflow_yaml_run_scalars(text: str) -> tuple[str, ...] | None:
+def _workflow_yaml_run_steps(
+    text: str,
+) -> tuple[tuple[str, str | None], ...] | None:
     if len(text.encode("utf-8")) > NATIVE_FIXED64_CPU_V4_MAX_WORKFLOW_UTF8_BYTES:
         return None
     try:
@@ -384,7 +392,7 @@ def _workflow_yaml_run_scalars(text: str) -> tuple[str, ...] | None:
         return None
     stack = [document]
     visited: set[int] = set()
-    run_scalars: list[str] = []
+    observed_run_scalars = 0
     observed_nodes = 0
     while stack:
         value = stack.pop()
@@ -399,11 +407,117 @@ def _workflow_yaml_run_scalars(text: str) -> tuple[str, ...] | None:
         if isinstance(value, dict):
             for key, child in value.items():
                 if key == "run" and isinstance(child, str):
-                    run_scalars.append(child)
+                    observed_run_scalars += 1
                 stack.append(child)
         elif isinstance(value, list):
             stack.extend(value)
-    return tuple(run_scalars)
+
+    if document is None:
+        return ()
+    if not isinstance(document, dict):
+        return None
+
+    def default_shell(
+        container: dict[object, object],
+        inherited: str | None,
+    ) -> str | None | object:
+        defaults = container.get("defaults")
+        if defaults is None:
+            return inherited
+        if not isinstance(defaults, dict):
+            return _INVALID_SHELL
+        run_defaults = defaults.get("run")
+        if run_defaults is None:
+            return inherited
+        if not isinstance(run_defaults, dict):
+            return _INVALID_SHELL
+        shell = run_defaults.get("shell")
+        if shell is None:
+            return inherited
+        return shell if isinstance(shell, str) else _INVALID_SHELL
+
+    def append_steps(
+        value: object,
+        inherited_shell: str | None,
+        destination: list[tuple[str, str | None]],
+    ) -> bool:
+        if value is None:
+            return True
+        if not isinstance(value, list):
+            return False
+        for step in value:
+            if not isinstance(step, dict):
+                return False
+            run = step.get("run")
+            if run is None:
+                continue
+            if not isinstance(run, str):
+                return False
+            shell = step.get("shell", inherited_shell)
+            if shell is not None and not isinstance(shell, str):
+                return False
+            destination.append((run, shell))
+        return True
+
+    def runner_default_shell(job: dict[object, object]) -> str | None:
+        runs_on = job.get("runs-on")
+        if runs_on is None:
+            return None
+        labels: tuple[str, ...]
+        if isinstance(runs_on, str):
+            labels = (runs_on.lower(),)
+        elif isinstance(runs_on, list) and all(
+            isinstance(label, str) for label in runs_on
+        ):
+            labels = tuple(str(label).lower() for label in runs_on)
+        else:
+            return _UNSUPPORTED_DEFAULT_SHELL
+        if any("${{" in label or "windows" in label for label in labels):
+            return _UNSUPPORTED_DEFAULT_SHELL
+        if any(
+            marker in label
+            for label in labels
+            for marker in ("linux", "ubuntu", "macos")
+        ):
+            return None
+        return _UNSUPPORTED_DEFAULT_SHELL
+
+    run_steps: list[tuple[str, str | None]] = []
+    workflow_shell = default_shell(document, None)
+    if workflow_shell is _INVALID_SHELL:
+        return None
+
+    jobs = document.get("jobs")
+    if jobs is not None:
+        if not isinstance(jobs, dict):
+            return None
+        for job in jobs.values():
+            if not isinstance(job, dict):
+                return None
+            job_shell = default_shell(job, workflow_shell)
+            if job_shell is None:
+                job_shell = runner_default_shell(job)
+            if job_shell is _INVALID_SHELL or not append_steps(
+                job.get("steps"),
+                job_shell,
+                run_steps,
+            ):
+                return None
+
+    runs = document.get("runs")
+    if runs is not None:
+        if not isinstance(runs, dict):
+            return None
+        if runs.get("using") == "composite" and not append_steps(
+            runs.get("steps"),
+            None,
+            run_steps,
+        ):
+            return None
+
+    if len(run_steps) != observed_run_scalars:
+        return None
+    return tuple(run_steps)
 
 
 def _cargo_subcommand_index(invocation: list[str]) -> int | None:
@@ -450,6 +564,62 @@ def _cargo_subcommand_index(invocation: list[str]) -> int | None:
             return None
         return index
     return None
+
+
+def _timeout_wrapped_command_index(
+    segment: list[str],
+    timeout_index: int,
+) -> int | None:
+    index = timeout_index + 1
+    while index < len(segment):
+        token = segment[index]
+        if token in {"--help", "--version"}:
+            return None
+        if token == "--":
+            index += 1
+            break
+        if token in {"-k", "--kill-after", "-s", "--signal"}:
+            if index + 1 >= len(segment):
+                return _AMBIGUOUS_COMMAND_INDEX
+            index += 2
+            continue
+        if token.startswith(("--kill-after=", "--signal=")):
+            index += 1
+            continue
+        if token in {
+            "--foreground",
+            "--preserve-status",
+            "--verbose",
+        }:
+            index += 1
+            continue
+        if token.startswith("--"):
+            return _AMBIGUOUS_COMMAND_INDEX
+        if token.startswith("-") and token != "-":
+            cluster = token[1:]
+            cluster_index = 0
+            consumes_next = False
+            while cluster_index < len(cluster):
+                option = cluster[cluster_index]
+                if option in {"f", "p", "v"}:
+                    cluster_index += 1
+                    continue
+                if option in {"k", "s"}:
+                    if cluster_index + 1 == len(cluster):
+                        consumes_next = True
+                    cluster_index = len(cluster)
+                    continue
+                return _AMBIGUOUS_COMMAND_INDEX
+            index += 1
+            if consumes_next:
+                if index >= len(segment):
+                    return _AMBIGUOUS_COMMAND_INDEX
+                index += 1
+            continue
+        break
+    if index + 1 >= len(segment):
+        return _AMBIGUOUS_COMMAND_INDEX
+    return index + 1
 
 
 def _shell_outer_command_word_index(segment: list[str]) -> int | None:
@@ -504,37 +674,10 @@ def _shell_outer_command_word_index(segment: list[str]) -> int | None:
                 index += 1
             continue
         if segment[index].rsplit("/", 1)[-1] == "timeout":
-            index += 1
-            while index < len(segment):
-                token = segment[index]
-                if token in {"--help", "--version"}:
-                    return None
-                if token == "--":
-                    index += 1
-                    break
-                if token in {"-k", "--kill-after", "-s", "--signal"}:
-                    index += 2
-                    continue
-                if token.startswith(("-k", "-s")) and len(token) > 2:
-                    index += 1
-                    continue
-                if token.startswith(("--kill-after=", "--signal=")):
-                    index += 1
-                    continue
-                if token in {
-                    "--foreground",
-                    "--preserve-status",
-                    "--verbose",
-                    "-v",
-                }:
-                    index += 1
-                    continue
-                if token.startswith("-"):
-                    return None
-                break
-            if index >= len(segment):
-                return None
-            index += 1
+            nested_index = _timeout_wrapped_command_index(segment, index)
+            if nested_index is None or nested_index == _AMBIGUOUS_COMMAND_INDEX:
+                return nested_index
+            index = nested_index
             continue
         return index
     return None
@@ -542,7 +685,11 @@ def _shell_outer_command_word_index(segment: list[str]) -> int | None:
 
 def _shell_command_word_index(segment: list[str]) -> int | None:
     index = _shell_outer_command_word_index(segment)
-    if index is None or segment[index].rsplit("/", 1)[-1] != "env":
+    if (
+        index is None
+        or index == _AMBIGUOUS_COMMAND_INDEX
+        or segment[index].rsplit("/", 1)[-1] != "env"
+    ):
         return index
     index += 1
     while index < len(segment):
@@ -581,14 +728,16 @@ def _shell_command_word_index(segment: list[str]) -> int | None:
     if index >= len(segment):
         return None
     nested = _shell_outer_command_word_index(segment[index:])
-    return index + nested if nested is not None else None
+    if nested is None or nested == _AMBIGUOUS_COMMAND_INDEX:
+        return nested
+    return index + nested
 
 
 def _shell_without_static_heredoc_bodies(script: str) -> str | None:
     def parse_delimiter(
         content: str,
         start: int,
-    ) -> tuple[str, int, bool] | None:
+    ) -> tuple[str, int, bool, bool] | None:
         index = start
         strip_tabs = index < len(content) and content[index] == "-"
         if strip_tabs:
@@ -598,6 +747,7 @@ def _shell_without_static_heredoc_bodies(script: str) -> str | None:
 
         delimiter: list[str] = []
         quote: str | None = None
+        delimiter_was_quoted = False
         while index < len(content):
             character = content[index]
             if quote is not None:
@@ -616,10 +766,12 @@ def _shell_without_static_heredoc_bodies(script: str) -> str | None:
                 index += 1
                 continue
             if character in {"'", '"'}:
+                delimiter_was_quoted = True
                 quote = character
                 index += 1
                 continue
             if character == "\\":
+                delimiter_was_quoted = True
                 index += 1
                 if index >= len(content):
                     return None
@@ -637,10 +789,23 @@ def _shell_without_static_heredoc_bodies(script: str) -> str | None:
             or re.fullmatch(r"[A-Za-z_][A-Za-z0-9_.-]*", value) is None
         ):
             return None
-        return value, index, strip_tabs
+        return value, index, strip_tabs, delimiter_was_quoted
+
+    def has_executable_expansion(content: str) -> bool:
+        index = 0
+        while index < len(content):
+            character = content[index]
+            if character == "\\" and index + 1 < len(content):
+                if content[index + 1] in {"\\", "$", "`"}:
+                    index += 2
+                    continue
+            if character == "`" or content.startswith("$(", index):
+                return True
+            index += 1
+        return False
 
     output: list[str] = []
-    pending_delimiters: list[tuple[str, bool]] = []
+    pending_delimiters: list[tuple[str, bool, bool]] = []
     quote: str | None = None
     for line in script.splitlines(keepends=True):
         content = line
@@ -653,10 +818,12 @@ def _shell_without_static_heredoc_bodies(script: str) -> str | None:
                 newline = "\r\n"
 
         if pending_delimiters:
-            delimiter, strip_tabs = pending_delimiters[0]
+            delimiter, strip_tabs, expansion_disabled = pending_delimiters[0]
             candidate = content.lstrip("\t") if strip_tabs else content
             if candidate == delimiter:
                 pending_delimiters.pop(0)
+            elif not expansion_disabled and has_executable_expansion(content):
+                return None
             output.append(newline)
             continue
 
@@ -692,8 +859,10 @@ def _shell_without_static_heredoc_bodies(script: str) -> str | None:
                 parsed = parse_delimiter(content, index + 2)
                 if parsed is None:
                     return None
-                delimiter, index, strip_tabs = parsed
-                pending_delimiters.append((delimiter, strip_tabs))
+                delimiter, index, strip_tabs, expansion_disabled = parsed
+                pending_delimiters.append(
+                    (delimiter, strip_tabs, expansion_disabled)
+                )
                 continue
             index += 1
 
@@ -727,6 +896,8 @@ def _workflow_has_dynamic_cargo_run_command(tokens: list[str]) -> bool:
         segment = list(immutable_segment)
         if segment:
             command_index = _shell_command_word_index(segment)
+            if command_index == _AMBIGUOUS_COMMAND_INDEX:
+                return True
             nonexecuting_display = (
                 command_index is not None
                 and segment[command_index].rsplit("/", 1)[-1] in {"echo", "printf"}
@@ -828,6 +999,11 @@ def _shell_tokens_invoke_native_fixed64_cpu_v4_live_probe(
         segment = list(immutable_segment)
         outer_command_index = _shell_outer_command_word_index(segment)
         command_index = _shell_command_word_index(segment)
+        if (
+            outer_command_index == _AMBIGUOUS_COMMAND_INDEX
+            or command_index == _AMBIGUOUS_COMMAND_INDEX
+        ):
+            return True
         if command_index is None:
             command_index = 0
             while command_index < len(segment) and (
@@ -889,42 +1065,75 @@ def _shell_tokens_invoke_native_fixed64_cpu_v4_live_probe(
                 ):
                     break
                 index += 1
+        if embedded is None and command == "eval":
+            if command_index + 1 < len(segment):
+                embedded = " ".join(segment[command_index + 1 :])
         if embedded is None and command in {"bash", "dash", "ksh", "sh", "zsh"}:
             index = command_index + 1
+            has_command_option = False
             while index < len(segment):
                 token = segment[index]
                 if token == "--":
+                    index += 1
                     break
                 if token in {"-O", "-o", "--init-file", "--rcfile"}:
+                    if index + 1 >= len(segment):
+                        return True
                     index += 2
                     continue
-                if token.startswith("-") and not token.startswith("--"):
+                if token.startswith(("--init-file=", "--rcfile=")):
+                    index += 1
+                    continue
+                if token.startswith("--"):
+                    if token not in {
+                        "--debugger",
+                        "--dump-po-strings",
+                        "--dump-strings",
+                        "--help",
+                        "--login",
+                        "--noediting",
+                        "--noprofile",
+                        "--norc",
+                        "--posix",
+                        "--pretty-print",
+                        "--restricted",
+                        "--verbose",
+                        "--version",
+                    }:
+                        return True
+                    index += 1
+                    continue
+                if token.startswith(("-", "+")) and token not in {"-", "+"}:
                     cluster = token[1:]
-                    value_option_index = min(
-                        (
-                            option_index
-                            for option_index, option in enumerate(cluster)
-                            if option in {"O", "o"}
-                        ),
-                        default=None,
-                    )
-                    command_option_index = cluster.find("c")
-                    if command_option_index >= 0 and (
-                        value_option_index is None
-                        or command_option_index < value_option_index
+                    value_option_indexes = [
+                        option_index
+                        for option_index, option in enumerate(cluster)
+                        if option in {"O", "o"}
+                    ]
+                    if any(
+                        option not in "abefhklmnptuvxBCEHPTDcsOo"
+                        for option in cluster
                     ):
-                        if index + 1 >= len(segment):
+                        return True
+                    has_command_option = has_command_option or "c" in cluster
+                    if value_option_indexes:
+                        if (
+                            len(value_option_indexes) != 1
+                            or value_option_indexes[0] != len(cluster) - 1
+                            or index + 1 >= len(segment)
+                        ):
                             return True
-                        embedded = segment[index + 1]
-                        break
-                    if value_option_index is not None:
-                        if value_option_index == len(cluster) - 1:
-                            index += 1
-                        index += 1
+                        index += 2
                         continue
-                if not token.startswith("-"):
+                    index += 1
+                    continue
+                if not token.startswith(("-", "+")):
                     break
-                index += 1
+                return True
+            if has_command_option:
+                if index >= len(segment):
+                    return True
+                embedded = segment[index]
         if embedded is None:
             continue
         embedded_executable = _shell_without_static_heredoc_bodies(embedded)
@@ -979,12 +1188,32 @@ def _shell_tokens_invoke_native_fixed64_cpu_v4_live_probe(
     return False
 
 
+def _is_supported_bourne_shell(shell: str | None) -> bool:
+    if shell is None:
+        return True
+    if any(marker in shell for marker in ("$", "`", "${{")):
+        return False
+    try:
+        tokens = shlex.split(shell, posix=True)
+    except ValueError:
+        return False
+    return bool(tokens) and tokens[0].rsplit("/", 1)[-1] in {
+        "bash",
+        "dash",
+        "ksh",
+        "sh",
+        "zsh",
+    }
+
+
 def _workflow_invokes_native_fixed64_cpu_v4_live_probe(text: str) -> bool:
     logical = text.replace("\\\n", " ")
-    yaml_run_scalars = _workflow_yaml_run_scalars(logical)
-    if yaml_run_scalars is None:
+    yaml_run_steps = _workflow_yaml_run_steps(logical)
+    if yaml_run_steps is None:
         return True
-    for line in yaml_run_scalars:
+    for line, shell in yaml_run_steps:
+        if not _is_supported_bourne_shell(shell):
+            return True
         executable = _shell_without_static_heredoc_bodies(line)
         if executable is None:
             return True
@@ -1004,6 +1233,175 @@ def _workflow_invokes_native_fixed64_cpu_v4_live_probe(text: str) -> bool:
         if _shell_tokens_invoke_native_fixed64_cpu_v4_live_probe(tokens):
             return True
     return False
+
+
+def _implementation_text_invokes_native_fixed64_cpu_v4_live_probe(
+    text: str,
+) -> bool:
+    if any(
+        token in text
+        for token in NATIVE_FIXED64_CPU_V4_FORBIDDEN_WORKFLOW_TOKENS
+    ):
+        return True
+    return re.search(NATIVE_FIXED64_CPU_V4_CARGO_RUN_PATTERN, text) is not None
+
+
+def _resolve_local_action_path(
+    repo_root: Path,
+    manifest: Path,
+    raw_path: str,
+) -> Path | None:
+    if (
+        not raw_path
+        or raw_path.startswith("docker://")
+        or any(marker in raw_path for marker in ("$", "`", "${{"))
+    ):
+        return None
+    relative = Path(raw_path)
+    if relative.is_absolute() or ".." in relative.parts:
+        return None
+    candidate = manifest.parent / relative
+    try:
+        resolved_root = repo_root.resolve(strict=True)
+        lexical_candidate = candidate.absolute()
+        lexical_relative = lexical_candidate.relative_to(resolved_root)
+        current = resolved_root
+        for part in lexical_relative.parts:
+            current /= part
+            if current.is_symlink():
+                return None
+        resolved = current.resolve(strict=True)
+        resolved.relative_to(resolved_root)
+    except (OSError, ValueError):
+        return None
+    return resolved if resolved.is_file() else None
+
+
+def _local_action_execution_surface(
+    repo_root: Path,
+    manifests: tuple[str, ...],
+) -> tuple[tuple[str, ...], bool, bool]:
+    implementation_files: set[str] = set()
+    surface_complete = True
+    invokes_live_probe = False
+    resolved_root = repo_root.resolve()
+
+    for manifest_raw in manifests:
+        manifest = repo_root / manifest_raw
+        try:
+            manifest_text = manifest.read_text(encoding="utf-8")
+        except (OSError, UnicodeError):
+            surface_complete = False
+            continue
+        if len(manifest_text.encode("utf-8")) > (
+            NATIVE_FIXED64_CPU_V4_MAX_WORKFLOW_UTF8_BYTES
+        ):
+            surface_complete = False
+            continue
+        try:
+            document = yaml.safe_load(manifest_text)
+        except (yaml.YAMLError, RecursionError):
+            surface_complete = False
+            continue
+        if not isinstance(document, dict) or not isinstance(
+            document.get("runs"), dict
+        ):
+            surface_complete = False
+            continue
+        runs = document["runs"]
+        using = runs.get("using")
+        if not isinstance(using, str):
+            surface_complete = False
+            continue
+        if _implementation_text_invokes_native_fixed64_cpu_v4_live_probe(
+            manifest_text
+        ):
+            invokes_live_probe = True
+
+        if using == "composite":
+            if _workflow_invokes_native_fixed64_cpu_v4_live_probe(
+                manifest_text
+            ):
+                invokes_live_probe = True
+            continue
+
+        primary_paths: list[Path] = []
+        if using == "docker":
+            image = runs.get("image")
+            if not isinstance(image, str) or image.startswith("docker://"):
+                surface_complete = False
+                continue
+            resolved_image = _resolve_local_action_path(
+                repo_root,
+                manifest,
+                image,
+            )
+            if resolved_image is None:
+                surface_complete = False
+                continue
+            primary_paths.append(resolved_image)
+        elif using.startswith("node"):
+            for key in ("main", "pre", "post"):
+                raw_path = runs.get(key)
+                if raw_path is None and key != "main":
+                    continue
+                if not isinstance(raw_path, str):
+                    surface_complete = False
+                    continue
+                resolved_path = _resolve_local_action_path(
+                    repo_root,
+                    manifest,
+                    raw_path,
+                )
+                if resolved_path is None:
+                    surface_complete = False
+                    continue
+                primary_paths.append(resolved_path)
+        else:
+            surface_complete = False
+            continue
+
+        action_files = tuple(
+            path
+            for path in manifest.parent.rglob("*")
+            if path.is_file() and path != manifest
+        )
+        if len(action_files) > NATIVE_FIXED64_CPU_V4_MAX_LOCAL_ACTION_FILES:
+            surface_complete = False
+            continue
+        total_utf8_bytes = 0
+        for implementation in sorted(set((*primary_paths, *action_files))):
+            try:
+                resolved = implementation.resolve(strict=True)
+                relative = resolved.relative_to(resolved_root).as_posix()
+            except (OSError, ValueError):
+                surface_complete = False
+                continue
+            if implementation.is_symlink() or not resolved.is_file():
+                surface_complete = False
+                continue
+            try:
+                text = resolved.read_text(encoding="utf-8")
+            except (OSError, UnicodeError):
+                surface_complete = False
+                continue
+            total_utf8_bytes += len(text.encode("utf-8"))
+            if total_utf8_bytes > (
+                NATIVE_FIXED64_CPU_V4_MAX_LOCAL_ACTION_UTF8_BYTES
+            ):
+                surface_complete = False
+                break
+            implementation_files.add(relative)
+            if _implementation_text_invokes_native_fixed64_cpu_v4_live_probe(
+                text
+            ):
+                invokes_live_probe = True
+
+    return (
+        tuple(sorted(implementation_files)),
+        surface_complete,
+        invokes_live_probe,
+    )
 
 
 def _mixed64_v2_authority_is_fail_closed(repo_root: Path) -> bool:
@@ -1422,7 +1820,11 @@ def _native_fixed64_cpu_v4_binary_is_activation_blocked(repo_root: Path) -> bool
         r"\{\s*FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED\s*\}"
     )
     activation_guard = "if !live_activation_admitted()"
+    qualification_binding = (
+        "let config = Fixed64CpuProbeConfigV4::qualification_profile();"
+    )
     qualification_call = "Fixed64CpuProbeConfigV4::qualification_profile()"
+    measurement_call = "run_native_fixed64_cpu_probe_v4(config)"
     return bool(
         source.count(activation_constant) == 1
         and "FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED: bool = true" not in source
@@ -1430,7 +1832,14 @@ def _native_fixed64_cpu_v4_binary_is_activation_blocked(repo_root: Path) -> bool
         and source.count(activation_guard) == 1
         and source.count("return ExitCode::from(3);") == 1
         and source.count(qualification_call) == 1
-        and source.index(activation_guard) < source.index(qualification_call)
+        and source.count(qualification_binding) == 1
+        and source.count("Fixed64CpuProbeConfigV4") == 2
+        and "Fixed64CpuProbeConfigV4 {" not in source
+        and source.count(measurement_call) == 1
+        and source.count("run_native_fixed64_cpu_probe_v4") == 2
+        and source.index(activation_guard)
+        < source.index(qualification_binding)
+        < source.index(measurement_call)
     )
 
 
@@ -1459,7 +1868,7 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
             }
         )
     )
-    github_action_surface_complete = all(
+    github_action_manifest_surface_complete = all(
         path.is_file() and not path.is_symlink()
         for path in github_action_candidates
     )
@@ -1468,10 +1877,15 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         for path in github_action_candidates
         if path.is_file() and not path.is_symlink()
     )
-    github_action_text = {
-        path: (repo_root / path).read_text(encoding="utf-8")
-        for path in github_action_manifests
-    }
+    (
+        github_action_implementation_files,
+        github_action_execution_surface_complete,
+        github_action_invokes_native_fixed64_cpu_v4_live_probe,
+    ) = _local_action_execution_surface(repo_root, github_action_manifests)
+    github_action_surface_complete = (
+        github_action_manifest_surface_complete
+        and github_action_execution_surface_complete
+    )
     workflows = tuple(
         sorted(
             path.relative_to(repo_root).as_posix()
@@ -1577,8 +1991,12 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
     )
     native_fixed64_cpu_v4_live_qualification_absent_from_github_actions = not any(
         _workflow_invokes_native_fixed64_cpu_v4_live_probe(text)
-        for text in (*github_workflow_text.values(), *github_action_text.values())
-    ) and github_action_surface_complete
+        for text in github_workflow_text.values()
+    ) and not github_action_invokes_native_fixed64_cpu_v4_live_probe
+    native_fixed64_cpu_v4_live_qualification_absent_from_github_actions = (
+        native_fixed64_cpu_v4_live_qualification_absent_from_github_actions
+        and github_action_surface_complete
+    )
     native_fixed64_cpu_v4_binary_activation_blocked = (
         _native_fixed64_cpu_v4_binary_is_activation_blocked(repo_root)
     )
@@ -1714,6 +2132,9 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         ),
         "native_fixed64_cpu_v4_github_action_manifests": list(
             github_action_manifests
+        ),
+        "native_fixed64_cpu_v4_github_action_implementation_files": list(
+            github_action_implementation_files
         ),
         "native_fixed64_cpu_v4_github_action_surface_complete": (
             github_action_surface_complete

@@ -22,6 +22,7 @@
       "expected_generated_count": 64,
       "expected_typed_failure_count": 0,
       "fixture_id": "synthetic_complete_64",
+      "fixture_payload_sha256": "8478682324df3bd10e5fa6e2988436cec4c59e815dcf3444eaf3009f1a373df5",
       "fixture_source": "native_compiled_constant",
       "ligand_atom_count": 12,
       "receptor_atom_count": 12
@@ -32,6 +33,7 @@
       "expected_generated_count": 48,
       "expected_typed_failure_count": 16,
       "fixture_id": "synthetic_feature_sparse_48_plus_16",
+      "fixture_payload_sha256": "9c93753ae23363c20d2f957fb521eedd1fe4f92fc39282c03c53d1f2674610c2",
       "fixture_source": "native_compiled_constant",
       "ligand_atom_count": 12,
       "receptor_atom_count": 12
@@ -62,6 +64,8 @@
     ],
     "native_binary": "betelgeuze-fixed64-cpu-probe-v4",
     "native_pipeline_profile_id": "betelgeuze.engine_v2_native_fixed64_complete_pipeline/1.0.0",
+    "native_probe_source_sha256": "fc67bb2ab03a8db29a36ccd4ff2b027a219a0b773933aa788f0ea92bd599e48e",
+    "native_qualification_source_sha256": "1204f6cfc8c24a01be14b54debcf02eff6ad2610c37846b4a4ff9dc105d0338d",
     "python_scientific_work_allowed": false,
     "receptor_context_recreated_inside_samples": false
   },

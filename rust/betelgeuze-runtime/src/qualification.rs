@@ -4,6 +4,7 @@
 //! run, or grant qualification/product authority.  A separately sealed runner
 //! may consume one predeclared profile around this native measurement core.
 
+use std::fmt::Write as _;
 use std::hint::black_box;
 use std::time::Instant;
 
@@ -15,6 +16,7 @@ use betelgeuze_docking_search::{
 };
 use betelgeuze_sys as sys;
 
+use crate::docking::CanonicalHasher;
 use crate::{
     Backend, Context, ContextOptions, Error, ErrorCode, Fixed64AtomicFeature,
     Fixed64ConformerCoordinateSource, Fixed64CoordinateSource, Fixed64Donor,
@@ -22,7 +24,7 @@ use crate::{
     Fixed64IndexedCoordinateSource, Fixed64Ligand, Fixed64Pair, Fixed64Pipeline,
     Fixed64PipelineContext, Fixed64Receptor, Fixed64RefinementMode, Fixed64RigidProfileEvidence,
     Fixed64Rotor, Fixed64RunInput, Fixed64ScientificProjection, Fixed64SourceEvidence, PositionSoa,
-    Result,
+    Result, FIXED64_NATIVE_PIPELINE_PROFILE_ID,
 };
 
 pub const FIXED64_CPU_QUALIFICATION_V4_PROFILE_ID: &str =
@@ -35,6 +37,10 @@ const LIGAND_ATOM_COUNT: usize = 12;
 const FEATURE_COUNT: usize = 12;
 const FROZEN_SCORER_V1_TERM_COUNT: usize = 8;
 const _: [(); FROZEN_SCORER_V1_TERM_COUNT] = [(); sys::BG_DOCKING_SCORER_V1_TERM_COUNT as usize];
+const COMPLETE_FIXTURE_PAYLOAD_SHA256_HEX: &str =
+    "8478682324df3bd10e5fa6e2988436cec4c59e815dcf3444eaf3009f1a373df5";
+const FEATURE_SPARSE_FIXTURE_PAYLOAD_SHA256_HEX: &str =
+    "9c93753ae23363c20d2f957fb521eedd1fe4f92fc39282c03c53d1f2674610c2";
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Fixed64CpuProbeConfigV4 {
@@ -107,6 +113,7 @@ impl Fixed64NumericParityV4 {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Fixed64CpuFixtureProbeV4 {
     pub fixture_id: &'static str,
+    pub fixture_payload_sha256: [u8; 32],
     pub candidate_denominator: usize,
     pub receptor_atom_count: usize,
     pub ligand_atom_count: usize,
@@ -167,6 +174,13 @@ impl FixtureVariant {
         match self {
             Self::Complete => (64, 0),
             Self::FeatureSparse => (48, 16),
+        }
+    }
+
+    const fn expected_payload_sha256_hex(self) -> &'static str {
+        match self {
+            Self::Complete => COMPLETE_FIXTURE_PAYLOAD_SHA256_HEX,
+            Self::FeatureSparse => FEATURE_SPARSE_FIXTURE_PAYLOAD_SHA256_HEX,
         }
     }
 }
@@ -449,6 +463,242 @@ impl SyntheticFixture {
                 .collect::<Vec<_>>(),
         ))
     }
+}
+
+fn hash_f64_values(hash: &mut CanonicalHasher, values: &[f64]) {
+    hash.usize(values.len());
+    for value in values {
+        hash.f64(*value);
+    }
+}
+
+fn hash_u8_values(hash: &mut CanonicalHasher, values: &[u8]) {
+    hash.usize(values.len());
+    for value in values {
+        hash.byte(*value);
+    }
+}
+
+fn hash_u64_values(hash: &mut CanonicalHasher, values: &[u64]) {
+    hash.usize(values.len());
+    for value in values {
+        hash.u64(*value);
+    }
+}
+
+fn hash_i32_values(hash: &mut CanonicalHasher, values: &[i32]) {
+    hash.usize(values.len());
+    for value in values {
+        hash.i32(*value);
+    }
+}
+
+fn hash_positions(hash: &mut CanonicalHasher, positions: PositionSoa<'_>) {
+    hash_f64_values(hash, positions.x_angstrom);
+    hash_f64_values(hash, positions.y_angstrom);
+    hash_f64_values(hash, positions.z_angstrom);
+}
+
+fn hash_donors(hash: &mut CanonicalHasher, donors: &[Fixed64Donor]) {
+    hash.usize(donors.len());
+    for donor in donors {
+        hash.u64(donor.donor_atom_index);
+        hash.u64(donor.hydrogen_atom_index);
+    }
+}
+
+fn hash_pairs(hash: &mut CanonicalHasher, pairs: &[Fixed64Pair]) {
+    hash.usize(pairs.len());
+    for pair in pairs {
+        hash.u64(pair.atom_i);
+        hash.u64(pair.atom_j);
+    }
+}
+
+fn hash_rotors(hash: &mut CanonicalHasher, rotors: &[Fixed64Rotor]) {
+    hash.usize(rotors.len());
+    for rotor in rotors {
+        hash.u64(rotor.atom_i);
+        hash.u64(rotor.atom_j);
+        hash.u64(rotor.atom_k);
+        hash.u64(rotor.atom_l);
+    }
+}
+
+fn hash_source(hash: &mut CanonicalHasher, source: Fixed64CoordinateSource<'_>) {
+    hash.digest(source.evidence.receipt_sha256);
+    hash.digest(source.evidence.proposal_sha256);
+    hash.digest(source.evidence.coordinate_sha256);
+    hash_positions(hash, source.coordinates);
+}
+
+const fn feature_kind_raw(kind: Fixed64FeatureKind) -> i32 {
+    match kind {
+        Fixed64FeatureKind::LigandDonor => sys::BG_DOCKING_FIXED64_FEATURE_LIGAND_DONOR,
+        Fixed64FeatureKind::LigandAcceptor => sys::BG_DOCKING_FIXED64_FEATURE_LIGAND_ACCEPTOR,
+        Fixed64FeatureKind::ReceptorDonor => sys::BG_DOCKING_FIXED64_FEATURE_RECEPTOR_DONOR,
+        Fixed64FeatureKind::ReceptorAcceptor => sys::BG_DOCKING_FIXED64_FEATURE_RECEPTOR_ACCEPTOR,
+        Fixed64FeatureKind::LigandPositiveSite => {
+            sys::BG_DOCKING_FIXED64_FEATURE_LIGAND_POSITIVE_SITE
+        }
+        Fixed64FeatureKind::LigandNegativeSite => {
+            sys::BG_DOCKING_FIXED64_FEATURE_LIGAND_NEGATIVE_SITE
+        }
+        Fixed64FeatureKind::ReceptorPositiveSite => {
+            sys::BG_DOCKING_FIXED64_FEATURE_RECEPTOR_POSITIVE_SITE
+        }
+        Fixed64FeatureKind::ReceptorNegativeSite => {
+            sys::BG_DOCKING_FIXED64_FEATURE_RECEPTOR_NEGATIVE_SITE
+        }
+        Fixed64FeatureKind::LigandAromaticPlane => {
+            sys::BG_DOCKING_FIXED64_FEATURE_LIGAND_AROMATIC_PLANE
+        }
+        Fixed64FeatureKind::ReceptorAromaticPlane => {
+            sys::BG_DOCKING_FIXED64_FEATURE_RECEPTOR_AROMATIC_PLANE
+        }
+        Fixed64FeatureKind::LigandShapeAxis => sys::BG_DOCKING_FIXED64_FEATURE_LIGAND_SHAPE_AXIS,
+        Fixed64FeatureKind::PocketShapeAxis => sys::BG_DOCKING_FIXED64_FEATURE_POCKET_SHAPE_AXIS,
+    }
+}
+
+const fn refinement_mode_raw(mode: Fixed64RefinementMode) -> i32 {
+    match mode {
+        Fixed64RefinementMode::V2Translation => {
+            sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V2_TRANSLATION
+        }
+        Fixed64RefinementMode::V3TranslationRotation => {
+            sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V3_TRANSLATION_ROTATION
+        }
+        Fixed64RefinementMode::V6BaselineV2Lane => {
+            sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V6_BASELINE_V2_LANE
+        }
+        Fixed64RefinementMode::V6BaselineV3Lane => {
+            sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V6_BASELINE_V3_LANE
+        }
+    }
+}
+
+fn canonical_fixture_payload_sha256(
+    variant: FixtureVariant,
+    context: Fixed64PipelineContext<'_>,
+    input: Fixed64RunInput<'_>,
+) -> [u8; 32] {
+    let mut hash =
+        CanonicalHasher::new("betelgeuze.engine_v2_native_fixed64_cpu_fixture_payload/4.0.0");
+    hash.string(FIXED64_CPU_QUALIFICATION_V4_PROFILE_ID);
+    hash.string(FIXED64_NATIVE_PIPELINE_PROFILE_ID);
+    hash.string(variant.id());
+
+    hash_positions(&mut hash, context.receptor.coordinates);
+    hash_f64_values(&mut hash, context.receptor.vdw_radius_angstrom);
+    hash_f64_values(&mut hash, context.receptor.charge_elementary);
+    hash_f64_values(&mut hash, context.receptor.epsilon_kcal_per_mol);
+    hash_u8_values(&mut hash, context.receptor.hydrophobic_mask);
+    hash_u8_values(&mut hash, context.receptor.acceptor_mask);
+    hash_donors(&mut hash, context.receptor.donors);
+
+    hash_positions(&mut hash, context.ligand.reference_coordinates);
+    hash_f64_values(&mut hash, context.ligand.vdw_radius_angstrom);
+    hash_u8_values(&mut hash, context.ligand.heavy_atom_mask);
+    hash_f64_values(&mut hash, context.ligand.charge_elementary);
+    hash_f64_values(&mut hash, context.ligand.epsilon_kcal_per_mol);
+    hash_u8_values(&mut hash, context.ligand.hydrophobic_mask);
+    hash_u8_values(&mut hash, context.ligand.acceptor_mask);
+    hash_donors(&mut hash, context.ligand.donors);
+    hash_pairs(&mut hash, context.ligand.exclusions);
+    hash_rotors(&mut hash, context.ligand.rotors);
+    hash_pairs(&mut hash, context.ligand.bonds);
+    hash.usize(context.ligand.chirality_centers.len());
+    for center in context.ligand.chirality_centers {
+        hash.u64(center.center_atom);
+        hash.u64(center.atom_i);
+        hash.u64(center.atom_j);
+        hash.u64(center.atom_k);
+    }
+    hash_i32_values(&mut hash, context.ligand.parent_atom_index);
+    hash_u64_values(&mut hash, context.ligand.rotatable_child_atom_index);
+    hash_pairs(&mut hash, context.ligand.internal_pairs);
+    for value in context.pocket_center_angstrom {
+        hash.f64(value);
+    }
+    hash.f64(context.pocket_radius_angstrom);
+    for digest in [
+        context.identities.authority_input_receipt_sha256,
+        context.identities.receptor_system_sha256,
+        context.identities.ligand_system_sha256,
+        context.identities.backend_receipt_sha256,
+        context.identities.validity_scorer_context_receipt_sha256,
+        context.identities.contact_policy_sha256,
+    ] {
+        hash.digest(digest);
+    }
+
+    for digest in [
+        input.exact_source_evidence.source_receipt_sha256,
+        input.exact_source_evidence.proposal_sha256,
+        input.exact_source_evidence.ligand_coordinate_sha256,
+        input.exact_source_evidence.receptor_coordinate_sha256,
+        input.exact_source_evidence.prepared_ligand_topology_sha256,
+        input
+            .exact_source_evidence
+            .prepared_receptor_topology_sha256,
+        input.exact_source_evidence.ligand_vdw_radii_sha256,
+        input.exact_source_evidence.ligand_heavy_atom_mask_sha256,
+        input.exact_source_evidence.receptor_vdw_radii_sha256,
+    ] {
+        hash.digest(digest);
+    }
+    hash_source(&mut hash, input.exact_source);
+    hash.usize(input.atomic_features.len());
+    for feature in input.atomic_features {
+        hash.i32(feature_kind_raw(feature.kind));
+        hash.digest(feature.receipt_sha256);
+    }
+    hash.usize(input.v7_control_sources.len());
+    for source in input.v7_control_sources {
+        hash.u32(source.source_index);
+        hash_source(&mut hash, source.source);
+    }
+    hash.usize(input.conformer_sources.len());
+    for source in input.conformer_sources {
+        hash.byte(source.rank);
+        hash_source(&mut hash, source.source);
+    }
+    hash.usize(input.retained_sources.len());
+    for source in input.retained_sources {
+        hash.u32(source.source_index);
+        hash_source(&mut hash, source.source);
+    }
+    hash.usize(input.feature_geometries.len());
+    for feature in input.feature_geometries {
+        hash.i32(feature_kind_raw(feature.kind));
+        hash.digest(feature.allocation_feature_receipt_sha256);
+        hash_u64_values(&mut hash, feature.atom_indices);
+        hash.digest(feature.feature_geometry_receipt_sha256);
+    }
+    hash.digest(input.feature_geometry_inventory_sha256);
+    for value in input.pocket_normal {
+        hash.f64(value);
+    }
+    hash.f64(input.rmsd_threshold_angstrom);
+    hash.usize(input.candidate_modes.len());
+    for mode in input.candidate_modes {
+        hash.i32(refinement_mode_raw(*mode));
+    }
+    hash_u64_values(&mut hash, input.rigid_max_steps);
+    hash_u8_values(&mut hash, input.proposal_is_torsion_eligible);
+    hash_u64_values(&mut hash, input.torsion_max_steps);
+    hash_f64_values(&mut hash, input.baseline_torsion_angles_radians);
+    hash.digest(input.predeclared_refinement_policy_sha256);
+    hash.finish()
+}
+
+fn digest_hex(value: [u8; 32]) -> String {
+    let mut output = String::with_capacity(64);
+    for byte in value {
+        write!(&mut output, "{byte:02x}").expect("writing to String cannot fail");
+    }
+    output
 }
 
 fn search_result<T, E: std::fmt::Display>(value: std::result::Result<T, E>) -> Result<T> {
@@ -817,11 +1067,25 @@ fn run_fixture(
         baseline_torsion_angles_radians: &baseline_angles,
         predeclared_refinement_policy_sha256: [0x76; 32],
     };
+    let scientific_context = fixture.scientific_context();
+    let fixture_payload_sha256 =
+        canonical_fixture_payload_sha256(variant, scientific_context, input);
+    let fixture_payload_sha256_hex = digest_hex(fixture_payload_sha256);
+    if fixture_payload_sha256_hex != variant.expected_payload_sha256_hex() {
+        return Err(Error::local(
+            ErrorCode::AbiMismatch,
+            format!(
+                "fixed64 CPU fixture payload identity changed for {}: {}",
+                variant.id(),
+                fixture_payload_sha256_hex,
+            ),
+        ));
+    }
 
     let cpp_context = Context::new(ContextOptions::cpu_reference())?;
     let rust_context = Context::new(ContextOptions::rust_cpu())?;
-    let cpp_pipeline = Fixed64Pipeline::new(&cpp_context, fixture.scientific_context())?;
-    let rust_pipeline = Fixed64Pipeline::new(&rust_context, fixture.scientific_context())?;
+    let cpp_pipeline = Fixed64Pipeline::new(&cpp_context, scientific_context)?;
+    let rust_pipeline = Fixed64Pipeline::new(&rust_context, scientific_context)?;
     if cpp_pipeline.backend() != Backend::CppCpuReference
         || rust_pipeline.backend() != Backend::RustCpu
     {
@@ -925,6 +1189,7 @@ fn run_fixture(
         && ratio <= config.maximum_rust_to_cpp_median_ratio;
     Ok(Fixed64CpuFixtureProbeV4 {
         fixture_id: variant.id(),
+        fixture_payload_sha256,
         candidate_denominator: cpp.candidate_denominator,
         receptor_atom_count: cpp.receptor_atom_count,
         ligand_atom_count: cpp.ligand_atom_count,
@@ -1007,6 +1272,14 @@ mod tests {
         assert_eq!(report.fixtures[0].typed_failure_count, 0);
         assert_eq!(report.fixtures[1].generated_count, 48);
         assert_eq!(report.fixtures[1].typed_failure_count, 16);
+        assert_eq!(
+            digest_hex(report.fixtures[0].fixture_payload_sha256),
+            COMPLETE_FIXTURE_PAYLOAD_SHA256_HEX,
+        );
+        assert_eq!(
+            digest_hex(report.fixtures[1].fixture_payload_sha256),
+            FEATURE_SPARSE_FIXTURE_PAYLOAD_SHA256_HEX,
+        );
         assert!(report.fixtures.iter().all(|fixture| {
             fixture.candidate_denominator == 64
                 && fixture.receptor_atom_count == 12

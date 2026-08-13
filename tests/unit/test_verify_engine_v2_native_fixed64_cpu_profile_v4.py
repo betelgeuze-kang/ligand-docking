@@ -20,6 +20,8 @@ _ROOT = Path(__file__).resolve().parents[2]
 _PROFILE = _ROOT / "config/engine_v2_native_fixed64_cpu_profile_v4.json"
 _VERIFIER = _ROOT / "tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py"
 _QUALIFICATION_SOURCE = _ROOT / "rust/betelgeuze-runtime/src/qualification.rs"
+_DOCKING_SOURCE = _ROOT / "rust/betelgeuze-runtime/src/docking.rs"
+_NATIVE_PIPELINE_SOURCE = _ROOT / "native/src/docking/fixed64_pipeline.cpp"
 _PROBE_SOURCE = (
     _ROOT
     / "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v4.rs"
@@ -44,7 +46,7 @@ def test_canonical_native_fixed64_cpu_profile_v4_is_frozen() -> None:
     profile = require_profile_document(raw)
 
     assert hashlib.sha256(raw).hexdigest() == (
-        "6ed95a18dea8c5bbe325a32cf99aeca12be8580c1c2e386d1cf5112d65cab20b"
+        "659b76e4f89f359dda8e6a86dd324ad0d8424bb39186c15a7a423ba24db62998"
     )
     assert profile["profile_id"] == "engine_v2_native_fixed64_cpu_synthetic_v4"
     assert all(value is False for value in profile["authority"].values())
@@ -66,6 +68,8 @@ def test_canonical_native_fixed64_cpu_profile_v4_is_frozen() -> None:
     require_compiled_profile_binding(
         profile,
         _QUALIFICATION_SOURCE.read_bytes(),
+        _DOCKING_SOURCE.read_bytes(),
+        _NATIVE_PIPELINE_SOURCE.read_bytes(),
         _PROBE_SOURCE.read_bytes(),
     )
 
@@ -96,6 +100,21 @@ def test_canonical_native_fixed64_cpu_profile_v4_is_frozen() -> None:
             b"const FROZEN_SCORER_V1_TERM_COUNT: usize = 7",
         ),
         (
+            "qualification",
+            b"ligand_radii: [1.2; LIGAND_ATOM_COUNT]",
+            b"ligand_radii: [1.3; LIGAND_ATOM_COUNT]",
+        ),
+        (
+            "docking",
+            b"betelgeuze.engine_v2_native_fixed64_complete_pipeline/1.0.0",
+            b"betelgeuze.engine_v2_native_fixed64_complete_pipeline/1.0.1",
+        ),
+        (
+            "native_pipeline",
+            b"betelgeuze.engine_v2_native_fixed64_complete_pipeline/1.0.0",
+            b"betelgeuze.engine_v2_native_fixed64_complete_pipeline/1.0.1",
+        ),
+        (
             "probe",
             b"Fixed64CpuProbeConfigV4::qualification_profile()",
             b"Fixed64CpuProbeConfigV4::unit_test()",
@@ -119,16 +138,57 @@ def test_profile_v4_rejects_compiled_gate_drift(
 ) -> None:
     profile = require_profile_document(_PROFILE.read_bytes())
     qualification = _QUALIFICATION_SOURCE.read_bytes()
+    docking = _DOCKING_SOURCE.read_bytes()
+    native_pipeline = _NATIVE_PIPELINE_SOURCE.read_bytes()
     probe = _PROBE_SOURCE.read_bytes()
     if source_name == "qualification":
         assert qualification.count(old) == 1
         qualification = qualification.replace(old, new, 1)
+    elif source_name == "docking":
+        assert docking.count(old) == 1
+        docking = docking.replace(old, new, 1)
+    elif source_name == "native_pipeline":
+        assert native_pipeline.count(old) == 1
+        native_pipeline = native_pipeline.replace(old, new, 1)
     else:
         assert probe.count(old) == 1
         probe = probe.replace(old, new, 1)
 
     with pytest.raises(NativeFixed64CPUProfileV4Error, match="compiled|entry point"):
-        require_compiled_profile_binding(profile, qualification, probe)
+        require_compiled_profile_binding(
+            profile,
+            qualification,
+            docking,
+            native_pipeline,
+            probe,
+        )
+
+
+def test_profile_v4_rejects_measurement_moved_before_activation_guard() -> None:
+    profile = require_profile_document(_PROFILE.read_bytes())
+    probe = _PROBE_SOURCE.read_bytes()
+    measurement_call = b"run_native_fixed64_cpu_probe_v4(config)"
+    activation_guard = b"if !live_activation_admitted()"
+    assert probe.count(measurement_call) == 1
+    assert probe.count(activation_guard) == 1
+    probe = probe.replace(measurement_call, b"measurement_call_moved", 1)
+    probe = probe.replace(
+        activation_guard,
+        measurement_call + b";\n    " + activation_guard,
+        1,
+    )
+    core = profile["measurement_core"]
+    assert type(core) is dict
+    core["native_probe_source_sha256"] = hashlib.sha256(probe).hexdigest()
+
+    with pytest.raises(NativeFixed64CPUProfileV4Error, match="entry point|precede"):
+        require_compiled_profile_binding(
+            profile,
+            _QUALIFICATION_SOURCE.read_bytes(),
+            _DOCKING_SOURCE.read_bytes(),
+            _NATIVE_PIPELINE_SOURCE.read_bytes(),
+            probe,
+        )
 
 
 @pytest.mark.parametrize(
@@ -185,7 +245,7 @@ def test_profile_v4_cli_reports_non_consuming_authority_false() -> None:
         "fixture_count": 2,
         "profile_id": "engine_v2_native_fixed64_cpu_synthetic_v4",
         "profile_sha256": (
-            "6ed95a18dea8c5bbe325a32cf99aeca12be8580c1c2e386d1cf5112d65cab20b"
+            "659b76e4f89f359dda8e6a86dd324ad0d8424bb39186c15a7a423ba24db62998"
         ),
         "reservation_created": False,
         "status": "verified",

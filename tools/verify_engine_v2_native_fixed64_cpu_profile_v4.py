@@ -16,6 +16,10 @@ PROFILE_RELATIVE_PATH = Path("config/engine_v2_native_fixed64_cpu_profile_v4.jso
 QUALIFICATION_SOURCE_RELATIVE_PATH = Path(
     "rust/betelgeuze-runtime/src/qualification.rs"
 )
+DOCKING_SOURCE_RELATIVE_PATH = Path("rust/betelgeuze-runtime/src/docking.rs")
+NATIVE_PIPELINE_SOURCE_RELATIVE_PATH = Path(
+    "native/src/docking/fixed64_pipeline.cpp"
+)
 PROBE_SOURCE_RELATIVE_PATH = Path(
     "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v4.rs"
 )
@@ -133,6 +137,9 @@ def require_profile_document(raw: bytes) -> dict[str, object]:
             "expected_generated_count": 64,
             "expected_typed_failure_count": 0,
             "fixture_id": "synthetic_complete_64",
+            "fixture_payload_sha256": (
+                "8478682324df3bd10e5fa6e2988436cec4c59e815dcf3444eaf3009f1a373df5"
+            ),
             "fixture_source": "native_compiled_constant",
             "ligand_atom_count": 12,
             "receptor_atom_count": 12,
@@ -143,6 +150,9 @@ def require_profile_document(raw: bytes) -> dict[str, object]:
             "expected_generated_count": 48,
             "expected_typed_failure_count": 16,
             "fixture_id": "synthetic_feature_sparse_48_plus_16",
+            "fixture_payload_sha256": (
+                "9c93753ae23363c20d2f957fb521eedd1fe4f92fc39282c03c53d1f2674610c2"
+            ),
             "fixture_source": "native_compiled_constant",
             "ligand_atom_count": 12,
             "receptor_atom_count": 12,
@@ -187,11 +197,22 @@ def require_profile_document(raw: bytes) -> dict[str, object]:
             "candidate_graph",
             "native_binary",
             "native_pipeline_profile_id",
+            "native_probe_source_sha256",
+            "native_qualification_source_sha256",
             "python_scientific_work_allowed",
             "receptor_context_recreated_inside_samples",
         },
         "measurement core",
     )
+    qualification_source_sha256 = core["native_qualification_source_sha256"]
+    probe_source_sha256 = core["native_probe_source_sha256"]
+    if (
+        type(qualification_source_sha256) is not str
+        or re.fullmatch(r"[0-9a-f]{64}", qualification_source_sha256) is None
+        or type(probe_source_sha256) is not str
+        or re.fullmatch(r"[0-9a-f]{64}", probe_source_sha256) is None
+    ):
+        _fail("native qualification/probe source identity is not canonical SHA-256")
     if core != {
         "candidate_graph": [
             "fixed64_proposal",
@@ -207,6 +228,8 @@ def require_profile_document(raw: bytes) -> dict[str, object]:
         "native_pipeline_profile_id": (
             "betelgeuze.engine_v2_native_fixed64_complete_pipeline/1.0.0"
         ),
+        "native_probe_source_sha256": probe_source_sha256,
+        "native_qualification_source_sha256": qualification_source_sha256,
         "python_scientific_work_allowed": False,
         "receptor_context_recreated_inside_samples": False,
     }:
@@ -287,6 +310,8 @@ def require_profile_document(raw: bytes) -> dict[str, object]:
 def require_compiled_profile_binding(
     profile: dict[str, object],
     qualification_source_raw: bytes,
+    docking_source_raw: bytes,
+    native_pipeline_source_raw: bytes,
     probe_source_raw: bytes,
 ) -> None:
     """Bind the native gate constants and entry point to the frozen JSON."""
@@ -296,7 +321,14 @@ def require_compiled_profile_binding(
         probe = probe_source_raw.decode("ascii")
     except UnicodeError as exc:
         raise NativeFixed64CPUProfileV4Error(
-            "native qualification sources must be ASCII"
+            "native qualification and probe sources must be ASCII"
+        ) from exc
+    try:
+        docking_source = docking_source_raw.decode("utf-8")
+        native_pipeline_source = native_pipeline_source_raw.decode("utf-8")
+    except UnicodeError as exc:
+        raise NativeFixed64CPUProfileV4Error(
+            "native pipeline sources must be UTF-8"
         ) from exc
 
     profile_id_matches = re.findall(
@@ -305,6 +337,48 @@ def require_compiled_profile_binding(
     )
     if profile_id_matches != [PROFILE_ID]:
         _fail("compiled qualification profile identity changed")
+
+    core = profile["measurement_core"]
+    if type(core) is not dict:
+        _fail("profile measurement core is unavailable for compiled binding")
+    if hashlib.sha256(qualification_source_raw).hexdigest() != core.get(
+        "native_qualification_source_sha256"
+    ):
+        _fail("compiled qualification source changed from the frozen profile")
+    if hashlib.sha256(probe_source_raw).hexdigest() != core.get(
+        "native_probe_source_sha256"
+    ):
+        _fail("compiled native probe source changed from the frozen profile")
+
+    native_pipeline_profile_id = core.get("native_pipeline_profile_id")
+    rust_pipeline_id_matches = re.findall(
+        r'pub const FIXED64_NATIVE_PIPELINE_PROFILE_ID: &str\s*=\s*"([^"]+)";',
+        docking_source,
+    )
+    cpp_pipeline_id_matches = re.findall(
+        r'constexpr char kProfileId\[\]\s*=\s*"([^"]+)";',
+        native_pipeline_source,
+    )
+    if (
+        rust_pipeline_id_matches != [native_pipeline_profile_id]
+        or cpp_pipeline_id_matches != [native_pipeline_profile_id]
+        or docking_source.count(str(native_pipeline_profile_id)) != 1
+        or docking_source.count("FIXED64_NATIVE_PIPELINE_PROFILE_ID") != 6
+        or native_pipeline_source.count(str(native_pipeline_profile_id)) != 1
+        or native_pipeline_source.count("kProfileId") != 6
+        or docking_source.count("Self::profile_id()?;") != 1
+        or docking_source.count(
+            "profile_id != FIXED64_NATIVE_PIPELINE_PROFILE_ID"
+        )
+        != 1
+        or docking_source.count("hash.string(FIXED64_NATIVE_PIPELINE_PROFILE_ID);")
+        != 3
+        or docking_source.count(
+            "pipeline_batch.string(FIXED64_NATIVE_PIPELINE_PROFILE_ID);"
+        )
+        != 1
+    ):
+        _fail("compiled native pipeline profile identity changed")
 
     config_matches = re.findall(
         r"pub const fn qualification_profile\(\) -> Self \{\s*"
@@ -399,6 +473,43 @@ def require_compiled_profile_binding(
     if compiled_fixture_ids != expected_fixture_ids:
         _fail("compiled fixture identities drifted from the frozen profile")
 
+    expected_fixture_payloads = [
+        fixture["fixture_payload_sha256"]
+        for fixture in fixtures
+        if type(fixture) is dict
+    ]
+    compiled_fixture_payloads = re.findall(
+        r"const (?:COMPLETE|FEATURE_SPARSE)_FIXTURE_PAYLOAD_SHA256_HEX: "
+        r'&str\s*=\s*"([0-9a-f]{64})";',
+        source,
+    )
+    fixture_payload_mappings = re.findall(
+        r"Self::(Complete|FeatureSparse)\s*=>\s*"
+        r"((?:COMPLETE|FEATURE_SPARSE)_FIXTURE_PAYLOAD_SHA256_HEX)",
+        source,
+    )
+    if (
+        compiled_fixture_payloads != expected_fixture_payloads
+        or fixture_payload_mappings
+        != [
+            ("Complete", "COMPLETE_FIXTURE_PAYLOAD_SHA256_HEX"),
+            (
+                "FeatureSparse",
+                "FEATURE_SPARSE_FIXTURE_PAYLOAD_SHA256_HEX",
+            ),
+        ]
+        or source.count(
+            "canonical_fixture_payload_sha256(variant, scientific_context, input)"
+        )
+        != 1
+        or source.count(
+            "fixture_payload_sha256_hex != variant.expected_payload_sha256_hex()"
+        )
+        != 1
+        or probe.count("digest(value.fixture_payload_sha256)") != 1
+    ):
+        _fail("compiled fixture payload identities drifted from the frozen profile")
+
     scorer_term_matches = re.findall(
         r"const FROZEN_SCORER_V1_TERM_COUNT: usize = (\d+);", source
     )
@@ -429,6 +540,10 @@ def require_compiled_profile_binding(
     )
     activation_guard = "if !live_activation_admitted()"
     qualification_call = "Fixed64CpuProbeConfigV4::qualification_profile()"
+    qualification_binding = (
+        "let config = Fixed64CpuProbeConfigV4::qualification_profile();"
+    )
+    measurement_call = "run_native_fixed64_cpu_probe_v4(config)"
     if (
         probe.count(
             "const FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED: bool = false;"
@@ -438,12 +553,20 @@ def require_compiled_profile_binding(
         or probe.count(activation_guard) != 1
         or probe.count("return ExitCode::from(3);") != 1
         or probe.count(qualification_call) != 1
+        or probe.count(qualification_binding) != 1
+        or probe.count("Fixed64CpuProbeConfigV4") != 2
         or "Fixed64CpuProbeConfigV4::unit_test()" in probe
-        or probe.count("run_native_fixed64_cpu_probe_v4(config)") != 1
+        or "Fixed64CpuProbeConfigV4 {" in probe
+        or probe.count(measurement_call) != 1
+        or probe.count("run_native_fixed64_cpu_probe_v4") != 2
     ):
         _fail("native probe entry point is not bound to the qualification profile")
-    if probe.index(activation_guard) > probe.index(qualification_call):
-        _fail("native probe activation gate occurs after the qualification call")
+    if not (
+        probe.index(activation_guard)
+        < probe.index(qualification_binding)
+        < probe.index(measurement_call)
+    ):
+        _fail("native probe activation gate does not precede configuration and measurement")
 
 
 def main() -> int:
@@ -453,6 +576,8 @@ def main() -> int:
     require_compiled_profile_binding(
         profile,
         (root / QUALIFICATION_SOURCE_RELATIVE_PATH).read_bytes(),
+        (root / DOCKING_SOURCE_RELATIVE_PATH).read_bytes(),
+        (root / NATIVE_PIPELINE_SOURCE_RELATIVE_PATH).read_bytes(),
         (root / PROBE_SOURCE_RELATIVE_PATH).read_bytes(),
     )
     print(

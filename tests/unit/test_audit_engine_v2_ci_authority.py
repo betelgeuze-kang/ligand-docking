@@ -790,6 +790,37 @@ def test_native_fixed64_cpu_v4_binary_activation_cannot_be_enabled(
     assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is False
 
 
+def test_native_fixed64_cpu_v4_measurement_cannot_precede_activation_guard(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_native_fixed64_cpu_v4_contract(tmp_path)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        encoding="utf-8",
+    )
+    probe = tmp_path / (
+        "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v4.rs"
+    )
+    source = probe.read_text(encoding="ascii")
+    measurement_call = "run_native_fixed64_cpu_probe_v4(config)"
+    activation_guard = "if !live_activation_admitted()"
+    assert source.count(measurement_call) == 1
+    assert source.count(activation_guard) == 1
+    source = source.replace(measurement_call, "measurement_call_moved", 1)
+    source = source.replace(
+        activation_guard,
+        measurement_call + ";\n    " + activation_guard,
+        1,
+    )
+    probe.write_text(source, encoding="ascii")
+
+    payload = build_inventory(tmp_path)
+    assert payload["native_fixed64_cpu_v4_binary_activation_blocked"] is False
+    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is False
+    assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is False
+
+
 def test_native_fixed64_cpu_v4_missing_restriction_fails_ci_audit(
     tmp_path: Path,
 ) -> None:
@@ -854,10 +885,13 @@ def test_native_fixed64_cpu_v4_missing_restriction_fails_ci_audit(
         "bash -o pipefail -c 'cargo r -p betelgeuze-runtime'",
         "bash -eO extglob -c 'cargo run -p betelgeuze-runtime'",
         "bash -eo pipefail -c 'cargo r -p betelgeuze-runtime'",
+        "bash -ecO extglob 'cargo run -p betelgeuze-runtime'",
         "env -iS 'cargo run -p betelgeuze-runtime'",
         "${{ matrix.command }}",
         "timeout 1 ${{ matrix.command }}",
+        "timeout -vk 1 1 ${{ matrix.command }}",
         "env -- timeout 1 ${{ matrix.command }}",
+        "eval 'cargo run -p betelgeuze-runtime'",
         (
             "cargo run -p betelgeuze-runtime && "
             "cargo run --bin unrelated-explicit-tool"
@@ -945,6 +979,100 @@ def test_native_fixed64_cpu_v4_live_binary_is_forbidden_in_composite_actions(
     assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is False
 
 
+@pytest.mark.parametrize("using", ("docker", "node20"))
+def test_native_fixed64_cpu_v4_live_binary_is_forbidden_in_local_action_code(
+    tmp_path: Path,
+    using: str,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_native_fixed64_cpu_v4_contract(tmp_path)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        encoding="utf-8",
+    )
+    action_dir = tmp_path / ".github/actions/qualify"
+    action_dir.mkdir(parents=True)
+    action = action_dir / "action.yml"
+    if using == "docker":
+        action.write_text(
+            "name: qualify\nruns:\n  using: docker\n  image: Dockerfile\n",
+            encoding="utf-8",
+        )
+        implementation = action_dir / "Dockerfile"
+        implementation.write_text(
+            'FROM rust:1\nENTRYPOINT ["cargo", "run", "-p", '
+            '"betelgeuze-runtime"]\n',
+            encoding="utf-8",
+        )
+    else:
+        action.write_text(
+            "name: qualify\nruns:\n  using: node20\n  main: index.js\n",
+            encoding="utf-8",
+        )
+        implementation = action_dir / "index.js"
+        implementation.write_text(
+            'require("node:child_process").execFileSync('
+            '"cargo", ["run", "-p", "betelgeuze-runtime"]);\n',
+            encoding="utf-8",
+        )
+
+    payload = build_inventory(tmp_path)
+    assert payload["native_fixed64_cpu_v4_github_action_surface_complete"] is True
+    assert payload["native_fixed64_cpu_v4_github_action_implementation_files"] == [
+        implementation.relative_to(tmp_path).as_posix()
+    ]
+    assert (
+        payload[
+            "native_fixed64_cpu_v4_live_qualification_absent_from_github_actions"
+        ]
+        is False
+    )
+    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is False
+
+
+@pytest.mark.parametrize(
+    "shell_declaration",
+    (
+        "      - shell: python\n",
+        "    defaults:\n      run:\n        shell: python\n"
+        "    steps:\n      - ",
+    ),
+)
+def test_native_fixed64_cpu_v4_unsupported_step_shell_fails_closed(
+    tmp_path: Path,
+    shell_declaration: str,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_native_fixed64_cpu_v4_contract(tmp_path)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        encoding="utf-8",
+    )
+    unrelated = tmp_path / ".github/workflows/unrelated.yaml"
+    if shell_declaration.startswith("      -"):
+        workflow = (
+            "jobs:\n  unsupported:\n    steps:\n"
+            + shell_declaration
+            + "        run: import os; os.system('cargo run -p betelgeuze-runtime')\n"
+        )
+    else:
+        workflow = (
+            "jobs:\n  unsupported:\n"
+            + shell_declaration
+            + "run: import os; os.system('cargo run -p betelgeuze-runtime')\n"
+        )
+    unrelated.write_text(workflow, encoding="utf-8")
+
+    payload = build_inventory(tmp_path)
+    assert (
+        payload[
+            "native_fixed64_cpu_v4_live_qualification_absent_from_github_actions"
+        ]
+        is False
+    )
+    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is False
+
+
 def test_native_fixed64_cpu_v4_multiline_run_preserves_command_boundaries(
     tmp_path: Path,
 ) -> None:
@@ -1004,6 +1132,63 @@ def test_native_fixed64_cpu_v4_heredoc_body_is_nonexecuting_data(
     )
     assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is True
     assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is True
+
+
+def test_native_fixed64_cpu_v4_unquoted_heredoc_command_substitution_is_audited(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_native_fixed64_cpu_v4_contract(tmp_path)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        encoding="utf-8",
+    )
+    unrelated = tmp_path / ".github/workflows/unrelated.yaml"
+    unrelated.write_text(
+        "jobs:\n  expansion:\n    steps:\n"
+        "      - run: |\n"
+        "          cat <<EOF\n"
+        "          $(cargo run -p betelgeuze-runtime)\n"
+        "          EOF\n",
+        encoding="utf-8",
+    )
+
+    payload = build_inventory(tmp_path)
+    assert (
+        payload[
+            "native_fixed64_cpu_v4_live_qualification_absent_from_github_actions"
+        ]
+        is False
+    )
+    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is False
+
+
+def test_native_fixed64_cpu_v4_unquoted_heredoc_static_data_remains_allowed(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_native_fixed64_cpu_v4_contract(tmp_path)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        encoding="utf-8",
+    )
+    unrelated = tmp_path / ".github/workflows/unrelated.yaml"
+    unrelated.write_text(
+        "jobs:\n  data:\n    steps:\n"
+        "      - run: |\n"
+        "          cat <<EOF\n"
+        "          cargo run -p betelgeuze-runtime\n"
+        "          EOF\n",
+        encoding="utf-8",
+    )
+
+    payload = build_inventory(tmp_path)
+    assert (
+        payload[
+            "native_fixed64_cpu_v4_live_qualification_absent_from_github_actions"
+        ]
+        is True
+    )
 
 
 def test_native_fixed64_cpu_v4_command_after_heredoc_is_still_audited(
