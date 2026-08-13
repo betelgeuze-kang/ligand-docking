@@ -852,8 +852,12 @@ def test_native_fixed64_cpu_v4_missing_restriction_fails_ci_audit(
         "env -i bash -c 'cargo run -p betelgeuze-runtime'",
         "bash -O extglob -c 'cargo run -p betelgeuze-runtime'",
         "bash -o pipefail -c 'cargo r -p betelgeuze-runtime'",
+        "bash -eO extglob -c 'cargo run -p betelgeuze-runtime'",
+        "bash -eo pipefail -c 'cargo r -p betelgeuze-runtime'",
         "env -iS 'cargo run -p betelgeuze-runtime'",
         "${{ matrix.command }}",
+        "timeout 1 ${{ matrix.command }}",
+        "env -- timeout 1 ${{ matrix.command }}",
         (
             "cargo run -p betelgeuze-runtime && "
             "cargo run --bin unrelated-explicit-tool"
@@ -956,6 +960,69 @@ def test_native_fixed64_cpu_v4_multiline_run_preserves_command_boundaries(
         "      - run: |\n"
         "          echo preparing\n"
         "          bash -c 'cargo run -p betelgeuze-runtime'\n",
+        encoding="utf-8",
+    )
+
+    payload = build_inventory(tmp_path)
+    assert (
+        payload[
+            "native_fixed64_cpu_v4_live_qualification_absent_from_github_actions"
+        ]
+        is False
+    )
+    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is False
+    assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is False
+
+
+def test_native_fixed64_cpu_v4_heredoc_body_is_nonexecuting_data(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_native_fixed64_cpu_v4_contract(tmp_path)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        encoding="utf-8",
+    )
+    unrelated = tmp_path / ".github/workflows/unrelated.yaml"
+    unrelated.write_text(
+        "jobs:\n  data:\n    steps:\n"
+        "      - run: |\n"
+        "          cat <<'EOF'\n"
+        "          cargo run -p betelgeuze-runtime\n"
+        "          betelgeuze-fixed64-cpu-probe-v4\n"
+        "          EOF\n"
+        "          cargo run --bin unrelated-explicit-tool\n",
+        encoding="utf-8",
+    )
+
+    payload = build_inventory(tmp_path)
+    assert (
+        payload[
+            "native_fixed64_cpu_v4_live_qualification_absent_from_github_actions"
+        ]
+        is True
+    )
+    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is True
+    assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is True
+
+
+def test_native_fixed64_cpu_v4_command_after_heredoc_is_still_audited(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_native_fixed64_cpu_v4_contract(tmp_path)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        encoding="utf-8",
+    )
+    unrelated = tmp_path / ".github/workflows/unrelated.yaml"
+    unrelated.write_text(
+        "jobs:\n  data:\n    steps:\n"
+        "      - run: |\n"
+        "          cat <<'EOF'\n"
+        "          inert evidence\n"
+        "          EOF\n"
+        "          cargo run -p betelgeuze-runtime\n",
         encoding="utf-8",
     )
 
@@ -1277,6 +1344,7 @@ def test_native_fixed64_cpu_v4_inventory_constants_are_exact() -> None:
         "**/action.yaml",
         ".github/workflows/*.yml",
         ".github/workflows/*.yaml",
+        "sparse-checkout-cone-mode: false",
         "config/engine_v2_native_fixed64_cpu_profile_v4.json",
         "tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py",
         "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v4.py",
@@ -1353,6 +1421,11 @@ def test_authoritative_main_runs_for_every_workflow_change() -> None:
     assert workflow.count(".github/workflows/*.yaml") == 2
     assert workflow.count("**/action.yml") == 2
     assert workflow.count("**/action.yaml") == 2
+    assert workflow.count("sparse-checkout-cone-mode: false") == 1
+    canonical_checkout = workflow.split(
+        "- name: Check out canonical Engine v2 surface", 1
+    )[1].split("- uses: actions/setup-python", 1)[0]
+    assert "sparse-checkout-cone-mode: false" in canonical_checkout
 
 
 def test_mixed64_v2_contract_requires_documented_contract_inventory(

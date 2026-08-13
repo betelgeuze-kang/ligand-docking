@@ -176,6 +176,7 @@ NATIVE_FIXED64_CPU_V4_REQUIRED_TOKEN_COUNTS = {
     "**/action.yaml": 2,
     ".github/workflows/*.yml": 2,
     ".github/workflows/*.yaml": 2,
+    "sparse-checkout-cone-mode: false": 1,
     "config/engine_v2_native_fixed64_cpu_profile_v4.json": 2,
     "tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py": 4,
     "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v4.py": 2,
@@ -502,6 +503,39 @@ def _shell_outer_command_word_index(segment: list[str]) -> int | None:
             while index < len(segment) and segment[index] in {"--", "-p"}:
                 index += 1
             continue
+        if segment[index].rsplit("/", 1)[-1] == "timeout":
+            index += 1
+            while index < len(segment):
+                token = segment[index]
+                if token in {"--help", "--version"}:
+                    return None
+                if token == "--":
+                    index += 1
+                    break
+                if token in {"-k", "--kill-after", "-s", "--signal"}:
+                    index += 2
+                    continue
+                if token.startswith(("-k", "-s")) and len(token) > 2:
+                    index += 1
+                    continue
+                if token.startswith(("--kill-after=", "--signal=")):
+                    index += 1
+                    continue
+                if token in {
+                    "--foreground",
+                    "--preserve-status",
+                    "--verbose",
+                    "-v",
+                }:
+                    index += 1
+                    continue
+                if token.startswith("-"):
+                    return None
+                break
+            if index >= len(segment):
+                return None
+            index += 1
+            continue
         return index
     return None
 
@@ -544,7 +578,126 @@ def _shell_command_word_index(segment: list[str]) -> int | None:
             index += 1
             continue
         break
-    return index if index < len(segment) else None
+    if index >= len(segment):
+        return None
+    nested = _shell_outer_command_word_index(segment[index:])
+    return index + nested if nested is not None else None
+
+
+def _shell_without_static_heredoc_bodies(script: str) -> str | None:
+    def parse_delimiter(
+        content: str,
+        start: int,
+    ) -> tuple[str, int, bool] | None:
+        index = start
+        strip_tabs = index < len(content) and content[index] == "-"
+        if strip_tabs:
+            index += 1
+        while index < len(content) and content[index] in " \t":
+            index += 1
+
+        delimiter: list[str] = []
+        quote: str | None = None
+        while index < len(content):
+            character = content[index]
+            if quote is not None:
+                if character == quote:
+                    quote = None
+                    index += 1
+                    continue
+                if quote == '"' and character == "\\":
+                    index += 1
+                    if index >= len(content):
+                        return None
+                    delimiter.append(content[index])
+                    index += 1
+                    continue
+                delimiter.append(character)
+                index += 1
+                continue
+            if character in {"'", '"'}:
+                quote = character
+                index += 1
+                continue
+            if character == "\\":
+                index += 1
+                if index >= len(content):
+                    return None
+                delimiter.append(content[index])
+                index += 1
+                continue
+            if character in " \t;&|()<>":
+                break
+            delimiter.append(character)
+            index += 1
+
+        value = "".join(delimiter)
+        if (
+            quote is not None
+            or re.fullmatch(r"[A-Za-z_][A-Za-z0-9_.-]*", value) is None
+        ):
+            return None
+        return value, index, strip_tabs
+
+    output: list[str] = []
+    pending_delimiters: list[tuple[str, bool]] = []
+    quote: str | None = None
+    for line in script.splitlines(keepends=True):
+        content = line
+        newline = ""
+        if content.endswith("\n"):
+            content = content[:-1]
+            newline = "\n"
+            if content.endswith("\r"):
+                content = content[:-1]
+                newline = "\r\n"
+
+        if pending_delimiters:
+            delimiter, strip_tabs = pending_delimiters[0]
+            candidate = content.lstrip("\t") if strip_tabs else content
+            if candidate == delimiter:
+                pending_delimiters.pop(0)
+            output.append(newline)
+            continue
+
+        output.append(line)
+        index = 0
+        while index < len(content):
+            character = content[index]
+            if quote is not None:
+                if character == quote:
+                    quote = None
+                    index += 1
+                    continue
+                if quote != "'" and character == "\\":
+                    index += 2
+                    continue
+                index += 1
+                continue
+            if character in {"'", '"', "`"}:
+                quote = character
+                index += 1
+                continue
+            if character == "\\":
+                index += 2
+                continue
+            if character == "#" and (
+                index == 0 or content[index - 1] in " \t;&|()"
+            ):
+                break
+            if (
+                content.startswith("<<", index)
+                and not content.startswith("<<<", index)
+            ):
+                parsed = parse_delimiter(content, index + 2)
+                if parsed is None:
+                    return None
+                delimiter, index, strip_tabs = parsed
+                pending_delimiters.append((delimiter, strip_tabs))
+                continue
+            index += 1
+
+    return None if pending_delimiters else "".join(output)
 
 
 def _shell_command_segments(tokens: list[str]) -> tuple[tuple[str, ...], ...]:
@@ -745,24 +898,43 @@ def _shell_tokens_invoke_native_fixed64_cpu_v4_live_probe(
                 if token in {"-O", "-o", "--init-file", "--rcfile"}:
                     index += 2
                     continue
-                if token.startswith(("-O", "-o")) and len(token) > 2:
-                    index += 1
-                    continue
-                if token == "-c" or (
-                    token.startswith("-")
-                    and not token.startswith("--")
-                    and "c" in token[1:]
-                ):
-                    if index + 1 >= len(segment):
-                        return True
-                    embedded = segment[index + 1]
-                    break
+                if token.startswith("-") and not token.startswith("--"):
+                    cluster = token[1:]
+                    value_option_index = min(
+                        (
+                            option_index
+                            for option_index, option in enumerate(cluster)
+                            if option in {"O", "o"}
+                        ),
+                        default=None,
+                    )
+                    command_option_index = cluster.find("c")
+                    if command_option_index >= 0 and (
+                        value_option_index is None
+                        or command_option_index < value_option_index
+                    ):
+                        if index + 1 >= len(segment):
+                            return True
+                        embedded = segment[index + 1]
+                        break
+                    if value_option_index is not None:
+                        if value_option_index == len(cluster) - 1:
+                            index += 1
+                        index += 1
+                        continue
                 if not token.startswith("-"):
                     break
                 index += 1
         if embedded is None:
             continue
-        lexer = shlex.shlex(embedded, posix=True, punctuation_chars=";&|()\n")
+        embedded_executable = _shell_without_static_heredoc_bodies(embedded)
+        if embedded_executable is None:
+            return True
+        lexer = shlex.shlex(
+            embedded_executable,
+            posix=True,
+            punctuation_chars=";&|()\n",
+        )
         lexer.whitespace_split = True
         lexer.whitespace = " \t\r"
         lexer.commenters = "#"
@@ -809,16 +981,19 @@ def _shell_tokens_invoke_native_fixed64_cpu_v4_live_probe(
 
 def _workflow_invokes_native_fixed64_cpu_v4_live_probe(text: str) -> bool:
     logical = text.replace("\\\n", " ")
-    if any(
-        token in logical
-        for token in NATIVE_FIXED64_CPU_V4_FORBIDDEN_WORKFLOW_TOKENS
-    ):
-        return True
     yaml_run_scalars = _workflow_yaml_run_scalars(logical)
     if yaml_run_scalars is None:
         return True
     for line in yaml_run_scalars:
-        lexer = shlex.shlex(line, posix=True, punctuation_chars=";&|()\n")
+        executable = _shell_without_static_heredoc_bodies(line)
+        if executable is None:
+            return True
+        if any(
+            token in executable
+            for token in NATIVE_FIXED64_CPU_V4_FORBIDDEN_WORKFLOW_TOKENS
+        ):
+            return True
+        lexer = shlex.shlex(executable, posix=True, punctuation_chars=";&|()\n")
         lexer.whitespace_split = True
         lexer.whitespace = " \t\r"
         lexer.commenters = "#"
