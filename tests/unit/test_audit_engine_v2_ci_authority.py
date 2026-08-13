@@ -120,7 +120,7 @@ def _cpu_performance_ci_tokens() -> tuple[str, ...]:
 
 def _native_fixed64_cpu_v4_ci_tokens() -> tuple[str, ...]:
     return tuple(
-        token
+        f"# {token}"
         for token, minimum_count in (
             NATIVE_FIXED64_CPU_V4_REQUIRED_TOKEN_COUNTS.items()
         )
@@ -799,6 +799,10 @@ def test_native_fixed64_cpu_v4_missing_restriction_fails_ci_audit(
         "bash -c 'cargo run -p betelgeuze-runtime'",
         "sh -ec 'cargo r -p betelgeuze-runtime'",
         "env -i bash -c 'cargo run -p betelgeuze-runtime'",
+        "bash -O extglob -c 'cargo run -p betelgeuze-runtime'",
+        "bash -o pipefail -c 'cargo r -p betelgeuze-runtime'",
+        "env -iS 'cargo run -p betelgeuze-runtime'",
+        "${{ matrix.command }}",
         (
             "cargo run -p betelgeuze-runtime && "
             "cargo run --bin unrelated-explicit-tool"
@@ -845,10 +849,16 @@ def test_native_fixed64_cpu_v4_live_binary_is_forbidden_in_every_workflow(
     assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is False
 
 
-@pytest.mark.parametrize("manifest_name", ("action.yml", "action.yaml"))
+@pytest.mark.parametrize(
+    "manifest_path",
+    (
+        Path(".github/actions/qualify/action.yml"),
+        Path("ci/qualify/action.yaml"),
+    ),
+)
 def test_native_fixed64_cpu_v4_live_binary_is_forbidden_in_composite_actions(
     tmp_path: Path,
-    manifest_name: str,
+    manifest_path: Path,
 ) -> None:
     _write_authoritative_workflows(tmp_path)
     _write_native_fixed64_cpu_v4_contract(tmp_path)
@@ -856,7 +866,7 @@ def test_native_fixed64_cpu_v4_live_binary_is_forbidden_in_composite_actions(
         "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
         encoding="utf-8",
     )
-    action = tmp_path / ".github/actions/qualify" / manifest_name
+    action = tmp_path / manifest_path
     action.parent.mkdir(parents=True, exist_ok=True)
     action.write_text(
         "name: qualify\nruns:\n  using: composite\n  steps:\n"
@@ -868,8 +878,37 @@ def test_native_fixed64_cpu_v4_live_binary_is_forbidden_in_composite_actions(
     payload = build_inventory(tmp_path)
     assert payload["native_fixed64_cpu_v4_github_action_surface_complete"] is True
     assert payload["native_fixed64_cpu_v4_github_action_manifests"] == [
-        f".github/actions/qualify/{manifest_name}"
+        manifest_path.as_posix()
     ]
+    assert (
+        payload[
+            "native_fixed64_cpu_v4_live_qualification_absent_from_github_actions"
+        ]
+        is False
+    )
+    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is False
+    assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is False
+
+
+def test_native_fixed64_cpu_v4_multiline_run_preserves_command_boundaries(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_native_fixed64_cpu_v4_contract(tmp_path)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        encoding="utf-8",
+    )
+    unrelated = tmp_path / ".github/workflows/unrelated.yaml"
+    unrelated.write_text(
+        "jobs:\n  multiline:\n    steps:\n"
+        "      - run: |\n"
+        "          echo preparing\n"
+        "          bash -c 'cargo run -p betelgeuze-runtime'\n",
+        encoding="utf-8",
+    )
+
+    payload = build_inventory(tmp_path)
     assert (
         payload[
             "native_fixed64_cpu_v4_live_qualification_absent_from_github_actions"
@@ -1183,8 +1222,8 @@ def test_native_fixed64_cpu_v4_inventory_constants_are_exact() -> None:
         "stage0_admission_authorized",
     }
     assert NATIVE_FIXED64_CPU_V4_REQUIRED_TOKENS == (
-        ".github/actions/**/action.yml",
-        ".github/actions/**/action.yaml",
+        "**/action.yml",
+        "**/action.yaml",
         ".github/workflows/*.yml",
         ".github/workflows/*.yaml",
         "config/engine_v2_native_fixed64_cpu_profile_v4.json",
@@ -1261,8 +1300,8 @@ def test_authoritative_main_runs_for_every_workflow_change() -> None:
 
     assert workflow.count(".github/workflows/*.yml") == 2
     assert workflow.count(".github/workflows/*.yaml") == 2
-    assert workflow.count(".github/actions/**/action.yml") == 2
-    assert workflow.count(".github/actions/**/action.yaml") == 2
+    assert workflow.count("**/action.yml") == 2
+    assert workflow.count("**/action.yaml") == 2
 
 
 def test_mixed64_v2_contract_requires_documented_contract_inventory(

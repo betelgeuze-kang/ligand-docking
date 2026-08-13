@@ -171,8 +171,8 @@ NATIVE_FIXED64_CPU_V4_CONTRACT_PATHS = (
     "docs/engine_v2_native_fixed64_cpu_qualification_v4.md",
 )
 NATIVE_FIXED64_CPU_V4_REQUIRED_TOKEN_COUNTS = {
-    ".github/actions/**/action.yml": 2,
-    ".github/actions/**/action.yaml": 2,
+    "**/action.yml": 2,
+    "**/action.yaml": 2,
     ".github/workflows/*.yml": 2,
     ".github/workflows/*.yaml": 2,
     "config/engine_v2_native_fixed64_cpu_profile_v4.json": 2,
@@ -546,15 +546,49 @@ def _shell_command_word_index(segment: list[str]) -> int | None:
     return index if index < len(segment) else None
 
 
-def _workflow_has_dynamic_cargo_run_command(tokens: list[str]) -> bool:
+def _shell_command_segments(tokens: list[str]) -> tuple[tuple[str, ...], ...]:
+    segments: list[tuple[str, ...]] = []
     segment: list[str] = []
+    conditional_depth = 0
     for token in [*tokens, ";"]:
-        if token and set(token) <= set(";&|()"):
+        if token in {"[[", "(("}:
+            conditional_depth += 1
+        if (
+            token
+            and set(token) <= set(";&|()\n")
+            and conditional_depth == 0
+        ):
+            if segment:
+                segments.append(tuple(segment))
+            segment = []
+        else:
+            segment.append(token)
+        if token in {"]]", "))"} and conditional_depth:
+            conditional_depth -= 1
+    return tuple(segments)
+
+
+def _workflow_has_dynamic_cargo_run_command(tokens: list[str]) -> bool:
+    for immutable_segment in _shell_command_segments(tokens):
+        segment = list(immutable_segment)
+        if segment:
             command_index = _shell_command_word_index(segment)
             nonexecuting_display = (
                 command_index is not None
                 and segment[command_index].rsplit("/", 1)[-1] in {"echo", "printf"}
             )
+            if (
+                command_index is not None
+                and not nonexecuting_display
+                and (
+                    segment[command_index].startswith("${{")
+                    or re.fullmatch(
+                        r"\$(?:[A-Za-z_][A-Za-z0-9_]*|\{[^{}]+\})",
+                        segment[command_index],
+                    )
+                )
+            ):
+                return True
             for index, candidate in enumerate(segment[:-1]):
                 if (
                     any(
@@ -589,9 +623,6 @@ def _workflow_has_dynamic_cargo_run_command(tokens: list[str]) -> bool:
                         )
                     ):
                         return True
-            segment = []
-        else:
-            segment.append(token)
     return False
 
 
@@ -639,17 +670,8 @@ def _shell_tokens_invoke_native_fixed64_cpu_v4_live_probe(
     if _workflow_has_dynamic_cargo_run_command(tokens):
         return True
 
-    segments: list[list[str]] = []
-    segment: list[str] = []
-    for token in [*tokens, ";"]:
-        if token and set(token) <= set(";&|()"):
-            if segment:
-                segments.append(segment)
-            segment = []
-        else:
-            segment.append(token)
-
-    for segment in segments:
+    for immutable_segment in _shell_command_segments(tokens):
+        segment = list(immutable_segment)
         outer_command_index = _shell_outer_command_word_index(segment)
         command_index = _shell_command_word_index(segment)
         if command_index is None:
@@ -693,6 +715,20 @@ def _shell_tokens_invoke_native_fixed64_cpu_v4_live_probe(
                     embedded = token[2:]
                     remaining = segment[index + 1 :]
                     break
+                if token.startswith("-") and not token.startswith("--"):
+                    cluster = token[1:]
+                    split_index = cluster.find("S")
+                    if split_index >= 0:
+                        attached = cluster[split_index + 1 :]
+                        if attached:
+                            embedded = attached
+                            remaining = segment[index + 1 :]
+                        elif index + 1 < len(segment):
+                            embedded = segment[index + 1]
+                            remaining = segment[index + 2 :]
+                        else:
+                            return True
+                        break
                 if token == "--" or not (
                     token.startswith("-")
                     or re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*=.*", token)
@@ -700,11 +736,17 @@ def _shell_tokens_invoke_native_fixed64_cpu_v4_live_probe(
                     break
                 index += 1
         if embedded is None and command in {"bash", "dash", "ksh", "sh", "zsh"}:
-            for index, token in enumerate(
-                segment[command_index + 1 :], start=command_index + 1
-            ):
+            index = command_index + 1
+            while index < len(segment):
+                token = segment[index]
                 if token == "--":
                     break
+                if token in {"-O", "-o", "--init-file", "--rcfile"}:
+                    index += 2
+                    continue
+                if token.startswith(("-O", "-o")) and len(token) > 2:
+                    index += 1
+                    continue
                 if token == "-c" or (
                     token.startswith("-")
                     and not token.startswith("--")
@@ -716,10 +758,12 @@ def _shell_tokens_invoke_native_fixed64_cpu_v4_live_probe(
                     break
                 if not token.startswith("-"):
                     break
+                index += 1
         if embedded is None:
             continue
-        lexer = shlex.shlex(embedded, posix=True, punctuation_chars=";&|()")
+        lexer = shlex.shlex(embedded, posix=True, punctuation_chars=";&|()\n")
         lexer.whitespace_split = True
+        lexer.whitespace = " \t\r"
         lexer.commenters = "#"
         try:
             embedded_tokens = [*list(lexer), *remaining]
@@ -738,7 +782,7 @@ def _shell_tokens_invoke_native_fixed64_cpu_v4_live_probe(
         for candidate in tokens[index:]:
             if invocation and (
                 candidate.rsplit("/", 1)[-1] == "cargo"
-                or (candidate and set(candidate) <= set(";&|()"))
+                or (candidate and set(candidate) <= set(";&|()\n"))
             ):
                 break
             invocation.append(candidate)
@@ -773,8 +817,9 @@ def _workflow_invokes_native_fixed64_cpu_v4_live_probe(text: str) -> bool:
     if yaml_run_scalars is None:
         return True
     for line in yaml_run_scalars:
-        lexer = shlex.shlex(line, posix=True, punctuation_chars=";&|()")
+        lexer = shlex.shlex(line, posix=True, punctuation_chars=";&|()\n")
         lexer.whitespace_split = True
+        lexer.whitespace = " \t\r"
         lexer.commenters = "#"
         try:
             tokens = list(lexer)
@@ -1200,13 +1245,12 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         path: (repo_root / path).read_text(encoding="utf-8")
         for path in github_workflows
     }
-    action_root = repo_root / ".github/actions"
     github_action_candidates = tuple(
         sorted(
             {
                 path
                 for pattern in ("**/action.yml", "**/action.yaml")
-                for path in action_root.glob(pattern)
+                for path in repo_root.glob(pattern)
             }
         )
     )
