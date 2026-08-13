@@ -29,6 +29,10 @@ on:
       - "tests/unit/test_engine_v2_native_geometric_admission.py"
       - "tests/unit/test_engine_v2_native_fixed64_pipeline.py"
       - "tests/unit/test_engine_v2_native_fixed64_complete_pipeline.py"
+      - "tests/unit/test_verify_engine_v2_native_fixed64_bounded_input_v3.py"
+      - "config/engine_v2_native_fixed64_bounded_input_v3.json"
+      - "tools/verify_engine_v2_native_fixed64_bounded_input_v3.py"
+      - "docs/engine_v2_native_fixed64_bounded_input_v3.md"
       - "config/engine_v2_cpu_performance_profile.json"
       - "config/engine_v2_native_fixed64_cpu_profile_v5_archive.json"
       - "config/engine_v2_native_fixed64_cpu_profile_v6.json"
@@ -92,6 +96,9 @@ jobs:
             config/engine_v2_native_fixed64_cpu_profile_v7.json
             config/engine_v2_native_fixed64_cpu_profile_v7_sources.json
             tools/verify_engine_v2_native_fixed64_cpu_v7_rustc_wrapper.py
+            config/engine_v2_native_fixed64_bounded_input_v3.json
+            tools/verify_engine_v2_native_fixed64_bounded_input_v3.py
+            docs/engine_v2_native_fixed64_bounded_input_v3.md
             .github/workflows/ci-engine-v2-release-candidate.yml
           sparse-checkout-cone-mode: false
           show-progress: false
@@ -126,6 +133,10 @@ jobs:
           if [ "$ruff_status" -ne 0 ] || [ "$pyright_status" -ne 0 ]; then
             exit 1
           fi
+
+      - name: Verify bounded native fixed64 input v3 contract
+        run: >-
+          python tools/verify_engine_v2_native_fixed64_bounded_input_v3.py
 
       - name: Upload static-analysis diagnostics
         if: always()
@@ -347,6 +358,10 @@ jobs:
             tests/unit/test_engine_v2_native_geometric_admission.py
             tests/unit/test_engine_v2_native_fixed64_pipeline.py
             tests/unit/test_engine_v2_native_fixed64_complete_pipeline.py
+            tests/unit/test_verify_engine_v2_native_fixed64_bounded_input_v3.py
+            config/engine_v2_native_fixed64_bounded_input_v3.json
+            tools/verify_engine_v2_native_fixed64_bounded_input_v3.py
+            docs/engine_v2_native_fixed64_bounded_input_v3.md
             config/engine_v2_cpu_performance_profile.json
             config/engine_v2_native_fixed64_cpu_profile_v5_archive.json
             config/engine_v2_native_fixed64_cpu_profile_v6.json
@@ -439,6 +454,7 @@ jobs:
             tests/unit/test_engine_v2_native_geometric_admission.py \
             tests/unit/test_engine_v2_native_fixed64_pipeline.py \
             tests/unit/test_engine_v2_native_fixed64_complete_pipeline.py \
+            tests/unit/test_verify_engine_v2_native_fixed64_bounded_input_v3.py \
             -k 'native or rust_cpu'
           python -m pytest -q tests/unit/test_engine_v2_docking_search_v2_facade.py
 

@@ -1,0 +1,40 @@
+{
+  "authority": {
+    "benchmark_execution_authorized": false,
+    "customer_pose_emission_authorized": false,
+    "existing_rank_auto_change_authorized": false,
+    "molecular_execution_authorized": false,
+    "production_claim_authorized": false,
+    "reservation_authorized": false,
+    "scientific_claim_authorized": false
+  },
+  "canonical_entrypoint": "native_fixed64_complete_pipeline_v3",
+  "compatibility": {
+    "v1": "retired",
+    "v2": "historical_receipt_compatible",
+    "v3": "canonical_synthetic_transport"
+  },
+  "evidence_schema_id": "betelgeuze.engine_v2_native_fixed64_complete_python_evidence/3.0.0",
+  "input_schema_id": "betelgeuze.engine_v2_native_fixed64_complete_input/3.0.0",
+  "limits": {
+    "candidate_denominator": 64,
+    "conformer_source_count": 7,
+    "exact_cartesian_pair_count": 2097152,
+    "feature_atom_indices_per_row": 4096,
+    "feature_geometry_row_count": 3072,
+    "ligand_atom_count": 512,
+    "prepared_input_scalar_count": 8388608,
+    "receptor_atom_count": 4096,
+    "retained_source_count": 4,
+    "v7_control_source_count": 24
+  },
+  "receipt_domains": {
+    "consumer_identity_in_prepared_projection": false,
+    "nul_terminated": true,
+    "prepared_input_projection": "betelgeuze.engine-v2.native-fixed64-prepared-input-projection/v1",
+    "prepared_input_receipt": "betelgeuze.engine-v2.native-fixed64-prepared-input-receipt/v1",
+    "prepared_input_receipt_binds_pipeline_batch_receipt": true
+  },
+  "schema_id": "betelgeuze.engine_v2_native_fixed64_bounded_input_contract/1.0.0",
+  "status": "synthetic_test_only_authority_false"
+}

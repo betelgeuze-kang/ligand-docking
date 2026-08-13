@@ -13,6 +13,7 @@ from betelgeuze_engine_v2.docking.native_fixed64_consumers import (
     NativeFixed64DiagnosticBenchmarkAdapter,
     NativeFixed64EvidenceV1,
     NativeFixed64EvidenceV2,
+    NativeFixed64EvidenceV3,
     NativeFixed64ProductShadowAdapter,
     NativeFixed64PythonApi,
 )
@@ -22,6 +23,19 @@ from betelgeuze_engine_v2.standalone_cli import main as standalone_main
 
 def _digest(marker: int) -> str:
     return f"{marker:02x}" * 32
+
+
+class _FloatProtocolObject:
+    def __float__(self) -> float:
+        raise AssertionError("v3 must not invoke caller numeric protocols")
+
+
+class _ListSubclass(list):
+    pass
+
+
+class _DictSubclass(dict):
+    pass
 
 
 def _source(marker: int, *, source_index: int | None = None, rank: int | None = None):
@@ -39,7 +53,7 @@ def _source(marker: int, *, source_index: int | None = None, rank: int | None = 
 
 def _input(*, consumer: str = "api") -> dict[str, object]:
     return {
-        "schema_id": ("betelgeuze.engine_v2_native_fixed64_complete_input/2.0.0"),
+        "schema_id": ("betelgeuze.engine_v2_native_fixed64_complete_input/3.0.0"),
         "consumer": consumer,
         "backend": "rust_cpu",
         "device_ordinal": 0,
@@ -107,6 +121,12 @@ def _input(*, consumer: str = "api") -> dict[str, object]:
     }
 
 
+def _input_v2(*, consumer: str = "api") -> dict[str, object]:
+    value = _input(consumer=consumer)
+    value["schema_id"] = "betelgeuze.engine_v2_native_fixed64_complete_input/2.0.0"
+    return value
+
+
 @pytest.fixture(scope="module")
 def native():
     return pytest.importorskip("betelgeuze_engine_v2_native")
@@ -119,13 +139,27 @@ def test_package_preloads_native_extension_before_legacy_imports(native) -> None
     assert NativeFixed64EvidenceV1 is NativeFixed64EvidenceV2
     assert (
         native.NATIVE_FIXED64_COMPLETE_INPUT_SCHEMA_ID
-        == "betelgeuze.engine_v2_native_fixed64_complete_input/2.0.0"
+        == "betelgeuze.engine_v2_native_fixed64_complete_input/3.0.0"
     )
+    assert native.NATIVE_FIXED64_COMPLETE_INPUT_SCHEMA_ID_V2.endswith("/2.0.0")
+    assert native.NATIVE_FIXED64_COMPLETE_INPUT_SCHEMA_ID_V3.endswith("/3.0.0")
 
 
 def test_retired_v1_entrypoint_fails_closed(native) -> None:
     with pytest.raises(ValueError, match="v1 is retired"):
         native.native_fixed64_complete_pipeline_v1({})
+
+
+def test_v2_entrypoint_remains_compatible(native) -> None:
+    document = native.native_fixed64_complete_pipeline_v2(_input_v2())
+
+    assert document["schema_id"].endswith("complete_python_evidence/2.0.0")
+    assert "prepared_input_projection_sha256" not in document
+    evidence = NativeFixed64EvidenceV2(surface="api", _document=document)
+    assert evidence.pipeline_receipt_sha256 == document["pipeline_receipt_sha256"]
+
+    with pytest.raises(NativeFixed64ConsumerError, match="canonical consumers require"):
+        NativeFixed64PythonApi().run(_input_v2())
 
 
 def test_complete_native_work_releases_the_gil_before_pipeline_execution() -> None:
@@ -137,22 +171,38 @@ def test_complete_native_work_releases_the_gil_before_pipeline_execution() -> No
         "let context = Context::new(options)?", allow_threads
     )
     pipeline_run = source.index("pipeline.run(run)", context_creation)
-    receipt_conversion = source.index("receipt_to_python(py", pipeline_run)
+    receipt_conversion = source.index("receipt_to_python(", pipeline_run)
 
     assert allow_threads < context_creation < pipeline_run < receipt_conversion
 
 
+def test_v3_bounded_preflight_precedes_python_sequence_allocation() -> None:
+    source = Path("rust_engine_v2/src/complete_fixed64_pipeline.rs").read_text(
+        encoding="utf-8"
+    )
+
+    preflight = source.index("bounded_prepared_input_preflight(input)")
+    ligand_allocation = source.index(
+        'dict_value(input, "ligand_coordinates_angstrom")?', preflight
+    )
+    assert preflight < ligand_allocation
+
+
 def test_complete_entrypoint_uses_one_native_receipt_graph(native) -> None:
-    first = native.native_fixed64_complete_pipeline_v2(_input())
-    second = native.native_fixed64_complete_pipeline_v2(_input())
+    first = native.native_fixed64_complete_pipeline_v3(_input())
+    second = native.native_fixed64_complete_pipeline_v3(_input())
 
     assert first == second
-    assert first["schema_id"].endswith("complete_python_evidence/2.0.0")
+    assert first["schema_id"].endswith("complete_python_evidence/3.0.0")
     assert first["pipeline_id"].endswith("complete_pipeline/2.0.0")
     assert first["backend"] == "rust_cpu"
     assert first["candidate_denominator"] == 64
     assert first["receptor_atom_count"] == 4
     assert first["ligand_atom_count"] == 1
+    assert first["prepared_input_bounded"] is True
+    assert first["exact_cartesian_pair_count"] == 4
+    assert 0 < first["prepared_input_scalar_count"] <= 8 * 1_024 * 1_024
+    assert first["prepared_input_scalar_limit"] == 8 * 1_024 * 1_024
     assert first["generated_count"] == 28
     assert first["typed_failure_count"] == 36
     assert (
@@ -306,6 +356,8 @@ def test_complete_entrypoint_uses_one_native_receipt_graph(native) -> None:
     for field in (
         "pipeline_receipt_sha256",
         "consumer_view_receipt_sha256",
+        "prepared_input_projection_sha256",
+        "prepared_input_receipt_sha256",
         "allocation_receipt_sha256",
         "proposal_batch_receipt_sha256",
         "geometric_admission_receipt_sha256",
@@ -331,6 +383,7 @@ def test_all_surfaces_share_complete_native_pipeline_receipt(native) -> None:
 
     assert source == original
     assert len({item.pipeline_receipt_sha256 for item in results}) == 1
+    assert len({item.prepared_input_receipt_sha256 for item in results}) == 1
     assert len({item.consumer_view_receipt_sha256 for item in results}) == 4
     assert results[-1].to_dict()["operator_second_opinion_authorized"] is True
     assert all(
@@ -342,7 +395,7 @@ def test_all_surfaces_share_complete_native_pipeline_receipt(native) -> None:
 def test_complete_python_facade_binds_evidence_to_requested_backend(
     native, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    document = native.native_fixed64_complete_pipeline_v2(_input())
+    document = native.native_fixed64_complete_pipeline_v3(_input())
     document["backend"] = "hip_safe"
     monkeypatch.setattr(
         native_consumers,
@@ -371,28 +424,28 @@ def test_complete_python_facade_rejects_native_boundary_drift(
     field: str,
     bad_value: object,
 ) -> None:
-    document = native.native_fixed64_complete_pipeline_v2(_input())
+    document = native.native_fixed64_complete_pipeline_v3(_input())
     document[field] = bad_value
 
     with pytest.raises(NativeFixed64ConsumerError):
-        NativeFixed64EvidenceV2(surface="api", _document=document)
+        NativeFixed64EvidenceV3(surface="api", _document=document)
 
 
 def test_complete_python_facade_rejects_reordered_candidate_denominator(native) -> None:
-    document = native.native_fixed64_complete_pipeline_v2(_input())
+    document = native.native_fixed64_complete_pipeline_v3(_input())
     document["candidates"][0]["slot_index"] = 1
 
     with pytest.raises(NativeFixed64ConsumerError, match="reordered or incomplete"):
-        NativeFixed64EvidenceV2(surface="api", _document=document)
+        NativeFixed64EvidenceV3(surface="api", _document=document)
 
-    document = native.native_fixed64_complete_pipeline_v2(_input())
+    document = native.native_fixed64_complete_pipeline_v3(_input())
     document["candidates"][0]["slot_index"] = False
     with pytest.raises(NativeFixed64ConsumerError, match="reordered or incomplete"):
-        NativeFixed64EvidenceV2(surface="api", _document=document)
+        NativeFixed64EvidenceV3(surface="api", _document=document)
 
 
 def test_complete_python_facade_rejects_post_admission_cross_wiring(native) -> None:
-    document = native.native_fixed64_complete_pipeline_v2(_input())
+    document = native.native_fixed64_complete_pipeline_v3(_input())
     rejected = next(
         row
         for row in document["candidates"]
@@ -400,27 +453,27 @@ def test_complete_python_facade_rejects_post_admission_cross_wiring(native) -> N
     )
     rejected["ranking"]["rank_eligible"] = True
     with pytest.raises(NativeFixed64ConsumerError, match="remained rank eligible"):
-        NativeFixed64EvidenceV2(surface="api", _document=document)
+        NativeFixed64EvidenceV3(surface="api", _document=document)
 
-    document = native.native_fixed64_complete_pipeline_v2(_input())
+    document = native.native_fixed64_complete_pipeline_v3(_input())
     document["post_admitted_count"] -= 1
     with pytest.raises(NativeFixed64ConsumerError, match="counts are cross-wired"):
-        NativeFixed64EvidenceV2(surface="api", _document=document)
+        NativeFixed64EvidenceV3(surface="api", _document=document)
 
-    document = native.native_fixed64_complete_pipeline_v2(_input())
+    document = native.native_fixed64_complete_pipeline_v3(_input())
     document["refined_count"] += 1
     document["post_admitted_count"] += 1
     with pytest.raises(NativeFixed64ConsumerError, match="counts are cross-wired"):
-        NativeFixed64EvidenceV2(surface="api", _document=document)
+        NativeFixed64EvidenceV3(surface="api", _document=document)
 
 
 def test_complete_python_facade_validates_receipt_graph_semantics_not_dict_order(
     native,
 ) -> None:
-    document = native.native_fixed64_complete_pipeline_v2(_input())
+    document = native.native_fixed64_complete_pipeline_v3(_input())
     document["receipt_graph"] = dict(reversed(tuple(document["receipt_graph"].items())))
 
-    evidence = NativeFixed64EvidenceV2(surface="api", _document=document)
+    evidence = NativeFixed64EvidenceV3(surface="api", _document=document)
     assert evidence.pipeline_receipt_sha256 == document["pipeline_receipt_sha256"]
 
 
@@ -429,14 +482,14 @@ def test_complete_python_facade_rejects_cross_wired_receipt_graph(
     native,
     mutation: str,
 ) -> None:
-    document = native.native_fixed64_complete_pipeline_v2(_input())
+    document = native.native_fixed64_complete_pipeline_v3(_input())
     if mutation == "missing":
         document["receipt_graph"].pop("pipeline_batch_receipt_sha256")
     else:
         document["receipt_graph"]["unexpected_receipt_sha256"] = _digest(119)
 
     with pytest.raises(NativeFixed64ConsumerError, match="incomplete or cross-wired"):
-        NativeFixed64EvidenceV2(surface="api", _document=document)
+        NativeFixed64EvidenceV3(surface="api", _document=document)
 
 
 @pytest.mark.parametrize(
@@ -463,17 +516,17 @@ def test_complete_python_facade_binds_public_receipts_to_complete_graph(
     public_field: str,
     graph_field: str,
 ) -> None:
-    document = native.native_fixed64_complete_pipeline_v2(_input())
+    document = native.native_fixed64_complete_pipeline_v3(_input())
     assert document[public_field] == document["receipt_graph"][graph_field]
 
     document[public_field] = _digest(119)
     with pytest.raises(NativeFixed64ConsumerError, match="aliases are cross-wired"):
-        NativeFixed64EvidenceV2(surface="api", _document=document)
+        NativeFixed64EvidenceV3(surface="api", _document=document)
 
-    document = native.native_fixed64_complete_pipeline_v2(_input())
+    document = native.native_fixed64_complete_pipeline_v3(_input())
     document["receipt_graph"][graph_field] = _digest(119)
     with pytest.raises(NativeFixed64ConsumerError, match="aliases are cross-wired"):
-        NativeFixed64EvidenceV2(surface="api", _document=document)
+        NativeFixed64EvidenceV3(surface="api", _document=document)
 
 
 def test_cli_routes_complete_schema_without_python_science(native, tmp_path) -> None:
@@ -508,7 +561,7 @@ def test_cli_routes_complete_schema_without_python_science(native, tmp_path) -> 
     assert (
         result["pipeline_receipt_sha256"]
         == (
-            native.native_fixed64_complete_pipeline_v2(_input())[
+            native.native_fixed64_complete_pipeline_v3(_input())[
                 "pipeline_receipt_sha256"
             ]
         )
@@ -539,19 +592,138 @@ def test_complete_entrypoint_fails_closed_before_native_work(
     mutation(value)
 
     with pytest.raises(ValueError, match=match):
-        native.native_fixed64_complete_pipeline_v2(value)
+        native.native_fixed64_complete_pipeline_v3(value)
+
+
+@pytest.mark.parametrize(
+    ("mutation", "match"),
+    (
+        (
+            lambda value: value.update(
+                ligand_coordinates_angstrom=[[0.0, 0.0, 0.0]] * 513
+            ),
+            "bounded shape",
+        ),
+        (
+            lambda value: value.update(
+                receptor_coordinates_angstrom=[[4.0, 0.0, 0.0]] * 4097
+            ),
+            "bounded shape",
+        ),
+        (
+            lambda value: value.update(
+                v7_control_sources=[
+                    _source(index + 1, source_index=index) for index in range(25)
+                ]
+            ),
+            "row count exceeds 24",
+        ),
+        (
+            lambda value: value.update(ligand_coordinates_angstrom=[[True, 0.0, 0.0]]),
+            "must not be bool",
+        ),
+        (
+            lambda value: value.__setitem__(
+                "x" * 1024, value.pop("contact_policy_sha256")
+            ),
+            "key length exceeds",
+        ),
+        (
+            lambda value: value.update(
+                ligand_charge_elementary=[_FloatProtocolObject()]
+            ),
+            "exact int or float",
+        ),
+        (
+            lambda value: value.update(
+                ligand_coordinates_angstrom=_ListSubclass([[0.0, 0.0, 0.0]])
+            ),
+            "exact list",
+        ),
+    ),
+)
+def test_v3_rejects_unbounded_or_inexact_transport_before_native_work(
+    native, mutation, match: str
+) -> None:
+    value = _input()
+    mutation(value)
+
+    with pytest.raises(ValueError, match=match):
+        native.native_fixed64_complete_pipeline_v3(value)
+
+
+def test_v3_rejects_mapping_subclasses_before_bounded_preflight(native) -> None:
+    with pytest.raises(ValueError, match="exact dict"):
+        native.native_fixed64_complete_pipeline_v3(_DictSubclass(_input()))
+
+
+def test_v3_prepared_input_receipt_binds_projection_and_pipeline(native) -> None:
+    first = native.native_fixed64_complete_pipeline_v3(_input())
+    changed_input = _input()
+    changed_input["ligand_charge_elementary"] = [0.25]
+    second = native.native_fixed64_complete_pipeline_v3(changed_input)
+
+    assert (
+        first["prepared_input_projection_sha256"]
+        != second["prepared_input_projection_sha256"]
+    )
+    assert (
+        first["prepared_input_receipt_sha256"]
+        != second["prepared_input_receipt_sha256"]
+    )
+    expected = hashlib.sha256(
+        b"betelgeuze.engine-v2.native-fixed64-prepared-input-receipt/v1\0"
+        + bytes.fromhex(first["prepared_input_projection_sha256"])
+        + bytes.fromhex(first["pipeline_receipt_sha256"])
+    ).hexdigest()
+    assert first["prepared_input_receipt_sha256"] == expected
+
+    tampered = deepcopy(first)
+    tampered["prepared_input_receipt_sha256"] = _digest(120)
+    with pytest.raises(NativeFixed64ConsumerError, match="receipt is cross-wired"):
+        NativeFixed64EvidenceV3(surface="api", _document=tampered)
+
+
+def test_v3_consumer_identity_is_excluded_from_prepared_projection(native) -> None:
+    api = native.native_fixed64_complete_pipeline_v3(_input(consumer="api"))
+    cli = native.native_fixed64_complete_pipeline_v3(_input(consumer="cli"))
+
+    assert api["pipeline_receipt_sha256"] == cli["pipeline_receipt_sha256"]
+    assert (
+        api["prepared_input_projection_sha256"]
+        == cli["prepared_input_projection_sha256"]
+    )
+    assert api["prepared_input_receipt_sha256"] == cli["prepared_input_receipt_sha256"]
+    assert api["consumer_view_receipt_sha256"] != cli["consumer_view_receipt_sha256"]
+
+
+def test_v3_projection_is_independent_of_python_dict_insertion_order(native) -> None:
+    source = _input()
+    reversed_input = dict(reversed(tuple(source.items())))
+
+    first = native.native_fixed64_complete_pipeline_v3(source)
+    second = native.native_fixed64_complete_pipeline_v3(reversed_input)
+
+    assert (
+        first["prepared_input_projection_sha256"]
+        == second["prepared_input_projection_sha256"]
+    )
+    assert (
+        first["prepared_input_receipt_sha256"]
+        == second["prepared_input_receipt_sha256"]
+    )
 
 
 def test_post_refinement_policy_is_required_and_receipt_bound(native) -> None:
     missing = _input()
     missing.pop("predeclared_post_refinement_admission_policy_sha256")
     with pytest.raises(ValueError, match="key schema"):
-        native.native_fixed64_complete_pipeline_v2(missing)
+        native.native_fixed64_complete_pipeline_v3(missing)
 
-    first = native.native_fixed64_complete_pipeline_v2(_input())
+    first = native.native_fixed64_complete_pipeline_v3(_input())
     changed = _input()
     changed["predeclared_post_refinement_admission_policy_sha256"] = _digest(120)
-    second = native.native_fixed64_complete_pipeline_v2(changed)
+    second = native.native_fixed64_complete_pipeline_v3(changed)
     assert (
         first["receipt_graph"]["post_admission_policy_receipt_sha256"]
         != second["receipt_graph"]["post_admission_policy_receipt_sha256"]
@@ -560,7 +732,7 @@ def test_post_refinement_policy_is_required_and_receipt_bound(native) -> None:
 
 
 def test_complete_consumer_view_receipt_is_domain_separated(native) -> None:
-    document = native.native_fixed64_complete_pipeline_v2(_input())
+    document = native.native_fixed64_complete_pipeline_v3(_input())
     assert (
         document["pipeline_receipt_sha256"] != document["consumer_view_receipt_sha256"]
     )
