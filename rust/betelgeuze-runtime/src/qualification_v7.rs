@@ -66,6 +66,7 @@ const CARGO_MANIFEST_BYTES: &[u8] = include_bytes!("../assets/original-Cargo.tom
 const CARGO_LOCK_BYTES: &[u8] = include_bytes!("../assets/workspace-Cargo.lock");
 const COMPILED_SOURCE_MANIFEST_SHA256: &str = env!("BETELGEUZE_V7_COMPILED_SOURCE_MANIFEST_SHA256");
 const COMPILED_SOURCE_COUNT: &str = env!("BETELGEUZE_V7_COMPILED_SOURCE_COUNT");
+const COMPILED_SOURCE_GRAPH_BOUND: &str = env!("BETELGEUZE_V7_COMPILED_SOURCE_GRAPH_BOUND");
 const COMPILED_PROFILE_SHA256: &str = env!("BETELGEUZE_V7_COMPILED_PROFILE_SHA256");
 const BUILD_COMMIT_OID: &str = env!("BETELGEUZE_V7_BUILD_COMMIT_OID");
 const BUILD_COMMIT_BOUND: &str = env!("BETELGEUZE_V7_BUILD_COMMIT_BOUND");
@@ -287,6 +288,18 @@ fn require_source_binding(profile: &str, key: &str, source_bytes: &[u8]) -> V7Re
 
 /// Verify the compile-bound, non-consuming v7 activation contract.
 pub fn verify_native_fixed64_cpu_v7_activation() -> V7Result<Fixed64CpuActivationStatusV7> {
+    if COMPILED_SOURCE_GRAPH_BOUND != "true" || BUILD_COMMIT_BOUND != "true" {
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 non-authoritative build cannot activate",
+        ));
+    }
+    if BUILD_CONFIGURATION_BOUND != "true"
+        || BUILD_CONFIGURATION_SHA256 != EXPECTED_BUILD_CONFIGURATION_SHA256
+    {
+        return Err(NativeFixed64CpuQualificationV7Error::new(
+            "native fixed64 CPU v7 build configuration is not frozen",
+        ));
+    }
     let profile = profile_text()?;
     for (literal, label) in [
         (
@@ -393,18 +406,6 @@ pub fn verify_native_fixed64_cpu_v7_activation() -> V7Result<Fixed64CpuActivatio
         TRANSITIVE_SOURCE_MANIFEST_BYTES,
     )?;
     let profile_sha256 = sha256_hex(PROFILE_BYTES);
-    if BUILD_COMMIT_BOUND != "true" {
-        return Err(NativeFixed64CpuQualificationV7Error::new(
-            "native fixed64 CPU v7 non-authoritative package build cannot activate",
-        ));
-    }
-    if BUILD_CONFIGURATION_BOUND != "true"
-        || BUILD_CONFIGURATION_SHA256 != EXPECTED_BUILD_CONFIGURATION_SHA256
-    {
-        return Err(NativeFixed64CpuQualificationV7Error::new(
-            "native fixed64 CPU v7 build configuration is not frozen",
-        ));
-    }
     if COMPILED_PROFILE_SHA256 != profile_sha256
         || BUILD_COMMIT_OID.len() != 40
         || BUILD_COMMIT_OID == "0000000000000000000000000000000000000000"
@@ -2814,8 +2815,8 @@ mod tests {
         } else {
             let error = verify_native_fixed64_cpu_v7_activation()
                 .expect_err("ordinary and non-authoritative builds must fail activation");
-            if BUILD_COMMIT_BOUND != "true" {
-                assert!(error.message().contains("non-authoritative package build"));
+            if COMPILED_SOURCE_GRAPH_BOUND != "true" || BUILD_COMMIT_BOUND != "true" {
+                assert!(error.message().contains("non-authoritative build"));
             } else {
                 assert!(error
                     .message()

@@ -64,6 +64,7 @@ on:
       - "config/engine_v2_native_fixed64_cpu_profile_v6_sources.json"
       - "config/engine_v2_native_fixed64_cpu_profile_v7.json"
       - "config/engine_v2_native_fixed64_cpu_profile_v7_sources.json"
+      - "config/engine_v2_native_fixed64_cpu_post_qualification_build_boundary_v1.json"
       - "config/engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt.json"
       - "config/engine_v2_native_fixed64_cpu_profile_v4.json"
       - "config/engine_v2_native_fixed64_cpu_profile_v4_archive.json"

@@ -11,11 +11,13 @@ import re
 from typing import Any, cast
 
 if __package__:
+    from . import verify_engine_v2_native_fixed64_cpu_profile_v7 as v7_profile_verifier
     from .verify_engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt import (
         NativeFixed64CPUV7ExecutionReceiptError,
         require_execution_receipt_bytes,
     )
 else:
+    import verify_engine_v2_native_fixed64_cpu_profile_v7 as v7_profile_verifier
     from verify_engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt import (
         NativeFixed64CPUV7ExecutionReceiptError,
         require_execution_receipt_bytes,
@@ -275,6 +277,7 @@ NATIVE_FIXED64_CPU_V7_CONTRACT_PATHS = (
     "config/engine_v2_native_fixed64_cpu_profile_v6_archive.json",
     "config/engine_v2_native_fixed64_cpu_profile_v7.json",
     "config/engine_v2_native_fixed64_cpu_profile_v7_sources.json",
+    "config/engine_v2_native_fixed64_cpu_post_qualification_build_boundary_v1.json",
     "config/engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt.json",
     "rust/Cargo.lock",
     "rust/Cargo.toml",
@@ -315,6 +318,7 @@ NATIVE_FIXED64_CPU_V7_REQUIRED_TOKEN_COUNTS = {
     "config/engine_v2_native_fixed64_cpu_profile_v6_archive.json": 2,
     "config/engine_v2_native_fixed64_cpu_profile_v7.json": 2,
     "config/engine_v2_native_fixed64_cpu_profile_v7_sources.json": 2,
+    "config/engine_v2_native_fixed64_cpu_post_qualification_build_boundary_v1.json": 1,
     "config/engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt.json": 2,
     "docs/engine_v2_native_fixed64_cpu_qualification_v7.md": 1,
     "docs/engine_v2_native_fixed64_cpu_qualification_v7_result.md": 1,
@@ -1085,11 +1089,6 @@ def _native_fixed64_cpu_v7_execution_receipt_is_consumed(repo_root: Path) -> boo
 
 def _native_fixed64_cpu_v7_authority_is_fail_closed(repo_root: Path) -> bool:
     profile_path = repo_root / "config/engine_v2_native_fixed64_cpu_profile_v7.json"
-    runner_path = repo_root / "rust/betelgeuze-runtime/src/qualification_v7.rs"
-    binary_path = (
-        repo_root
-        / "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-qualify-v7.rs"
-    )
     release_workflow_path = (
         repo_root / ".github/workflows/ci-engine-v2-release-candidate.yml"
     )
@@ -1134,21 +1133,48 @@ def _native_fixed64_cpu_v7_authority_is_fail_closed(repo_root: Path) -> bool:
         rustc_wrapper_source = (
             repo_root / "tools/verify_engine_v2_native_fixed64_cpu_v7_rustc_wrapper.py"
         ).read_text(encoding="utf-8")
-        qualification_source_raw = (
-            repo_root / "rust/betelgeuze-runtime/src/qualification.rs"
+        source_manifest = v7_profile_verifier.require_source_manifest_document(
+            source_manifest_raw
+        )
+        historical_sources = v7_profile_verifier.require_bound_source_commit(
+            repo_root,
+            source_manifest,
+            commit_oid=v7_profile_verifier.QUALIFIED_SOURCE_COMMIT_OID,
+        )
+        cargo_lock_raw = historical_sources["rust/Cargo.lock"]
+        cargo_manifest_raw = historical_sources["rust/betelgeuze-runtime/Cargo.toml"]
+        qualification_source_raw = historical_sources[
+            "rust/betelgeuze-runtime/src/qualification.rs"
+        ]
+        lane_metrics_source_raw = historical_sources[
+            "rust/betelgeuze-runtime/src/fixed64_lane_metrics.rs"
+        ]
+        runner_source_raw = historical_sources[
+            "rust/betelgeuze-runtime/src/qualification_v7.rs"
+        ]
+        binary_source_raw = historical_sources[
+            "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-qualify-v7.rs"
+        ]
+        post_qualification_boundary_raw = (
+            repo_root
+            / "config/engine_v2_native_fixed64_cpu_post_qualification_build_boundary_v1.json"
         ).read_bytes()
-        lane_metrics_source_raw = (
-            repo_root / "rust/betelgeuze-runtime/src/fixed64_lane_metrics.rs"
-        ).read_bytes()
-        runner_source_raw = runner_path.read_bytes()
-        binary_source_raw = binary_path.read_bytes()
+        v7_profile_verifier.require_post_qualification_build_contract(
+            post_qualification_boundary_raw
+        )
+        v7_profile_verifier.require_post_qualification_build_boundary(repo_root)
         profile = json.loads(raw.decode("ascii"))
         runner = runner_source_raw.decode("utf-8")
         binary = binary_source_raw.decode("utf-8")
         release_workflow = release_workflow_path.read_text(encoding="utf-8")
         hip_workflow = hip_workflow_path.read_text(encoding="utf-8")
         wrapper_lock = wrapper_lock_path.read_text(encoding="utf-8")
-    except (OSError, UnicodeError, ValueError):
+    except (
+        OSError,
+        UnicodeError,
+        ValueError,
+        v7_profile_verifier.NativeFixed64CPUProfileV7Error,
+    ):
         return False
     expected = (
         json.dumps(

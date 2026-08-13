@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import subprocess
 
 import pytest
 
@@ -217,6 +218,20 @@ def _write_native_fixed64_cpu_v6_contract(tmp_path: Path) -> None:
 
 def _write_native_fixed64_cpu_v7_contract(tmp_path: Path) -> None:
     root = Path(__file__).resolve().parents[2]
+    subprocess.run(["/usr/bin/git", "init", "-q", str(tmp_path)], check=True)
+    common_raw = subprocess.run(
+        ["/usr/bin/git", "rev-parse", "--git-common-dir"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    common = Path(common_raw)
+    if not common.is_absolute():
+        common = root / common
+    alternates = tmp_path / ".git/objects/info/alternates"
+    alternates.parent.mkdir(parents=True, exist_ok=True)
+    alternates.write_text(str(common.resolve() / "objects") + "\n", encoding="utf-8")
     _mark_complete_contract(tmp_path, NATIVE_FIXED64_CPU_V7_CONTRACT_PATHS)
     for relative in NATIVE_FIXED64_CPU_V7_CONTRACT_PATHS:
         (tmp_path / relative).write_bytes((root / relative).read_bytes())
@@ -1335,7 +1350,7 @@ def test_native_fixed64_cpu_v7_effective_rustc_wrapper_drift_fails_ci_audit(
     assert payload["native_fixed64_cpu_v7_contract_in_authoritative_ci"] is False
 
 
-def test_native_fixed64_cpu_v7_lane_metric_source_drift_fails_ci_audit(
+def test_current_lane_metric_source_change_does_not_rebind_historical_v7(
     tmp_path: Path,
 ) -> None:
     _write_authoritative_workflows(tmp_path)
@@ -1354,8 +1369,9 @@ def test_native_fixed64_cpu_v7_lane_metric_source_drift_fails_ci_audit(
         encoding="utf-8",
     )
     payload = build_inventory(tmp_path)
-    assert payload["native_fixed64_cpu_v7_authority_fail_closed"] is False
-    assert payload["native_fixed64_cpu_v7_contract_in_authoritative_ci"] is False
+    assert payload["native_fixed64_cpu_v7_authority_fail_closed"] is True
+    assert payload["native_fixed64_cpu_v7_contract_in_authoritative_ci"] is True
+    assert payload["native_fixed64_cpu_v7_qualification_authority_false"] is True
 
 
 def test_native_fixed64_cpu_v7_authority_escalation_fails_ci_audit(

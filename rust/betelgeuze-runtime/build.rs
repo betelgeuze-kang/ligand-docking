@@ -22,6 +22,7 @@ const BUILD_COMMIT_BOUND_ENV: &str = "BETELGEUZE_V7_BUILD_COMMIT_BOUND";
 const BUILD_CONFIGURATION_BOUND_ENV: &str = "BETELGEUZE_V7_BUILD_CONFIGURATION_BOUND";
 const BUILD_CONFIGURATION_SHA256_ENV: &str = "BETELGEUZE_V7_BUILD_CONFIGURATION_SHA256";
 const VERIFIED_SOURCE_ROOT_ENV: &str = "BETELGEUZE_V7_VERIFIED_SOURCE_ROOT";
+const COMPILED_SOURCE_GRAPH_BOUND_ENV: &str = "BETELGEUZE_V7_COMPILED_SOURCE_GRAPH_BOUND";
 const NON_AUTHORITATIVE_PACKAGE_BUILD_ENV: &str = "BETELGEUZE_V7_NON_AUTHORITATIVE_PACKAGE_BUILD";
 const QUALIFICATION_BUILD_ENV: &str = "BETELGEUZE_V7_QUALIFICATION_BUILD";
 const UNBOUND_BUILD_COMMIT_OID: &str = "0000000000000000000000000000000000000000";
@@ -197,7 +198,11 @@ fn qualification_rustc_wrapper_is_exact(source_root: &Path) -> bool {
         )
 }
 
-fn bind_build_configuration(source_root: &Path, non_authoritative_package: bool) -> (String, bool) {
+fn bind_build_configuration(
+    source_root: &Path,
+    non_authoritative_package: bool,
+    requested: bool,
+) -> (String, bool) {
     for name in FORBIDDEN_BUILD_ENVIRONMENT {
         println!("cargo:rerun-if-env-changed={name}");
     }
@@ -218,7 +223,6 @@ fn bind_build_configuration(source_root: &Path, non_authoritative_package: bool)
     ] {
         println!("cargo:rerun-if-env-changed={name}");
     }
-    let requested = opt_in_environment(QUALIFICATION_BUILD_ENV);
     if !requested {
         return (UNBOUND_BUILD_CONFIGURATION_SHA256.to_owned(), false);
     }
@@ -478,7 +482,7 @@ fn non_authoritative_package_build() -> bool {
 fn bind_activation_snapshot(
     source_root: &Path,
     canonical_manifest: &[u8],
-    non_authoritative_package: bool,
+    qualification_build_requested: bool,
 ) -> (String, String, bool) {
     let canonical_profile_path = source_root.join(PROFILE_RELATIVE_PATH);
     println!(
@@ -492,7 +496,7 @@ fn bind_activation_snapshot(
         "packaged v7 activation profile drifted from the build checkout"
     );
     let profile_sha256 = sha256_hex(&canonical_profile);
-    if non_authoritative_package {
+    if !qualification_build_requested {
         return (UNBOUND_BUILD_COMMIT_OID.to_owned(), profile_sha256, false);
     }
     track_git_commit_inputs(source_root);
@@ -561,6 +565,23 @@ fn bind_compiled_source_graph(source_root: &Path) -> (String, usize) {
     (sha256_hex(&canonical_manifest), rows.len())
 }
 
+fn frozen_source_manifest_identity(source_root: &Path) -> (Vec<u8>, String, usize) {
+    let canonical_manifest_path = source_root.join(SOURCE_MANIFEST_RELATIVE_PATH);
+    println!(
+        "cargo:rerun-if-changed={}",
+        canonical_manifest_path.display()
+    );
+    let canonical_manifest =
+        fs::read(&canonical_manifest_path).expect("canonical v7 source manifest is unavailable");
+    assert_eq!(
+        canonical_manifest, PACKAGED_SOURCE_MANIFEST_BYTES,
+        "packaged v7 source manifest drifted from the build checkout"
+    );
+    let source_count = parse_source_manifest(&canonical_manifest).len();
+    let manifest_sha256 = sha256_hex(&canonical_manifest);
+    (canonical_manifest, manifest_sha256, source_count)
+}
+
 fn main() {
     // The superseded v6 public verifier remains source-compatible but can
     // never activate from a v7 build.  Emit an explicitly unbound identity so
@@ -576,19 +597,38 @@ fn main() {
     let source_root = discover_source_root(&manifest_dir).expect(
         "v7 builds require the exact source checkout; set BETELGEUZE_V7_SOURCE_ROOT for packaged verification",
     );
-    let (manifest_sha256, source_count) = bind_compiled_source_graph(&source_root);
-    let canonical_manifest = fs::read(source_root.join(SOURCE_MANIFEST_RELATIVE_PATH))
-        .expect("canonical v7 source manifest is unavailable");
     let non_authoritative_package = non_authoritative_package_build();
-    let (build_configuration_sha256, build_configuration_bound) =
-        bind_build_configuration(&source_root, non_authoritative_package);
-    let (build_commit_oid, profile_sha256, build_commit_bound) =
-        bind_activation_snapshot(&source_root, &canonical_manifest, non_authoritative_package);
+    let qualification_build_requested = opt_in_environment(QUALIFICATION_BUILD_ENV);
+    assert!(
+        !(qualification_build_requested && non_authoritative_package),
+        "v7 qualification and non-authoritative package build modes are mutually exclusive"
+    );
+    let (canonical_manifest, manifest_sha256, source_count) =
+        frozen_source_manifest_identity(&source_root);
+    let source_graph_bound = if qualification_build_requested {
+        let (bound_manifest_sha256, bound_source_count) = bind_compiled_source_graph(&source_root);
+        assert_eq!(bound_manifest_sha256, manifest_sha256);
+        assert_eq!(bound_source_count, source_count);
+        true
+    } else {
+        false
+    };
+    let (build_configuration_sha256, build_configuration_bound) = bind_build_configuration(
+        &source_root,
+        non_authoritative_package,
+        qualification_build_requested,
+    );
+    let (build_commit_oid, profile_sha256, build_commit_bound) = bind_activation_snapshot(
+        &source_root,
+        &canonical_manifest,
+        qualification_build_requested,
+    );
     let source_root_text = source_root
         .to_str()
         .expect("v7 verified source root must be UTF-8");
     println!("cargo:rustc-env={COMPILED_MANIFEST_ENV}={manifest_sha256}");
     println!("cargo:rustc-env={COMPILED_SOURCE_COUNT_ENV}={source_count}");
+    println!("cargo:rustc-env={COMPILED_SOURCE_GRAPH_BOUND_ENV}={source_graph_bound}");
     println!("cargo:rustc-env={COMPILED_PROFILE_ENV}={profile_sha256}");
     println!("cargo:rustc-env={BUILD_COMMIT_ENV}={build_commit_oid}");
     println!("cargo:rustc-env={BUILD_COMMIT_BOUND_ENV}={build_commit_bound}");
