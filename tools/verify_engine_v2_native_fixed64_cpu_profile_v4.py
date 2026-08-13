@@ -21,9 +21,7 @@ QUALIFICATION_SOURCE_RELATIVE_PATH = Path(
     "rust/betelgeuze-runtime/src/qualification.rs"
 )
 DOCKING_SOURCE_RELATIVE_PATH = Path("rust/betelgeuze-runtime/src/docking.rs")
-NATIVE_PIPELINE_SOURCE_RELATIVE_PATH = Path(
-    "native/src/docking/fixed64_pipeline.cpp"
-)
+NATIVE_PIPELINE_SOURCE_RELATIVE_PATH = Path("native/src/docking/fixed64_pipeline.cpp")
 PROBE_SOURCE_RELATIVE_PATH = Path(
     "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v4.rs"
 )
@@ -111,9 +109,7 @@ RUST_PACKAGE_ROOT_RELATIVE_PATHS = (
     Path("rust/reference-dynamics"),
     Path("rust/reference-physics"),
 )
-RUST_BOUND_BUILD_SCRIPT_RELATIVE_PATHS = (
-    Path("rust/betelgeuze-sys/build.rs"),
-)
+RUST_BOUND_BUILD_SCRIPT_RELATIVE_PATHS = (Path("rust/betelgeuze-sys/build.rs"),)
 RUST_BOUND_CARGO_TARGET_SOURCE_RELATIVE_PATHS = tuple(
     Path(value)
     for value in (
@@ -152,6 +148,10 @@ RUST_BOUND_LOCAL_DEPENDENCY_BINDINGS = (
         "normal",
         "",
         "rust/betelgeuze-docking-search",
+        (),
+        True,
+        False,
+        "",
     ),
     (
         "betelgeuze-runtime",
@@ -159,6 +159,10 @@ RUST_BOUND_LOCAL_DEPENDENCY_BINDINGS = (
         "normal",
         "",
         "rust/betelgeuze-docking-search",
+        (),
+        True,
+        False,
+        "",
     ),
     (
         "betelgeuze-runtime",
@@ -166,6 +170,10 @@ RUST_BOUND_LOCAL_DEPENDENCY_BINDINGS = (
         "dev",
         "",
         "rust/reference-dynamics",
+        (),
+        True,
+        False,
+        "",
     ),
     (
         "betelgeuze-runtime",
@@ -173,6 +181,10 @@ RUST_BOUND_LOCAL_DEPENDENCY_BINDINGS = (
         "dev",
         "",
         "rust/reference-physics",
+        (),
+        True,
+        False,
+        "",
     ),
     (
         "betelgeuze-runtime",
@@ -180,6 +192,10 @@ RUST_BOUND_LOCAL_DEPENDENCY_BINDINGS = (
         "normal",
         "",
         "rust/betelgeuze-sys",
+        (),
+        True,
+        False,
+        "",
     ),
     (
         "betelgeuze-sys",
@@ -187,6 +203,50 @@ RUST_BOUND_LOCAL_DEPENDENCY_BINDINGS = (
         "normal",
         "",
         "rust/cpu-kernel",
+        (),
+        True,
+        False,
+        "",
+    ),
+)
+RUST_BOUND_CARGO_MANIFEST_TABLE_BINDINGS = (
+    (
+        "rust/Cargo.toml",
+        ("[workspace]", "[workspace.package]"),
+    ),
+    (
+        "rust/betelgeuze-docking-search/Cargo.toml",
+        ("[package]", "[dependencies]", "[lints.rust]"),
+    ),
+    (
+        "rust/betelgeuze-runtime/Cargo.toml",
+        (
+            "[package]",
+            "[features]",
+            "[dependencies]",
+            "[dev-dependencies]",
+        ),
+    ),
+    (
+        "rust/betelgeuze-sys/Cargo.toml",
+        (
+            "[package]",
+            "[features]",
+            "[dependencies]",
+            "[build-dependencies]",
+        ),
+    ),
+    (
+        "rust/cpu-kernel/Cargo.toml",
+        ("[package]", "[lib]", "[dependencies]", "[lints.rust]"),
+    ),
+    (
+        "rust/reference-dynamics/Cargo.toml",
+        ("[package]", "[dependencies]", "[lints.rust]"),
+    ),
+    (
+        "rust/reference-physics/Cargo.toml",
+        ("[package]", "[dependencies]", "[lints.rust]"),
     ),
 )
 REPOSITORY_CARGO_CONFIG_RELATIVE_PATHS = (
@@ -358,9 +418,7 @@ def _transitive_source_manifest_sha256(sources: dict[str, bytes]) -> str:
     ):
         _fail("native vendor equality manifest changed")
     for canonical_path in canonical_vendor_paths:
-        vendor_path = (
-            Path("rust/betelgeuze-sys/vendor") / canonical_path
-        ).as_posix()
+        vendor_path = (Path("rust/betelgeuze-sys/vendor") / canonical_path).as_posix()
         if sources[canonical_path] != sources[vendor_path]:
             _fail(f"native vendor source differs from canonical: {canonical_path}")
     identities = {
@@ -381,10 +439,9 @@ def require_native_vendor_tree_paths(observed_paths: tuple[str, ...]) -> None:
     expected_paths = tuple(
         path.as_posix() for path in NATIVE_VENDOR_COPY_SOURCE_RELATIVE_PATHS
     )
-    if (
-        len(observed_paths) != len(set(observed_paths))
-        or tuple(sorted(observed_paths)) != tuple(sorted(expected_paths))
-    ):
+    if len(observed_paths) != len(set(observed_paths)) or tuple(
+        sorted(observed_paths)
+    ) != tuple(sorted(expected_paths)):
         _fail("native vendor tree contains an unbound or missing source")
 
 
@@ -414,14 +471,9 @@ def read_bound_source_bytes(root: Path, relative: Path) -> bytes:
     if not hasattr(os, "O_DIRECTORY") or not hasattr(os, "O_NOFOLLOW"):
         _fail("platform lacks required no-follow compiler-source primitives")
     directory_flags = (
-        os.O_RDONLY
-        | getattr(os, "O_CLOEXEC", 0)
-        | os.O_DIRECTORY
-        | os.O_NOFOLLOW
+        os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | os.O_DIRECTORY | os.O_NOFOLLOW
     )
-    file_flags = (
-        os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | os.O_NOFOLLOW
-    )
+    file_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | os.O_NOFOLLOW
     descriptors: list[int] = []
     try:
         descriptors.append(os.open(root, directory_flags))
@@ -503,10 +555,9 @@ def require_rust_compiled_source_tree_paths(observed_paths: tuple[str, ...]) -> 
         for path in NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS
         if path.suffix == ".rs" and path.as_posix().startswith(roots)
     )
-    if (
-        len(observed_paths) != len(set(observed_paths))
-        or tuple(sorted(observed_paths)) != tuple(sorted(expected_paths))
-    ):
+    if len(observed_paths) != len(set(observed_paths)) or tuple(
+        sorted(observed_paths)
+    ) != tuple(sorted(expected_paths)):
         _fail("Rust compiled source tree contains an unbound or missing source")
 
 
@@ -516,11 +567,7 @@ def discover_rust_compiled_source_tree_paths(root: Path) -> tuple[str, ...]:
         for relative in RUST_COMPILED_SOURCE_TREE_ROOT_RELATIVE_PATHS
     )
     tree_entries = tuple(
-        sorted(
-            path
-            for source_root in source_roots
-            for path in source_root.rglob("*")
-        )
+        sorted(path for source_root in source_roots for path in source_root.rglob("*"))
     )
     if any(path.is_symlink() for path in tree_entries):
         _fail("Rust compiled source tree contains a symlink")
@@ -538,10 +585,9 @@ def require_rust_package_build_script_paths(
     expected_paths = tuple(
         path.as_posix() for path in RUST_BOUND_BUILD_SCRIPT_RELATIVE_PATHS
     )
-    if (
-        len(observed_paths) != len(set(observed_paths))
-        or tuple(sorted(observed_paths)) != tuple(sorted(expected_paths))
-    ):
+    if len(observed_paths) != len(set(observed_paths)) or tuple(
+        sorted(observed_paths)
+    ) != tuple(sorted(expected_paths)):
         _fail("Rust package build-script set contains an unbound or missing input")
 
 
@@ -569,8 +615,7 @@ def require_rust_cargo_target_source_paths(
 ) -> None:
     expected_paths = tuple(
         sorted(
-            path.as_posix()
-            for path in RUST_BOUND_CARGO_TARGET_SOURCE_RELATIVE_PATHS
+            path.as_posix() for path in RUST_BOUND_CARGO_TARGET_SOURCE_RELATIVE_PATHS
         )
     )
     if (
@@ -579,15 +624,27 @@ def require_rust_cargo_target_source_paths(
     ):
         _fail("Cargo target source set contains an unbound or missing input")
     bound_sources = {
-        path.as_posix()
-        for path in NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS
+        path.as_posix() for path in NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS
     }
     if any(path not in bound_sources for path in observed_paths):
         _fail("Cargo target source is absent from the transitive manifest")
 
 
 def require_rust_local_dependency_bindings(
-    observed_bindings: tuple[tuple[str, str, str, str, str], ...],
+    observed_bindings: tuple[
+        tuple[
+            str,
+            str,
+            str,
+            str,
+            str,
+            tuple[str, ...],
+            bool,
+            bool,
+            str,
+        ],
+        ...,
+    ],
 ) -> None:
     expected_bindings = tuple(sorted(RUST_BOUND_LOCAL_DEPENDENCY_BINDINGS))
     if (
@@ -595,11 +652,41 @@ def require_rust_local_dependency_bindings(
         or tuple(sorted(observed_bindings)) != expected_bindings
     ):
         _fail("Cargo local dependency graph contains an unbound or missing input")
-    expected_roots = {
-        path.as_posix() for path in RUST_PACKAGE_ROOT_RELATIVE_PATHS
-    }
+    expected_roots = {path.as_posix() for path in RUST_PACKAGE_ROOT_RELATIVE_PATHS}
     if any(binding[4] not in expected_roots for binding in observed_bindings):
         _fail("Cargo local dependency escapes the bound package roots")
+
+
+def require_rust_cargo_manifest_table_bindings(
+    root: Path,
+    expected_manifest_paths: tuple[Path, ...],
+) -> None:
+    bound_manifest_paths = tuple(
+        Path(relative_text)
+        for relative_text, _ in RUST_BOUND_CARGO_MANIFEST_TABLE_BINDINGS
+    )
+    if len(bound_manifest_paths) != len(set(bound_manifest_paths)) or tuple(
+        sorted(bound_manifest_paths)
+    ) != tuple(sorted(expected_manifest_paths)):
+        _fail("Cargo manifest table binding set is incomplete or duplicated")
+    for relative_text, expected_tables in RUST_BOUND_CARGO_MANIFEST_TABLE_BINDINGS:
+        relative = Path(relative_text)
+        try:
+            source = read_bound_source_bytes(root, relative).decode("utf-8")
+        except UnicodeError as exc:
+            raise NativeFixed64CPUProfileV4Error(
+                "Cargo manifest is not valid UTF-8"
+            ) from exc
+        observed_tables: list[str] = []
+        for line in source.splitlines():
+            candidate = line.strip()
+            if not candidate.startswith("["):
+                continue
+            if re.fullmatch(r"\[[A-Za-z0-9_.-]+\]", candidate) is None:
+                _fail("Cargo manifest contains an invalid or unbound table")
+            observed_tables.append(candidate)
+        if tuple(observed_tables) != expected_tables:
+            _fail("Cargo manifest table set contains an unbound or missing input")
 
 
 def discover_rust_cargo_target_source_paths(root: Path) -> tuple[str, ...]:
@@ -610,6 +697,7 @@ def discover_rust_cargo_target_source_paths(root: Path) -> tuple[str, ...]:
     )
     for relative in (*manifest_paths, Path("rust/Cargo.lock")):
         read_bound_source_bytes(root, relative)
+    require_rust_cargo_manifest_table_bindings(root, manifest_paths)
     environment = {
         key: value
         for key, value in os.environ.items()
@@ -669,12 +757,22 @@ def discover_rust_cargo_target_source_paths(root: Path) -> tuple[str, ...]:
         _fail("Cargo target metadata schema is invalid")
     if metadata.get("workspace_root") != str(rust_root):
         _fail("Cargo target metadata workspace root is cross-wired")
-    expected_manifests = {
-        str(root / relative) for relative in manifest_paths[1:]
-    }
+    expected_manifests = {str(root / relative) for relative in manifest_paths[1:]}
     observed_manifests: set[str] = set()
     observed_paths: list[str] = []
-    local_dependency_bindings: list[tuple[str, str, str, str, str]] = []
+    local_dependency_bindings: list[
+        tuple[
+            str,
+            str,
+            str,
+            str,
+            str,
+            tuple[str, ...],
+            bool,
+            bool,
+            str,
+        ]
+    ] = []
     probe_bindings: list[tuple[str, tuple[str, ...], str]] = []
     activation_bindings: list[tuple[str, tuple[str, ...], str]] = []
     for package in metadata["packages"]:
@@ -697,12 +795,32 @@ def discover_rust_cargo_target_source_paths(root: Path) -> tuple[str, ...]:
             dependency_source = dependency.get("source")
             dependency_kind = dependency.get("kind")
             dependency_rename = dependency.get("rename")
+            dependency_features = dependency.get("features")
+            dependency_uses_default_features = dependency.get("uses_default_features")
+            dependency_optional = dependency.get("optional")
+            dependency_target = dependency.get("target")
+            dependency_registry = dependency.get("registry")
             if (
                 type(dependency_name) is not str
                 or (dependency_path is not None and type(dependency_path) is not str)
-                or (dependency_source is not None and type(dependency_source) is not str)
+                or (
+                    dependency_source is not None and type(dependency_source) is not str
+                )
                 or (dependency_kind is not None and type(dependency_kind) is not str)
-                or (dependency_rename is not None and type(dependency_rename) is not str)
+                or (
+                    dependency_rename is not None and type(dependency_rename) is not str
+                )
+                or type(dependency_features) is not list
+                or any(type(feature) is not str for feature in dependency_features)
+                or type(dependency_uses_default_features) is not bool
+                or type(dependency_optional) is not bool
+                or (
+                    dependency_target is not None and type(dependency_target) is not str
+                )
+                or (
+                    dependency_registry is not None
+                    and type(dependency_registry) is not str
+                )
             ):
                 _fail("Cargo dependency identity metadata is invalid")
             if dependency_path is None:
@@ -711,6 +829,8 @@ def discover_rust_cargo_target_source_paths(root: Path) -> tuple[str, ...]:
                 continue
             if dependency_source is not None:
                 _fail("Cargo local dependency has an unexpected source identity")
+            if dependency_registry is not None:
+                _fail("Cargo local dependency has an unexpected registry identity")
             local_root = Path(dependency_path)
             if not local_root.is_absolute():
                 _fail("Cargo local dependency path is not absolute")
@@ -730,6 +850,10 @@ def discover_rust_cargo_target_source_paths(root: Path) -> tuple[str, ...]:
                     dependency_kind or "normal",
                     dependency_rename or "",
                     local_relative.as_posix(),
+                    tuple(dependency_features),
+                    dependency_uses_default_features,
+                    dependency_optional,
+                    dependency_target or "",
                 )
             )
         for target in package["targets"]:
@@ -838,7 +962,9 @@ def require_profile_document(raw: bytes) -> dict[str, object]:
             parse_constant=_reject_constant,
         )
     except (UnicodeError, json.JSONDecodeError) as exc:
-        raise NativeFixed64CPUProfileV4Error("profile is not canonical ASCII JSON") from exc
+        raise NativeFixed64CPUProfileV4Error(
+            "profile is not canonical ASCII JSON"
+        ) from exc
     profile = _exact_keys(
         value,
         {
@@ -978,9 +1104,7 @@ def require_profile_document(raw: bytes) -> dict[str, object]:
     rust_pipeline_source_sha256 = core["native_rust_pipeline_source_sha256"]
     cpp_pipeline_source_sha256 = core["native_cpp_pipeline_source_sha256"]
     transitive_source_count = core["native_transitive_source_count"]
-    transitive_source_manifest_sha256 = core[
-        "native_transitive_source_manifest_sha256"
-    ]
+    transitive_source_manifest_sha256 = core["native_transitive_source_manifest_sha256"]
     if (
         type(qualification_source_sha256) is not str
         or re.fullmatch(r"[0-9a-f]{64}", qualification_source_sha256) is None
@@ -1017,9 +1141,7 @@ def require_profile_document(raw: bytes) -> dict[str, object]:
         "native_qualification_source_sha256": qualification_source_sha256,
         "native_rust_pipeline_source_sha256": rust_pipeline_source_sha256,
         "native_transitive_source_count": transitive_source_count,
-        "native_transitive_source_manifest_sha256": (
-            transitive_source_manifest_sha256
-        ),
+        "native_transitive_source_manifest_sha256": (transitive_source_manifest_sha256),
         "python_scientific_work_allowed": False,
         "receptor_context_recreated_inside_samples": False,
     }:
@@ -1108,8 +1230,7 @@ def require_compiled_profile_binding(
     rust_compiled_source_tree_paths: tuple[str, ...],
     rust_package_build_script_paths: tuple[str, ...],
     rust_cargo_target_source_paths: tuple[str, ...] = tuple(
-        path.as_posix()
-        for path in RUST_BOUND_CARGO_TARGET_SOURCE_RELATIVE_PATHS
+        path.as_posix() for path in RUST_BOUND_CARGO_TARGET_SOURCE_RELATIVE_PATHS
     ),
 ) -> None:
     """Bind the native gate constants and entry point to the frozen JSON."""
@@ -1168,7 +1289,9 @@ def require_compiled_profile_binding(
         _fail("compiled native C++ pipeline source changed from the frozen profile")
     transitive_digest = _transitive_source_manifest_sha256(transitive_sources_raw)
     if transitive_digest != core.get("native_transitive_source_manifest_sha256"):
-        _fail("compiled native transitive source manifest changed from the frozen profile")
+        _fail(
+            "compiled native transitive source manifest changed from the frozen profile"
+        )
     direct_sources = {
         QUALIFICATION_SOURCE_RELATIVE_PATH.as_posix(): qualification_source_raw,
         DOCKING_SOURCE_RELATIVE_PATH.as_posix(): docking_source_raw,
@@ -1179,7 +1302,9 @@ def require_compiled_profile_binding(
         source_raw != transitive_sources_raw.get(path)
         for path, source_raw in direct_sources.items()
     ):
-        _fail("compiled pipeline source inputs are cross-wired from the transitive manifest")
+        _fail(
+            "compiled pipeline source inputs are cross-wired from the transitive manifest"
+        )
     library_activation_function = re.compile(
         r"pub\s+const\s+fn\s+fixed64_cpu_v4_live_activation_admitted\(\)"
         r"\s*->\s*bool\s*\{\s*FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED\s*\}"
@@ -1191,9 +1316,7 @@ def require_compiled_profile_binding(
     library_activation_guard = "if !fixed64_cpu_v4_live_activation_admitted()"
     fixture_construction = "let fixture = SyntheticFixture::new();"
     if (
-        source.count(
-            "pub const FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED: bool = false;"
-        )
+        source.count("pub const FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED: bool = false;")
         != 1
         or len(library_activation_function.findall(source)) != 1
         or source.count(unit_test_profile_gate) != 1
@@ -1205,8 +1328,7 @@ def require_compiled_profile_binding(
             < source.index(qualification_profile_gate)
             < source.index(library_activation_guard)
         )
-        or source.index(library_activation_guard)
-        > source.index(fixture_construction)
+        or source.index(library_activation_guard) > source.index(fixture_construction)
     ):
         _fail("compiled public qualification API is not activation-gated")
 
@@ -1217,7 +1339,9 @@ def require_compiled_profile_binding(
     constant_observation_matches = list(constant_observation.finditer(activation_test))
     constant_assertion = "assert!(!activation_constant);"
     function_assertion = "assert!(!fixed64_cpu_v4_live_activation_admitted());"
-    binary_launch = 'Command::new(env!("CARGO_BIN_EXE_betelgeuze-fixed64-cpu-probe-v4"))'
+    binary_launch = (
+        'Command::new(env!("CARGO_BIN_EXE_betelgeuze-fixed64-cpu-probe-v4"))'
+    )
     if (
         len(constant_observation_matches) != 1
         or activation_test.count(constant_assertion) != 1
@@ -1249,12 +1373,8 @@ def require_compiled_profile_binding(
         or native_pipeline_source.count(str(native_pipeline_profile_id)) != 1
         or native_pipeline_source.count("kProfileId") != 6
         or docking_source.count("Self::profile_id()?;") != 1
-        or docking_source.count(
-            "profile_id != FIXED64_NATIVE_PIPELINE_PROFILE_ID"
-        )
-        != 1
-        or docking_source.count("hash.string(FIXED64_NATIVE_PIPELINE_PROFILE_ID);")
-        != 3
+        or docking_source.count("profile_id != FIXED64_NATIVE_PIPELINE_PROFILE_ID") != 1
+        or docking_source.count("hash.string(FIXED64_NATIVE_PIPELINE_PROFILE_ID);") != 3
         or docking_source.count(
             "pipeline_batch.string(FIXED64_NATIVE_PIPELINE_PROFILE_ID);"
         )
@@ -1279,7 +1399,11 @@ def require_compiled_profile_binding(
     sampling = profile["sampling"]
     numeric = profile["numeric_parity"]
     performance = profile["performance"]
-    if type(sampling) is not dict or type(numeric) is not dict or type(performance) is not dict:
+    if (
+        type(sampling) is not dict
+        or type(numeric) is not dict
+        or type(performance) is not dict
+    ):
         _fail("profile gate sections are unavailable for compiled binding")
     try:
         compiled_gate = {
@@ -1310,14 +1434,8 @@ def require_compiled_profile_binding(
     if type(fixtures) is not list or type(gates) is not dict:
         _fail("profile fixture or gate sections are unavailable for compiled binding")
     expected_atoms = {
-        fixture["receptor_atom_count"]
-        for fixture in fixtures
-        if type(fixture) is dict
-    } | {
-        fixture["ligand_atom_count"]
-        for fixture in fixtures
-        if type(fixture) is dict
-    }
+        fixture["receptor_atom_count"] for fixture in fixtures if type(fixture) is dict
+    } | {fixture["ligand_atom_count"] for fixture in fixtures if type(fixture) is dict}
     if len(expected_atoms) != 1:
         _fail("frozen fixtures do not share one compiled atom denominator")
     expected_atom_count = next(iter(expected_atoms))
@@ -1401,8 +1519,7 @@ def require_compiled_profile_binding(
         source,
     )
     runtime_scorer_gate = (
-        "sys::BG_DOCKING_SCORER_V1_TERM_COUNT as usize "
-        "== FROZEN_SCORER_V1_TERM_COUNT"
+        "sys::BG_DOCKING_SCORER_V1_TERM_COUNT as usize == FROZEN_SCORER_V1_TERM_COUNT"
     )
     if (
         scorer_term_matches != [str(gates["score_term_count_exact"])]
@@ -1441,7 +1558,9 @@ def require_compiled_profile_binding(
         < probe.index(qualification_binding)
         < probe.index(measurement_call)
     ):
-        _fail("native probe activation gate does not precede configuration and measurement")
+        _fail(
+            "native probe activation gate does not precede configuration and measurement"
+        )
 
 
 def main() -> int:

@@ -48,8 +48,7 @@ _QUALIFICATION_SOURCE = _ROOT / "rust/betelgeuze-runtime/src/qualification.rs"
 _DOCKING_SOURCE = _ROOT / "rust/betelgeuze-runtime/src/docking.rs"
 _NATIVE_PIPELINE_SOURCE = _ROOT / "native/src/docking/fixed64_pipeline.cpp"
 _PROBE_SOURCE = (
-    _ROOT
-    / "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v4.rs"
+    _ROOT / "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v4.rs"
 )
 _TRANSITIVE_SOURCES = {
     path.as_posix(): (_ROOT / path).read_bytes()
@@ -71,10 +70,7 @@ _RUST_BUILD_SCRIPT_PATHS = tuple(
     path.as_posix() for path in RUST_BOUND_BUILD_SCRIPT_RELATIVE_PATHS
 )
 _RUST_CARGO_TARGET_SOURCE_PATHS = tuple(
-    sorted(
-        path.as_posix()
-        for path in RUST_BOUND_CARGO_TARGET_SOURCE_RELATIVE_PATHS
-    )
+    sorted(path.as_posix() for path in RUST_BOUND_CARGO_TARGET_SOURCE_RELATIVE_PATHS)
 )
 
 
@@ -137,7 +133,11 @@ def test_canonical_native_fixed64_cpu_profile_v4_is_frozen() -> None:
             b"maximum_rust_to_cpp_median_ratio: 1.25",
             b"maximum_rust_to_cpp_median_ratio: 2.0",
         ),
-        ("qualification", b"const SLOT_COUNT: usize = 64", b"const SLOT_COUNT: usize = 63"),
+        (
+            "qualification",
+            b"const SLOT_COUNT: usize = 64",
+            b"const SLOT_COUNT: usize = 63",
+        ),
         (
             "qualification",
             b"Self::FeatureSparse => (48, 16)",
@@ -250,9 +250,9 @@ def test_profile_v4_rejects_measurement_moved_before_activation_guard() -> None:
     assert type(core) is dict
     core["native_probe_source_sha256"] = hashlib.sha256(probe).hexdigest()
     changed = dict(_TRANSITIVE_SOURCES)
-    changed[
-        "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v4.rs"
-    ] = probe
+    changed["rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v4.rs"] = (
+        probe
+    )
     core["native_transitive_source_manifest_sha256"] = (
         _transitive_source_manifest_sha256(changed)
     )
@@ -271,7 +271,9 @@ def test_profile_v4_rejects_measurement_moved_before_activation_guard() -> None:
         )
 
 
-def test_profile_v4_requires_runtime_observation_of_release_activation_constant() -> None:
+def test_profile_v4_requires_runtime_observation_of_release_activation_constant() -> (
+    None
+):
     profile = require_profile_document(_PROFILE.read_bytes())
     changed = dict(_TRANSITIVE_SOURCES)
     path = "rust/betelgeuze-runtime/tests/fixed64_cpu_probe_activation.rs"
@@ -482,7 +484,9 @@ def test_profile_v4_rejects_cfg_shadowed_vendor_declaration() -> None:
 
 
 def test_profile_v4_rejects_vendor_shadow_header() -> None:
-    expected = tuple(path.as_posix() for path in NATIVE_VENDOR_COPY_SOURCE_RELATIVE_PATHS)
+    expected = tuple(
+        path.as_posix() for path in NATIVE_VENDOR_COPY_SOURCE_RELATIVE_PATHS
+    )
 
     with pytest.raises(
         NativeFixed64CPUProfileV4Error,
@@ -490,10 +494,7 @@ def test_profile_v4_rejects_vendor_shadow_header() -> None:
     ):
         require_native_vendor_tree_paths(
             expected
-            + (
-                "rust/betelgeuze-sys/vendor/native/src/cpu/"
-                "betelgeuze/engine.h",
-            )
+            + ("rust/betelgeuze-sys/vendor/native/src/cpu/betelgeuze/engine.h",)
         )
 
 
@@ -561,8 +562,7 @@ def test_profile_v4_rejects_unbound_rust_source() -> None:
         match="Rust compiled source tree contains an unbound",
     ):
         require_rust_compiled_source_tree_paths(
-            _RUST_SOURCE_TREE_PATHS
-            + ("rust/betelgeuze-runtime/src/unbound_module.rs",)
+            _RUST_SOURCE_TREE_PATHS + ("rust/betelgeuze-runtime/src/unbound_module.rs",)
         )
 
 
@@ -589,8 +589,7 @@ def test_profile_v4_discovers_exact_cargo_target_sources() -> None:
 def test_profile_v4_rejects_package_root_probe_target() -> None:
     changed = tuple(
         "rust/betelgeuze-runtime/probe.rs"
-        if path
-        == "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v4.rs"
+        if path == "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v4.rs"
         else path
         for path in _RUST_CARGO_TARGET_SOURCE_PATHS
     )
@@ -603,9 +602,12 @@ def test_profile_v4_rejects_package_root_probe_target() -> None:
 
 def test_profile_v4_rejects_unbound_local_dependency_root() -> None:
     changed = tuple(
-        (*binding[:4], "external/betelgeuze-docking-search")
-        if binding[:2]
-        == ("betelgeuze-runtime", "betelgeuze-docking-search")
+        (
+            *binding[:4],
+            "external/betelgeuze-docking-search",
+            *binding[5:],
+        )
+        if binding[:2] == ("betelgeuze-runtime", "betelgeuze-docking-search")
         else binding
         for binding in RUST_BOUND_LOCAL_DEPENDENCY_BINDINGS
     )
@@ -614,6 +616,35 @@ def test_profile_v4_rejects_unbound_local_dependency_root() -> None:
         match="local dependency graph contains an unbound",
     ):
         require_rust_local_dependency_bindings(changed)
+
+
+@pytest.mark.parametrize(
+    ("binding_index", "replacement"),
+    (
+        (5, ("hip",)),
+        (6, False),
+        (7, True),
+        (8, 'cfg(target_arch = "x86_64")'),
+    ),
+)
+def test_profile_v4_rejects_local_dependency_compile_option_drift(
+    binding_index: int,
+    replacement: object,
+) -> None:
+    changed = []
+    for binding in RUST_BOUND_LOCAL_DEPENDENCY_BINDINGS:
+        if binding[:2] != ("betelgeuze-runtime", "betelgeuze-sys"):
+            changed.append(binding)
+            continue
+        mutable = list(binding)
+        mutable[binding_index] = replacement
+        changed.append(tuple(mutable))
+
+    with pytest.raises(
+        NativeFixed64CPUProfileV4Error,
+        match="local dependency graph contains an unbound",
+    ):
+        require_rust_local_dependency_bindings(tuple(changed))
 
 
 def test_profile_v4_rejects_external_local_dependency_from_cargo_metadata(
@@ -631,9 +662,7 @@ def test_profile_v4_rejects_external_local_dependency_from_cargo_metadata(
         external_workspace / "rust",
         ignore=shutil.ignore_patterns("target"),
     )
-    external_dependency = (
-        external_workspace / "rust/betelgeuze-docking-search"
-    )
+    external_dependency = external_workspace / "rust/betelgeuze-docking-search"
     runtime_manifest = copied_root / "rust/betelgeuze-runtime/Cargo.toml"
     raw = runtime_manifest.read_text(encoding="utf-8")
     original = 'path = "../betelgeuze-docking-search"'
@@ -646,6 +675,58 @@ def test_profile_v4_rejects_external_local_dependency_from_cargo_metadata(
     with pytest.raises(
         NativeFixed64CPUProfileV4Error,
         match="local dependency escapes the repository",
+    ):
+        discover_rust_cargo_target_source_paths(copied_root)
+
+
+def test_profile_v4_rejects_local_dependency_feature_from_cargo_metadata(
+    tmp_path: Path,
+) -> None:
+    copied_root = tmp_path / "copied-repository"
+    shutil.copytree(
+        _ROOT / "rust",
+        copied_root / "rust",
+        ignore=shutil.ignore_patterns("target"),
+    )
+    runtime_manifest = copied_root / "rust/betelgeuze-runtime/Cargo.toml"
+    raw = runtime_manifest.read_text(encoding="utf-8")
+    original = 'betelgeuze-sys = { version = "0.1.0", path = "../betelgeuze-sys" }'
+    replacement = (
+        'betelgeuze-sys = { version = "0.1.0", '
+        'path = "../betelgeuze-sys", features = ["hip"] }'
+    )
+    assert raw.count(original) == 1
+    runtime_manifest.write_text(
+        raw.replace(original, replacement, 1),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        NativeFixed64CPUProfileV4Error,
+        match="local dependency graph contains an unbound",
+    ):
+        discover_rust_cargo_target_source_paths(copied_root)
+
+
+def test_profile_v4_rejects_cargo_patch_table_before_metadata(
+    tmp_path: Path,
+) -> None:
+    copied_root = tmp_path / "copied-repository"
+    shutil.copytree(
+        _ROOT / "rust",
+        copied_root / "rust",
+        ignore=shutil.ignore_patterns("target"),
+    )
+    workspace_manifest = copied_root / "rust/Cargo.toml"
+    workspace_manifest.write_text(
+        workspace_manifest.read_text(encoding="utf-8")
+        + '\n[patch.crates-io]\nsha2 = { path = "/external/sha2" }\n',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        NativeFixed64CPUProfileV4Error,
+        match="Cargo manifest table set contains an unbound",
     ):
         discover_rust_cargo_target_source_paths(copied_root)
 
@@ -679,9 +760,7 @@ def test_profile_v4_rejects_unbound_default_rust_build_script(
     for relative in RUST_PACKAGE_ROOT_RELATIVE_PATHS:
         (tmp_path / relative).mkdir(parents=True)
     (tmp_path / "rust/betelgeuze-sys/build.rs").write_bytes(b"fn main() {}\n")
-    (tmp_path / "rust/betelgeuze-runtime/build.rs").write_bytes(
-        b"fn main() {}\n"
-    )
+    (tmp_path / "rust/betelgeuze-runtime/build.rs").write_bytes(b"fn main() {}\n")
 
     with pytest.raises(
         NativeFixed64CPUProfileV4Error,
@@ -725,8 +804,7 @@ def test_profile_v4_rejects_build_script_inventory_drift() -> None:
         match="build-script set contains an unbound",
     ):
         require_rust_package_build_script_paths(
-            _RUST_BUILD_SCRIPT_PATHS
-            + ("rust/betelgeuze-runtime/build.rs",)
+            _RUST_BUILD_SCRIPT_PATHS + ("rust/betelgeuze-runtime/build.rs",)
         )
 
 
@@ -739,16 +817,15 @@ def test_profile_v4_release_non_test_activation_check_is_in_native_ci() -> None:
     assert source.count("Verify release non-test activation artifact is blocked") == 1
     assert source.count("cargo test --release --manifest-path rust/Cargo.toml") == 1
     assert source.count("--test fixed64_cpu_probe_activation") == 1
-    assert source.count(
-        "--exact native_fixed64_cpu_probe_is_blocked_before_measurement"
-    ) == 1
+    assert (
+        source.count("--exact native_fixed64_cpu_probe_is_blocked_before_measurement")
+        == 1
+    )
 
 
 def test_profile_v4_native_workflow_change_triggers_focused_suite() -> None:
     source = _FOCUSED_WORKFLOW.read_text(encoding="utf-8")
-    assert source.count(
-        '- ".github/workflows/ci-native-compute-abi.yml"'
-    ) == 1
+    assert source.count('- ".github/workflows/ci-native-compute-abi.yml"') == 1
 
 
 @pytest.mark.parametrize("relative", REPOSITORY_CARGO_CONFIG_RELATIVE_PATHS)
@@ -808,7 +885,9 @@ def test_profile_v4_rejects_repository_rust_toolchain_override(
     "mutate",
     (
         lambda profile: profile["authority"].update(qualification_authority=True),
-        lambda profile: profile["restrictions"].update(hip_device_execution_allowed=True),
+        lambda profile: profile["restrictions"].update(
+            hip_device_execution_allowed=True
+        ),
         lambda profile: profile["fixtures"][0].update(candidate_denominator=63),
         lambda profile: profile["gates"].update(score_term_count_exact=7),
         lambda profile: profile["numeric_parity"].update(relative_tolerance=1e-3),
@@ -858,7 +937,7 @@ def test_profile_v4_cli_reports_non_consuming_authority_false() -> None:
         "fixture_count": 2,
         "profile_id": "engine_v2_native_fixed64_cpu_synthetic_v4",
         "profile_sha256": (
-                "af7fba661a6f7dbb1ad8b01e37e34121e286115c4a67531a411134fd37cdbf7a"
+            "af7fba661a6f7dbb1ad8b01e37e34121e286115c4a67531a411134fd37cdbf7a"
         ),
         "reservation_created": False,
         "status": "verified",
