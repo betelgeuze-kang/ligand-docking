@@ -40,6 +40,8 @@ const CARGO_MANIFEST_BYTES: &[u8] = include_bytes!("../assets/original-Cargo.tom
 const CARGO_LOCK_BYTES: &[u8] = include_bytes!("../assets/workspace-Cargo.lock");
 const COMPILED_SOURCE_MANIFEST_SHA256: &str = env!("BETELGEUZE_V6_COMPILED_SOURCE_MANIFEST_SHA256");
 const COMPILED_SOURCE_COUNT: &str = env!("BETELGEUZE_V6_COMPILED_SOURCE_COUNT");
+const COMPILED_PROFILE_SHA256: &str = env!("BETELGEUZE_V6_COMPILED_PROFILE_SHA256");
+const BUILD_COMMIT_OID: &str = env!("BETELGEUZE_V6_BUILD_COMMIT_OID");
 const VERIFIED_SOURCE_ROOT: &str = env!("BETELGEUZE_V6_VERIFIED_SOURCE_ROOT");
 
 const ATTEMPT_SCHEMA_ID: &str = "betelgeuze.engine_v2_native_fixed64_cpu_attempt/6.0.0";
@@ -296,6 +298,14 @@ pub fn verify_native_fixed64_cpu_v6_activation() -> V6Result<Fixed64CpuActivatio
             "verified build source root",
         ),
         (
+            "\"build_commit_bound\": true",
+            "verified build commit",
+        ),
+        (
+            "\"compiled_activation_profile_verified_at_build\": true",
+            "compiled activation profile",
+        ),
+        (
             "\"output_path_utf8_required\": true",
             "output path encoding",
         ),
@@ -325,7 +335,13 @@ pub fn verify_native_fixed64_cpu_v6_activation() -> V6Result<Fixed64CpuActivatio
         "transitive_source_manifest_sha256",
         TRANSITIVE_SOURCE_MANIFEST_BYTES,
     )?;
-    if COMPILED_SOURCE_MANIFEST_SHA256 != sha256_hex(TRANSITIVE_SOURCE_MANIFEST_BYTES)
+    let profile_sha256 = sha256_hex(PROFILE_BYTES);
+    if COMPILED_PROFILE_SHA256 != profile_sha256
+        || BUILD_COMMIT_OID.len() != 40
+        || !BUILD_COMMIT_OID
+            .bytes()
+            .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
+        || COMPILED_SOURCE_MANIFEST_SHA256 != sha256_hex(TRANSITIVE_SOURCE_MANIFEST_BYTES)
         || COMPILED_SOURCE_COUNT != "192"
         || std::str::from_utf8(TRANSITIVE_SOURCE_MANIFEST_BYTES)
             .ok()
@@ -335,7 +351,6 @@ pub fn verify_native_fixed64_cpu_v6_activation() -> V6Result<Fixed64CpuActivatio
             "native fixed64 CPU v6 compiled transitive source graph is not exact",
         ));
     }
-    let profile_sha256 = sha256_hex(PROFILE_BYTES);
     let activation_sha256 = domain_digest(ACTIVATION_DOMAIN, PROFILE_BYTES);
     Ok(Fixed64CpuActivationStatusV6 {
         profile_id: FIXED64_CPU_QUALIFICATION_V6_PROFILE_ID,
@@ -436,7 +451,13 @@ fn source_checkout_evidence() -> V6Result<String> {
             "native fixed64 CPU v6 source commit identity is invalid",
         ));
     }
-    Ok(oid.to_ascii_lowercase())
+    let oid = oid.to_ascii_lowercase();
+    if oid != BUILD_COMMIT_OID {
+        return Err(NativeFixed64CpuQualificationV6Error::new(
+            "native fixed64 CPU v6 source commit differs from the verified build commit",
+        ));
+    }
+    Ok(oid)
 }
 
 fn cpu_model() -> V6Result<String> {

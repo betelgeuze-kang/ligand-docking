@@ -24,9 +24,9 @@ else:
 
 SCHEMA_ID = "betelgeuze.engine_v2_native_fixed64_cpu_profile/6.0.0"
 PROFILE_ID = "engine_v2_native_fixed64_cpu_synthetic_v6"
-PROFILE_SHA256 = "e6f8cff7f6e2c86f9aae803402cbb73d086f20b17c53f091896f7b32aa883369"
+PROFILE_SHA256 = "c2a6b244feca96dea45733ffd577e86fc648aa6529fe66837d4baff9e36f0204"
 SOURCE_MANIFEST_SHA256 = (
-    "8f428c31e2151bb4a4e3d2211f63b11f9ec487bf7891fd2d28b94f94a7523921"
+    "23bcf8417e18dd397d8fe6a7075f8a15ae3acc322c82353147dc5b16b063b88a"
 )
 SOURCE_COUNT = 192
 PROFILE_RELATIVE_PATH = Path("config/engine_v2_native_fixed64_cpu_profile_v6.json")
@@ -326,8 +326,10 @@ def require_profile_document_v6(
         "account_scoped_exactly_once": True,
         "artifact_and_terminal_persisted_before_return": True,
         "attempt_created_before_host_preflight": True,
+        "build_commit_bound": True,
         "build_source_root_bound": True,
         "caller_supplied_probe_allowed": False,
+        "compiled_activation_profile_verified_at_build": True,
         "compiled_transitive_sources_verified_at_build": True,
         "live_execution_implemented": True,
         "output_path_utf8_required": True,
@@ -646,7 +648,11 @@ def require_activation_source_contract(sources: dict[str, bytes]) -> None:
         "bind_compiled_source_graph(&source_root)",
         "BETELGEUZE_V6_SOURCE_ROOT",
         "cargo:rustc-env={COMPILED_MANIFEST_ENV}",
+        "cargo:rustc-env={COMPILED_PROFILE_ENV}",
+        "cargo:rustc-env={BUILD_COMMIT_ENV}",
         "cargo:rustc-env={VERIFIED_SOURCE_ROOT_ENV}",
+        "committed_blob(source_root, commit_oid, PROFILE_RELATIVE_PATH)",
+        "canonical_profile, PACKAGED_PROFILE_BYTES",
         "cargo:rerun-if-changed={}",
         "sha256_hex(&raw)",
         "row.sha256,",
@@ -693,7 +699,10 @@ def require_activation_source_contract(sources: dict[str, bytes]) -> None:
         "output filename cannot support atomic staging",
         "../assets/original-Cargo.toml",
         "COMPILED_SOURCE_MANIFEST_SHA256",
+        "COMPILED_PROFILE_SHA256",
+        "BUILD_COMMIT_OID",
         "VERIFIED_SOURCE_ROOT",
+        "source commit differs from the verified build commit",
         "post_measurement_host_invariant_failed",
         "path.to_str().is_none()",
         "profile state binding changed",

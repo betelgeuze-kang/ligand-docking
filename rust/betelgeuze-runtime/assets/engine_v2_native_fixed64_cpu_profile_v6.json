@@ -130,8 +130,10 @@
     "account_scoped_exactly_once": true,
     "artifact_and_terminal_persisted_before_return": true,
     "attempt_created_before_host_preflight": true,
+    "build_commit_bound": true,
     "build_source_root_bound": true,
     "caller_supplied_probe_allowed": false,
+    "compiled_activation_profile_verified_at_build": true,
     "compiled_transitive_sources_verified_at_build": true,
     "live_execution_implemented": true,
     "output_path_utf8_required": true,
@@ -153,9 +155,9 @@
     "cargo_manifest_sha256": "d230b8a374197ab667dabb8fe89a7079fab2c12fcede14ef3de380e11ef6bce4",
     "native_binary_source_sha256": "4407b433ebbb6508f0caf2715d3fe2b34f0b6667e82601cd4f39f075a625a871",
     "native_qualification_source_sha256": "8d36897aa72c0608b5cb5ad6a06d2ab1c090cd00ebdf6f9d811b2f8afc80f9d7",
-    "native_runner_source_sha256": "c354aa60ff77fa61eab6f0c9f4981a578eed452db64e78eaa8ccc11fea99d331",
+    "native_runner_source_sha256": "9c05a17d93eea50ed5591c7b5137db827f82df24f2d055b45da2fcfa05350a98",
     "predecessor_archive_sha256": "9e4042d08b4971cbd218f0afaa7a994892f89f3d256e32ed505129af078cd512",
-    "transitive_source_manifest_sha256": "8f428c31e2151bb4a4e3d2211f63b11f9ec487bf7891fd2d28b94f94a7523921"
+    "transitive_source_manifest_sha256": "23bcf8417e18dd397d8fe6a7075f8a15ae3acc322c82353147dc5b16b063b88a"
   },
   "status": "native_activation_implementation_frozen_execution_not_consumed"
 }

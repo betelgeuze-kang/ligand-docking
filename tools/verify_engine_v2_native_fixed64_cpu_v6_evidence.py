@@ -418,7 +418,8 @@ def _require_fixture(value: object, *, expected_id: str) -> dict[str, object]:
     violations = numeric["tolerance_violation_count"]
     first_violation = numeric["first_violation_index"]
     if (
-        numeric["compared_f64_count"] != 28544
+        type(numeric["compared_f64_count"]) is not int
+        or numeric["compared_f64_count"] != 28544
         or type(violations) is not int
         or violations < 0
         or (violations == 0 and first_violation is not None)

@@ -285,6 +285,19 @@ def test_compile_time_transitive_source_binding_is_required() -> None:
         require_activation_source_contract(sources)
 
 
+def test_compile_time_activation_profile_and_commit_binding_is_required() -> None:
+    _, _, _, _, sources = _real_evidence()
+    sources = dict(sources)
+    key = verifier.BUILD_SOURCE_RELATIVE_PATH.as_posix()
+    sources[key] = sources[key].replace(
+        b"committed_blob(source_root, commit_oid, PROFILE_RELATIVE_PATH)",
+        b"canonical_profile.clone()",
+        1,
+    )
+    with pytest.raises(NativeFixed64CPUProfileV6Error, match="compile-time source"):
+        require_activation_source_contract(sources)
+
+
 def test_binary_cannot_accept_caller_supplied_probe_configuration() -> None:
     _, _, _, _, sources = _real_evidence()
     sources = dict(sources)

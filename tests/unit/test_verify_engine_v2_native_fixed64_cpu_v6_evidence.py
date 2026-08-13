@@ -471,6 +471,29 @@ def test_measured_fixture_rejects_impossible_scalar_types_and_ranges(
     _require_mutated_artifact_fails(artifact, match="unsigned integer")
 
 
+def test_measured_fixture_rejects_float_numeric_parity_count() -> None:
+    attempt_raw = _envelope(_attempt(), ATTEMPT_DOMAIN)
+    attempt_projection_raw = json.dumps(
+        _attempt(),
+        allow_nan=False,
+        ensure_ascii=True,
+        separators=(",", ":"),
+    ).encode("ascii")
+    artifact = _artifact(
+        attempt_raw,
+        _domain(ATTEMPT_DOMAIN, attempt_projection_raw),
+        passed=True,
+    )
+    fixtures = artifact["fixtures"]
+    assert isinstance(fixtures, list)
+    fixture = fixtures[0]
+    assert isinstance(fixture, dict)
+    numeric = fixture["numeric_parity"]
+    assert isinstance(numeric, dict)
+    numeric["compared_f64_count"] = 28544.0
+    _require_mutated_artifact_fails(artifact, match="numeric parity counts")
+
+
 def test_artifact_receipt_tamper_fails_closed() -> None:
     attempt_raw, artifact_raw, terminal_raw = _evidence(passed=False)
     artifact_raw = artifact_raw.replace(b'"source_checkout', b'"source_checkouu', 1)

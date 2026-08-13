@@ -9,12 +9,12 @@ unchanged.
 
 The profile is
 `config/engine_v2_native_fixed64_cpu_profile_v6.json`. Its exact SHA-256 is
-`e6f8cff7f6e2c86f9aae803402cbb73d086f20b17c53f091896f7b32aa883369`.
+`c2a6b244feca96dea45733ffd577e86fc648aa6529fe66837d4baff9e36f0204`.
 The 192-input native/Rust compiler manifest is
 `config/engine_v2_native_fixed64_cpu_profile_v6_sources.json`, SHA-256
-`8f428c31e2151bb4a4e3d2211f63b11f9ec487bf7891fd2d28b94f94a7523921`.
+`23bcf8417e18dd397d8fe6a7075f8a15ae3acc322c82353147dc5b16b063b88a`.
 The domain-bound activation SHA-256 is
-`13bdeb2d7db484847fec61a9a458ceca1ef16d189bf481c8e9828878390cc289`.
+`7d95a36360b597ec4ba225de9aa0847d4e8a9dfff1182a14319ec36050f59547`.
 
 The standalone `betelgeuze-runtime` crate packages byte-identical mirrors of
 the profile, predecessor archive, source manifest, original pre-normalization
@@ -31,6 +31,10 @@ normalized manifest or compile stale transitive sources and remain activatable.
 The verified canonical source root is embedded into the binary, so packaged
 preflight and post-measurement checks return to the same exact checkout rather
 than Cargo's normalized package staging directory.
+The build also reads the exact profile and source-manifest blobs from the Git
+commit, rejects worktree substitutions, and embeds that commit plus the profile
+digest. Runtime activation requires the embedded profile digest, and preflight
+requires the source checkout to remain at the exact build commit.
 
 ## Transaction boundary
 

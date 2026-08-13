@@ -466,9 +466,9 @@
       "sha256": "d230b8a374197ab667dabb8fe89a7079fab2c12fcede14ef3de380e11ef6bce4"
     },
     {
-      "byte_count": 6706,
+      "byte_count": 9715,
       "path": "rust/betelgeuze-runtime/build.rs",
-      "sha256": "03407fc57355c98838e69dcadc04b9982e54507b8313d60521bd764390a03f34"
+      "sha256": "14e530f98bf40f474b2321fe2c92ab5f7b0a0b5dd82b2cb6fd97a5f217948bac"
     },
     {
       "byte_count": 5835,
@@ -506,9 +506,9 @@
       "sha256": "8d36897aa72c0608b5cb5ad6a06d2ab1c090cd00ebdf6f9d811b2f8afc80f9d7"
     },
     {
-      "byte_count": 82264,
+      "byte_count": 83102,
       "path": "rust/betelgeuze-runtime/src/qualification_v6.rs",
-      "sha256": "c354aa60ff77fa61eab6f0c9f4981a578eed452db64e78eaa8ccc11fea99d331"
+      "sha256": "9c05a17d93eea50ed5591c7b5137db827f82df24f2d055b45da2fcfa05350a98"
     },
     {
       "byte_count": 29008,

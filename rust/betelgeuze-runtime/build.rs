@@ -1,15 +1,21 @@
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use sha2::{Digest as _, Sha256};
 
 const SOURCE_MANIFEST_RELATIVE_PATH: &str =
     "config/engine_v2_native_fixed64_cpu_profile_v6_sources.json";
+const PROFILE_RELATIVE_PATH: &str = "config/engine_v2_native_fixed64_cpu_profile_v6.json";
 const PACKAGED_SOURCE_MANIFEST_BYTES: &[u8] =
     include_bytes!("assets/engine_v2_native_fixed64_cpu_profile_v6_sources.json");
+const PACKAGED_PROFILE_BYTES: &[u8] =
+    include_bytes!("assets/engine_v2_native_fixed64_cpu_profile_v6.json");
 const COMPILED_MANIFEST_ENV: &str = "BETELGEUZE_V6_COMPILED_SOURCE_MANIFEST_SHA256";
 const COMPILED_SOURCE_COUNT_ENV: &str = "BETELGEUZE_V6_COMPILED_SOURCE_COUNT";
+const COMPILED_PROFILE_ENV: &str = "BETELGEUZE_V6_COMPILED_PROFILE_SHA256";
+const BUILD_COMMIT_ENV: &str = "BETELGEUZE_V6_BUILD_COMMIT_OID";
 const VERIFIED_SOURCE_ROOT_ENV: &str = "BETELGEUZE_V6_VERIFIED_SOURCE_ROOT";
 
 #[derive(Debug)]
@@ -115,6 +121,65 @@ fn discover_source_root(manifest_dir: &Path) -> Option<PathBuf> {
     })
 }
 
+fn git_output(source_root: &Path, arguments: &[&str]) -> Vec<u8> {
+    let output = Command::new("git")
+        .args(arguments)
+        .current_dir(source_root)
+        .env_remove("GIT_DIR")
+        .env_remove("GIT_WORK_TREE")
+        .env_remove("GIT_INDEX_FILE")
+        .env_remove("GIT_OBJECT_DIRECTORY")
+        .env_remove("GIT_ALTERNATE_OBJECT_DIRECTORIES")
+        .output()
+        .expect("git is required to bind the v6 build commit");
+    assert!(
+        output.status.success() && output.stderr.is_empty(),
+        "v6 build git evidence failed closed"
+    );
+    output.stdout
+}
+
+fn committed_blob(source_root: &Path, commit_oid: &str, relative: &str) -> Vec<u8> {
+    let object = format!("{commit_oid}:{relative}");
+    git_output(source_root, &["cat-file", "blob", &object])
+}
+
+fn bind_activation_snapshot(source_root: &Path, canonical_manifest: &[u8]) -> (String, String) {
+    let raw_oid = git_output(source_root, &["rev-parse", "--verify", "HEAD"]);
+    let commit_oid = std::str::from_utf8(&raw_oid)
+        .expect("v6 build commit must be UTF-8")
+        .trim_end_matches('\n');
+    assert!(
+        commit_oid.len() == 40
+            && commit_oid
+                .bytes()
+                .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase()),
+        "v6 build commit identity is invalid"
+    );
+    assert_eq!(
+        canonical_manifest,
+        committed_blob(source_root, commit_oid, SOURCE_MANIFEST_RELATIVE_PATH),
+        "v6 source manifest differs from the exact build commit"
+    );
+    let canonical_profile_path = source_root.join(PROFILE_RELATIVE_PATH);
+    println!(
+        "cargo:rerun-if-changed={}",
+        canonical_profile_path.display()
+    );
+    let canonical_profile =
+        fs::read(&canonical_profile_path).expect("canonical v6 profile is unavailable");
+    assert_eq!(
+        canonical_profile,
+        committed_blob(source_root, commit_oid, PROFILE_RELATIVE_PATH),
+        "v6 activation profile differs from the exact build commit"
+    );
+    assert_eq!(
+        canonical_profile, PACKAGED_PROFILE_BYTES,
+        "packaged v6 activation profile drifted from the build checkout"
+    );
+    (commit_oid.to_owned(), sha256_hex(&canonical_profile))
+}
+
 fn bind_compiled_source_graph(source_root: &Path) -> (String, usize) {
     let canonical_manifest_path = source_root.join(SOURCE_MANIFEST_RELATIVE_PATH);
     println!(
@@ -165,10 +230,16 @@ fn main() {
         "v6 builds require the exact source checkout; set BETELGEUZE_V6_SOURCE_ROOT for packaged verification",
     );
     let (manifest_sha256, source_count) = bind_compiled_source_graph(&source_root);
+    let canonical_manifest = fs::read(source_root.join(SOURCE_MANIFEST_RELATIVE_PATH))
+        .expect("canonical v6 source manifest is unavailable");
+    let (build_commit_oid, profile_sha256) =
+        bind_activation_snapshot(&source_root, &canonical_manifest);
     let source_root_text = source_root
         .to_str()
         .expect("v6 verified source root must be UTF-8");
     println!("cargo:rustc-env={COMPILED_MANIFEST_ENV}={manifest_sha256}");
     println!("cargo:rustc-env={COMPILED_SOURCE_COUNT_ENV}={source_count}");
+    println!("cargo:rustc-env={COMPILED_PROFILE_ENV}={profile_sha256}");
+    println!("cargo:rustc-env={BUILD_COMMIT_ENV}={build_commit_oid}");
     println!("cargo:rustc-env={VERIFIED_SOURCE_ROOT_ENV}={source_root_text}");
 }

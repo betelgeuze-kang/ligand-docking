@@ -204,6 +204,7 @@ NATIVE_FIXED64_CPU_V5_FALSE_RESTRICTION_KEYS = (
     "test_double_production_authority_allowed",
 )
 NATIVE_FIXED64_CPU_V6_CONTRACT_PATHS = (
+    ".github/workflows/ci-native-hip-safe-trusted.yml",
     ".github/workflows/ci-engine-v2-release-candidate.yml",
     "config/engine_v2_native_fixed64_cpu_profile_v5_archive.json",
     "config/engine_v2_native_fixed64_cpu_profile_v6.json",
@@ -895,6 +896,9 @@ def _native_fixed64_cpu_v6_authority_is_fail_closed(repo_root: Path) -> bool:
     release_workflow_path = (
         repo_root / ".github/workflows/ci-engine-v2-release-candidate.yml"
     )
+    hip_workflow_path = (
+        repo_root / ".github/workflows/ci-native-hip-safe-trusted.yml"
+    )
     wrapper_lock_path = repo_root / "rust_engine_v2/Cargo.lock"
     try:
         raw = profile_path.read_bytes()
@@ -936,6 +940,7 @@ def _native_fixed64_cpu_v6_authority_is_fail_closed(repo_root: Path) -> bool:
         runner = runner_path.read_text(encoding="utf-8")
         binary = binary_path.read_text(encoding="utf-8")
         release_workflow = release_workflow_path.read_text(encoding="utf-8")
+        hip_workflow = hip_workflow_path.read_text(encoding="utf-8")
         wrapper_lock = wrapper_lock_path.read_text(encoding="utf-8")
     except (OSError, UnicodeError, ValueError):
         return False
@@ -986,7 +991,10 @@ def _native_fixed64_cpu_v6_authority_is_fail_closed(repo_root: Path) -> bool:
         and runner_contract.get("artifact_and_terminal_persisted_before_return")
         is True
         and runner_contract.get("caller_supplied_probe_allowed") is False
+        and runner_contract.get("build_commit_bound") is True
         and runner_contract.get("build_source_root_bound") is True
+        and runner_contract.get("compiled_activation_profile_verified_at_build")
+        is True
         and runner_contract.get("compiled_transitive_sources_verified_at_build")
         is True
         and runner_contract.get("output_path_utf8_required") is True
@@ -1001,6 +1009,10 @@ def _native_fixed64_cpu_v6_authority_is_fail_closed(repo_root: Path) -> bool:
         )
         and all(
             release_workflow.count(path) == 4
+            for path in NATIVE_FIXED64_CPU_V6_COMPILE_BOUND_CONFIG_PATHS
+        )
+        and all(
+            hip_workflow.count(path) == 1
             for path in NATIVE_FIXED64_CPU_V6_COMPILE_BOUND_CONFIG_PATHS
         )
         and re.search(
@@ -1050,7 +1062,11 @@ def _native_fixed64_cpu_v6_authority_is_fail_closed(repo_root: Path) -> bool:
         and "bind_compiled_source_graph(&source_root)" in build_source
         and "BETELGEUZE_V6_SOURCE_ROOT" in build_source
         and "cargo:rustc-env={COMPILED_MANIFEST_ENV}" in build_source
+        and "cargo:rustc-env={COMPILED_PROFILE_ENV}" in build_source
+        and "cargo:rustc-env={BUILD_COMMIT_ENV}" in build_source
         and "cargo:rustc-env={VERIFIED_SOURCE_ROOT_ENV}" in build_source
+        and "committed_blob(source_root, commit_oid, PROFILE_RELATIVE_PATH)"
+        in build_source
         and "decision_returned_only_after_terminal_persistence" in runner
         and runner.count("run_native_fixed64_cpu_qualification_successor(") == 1
         and "--verify-activation" in binary
