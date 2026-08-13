@@ -15,6 +15,7 @@ from tools.verify_engine_v2_native_fixed64_cpu_profile_v4 import (
     NATIVE_VENDOR_COPY_SOURCE_RELATIVE_PATHS,
     REPOSITORY_CARGO_CONFIG_RELATIVE_PATHS,
     REPOSITORY_RUST_TOOLCHAIN_OVERRIDE_RELATIVE_PATHS,
+    RUST_BOUND_EMBEDDED_INPUT_BINDINGS,
     RUST_BOUND_CARGO_TARGET_SOURCE_RELATIVE_PATHS,
     RUST_BOUND_BUILD_SCRIPT_RELATIVE_PATHS,
     RUST_BOUND_LOCAL_DEPENDENCY_BINDINGS,
@@ -25,6 +26,7 @@ from tools.verify_engine_v2_native_fixed64_cpu_profile_v4 import (
     discover_native_vendor_tree_paths,
     discover_rust_cargo_target_source_paths,
     discover_rust_compiled_source_tree_paths,
+    discover_rust_embedded_input_bindings,
     discover_rust_package_build_script_paths,
     read_bound_source_bytes,
     require_compiled_profile_binding,
@@ -92,7 +94,7 @@ def test_canonical_native_fixed64_cpu_profile_v4_is_frozen() -> None:
     profile = require_profile_document(raw)
 
     assert hashlib.sha256(raw).hexdigest() == (
-        "af7fba661a6f7dbb1ad8b01e37e34121e286115c4a67531a411134fd37cdbf7a"
+        "09a7d27446c7b6283798c6f1c6ba6a3c36ac63582c65b4897657e409ed4536c8"
     )
     assert profile["profile_id"] == "engine_v2_native_fixed64_cpu_synthetic_v4"
     assert all(value is False for value in profile["authority"].values())
@@ -556,6 +558,35 @@ def test_profile_v4_rejects_runtime_module_drift(target: str) -> None:
         )
 
 
+@pytest.mark.parametrize(
+    "target",
+    (
+        "rust/reference-dynamics/fixtures/dynamics_v1.tsv",
+        "rust/reference-physics/fixtures/exact_energy_v1.tsv",
+    ),
+)
+def test_profile_v4_rejects_embedded_fixture_drift(target: str) -> None:
+    profile = require_profile_document(_PROFILE.read_bytes())
+    changed = dict(_TRANSITIVE_SOURCES)
+    changed[target] += b"\n# embedded fixture semantic drift\n"
+
+    with pytest.raises(
+        NativeFixed64CPUProfileV4Error,
+        match="transitive source manifest",
+    ):
+        require_compiled_profile_binding(
+            profile,
+            _QUALIFICATION_SOURCE.read_bytes(),
+            _DOCKING_SOURCE.read_bytes(),
+            _NATIVE_PIPELINE_SOURCE.read_bytes(),
+            _PROBE_SOURCE.read_bytes(),
+            changed,
+            _VENDOR_TREE_PATHS,
+            _RUST_SOURCE_TREE_PATHS,
+            _RUST_BUILD_SCRIPT_PATHS,
+        )
+
+
 def test_profile_v4_rejects_unbound_rust_source() -> None:
     with pytest.raises(
         NativeFixed64CPUProfileV4Error,
@@ -570,6 +601,14 @@ def test_profile_v4_discovers_exact_rust_source_tree() -> None:
     assert discover_rust_compiled_source_tree_paths(_ROOT) == tuple(
         sorted(_RUST_SOURCE_TREE_PATHS)
     )
+
+
+def test_profile_v4_discovers_exact_rust_embedded_inputs() -> None:
+    observed = discover_rust_embedded_input_bindings(
+        _ROOT,
+        _RUST_SOURCE_TREE_PATHS + _RUST_BUILD_SCRIPT_PATHS,
+    )
+    assert tuple(sorted(observed)) == tuple(sorted(RUST_BOUND_EMBEDDED_INPUT_BINDINGS))
 
 
 def test_profile_v4_scans_only_present_nonempty_rust_source_roots() -> None:
@@ -731,6 +770,96 @@ def test_profile_v4_rejects_cargo_patch_table_before_metadata(
         discover_rust_cargo_target_source_paths(copied_root)
 
 
+@pytest.mark.parametrize(
+    "root_assignment",
+    (
+        'patch.crates-io.sha2 = { path = "/external/sha2" }',
+        'patch = { crates-io = { sha2 = { path = "/external/sha2" } } }',
+        'replace = { "sha2:0.10.9" = { path = "/external/sha2" } }',
+    ),
+)
+def test_profile_v4_rejects_cargo_root_assignment_before_metadata(
+    tmp_path: Path,
+    root_assignment: str,
+) -> None:
+    copied_root = tmp_path / "copied-repository"
+    shutil.copytree(
+        _ROOT / "rust",
+        copied_root / "rust",
+        ignore=shutil.ignore_patterns("target"),
+    )
+    workspace_manifest = copied_root / "rust/Cargo.toml"
+    workspace_manifest.write_text(
+        root_assignment
+        + "\n"
+        + workspace_manifest.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        NativeFixed64CPUProfileV4Error,
+        match="Cargo manifest contains an unbound root assignment",
+    ):
+        discover_rust_cargo_target_source_paths(copied_root)
+
+
+def test_profile_v4_rejects_rust_path_attribute_outside_inventory(
+    tmp_path: Path,
+) -> None:
+    copied_root = tmp_path / "copied-repository"
+    shutil.copytree(
+        _ROOT / "rust",
+        copied_root / "rust",
+        ignore=shutil.ignore_patterns("target"),
+    )
+    runtime_root = copied_root / "rust/betelgeuze-runtime"
+    (runtime_root / "unbound.rs").write_text("pub const VALUE: u8 = 1;\n")
+    crate_root = runtime_root / "src/lib.rs"
+    crate_root.write_text(
+        '#[path = "../unbound.rs"]\nmod unbound;\n'
+        + crate_root.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        NativeFixed64CPUProfileV4Error,
+        match="Rust path attribute source expansion is forbidden",
+    ):
+        discover_rust_compiled_source_tree_paths(copied_root)
+
+
+@pytest.mark.parametrize(
+    ("macro", "expected_error"),
+    (
+        ("include_str", "embedded compiler input binding set changed"),
+        ("include_bytes", "embedded compiler input binding set changed"),
+        ("include", "include! source expansion is forbidden"),
+    ),
+)
+def test_profile_v4_rejects_unbound_rust_include_input(
+    tmp_path: Path,
+    macro: str,
+    expected_error: str,
+) -> None:
+    copied_root = tmp_path / "copied-repository"
+    shutil.copytree(
+        _ROOT / "rust",
+        copied_root / "rust",
+        ignore=shutil.ignore_patterns("target"),
+    )
+    runtime_root = copied_root / "rust/betelgeuze-runtime"
+    (runtime_root / "unbound.rs").write_text("pub const VALUE: u8 = 1;\n")
+    crate_root = runtime_root / "src/lib.rs"
+    crate_root.write_text(
+        f'const _: &[u8] = {macro}!("../unbound.rs");\n'
+        + crate_root.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(NativeFixed64CPUProfileV4Error, match=expected_error):
+        discover_rust_compiled_source_tree_paths(copied_root)
+
+
 def test_profile_v4_rejects_symlinked_rust_source_subdirectory(
     tmp_path: Path,
 ) -> None:
@@ -826,6 +955,28 @@ def test_profile_v4_release_non_test_activation_check_is_in_native_ci() -> None:
 def test_profile_v4_native_workflow_change_triggers_focused_suite() -> None:
     source = _FOCUSED_WORKFLOW.read_text(encoding="utf-8")
     assert source.count('- ".github/workflows/ci-native-compute-abi.yml"') == 1
+
+
+@pytest.mark.parametrize(
+    "relative",
+    (
+        Path(".cargo/config"),
+        Path(".cargo/config.toml"),
+        Path("rust-toolchain"),
+        Path("rust-toolchain.toml"),
+    ),
+)
+def test_profile_v4_root_compiler_overrides_trigger_and_reach_ci_checkout(
+    relative: Path,
+) -> None:
+    quoted_trigger = f'      - "{relative.as_posix()}"'
+    sparse_entry = f"            {relative.as_posix()}\n"
+    focused = _FOCUSED_WORKFLOW.read_text(encoding="utf-8")
+    native = _NATIVE_WORKFLOW.read_text(encoding="utf-8")
+    assert focused.count(quoted_trigger) == 1
+    assert focused.count(sparse_entry) == 1
+    assert native.count(quoted_trigger) == 2
+    assert native.count(sparse_entry) == 1
 
 
 @pytest.mark.parametrize("relative", REPOSITORY_CARGO_CONFIG_RELATIVE_PATHS)
@@ -937,7 +1088,7 @@ def test_profile_v4_cli_reports_non_consuming_authority_false() -> None:
         "fixture_count": 2,
         "profile_id": "engine_v2_native_fixed64_cpu_synthetic_v4",
         "profile_sha256": (
-            "af7fba661a6f7dbb1ad8b01e37e34121e286115c4a67531a411134fd37cdbf7a"
+            "09a7d27446c7b6283798c6f1c6ba6a3c36ac63582c65b4897657e409ed4536c8"
         ),
         "reservation_created": False,
         "status": "verified",

@@ -35,6 +35,10 @@ on:
       - "rust/reference-physics/**"
       - "rust/Cargo.toml"
       - "rust/Cargo.lock"
+      - ".cargo/config"
+      - ".cargo/config.toml"
+      - "rust-toolchain"
+      - "rust-toolchain.toml"
       - "include/**"
       - "native/**"
       - "LICENSE"
@@ -172,6 +176,10 @@ jobs:
             rust/reference-physics
             rust/Cargo.toml
             rust/Cargo.lock
+            .cargo/config
+            .cargo/config.toml
+            rust-toolchain
+            rust-toolchain.toml
             include
             native
             LICENSE

@@ -8,6 +8,10 @@ on:
       - "include/betelgeuze/**"
       - "native/**"
       - "rust/**"
+      - ".cargo/config"
+      - ".cargo/config.toml"
+      - "rust-toolchain"
+      - "rust-toolchain.toml"
       - "config/engine_v2_native_fixed64_cpu_profile_v4.json"
       - "tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py"
       - ".github/workflows/ci-native-compute-abi.yml"
@@ -18,6 +22,10 @@ on:
       - "include/betelgeuze/**"
       - "native/**"
       - "rust/**"
+      - ".cargo/config"
+      - ".cargo/config.toml"
+      - "rust-toolchain"
+      - "rust-toolchain.toml"
       - "config/engine_v2_native_fixed64_cpu_profile_v4.json"
       - "tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py"
       - ".github/workflows/ci-native-compute-abi.yml"
@@ -51,6 +59,10 @@ jobs:
             include
             native
             rust
+            .cargo/config
+            .cargo/config.toml
+            rust-toolchain
+            rust-toolchain.toml
             config/engine_v2_native_fixed64_cpu_profile_v4.json
             tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py
 

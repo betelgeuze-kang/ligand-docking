@@ -110,6 +110,33 @@ RUST_PACKAGE_ROOT_RELATIVE_PATHS = (
     Path("rust/reference-physics"),
 )
 RUST_BOUND_BUILD_SCRIPT_RELATIVE_PATHS = (Path("rust/betelgeuze-sys/build.rs"),)
+RUST_BOUND_EMBEDDED_INPUT_BINDINGS = (
+    (
+        "rust/betelgeuze-runtime/tests/cpu_oracle_parity.rs",
+        "include_str",
+        "rust/betelgeuze-runtime/Cargo.toml",
+    ),
+    (
+        "rust/betelgeuze-runtime/tests/dynamics_oracle_parity.rs",
+        "include_str",
+        "rust/betelgeuze-runtime/Cargo.toml",
+    ),
+    (
+        "rust/reference-dynamics/tests/frozen_fixtures.rs",
+        "include_str",
+        "rust/reference-dynamics/fixtures/dynamics_v1.tsv",
+    ),
+    (
+        "rust/reference-dynamics/tests/properties.rs",
+        "include_str",
+        "rust/reference-dynamics/fixtures/dynamics_v1.tsv",
+    ),
+    (
+        "rust/reference-physics/tests/frozen_fixtures.rs",
+        "include_str",
+        "rust/reference-physics/fixtures/exact_energy_v1.tsv",
+    ),
+)
 RUST_BOUND_CARGO_TARGET_SOURCE_RELATIVE_PATHS = tuple(
     Path(value)
     for value in (
@@ -332,6 +359,7 @@ NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS = (
     Path("rust/betelgeuze-docking-search/tests/search_contract.rs"),
     Path("rust/betelgeuze-docking-search/tests/short_range.rs"),
     Path("rust/reference-dynamics/Cargo.toml"),
+    Path("rust/reference-dynamics/fixtures/dynamics_v1.tsv"),
     Path("rust/reference-dynamics/src/checkpoint.rs"),
     Path("rust/reference-dynamics/src/constraints.rs"),
     Path("rust/reference-dynamics/src/dynamics.rs"),
@@ -341,6 +369,7 @@ NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS = (
     Path("rust/reference-dynamics/tests/frozen_fixtures.rs"),
     Path("rust/reference-dynamics/tests/properties.rs"),
     Path("rust/reference-physics/Cargo.toml"),
+    Path("rust/reference-physics/fixtures/exact_energy_v1.tsv"),
     Path("rust/reference-physics/src/geometry.rs"),
     Path("rust/reference-physics/src/lib.rs"),
     Path("rust/reference-physics/src/model.rs"),
@@ -576,7 +605,77 @@ def discover_rust_compiled_source_tree_paths(root: Path) -> tuple[str, ...]:
         _fail("Rust compiled source tree contains an invalid Rust source")
     observed_paths = tuple(path.relative_to(root).as_posix() for path in source_entries)
     require_rust_compiled_source_tree_paths(observed_paths)
+    discover_rust_embedded_input_bindings(
+        root,
+        observed_paths
+        + tuple(path.as_posix() for path in RUST_BOUND_BUILD_SCRIPT_RELATIVE_PATHS),
+    )
     return observed_paths
+
+
+_RUST_INCLUDE_MACRO_START = re.compile(
+    r"\b(?P<macro>include(?:_str|_bytes)?)\s*!\s*\("
+)
+_RUST_STATIC_INCLUDE_MACRO = re.compile(
+    r'\b(?P<macro>include(?:_str|_bytes)?)\s*!\s*\(\s*'
+    r'"(?P<path>[A-Za-z0-9_./-]+)"\s*\)'
+)
+_RUST_PATH_ATTRIBUTE = re.compile(r"#\s*\[[^\]]*\bpath\s*=", re.DOTALL)
+
+
+def require_rust_embedded_input_bindings(
+    observed_bindings: tuple[tuple[str, str, str], ...],
+) -> None:
+    expected = tuple(sorted(RUST_BOUND_EMBEDDED_INPUT_BINDINGS))
+    if (
+        len(observed_bindings) != len(set(observed_bindings))
+        or tuple(sorted(observed_bindings)) != expected
+    ):
+        _fail("Rust embedded compiler input binding set changed")
+
+
+def discover_rust_embedded_input_bindings(
+    root: Path,
+    source_paths: tuple[str, ...],
+) -> tuple[tuple[str, str, str], ...]:
+    observed: list[tuple[str, str, str]] = []
+    for source_text in source_paths:
+        source_relative = Path(source_text)
+        try:
+            source = read_bound_source_bytes(root, source_relative).decode("utf-8")
+        except UnicodeError as exc:
+            raise NativeFixed64CPUProfileV4Error(
+                "Rust compiler source is not valid UTF-8"
+            ) from exc
+        if _RUST_PATH_ATTRIBUTE.search(source) is not None:
+            _fail("Rust path attribute source expansion is forbidden")
+        starts = tuple(_RUST_INCLUDE_MACRO_START.finditer(source))
+        static_includes = tuple(_RUST_STATIC_INCLUDE_MACRO.finditer(source))
+        if tuple((match.start(), match.group("macro")) for match in starts) != tuple(
+            (match.start(), match.group("macro")) for match in static_includes
+        ):
+            _fail("Rust include macro must use one bound static path literal")
+        for match in static_includes:
+            macro = match.group("macro")
+            if macro == "include":
+                _fail("Rust include! source expansion is forbidden")
+            literal = Path(match.group("path"))
+            if literal.is_absolute():
+                _fail("Rust embedded compiler input path is absolute")
+            normalized = Path(
+                os.path.normpath((source_relative.parent / literal).as_posix())
+            )
+            if (
+                normalized.is_absolute()
+                or not normalized.parts
+                or normalized.parts[0] == ".."
+            ):
+                _fail("Rust embedded compiler input escapes the repository")
+            read_bound_source_bytes(root, normalized)
+            observed.append((source_text, macro, normalized.as_posix()))
+    observed_bindings = tuple(observed)
+    require_rust_embedded_input_bindings(observed_bindings)
+    return observed_bindings
 
 
 def require_rust_package_build_script_paths(
@@ -678,12 +777,18 @@ def require_rust_cargo_manifest_table_bindings(
                 "Cargo manifest is not valid UTF-8"
             ) from exc
         observed_tables: list[str] = []
+        first_table_seen = False
         for line in source.splitlines():
             candidate = line.strip()
+            if not candidate or candidate.startswith("#"):
+                continue
             if not candidate.startswith("["):
+                if not first_table_seen:
+                    _fail("Cargo manifest contains an unbound root assignment")
                 continue
             if re.fullmatch(r"\[[A-Za-z0-9_.-]+\]", candidate) is None:
                 _fail("Cargo manifest contains an invalid or unbound table")
+            first_table_seen = True
             observed_tables.append(candidate)
         if tuple(observed_tables) != expected_tables:
             _fail("Cargo manifest table set contains an unbound or missing input")
