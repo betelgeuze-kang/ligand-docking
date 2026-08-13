@@ -42,8 +42,10 @@ from tools.audit_engine_v2_ci_authority import (
     NATIVE_FIXED64_CPU_V4_FORBIDDEN_WORKFLOW_TOKENS,
     NATIVE_FIXED64_CPU_V4_REQUIRED_TOKEN_COUNTS,
     NATIVE_FIXED64_CPU_V4_REQUIRED_TOKENS,
+    NATIVE_FIXED64_CPU_V4_SHELL_STARTUP_ENV_KEYS,
     NATIVE_FIXED64_CPU_V4_SHELL_EXPANSION_MARKERS,
     NATIVE_FIXED64_CPU_V4_STATIC_TARGET_PATTERN,
+    NATIVE_FIXED64_CPU_V4_TRUSTED_BOURNE_SHELLS,
     ONE_SHOT_CONTRACT_PATHS,
     ONE_SHOT_REQUIRED_TOKENS,
     STANDALONE_PIPELINE_CONTRACT_PATHS,
@@ -1075,6 +1077,47 @@ def test_native_fixed64_cpu_v4_live_binary_is_forbidden_in_local_action_code(
     assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is False
 
 
+def test_native_fixed64_cpu_v4_dynamic_local_action_command_input_fails_closed(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_native_fixed64_cpu_v4_contract(tmp_path)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        encoding="utf-8",
+    )
+    action_dir = tmp_path / ".github/actions/qualify"
+    action_dir.mkdir(parents=True)
+    (action_dir / "action.yml").write_text(
+        "name: qualify\ninputs:\n  command:\n    required: true\n"
+        "runs:\n  using: node20\n  main: index.js\n",
+        encoding="utf-8",
+    )
+    (action_dir / "index.js").write_text(
+        'const core = require("@actions/core");\n'
+        'const { execSync } = require("node:child_process");\n'
+        'execSync(core.getInput("command"));\n',
+        encoding="utf-8",
+    )
+    (tmp_path / ".github/workflows/unrelated.yaml").write_text(
+        "jobs:\n  dynamic-action:\n    steps:\n"
+        "      - uses: ./.github/actions/qualify\n"
+        "        with:\n"
+        "          command: cargo run -p betelgeuze-runtime\n",
+        encoding="utf-8",
+    )
+
+    payload = build_inventory(tmp_path)
+    assert payload["native_fixed64_cpu_v4_github_action_surface_complete"] is True
+    assert (
+        payload[
+            "native_fixed64_cpu_v4_live_qualification_absent_from_github_actions"
+        ]
+        is False
+    )
+    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is False
+
+
 @pytest.mark.parametrize(
     "shell_declaration",
     (
@@ -1131,6 +1174,38 @@ def test_native_fixed64_cpu_v4_custom_shell_command_template_fails_closed(
     unrelated.write_text(
         "jobs:\n  custom-shell:\n    steps:\n"
         "      - shell: bash -c 'cargo run -p betelgeuze-runtime' {0}\n"
+        "        run: echo ready\n",
+        encoding="utf-8",
+    )
+
+    payload = build_inventory(tmp_path)
+    assert (
+        payload[
+            "native_fixed64_cpu_v4_live_qualification_absent_from_github_actions"
+        ]
+        is False
+    )
+    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is False
+
+
+def test_native_fixed64_cpu_v4_repository_shell_path_fails_closed(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_native_fixed64_cpu_v4_contract(tmp_path)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        encoding="utf-8",
+    )
+    shell = tmp_path / "ci/bash"
+    shell.parent.mkdir(parents=True)
+    shell.write_text(
+        "#!/bin/sh\ncargo run -p betelgeuze-runtime\nexec /bin/bash \"$@\"\n",
+        encoding="utf-8",
+    )
+    (tmp_path / ".github/workflows/unrelated.yaml").write_text(
+        "jobs:\n  custom-shell:\n    steps:\n"
+        "      - shell: ./ci/bash {0}\n"
         "        run: echo ready\n",
         encoding="utf-8",
     )
@@ -1306,6 +1381,93 @@ def test_native_fixed64_cpu_v4_shell_interpreter_heredoc_is_audited(
         "          bash <<'EOF'\n"
         "          cargo run -p betelgeuze-runtime\n"
         "          EOF\n",
+        encoding="utf-8",
+    )
+
+    payload = build_inventory(tmp_path)
+    assert (
+        payload[
+            "native_fixed64_cpu_v4_live_qualification_absent_from_github_actions"
+        ]
+        is False
+    )
+    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is False
+
+
+def test_native_fixed64_cpu_v4_dynamic_quoted_interpreter_heredoc_is_audited(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_native_fixed64_cpu_v4_contract(tmp_path)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        encoding="utf-8",
+    )
+    (tmp_path / ".github/workflows/unrelated.yaml").write_text(
+        "jobs:\n  interpreter:\n    steps:\n"
+        "      - run: |\n"
+        "          bash <<'EOF'\n"
+        "          ${{ matrix.command }}\n"
+        "          EOF\n",
+        encoding="utf-8",
+    )
+
+    payload = build_inventory(tmp_path)
+    assert (
+        payload[
+            "native_fixed64_cpu_v4_live_qualification_absent_from_github_actions"
+        ]
+        is False
+    )
+    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is False
+
+
+def test_native_fixed64_cpu_v4_nested_escaped_backticks_are_audited(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_native_fixed64_cpu_v4_contract(tmp_path)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        encoding="utf-8",
+    )
+    (tmp_path / ".github/workflows/unrelated.yaml").write_text(
+        "jobs:\n  nested-backticks:\n    steps:\n"
+        "      - run: |\n"
+        "          echo `echo \\`${{ matrix.command }}\\``\n",
+        encoding="utf-8",
+    )
+
+    payload = build_inventory(tmp_path)
+    assert (
+        payload[
+            "native_fixed64_cpu_v4_live_qualification_absent_from_github_actions"
+        ]
+        is False
+    )
+    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is False
+
+
+def test_native_fixed64_cpu_v4_bash_env_startup_program_fails_closed(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_native_fixed64_cpu_v4_contract(tmp_path)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        encoding="utf-8",
+    )
+    startup = tmp_path / "ci/startup"
+    startup.parent.mkdir(parents=True)
+    startup.write_text(
+        "cargo run -p betelgeuze-runtime\n",
+        encoding="utf-8",
+    )
+    (tmp_path / ".github/workflows/unrelated.yaml").write_text(
+        "jobs:\n  startup:\n    env:\n"
+        "      BASH_ENV: ./ci/startup\n"
+        "    steps:\n"
+        "      - run: echo ready\n",
         encoding="utf-8",
     )
 
@@ -1740,6 +1902,29 @@ def test_native_fixed64_cpu_v4_inventory_constants_are_exact() -> None:
         "stdbuf",
         "sudo",
         "taskset",
+    )
+    assert NATIVE_FIXED64_CPU_V4_TRUSTED_BOURNE_SHELLS == (
+        "bash",
+        "dash",
+        "ksh",
+        "sh",
+        "zsh",
+        "/bin/bash",
+        "/bin/dash",
+        "/bin/ksh",
+        "/bin/sh",
+        "/bin/zsh",
+        "/usr/bin/bash",
+        "/usr/bin/dash",
+        "/usr/bin/ksh",
+        "/usr/bin/sh",
+        "/usr/bin/zsh",
+    )
+    assert NATIVE_FIXED64_CPU_V4_SHELL_STARTUP_ENV_KEYS == (
+        "BASH_ENV",
+        "ENV",
+        "KSH_ENV",
+        "ZDOTDIR",
     )
     assert NATIVE_FIXED64_CPU_V4_FOLDED_RUN_PATTERN.fullmatch("      - run: >2-")
     assert NATIVE_FIXED64_CPU_V4_MAX_WORKFLOW_UTF8_BYTES == 1_048_576

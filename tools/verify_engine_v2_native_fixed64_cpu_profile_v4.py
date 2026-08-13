@@ -23,6 +23,82 @@ NATIVE_PIPELINE_SOURCE_RELATIVE_PATH = Path(
 PROBE_SOURCE_RELATIVE_PATH = Path(
     "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v4.rs"
 )
+NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS = (
+    Path("include/betelgeuze/engine.h"),
+    Path("native/src/context.cpp"),
+    Path("native/src/dynamics/sha256.cpp"),
+    Path("native/src/dynamics/sha256.hpp"),
+    Path("native/src/hip/backend.hpp"),
+    Path("native/src/hip/evaluator.hpp"),
+    Path("native/src/hip/provider.h"),
+    Path("native/src/hip/stub.cpp"),
+    Path("native/src/internal.hpp"),
+    Path("native/src/rust/provider.h"),
+    Path("native/src/docking/fixed64_allocation.cpp"),
+    Path("native/src/docking/fixed64_downstream.cpp"),
+    Path("native/src/docking/fixed64_indexed_so3.cpp"),
+    Path("native/src/docking/fixed64_indexed_so3_provider.h"),
+    Path("native/src/docking/fixed64_pipeline.cpp"),
+    Path("native/src/docking/fixed64_producer.cpp"),
+    Path("native/src/docking/fixed64_refinement_pipeline.cpp"),
+    Path("native/src/docking/fixed64_single_anchor.cpp"),
+    Path("native/src/docking/fixed64_single_anchor_provider.h"),
+    Path("native/src/docking/fixed64_so3.cpp"),
+    Path("native/src/docking/fixed64_so3_reference.hpp"),
+    Path("native/src/docking/geometric_admission.cpp"),
+    Path("native/src/docking/pose_validity.cpp"),
+    Path("native/src/docking/rigid_refinement.cpp"),
+    Path("native/src/docking/scorer_v1.cpp"),
+    Path("native/src/docking/stable_top_k.cpp"),
+    Path("native/src/docking/torsion_v7.cpp"),
+    Path("rust/Cargo.lock"),
+    Path("rust/Cargo.toml"),
+    Path("rust/betelgeuze-sys/Cargo.toml"),
+    Path("rust/betelgeuze-sys/build.rs"),
+    Path("rust/betelgeuze-sys/src/lib.rs"),
+    Path("rust/betelgeuze-runtime/Cargo.toml"),
+    Path("rust/betelgeuze-runtime/src/docking.rs"),
+    Path("rust/betelgeuze-runtime/src/lib.rs"),
+    Path("rust/cpu-kernel/Cargo.toml"),
+    Path("rust/cpu-kernel/src/docking_fixed64_allocation.rs"),
+    Path("rust/cpu-kernel/src/docking_fixed64_indexed_so3.rs"),
+    Path("rust/cpu-kernel/src/docking_fixed64_single_anchor.rs"),
+    Path("rust/cpu-kernel/src/docking_fixed64_so3.rs"),
+    Path("rust/cpu-kernel/src/docking_rigid_refinement.rs"),
+    Path("rust/cpu-kernel/src/docking_torsion_v7.rs"),
+    Path("rust/cpu-kernel/src/kernel.rs"),
+    Path("rust/cpu-kernel/src/lib.rs"),
+    Path("rust/betelgeuze-docking-search/Cargo.toml"),
+    Path("rust/betelgeuze-docking-search/src/anchors.rs"),
+    Path("rust/betelgeuze-docking-search/src/cluster.rs"),
+    Path("rust/betelgeuze-docking-search/src/error.rs"),
+    Path("rust/betelgeuze-docking-search/src/fixed64.rs"),
+    Path("rust/betelgeuze-docking-search/src/fixed64_cluster.rs"),
+    Path("rust/betelgeuze-docking-search/src/fixed64_pipeline.rs"),
+    Path("rust/betelgeuze-docking-search/src/fixed64_placement.rs"),
+    Path("rust/betelgeuze-docking-search/src/fixed64_producer.rs"),
+    Path("rust/betelgeuze-docking-search/src/fixed64_ranking.rs"),
+    Path("rust/betelgeuze-docking-search/src/fixed64_single_anchor.rs"),
+    Path("rust/betelgeuze-docking-search/src/fixed64_validity.rs"),
+    Path("rust/betelgeuze-docking-search/src/geometric_admission.rs"),
+    Path("rust/betelgeuze-docking-search/src/geometry.rs"),
+    Path("rust/betelgeuze-docking-search/src/identity.rs"),
+    Path("rust/betelgeuze-docking-search/src/lib.rs"),
+    Path("rust/betelgeuze-docking-search/src/model.rs"),
+    Path("rust/betelgeuze-docking-search/src/native_hash.rs"),
+    Path("rust/betelgeuze-docking-search/src/prune.rs"),
+    Path("rust/betelgeuze-docking-search/src/receipt.rs"),
+    Path("rust/betelgeuze-docking-search/src/refine.rs"),
+    Path("rust/betelgeuze-docking-search/src/rigid_refinement.rs"),
+    Path("rust/betelgeuze-docking-search/src/scorer_v1.rs"),
+    Path("rust/betelgeuze-docking-search/src/search.rs"),
+    Path("rust/betelgeuze-docking-search/src/sha256.rs"),
+    Path("rust/betelgeuze-docking-search/src/short_range.rs"),
+    Path("rust/betelgeuze-docking-search/src/so3.rs"),
+    Path("rust/betelgeuze-docking-search/src/surface.rs"),
+    Path("rust/betelgeuze-docking-search/src/torsion_refinement.rs"),
+    Path("rust/betelgeuze-docking-search/src/validity.rs"),
+)
 
 
 class NativeFixed64CPUProfileV4Error(ValueError):
@@ -57,6 +133,30 @@ def _canonical_bytes(value: object) -> bytes:
         )
         + "\n"
     ).encode("ascii")
+
+
+def _transitive_source_manifest_sha256(sources: dict[str, bytes]) -> str:
+    expected_paths = tuple(
+        path.as_posix() for path in NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS
+    )
+    if len(expected_paths) != len(set(expected_paths)) or set(sources) != set(
+        expected_paths
+    ):
+        _fail("native transitive source manifest path set changed")
+    if any(type(raw) is not bytes for raw in sources.values()):
+        _fail("native transitive source manifest contains non-byte input")
+    identities = {
+        path: hashlib.sha256(sources[path]).hexdigest() for path in expected_paths
+    }
+    return hashlib.sha256(
+        json.dumps(
+            identities,
+            allow_nan=False,
+            ensure_ascii=True,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("ascii")
+    ).hexdigest()
 
 
 def _exact_keys(value: object, expected: set[str], name: str) -> dict[str, object]:
@@ -201,6 +301,8 @@ def require_profile_document(raw: bytes) -> dict[str, object]:
             "native_probe_source_sha256",
             "native_qualification_source_sha256",
             "native_rust_pipeline_source_sha256",
+            "native_transitive_source_count",
+            "native_transitive_source_manifest_sha256",
             "python_scientific_work_allowed",
             "receptor_context_recreated_inside_samples",
         },
@@ -210,6 +312,10 @@ def require_profile_document(raw: bytes) -> dict[str, object]:
     probe_source_sha256 = core["native_probe_source_sha256"]
     rust_pipeline_source_sha256 = core["native_rust_pipeline_source_sha256"]
     cpp_pipeline_source_sha256 = core["native_cpp_pipeline_source_sha256"]
+    transitive_source_count = core["native_transitive_source_count"]
+    transitive_source_manifest_sha256 = core[
+        "native_transitive_source_manifest_sha256"
+    ]
     if (
         type(qualification_source_sha256) is not str
         or re.fullmatch(r"[0-9a-f]{64}", qualification_source_sha256) is None
@@ -219,6 +325,11 @@ def require_profile_document(raw: bytes) -> dict[str, object]:
         or re.fullmatch(r"[0-9a-f]{64}", rust_pipeline_source_sha256) is None
         or type(cpp_pipeline_source_sha256) is not str
         or re.fullmatch(r"[0-9a-f]{64}", cpp_pipeline_source_sha256) is None
+        or type(transitive_source_count) is not int
+        or transitive_source_count
+        != len(NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS)
+        or type(transitive_source_manifest_sha256) is not str
+        or re.fullmatch(r"[0-9a-f]{64}", transitive_source_manifest_sha256) is None
     ):
         _fail("native measured source identity is not canonical SHA-256")
     if core != {
@@ -240,6 +351,10 @@ def require_profile_document(raw: bytes) -> dict[str, object]:
         "native_probe_source_sha256": probe_source_sha256,
         "native_qualification_source_sha256": qualification_source_sha256,
         "native_rust_pipeline_source_sha256": rust_pipeline_source_sha256,
+        "native_transitive_source_count": transitive_source_count,
+        "native_transitive_source_manifest_sha256": (
+            transitive_source_manifest_sha256
+        ),
         "python_scientific_work_allowed": False,
         "receptor_context_recreated_inside_samples": False,
     }:
@@ -323,6 +438,7 @@ def require_compiled_profile_binding(
     docking_source_raw: bytes,
     native_pipeline_source_raw: bytes,
     probe_source_raw: bytes,
+    transitive_sources_raw: dict[str, bytes],
 ) -> None:
     """Bind the native gate constants and entry point to the frozen JSON."""
 
@@ -367,6 +483,15 @@ def require_compiled_profile_binding(
         "native_cpp_pipeline_source_sha256"
     ):
         _fail("compiled native C++ pipeline source changed from the frozen profile")
+    transitive_digest = _transitive_source_manifest_sha256(transitive_sources_raw)
+    if transitive_digest != core.get("native_transitive_source_manifest_sha256"):
+        _fail("compiled native transitive source manifest changed from the frozen profile")
+    if docking_source_raw != transitive_sources_raw.get(
+        DOCKING_SOURCE_RELATIVE_PATH.as_posix()
+    ) or native_pipeline_source_raw != transitive_sources_raw.get(
+        NATIVE_PIPELINE_SOURCE_RELATIVE_PATH.as_posix()
+    ):
+        _fail("compiled pipeline source inputs are cross-wired from the transitive manifest")
     library_activation_function = re.compile(
         r"pub\s+const\s+fn\s+fixed64_cpu_v4_live_activation_admitted\(\)"
         r"\s*->\s*bool\s*\{\s*FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED\s*\}"
@@ -619,6 +744,10 @@ def main() -> int:
         (root / DOCKING_SOURCE_RELATIVE_PATH).read_bytes(),
         (root / NATIVE_PIPELINE_SOURCE_RELATIVE_PATH).read_bytes(),
         (root / PROBE_SOURCE_RELATIVE_PATH).read_bytes(),
+        {
+            path.as_posix(): (root / path).read_bytes()
+            for path in NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS
+        },
     )
     print(
         json.dumps(

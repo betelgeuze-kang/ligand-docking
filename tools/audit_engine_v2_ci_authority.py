@@ -288,6 +288,39 @@ NATIVE_FIXED64_CPU_V4_STDIN_INTERPRETERS = (
     "source",
     "zsh",
 )
+NATIVE_FIXED64_CPU_V4_TRUSTED_BOURNE_SHELLS = (
+    "bash",
+    "dash",
+    "ksh",
+    "sh",
+    "zsh",
+    "/bin/bash",
+    "/bin/dash",
+    "/bin/ksh",
+    "/bin/sh",
+    "/bin/zsh",
+    "/usr/bin/bash",
+    "/usr/bin/dash",
+    "/usr/bin/ksh",
+    "/usr/bin/sh",
+    "/usr/bin/zsh",
+)
+NATIVE_FIXED64_CPU_V4_SHELL_STARTUP_ENV_KEYS = (
+    "BASH_ENV",
+    "ENV",
+    "KSH_ENV",
+    "ZDOTDIR",
+)
+NATIVE_FIXED64_CPU_V4_DYNAMIC_ACTION_INPUT_PATTERN = re.compile(
+    r"(?:\b(?:core\.)?getInput\s*\(|"
+    r"\bprocess\.env(?:\.[A-Za-z_][A-Za-z0-9_]*|\s*\[)|"
+    r"\b(?:getenv|std::env::var|env::var)\s*\()"
+)
+NATIVE_FIXED64_CPU_V4_DYNAMIC_PROCESS_PATTERN = re.compile(
+    r"(?:\b(?:exec|execSync|execFile|execFileSync|spawn|spawnSync|system|popen)\s*\(|"
+    r"\bsubprocess\.(?:run|Popen|call|check_call|check_output)\s*\(|"
+    r"\bCommand::new\s*\()"
+)
 NATIVE_FIXED64_CPU_V4_FOLDED_RUN_PATTERN = re.compile(
     r"^(?P<indent>[ ]*)(?:-[ ]+)?run:[ ]*>[+-]?[1-9]?[+-]?[ ]*(?:#.*)?$"
 )
@@ -443,6 +476,13 @@ def _workflow_yaml_run_steps(
             for key, child in value.items():
                 if key == "run" and isinstance(child, str):
                     observed_run_scalars += 1
+                if key == "env":
+                    if not isinstance(child, dict) or any(
+                        not isinstance(env_key, str)
+                        or env_key in NATIVE_FIXED64_CPU_V4_SHELL_STARTUP_ENV_KEYS
+                        for env_key in child
+                    ):
+                        return None
                 stack.append(child)
         elif isinstance(value, list):
             stack.extend(value)
@@ -903,7 +943,14 @@ def _shell_command_word_index(segment: list[str]) -> int | None:
     return index + nested
 
 
-def _shell_without_static_heredoc_bodies(script: str) -> str | None:
+def _shell_without_static_heredoc_bodies(
+    script: str,
+    *,
+    analysis_depth: int = 0,
+) -> str | None:
+    if analysis_depth > 8:
+        return None
+
     def parse_delimiter(
         content: str,
         start: int,
@@ -1017,10 +1064,9 @@ def _shell_without_static_heredoc_bodies(script: str) -> str | None:
             ) = pending_delimiters[0]
             candidate = content.lstrip("\t") if strip_tabs else content
             if candidate == delimiter:
-                if interpreted and (
-                    _implementation_text_invokes_native_fixed64_cpu_v4_live_probe(
-                        "".join(body)
-                    )
+                if interpreted and _shell_script_invokes_native_fixed64_cpu_v4_live_probe(
+                    "".join(body),
+                    substitution_depth=analysis_depth + 1,
                 ):
                     return None
                 pending_delimiters.pop(0)
@@ -1106,6 +1152,26 @@ def _shell_command_segments(tokens: list[str]) -> tuple[tuple[str, ...], ...]:
 
 def _shell_command_substitution_bodies(script: str) -> tuple[str, ...] | None:
     """Return executable command-substitution bodies, or fail on ambiguity."""
+
+    def unescape_legacy_backtick_body(body: str) -> str:
+        output: list[str] = []
+        index = 0
+        while index < len(body):
+            if body[index] != "\\" or index + 1 >= len(body):
+                output.append(body[index])
+                index += 1
+                continue
+            escaped = body[index + 1]
+            if escaped in {"$", "`", "\\"}:
+                output.append(escaped)
+                index += 2
+                continue
+            if escaped == "\n":
+                index += 2
+                continue
+            output.extend(("\\", escaped))
+            index += 2
+        return "".join(output)
 
     def comment_starts(index: int) -> bool:
         return index == 0 or script[index - 1] in " \t\r\n;&|()"
@@ -1230,7 +1296,9 @@ def _shell_command_substitution_bodies(script: str) -> tuple[str, ...] | None:
             end = backtick_end(index)
             if end is None:
                 return None
-            bodies.append(script[index + 1 : end - 1])
+            bodies.append(
+                unescape_legacy_backtick_body(script[index + 1 : end - 1])
+            )
             index = end
             continue
         index += 1
@@ -1565,13 +1633,7 @@ def _is_supported_bourne_shell(shell: str | None) -> bool:
         tokens = shlex.split(shell, posix=True)
     except ValueError:
         return False
-    if not tokens or tokens[0].rsplit("/", 1)[-1] not in {
-        "bash",
-        "dash",
-        "ksh",
-        "sh",
-        "zsh",
-    }:
+    if not tokens or tokens[0] not in NATIVE_FIXED64_CPU_V4_TRUSTED_BOURNE_SHELLS:
         return False
     return tuple(tokens[1:]) in {
         (),
@@ -1592,7 +1654,10 @@ def _shell_script_invokes_native_fixed64_cpu_v4_live_probe(
 ) -> bool:
     if substitution_depth > 8:
         return True
-    executable = _shell_without_static_heredoc_bodies(script)
+    executable = _shell_without_static_heredoc_bodies(
+        script,
+        analysis_depth=substitution_depth,
+    )
     if executable is None:
         return True
     if any(
@@ -1628,6 +1693,11 @@ def _shell_script_invokes_native_fixed64_cpu_v4_live_probe(
 def _workflow_invokes_native_fixed64_cpu_v4_live_probe(text: str) -> bool:
     if re.search(r"\bCARGO_ALIAS_[A-Za-z0-9_]+\s*(?:=|:)", text):
         return True
+    if any(
+        re.search(rf"\b{re.escape(key)}\b", text)
+        for key in NATIVE_FIXED64_CPU_V4_SHELL_STARTUP_ENV_KEYS
+    ):
+        return True
     logical = text.replace("\\\n", " ")
     yaml_run_steps = _workflow_yaml_run_steps(logical)
     if yaml_run_steps is None:
@@ -1660,6 +1730,13 @@ def _implementation_text_invokes_native_fixed64_cpu_v4_live_probe(
             normalized,
         )
         is not None
+    )
+
+
+def _implementation_has_dynamic_process_execution(text: str) -> bool:
+    return bool(
+        NATIVE_FIXED64_CPU_V4_DYNAMIC_ACTION_INPUT_PATTERN.search(text)
+        and NATIVE_FIXED64_CPU_V4_DYNAMIC_PROCESS_PATTERN.search(text)
     )
 
 
@@ -1787,6 +1864,8 @@ def _local_action_execution_surface(
             surface_complete = False
             continue
         total_utf8_bytes = 0
+        action_has_dynamic_input = False
+        action_has_process_execution = False
         for implementation in sorted(set((*primary_paths, *action_files))):
             try:
                 resolved = implementation.resolve(strict=True)
@@ -1809,10 +1888,20 @@ def _local_action_execution_surface(
                 surface_complete = False
                 break
             implementation_files.add(relative)
+            action_has_dynamic_input = bool(
+                action_has_dynamic_input
+                or NATIVE_FIXED64_CPU_V4_DYNAMIC_ACTION_INPUT_PATTERN.search(text)
+            )
+            action_has_process_execution = bool(
+                action_has_process_execution
+                or NATIVE_FIXED64_CPU_V4_DYNAMIC_PROCESS_PATTERN.search(text)
+            )
             if _implementation_text_invokes_native_fixed64_cpu_v4_live_probe(
                 text
-            ):
+            ) or _implementation_has_dynamic_process_execution(text):
                 invokes_live_probe = True
+        if action_has_dynamic_input and action_has_process_execution:
+            invokes_live_probe = True
 
     return (
         tuple(sorted(implementation_files)),

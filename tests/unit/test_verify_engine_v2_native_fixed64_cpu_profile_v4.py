@@ -10,6 +10,7 @@ import sys
 import pytest
 
 from tools.verify_engine_v2_native_fixed64_cpu_profile_v4 import (
+    NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS,
     NativeFixed64CPUProfileV4Error,
     require_compiled_profile_binding,
     require_profile_document,
@@ -26,6 +27,10 @@ _PROBE_SOURCE = (
     _ROOT
     / "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v4.rs"
 )
+_TRANSITIVE_SOURCES = {
+    path.as_posix(): (_ROOT / path).read_bytes()
+    for path in NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS
+}
 
 
 def _canonical(value: object) -> bytes:
@@ -46,7 +51,7 @@ def test_canonical_native_fixed64_cpu_profile_v4_is_frozen() -> None:
     profile = require_profile_document(raw)
 
     assert hashlib.sha256(raw).hexdigest() == (
-        "6d819dce8f618652b9bd4af3960690825ed6e592735e6354bdeb0308b70e1780"
+        "c2a221b6ff18c990abff8c505ac0af87e4c8a05aa25aece20a477eca5cc114cb"
     )
     assert profile["profile_id"] == "engine_v2_native_fixed64_cpu_synthetic_v4"
     assert all(value is False for value in profile["authority"].values())
@@ -71,6 +76,7 @@ def test_canonical_native_fixed64_cpu_profile_v4_is_frozen() -> None:
         _DOCKING_SOURCE.read_bytes(),
         _NATIVE_PIPELINE_SOURCE.read_bytes(),
         _PROBE_SOURCE.read_bytes(),
+        dict(_TRANSITIVE_SOURCES),
     )
 
 
@@ -172,6 +178,7 @@ def test_profile_v4_rejects_compiled_gate_drift(
             docking,
             native_pipeline,
             probe,
+            dict(_TRANSITIVE_SOURCES),
         )
 
 
@@ -199,6 +206,46 @@ def test_profile_v4_rejects_measurement_moved_before_activation_guard() -> None:
             _DOCKING_SOURCE.read_bytes(),
             _NATIVE_PIPELINE_SOURCE.read_bytes(),
             probe,
+            dict(_TRANSITIVE_SOURCES),
+        )
+
+
+def test_profile_v4_rejects_transitive_kernel_source_drift() -> None:
+    profile = require_profile_document(_PROFILE.read_bytes())
+    changed = dict(_TRANSITIVE_SOURCES)
+    target = "native/src/docking/scorer_v1.cpp"
+    changed[target] += b"\n// semantic drift\n"
+
+    with pytest.raises(
+        NativeFixed64CPUProfileV4Error,
+        match="transitive source manifest",
+    ):
+        require_compiled_profile_binding(
+            profile,
+            _QUALIFICATION_SOURCE.read_bytes(),
+            _DOCKING_SOURCE.read_bytes(),
+            _NATIVE_PIPELINE_SOURCE.read_bytes(),
+            _PROBE_SOURCE.read_bytes(),
+            changed,
+        )
+
+
+def test_profile_v4_rejects_transitive_source_path_omission() -> None:
+    profile = require_profile_document(_PROFILE.read_bytes())
+    changed = dict(_TRANSITIVE_SOURCES)
+    changed.pop("rust/betelgeuze-docking-search/src/fixed64_ranking.rs")
+
+    with pytest.raises(
+        NativeFixed64CPUProfileV4Error,
+        match="path set",
+    ):
+        require_compiled_profile_binding(
+            profile,
+            _QUALIFICATION_SOURCE.read_bytes(),
+            _DOCKING_SOURCE.read_bytes(),
+            _NATIVE_PIPELINE_SOURCE.read_bytes(),
+            _PROBE_SOURCE.read_bytes(),
+            changed,
         )
 
 
@@ -256,7 +303,7 @@ def test_profile_v4_cli_reports_non_consuming_authority_false() -> None:
         "fixture_count": 2,
         "profile_id": "engine_v2_native_fixed64_cpu_synthetic_v4",
         "profile_sha256": (
-            "6d819dce8f618652b9bd4af3960690825ed6e592735e6354bdeb0308b70e1780"
+            "c2a221b6ff18c990abff8c505ac0af87e4c8a05aa25aece20a477eca5cc114cb"
         ),
         "reservation_created": False,
         "status": "verified",
