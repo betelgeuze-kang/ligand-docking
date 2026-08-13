@@ -297,6 +297,7 @@ def require_attempt_bytes(
         or attempt["profile_sha256"] != PROFILE_SHA256
         or attempt["activation_sha256"] != activation_sha256
         or attempt["output_path_sha256"] != output_path_sha256
+        or type(attempt["attempt_ordinal"]) is not int
         or attempt["attempt_ordinal"] != 1
         or attempt["measurement_started"] is not False
         or type(attempt["process_id"]) is not int
@@ -319,28 +320,30 @@ def _require_fixture(value: object, *, expected_id: str) -> dict[str, object]:
         "authority_false",
         "candidate_denominator",
         "cpp_decision_sha256",
+        "cpp_generated_count",
         "cpp_median_nanoseconds",
         "cpp_projection_sha256",
         "cpp_repeat_stable",
         "cpp_sample_nanoseconds",
+        "cpp_typed_failure_count",
         "decision_parity",
         "fixture_id",
         "fixture_payload_sha256",
         "gate_passed",
-        "generated_count",
         "ligand_atom_count",
         "numeric_parity",
         "persistent_cpp_context_count",
         "persistent_rust_context_count",
         "receptor_atom_count",
         "rust_decision_sha256",
+        "rust_generated_count",
         "rust_median_nanoseconds",
         "rust_projection_sha256",
         "rust_repeat_stable",
         "rust_sample_nanoseconds",
         "rust_to_cpp_median_ratio",
+        "rust_typed_failure_count",
         "score_term_count",
-        "typed_failure_count",
     )
     fixture = _require_ordered_keys(value, fixture_keys, label="fixture evidence")
     expected = EXPECTED_FIXTURES[expected_id]
@@ -362,13 +365,15 @@ def _require_fixture(value: object, *, expected_id: str) -> dict[str, object]:
             _fail(f"fixture {key} is not a boolean")
     for key in (
         "candidate_denominator",
-        "generated_count",
+        "cpp_generated_count",
+        "cpp_typed_failure_count",
         "ligand_atom_count",
         "persistent_cpp_context_count",
         "persistent_rust_context_count",
         "receptor_atom_count",
+        "rust_generated_count",
+        "rust_typed_failure_count",
         "score_term_count",
-        "typed_failure_count",
     ):
         scalar = fixture[key]
         if type(scalar) is not int or scalar < 0:
@@ -425,6 +430,7 @@ def _require_fixture(value: object, *, expected_id: str) -> dict[str, object]:
         or ratio <= 0
         or maximum_absolute < 0
         or maximum_scaled < 0
+        or maximum_scaled > 2.0
         or ratio != rust_median / cpp_median
         or (maximum_absolute == 0.0) is not (maximum_scaled == 0.0)
     ):
@@ -456,8 +462,16 @@ def _require_fixture(value: object, *, expected_id: str) -> dict[str, object]:
         and fixture["fixture_id"] == expected_id
         and fixture["fixture_payload_sha256"]
         == expected["fixture_payload_sha256"]
-        and fixture["generated_count"] == expected["generated_count"]
-        and fixture["typed_failure_count"] == expected["typed_failure_count"]
+        and fixture["cpp_generated_count"] == expected["generated_count"]
+        and fixture["rust_generated_count"] == expected["generated_count"]
+        and fixture["cpp_typed_failure_count"] == expected["typed_failure_count"]
+        and fixture["rust_typed_failure_count"] == expected["typed_failure_count"]
+        and fixture["cpp_generated_count"]
+        + fixture["cpp_typed_failure_count"]
+        == 64
+        and fixture["rust_generated_count"]
+        + fixture["rust_typed_failure_count"]
+        == 64
         and fixture["ligand_atom_count"] == 12
         and fixture["receptor_atom_count"] == 12
         and fixture["score_term_count"] == 8
@@ -526,7 +540,15 @@ def _blocked_state_rederives(
     if measurement_started is False:
         return len(observed) == 1 and observed <= POST_PIN_BLOCKERS
     if measurement_started is True:
-        return bool(observed) and observed <= MEASUREMENT_BLOCKERS
+        mutually_exclusive = {
+            "native_measurement_failed",
+            "native_measurement_report_contract_failed",
+        }
+        return (
+            bool(observed)
+            and observed <= MEASUREMENT_BLOCKERS
+            and not mutually_exclusive <= observed
+        )
     return False
 
 

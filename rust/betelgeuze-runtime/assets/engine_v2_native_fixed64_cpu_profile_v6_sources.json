@@ -501,14 +501,14 @@
       "sha256": "e7c1d145c39b6555a4dcf910ae9f88b12ceb1351a80ac18ab96b7eb7eb45f9c7"
     },
     {
-      "byte_count": 51450,
+      "byte_count": 52503,
       "path": "rust/betelgeuze-runtime/src/qualification.rs",
-      "sha256": "8d36897aa72c0608b5cb5ad6a06d2ab1c090cd00ebdf6f9d811b2f8afc80f9d7"
+      "sha256": "4999bc7e574df50123376eca214415ba2798f350ae14095e5ade7800b559b0a4"
     },
     {
-      "byte_count": 83613,
+      "byte_count": 85001,
       "path": "rust/betelgeuze-runtime/src/qualification_v6.rs",
-      "sha256": "5e62bb79cb32a6dee13dbd18239869aafd65c7667cc9c7310cb1c65368e31635"
+      "sha256": "223447407ab3642329718a2add3672d97dc51a3e2e49d9084ac3029ae9e59535"
     },
     {
       "byte_count": 29008,

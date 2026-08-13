@@ -124,6 +124,12 @@ pub struct Fixed64CpuFixtureProbeV5 {
     pub receptor_atom_count: usize,
     pub ligand_atom_count: usize,
     pub score_term_count: usize,
+    pub cpp_generated_count: u64,
+    pub rust_generated_count: u64,
+    pub cpp_typed_failure_count: u64,
+    pub rust_typed_failure_count: u64,
+    // Retained for the v5 probe output. V6 evidence serializes the explicit
+    // backend-specific counts and independently re-derives its gate from them.
     pub generated_count: u64,
     pub typed_failure_count: u64,
     pub cpp_decision_sha256: [u8; 32],
@@ -1208,6 +1214,10 @@ fn run_fixture(
         receptor_atom_count: cpp.receptor_atom_count,
         ligand_atom_count: cpp.ligand_atom_count,
         score_term_count: sys::BG_DOCKING_SCORER_V1_TERM_COUNT as usize,
+        cpp_generated_count: cpp.generated_count,
+        rust_generated_count: rust.generated_count,
+        cpp_typed_failure_count: cpp.typed_failure_count,
+        rust_typed_failure_count: rust.typed_failure_count,
         generated_count: cpp.generated_count,
         typed_failure_count: cpp.typed_failure_count,
         cpp_decision_sha256: cpp.decision_sha256,
@@ -1323,8 +1333,16 @@ mod tests {
         assert!(!report.product_performance_claim_authorized);
         assert_eq!(report.fixtures[0].generated_count, 64);
         assert_eq!(report.fixtures[0].typed_failure_count, 0);
+        assert_eq!(report.fixtures[0].cpp_generated_count, 64);
+        assert_eq!(report.fixtures[0].rust_generated_count, 64);
+        assert_eq!(report.fixtures[0].cpp_typed_failure_count, 0);
+        assert_eq!(report.fixtures[0].rust_typed_failure_count, 0);
         assert_eq!(report.fixtures[1].generated_count, 48);
         assert_eq!(report.fixtures[1].typed_failure_count, 16);
+        assert_eq!(report.fixtures[1].cpp_generated_count, 48);
+        assert_eq!(report.fixtures[1].rust_generated_count, 48);
+        assert_eq!(report.fixtures[1].cpp_typed_failure_count, 16);
+        assert_eq!(report.fixtures[1].rust_typed_failure_count, 16);
         assert_eq!(
             digest_hex(report.fixtures[0].fixture_payload_sha256),
             COMPLETE_FIXTURE_PAYLOAD_SHA256_HEX,

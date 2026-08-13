@@ -24,9 +24,9 @@ else:
 
 SCHEMA_ID = "betelgeuze.engine_v2_native_fixed64_cpu_profile/6.0.0"
 PROFILE_ID = "engine_v2_native_fixed64_cpu_synthetic_v6"
-PROFILE_SHA256 = "1d0abc132ecd7b9a0730d8000d6b0f8edf54f2b7021cdfb776f2caa84c3dacb1"
+PROFILE_SHA256 = "fde4e50ed66abfbf44ab0730117d88c1f1b9a0f98e7ffd8b1de988490c84a684"
 SOURCE_MANIFEST_SHA256 = (
-    "5b9452a44587607f351fd4d8a5d1ff0a478fe4711094b98585abae71711da207"
+    "58238e6a8baa4d0a660df6aa1684b7cce3156788ba17e42b3bc14d6b1b500536"
 )
 SOURCE_COUNT = 192
 PROFILE_RELATIVE_PATH = Path("config/engine_v2_native_fixed64_cpu_profile_v6.json")

@@ -1573,6 +1573,10 @@ fn report_contract_is_valid(report: &Fixed64CpuProbeReportV5) -> bool {
                 && fixture.receptor_atom_count == 12
                 && fixture.ligand_atom_count == 12
                 && fixture.score_term_count == 8
+                && fixture.generated_count == fixture.cpp_generated_count
+                && fixture.typed_failure_count == fixture.cpp_typed_failure_count
+                && fixture.cpp_generated_count + fixture.cpp_typed_failure_count == 64
+                && fixture.rust_generated_count + fixture.rust_typed_failure_count == 64
                 && fixture.authority_false
         })
 }
@@ -1659,15 +1663,16 @@ fn fixture_json(value: &Fixed64CpuFixtureProbeV5) -> V6Result<String> {
             "{{\"authority_false\":{},",
             "\"candidate_denominator\":{},",
             "\"cpp_decision_sha256\":\"{}\",",
+            "\"cpp_generated_count\":{},",
             "\"cpp_median_nanoseconds\":{},",
             "\"cpp_projection_sha256\":\"{}\",",
             "\"cpp_repeat_stable\":{},",
             "\"cpp_sample_nanoseconds\":{},",
+            "\"cpp_typed_failure_count\":{},",
             "\"decision_parity\":{},",
             "\"fixture_id\":{},",
             "\"fixture_payload_sha256\":\"{}\",",
             "\"gate_passed\":{},",
-            "\"generated_count\":{},",
             "\"ligand_atom_count\":{},",
             "\"numeric_parity\":{{",
             "\"compared_f64_count\":{},",
@@ -1680,27 +1685,29 @@ fn fixture_json(value: &Fixed64CpuFixtureProbeV5) -> V6Result<String> {
             "\"persistent_rust_context_count\":{},",
             "\"receptor_atom_count\":{},",
             "\"rust_decision_sha256\":\"{}\",",
+            "\"rust_generated_count\":{},",
             "\"rust_median_nanoseconds\":{},",
             "\"rust_projection_sha256\":\"{}\",",
             "\"rust_repeat_stable\":{},",
             "\"rust_sample_nanoseconds\":{},",
             "\"rust_to_cpp_median_ratio\":{},",
-            "\"score_term_count\":{},",
-            "\"typed_failure_count\":{}",
+            "\"rust_typed_failure_count\":{},",
+            "\"score_term_count\":{}",
             "}}"
         ),
         value.authority_false,
         value.candidate_denominator,
         digest_hex(value.cpp_decision_sha256),
+        value.cpp_generated_count,
         value.cpp_median_nanoseconds,
         digest_hex(value.cpp_projection_sha256),
         value.cpp_repeat_stable,
         json_u64_array(&value.cpp_sample_nanoseconds),
+        value.cpp_typed_failure_count,
         value.decision_parity,
         json_string(value.fixture_id),
         digest_hex(value.fixture_payload_sha256),
         value.gate_passed,
-        value.generated_count,
         value.ligand_atom_count,
         value.numeric_parity.compared_f64_count,
         first_violation,
@@ -1711,13 +1718,14 @@ fn fixture_json(value: &Fixed64CpuFixtureProbeV5) -> V6Result<String> {
         value.persistent_rust_context_count,
         value.receptor_atom_count,
         digest_hex(value.rust_decision_sha256),
+        value.rust_generated_count,
         value.rust_median_nanoseconds,
         digest_hex(value.rust_projection_sha256),
         value.rust_repeat_stable,
         json_u64_array(&value.rust_sample_nanoseconds),
         json_f64(value.rust_to_cpp_median_ratio)?,
+        value.rust_typed_failure_count,
         value.score_term_count,
-        value.typed_failure_count,
     ))
 }
 
@@ -2032,6 +2040,24 @@ mod tests {
             public_benchmark_authorized: false,
             product_performance_claim_authorized: false,
             hip_device_execution_authorized: false,
+        }
+    }
+
+    #[test]
+    fn fixture_artifact_persists_each_backend_failure_denominator() {
+        let report = crate::qualification::run_native_fixed64_cpu_probe_v5(
+            crate::qualification::Fixed64CpuProbeConfigV5::unit_test(),
+        )
+        .expect("synthetic fixed64 backend evidence");
+        for fixture in &report.fixtures {
+            let text = fixture_json(fixture).expect("serialize fixture evidence");
+            assert!(text.contains("\"cpp_generated_count\":"));
+            assert!(text.contains("\"cpp_typed_failure_count\":"));
+            assert!(text.contains("\"rust_generated_count\":"));
+            assert!(text.contains("\"rust_typed_failure_count\":"));
+            assert!(!text.contains("\"generated_count\":"));
+            assert!(!text.contains("\"typed_failure_count\":"));
+            assert!(!text.contains(",}"));
         }
     }
 

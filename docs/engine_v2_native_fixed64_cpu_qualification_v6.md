@@ -9,12 +9,12 @@ unchanged.
 
 The profile is
 `config/engine_v2_native_fixed64_cpu_profile_v6.json`. Its exact SHA-256 is
-`1d0abc132ecd7b9a0730d8000d6b0f8edf54f2b7021cdfb776f2caa84c3dacb1`.
+`fde4e50ed66abfbf44ab0730117d88c1f1b9a0f98e7ffd8b1de988490c84a684`.
 The 192-input native/Rust compiler manifest is
 `config/engine_v2_native_fixed64_cpu_profile_v6_sources.json`, SHA-256
-`5b9452a44587607f351fd4d8a5d1ff0a478fe4711094b98585abae71711da207`.
+`58238e6a8baa4d0a660df6aa1684b7cce3156788ba17e42b3bc14d6b1b500536`.
 The domain-bound activation SHA-256 is
-`fc2d69652f23825d1aac9f56afcccf2d4a05101f230c900a5afa79655e419519`.
+`1fa6b4f272661fd7b1318f4296df2143a3c36250657cd3bb220d9106f5636100`.
 
 The standalone `betelgeuze-runtime` crate packages byte-identical mirrors of
 the profile, predecessor archive, source manifest, original pre-normalization
@@ -82,8 +82,9 @@ the same profile. Artifact, terminal, or output collisions fail closed.
 
 Each fixture records the exact payload identity, C++ and Rust decision and full
 projection identities, all 25 timing samples, medians, numeric comparison
-counts and maxima, generated/failure counts, repeat stability, and the frozen
-64-slot denominator. The fixed payload plus the build-verified 192-source compiler
+counts and maxima, separate C++ and Rust generated/failure counts, repeat
+stability, and each backend's frozen 64-slot denominator. The fixed payload
+plus the build-verified 192-source compiler
 manifest makes the ScorerV1 terms, validity measurements, coordinate states,
 refinement objectives, ranks, and typed failures rederivable from the same
 native graph.

@@ -93,15 +93,16 @@ def _fixture(fixture_id: str) -> dict[str, object]:
         "authority_false": True,
         "candidate_denominator": 64,
         "cpp_decision_sha256": "c3" * 32,
+        "cpp_generated_count": expected["generated_count"],
         "cpp_median_nanoseconds": 112,
         "cpp_projection_sha256": "d4" * 32,
         "cpp_repeat_stable": True,
         "cpp_sample_nanoseconds": cpp_samples,
+        "cpp_typed_failure_count": expected["typed_failure_count"],
         "decision_parity": True,
         "fixture_id": fixture_id,
         "fixture_payload_sha256": expected["fixture_payload_sha256"],
         "gate_passed": True,
-        "generated_count": expected["generated_count"],
         "ligand_atom_count": 12,
         "numeric_parity": {
             "compared_f64_count": 28544,
@@ -114,13 +115,14 @@ def _fixture(fixture_id: str) -> dict[str, object]:
         "persistent_rust_context_count": 1,
         "receptor_atom_count": 12,
         "rust_decision_sha256": "c3" * 32,
+        "rust_generated_count": expected["generated_count"],
         "rust_median_nanoseconds": 112,
         "rust_projection_sha256": "e5" * 32,
         "rust_repeat_stable": True,
         "rust_sample_nanoseconds": rust_samples,
         "rust_to_cpp_median_ratio": 1.0,
+        "rust_typed_failure_count": expected["typed_failure_count"],
         "score_term_count": 8,
-        "typed_failure_count": expected["typed_failure_count"],
     }
 
 
@@ -362,6 +364,17 @@ def _require_mutated_artifact_passes(artifact: dict[str, object]) -> None:
     )
 
 
+def test_attempt_ordinal_rejects_boolean_alias_for_one() -> None:
+    attempt = _attempt()
+    attempt["attempt_ordinal"] = True
+    with pytest.raises(NativeFixed64CPUV6EvidenceError, match="semantics changed"):
+        require_attempt_bytes(
+            _envelope(attempt, ATTEMPT_DOMAIN),
+            activation_sha256=_domain(ACTIVATION_DOMAIN, _PROFILE_RAW),
+            output_path_sha256=_OUTPUT_PATH_SHA256,
+        )
+
+
 @pytest.mark.parametrize(
     ("field", "value"),
     (
@@ -502,11 +515,71 @@ def test_blocked_evidence_accepts_post_measurement_host_drift() -> None:
     _require_mutated_artifact_passes(artifact)
 
 
+def test_blocked_evidence_rejects_mutually_exclusive_measurement_failures() -> None:
+    attempt_raw = _envelope(_attempt(), ATTEMPT_DOMAIN)
+    attempt_projection_raw = json.dumps(
+        _attempt(),
+        allow_nan=False,
+        ensure_ascii=True,
+        separators=(",", ":"),
+    ).encode("ascii")
+    artifact = _artifact(
+        attempt_raw,
+        _domain(ATTEMPT_DOMAIN, attempt_projection_raw),
+        passed=True,
+    )
+    artifact["blockers"] = [
+        "native_measurement_failed",
+        "native_measurement_report_contract_failed",
+    ]
+    artifact["fixtures"] = []
+    execution = artifact["execution"]
+    assert isinstance(execution, dict)
+    execution["measurement_started"] = True
+    execution["recorded_decision"] = "BLOCKED"
+    execution["recorded_gate_passed"] = None
+    execution["recorded_numeric_gate_passed"] = None
+    _require_mutated_artifact_fails(artifact, match="state does not rederive")
+
+
+@pytest.mark.parametrize(
+    "measurement_failure",
+    ("native_measurement_failed", "native_measurement_report_contract_failed"),
+)
+def test_blocked_evidence_accepts_one_measurement_failure_plus_host_drift(
+    measurement_failure: str,
+) -> None:
+    attempt_raw = _envelope(_attempt(), ATTEMPT_DOMAIN)
+    attempt_projection_raw = json.dumps(
+        _attempt(),
+        allow_nan=False,
+        ensure_ascii=True,
+        separators=(",", ":"),
+    ).encode("ascii")
+    artifact = _artifact(
+        attempt_raw,
+        _domain(ATTEMPT_DOMAIN, attempt_projection_raw),
+        passed=True,
+    )
+    artifact["blockers"] = [
+        measurement_failure,
+        "post_measurement_host_invariant_failed",
+    ]
+    artifact["fixtures"] = []
+    execution = artifact["execution"]
+    assert isinstance(execution, dict)
+    execution["measurement_started"] = True
+    execution["recorded_decision"] = "BLOCKED"
+    execution["recorded_gate_passed"] = None
+    execution["recorded_numeric_gate_passed"] = None
+    _require_mutated_artifact_passes(artifact)
+
+
 @pytest.mark.parametrize(
     ("field", "value"),
     (
-        ("generated_count", None),
-        ("typed_failure_count", "0"),
+        ("cpp_generated_count", None),
+        ("rust_typed_failure_count", "0"),
         ("persistent_cpp_context_count", -1),
         ("candidate_denominator", True),
     ),
@@ -539,6 +612,28 @@ def test_measured_fixture_rejects_impossible_scalar_types_and_ranges(
     execution["recorded_decision"] = "NO_GO"
     execution["recorded_gate_passed"] = False
     _require_mutated_artifact_fails(artifact, match="unsigned integer")
+
+
+def test_measured_fixture_rederives_each_backend_failure_denominator() -> None:
+    attempt_raw = _envelope(_attempt(), ATTEMPT_DOMAIN)
+    attempt_projection_raw = json.dumps(
+        _attempt(),
+        allow_nan=False,
+        ensure_ascii=True,
+        separators=(",", ":"),
+    ).encode("ascii")
+    artifact = _artifact(
+        attempt_raw,
+        _domain(ATTEMPT_DOMAIN, attempt_projection_raw),
+        passed=True,
+    )
+    fixtures = artifact["fixtures"]
+    assert isinstance(fixtures, list)
+    fixture = fixtures[0]
+    assert isinstance(fixture, dict)
+    fixture["rust_generated_count"] = 63
+    fixture["rust_typed_failure_count"] = 1
+    _require_mutated_artifact_fails(artifact, match="gate does not rederive")
 
 
 def test_measured_fixture_rejects_float_numeric_parity_count() -> None:
@@ -592,6 +687,30 @@ def test_measured_fixture_rejects_inconsistent_numeric_parity_maxima(
     assert isinstance(numeric, dict)
     numeric["maximum_absolute_difference"] = maximum_absolute
     numeric["maximum_scaled_difference"] = maximum_scaled
+    _require_mutated_artifact_fails(artifact, match="numeric evidence")
+
+
+def test_measured_fixture_rejects_impossible_scaled_difference_bound() -> None:
+    attempt_raw = _envelope(_attempt(), ATTEMPT_DOMAIN)
+    attempt_projection_raw = json.dumps(
+        _attempt(),
+        allow_nan=False,
+        ensure_ascii=True,
+        separators=(",", ":"),
+    ).encode("ascii")
+    artifact = _artifact(
+        attempt_raw,
+        _domain(ATTEMPT_DOMAIN, attempt_projection_raw),
+        passed=True,
+    )
+    fixtures = artifact["fixtures"]
+    assert isinstance(fixtures, list)
+    fixture = fixtures[0]
+    assert isinstance(fixture, dict)
+    numeric = fixture["numeric_parity"]
+    assert isinstance(numeric, dict)
+    numeric["maximum_absolute_difference"] = 1.0
+    numeric["maximum_scaled_difference"] = 3.0
     _require_mutated_artifact_fails(artifact, match="numeric evidence")
 
 
