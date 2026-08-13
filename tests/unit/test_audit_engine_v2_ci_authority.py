@@ -764,6 +764,22 @@ def test_native_fixed64_cpu_v4_missing_restriction_fails_ci_audit(
         "cargo run --package=betelgeuze-runtime",
         "cargo --color always run --manifest-path rust/betelgeuze-runtime/Cargo.toml",
         "cargo +stable --locked run -p betelgeuze-runtime",
+        (
+            "cargo run -p betelgeuze-runtime && "
+            "cargo run --bin unrelated-explicit-tool"
+        ),
+        (
+            "cargo run --bin unrelated-explicit-tool || "
+            "cargo run -p betelgeuze-runtime"
+        ),
+        (
+            "cargo run --bin unrelated-explicit-tool; "
+            "cargo run --manifest-path rust/betelgeuze-runtime/Cargo.toml"
+        ),
+        (
+            "cargo run --bin unrelated-explicit-tool | "
+            "cargo run -p betelgeuze-runtime"
+        ),
     ),
 )
 def test_native_fixed64_cpu_v4_live_binary_is_forbidden_in_every_workflow(
@@ -807,6 +823,34 @@ def test_native_fixed64_cpu_v4_explicit_unrelated_binary_remains_allowed(
     unrelated.write_text(
         "jobs:\n  explicit:\n    steps:\n"
         "      - run: cargo run --bin unrelated-explicit-tool\n",
+        encoding="utf-8",
+    )
+
+    payload = build_inventory(tmp_path)
+    assert (
+        payload[
+            "native_fixed64_cpu_v4_live_qualification_absent_from_github_actions"
+        ]
+        is True
+    )
+    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is True
+    assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is True
+
+
+def test_native_fixed64_cpu_v4_multiple_explicit_unrelated_binaries_are_allowed(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_native_fixed64_cpu_v4_contract(tmp_path)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        encoding="utf-8",
+    )
+    unrelated = tmp_path / ".github/workflows/unrelated.yaml"
+    unrelated.write_text(
+        "jobs:\n  explicit:\n    steps:\n"
+        "      - run: cargo run --bin first-unrelated && "
+        "cargo run --bin second-unrelated\n",
         encoding="utf-8",
     )
 

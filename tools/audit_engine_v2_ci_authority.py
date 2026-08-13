@@ -8,6 +8,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import shlex
 from typing import Any
 
 
@@ -331,10 +332,35 @@ def _workflow_invokes_native_fixed64_cpu_v4_live_probe(text: str) -> bool:
         for token in NATIVE_FIXED64_CPU_V4_FORBIDDEN_WORKFLOW_TOKENS
     ):
         return True
-    return any(
-        re.search(NATIVE_FIXED64_CPU_V4_EXPLICIT_BIN_PATTERN, command) is None
-        for command in re.findall(NATIVE_FIXED64_CPU_V4_CARGO_RUN_PATTERN, logical)
-    )
+    for line in logical.splitlines():
+        lexer = shlex.shlex(line, posix=True, punctuation_chars=";&|()")
+        lexer.whitespace_split = True
+        lexer.commenters = ""
+        try:
+            tokens = list(lexer)
+        except ValueError:
+            # An unparsable shell fragment cannot earn a live-execution
+            # exemption.  Reject it conservatively when it names Cargo run.
+            if re.search(NATIVE_FIXED64_CPU_V4_CARGO_RUN_PATTERN, line):
+                return True
+            continue
+        for index, token in enumerate(tokens):
+            if token.rsplit("/", 1)[-1] != "cargo":
+                continue
+            invocation: list[str] = []
+            for candidate in tokens[index:]:
+                if invocation and (
+                    candidate.rsplit("/", 1)[-1] == "cargo"
+                    or (candidate and set(candidate) <= set(";&|()"))
+                ):
+                    break
+                invocation.append(candidate)
+            if "run" in invocation and re.search(
+                NATIVE_FIXED64_CPU_V4_EXPLICIT_BIN_PATTERN,
+                " ".join(invocation),
+            ) is None:
+                return True
+    return False
 
 
 def _mixed64_v2_authority_is_fail_closed(repo_root: Path) -> bool:
