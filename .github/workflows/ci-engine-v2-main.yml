@@ -35,6 +35,7 @@ on:
       - "rust/reference-physics/**"
       - "rust/Cargo.toml"
       - "rust/Cargo.lock"
+      - ".cargo"
       - ".cargo/config"
       - ".cargo/config.toml"
       - "rust-toolchain"
@@ -176,6 +177,7 @@ jobs:
             rust/reference-physics
             rust/Cargo.toml
             rust/Cargo.lock
+            .cargo
             .cargo/config
             .cargo/config.toml
             rust-toolchain

@@ -9,6 +9,7 @@ import subprocess
 import sys
 
 import pytest
+import tools.verify_engine_v2_native_fixed64_cpu_profile_v4 as verifier
 
 from tools.verify_engine_v2_native_fixed64_cpu_profile_v4 import (
     NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS,
@@ -34,6 +35,7 @@ from tools.verify_engine_v2_native_fixed64_cpu_profile_v4 import (
     require_repository_cargo_configuration_absent,
     require_repository_rust_toolchain_override_absent,
     require_rust_cargo_target_source_paths,
+    require_rust_embedded_input_bindings,
     require_rust_local_dependency_bindings,
     require_rust_package_build_script_paths,
     require_rust_compiled_source_tree_paths,
@@ -860,6 +862,81 @@ def test_profile_v4_rejects_unbound_rust_include_input(
         discover_rust_compiled_source_tree_paths(copied_root)
 
 
+@pytest.mark.parametrize(
+    "macro_source",
+    (
+        'const _: &str = include_str /* gap */ ! ("../unbound.rs");\n',
+        (
+            'const _: &str = include_str /* outer /* nested */ gap */ '
+            '!("../unbound.rs");\n'
+        ),
+        'const _: &str = include_str // gap\n!("../unbound.rs");\n',
+    ),
+)
+def test_profile_v4_rejects_comment_separated_rust_include_input(
+    tmp_path: Path,
+    macro_source: str,
+) -> None:
+    copied_root = tmp_path / "copied-repository"
+    shutil.copytree(
+        _ROOT / "rust",
+        copied_root / "rust",
+        ignore=shutil.ignore_patterns("target"),
+    )
+    runtime_root = copied_root / "rust/betelgeuze-runtime"
+    (runtime_root / "unbound.rs").write_text("pub const VALUE: u8 = 1;\n")
+    crate_root = runtime_root / "src/lib.rs"
+    crate_root.write_text(
+        macro_source + crate_root.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        NativeFixed64CPUProfileV4Error,
+        match="embedded compiler input binding set changed",
+    ):
+        discover_rust_compiled_source_tree_paths(copied_root)
+
+
+def test_profile_v4_ignores_include_tokens_inside_comments_and_raw_strings(
+    tmp_path: Path,
+) -> None:
+    copied_root = tmp_path / "copied-repository"
+    shutil.copytree(
+        _ROOT / "rust",
+        copied_root / "rust",
+        ignore=shutil.ignore_patterns("target"),
+    )
+    crate_root = copied_root / "rust/betelgeuze-runtime/src/lib.rs"
+    crate_root.write_text(
+        '// include_str!("../unbound-comment.txt")\n'
+        'const _: &str = r#"include_bytes!("../unbound-raw.txt")"#;\n'
+        + crate_root.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
+    assert discover_rust_compiled_source_tree_paths(copied_root) == tuple(
+        sorted(_RUST_SOURCE_TREE_PATHS)
+    )
+
+
+def test_profile_v4_requires_embedded_target_in_transitive_manifest(monkeypatch) -> None:
+    changed = RUST_BOUND_EMBEDDED_INPUT_BINDINGS + (
+        (
+            "rust/betelgeuze-runtime/src/lib.rs",
+            "include_str",
+            "rust/betelgeuze-runtime/unbound.txt",
+        ),
+    )
+    monkeypatch.setattr(verifier, "RUST_BOUND_EMBEDDED_INPUT_BINDINGS", changed)
+
+    with pytest.raises(
+        NativeFixed64CPUProfileV4Error,
+        match="embedded compiler input is absent from the transitive manifest",
+    ):
+        require_rust_embedded_input_bindings(changed)
+
+
 def test_profile_v4_rejects_symlinked_rust_source_subdirectory(
     tmp_path: Path,
 ) -> None:
@@ -960,6 +1037,7 @@ def test_profile_v4_native_workflow_change_triggers_focused_suite() -> None:
 @pytest.mark.parametrize(
     "relative",
     (
+        Path(".cargo"),
         Path(".cargo/config"),
         Path(".cargo/config.toml"),
         Path("rust-toolchain"),

@@ -613,6 +613,7 @@ def discover_rust_compiled_source_tree_paths(root: Path) -> tuple[str, ...]:
     return observed_paths
 
 
+_RUST_RAW_STRING_START = re.compile(r'(?:br|cr|r)(?P<hashes>#{0,255})"')
 _RUST_INCLUDE_MACRO_START = re.compile(
     r"\b(?P<macro>include(?:_str|_bytes)?)\s*!\s*\("
 )
@@ -621,6 +622,72 @@ _RUST_STATIC_INCLUDE_MACRO = re.compile(
     r'"(?P<path>[A-Za-z0-9_./-]+)"\s*\)'
 )
 _RUST_PATH_ATTRIBUTE = re.compile(r"#\s*\[[^\]]*\bpath\s*=", re.DOTALL)
+
+
+def _rust_source_lexical_views(source: str) -> tuple[str, str]:
+    normalized = list(source)
+    code_only = list(source)
+
+    def blank(target: list[str], start: int, end: int) -> None:
+        for index in range(start, end):
+            if target[index] not in {"\n", "\r"}:
+                target[index] = " "
+
+    index = 0
+    while index < len(source):
+        raw = _RUST_RAW_STRING_START.match(source, index)
+        if raw is not None:
+            start = index
+            terminator = '"' + raw.group("hashes")
+            end = source.find(terminator, raw.end())
+            if end < 0:
+                _fail("Rust compiler source contains an unterminated raw string")
+            index = end + len(terminator)
+            blank(code_only, start, index)
+            continue
+        if source[index] == '"':
+            start = index
+            index += 1
+            while index < len(source):
+                if source[index] == "\\":
+                    index += 2
+                    continue
+                if source[index] == '"':
+                    index += 1
+                    break
+                index += 1
+            else:
+                _fail("Rust compiler source contains an unterminated string")
+            blank(code_only, start, index)
+            continue
+        if source.startswith("//", index):
+            end = source.find("\n", index + 2)
+            if end < 0:
+                end = len(source)
+            blank(normalized, index, end)
+            blank(code_only, index, end)
+            index = end
+            continue
+        if source.startswith("/*", index):
+            start = index
+            depth = 1
+            index += 2
+            while index < len(source) and depth:
+                if source.startswith("/*", index):
+                    depth += 1
+                    index += 2
+                elif source.startswith("*/", index):
+                    depth -= 1
+                    index += 2
+                else:
+                    index += 1
+            if depth:
+                _fail("Rust compiler source contains an unterminated block comment")
+            blank(normalized, start, index)
+            blank(code_only, start, index)
+            continue
+        index += 1
+    return "".join(normalized), "".join(code_only)
 
 
 def require_rust_embedded_input_bindings(
@@ -632,6 +699,11 @@ def require_rust_embedded_input_bindings(
         or tuple(sorted(observed_bindings)) != expected
     ):
         _fail("Rust embedded compiler input binding set changed")
+    transitive_paths = {
+        path.as_posix() for path in NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS
+    }
+    if any(binding[2] not in transitive_paths for binding in observed_bindings):
+        _fail("Rust embedded compiler input is absent from the transitive manifest")
 
 
 def discover_rust_embedded_input_bindings(
@@ -647,10 +719,18 @@ def discover_rust_embedded_input_bindings(
             raise NativeFixed64CPUProfileV4Error(
                 "Rust compiler source is not valid UTF-8"
             ) from exc
-        if _RUST_PATH_ATTRIBUTE.search(source) is not None:
+        normalized, code_only = _rust_source_lexical_views(source)
+        if _RUST_PATH_ATTRIBUTE.search(code_only) is not None:
             _fail("Rust path attribute source expansion is forbidden")
-        starts = tuple(_RUST_INCLUDE_MACRO_START.finditer(source))
-        static_includes = tuple(_RUST_STATIC_INCLUDE_MACRO.finditer(source))
+        starts = tuple(_RUST_INCLUDE_MACRO_START.finditer(code_only))
+        start_keys = {
+            (match.start(), match.group("macro")) for match in starts
+        }
+        static_includes = tuple(
+            match
+            for match in _RUST_STATIC_INCLUDE_MACRO.finditer(normalized)
+            if (match.start(), match.group("macro")) in start_keys
+        )
         if tuple((match.start(), match.group("macro")) for match in starts) != tuple(
             (match.start(), match.group("macro")) for match in static_includes
         ):
