@@ -17,6 +17,16 @@ The measured graph is:
 7. stable Top-K;
 8. direct-RMSD clustering.
 
+The native Python wheel exposes that same graph as
+`native_fixed64_complete_pipeline_v2` using input and evidence schema 2.0.0.
+The v2 transport requires a separately predeclared post-refinement admission
+policy SHA-256, returns both post-admission policy and batch receipts, preserves
+all 64 per-candidate post-admission rows, and carries the backend-independent
+scientific projection SHA-256. CLI, diagnostic benchmark, API, and product
+shadow consume this one receipt graph; only their domain-separated consumer
+view receipt differs. The old v1 entry point fails closed because its schema
+cannot bind the post-refinement admission policy.
+
 Profile v5 is the ABI 1.21 successor to the merge-anchored v4 profile. It does
 not rewrite v4. The second admission pass is required to run before ScorerV1;
 every rejected or upstream-failed slot remains in the 64-row denominator as a

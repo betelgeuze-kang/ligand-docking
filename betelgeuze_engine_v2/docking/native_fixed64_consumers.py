@@ -21,9 +21,9 @@ class NativeFixed64ConsumerError(RuntimeError):
     """The native fixed64 bridge or its authority boundary failed closed."""
 
 
-_COMPLETE_INPUT_SCHEMA_ID = "betelgeuze.engine_v2_native_fixed64_complete_input/1.0.0"
+_COMPLETE_INPUT_SCHEMA_ID = "betelgeuze.engine_v2_native_fixed64_complete_input/2.0.0"
 _COMPLETE_EVIDENCE_SCHEMA_ID = (
-    "betelgeuze.engine_v2_native_fixed64_complete_python_evidence/1.0.0"
+    "betelgeuze.engine_v2_native_fixed64_complete_python_evidence/2.0.0"
 )
 
 _RECEIPT_GRAPH_FIELDS = (
@@ -39,6 +39,8 @@ _RECEIPT_GRAPH_FIELDS = (
     "producer_batch_receipt_sha256",
     "refinement_policy_receipt_sha256",
     "refinement_batch_receipt_sha256",
+    "post_admission_policy_receipt_sha256",
+    "post_admission_batch_receipt_sha256",
     "scorer_batch_receipt_sha256",
     "validity_batch_receipt_sha256",
     "ranking_batch_receipt_sha256",
@@ -49,9 +51,8 @@ _RECEIPT_GRAPH_FIELDS = (
 _RECEIPT_GRAPH_ALIASES = {
     "allocation_receipt_sha256": "allocation_receipt_sha256",
     "proposal_batch_receipt_sha256": "producer_batch_receipt_sha256",
-    "geometric_admission_receipt_sha256": (
-        "geometric_admission_batch_receipt_sha256"
-    ),
+    "geometric_admission_receipt_sha256": ("geometric_admission_batch_receipt_sha256"),
+    "post_refinement_admission_receipt_sha256": ("post_admission_batch_receipt_sha256"),
     "scorer_receipt_sha256": "scorer_batch_receipt_sha256",
     "validity_receipt_sha256": "validity_batch_receipt_sha256",
     "ranking_receipt_sha256": "ranking_batch_receipt_sha256",
@@ -84,7 +85,7 @@ def _native_entrypoint():
         raise NativeFixed64ConsumerError(
             "native fixed64 extension is required; Python fallback is forbidden"
         ) from exc
-    name = "native_fixed64_complete_pipeline_v1"
+    name = "native_fixed64_complete_pipeline_v2"
     entrypoint = getattr(module, name, None)
     if not callable(entrypoint):
         raise NativeFixed64ConsumerError(
@@ -94,7 +95,7 @@ def _native_entrypoint():
 
 
 @dataclass(frozen=True, slots=True)
-class NativeFixed64EvidenceV1:
+class NativeFixed64EvidenceV2:
     """Immutable view of one self-verified native pipeline/consumer receipt."""
 
     surface: NativeFixed64Surface
@@ -131,6 +132,29 @@ class NativeFixed64EvidenceV1:
                 raise NativeFixed64ConsumerError(
                     "native fixed64 candidate denominator is reordered or incomplete"
                 )
+            post_admission = candidate.get("post_refinement_geometric_admission")
+            ranking = candidate.get("ranking")
+            lineage = candidate.get("lineage")
+            if (
+                not isinstance(post_admission, Mapping)
+                or type(post_admission.get("rank_eligible")) is not bool
+                or not isinstance(ranking, Mapping)
+                or type(ranking.get("rank_eligible")) is not bool
+                or type(ranking.get("valid_rank_eligible")) is not bool
+                or not isinstance(lineage, Mapping)
+                or lineage.get("post_admission_row_receipt_sha256")
+                != post_admission.get("receipt_sha256")
+            ):
+                raise NativeFixed64ConsumerError(
+                    "native fixed64 post-refinement admission evidence is cross-wired"
+                )
+            if post_admission.get("rank_eligible") is False and (
+                ranking.get("rank_eligible") is not False
+                or ranking.get("valid_rank_eligible") is not False
+            ):
+                raise NativeFixed64ConsumerError(
+                    "post-refinement rejected candidate remained rank eligible"
+                )
         for field in (
             "reservation_authorized",
             "molecular_execution_authorized",
@@ -153,6 +177,39 @@ class NativeFixed64EvidenceV1:
                 raise NativeFixed64ConsumerError(
                     f"native fixed64 authority field {field} changed"
                 )
+        counts = {
+            field: document.get(field)
+            for field in (
+                "generated_count",
+                "typed_failure_count",
+                "initial_admitted_count",
+                "refined_count",
+                "post_admitted_count",
+                "post_rejected_count",
+                "scored_count",
+                "valid_count",
+                "cluster_count",
+            )
+        }
+        if any(
+            type(value) is not int or not 0 <= value <= 64 for value in counts.values()
+        ):
+            raise NativeFixed64ConsumerError(
+                "native fixed64 denominator counts are invalid"
+            )
+        if (
+            counts["generated_count"] + counts["typed_failure_count"] != 64
+            or counts["initial_admitted_count"] > counts["generated_count"]
+            or counts["refined_count"] > counts["initial_admitted_count"]
+            or counts["post_admitted_count"] + counts["post_rejected_count"]
+            != counts["refined_count"]
+            or counts["scored_count"] > counts["post_admitted_count"]
+            or counts["valid_count"] > counts["scored_count"]
+            or counts["cluster_count"] > counts["valid_count"]
+        ):
+            raise NativeFixed64ConsumerError(
+                "native fixed64 denominator counts are cross-wired"
+            )
         if document.get("denominator_preserved") is not True:
             raise NativeFixed64ConsumerError(
                 "native fixed64 denominator preservation changed"
@@ -163,9 +220,11 @@ class NativeFixed64EvidenceV1:
             "allocation_receipt_sha256",
             "proposal_batch_receipt_sha256",
             "geometric_admission_receipt_sha256",
+            "post_refinement_admission_receipt_sha256",
             "scorer_receipt_sha256",
             "validity_receipt_sha256",
             "ranking_receipt_sha256",
+            "scientific_projection_sha256",
         ):
             value = document.get(field)
             if (
@@ -217,11 +276,16 @@ class NativeFixed64EvidenceV1:
         return value
 
 
+# Import compatibility only. The alias validates and represents the v2 schema;
+# it does not admit or reinterpret retired v1 evidence.
+NativeFixed64EvidenceV1 = NativeFixed64EvidenceV2
+
+
 def run_native_fixed64_surface(
     input_document: Mapping[str, object],
     *,
     surface: NativeFixed64Surface,
-) -> NativeFixed64EvidenceV1:
+) -> NativeFixed64EvidenceV2:
     """Run one surface through the exact same Rust receipt core."""
 
     if type(input_document) is not dict:
@@ -247,34 +311,34 @@ def run_native_fixed64_surface(
         raise NativeFixed64ConsumerError(
             "native fixed64 evidence does not match the requested backend"
         )
-    return NativeFixed64EvidenceV1(surface=surface, _document=result)
+    return NativeFixed64EvidenceV2(surface=surface, _document=result)
 
 
 class NativeFixed64CliAdapter:
     __slots__ = ()
 
-    def run(self, input_document: Mapping[str, object]) -> NativeFixed64EvidenceV1:
+    def run(self, input_document: Mapping[str, object]) -> NativeFixed64EvidenceV2:
         return run_native_fixed64_surface(input_document, surface="cli")
 
 
 class NativeFixed64DiagnosticBenchmarkAdapter:
     __slots__ = ()
 
-    def run(self, input_document: Mapping[str, object]) -> NativeFixed64EvidenceV1:
+    def run(self, input_document: Mapping[str, object]) -> NativeFixed64EvidenceV2:
         return run_native_fixed64_surface(input_document, surface="benchmark")
 
 
 class NativeFixed64PythonApi:
     __slots__ = ()
 
-    def run(self, input_document: Mapping[str, object]) -> NativeFixed64EvidenceV1:
+    def run(self, input_document: Mapping[str, object]) -> NativeFixed64EvidenceV2:
         return run_native_fixed64_surface(input_document, surface="api")
 
 
 class NativeFixed64ProductShadowAdapter:
     __slots__ = ()
 
-    def run(self, input_document: Mapping[str, object]) -> NativeFixed64EvidenceV1:
+    def run(self, input_document: Mapping[str, object]) -> NativeFixed64EvidenceV2:
         return run_native_fixed64_surface(input_document, surface="product_shadow")
 
 
@@ -283,6 +347,7 @@ __all__ = [
     "NativeFixed64ConsumerError",
     "NativeFixed64DiagnosticBenchmarkAdapter",
     "NativeFixed64EvidenceV1",
+    "NativeFixed64EvidenceV2",
     "NativeFixed64ProductShadowAdapter",
     "NativeFixed64PythonApi",
     "NativeFixed64Surface",

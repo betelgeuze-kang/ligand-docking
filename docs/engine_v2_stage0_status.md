@@ -260,16 +260,20 @@ The canonical capability state is:
   byte-identical. The 64-candidate synthetic qualification fixture measured
   12.2x scorer speedup while preserving exact rank/Top-5 and 1e-12 term parity;
   this is engineering evidence, not development-corpus qualification.
-- PR #303 merged the ABI 1.19 complete fixed64 consumer bridge at
-  `a03ded315857ebc842cb9821c7fb480ee1fe247f`. The subsequent native CPU
-  qualification-v4 implementation covers the full 64-slot proposal,
-  geometric-admission, rigid/V7-refinement, eight-term Scorer-v1, validity,
-  stable-Top-K, and direct-RMSD-clustering graph for two compiled synthetic
-  fixtures. It preserves typed failed slots, compares backend-independent
-  C++/Rust scientific projections, and reuses one persistent context per
-  backend. Its frozen 25-sample execution remains unconsumed and cannot be run
-  by CI; it establishes no molecular, qualification, Stage 0, product,
-  benchmark, HIP-device, or claim authority.
+- PR #303 merged the initial ABI 1.19 complete fixed64 consumer bridge at
+  `a03ded315857ebc842cb9821c7fb480ee1fe247f`; qualification v4 is now a
+  merge-anchored archive. ABI 1.21 and native CPU qualification v5 extend that
+  graph with a second full-Cartesian geometric admission over final refined
+  coordinates before eight-term ScorerV1, validity, stable Top-K, and direct
+  RMSD clustering. Rejected and upstream-failed slots remain typed within the
+  exact 64-slot denominator and cannot rank. The versioned v2 Python bridge
+  binds a separately predeclared post-admission policy and returns the same
+  complete native receipt graph to CLI, benchmark, API, and product shadow.
+  Two compiled synthetic fixtures compare backend-independent C++/Rust
+  scientific projections while reusing one persistent context per backend.
+  The frozen 25-sample v5 execution remains unconsumed and cannot be run by CI;
+  it establishes no molecular, qualification, Stage 0, product, benchmark,
+  HIP-device, or claim authority.
 - A fail-closed Stage 0 policy verifier covers seven acceptance axes, paired
   baseline CI interpretation, descriptive-only runtime, diagnostic branching,
   source hashes, exact environment, artifact counts, full-suite classification,
@@ -380,12 +384,13 @@ The canonical capability state is:
 9. **Later native tracks:** `cpp_hip_required` remains an explicit fail-closed
     unavailable product backend. The non-authoritative native ABI now includes
     fixed64 allocation, deterministic SO(3), indexed placement,
-    single-anchor placement, and an ABI 1.19 canonical 64-slot producer with
+    single-anchor placement, and an ABI 1.21 canonical 64-slot pipeline with
     one shared surface-aware admission batch and receipt-bound placement
     quaternions. A Rust-owned complete fixed64 pipeline now carries native
-    rigid/V7 refinement, eight Scorer-v1 terms, validity, stable Top-K, and
-    direct-RMSD clustering, with a claim-blocked C++/Rust qualification-v4
-    projection. C++, Rust CPU, `hip_safe`, and `hip_fast` paths are synthetic parity-test
+    rigid/V7 refinement, post-refinement admission, eight Scorer-v1 terms,
+    validity, stable Top-K, and direct-RMSD clustering, with a claim-blocked
+    C++/Rust qualification-v5 projection. C++, Rust CPU, `hip_safe`, and
+    `hip_fast` paths are synthetic parity-test
     surfaces only and every execution, reservation, benchmark, product-rank,
     customer-pose, and claim authority bit remains false. These primitives are
     a synthetic native candidate executor but not an admitted molecular or
