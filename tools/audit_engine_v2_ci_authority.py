@@ -10,6 +10,17 @@ from pathlib import Path
 import re
 from typing import Any, cast
 
+if __package__:
+    from .verify_engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt import (
+        NativeFixed64CPUV7ExecutionReceiptError,
+        require_execution_receipt_bytes,
+    )
+else:
+    from verify_engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt import (
+        NativeFixed64CPUV7ExecutionReceiptError,
+        require_execution_receipt_bytes,
+    )
+
 
 SCHEMA_ID = "betelgeuze.engine_v2_ci_authority_inventory/1.0.0"
 AUTHORITATIVE_WORKFLOWS = (
@@ -264,6 +275,7 @@ NATIVE_FIXED64_CPU_V7_CONTRACT_PATHS = (
     "config/engine_v2_native_fixed64_cpu_profile_v6_archive.json",
     "config/engine_v2_native_fixed64_cpu_profile_v7.json",
     "config/engine_v2_native_fixed64_cpu_profile_v7_sources.json",
+    "config/engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt.json",
     "rust/Cargo.lock",
     "rust/Cargo.toml",
     "rust_engine_v2/Cargo.lock",
@@ -283,9 +295,12 @@ NATIVE_FIXED64_CPU_V7_CONTRACT_PATHS = (
     "tools/verify_engine_v2_native_fixed64_cpu_profile_v7.py",
     "tools/verify_engine_v2_native_fixed64_cpu_v7_rustc_wrapper.py",
     "tools/verify_engine_v2_native_fixed64_cpu_v7_evidence.py",
+    "tools/verify_engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt.py",
     "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v7.py",
     "tests/unit/test_verify_engine_v2_native_fixed64_cpu_v7_evidence.py",
+    "tests/unit/test_verify_engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt.py",
     "docs/engine_v2_native_fixed64_cpu_qualification_v7.md",
+    "docs/engine_v2_native_fixed64_cpu_qualification_v7_result.md",
 )
 NATIVE_FIXED64_CPU_V7_BUILD_CONFIGURATION_SHA256 = (
     "6e39e4e07bcb2f9324f242adcf3f48428191b2a91418d34520c6acc1cf046068"
@@ -300,7 +315,9 @@ NATIVE_FIXED64_CPU_V7_REQUIRED_TOKEN_COUNTS = {
     "config/engine_v2_native_fixed64_cpu_profile_v6_archive.json": 2,
     "config/engine_v2_native_fixed64_cpu_profile_v7.json": 2,
     "config/engine_v2_native_fixed64_cpu_profile_v7_sources.json": 2,
+    "config/engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt.json": 2,
     "docs/engine_v2_native_fixed64_cpu_qualification_v7.md": 1,
+    "docs/engine_v2_native_fixed64_cpu_qualification_v7_result.md": 1,
     "rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v6_archive.json": 1,
     "rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v7.json": 1,
     "rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v7_sources.json": 1,
@@ -310,8 +327,10 @@ NATIVE_FIXED64_CPU_V7_REQUIRED_TOKEN_COUNTS = {
     "tools/verify_engine_v2_native_fixed64_cpu_profile_v7.py": 4,
     "tools/verify_engine_v2_native_fixed64_cpu_v7_rustc_wrapper.py": 3,
     "tools/verify_engine_v2_native_fixed64_cpu_v7_evidence.py": 4,
+    "tools/verify_engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt.py": 4,
     "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v7.py": 3,
     "tests/unit/test_verify_engine_v2_native_fixed64_cpu_v7_evidence.py": 3,
+    "tests/unit/test_verify_engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt.py": 3,
 }
 NATIVE_FIXED64_CPU_V7_REQUIRED_TOKENS = tuple(
     NATIVE_FIXED64_CPU_V7_REQUIRED_TOKEN_COUNTS
@@ -1033,6 +1052,37 @@ def _native_fixed64_cpu_v6_archive_is_fail_closed(repo_root: Path) -> bool:
     )
 
 
+def _native_fixed64_cpu_v7_execution_receipt_is_consumed(repo_root: Path) -> bool:
+    path = (
+        repo_root
+        / "config/engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt.json"
+    )
+    try:
+        projection = require_execution_receipt_bytes(path.read_bytes())
+    except (OSError, NativeFixed64CPUV7ExecutionReceiptError):
+        return False
+    execution = projection.get("execution")
+    authority = projection.get("authority")
+    claims = projection.get("claims")
+    restrictions = projection.get("restrictions")
+    return bool(
+        projection.get("status") == "recorded_pass_non_authoritative"
+        and type(execution) is dict
+        and execution.get("execution_consumed") is True
+        and execution.get("execution_attested") is False
+        and execution.get("recorded_decision") == "PASS"
+        and type(authority) is dict
+        and authority
+        and all(value is False for value in authority.values())
+        and type(claims) is dict
+        and claims
+        and all(value is False for value in claims.values())
+        and type(restrictions) is dict
+        and restrictions
+        and all(value is False for value in restrictions.values())
+    )
+
+
 def _native_fixed64_cpu_v7_authority_is_fail_closed(repo_root: Path) -> bool:
     profile_path = repo_root / "config/engine_v2_native_fixed64_cpu_profile_v7.json"
     runner_path = repo_root / "rust/betelgeuze-runtime/src/qualification_v7.rs"
@@ -1585,6 +1635,10 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
             and _native_fixed64_cpu_v7_authority_is_fail_closed(repo_root)
         )
     )
+    native_fixed64_cpu_v7_execution_consumed = bool(
+        native_fixed64_cpu_v7_contract_files_complete
+        and _native_fixed64_cpu_v7_execution_receipt_is_consumed(repo_root)
+    )
     native_fixed64_cpu_v7_live_qualification_absent_from_github_actions = (
         "--run-output" not in all_workflow_text
         and "run_native_fixed64_cpu_qualification_v7" not in all_workflow_text
@@ -1593,6 +1647,10 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
     native_fixed64_cpu_v7_authority_fail_closed = (
         native_fixed64_cpu_v7_profile_authority_false
         and native_fixed64_cpu_v7_live_qualification_absent_from_github_actions
+        and (
+            not native_fixed64_cpu_v7_contract_present
+            or native_fixed64_cpu_v7_execution_consumed
+        )
     )
     native_fixed64_cpu_v7_contract_in_authoritative_ci = (
         not native_fixed64_cpu_v7_contract_present
@@ -1741,7 +1799,12 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         "native_fixed64_cpu_v7_authority_fail_closed": (
             native_fixed64_cpu_v7_authority_fail_closed
         ),
-        "native_fixed64_cpu_v7_execution_consumed": False,
+        "native_fixed64_cpu_v7_execution_consumed": (
+            native_fixed64_cpu_v7_execution_consumed
+        ),
+        "native_fixed64_cpu_v7_execution_receipt_verified": (
+            native_fixed64_cpu_v7_execution_consumed
+        ),
         "native_fixed64_cpu_v7_github_actions_production_authority_false": (
             native_fixed64_cpu_v7_profile_authority_false
         ),

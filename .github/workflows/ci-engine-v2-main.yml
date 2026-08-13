@@ -64,6 +64,7 @@ on:
       - "config/engine_v2_native_fixed64_cpu_profile_v6_sources.json"
       - "config/engine_v2_native_fixed64_cpu_profile_v7.json"
       - "config/engine_v2_native_fixed64_cpu_profile_v7_sources.json"
+      - "config/engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt.json"
       - "config/engine_v2_native_fixed64_cpu_profile_v4.json"
       - "config/engine_v2_native_fixed64_cpu_profile_v4_archive.json"
       - "tools/build_engine_v2_wheel.py"
@@ -102,6 +103,7 @@ on:
       - "tools/verify_engine_v2_native_fixed64_cpu_profile_v7.py"
       - "tools/verify_engine_v2_native_fixed64_cpu_v7_rustc_wrapper.py"
       - "tools/verify_engine_v2_native_fixed64_cpu_v7_evidence.py"
+      - "tools/verify_engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt.py"
       - "tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py"
       - "config/engine_v2_public_redocking_stage0_*.json"
       - "tests/unit/test_engine_v2_*.py"
@@ -113,6 +115,7 @@ on:
       - "tests/unit/test_verify_engine_v2_native_fixed64_cpu_v6_evidence.py"
       - "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v7.py"
       - "tests/unit/test_verify_engine_v2_native_fixed64_cpu_v7_evidence.py"
+      - "tests/unit/test_verify_engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt.py"
       - "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v4.py"
       - "tests/unit/test_build_engine_v2_source_paired_failure_atlas.py"
       - "tests/unit/test_build_engine_v2_receipt_bound_scale_feasibility_audit.py"
@@ -123,6 +126,7 @@ on:
       - "tests/unit/test_verify_engine_v2_source_paired_clearance_activation.py"
       - "tests/unit/test_verify_engine_v2_source_paired_clearance_external_reservation_operations_decision.py"
       - "docs/engine_v2_source_paired_clearance_activation.md"
+      - "docs/engine_v2_native_fixed64_cpu_qualification_v7_result.md"
       - "docs/engine_v2_*.md"
       - "docs/independent_engine_v2_commercial_roadmap.ko.md"
       - "docs/roadmaps/engine-v2-scientific-evidence-roadmap.md"
@@ -250,8 +254,10 @@ jobs:
             config/engine_v2_native_fixed64_cpu_profile_v6_sources.json
             config/engine_v2_native_fixed64_cpu_profile_v7.json
             config/engine_v2_native_fixed64_cpu_profile_v7_sources.json
+            config/engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt.json
             docs/engine_v2_native_fixed64_cpu_qualification_v6.md
             docs/engine_v2_native_fixed64_cpu_qualification_v7.md
+            docs/engine_v2_native_fixed64_cpu_qualification_v7_result.md
             config/engine_v2_native_fixed64_cpu_profile_v4.json
             config/engine_v2_native_fixed64_cpu_profile_v4_archive.json
             config/engine_v2_public_redocking_stage0_threshold_evidence.json
@@ -296,6 +302,7 @@ jobs:
             tools/verify_engine_v2_native_fixed64_cpu_profile_v7.py
             tools/verify_engine_v2_native_fixed64_cpu_v7_rustc_wrapper.py
             tools/verify_engine_v2_native_fixed64_cpu_v7_evidence.py
+            tools/verify_engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt.py
             tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py
             config/engine_v2_public_redocking_stage0_freeze.template.json
             config/engine_v2_public_redocking_stage0_attestation.template.json
@@ -336,6 +343,7 @@ jobs:
             tests/unit/test_verify_engine_v2_native_fixed64_cpu_v6_evidence.py
             tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v7.py
             tests/unit/test_verify_engine_v2_native_fixed64_cpu_v7_evidence.py
+            tests/unit/test_verify_engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt.py
             tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v4.py
             tests/unit/test_engine_v2_native_geometric_admission.py
             tests/unit/test_engine_v2_oracle_selection_metrics.py
@@ -524,6 +532,7 @@ jobs:
             tools/verify_engine_v2_native_fixed64_cpu_profile_v7.py \
             tools/verify_engine_v2_native_fixed64_cpu_v7_rustc_wrapper.py \
             tools/verify_engine_v2_native_fixed64_cpu_v7_evidence.py \
+            tools/verify_engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt.py \
             tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py \
             tools/run_engine_v2_cpu_performance_qualification.py
           python tools/check_engine_v2_architecture.py
@@ -646,6 +655,15 @@ jobs:
             /tmp/engine-v2-native-fixed64-cpu-v7-evidence-help.txt
           grep -q -- '--terminal' \
             /tmp/engine-v2-native-fixed64-cpu-v7-evidence-help.txt
+          python \
+            tools/verify_engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt.py \
+            > /tmp/engine-v2-native-fixed64-cpu-v7-execution-receipt.json
+          grep -q '"execution_consumed":true' \
+            /tmp/engine-v2-native-fixed64-cpu-v7-execution-receipt.json
+          grep -q '"raw_evidence_reverified":false' \
+            /tmp/engine-v2-native-fixed64-cpu-v7-execution-receipt.json
+          grep -q '"status":"recorded_pass_non_authoritative"' \
+            /tmp/engine-v2-native-fixed64-cpu-v7-execution-receipt.json
 
       - name: Run complete focused Engine v2 CPU suite
         shell: bash
@@ -776,6 +794,7 @@ jobs:
             tests/unit/test_verify_engine_v2_native_fixed64_cpu_v6_evidence.py \
             tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v7.py \
             tests/unit/test_verify_engine_v2_native_fixed64_cpu_v7_evidence.py \
+            tests/unit/test_verify_engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt.py \
             tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v4.py \
             tests/unit/test_engine_v2_native_geometric_admission.py \
             tests/unit/test_engine_v2_oracle_selection_metrics.py \
