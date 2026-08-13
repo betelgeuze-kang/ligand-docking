@@ -22,6 +22,7 @@ on:
       - "tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py"
       - "tools/verify_engine_v2_native_fixed64_cpu_profile_v5.py"
       - "tools/verify_engine_v2_native_fixed64_cpu_profile_v6.py"
+      - "tools/verify_engine_v2_native_fixed64_cpu_v6_rustc_wrapper.py"
       - "tools/verify_engine_v2_native_fixed64_cpu_v6_evidence.py"
       - "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v6.py"
       - "tests/unit/test_verify_engine_v2_native_fixed64_cpu_v6_evidence.py"
@@ -47,6 +48,7 @@ on:
       - "tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py"
       - "tools/verify_engine_v2_native_fixed64_cpu_profile_v5.py"
       - "tools/verify_engine_v2_native_fixed64_cpu_profile_v6.py"
+      - "tools/verify_engine_v2_native_fixed64_cpu_v6_rustc_wrapper.py"
       - "tools/verify_engine_v2_native_fixed64_cpu_v6_evidence.py"
       - "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v6.py"
       - "tests/unit/test_verify_engine_v2_native_fixed64_cpu_v6_evidence.py"
@@ -95,6 +97,7 @@ jobs:
             tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py
             tools/verify_engine_v2_native_fixed64_cpu_profile_v5.py
             tools/verify_engine_v2_native_fixed64_cpu_profile_v6.py
+            tools/verify_engine_v2_native_fixed64_cpu_v6_rustc_wrapper.py
             tools/verify_engine_v2_native_fixed64_cpu_v6_evidence.py
 
       - name: Report hosted toolchain
@@ -174,6 +177,7 @@ jobs:
         run: |
           cargo package --manifest-path rust/betelgeuze-sys/Cargo.toml --locked \
             --config 'patch.crates-io.betelgeuze-cpu-kernel.path="rust/cpu-kernel"'
+          BETELGEUZE_V6_NON_AUTHORITATIVE_PACKAGE_BUILD=1 \
           BETELGEUZE_V6_SOURCE_ROOT="$GITHUB_WORKSPACE" \
           cargo package --manifest-path rust/betelgeuze-runtime/Cargo.toml --locked \
             --config 'patch.crates-io.betelgeuze-sys.path="rust/betelgeuze-sys"' \
@@ -184,6 +188,8 @@ jobs:
 
       - name: Verify normalized standalone v6 package activation
         run: |
+          set +e
+          BETELGEUZE_V6_NON_AUTHORITATIVE_PACKAGE_BUILD=1 \
           BETELGEUZE_V6_SOURCE_ROOT="$GITHUB_WORKSPACE" \
           cargo run --offline --locked \
             --manifest-path rust/target/package/betelgeuze-runtime-0.1.0/Cargo.toml \
@@ -193,4 +199,13 @@ jobs:
             --config "patch.crates-io.betelgeuze-docking-search.path=\"$GITHUB_WORKSPACE/rust/betelgeuze-docking-search\"" \
             --config "patch.crates-io.betelgeuze-reference-physics.path=\"$GITHUB_WORKSPACE/rust/reference-physics\"" \
             --config "patch.crates-io.betelgeuze-reference-dynamics.path=\"$GITHUB_WORKSPACE/rust/reference-dynamics\"" \
-            -- --verify-activation
+            -- --verify-activation \
+            > /tmp/v6-normalized-package.stdout \
+            2> /tmp/v6-normalized-package.stderr
+          activation_status=$?
+          set -e
+          test "$activation_status" -eq 1
+          test ! -s /tmp/v6-normalized-package.stdout
+          grep -F \
+            'non-authoritative package build cannot activate' \
+            /tmp/v6-normalized-package.stderr

@@ -19,6 +19,7 @@ if __package__:
     from .verify_engine_v2_native_fixed64_cpu_profile_v6 import (
         FALSE_AUTHORITY_KEYS,
         FALSE_RESTRICTION_KEYS,
+        BUILD_CONFIGURATION_SHA256,
         PROFILE_ID,
         PROFILE_RELATIVE_PATH,
         PROFILE_SHA256,
@@ -28,6 +29,7 @@ else:
     from verify_engine_v2_native_fixed64_cpu_profile_v6 import (
         FALSE_AUTHORITY_KEYS,
         FALSE_RESTRICTION_KEYS,
+        BUILD_CONFIGURATION_SHA256,
         PROFILE_ID,
         PROFILE_RELATIVE_PATH,
         PROFILE_SHA256,
@@ -99,6 +101,7 @@ ATTEMPT_KEYS = (
     "activation_sha256",
     "attempt_ordinal",
     "authority",
+    "build_configuration_sha256",
     "measurement_started",
     "output_path_sha256",
     "process_id",
@@ -115,6 +118,7 @@ ARTIFACT_KEYS = (
     "attempt_receipt_sha256",
     "authority",
     "blockers",
+    "build_configuration_sha256",
     "execution",
     "fixtures",
     "host",
@@ -137,6 +141,7 @@ TERMINAL_KEYS = (
     "attempt_receipt_sha256",
     "authority",
     "blockers",
+    "build_configuration_sha256",
     "decision_returned_only_after_terminal_persistence",
     "execution_attested",
     "execution_consumed",
@@ -296,6 +301,7 @@ def require_attempt_bytes(
         or attempt["profile_id"] != PROFILE_ID
         or attempt["profile_sha256"] != PROFILE_SHA256
         or attempt["activation_sha256"] != activation_sha256
+        or attempt["build_configuration_sha256"] != BUILD_CONFIGURATION_SHA256
         or attempt["output_path_sha256"] != output_path_sha256
         or type(attempt["attempt_ordinal"]) is not int
         or attempt["attempt_ordinal"] != 1
@@ -613,12 +619,16 @@ def require_artifact_bytes(
         or artifact["activation_sha256"] != activation_sha256
         or artifact["attempt_ledger_raw_sha256"] != _sha256(attempt_raw)
         or artifact["attempt_receipt_sha256"] != attempt_receipt
+        or artifact["build_configuration_sha256"] != BUILD_CONFIGURATION_SHA256
+        or artifact["build_configuration_sha256"]
+        != attempt["build_configuration_sha256"]
         or artifact["run_nonce"] != attempt["run_nonce"]
         or artifact["output_path_sha256"] != output_path_sha256
         or artifact["output_path_sha256"] != attempt["output_path_sha256"]
         or artifact["qualification_authority"] is not False
         or execution["execution_attested"] is not False
         or execution["offline_replay_only"] is not True
+        or type(host["measurement_cpu_ordinal"]) is not int
         or host["measurement_cpu_ordinal"] != 2
         or type(host["measurement_cpu_available"]) is not bool
         or (
@@ -731,6 +741,12 @@ def require_terminal_bytes(
         or terminal["activation_sha256"] != activation_sha256
         or terminal["attempt_ledger_raw_sha256"] != _sha256(attempt_raw)
         or terminal["attempt_receipt_sha256"] != attempt_receipt
+        or terminal["build_configuration_sha256"]
+        != BUILD_CONFIGURATION_SHA256
+        or terminal["build_configuration_sha256"]
+        != attempt["build_configuration_sha256"]
+        or terminal["build_configuration_sha256"]
+        != artifact["build_configuration_sha256"]
         or terminal["artifact_raw_sha256"] != _sha256(artifact_raw)
         or terminal["artifact_byte_count"] != len(artifact_raw)
         or terminal["artifact_receipt_sha256"] != artifact_receipt

@@ -22,6 +22,25 @@ use crate::qualification::{
     Fixed64CpuProbeReportV5,
 };
 
+#[cfg(all(
+    betelgeuze_v6_qualification_build,
+    any(
+        not(target_os = "linux"),
+        not(target_arch = "x86_64"),
+        not(target_env = "gnu"),
+        not(target_feature = "sse2"),
+        not(panic = "abort"),
+        debug_assertions,
+    )
+))]
+compile_error!("v6 qualification Rust target configuration is not frozen");
+
+#[cfg(all(
+    betelgeuze_v6_qualification_build,
+    not(betelgeuze_v6_effective_rust_flags_verified)
+))]
+compile_error!("v6 qualification effective rustc flags were not wrapper-verified");
+
 pub const FIXED64_CPU_QUALIFICATION_V6_PROFILE_ID: &str =
     "engine_v2_native_fixed64_cpu_synthetic_v6";
 pub const FIXED64_CPU_QUALIFICATION_V6_SCHEMA_ID: &str =
@@ -43,7 +62,11 @@ const COMPILED_SOURCE_COUNT: &str = env!("BETELGEUZE_V6_COMPILED_SOURCE_COUNT");
 const COMPILED_PROFILE_SHA256: &str = env!("BETELGEUZE_V6_COMPILED_PROFILE_SHA256");
 const BUILD_COMMIT_OID: &str = env!("BETELGEUZE_V6_BUILD_COMMIT_OID");
 const BUILD_COMMIT_BOUND: &str = env!("BETELGEUZE_V6_BUILD_COMMIT_BOUND");
+const BUILD_CONFIGURATION_SHA256: &str = env!("BETELGEUZE_V6_BUILD_CONFIGURATION_SHA256");
+const BUILD_CONFIGURATION_BOUND: &str = env!("BETELGEUZE_V6_BUILD_CONFIGURATION_BOUND");
 const VERIFIED_SOURCE_ROOT: &str = env!("BETELGEUZE_V6_VERIFIED_SOURCE_ROOT");
+const EXPECTED_BUILD_CONFIGURATION_SHA256: &str =
+    "28b7b3d8533456d27539b8cfb0fb2c03e9afe68198b81a60839a9f5e9c271c9f";
 
 const ATTEMPT_SCHEMA_ID: &str = "betelgeuze.engine_v2_native_fixed64_cpu_attempt/6.0.0";
 const ARTIFACT_SCHEMA_ID: &str =
@@ -120,6 +143,7 @@ pub struct Fixed64CpuActivationStatusV6 {
     pub profile_id: &'static str,
     pub profile_sha256: String,
     pub activation_sha256: String,
+    pub build_configuration_sha256: String,
     pub live_execution_implemented: bool,
     pub execution_consumed: bool,
     pub qualification_authority: bool,
@@ -133,6 +157,7 @@ pub struct Fixed64CpuActivationStatusV6 {
 pub struct Fixed64CpuPreflightV6 {
     pub profile_sha256: String,
     pub activation_sha256: String,
+    pub build_configuration_sha256: String,
     pub source_commit_oid: Option<String>,
     pub cpu_model: Option<String>,
     pub boost_disabled: Option<bool>,
@@ -303,6 +328,10 @@ pub fn verify_native_fixed64_cpu_v6_activation() -> V6Result<Fixed64CpuActivatio
             "verified build commit",
         ),
         (
+            "\"frozen_build_configuration_required\": true",
+            "frozen build configuration",
+        ),
+        (
             "\"compiled_activation_profile_verified_at_build\": true",
             "compiled activation profile",
         ),
@@ -311,12 +340,28 @@ pub fn verify_native_fixed64_cpu_v6_activation() -> V6Result<Fixed64CpuActivatio
             "non-authoritative package activation boundary",
         ),
         (
+            "\"normal_and_ci_build_activation_rejected\": true",
+            "normal build activation boundary",
+        ),
+        (
             "\"output_path_utf8_required\": true",
             "output path encoding",
         ),
         (
             "\"post_measurement_host_revalidation_required\": true",
             "post-measurement host revalidation",
+        ),
+        (
+            "\"qualification_build_opt_in_required\": true",
+            "qualification build opt-in",
+        ),
+        (
+            "\"cargo_profile\": \"qualification-v6\"",
+            "qualification Cargo profile",
+        ),
+        (
+            "\"target_triple\": \"x86_64-unknown-linux-gnu\"",
+            "qualification target triple",
         ),
     ] {
         require_profile_literal(profile, literal, label)?;
@@ -346,6 +391,13 @@ pub fn verify_native_fixed64_cpu_v6_activation() -> V6Result<Fixed64CpuActivatio
             "native fixed64 CPU v6 non-authoritative package build cannot activate",
         ));
     }
+    if BUILD_CONFIGURATION_BOUND != "true"
+        || BUILD_CONFIGURATION_SHA256 != EXPECTED_BUILD_CONFIGURATION_SHA256
+    {
+        return Err(NativeFixed64CpuQualificationV6Error::new(
+            "native fixed64 CPU v6 build configuration is not frozen",
+        ));
+    }
     if COMPILED_PROFILE_SHA256 != profile_sha256
         || BUILD_COMMIT_OID.len() != 40
         || BUILD_COMMIT_OID == "0000000000000000000000000000000000000000"
@@ -353,10 +405,10 @@ pub fn verify_native_fixed64_cpu_v6_activation() -> V6Result<Fixed64CpuActivatio
             .bytes()
             .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
         || COMPILED_SOURCE_MANIFEST_SHA256 != sha256_hex(TRANSITIVE_SOURCE_MANIFEST_BYTES)
-        || COMPILED_SOURCE_COUNT != "192"
+        || COMPILED_SOURCE_COUNT != "193"
         || std::str::from_utf8(TRANSITIVE_SOURCE_MANIFEST_BYTES)
             .ok()
-            .is_none_or(|manifest| manifest.matches("\"source_count\": 192").count() != 1)
+            .is_none_or(|manifest| manifest.matches("\"source_count\": 193").count() != 1)
     {
         return Err(NativeFixed64CpuQualificationV6Error::new(
             "native fixed64 CPU v6 compiled transitive source graph is not exact",
@@ -367,6 +419,7 @@ pub fn verify_native_fixed64_cpu_v6_activation() -> V6Result<Fixed64CpuActivatio
         profile_id: FIXED64_CPU_QUALIFICATION_V6_PROFILE_ID,
         profile_sha256,
         activation_sha256,
+        build_configuration_sha256: BUILD_CONFIGURATION_SHA256.to_owned(),
         live_execution_implemented: true,
         execution_consumed: false,
         qualification_authority: false,
@@ -674,6 +727,7 @@ pub fn preflight_native_fixed64_cpu_v6() -> V6Result<Fixed64CpuPreflightV6> {
     Ok(Fixed64CpuPreflightV6 {
         profile_sha256: activation.profile_sha256,
         activation_sha256: activation.activation_sha256,
+        build_configuration_sha256: activation.build_configuration_sha256,
         source_commit_oid,
         cpu_model: model,
         boost_disabled,
@@ -956,9 +1010,12 @@ fn validate_absent_output(path: &Path) -> V6Result<ValidatedOutputTarget> {
             "native fixed64 CPU v6 output parent is unavailable",
         )
     })?;
-    if canonical_parent != parent || path != canonical_parent.join(name) {
+    let canonical_target = canonical_parent.join(name);
+    if canonical_parent != parent
+        || path.as_os_str().as_bytes() != canonical_target.as_os_str().as_bytes()
+    {
         return Err(NativeFixed64CpuQualificationV6Error::new(
-            "native fixed64 CPU v6 output parent traverses a symlink",
+            "native fixed64 CPU v6 output path is not lexically canonical",
         ));
     }
     if path.starts_with(source_root()?) {
@@ -1511,6 +1568,7 @@ fn create_attempt(
             "{{\"activation_sha256\":\"{}\",",
             "\"attempt_ordinal\":1,",
             "\"authority\":{},",
+            "\"build_configuration_sha256\":\"{}\",",
             "\"measurement_started\":false,",
             "\"output_path_sha256\":\"{}\",",
             "\"process_id\":{},",
@@ -1523,6 +1581,7 @@ fn create_attempt(
         ),
         activation.activation_sha256,
         AUTHORITY_FALSE_JSON,
+        activation.build_configuration_sha256,
         output_path_sha256,
         process_id,
         process_start_ticks()?,
@@ -1770,6 +1829,7 @@ fn build_artifact(
             "\"attempt_receipt_sha256\":\"{}\",",
             "\"authority\":{},",
             "\"blockers\":{},",
+            "\"build_configuration_sha256\":\"{}\",",
             "\"execution\":{{",
             "\"execution_attested\":false,",
             "\"measurement_started\":{},",
@@ -1801,6 +1861,7 @@ fn build_artifact(
         attempt.receipt_sha256,
         AUTHORITY_FALSE_JSON,
         json_string_array(&outcome.blockers),
+        preflight.build_configuration_sha256,
         outcome.measurement_started,
         json_string(&recorded_decision),
         json_optional_bool(recorded_gate_passed),
@@ -1855,6 +1916,7 @@ fn build_terminal(
             "\"attempt_receipt_sha256\":\"{}\",",
             "\"authority\":{},",
             "\"blockers\":{},",
+            "\"build_configuration_sha256\":\"{}\",",
             "\"decision_returned_only_after_terminal_persistence\":true,",
             "\"execution_attested\":false,",
             "\"execution_consumed\":true,",
@@ -1877,6 +1939,7 @@ fn build_terminal(
         attempt.receipt_sha256,
         AUTHORITY_FALSE_JSON,
         json_string_array(&artifact.blockers),
+        activation.build_configuration_sha256,
         attempt.output_path_sha256,
         activation.profile_id,
         activation.profile_sha256,
@@ -1930,6 +1993,7 @@ pub fn run_native_fixed64_cpu_qualification_v6(
     let preflight = preflight_native_fixed64_cpu_v6()?;
     if preflight.profile_sha256 != activation.profile_sha256
         || preflight.activation_sha256 != activation.activation_sha256
+        || preflight.build_configuration_sha256 != activation.build_configuration_sha256
     {
         return Err(NativeFixed64CpuQualificationV6Error::new(
             "native fixed64 CPU v6 preflight activation identity changed",
@@ -2033,6 +2097,7 @@ mod tests {
             profile_id: FIXED64_CPU_QUALIFICATION_V6_PROFILE_ID,
             profile_sha256: "11".repeat(32),
             activation_sha256: "22".repeat(32),
+            build_configuration_sha256: "33".repeat(32),
             live_execution_implemented: true,
             execution_consumed: false,
             qualification_authority: false,
@@ -2062,15 +2127,31 @@ mod tests {
     }
 
     #[test]
-    fn compile_bound_activation_is_non_consuming_and_all_authority_false() {
-        let status = verify_native_fixed64_cpu_v6_activation().expect("activation contract");
-        assert!(status.live_execution_implemented);
-        assert!(!status.execution_consumed);
-        assert!(!status.qualification_authority);
-        assert!(!status.molecular_execution_authorized);
-        assert!(!status.public_benchmark_authorized);
-        assert!(!status.product_performance_claim_authorized);
-        assert!(!status.hip_device_execution_authorized);
+    fn activation_requires_the_compile_bound_frozen_build_configuration() {
+        if BUILD_COMMIT_BOUND == "true" && BUILD_CONFIGURATION_BOUND == "true" {
+            let status = verify_native_fixed64_cpu_v6_activation().expect("activation contract");
+            assert_eq!(
+                status.build_configuration_sha256,
+                EXPECTED_BUILD_CONFIGURATION_SHA256
+            );
+            assert!(status.live_execution_implemented);
+            assert!(!status.execution_consumed);
+            assert!(!status.qualification_authority);
+            assert!(!status.molecular_execution_authorized);
+            assert!(!status.public_benchmark_authorized);
+            assert!(!status.product_performance_claim_authorized);
+            assert!(!status.hip_device_execution_authorized);
+        } else {
+            let error = verify_native_fixed64_cpu_v6_activation()
+                .expect_err("ordinary and non-authoritative builds must fail activation");
+            if BUILD_COMMIT_BOUND != "true" {
+                assert!(error.message().contains("non-authoritative package build"));
+            } else {
+                assert!(error
+                    .message()
+                    .contains("build configuration is not frozen"));
+            }
+        }
     }
 
     #[test]
@@ -2137,6 +2218,19 @@ mod tests {
         let error = validate_absent_output(&directory.path.join(name))
             .expect_err("non-UTF-8 output must be rejected before state creation");
         assert!(error.message().contains("output path is invalid"));
+    }
+
+    #[test]
+    fn output_validation_rejects_redundant_components_before_attempt_creation() {
+        let directory = TestDirectory::new();
+        for spelling in [
+            format!("{}/./result.json", directory.path.display()),
+            format!("{}//result.json", directory.path.display()),
+        ] {
+            let error = validate_absent_output(Path::new(&spelling))
+                .expect_err("non-canonical spelling must fail before state creation");
+            assert!(error.message().contains("not lexically canonical"));
+        }
     }
 
     #[test]
@@ -2238,6 +2332,7 @@ mod tests {
         let preflight = Fixed64CpuPreflightV6 {
             profile_sha256: activation.profile_sha256.clone(),
             activation_sha256: activation.activation_sha256.clone(),
+            build_configuration_sha256: activation.build_configuration_sha256.clone(),
             source_commit_oid: None,
             cpu_model: None,
             boost_disabled: None,
@@ -2253,10 +2348,18 @@ mod tests {
         let artifact = build_artifact(&activation, &attempt, &preflight, outcome).unwrap();
         let text = std::str::from_utf8(&artifact.raw).unwrap();
         assert_eq!(artifact.recorded_decision, "BLOCKED");
+        assert!(text.contains(&format!(
+            "\"build_configuration_sha256\":\"{}\"",
+            activation.build_configuration_sha256
+        )));
         assert!(text.contains("\"qualification_authority\":false"));
         assert!(text.contains("\"measurement_started\":false"));
         let terminal = build_terminal(&activation, &attempt, &artifact).unwrap();
         let terminal = std::str::from_utf8(&terminal).unwrap();
+        assert!(terminal.contains(&format!(
+            "\"build_configuration_sha256\":\"{}\"",
+            activation.build_configuration_sha256
+        )));
         assert!(terminal.contains("\"execution_consumed\":true"));
         assert!(terminal.contains("\"decision_returned_only_after_terminal_persistence\":true"));
     }

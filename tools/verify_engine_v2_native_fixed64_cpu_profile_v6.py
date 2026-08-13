@@ -24,11 +24,14 @@ else:
 
 SCHEMA_ID = "betelgeuze.engine_v2_native_fixed64_cpu_profile/6.0.0"
 PROFILE_ID = "engine_v2_native_fixed64_cpu_synthetic_v6"
-PROFILE_SHA256 = "fde4e50ed66abfbf44ab0730117d88c1f1b9a0f98e7ffd8b1de988490c84a684"
-SOURCE_MANIFEST_SHA256 = (
-    "58238e6a8baa4d0a660df6aa1684b7cce3156788ba17e42b3bc14d6b1b500536"
+PROFILE_SHA256 = "df3e616a4b873176a18fb37e10f8e70d68e6d248ba594f0db923a72af1f05107"
+BUILD_CONFIGURATION_SHA256 = (
+    "28b7b3d8533456d27539b8cfb0fb2c03e9afe68198b81a60839a9f5e9c271c9f"
 )
-SOURCE_COUNT = 192
+SOURCE_MANIFEST_SHA256 = (
+    "5ceb27d2e2f6d09dfdc29e7a6b690b3ef3870ee85d483289a2ffd163f44a4fc8"
+)
+SOURCE_COUNT = 193
 PROFILE_RELATIVE_PATH = Path("config/engine_v2_native_fixed64_cpu_profile_v6.json")
 SOURCE_MANIFEST_RELATIVE_PATH = Path(
     "config/engine_v2_native_fixed64_cpu_profile_v6_sources.json"
@@ -50,6 +53,10 @@ BINARY_SOURCE_RELATIVE_PATH = Path(
 )
 CARGO_MANIFEST_RELATIVE_PATH = Path("rust/betelgeuze-runtime/Cargo.toml")
 BUILD_SOURCE_RELATIVE_PATH = Path("rust/betelgeuze-runtime/build.rs")
+SYS_BUILD_SOURCE_RELATIVE_PATH = Path("rust/betelgeuze-sys/build.rs")
+RUSTC_WRAPPER_RELATIVE_PATH = Path(
+    "tools/verify_engine_v2_native_fixed64_cpu_v6_rustc_wrapper.py"
+)
 CARGO_LOCK_RELATIVE_PATH = Path("rust/Cargo.lock")
 PACKAGED_PROFILE_RELATIVE_PATH = Path(
     "rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v6.json"
@@ -151,6 +158,74 @@ EXPECTED_CARGO_TARGETS = {
     "rust/reference-physics/tests/frozen_fixtures.rs",
     "rust/reference-physics/tests/properties.rs",
 }
+EXPECTED_BUILD_CONFIGURATION = {
+    "cargo_binary_sha256": "9548937d530bf439ff1ba47a3b2bd26eeb9c3aff1961c20c01798613de922578",
+    "cargo_build_script_panic_env": "unwind",
+    "cargo_build_script_profile_env": "release",
+    "cargo_codegen_units": 1,
+    "cargo_commit_hash": "083ac5135f967fd9dc906ab057a2315861c7a80d",
+    "cargo_debug": False,
+    "cargo_debug_assertions": False,
+    "cargo_incremental": False,
+    "cargo_lto": "fat",
+    "cargo_opt_level": 3,
+    "cargo_overflow_checks": True,
+    "cargo_panic": "abort",
+    "cargo_profile": "qualification-v6",
+    "cargo_release": "1.93.0",
+    "cargo_strip": "none",
+    "cargo_target_directory": "rust/target/qualification-v6",
+    "cpp_compiler_canonical_path": "/usr/bin/x86_64-linux-gnu-g++-11",
+    "cpp_compiler_sha256": "2360901d864cf10bfd6296e261cb2c14053552a80377761ab07146ec9ec9a2c0",
+    "cpp_dumpfullversion": "11.4.0",
+    "cpp_dumpmachine": "x86_64-linux-gnu",
+    "cpp_explicit_flags": [
+        "-std=c++17",
+        "-O3",
+        "-m64",
+        "-fPIC",
+        "-ffunction-sections",
+        "-fdata-sections",
+        "-fvisibility=hidden",
+        "-ffp-contract=off",
+        "-fno-fast-math",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+    ],
+    "environment_flag_overrides_allowed": False,
+    "hip_feature_allowed": False,
+    "host_triple": "x86_64-unknown-linux-gnu",
+    "qualification_build_opt_in": "BETELGEUZE_V6_QUALIFICATION_BUILD=1",
+    "rust_target_features": ["fxsr", "sse", "sse2"],
+    "rustc_binary_effective_codegen_flags": [
+        "opt-level=3",
+        "panic=abort",
+        "lto=fat",
+        "codegen-units=1",
+        "overflow-checks=on",
+    ],
+    "rustc_binary_sha256": "d32249a7c3bfcfc67b471460386e46323accae7125e344567a12d5664d99bb57",
+    "rustc_commit_hash": "254b59607d4417e9dffbc307138ae5c86280fe4c",
+    "rustc_library_effective_codegen_flags": [
+        "opt-level=3",
+        "panic=abort",
+        "linker-plugin-lto",
+        "codegen-units=1",
+        "overflow-checks=on",
+    ],
+    "rustc_llvm_version": "21.1.8",
+    "rustc_release": "1.93.0",
+    "rustc_wrapper_cfg": "betelgeuze_v6_effective_rust_flags_verified",
+    "rustc_wrapper_interpreter_canonical_path": "/usr/bin/python3.10",
+    "rustc_wrapper_interpreter_sha256": "7d51cd6b48b521277f5caa4610a82126e315fa2be4df069823a8b1eeb5bd4a86",
+    "rustc_wrapper_relative_path": "tools/verify_engine_v2_native_fixed64_cpu_v6_rustc_wrapper.py",
+    "rustc_wrapper_required": True,
+    "rustc_wrapper_sha256": "97cbf0ae815235be44e23f1fce2c34391e1d7c037be7d8e923daf0ed2c956c45",
+    "schema_id": "betelgeuze.engine_v2_native_fixed64_cpu_build_configuration/1.0.0",
+    "target_triple": "x86_64-unknown-linux-gnu",
+}
 
 
 class NativeFixed64CPUProfileV6Error(ValueError):
@@ -184,6 +259,16 @@ def _canonical_bytes(value: object) -> bytes:
             sort_keys=True,
         )
         + "\n"
+    ).encode("ascii")
+
+
+def _compact_canonical_bytes(value: object) -> bytes:
+    return json.dumps(
+        value,
+        allow_nan=False,
+        ensure_ascii=True,
+        separators=(",", ":"),
+        sort_keys=True,
     ).encode("ascii")
 
 
@@ -239,6 +324,7 @@ def require_profile_document_v6(
     expected_top_keys = {
         "authority",
         "backends",
+        "build_configuration",
         "change_control",
         "fixtures",
         "gates",
@@ -267,6 +353,17 @@ def require_profile_document_v6(
         _fail("v6 authority is not entirely false")
     if any(value is not False for value in restrictions.values()):
         _fail("v6 restrictions are not entirely false")
+    build_configuration = _exact_keys(
+        profile["build_configuration"],
+        set(EXPECTED_BUILD_CONFIGURATION),
+        label="v6 build configuration",
+    )
+    if (
+        build_configuration != EXPECTED_BUILD_CONFIGURATION
+        or hashlib.sha256(_compact_canonical_bytes(build_configuration)).hexdigest()
+        != BUILD_CONFIGURATION_SHA256
+    ):
+        _fail("v6 frozen build configuration changed")
 
     for key in (
         "backends",
@@ -331,11 +428,15 @@ def require_profile_document_v6(
         "caller_supplied_probe_allowed": False,
         "compiled_activation_profile_verified_at_build": True,
         "compiled_transitive_sources_verified_at_build": True,
+        "effective_rustc_flags_wrapper_verified_at_build": True,
+        "frozen_build_configuration_required": True,
         "live_execution_implemented": True,
         "non_authoritative_package_build_activation_rejected": True,
+        "normal_and_ci_build_activation_rejected": True,
         "output_path_utf8_required": True,
         "output_policy": "owner_only_absent_only_single_artifact_plus_terminal",
         "post_measurement_host_revalidation_required": True,
+        "qualification_build_opt_in_required": True,
         "state_policy": "login_account_home_nofollow_o_excl",
         "test_only_profile_execution_allowed": False,
     }:
@@ -632,6 +733,12 @@ def require_activation_source_contract(sources: dict[str, bytes]) -> None:
         runner = sources[RUNNER_SOURCE_RELATIVE_PATH.as_posix()].decode("utf-8")
         binary = sources[BINARY_SOURCE_RELATIVE_PATH.as_posix()].decode("utf-8")
         build_source = sources[BUILD_SOURCE_RELATIVE_PATH.as_posix()].decode("utf-8")
+        sys_build_source = sources[SYS_BUILD_SOURCE_RELATIVE_PATH.as_posix()].decode(
+            "utf-8"
+        )
+        rustc_wrapper_source = sources[RUSTC_WRAPPER_RELATIVE_PATH.as_posix()].decode(
+            "utf-8"
+        )
     except (KeyError, UnicodeError) as exc:
         raise NativeFixed64CPUProfileV6Error(
             "v6 activation sources are unavailable"
@@ -652,8 +759,22 @@ def require_activation_source_contract(sources: dict[str, bytes]) -> None:
         "cargo:rustc-env={COMPILED_PROFILE_ENV}",
         "cargo:rustc-env={BUILD_COMMIT_ENV}",
         "cargo:rustc-env={BUILD_COMMIT_BOUND_ENV}",
+        "cargo:rustc-env={BUILD_CONFIGURATION_SHA256_ENV}",
+        "cargo:rustc-env={BUILD_CONFIGURATION_BOUND_ENV}",
         "cargo:rustc-env={VERIFIED_SOURCE_ROOT_ENV}",
         "BETELGEUZE_V6_NON_AUTHORITATIVE_PACKAGE_BUILD",
+        "BETELGEUZE_V6_QUALIFICATION_BUILD",
+        "EXPECTED_BUILD_CONFIGURATION_SHA256",
+        "EXPECTED_RUSTC_SHA256",
+        "EXPECTED_CARGO_SHA256",
+        "EXPECTED_CPP_SHA256",
+        "EXPECTED_RUSTC_WRAPPER_SHA256",
+        "EXPECTED_RUSTC_WRAPPER_INTERPRETER_SHA256",
+        "qualification_rustc_wrapper_is_exact",
+        "betelgeuze_v6_effective_rust_flags_verified",
+        "CARGO_ENCODED_RUSTFLAGS",
+        "CARGO_CFG_TARGET_FEATURE",
+        "FORBIDDEN_BUILD_ENVIRONMENT",
         "UNBOUND_BUILD_COMMIT_OID",
         "committed_blob(source_root, commit_oid, PROFILE_RELATIVE_PATH)",
         "track_git_commit_inputs(source_root)",
@@ -667,12 +788,49 @@ def require_activation_source_contract(sources: dict[str, bytes]) -> None:
     ):
         if token not in build_source:
             _fail(f"v6 compile-time source binding token is missing: {token}")
+    activation_start = runner.find("pub fn verify_native_fixed64_cpu_v6_activation(")
+    activation_end = runner.find("\nfn source_root()", activation_start)
+    if activation_start < 0 or activation_end < 0:
+        _fail("v6 activation verification entry point is unavailable")
+    activation_body = runner[activation_start:activation_end]
     for token in (
         'BUILD_COMMIT_BOUND != "true"',
         "non-authoritative package build cannot activate",
+        'BUILD_CONFIGURATION_BOUND != "true"',
+        "build configuration is not frozen",
+        "build_configuration_sha256",
     ):
-        if token not in runner:
+        if token not in activation_body:
             _fail(f"v6 non-authoritative package rejection token is missing: {token}")
+    for token in (
+        'const QUALIFICATION_CPP_COMPILER: &str = "/usr/bin/x86_64-linux-gnu-g++-11";',
+        "const QUALIFICATION_CPP_FLAGS: &[&str]",
+        ".no_default_flags(true)",
+        ".compiler(QUALIFICATION_CPP_COMPILER)",
+        '"-ffp-contract=off"',
+        '"-fno-fast-math"',
+        '"-Werror"',
+        "QUALIFICATION_FORBIDDEN_ENVIRONMENT",
+        "v6 CPU qualification build cannot link hip_safe",
+        "QUALIFICATION_RUSTC_WRAPPER_RELATIVE_PATH",
+        'std::env::var_os("RUSTC_WRAPPER")',
+    ):
+        if token not in sys_build_source:
+            _fail(f"v6 frozen C++ build token is missing: {token}")
+    for token in (
+        "CONTROLLED_LIBRARY_CRATES",
+        "CONTROLLED_CFG_VALUES",
+        '"opt-level": "3"',
+        'expected["lto"] = "fat"',
+        'expected["linker-plugin-lto"] = None',
+        "effective -C option names differ from the frozen profile",
+        "cfg values differ from the frozen profile",
+        "os.execv(rustc",
+        "unstable rustc options are forbidden",
+        "betelgeuze_v6_effective_rust_flags_verified",
+    ):
+        if token not in rustc_wrapper_source:
+            _fail(f"v6 effective rustc wrapper token is missing: {token}")
     start = runner.find("pub fn run_native_fixed64_cpu_qualification_v6(")
     end = runner.find("\n#[cfg(test)]", start)
     if start < 0 or end < 0:
@@ -715,6 +873,8 @@ def require_activation_source_contract(sources: dict[str, bytes]) -> None:
         "COMPILED_SOURCE_MANIFEST_SHA256",
         "COMPILED_PROFILE_SHA256",
         "BUILD_COMMIT_OID",
+        "BUILD_CONFIGURATION_SHA256",
+        "v6 qualification effective rustc flags were not wrapper-verified",
         "VERIFIED_SOURCE_ROOT",
         "source commit differs from the verified build commit",
         "post_measurement_host_invariant_failed",
@@ -770,6 +930,7 @@ def main() -> int:
             {
                 "all_authority_false": True,
                 "compiled_profile_binding_verified": True,
+                "build_configuration_sha256": BUILD_CONFIGURATION_SHA256,
                 "execution_consumed": False,
                 "live_execution_implemented": True,
                 "non_consuming_preflight_only": True,

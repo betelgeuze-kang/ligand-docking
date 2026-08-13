@@ -9,6 +9,7 @@ import sys
 import pytest
 
 from tools.verify_engine_v2_native_fixed64_cpu_profile_v6 import (
+    BUILD_CONFIGURATION_SHA256,
     FALSE_AUTHORITY_KEYS,
     FALSE_RESTRICTION_KEYS,
     PROFILE_ID,
@@ -73,6 +74,7 @@ def _attempt() -> dict[str, object]:
         "activation_sha256": _domain(ACTIVATION_DOMAIN, _PROFILE_RAW),
         "attempt_ordinal": 1,
         "authority": _false_authority(),
+        "build_configuration_sha256": BUILD_CONFIGURATION_SHA256,
         "measurement_started": False,
         "output_path_sha256": _OUTPUT_PATH_SHA256,
         "process_id": 1234,
@@ -140,6 +142,7 @@ def _artifact(
         "attempt_receipt_sha256": attempt_receipt,
         "authority": _false_authority(),
         "blockers": blockers,
+        "build_configuration_sha256": BUILD_CONFIGURATION_SHA256,
         "execution": {
             "execution_attested": False,
             "measurement_started": passed,
@@ -186,6 +189,7 @@ def _terminal(
         "attempt_receipt_sha256": attempt_receipt,
         "authority": _false_authority(),
         "blockers": [] if passed else ["source_checkout_not_exact_main"],
+        "build_configuration_sha256": BUILD_CONFIGURATION_SHA256,
         "decision_returned_only_after_terminal_persistence": True,
         "execution_attested": False,
         "execution_consumed": True,
@@ -375,6 +379,17 @@ def test_attempt_ordinal_rejects_boolean_alias_for_one() -> None:
         )
 
 
+def test_attempt_rejects_other_build_configuration() -> None:
+    attempt = _attempt()
+    attempt["build_configuration_sha256"] = "00" * 32
+    with pytest.raises(NativeFixed64CPUV6EvidenceError, match="semantics changed"):
+        require_attempt_bytes(
+            _envelope(attempt, ATTEMPT_DOMAIN),
+            activation_sha256=_domain(ACTIVATION_DOMAIN, _PROFILE_RAW),
+            output_path_sha256=_OUTPUT_PATH_SHA256,
+        )
+
+
 @pytest.mark.parametrize(
     ("field", "value"),
     (
@@ -423,6 +438,84 @@ def test_measured_evidence_rejects_other_build_commit() -> None:
     host = artifact["host"]
     assert isinstance(host, dict)
     host["source_commit_oid"] = "ab" * 20
+    _require_mutated_artifact_fails(artifact, match="identity or authority")
+
+
+def test_artifact_rejects_other_build_configuration() -> None:
+    attempt_raw = _envelope(_attempt(), ATTEMPT_DOMAIN)
+    attempt_projection_raw = json.dumps(
+        _attempt(),
+        allow_nan=False,
+        ensure_ascii=True,
+        separators=(",", ":"),
+    ).encode("ascii")
+    artifact = _artifact(
+        attempt_raw,
+        _domain(ATTEMPT_DOMAIN, attempt_projection_raw),
+        passed=True,
+    )
+    artifact["build_configuration_sha256"] = "00" * 32
+    _require_mutated_artifact_fails(artifact, match="identity or authority")
+
+
+def test_terminal_rejects_other_build_configuration() -> None:
+    attempt_raw, artifact_raw, _ = _evidence(passed=True)
+    attempt_projection = _attempt()
+    attempt_projection_raw = json.dumps(
+        attempt_projection,
+        allow_nan=False,
+        ensure_ascii=True,
+        separators=(",", ":"),
+    ).encode("ascii")
+    artifact_projection = _artifact(
+        attempt_raw,
+        _domain(ATTEMPT_DOMAIN, attempt_projection_raw),
+        passed=True,
+    )
+    artifact_projection_raw = json.dumps(
+        artifact_projection,
+        allow_nan=False,
+        ensure_ascii=True,
+        separators=(",", ":"),
+    ).encode("ascii")
+    terminal = _terminal(
+        attempt_raw,
+        _domain(ATTEMPT_DOMAIN, attempt_projection_raw),
+        artifact_raw,
+        _domain(ARTIFACT_DOMAIN, artifact_projection_raw),
+        passed=True,
+    )
+    terminal["build_configuration_sha256"] = "00" * 32
+    with pytest.raises(
+        NativeFixed64CPUV6EvidenceError,
+        match="terminal state does not rederive",
+    ):
+        require_persisted_evidence_bytes(
+            artifact_raw=artifact_raw,
+            attempt_raw=attempt_raw,
+            expected_source_commit_oid=_SOURCE_COMMIT_OID,
+            terminal_raw=_envelope(terminal, TERMINAL_DOMAIN),
+            output_path_sha256=_OUTPUT_PATH_SHA256,
+            profile_raw=_PROFILE_RAW,
+        )
+
+
+def test_measured_evidence_rejects_float_measurement_cpu_ordinal() -> None:
+    attempt_raw = _envelope(_attempt(), ATTEMPT_DOMAIN)
+    attempt_projection_raw = json.dumps(
+        _attempt(),
+        allow_nan=False,
+        ensure_ascii=True,
+        separators=(",", ":"),
+    ).encode("ascii")
+    artifact = _artifact(
+        attempt_raw,
+        _domain(ATTEMPT_DOMAIN, attempt_projection_raw),
+        passed=True,
+    )
+    host = artifact["host"]
+    assert isinstance(host, dict)
+    host["measurement_cpu_ordinal"] = 2.0
     _require_mutated_artifact_fails(artifact, match="identity or authority")
 
 

@@ -209,6 +209,7 @@ def _write_native_fixed64_cpu_v6_contract(tmp_path: Path) -> None:
         "config/engine_v2_native_fixed64_cpu_profile_v6.json",
         "config/engine_v2_native_fixed64_cpu_profile_v6_sources.json",
         "rust/Cargo.lock",
+        "rust/Cargo.toml",
         "rust_engine_v2/Cargo.lock",
         "rust/betelgeuze-runtime/Cargo.toml",
         "rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v5_archive.json",
@@ -219,6 +220,8 @@ def _write_native_fixed64_cpu_v6_contract(tmp_path: Path) -> None:
         "rust/betelgeuze-runtime/build.rs",
         "rust/betelgeuze-runtime/src/qualification_v6.rs",
         "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-qualify-v6.rs",
+        "rust/betelgeuze-sys/build.rs",
+        "tools/verify_engine_v2_native_fixed64_cpu_v6_rustc_wrapper.py",
     ):
         (tmp_path / relative).write_bytes((root / relative).read_bytes())
 
@@ -1070,6 +1073,29 @@ def test_native_fixed64_cpu_v6_live_invocation_is_forbidden_in_any_workflow(
     assert payload["native_fixed64_cpu_v6_contract_in_authoritative_ci"] is False
 
 
+def test_native_fixed64_cpu_v6_qualification_build_opt_in_is_forbidden_in_ci(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_native_fixed64_cpu_v6_contract(tmp_path)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_native_fixed64_cpu_v6_ci_tokens()),
+        encoding="utf-8",
+    )
+    specialized = tmp_path / ".github/workflows/untrusted-native-build.yaml"
+    specialized.write_text(
+        "run: BETELGEUZE_V6_QUALIFICATION_BUILD=1 cargo build\n",
+        encoding="utf-8",
+    )
+    payload = build_inventory(tmp_path)
+    assert (
+        payload["native_fixed64_cpu_v6_live_qualification_absent_from_github_actions"]
+        is False
+    )
+    assert payload["native_fixed64_cpu_v6_authority_fail_closed"] is False
+    assert payload["native_fixed64_cpu_v6_contract_in_authoritative_ci"] is False
+
+
 def test_native_fixed64_cpu_v6_packaged_asset_drift_fails_ci_audit(
     tmp_path: Path,
 ) -> None:
@@ -1178,6 +1204,32 @@ def test_native_fixed64_cpu_v6_cached_git_commit_cannot_pass_ci_audit(
         text.replace(
             "track_git_commit_inputs(source_root)",
             "trust_cached_git_commit_inputs(source_root)",
+            1,
+        ),
+        encoding="utf-8",
+    )
+    payload = build_inventory(tmp_path)
+    assert payload["native_fixed64_cpu_v6_authority_fail_closed"] is False
+    assert payload["native_fixed64_cpu_v6_contract_in_authoritative_ci"] is False
+
+
+def test_native_fixed64_cpu_v6_effective_rustc_wrapper_drift_fails_ci_audit(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_native_fixed64_cpu_v6_contract(tmp_path)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_native_fixed64_cpu_v6_ci_tokens()),
+        encoding="utf-8",
+    )
+    wrapper = (
+        tmp_path
+        / "tools/verify_engine_v2_native_fixed64_cpu_v6_rustc_wrapper.py"
+    )
+    wrapper.write_text(
+        wrapper.read_text(encoding="utf-8").replace(
+            "effective -C option names differ from the frozen profile",
+            "effective options are accepted from Cargo",
             1,
         ),
         encoding="utf-8",

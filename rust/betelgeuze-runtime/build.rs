@@ -1,5 +1,7 @@
 use std::env;
+use std::ffi::{OsStr, OsString};
 use std::fs;
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -17,9 +19,76 @@ const COMPILED_SOURCE_COUNT_ENV: &str = "BETELGEUZE_V6_COMPILED_SOURCE_COUNT";
 const COMPILED_PROFILE_ENV: &str = "BETELGEUZE_V6_COMPILED_PROFILE_SHA256";
 const BUILD_COMMIT_ENV: &str = "BETELGEUZE_V6_BUILD_COMMIT_OID";
 const BUILD_COMMIT_BOUND_ENV: &str = "BETELGEUZE_V6_BUILD_COMMIT_BOUND";
+const BUILD_CONFIGURATION_BOUND_ENV: &str = "BETELGEUZE_V6_BUILD_CONFIGURATION_BOUND";
+const BUILD_CONFIGURATION_SHA256_ENV: &str = "BETELGEUZE_V6_BUILD_CONFIGURATION_SHA256";
 const VERIFIED_SOURCE_ROOT_ENV: &str = "BETELGEUZE_V6_VERIFIED_SOURCE_ROOT";
 const NON_AUTHORITATIVE_PACKAGE_BUILD_ENV: &str = "BETELGEUZE_V6_NON_AUTHORITATIVE_PACKAGE_BUILD";
+const QUALIFICATION_BUILD_ENV: &str = "BETELGEUZE_V6_QUALIFICATION_BUILD";
 const UNBOUND_BUILD_COMMIT_OID: &str = "0000000000000000000000000000000000000000";
+const UNBOUND_BUILD_CONFIGURATION_SHA256: &str =
+    "0000000000000000000000000000000000000000000000000000000000000000";
+const EXPECTED_BUILD_CONFIGURATION_SHA256: &str =
+    "28b7b3d8533456d27539b8cfb0fb2c03e9afe68198b81a60839a9f5e9c271c9f";
+const EXPECTED_RUSTC_SHA256: &str =
+    "d32249a7c3bfcfc67b471460386e46323accae7125e344567a12d5664d99bb57";
+const EXPECTED_CARGO_SHA256: &str =
+    "9548937d530bf439ff1ba47a3b2bd26eeb9c3aff1961c20c01798613de922578";
+const EXPECTED_CPP_PATH: &str = "/usr/bin/x86_64-linux-gnu-g++-11";
+const EXPECTED_CPP_SHA256: &str =
+    "2360901d864cf10bfd6296e261cb2c14053552a80377761ab07146ec9ec9a2c0";
+const QUALIFICATION_RUSTC_WRAPPER_RELATIVE_PATH: &str =
+    "tools/verify_engine_v2_native_fixed64_cpu_v6_rustc_wrapper.py";
+const EXPECTED_RUSTC_WRAPPER_SHA256: &str =
+    "97cbf0ae815235be44e23f1fce2c34391e1d7c037be7d8e923daf0ed2c956c45";
+const EXPECTED_RUSTC_WRAPPER_INTERPRETER: &str = "/usr/bin/python3.10";
+const EXPECTED_RUSTC_WRAPPER_INTERPRETER_SHA256: &str =
+    "7d51cd6b48b521277f5caa4610a82126e315fa2be4df069823a8b1eeb5bd4a86";
+
+const FORBIDDEN_BUILD_ENVIRONMENT: &[&str] = &[
+    "AR",
+    "CC",
+    "CFLAGS",
+    "CPPFLAGS",
+    "CXX",
+    "CXXFLAGS",
+    "LDFLAGS",
+    "RANLIB",
+    "RUSTC_BOOTSTRAP",
+    "RUSTDOCFLAGS",
+    "RUSTC_WORKSPACE_WRAPPER",
+    "RUSTFLAGS",
+    "CARGO_BUILD_RUSTC",
+    "CARGO_BUILD_RUSTC_WRAPPER",
+    "CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER",
+    "CARGO_BUILD_RUSTFLAGS",
+    "CARGO_BUILD_TARGET",
+    "CARGO_INCREMENTAL",
+    "HOST_AR",
+    "HOST_CC",
+    "HOST_CFLAGS",
+    "HOST_CXX",
+    "HOST_CXXFLAGS",
+    "TARGET_AR",
+    "TARGET_CC",
+    "TARGET_CFLAGS",
+    "TARGET_CXX",
+    "TARGET_CXXFLAGS",
+    "AR_x86_64_unknown_linux_gnu",
+    "CC_x86_64_unknown_linux_gnu",
+    "CFLAGS_x86_64_unknown_linux_gnu",
+    "CXX_x86_64_unknown_linux_gnu",
+    "CXXFLAGS_x86_64_unknown_linux_gnu",
+    "AR_x86_64-unknown-linux-gnu",
+    "CC_x86_64-unknown-linux-gnu",
+    "CFLAGS_x86_64-unknown-linux-gnu",
+    "CXX_x86_64-unknown-linux-gnu",
+    "CXXFLAGS_x86_64-unknown-linux-gnu",
+    "BETELGEUZE_HIP_SAFE",
+    "ROCM_PATH",
+    "HIP_PATH",
+    "BG_HIP_SAFE_ARCHITECTURES",
+    "BG_HIP_DEVICE_LIB_PATH",
+];
 
 #[derive(Debug)]
 struct SourceRow {
@@ -31,6 +100,185 @@ struct SourceRow {
 fn sha256_hex(bytes: &[u8]) -> String {
     let digest = Sha256::digest(bytes);
     digest.iter().map(|byte| format!("{byte:02x}")).collect()
+}
+
+fn exact_environment(name: &str, expected: &str) -> bool {
+    env::var(name).ok().as_deref() == Some(expected)
+}
+
+fn environment_is_absent(name: &str) -> bool {
+    env::var_os(name).is_none()
+}
+
+fn resolve_program(program: &OsStr) -> Option<PathBuf> {
+    let candidate = PathBuf::from(program);
+    let unresolved = if candidate.components().count() > 1 {
+        candidate
+    } else {
+        env::var_os("PATH")
+            .into_iter()
+            .flat_map(|value| env::split_paths(&value).collect::<Vec<_>>())
+            .map(|directory| directory.join(&candidate))
+            .find(|path| path.is_file())?
+    };
+    unresolved.canonicalize().ok()
+}
+
+fn command_text(program: &OsStr, arguments: &[&str]) -> Option<String> {
+    let output = Command::new(program).args(arguments).output().ok()?;
+    if !output.status.success() || !output.stderr.is_empty() {
+        return None;
+    }
+    String::from_utf8(output.stdout).ok()
+}
+
+fn executable_matches(program: &OsStr, expected_sha256: &str) -> bool {
+    let Some(path) = resolve_program(program) else {
+        return false;
+    };
+    fs::read(path)
+        .ok()
+        .is_some_and(|raw| sha256_hex(&raw) == expected_sha256)
+}
+
+fn opt_in_environment(name: &str) -> bool {
+    println!("cargo:rerun-if-env-changed={name}");
+    match env::var(name) {
+        Ok(value) => {
+            assert_eq!(value, "1", "{name} must equal 1 when present");
+            true
+        }
+        Err(env::VarError::NotPresent) => false,
+        Err(env::VarError::NotUnicode(_)) => panic!("{name} must be UTF-8"),
+    }
+}
+
+fn qualification_output_directory_is_exact(source_root: &Path) -> bool {
+    let Some(out_dir) = env::var_os("OUT_DIR").map(PathBuf::from) else {
+        return false;
+    };
+    let Some(canonical_out_dir) = out_dir.canonicalize().ok() else {
+        return false;
+    };
+    let expected_build_root = source_root.join("rust/target/qualification-v6/build");
+    let Some(relative) = canonical_out_dir.strip_prefix(expected_build_root).ok() else {
+        return false;
+    };
+    let components = relative
+        .iter()
+        .map(OsStr::as_encoded_bytes)
+        .collect::<Vec<_>>();
+    components.len() == 2
+        && components[0].starts_with(b"betelgeuze-runtime-")
+        && components[0]["betelgeuze-runtime-".len()..]
+            .iter()
+            .all(u8::is_ascii_hexdigit)
+        && components[1] == b"out"
+}
+
+fn qualification_rustc_wrapper_is_exact(source_root: &Path) -> bool {
+    let Some(wrapper) = env::var_os("RUSTC_WRAPPER") else {
+        return false;
+    };
+    let expected = source_root.join(QUALIFICATION_RUSTC_WRAPPER_RELATIVE_PATH);
+    let Some(expected_canonical) = expected.canonicalize().ok() else {
+        return false;
+    };
+    let metadata = fs::symlink_metadata(&expected).ok();
+    metadata
+        .is_some_and(|value| value.file_type().is_file() && value.permissions().mode() & 0o111 != 0)
+        && resolve_program(&wrapper).as_deref() == Some(expected_canonical.as_path())
+        && executable_matches(&wrapper, EXPECTED_RUSTC_WRAPPER_SHA256)
+        && resolve_program(OsStr::new(EXPECTED_RUSTC_WRAPPER_INTERPRETER)).as_deref()
+            == Some(Path::new(EXPECTED_RUSTC_WRAPPER_INTERPRETER))
+        && executable_matches(
+            OsStr::new(EXPECTED_RUSTC_WRAPPER_INTERPRETER),
+            EXPECTED_RUSTC_WRAPPER_INTERPRETER_SHA256,
+        )
+}
+
+fn bind_build_configuration(source_root: &Path, non_authoritative_package: bool) -> (String, bool) {
+    for name in FORBIDDEN_BUILD_ENVIRONMENT {
+        println!("cargo:rerun-if-env-changed={name}");
+    }
+    for name in [
+        "CARGO",
+        "CARGO_CFG_PANIC",
+        "CARGO_CFG_TARGET_FEATURE",
+        "CARGO_ENCODED_RUSTFLAGS",
+        "CARGO_FEATURE_HIP",
+        "DEBUG",
+        "HOST",
+        "OPT_LEVEL",
+        "OUT_DIR",
+        "PROFILE",
+        "RUSTC",
+        "RUSTC_WRAPPER",
+        "TARGET",
+    ] {
+        println!("cargo:rerun-if-env-changed={name}");
+    }
+    let requested = opt_in_environment(QUALIFICATION_BUILD_ENV);
+    if !requested {
+        return (UNBOUND_BUILD_CONFIGURATION_SHA256.to_owned(), false);
+    }
+    assert!(
+        !non_authoritative_package,
+        "v6 qualification and non-authoritative package build modes are mutually exclusive"
+    );
+    let encoded_rustflags_empty =
+        env::var_os("CARGO_ENCODED_RUSTFLAGS").is_none_or(|value| value.is_empty());
+    let no_dynamic_overrides = env::vars_os().all(|(name, value)| {
+        let Some(name) = name.to_str() else {
+            return false;
+        };
+        !name.starts_with("CARGO_PROFILE_")
+            && !name.starts_with("CARGO_TARGET_")
+            && !name.starts_with("CARGO_UNSTABLE_")
+            && (name != "CARGO_FEATURE_HIP" || value.is_empty())
+    });
+    let rustc = env::var_os("RUSTC").unwrap_or_else(|| OsString::from("rustc"));
+    let cargo = env::var_os("CARGO").unwrap_or_else(|| OsString::from("cargo"));
+    let cpp = OsStr::new(EXPECTED_CPP_PATH);
+    let rustc_identity = command_text(&rustc, &["-vV"]).is_some_and(|text| {
+        text.contains("commit-hash: 254b59607d4417e9dffbc307138ae5c86280fe4c\n")
+            && text.contains("host: x86_64-unknown-linux-gnu\n")
+            && text.contains("release: 1.93.0\n")
+            && text.contains("LLVM version: 21.1.8\n")
+    });
+    let cargo_identity = command_text(&cargo, &["-vV"]).is_some_and(|text| {
+        text.contains("release: 1.93.0\n")
+            && text.contains("commit-hash: 083ac5135f967fd9dc906ab057a2315861c7a80d\n")
+            && text.contains("host: x86_64-unknown-linux-gnu\n")
+    });
+    let cpp_identity = resolve_program(cpp).as_deref() == Some(Path::new(EXPECTED_CPP_PATH))
+        && executable_matches(cpp, EXPECTED_CPP_SHA256)
+        && command_text(cpp, &["-dumpfullversion", "-dumpversion"]).as_deref() == Some("11.4.0\n")
+        && command_text(cpp, &["-dumpmachine"]).as_deref() == Some("x86_64-linux-gnu\n");
+    let exact = exact_environment("PROFILE", "release")
+        && exact_environment("OPT_LEVEL", "3")
+        && exact_environment("DEBUG", "false")
+        && exact_environment("HOST", "x86_64-unknown-linux-gnu")
+        && exact_environment("TARGET", "x86_64-unknown-linux-gnu")
+        && exact_environment("CARGO_CFG_PANIC", "unwind")
+        && exact_environment("CARGO_CFG_TARGET_FEATURE", "fxsr,sse,sse2")
+        && encoded_rustflags_empty
+        && FORBIDDEN_BUILD_ENVIRONMENT
+            .iter()
+            .all(|name| environment_is_absent(name))
+        && no_dynamic_overrides
+        && qualification_output_directory_is_exact(source_root)
+        && executable_matches(&rustc, EXPECTED_RUSTC_SHA256)
+        && executable_matches(&cargo, EXPECTED_CARGO_SHA256)
+        && rustc_identity
+        && cargo_identity
+        && cpp_identity
+        && qualification_rustc_wrapper_is_exact(source_root);
+    assert!(
+        exact,
+        "v6 qualification build does not match the frozen compiler configuration"
+    );
+    (EXPECTED_BUILD_CONFIGURATION_SHA256.to_owned(), true)
 }
 
 fn parse_number_line(line: &str, prefix: &str, suffix: &str) -> usize {
@@ -314,6 +562,8 @@ fn bind_compiled_source_graph(source_root: &Path) -> (String, usize) {
 }
 
 fn main() {
+    println!("cargo:rustc-check-cfg=cfg(betelgeuze_v6_qualification_build)");
+    println!("cargo:rustc-check-cfg=cfg(betelgeuze_v6_effective_rust_flags_verified)");
     println!("cargo:rerun-if-changed=assets/engine_v2_native_fixed64_cpu_profile_v6_sources.json");
     println!("cargo:rerun-if-changed=assets/original-Cargo.toml");
     let manifest_dir =
@@ -324,11 +574,11 @@ fn main() {
     let (manifest_sha256, source_count) = bind_compiled_source_graph(&source_root);
     let canonical_manifest = fs::read(source_root.join(SOURCE_MANIFEST_RELATIVE_PATH))
         .expect("canonical v6 source manifest is unavailable");
-    let (build_commit_oid, profile_sha256, build_commit_bound) = bind_activation_snapshot(
-        &source_root,
-        &canonical_manifest,
-        non_authoritative_package_build(),
-    );
+    let non_authoritative_package = non_authoritative_package_build();
+    let (build_configuration_sha256, build_configuration_bound) =
+        bind_build_configuration(&source_root, non_authoritative_package);
+    let (build_commit_oid, profile_sha256, build_commit_bound) =
+        bind_activation_snapshot(&source_root, &canonical_manifest, non_authoritative_package);
     let source_root_text = source_root
         .to_str()
         .expect("v6 verified source root must be UTF-8");
@@ -337,5 +587,10 @@ fn main() {
     println!("cargo:rustc-env={COMPILED_PROFILE_ENV}={profile_sha256}");
     println!("cargo:rustc-env={BUILD_COMMIT_ENV}={build_commit_oid}");
     println!("cargo:rustc-env={BUILD_COMMIT_BOUND_ENV}={build_commit_bound}");
+    if build_configuration_bound {
+        println!("cargo:rustc-cfg=betelgeuze_v6_qualification_build");
+    }
+    println!("cargo:rustc-env={BUILD_CONFIGURATION_SHA256_ENV}={build_configuration_sha256}");
+    println!("cargo:rustc-env={BUILD_CONFIGURATION_BOUND_ENV}={build_configuration_bound}");
     println!("cargo:rustc-env={VERIFIED_SOURCE_ROOT_ENV}={source_root_text}");
 }

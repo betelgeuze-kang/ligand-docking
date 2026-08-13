@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -25,6 +26,7 @@ _MANIFEST = _ROOT / verifier.SOURCE_MANIFEST_RELATIVE_PATH
 _V5_PROFILE = _ROOT / verifier.V5_PROFILE_RELATIVE_PATH
 _V5_ARCHIVE = _ROOT / verifier.V5_ARCHIVE_RELATIVE_PATH
 _TOOL = _ROOT / "tools/verify_engine_v2_native_fixed64_cpu_profile_v6.py"
+_RUSTC_WRAPPER = _ROOT / verifier.RUSTC_WRAPPER_RELATIVE_PATH
 
 
 def _canonical(value: object) -> bytes:
@@ -130,7 +132,97 @@ def test_command_line_verifier_is_non_consuming_and_authority_false() -> None:
     assert payload["execution_consumed"] is False
     assert payload["non_consuming_preflight_only"] is True
     assert payload["all_authority_false"] is True
-    assert payload["source_count"] == 192
+    assert payload["source_count"] == 193
+
+
+def _invoke_rustc_wrapper(arguments: list[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, str(_RUSTC_WRAPPER), "/bin/true", *arguments],
+        cwd=_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+        env={**os.environ, "BETELGEUZE_V6_QUALIFICATION_BUILD": "1"},
+    )
+
+
+def _runtime_rustc_arguments() -> list[str]:
+    return [
+        "--crate-name",
+        "betelgeuze_runtime",
+        "--crate-type",
+        "lib",
+        "--cfg",
+        'feature="default"',
+        "--cfg",
+        "betelgeuze_v6_qualification_build",
+        "--check-cfg",
+        "cfg(betelgeuze_v6_effective_rust_flags_verified)",
+        "-C",
+        "opt-level=3",
+        "-C",
+        "panic=abort",
+        "-C",
+        "linker-plugin-lto",
+        "-C",
+        "codegen-units=1",
+        "-C",
+        "overflow-checks=on",
+        "-C",
+        "metadata=0123456789abcdef",
+        "-C",
+        "extra-filename=-0123456789abcdef",
+    ]
+
+
+def _binary_rustc_arguments() -> list[str]:
+    arguments = _runtime_rustc_arguments()
+    arguments[arguments.index("betelgeuze_runtime")] = (
+        "betelgeuze_fixed64_cpu_qualify_v6"
+    )
+    arguments[arguments.index("lib")] = "bin"
+    arguments[arguments.index("linker-plugin-lto")] = "lto=fat"
+    return arguments
+
+
+def test_rustc_wrapper_accepts_only_the_frozen_effective_runtime_invocation() -> None:
+    completed = _invoke_rustc_wrapper(_runtime_rustc_arguments())
+    assert completed.returncode == 0
+    assert completed.stdout == ""
+    assert completed.stderr == ""
+
+
+def test_rustc_wrapper_accepts_only_the_frozen_effective_binary_invocation() -> None:
+    completed = _invoke_rustc_wrapper(_binary_rustc_arguments())
+    assert completed.returncode == 0
+    assert completed.stdout == ""
+    assert completed.stderr == ""
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "missing_lto",
+        "native_cpu",
+        "duplicate_metadata",
+        "extra_cfg",
+    ],
+)
+def test_rustc_wrapper_rejects_effective_flag_bypasses(mutation: str) -> None:
+    arguments = _runtime_rustc_arguments()
+    if mutation == "missing_lto":
+        position = arguments.index("linker-plugin-lto")
+        del arguments[position - 1 : position + 1]
+    elif mutation == "native_cpu":
+        arguments.extend(["-C", "target-cpu=native"])
+    elif mutation == "duplicate_metadata":
+        arguments.extend(["-C", "metadata=fedcba9876543210"])
+    else:
+        arguments.extend(["--cfg", "result_dependent_fast_path"])
+    completed = _invoke_rustc_wrapper(arguments)
+    assert completed.returncode == 86
+    assert completed.stdout == ""
+    assert "rustc wrapper rejected build" in completed.stderr
 
 
 def test_command_line_verifier_resolves_sibling_without_site_packages() -> None:
@@ -224,6 +316,26 @@ def test_authority_enablement_fails_even_with_rebound_profile_digest(
         )
 
 
+def test_build_configuration_drift_fails_even_with_rebound_profile_digest(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    profile_raw, manifest_raw, v5_profile_raw, v5_archive_raw, sources = (
+        _real_evidence()
+    )
+    profile = json.loads(profile_raw)
+    profile["build_configuration"]["cargo_lto"] = False
+    mutated = _canonical(profile)
+    monkeypatch.setattr(verifier, "PROFILE_SHA256", hashlib.sha256(mutated).hexdigest())
+    with pytest.raises(NativeFixed64CPUProfileV6Error, match="build configuration"):
+        require_profile_document_v6(
+            mutated,
+            v5_profile_raw,
+            v5_archive_raw,
+            manifest_raw,
+            sources,
+        )
+
+
 def test_manifest_source_byte_drift_fails_closed(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -282,6 +394,19 @@ def test_compile_time_transitive_source_binding_is_required() -> None:
         1,
     )
     with pytest.raises(NativeFixed64CPUProfileV6Error, match="compile-time source"):
+        require_activation_source_contract(sources)
+
+
+def test_effective_rustc_wrapper_contract_is_compile_bound() -> None:
+    _, _, _, _, sources = _real_evidence()
+    sources = dict(sources)
+    key = verifier.RUSTC_WRAPPER_RELATIVE_PATH.as_posix()
+    sources[key] = sources[key].replace(
+        b"effective -C option names differ from the frozen profile",
+        b"effective options are accepted from Cargo",
+        1,
+    )
+    with pytest.raises(NativeFixed64CPUProfileV6Error, match="rustc wrapper token"):
         require_activation_source_contract(sources)
 
 

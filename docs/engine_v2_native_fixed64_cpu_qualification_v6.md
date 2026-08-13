@@ -9,12 +9,14 @@ unchanged.
 
 The profile is
 `config/engine_v2_native_fixed64_cpu_profile_v6.json`. Its exact SHA-256 is
-`fde4e50ed66abfbf44ab0730117d88c1f1b9a0f98e7ffd8b1de988490c84a684`.
+`df3e616a4b873176a18fb37e10f8e70d68e6d248ba594f0db923a72af1f05107`.
 The 192-input native/Rust compiler manifest is
 `config/engine_v2_native_fixed64_cpu_profile_v6_sources.json`, SHA-256
-`58238e6a8baa4d0a660df6aa1684b7cce3156788ba17e42b3bc14d6b1b500536`.
+`5ceb27d2e2f6d09dfdc29e7a6b690b3ef3870ee85d483289a2ffd163f44a4fc8`.
 The domain-bound activation SHA-256 is
-`1fa6b4f272661fd7b1318f4296df2143a3c36250657cd3bb220d9106f5636100`.
+`1effbe2b3bea38879fa7ae4b3d488518a8df388a18fc0bf9e5bca2649e749382`.
+The independently hashed frozen build configuration is
+`28b7b3d8533456d27539b8cfb0fb2c03e9afe68198b81a60839a9f5e9c271c9f`.
 
 The standalone `betelgeuze-runtime` crate packages byte-identical mirrors of
 the profile, predecessor archive, source manifest, original pre-normalization
@@ -27,11 +29,33 @@ Git-less manylinux extension-wheel builds must opt into the explicit
 `BETELGEUZE_V6_NON_AUTHORITATIVE_PACKAGE_BUILD=1` compile mode. That mode still
 verifies the complete frozen source graph and packaged profile bytes, but
 embeds `build_commit_bound=false`; every v6 activation entry point therefore
-fails closed. Standalone qualification builds do not have this exception and
-must bind the exact Git commit plus its committed profile and source-manifest
-blobs.
+fails closed. Ordinary debug, release, test, package, and CI builds also embed
+an unbound build configuration and cannot activate. An authoritative local
+qualification build must explicitly opt in and use the frozen Cargo profile:
 
-The crate build script verifies every one of the 192 manifest rows against the
+```bash
+qualification_source_root="$(pwd -P)"
+env -u HIP_PATH -u ROCM_PATH \
+  BETELGEUZE_V6_QUALIFICATION_BUILD=1 \
+  RUSTC_WRAPPER="${qualification_source_root}/tools/verify_engine_v2_native_fixed64_cpu_v6_rustc_wrapper.py" \
+  cargo build --locked --profile qualification-v6 \
+  --manifest-path rust/Cargo.toml \
+  -p betelgeuze-runtime \
+  --bin betelgeuze-fixed64-cpu-qualify-v6
+```
+
+The build fails unless the exact Rust 1.93.0 toolchain, GNU C++ 11.4.0 binary,
+x86_64 target, target features, panic/optimization profile, explicit strict-FP
+C++ flags, and absence of environment flag overrides all match the frozen
+configuration. The source-bound wrapper additionally checks the effective
+codegen and cfg arguments received by every controlled Rust crate. It rejects
+Cargo CLI profile overrides, appended `cargo rustc` codegen/cfg options,
+unstable options, a substituted wrapper or interpreter, and any invocation that
+does not match the frozen library/binary LTO split. GitHub Actions is statically
+forbidden from setting the qualification-build opt-in. The build must also bind
+the exact Git commit plus its committed profile and source-manifest blobs.
+
+The crate build script verifies every one of the 193 manifest rows against the
 actual checkout used for compilation and embeds the verified manifest identity
 and source count. Packaged verification therefore requires an exact source root
 through `BETELGEUZE_V6_SOURCE_ROOT`; a package cannot silently substitute a
@@ -80,7 +104,9 @@ the same profile. Artifact, terminal, or output collisions fail closed.
 
 ## Evidence and authority
 
-Each fixture records the exact payload identity, C++ and Rust decision and full
+The attempt, artifact, and terminal each persist and cross-bind the frozen
+build-configuration SHA-256. Each fixture records the exact payload identity,
+C++ and Rust decision and full
 projection identities, all 25 timing samples, medians, numeric comparison
 counts and maxima, separate C++ and Rust generated/failure counts, repeat
 stability, and each backend's frozen 64-slot denominator. The fixed payload
@@ -94,7 +120,7 @@ benchmark, Stage 0, Fresh-128, reservation, molecular, or HIP authority. A
 passing local synthetic gate remains development evidence only.
 
 GitHub Actions runs only the independent static verifier, test-realm unit
-transactions, and normalized package `--verify-activation`:
+transactions, and a normalized package `--verify-activation` rejection check:
 
 ```bash
 python3 tools/verify_engine_v2_native_fixed64_cpu_profile_v6.py

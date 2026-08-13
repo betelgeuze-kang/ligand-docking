@@ -210,6 +210,7 @@ NATIVE_FIXED64_CPU_V6_CONTRACT_PATHS = (
     "config/engine_v2_native_fixed64_cpu_profile_v6.json",
     "config/engine_v2_native_fixed64_cpu_profile_v6_sources.json",
     "rust/Cargo.lock",
+    "rust/Cargo.toml",
     "rust_engine_v2/Cargo.lock",
     "rust/betelgeuze-runtime/Cargo.toml",
     "rust/betelgeuze-runtime/assets/engine_v2_native_fixed64_cpu_profile_v5_archive.json",
@@ -222,11 +223,19 @@ NATIVE_FIXED64_CPU_V6_CONTRACT_PATHS = (
     "rust/betelgeuze-runtime/src/qualification.rs",
     "rust/betelgeuze-runtime/src/qualification_v6.rs",
     "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-qualify-v6.rs",
+    "rust/betelgeuze-sys/build.rs",
     "tools/verify_engine_v2_native_fixed64_cpu_profile_v6.py",
+    "tools/verify_engine_v2_native_fixed64_cpu_v6_rustc_wrapper.py",
     "tools/verify_engine_v2_native_fixed64_cpu_v6_evidence.py",
     "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v6.py",
     "tests/unit/test_verify_engine_v2_native_fixed64_cpu_v6_evidence.py",
     "docs/engine_v2_native_fixed64_cpu_qualification_v6.md",
+)
+NATIVE_FIXED64_CPU_V6_BUILD_CONFIGURATION_SHA256 = (
+    "28b7b3d8533456d27539b8cfb0fb2c03e9afe68198b81a60839a9f5e9c271c9f"
+)
+NATIVE_FIXED64_CPU_V6_QUALIFICATION_BUILD_ENV = (
+    "BETELGEUZE_V6_QUALIFICATION_BUILD"
 )
 NATIVE_FIXED64_CPU_V6_COMPILE_BOUND_CONFIG_PATHS = (
     "config/engine_v2_native_fixed64_cpu_profile_v5_archive.json",
@@ -245,6 +254,7 @@ NATIVE_FIXED64_CPU_V6_REQUIRED_TOKEN_COUNTS = {
     "rust/betelgeuze-runtime/assets/workspace-Cargo.lock": 1,
     "rust/betelgeuze-runtime/build.rs": 1,
     "tools/verify_engine_v2_native_fixed64_cpu_profile_v6.py": 4,
+    "tools/verify_engine_v2_native_fixed64_cpu_v6_rustc_wrapper.py": 3,
     "tools/verify_engine_v2_native_fixed64_cpu_v6_evidence.py": 4,
     "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v6.py": 3,
     "tests/unit/test_verify_engine_v2_native_fixed64_cpu_v6_evidence.py": 3,
@@ -936,6 +946,13 @@ def _native_fixed64_cpu_v6_authority_is_fail_closed(repo_root: Path) -> bool:
         build_source = (
             repo_root / "rust/betelgeuze-runtime/build.rs"
         ).read_text(encoding="utf-8")
+        sys_build_source = (repo_root / "rust/betelgeuze-sys/build.rs").read_text(
+            encoding="utf-8"
+        )
+        rustc_wrapper_source = (
+            repo_root
+            / "tools/verify_engine_v2_native_fixed64_cpu_v6_rustc_wrapper.py"
+        ).read_text(encoding="utf-8")
         profile = json.loads(raw.decode("ascii"))
         runner = runner_path.read_text(encoding="utf-8")
         binary = binary_path.read_text(encoding="utf-8")
@@ -957,6 +974,7 @@ def _native_fixed64_cpu_v6_authority_is_fail_closed(repo_root: Path) -> bool:
     authority = profile.get("authority")
     restrictions = profile.get("restrictions")
     runner_contract = profile.get("runner")
+    build_configuration = profile.get("build_configuration")
     source_bindings = profile.get("source_bindings")
     if not (
         type(profile) is dict
@@ -986,6 +1004,17 @@ def _native_fixed64_cpu_v6_authority_is_fail_closed(repo_root: Path) -> bool:
             for key in NATIVE_FIXED64_CPU_V6_FALSE_RESTRICTION_KEYS
         )
         and type(runner_contract) is dict
+        and type(build_configuration) is dict
+        and hashlib.sha256(
+            json.dumps(
+                build_configuration,
+                allow_nan=False,
+                ensure_ascii=True,
+                separators=(",", ":"),
+                sort_keys=True,
+            ).encode("ascii")
+        ).hexdigest()
+        == NATIVE_FIXED64_CPU_V6_BUILD_CONFIGURATION_SHA256
         and runner_contract.get("account_scoped_exactly_once") is True
         and runner_contract.get("attempt_created_before_host_preflight") is True
         and runner_contract.get("artifact_and_terminal_persisted_before_return")
@@ -997,13 +1026,18 @@ def _native_fixed64_cpu_v6_authority_is_fail_closed(repo_root: Path) -> bool:
         is True
         and runner_contract.get("compiled_transitive_sources_verified_at_build")
         is True
+        and runner_contract.get("effective_rustc_flags_wrapper_verified_at_build")
+        is True
+        and runner_contract.get("frozen_build_configuration_required") is True
         and runner_contract.get(
             "non_authoritative_package_build_activation_rejected"
         )
         is True
+        and runner_contract.get("normal_and_ci_build_activation_rejected") is True
         and runner_contract.get("output_path_utf8_required") is True
         and runner_contract.get("post_measurement_host_revalidation_required")
         is True
+        and runner_contract.get("qualification_build_opt_in_required") is True
         and runner_contract.get("test_only_profile_execution_allowed") is False
         and type(source_bindings) is dict
         and len(source_bindings) == 7
@@ -1076,6 +1110,35 @@ def _native_fixed64_cpu_v6_authority_is_fail_closed(repo_root: Path) -> bool:
         and "cargo:rustc-env={BUILD_COMMIT_BOUND_ENV}" in build_source
         and "cargo:rustc-env={VERIFIED_SOURCE_ROOT_ENV}" in build_source
         and "BETELGEUZE_V6_NON_AUTHORITATIVE_PACKAGE_BUILD" in build_source
+        and NATIVE_FIXED64_CPU_V6_QUALIFICATION_BUILD_ENV in build_source
+        and "BUILD_CONFIGURATION_SHA256_ENV" in build_source
+        and "BUILD_CONFIGURATION_BOUND_ENV" in build_source
+        and "EXPECTED_BUILD_CONFIGURATION_SHA256" in build_source
+        and "EXPECTED_RUSTC_SHA256" in build_source
+        and "EXPECTED_CARGO_SHA256" in build_source
+        and "EXPECTED_CPP_SHA256" in build_source
+        and "EXPECTED_RUSTC_WRAPPER_SHA256" in build_source
+        and "EXPECTED_RUSTC_WRAPPER_INTERPRETER_SHA256" in build_source
+        and "qualification_rustc_wrapper_is_exact" in build_source
+        and "betelgeuze_v6_effective_rust_flags_verified" in build_source
+        and 'const QUALIFICATION_CPP_COMPILER: &str = "/usr/bin/x86_64-linux-gnu-g++-11";'
+        in sys_build_source
+        and "const QUALIFICATION_CPP_FLAGS: &[&str]" in sys_build_source
+        and ".no_default_flags(true)" in sys_build_source
+        and '"-ffp-contract=off"' in sys_build_source
+        and '"-fno-fast-math"' in sys_build_source
+        and "QUALIFICATION_RUSTC_WRAPPER_RELATIVE_PATH" in sys_build_source
+        and 'std::env::var_os("RUSTC_WRAPPER")' in sys_build_source
+        and "CONTROLLED_LIBRARY_CRATES" in rustc_wrapper_source
+        and "CONTROLLED_CFG_VALUES" in rustc_wrapper_source
+        and '"opt-level": "3"' in rustc_wrapper_source
+        and 'expected["lto"] = "fat"' in rustc_wrapper_source
+        and 'expected["linker-plugin-lto"] = None' in rustc_wrapper_source
+        and "effective -C option names differ from the frozen profile"
+        in rustc_wrapper_source
+        and "cfg values differ from the frozen profile" in rustc_wrapper_source
+        and "unstable rustc options are forbidden" in rustc_wrapper_source
+        and "os.execv(rustc" in rustc_wrapper_source
         and "UNBOUND_BUILD_COMMIT_OID" in build_source
         and "committed_blob(source_root, commit_oid, PROFILE_RELATIVE_PATH)"
         in build_source
@@ -1085,6 +1148,10 @@ def _native_fixed64_cpu_v6_authority_is_fail_closed(repo_root: Path) -> bool:
         and 'emit_rerun_if_changed(&reference_path, "symbolic HEAD reference")'
         in build_source
         and 'BUILD_COMMIT_BOUND != "true"' in runner
+        and 'BUILD_CONFIGURATION_BOUND != "true"' in runner
+        and "build configuration is not frozen" in runner
+        and "v6 qualification effective rustc flags were not wrapper-verified"
+        in runner
         and "non-authoritative package build cannot activate" in runner
         and "decision_returned_only_after_terminal_persistence" in runner
         and runner.count("run_native_fixed64_cpu_qualification_successor(") == 1
@@ -1264,6 +1331,7 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
     native_fixed64_cpu_v6_live_qualification_absent_from_github_actions = (
         "--run-output" not in all_workflow_text
         and "run_native_fixed64_cpu_qualification_v6" not in all_workflow_text
+        and NATIVE_FIXED64_CPU_V6_QUALIFICATION_BUILD_ENV not in all_workflow_text
     )
     native_fixed64_cpu_v6_authority_fail_closed = (
         native_fixed64_cpu_v6_profile_authority_false
