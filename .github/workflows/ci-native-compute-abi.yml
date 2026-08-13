@@ -110,6 +110,14 @@ jobs:
       - name: Test Rust C++ boundary
         run: cargo test --manifest-path rust/Cargo.toml --workspace --locked
 
+      - name: Verify release non-test activation artifact is blocked
+        run: >-
+          cargo test --release --manifest-path rust/Cargo.toml
+          -p betelgeuze-runtime
+          --test fixed64_cpu_probe_activation
+          --locked --
+          --exact native_fixed64_cpu_probe_is_blocked_before_measurement
+
       - name: Verify standalone Rust packages
         run: |
           cargo package --manifest-path rust/betelgeuze-sys/Cargo.toml --locked \

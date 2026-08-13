@@ -12,6 +12,7 @@ import pytest
 from tools.verify_engine_v2_native_fixed64_cpu_profile_v4 import (
     NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS,
     NATIVE_VENDOR_COPY_SOURCE_RELATIVE_PATHS,
+    REPOSITORY_CARGO_CONFIG_RELATIVE_PATHS,
     RUST_BOUND_BUILD_SCRIPT_RELATIVE_PATHS,
     RUST_COMPILED_SOURCE_TREE_ROOT_RELATIVE_PATHS,
     RUST_PACKAGE_ROOT_RELATIVE_PATHS,
@@ -23,6 +24,7 @@ from tools.verify_engine_v2_native_fixed64_cpu_profile_v4 import (
     read_bound_source_bytes,
     require_compiled_profile_binding,
     require_native_vendor_tree_paths,
+    require_repository_cargo_configuration_absent,
     require_rust_package_build_script_paths,
     require_rust_compiled_source_tree_paths,
     require_profile_document,
@@ -32,6 +34,7 @@ from tools.verify_engine_v2_native_fixed64_cpu_profile_v4 import (
 _ROOT = Path(__file__).resolve().parents[2]
 _PROFILE = _ROOT / "config/engine_v2_native_fixed64_cpu_profile_v4.json"
 _VERIFIER = _ROOT / "tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py"
+_NATIVE_WORKFLOW = _ROOT / ".github/workflows/ci-native-compute-abi.yml"
 _QUALIFICATION_SOURCE = _ROOT / "rust/betelgeuze-runtime/src/qualification.rs"
 _DOCKING_SOURCE = _ROOT / "rust/betelgeuze-runtime/src/docking.rs"
 _NATIVE_PIPELINE_SOURCE = _ROOT / "native/src/docking/fixed64_pipeline.cpp"
@@ -78,7 +81,7 @@ def test_canonical_native_fixed64_cpu_profile_v4_is_frozen() -> None:
     profile = require_profile_document(raw)
 
     assert hashlib.sha256(raw).hexdigest() == (
-        "6050319c55441993fb9d35bfbda4408f823880e9909d29efae2a0dd19b0f4406"
+        "a2a31ef2595c49bf19a9d9ec70afca8d4e3ad606ccc64b7ead81e52df0dfc224"
     )
     assert profile["profile_id"] == "engine_v2_native_fixed64_cpu_synthetic_v4"
     assert all(value is False for value in profile["authority"].values())
@@ -603,6 +606,50 @@ def test_profile_v4_rejects_build_script_inventory_drift() -> None:
         )
 
 
+def test_profile_v4_canonical_repository_has_no_cargo_configuration() -> None:
+    require_repository_cargo_configuration_absent(_ROOT)
+
+
+def test_profile_v4_release_non_test_activation_check_is_in_native_ci() -> None:
+    source = _NATIVE_WORKFLOW.read_text(encoding="utf-8")
+    assert source.count("Verify release non-test activation artifact is blocked") == 1
+    assert source.count("cargo test --release --manifest-path rust/Cargo.toml") == 1
+    assert source.count("--test fixed64_cpu_probe_activation") == 1
+    assert source.count(
+        "--exact native_fixed64_cpu_probe_is_blocked_before_measurement"
+    ) == 1
+
+
+@pytest.mark.parametrize("relative", REPOSITORY_CARGO_CONFIG_RELATIVE_PATHS)
+def test_profile_v4_rejects_repository_cargo_configuration(
+    tmp_path: Path,
+    relative: Path,
+) -> None:
+    path = tmp_path / relative
+    path.parent.mkdir(parents=True)
+    path.write_bytes(b"[build]\nrustflags = ['--cfg', 'activation_open']\n")
+
+    with pytest.raises(
+        NativeFixed64CPUProfileV4Error,
+        match="Cargo configuration is forbidden",
+    ):
+        require_repository_cargo_configuration_absent(tmp_path)
+
+
+def test_profile_v4_rejects_symlinked_cargo_configuration_parent(
+    tmp_path: Path,
+) -> None:
+    external = tmp_path / "external-cargo"
+    external.mkdir()
+    (tmp_path / ".cargo").symlink_to(external, target_is_directory=True)
+
+    with pytest.raises(
+        NativeFixed64CPUProfileV4Error,
+        match="Cargo configuration path is symlinked",
+    ):
+        require_repository_cargo_configuration_absent(tmp_path)
+
+
 @pytest.mark.parametrize(
     "mutate",
     (
@@ -657,7 +704,7 @@ def test_profile_v4_cli_reports_non_consuming_authority_false() -> None:
         "fixture_count": 2,
         "profile_id": "engine_v2_native_fixed64_cpu_synthetic_v4",
         "profile_sha256": (
-            "6050319c55441993fb9d35bfbda4408f823880e9909d29efae2a0dd19b0f4406"
+            "a2a31ef2595c49bf19a9d9ec70afca8d4e3ad606ccc64b7ead81e52df0dfc224"
         ),
         "reservation_created": False,
         "status": "verified",

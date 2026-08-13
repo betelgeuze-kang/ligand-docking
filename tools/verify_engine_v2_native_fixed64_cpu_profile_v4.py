@@ -25,6 +25,9 @@ NATIVE_PIPELINE_SOURCE_RELATIVE_PATH = Path(
 PROBE_SOURCE_RELATIVE_PATH = Path(
     "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-probe-v4.rs"
 )
+ACTIVATION_TEST_RELATIVE_PATH = Path(
+    "rust/betelgeuze-runtime/tests/fixed64_cpu_probe_activation.rs"
+)
 NATIVE_VENDOR_CANONICAL_SOURCE_RELATIVE_PATHS = tuple(
     Path(value)
     for value in (
@@ -90,15 +93,25 @@ RUST_COMPILED_SOURCE_TREE_ROOT_RELATIVE_PATHS = (
     Path("rust/betelgeuze-runtime/src"),
     Path("rust/betelgeuze-sys/src"),
     Path("rust/cpu-kernel/src"),
+    Path("rust/reference-dynamics/src"),
+    Path("rust/reference-physics/src"),
 )
 RUST_PACKAGE_ROOT_RELATIVE_PATHS = (
     Path("rust/betelgeuze-docking-search"),
     Path("rust/betelgeuze-runtime"),
     Path("rust/betelgeuze-sys"),
     Path("rust/cpu-kernel"),
+    Path("rust/reference-dynamics"),
+    Path("rust/reference-physics"),
 )
 RUST_BOUND_BUILD_SCRIPT_RELATIVE_PATHS = (
     Path("rust/betelgeuze-sys/build.rs"),
+)
+REPOSITORY_CARGO_CONFIG_RELATIVE_PATHS = (
+    Path(".cargo/config"),
+    Path(".cargo/config.toml"),
+    Path("rust/.cargo/config"),
+    Path("rust/.cargo/config.toml"),
 )
 NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS = (
     *NATIVE_VENDOR_CANONICAL_SOURCE_RELATIVE_PATHS,
@@ -117,6 +130,7 @@ NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS = (
     Path("rust/betelgeuze-runtime/src/forcefield.rs"),
     Path("rust/betelgeuze-runtime/src/lib.rs"),
     Path("rust/betelgeuze-runtime/src/qualification.rs"),
+    ACTIVATION_TEST_RELATIVE_PATH,
     Path("rust/cpu-kernel/Cargo.toml"),
     Path("rust/cpu-kernel/src/docking_fixed64_allocation.rs"),
     Path("rust/cpu-kernel/src/docking_fixed64_indexed_so3.rs"),
@@ -156,6 +170,18 @@ NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS = (
     Path("rust/betelgeuze-docking-search/src/surface.rs"),
     Path("rust/betelgeuze-docking-search/src/torsion_refinement.rs"),
     Path("rust/betelgeuze-docking-search/src/validity.rs"),
+    Path("rust/reference-dynamics/Cargo.toml"),
+    Path("rust/reference-dynamics/src/checkpoint.rs"),
+    Path("rust/reference-dynamics/src/constraints.rs"),
+    Path("rust/reference-dynamics/src/dynamics.rs"),
+    Path("rust/reference-dynamics/src/lib.rs"),
+    Path("rust/reference-dynamics/src/model.rs"),
+    Path("rust/reference-dynamics/src/rng.rs"),
+    Path("rust/reference-physics/Cargo.toml"),
+    Path("rust/reference-physics/src/geometry.rs"),
+    Path("rust/reference-physics/src/lib.rs"),
+    Path("rust/reference-physics/src/model.rs"),
+    Path("rust/reference-physics/src/oracle.rs"),
 )
 
 
@@ -431,6 +457,28 @@ def discover_rust_package_build_script_paths(root: Path) -> tuple[str, ...]:
     observed_paths = tuple(observed)
     require_rust_package_build_script_paths(observed_paths)
     return observed_paths
+
+
+def require_repository_cargo_configuration_absent(root: Path) -> None:
+    for relative in REPOSITORY_CARGO_CONFIG_RELATIVE_PATHS:
+        current = root
+        for index, part in enumerate(relative.parts):
+            current /= part
+            try:
+                entry = current.lstat()
+            except FileNotFoundError:
+                break
+            except OSError as exc:
+                raise NativeFixed64CPUProfileV4Error(
+                    "repository Cargo configuration path is unreadable"
+                ) from exc
+            if stat.S_ISLNK(entry.st_mode):
+                _fail("repository Cargo configuration path is symlinked")
+            if index + 1 < len(relative.parts):
+                if not stat.S_ISDIR(entry.st_mode):
+                    _fail("repository Cargo configuration parent is invalid")
+            else:
+                _fail("repository Cargo configuration is forbidden by the profile")
 
 
 def _exact_keys(value: object, expected: set[str], name: str) -> dict[str, object]:
@@ -725,9 +773,16 @@ def require_compiled_profile_binding(
     try:
         source = qualification_source_raw.decode("ascii")
         probe = probe_source_raw.decode("ascii")
+        activation_test = transitive_sources_raw[
+            ACTIVATION_TEST_RELATIVE_PATH.as_posix()
+        ].decode("ascii")
     except UnicodeError as exc:
         raise NativeFixed64CPUProfileV4Error(
-            "native qualification and probe sources must be ASCII"
+            "native qualification, probe, and activation-test sources must be ASCII"
+        ) from exc
+    except KeyError as exc:
+        raise NativeFixed64CPUProfileV4Error(
+            "release activation-test source is absent from the transitive manifest"
         ) from exc
     try:
         docking_source = docking_source_raw.decode("utf-8")
@@ -806,6 +861,21 @@ def require_compiled_profile_binding(
         > source.index(fixture_construction)
     ):
         _fail("compiled public qualification API is not activation-gated")
+
+    constant_assertion = "assert!(!FIXED64_CPU_V4_LIVE_ACTIVATION_ADMITTED);"
+    function_assertion = "assert!(!fixed64_cpu_v4_live_activation_admitted());"
+    binary_launch = 'Command::new(env!("CARGO_BIN_EXE_betelgeuze-fixed64-cpu-probe-v4"))'
+    if (
+        activation_test.count(constant_assertion) != 1
+        or activation_test.count(function_assertion) != 1
+        or activation_test.count(binary_launch) != 1
+        or not (
+            activation_test.index(constant_assertion)
+            < activation_test.index(function_assertion)
+            < activation_test.index(binary_launch)
+        )
+    ):
+        _fail("release non-test activation artifact check is missing or reordered")
 
     native_pipeline_profile_id = core.get("native_pipeline_profile_id")
     rust_pipeline_id_matches = re.findall(
@@ -1023,6 +1093,7 @@ def main() -> int:
     root = Path(__file__).resolve().parents[1]
     raw = (root / PROFILE_RELATIVE_PATH).read_bytes()
     profile = require_profile_document(raw)
+    require_repository_cargo_configuration_absent(root)
     vendor_tree_paths = discover_native_vendor_tree_paths(root)
     rust_source_tree_paths = discover_rust_compiled_source_tree_paths(root)
     rust_build_script_paths = discover_rust_package_build_script_paths(root)
