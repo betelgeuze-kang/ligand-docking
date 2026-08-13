@@ -105,6 +105,8 @@ on:
       - "README.ko.md"
       - ".github/workflows/*.yml"
       - ".github/workflows/*.yaml"
+      - ".github/actions/**/action.yml"
+      - ".github/actions/**/action.yaml"
       - ".github/workflows/ci-engine-v2-external-baseline.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-hydrogen-coordinates.yml"
@@ -157,6 +159,8 @@ jobs:
           sparse-checkout: |
             .github/workflows/*.yml
             .github/workflows/*.yaml
+            .github/actions/**/action.yml
+            .github/actions/**/action.yaml
             betelgeuze_engine_v2
             betelgeuze_engine_v2/docking/performance_host_preflight_v3.py
             betelgeuze_engine_v2/docking/performance_qualification_v3.py

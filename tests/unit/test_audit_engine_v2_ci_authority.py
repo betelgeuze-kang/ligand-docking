@@ -790,9 +790,15 @@ def test_native_fixed64_cpu_v4_missing_restriction_fails_ci_audit(
         'command -- "$CARGO" run -p betelgeuze-runtime',
         "env -S 'cargo run -p betelgeuze-runtime'",
         "env --split-string='cargo r -p betelgeuze-runtime'",
+        "command env -S 'cargo run -p betelgeuze-runtime'",
+        "time env -S 'cargo r -p betelgeuze-runtime'",
         'CARGO=cargo; exec -la cargo "$CARGO" run -p betelgeuze-runtime',
         'CARGO=cargo; time -p "$CARGO" run -p betelgeuze-runtime',
         'CARGO=cargo; timeout 1 "$CARGO" run -p betelgeuze-runtime',
+        'CARGO=cargo; "$CARGO" --color always run -p betelgeuze-runtime',
+        "bash -c 'cargo run -p betelgeuze-runtime'",
+        "sh -ec 'cargo r -p betelgeuze-runtime'",
+        "env -i bash -c 'cargo run -p betelgeuze-runtime'",
         (
             "cargo run -p betelgeuze-runtime && "
             "cargo run --bin unrelated-explicit-tool"
@@ -829,6 +835,41 @@ def test_native_fixed64_cpu_v4_live_binary_is_forbidden_in_every_workflow(
     )
 
     payload = build_inventory(tmp_path)
+    assert (
+        payload[
+            "native_fixed64_cpu_v4_live_qualification_absent_from_github_actions"
+        ]
+        is False
+    )
+    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is False
+    assert payload["native_fixed64_cpu_v4_contract_in_authoritative_ci"] is False
+
+
+@pytest.mark.parametrize("manifest_name", ("action.yml", "action.yaml"))
+def test_native_fixed64_cpu_v4_live_binary_is_forbidden_in_composite_actions(
+    tmp_path: Path,
+    manifest_name: str,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_native_fixed64_cpu_v4_contract(tmp_path)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        encoding="utf-8",
+    )
+    action = tmp_path / ".github/actions/qualify" / manifest_name
+    action.parent.mkdir(parents=True, exist_ok=True)
+    action.write_text(
+        "name: qualify\nruns:\n  using: composite\n  steps:\n"
+        "    - shell: bash\n"
+        "      run: cargo run -p betelgeuze-runtime\n",
+        encoding="utf-8",
+    )
+
+    payload = build_inventory(tmp_path)
+    assert payload["native_fixed64_cpu_v4_github_action_surface_complete"] is True
+    assert payload["native_fixed64_cpu_v4_github_action_manifests"] == [
+        f".github/actions/qualify/{manifest_name}"
+    ]
     assert (
         payload[
             "native_fixed64_cpu_v4_live_qualification_absent_from_github_actions"
@@ -930,6 +971,7 @@ def test_native_fixed64_cpu_v4_run_test_filter_is_not_a_cargo_subcommand(
         "cargo --help=diagnostic r",
         "cargo --list=diagnostic run",
         'echo "$CARGO" run -p betelgeuze-runtime',
+        "echo -S 'cargo run -p betelgeuze-runtime'",
     ),
 )
 def test_native_fixed64_cpu_v4_nonexecuting_run_text_remains_allowed(
@@ -1141,6 +1183,8 @@ def test_native_fixed64_cpu_v4_inventory_constants_are_exact() -> None:
         "stage0_admission_authorized",
     }
     assert NATIVE_FIXED64_CPU_V4_REQUIRED_TOKENS == (
+        ".github/actions/**/action.yml",
+        ".github/actions/**/action.yaml",
         ".github/workflows/*.yml",
         ".github/workflows/*.yaml",
         "config/engine_v2_native_fixed64_cpu_profile_v4.json",
@@ -1217,6 +1261,8 @@ def test_authoritative_main_runs_for_every_workflow_change() -> None:
 
     assert workflow.count(".github/workflows/*.yml") == 2
     assert workflow.count(".github/workflows/*.yaml") == 2
+    assert workflow.count(".github/actions/**/action.yml") == 2
+    assert workflow.count(".github/actions/**/action.yaml") == 2
 
 
 def test_mixed64_v2_contract_requires_documented_contract_inventory(

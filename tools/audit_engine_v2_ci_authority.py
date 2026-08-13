@@ -171,6 +171,8 @@ NATIVE_FIXED64_CPU_V4_CONTRACT_PATHS = (
     "docs/engine_v2_native_fixed64_cpu_qualification_v4.md",
 )
 NATIVE_FIXED64_CPU_V4_REQUIRED_TOKEN_COUNTS = {
+    ".github/actions/**/action.yml": 2,
+    ".github/actions/**/action.yaml": 2,
     ".github/workflows/*.yml": 2,
     ".github/workflows/*.yaml": 2,
     "config/engine_v2_native_fixed64_cpu_profile_v4.json": 2,
@@ -448,7 +450,7 @@ def _cargo_subcommand_index(invocation: list[str]) -> int | None:
     return None
 
 
-def _shell_command_word_index(segment: list[str]) -> int | None:
+def _shell_outer_command_word_index(segment: list[str]) -> int | None:
     index = 0
     while index < len(segment):
         while index < len(segment) and (
@@ -499,40 +501,49 @@ def _shell_command_word_index(segment: list[str]) -> int | None:
             while index < len(segment) and segment[index] in {"--", "-p"}:
                 index += 1
             continue
-        if segment[index] == "env":
-            index += 1
-            while index < len(segment):
-                token = segment[index]
-                if token in {"--help", "--version"}:
-                    return None
-                if token == "--":
-                    index += 1
-                    break
-                if token in {
-                    "-u",
-                    "--unset",
-                    "-C",
-                    "--chdir",
-                    "-S",
-                    "--split-string",
-                }:
-                    index += 2
-                elif token.startswith(
-                    ("-u", "-C", "--unset=", "--chdir=", "--split-string=")
-                ) or token in {
-                    "-i",
-                    "--ignore-environment",
-                    "-0",
-                    "--null",
-                    "-v",
-                    "--debug",
-                }:
-                    index += 1
-                else:
-                    break
-            continue
         return index
     return None
+
+
+def _shell_command_word_index(segment: list[str]) -> int | None:
+    index = _shell_outer_command_word_index(segment)
+    if index is None or segment[index].rsplit("/", 1)[-1] != "env":
+        return index
+    index += 1
+    while index < len(segment):
+        token = segment[index]
+        if token in {"--help", "--version"}:
+            return None
+        if token == "--":
+            index += 1
+            break
+        if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*=.*", token):
+            index += 1
+            continue
+        if token in {
+            "-u",
+            "--unset",
+            "-C",
+            "--chdir",
+            "-S",
+            "--split-string",
+        }:
+            index += 2
+            continue
+        if token.startswith(
+            ("-u", "-C", "--unset=", "--chdir=", "--split-string=")
+        ) or token in {
+            "-i",
+            "--ignore-environment",
+            "-0",
+            "--null",
+            "-v",
+            "--debug",
+        }:
+            index += 1
+            continue
+        break
+    return index if index < len(segment) else None
 
 
 def _workflow_has_dynamic_cargo_run_command(tokens: list[str]) -> bool:
@@ -550,8 +561,6 @@ def _workflow_has_dynamic_cargo_run_command(tokens: list[str]) -> bool:
                         marker in candidate
                         for marker in NATIVE_FIXED64_CPU_V4_SHELL_EXPANSION_MARKERS
                     )
-                    and segment[index + 1]
-                    in NATIVE_FIXED64_CPU_V4_CARGO_RUN_SUBCOMMANDS
                     and not (
                         nonexecuting_display
                         and index > command_index
@@ -561,7 +570,25 @@ def _workflow_has_dynamic_cargo_run_command(tokens: list[str]) -> bool:
                         )
                     )
                 ):
-                    return True
+                    invocation = ["cargo", *segment[index + 1 :]]
+                    subcommand_index = _cargo_subcommand_index(invocation)
+                    if subcommand_index == -1:
+                        continue
+                    if subcommand_index is None:
+                        if any(
+                            command in invocation[1:]
+                            for command in NATIVE_FIXED64_CPU_V4_CARGO_RUN_SUBCOMMANDS
+                        ):
+                            return True
+                        continue
+                    if (
+                        invocation[subcommand_index]
+                        in NATIVE_FIXED64_CPU_V4_CARGO_RUN_SUBCOMMANDS
+                        and not _cargo_run_has_static_non_probe_target(
+                            invocation[subcommand_index + 1 :]
+                        )
+                    ):
+                        return True
             segment = []
         else:
             segment.append(token)
@@ -612,23 +639,90 @@ def _shell_tokens_invoke_native_fixed64_cpu_v4_live_probe(
     if _workflow_has_dynamic_cargo_run_command(tokens):
         return True
 
-    for index, token in enumerate(tokens):
+    segments: list[list[str]] = []
+    segment: list[str] = []
+    for token in [*tokens, ";"]:
+        if token and set(token) <= set(";&|()"):
+            if segment:
+                segments.append(segment)
+            segment = []
+        else:
+            segment.append(token)
+
+    for segment in segments:
+        outer_command_index = _shell_outer_command_word_index(segment)
+        command_index = _shell_command_word_index(segment)
+        if command_index is None:
+            command_index = 0
+            while command_index < len(segment) and (
+                segment[command_index]
+                in {"!", "do", "elif", "else", "if", "then", "until", "while"}
+                or re.fullmatch(
+                    r"[A-Za-z_][A-Za-z0-9_]*=.*", segment[command_index]
+                )
+            ):
+                command_index += 1
+        command = (
+            segment[command_index].rsplit("/", 1)[-1]
+            if command_index < len(segment)
+            else ""
+        )
+
         embedded: str | None = None
-        if token in {"-S", "--split-string"}:
-            if index + 1 >= len(tokens):
-                return True
-            embedded = tokens[index + 1]
-        elif token.startswith("--split-string="):
-            embedded = token.removeprefix("--split-string=")
-        elif token.startswith("-S") and len(token) > 2:
-            embedded = token[2:]
+        remaining: list[str] = []
+        outer_command = (
+            segment[outer_command_index].rsplit("/", 1)[-1]
+            if outer_command_index is not None
+            else ""
+        )
+        if outer_command == "env":
+            index = outer_command_index + 1
+            while index < len(segment):
+                token = segment[index]
+                if token in {"-S", "--split-string"}:
+                    if index + 1 >= len(segment):
+                        return True
+                    embedded = segment[index + 1]
+                    remaining = segment[index + 2 :]
+                    break
+                if token.startswith("--split-string="):
+                    embedded = token.removeprefix("--split-string=")
+                    remaining = segment[index + 1 :]
+                    break
+                if token.startswith("-S") and len(token) > 2:
+                    embedded = token[2:]
+                    remaining = segment[index + 1 :]
+                    break
+                if token == "--" or not (
+                    token.startswith("-")
+                    or re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*=.*", token)
+                ):
+                    break
+                index += 1
+        if embedded is None and command in {"bash", "dash", "ksh", "sh", "zsh"}:
+            for index, token in enumerate(
+                segment[command_index + 1 :], start=command_index + 1
+            ):
+                if token == "--":
+                    break
+                if token == "-c" or (
+                    token.startswith("-")
+                    and not token.startswith("--")
+                    and "c" in token[1:]
+                ):
+                    if index + 1 >= len(segment):
+                        return True
+                    embedded = segment[index + 1]
+                    break
+                if not token.startswith("-"):
+                    break
         if embedded is None:
             continue
         lexer = shlex.shlex(embedded, posix=True, punctuation_chars=";&|()")
         lexer.whitespace_split = True
         lexer.commenters = "#"
         try:
-            embedded_tokens = list(lexer)
+            embedded_tokens = [*list(lexer), *remaining]
         except ValueError:
             return True
         if _shell_tokens_invoke_native_fixed64_cpu_v4_live_probe(
@@ -1106,6 +1200,29 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         path: (repo_root / path).read_text(encoding="utf-8")
         for path in github_workflows
     }
+    action_root = repo_root / ".github/actions"
+    github_action_candidates = tuple(
+        sorted(
+            {
+                path
+                for pattern in ("**/action.yml", "**/action.yaml")
+                for path in action_root.glob(pattern)
+            }
+        )
+    )
+    github_action_surface_complete = all(
+        path.is_file() and not path.is_symlink()
+        for path in github_action_candidates
+    )
+    github_action_manifests = tuple(
+        path.relative_to(repo_root).as_posix()
+        for path in github_action_candidates
+        if path.is_file() and not path.is_symlink()
+    )
+    github_action_text = {
+        path: (repo_root / path).read_text(encoding="utf-8")
+        for path in github_action_manifests
+    }
     workflows = tuple(
         sorted(
             path.relative_to(repo_root).as_posix()
@@ -1211,8 +1328,8 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
     )
     native_fixed64_cpu_v4_live_qualification_absent_from_github_actions = not any(
         _workflow_invokes_native_fixed64_cpu_v4_live_probe(text)
-        for text in github_workflow_text.values()
-    )
+        for text in (*github_workflow_text.values(), *github_action_text.values())
+    ) and github_action_surface_complete
     native_fixed64_cpu_v4_authority_fail_closed = (
         not native_fixed64_cpu_v4_contract_present
         or (
@@ -1338,6 +1455,12 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         ),
         "native_fixed64_cpu_v4_live_qualification_absent_from_github_actions": (
             native_fixed64_cpu_v4_live_qualification_absent_from_github_actions
+        ),
+        "native_fixed64_cpu_v4_github_action_manifests": list(
+            github_action_manifests
+        ),
+        "native_fixed64_cpu_v4_github_action_surface_complete": (
+            github_action_surface_complete
         ),
         "one_shot_contract_in_authoritative_ci": (
             one_shot_contract_in_authoritative_ci
