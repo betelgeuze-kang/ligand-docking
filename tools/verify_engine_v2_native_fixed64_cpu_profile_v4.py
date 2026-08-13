@@ -88,6 +88,8 @@ NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS = (
     *NATIVE_VENDOR_COPY_SOURCE_RELATIVE_PATHS,
     Path("rust/Cargo.lock"),
     Path("rust/Cargo.toml"),
+    Path("rust/betelgeuze-sys/abi/header_c11.c"),
+    Path("rust/betelgeuze-sys/abi/layout_assertions.cpp"),
     Path("rust/betelgeuze-sys/Cargo.toml"),
     Path("rust/betelgeuze-sys/build.rs"),
     Path("rust/betelgeuze-sys/src/lib.rs"),
@@ -189,7 +191,19 @@ def _transitive_source_manifest_sha256(sources: dict[str, bytes]) -> str:
         + "];"
     ).encode("ascii")
     build_source = sources["rust/betelgeuze-sys/build.rs"]
-    if build_source.count(expected_vendor_declaration) != 1:
+    expected_build_prefix = (
+        b"use std::fs;\n"
+        b"use std::path::{Path, PathBuf};\n"
+        b"use std::process::Command;\n\n"
+        b'const QUALIFIED_ROCM_RELEASE_PREFIX: &str = "6.0.2-";\n\n'
+        + expected_vendor_declaration
+        + b"\n\nfn track(path: &Path) {"
+    )
+    if (
+        not build_source.startswith(expected_build_prefix)
+        or build_source.count(b"VENDORED_FILES") != 3
+        or build_source.count(b"for relative in VENDORED_FILES {") != 2
+    ):
         _fail("native vendor equality manifest changed")
     for canonical_path in canonical_vendor_paths:
         vendor_path = (
@@ -220,6 +234,28 @@ def require_native_vendor_tree_paths(observed_paths: tuple[str, ...]) -> None:
         or tuple(sorted(observed_paths)) != tuple(sorted(expected_paths))
     ):
         _fail("native vendor tree contains an unbound or missing source")
+
+
+def discover_native_vendor_tree_paths(root: Path) -> tuple[str, ...]:
+    vendor_roots = (
+        root / "rust/betelgeuze-sys/vendor/include",
+        root / "rust/betelgeuze-sys/vendor/native",
+    )
+    if any(vendor_root.is_symlink() or not vendor_root.is_dir() for vendor_root in vendor_roots):
+        _fail("native vendor root is missing, invalid, or symlinked")
+    vendor_entries = tuple(
+        sorted(
+            path
+            for vendor_root in vendor_roots
+            for path in vendor_root.rglob("*")
+            if path.is_file() or path.is_symlink()
+        )
+    )
+    if any(path.is_symlink() for path in vendor_entries):
+        _fail("native vendor tree contains a symlink")
+    observed_paths = tuple(path.relative_to(root).as_posix() for path in vendor_entries)
+    require_native_vendor_tree_paths(observed_paths)
+    return observed_paths
 
 
 def _exact_keys(value: object, expected: set[str], name: str) -> dict[str, object]:
@@ -803,23 +839,7 @@ def main() -> int:
     root = Path(__file__).resolve().parents[1]
     raw = (root / PROFILE_RELATIVE_PATH).read_bytes()
     profile = require_profile_document(raw)
-    vendor_roots = (
-        root / "rust/betelgeuze-sys/vendor/include",
-        root / "rust/betelgeuze-sys/vendor/native",
-    )
-    vendor_entries = tuple(
-        sorted(
-            path
-            for vendor_root in vendor_roots
-            for path in vendor_root.rglob("*")
-            if path.is_file() or path.is_symlink()
-        )
-    )
-    if any(path.is_symlink() for path in vendor_entries):
-        _fail("native vendor tree contains a symlink")
-    require_native_vendor_tree_paths(
-        tuple(path.relative_to(root).as_posix() for path in vendor_entries)
-    )
+    vendor_tree_paths = discover_native_vendor_tree_paths(root)
     require_compiled_profile_binding(
         profile,
         (root / QUALIFICATION_SOURCE_RELATIVE_PATH).read_bytes(),
@@ -830,7 +850,7 @@ def main() -> int:
             path.as_posix(): (root / path).read_bytes()
             for path in NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS
         },
-        tuple(path.relative_to(root).as_posix() for path in vendor_entries),
+        vendor_tree_paths,
     )
     print(
         json.dumps(

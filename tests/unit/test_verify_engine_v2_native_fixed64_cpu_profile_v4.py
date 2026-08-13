@@ -13,6 +13,7 @@ from tools.verify_engine_v2_native_fixed64_cpu_profile_v4 import (
     NATIVE_PIPELINE_TRANSITIVE_SOURCE_RELATIVE_PATHS,
     NATIVE_VENDOR_COPY_SOURCE_RELATIVE_PATHS,
     NativeFixed64CPUProfileV4Error,
+    discover_native_vendor_tree_paths,
     require_compiled_profile_binding,
     require_native_vendor_tree_paths,
     require_profile_document,
@@ -56,7 +57,7 @@ def test_canonical_native_fixed64_cpu_profile_v4_is_frozen() -> None:
     profile = require_profile_document(raw)
 
     assert hashlib.sha256(raw).hexdigest() == (
-        "022aa93ff888c13db8412a9e9731f16719c5a8e0d75432d62e090ded2e2fc515"
+        "2006f52041c39897f6f2d0b308f425f5ca7917919fdcd7388ae5ef372e0145e2"
     )
     assert profile["profile_id"] == "engine_v2_native_fixed64_cpu_synthetic_v4"
     assert all(value is False for value in profile["authority"].values())
@@ -267,6 +268,26 @@ def test_profile_v4_rejects_transitive_source_path_omission() -> None:
         )
 
 
+def test_profile_v4_rejects_abi_probe_source_drift() -> None:
+    profile = require_profile_document(_PROFILE.read_bytes())
+    changed = dict(_TRANSITIVE_SOURCES)
+    changed["rust/betelgeuze-sys/abi/header_c11.c"] += b"\n/* ABI drift */\n"
+
+    with pytest.raises(
+        NativeFixed64CPUProfileV4Error,
+        match="transitive source manifest",
+    ):
+        require_compiled_profile_binding(
+            profile,
+            _QUALIFICATION_SOURCE.read_bytes(),
+            _DOCKING_SOURCE.read_bytes(),
+            _NATIVE_PIPELINE_SOURCE.read_bytes(),
+            _PROBE_SOURCE.read_bytes(),
+            changed,
+            _VENDOR_TREE_PATHS,
+        )
+
+
 def test_profile_v4_rejects_vendor_source_drift() -> None:
     profile = require_profile_document(_PROFILE.read_bytes())
     changed = dict(_TRANSITIVE_SOURCES)
@@ -312,6 +333,33 @@ def test_profile_v4_rejects_vendor_equality_manifest_drift() -> None:
         )
 
 
+def test_profile_v4_rejects_cfg_shadowed_vendor_declaration() -> None:
+    profile = require_profile_document(_PROFILE.read_bytes())
+    changed = dict(_TRANSITIVE_SOURCES)
+    build_path = "rust/betelgeuze-sys/build.rs"
+    declaration = b"const VENDORED_FILES: &[&str] = &[\n"
+    assert changed[build_path].count(declaration) == 1
+    changed[build_path] = changed[build_path].replace(
+        declaration,
+        b"#[cfg(any())]\n" + declaration,
+        1,
+    )
+
+    with pytest.raises(
+        NativeFixed64CPUProfileV4Error,
+        match="vendor equality manifest changed",
+    ):
+        require_compiled_profile_binding(
+            profile,
+            _QUALIFICATION_SOURCE.read_bytes(),
+            _DOCKING_SOURCE.read_bytes(),
+            _NATIVE_PIPELINE_SOURCE.read_bytes(),
+            _PROBE_SOURCE.read_bytes(),
+            changed,
+            _VENDOR_TREE_PATHS,
+        )
+
+
 def test_profile_v4_rejects_vendor_shadow_header() -> None:
     expected = tuple(path.as_posix() for path in NATIVE_VENDOR_COPY_SOURCE_RELATIVE_PATHS)
 
@@ -326,6 +374,20 @@ def test_profile_v4_rejects_vendor_shadow_header() -> None:
                 "betelgeuze/engine.h",
             )
         )
+
+
+def test_profile_v4_rejects_symlinked_vendor_root(tmp_path: Path) -> None:
+    vendor = tmp_path / "rust/betelgeuze-sys/vendor"
+    vendor.mkdir(parents=True)
+    target = tmp_path / "canonical-include"
+    target.mkdir()
+    (vendor / "include").symlink_to(target, target_is_directory=True)
+
+    with pytest.raises(
+        NativeFixed64CPUProfileV4Error,
+        match="vendor root is missing, invalid, or symlinked",
+    ):
+        discover_native_vendor_tree_paths(tmp_path)
 
 
 @pytest.mark.parametrize(
@@ -382,7 +444,7 @@ def test_profile_v4_cli_reports_non_consuming_authority_false() -> None:
         "fixture_count": 2,
         "profile_id": "engine_v2_native_fixed64_cpu_synthetic_v4",
         "profile_sha256": (
-            "022aa93ff888c13db8412a9e9731f16719c5a8e0d75432d62e090ded2e2fc515"
+            "2006f52041c39897f6f2d0b308f425f5ca7917919fdcd7388ae5ef372e0145e2"
         ),
         "reservation_created": False,
         "status": "verified",
