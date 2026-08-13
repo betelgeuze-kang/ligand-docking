@@ -30,6 +30,8 @@ from tools.audit_engine_v2_ci_authority import (
     NATIVE_FIXED64_CPU_V4_CARGO_RUN_PATTERN,
     NATIVE_FIXED64_CPU_V4_EXPLICIT_BIN_PATTERN,
     NATIVE_FIXED64_CPU_V4_FOLDED_RUN_PATTERN,
+    NATIVE_FIXED64_CPU_V4_MAX_WORKFLOW_UTF8_BYTES,
+    NATIVE_FIXED64_CPU_V4_MAX_YAML_NODES,
     NATIVE_FIXED64_CPU_V4_FORBIDDEN_WORKFLOW_TOKENS,
     NATIVE_FIXED64_CPU_V4_REQUIRED_TOKEN_COUNTS,
     NATIVE_FIXED64_CPU_V4_REQUIRED_TOKENS,
@@ -927,6 +929,49 @@ def test_native_fixed64_cpu_v4_folded_yaml_stops_before_sibling_bin_text(
 
 
 @pytest.mark.parametrize(
+    "run_yaml",
+    (
+        '"cargo run --manifest-path rust/betelgeuze-runtime/Cargo.toml"',
+        "'cargo run -p betelgeuze-runtime'",
+        "*tokenless_command",
+    ),
+)
+def test_native_fixed64_cpu_v4_yaml_scalar_forms_cannot_hide_tokenless_run(
+    tmp_path: Path,
+    run_yaml: str,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_native_fixed64_cpu_v4_contract(tmp_path)
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_native_fixed64_cpu_v4_ci_tokens()),
+        encoding="utf-8",
+    )
+    anchor = (
+        "x-command: &tokenless_command >\n"
+        "  cargo\n"
+        "  run -p betelgeuze-runtime\n"
+        if run_yaml.startswith("*")
+        else ""
+    )
+    unrelated = tmp_path / ".github/workflows/unrelated.yaml"
+    unrelated.write_text(
+        anchor
+        + "jobs:\n  scalar:\n    runs-on: ubuntu-latest\n    steps:\n"
+        + f"      - run: {run_yaml}\n",
+        encoding="utf-8",
+    )
+
+    payload = build_inventory(tmp_path)
+    assert (
+        payload[
+            "native_fixed64_cpu_v4_live_qualification_absent_from_github_actions"
+        ]
+        is False
+    )
+    assert payload["native_fixed64_cpu_v4_authority_fail_closed"] is False
+
+
+@pytest.mark.parametrize(
     ("section", "field", "value"),
     (
         ("authority", "qualification_authority", True),
@@ -1003,6 +1048,8 @@ def test_native_fixed64_cpu_v4_inventory_constants_are_exact() -> None:
     )
     assert NATIVE_FIXED64_CPU_V4_EXPLICIT_BIN_PATTERN == r"(?:^|\s)--bin(?:=|\s+)"
     assert NATIVE_FIXED64_CPU_V4_FOLDED_RUN_PATTERN.fullmatch("      - run: >2-")
+    assert NATIVE_FIXED64_CPU_V4_MAX_WORKFLOW_UTF8_BYTES == 1_048_576
+    assert NATIVE_FIXED64_CPU_V4_MAX_YAML_NODES == 100_000
 
 
 def test_authoritative_main_runs_for_every_workflow_change() -> None:

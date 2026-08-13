@@ -11,6 +11,8 @@ import re
 import shlex
 from typing import Any
 
+import yaml
+
 
 SCHEMA_ID = "betelgeuze.engine_v2_ci_authority_inventory/1.0.0"
 AUTHORITATIVE_WORKFLOWS = (
@@ -210,6 +212,8 @@ NATIVE_FIXED64_CPU_V4_EXPLICIT_BIN_PATTERN = r"(?:^|\s)--bin(?:=|\s+)"
 NATIVE_FIXED64_CPU_V4_FOLDED_RUN_PATTERN = re.compile(
     r"^(?P<indent>[ ]*)(?:-[ ]+)?run:[ ]*>[+-]?[1-9]?[+-]?[ ]*(?:#.*)?$"
 )
+NATIVE_FIXED64_CPU_V4_MAX_WORKFLOW_UTF8_BYTES = 1_048_576
+NATIVE_FIXED64_CPU_V4_MAX_YAML_NODES = 100_000
 ONE_SHOT_CONTRACT_PATHS = (
     "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_ab.py",
     "config/engine_v2_source_paired_clearance_one_shot_ab.json",
@@ -328,6 +332,37 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _workflow_yaml_run_scalars(text: str) -> tuple[str, ...] | None:
+    if len(text.encode("utf-8")) > NATIVE_FIXED64_CPU_V4_MAX_WORKFLOW_UTF8_BYTES:
+        return None
+    try:
+        document = yaml.safe_load(text)
+    except (yaml.YAMLError, RecursionError):
+        return ()
+    stack = [document]
+    visited: set[int] = set()
+    run_scalars: list[str] = []
+    observed_nodes = 0
+    while stack:
+        value = stack.pop()
+        if isinstance(value, (dict, list)):
+            identity = id(value)
+            if identity in visited:
+                continue
+            visited.add(identity)
+        observed_nodes += 1
+        if observed_nodes > NATIVE_FIXED64_CPU_V4_MAX_YAML_NODES:
+            return None
+        if isinstance(value, dict):
+            for key, child in value.items():
+                if key == "run" and isinstance(child, str):
+                    run_scalars.append(child)
+                stack.append(child)
+        elif isinstance(value, list):
+            stack.extend(value)
+    return tuple(run_scalars)
+
+
 def _workflow_invokes_native_fixed64_cpu_v4_live_probe(text: str) -> bool:
     logical = text.replace("\\\n", " ")
     if any(
@@ -336,7 +371,10 @@ def _workflow_invokes_native_fixed64_cpu_v4_live_probe(text: str) -> bool:
     ):
         return True
     lines = logical.splitlines()
-    shell_fragments = list(lines)
+    yaml_run_scalars = _workflow_yaml_run_scalars(logical)
+    if yaml_run_scalars is None:
+        return True
+    shell_fragments = [*lines, *yaml_run_scalars]
     for index, line in enumerate(lines):
         folded = NATIVE_FIXED64_CPU_V4_FOLDED_RUN_PATTERN.match(line)
         if folded is None:
