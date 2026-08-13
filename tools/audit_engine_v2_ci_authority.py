@@ -1079,6 +1079,11 @@ def _native_fixed64_cpu_v6_authority_is_fail_closed(repo_root: Path) -> bool:
         and "UNBOUND_BUILD_COMMIT_OID" in build_source
         and "committed_blob(source_root, commit_oid, PROFILE_RELATIVE_PATH)"
         in build_source
+        and "track_git_commit_inputs(source_root)" in build_source
+        and 'git_path(source_root, "HEAD")' in build_source
+        and 'git_path(source_root, "packed-refs")' in build_source
+        and 'emit_rerun_if_changed(&reference_path, "symbolic HEAD reference")'
+        in build_source
         and 'BUILD_COMMIT_BOUND != "true"' in runner
         and "non-authoritative package build cannot activate" in runner
         and "decision_returned_only_after_terminal_persistence" in runner

@@ -142,6 +142,69 @@ fn git_output(source_root: &Path, arguments: &[&str]) -> Vec<u8> {
     output.stdout
 }
 
+fn git_path(source_root: &Path, git_relative: &str) -> PathBuf {
+    let raw = git_output(source_root, &["rev-parse", "--git-path", git_relative]);
+    let text = std::str::from_utf8(&raw)
+        .expect("v6 Git metadata path must be UTF-8")
+        .trim_end_matches('\n');
+    assert!(
+        !text.is_empty() && !text.contains('\r') && !text.contains('\n'),
+        "v6 Git metadata path is invalid"
+    );
+    let path = PathBuf::from(text);
+    if path.is_absolute() {
+        path
+    } else {
+        source_root.join(path)
+    }
+}
+
+fn emit_rerun_if_changed(path: &Path, label: &str) {
+    let text = path
+        .to_str()
+        .unwrap_or_else(|| panic!("v6 {label} path must be UTF-8"));
+    assert!(
+        !text.contains('\r') && !text.contains('\n'),
+        "v6 {label} path is invalid"
+    );
+    println!("cargo:rerun-if-changed={text}");
+}
+
+fn track_git_commit_inputs(source_root: &Path) {
+    let head_path = git_path(source_root, "HEAD");
+    let head_metadata =
+        fs::symlink_metadata(&head_path).expect("v6 worktree HEAD metadata is unavailable");
+    assert!(
+        head_metadata.file_type().is_file() && !head_metadata.file_type().is_symlink(),
+        "v6 worktree HEAD is not a regular file"
+    );
+    emit_rerun_if_changed(&head_path, "worktree HEAD");
+    let head = fs::read_to_string(&head_path).expect("v6 worktree HEAD is unavailable");
+    if let Some(reference) = head.strip_prefix("ref: ") {
+        let reference = reference.trim_end_matches('\n').trim_end_matches('\r');
+        assert!(
+            reference.starts_with("refs/heads/")
+                && reference.is_ascii()
+                && !reference.contains("..")
+                && !reference.contains('\\'),
+            "v6 symbolic HEAD reference is invalid"
+        );
+        let reference_path = git_path(source_root, reference);
+        let packed_refs_path = git_path(source_root, "packed-refs");
+        if reference_path.is_file() {
+            emit_rerun_if_changed(&reference_path, "symbolic HEAD reference");
+        } else {
+            assert!(
+                packed_refs_path.is_file(),
+                "v6 symbolic HEAD target is unavailable"
+            );
+        }
+        if packed_refs_path.is_file() {
+            emit_rerun_if_changed(&packed_refs_path, "packed refs");
+        }
+    }
+}
+
 fn committed_blob(source_root: &Path, commit_oid: &str, relative: &str) -> Vec<u8> {
     let object = format!("{commit_oid}:{relative}");
     git_output(source_root, &["cat-file", "blob", &object])
@@ -184,6 +247,7 @@ fn bind_activation_snapshot(
     if non_authoritative_package {
         return (UNBOUND_BUILD_COMMIT_OID.to_owned(), profile_sha256, false);
     }
+    track_git_commit_inputs(source_root);
     let raw_oid = git_output(source_root, &["rev-parse", "--verify", "HEAD"]);
     let commit_oid = std::str::from_utf8(&raw_oid)
         .expect("v6 build commit must be UTF-8")

@@ -24,9 +24,9 @@ else:
 
 SCHEMA_ID = "betelgeuze.engine_v2_native_fixed64_cpu_profile/6.0.0"
 PROFILE_ID = "engine_v2_native_fixed64_cpu_synthetic_v6"
-PROFILE_SHA256 = "68c3b49bb5e5152c08afecdac76c959765162131ddefba2cf84e580228b1e1d7"
+PROFILE_SHA256 = "1d0abc132ecd7b9a0730d8000d6b0f8edf54f2b7021cdfb776f2caa84c3dacb1"
 SOURCE_MANIFEST_SHA256 = (
-    "1d80a3415a4568930b5e92071da6471488c890ccf131ae9f2e6fbd761bfc43c9"
+    "5b9452a44587607f351fd4d8a5d1ff0a478fe4711094b98585abae71711da207"
 )
 SOURCE_COUNT = 192
 PROFILE_RELATIVE_PATH = Path("config/engine_v2_native_fixed64_cpu_profile_v6.json")
@@ -656,6 +656,10 @@ def require_activation_source_contract(sources: dict[str, bytes]) -> None:
         "BETELGEUZE_V6_NON_AUTHORITATIVE_PACKAGE_BUILD",
         "UNBOUND_BUILD_COMMIT_OID",
         "committed_blob(source_root, commit_oid, PROFILE_RELATIVE_PATH)",
+        "track_git_commit_inputs(source_root)",
+        'git_path(source_root, "HEAD")',
+        'git_path(source_root, "packed-refs")',
+        'emit_rerun_if_changed(&reference_path, "symbolic HEAD reference")',
         "canonical_profile, PACKAGED_PROFILE_BYTES",
         "cargo:rerun-if-changed={}",
         "sha256_hex(&raw)",

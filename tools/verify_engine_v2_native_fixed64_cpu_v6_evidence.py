@@ -12,6 +12,7 @@ from pathlib import Path
 import pwd
 import re
 import stat
+import subprocess
 from typing import NoReturn
 
 if __package__:
@@ -21,6 +22,7 @@ if __package__:
         PROFILE_ID,
         PROFILE_RELATIVE_PATH,
         PROFILE_SHA256,
+        SOURCE_MANIFEST_RELATIVE_PATH,
     )
 else:
     from verify_engine_v2_native_fixed64_cpu_profile_v6 import (
@@ -29,6 +31,7 @@ else:
         PROFILE_ID,
         PROFILE_RELATIVE_PATH,
         PROFILE_SHA256,
+        SOURCE_MANIFEST_RELATIVE_PATH,
     )
 
 
@@ -182,6 +185,16 @@ def _domain_sha256(domain: bytes, raw: bytes) -> str:
 def _require_digest(value: object, *, label: str) -> str:
     if type(value) is not str or re.fullmatch(r"[0-9a-f]{64}", value) is None:
         _fail(f"{label} is not a lowercase SHA-256")
+    return value
+
+
+def _require_commit_oid(value: object, *, label: str) -> str:
+    if (
+        type(value) is not str
+        or re.fullmatch(r"[0-9a-f]{40}", value) is None
+        or value == "0" * 40
+    ):
+        _fail(f"{label} is not a bound Git commit identity")
     return value
 
 
@@ -413,6 +426,7 @@ def _require_fixture(value: object, *, expected_id: str) -> dict[str, object]:
         or maximum_absolute < 0
         or maximum_scaled < 0
         or ratio != rust_median / cpp_median
+        or (maximum_absolute == 0.0) is not (maximum_scaled == 0.0)
     ):
         _fail("fixture numeric evidence is non-finite or not rederivable")
     violations = numeric["tolerance_violation_count"]
@@ -457,14 +471,15 @@ def _require_fixture(value: object, *, expected_id: str) -> dict[str, object]:
     return fixture
 
 
-def _qualified_host(host: dict[str, object]) -> bool:
+def _qualified_host(
+    host: dict[str, object], *, expected_source_commit_oid: str
+) -> bool:
     return bool(
         host["boost_disabled"] is True
         and host["cpu_model"] == "AMD Ryzen 9 5900X 12-Core Processor"
         and host["measurement_cpu_available"] is True
         and host["process_task_count"] == 1
-        and type(host["source_commit_oid"]) is str
-        and re.fullmatch(r"[0-9a-f]{40}", host["source_commit_oid"]) is not None
+        and host["source_commit_oid"] == expected_source_commit_oid
     )
 
 
@@ -491,6 +506,8 @@ def _blocked_state_rederives(
     blockers: list[str],
     execution: dict[str, object],
     host: dict[str, object],
+    *,
+    expected_source_commit_oid: str,
 ) -> bool:
     observed = set(blockers)
     expected_preflight = _expected_preflight_blockers(host)
@@ -502,7 +519,9 @@ def _blocked_state_rederives(
         if host["measurement_cpu_available"] is False:
             allowed.append(expected_preflight | {"affinity_unavailable"})
         return observed in allowed and observed <= PREFLIGHT_BLOCKERS
-    if not _qualified_host(host):
+    if not _qualified_host(
+        host, expected_source_commit_oid=expected_source_commit_oid
+    ):
         return False
     if measurement_started is False:
         return len(observed) == 1 and observed <= POST_PIN_BLOCKERS
@@ -518,8 +537,12 @@ def require_artifact_bytes(
     attempt: dict[str, object],
     attempt_receipt: str,
     activation_sha256: str,
+    expected_source_commit_oid: str,
     output_path_sha256: str,
 ) -> tuple[dict[str, object], str]:
+    expected_source_commit_oid = _require_commit_oid(
+        expected_source_commit_oid, label="expected v6 build commit"
+    )
     artifact, receipt = _split_envelope(
         raw,
         domain=ARTIFACT_DOMAIN,
@@ -597,6 +620,7 @@ def require_artifact_bytes(
                 type(host["source_commit_oid"]) is not str
                 or re.fullmatch(r"[0-9a-f]{40}", host["source_commit_oid"])
                 is None
+                or host["source_commit_oid"] != expected_source_commit_oid
             )
         )
     ):
@@ -605,7 +629,9 @@ def require_artifact_bytes(
     if type(fixtures) is not list:
         _fail("qualification artifact fixtures are not a list")
     if fixtures:
-        if not _qualified_host(host):
+        if not _qualified_host(
+            host, expected_source_commit_oid=expected_source_commit_oid
+        ):
             _fail("measured qualification artifact host is not exactly qualified")
         if len(fixtures) != 2:
             _fail("qualification artifact fixture denominator changed")
@@ -634,7 +660,12 @@ def require_artifact_bytes(
         execution["recorded_decision"] != "BLOCKED"
         or execution["recorded_gate_passed"] is not None
         or execution["recorded_numeric_gate_passed"] is not None
-        or not _blocked_state_rederives(blockers, execution, host)
+        or not _blocked_state_rederives(
+            blockers,
+            execution,
+            host,
+            expected_source_commit_oid=expected_source_commit_oid,
+        )
     ):
         _fail("blocked qualification artifact state does not rederive")
     return artifact, receipt
@@ -702,6 +733,7 @@ def require_persisted_evidence_bytes(
     *,
     artifact_raw: bytes,
     attempt_raw: bytes,
+    expected_source_commit_oid: str,
     terminal_raw: bytes,
     output_path_sha256: str,
     profile_raw: bytes,
@@ -720,6 +752,7 @@ def require_persisted_evidence_bytes(
         attempt=attempt,
         attempt_receipt=attempt_receipt,
         activation_sha256=activation_sha256,
+        expected_source_commit_oid=expected_source_commit_oid,
         output_path_sha256=output_path_sha256,
     )
     terminal = require_terminal_bytes(
@@ -738,8 +771,94 @@ def require_persisted_evidence_bytes(
         "attempt": attempt,
         "terminal": terminal,
         "artifact_sha256": _sha256(artifact_raw),
+        "source_commit_oid": expected_source_commit_oid,
         "terminal_sha256": _sha256(terminal_raw),
     }
+
+
+def _git_bytes(repo_root: Path, arguments: list[str], *, label: str) -> bytes:
+    try:
+        completed = subprocess.run(
+            ["git", "-c", "core.fsmonitor=false", *arguments],
+            cwd=repo_root,
+            check=False,
+            capture_output=True,
+            env={
+                "LANG": "C",
+                "LC_ALL": "C",
+                "PATH": os.environ.get("PATH", ""),
+            },
+        )
+    except OSError as exc:
+        raise NativeFixed64CPUV6EvidenceError(
+            f"{label} Git evidence is unavailable"
+        ) from exc
+    if completed.returncode != 0 or completed.stderr:
+        _fail(f"{label} Git evidence failed closed")
+    return completed.stdout
+
+
+def _exact_checkout_commit(repo_root: Path) -> str:
+    try:
+        if not repo_root.is_absolute() or repo_root.resolve(strict=True) != repo_root:
+            _fail("evidence repository root is not exact")
+    except OSError as exc:
+        raise NativeFixed64CPUV6EvidenceError(
+            "evidence repository root is unavailable"
+        ) from exc
+    reported_root_raw = _git_bytes(
+        repo_root,
+        ["rev-parse", "--show-toplevel"],
+        label="repository root",
+    )
+    try:
+        reported_root = Path(reported_root_raw.decode("utf-8").removesuffix("\n"))
+    except UnicodeError as exc:
+        raise NativeFixed64CPUV6EvidenceError(
+            "repository root Git evidence is not UTF-8"
+        ) from exc
+    if reported_root != repo_root:
+        _fail("evidence repository root differs from Git")
+    status = _git_bytes(
+        repo_root,
+        ["status", "--porcelain=v1", "--untracked-files=normal"],
+        label="repository status",
+    )
+    if status:
+        _fail("evidence repository checkout is not clean")
+    oid_raw = _git_bytes(
+        repo_root,
+        ["rev-parse", "--verify", "HEAD"],
+        label="repository commit",
+    )
+    try:
+        oid = oid_raw.decode("ascii").removesuffix("\n")
+    except UnicodeError as exc:
+        raise NativeFixed64CPUV6EvidenceError(
+            "repository commit Git evidence is not ASCII"
+        ) from exc
+    oid = _require_commit_oid(oid, label="evidence repository HEAD")
+    critical_paths = (
+        PROFILE_RELATIVE_PATH,
+        SOURCE_MANIFEST_RELATIVE_PATH,
+        Path("tools/verify_engine_v2_native_fixed64_cpu_profile_v6.py"),
+        Path("tools/verify_engine_v2_native_fixed64_cpu_v6_evidence.py"),
+    )
+    for relative in critical_paths:
+        try:
+            observed = (repo_root / relative).read_bytes()
+        except OSError as exc:
+            raise NativeFixed64CPUV6EvidenceError(
+                f"critical evidence source is unavailable: {relative.as_posix()}"
+            ) from exc
+        committed = _git_bytes(
+            repo_root,
+            ["cat-file", "blob", f"{oid}:{relative.as_posix()}"],
+            label=f"committed evidence source {relative.as_posix()}",
+        )
+        if observed != committed:
+            _fail(f"critical evidence source differs from HEAD: {relative.as_posix()}")
+    return oid
 
 
 def _read_owner_file(path: Path, *, maximum: int, label: str) -> bytes:
@@ -863,6 +982,7 @@ def verify_persisted_evidence(
     artifact_path = artifact_path.absolute()
     attempt_path = attempt_path.absolute()
     terminal_path = terminal_path.absolute()
+    expected_source_commit_oid = _exact_checkout_commit(repo_root)
     _require_state_paths(attempt_path, terminal_path)
     artifact_raw = _read_owner_file(
         artifact_path, maximum=MAX_ARTIFACT_BYTES, label="qualification artifact"
@@ -878,6 +998,7 @@ def verify_persisted_evidence(
     return require_persisted_evidence_bytes(
         artifact_raw=artifact_raw,
         attempt_raw=attempt_raw,
+        expected_source_commit_oid=expected_source_commit_oid,
         terminal_raw=terminal_raw,
         output_path_sha256=output_path_sha256,
         profile_raw=profile_raw,
@@ -914,6 +1035,7 @@ def main() -> int:
                 "profile_sha256": PROFILE_SHA256,
                 "qualification_authority": False,
                 "recorded_decision": terminal["recorded_decision"],
+                "source_commit_oid": evidence["source_commit_oid"],
                 "structural_integrity_verified": True,
                 "terminal_sha256": evidence["terminal_sha256"],
             },

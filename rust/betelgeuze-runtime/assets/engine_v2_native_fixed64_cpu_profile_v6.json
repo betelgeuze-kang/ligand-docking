@@ -158,7 +158,7 @@
     "native_qualification_source_sha256": "8d36897aa72c0608b5cb5ad6a06d2ab1c090cd00ebdf6f9d811b2f8afc80f9d7",
     "native_runner_source_sha256": "5e62bb79cb32a6dee13dbd18239869aafd65c7667cc9c7310cb1c65368e31635",
     "predecessor_archive_sha256": "9e4042d08b4971cbd218f0afaa7a994892f89f3d256e32ed505129af078cd512",
-    "transitive_source_manifest_sha256": "1d80a3415a4568930b5e92071da6471488c890ccf131ae9f2e6fbd761bfc43c9"
+    "transitive_source_manifest_sha256": "5b9452a44587607f351fd4d8a5d1ff0a478fe4711094b98585abae71711da207"
   },
   "status": "native_activation_implementation_frozen_execution_not_consumed"
 }

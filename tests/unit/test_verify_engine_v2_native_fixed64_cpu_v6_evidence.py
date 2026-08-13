@@ -24,6 +24,7 @@ from tools.verify_engine_v2_native_fixed64_cpu_v6_evidence import (
     NativeFixed64CPUV6EvidenceError,
     TERMINAL_DOMAIN,
     TERMINAL_SCHEMA_ID,
+    _exact_checkout_commit,
     require_artifact_bytes,
     require_attempt_bytes,
     require_persisted_evidence_bytes,
@@ -36,6 +37,7 @@ _PROFILE_RAW = (
 ).read_bytes()
 _VERIFIER = _ROOT / "tools/verify_engine_v2_native_fixed64_cpu_v6_evidence.py"
 _OUTPUT_PATH_SHA256 = "a1" * 32
+_SOURCE_COMMIT_OID = "f6" * 20
 
 
 def _domain(domain: bytes, raw: bytes) -> str:
@@ -151,7 +153,7 @@ def _artifact(
             "measurement_cpu_available": True,
             "measurement_cpu_ordinal": 2,
             "process_task_count": 1,
-            "source_commit_oid": "f6" * 20 if passed else None,
+            "source_commit_oid": _SOURCE_COMMIT_OID if passed else None,
         },
         "output_path_sha256": _OUTPUT_PATH_SHA256,
         "profile_id": PROFILE_ID,
@@ -240,6 +242,7 @@ def test_complete_blocked_and_pass_evidence_rederive(passed: bool) -> None:
     evidence = require_persisted_evidence_bytes(
         artifact_raw=artifact_raw,
         attempt_raw=attempt_raw,
+        expected_source_commit_oid=_SOURCE_COMMIT_OID,
         terminal_raw=terminal_raw,
         output_path_sha256=_OUTPUT_PATH_SHA256,
         profile_raw=_PROFILE_RAW,
@@ -264,6 +267,52 @@ def test_evidence_help_resolves_sibling_chain_without_site_packages() -> None:
     assert "--terminal" in completed.stdout
 
 
+def test_exact_checkout_commit_is_derived_from_clean_git_head(tmp_path: Path) -> None:
+    critical = (
+        Path("config/engine_v2_native_fixed64_cpu_profile_v6.json"),
+        Path("config/engine_v2_native_fixed64_cpu_profile_v6_sources.json"),
+        Path("tools/verify_engine_v2_native_fixed64_cpu_profile_v6.py"),
+        Path("tools/verify_engine_v2_native_fixed64_cpu_v6_evidence.py"),
+    )
+    for relative in critical:
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(relative.as_posix().encode("ascii"))
+    subprocess.run(
+        ["git", "init", "-q", "--initial-branch=main"],
+        cwd=tmp_path,
+        check=True,
+    )
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
+    subprocess.run(
+        [
+            "git",
+            "-c",
+            "user.name=Engine V2 Test",
+            "-c",
+            "user.email=engine-v2-test@example.invalid",
+            "commit",
+            "-q",
+            "-m",
+            "freeze evidence checkout",
+        ],
+        cwd=tmp_path,
+        check=True,
+    )
+    expected = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    assert _exact_checkout_commit(tmp_path) == expected
+
+    (tmp_path / critical[-1]).write_bytes(b"mutated")
+    with pytest.raises(NativeFixed64CPUV6EvidenceError, match="not clean"):
+        _exact_checkout_commit(tmp_path)
+
+
 def _require_mutated_artifact_fails(
     artifact: dict[str, object],
     *,
@@ -286,6 +335,7 @@ def _require_mutated_artifact_fails(
             attempt=attempt,
             attempt_receipt=attempt_receipt,
             activation_sha256=_domain(ACTIVATION_DOMAIN, _PROFILE_RAW),
+            expected_source_commit_oid=_SOURCE_COMMIT_OID,
             output_path_sha256=_OUTPUT_PATH_SHA256,
         )
 
@@ -307,6 +357,7 @@ def _require_mutated_artifact_passes(artifact: dict[str, object]) -> None:
         attempt=attempt,
         attempt_receipt=attempt_receipt,
         activation_sha256=_domain(ACTIVATION_DOMAIN, _PROFILE_RAW),
+        expected_source_commit_oid=_SOURCE_COMMIT_OID,
         output_path_sha256=_OUTPUT_PATH_SHA256,
     )
 
@@ -341,6 +392,25 @@ def test_measured_evidence_requires_exact_qualified_host(
     assert isinstance(host, dict)
     host[field] = value
     _require_mutated_artifact_fails(artifact, match="host is not exactly qualified")
+
+
+def test_measured_evidence_rejects_other_build_commit() -> None:
+    attempt_raw = _envelope(_attempt(), ATTEMPT_DOMAIN)
+    attempt_projection_raw = json.dumps(
+        _attempt(),
+        allow_nan=False,
+        ensure_ascii=True,
+        separators=(",", ":"),
+    ).encode("ascii")
+    artifact = _artifact(
+        attempt_raw,
+        _domain(ATTEMPT_DOMAIN, attempt_projection_raw),
+        passed=True,
+    )
+    host = artifact["host"]
+    assert isinstance(host, dict)
+    host["source_commit_oid"] = "ab" * 20
+    _require_mutated_artifact_fails(artifact, match="identity or authority")
 
 
 @pytest.mark.parametrize(
@@ -494,6 +564,37 @@ def test_measured_fixture_rejects_float_numeric_parity_count() -> None:
     _require_mutated_artifact_fails(artifact, match="numeric parity counts")
 
 
+@pytest.mark.parametrize(
+    ("maximum_absolute", "maximum_scaled"),
+    ((0.0, 1.0), (1.0, 0.0)),
+)
+def test_measured_fixture_rejects_inconsistent_numeric_parity_maxima(
+    maximum_absolute: float,
+    maximum_scaled: float,
+) -> None:
+    attempt_raw = _envelope(_attempt(), ATTEMPT_DOMAIN)
+    attempt_projection_raw = json.dumps(
+        _attempt(),
+        allow_nan=False,
+        ensure_ascii=True,
+        separators=(",", ":"),
+    ).encode("ascii")
+    artifact = _artifact(
+        attempt_raw,
+        _domain(ATTEMPT_DOMAIN, attempt_projection_raw),
+        passed=True,
+    )
+    fixtures = artifact["fixtures"]
+    assert isinstance(fixtures, list)
+    fixture = fixtures[0]
+    assert isinstance(fixture, dict)
+    numeric = fixture["numeric_parity"]
+    assert isinstance(numeric, dict)
+    numeric["maximum_absolute_difference"] = maximum_absolute
+    numeric["maximum_scaled_difference"] = maximum_scaled
+    _require_mutated_artifact_fails(artifact, match="numeric evidence")
+
+
 def test_artifact_receipt_tamper_fails_closed() -> None:
     attempt_raw, artifact_raw, terminal_raw = _evidence(passed=False)
     artifact_raw = artifact_raw.replace(b'"source_checkout', b'"source_checkouu', 1)
@@ -501,6 +602,7 @@ def test_artifact_receipt_tamper_fails_closed() -> None:
         require_persisted_evidence_bytes(
             artifact_raw=artifact_raw,
             attempt_raw=attempt_raw,
+            expected_source_commit_oid=_SOURCE_COMMIT_OID,
             terminal_raw=terminal_raw,
             output_path_sha256=_OUTPUT_PATH_SHA256,
             profile_raw=_PROFILE_RAW,
@@ -533,6 +635,7 @@ def test_attempt_cross_wiring_fails_with_recomputed_artifact_receipt() -> None:
         require_persisted_evidence_bytes(
             artifact_raw=artifact_raw,
             attempt_raw=attempt_raw,
+            expected_source_commit_oid=_SOURCE_COMMIT_OID,
             terminal_raw=terminal_raw,
             output_path_sha256=_OUTPUT_PATH_SHA256,
             profile_raw=_PROFILE_RAW,
@@ -571,6 +674,7 @@ def test_truncated_timing_denominator_fails_closed() -> None:
         require_persisted_evidence_bytes(
             artifact_raw=artifact_raw,
             attempt_raw=attempt_raw,
+            expected_source_commit_oid=_SOURCE_COMMIT_OID,
             terminal_raw=terminal_raw,
             output_path_sha256=_OUTPUT_PATH_SHA256,
             profile_raw=_PROFILE_RAW,
@@ -605,6 +709,7 @@ def test_terminal_authority_escalation_fails_even_with_recomputed_receipt() -> N
         require_persisted_evidence_bytes(
             artifact_raw=artifact_raw,
             attempt_raw=attempt_raw,
+            expected_source_commit_oid=_SOURCE_COMMIT_OID,
             terminal_raw=terminal_raw,
             output_path_sha256=_OUTPUT_PATH_SHA256,
             profile_raw=_PROFILE_RAW,
@@ -617,6 +722,7 @@ def test_output_path_cross_wiring_fails_closed() -> None:
         require_persisted_evidence_bytes(
             artifact_raw=artifact_raw,
             attempt_raw=attempt_raw,
+            expected_source_commit_oid=_SOURCE_COMMIT_OID,
             terminal_raw=terminal_raw,
             output_path_sha256="ff" * 32,
             profile_raw=_PROFILE_RAW,

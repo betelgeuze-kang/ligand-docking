@@ -466,9 +466,9 @@
       "sha256": "d230b8a374197ab667dabb8fe89a7079fab2c12fcede14ef3de380e11ef6bce4"
     },
     {
-      "byte_count": 10916,
+      "byte_count": 13280,
       "path": "rust/betelgeuze-runtime/build.rs",
-      "sha256": "4b4146ae2dc8c4b10cd4d0262b1db9cce148dfe320b18b71f37298ceb13f194c"
+      "sha256": "cdf4c5cfcdd9ca7026286dc1bde3721c9ae7c52d95c725cbf4ba0ac60a3008a8"
     },
     {
       "byte_count": 5835,

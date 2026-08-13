@@ -298,6 +298,19 @@ def test_compile_time_activation_profile_and_commit_binding_is_required() -> Non
         require_activation_source_contract(sources)
 
 
+def test_compile_time_build_commit_tracks_git_head_and_ref_inputs() -> None:
+    _, _, _, _, sources = _real_evidence()
+    sources = dict(sources)
+    key = verifier.BUILD_SOURCE_RELATIVE_PATH.as_posix()
+    sources[key] = sources[key].replace(
+        b"track_git_commit_inputs(source_root)",
+        b"trust_cached_git_commit_inputs(source_root)",
+        1,
+    )
+    with pytest.raises(NativeFixed64CPUProfileV6Error, match="compile-time source"):
+        require_activation_source_contract(sources)
+
+
 def test_non_authoritative_package_build_cannot_activate() -> None:
     _, _, _, _, sources = _real_evidence()
     sources = dict(sources)

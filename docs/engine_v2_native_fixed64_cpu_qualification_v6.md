@@ -9,12 +9,12 @@ unchanged.
 
 The profile is
 `config/engine_v2_native_fixed64_cpu_profile_v6.json`. Its exact SHA-256 is
-`68c3b49bb5e5152c08afecdac76c959765162131ddefba2cf84e580228b1e1d7`.
+`1d0abc132ecd7b9a0730d8000d6b0f8edf54f2b7021cdfb776f2caa84c3dacb1`.
 The 192-input native/Rust compiler manifest is
 `config/engine_v2_native_fixed64_cpu_profile_v6_sources.json`, SHA-256
-`1d80a3415a4568930b5e92071da6471488c890ccf131ae9f2e6fbd761bfc43c9`.
+`5b9452a44587607f351fd4d8a5d1ff0a478fe4711094b98585abae71711da207`.
 The domain-bound activation SHA-256 is
-`513b67d190a00f00afda054b51d843e107a424b81b0207509d6b8b6defec0105`.
+`fc2d69652f23825d1aac9f56afcccf2d4a05101f230c900a5afa79655e419519`.
 
 The standalone `betelgeuze-runtime` crate packages byte-identical mirrors of
 the profile, predecessor archive, source manifest, original pre-normalization
@@ -43,6 +43,9 @@ The build also reads the exact profile and source-manifest blobs from the Git
 commit, rejects worktree substitutions, and embeds that commit plus the profile
 digest. Runtime activation requires the embedded profile digest, and preflight
 requires the source checkout to remain at the exact build commit.
+Authoritative builds track the worktree `HEAD`, its symbolic branch ref, and
+`packed-refs` as Cargo build-script inputs, so even a source-identical commit
+advance refreshes the embedded build identity without requiring `cargo clean`.
 
 ## Transaction boundary
 
@@ -111,8 +114,11 @@ python3 tools/verify_engine_v2_native_fixed64_cpu_v6_evidence.py \
 That verifier rederives all three domain-separated receipts, the exact output
 path binding, profile and activation identities, the 25-sample timing
 denominators and medians, fixture and numeric gates, the false-authority maps,
-and the terminal's raw attempt/artifact bindings. It reports structural
-integrity only and cannot grant qualification authority.
+and the terminal's raw attempt/artifact bindings. It also requires a clean,
+exact trusted source checkout, compares its `HEAD` and critical committed
+verifier/profile blobs, and binds every non-null artifact source commit to that
+exact build identity. It reports structural integrity only and cannot grant
+qualification authority.
 
 The consuming `--run-output` operation must not be invoked until this
 activation is reviewed and merged, an exact clean `main` checkout passes the
