@@ -116,23 +116,28 @@ ID, complete fixture payload, source identity, denominator, fixture counts,
 sampling, numeric tolerances, performance ratio, or guard-to-measurement order
 drifts from the canonical JSON.
 
-Do not invoke the native binary from GitHub Actions or treat a blocked/unit probe
-as the exactly-once qualification result. The CI authority auditor scans every
-workflow and every repository-local `**/action.yml` or `action.yaml` manifest,
-including each step's effective shell, expansion-enabled heredocs, nested
-command substitutions (including escaped legacy-backtick nesting),
-shell/`timeout`/`sudo`/`eval` commands, interpreter heredoc programs, shell
-startup-environment variables, computed-property local-action process calls,
-dynamic process inputs, and the declared Docker or Node action implementation
-files. Custom Bourne shells are accepted only as a bounded static script
-template using a known runner shell name or absolute system path;
-repository-relative shell executables, executable shell arguments, `PATH` or
-`GITHUB_PATH` mutation, unsupported shells, and incomplete local-action
-surfaces fail closed. `GITHUB_ENV` writes are limited to three explicit
-non-command-resolution output names and one tokenized `echo NAME=value`
-assignment, so quote-concatenated startup variables are rejected. The
-authoritative workflow triggers on and checks out the complete repository so
-an implementation-only change cannot escape inspection.
-The auditor fails closed on a live-probe invocation.
-The binary gate is an independent defense: changing it requires a separately
-reviewed activation that replaces this unconsumed profile state.
+Do not treat any GitHub Actions or test-double invocation as the exactly-once
+qualification result. The CI inventory deliberately makes no claim that a
+static parser can prove the absence of an arbitrary invocation from every shell,
+interpreter, action implementation, environment expansion, or runtime-generated
+program. Such a claim is not an authority boundary.
+
+The normative fail-closed boundary is instead explicit and independently
+checked:
+
+- the canonical profile fixes `qualification_authority`,
+  `github_actions_live_qualification_allowed`,
+  `github_actions_production_authority_allowed`, and
+  `test_double_production_authority_allowed` to `false`;
+- the public library API rejects the frozen qualification profile before fixture
+  construction, while the checked-in binary checks the same compile-bound gate
+  before constructing its configuration or calling the measurement core;
+- the authoritative CI runs only the non-consuming exact-profile/source
+  verifier and unit tests; it does not possess an admission path that can turn
+  output into qualification evidence.
+
+Consequently, invoking the canonical binary exits before measurement. Patching
+source or configuration at workflow runtime changes the exact source/profile
+identity and still cannot produce an admitted v4 receipt. A future activation
+must be a separately reviewed, versioned contract that replaces this unconsumed
+state and supplies its own exactly-once admission authority.
