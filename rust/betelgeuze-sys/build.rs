@@ -3,6 +3,56 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 const QUALIFIED_ROCM_RELEASE_PREFIX: &str = "6.0.2-";
+const QUALIFICATION_BUILD_ENV: &str = "BETELGEUZE_V6_QUALIFICATION_BUILD";
+const QUALIFICATION_RUSTC_WRAPPER_RELATIVE_PATH: &str =
+    "tools/verify_engine_v2_native_fixed64_cpu_v6_rustc_wrapper.py";
+const QUALIFICATION_CPP_COMPILER: &str = "/usr/bin/x86_64-linux-gnu-g++-11";
+const QUALIFICATION_CPP_FLAGS: &[&str] = &[
+    "-std=c++17",
+    "-O3",
+    "-m64",
+    "-fPIC",
+    "-ffunction-sections",
+    "-fdata-sections",
+    "-fvisibility=hidden",
+    "-ffp-contract=off",
+    "-fno-fast-math",
+    "-Wall",
+    "-Wextra",
+    "-Wpedantic",
+    "-Werror",
+];
+const QUALIFICATION_FORBIDDEN_ENVIRONMENT: &[&str] = &[
+    "AR",
+    "CC",
+    "CFLAGS",
+    "CPPFLAGS",
+    "CXX",
+    "CXXFLAGS",
+    "LDFLAGS",
+    "RANLIB",
+    "RUSTFLAGS",
+    "RUSTC_WORKSPACE_WRAPPER",
+    "CARGO_BUILD_RUSTFLAGS",
+    "CARGO_INCREMENTAL",
+    "HOST_CC",
+    "HOST_CFLAGS",
+    "HOST_CXX",
+    "HOST_CXXFLAGS",
+    "TARGET_CC",
+    "TARGET_CFLAGS",
+    "TARGET_CXX",
+    "TARGET_CXXFLAGS",
+    "CC_x86_64_unknown_linux_gnu",
+    "CFLAGS_x86_64_unknown_linux_gnu",
+    "CXX_x86_64_unknown_linux_gnu",
+    "CXXFLAGS_x86_64_unknown_linux_gnu",
+    "BETELGEUZE_HIP_SAFE",
+    "ROCM_PATH",
+    "HIP_PATH",
+    "BG_HIP_SAFE_ARCHITECTURES",
+    "BG_HIP_DEVICE_LIB_PATH",
+];
 
 const VENDORED_FILES: &[&str] = &[
     "include/betelgeuze/engine.h",
@@ -57,6 +107,124 @@ const VENDORED_FILES: &[&str] = &[
     "native/src/hip/planning.hpp",
     "native/src/hip/stub.cpp",
 ];
+
+fn qualification_build_requested() -> bool {
+    println!("cargo:rerun-if-env-changed={QUALIFICATION_BUILD_ENV}");
+    println!("cargo:rerun-if-env-changed=RUSTC_WRAPPER");
+    for name in QUALIFICATION_FORBIDDEN_ENVIRONMENT {
+        println!("cargo:rerun-if-env-changed={name}");
+    }
+    let requested = match std::env::var(QUALIFICATION_BUILD_ENV) {
+        Ok(value) => {
+            assert_eq!(value, "1", "{QUALIFICATION_BUILD_ENV} must equal 1");
+            true
+        }
+        Err(std::env::VarError::NotPresent) => false,
+        Err(std::env::VarError::NotUnicode(_)) => {
+            panic!("{QUALIFICATION_BUILD_ENV} must be UTF-8")
+        }
+    };
+    if !requested {
+        return false;
+    }
+    let manifest_dir = PathBuf::from(
+        std::env::var_os("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR is set by Cargo"),
+    );
+    let workspace_root = manifest_dir
+        .join("..")
+        .canonicalize()
+        .expect("v6 native qualification workspace root must resolve");
+    let out_dir = PathBuf::from(std::env::var_os("OUT_DIR").expect("OUT_DIR is set by Cargo"))
+        .canonicalize()
+        .expect("v6 native qualification OUT_DIR must resolve");
+    let expected_build_root = workspace_root.join("target/qualification-v6/build");
+    let expected_wrapper = workspace_root
+        .parent()
+        .expect("v6 native qualification repository root must exist")
+        .join(QUALIFICATION_RUSTC_WRAPPER_RELATIVE_PATH)
+        .canonicalize()
+        .expect("v6 native qualification rustc wrapper must resolve");
+    let wrapper_is_exact = std::env::var_os("RUSTC_WRAPPER")
+        .map(PathBuf::from)
+        .and_then(|path| path.canonicalize().ok())
+        .as_deref()
+        == Some(expected_wrapper.as_path());
+    let output_is_exact = out_dir
+        .strip_prefix(expected_build_root)
+        .ok()
+        .map(|relative| relative.iter().collect::<Vec<_>>())
+        .is_some_and(|components| {
+            components.len() == 2
+                && components[0]
+                    .as_encoded_bytes()
+                    .starts_with(b"betelgeuze-sys-")
+                && components[0].as_encoded_bytes()["betelgeuze-sys-".len()..]
+                    .iter()
+                    .all(u8::is_ascii_hexdigit)
+                && components[1] == "out"
+        });
+    let no_target_environment_override = std::env::vars_os().all(|(name, _)| {
+        name.to_str()
+            .is_some_and(|name| !name.starts_with("CARGO_TARGET_"))
+    });
+    let checks = [
+        (
+            "build-script profile",
+            std::env::var("PROFILE").ok().as_deref() == Some("release"),
+        ),
+        (
+            "optimization level",
+            std::env::var("OPT_LEVEL").ok().as_deref() == Some("3"),
+        ),
+        (
+            "debug info",
+            std::env::var("DEBUG").ok().as_deref() == Some("false"),
+        ),
+        (
+            "host triple",
+            std::env::var("HOST").ok().as_deref() == Some("x86_64-unknown-linux-gnu"),
+        ),
+        (
+            "target triple",
+            std::env::var("TARGET").ok().as_deref() == Some("x86_64-unknown-linux-gnu"),
+        ),
+        (
+            "build-script panic mode",
+            std::env::var("CARGO_CFG_PANIC").ok().as_deref() == Some("unwind"),
+        ),
+        (
+            "target features",
+            std::env::var("CARGO_CFG_TARGET_FEATURE").ok().as_deref() == Some("fxsr,sse,sse2"),
+        ),
+        (
+            "HIP feature absence",
+            std::env::var_os("CARGO_FEATURE_HIP").is_none(),
+        ),
+        (
+            "Rust flag absence",
+            std::env::var_os("CARGO_ENCODED_RUSTFLAGS").is_none_or(|value| value.is_empty()),
+        ),
+        ("rustc wrapper", wrapper_is_exact),
+        (
+            "compiler override absence",
+            QUALIFICATION_FORBIDDEN_ENVIRONMENT
+                .iter()
+                .all(|name| std::env::var_os(name).is_none()),
+        ),
+        ("target override absence", no_target_environment_override),
+        ("qualification output directory", output_is_exact),
+    ];
+    let failures = checks
+        .into_iter()
+        .filter_map(|(label, passed)| (!passed).then_some(label))
+        .collect::<Vec<_>>();
+    assert!(
+        failures.is_empty(),
+        "v6 native qualification compiler configuration changed: {}",
+        failures.join(", ")
+    );
+    true
+}
 
 fn track(path: &Path) {
     println!("cargo:rerun-if-changed={}", path.display());
@@ -248,6 +416,7 @@ fn main() {
         std::env::var_os("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR is set by Cargo"),
     );
     verify_workspace_vendor(&manifest_dir);
+    let qualification_build = qualification_build_requested();
 
     let vendor_root = manifest_dir.join("vendor");
     for relative in VENDORED_FILES {
@@ -305,10 +474,13 @@ fn main() {
     track(&cpp_layout_probe);
 
     let hip_safe_link = build_hip_safe_provider(&manifest_dir, &include_dir, &hip_provider_source);
+    assert!(
+        !qualification_build || hip_safe_link.is_none(),
+        "v6 CPU qualification build cannot link hip_safe"
+    );
     let mut native_build = cc::Build::new();
     native_build
         .cpp(true)
-        .std("c++17")
         .include(&include_dir)
         .file(&context_source)
         .file(&evaluator_source)
@@ -340,9 +512,20 @@ fn main() {
         .file(&dynamics_common_source)
         .file(&dynamics_integrator_source)
         .file(&dynamics_sha256_source)
-        .define("BG_DISABLE_DESCRIPTOR_INIT_CONVENIENCE_MACROS", None)
-        .warnings(true)
-        .warnings_into_errors(true);
+        .define("BG_DISABLE_DESCRIPTOR_INIT_CONVENIENCE_MACROS", None);
+    if qualification_build {
+        native_build
+            .compiler(QUALIFICATION_CPP_COMPILER)
+            .no_default_flags(true);
+        for flag in QUALIFICATION_CPP_FLAGS {
+            native_build.flag(flag);
+        }
+    } else {
+        native_build
+            .std("c++17")
+            .warnings(true)
+            .warnings_into_errors(true);
+    }
     let hip_enabled = std::env::var_os("CARGO_FEATURE_HIP").is_some();
     if hip_enabled {
         println!("cargo:rerun-if-env-changed=HIP_PATH");
@@ -398,7 +581,12 @@ fn main() {
             .file(&hip_stub_source)
             .define("BG_ENABLE_HIP", "0");
     }
-    if native_build.get_compiler().is_like_msvc() {
+    if qualification_build {
+        assert!(
+            !native_build.get_compiler().is_like_msvc(),
+            "v6 CPU qualification compiler must be GNU C++"
+        );
+    } else if native_build.get_compiler().is_like_msvc() {
         native_build.flag_if_supported("/fp:strict");
     } else {
         native_build

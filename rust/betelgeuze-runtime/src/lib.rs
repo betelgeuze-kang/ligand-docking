@@ -7,6 +7,7 @@ mod docking;
 mod dynamics;
 mod forcefield;
 mod qualification;
+mod qualification_v6;
 
 pub use docking::{
     Fixed64AtomicFeature, Fixed64AuthorityDisposition, Fixed64BatchReceipts,
@@ -36,6 +37,13 @@ pub use qualification::{
     Fixed64CpuFixtureProbeV5, Fixed64CpuProbeConfigV5, Fixed64CpuProbeReportV5,
     Fixed64NumericParityV5, FIXED64_CPU_QUALIFICATION_V5_PROFILE_ID,
     FIXED64_CPU_QUALIFICATION_V5_SCHEMA_ID, FIXED64_CPU_V5_LIVE_ACTIVATION_ADMITTED,
+};
+pub use qualification_v6::{
+    preflight_native_fixed64_cpu_v6, run_native_fixed64_cpu_qualification_v6,
+    verify_native_fixed64_cpu_v6_activation, Fixed64CpuActivationStatusV6,
+    Fixed64CpuPersistedQualificationV6, Fixed64CpuPreflightV6,
+    NativeFixed64CpuQualificationV6Error, FIXED64_CPU_QUALIFICATION_V6_PROFILE_ID,
+    FIXED64_CPU_QUALIFICATION_V6_SCHEMA_ID,
 };
 
 use std::ffi::CStr;

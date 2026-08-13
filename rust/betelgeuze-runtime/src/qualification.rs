@@ -124,6 +124,12 @@ pub struct Fixed64CpuFixtureProbeV5 {
     pub receptor_atom_count: usize,
     pub ligand_atom_count: usize,
     pub score_term_count: usize,
+    pub cpp_generated_count: u64,
+    pub rust_generated_count: u64,
+    pub cpp_typed_failure_count: u64,
+    pub rust_typed_failure_count: u64,
+    // Retained for the v5 probe output. V6 evidence serializes the explicit
+    // backend-specific counts and independently re-derives its gate from them.
     pub generated_count: u64,
     pub typed_failure_count: u64,
     pub cpp_decision_sha256: [u8; 32],
@@ -1208,6 +1214,10 @@ fn run_fixture(
         receptor_atom_count: cpp.receptor_atom_count,
         ligand_atom_count: cpp.ligand_atom_count,
         score_term_count: sys::BG_DOCKING_SCORER_V1_TERM_COUNT as usize,
+        cpp_generated_count: cpp.generated_count,
+        rust_generated_count: rust.generated_count,
+        cpp_typed_failure_count: cpp.typed_failure_count,
+        rust_typed_failure_count: rust.typed_failure_count,
         generated_count: cpp.generated_count,
         typed_failure_count: cpp.typed_failure_count,
         cpp_decision_sha256: cpp.decision_sha256,
@@ -1234,23 +1244,18 @@ fn run_fixture(
 ///
 /// This function deliberately returns all execution and claim authorities as
 /// false.  Calling it does not consume or qualify the sealed v5 profile.
-pub fn run_native_fixed64_cpu_probe_v5(
+fn run_native_fixed64_cpu_probe_with_identity(
     config: Fixed64CpuProbeConfigV5,
+    schema_id: &'static str,
+    profile_id: &'static str,
 ) -> Result<Fixed64CpuProbeReportV5> {
-    let config = config.validate()?;
-    if config != Fixed64CpuProbeConfigV5::unit_test() {
-        if config != Fixed64CpuProbeConfigV5::qualification_profile() {
-            return Err(Error::local(
-                ErrorCode::InvalidArgument,
-                "fixed64 CPU probe accepts only the unit-test or frozen qualification profile",
-            ));
-        }
-        if !fixed64_cpu_v5_live_activation_admitted() {
-            return Err(Error::local(
-                ErrorCode::BackendUnavailable,
-                "fixed64 CPU qualification profile failed closed: reviewed live activation is absent",
-            ));
-        }
+    if config != Fixed64CpuProbeConfigV5::unit_test()
+        && config != Fixed64CpuProbeConfigV5::qualification_profile()
+    {
+        return Err(Error::local(
+            ErrorCode::InvalidArgument,
+            "fixed64 CPU probe accepts only the unit-test or frozen qualification profile",
+        ));
     }
     let fixture = SyntheticFixture::new();
     let fixtures = [FixtureVariant::Complete, FixtureVariant::FeatureSparse]
@@ -1259,8 +1264,8 @@ pub fn run_native_fixed64_cpu_probe_v5(
         .collect::<Result<Vec<_>>>()?;
     let gate_passed = fixtures.iter().all(|fixture| fixture.gate_passed);
     Ok(Fixed64CpuProbeReportV5 {
-        schema_id: FIXED64_CPU_QUALIFICATION_V5_SCHEMA_ID,
-        profile_id: FIXED64_CPU_QUALIFICATION_V5_PROFILE_ID,
+        schema_id,
+        profile_id,
         qualification_authority: false,
         molecular_execution_authorized: false,
         reservation_authorized: false,
@@ -1269,6 +1274,36 @@ pub fn run_native_fixed64_cpu_probe_v5(
         fixtures,
         gate_passed,
     })
+}
+
+pub fn run_native_fixed64_cpu_probe_v5(
+    config: Fixed64CpuProbeConfigV5,
+) -> Result<Fixed64CpuProbeReportV5> {
+    let config = config.validate()?;
+    if config == Fixed64CpuProbeConfigV5::qualification_profile()
+        && !fixed64_cpu_v5_live_activation_admitted()
+    {
+        return Err(Error::local(
+            ErrorCode::BackendUnavailable,
+            "fixed64 CPU qualification profile failed closed: reviewed live activation is absent",
+        ));
+    }
+    run_native_fixed64_cpu_probe_with_identity(
+        config,
+        FIXED64_CPU_QUALIFICATION_V5_SCHEMA_ID,
+        FIXED64_CPU_QUALIFICATION_V5_PROFILE_ID,
+    )
+}
+
+pub(crate) fn run_native_fixed64_cpu_qualification_successor(
+    schema_id: &'static str,
+    profile_id: &'static str,
+) -> Result<Fixed64CpuProbeReportV5> {
+    run_native_fixed64_cpu_probe_with_identity(
+        Fixed64CpuProbeConfigV5::qualification_profile(),
+        schema_id,
+        profile_id,
+    )
 }
 
 #[cfg(test)]
@@ -1298,8 +1333,16 @@ mod tests {
         assert!(!report.product_performance_claim_authorized);
         assert_eq!(report.fixtures[0].generated_count, 64);
         assert_eq!(report.fixtures[0].typed_failure_count, 0);
+        assert_eq!(report.fixtures[0].cpp_generated_count, 64);
+        assert_eq!(report.fixtures[0].rust_generated_count, 64);
+        assert_eq!(report.fixtures[0].cpp_typed_failure_count, 0);
+        assert_eq!(report.fixtures[0].rust_typed_failure_count, 0);
         assert_eq!(report.fixtures[1].generated_count, 48);
         assert_eq!(report.fixtures[1].typed_failure_count, 16);
+        assert_eq!(report.fixtures[1].cpp_generated_count, 48);
+        assert_eq!(report.fixtures[1].rust_generated_count, 48);
+        assert_eq!(report.fixtures[1].cpp_typed_failure_count, 16);
+        assert_eq!(report.fixtures[1].rust_typed_failure_count, 16);
         assert_eq!(
             digest_hex(report.fixtures[0].fixture_payload_sha256),
             COMPLETE_FIXTURE_PAYLOAD_SHA256_HEX,

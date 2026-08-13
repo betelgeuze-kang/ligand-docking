@@ -30,6 +30,10 @@ on:
       - "tests/unit/test_engine_v2_native_fixed64_pipeline.py"
       - "tests/unit/test_engine_v2_native_fixed64_complete_pipeline.py"
       - "config/engine_v2_cpu_performance_profile.json"
+      - "config/engine_v2_native_fixed64_cpu_profile_v5_archive.json"
+      - "config/engine_v2_native_fixed64_cpu_profile_v6.json"
+      - "config/engine_v2_native_fixed64_cpu_profile_v6_sources.json"
+      - "tools/verify_engine_v2_native_fixed64_cpu_v6_rustc_wrapper.py"
       - "tests/unit/test_engine_v2_docking_search_v2_facade.py"
       - "CHANGELOG.md"
       - "docs/engine_v2_0_2_0rc5.md"
@@ -76,6 +80,10 @@ jobs:
             tools/run_engine_v2_cpu_performance_qualification.py
             tools/build_engine_v2_sbom.py
             config/engine_v2_cpu_performance_profile.json
+            config/engine_v2_native_fixed64_cpu_profile_v5_archive.json
+            config/engine_v2_native_fixed64_cpu_profile_v6.json
+            config/engine_v2_native_fixed64_cpu_profile_v6_sources.json
+            tools/verify_engine_v2_native_fixed64_cpu_v6_rustc_wrapper.py
             .github/workflows/ci-engine-v2-release-candidate.yml
           sparse-checkout-cone-mode: false
           show-progress: false
@@ -166,6 +174,10 @@ jobs:
             tests/unit/test_engine_v2_scorer_v1_stage5.py
             tests/unit/test_engine_v2_native_geometric_admission.py
             config/engine_v2_cpu_performance_profile.json
+            config/engine_v2_native_fixed64_cpu_profile_v5_archive.json
+            config/engine_v2_native_fixed64_cpu_profile_v6.json
+            config/engine_v2_native_fixed64_cpu_profile_v6_sources.json
+            tools/verify_engine_v2_native_fixed64_cpu_v6_rustc_wrapper.py
             tests/unit/test_engine_v2_docking_search_v2_facade.py
             tests/unit/test_engine_v2_packaging_guards.py
             CHANGELOG.md
@@ -324,6 +336,10 @@ jobs:
             tests/unit/test_engine_v2_native_fixed64_pipeline.py
             tests/unit/test_engine_v2_native_fixed64_complete_pipeline.py
             config/engine_v2_cpu_performance_profile.json
+            config/engine_v2_native_fixed64_cpu_profile_v5_archive.json
+            config/engine_v2_native_fixed64_cpu_profile_v6.json
+            config/engine_v2_native_fixed64_cpu_profile_v6_sources.json
+            tools/verify_engine_v2_native_fixed64_cpu_v6_rustc_wrapper.py
             .github/workflows/ci-engine-v2-release-candidate.yml
             tests/unit/test_engine_v2_docking_search_v2_facade.py
           sparse-checkout-cone-mode: false
@@ -354,6 +370,7 @@ jobs:
               -e RUSTUP_HOME=/rustup \
               -e CARGO_HOME=/tmp/cargo-home \
               -e CARGO_TARGET_DIR=/tmp/native-target \
+              -e BETELGEUZE_V6_NON_AUTHORITATIVE_PACKAGE_BUILD=1 \
               "$MANYLINUX_IMAGE" \
               bash -lc "set -euo pipefail
                 /opt/python/${{ matrix.abi }}/bin/python -m venv /tmp/native-venv
@@ -362,7 +379,23 @@ jobs:
                   /tmp/native-venv/bin/python tools/build_engine_v2_native_wheel.py \
                     --backend-profile cpu-manylinux_2_28-gcc14 \
                     --compatibility manylinux_2_28 \
-                    --output-dir /output"
+                    --output-dir /output
+                set +e
+                PATH=/opt/rh/gcc-toolset-14/root/usr/bin:/cargo/bin:/tmp/native-venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+                  BETELGEUZE_V6_SOURCE_ROOT=/io \
+                  /cargo/bin/cargo run --locked \
+                    --manifest-path rust/betelgeuze-runtime/Cargo.toml \
+                    --bin betelgeuze-fixed64-cpu-qualify-v6 \
+                    -- --verify-activation \
+                    >/tmp/v6-nonauthoritative.stdout \
+                    2>/tmp/v6-nonauthoritative.stderr
+                activation_status=\$?
+                set -e
+                test \"\$activation_status\" -eq 1
+                test ! -s /tmp/v6-nonauthoritative.stdout
+                grep -F \
+                  'non-authoritative package build cannot activate' \
+                  /tmp/v6-nonauthoritative.stderr"
             git diff --exit-code
           done
           wheel_a="$(find native-dist-a -maxdepth 1 -name '*.whl' -print -quit)"
