@@ -255,6 +255,27 @@ def test_profile_v4_rejects_transitive_source_path_omission() -> None:
         )
 
 
+def test_profile_v4_rejects_unbound_transitive_local_include() -> None:
+    profile = require_profile_document(_PROFILE.read_bytes())
+    changed = dict(_TRANSITIVE_SOURCES)
+    changed["native/src/hip/evaluator.hpp"] += (
+        b'\n#include "../cpu/unbound_evaluator.hpp"\n'
+    )
+
+    with pytest.raises(
+        NativeFixed64CPUProfileV4Error,
+        match="transitive local include is not bound",
+    ):
+        require_compiled_profile_binding(
+            profile,
+            _QUALIFICATION_SOURCE.read_bytes(),
+            _DOCKING_SOURCE.read_bytes(),
+            _NATIVE_PIPELINE_SOURCE.read_bytes(),
+            _PROBE_SOURCE.read_bytes(),
+            changed,
+        )
+
+
 @pytest.mark.parametrize(
     "mutate",
     (

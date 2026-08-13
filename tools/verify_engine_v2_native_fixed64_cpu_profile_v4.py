@@ -6,6 +6,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+import posixpath
 import re
 from typing import NoReturn
 
@@ -146,6 +147,28 @@ def _transitive_source_manifest_sha256(sources: dict[str, bytes]) -> str:
         _fail("native transitive source manifest path set changed")
     if any(type(raw) is not bytes for raw in sources.values()):
         _fail("native transitive source manifest contains non-byte input")
+    include_pattern = re.compile(rb'^\s*#\s*include\s*"([^"\r\n]+)"', re.MULTILINE)
+    for source_path in expected_paths:
+        if not source_path.startswith(("include/", "native/")):
+            continue
+        for raw_include in include_pattern.findall(sources[source_path]):
+            try:
+                include = raw_include.decode("ascii")
+            except UnicodeError as exc:
+                raise NativeFixed64CPUProfileV4Error(
+                    "native transitive local include is not ASCII"
+                ) from exc
+            candidates = {
+                posixpath.normpath(
+                    posixpath.join(posixpath.dirname(source_path), include)
+                ),
+                posixpath.normpath(posixpath.join("include", include)),
+            }
+            if not candidates.intersection(sources):
+                _fail(
+                    "native transitive local include is not bound: "
+                    f"{source_path} -> {include}"
+                )
     identities = {
         path: hashlib.sha256(sources[path]).hexdigest() for path in expected_paths
     }
