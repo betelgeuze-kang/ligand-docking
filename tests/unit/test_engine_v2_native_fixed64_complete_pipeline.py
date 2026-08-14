@@ -14,8 +14,10 @@ from betelgeuze_engine_v2.docking.native_fixed64_consumers import (
     NativeFixed64EvidenceV1,
     NativeFixed64EvidenceV2,
     NativeFixed64EvidenceV3,
+    NativeFixed64PreparedSessionV1,
     NativeFixed64ProductShadowAdapter,
     NativeFixed64PythonApi,
+    prepare_native_fixed64_session,
 )
 import betelgeuze_engine_v2.docking.native_fixed64_consumers as native_consumers
 from betelgeuze_engine_v2.standalone_cli import main as standalone_main
@@ -148,6 +150,7 @@ def test_package_preloads_native_extension_before_legacy_imports(native) -> None
     )
     assert native.NATIVE_FIXED64_COMPLETE_INPUT_SCHEMA_ID_V2.endswith("/2.0.0")
     assert native.NATIVE_FIXED64_COMPLETE_INPUT_SCHEMA_ID_V3.endswith("/3.0.0")
+    assert native.NATIVE_FIXED64_PREPARED_SESSION_SCHEMA_ID_V1.endswith("/1.0.0")
 
 
 def test_retired_v1_entrypoint_fails_closed(native) -> None:
@@ -171,14 +174,123 @@ def test_complete_native_work_releases_the_gil_before_pipeline_execution() -> No
     source = Path("rust_engine_v2/src/complete_fixed64_pipeline.rs").read_text(
         encoding="utf-8"
     )
-    allow_threads = source.index(".allow_threads(move ||")
-    context_creation = source.index(
-        "let context = Context::new(options)?", allow_threads
-    )
-    pipeline_run = source.index("pipeline.run(run)", context_creation)
-    receipt_conversion = source.index("receipt_to_python(", pipeline_run)
+    run_once = source.index("fn run_once(&self)")
+    context_creation = source.index("let pipeline = self.create_pipeline()?", run_once)
+    pipeline_run = source.index("self.run(&pipeline)", context_creation)
+    allow_threads = source.index(".allow_threads(move || input.run_once())")
+    receipt_conversion = source.index("receipt_to_python(", allow_threads)
 
-    assert allow_threads < context_creation < pipeline_run < receipt_conversion
+    assert run_once < context_creation < pipeline_run
+    assert allow_threads < receipt_conversion
+
+
+def test_prepared_session_reuses_one_native_context_without_caching_science(
+    native,
+) -> None:
+    source = _input(consumer="cli")
+    original = deepcopy(source)
+    session = prepare_native_fixed64_session(source)
+
+    assert isinstance(session, NativeFixed64PreparedSessionV1)
+    assert source == original
+    metadata = session.describe()
+    assert metadata["schema_id"].endswith("prepared_session/1.0.0")
+    assert metadata["default_consumer"] == "cli"
+    assert metadata["backend"] == "rust_cpu"
+    assert metadata["candidate_denominator"] == 64
+    assert metadata["persistent_native_context"] is True
+    assert metadata["context_reused_across_runs"] is True
+    assert metadata["scientific_result_cached"] is False
+    assert metadata["session_thread_confined"] is True
+    assert metadata["result_dependent_input_consumed"] is False
+    for field in (
+        "reservation_authorized",
+        "molecular_execution_authorized",
+        "benchmark_execution_authorized",
+        "scientific_claim_authorized",
+        "hip_device_execution_authorized",
+        "existing_rank_auto_change_authorized",
+        "customer_pose_emission_authorized",
+        "production_claim_authorized",
+    ):
+        assert metadata[field] is False
+    expected_session_receipt = hashlib.sha256(
+        b"betelgeuze.engine-v2.native-fixed64-prepared-session/v1\0"
+        + len(metadata["pipeline_id"]).to_bytes(8, "big")
+        + metadata["pipeline_id"].encode("ascii")
+        + bytes.fromhex(metadata["prepared_input_projection_sha256"])
+    ).hexdigest()
+    assert metadata["prepared_session_receipt_sha256"] == expected_session_receipt
+    assert session.prepared_session_receipt_sha256 == expected_session_receipt
+
+    results = {
+        surface: session.run(surface=surface)
+        for surface in ("cli", "benchmark", "api", "product_shadow")
+    }
+    rerun = session.run(surface="cli")
+    stateless = native.native_fixed64_complete_pipeline_v3(_input(consumer="cli"))
+
+    assert rerun.to_dict() == results["cli"].to_dict() == stateless
+    assert len({item.pipeline_receipt_sha256 for item in results.values()}) == 1
+    assert len(
+        {item.prepared_input_receipt_sha256 for item in results.values()}
+    ) == 1
+    assert len({item.consumer_view_receipt_sha256 for item in results.values()}) == 4
+    assert results["product_shadow"].to_dict()[
+        "operator_second_opinion_authorized"
+    ] is True
+
+
+def test_prepared_session_owns_input_after_bounded_native_copy(native) -> None:
+    source = _input(consumer="api")
+    session = prepare_native_fixed64_session(source)
+    expected = native.native_fixed64_complete_pipeline_v3(deepcopy(source))
+
+    source["ligand_charge_elementary"][0] = -9.0
+    source["ligand_coordinates_angstrom"][0][0] = 99.0
+    source["v7_control_sources"][0]["coordinates_angstrom"][0][0] = 88.0
+
+    assert session.run(surface="api").to_dict() == expected
+
+
+def test_prepared_session_rejects_unknown_consumer(native) -> None:
+    session = prepare_native_fixed64_session(_input())
+
+    with pytest.raises(NativeFixed64ConsumerError, match="unsupported"):
+        session.run(surface="production")
+
+
+@pytest.mark.parametrize("backend", ("hip_safe", "hip_fast"))
+def test_prepared_session_rejects_hip_before_context_creation(native, backend: str) -> None:
+    source = _input()
+    source["backend"] = backend
+
+    with pytest.raises(NativeFixed64ConsumerError, match="CPU-only"):
+        prepare_native_fixed64_session(source)
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    (
+        lambda value: value.update(pipeline_id="cross-wired"),
+        lambda value: value.update(scientific_result_cached=True),
+        lambda value: value.update(hip_device_execution_authorized=True),
+        lambda value: value.update(existing_rank_auto_change_authorized=True),
+        lambda value: value.update(prepared_session_receipt_sha256=_digest(121)),
+    ),
+)
+def test_prepared_session_facade_rejects_metadata_drift(native, mutation) -> None:
+    raw_session = native.native_fixed64_prepare_session_v1(_input())
+    metadata = raw_session.describe()
+    mutation(metadata)
+
+    with pytest.raises(NativeFixed64ConsumerError):
+        NativeFixed64PreparedSessionV1(
+            _native_session=raw_session,
+            _metadata=metadata,
+            _backend="rust_cpu",
+            _default_consumer="api",
+        )
 
 
 def test_v3_bounded_preflight_precedes_python_sequence_allocation() -> None:

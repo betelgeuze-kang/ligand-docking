@@ -390,8 +390,10 @@ from .native_fixed64_consumers import (  # noqa: E402
     NativeFixed64EvidenceV1,
     NativeFixed64EvidenceV2,
     NativeFixed64EvidenceV3,
+    NativeFixed64PreparedSessionV1,
     NativeFixed64ProductShadowAdapter,
     NativeFixed64PythonApi,
+    prepare_native_fixed64_session,
     run_native_fixed64_surface,
 )
 
@@ -728,7 +730,9 @@ __all__ = [
     "NativeFixed64EvidenceV1",
     "NativeFixed64EvidenceV2",
     "NativeFixed64EvidenceV3",
+    "NativeFixed64PreparedSessionV1",
     "NativeFixed64ProductShadowAdapter",
     "NativeFixed64PythonApi",
+    "prepare_native_fixed64_session",
     "run_native_fixed64_surface",
 ]
