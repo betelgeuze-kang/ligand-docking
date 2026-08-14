@@ -162,7 +162,7 @@ CPU_PERFORMANCE_REQUIRED_TOKEN_COUNTS = {
     "tests/unit/test_verify_engine_v2_cpu_performance_profile_v3.py": 2,
     "tests/unit/test_engine_v2_native_geometric_admission.py": 2,
     "docs/engine_v2_cpu_performance_qualification.md": 1,
-    "betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1.py": 1,
+    "betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1.py": 2,
     "config/engine_v2_full_pipeline_cpu_performance_v1.json": 2,
     "tools/run_engine_v2_full_pipeline_cpu_performance_v1.py": 3,
     "tools/verify_engine_v2_full_pipeline_cpu_performance_v1.py": 3,

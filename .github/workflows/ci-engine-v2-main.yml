@@ -234,6 +234,7 @@ jobs:
             train/__init__.py
             train/runtime_inputs.py
             train/checkpoint_contracts.py
+            betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1.py
             config/settings.yaml
             config/independent_engine_v2_capabilities.yaml
             config/engine_v2_public_redocking_contamination_registry.json
