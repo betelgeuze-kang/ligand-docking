@@ -390,6 +390,10 @@ class NativeFixed64PreparedSessionV1:
 
     def __post_init__(self) -> None:
         metadata = self._metadata
+        if type(metadata) is not dict:
+            raise TypeError("native prepared-session metadata must be an exact dict")
+        if type(self._backend) is not str or type(self._default_consumer) is not str:
+            raise TypeError("native prepared-session identities must be exact strings")
         pipeline_id = metadata.get("pipeline_id")
         projection = metadata.get("prepared_input_projection_sha256")
         session_receipt = metadata.get("prepared_session_receipt_sha256")

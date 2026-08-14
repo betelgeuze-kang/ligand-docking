@@ -228,6 +228,7 @@ def verify(
             "test_prepared_session_rejects_hip_before_context_creation",
             "test_prepared_session_rejects_mapping_subclass_before_native_lookup",
             "test_prepared_session_does_not_deepcopy_before_native_preflight",
+            "test_prepared_session_facade_rejects_metadata_mapping_subclass",
             "rerun.to_dict() == results[\"cli\"].to_dict() == stateless",
             "len({item.consumer_view_receipt_sha256 for item in results.values()}) == 4",
         ),

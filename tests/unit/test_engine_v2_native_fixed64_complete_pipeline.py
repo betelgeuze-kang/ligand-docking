@@ -307,6 +307,18 @@ def test_prepared_session_facade_rejects_metadata_drift(native, mutation) -> Non
         )
 
 
+def test_prepared_session_facade_rejects_metadata_mapping_subclass(native) -> None:
+    raw_session = native.native_fixed64_prepare_session_v1(_input())
+
+    with pytest.raises(TypeError, match="metadata must be an exact dict"):
+        NativeFixed64PreparedSessionV1(
+            _native_session=raw_session,
+            _metadata=_DictSubclass(raw_session.describe()),
+            _backend="rust_cpu",
+            _default_consumer="api",
+        )
+
+
 def test_prepared_session_rejects_mapping_subclass_before_native_lookup() -> None:
     with pytest.raises(TypeError, match="exact dict"):
         prepare_native_fixed64_session(_DictSubclass(_input()))
