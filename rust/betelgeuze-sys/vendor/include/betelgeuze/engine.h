@@ -3163,7 +3163,12 @@ BG_API bg_status BG_CALL bg_docking_fixed64_pipeline_v1_run(
 /* ABI 1.21 post-refinement admission composition. The same persistent
  * admission context is reused before and after refinement. The post gate runs
  * before any ScorerV1 work; rejected rows are passed to downstream only as
- * typed inactive states and therefore cannot occupy primary or valid ranks. */
+ * typed inactive states and therefore cannot occupy primary or valid ranks.
+ *
+ * A v2 pipeline handle owns mutable internal coordinate workspace. Calls that
+ * use or destroy the same handle require external synchronization; independent
+ * handles may run concurrently. Workspace identity and lifecycle counters are
+ * implementation details and never enter scientific receipts. */
 BG_API bg_status BG_CALL bg_docking_fixed64_pipeline_v2_create(
     const bg_context *context,
     const bg_docking_geometric_admission_context_soa_v1 *admission_descriptor,

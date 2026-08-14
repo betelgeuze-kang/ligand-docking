@@ -60,6 +60,57 @@ struct MemoryRange final {
     uintptr_t end = 0;
 };
 
+void prepare_coordinate_buffer(
+    std::vector<double> &buffer,
+    std::size_t coordinate_count) {
+    if (buffer.size() != coordinate_count) {
+        buffer.resize(coordinate_count);
+    }
+    std::fill(buffer.begin(), buffer.end(), 0.0);
+}
+
+template <std::size_t N>
+void prepare_coordinate_buffers(
+    std::array<std::vector<double>, N> &buffers,
+    std::size_t coordinate_count) {
+    for (auto &buffer : buffers) {
+        prepare_coordinate_buffer(buffer, coordinate_count);
+    }
+}
+
+[[nodiscard]] bg_status prepare_v2_workspace(
+    bg_docking_fixed64_pipeline_v2_workspace &workspace,
+    std::size_t coordinate_count) {
+    if (workspace.successful_run_count ==
+        std::numeric_limits<uint64_t>::max()) {
+        return fail(
+            BG_STATUS_CAPACITY_OVERFLOW,
+            "fixed64 complete pipeline v2 successful-run counter overflowed");
+    }
+    const bool grows =
+        coordinate_count > workspace.provisioned_coordinate_count;
+    if (grows && workspace.coordinate_capacity_growth_count ==
+                     std::numeric_limits<uint64_t>::max()) {
+        return fail(
+            BG_STATUS_CAPACITY_OVERFLOW,
+            "fixed64 complete pipeline v2 workspace-growth counter overflowed");
+    }
+    prepare_coordinate_buffer(workspace.producer_x, coordinate_count);
+    prepare_coordinate_buffer(workspace.producer_y, coordinate_count);
+    prepare_coordinate_buffer(workspace.producer_z, coordinate_count);
+    prepare_coordinate_buffers(
+        workspace.rigid_coordinates, coordinate_count);
+    prepare_coordinate_buffers(
+        workspace.torsion_coordinates, coordinate_count);
+    prepare_coordinate_buffers(
+        workspace.final_coordinates, coordinate_count);
+    if (grows) {
+        workspace.provisioned_coordinate_count = coordinate_count;
+        ++workspace.coordinate_capacity_growth_count;
+    }
+    return BG_STATUS_OK;
+}
+
 class CanonicalHash final {
   public:
     explicit CanonicalHash(const char *domain) noexcept { string(domain); }
@@ -2836,12 +2887,51 @@ extern "C" BG_API bg_status BG_CALL bg_docking_fixed64_pipeline_v2_run(
         status = validate_post_admission_output(
             *components, *post_admission_output);
         if (status != BG_STATUS_OK) return status;
+        status = betelgeuze::native::docking::fixed64_producer::
+            validate_for_composition(
+                *context,
+                *components->admission,
+                *input->producer_input,
+                *producer_output);
+        if (status != BG_STATUS_OK) return status;
+        status = betelgeuze::native::docking::refinement_pipeline::
+            validate_outputs_for_composition(
+                *components->refinement,
+                coordinate_count,
+                *rigid_output,
+                *torsion_output,
+                *scorer_output,
+                *validity_output,
+                *ranking_output,
+                *cluster_output,
+                *refinement_output);
+        if (status != BG_STATUS_OK) return status;
+        status = validate_v2_overlap(
+            *context,
+            *pipeline,
+            *components,
+            *input,
+            coordinate_count,
+            *producer_output,
+            *rigid_output,
+            *torsion_output,
+            *scorer_output,
+            *validity_output,
+            *ranking_output,
+            *cluster_output,
+            *refinement_output,
+            *post_admission_output,
+            *pipeline_output);
+        if (status != BG_STATUS_OK) return status;
+        auto &workspace = pipeline->workspace;
+        status = prepare_v2_workspace(workspace, coordinate_count);
+        if (status != BG_STATUS_OK) return status;
 
         std::array<bg_docking_fixed64_producer_row_v1, kCandidateCount>
             local_producer_rows{};
-        std::vector<double> producer_x(coordinate_count, 0.0);
-        std::vector<double> producer_y(coordinate_count, 0.0);
-        std::vector<double> producer_z(coordinate_count, 0.0);
+        auto &producer_x = workspace.producer_x;
+        auto &producer_y = workspace.producer_y;
+        auto &producer_z = workspace.producer_z;
         bg_docking_fixed64_producer_output_v1 local_producer{};
         status = bg_docking_fixed64_producer_output_v1_init(
             &local_producer, sizeof(local_producer), BG_ABI_VERSION);
@@ -2907,15 +2997,8 @@ extern "C" BG_API bg_status BG_CALL bg_docking_fixed64_pipeline_v2_run(
         refinement_input.source_quaternion_z = source_quaternion_z.data();
         refinement_input.source_quaternion_w = source_quaternion_w.data();
 
-        status = betelgeuze::native::docking::fixed64_producer::
-            validate_for_composition(
-                *context,
-                *components->admission,
-                *input->producer_input,
-                *producer_output);
-        if (status != BG_STATUS_OK) return status;
         status = betelgeuze::native::docking::refinement_pipeline::
-            validate_for_composition(
+            validate_input_and_overlap_for_composition(
                 *context,
                 *components->refinement,
                 refinement_input,
@@ -2927,28 +3010,9 @@ extern "C" BG_API bg_status BG_CALL bg_docking_fixed64_pipeline_v2_run(
                 *cluster_output,
                 *refinement_output);
         if (status != BG_STATUS_OK) return status;
-        status = validate_v2_overlap(
-            *context,
-            *pipeline,
-            *components,
-            *input,
-            coordinate_count,
-            *producer_output,
-            *rigid_output,
-            *torsion_output,
-            *scorer_output,
-            *validity_output,
-            *ranking_output,
-            *cluster_output,
-            *refinement_output,
-            *post_admission_output,
-            *pipeline_output);
-        if (status != BG_STATUS_OK) return status;
-
         std::array<bg_docking_rigid_refinement_row_v1, kCandidateCount>
             rigid_rows{};
-        std::array<std::vector<double>, 12> rigid_coordinates;
-        for (auto &values : rigid_coordinates) values.resize(coordinate_count);
+        auto &rigid_coordinates = workspace.rigid_coordinates;
         bg_docking_rigid_refinement_output_v1 local_rigid{};
         status = bg_docking_rigid_refinement_output_v1_init(
             &local_rigid, sizeof(local_rigid), BG_ABI_VERSION);
@@ -2975,8 +3039,7 @@ extern "C" BG_API bg_status BG_CALL bg_docking_fixed64_pipeline_v2_run(
             bg_docking_torsion_v7_move_v1,
             kCandidateCount * kMovesPerCandidate>
             torsion_moves{};
-        std::array<std::vector<double>, 8> torsion_coordinates;
-        for (auto &values : torsion_coordinates) values.resize(coordinate_count);
+        auto &torsion_coordinates = workspace.torsion_coordinates;
         bg_docking_torsion_v7_output_v1 local_torsion{};
         status = bg_docking_torsion_v7_output_v1_init(
             &local_torsion, sizeof(local_torsion), BG_ABI_VERSION);
@@ -2999,8 +3062,7 @@ extern "C" BG_API bg_status BG_CALL bg_docking_fixed64_pipeline_v2_run(
 
         std::array<bg_docking_fixed64_refinement_row_v1, kCandidateCount>
             refinement_rows{};
-        std::array<std::vector<double>, 3> final_coordinates;
-        for (auto &values : final_coordinates) values.resize(coordinate_count);
+        auto &final_coordinates = workspace.final_coordinates;
         std::array<std::array<double, kCandidateCount>, 4> final_quaternions{};
         bg_docking_fixed64_refinement_output_v1 local_refinement{};
         status = bg_docking_fixed64_refinement_output_v1_init(
@@ -3707,6 +3769,7 @@ extern "C" BG_API bg_status BG_CALL bg_docking_fixed64_pipeline_v2_run(
         committed.production_claim_authorized = UINT8_C(0);
         committed.scientific_claim_authorized = UINT8_C(0);
         *pipeline_output = committed;
+        ++workspace.successful_run_count;
         return BG_STATUS_OK;
     });
 }

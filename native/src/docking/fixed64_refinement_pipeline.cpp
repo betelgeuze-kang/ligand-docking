@@ -1378,6 +1378,31 @@ bg_status run_stage_for_composition(
     return BG_STATUS_OK;
 }
 
+bg_status validate_outputs_for_composition(
+    const bg_docking_fixed64_refinement_pipeline_v1 &pipeline,
+    std::size_t coordinate_count,
+    bg_docking_rigid_refinement_output_v1 &rigid,
+    bg_docking_torsion_v7_output_v1 &torsion,
+    bg_docking_scorer_v1_output_v1 &scorer,
+    bg_docking_pose_validity_output_v1 &validity,
+    bg_docking_stable_top_k_output_v1 &ranking,
+    bg_docking_rmsd_cluster_output_v1 &cluster,
+    bg_docking_fixed64_refinement_output_v1 &output) {
+    bg_status status = validate_component_outputs(
+        pipeline,
+        coordinate_count,
+        rigid,
+        torsion,
+        scorer,
+        validity,
+        ranking);
+    if (status != BG_STATUS_OK) return status;
+    status = validate_cluster_output(pipeline, cluster);
+    if (status != BG_STATUS_OK) return status;
+    status = validate_pipeline_output(pipeline, output, coordinate_count);
+    return status;
+}
+
 bg_status validate_for_composition(
     const bg_context &context,
     const bg_docking_fixed64_refinement_pipeline_v1 &pipeline,
@@ -1392,18 +1417,44 @@ bg_status validate_for_composition(
     std::size_t coordinate_count = 0;
     bg_status status = validate_input(pipeline, input, &coordinate_count);
     if (status != BG_STATUS_OK) return status;
-    status = validate_component_outputs(
+    status = validate_outputs_for_composition(
         pipeline,
         coordinate_count,
         rigid,
         torsion,
         scorer,
         validity,
-        ranking);
+        ranking,
+        cluster,
+        output);
     if (status != BG_STATUS_OK) return status;
-    status = validate_cluster_output(pipeline, cluster);
-    if (status != BG_STATUS_OK) return status;
-    status = validate_pipeline_output(pipeline, output, coordinate_count);
+    return validate_no_overlap(
+        context,
+        pipeline,
+        input,
+        coordinate_count,
+        rigid,
+        torsion,
+        scorer,
+        validity,
+        ranking,
+        cluster,
+        output);
+}
+
+bg_status validate_input_and_overlap_for_composition(
+    const bg_context &context,
+    const bg_docking_fixed64_refinement_pipeline_v1 &pipeline,
+    const bg_docking_fixed64_refinement_input_v1 &input,
+    bg_docking_rigid_refinement_output_v1 &rigid,
+    bg_docking_torsion_v7_output_v1 &torsion,
+    bg_docking_scorer_v1_output_v1 &scorer,
+    bg_docking_pose_validity_output_v1 &validity,
+    bg_docking_stable_top_k_output_v1 &ranking,
+    bg_docking_rmsd_cluster_output_v1 &cluster,
+    bg_docking_fixed64_refinement_output_v1 &output) {
+    std::size_t coordinate_count = 0;
+    const bg_status status = validate_input(pipeline, input, &coordinate_count);
     if (status != BG_STATUS_OK) return status;
     return validate_no_overlap(
         context,

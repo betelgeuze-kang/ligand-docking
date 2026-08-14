@@ -544,6 +544,10 @@ if(BUILD_TESTING)
         betelgeuze_engine_docking_fixed64_producer
         PRIVATE betelgeuze_engine
     )
+    target_include_directories(
+        betelgeuze_engine_docking_fixed64_producer
+        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
+    )
     target_compile_features(
         betelgeuze_engine_docking_fixed64_producer
         PRIVATE cxx_std_17
