@@ -757,6 +757,10 @@ def _repository_d0_backend_binding_digest(
         binding.get("receipt_sha256"), name="backend binding receipt"
     )
     if digest.hexdigest() != observed:
+        if values[8] == "attested_sha256":
+            raise NativeFixed64ConsumerError(
+                "repository D0 attested build identity receipt is not rederivable"
+            )
         raise NativeFixed64ConsumerError(
             "repository D0 backend binding receipt is not rederivable"
         )
