@@ -260,6 +260,19 @@ def test_prepared_session_rejects_unknown_consumer(native) -> None:
         session.run(surface="production")
 
 
+@pytest.mark.parametrize("backend", ("cpp_cpu_reference", "rust_cpu"))
+def test_prepared_session_cpu_backends_match_stateless_v3(native, backend: str) -> None:
+    source = _input(consumer="api")
+    source["backend"] = backend
+
+    session = prepare_native_fixed64_session(source)
+    prepared = session.run(surface="api").to_dict()
+    stateless = native.native_fixed64_complete_pipeline_v3(deepcopy(source))
+
+    assert prepared == stateless
+    assert session.describe()["backend"] == backend
+
+
 @pytest.mark.parametrize("backend", ("hip_safe", "hip_fast"))
 def test_prepared_session_rejects_hip_before_context_creation(native, backend: str) -> None:
     source = _input()
@@ -273,6 +286,7 @@ def test_prepared_session_rejects_hip_before_context_creation(native, backend: s
     "mutation",
     (
         lambda value: value.update(pipeline_id="cross-wired"),
+        lambda value: value.update(default_consumer="cli"),
         lambda value: value.update(scientific_result_cached=True),
         lambda value: value.update(hip_device_execution_authorized=True),
         lambda value: value.update(existing_rank_auto_change_authorized=True),
@@ -291,6 +305,19 @@ def test_prepared_session_facade_rejects_metadata_drift(native, mutation) -> Non
             _backend="rust_cpu",
             _default_consumer="api",
         )
+
+
+def test_prepared_session_rejects_mapping_subclass_before_native_lookup() -> None:
+    with pytest.raises(TypeError, match="exact dict"):
+        prepare_native_fixed64_session(_DictSubclass(_input()))
+
+
+def test_prepared_session_does_not_deepcopy_before_native_preflight(native) -> None:
+    source = _input()
+    source["ligand_charge_elementary"] = _DeepcopyTrap()
+
+    with pytest.raises(NativeFixed64ConsumerError, match="exact list"):
+        prepare_native_fixed64_session(source)
 
 
 def test_v3_bounded_preflight_precedes_python_sequence_allocation() -> None:

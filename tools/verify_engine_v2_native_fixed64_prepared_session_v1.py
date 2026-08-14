@@ -224,7 +224,10 @@ def verify(
         (
             "test_prepared_session_reuses_one_native_context_without_caching_science",
             "test_prepared_session_owns_input_after_bounded_native_copy",
+            "test_prepared_session_cpu_backends_match_stateless_v3",
             "test_prepared_session_rejects_hip_before_context_creation",
+            "test_prepared_session_rejects_mapping_subclass_before_native_lookup",
+            "test_prepared_session_does_not_deepcopy_before_native_preflight",
             "rerun.to_dict() == results[\"cli\"].to_dict() == stateless",
             "len({item.consumer_view_receipt_sha256 for item in results.values()}) == 4",
         ),
