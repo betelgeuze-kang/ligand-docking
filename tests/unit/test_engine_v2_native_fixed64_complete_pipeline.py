@@ -51,6 +51,13 @@ class _StringProtocolObject:
         raise AssertionError("prepared session must reject before caller string comparison")
 
 
+class _StringKeySubclass(str):
+    __hash__ = str.__hash__
+
+    def __eq__(self, _other: object) -> bool:
+        raise AssertionError("prepared session must reject before caller key comparison")
+
+
 class _DeepcopyTrap:
     def __deepcopy__(self, _memo):
         raise AssertionError("canonical v3 consumer must not deep-copy nested input")
@@ -281,6 +288,28 @@ def test_prepared_session_rejects_surface_subclass_before_protocols(native) -> N
         run_native_fixed64_surface(
             _input(), surface=surface  # type: ignore[arg-type]
         )
+    raw_session = native.native_fixed64_prepare_session_v1(_input())
+    with pytest.raises(ValueError, match="exact string"):
+        raw_session.run(surface)
+
+
+def test_prepared_session_rejects_input_identity_protocols_before_comparison(
+    native,
+) -> None:
+    source = _input()
+    source["schema_id"] = _StringProtocolObject()
+
+    with pytest.raises(NativeFixed64ConsumerError, match="exact strings"):
+        prepare_native_fixed64_session(source)
+
+
+def test_prepared_session_rejects_input_key_subclass_before_comparison(native) -> None:
+    source = _input()
+    schema_id = source.pop("schema_id")
+    source[_StringKeySubclass("schema_id")] = schema_id
+
+    with pytest.raises(NativeFixed64ConsumerError, match="keys must be exact strings"):
+        prepare_native_fixed64_session(source)
 
 
 @pytest.mark.parametrize("backend", ("cpp_cpu_reference", "rust_cpu"))
@@ -879,6 +908,70 @@ def test_v3_rejects_unbounded_or_inexact_transport_before_native_work(
 def test_v3_rejects_mapping_subclasses_before_bounded_preflight(native) -> None:
     with pytest.raises(ValueError, match="exact dict"):
         native.native_fixed64_complete_pipeline_v3(_DictSubclass(_input()))
+
+
+def test_v3_rejects_key_subclasses_before_native_lookup(native) -> None:
+    source = _input()
+    schema_id = source.pop("schema_id")
+    source[_StringKeySubclass("schema_id")] = schema_id
+
+    with pytest.raises(ValueError, match="keys must be exact strings"):
+        native.native_fixed64_complete_pipeline_v3(source)
+
+
+@pytest.mark.parametrize(
+    "field",
+    (
+        "schema_id",
+        "consumer",
+        "backend",
+        "authority_input_receipt_sha256",
+        "feature_geometry_inventory_sha256",
+        "predeclared_refinement_policy_sha256",
+    ),
+)
+def test_v3_rejects_scalar_string_subclasses_before_native_work(
+    native, field: str
+) -> None:
+    source = _input()
+    source[field] = _StringSubclass(str(source[field]))
+
+    with pytest.raises(ValueError, match="exact string"):
+        native.native_fixed64_complete_pipeline_v3(source)
+
+
+def test_v3_rejects_nested_receipt_string_subclass_before_native_work(native) -> None:
+    source = _input()
+    row = source["v7_control_sources"][0]
+    row["receipt_sha256"] = _StringSubclass(str(row["receipt_sha256"]))
+
+    with pytest.raises(ValueError, match="exact string"):
+        native.native_fixed64_complete_pipeline_v3(source)
+
+
+@pytest.mark.parametrize(
+    "field",
+    (
+        "kind",
+        "allocation_feature_receipt_sha256",
+        "feature_geometry_receipt_sha256",
+    ),
+)
+def test_v3_rejects_feature_string_subclasses_before_native_work(
+    native, field: str
+) -> None:
+    source = _input()
+    feature = {
+        "kind": "ligand_donor",
+        "allocation_feature_receipt_sha256": _digest(120),
+        "feature_geometry_receipt_sha256": _digest(121),
+        "atom_indices": [0],
+    }
+    feature[field] = _StringSubclass(str(feature[field]))
+    source["feature_geometries"] = [feature]
+
+    with pytest.raises(ValueError, match="exact string"):
+        native.native_fixed64_complete_pipeline_v3(source)
 
 
 def test_v3_prepared_input_receipt_binds_projection_and_pipeline(native) -> None:

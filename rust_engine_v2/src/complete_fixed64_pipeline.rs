@@ -109,6 +109,22 @@ const INPUT_KEYS: &[&str] = &[
     "test_only",
 ];
 
+const INPUT_DIGEST_KEYS: &[&str] = &[
+    "authority_input_receipt_sha256",
+    "source_receipt_sha256",
+    "proposal_sha256",
+    "prepared_ligand_topology_sha256",
+    "prepared_receptor_topology_sha256",
+    "receptor_system_sha256",
+    "ligand_system_sha256",
+    "backend_receipt_sha256",
+    "validity_scorer_context_receipt_sha256",
+    "contact_policy_sha256",
+    "feature_geometry_inventory_sha256",
+    "predeclared_refinement_policy_sha256",
+    "predeclared_post_refinement_admission_policy_sha256",
+];
+
 const INDEXED_SOURCE_KEYS: &[&str] = &[
     "source_index",
     "receipt_sha256",
@@ -588,9 +604,18 @@ impl NativeFixed64PreparedSession {
     }
 
     #[pyo3(signature = (consumer=None))]
-    fn run(&self, py: Python<'_>, consumer: Option<&str>) -> PyResult<PyObject> {
+    fn run(&self, py: Python<'_>, consumer: Option<&PyAny>) -> PyResult<PyObject> {
         let consumer = consumer
-            .map(Consumer::parse)
+            .map(|value| {
+                let value = value
+                    .downcast_exact::<PyString>()
+                    .map_err(|_| input_error("consumer must be an exact string"))?;
+                Consumer::parse(
+                    value
+                        .to_str()
+                        .map_err(|_| input_error("consumer must be valid UTF-8"))?,
+                )
+            })
             .transpose()?
             .unwrap_or(self.default_consumer);
         // The native pipeline is explicitly thread-confined by its context
@@ -638,7 +663,7 @@ fn parse_complete_pipeline_input(
     } else {
         require_exact_keys(input, INPUT_KEYS, "native fixed64 complete input")?;
     }
-    if dict_string(input, "schema_id")? != transport.input_schema_id() {
+    if transport_string(input, "schema_id", transport)? != transport.input_schema_id() {
         return Err(input_error("complete input schema_id is unsupported"));
     }
     if !dict_exact_bool(input, "test_only")? {
@@ -646,8 +671,8 @@ fn parse_complete_pipeline_input(
             "complete Python bridge is synthetic/test-only and fails closed otherwise",
         ));
     }
-    let consumer = Consumer::parse(dict_string(input, "consumer")?)?;
-    let backend = dict_string(input, "backend")?;
+    let consumer = Consumer::parse(transport_string(input, "consumer", transport)?)?;
+    let backend = transport_string(input, "backend", transport)?;
     let device_ordinal = exact_i32(dict_value(input, "device_ordinal")?, "device_ordinal")?;
     let options = context_options(backend, device_ordinal)?;
     let prepared_input_bounds = transport
@@ -992,6 +1017,15 @@ impl ScalarBudget {
 
 fn bounded_prepared_input_preflight(input: &PyDict) -> PyResult<PreparedInputBounds> {
     let mut budget = ScalarBudget::default();
+    for name in INPUT_DIGEST_KEYS {
+        let value = exact_dict_string(input, name)?;
+        // The zero inventory identity is the predeclared representation of an
+        // empty feature inventory. Preserve that existing contract while still
+        // rejecting string subclasses before any native copy.
+        if *name != "feature_geometry_inventory_sha256" || value != "0".repeat(64) {
+            decode_digest(value, name)?;
+        }
+    }
     // device ordinal, pocket radius, RMSD threshold, and test-only flag are
     // fixed-width scalars; variable sequences are added below before copying.
     budget.add(4, "fixed prepared-input scalars")?;
@@ -1202,6 +1236,28 @@ fn require_bounded_exact_keys(value: &PyDict, expected: &[&str], name: &str) -> 
         }
     }
     require_exact_keys(value, expected, name)
+}
+
+fn exact_dict_string<'py>(dict: &'py PyDict, key: &str) -> PyResult<&'py str> {
+    let value = dict_value(dict, key)?;
+    let value = value
+        .downcast_exact::<PyString>()
+        .map_err(|_| input_error(&format!("{key} must be an exact string")))?;
+    value
+        .to_str()
+        .map_err(|_| input_error(&format!("{key} must be valid UTF-8")))
+}
+
+fn transport_string<'py>(
+    dict: &'py PyDict,
+    key: &str,
+    transport: CompleteTransportVersion,
+) -> PyResult<&'py str> {
+    if transport.is_bounded() {
+        exact_dict_string(dict, key)
+    } else {
+        dict_string(dict, key)
+    }
 }
 
 fn bounded_coordinate_rows(value: &PyAny, maximum: usize, name: &str) -> PyResult<usize> {
@@ -1433,6 +1489,12 @@ fn bounded_source_rows(
                 "{name}[{offset}].{identity_key} must be an exact non-negative integer"
             )));
         }
+        for digest_key in ["receipt_sha256", "proposal_sha256"] {
+            decode_digest(
+                exact_dict_string(row, digest_key)?,
+                &format!("{name}[{offset}].{digest_key}"),
+            )?;
+        }
         let count = bounded_coordinate_rows(
             dict_value(row, "coordinates_angstrom")?,
             ligand_atom_count,
@@ -1475,7 +1537,16 @@ fn bounded_feature_geometry_rows(value: &PyAny, maximum_rows: usize) -> PyResult
             ))
         })?;
         require_bounded_exact_keys(row, FEATURE_GEOMETRY_KEYS, "feature_geometries")?;
-        feature_kind(dict_string(row, "kind")?)?;
+        feature_kind(exact_dict_string(row, "kind")?)?;
+        for digest_key in [
+            "allocation_feature_receipt_sha256",
+            "feature_geometry_receipt_sha256",
+        ] {
+            decode_digest(
+                exact_dict_string(row, digest_key)?,
+                &format!("feature_geometries[{offset}].{digest_key}"),
+            )?;
+        }
         let count = bounded_u64_values(
             dict_value(row, "atom_indices")?,
             1,

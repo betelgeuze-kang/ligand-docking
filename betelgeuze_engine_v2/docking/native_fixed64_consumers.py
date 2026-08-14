@@ -531,13 +531,7 @@ def _bounded_native_payload(
     *,
     surface: NativeFixed64Surface,
 ) -> dict[str, object]:
-    if type(input_document) is not dict:
-        raise TypeError("native fixed64 input must be an exact dict")
-    if len(input_document) != _COMPLETE_INPUT_KEY_COUNT:
-        raise NativeFixed64ConsumerError(
-            "canonical consumers require the complete fixed64 input schema: "
-            "invalid top-level key count"
-        )
+    _require_exact_native_input_shell(input_document)
     if type(surface) is not str or surface not in {
         "cli",
         "benchmark",
@@ -549,11 +543,35 @@ def _bounded_native_payload(
     # preflight. Rust copies every admitted collection into owned native state.
     payload = input_document.copy()
     payload["consumer"] = surface
-    if payload.get("schema_id") != _COMPLETE_INPUT_SCHEMA_ID:
+    return payload
+
+
+def _require_exact_native_input_shell(
+    input_document: Mapping[str, object],
+) -> tuple[str, str, str]:
+    if type(input_document) is not dict:
+        raise TypeError("native fixed64 input must be an exact dict")
+    if len(input_document) != _COMPLETE_INPUT_KEY_COUNT:
+        raise NativeFixed64ConsumerError(
+            "canonical consumers require the complete fixed64 input schema: "
+            "invalid top-level key count"
+        )
+    if any(type(key) is not str for key in input_document):
+        raise NativeFixed64ConsumerError(
+            "native fixed64 input keys must be exact strings"
+        )
+    schema_id = input_document.get("schema_id")
+    consumer = input_document.get("consumer")
+    backend = input_document.get("backend")
+    if any(type(value) is not str for value in (schema_id, consumer, backend)):
+        raise NativeFixed64ConsumerError(
+            "native fixed64 input identities must be exact strings"
+        )
+    if schema_id != _COMPLETE_INPUT_SCHEMA_ID:
         raise NativeFixed64ConsumerError(
             "canonical consumers require the complete fixed64 input schema"
         )
-    return payload
+    return cast(str, schema_id), cast(str, consumer), cast(str, backend)
 
 
 def prepare_native_fixed64_session(
@@ -563,8 +581,8 @@ def prepare_native_fixed64_session(
 
     if type(input_document) is not dict:
         raise TypeError("native fixed64 input must be an exact dict")
-    surface = input_document.get("consumer")
-    if type(surface) is not str or surface not in {
+    _schema_id, surface, _backend = _require_exact_native_input_shell(input_document)
+    if surface not in {
         "cli",
         "benchmark",
         "api",
