@@ -24,6 +24,7 @@ on:
       - "betelgeuze_engine_v2/docking/geometric_admission_v2.py"
       - "betelgeuze_engine_v2/docking/pipeline_candidate_evidence_v2.py"
       - "betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1.py"
+      - "betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1_activation.py"
       - "betelgeuze_engine_v2/benchmark/oracle_selection_metrics.py"
       - "betelgeuze_engine_v2/benchmark/oracle_selection_evidence.py"
       - "packaging/engine-v2/**"
@@ -60,6 +61,9 @@ on:
       - "config/engine_v2_cpu_performance_profile_v3.json"
       - "config/engine_v2_cpu_performance_v3_runner_activation.json"
       - "config/engine_v2_full_pipeline_cpu_performance_v1.json"
+      - "config/engine_v2_full_pipeline_cpu_performance_v1_activation.json"
+      - "config/engine_v2_full_pipeline_cpu_performance_v1_stdlib_closure.json"
+      - "config/engine_v2_full_pipeline_cpu_performance_v1_dynamic_library_closure.json"
       - "config/engine_v2_native_fixed64_cpu_profile_v5.json"
       - "config/engine_v2_native_fixed64_cpu_profile_v5_archive.json"
       - "config/engine_v2_native_fixed64_cpu_profile_v6.json"
@@ -102,6 +106,8 @@ on:
       - "tools/run_engine_v2_cpu_performance_qualification_v3.py"
       - "tools/run_engine_v2_full_pipeline_cpu_performance_v1.py"
       - "tools/verify_engine_v2_full_pipeline_cpu_performance_v1.py"
+      - "tools/preflight_engine_v2_full_pipeline_cpu_performance_v1_activation.py"
+      - "tools/verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py"
       - "tools/verify_engine_v2_native_fixed64_cpu_profile_v5.py"
       - "tools/verify_engine_v2_native_fixed64_cpu_profile_v6.py"
       - "tools/verify_engine_v2_native_fixed64_cpu_v6_rustc_wrapper.py"
@@ -124,6 +130,8 @@ on:
       - "tests/unit/test_verify_engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt.py"
       - "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v4.py"
       - "tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1.py"
+      - "tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1_activation.py"
+      - "tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py"
       - "tests/unit/test_build_engine_v2_source_paired_failure_atlas.py"
       - "tests/unit/test_build_engine_v2_receipt_bound_scale_feasibility_audit.py"
       - "tests/unit/test_verify_engine_v2_phase25_cohort_admission.py"
@@ -236,6 +244,7 @@ jobs:
             train/runtime_inputs.py
             train/checkpoint_contracts.py
             betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1.py
+            betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1_activation.py
             config/settings.yaml
             config/independent_engine_v2_capabilities.yaml
             config/engine_v2_public_redocking_contamination_registry.json
@@ -256,6 +265,9 @@ jobs:
             config/engine_v2_cpu_performance_profile_v3.json
             config/engine_v2_cpu_performance_v3_runner_activation.json
             config/engine_v2_full_pipeline_cpu_performance_v1.json
+            config/engine_v2_full_pipeline_cpu_performance_v1_activation.json
+            config/engine_v2_full_pipeline_cpu_performance_v1_stdlib_closure.json
+            config/engine_v2_full_pipeline_cpu_performance_v1_dynamic_library_closure.json
             config/engine_v2_native_cpu_runtime_artifacts_v1.json
             config/engine_v2_repository_synthetic_d0_native_source_v1.json
             config/engine_v2_repository_synthetic_d0_native_session_v1.json
@@ -311,6 +323,8 @@ jobs:
             tools/run_engine_v2_cpu_performance_qualification_v3.py
             tools/run_engine_v2_full_pipeline_cpu_performance_v1.py
             tools/verify_engine_v2_full_pipeline_cpu_performance_v1.py
+            tools/preflight_engine_v2_full_pipeline_cpu_performance_v1_activation.py
+            tools/verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py
             tools/verify_engine_v2_native_fixed64_cpu_profile_v5.py
             tools/verify_engine_v2_native_fixed64_cpu_profile_v6.py
             tools/verify_engine_v2_native_fixed64_cpu_v6_rustc_wrapper.py
@@ -356,6 +370,8 @@ jobs:
             tests/unit/test_engine_v2_cpu_performance_qualification_v3.py
             tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1.py
             tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1.py
+            tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1_activation.py
+            tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py
             tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v5.py
             tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v6.py
             tests/unit/test_verify_engine_v2_native_fixed64_cpu_v6_evidence.py
@@ -367,6 +383,7 @@ jobs:
             tests/unit/test_engine_v2_oracle_selection_metrics.py
             tests/unit/test_engine_v2_oracle_selection_evidence.py
             docs/engine_v2_full_pipeline_cpu_performance_v1.md
+            docs/engine_v2_full_pipeline_cpu_performance_v1_activation.md
             tests/unit/test_source_paired_clearance_activation.py
             tests/unit/test_source_paired_clearance_activation_evidence.py
             tests/unit/test_source_paired_torsion_rescue_activation_snapshot.py
@@ -503,6 +520,9 @@ jobs:
           git fetch --no-tags --depth=1 origin 5c1e4791e988d4c75a5111f933feac85236ba821
           test "$(git rev-parse --verify '5c1e4791e988d4c75a5111f933feac85236ba821^{commit}')" = \
             "5c1e4791e988d4c75a5111f933feac85236ba821"
+          git fetch --no-tags --depth=1 origin 38c16136a1e2cc126517ff9b50a05f06c5795adb
+          test "$(git rev-parse --verify '38c16136a1e2cc126517ff9b50a05f06c5795adb^{commit}')" = \
+            "38c16136a1e2cc126517ff9b50a05f06c5795adb"
 
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
@@ -641,6 +661,12 @@ jobs:
             > /tmp/engine-v2-full-pipeline-cpu-runner-v1.json
           grep -q '"reservation_created":false' \
             /tmp/engine-v2-full-pipeline-cpu-runner-v1.json
+          python tools/verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py \
+            > /tmp/engine-v2-full-pipeline-cpu-activation-v1.json
+          grep -q '"execution_activated":false' \
+            /tmp/engine-v2-full-pipeline-cpu-activation-v1.json
+          grep -q '"qualification_consumed":false' \
+            /tmp/engine-v2-full-pipeline-cpu-activation-v1.json
           python tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py \
             > /tmp/engine-v2-native-fixed64-cpu-profile-v4-archive.json
           grep -q '"archived":true' \
@@ -829,6 +855,8 @@ jobs:
             tests/unit/test_engine_v2_cpu_performance_qualification_v3.py \
             tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1.py \
             tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1.py \
+            tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1_activation.py \
+            tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py \
             tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v5.py \
             tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v6.py \
             tests/unit/test_verify_engine_v2_native_fixed64_cpu_v6_evidence.py \

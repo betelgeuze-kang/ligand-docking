@@ -1,0 +1,761 @@
+{
+  "file_backed_module_count": 84,
+  "file_backed_total_bytes": 2194777,
+  "module_count": 125,
+  "rows": [
+    {
+      "module": "__future__",
+      "origin": "stdlib_file",
+      "path": "__future__.py",
+      "sha256": "7923cdce02f46d719df43663dcf5f5bf21e28ac5397c950ec7dc4e357881b33f",
+      "size_bytes": 5155
+    },
+    {
+      "module": "_abc",
+      "origin": "built-in"
+    },
+    {
+      "module": "_ast",
+      "origin": "built-in"
+    },
+    {
+      "module": "_bisect",
+      "origin": "built-in"
+    },
+    {
+      "module": "_blake2",
+      "origin": "built-in"
+    },
+    {
+      "module": "_bz2",
+      "origin": "stdlib_file",
+      "path": "lib-dynload/_bz2.cpython-310-x86_64-linux-gnu.so",
+      "sha256": "e3ad21142bcc6f8d05dcbfb17ccaa730a473a54cd622ec64224337678f01513a",
+      "size_bytes": 32120
+    },
+    {
+      "module": "_codecs",
+      "origin": "built-in"
+    },
+    {
+      "module": "_collections",
+      "origin": "built-in"
+    },
+    {
+      "module": "_collections_abc",
+      "origin": "stdlib_file",
+      "path": "_collections_abc.py",
+      "sha256": "48560945f0f48a364ceff93de6e4cd2e2779b5effce505e70258506be4c67dba",
+      "size_bytes": 32284
+    },
+    {
+      "module": "_compression",
+      "origin": "stdlib_file",
+      "path": "_compression.py",
+      "sha256": "3ad5d60627477a60939ee44fc1bb3a05dbe8fb52f0f75039b8f5d8f1a278b981",
+      "size_bytes": 5681
+    },
+    {
+      "module": "_csv",
+      "origin": "built-in"
+    },
+    {
+      "module": "_frozen_importlib",
+      "origin": "frozen"
+    },
+    {
+      "module": "_frozen_importlib_external",
+      "origin": "frozen"
+    },
+    {
+      "module": "_functools",
+      "origin": "built-in"
+    },
+    {
+      "module": "_hashlib",
+      "origin": "stdlib_file",
+      "path": "lib-dynload/_hashlib.cpython-310-x86_64-linux-gnu.so",
+      "sha256": "cd941a4f0cf06f723a6ca62ccc5b906d268daa2d51bc93597be1941a222b4af7",
+      "size_bytes": 63728
+    },
+    {
+      "module": "_imp",
+      "origin": "built-in"
+    },
+    {
+      "module": "_io",
+      "origin": "built-in"
+    },
+    {
+      "module": "_json",
+      "origin": "stdlib_file",
+      "path": "lib-dynload/_json.cpython-310-x86_64-linux-gnu.so",
+      "sha256": "386142944914ac72afac209b9a7107b69d422725e4dfc60f8bd6dc4d36a852af",
+      "size_bytes": 49160
+    },
+    {
+      "module": "_locale",
+      "origin": "built-in"
+    },
+    {
+      "module": "_lzma",
+      "origin": "stdlib_file",
+      "path": "lib-dynload/_lzma.cpython-310-x86_64-linux-gnu.so",
+      "sha256": "7612995f8df322989c4ce3fc2755d92e92b34e39ca9230644adbec8b6862f37b",
+      "size_bytes": 45240
+    },
+    {
+      "module": "_opcode",
+      "origin": "stdlib_file",
+      "path": "lib-dynload/_opcode.cpython-310-x86_64-linux-gnu.so",
+      "sha256": "fa4a2d5a2b490eeac47d7e44ff5b2ead709273353933aa5ac64b6a6575375304",
+      "size_bytes": 14672
+    },
+    {
+      "module": "_operator",
+      "origin": "built-in"
+    },
+    {
+      "module": "_posixsubprocess",
+      "origin": "built-in"
+    },
+    {
+      "module": "_random",
+      "origin": "built-in"
+    },
+    {
+      "module": "_sha512",
+      "origin": "built-in"
+    },
+    {
+      "module": "_signal",
+      "origin": "built-in"
+    },
+    {
+      "module": "_sre",
+      "origin": "built-in"
+    },
+    {
+      "module": "_stat",
+      "origin": "built-in"
+    },
+    {
+      "module": "_struct",
+      "origin": "built-in"
+    },
+    {
+      "module": "_thread",
+      "origin": "built-in"
+    },
+    {
+      "module": "_warnings",
+      "origin": "built-in"
+    },
+    {
+      "module": "_weakref",
+      "origin": "built-in"
+    },
+    {
+      "module": "_weakrefset",
+      "origin": "stdlib_file",
+      "path": "_weakrefset.py",
+      "sha256": "49fb432325ef836f89caa60e50b152eb6f32b700ed71fedcd4d56815723f77ba",
+      "size_bytes": 5923
+    },
+    {
+      "module": "abc",
+      "origin": "stdlib_file",
+      "path": "abc.py",
+      "sha256": "c702f783a7e81f9c37a1d22095c05360b11916d144d2730ff735c36f879523c5",
+      "size_bytes": 6522
+    },
+    {
+      "module": "argparse",
+      "origin": "stdlib_file",
+      "path": "argparse.py",
+      "sha256": "579514c1f51cf397347d64a7f496c7f7c07e5cc1f55fe371f4c3403b5ed55f47",
+      "size_bytes": 98839
+    },
+    {
+      "module": "ast",
+      "origin": "stdlib_file",
+      "path": "ast.py",
+      "sha256": "2bacf018a141dd55b5ab20e4e2cc39ca7390b26f06948f8a8cb6edbedc292829",
+      "size_bytes": 59900
+    },
+    {
+      "module": "base64",
+      "origin": "stdlib_file",
+      "path": "base64.py",
+      "sha256": "6fff1906d502cc2308fa0987ce09b3ebe6e6ebfb53a119efdae92ad167a2d21f",
+      "size_bytes": 20846
+    },
+    {
+      "module": "binascii",
+      "origin": "built-in"
+    },
+    {
+      "module": "bisect",
+      "origin": "stdlib_file",
+      "path": "bisect.py",
+      "sha256": "e5b2ff166f48a06e70ae831d8c9b47283fcd0c254306eee12d3dae9c55e11526",
+      "size_bytes": 3135
+    },
+    {
+      "module": "builtins",
+      "origin": "built-in"
+    },
+    {
+      "module": "bz2",
+      "origin": "stdlib_file",
+      "path": "bz2.py",
+      "sha256": "76ab3252924e71e859d7d90e8d3db13b6554975cfcac0fdadced4de7f8779330",
+      "size_bytes": 11847
+    },
+    {
+      "module": "codecs",
+      "origin": "stdlib_file",
+      "path": "codecs.py",
+      "sha256": "166ffd0f0fe40631bb7adef898ebfe59c7fb9efeb25f635b0fd50b68e9353b6a",
+      "size_bytes": 36714
+    },
+    {
+      "module": "collections",
+      "origin": "stdlib_file",
+      "path": "collections/__init__.py",
+      "sha256": "5d7b9d899fb1407a614cb2ade46b6d2400ba797634e9fed7d770fc4b7e372760",
+      "size_bytes": 51398
+    },
+    {
+      "module": "collections.abc",
+      "origin": "stdlib_file",
+      "path": "collections/abc.py",
+      "sha256": "9cb4208f99128a0489b6c8e6c61637617dd7d4250c59e065491957eda084dd10",
+      "size_bytes": 119
+    },
+    {
+      "module": "contextlib",
+      "origin": "stdlib_file",
+      "path": "contextlib.py",
+      "sha256": "2e17d45cf3da698c9752c58a668c8a03d0ce2280fdffd6e352794a38a94d9f07",
+      "size_bytes": 25882
+    },
+    {
+      "module": "copy",
+      "origin": "stdlib_file",
+      "path": "copy.py",
+      "sha256": "27dcfc53a4b9d4fbc3d90c74e549eb6eca9301524d6d2fbff9a6589cf51b6fd5",
+      "size_bytes": 8681
+    },
+    {
+      "module": "copyreg",
+      "origin": "stdlib_file",
+      "path": "copyreg.py",
+      "sha256": "65cc0a30e07e9768ff97c78391985459a237083dce0c9086abfb879dc517420b",
+      "size_bytes": 7426
+    },
+    {
+      "module": "csv",
+      "origin": "stdlib_file",
+      "path": "csv.py",
+      "sha256": "6c68a5186e3b85e6e267a7ef96479327a45ae2b40bf5e9f2017e4b2282b3f5b1",
+      "size_bytes": 16030
+    },
+    {
+      "module": "dataclasses",
+      "origin": "stdlib_file",
+      "path": "dataclasses.py",
+      "sha256": "fa2e3728d8184954479c6fcd17015a5e0c176850f18f119f5c548fca49019441",
+      "size_bytes": 56390
+    },
+    {
+      "module": "dis",
+      "origin": "stdlib_file",
+      "path": "dis.py",
+      "sha256": "67075458fb59ec9e0d6206440df6b2f31944fcb4c480b9f6fe202094bc455d1d",
+      "size_bytes": 20020
+    },
+    {
+      "module": "encodings",
+      "origin": "stdlib_file",
+      "path": "encodings/__init__.py",
+      "sha256": "05f07fc2a0fbd9a9cc92aa7567df84f343ebbb17fc676432e108e127d81913df",
+      "size_bytes": 5620
+    },
+    {
+      "module": "encodings.aliases",
+      "origin": "stdlib_file",
+      "path": "encodings/aliases.py",
+      "sha256": "6fdcc49ba23a0203ae6cf28e608f8e6297d7c4d77d52e651db3cb49b9564c6d2",
+      "size_bytes": 15677
+    },
+    {
+      "module": "encodings.cp437",
+      "origin": "stdlib_file",
+      "path": "encodings/cp437.py",
+      "sha256": "5c2a5015cd36cf7f561269f33dec4c323093d3d88b0673969accdabdcb9ce2cb",
+      "size_bytes": 34564
+    },
+    {
+      "module": "encodings.utf_8",
+      "origin": "stdlib_file",
+      "path": "encodings/utf_8.py",
+      "sha256": "ba0cac060269583523ca9506473a755203037c57d466a11aa89a30a5f6756f3d",
+      "size_bytes": 1005
+    },
+    {
+      "module": "enum",
+      "origin": "stdlib_file",
+      "path": "enum.py",
+      "sha256": "59a62af0e129ae688f5549d6a273c51c5db80b534521f98dae2e4ceb485d9f75",
+      "size_bytes": 39831
+    },
+    {
+      "module": "errno",
+      "origin": "built-in"
+    },
+    {
+      "module": "fcntl",
+      "origin": "built-in"
+    },
+    {
+      "module": "fnmatch",
+      "origin": "stdlib_file",
+      "path": "fnmatch.py",
+      "sha256": "8a47ad23c243c6af0314bca4fc59b077035b6074f1915b6fc2b7c00864a7c16d",
+      "size_bytes": 6713
+    },
+    {
+      "module": "functools",
+      "origin": "stdlib_file",
+      "path": "functools.py",
+      "sha256": "1604a69d2d60921502b375a8af0d662702abe625987b773637a34c09c76a8a25",
+      "size_bytes": 38076
+    },
+    {
+      "module": "genericpath",
+      "origin": "stdlib_file",
+      "path": "genericpath.py",
+      "sha256": "9d58ad64056a89f12258a62596c2073cd9e52b459dde152f710edc0cffcd865b",
+      "size_bytes": 4975
+    },
+    {
+      "module": "gettext",
+      "origin": "stdlib_file",
+      "path": "gettext.py",
+      "sha256": "08f55e36b40fd1bb48975df7f86e8f9799b3564eee6b7669c5d71db44195b801",
+      "size_bytes": 27693
+    },
+    {
+      "module": "grp",
+      "origin": "built-in"
+    },
+    {
+      "module": "hashlib",
+      "origin": "stdlib_file",
+      "path": "hashlib.py",
+      "sha256": "9d56ebad0263a48ac94e0b2b7a3723625f2ff4dc7707d1156580e008d40bc790",
+      "size_bytes": 10229
+    },
+    {
+      "module": "hmac",
+      "origin": "stdlib_file",
+      "path": "hmac.py",
+      "sha256": "a4790b3cfd1b58875879621dbe8f4c0a30fb50a8582045b0d5c1a712afc8c36b",
+      "size_bytes": 7717
+    },
+    {
+      "module": "importlib",
+      "origin": "stdlib_file",
+      "path": "importlib/__init__.py",
+      "sha256": "49ad4fdc8139026f7f3773e3f50f09207ff6bd8e92a2c382545525235448e525",
+      "size_bytes": 6089
+    },
+    {
+      "module": "importlib._abc",
+      "origin": "stdlib_file",
+      "path": "importlib/_abc.py",
+      "sha256": "e24fa90513d1fd6e10df30dc28044dfcad857b88161c79de10f7109c18227e8d",
+      "size_bytes": 1852
+    },
+    {
+      "module": "importlib._bootstrap",
+      "origin": "frozen"
+    },
+    {
+      "module": "importlib._bootstrap_external",
+      "origin": "frozen"
+    },
+    {
+      "module": "importlib.machinery",
+      "origin": "stdlib_file",
+      "path": "importlib/machinery.py",
+      "sha256": "b7b47efe3d95ae817e0c61d852682ddf8b8ce95aaf36ae4cf333e145416baf18",
+      "size_bytes": 831
+    },
+    {
+      "module": "importlib.util",
+      "origin": "stdlib_file",
+      "path": "importlib/util.py",
+      "sha256": "de645b9f6d595f5e415d117f4d04ce77f144ce5ad2a6477659a9b5547d54b9dd",
+      "size_bytes": 11487
+    },
+    {
+      "module": "inspect",
+      "origin": "stdlib_file",
+      "path": "inspect.py",
+      "sha256": "98cc184ae793fa1c45de2f28de2539f6d63bf7bec8338df580549f8263baa905",
+      "size_bytes": 124378
+    },
+    {
+      "module": "io",
+      "origin": "stdlib_file",
+      "path": "io.py",
+      "sha256": "ee094fcf87d17a3a25816c663b67bd8797dccc3eebabad5a23f6da162146a0a8",
+      "size_bytes": 4196
+    },
+    {
+      "module": "ipaddress",
+      "origin": "stdlib_file",
+      "path": "ipaddress.py",
+      "sha256": "b2dc2c1f2bf13ca8b54a1f69b43a7dd20b81d8ef97bd1a5af717b18bc5cd0a1b",
+      "size_bytes": 77780
+    },
+    {
+      "module": "itertools",
+      "origin": "built-in"
+    },
+    {
+      "module": "json",
+      "origin": "stdlib_file",
+      "path": "json/__init__.py",
+      "sha256": "d5d41e2c29049515d295d81a6d40b4890fbec8d8482cfb401630f8ef2f77e4d5",
+      "size_bytes": 14020
+    },
+    {
+      "module": "json.decoder",
+      "origin": "stdlib_file",
+      "path": "json/decoder.py",
+      "sha256": "9f02654649816145bc76f8c210a5fe3ba1de142d4d97a1c93105732e747c285b",
+      "size_bytes": 12473
+    },
+    {
+      "module": "json.encoder",
+      "origin": "stdlib_file",
+      "path": "json/encoder.py",
+      "sha256": "06b881b824f71e95d72af4ab865de4c35553e791b6d959a125caac61401cc350",
+      "size_bytes": 16074
+    },
+    {
+      "module": "json.scanner",
+      "origin": "stdlib_file",
+      "path": "json/scanner.py",
+      "sha256": "8604d9d03786d0d509abb49e9f069337278ea988c244069ae8ca2c89acc2cb08",
+      "size_bytes": 2425
+    },
+    {
+      "module": "keyword",
+      "origin": "stdlib_file",
+      "path": "keyword.py",
+      "sha256": "afbe73afb68d32fa998e5ff3d081090deec457152470f5331cc2bd430a0e9d2a",
+      "size_bytes": 1061
+    },
+    {
+      "module": "linecache",
+      "origin": "stdlib_file",
+      "path": "linecache.py",
+      "sha256": "e814839fc75010db274ae034f45b0fff7e529ccb702319048545fef84c2045b7",
+      "size_bytes": 5690
+    },
+    {
+      "module": "locale",
+      "origin": "stdlib_file",
+      "path": "locale.py",
+      "sha256": "b83a392471f4366f1af2f4076af5fcf3b29d1254a605ea4d24c898b8a69e34cb",
+      "size_bytes": 78128
+    },
+    {
+      "module": "lzma",
+      "origin": "stdlib_file",
+      "path": "lzma.py",
+      "sha256": "58fb9d2fdc8a8af7b25e218f17ea3b51bdfa53bdf40f440ab33c605974ca5c2e",
+      "size_bytes": 13277
+    },
+    {
+      "module": "marshal",
+      "origin": "built-in"
+    },
+    {
+      "module": "math",
+      "origin": "built-in"
+    },
+    {
+      "module": "ntpath",
+      "origin": "stdlib_file",
+      "path": "ntpath.py",
+      "sha256": "db35d89f9729091b0f518e155e041cc9f1001da7563efa2724cb0f9ddb1845f7",
+      "size_bytes": 27561
+    },
+    {
+      "module": "opcode",
+      "origin": "stdlib_file",
+      "path": "opcode.py",
+      "sha256": "042223e56632d8ff283e63e190e0496f9af6945f0d6dfb692ac9d129aabc85dc",
+      "size_bytes": 5902
+    },
+    {
+      "module": "operator",
+      "origin": "stdlib_file",
+      "path": "operator.py",
+      "sha256": "fd931e2bf493ddd239208b0c0a2249324602b48aabc984c85b7d8dcc4d99a17d",
+      "size_bytes": 10751
+    },
+    {
+      "module": "os",
+      "origin": "stdlib_file",
+      "path": "os.py",
+      "sha256": "70e420e105d021d5ba2ec4d8a9b2131561db6d93e800e8580ddeb86cbd6959c3",
+      "size_bytes": 39557
+    },
+    {
+      "module": "os.path",
+      "origin": "stdlib_file",
+      "path": "posixpath.py",
+      "sha256": "b7fe3db38f32ea2cf16945b6e7d0c09265e0f73306387cc3d53c3f53aea92959",
+      "size_bytes": 16123
+    },
+    {
+      "module": "pathlib",
+      "origin": "stdlib_file",
+      "path": "pathlib.py",
+      "sha256": "936f14a3ecc4ac5e896e4d673666d76b25a9d581f3b4c8d8d424e830fda2a69b",
+      "size_bytes": 49575
+    },
+    {
+      "module": "platform",
+      "origin": "stdlib_file",
+      "path": "platform.py",
+      "sha256": "7dfc78c916cdc7f7d976308e3bcfbc93989e0dc3d7cd515d2d3a31d006bb4d31",
+      "size_bytes": 42022
+    },
+    {
+      "module": "posix",
+      "origin": "built-in"
+    },
+    {
+      "module": "posixpath",
+      "origin": "stdlib_file",
+      "path": "posixpath.py",
+      "sha256": "b7fe3db38f32ea2cf16945b6e7d0c09265e0f73306387cc3d53c3f53aea92959",
+      "size_bytes": 16123
+    },
+    {
+      "module": "pwd",
+      "origin": "built-in"
+    },
+    {
+      "module": "random",
+      "origin": "stdlib_file",
+      "path": "random.py",
+      "sha256": "ce80a2471965e64ae93caea14490f16850432e65dce87f15edfe25b6f562f8d1",
+      "size_bytes": 33221
+    },
+    {
+      "module": "re",
+      "origin": "stdlib_file",
+      "path": "re.py",
+      "sha256": "018b1a2c70e8ef537cc328d1026afdeca5839392ce47235a7b8d22e1b788cdc7",
+      "size_bytes": 15860
+    },
+    {
+      "module": "reprlib",
+      "origin": "stdlib_file",
+      "path": "reprlib.py",
+      "sha256": "dc786fbc528e10bc6ea3c1fa84e4178e85c4f3c9b937a4b191546aec317e9cb9",
+      "size_bytes": 5267
+    },
+    {
+      "module": "resource",
+      "origin": "stdlib_file",
+      "path": "lib-dynload/resource.cpython-310-x86_64-linux-gnu.so",
+      "sha256": "44ed265ed539ea9f01cd958cf12600ae854fae3a5ad8466ead8fdad3530359c3",
+      "size_bytes": 19424
+    },
+    {
+      "module": "secrets",
+      "origin": "stdlib_file",
+      "path": "secrets.py",
+      "sha256": "695195792d0f738bbdcd22ab0493e787d7a167adb1ac453b2b400ce4ebf66842",
+      "size_bytes": 2036
+    },
+    {
+      "module": "select",
+      "origin": "built-in"
+    },
+    {
+      "module": "selectors",
+      "origin": "stdlib_file",
+      "path": "selectors.py",
+      "sha256": "b16e673c110fd6a362414308ef73ffc3c15125c87361333b309791735931040d",
+      "size_bytes": 19536
+    },
+    {
+      "module": "shutil",
+      "origin": "stdlib_file",
+      "path": "shutil.py",
+      "sha256": "d96cf3b8b17c717f14dc67643cc8ad0943fb4b960d3e32981b2991613d39dde9",
+      "size_bytes": 54572
+    },
+    {
+      "module": "signal",
+      "origin": "stdlib_file",
+      "path": "signal.py",
+      "sha256": "6ae9e49fe09b607bc161fc80067de9763aa48f523567a34992f00be06057f00a",
+      "size_bytes": 2438
+    },
+    {
+      "module": "sre_compile",
+      "origin": "stdlib_file",
+      "path": "sre_compile.py",
+      "sha256": "800f4c7df096e10336cd54f1aa6382721d6fcb974669463fe67f7a9189e52407",
+      "size_bytes": 27973
+    },
+    {
+      "module": "sre_constants",
+      "origin": "stdlib_file",
+      "path": "sre_constants.py",
+      "sha256": "6d5f1ff40e42f4be9b98899b58684dffcdb9c0ef1b3b942c17a3fcafc0bbcdc1",
+      "size_bytes": 7177
+    },
+    {
+      "module": "sre_parse",
+      "origin": "stdlib_file",
+      "path": "sre_parse.py",
+      "sha256": "dad10892e970f3b9d0ad874d893edde31c0303e39ea5e2678935129e29128c2f",
+      "size_bytes": 40779
+    },
+    {
+      "module": "stat",
+      "origin": "stdlib_file",
+      "path": "stat.py",
+      "sha256": "052af0327eae6941b69b05c088b3e748f79995635f80ac4cc7125eb333eb4c77",
+      "size_bytes": 5485
+    },
+    {
+      "module": "struct",
+      "origin": "stdlib_file",
+      "path": "struct.py",
+      "sha256": "9c231f9497caf513a22dee8f790b07f969b0e45854a0bdd6dd84b492e08c2856",
+      "size_bytes": 257
+    },
+    {
+      "module": "subprocess",
+      "origin": "stdlib_file",
+      "path": "subprocess.py",
+      "sha256": "53bb0d0780e166ef4ae94f3b2a817a8aae49a84d899db1f4c31f933d429057d6",
+      "size_bytes": 84917
+    },
+    {
+      "module": "sys",
+      "origin": "built-in"
+    },
+    {
+      "module": "sysconfig",
+      "origin": "stdlib_file",
+      "path": "sysconfig.py",
+      "sha256": "e9b05d1a93f70cbbccd254fc0997abaabc992925477b21202661401d7fd1dd41",
+      "size_bytes": 29398
+    },
+    {
+      "module": "tempfile",
+      "origin": "stdlib_file",
+      "path": "tempfile.py",
+      "sha256": "b97b6cec79567177633bd15a4d838e8bbe2e3bbd60b8d399d0674eee9cf5b229",
+      "size_bytes": 34567
+    },
+    {
+      "module": "threading",
+      "origin": "stdlib_file",
+      "path": "threading.py",
+      "sha256": "a21926e636bec8c2e5579f3e79cce144c36379ef93c4596252af29970983553d",
+      "size_bytes": 57200
+    },
+    {
+      "module": "time",
+      "origin": "built-in"
+    },
+    {
+      "module": "token",
+      "origin": "stdlib_file",
+      "path": "token.py",
+      "sha256": "2cabb6a81cafa84b475fc852c20b6bad45955ec0f88063720a831495215f776b",
+      "size_bytes": 2386
+    },
+    {
+      "module": "tokenize",
+      "origin": "stdlib_file",
+      "path": "tokenize.py",
+      "sha256": "b76fe3cc91541b872f16a879db6c9ff44c7ba4c2df366d40a3a211948edafba5",
+      "size_bytes": 25921
+    },
+    {
+      "module": "types",
+      "origin": "stdlib_file",
+      "path": "types.py",
+      "sha256": "5e6c3b3380332249908d7907bc4c1102c0bf14076248c8244d03314f6b2e2078",
+      "size_bytes": 10117
+    },
+    {
+      "module": "typing",
+      "origin": "stdlib_file",
+      "path": "typing.py",
+      "sha256": "ec7b7f73fc92827c78a7d2aff90cffe070530cad6c693460165c26f76d195f41",
+      "size_bytes": 92557
+    },
+    {
+      "module": "urllib",
+      "origin": "stdlib_file",
+      "path": "urllib/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "module": "urllib.parse",
+      "origin": "stdlib_file",
+      "path": "urllib/parse.py",
+      "sha256": "182c08612deeb0c00861e2cca2ead81d365f43ae34382564cadc7d41d06917ab",
+      "size_bytes": 44403
+    },
+    {
+      "module": "warnings",
+      "origin": "stdlib_file",
+      "path": "warnings.py",
+      "sha256": "b8e7748e4c67eb65cea5d3b3bd888d245771c0ebe63117f747189a55a9b622db",
+      "size_bytes": 19688
+    },
+    {
+      "module": "weakref",
+      "origin": "stdlib_file",
+      "path": "weakref.py",
+      "sha256": "dd8e03473ee5667c1a2caa43ede07797652bcb4035fabb60d60af10bb23a0886",
+      "size_bytes": 21560
+    },
+    {
+      "module": "zipfile",
+      "origin": "stdlib_file",
+      "path": "zipfile.py",
+      "sha256": "2f925475f942fa8cc0b8e258d030c3ca974a3a335fab4d3860205661ab5478c0",
+      "size_bytes": 90851
+    },
+    {
+      "module": "zipimport",
+      "origin": "frozen"
+    },
+    {
+      "module": "zlib",
+      "origin": "built-in"
+    }
+  ],
+  "rows_sha256": "dfbcb14de125ed61ec8b77999b41661411d08dc72a62cd20c8752272576576ab",
+  "schema_id": "betelgeuze.engine_v2_python_stdlib_import_closure/1.0.0"
+}

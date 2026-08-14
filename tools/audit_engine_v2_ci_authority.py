@@ -140,6 +140,15 @@ CPU_PERFORMANCE_CONTRACT_PATHS = (
     "tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1.py",
     "tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1.py",
     "docs/engine_v2_full_pipeline_cpu_performance_v1.md",
+    "betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1_activation.py",
+    "config/engine_v2_full_pipeline_cpu_performance_v1_activation.json",
+    "config/engine_v2_full_pipeline_cpu_performance_v1_stdlib_closure.json",
+    "config/engine_v2_full_pipeline_cpu_performance_v1_dynamic_library_closure.json",
+    "tools/preflight_engine_v2_full_pipeline_cpu_performance_v1_activation.py",
+    "tools/verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py",
+    "tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1_activation.py",
+    "tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py",
+    "docs/engine_v2_full_pipeline_cpu_performance_v1_activation.md",
     (
         "packaging/engine-v2/native-runtime-archive/0.2.0rc6/cp310-cp310/"
         "betelgeuze-engine-v2-native-0.2.0rc6.spdx.json"
@@ -178,6 +187,15 @@ CPU_PERFORMANCE_REQUIRED_TOKEN_COUNTS = {
     "tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1.py": 2,
     "tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1.py": 3,
     "docs/engine_v2_full_pipeline_cpu_performance_v1.md": 1,
+    "betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1_activation.py": 2,
+    "config/engine_v2_full_pipeline_cpu_performance_v1_activation.json": 2,
+    "config/engine_v2_full_pipeline_cpu_performance_v1_stdlib_closure.json": 2,
+    "config/engine_v2_full_pipeline_cpu_performance_v1_dynamic_library_closure.json": 2,
+    "tools/preflight_engine_v2_full_pipeline_cpu_performance_v1_activation.py": 2,
+    "tools/verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py": 3,
+    "tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1_activation.py": 3,
+    "tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py": 3,
+    "docs/engine_v2_full_pipeline_cpu_performance_v1_activation.md": 1,
     "packaging/engine-v2/native-runtime-archive": 1,
     "import betelgeuze_engine_v2.docking.performance_host_preflight_v3": 1,
     "import betelgeuze_engine_v2.docking.performance_qualification_v3": 1,
@@ -869,7 +887,7 @@ def _cpu_performance_authority_is_fail_closed(repo_root: Path) -> bool:
     full_gates = full_pipeline.get("gates")
     full_measurement = full_pipeline.get("measurement")
     full_predecessor = full_pipeline.get("predecessor_disposition")
-    return bool(
+    full_pipeline_profile_fail_closed = bool(
         type(full_authority) is dict
         and set(full_authority)
         == set(FULL_PIPELINE_CPU_PERFORMANCE_FALSE_AUTHORITY_KEYS)
@@ -897,6 +915,98 @@ def _cpu_performance_authority_is_fail_closed(repo_root: Path) -> bool:
         and full_predecessor.get("attempt_consumed") is False
         and full_predecessor.get("predecessor_terminal_state_present") is False
         and full_predecessor.get("rerun_performed") is False
+    )
+    if not full_pipeline_profile_fail_closed:
+        return False
+
+    full_activation_path = (
+        repo_root
+        / "config/engine_v2_full_pipeline_cpu_performance_v1_activation.json"
+    )
+    try:
+        full_activation_raw = full_activation_path.read_bytes()
+        full_activation_contract = json.loads(
+            full_activation_raw.decode("ascii"),
+            object_pairs_hook=reject_duplicate_keys,
+            parse_float=reject_float,
+            parse_constant=reject_float,
+        )
+    except (OSError, UnicodeError, ValueError):
+        return False
+    expected_full_activation_bytes = (
+        json.dumps(
+            full_activation_contract,
+            indent=2,
+            sort_keys=True,
+            ensure_ascii=True,
+            allow_nan=False,
+        ).encode("ascii")
+        + b"\n"
+    )
+    if (
+        type(full_activation_contract) is not dict
+        or full_activation_raw != expected_full_activation_bytes
+        or full_activation_contract.get("schema_id")
+        != "betelgeuze.engine_v2_full_pipeline_cpu_performance_activation/1.0.0"
+        or full_activation_contract.get("status")
+        != "frozen_non_consuming_exact_main_preflight_execution_not_activated"
+        or full_activation_contract.get("profile_id")
+        != "engine_v2_full_pipeline_cpu_performance_v1"
+        or full_activation_contract.get("profile_sha256")
+        != "385fb713cca8f39353f138115749abdfc9768b02222e13111a418360be30a000"
+    ):
+        return False
+    activation_authority = full_activation_contract.get("authority")
+    activation_restrictions = full_activation_contract.get("restrictions")
+    activation_runner = full_activation_contract.get("runner")
+    activation_preflight = full_activation_contract.get("preflight")
+    activation_sources = full_activation_contract.get("source_bindings")
+    required_source_bindings = {
+        "merged_main_commit_sha256",
+        "merged_main_tree_sha256",
+        "profile_sha256",
+        "profile_verifier_sha256",
+        "measurement_core_sha256",
+        "runner_tool_sha256",
+        "native_consumer_sha256",
+        "native_cpu_parity_sha256",
+        "host_preflight_sha256",
+        "stdlib_import_closure_manifest_sha256",
+        "dynamic_library_closure_manifest_sha256",
+    }
+    return bool(
+        type(activation_authority) is dict
+        and set(activation_authority)
+        == set(FULL_PIPELINE_CPU_PERFORMANCE_FALSE_AUTHORITY_KEYS)
+        and all(value is False for value in activation_authority.values())
+        and type(activation_restrictions) is dict
+        and activation_restrictions
+        and all(value is False for value in activation_restrictions.values())
+        and type(activation_runner) is dict
+        and activation_runner.get("activation_contract_present") is True
+        and activation_runner.get("activation_contract_allows_live_execution")
+        is False
+        and activation_runner.get("github_actions_live_execution_allowed") is False
+        and activation_runner.get("live_synthetic_local_execution_implemented")
+        is False
+        and activation_runner.get("qualification_attempt_consumed") is False
+        and activation_runner.get("reservation_created") is False
+        and activation_runner.get("runner_remains_fail_closed") is True
+        and type(activation_preflight) is dict
+        and activation_preflight.get("caller_science_input_allowed") is False
+        and activation_preflight.get("github_actions_preflight_allowed") is False
+        and activation_preflight.get("molecular_input_allowed") is False
+        and activation_preflight.get("performance_measurement_allowed") is False
+        and activation_preflight.get("qualification_state_write_allowed") is False
+        and activation_preflight.get("reservation_allowed") is False
+        and type(activation_sources) is dict
+        and set(activation_sources) == required_source_bindings
+        and all(
+            type(value) is str
+            and len(value) == 64
+            and all(character in "0123456789abcdef" for character in value)
+            for value in activation_sources.values()
+        )
     )
 
 
