@@ -46,9 +46,8 @@ pub use forcefield::{
 pub use qualification::{
     compare_fixed64_scientific_numeric_parity, fixed64_cpu_v5_live_activation_admitted,
     run_native_fixed64_cpu_probe_v5, Fixed64CpuFixtureProbeV5, Fixed64CpuProbeConfigV5,
-    Fixed64CpuProbeReportV5, Fixed64NumericParityV5,
-    FIXED64_CPU_QUALIFICATION_V5_PROFILE_ID, FIXED64_CPU_QUALIFICATION_V5_SCHEMA_ID,
-    FIXED64_CPU_V5_LIVE_ACTIVATION_ADMITTED,
+    Fixed64CpuProbeReportV5, Fixed64NumericParityV5, FIXED64_CPU_QUALIFICATION_V5_PROFILE_ID,
+    FIXED64_CPU_QUALIFICATION_V5_SCHEMA_ID, FIXED64_CPU_V5_LIVE_ACTIVATION_ADMITTED,
 };
 pub use qualification_v6::{
     preflight_native_fixed64_cpu_v6, run_native_fixed64_cpu_qualification_v6,
