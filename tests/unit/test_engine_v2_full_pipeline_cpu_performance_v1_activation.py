@@ -573,6 +573,7 @@ def test_loader_bootstrap_rejects_direct_path_invocation(
         "_TRUSTED_INITIAL_NAMESPACE_EXEC_SUPERVISOR_OPERATIONAL",
         True,
     )
+    monkeypatch.setattr(preflight, "_require_initial_host_namespaces", lambda: None)
 
     with pytest.raises(RuntimeError, match="authenticated stage0 snapshot"):
         preflight._require_exact_loader_bootstrap()
