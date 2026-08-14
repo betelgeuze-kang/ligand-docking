@@ -98,6 +98,19 @@ def test_native_repository_d0_source_rejects_materializer_drift(
         verify(rust_source_path=drifted)
 
 
+def test_native_repository_d0_source_rejects_legacy_identity_manifest_drift(
+    tmp_path: Path,
+) -> None:
+    drifted = tmp_path / DEFAULT_RUST_SOURCE.name
+    raw = DEFAULT_RUST_SOURCE.read_text(encoding="utf-8")
+    needle = "9b39f3d5b4d6b4d8da17abfc5ce717bc45e271ab18a01dd9113068cb79300d0e"
+    assert needle in raw
+    drifted.write_text(raw.replace(needle, "0" * 64, 1), encoding="utf-8")
+
+    with pytest.raises(ContractError, match="identity manifest changed"):
+        verify(rust_source_path=drifted)
+
+
 def test_native_repository_d0_source_rejects_caller_input(
     tmp_path: Path,
 ) -> None:

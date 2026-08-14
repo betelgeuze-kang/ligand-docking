@@ -14,8 +14,10 @@ Shoemake Haar rotations and bounded spherical translations. Logical controls
 uniform source indices 24, 27, 29, 32, 34, 37, 40, 42, 45, 47, 50, 53, 55,
 58, 60, and 63. Retained controls remain 36, 45, 54, and 63. All 28 selected
 coordinate payloads must match the frozen current-V7 binary64 coordinate
-SHA-256 identities bit for bit; drift fails closed before a bundle is
-returned.
+SHA-256 identities bit for bit; their ordered coordinate and proposal identity
+manifests are additionally frozen as `6da149e7d418ebbe709615ba6df8d188c198e26fe56756e81da21dd8eba864b3`
+and `aa4dc1845c6354116d09d2f99998b8ed0847b00d5ea0b4cf8d144a3b98ee38cf`.
+Any individual or ordering drift fails closed before a bundle is returned.
 
 The native feature inventory derives 13 geometry-bound pre-result features
 from the frozen atomic numbers, bonds, partial charges, and coordinates:

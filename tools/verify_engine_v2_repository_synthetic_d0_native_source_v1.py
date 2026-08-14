@@ -116,6 +116,12 @@ EXPECTED_RECEIPT_IDENTITIES = {
         "9365608f04170392497222d4681e7494c2ddedb01fcab653ca1aded4de984e6e"
     ),
     "proposal_identity_count": 28,
+    "selected_current_v7_coordinate_identity_manifest_sha256": (
+        "6da149e7d418ebbe709615ba6df8d188c198e26fe56756e81da21dd8eba864b3"
+    ),
+    "selected_proposal_identity_manifest_sha256": (
+        "aa4dc1845c6354116d09d2f99998b8ed0847b00d5ea0b4cf8d144a3b98ee38cf"
+    ),
 }
 EXPECTED_SCOPE = {
     "component": "betelgeuze-docking-search::repository_d0",
@@ -223,12 +229,12 @@ def _require_snippets(source: str, snippets: tuple[str, ...], *, label: str) -> 
         raise ContractError(f"{label} is missing frozen contract snippets: {missing}")
 
 
-def _digest_count(source: str, start: str, end: str) -> int:
+def _digest_values(source: str, start: str, end: str) -> list[str]:
     try:
         section = source.split(start, 1)[1].split(end, 1)[0]
     except IndexError as exc:
         raise ContractError(f"Rust source digest section changed: {start}") from exc
-    return len(re.findall(r'digest\("[0-9a-f]{64}"\)', section))
+    return re.findall(r'digest\("([0-9a-f]{64})"\)', section)
 
 
 def verify(
@@ -329,18 +335,53 @@ def verify(
         ),
         label="Rust materializer source",
     )
-    for digest in EXPECTED_RECEIPT_IDENTITIES.values():
-        if isinstance(digest, str) and len(digest) == 64 and digest not in rust_source:
+    manifest_keys = {
+        "selected_current_v7_coordinate_identity_manifest_sha256",
+        "selected_proposal_identity_manifest_sha256",
+    }
+    for key, digest in EXPECTED_RECEIPT_IDENTITIES.items():
+        if (
+            key not in manifest_keys
+            and isinstance(digest, str)
+            and len(digest) == 64
+            and digest not in rust_source
+        ):
             raise ContractError("Rust source is missing a frozen receipt identity")
-    expected_digest_counts = (
-        ("const V7_LEGACY_PROPOSAL_SHA256", "const RETAINED_LEGACY_PROPOSAL_SHA256", 24),
-        ("const RETAINED_LEGACY_PROPOSAL_SHA256", "const V7_LEGACY_NATIVE_COORDINATE_SHA256", 4),
-        ("const V7_LEGACY_NATIVE_COORDINATE_SHA256", "const RETAINED_LEGACY_NATIVE_COORDINATE_SHA256", 24),
-        ("const RETAINED_LEGACY_NATIVE_COORDINATE_SHA256", "#[derive(Clone, Copy", 4),
+    proposal_identities = _digest_values(
+        rust_source,
+        "const V7_LEGACY_PROPOSAL_SHA256",
+        "const RETAINED_LEGACY_PROPOSAL_SHA256",
+    ) + _digest_values(
+        rust_source,
+        "const RETAINED_LEGACY_PROPOSAL_SHA256",
+        "const V7_LEGACY_NATIVE_COORDINATE_SHA256",
     )
-    for start, end, expected_count in expected_digest_counts:
-        if _digest_count(rust_source, start, end) != expected_count:
-            raise ContractError("frozen current-V7 proposal or coordinate identity count changed")
+    coordinate_identities = _digest_values(
+        rust_source,
+        "const V7_LEGACY_NATIVE_COORDINATE_SHA256",
+        "const RETAINED_LEGACY_NATIVE_COORDINATE_SHA256",
+    ) + _digest_values(
+        rust_source,
+        "const RETAINED_LEGACY_NATIVE_COORDINATE_SHA256",
+        "#[derive(Clone, Copy",
+    )
+    if len(proposal_identities) != 28 or len(coordinate_identities) != 28:
+        raise ContractError("frozen current-V7 proposal or coordinate identity count changed")
+    proposal_manifest = hashlib.sha256(
+        "".join(proposal_identities).encode("ascii")
+    ).hexdigest()
+    coordinate_manifest = hashlib.sha256(
+        "".join(coordinate_identities).encode("ascii")
+    ).hexdigest()
+    if (
+        proposal_manifest
+        != EXPECTED_RECEIPT_IDENTITIES["selected_proposal_identity_manifest_sha256"]
+        or coordinate_manifest
+        != EXPECTED_RECEIPT_IDENTITIES[
+            "selected_current_v7_coordinate_identity_manifest_sha256"
+        ]
+    ):
+        raise ContractError("ordered current-V7 proposal or coordinate identity manifest changed")
 
     rust_library = _read_text(rust_library_path, label="Rust library export")
     _require_snippets(

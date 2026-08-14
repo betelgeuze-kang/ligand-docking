@@ -74,7 +74,9 @@
     "guided_receipt_sha256": "8fc7cd2c744793fa9a000e6aab7b94e95aa19a2e8d74dda2b5468d2922d512c6",
     "native_source_bundle_receipt_sha256": "929eedd01ef06fe28daa362654325aa5f849891b58d3d6d67a161a8f43fda37a",
     "prepared_input_receipt_sha256": "9365608f04170392497222d4681e7494c2ddedb01fcab653ca1aded4de984e6e",
-    "proposal_identity_count": 28
+    "proposal_identity_count": 28,
+    "selected_current_v7_coordinate_identity_manifest_sha256": "6da149e7d418ebbe709615ba6df8d188c198e26fe56756e81da21dd8eba864b3",
+    "selected_proposal_identity_manifest_sha256": "aa4dc1845c6354116d09d2f99998b8ed0847b00d5ea0b4cf8d144a3b98ee38cf"
   },
   "schema_id": "betelgeuze.engine_v2_repository_synthetic_d0_native_source_policy/1.0.0",
   "scope": {
