@@ -5,14 +5,45 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 from pathlib import Path
+import sys
 from typing import Any
 
-from betelgeuze_engine_v2.docking import full_pipeline_cpu_performance_v1 as profile
-
-
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_MEASUREMENT_CORE = (
+    REPOSITORY_ROOT
+    / "betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1.py"
+)
+_PROFILE_MODULE_NAME = (
+    "betelgeuze_engine_v2.docking.full_pipeline_cpu_performance_v1"
+)
+
+
+def _load_measurement_core() -> Any:
+    existing = sys.modules.get(_PROFILE_MODULE_NAME)
+    if existing is not None:
+        return existing
+    spec = importlib.util.spec_from_file_location(
+        _PROFILE_MODULE_NAME,
+        DEFAULT_MEASUREMENT_CORE,
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError("full-pipeline CPU measurement core cannot be loaded")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[_PROFILE_MODULE_NAME] = module
+    try:
+        spec.loader.exec_module(module)
+    except BaseException:
+        sys.modules.pop(_PROFILE_MODULE_NAME, None)
+        raise
+    return module
+
+
+profile = _load_measurement_core()
+
+
 DEFAULT_PROFILE = REPOSITORY_ROOT / "config/engine_v2_full_pipeline_cpu_performance_v1.json"
 DEFAULT_ARTIFACT_CONTRACT = REPOSITORY_ROOT / "config/engine_v2_native_cpu_runtime_artifacts_v1.json"
 DEFAULT_PREDECESSOR_PROFILE = REPOSITORY_ROOT / "config/engine_v2_cpu_performance_profile_v3.json"
@@ -20,7 +51,6 @@ DEFAULT_PREDECESSOR_ACTIVATION = REPOSITORY_ROOT / "config/engine_v2_cpu_perform
 DEFAULT_NATIVE_PARITY_POLICY = REPOSITORY_ROOT / "config/engine_v2_repository_synthetic_d0_cpu_parity_v1.json"
 DEFAULT_NATIVE_SOURCE_POLICY = REPOSITORY_ROOT / "config/engine_v2_repository_synthetic_d0_native_source_v1.json"
 DEFAULT_NATIVE_SESSION_POLICY = REPOSITORY_ROOT / "config/engine_v2_repository_synthetic_d0_native_session_v1.json"
-DEFAULT_MEASUREMENT_CORE = REPOSITORY_ROOT / "betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1.py"
 DEFAULT_NATIVE_CONSUMER = REPOSITORY_ROOT / "betelgeuze_engine_v2/docking/native_fixed64_consumers.py"
 DEFAULT_NATIVE_PARITY_SOURCE = REPOSITORY_ROOT / "betelgeuze_engine_v2/docking/native_cpu_parity.py"
 DEFAULT_HOST_PREFLIGHT = REPOSITORY_ROOT / "betelgeuze_engine_v2/docking/performance_host_preflight_v3.py"

@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
+import subprocess
+import sys
 
 import pytest
 
@@ -148,3 +151,35 @@ def test_runner_static_verification_is_non_consuming(capsys) -> None:
     assert result["execution_activated"] is False
     assert result["qualification_consumed"] is False
     assert result["reservation_created"] is False
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    (
+        ("tools/verify_engine_v2_full_pipeline_cpu_performance_v1.py",),
+        (
+            "tools/run_engine_v2_full_pipeline_cpu_performance_v1.py",
+            "--verify-implementation",
+        ),
+    ),
+)
+def test_direct_script_bootstraps_repository_root_without_environment_package(
+    tmp_path: Path,
+    arguments: tuple[str, ...],
+) -> None:
+    repository_root = Path(__file__).resolve().parents[2]
+    environment = dict(os.environ)
+    environment.pop("PYTHONPATH", None)
+    environment["PYTHONNOUSERSITE"] = "1"
+    result = subprocess.run(
+        [sys.executable, str(repository_root / arguments[0]), *arguments[1:]],
+        cwd=tmp_path,
+        env=environment,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    document = json.loads(result.stdout)
+    assert document["execution_activated"] is False
+    assert document["qualification_consumed"] is False
+    assert document["reservation_created"] is False

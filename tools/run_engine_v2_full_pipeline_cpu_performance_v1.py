@@ -7,13 +7,23 @@ import argparse
 import json
 import os
 from pathlib import Path
+import sys
 from typing import Sequence
 
-from betelgeuze_engine_v2.docking.full_pipeline_cpu_performance_v1 import (
-    FullPipelineCPUPerformanceV1Error,
-    run_live_full_pipeline_cpu_performance_v1,
+_REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+if str(_REPOSITORY_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPOSITORY_ROOT))
+
+from tools.verify_engine_v2_full_pipeline_cpu_performance_v1 import (  # noqa: E402
+    profile,
+    verify,
 )
-from tools.verify_engine_v2_full_pipeline_cpu_performance_v1 import verify
+
+
+FullPipelineCPUPerformanceV1Error = profile.FullPipelineCPUPerformanceV1Error
+run_live_full_pipeline_cpu_performance_v1 = (
+    profile.run_live_full_pipeline_cpu_performance_v1
+)
 
 
 def _parser() -> argparse.ArgumentParser:
