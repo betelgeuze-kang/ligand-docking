@@ -1,0 +1,155 @@
+{
+  "authority": {
+    "fresh_holdout_execution_authorized": false,
+    "github_actions_production_authority": false,
+    "hip_device_execution_authorized": false,
+    "installation_authorized": false,
+    "molecular_execution_authorized": false,
+    "product_execution_authorized": false,
+    "public_benchmark_authorized": false,
+    "qualification_consumption_authorized": false,
+    "reservation_authorized": false,
+    "runtime_launch_authorized": false,
+    "scientific_claim_authorized": false,
+    "stage0_admission_authorized": false,
+    "test_double_production_authority": false
+  },
+  "build": {
+    "binary_identity_frozen": false,
+    "compile_only_ci_allowed": true,
+    "compiler_flags": [
+      "-std=c++17",
+      "-O2",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-Werror",
+      "-static",
+      "-s",
+      "-Wl,--build-id=none"
+    ],
+    "packaged_binary_present": false,
+    "static_elf_no_dynamic_or_interp_required": true
+  },
+  "foundation": {
+    "activation_contract_sha256": "c9f77a76c0d7687d1c4195f06d50529ce66d915dd1a79f48e9a2827570af9ea2",
+    "foundation_commit_oid": "c15b46e4a93e157826677165642b8788b75f20c7",
+    "foundation_commit_sha256": "a8c477a252b12d0306eeb4b70d0159d9de3823fcae285fe697b22d19d237ba93",
+    "foundation_tree_oid": "28361485778537401731d6d085480ae6e613dbc5",
+    "foundation_tree_sha256": "e28fb3eabc81cb71bae3c1f0b51ce58642be6164454538c14e39c34b776fee43",
+    "preflight_sha256": "aca96d31bb1ca09d9eb83a10bb7a8a91192fc1405a9eaa8011d94453a28a306e",
+    "profile_sha256": "385fb713cca8f39353f138115749abdfc9768b02222e13111a418360be30a000",
+    "runtime_scope_manifest_sha256": "72b90f500af43c921ce0b8f7d6774c5e99a7e4f3fe366478b3fc33b524b4b404"
+  },
+  "implementation": {
+    "compiled_service_path": "/usr/local/libexec/betelgeuze-engine-v2-full-pipeline-cpu-supervisor-v1",
+    "dynamic_loader_path": "/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2",
+    "dynamic_loader_sha256": "8d06f393f4a93bcf9b81145a259524d66a95522a646bf8d7e05b6ffdf2e63dcc",
+    "exact_service_source_present": true,
+    "python_executable_path": "/usr/bin/python3.10",
+    "python_executable_sha256": "7d51cd6b48b521277f5caa4610a82126e315fa2be4df069823a8b1eeb5bd4a86",
+    "service_source_path": "native/tools/engine_v2_full_pipeline_cpu_supervisor_v1.cpp",
+    "service_source_sha256": "a7abb3ab52fc01b65b0d6d1cd09e5d807d5f9060c7aca1e1312225040b60c741",
+    "socket_path": "/run/betelgeuze-engine-v2/full-pipeline-cpu-supervisor-v1.sock"
+  },
+  "lifecycle": {
+    "activation_contract_bound_to_handoff": false,
+    "client_roster_configured": false,
+    "exactly_once_runner_bound": false,
+    "independent_namespace_attestation_present": false,
+    "installation_manifest_present": false,
+    "operational": false,
+    "preflight_accepts_supervisor_handoff": false,
+    "provider_qualified": false,
+    "root_service_installed": false,
+    "service_socket_bound": false,
+    "systemd_provisioning_present": false
+  },
+  "protocol": {
+    "ancillary_descriptor_count": 3,
+    "ancillary_descriptor_roles": [
+      "exact_preflight_source",
+      "artifact_directory",
+      "runtime_directory"
+    ],
+    "handoff_bytes": 464,
+    "handoff_descriptor_roles": [
+      "sealed_handoff_receipt",
+      "initial_user_namespace",
+      "initial_mount_namespace"
+    ],
+    "handoff_magic": "BGV2CPUHANDOF1",
+    "maximum_timeout_seconds": 900,
+    "nonce_bytes": 32,
+    "request_bytes": 192,
+    "request_magic": "BGV2CPUSUPREQ1",
+    "required_request_digests": [
+      "activation_sha256",
+      "preflight_sha256",
+      "profile_sha256",
+      "runtime_manifest_sha256"
+    ],
+    "socket_domain": "AF_UNIX",
+    "socket_type": "SOCK_SEQPACKET",
+    "terminal_bytes": 96,
+    "terminal_magic": "BGV2CPUTERMV1",
+    "version": 1
+  },
+  "restrictions": {
+    "actual_service_execution_allowed_in_ci": false,
+    "caller_supplied_command_allowed": false,
+    "caller_supplied_environment_allowed": false,
+    "failed_or_consumed_qualification_rerun_allowed": false,
+    "hip_execution_allowed": false,
+    "molecular_input_allowed": false,
+    "performance_measurement_allowed": false,
+    "production_socket_creation_allowed": false,
+    "qualification_state_write_allowed": false,
+    "reservation_allowed": false
+  },
+  "schema_id": "betelgeuze.engine_v2_full_pipeline_cpu_supervisor/1.0.0",
+  "status": "implemented_reviewable_not_installed_not_operational",
+  "supervisor_id": "engine_v2_full_pipeline_cpu_supervisor_v1",
+  "trust_boundary": {
+    "child_credential_drop_after_trace_stop": true,
+    "close_range_before_untrusted_exec": true,
+    "continuous_trace_options": [
+      "PTRACE_O_TRACEEXEC",
+      "PTRACE_O_EXITKILL",
+      "PTRACE_O_TRACEFORK",
+      "PTRACE_O_TRACEVFORK",
+      "PTRACE_O_TRACECLONE"
+    ],
+    "exec_descriptor_primitive": "execveat_AT_EMPTY_PATH",
+    "expected_initial_mount_namespace_inode": 4026531841,
+    "expected_initial_user_namespace_inode": 4026531837,
+    "handoff_peer_credential": "SO_PEERCRED_root_service_socketpair",
+    "launch_environment_sha256": "5cf4cf74eba4f493ae3f8a88c3459e2f8861146b6e38b5c4d7bd65e958f0da96",
+    "launch_vector_sha256": "3844da69d7b4a1dd61cde9ffa559c7409a6d23b43a80f63dcea612f859a932d3",
+    "mount_independent_namespace_fd_attestation_implemented": true,
+    "namespace_descriptor_ioctls": [
+      "NS_GET_NSTYPE",
+      "NS_GET_OWNER_UID",
+      "NS_GET_PARENT",
+      "NS_GET_USERNS"
+    ],
+    "namespace_fd_attestation_independently_qualified": false,
+    "peer_pid_pinned_with_pidfd": true,
+    "peer_pid_pinned_with_so_peerpidfd": true,
+    "peer_pidfd_and_connection_liveness_required_until_terminal": true,
+    "preflight_source_snapshot_mode": "0444_sealed_read_only",
+    "preflight_source_snapshot_seals": [
+      "F_SEAL_SEAL",
+      "F_SEAL_SHRINK",
+      "F_SEAL_GROW",
+      "F_SEAL_WRITE"
+    ],
+    "procfs_path_evidence_authoritative": false,
+    "request_peer_credential": "SO_PEERCRED",
+    "second_exec_allowed": false,
+    "stdio_rebound_to_root_opened_dev_null": true,
+    "supervisor_binary_digest_in_handoff": true,
+    "trace_exclusion_across_exec_implemented": true,
+    "trace_exclusion_independently_qualified": false
+  }
+}

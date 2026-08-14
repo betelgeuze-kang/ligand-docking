@@ -228,6 +228,35 @@ FULL_PIPELINE_CPU_PERFORMANCE_FALSE_AUTHORITY_KEYS = (
     "stage0_admission_authorized",
     "synthetic_cpu_performance_qualification_authorized",
 )
+FULL_PIPELINE_CPU_SUPERVISOR_CONTRACT_PATHS = (
+    "config/engine_v2_full_pipeline_cpu_supervisor_v1.json",
+    "native/tools/engine_v2_full_pipeline_cpu_supervisor_v1.cpp",
+    "tools/verify_engine_v2_full_pipeline_cpu_supervisor_v1.py",
+    "tests/unit/test_verify_engine_v2_full_pipeline_cpu_supervisor_v1.py",
+    "docs/engine_v2_full_pipeline_cpu_supervisor_v1.md",
+)
+FULL_PIPELINE_CPU_SUPERVISOR_REQUIRED_TOKEN_COUNTS = {
+    "config/engine_v2_full_pipeline_cpu_supervisor_v1.json": 2,
+    "native/tools/engine_v2_full_pipeline_cpu_supervisor_v1.cpp": 2,
+    "tools/verify_engine_v2_full_pipeline_cpu_supervisor_v1.py": 3,
+    "tests/unit/test_verify_engine_v2_full_pipeline_cpu_supervisor_v1.py": 3,
+    "docs/engine_v2_full_pipeline_cpu_supervisor_v1.md": 2,
+}
+FULL_PIPELINE_CPU_SUPERVISOR_FALSE_AUTHORITY_KEYS = (
+    "fresh_holdout_execution_authorized",
+    "github_actions_production_authority",
+    "hip_device_execution_authorized",
+    "installation_authorized",
+    "molecular_execution_authorized",
+    "product_execution_authorized",
+    "public_benchmark_authorized",
+    "qualification_consumption_authorized",
+    "reservation_authorized",
+    "runtime_launch_authorized",
+    "scientific_claim_authorized",
+    "stage0_admission_authorized",
+    "test_double_production_authority",
+)
 NATIVE_FIXED64_CPU_V5_CONTRACT_PATHS = (
     "config/engine_v2_native_fixed64_cpu_profile_v5.json",
     "config/engine_v2_native_fixed64_cpu_profile_v5_archive.json",
@@ -597,6 +626,147 @@ def _mixed64_v2_authority_is_fail_closed(repo_root: Path) -> bool:
             type(authority.get(key)) is bool and authority.get(key) is False
             for key in MIXED64_V2_FORBIDDEN_TRUE_AUTHORITY_KEYS
         )
+    )
+
+
+def _full_pipeline_cpu_supervisor_authority_is_fail_closed(
+    repo_root: Path,
+) -> bool:
+    def reject_duplicate_keys(
+        pairs: list[tuple[str, object]],
+    ) -> dict[str, object]:
+        observed: dict[str, object] = {}
+        for key, value in pairs:
+            if key in observed:
+                raise ValueError(f"duplicate JSON key: {key}")
+            observed[key] = value
+        return observed
+
+    def reject_float(value: str) -> object:
+        raise ValueError(f"JSON float is forbidden: {value}")
+
+    contract_path = (
+        repo_root / "config/engine_v2_full_pipeline_cpu_supervisor_v1.json"
+    )
+    source_path = (
+        repo_root / "native/tools/engine_v2_full_pipeline_cpu_supervisor_v1.cpp"
+    )
+    try:
+        raw = contract_path.read_bytes()
+        contract = json.loads(
+            raw.decode("ascii"),
+            object_pairs_hook=reject_duplicate_keys,
+            parse_float=reject_float,
+            parse_constant=reject_float,
+        )
+        source_raw = source_path.read_bytes()
+        source = source_raw.decode("utf-8")
+    except (OSError, UnicodeError, ValueError):
+        return False
+    canonical = (
+        json.dumps(
+            contract,
+            allow_nan=False,
+            ensure_ascii=True,
+            indent=2,
+            sort_keys=True,
+        ).encode("ascii")
+        + b"\n"
+    )
+    if (
+        type(contract) is not dict
+        or raw != canonical
+        or set(contract)
+        != {
+            "authority",
+            "build",
+            "foundation",
+            "implementation",
+            "lifecycle",
+            "protocol",
+            "restrictions",
+            "schema_id",
+            "status",
+            "supervisor_id",
+            "trust_boundary",
+        }
+        or contract.get("schema_id")
+        != "betelgeuze.engine_v2_full_pipeline_cpu_supervisor/1.0.0"
+        or contract.get("supervisor_id")
+        != "engine_v2_full_pipeline_cpu_supervisor_v1"
+        or contract.get("status")
+        != "implemented_reviewable_not_installed_not_operational"
+    ):
+        return False
+    authority = contract.get("authority")
+    build = contract.get("build")
+    implementation = contract.get("implementation")
+    lifecycle = contract.get("lifecycle")
+    protocol = contract.get("protocol")
+    restrictions = contract.get("restrictions")
+    trust = contract.get("trust_boundary")
+    return bool(
+        type(authority) is dict
+        and set(authority) == set(FULL_PIPELINE_CPU_SUPERVISOR_FALSE_AUTHORITY_KEYS)
+        and all(value is False for value in authority.values())
+        and type(build) is dict
+        and build.get("binary_identity_frozen") is False
+        and build.get("compile_only_ci_allowed") is True
+        and build.get("packaged_binary_present") is False
+        and build.get("static_elf_no_dynamic_or_interp_required") is True
+        and type(implementation) is dict
+        and implementation.get("exact_service_source_present") is True
+        and implementation.get("service_source_path")
+        == "native/tools/engine_v2_full_pipeline_cpu_supervisor_v1.cpp"
+        and implementation.get("service_source_sha256")
+        == hashlib.sha256(source_raw).hexdigest()
+        and type(lifecycle) is dict
+        and lifecycle
+        and all(value is False for value in lifecycle.values())
+        and type(protocol) is dict
+        and protocol.get("ancillary_descriptor_count") == 3
+        and type(protocol.get("ancillary_descriptor_count")) is int
+        and protocol.get("request_bytes") == 192
+        and type(protocol.get("request_bytes")) is int
+        and protocol.get("handoff_bytes") == 464
+        and type(protocol.get("handoff_bytes")) is int
+        and protocol.get("terminal_bytes") == 96
+        and type(protocol.get("terminal_bytes")) is int
+        and protocol.get("socket_domain") == "AF_UNIX"
+        and protocol.get("socket_type") == "SOCK_SEQPACKET"
+        and type(restrictions) is dict
+        and restrictions
+        and all(value is False for value in restrictions.values())
+        and type(trust) is dict
+        and trust.get("mount_independent_namespace_fd_attestation_implemented")
+        is True
+        and trust.get("namespace_fd_attestation_independently_qualified") is False
+        and trust.get("peer_pid_pinned_with_pidfd") is True
+        and trust.get("peer_pid_pinned_with_so_peerpidfd") is True
+        and trust.get("peer_pidfd_and_connection_liveness_required_until_terminal")
+        is True
+        and trust.get("preflight_source_snapshot_mode")
+        == "0444_sealed_read_only"
+        and trust.get("procfs_path_evidence_authoritative") is False
+        and trust.get("second_exec_allowed") is False
+        and trust.get("trace_exclusion_across_exec_implemented") is True
+        and trust.get("trace_exclusion_independently_qualified") is False
+        and source.count("constexpr bool kInstallationAuthorized = false;") == 1
+        and source.count("constexpr bool kRuntimeLaunchAuthorized = false;") == 1
+        and source.count(
+            "constexpr bool kQualificationConsumptionAuthorized = false;"
+        )
+        == 1
+        and "std::getenv" not in source
+        and "getenv(" not in source
+        and "unlink(" not in source
+        and "SO_PEERPIDFD" in source
+        and "source.raw.size(), 0444" in source
+        and "return run_service();" in source
+        and source.index(
+            "if (!kInstallationAuthorized || !kRuntimeLaunchAuthorized ||"
+        )
+        < source.index("return run_service();")
     )
 
 
@@ -1913,6 +2083,35 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         )
     )
 
+    full_pipeline_cpu_supervisor_present = any(
+        (repo_root / path).is_file()
+        for path in FULL_PIPELINE_CPU_SUPERVISOR_CONTRACT_PATHS
+    )
+    full_pipeline_cpu_supervisor_files_complete = all(
+        (repo_root / path).is_file()
+        for path in FULL_PIPELINE_CPU_SUPERVISOR_CONTRACT_PATHS
+    )
+    full_pipeline_cpu_supervisor_authority_fail_closed = (
+        not full_pipeline_cpu_supervisor_present
+        or (
+            full_pipeline_cpu_supervisor_files_complete
+            and _full_pipeline_cpu_supervisor_authority_is_fail_closed(repo_root)
+        )
+    )
+    full_pipeline_cpu_supervisor_in_authoritative_ci = (
+        not full_pipeline_cpu_supervisor_present
+        or (
+            full_pipeline_cpu_supervisor_files_complete
+            and full_pipeline_cpu_supervisor_authority_fail_closed
+            and all(
+                main_text.count(token) >= minimum_count
+                for token, minimum_count in (
+                    FULL_PIPELINE_CPU_SUPERVISOR_REQUIRED_TOKEN_COUNTS.items()
+                )
+            )
+        )
+    )
+
     cpu_performance_contract_present = any(
         (repo_root / path).is_file() for path in CPU_PERFORMANCE_CONTRACT_PATHS
     )
@@ -1922,12 +2121,14 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
     cpu_performance_authority_fail_closed = not cpu_performance_contract_present or (
         cpu_performance_contract_files_complete
         and _cpu_performance_authority_is_fail_closed(repo_root)
+        and full_pipeline_cpu_supervisor_authority_fail_closed
     )
     cpu_performance_contract_in_authoritative_ci = (
         not cpu_performance_contract_present
         or (
             cpu_performance_contract_files_complete
             and cpu_performance_authority_fail_closed
+            and full_pipeline_cpu_supervisor_in_authoritative_ci
             and all(
                 main_text.count(token) >= minimum_count
                 for token, minimum_count in (
@@ -2143,6 +2344,12 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         ),
         "cpu_performance_authority_fail_closed": (
             cpu_performance_authority_fail_closed
+        ),
+        "full_pipeline_cpu_supervisor_authority_fail_closed": (
+            full_pipeline_cpu_supervisor_authority_fail_closed
+        ),
+        "full_pipeline_cpu_supervisor_in_authoritative_ci": (
+            full_pipeline_cpu_supervisor_in_authoritative_ci
         ),
         "native_fixed64_cpu_v5_contract_in_authoritative_ci": (
             native_fixed64_cpu_v5_contract_in_authoritative_ci
