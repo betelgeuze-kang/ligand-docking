@@ -51,6 +51,12 @@ on:
       - "tools/preflight_engine_v2_full_pipeline_cpu_performance_v1_activation.py"
       - "native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp"
       - "tools/verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py"
+      - "config/engine_v2_full_pipeline_cpu_supervisor_v1.json"
+      - "native/tools/engine_v2_full_pipeline_cpu_supervisor_v1.cpp"
+      - "tools/verify_engine_v2_full_pipeline_cpu_supervisor_v1.py"
+      - "tools/audit_engine_v2_ci_authority.py"
+      - "tests/unit/test_verify_engine_v2_full_pipeline_cpu_supervisor_v1.py"
+      - "docs/engine_v2_full_pipeline_cpu_supervisor_v1.md"
       - "tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1.py"
       - "tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1.py"
       - "tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1_activation.py"
@@ -254,6 +260,12 @@ jobs:
             tools/preflight_engine_v2_full_pipeline_cpu_performance_v1_activation.py
             native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp
             tools/verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py
+            config/engine_v2_full_pipeline_cpu_supervisor_v1.json
+            native/tools/engine_v2_full_pipeline_cpu_supervisor_v1.cpp
+            tools/verify_engine_v2_full_pipeline_cpu_supervisor_v1.py
+            tools/audit_engine_v2_ci_authority.py
+            tests/unit/test_verify_engine_v2_full_pipeline_cpu_supervisor_v1.py
+            docs/engine_v2_full_pipeline_cpu_supervisor_v1.md
             tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py
             tools/verify_engine_v2_native_fixed64_cpu_profile_v5.py
             tools/verify_engine_v2_native_fixed64_cpu_profile_v6.py
@@ -292,6 +304,9 @@ jobs:
           git fetch --no-tags --depth=1 origin 38c16136a1e2cc126517ff9b50a05f06c5795adb
           test "$(git rev-parse --verify '38c16136a1e2cc126517ff9b50a05f06c5795adb^{commit}')" = \
             "38c16136a1e2cc126517ff9b50a05f06c5795adb"
+          git fetch --no-tags --depth=1 origin c15b46e4a93e157826677165642b8788b75f20c7
+          test "$(git rev-parse --verify 'c15b46e4a93e157826677165642b8788b75f20c7^{commit}')" = \
+            "c15b46e4a93e157826677165642b8788b75f20c7"
 
       - name: Report hosted toolchain
         run: |
@@ -345,6 +360,41 @@ jobs:
       - name: Verify full-pipeline CPU performance v1 activation
         run: >-
           python3 tools/verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py
+
+      - name: Verify full-pipeline CPU supervisor v1
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/verify_engine_v2_full_pipeline_cpu_supervisor_v1.py
+          g++ -std=c++17 -O2 -Wall -Wextra -Wpedantic -Werror -static -s \
+            -Wl,--build-id=none \
+            native/tools/engine_v2_full_pipeline_cpu_supervisor_v1.cpp \
+            -o /tmp/engine-v2-full-pipeline-cpu-supervisor-v1
+          /tmp/engine-v2-full-pipeline-cpu-supervisor-v1 --describe-contract \
+            > /tmp/engine-v2-full-pipeline-cpu-supervisor-v1-description.json
+          /tmp/engine-v2-full-pipeline-cpu-supervisor-v1 --self-test-primitives \
+            > /tmp/engine-v2-full-pipeline-cpu-supervisor-v1-self-test.json
+          grep -q '"authority_false":true' \
+            /tmp/engine-v2-full-pipeline-cpu-supervisor-v1-description.json
+          grep -q '"operational":false' \
+            /tmp/engine-v2-full-pipeline-cpu-supervisor-v1-description.json
+          grep -q '"service_started":false' \
+            /tmp/engine-v2-full-pipeline-cpu-supervisor-v1-self-test.json
+          grep -q '"sha256_abc":true' \
+            /tmp/engine-v2-full-pipeline-cpu-supervisor-v1-self-test.json
+          set +e
+          /tmp/engine-v2-full-pipeline-cpu-supervisor-v1 \
+            > /tmp/engine-v2-full-pipeline-cpu-supervisor-v1.stdout \
+            2> /tmp/engine-v2-full-pipeline-cpu-supervisor-v1.stderr
+          supervisor_status=$?
+          set -e
+          test "$supervisor_status" -eq 125
+          test ! -e \
+            /run/betelgeuze-engine-v2/full-pipeline-cpu-supervisor-v1.sock
+          if readelf -l /tmp/engine-v2-full-pipeline-cpu-supervisor-v1 | \
+            grep -E 'INTERP|DYNAMIC'; then
+            exit 1
+          fi
 
       - name: Build and test the C ABI
         run: |

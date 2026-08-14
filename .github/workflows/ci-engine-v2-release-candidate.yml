@@ -80,6 +80,12 @@ on:
       - "tools/preflight_engine_v2_full_pipeline_cpu_performance_v1_activation.py"
       - "native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp"
       - "tools/verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py"
+      - "config/engine_v2_full_pipeline_cpu_supervisor_v1.json"
+      - "native/tools/engine_v2_full_pipeline_cpu_supervisor_v1.cpp"
+      - "tools/verify_engine_v2_full_pipeline_cpu_supervisor_v1.py"
+      - "tools/audit_engine_v2_ci_authority.py"
+      - "tests/unit/test_verify_engine_v2_full_pipeline_cpu_supervisor_v1.py"
+      - "docs/engine_v2_full_pipeline_cpu_supervisor_v1.md"
       - "docs/engine_v2_full_pipeline_cpu_performance_v1.md"
       - "docs/engine_v2_full_pipeline_cpu_performance_v1_activation.md"
       - "config/engine_v2_cpu_performance_profile.json"
@@ -189,6 +195,12 @@ jobs:
             tools/preflight_engine_v2_full_pipeline_cpu_performance_v1_activation.py
             native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp
             tools/verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py
+            config/engine_v2_full_pipeline_cpu_supervisor_v1.json
+            native/tools/engine_v2_full_pipeline_cpu_supervisor_v1.cpp
+            tools/verify_engine_v2_full_pipeline_cpu_supervisor_v1.py
+            tools/audit_engine_v2_ci_authority.py
+            tests/unit/test_verify_engine_v2_full_pipeline_cpu_supervisor_v1.py
+            docs/engine_v2_full_pipeline_cpu_supervisor_v1.md
             tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1.py
             tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1.py
             tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1_activation.py
@@ -207,6 +219,9 @@ jobs:
           git fetch --no-tags --depth=1 origin 38c16136a1e2cc126517ff9b50a05f06c5795adb
           test "$(git rev-parse --verify '38c16136a1e2cc126517ff9b50a05f06c5795adb^{commit}')" = \
             "38c16136a1e2cc126517ff9b50a05f06c5795adb"
+          git fetch --no-tags --depth=1 origin c15b46e4a93e157826677165642b8788b75f20c7
+          test "$(git rev-parse --verify 'c15b46e4a93e157826677165642b8788b75f20c7^{commit}')" = \
+            "c15b46e4a93e157826677165642b8788b75f20c7"
 
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
@@ -235,6 +250,7 @@ jobs:
             tools/verify_engine_v2_full_pipeline_cpu_performance_v1.py \
             tools/preflight_engine_v2_full_pipeline_cpu_performance_v1_activation.py \
             tools/verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py \
+            tools/verify_engine_v2_full_pipeline_cpu_supervisor_v1.py \
             tools/build_engine_v2_sbom.py \
             --config packaging/engine-v2/pyproject.toml > static-analysis.log 2>&1
           ruff_status=$?
@@ -284,6 +300,10 @@ jobs:
       - name: Verify full-pipeline CPU performance v1 activation
         run: >-
           python tools/verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py
+
+      - name: Verify full-pipeline CPU supervisor v1
+        run: >-
+          python tools/verify_engine_v2_full_pipeline_cpu_supervisor_v1.py
 
       - name: Upload static-analysis diagnostics
         if: always()
