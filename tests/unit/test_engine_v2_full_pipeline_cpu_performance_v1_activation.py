@@ -214,9 +214,13 @@ def test_dynamic_library_closure_rejects_anonymous_executable_mapping(
 
 def test_dynamic_library_closure_rejects_mapping_device_inode_drift(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     site_packages = tmp_path / "site-packages"
     site_packages.mkdir()
+    stdlib_root = tmp_path / "stdlib"
+    stdlib_root.mkdir()
+    monkeypatch.setattr(activation, "PYTHON_STDLIB_ROOT", stdlib_root)
     executable = tmp_path / "mapped-executable"
     executable.write_bytes(b"mapped")
     executable.chmod(0o600)
