@@ -882,8 +882,11 @@ def test_full_pipeline_cpu_activation_escalation_fails_ci_audit(
             "trusted_launcher_parent_exact",
         ),
         ("immutable_bootstrap_snapshot", "launched_from_snapshot_required"),
-        ("initial_host_namespaces", "stage0_enforced"),
-        ("trusted_root_launcher", "direct_parent_required"),
+        ("initial_host_namespaces", "mount_independent_evidence_required"),
+        (
+            "trusted_initial_namespace_exec_supervisor",
+            "trace_exclusion_across_exec_required",
+        ),
     ),
 )
 def test_full_pipeline_cpu_activation_requires_launcher_loader_and_snapshot_proof(
@@ -920,7 +923,9 @@ def test_full_pipeline_cpu_activation_rejects_namespace_boolean_type_drift(
         tmp_path / "config/engine_v2_full_pipeline_cpu_performance_v1_activation.json"
     )
     activation = json.loads(activation_path.read_text(encoding="ascii"))
-    activation["preflight"]["initial_host_namespaces"]["stage0_enforced"] = 1
+    activation["preflight"]["initial_host_namespaces"][
+        "mount_independent_evidence_required"
+    ] = 1
     activation_path.write_text(
         json.dumps(activation, indent=2, sort_keys=True) + "\n",
         encoding="ascii",

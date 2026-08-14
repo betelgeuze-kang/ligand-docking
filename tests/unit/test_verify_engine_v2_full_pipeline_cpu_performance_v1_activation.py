@@ -91,7 +91,9 @@ def test_full_pipeline_cpu_activation_rejects_nested_boolean_integer_drift(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     document = json.loads(_ACTIVATION.read_text(encoding="ascii"))
-    document["preflight"]["initial_host_namespaces"]["stage0_enforced"] = 1
+    document["preflight"]["initial_host_namespaces"][
+        "mount_independent_evidence_required"
+    ] = 1
     changed = tmp_path / "activation.json"
     _write_canonical(changed, document)
     monkeypatch.setattr(
@@ -279,45 +281,41 @@ def test_trusted_launcher_source_rejects_preflight_digest_cross_wiring(
 
     with pytest.raises(
         verify.FullPipelineCPUActivationContractError,
-        match="bind the exact preflight digest twice",
+        match="bind the exact preflight digest once",
     ):
         verify._validate_trusted_launcher_source(
             preflight_sha256=preflight_sha256,
             source_sha256=hashlib.sha256(changed.read_bytes()).hexdigest(),
-            stage0_sha256=str(
-                json.loads(_ACTIVATION.read_text(encoding="ascii"))["preflight"][
-                    "exact_loader_kernel_process_identity"
-                ]["stage0_source_sha256"]
-            ),
         )
 
 
-def test_trusted_launcher_source_rejects_stage0_byte_drift(
+@pytest.mark.parametrize("forbidden", ("execve(", "fork(", "/proc/", "ptrace("))
+def test_trusted_launcher_stub_rejects_execution_or_procfs_path(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    forbidden: str,
 ) -> None:
     source = verify.DEFAULT_TRUSTED_LAUNCHER_SOURCE.read_text(encoding="utf-8")
     changed = tmp_path / "launcher.cpp"
     changed.write_text(
-        source.replace("import fcntl\n", "import fcntl\n# drift\n", 1),
+        source.replace(
+            "    (void)argv;\n",
+            f"    (void)argv;\n    // forbidden mutation: {forbidden}\n",
+            1,
+        ),
         encoding="utf-8",
     )
     monkeypatch.setattr(verify, "DEFAULT_TRUSTED_LAUNCHER_SOURCE", changed)
 
     with pytest.raises(
         verify.FullPipelineCPUActivationContractError,
-        match="stage0 source digest changed",
+        match="stub gained execution or procfs path",
     ):
         verify._validate_trusted_launcher_source(
             preflight_sha256=hashlib.sha256(
                 verify.DEFAULT_PREFLIGHT_TOOL.read_bytes()
             ).hexdigest(),
             source_sha256=hashlib.sha256(changed.read_bytes()).hexdigest(),
-            stage0_sha256=str(
-                json.loads(_ACTIVATION.read_text(encoding="ascii"))["preflight"][
-                    "exact_loader_kernel_process_identity"
-                ]["stage0_source_sha256"]
-            ),
         )
 
 
@@ -330,8 +328,8 @@ def test_trusted_launcher_source_rejects_complete_source_drift(
     changed = tmp_path / "launcher.cpp"
     changed.write_text(
         source.replace(
-            '    "/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu";\n',
-            '    "/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu";\n',
+            "trace-excluding exec ",
+            "trace-permitting exec ",
             1,
         ),
         encoding="utf-8",
@@ -348,11 +346,6 @@ def test_trusted_launcher_source_rejects_complete_source_drift(
             ).hexdigest(),
             source_sha256=str(
                 contract["preflight"]["trusted_root_launcher"]["source_sha256"]
-            ),
-            stage0_sha256=str(
-                contract["preflight"]["exact_loader_kernel_process_identity"][
-                    "stage0_source_sha256"
-                ]
             ),
         )
 

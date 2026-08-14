@@ -75,58 +75,37 @@ device/inode, bytes, and kernel seals are independently verified. No
 caller-supplied expected digest is accepted. Added, missing, moved, or changed
 module/mapping rows fail closed.
 
-Before any native constructor can run, a root-provisioned static native launcher
-at
-`/usr/local/libexec/betelgeuze-engine-v2-full-pipeline-cpu-preflight-launcher-v1`
-starts the root-owned `/usr/bin/python3.10` target through the exact glibc dynamic loader.
-The launcher is a direct parent process, is root-owned at mode
-`0555`, contains no `PT_DYNAMIC` or `PT_INTERP`, sets dumpability off and
-no-new-privileges on, removes inherited descriptors, resets signal state, and
-remains alive until the child terminates. The child validates the launcher's
-exact parent path/inode, root-controlled directory chain, static ELF structure,
-command line, zero capabilities, absent tracer, UID/GID, and stable process
-start identity. This outside-the-repository process boundary anchors the exact
-preflight digest before any account-owned bootstrap byte can execute.
-Before numeric UID/GID zero is treated as host-root authority, the native
-launcher, embedded stage 0, and Python preflight each require the exact initial
-host user and mount namespaces. The frozen identity maps are
-`0 0 4294967295`; the namespace identities are `user:[4026531837]` and
-`mnt:[4026531841]`. An unprivileged user namespace or private mount/chroot tree
-therefore fails closed before account-owned source is read.
-The reviewed exact-host build uses `g++ -std=c++17 -O2 -Wall -Wextra
--Wpedantic -Werror -static -s -Wl,--build-id=none`; its frozen binary SHA-256
-is `43fe19fd75f2b9ae37b124004a4b77ff59a7bcad772e53945af64216874c91a5`.
-The preflight hashes the actual parent executable and requires that digest in
-the activation contract, in addition to checking root ownership and static ELF
-structure. The contract separately freezes the SHA-256 of the complete launcher
-source, and the static verifier hashes every source byte rather than accepting
-selected snippets as a source-to-binary provenance claim.
+## Trusted execution blocker
 
-The launcher clears the inherited
-environment, inhibits the loader cache, fixes the library search path, disables
-glibc hardware-capability variants, and preloads the exact absolute
-`libstdc++`, `libgcc_s`, `libpthread`, `libm`, `libdl`, and `libc` paths required
-by the frozen extension. The kernel-maintained `/proc/self/exe` must remain the
-exact loader, while `/proc/self/cmdline` must byte-match the complete reviewed
-loader option vector, root-owned interpreter target, `-I -S -B`, frozen
-stage-0 source, bootstrap source path, and forwarded preflight arguments. The
-launcher source embeds the reviewed bootstrap SHA-256 twice: once as a compiled
-identity and once in the exact stage-0 literal. A caller cannot select or render
-that digest, and there is no caller-created completion token.
+The reviewed root-launcher design is not an operational trust anchor. Namespace
+identity read through `/proc` remains inside the caller's mutable mount tree,
+and an ordinary non-setuid `execve` can restore child dumpability before Python
+validation. Neither signal is permitted to grant runtime authority.
 
-The stage-0 source first requires its direct parent executable to be the frozen
-root-provisioned launcher, then authenticates the bootstrap through a stable
-no-follow read before any bootstrap byte executes, copies those exact bytes into a mode-0400
-memfd, applies all four write/grow/shrink/seal locks, and executes only that
-authenticated immutable bootstrap snapshot. Direct pathname execution of the
-bootstrap is unsupported and fails closed. The resulting 20-row executable
-closure is fully hashed and compared with its frozen manifest before native
-initialization.
-After initialization, the verifier requires the pre/post mapping delta to be
-exactly one row: the authenticated sealed native memfd. A newly discovered,
-late-loaded, missing, or changed dependency rejects activation.
-Any post-import rejection removes both the native public package and submodule
-from `sys.modules` before control can return to a programmatic caller.
+The native launcher artifact is therefore a non-operational fail-closed stub.
+It contains no `fork`, `execve`, `ptrace`, or `/proc` path and always exits 125.
+Its complete source and reproducible static binary remain SHA-256-bound so that
+any accidental execution path fails the static verifier. The static verifier
+hashes every source byte. Installation and runtime launch are both unauthorized.
+
+The Python preflight independently freezes
+`_TRUSTED_INITIAL_NAMESPACE_EXEC_SUPERVISOR_OPERATIONAL = False`. After the
+earlier GitHub Actions rejection, this gate fails before any namespace, process,
+repository, runtime, or native-provider path is read. The embedded stage-0,
+exact loader vector, immutable bootstrap, and closure logic remain reviewable
+future constraints, but they are unreachable in this activation.
+
+A separate activation PR must supply an independently provisioned supervisor
+that provides all of the following before this gate may change:
+
+- mount-independent initial user/mount namespace attestation;
+- a signed or kernel-attested handoff binding the exact launcher, preflight,
+  loader, interpreter, arguments, and environment;
+- trace exclusion that remains continuous across every `exec` transition;
+- fail-closed revocation and lifecycle evidence outside caller-owned paths.
+
+Path-based `/proc` checks may remain defense in depth after that handoff, but
+the contract explicitly records that they are not authoritative evidence.
 
 ## Non-consuming preflight
 
@@ -136,14 +115,8 @@ Static contract verification is safe in CI and performs no native import:
 python3 tools/verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py
 ```
 
-The exact local non-consuming preflight must be launched by the reviewed,
-root-provisioned static native launcher. Repository code is not authorized to
-install or replace that root-owned trust anchor. Until an independent host
-administrator compiles the reviewed source and installs the exact binary at the
-frozen path with root ownership and mode `0555`, local preflight execution is
-intentionally unavailable and fails closed. The artifact and runtime paths
-remain locations for independently re-derived byte identities and cannot carry
-science input:
+The launcher stub may be built only to reproduce its frozen binary identity. It
+must not be installed or used to launch the preflight:
 
 ```bash
 g++ -std=c++17 -O2 -Wall -Wextra -Wpedantic -Werror -static -s \
@@ -151,45 +124,18 @@ g++ -std=c++17 -O2 -Wall -Wextra -Wpedantic -Werror -static -s \
   native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp \
   -o /independent/staging/engine-v2-preflight-launcher-v1
 sha256sum /independent/staging/engine-v2-preflight-launcher-v1
-# An independent host administrator verifies both the contract's complete source
-# SHA-256 and exact-host binary SHA-256, then installs these exact bytes as
-# root:root mode 0555 at the frozen /usr/local/libexec path.
-```
-
-Only after that independent provisioning step is the following invocation
-supported:
-
-```bash
-/usr/local/libexec/betelgeuze-engine-v2-full-pipeline-cpu-preflight-launcher-v1 \
-  /exact/repository/tools/preflight_engine_v2_full_pipeline_cpu_performance_v1_activation.py -- \
-  --artifact-directory /exact/artifact/directory \
-  --runtime-root /exact/runtime
+# Executing this audit artifact exits 125; installation is unauthorized.
 ```
 
 GitHub Actions is rejected before any repository or native provider is loaded.
-The supported command has no preliminary execution of the owner-writable
-bootstrap pathname. The root-owned launcher parent, kernel process identity,
-and authenticated immutable bootstrap snapshot jointly prove the launcher,
-loader, interpreter, and source boundary; no
-caller-provided `LD_LIBRARY_PATH`, `LD_PRELOAD`, loader-cache choice, or ROCm
-environment survives into the authenticated process.
-The local result records immutable-snapshot and descriptor-bound native
-initialization, `trusted_root_launcher_parent_validated=true`,
-`trusted_root_launcher_source_sha256=<contract digest>`,
-`initial_host_namespaces_validated=true`,
-`root_owned_interpreter_target_validated=true`,
-`exact_loader_process_identity_validated=true`, and
-`immutable_bootstrap_snapshot_validated=true`, verified public package exports,
-host preflight evidence, and explicit false fields for measurement,
-qualification consumption, reservation, molecular execution, public benchmark,
-HIP device execution, and product action.
-
-A successful preflight only establishes that the reviewed activation bytes can
-be loaded on the pinned host. A later PR must add and bind a transactional
-account-scoped exactly-once runner. That later runner must create its attempt
-before its execution-time preflight and persist an artifact plus terminal
-decision before returning. This activation contract grants that runner no live
-execution capability and is not performance evidence.
+Every non-GitHub invocation that reaches the script's runtime gate then fails
+before `/proc` evidence or any additional repository, runtime, native, or
+molecular input is read. The account-controlled preflight file has necessarily
+already been loaded and cannot establish its own trust boundary. Consequently
+this PR can produce no successful local preflight receipt. A later supervisor PR
+must first close the two execution-boundary blockers; a still later runner PR
+must bind a transactional account-scoped exactly-once attempt. This activation
+contract grants neither capability and is not performance evidence.
 
 ## Authority boundary
 

@@ -66,6 +66,7 @@ _TRUSTED_LAUNCHER_SOURCE_RELATIVE_PATH = Path(
 _INITIAL_HOST_IDENTITY_MAP = ((0, 0, 4_294_967_295),)
 _INITIAL_HOST_USER_NAMESPACE = "user:[4026531837]"
 _INITIAL_HOST_MOUNT_NAMESPACE = "mnt:[4026531841]"
+_TRUSTED_INITIAL_NAMESPACE_EXEC_SUPERVISOR_OPERATIONAL = False
 _EXACT_LOADER_STAGE0_PREFLIGHT_SHA256_TOKEN = "__ENGINE_V2_PREFLIGHT_SHA256__"
 _EXACT_LOADER_BOOTSTRAP_ENVIRONMENT = {
     "CUDA_VISIBLE_DEVICES": "",
@@ -212,7 +213,9 @@ _ACTIVATION_SCHEMA_ID = (
     "betelgeuze.engine_v2_full_pipeline_cpu_performance_activation/1.0.0"
 )
 _ACTIVATION_ID = "engine_v2_full_pipeline_cpu_performance_v1_activation"
-_ACTIVATION_STATUS = "frozen_non_consuming_exact_main_preflight_execution_not_activated"
+_ACTIVATION_STATUS = (
+    "frozen_non_consuming_exact_main_preflight_supervisor_not_implemented"
+)
 _PROFILE_ID = "engine_v2_full_pipeline_cpu_performance_v1"
 _PROFILE_SHA256 = "385fb713cca8f39353f138115749abdfc9768b02222e13111a418360be30a000"
 _EXPECTED_SOURCE_BINDINGS = {
@@ -638,6 +641,11 @@ def _validate_bootstrap_snapshot(descriptor: int, *, expected_sha256: str) -> by
 def _require_exact_loader_bootstrap() -> tuple[Path, int, bytes, str]:
     if os.environ.get("GITHUB_ACTIONS", "").lower() == "true":
         _fail("GitHub Actions cannot run the exact-runtime activation preflight")
+    if _TRUSTED_INITIAL_NAMESPACE_EXEC_SUPERVISOR_OPERATIONAL is not True:
+        _fail(
+            "mount-independent initial-namespace and trace-excluding exec "
+            "supervisor is not implemented"
+        )
     _require_initial_host_namespaces()
     source_path_value = globals().get("__engine_v2_bootstrap_source_path__")
     expected_sha256 = globals().get("__engine_v2_bootstrap_expected_sha256__")
@@ -967,6 +975,7 @@ def _expected_activation_contract(
             "exact_python_executable_target": str(_EXACT_PYTHON_EXECUTABLE),
             "exact_loader_environment": dict(_EXACT_LOADER_BOOTSTRAP_ENVIRONMENT),
             "exact_loader_kernel_process_identity": {
+                "operational": False,
                 "proc_cmdline_exact": True,
                 "proc_exe_exact": True,
                 "stage0_argument_vector_bound": True,
@@ -976,21 +985,15 @@ def _expected_activation_contract(
                 ).hexdigest(),
             },
             "trusted_root_launcher": {
+                "artifact_role": "non_operational_fail_closed_stub",
                 "binary_sha256": trusted_launcher_sha256,
-                "direct_parent_required": True,
-                "effective_capabilities_required": 0,
-                "install_path": str(_EXACT_TRUSTED_LAUNCHER),
-                "mode": "0555",
-                "no_new_privileges_required": True,
-                "repository_installation_authorized": False,
-                "root_gid": 0,
-                "root_uid": 0,
+                "installation_authorized": False,
+                "runtime_launch_authorized": False,
                 "source_path": (
                     "native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp"
                 ),
                 "source_sha256": trusted_launcher_source_sha256,
                 "static_elf_no_dynamic_or_interp_required": True,
-                "tracer_absent_required": True,
             },
             "immutable_bootstrap_snapshot": {
                 "descriptor_cloexec": False,
@@ -1014,11 +1017,11 @@ def _expected_activation_contract(
             "github_actions_preflight_allowed": False,
             "host_preflight_required": True,
             "initial_host_namespaces": {
+                "defense_in_depth_procfs_checks_present": True,
                 "gid_map": [0, 0, 4_294_967_295],
                 "mount_namespace": _INITIAL_HOST_MOUNT_NAMESPACE,
-                "native_launcher_enforced": True,
-                "python_preflight_enforced": True,
-                "stage0_enforced": True,
+                "mount_independent_evidence_required": True,
+                "procfs_path_evidence_authoritative": False,
                 "uid_map": [0, 0, 4_294_967_295],
                 "user_namespace": _INITIAL_HOST_USER_NAMESPACE,
             },
@@ -1029,6 +1032,14 @@ def _expected_activation_contract(
             "native_initialization_delta_exact": True,
             "qualification_state_write_allowed": False,
             "reservation_allowed": False,
+            "trusted_initial_namespace_exec_supervisor": {
+                "implementation_present": False,
+                "installation_authorized": False,
+                "mount_independent_namespace_attestation_required": True,
+                "operational": False,
+                "signed_or_kernel_attested_handoff_required": True,
+                "trace_exclusion_across_exec_required": True,
+            },
         },
         "profile_id": _PROFILE_ID,
         "profile_sha256": _PROFILE_SHA256,

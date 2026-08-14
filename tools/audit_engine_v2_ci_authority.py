@@ -952,7 +952,7 @@ def _cpu_performance_authority_is_fail_closed(repo_root: Path) -> bool:
         or full_activation_contract.get("schema_id")
         != "betelgeuze.engine_v2_full_pipeline_cpu_performance_activation/1.0.0"
         or full_activation_contract.get("status")
-        != "frozen_non_consuming_exact_main_preflight_execution_not_activated"
+        != "frozen_non_consuming_exact_main_preflight_supervisor_not_implemented"
         or full_activation_contract.get("profile_id")
         != "engine_v2_full_pipeline_cpu_performance_v1"
         or full_activation_contract.get("profile_sha256")
@@ -980,6 +980,11 @@ def _cpu_performance_authority_is_fail_closed(repo_root: Path) -> bool:
     )
     activation_initial_host_namespaces = (
         activation_preflight.get("initial_host_namespaces")
+        if type(activation_preflight) is dict
+        else None
+    )
+    activation_initial_namespace_exec_supervisor = (
+        activation_preflight.get("trusted_initial_namespace_exec_supervisor")
         if type(activation_preflight) is dict
         else None
     )
@@ -1030,6 +1035,7 @@ def _cpu_performance_authority_is_fail_closed(repo_root: Path) -> bool:
         and activation_preflight.get("exact_python_executable_target")
         == "/usr/bin/python3.10"
         and type(activation_loader_identity) is dict
+        and activation_loader_identity.get("operational") is False
         and activation_loader_identity.get("proc_cmdline_exact") is True
         and activation_loader_identity.get("proc_exe_exact") is True
         and activation_loader_identity.get("stage0_argument_vector_bound") is True
@@ -1037,11 +1043,11 @@ def _cpu_performance_authority_is_fail_closed(repo_root: Path) -> bool:
         and type(activation_initial_host_namespaces) is dict
         and set(activation_initial_host_namespaces)
         == {
+            "defense_in_depth_procfs_checks_present",
             "gid_map",
+            "mount_independent_evidence_required",
             "mount_namespace",
-            "native_launcher_enforced",
-            "python_preflight_enforced",
-            "stage0_enforced",
+            "procfs_path_evidence_authoritative",
             "uid_map",
             "user_namespace",
         }
@@ -1059,31 +1065,60 @@ def _cpu_performance_authority_is_fail_closed(repo_root: Path) -> bool:
         == "mnt:[4026531841]"
         and activation_initial_host_namespaces.get("user_namespace")
         == "user:[4026531837]"
-        and activation_initial_host_namespaces.get("native_launcher_enforced") is True
-        and activation_initial_host_namespaces.get("python_preflight_enforced") is True
-        and activation_initial_host_namespaces.get("stage0_enforced") is True
+        and activation_initial_host_namespaces.get(
+            "defense_in_depth_procfs_checks_present"
+        )
+        is True
+        and activation_initial_host_namespaces.get(
+            "mount_independent_evidence_required"
+        )
+        is True
+        and activation_initial_host_namespaces.get("procfs_path_evidence_authoritative")
+        is False
+        and type(activation_initial_namespace_exec_supervisor) is dict
+        and set(activation_initial_namespace_exec_supervisor)
+        == {
+            "implementation_present",
+            "installation_authorized",
+            "mount_independent_namespace_attestation_required",
+            "operational",
+            "signed_or_kernel_attested_handoff_required",
+            "trace_exclusion_across_exec_required",
+        }
+        and activation_initial_namespace_exec_supervisor.get("implementation_present")
+        is False
+        and activation_initial_namespace_exec_supervisor.get("installation_authorized")
+        is False
+        and activation_initial_namespace_exec_supervisor.get(
+            "mount_independent_namespace_attestation_required"
+        )
+        is True
+        and activation_initial_namespace_exec_supervisor.get("operational") is False
+        and activation_initial_namespace_exec_supervisor.get(
+            "signed_or_kernel_attested_handoff_required"
+        )
+        is True
+        and activation_initial_namespace_exec_supervisor.get(
+            "trace_exclusion_across_exec_required"
+        )
+        is True
         and type(activation_trusted_launcher) is dict
+        and activation_trusted_launcher.get("artifact_role")
+        == "non_operational_fail_closed_stub"
         and type(activation_trusted_launcher.get("binary_sha256")) is str
         and len(activation_trusted_launcher["binary_sha256"]) == 64
         and all(
             character in "0123456789abcdef"
             for character in activation_trusted_launcher["binary_sha256"]
         )
-        and activation_trusted_launcher.get("direct_parent_required") is True
-        and activation_trusted_launcher.get("effective_capabilities_required") == 0
-        and activation_trusted_launcher.get("mode") == "0555"
-        and activation_trusted_launcher.get("no_new_privileges_required") is True
-        and activation_trusted_launcher.get("repository_installation_authorized")
-        is False
-        and activation_trusted_launcher.get("root_gid") == 0
-        and activation_trusted_launcher.get("root_uid") == 0
+        and activation_trusted_launcher.get("installation_authorized") is False
+        and activation_trusted_launcher.get("runtime_launch_authorized") is False
         and activation_trusted_launcher.get("source_path")
         == "native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp"
         and activation_trusted_launcher.get("source_sha256")
         == trusted_launcher_source_sha256
         and activation_trusted_launcher.get("static_elf_no_dynamic_or_interp_required")
         is True
-        and activation_trusted_launcher.get("tracer_absent_required") is True
         and type(activation_bootstrap_snapshot) is dict
         and activation_bootstrap_snapshot.get("descriptor_cloexec") is False
         and activation_bootstrap_snapshot.get("descriptor_mode") == "0400"

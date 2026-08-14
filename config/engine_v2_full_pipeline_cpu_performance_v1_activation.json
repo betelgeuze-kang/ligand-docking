@@ -62,10 +62,11 @@
     },
     "exact_loader_inhibit_cache": true,
     "exact_loader_kernel_process_identity": {
+      "operational": false,
       "proc_cmdline_exact": true,
       "proc_exe_exact": true,
       "stage0_argument_vector_bound": true,
-      "stage0_source_sha256": "2077e7486936e5481fe93caec74d856582ef5f8a9050067001ea0dfcfd0dcdba",
+      "stage0_source_sha256": "f337c35535ac2d4d48084d8f95fd1814540c1df4fcd8fb48d65bdf24a908cfa4",
       "trusted_launcher_parent_exact": true
     },
     "exact_loader_library_path": "/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu",
@@ -97,15 +98,15 @@
       "zero_link_count_required": true
     },
     "initial_host_namespaces": {
+      "defense_in_depth_procfs_checks_present": true,
       "gid_map": [
         0,
         0,
         4294967295
       ],
+      "mount_independent_evidence_required": true,
       "mount_namespace": "mnt:[4026531841]",
-      "native_launcher_enforced": true,
-      "python_preflight_enforced": true,
-      "stage0_enforced": true,
+      "procfs_path_evidence_authoritative": false,
       "uid_map": [
         0,
         0,
@@ -117,23 +118,25 @@
     "native_initialization_delta_exact": true,
     "performance_measurement_allowed": false,
     "performance_sidecar_sha256": "04253e3897bb5746e1c1082dbf8e27922835ffb075aeb3268c18a0895662173f",
-    "preflight_tool_sha256": "2369cfc52596a083964d1ec97f4a675056fdbfc76b4cc8a51db43393d50378e4",
+    "preflight_tool_sha256": "aca96d31bb1ca09d9eb83a10bb7a8a91192fc1405a9eaa8011d94453a28a306e",
     "qualification_state_write_allowed": false,
     "reservation_allowed": false,
+    "trusted_initial_namespace_exec_supervisor": {
+      "implementation_present": false,
+      "installation_authorized": false,
+      "mount_independent_namespace_attestation_required": true,
+      "operational": false,
+      "signed_or_kernel_attested_handoff_required": true,
+      "trace_exclusion_across_exec_required": true
+    },
     "trusted_root_launcher": {
-      "binary_sha256": "43fe19fd75f2b9ae37b124004a4b77ff59a7bcad772e53945af64216874c91a5",
-      "direct_parent_required": true,
-      "effective_capabilities_required": 0,
-      "install_path": "/usr/local/libexec/betelgeuze-engine-v2-full-pipeline-cpu-preflight-launcher-v1",
-      "mode": "0555",
-      "no_new_privileges_required": true,
-      "repository_installation_authorized": false,
-      "root_gid": 0,
-      "root_uid": 0,
+      "artifact_role": "non_operational_fail_closed_stub",
+      "binary_sha256": "f72eff58f85bb028aa53a4cf356bbe8e86fb11622ac0cd7060d13fb0ed3e0068",
+      "installation_authorized": false,
+      "runtime_launch_authorized": false,
       "source_path": "native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp",
-      "source_sha256": "dceb59051167349bfeb8e6d91a015538173e5f5576e3d2fa1ce00381c383566b",
-      "static_elf_no_dynamic_or_interp_required": true,
-      "tracer_absent_required": true
+      "source_sha256": "9e30f5102f592ef9f95f3c3251febc0d6aeb811a78c40cdc1c794b8b9b6c827d",
+      "static_elf_no_dynamic_or_interp_required": true
     }
   },
   "profile_id": "engine_v2_full_pipeline_cpu_performance_v1",
@@ -197,5 +200,5 @@
     "merged_main_tree_oid": "e36d1cf0915350556ac4202e11d6176fabf5e797",
     "merged_main_tree_sha256": "69998e9df4740c927568b41e21eb8b94185d4fa3b9dd5fa37d71bcbbd5060579"
   },
-  "status": "frozen_non_consuming_exact_main_preflight_execution_not_activated"
+  "status": "frozen_non_consuming_exact_main_preflight_supervisor_not_implemented"
 }

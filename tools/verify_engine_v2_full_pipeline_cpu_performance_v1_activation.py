@@ -84,7 +84,7 @@ ACTIVATION_SCHEMA_ID = (
 ACTIVATION_ID = "engine_v2_full_pipeline_cpu_performance_v1_activation"
 PROFILE_ID = "engine_v2_full_pipeline_cpu_performance_v1"
 PROFILE_SHA256 = "385fb713cca8f39353f138115749abdfc9768b02222e13111a418360be30a000"
-ACTIVATION_SHA256 = "86d439c59ba5a9e1fc14a78dbf51083e658661911971abbe373d83a1c899091b"
+ACTIVATION_SHA256 = "c9f77a76c0d7687d1c4195f06d50529ce66d915dd1a79f48e9a2827570af9ea2"
 STDLIB_CLOSURE_SHA256 = (
     "d892595cc2bb59aae3fbf7100da9e6b52809082dd5cbc2edb2646811d0b58e35"
 )
@@ -282,7 +282,6 @@ def _validate_trusted_launcher_source(
     *,
     preflight_sha256: str,
     source_sha256: str,
-    stage0_sha256: str,
     source_path: Path | None = None,
 ) -> None:
     source_path = source_path or DEFAULT_TRUSTED_LAUNCHER_SOURCE
@@ -297,43 +296,28 @@ def _validate_trusted_launcher_source(
         raise FullPipelineCPUActivationContractError(
             "trusted launcher source is not UTF-8"
         ) from exc
-    if source.count(preflight_sha256) != 2:
+    if source.count(preflight_sha256) != 1:
         raise FullPipelineCPUActivationContractError(
-            "trusted launcher does not bind the exact preflight digest twice"
-        )
-    stage0_prefix = 'R"ENGINEV2STAGE0('
-    stage0_suffix = ')ENGINEV2STAGE0";'
-    _before, separator, remainder = source.partition(stage0_prefix)
-    stage0, closing, _after = remainder.partition(stage0_suffix)
-    if (
-        not separator
-        or not closing
-        or stage0_prefix in remainder
-        or stage0_suffix in _after
-    ):
-        raise FullPipelineCPUActivationContractError(
-            "trusted launcher stage0 literal is ambiguous"
-        )
-    if hashlib.sha256(stage0.encode("ascii")).hexdigest() != stage0_sha256:
-        raise FullPipelineCPUActivationContractError(
-            "trusted launcher stage0 source digest changed"
+            "trusted launcher stub does not bind the exact preflight digest once"
         )
     _require_snippets(
         source_path,
         (
-            "constexpr char kLauncherPath[] =",
-            'constexpr char kPythonExecutable[] = "/usr/bin/python3.10";',
-            "PR_SET_DUMPABLE",
-            "PR_SET_NO_NEW_PRIVS",
-            "require_initial_host_namespaces",
-            'kInitialUserNamespace[] = "user:[4026531837]"',
-            'kInitialMountNamespace[] = "mnt:[4026531841]"',
-            "SYS_close_range",
-            "PR_SET_PDEATHSIG",
-            "getppid() != launcher_pid",
-            "execve(kDynamicLoader",
+            "kTrustedSupervisorOperational = false",
+            "mount-independent initial-namespace attestation",
+            "trace-excluding exec",
+            "is not implemented",
+            "return 125",
         ),
     )
+    forbidden = tuple(
+        value for value in ("execve(", "fork(", "/proc/", "ptrace(") if value in source
+    )
+    if forbidden:
+        raise FullPipelineCPUActivationContractError(
+            "non-operational trusted launcher stub gained execution or procfs path: "
+            + ", ".join(forbidden)
+        )
 
 
 def _require_workflow_trigger_path_occurrences(
@@ -767,7 +751,7 @@ def verify(
     _require_exact(document["profile_sha256"], PROFILE_SHA256, name="profile_sha256")
     _require_exact(
         document["status"],
-        "frozen_non_consuming_exact_main_preflight_execution_not_activated",
+        "frozen_non_consuming_exact_main_preflight_supervisor_not_implemented",
         name="status",
     )
     authority = document["authority"]
@@ -923,11 +907,12 @@ def verify(
                 "ROCR_VISIBLE_DEVICES": "",
             },
             "exact_loader_kernel_process_identity": {
+                "operational": False,
                 "proc_cmdline_exact": True,
                 "proc_exe_exact": True,
                 "stage0_argument_vector_bound": True,
                 "stage0_source_sha256": (
-                    "2077e7486936e5481fe93caec74d856582ef5f8a9050067001ea0dfcfd0dcdba"
+                    "f337c35535ac2d4d48084d8f95fd1814540c1df4fcd8fb48d65bdf24a908cfa4"
                 ),
                 "trusted_launcher_parent_exact": True,
             },
@@ -963,11 +948,11 @@ def verify(
             "github_actions_preflight_allowed": False,
             "host_preflight_required": True,
             "initial_host_namespaces": {
+                "defense_in_depth_procfs_checks_present": True,
                 "gid_map": [0, 0, 4_294_967_295],
+                "mount_independent_evidence_required": True,
                 "mount_namespace": "mnt:[4026531841]",
-                "native_launcher_enforced": True,
-                "python_preflight_enforced": True,
-                "stage0_enforced": True,
+                "procfs_path_evidence_authoritative": False,
                 "uid_map": [0, 0, 4_294_967_295],
                 "user_namespace": "user:[4026531837]",
             },
@@ -983,22 +968,21 @@ def verify(
             "native_initialization_delta_exact": True,
             "qualification_state_write_allowed": False,
             "reservation_allowed": False,
+            "trusted_initial_namespace_exec_supervisor": {
+                "implementation_present": False,
+                "installation_authorized": False,
+                "mount_independent_namespace_attestation_required": True,
+                "operational": False,
+                "signed_or_kernel_attested_handoff_required": True,
+                "trace_exclusion_across_exec_required": True,
+            },
             "trusted_root_launcher": {
+                "artifact_role": "non_operational_fail_closed_stub",
                 "binary_sha256": (
-                    "43fe19fd75f2b9ae37b124004a4b77ff59a7bcad772e53945af64216874c91a5"
+                    "f72eff58f85bb028aa53a4cf356bbe8e86fb11622ac0cd7060d13fb0ed3e0068"
                 ),
-                "direct_parent_required": True,
-                "effective_capabilities_required": 0,
-                "install_path": (
-                    "/usr/local/libexec/"
-                    "betelgeuze-engine-v2-full-pipeline-cpu-preflight-"
-                    "launcher-v1"
-                ),
-                "mode": "0555",
-                "no_new_privileges_required": True,
-                "repository_installation_authorized": False,
-                "root_gid": 0,
-                "root_uid": 0,
+                "installation_authorized": False,
+                "runtime_launch_authorized": False,
                 "source_path": (
                     "native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp"
                 ),
@@ -1007,7 +991,6 @@ def verify(
                     / "native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp"
                 ),
                 "static_elf_no_dynamic_or_interp_required": True,
-                "tracer_absent_required": True,
             },
         },
         name="preflight boundary",
@@ -1015,9 +998,6 @@ def verify(
     _validate_trusted_launcher_source(
         preflight_sha256=str(preflight["preflight_tool_sha256"]),
         source_sha256=str(preflight["trusted_root_launcher"]["source_sha256"]),
-        stage0_sha256=str(
-            preflight["exact_loader_kernel_process_identity"]["stage0_source_sha256"]
-        ),
         source_path=(
             repository_root
             / "native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp"
@@ -1044,6 +1024,8 @@ def verify(
             "activation contract exact projection changed",
             "_require_native_extension",
             "_require_exact_loader_bootstrap",
+            "_TRUSTED_INITIAL_NAMESPACE_EXEC_SUPERVISOR_OPERATIONAL = False",
+            "supervisor is not implemented",
             "_EXACT_LOADER_STAGE0_TEMPLATE",
             "_render_exact_loader_stage0",
             "_read_exact_proc_cmdline",
@@ -1077,6 +1059,15 @@ def verify(
             "derive_host_preflight_evidence_v3",
         ),
     )
+    _require_ordered_snippets(
+        repository_root
+        / "tools/preflight_engine_v2_full_pipeline_cpu_performance_v1_activation.py",
+        (
+            "if _TRUSTED_INITIAL_NAMESPACE_EXEC_SUPERVISOR_OPERATIONAL is not True:",
+            "supervisor is not implemented",
+            "_require_initial_host_namespaces()",
+        ),
+    )
     _require_snippets(
         repository_root
         / "betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1_activation.py",
@@ -1101,7 +1092,7 @@ def verify(
             "test_full_pipeline_cpu_activation_rejects_authority_drift",
             "test_full_pipeline_cpu_activation_rejects_nested_boolean_integer_drift",
             "test_trusted_launcher_source_rejects_preflight_digest_cross_wiring",
-            "test_trusted_launcher_source_rejects_stage0_byte_drift",
+            "test_trusted_launcher_stub_rejects_execution_or_procfs_path",
             "test_trusted_launcher_source_rejects_complete_source_drift",
         ),
     )
@@ -1117,7 +1108,8 @@ def verify(
             "test_loader_bootstrap_rejects_direct_path_invocation",
             "test_loader_bootstrap_rejects_github_actions_before_source_validation",
             "test_static_launcher_elf_rejects_dynamic_interpreter",
-            "test_trusted_launcher_build_is_static_and_unprovisioned_fails_closed",
+            "test_trusted_launcher_stub_build_is_static_and_non_operational",
+            "test_runtime_preflight_rejects_unimplemented_supervisor_before_procfs",
             "test_native_extension_failure_cleanup_removes_public_and_submodule",
             "test_native_initialization_delta_rejects_a_late_dependency",
         ),
@@ -1135,16 +1127,14 @@ def verify(
             "79 declared bytecode-cache files",
             "21 file-backed executable mappings",
             "20 pre-initialization executable mappings",
-            "exact glibc dynamic loader",
-            "kernel-maintained `/proc/self/exe`",
-            "root-provisioned static native launcher",
-            "host user and mount namespaces",
-            "static verifier hashes every source byte",
-            "root-owned `/usr/bin/python3.10` target",
-            "authenticated immutable bootstrap snapshot",
-            "Direct pathname execution",
+            "Trusted execution blocker",
+            "non-operational fail-closed stub",
+            "mount-independent initial user/mount namespace attestation",
+            "trace exclusion",
+            "hashes every source byte",
+            "must not be installed",
+            "no successful local preflight receipt",
             "before native initialization",
-            "descriptor-bound native",
             "sealed memfd",
             "public package",
         ),
@@ -1217,7 +1207,9 @@ def verify(
         "performance_measurement_performed": False,
         "qualification_consumed": False,
         "reservation_created": False,
-        "status": "verified_non_consuming_activation_execution_not_activated",
+        "runtime_preflight_operational": False,
+        "status": "verified_non_consuming_activation_supervisor_not_implemented",
+        "trusted_supervisor_implemented": False,
     }
 
 

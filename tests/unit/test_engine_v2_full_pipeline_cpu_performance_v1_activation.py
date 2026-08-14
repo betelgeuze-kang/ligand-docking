@@ -427,6 +427,11 @@ def test_loader_bootstrap_requires_kernel_identity_and_immutable_snapshot(
         "_require_trusted_launcher_parent",
         lambda *, source_path: "b" * 64,
     )
+    monkeypatch.setattr(
+        preflight,
+        "_TRUSTED_INITIAL_NAMESPACE_EXEC_SUPERVISOR_OPERATIONAL",
+        True,
+    )
     monkeypatch.setattr(preflight, "_require_initial_host_namespaces", lambda: None)
     real_readlink = os.readlink
 
@@ -469,7 +474,7 @@ def test_static_launcher_elf_rejects_dynamic_interpreter() -> None:
         preflight._require_static_x86_64_elf(bytes(raw))
 
 
-def test_trusted_launcher_build_is_static_and_unprovisioned_fails_closed(
+def test_trusted_launcher_stub_build_is_static_and_non_operational(
     tmp_path: Path,
 ) -> None:
     compiler = shutil.which("g++")
@@ -517,10 +522,29 @@ def test_trusted_launcher_build_is_static_and_unprovisioned_fails_closed(
         text=True,
     )
     assert rejected.returncode == 125
-    assert (
-        "initial host user/mount namespace identity changed" in rejected.stderr
-        or "root-provisioned path" in rejected.stderr
+    assert "mount-independent initial-namespace attestation" in rejected.stderr
+    assert "trace-excluding exec supervisor is not implemented" in rejected.stderr
+
+
+def test_runtime_preflight_rejects_unimplemented_supervisor_before_procfs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        preflight.os,
+        "environ",
+        dict(preflight._EXACT_LOADER_BOOTSTRAP_ENVIRONMENT),
     )
+    monkeypatch.setattr(
+        preflight,
+        "_require_initial_host_namespaces",
+        lambda: pytest.fail("procfs must not be read before supervisor admission"),
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="trace-excluding exec supervisor is not implemented",
+    ):
+        preflight._require_exact_loader_bootstrap()
 
 
 def test_loader_bootstrap_rejects_direct_path_invocation(
@@ -539,6 +563,11 @@ def test_loader_bootstrap_rejects_direct_path_invocation(
     )
     monkeypatch.delitem(
         preflight.__dict__, "__engine_v2_bootstrap_snapshot_fd__", raising=False
+    )
+    monkeypatch.setattr(
+        preflight,
+        "_TRUSTED_INITIAL_NAMESPACE_EXEC_SUPERVISOR_OPERATIONAL",
+        True,
     )
 
     with pytest.raises(RuntimeError, match="authenticated stage0 snapshot"):
