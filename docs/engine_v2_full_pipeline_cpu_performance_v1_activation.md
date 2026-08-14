@@ -78,8 +78,14 @@ process image through the exact glibc dynamic loader. It clears the inherited
 environment, inhibits the loader cache, fixes the library search path, disables
 glibc hardware-capability variants, and preloads the exact absolute
 `libstdc++`, `libgcc_s`, `libpthread`, `libm`, `libdl`, and `libc` paths required
-by the frozen extension. The resulting 20-row executable closure is fully
-hashed and compared with its frozen manifest before native initialization.
+by the frozen extension. Loader completion is accepted only through a one-time
+inherited descriptor handshake: the parent creates a random 32-byte payload in
+a mode-0400 sealed memfd, passes its descriptor and SHA-256 across `execve`, and
+the child validates the descriptor, zero link count, exact name, bytes, and all
+four write/grow/shrink/seal locks before normalizing the environment. A caller
+that merely supplies the documented environment marker is rejected. The
+resulting 20-row executable closure is fully hashed and compared with its
+frozen manifest before native initialization.
 After initialization, the verifier requires the pre/post mapping delta to be
 exactly one row: the authenticated sealed native memfd. A newly discovered,
 late-loaded, missing, or changed dependency rejects activation.
@@ -105,14 +111,16 @@ science input:
 ```
 
 GitHub Actions is rejected before any repository or native provider is loaded.
-The local command self-reexecutes through the exact glibc dynamic loader; no
-caller-provided `LD_LIBRARY_PATH`, `LD_PRELOAD`, loader-cache choice, or ROCm
-environment survives into the authenticated process.
+The local command self-reexecutes through the exact glibc dynamic loader and
+must consume its sealed one-time inherited descriptor handshake; no
+caller-provided `LD_LIBRARY_PATH`, `LD_PRELOAD`, loader-cache choice, forged
+completion marker, or ROCm environment survives into the authenticated
+process.
 The local result records immutable-snapshot and descriptor-bound native
-initialization, verified public package exports, host preflight evidence, and
-explicit false fields for measurement, qualification consumption, reservation,
-molecular execution, public benchmark, HIP device execution, and product
-action.
+initialization, `exact_loader_handshake_validated=true`, verified public package
+exports, host preflight evidence, and explicit false fields for measurement,
+qualification consumption, reservation, molecular execution, public benchmark,
+HIP device execution, and product action.
 
 A successful preflight only establishes that the reviewed activation bytes can
 be loaded on the pinned host. A later PR must add and bind a transactional

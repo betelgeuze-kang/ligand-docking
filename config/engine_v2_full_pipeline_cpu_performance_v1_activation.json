@@ -55,11 +55,26 @@
     "exact_dynamic_loader_path": "/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2",
     "exact_loader_environment": {
       "CUDA_VISIBLE_DEVICES": "",
-      "ENGINE_V2_EXACT_LOADER_BOOTSTRAP": "v1",
+      "ENGINE_V2_EXACT_LOADER_BOOTSTRAP": "validated-sealed-memfd-v1",
       "HIP_VISIBLE_DEVICES": "",
       "LC_ALL": "C",
       "PATH": "/usr/bin:/bin",
       "ROCR_VISIBLE_DEVICES": ""
+    },
+    "exact_loader_handshake": {
+      "descriptor_cloexec": false,
+      "descriptor_mode": "0400",
+      "descriptor_name": "engine-v2-exact-loader-bootstrap-v1",
+      "descriptor_seals": [
+        "F_SEAL_SEAL",
+        "F_SEAL_SHRINK",
+        "F_SEAL_GROW",
+        "F_SEAL_WRITE"
+      ],
+      "environment_key": "ENGINE_V2_EXACT_LOADER_BOOTSTRAP",
+      "nonce_bytes": 32,
+      "one_time_inherited_descriptor_required": true,
+      "version": "sealed-memfd-v1"
     },
     "exact_loader_inhibit_cache": true,
     "exact_loader_library_path": "/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu",
@@ -79,7 +94,7 @@
     "native_initialization_delta_exact": true,
     "performance_measurement_allowed": false,
     "performance_sidecar_sha256": "04253e3897bb5746e1c1082dbf8e27922835ffb075aeb3268c18a0895662173f",
-    "preflight_tool_sha256": "b152b096cff0066e42460fb49b976c78710f5c8e8be47d1810ddd8d9ba69b5b2",
+    "preflight_tool_sha256": "c78bd301582ff5743f8c039ef947564a44e4137bd0c5d59a1d701ac565254803",
     "qualification_state_write_allowed": false,
     "reservation_allowed": false
   },

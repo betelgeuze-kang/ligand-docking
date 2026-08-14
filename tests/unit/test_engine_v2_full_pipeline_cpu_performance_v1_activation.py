@@ -319,6 +319,13 @@ def test_loader_bootstrap_execs_the_exact_loader_with_a_clean_environment(
     def fake_execve(
         path: Path, arguments: list[str], environment: dict[str, str]
     ) -> None:
+        marker = environment[preflight._EXACT_LOADER_HANDSHAKE_ENVIRONMENT_KEY]
+        version, raw_descriptor, expected_sha256 = marker.split(":")
+        assert version == preflight._EXACT_LOADER_HANDSHAKE_VERSION
+        preflight._validate_exact_loader_handshake_descriptor(
+            int(raw_descriptor),
+            expected_sha256=expected_sha256,
+        )
         captured.update(path=path, arguments=arguments, environment=environment)
         raise BootstrapExecCalled
 
@@ -336,8 +343,47 @@ def test_loader_bootstrap_execs_the_exact_loader_with_a_clean_environment(
     assert "--inhibit-cache" in arguments
     assert "--glibc-hwcaps-mask" in arguments
     assert "--preload" in arguments
-    assert captured["environment"] == preflight._EXACT_LOADER_BOOTSTRAP_ENVIRONMENT
+    environment = captured["environment"]
+    assert isinstance(environment, dict)
+    marker = environment.pop(preflight._EXACT_LOADER_HANDSHAKE_ENVIRONMENT_KEY)
+    expected_environment = dict(preflight._EXACT_LOADER_BOOTSTRAP_ENVIRONMENT)
+    expected_environment.pop(preflight._EXACT_LOADER_HANDSHAKE_ENVIRONMENT_KEY)
+    assert environment == expected_environment
+    assert marker.startswith(preflight._EXACT_LOADER_HANDSHAKE_VERSION + ":")
     assert "LD_LIBRARY_PATH" not in captured["environment"]
+
+
+def test_loader_bootstrap_consumes_sealed_one_time_handshake(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    descriptor, marker = preflight._create_exact_loader_handshake()
+    environment = dict(preflight._EXACT_LOADER_BOOTSTRAP_ENVIRONMENT)
+    environment[preflight._EXACT_LOADER_HANDSHAKE_ENVIRONMENT_KEY] = marker
+    monkeypatch.setattr(preflight.os, "environ", environment)
+
+    preflight._require_exact_loader_bootstrap()
+
+    assert environment == preflight._EXACT_LOADER_BOOTSTRAP_ENVIRONMENT
+    with pytest.raises(OSError):
+        os.fstat(descriptor)
+
+
+def test_loader_bootstrap_rejects_forged_validated_environment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        preflight.os,
+        "execve",
+        lambda *_arguments, **_keywords: pytest.fail("execve must not be called"),
+    )
+    monkeypatch.setattr(
+        preflight.os,
+        "environ",
+        dict(preflight._EXACT_LOADER_BOOTSTRAP_ENVIRONMENT),
+    )
+
+    with pytest.raises(RuntimeError, match="handshake marker is invalid"):
+        preflight._require_exact_loader_bootstrap()
 
 
 def test_loader_bootstrap_rejects_github_actions_before_exec(

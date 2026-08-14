@@ -961,6 +961,11 @@ def _cpu_performance_authority_is_fail_closed(repo_root: Path) -> bool:
     activation_restrictions = full_activation_contract.get("restrictions")
     activation_runner = full_activation_contract.get("runner")
     activation_preflight = full_activation_contract.get("preflight")
+    activation_loader_handshake = (
+        activation_preflight.get("exact_loader_handshake")
+        if type(activation_preflight) is dict
+        else None
+    )
     activation_sources = full_activation_contract.get("source_bindings")
     required_source_bindings = {
         "merged_main_commit_sha256",
@@ -998,6 +1003,12 @@ def _cpu_performance_authority_is_fail_closed(repo_root: Path) -> bool:
         and activation_preflight.get("molecular_input_allowed") is False
         and activation_preflight.get("exact_preinit_closure_required") is True
         and activation_preflight.get("native_initialization_delta_exact") is True
+        and type(activation_loader_handshake) is dict
+        and activation_loader_handshake.get("descriptor_cloexec") is False
+        and activation_loader_handshake.get("descriptor_mode") == "0400"
+        and activation_loader_handshake.get("nonce_bytes") == 32
+        and activation_loader_handshake.get("one_time_inherited_descriptor_required")
+        is True
         and activation_preflight.get("performance_measurement_allowed") is False
         and activation_preflight.get("qualification_state_write_allowed") is False
         and activation_preflight.get("reservation_allowed") is False

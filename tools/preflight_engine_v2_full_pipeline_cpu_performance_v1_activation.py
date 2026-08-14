@@ -50,9 +50,15 @@ _EXACT_NATIVE_DEPENDENCY_PRELOAD_PATHS = (
     "/usr/lib/x86_64-linux-gnu/libdl.so.2",
     "/usr/lib/x86_64-linux-gnu/libc.so.6",
 )
+_EXACT_LOADER_HANDSHAKE_ENVIRONMENT_KEY = "ENGINE_V2_EXACT_LOADER_BOOTSTRAP"
+_EXACT_LOADER_HANDSHAKE_NAME = "engine-v2-exact-loader-bootstrap-v1"
+_EXACT_LOADER_HANDSHAKE_PREFIX = b"betelgeuze.engine_v2_exact_loader_bootstrap/1.0.0\n"
+_EXACT_LOADER_HANDSHAKE_NONCE_BYTES = 32
+_EXACT_LOADER_HANDSHAKE_VERSION = "sealed-memfd-v1"
+_EXACT_LOADER_VALIDATED_MARKER = "validated-sealed-memfd-v1"
 _EXACT_LOADER_BOOTSTRAP_ENVIRONMENT = {
     "CUDA_VISIBLE_DEVICES": "",
-    "ENGINE_V2_EXACT_LOADER_BOOTSTRAP": "v1",
+    _EXACT_LOADER_HANDSHAKE_ENVIRONMENT_KEY: _EXACT_LOADER_VALIDATED_MARKER,
     "HIP_VISIBLE_DEVICES": "",
     "LC_ALL": "C",
     "PATH": "/usr/bin:/bin",
@@ -141,11 +147,137 @@ def _fail(message: str) -> NoReturn:
     )
 
 
+def _validate_exact_loader_handshake_descriptor(
+    descriptor: int, *, expected_sha256: str
+) -> None:
+    if (
+        type(descriptor) is not int
+        or descriptor < 3
+        or type(expected_sha256) is not str
+        or len(expected_sha256) != 64
+        or any(character not in "0123456789abcdef" for character in expected_sha256)
+    ):
+        _fail("exact-loader handshake identity is invalid")
+    try:
+        metadata = os.fstat(descriptor)
+        descriptor_flags = fcntl.fcntl(descriptor, fcntl.F_GETFD)
+        seals = fcntl.fcntl(descriptor, fcntl.F_GET_SEALS)
+        target = os.readlink(f"/proc/self/fd/{descriptor}")
+        raw = os.pread(
+            descriptor,
+            len(_EXACT_LOADER_HANDSHAKE_PREFIX)
+            + _EXACT_LOADER_HANDSHAKE_NONCE_BYTES
+            + 1,
+            0,
+        )
+    except OSError as exc:
+        raise RuntimeError("exact-loader handshake descriptor is unavailable") from exc
+    expected_size = (
+        len(_EXACT_LOADER_HANDSHAKE_PREFIX) + _EXACT_LOADER_HANDSHAKE_NONCE_BYTES
+    )
+    if (
+        not stat.S_ISREG(metadata.st_mode)
+        or metadata.st_uid != os.geteuid()
+        or metadata.st_gid != os.getegid()
+        or stat.S_IMODE(metadata.st_mode) != 0o400
+        or metadata.st_nlink != 0
+        or metadata.st_size != expected_size
+        or descriptor_flags & fcntl.FD_CLOEXEC
+        or seals != _REQUIRED_NATIVE_SNAPSHOT_SEALS
+        or target != f"/memfd:{_EXACT_LOADER_HANDSHAKE_NAME} (deleted)"
+        or len(raw) != expected_size
+        or not raw.startswith(_EXACT_LOADER_HANDSHAKE_PREFIX)
+        or hashlib.sha256(raw).hexdigest() != expected_sha256
+    ):
+        _fail("exact-loader inherited handshake failed validation")
+
+
+def _create_exact_loader_handshake() -> tuple[int, str]:
+    memfd_create = getattr(os, "memfd_create", None)
+    allow_sealing = getattr(os, "MFD_ALLOW_SEALING", None)
+    if memfd_create is None or allow_sealing is None:
+        _fail("sealed exact-loader handshake is unavailable")
+    try:
+        descriptor = memfd_create(
+            _EXACT_LOADER_HANDSHAKE_NAME,
+            flags=allow_sealing,
+        )
+    except OSError as exc:
+        raise RuntimeError("exact-loader handshake creation failed") from exc
+    try:
+        nonce = bytearray()
+        while len(nonce) < _EXACT_LOADER_HANDSHAKE_NONCE_BYTES:
+            chunk = os.getrandom(_EXACT_LOADER_HANDSHAKE_NONCE_BYTES - len(nonce))
+            if not chunk:
+                _fail("exact-loader handshake randomness is unavailable")
+            nonce.extend(chunk)
+        raw = _EXACT_LOADER_HANDSHAKE_PREFIX + bytes(nonce)
+        written = 0
+        while written < len(raw):
+            count = os.write(descriptor, raw[written:])
+            if count <= 0:
+                _fail("exact-loader handshake write did not progress")
+            written += count
+        os.fchmod(descriptor, 0o400)
+        fcntl.fcntl(
+            descriptor,
+            fcntl.F_ADD_SEALS,
+            _REQUIRED_NATIVE_SNAPSHOT_SEALS,
+        )
+        digest = hashlib.sha256(raw).hexdigest()
+        _validate_exact_loader_handshake_descriptor(
+            descriptor,
+            expected_sha256=digest,
+        )
+    except BaseException:
+        os.close(descriptor)
+        raise
+    marker = f"{_EXACT_LOADER_HANDSHAKE_VERSION}:{descriptor}:{digest}"
+    return descriptor, marker
+
+
+def _consume_exact_loader_handshake(marker: str) -> None:
+    if type(marker) is not str:
+        _fail("exact-loader handshake marker is invalid")
+    fields = marker.split(":")
+    if len(fields) != 3 or fields[0] != _EXACT_LOADER_HANDSHAKE_VERSION:
+        _fail("exact-loader handshake marker is invalid")
+    raw_descriptor, expected_sha256 = fields[1:]
+    try:
+        descriptor = int(raw_descriptor, 10)
+    except ValueError:
+        _fail("exact-loader handshake descriptor number is invalid")
+    if str(descriptor) != raw_descriptor:
+        _fail("exact-loader handshake descriptor number is not canonical")
+    expected_environment = dict(_EXACT_LOADER_BOOTSTRAP_ENVIRONMENT)
+    expected_environment[_EXACT_LOADER_HANDSHAKE_ENVIRONMENT_KEY] = marker
+    if dict(os.environ) != expected_environment:
+        _fail("exact-loader inherited environment changed")
+    try:
+        _validate_exact_loader_handshake_descriptor(
+            descriptor,
+            expected_sha256=expected_sha256,
+        )
+    finally:
+        try:
+            os.close(descriptor)
+        except OSError:
+            pass
+    os.environ[_EXACT_LOADER_HANDSHAKE_ENVIRONMENT_KEY] = _EXACT_LOADER_VALIDATED_MARKER
+    if dict(os.environ) != _EXACT_LOADER_BOOTSTRAP_ENVIRONMENT:
+        _fail("exact-loader validated environment normalization failed")
+
+
 def _require_exact_loader_bootstrap() -> None:
     if os.environ.get("GITHUB_ACTIONS", "").lower() == "true":
         _fail("GitHub Actions cannot run the exact-runtime activation preflight")
-    if dict(os.environ) == _EXACT_LOADER_BOOTSTRAP_ENVIRONMENT:
+    marker = os.environ.get(_EXACT_LOADER_HANDSHAKE_ENVIRONMENT_KEY)
+    if marker is not None:
+        _consume_exact_loader_handshake(marker)
         return
+    descriptor, marker = _create_exact_loader_handshake()
+    bootstrap_environment = dict(_EXACT_LOADER_BOOTSTRAP_ENVIRONMENT)
+    bootstrap_environment[_EXACT_LOADER_HANDSHAKE_ENVIRONMENT_KEY] = marker
     launcher = Path(sys.executable).absolute()
     bootstrap = Path(__file__).absolute()
     arguments = [
@@ -170,10 +302,12 @@ def _require_exact_loader_bootstrap() -> None:
         os.execve(
             _EXACT_DYNAMIC_LOADER,
             arguments,
-            _EXACT_LOADER_BOOTSTRAP_ENVIRONMENT,
+            bootstrap_environment,
         )
     except OSError as exc:
         raise RuntimeError("exact dynamic-loader bootstrap failed") from exc
+    finally:
+        os.close(descriptor)
     _fail("exact dynamic-loader bootstrap returned unexpectedly")
 
 
@@ -445,6 +579,21 @@ def _expected_activation_contract(*, bootstrap_sha256: str) -> dict[str, object]
             "caller_science_input_allowed": False,
             "exact_dynamic_loader_path": str(_EXACT_DYNAMIC_LOADER),
             "exact_loader_environment": dict(_EXACT_LOADER_BOOTSTRAP_ENVIRONMENT),
+            "exact_loader_handshake": {
+                "descriptor_cloexec": False,
+                "descriptor_mode": "0400",
+                "descriptor_name": _EXACT_LOADER_HANDSHAKE_NAME,
+                "descriptor_seals": [
+                    "F_SEAL_SEAL",
+                    "F_SEAL_SHRINK",
+                    "F_SEAL_GROW",
+                    "F_SEAL_WRITE",
+                ],
+                "environment_key": _EXACT_LOADER_HANDSHAKE_ENVIRONMENT_KEY,
+                "nonce_bytes": _EXACT_LOADER_HANDSHAKE_NONCE_BYTES,
+                "one_time_inherited_descriptor_required": True,
+                "version": _EXACT_LOADER_HANDSHAKE_VERSION,
+            },
             "exact_loader_inhibit_cache": True,
             "exact_loader_library_path": _EXACT_DYNAMIC_LOADER_LIBRARY_PATH,
             "exact_loader_preload_paths": list(_EXACT_NATIVE_DEPENDENCY_PRELOAD_PATHS),
@@ -1042,6 +1191,7 @@ def derive_preflight(
         evidence["artifact_and_runtime_verified"] = bool(
             runtime_evidence["artifact_and_runtime_verified"]
         )
+        evidence["exact_loader_handshake_validated"] = True
         evidence["native_extension_sha256"] = native_extension_sha256
         evidence["native_entrypoints_verified"] = True
         evidence["native_extension_descriptor_bound"] = True
