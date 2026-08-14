@@ -13,12 +13,9 @@ from typing import Any
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_MEASUREMENT_CORE = (
-    REPOSITORY_ROOT
-    / "betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1.py"
+    REPOSITORY_ROOT / "betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1.py"
 )
-_PROFILE_MODULE_NAME = (
-    "betelgeuze_engine_v2.docking.full_pipeline_cpu_performance_v1"
-)
+_PROFILE_MODULE_NAME = "betelgeuze_engine_v2.docking.full_pipeline_cpu_performance_v1"
 
 
 def _load_measurement_core() -> Any:
@@ -44,31 +41,77 @@ def _load_measurement_core() -> Any:
 profile = _load_measurement_core()
 
 
-DEFAULT_PROFILE = REPOSITORY_ROOT / "config/engine_v2_full_pipeline_cpu_performance_v1.json"
-DEFAULT_ARTIFACT_CONTRACT = REPOSITORY_ROOT / "config/engine_v2_native_cpu_runtime_artifacts_v1.json"
-DEFAULT_PREDECESSOR_PROFILE = REPOSITORY_ROOT / "config/engine_v2_cpu_performance_profile_v3.json"
-DEFAULT_PREDECESSOR_ACTIVATION = REPOSITORY_ROOT / "config/engine_v2_cpu_performance_v3_runner_activation.json"
-DEFAULT_NATIVE_PARITY_POLICY = REPOSITORY_ROOT / "config/engine_v2_repository_synthetic_d0_cpu_parity_v1.json"
-DEFAULT_NATIVE_SOURCE_POLICY = REPOSITORY_ROOT / "config/engine_v2_repository_synthetic_d0_native_source_v1.json"
-DEFAULT_NATIVE_SESSION_POLICY = REPOSITORY_ROOT / "config/engine_v2_repository_synthetic_d0_native_session_v1.json"
-DEFAULT_NATIVE_CONSUMER = REPOSITORY_ROOT / "betelgeuze_engine_v2/docking/native_fixed64_consumers.py"
-DEFAULT_NATIVE_PARITY_SOURCE = REPOSITORY_ROOT / "betelgeuze_engine_v2/docking/native_cpu_parity.py"
-DEFAULT_HOST_PREFLIGHT = REPOSITORY_ROOT / "betelgeuze_engine_v2/docking/performance_host_preflight_v3.py"
-DEFAULT_RUNNER = REPOSITORY_ROOT / "tools/run_engine_v2_full_pipeline_cpu_performance_v1.py"
-DEFAULT_TEST = REPOSITORY_ROOT / "tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1.py"
-DEFAULT_VERIFIER_TEST = REPOSITORY_ROOT / "tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1.py"
-DEFAULT_DOCUMENTATION = REPOSITORY_ROOT / "docs/engine_v2_full_pipeline_cpu_performance_v1.md"
+DEFAULT_PROFILE = (
+    REPOSITORY_ROOT / "config/engine_v2_full_pipeline_cpu_performance_v1.json"
+)
+DEFAULT_ARTIFACT_CONTRACT = (
+    REPOSITORY_ROOT / "config/engine_v2_native_cpu_runtime_artifacts_v1.json"
+)
+DEFAULT_PREDECESSOR_PROFILE = (
+    REPOSITORY_ROOT / "config/engine_v2_cpu_performance_profile_v3.json"
+)
+DEFAULT_PREDECESSOR_ACTIVATION = (
+    REPOSITORY_ROOT / "config/engine_v2_cpu_performance_v3_runner_activation.json"
+)
+DEFAULT_NATIVE_PARITY_POLICY = (
+    REPOSITORY_ROOT / "config/engine_v2_repository_synthetic_d0_cpu_parity_v1.json"
+)
+DEFAULT_NATIVE_SOURCE_POLICY = (
+    REPOSITORY_ROOT / "config/engine_v2_repository_synthetic_d0_native_source_v1.json"
+)
+DEFAULT_NATIVE_SESSION_POLICY = (
+    REPOSITORY_ROOT / "config/engine_v2_repository_synthetic_d0_native_session_v1.json"
+)
+DEFAULT_NATIVE_CONSUMER = (
+    REPOSITORY_ROOT / "betelgeuze_engine_v2/docking/native_fixed64_consumers.py"
+)
+DEFAULT_NATIVE_PARITY_SOURCE = (
+    REPOSITORY_ROOT / "betelgeuze_engine_v2/docking/native_cpu_parity.py"
+)
+DEFAULT_HOST_PREFLIGHT = (
+    REPOSITORY_ROOT / "betelgeuze_engine_v2/docking/performance_host_preflight_v3.py"
+)
+DEFAULT_RUNNER = (
+    REPOSITORY_ROOT / "tools/run_engine_v2_full_pipeline_cpu_performance_v1.py"
+)
+DEFAULT_TEST = (
+    REPOSITORY_ROOT / "tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1.py"
+)
+DEFAULT_VERIFIER_TEST = (
+    REPOSITORY_ROOT
+    / "tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1.py"
+)
+DEFAULT_DOCUMENTATION = (
+    REPOSITORY_ROOT / "docs/engine_v2_full_pipeline_cpu_performance_v1.md"
+)
 DEFAULT_MAIN_WORKFLOW = REPOSITORY_ROOT / ".github/workflows/ci-engine-v2-main.yml"
-DEFAULT_RELEASE_WORKFLOW = REPOSITORY_ROOT / ".github/workflows/ci-engine-v2-release-candidate.yml"
-DEFAULT_NATIVE_WORKFLOW = REPOSITORY_ROOT / ".github/workflows/ci-native-compute-abi.yml"
+DEFAULT_RELEASE_WORKFLOW = (
+    REPOSITORY_ROOT / ".github/workflows/ci-engine-v2-release-candidate.yml"
+)
+DEFAULT_NATIVE_WORKFLOW = (
+    REPOSITORY_ROOT / ".github/workflows/ci-native-compute-abi.yml"
+)
+DEFAULT_DURABLE_ARCHIVE_ROOT = REPOSITORY_ROOT
 
-PROFILE_SHA256 = "63c24b3f054ad5b681c737ba4a2e117e60d01b876c6b9c01cbbe5ecd0c492496"
-ARTIFACT_CONTRACT_SHA256 = "195abc14487ccec4d0f8065fa0e642337ce42691cebee4f47106b94bd2d0ebe8"
-PREDECESSOR_PROFILE_SHA256 = "21facfc62956b402d4a43e5b68389083bacaa3d3afd753eb6b1da3578c8bb6b3"
-PREDECESSOR_ACTIVATION_SHA256 = "3a309594b35cf0e14d4efd4f01146a6849218509c43f4f024b1d765e6d647bda"
-NATIVE_PARITY_POLICY_SHA256 = "47d3fd8a0fe341591d46c0427dc45d726898813e953b039ce66fd47816ad1511"
-NATIVE_SOURCE_POLICY_SHA256 = "2dbd7da6c8a2b7e6612eabbf15c118bddd659629f974374aac6bccc22deb7e96"
-NATIVE_SESSION_POLICY_SHA256 = "51f314de529f1ed3b000bdfff2f7f3494a308303f5d6acf19ab517b3e7054de3"
+PROFILE_SHA256 = "385fb713cca8f39353f138115749abdfc9768b02222e13111a418360be30a000"
+ARTIFACT_CONTRACT_SHA256 = (
+    "195abc14487ccec4d0f8065fa0e642337ce42691cebee4f47106b94bd2d0ebe8"
+)
+PREDECESSOR_PROFILE_SHA256 = (
+    "21facfc62956b402d4a43e5b68389083bacaa3d3afd753eb6b1da3578c8bb6b3"
+)
+PREDECESSOR_ACTIVATION_SHA256 = (
+    "3a309594b35cf0e14d4efd4f01146a6849218509c43f4f024b1d765e6d647bda"
+)
+NATIVE_PARITY_POLICY_SHA256 = (
+    "47d3fd8a0fe341591d46c0427dc45d726898813e953b039ce66fd47816ad1511"
+)
+NATIVE_SOURCE_POLICY_SHA256 = (
+    "2dbd7da6c8a2b7e6612eabbf15c118bddd659629f974374aac6bccc22deb7e96"
+)
+NATIVE_SESSION_POLICY_SHA256 = (
+    "51f314de529f1ed3b000bdfff2f7f3494a308303f5d6acf19ab517b3e7054de3"
+)
 
 AUTHORITY_KEYS = frozenset(
     {
@@ -95,9 +138,7 @@ def _reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     value: dict[str, Any] = {}
     for key, item in pairs:
         if key in value:
-            raise FullPipelineCPUPerformanceProfileError(
-                f"duplicate JSON key: {key}"
-            )
+            raise FullPipelineCPUPerformanceProfileError(f"duplicate JSON key: {key}")
         value[key] = item
     return value
 
@@ -182,6 +223,7 @@ def verify(
     main_workflow_path: Path = DEFAULT_MAIN_WORKFLOW,
     release_workflow_path: Path = DEFAULT_RELEASE_WORKFLOW,
     native_workflow_path: Path = DEFAULT_NATIVE_WORKFLOW,
+    durable_archive_root: Path = DEFAULT_DURABLE_ARCHIVE_ROOT,
     artifact_directory: Path | None = None,
     runtime_root: Path | None = None,
 ) -> dict[str, object]:
@@ -297,6 +339,22 @@ def verify(
         [dict(row) for row in profile.EXPECTED_ARTIFACT_ROWS],
         name="artifact payload rows",
     )
+    durable_archive = artifact.get("durable_repository_archive")
+    if type(durable_archive) is not dict:
+        raise FullPipelineCPUPerformanceProfileError(
+            "durable repository archive binding is absent"
+        )
+    _require_exact(
+        durable_archive,
+        {
+            "actions_artifact_expires_at": "2026-08-28T08:48:29Z",
+            "actions_artifact_is_transport_only": True,
+            "archive_format": "git_history_tracked_exact_payloads_v1",
+            "payloads": [dict(row) for row in profile.EXPECTED_DURABLE_ARCHIVE_ROWS],
+            "required_before_activation": True,
+        },
+        name="durable repository archive binding",
+    )
     _require_exact(
         runtime["site_packages_rows"],
         [dict(row) for row in profile.EXPECTED_SITE_ROWS],
@@ -328,7 +386,9 @@ def verify(
         name="CPython shared library",
     )
     _require_exact(runtime["numpy_allowed"], False, name="NumPy restriction")
-    _require_exact(runtime["bootstrap_flags"], ["-I", "-S", "-B"], name="bootstrap flags")
+    _require_exact(
+        runtime["bootstrap_flags"], ["-I", "-S", "-B"], name="bootstrap flags"
+    )
     _require_exact(
         measurement["baseline_backend"],
         profile.BASELINE_BACKEND,
@@ -368,12 +428,8 @@ def verify(
         True,
         name="full numeric parity gate",
     )
-    _require_exact(
-        workload["candidate_denominator"], 64, name="candidate denominator"
-    )
-    _require_exact(
-        workload["consumer_surface"], "benchmark", name="consumer surface"
-    )
+    _require_exact(workload["candidate_denominator"], 64, name="candidate denominator")
+    _require_exact(workload["consumer_surface"], "benchmark", name="consumer surface")
     _require_exact(
         workload["synthetic_only_acknowledgment"],
         profile.SYNTHETIC_ONLY_ACKNOWLEDGMENT,
@@ -449,6 +505,8 @@ def verify(
         (
             "def verify_local_runtime_binding(",
             "def _run_injected_test_double(",
+            "def _compare_backend_evidence(",
+            "EXPECTED_PARITY_F64_COUNT: Final = 16_896",
             "def run_live_full_pipeline_cpu_performance_v1(",
             "full-pipeline CPU performance v1 execution is not activated",
             PROFILE_SHA256,
@@ -513,6 +571,7 @@ def verify(
         "tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1.py",
         "tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1.py",
         "docs/engine_v2_full_pipeline_cpu_performance_v1.md",
+        "packaging/engine-v2/native-runtime-archive",
     )
     for workflow_path in (
         main_workflow_path,
@@ -520,6 +579,15 @@ def verify(
         native_workflow_path,
     ):
         _require_snippets(workflow_path, workflow_tokens)
+
+    try:
+        durable_archive_evidence = profile.verify_durable_repository_archive(
+            repository_root=durable_archive_root
+        ).to_dict()
+    except profile.FullPipelineCPUPerformanceV1Error as exc:
+        raise FullPipelineCPUPerformanceProfileError(
+            "durable repository archive verification failed"
+        ) from exc
 
     if (artifact_directory is None) is not (runtime_root is None):
         raise FullPipelineCPUPerformanceProfileError(
@@ -548,6 +616,8 @@ def verify(
         "qualification_consumed": False,
         "predecessor_attempt_consumed": False,
         "reservation_created": False,
+        "durable_repository_archive_verified": True,
+        "durable_repository_archive_evidence": durable_archive_evidence,
         "local_runtime_verified": local_evidence is not None,
         "local_runtime_evidence": local_evidence,
     }

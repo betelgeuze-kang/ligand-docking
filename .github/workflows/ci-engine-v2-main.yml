@@ -27,6 +27,7 @@ on:
       - "betelgeuze_engine_v2/benchmark/oracle_selection_metrics.py"
       - "betelgeuze_engine_v2/benchmark/oracle_selection_evidence.py"
       - "packaging/engine-v2/**"
+      - "packaging/engine-v2/native-runtime-archive/**"
       - "rust_engine_v2/**"
       - "rust/betelgeuze-docking-search/**"
       - "rust/betelgeuze-runtime/**"

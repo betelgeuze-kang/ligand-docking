@@ -29,10 +29,13 @@ PROFILE_SCHEMA_ID: Final = (
 )
 PROFILE_ID: Final = "engine_v2_full_pipeline_cpu_performance_v1"
 PROFILE_SHA256: Final = (
-    "63c24b3f054ad5b681c737ba4a2e117e60d01b876c6b9c01cbbe5ecd0c492496"
+    "385fb713cca8f39353f138115749abdfc9768b02222e13111a418360be30a000"
 )
 LOCAL_RUNTIME_EVIDENCE_SCHEMA_ID: Final = (
     "betelgeuze.engine_v2_full_pipeline_cpu_runtime_binding_evidence/1.0.0"
+)
+DURABLE_ARCHIVE_EVIDENCE_SCHEMA_ID: Final = (
+    "betelgeuze.engine_v2_full_pipeline_cpu_durable_archive_evidence/1.0.0"
 )
 TEST_DOUBLE_RECEIPT_SCHEMA_ID: Final = (
     "betelgeuze.engine_v2_full_pipeline_cpu_performance_test_double_receipt/1.0.0"
@@ -48,6 +51,77 @@ PERCENTILE_NUMERATORS: Final = (50, 95)
 PERCENTILE_DENOMINATOR: Final = 100
 EXPECTED_DECISION_SHA256: Final = (
     "8908c757de4e7a8f5d12452e40ec0292b44c3db7893f98d5b92956e1f0c9d9f4"
+)
+PARITY_ABSOLUTE_TOLERANCE: Final = 1.0e-11
+PARITY_RELATIVE_TOLERANCE: Final = 4.0e-12
+EXPECTED_PARITY_F64_COUNT: Final = 16_896
+EXPECTED_STAGE_COUNTS: Final = MappingProxyType(
+    {
+        "generated_count": 54,
+        "typed_failure_count": 10,
+        "initial_admitted_count": 30,
+        "refined_count": 16,
+        "post_admitted_count": 16,
+        "post_rejected_count": 0,
+        "scored_count": 16,
+        "valid_count": 16,
+        "cluster_count": 12,
+    }
+)
+EXPECTED_RANK_SELECTION: Final = MappingProxyType(
+    {
+        "primary_slot_indices": (
+            23,
+            63,
+            9,
+            10,
+            29,
+            16,
+            61,
+            8,
+            11,
+            52,
+            20,
+            13,
+            33,
+            26,
+            34,
+            22,
+        ),
+        "valid_slot_indices": (
+            23,
+            63,
+            9,
+            10,
+            29,
+            16,
+            61,
+            8,
+            11,
+            52,
+            20,
+            13,
+            33,
+            26,
+            34,
+            22,
+        ),
+        "representative_slot_indices": (23, 9, 10, 29, 16, 8, 11, 52, 20, 13, 33, 22),
+        "top_k_slot_indices": (23, 9, 10, 29, 16),
+    }
+)
+EXPECTED_SOURCE_IDENTITIES: Final = MappingProxyType(
+    {
+        "repository_source_bundle_receipt_sha256": (
+            "80a7ee8fe919523c7afab78467dddb9bc2e653e028f1e731c9058db3ef17a68f"
+        ),
+        "repository_source_prepared_input_receipt_sha256": (
+            "9365608f04170392497222d4681e7494c2ddedb01fcab653ca1aded4de984e6e"
+        ),
+        "repository_allocation_receipt_sha256": (
+            "8775a56bcd15bc903ead9365eb699c167d523157404dc2271c11a5274bacd2fb"
+        ),
+    }
 )
 SYNTHETIC_ONLY_ACKNOWLEDGMENT: Final = (
     "repository-synthetic-d0-only:no-reservation:no-molecular-experiment:"
@@ -79,6 +153,22 @@ EXPECTED_ARTIFACT_ROWS: Final = (
 )
 EXPECTED_ARTIFACT_MANIFEST_SHA256: Final = (
     "9f99bcea4f56768d6e9187b5c0d04ca2528411aced2efceae31481b7330e24b2"
+)
+DURABLE_ARCHIVE_DIRECTORY: Final = PurePosixPath(
+    "packaging/engine-v2/native-runtime-archive/0.2.0rc6/cp310-cp310"
+)
+EXPECTED_DURABLE_ARCHIVE_ROWS: Final = tuple(
+    MappingProxyType(
+        {
+            "path": str(DURABLE_ARCHIVE_DIRECTORY / str(row["path"])),
+            "sha256": row["sha256"],
+            "size_bytes": row["size_bytes"],
+        }
+    )
+    for row in EXPECTED_ARTIFACT_ROWS
+)
+EXPECTED_DURABLE_ARCHIVE_MANIFEST_SHA256: Final = (
+    "a85cf282dbf26d26bf9e2679dbc47a0b2df2e12f53ee4e88bf7fcb6d0a273a18"
 )
 EXPECTED_SITE_ROWS: Final = (
     MappingProxyType(
@@ -146,9 +236,7 @@ EXPECTED_PYVENV_SHA256: Final = (
     "db6c8a96f25493eda9f74f23f0b5f248a8b50a5b469b15c5ee7313875b416364"
 )
 EXPECTED_PYVENV_BYTES: Final = (
-    b"home = /usr/bin\n"
-    b"include-system-site-packages = false\n"
-    b"version = 3.10.12\n"
+    b"home = /usr/bin\ninclude-system-site-packages = false\nversion = 3.10.12\n"
 )
 EXPECTED_TOP_LEVEL_SITE_NAMES: Final = (
     "betelgeuze_engine_v2_native",
@@ -273,6 +361,14 @@ REQUIRED_LINEAGE_DIGEST_FIELDS: Final = (
     "ranking_evidence_sha256",
     "row_receipt_sha256",
 )
+REQUIRED_EXACT_CANDIDATE_SOURCE_DIGEST_FIELDS: Final = frozenset(
+    {
+        "allocation_slot_receipt_sha256",
+        "source_coordinate_sha256",
+        "source_payload_receipt_sha256",
+        "source_proposal_sha256",
+    }
+)
 
 MAX_RUNTIME_FILE_BYTES: Final = 16 * 1024 * 1024
 MAX_ARTIFACT_FILE_BYTES: Final = 4 * 1024 * 1024
@@ -290,6 +386,13 @@ class _PreparedSession(Protocol):
     def describe(self) -> dict[str, object]: ...
 
     def run(self, *, surface: str) -> _Evidence: ...
+
+
+@dataclass(frozen=True, slots=True)
+class _ValidatedEvidence:
+    document: dict[str, object]
+    pipeline_receipt_sha256: str
+    scientific_projection_sha256: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -321,10 +424,40 @@ class LocalRuntimeBindingEvidenceV1:
 
 
 @dataclass(frozen=True, slots=True)
+class DurableRepositoryArchiveEvidenceV1:
+    """Offline proof that expiring transport payloads survive in Git history."""
+
+    repository_archive_manifest_sha256: str
+    sbom_sha256: str
+    wheel_sha256: str
+    payload_total_bytes: int
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "schema_id": DURABLE_ARCHIVE_EVIDENCE_SCHEMA_ID,
+            "profile_id": PROFILE_ID,
+            "repository_archive_manifest_sha256": (
+                self.repository_archive_manifest_sha256
+            ),
+            "sbom_sha256": self.sbom_sha256,
+            "wheel_sha256": self.wheel_sha256,
+            "payload_total_bytes": self.payload_total_bytes,
+            "durable_repository_archive_verified": True,
+            "actions_artifact_is_transport_only": True,
+            "imports_performed": False,
+            "performance_measurement_performed": False,
+            "qualification_consumed": False,
+            "reservation_created": False,
+            "all_authority_false": True,
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class TestDoubleMeasurementReceiptV1:
     """Immutable unit-test receipt; it can never attest a live qualification."""
 
     observations: tuple[Mapping[str, object], ...]
+    parity_observations: tuple[Mapping[str, object], ...]
     summaries: Mapping[str, Mapping[str, int]]
     schedule_sha256: str
     backend_pipeline_receipts: Mapping[str, str]
@@ -343,6 +476,9 @@ class TestDoubleMeasurementReceiptV1:
             "schedule_sha256": self.schedule_sha256,
             "backend_pipeline_receipts": dict(self.backend_pipeline_receipts),
             "observations": [dict(row) for row in self.observations],
+            "parity_pair_count": len(self.parity_observations),
+            "parity_observations": [dict(row) for row in self.parity_observations],
+            "full_numeric_parity_passed": True,
             "summaries": {
                 backend: dict(values) for backend, values in self.summaries.items()
             },
@@ -387,9 +523,7 @@ def _require_real_owner_directory(path: Path, *, name: str) -> Path:
     if metadata.st_uid != os.geteuid() or metadata.st_mode & (
         stat.S_IWGRP | stat.S_IWOTH
     ):
-        raise FullPipelineCPUPerformanceV1Error(
-            f"{name} is not owner-controlled"
-        )
+        raise FullPipelineCPUPerformanceV1Error(f"{name} is not owner-controlled")
     return resolved
 
 
@@ -444,12 +578,74 @@ def _read_owner_regular_file(
             "st_ctime_ns",
         )
         if observed != before.st_size or any(
-            getattr(before, field) != getattr(after, field)
-            for field in identity_fields
+            getattr(before, field) != getattr(after, field) for field in identity_fields
+        ):
+            raise FullPipelineCPUPerformanceV1Error(f"{name} changed while it was read")
+        return b"".join(chunks)
+    finally:
+        os.close(descriptor)
+
+
+def _read_repository_regular_file(
+    path: Path,
+    *,
+    name: str,
+    maximum_bytes: int,
+) -> bytes:
+    """Read a tracked payload without following links or accepting live drift.
+
+    Git worktrees may be group-writable under a collaborative umask.  The exact
+    profile digest and payload SHA-256 provide the integrity boundary here, so
+    this archive reader permits group write while still rejecting other-write,
+    foreign ownership, links, non-regular files, and mutation during the read.
+    """
+
+    flags = os.O_RDONLY | os.O_CLOEXEC | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        descriptor = os.open(path, flags)
+    except OSError as exc:
+        raise FullPipelineCPUPerformanceV1Error(
+            f"{name} cannot be opened safely"
+        ) from exc
+    try:
+        before = os.fstat(descriptor)
+        if (
+            not stat.S_ISREG(before.st_mode)
+            or before.st_uid != os.geteuid()
+            or before.st_mode & stat.S_IWOTH
+            or before.st_nlink != 1
+            or not 1 <= before.st_size <= maximum_bytes
         ):
             raise FullPipelineCPUPerformanceV1Error(
-                f"{name} changed while it was read"
+                f"{name} is not a bounded repository regular file"
             )
+        chunks: list[bytes] = []
+        observed = 0
+        while observed <= maximum_bytes:
+            chunk = os.read(
+                descriptor,
+                min(1 << 20, maximum_bytes + 1 - observed),
+            )
+            if not chunk:
+                break
+            chunks.append(chunk)
+            observed += len(chunk)
+        after = os.fstat(descriptor)
+        identity_fields = (
+            "st_dev",
+            "st_ino",
+            "st_mode",
+            "st_uid",
+            "st_gid",
+            "st_nlink",
+            "st_size",
+            "st_mtime_ns",
+            "st_ctime_ns",
+        )
+        if observed != before.st_size or any(
+            getattr(before, field) != getattr(after, field) for field in identity_fields
+        ):
+            raise FullPipelineCPUPerformanceV1Error(f"{name} changed while it was read")
         return b"".join(chunks)
     finally:
         os.close(descriptor)
@@ -465,7 +661,9 @@ def _require_expected_rows(
         raise FullPipelineCPUPerformanceV1Error(f"{name} manifest changed")
 
 
-def _artifact_rows(artifact_directory: Path) -> tuple[list[dict[str, object]], dict[str, bytes]]:
+def _artifact_rows(
+    artifact_directory: Path,
+) -> tuple[list[dict[str, object]], dict[str, bytes]]:
     expected_names = tuple(str(row["path"]) for row in EXPECTED_ARTIFACT_ROWS)
     try:
         entries = sorted(os.scandir(artifact_directory), key=lambda item: item.name)
@@ -638,6 +836,83 @@ def _verify_sbom(raw: bytes) -> None:
         )
 
 
+def verify_durable_repository_archive(
+    *, repository_root: Path
+) -> DurableRepositoryArchiveEvidenceV1:
+    """Verify the exact wheel and SBOM preserved under the tracked archive path."""
+
+    try:
+        unresolved_root = repository_root.absolute()
+        resolved_root = repository_root.resolve(strict=True)
+        root_metadata = unresolved_root.lstat()
+    except OSError as exc:
+        raise FullPipelineCPUPerformanceV1Error(
+            "repository root is unavailable"
+        ) from exc
+    if (
+        unresolved_root != resolved_root
+        or not stat.S_ISDIR(root_metadata.st_mode)
+        or root_metadata.st_uid != os.geteuid()
+        or root_metadata.st_mode & stat.S_IWOTH
+    ):
+        raise FullPipelineCPUPerformanceV1Error(
+            "repository root must be a real owner-controlled directory"
+        )
+
+    archive_directory = resolved_root.joinpath(*DURABLE_ARCHIVE_DIRECTORY.parts)
+    expected_names = tuple(
+        str(row["path"]).rsplit("/", 1)[-1] for row in EXPECTED_DURABLE_ARCHIVE_ROWS
+    )
+    try:
+        entries = sorted(os.scandir(archive_directory), key=lambda item: item.name)
+    except OSError as exc:
+        raise FullPipelineCPUPerformanceV1Error(
+            "durable repository archive cannot be enumerated"
+        ) from exc
+    if tuple(entry.name for entry in entries) != expected_names:
+        raise FullPipelineCPUPerformanceV1Error(
+            "durable repository archive inventory changed"
+        )
+
+    rows: list[dict[str, object]] = []
+    payloads: dict[str, bytes] = {}
+    for expected, entry in zip(EXPECTED_DURABLE_ARCHIVE_ROWS, entries, strict=True):
+        raw = _read_repository_regular_file(
+            Path(entry.path),
+            name=f"durable repository archive payload {entry.name}",
+            maximum_bytes=MAX_ARTIFACT_FILE_BYTES,
+        )
+        rows.append(
+            {
+                "path": expected["path"],
+                "sha256": _sha256_bytes(raw),
+                "size_bytes": len(raw),
+            }
+        )
+        payloads[entry.name] = raw
+    _require_expected_rows(
+        rows,
+        EXPECTED_DURABLE_ARCHIVE_ROWS,
+        name="durable repository archive",
+    )
+    archive_manifest_sha256 = _manifest_sha256(rows)
+    if archive_manifest_sha256 != EXPECTED_DURABLE_ARCHIVE_MANIFEST_SHA256:
+        raise FullPipelineCPUPerformanceV1Error(
+            "durable repository archive manifest is not independently rederivable"
+        )
+
+    sbom_name = str(EXPECTED_ARTIFACT_ROWS[0]["path"])
+    wheel_name = str(EXPECTED_ARTIFACT_ROWS[1]["path"])
+    _verify_sbom(payloads[sbom_name])
+    _verify_wheel(payloads[wheel_name])
+    return DurableRepositoryArchiveEvidenceV1(
+        repository_archive_manifest_sha256=archive_manifest_sha256,
+        sbom_sha256=_sha256_bytes(payloads[sbom_name]),
+        wheel_sha256=_sha256_bytes(payloads[wheel_name]),
+        payload_total_bytes=sum(len(raw) for raw in payloads.values()),
+    )
+
+
 def _site_package_rows(site_packages: Path) -> list[dict[str, object]]:
     try:
         roots = sorted(os.scandir(site_packages), key=lambda item: item.name)
@@ -735,10 +1010,11 @@ def verify_local_runtime_binding(
         name="runtime pyvenv configuration",
         maximum_bytes=4096,
     )
-    if pyvenv != EXPECTED_PYVENV_BYTES or _sha256_bytes(pyvenv) != EXPECTED_PYVENV_SHA256:
-        raise FullPipelineCPUPerformanceV1Error(
-            "runtime pyvenv configuration changed"
-        )
+    if (
+        pyvenv != EXPECTED_PYVENV_BYTES
+        or _sha256_bytes(pyvenv) != EXPECTED_PYVENV_SHA256
+    ):
+        raise FullPipelineCPUPerformanceV1Error("runtime pyvenv configuration changed")
     for relative, target in EXPECTED_INTERPRETER_LINKS.items():
         path = runtime_root / relative
         try:
@@ -754,9 +1030,7 @@ def verify_local_runtime_binding(
             )
     real_python = (runtime_root / "bin/python3.10").resolve(strict=True)
     if real_python != Path("/usr/bin/python3.10"):
-        raise FullPipelineCPUPerformanceV1Error(
-            "runtime interpreter real path changed"
-        )
+        raise FullPipelineCPUPerformanceV1Error("runtime interpreter real path changed")
     python_raw = _read_owner_regular_file(
         real_python,
         name="runtime CPython executable",
@@ -765,9 +1039,7 @@ def verify_local_runtime_binding(
     )
     python_sha256 = _sha256_bytes(python_raw)
     if python_sha256 != EXPECTED_PYTHON_SHA256:
-        raise FullPipelineCPUPerformanceV1Error(
-            "runtime CPython executable changed"
-        )
+        raise FullPipelineCPUPerformanceV1Error("runtime CPython executable changed")
     shared_library_raw = _read_owner_regular_file(
         Path("/usr/lib/x86_64-linux-gnu/libpython3.10.so.1.0"),
         name="runtime CPython shared library",
@@ -783,9 +1055,7 @@ def verify_local_runtime_binding(
         name="native runtime site-packages",
     )
     site_rows = _site_package_rows(site_packages)
-    _require_expected_rows(
-        site_rows, EXPECTED_SITE_ROWS, name="runtime site-packages"
-    )
+    _require_expected_rows(site_rows, EXPECTED_SITE_ROWS, name="runtime site-packages")
     site_manifest_sha256 = _manifest_sha256(site_rows)
     if site_manifest_sha256 != EXPECTED_SITE_MANIFEST_SHA256:
         raise FullPipelineCPUPerformanceV1Error(
@@ -827,7 +1097,9 @@ def verify_local_runtime_binding(
     )
 
 
-def _paired_schedule(*, phase: str, count: int) -> tuple[tuple[str, int, int, str], ...]:
+def _paired_schedule(
+    *, phase: str, count: int
+) -> tuple[tuple[str, int, int, str], ...]:
     if phase not in {"warmup", "sample"} or type(count) is not int or count < 0:
         raise FullPipelineCPUPerformanceV1Error("paired schedule request is invalid")
     rows: list[tuple[str, int, int, str]] = []
@@ -876,7 +1148,7 @@ def _validate_session_metadata(document: object, *, backend: str) -> None:
             )
 
 
-def _validate_evidence(document: object, *, backend: str) -> str:
+def _validate_evidence(document: object, *, backend: str) -> _ValidatedEvidence:
     if type(document) is not dict:
         raise FullPipelineCPUPerformanceV1Error(
             "test-double full-pipeline evidence must be an exact dict"
@@ -901,6 +1173,22 @@ def _validate_evidence(document: object, *, backend: str) -> str:
         if document.get(field) is not False:
             raise FullPipelineCPUPerformanceV1Error(
                 f"test-double full-pipeline evidence granted {field}"
+            )
+    for field, expected in EXPECTED_STAGE_COUNTS.items():
+        if document.get(field) != expected:
+            raise FullPipelineCPUPerformanceV1Error(
+                f"test-double full-pipeline stage count {field} changed"
+            )
+    for field, expected in EXPECTED_RANK_SELECTION.items():
+        value = document.get(field)
+        if type(value) is not list or tuple(value) != expected:
+            raise FullPipelineCPUPerformanceV1Error(
+                f"test-double full-pipeline rank selection {field} changed"
+            )
+    for field, expected in EXPECTED_SOURCE_IDENTITIES.items():
+        if document.get(field) != expected:
+            raise FullPipelineCPUPerformanceV1Error(
+                f"test-double full-pipeline source identity {field} changed"
             )
     for index, candidate in enumerate(candidates):
         if type(candidate) is not dict or candidate.get("slot_index") != index:
@@ -989,8 +1277,135 @@ def _validate_evidence(document: object, *, backend: str) -> str:
                 )
         for field in REQUIRED_LINEAGE_DIGEST_FIELDS:
             _require_digest(lineage.get(field), name=f"candidate lineage {field}")
-    return _require_digest(
-        document.get("pipeline_receipt_sha256"), name="pipeline receipt"
+        for field in REQUIRED_EXACT_CANDIDATE_SOURCE_DIGEST_FIELDS:
+            _require_digest(candidate.get(field), name=f"candidate source {field}")
+    return _ValidatedEvidence(
+        document=document,
+        pipeline_receipt_sha256=_require_digest(
+            document.get("pipeline_receipt_sha256"), name="pipeline receipt"
+        ),
+        scientific_projection_sha256=_require_digest(
+            document.get("scientific_projection_sha256"),
+            name="scientific projection",
+        ),
+    )
+
+
+def _compare_scientific_values(
+    baseline: object,
+    experimental: object,
+    *,
+    path: str,
+) -> tuple[int, float, float]:
+    if type(baseline) is not type(experimental):
+        raise FullPipelineCPUPerformanceV1Error(
+            f"cross-backend scientific parity changed at {path}"
+        )
+    if type(baseline) is dict:
+        if frozenset(baseline) != frozenset(experimental):
+            raise FullPipelineCPUPerformanceV1Error(
+                f"cross-backend scientific parity changed at {path}"
+            )
+        compared = 0
+        maximum_absolute = 0.0
+        maximum_scaled = 0.0
+        for key in sorted(baseline):
+            if type(key) is not str:
+                raise FullPipelineCPUPerformanceV1Error(
+                    f"cross-backend scientific parity changed at {path}"
+                )
+            if key == "producer_backend" or (
+                key.endswith("sha256")
+                and key not in REQUIRED_EXACT_CANDIDATE_SOURCE_DIGEST_FIELDS
+            ):
+                continue
+            count, absolute, scaled = _compare_scientific_values(
+                baseline[key],
+                experimental[key],
+                path=f"{path}.{key}",
+            )
+            compared += count
+            maximum_absolute = max(maximum_absolute, absolute)
+            maximum_scaled = max(maximum_scaled, scaled)
+        return compared, maximum_absolute, maximum_scaled
+    if type(baseline) is list:
+        if len(baseline) != len(experimental):
+            raise FullPipelineCPUPerformanceV1Error(
+                f"cross-backend scientific parity changed at {path}"
+            )
+        compared = 0
+        maximum_absolute = 0.0
+        maximum_scaled = 0.0
+        for index, (baseline_item, experimental_item) in enumerate(
+            zip(baseline, experimental, strict=True)
+        ):
+            count, absolute, scaled = _compare_scientific_values(
+                baseline_item,
+                experimental_item,
+                path=f"{path}[{index}]",
+            )
+            compared += count
+            maximum_absolute = max(maximum_absolute, absolute)
+            maximum_scaled = max(maximum_scaled, scaled)
+        return compared, maximum_absolute, maximum_scaled
+    if type(baseline) is float:
+        if not math.isfinite(baseline) or not math.isfinite(experimental):
+            raise FullPipelineCPUPerformanceV1Error(
+                f"cross-backend scientific parity changed at {path}"
+            )
+        absolute = abs(baseline - experimental)
+        scaled = absolute / max(abs(baseline), abs(experimental), 1.0)
+        if not math.isclose(
+            baseline,
+            experimental,
+            rel_tol=PARITY_RELATIVE_TOLERANCE,
+            abs_tol=PARITY_ABSOLUTE_TOLERANCE,
+        ):
+            raise FullPipelineCPUPerformanceV1Error(
+                f"cross-backend scientific parity changed at {path}"
+            )
+        return 1, absolute, scaled
+    if type(baseline) not in {bool, int, str, type(None)} or baseline != experimental:
+        raise FullPipelineCPUPerformanceV1Error(
+            f"cross-backend scientific parity changed at {path}"
+        )
+    return 0, 0.0, 0.0
+
+
+def _compare_backend_evidence(
+    baseline: _ValidatedEvidence,
+    experimental: _ValidatedEvidence,
+    *,
+    phase: str,
+    ordinal: int,
+) -> Mapping[str, object]:
+    baseline_candidates = baseline.document["candidates"]
+    experimental_candidates = experimental.document["candidates"]
+    compared, maximum_absolute, maximum_scaled = _compare_scientific_values(
+        baseline_candidates,
+        experimental_candidates,
+        path="candidates",
+    )
+    if compared != EXPECTED_PARITY_F64_COUNT:
+        raise FullPipelineCPUPerformanceV1Error(
+            "cross-backend scientific parity f64 denominator changed"
+        )
+    return MappingProxyType(
+        {
+            "phase": phase,
+            "pair_ordinal": ordinal,
+            "compared_f64_count": compared,
+            "maximum_absolute_difference": maximum_absolute,
+            "maximum_scaled_difference": maximum_scaled,
+            "baseline_scientific_projection_sha256": (
+                baseline.scientific_projection_sha256
+            ),
+            "experimental_scientific_projection_sha256": (
+                experimental.scientific_projection_sha256
+            ),
+            "exact_status_failure_rank_parity": True,
+            "full_numeric_parity": True,
+        }
     )
 
 
@@ -1023,26 +1438,42 @@ def _run_injected_test_double(
         sessions[backend] = session
 
     backend_receipts: dict[str, str] = {}
-    for _phase, _ordinal, _position, backend in _paired_schedule(
+    parity_observations: list[Mapping[str, object]] = []
+    warmup_pair: dict[str, _ValidatedEvidence] = {}
+    for phase, ordinal, position, backend in _paired_schedule(
         phase="warmup", count=WARMUP_COUNT
     ):
         evidence = sessions[backend].run(surface=CONSUMER_SURFACE)
-        receipt = _validate_evidence(evidence.to_dict(), backend=backend)
+        validated = _validate_evidence(evidence.to_dict(), backend=backend)
+        receipt = validated.pipeline_receipt_sha256
         previous = backend_receipts.setdefault(backend, receipt)
         if previous != receipt:
             raise FullPipelineCPUPerformanceV1Error(
                 "test-double backend receipt is not repeat-stable"
             )
+        warmup_pair[backend] = validated
+        if position == 1:
+            parity_observations.append(
+                _compare_backend_evidence(
+                    warmup_pair[BASELINE_BACKEND],
+                    warmup_pair[EXPERIMENTAL_BACKEND],
+                    phase=phase,
+                    ordinal=ordinal,
+                )
+            )
+            warmup_pair = {}
 
     observations: list[Mapping[str, object]] = []
     schedule_rows: list[dict[str, object]] = []
+    sample_pair: dict[str, _ValidatedEvidence] = {}
     for phase, ordinal, position, backend in _paired_schedule(
         phase="sample", count=SAMPLE_COUNT
     ):
         wall_start = wall_clock_ns()
         process_start = process_clock_ns()
         evidence = sessions[backend].run(surface=CONSUMER_SURFACE)
-        receipt = _validate_evidence(evidence.to_dict(), backend=backend)
+        validated = _validate_evidence(evidence.to_dict(), backend=backend)
+        receipt = validated.pipeline_receipt_sha256
         process_end = process_clock_ns()
         wall_end = wall_clock_ns()
         if any(
@@ -1082,6 +1513,17 @@ def _run_injected_test_double(
                 "backend": backend,
             }
         )
+        sample_pair[backend] = validated
+        if position == 1:
+            parity_observations.append(
+                _compare_backend_evidence(
+                    sample_pair[BASELINE_BACKEND],
+                    sample_pair[EXPERIMENTAL_BACKEND],
+                    phase=phase,
+                    ordinal=ordinal,
+                )
+            )
+            sample_pair = {}
     summaries: dict[str, Mapping[str, int]] = {}
     for backend in BACKENDS:
         backend_rows = [row for row in observations if row["backend"] == backend]
@@ -1101,13 +1543,16 @@ def _run_injected_test_double(
         )
     return TestDoubleMeasurementReceiptV1(
         observations=tuple(observations),
+        parity_observations=tuple(parity_observations),
         summaries=MappingProxyType(summaries),
         schedule_sha256=_sha256_bytes(_canonical_json_bytes(schedule_rows)),
         backend_pipeline_receipts=MappingProxyType(dict(backend_receipts)),
     )
 
 
-def run_live_full_pipeline_cpu_performance_v1(*_args: object, **_kwargs: object) -> None:
+def run_live_full_pipeline_cpu_performance_v1(
+    *_args: object, **_kwargs: object
+) -> None:
     """Fail closed until an exact-source activation contract is merged."""
 
     raise FullPipelineCPUPerformanceV1Error(

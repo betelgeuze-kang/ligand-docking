@@ -10,6 +10,7 @@ import pytest
 
 from tools import run_engine_v2_full_pipeline_cpu_performance_v1 as runner
 from tools.verify_engine_v2_full_pipeline_cpu_performance_v1 import (
+    DEFAULT_DURABLE_ARCHIVE_ROOT,
     DEFAULT_MEASUREMENT_CORE,
     DEFAULT_PROFILE,
     FullPipelineCPUPerformanceProfileError,
@@ -50,6 +51,12 @@ def test_full_pipeline_cpu_performance_profile_verifies() -> None:
     assert result["qualification_consumed"] is False
     assert result["predecessor_attempt_consumed"] is False
     assert result["reservation_created"] is False
+    assert result["durable_repository_archive_verified"] is True
+    archive = result["durable_repository_archive_evidence"]
+    assert archive["payload_total_bytes"] == 1_232_493
+    assert archive["performance_measurement_performed"] is False
+    assert archive["qualification_consumed"] is False
+    assert archive["reservation_created"] is False
     assert result["local_runtime_verified"] is False
 
 
@@ -130,9 +137,13 @@ def test_full_pipeline_cpu_performance_profile_rejects_source_drift(
     needle = "def verify_local_runtime_binding("
     assert needle in raw
     changed = tmp_path / "measurement.py"
-    changed.write_text(raw.replace(needle, "def drifted_runtime_binding("), encoding="utf-8")
+    changed.write_text(
+        raw.replace(needle, "def drifted_runtime_binding("), encoding="utf-8"
+    )
 
-    with pytest.raises(FullPipelineCPUPerformanceProfileError, match="missing frozen snippets"):
+    with pytest.raises(
+        FullPipelineCPUPerformanceProfileError, match="missing frozen snippets"
+    ):
         verify(measurement_core_path=changed)
 
 
@@ -142,6 +153,24 @@ def test_local_runtime_verification_requires_both_paths(tmp_path: Path) -> None:
         match="must be supplied together",
     ):
         verify(artifact_directory=tmp_path)
+
+
+def test_durable_repository_archive_rejects_payload_drift(tmp_path: Path) -> None:
+    document = json.loads(DEFAULT_PROFILE.read_text(encoding="ascii"))
+    rows = document["artifact_binding"]["durable_repository_archive"]["payloads"]
+    for index, row in enumerate(rows):
+        relative = Path(row["path"])
+        source = DEFAULT_DURABLE_ARCHIVE_ROOT / relative
+        target = tmp_path / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        raw = source.read_bytes()
+        target.write_bytes(raw + (b"drift" if index == 1 else b""))
+
+    with pytest.raises(
+        FullPipelineCPUPerformanceProfileError,
+        match="durable repository archive",
+    ):
+        verify(durable_archive_root=tmp_path)
 
 
 def test_runner_static_verification_is_non_consuming(capsys) -> None:

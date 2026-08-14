@@ -1,0 +1,1647 @@
+{
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "creationInfo": {
+    "created": "2025-01-01T00:00:00Z",
+    "creators": [
+      "Tool: betelgeuze-engine-v2-sbom/1.0.0"
+    ],
+    "licenseListVersion": "3.25"
+  },
+  "dataLicense": "CC0-1.0",
+  "documentNamespace": "https://betelgeuze.invalid/spdx/betelgeuze-engine-v2-native/0.2.0rc6/54f21885cdf6b4410bd084a876fb73f53a8a7b8c37b9e615e4dae36225f2e4b4",
+  "name": "betelgeuze-engine-v2-native-0.2.0rc6-sbom",
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-Package-EngineV2",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "54f21885cdf6b4410bd084a876fb73f53a8a7b8c37b9e615e4dae36225f2e4b4"
+        }
+      ],
+      "comment": "Cargo.lock SHA-256: 50cc99fe6882b58341023b06b88d42acbf498b00d9d3cd5a5da364e924242fbf; native extension betelgeuze_engine_v2_native/betelgeuze_engine_v2_native.cpython-310-x86_64-linux-gnu.so SHA-256: ff7b5e6ba7c0e250cf739292d34c562d0bd142d5f7f6c842c5c191d42b2504e1",
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:pypi/betelgeuze-engine-v2-native@0.2.0rc6",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "betelgeuze-engine-v2-native",
+      "versionInfo": "0.2.0rc6"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-2",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/autocfg@1.5.1",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "autocfg",
+      "versionInfo": "1.5.1"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-3",
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/betelgeuze-cpu-kernel@0.1.0",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "betelgeuze-cpu-kernel",
+      "versionInfo": "0.1.0"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-4",
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/betelgeuze-docking-search@0.1.0",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "betelgeuze-docking-search",
+      "versionInfo": "0.1.0"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-6",
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/betelgeuze-runtime@0.1.0",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "betelgeuze-runtime",
+      "versionInfo": "0.1.0"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-7",
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/betelgeuze-sys@0.1.0",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "betelgeuze-sys",
+      "versionInfo": "0.1.0"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-8",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "b588b76d00fde79687d7646a9b5bdf3cc0f655e0bbd080335a95d7e96f3587da"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/bitflags@2.13.1",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "bitflags",
+      "versionInfo": "2.13.1"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-9",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "3078c7629b62d3f0439517fa394996acacc5cbc91c5a20d8c658e77abd503a71"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/block-buffer@0.10.4",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "block-buffer",
+      "versionInfo": "0.10.4"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-10",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "5d262e149917187838d5b42777c8253bcb64500067342904e7d429499a6f277e"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/cc@1.4.2",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "cc",
+      "versionInfo": "1.4.2"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-11",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/cfg-if@1.0.4",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "cfg-if",
+      "versionInfo": "1.0.4"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-12",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "59ed5838eebb26a2bb2e58f6d5b5316989ae9d08bab10e0e6d103e656d1b0280"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/cpufeatures@0.2.17",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "cpufeatures",
+      "versionInfo": "0.2.17"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-13",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "5181e0de7b61eb03a81e347d6dd8797bae9da5146707b51077e2d71a54ec0ceb"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/crossbeam-deque@0.8.7",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "crossbeam-deque",
+      "versionInfo": "0.8.7"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-14",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "2d6914041f254d6e9176c01941b21115dcfb7089e55135a35411081bd106ef3f"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/crossbeam-epoch@0.9.20",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "crossbeam-epoch",
+      "versionInfo": "0.9.20"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-15",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "61803da095bee82a81bb1a452ecc25d3b2f1416d1897eb86430c6159ef717c17"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/crossbeam-utils@0.8.22",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "crossbeam-utils",
+      "versionInfo": "0.8.22"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-16",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "78c8292055d1c1df0cce5d180393dc8cce0abec0a7102adb6c7b1eef6016d60a"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/crypto-common@0.1.7",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "crypto-common",
+      "versionInfo": "0.1.7"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-17",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "9ed9a281f7bc9b7576e61468ba615a66a5c8cfdff42420a70aa82701a3b1e292"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/digest@0.10.7",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "digest",
+      "versionInfo": "0.10.7"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-18",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "9e5e8f6c15a24b9a3ee5efec809ccd006d3b30e8b3bb63c39af737c7f87daa1d"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/either@1.17.0",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "either",
+      "versionInfo": "1.17.0"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-19",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "26b73573e6edcd2af0cdf47bd6cb58f0b3839491263c314eaad1ccf24430e1de"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/find-msvc-tools@0.1.10",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "find-msvc-tools",
+      "versionInfo": "0.1.10"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-20",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "85649ca51fd72272d7821adaf274ad91c288277713d9c18820d8499a7ff69e9a"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/generic-array@0.14.7",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "generic-array",
+      "versionInfo": "0.14.7"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-21",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "95505c38b4572b2d910cecb0281560f54b440a19336cbbcb27bf6ce6adc6f5a8"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/heck@0.4.1",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "heck",
+      "versionInfo": "0.4.1"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-22",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "79cf5c93f93228cf8efb3ba362535fb11199ac548a09ce117c9b1adc3030d706"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/indoc@2.0.7",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "indoc",
+      "versionInfo": "2.0.7"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-23",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "3eaf3ede3fee6db1a4c2ee091bf8a8b4dccdc6d17f656fb07896ee72867612f2"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/libc@0.2.189",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "libc",
+      "versionInfo": "0.2.189"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-24",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "b6d2cec3eae94f9f509c767b45932f1ada8350c4bdb85af2fcab4a3c14807981"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/libm@0.2.16",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "libm",
+      "versionInfo": "0.2.16"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-25",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "224399e74b87b5f3557511d98dff8b14089b3dadafcab6bb93eab67d3aace965"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/lock_api@0.4.14",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "lock_api",
+      "versionInfo": "0.4.14"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-26",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "3f607c237553f086e7043417a51df26b2eb899d3caff94e6a67592ff992fedc7"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/matrixmultiply@0.3.11",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "matrixmultiply",
+      "versionInfo": "0.3.11"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-27",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "488016bfae457b036d996092f6cb448677611ce4449e970ceaf42695203f218a"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/memoffset@0.9.1",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "memoffset",
+      "versionInfo": "0.9.1"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-28",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "adb12d4e967ec485a5f71c6311fe28158e9d6f4bc4a447b474184d0f91a8fa32"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/ndarray@0.15.6",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "ndarray",
+      "versionInfo": "0.15.6"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-29",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "73f88a1307638156682bada9d7604135552957b7818057dcef22705b4d509495"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/num-complex@0.4.6",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "num-complex",
+      "versionInfo": "0.4.6"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-30",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "7969661fd2958a5cb096e56c8e1ad0444ac2bbcd0061bd28660485a44879858f"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/num-integer@0.1.46",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "num-integer",
+      "versionInfo": "0.1.46"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-31",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/num-traits@0.2.19",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "num-traits",
+      "versionInfo": "0.2.19"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-32",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "bef41cbb417ea83b30525259e30ccef6af39b31c240bda578889494c5392d331"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/numpy@0.20.0",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "numpy",
+      "versionInfo": "0.20.0"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-33",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/once_cell@1.21.4",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "once_cell",
+      "versionInfo": "1.21.4"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-34",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "93857453250e3077bd71ff98b6a65ea6621a19bb0f559a85248955ac12c45a1a"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/parking_lot@0.12.5",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "parking_lot",
+      "versionInfo": "0.12.5"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-35",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "2621685985a2ebf1c516881c026032ac7deafcda1a2c9b7850dc81e3dfcb64c1"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/parking_lot_core@0.9.12",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "parking_lot_core",
+      "versionInfo": "0.9.12"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-36",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "3d20d5497ef88037a52ff98267d066e7f11fcc5e99bbfbd58a42336193aacec3"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/portable-atomic@1.14.0",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "portable-atomic",
+      "versionInfo": "1.14.0"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-37",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "985e7ec9bb745e6ce6535b544d84d6cd6f7ad8bd711c398938ae983b91a766d9"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/proc-macro2@1.0.107",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "proc-macro2",
+      "versionInfo": "1.0.107"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-38",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "53bdbb96d49157e65d45cc287af5f32ffadd5f4761438b527b055fb0d4bb8233"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/pyo3@0.20.3",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "pyo3",
+      "versionInfo": "0.20.3"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-39",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "deaa5745de3f5231ce10517a1f5dd97d53e5a2fd77aa6b5842292085831d48d7"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/pyo3-build-config@0.20.3",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "pyo3-build-config",
+      "versionInfo": "0.20.3"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-40",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "62b42531d03e08d4ef1f6e85a2ed422eb678b8cd62b762e53891c05faf0d4afa"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/pyo3-ffi@0.20.3",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "pyo3-ffi",
+      "versionInfo": "0.20.3"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-41",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "7305c720fa01b8055ec95e484a6eca7a83c841267f0dd5280f0c8b8551d2c158"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/pyo3-macros@0.20.3",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "pyo3-macros",
+      "versionInfo": "0.20.3"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-42",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "7c7e9b68bb9c3149c5b0cade5d07f953d6d125eb4337723c4ccdb665f1f96185"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/pyo3-macros-backend@0.20.3",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "pyo3-macros-backend",
+      "versionInfo": "0.20.3"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-43",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "1fbf4db142a473a8d80c26bbf18454ed458bf8d26c8219c331daecfdbd079001"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/quote@1.0.47",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "quote",
+      "versionInfo": "1.0.47"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-44",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "60a357793950651c4ed0f3f52338f53b2f809f32d83a07f72909fa13e4c6c1e3"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/rawpointer@0.2.1",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "rawpointer",
+      "versionInfo": "0.2.1"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-45",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "fb39b166781f92d482534ef4b4b1b2568f42613b53e5b6c160e24cfbfa30926d"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/rayon@1.12.0",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "rayon",
+      "versionInfo": "1.12.0"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-46",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "22e18b0f0062d30d4230b2e85ff77fdfe4326feb054b9783a3460d8435c8ab91"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/rayon-core@1.13.0",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "rayon-core",
+      "versionInfo": "1.13.0"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-47",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "ed2bf2547551a7053d6fdfafda3f938979645c44812fbfcda098faae3f1a362d"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/redox_syscall@0.5.18",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "redox_syscall",
+      "versionInfo": "0.5.18"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-48",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/rustc-hash@1.1.0",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "rustc-hash",
+      "versionInfo": "1.1.0"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-49",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "cf54715a573b99ac80df0bc206da022bcd442c974952c7b9720069370852e21f"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/rustversion@1.0.23",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "rustversion",
+      "versionInfo": "1.0.23"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-50",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/scopeguard@1.2.0",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "scopeguard",
+      "versionInfo": "1.2.0"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-51",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "a7507d819769d01a365ab707794a4084392c824f54a7a6a7862f8c3d0892b283"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/sha2@0.10.9",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "sha2",
+      "versionInfo": "0.10.9"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-52",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/shlex@2.0.1",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "shlex",
+      "versionInfo": "2.0.1"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-53",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "8ed6a63f02c8539c91a8685a86f4099661ba3da017932f6ebbea6de3f0fa7c90"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/smallvec@1.15.2",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "smallvec",
+      "versionInfo": "1.15.2"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-54",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "872831b642d1a07999a962a351ed35b955ea2cfc8f3862091e2a240a84f17297"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/syn@2.0.119",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "syn",
+      "versionInfo": "2.0.119"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-55",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "61c41af27dd6d1e27b1b16b489db798443478cef1f06a660c96db617ba5de3b1"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/target-lexicon@0.12.16",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "target-lexicon",
+      "versionInfo": "0.12.16"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-56",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/typenum@1.20.1",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "typenum",
+      "versionInfo": "1.20.1"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-57",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "e6e4313cd5fcd3dad5cafa179702e2b244f760991f45397d14d4ebf38247da75"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/unicode-ident@1.0.24",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "unicode-ident",
+      "versionInfo": "1.0.24"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-58",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "7264e107f553ccae879d21fbea1d6724ac785e8c3bfc762137959b5802826ef3"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/unindent@0.2.4",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "unindent",
+      "versionInfo": "0.2.4"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-59",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/version_check@0.9.5",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "version_check",
+      "versionInfo": "0.9.5"
+    },
+    {
+      "SPDXID": "SPDXRef-CargoDependency-60",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "f0805222e57f7521d6a62e36fa9163bc891acd422f971defe97d64e70d0a4fe5"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:cargo/windows-link@0.2.1",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "windows-link",
+      "versionInfo": "0.2.1"
+    }
+  ],
+  "relationships": [
+    {
+      "relatedSpdxElement": "SPDXRef-Package-EngineV2",
+      "relationshipType": "DESCRIBES",
+      "spdxElementId": "SPDXRef-DOCUMENT"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-2",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-3",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-4",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-6",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-7",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-8",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-9",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-10",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-11",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-12",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-13",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-14",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-15",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-16",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-17",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-18",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-19",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-20",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-21",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-22",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-23",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-24",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-25",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-26",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-27",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-28",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-29",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-30",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-31",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-32",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-33",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-34",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-35",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-36",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-37",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-38",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-39",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-40",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-41",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-42",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-43",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-44",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-45",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-46",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-47",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-48",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-49",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-50",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-51",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-52",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-53",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-54",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-55",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-56",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-57",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-58",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-59",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-CargoDependency-60",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-EngineV2"
+    }
+  ],
+  "spdxVersion": "SPDX-2.3"
+}

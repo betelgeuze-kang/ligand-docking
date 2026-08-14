@@ -33,6 +33,24 @@
     "artifact_name": "engine-v2-native-0.2.0rc6-cp310-cp310-31785070195-1",
     "artifact_payload_total_bytes": 1232493,
     "artifact_size_bytes": 1186996,
+    "durable_repository_archive": {
+      "actions_artifact_expires_at": "2026-08-28T08:48:29Z",
+      "actions_artifact_is_transport_only": true,
+      "archive_format": "git_history_tracked_exact_payloads_v1",
+      "payloads": [
+        {
+          "path": "packaging/engine-v2/native-runtime-archive/0.2.0rc6/cp310-cp310/betelgeuze-engine-v2-native-0.2.0rc6.spdx.json",
+          "sha256": "c72445b0153cec5edd16e7b3b76918ad91eaf7aee5bd167f3142414d92cbd737",
+          "size_bytes": 49844
+        },
+        {
+          "path": "packaging/engine-v2/native-runtime-archive/0.2.0rc6/cp310-cp310/betelgeuze_engine_v2_native-0.2.0rc6-cp310-cp310-manylinux_2_28_x86_64.whl",
+          "sha256": "54f21885cdf6b4410bd084a876fb73f53a8a7b8c37b9e615e4dae36225f2e4b4",
+          "size_bytes": 1182649
+        }
+      ],
+      "required_before_activation": true
+    },
     "event_name": "push",
     "job_completed_at": "2026-08-14T08:48:33Z",
     "job_id": 94719062285,

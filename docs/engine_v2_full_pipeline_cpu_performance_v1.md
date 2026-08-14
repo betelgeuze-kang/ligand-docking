@@ -13,6 +13,13 @@ workflow run `31785070195`, attempt `1`, at main commit
 five wheel members, installed site-packages inventory, CPython 3.10 executable,
 shared library, virtual-environment configuration, and native extension.
 
+The Actions artifact expires on 2026-08-28 and is transport-only. Its exact
+wheel and SBOM are therefore also preserved under
+`packaging/engine-v2/native-runtime-archive/0.2.0rc6/cp310-cp310/` in Git
+history. Static verification re-derives both SHA-256 values, the two-file
+inventory, wheel member/RECORD binding, and SBOM-to-wheel binding from that
+durable archive before activation can be reviewed.
+
 The native extension SHA-256 is
 `ff7b5e6ba7c0e250cf739292d34c562d0bd142d5f7f6c842c5c191d42b2504e1`.
 The verifier may inspect an owner-controlled local copy, but it does not import
@@ -53,6 +60,13 @@ AB/BA order. Wall and process clocks are both recorded. P50 and P95 values are
 descriptive private development evidence. No speed threshold exists in this
 profile; parity, evidence completeness, denominator preservation, positive
 durations, and schedule completeness are the gates.
+
+Every one of the five warmup pairs and 30 timed sample pairs retains both
+backend scientific-projection identities and compares the complete candidate
+projection outside the timed interval. Each pair must preserve exact
+status/failure/rank semantics and compare exactly 16,896 finite binary64 values
+within absolute tolerance `1e-11` and relative tolerance `4e-12`; otherwise the
+measurement fails before a receipt can be produced.
 
 ## Activation boundary
 

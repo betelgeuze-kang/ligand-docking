@@ -50,7 +50,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             "select exactly one full-pipeline CPU v1 operation"
         )
     if arguments.verify_implementation:
-        if arguments.artifact_directory is not None or arguments.runtime_root is not None:
+        if (
+            arguments.artifact_directory is not None
+            or arguments.runtime_root is not None
+        ):
             raise FullPipelineCPUPerformanceV1Error(
                 "static verification does not accept runtime paths"
             )
@@ -65,7 +68,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             runtime_root=arguments.runtime_root,
         )
     else:
-        if arguments.artifact_directory is not None or arguments.runtime_root is not None:
+        if (
+            arguments.artifact_directory is not None
+            or arguments.runtime_root is not None
+        ):
             raise FullPipelineCPUPerformanceV1Error(
                 "inactive execution does not accept runtime paths"
             )

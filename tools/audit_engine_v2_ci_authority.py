@@ -140,6 +140,15 @@ CPU_PERFORMANCE_CONTRACT_PATHS = (
     "tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1.py",
     "tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1.py",
     "docs/engine_v2_full_pipeline_cpu_performance_v1.md",
+    (
+        "packaging/engine-v2/native-runtime-archive/0.2.0rc6/cp310-cp310/"
+        "betelgeuze-engine-v2-native-0.2.0rc6.spdx.json"
+    ),
+    (
+        "packaging/engine-v2/native-runtime-archive/0.2.0rc6/cp310-cp310/"
+        "betelgeuze_engine_v2_native-0.2.0rc6-cp310-cp310-"
+        "manylinux_2_28_x86_64.whl"
+    ),
 )
 CPU_PERFORMANCE_REQUIRED_TOKEN_COUNTS = {
     "betelgeuze_engine_v2/docking/performance_host_preflight_v3.py": 1,
@@ -169,6 +178,7 @@ CPU_PERFORMANCE_REQUIRED_TOKEN_COUNTS = {
     "tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1.py": 2,
     "tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1.py": 3,
     "docs/engine_v2_full_pipeline_cpu_performance_v1.md": 1,
+    "packaging/engine-v2/native-runtime-archive": 1,
     "import betelgeuze_engine_v2.docking.performance_host_preflight_v3": 1,
     "import betelgeuze_engine_v2.docking.performance_qualification_v3": 1,
     "import betelgeuze_engine_v2.docking.performance_sidecar": 1,
@@ -870,13 +880,11 @@ def _cpu_performance_authority_is_fail_closed(repo_root: Path) -> bool:
         and type(full_activation) is dict
         and full_activation.get("activation_contract_present") is False
         and full_activation.get("github_actions_live_execution_allowed") is False
-        and full_activation.get("implementation_profile_allows_live_execution")
-        is False
+        and full_activation.get("implementation_profile_allows_live_execution") is False
         and full_activation.get("qualification_attempt_consumed") is False
         and full_activation.get("reservation_created") is False
         and full_activation.get("separate_activation_contract_required") is True
-        and full_activation.get("exactly_once_local_synthetic_attempt_required")
-        is True
+        and full_activation.get("exactly_once_local_synthetic_attempt_required") is True
         and type(full_gates) is dict
         and full_gates.get("speed_threshold_present") is False
         and full_gates.get("all_authority_false_required") is True
