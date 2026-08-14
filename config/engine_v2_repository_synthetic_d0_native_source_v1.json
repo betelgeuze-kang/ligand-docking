@@ -25,6 +25,8 @@
   "feature_inventory": {
     "atomic_feature_count": 13,
     "donor_attached_hydrogen_required": true,
+    "geometry_inventory_receipt_algorithm": "Fixed64FeatureGeometryInventory::new/native-1.0.0",
+    "geometry_receipt_algorithm": "Fixed64FeatureGeometry::new/native-1.0.0",
     "ligand_shape_atom_indices": [
       0,
       1,
@@ -69,10 +71,10 @@
   "receipt_identities": {
     "allocation_receipt_sha256": "8775a56bcd15bc903ead9365eb699c167d523157404dc2271c11a5274bacd2fb",
     "bitwise_current_v7_coordinate_identity_count": 28,
-    "feature_inventory_receipt_sha256": "44cdd65dfa69fd58fdfd9a174cebf56d17a2be71ded0893c9a503e67fd42179e",
+    "feature_inventory_receipt_sha256": "0a13f3fd3ee9a95ef496135c6834dd3528aff729e20aa032df07182f6abe78f0",
     "guided_policy_sha256": "2974e9ba80479cccc97dce1b51567e8e7309e7f89c983401c9a8966a3d08633f",
     "guided_receipt_sha256": "8fc7cd2c744793fa9a000e6aab7b94e95aa19a2e8d74dda2b5468d2922d512c6",
-    "native_source_bundle_receipt_sha256": "929eedd01ef06fe28daa362654325aa5f849891b58d3d6d67a161a8f43fda37a",
+    "native_source_bundle_receipt_sha256": "80a7ee8fe919523c7afab78467dddb9bc2e653e028f1e731c9058db3ef17a68f",
     "prepared_input_receipt_sha256": "9365608f04170392497222d4681e7494c2ddedb01fcab653ca1aded4de984e6e",
     "proposal_identity_count": 28,
     "selected_current_v7_coordinate_identity_manifest_sha256": "6da149e7d418ebbe709615ba6df8d188c198e26fe56756e81da21dd8eba864b3",

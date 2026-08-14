@@ -27,7 +27,10 @@ sites, and ligand/pocket heavy-atom shape axes. The exact fixture has no true
 conformer ensemble and no aromatic system. Those inputs are not fabricated:
 slots 36–43 and 56–57 remain typed missing-feature failures. The allocation
 therefore preserves all 64 denominator slots as 54 ready plus 10 typed failures,
-with result-dependent allocation false.
+with result-dependent allocation false. Every geometry receipt and the ordered
+geometry-inventory receipt are produced through the same canonical
+`Fixed64FeatureGeometry` and `Fixed64FeatureGeometryInventory` constructors
+that the complete native producer independently rederives.
 
 Prepared ligand and receptor coordinates, atomic numbers, bonds, partial
 charges, van der Waals radii, the ligand heavy-atom mask, pocket center,
@@ -36,8 +39,8 @@ binding change. A dedicated prepared-input receipt binds those values before
 they enter the source-bundle receipt. The prepared-input, native source-bundle,
 feature-inventory, and derived allocation receipts are frozen as
 `9365608f04170392497222d4681e7494c2ddedb01fcab653ca1aded4de984e6e`,
-`929eedd01ef06fe28daa362654325aa5f849891b58d3d6d67a161a8f43fda37a`,
-`44cdd65dfa69fd58fdfd9a174cebf56d17a2be71ded0893c9a503e67fd42179e`,
+`80a7ee8fe919523c7afab78467dddb9bc2e653e028f1e731c9058db3ef17a68f`,
+`0a13f3fd3ee9a95ef496135c6834dd3528aff729e20aa032df07182f6abe78f0`,
 and `8775a56bcd15bc903ead9365eb699c167d523157404dc2271c11a5274bacd2fb`.
 
 This change is source materialization only. Consumer activation remains false,

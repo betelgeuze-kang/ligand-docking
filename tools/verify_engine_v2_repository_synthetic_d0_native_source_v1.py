@@ -63,6 +63,10 @@ EXPECTED_CONSUMER_BINDING = {
 EXPECTED_FEATURE_INVENTORY = {
     "atomic_feature_count": 13,
     "donor_attached_hydrogen_required": True,
+    "geometry_inventory_receipt_algorithm": (
+        "Fixed64FeatureGeometryInventory::new/native-1.0.0"
+    ),
+    "geometry_receipt_algorithm": "Fixed64FeatureGeometry::new/native-1.0.0",
     "ligand_shape_atom_indices": [0, 1, 3],
     "missing_feature_slot_indices": [*range(36, 44), 56, 57],
     "partial_charge_threshold_binary64_hex": "0x1.0000000000000p-2",
@@ -101,7 +105,7 @@ EXPECTED_RECEIPT_IDENTITIES = {
     ),
     "bitwise_current_v7_coordinate_identity_count": 28,
     "feature_inventory_receipt_sha256": (
-        "44cdd65dfa69fd58fdfd9a174cebf56d17a2be71ded0893c9a503e67fd42179e"
+        "0a13f3fd3ee9a95ef496135c6834dd3528aff729e20aa032df07182f6abe78f0"
     ),
     "guided_policy_sha256": (
         "2974e9ba80479cccc97dce1b51567e8e7309e7f89c983401c9a8966a3d08633f"
@@ -110,7 +114,7 @@ EXPECTED_RECEIPT_IDENTITIES = {
         "8fc7cd2c744793fa9a000e6aab7b94e95aa19a2e8d74dda2b5468d2922d512c6"
     ),
     "native_source_bundle_receipt_sha256": (
-        "929eedd01ef06fe28daa362654325aa5f849891b58d3d6d67a161a8f43fda37a"
+        "80a7ee8fe919523c7afab78467dddb9bc2e653e028f1e731c9058db3ef17a68f"
     ),
     "prepared_input_receipt_sha256": (
         "9365608f04170392497222d4681e7494c2ddedb01fcab653ca1aded4de984e6e"
@@ -331,6 +335,8 @@ def verify(
             "push_charge_features(&mut definitions, false, &RECEPTOR_PARTIAL_CHARGES)?;",
             "heavy_atom_indices(&LIGAND_ATOMIC_NUMBERS)?",
             "heavy_atom_indices(&RECEPTOR_ATOMIC_NUMBERS)?",
+            "Fixed64FeatureGeometry::new(",
+            "Fixed64FeatureGeometryInventory::new(rows)",
             "sha256_counter_uniform_binary64/1.0.0",
         ),
         label="Rust materializer source",

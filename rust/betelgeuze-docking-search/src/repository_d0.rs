@@ -4,8 +4,9 @@ use crate::native_hash::CanonicalHash;
 use crate::{
     native_fixed64_coordinate_sha256, native_fixed64_heavy_atom_mask_sha256,
     native_fixed64_radii_sha256, Fixed64Allocation, Fixed64AtomicFeatureEvidence,
-    Fixed64ExactV11SourceEvidence, Fixed64FeatureInventory, Fixed64FeatureKind,
-    Fixed64IndexedSourceEvidence, Fixed64SourceEvidence, Vec3,
+    Fixed64ExactV11SourceEvidence, Fixed64FeatureGeometry, Fixed64FeatureGeometryInventory,
+    Fixed64FeatureInventory, Fixed64FeatureKind, Fixed64IndexedSourceEvidence,
+    Fixed64SourceEvidence, Vec3,
 };
 
 pub const REPOSITORY_D0_SCHEMA_ID: &str =
@@ -25,11 +26,11 @@ pub const REPOSITORY_D0_GUIDED_SOURCE_INDICES: [u32; 16] = [
 ];
 pub const REPOSITORY_D0_RETAINED_SOURCE_INDICES: [u32; 4] = [36, 45, 54, 63];
 pub const REPOSITORY_D0_EXPECTED_BUNDLE_SHA256: [u8; 32] =
-    digest("929eedd01ef06fe28daa362654325aa5f849891b58d3d6d67a161a8f43fda37a");
+    digest("80a7ee8fe919523c7afab78467dddb9bc2e653e028f1e731c9058db3ef17a68f");
 pub const REPOSITORY_D0_EXPECTED_PREPARED_INPUT_SHA256: [u8; 32] =
     digest("9365608f04170392497222d4681e7494c2ddedb01fcab653ca1aded4de984e6e");
 pub const REPOSITORY_D0_EXPECTED_FEATURE_INVENTORY_SHA256: [u8; 32] =
-    digest("44cdd65dfa69fd58fdfd9a174cebf56d17a2be71ded0893c9a503e67fd42179e");
+    digest("0a13f3fd3ee9a95ef496135c6834dd3528aff729e20aa032df07182f6abe78f0");
 pub const REPOSITORY_D0_EXPECTED_ALLOCATION_SHA256: [u8; 32] =
     digest("8775a56bcd15bc903ead9365eb699c167d523157404dc2271c11a5274bacd2fb");
 
@@ -561,7 +562,7 @@ pub fn materialize_repository_synthetic_d0_sources(
     )?;
     let atomic_features = atomic_features(exact_source.source_receipt_sha256)?;
     let prepared_input_receipt_sha256 = prepared_input_sha256();
-    let feature_geometry_inventory_sha256 = feature_inventory_sha256(&atomic_features);
+    let feature_geometry_inventory_sha256 = feature_inventory_sha256(&atomic_features)?;
     let pocket_normal = pocket_normal()?;
     let receipt_sha256 = bundle_sha256(
         &exact_source,
@@ -719,25 +720,36 @@ fn atomic_features(
     let mut features = definitions
         .iter()
         .map(|(kind, ligand, indices)| {
-            let geometry =
+            let source_geometry =
                 feature_geometry_sha256(*kind, *ligand, indices, exact_source_receipt_sha256);
             let mut allocation =
                 CanonicalHash::new("betelgeuze.repository_d0_atomic_feature/native-v1");
             allocation.string(kind.id());
             allocation.digest(exact_source_receipt_sha256);
-            allocation.digest(geometry);
+            allocation.digest(source_geometry);
             allocation.usize(indices.len());
             for &index in indices {
                 allocation.u64(index);
             }
-            RepositoryD0AtomicFeature {
+            let allocation_feature_receipt_sha256 = allocation.finish();
+            let geometry = Fixed64FeatureGeometry::new(
+                *kind,
+                allocation_feature_receipt_sha256,
+                indices.iter().map(|index| *index as usize).collect(),
+            )
+            .map_err(|_| {
+                RepositoryD0SourceError::InternalInvariant(
+                    "repository D0 feature geometry cannot be canonically derived",
+                )
+            })?;
+            Ok(RepositoryD0AtomicFeature {
                 kind: *kind,
                 atom_indices: indices.clone(),
-                allocation_feature_receipt_sha256: allocation.finish(),
-                feature_geometry_receipt_sha256: geometry,
-            }
+                allocation_feature_receipt_sha256,
+                feature_geometry_receipt_sha256: geometry.receipt_sha256(),
+            })
         })
-        .collect::<Vec<_>>();
+        .collect::<Result<Vec<_>, RepositoryD0SourceError>>()?;
     features.sort_by_key(|feature| (feature.kind, feature.allocation_feature_receipt_sha256));
     if features.len() != 13 {
         return Err(RepositoryD0SourceError::InternalInvariant(
@@ -860,15 +872,35 @@ fn feature_geometry_sha256(
     hash.finish()
 }
 
-fn feature_inventory_sha256(features: &[RepositoryD0AtomicFeature]) -> [u8; 32] {
-    let mut hash = CanonicalHash::new("betelgeuze.repository_d0_feature_inventory/native-v1");
-    hash.usize(features.len());
-    for feature in features {
-        hash.string(feature.kind.id());
-        hash.digest(feature.allocation_feature_receipt_sha256);
-        hash.digest(feature.feature_geometry_receipt_sha256);
-    }
-    hash.finish()
+fn feature_inventory_sha256(
+    features: &[RepositoryD0AtomicFeature],
+) -> Result<[u8; 32], RepositoryD0SourceError> {
+    let rows = features
+        .iter()
+        .map(|feature| {
+            Fixed64FeatureGeometry::new(
+                feature.kind,
+                feature.allocation_feature_receipt_sha256,
+                feature
+                    .atom_indices
+                    .iter()
+                    .map(|index| *index as usize)
+                    .collect(),
+            )
+            .map_err(|_| {
+                RepositoryD0SourceError::InternalInvariant(
+                    "repository D0 feature geometry changed after construction",
+                )
+            })
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    Fixed64FeatureGeometryInventory::new(rows)
+        .map(|inventory| inventory.receipt_sha256())
+        .map_err(|_| {
+            RepositoryD0SourceError::InternalInvariant(
+                "repository D0 feature geometry inventory is noncanonical",
+            )
+        })
 }
 
 fn prepared_input_sha256() -> [u8; 32] {
