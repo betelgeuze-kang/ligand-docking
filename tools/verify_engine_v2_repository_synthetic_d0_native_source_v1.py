@@ -141,10 +141,14 @@ EXPECTED_SOURCE_GENERATION = {
     "counter_prng_id": "sha256_counter_uniform_binary64/1.0.0",
     "current_v7_coordinate_identity": "bitwise_binary64_sha256_exact",
     "haar_rotation_algorithm": "shoemake_sha256_counter",
+    "legacy_ulp_correction_count": 21,
     "logical_control_source_indices": list(range(24)),
     "one_materialization_call": True,
     "result_dependent_retry_allowed": False,
     "retained_source_indices": [36, 45, 54, 63],
+    "transcendental_kernel": (
+        "portable_libm_with_frozen_current_v7_one_ulp_corrections"
+    ),
     "translation_radius_binary64_hex": "0x1.0000000000000p+2",
     "true_conformer_generation_allowed": False,
     "uniform_upstream_source_indices": [
@@ -338,6 +342,10 @@ def verify(
             "Fixed64FeatureGeometry::new(",
             "Fixed64FeatureGeometryInventory::new(rows)",
             "sha256_counter_uniform_binary64/1.0.0",
+            "fn preserve_legacy_binary64(",
+            "pure-Rust libm crate differs by one ULP at these 21 frozen fixture points.",
+            "(LegacyTranscendental::SinSecond, 7 | 12 | 62) => -1,",
+            "(LegacyTranscendental::SinAzimuth, 55) => -1,",
         ),
         label="Rust materializer source",
     )
@@ -408,6 +416,8 @@ def verify(
         documentation,
         (
             "pure-Rust source derivation",
+            "pure-Rust `libm`",
+            "21 frozen one-ULP corrections",
             "54 ready plus 10 typed failures",
             "All operational authority remains false",
             "C++ parity is a separate pending change",

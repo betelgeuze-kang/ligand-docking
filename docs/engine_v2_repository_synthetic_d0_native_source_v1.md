@@ -19,6 +19,14 @@ manifests are additionally frozen as `6da149e7d418ebbe709615ba6df8d188c198e26fe5
 and `aa4dc1845c6354116d09d2f99998b8ed0847b00d5ea0b4cf8d144a3b98ee38cf`.
 Any individual or ordering drift fails closed before a bundle is returned.
 
+Production transcendental evaluation uses the portable pure-Rust `libm`
+kernel. The historical current-V7 Python payload was produced through the
+platform libm and differs from the portable kernel by exactly one ULP at 21
+predeclared fixture points. Those 21 frozen one-ULP corrections are applied by
+proposal index and operation before coordinate construction. The existing 28
+coordinate identities remain unchanged and independently fail closed, so this
+portability repair does not silently redefine the historical source.
+
 The native feature inventory derives 13 geometry-bound pre-result features
 from the frozen atomic numbers, bonds, partial charges, and coordinates:
 two ligand donors with attached hydrogens, two ligand acceptors, one receptor

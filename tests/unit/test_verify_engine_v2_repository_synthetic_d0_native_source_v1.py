@@ -65,6 +65,9 @@ def test_native_repository_d0_source_contract_verifies() -> None:
         lambda document: document["source_generation"].update(
             uniform_upstream_source_indices=list(range(16))
         ),
+        lambda document: document["source_generation"].update(
+            legacy_ulp_correction_count=20
+        ),
         lambda document: document["receipt_identities"].update(
             allocation_receipt_sha256="0" * 64
         ),

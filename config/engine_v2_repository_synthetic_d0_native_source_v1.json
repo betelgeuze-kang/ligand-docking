@@ -95,6 +95,7 @@
     "counter_prng_id": "sha256_counter_uniform_binary64/1.0.0",
     "current_v7_coordinate_identity": "bitwise_binary64_sha256_exact",
     "haar_rotation_algorithm": "shoemake_sha256_counter",
+    "legacy_ulp_correction_count": 21,
     "logical_control_source_indices": [
       0,
       1,
@@ -129,6 +130,7 @@
       54,
       63
     ],
+    "transcendental_kernel": "portable_libm_with_frozen_current_v7_one_ulp_corrections",
     "translation_radius_binary64_hex": "0x1.0000000000000p+2",
     "true_conformer_generation_allowed": false,
     "uniform_upstream_source_indices": [
