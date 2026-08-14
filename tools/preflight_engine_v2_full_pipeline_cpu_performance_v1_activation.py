@@ -273,6 +273,169 @@ def _reject_json_float(value: str) -> NoReturn:
     _fail(f"activation contract contains a non-integer number: {value}")
 
 
+def _exact_json_equal(observed: object, expected: object) -> bool:
+    if type(observed) is not type(expected):
+        return False
+    if type(expected) is dict:
+        observed_mapping = observed
+        expected_mapping = expected
+        return bool(
+            observed_mapping.keys() == expected_mapping.keys()
+            and all(
+                _exact_json_equal(observed_mapping[key], expected_mapping[key])
+                for key in expected_mapping
+            )
+        )
+    if type(expected) is list:
+        observed_rows = observed
+        expected_rows = expected
+        return bool(
+            len(observed_rows) == len(expected_rows)
+            and all(
+                _exact_json_equal(observed_value, expected_value)
+                for observed_value, expected_value in zip(
+                    observed_rows, expected_rows, strict=True
+                )
+            )
+        )
+    return bool(observed == expected)
+
+
+def _expected_activation_contract(*, bootstrap_sha256: str) -> dict[str, object]:
+    false_authority = {
+        key: False
+        for key in (
+            "fresh_holdout_execution_authorized",
+            "hip_device_execution_authorized",
+            "historical_ab_execution_authorized",
+            "molecular_execution_authorized",
+            "product_execution_authorized",
+            "product_performance_claim_authorized",
+            "public_benchmark_authorized",
+            "reservation_authorized",
+            "scientific_claim_authorized",
+            "stage0_admission_authorized",
+            "synthetic_cpu_performance_qualification_authorized",
+        )
+    }
+    false_restrictions = {
+        key: False
+        for key in (
+            "actual_molecular_execution_allowed",
+            "caller_science_input_allowed",
+            "fresh_or_historical_case_input_allowed",
+            "github_actions_production_authority_allowed",
+            "hip_device_execution_allowed",
+            "performance_measurement_allowed",
+            "product_or_public_performance_claim_allowed",
+            "qualification_consumption_allowed",
+            "reservation_allowed",
+            "result_dependent_configuration_allowed",
+            "test_double_production_authority_allowed",
+        )
+    }
+    return {
+        "activation_id": _ACTIVATION_ID,
+        "authority": false_authority,
+        "closure_manifests": {
+            "dynamic_library_closure": {
+                "library_count": 20,
+                "manifest_sha256": _EXPECTED_SOURCE_BINDINGS[
+                    "dynamic_library_closure_manifest_sha256"
+                ],
+                "path": (
+                    "config/engine_v2_full_pipeline_cpu_performance_v1_"
+                    "dynamic_library_closure.json"
+                ),
+                "total_bytes": 13_962_048,
+            },
+            "stdlib_import_closure": {
+                "cached_bytecode_file_count": 78,
+                "cached_bytecode_total_bytes": 1_447_655,
+                "file_backed_module_count": 84,
+                "file_backed_total_bytes": 2_194_777,
+                "manifest_sha256": _EXPECTED_SOURCE_BINDINGS[
+                    "stdlib_import_closure_manifest_sha256"
+                ],
+                "module_count": 125,
+                "path": (
+                    "config/engine_v2_full_pipeline_cpu_performance_v1_"
+                    "stdlib_closure.json"
+                ),
+            },
+        },
+        "preflight": {
+            "activation_module_sha256": _BOUND_MODULE_ROWS[1][2],
+            "bootstrap_flags": ["-I", "-S", "-B"],
+            "caller_science_input_allowed": False,
+            "exact_native_extension_import_required": True,
+            "github_actions_preflight_allowed": False,
+            "host_preflight_required": True,
+            "molecular_input_allowed": False,
+            "performance_measurement_allowed": False,
+            "performance_sidecar_sha256": _BOUND_MODULE_ROWS[0][2],
+            "preflight_tool_sha256": bootstrap_sha256,
+            "qualification_state_write_allowed": False,
+            "reservation_allowed": False,
+        },
+        "profile_id": _PROFILE_ID,
+        "profile_sha256": _PROFILE_SHA256,
+        "restrictions": false_restrictions,
+        "runner": {
+            "activation_contract_allows_live_execution": False,
+            "activation_contract_present": True,
+            "exactly_once_local_synthetic_attempt_required": True,
+            "github_actions_live_execution_allowed": False,
+            "live_synthetic_local_execution_implemented": False,
+            "profile_change_after_activation_allowed": False,
+            "qualification_attempt_consumed": False,
+            "reservation_created": False,
+            "runner_remains_fail_closed": True,
+        },
+        "runtime_binding": {
+            "abi": "cp310-cp310",
+            "artifact_contract_sha256": (
+                "195abc14487ccec4d0f8065fa0e642337ce42691cebee4f47106b94bd2d0ebe8"
+            ),
+            "artifact_id": 9_213_296_947,
+            "artifact_run_attempt": 1,
+            "artifact_run_id": 31_785_070_195,
+            "artifact_workflow_head_sha": (
+                "3330faa43c7fc8640d89babd84ac444c5959157c"
+            ),
+            "native_extension_sha256": (
+                "ff7b5e6ba7c0e250cf739292d34c562d0bd142d5f7f6c842c5c191d42b2504e1"
+            ),
+            "python_executable_sha256": (
+                "7d51cd6b48b521277f5caa4610a82126e315fa2be4df069823a8b1eeb5bd4a86"
+            ),
+            "python_shared_library_sha256": (
+                "1ece943a1641101b1c678b553a7a0fbb6683ff0ad76f7ebce9f8844354e3f153"
+            ),
+            "runtime_scope_manifest_sha256": (
+                "72b90f500af43c921ce0b8f7d6774c5e99a7e4f3fe366478b3fc33b524b4b404"
+            ),
+        },
+        "schema_id": _ACTIVATION_SCHEMA_ID,
+        "source_bindings": dict(_EXPECTED_SOURCE_BINDINGS),
+        "source_foundation": {
+            "merged_main_commit_object_encoding": "git_cat_file_commit_raw_v1",
+            "merged_main_commit_oid": "38c16136a1e2cc126517ff9b50a05f06c5795adb",
+            "merged_main_commit_sha256": _EXPECTED_SOURCE_BINDINGS[
+                "merged_main_commit_sha256"
+            ],
+            "merged_main_tree_manifest_encoding": (
+                "git_ls_tree_r_full_tree_z_v1"
+            ),
+            "merged_main_tree_oid": "e36d1cf0915350556ac4202e11d6176fabf5e797",
+            "merged_main_tree_sha256": _EXPECTED_SOURCE_BINDINGS[
+                "merged_main_tree_sha256"
+            ],
+        },
+        "status": _ACTIVATION_STATUS,
+    }
+
+
 def _load_activation_contract(
     *, repository_root: Path, bootstrap_raw: bytes
 ) -> tuple[dict[str, object], bytes]:
@@ -304,50 +467,11 @@ def _load_activation_contract(
     )
     if raw != canonical:
         _fail("activation contract is not canonical indented JSON")
-    if (
-        document.get("schema_id") != _ACTIVATION_SCHEMA_ID
-        or document.get("activation_id") != _ACTIVATION_ID
-        or document.get("status") != _ACTIVATION_STATUS
-        or document.get("profile_id") != _PROFILE_ID
-        or document.get("profile_sha256") != _PROFILE_SHA256
-        or document.get("source_bindings") != _EXPECTED_SOURCE_BINDINGS
-    ):
-        _fail("activation contract identity or source bindings changed")
-    for section in ("authority", "restrictions"):
-        values = document.get(section)
-        if type(values) is not dict or not values or any(
-            value is not False for value in values.values()
-        ):
-            _fail(f"activation contract {section} is not all false")
-    runner = document.get("runner")
-    if (
-        type(runner) is not dict
-        or runner.get("activation_contract_allows_live_execution") is not False
-        or runner.get("github_actions_live_execution_allowed") is not False
-        or runner.get("live_synthetic_local_execution_implemented") is not False
-        or runner.get("qualification_attempt_consumed") is not False
-        or runner.get("reservation_created") is not False
-        or runner.get("runner_remains_fail_closed") is not True
-    ):
-        _fail("activation runner boundary changed")
-    preflight = document.get("preflight")
-    if (
-        type(preflight) is not dict
-        or preflight.get("activation_module_sha256")
-        != _BOUND_MODULE_ROWS[1][2]
-        or preflight.get("performance_sidecar_sha256")
-        != _BOUND_MODULE_ROWS[0][2]
-        or preflight.get("preflight_tool_sha256")
-        != hashlib.sha256(bootstrap_raw).hexdigest()
-        or preflight.get("bootstrap_flags") != ["-I", "-S", "-B"]
-        or preflight.get("caller_science_input_allowed") is not False
-        or preflight.get("github_actions_preflight_allowed") is not False
-        or preflight.get("molecular_input_allowed") is not False
-        or preflight.get("performance_measurement_allowed") is not False
-        or preflight.get("qualification_state_write_allowed") is not False
-        or preflight.get("reservation_allowed") is not False
-    ):
-        _fail("activation preflight boundary changed")
+    expected = _expected_activation_contract(
+        bootstrap_sha256=hashlib.sha256(bootstrap_raw).hexdigest()
+    )
+    if not _exact_json_equal(document, expected):
+        _fail("activation contract exact projection changed")
     return document, raw
 
 

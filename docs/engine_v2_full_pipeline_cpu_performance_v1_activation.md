@@ -36,7 +36,11 @@ private effective account group.
 Before any repository module is compiled, the preflight reads all required
 module bytes through stable no-follow descriptors and authenticates their
 SHA-256 identities. The same authenticated byte strings are then executed;
-preloaded or second-read modules are rejected. The preflight initializes the
+preloaded or second-read modules are rejected. Before that import boundary, the
+complete activation document is compared recursively against an exact typed
+projection, including all keys, runtime/foundation identities, closure
+summaries, false authority, and the self-hashed bootstrap. Unknown fields and
+Boolean/integer substitutions fail closed. The preflight then initializes the
 exact native extension without creating a docking session and re-derives:
 
 - 125 imported standard-library module identities, including 84 file-backed

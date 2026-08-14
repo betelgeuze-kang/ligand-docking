@@ -44,7 +44,7 @@
     "molecular_input_allowed": false,
     "performance_measurement_allowed": false,
     "performance_sidecar_sha256": "04253e3897bb5746e1c1082dbf8e27922835ffb075aeb3268c18a0895662173f",
-    "preflight_tool_sha256": "1e17f56a3a2bbe3f3ae1b8b432d230004a7dc063365ea5dd7ddb6ca072be3dc1",
+    "preflight_tool_sha256": "15358a2b057c510f60bc7728ede595c1bf5d1fc37bbff24ece693c526b898286",
     "qualification_state_write_allowed": false,
     "reservation_allowed": false
   },

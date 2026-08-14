@@ -193,6 +193,55 @@ def test_bound_module_executes_only_the_authenticated_bytes(tmp_path: Path) -> N
         sys.modules.pop(qualified, None)
 
 
+@pytest.mark.parametrize(
+    "mutate",
+    (
+        lambda document: document.__setitem__("unknown_runtime_authority", False),
+        lambda document: document["authority"].__setitem__(
+            "molecular_execution_authorized", 0
+        ),
+        lambda document: document["runtime_binding"].__setitem__(
+            "artifact_run_attempt", True
+        ),
+    ),
+)
+def test_runtime_activation_contract_rejects_unknown_and_type_drift(
+    tmp_path: Path,
+    mutate: object,
+) -> None:
+    repository_root = tmp_path / "repository"
+    config_root = repository_root / "config"
+    config_root.mkdir(parents=True)
+    source = (
+        Path(preflight.__file__)
+        .resolve()
+        .parents[1]
+        / "config/engine_v2_full_pipeline_cpu_performance_v1_activation.json"
+    )
+    document = json.loads(source.read_text(encoding="ascii"))
+    assert callable(mutate)
+    mutate(document)
+    changed = config_root / source.name
+    changed.write_text(
+        json.dumps(
+            document,
+            allow_nan=False,
+            ensure_ascii=True,
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="ascii",
+    )
+    bootstrap_raw = Path(preflight.__file__).read_bytes()
+
+    with pytest.raises(RuntimeError, match="exact projection changed"):
+        preflight._load_activation_contract(
+            repository_root=repository_root,
+            bootstrap_raw=bootstrap_raw,
+        )
+
+
 def test_preflight_evidence_remains_non_consuming() -> None:
     evidence = activation.ActivationPreflightEvidenceV1(
         activation_sha256="a" * 64,

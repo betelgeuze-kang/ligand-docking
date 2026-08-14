@@ -77,7 +77,7 @@ ACTIVATION_ID = "engine_v2_full_pipeline_cpu_performance_v1_activation"
 PROFILE_ID = "engine_v2_full_pipeline_cpu_performance_v1"
 PROFILE_SHA256 = "385fb713cca8f39353f138115749abdfc9768b02222e13111a418360be30a000"
 ACTIVATION_SHA256 = (
-    "8554207e484b2a103496f4d015f511034b1b4aeb4b60ab24458d8b6d17286cad"
+    "19939ad62b1b303f82e061af09a43778fa058e21aff25dac8cfab5c9164a3b59"
 )
 STDLIB_CLOSURE_SHA256 = (
     "230cc88d60a9fd0f92318492ec533672930e72eaed11ef5410a45ce7edbb690b"
@@ -767,6 +767,8 @@ def verify(
             "ActivationPreflightEvidenceV1",
             "_authenticate_bound_sources",
             "bound source changed before import",
+            "_exact_json_equal",
+            "activation contract exact projection changed",
             "_require_native_extension",
             "native_fixed64_prepare_repository_synthetic_d0_session_v1",
             "native_fixed64_repository_synthetic_d0_cpu_parity_v1",
@@ -804,6 +806,7 @@ def verify(
             "exact merged-main foundation",
             "non-consuming preflight",
             "does not activate the exactly-once runner",
+            "exact typed",
             "125 imported standard-library module identities",
             "84 file-backed",
             "78 declared bytecode-cache files",
