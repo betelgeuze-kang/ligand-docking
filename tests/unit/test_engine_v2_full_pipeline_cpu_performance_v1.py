@@ -370,7 +370,9 @@ def test_injected_measurement_rejects_nonpositive_clock_duration() -> None:
         )
 
 
-def test_live_full_pipeline_measurement_is_not_activated(tmp_path: Path) -> None:
+def test_live_full_pipeline_measurement_is_not_activated(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     output = tmp_path / "must-not-exist.json"
 
     with pytest.raises(
@@ -380,6 +382,7 @@ def test_live_full_pipeline_measurement_is_not_activated(tmp_path: Path) -> None
         profile.run_live_full_pipeline_cpu_performance_v1(output)
     assert not output.exists()
 
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
     with pytest.raises(
         profile.FullPipelineCPUPerformanceV1Error,
         match="execution is not activated",
