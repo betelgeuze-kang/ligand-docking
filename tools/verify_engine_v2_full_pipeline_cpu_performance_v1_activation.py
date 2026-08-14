@@ -77,10 +77,10 @@ ACTIVATION_ID = "engine_v2_full_pipeline_cpu_performance_v1_activation"
 PROFILE_ID = "engine_v2_full_pipeline_cpu_performance_v1"
 PROFILE_SHA256 = "385fb713cca8f39353f138115749abdfc9768b02222e13111a418360be30a000"
 ACTIVATION_SHA256 = (
-    "dd9f1ab66a08057d2aeec5c86fd890cc3459f6fa64e0c9da08a263dd2c8050b2"
+    "8554207e484b2a103496f4d015f511034b1b4aeb4b60ab24458d8b6d17286cad"
 )
 STDLIB_CLOSURE_SHA256 = (
-    "856347ca4e84353a138ca27e1d66e8a841ca349f49d91f9600f415d5fb0d22d1"
+    "230cc88d60a9fd0f92318492ec533672930e72eaed11ef5410a45ce7edbb690b"
 )
 DYNAMIC_CLOSURE_SHA256 = (
     "b9190033cf42ea75aa1131da38517b70101f05f8c55992419964014bc67030b1"
@@ -229,6 +229,27 @@ def _require_snippets(path: Path, snippets: Sequence[str]) -> None:
         )
 
 
+def _require_workflow_trigger_path_occurrences(
+    path: Path,
+    *,
+    relative_path: str,
+    expected_count: int,
+) -> None:
+    raw = path.read_text(encoding="utf-8")
+    trigger_region, separator, _jobs = raw.partition("\njobs:")
+    if not separator:
+        raise FullPipelineCPUActivationContractError(
+            f"{path.name} jobs boundary is absent"
+        )
+    needle = f'      - "{relative_path}"'
+    observed_count = sum(line == needle for line in trigger_region.splitlines())
+    if observed_count != expected_count:
+        raise FullPipelineCPUActivationContractError(
+            f"{path.name} trigger path count changed for {relative_path}: "
+            f"observed {observed_count}, expected {expected_count}"
+        )
+
+
 def _require_non_negative_int(value: object, *, name: str) -> int:
     if type(value) is not int or value < 0:
         raise FullPipelineCPUActivationContractError(
@@ -263,6 +284,8 @@ def _validate_stdlib_closure(document: dict[str, Any]) -> None:
         frozenset(document),
         frozenset(
             {
+                "cached_bytecode_file_count",
+                "cached_bytecode_total_bytes",
                 "file_backed_module_count",
                 "file_backed_total_bytes",
                 "module_count",
@@ -281,6 +304,8 @@ def _validate_stdlib_closure(document: dict[str, Any]) -> None:
     identities: list[str] = []
     file_count = 0
     total_bytes = 0
+    cached_bytecode_file_count = 0
+    cached_bytecode_total_bytes = 0
     for row in rows:
         if type(row) is not dict:
             raise FullPipelineCPUActivationContractError(
@@ -309,9 +334,12 @@ def _validate_stdlib_closure(document: dict[str, Any]) -> None:
             raise FullPipelineCPUActivationContractError(
                 "standard-library closure origin changed"
             )
+        expected_row_keys = {"module", "origin", "path", "sha256", "size_bytes"}
+        if "cached_bytecode" in row:
+            expected_row_keys.add("cached_bytecode")
         _require_exact(
             frozenset(row),
-            frozenset({"module", "origin", "path", "sha256", "size_bytes"}),
+            frozenset(expected_row_keys),
             name="file-backed standard-library closure row keys",
         )
         _require_relative_path(row["path"], name="standard-library closure path")
@@ -320,6 +348,46 @@ def _validate_stdlib_closure(document: dict[str, Any]) -> None:
             row["size_bytes"], name="standard-library closure file size"
         )
         file_count += 1
+        cached = row.get("cached_bytecode")
+        if str(row["path"]).endswith(".py") and type(cached) is not dict:
+            raise FullPipelineCPUActivationContractError(
+                "source-backed standard-library row lacks bytecode identity"
+            )
+        if cached is not None:
+            if type(cached) is not dict:
+                raise FullPipelineCPUActivationContractError(
+                    "standard-library bytecode identity is not an exact object"
+                )
+            present = cached.get("present")
+            cached_path = _require_relative_path(
+                cached.get("path"), name="standard-library bytecode cache path"
+            )
+            if not cached_path.endswith(".pyc") or type(present) is not bool:
+                raise FullPipelineCPUActivationContractError(
+                    "standard-library bytecode cache identity changed"
+                )
+            expected_cached_keys = {"path", "present"}
+            if present:
+                expected_cached_keys.update({"sha256", "size_bytes"})
+            _require_exact(
+                frozenset(cached),
+                frozenset(expected_cached_keys),
+                name="standard-library bytecode cache row keys",
+            )
+            if present:
+                _require_digest(
+                    cached["sha256"], name="standard-library bytecode cache digest"
+                )
+                cached_size = _require_non_negative_int(
+                    cached["size_bytes"],
+                    name="standard-library bytecode cache size",
+                )
+                if cached_size == 0:
+                    raise FullPipelineCPUActivationContractError(
+                        "standard-library bytecode cache size must be positive"
+                    )
+                cached_bytecode_file_count += 1
+                cached_bytecode_total_bytes += cached_size
     if identities != sorted(identities) or len(set(identities)) != len(identities):
         raise FullPipelineCPUActivationContractError(
             "standard-library closure rows are not canonical unique order"
@@ -334,6 +402,16 @@ def _validate_stdlib_closure(document: dict[str, Any]) -> None:
         document["file_backed_total_bytes"],
         total_bytes,
         name="file-backed module byte total",
+    )
+    _require_exact(
+        document["cached_bytecode_file_count"],
+        cached_bytecode_file_count,
+        name="cached bytecode file count",
+    )
+    _require_exact(
+        document["cached_bytecode_total_bytes"],
+        cached_bytecode_total_bytes,
+        name="cached bytecode byte total",
     )
 
 
@@ -586,6 +664,12 @@ def verify(
                 "total_bytes": dynamic["total_bytes"],
             },
             "stdlib_import_closure": {
+                "cached_bytecode_file_count": stdlib[
+                    "cached_bytecode_file_count"
+                ],
+                "cached_bytecode_total_bytes": stdlib[
+                    "cached_bytecode_total_bytes"
+                ],
                 "file_backed_module_count": stdlib["file_backed_module_count"],
                 "file_backed_total_bytes": stdlib["file_backed_total_bytes"],
                 "manifest_sha256": hashlib.sha256(stdlib_raw).hexdigest(),
@@ -654,6 +738,9 @@ def verify(
             "host_preflight_required": True,
             "molecular_input_allowed": False,
             "performance_measurement_allowed": False,
+            "performance_sidecar_sha256": _sha256(
+                repository_root / "betelgeuze_engine_v2/docking/performance_sidecar.py"
+            ),
             "preflight_tool_sha256": _sha256(
                 repository_root
                 / "tools/preflight_engine_v2_full_pipeline_cpu_performance_v1_activation.py"
@@ -678,6 +765,8 @@ def verify(
         (
             "GitHub Actions cannot run the exact-runtime activation preflight",
             "ActivationPreflightEvidenceV1",
+            "_authenticate_bound_sources",
+            "bound source changed before import",
             "_require_native_extension",
             "native_fixed64_prepare_repository_synthetic_d0_session_v1",
             "native_fixed64_repository_synthetic_d0_cpu_parity_v1",
@@ -716,7 +805,8 @@ def verify(
             "non-consuming preflight",
             "does not activate the exactly-once runner",
             "125 imported standard-library module identities",
-            "including 84 file-backed",
+            "84 file-backed",
+            "78 declared bytecode-cache files",
         ),
     )
     workflow_tokens = (
@@ -729,13 +819,26 @@ def verify(
         "tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py",
         "tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1_activation.py",
         "docs/engine_v2_full_pipeline_cpu_performance_v1_activation.md",
+        "betelgeuze_engine_v2/docking/performance_host_preflight_v3.py",
+        "betelgeuze_engine_v2/docking/performance_sidecar.py",
     )
     for relative in (
         ".github/workflows/ci-engine-v2-main.yml",
         ".github/workflows/ci-engine-v2-release-candidate.yml",
         ".github/workflows/ci-native-compute-abi.yml",
     ):
-        _require_snippets(repository_root / relative, workflow_tokens)
+        workflow_path = repository_root / relative
+        _require_snippets(workflow_path, workflow_tokens)
+        expected_count = 2 if relative.endswith("ci-native-compute-abi.yml") else 1
+        for bound_trigger in (
+            "betelgeuze_engine_v2/docking/performance_host_preflight_v3.py",
+            "betelgeuze_engine_v2/docking/performance_sidecar.py",
+        ):
+            _require_workflow_trigger_path_occurrences(
+                workflow_path,
+                relative_path=bound_trigger,
+                expected_count=expected_count,
+            )
     return {
         "schema_id": ACTIVATION_SCHEMA_ID,
         "activation_id": ACTIVATION_ID,

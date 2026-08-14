@@ -25,6 +25,8 @@ on:
       - "betelgeuze_engine_v2/docking/pipeline_candidate_evidence_v2.py"
       - "betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1.py"
       - "betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1_activation.py"
+      - "betelgeuze_engine_v2/docking/performance_host_preflight_v3.py"
+      - "betelgeuze_engine_v2/docking/performance_sidecar.py"
       - "betelgeuze_engine_v2/benchmark/oracle_selection_metrics.py"
       - "betelgeuze_engine_v2/benchmark/oracle_selection_evidence.py"
       - "packaging/engine-v2/**"
@@ -203,6 +205,7 @@ jobs:
           sparse-checkout: |
             betelgeuze_engine_v2
             betelgeuze_engine_v2/docking/performance_host_preflight_v3.py
+            betelgeuze_engine_v2/docking/performance_sidecar.py
             betelgeuze_engine_v2/docking/performance_qualification_v3.py
             betelgeuze_engine_v2/benchmark/source_paired_clearance_activation.py
             betelgeuze_engine_v2/docking/source_paired_clearance_activation.py

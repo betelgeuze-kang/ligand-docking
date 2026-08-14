@@ -39,6 +39,8 @@ on:
       - "config/engine_v2_native_cpu_runtime_artifacts_v1.json"
       - "betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1.py"
       - "betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1_activation.py"
+      - "betelgeuze_engine_v2/docking/performance_host_preflight_v3.py"
+      - "betelgeuze_engine_v2/docking/performance_sidecar.py"
       - "config/engine_v2_full_pipeline_cpu_performance_v1.json"
       - "config/engine_v2_full_pipeline_cpu_performance_v1_activation.json"
       - "config/engine_v2_full_pipeline_cpu_performance_v1_stdlib_closure.json"
@@ -125,6 +127,8 @@ on:
       - "config/engine_v2_native_cpu_runtime_artifacts_v1.json"
       - "betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1.py"
       - "betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1_activation.py"
+      - "betelgeuze_engine_v2/docking/performance_host_preflight_v3.py"
+      - "betelgeuze_engine_v2/docking/performance_sidecar.py"
       - "config/engine_v2_full_pipeline_cpu_performance_v1.json"
       - "config/engine_v2_full_pipeline_cpu_performance_v1_activation.json"
       - "config/engine_v2_full_pipeline_cpu_performance_v1_stdlib_closure.json"
@@ -211,6 +215,7 @@ jobs:
             betelgeuze_engine_v2/docking/native_fixed64_consumers.py
             betelgeuze_engine_v2/docking/native_cpu_parity.py
             betelgeuze_engine_v2/docking/performance_host_preflight_v3.py
+            betelgeuze_engine_v2/docking/performance_sidecar.py
             betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1.py
             betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1_activation.py
             betelgeuze_engine_v2/standalone_cli.py

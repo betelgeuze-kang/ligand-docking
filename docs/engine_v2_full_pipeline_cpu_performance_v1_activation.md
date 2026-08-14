@@ -22,6 +22,8 @@ inactive runner, native consumer, native CPU parity, host preflight, commit,
 tree, standard-library import closure, and dynamic-library closure. The
 profile remains byte-identical at
 `385fb713cca8f39353f138115749abdfc9768b02222e13111a418360be30a000`.
+The preflight boundary additionally binds its own bootstrap, activation module,
+and the exact performance sidecar that host preflight imports.
 
 ## Runtime closure
 
@@ -31,12 +33,16 @@ account-owned virtual environment and requires CPython `-I -S -B`, the exact
 interpreter and native-extension hashes, the frozen runtime inventory, and a
 private effective account group.
 
-After all required repository modules are loaded from bounded source bytes, the
-preflight initializes the exact native extension without creating a docking
-session. It then re-derives:
+Before any repository module is compiled, the preflight reads all required
+module bytes through stable no-follow descriptors and authenticates their
+SHA-256 identities. The same authenticated byte strings are then executed;
+preloaded or second-read modules are rejected. The preflight initializes the
+exact native extension without creating a docking session and re-derives:
 
 - 125 imported standard-library module identities, including 84 file-backed
-  rows with their complete hashes and sizes;
+  source or extension rows with their complete hashes and sizes;
+- 78 declared bytecode-cache files with their paths, hashes, and sizes, so
+  CPython's readable `.pyc` path cannot diverge from the frozen closure;
 - 20 actually mapped shared libraries, including the native extension,
   CPython extension modules, C/C++ runtimes, loader, and transitive system
   libraries.

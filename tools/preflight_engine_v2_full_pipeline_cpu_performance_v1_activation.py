@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import grp
+import hashlib
 import importlib
 import importlib.machinery
 import json
@@ -31,6 +32,80 @@ _EXPECTED_VENV_CONFIGURATION = (
     b"version = 3.10.12\n"
 )
 _MAX_SOURCE_BYTES = 4 * 1024 * 1024
+_ACTIVATION_SCHEMA_ID = (
+    "betelgeuze.engine_v2_full_pipeline_cpu_performance_activation/1.0.0"
+)
+_ACTIVATION_ID = "engine_v2_full_pipeline_cpu_performance_v1_activation"
+_ACTIVATION_STATUS = (
+    "frozen_non_consuming_exact_main_preflight_execution_not_activated"
+)
+_PROFILE_ID = "engine_v2_full_pipeline_cpu_performance_v1"
+_PROFILE_SHA256 = "385fb713cca8f39353f138115749abdfc9768b02222e13111a418360be30a000"
+_EXPECTED_SOURCE_BINDINGS = {
+    "profile_sha256": _PROFILE_SHA256,
+    "profile_verifier_sha256": (
+        "b05d9e9710cc9594eba4a0630420dfbc1204dba9e89c63332a0f10bbc541e880"
+    ),
+    "measurement_core_sha256": (
+        "c27657f104248973f11f6da498fc08da460cb6d4823719139762ce76b0cd18d7"
+    ),
+    "runner_tool_sha256": (
+        "bfaf4bc25b2161a43e1e01418394c716d4b762fd39ec6708a01791159916e6e8"
+    ),
+    "native_consumer_sha256": (
+        "ea4fb7953d2bb2c1e4e16380dd3ad362d4fa8265bf0c11d26d69dfed3cc8df25"
+    ),
+    "native_cpu_parity_sha256": (
+        "cbff9243caea510e070067663e7c36c216afc84e226b9ade3e37b03e6ac30f75"
+    ),
+    "host_preflight_sha256": (
+        "236496cb7342040191db51f6c801948ab1c6b859d09a85b35e3c8a9c00a38adf"
+    ),
+    "merged_main_commit_sha256": (
+        "1b478ee3b9737e9d50fc854fb4bde93cbd1efd48015a27df52199a698d17e82e"
+    ),
+    "merged_main_tree_sha256": (
+        "69998e9df4740c927568b41e21eb8b94185d4fa3b9dd5fa37d71bcbbd5060579"
+    ),
+    "stdlib_import_closure_manifest_sha256": (
+        "230cc88d60a9fd0f92318492ec533672930e72eaed11ef5410a45ce7edbb690b"
+    ),
+    "dynamic_library_closure_manifest_sha256": (
+        "b9190033cf42ea75aa1131da38517b70101f05f8c55992419964014bc67030b1"
+    ),
+}
+_BOUND_MODULE_ROWS = (
+    (
+        "performance_sidecar",
+        "performance_sidecar.py",
+        "04253e3897bb5746e1c1082dbf8e27922835ffb075aeb3268c18a0895662173f",
+    ),
+    (
+        "full_pipeline_cpu_performance_v1_activation",
+        "full_pipeline_cpu_performance_v1_activation.py",
+        "b3d216100df51cfa0886ce9119a1e7e72a15ba30e6046609022c0d062351566b",
+    ),
+    (
+        "full_pipeline_cpu_performance_v1",
+        "full_pipeline_cpu_performance_v1.py",
+        _EXPECTED_SOURCE_BINDINGS["measurement_core_sha256"],
+    ),
+    (
+        "native_fixed64_consumers",
+        "native_fixed64_consumers.py",
+        _EXPECTED_SOURCE_BINDINGS["native_consumer_sha256"],
+    ),
+    (
+        "native_cpu_parity",
+        "native_cpu_parity.py",
+        _EXPECTED_SOURCE_BINDINGS["native_cpu_parity_sha256"],
+    ),
+    (
+        "performance_host_preflight_v3",
+        "performance_host_preflight_v3.py",
+        _EXPECTED_SOURCE_BINDINGS["host_preflight_sha256"],
+    ),
+)
 
 
 def _fail(message: str) -> NoReturn:
@@ -74,6 +149,8 @@ def _require_isolated_bootstrap() -> None:
         and sys.flags.no_user_site == 1
         and sys.flags.dont_write_bytecode == 1
         and sys.flags.hash_randomization == 1
+        and sys.flags.optimize == 0
+        and sys.pycache_prefix is None
     ):
         _fail("preflight requires exact CPython -I -S -B flags")
     if hasattr(sys.flags, "safe_path"):
@@ -165,11 +242,9 @@ def _install_package_stub(name: str, path: Path) -> None:
     sys.modules[name] = module
 
 
-def _load_source_module(name: str, path: Path) -> types.ModuleType:
-    existing = sys.modules.get(name)
-    if isinstance(existing, types.ModuleType):
-        return existing
-    raw = _read_owner_source(path, name=name)
+def _load_source_module(name: str, path: Path, raw: bytes) -> types.ModuleType:
+    if name in sys.modules:
+        _fail(f"bound source module was already loaded: {name}")
     module = types.ModuleType(name)
     module.__file__ = str(path)
     module.__package__ = name.rpartition(".")[0]
@@ -183,6 +258,156 @@ def _load_source_module(name: str, path: Path) -> types.ModuleType:
         sys.modules.pop(name, None)
         raise
     return module
+
+
+def _reject_duplicate_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    document: dict[str, object] = {}
+    for key, value in pairs:
+        if key in document:
+            _fail(f"activation contract has duplicate key: {key}")
+        document[key] = value
+    return document
+
+
+def _reject_json_float(value: str) -> NoReturn:
+    _fail(f"activation contract contains a non-integer number: {value}")
+
+
+def _load_activation_contract(
+    *, repository_root: Path, bootstrap_raw: bytes
+) -> tuple[dict[str, object], bytes]:
+    raw = _read_owner_source(
+        repository_root
+        / "config/engine_v2_full_pipeline_cpu_performance_v1_activation.json",
+        name="full-pipeline CPU activation contract",
+    )
+    try:
+        document = json.loads(
+            raw.decode("ascii"),
+            object_pairs_hook=_reject_duplicate_keys,
+            parse_float=_reject_json_float,
+            parse_constant=_reject_json_float,
+        )
+    except (UnicodeError, ValueError) as exc:
+        raise RuntimeError("activation contract cannot be decoded safely") from exc
+    if type(document) is not dict:
+        _fail("activation contract must be an exact object")
+    canonical = (
+        json.dumps(
+            document,
+            allow_nan=False,
+            ensure_ascii=True,
+            indent=2,
+            sort_keys=True,
+        ).encode("ascii")
+        + b"\n"
+    )
+    if raw != canonical:
+        _fail("activation contract is not canonical indented JSON")
+    if (
+        document.get("schema_id") != _ACTIVATION_SCHEMA_ID
+        or document.get("activation_id") != _ACTIVATION_ID
+        or document.get("status") != _ACTIVATION_STATUS
+        or document.get("profile_id") != _PROFILE_ID
+        or document.get("profile_sha256") != _PROFILE_SHA256
+        or document.get("source_bindings") != _EXPECTED_SOURCE_BINDINGS
+    ):
+        _fail("activation contract identity or source bindings changed")
+    for section in ("authority", "restrictions"):
+        values = document.get(section)
+        if type(values) is not dict or not values or any(
+            value is not False for value in values.values()
+        ):
+            _fail(f"activation contract {section} is not all false")
+    runner = document.get("runner")
+    if (
+        type(runner) is not dict
+        or runner.get("activation_contract_allows_live_execution") is not False
+        or runner.get("github_actions_live_execution_allowed") is not False
+        or runner.get("live_synthetic_local_execution_implemented") is not False
+        or runner.get("qualification_attempt_consumed") is not False
+        or runner.get("reservation_created") is not False
+        or runner.get("runner_remains_fail_closed") is not True
+    ):
+        _fail("activation runner boundary changed")
+    preflight = document.get("preflight")
+    if (
+        type(preflight) is not dict
+        or preflight.get("activation_module_sha256")
+        != _BOUND_MODULE_ROWS[1][2]
+        or preflight.get("performance_sidecar_sha256")
+        != _BOUND_MODULE_ROWS[0][2]
+        or preflight.get("preflight_tool_sha256")
+        != hashlib.sha256(bootstrap_raw).hexdigest()
+        or preflight.get("bootstrap_flags") != ["-I", "-S", "-B"]
+        or preflight.get("caller_science_input_allowed") is not False
+        or preflight.get("github_actions_preflight_allowed") is not False
+        or preflight.get("molecular_input_allowed") is not False
+        or preflight.get("performance_measurement_allowed") is not False
+        or preflight.get("qualification_state_write_allowed") is not False
+        or preflight.get("reservation_allowed") is not False
+    ):
+        _fail("activation preflight boundary changed")
+    return document, raw
+
+
+def _authenticate_bound_sources(
+    *, repository_root: Path
+) -> tuple[Path, dict[str, bytes]]:
+    package_root = _require_owner_directory(
+        repository_root / "betelgeuze_engine_v2",
+        name="Engine V2 package root",
+    )
+    docking_root = _require_owner_directory(
+        package_root / "docking",
+        name="Engine V2 docking root",
+    )
+    sources: dict[str, bytes] = {}
+    for short_name, file_name, expected_sha256 in _BOUND_MODULE_ROWS:
+        raw = _read_owner_source(
+            docking_root / file_name,
+            name=f"bound source {short_name}",
+        )
+        if hashlib.sha256(raw).hexdigest() != expected_sha256:
+            _fail(f"bound source changed before import: {short_name}")
+        sources[short_name] = raw
+    return docking_root, sources
+
+
+def _load_closure_manifest(
+    *, repository_root: Path, relative_path: str, binding_name: str, schema_id: str
+) -> tuple[dict[str, object], str]:
+    raw = _read_owner_source(
+        repository_root / relative_path,
+        name=f"runtime closure manifest {binding_name}",
+    )
+    digest = hashlib.sha256(raw).hexdigest()
+    if digest != _EXPECTED_SOURCE_BINDINGS[binding_name]:
+        _fail(f"runtime closure manifest changed: {binding_name}")
+    try:
+        document = json.loads(
+            raw.decode("ascii"),
+            object_pairs_hook=_reject_duplicate_keys,
+            parse_float=_reject_json_float,
+            parse_constant=_reject_json_float,
+        )
+    except (UnicodeError, ValueError) as exc:
+        raise RuntimeError("runtime closure manifest cannot be decoded safely") from exc
+    if type(document) is not dict or document.get("schema_id") != schema_id:
+        _fail(f"runtime closure manifest schema changed: {binding_name}")
+    canonical = (
+        json.dumps(
+            document,
+            allow_nan=False,
+            ensure_ascii=True,
+            indent=2,
+            sort_keys=True,
+        ).encode("ascii")
+        + b"\n"
+    )
+    if raw != canonical:
+        _fail(f"runtime closure manifest is not canonical: {binding_name}")
+    return document, digest
 
 
 def _require_runtime_root(runtime_root: Path) -> tuple[Path, Path]:
@@ -208,43 +433,26 @@ def _require_runtime_root(runtime_root: Path) -> tuple[Path, Path]:
 
 
 def _load_bound_modules(
-    *, repository_root: Path, site_packages: Path
+    *, repository_root: Path, site_packages: Path, authenticated_sources: dict[str, bytes]
 ) -> dict[str, types.ModuleType]:
     package_root = _require_owner_directory(
         repository_root / "betelgeuze_engine_v2",
         name="Engine V2 package root",
     )
     docking_root = _require_owner_directory(
-        package_root / "docking",
-        name="Engine V2 docking root",
-    )
-    tools_root = _require_owner_directory(
-        repository_root / "tools",
-        name="repository tools root",
+        package_root / "docking", name="Engine V2 docking root"
     )
     sys.path.extend((str(repository_root), str(site_packages)))
     _install_package_stub("betelgeuze_engine_v2", package_root)
     _install_package_stub("betelgeuze_engine_v2.docking", docking_root)
-    _install_package_stub("tools", tools_root)
     modules: dict[str, types.ModuleType] = {}
-    for short_name in (
-        "full_pipeline_cpu_performance_v1_activation",
-        "full_pipeline_cpu_performance_v1",
-        "native_fixed64_consumers",
-        "native_cpu_parity",
-        "performance_sidecar",
-        "performance_host_preflight_v3",
-    ):
+    for short_name, file_name, _expected_sha256 in _BOUND_MODULE_ROWS:
         qualified = f"betelgeuze_engine_v2.docking.{short_name}"
         modules[short_name] = _load_source_module(
             qualified,
-            docking_root / f"{short_name}.py",
+            docking_root / file_name,
+            authenticated_sources[short_name],
         )
-    modules["activation_verifier"] = _load_source_module(
-        "tools.verify_engine_v2_full_pipeline_cpu_performance_v1_activation",
-        tools_root
-        / "verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py",
-    )
     return modules
 
 
@@ -285,14 +493,22 @@ def derive_preflight(
     )
     if bootstrap.parent != repository_root / "tools":
         _fail("activation preflight bootstrap escaped repository tools")
-    _read_owner_source(bootstrap, name="activation preflight bootstrap")
+    bootstrap_raw = _read_owner_source(
+        bootstrap, name="activation preflight bootstrap"
+    )
     runtime_root, site_packages = _require_runtime_root(runtime_root)
+    contract, contract_raw = _load_activation_contract(
+        repository_root=repository_root,
+        bootstrap_raw=bootstrap_raw,
+    )
+    _docking_root, authenticated_sources = _authenticate_bound_sources(
+        repository_root=repository_root
+    )
     modules = _load_bound_modules(
         repository_root=repository_root,
         site_packages=site_packages,
+        authenticated_sources=authenticated_sources,
     )
-    verifier = modules["activation_verifier"]
-    static_result = verifier.verify(repository_root=repository_root)
     measurement = modules["full_pipeline_cpu_performance_v1"]
     runtime_evidence = measurement.verify_local_runtime_binding(
         artifact_directory=artifact_directory,
@@ -307,16 +523,22 @@ def derive_preflight(
     observed_dynamic = activation.derive_dynamic_library_closure(
         site_packages=site_packages
     )
-    expected_stdlib = verifier.load_closure_manifest(
-        repository_root
-        / "config/engine_v2_full_pipeline_cpu_performance_v1_stdlib_closure.json",
-        expected_schema_id=activation.STDLIB_CLOSURE_SCHEMA_ID,
-    )[0]
-    expected_dynamic = verifier.load_closure_manifest(
-        repository_root
-        / "config/engine_v2_full_pipeline_cpu_performance_v1_dynamic_library_closure.json",
-        expected_schema_id=activation.DYNAMIC_LIBRARY_CLOSURE_SCHEMA_ID,
-    )[0]
+    expected_stdlib, stdlib_manifest_sha256 = _load_closure_manifest(
+        repository_root=repository_root,
+        relative_path=(
+            "config/engine_v2_full_pipeline_cpu_performance_v1_stdlib_closure.json"
+        ),
+        binding_name="stdlib_import_closure_manifest_sha256",
+        schema_id=activation.STDLIB_CLOSURE_SCHEMA_ID,
+    )
+    expected_dynamic, dynamic_manifest_sha256 = _load_closure_manifest(
+        repository_root=repository_root,
+        relative_path=(
+            "config/engine_v2_full_pipeline_cpu_performance_v1_dynamic_library_closure.json"
+        ),
+        binding_name="dynamic_library_closure_manifest_sha256",
+        schema_id=activation.DYNAMIC_LIBRARY_CLOSURE_SCHEMA_ID,
+    )
     activation.require_exact_closure(
         observed_stdlib,
         expected_stdlib,
@@ -329,14 +551,10 @@ def derive_preflight(
     )
     blockers = tuple(str(value) for value in host_document["blockers"])
     evidence = activation.ActivationPreflightEvidenceV1(
-        activation_sha256=str(static_result["activation_sha256"]),
-        profile_sha256=str(static_result["profile_sha256"]),
-        stdlib_import_closure_manifest_sha256=str(
-            static_result["stdlib_import_closure_manifest_sha256"]
-        ),
-        dynamic_library_closure_manifest_sha256=str(
-            static_result["dynamic_library_closure_manifest_sha256"]
-        ),
+        activation_sha256=hashlib.sha256(contract_raw).hexdigest(),
+        profile_sha256=str(contract["profile_sha256"]),
+        stdlib_import_closure_manifest_sha256=stdlib_manifest_sha256,
+        dynamic_library_closure_manifest_sha256=dynamic_manifest_sha256,
         host_preflight=host_document,
         blockers=blockers,
     ).to_dict()

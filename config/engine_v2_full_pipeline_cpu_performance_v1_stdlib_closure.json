@@ -1,9 +1,17 @@
 {
+  "cached_bytecode_file_count": 78,
+  "cached_bytecode_total_bytes": 1447655,
   "file_backed_module_count": 84,
   "file_backed_total_bytes": 2194777,
   "module_count": 125,
   "rows": [
     {
+      "cached_bytecode": {
+        "path": "__pycache__/__future__.cpython-310.pyc",
+        "present": true,
+        "sha256": "fbfd865cf3b9a3c4a6642cab3b4087146d3d8565077f41d4203ed5396d987588",
+        "size_bytes": 4131
+      },
       "module": "__future__",
       "origin": "stdlib_file",
       "path": "__future__.py",
@@ -42,6 +50,12 @@
       "origin": "built-in"
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/_collections_abc.cpython-310.pyc",
+        "present": true,
+        "sha256": "95a11a71fcc35da8b9e5605983e027b2747e8931da1c00497f1edb9dea1367f5",
+        "size_bytes": 32925
+      },
       "module": "_collections_abc",
       "origin": "stdlib_file",
       "path": "_collections_abc.py",
@@ -49,6 +63,12 @@
       "size_bytes": 32284
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/_compression.cpython-310.pyc",
+        "present": true,
+        "sha256": "51fb7df56daccb830458a22e46592eb62e681d1b45e3bc94b1173c63a87dfb78",
+        "size_bytes": 4512
+      },
       "module": "_compression",
       "origin": "stdlib_file",
       "path": "_compression.py",
@@ -156,6 +176,12 @@
       "origin": "built-in"
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/_weakrefset.cpython-310.pyc",
+        "present": true,
+        "sha256": "703ef8ef6cb4834523a186680cb62451c3f08e8d09866aa55bfb79d366e73386",
+        "size_bytes": 7608
+      },
       "module": "_weakrefset",
       "origin": "stdlib_file",
       "path": "_weakrefset.py",
@@ -163,6 +189,12 @@
       "size_bytes": 5923
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/abc.cpython-310.pyc",
+        "present": true,
+        "sha256": "82e3c2081de59d4ff99e563b19b72108607b3e1a5c9a67e1e5be53fd11ff744f",
+        "size_bytes": 6751
+      },
       "module": "abc",
       "origin": "stdlib_file",
       "path": "abc.py",
@@ -170,6 +202,12 @@
       "size_bytes": 6522
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/argparse.cpython-310.pyc",
+        "present": true,
+        "sha256": "f7b8fd1b564b215f169b353c400060773a8ce890dfc93ae825b5f59a61738142",
+        "size_bytes": 63539
+      },
       "module": "argparse",
       "origin": "stdlib_file",
       "path": "argparse.py",
@@ -177,6 +215,12 @@
       "size_bytes": 98839
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/ast.cpython-310.pyc",
+        "present": true,
+        "sha256": "b0935c18fc69436340a01dfb2ad59caa54c859b6153adb44226a311a0dc05474",
+        "size_bytes": 55739
+      },
       "module": "ast",
       "origin": "stdlib_file",
       "path": "ast.py",
@@ -184,6 +228,12 @@
       "size_bytes": 59900
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/base64.cpython-310.pyc",
+        "present": true,
+        "sha256": "5c79c7fafde78b99195449786433983782b802c3f3d948d976c06010436a9bec",
+        "size_bytes": 17162
+      },
       "module": "base64",
       "origin": "stdlib_file",
       "path": "base64.py",
@@ -195,6 +245,12 @@
       "origin": "built-in"
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/bisect.cpython-310.pyc",
+        "present": true,
+        "sha256": "4941472ff58505d168b792439fa75b40fc0c37e614e84ff0922ec07365682710",
+        "size_bytes": 2588
+      },
       "module": "bisect",
       "origin": "stdlib_file",
       "path": "bisect.py",
@@ -206,6 +262,12 @@
       "origin": "built-in"
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/bz2.cpython-310.pyc",
+        "present": true,
+        "sha256": "07e6bd083e4de984a4c71724a7110ddb9b678bd1ca8b3a62cf8aef38a7bb5005",
+        "size_bytes": 10870
+      },
       "module": "bz2",
       "origin": "stdlib_file",
       "path": "bz2.py",
@@ -213,6 +275,12 @@
       "size_bytes": 11847
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/codecs.cpython-310.pyc",
+        "present": true,
+        "sha256": "4f8c4fe74918dcff9321c5802b3e322132f499dd3b671f1d57a88fc32cb20899",
+        "size_bytes": 33219
+      },
       "module": "codecs",
       "origin": "stdlib_file",
       "path": "codecs.py",
@@ -220,6 +288,12 @@
       "size_bytes": 36714
     },
     {
+      "cached_bytecode": {
+        "path": "collections/__pycache__/__init__.cpython-310.pyc",
+        "present": true,
+        "sha256": "37134d49d13e0a039b4c919225f90d5c879f7449b094686a75ed12a70544cc29",
+        "size_bytes": 48453
+      },
       "module": "collections",
       "origin": "stdlib_file",
       "path": "collections/__init__.py",
@@ -227,6 +301,12 @@
       "size_bytes": 51398
     },
     {
+      "cached_bytecode": {
+        "path": "collections/__pycache__/abc.cpython-310.pyc",
+        "present": true,
+        "sha256": "c9980281a0299299affd1689531bb16223382c0ec306b7eb928f0cd203df8db4",
+        "size_bytes": 238
+      },
       "module": "collections.abc",
       "origin": "stdlib_file",
       "path": "collections/abc.py",
@@ -234,6 +314,12 @@
       "size_bytes": 119
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/contextlib.cpython-310.pyc",
+        "present": true,
+        "sha256": "2cf98c8006a69b5a6a7c886ffdf4a5324b17bdb8f63d215b490f03950809a50b",
+        "size_bytes": 20895
+      },
       "module": "contextlib",
       "origin": "stdlib_file",
       "path": "contextlib.py",
@@ -241,6 +327,12 @@
       "size_bytes": 25882
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/copy.cpython-310.pyc",
+        "present": true,
+        "sha256": "f333016ccd6e34b1443e1df2c332ce94eb88327840755cdc4b2d61c794f05f90",
+        "size_bytes": 6996
+      },
       "module": "copy",
       "origin": "stdlib_file",
       "path": "copy.py",
@@ -248,6 +340,12 @@
       "size_bytes": 8681
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/copyreg.cpython-310.pyc",
+        "present": true,
+        "sha256": "40567f3083ceaba59a8f9fe62bcb99ede22a97f91065bbf45230c7a2e1bbc0f2",
+        "size_bytes": 4683
+      },
       "module": "copyreg",
       "origin": "stdlib_file",
       "path": "copyreg.py",
@@ -255,6 +353,12 @@
       "size_bytes": 7426
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/csv.cpython-310.pyc",
+        "present": true,
+        "sha256": "0133d37c3e6f54ef49a4368d220e8839d2d503ac731144357e6efcfc86d65e79",
+        "size_bytes": 11798
+      },
       "module": "csv",
       "origin": "stdlib_file",
       "path": "csv.py",
@@ -262,6 +366,12 @@
       "size_bytes": 16030
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/dataclasses.cpython-310.pyc",
+        "present": true,
+        "sha256": "2b6eb8f5b32cdeecc0c372f29828dac9b3b08ebbd3df4b50fb91c5cf30576424",
+        "size_bytes": 26578
+      },
       "module": "dataclasses",
       "origin": "stdlib_file",
       "path": "dataclasses.py",
@@ -269,6 +379,12 @@
       "size_bytes": 56390
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/dis.cpython-310.pyc",
+        "present": true,
+        "sha256": "64ef6bb1f900784888677b4643521dd866a965f66a8206122898bce221da8932",
+        "size_bytes": 15656
+      },
       "module": "dis",
       "origin": "stdlib_file",
       "path": "dis.py",
@@ -276,6 +392,12 @@
       "size_bytes": 20020
     },
     {
+      "cached_bytecode": {
+        "path": "encodings/__pycache__/__init__.cpython-310.pyc",
+        "present": true,
+        "sha256": "0547db607d752d0cd7f181d8b3e1ace8434786a752c0bf84ae04822610537627",
+        "size_bytes": 3875
+      },
       "module": "encodings",
       "origin": "stdlib_file",
       "path": "encodings/__init__.py",
@@ -283,6 +405,12 @@
       "size_bytes": 5620
     },
     {
+      "cached_bytecode": {
+        "path": "encodings/__pycache__/aliases.cpython-310.pyc",
+        "present": true,
+        "sha256": "bc35e354b04ca4adebf2225b8a3ff07ad6dd44fb225ab76db0aff4212725c001",
+        "size_bytes": 10921
+      },
       "module": "encodings.aliases",
       "origin": "stdlib_file",
       "path": "encodings/aliases.py",
@@ -290,6 +418,12 @@
       "size_bytes": 15677
     },
     {
+      "cached_bytecode": {
+        "path": "encodings/__pycache__/cp437.cpython-310.pyc",
+        "present": true,
+        "sha256": "ee4db615ccfa6090d7adddf29c9e164adeffe944e4b8e65a008138af78dc5209",
+        "size_bytes": 8924
+      },
       "module": "encodings.cp437",
       "origin": "stdlib_file",
       "path": "encodings/cp437.py",
@@ -297,6 +431,12 @@
       "size_bytes": 34564
     },
     {
+      "cached_bytecode": {
+        "path": "encodings/__pycache__/utf_8.cpython-310.pyc",
+        "present": true,
+        "sha256": "9f64fba59e0b12f366423e5febd0d8ce3a5fa4e052147ef24b0d00854d5d0bf1",
+        "size_bytes": 1597
+      },
       "module": "encodings.utf_8",
       "origin": "stdlib_file",
       "path": "encodings/utf_8.py",
@@ -304,6 +444,12 @@
       "size_bytes": 1005
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/enum.cpython-310.pyc",
+        "present": true,
+        "sha256": "45b0ae770364e23615988117a63a5321a7b8333e6240eedb8512706f403fe697",
+        "size_bytes": 26063
+      },
       "module": "enum",
       "origin": "stdlib_file",
       "path": "enum.py",
@@ -319,6 +465,12 @@
       "origin": "built-in"
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/fnmatch.cpython-310.pyc",
+        "present": true,
+        "sha256": "a3ebb7fa3d2e65ea9700459a32168317be47e05f422fc663aa85c553a30daa49",
+        "size_bytes": 4244
+      },
       "module": "fnmatch",
       "origin": "stdlib_file",
       "path": "fnmatch.py",
@@ -326,6 +478,12 @@
       "size_bytes": 6713
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/functools.cpython-310.pyc",
+        "present": true,
+        "sha256": "5ee17aa0b672f290ec72f27787ec9c5fb9d5813130758fbd67985e4e2610a209",
+        "size_bytes": 28335
+      },
       "module": "functools",
       "origin": "stdlib_file",
       "path": "functools.py",
@@ -333,6 +491,12 @@
       "size_bytes": 38076
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/genericpath.cpython-310.pyc",
+        "present": true,
+        "sha256": "ece7c8eceaa6ef5e1e9c897945808baa7544efa0d9a1ad818b61094110403594",
+        "size_bytes": 3907
+      },
       "module": "genericpath",
       "origin": "stdlib_file",
       "path": "genericpath.py",
@@ -340,6 +504,12 @@
       "size_bytes": 4975
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/gettext.cpython-310.pyc",
+        "present": true,
+        "sha256": "f7ed29796ec41899ec2c290b809d55b27605e175d671fdef21cc3106ccc38eab",
+        "size_bytes": 18221
+      },
       "module": "gettext",
       "origin": "stdlib_file",
       "path": "gettext.py",
@@ -351,6 +521,12 @@
       "origin": "built-in"
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/hashlib.cpython-310.pyc",
+        "present": true,
+        "sha256": "435407c84d42b05662085b2eaea1ed2611555b446dc3fa2d0620339f18a418fc",
+        "size_bytes": 6845
+      },
       "module": "hashlib",
       "origin": "stdlib_file",
       "path": "hashlib.py",
@@ -358,6 +534,12 @@
       "size_bytes": 10229
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/hmac.cpython-310.pyc",
+        "present": true,
+        "sha256": "27c7660ba5c1c8b89497944c0bb4ee97211ae9f2d5b09bc10ab4af207b71831a",
+        "size_bytes": 6973
+      },
       "module": "hmac",
       "origin": "stdlib_file",
       "path": "hmac.py",
@@ -365,6 +547,12 @@
       "size_bytes": 7717
     },
     {
+      "cached_bytecode": {
+        "path": "importlib/__pycache__/__init__.cpython-310.pyc",
+        "present": true,
+        "sha256": "c246f02ebe9792e8d0a1bcef557127deaa3690933f6ba18fac8739b889c1a685",
+        "size_bytes": 3805
+      },
       "module": "importlib",
       "origin": "stdlib_file",
       "path": "importlib/__init__.py",
@@ -372,6 +560,12 @@
       "size_bytes": 6089
     },
     {
+      "cached_bytecode": {
+        "path": "importlib/__pycache__/_abc.cpython-310.pyc",
+        "present": true,
+        "sha256": "d05cfe15a58752db85ec6523a4cdfe148ebf22384ca31ec12e43f1c4b84333f4",
+        "size_bytes": 1971
+      },
       "module": "importlib._abc",
       "origin": "stdlib_file",
       "path": "importlib/_abc.py",
@@ -387,6 +581,12 @@
       "origin": "frozen"
     },
     {
+      "cached_bytecode": {
+        "path": "importlib/__pycache__/machinery.cpython-310.pyc",
+        "present": true,
+        "sha256": "4cc756a39fdaa8e6174e3e0f317056c7d88047e8da3bf705e9c6085e0c35622c",
+        "size_bytes": 944
+      },
       "module": "importlib.machinery",
       "origin": "stdlib_file",
       "path": "importlib/machinery.py",
@@ -394,6 +594,12 @@
       "size_bytes": 831
     },
     {
+      "cached_bytecode": {
+        "path": "importlib/__pycache__/util.cpython-310.pyc",
+        "present": true,
+        "sha256": "eeb287893416d3aed7d9dec12ff9bdcb62847c5e5ba081916d2c97b294c9e3cf",
+        "size_bytes": 9329
+      },
       "module": "importlib.util",
       "origin": "stdlib_file",
       "path": "importlib/util.py",
@@ -401,6 +607,12 @@
       "size_bytes": 11487
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/inspect.cpython-310.pyc",
+        "present": true,
+        "sha256": "7846daaabca2a2fc6dd0ea916343e71a84e39ba097f8fa017cfeecd1cd52f7ee",
+        "size_bytes": 85153
+      },
       "module": "inspect",
       "origin": "stdlib_file",
       "path": "inspect.py",
@@ -408,6 +620,12 @@
       "size_bytes": 124378
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/io.cpython-310.pyc",
+        "present": true,
+        "sha256": "1c3e590a8662739ede267d444c03abbc2cd96ef89d36b706593b94714dc35f69",
+        "size_bytes": 3663
+      },
       "module": "io",
       "origin": "stdlib_file",
       "path": "io.py",
@@ -415,6 +633,12 @@
       "size_bytes": 4196
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/ipaddress.cpython-310.pyc",
+        "present": true,
+        "sha256": "d68327db33fd3bf5f3e66c2d5e03659940a63ab6a0125133f872871a304feeff",
+        "size_bytes": 62670
+      },
       "module": "ipaddress",
       "origin": "stdlib_file",
       "path": "ipaddress.py",
@@ -426,6 +650,12 @@
       "origin": "built-in"
     },
     {
+      "cached_bytecode": {
+        "path": "json/__pycache__/__init__.cpython-310.pyc",
+        "present": true,
+        "sha256": "36482fd44fe455834f27ea9c8ea3e26bcaea994e492bad96d1912082d8a4eab0",
+        "size_bytes": 12264
+      },
       "module": "json",
       "origin": "stdlib_file",
       "path": "json/__init__.py",
@@ -433,6 +663,12 @@
       "size_bytes": 14020
     },
     {
+      "cached_bytecode": {
+        "path": "json/__pycache__/decoder.cpython-310.pyc",
+        "present": true,
+        "sha256": "9f0dec49d793f8f43611d80b00f546f32e9b917946de9e36153b766cb67face3",
+        "size_bytes": 9766
+      },
       "module": "json.decoder",
       "origin": "stdlib_file",
       "path": "json/decoder.py",
@@ -440,6 +676,12 @@
       "size_bytes": 12473
     },
     {
+      "cached_bytecode": {
+        "path": "json/__pycache__/encoder.cpython-310.pyc",
+        "present": true,
+        "sha256": "a90c42ea38a85b20ff2f5eea871b65551f15378de0b65767279b2f0c0d5ad2cd",
+        "size_bytes": 11117
+      },
       "module": "json.encoder",
       "origin": "stdlib_file",
       "path": "json/encoder.py",
@@ -447,6 +689,12 @@
       "size_bytes": 16074
     },
     {
+      "cached_bytecode": {
+        "path": "json/__pycache__/scanner.cpython-310.pyc",
+        "present": true,
+        "sha256": "7df65755719b7190eb18be8678def10b472dbb13f68883dea5aeea06cbbf4b56",
+        "size_bytes": 1916
+      },
       "module": "json.scanner",
       "origin": "stdlib_file",
       "path": "json/scanner.py",
@@ -454,6 +702,12 @@
       "size_bytes": 2425
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/keyword.cpython-310.pyc",
+        "present": true,
+        "sha256": "0fc73dfd260e9477329b993d887e0cdb393fd10ac9798fa0fe92eda44ca90047",
+        "size_bytes": 927
+      },
       "module": "keyword",
       "origin": "stdlib_file",
       "path": "keyword.py",
@@ -461,6 +715,12 @@
       "size_bytes": 1061
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/linecache.cpython-310.pyc",
+        "present": true,
+        "sha256": "867999a01c3e36d82c7fedcd021a021eafcb202ce3498bfabace4fd3df0d2b67",
+        "size_bytes": 4142
+      },
       "module": "linecache",
       "origin": "stdlib_file",
       "path": "linecache.py",
@@ -468,6 +728,12 @@
       "size_bytes": 5690
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/locale.cpython-310.pyc",
+        "present": true,
+        "sha256": "15ab39d170bed25edafe8d9bdae6b85d642fa3a7f070d3abd3ce4ca0653af098",
+        "size_bytes": 46154
+      },
       "module": "locale",
       "origin": "stdlib_file",
       "path": "locale.py",
@@ -475,6 +741,12 @@
       "size_bytes": 78128
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/lzma.cpython-310.pyc",
+        "present": true,
+        "sha256": "f1665e2c3ac3bac535fbadd1b24b15a2f39ec9497544a892184f3c8bb41ba83e",
+        "size_bytes": 12100
+      },
       "module": "lzma",
       "origin": "stdlib_file",
       "path": "lzma.py",
@@ -490,6 +762,12 @@
       "origin": "built-in"
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/ntpath.cpython-310.pyc",
+        "present": true,
+        "sha256": "6adfd9d16885588fe7f5f871bde3d70d2cb1af1595efa0e74c827e3c20c5d603",
+        "size_bytes": 14704
+      },
       "module": "ntpath",
       "origin": "stdlib_file",
       "path": "ntpath.py",
@@ -497,6 +775,12 @@
       "size_bytes": 27561
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/opcode.cpython-310.pyc",
+        "present": true,
+        "sha256": "230364e6dd3ffdf86d845191ebf1938d6b3c172ffa14eb360cf33490a6359d42",
+        "size_bytes": 5447
+      },
       "module": "opcode",
       "origin": "stdlib_file",
       "path": "opcode.py",
@@ -504,6 +788,12 @@
       "size_bytes": 5902
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/operator.cpython-310.pyc",
+        "present": true,
+        "sha256": "8a8428f236ffc6977698b405305bd83a2cc061704ac474447e155c82ea1d1c0f",
+        "size_bytes": 13508
+      },
       "module": "operator",
       "origin": "stdlib_file",
       "path": "operator.py",
@@ -511,6 +801,12 @@
       "size_bytes": 10751
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/os.cpython-310.pyc",
+        "present": true,
+        "sha256": "ed0aced830f1d1c5a74130880545754422ebb2f6ba1c01b941505ab36d34920b",
+        "size_bytes": 31599
+      },
       "module": "os",
       "origin": "stdlib_file",
       "path": "os.py",
@@ -518,6 +814,12 @@
       "size_bytes": 39557
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/posixpath.cpython-310.pyc",
+        "present": true,
+        "sha256": "fd9c69373d4a22ccae72d882f65c161c089532da1c89804158d6b8e9009523ee",
+        "size_bytes": 10560
+      },
       "module": "os.path",
       "origin": "stdlib_file",
       "path": "posixpath.py",
@@ -525,6 +827,12 @@
       "size_bytes": 16123
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/pathlib.cpython-310.pyc",
+        "present": true,
+        "sha256": "b2333468eda083ad03e29c47ea71d59124752495bb57bb7d830390b7d5ac53fc",
+        "size_bytes": 42052
+      },
       "module": "pathlib",
       "origin": "stdlib_file",
       "path": "pathlib.py",
@@ -532,6 +840,12 @@
       "size_bytes": 49575
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/platform.cpython-310.pyc",
+        "present": true,
+        "sha256": "456e1eb5375d480fa83fae1695d95f1946b5486aadbd64ec41787dfd5a3fcb07",
+        "size_bytes": 27429
+      },
       "module": "platform",
       "origin": "stdlib_file",
       "path": "platform.py",
@@ -543,6 +857,12 @@
       "origin": "built-in"
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/posixpath.cpython-310.pyc",
+        "present": true,
+        "sha256": "fd9c69373d4a22ccae72d882f65c161c089532da1c89804158d6b8e9009523ee",
+        "size_bytes": 10560
+      },
       "module": "posixpath",
       "origin": "stdlib_file",
       "path": "posixpath.py",
@@ -554,6 +874,12 @@
       "origin": "built-in"
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/random.cpython-310.pyc",
+        "present": true,
+        "sha256": "b1609d7049bfb3f1dd2ecc18371545d7b5cc36b653edb464e07b790f2a331c50",
+        "size_bytes": 22748
+      },
       "module": "random",
       "origin": "stdlib_file",
       "path": "random.py",
@@ -561,6 +887,12 @@
       "size_bytes": 33221
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/re.cpython-310.pyc",
+        "present": true,
+        "sha256": "cadd09c258ceb54d0b0747226029b2fdffa0b826ee4a68e7d63a6b0c73087182",
+        "size_bytes": 14227
+      },
       "module": "re",
       "origin": "stdlib_file",
       "path": "re.py",
@@ -568,6 +900,12 @@
       "size_bytes": 15860
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/reprlib.cpython-310.pyc",
+        "present": true,
+        "sha256": "3ad8b71bd10e719e8cc5e484814b725093184889ce529ba195e5f342ce4f71c5",
+        "size_bytes": 5250
+      },
       "module": "reprlib",
       "origin": "stdlib_file",
       "path": "reprlib.py",
@@ -582,6 +920,12 @@
       "size_bytes": 19424
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/secrets.cpython-310.pyc",
+        "present": true,
+        "sha256": "9ac817a2b6c762c2a71a379eedd2e3485966267402542b7cdfb0cab2032b4cfd",
+        "size_bytes": 2175
+      },
       "module": "secrets",
       "origin": "stdlib_file",
       "path": "secrets.py",
@@ -593,6 +937,12 @@
       "origin": "built-in"
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/selectors.cpython-310.pyc",
+        "present": true,
+        "sha256": "a90016075990bb3c14ad78f618bcf6f9eeee6330fabaa4b2a182c183b59343fb",
+        "size_bytes": 17105
+      },
       "module": "selectors",
       "origin": "stdlib_file",
       "path": "selectors.py",
@@ -600,6 +950,12 @@
       "size_bytes": 19536
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/shutil.cpython-310.pyc",
+        "present": true,
+        "sha256": "19fcebdb7d5140a37a97a720210912c7a3cc772a5b8903eec8fd119a8a266ef9",
+        "size_bytes": 38536
+      },
       "module": "shutil",
       "origin": "stdlib_file",
       "path": "shutil.py",
@@ -607,6 +963,12 @@
       "size_bytes": 54572
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/signal.cpython-310.pyc",
+        "present": true,
+        "sha256": "9bbcbdbbc379b903168d37fb0b4952ea55066b36aa44352023e5c2f1a7eec03a",
+        "size_bytes": 2935
+      },
       "module": "signal",
       "origin": "stdlib_file",
       "path": "signal.py",
@@ -614,6 +976,12 @@
       "size_bytes": 2438
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/sre_compile.cpython-310.pyc",
+        "present": true,
+        "sha256": "8b83a4f39e347eed70fc63144dcca533057639432eacfd73c2224ea14cc5e3cc",
+        "size_bytes": 15194
+      },
       "module": "sre_compile",
       "origin": "stdlib_file",
       "path": "sre_compile.py",
@@ -621,6 +989,12 @@
       "size_bytes": 27973
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/sre_constants.cpython-310.pyc",
+        "present": true,
+        "sha256": "2bcd6900d3252ccff12adf758a16da2b3e13b2eee239d48ed083d460c94b15e7",
+        "size_bytes": 6357
+      },
       "module": "sre_constants",
       "origin": "stdlib_file",
       "path": "sre_constants.py",
@@ -628,6 +1002,12 @@
       "size_bytes": 7177
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/sre_parse.cpython-310.pyc",
+        "present": true,
+        "sha256": "383248d70dfa2ed1fca629941a13bfd1523800c3f317eeca9f14f8d4ec8efc5f",
+        "size_bytes": 21755
+      },
       "module": "sre_parse",
       "origin": "stdlib_file",
       "path": "sre_parse.py",
@@ -635,6 +1015,12 @@
       "size_bytes": 40779
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/stat.cpython-310.pyc",
+        "present": true,
+        "sha256": "a3caae2d2a8ac7e07fa71e6548bbb4a4b60b1174f783b2260c326a36c1231753",
+        "size_bytes": 4273
+      },
       "module": "stat",
       "origin": "stdlib_file",
       "path": "stat.py",
@@ -642,6 +1028,12 @@
       "size_bytes": 5485
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/struct.cpython-310.pyc",
+        "present": true,
+        "sha256": "72196ad89b5c747ea44fc42240322d2d652d1f8a8600c4b9841065a0942947da",
+        "size_bytes": 307
+      },
       "module": "struct",
       "origin": "stdlib_file",
       "path": "struct.py",
@@ -649,6 +1041,12 @@
       "size_bytes": 257
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/subprocess.cpython-310.pyc",
+        "present": true,
+        "sha256": "d4c894f6b7ada73c927527f462740df9705799bfa8cc816ac980e30dd6d331fd",
+        "size_bytes": 44741
+      },
       "module": "subprocess",
       "origin": "stdlib_file",
       "path": "subprocess.py",
@@ -660,6 +1058,12 @@
       "origin": "built-in"
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/sysconfig.cpython-310.pyc",
+        "present": true,
+        "sha256": "f1148a5914b9190a53f1c6a966b50c1c49f23c45fbdb9287b6ccbec71c2e161c",
+        "size_bytes": 18151
+      },
       "module": "sysconfig",
       "origin": "stdlib_file",
       "path": "sysconfig.py",
@@ -667,6 +1071,12 @@
       "size_bytes": 29398
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/tempfile.cpython-310.pyc",
+        "present": true,
+        "sha256": "b451e55286dd649f9c331df8503c8611ba51710487ea7cd15aac13fe09742a55",
+        "size_bytes": 27339
+      },
       "module": "tempfile",
       "origin": "stdlib_file",
       "path": "tempfile.py",
@@ -674,6 +1084,12 @@
       "size_bytes": 34567
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/threading.cpython-310.pyc",
+        "present": true,
+        "sha256": "e32349f37ebf0afd8d04f4904723abacff3d2d827ba9d671baabf235f36d1dff",
+        "size_bytes": 44969
+      },
       "module": "threading",
       "origin": "stdlib_file",
       "path": "threading.py",
@@ -685,6 +1101,12 @@
       "origin": "built-in"
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/token.cpython-310.pyc",
+        "present": true,
+        "sha256": "0c225c76d1efa672806dc2e9e4b9392b6296371fd040ee205dd769af8aae4567",
+        "size_bytes": 2738
+      },
       "module": "token",
       "origin": "stdlib_file",
       "path": "token.py",
@@ -692,6 +1114,12 @@
       "size_bytes": 2386
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/tokenize.cpython-310.pyc",
+        "present": true,
+        "sha256": "23257d632531bb8a51c364265f05342a6527be67d309bba0dc8edff38b046a78",
+        "size_bytes": 17194
+      },
       "module": "tokenize",
       "origin": "stdlib_file",
       "path": "tokenize.py",
@@ -699,6 +1127,12 @@
       "size_bytes": 25921
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/types.cpython-310.pyc",
+        "present": true,
+        "sha256": "c245101600201a3befd0b9006ff504ea1ffaa2c75eca5744592219d6784c0000",
+        "size_bytes": 9525
+      },
       "module": "types",
       "origin": "stdlib_file",
       "path": "types.py",
@@ -706,6 +1140,12 @@
       "size_bytes": 10117
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/typing.cpython-310.pyc",
+        "present": true,
+        "sha256": "09211acb4a92df1d6823045bb2627acbf2f34db2209ee51ce9471368e9c902bb",
+        "size_bytes": 85277
+      },
       "module": "typing",
       "origin": "stdlib_file",
       "path": "typing.py",
@@ -713,6 +1153,12 @@
       "size_bytes": 92557
     },
     {
+      "cached_bytecode": {
+        "path": "urllib/__pycache__/__init__.cpython-310.pyc",
+        "present": true,
+        "sha256": "4d1f3ed28c5c78a97cf52111e6bb22e1059667c8730d0ec06639b5d2eda33d6c",
+        "size_bytes": 131
+      },
       "module": "urllib",
       "origin": "stdlib_file",
       "path": "urllib/__init__.py",
@@ -720,6 +1166,12 @@
       "size_bytes": 0
     },
     {
+      "cached_bytecode": {
+        "path": "urllib/__pycache__/parse.cpython-310.pyc",
+        "present": true,
+        "sha256": "3cbc073e7193dbfd3bfe5eb7c637ce30bf12e00d4b96f9fe5db1f988b9c98e2e",
+        "size_bytes": 34868
+      },
       "module": "urllib.parse",
       "origin": "stdlib_file",
       "path": "urllib/parse.py",
@@ -727,6 +1179,12 @@
       "size_bytes": 44403
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/warnings.cpython-310.pyc",
+        "present": true,
+        "sha256": "e797217e2c6e8b0e77e6c83d3eab864aa1c38167eb817b0f1233ded89870eef5",
+        "size_bytes": 13646
+      },
       "module": "warnings",
       "origin": "stdlib_file",
       "path": "warnings.py",
@@ -734,6 +1192,12 @@
       "size_bytes": 19688
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/weakref.cpython-310.pyc",
+        "present": true,
+        "sha256": "e099cc9930185092cd37f225e181f7cadb0861903926ec6cbe564be3383602f3",
+        "size_bytes": 20343
+      },
       "module": "weakref",
       "origin": "stdlib_file",
       "path": "weakref.py",
@@ -741,6 +1205,12 @@
       "size_bytes": 21560
     },
     {
+      "cached_bytecode": {
+        "path": "__pycache__/zipfile.cpython-310.pyc",
+        "present": true,
+        "sha256": "501ccc31f9249a2827bc1c933ae6ce73df8caca1813018df3f0eecd889e4507c",
+        "size_bytes": 61845
+      },
       "module": "zipfile",
       "origin": "stdlib_file",
       "path": "zipfile.py",
@@ -756,6 +1226,6 @@
       "origin": "built-in"
     }
   ],
-  "rows_sha256": "dfbcb14de125ed61ec8b77999b41661411d08dc72a62cd20c8752272576576ab",
+  "rows_sha256": "3666eaad79e6e2333a3dccd92045015fa7f34a399514fe00323cc3053b39538e",
   "schema_id": "betelgeuze.engine_v2_python_stdlib_import_closure/1.0.0"
 }

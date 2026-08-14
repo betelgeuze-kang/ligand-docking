@@ -142,14 +142,61 @@ def _stdlib_file_identity(path: Path) -> tuple[str, bytes]:
     return relative.as_posix(), raw
 
 
+def _stdlib_cached_bytecode_identity(module: ModuleType) -> dict[str, object] | None:
+    raw_cached = getattr(module, "__cached__", None)
+    if raw_cached is None:
+        return None
+    if type(raw_cached) is not str or not raw_cached:
+        raise FullPipelineCPUActivationError(
+            "imported standard-library bytecode cache identity is invalid"
+        )
+    path = Path(raw_cached)
+    if not path.is_absolute() or path.suffix != ".pyc":
+        raise FullPipelineCPUActivationError(
+            "imported standard-library bytecode cache path is invalid"
+        )
+    try:
+        relative, raw = _stdlib_file_identity(path)
+    except FullPipelineCPUActivationError as exc:
+        try:
+            root = PYTHON_STDLIB_ROOT.resolve(strict=True)
+            parent = path.parent.resolve(strict=True)
+            unresolved = parent / path.name
+            relative_path = unresolved.relative_to(root)
+        except (OSError, ValueError) as path_exc:
+            raise FullPipelineCPUActivationError(
+                "imported standard-library bytecode cache escaped the frozen root"
+            ) from path_exc
+        try:
+            unresolved.lstat()
+        except FileNotFoundError:
+            return {
+                "path": relative_path.as_posix(),
+                "present": False,
+            }
+        except OSError as path_exc:
+            raise FullPipelineCPUActivationError(
+                "imported standard-library bytecode cache state is ambiguous"
+            ) from path_exc
+        raise exc
+    return {
+        "path": relative,
+        "present": True,
+        "sha256": sha256_bytes(raw),
+        "size_bytes": len(raw),
+    }
+
+
 def derive_stdlib_import_closure(
     modules: Mapping[str, ModuleType] | None = None,
 ) -> dict[str, object]:
-    """Hash the exact built-in, frozen, and file-backed stdlib module set."""
+    """Hash built-ins plus source, extension, and declared bytecode identities."""
 
     source = sys.modules if modules is None else modules
     rows: list[dict[str, object]] = []
     total_bytes = 0
+    cached_bytecode_file_count = 0
+    cached_bytecode_total_bytes = 0
     for name, module in sorted(source.items()):
         if type(name) is not str or not name or not isinstance(module, ModuleType):
             continue
@@ -174,21 +221,30 @@ def derive_stdlib_import_closure(
             except (OSError, ValueError):
                 continue
             raise
-        rows.append(
-            {
-                "module": name,
-                "origin": "stdlib_file",
-                "path": relative,
-                "sha256": sha256_bytes(raw),
-                "size_bytes": len(raw),
-            }
-        )
+        row: dict[str, object] = {
+            "module": name,
+            "origin": "stdlib_file",
+            "path": relative,
+            "sha256": sha256_bytes(raw),
+            "size_bytes": len(raw),
+        }
+        cached = _stdlib_cached_bytecode_identity(module)
+        if relative.endswith(".py") and cached is None:
+            raise FullPipelineCPUActivationError(
+                "source-backed standard-library module lacks a bytecode cache identity"
+            )
+        if cached is not None:
+            row["cached_bytecode"] = cached
+            if cached["present"] is True:
+                cached_bytecode_file_count += 1
+                cached_bytecode_total_bytes += int(cached["size_bytes"])
+        rows.append(row)
         total_bytes += len(raw)
     if not rows or len(rows) > MAX_STDLIB_MODULE_ROWS:
         raise FullPipelineCPUActivationError(
             "standard-library import closure row count is invalid"
         )
-    if total_bytes > MAX_CLOSURE_TOTAL_BYTES:
+    if total_bytes + cached_bytecode_total_bytes > MAX_CLOSURE_TOTAL_BYTES:
         raise FullPipelineCPUActivationError(
             "standard-library import closure exceeds its byte envelope"
         )
@@ -199,6 +255,8 @@ def derive_stdlib_import_closure(
             row.get("origin") == "stdlib_file" for row in rows
         ),
         "file_backed_total_bytes": total_bytes,
+        "cached_bytecode_file_count": cached_bytecode_file_count,
+        "cached_bytecode_total_bytes": cached_bytecode_total_bytes,
         "rows_sha256": manifest_rows_sha256(rows),
         "rows": rows,
     }

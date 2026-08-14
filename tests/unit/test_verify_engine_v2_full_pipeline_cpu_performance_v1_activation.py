@@ -135,6 +135,74 @@ def test_closure_manifest_rejects_summary_drift(tmp_path: Path) -> None:
         )
 
 
+def test_closure_manifest_requires_declared_bytecode_identity(tmp_path: Path) -> None:
+    document = json.loads(_STDLIB.read_text(encoding="ascii"))
+    source_row = next(
+        row
+        for row in document["rows"]
+        if row.get("origin") == "stdlib_file" and str(row.get("path")).endswith(".py")
+    )
+    source_row.pop("cached_bytecode")
+    document["rows_sha256"] = hashlib.sha256(
+        verify._compact_json_bytes(document["rows"])
+    ).hexdigest()
+    changed = tmp_path / "stdlib-bytecode.json"
+    _write_canonical(changed, document)
+
+    with pytest.raises(
+        verify.FullPipelineCPUActivationContractError,
+        match="lacks bytecode identity",
+    ):
+        verify.load_closure_manifest(
+            changed,
+            expected_schema_id=(
+                "betelgeuze.engine_v2_python_stdlib_import_closure/1.0.0"
+            ),
+        )
+
+
+def test_workflow_trigger_guard_rejects_sparse_checkout_only(tmp_path: Path) -> None:
+    target = "betelgeuze_engine_v2/docking/performance_sidecar.py"
+    workflow = tmp_path / "workflow.yml"
+    workflow.write_text(
+        "on:\n"
+        "  push:\n"
+        "    paths:\n"
+        '      - "unrelated.py"\n'
+        "jobs:\n"
+        "  verify:\n"
+        "    steps:\n"
+        f"      - run: use {target}\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        verify.FullPipelineCPUActivationContractError,
+        match="trigger path count changed",
+    ):
+        verify._require_workflow_trigger_path_occurrences(
+            workflow,
+            relative_path=target,
+            expected_count=1,
+        )
+
+    workflow.write_text(
+        "on:\n"
+        "  push:\n"
+        "    paths:\n"
+        f'      - "{target}"\n'
+        "jobs:\n"
+        "  verify:\n"
+        "    steps: []\n",
+        encoding="utf-8",
+    )
+    verify._require_workflow_trigger_path_occurrences(
+        workflow,
+        relative_path=target,
+        expected_count=1,
+    )
+
+
 def test_activation_contract_rejects_duplicate_json_keys(tmp_path: Path) -> None:
     changed = tmp_path / "activation.json"
     changed.write_text('{"schema_id":"a","schema_id":"b"}\n', encoding="ascii")

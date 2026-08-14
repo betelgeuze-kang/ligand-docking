@@ -21,15 +21,17 @@
       "total_bytes": 13962048
     },
     "stdlib_import_closure": {
+      "cached_bytecode_file_count": 78,
+      "cached_bytecode_total_bytes": 1447655,
       "file_backed_module_count": 84,
       "file_backed_total_bytes": 2194777,
-      "manifest_sha256": "856347ca4e84353a138ca27e1d66e8a841ca349f49d91f9600f415d5fb0d22d1",
+      "manifest_sha256": "230cc88d60a9fd0f92318492ec533672930e72eaed11ef5410a45ce7edbb690b",
       "module_count": 125,
       "path": "config/engine_v2_full_pipeline_cpu_performance_v1_stdlib_closure.json"
     }
   },
   "preflight": {
-    "activation_module_sha256": "7cbfd960910f3e20c2f7c96e0873d0c93e8e49bbe3df10a4f88249fd019603e7",
+    "activation_module_sha256": "b3d216100df51cfa0886ce9119a1e7e72a15ba30e6046609022c0d062351566b",
     "bootstrap_flags": [
       "-I",
       "-S",
@@ -41,7 +43,8 @@
     "host_preflight_required": true,
     "molecular_input_allowed": false,
     "performance_measurement_allowed": false,
-    "preflight_tool_sha256": "ebca11051c2e6805a2217e5d53faeb42fd62116894b1fc9615b8a03368146c1e",
+    "performance_sidecar_sha256": "04253e3897bb5746e1c1082dbf8e27922835ffb075aeb3268c18a0895662173f",
+    "preflight_tool_sha256": "1e17f56a3a2bbe3f3ae1b8b432d230004a7dc063365ea5dd7ddb6ca072be3dc1",
     "qualification_state_write_allowed": false,
     "reservation_allowed": false
   },
@@ -95,7 +98,7 @@
     "profile_sha256": "385fb713cca8f39353f138115749abdfc9768b02222e13111a418360be30a000",
     "profile_verifier_sha256": "b05d9e9710cc9594eba4a0630420dfbc1204dba9e89c63332a0f10bbc541e880",
     "runner_tool_sha256": "bfaf4bc25b2161a43e1e01418394c716d4b762fd39ec6708a01791159916e6e8",
-    "stdlib_import_closure_manifest_sha256": "856347ca4e84353a138ca27e1d66e8a841ca349f49d91f9600f415d5fb0d22d1"
+    "stdlib_import_closure_manifest_sha256": "230cc88d60a9fd0f92318492ec533672930e72eaed11ef5410a45ce7edbb690b"
   },
   "source_foundation": {
     "merged_main_commit_object_encoding": "git_cat_file_commit_raw_v1",
