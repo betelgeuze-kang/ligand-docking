@@ -24,6 +24,7 @@ mod native_hash;
 mod prune;
 mod receipt;
 mod refine;
+mod repository_d0;
 mod rigid_refinement;
 mod scorer_v1;
 mod search;
@@ -126,6 +127,18 @@ pub use model::{
     MAX_SURFACE_SAMPLES, MAX_TOP_K,
 };
 pub use receipt::SearchReceipt;
+pub use repository_d0::{
+    materialize_repository_synthetic_d0_sources, RepositoryD0AtomicFeature,
+    RepositoryD0ProposalSource, RepositoryD0SourceBundle, RepositoryD0SourceError,
+    REPOSITORY_D0_CANDIDATE_DENOMINATOR, REPOSITORY_D0_CENTERED_CANDIDATE_COUNT,
+    REPOSITORY_D0_EXPECTED_ALLOCATION_SHA256, REPOSITORY_D0_EXPECTED_BUNDLE_SHA256,
+    REPOSITORY_D0_EXPECTED_FEATURE_INVENTORY_SHA256, REPOSITORY_D0_EXPECTED_PREPARED_INPUT_SHA256,
+    REPOSITORY_D0_GUIDED_SOURCE_INDICES, REPOSITORY_D0_LIGAND_ATOM_COUNT,
+    REPOSITORY_D0_POCKET_RADIUS_ANGSTROM, REPOSITORY_D0_PROFILE_ID,
+    REPOSITORY_D0_RECEPTOR_ATOM_COUNT, REPOSITORY_D0_RETAINED_SOURCE_INDICES,
+    REPOSITORY_D0_SCHEMA_ID, REPOSITORY_D0_SEED, REPOSITORY_D0_TOP_K,
+    REPOSITORY_D0_TRANSLATION_RADIUS_ANGSTROM,
+};
 pub use rigid_refinement::{
     refine_interaction_aware_rigid_v2, refine_interaction_aware_rigid_v3,
     refine_interaction_aware_rigid_v6, NativeRigidRefinementContext, NativeRigidRefinementError,
