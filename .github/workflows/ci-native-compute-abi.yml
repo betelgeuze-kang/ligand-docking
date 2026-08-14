@@ -38,12 +38,25 @@ on:
       - "config/engine_v2_repository_synthetic_d0_cpu_parity_v1.json"
       - "config/engine_v2_native_cpu_runtime_artifacts_v1.json"
       - "betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1.py"
+      - "betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1_activation.py"
+      - "betelgeuze_engine_v2/docking/performance_host_preflight_v3.py"
+      - "betelgeuze_engine_v2/docking/performance_sidecar.py"
       - "config/engine_v2_full_pipeline_cpu_performance_v1.json"
+      - "config/engine_v2_full_pipeline_cpu_performance_v1_activation.json"
+      - "config/engine_v2_full_pipeline_cpu_performance_v1_stdlib_closure.json"
+      - "config/engine_v2_full_pipeline_cpu_performance_v1_dynamic_library_closure.json"
+      - "config/engine_v2_full_pipeline_cpu_performance_v1_preinit_executable_closure.json"
       - "tools/run_engine_v2_full_pipeline_cpu_performance_v1.py"
       - "tools/verify_engine_v2_full_pipeline_cpu_performance_v1.py"
+      - "tools/preflight_engine_v2_full_pipeline_cpu_performance_v1_activation.py"
+      - "native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp"
+      - "tools/verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py"
       - "tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1.py"
       - "tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1.py"
+      - "tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1_activation.py"
+      - "tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py"
       - "docs/engine_v2_full_pipeline_cpu_performance_v1.md"
+      - "docs/engine_v2_full_pipeline_cpu_performance_v1_activation.md"
       - "packaging/engine-v2/native-runtime-archive/**"
       - "tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py"
       - "tools/verify_engine_v2_native_fixed64_cpu_profile_v5.py"
@@ -115,12 +128,25 @@ on:
       - "config/engine_v2_repository_synthetic_d0_cpu_parity_v1.json"
       - "config/engine_v2_native_cpu_runtime_artifacts_v1.json"
       - "betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1.py"
+      - "betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1_activation.py"
+      - "betelgeuze_engine_v2/docking/performance_host_preflight_v3.py"
+      - "betelgeuze_engine_v2/docking/performance_sidecar.py"
       - "config/engine_v2_full_pipeline_cpu_performance_v1.json"
+      - "config/engine_v2_full_pipeline_cpu_performance_v1_activation.json"
+      - "config/engine_v2_full_pipeline_cpu_performance_v1_stdlib_closure.json"
+      - "config/engine_v2_full_pipeline_cpu_performance_v1_dynamic_library_closure.json"
+      - "config/engine_v2_full_pipeline_cpu_performance_v1_preinit_executable_closure.json"
       - "tools/run_engine_v2_full_pipeline_cpu_performance_v1.py"
       - "tools/verify_engine_v2_full_pipeline_cpu_performance_v1.py"
+      - "tools/preflight_engine_v2_full_pipeline_cpu_performance_v1_activation.py"
+      - "native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp"
+      - "tools/verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py"
       - "tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1.py"
       - "tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1.py"
+      - "tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1_activation.py"
+      - "tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py"
       - "docs/engine_v2_full_pipeline_cpu_performance_v1.md"
+      - "docs/engine_v2_full_pipeline_cpu_performance_v1_activation.md"
       - "packaging/engine-v2/native-runtime-archive/**"
       - "tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py"
       - "tools/verify_engine_v2_native_fixed64_cpu_profile_v5.py"
@@ -192,6 +218,10 @@ jobs:
             rust_engine_v2
             betelgeuze_engine_v2/docking/native_fixed64_consumers.py
             betelgeuze_engine_v2/docking/native_cpu_parity.py
+            betelgeuze_engine_v2/docking/performance_host_preflight_v3.py
+            betelgeuze_engine_v2/docking/performance_sidecar.py
+            betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1.py
+            betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1_activation.py
             betelgeuze_engine_v2/standalone_cli.py
             .cargo
             .cargo/config
@@ -214,6 +244,16 @@ jobs:
             config/engine_v2_repository_synthetic_d0_native_session_v1.json
             config/engine_v2_repository_synthetic_d0_cpu_parity_v1.json
             config/engine_v2_native_cpu_runtime_artifacts_v1.json
+            config/engine_v2_full_pipeline_cpu_performance_v1.json
+            config/engine_v2_full_pipeline_cpu_performance_v1_activation.json
+            config/engine_v2_full_pipeline_cpu_performance_v1_stdlib_closure.json
+            config/engine_v2_full_pipeline_cpu_performance_v1_dynamic_library_closure.json
+            config/engine_v2_full_pipeline_cpu_performance_v1_preinit_executable_closure.json
+            tools/run_engine_v2_full_pipeline_cpu_performance_v1.py
+            tools/verify_engine_v2_full_pipeline_cpu_performance_v1.py
+            tools/preflight_engine_v2_full_pipeline_cpu_performance_v1_activation.py
+            native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp
+            tools/verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py
             tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py
             tools/verify_engine_v2_native_fixed64_cpu_profile_v5.py
             tools/verify_engine_v2_native_fixed64_cpu_profile_v6.py
@@ -232,19 +272,26 @@ jobs:
             tests/unit/test_verify_engine_v2_repository_synthetic_d0_native_session_v1.py
             tests/unit/test_verify_engine_v2_repository_synthetic_d0_cpu_parity_v1.py
             tests/unit/test_verify_engine_v2_native_cpu_runtime_artifacts_v1.py
+            tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1_activation.py
+            tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py
             docs/engine_v2_native_fixed64_workspace_reuse_v1.md
             docs/engine_v2_repository_synthetic_d0_native_source_v1.md
             docs/engine_v2_repository_synthetic_d0_native_session_v1.md
             docs/engine_v2_repository_synthetic_d0_cpu_parity_v1.md
             docs/engine_v2_native_cpu_runtime_artifacts_v1.md
+            docs/engine_v2_full_pipeline_cpu_performance_v1_activation.md
             .github/workflows/ci-native-compute-abi.yml
             .github/workflows/ci-engine-v2-release-candidate.yml
+            .github/workflows/ci-engine-v2-main.yml
 
       - name: Fetch consumed native fixed64 CPU v7 source object
         run: |
           git fetch --no-tags --depth=1 origin 5c1e4791e988d4c75a5111f933feac85236ba821
           test "$(git rev-parse --verify '5c1e4791e988d4c75a5111f933feac85236ba821^{commit}')" = \
             "5c1e4791e988d4c75a5111f933feac85236ba821"
+          git fetch --no-tags --depth=1 origin 38c16136a1e2cc126517ff9b50a05f06c5795adb
+          test "$(git rev-parse --verify '38c16136a1e2cc126517ff9b50a05f06c5795adb^{commit}')" = \
+            "38c16136a1e2cc126517ff9b50a05f06c5795adb"
 
       - name: Report hosted toolchain
         run: |
@@ -294,6 +341,10 @@ jobs:
       - name: Verify native CPU runtime artifacts v1 contract
         run: >-
           python3 tools/verify_engine_v2_native_cpu_runtime_artifacts_v1.py
+
+      - name: Verify full-pipeline CPU performance v1 activation
+        run: >-
+          python3 tools/verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py
 
       - name: Build and test the C ABI
         run: |

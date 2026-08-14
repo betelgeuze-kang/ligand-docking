@@ -140,6 +140,17 @@ CPU_PERFORMANCE_CONTRACT_PATHS = (
     "tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1.py",
     "tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1.py",
     "docs/engine_v2_full_pipeline_cpu_performance_v1.md",
+    "betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1_activation.py",
+    "config/engine_v2_full_pipeline_cpu_performance_v1_activation.json",
+    "config/engine_v2_full_pipeline_cpu_performance_v1_stdlib_closure.json",
+    "config/engine_v2_full_pipeline_cpu_performance_v1_dynamic_library_closure.json",
+    "config/engine_v2_full_pipeline_cpu_performance_v1_preinit_executable_closure.json",
+    "tools/preflight_engine_v2_full_pipeline_cpu_performance_v1_activation.py",
+    "native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp",
+    "tools/verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py",
+    "tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1_activation.py",
+    "tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py",
+    "docs/engine_v2_full_pipeline_cpu_performance_v1_activation.md",
     (
         "packaging/engine-v2/native-runtime-archive/0.2.0rc6/cp310-cp310/"
         "betelgeuze-engine-v2-native-0.2.0rc6.spdx.json"
@@ -178,6 +189,17 @@ CPU_PERFORMANCE_REQUIRED_TOKEN_COUNTS = {
     "tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1.py": 2,
     "tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1.py": 3,
     "docs/engine_v2_full_pipeline_cpu_performance_v1.md": 1,
+    "betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1_activation.py": 2,
+    "config/engine_v2_full_pipeline_cpu_performance_v1_activation.json": 2,
+    "config/engine_v2_full_pipeline_cpu_performance_v1_stdlib_closure.json": 2,
+    "config/engine_v2_full_pipeline_cpu_performance_v1_dynamic_library_closure.json": 2,
+    "config/engine_v2_full_pipeline_cpu_performance_v1_preinit_executable_closure.json": 2,
+    "tools/preflight_engine_v2_full_pipeline_cpu_performance_v1_activation.py": 2,
+    "native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp": 2,
+    "tools/verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py": 3,
+    "tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1_activation.py": 3,
+    "tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py": 3,
+    "docs/engine_v2_full_pipeline_cpu_performance_v1_activation.md": 1,
     "packaging/engine-v2/native-runtime-archive": 1,
     "import betelgeuze_engine_v2.docking.performance_host_preflight_v3": 1,
     "import betelgeuze_engine_v2.docking.performance_qualification_v3": 1,
@@ -869,7 +891,7 @@ def _cpu_performance_authority_is_fail_closed(repo_root: Path) -> bool:
     full_gates = full_pipeline.get("gates")
     full_measurement = full_pipeline.get("measurement")
     full_predecessor = full_pipeline.get("predecessor_disposition")
-    return bool(
+    full_pipeline_profile_fail_closed = bool(
         type(full_authority) is dict
         and set(full_authority)
         == set(FULL_PIPELINE_CPU_PERFORMANCE_FALSE_AUTHORITY_KEYS)
@@ -897,6 +919,222 @@ def _cpu_performance_authority_is_fail_closed(repo_root: Path) -> bool:
         and full_predecessor.get("attempt_consumed") is False
         and full_predecessor.get("predecessor_terminal_state_present") is False
         and full_predecessor.get("rerun_performed") is False
+    )
+    if not full_pipeline_profile_fail_closed:
+        return False
+
+    full_activation_path = (
+        repo_root / "config/engine_v2_full_pipeline_cpu_performance_v1_activation.json"
+    )
+    try:
+        full_activation_raw = full_activation_path.read_bytes()
+        full_activation_contract = json.loads(
+            full_activation_raw.decode("ascii"),
+            object_pairs_hook=reject_duplicate_keys,
+            parse_float=reject_float,
+            parse_constant=reject_float,
+        )
+    except (OSError, UnicodeError, ValueError):
+        return False
+    expected_full_activation_bytes = (
+        json.dumps(
+            full_activation_contract,
+            indent=2,
+            sort_keys=True,
+            ensure_ascii=True,
+            allow_nan=False,
+        ).encode("ascii")
+        + b"\n"
+    )
+    if (
+        type(full_activation_contract) is not dict
+        or full_activation_raw != expected_full_activation_bytes
+        or full_activation_contract.get("schema_id")
+        != "betelgeuze.engine_v2_full_pipeline_cpu_performance_activation/1.0.0"
+        or full_activation_contract.get("status")
+        != "frozen_non_consuming_exact_main_preflight_supervisor_not_implemented"
+        or full_activation_contract.get("profile_id")
+        != "engine_v2_full_pipeline_cpu_performance_v1"
+        or full_activation_contract.get("profile_sha256")
+        != "385fb713cca8f39353f138115749abdfc9768b02222e13111a418360be30a000"
+    ):
+        return False
+    activation_authority = full_activation_contract.get("authority")
+    activation_restrictions = full_activation_contract.get("restrictions")
+    activation_runner = full_activation_contract.get("runner")
+    activation_preflight = full_activation_contract.get("preflight")
+    activation_loader_identity = (
+        activation_preflight.get("exact_loader_kernel_process_identity")
+        if type(activation_preflight) is dict
+        else None
+    )
+    activation_bootstrap_snapshot = (
+        activation_preflight.get("immutable_bootstrap_snapshot")
+        if type(activation_preflight) is dict
+        else None
+    )
+    activation_trusted_launcher = (
+        activation_preflight.get("trusted_root_launcher")
+        if type(activation_preflight) is dict
+        else None
+    )
+    activation_initial_host_namespaces = (
+        activation_preflight.get("initial_host_namespaces")
+        if type(activation_preflight) is dict
+        else None
+    )
+    activation_initial_namespace_exec_supervisor = (
+        activation_preflight.get("trusted_initial_namespace_exec_supervisor")
+        if type(activation_preflight) is dict
+        else None
+    )
+    try:
+        trusted_launcher_source_sha256 = _sha256(
+            repo_root
+            / "native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp"
+        )
+    except OSError:
+        return False
+    activation_sources = full_activation_contract.get("source_bindings")
+    required_source_bindings = {
+        "merged_main_commit_sha256",
+        "merged_main_tree_sha256",
+        "profile_sha256",
+        "profile_verifier_sha256",
+        "measurement_core_sha256",
+        "runner_tool_sha256",
+        "native_consumer_sha256",
+        "native_cpu_parity_sha256",
+        "host_preflight_sha256",
+        "preinit_executable_closure_manifest_sha256",
+        "stdlib_import_closure_manifest_sha256",
+        "dynamic_library_closure_manifest_sha256",
+    }
+    return bool(
+        type(activation_authority) is dict
+        and set(activation_authority)
+        == set(FULL_PIPELINE_CPU_PERFORMANCE_FALSE_AUTHORITY_KEYS)
+        and all(value is False for value in activation_authority.values())
+        and type(activation_restrictions) is dict
+        and activation_restrictions
+        and all(value is False for value in activation_restrictions.values())
+        and type(activation_runner) is dict
+        and activation_runner.get("activation_contract_present") is True
+        and activation_runner.get("activation_contract_allows_live_execution") is False
+        and activation_runner.get("github_actions_live_execution_allowed") is False
+        and activation_runner.get("live_synthetic_local_execution_implemented") is False
+        and activation_runner.get("qualification_attempt_consumed") is False
+        and activation_runner.get("reservation_created") is False
+        and activation_runner.get("runner_remains_fail_closed") is True
+        and type(activation_preflight) is dict
+        and activation_preflight.get("caller_science_input_allowed") is False
+        and activation_preflight.get("github_actions_preflight_allowed") is False
+        and activation_preflight.get("molecular_input_allowed") is False
+        and activation_preflight.get("exact_preinit_closure_required") is True
+        and activation_preflight.get("native_initialization_delta_exact") is True
+        and activation_preflight.get("exact_python_executable_target")
+        == "/usr/bin/python3.10"
+        and type(activation_loader_identity) is dict
+        and activation_loader_identity.get("operational") is False
+        and activation_loader_identity.get("proc_cmdline_exact") is True
+        and activation_loader_identity.get("proc_exe_exact") is True
+        and activation_loader_identity.get("stage0_argument_vector_bound") is True
+        and activation_loader_identity.get("trusted_launcher_parent_exact") is True
+        and type(activation_initial_host_namespaces) is dict
+        and set(activation_initial_host_namespaces)
+        == {
+            "defense_in_depth_procfs_checks_present",
+            "gid_map",
+            "mount_independent_evidence_required",
+            "mount_namespace",
+            "procfs_path_evidence_authoritative",
+            "uid_map",
+            "user_namespace",
+        }
+        and activation_initial_host_namespaces.get("gid_map") == [0, 0, 4_294_967_295]
+        and all(
+            type(value) is int
+            for value in activation_initial_host_namespaces["gid_map"]
+        )
+        and activation_initial_host_namespaces.get("uid_map") == [0, 0, 4_294_967_295]
+        and all(
+            type(value) is int
+            for value in activation_initial_host_namespaces["uid_map"]
+        )
+        and activation_initial_host_namespaces.get("mount_namespace")
+        == "mnt:[4026531841]"
+        and activation_initial_host_namespaces.get("user_namespace")
+        == "user:[4026531837]"
+        and activation_initial_host_namespaces.get(
+            "defense_in_depth_procfs_checks_present"
+        )
+        is True
+        and activation_initial_host_namespaces.get(
+            "mount_independent_evidence_required"
+        )
+        is True
+        and activation_initial_host_namespaces.get("procfs_path_evidence_authoritative")
+        is False
+        and type(activation_initial_namespace_exec_supervisor) is dict
+        and set(activation_initial_namespace_exec_supervisor)
+        == {
+            "implementation_present",
+            "installation_authorized",
+            "mount_independent_namespace_attestation_required",
+            "operational",
+            "signed_or_kernel_attested_handoff_required",
+            "trace_exclusion_across_exec_required",
+        }
+        and activation_initial_namespace_exec_supervisor.get("implementation_present")
+        is False
+        and activation_initial_namespace_exec_supervisor.get("installation_authorized")
+        is False
+        and activation_initial_namespace_exec_supervisor.get(
+            "mount_independent_namespace_attestation_required"
+        )
+        is True
+        and activation_initial_namespace_exec_supervisor.get("operational") is False
+        and activation_initial_namespace_exec_supervisor.get(
+            "signed_or_kernel_attested_handoff_required"
+        )
+        is True
+        and activation_initial_namespace_exec_supervisor.get(
+            "trace_exclusion_across_exec_required"
+        )
+        is True
+        and type(activation_trusted_launcher) is dict
+        and activation_trusted_launcher.get("artifact_role")
+        == "non_operational_fail_closed_stub"
+        and type(activation_trusted_launcher.get("binary_sha256")) is str
+        and len(activation_trusted_launcher["binary_sha256"]) == 64
+        and all(
+            character in "0123456789abcdef"
+            for character in activation_trusted_launcher["binary_sha256"]
+        )
+        and activation_trusted_launcher.get("installation_authorized") is False
+        and activation_trusted_launcher.get("runtime_launch_authorized") is False
+        and activation_trusted_launcher.get("source_path")
+        == "native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp"
+        and activation_trusted_launcher.get("source_sha256")
+        == trusted_launcher_source_sha256
+        and activation_trusted_launcher.get("static_elf_no_dynamic_or_interp_required")
+        is True
+        and type(activation_bootstrap_snapshot) is dict
+        and activation_bootstrap_snapshot.get("descriptor_cloexec") is False
+        and activation_bootstrap_snapshot.get("descriptor_mode") == "0400"
+        and activation_bootstrap_snapshot.get("exact_source_sha256_required") is True
+        and activation_bootstrap_snapshot.get("launched_from_snapshot_required") is True
+        and activation_preflight.get("performance_measurement_allowed") is False
+        and activation_preflight.get("qualification_state_write_allowed") is False
+        and activation_preflight.get("reservation_allowed") is False
+        and type(activation_sources) is dict
+        and set(activation_sources) == required_source_bindings
+        and all(
+            type(value) is str
+            and len(value) == 64
+            and all(character in "0123456789abcdef" for character in value)
+            for value in activation_sources.values()
+        )
     )
 
 

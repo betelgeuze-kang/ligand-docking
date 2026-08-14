@@ -410,6 +410,27 @@ def test_constant_safe_exec_does_not_trigger_product_boundary(tmp_path: Path) ->
     assert architecture.inspect_product_import_boundary(tmp_path) == []
 
 
+def test_audited_full_pipeline_activation_loader_exception_is_narrow(
+    tmp_path: Path,
+) -> None:
+    _write(tmp_path / "tools/__init__.py", "")
+    _write(
+        tmp_path
+        / "tools/preflight_engine_v2_full_pipeline_cpu_performance_v1_activation.py",
+        "def _load_source_module(code):\n"
+        "    exec(code, {})\n"
+        "def unreviewed_loader(payload):\n"
+        "    exec(payload, {})\n",
+    )
+
+    violations = architecture.inspect_product_import_boundary(tmp_path)
+    assert {
+        item.line
+        for item in violations
+        if item.code == "product_dynamic_code_execution_unresolved"
+    } == {4}
+
+
 def test_new_loader_in_audited_module_does_not_inherit_exception(
     tmp_path: Path,
 ) -> None:

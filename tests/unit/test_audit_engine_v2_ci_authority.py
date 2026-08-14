@@ -187,10 +187,19 @@ def _write_cpu_performance_contract(
         Path(__file__).resolve().parents[2]
         / "config/engine_v2_full_pipeline_cpu_performance_v1.json"
     )
-    full_pipeline = (
-        tmp_path / "config/engine_v2_full_pipeline_cpu_performance_v1.json"
-    )
+    full_pipeline = tmp_path / "config/engine_v2_full_pipeline_cpu_performance_v1.json"
     full_pipeline.write_bytes(full_pipeline_source.read_bytes())
+    for relative in (
+        "config/engine_v2_full_pipeline_cpu_performance_v1_activation.json",
+        "config/engine_v2_full_pipeline_cpu_performance_v1_stdlib_closure.json",
+        "config/engine_v2_full_pipeline_cpu_performance_v1_dynamic_library_closure.json",
+        "config/engine_v2_full_pipeline_cpu_performance_v1_preinit_executable_closure.json",
+        "native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp",
+    ):
+        source = Path(__file__).resolve().parents[2] / relative
+        target = tmp_path / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(source.read_bytes())
 
 
 def _write_native_fixed64_cpu_v5_contract(tmp_path: Path) -> None:
@@ -808,13 +817,117 @@ def test_full_pipeline_cpu_performance_escalation_fails_ci_audit(
 ) -> None:
     _write_authoritative_workflows(tmp_path)
     _write_cpu_performance_contract(tmp_path)
-    profile_path = (
-        tmp_path / "config/engine_v2_full_pipeline_cpu_performance_v1.json"
-    )
+    profile_path = tmp_path / "config/engine_v2_full_pipeline_cpu_performance_v1.json"
     successor = json.loads(profile_path.read_text(encoding="ascii"))
     successor[section][field] = value
     profile_path.write_text(
         json.dumps(successor, indent=2, sort_keys=True) + "\n",
+        encoding="ascii",
+    )
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_cpu_performance_ci_tokens()), encoding="utf-8"
+    )
+
+    payload = build_inventory(tmp_path)
+    assert payload["cpu_performance_authority_fail_closed"] is False
+    assert payload["cpu_performance_contract_in_authoritative_ci"] is False
+
+
+@pytest.mark.parametrize(
+    ("section", "field", "value"),
+    (
+        ("authority", "synthetic_cpu_performance_qualification_authorized", True),
+        ("restrictions", "qualification_consumption_allowed", True),
+        ("runner", "activation_contract_allows_live_execution", True),
+        ("runner", "github_actions_live_execution_allowed", True),
+        ("runner", "live_synthetic_local_execution_implemented", True),
+        ("runner", "qualification_attempt_consumed", True),
+        ("preflight", "github_actions_preflight_allowed", True),
+        ("preflight", "performance_measurement_allowed", True),
+        ("preflight", "qualification_state_write_allowed", True),
+    ),
+)
+def test_full_pipeline_cpu_activation_escalation_fails_ci_audit(
+    tmp_path: Path,
+    section: str,
+    field: str,
+    value: object,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_cpu_performance_contract(tmp_path)
+    activation_path = (
+        tmp_path / "config/engine_v2_full_pipeline_cpu_performance_v1_activation.json"
+    )
+    activation = json.loads(activation_path.read_text(encoding="ascii"))
+    activation[section][field] = value
+    activation_path.write_text(
+        json.dumps(activation, indent=2, sort_keys=True) + "\n",
+        encoding="ascii",
+    )
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_cpu_performance_ci_tokens()), encoding="utf-8"
+    )
+
+    payload = build_inventory(tmp_path)
+    assert payload["cpu_performance_authority_fail_closed"] is False
+    assert payload["cpu_performance_contract_in_authoritative_ci"] is False
+
+
+@pytest.mark.parametrize(
+    ("section", "field"),
+    (
+        ("exact_loader_kernel_process_identity", "proc_cmdline_exact"),
+        (
+            "exact_loader_kernel_process_identity",
+            "trusted_launcher_parent_exact",
+        ),
+        ("immutable_bootstrap_snapshot", "launched_from_snapshot_required"),
+        ("initial_host_namespaces", "mount_independent_evidence_required"),
+        (
+            "trusted_initial_namespace_exec_supervisor",
+            "trace_exclusion_across_exec_required",
+        ),
+    ),
+)
+def test_full_pipeline_cpu_activation_requires_launcher_loader_and_snapshot_proof(
+    tmp_path: Path,
+    section: str,
+    field: str,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_cpu_performance_contract(tmp_path)
+    activation_path = (
+        tmp_path / "config/engine_v2_full_pipeline_cpu_performance_v1_activation.json"
+    )
+    activation = json.loads(activation_path.read_text(encoding="ascii"))
+    activation["preflight"][section][field] = False
+    activation_path.write_text(
+        json.dumps(activation, indent=2, sort_keys=True) + "\n",
+        encoding="ascii",
+    )
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_cpu_performance_ci_tokens()), encoding="utf-8"
+    )
+
+    payload = build_inventory(tmp_path)
+    assert payload["cpu_performance_authority_fail_closed"] is False
+    assert payload["cpu_performance_contract_in_authoritative_ci"] is False
+
+
+def test_full_pipeline_cpu_activation_rejects_namespace_boolean_type_drift(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_cpu_performance_contract(tmp_path)
+    activation_path = (
+        tmp_path / "config/engine_v2_full_pipeline_cpu_performance_v1_activation.json"
+    )
+    activation = json.loads(activation_path.read_text(encoding="ascii"))
+    activation["preflight"]["initial_host_namespaces"][
+        "mount_independent_evidence_required"
+    ] = 1
+    activation_path.write_text(
+        json.dumps(activation, indent=2, sort_keys=True) + "\n",
         encoding="ascii",
     )
     (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(

@@ -1,0 +1,204 @@
+{
+  "activation_id": "engine_v2_full_pipeline_cpu_performance_v1_activation",
+  "authority": {
+    "fresh_holdout_execution_authorized": false,
+    "hip_device_execution_authorized": false,
+    "historical_ab_execution_authorized": false,
+    "molecular_execution_authorized": false,
+    "product_execution_authorized": false,
+    "product_performance_claim_authorized": false,
+    "public_benchmark_authorized": false,
+    "reservation_authorized": false,
+    "scientific_claim_authorized": false,
+    "stage0_admission_authorized": false,
+    "synthetic_cpu_performance_qualification_authorized": false
+  },
+  "closure_manifests": {
+    "dynamic_library_closure": {
+      "executable_file_count": 21,
+      "manifest_sha256": "a5c56fd7ac0c26224e2282f88e54ff3a4e19c6a1d52263407f03d156199e7352",
+      "path": "config/engine_v2_full_pipeline_cpu_performance_v1_dynamic_library_closure.json",
+      "total_bytes": 19879272,
+      "virtual_executable_mappings": [
+        "[vdso]",
+        "[vsyscall]"
+      ]
+    },
+    "preinit_executable_closure": {
+      "executable_file_count": 20,
+      "manifest_sha256": "282e17c72a82f0dc3e968e74fc2072371d7673dacf84b18985b2c2253c305558",
+      "path": "config/engine_v2_full_pipeline_cpu_performance_v1_preinit_executable_closure.json",
+      "total_bytes": 17279568,
+      "virtual_executable_mappings": [
+        "[vdso]",
+        "[vsyscall]"
+      ]
+    },
+    "stdlib_import_closure": {
+      "cached_bytecode_file_count": 79,
+      "cached_bytecode_total_bytes": 1449467,
+      "file_backed_module_count": 85,
+      "file_backed_total_bytes": 2196025,
+      "manifest_sha256": "d892595cc2bb59aae3fbf7100da9e6b52809082dd5cbc2edb2646811d0b58e35",
+      "module_count": 126,
+      "path": "config/engine_v2_full_pipeline_cpu_performance_v1_stdlib_closure.json"
+    }
+  },
+  "preflight": {
+    "activation_module_sha256": "b53633b1219bd1f6ca283219e2879ae9b14ee8f0450a14251e689b5433c2cee0",
+    "bootstrap_flags": [
+      "-I",
+      "-S",
+      "-B"
+    ],
+    "caller_science_input_allowed": false,
+    "exact_dynamic_loader_path": "/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2",
+    "exact_loader_environment": {
+      "CUDA_VISIBLE_DEVICES": "",
+      "HIP_VISIBLE_DEVICES": "",
+      "LC_ALL": "C",
+      "PATH": "/usr/bin:/bin",
+      "ROCR_VISIBLE_DEVICES": ""
+    },
+    "exact_loader_inhibit_cache": true,
+    "exact_loader_kernel_process_identity": {
+      "operational": false,
+      "proc_cmdline_exact": true,
+      "proc_exe_exact": true,
+      "stage0_argument_vector_bound": true,
+      "stage0_source_sha256": "f337c35535ac2d4d48084d8f95fd1814540c1df4fcd8fb48d65bdf24a908cfa4",
+      "trusted_launcher_parent_exact": true
+    },
+    "exact_loader_library_path": "/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu",
+    "exact_loader_preload_paths": [
+      "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30",
+      "/usr/lib/x86_64-linux-gnu/libgcc_s.so.1",
+      "/usr/lib/x86_64-linux-gnu/libpthread.so.0",
+      "/usr/lib/x86_64-linux-gnu/libm.so.6",
+      "/usr/lib/x86_64-linux-gnu/libdl.so.2",
+      "/usr/lib/x86_64-linux-gnu/libc.so.6"
+    ],
+    "exact_native_extension_import_required": true,
+    "exact_preinit_closure_required": true,
+    "exact_python_executable_target": "/usr/bin/python3.10",
+    "github_actions_preflight_allowed": false,
+    "host_preflight_required": true,
+    "immutable_bootstrap_snapshot": {
+      "descriptor_cloexec": false,
+      "descriptor_mode": "0400",
+      "descriptor_name": "engine-v2-preflight-bootstrap-v1",
+      "descriptor_seals": [
+        "F_SEAL_SEAL",
+        "F_SEAL_SHRINK",
+        "F_SEAL_GROW",
+        "F_SEAL_WRITE"
+      ],
+      "exact_source_sha256_required": true,
+      "launched_from_snapshot_required": true,
+      "zero_link_count_required": true
+    },
+    "initial_host_namespaces": {
+      "defense_in_depth_procfs_checks_present": true,
+      "gid_map": [
+        0,
+        0,
+        4294967295
+      ],
+      "mount_independent_evidence_required": true,
+      "mount_namespace": "mnt:[4026531841]",
+      "procfs_path_evidence_authoritative": false,
+      "uid_map": [
+        0,
+        0,
+        4294967295
+      ],
+      "user_namespace": "user:[4026531837]"
+    },
+    "molecular_input_allowed": false,
+    "native_initialization_delta_exact": true,
+    "performance_measurement_allowed": false,
+    "performance_sidecar_sha256": "04253e3897bb5746e1c1082dbf8e27922835ffb075aeb3268c18a0895662173f",
+    "preflight_tool_sha256": "aca96d31bb1ca09d9eb83a10bb7a8a91192fc1405a9eaa8011d94453a28a306e",
+    "qualification_state_write_allowed": false,
+    "reservation_allowed": false,
+    "trusted_initial_namespace_exec_supervisor": {
+      "implementation_present": false,
+      "installation_authorized": false,
+      "mount_independent_namespace_attestation_required": true,
+      "operational": false,
+      "signed_or_kernel_attested_handoff_required": true,
+      "trace_exclusion_across_exec_required": true
+    },
+    "trusted_root_launcher": {
+      "artifact_role": "non_operational_fail_closed_stub",
+      "binary_sha256": "f72eff58f85bb028aa53a4cf356bbe8e86fb11622ac0cd7060d13fb0ed3e0068",
+      "installation_authorized": false,
+      "runtime_launch_authorized": false,
+      "source_path": "native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp",
+      "source_sha256": "9e30f5102f592ef9f95f3c3251febc0d6aeb811a78c40cdc1c794b8b9b6c827d",
+      "static_elf_no_dynamic_or_interp_required": true
+    }
+  },
+  "profile_id": "engine_v2_full_pipeline_cpu_performance_v1",
+  "profile_sha256": "385fb713cca8f39353f138115749abdfc9768b02222e13111a418360be30a000",
+  "restrictions": {
+    "actual_molecular_execution_allowed": false,
+    "caller_science_input_allowed": false,
+    "fresh_or_historical_case_input_allowed": false,
+    "github_actions_production_authority_allowed": false,
+    "hip_device_execution_allowed": false,
+    "performance_measurement_allowed": false,
+    "product_or_public_performance_claim_allowed": false,
+    "qualification_consumption_allowed": false,
+    "reservation_allowed": false,
+    "result_dependent_configuration_allowed": false,
+    "test_double_production_authority_allowed": false
+  },
+  "runner": {
+    "activation_contract_allows_live_execution": false,
+    "activation_contract_present": true,
+    "exactly_once_local_synthetic_attempt_required": true,
+    "github_actions_live_execution_allowed": false,
+    "live_synthetic_local_execution_implemented": false,
+    "profile_change_after_activation_allowed": false,
+    "qualification_attempt_consumed": false,
+    "reservation_created": false,
+    "runner_remains_fail_closed": true
+  },
+  "runtime_binding": {
+    "abi": "cp310-cp310",
+    "artifact_contract_sha256": "195abc14487ccec4d0f8065fa0e642337ce42691cebee4f47106b94bd2d0ebe8",
+    "artifact_id": 9213296947,
+    "artifact_run_attempt": 1,
+    "artifact_run_id": 31785070195,
+    "artifact_workflow_head_sha": "3330faa43c7fc8640d89babd84ac444c5959157c",
+    "native_extension_sha256": "ff7b5e6ba7c0e250cf739292d34c562d0bd142d5f7f6c842c5c191d42b2504e1",
+    "python_executable_sha256": "7d51cd6b48b521277f5caa4610a82126e315fa2be4df069823a8b1eeb5bd4a86",
+    "python_shared_library_sha256": "1ece943a1641101b1c678b553a7a0fbb6683ff0ad76f7ebce9f8844354e3f153",
+    "runtime_scope_manifest_sha256": "72b90f500af43c921ce0b8f7d6774c5e99a7e4f3fe366478b3fc33b524b4b404"
+  },
+  "schema_id": "betelgeuze.engine_v2_full_pipeline_cpu_performance_activation/1.0.0",
+  "source_bindings": {
+    "dynamic_library_closure_manifest_sha256": "a5c56fd7ac0c26224e2282f88e54ff3a4e19c6a1d52263407f03d156199e7352",
+    "host_preflight_sha256": "236496cb7342040191db51f6c801948ab1c6b859d09a85b35e3c8a9c00a38adf",
+    "measurement_core_sha256": "c27657f104248973f11f6da498fc08da460cb6d4823719139762ce76b0cd18d7",
+    "merged_main_commit_sha256": "1b478ee3b9737e9d50fc854fb4bde93cbd1efd48015a27df52199a698d17e82e",
+    "merged_main_tree_sha256": "69998e9df4740c927568b41e21eb8b94185d4fa3b9dd5fa37d71bcbbd5060579",
+    "native_consumer_sha256": "ea4fb7953d2bb2c1e4e16380dd3ad362d4fa8265bf0c11d26d69dfed3cc8df25",
+    "native_cpu_parity_sha256": "cbff9243caea510e070067663e7c36c216afc84e226b9ade3e37b03e6ac30f75",
+    "preinit_executable_closure_manifest_sha256": "282e17c72a82f0dc3e968e74fc2072371d7673dacf84b18985b2c2253c305558",
+    "profile_sha256": "385fb713cca8f39353f138115749abdfc9768b02222e13111a418360be30a000",
+    "profile_verifier_sha256": "b05d9e9710cc9594eba4a0630420dfbc1204dba9e89c63332a0f10bbc541e880",
+    "runner_tool_sha256": "bfaf4bc25b2161a43e1e01418394c716d4b762fd39ec6708a01791159916e6e8",
+    "stdlib_import_closure_manifest_sha256": "d892595cc2bb59aae3fbf7100da9e6b52809082dd5cbc2edb2646811d0b58e35"
+  },
+  "source_foundation": {
+    "merged_main_commit_object_encoding": "git_cat_file_commit_raw_v1",
+    "merged_main_commit_oid": "38c16136a1e2cc126517ff9b50a05f06c5795adb",
+    "merged_main_commit_sha256": "1b478ee3b9737e9d50fc854fb4bde93cbd1efd48015a27df52199a698d17e82e",
+    "merged_main_tree_manifest_encoding": "git_ls_tree_r_full_tree_z_v1",
+    "merged_main_tree_oid": "e36d1cf0915350556ac4202e11d6176fabf5e797",
+    "merged_main_tree_sha256": "69998e9df4740c927568b41e21eb8b94185d4fa3b9dd5fa37d71bcbbd5060579"
+  },
+  "status": "frozen_non_consuming_exact_main_preflight_supervisor_not_implemented"
+}
