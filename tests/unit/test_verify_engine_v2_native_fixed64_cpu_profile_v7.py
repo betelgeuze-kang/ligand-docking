@@ -405,22 +405,12 @@ def test_build_configuration_drift_fails_even_with_rebound_profile_digest(
         )
 
 
-def test_manifest_source_byte_drift_fails_closed(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    manifest = json.loads(_MANIFEST.read_bytes())
-    row = next(
-        value
-        for value in manifest["files"]
-        if value["path"] == verifier.RUNNER_SOURCE_RELATIVE_PATH.as_posix()
-    )
-    row["sha256"] = "00" * 32
-    mutated = _canonical(manifest)
-    monkeypatch.setattr(
-        verifier, "SOURCE_MANIFEST_SHA256", hashlib.sha256(mutated).hexdigest()
-    )
-    parsed = require_source_manifest_document(mutated)
-    with pytest.raises(NativeFixed64CPUProfileV7Error, match="bound transitive source"):
+def test_current_post_qualification_source_tree_cannot_inherit_consumed_manifest() -> None:
+    parsed = require_source_manifest_document(_MANIFEST.read_bytes())
+    # Repository D0 sources were added after the one-shot V7 qualification. The
+    # current tree must therefore remain unbound instead of silently inheriting
+    # authority from the consumed historical manifest.
+    with pytest.raises(NativeFixed64CPUProfileV7Error, match="unbound or missing source"):
         require_bound_source_tree(_ROOT, parsed)
 
 
