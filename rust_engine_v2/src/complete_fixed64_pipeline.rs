@@ -7,8 +7,12 @@
 use std::collections::BTreeSet;
 
 use betelgeuze_docking_search::{
-    native_fixed64_coordinate_sha256, native_fixed64_heavy_atom_mask_sha256,
-    native_fixed64_radii_sha256, Vec3, FIXED64_MAX_LIGAND_ATOMS, FIXED64_MAX_RECEPTOR_ATOMS,
+    materialize_repository_synthetic_d0_sources, native_fixed64_coordinate_sha256,
+    native_fixed64_heavy_atom_mask_sha256, native_fixed64_radii_sha256,
+    Fixed64FeatureKind as SearchFixed64FeatureKind, RepositoryD0AtomicFeature,
+    RepositoryD0ProposalSource, Vec3, FIXED64_MAX_LIGAND_ATOMS, FIXED64_MAX_RECEPTOR_ATOMS,
+    REPOSITORY_D0_EXPECTED_ALLOCATION_SHA256, REPOSITORY_D0_LIGAND_ATOM_COUNT,
+    REPOSITORY_D0_PROFILE_ID, REPOSITORY_D0_RECEPTOR_ATOM_COUNT,
 };
 use betelgeuze_runtime::{
     Backend, Context, ContextOptions, Fixed64AtomicFeature, Fixed64ChiralityCenter,
@@ -52,6 +56,29 @@ const PREPARED_SESSION_SCHEMA_ID: &str =
     "betelgeuze.engine_v2_native_fixed64_prepared_session/1.0.0";
 const PREPARED_SESSION_RECEIPT_DOMAIN: &[u8] =
     b"betelgeuze.engine-v2.native-fixed64-prepared-session/v1\0";
+const REPOSITORY_D0_SESSION_BINDING_SCHEMA_ID: &str =
+    "betelgeuze.engine_v2_native_repository_synthetic_d0_session_binding/1.0.0";
+const REPOSITORY_D0_SESSION_BINDING_RECEIPT_DOMAIN: &[u8] =
+    b"betelgeuze.engine-v2.native-repository-d0-session-binding/v1\0";
+const REPOSITORY_D0_BACKEND_BINDING_SCHEMA_ID: &str =
+    "betelgeuze.engine_v2_native_repository_synthetic_d0_backend_binding/1.0.0";
+const REPOSITORY_D0_BACKEND_BINDING_RECEIPT_DOMAIN: &[u8] =
+    b"betelgeuze.engine-v2.native-repository-d0-backend-binding/v1\0";
+const REPOSITORY_D0_SYNTHETIC_ONLY_ACKNOWLEDGMENT: &str =
+    "repository-synthetic-d0-only:no-reservation:no-molecular-experiment:no-qualification-rerun:no-product-action:no-public-or-scientific-claim";
+const REPOSITORY_D0_VALIDITY_SCORER_CONTEXT_SHA256: &str =
+    "8471a70101541cb974ac334db79ea14607024ecce17e2ca3838f679c3eb5271e";
+const REPOSITORY_D0_CONTACT_POLICY_SHA256: &str =
+    "acd011160586307d92ee2ff26a62183aaac5dbd9d12093ac13f018f3787c3f8e";
+const REPOSITORY_D0_REFINEMENT_POLICY_SHA256: &str =
+    "6508cf3aca1713f0d8f2432f227996694f47c32ea93e2f444a4d792414152082";
+const REPOSITORY_D0_POST_ADMISSION_POLICY_SHA256: &str =
+    "f6edd080650c824fdb13c33153d20f88d1b7958840ccb75bbaf2c7e4fe7f2841";
+const REPOSITORY_D0_RMSD_THRESHOLD_ANGSTROM: f64 = 1.5;
+const REPOSITORY_D0_RIGID_MAX_STEPS: u64 = 20;
+const REPOSITORY_D0_TORSION_MAX_STEPS: u64 = 4;
+const REPOSITORY_D0_V3_TORSION_FIRST_SLOT: usize = 24;
+const REPOSITORY_D0_V3_TORSION_END_SLOT_EXCLUSIVE: usize = 44;
 
 const INPUT_KEYS: &[&str] = &[
     "schema_id",
@@ -430,6 +457,16 @@ struct NativeFixed64PreparedSession {
     pipeline: Fixed64Pipeline,
     input: OwnedCompletePipelineInput,
     prepared_session_receipt_sha256: [u8; 32],
+    repository_d0_binding: Option<RepositoryD0SessionBinding>,
+}
+
+#[derive(Clone, Copy)]
+struct RepositoryD0SessionBinding {
+    source_bundle_receipt_sha256: [u8; 32],
+    source_prepared_input_receipt_sha256: [u8; 32],
+    allocation_receipt_sha256: [u8; 32],
+    backend_binding_receipt_sha256: [u8; 32],
+    binding_receipt_sha256: [u8; 32],
 }
 
 pub(crate) fn register(module: &PyModule) -> PyResult<()> {
@@ -447,6 +484,10 @@ pub(crate) fn register(module: &PyModule) -> PyResult<()> {
         module
     )?)?;
     module.add_function(wrap_pyfunction!(native_fixed64_prepare_session_v1, module)?)?;
+    module.add_function(wrap_pyfunction!(
+        native_fixed64_prepare_repository_synthetic_d0_session_v1,
+        module
+    )?)?;
     module.add("NATIVE_FIXED64_COMPLETE_INPUT_SCHEMA_ID", INPUT_SCHEMA_ID)?;
     module.add(
         "NATIVE_FIXED64_COMPLETE_INPUT_SCHEMA_ID_V1",
@@ -475,6 +516,14 @@ pub(crate) fn register(module: &PyModule) -> PyResult<()> {
     module.add(
         "NATIVE_FIXED64_PREPARED_SESSION_SCHEMA_ID_V1",
         PREPARED_SESSION_SCHEMA_ID,
+    )?;
+    module.add(
+        "NATIVE_REPOSITORY_D0_SESSION_BINDING_SCHEMA_ID_V1",
+        REPOSITORY_D0_SESSION_BINDING_SCHEMA_ID,
+    )?;
+    module.add(
+        "NATIVE_REPOSITORY_D0_SYNTHETIC_ONLY_ACKNOWLEDGMENT",
+        REPOSITORY_D0_SYNTHETIC_ONLY_ACKNOWLEDGMENT,
     )?;
     Ok(())
 }
@@ -521,7 +570,1093 @@ fn native_fixed64_prepare_session_v1(input: &PyDict) -> PyResult<NativeFixed64Pr
             projection_sha256,
             pipeline_id,
         ),
+        repository_d0_binding: None,
     })
+}
+
+#[pyfunction]
+fn native_fixed64_prepare_repository_synthetic_d0_session_v1(
+    backend: &PyAny,
+    default_consumer: &PyAny,
+    synthetic_only_acknowledgment: &PyAny,
+) -> PyResult<NativeFixed64PreparedSession> {
+    let backend = exact_argument_string(backend, "backend")?;
+    let default_consumer =
+        Consumer::parse(exact_argument_string(default_consumer, "default_consumer")?)?;
+    if exact_argument_string(
+        synthetic_only_acknowledgment,
+        "synthetic_only_acknowledgment",
+    )? != REPOSITORY_D0_SYNTHETIC_ONLY_ACKNOWLEDGMENT
+    {
+        return Err(input_error(
+            "repository D0 session requires the exact synthetic-only acknowledgment",
+        ));
+    }
+    let options = match backend {
+        "cpp_cpu_reference" => ContextOptions::cpu_reference(),
+        "rust_cpu" => ContextOptions::rust_cpu(),
+        "hip_safe" | "hip_fast" => {
+            return Err(input_error(
+                "repository D0 prepared session is synthetic CPU-only; HIP device execution is unauthorized",
+            ));
+        }
+        _ => return Err(input_error("repository D0 backend is unsupported")),
+    };
+    let (input, source_binding) = repository_synthetic_d0_complete_input(options, backend)?;
+    let projection_sha256 = input.prepared_input_projection_sha256.ok_or_else(|| {
+        input_error("repository D0 session lost its bounded prepared-input projection")
+    })?;
+    let pipeline = input.create_pipeline().map_err(runtime_error)?;
+    let pipeline_id = Fixed64Pipeline::profile_id().map_err(runtime_error)?;
+    let prepared_session_receipt_sha256 =
+        prepared_session_receipt_sha256(projection_sha256, pipeline_id);
+    let binding_receipt_sha256 = repository_d0_session_binding_receipt_sha256(
+        prepared_session_receipt_sha256,
+        source_binding.source_bundle_receipt_sha256,
+        source_binding.source_prepared_input_receipt_sha256,
+        source_binding.allocation_receipt_sha256,
+        source_binding.backend_binding_receipt_sha256,
+    );
+    Ok(NativeFixed64PreparedSession {
+        default_consumer,
+        pipeline,
+        input,
+        prepared_session_receipt_sha256,
+        repository_d0_binding: Some(RepositoryD0SessionBinding {
+            binding_receipt_sha256,
+            ..source_binding
+        }),
+    })
+}
+
+fn exact_argument_string<'py>(value: &'py PyAny, name: &str) -> PyResult<&'py str> {
+    value
+        .downcast_exact::<PyString>()
+        .map_err(|_| input_error(&format!("{name} must be an exact string")))?
+        .to_str()
+        .map_err(|_| input_error(&format!("{name} must be valid UTF-8")))
+}
+
+fn repository_synthetic_d0_complete_input(
+    options: ContextOptions,
+    backend: &str,
+) -> PyResult<(OwnedCompletePipelineInput, RepositoryD0SessionBinding)> {
+    let bundle = materialize_repository_synthetic_d0_sources().map_err(|error| {
+        input_error(&format!(
+            "repository synthetic D0 native source materialization failed: {error}"
+        ))
+    })?;
+    let ligand_coordinates =
+        Coordinates::from_rows(bundle.ligand_prepared_coordinates_angstrom().to_vec());
+    let receptor_coordinates =
+        Coordinates::from_rows(bundle.receptor_coordinates_angstrom().to_vec());
+    let ligand_heavy_bool = bundle.ligand_heavy_atom_mask();
+    let ligand_heavy = ligand_heavy_bool.map(u8::from).to_vec();
+    let ligand_atomic_numbers = bundle.ligand_atomic_numbers();
+    let receptor_atomic_numbers = bundle.receptor_atomic_numbers();
+    let ligand_epsilon = ligand_atomic_numbers
+        .iter()
+        .copied()
+        .map(repository_d0_epsilon)
+        .collect::<PyResult<Vec<_>>>()?;
+    let receptor_epsilon = receptor_atomic_numbers
+        .iter()
+        .copied()
+        .map(repository_d0_epsilon)
+        .collect::<PyResult<Vec<_>>>()?;
+    let ligand_hydrophobic = ligand_atomic_numbers
+        .iter()
+        .map(|atomic_number| u8::from(*atomic_number == 6))
+        .collect::<Vec<_>>();
+    let receptor_hydrophobic = receptor_atomic_numbers
+        .iter()
+        .map(|atomic_number| u8::from(*atomic_number == 6))
+        .collect::<Vec<_>>();
+    let scoring_features = repository_d0_scoring_features(
+        bundle.atomic_features(),
+        ligand_atomic_numbers,
+        receptor_atomic_numbers,
+    )?;
+    let topology = repository_d0_topology(bundle.ligand_bonds(), REPOSITORY_D0_LIGAND_ATOM_COUNT)?;
+    let ligand_acceptor = scoring_features.ligand_acceptor;
+    let receptor_acceptor = scoring_features.receptor_acceptor;
+    let ligand_donors = scoring_features.ligand_donors;
+    let receptor_donors = scoring_features.receptor_donors;
+    let ligand_exclusions = topology.exclusions;
+    let bonds = topology.bonds;
+    let internal_pairs = topology.internal_pairs;
+    let parent_atom_index = topology.parent_atom_index;
+    let rotatable_child_atom_index = Vec::new();
+    let rotors = Vec::new();
+    let chirality_centers = Vec::new();
+
+    let exact_source = repository_d0_owned_source(bundle.exact_source());
+    let v7_sources = bundle
+        .v7_control_sources()
+        .iter()
+        .map(|source| IndexedSource {
+            source_index: source.source_index(),
+            source: repository_d0_owned_source(source),
+        })
+        .collect::<Vec<_>>();
+    let retained_sources = bundle
+        .retained_sources()
+        .iter()
+        .map(|source| IndexedSource {
+            source_index: source.source_index(),
+            source: repository_d0_owned_source(source),
+        })
+        .collect::<Vec<_>>();
+    let feature_geometries = bundle
+        .atomic_features()
+        .iter()
+        .map(|feature| FeatureGeometry {
+            kind: repository_d0_feature_kind(feature.kind()),
+            allocation_feature_receipt_sha256: feature.allocation_feature_receipt_sha256(),
+            feature_geometry_receipt_sha256: feature.feature_geometry_receipt_sha256(),
+            atom_indices: feature.atom_indices().to_vec(),
+        })
+        .collect::<Vec<_>>();
+    let atomic_features = bundle
+        .atomic_features()
+        .iter()
+        .map(|feature| Fixed64AtomicFeature {
+            kind: repository_d0_feature_kind(feature.kind()),
+            receipt_sha256: feature.allocation_feature_receipt_sha256(),
+        })
+        .collect::<Vec<_>>();
+
+    let candidate_modes = (0..64)
+        .map(|slot| {
+            if (REPOSITORY_D0_V3_TORSION_FIRST_SLOT..REPOSITORY_D0_V3_TORSION_END_SLOT_EXCLUSIVE)
+                .contains(&slot)
+            {
+                Fixed64RefinementMode::V6BaselineV3Lane
+            } else {
+                Fixed64RefinementMode::V6BaselineV2Lane
+            }
+        })
+        .collect::<Vec<_>>();
+    let rigid_max_steps = vec![REPOSITORY_D0_RIGID_MAX_STEPS; 64];
+    let torsion_eligible = (0..64)
+        .map(|slot| {
+            u8::from(
+                (REPOSITORY_D0_V3_TORSION_FIRST_SLOT..REPOSITORY_D0_V3_TORSION_END_SLOT_EXCLUSIVE)
+                    .contains(&slot),
+            )
+        })
+        .collect::<Vec<_>>();
+    let torsion_max_steps = torsion_eligible
+        .iter()
+        .map(|eligible| {
+            if *eligible == 1 {
+                REPOSITORY_D0_TORSION_MAX_STEPS
+            } else {
+                0
+            }
+        })
+        .collect::<Vec<_>>();
+    let baseline_torsion_angles =
+        vec![0.0; 64_usize.saturating_mul(REPOSITORY_D0_LIGAND_ATOM_COUNT)];
+    let backend_binding_receipt_sha256 =
+        repository_d0_backend_binding_receipt_sha256(backend, bundle.receipt_sha256())?;
+    let exact_evidence = Fixed64ExactSourceEvidence {
+        source_receipt_sha256: exact_source.evidence.receipt_sha256,
+        proposal_sha256: exact_source.evidence.proposal_sha256,
+        ligand_coordinate_sha256: exact_source.evidence.coordinate_sha256,
+        receptor_coordinate_sha256: coordinate_digest(&receptor_coordinates)?,
+        prepared_ligand_topology_sha256: bundle.ligand_system_sha256(),
+        prepared_receptor_topology_sha256: bundle.receptor_system_sha256(),
+        ligand_vdw_radii_sha256: native_fixed64_radii_sha256(bundle.ligand_vdw_radii_angstrom())
+            .map_err(|error| input_error(&error.to_string()))?,
+        ligand_heavy_atom_mask_sha256: native_fixed64_heavy_atom_mask_sha256(&ligand_heavy_bool)
+            .map_err(|error| input_error(&error.to_string()))?,
+        receptor_vdw_radii_sha256: native_fixed64_radii_sha256(
+            bundle.receptor_vdw_radii_angstrom(),
+        )
+        .map_err(|error| input_error(&error.to_string()))?,
+    };
+    let identities = Fixed64Identities {
+        authority_input_receipt_sha256: bundle.authority_input_receipt_sha256(),
+        receptor_system_sha256: bundle.receptor_system_sha256(),
+        ligand_system_sha256: bundle.ligand_system_sha256(),
+        backend_receipt_sha256: backend_binding_receipt_sha256,
+        validity_scorer_context_receipt_sha256: decode_digest(
+            REPOSITORY_D0_VALIDITY_SCORER_CONTEXT_SHA256,
+            "repository D0 validity/scorer context SHA-256",
+        )?,
+        contact_policy_sha256: decode_digest(
+            REPOSITORY_D0_CONTACT_POLICY_SHA256,
+            "repository D0 contact policy SHA-256",
+        )?,
+    };
+    let pocket_center = bundle.pocket_center_angstrom();
+    let pocket_normal = bundle.pocket_normal();
+    let mut input = OwnedCompletePipelineInput {
+        options,
+        exact_evidence,
+        identities,
+        ligand_coordinates,
+        ligand_radii: bundle.ligand_vdw_radii_angstrom().to_vec(),
+        ligand_heavy,
+        ligand_charges: bundle.ligand_partial_charges_elementary().to_vec(),
+        ligand_epsilon,
+        ligand_hydrophobic,
+        ligand_acceptor,
+        ligand_donors,
+        ligand_exclusions,
+        rotors,
+        bonds,
+        chirality_centers,
+        parent_atom_index,
+        rotatable_child_atom_index,
+        internal_pairs,
+        receptor_coordinates,
+        receptor_radii: bundle.receptor_vdw_radii_angstrom().to_vec(),
+        receptor_charges: bundle.receptor_partial_charges_elementary().to_vec(),
+        receptor_epsilon,
+        receptor_hydrophobic,
+        receptor_acceptor,
+        receptor_donors,
+        pocket_center: [pocket_center.x, pocket_center.y, pocket_center.z],
+        pocket_radius: bundle.pocket_radius_angstrom(),
+        exact_source,
+        atomic_features,
+        v7_sources,
+        conformer_sources: Vec::new(),
+        retained_sources,
+        feature_geometries,
+        feature_geometry_inventory_sha256: bundle.feature_geometry_inventory_sha256(),
+        pocket_normal: [pocket_normal.x, pocket_normal.y, pocket_normal.z],
+        rmsd_threshold_angstrom: REPOSITORY_D0_RMSD_THRESHOLD_ANGSTROM,
+        candidate_modes,
+        rigid_max_steps,
+        torsion_eligible,
+        torsion_max_steps,
+        baseline_torsion_angles,
+        predeclared_refinement_policy_sha256: decode_digest(
+            REPOSITORY_D0_REFINEMENT_POLICY_SHA256,
+            "repository D0 refinement policy SHA-256",
+        )?,
+        predeclared_post_refinement_admission_policy_sha256: decode_digest(
+            REPOSITORY_D0_POST_ADMISSION_POLICY_SHA256,
+            "repository D0 post-admission policy SHA-256",
+        )?,
+        prepared_input_bounds: None,
+        prepared_input_projection_sha256: None,
+    };
+    let bounds = repository_d0_prepared_input_bounds(&input)?;
+    let projection_sha256 = prepared_input_projection_sha256(PreparedInputProjection {
+        backend,
+        device_ordinal: 0,
+        exact_evidence: &input.exact_evidence,
+        identities: &input.identities,
+        ligand_coordinates: &input.ligand_coordinates,
+        ligand_radii: &input.ligand_radii,
+        ligand_heavy: &input.ligand_heavy,
+        ligand_charges: &input.ligand_charges,
+        ligand_epsilon: &input.ligand_epsilon,
+        ligand_hydrophobic: &input.ligand_hydrophobic,
+        ligand_acceptor: &input.ligand_acceptor,
+        ligand_donors: &input.ligand_donors,
+        ligand_exclusions: &input.ligand_exclusions,
+        rotors: &input.rotors,
+        bonds: &input.bonds,
+        chirality_centers: &input.chirality_centers,
+        parent_atom_index: &input.parent_atom_index,
+        rotatable_child_atom_index: &input.rotatable_child_atom_index,
+        internal_pairs: &input.internal_pairs,
+        receptor_coordinates: &input.receptor_coordinates,
+        receptor_radii: &input.receptor_radii,
+        receptor_charges: &input.receptor_charges,
+        receptor_epsilon: &input.receptor_epsilon,
+        receptor_hydrophobic: &input.receptor_hydrophobic,
+        receptor_acceptor: &input.receptor_acceptor,
+        receptor_donors: &input.receptor_donors,
+        pocket_center: input.pocket_center,
+        pocket_radius: input.pocket_radius,
+        pocket_normal: input.pocket_normal,
+        v7_sources: &input.v7_sources,
+        conformer_sources: &input.conformer_sources,
+        retained_sources: &input.retained_sources,
+        feature_geometries: &input.feature_geometries,
+        feature_geometry_inventory_sha256: input.feature_geometry_inventory_sha256,
+        rmsd_threshold_angstrom: input.rmsd_threshold_angstrom,
+        candidate_modes: &input.candidate_modes,
+        rigid_max_steps: &input.rigid_max_steps,
+        torsion_eligible: &input.torsion_eligible,
+        torsion_max_steps: &input.torsion_max_steps,
+        baseline_torsion_angles: &input.baseline_torsion_angles,
+        predeclared_refinement_policy_sha256: input.predeclared_refinement_policy_sha256,
+        predeclared_post_refinement_admission_policy_sha256: input
+            .predeclared_post_refinement_admission_policy_sha256,
+        bounds,
+    });
+    input.prepared_input_bounds = Some(bounds);
+    input.prepared_input_projection_sha256 = Some(projection_sha256);
+    Ok((
+        input,
+        RepositoryD0SessionBinding {
+            source_bundle_receipt_sha256: bundle.receipt_sha256(),
+            source_prepared_input_receipt_sha256: bundle.prepared_input_receipt_sha256(),
+            allocation_receipt_sha256: REPOSITORY_D0_EXPECTED_ALLOCATION_SHA256,
+            backend_binding_receipt_sha256,
+            binding_receipt_sha256: [0; 32],
+        },
+    ))
+}
+
+fn repository_d0_epsilon(atomic_number: u8) -> PyResult<f64> {
+    match atomic_number {
+        1 => Ok(0.02),
+        6 => Ok(0.12),
+        7 => Ok(0.17),
+        8 => Ok(0.20),
+        _ => Err(input_error(
+            "repository D0 contains an unsupported ScorerV1 atomic number",
+        )),
+    }
+}
+
+struct RepositoryD0ScoringFeatures {
+    ligand_acceptor: Vec<u8>,
+    receptor_acceptor: Vec<u8>,
+    ligand_donors: Vec<Fixed64Donor>,
+    receptor_donors: Vec<Fixed64Donor>,
+}
+
+fn repository_d0_scoring_features(
+    features: &[RepositoryD0AtomicFeature],
+    ligand_atomic_numbers: &[u8],
+    receptor_atomic_numbers: &[u8],
+) -> PyResult<RepositoryD0ScoringFeatures> {
+    let mut ligand_acceptor = vec![0_u8; ligand_atomic_numbers.len()];
+    let mut receptor_acceptor = vec![0_u8; receptor_atomic_numbers.len()];
+    let mut ligand_donors = Vec::new();
+    let mut receptor_donors = Vec::new();
+    for feature in features {
+        let indices = feature.atom_indices();
+        match feature.kind() {
+            SearchFixed64FeatureKind::LigandAcceptor => {
+                let index = repository_d0_feature_index(
+                    indices,
+                    0,
+                    ligand_atomic_numbers.len(),
+                    "ligand acceptor",
+                )?;
+                if indices.len() != 1 || ligand_acceptor[index] != 0 {
+                    return Err(input_error(
+                        "repository D0 ligand acceptor features are noncanonical",
+                    ));
+                }
+                ligand_acceptor[index] = 1;
+            }
+            SearchFixed64FeatureKind::ReceptorAcceptor => {
+                let index = repository_d0_feature_index(
+                    indices,
+                    0,
+                    receptor_atomic_numbers.len(),
+                    "receptor acceptor",
+                )?;
+                if indices.len() != 1 || receptor_acceptor[index] != 0 {
+                    return Err(input_error(
+                        "repository D0 receptor acceptor features are noncanonical",
+                    ));
+                }
+                receptor_acceptor[index] = 1;
+            }
+            SearchFixed64FeatureKind::LigandDonor => {
+                ligand_donors.push(repository_d0_donor(
+                    indices,
+                    ligand_atomic_numbers,
+                    "ligand donor",
+                )?);
+            }
+            SearchFixed64FeatureKind::ReceptorDonor => {
+                receptor_donors.push(repository_d0_donor(
+                    indices,
+                    receptor_atomic_numbers,
+                    "receptor donor",
+                )?);
+            }
+            SearchFixed64FeatureKind::LigandPositiveSite
+            | SearchFixed64FeatureKind::LigandNegativeSite
+            | SearchFixed64FeatureKind::ReceptorPositiveSite
+            | SearchFixed64FeatureKind::ReceptorNegativeSite
+            | SearchFixed64FeatureKind::LigandAromaticPlane
+            | SearchFixed64FeatureKind::ReceptorAromaticPlane
+            | SearchFixed64FeatureKind::LigandShapeAxis
+            | SearchFixed64FeatureKind::PocketShapeAxis => {}
+        }
+    }
+    ligand_donors.sort_by_key(|donor| (donor.donor_atom_index, donor.hydrogen_atom_index));
+    receptor_donors.sort_by_key(|donor| (donor.donor_atom_index, donor.hydrogen_atom_index));
+    if ligand_donors.windows(2).any(|rows| rows[0] == rows[1])
+        || receptor_donors.windows(2).any(|rows| rows[0] == rows[1])
+        || ligand_acceptor.iter().filter(|value| **value == 1).count() != 2
+        || receptor_acceptor
+            .iter()
+            .filter(|value| **value == 1)
+            .count()
+            != 2
+        || ligand_donors.len() != 2
+        || receptor_donors.len() != 1
+    {
+        return Err(input_error(
+            "repository D0 scorer feature denominator changed",
+        ));
+    }
+    Ok(RepositoryD0ScoringFeatures {
+        ligand_acceptor,
+        receptor_acceptor,
+        ligand_donors,
+        receptor_donors,
+    })
+}
+
+fn repository_d0_feature_index(
+    indices: &[u64],
+    offset: usize,
+    atom_count: usize,
+    label: &str,
+) -> PyResult<usize> {
+    let value = indices
+        .get(offset)
+        .copied()
+        .ok_or_else(|| input_error(&format!("repository D0 {label} index is absent")))?;
+    let index = usize::try_from(value)
+        .map_err(|_| input_error(&format!("repository D0 {label} index overflows")))?;
+    if index >= atom_count {
+        return Err(input_error(&format!(
+            "repository D0 {label} index is out of range"
+        )));
+    }
+    Ok(index)
+}
+
+fn repository_d0_donor(
+    indices: &[u64],
+    atomic_numbers: &[u8],
+    label: &str,
+) -> PyResult<Fixed64Donor> {
+    if indices.len() != 2 {
+        return Err(input_error(&format!(
+            "repository D0 {label} geometry is noncanonical"
+        )));
+    }
+    let donor = repository_d0_feature_index(indices, 0, atomic_numbers.len(), label)?;
+    let hydrogen = repository_d0_feature_index(indices, 1, atomic_numbers.len(), label)?;
+    if donor == hydrogen
+        || atomic_numbers.get(donor) == Some(&1)
+        || atomic_numbers.get(hydrogen) != Some(&1)
+    {
+        return Err(input_error(&format!(
+            "repository D0 {label} atom types are noncanonical"
+        )));
+    }
+    Ok(Fixed64Donor {
+        donor_atom_index: donor as u64,
+        hydrogen_atom_index: hydrogen as u64,
+    })
+}
+
+struct RepositoryD0Topology {
+    bonds: Vec<Fixed64Pair>,
+    exclusions: Vec<Fixed64Pair>,
+    internal_pairs: Vec<Fixed64Pair>,
+    parent_atom_index: Vec<i32>,
+}
+
+fn repository_d0_topology(
+    source_bonds: &[(usize, usize)],
+    atom_count: usize,
+) -> PyResult<RepositoryD0Topology> {
+    if atom_count != REPOSITORY_D0_LIGAND_ATOM_COUNT {
+        return Err(input_error(
+            "repository D0 topology atom denominator changed",
+        ));
+    }
+    let bonds = repository_d0_pairs(source_bonds);
+    if bonds.len() != 4
+        || bonds.iter().any(|pair| {
+            pair.atom_i >= atom_count as u64
+                || pair.atom_j >= atom_count as u64
+                || pair.atom_i >= pair.atom_j
+        })
+    {
+        return Err(input_error("repository D0 bond graph is noncanonical"));
+    }
+    let mut adjacency = vec![Vec::<usize>::new(); atom_count];
+    for pair in &bonds {
+        let atom_i = pair.atom_i as usize;
+        let atom_j = pair.atom_j as usize;
+        adjacency[atom_i].push(atom_j);
+        adjacency[atom_j].push(atom_i);
+    }
+    for neighbors in &mut adjacency {
+        neighbors.sort_unstable();
+        neighbors.dedup();
+    }
+    let mut parent_atom_index = vec![i32::MIN; atom_count];
+    parent_atom_index[0] = -1;
+    let mut queue = vec![0_usize];
+    let mut cursor = 0_usize;
+    while let Some(&atom) = queue.get(cursor) {
+        cursor += 1;
+        for &neighbor in &adjacency[atom] {
+            if parent_atom_index[neighbor] == i32::MIN {
+                parent_atom_index[neighbor] = atom as i32;
+                queue.push(neighbor);
+            }
+        }
+    }
+    if queue.len() != atom_count || parent_atom_index.contains(&i32::MIN) {
+        return Err(input_error(
+            "repository D0 ligand bond graph is disconnected",
+        ));
+    }
+    let mut excluded = BTreeSet::<(usize, usize)>::new();
+    for atom_i in 0..atom_count {
+        for &atom_j in &adjacency[atom_i] {
+            excluded.insert(ordered_pair(atom_i, atom_j));
+            for &atom_k in &adjacency[atom_j] {
+                if atom_i != atom_k {
+                    excluded.insert(ordered_pair(atom_i, atom_k));
+                }
+            }
+        }
+    }
+    let exclusions = excluded
+        .iter()
+        .map(|(atom_i, atom_j)| Fixed64Pair {
+            atom_i: *atom_i as u64,
+            atom_j: *atom_j as u64,
+        })
+        .collect::<Vec<_>>();
+    let internal_pairs = (0..atom_count)
+        .flat_map(|atom_i| ((atom_i + 1)..atom_count).map(move |atom_j| (atom_i, atom_j)))
+        .filter(|pair| !excluded.contains(pair))
+        .map(|(atom_i, atom_j)| Fixed64Pair {
+            atom_i: atom_i as u64,
+            atom_j: atom_j as u64,
+        })
+        .collect::<Vec<_>>();
+    if exclusions.len() != 7 || internal_pairs.len() != 3 {
+        return Err(input_error(
+            "repository D0 exclusion or internal-pair denominator changed",
+        ));
+    }
+    Ok(RepositoryD0Topology {
+        bonds,
+        exclusions,
+        internal_pairs,
+        parent_atom_index,
+    })
+}
+
+const fn ordered_pair(left: usize, right: usize) -> (usize, usize) {
+    if left < right {
+        (left, right)
+    } else {
+        (right, left)
+    }
+}
+
+fn repository_d0_pairs(values: &[(usize, usize)]) -> Vec<Fixed64Pair> {
+    let mut pairs = values
+        .iter()
+        .map(|(atom_i, atom_j)| {
+            let (atom_i, atom_j) = if atom_i < atom_j {
+                (*atom_i, *atom_j)
+            } else {
+                (*atom_j, *atom_i)
+            };
+            Fixed64Pair {
+                atom_i: atom_i as u64,
+                atom_j: atom_j as u64,
+            }
+        })
+        .collect::<Vec<_>>();
+    pairs.sort_by_key(|pair| (pair.atom_i, pair.atom_j));
+    pairs.dedup();
+    pairs
+}
+
+fn repository_d0_owned_source(source: &RepositoryD0ProposalSource) -> OwnedSource {
+    OwnedSource {
+        evidence: Fixed64SourceEvidence {
+            receipt_sha256: source.source_receipt_sha256(),
+            proposal_sha256: source.legacy_proposal_sha256(),
+            coordinate_sha256: source.coordinate_sha256(),
+        },
+        coordinates: Coordinates::from_rows(source.coordinates_angstrom().to_vec()),
+    }
+}
+
+const fn repository_d0_feature_kind(value: SearchFixed64FeatureKind) -> Fixed64FeatureKind {
+    match value {
+        SearchFixed64FeatureKind::LigandDonor => Fixed64FeatureKind::LigandDonor,
+        SearchFixed64FeatureKind::LigandAcceptor => Fixed64FeatureKind::LigandAcceptor,
+        SearchFixed64FeatureKind::ReceptorDonor => Fixed64FeatureKind::ReceptorDonor,
+        SearchFixed64FeatureKind::ReceptorAcceptor => Fixed64FeatureKind::ReceptorAcceptor,
+        SearchFixed64FeatureKind::LigandPositiveSite => Fixed64FeatureKind::LigandPositiveSite,
+        SearchFixed64FeatureKind::LigandNegativeSite => Fixed64FeatureKind::LigandNegativeSite,
+        SearchFixed64FeatureKind::ReceptorPositiveSite => Fixed64FeatureKind::ReceptorPositiveSite,
+        SearchFixed64FeatureKind::ReceptorNegativeSite => Fixed64FeatureKind::ReceptorNegativeSite,
+        SearchFixed64FeatureKind::LigandAromaticPlane => Fixed64FeatureKind::LigandAromaticPlane,
+        SearchFixed64FeatureKind::ReceptorAromaticPlane => {
+            Fixed64FeatureKind::ReceptorAromaticPlane
+        }
+        SearchFixed64FeatureKind::LigandShapeAxis => Fixed64FeatureKind::LigandShapeAxis,
+        SearchFixed64FeatureKind::PocketShapeAxis => Fixed64FeatureKind::PocketShapeAxis,
+    }
+}
+
+fn repository_d0_prepared_input_bounds(
+    input: &OwnedCompletePipelineInput,
+) -> PyResult<PreparedInputBounds> {
+    let ligand_atom_count = input.ligand_coordinates.x.len();
+    let receptor_atom_count = input.receptor_coordinates.x.len();
+    if ligand_atom_count != REPOSITORY_D0_LIGAND_ATOM_COUNT
+        || receptor_atom_count != REPOSITORY_D0_RECEPTOR_ATOM_COUNT
+    {
+        return Err(input_error(
+            "repository D0 atom denominator changed before native preparation",
+        ));
+    }
+    let exact_cartesian_pair_count = ligand_atom_count
+        .checked_mul(receptor_atom_count)
+        .ok_or_else(|| input_error("repository D0 exact pair denominator overflows"))?;
+    let mut budget = ScalarBudget::default();
+    budget.add(4, "fixed prepared-input scalars")?;
+    budget.add(ligand_atom_count * 3, "ligand coordinates")?;
+    budget.add(receptor_atom_count * 3, "receptor coordinates")?;
+    budget.add(ligand_atom_count * 6, "ligand atom channels")?;
+    budget.add(receptor_atom_count * 5, "receptor atom channels")?;
+    for (count, width, name) in [
+        (input.ligand_donors.len(), 2, "ligand donors"),
+        (input.receptor_donors.len(), 2, "receptor donors"),
+        (input.ligand_exclusions.len(), 2, "ligand exclusions"),
+        (input.rotors.len(), 4, "rotors"),
+        (input.bonds.len(), 2, "bonds"),
+        (input.chirality_centers.len(), 4, "chirality centers"),
+        (input.internal_pairs.len(), 2, "internal pairs"),
+    ] {
+        budget.add(count * width, name)?;
+    }
+    budget.add(input.parent_atom_index.len(), "parent atom indices")?;
+    budget.add(
+        input.rotatable_child_atom_index.len(),
+        "rotatable child atom indices",
+    )?;
+    budget.add(6, "pocket vectors")?;
+    budget.add(
+        source_scalar_count(input.v7_sources.len(), ligand_atom_count)?,
+        "V7 control sources",
+    )?;
+    budget.add(
+        source_scalar_count(input.conformer_sources.len(), ligand_atom_count)?,
+        "conformer sources",
+    )?;
+    budget.add(
+        source_scalar_count(input.retained_sources.len(), ligand_atom_count)?,
+        "retained sources",
+    )?;
+    budget.add(
+        input
+            .feature_geometries
+            .iter()
+            .map(|feature| feature.atom_indices.len())
+            .sum(),
+        "feature geometries",
+    )?;
+    budget.add(input.candidate_modes.len(), "candidate modes")?;
+    budget.add(input.rigid_max_steps.len(), "rigid step budgets")?;
+    budget.add(input.torsion_max_steps.len(), "torsion step budgets")?;
+    budget.add(input.torsion_eligible.len(), "torsion eligibility")?;
+    budget.add(
+        input.baseline_torsion_angles.len(),
+        "baseline torsion angles",
+    )?;
+    if budget.count != 1_178 {
+        return Err(input_error(
+            "repository D0 prepared-input scalar denominator changed",
+        ));
+    }
+    Ok(PreparedInputBounds {
+        ligand_atom_count,
+        receptor_atom_count,
+        exact_cartesian_pair_count,
+        scalar_count: budget.count,
+    })
+}
+
+fn repository_d0_backend_binding_receipt_sha256(
+    backend: &str,
+    source_bundle_receipt_sha256: [u8; 32],
+) -> PyResult<[u8; 32]> {
+    let pipeline_id = Fixed64Pipeline::profile_id().map_err(runtime_error)?;
+    let toolchain_attestation_status = repository_d0_toolchain_attestation_status()?;
+    let mut hash = Sha256::new();
+    hash.update(REPOSITORY_D0_BACKEND_BINDING_RECEIPT_DOMAIN);
+    for value in [
+        REPOSITORY_D0_BACKEND_BINDING_SCHEMA_ID,
+        backend,
+        pipeline_id,
+        env!("CARGO_PKG_VERSION"),
+        env!("BETELGEUZE_NATIVE_SOURCE_CLOSURE_SHA256"),
+        env!("BETELGEUZE_NATIVE_SOURCE_CLOSURE_FILE_COUNT"),
+        env!("BETELGEUZE_NATIVE_BUILD_PROFILE_ID"),
+        env!("BETELGEUZE_NATIVE_TOOLCHAIN_SHA256"),
+        toolchain_attestation_status,
+        env!("BETELGEUZE_BUILD_WRAPPER_CONTROL"),
+        env!("BETELGEUZE_NATIVE_CARGO_FEATURES"),
+        env!("BETELGEUZE_RUSTC_VERBOSE_SHA256"),
+        env!("BETELGEUZE_TARGET_TRIPLE"),
+    ] {
+        hash.update((value.len() as u64).to_be_bytes());
+        hash.update(value.as_bytes());
+    }
+    hash.update(source_bundle_receipt_sha256);
+    hash.update([0]);
+    Ok(hash.finalize().into())
+}
+
+fn repository_d0_toolchain_attestation_status() -> PyResult<&'static str> {
+    repository_d0_toolchain_attestation_status_for(
+        env!("BETELGEUZE_NATIVE_TOOLCHAIN_SHA256"),
+        env!("BETELGEUZE_NATIVE_BUILD_PROFILE_ID"),
+        env!("BETELGEUZE_BUILD_WRAPPER_CONTROL"),
+        env!("BETELGEUZE_NATIVE_CARGO_FEATURES"),
+    )
+}
+
+fn repository_d0_toolchain_attestation_status_for(
+    toolchain: &str,
+    build_profile: &str,
+    wrapper_control: &str,
+    cargo_features: &str,
+) -> PyResult<&'static str> {
+    let attested = toolchain.len() == 64
+        && toolchain
+            .bytes()
+            .all(|value| value.is_ascii_digit() || (b'a'..=b'f').contains(&value));
+    if attested {
+        let expected_features = match build_profile {
+            "cpu-manylinux_2_28-gcc14" => "extension-module",
+            "hip-gfx1030-rocm602" => "extension-module,hip",
+            _ => {
+                return Err(input_error(
+                    "repository D0 attested native build profile is unsupported",
+                ));
+            }
+        };
+        if wrapper_control != "verified_frozen_wrapper" || cargo_features != expected_features {
+            return Err(input_error(
+                "repository D0 attested native build identity is cross-wired",
+            ));
+        }
+        return Ok("attested_sha256");
+    }
+    if toolchain == "unattested"
+        && build_profile == "direct-cargo-unattested"
+        && wrapper_control == "direct_cargo_unattested"
+    {
+        return Ok("unattested_direct_cargo");
+    }
+    Err(input_error(
+        "repository D0 native toolchain attestation state is ambiguous",
+    ))
+}
+
+fn repository_d0_session_binding_receipt_sha256(
+    prepared_session_receipt_sha256: [u8; 32],
+    source_bundle_receipt_sha256: [u8; 32],
+    source_prepared_input_receipt_sha256: [u8; 32],
+    allocation_receipt_sha256: [u8; 32],
+    backend_binding_receipt_sha256: [u8; 32],
+) -> [u8; 32] {
+    let mut hash = Sha256::new();
+    hash.update(REPOSITORY_D0_SESSION_BINDING_RECEIPT_DOMAIN);
+    hash.update((REPOSITORY_D0_SESSION_BINDING_SCHEMA_ID.len() as u64).to_be_bytes());
+    hash.update(REPOSITORY_D0_SESSION_BINDING_SCHEMA_ID.as_bytes());
+    hash.update(prepared_session_receipt_sha256);
+    hash.update(source_bundle_receipt_sha256);
+    hash.update(source_prepared_input_receipt_sha256);
+    hash.update(allocation_receipt_sha256);
+    hash.update(backend_binding_receipt_sha256);
+    hash.update([0]);
+    hash.finalize().into()
+}
+
+fn append_repository_d0_binding(
+    py: Python<'_>,
+    document: &PyDict,
+    binding: RepositoryD0SessionBinding,
+    backend: &str,
+    prepared_session_receipt_sha256: [u8; 32],
+    scientific_decision_sha256: Option<[u8; 32]>,
+) -> PyResult<()> {
+    let pipeline_id = Fixed64Pipeline::profile_id().map_err(runtime_error)?;
+    let toolchain_attestation_status = repository_d0_toolchain_attestation_status()?;
+    let backend_binding = PyDict::new(py);
+    for (name, value) in [
+        ("schema_id", REPOSITORY_D0_BACKEND_BINDING_SCHEMA_ID),
+        ("backend", backend),
+        ("pipeline_id", pipeline_id),
+        ("native_package_version", env!("CARGO_PKG_VERSION")),
+        (
+            "native_source_closure_sha256",
+            env!("BETELGEUZE_NATIVE_SOURCE_CLOSURE_SHA256"),
+        ),
+        (
+            "native_source_closure_file_count_decimal",
+            env!("BETELGEUZE_NATIVE_SOURCE_CLOSURE_FILE_COUNT"),
+        ),
+        (
+            "native_build_profile_id",
+            env!("BETELGEUZE_NATIVE_BUILD_PROFILE_ID"),
+        ),
+        (
+            "native_toolchain_sha256",
+            env!("BETELGEUZE_NATIVE_TOOLCHAIN_SHA256"),
+        ),
+        ("toolchain_attestation_status", toolchain_attestation_status),
+        (
+            "build_wrapper_control",
+            env!("BETELGEUZE_BUILD_WRAPPER_CONTROL"),
+        ),
+        (
+            "native_cargo_features",
+            env!("BETELGEUZE_NATIVE_CARGO_FEATURES"),
+        ),
+        (
+            "rustc_verbose_sha256",
+            env!("BETELGEUZE_RUSTC_VERBOSE_SHA256"),
+        ),
+        ("target_triple", env!("BETELGEUZE_TARGET_TRIPLE")),
+    ] {
+        backend_binding.set_item(name, value)?;
+    }
+    backend_binding.set_item(
+        "source_bundle_receipt_sha256",
+        hex_digest(binding.source_bundle_receipt_sha256),
+    )?;
+    backend_binding.set_item(
+        "receipt_sha256",
+        hex_digest(binding.backend_binding_receipt_sha256),
+    )?;
+    document.set_item(
+        "prepared_source_origin",
+        "repository_synthetic_d0_native_materializer",
+    )?;
+    document.set_item("caller_science_transport_consumed", false)?;
+    document.set_item("repository_source_profile_id", REPOSITORY_D0_PROFILE_ID)?;
+    document.set_item(
+        "repository_source_bundle_receipt_sha256",
+        hex_digest(binding.source_bundle_receipt_sha256),
+    )?;
+    document.set_item(
+        "repository_source_prepared_input_receipt_sha256",
+        hex_digest(binding.source_prepared_input_receipt_sha256),
+    )?;
+    document.set_item(
+        "repository_allocation_receipt_sha256",
+        hex_digest(binding.allocation_receipt_sha256),
+    )?;
+    document.set_item(
+        "repository_backend_binding_receipt_sha256",
+        hex_digest(binding.backend_binding_receipt_sha256),
+    )?;
+    document.set_item("repository_backend_binding", backend_binding)?;
+    document.set_item(
+        "repository_session_binding_schema_id",
+        REPOSITORY_D0_SESSION_BINDING_SCHEMA_ID,
+    )?;
+    document.set_item(
+        "prepared_session_receipt_sha256",
+        hex_digest(prepared_session_receipt_sha256),
+    )?;
+    document.set_item(
+        "repository_session_binding_receipt_sha256",
+        hex_digest(binding.binding_receipt_sha256),
+    )?;
+    document.set_item(
+        "synthetic_only_acknowledgment",
+        REPOSITORY_D0_SYNTHETIC_ONLY_ACKNOWLEDGMENT,
+    )?;
+    document.set_item("qualification_rerun_authorized", false)?;
+    document.set_item("d1_d2_molecular_execution_authorized", false)?;
+    document.set_item("fresh_holdout_execution_authorized", false)?;
+    document.set_item("historical_ab_execution_authorized", false)?;
+    document.set_item("public_benchmark_authorized", false)?;
+    document.set_item("stage0_admission_authorized", false)?;
+    document.set_item("product_performance_claim_authorized", false)?;
+    if let Some(decision_sha256) = scientific_decision_sha256 {
+        document.set_item(
+            "repository_scientific_decision_sha256",
+            hex_digest(decision_sha256),
+        )?;
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod repository_d0_session_tests {
+    use super::*;
+
+    #[test]
+    fn repository_d0_build_attestation_fails_closed_on_cross_wiring() {
+        let toolchain = "a".repeat(64);
+        assert_eq!(
+            repository_d0_toolchain_attestation_status_for(
+                &toolchain,
+                "cpu-manylinux_2_28-gcc14",
+                "verified_frozen_wrapper",
+                "extension-module",
+            )
+            .expect("frozen CPU build identity"),
+            "attested_sha256",
+        );
+        assert!(repository_d0_toolchain_attestation_status_for(
+            &toolchain,
+            "cpu-manylinux_2_28-gcc14",
+            "direct_cargo_unattested",
+            "extension-module",
+        )
+        .is_err());
+        assert!(repository_d0_toolchain_attestation_status_for(
+            &toolchain,
+            "hip-gfx1030-rocm602",
+            "verified_frozen_wrapper",
+            "extension-module",
+        )
+        .is_err());
+        assert_eq!(
+            repository_d0_toolchain_attestation_status_for(
+                "unattested",
+                "direct-cargo-unattested",
+                "direct_cargo_unattested",
+                "none",
+            )
+            .expect("explicit direct Cargo state"),
+            "unattested_direct_cargo",
+        );
+    }
+
+    #[test]
+    fn repository_d0_direct_input_is_complete_bounded_and_source_distinct() {
+        let (input, binding) =
+            repository_synthetic_d0_complete_input(ContextOptions::rust_cpu(), "rust_cpu")
+                .expect("repository D0 input must materialize");
+        let bounds = input
+            .prepared_input_bounds
+            .expect("repository D0 input must be bounded");
+        assert_eq!(bounds.ligand_atom_count, 5);
+        assert_eq!(bounds.receptor_atom_count, 5);
+        assert_eq!(bounds.exact_cartesian_pair_count, 25);
+        assert_eq!(bounds.scalar_count, 1_178);
+        assert_eq!(input.v7_sources.len(), 24);
+        assert!(input.conformer_sources.is_empty());
+        assert_eq!(input.retained_sources.len(), 4);
+        assert_eq!(input.atomic_features.len(), 13);
+        assert_eq!(input.feature_geometries.len(), 13);
+        assert_eq!(input.ligand_exclusions.len(), 7);
+        assert_eq!(input.internal_pairs.len(), 3);
+        assert!(input.rotors.is_empty());
+        assert!(input.rotatable_child_atom_index.is_empty());
+        assert_eq!(
+            input
+                .torsion_eligible
+                .iter()
+                .filter(|value| **value == 1)
+                .count(),
+            20
+        );
+        assert_eq!(
+            input
+                .candidate_modes
+                .iter()
+                .filter(|mode| matches!(mode, Fixed64RefinementMode::V6BaselineV3Lane))
+                .count(),
+            20
+        );
+        assert_eq!(
+            binding.allocation_receipt_sha256,
+            REPOSITORY_D0_EXPECTED_ALLOCATION_SHA256
+        );
+        assert_ne!(binding.backend_binding_receipt_sha256, [0; 32]);
+        assert_ne!(input.prepared_input_projection_sha256, Some([0; 32]));
+        assert_ne!(
+            coordinate_digest(&input.ligand_coordinates).expect("ligand identity"),
+            input.exact_source.evidence.coordinate_sha256,
+            "prepared ligand reference and exact proposal source must remain distinct",
+        );
+    }
+
+    #[test]
+    fn repository_d0_cpu_backends_preserve_fixed64_decisions_without_qualification() {
+        // This is an untimed, repeatable synthetic unit test. It neither calls
+        // the exactly-once qualification runner nor consumes its persisted
+        // account-scoped execution state.
+        let (cpp_input, cpp_binding) = repository_synthetic_d0_complete_input(
+            ContextOptions::cpu_reference(),
+            "cpp_cpu_reference",
+        )
+        .expect("C++ repository D0 input");
+        let (rust_input, rust_binding) =
+            repository_synthetic_d0_complete_input(ContextOptions::rust_cpu(), "rust_cpu")
+                .expect("Rust repository D0 input");
+        assert_ne!(
+            cpp_binding.backend_binding_receipt_sha256,
+            rust_binding.backend_binding_receipt_sha256,
+        );
+        assert_ne!(
+            cpp_input.prepared_input_projection_sha256,
+            rust_input.prepared_input_projection_sha256,
+        );
+        let cpp = cpp_input.run_once().expect("C++ repository D0 run");
+        let rust = rust_input.run_once().expect("Rust repository D0 run");
+        assert_eq!((cpp.generated_count, cpp.typed_failure_count), (54, 10));
+        assert_eq!((rust.generated_count, rust.typed_failure_count), (54, 10));
+        assert_eq!(cpp.rows.len(), 64);
+        assert_eq!(rust.rows.len(), 64);
+        assert!(cpp.authority.denominator_preserved);
+        assert!(rust.authority.denominator_preserved);
+        assert!(!cpp.authority.molecular_execution_authorized);
+        assert!(!rust.authority.molecular_execution_authorized);
+        let cpp_projection = cpp.scientific_projection().expect("C++ projection");
+        let rust_projection = rust.scientific_projection().expect("Rust projection");
+        assert_eq!(
+            hex_digest(cpp_projection.decision_sha256),
+            "8908c757de4e7a8f5d12452e40ec0292b44c3db7893f98d5b92956e1f0c9d9f4",
+        );
+        assert_eq!(
+            cpp_projection.decision_sha256,
+            rust_projection.decision_sha256
+        );
+        assert_eq!(
+            cpp_projection.primary_slot_indices,
+            rust_projection.primary_slot_indices
+        );
+        assert_eq!(
+            cpp_projection.valid_slot_indices,
+            rust_projection.valid_slot_indices
+        );
+        assert_eq!(
+            cpp_projection.top_k_slot_indices,
+            rust_projection.top_k_slot_indices
+        );
+        assert_eq!(
+            cpp_projection.primary_slot_indices,
+            [23, 63, 9, 10, 29, 16, 61, 8, 11, 52, 20, 13, 33, 26, 34, 22],
+        );
+        assert_eq!(
+            cpp_projection.representative_slot_indices,
+            [23, 9, 10, 29, 16, 8, 11, 52, 20, 13, 33, 22],
+        );
+        assert_eq!(cpp_projection.top_k_slot_indices, [23, 9, 10, 29, 16]);
+    }
 }
 
 #[pymethods]
@@ -600,6 +1735,19 @@ impl NativeFixed64PreparedSession {
         output.set_item("existing_rank_auto_change_authorized", false)?;
         output.set_item("customer_pose_emission_authorized", false)?;
         output.set_item("production_claim_authorized", false)?;
+        if let Some(binding) = self.repository_d0_binding {
+            append_repository_d0_binding(
+                py,
+                output,
+                binding,
+                backend_id(self.pipeline.backend()),
+                self.prepared_session_receipt_sha256,
+                None,
+            )?;
+        } else {
+            output.set_item("prepared_source_origin", "caller_supplied_bounded_v3")?;
+            output.set_item("caller_science_transport_consumed", true)?;
+        }
         Ok(output.into())
     }
 
@@ -622,14 +1770,38 @@ impl NativeFixed64PreparedSession {
         // lease. PyO3's unsendable class guard keeps every execution on the
         // creating Python thread, while repeated calls reuse the exact handle.
         let receipt = self.input.run(&self.pipeline).map_err(runtime_error)?;
-        receipt_to_python(
+        let repository_decision_sha256 = self
+            .repository_d0_binding
+            .map(|_| {
+                receipt
+                    .scientific_projection()
+                    .map(|projection| projection.decision_sha256)
+                    .map_err(runtime_error)
+            })
+            .transpose()?;
+        let output = receipt_to_python(
             py,
             &receipt,
             consumer,
             CompleteTransportVersion::V3,
             self.input.prepared_input_bounds,
             self.input.prepared_input_projection_sha256,
-        )
+        )?;
+        if let Some(binding) = self.repository_d0_binding {
+            let document = output
+                .as_ref(py)
+                .downcast::<PyDict>()
+                .map_err(|_| input_error("repository D0 receipt transport is not a dict"))?;
+            append_repository_d0_binding(
+                py,
+                document,
+                binding,
+                backend_id(self.pipeline.backend()),
+                self.prepared_session_receipt_sha256,
+                repository_decision_sha256,
+            )?;
+        }
+        Ok(output)
     }
 }
 

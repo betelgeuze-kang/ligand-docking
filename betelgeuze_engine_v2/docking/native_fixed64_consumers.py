@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import hashlib
 import importlib
+import math
 from types import MappingProxyType
 from typing import ClassVar, Literal, Mapping, cast
 
@@ -40,6 +41,70 @@ _PREPARED_SESSION_SCHEMA_ID = (
 _PREPARED_SESSION_RECEIPT_DOMAIN = (
     b"betelgeuze.engine-v2.native-fixed64-prepared-session/v1\0"
 )
+_REPOSITORY_D0_SESSION_BINDING_SCHEMA_ID = (
+    "betelgeuze.engine_v2_native_repository_synthetic_d0_session_binding/1.0.0"
+)
+_REPOSITORY_D0_SESSION_BINDING_RECEIPT_DOMAIN = (
+    b"betelgeuze.engine-v2.native-repository-d0-session-binding/v1\0"
+)
+_REPOSITORY_D0_BACKEND_BINDING_SCHEMA_ID = (
+    "betelgeuze.engine_v2_native_repository_synthetic_d0_backend_binding/1.0.0"
+)
+_REPOSITORY_D0_BACKEND_BINDING_RECEIPT_DOMAIN = (
+    b"betelgeuze.engine-v2.native-repository-d0-backend-binding/v1\0"
+)
+REPOSITORY_SYNTHETIC_D0_NATIVE_ACKNOWLEDGMENT = (
+    "repository-synthetic-d0-only:no-reservation:no-molecular-experiment:"
+    "no-qualification-rerun:no-product-action:no-public-or-scientific-claim"
+)
+_REPOSITORY_D0_SOURCE_PROFILE_ID = (
+    "betelgeuze.engine_v2_repository_synthetic_d0_fixed64_source/native-1.0.0"
+)
+_REPOSITORY_D0_SOURCE_BUNDLE_SHA256 = (
+    "80a7ee8fe919523c7afab78467dddb9bc2e653e028f1e731c9058db3ef17a68f"
+)
+_REPOSITORY_D0_SOURCE_PREPARED_INPUT_SHA256 = (
+    "9365608f04170392497222d4681e7494c2ddedb01fcab653ca1aded4de984e6e"
+)
+_REPOSITORY_D0_ALLOCATION_SHA256 = (
+    "8775a56bcd15bc903ead9365eb699c167d523157404dc2271c11a5274bacd2fb"
+)
+_REPOSITORY_D0_SCIENTIFIC_DECISION_SHA256 = (
+    "8908c757de4e7a8f5d12452e40ec0292b44c3db7893f98d5b92956e1f0c9d9f4"
+)
+_REPOSITORY_D0_PRIMARY_SLOT_INDICES = (
+    23,
+    63,
+    9,
+    10,
+    29,
+    16,
+    61,
+    8,
+    11,
+    52,
+    20,
+    13,
+    33,
+    26,
+    34,
+    22,
+)
+_REPOSITORY_D0_REPRESENTATIVE_SLOT_INDICES = (
+    23,
+    9,
+    10,
+    29,
+    16,
+    8,
+    11,
+    52,
+    20,
+    13,
+    33,
+    22,
+)
+_REPOSITORY_D0_TOP_K_SLOT_INDICES = (23, 9, 10, 29, 16)
 _NATIVE_FIXED64_PIPELINE_ID = (
     "betelgeuze.engine_v2_native_fixed64_complete_pipeline/2.0.0"
 )
@@ -48,6 +113,29 @@ _PREPARED_INPUT_SCALAR_LIMIT = 8 * 1_024 * 1_024
 # making even a shallow transport copy; Rust then validates the exact key set
 # and bounds every nested collection before copying its values.
 _COMPLETE_INPUT_KEY_COUNT = 53
+
+_REPOSITORY_D0_BACKEND_BINDING_VALUE_FIELDS = (
+    "schema_id",
+    "backend",
+    "pipeline_id",
+    "native_package_version",
+    "native_source_closure_sha256",
+    "native_source_closure_file_count_decimal",
+    "native_build_profile_id",
+    "native_toolchain_sha256",
+    "toolchain_attestation_status",
+    "build_wrapper_control",
+    "native_cargo_features",
+    "rustc_verbose_sha256",
+    "target_triple",
+)
+_REPOSITORY_D0_BACKEND_BINDING_FIELDS = frozenset(
+    (
+        *_REPOSITORY_D0_BACKEND_BINDING_VALUE_FIELDS,
+        "source_bundle_receipt_sha256",
+        "receipt_sha256",
+    )
+)
 
 _RECEIPT_GRAPH_FIELDS = (
     "allocation_inventory_sha256",
@@ -125,6 +213,22 @@ def _native_session_entrypoint():
             "native fixed64 extension is required; Python fallback is forbidden"
         ) from exc
     name = "native_fixed64_prepare_session_v1"
+    entrypoint = getattr(module, name, None)
+    if not callable(entrypoint):
+        raise NativeFixed64ConsumerError(
+            f"native fixed64 extension lacks the versioned entrypoint {name}"
+        )
+    return entrypoint
+
+
+def _native_repository_d0_session_entrypoint():
+    try:
+        module = importlib.import_module("betelgeuze_engine_v2_native")
+    except (ImportError, OSError) as exc:
+        raise NativeFixed64ConsumerError(
+            "native fixed64 extension is required; Python fallback is forbidden"
+        ) from exc
+    name = "native_fixed64_prepare_repository_synthetic_d0_session_v1"
     entrypoint = getattr(module, name, None)
     if not callable(entrypoint):
         raise NativeFixed64ConsumerError(
@@ -521,6 +625,380 @@ class NativeFixed64PreparedSessionV1:
         return NativeFixed64EvidenceV3(surface=surface, _document=result)
 
 
+_REPOSITORY_D0_VALIDITY_FIELDS = frozenset(
+    {
+        "status",
+        "failure_code",
+        "upstream_scorer_failure_code",
+        "passed_check_mask",
+        "blocker_mask",
+        "observed_count",
+        "atom_count",
+        "rotation_orthogonality_max_error",
+        "rotation_determinant",
+        "max_bond_length_delta_angstrom",
+        "minimum_ligand_nonbonded_distance_angstrom",
+        "evaluated_ligand_nonbonded_pair_count",
+        "excluded_ligand_pair_count",
+        "minimum_receptor_ligand_distance_angstrom",
+        "evaluated_receptor_ligand_pair_count",
+        "minimum_declared_chiral_volume",
+        "declared_chirality_center_count",
+        "maximum_pocket_center_distance_angstrom",
+        "element_vdw_ligand_pair_count",
+        "element_vdw_ligand_severe_overlap_count",
+        "element_vdw_ligand_minimum_distance_angstrom",
+        "element_vdw_ligand_minimum_ratio",
+        "element_vdw_receptor_candidate_pair_count",
+        "element_vdw_receptor_full_cartesian_pair_count",
+        "element_vdw_receptor_cell_count",
+        "element_vdw_receptor_severe_overlap_count",
+        "element_vdw_receptor_minimum_distance_angstrom",
+        "element_vdw_receptor_minimum_ratio",
+    }
+)
+
+
+def _repository_d0_digest(value: object, *, name: str) -> str:
+    if (
+        type(value) is not str
+        or len(value) != 64
+        or any(character not in "0123456789abcdef" for character in value)
+    ):
+        raise NativeFixed64ConsumerError(f"repository D0 {name} is not SHA-256")
+    return value
+
+
+def _repository_d0_slot_indices(value: object, *, name: str) -> tuple[int, ...]:
+    if type(value) is not list or any(type(item) is not int for item in value):
+        raise NativeFixed64ConsumerError(
+            f"repository D0 {name} must be an exact integer list"
+        )
+    return tuple(value)
+
+
+def _repository_d0_backend_binding_digest(
+    binding: Mapping[str, object],
+) -> str:
+    if (
+        type(binding) is not dict
+        or set(binding) != _REPOSITORY_D0_BACKEND_BINDING_FIELDS
+    ):
+        raise NativeFixed64ConsumerError(
+            "repository D0 backend binding key schema changed"
+        )
+    values: list[str] = []
+    for field in _REPOSITORY_D0_BACKEND_BINDING_VALUE_FIELDS:
+        value = binding.get(field)
+        if type(value) is not str:
+            raise NativeFixed64ConsumerError(
+                f"repository D0 backend binding field {field} is not an exact string"
+            )
+        try:
+            value.encode("ascii")
+        except UnicodeEncodeError as exc:
+            raise NativeFixed64ConsumerError(
+                f"repository D0 backend binding field {field} is not ASCII"
+            ) from exc
+        values.append(value)
+    if (
+        values[0] != _REPOSITORY_D0_BACKEND_BINDING_SCHEMA_ID
+        or values[2] != _NATIVE_FIXED64_PIPELINE_ID
+        or not values[5].isdigit()
+        or int(values[5]) <= 0
+    ):
+        raise NativeFixed64ConsumerError(
+            "repository D0 backend build identity is cross-wired"
+        )
+    for field in ("native_source_closure_sha256", "rustc_verbose_sha256"):
+        _repository_d0_digest(binding.get(field), name=field)
+    if values[8] == "attested_sha256":
+        _repository_d0_digest(
+            binding.get("native_toolchain_sha256"), name="native_toolchain_sha256"
+        )
+        expected_features = {
+            "cpu-manylinux_2_28-gcc14": "extension-module",
+            "hip-gfx1030-rocm602": "extension-module,hip",
+        }.get(values[6])
+        if (
+            expected_features is None
+            or values[9] != "verified_frozen_wrapper"
+            or values[10] != expected_features
+        ):
+            raise NativeFixed64ConsumerError(
+                "repository D0 attested build identity is cross-wired"
+            )
+    elif not (
+        values[8] == "unattested_direct_cargo"
+        and values[7] == "unattested"
+        and values[6] == "direct-cargo-unattested"
+        and values[9] == "direct_cargo_unattested"
+    ):
+        raise NativeFixed64ConsumerError(
+            "repository D0 toolchain attestation state is ambiguous"
+        )
+    source_bundle = _repository_d0_digest(
+        binding.get("source_bundle_receipt_sha256"),
+        name="backend source bundle receipt",
+    )
+    if source_bundle != _REPOSITORY_D0_SOURCE_BUNDLE_SHA256:
+        raise NativeFixed64ConsumerError(
+            "repository D0 backend binding source bundle is cross-wired"
+        )
+    digest = hashlib.sha256()
+    digest.update(_REPOSITORY_D0_BACKEND_BINDING_RECEIPT_DOMAIN)
+    for value in values:
+        encoded = value.encode("ascii")
+        digest.update(len(encoded).to_bytes(8, "big"))
+        digest.update(encoded)
+    digest.update(bytes.fromhex(source_bundle))
+    digest.update(b"\0")
+    observed = _repository_d0_digest(
+        binding.get("receipt_sha256"), name="backend binding receipt"
+    )
+    if digest.hexdigest() != observed:
+        if values[8] == "attested_sha256":
+            raise NativeFixed64ConsumerError(
+                "repository D0 attested build identity receipt is not rederivable"
+            )
+        raise NativeFixed64ConsumerError(
+            "repository D0 backend binding receipt is not rederivable"
+        )
+    return observed
+
+
+def _validate_repository_d0_document(
+    document: Mapping[str, object],
+    *,
+    backend: str,
+    require_decision: bool,
+) -> None:
+    if type(document) is not dict or type(backend) is not str:
+        raise TypeError("repository D0 evidence must use exact Python identities")
+    if (
+        type(document.get("backend")) is not str
+        or document.get("backend") != backend
+        or backend not in {"cpp_cpu_reference", "rust_cpu"}
+        or document.get("prepared_source_origin")
+        != "repository_synthetic_d0_native_materializer"
+        or document.get("caller_science_transport_consumed") is not False
+        or document.get("repository_source_profile_id")
+        != _REPOSITORY_D0_SOURCE_PROFILE_ID
+        or document.get("repository_source_bundle_receipt_sha256")
+        != _REPOSITORY_D0_SOURCE_BUNDLE_SHA256
+        or document.get("repository_source_prepared_input_receipt_sha256")
+        != _REPOSITORY_D0_SOURCE_PREPARED_INPUT_SHA256
+        or document.get("repository_allocation_receipt_sha256")
+        != _REPOSITORY_D0_ALLOCATION_SHA256
+        or document.get("repository_session_binding_schema_id")
+        != _REPOSITORY_D0_SESSION_BINDING_SCHEMA_ID
+        or document.get("synthetic_only_acknowledgment")
+        != REPOSITORY_SYNTHETIC_D0_NATIVE_ACKNOWLEDGMENT
+        or document.get("candidate_denominator") != 64
+        or document.get("ligand_atom_count") != 5
+        or document.get("receptor_atom_count") != 5
+        or document.get("exact_cartesian_pair_count") != 25
+        or document.get("prepared_input_scalar_count") != 1_178
+    ):
+        raise NativeFixed64ConsumerError(
+            "repository D0 session evidence is cross-wired"
+        )
+    for field in (
+        "qualification_rerun_authorized",
+        "d1_d2_molecular_execution_authorized",
+        "fresh_holdout_execution_authorized",
+        "historical_ab_execution_authorized",
+        "public_benchmark_authorized",
+        "stage0_admission_authorized",
+        "product_performance_claim_authorized",
+    ):
+        if document.get(field) is not False:
+            raise NativeFixed64ConsumerError(
+                f"repository D0 authority field {field} changed"
+            )
+    backend_binding = document.get("repository_backend_binding")
+    if not isinstance(backend_binding, Mapping):
+        raise NativeFixed64ConsumerError(
+            "repository D0 backend binding evidence is absent"
+        )
+    backend_receipt = _repository_d0_backend_binding_digest(backend_binding)
+    if (
+        backend_binding.get("backend") != backend
+        or document.get("repository_backend_binding_receipt_sha256") != backend_receipt
+    ):
+        raise NativeFixed64ConsumerError(
+            "repository D0 backend binding alias is cross-wired"
+        )
+    prepared_session_receipt = _repository_d0_digest(
+        document.get("prepared_session_receipt_sha256"),
+        name="prepared session receipt",
+    )
+    session_binding = hashlib.sha256()
+    session_binding.update(_REPOSITORY_D0_SESSION_BINDING_RECEIPT_DOMAIN)
+    schema = _REPOSITORY_D0_SESSION_BINDING_SCHEMA_ID.encode("ascii")
+    session_binding.update(len(schema).to_bytes(8, "big"))
+    session_binding.update(schema)
+    for value in (
+        prepared_session_receipt,
+        _REPOSITORY_D0_SOURCE_BUNDLE_SHA256,
+        _REPOSITORY_D0_SOURCE_PREPARED_INPUT_SHA256,
+        _REPOSITORY_D0_ALLOCATION_SHA256,
+        backend_receipt,
+    ):
+        session_binding.update(bytes.fromhex(value))
+    session_binding.update(b"\0")
+    observed_session_binding = _repository_d0_digest(
+        document.get("repository_session_binding_receipt_sha256"),
+        name="session binding receipt",
+    )
+    if session_binding.hexdigest() != observed_session_binding:
+        raise NativeFixed64ConsumerError(
+            "repository D0 session binding receipt is not rederivable"
+        )
+    if not require_decision:
+        if "repository_scientific_decision_sha256" in document:
+            raise NativeFixed64ConsumerError(
+                "repository D0 metadata unexpectedly contains run results"
+            )
+        return
+    decision_sha256 = _repository_d0_digest(
+        document.get("repository_scientific_decision_sha256"),
+        name="scientific decision receipt",
+    )
+    primary_slot_indices = _repository_d0_slot_indices(
+        document.get("primary_slot_indices"), name="primary slots"
+    )
+    valid_slot_indices = _repository_d0_slot_indices(
+        document.get("valid_slot_indices"), name="valid slots"
+    )
+    representative_slot_indices = _repository_d0_slot_indices(
+        document.get("representative_slot_indices"), name="representative slots"
+    )
+    top_k_slot_indices = _repository_d0_slot_indices(
+        document.get("top_k_slot_indices"), name="Top-K slots"
+    )
+    if (
+        decision_sha256 != _REPOSITORY_D0_SCIENTIFIC_DECISION_SHA256
+        or document.get("generated_count") != 54
+        or document.get("typed_failure_count") != 10
+        or document.get("initial_admitted_count") != 30
+        or document.get("refined_count") != 16
+        or document.get("post_admitted_count") != 16
+        or document.get("post_rejected_count") != 0
+        or document.get("scored_count") != 16
+        or document.get("valid_count") != 16
+        or document.get("cluster_count") != 12
+        or primary_slot_indices != _REPOSITORY_D0_PRIMARY_SLOT_INDICES
+        or valid_slot_indices != _REPOSITORY_D0_PRIMARY_SLOT_INDICES
+        or representative_slot_indices != _REPOSITORY_D0_REPRESENTATIVE_SLOT_INDICES
+        or top_k_slot_indices != _REPOSITORY_D0_TOP_K_SLOT_INDICES
+        or document.get("allocation_receipt_sha256") != _REPOSITORY_D0_ALLOCATION_SHA256
+    ):
+        raise NativeFixed64ConsumerError(
+            "repository D0 runtime denominator or allocation changed"
+        )
+    candidates = document.get("candidates")
+    if type(candidates) is not list or len(candidates) != 64:
+        raise NativeFixed64ConsumerError(
+            "repository D0 candidate evidence denominator changed"
+        )
+    available_count = 0
+    for candidate in candidates:
+        if type(candidate) is not dict:
+            raise NativeFixed64ConsumerError(
+                "repository D0 candidate evidence is not an exact dict"
+            )
+        scorer = candidate.get("scorer_v1")
+        validity = candidate.get("validity")
+        lineage = candidate.get("lineage")
+        if (
+            type(scorer) is not dict
+            or type(validity) is not dict
+            or set(validity) != _REPOSITORY_D0_VALIDITY_FIELDS
+            or type(lineage) is not dict
+        ):
+            raise NativeFixed64ConsumerError(
+                "repository D0 scorer or validity evidence is incomplete"
+            )
+        terms = scorer.get("weighted_terms")
+        if (
+            type(terms) is not list
+            or len(terms) != 8
+            or any(
+                type(value) is not float or not math.isfinite(value) for value in terms
+            )
+        ):
+            raise NativeFixed64ConsumerError(
+                "repository D0 complete ScorerV1 term receipt changed"
+            )
+        _repository_d0_digest(
+            lineage.get("scorer_evidence_sha256"), name="ScorerV1 row receipt"
+        )
+        _repository_d0_digest(
+            lineage.get("validity_evidence_sha256"), name="validity row receipt"
+        )
+        if candidate.get("coordinates_available") is True:
+            available_count += 1
+            geometric = candidate.get("geometric_admission")
+            if type(geometric) is not dict or geometric.get("exact_pair_count") != 25:
+                raise NativeFixed64ConsumerError(
+                    "repository D0 exact geometric pair denominator changed"
+                )
+    if available_count != 54:
+        raise NativeFixed64ConsumerError(
+            "repository D0 available candidate denominator changed"
+        )
+
+
+class NativeRepositorySyntheticD0EvidenceV1(NativeFixed64EvidenceV3):
+    """Complete source-bound synthetic D0 evidence from one native session."""
+
+    __slots__ = ()
+
+    def __post_init__(self) -> None:
+        _validate_repository_d0_document(
+            self._document,
+            backend=cast(str, self._document.get("backend")),
+            require_decision=True,
+        )
+        super().__post_init__()
+
+
+@dataclass(frozen=True, slots=True)
+class NativeRepositorySyntheticD0PreparedSessionV1:
+    """Validated facade over a no-caller-science repository D0 native session."""
+
+    _base: NativeFixed64PreparedSessionV1
+
+    def __post_init__(self) -> None:
+        metadata = self._base.describe()
+        _validate_repository_d0_document(
+            metadata,
+            backend=cast(str, metadata.get("backend")),
+            require_decision=False,
+        )
+
+    @property
+    def prepared_input_projection_sha256(self) -> str:
+        return self._base.prepared_input_projection_sha256
+
+    @property
+    def prepared_session_receipt_sha256(self) -> str:
+        return self._base.prepared_session_receipt_sha256
+
+    def describe(self) -> dict[str, object]:
+        return self._base.describe()
+
+    def run(
+        self, *, surface: NativeFixed64Surface
+    ) -> NativeRepositorySyntheticD0EvidenceV1:
+        evidence = self._base.run(surface=surface)
+        return NativeRepositorySyntheticD0EvidenceV1(
+            surface=surface,
+            _document=evidence.to_dict(),
+        )
+
+
 # Import compatibility only. The alias validates and represents the v2 schema;
 # it does not admit or reinterpret retired v1 evidence.
 NativeFixed64EvidenceV1 = NativeFixed64EvidenceV2
@@ -622,6 +1100,62 @@ def prepare_native_fixed64_session(
     )
 
 
+def prepare_repository_synthetic_d0_session(
+    *,
+    backend: str,
+    default_surface: NativeFixed64Surface,
+    synthetic_only_acknowledgment: str,
+) -> NativeRepositorySyntheticD0PreparedSessionV1:
+    """Create the source-bound synthetic D0 session without Python science input."""
+
+    if any(
+        type(value) is not str
+        for value in (backend, default_surface, synthetic_only_acknowledgment)
+    ):
+        raise TypeError("repository D0 session arguments must be exact strings")
+    if backend not in {"cpp_cpu_reference", "rust_cpu"}:
+        if backend in {"hip_safe", "hip_fast"}:
+            raise NativeFixed64ConsumerError(
+                "repository D0 session is synthetic CPU-only; HIP execution is unauthorized"
+            )
+        raise NativeFixed64ConsumerError("repository D0 backend is unsupported")
+    if default_surface not in {"cli", "benchmark", "api", "product_shadow"}:
+        raise NativeFixed64ConsumerError("native consumer surface is unsupported")
+    if synthetic_only_acknowledgment != REPOSITORY_SYNTHETIC_D0_NATIVE_ACKNOWLEDGMENT:
+        raise NativeFixed64ConsumerError(
+            "repository D0 session requires the exact synthetic-only acknowledgment"
+        )
+    entrypoint = _native_repository_d0_session_entrypoint()
+    try:
+        session = entrypoint(
+            backend,
+            default_surface,
+            synthetic_only_acknowledgment,
+        )
+    except (TypeError, ValueError, RuntimeError) as exc:
+        raise NativeFixed64ConsumerError(str(exc)) from exc
+    describe = getattr(session, "describe", None)
+    if not callable(describe):
+        raise NativeFixed64ConsumerError(
+            "repository D0 native session lacks metadata evidence"
+        )
+    try:
+        metadata = describe()
+    except (TypeError, ValueError, RuntimeError) as exc:
+        raise NativeFixed64ConsumerError(str(exc)) from exc
+    if type(metadata) is not dict:
+        raise NativeFixed64ConsumerError(
+            "repository D0 prepared-session metadata is not an exact dict"
+        )
+    base = NativeFixed64PreparedSessionV1(
+        _native_session=session,
+        _metadata=metadata,
+        _backend=backend,
+        _default_consumer=default_surface,
+    )
+    return NativeRepositorySyntheticD0PreparedSessionV1(_base=base)
+
+
 def run_native_fixed64_surface(
     input_document: Mapping[str, object],
     *,
@@ -652,12 +1186,30 @@ class NativeFixed64CliAdapter:
     def run(self, input_document: Mapping[str, object]) -> NativeFixed64EvidenceV3:
         return run_native_fixed64_surface(input_document, surface="cli")
 
+    def run_repository_synthetic_d0(
+        self, *, backend: str, synthetic_only_acknowledgment: str
+    ) -> NativeRepositorySyntheticD0EvidenceV1:
+        return prepare_repository_synthetic_d0_session(
+            backend=backend,
+            default_surface="cli",
+            synthetic_only_acknowledgment=synthetic_only_acknowledgment,
+        ).run(surface="cli")
+
 
 class NativeFixed64DiagnosticBenchmarkAdapter:
     __slots__ = ()
 
     def run(self, input_document: Mapping[str, object]) -> NativeFixed64EvidenceV3:
         return run_native_fixed64_surface(input_document, surface="benchmark")
+
+    def run_repository_synthetic_d0(
+        self, *, backend: str, synthetic_only_acknowledgment: str
+    ) -> NativeRepositorySyntheticD0EvidenceV1:
+        return prepare_repository_synthetic_d0_session(
+            backend=backend,
+            default_surface="benchmark",
+            synthetic_only_acknowledgment=synthetic_only_acknowledgment,
+        ).run(surface="benchmark")
 
 
 class NativeFixed64PythonApi:
@@ -666,12 +1218,30 @@ class NativeFixed64PythonApi:
     def run(self, input_document: Mapping[str, object]) -> NativeFixed64EvidenceV3:
         return run_native_fixed64_surface(input_document, surface="api")
 
+    def run_repository_synthetic_d0(
+        self, *, backend: str, synthetic_only_acknowledgment: str
+    ) -> NativeRepositorySyntheticD0EvidenceV1:
+        return prepare_repository_synthetic_d0_session(
+            backend=backend,
+            default_surface="api",
+            synthetic_only_acknowledgment=synthetic_only_acknowledgment,
+        ).run(surface="api")
+
 
 class NativeFixed64ProductShadowAdapter:
     __slots__ = ()
 
     def run(self, input_document: Mapping[str, object]) -> NativeFixed64EvidenceV3:
         return run_native_fixed64_surface(input_document, surface="product_shadow")
+
+    def run_repository_synthetic_d0(
+        self, *, backend: str, synthetic_only_acknowledgment: str
+    ) -> NativeRepositorySyntheticD0EvidenceV1:
+        return prepare_repository_synthetic_d0_session(
+            backend=backend,
+            default_surface="product_shadow",
+            synthetic_only_acknowledgment=synthetic_only_acknowledgment,
+        ).run(surface="product_shadow")
 
 
 __all__ = [
@@ -685,6 +1255,10 @@ __all__ = [
     "NativeFixed64ProductShadowAdapter",
     "NativeFixed64PythonApi",
     "NativeFixed64Surface",
+    "NativeRepositorySyntheticD0EvidenceV1",
+    "NativeRepositorySyntheticD0PreparedSessionV1",
+    "REPOSITORY_SYNTHETIC_D0_NATIVE_ACKNOWLEDGMENT",
     "prepare_native_fixed64_session",
+    "prepare_repository_synthetic_d0_session",
     "run_native_fixed64_surface",
 ]
