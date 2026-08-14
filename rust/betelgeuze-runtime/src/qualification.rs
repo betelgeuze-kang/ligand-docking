@@ -954,6 +954,38 @@ fn numeric_parity(
     result
 }
 
+/// Compare every floating-point field in two validated fixed64 scientific
+/// projections without running a benchmark or granting qualification authority.
+///
+/// Exact denominator, failure, rank, validity-mask, and selection parity is
+/// represented separately by `Fixed64ScientificProjection::decision_sha256`.
+/// This helper owns the complementary bounded comparison of all coordinates,
+/// ScorerV1 terms, refinement objectives, validity measurements, and geometry
+/// measurements carried by the projection.
+pub fn compare_fixed64_scientific_numeric_parity(
+    reference: &Fixed64ScientificProjection,
+    observed: &Fixed64ScientificProjection,
+    absolute_tolerance: f64,
+    relative_tolerance: f64,
+) -> Result<Fixed64NumericParityV5> {
+    if !absolute_tolerance.is_finite()
+        || absolute_tolerance < 0.0
+        || !relative_tolerance.is_finite()
+        || relative_tolerance < 0.0
+    {
+        return Err(Error::local(
+            ErrorCode::InvalidArgument,
+            "fixed64 scientific parity tolerances must be finite and non-negative",
+        ));
+    }
+    Ok(numeric_parity(
+        reference,
+        observed,
+        absolute_tolerance,
+        relative_tolerance,
+    ))
+}
+
 fn timed_run(
     pipeline: &Fixed64Pipeline,
     input: Fixed64RunInput<'_>,

@@ -25,6 +25,11 @@ from betelgeuze_engine_v2.docking.native_fixed64_consumers import (
     run_native_fixed64_surface,
 )
 import betelgeuze_engine_v2.docking.native_fixed64_consumers as native_consumers
+from betelgeuze_engine_v2.docking.native_cpu_parity import (
+    NativeCpuParityError,
+    NativeRepositorySyntheticD0CpuParityReceiptV1,
+    run_repository_synthetic_d0_cpu_parity,
+)
 from betelgeuze_engine_v2.standalone_cli import main as standalone_main
 
 
@@ -966,6 +971,100 @@ def test_cli_routes_repository_d0_without_caller_science(native, tmp_path) -> No
                 "dock",
                 "--repository-native-d0-backend",
                 "rust_cpu",
+                "--output",
+                str(rejected_path),
+            ]
+        )
+        == 2
+    )
+    assert not rejected_path.exists()
+
+
+def test_repository_d0_cpu_parity_is_native_complete_and_non_authoritative(
+    native,
+) -> None:
+    receipt = run_repository_synthetic_d0_cpu_parity(
+        synthetic_only_acknowledgment=(
+            REPOSITORY_SYNTHETIC_D0_NATIVE_ACKNOWLEDGMENT
+        )
+    )
+    document = receipt.to_dict()
+    assert receipt.gate_passed
+    assert document["candidate_denominator"] == 64
+    assert document["score_term_count"] == 8
+    assert document["numeric_parity"]["compared_f64_count"] == 16_896
+    assert document["numeric_parity"]["tolerance_violation_count"] == 0
+    assert document["gates"] == {
+        "source_binding_parity": True,
+        "exact_decision_parity": True,
+        "exact_count_parity": True,
+        "exact_rank_parity": True,
+        "exact_source_identity_parity": True,
+        "cpp_repeat_stable": True,
+        "rust_repeat_stable": True,
+        "numeric_parity": True,
+        "all_authority_false": True,
+        "gate_passed": True,
+    }
+    assert all(
+        document[name] is False
+        for name in (
+            "reservation_authorized",
+            "molecular_execution_authorized",
+            "historical_ab_execution_authorized",
+            "fresh_holdout_execution_authorized",
+            "public_benchmark_authorized",
+            "stage0_admission_authorized",
+            "qualification_rerun_authorized",
+            "scientific_claim_authorized",
+            "product_performance_claim_authorized",
+            "hip_device_execution_authorized",
+        )
+    )
+    assert (
+        document["identity_disposition"]["coordinate_identity_equal_count"]
+        + document["identity_disposition"]["coordinate_identity_different_count"]
+        == 64
+    )
+
+    mutated = receipt.to_dict()
+    mutated["numeric_parity"]["maximum_absolute_difference"] = 0.0
+    with pytest.raises(NativeCpuParityError, match="not independently rederivable"):
+        NativeRepositorySyntheticD0CpuParityReceiptV1(_document=mutated)
+
+    with pytest.raises(TypeError, match="exact string"):
+        run_repository_synthetic_d0_cpu_parity(
+            synthetic_only_acknowledgment=_StringSubclass(
+                REPOSITORY_SYNTHETIC_D0_NATIVE_ACKNOWLEDGMENT
+            )
+        )
+    with pytest.raises(ValueError, match="exact synthetic-only"):
+        native.native_fixed64_repository_synthetic_d0_cpu_parity_v1("acknowledged")
+
+
+def test_cli_runs_repository_d0_cpu_parity_without_result_input(native, tmp_path) -> None:
+    output_path = tmp_path / "repository-d0-cpu-parity.json"
+    assert (
+        standalone_main(
+            [
+                "verify",
+                "--repository-native-d0-cpu-parity",
+                "--test-only-synthetic",
+                "--output",
+                str(output_path),
+            ]
+        )
+        == 0
+    )
+    document = json.loads(output_path.read_text(encoding="ascii"))
+    assert document["gates"]["gate_passed"] is True
+    assert document["performance_measurement_performed"] is False
+    rejected_path = tmp_path / "repository-d0-cpu-parity-rejected.json"
+    assert (
+        standalone_main(
+            [
+                "verify",
+                "--repository-native-d0-cpu-parity",
                 "--output",
                 str(rejected_path),
             ]

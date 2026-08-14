@@ -62,6 +62,10 @@ from .docking.native_fixed64_consumers import (
     NativeFixed64ConsumerError,
     REPOSITORY_SYNTHETIC_D0_NATIVE_ACKNOWLEDGMENT,
 )
+from .docking.native_cpu_parity import (
+    NativeCpuParityError,
+    run_repository_synthetic_d0_cpu_parity,
+)
 from .docking.scorer_v1 import SCORER_V1_SCORE_ID, SCORER_V1_TERMS_SCHEMA_ID
 from .docking.torsion_contact_refinement import (
     INTERACTION_AWARE_TORSION_CONTACT_RECEIPT_V7_SCHEMA_ID,
@@ -954,6 +958,27 @@ def dock_repository_synthetic_d0_native(
     except NativeFixed64ConsumerError as exc:
         raise StandaloneDockCliError(
             "repository native D0 docking failed closed"
+        ) from exc
+
+
+def verify_repository_synthetic_d0_native_cpu_parity(
+    *, synthetic_acknowledged: bool = False
+) -> dict[str, object]:
+    """Run the untimed, non-consuming native synthetic D0 CPU parity gate."""
+
+    if synthetic_acknowledged is not True:
+        raise StandaloneDockCliError(
+            "repository native D0 CPU parity requires --test-only-synthetic"
+        )
+    try:
+        return run_repository_synthetic_d0_cpu_parity(
+            synthetic_only_acknowledgment=(
+                REPOSITORY_SYNTHETIC_D0_NATIVE_ACKNOWLEDGMENT
+            )
+        ).to_dict()
+    except NativeCpuParityError as exc:
+        raise StandaloneDockCliError(
+            "repository native D0 CPU parity failed closed"
         ) from exc
 
 
@@ -2306,7 +2331,13 @@ def _parser() -> argparse.ArgumentParser:
     docking.add_argument("--overwrite", action="store_true")
 
     verify = commands.add_parser("verify")
-    verify.add_argument("--result", type=Path, required=True)
+    verify_source = verify.add_mutually_exclusive_group(required=True)
+    verify_source.add_argument("--result", type=Path)
+    verify_source.add_argument(
+        "--repository-native-d0-cpu-parity",
+        action="store_true",
+    )
+    verify.add_argument("--test-only-synthetic", action="store_true")
     verify.add_argument("--output", type=Path, required=True)
     verify.add_argument("--overwrite", action="store_true")
 
@@ -2414,21 +2445,39 @@ def main(argv: Sequence[str] | None = None) -> int:
                 input_paths=input_paths,
             )
         elif arguments.command in {"verify", "report"}:
-            result = _load_canonical_json(
-                arguments.result,
-                name="pipeline result",
-                maximum=MAX_CLI_INPUT_BYTES,
-            )
-            document = (
-                verify_pipeline_result(result)
-                if arguments.command == "verify"
-                else report_pipeline_result(result)
-            )
+            if (
+                arguments.command == "verify"
+                and arguments.repository_native_d0_cpu_parity
+            ):
+                document = verify_repository_synthetic_d0_native_cpu_parity(
+                    synthetic_acknowledged=arguments.test_only_synthetic,
+                )
+                input_paths = ()
+            else:
+                if (
+                    arguments.command == "verify"
+                    and arguments.test_only_synthetic
+                ):
+                    raise StandaloneDockCliError(
+                        "--test-only-synthetic requires "
+                        "--repository-native-d0-cpu-parity"
+                    )
+                result = _load_canonical_json(
+                    arguments.result,
+                    name="pipeline result",
+                    maximum=MAX_CLI_INPUT_BYTES,
+                )
+                document = (
+                    verify_pipeline_result(result)
+                    if arguments.command == "verify"
+                    else report_pipeline_result(result)
+                )
+                input_paths = (arguments.result,)
             _write_output(
                 document,
                 arguments.output,
                 overwrite=arguments.overwrite,
-                input_paths=(arguments.result,),
+                input_paths=input_paths,
             )
         else:  # pragma: no cover - argparse owns command admission.
             raise StandaloneDockCliError("unsupported command")
@@ -2459,5 +2508,6 @@ __all__ = [
     "prepare_ligands",
     "prepare_receptor",
     "report_pipeline_result",
+    "verify_repository_synthetic_d0_native_cpu_parity",
     "verify_pipeline_result",
 ]

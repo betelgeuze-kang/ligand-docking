@@ -396,6 +396,15 @@ from .native_fixed64_consumers import (  # noqa: E402
     prepare_native_fixed64_session,
     run_native_fixed64_surface,
 )
+from .native_cpu_parity import (  # noqa: E402
+    NativeCpuParityError,
+    NativeRepositorySyntheticD0CpuParityReceiptV1,
+    REPOSITORY_SYNTHETIC_D0_CPU_PARITY_POLICY_SHA256,
+    REPOSITORY_SYNTHETIC_D0_CPU_PARITY_PROFILE_ID,
+    REPOSITORY_SYNTHETIC_D0_CPU_PARITY_SCHEMA_ID,
+    REPOSITORY_SYNTHETIC_D0_NATIVE_ACKNOWLEDGMENT,
+    run_repository_synthetic_d0_cpu_parity,
+)
 
 __all__ = [
     "DOCKING_SEARCH_V2_ALGORITHM_ID",
@@ -735,4 +744,11 @@ __all__ = [
     "NativeFixed64PythonApi",
     "prepare_native_fixed64_session",
     "run_native_fixed64_surface",
+    "NativeCpuParityError",
+    "NativeRepositorySyntheticD0CpuParityReceiptV1",
+    "REPOSITORY_SYNTHETIC_D0_CPU_PARITY_POLICY_SHA256",
+    "REPOSITORY_SYNTHETIC_D0_CPU_PARITY_PROFILE_ID",
+    "REPOSITORY_SYNTHETIC_D0_CPU_PARITY_SCHEMA_ID",
+    "REPOSITORY_SYNTHETIC_D0_NATIVE_ACKNOWLEDGMENT",
+    "run_repository_synthetic_d0_cpu_parity",
 ]
