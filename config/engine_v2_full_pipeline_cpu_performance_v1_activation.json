@@ -65,7 +65,8 @@
       "proc_cmdline_exact": true,
       "proc_exe_exact": true,
       "stage0_argument_vector_bound": true,
-      "stage0_source_sha256": "c8075347e3df061636efd00421497341f9bde0d8d6befbc592cd39ea73a44a2f"
+      "stage0_source_sha256": "dcf164779a9661ac43d0c9253cdb4700b955ca4c206a42e2f5afa3a384db132a",
+      "trusted_launcher_parent_exact": true
     },
     "exact_loader_library_path": "/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu",
     "exact_loader_preload_paths": [
@@ -78,6 +79,7 @@
     ],
     "exact_native_extension_import_required": true,
     "exact_preinit_closure_required": true,
+    "exact_python_executable_target": "/usr/bin/python3.10",
     "github_actions_preflight_allowed": false,
     "host_preflight_required": true,
     "immutable_bootstrap_snapshot": {
@@ -98,9 +100,23 @@
     "native_initialization_delta_exact": true,
     "performance_measurement_allowed": false,
     "performance_sidecar_sha256": "04253e3897bb5746e1c1082dbf8e27922835ffb075aeb3268c18a0895662173f",
-    "preflight_tool_sha256": "7dd5d4d5be4ac04839e01cb73379d1d8bbeaf3b01436146e42c0e063c04bb674",
+    "preflight_tool_sha256": "eceef0eae16f1a720cf03fb720488c4aa0ff801fcab4a04c02a0b79ce42adb44",
     "qualification_state_write_allowed": false,
-    "reservation_allowed": false
+    "reservation_allowed": false,
+    "trusted_root_launcher": {
+      "binary_sha256": "b4d0e622d4dec784356716cacf5b8db69f4950563470540e3f24954227424e56",
+      "direct_parent_required": true,
+      "effective_capabilities_required": 0,
+      "install_path": "/usr/local/libexec/betelgeuze-engine-v2-full-pipeline-cpu-preflight-launcher-v1",
+      "mode": "0555",
+      "no_new_privileges_required": true,
+      "repository_installation_authorized": false,
+      "root_gid": 0,
+      "root_uid": 0,
+      "source_path": "native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp",
+      "static_elf_no_dynamic_or_interp_required": true,
+      "tracer_absent_required": true
+    }
   },
   "profile_id": "engine_v2_full_pipeline_cpu_performance_v1",
   "profile_sha256": "385fb713cca8f39353f138115749abdfc9768b02222e13111a418360be30a000",

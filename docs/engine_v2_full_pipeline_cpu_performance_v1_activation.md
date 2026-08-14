@@ -30,9 +30,11 @@ and the exact performance sidecar that host preflight imports.
 
 The runtime remains the exact cp310 artifact from main-push run `31785070195`,
 attempt `1`, artifact `9213296947`. The non-consuming preflight uses the
-account-owned virtual environment and requires CPython `-I -S -B`, the exact
-interpreter and native-extension hashes, the frozen runtime inventory, and a
-private effective account group.
+account-owned virtual environment only as an authenticated site-package
+inventory. The executable target is the root-owned `/usr/bin/python3.10`
+regular file, never an account-owned virtual-environment symlink. CPython must
+run with `-I -S -B`, the exact interpreter and native-extension hashes, the
+frozen runtime inventory, and a private effective account group.
 
 Before any repository module is compiled, the preflight reads all required
 module bytes through stable no-follow descriptors and authenticates their
@@ -73,19 +75,40 @@ device/inode, bytes, and kernel seals are independently verified. No
 caller-supplied expected digest is accepted. Added, missing, moved, or changed
 module/mapping rows fail closed.
 
-Before any native constructor can run, the approved launcher starts the bound
-runtime through the exact glibc dynamic loader. It clears the inherited
+Before any native constructor can run, a root-provisioned static native launcher
+at
+`/usr/local/libexec/betelgeuze-engine-v2-full-pipeline-cpu-preflight-launcher-v1`
+starts the root-owned `/usr/bin/python3.10` target through the exact glibc dynamic loader.
+The launcher is a direct parent process, is root-owned at mode
+`0555`, contains no `PT_DYNAMIC` or `PT_INTERP`, sets dumpability off and
+no-new-privileges on, removes inherited descriptors, resets signal state, and
+remains alive until the child terminates. The child validates the launcher's
+exact parent path/inode, root-controlled directory chain, static ELF structure,
+command line, zero capabilities, absent tracer, UID/GID, and stable process
+start identity. This outside-the-repository process boundary anchors the exact
+preflight digest before any account-owned bootstrap byte can execute.
+The reviewed exact-host build uses `g++ -std=c++17 -O2 -Wall -Wextra
+-Wpedantic -Werror -static -s -Wl,--build-id=none`; its frozen binary SHA-256
+is `b4d0e622d4dec784356716cacf5b8db69f4950563470540e3f24954227424e56`.
+The preflight hashes the actual parent executable and requires that digest in
+the activation contract, in addition to checking root ownership and static ELF
+structure.
+
+The launcher clears the inherited
 environment, inhibits the loader cache, fixes the library search path, disables
 glibc hardware-capability variants, and preloads the exact absolute
 `libstdc++`, `libgcc_s`, `libpthread`, `libm`, `libdl`, and `libc` paths required
 by the frozen extension. The kernel-maintained `/proc/self/exe` must remain the
 exact loader, while `/proc/self/cmdline` must byte-match the complete reviewed
-loader option vector, runtime interpreter, `-I -S -B`, frozen stage-0 source,
-bootstrap source path, frozen source SHA-256, and user arguments. There is no
-caller-created completion token.
+loader option vector, root-owned interpreter target, `-I -S -B`, frozen
+stage-0 source, bootstrap source path, and forwarded preflight arguments. The
+launcher source embeds the reviewed bootstrap SHA-256 twice: once as a compiled
+identity and once in the exact stage-0 literal. A caller cannot select or render
+that digest, and there is no caller-created completion token.
 
-The stage-0 source authenticates the bootstrap through a stable no-follow read
-before any bootstrap byte executes, copies those exact bytes into a mode-0400
+The stage-0 source first requires its direct parent executable to be the frozen
+root-provisioned launcher, then authenticates the bootstrap through a stable
+no-follow read before any bootstrap byte executes, copies those exact bytes into a mode-0400
 memfd, applies all four write/grow/shrink/seal locks, and executes only that
 authenticated immutable bootstrap snapshot. Direct pathname execution of the
 bootstrap is unsupported and fails closed. The resulting 20-row executable
@@ -105,36 +128,46 @@ Static contract verification is safe in CI and performs no native import:
 python3 tools/verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py
 ```
 
-The exact local non-consuming preflight must be launched by the reviewed
-external stage-0 launcher. The following is the required argument shape;
-`$FROZEN_STAGE0_SOURCE` is the exact ASCII source whose SHA-256 is in the
-activation contract and whose literal code embeds the reviewed bootstrap
-SHA-256. The artifact and runtime paths remain locations for independently
-re-derived byte identities and cannot carry science input:
+The exact local non-consuming preflight must be launched by the reviewed,
+root-provisioned static native launcher. Repository code is not authorized to
+install or replace that root-owned trust anchor. Until an independent host
+administrator compiles the reviewed source and installs the exact binary at the
+frozen path with root ownership and mode `0555`, local preflight execution is
+intentionally unavailable and fails closed. The artifact and runtime paths
+remain locations for independently re-derived byte identities and cannot carry
+science input:
 
 ```bash
-env -i CUDA_VISIBLE_DEVICES= HIP_VISIBLE_DEVICES= ROCR_VISIBLE_DEVICES= \
-  LC_ALL=C PATH=/usr/bin:/bin \
-  /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 \
-  --inhibit-cache \
-  --library-path /usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu \
-  --glibc-hwcaps-mask '' \
-  --preload /exact/colon-separated/native/dependency/paths \
-  --argv0 /exact/runtime/bin/python \
-  /exact/runtime/bin/python -I -S -B -c "$FROZEN_STAGE0_SOURCE" \
-  /exact/repository/tools/preflight_engine_v2_full_pipeline_cpu_performance_v1_activation.py \
+g++ -std=c++17 -O2 -Wall -Wextra -Wpedantic -Werror -static -s \
+  -Wl,--build-id=none \
+  native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp \
+  -o /independent/staging/engine-v2-preflight-launcher-v1
+sha256sum /independent/staging/engine-v2-preflight-launcher-v1
+# An independent host administrator verifies the expected SHA-256, then installs
+# these exact bytes as root:root mode 0555 at the frozen /usr/local/libexec path.
+```
+
+Only after that independent provisioning step is the following invocation
+supported:
+
+```bash
+/usr/local/libexec/betelgeuze-engine-v2-full-pipeline-cpu-preflight-launcher-v1 \
+  /exact/repository/tools/preflight_engine_v2_full_pipeline_cpu_performance_v1_activation.py -- \
   --artifact-directory /exact/artifact/directory \
   --runtime-root /exact/runtime
 ```
 
 GitHub Actions is rejected before any repository or native provider is loaded.
 The supported command has no preliminary execution of the owner-writable
-bootstrap pathname. Kernel process identity and the authenticated immutable
-bootstrap snapshot jointly prove the loader and source boundary; no
+bootstrap pathname. The root-owned launcher parent, kernel process identity,
+and authenticated immutable bootstrap snapshot jointly prove the launcher,
+loader, interpreter, and source boundary; no
 caller-provided `LD_LIBRARY_PATH`, `LD_PRELOAD`, loader-cache choice, or ROCm
 environment survives into the authenticated process.
 The local result records immutable-snapshot and descriptor-bound native
-initialization, `exact_loader_process_identity_validated=true`,
+initialization, `trusted_root_launcher_parent_validated=true`,
+`root_owned_interpreter_target_validated=true`,
+`exact_loader_process_identity_validated=true`, and
 `immutable_bootstrap_snapshot_validated=true`, verified public package exports,
 host preflight evidence, and explicit false fields for measurement,
 qualification consumption, reservation, molecular execution, public benchmark,

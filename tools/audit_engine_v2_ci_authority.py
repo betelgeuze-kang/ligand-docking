@@ -146,6 +146,7 @@ CPU_PERFORMANCE_CONTRACT_PATHS = (
     "config/engine_v2_full_pipeline_cpu_performance_v1_dynamic_library_closure.json",
     "config/engine_v2_full_pipeline_cpu_performance_v1_preinit_executable_closure.json",
     "tools/preflight_engine_v2_full_pipeline_cpu_performance_v1_activation.py",
+    "native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp",
     "tools/verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py",
     "tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1_activation.py",
     "tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py",
@@ -194,6 +195,7 @@ CPU_PERFORMANCE_REQUIRED_TOKEN_COUNTS = {
     "config/engine_v2_full_pipeline_cpu_performance_v1_dynamic_library_closure.json": 2,
     "config/engine_v2_full_pipeline_cpu_performance_v1_preinit_executable_closure.json": 2,
     "tools/preflight_engine_v2_full_pipeline_cpu_performance_v1_activation.py": 2,
+    "native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp": 2,
     "tools/verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py": 3,
     "tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1_activation.py": 3,
     "tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py": 3,
@@ -971,6 +973,11 @@ def _cpu_performance_authority_is_fail_closed(repo_root: Path) -> bool:
         if type(activation_preflight) is dict
         else None
     )
+    activation_trusted_launcher = (
+        activation_preflight.get("trusted_root_launcher")
+        if type(activation_preflight) is dict
+        else None
+    )
     activation_sources = full_activation_contract.get("source_bindings")
     required_source_bindings = {
         "merged_main_commit_sha256",
@@ -1008,10 +1015,31 @@ def _cpu_performance_authority_is_fail_closed(repo_root: Path) -> bool:
         and activation_preflight.get("molecular_input_allowed") is False
         and activation_preflight.get("exact_preinit_closure_required") is True
         and activation_preflight.get("native_initialization_delta_exact") is True
+        and activation_preflight.get("exact_python_executable_target")
+        == "/usr/bin/python3.10"
         and type(activation_loader_identity) is dict
         and activation_loader_identity.get("proc_cmdline_exact") is True
         and activation_loader_identity.get("proc_exe_exact") is True
         and activation_loader_identity.get("stage0_argument_vector_bound") is True
+        and activation_loader_identity.get("trusted_launcher_parent_exact") is True
+        and type(activation_trusted_launcher) is dict
+        and type(activation_trusted_launcher.get("binary_sha256")) is str
+        and len(activation_trusted_launcher["binary_sha256"]) == 64
+        and all(
+            character in "0123456789abcdef"
+            for character in activation_trusted_launcher["binary_sha256"]
+        )
+        and activation_trusted_launcher.get("direct_parent_required") is True
+        and activation_trusted_launcher.get("effective_capabilities_required") == 0
+        and activation_trusted_launcher.get("mode") == "0555"
+        and activation_trusted_launcher.get("no_new_privileges_required") is True
+        and activation_trusted_launcher.get("repository_installation_authorized")
+        is False
+        and activation_trusted_launcher.get("root_gid") == 0
+        and activation_trusted_launcher.get("root_uid") == 0
+        and activation_trusted_launcher.get("static_elf_no_dynamic_or_interp_required")
+        is True
+        and activation_trusted_launcher.get("tracer_absent_required") is True
         and type(activation_bootstrap_snapshot) is dict
         and activation_bootstrap_snapshot.get("descriptor_cloexec") is False
         and activation_bootstrap_snapshot.get("descriptor_mode") == "0400"

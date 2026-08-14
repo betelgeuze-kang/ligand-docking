@@ -875,10 +875,15 @@ def test_full_pipeline_cpu_activation_escalation_fails_ci_audit(
     ("section", "field"),
     (
         ("exact_loader_kernel_process_identity", "proc_cmdline_exact"),
+        (
+            "exact_loader_kernel_process_identity",
+            "trusted_launcher_parent_exact",
+        ),
         ("immutable_bootstrap_snapshot", "launched_from_snapshot_required"),
+        ("trusted_root_launcher", "direct_parent_required"),
     ),
 )
-def test_full_pipeline_cpu_activation_requires_kernel_loader_and_snapshot_proof(
+def test_full_pipeline_cpu_activation_requires_launcher_loader_and_snapshot_proof(
     tmp_path: Path,
     section: str,
     field: str,

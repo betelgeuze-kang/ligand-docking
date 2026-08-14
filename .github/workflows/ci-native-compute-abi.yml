@@ -49,6 +49,7 @@ on:
       - "tools/run_engine_v2_full_pipeline_cpu_performance_v1.py"
       - "tools/verify_engine_v2_full_pipeline_cpu_performance_v1.py"
       - "tools/preflight_engine_v2_full_pipeline_cpu_performance_v1_activation.py"
+      - "native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp"
       - "tools/verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py"
       - "tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1.py"
       - "tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1.py"
@@ -138,6 +139,7 @@ on:
       - "tools/run_engine_v2_full_pipeline_cpu_performance_v1.py"
       - "tools/verify_engine_v2_full_pipeline_cpu_performance_v1.py"
       - "tools/preflight_engine_v2_full_pipeline_cpu_performance_v1_activation.py"
+      - "native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp"
       - "tools/verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py"
       - "tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1.py"
       - "tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1.py"
@@ -250,6 +252,7 @@ jobs:
             tools/run_engine_v2_full_pipeline_cpu_performance_v1.py
             tools/verify_engine_v2_full_pipeline_cpu_performance_v1.py
             tools/preflight_engine_v2_full_pipeline_cpu_performance_v1_activation.py
+            native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp
             tools/verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py
             tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py
             tools/verify_engine_v2_native_fixed64_cpu_profile_v5.py

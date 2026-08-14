@@ -16,6 +16,7 @@ import os
 from pathlib import Path
 import pwd
 import stat
+import struct
 import sys
 import types
 from typing import NoReturn, Sequence
@@ -43,6 +44,10 @@ _REQUIRED_NATIVE_SNAPSHOT_SEALS = (
     fcntl.F_SEAL_SEAL | fcntl.F_SEAL_SHRINK | fcntl.F_SEAL_GROW | fcntl.F_SEAL_WRITE
 )
 _EXACT_DYNAMIC_LOADER = Path("/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2")
+_EXACT_PYTHON_EXECUTABLE = Path("/usr/bin/python3.10")
+_EXACT_TRUSTED_LAUNCHER = Path(
+    "/usr/local/libexec/betelgeuze-engine-v2-full-pipeline-cpu-preflight-launcher-v1"
+)
 _EXACT_DYNAMIC_LOADER_LIBRARY_PATH = "/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu"
 _EXACT_NATIVE_DEPENDENCY_PRELOAD_PATHS = (
     "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30",
@@ -54,6 +59,7 @@ _EXACT_NATIVE_DEPENDENCY_PRELOAD_PATHS = (
 )
 _EXACT_LOADER_BOOTSTRAP_SNAPSHOT_NAME = "engine-v2-preflight-bootstrap-v1"
 _EXACT_LOADER_MAX_CMDLINE_BYTES = 64 * 1024
+_EXACT_TRUSTED_LAUNCHER_MAX_BYTES = 4 * 1024 * 1024
 _EXACT_LOADER_STAGE0_PREFLIGHT_SHA256_TOKEN = "__ENGINE_V2_PREFLIGHT_SHA256__"
 _EXACT_LOADER_BOOTSTRAP_ENVIRONMENT = {
     "CUDA_VISIBLE_DEVICES": "",
@@ -69,6 +75,14 @@ import os
 import stat
 import sys
 
+trusted_launcher_path = "/usr/local/libexec/betelgeuze-engine-v2-full-pipeline-cpu-preflight-launcher-v1"
+parent_pid = os.getppid()
+try:
+    parent_executable = os.readlink(f"/proc/{parent_pid}/exe")
+except OSError as exc:
+    raise RuntimeError("exact-loader stage0 trusted parent is unavailable") from exc
+if parent_pid <= 1 or parent_executable != trusted_launcher_path:
+    raise RuntimeError("exact-loader stage0 requires the trusted launcher parent")
 if len(sys.argv) < 2:
     raise RuntimeError("exact-loader stage0 arguments are incomplete")
 source_path = sys.argv[1]
@@ -250,12 +264,15 @@ def _fail(message: str) -> NoReturn:
     )
 
 
-def _read_exact_proc_cmdline() -> bytes:
+def _read_exact_proc_cmdline(pid: int | None = None) -> bytes:
+    if pid is not None and (type(pid) is not int or pid <= 1):
+        _fail("kernel process identifier is invalid")
+    proc_path = "/proc/self/cmdline" if pid is None else f"/proc/{pid}/cmdline"
     flags = os.O_RDONLY | os.O_CLOEXEC | getattr(os, "O_NOFOLLOW", 0)
     if getattr(os, "O_NOFOLLOW", 0) == 0:
         _fail("safe procfs cmdline reads are unavailable")
     try:
-        descriptor = os.open("/proc/self/cmdline", flags)
+        descriptor = os.open(proc_path, flags)
     except OSError as exc:
         raise RuntimeError("kernel process command line is unavailable") from exc
     try:
@@ -300,6 +317,188 @@ def _read_exact_proc_cmdline() -> bytes:
     return raw
 
 
+def _read_bounded_proc_text(path: str, *, maximum_bytes: int) -> str:
+    flags = os.O_RDONLY | os.O_CLOEXEC | getattr(os, "O_NOFOLLOW", 0)
+    if getattr(os, "O_NOFOLLOW", 0) == 0:
+        _fail("safe procfs reads are unavailable")
+    try:
+        descriptor = os.open(path, flags)
+    except OSError as exc:
+        raise RuntimeError(f"kernel process evidence is unavailable: {path}") from exc
+    try:
+        before = os.fstat(descriptor)
+        raw = os.read(descriptor, maximum_bytes + 1)
+        after = os.fstat(descriptor)
+    finally:
+        os.close(descriptor)
+    identity_fields = (
+        "st_dev",
+        "st_ino",
+        "st_mode",
+        "st_uid",
+        "st_gid",
+        "st_nlink",
+        "st_mtime_ns",
+        "st_ctime_ns",
+    )
+    if (
+        not stat.S_ISREG(before.st_mode)
+        or before.st_uid != os.geteuid()
+        or before.st_mode & (stat.S_IWGRP | stat.S_IWOTH)
+        or any(
+            getattr(before, field) != getattr(after, field) for field in identity_fields
+        )
+        or not raw
+        or len(raw) > maximum_bytes
+    ):
+        _fail(f"kernel process evidence is invalid or changed: {path}")
+    try:
+        return raw.decode("ascii")
+    except UnicodeDecodeError as exc:
+        raise RuntimeError(f"kernel process evidence is not ASCII: {path}") from exc
+
+
+def _proc_start_ticks(pid: int) -> int:
+    payload = _read_bounded_proc_text(f"/proc/{pid}/stat", maximum_bytes=16 * 1024)
+    closing = payload.rfind(")")
+    fields = payload[closing + 2 :].split() if closing >= 0 else []
+    if len(fields) < 20:
+        _fail("trusted launcher process stat is malformed")
+    try:
+        start_ticks = int(fields[19], 10)
+    except ValueError as exc:
+        raise RuntimeError("trusted launcher start time is malformed") from exc
+    if start_ticks <= 0:
+        _fail("trusted launcher start time is invalid")
+    return start_ticks
+
+
+def _proc_status(pid: int) -> dict[str, str]:
+    payload = _read_bounded_proc_text(f"/proc/{pid}/status", maximum_bytes=128 * 1024)
+    fields: dict[str, str] = {}
+    for line in payload.splitlines():
+        key, separator, value = line.partition(":")
+        if separator:
+            fields[key] = value.strip()
+    return fields
+
+
+def _require_static_x86_64_elf(raw: bytes) -> None:
+    if (
+        len(raw) < 64
+        or raw[:4] != b"\x7fELF"
+        or raw[4] != 2
+        or raw[5] != 1
+        or raw[6] != 1
+    ):
+        _fail("trusted launcher is not an exact ELF64 little-endian executable")
+    executable_type, machine = struct.unpack_from("<HH", raw, 16)
+    program_offset = struct.unpack_from("<Q", raw, 32)[0]
+    program_entry_size, program_count = struct.unpack_from("<HH", raw, 54)
+    if executable_type != 2 or machine != 62 or program_entry_size < 56:
+        _fail("trusted launcher ELF identity changed")
+    end = program_offset + program_entry_size * program_count
+    if program_count == 0 or end > len(raw):
+        _fail("trusted launcher program-header table is invalid")
+    program_types = {
+        struct.unpack_from("<I", raw, program_offset + index * program_entry_size)[0]
+        for index in range(program_count)
+    }
+    if 2 in program_types or 3 in program_types:
+        _fail(
+            "trusted launcher must be a fully static ELF without PT_DYNAMIC/PT_INTERP"
+        )
+
+
+def _require_trusted_launcher_parent(*, source_path: Path) -> str:
+    parent_pid = os.getppid()
+    if parent_pid <= 1 or not hasattr(os, "pidfd_open"):
+        _fail("trusted root launcher parent is unavailable")
+    try:
+        pidfd = os.pidfd_open(parent_pid, 0)
+    except OSError as exc:
+        raise RuntimeError("trusted launcher pidfd is unavailable") from exc
+    try:
+        start_ticks = _proc_start_ticks(parent_pid)
+        try:
+            parent_executable = os.readlink(f"/proc/{parent_pid}/exe")
+        except OSError as exc:
+            raise RuntimeError("trusted launcher executable is unavailable") from exc
+        if parent_executable != str(_EXACT_TRUSTED_LAUNCHER):
+            _fail("preflight parent is not the root-provisioned trusted launcher")
+        for directory in (
+            Path("/"),
+            Path("/usr"),
+            Path("/usr/local"),
+            Path("/usr/local/libexec"),
+        ):
+            try:
+                metadata = directory.stat()
+            except OSError as exc:
+                raise RuntimeError("trusted launcher directory is unavailable") from exc
+            if (
+                not stat.S_ISDIR(metadata.st_mode)
+                or metadata.st_uid != 0
+                or metadata.st_gid != 0
+                or metadata.st_mode & (stat.S_IWGRP | stat.S_IWOTH)
+            ):
+                _fail("trusted launcher directory is not root-controlled")
+        flags = os.O_RDONLY | os.O_CLOEXEC | getattr(os, "O_NOFOLLOW", 0)
+        if getattr(os, "O_NOFOLLOW", 0) == 0:
+            _fail("safe trusted-launcher reads are unavailable")
+        try:
+            descriptor = os.open(_EXACT_TRUSTED_LAUNCHER, flags)
+        except OSError as exc:
+            raise RuntimeError("trusted launcher has not been provisioned") from exc
+        try:
+            metadata = os.fstat(descriptor)
+            raw = os.pread(descriptor, _EXACT_TRUSTED_LAUNCHER_MAX_BYTES + 1, 0)
+            proc_metadata = os.stat(f"/proc/{parent_pid}/exe")
+        finally:
+            os.close(descriptor)
+        if (
+            not stat.S_ISREG(metadata.st_mode)
+            or metadata.st_uid != 0
+            or metadata.st_gid != 0
+            or stat.S_IMODE(metadata.st_mode) != 0o555
+            or metadata.st_nlink != 1
+            or not 1 <= metadata.st_size <= _EXACT_TRUSTED_LAUNCHER_MAX_BYTES
+            or len(raw) != metadata.st_size
+            or (metadata.st_dev, metadata.st_ino)
+            != (proc_metadata.st_dev, proc_metadata.st_ino)
+        ):
+            _fail("trusted launcher file identity or ownership changed")
+        _require_static_x86_64_elf(raw)
+        expected_parent_arguments = [
+            str(_EXACT_TRUSTED_LAUNCHER),
+            str(source_path),
+            "--",
+            *sys.argv[1:],
+        ]
+        expected_parent_cmdline = (
+            b"\0".join(os.fsencode(value) for value in expected_parent_arguments)
+            + b"\0"
+        )
+        if _read_exact_proc_cmdline(parent_pid) != expected_parent_cmdline:
+            _fail("trusted launcher parent command line changed")
+        status = _proc_status(parent_pid)
+        expected_uid = str(os.geteuid())
+        expected_gid = str(os.getegid())
+        if (
+            status.get("TracerPid") != "0"
+            or status.get("NoNewPrivs") != "1"
+            or int(status.get("CapEff", "-1"), 16) != 0
+            or status.get("Uid", "").split() != [expected_uid] * 4
+            or status.get("Gid", "").split() != [expected_gid] * 4
+        ):
+            _fail("trusted launcher parent hardening state changed")
+        if os.getppid() != parent_pid or _proc_start_ticks(parent_pid) != start_ticks:
+            _fail("trusted launcher parent identity changed during validation")
+        return hashlib.sha256(raw).hexdigest()
+    finally:
+        os.close(pidfd)
+
+
 def _render_exact_loader_stage0(expected_sha256: str) -> str:
     if (
         type(expected_sha256) is not str
@@ -323,7 +522,6 @@ def _render_exact_loader_stage0(expected_sha256: str) -> str:
 def _exact_loader_stage0_arguments(
     *, source_path: Path, expected_sha256: str
 ) -> list[str]:
-    launcher = Path(sys.executable).absolute()
     stage0_source = _render_exact_loader_stage0(expected_sha256)
     return [
         str(_EXACT_DYNAMIC_LOADER),
@@ -335,8 +533,8 @@ def _exact_loader_stage0_arguments(
         "--preload",
         ":".join(_EXACT_NATIVE_DEPENDENCY_PRELOAD_PATHS),
         "--argv0",
-        str(launcher),
-        str(launcher),
+        str(_EXACT_PYTHON_EXECUTABLE),
+        str(_EXACT_PYTHON_EXECUTABLE),
         "-I",
         "-S",
         "-B",
@@ -375,7 +573,7 @@ def _validate_bootstrap_snapshot(descriptor: int, *, expected_sha256: str) -> by
     return raw
 
 
-def _require_exact_loader_bootstrap() -> tuple[Path, int, bytes]:
+def _require_exact_loader_bootstrap() -> tuple[Path, int, bytes, str]:
     if os.environ.get("GITHUB_ACTIONS", "").lower() == "true":
         _fail("GitHub Actions cannot run the exact-runtime activation preflight")
     source_path_value = globals().get("__engine_v2_bootstrap_source_path__")
@@ -399,6 +597,7 @@ def _require_exact_loader_bootstrap() -> tuple[Path, int, bytes]:
         or dict(os.environ) != _EXACT_LOADER_BOOTSTRAP_ENVIRONMENT
     ):
         _fail("authenticated stage0 bootstrap process state changed")
+    trusted_launcher_sha256 = _require_trusted_launcher_parent(source_path=source_path)
     try:
         executable_target = os.readlink("/proc/self/exe")
     except OSError as exc:
@@ -419,7 +618,7 @@ def _require_exact_loader_bootstrap() -> tuple[Path, int, bytes]:
         descriptor,
         expected_sha256=expected_sha256,
     )
-    return source_path, descriptor, raw
+    return source_path, descriptor, raw, trusted_launcher_sha256
 
 
 def _require_private_effective_group() -> None:
@@ -439,8 +638,10 @@ def _require_private_effective_group() -> None:
         _fail("effective account group is not private")
 
 
-def _require_isolated_bootstrap() -> tuple[Path, bytes]:
-    source_path, descriptor, raw = _require_exact_loader_bootstrap()
+def _require_isolated_bootstrap() -> tuple[Path, bytes, str]:
+    source_path, descriptor, raw, trusted_launcher_sha256 = (
+        _require_exact_loader_bootstrap()
+    )
     try:
         if tuple(sys.path) != _EXPECTED_INITIAL_PATHS:
             _fail("isolated standard-library path set changed")
@@ -470,7 +671,7 @@ def _require_isolated_bootstrap() -> tuple[Path, bytes]:
         _require_private_effective_group()
     finally:
         os.close(descriptor)
-    return source_path, raw
+    return source_path, raw, trusted_launcher_sha256
 
 
 def _require_owner_directory(path: Path, *, name: str) -> Path:
@@ -614,7 +815,9 @@ def _exact_json_equal(observed: object, expected: object) -> bool:
     return bool(observed == expected)
 
 
-def _expected_activation_contract(*, bootstrap_sha256: str) -> dict[str, object]:
+def _expected_activation_contract(
+    *, bootstrap_sha256: str, trusted_launcher_sha256: str
+) -> dict[str, object]:
     false_authority = {
         key: False
         for key in (
@@ -695,14 +898,32 @@ def _expected_activation_contract(*, bootstrap_sha256: str) -> dict[str, object]
             "bootstrap_flags": ["-I", "-S", "-B"],
             "caller_science_input_allowed": False,
             "exact_dynamic_loader_path": str(_EXACT_DYNAMIC_LOADER),
+            "exact_python_executable_target": str(_EXACT_PYTHON_EXECUTABLE),
             "exact_loader_environment": dict(_EXACT_LOADER_BOOTSTRAP_ENVIRONMENT),
             "exact_loader_kernel_process_identity": {
                 "proc_cmdline_exact": True,
                 "proc_exe_exact": True,
                 "stage0_argument_vector_bound": True,
+                "trusted_launcher_parent_exact": True,
                 "stage0_source_sha256": hashlib.sha256(
                     _render_exact_loader_stage0(bootstrap_sha256).encode("ascii")
                 ).hexdigest(),
+            },
+            "trusted_root_launcher": {
+                "binary_sha256": trusted_launcher_sha256,
+                "direct_parent_required": True,
+                "effective_capabilities_required": 0,
+                "install_path": str(_EXACT_TRUSTED_LAUNCHER),
+                "mode": "0555",
+                "no_new_privileges_required": True,
+                "repository_installation_authorized": False,
+                "root_gid": 0,
+                "root_uid": 0,
+                "source_path": (
+                    "native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp"
+                ),
+                "static_elf_no_dynamic_or_interp_required": True,
+                "tracer_absent_required": True,
             },
             "immutable_bootstrap_snapshot": {
                 "descriptor_cloexec": False,
@@ -788,7 +1009,10 @@ def _expected_activation_contract(*, bootstrap_sha256: str) -> dict[str, object]
 
 
 def _load_activation_contract(
-    *, repository_root: Path, bootstrap_raw: bytes
+    *,
+    repository_root: Path,
+    bootstrap_raw: bytes,
+    trusted_launcher_sha256: str,
 ) -> tuple[dict[str, object], bytes]:
     raw = _read_owner_source(
         repository_root
@@ -819,7 +1043,8 @@ def _load_activation_contract(
     if raw != canonical:
         _fail("activation contract is not canonical indented JSON")
     expected = _expected_activation_contract(
-        bootstrap_sha256=hashlib.sha256(bootstrap_raw).hexdigest()
+        bootstrap_sha256=hashlib.sha256(bootstrap_raw).hexdigest(),
+        trusted_launcher_sha256=trusted_launcher_sha256,
     )
     if not _exact_json_equal(document, expected):
         _fail("activation contract exact projection changed")
@@ -888,8 +1113,8 @@ def _load_closure_manifest(
 def _require_runtime_root(runtime_root: Path) -> tuple[Path, Path]:
     runtime_root = _require_owner_directory(runtime_root, name="native runtime root")
     launcher = Path(sys.executable).absolute()
-    if launcher.parent.parent != runtime_root:
-        _fail("running interpreter is outside the supplied native runtime root")
+    if launcher != _EXACT_PYTHON_EXECUTABLE:
+        _fail("running interpreter is not the frozen root-owned executable target")
     configuration = _read_owner_source(
         runtime_root / "pyvenv.cfg",
         name="native runtime virtual-environment configuration",
@@ -900,10 +1125,6 @@ def _require_runtime_root(runtime_root: Path) -> tuple[Path, Path]:
         runtime_root / "lib/python3.10/site-packages",
         name="native runtime site-packages",
     )
-    if launcher.parent != runtime_root / "bin":
-        _fail("native runtime launcher escaped the runtime bin directory")
-    if launcher.resolve(strict=True) != Path("/usr/bin/python3.10"):
-        _fail("native runtime launcher target changed")
     return runtime_root, site_packages
 
 
@@ -1205,7 +1426,7 @@ def derive_preflight(
 ) -> dict[str, object]:
     """Inspect exact bytes and imports without creating an execution attempt."""
 
-    bootstrap, bootstrap_raw = _require_isolated_bootstrap()
+    bootstrap, bootstrap_raw, trusted_launcher_sha256 = _require_isolated_bootstrap()
     repository_root = _require_owner_directory(
         bootstrap.parent.parent,
         name="repository root",
@@ -1216,6 +1437,7 @@ def derive_preflight(
     contract, contract_raw = _load_activation_contract(
         repository_root=repository_root,
         bootstrap_raw=bootstrap_raw,
+        trusted_launcher_sha256=trusted_launcher_sha256,
     )
     _docking_root, authenticated_sources = _authenticate_bound_sources(
         repository_root=repository_root
@@ -1318,6 +1540,9 @@ def derive_preflight(
             runtime_evidence["artifact_and_runtime_verified"]
         )
         evidence["exact_loader_process_identity_validated"] = True
+        evidence["trusted_root_launcher_parent_validated"] = True
+        evidence["trusted_root_launcher_sha256"] = trusted_launcher_sha256
+        evidence["root_owned_interpreter_target_validated"] = True
         evidence["immutable_bootstrap_snapshot_validated"] = True
         evidence["native_extension_sha256"] = native_extension_sha256
         evidence["native_entrypoints_verified"] = True

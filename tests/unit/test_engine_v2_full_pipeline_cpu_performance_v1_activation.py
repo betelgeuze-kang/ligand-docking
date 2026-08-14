@@ -7,6 +7,8 @@ import importlib.machinery
 import json
 import os
 from pathlib import Path
+import shutil
+import subprocess
 import sys
 import types
 
@@ -327,7 +329,6 @@ def _sealed_bootstrap_snapshot(raw: bytes) -> int:
 def test_loader_stage0_argument_vector_binds_every_loader_option(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(preflight.sys, "executable", "/exact/runtime/bin/python3")
     monkeypatch.setattr(preflight.sys, "argv", ["/proc/self/fd/7", "--fixture"])
 
     arguments = preflight._exact_loader_stage0_arguments(
@@ -342,11 +343,19 @@ def test_loader_stage0_argument_vector_binds_every_loader_option(
     assert "--inhibit-cache" in arguments
     assert "--glibc-hwcaps-mask" in arguments
     assert "--preload" in arguments
+    python_index = arguments.index(str(preflight._EXACT_PYTHON_EXECUTABLE))
+    assert arguments[python_index - 1] == "--argv0"
+    assert arguments[python_index + 1] == str(preflight._EXACT_PYTHON_EXECUTABLE)
     rendered_stage0 = preflight._render_exact_loader_stage0("a" * 64)
     assert arguments[arguments.index("-c") + 1] == rendered_stage0
     assert arguments[-1] == "--fixture"
     assert 'expected_sha256 = "' + "a" * 64 + '"' in rendered_stage0
     compile(rendered_stage0, "<stage0>", "exec")
+    with pytest.raises(RuntimeError, match="trusted launcher parent"):
+        exec(
+            compile(rendered_stage0, "<untrusted-stage0>", "exec"),
+            {"__name__": "__untrusted_stage0_test__"},
+        )
 
 
 def test_loader_bootstrap_requires_kernel_identity_and_immutable_snapshot(
@@ -372,7 +381,6 @@ def test_loader_bootstrap_requires_kernel_identity_and_immutable_snapshot(
         preflight.__dict__, "__engine_v2_bootstrap_snapshot_fd__", descriptor
     )
     monkeypatch.setattr(preflight, "__file__", snapshot_path)
-    monkeypatch.setattr(preflight.sys, "executable", "/exact/runtime/bin/python3")
     monkeypatch.setattr(preflight.sys, "argv", [snapshot_path, "--fixture"])
     monkeypatch.setattr(
         preflight.os,
@@ -385,6 +393,11 @@ def test_loader_bootstrap_requires_kernel_identity_and_immutable_snapshot(
     )
     expected_cmdline = b"\0".join(os.fsencode(value) for value in arguments) + b"\0"
     monkeypatch.setattr(preflight, "_read_exact_proc_cmdline", lambda: expected_cmdline)
+    monkeypatch.setattr(
+        preflight,
+        "_require_trusted_launcher_parent",
+        lambda *, source_path: "b" * 64,
+    )
     real_readlink = os.readlink
 
     def fake_readlink(path: str) -> str:
@@ -394,12 +407,13 @@ def test_loader_bootstrap_requires_kernel_identity_and_immutable_snapshot(
 
     monkeypatch.setattr(preflight.os, "readlink", fake_readlink)
     try:
-        observed_path, observed_descriptor, observed_raw = (
+        observed_path, observed_descriptor, observed_raw, launcher_sha256 = (
             preflight._require_exact_loader_bootstrap()
         )
         assert observed_path == source_path
         assert observed_descriptor == descriptor
         assert observed_raw == raw
+        assert launcher_sha256 == "b" * 64
         monkeypatch.setattr(
             preflight,
             "_read_exact_proc_cmdline",
@@ -409,6 +423,71 @@ def test_loader_bootstrap_requires_kernel_identity_and_immutable_snapshot(
             preflight._require_exact_loader_bootstrap()
     finally:
         os.close(descriptor)
+
+
+def test_static_launcher_elf_rejects_dynamic_interpreter() -> None:
+    raw = bytearray(64 + 56)
+    raw[:7] = b"\x7fELF\x02\x01\x01"
+    preflight.struct.pack_into("<HH", raw, 16, 2, 62)
+    preflight.struct.pack_into("<Q", raw, 32, 64)
+    preflight.struct.pack_into("<HH", raw, 54, 56, 1)
+    preflight.struct.pack_into("<I", raw, 64, 1)
+    preflight._require_static_x86_64_elf(bytes(raw))
+
+    preflight.struct.pack_into("<I", raw, 64, 3)
+    with pytest.raises(RuntimeError, match="fully static ELF"):
+        preflight._require_static_x86_64_elf(bytes(raw))
+
+
+def test_trusted_launcher_build_is_static_and_unprovisioned_fails_closed(
+    tmp_path: Path,
+) -> None:
+    compiler = shutil.which("g++")
+    assert compiler is not None
+    repository_root = Path(preflight.__file__).resolve().parents[1]
+    source = (
+        repository_root
+        / "native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp"
+    )
+    executable = tmp_path / "trusted-launcher"
+    subprocess.run(
+        [
+            compiler,
+            "-std=c++17",
+            "-O2",
+            "-Wall",
+            "-Wextra",
+            "-Wpedantic",
+            "-Werror",
+            "-static",
+            "-s",
+            "-Wl,--build-id=none",
+            str(source),
+            "-o",
+            str(executable),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    executable_raw = executable.read_bytes()
+    preflight._require_static_x86_64_elf(executable_raw)
+    rejected = subprocess.run(
+        [
+            str(executable),
+            "/tmp/preflight_engine_v2_full_pipeline_cpu_performance_v1_activation.py",
+            "--",
+            "--artifact-directory",
+            "/tmp/absent-artifact",
+            "--runtime-root",
+            "/tmp/absent-runtime",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert rejected.returncode == 125
+    assert "root-provisioned path" in rejected.stderr
 
 
 def test_loader_bootstrap_rejects_direct_path_invocation(
@@ -640,11 +719,15 @@ def test_runtime_activation_contract_rejects_unknown_and_type_drift(
         encoding="ascii",
     )
     bootstrap_raw = Path(preflight.__file__).read_bytes()
+    trusted_launcher_sha256 = str(
+        document["preflight"]["trusted_root_launcher"]["binary_sha256"]
+    )
 
     with pytest.raises(RuntimeError, match="exact projection changed"):
         preflight._load_activation_contract(
             repository_root=repository_root,
             bootstrap_raw=bootstrap_raw,
+            trusted_launcher_sha256=trusted_launcher_sha256,
         )
 
 

@@ -244,6 +244,56 @@ def test_workflow_trigger_guard_rejects_sparse_checkout_only(tmp_path: Path) -> 
     )
 
 
+def test_trusted_launcher_source_rejects_preflight_digest_cross_wiring(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = verify.DEFAULT_TRUSTED_LAUNCHER_SOURCE.read_text(encoding="utf-8")
+    preflight_sha256 = hashlib.sha256(
+        verify.DEFAULT_PREFLIGHT_TOOL.read_bytes()
+    ).hexdigest()
+    changed = tmp_path / "launcher.cpp"
+    changed.write_text(source.replace(preflight_sha256, "0" * 64, 1), encoding="utf-8")
+    monkeypatch.setattr(verify, "DEFAULT_TRUSTED_LAUNCHER_SOURCE", changed)
+
+    with pytest.raises(
+        verify.FullPipelineCPUActivationContractError,
+        match="bind the exact preflight digest twice",
+    ):
+        verify._validate_trusted_launcher_source(
+            preflight_sha256=preflight_sha256,
+            stage0_sha256=(
+                "dcf164779a9661ac43d0c9253cdb4700b955ca4c206a42e2f5afa3a384db132a"
+            ),
+        )
+
+
+def test_trusted_launcher_source_rejects_stage0_byte_drift(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = verify.DEFAULT_TRUSTED_LAUNCHER_SOURCE.read_text(encoding="utf-8")
+    changed = tmp_path / "launcher.cpp"
+    changed.write_text(
+        source.replace("import fcntl\n", "import fcntl\n# drift\n", 1),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(verify, "DEFAULT_TRUSTED_LAUNCHER_SOURCE", changed)
+
+    with pytest.raises(
+        verify.FullPipelineCPUActivationContractError,
+        match="stage0 source digest changed",
+    ):
+        verify._validate_trusted_launcher_source(
+            preflight_sha256=hashlib.sha256(
+                verify.DEFAULT_PREFLIGHT_TOOL.read_bytes()
+            ).hexdigest(),
+            stage0_sha256=(
+                "dcf164779a9661ac43d0c9253cdb4700b955ca4c206a42e2f5afa3a384db132a"
+            ),
+        )
+
+
 def test_activation_contract_rejects_duplicate_json_keys(tmp_path: Path) -> None:
     changed = tmp_path / "activation.json"
     changed.write_text('{"schema_id":"a","schema_id":"b"}\n', encoding="ascii")
