@@ -187,14 +187,13 @@ def _write_cpu_performance_contract(
         Path(__file__).resolve().parents[2]
         / "config/engine_v2_full_pipeline_cpu_performance_v1.json"
     )
-    full_pipeline = (
-        tmp_path / "config/engine_v2_full_pipeline_cpu_performance_v1.json"
-    )
+    full_pipeline = tmp_path / "config/engine_v2_full_pipeline_cpu_performance_v1.json"
     full_pipeline.write_bytes(full_pipeline_source.read_bytes())
     for relative in (
         "config/engine_v2_full_pipeline_cpu_performance_v1_activation.json",
         "config/engine_v2_full_pipeline_cpu_performance_v1_stdlib_closure.json",
         "config/engine_v2_full_pipeline_cpu_performance_v1_dynamic_library_closure.json",
+        "config/engine_v2_full_pipeline_cpu_performance_v1_preinit_executable_closure.json",
     ):
         source = Path(__file__).resolve().parents[2] / relative
         target = tmp_path / relative
@@ -816,9 +815,7 @@ def test_full_pipeline_cpu_performance_escalation_fails_ci_audit(
 ) -> None:
     _write_authoritative_workflows(tmp_path)
     _write_cpu_performance_contract(tmp_path)
-    profile_path = (
-        tmp_path / "config/engine_v2_full_pipeline_cpu_performance_v1.json"
-    )
+    profile_path = tmp_path / "config/engine_v2_full_pipeline_cpu_performance_v1.json"
     successor = json.loads(profile_path.read_text(encoding="ascii"))
     successor[section][field] = value
     profile_path.write_text(
@@ -857,8 +854,7 @@ def test_full_pipeline_cpu_activation_escalation_fails_ci_audit(
     _write_authoritative_workflows(tmp_path)
     _write_cpu_performance_contract(tmp_path)
     activation_path = (
-        tmp_path
-        / "config/engine_v2_full_pipeline_cpu_performance_v1_activation.json"
+        tmp_path / "config/engine_v2_full_pipeline_cpu_performance_v1_activation.json"
     )
     activation = json.loads(activation_path.read_text(encoding="ascii"))
     activation[section][field] = value

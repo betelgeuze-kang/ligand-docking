@@ -26,6 +26,18 @@ def _module(name: str, *, origin: str) -> types.ModuleType:
     return module
 
 
+def _executable_closure(rows: list[dict[str, object]]) -> dict[str, object]:
+    ordered = sorted(rows, key=lambda row: str(row["path"]))
+    return {
+        "schema_id": activation.DYNAMIC_LIBRARY_CLOSURE_SCHEMA_ID,
+        "executable_file_count": len(ordered),
+        "total_bytes": sum(int(row["size_bytes"]) for row in ordered),
+        "virtual_executable_mappings": ["[vdso]", "[vsyscall]"],
+        "rows_sha256": activation.manifest_rows_sha256(ordered),
+        "rows": ordered,
+    }
+
+
 def test_stdlib_import_closure_is_rederivable() -> None:
     modules = {
         "synthetic_builtin": _module("synthetic_builtin", origin="built-in"),
@@ -221,6 +233,130 @@ def test_dynamic_library_closure_rejects_mapping_device_inode_drift(
         )
 
 
+def test_native_initialization_delta_accepts_only_the_sealed_extension() -> None:
+    dependency = {
+        "path": "system:/usr/lib/exact-dependency.so",
+        "sha256": "a" * 64,
+        "size_bytes": 17,
+    }
+    native = {
+        "path": activation.SEALED_NATIVE_EXTENSION_IDENTITY,
+        "sha256": "b" * 64,
+        "size_bytes": 23,
+    }
+
+    activation.require_exact_native_initialization_delta(
+        _executable_closure([dependency]),
+        _executable_closure([native, dependency]),
+        native_extension_sha256="b" * 64,
+        native_extension_size_bytes=23,
+    )
+
+
+def test_native_initialization_delta_rejects_a_late_dependency() -> None:
+    dependency = {
+        "path": "system:/usr/lib/exact-dependency.so",
+        "sha256": "a" * 64,
+        "size_bytes": 17,
+    }
+    native = {
+        "path": activation.SEALED_NATIVE_EXTENSION_IDENTITY,
+        "sha256": "b" * 64,
+        "size_bytes": 23,
+    }
+    late = {
+        "path": "system:/usr/lib/late-constructor.so",
+        "sha256": "c" * 64,
+        "size_bytes": 29,
+    }
+
+    with pytest.raises(
+        activation.FullPipelineCPUActivationError,
+        match="executable mapping delta changed",
+    ):
+        activation.require_exact_native_initialization_delta(
+            _executable_closure([dependency]),
+            _executable_closure([native, dependency, late]),
+            native_extension_sha256="b" * 64,
+            native_extension_size_bytes=23,
+        )
+
+
+def test_native_initialization_delta_rejects_dependency_identity_drift() -> None:
+    preinit_dependency = {
+        "path": "system:/usr/lib/exact-dependency.so",
+        "sha256": "a" * 64,
+        "size_bytes": 17,
+    }
+    postinit_dependency = dict(preinit_dependency)
+    postinit_dependency["sha256"] = "c" * 64
+    native = {
+        "path": activation.SEALED_NATIVE_EXTENSION_IDENTITY,
+        "sha256": "b" * 64,
+        "size_bytes": 23,
+    }
+
+    with pytest.raises(
+        activation.FullPipelineCPUActivationError,
+        match="changed an authenticated dependency mapping",
+    ):
+        activation.require_exact_native_initialization_delta(
+            _executable_closure([preinit_dependency]),
+            _executable_closure([native, postinit_dependency]),
+            native_extension_sha256="b" * 64,
+            native_extension_size_bytes=23,
+        )
+
+
+def test_loader_bootstrap_execs_the_exact_loader_with_a_clean_environment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+
+    class BootstrapExecCalled(RuntimeError):
+        pass
+
+    def fake_execve(
+        path: Path, arguments: list[str], environment: dict[str, str]
+    ) -> None:
+        captured.update(path=path, arguments=arguments, environment=environment)
+        raise BootstrapExecCalled
+
+    monkeypatch.setattr(preflight.os, "execve", fake_execve)
+    monkeypatch.setattr(preflight.sys, "executable", "/exact/runtime/bin/python3")
+    monkeypatch.setattr(preflight.sys, "argv", ["preflight.py", "--fixture"])
+    monkeypatch.setattr(preflight.os, "environ", {"LD_LIBRARY_PATH": "/attacker"})
+
+    with pytest.raises(BootstrapExecCalled):
+        preflight._require_exact_loader_bootstrap()
+
+    assert captured["path"] == preflight._EXACT_DYNAMIC_LOADER
+    arguments = captured["arguments"]
+    assert isinstance(arguments, list)
+    assert "--inhibit-cache" in arguments
+    assert "--glibc-hwcaps-mask" in arguments
+    assert "--preload" in arguments
+    assert captured["environment"] == preflight._EXACT_LOADER_BOOTSTRAP_ENVIRONMENT
+    assert "LD_LIBRARY_PATH" not in captured["environment"]
+
+
+def test_loader_bootstrap_rejects_github_actions_before_exec(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        preflight.os,
+        "execve",
+        lambda *_arguments, **_keywords: pytest.fail("execve must not be called"),
+    )
+    monkeypatch.setattr(preflight.os, "environ", {"GITHUB_ACTIONS": "true"})
+
+    with pytest.raises(
+        RuntimeError,
+        match="GitHub Actions cannot run the exact-runtime activation preflight",
+    ):
+        preflight._require_exact_loader_bootstrap()
+
+
 def test_native_extension_descriptor_detects_post_authentication_change(
     tmp_path: Path,
 ) -> None:
@@ -414,8 +550,9 @@ def test_preflight_evidence_remains_non_consuming() -> None:
     evidence = activation.ActivationPreflightEvidenceV1(
         activation_sha256="a" * 64,
         profile_sha256="b" * 64,
-        stdlib_import_closure_manifest_sha256="c" * 64,
-        dynamic_library_closure_manifest_sha256="d" * 64,
+        preinit_executable_closure_manifest_sha256="c" * 64,
+        stdlib_import_closure_manifest_sha256="d" * 64,
+        dynamic_library_closure_manifest_sha256="e" * 64,
         host_preflight={"qualified": True, "blockers": []},
         blockers=(),
     ).to_dict()

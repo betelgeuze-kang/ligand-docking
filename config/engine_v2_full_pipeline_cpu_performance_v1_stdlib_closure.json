@@ -1,9 +1,9 @@
 {
-  "cached_bytecode_file_count": 78,
-  "cached_bytecode_total_bytes": 1447655,
-  "file_backed_module_count": 84,
-  "file_backed_total_bytes": 2194777,
-  "module_count": 125,
+  "cached_bytecode_file_count": 79,
+  "cached_bytecode_total_bytes": 1449467,
+  "file_backed_module_count": 85,
+  "file_backed_total_bytes": 2196025,
+  "module_count": 126,
   "rows": [
     {
       "cached_bytecode": {
@@ -416,6 +416,19 @@
       "path": "encodings/aliases.py",
       "sha256": "6fdcc49ba23a0203ae6cf28e608f8e6297d7c4d77d52e651db3cb49b9564c6d2",
       "size_bytes": 15677
+    },
+    {
+      "cached_bytecode": {
+        "path": "encodings/__pycache__/ascii.cpython-310.pyc",
+        "present": true,
+        "sha256": "9b80a9a14cc1a9bc8f507df87204b1afe35ae2481bd680f8e057ce08187d5c97",
+        "size_bytes": 1812
+      },
+      "module": "encodings.ascii",
+      "origin": "stdlib_file",
+      "path": "encodings/ascii.py",
+      "sha256": "578aa1173f7cc60dad2895071287fe6182bd14787b3fbf47a6c7983dfe3675e3",
+      "size_bytes": 1248
     },
     {
       "cached_bytecode": {
@@ -1226,6 +1239,6 @@
       "origin": "built-in"
     }
   ],
-  "rows_sha256": "3666eaad79e6e2333a3dccd92045015fa7f34a399514fe00323cc3053b39538e",
+  "rows_sha256": "97a5c7d5c4b32311655a1e3483984f0e3f841a2b2e5c9ea091cd60f9e2f227bd",
   "schema_id": "betelgeuze.engine_v2_python_stdlib_import_closure/1.0.0"
 }

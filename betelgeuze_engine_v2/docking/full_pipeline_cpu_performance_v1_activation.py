@@ -524,6 +524,139 @@ def derive_dynamic_library_closure(
     }
 
 
+def _validated_executable_closure_rows(
+    document: Mapping[str, object], *, name: str
+) -> dict[str, dict[str, object]]:
+    expected_keys = {
+        "schema_id",
+        "executable_file_count",
+        "total_bytes",
+        "virtual_executable_mappings",
+        "rows_sha256",
+        "rows",
+    }
+    if type(document) is not dict or set(document) != expected_keys:
+        raise FullPipelineCPUActivationError(f"{name} is not an exact closure object")
+    if document["schema_id"] != DYNAMIC_LIBRARY_CLOSURE_SCHEMA_ID:
+        raise FullPipelineCPUActivationError(f"{name} schema changed")
+    raw_virtual = document["virtual_executable_mappings"]
+    if (
+        type(raw_virtual) is not list
+        or any(
+            type(value) is not str or value not in ALLOWED_VIRTUAL_EXECUTABLE_MAPPINGS
+            for value in raw_virtual
+        )
+        or raw_virtual != sorted(set(raw_virtual))
+    ):
+        raise FullPipelineCPUActivationError(f"{name} virtual mappings changed")
+    raw_rows = document["rows"]
+    if type(raw_rows) is not list or not raw_rows:
+        raise FullPipelineCPUActivationError(f"{name} rows changed")
+    rows: dict[str, dict[str, object]] = {}
+    total_bytes = 0
+    ordered_paths: list[str] = []
+    for raw_row in raw_rows:
+        if type(raw_row) is not dict or set(raw_row) != {
+            "path",
+            "sha256",
+            "size_bytes",
+        }:
+            raise FullPipelineCPUActivationError(f"{name} row changed")
+        path = raw_row["path"]
+        digest = raw_row["sha256"]
+        size = raw_row["size_bytes"]
+        if (
+            type(path) is not str
+            or not path
+            or not path.isascii()
+            or type(digest) is not str
+            or len(digest) != 64
+            or any(character not in "0123456789abcdef" for character in digest)
+            or type(size) is not int
+            or size <= 0
+        ):
+            raise FullPipelineCPUActivationError(f"{name} row identity changed")
+        if path in rows:
+            raise FullPipelineCPUActivationError(f"{name} contains duplicate rows")
+        row = dict(raw_row)
+        rows[path] = row
+        ordered_paths.append(path)
+        total_bytes += size
+    if ordered_paths != sorted(ordered_paths):
+        raise FullPipelineCPUActivationError(f"{name} row order changed")
+    if (
+        type(document["executable_file_count"]) is not int
+        or document["executable_file_count"] != len(raw_rows)
+        or type(document["total_bytes"]) is not int
+        or document["total_bytes"] != total_bytes
+        or document["rows_sha256"] != manifest_rows_sha256(raw_rows)
+    ):
+        raise FullPipelineCPUActivationError(f"{name} summary changed")
+    return rows
+
+
+def require_exact_native_initialization_delta(
+    preinit: Mapping[str, object],
+    postinit: Mapping[str, object],
+    *,
+    native_extension_sha256: str,
+    native_extension_size_bytes: int,
+) -> None:
+    """Require native initialization to add only its authenticated sealed mapping."""
+
+    if (
+        type(native_extension_sha256) is not str
+        or len(native_extension_sha256) != 64
+        or any(
+            character not in "0123456789abcdef" for character in native_extension_sha256
+        )
+        or type(native_extension_size_bytes) is not int
+        or native_extension_size_bytes <= 0
+    ):
+        raise FullPipelineCPUActivationError(
+            "native initialization expected identity is invalid"
+        )
+    preinit_rows = _validated_executable_closure_rows(
+        preinit, name="pre-initialization executable closure"
+    )
+    postinit_rows = _validated_executable_closure_rows(
+        postinit, name="post-initialization executable closure"
+    )
+    if (
+        preinit["virtual_executable_mappings"]
+        != postinit["virtual_executable_mappings"]
+    ):
+        raise FullPipelineCPUActivationError(
+            "native initialization changed virtual executable mappings"
+        )
+    expected_postinit_paths = set(preinit_rows) | {SEALED_NATIVE_EXTENSION_IDENTITY}
+    if (
+        SEALED_NATIVE_EXTENSION_IDENTITY in preinit_rows
+        or set(postinit_rows) != expected_postinit_paths
+    ):
+        raise FullPipelineCPUActivationError(
+            "native initialization executable mapping delta changed"
+        )
+    for path, preinit_row in preinit_rows.items():
+        if canonical_json_bytes(preinit_row) != canonical_json_bytes(
+            postinit_rows[path]
+        ):
+            raise FullPipelineCPUActivationError(
+                "native initialization changed an authenticated dependency mapping"
+            )
+    expected_native_row = {
+        "path": SEALED_NATIVE_EXTENSION_IDENTITY,
+        "sha256": native_extension_sha256,
+        "size_bytes": native_extension_size_bytes,
+    }
+    if canonical_json_bytes(postinit_rows[SEALED_NATIVE_EXTENSION_IDENTITY]) != (
+        canonical_json_bytes(expected_native_row)
+    ):
+        raise FullPipelineCPUActivationError(
+            "native initialization sealed mapping identity changed"
+        )
+
+
 def require_exact_closure(
     observed: Mapping[str, object],
     expected: Mapping[str, object],
@@ -544,6 +677,7 @@ def require_exact_closure(
 class ActivationPreflightEvidenceV1:
     activation_sha256: str
     profile_sha256: str
+    preinit_executable_closure_manifest_sha256: str
     stdlib_import_closure_manifest_sha256: str
     dynamic_library_closure_manifest_sha256: str
     host_preflight: Mapping[str, object]
@@ -555,6 +689,9 @@ class ActivationPreflightEvidenceV1:
             "activation_id": ACTIVATION_ID,
             "activation_sha256": self.activation_sha256,
             "profile_sha256": self.profile_sha256,
+            "preinit_executable_closure_manifest_sha256": (
+                self.preinit_executable_closure_manifest_sha256
+            ),
             "stdlib_import_closure_manifest_sha256": (
                 self.stdlib_import_closure_manifest_sha256
             ),
@@ -592,5 +729,6 @@ __all__ = [
     "derive_stdlib_import_closure",
     "manifest_rows_sha256",
     "require_exact_closure",
+    "require_exact_native_initialization_delta",
     "sha256_bytes",
 ]

@@ -24,31 +24,62 @@
         "[vsyscall]"
       ]
     },
+    "preinit_executable_closure": {
+      "executable_file_count": 20,
+      "manifest_sha256": "282e17c72a82f0dc3e968e74fc2072371d7673dacf84b18985b2c2253c305558",
+      "path": "config/engine_v2_full_pipeline_cpu_performance_v1_preinit_executable_closure.json",
+      "total_bytes": 17279568,
+      "virtual_executable_mappings": [
+        "[vdso]",
+        "[vsyscall]"
+      ]
+    },
     "stdlib_import_closure": {
-      "cached_bytecode_file_count": 78,
-      "cached_bytecode_total_bytes": 1447655,
-      "file_backed_module_count": 84,
-      "file_backed_total_bytes": 2194777,
-      "manifest_sha256": "230cc88d60a9fd0f92318492ec533672930e72eaed11ef5410a45ce7edbb690b",
-      "module_count": 125,
+      "cached_bytecode_file_count": 79,
+      "cached_bytecode_total_bytes": 1449467,
+      "file_backed_module_count": 85,
+      "file_backed_total_bytes": 2196025,
+      "manifest_sha256": "d892595cc2bb59aae3fbf7100da9e6b52809082dd5cbc2edb2646811d0b58e35",
+      "module_count": 126,
       "path": "config/engine_v2_full_pipeline_cpu_performance_v1_stdlib_closure.json"
     }
   },
   "preflight": {
-    "activation_module_sha256": "73dc3b152a878cd14923f6df9cb881b7fb5eb3647fc8bdb7e90ee9f6cf47c78d",
+    "activation_module_sha256": "b53633b1219bd1f6ca283219e2879ae9b14ee8f0450a14251e689b5433c2cee0",
     "bootstrap_flags": [
       "-I",
       "-S",
       "-B"
     ],
     "caller_science_input_allowed": false,
+    "exact_dynamic_loader_path": "/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2",
+    "exact_loader_environment": {
+      "CUDA_VISIBLE_DEVICES": "",
+      "ENGINE_V2_EXACT_LOADER_BOOTSTRAP": "v1",
+      "HIP_VISIBLE_DEVICES": "",
+      "LC_ALL": "C",
+      "PATH": "/usr/bin:/bin",
+      "ROCR_VISIBLE_DEVICES": ""
+    },
+    "exact_loader_inhibit_cache": true,
+    "exact_loader_library_path": "/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu",
+    "exact_loader_preload_paths": [
+      "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30",
+      "/usr/lib/x86_64-linux-gnu/libgcc_s.so.1",
+      "/usr/lib/x86_64-linux-gnu/libpthread.so.0",
+      "/usr/lib/x86_64-linux-gnu/libm.so.6",
+      "/usr/lib/x86_64-linux-gnu/libdl.so.2",
+      "/usr/lib/x86_64-linux-gnu/libc.so.6"
+    ],
     "exact_native_extension_import_required": true,
+    "exact_preinit_closure_required": true,
     "github_actions_preflight_allowed": false,
     "host_preflight_required": true,
     "molecular_input_allowed": false,
+    "native_initialization_delta_exact": true,
     "performance_measurement_allowed": false,
     "performance_sidecar_sha256": "04253e3897bb5746e1c1082dbf8e27922835ffb075aeb3268c18a0895662173f",
-    "preflight_tool_sha256": "d4e61673758f3e8882b72987539132d6e75065df2ad77eb98c5aae8665512545",
+    "preflight_tool_sha256": "b152b096cff0066e42460fb49b976c78710f5c8e8be47d1810ddd8d9ba69b5b2",
     "qualification_state_write_allowed": false,
     "reservation_allowed": false
   },
@@ -99,10 +130,11 @@
     "merged_main_tree_sha256": "69998e9df4740c927568b41e21eb8b94185d4fa3b9dd5fa37d71bcbbd5060579",
     "native_consumer_sha256": "ea4fb7953d2bb2c1e4e16380dd3ad362d4fa8265bf0c11d26d69dfed3cc8df25",
     "native_cpu_parity_sha256": "cbff9243caea510e070067663e7c36c216afc84e226b9ade3e37b03e6ac30f75",
+    "preinit_executable_closure_manifest_sha256": "282e17c72a82f0dc3e968e74fc2072371d7673dacf84b18985b2c2253c305558",
     "profile_sha256": "385fb713cca8f39353f138115749abdfc9768b02222e13111a418360be30a000",
     "profile_verifier_sha256": "b05d9e9710cc9594eba4a0630420dfbc1204dba9e89c63332a0f10bbc541e880",
     "runner_tool_sha256": "bfaf4bc25b2161a43e1e01418394c716d4b762fd39ec6708a01791159916e6e8",
-    "stdlib_import_closure_manifest_sha256": "230cc88d60a9fd0f92318492ec533672930e72eaed11ef5410a45ce7edbb690b"
+    "stdlib_import_closure_manifest_sha256": "d892595cc2bb59aae3fbf7100da9e6b52809082dd5cbc2edb2646811d0b58e35"
   },
   "source_foundation": {
     "merged_main_commit_object_encoding": "git_cat_file_commit_raw_v1",

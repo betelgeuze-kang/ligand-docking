@@ -24,6 +24,10 @@ DEFAULT_DYNAMIC_CLOSURE = (
     REPOSITORY_ROOT
     / "config/engine_v2_full_pipeline_cpu_performance_v1_dynamic_library_closure.json"
 )
+DEFAULT_PREINIT_CLOSURE = (
+    REPOSITORY_ROOT
+    / "config/engine_v2_full_pipeline_cpu_performance_v1_preinit_executable_closure.json"
+)
 DEFAULT_PROFILE = (
     REPOSITORY_ROOT / "config/engine_v2_full_pipeline_cpu_performance_v1.json"
 )
@@ -76,12 +80,15 @@ ACTIVATION_SCHEMA_ID = (
 ACTIVATION_ID = "engine_v2_full_pipeline_cpu_performance_v1_activation"
 PROFILE_ID = "engine_v2_full_pipeline_cpu_performance_v1"
 PROFILE_SHA256 = "385fb713cca8f39353f138115749abdfc9768b02222e13111a418360be30a000"
-ACTIVATION_SHA256 = "15b9ba143be03d68382f60367f1e8c1e16e6da4fb7a61ab187b6e465d5ae1623"
+ACTIVATION_SHA256 = "735ecf8b67e89124a5e183f0e9016c1ee7c30448b739a0abd7fed1d302eef90f"
 STDLIB_CLOSURE_SHA256 = (
-    "230cc88d60a9fd0f92318492ec533672930e72eaed11ef5410a45ce7edbb690b"
+    "d892595cc2bb59aae3fbf7100da9e6b52809082dd5cbc2edb2646811d0b58e35"
 )
 DYNAMIC_CLOSURE_SHA256 = (
     "a5c56fd7ac0c26224e2282f88e54ff3a4e19c6a1d52263407f03d156199e7352"
+)
+PREINIT_CLOSURE_SHA256 = (
+    "282e17c72a82f0dc3e968e74fc2072371d7673dacf84b18985b2c2253c305558"
 )
 FOUNDATION_COMMIT_OID = "38c16136a1e2cc126517ff9b50a05f06c5795adb"
 FOUNDATION_COMMIT_SHA256 = (
@@ -115,6 +122,7 @@ SOURCE_BINDINGS = {
     "merged_main_commit_sha256": FOUNDATION_COMMIT_SHA256,
     "merged_main_tree_sha256": FOUNDATION_TREE_SHA256,
     "stdlib_import_closure_manifest_sha256": STDLIB_CLOSURE_SHA256,
+    "preinit_executable_closure_manifest_sha256": PREINIT_CLOSURE_SHA256,
     "dynamic_library_closure_manifest_sha256": DYNAMIC_CLOSURE_SHA256,
 }
 SOURCE_PATHS = {
@@ -126,6 +134,7 @@ SOURCE_PATHS = {
     "native_cpu_parity_sha256": DEFAULT_NATIVE_PARITY,
     "host_preflight_sha256": DEFAULT_HOST_PREFLIGHT,
     "stdlib_import_closure_manifest_sha256": DEFAULT_STDLIB_CLOSURE,
+    "preinit_executable_closure_manifest_sha256": DEFAULT_PREINIT_CLOSURE,
     "dynamic_library_closure_manifest_sha256": DEFAULT_DYNAMIC_CLOSURE,
 }
 
@@ -223,6 +232,18 @@ def _require_snippets(path: Path, snippets: Sequence[str]) -> None:
         raise FullPipelineCPUActivationContractError(
             f"{path.name} missing frozen snippets: {missing}"
         )
+
+
+def _require_ordered_snippets(path: Path, snippets: Sequence[str]) -> None:
+    raw = path.read_text(encoding="utf-8")
+    cursor = 0
+    for value in snippets:
+        observed = raw.find(value, cursor)
+        if observed < 0:
+            raise FullPipelineCPUActivationContractError(
+                f"{path.name} missing ordered frozen snippet: {value}"
+            )
+        cursor = observed + len(value)
 
 
 def _require_workflow_trigger_path_occurrences(
@@ -529,6 +550,38 @@ def load_closure_manifest(
     return document, raw
 
 
+def _require_exact_native_initialization_delta(
+    preinit: dict[str, Any], dynamic: dict[str, Any]
+) -> None:
+    preinit_rows = {str(row["path"]): row for row in preinit["rows"]}
+    dynamic_rows = {str(row["path"]): row for row in dynamic["rows"]}
+    native_identity = "sealed_memfd:engine-v2-native-extension-v1"
+    if (
+        native_identity in preinit_rows
+        or set(dynamic_rows) != set(preinit_rows) | {native_identity}
+        or preinit["virtual_executable_mappings"]
+        != dynamic["virtual_executable_mappings"]
+    ):
+        raise FullPipelineCPUActivationContractError(
+            "native initialization executable mapping delta changed"
+        )
+    for path, row in preinit_rows.items():
+        _require_exact(
+            dynamic_rows[path], row, name="pre-initialized dependency mapping"
+        )
+    _require_exact(
+        dynamic_rows[native_identity],
+        {
+            "path": native_identity,
+            "sha256": (
+                "ff7b5e6ba7c0e250cf739292d34c562d0bd142d5f7f6c842c5c191d42b2504e1"
+            ),
+            "size_bytes": 2_599_704,
+        },
+        name="sealed native initialization mapping",
+    )
+
+
 def _git_bytes(repository_root: Path, arguments: Sequence[str]) -> bytes:
     try:
         completed = subprocess.run(
@@ -673,6 +726,7 @@ def verify(
             )
 
     stdlib_path = actual_paths["stdlib_import_closure_manifest_sha256"]
+    preinit_path = actual_paths["preinit_executable_closure_manifest_sha256"]
     dynamic_path = actual_paths["dynamic_library_closure_manifest_sha256"]
     stdlib, stdlib_raw = load_closure_manifest(
         stdlib_path,
@@ -682,6 +736,11 @@ def verify(
         dynamic_path,
         expected_schema_id="betelgeuze.engine_v2_executable_mapping_closure/1.0.0",
     )
+    preinit, preinit_raw = load_closure_manifest(
+        preinit_path,
+        expected_schema_id="betelgeuze.engine_v2_executable_mapping_closure/1.0.0",
+    )
+    _require_exact_native_initialization_delta(preinit, dynamic)
     _require_exact(
         document["closure_manifests"],
         {
@@ -691,6 +750,13 @@ def verify(
                 "path": "config/engine_v2_full_pipeline_cpu_performance_v1_dynamic_library_closure.json",
                 "total_bytes": dynamic["total_bytes"],
                 "virtual_executable_mappings": dynamic["virtual_executable_mappings"],
+            },
+            "preinit_executable_closure": {
+                "executable_file_count": preinit["executable_file_count"],
+                "manifest_sha256": hashlib.sha256(preinit_raw).hexdigest(),
+                "path": "config/engine_v2_full_pipeline_cpu_performance_v1_preinit_executable_closure.json",
+                "total_bytes": preinit["total_bytes"],
+                "virtual_executable_mappings": preinit["virtual_executable_mappings"],
             },
             "stdlib_import_closure": {
                 "cached_bytecode_file_count": stdlib["cached_bytecode_file_count"],
@@ -756,7 +822,31 @@ def verify(
             ),
             "bootstrap_flags": ["-I", "-S", "-B"],
             "caller_science_input_allowed": False,
+            "exact_dynamic_loader_path": (
+                "/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2"
+            ),
+            "exact_loader_environment": {
+                "CUDA_VISIBLE_DEVICES": "",
+                "ENGINE_V2_EXACT_LOADER_BOOTSTRAP": "v1",
+                "HIP_VISIBLE_DEVICES": "",
+                "LC_ALL": "C",
+                "PATH": "/usr/bin:/bin",
+                "ROCR_VISIBLE_DEVICES": "",
+            },
+            "exact_loader_inhibit_cache": True,
+            "exact_loader_library_path": (
+                "/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu"
+            ),
+            "exact_loader_preload_paths": [
+                "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30",
+                "/usr/lib/x86_64-linux-gnu/libgcc_s.so.1",
+                "/usr/lib/x86_64-linux-gnu/libpthread.so.0",
+                "/usr/lib/x86_64-linux-gnu/libm.so.6",
+                "/usr/lib/x86_64-linux-gnu/libdl.so.2",
+                "/usr/lib/x86_64-linux-gnu/libc.so.6",
+            ],
             "exact_native_extension_import_required": True,
+            "exact_preinit_closure_required": True,
             "github_actions_preflight_allowed": False,
             "host_preflight_required": True,
             "molecular_input_allowed": False,
@@ -768,6 +858,7 @@ def verify(
                 repository_root
                 / "tools/preflight_engine_v2_full_pipeline_cpu_performance_v1_activation.py"
             ),
+            "native_initialization_delta_exact": True,
             "qualification_state_write_allowed": False,
             "reservation_allowed": False,
         },
@@ -793,6 +884,13 @@ def verify(
             "_exact_json_equal",
             "activation contract exact projection changed",
             "_require_native_extension",
+            "_require_exact_loader_bootstrap",
+            "os.execve",
+            "--inhibit-cache",
+            "--glibc-hwcaps-mask",
+            "--preload",
+            "preinit_executable_closure_manifest_sha256",
+            "require_exact_native_initialization_delta",
             "ExtensionFileLoader",
             "/proc/self/fd/",
             "_require_native_descriptor_stable",
@@ -820,6 +918,7 @@ def verify(
             "expected_mapping_identity=mapping_identity",
             "SEALED_NATIVE_EXTENSION_MAP_PATH",
             "sealed_executable_descriptor",
+            "require_exact_native_initialization_delta",
         ),
     )
     _require_snippets(
@@ -836,6 +935,9 @@ def verify(
         (
             "test_stdlib_import_closure_is_rederivable",
             "test_dynamic_library_closure_is_rederivable",
+            "test_loader_bootstrap_execs_the_exact_loader_with_a_clean_environment",
+            "test_loader_bootstrap_rejects_github_actions_before_exec",
+            "test_native_initialization_delta_rejects_a_late_dependency",
         ),
     )
     _require_snippets(
@@ -846,10 +948,13 @@ def verify(
             "non-consuming preflight",
             "does not activate the exactly-once runner",
             "exact typed",
-            "125 imported standard-library module identities",
-            "84 file-backed",
-            "78 declared bytecode-cache files",
+            "126 imported standard-library module identities",
+            "85 file-backed",
+            "79 declared bytecode-cache files",
             "21 file-backed executable mappings",
+            "20 pre-initialization executable mappings",
+            "exact glibc dynamic loader",
+            "before native initialization",
             "descriptor-bound native",
             "sealed memfd",
             "public package",
@@ -859,6 +964,7 @@ def verify(
         "config/engine_v2_full_pipeline_cpu_performance_v1_activation.json",
         "config/engine_v2_full_pipeline_cpu_performance_v1_stdlib_closure.json",
         "config/engine_v2_full_pipeline_cpu_performance_v1_dynamic_library_closure.json",
+        "config/engine_v2_full_pipeline_cpu_performance_v1_preinit_executable_closure.json",
         "betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1_activation.py",
         "tools/verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py",
         "tools/preflight_engine_v2_full_pipeline_cpu_performance_v1_activation.py",
@@ -885,6 +991,20 @@ def verify(
                 relative_path=bound_trigger,
                 expected_count=expected_count,
             )
+    preflight_tool = (
+        repository_root
+        / "tools/preflight_engine_v2_full_pipeline_cpu_performance_v1_activation.py"
+    )
+    _require_ordered_snippets(
+        preflight_tool,
+        (
+            "def derive_preflight(",
+            "observed_preinit = activation.derive_dynamic_library_closure(",
+            'name="pre-initialization executable-file mapping closure"',
+            "_require_native_extension(",
+            "require_exact_native_initialization_delta(",
+        ),
+    )
     return {
         "schema_id": ACTIVATION_SCHEMA_ID,
         "activation_id": ACTIVATION_ID,
@@ -894,6 +1014,9 @@ def verify(
         "foundation_commit_oid": FOUNDATION_COMMIT_OID,
         "foundation_tree_oid": FOUNDATION_TREE_OID,
         "stdlib_import_closure_manifest_sha256": hashlib.sha256(stdlib_raw).hexdigest(),
+        "preinit_executable_closure_manifest_sha256": hashlib.sha256(
+            preinit_raw
+        ).hexdigest(),
         "dynamic_library_closure_manifest_sha256": hashlib.sha256(
             dynamic_raw
         ).hexdigest(),

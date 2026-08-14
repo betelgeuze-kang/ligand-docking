@@ -16,10 +16,11 @@ The activation binds the exact merged-main foundation produced by PR #319:
 - SHA-256 of raw `git ls-tree -r --full-tree -z` output
   `69998e9df4740c927568b41e21eb8b94185d4fa3b9dd5fa37d71bcbbd5060579`.
 
-The verifier re-reads those Git objects and separately hashes all eleven
+The verifier re-reads those Git objects and separately hashes all twelve
 required activation bindings: profile, profile verifier, measurement core,
 inactive runner, native consumer, native CPU parity, host preflight, commit,
-tree, standard-library import closure, and executable-mapping closure. The
+tree, standard-library import closure, pre-initialization executable closure,
+and post-initialization executable-mapping closure. The
 profile remains byte-identical at
 `385fb713cca8f39353f138115749abdfc9768b02222e13111a418360be30a000`.
 The preflight boundary additionally binds its own bootstrap, activation module,
@@ -52,10 +53,11 @@ also projected onto the authenticated public package so subsequent canonical
 consumer imports resolve the verified entrypoints. The preflight then
 re-derives:
 
-- 125 imported standard-library module identities, including 84 file-backed
+- 126 imported standard-library module identities, including 85 file-backed
   source or extension rows with their complete hashes and sizes;
-- 78 declared bytecode-cache files with their paths, hashes, and sizes, so
+- 79 declared bytecode-cache files with their paths, hashes, and sizes, so
   CPython's readable `.pyc` path cannot diverge from the frozen closure;
+- 20 pre-initialization executable mappings before native initialization;
 - 21 file-backed executable mappings, including the CPython executable, native
   sealed native-extension snapshot, CPython extension modules, C/C++
   runtimes, loader, and transitive system libraries;
@@ -70,6 +72,17 @@ the exact sealed memfd whose retained descriptor, zero link count, mode,
 device/inode, bytes, and kernel seals are independently verified. No
 caller-supplied expected digest is accepted. Added, missing, moved, or changed
 module/mapping rows fail closed.
+
+Before any native constructor can run, the bootstrap replaces its initial
+process image through the exact glibc dynamic loader. It clears the inherited
+environment, inhibits the loader cache, fixes the library search path, disables
+glibc hardware-capability variants, and preloads the exact absolute
+`libstdc++`, `libgcc_s`, `libpthread`, `libm`, `libdl`, and `libc` paths required
+by the frozen extension. The resulting 20-row executable closure is fully
+hashed and compared with its frozen manifest before native initialization.
+After initialization, the verifier requires the pre/post mapping delta to be
+exactly one row: the authenticated sealed native memfd. A newly discovered,
+late-loaded, missing, or changed dependency rejects activation.
 
 ## Non-consuming preflight
 
@@ -92,6 +105,9 @@ science input:
 ```
 
 GitHub Actions is rejected before any repository or native provider is loaded.
+The local command self-reexecutes through the exact glibc dynamic loader; no
+caller-provided `LD_LIBRARY_PATH`, `LD_PRELOAD`, loader-cache choice, or ROCm
+environment survives into the authenticated process.
 The local result records immutable-snapshot and descriptor-bound native
 initialization, verified public package exports, host preflight evidence, and
 explicit false fields for measurement, qualification consumption, reservation,

@@ -144,6 +144,7 @@ CPU_PERFORMANCE_CONTRACT_PATHS = (
     "config/engine_v2_full_pipeline_cpu_performance_v1_activation.json",
     "config/engine_v2_full_pipeline_cpu_performance_v1_stdlib_closure.json",
     "config/engine_v2_full_pipeline_cpu_performance_v1_dynamic_library_closure.json",
+    "config/engine_v2_full_pipeline_cpu_performance_v1_preinit_executable_closure.json",
     "tools/preflight_engine_v2_full_pipeline_cpu_performance_v1_activation.py",
     "tools/verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py",
     "tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1_activation.py",
@@ -191,6 +192,7 @@ CPU_PERFORMANCE_REQUIRED_TOKEN_COUNTS = {
     "config/engine_v2_full_pipeline_cpu_performance_v1_activation.json": 2,
     "config/engine_v2_full_pipeline_cpu_performance_v1_stdlib_closure.json": 2,
     "config/engine_v2_full_pipeline_cpu_performance_v1_dynamic_library_closure.json": 2,
+    "config/engine_v2_full_pipeline_cpu_performance_v1_preinit_executable_closure.json": 2,
     "tools/preflight_engine_v2_full_pipeline_cpu_performance_v1_activation.py": 2,
     "tools/verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py": 3,
     "tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1_activation.py": 3,
@@ -920,8 +922,7 @@ def _cpu_performance_authority_is_fail_closed(repo_root: Path) -> bool:
         return False
 
     full_activation_path = (
-        repo_root
-        / "config/engine_v2_full_pipeline_cpu_performance_v1_activation.json"
+        repo_root / "config/engine_v2_full_pipeline_cpu_performance_v1_activation.json"
     )
     try:
         full_activation_raw = full_activation_path.read_bytes()
@@ -971,6 +972,7 @@ def _cpu_performance_authority_is_fail_closed(repo_root: Path) -> bool:
         "native_consumer_sha256",
         "native_cpu_parity_sha256",
         "host_preflight_sha256",
+        "preinit_executable_closure_manifest_sha256",
         "stdlib_import_closure_manifest_sha256",
         "dynamic_library_closure_manifest_sha256",
     }
@@ -984,11 +986,9 @@ def _cpu_performance_authority_is_fail_closed(repo_root: Path) -> bool:
         and all(value is False for value in activation_restrictions.values())
         and type(activation_runner) is dict
         and activation_runner.get("activation_contract_present") is True
-        and activation_runner.get("activation_contract_allows_live_execution")
-        is False
+        and activation_runner.get("activation_contract_allows_live_execution") is False
         and activation_runner.get("github_actions_live_execution_allowed") is False
-        and activation_runner.get("live_synthetic_local_execution_implemented")
-        is False
+        and activation_runner.get("live_synthetic_local_execution_implemented") is False
         and activation_runner.get("qualification_attempt_consumed") is False
         and activation_runner.get("reservation_created") is False
         and activation_runner.get("runner_remains_fail_closed") is True
@@ -996,6 +996,8 @@ def _cpu_performance_authority_is_fail_closed(repo_root: Path) -> bool:
         and activation_preflight.get("caller_science_input_allowed") is False
         and activation_preflight.get("github_actions_preflight_allowed") is False
         and activation_preflight.get("molecular_input_allowed") is False
+        and activation_preflight.get("exact_preinit_closure_required") is True
+        and activation_preflight.get("native_initialization_delta_exact") is True
         and activation_preflight.get("performance_measurement_allowed") is False
         and activation_preflight.get("qualification_state_write_allowed") is False
         and activation_preflight.get("reservation_allowed") is False

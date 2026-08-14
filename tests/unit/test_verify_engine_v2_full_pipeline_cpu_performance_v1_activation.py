@@ -14,14 +14,19 @@ _ACTIVATION = (
     _ROOT / "config/engine_v2_full_pipeline_cpu_performance_v1_activation.json"
 )
 _STDLIB = (
+    _ROOT / "config/engine_v2_full_pipeline_cpu_performance_v1_stdlib_closure.json"
+)
+_PREINIT = (
     _ROOT
-    / "config/engine_v2_full_pipeline_cpu_performance_v1_stdlib_closure.json"
+    / "config/engine_v2_full_pipeline_cpu_performance_v1_preinit_executable_closure.json"
 )
 
 
 def _write_canonical(path: Path, document: object) -> None:
     path.write_text(
-        json.dumps(document, allow_nan=False, ensure_ascii=True, indent=2, sort_keys=True)
+        json.dumps(
+            document, allow_nan=False, ensure_ascii=True, indent=2, sort_keys=True
+        )
         + "\n",
         encoding="ascii",
     )
@@ -81,7 +86,7 @@ def test_full_pipeline_cpu_activation_rejects_source_cross_wiring(
         verify.verify(activation_path=changed)
 
 
-def test_full_pipeline_cpu_activation_requires_exact_eleven_bindings() -> None:
+def test_full_pipeline_cpu_activation_requires_exact_twelve_bindings() -> None:
     document = json.loads(_ACTIVATION.read_text(encoding="ascii"))
 
     assert set(document["source_bindings"]) == {
@@ -95,8 +100,44 @@ def test_full_pipeline_cpu_activation_requires_exact_eleven_bindings() -> None:
         "native_cpu_parity_sha256",
         "host_preflight_sha256",
         "stdlib_import_closure_manifest_sha256",
+        "preinit_executable_closure_manifest_sha256",
         "dynamic_library_closure_manifest_sha256",
     }
+
+
+def test_preinit_closure_is_exactly_the_postinit_dependency_set() -> None:
+    preinit = json.loads(_PREINIT.read_text(encoding="ascii"))
+    dynamic = json.loads(
+        (
+            _ROOT
+            / "config/engine_v2_full_pipeline_cpu_performance_v1_dynamic_library_closure.json"
+        ).read_text(encoding="ascii")
+    )
+
+    verify._require_exact_native_initialization_delta(preinit, dynamic)
+
+
+def test_preinit_closure_rejects_a_late_native_dependency() -> None:
+    preinit = json.loads(_PREINIT.read_text(encoding="ascii"))
+    dynamic = json.loads(
+        (
+            _ROOT
+            / "config/engine_v2_full_pipeline_cpu_performance_v1_dynamic_library_closure.json"
+        ).read_text(encoding="ascii")
+    )
+    dynamic["rows"].append(
+        {
+            "path": "system:/usr/lib/x86_64-linux-gnu/late-native-dependency.so",
+            "sha256": "0" * 64,
+            "size_bytes": 1,
+        }
+    )
+
+    with pytest.raises(
+        verify.FullPipelineCPUActivationContractError,
+        match="executable mapping delta changed",
+    ):
+        verify._require_exact_native_initialization_delta(preinit, dynamic)
 
 
 def test_closure_manifest_rejects_row_receipt_drift(tmp_path: Path) -> None:

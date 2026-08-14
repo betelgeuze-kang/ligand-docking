@@ -40,6 +40,24 @@ _SEALED_NATIVE_EXTENSION_NAME = "engine-v2-native-extension-v1"
 _REQUIRED_NATIVE_SNAPSHOT_SEALS = (
     fcntl.F_SEAL_SEAL | fcntl.F_SEAL_SHRINK | fcntl.F_SEAL_GROW | fcntl.F_SEAL_WRITE
 )
+_EXACT_DYNAMIC_LOADER = Path("/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2")
+_EXACT_DYNAMIC_LOADER_LIBRARY_PATH = "/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu"
+_EXACT_NATIVE_DEPENDENCY_PRELOAD_PATHS = (
+    "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30",
+    "/usr/lib/x86_64-linux-gnu/libgcc_s.so.1",
+    "/usr/lib/x86_64-linux-gnu/libpthread.so.0",
+    "/usr/lib/x86_64-linux-gnu/libm.so.6",
+    "/usr/lib/x86_64-linux-gnu/libdl.so.2",
+    "/usr/lib/x86_64-linux-gnu/libc.so.6",
+)
+_EXACT_LOADER_BOOTSTRAP_ENVIRONMENT = {
+    "CUDA_VISIBLE_DEVICES": "",
+    "ENGINE_V2_EXACT_LOADER_BOOTSTRAP": "v1",
+    "HIP_VISIBLE_DEVICES": "",
+    "LC_ALL": "C",
+    "PATH": "/usr/bin:/bin",
+    "ROCR_VISIBLE_DEVICES": "",
+}
 _ACTIVATION_SCHEMA_ID = (
     "betelgeuze.engine_v2_full_pipeline_cpu_performance_activation/1.0.0"
 )
@@ -74,7 +92,10 @@ _EXPECTED_SOURCE_BINDINGS = {
         "69998e9df4740c927568b41e21eb8b94185d4fa3b9dd5fa37d71bcbbd5060579"
     ),
     "stdlib_import_closure_manifest_sha256": (
-        "230cc88d60a9fd0f92318492ec533672930e72eaed11ef5410a45ce7edbb690b"
+        "d892595cc2bb59aae3fbf7100da9e6b52809082dd5cbc2edb2646811d0b58e35"
+    ),
+    "preinit_executable_closure_manifest_sha256": (
+        "282e17c72a82f0dc3e968e74fc2072371d7673dacf84b18985b2c2253c305558"
     ),
     "dynamic_library_closure_manifest_sha256": (
         "a5c56fd7ac0c26224e2282f88e54ff3a4e19c6a1d52263407f03d156199e7352"
@@ -89,7 +110,7 @@ _BOUND_MODULE_ROWS = (
     (
         "full_pipeline_cpu_performance_v1_activation",
         "full_pipeline_cpu_performance_v1_activation.py",
-        "73dc3b152a878cd14923f6df9cb881b7fb5eb3647fc8bdb7e90ee9f6cf47c78d",
+        "b53633b1219bd1f6ca283219e2879ae9b14ee8f0450a14251e689b5433c2cee0",
     ),
     (
         "full_pipeline_cpu_performance_v1",
@@ -120,6 +141,42 @@ def _fail(message: str) -> NoReturn:
     )
 
 
+def _require_exact_loader_bootstrap() -> None:
+    if os.environ.get("GITHUB_ACTIONS", "").lower() == "true":
+        _fail("GitHub Actions cannot run the exact-runtime activation preflight")
+    if dict(os.environ) == _EXACT_LOADER_BOOTSTRAP_ENVIRONMENT:
+        return
+    launcher = Path(sys.executable).absolute()
+    bootstrap = Path(__file__).absolute()
+    arguments = [
+        str(_EXACT_DYNAMIC_LOADER),
+        "--inhibit-cache",
+        "--library-path",
+        _EXACT_DYNAMIC_LOADER_LIBRARY_PATH,
+        "--glibc-hwcaps-mask",
+        "",
+        "--preload",
+        ":".join(_EXACT_NATIVE_DEPENDENCY_PRELOAD_PATHS),
+        "--argv0",
+        str(launcher),
+        str(launcher),
+        "-I",
+        "-S",
+        "-B",
+        str(bootstrap),
+        *sys.argv[1:],
+    ]
+    try:
+        os.execve(
+            _EXACT_DYNAMIC_LOADER,
+            arguments,
+            _EXACT_LOADER_BOOTSTRAP_ENVIRONMENT,
+        )
+    except OSError as exc:
+        raise RuntimeError("exact dynamic-loader bootstrap failed") from exc
+    _fail("exact dynamic-loader bootstrap returned unexpectedly")
+
+
 def _require_private_effective_group() -> None:
     try:
         account = pwd.getpwuid(os.geteuid())
@@ -138,6 +195,7 @@ def _require_private_effective_group() -> None:
 
 
 def _require_isolated_bootstrap() -> None:
+    _require_exact_loader_bootstrap()
     if tuple(sys.path) != _EXPECTED_INITIAL_PATHS:
         _fail("isolated standard-library path set changed")
     try:
@@ -161,8 +219,6 @@ def _require_isolated_bootstrap() -> None:
         _fail("preflight requires exact CPython -I -S -B flags")
     if hasattr(sys.flags, "safe_path"):
         _fail("unexpected safe_path field appeared in the pinned CPython lane")
-    if os.environ.get("GITHUB_ACTIONS", "").lower() == "true":
-        _fail("GitHub Actions cannot run the exact-runtime activation preflight")
     _require_private_effective_group()
 
 
@@ -356,15 +412,27 @@ def _expected_activation_contract(*, bootstrap_sha256: str) -> dict[str, object]
                 "total_bytes": 19_879_272,
                 "virtual_executable_mappings": ["[vdso]", "[vsyscall]"],
             },
+            "preinit_executable_closure": {
+                "executable_file_count": 20,
+                "manifest_sha256": _EXPECTED_SOURCE_BINDINGS[
+                    "preinit_executable_closure_manifest_sha256"
+                ],
+                "path": (
+                    "config/engine_v2_full_pipeline_cpu_performance_v1_"
+                    "preinit_executable_closure.json"
+                ),
+                "total_bytes": 17_279_568,
+                "virtual_executable_mappings": ["[vdso]", "[vsyscall]"],
+            },
             "stdlib_import_closure": {
-                "cached_bytecode_file_count": 78,
-                "cached_bytecode_total_bytes": 1_447_655,
-                "file_backed_module_count": 84,
-                "file_backed_total_bytes": 2_194_777,
+                "cached_bytecode_file_count": 79,
+                "cached_bytecode_total_bytes": 1_449_467,
+                "file_backed_module_count": 85,
+                "file_backed_total_bytes": 2_196_025,
                 "manifest_sha256": _EXPECTED_SOURCE_BINDINGS[
                     "stdlib_import_closure_manifest_sha256"
                 ],
-                "module_count": 125,
+                "module_count": 126,
                 "path": (
                     "config/engine_v2_full_pipeline_cpu_performance_v1_"
                     "stdlib_closure.json"
@@ -375,13 +443,20 @@ def _expected_activation_contract(*, bootstrap_sha256: str) -> dict[str, object]
             "activation_module_sha256": _BOUND_MODULE_ROWS[1][2],
             "bootstrap_flags": ["-I", "-S", "-B"],
             "caller_science_input_allowed": False,
+            "exact_dynamic_loader_path": str(_EXACT_DYNAMIC_LOADER),
+            "exact_loader_environment": dict(_EXACT_LOADER_BOOTSTRAP_ENVIRONMENT),
+            "exact_loader_inhibit_cache": True,
+            "exact_loader_library_path": _EXACT_DYNAMIC_LOADER_LIBRARY_PATH,
+            "exact_loader_preload_paths": list(_EXACT_NATIVE_DEPENDENCY_PRELOAD_PATHS),
             "exact_native_extension_import_required": True,
+            "exact_preinit_closure_required": True,
             "github_actions_preflight_allowed": False,
             "host_preflight_required": True,
             "molecular_input_allowed": False,
             "performance_measurement_allowed": False,
             "performance_sidecar_sha256": _BOUND_MODULE_ROWS[0][2],
             "preflight_tool_sha256": bootstrap_sha256,
+            "native_initialization_delta_exact": True,
             "qualification_state_write_allowed": False,
             "reservation_allowed": False,
         },
@@ -881,17 +956,32 @@ def derive_preflight(
         runtime_root=runtime_root,
     ).to_dict()
     native_extension_sha256 = str(runtime_evidence["native_extension_sha256"])
+    host = modules["performance_host_preflight_v3"].derive_host_preflight_evidence_v3()
+    host_document = host.to_dict()
+    activation = modules["full_pipeline_cpu_performance_v1_activation"]
+    observed_preinit = activation.derive_dynamic_library_closure(
+        site_packages=site_packages
+    )
+    expected_preinit, preinit_manifest_sha256 = _load_closure_manifest(
+        repository_root=repository_root,
+        relative_path=(
+            "config/engine_v2_full_pipeline_cpu_performance_v1_"
+            "preinit_executable_closure.json"
+        ),
+        binding_name="preinit_executable_closure_manifest_sha256",
+        schema_id=activation.DYNAMIC_LIBRARY_CLOSURE_SCHEMA_ID,
+    )
+    activation.require_exact_closure(
+        observed_preinit,
+        expected_preinit,
+        name="pre-initialization executable-file mapping closure",
+    )
+    if dict(os.environ) != _EXACT_LOADER_BOOTSTRAP_ENVIRONMENT:
+        _fail("exact dynamic-loader environment changed before native initialization")
     _native, native_descriptor, native_metadata = _require_native_extension(
-        site_packages,
-        expected_sha256=native_extension_sha256,
+        site_packages, expected_sha256=native_extension_sha256
     )
     try:
-        host = modules[
-            "performance_host_preflight_v3"
-        ].derive_host_preflight_evidence_v3()
-        host_document = host.to_dict()
-
-        activation = modules["full_pipeline_cpu_performance_v1_activation"]
         observed_stdlib = activation.derive_stdlib_import_closure()
         observed_dynamic = activation.derive_dynamic_library_closure(
             site_packages=site_packages,
@@ -928,6 +1018,12 @@ def derive_preflight(
             expected_dynamic,
             name="executable-file mapping closure",
         )
+        activation.require_exact_native_initialization_delta(
+            observed_preinit,
+            observed_dynamic,
+            native_extension_sha256=native_extension_sha256,
+            native_extension_size_bytes=native_metadata.st_size,
+        )
         _require_native_snapshot_sealed(
             native_descriptor,
             expected_metadata=native_metadata,
@@ -937,6 +1033,7 @@ def derive_preflight(
         evidence = activation.ActivationPreflightEvidenceV1(
             activation_sha256=hashlib.sha256(contract_raw).hexdigest(),
             profile_sha256=str(contract["profile_sha256"]),
+            preinit_executable_closure_manifest_sha256=(preinit_manifest_sha256),
             stdlib_import_closure_manifest_sha256=stdlib_manifest_sha256,
             dynamic_library_closure_manifest_sha256=dynamic_manifest_sha256,
             host_preflight=host_document,
@@ -949,6 +1046,8 @@ def derive_preflight(
         evidence["native_entrypoints_verified"] = True
         evidence["native_extension_descriptor_bound"] = True
         evidence["native_extension_immutable_snapshot_bound"] = True
+        evidence["native_dependencies_preinitialized_and_authenticated"] = True
+        evidence["native_initialization_mapping_delta_exact"] = True
         evidence["native_public_package_verified"] = True
         return evidence
     finally:
