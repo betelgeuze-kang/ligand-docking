@@ -60,6 +60,7 @@ from .docking.interaction_refinement import (
 from .docking.native_fixed64_consumers import (
     NativeFixed64CliAdapter,
     NativeFixed64ConsumerError,
+    REPOSITORY_SYNTHETIC_D0_NATIVE_ACKNOWLEDGMENT,
 )
 from .docking.scorer_v1 import SCORER_V1_SCORE_ID, SCORER_V1_TERMS_SCHEMA_ID
 from .docking.torsion_contact_refinement import (
@@ -928,6 +929,32 @@ def dock_native_fixed64(input_path: Path) -> dict[str, object]:
         return NativeFixed64CliAdapter().run(document).to_dict()
     except NativeFixed64ConsumerError as exc:
         raise StandaloneDockCliError("native fixed64 docking failed closed") from exc
+
+
+def dock_repository_synthetic_d0_native(
+    *, backend: str, synthetic_acknowledged: bool = False
+) -> dict[str, object]:
+    """Run the repository D0 source through the no-caller-science native core."""
+
+    if synthetic_acknowledged is not True:
+        raise StandaloneDockCliError(
+            "repository native D0 docking requires --test-only-synthetic"
+        )
+    try:
+        return (
+            NativeFixed64CliAdapter()
+            .run_repository_synthetic_d0(
+                backend=backend,
+                synthetic_only_acknowledgment=(
+                    REPOSITORY_SYNTHETIC_D0_NATIVE_ACKNOWLEDGMENT
+                ),
+            )
+            .to_dict()
+        )
+    except NativeFixed64ConsumerError as exc:
+        raise StandaloneDockCliError(
+            "repository native D0 docking failed closed"
+        ) from exc
 
 
 def _load_canonical_json(path: Path, *, name: str, maximum: int) -> dict[str, object]:
@@ -2270,6 +2297,10 @@ def _parser() -> argparse.ArgumentParser:
     docking.add_argument("--pocket", type=Path)
     docking.add_argument("--seed", type=int)
     docking.add_argument("--native-fixed64-input", type=Path)
+    docking.add_argument(
+        "--repository-native-d0-backend",
+        choices=("cpp_cpu_reference", "rust_cpu"),
+    )
     docking.add_argument("--test-only-synthetic", action="store_true")
     docking.add_argument("--output", type=Path, required=True)
     docking.add_argument("--overwrite", action="store_true")
@@ -2314,8 +2345,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 input_paths=source_paths,
             )
         elif arguments.command == "dock":
-            if arguments.native_fixed64_input is not None:
-                if any(
+            if arguments.repository_native_d0_backend is not None:
+                if arguments.native_fixed64_input is not None or any(
                     value is not None
                     for value in (
                         arguments.receptor,
@@ -2323,7 +2354,28 @@ def main(argv: Sequence[str] | None = None) -> int:
                         arguments.pocket,
                         arguments.seed,
                     )
-                ) or arguments.test_only_synthetic:
+                ):
+                    raise StandaloneDockCliError(
+                        "--repository-native-d0-backend cannot be combined with input documents"
+                    )
+                document = dock_repository_synthetic_d0_native(
+                    backend=arguments.repository_native_d0_backend,
+                    synthetic_acknowledged=arguments.test_only_synthetic,
+                )
+                input_paths = ()
+            elif arguments.native_fixed64_input is not None:
+                if (
+                    any(
+                        value is not None
+                        for value in (
+                            arguments.receptor,
+                            arguments.ligand,
+                            arguments.pocket,
+                            arguments.seed,
+                        )
+                    )
+                    or arguments.test_only_synthetic
+                ):
                     raise StandaloneDockCliError(
                         "--native-fixed64-input cannot be combined with legacy dock inputs"
                     )
@@ -2341,7 +2393,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 ):
                     raise StandaloneDockCliError(
                         "dock requires receptor, ligand, pocket, and seed unless "
-                        "--native-fixed64-input is used"
+                        "--native-fixed64-input or --repository-native-d0-backend is used"
                     )
                 document = dock(
                     receptor_path=arguments.receptor,
@@ -2398,6 +2450,7 @@ __all__ = [
     "PIPELINE_REPORT_SCHEMA_ID",
     "PIPELINE_VERIFICATION_SCHEMA_ID",
     "dock_native_fixed64",
+    "dock_repository_synthetic_d0_native",
     "STANDALONE_CLI_ID",
     "StandaloneDockCliError",
     "define_explicit_pocket",

@@ -17,7 +17,11 @@ from betelgeuze_engine_v2.docking.native_fixed64_consumers import (
     NativeFixed64PreparedSessionV1,
     NativeFixed64ProductShadowAdapter,
     NativeFixed64PythonApi,
+    NativeRepositorySyntheticD0EvidenceV1,
+    NativeRepositorySyntheticD0PreparedSessionV1,
+    REPOSITORY_SYNTHETIC_D0_NATIVE_ACKNOWLEDGMENT,
     prepare_native_fixed64_session,
+    prepare_repository_synthetic_d0_session,
     run_native_fixed64_surface,
 )
 import betelgeuze_engine_v2.docking.native_fixed64_consumers as native_consumers
@@ -43,19 +47,25 @@ class _DictSubclass(dict):
 
 class _StringSubclass(str):
     def __hash__(self) -> int:
-        raise AssertionError("prepared session must reject before caller string hashing")
+        raise AssertionError(
+            "prepared session must reject before caller string hashing"
+        )
 
 
 class _StringProtocolObject:
     def __eq__(self, _other: object) -> bool:
-        raise AssertionError("prepared session must reject before caller string comparison")
+        raise AssertionError(
+            "prepared session must reject before caller string comparison"
+        )
 
 
 class _StringKeySubclass(str):
     __hash__ = str.__hash__
 
     def __eq__(self, _other: object) -> bool:
-        raise AssertionError("prepared session must reject before caller key comparison")
+        raise AssertionError(
+            "prepared session must reject before caller key comparison"
+        )
 
 
 class _DeepcopyTrap:
@@ -250,13 +260,12 @@ def test_prepared_session_reuses_one_native_context_without_caching_science(
 
     assert rerun.to_dict() == results["cli"].to_dict() == stateless
     assert len({item.pipeline_receipt_sha256 for item in results.values()}) == 1
-    assert len(
-        {item.prepared_input_receipt_sha256 for item in results.values()}
-    ) == 1
+    assert len({item.prepared_input_receipt_sha256 for item in results.values()}) == 1
     assert len({item.consumer_view_receipt_sha256 for item in results.values()}) == 4
-    assert results["product_shadow"].to_dict()[
-        "operator_second_opinion_authorized"
-    ] is True
+    assert (
+        results["product_shadow"].to_dict()["operator_second_opinion_authorized"]
+        is True
+    )
 
 
 def test_prepared_session_owns_input_after_bounded_native_copy(native) -> None:
@@ -286,7 +295,8 @@ def test_prepared_session_rejects_surface_subclass_before_protocols(native) -> N
         session.run(surface=surface)  # type: ignore[arg-type]
     with pytest.raises(NativeFixed64ConsumerError, match="unsupported"):
         run_native_fixed64_surface(
-            _input(), surface=surface  # type: ignore[arg-type]
+            _input(),
+            surface=surface,  # type: ignore[arg-type]
         )
     raw_session = native.native_fixed64_prepare_session_v1(_input())
     with pytest.raises(ValueError, match="exact string"):
@@ -326,7 +336,9 @@ def test_prepared_session_cpu_backends_match_stateless_v3(native, backend: str) 
 
 
 @pytest.mark.parametrize("backend", ("hip_safe", "hip_fast"))
-def test_prepared_session_rejects_hip_before_context_creation(native, backend: str) -> None:
+def test_prepared_session_rejects_hip_before_context_creation(
+    native, backend: str
+) -> None:
     source = _input()
     source["backend"] = backend
 
@@ -780,6 +792,187 @@ def test_complete_python_facade_binds_public_receipts_to_complete_graph(
     document["receipt_graph"][graph_field] = _digest(119)
     with pytest.raises(NativeFixed64ConsumerError, match="aliases are cross-wired"):
         NativeFixed64EvidenceV3(surface="api", _document=document)
+
+
+def test_repository_d0_native_session_uses_one_source_bound_core_across_surfaces(
+    native,
+) -> None:
+    decisions: dict[str, str] = {}
+    pipeline_receipts: dict[str, str] = {}
+    for backend in ("cpp_cpu_reference", "rust_cpu"):
+        session = prepare_repository_synthetic_d0_session(
+            backend=backend,
+            default_surface="cli",
+            synthetic_only_acknowledgment=(
+                REPOSITORY_SYNTHETIC_D0_NATIVE_ACKNOWLEDGMENT
+            ),
+        )
+        assert isinstance(session, NativeRepositorySyntheticD0PreparedSessionV1)
+        metadata = session.describe()
+        assert metadata["prepared_source_origin"] == (
+            "repository_synthetic_d0_native_materializer"
+        )
+        assert metadata["caller_science_transport_consumed"] is False
+        assert metadata["candidate_denominator"] == 64
+        assert metadata["exact_cartesian_pair_count"] == 25
+        assert metadata["prepared_input_scalar_count"] == 1_178
+        assert metadata["repository_backend_binding"]["backend"] == backend
+        results = {
+            surface: session.run(surface=surface)
+            for surface in ("cli", "benchmark", "api", "product_shadow")
+        }
+        assert all(
+            isinstance(result, NativeRepositorySyntheticD0EvidenceV1)
+            for result in results.values()
+        )
+        documents = {surface: result.to_dict() for surface, result in results.items()}
+        assert len({result.pipeline_receipt_sha256 for result in results.values()}) == 1
+        assert (
+            len(
+                {
+                    document["repository_session_binding_receipt_sha256"]
+                    for document in documents.values()
+                }
+            )
+            == 1
+        )
+        assert (
+            len(
+                {
+                    document["repository_scientific_decision_sha256"]
+                    for document in documents.values()
+                }
+            )
+            == 1
+        )
+        assert (
+            len({result.consumer_view_receipt_sha256 for result in results.values()})
+            == 4
+        )
+        assert documents["product_shadow"]["operator_second_opinion_authorized"] is True
+        assert all(
+            document["existing_rank_auto_change_authorized"] is False
+            and document["molecular_execution_authorized"] is False
+            and document["qualification_rerun_authorized"] is False
+            for document in documents.values()
+        )
+        decisions[backend] = str(
+            documents["api"]["repository_scientific_decision_sha256"]
+        )
+        pipeline_receipts[backend] = results["api"].pipeline_receipt_sha256
+    assert len(set(decisions.values())) == 1
+    assert len(set(pipeline_receipts.values())) == 2
+
+
+def test_repository_d0_native_session_rejects_authority_and_binding_drift(
+    native,
+) -> None:
+    with pytest.raises(TypeError, match="exact strings"):
+        prepare_repository_synthetic_d0_session(
+            backend=_StringSubclass("rust_cpu"),
+            default_surface="api",
+            synthetic_only_acknowledgment=(
+                REPOSITORY_SYNTHETIC_D0_NATIVE_ACKNOWLEDGMENT
+            ),
+        )
+    with pytest.raises(NativeFixed64ConsumerError, match="exact synthetic-only"):
+        prepare_repository_synthetic_d0_session(
+            backend="rust_cpu",
+            default_surface="api",
+            synthetic_only_acknowledgment="acknowledged",
+        )
+    with pytest.raises(NativeFixed64ConsumerError, match="HIP execution"):
+        prepare_repository_synthetic_d0_session(
+            backend="hip_safe",
+            default_surface="api",
+            synthetic_only_acknowledgment=(
+                REPOSITORY_SYNTHETIC_D0_NATIVE_ACKNOWLEDGMENT
+            ),
+        )
+    raw = native.native_fixed64_prepare_repository_synthetic_d0_session_v1
+    with pytest.raises(ValueError, match="exact synthetic-only"):
+        raw("rust_cpu", "api", "acknowledged")
+    with pytest.raises(ValueError, match="HIP device execution is unauthorized"):
+        raw(
+            "hip_safe",
+            "api",
+            REPOSITORY_SYNTHETIC_D0_NATIVE_ACKNOWLEDGMENT,
+        )
+
+    evidence = NativeFixed64PythonApi().run_repository_synthetic_d0(
+        backend="rust_cpu",
+        synthetic_only_acknowledgment=REPOSITORY_SYNTHETIC_D0_NATIVE_ACKNOWLEDGMENT,
+    )
+    document = evidence.to_dict()
+    document["repository_backend_binding"]["native_source_closure_sha256"] = _digest(1)
+    with pytest.raises(NativeFixed64ConsumerError, match="not rederivable"):
+        NativeRepositorySyntheticD0EvidenceV1(
+            surface="api",
+            _document=document,
+        )
+
+    document = evidence.to_dict()
+    document["backend"] = _StringSubclass("rust_cpu")
+    with pytest.raises(TypeError, match="exact Python identities"):
+        NativeRepositorySyntheticD0EvidenceV1(
+            surface="api",
+            _document=document,
+        )
+
+    document = evidence.to_dict()
+    binding = document["repository_backend_binding"]
+    assert isinstance(binding, dict)
+    binding["toolchain_attestation_status"] = "attested_sha256"
+    binding["native_toolchain_sha256"] = "0" * 64
+    with pytest.raises(NativeFixed64ConsumerError, match="attested build identity"):
+        NativeRepositorySyntheticD0EvidenceV1(
+            surface="api",
+            _document=document,
+        )
+
+
+def test_cli_routes_repository_d0_without_caller_science(native, tmp_path) -> None:
+    output_path = tmp_path / "repository-d0-native-output.json"
+
+    assert (
+        standalone_main(
+            [
+                "dock",
+                "--repository-native-d0-backend",
+                "rust_cpu",
+                "--test-only-synthetic",
+                "--output",
+                str(output_path),
+            ]
+        )
+        == 0
+    )
+    result = json.loads(output_path.read_text(encoding="ascii"))
+    assert result["consumer"] == "cli"
+    assert result["prepared_source_origin"] == (
+        "repository_synthetic_d0_native_materializer"
+    )
+    assert result["caller_science_transport_consumed"] is False
+    assert result["candidate_denominator"] == 64
+    assert result["generated_count"] == 54
+    assert result["typed_failure_count"] == 10
+    assert result["molecular_execution_authorized"] is False
+    assert result["qualification_rerun_authorized"] is False
+
+    rejected_path = tmp_path / "repository-d0-native-rejected.json"
+    assert (
+        standalone_main(
+            [
+                "dock",
+                "--repository-native-d0-backend",
+                "rust_cpu",
+                "--output",
+                str(rejected_path),
+            ]
+        )
+        == 2
+    )
+    assert not rejected_path.exists()
 
 
 def test_cli_routes_complete_schema_without_python_science(native, tmp_path) -> None:
