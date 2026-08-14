@@ -241,6 +241,27 @@ def test_supervisor_contract_rejects_workflow_drift(tmp_path: Path) -> None:
         verify(workflow_paths=(workflow, *DEFAULT_WORKFLOWS[1:]))
 
 
+def test_supervisor_contract_rejects_ci_audit_sparse_omission(
+    tmp_path: Path,
+) -> None:
+    original = DEFAULT_WORKFLOWS[1]
+    raw = original.read_text(encoding="utf-8")
+    needle = "tools/audit_engine_v2_ci_authority.py"
+    assert raw.count(needle) >= 2
+    workflow = tmp_path / original.name
+    prefix, suffix = raw.rsplit(needle, 1)
+    workflow.write_text(prefix + "DRIFTED" + suffix, encoding="utf-8")
+
+    with pytest.raises(SupervisorContractError, match="sparse checkout"):
+        verify(
+            workflow_paths=(
+                DEFAULT_WORKFLOWS[0],
+                workflow,
+                DEFAULT_WORKFLOWS[2],
+            )
+        )
+
+
 def test_supervisor_contract_rejects_documentation_drift(tmp_path: Path) -> None:
     raw = DEFAULT_DOCUMENTATION.read_text(encoding="utf-8")
     needle = "not an activation receipt"

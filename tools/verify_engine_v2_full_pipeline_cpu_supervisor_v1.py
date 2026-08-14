@@ -444,12 +444,17 @@ def _verify_workflows(paths: tuple[Path, ...]) -> None:
         "config/engine_v2_full_pipeline_cpu_supervisor_v1.json",
         "native/tools/engine_v2_full_pipeline_cpu_supervisor_v1.cpp",
         "tools/verify_engine_v2_full_pipeline_cpu_supervisor_v1.py",
+        "tools/audit_engine_v2_ci_authority.py",
         "tests/unit/test_verify_engine_v2_full_pipeline_cpu_supervisor_v1.py",
         "docs/engine_v2_full_pipeline_cpu_supervisor_v1.md",
         "Verify full-pipeline CPU supervisor v1",
     )
     for path in paths:
         workflow = _require_snippets(path, required)
+        if workflow.count("tools/audit_engine_v2_ci_authority.py") < 2:
+            raise SupervisorContractError(
+                f"{path.name} sparse checkout lost the bound CI authority audit"
+            )
         if any(
             forbidden in workflow
             for forbidden in (

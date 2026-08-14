@@ -54,6 +54,7 @@ on:
       - "config/engine_v2_full_pipeline_cpu_supervisor_v1.json"
       - "native/tools/engine_v2_full_pipeline_cpu_supervisor_v1.cpp"
       - "tools/verify_engine_v2_full_pipeline_cpu_supervisor_v1.py"
+      - "tools/audit_engine_v2_ci_authority.py"
       - "tests/unit/test_verify_engine_v2_full_pipeline_cpu_supervisor_v1.py"
       - "docs/engine_v2_full_pipeline_cpu_supervisor_v1.md"
       - "tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1.py"
@@ -262,6 +263,7 @@ jobs:
             config/engine_v2_full_pipeline_cpu_supervisor_v1.json
             native/tools/engine_v2_full_pipeline_cpu_supervisor_v1.cpp
             tools/verify_engine_v2_full_pipeline_cpu_supervisor_v1.py
+            tools/audit_engine_v2_ci_authority.py
             tests/unit/test_verify_engine_v2_full_pipeline_cpu_supervisor_v1.py
             docs/engine_v2_full_pipeline_cpu_supervisor_v1.md
             tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py
