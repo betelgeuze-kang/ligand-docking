@@ -281,6 +281,11 @@ _AUDITED_UNRESOLVED_DYNAMIC_CODE = frozenset(
             "exec_module",
             "code",
         ),
+        (
+            "tools.preflight_engine_v2_full_pipeline_cpu_performance_v1_activation",
+            "_load_source_module",
+            "code",
+        ),
     }
 )
 _CMAKE_EXTERNAL_RE = re.compile(
