@@ -76,12 +76,12 @@ ACTIVATION_SCHEMA_ID = (
 ACTIVATION_ID = "engine_v2_full_pipeline_cpu_performance_v1_activation"
 PROFILE_ID = "engine_v2_full_pipeline_cpu_performance_v1"
 PROFILE_SHA256 = "385fb713cca8f39353f138115749abdfc9768b02222e13111a418360be30a000"
-ACTIVATION_SHA256 = "9f05b674e107f5c592fa091a6d6b1fc814eae7c93eda7229ac5c2168fa916f82"
+ACTIVATION_SHA256 = "15b9ba143be03d68382f60367f1e8c1e16e6da4fb7a61ab187b6e465d5ae1623"
 STDLIB_CLOSURE_SHA256 = (
     "230cc88d60a9fd0f92318492ec533672930e72eaed11ef5410a45ce7edbb690b"
 )
 DYNAMIC_CLOSURE_SHA256 = (
-    "9112e029cf620efbb9dd4769540c8b80da30ade25cc8d55ccdc64f8e374c7247"
+    "a5c56fd7ac0c26224e2282f88e54ff3a4e19c6a1d52263407f03d156199e7352"
 )
 FOUNDATION_COMMIT_OID = "38c16136a1e2cc126517ff9b50a05f06c5795adb"
 FOUNDATION_COMMIT_SHA256 = (
@@ -460,7 +460,12 @@ def _validate_dynamic_closure(document: dict[str, Any]) -> None:
             type(identity) is not str
             or not identity.isascii()
             or not identity.startswith(
-                ("qualified_site_packages/", "stdlib/", "system:/")
+                (
+                    "qualified_site_packages/",
+                    "sealed_memfd:",
+                    "stdlib/",
+                    "system:/",
+                )
             )
             or ".." in PurePosixPath(identity.removeprefix("system:")).parts
         ):
@@ -791,6 +796,11 @@ def verify(
             "ExtensionFileLoader",
             "/proc/self/fd/",
             "_require_native_descriptor_stable",
+            "memfd_create",
+            "F_ADD_SEALS",
+            "F_SEAL_WRITE",
+            "_require_native_snapshot_sealed",
+            "_populate_native_package",
             "required_executable_file_identity",
             "native_fixed64_prepare_repository_synthetic_d0_session_v1",
             "native_fixed64_repository_synthetic_d0_cpu_parity_v1",
@@ -808,6 +818,8 @@ def verify(
             "deleted executable file mapping is forbidden",
             "unexpected anonymous executable mapping",
             "expected_mapping_identity=mapping_identity",
+            "SEALED_NATIVE_EXTENSION_MAP_PATH",
+            "sealed_executable_descriptor",
         ),
     )
     _require_snippets(
@@ -838,7 +850,9 @@ def verify(
             "84 file-backed",
             "78 declared bytecode-cache files",
             "21 file-backed executable mappings",
-            "descriptor-bound native initialization",
+            "descriptor-bound native",
+            "sealed memfd",
+            "public package",
         ),
     )
     workflow_tokens = (

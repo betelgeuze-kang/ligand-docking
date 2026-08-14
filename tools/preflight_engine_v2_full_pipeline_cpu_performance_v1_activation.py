@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import argparse
+import fcntl
 import grp
 import hashlib
 import importlib.machinery
@@ -34,6 +35,10 @@ _MAX_NATIVE_EXTENSION_BYTES = 16 * 1024 * 1024
 _NATIVE_EXTENSION_RELATIVE_PATH = Path(
     "betelgeuze_engine_v2_native/"
     "betelgeuze_engine_v2_native.cpython-310-x86_64-linux-gnu.so"
+)
+_SEALED_NATIVE_EXTENSION_NAME = "engine-v2-native-extension-v1"
+_REQUIRED_NATIVE_SNAPSHOT_SEALS = (
+    fcntl.F_SEAL_SEAL | fcntl.F_SEAL_SHRINK | fcntl.F_SEAL_GROW | fcntl.F_SEAL_WRITE
 )
 _ACTIVATION_SCHEMA_ID = (
     "betelgeuze.engine_v2_full_pipeline_cpu_performance_activation/1.0.0"
@@ -72,7 +77,7 @@ _EXPECTED_SOURCE_BINDINGS = {
         "230cc88d60a9fd0f92318492ec533672930e72eaed11ef5410a45ce7edbb690b"
     ),
     "dynamic_library_closure_manifest_sha256": (
-        "9112e029cf620efbb9dd4769540c8b80da30ade25cc8d55ccdc64f8e374c7247"
+        "a5c56fd7ac0c26224e2282f88e54ff3a4e19c6a1d52263407f03d156199e7352"
     ),
 }
 _BOUND_MODULE_ROWS = (
@@ -84,7 +89,7 @@ _BOUND_MODULE_ROWS = (
     (
         "full_pipeline_cpu_performance_v1_activation",
         "full_pipeline_cpu_performance_v1_activation.py",
-        "67e419c0a8d56aa0c59c87d9650cf51f55d234a4e74f984ea8ff89c247e402c5",
+        "73dc3b152a878cd14923f6df9cb881b7fb5eb3647fc8bdb7e90ee9f6cf47c78d",
     ),
     (
         "full_pipeline_cpu_performance_v1",
@@ -667,6 +672,117 @@ def _open_authenticated_native_extension(
         raise
 
 
+def _require_native_snapshot_sealed(
+    descriptor: int,
+    *,
+    expected_metadata: os.stat_result,
+    expected_sha256: str,
+) -> None:
+    metadata = os.fstat(descriptor)
+    try:
+        seals = fcntl.fcntl(descriptor, fcntl.F_GET_SEALS)
+    except OSError as exc:
+        raise RuntimeError("native extension snapshot seals are unavailable") from exc
+    if (
+        not stat.S_ISREG(metadata.st_mode)
+        or metadata.st_uid != os.geteuid()
+        or metadata.st_gid != os.getegid()
+        or stat.S_IMODE(metadata.st_mode) != 0o500
+        or metadata.st_nlink != 0
+        or seals != _REQUIRED_NATIVE_SNAPSHOT_SEALS
+    ):
+        _fail("native extension snapshot is not immutable")
+    _require_native_descriptor_stable(
+        descriptor,
+        expected_metadata=expected_metadata,
+        expected_sha256=expected_sha256,
+    )
+
+
+def _create_sealed_native_extension_snapshot(
+    source_descriptor: int, *, expected_sha256: str
+) -> tuple[int, os.stat_result]:
+    if not hasattr(os, "memfd_create") or not hasattr(os, "MFD_ALLOW_SEALING"):
+        _fail("sealed native extension snapshots are unavailable")
+    try:
+        descriptor = os.memfd_create(
+            _SEALED_NATIVE_EXTENSION_NAME,
+            flags=os.MFD_CLOEXEC | os.MFD_ALLOW_SEALING,
+        )
+    except OSError as exc:
+        raise RuntimeError("native extension snapshot cannot be created") from exc
+    try:
+        offset = 0
+        while offset <= _MAX_NATIVE_EXTENSION_BYTES:
+            chunk = os.pread(
+                source_descriptor,
+                min(1 << 20, _MAX_NATIVE_EXTENSION_BYTES + 1 - offset),
+                offset,
+            )
+            if not chunk:
+                break
+            written = 0
+            while written < len(chunk):
+                count = os.pwrite(
+                    descriptor,
+                    chunk[written:],
+                    offset + written,
+                )
+                if count <= 0:
+                    _fail("native extension snapshot write did not progress")
+                written += count
+            offset += len(chunk)
+        if offset > _MAX_NATIVE_EXTENSION_BYTES:
+            _fail("native extension snapshot exceeds its byte envelope")
+        digest, observed_size = _descriptor_sha256(
+            descriptor,
+            maximum_bytes=_MAX_NATIVE_EXTENSION_BYTES,
+        )
+        if digest != expected_sha256 or observed_size != offset:
+            _fail("native extension snapshot differs from authenticated bytes")
+        os.fchmod(descriptor, 0o500)
+        fcntl.fcntl(
+            descriptor,
+            fcntl.F_ADD_SEALS,
+            _REQUIRED_NATIVE_SNAPSHOT_SEALS,
+        )
+        metadata = os.fstat(descriptor)
+        _require_native_snapshot_sealed(
+            descriptor,
+            expected_metadata=metadata,
+            expected_sha256=expected_sha256,
+        )
+        return descriptor, metadata
+    except BaseException:
+        os.close(descriptor)
+        raise
+
+
+def _populate_native_package(
+    package: types.ModuleType, native: types.ModuleType
+) -> None:
+    declared = getattr(native, "__all__", None)
+    if declared is None:
+        exported_names = tuple(
+            sorted(name for name in vars(native) if not name.startswith("_"))
+        )
+    else:
+        if (
+            type(declared) not in {list, tuple}
+            or any(type(name) is not str or not name for name in declared)
+            or len(set(declared)) != len(declared)
+        ):
+            _fail("native extension export surface is invalid")
+        exported_names = tuple(declared)
+        package.__all__ = declared
+    for name in exported_names:
+        if not hasattr(native, name):
+            _fail("native extension declared an absent export")
+        setattr(package, name, getattr(native, name))
+    package.betelgeuze_engine_v2_native = native
+    package.__doc__ = native.__doc__
+
+
 def _require_native_extension(
     site_packages: Path, *, expected_sha256: str
 ) -> tuple[types.ModuleType, int, os.stat_result]:
@@ -678,11 +794,19 @@ def _require_native_extension(
         site_packages / package_name,
         name="native extension package root",
     )
-    descriptor, metadata = _open_authenticated_native_extension(
+    source_descriptor, _source_metadata = _open_authenticated_native_extension(
         site_packages, expected_sha256=expected_sha256
     )
+    try:
+        descriptor, metadata = _create_sealed_native_extension_snapshot(
+            source_descriptor,
+            expected_sha256=expected_sha256,
+        )
+    finally:
+        os.close(source_descriptor)
     descriptor_path = f"/proc/self/fd/{descriptor}"
     _install_package_stub(package_name, package_root)
+    package = sys.modules[package_name]
     try:
         loader = importlib.machinery.ExtensionFileLoader(
             qualified_name, descriptor_path
@@ -697,16 +821,22 @@ def _require_native_extension(
         native = importlib.util.module_from_spec(specification)
         sys.modules[qualified_name] = native
         loader.exec_module(native)
-        _require_native_descriptor_stable(
+        _require_native_snapshot_sealed(
             descriptor,
             expected_metadata=metadata,
             expected_sha256=expected_sha256,
         )
+        _populate_native_package(package, native)
+        public_package = importlib.import_module(package_name)
+        if public_package is not package:
+            _fail("native extension public package identity changed")
         for name in (
             "native_fixed64_prepare_repository_synthetic_d0_session_v1",
             "native_fixed64_repository_synthetic_d0_cpu_parity_v1",
         ):
-            if not callable(getattr(native, name, None)):
+            if not callable(getattr(native, name, None)) or not callable(
+                getattr(public_package, name, None)
+            ):
                 _fail(f"exact native extension lacks required entrypoint {name}")
     except BaseException:
         sys.modules.pop(qualified_name, None)
@@ -770,6 +900,7 @@ def derive_preflight(
                 os.minor(native_metadata.st_dev),
                 native_metadata.st_ino,
             ),
+            sealed_executable_descriptor=native_descriptor,
         )
         expected_stdlib, stdlib_manifest_sha256 = _load_closure_manifest(
             repository_root=repository_root,
@@ -797,7 +928,7 @@ def derive_preflight(
             expected_dynamic,
             name="executable-file mapping closure",
         )
-        _require_native_descriptor_stable(
+        _require_native_snapshot_sealed(
             native_descriptor,
             expected_metadata=native_metadata,
             expected_sha256=native_extension_sha256,
@@ -817,6 +948,8 @@ def derive_preflight(
         evidence["native_extension_sha256"] = native_extension_sha256
         evidence["native_entrypoints_verified"] = True
         evidence["native_extension_descriptor_bound"] = True
+        evidence["native_extension_immutable_snapshot_bound"] = True
+        evidence["native_public_package_verified"] = True
         return evidence
     finally:
         os.close(native_descriptor)

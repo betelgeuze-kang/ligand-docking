@@ -2,7 +2,7 @@
   "executable_file_count": 21,
   "rows": [
     {
-      "path": "qualified_site_packages/betelgeuze_engine_v2_native/betelgeuze_engine_v2_native.cpython-310-x86_64-linux-gnu.so",
+      "path": "sealed_memfd:engine-v2-native-extension-v1",
       "sha256": "ff7b5e6ba7c0e250cf739292d34c562d0bd142d5f7f6c842c5c191d42b2504e1",
       "size_bytes": 2599704
     },
@@ -107,7 +107,7 @@
       "size_bytes": 108936
     }
   ],
-  "rows_sha256": "544015acd76f71df4628b61850a02b7ce35fcc920e42f074ecea80420f47637c",
+  "rows_sha256": "bdf3394504814f18ce716da1f1ef9cdd0bb9e7c0851b165690892cbb158f50c0",
   "schema_id": "betelgeuze.engine_v2_executable_mapping_closure/1.0.0",
   "total_bytes": 19879272,
   "virtual_executable_mappings": [

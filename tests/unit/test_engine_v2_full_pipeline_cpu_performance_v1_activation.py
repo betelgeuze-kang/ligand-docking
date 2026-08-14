@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import errno
 import hashlib
 import importlib.machinery
 import json
@@ -246,6 +247,67 @@ def test_native_extension_descriptor_detects_post_authentication_change(
             )
     finally:
         os.close(descriptor)
+
+
+def test_native_extension_snapshot_is_sealed_before_load(tmp_path: Path) -> None:
+    extension = tmp_path / preflight._NATIVE_EXTENSION_RELATIVE_PATH
+    extension.parent.mkdir(parents=True)
+    original = b"immutable-native-snapshot" * 8
+    extension.write_bytes(original)
+    extension.chmod(0o600)
+    expected_sha256 = hashlib.sha256(original).hexdigest()
+    source_descriptor, _source_metadata = (
+        preflight._open_authenticated_native_extension(
+            tmp_path,
+            expected_sha256=expected_sha256,
+        )
+    )
+    try:
+        snapshot_descriptor, snapshot_metadata = (
+            preflight._create_sealed_native_extension_snapshot(
+                source_descriptor,
+                expected_sha256=expected_sha256,
+            )
+        )
+    finally:
+        os.close(source_descriptor)
+    try:
+        extension.write_bytes(b"mutable-source-drift-after-snapshot")
+        preflight._require_native_snapshot_sealed(
+            snapshot_descriptor,
+            expected_metadata=snapshot_metadata,
+            expected_sha256=expected_sha256,
+        )
+        with pytest.raises(OSError) as caught:
+            os.pwrite(snapshot_descriptor, b"X", 0)
+        assert caught.value.errno == errno.EPERM
+    finally:
+        os.close(snapshot_descriptor)
+
+
+def test_native_extension_public_package_reexports_entrypoints() -> None:
+    package = types.ModuleType("betelgeuze_engine_v2_native")
+    native = types.ModuleType("betelgeuze_engine_v2_native.betelgeuze_engine_v2_native")
+
+    def prepare() -> None:
+        return None
+
+    def parity() -> None:
+        return None
+
+    native.native_fixed64_prepare_repository_synthetic_d0_session_v1 = prepare
+    native.native_fixed64_repository_synthetic_d0_cpu_parity_v1 = parity
+    native.__all__ = [
+        "native_fixed64_prepare_repository_synthetic_d0_session_v1",
+        "native_fixed64_repository_synthetic_d0_cpu_parity_v1",
+    ]
+
+    preflight._populate_native_package(package, native)
+
+    assert package.native_fixed64_prepare_repository_synthetic_d0_session_v1 is prepare
+    assert package.native_fixed64_repository_synthetic_d0_cpu_parity_v1 is parity
+    assert package.betelgeuze_engine_v2_native is native
+    assert package.__all__ == native.__all__
 
 
 def test_exact_closure_rejects_semantic_drift() -> None:

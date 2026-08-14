@@ -42,27 +42,34 @@ projection, including all keys, runtime/foundation identities, closure
 summaries, false authority, and the self-hashed bootstrap. Unknown fields and
 Boolean/integer substitutions fail closed. The preflight opens the exact
 native extension through a stable no-follow descriptor, authenticates its
-bytes and inode, and initializes it through the same `/proc/self/fd`
-descriptor without creating a docking session. It retains and rechecks that
-descriptor until the loaded executable mapping has been matched to the same
-device and inode. The preflight then re-derives:
+bytes, copies them into an anonymous sealed memfd, sets mode `0500`, applies
+the complete write/grow/shrink/seal lock set, and closes the owner-writable
+source descriptor before native initialization. It loads only that immutable
+snapshot through `/proc/self/fd` without creating a docking session, retains
+and rechecks its seals, bytes, and metadata, and requires the loaded executable
+mapping to match the same device and inode. The loaded submodule exports are
+also projected onto the authenticated public package so subsequent canonical
+consumer imports resolve the verified entrypoints. The preflight then
+re-derives:
 
 - 125 imported standard-library module identities, including 84 file-backed
   source or extension rows with their complete hashes and sizes;
 - 78 declared bytecode-cache files with their paths, hashes, and sizes, so
   CPython's readable `.pyc` path cannot diverge from the frozen closure;
 - 21 file-backed executable mappings, including the CPython executable, native
-  extension, CPython extension modules, C/C++ runtimes, loader, and transitive
-  system libraries;
+  sealed native-extension snapshot, CPython extension modules, C/C++
+  runtimes, loader, and transitive system libraries;
 - the exact `[vdso]` and `[vsyscall]` virtual executable mapping set.
 
 The mappings come from the isolated process itself rather than `ldd`. Every
 file-backed executable mapping is included regardless of filename or suffix,
 including paths containing spaces. The map device/inode must equal the file
-descriptor identity used for hashing. Deleted mappings and unexpected
-anonymous executable mappings fail closed, and no caller-supplied expected
-digest is accepted. Added, missing, moved, or changed module/mapping rows fail
-closed.
+descriptor identity used for hashing. Ordinary deleted mappings and unexpected
+anonymous executable mappings fail closed; the sole deleted-path exception is
+the exact sealed memfd whose retained descriptor, zero link count, mode,
+device/inode, bytes, and kernel seals are independently verified. No
+caller-supplied expected digest is accepted. Added, missing, moved, or changed
+module/mapping rows fail closed.
 
 ## Non-consuming preflight
 
@@ -85,10 +92,11 @@ science input:
 ```
 
 GitHub Actions is rejected before any repository or native provider is loaded.
-The local result records import, descriptor-bound native initialization, host
-preflight evidence, and explicit false fields for measurement, qualification
-consumption, reservation, molecular execution, public benchmark, HIP device
-execution, and product action.
+The local result records immutable-snapshot and descriptor-bound native
+initialization, verified public package exports, host preflight evidence, and
+explicit false fields for measurement, qualification consumption, reservation,
+molecular execution, public benchmark, HIP device execution, and product
+action.
 
 A successful preflight only establishes that the reviewed activation bytes can
 be loaded on the pinned host. A later PR must add and bind a transactional

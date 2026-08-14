@@ -40,6 +40,10 @@ MAX_CLOSURE_TOTAL_BYTES: Final = 128 * 1024 * 1024
 MAX_STDLIB_MODULE_ROWS: Final = 512
 MAX_EXECUTABLE_FILE_ROWS: Final = 128
 ALLOWED_VIRTUAL_EXECUTABLE_MAPPINGS: Final = frozenset({"[vdso]", "[vsyscall]"})
+SEALED_NATIVE_EXTENSION_MAP_PATH: Final = (
+    "/memfd:engine-v2-native-extension-v1 (deleted)"
+)
+SEALED_NATIVE_EXTENSION_IDENTITY: Final = "sealed_memfd:engine-v2-native-extension-v1"
 
 
 class FullPipelineCPUActivationError(RuntimeError):
@@ -321,11 +325,68 @@ def _require_mapping_permissions(permissions: str) -> None:
         raise FullPipelineCPUActivationError("process map contains invalid permissions")
 
 
+def _read_stable_sealed_snapshot_descriptor(
+    descriptor: int,
+) -> tuple[tuple[int, int, int], bytes]:
+    try:
+        before = os.fstat(descriptor)
+    except OSError as exc:
+        raise FullPipelineCPUActivationError(
+            "sealed executable snapshot descriptor is unavailable"
+        ) from exc
+    if (
+        not stat.S_ISREG(before.st_mode)
+        or before.st_uid != os.geteuid()
+        or before.st_gid != os.getegid()
+        or stat.S_IMODE(before.st_mode) != 0o500
+        or before.st_nlink != 0
+        or not 1 <= before.st_size <= MAX_CLOSURE_FILE_BYTES
+    ):
+        raise FullPipelineCPUActivationError(
+            "sealed executable snapshot descriptor is invalid"
+        )
+    chunks: list[bytes] = []
+    observed = 0
+    while observed <= MAX_CLOSURE_FILE_BYTES:
+        chunk = os.pread(
+            descriptor,
+            min(1 << 20, MAX_CLOSURE_FILE_BYTES + 1 - observed),
+            observed,
+        )
+        if not chunk:
+            break
+        chunks.append(chunk)
+        observed += len(chunk)
+    after = os.fstat(descriptor)
+    identity_fields = (
+        "st_dev",
+        "st_ino",
+        "st_mode",
+        "st_uid",
+        "st_gid",
+        "st_nlink",
+        "st_size",
+        "st_mtime_ns",
+        "st_ctime_ns",
+    )
+    if observed != before.st_size or any(
+        getattr(before, field) != getattr(after, field) for field in identity_fields
+    ):
+        raise FullPipelineCPUActivationError(
+            "sealed executable snapshot changed while read"
+        )
+    return (
+        (os.major(before.st_dev), os.minor(before.st_dev), before.st_ino),
+        b"".join(chunks),
+    )
+
+
 def derive_dynamic_library_closure(
     *,
     site_packages: Path,
     process_maps_path: Path | None = None,
     required_executable_file_identity: tuple[int, int, int] | None = None,
+    sealed_executable_descriptor: int | None = None,
 ) -> dict[str, object]:
     """Hash every file-backed executable mapping in the activation process."""
 
@@ -336,7 +397,20 @@ def derive_dynamic_library_closure(
         raise FullPipelineCPUActivationError(
             "dynamic-library process map is unavailable"
         ) from exc
-    observed: dict[tuple[int, int, int], tuple[Path, str]] = {}
+    sealed_identity: tuple[int, int, int] | None = None
+    sealed_raw: bytes | None = None
+    if sealed_executable_descriptor is not None:
+        sealed_identity, sealed_raw = _read_stable_sealed_snapshot_descriptor(
+            sealed_executable_descriptor
+        )
+        if (
+            required_executable_file_identity is not None
+            and sealed_identity != required_executable_file_identity
+        ):
+            raise FullPipelineCPUActivationError(
+                "required executable identity differs from sealed snapshot"
+            )
+    observed: dict[tuple[int, int, int], tuple[Path | None, str]] = {}
     path_identities: dict[Path, tuple[int, int, int]] = {}
     virtual_executable_mappings: set[str] = set()
     for line in lines:
@@ -355,13 +429,27 @@ def derive_dynamic_library_closure(
                 )
             virtual_executable_mappings.add(raw_path)
             continue
-        if raw_path.endswith(" (deleted)"):
-            raise FullPipelineCPUActivationError(
-                "deleted executable file mapping is forbidden"
-            )
         mapping_identity = _parse_mapping_device_inode(
             device=fields[3], inode=fields[4]
         )
+        if raw_path.endswith(" (deleted)"):
+            if (
+                sealed_identity is None
+                or mapping_identity != sealed_identity
+                or raw_path != SEALED_NATIVE_EXTENSION_MAP_PATH
+            ):
+                raise FullPipelineCPUActivationError(
+                    "deleted executable file mapping is forbidden"
+                )
+            previous = observed.setdefault(
+                mapping_identity,
+                (None, SEALED_NATIVE_EXTENSION_IDENTITY),
+            )
+            if previous != (None, SEALED_NATIVE_EXTENSION_IDENTITY):
+                raise FullPipelineCPUActivationError(
+                    "sealed executable mapping identity is ambiguous"
+                )
+            continue
         try:
             path = Path(raw_path).resolve(strict=True)
             identity = _mapped_executable_identity(path, site_packages=site_packages)
@@ -391,12 +479,25 @@ def derive_dynamic_library_closure(
     for mapping_identity, (path, identity) in sorted(
         observed.items(), key=lambda item: item[1][1]
     ):
-        raw = _read_stable_regular_file(
-            path,
-            name="mapped executable file",
-            allowed_owner_uids=(0, os.geteuid()),
-            expected_mapping_identity=mapping_identity,
-        )
+        if path is None:
+            if sealed_executable_descriptor is None or sealed_raw is None:
+                raise FullPipelineCPUActivationError(
+                    "sealed executable mapping lacks its descriptor"
+                )
+            observed_identity, raw = _read_stable_sealed_snapshot_descriptor(
+                sealed_executable_descriptor
+            )
+            if observed_identity != mapping_identity or raw != sealed_raw:
+                raise FullPipelineCPUActivationError(
+                    "sealed executable mapping changed during closure derivation"
+                )
+        else:
+            raw = _read_stable_regular_file(
+                path,
+                name="mapped executable file",
+                allowed_owner_uids=(0, os.geteuid()),
+                expected_mapping_identity=mapping_identity,
+            )
         rows.append(
             {
                 "path": identity,
