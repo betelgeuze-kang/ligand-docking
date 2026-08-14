@@ -53,6 +53,10 @@ on:
       - "config/engine_v2_repository_synthetic_d0_native_session_v1.json"
       - "tools/verify_engine_v2_repository_synthetic_d0_native_session_v1.py"
       - "docs/engine_v2_repository_synthetic_d0_native_session_v1.md"
+      - "tests/unit/test_verify_engine_v2_repository_synthetic_d0_cpu_parity_v1.py"
+      - "config/engine_v2_repository_synthetic_d0_cpu_parity_v1.json"
+      - "tools/verify_engine_v2_repository_synthetic_d0_cpu_parity_v1.py"
+      - "docs/engine_v2_repository_synthetic_d0_cpu_parity_v1.md"
       - "config/engine_v2_cpu_performance_profile.json"
       - "config/engine_v2_native_fixed64_cpu_profile_v5_archive.json"
       - "config/engine_v2_native_fixed64_cpu_profile_v6.json"
@@ -135,6 +139,10 @@ jobs:
             config/engine_v2_repository_synthetic_d0_native_session_v1.json
             tools/verify_engine_v2_repository_synthetic_d0_native_session_v1.py
             docs/engine_v2_repository_synthetic_d0_native_session_v1.md
+            tests/unit/test_verify_engine_v2_repository_synthetic_d0_cpu_parity_v1.py
+            config/engine_v2_repository_synthetic_d0_cpu_parity_v1.json
+            tools/verify_engine_v2_repository_synthetic_d0_cpu_parity_v1.py
+            docs/engine_v2_repository_synthetic_d0_cpu_parity_v1.md
             tests/unit/test_engine_v2_native_fixed64_complete_pipeline.py
             .github/workflows/ci-native-compute-abi.yml
             .github/workflows/ci-engine-v2-release-candidate.yml
@@ -195,6 +203,10 @@ jobs:
       - name: Verify repository synthetic D0 native session v1 contract
         run: >-
           python tools/verify_engine_v2_repository_synthetic_d0_native_session_v1.py
+
+      - name: Verify repository synthetic D0 native CPU parity v1 contract
+        run: >-
+          python tools/verify_engine_v2_repository_synthetic_d0_cpu_parity_v1.py
 
       - name: Upload static-analysis diagnostics
         if: always()
@@ -440,6 +452,10 @@ jobs:
             config/engine_v2_repository_synthetic_d0_native_session_v1.json
             tools/verify_engine_v2_repository_synthetic_d0_native_session_v1.py
             docs/engine_v2_repository_synthetic_d0_native_session_v1.md
+            tests/unit/test_verify_engine_v2_repository_synthetic_d0_cpu_parity_v1.py
+            config/engine_v2_repository_synthetic_d0_cpu_parity_v1.json
+            tools/verify_engine_v2_repository_synthetic_d0_cpu_parity_v1.py
+            docs/engine_v2_repository_synthetic_d0_cpu_parity_v1.md
             config/engine_v2_cpu_performance_profile.json
             config/engine_v2_native_fixed64_cpu_profile_v5_archive.json
             config/engine_v2_native_fixed64_cpu_profile_v6.json
@@ -539,6 +555,7 @@ jobs:
             tests/unit/test_verify_engine_v2_native_fixed64_workspace_reuse_v1.py \
             tests/unit/test_verify_engine_v2_repository_synthetic_d0_native_source_v1.py \
             tests/unit/test_verify_engine_v2_repository_synthetic_d0_native_session_v1.py \
+            tests/unit/test_verify_engine_v2_repository_synthetic_d0_cpu_parity_v1.py \
             -k 'native or rust_cpu'
           python -m pytest -q tests/unit/test_engine_v2_docking_search_v2_facade.py
 

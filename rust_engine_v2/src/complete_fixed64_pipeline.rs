@@ -15,12 +15,13 @@ use betelgeuze_docking_search::{
     REPOSITORY_D0_PROFILE_ID, REPOSITORY_D0_RECEPTOR_ATOM_COUNT,
 };
 use betelgeuze_runtime::{
-    Backend, Context, ContextOptions, Fixed64AtomicFeature, Fixed64ChiralityCenter,
-    Fixed64ConformerCoordinateSource, Fixed64CoordinateSource, Fixed64Donor,
-    Fixed64ExactSourceEvidence, Fixed64FeatureGeometry, Fixed64FeatureKind, Fixed64Identities,
-    Fixed64IndexedCoordinateSource, Fixed64Ligand, Fixed64Pair, Fixed64Pipeline,
-    Fixed64PipelineContext, Fixed64PipelineReceipt, Fixed64Receptor, Fixed64RefinementMode,
-    Fixed64Rotor, Fixed64RunInput, Fixed64SourceEvidence, PositionSoa, PositionSoaOwned,
+    compare_fixed64_scientific_numeric_parity, Backend, Context, ContextOptions,
+    Fixed64AtomicFeature, Fixed64ChiralityCenter, Fixed64ConformerCoordinateSource,
+    Fixed64CoordinateSource, Fixed64Donor, Fixed64ExactSourceEvidence, Fixed64FeatureGeometry,
+    Fixed64FeatureKind, Fixed64Identities, Fixed64IndexedCoordinateSource, Fixed64Ligand,
+    Fixed64NumericParityV5, Fixed64Pair, Fixed64Pipeline, Fixed64PipelineContext,
+    Fixed64PipelineReceipt, Fixed64Receptor, Fixed64RefinementMode, Fixed64Rotor, Fixed64RunInput,
+    Fixed64ScientificProjection, Fixed64SourceEvidence, PositionSoa, PositionSoaOwned,
 };
 use numpy::{PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::prelude::*;
@@ -79,6 +80,24 @@ const REPOSITORY_D0_RIGID_MAX_STEPS: u64 = 20;
 const REPOSITORY_D0_TORSION_MAX_STEPS: u64 = 4;
 const REPOSITORY_D0_V3_TORSION_FIRST_SLOT: usize = 24;
 const REPOSITORY_D0_V3_TORSION_END_SLOT_EXCLUSIVE: usize = 44;
+const REPOSITORY_D0_CPU_PARITY_SCHEMA_ID: &str =
+    "betelgeuze.engine_v2_repository_synthetic_d0_cpu_parity_receipt/1.0.0";
+const REPOSITORY_D0_CPU_PARITY_PROFILE_ID: &str = "engine_v2_repository_synthetic_d0_cpu_parity_v1";
+const REPOSITORY_D0_CPU_PARITY_POLICY_SHA256: &str =
+    "47d3fd8a0fe341591d46c0427dc45d726898813e953b039ce66fd47816ad1511";
+const REPOSITORY_D0_CPU_PARITY_EXPECTED_DECISION_SHA256: &str =
+    "8908c757de4e7a8f5d12452e40ec0292b44c3db7893f98d5b92956e1f0c9d9f4";
+const REPOSITORY_D0_CPU_PARITY_EXPECTED_SOURCE_BUNDLE_SHA256: &str =
+    "80a7ee8fe919523c7afab78467dddb9bc2e653e028f1e731c9058db3ef17a68f";
+const REPOSITORY_D0_CPU_PARITY_ABSOLUTE_TOLERANCE: f64 = 1.0e-11;
+const REPOSITORY_D0_CPU_PARITY_RELATIVE_TOLERANCE: f64 = 4.0e-12;
+const REPOSITORY_D0_CPU_PARITY_RECEIPT_DOMAIN: &[u8] =
+    b"betelgeuze.engine-v2.repository-synthetic-d0-cpu-parity-receipt/v1\0";
+const REPOSITORY_D0_EXPECTED_PRIMARY_SLOT_INDICES: &[u32] =
+    &[23, 63, 9, 10, 29, 16, 61, 8, 11, 52, 20, 13, 33, 26, 34, 22];
+const REPOSITORY_D0_EXPECTED_REPRESENTATIVE_SLOT_INDICES: &[u32] =
+    &[23, 9, 10, 29, 16, 8, 11, 52, 20, 13, 33, 22];
+const REPOSITORY_D0_EXPECTED_TOP_K_SLOT_INDICES: &[u32] = &[23, 9, 10, 29, 16];
 
 const INPUT_KEYS: &[&str] = &[
     "schema_id",
@@ -469,6 +488,50 @@ struct RepositoryD0SessionBinding {
     binding_receipt_sha256: [u8; 32],
 }
 
+#[derive(Debug, Clone, PartialEq)]
+struct RepositoryD0CpuParityEvidence {
+    source_bundle_receipt_sha256: [u8; 32],
+    source_prepared_input_receipt_sha256: [u8; 32],
+    allocation_receipt_sha256: [u8; 32],
+    cpp_backend_binding_receipt_sha256: [u8; 32],
+    rust_backend_binding_receipt_sha256: [u8; 32],
+    cpp_pipeline_receipt_sha256: [u8; 32],
+    rust_pipeline_receipt_sha256: [u8; 32],
+    cpp_projection_sha256: [u8; 32],
+    rust_projection_sha256: [u8; 32],
+    scientific_decision_sha256: [u8; 32],
+    candidate_denominator: usize,
+    receptor_atom_count: usize,
+    ligand_atom_count: usize,
+    generated_count: u64,
+    typed_failure_count: u64,
+    initial_admitted_count: u64,
+    refined_count: u64,
+    post_admitted_count: u64,
+    post_rejected_count: u64,
+    scored_count: u64,
+    valid_count: u64,
+    cluster_count: u64,
+    primary_slot_indices: Vec<u32>,
+    valid_slot_indices: Vec<u32>,
+    representative_slot_indices: Vec<u32>,
+    top_k_slot_indices: Vec<u32>,
+    score_term_count: usize,
+    numeric_parity: Fixed64NumericParityV5,
+    coordinate_identity_equal_count: usize,
+    coordinate_identity_different_count: usize,
+    cpp_repeat_stable: bool,
+    rust_repeat_stable: bool,
+    exact_decision_parity: bool,
+    exact_count_parity: bool,
+    exact_rank_parity: bool,
+    exact_source_identity_parity: bool,
+    source_binding_parity: bool,
+    all_authority_false: bool,
+    gate_passed: bool,
+    receipt_sha256: [u8; 32],
+}
+
 pub(crate) fn register(module: &PyModule) -> PyResult<()> {
     module.add_class::<NativeFixed64PreparedSession>()?;
     module.add_function(wrap_pyfunction!(
@@ -486,6 +549,10 @@ pub(crate) fn register(module: &PyModule) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(native_fixed64_prepare_session_v1, module)?)?;
     module.add_function(wrap_pyfunction!(
         native_fixed64_prepare_repository_synthetic_d0_session_v1,
+        module
+    )?)?;
+    module.add_function(wrap_pyfunction!(
+        native_fixed64_repository_synthetic_d0_cpu_parity_v1,
         module
     )?)?;
     module.add("NATIVE_FIXED64_COMPLETE_INPUT_SCHEMA_ID", INPUT_SCHEMA_ID)?;
@@ -524,6 +591,14 @@ pub(crate) fn register(module: &PyModule) -> PyResult<()> {
     module.add(
         "NATIVE_REPOSITORY_D0_SYNTHETIC_ONLY_ACKNOWLEDGMENT",
         REPOSITORY_D0_SYNTHETIC_ONLY_ACKNOWLEDGMENT,
+    )?;
+    module.add(
+        "NATIVE_REPOSITORY_D0_CPU_PARITY_SCHEMA_ID_V1",
+        REPOSITORY_D0_CPU_PARITY_SCHEMA_ID,
+    )?;
+    module.add(
+        "NATIVE_REPOSITORY_D0_CPU_PARITY_PROFILE_ID_V1",
+        REPOSITORY_D0_CPU_PARITY_PROFILE_ID,
     )?;
     Ok(())
 }
@@ -627,6 +702,494 @@ fn native_fixed64_prepare_repository_synthetic_d0_session_v1(
             ..source_binding
         }),
     })
+}
+
+fn repository_d0_projection_authority_is_false(value: &Fixed64ScientificProjection) -> bool {
+    let authority = value.authority;
+    !authority.result_dependent_input_consumed
+        && !authority.fallback_allowed
+        && !authority.multi_anchor_consumed
+        && authority.denominator_preserved
+        && !authority.molecular_execution_authorized
+        && !authority.reservation_authorized
+        && !authority.benchmark_execution_authorized
+        && !authority.existing_rank_auto_change_authorized
+        && !authority.customer_pose_emission_authorized
+        && !authority.production_claim_authorized
+        && !authority.scientific_claim_authorized
+}
+
+fn repository_d0_parity_hash_u32_slice(hash: &mut Sha256, values: &[u32]) {
+    hash.update((values.len() as u64).to_be_bytes());
+    for value in values {
+        hash.update(value.to_be_bytes());
+    }
+}
+
+fn repository_d0_cpu_parity_receipt_sha256(value: &RepositoryD0CpuParityEvidence) -> [u8; 32] {
+    let mut hash = Sha256::new();
+    hash.update(REPOSITORY_D0_CPU_PARITY_RECEIPT_DOMAIN);
+    for text in [
+        REPOSITORY_D0_CPU_PARITY_SCHEMA_ID,
+        REPOSITORY_D0_CPU_PARITY_PROFILE_ID,
+        REPOSITORY_D0_CPU_PARITY_POLICY_SHA256,
+    ] {
+        hash.update((text.len() as u64).to_be_bytes());
+        hash.update(text.as_bytes());
+    }
+    for digest in [
+        value.source_bundle_receipt_sha256,
+        value.source_prepared_input_receipt_sha256,
+        value.allocation_receipt_sha256,
+        value.cpp_backend_binding_receipt_sha256,
+        value.rust_backend_binding_receipt_sha256,
+        value.cpp_pipeline_receipt_sha256,
+        value.rust_pipeline_receipt_sha256,
+        value.cpp_projection_sha256,
+        value.rust_projection_sha256,
+        value.scientific_decision_sha256,
+    ] {
+        hash.update(digest);
+    }
+    for count in [
+        value.candidate_denominator as u64,
+        value.receptor_atom_count as u64,
+        value.ligand_atom_count as u64,
+        value.generated_count,
+        value.typed_failure_count,
+        value.initial_admitted_count,
+        value.refined_count,
+        value.post_admitted_count,
+        value.post_rejected_count,
+        value.scored_count,
+        value.valid_count,
+        value.cluster_count,
+        value.score_term_count as u64,
+        value.numeric_parity.compared_f64_count as u64,
+        value.numeric_parity.tolerance_violation_count as u64,
+        value
+            .numeric_parity
+            .first_violation_index
+            .map_or(u64::MAX, |index| index as u64),
+        value.coordinate_identity_equal_count as u64,
+        value.coordinate_identity_different_count as u64,
+    ] {
+        hash.update(count.to_be_bytes());
+    }
+    hash.update(
+        value
+            .numeric_parity
+            .maximum_absolute_difference
+            .to_bits()
+            .to_be_bytes(),
+    );
+    hash.update(
+        value
+            .numeric_parity
+            .maximum_scaled_difference
+            .to_bits()
+            .to_be_bytes(),
+    );
+    repository_d0_parity_hash_u32_slice(&mut hash, &value.primary_slot_indices);
+    repository_d0_parity_hash_u32_slice(&mut hash, &value.valid_slot_indices);
+    repository_d0_parity_hash_u32_slice(&mut hash, &value.representative_slot_indices);
+    repository_d0_parity_hash_u32_slice(&mut hash, &value.top_k_slot_indices);
+    for gate in [
+        value.cpp_repeat_stable,
+        value.rust_repeat_stable,
+        value.exact_decision_parity,
+        value.exact_count_parity,
+        value.exact_rank_parity,
+        value.exact_source_identity_parity,
+        value.source_binding_parity,
+        value.all_authority_false,
+        value.gate_passed,
+    ] {
+        hash.update([u8::from(gate)]);
+    }
+    hash.update([0]);
+    hash.finalize().into()
+}
+
+fn repository_d0_expected_counts(value: &Fixed64ScientificProjection) -> bool {
+    value.candidate_denominator == 64
+        && value.receptor_atom_count == REPOSITORY_D0_RECEPTOR_ATOM_COUNT
+        && value.ligand_atom_count == REPOSITORY_D0_LIGAND_ATOM_COUNT
+        && value.generated_count == 54
+        && value.typed_failure_count == 10
+        && value.initial_admitted_count == 30
+        && value.refined_count == 16
+        && value.post_admitted_count == 16
+        && value.post_rejected_count == 0
+        && value.scored_count == 16
+        && value.valid_count == 16
+        && value.cluster_count == 12
+        && value.candidate_rows.len() == 64
+}
+
+fn repository_d0_expected_ranks(value: &Fixed64ScientificProjection) -> bool {
+    value.primary_slot_indices == REPOSITORY_D0_EXPECTED_PRIMARY_SLOT_INDICES
+        && value.valid_slot_indices == REPOSITORY_D0_EXPECTED_PRIMARY_SLOT_INDICES
+        && value.representative_slot_indices == REPOSITORY_D0_EXPECTED_REPRESENTATIVE_SLOT_INDICES
+        && value.top_k_slot_indices == REPOSITORY_D0_EXPECTED_TOP_K_SLOT_INDICES
+}
+
+fn repository_d0_exact_source_identity_parity(
+    reference: &Fixed64ScientificProjection,
+    observed: &Fixed64ScientificProjection,
+) -> bool {
+    reference.candidate_rows.len() == observed.candidate_rows.len()
+        && reference
+            .candidate_rows
+            .iter()
+            .zip(&observed.candidate_rows)
+            .all(|(left, right)| {
+                left.allocation_slot_receipt_sha256 == right.allocation_slot_receipt_sha256
+                    && left.source_payload_receipt_sha256 == right.source_payload_receipt_sha256
+                    && left.source_proposal_sha256 == right.source_proposal_sha256
+                    && left.source_coordinate_sha256 == right.source_coordinate_sha256
+            })
+}
+
+fn repository_d0_cpu_parity_evidence() -> PyResult<RepositoryD0CpuParityEvidence> {
+    let (cpp_input, cpp_binding) = repository_synthetic_d0_complete_input(
+        ContextOptions::cpu_reference(),
+        "cpp_cpu_reference",
+    )?;
+    let (rust_input, rust_binding) =
+        repository_synthetic_d0_complete_input(ContextOptions::rust_cpu(), "rust_cpu")?;
+    let cpp_pipeline = cpp_input.create_pipeline().map_err(runtime_error)?;
+    let rust_pipeline = rust_input.create_pipeline().map_err(runtime_error)?;
+    let cpp_receipt = cpp_input.run(&cpp_pipeline).map_err(runtime_error)?;
+    let rust_receipt = rust_input.run(&rust_pipeline).map_err(runtime_error)?;
+    let cpp_repeat_receipt = cpp_input.run(&cpp_pipeline).map_err(runtime_error)?;
+    let rust_repeat_receipt = rust_input.run(&rust_pipeline).map_err(runtime_error)?;
+    let cpp = cpp_receipt.scientific_projection().map_err(runtime_error)?;
+    let rust = rust_receipt
+        .scientific_projection()
+        .map_err(runtime_error)?;
+    let cpp_repeat = cpp_repeat_receipt
+        .scientific_projection()
+        .map_err(runtime_error)?;
+    let rust_repeat = rust_repeat_receipt
+        .scientific_projection()
+        .map_err(runtime_error)?;
+    let numeric_parity = compare_fixed64_scientific_numeric_parity(
+        &cpp,
+        &rust,
+        REPOSITORY_D0_CPU_PARITY_ABSOLUTE_TOLERANCE,
+        REPOSITORY_D0_CPU_PARITY_RELATIVE_TOLERANCE,
+    )
+    .map_err(runtime_error)?;
+    let expected_decision = decode_digest(
+        REPOSITORY_D0_CPU_PARITY_EXPECTED_DECISION_SHA256,
+        "repository D0 expected scientific decision",
+    )?;
+    let expected_source_bundle = decode_digest(
+        REPOSITORY_D0_CPU_PARITY_EXPECTED_SOURCE_BUNDLE_SHA256,
+        "repository D0 expected source bundle",
+    )?;
+    let cpp_repeat_stable = cpp == cpp_repeat;
+    let rust_repeat_stable = rust == rust_repeat;
+    let exact_decision_parity =
+        cpp.decision_sha256 == rust.decision_sha256 && cpp.decision_sha256 == expected_decision;
+    let exact_count_parity = cpp.candidate_denominator == rust.candidate_denominator
+        && cpp.receptor_atom_count == rust.receptor_atom_count
+        && cpp.ligand_atom_count == rust.ligand_atom_count
+        && cpp.generated_count == rust.generated_count
+        && cpp.typed_failure_count == rust.typed_failure_count
+        && cpp.initial_admitted_count == rust.initial_admitted_count
+        && cpp.refined_count == rust.refined_count
+        && cpp.post_admitted_count == rust.post_admitted_count
+        && cpp.post_rejected_count == rust.post_rejected_count
+        && cpp.scored_count == rust.scored_count
+        && cpp.valid_count == rust.valid_count
+        && cpp.cluster_count == rust.cluster_count
+        && repository_d0_expected_counts(&cpp)
+        && repository_d0_expected_counts(&rust);
+    let exact_rank_parity = cpp.primary_slot_indices == rust.primary_slot_indices
+        && cpp.valid_slot_indices == rust.valid_slot_indices
+        && cpp.representative_slot_indices == rust.representative_slot_indices
+        && cpp.top_k_slot_indices == rust.top_k_slot_indices
+        && repository_d0_expected_ranks(&cpp)
+        && repository_d0_expected_ranks(&rust);
+    let exact_source_identity_parity = repository_d0_exact_source_identity_parity(&cpp, &rust);
+    let source_binding_parity = cpp_binding.source_bundle_receipt_sha256
+        == rust_binding.source_bundle_receipt_sha256
+        && cpp_binding.source_bundle_receipt_sha256 == expected_source_bundle
+        && cpp_binding.source_prepared_input_receipt_sha256
+            == rust_binding.source_prepared_input_receipt_sha256
+        && cpp_binding.source_prepared_input_receipt_sha256 != [0; 32]
+        && cpp_binding.allocation_receipt_sha256 == rust_binding.allocation_receipt_sha256
+        && cpp_binding.allocation_receipt_sha256 == REPOSITORY_D0_EXPECTED_ALLOCATION_SHA256;
+    let all_authority_false = repository_d0_projection_authority_is_false(&cpp)
+        && repository_d0_projection_authority_is_false(&rust);
+    let score_term_count = cpp
+        .candidate_rows
+        .first()
+        .map_or(0, |row| row.scorer.weighted_terms.len());
+    let coordinate_identity_equal_count = cpp
+        .candidate_rows
+        .iter()
+        .zip(&rust.candidate_rows)
+        .filter(|(left, right)| {
+            left.refinement.coordinate_sha256 == right.refinement.coordinate_sha256
+                && left.ranking.coordinate_sha256 == right.ranking.coordinate_sha256
+                && left.cluster.coordinate_sha256 == right.cluster.coordinate_sha256
+        })
+        .count();
+    let coordinate_identity_different_count = cpp
+        .candidate_denominator
+        .saturating_sub(coordinate_identity_equal_count);
+    let gate_passed = cpp_repeat_stable
+        && rust_repeat_stable
+        && exact_decision_parity
+        && exact_count_parity
+        && exact_rank_parity
+        && exact_source_identity_parity
+        && source_binding_parity
+        && all_authority_false
+        && score_term_count == 8
+        && numeric_parity.passed();
+    let mut evidence = RepositoryD0CpuParityEvidence {
+        source_bundle_receipt_sha256: cpp_binding.source_bundle_receipt_sha256,
+        source_prepared_input_receipt_sha256: cpp_binding.source_prepared_input_receipt_sha256,
+        allocation_receipt_sha256: cpp_binding.allocation_receipt_sha256,
+        cpp_backend_binding_receipt_sha256: cpp_binding.backend_binding_receipt_sha256,
+        rust_backend_binding_receipt_sha256: rust_binding.backend_binding_receipt_sha256,
+        cpp_pipeline_receipt_sha256: cpp_receipt.receipts.pipeline_batch_receipt_sha256,
+        rust_pipeline_receipt_sha256: rust_receipt.receipts.pipeline_batch_receipt_sha256,
+        cpp_projection_sha256: cpp.sha256,
+        rust_projection_sha256: rust.sha256,
+        scientific_decision_sha256: cpp.decision_sha256,
+        candidate_denominator: cpp.candidate_denominator,
+        receptor_atom_count: cpp.receptor_atom_count,
+        ligand_atom_count: cpp.ligand_atom_count,
+        generated_count: cpp.generated_count,
+        typed_failure_count: cpp.typed_failure_count,
+        initial_admitted_count: cpp.initial_admitted_count,
+        refined_count: cpp.refined_count,
+        post_admitted_count: cpp.post_admitted_count,
+        post_rejected_count: cpp.post_rejected_count,
+        scored_count: cpp.scored_count,
+        valid_count: cpp.valid_count,
+        cluster_count: cpp.cluster_count,
+        primary_slot_indices: cpp.primary_slot_indices.clone(),
+        valid_slot_indices: cpp.valid_slot_indices.clone(),
+        representative_slot_indices: cpp.representative_slot_indices.clone(),
+        top_k_slot_indices: cpp.top_k_slot_indices.clone(),
+        score_term_count,
+        numeric_parity,
+        coordinate_identity_equal_count,
+        coordinate_identity_different_count,
+        cpp_repeat_stable,
+        rust_repeat_stable,
+        exact_decision_parity,
+        exact_count_parity,
+        exact_rank_parity,
+        exact_source_identity_parity,
+        source_binding_parity,
+        all_authority_false,
+        gate_passed,
+        receipt_sha256: [0; 32],
+    };
+    evidence.receipt_sha256 = repository_d0_cpu_parity_receipt_sha256(&evidence);
+    Ok(evidence)
+}
+
+#[pyfunction]
+fn native_fixed64_repository_synthetic_d0_cpu_parity_v1(
+    py: Python<'_>,
+    synthetic_only_acknowledgment: &PyAny,
+) -> PyResult<PyObject> {
+    if exact_argument_string(
+        synthetic_only_acknowledgment,
+        "synthetic_only_acknowledgment",
+    )? != REPOSITORY_D0_SYNTHETIC_ONLY_ACKNOWLEDGMENT
+    {
+        return Err(input_error(
+            "repository D0 CPU parity requires the exact synthetic-only acknowledgment",
+        ));
+    }
+    let evidence = repository_d0_cpu_parity_evidence()?;
+    let output = PyDict::new(py);
+    output.set_item("schema_id", REPOSITORY_D0_CPU_PARITY_SCHEMA_ID)?;
+    output.set_item("profile_id", REPOSITORY_D0_CPU_PARITY_PROFILE_ID)?;
+    output.set_item(
+        "status",
+        if evidence.gate_passed {
+            "synthetic_non_authoritative_pass"
+        } else {
+            "synthetic_non_authoritative_failed"
+        },
+    )?;
+    output.set_item("test_only", true)?;
+    output.set_item("caller_science_transport_consumed", false)?;
+    output.set_item("performance_measurement_performed", false)?;
+    output.set_item(
+        "synthetic_only_acknowledgment",
+        REPOSITORY_D0_SYNTHETIC_ONLY_ACKNOWLEDGMENT,
+    )?;
+    output.set_item("policy_sha256", REPOSITORY_D0_CPU_PARITY_POLICY_SHA256)?;
+    output.set_item(
+        "source_bundle_receipt_sha256",
+        hex_digest(evidence.source_bundle_receipt_sha256),
+    )?;
+    output.set_item(
+        "source_prepared_input_receipt_sha256",
+        hex_digest(evidence.source_prepared_input_receipt_sha256),
+    )?;
+    output.set_item(
+        "allocation_receipt_sha256",
+        hex_digest(evidence.allocation_receipt_sha256),
+    )?;
+    output.set_item(
+        "scientific_decision_sha256",
+        hex_digest(evidence.scientific_decision_sha256),
+    )?;
+    output.set_item("candidate_denominator", evidence.candidate_denominator)?;
+    output.set_item("receptor_atom_count", evidence.receptor_atom_count)?;
+    output.set_item("ligand_atom_count", evidence.ligand_atom_count)?;
+    output.set_item("score_term_count", evidence.score_term_count)?;
+
+    let counts = PyDict::new(py);
+    counts.set_item("generated_count", evidence.generated_count)?;
+    counts.set_item("typed_failure_count", evidence.typed_failure_count)?;
+    counts.set_item("initial_admitted_count", evidence.initial_admitted_count)?;
+    counts.set_item("refined_count", evidence.refined_count)?;
+    counts.set_item("post_admitted_count", evidence.post_admitted_count)?;
+    counts.set_item("post_rejected_count", evidence.post_rejected_count)?;
+    counts.set_item("scored_count", evidence.scored_count)?;
+    counts.set_item("valid_count", evidence.valid_count)?;
+    counts.set_item("cluster_count", evidence.cluster_count)?;
+    output.set_item("stage_counts", counts)?;
+
+    let ranks = PyDict::new(py);
+    ranks.set_item("primary_slot_indices", &evidence.primary_slot_indices)?;
+    ranks.set_item("valid_slot_indices", &evidence.valid_slot_indices)?;
+    ranks.set_item(
+        "representative_slot_indices",
+        &evidence.representative_slot_indices,
+    )?;
+    ranks.set_item("top_k_slot_indices", &evidence.top_k_slot_indices)?;
+    output.set_item("rank_selection", ranks)?;
+
+    let numeric = PyDict::new(py);
+    numeric.set_item(
+        "absolute_tolerance",
+        REPOSITORY_D0_CPU_PARITY_ABSOLUTE_TOLERANCE,
+    )?;
+    numeric.set_item(
+        "relative_tolerance",
+        REPOSITORY_D0_CPU_PARITY_RELATIVE_TOLERANCE,
+    )?;
+    numeric.set_item(
+        "compared_f64_count",
+        evidence.numeric_parity.compared_f64_count,
+    )?;
+    numeric.set_item(
+        "maximum_absolute_difference",
+        evidence.numeric_parity.maximum_absolute_difference,
+    )?;
+    numeric.set_item(
+        "maximum_scaled_difference",
+        evidence.numeric_parity.maximum_scaled_difference,
+    )?;
+    numeric.set_item(
+        "tolerance_violation_count",
+        evidence.numeric_parity.tolerance_violation_count,
+    )?;
+    numeric.set_item(
+        "first_violation_index",
+        evidence.numeric_parity.first_violation_index,
+    )?;
+    numeric.set_item("passed", evidence.numeric_parity.passed())?;
+    output.set_item("numeric_parity", numeric)?;
+
+    let cpp_backend = PyDict::new(py);
+    cpp_backend.set_item("backend", "cpp_cpu_reference")?;
+    cpp_backend.set_item(
+        "backend_binding_receipt_sha256",
+        hex_digest(evidence.cpp_backend_binding_receipt_sha256),
+    )?;
+    cpp_backend.set_item(
+        "pipeline_receipt_sha256",
+        hex_digest(evidence.cpp_pipeline_receipt_sha256),
+    )?;
+    cpp_backend.set_item(
+        "scientific_projection_sha256",
+        hex_digest(evidence.cpp_projection_sha256),
+    )?;
+    cpp_backend.set_item("repeat_stable", evidence.cpp_repeat_stable)?;
+    let rust_backend = PyDict::new(py);
+    rust_backend.set_item("backend", "rust_cpu")?;
+    rust_backend.set_item(
+        "backend_binding_receipt_sha256",
+        hex_digest(evidence.rust_backend_binding_receipt_sha256),
+    )?;
+    rust_backend.set_item(
+        "pipeline_receipt_sha256",
+        hex_digest(evidence.rust_pipeline_receipt_sha256),
+    )?;
+    rust_backend.set_item(
+        "scientific_projection_sha256",
+        hex_digest(evidence.rust_projection_sha256),
+    )?;
+    rust_backend.set_item("repeat_stable", evidence.rust_repeat_stable)?;
+    let backends = PyDict::new(py);
+    backends.set_item("cpp_cpu_reference", cpp_backend)?;
+    backends.set_item("rust_cpu", rust_backend)?;
+    output.set_item("backend_evidence", backends)?;
+
+    let identity = PyDict::new(py);
+    identity.set_item("coordinate_sha256_identity_parity_required", false)?;
+    identity.set_item(
+        "coordinate_identity_equal_count",
+        evidence.coordinate_identity_equal_count,
+    )?;
+    identity.set_item(
+        "coordinate_identity_different_count",
+        evidence.coordinate_identity_different_count,
+    )?;
+    identity.set_item(
+        "exact_source_and_allocation_identity_parity",
+        evidence.exact_source_identity_parity && evidence.source_binding_parity,
+    )?;
+    identity.set_item("backend_bound_receipt_identity_parity_required", false)?;
+    output.set_item("identity_disposition", identity)?;
+
+    let gates = PyDict::new(py);
+    gates.set_item("source_binding_parity", evidence.source_binding_parity)?;
+    gates.set_item("exact_decision_parity", evidence.exact_decision_parity)?;
+    gates.set_item("exact_count_parity", evidence.exact_count_parity)?;
+    gates.set_item("exact_rank_parity", evidence.exact_rank_parity)?;
+    gates.set_item(
+        "exact_source_identity_parity",
+        evidence.exact_source_identity_parity,
+    )?;
+    gates.set_item("cpp_repeat_stable", evidence.cpp_repeat_stable)?;
+    gates.set_item("rust_repeat_stable", evidence.rust_repeat_stable)?;
+    gates.set_item("numeric_parity", evidence.numeric_parity.passed())?;
+    gates.set_item("all_authority_false", evidence.all_authority_false)?;
+    gates.set_item("gate_passed", evidence.gate_passed)?;
+    output.set_item("gates", gates)?;
+
+    for field in [
+        "reservation_authorized",
+        "molecular_execution_authorized",
+        "historical_ab_execution_authorized",
+        "fresh_holdout_execution_authorized",
+        "public_benchmark_authorized",
+        "stage0_admission_authorized",
+        "qualification_rerun_authorized",
+        "scientific_claim_authorized",
+        "product_performance_claim_authorized",
+        "hip_device_execution_authorized",
+    ] {
+        output.set_item(field, false)?;
+    }
+    output.set_item("parity_receipt_sha256", hex_digest(evidence.receipt_sha256))?;
+    Ok(output.into())
 }
 
 fn exact_argument_string<'py>(value: &'py PyAny, name: &str) -> PyResult<&'py str> {
@@ -1656,6 +2219,36 @@ mod repository_d0_session_tests {
             [23, 9, 10, 29, 16, 8, 11, 52, 20, 13, 33, 22],
         );
         assert_eq!(cpp_projection.top_k_slot_indices, [23, 9, 10, 29, 16]);
+    }
+
+    #[test]
+    fn repository_d0_cpu_parity_receipt_is_complete_and_non_authoritative() {
+        let evidence = repository_d0_cpu_parity_evidence()
+            .expect("repository synthetic D0 CPU parity evidence");
+        assert!(evidence.gate_passed);
+        assert!(evidence.exact_decision_parity);
+        assert!(evidence.exact_count_parity);
+        assert!(evidence.exact_rank_parity);
+        assert!(evidence.exact_source_identity_parity);
+        assert!(evidence.source_binding_parity);
+        assert!(evidence.cpp_repeat_stable);
+        assert!(evidence.rust_repeat_stable);
+        assert!(evidence.numeric_parity.passed());
+        assert!(evidence.numeric_parity.compared_f64_count > 0);
+        assert!(
+            evidence.numeric_parity.maximum_absolute_difference
+                <= REPOSITORY_D0_CPU_PARITY_ABSOLUTE_TOLERANCE
+        );
+        assert!(evidence.all_authority_false);
+        assert_eq!(evidence.candidate_denominator, 64);
+        assert_eq!(evidence.score_term_count, 8);
+        assert_eq!(
+            evidence.coordinate_identity_equal_count + evidence.coordinate_identity_different_count,
+            64,
+        );
+        assert_ne!(evidence.cpp_pipeline_receipt_sha256, [0; 32]);
+        assert_ne!(evidence.rust_pipeline_receipt_sha256, [0; 32]);
+        assert_ne!(evidence.receipt_sha256, [0; 32]);
     }
 }
 

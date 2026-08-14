@@ -248,6 +248,15 @@ from .docking.native_fixed64_consumers import (
     NativeFixed64PythonApi,
     run_native_fixed64_surface,
 )
+from .docking.native_cpu_parity import (
+    NativeCpuParityError,
+    NativeRepositorySyntheticD0CpuParityReceiptV1,
+    REPOSITORY_SYNTHETIC_D0_CPU_PARITY_POLICY_SHA256,
+    REPOSITORY_SYNTHETIC_D0_CPU_PARITY_PROFILE_ID,
+    REPOSITORY_SYNTHETIC_D0_CPU_PARITY_SCHEMA_ID,
+    REPOSITORY_SYNTHETIC_D0_NATIVE_ACKNOWLEDGMENT,
+    run_repository_synthetic_d0_cpu_parity,
+)
 
 __version__ = ENGINE_API_VERSION
 
@@ -338,6 +347,13 @@ __all__ = [
     "NativeFixed64ProductShadowAdapter",
     "NativeFixed64PythonApi",
     "run_native_fixed64_surface",
+    "NativeCpuParityError",
+    "NativeRepositorySyntheticD0CpuParityReceiptV1",
+    "REPOSITORY_SYNTHETIC_D0_CPU_PARITY_POLICY_SHA256",
+    "REPOSITORY_SYNTHETIC_D0_CPU_PARITY_PROFILE_ID",
+    "REPOSITORY_SYNTHETIC_D0_CPU_PARITY_SCHEMA_ID",
+    "REPOSITORY_SYNTHETIC_D0_NATIVE_ACKNOWLEDGMENT",
+    "run_repository_synthetic_d0_cpu_parity",
     "IndependentPhysicsProvider",
     "KinematicResult",
     "LocalEnergyConfig",
