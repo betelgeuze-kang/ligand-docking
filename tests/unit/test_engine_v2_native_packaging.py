@@ -56,7 +56,10 @@ def test_native_release_version_surfaces_match_rc6() -> None:
     assert cargo["package"]["version"] == "0.2.0-rc.6"
     assert native["project"]["version"] == NATIVE_VERSION
     assert "betelgeuze-engine-v2-native-0.2.0rc6.spdx.json" in workflow
-    assert "engine-v2-native-0.2.0rc6-${{ github.run_id }}" in workflow
+    assert (
+        "engine-v2-native-0.2.0rc6-${{ matrix.abi }}-"
+        "${{ github.run_id }}-${{ github.run_attempt }}"
+    ) in workflow
     assert '-v "$PWD:/io:ro" -w /io' in workflow
     assert '-v "$PWD/$output:/output"' in workflow
     assert "--output-dir /output" in workflow
