@@ -32,6 +32,7 @@ SOURCE_MANIFEST_SHA256 = (
     "ecb009ac228652c6c6cbdefcdd70828ce3d9aeea5a5e31d0fff0246d4d5f932e"
 )
 SOURCE_COUNT = 196
+QUALIFIED_SOURCE_COMMIT_OID = "5c1e4791e988d4c75a5111f933feac85236ba821"
 PROFILE_RELATIVE_PATH = Path("config/engine_v2_native_fixed64_cpu_profile_v7.json")
 SOURCE_MANIFEST_RELATIVE_PATH = Path(
     "config/engine_v2_native_fixed64_cpu_profile_v7_sources.json"
@@ -71,6 +72,9 @@ PACKAGED_CARGO_LOCK_RELATIVE_PATH = Path(
 )
 PACKAGED_CARGO_MANIFEST_RELATIVE_PATH = Path(
     "rust/betelgeuze-runtime/assets/original-Cargo.toml"
+)
+POST_QUALIFICATION_BUILD_BOUNDARY_RELATIVE_PATH = Path(
+    "config/engine_v2_native_fixed64_cpu_post_qualification_build_boundary_v1.json"
 )
 
 FALSE_AUTHORITY_KEYS = {
@@ -715,6 +719,265 @@ def require_bound_source_tree(
     return sources
 
 
+def _git_object_command(root: Path, arguments: list[str]) -> bytes:
+    environment = {
+        "GIT_CONFIG_GLOBAL": "/dev/null",
+        "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_NO_REPLACE_OBJECTS": "1",
+        "LC_ALL": "C",
+        "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+    }
+    completed = subprocess.run(
+        ["/usr/bin/git", "--no-replace-objects", *arguments],
+        cwd=root,
+        check=False,
+        capture_output=True,
+        env=environment,
+    )
+    if completed.returncode == 0:
+        if completed.stderr:
+            _fail("historical source Git command emitted unexpected diagnostics")
+        return completed.stdout
+    _fail("historical qualified source Git object is unavailable")
+
+
+def require_bound_source_commit(
+    root: Path,
+    manifest: dict[str, object],
+    *,
+    commit_oid: str = QUALIFIED_SOURCE_COMMIT_OID,
+) -> dict[str, bytes]:
+    if re.fullmatch(r"[0-9a-f]{40}", commit_oid) is None:
+        _fail("historical qualified source commit identity is invalid")
+    resolved = _git_object_command(
+        root, ["rev-parse", "--verify", f"{commit_oid}^{{commit}}"]
+    )
+    if resolved != f"{commit_oid}\n".encode("ascii"):
+        _fail("historical qualified source commit resolved to a different object")
+    rows = manifest["files"]
+    assert isinstance(rows, list)
+    expected = {str(row["path"]): row for row in rows if isinstance(row, dict)}
+    historical_manifest = _git_object_command(
+        root,
+        [
+            "cat-file",
+            "blob",
+            f"{commit_oid}:{SOURCE_MANIFEST_RELATIVE_PATH.as_posix()}",
+        ],
+    )
+    if historical_manifest != _canonical_bytes(manifest):
+        _fail("historical qualified source manifest differs from the frozen manifest")
+    selected_roots = [
+        *(tree.as_posix() for tree in RUST_SOURCE_ROOTS),
+        *(tree.as_posix() for tree in NATIVE_SOURCE_ROOTS),
+    ]
+    tree_output = _git_object_command(
+        root,
+        ["ls-tree", "-r", "-z", "--name-only", commit_oid, "--", *selected_roots],
+    )
+    observed_paths = {
+        value.decode("utf-8") for value in tree_output.split(b"\0") if value
+    }
+    rust_observed = {
+        path
+        for path in observed_paths
+        if any(path.startswith(f"{tree.as_posix()}/") for tree in RUST_SOURCE_ROOTS)
+        and Path(path).suffix == ".rs"
+    }
+    native_observed = {
+        path
+        for path in observed_paths
+        if any(path.startswith(f"{tree.as_posix()}/") for tree in NATIVE_SOURCE_ROOTS)
+        and Path(path).suffix in NATIVE_SOURCE_SUFFIXES
+    }
+    rust_expected = {
+        path
+        for path in expected
+        if any(path.startswith(f"{tree.as_posix()}/") for tree in RUST_SOURCE_ROOTS)
+        and Path(path).suffix == ".rs"
+    }
+    native_expected = {
+        path
+        for path in expected
+        if any(path.startswith(f"{tree.as_posix()}/") for tree in NATIVE_SOURCE_ROOTS)
+        and Path(path).suffix in NATIVE_SOURCE_SUFFIXES
+    }
+    if rust_observed != rust_expected or native_observed != native_expected:
+        _fail("historical qualified source tree contains an unbound or missing source")
+    bound_tree_output = _git_object_command(
+        root,
+        ["ls-tree", "-r", "-z", commit_oid, "--", *sorted(expected)],
+    )
+    bound_entries: dict[str, tuple[str, str]] = {}
+    for entry in bound_tree_output.split(b"\0"):
+        if not entry:
+            continue
+        try:
+            metadata, path_raw = entry.split(b"\t", 1)
+            mode_raw, kind_raw, _ = metadata.split(b" ", 2)
+            path = path_raw.decode("utf-8")
+            mode = mode_raw.decode("ascii")
+            kind = kind_raw.decode("ascii")
+        except (UnicodeDecodeError, ValueError) as exc:
+            raise NativeFixed64CPUProfileV7Error(
+                "historical qualified source tree entry is malformed"
+            ) from exc
+        if path in bound_entries:
+            _fail("historical qualified source tree contains a duplicate path")
+        bound_entries[path] = (mode, kind)
+    if set(bound_entries) != set(expected) or any(
+        kind != "blob" or mode not in {"100644", "100755"}
+        for mode, kind in bound_entries.values()
+    ):
+        _fail("historical qualified source tree is missing a regular bound file")
+    for forbidden in FORBIDDEN_CONFIGURATION_PATHS:
+        found = _git_object_command(
+            root,
+            ["ls-tree", "-z", "--name-only", commit_oid, "--", forbidden.as_posix()],
+        )
+        if found:
+            _fail(
+                f"historical qualified source contains compiler override: {forbidden}"
+            )
+    sources: dict[str, bytes] = {}
+    for path, row in expected.items():
+        raw = _git_object_command(root, ["cat-file", "blob", f"{commit_oid}:{path}"])
+        if (
+            len(raw) != row["byte_count"]
+            or hashlib.sha256(raw).hexdigest() != row["sha256"]
+        ):
+            _fail(f"historical bound transitive source changed: {path}")
+        sources[path] = raw
+    return sources
+
+
+def require_post_qualification_build_boundary(root: Path) -> None:
+    build_source = read_bound_source_bytes(root, BUILD_SOURCE_RELATIVE_PATH).decode(
+        "utf-8"
+    )
+    runner_source = read_bound_source_bytes(root, RUNNER_SOURCE_RELATIVE_PATH).decode(
+        "utf-8"
+    )
+    for token in (
+        "COMPILED_SOURCE_GRAPH_BOUND_ENV",
+        "let qualification_build_requested = opt_in_environment(QUALIFICATION_BUILD_ENV);",
+        "let source_graph_bound = if qualification_build_requested",
+        "bind_compiled_source_graph(&source_root)",
+        "qualification_build_requested,",
+        "cargo:rustc-env={COMPILED_SOURCE_GRAPH_BOUND_ENV}={source_graph_bound}",
+    ):
+        if token not in build_source:
+            _fail(f"post-qualification build boundary token is missing: {token}")
+    source_gate = build_source.find(
+        "let source_graph_bound = if qualification_build_requested"
+    )
+    source_bind = build_source.find(
+        "bind_compiled_source_graph(&source_root)", source_gate
+    )
+    source_unbound = build_source.find("false", source_bind)
+    configuration_bind = build_source.find("bind_build_configuration(", source_unbound)
+    commit_bind = build_source.find("bind_activation_snapshot(", configuration_bind)
+    if (
+        not 0
+        <= source_gate
+        < source_bind
+        < source_unbound
+        < configuration_bind
+        < commit_bind
+    ):
+        _fail("post-qualification build binding order changed")
+    activation_start = runner_source.find(
+        "pub fn verify_native_fixed64_cpu_v7_activation("
+    )
+    profile_read = runner_source.find(
+        "let profile = profile_text()?;", activation_start
+    )
+    source_rejection = runner_source.find(
+        'COMPILED_SOURCE_GRAPH_BOUND != "true" || BUILD_COMMIT_BOUND != "true"',
+        activation_start,
+    )
+    if not 0 <= activation_start < source_rejection < profile_read:
+        _fail(
+            "post-qualification activation did not reject unbound source before source inspection"
+        )
+    if (
+        "native fixed64 CPU v7 non-authoritative build cannot activate"
+        not in runner_source
+    ):
+        _fail("post-qualification non-authoritative activation rejection changed")
+
+
+def require_post_qualification_build_contract(raw: bytes) -> dict[str, object]:
+    document = _load_canonical_object(raw, label="post-qualification build boundary")
+    document = _exact_keys(
+        document,
+        {"authority", "build_modes", "historical_evidence", "schema_id", "status"},
+        label="post-qualification build boundary",
+    )
+    if (
+        document["schema_id"]
+        != "betelgeuze.engine_v2_native_fixed64_cpu_post_qualification_build_boundary/1.0.0"
+        or document["status"]
+        != "historical_v7_consumed_current_runtime_development_unbound"
+    ):
+        _fail("post-qualification build boundary identity changed")
+    authority = document["authority"]
+    if (
+        not isinstance(authority, dict)
+        or set(authority)
+        != {
+            "fresh_holdout_execution_authorized",
+            "historical_ab_execution_authorized",
+            "hip_device_execution_authorized",
+            "molecular_execution_authorized",
+            "product_performance_claim_authorized",
+            "public_benchmark_authorized",
+            "qualification_rerun_authorized",
+            "reservation_authorized",
+            "stage0_admission_authorized",
+        }
+        or any(value is not False for value in authority.values())
+    ):
+        _fail("post-qualification build boundary authority changed")
+    modes = _exact_keys(
+        document["build_modes"],
+        {
+            "historical_qualification",
+            "non_authoritative_package",
+            "ordinary_development",
+        },
+        label="post-qualification build modes",
+    )
+    if (
+        modes["ordinary_development"]
+        != {
+            "activation_allowed": False,
+            "build_commit_bound": False,
+            "frozen_manifest_metadata_verified": True,
+            "source_graph_bound": False,
+        }
+        or modes["non_authoritative_package"] != modes["ordinary_development"]
+    ):
+        _fail("post-qualification unbound build mode changed")
+    if modes["historical_qualification"] != {
+        "activation_allowed_from_current_source": False,
+        "exact_source_commit_required": QUALIFIED_SOURCE_COMMIT_OID,
+        "frozen_build_configuration_required": True,
+        "source_graph_bound": True,
+    }:
+        _fail("post-qualification historical build mode changed")
+    if document["historical_evidence"] != {
+        "execution_consumed": True,
+        "execution_receipt_sha256": "f653185c2bfc7642e2d9e73b918a2e0a9c14c0e107f5804799e140bb42c34b82",
+        "profile_id": PROFILE_ID,
+        "profile_sha256": PROFILE_SHA256,
+        "source_commit_oid": QUALIFIED_SOURCE_COMMIT_OID,
+        "source_manifest_sha256": SOURCE_MANIFEST_SHA256,
+    }:
+        _fail("post-qualification historical evidence identity changed")
+    return document
+
+
 def require_packaged_activation_assets(
     root: Path,
     *,
@@ -1022,8 +1285,11 @@ def main() -> int:
     manifest_raw = read_bound_source_bytes(root, SOURCE_MANIFEST_RELATIVE_PATH)
     v6_profile_raw = read_bound_source_bytes(root, V6_PROFILE_RELATIVE_PATH)
     v6_archive_raw = read_bound_source_bytes(root, V6_ARCHIVE_RELATIVE_PATH)
+    post_qualification_boundary_raw = read_bound_source_bytes(
+        root, POST_QUALIFICATION_BUILD_BOUNDARY_RELATIVE_PATH
+    )
     manifest = require_source_manifest_document(manifest_raw)
-    sources = require_bound_source_tree(root, manifest)
+    sources = require_bound_source_commit(root, manifest)
     require_packaged_activation_assets(
         root,
         profile_raw=profile_raw,
@@ -1041,18 +1307,27 @@ def main() -> int:
     )
     require_cargo_target_inventory(root)
     require_activation_source_contract(sources)
+    require_post_qualification_build_boundary(root)
+    require_post_qualification_build_contract(post_qualification_boundary_raw)
     print(
         json.dumps(
             {
                 "all_authority_false": True,
                 "compiled_profile_binding_verified": True,
+                "current_build_activation_bound": False,
                 "build_configuration_sha256": BUILD_CONFIGURATION_SHA256,
                 "execution_consumed": False,
                 "live_execution_implemented": True,
                 "non_consuming_preflight_only": True,
                 "profile_id": PROFILE_ID,
                 "profile_sha256": PROFILE_SHA256,
+                "recorded_execution_consumed": True,
+                "post_qualification_build_boundary_sha256": hashlib.sha256(
+                    post_qualification_boundary_raw
+                ).hexdigest(),
                 "source_count": SOURCE_COUNT,
+                "source_commit_oid": QUALIFIED_SOURCE_COMMIT_OID,
+                "source_verification_mode": "historical_git_commit",
                 "source_manifest_sha256": SOURCE_MANIFEST_SHA256,
                 "status": "native_lane_metrics_activation_frozen_execution_not_consumed",
             },

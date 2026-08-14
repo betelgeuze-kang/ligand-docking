@@ -87,6 +87,7 @@ def test_static_cli_resolves_without_site_packages() -> None:
     assert completed.stderr == ""
     assert result["recorded_decision"] == "PASS"
     assert result["raw_evidence_reverified"] is False
+    assert result["historical_source_reverified"] is True
     assert result["all_authority_false"] is True
 
 

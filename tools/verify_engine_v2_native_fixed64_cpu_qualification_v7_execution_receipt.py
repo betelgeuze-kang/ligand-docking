@@ -14,8 +14,10 @@ from typing import NoReturn
 
 if __package__:
     from . import verify_engine_v2_native_fixed64_cpu_v7_evidence as raw_verifier
+    from . import verify_engine_v2_native_fixed64_cpu_profile_v7 as profile_verifier
 else:
     import verify_engine_v2_native_fixed64_cpu_v7_evidence as raw_verifier
+    import verify_engine_v2_native_fixed64_cpu_profile_v7 as profile_verifier
 
 
 RECEIPT_RELATIVE_PATH = Path(
@@ -630,6 +632,15 @@ def verify_execution_receipt(
             repo_root=repo_root,
             terminal_path=terminal_path,
         )
+    manifest_raw = (
+        repo_root / profile_verifier.SOURCE_MANIFEST_RELATIVE_PATH
+    ).read_bytes()
+    manifest = profile_verifier.require_source_manifest_document(manifest_raw)
+    profile_verifier.require_bound_source_commit(
+        repo_root,
+        manifest,
+        commit_oid=EXPECTED_SOURCE_COMMIT_OID,
+    )
     return projection, raw_reverified
 
 
@@ -664,6 +675,7 @@ def main() -> int:
             {
                 "all_authority_false": True,
                 "execution_consumed": True,
+                "historical_source_reverified": True,
                 "profile_id": profile["profile_id"],
                 "raw_evidence_reverified": raw_reverified,
                 "receipt_sha256": EXPECTED_RECEIPT_SHA256,

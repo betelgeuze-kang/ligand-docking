@@ -41,6 +41,7 @@ on:
       - "tools/verify_engine_v2_native_fixed64_cpu_v6_rustc_wrapper.py"
       - "config/engine_v2_native_fixed64_cpu_profile_v7.json"
       - "config/engine_v2_native_fixed64_cpu_profile_v7_sources.json"
+      - "config/engine_v2_native_fixed64_cpu_post_qualification_build_boundary_v1.json"
       - "tools/verify_engine_v2_native_fixed64_cpu_v7_rustc_wrapper.py"
       - "tests/unit/test_engine_v2_docking_search_v2_facade.py"
       - "CHANGELOG.md"
@@ -425,7 +426,7 @@ jobs:
                 test \"\$activation_status\" -eq 1
                 test ! -s /tmp/v7-nonauthoritative.stdout
                 grep -F \
-                  'non-authoritative package build cannot activate' \
+                  'native fixed64 CPU v7 non-authoritative build cannot activate' \
                   /tmp/v7-nonauthoritative.stderr"
             git diff --exit-code
           done

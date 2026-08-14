@@ -67,9 +67,12 @@ metrics explicitly carry `authority=false`, `rank_mutated=false`, and
 
 Git-less wheel packaging uses only the explicit non-authoritative mode
 `BETELGEUZE_V7_NON_AUTHORITATIVE_PACKAGE_BUILD=1` plus an exact
-`BETELGEUZE_V7_SOURCE_ROOT`. That mode verifies the frozen source graph but
-embeds an unbound commit and rejects activation. Ordinary local and CI builds
-also reject activation.
+`BETELGEUZE_V7_SOURCE_ROOT`. After the one-shot v7 run was consumed, that mode
+verifies the frozen profile and source-manifest metadata only; it deliberately
+leaves the current source graph, build commit, and build configuration unbound
+and rejects activation. Ordinary local and CI builds use the same unbound
+post-qualification boundary and also reject activation. Historical source
+verification is performed separately from the exact consumed Git commit.
 
 An authoritative synthetic qualification binary can only be compiled from the
 exact committed source with the frozen toolchain and flags:
@@ -110,3 +113,27 @@ reservation, molecular, rank-mutation, allocation-mutation, or HIP authority.
 The consuming synthetic run remains separate from molecular execution and is
 permitted only after exact-head review, merge, clean-main preflight, and an
 absent account-scoped state check.
+
+## Post-qualification source boundary
+
+The single synthetic v7 run has since been consumed at exact source commit
+`5c1e4791e988d4c75a5111f933feac85236ba821`; its immutable compact receipt is
+verified separately and has SHA-256
+`f653185c2bfc7642e2d9e73b918a2e0a9c14c0e107f5804799e140bb42c34b82`.
+The profile document above remains the historical pre-run activation contract
+and is not rewritten after measurement.
+
+Current runtime development and non-authoritative package builds verify the
+frozen profile and manifest metadata but deliberately set source-graph,
+build-commit, build-configuration, and activation binding false. They therefore
+cannot activate or rerun v7, even if current Rust sources compile and tests run.
+The static verifier reads all 196 qualified files from the exact historical Git
+commit with replacement objects disabled, then verifies the current unbound
+build gate separately. The machine-readable boundary is
+`config/engine_v2_native_fixed64_cpu_post_qualification_build_boundary_v1.json`.
+
+Only the exact historical commit with its frozen compiler configuration can
+produce a source-bound v7 binary; the persisted account-scoped terminal already
+records consumption. No current-source rebind, qualification rerun, molecular
+execution, reservation, public benchmark, or HIP-device authority is created by
+this post-qualification build separation.

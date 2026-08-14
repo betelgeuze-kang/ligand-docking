@@ -1,0 +1,43 @@
+{
+  "authority": {
+    "fresh_holdout_execution_authorized": false,
+    "hip_device_execution_authorized": false,
+    "historical_ab_execution_authorized": false,
+    "molecular_execution_authorized": false,
+    "product_performance_claim_authorized": false,
+    "public_benchmark_authorized": false,
+    "qualification_rerun_authorized": false,
+    "reservation_authorized": false,
+    "stage0_admission_authorized": false
+  },
+  "build_modes": {
+    "historical_qualification": {
+      "activation_allowed_from_current_source": false,
+      "exact_source_commit_required": "5c1e4791e988d4c75a5111f933feac85236ba821",
+      "frozen_build_configuration_required": true,
+      "source_graph_bound": true
+    },
+    "non_authoritative_package": {
+      "activation_allowed": false,
+      "build_commit_bound": false,
+      "frozen_manifest_metadata_verified": true,
+      "source_graph_bound": false
+    },
+    "ordinary_development": {
+      "activation_allowed": false,
+      "build_commit_bound": false,
+      "frozen_manifest_metadata_verified": true,
+      "source_graph_bound": false
+    }
+  },
+  "historical_evidence": {
+    "execution_consumed": true,
+    "execution_receipt_sha256": "f653185c2bfc7642e2d9e73b918a2e0a9c14c0e107f5804799e140bb42c34b82",
+    "profile_id": "engine_v2_native_fixed64_cpu_synthetic_v7",
+    "profile_sha256": "50c3e609a23e3bf0641a900f71dc360dcadc1a52c3bde66cdfa74b8c1affcd5d",
+    "source_commit_oid": "5c1e4791e988d4c75a5111f933feac85236ba821",
+    "source_manifest_sha256": "ecb009ac228652c6c6cbdefcdd70828ce3d9aeea5a5e31d0fff0246d4d5f932e"
+  },
+  "schema_id": "betelgeuze.engine_v2_native_fixed64_cpu_post_qualification_build_boundary/1.0.0",
+  "status": "historical_v7_consumed_current_runtime_development_unbound"
+}

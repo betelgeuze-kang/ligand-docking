@@ -13,8 +13,11 @@ import tools.verify_engine_v2_native_fixed64_cpu_profile_v7 as verifier
 from tools.verify_engine_v2_native_fixed64_cpu_profile_v7 import (
     NativeFixed64CPUProfileV7Error,
     require_activation_source_contract,
+    require_bound_source_commit,
     require_bound_source_tree,
     require_packaged_activation_assets,
+    require_post_qualification_build_boundary,
+    require_post_qualification_build_contract,
     require_profile_document_v7,
     require_source_manifest_document,
 )
@@ -48,7 +51,7 @@ def _real_evidence() -> tuple[bytes, bytes, bytes, bytes, dict[str, bytes]]:
     v6_profile_raw = _V6_PROFILE.read_bytes()
     v6_archive_raw = _V6_ARCHIVE.read_bytes()
     manifest = require_source_manifest_document(manifest_raw)
-    sources = require_bound_source_tree(_ROOT, manifest)
+    sources = require_bound_source_commit(_ROOT, manifest)
     return profile_raw, manifest_raw, v6_profile_raw, v6_archive_raw, sources
 
 
@@ -126,9 +129,32 @@ def test_command_line_verifier_is_non_consuming_and_authority_false() -> None:
     assert completed.stderr == ""
     assert payload["compiled_profile_binding_verified"] is True
     assert payload["execution_consumed"] is False
+    assert payload["recorded_execution_consumed"] is True
+    assert payload["current_build_activation_bound"] is False
     assert payload["non_consuming_preflight_only"] is True
     assert payload["all_authority_false"] is True
     assert payload["source_count"] == 196
+    assert payload["source_commit_oid"] == verifier.QUALIFIED_SOURCE_COMMIT_OID
+    assert payload["source_verification_mode"] == "historical_git_commit"
+
+
+def test_post_qualification_build_is_explicitly_unbound() -> None:
+    require_post_qualification_build_boundary(_ROOT)
+    contract = require_post_qualification_build_contract(
+        (_ROOT / verifier.POST_QUALIFICATION_BUILD_BOUNDARY_RELATIVE_PATH).read_bytes()
+    )
+    assert contract["historical_evidence"]["execution_consumed"] is True
+
+
+def test_post_qualification_rerun_authority_fails_closed() -> None:
+    path = _ROOT / verifier.POST_QUALIFICATION_BUILD_BOUNDARY_RELATIVE_PATH
+    document = json.loads(path.read_text(encoding="ascii"))
+    document["authority"]["qualification_rerun_authorized"] = True
+    with pytest.raises(
+        NativeFixed64CPUProfileV7Error,
+        match="build boundary authority",
+    ):
+        require_post_qualification_build_contract(_canonical(document))
 
 
 def _invoke_rustc_wrapper(
