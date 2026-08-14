@@ -13,6 +13,9 @@ on:
       - "betelgeuze_engine_v2/docking/native_cpu_parity.py"
       - "betelgeuze_engine_v2/standalone_cli.py"
       - "betelgeuze_engine_v2/docking/synthetic_d0_fixture_admission.json"
+      - "tools/build_engine_v2_native_wheel.py"
+      - "tools/build_engine_v2_sbom.py"
+      - "tests/unit/test_engine_v2_native_packaging.py"
       - ".cargo"
       - ".cargo/config"
       - ".cargo/config.toml"
@@ -33,6 +36,7 @@ on:
       - "config/engine_v2_repository_synthetic_d0_native_source_v1.json"
       - "config/engine_v2_repository_synthetic_d0_native_session_v1.json"
       - "config/engine_v2_repository_synthetic_d0_cpu_parity_v1.json"
+      - "config/engine_v2_native_cpu_runtime_artifacts_v1.json"
       - "tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py"
       - "tools/verify_engine_v2_native_fixed64_cpu_profile_v5.py"
       - "tools/verify_engine_v2_native_fixed64_cpu_profile_v6.py"
@@ -46,6 +50,7 @@ on:
       - "tools/verify_engine_v2_repository_synthetic_d0_native_source_v1.py"
       - "tools/verify_engine_v2_repository_synthetic_d0_native_session_v1.py"
       - "tools/verify_engine_v2_repository_synthetic_d0_cpu_parity_v1.py"
+      - "tools/verify_engine_v2_native_cpu_runtime_artifacts_v1.py"
       - "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v6.py"
       - "tests/unit/test_verify_engine_v2_native_fixed64_cpu_v6_evidence.py"
       - "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v7.py"
@@ -55,12 +60,14 @@ on:
       - "tests/unit/test_verify_engine_v2_repository_synthetic_d0_native_source_v1.py"
       - "tests/unit/test_verify_engine_v2_repository_synthetic_d0_native_session_v1.py"
       - "tests/unit/test_verify_engine_v2_repository_synthetic_d0_cpu_parity_v1.py"
+      - "tests/unit/test_verify_engine_v2_native_cpu_runtime_artifacts_v1.py"
       - "tests/unit/test_engine_v2_native_fixed64_complete_pipeline.py"
       - "docs/engine_v2_native_fixed64_cpu_qualification_v7_result.md"
       - "docs/engine_v2_native_fixed64_workspace_reuse_v1.md"
       - "docs/engine_v2_repository_synthetic_d0_native_source_v1.md"
       - "docs/engine_v2_repository_synthetic_d0_native_session_v1.md"
       - "docs/engine_v2_repository_synthetic_d0_cpu_parity_v1.md"
+      - "docs/engine_v2_native_cpu_runtime_artifacts_v1.md"
       - ".github/workflows/ci-native-compute-abi.yml"
       - ".github/workflows/ci-engine-v2-release-candidate.yml"
       - ".github/workflows/ci-native-hip-safe-trusted.yml"
@@ -75,6 +82,9 @@ on:
       - "betelgeuze_engine_v2/docking/native_cpu_parity.py"
       - "betelgeuze_engine_v2/standalone_cli.py"
       - "betelgeuze_engine_v2/docking/synthetic_d0_fixture_admission.json"
+      - "tools/build_engine_v2_native_wheel.py"
+      - "tools/build_engine_v2_sbom.py"
+      - "tests/unit/test_engine_v2_native_packaging.py"
       - ".cargo"
       - ".cargo/config"
       - ".cargo/config.toml"
@@ -95,6 +105,7 @@ on:
       - "config/engine_v2_repository_synthetic_d0_native_source_v1.json"
       - "config/engine_v2_repository_synthetic_d0_native_session_v1.json"
       - "config/engine_v2_repository_synthetic_d0_cpu_parity_v1.json"
+      - "config/engine_v2_native_cpu_runtime_artifacts_v1.json"
       - "tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py"
       - "tools/verify_engine_v2_native_fixed64_cpu_profile_v5.py"
       - "tools/verify_engine_v2_native_fixed64_cpu_profile_v6.py"
@@ -108,6 +119,7 @@ on:
       - "tools/verify_engine_v2_repository_synthetic_d0_native_source_v1.py"
       - "tools/verify_engine_v2_repository_synthetic_d0_native_session_v1.py"
       - "tools/verify_engine_v2_repository_synthetic_d0_cpu_parity_v1.py"
+      - "tools/verify_engine_v2_native_cpu_runtime_artifacts_v1.py"
       - "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v6.py"
       - "tests/unit/test_verify_engine_v2_native_fixed64_cpu_v6_evidence.py"
       - "tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v7.py"
@@ -117,12 +129,14 @@ on:
       - "tests/unit/test_verify_engine_v2_repository_synthetic_d0_native_source_v1.py"
       - "tests/unit/test_verify_engine_v2_repository_synthetic_d0_native_session_v1.py"
       - "tests/unit/test_verify_engine_v2_repository_synthetic_d0_cpu_parity_v1.py"
+      - "tests/unit/test_verify_engine_v2_native_cpu_runtime_artifacts_v1.py"
       - "tests/unit/test_engine_v2_native_fixed64_complete_pipeline.py"
       - "docs/engine_v2_native_fixed64_cpu_qualification_v7_result.md"
       - "docs/engine_v2_native_fixed64_workspace_reuse_v1.md"
       - "docs/engine_v2_repository_synthetic_d0_native_source_v1.md"
       - "docs/engine_v2_repository_synthetic_d0_native_session_v1.md"
       - "docs/engine_v2_repository_synthetic_d0_cpu_parity_v1.md"
+      - "docs/engine_v2_native_cpu_runtime_artifacts_v1.md"
       - ".github/workflows/ci-native-compute-abi.yml"
       - ".github/workflows/ci-engine-v2-release-candidate.yml"
       - ".github/workflows/ci-native-hip-safe-trusted.yml"
@@ -153,6 +167,9 @@ jobs:
             CMakeLists.txt
             LICENSE
             betelgeuze_engine_v2/docking/synthetic_d0_fixture_admission.json
+            tools/build_engine_v2_native_wheel.py
+            tools/build_engine_v2_sbom.py
+            tests/unit/test_engine_v2_native_packaging.py
             include
             native
             rust
@@ -180,6 +197,7 @@ jobs:
             config/engine_v2_repository_synthetic_d0_native_source_v1.json
             config/engine_v2_repository_synthetic_d0_native_session_v1.json
             config/engine_v2_repository_synthetic_d0_cpu_parity_v1.json
+            config/engine_v2_native_cpu_runtime_artifacts_v1.json
             tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py
             tools/verify_engine_v2_native_fixed64_cpu_profile_v5.py
             tools/verify_engine_v2_native_fixed64_cpu_profile_v6.py
@@ -193,13 +211,16 @@ jobs:
             tools/verify_engine_v2_repository_synthetic_d0_native_source_v1.py
             tools/verify_engine_v2_repository_synthetic_d0_native_session_v1.py
             tools/verify_engine_v2_repository_synthetic_d0_cpu_parity_v1.py
+            tools/verify_engine_v2_native_cpu_runtime_artifacts_v1.py
             tests/unit/test_engine_v2_native_fixed64_complete_pipeline.py
             tests/unit/test_verify_engine_v2_repository_synthetic_d0_native_session_v1.py
             tests/unit/test_verify_engine_v2_repository_synthetic_d0_cpu_parity_v1.py
+            tests/unit/test_verify_engine_v2_native_cpu_runtime_artifacts_v1.py
             docs/engine_v2_native_fixed64_workspace_reuse_v1.md
             docs/engine_v2_repository_synthetic_d0_native_source_v1.md
             docs/engine_v2_repository_synthetic_d0_native_session_v1.md
             docs/engine_v2_repository_synthetic_d0_cpu_parity_v1.md
+            docs/engine_v2_native_cpu_runtime_artifacts_v1.md
             .github/workflows/ci-native-compute-abi.yml
             .github/workflows/ci-engine-v2-release-candidate.yml
 
@@ -253,6 +274,10 @@ jobs:
       - name: Verify repository synthetic D0 native CPU parity v1 contract
         run: >-
           python3 tools/verify_engine_v2_repository_synthetic_d0_cpu_parity_v1.py
+
+      - name: Verify native CPU runtime artifacts v1 contract
+        run: >-
+          python3 tools/verify_engine_v2_native_cpu_runtime_artifacts_v1.py
 
       - name: Build and test the C ABI
         run: |
