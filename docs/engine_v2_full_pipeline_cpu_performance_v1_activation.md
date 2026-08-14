@@ -87,12 +87,20 @@ exact parent path/inode, root-controlled directory chain, static ELF structure,
 command line, zero capabilities, absent tracer, UID/GID, and stable process
 start identity. This outside-the-repository process boundary anchors the exact
 preflight digest before any account-owned bootstrap byte can execute.
+Before numeric UID/GID zero is treated as host-root authority, the native
+launcher, embedded stage 0, and Python preflight each require the exact initial
+host user and mount namespaces. The frozen identity maps are
+`0 0 4294967295`; the namespace identities are `user:[4026531837]` and
+`mnt:[4026531841]`. An unprivileged user namespace or private mount/chroot tree
+therefore fails closed before account-owned source is read.
 The reviewed exact-host build uses `g++ -std=c++17 -O2 -Wall -Wextra
 -Wpedantic -Werror -static -s -Wl,--build-id=none`; its frozen binary SHA-256
-is `b4d0e622d4dec784356716cacf5b8db69f4950563470540e3f24954227424e56`.
+is `43fe19fd75f2b9ae37b124004a4b77ff59a7bcad772e53945af64216874c91a5`.
 The preflight hashes the actual parent executable and requires that digest in
 the activation contract, in addition to checking root ownership and static ELF
-structure.
+structure. The contract separately freezes the SHA-256 of the complete launcher
+source, and the static verifier hashes every source byte rather than accepting
+selected snippets as a source-to-binary provenance claim.
 
 The launcher clears the inherited
 environment, inhibits the loader cache, fixes the library search path, disables
@@ -143,8 +151,9 @@ g++ -std=c++17 -O2 -Wall -Wextra -Wpedantic -Werror -static -s \
   native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp \
   -o /independent/staging/engine-v2-preflight-launcher-v1
 sha256sum /independent/staging/engine-v2-preflight-launcher-v1
-# An independent host administrator verifies the expected SHA-256, then installs
-# these exact bytes as root:root mode 0555 at the frozen /usr/local/libexec path.
+# An independent host administrator verifies both the contract's complete source
+# SHA-256 and exact-host binary SHA-256, then installs these exact bytes as
+# root:root mode 0555 at the frozen /usr/local/libexec path.
 ```
 
 Only after that independent provisioning step is the following invocation
@@ -166,6 +175,8 @@ caller-provided `LD_LIBRARY_PATH`, `LD_PRELOAD`, loader-cache choice, or ROCm
 environment survives into the authenticated process.
 The local result records immutable-snapshot and descriptor-bound native
 initialization, `trusted_root_launcher_parent_validated=true`,
+`trusted_root_launcher_source_sha256=<contract digest>`,
+`initial_host_namespaces_validated=true`,
 `root_owned_interpreter_target_validated=true`,
 `exact_loader_process_identity_validated=true`, and
 `immutable_bootstrap_snapshot_validated=true`, verified public package exports,

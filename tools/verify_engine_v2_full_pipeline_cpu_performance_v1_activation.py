@@ -84,7 +84,7 @@ ACTIVATION_SCHEMA_ID = (
 ACTIVATION_ID = "engine_v2_full_pipeline_cpu_performance_v1_activation"
 PROFILE_ID = "engine_v2_full_pipeline_cpu_performance_v1"
 PROFILE_SHA256 = "385fb713cca8f39353f138115749abdfc9768b02222e13111a418360be30a000"
-ACTIVATION_SHA256 = "ea7aadcd791187e9b9429c4ca4dd9677554267b2051be0ed4ec167bcca3ecbd5"
+ACTIVATION_SHA256 = "86d439c59ba5a9e1fc14a78dbf51083e658661911971abbe373d83a1c899091b"
 STDLIB_CLOSURE_SHA256 = (
     "d892595cc2bb59aae3fbf7100da9e6b52809082dd5cbc2edb2646811d0b58e35"
 )
@@ -224,8 +224,36 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _exact_value_equal(value: object, expected: object) -> bool:
+    if type(value) is not type(expected):
+        return False
+    if type(expected) is dict:
+        value_mapping = value
+        expected_mapping = expected
+        return bool(
+            value_mapping.keys() == expected_mapping.keys()
+            and all(
+                _exact_value_equal(value_mapping[key], expected_mapping[key])
+                for key in expected_mapping
+            )
+        )
+    if type(expected) is list:
+        value_rows = value
+        expected_rows = expected
+        return bool(
+            len(value_rows) == len(expected_rows)
+            and all(
+                _exact_value_equal(value_item, expected_item)
+                for value_item, expected_item in zip(
+                    value_rows, expected_rows, strict=True
+                )
+            )
+        )
+    return bool(value == expected)
+
+
 def _require_exact(value: object, expected: object, *, name: str) -> None:
-    if type(value) is not type(expected) or value != expected:
+    if not _exact_value_equal(value, expected):
         raise FullPipelineCPUActivationContractError(f"{name} changed")
 
 
@@ -251,9 +279,24 @@ def _require_ordered_snippets(path: Path, snippets: Sequence[str]) -> None:
 
 
 def _validate_trusted_launcher_source(
-    *, preflight_sha256: str, stage0_sha256: str
+    *,
+    preflight_sha256: str,
+    source_sha256: str,
+    stage0_sha256: str,
+    source_path: Path | None = None,
 ) -> None:
-    source = DEFAULT_TRUSTED_LAUNCHER_SOURCE.read_text(encoding="utf-8")
+    source_path = source_path or DEFAULT_TRUSTED_LAUNCHER_SOURCE
+    source_raw = source_path.read_bytes()
+    if hashlib.sha256(source_raw).hexdigest() != source_sha256:
+        raise FullPipelineCPUActivationContractError(
+            "trusted launcher source digest changed"
+        )
+    try:
+        source = source_raw.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise FullPipelineCPUActivationContractError(
+            "trusted launcher source is not UTF-8"
+        ) from exc
     if source.count(preflight_sha256) != 2:
         raise FullPipelineCPUActivationContractError(
             "trusted launcher does not bind the exact preflight digest twice"
@@ -276,12 +319,15 @@ def _validate_trusted_launcher_source(
             "trusted launcher stage0 source digest changed"
         )
     _require_snippets(
-        DEFAULT_TRUSTED_LAUNCHER_SOURCE,
+        source_path,
         (
             "constexpr char kLauncherPath[] =",
             'constexpr char kPythonExecutable[] = "/usr/bin/python3.10";',
             "PR_SET_DUMPABLE",
             "PR_SET_NO_NEW_PRIVS",
+            "require_initial_host_namespaces",
+            'kInitialUserNamespace[] = "user:[4026531837]"',
+            'kInitialMountNamespace[] = "mnt:[4026531841]"',
             "SYS_close_range",
             "PR_SET_PDEATHSIG",
             "getppid() != launcher_pid",
@@ -881,7 +927,7 @@ def verify(
                 "proc_exe_exact": True,
                 "stage0_argument_vector_bound": True,
                 "stage0_source_sha256": (
-                    "dcf164779a9661ac43d0c9253cdb4700b955ca4c206a42e2f5afa3a384db132a"
+                    "2077e7486936e5481fe93caec74d856582ef5f8a9050067001ea0dfcfd0dcdba"
                 ),
                 "trusted_launcher_parent_exact": True,
             },
@@ -916,6 +962,15 @@ def verify(
             "exact_python_executable_target": "/usr/bin/python3.10",
             "github_actions_preflight_allowed": False,
             "host_preflight_required": True,
+            "initial_host_namespaces": {
+                "gid_map": [0, 0, 4_294_967_295],
+                "mount_namespace": "mnt:[4026531841]",
+                "native_launcher_enforced": True,
+                "python_preflight_enforced": True,
+                "stage0_enforced": True,
+                "uid_map": [0, 0, 4_294_967_295],
+                "user_namespace": "user:[4026531837]",
+            },
             "molecular_input_allowed": False,
             "performance_measurement_allowed": False,
             "performance_sidecar_sha256": _sha256(
@@ -930,7 +985,7 @@ def verify(
             "reservation_allowed": False,
             "trusted_root_launcher": {
                 "binary_sha256": (
-                    "b4d0e622d4dec784356716cacf5b8db69f4950563470540e3f24954227424e56"
+                    "43fe19fd75f2b9ae37b124004a4b77ff59a7bcad772e53945af64216874c91a5"
                 ),
                 "direct_parent_required": True,
                 "effective_capabilities_required": 0,
@@ -947,6 +1002,10 @@ def verify(
                 "source_path": (
                     "native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp"
                 ),
+                "source_sha256": _sha256(
+                    repository_root
+                    / "native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp"
+                ),
                 "static_elf_no_dynamic_or_interp_required": True,
                 "tracer_absent_required": True,
             },
@@ -955,8 +1014,13 @@ def verify(
     )
     _validate_trusted_launcher_source(
         preflight_sha256=str(preflight["preflight_tool_sha256"]),
+        source_sha256=str(preflight["trusted_root_launcher"]["source_sha256"]),
         stage0_sha256=str(
             preflight["exact_loader_kernel_process_identity"]["stage0_source_sha256"]
+        ),
+        source_path=(
+            repository_root
+            / "native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp"
         ),
     )
 
@@ -983,8 +1047,11 @@ def verify(
             "_EXACT_LOADER_STAGE0_TEMPLATE",
             "_render_exact_loader_stage0",
             "_read_exact_proc_cmdline",
+            "_require_initial_host_namespaces",
             "_require_trusted_launcher_parent",
             "trusted_root_launcher_parent_validated",
+            "trusted_root_launcher_source_sha256",
+            "initial_host_namespaces_validated",
             "root_owned_interpreter_target_validated",
             "kernel process identity does not prove the exact loader invocation",
             "_validate_bootstrap_snapshot",
@@ -1032,8 +1099,10 @@ def verify(
         (
             "test_full_pipeline_cpu_activation_contract_verifies",
             "test_full_pipeline_cpu_activation_rejects_authority_drift",
+            "test_full_pipeline_cpu_activation_rejects_nested_boolean_integer_drift",
             "test_trusted_launcher_source_rejects_preflight_digest_cross_wiring",
             "test_trusted_launcher_source_rejects_stage0_byte_drift",
+            "test_trusted_launcher_source_rejects_complete_source_drift",
         ),
     )
     _require_snippets(
@@ -1043,6 +1112,7 @@ def verify(
             "test_stdlib_import_closure_is_rederivable",
             "test_dynamic_library_closure_is_rederivable",
             "test_loader_stage0_argument_vector_binds_every_loader_option",
+            "test_initial_host_namespace_identity_is_exact",
             "test_loader_bootstrap_requires_kernel_identity_and_immutable_snapshot",
             "test_loader_bootstrap_rejects_direct_path_invocation",
             "test_loader_bootstrap_rejects_github_actions_before_source_validation",
@@ -1068,6 +1138,8 @@ def verify(
             "exact glibc dynamic loader",
             "kernel-maintained `/proc/self/exe`",
             "root-provisioned static native launcher",
+            "host user and mount namespaces",
+            "static verifier hashes every source byte",
             "root-owned `/usr/bin/python3.10` target",
             "authenticated immutable bootstrap snapshot",
             "Direct pathname execution",

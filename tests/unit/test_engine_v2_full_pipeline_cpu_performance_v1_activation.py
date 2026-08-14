@@ -326,6 +326,31 @@ def _sealed_bootstrap_snapshot(raw: bytes) -> int:
     return descriptor
 
 
+def test_initial_host_namespace_identity_is_exact(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    maps = {
+        "/proc/self/uid_map": "         0          0 4294967295\n",
+        "/proc/self/gid_map": "         0          0 4294967295\n",
+    }
+    namespaces = {
+        "/proc/self/ns/user": "user:[4026531837]",
+        "/proc/self/ns/mnt": "mnt:[4026531841]",
+    }
+    monkeypatch.setattr(
+        preflight,
+        "_read_bounded_proc_text",
+        lambda path, *, maximum_bytes: maps[path],
+    )
+    monkeypatch.setattr(preflight.os, "readlink", lambda path: namespaces[path])
+
+    preflight._require_initial_host_namespaces()
+
+    maps["/proc/self/uid_map"] = "0 1000 1\n"
+    with pytest.raises(RuntimeError, match="initial host user/mount namespace"):
+        preflight._require_initial_host_namespaces()
+
+
 def test_loader_stage0_argument_vector_binds_every_loader_option(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -350,6 +375,10 @@ def test_loader_stage0_argument_vector_binds_every_loader_option(
     assert arguments[arguments.index("-c") + 1] == rendered_stage0
     assert arguments[-1] == "--fixture"
     assert 'expected_sha256 = "' + "a" * 64 + '"' in rendered_stage0
+    assert 'os.readlink("/proc/self/ns/user") != "user:[4026531837]"' in (
+        rendered_stage0
+    )
+    assert 'os.readlink("/proc/self/ns/mnt") != "mnt:[4026531841]"' in (rendered_stage0)
     compile(rendered_stage0, "<stage0>", "exec")
     with pytest.raises(RuntimeError, match="trusted launcher parent"):
         exec(
@@ -398,6 +427,7 @@ def test_loader_bootstrap_requires_kernel_identity_and_immutable_snapshot(
         "_require_trusted_launcher_parent",
         lambda *, source_path: "b" * 64,
     )
+    monkeypatch.setattr(preflight, "_require_initial_host_namespaces", lambda: None)
     real_readlink = os.readlink
 
     def fake_readlink(path: str) -> str:
@@ -487,7 +517,10 @@ def test_trusted_launcher_build_is_static_and_unprovisioned_fails_closed(
         text=True,
     )
     assert rejected.returncode == 125
-    assert "root-provisioned path" in rejected.stderr
+    assert (
+        "initial host user/mount namespace identity changed" in rejected.stderr
+        or "root-provisioned path" in rejected.stderr
+    )
 
 
 def test_loader_bootstrap_rejects_direct_path_invocation(
@@ -516,6 +549,11 @@ def test_loader_bootstrap_rejects_github_actions_before_source_validation(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(preflight.os, "environ", {"GITHUB_ACTIONS": "true"})
+    monkeypatch.setattr(
+        preflight,
+        "_require_initial_host_namespaces",
+        lambda: pytest.fail("namespace evidence must not be read in GitHub Actions"),
+    )
 
     with pytest.raises(
         RuntimeError,
@@ -722,12 +760,16 @@ def test_runtime_activation_contract_rejects_unknown_and_type_drift(
     trusted_launcher_sha256 = str(
         document["preflight"]["trusted_root_launcher"]["binary_sha256"]
     )
+    trusted_launcher_source_sha256 = str(
+        document["preflight"]["trusted_root_launcher"]["source_sha256"]
+    )
 
     with pytest.raises(RuntimeError, match="exact projection changed"):
         preflight._load_activation_contract(
             repository_root=repository_root,
             bootstrap_raw=bootstrap_raw,
             trusted_launcher_sha256=trusted_launcher_sha256,
+            trusted_launcher_source_sha256=trusted_launcher_source_sha256,
         )
 
 

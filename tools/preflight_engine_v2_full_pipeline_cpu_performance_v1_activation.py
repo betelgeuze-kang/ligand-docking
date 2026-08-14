@@ -60,6 +60,12 @@ _EXACT_NATIVE_DEPENDENCY_PRELOAD_PATHS = (
 _EXACT_LOADER_BOOTSTRAP_SNAPSHOT_NAME = "engine-v2-preflight-bootstrap-v1"
 _EXACT_LOADER_MAX_CMDLINE_BYTES = 64 * 1024
 _EXACT_TRUSTED_LAUNCHER_MAX_BYTES = 4 * 1024 * 1024
+_TRUSTED_LAUNCHER_SOURCE_RELATIVE_PATH = Path(
+    "native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp"
+)
+_INITIAL_HOST_IDENTITY_MAP = ((0, 0, 4_294_967_295),)
+_INITIAL_HOST_USER_NAMESPACE = "user:[4026531837]"
+_INITIAL_HOST_MOUNT_NAMESPACE = "mnt:[4026531841]"
 _EXACT_LOADER_STAGE0_PREFLIGHT_SHA256_TOKEN = "__ENGINE_V2_PREFLIGHT_SHA256__"
 _EXACT_LOADER_BOOTSTRAP_ENVIRONMENT = {
     "CUDA_VISIBLE_DEVICES": "",
@@ -83,6 +89,27 @@ except OSError as exc:
     raise RuntimeError("exact-loader stage0 trusted parent is unavailable") from exc
 if parent_pid <= 1 or parent_executable != trusted_launcher_path:
     raise RuntimeError("exact-loader stage0 requires the trusted launcher parent")
+def namespace_map(path):
+    flags = os.O_RDONLY | os.O_CLOEXEC | getattr(os, "O_NOFOLLOW", 0)
+    if getattr(os, "O_NOFOLLOW", 0) == 0:
+        raise RuntimeError("exact-loader stage0 namespace-map no-follow is unavailable")
+    descriptor = os.open(path, flags)
+    try:
+        raw = os.read(descriptor, 4097)
+    finally:
+        os.close(descriptor)
+    try:
+        rows = [tuple(int(value, 10) for value in line.split()) for line in raw.decode("ascii").splitlines()]
+    except (UnicodeError, ValueError) as exc:
+        raise RuntimeError("exact-loader stage0 namespace map is malformed") from exc
+    return rows
+if (
+    namespace_map("/proc/self/uid_map") != [(0, 0, 4294967295)]
+    or namespace_map("/proc/self/gid_map") != [(0, 0, 4294967295)]
+    or os.readlink("/proc/self/ns/user") != "user:[4026531837]"
+    or os.readlink("/proc/self/ns/mnt") != "mnt:[4026531841]"
+):
+    raise RuntimeError("exact-loader stage0 requires initial host user/mount namespaces")
 if len(sys.argv) < 2:
     raise RuntimeError("exact-loader stage0 arguments are incomplete")
 source_path = sys.argv[1]
@@ -358,6 +385,41 @@ def _read_bounded_proc_text(path: str, *, maximum_bytes: int) -> str:
         raise RuntimeError(f"kernel process evidence is not ASCII: {path}") from exc
 
 
+def _parse_namespace_map(path: str) -> tuple[tuple[int, int, int], ...]:
+    rows: list[tuple[int, int, int]] = []
+    for line in _read_bounded_proc_text(path, maximum_bytes=4096).splitlines():
+        fields = line.split()
+        if len(fields) != 3:
+            _fail(f"kernel namespace map is malformed: {path}")
+        try:
+            row = (
+                int(fields[0], 10),
+                int(fields[1], 10),
+                int(fields[2], 10),
+            )
+        except ValueError as exc:
+            raise RuntimeError(f"kernel namespace map is malformed: {path}") from exc
+        if any(value < 0 or value > 4_294_967_295 for value in row):
+            _fail(f"kernel namespace map is outside its envelope: {path}")
+        rows.append(row)
+    return tuple(rows)
+
+
+def _require_initial_host_namespaces() -> None:
+    try:
+        user_namespace = os.readlink("/proc/self/ns/user")
+        mount_namespace = os.readlink("/proc/self/ns/mnt")
+    except OSError as exc:
+        raise RuntimeError("initial host namespace evidence is unavailable") from exc
+    if (
+        _parse_namespace_map("/proc/self/uid_map") != _INITIAL_HOST_IDENTITY_MAP
+        or _parse_namespace_map("/proc/self/gid_map") != _INITIAL_HOST_IDENTITY_MAP
+        or user_namespace != _INITIAL_HOST_USER_NAMESPACE
+        or mount_namespace != _INITIAL_HOST_MOUNT_NAMESPACE
+    ):
+        _fail("initial host user/mount namespace identity changed")
+
+
 def _proc_start_ticks(pid: int) -> int:
     payload = _read_bounded_proc_text(f"/proc/{pid}/stat", maximum_bytes=16 * 1024)
     closing = payload.rfind(")")
@@ -576,6 +638,7 @@ def _validate_bootstrap_snapshot(descriptor: int, *, expected_sha256: str) -> by
 def _require_exact_loader_bootstrap() -> tuple[Path, int, bytes, str]:
     if os.environ.get("GITHUB_ACTIONS", "").lower() == "true":
         _fail("GitHub Actions cannot run the exact-runtime activation preflight")
+    _require_initial_host_namespaces()
     source_path_value = globals().get("__engine_v2_bootstrap_source_path__")
     expected_sha256 = globals().get("__engine_v2_bootstrap_expected_sha256__")
     descriptor = globals().get("__engine_v2_bootstrap_snapshot_fd__")
@@ -816,7 +879,10 @@ def _exact_json_equal(observed: object, expected: object) -> bool:
 
 
 def _expected_activation_contract(
-    *, bootstrap_sha256: str, trusted_launcher_sha256: str
+    *,
+    bootstrap_sha256: str,
+    trusted_launcher_sha256: str,
+    trusted_launcher_source_sha256: str,
 ) -> dict[str, object]:
     false_authority = {
         key: False
@@ -922,6 +988,7 @@ def _expected_activation_contract(
                 "source_path": (
                     "native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp"
                 ),
+                "source_sha256": trusted_launcher_source_sha256,
                 "static_elf_no_dynamic_or_interp_required": True,
                 "tracer_absent_required": True,
             },
@@ -946,6 +1013,15 @@ def _expected_activation_contract(
             "exact_preinit_closure_required": True,
             "github_actions_preflight_allowed": False,
             "host_preflight_required": True,
+            "initial_host_namespaces": {
+                "gid_map": [0, 0, 4_294_967_295],
+                "mount_namespace": _INITIAL_HOST_MOUNT_NAMESPACE,
+                "native_launcher_enforced": True,
+                "python_preflight_enforced": True,
+                "stage0_enforced": True,
+                "uid_map": [0, 0, 4_294_967_295],
+                "user_namespace": _INITIAL_HOST_USER_NAMESPACE,
+            },
             "molecular_input_allowed": False,
             "performance_measurement_allowed": False,
             "performance_sidecar_sha256": _BOUND_MODULE_ROWS[0][2],
@@ -1013,6 +1089,7 @@ def _load_activation_contract(
     repository_root: Path,
     bootstrap_raw: bytes,
     trusted_launcher_sha256: str,
+    trusted_launcher_source_sha256: str,
 ) -> tuple[dict[str, object], bytes]:
     raw = _read_owner_source(
         repository_root
@@ -1045,6 +1122,7 @@ def _load_activation_contract(
     expected = _expected_activation_contract(
         bootstrap_sha256=hashlib.sha256(bootstrap_raw).hexdigest(),
         trusted_launcher_sha256=trusted_launcher_sha256,
+        trusted_launcher_source_sha256=trusted_launcher_source_sha256,
     )
     if not _exact_json_equal(document, expected):
         _fail("activation contract exact projection changed")
@@ -1433,11 +1511,18 @@ def derive_preflight(
     )
     if bootstrap.parent != repository_root / "tools":
         _fail("activation preflight bootstrap escaped repository tools")
+    trusted_launcher_source_sha256 = hashlib.sha256(
+        _read_owner_source(
+            repository_root / _TRUSTED_LAUNCHER_SOURCE_RELATIVE_PATH,
+            name="trusted native launcher source",
+        )
+    ).hexdigest()
     runtime_root, site_packages = _require_runtime_root(runtime_root)
     contract, contract_raw = _load_activation_contract(
         repository_root=repository_root,
         bootstrap_raw=bootstrap_raw,
         trusted_launcher_sha256=trusted_launcher_sha256,
+        trusted_launcher_source_sha256=trusted_launcher_source_sha256,
     )
     _docking_root, authenticated_sources = _authenticate_bound_sources(
         repository_root=repository_root
@@ -1542,6 +1627,8 @@ def derive_preflight(
         evidence["exact_loader_process_identity_validated"] = True
         evidence["trusted_root_launcher_parent_validated"] = True
         evidence["trusted_root_launcher_sha256"] = trusted_launcher_sha256
+        evidence["trusted_root_launcher_source_sha256"] = trusted_launcher_source_sha256
+        evidence["initial_host_namespaces_validated"] = True
         evidence["root_owned_interpreter_target_validated"] = True
         evidence["immutable_bootstrap_snapshot_validated"] = True
         evidence["native_extension_sha256"] = native_extension_sha256

@@ -1,5 +1,6 @@
 #include <cerrno>
 #include <csignal>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
@@ -7,6 +8,7 @@
 #include <string_view>
 #include <vector>
 
+#include <fcntl.h>
 #include <sys/prctl.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
@@ -32,7 +34,9 @@ constexpr char kPreloadPaths[] =
     "/usr/lib/x86_64-linux-gnu/libdl.so.2:"
     "/usr/lib/x86_64-linux-gnu/libc.so.6";
 constexpr char kExpectedPreflightSha256[] =
-    "eceef0eae16f1a720cf03fb720488c4aa0ff801fcab4a04c02a0b79ce42adb44";
+    "2369cfc52596a083964d1ec97f4a675056fdbfc76b4cc8a51db43393d50378e4";
+constexpr char kInitialUserNamespace[] = "user:[4026531837]";
+constexpr char kInitialMountNamespace[] = "mnt:[4026531841]";
 constexpr char kStage0Source[] = R"ENGINEV2STAGE0(import fcntl
 import hashlib
 import os
@@ -47,10 +51,31 @@ except OSError as exc:
     raise RuntimeError("exact-loader stage0 trusted parent is unavailable") from exc
 if parent_pid <= 1 or parent_executable != trusted_launcher_path:
     raise RuntimeError("exact-loader stage0 requires the trusted launcher parent")
+def namespace_map(path):
+    flags = os.O_RDONLY | os.O_CLOEXEC | getattr(os, "O_NOFOLLOW", 0)
+    if getattr(os, "O_NOFOLLOW", 0) == 0:
+        raise RuntimeError("exact-loader stage0 namespace-map no-follow is unavailable")
+    descriptor = os.open(path, flags)
+    try:
+        raw = os.read(descriptor, 4097)
+    finally:
+        os.close(descriptor)
+    try:
+        rows = [tuple(int(value, 10) for value in line.split()) for line in raw.decode("ascii").splitlines()]
+    except (UnicodeError, ValueError) as exc:
+        raise RuntimeError("exact-loader stage0 namespace map is malformed") from exc
+    return rows
+if (
+    namespace_map("/proc/self/uid_map") != [(0, 0, 4294967295)]
+    or namespace_map("/proc/self/gid_map") != [(0, 0, 4294967295)]
+    or os.readlink("/proc/self/ns/user") != "user:[4026531837]"
+    or os.readlink("/proc/self/ns/mnt") != "mnt:[4026531841]"
+):
+    raise RuntimeError("exact-loader stage0 requires initial host user/mount namespaces")
 if len(sys.argv) < 2:
     raise RuntimeError("exact-loader stage0 arguments are incomplete")
 source_path = sys.argv[1]
-expected_sha256 = "eceef0eae16f1a720cf03fb720488c4aa0ff801fcab4a04c02a0b79ce42adb44"
+expected_sha256 = "2369cfc52596a083964d1ec97f4a675056fdbfc76b4cc8a51db43393d50378e4"
 forwarded_arguments = sys.argv[2:]
 if (
     not os.path.isabs(source_path)
@@ -152,6 +177,52 @@ exec(
     std::exit(125);
 }
 
+std::string read_small_file(const char* path) {
+    const int descriptor = open(path, O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
+    if (descriptor < 0) {
+        fail("namespace map is unavailable");
+    }
+    std::vector<char> buffer(4097, '\0');
+    const ssize_t observed = read(descriptor, buffer.data(), buffer.size());
+    const int saved_errno = errno;
+    if (close(descriptor) != 0) {
+        fail("namespace-map descriptor close failed");
+    }
+    errno = saved_errno;
+    if (observed <= 0 || static_cast<std::size_t>(observed) >= buffer.size()) {
+        fail("namespace map is empty or exceeds its envelope");
+    }
+    return std::string(buffer.data(), static_cast<std::size_t>(observed));
+}
+
+std::string read_link(const char* path) {
+    std::vector<char> buffer(4096, '\0');
+    const ssize_t observed = readlink(path, buffer.data(), buffer.size() - 1);
+    if (observed <= 0 || static_cast<std::size_t>(observed) >= buffer.size() - 1) {
+        fail("kernel identity symlink is unavailable");
+    }
+    return std::string(buffer.data(), static_cast<std::size_t>(observed));
+}
+
+void require_initial_host_namespaces() {
+    const auto require_full_identity_map = [](const std::string& raw) {
+        unsigned long long inside = 1;
+        unsigned long long outside = 1;
+        unsigned long long length = 0;
+        char trailing = '\0';
+        return std::sscanf(
+                   raw.c_str(), " %llu %llu %llu %c", &inside, &outside, &length,
+                   &trailing) == 3 &&
+               inside == 0 && outside == 0 && length == 4294967295ULL;
+    };
+    if (!require_full_identity_map(read_small_file("/proc/self/uid_map")) ||
+        !require_full_identity_map(read_small_file("/proc/self/gid_map")) ||
+        read_link("/proc/self/ns/user") != kInitialUserNamespace ||
+        read_link("/proc/self/ns/mnt") != kInitialMountNamespace) {
+        fail("initial host user/mount namespace identity changed");
+    }
+}
+
 void harden_process() {
     if (prctl(PR_SET_DUMPABLE, 0, 0, 0, 0) != 0) {
         fail("PR_SET_DUMPABLE failed");
@@ -198,13 +269,7 @@ void harden_process() {
 }
 
 std::string self_executable() {
-    std::vector<char> buffer(4096, '\0');
-    const ssize_t observed =
-        readlink("/proc/self/exe", buffer.data(), buffer.size() - 1);
-    if (observed <= 0 || static_cast<std::size_t>(observed) >= buffer.size() - 1) {
-        fail("self executable identity is unavailable");
-    }
-    return std::string(buffer.data(), static_cast<std::size_t>(observed));
+    return read_link("/proc/self/exe");
 }
 
 bool valid_source_path(const std::string_view path) {
@@ -235,6 +300,7 @@ int propagate_child_status(const pid_t child) {
 
 int main(int argc, char** argv) {
     harden_process();
+    require_initial_host_namespaces();
     if (self_executable() != kLauncherPath) {
         fail("launcher is not executing from its root-provisioned path");
     }

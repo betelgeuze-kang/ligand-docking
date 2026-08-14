@@ -194,9 +194,11 @@ def _write_cpu_performance_contract(
         "config/engine_v2_full_pipeline_cpu_performance_v1_stdlib_closure.json",
         "config/engine_v2_full_pipeline_cpu_performance_v1_dynamic_library_closure.json",
         "config/engine_v2_full_pipeline_cpu_performance_v1_preinit_executable_closure.json",
+        "native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp",
     ):
         source = Path(__file__).resolve().parents[2] / relative
         target = tmp_path / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(source.read_bytes())
 
 
@@ -880,6 +882,7 @@ def test_full_pipeline_cpu_activation_escalation_fails_ci_audit(
             "trusted_launcher_parent_exact",
         ),
         ("immutable_bootstrap_snapshot", "launched_from_snapshot_required"),
+        ("initial_host_namespaces", "stage0_enforced"),
         ("trusted_root_launcher", "direct_parent_required"),
     ),
 )
@@ -895,6 +898,29 @@ def test_full_pipeline_cpu_activation_requires_launcher_loader_and_snapshot_proo
     )
     activation = json.loads(activation_path.read_text(encoding="ascii"))
     activation["preflight"][section][field] = False
+    activation_path.write_text(
+        json.dumps(activation, indent=2, sort_keys=True) + "\n",
+        encoding="ascii",
+    )
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_cpu_performance_ci_tokens()), encoding="utf-8"
+    )
+
+    payload = build_inventory(tmp_path)
+    assert payload["cpu_performance_authority_fail_closed"] is False
+    assert payload["cpu_performance_contract_in_authoritative_ci"] is False
+
+
+def test_full_pipeline_cpu_activation_rejects_namespace_boolean_type_drift(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_cpu_performance_contract(tmp_path)
+    activation_path = (
+        tmp_path / "config/engine_v2_full_pipeline_cpu_performance_v1_activation.json"
+    )
+    activation = json.loads(activation_path.read_text(encoding="ascii"))
+    activation["preflight"]["initial_host_namespaces"]["stage0_enforced"] = 1
     activation_path.write_text(
         json.dumps(activation, indent=2, sort_keys=True) + "\n",
         encoding="ascii",

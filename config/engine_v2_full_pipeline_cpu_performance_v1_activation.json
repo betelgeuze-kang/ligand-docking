@@ -65,7 +65,7 @@
       "proc_cmdline_exact": true,
       "proc_exe_exact": true,
       "stage0_argument_vector_bound": true,
-      "stage0_source_sha256": "dcf164779a9661ac43d0c9253cdb4700b955ca4c206a42e2f5afa3a384db132a",
+      "stage0_source_sha256": "2077e7486936e5481fe93caec74d856582ef5f8a9050067001ea0dfcfd0dcdba",
       "trusted_launcher_parent_exact": true
     },
     "exact_loader_library_path": "/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu",
@@ -96,15 +96,32 @@
       "launched_from_snapshot_required": true,
       "zero_link_count_required": true
     },
+    "initial_host_namespaces": {
+      "gid_map": [
+        0,
+        0,
+        4294967295
+      ],
+      "mount_namespace": "mnt:[4026531841]",
+      "native_launcher_enforced": true,
+      "python_preflight_enforced": true,
+      "stage0_enforced": true,
+      "uid_map": [
+        0,
+        0,
+        4294967295
+      ],
+      "user_namespace": "user:[4026531837]"
+    },
     "molecular_input_allowed": false,
     "native_initialization_delta_exact": true,
     "performance_measurement_allowed": false,
     "performance_sidecar_sha256": "04253e3897bb5746e1c1082dbf8e27922835ffb075aeb3268c18a0895662173f",
-    "preflight_tool_sha256": "eceef0eae16f1a720cf03fb720488c4aa0ff801fcab4a04c02a0b79ce42adb44",
+    "preflight_tool_sha256": "2369cfc52596a083964d1ec97f4a675056fdbfc76b4cc8a51db43393d50378e4",
     "qualification_state_write_allowed": false,
     "reservation_allowed": false,
     "trusted_root_launcher": {
-      "binary_sha256": "b4d0e622d4dec784356716cacf5b8db69f4950563470540e3f24954227424e56",
+      "binary_sha256": "43fe19fd75f2b9ae37b124004a4b77ff59a7bcad772e53945af64216874c91a5",
       "direct_parent_required": true,
       "effective_capabilities_required": 0,
       "install_path": "/usr/local/libexec/betelgeuze-engine-v2-full-pipeline-cpu-preflight-launcher-v1",
@@ -114,6 +131,7 @@
       "root_gid": 0,
       "root_uid": 0,
       "source_path": "native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp",
+      "source_sha256": "dceb59051167349bfeb8e6d91a015538173e5f5576e3d2fa1ce00381c383566b",
       "static_elf_no_dynamic_or_interp_required": true,
       "tracer_absent_required": true
     }

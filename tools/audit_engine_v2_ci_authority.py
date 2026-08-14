@@ -978,6 +978,18 @@ def _cpu_performance_authority_is_fail_closed(repo_root: Path) -> bool:
         if type(activation_preflight) is dict
         else None
     )
+    activation_initial_host_namespaces = (
+        activation_preflight.get("initial_host_namespaces")
+        if type(activation_preflight) is dict
+        else None
+    )
+    try:
+        trusted_launcher_source_sha256 = _sha256(
+            repo_root
+            / "native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp"
+        )
+    except OSError:
+        return False
     activation_sources = full_activation_contract.get("source_bindings")
     required_source_bindings = {
         "merged_main_commit_sha256",
@@ -1022,6 +1034,34 @@ def _cpu_performance_authority_is_fail_closed(repo_root: Path) -> bool:
         and activation_loader_identity.get("proc_exe_exact") is True
         and activation_loader_identity.get("stage0_argument_vector_bound") is True
         and activation_loader_identity.get("trusted_launcher_parent_exact") is True
+        and type(activation_initial_host_namespaces) is dict
+        and set(activation_initial_host_namespaces)
+        == {
+            "gid_map",
+            "mount_namespace",
+            "native_launcher_enforced",
+            "python_preflight_enforced",
+            "stage0_enforced",
+            "uid_map",
+            "user_namespace",
+        }
+        and activation_initial_host_namespaces.get("gid_map") == [0, 0, 4_294_967_295]
+        and all(
+            type(value) is int
+            for value in activation_initial_host_namespaces["gid_map"]
+        )
+        and activation_initial_host_namespaces.get("uid_map") == [0, 0, 4_294_967_295]
+        and all(
+            type(value) is int
+            for value in activation_initial_host_namespaces["uid_map"]
+        )
+        and activation_initial_host_namespaces.get("mount_namespace")
+        == "mnt:[4026531841]"
+        and activation_initial_host_namespaces.get("user_namespace")
+        == "user:[4026531837]"
+        and activation_initial_host_namespaces.get("native_launcher_enforced") is True
+        and activation_initial_host_namespaces.get("python_preflight_enforced") is True
+        and activation_initial_host_namespaces.get("stage0_enforced") is True
         and type(activation_trusted_launcher) is dict
         and type(activation_trusted_launcher.get("binary_sha256")) is str
         and len(activation_trusted_launcher["binary_sha256"]) == 64
@@ -1037,6 +1077,10 @@ def _cpu_performance_authority_is_fail_closed(repo_root: Path) -> bool:
         is False
         and activation_trusted_launcher.get("root_gid") == 0
         and activation_trusted_launcher.get("root_uid") == 0
+        and activation_trusted_launcher.get("source_path")
+        == "native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp"
+        and activation_trusted_launcher.get("source_sha256")
+        == trusted_launcher_source_sha256
         and activation_trusted_launcher.get("static_elf_no_dynamic_or_interp_required")
         is True
         and activation_trusted_launcher.get("tracer_absent_required") is True
