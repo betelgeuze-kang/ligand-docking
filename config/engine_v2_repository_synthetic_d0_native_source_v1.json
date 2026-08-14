@@ -1,0 +1,150 @@
+{
+  "authority": {
+    "customer_pose_emission_authorized": false,
+    "d1_d2_molecular_execution_authorized": false,
+    "existing_rank_auto_change_authorized": false,
+    "fresh_holdout_execution_authorized": false,
+    "hip_device_execution_authorized": false,
+    "historical_ab_execution_authorized": false,
+    "molecular_execution_authorized": false,
+    "product_performance_claim_authorized": false,
+    "production_claim_authorized": false,
+    "public_benchmark_authorized": false,
+    "qualification_rerun_authorized": false,
+    "reservation_authorized": false,
+    "stage0_admission_authorized": false
+  },
+  "consumer_binding": {
+    "api_activation_authorized": false,
+    "benchmark_activation_authorized": false,
+    "binding_ready": true,
+    "product_shadow_activation_authorized": false,
+    "standalone_activation_authorized": false,
+    "test_only": true
+  },
+  "feature_inventory": {
+    "atomic_feature_count": 13,
+    "donor_attached_hydrogen_required": true,
+    "ligand_shape_atom_indices": [
+      0,
+      1,
+      3
+    ],
+    "missing_feature_slot_indices": [
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      56,
+      57
+    ],
+    "partial_charge_threshold_binary64_hex": "0x1.0000000000000p-2",
+    "pocket_shape_atom_indices": [
+      0,
+      1,
+      3
+    ],
+    "ready_slot_count": 54,
+    "result_fields_consumed": false,
+    "true_conformer_source_count": 0,
+    "typed_failure_count": 10
+  },
+  "fixture": {
+    "authority_input_receipt_sha256": "8b434dd9b208c57f0be6f77442d6e041f6ca1a1727409bcf3fd43716b13a4284",
+    "candidate_denominator": 64,
+    "fixture_id": "betelgeuze.engine_v2.synthetic_d0_standalone_fixture/1.0.0",
+    "ligand_atom_count": 5,
+    "ligand_system_sha256": "62dc8387fc033b9f87c1a6f5d97ed8f2e897e5c1332e8d6567faf5ea06000353",
+    "manifest_sha256": "12919355ac208aaa11d9560ebc95db05a30a5d4379bf741f89e81482d131693b",
+    "receptor_atom_count": 5,
+    "receptor_system_sha256": "f205331ddce5591aeaac950a32a4e1cc151b1adf92793d6095e1cd226cfdd913",
+    "request_sha256": "bbf826bbdc30818f27c95f04763696bd09b7aa3e9cbd75c5d1597442d8129629",
+    "seed": 4301,
+    "top_k": 5
+  },
+  "receipt_identities": {
+    "allocation_receipt_sha256": "8775a56bcd15bc903ead9365eb699c167d523157404dc2271c11a5274bacd2fb",
+    "bitwise_current_v7_coordinate_identity_count": 28,
+    "feature_inventory_receipt_sha256": "44cdd65dfa69fd58fdfd9a174cebf56d17a2be71ded0893c9a503e67fd42179e",
+    "guided_policy_sha256": "2974e9ba80479cccc97dce1b51567e8e7309e7f89c983401c9a8966a3d08633f",
+    "guided_receipt_sha256": "8fc7cd2c744793fa9a000e6aab7b94e95aa19a2e8d74dda2b5468d2922d512c6",
+    "native_source_bundle_receipt_sha256": "929eedd01ef06fe28daa362654325aa5f849891b58d3d6d67a161a8f43fda37a",
+    "prepared_input_receipt_sha256": "9365608f04170392497222d4681e7494c2ddedb01fcab653ca1aded4de984e6e",
+    "proposal_identity_count": 28
+  },
+  "schema_id": "betelgeuze.engine_v2_repository_synthetic_d0_native_source_policy/1.0.0",
+  "scope": {
+    "component": "betelgeuze-docking-search::repository_d0",
+    "cpp_parity_status": "pending_separate_parity_change",
+    "hip_disposition": "compile_only_no_device_execution_or_parity_claim",
+    "implementation": "rust_native_no_python_science_transport",
+    "molecular_input_scope": "repository_owned_synthetic_d0_only",
+    "performance_claim": "none",
+    "validation_mode": "synthetic_native_cpu_only"
+  },
+  "source_generation": {
+    "centered_candidate_count": 8,
+    "counter_prng_id": "sha256_counter_uniform_binary64/1.0.0",
+    "current_v7_coordinate_identity": "bitwise_binary64_sha256_exact",
+    "haar_rotation_algorithm": "shoemake_sha256_counter",
+    "logical_control_source_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23
+    ],
+    "one_materialization_call": true,
+    "result_dependent_retry_allowed": false,
+    "retained_source_indices": [
+      36,
+      45,
+      54,
+      63
+    ],
+    "translation_radius_binary64_hex": "0x1.0000000000000p+2",
+    "true_conformer_generation_allowed": false,
+    "uniform_upstream_source_indices": [
+      24,
+      27,
+      29,
+      32,
+      34,
+      37,
+      40,
+      42,
+      45,
+      47,
+      50,
+      53,
+      55,
+      58,
+      60,
+      63
+    ]
+  },
+  "status": "repository_synthetic_d0_native_source_only_authority_false"
+}
