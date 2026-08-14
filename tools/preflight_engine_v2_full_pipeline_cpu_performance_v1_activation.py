@@ -36,6 +36,8 @@ _NATIVE_EXTENSION_RELATIVE_PATH = Path(
     "betelgeuze_engine_v2_native/"
     "betelgeuze_engine_v2_native.cpython-310-x86_64-linux-gnu.so"
 )
+_NATIVE_PACKAGE_NAME = "betelgeuze_engine_v2_native"
+_NATIVE_QUALIFIED_NAME = "betelgeuze_engine_v2_native.betelgeuze_engine_v2_native"
 _SEALED_NATIVE_EXTENSION_NAME = "engine-v2-native-extension-v1"
 _REQUIRED_NATIVE_SNAPSHOT_SEALS = (
     fcntl.F_SEAL_SEAL | fcntl.F_SEAL_SHRINK | fcntl.F_SEAL_GROW | fcntl.F_SEAL_WRITE
@@ -50,20 +52,121 @@ _EXACT_NATIVE_DEPENDENCY_PRELOAD_PATHS = (
     "/usr/lib/x86_64-linux-gnu/libdl.so.2",
     "/usr/lib/x86_64-linux-gnu/libc.so.6",
 )
-_EXACT_LOADER_HANDSHAKE_ENVIRONMENT_KEY = "ENGINE_V2_EXACT_LOADER_BOOTSTRAP"
-_EXACT_LOADER_HANDSHAKE_NAME = "engine-v2-exact-loader-bootstrap-v1"
-_EXACT_LOADER_HANDSHAKE_PREFIX = b"betelgeuze.engine_v2_exact_loader_bootstrap/1.0.0\n"
-_EXACT_LOADER_HANDSHAKE_NONCE_BYTES = 32
-_EXACT_LOADER_HANDSHAKE_VERSION = "sealed-memfd-v1"
-_EXACT_LOADER_VALIDATED_MARKER = "validated-sealed-memfd-v1"
+_EXACT_LOADER_BOOTSTRAP_SNAPSHOT_NAME = "engine-v2-preflight-bootstrap-v1"
+_EXACT_LOADER_MAX_CMDLINE_BYTES = 64 * 1024
+_EXACT_LOADER_STAGE0_PREFLIGHT_SHA256_TOKEN = "__ENGINE_V2_PREFLIGHT_SHA256__"
 _EXACT_LOADER_BOOTSTRAP_ENVIRONMENT = {
     "CUDA_VISIBLE_DEVICES": "",
-    _EXACT_LOADER_HANDSHAKE_ENVIRONMENT_KEY: _EXACT_LOADER_VALIDATED_MARKER,
     "HIP_VISIBLE_DEVICES": "",
     "LC_ALL": "C",
     "PATH": "/usr/bin:/bin",
     "ROCR_VISIBLE_DEVICES": "",
 }
+_EXACT_LOADER_STAGE0_TEMPLATE = """\
+import fcntl
+import hashlib
+import os
+import stat
+import sys
+
+if len(sys.argv) < 2:
+    raise RuntimeError("exact-loader stage0 arguments are incomplete")
+source_path = sys.argv[1]
+expected_sha256 = "__ENGINE_V2_PREFLIGHT_SHA256__"
+forwarded_arguments = sys.argv[2:]
+if (
+    not os.path.isabs(source_path)
+    or os.path.basename(source_path)
+    != "preflight_engine_v2_full_pipeline_cpu_performance_v1_activation.py"
+    or len(expected_sha256) != 64
+    or any(character not in "0123456789abcdef" for character in expected_sha256)
+):
+    raise RuntimeError("exact-loader stage0 source identity is invalid")
+source_flags = os.O_RDONLY | os.O_CLOEXEC | getattr(os, "O_NOFOLLOW", 0)
+if getattr(os, "O_NOFOLLOW", 0) == 0:
+    raise RuntimeError("exact-loader stage0 no-follow reads are unavailable")
+source_descriptor = os.open(source_path, source_flags)
+try:
+    before = os.fstat(source_descriptor)
+    if (
+        not stat.S_ISREG(before.st_mode)
+        or before.st_uid != os.geteuid()
+        or before.st_gid != os.getegid()
+        or before.st_mode & stat.S_IWOTH
+        or before.st_nlink != 1
+        or not 1 <= before.st_size <= 4 * 1024 * 1024
+    ):
+        raise RuntimeError("exact-loader stage0 source is uncontrolled")
+    chunks = []
+    observed = 0
+    while observed <= 4 * 1024 * 1024:
+        chunk = os.read(source_descriptor, min(1 << 20, 4 * 1024 * 1024 + 1 - observed))
+        if not chunk:
+            break
+        chunks.append(chunk)
+        observed += len(chunk)
+    after = os.fstat(source_descriptor)
+    identity_fields = (
+        "st_dev",
+        "st_ino",
+        "st_mode",
+        "st_uid",
+        "st_gid",
+        "st_nlink",
+        "st_size",
+        "st_mtime_ns",
+        "st_ctime_ns",
+    )
+    if observed != before.st_size or any(
+        getattr(before, field) != getattr(after, field) for field in identity_fields
+    ):
+        raise RuntimeError("exact-loader stage0 source changed while read")
+    raw = b"".join(chunks)
+finally:
+    os.close(source_descriptor)
+if hashlib.sha256(raw).hexdigest() != expected_sha256:
+    raise RuntimeError("exact-loader stage0 source digest changed")
+snapshot_descriptor = os.memfd_create(
+    "engine-v2-preflight-bootstrap-v1",
+    flags=os.MFD_ALLOW_SEALING,
+)
+try:
+    written = 0
+    while written < len(raw):
+        count = os.write(snapshot_descriptor, raw[written:])
+        if count <= 0:
+            raise RuntimeError("exact-loader stage0 snapshot write did not progress")
+        written += count
+    os.fchmod(snapshot_descriptor, 0o400)
+    required_seals = (
+        fcntl.F_SEAL_SEAL
+        | fcntl.F_SEAL_SHRINK
+        | fcntl.F_SEAL_GROW
+        | fcntl.F_SEAL_WRITE
+    )
+    fcntl.fcntl(snapshot_descriptor, fcntl.F_ADD_SEALS, required_seals)
+    if fcntl.fcntl(snapshot_descriptor, fcntl.F_GET_SEALS) != required_seals:
+        raise RuntimeError("exact-loader stage0 snapshot seals changed")
+except BaseException:
+    os.close(snapshot_descriptor)
+    raise
+snapshot_path = f"/proc/self/fd/{snapshot_descriptor}"
+namespace = {
+    "__name__": "__main__",
+    "__file__": snapshot_path,
+    "__package__": None,
+    "__cached__": None,
+    "__engine_v2_bootstrap_source_path__": source_path,
+    "__engine_v2_bootstrap_expected_sha256__": expected_sha256,
+    "__engine_v2_bootstrap_snapshot_fd__": snapshot_descriptor,
+}
+sys.argv = [snapshot_path, *forwarded_arguments]
+exec(
+    compile(raw, snapshot_path, "exec", dont_inherit=True, optimize=0),
+    namespace,
+    namespace,
+)
+"""
 _ACTIVATION_SCHEMA_ID = (
     "betelgeuze.engine_v2_full_pipeline_cpu_performance_activation/1.0.0"
 )
@@ -147,140 +250,82 @@ def _fail(message: str) -> NoReturn:
     )
 
 
-def _validate_exact_loader_handshake_descriptor(
-    descriptor: int, *, expected_sha256: str
-) -> None:
+def _read_exact_proc_cmdline() -> bytes:
+    flags = os.O_RDONLY | os.O_CLOEXEC | getattr(os, "O_NOFOLLOW", 0)
+    if getattr(os, "O_NOFOLLOW", 0) == 0:
+        _fail("safe procfs cmdline reads are unavailable")
+    try:
+        descriptor = os.open("/proc/self/cmdline", flags)
+    except OSError as exc:
+        raise RuntimeError("kernel process command line is unavailable") from exc
+    try:
+        before = os.fstat(descriptor)
+        chunks: list[bytes] = []
+        observed = 0
+        while observed <= _EXACT_LOADER_MAX_CMDLINE_BYTES:
+            chunk = os.read(
+                descriptor,
+                min(4096, _EXACT_LOADER_MAX_CMDLINE_BYTES + 1 - observed),
+            )
+            if not chunk:
+                break
+            chunks.append(chunk)
+            observed += len(chunk)
+        after = os.fstat(descriptor)
+    finally:
+        os.close(descriptor)
+    identity_fields = (
+        "st_dev",
+        "st_ino",
+        "st_mode",
+        "st_uid",
+        "st_gid",
+        "st_nlink",
+        "st_mtime_ns",
+        "st_ctime_ns",
+    )
+    raw = b"".join(chunks)
     if (
-        type(descriptor) is not int
-        or descriptor < 3
-        or type(expected_sha256) is not str
+        not stat.S_ISREG(before.st_mode)
+        or before.st_uid != os.geteuid()
+        or before.st_mode & (stat.S_IWGRP | stat.S_IWOTH)
+        or any(
+            getattr(before, field) != getattr(after, field) for field in identity_fields
+        )
+        or not raw
+        or len(raw) > _EXACT_LOADER_MAX_CMDLINE_BYTES
+        or not raw.endswith(b"\0")
+    ):
+        _fail("kernel process command line is invalid or changed")
+    return raw
+
+
+def _render_exact_loader_stage0(expected_sha256: str) -> str:
+    if (
+        type(expected_sha256) is not str
         or len(expected_sha256) != 64
         or any(character not in "0123456789abcdef" for character in expected_sha256)
-    ):
-        _fail("exact-loader handshake identity is invalid")
-    try:
-        metadata = os.fstat(descriptor)
-        descriptor_flags = fcntl.fcntl(descriptor, fcntl.F_GETFD)
-        seals = fcntl.fcntl(descriptor, fcntl.F_GET_SEALS)
-        target = os.readlink(f"/proc/self/fd/{descriptor}")
-        raw = os.pread(
-            descriptor,
-            len(_EXACT_LOADER_HANDSHAKE_PREFIX)
-            + _EXACT_LOADER_HANDSHAKE_NONCE_BYTES
-            + 1,
-            0,
+        or _EXACT_LOADER_STAGE0_TEMPLATE.count(
+            _EXACT_LOADER_STAGE0_PREFLIGHT_SHA256_TOKEN
         )
-    except OSError as exc:
-        raise RuntimeError("exact-loader handshake descriptor is unavailable") from exc
-    expected_size = (
-        len(_EXACT_LOADER_HANDSHAKE_PREFIX) + _EXACT_LOADER_HANDSHAKE_NONCE_BYTES
+        != 1
+    ):
+        _fail("exact-loader stage0 rendering identity is invalid")
+    rendered = _EXACT_LOADER_STAGE0_TEMPLATE.replace(
+        _EXACT_LOADER_STAGE0_PREFLIGHT_SHA256_TOKEN,
+        expected_sha256,
     )
-    if (
-        not stat.S_ISREG(metadata.st_mode)
-        or metadata.st_uid != os.geteuid()
-        or metadata.st_gid != os.getegid()
-        or stat.S_IMODE(metadata.st_mode) != 0o400
-        or metadata.st_nlink != 0
-        or metadata.st_size != expected_size
-        or descriptor_flags & fcntl.FD_CLOEXEC
-        or seals != _REQUIRED_NATIVE_SNAPSHOT_SEALS
-        or target != f"/memfd:{_EXACT_LOADER_HANDSHAKE_NAME} (deleted)"
-        or len(raw) != expected_size
-        or not raw.startswith(_EXACT_LOADER_HANDSHAKE_PREFIX)
-        or hashlib.sha256(raw).hexdigest() != expected_sha256
-    ):
-        _fail("exact-loader inherited handshake failed validation")
+    if _EXACT_LOADER_STAGE0_PREFLIGHT_SHA256_TOKEN in rendered:
+        _fail("exact-loader stage0 rendering retained its digest token")
+    return rendered
 
 
-def _create_exact_loader_handshake() -> tuple[int, str]:
-    memfd_create = getattr(os, "memfd_create", None)
-    allow_sealing = getattr(os, "MFD_ALLOW_SEALING", None)
-    if memfd_create is None or allow_sealing is None:
-        _fail("sealed exact-loader handshake is unavailable")
-    try:
-        descriptor = memfd_create(
-            _EXACT_LOADER_HANDSHAKE_NAME,
-            flags=allow_sealing,
-        )
-    except OSError as exc:
-        raise RuntimeError("exact-loader handshake creation failed") from exc
-    try:
-        nonce = bytearray()
-        while len(nonce) < _EXACT_LOADER_HANDSHAKE_NONCE_BYTES:
-            chunk = os.getrandom(_EXACT_LOADER_HANDSHAKE_NONCE_BYTES - len(nonce))
-            if not chunk:
-                _fail("exact-loader handshake randomness is unavailable")
-            nonce.extend(chunk)
-        raw = _EXACT_LOADER_HANDSHAKE_PREFIX + bytes(nonce)
-        written = 0
-        while written < len(raw):
-            count = os.write(descriptor, raw[written:])
-            if count <= 0:
-                _fail("exact-loader handshake write did not progress")
-            written += count
-        os.fchmod(descriptor, 0o400)
-        fcntl.fcntl(
-            descriptor,
-            fcntl.F_ADD_SEALS,
-            _REQUIRED_NATIVE_SNAPSHOT_SEALS,
-        )
-        digest = hashlib.sha256(raw).hexdigest()
-        _validate_exact_loader_handshake_descriptor(
-            descriptor,
-            expected_sha256=digest,
-        )
-    except BaseException:
-        os.close(descriptor)
-        raise
-    marker = f"{_EXACT_LOADER_HANDSHAKE_VERSION}:{descriptor}:{digest}"
-    return descriptor, marker
-
-
-def _consume_exact_loader_handshake(marker: str) -> None:
-    if type(marker) is not str:
-        _fail("exact-loader handshake marker is invalid")
-    fields = marker.split(":")
-    if len(fields) != 3 or fields[0] != _EXACT_LOADER_HANDSHAKE_VERSION:
-        _fail("exact-loader handshake marker is invalid")
-    raw_descriptor, expected_sha256 = fields[1:]
-    try:
-        descriptor = int(raw_descriptor, 10)
-    except ValueError:
-        _fail("exact-loader handshake descriptor number is invalid")
-    if str(descriptor) != raw_descriptor:
-        _fail("exact-loader handshake descriptor number is not canonical")
-    expected_environment = dict(_EXACT_LOADER_BOOTSTRAP_ENVIRONMENT)
-    expected_environment[_EXACT_LOADER_HANDSHAKE_ENVIRONMENT_KEY] = marker
-    if dict(os.environ) != expected_environment:
-        _fail("exact-loader inherited environment changed")
-    try:
-        _validate_exact_loader_handshake_descriptor(
-            descriptor,
-            expected_sha256=expected_sha256,
-        )
-    finally:
-        try:
-            os.close(descriptor)
-        except OSError:
-            pass
-    os.environ[_EXACT_LOADER_HANDSHAKE_ENVIRONMENT_KEY] = _EXACT_LOADER_VALIDATED_MARKER
-    if dict(os.environ) != _EXACT_LOADER_BOOTSTRAP_ENVIRONMENT:
-        _fail("exact-loader validated environment normalization failed")
-
-
-def _require_exact_loader_bootstrap() -> None:
-    if os.environ.get("GITHUB_ACTIONS", "").lower() == "true":
-        _fail("GitHub Actions cannot run the exact-runtime activation preflight")
-    marker = os.environ.get(_EXACT_LOADER_HANDSHAKE_ENVIRONMENT_KEY)
-    if marker is not None:
-        _consume_exact_loader_handshake(marker)
-        return
-    descriptor, marker = _create_exact_loader_handshake()
-    bootstrap_environment = dict(_EXACT_LOADER_BOOTSTRAP_ENVIRONMENT)
-    bootstrap_environment[_EXACT_LOADER_HANDSHAKE_ENVIRONMENT_KEY] = marker
+def _exact_loader_stage0_arguments(
+    *, source_path: Path, expected_sha256: str
+) -> list[str]:
     launcher = Path(sys.executable).absolute()
-    bootstrap = Path(__file__).absolute()
-    arguments = [
+    stage0_source = _render_exact_loader_stage0(expected_sha256)
+    return [
         str(_EXACT_DYNAMIC_LOADER),
         "--inhibit-cache",
         "--library-path",
@@ -295,20 +340,86 @@ def _require_exact_loader_bootstrap() -> None:
         "-I",
         "-S",
         "-B",
-        str(bootstrap),
+        "-c",
+        stage0_source,
+        str(source_path),
         *sys.argv[1:],
     ]
+
+
+def _validate_bootstrap_snapshot(descriptor: int, *, expected_sha256: str) -> bytes:
+    if type(descriptor) is not int or descriptor < 3:
+        _fail("bootstrap snapshot descriptor is invalid")
     try:
-        os.execve(
-            _EXACT_DYNAMIC_LOADER,
-            arguments,
-            bootstrap_environment,
-        )
+        metadata = os.fstat(descriptor)
+        descriptor_flags = fcntl.fcntl(descriptor, fcntl.F_GETFD)
+        seals = fcntl.fcntl(descriptor, fcntl.F_GET_SEALS)
+        target = os.readlink(f"/proc/self/fd/{descriptor}")
+        raw = os.pread(descriptor, _MAX_SOURCE_BYTES + 1, 0)
     except OSError as exc:
-        raise RuntimeError("exact dynamic-loader bootstrap failed") from exc
-    finally:
-        os.close(descriptor)
-    _fail("exact dynamic-loader bootstrap returned unexpectedly")
+        raise RuntimeError("bootstrap snapshot descriptor is unavailable") from exc
+    if (
+        not stat.S_ISREG(metadata.st_mode)
+        or metadata.st_uid != os.geteuid()
+        or metadata.st_gid != os.getegid()
+        or stat.S_IMODE(metadata.st_mode) != 0o400
+        or metadata.st_nlink != 0
+        or not 1 <= metadata.st_size <= _MAX_SOURCE_BYTES
+        or descriptor_flags & fcntl.FD_CLOEXEC
+        or seals != _REQUIRED_NATIVE_SNAPSHOT_SEALS
+        or target != f"/memfd:{_EXACT_LOADER_BOOTSTRAP_SNAPSHOT_NAME} (deleted)"
+        or len(raw) != metadata.st_size
+        or hashlib.sha256(raw).hexdigest() != expected_sha256
+    ):
+        _fail("authenticated immutable bootstrap snapshot changed")
+    return raw
+
+
+def _require_exact_loader_bootstrap() -> tuple[Path, int, bytes]:
+    if os.environ.get("GITHUB_ACTIONS", "").lower() == "true":
+        _fail("GitHub Actions cannot run the exact-runtime activation preflight")
+    source_path_value = globals().get("__engine_v2_bootstrap_source_path__")
+    expected_sha256 = globals().get("__engine_v2_bootstrap_expected_sha256__")
+    descriptor = globals().get("__engine_v2_bootstrap_snapshot_fd__")
+    if (
+        type(source_path_value) is not str
+        or not source_path_value
+        or type(expected_sha256) is not str
+        or len(expected_sha256) != 64
+        or any(character not in "0123456789abcdef" for character in expected_sha256)
+        or type(descriptor) is not int
+    ):
+        _fail("preflight must be launched through the authenticated stage0 snapshot")
+    source_path = Path(source_path_value)
+    snapshot_path = f"/proc/self/fd/{descriptor}"
+    if (
+        not source_path.is_absolute()
+        or Path(__file__).absolute() != Path(snapshot_path)
+        or sys.argv[0] != snapshot_path
+        or dict(os.environ) != _EXACT_LOADER_BOOTSTRAP_ENVIRONMENT
+    ):
+        _fail("authenticated stage0 bootstrap process state changed")
+    try:
+        executable_target = os.readlink("/proc/self/exe")
+    except OSError as exc:
+        raise RuntimeError("kernel process executable identity is unavailable") from exc
+    expected_arguments = _exact_loader_stage0_arguments(
+        source_path=source_path,
+        expected_sha256=expected_sha256,
+    )
+    expected_cmdline = (
+        b"\0".join(os.fsencode(value) for value in expected_arguments) + b"\0"
+    )
+    if (
+        executable_target != str(_EXACT_DYNAMIC_LOADER)
+        or _read_exact_proc_cmdline() != expected_cmdline
+    ):
+        _fail("kernel process identity does not prove the exact loader invocation")
+    raw = _validate_bootstrap_snapshot(
+        descriptor,
+        expected_sha256=expected_sha256,
+    )
+    return source_path, descriptor, raw
 
 
 def _require_private_effective_group() -> None:
@@ -328,32 +439,38 @@ def _require_private_effective_group() -> None:
         _fail("effective account group is not private")
 
 
-def _require_isolated_bootstrap() -> None:
-    _require_exact_loader_bootstrap()
-    if tuple(sys.path) != _EXPECTED_INITIAL_PATHS:
-        _fail("isolated standard-library path set changed")
+def _require_isolated_bootstrap() -> tuple[Path, bytes]:
+    source_path, descriptor, raw = _require_exact_loader_bootstrap()
     try:
-        _STDLIB_ZIP_PATH.lstat()
-    except FileNotFoundError:
-        pass
-    except OSError as exc:
-        raise RuntimeError("isolated standard-library zip state is ambiguous") from exc
-    else:
-        _fail("isolated standard-library zip must be absent")
-    if not (
-        sys.flags.isolated == 1
-        and sys.flags.ignore_environment == 1
-        and sys.flags.no_site == 1
-        and sys.flags.no_user_site == 1
-        and sys.flags.dont_write_bytecode == 1
-        and sys.flags.hash_randomization == 1
-        and sys.flags.optimize == 0
-        and sys.pycache_prefix is None
-    ):
-        _fail("preflight requires exact CPython -I -S -B flags")
-    if hasattr(sys.flags, "safe_path"):
-        _fail("unexpected safe_path field appeared in the pinned CPython lane")
-    _require_private_effective_group()
+        if tuple(sys.path) != _EXPECTED_INITIAL_PATHS:
+            _fail("isolated standard-library path set changed")
+        try:
+            _STDLIB_ZIP_PATH.lstat()
+        except FileNotFoundError:
+            pass
+        except OSError as exc:
+            raise RuntimeError(
+                "isolated standard-library zip state is ambiguous"
+            ) from exc
+        else:
+            _fail("isolated standard-library zip must be absent")
+        if not (
+            sys.flags.isolated == 1
+            and sys.flags.ignore_environment == 1
+            and sys.flags.no_site == 1
+            and sys.flags.no_user_site == 1
+            and sys.flags.dont_write_bytecode == 1
+            and sys.flags.hash_randomization == 1
+            and sys.flags.optimize == 0
+            and sys.pycache_prefix is None
+        ):
+            _fail("preflight requires exact CPython -I -S -B flags")
+        if hasattr(sys.flags, "safe_path"):
+            _fail("unexpected safe_path field appeared in the pinned CPython lane")
+        _require_private_effective_group()
+    finally:
+        os.close(descriptor)
+    return source_path, raw
 
 
 def _require_owner_directory(path: Path, *, name: str) -> Path:
@@ -579,20 +696,27 @@ def _expected_activation_contract(*, bootstrap_sha256: str) -> dict[str, object]
             "caller_science_input_allowed": False,
             "exact_dynamic_loader_path": str(_EXACT_DYNAMIC_LOADER),
             "exact_loader_environment": dict(_EXACT_LOADER_BOOTSTRAP_ENVIRONMENT),
-            "exact_loader_handshake": {
+            "exact_loader_kernel_process_identity": {
+                "proc_cmdline_exact": True,
+                "proc_exe_exact": True,
+                "stage0_argument_vector_bound": True,
+                "stage0_source_sha256": hashlib.sha256(
+                    _render_exact_loader_stage0(bootstrap_sha256).encode("ascii")
+                ).hexdigest(),
+            },
+            "immutable_bootstrap_snapshot": {
                 "descriptor_cloexec": False,
                 "descriptor_mode": "0400",
-                "descriptor_name": _EXACT_LOADER_HANDSHAKE_NAME,
+                "descriptor_name": _EXACT_LOADER_BOOTSTRAP_SNAPSHOT_NAME,
                 "descriptor_seals": [
                     "F_SEAL_SEAL",
                     "F_SEAL_SHRINK",
                     "F_SEAL_GROW",
                     "F_SEAL_WRITE",
                 ],
-                "environment_key": _EXACT_LOADER_HANDSHAKE_ENVIRONMENT_KEY,
-                "nonce_bytes": _EXACT_LOADER_HANDSHAKE_NONCE_BYTES,
-                "one_time_inherited_descriptor_required": True,
-                "version": _EXACT_LOADER_HANDSHAKE_VERSION,
+                "exact_source_sha256_required": True,
+                "launched_from_snapshot_required": True,
+                "zero_link_count_required": True,
             },
             "exact_loader_inhibit_cache": True,
             "exact_loader_library_path": _EXACT_DYNAMIC_LOADER_LIBRARY_PATH,
@@ -1007,11 +1131,16 @@ def _populate_native_package(
     package.__doc__ = native.__doc__
 
 
+def _remove_loaded_native_extension() -> None:
+    sys.modules.pop(_NATIVE_QUALIFIED_NAME, None)
+    sys.modules.pop(_NATIVE_PACKAGE_NAME, None)
+
+
 def _require_native_extension(
     site_packages: Path, *, expected_sha256: str
 ) -> tuple[types.ModuleType, int, os.stat_result]:
-    package_name = "betelgeuze_engine_v2_native"
-    qualified_name = f"{package_name}.betelgeuze_engine_v2_native"
+    package_name = _NATIVE_PACKAGE_NAME
+    qualified_name = _NATIVE_QUALIFIED_NAME
     if package_name in sys.modules or qualified_name in sys.modules:
         _fail("exact native extension was already loaded")
     package_root = _require_owner_directory(
@@ -1063,8 +1192,7 @@ def _require_native_extension(
             ):
                 _fail(f"exact native extension lacks required entrypoint {name}")
     except BaseException:
-        sys.modules.pop(qualified_name, None)
-        sys.modules.pop(package_name, None)
+        _remove_loaded_native_extension()
         os.close(descriptor)
         raise
     return native, descriptor, metadata
@@ -1077,15 +1205,13 @@ def derive_preflight(
 ) -> dict[str, object]:
     """Inspect exact bytes and imports without creating an execution attempt."""
 
-    _require_isolated_bootstrap()
-    bootstrap = Path(__file__).absolute()
+    bootstrap, bootstrap_raw = _require_isolated_bootstrap()
     repository_root = _require_owner_directory(
         bootstrap.parent.parent,
         name="repository root",
     )
     if bootstrap.parent != repository_root / "tools":
         _fail("activation preflight bootstrap escaped repository tools")
-    bootstrap_raw = _read_owner_source(bootstrap, name="activation preflight bootstrap")
     runtime_root, site_packages = _require_runtime_root(runtime_root)
     contract, contract_raw = _load_activation_contract(
         repository_root=repository_root,
@@ -1191,7 +1317,8 @@ def derive_preflight(
         evidence["artifact_and_runtime_verified"] = bool(
             runtime_evidence["artifact_and_runtime_verified"]
         )
-        evidence["exact_loader_handshake_validated"] = True
+        evidence["exact_loader_process_identity_validated"] = True
+        evidence["immutable_bootstrap_snapshot_validated"] = True
         evidence["native_extension_sha256"] = native_extension_sha256
         evidence["native_entrypoints_verified"] = True
         evidence["native_extension_descriptor_bound"] = True
@@ -1200,6 +1327,9 @@ def derive_preflight(
         evidence["native_initialization_mapping_delta_exact"] = True
         evidence["native_public_package_verified"] = True
         return evidence
+    except BaseException:
+        _remove_loaded_native_extension()
+        raise
     finally:
         os.close(native_descriptor)
 

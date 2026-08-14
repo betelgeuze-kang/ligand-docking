@@ -871,8 +871,17 @@ def test_full_pipeline_cpu_activation_escalation_fails_ci_audit(
     assert payload["cpu_performance_contract_in_authoritative_ci"] is False
 
 
-def test_full_pipeline_cpu_activation_requires_one_time_loader_handshake(
+@pytest.mark.parametrize(
+    ("section", "field"),
+    (
+        ("exact_loader_kernel_process_identity", "proc_cmdline_exact"),
+        ("immutable_bootstrap_snapshot", "launched_from_snapshot_required"),
+    ),
+)
+def test_full_pipeline_cpu_activation_requires_kernel_loader_and_snapshot_proof(
     tmp_path: Path,
+    section: str,
+    field: str,
 ) -> None:
     _write_authoritative_workflows(tmp_path)
     _write_cpu_performance_contract(tmp_path)
@@ -880,9 +889,7 @@ def test_full_pipeline_cpu_activation_requires_one_time_loader_handshake(
         tmp_path / "config/engine_v2_full_pipeline_cpu_performance_v1_activation.json"
     )
     activation = json.loads(activation_path.read_text(encoding="ascii"))
-    activation["preflight"]["exact_loader_handshake"][
-        "one_time_inherited_descriptor_required"
-    ] = False
+    activation["preflight"][section][field] = False
     activation_path.write_text(
         json.dumps(activation, indent=2, sort_keys=True) + "\n",
         encoding="ascii",

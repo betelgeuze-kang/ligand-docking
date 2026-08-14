@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import errno
+import fcntl
 import hashlib
 import importlib.machinery
 import json
@@ -308,92 +309,133 @@ def test_native_initialization_delta_rejects_dependency_identity_drift() -> None
         )
 
 
-def test_loader_bootstrap_execs_the_exact_loader_with_a_clean_environment(
+def _sealed_bootstrap_snapshot(raw: bytes) -> int:
+    descriptor = os.memfd_create(
+        preflight._EXACT_LOADER_BOOTSTRAP_SNAPSHOT_NAME,
+        flags=os.MFD_ALLOW_SEALING,
+    )
+    os.write(descriptor, raw)
+    os.fchmod(descriptor, 0o400)
+    fcntl.fcntl(
+        descriptor,
+        fcntl.F_ADD_SEALS,
+        preflight._REQUIRED_NATIVE_SNAPSHOT_SEALS,
+    )
+    return descriptor
+
+
+def test_loader_stage0_argument_vector_binds_every_loader_option(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    captured: dict[str, object] = {}
-
-    class BootstrapExecCalled(RuntimeError):
-        pass
-
-    def fake_execve(
-        path: Path, arguments: list[str], environment: dict[str, str]
-    ) -> None:
-        marker = environment[preflight._EXACT_LOADER_HANDSHAKE_ENVIRONMENT_KEY]
-        version, raw_descriptor, expected_sha256 = marker.split(":")
-        assert version == preflight._EXACT_LOADER_HANDSHAKE_VERSION
-        preflight._validate_exact_loader_handshake_descriptor(
-            int(raw_descriptor),
-            expected_sha256=expected_sha256,
-        )
-        captured.update(path=path, arguments=arguments, environment=environment)
-        raise BootstrapExecCalled
-
-    monkeypatch.setattr(preflight.os, "execve", fake_execve)
     monkeypatch.setattr(preflight.sys, "executable", "/exact/runtime/bin/python3")
-    monkeypatch.setattr(preflight.sys, "argv", ["preflight.py", "--fixture"])
-    monkeypatch.setattr(preflight.os, "environ", {"LD_LIBRARY_PATH": "/attacker"})
+    monkeypatch.setattr(preflight.sys, "argv", ["/proc/self/fd/7", "--fixture"])
 
-    with pytest.raises(BootstrapExecCalled):
-        preflight._require_exact_loader_bootstrap()
+    arguments = preflight._exact_loader_stage0_arguments(
+        source_path=Path(
+            "/exact/repository/tools/"
+            "preflight_engine_v2_full_pipeline_cpu_performance_v1_activation.py"
+        ),
+        expected_sha256="a" * 64,
+    )
 
-    assert captured["path"] == preflight._EXACT_DYNAMIC_LOADER
-    arguments = captured["arguments"]
-    assert isinstance(arguments, list)
+    assert arguments[0] == str(preflight._EXACT_DYNAMIC_LOADER)
     assert "--inhibit-cache" in arguments
     assert "--glibc-hwcaps-mask" in arguments
     assert "--preload" in arguments
-    environment = captured["environment"]
-    assert isinstance(environment, dict)
-    marker = environment.pop(preflight._EXACT_LOADER_HANDSHAKE_ENVIRONMENT_KEY)
-    expected_environment = dict(preflight._EXACT_LOADER_BOOTSTRAP_ENVIRONMENT)
-    expected_environment.pop(preflight._EXACT_LOADER_HANDSHAKE_ENVIRONMENT_KEY)
-    assert environment == expected_environment
-    assert marker.startswith(preflight._EXACT_LOADER_HANDSHAKE_VERSION + ":")
-    assert "LD_LIBRARY_PATH" not in captured["environment"]
+    rendered_stage0 = preflight._render_exact_loader_stage0("a" * 64)
+    assert arguments[arguments.index("-c") + 1] == rendered_stage0
+    assert arguments[-1] == "--fixture"
+    assert 'expected_sha256 = "' + "a" * 64 + '"' in rendered_stage0
+    compile(rendered_stage0, "<stage0>", "exec")
 
 
-def test_loader_bootstrap_consumes_sealed_one_time_handshake(
+def test_loader_bootstrap_requires_kernel_identity_and_immutable_snapshot(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    descriptor, marker = preflight._create_exact_loader_handshake()
-    environment = dict(preflight._EXACT_LOADER_BOOTSTRAP_ENVIRONMENT)
-    environment[preflight._EXACT_LOADER_HANDSHAKE_ENVIRONMENT_KEY] = marker
-    monkeypatch.setattr(preflight.os, "environ", environment)
-
-    preflight._require_exact_loader_bootstrap()
-
-    assert environment == preflight._EXACT_LOADER_BOOTSTRAP_ENVIRONMENT
-    with pytest.raises(OSError):
-        os.fstat(descriptor)
-
-
-def test_loader_bootstrap_rejects_forged_validated_environment(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(
-        preflight.os,
-        "execve",
-        lambda *_arguments, **_keywords: pytest.fail("execve must not be called"),
+    raw = b"authenticated immutable bootstrap"
+    expected_sha256 = hashlib.sha256(raw).hexdigest()
+    descriptor = _sealed_bootstrap_snapshot(raw)
+    source_path = Path(
+        "/exact/repository/tools/"
+        "preflight_engine_v2_full_pipeline_cpu_performance_v1_activation.py"
     )
+    snapshot_path = f"/proc/self/fd/{descriptor}"
+    monkeypatch.setitem(
+        preflight.__dict__, "__engine_v2_bootstrap_source_path__", str(source_path)
+    )
+    monkeypatch.setitem(
+        preflight.__dict__,
+        "__engine_v2_bootstrap_expected_sha256__",
+        expected_sha256,
+    )
+    monkeypatch.setitem(
+        preflight.__dict__, "__engine_v2_bootstrap_snapshot_fd__", descriptor
+    )
+    monkeypatch.setattr(preflight, "__file__", snapshot_path)
+    monkeypatch.setattr(preflight.sys, "executable", "/exact/runtime/bin/python3")
+    monkeypatch.setattr(preflight.sys, "argv", [snapshot_path, "--fixture"])
     monkeypatch.setattr(
         preflight.os,
         "environ",
         dict(preflight._EXACT_LOADER_BOOTSTRAP_ENVIRONMENT),
     )
+    arguments = preflight._exact_loader_stage0_arguments(
+        source_path=source_path,
+        expected_sha256=expected_sha256,
+    )
+    expected_cmdline = b"\0".join(os.fsencode(value) for value in arguments) + b"\0"
+    monkeypatch.setattr(preflight, "_read_exact_proc_cmdline", lambda: expected_cmdline)
+    real_readlink = os.readlink
 
-    with pytest.raises(RuntimeError, match="handshake marker is invalid"):
-        preflight._require_exact_loader_bootstrap()
+    def fake_readlink(path: str) -> str:
+        if path == "/proc/self/exe":
+            return str(preflight._EXACT_DYNAMIC_LOADER)
+        return real_readlink(path)
+
+    monkeypatch.setattr(preflight.os, "readlink", fake_readlink)
+    try:
+        observed_path, observed_descriptor, observed_raw = (
+            preflight._require_exact_loader_bootstrap()
+        )
+        assert observed_path == source_path
+        assert observed_descriptor == descriptor
+        assert observed_raw == raw
+        monkeypatch.setattr(
+            preflight,
+            "_read_exact_proc_cmdline",
+            lambda: expected_cmdline.replace(b"--inhibit-cache", b"--inhibit-cachf", 1),
+        )
+        with pytest.raises(RuntimeError, match="exact loader invocation"):
+            preflight._require_exact_loader_bootstrap()
+    finally:
+        os.close(descriptor)
 
 
-def test_loader_bootstrap_rejects_github_actions_before_exec(
+def test_loader_bootstrap_rejects_direct_path_invocation(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
         preflight.os,
-        "execve",
-        lambda *_arguments, **_keywords: pytest.fail("execve must not be called"),
+        "environ",
+        dict(preflight._EXACT_LOADER_BOOTSTRAP_ENVIRONMENT),
     )
+    monkeypatch.delitem(
+        preflight.__dict__, "__engine_v2_bootstrap_source_path__", raising=False
+    )
+    monkeypatch.delitem(
+        preflight.__dict__, "__engine_v2_bootstrap_expected_sha256__", raising=False
+    )
+    monkeypatch.delitem(
+        preflight.__dict__, "__engine_v2_bootstrap_snapshot_fd__", raising=False
+    )
+
+    with pytest.raises(RuntimeError, match="authenticated stage0 snapshot"):
+        preflight._require_exact_loader_bootstrap()
+
+
+def test_loader_bootstrap_rejects_github_actions_before_source_validation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(preflight.os, "environ", {"GITHUB_ACTIONS": "true"})
 
     with pytest.raises(
@@ -490,6 +532,20 @@ def test_native_extension_public_package_reexports_entrypoints() -> None:
     assert package.native_fixed64_repository_synthetic_d0_cpu_parity_v1 is parity
     assert package.betelgeuze_engine_v2_native is native
     assert package.__all__ == native.__all__
+
+
+def test_native_extension_failure_cleanup_removes_public_and_submodule() -> None:
+    package = types.ModuleType(preflight._NATIVE_PACKAGE_NAME)
+    native = types.ModuleType(preflight._NATIVE_QUALIFIED_NAME)
+    sys.modules[preflight._NATIVE_PACKAGE_NAME] = package
+    sys.modules[preflight._NATIVE_QUALIFIED_NAME] = native
+    try:
+        preflight._remove_loaded_native_extension()
+        assert preflight._NATIVE_PACKAGE_NAME not in sys.modules
+        assert preflight._NATIVE_QUALIFIED_NAME not in sys.modules
+    finally:
+        sys.modules.pop(preflight._NATIVE_PACKAGE_NAME, None)
+        sys.modules.pop(preflight._NATIVE_QUALIFIED_NAME, None)
 
 
 def test_exact_closure_rejects_semantic_drift() -> None:

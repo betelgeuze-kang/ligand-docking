@@ -55,28 +55,18 @@
     "exact_dynamic_loader_path": "/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2",
     "exact_loader_environment": {
       "CUDA_VISIBLE_DEVICES": "",
-      "ENGINE_V2_EXACT_LOADER_BOOTSTRAP": "validated-sealed-memfd-v1",
       "HIP_VISIBLE_DEVICES": "",
       "LC_ALL": "C",
       "PATH": "/usr/bin:/bin",
       "ROCR_VISIBLE_DEVICES": ""
     },
-    "exact_loader_handshake": {
-      "descriptor_cloexec": false,
-      "descriptor_mode": "0400",
-      "descriptor_name": "engine-v2-exact-loader-bootstrap-v1",
-      "descriptor_seals": [
-        "F_SEAL_SEAL",
-        "F_SEAL_SHRINK",
-        "F_SEAL_GROW",
-        "F_SEAL_WRITE"
-      ],
-      "environment_key": "ENGINE_V2_EXACT_LOADER_BOOTSTRAP",
-      "nonce_bytes": 32,
-      "one_time_inherited_descriptor_required": true,
-      "version": "sealed-memfd-v1"
-    },
     "exact_loader_inhibit_cache": true,
+    "exact_loader_kernel_process_identity": {
+      "proc_cmdline_exact": true,
+      "proc_exe_exact": true,
+      "stage0_argument_vector_bound": true,
+      "stage0_source_sha256": "c8075347e3df061636efd00421497341f9bde0d8d6befbc592cd39ea73a44a2f"
+    },
     "exact_loader_library_path": "/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu",
     "exact_loader_preload_paths": [
       "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30",
@@ -90,11 +80,25 @@
     "exact_preinit_closure_required": true,
     "github_actions_preflight_allowed": false,
     "host_preflight_required": true,
+    "immutable_bootstrap_snapshot": {
+      "descriptor_cloexec": false,
+      "descriptor_mode": "0400",
+      "descriptor_name": "engine-v2-preflight-bootstrap-v1",
+      "descriptor_seals": [
+        "F_SEAL_SEAL",
+        "F_SEAL_SHRINK",
+        "F_SEAL_GROW",
+        "F_SEAL_WRITE"
+      ],
+      "exact_source_sha256_required": true,
+      "launched_from_snapshot_required": true,
+      "zero_link_count_required": true
+    },
     "molecular_input_allowed": false,
     "native_initialization_delta_exact": true,
     "performance_measurement_allowed": false,
     "performance_sidecar_sha256": "04253e3897bb5746e1c1082dbf8e27922835ffb075aeb3268c18a0895662173f",
-    "preflight_tool_sha256": "c78bd301582ff5743f8c039ef947564a44e4137bd0c5d59a1d701ac565254803",
+    "preflight_tool_sha256": "7dd5d4d5be4ac04839e01cb73379d1d8bbeaf3b01436146e42c0e063c04bb674",
     "qualification_state_write_allowed": false,
     "reservation_allowed": false
   },

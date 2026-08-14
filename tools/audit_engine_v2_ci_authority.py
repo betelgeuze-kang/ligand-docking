@@ -961,8 +961,13 @@ def _cpu_performance_authority_is_fail_closed(repo_root: Path) -> bool:
     activation_restrictions = full_activation_contract.get("restrictions")
     activation_runner = full_activation_contract.get("runner")
     activation_preflight = full_activation_contract.get("preflight")
-    activation_loader_handshake = (
-        activation_preflight.get("exact_loader_handshake")
+    activation_loader_identity = (
+        activation_preflight.get("exact_loader_kernel_process_identity")
+        if type(activation_preflight) is dict
+        else None
+    )
+    activation_bootstrap_snapshot = (
+        activation_preflight.get("immutable_bootstrap_snapshot")
         if type(activation_preflight) is dict
         else None
     )
@@ -1003,12 +1008,15 @@ def _cpu_performance_authority_is_fail_closed(repo_root: Path) -> bool:
         and activation_preflight.get("molecular_input_allowed") is False
         and activation_preflight.get("exact_preinit_closure_required") is True
         and activation_preflight.get("native_initialization_delta_exact") is True
-        and type(activation_loader_handshake) is dict
-        and activation_loader_handshake.get("descriptor_cloexec") is False
-        and activation_loader_handshake.get("descriptor_mode") == "0400"
-        and activation_loader_handshake.get("nonce_bytes") == 32
-        and activation_loader_handshake.get("one_time_inherited_descriptor_required")
-        is True
+        and type(activation_loader_identity) is dict
+        and activation_loader_identity.get("proc_cmdline_exact") is True
+        and activation_loader_identity.get("proc_exe_exact") is True
+        and activation_loader_identity.get("stage0_argument_vector_bound") is True
+        and type(activation_bootstrap_snapshot) is dict
+        and activation_bootstrap_snapshot.get("descriptor_cloexec") is False
+        and activation_bootstrap_snapshot.get("descriptor_mode") == "0400"
+        and activation_bootstrap_snapshot.get("exact_source_sha256_required") is True
+        and activation_bootstrap_snapshot.get("launched_from_snapshot_required") is True
         and activation_preflight.get("performance_measurement_allowed") is False
         and activation_preflight.get("qualification_state_write_allowed") is False
         and activation_preflight.get("reservation_allowed") is False

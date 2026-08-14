@@ -80,7 +80,7 @@ ACTIVATION_SCHEMA_ID = (
 ACTIVATION_ID = "engine_v2_full_pipeline_cpu_performance_v1_activation"
 PROFILE_ID = "engine_v2_full_pipeline_cpu_performance_v1"
 PROFILE_SHA256 = "385fb713cca8f39353f138115749abdfc9768b02222e13111a418360be30a000"
-ACTIVATION_SHA256 = "2b1e85e3013e4ae79bc8052e8ed0fbec2f1a6e2cb5213b76bab8269d04232dc2"
+ACTIVATION_SHA256 = "1090ae48ccd5d11dbc904ebbf43b8b3dddf4cf608a25b0b24bf3f1cc3996b0fa"
 STDLIB_CLOSURE_SHA256 = (
     "d892595cc2bb59aae3fbf7100da9e6b52809082dd5cbc2edb2646811d0b58e35"
 )
@@ -827,26 +827,32 @@ def verify(
             ),
             "exact_loader_environment": {
                 "CUDA_VISIBLE_DEVICES": "",
-                "ENGINE_V2_EXACT_LOADER_BOOTSTRAP": "validated-sealed-memfd-v1",
                 "HIP_VISIBLE_DEVICES": "",
                 "LC_ALL": "C",
                 "PATH": "/usr/bin:/bin",
                 "ROCR_VISIBLE_DEVICES": "",
             },
-            "exact_loader_handshake": {
+            "exact_loader_kernel_process_identity": {
+                "proc_cmdline_exact": True,
+                "proc_exe_exact": True,
+                "stage0_argument_vector_bound": True,
+                "stage0_source_sha256": (
+                    "c8075347e3df061636efd00421497341f9bde0d8d6befbc592cd39ea73a44a2f"
+                ),
+            },
+            "immutable_bootstrap_snapshot": {
                 "descriptor_cloexec": False,
                 "descriptor_mode": "0400",
-                "descriptor_name": "engine-v2-exact-loader-bootstrap-v1",
+                "descriptor_name": "engine-v2-preflight-bootstrap-v1",
                 "descriptor_seals": [
                     "F_SEAL_SEAL",
                     "F_SEAL_SHRINK",
                     "F_SEAL_GROW",
                     "F_SEAL_WRITE",
                 ],
-                "environment_key": "ENGINE_V2_EXACT_LOADER_BOOTSTRAP",
-                "nonce_bytes": 32,
-                "one_time_inherited_descriptor_required": True,
-                "version": "sealed-memfd-v1",
+                "exact_source_sha256_required": True,
+                "launched_from_snapshot_required": True,
+                "zero_link_count_required": True,
             },
             "exact_loader_inhibit_cache": True,
             "exact_loader_library_path": (
@@ -900,10 +906,13 @@ def verify(
             "activation contract exact projection changed",
             "_require_native_extension",
             "_require_exact_loader_bootstrap",
-            "_consume_exact_loader_handshake",
-            "exact_loader_handshake_validated",
-            "os.getrandom",
-            "os.execve",
+            "_EXACT_LOADER_STAGE0_TEMPLATE",
+            "_render_exact_loader_stage0",
+            "_read_exact_proc_cmdline",
+            "kernel process identity does not prove the exact loader invocation",
+            "_validate_bootstrap_snapshot",
+            "exact_loader_process_identity_validated",
+            "immutable_bootstrap_snapshot_validated",
             "--inhibit-cache",
             "--glibc-hwcaps-mask",
             "--preload",
@@ -917,6 +926,7 @@ def verify(
             "F_SEAL_WRITE",
             "_require_native_snapshot_sealed",
             "_populate_native_package",
+            "_remove_loaded_native_extension",
             "required_executable_file_identity",
             "native_fixed64_prepare_repository_synthetic_d0_session_v1",
             "native_fixed64_repository_synthetic_d0_cpu_parity_v1",
@@ -953,10 +963,11 @@ def verify(
         (
             "test_stdlib_import_closure_is_rederivable",
             "test_dynamic_library_closure_is_rederivable",
-            "test_loader_bootstrap_execs_the_exact_loader_with_a_clean_environment",
-            "test_loader_bootstrap_consumes_sealed_one_time_handshake",
-            "test_loader_bootstrap_rejects_forged_validated_environment",
-            "test_loader_bootstrap_rejects_github_actions_before_exec",
+            "test_loader_stage0_argument_vector_binds_every_loader_option",
+            "test_loader_bootstrap_requires_kernel_identity_and_immutable_snapshot",
+            "test_loader_bootstrap_rejects_direct_path_invocation",
+            "test_loader_bootstrap_rejects_github_actions_before_source_validation",
+            "test_native_extension_failure_cleanup_removes_public_and_submodule",
             "test_native_initialization_delta_rejects_a_late_dependency",
         ),
     )
@@ -974,7 +985,9 @@ def verify(
             "21 file-backed executable mappings",
             "20 pre-initialization executable mappings",
             "exact glibc dynamic loader",
-            "one-time inherited descriptor handshake",
+            "kernel-maintained `/proc/self/exe`",
+            "authenticated immutable bootstrap snapshot",
+            "Direct pathname execution",
             "before native initialization",
             "descriptor-bound native",
             "sealed memfd",
