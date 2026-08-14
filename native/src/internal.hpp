@@ -54,6 +54,27 @@ namespace betelgeuze::native::docking::downstream {
 }
 
 namespace betelgeuze::native::docking::refinement_pipeline {
+[[nodiscard]] bg_status validate_outputs_for_composition(
+    const bg_docking_fixed64_refinement_pipeline_v1 &pipeline,
+    std::size_t coordinate_count,
+    bg_docking_rigid_refinement_output_v1 &rigid,
+    bg_docking_torsion_v7_output_v1 &torsion,
+    bg_docking_scorer_v1_output_v1 &scorer,
+    bg_docking_pose_validity_output_v1 &validity,
+    bg_docking_stable_top_k_output_v1 &ranking,
+    bg_docking_rmsd_cluster_output_v1 &cluster,
+    bg_docking_fixed64_refinement_output_v1 &output);
+[[nodiscard]] bg_status validate_input_and_overlap_for_composition(
+    const bg_context &context,
+    const bg_docking_fixed64_refinement_pipeline_v1 &pipeline,
+    const bg_docking_fixed64_refinement_input_v1 &input,
+    bg_docking_rigid_refinement_output_v1 &rigid,
+    bg_docking_torsion_v7_output_v1 &torsion,
+    bg_docking_scorer_v1_output_v1 &scorer,
+    bg_docking_pose_validity_output_v1 &validity,
+    bg_docking_stable_top_k_output_v1 &ranking,
+    bg_docking_rmsd_cluster_output_v1 &cluster,
+    bg_docking_fixed64_refinement_output_v1 &output);
 [[nodiscard]] bg_status run_stage_for_composition(
     const bg_context &context,
     const bg_docking_fixed64_refinement_pipeline_v1 &pipeline,
@@ -161,8 +182,24 @@ struct bg_docking_fixed64_pipeline_v1 final {
     std::array<uint8_t, 32> component_binding_receipt_sha256{};
 };
 
+struct bg_docking_fixed64_pipeline_v2_workspace final {
+    uint64_t successful_run_count = 0;
+    uint64_t coordinate_capacity_growth_count = 0;
+    std::size_t provisioned_coordinate_count = 0;
+    std::vector<double> producer_x;
+    std::vector<double> producer_y;
+    std::vector<double> producer_z;
+    std::array<std::vector<double>, 12> rigid_coordinates;
+    std::array<std::vector<double>, 8> torsion_coordinates;
+    std::array<std::vector<double>, 3> final_coordinates;
+};
+
 struct bg_docking_fixed64_pipeline_v2 final {
     bg_docking_fixed64_pipeline_v1 *components = nullptr;
+    // ABI v2 pipeline handles require external synchronization. Keeping the
+    // workspace mutable preserves the frozen const run signature while making
+    // repeated prepared-session runs allocation-stable.
+    mutable bg_docking_fixed64_pipeline_v2_workspace workspace;
 };
 
 struct bg_docking_rigid_refinement final {

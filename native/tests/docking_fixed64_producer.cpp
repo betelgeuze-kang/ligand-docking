@@ -1,4 +1,5 @@
 #include "betelgeuze/engine.h"
+#include "internal.hpp"
 
 #include <algorithm>
 #include <array>
@@ -794,6 +795,7 @@ bg_status run_complete_pipeline_into(
 struct CompletePipelineV2RunOptions {
     bool repeat_same_output_descriptors = false;
     bool omit_post_admission_policy = false;
+    bool undersize_rigid_rows = false;
     bool undersize_pipeline_rows = false;
     bool overlap_pipeline_rows_with_producer = false;
     bool overlap_rigid_x_with_source = false;
@@ -854,7 +856,7 @@ bg_status run_complete_pipeline_v2_into(
     producer.x_angstrom = result->producer.x.data();
     producer.y_angstrom = result->producer.y.data();
     producer.z_angstrom = result->producer.z.data();
-    rigid.row_capacity = kSlots;
+    rigid.row_capacity = options.undersize_rigid_rows ? kSlots - 1 : kSlots;
     rigid.coordinate_capacity = coordinate_count;
     rigid.rows = result->rigid_rows.data();
     rigid.selected_x_angstrom = options.overlap_rigid_x_with_source
@@ -2265,7 +2267,69 @@ void test_complete_pipeline_v2_post_admission_exact64_repeat_and_cpu_parity() {
     assert(reuse_context != nullptr);
     auto *reused_pipeline =
         make_complete_pipeline_v2(fixture, reuse_context, 1.0e6, 0.55);
+    assert(reused_pipeline->workspace.successful_run_count == UINT64_C(0));
+    assert(
+        reused_pipeline->workspace.coordinate_capacity_growth_count ==
+        UINT64_C(0));
+    assert(reused_pipeline->workspace.provisioned_coordinate_count == 0);
     CompletePipelineResult reused{};
+    assert(run_complete_pipeline_v2_into(
+               reuse_context,
+               reused_pipeline,
+               fixture,
+               &reused) == BG_STATUS_OK);
+    assert(reused_pipeline->workspace.successful_run_count == UINT64_C(1));
+    assert(
+        reused_pipeline->workspace.coordinate_capacity_growth_count ==
+        UINT64_C(1));
+    assert(
+        reused_pipeline->workspace.provisioned_coordinate_count ==
+        kCoordinates);
+    const double *const producer_x_workspace =
+        reused_pipeline->workspace.producer_x.data();
+    const double *const producer_y_workspace =
+        reused_pipeline->workspace.producer_y.data();
+    const double *const producer_z_workspace =
+        reused_pipeline->workspace.producer_z.data();
+    std::array<const double *, 12> rigid_workspace{};
+    std::array<const double *, 8> torsion_workspace{};
+    std::array<const double *, 3> final_workspace{};
+    for (std::size_t index = 0; index < rigid_workspace.size(); ++index) {
+        rigid_workspace[index] =
+            reused_pipeline->workspace.rigid_coordinates[index].data();
+    }
+    for (std::size_t index = 0; index < torsion_workspace.size(); ++index) {
+        torsion_workspace[index] =
+            reused_pipeline->workspace.torsion_coordinates[index].data();
+    }
+    for (std::size_t index = 0; index < final_workspace.size(); ++index) {
+        final_workspace[index] =
+            reused_pipeline->workspace.final_coordinates[index].data();
+    }
+    const CompletePipelineResult first_reused = reused;
+    const auto poison = [](auto &buffers) {
+        for (auto &buffer : buffers) {
+            std::fill(
+                buffer.begin(),
+                buffer.end(),
+                std::numeric_limits<double>::quiet_NaN());
+        }
+    };
+    std::fill(
+        reused_pipeline->workspace.producer_x.begin(),
+        reused_pipeline->workspace.producer_x.end(),
+        std::numeric_limits<double>::quiet_NaN());
+    std::fill(
+        reused_pipeline->workspace.producer_y.begin(),
+        reused_pipeline->workspace.producer_y.end(),
+        std::numeric_limits<double>::quiet_NaN());
+    std::fill(
+        reused_pipeline->workspace.producer_z.begin(),
+        reused_pipeline->workspace.producer_z.end(),
+        std::numeric_limits<double>::quiet_NaN());
+    poison(reused_pipeline->workspace.rigid_coordinates);
+    poison(reused_pipeline->workspace.torsion_coordinates);
+    poison(reused_pipeline->workspace.final_coordinates);
     CompletePipelineV2RunOptions repeat_options{};
     repeat_options.repeat_same_output_descriptors = true;
     assert(run_complete_pipeline_v2_into(
@@ -2274,6 +2338,33 @@ void test_complete_pipeline_v2_post_admission_exact64_repeat_and_cpu_parity() {
                fixture,
                &reused,
                repeat_options) == BG_STATUS_OK);
+    assert(std::memcmp(
+               &first_reused, &reused, sizeof(first_reused)) == 0);
+    assert(reused_pipeline->workspace.successful_run_count == UINT64_C(3));
+    assert(
+        reused_pipeline->workspace.coordinate_capacity_growth_count ==
+        UINT64_C(1));
+    assert(
+        reused_pipeline->workspace.provisioned_coordinate_count ==
+        kCoordinates);
+    assert(reused_pipeline->workspace.producer_x.data() == producer_x_workspace);
+    assert(reused_pipeline->workspace.producer_y.data() == producer_y_workspace);
+    assert(reused_pipeline->workspace.producer_z.data() == producer_z_workspace);
+    for (std::size_t index = 0; index < rigid_workspace.size(); ++index) {
+        assert(
+            reused_pipeline->workspace.rigid_coordinates[index].data() ==
+            rigid_workspace[index]);
+    }
+    for (std::size_t index = 0; index < torsion_workspace.size(); ++index) {
+        assert(
+            reused_pipeline->workspace.torsion_coordinates[index].data() ==
+            torsion_workspace[index]);
+    }
+    for (std::size_t index = 0; index < final_workspace.size(); ++index) {
+        assert(
+            reused_pipeline->workspace.final_coordinates[index].data() ==
+            final_workspace[index]);
+    }
     bg_docking_fixed64_pipeline_v2_destroy(reused_pipeline);
     bg_context_destroy(reuse_context);
 
@@ -2331,11 +2422,35 @@ void test_complete_pipeline_v2_invalid_input_and_alias_are_transactional() {
         assert(bg_docking_fixed64_pipeline_v2_get_backend(
                    pipeline, &intact_backend) == BG_STATUS_OK);
         assert(intact_backend == BG_BACKEND_CPP_CPU_REFERENCE);
+        assert(pipeline->workspace.successful_run_count == UINT64_C(0));
+        assert(
+            pipeline->workspace.coordinate_capacity_growth_count ==
+            UINT64_C(0));
+        assert(pipeline->workspace.provisioned_coordinate_count == 0);
+        assert(pipeline->workspace.producer_x.empty());
+        assert(pipeline->workspace.producer_y.empty());
+        assert(pipeline->workspace.producer_z.empty());
+        assert(std::all_of(
+            pipeline->workspace.rigid_coordinates.begin(),
+            pipeline->workspace.rigid_coordinates.end(),
+            [](const auto &buffer) { return buffer.empty(); }));
+        assert(std::all_of(
+            pipeline->workspace.torsion_coordinates.begin(),
+            pipeline->workspace.torsion_coordinates.end(),
+            [](const auto &buffer) { return buffer.empty(); }));
+        assert(std::all_of(
+            pipeline->workspace.final_coordinates.begin(),
+            pipeline->workspace.final_coordinates.end(),
+            [](const auto &buffer) { return buffer.empty(); }));
     };
 
     CompletePipelineV2RunOptions options{};
     options.omit_post_admission_policy = true;
     expect_rejected(options, BG_STATUS_INVALID_ARGUMENT);
+
+    options = {};
+    options.undersize_rigid_rows = true;
+    expect_rejected(options, BG_STATUS_BUFFER_TOO_SMALL);
 
     options = {};
     options.undersize_pipeline_rows = true;
