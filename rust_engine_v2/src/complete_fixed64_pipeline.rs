@@ -1153,7 +1153,7 @@ fn native_fixed64_repository_synthetic_d0_cpu_parity_v1(
     )?;
     identity.set_item(
         "exact_source_and_allocation_identity_parity",
-        evidence.exact_source_identity_parity,
+        evidence.exact_source_identity_parity && evidence.source_binding_parity,
     )?;
     identity.set_item("backend_bound_receipt_identity_parity_required", false)?;
     output.set_item("identity_disposition", identity)?;
