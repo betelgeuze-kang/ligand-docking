@@ -1,0 +1,213 @@
+{
+  "activation": {
+    "activation_contract_present": false,
+    "exactly_once_local_synthetic_attempt_required": true,
+    "github_actions_live_execution_allowed": false,
+    "implementation_profile_allows_live_execution": false,
+    "profile_change_after_activation_allowed": false,
+    "qualification_attempt_consumed": false,
+    "reservation_created": false,
+    "separate_activation_contract_required": true,
+    "source_binding_fields_required": [
+      "merged_main_commit_sha256",
+      "merged_main_tree_sha256",
+      "profile_sha256",
+      "profile_verifier_sha256",
+      "measurement_core_sha256",
+      "runner_tool_sha256",
+      "native_consumer_sha256",
+      "native_cpu_parity_sha256",
+      "host_preflight_sha256",
+      "stdlib_import_closure_manifest_sha256",
+      "dynamic_library_closure_manifest_sha256"
+    ]
+  },
+  "artifact_binding": {
+    "abi": "cp310-cp310",
+    "artifact_contract_sha256": "195abc14487ccec4d0f8065fa0e642337ce42691cebee4f47106b94bd2d0ebe8",
+    "artifact_created_at": "2026-08-14T08:48:30Z",
+    "artifact_digest": "sha256:404a503d1bbe5f40880df87099faef2b07ca69e797680737f6277a7d42dababa",
+    "artifact_directory_manifest_sha256": "9f99bcea4f56768d6e9187b5c0d04ca2528411aced2efceae31481b7330e24b2",
+    "artifact_expires_at": "2026-08-28T08:48:29Z",
+    "artifact_id": 9213296947,
+    "artifact_name": "engine-v2-native-0.2.0rc6-cp310-cp310-31785070195-1",
+    "artifact_payload_total_bytes": 1232493,
+    "artifact_size_bytes": 1186996,
+    "event_name": "push",
+    "job_completed_at": "2026-08-14T08:48:33Z",
+    "job_id": 94719062285,
+    "job_name": "native-cpu-wheel (3.10, cp310-cp310)",
+    "job_started_at": "2026-08-14T08:43:19Z",
+    "payloads": [
+      {
+        "path": "betelgeuze-engine-v2-native-0.2.0rc6.spdx.json",
+        "sha256": "c72445b0153cec5edd16e7b3b76918ad91eaf7aee5bd167f3142414d92cbd737",
+        "size_bytes": 49844
+      },
+      {
+        "path": "betelgeuze_engine_v2_native-0.2.0rc6-cp310-cp310-manylinux_2_28_x86_64.whl",
+        "sha256": "54f21885cdf6b4410bd084a876fb73f53a8a7b8c37b9e615e4dae36225f2e4b4",
+        "size_bytes": 1182649
+      }
+    ],
+    "ref": "refs/heads/main",
+    "repository": "betelgeuze-kang/ligand-docking",
+    "run_attempt": 1,
+    "run_conclusion": "success",
+    "run_id": 31785070195,
+    "run_started_at": "2026-08-14T08:43:17Z",
+    "workflow_head_sha": "3330faa43c7fc8640d89babd84ac444c5959157c",
+    "workflow_id": 312143772,
+    "workflow_path": ".github/workflows/ci-engine-v2-release-candidate.yml"
+  },
+  "authority": {
+    "fresh_holdout_execution_authorized": false,
+    "hip_device_execution_authorized": false,
+    "historical_ab_execution_authorized": false,
+    "molecular_execution_authorized": false,
+    "product_execution_authorized": false,
+    "product_performance_claim_authorized": false,
+    "public_benchmark_authorized": false,
+    "reservation_authorized": false,
+    "scientific_claim_authorized": false,
+    "stage0_admission_authorized": false,
+    "synthetic_cpu_performance_qualification_authorized": false
+  },
+  "gates": {
+    "all_authority_false_required": true,
+    "all_timed_evidence_validated_required": true,
+    "candidate_denominator_exact": 64,
+    "complete_scorer_v1_term_count_exact": 8,
+    "descriptive_timing_completeness_required": true,
+    "exact_decision_parity_required": true,
+    "exact_failure_and_rank_parity_required": true,
+    "host_preflight_required": true,
+    "native_cpu_full_numeric_parity_required": true,
+    "positive_duration_required": true,
+    "runtime_binding_required": true,
+    "speed_threshold_present": false
+  },
+  "measurement": {
+    "baseline_backend": "cpp_cpu_reference",
+    "experimental_backend": "rust_cpu",
+    "percentile_denominator": 100,
+    "percentile_method": "nearest_rank_integer_v1",
+    "percentile_numerators": [
+      50,
+      95
+    ],
+    "prepared_session_count": 2,
+    "process_clock": "time.process_time_ns",
+    "result_cache_allowed": false,
+    "sample_count_per_backend": 30,
+    "schedule_id": "paired_alternating_ab_ba_v1",
+    "speed_values_role": "descriptive_private_development_baseline_only",
+    "timed_boundary": "NativeRepositorySyntheticD0PreparedSessionV1.run(surface=benchmark)_including_native_pipeline_receipt_materialization_and_python_evidence_validation",
+    "timer": "time.perf_counter_ns",
+    "warmup_count_per_backend": 5
+  },
+  "predecessor_disposition": {
+    "attempt_consumed": false,
+    "attempt_state_at_successor_freeze": "account_local_profile_state_absent",
+    "attempt_state_observed_at_utc": "2026-08-14T09:16:36Z",
+    "attempt_state_observer_effective_uid": 1000,
+    "attempt_state_observer_login": "betelgeuze",
+    "attempt_state_relative_path": ".betelgeuze-engine-v2/qualification/21facfc62956b402d4a43e5b68389083bacaa3d3afd753eb6b1da3578c8bb6b3",
+    "predecessor_activation_sha256": "3a309594b35cf0e14d4efd4f01146a6849218509c43f4f024b1d765e6d647bda",
+    "predecessor_expected_native_extension_sha256": "a07ca2276277cd610450d45d09f5b9789a69580747f61c6c9867640b07164a55",
+    "predecessor_profile_id": "engine_v2_ryzen_5900x_geometric_kernel_synthetic_v3",
+    "predecessor_profile_sha256": "21facfc62956b402d4a43e5b68389083bacaa3d3afd753eb6b1da3578c8bb6b3",
+    "predecessor_runtime_artifact_available": false,
+    "predecessor_runtime_reconstructed_allowed": false,
+    "predecessor_terminal_state_present": false,
+    "rerun_performed": false,
+    "successor_reinterprets_predecessor_result": false,
+    "supersession_reason": "exact_predecessor_native_runtime_artifact_unavailable"
+  },
+  "profile_id": "engine_v2_full_pipeline_cpu_performance_v1",
+  "restrictions": {
+    "actual_molecular_execution_allowed": false,
+    "caller_science_input_allowed": false,
+    "contains_molecular_cases": false,
+    "fresh_or_historical_case_input_allowed": false,
+    "github_actions_measurement_allowed": false,
+    "github_actions_production_authority_allowed": false,
+    "hip_device_execution_allowed": false,
+    "implementation_pr_measurement_allowed": false,
+    "product_or_public_performance_claim_allowed": false,
+    "qualification_consumption_allowed": false,
+    "reservation_allowed": false,
+    "result_dependent_configuration_allowed": false,
+    "test_double_production_authority_allowed": false
+  },
+  "runtime_binding": {
+    "bootstrap_flags": [
+      "-I",
+      "-S",
+      "-B"
+    ],
+    "extension_module_relative_path": "betelgeuze_engine_v2_native/betelgeuze_engine_v2_native.cpython-310-x86_64-linux-gnu.so",
+    "native_distribution_name": "betelgeuze-engine-v2-native",
+    "native_extension_sha256": "ff7b5e6ba7c0e250cf739292d34c562d0bd142d5f7f6c842c5c191d42b2504e1",
+    "native_version": "0.2.0rc6",
+    "numpy_allowed": false,
+    "python_byteorder": "little",
+    "python_cache_tag": "cpython-310",
+    "python_executable_realpath": "/usr/bin/python3.10",
+    "python_executable_sha256": "7d51cd6b48b521277f5caa4610a82126e315fa2be4df069823a8b1eeb5bd4a86",
+    "python_implementation": "CPython",
+    "python_shared_library_sha256": "1ece943a1641101b1c678b553a7a0fbb6683ff0ad76f7ebce9f8844354e3f153",
+    "python_soabi": "cpython-310-x86_64-linux-gnu",
+    "python_version": "3.10.12",
+    "pyvenv_configuration_sha256": "db6c8a96f25493eda9f74f23f0b5f248a8b50a5b469b15c5ee7313875b416364",
+    "pyvenv_configuration_size_bytes": 71,
+    "runtime_manifest_scope": "pyvenv_configuration_interpreter_symlinks_and_exact_site_packages_only_activation_scripts_never_read",
+    "runtime_scope_manifest_sha256": "72b90f500af43c921ce0b8f7d6774c5e99a7e4f3fe366478b3fc33b524b4b404",
+    "site_packages_file_count": 5,
+    "site_packages_manifest_sha256": "5b720c659aec55ad416f7d263d240b98b75d2d699f247f0b83c42f7002f63119",
+    "site_packages_rows": [
+      {
+        "path": "betelgeuze_engine_v2_native-0.2.0rc6.dist-info/METADATA",
+        "sha256": "e8a7e538cee43befb3a0b8b63b9b7b88db8d2969cf3da012af4694b902d5f64b",
+        "size_bytes": 284
+      },
+      {
+        "path": "betelgeuze_engine_v2_native-0.2.0rc6.dist-info/RECORD",
+        "sha256": "bc0a36835a71cccb363db81b0a26c1846d875477e175eb9dfbc12fecb9ee7c12",
+        "size_bytes": 517
+      },
+      {
+        "path": "betelgeuze_engine_v2_native-0.2.0rc6.dist-info/WHEEL",
+        "sha256": "e0b0b2962b6b3e1aca30116e39ad7ee772d32cf103803fd598f0f56370f0203b",
+        "size_bytes": 109
+      },
+      {
+        "path": "betelgeuze_engine_v2_native/__init__.py",
+        "sha256": "5fe535168f9dcffd7d7d4807f5c33b09c1a8936d9d532f49f2af196b4f82ff92",
+        "size_bytes": 191
+      },
+      {
+        "path": "betelgeuze_engine_v2_native/betelgeuze_engine_v2_native.cpython-310-x86_64-linux-gnu.so",
+        "sha256": "ff7b5e6ba7c0e250cf739292d34c562d0bd142d5f7f6c842c5c191d42b2504e1",
+        "size_bytes": 2599704
+      }
+    ],
+    "site_packages_top_level_names": [
+      "betelgeuze_engine_v2_native",
+      "betelgeuze_engine_v2_native-0.2.0rc6.dist-info"
+    ],
+    "site_packages_total_bytes": 2600805
+  },
+  "schema_id": "betelgeuze.engine_v2_full_pipeline_cpu_performance_profile/1.0.0",
+  "status": "frozen_implementation_profile_execution_not_activated",
+  "workload": {
+    "candidate_denominator": 64,
+    "consumer_surface": "benchmark",
+    "fixed_source_bundle_receipt_sha256": "80a7ee8fe919523c7afab78467dddb9bc2e653e028f1e731c9058db3ef17a68f",
+    "no_caller_science_transport": true,
+    "profile_kind": "repository_synthetic_d0_only",
+    "scientific_decision_sha256": "8908c757de4e7a8f5d12452e40ec0292b44c3db7893f98d5b92956e1f0c9d9f4",
+    "session_preparation_timed": false,
+    "synthetic_only_acknowledgment": "repository-synthetic-d0-only:no-reservation:no-molecular-experiment:no-qualification-rerun:no-product-action:no-public-or-scientific-claim"
+  }
+}

@@ -133,6 +133,13 @@ CPU_PERFORMANCE_CONTRACT_PATHS = (
     "tests/unit/test_verify_engine_v2_cpu_performance_profile_v3.py",
     "tests/unit/test_engine_v2_native_geometric_admission.py",
     "docs/engine_v2_cpu_performance_qualification.md",
+    "betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1.py",
+    "config/engine_v2_full_pipeline_cpu_performance_v1.json",
+    "tools/run_engine_v2_full_pipeline_cpu_performance_v1.py",
+    "tools/verify_engine_v2_full_pipeline_cpu_performance_v1.py",
+    "tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1.py",
+    "tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1.py",
+    "docs/engine_v2_full_pipeline_cpu_performance_v1.md",
 )
 CPU_PERFORMANCE_REQUIRED_TOKEN_COUNTS = {
     "betelgeuze_engine_v2/docking/performance_host_preflight_v3.py": 1,
@@ -155,6 +162,13 @@ CPU_PERFORMANCE_REQUIRED_TOKEN_COUNTS = {
     "tests/unit/test_verify_engine_v2_cpu_performance_profile_v3.py": 2,
     "tests/unit/test_engine_v2_native_geometric_admission.py": 2,
     "docs/engine_v2_cpu_performance_qualification.md": 1,
+    "betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1.py": 1,
+    "config/engine_v2_full_pipeline_cpu_performance_v1.json": 2,
+    "tools/run_engine_v2_full_pipeline_cpu_performance_v1.py": 3,
+    "tools/verify_engine_v2_full_pipeline_cpu_performance_v1.py": 3,
+    "tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1.py": 2,
+    "tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1.py": 3,
+    "docs/engine_v2_full_pipeline_cpu_performance_v1.md": 1,
     "import betelgeuze_engine_v2.docking.performance_host_preflight_v3": 1,
     "import betelgeuze_engine_v2.docking.performance_qualification_v3": 1,
     "import betelgeuze_engine_v2.docking.performance_sidecar": 1,
@@ -168,6 +182,19 @@ CPU_PERFORMANCE_FALSE_AUTHORITY_KEYS = (
     "public_benchmark_authorized",
     "scientific_claim_authorized",
     "stage0_admission_authorized",
+)
+FULL_PIPELINE_CPU_PERFORMANCE_FALSE_AUTHORITY_KEYS = (
+    "fresh_holdout_execution_authorized",
+    "hip_device_execution_authorized",
+    "historical_ab_execution_authorized",
+    "molecular_execution_authorized",
+    "product_execution_authorized",
+    "product_performance_claim_authorized",
+    "public_benchmark_authorized",
+    "reservation_authorized",
+    "scientific_claim_authorized",
+    "stage0_admission_authorized",
+    "synthetic_cpu_performance_qualification_authorized",
 )
 NATIVE_FIXED64_CPU_V5_CONTRACT_PATHS = (
     "config/engine_v2_native_fixed64_cpu_profile_v5.json",
@@ -758,7 +785,7 @@ def _cpu_performance_authority_is_fail_closed(repo_root: Path) -> bool:
         "terminal_state_policy",
         "test_double_execution_authority",
     }
-    return bool(
+    activation_fail_closed = bool(
         type(activation_authority) is dict
         and set(activation_authority) == set(CPU_PERFORMANCE_FALSE_AUTHORITY_KEYS)
         and all(
@@ -790,6 +817,78 @@ def _cpu_performance_authority_is_fail_closed(repo_root: Path) -> bool:
         and runner.get("terminal_state_policy")
         == "owner_only_absent_only_attempt_and_artifact_bound"
         and runner.get("test_double_execution_authority") is False
+    )
+    if not activation_fail_closed:
+        return False
+
+    full_pipeline_path = (
+        repo_root / "config/engine_v2_full_pipeline_cpu_performance_v1.json"
+    )
+    try:
+        full_pipeline_raw = full_pipeline_path.read_bytes()
+        full_pipeline = json.loads(
+            full_pipeline_raw.decode("ascii"),
+            object_pairs_hook=reject_duplicate_keys,
+            parse_float=reject_float,
+            parse_constant=reject_float,
+        )
+    except (OSError, UnicodeError, ValueError):
+        return False
+    expected_full_pipeline_bytes = (
+        json.dumps(
+            full_pipeline,
+            indent=2,
+            sort_keys=True,
+            ensure_ascii=True,
+            allow_nan=False,
+        ).encode("ascii")
+        + b"\n"
+    )
+    if (
+        type(full_pipeline) is not dict
+        or full_pipeline_raw != expected_full_pipeline_bytes
+        or full_pipeline.get("schema_id")
+        != "betelgeuze.engine_v2_full_pipeline_cpu_performance_profile/1.0.0"
+        or full_pipeline.get("status")
+        != "frozen_implementation_profile_execution_not_activated"
+    ):
+        return False
+    full_authority = full_pipeline.get("authority")
+    full_restrictions = full_pipeline.get("restrictions")
+    full_activation = full_pipeline.get("activation")
+    full_gates = full_pipeline.get("gates")
+    full_measurement = full_pipeline.get("measurement")
+    full_predecessor = full_pipeline.get("predecessor_disposition")
+    return bool(
+        type(full_authority) is dict
+        and set(full_authority)
+        == set(FULL_PIPELINE_CPU_PERFORMANCE_FALSE_AUTHORITY_KEYS)
+        and all(value is False for value in full_authority.values())
+        and type(full_restrictions) is dict
+        and full_restrictions
+        and all(value is False for value in full_restrictions.values())
+        and type(full_activation) is dict
+        and full_activation.get("activation_contract_present") is False
+        and full_activation.get("github_actions_live_execution_allowed") is False
+        and full_activation.get("implementation_profile_allows_live_execution")
+        is False
+        and full_activation.get("qualification_attempt_consumed") is False
+        and full_activation.get("reservation_created") is False
+        and full_activation.get("separate_activation_contract_required") is True
+        and full_activation.get("exactly_once_local_synthetic_attempt_required")
+        is True
+        and type(full_gates) is dict
+        and full_gates.get("speed_threshold_present") is False
+        and full_gates.get("all_authority_false_required") is True
+        and full_gates.get("native_cpu_full_numeric_parity_required") is True
+        and type(full_measurement) is dict
+        and full_measurement.get("result_cache_allowed") is False
+        and full_measurement.get("sample_count_per_backend") == 30
+        and full_measurement.get("warmup_count_per_backend") == 5
+        and type(full_predecessor) is dict
+        and full_predecessor.get("attempt_consumed") is False
+        and full_predecessor.get("predecessor_terminal_state_present") is False
+        and full_predecessor.get("rerun_performed") is False
     )
 
 
