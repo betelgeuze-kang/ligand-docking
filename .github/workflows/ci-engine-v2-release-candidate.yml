@@ -33,6 +33,10 @@ on:
       - "config/engine_v2_native_fixed64_bounded_input_v3.json"
       - "tools/verify_engine_v2_native_fixed64_bounded_input_v3.py"
       - "docs/engine_v2_native_fixed64_bounded_input_v3.md"
+      - "tests/unit/test_verify_engine_v2_native_fixed64_context_lease_v1.py"
+      - "config/engine_v2_native_fixed64_context_lease_v1.json"
+      - "tools/verify_engine_v2_native_fixed64_context_lease_v1.py"
+      - "docs/engine_v2_native_fixed64_context_lease_v1.md"
       - "config/engine_v2_cpu_performance_profile.json"
       - "config/engine_v2_native_fixed64_cpu_profile_v5_archive.json"
       - "config/engine_v2_native_fixed64_cpu_profile_v6.json"
@@ -100,6 +104,9 @@ jobs:
             config/engine_v2_native_fixed64_bounded_input_v3.json
             tools/verify_engine_v2_native_fixed64_bounded_input_v3.py
             docs/engine_v2_native_fixed64_bounded_input_v3.md
+            config/engine_v2_native_fixed64_context_lease_v1.json
+            tools/verify_engine_v2_native_fixed64_context_lease_v1.py
+            docs/engine_v2_native_fixed64_context_lease_v1.md
             .github/workflows/ci-engine-v2-release-candidate.yml
           sparse-checkout-cone-mode: false
           show-progress: false
@@ -138,6 +145,10 @@ jobs:
       - name: Verify bounded native fixed64 input v3 contract
         run: >-
           python tools/verify_engine_v2_native_fixed64_bounded_input_v3.py
+
+      - name: Verify native fixed64 context lease v1 contract
+        run: >-
+          python tools/verify_engine_v2_native_fixed64_context_lease_v1.py
 
       - name: Upload static-analysis diagnostics
         if: always()
@@ -363,6 +374,10 @@ jobs:
             config/engine_v2_native_fixed64_bounded_input_v3.json
             tools/verify_engine_v2_native_fixed64_bounded_input_v3.py
             docs/engine_v2_native_fixed64_bounded_input_v3.md
+            tests/unit/test_verify_engine_v2_native_fixed64_context_lease_v1.py
+            config/engine_v2_native_fixed64_context_lease_v1.json
+            tools/verify_engine_v2_native_fixed64_context_lease_v1.py
+            docs/engine_v2_native_fixed64_context_lease_v1.md
             config/engine_v2_cpu_performance_profile.json
             config/engine_v2_native_fixed64_cpu_profile_v5_archive.json
             config/engine_v2_native_fixed64_cpu_profile_v6.json
@@ -456,6 +471,7 @@ jobs:
             tests/unit/test_engine_v2_native_fixed64_pipeline.py \
             tests/unit/test_engine_v2_native_fixed64_complete_pipeline.py \
             tests/unit/test_verify_engine_v2_native_fixed64_bounded_input_v3.py \
+            tests/unit/test_verify_engine_v2_native_fixed64_context_lease_v1.py \
             -k 'native or rust_cpu'
           python -m pytest -q tests/unit/test_engine_v2_docking_search_v2_facade.py
 

@@ -955,7 +955,7 @@ fn numeric_parity(
 }
 
 fn timed_run(
-    pipeline: &Fixed64Pipeline<'_>,
+    pipeline: &Fixed64Pipeline,
     input: Fixed64RunInput<'_>,
 ) -> Result<(u64, Fixed64ScientificProjection)> {
     let started = Instant::now();
@@ -1147,7 +1147,7 @@ fn run_fixture(
     let mut cpp_repeat_stable = true;
     let mut rust_repeat_stable = true;
     for round in 0..config.sample_rounds {
-        let mut execute = |pipeline: &Fixed64Pipeline<'_>, cpp: bool| -> Result<()> {
+        let mut execute = |pipeline: &Fixed64Pipeline, cpp: bool| -> Result<()> {
             let (duration, projection) = timed_run(pipeline, input)?;
             let (samples, first, repeat_stable) = if cpp {
                 (&mut cpp_samples, &mut cpp_first, &mut cpp_repeat_stable)
