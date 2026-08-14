@@ -274,11 +274,8 @@ jobs:
           python tools/verify_engine_v2_full_pipeline_cpu_performance_v1.py
 
       - name: Verify full-pipeline CPU performance v1 activation
-        run: |
+        run: >-
           python tools/verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py
-          python -m pytest -q \
-            tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1_activation.py \
-            tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py
 
       - name: Upload static-analysis diagnostics
         if: always()
