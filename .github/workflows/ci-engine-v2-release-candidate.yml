@@ -7,6 +7,7 @@ on:
     paths:
       - "betelgeuze_engine_v2/**"
       - "packaging/engine-v2/**"
+      - "packaging/engine-v2/native-runtime-archive/**"
       - "rust_engine_v2/**"
       - "rust/betelgeuze-docking-search/**"
       - "rust/betelgeuze-runtime/**"
@@ -61,6 +62,13 @@ on:
       - "config/engine_v2_native_cpu_runtime_artifacts_v1.json"
       - "tools/verify_engine_v2_native_cpu_runtime_artifacts_v1.py"
       - "docs/engine_v2_native_cpu_runtime_artifacts_v1.md"
+      - "betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1.py"
+      - "tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1.py"
+      - "tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1.py"
+      - "config/engine_v2_full_pipeline_cpu_performance_v1.json"
+      - "tools/run_engine_v2_full_pipeline_cpu_performance_v1.py"
+      - "tools/verify_engine_v2_full_pipeline_cpu_performance_v1.py"
+      - "docs/engine_v2_full_pipeline_cpu_performance_v1.md"
       - "config/engine_v2_cpu_performance_profile.json"
       - "config/engine_v2_native_fixed64_cpu_profile_v5_archive.json"
       - "config/engine_v2_native_fixed64_cpu_profile_v6.json"
@@ -152,7 +160,17 @@ jobs:
             config/engine_v2_native_cpu_runtime_artifacts_v1.json
             tools/verify_engine_v2_native_cpu_runtime_artifacts_v1.py
             docs/engine_v2_native_cpu_runtime_artifacts_v1.md
+            config/engine_v2_cpu_performance_profile_v3.json
+            config/engine_v2_cpu_performance_v3_runner_activation.json
+            betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1.py
+            config/engine_v2_full_pipeline_cpu_performance_v1.json
+            tools/run_engine_v2_full_pipeline_cpu_performance_v1.py
+            tools/verify_engine_v2_full_pipeline_cpu_performance_v1.py
+            tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1.py
+            tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1.py
+            docs/engine_v2_full_pipeline_cpu_performance_v1.md
             tests/unit/test_engine_v2_native_fixed64_complete_pipeline.py
+            .github/workflows/ci-engine-v2-main.yml
             .github/workflows/ci-native-compute-abi.yml
             .github/workflows/ci-engine-v2-release-candidate.yml
           sparse-checkout-cone-mode: false
@@ -177,8 +195,11 @@ jobs:
             betelgeuze_engine_v2/molecular \
             betelgeuze_engine_v2/physics/reference_parameters.py \
             betelgeuze_engine_v2/physics/reference_forcefield.py \
+            betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1.py \
             tools/build_engine_v2_wheel.py \
             tools/run_engine_v2_cpu_performance_qualification.py \
+            tools/run_engine_v2_full_pipeline_cpu_performance_v1.py \
+            tools/verify_engine_v2_full_pipeline_cpu_performance_v1.py \
             tools/build_engine_v2_sbom.py \
             --config packaging/engine-v2/pyproject.toml > static-analysis.log 2>&1
           ruff_status=$?
@@ -220,6 +241,10 @@ jobs:
       - name: Verify native CPU runtime artifacts v1 contract
         run: >-
           python tools/verify_engine_v2_native_cpu_runtime_artifacts_v1.py
+
+      - name: Verify full-pipeline CPU performance v1 implementation profile
+        run: >-
+          python tools/verify_engine_v2_full_pipeline_cpu_performance_v1.py
 
       - name: Upload static-analysis diagnostics
         if: always()
