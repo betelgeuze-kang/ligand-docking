@@ -21,18 +21,20 @@ The current `main` branch contains:
 - a fail-closed CPU reference orchestrator and strict checkpoint contracts;
 - an independent `betelgeuze-engine-v2` wheel for Python 3.10–3.12;
 - an ABI 1.21 C++/Rust complete fixed64 candidate pipeline and a frozen,
-  non-consuming native CPU qualification-v5 profile. The pipeline applies the
+  exactly-once-consumed native CPU qualification-v7 profile. The pipeline applies the
   same full-Cartesian geometric admission to final post-refinement coordinates
   before ScorerV1, preserves every rejected or upstream-failed slot as typed
   inactive evidence, and exposes the complete score, validity, stable-rank,
-  and clustering graph through one versioned v2 bridge shared by CLI,
+  and clustering graph through one bounded versioned v3 bridge shared by CLI,
   benchmark, API, and product shadow. Two compiled synthetic fixtures preserve
   all 64 slots, compare independently implemented C++ reference and Rust CPU
   decisions plus all numeric scientific state, and reuse persistent contexts.
-  CI may compile, unit-test, and statically verify this profile but may not
-  consume its live 25-sample execution. This is engineering-only evidence and
-  grants no molecular, benchmark, Stage 0, product, HIP-device, or claim
-  authority;
+  The single account-scoped synthetic execution recorded `PASS` in persisted
+  receipt `f653185c2bfc7642e2d9e73b918a2e0a9c14c0e107f5804799e140bb42c34b82`;
+  it must not be rerun. CI may compile, unit-test, and statically verify the
+  frozen profile and receipt but receives no live qualification authority. This
+  is engineering-only evidence and grants no molecular, benchmark, Stage 0,
+  product, HIP-device, or claim authority;
 - bounded single-model PDB and single-molecule SDF V2000 ingestion;
 - bounded single-block CIF syntax plus mmCIF entity/asym/polymer identity,
   zero-occupancy, altloc, nonpoly instance, component atom/bond, and selected

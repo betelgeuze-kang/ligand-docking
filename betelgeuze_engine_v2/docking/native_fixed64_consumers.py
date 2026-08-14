@@ -7,11 +7,11 @@ that the returned permission boundary remains fail-closed.
 
 from __future__ import annotations
 
-from copy import deepcopy
 from dataclasses import dataclass
+import hashlib
 import importlib
 from types import MappingProxyType
-from typing import Literal, Mapping
+from typing import ClassVar, Literal, Mapping
 
 
 NativeFixed64Surface = Literal["cli", "benchmark", "api", "product_shadow"]
@@ -21,10 +21,24 @@ class NativeFixed64ConsumerError(RuntimeError):
     """The native fixed64 bridge or its authority boundary failed closed."""
 
 
-_COMPLETE_INPUT_SCHEMA_ID = "betelgeuze.engine_v2_native_fixed64_complete_input/2.0.0"
-_COMPLETE_EVIDENCE_SCHEMA_ID = (
+_COMPLETE_INPUT_SCHEMA_ID_V2 = (
+    "betelgeuze.engine_v2_native_fixed64_complete_input/2.0.0"
+)
+_COMPLETE_EVIDENCE_SCHEMA_ID_V2 = (
     "betelgeuze.engine_v2_native_fixed64_complete_python_evidence/2.0.0"
 )
+_COMPLETE_INPUT_SCHEMA_ID = "betelgeuze.engine_v2_native_fixed64_complete_input/3.0.0"
+_COMPLETE_EVIDENCE_SCHEMA_ID = (
+    "betelgeuze.engine_v2_native_fixed64_complete_python_evidence/3.0.0"
+)
+_PREPARED_INPUT_RECEIPT_DOMAIN = (
+    b"betelgeuze.engine-v2.native-fixed64-prepared-input-receipt/v1\0"
+)
+_PREPARED_INPUT_SCALAR_LIMIT = 8 * 1_024 * 1_024
+# Versioned v3 transport schema cardinality.  Bound the outer mapping before
+# making even a shallow transport copy; Rust then validates the exact key set
+# and bounds every nested collection before copying its values.
+_COMPLETE_INPUT_KEY_COUNT = 53
 
 _RECEIPT_GRAPH_FIELDS = (
     "allocation_inventory_sha256",
@@ -85,7 +99,7 @@ def _native_entrypoint():
         raise NativeFixed64ConsumerError(
             "native fixed64 extension is required; Python fallback is forbidden"
         ) from exc
-    name = "native_fixed64_complete_pipeline_v2"
+    name = "native_fixed64_complete_pipeline_v3"
     entrypoint = getattr(module, name, None)
     if not callable(entrypoint):
         raise NativeFixed64ConsumerError(
@@ -96,7 +110,9 @@ def _native_entrypoint():
 
 @dataclass(frozen=True, slots=True)
 class NativeFixed64EvidenceV2:
-    """Immutable view of one self-verified native pipeline/consumer receipt."""
+    """Immutable compatibility view of one v2 native pipeline receipt."""
+
+    _EXPECTED_SCHEMA_ID: ClassVar[str] = _COMPLETE_EVIDENCE_SCHEMA_ID_V2
 
     surface: NativeFixed64Surface
     _document: Mapping[str, object]
@@ -110,7 +126,7 @@ class NativeFixed64EvidenceV2:
         schema_id = document.get("schema_id")
         candidates = document.get("candidates")
         if (
-            schema_id != _COMPLETE_EVIDENCE_SCHEMA_ID
+            schema_id != self._EXPECTED_SCHEMA_ID
             or document.get("consumer") != self.surface
             or document.get("backend")
             not in {"cpp_cpu_reference", "rust_cpu", "hip_safe", "hip_fast"}
@@ -276,6 +292,68 @@ class NativeFixed64EvidenceV2:
         return value
 
 
+class NativeFixed64EvidenceV3(NativeFixed64EvidenceV2):
+    """Immutable bounded prepared-input and native pipeline receipt view."""
+
+    __slots__ = ()
+    _EXPECTED_SCHEMA_ID: ClassVar[str] = _COMPLETE_EVIDENCE_SCHEMA_ID
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        document = self._document
+        projection = document.get("prepared_input_projection_sha256")
+        prepared_receipt = document.get("prepared_input_receipt_sha256")
+        pipeline_receipt = document.get("pipeline_receipt_sha256")
+        if document.get("prepared_input_bounded") is not True:
+            raise NativeFixed64ConsumerError(
+                "native fixed64 prepared input is not bounded"
+            )
+        for field, value in (
+            ("prepared_input_projection_sha256", projection),
+            ("prepared_input_receipt_sha256", prepared_receipt),
+        ):
+            if (
+                type(value) is not str
+                or len(value) != 64
+                or any(character not in "0123456789abcdef" for character in value)
+            ):
+                raise NativeFixed64ConsumerError(
+                    f"native fixed64 receipt field {field} is invalid"
+                )
+        ligand_count = document.get("ligand_atom_count")
+        receptor_count = document.get("receptor_atom_count")
+        exact_pair_count = document.get("exact_cartesian_pair_count")
+        scalar_count = document.get("prepared_input_scalar_count")
+        scalar_limit = document.get("prepared_input_scalar_limit")
+        if (
+            type(ligand_count) is not int
+            or not 1 <= ligand_count <= 512
+            or type(receptor_count) is not int
+            or not 1 <= receptor_count <= 4096
+            or type(exact_pair_count) is not int
+            or exact_pair_count != ligand_count * receptor_count
+            or type(scalar_count) is not int
+            or not 0 < scalar_count <= _PREPARED_INPUT_SCALAR_LIMIT
+            or scalar_limit != _PREPARED_INPUT_SCALAR_LIMIT
+        ):
+            raise NativeFixed64ConsumerError(
+                "native fixed64 prepared-input bounds are cross-wired"
+            )
+        expected_receipt = hashlib.sha256(
+            _PREPARED_INPUT_RECEIPT_DOMAIN
+            + bytes.fromhex(str(projection))
+            + bytes.fromhex(str(pipeline_receipt))
+        ).hexdigest()
+        if prepared_receipt != expected_receipt:
+            raise NativeFixed64ConsumerError(
+                "native fixed64 prepared-input receipt is cross-wired"
+            )
+
+    @property
+    def prepared_input_receipt_sha256(self) -> str:
+        return str(self._document["prepared_input_receipt_sha256"])
+
+
 # Import compatibility only. The alias validates and represents the v2 schema;
 # it does not admit or reinterpret retired v1 evidence.
 NativeFixed64EvidenceV1 = NativeFixed64EvidenceV2
@@ -285,14 +363,22 @@ def run_native_fixed64_surface(
     input_document: Mapping[str, object],
     *,
     surface: NativeFixed64Surface,
-) -> NativeFixed64EvidenceV2:
+) -> NativeFixed64EvidenceV3:
     """Run one surface through the exact same Rust receipt core."""
 
     if type(input_document) is not dict:
         raise TypeError("native fixed64 input must be an exact dict")
+    if len(input_document) != _COMPLETE_INPUT_KEY_COUNT:
+        raise NativeFixed64ConsumerError(
+            "canonical consumers require the complete fixed64 input schema: "
+            "invalid top-level key count"
+        )
     if surface not in {"cli", "benchmark", "api", "product_shadow"}:
         raise NativeFixed64ConsumerError("native consumer surface is unsupported")
-    payload = deepcopy(input_document)
+    # Do not deepcopy caller-owned nested collections before the native bounded
+    # preflight.  The exact outer dict is small and a shallow copy is sufficient
+    # to bind the selected consumer without mutating the caller's document.
+    payload = input_document.copy()
     payload["consumer"] = surface
     if payload.get("schema_id") != _COMPLETE_INPUT_SCHEMA_ID:
         raise NativeFixed64ConsumerError(
@@ -311,34 +397,34 @@ def run_native_fixed64_surface(
         raise NativeFixed64ConsumerError(
             "native fixed64 evidence does not match the requested backend"
         )
-    return NativeFixed64EvidenceV2(surface=surface, _document=result)
+    return NativeFixed64EvidenceV3(surface=surface, _document=result)
 
 
 class NativeFixed64CliAdapter:
     __slots__ = ()
 
-    def run(self, input_document: Mapping[str, object]) -> NativeFixed64EvidenceV2:
+    def run(self, input_document: Mapping[str, object]) -> NativeFixed64EvidenceV3:
         return run_native_fixed64_surface(input_document, surface="cli")
 
 
 class NativeFixed64DiagnosticBenchmarkAdapter:
     __slots__ = ()
 
-    def run(self, input_document: Mapping[str, object]) -> NativeFixed64EvidenceV2:
+    def run(self, input_document: Mapping[str, object]) -> NativeFixed64EvidenceV3:
         return run_native_fixed64_surface(input_document, surface="benchmark")
 
 
 class NativeFixed64PythonApi:
     __slots__ = ()
 
-    def run(self, input_document: Mapping[str, object]) -> NativeFixed64EvidenceV2:
+    def run(self, input_document: Mapping[str, object]) -> NativeFixed64EvidenceV3:
         return run_native_fixed64_surface(input_document, surface="api")
 
 
 class NativeFixed64ProductShadowAdapter:
     __slots__ = ()
 
-    def run(self, input_document: Mapping[str, object]) -> NativeFixed64EvidenceV2:
+    def run(self, input_document: Mapping[str, object]) -> NativeFixed64EvidenceV3:
         return run_native_fixed64_surface(input_document, surface="product_shadow")
 
 
@@ -348,6 +434,7 @@ __all__ = [
     "NativeFixed64DiagnosticBenchmarkAdapter",
     "NativeFixed64EvidenceV1",
     "NativeFixed64EvidenceV2",
+    "NativeFixed64EvidenceV3",
     "NativeFixed64ProductShadowAdapter",
     "NativeFixed64PythonApi",
     "NativeFixed64Surface",

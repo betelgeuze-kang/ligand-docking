@@ -8,7 +8,7 @@ use std::collections::BTreeSet;
 
 use betelgeuze_docking_search::{
     native_fixed64_coordinate_sha256, native_fixed64_heavy_atom_mask_sha256,
-    native_fixed64_radii_sha256, Vec3,
+    native_fixed64_radii_sha256, Vec3, FIXED64_MAX_LIGAND_ATOMS, FIXED64_MAX_RECEPTOR_ATOMS,
 };
 use betelgeuze_runtime::{
     Backend, Context, ContextOptions, Fixed64AtomicFeature, Fixed64ChiralityCenter,
@@ -18,8 +18,9 @@ use betelgeuze_runtime::{
     Fixed64PipelineContext, Fixed64PipelineReceipt, Fixed64Receptor, Fixed64RefinementMode,
     Fixed64Rotor, Fixed64RunInput, Fixed64SourceEvidence, PositionSoa, PositionSoaOwned,
 };
+use numpy::{PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::prelude::*;
-use pyo3::types::{PyAny, PyBool, PyDict, PyList};
+use pyo3::types::{PyAny, PyBool, PyDict, PyFloat, PyList, PyLong, PyString};
 use sha2::{Digest, Sha256};
 
 use crate::fixed64_pipeline::{
@@ -29,9 +30,24 @@ use crate::fixed64_pipeline::{
 };
 
 const LEGACY_INPUT_SCHEMA_ID: &str = "betelgeuze.engine_v2_native_fixed64_complete_input/1.0.0";
-pub(crate) const INPUT_SCHEMA_ID: &str = "betelgeuze.engine_v2_native_fixed64_complete_input/2.0.0";
-pub(crate) const EVIDENCE_SCHEMA_ID: &str =
+pub(crate) const INPUT_SCHEMA_ID_V2: &str =
+    "betelgeuze.engine_v2_native_fixed64_complete_input/2.0.0";
+pub(crate) const EVIDENCE_SCHEMA_ID_V2: &str =
     "betelgeuze.engine_v2_native_fixed64_complete_python_evidence/2.0.0";
+pub(crate) const INPUT_SCHEMA_ID: &str = "betelgeuze.engine_v2_native_fixed64_complete_input/3.0.0";
+pub(crate) const EVIDENCE_SCHEMA_ID: &str =
+    "betelgeuze.engine_v2_native_fixed64_complete_python_evidence/3.0.0";
+
+const MAX_V7_CONTROL_SOURCES: usize = 24;
+const MAX_CONFORMER_SOURCES: usize = 7;
+const MAX_RETAINED_SOURCES: usize = 4;
+const MAX_ATOMIC_FEATURES: usize = 12 * 256;
+const MAX_FEATURE_ATOM_INDICES: usize = FIXED64_MAX_RECEPTOR_ATOMS;
+const MAX_PREPARED_INPUT_SCALAR_COUNT: usize = 8 * 1_024 * 1_024;
+const PREPARED_INPUT_PROJECTION_DOMAIN: &[u8] =
+    b"betelgeuze.engine-v2.native-fixed64-prepared-input-projection/v1\0";
+const PREPARED_INPUT_RECEIPT_DOMAIN: &[u8] =
+    b"betelgeuze.engine-v2.native-fixed64-prepared-input-receipt/v1\0";
 
 const INPUT_KEYS: &[&str] = &[
     "schema_id",
@@ -203,6 +219,40 @@ struct FeatureGeometry {
     atom_indices: Vec<u64>,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum CompleteTransportVersion {
+    V2,
+    V3,
+}
+
+impl CompleteTransportVersion {
+    const fn input_schema_id(self) -> &'static str {
+        match self {
+            Self::V2 => INPUT_SCHEMA_ID_V2,
+            Self::V3 => INPUT_SCHEMA_ID,
+        }
+    }
+
+    const fn evidence_schema_id(self) -> &'static str {
+        match self {
+            Self::V2 => EVIDENCE_SCHEMA_ID_V2,
+            Self::V3 => EVIDENCE_SCHEMA_ID,
+        }
+    }
+
+    const fn is_bounded(self) -> bool {
+        matches!(self, Self::V3)
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct PreparedInputBounds {
+    ligand_atom_count: usize,
+    receptor_atom_count: usize,
+    exact_cartesian_pair_count: usize,
+    scalar_count: usize,
+}
+
 pub(crate) fn register(module: &PyModule) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(
         native_fixed64_complete_pipeline_v1,
@@ -212,6 +262,10 @@ pub(crate) fn register(module: &PyModule) -> PyResult<()> {
         native_fixed64_complete_pipeline_v2,
         module
     )?)?;
+    module.add_function(wrap_pyfunction!(
+        native_fixed64_complete_pipeline_v3,
+        module
+    )?)?;
     module.add("NATIVE_FIXED64_COMPLETE_INPUT_SCHEMA_ID", INPUT_SCHEMA_ID)?;
     module.add(
         "NATIVE_FIXED64_COMPLETE_INPUT_SCHEMA_ID_V1",
@@ -219,6 +273,10 @@ pub(crate) fn register(module: &PyModule) -> PyResult<()> {
     )?;
     module.add(
         "NATIVE_FIXED64_COMPLETE_INPUT_SCHEMA_ID_V2",
+        INPUT_SCHEMA_ID_V2,
+    )?;
+    module.add(
+        "NATIVE_FIXED64_COMPLETE_INPUT_SCHEMA_ID_V3",
         INPUT_SCHEMA_ID,
     )?;
     module.add(
@@ -227,6 +285,10 @@ pub(crate) fn register(module: &PyModule) -> PyResult<()> {
     )?;
     module.add(
         "NATIVE_FIXED64_COMPLETE_EVIDENCE_SCHEMA_ID_V2",
+        EVIDENCE_SCHEMA_ID_V2,
+    )?;
+    module.add(
+        "NATIVE_FIXED64_COMPLETE_EVIDENCE_SCHEMA_ID_V3",
         EVIDENCE_SCHEMA_ID,
     )?;
     Ok(())
@@ -235,14 +297,31 @@ pub(crate) fn register(module: &PyModule) -> PyResult<()> {
 #[pyfunction]
 fn native_fixed64_complete_pipeline_v1(_py: Python<'_>, _input: &PyDict) -> PyResult<PyObject> {
     Err(input_error(
-        "complete pipeline v1 is retired because it cannot bind post-refinement admission; use v2",
+        "complete pipeline v1 is retired because it cannot bind post-refinement admission; use v3",
     ))
 }
 
 #[pyfunction]
 fn native_fixed64_complete_pipeline_v2(py: Python<'_>, input: &PyDict) -> PyResult<PyObject> {
-    require_exact_keys(input, INPUT_KEYS, "native fixed64 complete input")?;
-    if dict_string(input, "schema_id")? != INPUT_SCHEMA_ID {
+    run_complete_pipeline(py, input, CompleteTransportVersion::V2)
+}
+
+#[pyfunction]
+fn native_fixed64_complete_pipeline_v3(py: Python<'_>, input: &PyDict) -> PyResult<PyObject> {
+    run_complete_pipeline(py, input, CompleteTransportVersion::V3)
+}
+
+fn run_complete_pipeline(
+    py: Python<'_>,
+    input: &PyDict,
+    transport: CompleteTransportVersion,
+) -> PyResult<PyObject> {
+    if transport.is_bounded() {
+        require_bounded_exact_keys(input, INPUT_KEYS, "native fixed64 complete input")?;
+    } else {
+        require_exact_keys(input, INPUT_KEYS, "native fixed64 complete input")?;
+    }
+    if dict_string(input, "schema_id")? != transport.input_schema_id() {
         return Err(input_error("complete input schema_id is unsupported"));
     }
     if !dict_exact_bool(input, "test_only")? {
@@ -251,10 +330,13 @@ fn native_fixed64_complete_pipeline_v2(py: Python<'_>, input: &PyDict) -> PyResu
         ));
     }
     let consumer = Consumer::parse(dict_string(input, "consumer")?)?;
-    let options = context_options(
-        dict_string(input, "backend")?,
-        exact_i32(dict_value(input, "device_ordinal")?, "device_ordinal")?,
-    )?;
+    let backend = dict_string(input, "backend")?;
+    let device_ordinal = exact_i32(dict_value(input, "device_ordinal")?, "device_ordinal")?;
+    let options = context_options(backend, device_ordinal)?;
+    let prepared_input_bounds = transport
+        .is_bounded()
+        .then(|| bounded_prepared_input_preflight(input))
+        .transpose()?;
 
     let ligand_coordinates = Coordinates::from_rows(rows3(
         dict_value(input, "ligand_coordinates_angstrom")?,
@@ -266,6 +348,13 @@ fn native_fixed64_complete_pipeline_v2(py: Python<'_>, input: &PyDict) -> PyResu
     )?);
     let ligand_count = ligand_coordinates.x.len();
     let receptor_count = receptor_coordinates.x.len();
+    if prepared_input_bounds.is_some_and(|bounds| {
+        bounds.ligand_atom_count != ligand_count || bounds.receptor_atom_count != receptor_count
+    }) {
+        return Err(input_error(
+            "prepared input atom counts changed after bounded preflight",
+        ));
+    }
     let ligand_radii = f64_values(
         dict_value(input, "ligand_vdw_radii_angstrom")?,
         ligand_count,
@@ -465,6 +554,53 @@ fn native_fixed64_complete_pipeline_v2(py: Python<'_>, input: &PyDict) -> PyResu
         dict_digest(input, "predeclared_refinement_policy_sha256")?;
     let predeclared_post_refinement_admission_policy_sha256 =
         dict_digest(input, "predeclared_post_refinement_admission_policy_sha256")?;
+    let prepared_input_projection_sha256 = prepared_input_bounds.map(|bounds| {
+        prepared_input_projection_sha256(PreparedInputProjection {
+            backend,
+            device_ordinal,
+            exact_evidence: &exact_evidence,
+            identities: &identities,
+            ligand_coordinates: &ligand_coordinates,
+            ligand_radii: &ligand_radii,
+            ligand_heavy: &ligand_heavy,
+            ligand_charges: &ligand_charges,
+            ligand_epsilon: &ligand_epsilon,
+            ligand_hydrophobic: &ligand_hydrophobic,
+            ligand_acceptor: &ligand_acceptor,
+            ligand_donors: &ligand_donors,
+            ligand_exclusions: &ligand_exclusions,
+            rotors: &rotors,
+            bonds: &bonds,
+            chirality_centers: &chirality_centers,
+            parent_atom_index: &parent_atom_index,
+            rotatable_child_atom_index: &rotatable_child_atom_index,
+            internal_pairs: &internal_pairs,
+            receptor_coordinates: &receptor_coordinates,
+            receptor_radii: &receptor_radii,
+            receptor_charges: &receptor_charges,
+            receptor_epsilon: &receptor_epsilon,
+            receptor_hydrophobic: &receptor_hydrophobic,
+            receptor_acceptor: &receptor_acceptor,
+            receptor_donors: &receptor_donors,
+            pocket_center,
+            pocket_radius,
+            pocket_normal,
+            v7_sources: &v7_sources,
+            conformer_sources: &conformer_sources,
+            retained_sources: &retained_sources,
+            feature_geometries: &feature_geometries,
+            feature_geometry_inventory_sha256,
+            rmsd_threshold_angstrom,
+            candidate_modes: &candidate_modes,
+            rigid_max_steps: &rigid_max_steps,
+            torsion_eligible: &torsion_eligible,
+            torsion_max_steps: &torsion_max_steps,
+            baseline_torsion_angles: &baseline_torsion_angles,
+            predeclared_refinement_policy_sha256,
+            predeclared_post_refinement_admission_policy_sha256,
+            bounds,
+        })
+    });
     let receipt = py
         .allow_threads(move || {
             let context = Context::new(options)?;
@@ -553,7 +689,538 @@ fn native_fixed64_complete_pipeline_v2(py: Python<'_>, input: &PyDict) -> PyResu
             pipeline.run(run)
         })
         .map_err(runtime_error)?;
-    receipt_to_python(py, &receipt, consumer)
+    receipt_to_python(
+        py,
+        &receipt,
+        consumer,
+        transport,
+        prepared_input_bounds,
+        prepared_input_projection_sha256,
+    )
+}
+
+#[derive(Default)]
+struct ScalarBudget {
+    count: usize,
+}
+
+impl ScalarBudget {
+    fn add(&mut self, count: usize, name: &str) -> PyResult<()> {
+        self.count = self
+            .count
+            .checked_add(count)
+            .ok_or_else(|| input_error(&format!("{name} scalar denominator overflows")))?;
+        if self.count > MAX_PREPARED_INPUT_SCALAR_COUNT {
+            return Err(input_error(&format!(
+                "prepared input scalar count exceeds {MAX_PREPARED_INPUT_SCALAR_COUNT}"
+            )));
+        }
+        Ok(())
+    }
+}
+
+fn bounded_prepared_input_preflight(input: &PyDict) -> PyResult<PreparedInputBounds> {
+    let mut budget = ScalarBudget::default();
+    // device ordinal, pocket radius, RMSD threshold, and test-only flag are
+    // fixed-width scalars; variable sequences are added below before copying.
+    budget.add(4, "fixed prepared-input scalars")?;
+    let ligand_atom_count = bounded_coordinate_rows(
+        dict_value(input, "ligand_coordinates_angstrom")?,
+        FIXED64_MAX_LIGAND_ATOMS,
+        "ligand_coordinates_angstrom",
+    )?;
+    budget.add(
+        ligand_atom_count
+            .checked_mul(3)
+            .ok_or_else(|| input_error("ligand coordinate denominator overflows"))?,
+        "ligand_coordinates_angstrom",
+    )?;
+    let receptor_atom_count = bounded_coordinate_rows(
+        dict_value(input, "receptor_coordinates_angstrom")?,
+        FIXED64_MAX_RECEPTOR_ATOMS,
+        "receptor_coordinates_angstrom",
+    )?;
+    budget.add(
+        receptor_atom_count
+            .checked_mul(3)
+            .ok_or_else(|| input_error("receptor coordinate denominator overflows"))?,
+        "receptor_coordinates_angstrom",
+    )?;
+    let exact_cartesian_pair_count = ligand_atom_count
+        .checked_mul(receptor_atom_count)
+        .ok_or_else(|| input_error("exact Cartesian pair denominator overflows"))?;
+    let maximum_pair_count = FIXED64_MAX_LIGAND_ATOMS
+        .checked_mul(FIXED64_MAX_RECEPTOR_ATOMS)
+        .ok_or_else(|| input_error("fixed64 pair capacity overflows"))?;
+    if exact_cartesian_pair_count > maximum_pair_count {
+        return Err(input_error("exact Cartesian pair capacity exceeded"));
+    }
+
+    for name in [
+        "ligand_vdw_radii_angstrom",
+        "ligand_charge_elementary",
+        "ligand_epsilon_kcal_per_mol",
+    ] {
+        bounded_f64_values(dict_value(input, name)?, ligand_atom_count, name)?;
+        budget.add(ligand_atom_count, name)?;
+    }
+    for name in [
+        "ligand_heavy_atom_mask",
+        "ligand_hydrophobic_mask",
+        "ligand_acceptor_mask",
+    ] {
+        bounded_bool_values(dict_value(input, name)?, ligand_atom_count, name)?;
+        budget.add(ligand_atom_count, name)?;
+    }
+    for name in [
+        "receptor_vdw_radii_angstrom",
+        "receptor_charge_elementary",
+        "receptor_epsilon_kcal_per_mol",
+    ] {
+        bounded_f64_values(dict_value(input, name)?, receptor_atom_count, name)?;
+        budget.add(receptor_atom_count, name)?;
+    }
+    for name in ["receptor_hydrophobic_mask", "receptor_acceptor_mask"] {
+        bounded_bool_values(dict_value(input, name)?, receptor_atom_count, name)?;
+        budget.add(receptor_atom_count, name)?;
+    }
+
+    let ligand_pair_capacity = ligand_atom_count
+        .checked_mul(ligand_atom_count.saturating_sub(1))
+        .and_then(|value| value.checked_div(2))
+        .ok_or_else(|| input_error("ligand pair capacity overflows"))?;
+    for (name, width, capacity, atom_bound) in [
+        ("ligand_donors", 2, ligand_atom_count, ligand_atom_count),
+        (
+            "receptor_donors",
+            2,
+            receptor_atom_count,
+            receptor_atom_count,
+        ),
+        (
+            "ligand_exclusions",
+            2,
+            ligand_pair_capacity,
+            ligand_atom_count,
+        ),
+        ("rotor_quads", 4, ligand_atom_count, ligand_atom_count),
+        ("bond_pairs", 2, ligand_pair_capacity, ligand_atom_count),
+        ("chirality_centers", 4, ligand_atom_count, ligand_atom_count),
+        ("internal_pairs", 2, ligand_pair_capacity, ligand_atom_count),
+    ] {
+        let row_count =
+            bounded_index_rows(dict_value(input, name)?, width, capacity, atom_bound, name)?;
+        budget.add(
+            row_count
+                .checked_mul(width)
+                .ok_or_else(|| input_error(&format!("{name} scalar denominator overflows")))?,
+            name,
+        )?;
+    }
+    bounded_i32_values(
+        dict_value(input, "parent_atom_index")?,
+        ligand_atom_count,
+        "parent_atom_index",
+    )?;
+    budget.add(ligand_atom_count, "parent_atom_index")?;
+    let rotatable_child_count = bounded_u64_values(
+        dict_value(input, "rotatable_child_atom_index")?,
+        0,
+        ligand_atom_count,
+        "rotatable_child_atom_index",
+    )?;
+    budget.add(rotatable_child_count, "rotatable_child_atom_index")?;
+
+    for name in ["pocket_center_angstrom", "pocket_normal"] {
+        bounded_f64_values(dict_value(input, name)?, 3, name)?;
+        budget.add(3, name)?;
+    }
+    for name in ["pocket_radius_angstrom", "rmsd_threshold_angstrom"] {
+        exact_finite_f64(dict_value(input, name)?, name)?;
+    }
+
+    let v7_count = bounded_source_rows(
+        dict_value(input, "v7_control_sources")?,
+        INDEXED_SOURCE_KEYS,
+        ligand_atom_count,
+        MAX_V7_CONTROL_SOURCES,
+        "v7_control_sources",
+    )?;
+    budget.add(
+        source_scalar_count(v7_count, ligand_atom_count)?,
+        "v7_control_sources",
+    )?;
+    let conformer_count = bounded_source_rows(
+        dict_value(input, "conformer_sources")?,
+        CONFORMER_SOURCE_KEYS,
+        ligand_atom_count,
+        MAX_CONFORMER_SOURCES,
+        "conformer_sources",
+    )?;
+    budget.add(
+        source_scalar_count(conformer_count, ligand_atom_count)?,
+        "conformer_sources",
+    )?;
+    let retained_count = bounded_source_rows(
+        dict_value(input, "retained_sources")?,
+        INDEXED_SOURCE_KEYS,
+        ligand_atom_count,
+        MAX_RETAINED_SOURCES,
+        "retained_sources",
+    )?;
+    budget.add(
+        source_scalar_count(retained_count, ligand_atom_count)?,
+        "retained_sources",
+    )?;
+
+    let feature_atom_index_count = bounded_feature_geometry_rows(
+        dict_value(input, "feature_geometries")?,
+        MAX_ATOMIC_FEATURES,
+    )?;
+    budget.add(feature_atom_index_count, "feature_geometries")?;
+
+    bounded_string_values(dict_value(input, "candidate_modes")?, 64, "candidate_modes")?;
+    budget.add(64, "candidate_modes")?;
+    for name in ["rigid_max_steps", "torsion_max_steps"] {
+        bounded_u64_values(dict_value(input, name)?, 64, 64, name)?;
+        budget.add(64, name)?;
+    }
+    bounded_bool_values(
+        dict_value(input, "proposal_is_torsion_eligible")?,
+        64,
+        "proposal_is_torsion_eligible",
+    )?;
+    budget.add(64, "proposal_is_torsion_eligible")?;
+    let baseline_count = ligand_atom_count
+        .checked_mul(64)
+        .ok_or_else(|| input_error("baseline torsion denominator overflows"))?;
+    bounded_f64_values(
+        dict_value(input, "baseline_torsion_angles_radians")?,
+        baseline_count,
+        "baseline_torsion_angles_radians",
+    )?;
+    budget.add(baseline_count, "baseline_torsion_angles_radians")?;
+
+    Ok(PreparedInputBounds {
+        ligand_atom_count,
+        receptor_atom_count,
+        exact_cartesian_pair_count,
+        scalar_count: budget.count,
+    })
+}
+
+fn require_bounded_exact_keys(value: &PyDict, expected: &[&str], name: &str) -> PyResult<()> {
+    if value.downcast_exact::<PyDict>().is_err() {
+        return Err(input_error(&format!("{name} must be an exact dict")));
+    }
+    if value.len() != expected.len() {
+        return Err(input_error(&format!("{name} has an invalid key schema")));
+    }
+    let maximum_key_bytes = expected.iter().map(|key| key.len()).max().unwrap_or(0);
+    for key in value.keys().iter() {
+        let key = key
+            .downcast_exact::<PyString>()
+            .map_err(|_| input_error(&format!("{name} keys must be exact strings")))?;
+        let text = key
+            .to_str()
+            .map_err(|_| input_error(&format!("{name} keys must be valid UTF-8")))?;
+        if text.len() > maximum_key_bytes {
+            return Err(input_error(&format!(
+                "{name} key length exceeds its schema"
+            )));
+        }
+    }
+    require_exact_keys(value, expected, name)
+}
+
+fn bounded_coordinate_rows(value: &PyAny, maximum: usize, name: &str) -> PyResult<usize> {
+    if let Ok(array) = value.extract::<PyReadonlyArray2<'_, f64>>() {
+        let view = array.as_array();
+        let count = view.nrows();
+        if !(1..=maximum).contains(&count) || view.ncols() != 3 {
+            return Err(input_error(&format!(
+                "{name} must have bounded shape [1..={maximum},3]"
+            )));
+        }
+        if view.iter().any(|component| !component.is_finite()) {
+            return Err(input_error(&format!("{name} must be finite")));
+        }
+        return Ok(count);
+    }
+    let rows = value
+        .downcast_exact::<PyList>()
+        .map_err(|_| input_error(&format!("{name} must be a float64 array or exact list")))?;
+    if !(1..=maximum).contains(&rows.len()) {
+        return Err(input_error(&format!(
+            "{name} must have bounded shape [1..={maximum},3]"
+        )));
+    }
+    for (row_index, row) in rows.iter().enumerate() {
+        let components = row
+            .downcast_exact::<PyList>()
+            .map_err(|_| input_error(&format!("{name}[{row_index}] must be an exact list")))?;
+        if components.len() != 3 {
+            return Err(input_error(&format!(
+                "{name} rows must contain exactly 3 values"
+            )));
+        }
+        for component in components.iter() {
+            exact_finite_f64(component, name)?;
+        }
+    }
+    Ok(rows.len())
+}
+
+fn bounded_f64_values(value: &PyAny, expected: usize, name: &str) -> PyResult<()> {
+    if let Ok(array) = value.extract::<PyReadonlyArray1<'_, f64>>() {
+        let values = array.as_slice()?;
+        if values.len() != expected || values.iter().any(|item| !item.is_finite()) {
+            return Err(input_error(&format!(
+                "{name} length or finite-value contract failed"
+            )));
+        }
+        return Ok(());
+    }
+    let values = value
+        .downcast_exact::<PyList>()
+        .map_err(|_| input_error(&format!("{name} must be a float64 array or exact list")))?;
+    if values.len() != expected {
+        return Err(input_error(&format!("{name} length mismatch")));
+    }
+    for item in values.iter() {
+        exact_finite_f64(item, name)?;
+    }
+    Ok(())
+}
+
+fn exact_finite_f64(value: &PyAny, name: &str) -> PyResult<f64> {
+    if value.downcast_exact::<PyFloat>().is_err() && value.downcast_exact::<PyLong>().is_err() {
+        return Err(input_error(&format!(
+            "{name} values must be exact int or float and must not be bool"
+        )));
+    }
+    let value = value
+        .extract::<f64>()
+        .map_err(|_| input_error(&format!("{name} values must be numeric")))?;
+    if !value.is_finite() {
+        return Err(input_error(&format!("{name} values must be finite")));
+    }
+    Ok(value)
+}
+
+fn bounded_bool_values(value: &PyAny, expected: usize, name: &str) -> PyResult<()> {
+    if let Ok(array) = value.extract::<PyReadonlyArray1<'_, u8>>() {
+        let values = array.as_slice()?;
+        if values.len() != expected || values.iter().any(|item| *item > 1) {
+            return Err(input_error(&format!(
+                "{name} must be a bounded binary mask"
+            )));
+        }
+        return Ok(());
+    }
+    let values = value
+        .downcast_exact::<PyList>()
+        .map_err(|_| input_error(&format!("{name} must be a uint8 array or exact list")))?;
+    if values.len() != expected || values.iter().any(|item| !item.is_instance_of::<PyBool>()) {
+        return Err(input_error(&format!("{name} must be an exact bool list")));
+    }
+    Ok(())
+}
+
+fn bounded_index_rows(
+    value: &PyAny,
+    width: usize,
+    maximum_rows: usize,
+    atom_bound: usize,
+    name: &str,
+) -> PyResult<usize> {
+    let rows = value
+        .downcast_exact::<PyList>()
+        .map_err(|_| input_error(&format!("{name} must be an exact list")))?;
+    if rows.len() > maximum_rows {
+        return Err(input_error(&format!(
+            "{name} row count exceeds {maximum_rows}"
+        )));
+    }
+    for (row_index, row) in rows.iter().enumerate() {
+        let values = row
+            .downcast_exact::<PyList>()
+            .map_err(|_| input_error(&format!("{name}[{row_index}] must be an exact list")))?;
+        if values.len() != width {
+            return Err(input_error(&format!(
+                "{name}[{row_index}] must contain exactly {width} indices"
+            )));
+        }
+        for item in values.iter() {
+            let index = item
+                .downcast_exact::<PyLong>()
+                .map_err(|_| input_error(&format!("{name} indices must be exact integers")))?
+                .extract::<usize>()
+                .map_err(|_| {
+                    input_error(&format!(
+                        "{name} indices must be exact non-negative integers"
+                    ))
+                })?;
+            if index >= atom_bound {
+                return Err(input_error(&format!("{name} atom index is out of bounds")));
+            }
+        }
+    }
+    Ok(rows.len())
+}
+
+fn bounded_i32_values(value: &PyAny, expected: usize, name: &str) -> PyResult<()> {
+    let values = value
+        .downcast_exact::<PyList>()
+        .map_err(|_| input_error(&format!("{name} must be an exact list")))?;
+    if values.len() != expected {
+        return Err(input_error(&format!("{name} length mismatch")));
+    }
+    for item in values.iter() {
+        exact_i32(item, name)?;
+    }
+    Ok(())
+}
+
+fn bounded_u64_values(
+    value: &PyAny,
+    minimum: usize,
+    maximum: usize,
+    name: &str,
+) -> PyResult<usize> {
+    let values = value
+        .downcast_exact::<PyList>()
+        .map_err(|_| input_error(&format!("{name} must be an exact list")))?;
+    if !(minimum..=maximum).contains(&values.len()) {
+        return Err(input_error(&format!(
+            "{name} length must be in [{minimum},{maximum}]"
+        )));
+    }
+    for item in values.iter() {
+        if item
+            .downcast_exact::<PyLong>()
+            .ok()
+            .and_then(|value| value.extract::<u64>().ok())
+            .is_none()
+        {
+            return Err(input_error(&format!(
+                "{name} values must be exact non-negative integers"
+            )));
+        }
+    }
+    Ok(values.len())
+}
+
+fn bounded_string_values(value: &PyAny, expected: usize, name: &str) -> PyResult<()> {
+    let values = value
+        .downcast_exact::<PyList>()
+        .map_err(|_| input_error(&format!("{name} must be an exact list")))?;
+    if values.len() != expected
+        || values
+            .iter()
+            .any(|item| item.downcast_exact::<PyString>().is_err())
+    {
+        return Err(input_error(&format!(
+            "{name} must contain exactly {expected} strings"
+        )));
+    }
+    Ok(())
+}
+
+fn bounded_source_rows(
+    value: &PyAny,
+    expected_keys: &[&str],
+    ligand_atom_count: usize,
+    maximum_rows: usize,
+    name: &str,
+) -> PyResult<usize> {
+    let rows = value
+        .downcast_exact::<PyList>()
+        .map_err(|_| input_error(&format!("{name} must be an exact list")))?;
+    if rows.len() > maximum_rows {
+        return Err(input_error(&format!(
+            "{name} row count exceeds {maximum_rows}"
+        )));
+    }
+    for (offset, item) in rows.iter().enumerate() {
+        let row = item
+            .downcast_exact::<PyDict>()
+            .map_err(|_| input_error(&format!("{name}[{offset}] must be an exact dict")))?;
+        require_bounded_exact_keys(row, expected_keys, name)?;
+        let identity_key = if expected_keys == INDEXED_SOURCE_KEYS {
+            "source_index"
+        } else {
+            "rank"
+        };
+        if dict_value(row, identity_key)?
+            .downcast_exact::<PyLong>()
+            .ok()
+            .and_then(|value| value.extract::<u32>().ok())
+            .is_none()
+        {
+            return Err(input_error(&format!(
+                "{name}[{offset}].{identity_key} must be an exact non-negative integer"
+            )));
+        }
+        let count = bounded_coordinate_rows(
+            dict_value(row, "coordinates_angstrom")?,
+            ligand_atom_count,
+            &format!("{name}[{offset}].coordinates_angstrom"),
+        )?;
+        if count != ligand_atom_count {
+            return Err(input_error(&format!(
+                "{name}[{offset}] coordinates must match ligand atom count"
+            )));
+        }
+    }
+    Ok(rows.len())
+}
+
+fn source_scalar_count(source_count: usize, ligand_atom_count: usize) -> PyResult<usize> {
+    source_count
+        .checked_mul(
+            ligand_atom_count
+                .checked_mul(3)
+                .and_then(|value| value.checked_add(1))
+                .ok_or_else(|| input_error("source scalar denominator overflows"))?,
+        )
+        .ok_or_else(|| input_error("source scalar denominator overflows"))
+}
+
+fn bounded_feature_geometry_rows(value: &PyAny, maximum_rows: usize) -> PyResult<usize> {
+    let rows = value
+        .downcast_exact::<PyList>()
+        .map_err(|_| input_error("feature_geometries must be an exact list"))?;
+    if rows.len() > maximum_rows {
+        return Err(input_error(&format!(
+            "feature_geometries row count exceeds {maximum_rows}"
+        )));
+    }
+    let mut atom_index_count = 0_usize;
+    for (offset, item) in rows.iter().enumerate() {
+        let row = item.downcast_exact::<PyDict>().map_err(|_| {
+            input_error(&format!(
+                "feature_geometries[{offset}] must be an exact dict"
+            ))
+        })?;
+        require_bounded_exact_keys(row, FEATURE_GEOMETRY_KEYS, "feature_geometries")?;
+        feature_kind(dict_string(row, "kind")?)?;
+        let count = bounded_u64_values(
+            dict_value(row, "atom_indices")?,
+            1,
+            MAX_FEATURE_ATOM_INDICES,
+            "feature_geometries.atom_indices",
+        )?;
+        atom_index_count = atom_index_count
+            .checked_add(count)
+            .ok_or_else(|| input_error("feature geometry atom-index denominator overflows"))?;
+        if atom_index_count > MAX_PREPARED_INPUT_SCALAR_COUNT {
+            return Err(input_error(
+                "feature geometry atom-index scalar capacity exceeded",
+            ));
+        }
+    }
+    Ok(atom_index_count)
 }
 
 fn context_options(backend: &str, device_ordinal: i32) -> PyResult<ContextOptions> {
@@ -573,7 +1240,7 @@ fn context_options(backend: &str, device_ordinal: i32) -> PyResult<ContextOption
 }
 
 fn exact_i32(value: &PyAny, name: &str) -> PyResult<i32> {
-    if value.is_instance_of::<PyBool>() {
+    if value.downcast_exact::<PyLong>().is_err() {
         return Err(input_error(&format!("{name} must be an exact integer")));
     }
     value
@@ -848,6 +1515,355 @@ fn heavy_digest(values: &[u8]) -> PyResult<[u8; 32]> {
     native_fixed64_heavy_atom_mask_sha256(&values).map_err(|error| input_error(error.message()))
 }
 
+struct PreparedInputProjection<'a> {
+    backend: &'a str,
+    device_ordinal: i32,
+    exact_evidence: &'a Fixed64ExactSourceEvidence,
+    identities: &'a Fixed64Identities,
+    ligand_coordinates: &'a Coordinates,
+    ligand_radii: &'a [f64],
+    ligand_heavy: &'a [u8],
+    ligand_charges: &'a [f64],
+    ligand_epsilon: &'a [f64],
+    ligand_hydrophobic: &'a [u8],
+    ligand_acceptor: &'a [u8],
+    ligand_donors: &'a [Fixed64Donor],
+    ligand_exclusions: &'a [Fixed64Pair],
+    rotors: &'a [Fixed64Rotor],
+    bonds: &'a [Fixed64Pair],
+    chirality_centers: &'a [Fixed64ChiralityCenter],
+    parent_atom_index: &'a [i32],
+    rotatable_child_atom_index: &'a [u64],
+    internal_pairs: &'a [Fixed64Pair],
+    receptor_coordinates: &'a Coordinates,
+    receptor_radii: &'a [f64],
+    receptor_charges: &'a [f64],
+    receptor_epsilon: &'a [f64],
+    receptor_hydrophobic: &'a [u8],
+    receptor_acceptor: &'a [u8],
+    receptor_donors: &'a [Fixed64Donor],
+    pocket_center: [f64; 3],
+    pocket_radius: f64,
+    pocket_normal: [f64; 3],
+    v7_sources: &'a [IndexedSource],
+    conformer_sources: &'a [ConformerSource],
+    retained_sources: &'a [IndexedSource],
+    feature_geometries: &'a [FeatureGeometry],
+    feature_geometry_inventory_sha256: [u8; 32],
+    rmsd_threshold_angstrom: f64,
+    candidate_modes: &'a [Fixed64RefinementMode],
+    rigid_max_steps: &'a [u64],
+    torsion_eligible: &'a [u8],
+    torsion_max_steps: &'a [u64],
+    baseline_torsion_angles: &'a [f64],
+    predeclared_refinement_policy_sha256: [u8; 32],
+    predeclared_post_refinement_admission_policy_sha256: [u8; 32],
+    bounds: PreparedInputBounds,
+}
+
+struct PreparedProjectionHasher {
+    hash: Sha256,
+}
+
+impl PreparedProjectionHasher {
+    fn new() -> Self {
+        let mut hash = Sha256::new();
+        hash.update(PREPARED_INPUT_PROJECTION_DOMAIN);
+        Self { hash }
+    }
+
+    fn field(&mut self, name: &str) {
+        self.hash.update((name.len() as u64).to_be_bytes());
+        self.hash.update(name.as_bytes());
+    }
+
+    fn usize(&mut self, value: usize) {
+        self.hash.update((value as u64).to_be_bytes());
+    }
+
+    fn u64(&mut self, value: u64) {
+        self.hash.update(value.to_be_bytes());
+    }
+
+    fn i32(&mut self, value: i32) {
+        self.hash.update(value.to_be_bytes());
+    }
+
+    fn byte(&mut self, value: u8) {
+        self.hash.update([value]);
+    }
+
+    fn f64(&mut self, value: f64) {
+        self.hash.update(value.to_bits().to_be_bytes());
+    }
+
+    fn digest(&mut self, value: [u8; 32]) {
+        self.hash.update(value);
+    }
+
+    fn string(&mut self, value: &str) {
+        self.usize(value.len());
+        self.hash.update(value.as_bytes());
+    }
+
+    fn f64_slice(&mut self, name: &str, values: &[f64]) {
+        self.field(name);
+        self.usize(values.len());
+        for value in values {
+            self.f64(*value);
+        }
+    }
+
+    fn u8_slice(&mut self, name: &str, values: &[u8]) {
+        self.field(name);
+        self.usize(values.len());
+        self.hash.update(values);
+    }
+
+    fn u64_slice(&mut self, name: &str, values: &[u64]) {
+        self.field(name);
+        self.usize(values.len());
+        for value in values {
+            self.u64(*value);
+        }
+    }
+
+    fn i32_slice(&mut self, name: &str, values: &[i32]) {
+        self.field(name);
+        self.usize(values.len());
+        for value in values {
+            self.i32(*value);
+        }
+    }
+
+    fn coordinates(&mut self, name: &str, value: &Coordinates) {
+        self.field(name);
+        self.usize(value.x.len());
+        for index in 0..value.x.len() {
+            self.f64(value.x[index]);
+            self.f64(value.y[index]);
+            self.f64(value.z[index]);
+        }
+    }
+
+    fn donors(&mut self, name: &str, values: &[Fixed64Donor]) {
+        self.field(name);
+        self.usize(values.len());
+        for value in values {
+            self.u64(value.donor_atom_index);
+            self.u64(value.hydrogen_atom_index);
+        }
+    }
+
+    fn pairs(&mut self, name: &str, values: &[Fixed64Pair]) {
+        self.field(name);
+        self.usize(values.len());
+        for value in values {
+            self.u64(value.atom_i);
+            self.u64(value.atom_j);
+        }
+    }
+
+    fn sources(&mut self, name: &str, values: &[IndexedSource]) {
+        self.field(name);
+        self.usize(values.len());
+        for value in values {
+            self.u64(u64::from(value.source_index));
+            self.source(&value.source);
+        }
+    }
+
+    fn source(&mut self, value: &OwnedSource) {
+        self.digest(value.evidence.receipt_sha256);
+        self.digest(value.evidence.proposal_sha256);
+        self.digest(value.evidence.coordinate_sha256);
+        self.usize(value.coordinates.x.len());
+        for index in 0..value.coordinates.x.len() {
+            self.f64(value.coordinates.x[index]);
+            self.f64(value.coordinates.y[index]);
+            self.f64(value.coordinates.z[index]);
+        }
+    }
+
+    fn finish(self) -> [u8; 32] {
+        self.hash.finalize().into()
+    }
+}
+
+fn prepared_input_projection_sha256(value: PreparedInputProjection<'_>) -> [u8; 32] {
+    let mut hash = PreparedProjectionHasher::new();
+    hash.field("schema_id");
+    hash.string(INPUT_SCHEMA_ID);
+    hash.field("backend");
+    hash.string(value.backend);
+    hash.field("device_ordinal");
+    hash.i32(value.device_ordinal);
+
+    for (name, digest) in [
+        (
+            "authority_input_receipt_sha256",
+            value.identities.authority_input_receipt_sha256,
+        ),
+        (
+            "source_receipt_sha256",
+            value.exact_evidence.source_receipt_sha256,
+        ),
+        ("proposal_sha256", value.exact_evidence.proposal_sha256),
+        (
+            "prepared_ligand_topology_sha256",
+            value.exact_evidence.prepared_ligand_topology_sha256,
+        ),
+        (
+            "prepared_receptor_topology_sha256",
+            value.exact_evidence.prepared_receptor_topology_sha256,
+        ),
+        (
+            "receptor_system_sha256",
+            value.identities.receptor_system_sha256,
+        ),
+        (
+            "ligand_system_sha256",
+            value.identities.ligand_system_sha256,
+        ),
+        (
+            "backend_receipt_sha256",
+            value.identities.backend_receipt_sha256,
+        ),
+        (
+            "validity_scorer_context_receipt_sha256",
+            value.identities.validity_scorer_context_receipt_sha256,
+        ),
+        (
+            "contact_policy_sha256",
+            value.identities.contact_policy_sha256,
+        ),
+    ] {
+        hash.field(name);
+        hash.digest(digest);
+    }
+
+    hash.coordinates("ligand_coordinates_angstrom", value.ligand_coordinates);
+    hash.f64_slice("ligand_vdw_radii_angstrom", value.ligand_radii);
+    hash.u8_slice("ligand_heavy_atom_mask", value.ligand_heavy);
+    hash.f64_slice("ligand_charge_elementary", value.ligand_charges);
+    hash.f64_slice("ligand_epsilon_kcal_per_mol", value.ligand_epsilon);
+    hash.u8_slice("ligand_hydrophobic_mask", value.ligand_hydrophobic);
+    hash.u8_slice("ligand_acceptor_mask", value.ligand_acceptor);
+    hash.donors("ligand_donors", value.ligand_donors);
+    hash.pairs("ligand_exclusions", value.ligand_exclusions);
+    hash.field("rotor_quads");
+    hash.usize(value.rotors.len());
+    for rotor in value.rotors {
+        hash.u64(rotor.atom_i);
+        hash.u64(rotor.atom_j);
+        hash.u64(rotor.atom_k);
+        hash.u64(rotor.atom_l);
+    }
+    hash.pairs("bond_pairs", value.bonds);
+    hash.field("chirality_centers");
+    hash.usize(value.chirality_centers.len());
+    for center in value.chirality_centers {
+        hash.u64(center.center_atom);
+        hash.u64(center.atom_i);
+        hash.u64(center.atom_j);
+        hash.u64(center.atom_k);
+    }
+    hash.i32_slice("parent_atom_index", value.parent_atom_index);
+    hash.u64_slice(
+        "rotatable_child_atom_index",
+        value.rotatable_child_atom_index,
+    );
+    hash.pairs("internal_pairs", value.internal_pairs);
+
+    hash.coordinates("receptor_coordinates_angstrom", value.receptor_coordinates);
+    hash.f64_slice("receptor_vdw_radii_angstrom", value.receptor_radii);
+    hash.f64_slice("receptor_charge_elementary", value.receptor_charges);
+    hash.f64_slice("receptor_epsilon_kcal_per_mol", value.receptor_epsilon);
+    hash.u8_slice("receptor_hydrophobic_mask", value.receptor_hydrophobic);
+    hash.u8_slice("receptor_acceptor_mask", value.receptor_acceptor);
+    hash.donors("receptor_donors", value.receptor_donors);
+
+    hash.field("pocket_center_angstrom");
+    for component in value.pocket_center {
+        hash.f64(component);
+    }
+    hash.field("pocket_radius_angstrom");
+    hash.f64(value.pocket_radius);
+    hash.field("pocket_normal");
+    for component in value.pocket_normal {
+        hash.f64(component);
+    }
+
+    hash.sources("v7_control_sources", value.v7_sources);
+    hash.field("conformer_sources");
+    hash.usize(value.conformer_sources.len());
+    for source in value.conformer_sources {
+        hash.byte(source.rank);
+        hash.source(&source.source);
+    }
+    hash.sources("retained_sources", value.retained_sources);
+    hash.field("feature_geometries");
+    hash.usize(value.feature_geometries.len());
+    for feature in value.feature_geometries {
+        hash.byte(feature_kind_id(feature.kind));
+        hash.digest(feature.allocation_feature_receipt_sha256);
+        hash.digest(feature.feature_geometry_receipt_sha256);
+        hash.u64_slice("atom_indices", &feature.atom_indices);
+    }
+    hash.field("feature_geometry_inventory_sha256");
+    hash.digest(value.feature_geometry_inventory_sha256);
+    hash.field("rmsd_threshold_angstrom");
+    hash.f64(value.rmsd_threshold_angstrom);
+
+    hash.field("candidate_modes");
+    hash.usize(value.candidate_modes.len());
+    for mode in value.candidate_modes {
+        hash.byte(refinement_mode_id(*mode));
+    }
+    hash.u64_slice("rigid_max_steps", value.rigid_max_steps);
+    hash.u8_slice("proposal_is_torsion_eligible", value.torsion_eligible);
+    hash.u64_slice("torsion_max_steps", value.torsion_max_steps);
+    hash.f64_slice(
+        "baseline_torsion_angles_radians",
+        value.baseline_torsion_angles,
+    );
+    hash.field("predeclared_refinement_policy_sha256");
+    hash.digest(value.predeclared_refinement_policy_sha256);
+    hash.field("predeclared_post_refinement_admission_policy_sha256");
+    hash.digest(value.predeclared_post_refinement_admission_policy_sha256);
+    hash.field("test_only");
+    hash.byte(1);
+    hash.field("bounded_ligand_atom_count");
+    hash.usize(value.bounds.ligand_atom_count);
+    hash.field("bounded_receptor_atom_count");
+    hash.usize(value.bounds.receptor_atom_count);
+    hash.field("exact_cartesian_pair_count");
+    hash.usize(value.bounds.exact_cartesian_pair_count);
+    hash.field("prepared_input_scalar_count");
+    hash.usize(value.bounds.scalar_count);
+    hash.finish()
+}
+
+const fn refinement_mode_id(value: Fixed64RefinementMode) -> u8 {
+    match value {
+        Fixed64RefinementMode::V2Translation => 0,
+        Fixed64RefinementMode::V3TranslationRotation => 1,
+        Fixed64RefinementMode::V6BaselineV2Lane => 2,
+        Fixed64RefinementMode::V6BaselineV3Lane => 3,
+    }
+}
+
+fn prepared_input_receipt_sha256(
+    projection_sha256: [u8; 32],
+    pipeline_receipt_sha256: [u8; 32],
+) -> [u8; 32] {
+    let mut hash = Sha256::new();
+    hash.update(PREPARED_INPUT_RECEIPT_DOMAIN);
+    hash.update(projection_sha256);
+    hash.update(pipeline_receipt_sha256);
+    hash.finalize().into()
+}
+
 fn runtime_error(error: betelgeuze_runtime::Error) -> PyErr {
     input_error(&format!(
         "native_complete_pipeline_{:?}: {}",
@@ -968,9 +1984,12 @@ fn receipt_to_python(
     py: Python<'_>,
     receipt: &Fixed64PipelineReceipt,
     consumer: Consumer,
+    transport: CompleteTransportVersion,
+    prepared_input_bounds: Option<PreparedInputBounds>,
+    prepared_input_projection_sha256: Option<[u8; 32]>,
 ) -> PyResult<PyObject> {
     let output = PyDict::new(py);
-    output.set_item("schema_id", EVIDENCE_SCHEMA_ID)?;
+    output.set_item("schema_id", transport.evidence_schema_id())?;
     output.set_item(
         "pipeline_id",
         Fixed64Pipeline::profile_id().map_err(runtime_error)?,
@@ -998,6 +2017,35 @@ fn receipt_to_python(
         "consumer_view_receipt_sha256",
         hex_digest(consumer_view_digest(receipt, consumer)),
     )?;
+    if transport.is_bounded() {
+        let bounds = prepared_input_bounds.ok_or_else(|| {
+            input_error("bounded prepared-input evidence is missing cardinality bounds")
+        })?;
+        let projection_sha256 = prepared_input_projection_sha256.ok_or_else(|| {
+            input_error("bounded prepared-input evidence is missing its native projection")
+        })?;
+        output.set_item("prepared_input_bounded", true)?;
+        output.set_item(
+            "prepared_input_projection_sha256",
+            hex_digest(projection_sha256),
+        )?;
+        output.set_item(
+            "prepared_input_receipt_sha256",
+            hex_digest(prepared_input_receipt_sha256(
+                projection_sha256,
+                receipt.receipts.pipeline_batch_receipt_sha256,
+            )),
+        )?;
+        output.set_item(
+            "exact_cartesian_pair_count",
+            bounds.exact_cartesian_pair_count,
+        )?;
+        output.set_item("prepared_input_scalar_count", bounds.scalar_count)?;
+        output.set_item(
+            "prepared_input_scalar_limit",
+            MAX_PREPARED_INPUT_SCALAR_COUNT,
+        )?;
+    }
     output.set_item(
         "allocation_receipt_sha256",
         hex_digest(receipt.receipts.allocation_receipt_sha256),

@@ -400,6 +400,15 @@ check is not external execution authority, scientific admission, or a molecular
 experiment authorization. The admitted profile binds the current V7,
 Scorer-v1, full fixed-64/Top-5 budget and proposal-plan receipts.
 
+The lower-level canonical fixed64 consumers use
+`native_fixed64_complete_pipeline_v3`. That bridge performs a bounded native
+preflight before copying prepared Python sequences, then derives a Rust-owned
+prepared-input projection and binds it to the complete native pipeline receipt.
+CLI, diagnostic benchmark, API, and product shadow share those two receipts;
+only the consumer-view receipt is surface-specific. See
+[the bounded prepared-input v3 contract](engine_v2_native_fixed64_bounded_input_v3.md).
+All authority fields remain fail-closed.
+
 The no-argument pipeline seals the exact canonical component types and IDs.
 The public constructor rejects supplied dependencies before execution. The
 underscore-prefixed internal test factory is the only dependency-injected path;

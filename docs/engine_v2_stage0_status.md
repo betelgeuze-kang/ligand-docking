@@ -408,10 +408,12 @@ The canonical capability state is:
     surfaces only and every execution, reservation, benchmark, product-rank,
     customer-pose, and claim authority bit remains false. These primitives are
     a synthetic native candidate executor but not an admitted molecular or
-    Stage 0 executor. Bounded native parsing, exactly-once qualification
-    activation/downstream binding, and product shadow
-    routing remain unavailable while the proposal, validity, and external
-    authority gates fail.
+    Stage 0 executor. The versioned v3 complete bridge now bounds native
+    prepared-input parsing before allocation and binds a Rust-derived transport
+    projection to the exact native pipeline receipt across CLI, benchmark, API,
+    and product-shadow surfaces. Exactly-once qualification downstream binding
+    and admitted product-shadow routing remain unavailable while the proposal,
+    validity, and external-authority gates fail.
 
 ## Exit condition
 
