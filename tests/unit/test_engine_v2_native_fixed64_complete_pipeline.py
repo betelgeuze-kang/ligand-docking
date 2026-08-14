@@ -18,6 +18,7 @@ from betelgeuze_engine_v2.docking.native_fixed64_consumers import (
     NativeFixed64ProductShadowAdapter,
     NativeFixed64PythonApi,
     prepare_native_fixed64_session,
+    run_native_fixed64_surface,
 )
 import betelgeuze_engine_v2.docking.native_fixed64_consumers as native_consumers
 from betelgeuze_engine_v2.standalone_cli import main as standalone_main
@@ -38,6 +39,16 @@ class _ListSubclass(list):
 
 class _DictSubclass(dict):
     pass
+
+
+class _StringSubclass(str):
+    def __hash__(self) -> int:
+        raise AssertionError("prepared session must reject before caller string hashing")
+
+
+class _StringProtocolObject:
+    def __eq__(self, _other: object) -> bool:
+        raise AssertionError("prepared session must reject before caller string comparison")
 
 
 class _DeepcopyTrap:
@@ -260,6 +271,18 @@ def test_prepared_session_rejects_unknown_consumer(native) -> None:
         session.run(surface="production")
 
 
+def test_prepared_session_rejects_surface_subclass_before_protocols(native) -> None:
+    session = prepare_native_fixed64_session(_input())
+    surface = _StringSubclass("api")
+
+    with pytest.raises(NativeFixed64ConsumerError, match="unsupported"):
+        session.run(surface=surface)  # type: ignore[arg-type]
+    with pytest.raises(NativeFixed64ConsumerError, match="unsupported"):
+        run_native_fixed64_surface(
+            _input(), surface=surface  # type: ignore[arg-type]
+        )
+
+
 @pytest.mark.parametrize("backend", ("cpp_cpu_reference", "rust_cpu"))
 def test_prepared_session_cpu_backends_match_stateless_v3(native, backend: str) -> None:
     source = _input(consumer="api")
@@ -314,6 +337,20 @@ def test_prepared_session_facade_rejects_metadata_mapping_subclass(native) -> No
         NativeFixed64PreparedSessionV1(
             _native_session=raw_session,
             _metadata=_DictSubclass(raw_session.describe()),
+            _backend="rust_cpu",
+            _default_consumer="api",
+        )
+
+
+def test_prepared_session_facade_rejects_metadata_identity_protocols(native) -> None:
+    raw_session = native.native_fixed64_prepare_session_v1(_input())
+    metadata = raw_session.describe()
+    metadata["schema_id"] = _StringProtocolObject()
+
+    with pytest.raises(TypeError, match="identities must be exact strings"):
+        NativeFixed64PreparedSessionV1(
+            _native_session=raw_session,
+            _metadata=metadata,
             _backend="rust_cpu",
             _default_consumer="api",
         )

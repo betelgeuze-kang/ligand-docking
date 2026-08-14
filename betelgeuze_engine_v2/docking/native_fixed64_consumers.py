@@ -398,15 +398,24 @@ class NativeFixed64PreparedSessionV1:
         projection = metadata.get("prepared_input_projection_sha256")
         session_receipt = metadata.get("prepared_session_receipt_sha256")
         default_consumer = metadata.get("default_consumer")
+        metadata_backend = metadata.get("backend")
+        schema_id = metadata.get("schema_id")
         ligand_count = metadata.get("ligand_atom_count")
         receptor_count = metadata.get("receptor_atom_count")
         exact_pair_count = metadata.get("exact_cartesian_pair_count")
         scalar_count = metadata.get("prepared_input_scalar_count")
+        if any(
+            type(value) is not str
+            for value in (schema_id, pipeline_id, default_consumer, metadata_backend)
+        ):
+            raise TypeError(
+                "native prepared-session metadata identities must be exact strings"
+            )
         if (
-            metadata.get("schema_id") != _PREPARED_SESSION_SCHEMA_ID
+            schema_id != _PREPARED_SESSION_SCHEMA_ID
             or pipeline_id != _NATIVE_FIXED64_PIPELINE_ID
             or default_consumer != self._default_consumer
-            or metadata.get("backend") != self._backend
+            or metadata_backend != self._backend
             or self._backend not in {"cpp_cpu_reference", "rust_cpu"}
             or metadata.get("candidate_denominator") != 64
             or metadata.get("test_only") is not True
@@ -486,7 +495,12 @@ class NativeFixed64PreparedSessionV1:
         return value
 
     def run(self, *, surface: NativeFixed64Surface) -> NativeFixed64EvidenceV3:
-        if surface not in {"cli", "benchmark", "api", "product_shadow"}:
+        if type(surface) is not str or surface not in {
+            "cli",
+            "benchmark",
+            "api",
+            "product_shadow",
+        }:
             raise NativeFixed64ConsumerError("native consumer surface is unsupported")
         try:
             result = self._native_session.run(surface)
@@ -524,7 +538,12 @@ def _bounded_native_payload(
             "canonical consumers require the complete fixed64 input schema: "
             "invalid top-level key count"
         )
-    if surface not in {"cli", "benchmark", "api", "product_shadow"}:
+    if type(surface) is not str or surface not in {
+        "cli",
+        "benchmark",
+        "api",
+        "product_shadow",
+    }:
         raise NativeFixed64ConsumerError("native consumer surface is unsupported")
     # Do not deepcopy caller-owned nested collections before the native bounded
     # preflight. Rust copies every admitted collection into owned native state.
