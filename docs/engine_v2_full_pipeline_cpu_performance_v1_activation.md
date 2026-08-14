@@ -19,7 +19,7 @@ The activation binds the exact merged-main foundation produced by PR #319:
 The verifier re-reads those Git objects and separately hashes all eleven
 required activation bindings: profile, profile verifier, measurement core,
 inactive runner, native consumer, native CPU parity, host preflight, commit,
-tree, standard-library import closure, and dynamic-library closure. The
+tree, standard-library import closure, and executable-mapping closure. The
 profile remains byte-identical at
 `385fb713cca8f39353f138115749abdfc9768b02222e13111a418360be30a000`.
 The preflight boundary additionally binds its own bootstrap, activation module,
@@ -40,20 +40,29 @@ preloaded or second-read modules are rejected. Before that import boundary, the
 complete activation document is compared recursively against an exact typed
 projection, including all keys, runtime/foundation identities, closure
 summaries, false authority, and the self-hashed bootstrap. Unknown fields and
-Boolean/integer substitutions fail closed. The preflight then initializes the
-exact native extension without creating a docking session and re-derives:
+Boolean/integer substitutions fail closed. The preflight opens the exact
+native extension through a stable no-follow descriptor, authenticates its
+bytes and inode, and initializes it through the same `/proc/self/fd`
+descriptor without creating a docking session. It retains and rechecks that
+descriptor until the loaded executable mapping has been matched to the same
+device and inode. The preflight then re-derives:
 
 - 125 imported standard-library module identities, including 84 file-backed
   source or extension rows with their complete hashes and sizes;
 - 78 declared bytecode-cache files with their paths, hashes, and sizes, so
   CPython's readable `.pyc` path cannot diverge from the frozen closure;
-- 20 actually mapped shared libraries, including the native extension,
-  CPython extension modules, C/C++ runtimes, loader, and transitive system
-  libraries.
+- 21 file-backed executable mappings, including the CPython executable, native
+  extension, CPython extension modules, C/C++ runtimes, loader, and transitive
+  system libraries;
+- the exact `[vdso]` and `[vsyscall]` virtual executable mapping set.
 
-The mappings come from the isolated process itself rather than `ldd`, and no
-caller-supplied expected digest is accepted. Added, missing, moved, or changed
-module/library rows fail closed.
+The mappings come from the isolated process itself rather than `ldd`. Every
+file-backed executable mapping is included regardless of filename or suffix,
+including paths containing spaces. The map device/inode must equal the file
+descriptor identity used for hashing. Deleted mappings and unexpected
+anonymous executable mappings fail closed, and no caller-supplied expected
+digest is accepted. Added, missing, moved, or changed module/mapping rows fail
+closed.
 
 ## Non-consuming preflight
 
@@ -76,7 +85,7 @@ science input:
 ```
 
 GitHub Actions is rejected before any repository or native provider is loaded.
-The local result records import and native-initialization evidence, host
+The local result records import, descriptor-bound native initialization, host
 preflight evidence, and explicit false fields for measurement, qualification
 consumption, reservation, molecular execution, public benchmark, HIP device
 execution, and product action.

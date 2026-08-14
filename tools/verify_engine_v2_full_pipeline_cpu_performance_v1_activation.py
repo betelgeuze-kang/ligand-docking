@@ -76,14 +76,12 @@ ACTIVATION_SCHEMA_ID = (
 ACTIVATION_ID = "engine_v2_full_pipeline_cpu_performance_v1_activation"
 PROFILE_ID = "engine_v2_full_pipeline_cpu_performance_v1"
 PROFILE_SHA256 = "385fb713cca8f39353f138115749abdfc9768b02222e13111a418360be30a000"
-ACTIVATION_SHA256 = (
-    "19939ad62b1b303f82e061af09a43778fa058e21aff25dac8cfab5c9164a3b59"
-)
+ACTIVATION_SHA256 = "9f05b674e107f5c592fa091a6d6b1fc814eae7c93eda7229ac5c2168fa916f82"
 STDLIB_CLOSURE_SHA256 = (
     "230cc88d60a9fd0f92318492ec533672930e72eaed11ef5410a45ce7edbb690b"
 )
 DYNAMIC_CLOSURE_SHA256 = (
-    "b9190033cf42ea75aa1131da38517b70101f05f8c55992419964014bc67030b1"
+    "9112e029cf620efbb9dd4769540c8b80da30ade25cc8d55ccdc64f8e374c7247"
 )
 FOUNDATION_COMMIT_OID = "38c16136a1e2cc126517ff9b50a05f06c5795adb"
 FOUNDATION_COMMIT_SHA256 = (
@@ -156,9 +154,7 @@ def _reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     result: dict[str, Any] = {}
     for key, value in pairs:
         if key in result:
-            raise FullPipelineCPUActivationContractError(
-                f"duplicate JSON key: {key}"
-            )
+            raise FullPipelineCPUActivationContractError(f"duplicate JSON key: {key}")
         result[key] = value
     return result
 
@@ -419,26 +415,45 @@ def _validate_dynamic_closure(document: dict[str, Any]) -> None:
     _require_exact(
         frozenset(document),
         frozenset(
-            {"library_count", "rows", "rows_sha256", "schema_id", "total_bytes"}
+            {
+                "executable_file_count",
+                "rows",
+                "rows_sha256",
+                "schema_id",
+                "total_bytes",
+                "virtual_executable_mappings",
+            }
         ),
-        name="dynamic-library closure keys",
+        name="executable-mapping closure keys",
     )
     rows = document["rows"]
     if type(rows) is not list or not rows:
         raise FullPipelineCPUActivationContractError(
-            "dynamic-library closure rows changed"
+            "executable-mapping closure rows changed"
+        )
+    virtual_mappings = document["virtual_executable_mappings"]
+    if (
+        type(virtual_mappings) is not list
+        or any(
+            type(value) is not str or value not in {"[vdso]", "[vsyscall]"}
+            for value in virtual_mappings
+        )
+        or virtual_mappings != sorted(set(virtual_mappings))
+    ):
+        raise FullPipelineCPUActivationContractError(
+            "virtual executable mapping closure changed"
         )
     identities: list[str] = []
     total_bytes = 0
     for row in rows:
         if type(row) is not dict:
             raise FullPipelineCPUActivationContractError(
-                "dynamic-library closure row is not an exact object"
+                "executable-mapping closure row is not an exact object"
             )
         _require_exact(
             frozenset(row),
             frozenset({"path", "sha256", "size_bytes"}),
-            name="dynamic-library closure row keys",
+            name="executable-mapping closure row keys",
         )
         identity = row["path"]
         if (
@@ -450,24 +465,30 @@ def _validate_dynamic_closure(document: dict[str, Any]) -> None:
             or ".." in PurePosixPath(identity.removeprefix("system:")).parts
         ):
             raise FullPipelineCPUActivationContractError(
-                "dynamic-library closure identity changed"
+                "executable-mapping closure identity changed"
             )
         identities.append(identity)
-        _require_digest(row["sha256"], name="dynamic-library digest")
+        _require_digest(row["sha256"], name="executable mapping digest")
         size = _require_non_negative_int(
-            row["size_bytes"], name="dynamic-library size"
+            row["size_bytes"], name="executable mapping size"
         )
         if size == 0:
             raise FullPipelineCPUActivationContractError(
-                "dynamic-library size must be positive"
+                "executable mapping size must be positive"
             )
         total_bytes += size
     if identities != sorted(identities) or len(set(identities)) != len(identities):
         raise FullPipelineCPUActivationContractError(
-            "dynamic-library closure rows are not canonical unique order"
+            "executable-mapping closure rows are not canonical unique order"
         )
-    _require_exact(document["library_count"], len(rows), name="library count")
-    _require_exact(document["total_bytes"], total_bytes, name="library byte total")
+    _require_exact(
+        document["executable_file_count"],
+        len(rows),
+        name="executable file count",
+    )
+    _require_exact(
+        document["total_bytes"], total_bytes, name="executable file byte total"
+    )
 
 
 def load_closure_manifest(
@@ -493,7 +514,7 @@ def load_closure_manifest(
     ):
         _validate_stdlib_closure(document)
     elif expected_schema_id == (
-        "betelgeuze.engine_v2_loaded_dynamic_library_closure/1.0.0"
+        "betelgeuze.engine_v2_executable_mapping_closure/1.0.0"
     ):
         _validate_dynamic_closure(document)
     else:
@@ -521,9 +542,7 @@ def _git_bytes(repository_root: Path, arguments: Sequence[str]) -> bytes:
 
 
 def _verify_foundation(repository_root: Path) -> None:
-    commit_type = _git_bytes(
-        repository_root, ("cat-file", "-t", FOUNDATION_COMMIT_OID)
-    )
+    commit_type = _git_bytes(repository_root, ("cat-file", "-t", FOUNDATION_COMMIT_OID))
     if commit_type != b"commit\n":
         raise FullPipelineCPUActivationContractError(
             "merged-main foundation object is not a commit"
@@ -535,10 +554,14 @@ def _verify_foundation(repository_root: Path) -> None:
         raise FullPipelineCPUActivationContractError(
             "merged-main foundation commit bytes changed"
         )
-    tree_oid = _git_bytes(
-        repository_root,
-        ("show", "-s", "--format=%T", FOUNDATION_COMMIT_OID),
-    ).decode("ascii").strip()
+    tree_oid = (
+        _git_bytes(
+            repository_root,
+            ("show", "-s", "--format=%T", FOUNDATION_COMMIT_OID),
+        )
+        .decode("ascii")
+        .strip()
+    )
     if tree_oid != FOUNDATION_TREE_OID:
         raise FullPipelineCPUActivationContractError(
             "merged-main foundation tree OID changed"
@@ -652,24 +675,21 @@ def verify(
     )
     dynamic, dynamic_raw = load_closure_manifest(
         dynamic_path,
-        expected_schema_id="betelgeuze.engine_v2_loaded_dynamic_library_closure/1.0.0",
+        expected_schema_id="betelgeuze.engine_v2_executable_mapping_closure/1.0.0",
     )
     _require_exact(
         document["closure_manifests"],
         {
             "dynamic_library_closure": {
-                "library_count": dynamic["library_count"],
+                "executable_file_count": dynamic["executable_file_count"],
                 "manifest_sha256": hashlib.sha256(dynamic_raw).hexdigest(),
                 "path": "config/engine_v2_full_pipeline_cpu_performance_v1_dynamic_library_closure.json",
                 "total_bytes": dynamic["total_bytes"],
+                "virtual_executable_mappings": dynamic["virtual_executable_mappings"],
             },
             "stdlib_import_closure": {
-                "cached_bytecode_file_count": stdlib[
-                    "cached_bytecode_file_count"
-                ],
-                "cached_bytecode_total_bytes": stdlib[
-                    "cached_bytecode_total_bytes"
-                ],
+                "cached_bytecode_file_count": stdlib["cached_bytecode_file_count"],
+                "cached_bytecode_total_bytes": stdlib["cached_bytecode_total_bytes"],
                 "file_backed_module_count": stdlib["file_backed_module_count"],
                 "file_backed_total_bytes": stdlib["file_backed_total_bytes"],
                 "manifest_sha256": hashlib.sha256(stdlib_raw).hexdigest(),
@@ -689,9 +709,7 @@ def verify(
             "artifact_id": 9213296947,
             "artifact_run_attempt": 1,
             "artifact_run_id": 31785070195,
-            "artifact_workflow_head_sha": (
-                "3330faa43c7fc8640d89babd84ac444c5959157c"
-            ),
+            "artifact_workflow_head_sha": ("3330faa43c7fc8640d89babd84ac444c5959157c"),
             "native_extension_sha256": (
                 "ff7b5e6ba7c0e250cf739292d34c562d0bd142d5f7f6c842c5c191d42b2504e1"
             ),
@@ -770,6 +788,10 @@ def verify(
             "_exact_json_equal",
             "activation contract exact projection changed",
             "_require_native_extension",
+            "ExtensionFileLoader",
+            "/proc/self/fd/",
+            "_require_native_descriptor_stable",
+            "required_executable_file_identity",
             "native_fixed64_prepare_repository_synthetic_d0_session_v1",
             "native_fixed64_repository_synthetic_d0_cpu_parity_v1",
             "derive_host_preflight_evidence_v3",
@@ -782,6 +804,10 @@ def verify(
             '"performance_measurement_performed": False',
             '"qualification_consumed": False',
             '"reservation_created": False',
+            "line.split(maxsplit=5)",
+            "deleted executable file mapping is forbidden",
+            "unexpected anonymous executable mapping",
+            "expected_mapping_identity=mapping_identity",
         ),
     )
     _require_snippets(
@@ -801,7 +827,8 @@ def verify(
         ),
     )
     _require_snippets(
-        repository_root / "docs/engine_v2_full_pipeline_cpu_performance_v1_activation.md",
+        repository_root
+        / "docs/engine_v2_full_pipeline_cpu_performance_v1_activation.md",
         (
             "exact merged-main foundation",
             "non-consuming preflight",
@@ -810,6 +837,8 @@ def verify(
             "125 imported standard-library module identities",
             "84 file-backed",
             "78 declared bytecode-cache files",
+            "21 file-backed executable mappings",
+            "descriptor-bound native initialization",
         ),
     )
     workflow_tokens = (
@@ -850,9 +879,7 @@ def verify(
         "profile_sha256": PROFILE_SHA256,
         "foundation_commit_oid": FOUNDATION_COMMIT_OID,
         "foundation_tree_oid": FOUNDATION_TREE_OID,
-        "stdlib_import_closure_manifest_sha256": hashlib.sha256(
-            stdlib_raw
-        ).hexdigest(),
+        "stdlib_import_closure_manifest_sha256": hashlib.sha256(stdlib_raw).hexdigest(),
         "dynamic_library_closure_manifest_sha256": hashlib.sha256(
             dynamic_raw
         ).hexdigest(),

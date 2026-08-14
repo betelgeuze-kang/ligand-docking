@@ -1,5 +1,5 @@
 {
-  "library_count": 20,
+  "executable_file_count": 21,
   "rows": [
     {
       "path": "qualified_site_packages/betelgeuze_engine_v2_native/betelgeuze_engine_v2_native.cpython-310-x86_64-linux-gnu.so",
@@ -35,6 +35,11 @@
       "path": "stdlib/lib-dynload/resource.cpython-310-x86_64-linux-gnu.so",
       "sha256": "44ed265ed539ea9f01cd958cf12600ae854fae3a5ad8466ead8fdad3530359c3",
       "size_bytes": 19424
+    },
+    {
+      "path": "system:/usr/bin/python3.10",
+      "sha256": "7d51cd6b48b521277f5caa4610a82126e315fa2be4df069823a8b1eeb5bd4a86",
+      "size_bytes": 5917224
     },
     {
       "path": "system:/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2",
@@ -102,7 +107,11 @@
       "size_bytes": 108936
     }
   ],
-  "rows_sha256": "319d3e0648edf99da9636708e811fdcf49f7a35280bbf8cd58c5b5b1e4da1b24",
-  "schema_id": "betelgeuze.engine_v2_loaded_dynamic_library_closure/1.0.0",
-  "total_bytes": 13962048
+  "rows_sha256": "544015acd76f71df4628b61850a02b7ce35fcc920e42f074ecea80420f47637c",
+  "schema_id": "betelgeuze.engine_v2_executable_mapping_closure/1.0.0",
+  "total_bytes": 19879272,
+  "virtual_executable_mappings": [
+    "[vdso]",
+    "[vsyscall]"
+  ]
 }

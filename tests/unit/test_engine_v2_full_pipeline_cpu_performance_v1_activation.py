@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import importlib.machinery
 import json
+import os
 from pathlib import Path
 import sys
 import types
@@ -12,7 +13,9 @@ import pytest
 from betelgeuze_engine_v2.docking import (
     full_pipeline_cpu_performance_v1_activation as activation,
 )
-from tools import preflight_engine_v2_full_pipeline_cpu_performance_v1_activation as preflight
+from tools import (
+    preflight_engine_v2_full_pipeline_cpu_performance_v1_activation as preflight,
+)
 
 
 def _module(name: str, *, origin: str) -> types.ModuleType:
@@ -92,12 +95,15 @@ def test_dynamic_library_closure_is_rederivable(tmp_path: Path) -> None:
     site_packages = tmp_path / "site-packages"
     package = site_packages / "native"
     package.mkdir(parents=True)
-    library = package / "native_fixture.so"
+    library = package / "native executable fixture"
     library.write_bytes(b"exact-native-fixture")
     library.chmod(0o600)
+    metadata = library.stat()
+    device = f"{os.major(metadata.st_dev):x}:{os.minor(metadata.st_dev):x}"
     process_maps = tmp_path / "maps"
     process_maps.write_text(
-        f"1000-2000 r-xp 00000000 00:00 1 {library}\n",
+        f"1000-2000 r-xp 00000000 {device} {metadata.st_ino} {library}\n"
+        "2000-3000 r-xp 00000000 00:00 0 [vdso]\n",
         encoding="ascii",
     )
     process_maps.chmod(0o600)
@@ -105,17 +111,23 @@ def test_dynamic_library_closure_is_rederivable(tmp_path: Path) -> None:
     observed = activation.derive_dynamic_library_closure(
         site_packages=site_packages,
         process_maps_path=process_maps,
+        required_executable_file_identity=(
+            os.major(metadata.st_dev),
+            os.minor(metadata.st_dev),
+            metadata.st_ino,
+        ),
     )
 
     expected_row = {
-        "path": "qualified_site_packages/native/native_fixture.so",
+        "path": "qualified_site_packages/native/native executable fixture",
         "sha256": hashlib.sha256(b"exact-native-fixture").hexdigest(),
         "size_bytes": len(b"exact-native-fixture"),
     }
     assert observed == {
         "schema_id": activation.DYNAMIC_LIBRARY_CLOSURE_SCHEMA_ID,
-        "library_count": 1,
+        "executable_file_count": 1,
         "total_bytes": len(b"exact-native-fixture"),
+        "virtual_executable_mappings": ["[vdso]"],
         "rows_sha256": activation.manifest_rows_sha256([expected_row]),
         "rows": [expected_row],
     }
@@ -132,12 +144,108 @@ def test_dynamic_library_closure_rejects_unavailable_mapping(tmp_path: Path) -> 
 
     with pytest.raises(
         activation.FullPipelineCPUActivationError,
-        match="mapped dynamic library is unavailable",
+        match="mapped executable file is unavailable",
     ):
         activation.derive_dynamic_library_closure(
             site_packages=site_packages,
             process_maps_path=process_maps,
         )
+
+
+def test_dynamic_library_closure_rejects_deleted_mapping(tmp_path: Path) -> None:
+    site_packages = tmp_path / "site-packages"
+    site_packages.mkdir()
+    executable = tmp_path / "deleted executable"
+    executable.write_bytes(b"mapped")
+    metadata = executable.stat()
+    device = f"{os.major(metadata.st_dev):x}:{os.minor(metadata.st_dev):x}"
+    process_maps = tmp_path / "maps"
+    process_maps.write_text(
+        f"1000-2000 r-xp 00000000 {device} {metadata.st_ino} {executable} (deleted)\n",
+        encoding="ascii",
+    )
+
+    with pytest.raises(
+        activation.FullPipelineCPUActivationError,
+        match="deleted executable file mapping is forbidden",
+    ):
+        activation.derive_dynamic_library_closure(
+            site_packages=site_packages,
+            process_maps_path=process_maps,
+        )
+
+
+def test_dynamic_library_closure_rejects_anonymous_executable_mapping(
+    tmp_path: Path,
+) -> None:
+    site_packages = tmp_path / "site-packages"
+    site_packages.mkdir()
+    process_maps = tmp_path / "maps"
+    process_maps.write_text(
+        "1000-2000 rwxp 00000000 00:00 0 [jit-cache]\n",
+        encoding="ascii",
+    )
+
+    with pytest.raises(
+        activation.FullPipelineCPUActivationError,
+        match="unexpected anonymous executable mapping",
+    ):
+        activation.derive_dynamic_library_closure(
+            site_packages=site_packages,
+            process_maps_path=process_maps,
+        )
+
+
+def test_dynamic_library_closure_rejects_mapping_device_inode_drift(
+    tmp_path: Path,
+) -> None:
+    site_packages = tmp_path / "site-packages"
+    site_packages.mkdir()
+    executable = tmp_path / "mapped-executable"
+    executable.write_bytes(b"mapped")
+    executable.chmod(0o600)
+    process_maps = tmp_path / "maps"
+    process_maps.write_text(
+        f"1000-2000 r-xp 00000000 01:02 3 {executable}\n",
+        encoding="ascii",
+    )
+
+    with pytest.raises(
+        activation.FullPipelineCPUActivationError,
+        match="device/inode differs from the executable mapping",
+    ):
+        activation.derive_dynamic_library_closure(
+            site_packages=site_packages,
+            process_maps_path=process_maps,
+        )
+
+
+def test_native_extension_descriptor_detects_post_authentication_change(
+    tmp_path: Path,
+) -> None:
+    extension = tmp_path / preflight._NATIVE_EXTENSION_RELATIVE_PATH
+    extension.parent.mkdir(parents=True)
+    original = b"A" * 64
+    extension.write_bytes(original)
+    extension.chmod(0o600)
+    expected_sha256 = hashlib.sha256(original).hexdigest()
+    descriptor, metadata = preflight._open_authenticated_native_extension(
+        tmp_path,
+        expected_sha256=expected_sha256,
+    )
+    try:
+        extension.write_bytes(b"B" * 64)
+        with pytest.raises(
+            RuntimeError,
+            match="authenticated native extension descriptor changed",
+        ):
+            preflight._require_native_descriptor_stable(
+                descriptor,
+                expected_metadata=metadata,
+                expected_sha256=expected_sha256,
+            )
+    finally:
+        os.close(descriptor)
 
 
 def test_exact_closure_rejects_semantic_drift() -> None:
@@ -213,9 +321,7 @@ def test_runtime_activation_contract_rejects_unknown_and_type_drift(
     config_root = repository_root / "config"
     config_root.mkdir(parents=True)
     source = (
-        Path(preflight.__file__)
-        .resolve()
-        .parents[1]
+        Path(preflight.__file__).resolve().parents[1]
         / "config/engine_v2_full_pipeline_cpu_performance_v1_activation.json"
     )
     document = json.loads(source.read_text(encoding="ascii"))

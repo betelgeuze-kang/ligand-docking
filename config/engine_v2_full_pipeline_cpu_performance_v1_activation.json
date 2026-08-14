@@ -15,10 +15,14 @@
   },
   "closure_manifests": {
     "dynamic_library_closure": {
-      "library_count": 20,
-      "manifest_sha256": "b9190033cf42ea75aa1131da38517b70101f05f8c55992419964014bc67030b1",
+      "executable_file_count": 21,
+      "manifest_sha256": "9112e029cf620efbb9dd4769540c8b80da30ade25cc8d55ccdc64f8e374c7247",
       "path": "config/engine_v2_full_pipeline_cpu_performance_v1_dynamic_library_closure.json",
-      "total_bytes": 13962048
+      "total_bytes": 19879272,
+      "virtual_executable_mappings": [
+        "[vdso]",
+        "[vsyscall]"
+      ]
     },
     "stdlib_import_closure": {
       "cached_bytecode_file_count": 78,
@@ -31,7 +35,7 @@
     }
   },
   "preflight": {
-    "activation_module_sha256": "b3d216100df51cfa0886ce9119a1e7e72a15ba30e6046609022c0d062351566b",
+    "activation_module_sha256": "67e419c0a8d56aa0c59c87d9650cf51f55d234a4e74f984ea8ff89c247e402c5",
     "bootstrap_flags": [
       "-I",
       "-S",
@@ -44,7 +48,7 @@
     "molecular_input_allowed": false,
     "performance_measurement_allowed": false,
     "performance_sidecar_sha256": "04253e3897bb5746e1c1082dbf8e27922835ffb075aeb3268c18a0895662173f",
-    "preflight_tool_sha256": "15358a2b057c510f60bc7728ede595c1bf5d1fc37bbff24ece693c526b898286",
+    "preflight_tool_sha256": "48526f1c2e27eac901986563d36b53bc89b0731eb77558401a78e7b8cf832ac1",
     "qualification_state_write_allowed": false,
     "reservation_allowed": false
   },
@@ -88,7 +92,7 @@
   },
   "schema_id": "betelgeuze.engine_v2_full_pipeline_cpu_performance_activation/1.0.0",
   "source_bindings": {
-    "dynamic_library_closure_manifest_sha256": "b9190033cf42ea75aa1131da38517b70101f05f8c55992419964014bc67030b1",
+    "dynamic_library_closure_manifest_sha256": "9112e029cf620efbb9dd4769540c8b80da30ade25cc8d55ccdc64f8e374c7247",
     "host_preflight_sha256": "236496cb7342040191db51f6c801948ab1c6b859d09a85b35e3c8a9c00a38adf",
     "measurement_core_sha256": "c27657f104248973f11f6da498fc08da460cb6d4823719139762ce76b0cd18d7",
     "merged_main_commit_sha256": "1b478ee3b9737e9d50fc854fb4bde93cbd1efd48015a27df52199a698d17e82e",

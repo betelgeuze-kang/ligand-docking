@@ -28,7 +28,7 @@ STDLIB_CLOSURE_SCHEMA_ID: Final = (
     "betelgeuze.engine_v2_python_stdlib_import_closure/1.0.0"
 )
 DYNAMIC_LIBRARY_CLOSURE_SCHEMA_ID: Final = (
-    "betelgeuze.engine_v2_loaded_dynamic_library_closure/1.0.0"
+    "betelgeuze.engine_v2_executable_mapping_closure/1.0.0"
 )
 PREFLIGHT_EVIDENCE_SCHEMA_ID: Final = (
     "betelgeuze.engine_v2_full_pipeline_cpu_activation_preflight/1.0.0"
@@ -38,7 +38,8 @@ PYTHON_STDLIB_ROOT: Final = Path("/usr/lib/python3.10")
 MAX_CLOSURE_FILE_BYTES: Final = 32 * 1024 * 1024
 MAX_CLOSURE_TOTAL_BYTES: Final = 128 * 1024 * 1024
 MAX_STDLIB_MODULE_ROWS: Final = 512
-MAX_DYNAMIC_LIBRARY_ROWS: Final = 128
+MAX_EXECUTABLE_FILE_ROWS: Final = 128
+ALLOWED_VIRTUAL_EXECUTABLE_MAPPINGS: Final = frozenset({"[vdso]", "[vsyscall]"})
 
 
 class FullPipelineCPUActivationError(RuntimeError):
@@ -73,6 +74,7 @@ def _read_stable_regular_file(
     *,
     name: str,
     allowed_owner_uids: tuple[int, ...],
+    expected_mapping_identity: tuple[int, int, int] | None = None,
 ) -> bytes:
     flags = os.O_RDONLY | os.O_CLOEXEC | getattr(os, "O_NOFOLLOW", 0)
     if getattr(os, "O_NOFOLLOW", 0) == 0:
@@ -92,6 +94,18 @@ def _read_stable_regular_file(
         ):
             raise FullPipelineCPUActivationError(
                 f"{name} is not a bounded controlled regular file: {path}"
+            )
+        observed_mapping_identity = (
+            os.major(before.st_dev),
+            os.minor(before.st_dev),
+            before.st_ino,
+        )
+        if (
+            expected_mapping_identity is not None
+            and observed_mapping_identity != expected_mapping_identity
+        ):
+            raise FullPipelineCPUActivationError(
+                f"{name} device/inode differs from the executable mapping"
             )
         chunks: list[bytes] = []
         observed = 0
@@ -117,8 +131,7 @@ def _read_stable_regular_file(
             "st_ctime_ns",
         )
         if observed != before.st_size or any(
-            getattr(before, field) != getattr(after, field)
-            for field in identity_fields
+            getattr(before, field) != getattr(after, field) for field in identity_fields
         ):
             raise FullPipelineCPUActivationError(f"{name} changed while read")
         return b"".join(chunks)
@@ -262,28 +275,59 @@ def derive_stdlib_import_closure(
     }
 
 
-def _mapped_library_identity(path: Path, *, site_packages: Path) -> str:
+def _mapped_executable_identity(path: Path, *, site_packages: Path) -> str:
     resolved = path.resolve(strict=True)
     try:
-        return "qualified_site_packages/" + resolved.relative_to(
-            site_packages.resolve(strict=True)
-        ).as_posix()
+        return (
+            "qualified_site_packages/"
+            + resolved.relative_to(site_packages.resolve(strict=True)).as_posix()
+        )
     except ValueError:
         pass
     try:
-        return "stdlib/" + resolved.relative_to(
-            PYTHON_STDLIB_ROOT.resolve(strict=True)
-        ).as_posix()
+        return (
+            "stdlib/"
+            + resolved.relative_to(PYTHON_STDLIB_ROOT.resolve(strict=True)).as_posix()
+        )
     except ValueError:
         return "system:" + str(resolved)
+
+
+def _parse_mapping_device_inode(*, device: str, inode: str) -> tuple[int, int, int]:
+    try:
+        major_text, minor_text = device.split(":", maxsplit=1)
+        major = int(major_text, 16)
+        minor = int(minor_text, 16)
+        inode_number = int(inode, 10)
+    except (TypeError, ValueError) as exc:
+        raise FullPipelineCPUActivationError(
+            "executable mapping device/inode is invalid"
+        ) from exc
+    if major < 0 or minor < 0 or inode_number <= 0:
+        raise FullPipelineCPUActivationError(
+            "executable mapping device/inode is invalid"
+        )
+    return major, minor, inode_number
+
+
+def _require_mapping_permissions(permissions: str) -> None:
+    if (
+        len(permissions) != 4
+        or permissions[0] not in {"r", "-"}
+        or permissions[1] not in {"w", "-"}
+        or permissions[2] not in {"x", "-"}
+        or permissions[3] not in {"p", "s"}
+    ):
+        raise FullPipelineCPUActivationError("process map contains invalid permissions")
 
 
 def derive_dynamic_library_closure(
     *,
     site_packages: Path,
     process_maps_path: Path | None = None,
+    required_executable_file_identity: tuple[int, int, int] | None = None,
 ) -> dict[str, object]:
-    """Hash every mapped shared object in the isolated activation process."""
+    """Hash every file-backed executable mapping in the activation process."""
 
     maps_path = process_maps_path or Path(f"/proc/{os.getpid()}/maps")
     try:
@@ -292,33 +336,66 @@ def derive_dynamic_library_closure(
         raise FullPipelineCPUActivationError(
             "dynamic-library process map is unavailable"
         ) from exc
-    observed: dict[Path, str] = {}
+    observed: dict[tuple[int, int, int], tuple[Path, str]] = {}
+    path_identities: dict[Path, tuple[int, int, int]] = {}
+    virtual_executable_mappings: set[str] = set()
     for line in lines:
-        fields = line.split()
-        if len(fields) < 6:
+        fields = line.split(maxsplit=5)
+        if len(fields) < 5:
+            raise FullPipelineCPUActivationError("process map row is malformed")
+        permissions = fields[1]
+        _require_mapping_permissions(permissions)
+        if permissions[2] != "x":
             continue
-        raw_path = fields[-1]
-        if not raw_path.startswith("/") or ".so" not in Path(raw_path).name:
+        raw_path = fields[5] if len(fields) == 6 else ""
+        if not raw_path.startswith("/"):
+            if raw_path not in ALLOWED_VIRTUAL_EXECUTABLE_MAPPINGS:
+                raise FullPipelineCPUActivationError(
+                    "unexpected anonymous executable mapping"
+                )
+            virtual_executable_mappings.add(raw_path)
             continue
+        if raw_path.endswith(" (deleted)"):
+            raise FullPipelineCPUActivationError(
+                "deleted executable file mapping is forbidden"
+            )
+        mapping_identity = _parse_mapping_device_inode(
+            device=fields[3], inode=fields[4]
+        )
         try:
             path = Path(raw_path).resolve(strict=True)
-            identity = _mapped_library_identity(path, site_packages=site_packages)
+            identity = _mapped_executable_identity(path, site_packages=site_packages)
         except OSError as exc:
             raise FullPipelineCPUActivationError(
-                "mapped dynamic library is unavailable"
+                "mapped executable file is unavailable"
             ) from exc
-        previous = observed.setdefault(path, identity)
-        if previous != identity:
+        previous_path_identity = path_identities.setdefault(path, mapping_identity)
+        if previous_path_identity != mapping_identity:
             raise FullPipelineCPUActivationError(
-                "mapped dynamic library identity is ambiguous"
+                "mapped executable file identity is ambiguous"
             )
+        previous = observed.setdefault(mapping_identity, (path, identity))
+        if previous != (path, identity):
+            raise FullPipelineCPUActivationError(
+                "mapped executable device/inode has ambiguous paths"
+            )
+    if (
+        required_executable_file_identity is not None
+        and required_executable_file_identity not in observed
+    ):
+        raise FullPipelineCPUActivationError(
+            "authenticated native extension is not an executable mapping"
+        )
     rows: list[dict[str, object]] = []
     total_bytes = 0
-    for path, identity in sorted(observed.items(), key=lambda item: item[1]):
+    for mapping_identity, (path, identity) in sorted(
+        observed.items(), key=lambda item: item[1][1]
+    ):
         raw = _read_stable_regular_file(
             path,
-            name="mapped dynamic library",
+            name="mapped executable file",
             allowed_owner_uids=(0, os.geteuid()),
+            expected_mapping_identity=mapping_identity,
         )
         rows.append(
             {
@@ -328,18 +405,19 @@ def derive_dynamic_library_closure(
             }
         )
         total_bytes += len(raw)
-    if not rows or len(rows) > MAX_DYNAMIC_LIBRARY_ROWS:
+    if not rows or len(rows) > MAX_EXECUTABLE_FILE_ROWS:
         raise FullPipelineCPUActivationError(
-            "dynamic-library closure row count is invalid"
+            "executable-file closure row count is invalid"
         )
     if total_bytes > MAX_CLOSURE_TOTAL_BYTES:
         raise FullPipelineCPUActivationError(
-            "dynamic-library closure exceeds its byte envelope"
+            "executable-file closure exceeds its byte envelope"
         )
     return {
         "schema_id": DYNAMIC_LIBRARY_CLOSURE_SCHEMA_ID,
-        "library_count": len(rows),
+        "executable_file_count": len(rows),
         "total_bytes": total_bytes,
+        "virtual_executable_mappings": sorted(virtual_executable_mappings),
         "rows_sha256": manifest_rows_sha256(rows),
         "rows": rows,
     }

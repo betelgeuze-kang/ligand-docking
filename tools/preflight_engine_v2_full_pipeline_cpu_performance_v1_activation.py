@@ -8,8 +8,8 @@ from __future__ import annotations
 import argparse
 import grp
 import hashlib
-import importlib
 import importlib.machinery
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -27,18 +27,19 @@ _EXPECTED_INITIAL_PATHS = (
 )
 _STDLIB_ZIP_PATH = Path(_EXPECTED_INITIAL_PATHS[0])
 _EXPECTED_VENV_CONFIGURATION = (
-    b"home = /usr/bin\n"
-    b"include-system-site-packages = false\n"
-    b"version = 3.10.12\n"
+    b"home = /usr/bin\ninclude-system-site-packages = false\nversion = 3.10.12\n"
 )
 _MAX_SOURCE_BYTES = 4 * 1024 * 1024
+_MAX_NATIVE_EXTENSION_BYTES = 16 * 1024 * 1024
+_NATIVE_EXTENSION_RELATIVE_PATH = Path(
+    "betelgeuze_engine_v2_native/"
+    "betelgeuze_engine_v2_native.cpython-310-x86_64-linux-gnu.so"
+)
 _ACTIVATION_SCHEMA_ID = (
     "betelgeuze.engine_v2_full_pipeline_cpu_performance_activation/1.0.0"
 )
 _ACTIVATION_ID = "engine_v2_full_pipeline_cpu_performance_v1_activation"
-_ACTIVATION_STATUS = (
-    "frozen_non_consuming_exact_main_preflight_execution_not_activated"
-)
+_ACTIVATION_STATUS = "frozen_non_consuming_exact_main_preflight_execution_not_activated"
 _PROFILE_ID = "engine_v2_full_pipeline_cpu_performance_v1"
 _PROFILE_SHA256 = "385fb713cca8f39353f138115749abdfc9768b02222e13111a418360be30a000"
 _EXPECTED_SOURCE_BINDINGS = {
@@ -71,7 +72,7 @@ _EXPECTED_SOURCE_BINDINGS = {
         "230cc88d60a9fd0f92318492ec533672930e72eaed11ef5410a45ce7edbb690b"
     ),
     "dynamic_library_closure_manifest_sha256": (
-        "b9190033cf42ea75aa1131da38517b70101f05f8c55992419964014bc67030b1"
+        "9112e029cf620efbb9dd4769540c8b80da30ade25cc8d55ccdc64f8e374c7247"
     ),
 }
 _BOUND_MODULE_ROWS = (
@@ -83,7 +84,7 @@ _BOUND_MODULE_ROWS = (
     (
         "full_pipeline_cpu_performance_v1_activation",
         "full_pipeline_cpu_performance_v1_activation.py",
-        "b3d216100df51cfa0886ce9119a1e7e72a15ba30e6046609022c0d062351566b",
+        "67e419c0a8d56aa0c59c87d9650cf51f55d234a4e74f984ea8ff89c247e402c5",
     ),
     (
         "full_pipeline_cpu_performance_v1",
@@ -339,7 +340,7 @@ def _expected_activation_contract(*, bootstrap_sha256: str) -> dict[str, object]
         "authority": false_authority,
         "closure_manifests": {
             "dynamic_library_closure": {
-                "library_count": 20,
+                "executable_file_count": 21,
                 "manifest_sha256": _EXPECTED_SOURCE_BINDINGS[
                     "dynamic_library_closure_manifest_sha256"
                 ],
@@ -347,7 +348,8 @@ def _expected_activation_contract(*, bootstrap_sha256: str) -> dict[str, object]
                     "config/engine_v2_full_pipeline_cpu_performance_v1_"
                     "dynamic_library_closure.json"
                 ),
-                "total_bytes": 13_962_048,
+                "total_bytes": 19_879_272,
+                "virtual_executable_mappings": ["[vdso]", "[vsyscall]"],
             },
             "stdlib_import_closure": {
                 "cached_bytecode_file_count": 78,
@@ -400,9 +402,7 @@ def _expected_activation_contract(*, bootstrap_sha256: str) -> dict[str, object]
             "artifact_id": 9_213_296_947,
             "artifact_run_attempt": 1,
             "artifact_run_id": 31_785_070_195,
-            "artifact_workflow_head_sha": (
-                "3330faa43c7fc8640d89babd84ac444c5959157c"
-            ),
+            "artifact_workflow_head_sha": ("3330faa43c7fc8640d89babd84ac444c5959157c"),
             "native_extension_sha256": (
                 "ff7b5e6ba7c0e250cf739292d34c562d0bd142d5f7f6c842c5c191d42b2504e1"
             ),
@@ -424,9 +424,7 @@ def _expected_activation_contract(*, bootstrap_sha256: str) -> dict[str, object]
             "merged_main_commit_sha256": _EXPECTED_SOURCE_BINDINGS[
                 "merged_main_commit_sha256"
             ],
-            "merged_main_tree_manifest_encoding": (
-                "git_ls_tree_r_full_tree_z_v1"
-            ),
+            "merged_main_tree_manifest_encoding": ("git_ls_tree_r_full_tree_z_v1"),
             "merged_main_tree_oid": "e36d1cf0915350556ac4202e11d6176fabf5e797",
             "merged_main_tree_sha256": _EXPECTED_SOURCE_BINDINGS[
                 "merged_main_tree_sha256"
@@ -557,7 +555,10 @@ def _require_runtime_root(runtime_root: Path) -> tuple[Path, Path]:
 
 
 def _load_bound_modules(
-    *, repository_root: Path, site_packages: Path, authenticated_sources: dict[str, bytes]
+    *,
+    repository_root: Path,
+    site_packages: Path,
+    authenticated_sources: dict[str, bytes],
 ) -> dict[str, types.ModuleType]:
     package_root = _require_owner_directory(
         repository_root / "betelgeuze_engine_v2",
@@ -580,26 +581,139 @@ def _load_bound_modules(
     return modules
 
 
-def _require_native_extension(site_packages: Path) -> types.ModuleType:
-    try:
-        native = importlib.import_module("betelgeuze_engine_v2_native")
-    except (ImportError, OSError):
-        _fail("exact native extension cannot be initialized")
-    raw_path = getattr(native, "__file__", None)
-    if type(raw_path) is not str:
-        _fail("native extension module path is absent")
-    try:
-        path = Path(raw_path).resolve(strict=True)
-        path.relative_to(site_packages)
-    except (OSError, ValueError):
-        _fail("native extension escaped the exact runtime site-packages")
-    for name in (
-        "native_fixed64_prepare_repository_synthetic_d0_session_v1",
-        "native_fixed64_repository_synthetic_d0_cpu_parity_v1",
+def _descriptor_sha256(descriptor: int, *, maximum_bytes: int) -> tuple[str, int]:
+    digest = hashlib.sha256()
+    observed = 0
+    while observed <= maximum_bytes:
+        chunk = os.pread(
+            descriptor,
+            min(1 << 20, maximum_bytes + 1 - observed),
+            observed,
+        )
+        if not chunk:
+            break
+        digest.update(chunk)
+        observed += len(chunk)
+    if observed > maximum_bytes:
+        _fail("native extension exceeds its byte envelope")
+    return digest.hexdigest(), observed
+
+
+def _native_descriptor_identity(metadata: os.stat_result) -> tuple[int, ...]:
+    return (
+        metadata.st_dev,
+        metadata.st_ino,
+        metadata.st_mode,
+        metadata.st_uid,
+        metadata.st_gid,
+        metadata.st_nlink,
+        metadata.st_size,
+        metadata.st_mtime_ns,
+        metadata.st_ctime_ns,
+    )
+
+
+def _require_native_descriptor_stable(
+    descriptor: int,
+    *,
+    expected_metadata: os.stat_result,
+    expected_sha256: str,
+) -> None:
+    before = os.fstat(descriptor)
+    digest, size = _descriptor_sha256(
+        descriptor, maximum_bytes=_MAX_NATIVE_EXTENSION_BYTES
+    )
+    after = os.fstat(descriptor)
+    expected_identity = _native_descriptor_identity(expected_metadata)
+    if (
+        _native_descriptor_identity(before) != expected_identity
+        or _native_descriptor_identity(after) != expected_identity
+        or size != expected_metadata.st_size
+        or digest != expected_sha256
     ):
-        if not callable(getattr(native, name, None)):
-            _fail(f"exact native extension lacks required entrypoint {name}")
-    return native
+        _fail("authenticated native extension descriptor changed")
+
+
+def _open_authenticated_native_extension(
+    site_packages: Path, *, expected_sha256: str
+) -> tuple[int, os.stat_result]:
+    path = site_packages / _NATIVE_EXTENSION_RELATIVE_PATH
+    flags = os.O_RDONLY | os.O_CLOEXEC | getattr(os, "O_NOFOLLOW", 0)
+    if getattr(os, "O_NOFOLLOW", 0) == 0:
+        _fail("safe no-follow native extension reads are unavailable")
+    try:
+        descriptor = os.open(path, flags)
+    except OSError as exc:
+        raise RuntimeError("exact native extension cannot be opened safely") from exc
+    try:
+        metadata = os.fstat(descriptor)
+        if (
+            not stat.S_ISREG(metadata.st_mode)
+            or metadata.st_uid != os.geteuid()
+            or metadata.st_gid != os.getegid()
+            or metadata.st_mode & (stat.S_IWGRP | stat.S_IWOTH)
+            or metadata.st_nlink != 1
+            or not 1 <= metadata.st_size <= _MAX_NATIVE_EXTENSION_BYTES
+        ):
+            _fail("exact native extension is not a controlled regular file")
+        _require_native_descriptor_stable(
+            descriptor,
+            expected_metadata=metadata,
+            expected_sha256=expected_sha256,
+        )
+        return descriptor, metadata
+    except BaseException:
+        os.close(descriptor)
+        raise
+
+
+def _require_native_extension(
+    site_packages: Path, *, expected_sha256: str
+) -> tuple[types.ModuleType, int, os.stat_result]:
+    package_name = "betelgeuze_engine_v2_native"
+    qualified_name = f"{package_name}.betelgeuze_engine_v2_native"
+    if package_name in sys.modules or qualified_name in sys.modules:
+        _fail("exact native extension was already loaded")
+    package_root = _require_owner_directory(
+        site_packages / package_name,
+        name="native extension package root",
+    )
+    descriptor, metadata = _open_authenticated_native_extension(
+        site_packages, expected_sha256=expected_sha256
+    )
+    descriptor_path = f"/proc/self/fd/{descriptor}"
+    _install_package_stub(package_name, package_root)
+    try:
+        loader = importlib.machinery.ExtensionFileLoader(
+            qualified_name, descriptor_path
+        )
+        specification = importlib.util.spec_from_file_location(
+            qualified_name,
+            descriptor_path,
+            loader=loader,
+        )
+        if specification is None:
+            _fail("exact native extension descriptor has no import specification")
+        native = importlib.util.module_from_spec(specification)
+        sys.modules[qualified_name] = native
+        loader.exec_module(native)
+        _require_native_descriptor_stable(
+            descriptor,
+            expected_metadata=metadata,
+            expected_sha256=expected_sha256,
+        )
+        for name in (
+            "native_fixed64_prepare_repository_synthetic_d0_session_v1",
+            "native_fixed64_repository_synthetic_d0_cpu_parity_v1",
+        ):
+            if not callable(getattr(native, name, None)):
+                _fail(f"exact native extension lacks required entrypoint {name}")
+    except BaseException:
+        sys.modules.pop(qualified_name, None)
+        sys.modules.pop(package_name, None)
+        os.close(descriptor)
+        raise
+    return native, descriptor, metadata
 
 
 def derive_preflight(
@@ -617,9 +731,7 @@ def derive_preflight(
     )
     if bootstrap.parent != repository_root / "tools":
         _fail("activation preflight bootstrap escaped repository tools")
-    bootstrap_raw = _read_owner_source(
-        bootstrap, name="activation preflight bootstrap"
-    )
+    bootstrap_raw = _read_owner_source(bootstrap, name="activation preflight bootstrap")
     runtime_root, site_packages = _require_runtime_root(runtime_root)
     contract, contract_raw = _load_activation_contract(
         repository_root=repository_root,
@@ -638,58 +750,76 @@ def derive_preflight(
         artifact_directory=artifact_directory,
         runtime_root=runtime_root,
     ).to_dict()
-    _require_native_extension(site_packages)
-    host = modules["performance_host_preflight_v3"].derive_host_preflight_evidence_v3()
-    host_document = host.to_dict()
+    native_extension_sha256 = str(runtime_evidence["native_extension_sha256"])
+    _native, native_descriptor, native_metadata = _require_native_extension(
+        site_packages,
+        expected_sha256=native_extension_sha256,
+    )
+    try:
+        host = modules[
+            "performance_host_preflight_v3"
+        ].derive_host_preflight_evidence_v3()
+        host_document = host.to_dict()
 
-    activation = modules["full_pipeline_cpu_performance_v1_activation"]
-    observed_stdlib = activation.derive_stdlib_import_closure()
-    observed_dynamic = activation.derive_dynamic_library_closure(
-        site_packages=site_packages
-    )
-    expected_stdlib, stdlib_manifest_sha256 = _load_closure_manifest(
-        repository_root=repository_root,
-        relative_path=(
-            "config/engine_v2_full_pipeline_cpu_performance_v1_stdlib_closure.json"
-        ),
-        binding_name="stdlib_import_closure_manifest_sha256",
-        schema_id=activation.STDLIB_CLOSURE_SCHEMA_ID,
-    )
-    expected_dynamic, dynamic_manifest_sha256 = _load_closure_manifest(
-        repository_root=repository_root,
-        relative_path=(
-            "config/engine_v2_full_pipeline_cpu_performance_v1_dynamic_library_closure.json"
-        ),
-        binding_name="dynamic_library_closure_manifest_sha256",
-        schema_id=activation.DYNAMIC_LIBRARY_CLOSURE_SCHEMA_ID,
-    )
-    activation.require_exact_closure(
-        observed_stdlib,
-        expected_stdlib,
-        name="standard-library import closure",
-    )
-    activation.require_exact_closure(
-        observed_dynamic,
-        expected_dynamic,
-        name="dynamic-library closure",
-    )
-    blockers = tuple(str(value) for value in host_document["blockers"])
-    evidence = activation.ActivationPreflightEvidenceV1(
-        activation_sha256=hashlib.sha256(contract_raw).hexdigest(),
-        profile_sha256=str(contract["profile_sha256"]),
-        stdlib_import_closure_manifest_sha256=stdlib_manifest_sha256,
-        dynamic_library_closure_manifest_sha256=dynamic_manifest_sha256,
-        host_preflight=host_document,
-        blockers=blockers,
-    ).to_dict()
-    evidence["artifact_and_runtime_verified"] = bool(
-        runtime_evidence["artifact_and_runtime_verified"]
-    )
-    evidence["native_extension_sha256"] = runtime_evidence[
-        "native_extension_sha256"
-    ]
-    evidence["native_entrypoints_verified"] = True
-    return evidence
+        activation = modules["full_pipeline_cpu_performance_v1_activation"]
+        observed_stdlib = activation.derive_stdlib_import_closure()
+        observed_dynamic = activation.derive_dynamic_library_closure(
+            site_packages=site_packages,
+            required_executable_file_identity=(
+                os.major(native_metadata.st_dev),
+                os.minor(native_metadata.st_dev),
+                native_metadata.st_ino,
+            ),
+        )
+        expected_stdlib, stdlib_manifest_sha256 = _load_closure_manifest(
+            repository_root=repository_root,
+            relative_path=(
+                "config/engine_v2_full_pipeline_cpu_performance_v1_stdlib_closure.json"
+            ),
+            binding_name="stdlib_import_closure_manifest_sha256",
+            schema_id=activation.STDLIB_CLOSURE_SCHEMA_ID,
+        )
+        expected_dynamic, dynamic_manifest_sha256 = _load_closure_manifest(
+            repository_root=repository_root,
+            relative_path=(
+                "config/engine_v2_full_pipeline_cpu_performance_v1_dynamic_library_closure.json"
+            ),
+            binding_name="dynamic_library_closure_manifest_sha256",
+            schema_id=activation.DYNAMIC_LIBRARY_CLOSURE_SCHEMA_ID,
+        )
+        activation.require_exact_closure(
+            observed_stdlib,
+            expected_stdlib,
+            name="standard-library import closure",
+        )
+        activation.require_exact_closure(
+            observed_dynamic,
+            expected_dynamic,
+            name="executable-file mapping closure",
+        )
+        _require_native_descriptor_stable(
+            native_descriptor,
+            expected_metadata=native_metadata,
+            expected_sha256=native_extension_sha256,
+        )
+        blockers = tuple(str(value) for value in host_document["blockers"])
+        evidence = activation.ActivationPreflightEvidenceV1(
+            activation_sha256=hashlib.sha256(contract_raw).hexdigest(),
+            profile_sha256=str(contract["profile_sha256"]),
+            stdlib_import_closure_manifest_sha256=stdlib_manifest_sha256,
+            dynamic_library_closure_manifest_sha256=dynamic_manifest_sha256,
+            host_preflight=host_document,
+            blockers=blockers,
+        ).to_dict()
+        evidence["artifact_and_runtime_verified"] = bool(
+            runtime_evidence["artifact_and_runtime_verified"]
+        )
+        evidence["native_extension_sha256"] = native_extension_sha256
+        evidence["native_entrypoints_verified"] = True
+        evidence["native_extension_descriptor_bound"] = True
+        return evidence
+    finally:
+        os.close(native_descriptor)
 
 
 def _parser() -> argparse.ArgumentParser:
