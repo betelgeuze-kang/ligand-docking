@@ -48,6 +48,10 @@ const PREPARED_INPUT_PROJECTION_DOMAIN: &[u8] =
     b"betelgeuze.engine-v2.native-fixed64-prepared-input-projection/v1\0";
 const PREPARED_INPUT_RECEIPT_DOMAIN: &[u8] =
     b"betelgeuze.engine-v2.native-fixed64-prepared-input-receipt/v1\0";
+const PREPARED_SESSION_SCHEMA_ID: &str =
+    "betelgeuze.engine_v2_native_fixed64_prepared_session/1.0.0";
+const PREPARED_SESSION_RECEIPT_DOMAIN: &[u8] =
+    b"betelgeuze.engine-v2.native-fixed64-prepared-session/v1\0";
 
 const INPUT_KEYS: &[&str] = &[
     "schema_id",
@@ -103,6 +107,22 @@ const INPUT_KEYS: &[&str] = &[
     "predeclared_refinement_policy_sha256",
     "predeclared_post_refinement_admission_policy_sha256",
     "test_only",
+];
+
+const INPUT_DIGEST_KEYS: &[&str] = &[
+    "authority_input_receipt_sha256",
+    "source_receipt_sha256",
+    "proposal_sha256",
+    "prepared_ligand_topology_sha256",
+    "prepared_receptor_topology_sha256",
+    "receptor_system_sha256",
+    "ligand_system_sha256",
+    "backend_receipt_sha256",
+    "validity_scorer_context_receipt_sha256",
+    "contact_policy_sha256",
+    "feature_geometry_inventory_sha256",
+    "predeclared_refinement_policy_sha256",
+    "predeclared_post_refinement_admission_policy_sha256",
 ];
 
 const INDEXED_SOURCE_KEYS: &[&str] = &[
@@ -253,7 +273,167 @@ struct PreparedInputBounds {
     scalar_count: usize,
 }
 
+struct OwnedCompletePipelineInput {
+    options: ContextOptions,
+    exact_evidence: Fixed64ExactSourceEvidence,
+    identities: Fixed64Identities,
+    ligand_coordinates: Coordinates,
+    ligand_radii: Vec<f64>,
+    ligand_heavy: Vec<u8>,
+    ligand_charges: Vec<f64>,
+    ligand_epsilon: Vec<f64>,
+    ligand_hydrophobic: Vec<u8>,
+    ligand_acceptor: Vec<u8>,
+    ligand_donors: Vec<Fixed64Donor>,
+    ligand_exclusions: Vec<Fixed64Pair>,
+    rotors: Vec<Fixed64Rotor>,
+    bonds: Vec<Fixed64Pair>,
+    chirality_centers: Vec<Fixed64ChiralityCenter>,
+    parent_atom_index: Vec<i32>,
+    rotatable_child_atom_index: Vec<u64>,
+    internal_pairs: Vec<Fixed64Pair>,
+    receptor_coordinates: Coordinates,
+    receptor_radii: Vec<f64>,
+    receptor_charges: Vec<f64>,
+    receptor_epsilon: Vec<f64>,
+    receptor_hydrophobic: Vec<u8>,
+    receptor_acceptor: Vec<u8>,
+    receptor_donors: Vec<Fixed64Donor>,
+    pocket_center: [f64; 3],
+    pocket_radius: f64,
+    exact_source: OwnedSource,
+    atomic_features: Vec<Fixed64AtomicFeature>,
+    v7_sources: Vec<IndexedSource>,
+    conformer_sources: Vec<ConformerSource>,
+    retained_sources: Vec<IndexedSource>,
+    feature_geometries: Vec<FeatureGeometry>,
+    feature_geometry_inventory_sha256: [u8; 32],
+    pocket_normal: [f64; 3],
+    rmsd_threshold_angstrom: f64,
+    candidate_modes: Vec<Fixed64RefinementMode>,
+    rigid_max_steps: Vec<u64>,
+    torsion_eligible: Vec<u8>,
+    torsion_max_steps: Vec<u64>,
+    baseline_torsion_angles: Vec<f64>,
+    predeclared_refinement_policy_sha256: [u8; 32],
+    predeclared_post_refinement_admission_policy_sha256: [u8; 32],
+    prepared_input_bounds: Option<PreparedInputBounds>,
+    prepared_input_projection_sha256: Option<[u8; 32]>,
+}
+
+impl OwnedCompletePipelineInput {
+    fn create_pipeline(&self) -> betelgeuze_runtime::Result<Fixed64Pipeline> {
+        let context = Context::new(self.options)?;
+        let scientific = Fixed64PipelineContext {
+            receptor: Fixed64Receptor {
+                coordinates: self.receptor_coordinates.view(),
+                vdw_radius_angstrom: &self.receptor_radii,
+                charge_elementary: &self.receptor_charges,
+                epsilon_kcal_per_mol: &self.receptor_epsilon,
+                hydrophobic_mask: &self.receptor_hydrophobic,
+                acceptor_mask: &self.receptor_acceptor,
+                donors: &self.receptor_donors,
+            },
+            ligand: Fixed64Ligand {
+                reference_coordinates: self.ligand_coordinates.view(),
+                vdw_radius_angstrom: &self.ligand_radii,
+                heavy_atom_mask: &self.ligand_heavy,
+                charge_elementary: &self.ligand_charges,
+                epsilon_kcal_per_mol: &self.ligand_epsilon,
+                hydrophobic_mask: &self.ligand_hydrophobic,
+                acceptor_mask: &self.ligand_acceptor,
+                donors: &self.ligand_donors,
+                exclusions: &self.ligand_exclusions,
+                rotors: &self.rotors,
+                bonds: &self.bonds,
+                chirality_centers: &self.chirality_centers,
+                parent_atom_index: &self.parent_atom_index,
+                rotatable_child_atom_index: &self.rotatable_child_atom_index,
+                internal_pairs: &self.internal_pairs,
+            },
+            pocket_center_angstrom: self.pocket_center,
+            pocket_radius_angstrom: self.pocket_radius,
+            identities: self.identities,
+        };
+        Fixed64Pipeline::new(&context, scientific)
+    }
+
+    fn run(
+        &self,
+        pipeline: &Fixed64Pipeline,
+    ) -> betelgeuze_runtime::Result<Fixed64PipelineReceipt> {
+        let v7_views = self
+            .v7_sources
+            .iter()
+            .map(|source| Fixed64IndexedCoordinateSource {
+                source_index: source.source_index,
+                source: source.source.view(),
+            })
+            .collect::<Vec<_>>();
+        let conformer_views = self
+            .conformer_sources
+            .iter()
+            .map(|source| Fixed64ConformerCoordinateSource {
+                rank: source.rank,
+                source: source.source.view(),
+            })
+            .collect::<Vec<_>>();
+        let retained_views = self
+            .retained_sources
+            .iter()
+            .map(|source| Fixed64IndexedCoordinateSource {
+                source_index: source.source_index,
+                source: source.source.view(),
+            })
+            .collect::<Vec<_>>();
+        let feature_views = self
+            .feature_geometries
+            .iter()
+            .map(|feature| Fixed64FeatureGeometry {
+                kind: feature.kind,
+                allocation_feature_receipt_sha256: feature.allocation_feature_receipt_sha256,
+                atom_indices: &feature.atom_indices,
+                feature_geometry_receipt_sha256: feature.feature_geometry_receipt_sha256,
+            })
+            .collect::<Vec<_>>();
+        pipeline.run(Fixed64RunInput {
+            exact_source_evidence: self.exact_evidence,
+            exact_source: self.exact_source.view(),
+            atomic_features: &self.atomic_features,
+            v7_control_sources: &v7_views,
+            conformer_sources: &conformer_views,
+            retained_sources: &retained_views,
+            feature_geometries: &feature_views,
+            feature_geometry_inventory_sha256: self.feature_geometry_inventory_sha256,
+            pocket_normal: self.pocket_normal,
+            rmsd_threshold_angstrom: self.rmsd_threshold_angstrom,
+            candidate_modes: &self.candidate_modes,
+            rigid_max_steps: &self.rigid_max_steps,
+            proposal_is_torsion_eligible: &self.torsion_eligible,
+            torsion_max_steps: &self.torsion_max_steps,
+            baseline_torsion_angles_radians: &self.baseline_torsion_angles,
+            predeclared_refinement_policy_sha256: self.predeclared_refinement_policy_sha256,
+            predeclared_post_refinement_admission_policy_sha256: self
+                .predeclared_post_refinement_admission_policy_sha256,
+        })
+    }
+
+    fn run_once(&self) -> betelgeuze_runtime::Result<Fixed64PipelineReceipt> {
+        let pipeline = self.create_pipeline()?;
+        self.run(&pipeline)
+    }
+}
+
+#[pyclass(unsendable, name = "NativeFixed64PreparedSessionV1")]
+struct NativeFixed64PreparedSession {
+    default_consumer: Consumer,
+    pipeline: Fixed64Pipeline,
+    input: OwnedCompletePipelineInput,
+    prepared_session_receipt_sha256: [u8; 32],
+}
+
 pub(crate) fn register(module: &PyModule) -> PyResult<()> {
+    module.add_class::<NativeFixed64PreparedSession>()?;
     module.add_function(wrap_pyfunction!(
         native_fixed64_complete_pipeline_v1,
         module
@@ -266,6 +446,7 @@ pub(crate) fn register(module: &PyModule) -> PyResult<()> {
         native_fixed64_complete_pipeline_v3,
         module
     )?)?;
+    module.add_function(wrap_pyfunction!(native_fixed64_prepare_session_v1, module)?)?;
     module.add("NATIVE_FIXED64_COMPLETE_INPUT_SCHEMA_ID", INPUT_SCHEMA_ID)?;
     module.add(
         "NATIVE_FIXED64_COMPLETE_INPUT_SCHEMA_ID_V1",
@@ -291,6 +472,10 @@ pub(crate) fn register(module: &PyModule) -> PyResult<()> {
         "NATIVE_FIXED64_COMPLETE_EVIDENCE_SCHEMA_ID_V3",
         EVIDENCE_SCHEMA_ID,
     )?;
+    module.add(
+        "NATIVE_FIXED64_PREPARED_SESSION_SCHEMA_ID_V1",
+        PREPARED_SESSION_SCHEMA_ID,
+    )?;
     Ok(())
 }
 
@@ -311,17 +496,174 @@ fn native_fixed64_complete_pipeline_v3(py: Python<'_>, input: &PyDict) -> PyResu
     run_complete_pipeline(py, input, CompleteTransportVersion::V3)
 }
 
+#[pyfunction]
+fn native_fixed64_prepare_session_v1(input: &PyDict) -> PyResult<NativeFixed64PreparedSession> {
+    let (default_consumer, input) =
+        parse_complete_pipeline_input(input, CompleteTransportVersion::V3)?;
+    if !matches!(
+        input.options.backend,
+        Backend::CppCpuReference | Backend::RustCpu
+    ) {
+        return Err(input_error(
+            "prepared session v1 is synthetic CPU-only; HIP device execution is unauthorized",
+        ));
+    }
+    let projection_sha256 = input.prepared_input_projection_sha256.ok_or_else(|| {
+        input_error("prepared session requires a bounded prepared-input projection")
+    })?;
+    let pipeline = input.create_pipeline().map_err(runtime_error)?;
+    let pipeline_id = Fixed64Pipeline::profile_id().map_err(runtime_error)?;
+    Ok(NativeFixed64PreparedSession {
+        default_consumer,
+        pipeline,
+        input,
+        prepared_session_receipt_sha256: prepared_session_receipt_sha256(
+            projection_sha256,
+            pipeline_id,
+        ),
+    })
+}
+
+#[pymethods]
+impl NativeFixed64PreparedSession {
+    #[getter]
+    fn schema_id(&self) -> &'static str {
+        PREPARED_SESSION_SCHEMA_ID
+    }
+
+    #[getter]
+    fn default_consumer(&self) -> &'static str {
+        self.default_consumer.id()
+    }
+
+    #[getter]
+    fn backend(&self) -> &'static str {
+        backend_id(self.pipeline.backend())
+    }
+
+    #[getter]
+    fn prepared_input_projection_sha256(&self) -> PyResult<String> {
+        self.input
+            .prepared_input_projection_sha256
+            .map(hex_digest)
+            .ok_or_else(|| input_error("prepared session lost its bounded input projection"))
+    }
+
+    #[getter]
+    fn prepared_session_receipt_sha256(&self) -> String {
+        hex_digest(self.prepared_session_receipt_sha256)
+    }
+
+    fn describe(&self, py: Python<'_>) -> PyResult<PyObject> {
+        let bounds = self.input.prepared_input_bounds.ok_or_else(|| {
+            input_error("prepared session lost its bounded input cardinality evidence")
+        })?;
+        let output = PyDict::new(py);
+        output.set_item("schema_id", PREPARED_SESSION_SCHEMA_ID)?;
+        output.set_item(
+            "pipeline_id",
+            Fixed64Pipeline::profile_id().map_err(runtime_error)?,
+        )?;
+        output.set_item("default_consumer", self.default_consumer.id())?;
+        output.set_item("backend", backend_id(self.pipeline.backend()))?;
+        output.set_item("candidate_denominator", 64)?;
+        output.set_item("ligand_atom_count", bounds.ligand_atom_count)?;
+        output.set_item("receptor_atom_count", bounds.receptor_atom_count)?;
+        output.set_item(
+            "exact_cartesian_pair_count",
+            bounds.exact_cartesian_pair_count,
+        )?;
+        output.set_item("prepared_input_scalar_count", bounds.scalar_count)?;
+        output.set_item(
+            "prepared_input_scalar_limit",
+            MAX_PREPARED_INPUT_SCALAR_COUNT,
+        )?;
+        output.set_item(
+            "prepared_input_projection_sha256",
+            self.prepared_input_projection_sha256()?,
+        )?;
+        output.set_item(
+            "prepared_session_receipt_sha256",
+            self.prepared_session_receipt_sha256(),
+        )?;
+        output.set_item("test_only", true)?;
+        output.set_item("persistent_native_context", true)?;
+        output.set_item("context_reused_across_runs", true)?;
+        output.set_item("scientific_result_cached", false)?;
+        output.set_item("session_thread_confined", true)?;
+        output.set_item("result_dependent_input_consumed", false)?;
+        output.set_item("reservation_authorized", false)?;
+        output.set_item("molecular_execution_authorized", false)?;
+        output.set_item("benchmark_execution_authorized", false)?;
+        output.set_item("scientific_claim_authorized", false)?;
+        output.set_item("hip_device_execution_authorized", false)?;
+        output.set_item("existing_rank_auto_change_authorized", false)?;
+        output.set_item("customer_pose_emission_authorized", false)?;
+        output.set_item("production_claim_authorized", false)?;
+        Ok(output.into())
+    }
+
+    #[pyo3(signature = (consumer=None))]
+    fn run(&self, py: Python<'_>, consumer: Option<&PyAny>) -> PyResult<PyObject> {
+        let consumer = consumer
+            .map(|value| {
+                let value = value
+                    .downcast_exact::<PyString>()
+                    .map_err(|_| input_error("consumer must be an exact string"))?;
+                Consumer::parse(
+                    value
+                        .to_str()
+                        .map_err(|_| input_error("consumer must be valid UTF-8"))?,
+                )
+            })
+            .transpose()?
+            .unwrap_or(self.default_consumer);
+        // The native pipeline is explicitly thread-confined by its context
+        // lease. PyO3's unsendable class guard keeps every execution on the
+        // creating Python thread, while repeated calls reuse the exact handle.
+        let receipt = self.input.run(&self.pipeline).map_err(runtime_error)?;
+        receipt_to_python(
+            py,
+            &receipt,
+            consumer,
+            CompleteTransportVersion::V3,
+            self.input.prepared_input_bounds,
+            self.input.prepared_input_projection_sha256,
+        )
+    }
+}
+
 fn run_complete_pipeline(
     py: Python<'_>,
     input: &PyDict,
     transport: CompleteTransportVersion,
 ) -> PyResult<PyObject> {
+    let (consumer, input) = parse_complete_pipeline_input(input, transport)?;
+    let prepared_input_bounds = input.prepared_input_bounds;
+    let prepared_input_projection_sha256 = input.prepared_input_projection_sha256;
+    let receipt = py
+        .allow_threads(move || input.run_once())
+        .map_err(runtime_error)?;
+    receipt_to_python(
+        py,
+        &receipt,
+        consumer,
+        transport,
+        prepared_input_bounds,
+        prepared_input_projection_sha256,
+    )
+}
+
+fn parse_complete_pipeline_input(
+    input: &PyDict,
+    transport: CompleteTransportVersion,
+) -> PyResult<(Consumer, OwnedCompletePipelineInput)> {
     if transport.is_bounded() {
         require_bounded_exact_keys(input, INPUT_KEYS, "native fixed64 complete input")?;
     } else {
         require_exact_keys(input, INPUT_KEYS, "native fixed64 complete input")?;
     }
-    if dict_string(input, "schema_id")? != transport.input_schema_id() {
+    if transport_string(input, "schema_id", transport)? != transport.input_schema_id() {
         return Err(input_error("complete input schema_id is unsupported"));
     }
     if !dict_exact_bool(input, "test_only")? {
@@ -329,8 +671,8 @@ fn run_complete_pipeline(
             "complete Python bridge is synthetic/test-only and fails closed otherwise",
         ));
     }
-    let consumer = Consumer::parse(dict_string(input, "consumer")?)?;
-    let backend = dict_string(input, "backend")?;
+    let consumer = Consumer::parse(transport_string(input, "consumer", transport)?)?;
+    let backend = transport_string(input, "backend", transport)?;
     let device_ordinal = exact_i32(dict_value(input, "device_ordinal")?, "device_ordinal")?;
     let options = context_options(backend, device_ordinal)?;
     let prepared_input_bounds = transport
@@ -601,102 +943,56 @@ fn run_complete_pipeline(
             bounds,
         })
     });
-    let receipt = py
-        .allow_threads(move || {
-            let context = Context::new(options)?;
-            let scientific = Fixed64PipelineContext {
-                receptor: Fixed64Receptor {
-                    coordinates: receptor_coordinates.view(),
-                    vdw_radius_angstrom: &receptor_radii,
-                    charge_elementary: &receptor_charges,
-                    epsilon_kcal_per_mol: &receptor_epsilon,
-                    hydrophobic_mask: &receptor_hydrophobic,
-                    acceptor_mask: &receptor_acceptor,
-                    donors: &receptor_donors,
-                },
-                ligand: Fixed64Ligand {
-                    reference_coordinates: ligand_coordinates.view(),
-                    vdw_radius_angstrom: &ligand_radii,
-                    heavy_atom_mask: &ligand_heavy,
-                    charge_elementary: &ligand_charges,
-                    epsilon_kcal_per_mol: &ligand_epsilon,
-                    hydrophobic_mask: &ligand_hydrophobic,
-                    acceptor_mask: &ligand_acceptor,
-                    donors: &ligand_donors,
-                    exclusions: &ligand_exclusions,
-                    rotors: &rotors,
-                    bonds: &bonds,
-                    chirality_centers: &chirality_centers,
-                    parent_atom_index: &parent_atom_index,
-                    rotatable_child_atom_index: &rotatable_child_atom_index,
-                    internal_pairs: &internal_pairs,
-                },
-                pocket_center_angstrom: pocket_center,
-                pocket_radius_angstrom: pocket_radius,
-                identities,
-            };
-            let pipeline = Fixed64Pipeline::new(&context, scientific)?;
-
-            let v7_views = v7_sources
-                .iter()
-                .map(|source| Fixed64IndexedCoordinateSource {
-                    source_index: source.source_index,
-                    source: source.source.view(),
-                })
-                .collect::<Vec<_>>();
-            let conformer_views = conformer_sources
-                .iter()
-                .map(|source| Fixed64ConformerCoordinateSource {
-                    rank: source.rank,
-                    source: source.source.view(),
-                })
-                .collect::<Vec<_>>();
-            let retained_views = retained_sources
-                .iter()
-                .map(|source| Fixed64IndexedCoordinateSource {
-                    source_index: source.source_index,
-                    source: source.source.view(),
-                })
-                .collect::<Vec<_>>();
-            let feature_views = feature_geometries
-                .iter()
-                .map(|feature| Fixed64FeatureGeometry {
-                    kind: feature.kind,
-                    allocation_feature_receipt_sha256: feature.allocation_feature_receipt_sha256,
-                    atom_indices: &feature.atom_indices,
-                    feature_geometry_receipt_sha256: feature.feature_geometry_receipt_sha256,
-                })
-                .collect::<Vec<_>>();
-            let run = Fixed64RunInput {
-                exact_source_evidence: exact_evidence,
-                exact_source: exact_source.view(),
-                atomic_features: &atomic_features,
-                v7_control_sources: &v7_views,
-                conformer_sources: &conformer_views,
-                retained_sources: &retained_views,
-                feature_geometries: &feature_views,
-                feature_geometry_inventory_sha256,
-                pocket_normal,
-                rmsd_threshold_angstrom,
-                candidate_modes: &candidate_modes,
-                rigid_max_steps: &rigid_max_steps,
-                proposal_is_torsion_eligible: &torsion_eligible,
-                torsion_max_steps: &torsion_max_steps,
-                baseline_torsion_angles_radians: &baseline_torsion_angles,
-                predeclared_refinement_policy_sha256,
-                predeclared_post_refinement_admission_policy_sha256,
-            };
-            pipeline.run(run)
-        })
-        .map_err(runtime_error)?;
-    receipt_to_python(
-        py,
-        &receipt,
+    Ok((
         consumer,
-        transport,
-        prepared_input_bounds,
-        prepared_input_projection_sha256,
-    )
+        OwnedCompletePipelineInput {
+            options,
+            exact_evidence,
+            identities,
+            ligand_coordinates,
+            ligand_radii,
+            ligand_heavy,
+            ligand_charges,
+            ligand_epsilon,
+            ligand_hydrophobic,
+            ligand_acceptor,
+            ligand_donors,
+            ligand_exclusions,
+            rotors,
+            bonds,
+            chirality_centers,
+            parent_atom_index,
+            rotatable_child_atom_index,
+            internal_pairs,
+            receptor_coordinates,
+            receptor_radii,
+            receptor_charges,
+            receptor_epsilon,
+            receptor_hydrophobic,
+            receptor_acceptor,
+            receptor_donors,
+            pocket_center,
+            pocket_radius,
+            exact_source,
+            atomic_features,
+            v7_sources,
+            conformer_sources,
+            retained_sources,
+            feature_geometries,
+            feature_geometry_inventory_sha256,
+            pocket_normal,
+            rmsd_threshold_angstrom,
+            candidate_modes,
+            rigid_max_steps,
+            torsion_eligible,
+            torsion_max_steps,
+            baseline_torsion_angles,
+            predeclared_refinement_policy_sha256,
+            predeclared_post_refinement_admission_policy_sha256,
+            prepared_input_bounds,
+            prepared_input_projection_sha256,
+        },
+    ))
 }
 
 #[derive(Default)]
@@ -721,6 +1017,15 @@ impl ScalarBudget {
 
 fn bounded_prepared_input_preflight(input: &PyDict) -> PyResult<PreparedInputBounds> {
     let mut budget = ScalarBudget::default();
+    for name in INPUT_DIGEST_KEYS {
+        let value = exact_dict_string(input, name)?;
+        // The zero inventory identity is the predeclared representation of an
+        // empty feature inventory. Preserve that existing contract while still
+        // rejecting string subclasses before any native copy.
+        if *name != "feature_geometry_inventory_sha256" || value != "0".repeat(64) {
+            decode_digest(value, name)?;
+        }
+    }
     // device ordinal, pocket radius, RMSD threshold, and test-only flag are
     // fixed-width scalars; variable sequences are added below before copying.
     budget.add(4, "fixed prepared-input scalars")?;
@@ -931,6 +1236,28 @@ fn require_bounded_exact_keys(value: &PyDict, expected: &[&str], name: &str) -> 
         }
     }
     require_exact_keys(value, expected, name)
+}
+
+fn exact_dict_string<'py>(dict: &'py PyDict, key: &str) -> PyResult<&'py str> {
+    let value = dict_value(dict, key)?;
+    let value = value
+        .downcast_exact::<PyString>()
+        .map_err(|_| input_error(&format!("{key} must be an exact string")))?;
+    value
+        .to_str()
+        .map_err(|_| input_error(&format!("{key} must be valid UTF-8")))
+}
+
+fn transport_string<'py>(
+    dict: &'py PyDict,
+    key: &str,
+    transport: CompleteTransportVersion,
+) -> PyResult<&'py str> {
+    if transport.is_bounded() {
+        exact_dict_string(dict, key)
+    } else {
+        dict_string(dict, key)
+    }
 }
 
 fn bounded_coordinate_rows(value: &PyAny, maximum: usize, name: &str) -> PyResult<usize> {
@@ -1162,6 +1489,12 @@ fn bounded_source_rows(
                 "{name}[{offset}].{identity_key} must be an exact non-negative integer"
             )));
         }
+        for digest_key in ["receipt_sha256", "proposal_sha256"] {
+            decode_digest(
+                exact_dict_string(row, digest_key)?,
+                &format!("{name}[{offset}].{digest_key}"),
+            )?;
+        }
         let count = bounded_coordinate_rows(
             dict_value(row, "coordinates_angstrom")?,
             ligand_atom_count,
@@ -1204,7 +1537,16 @@ fn bounded_feature_geometry_rows(value: &PyAny, maximum_rows: usize) -> PyResult
             ))
         })?;
         require_bounded_exact_keys(row, FEATURE_GEOMETRY_KEYS, "feature_geometries")?;
-        feature_kind(dict_string(row, "kind")?)?;
+        feature_kind(exact_dict_string(row, "kind")?)?;
+        for digest_key in [
+            "allocation_feature_receipt_sha256",
+            "feature_geometry_receipt_sha256",
+        ] {
+            decode_digest(
+                exact_dict_string(row, digest_key)?,
+                &format!("feature_geometries[{offset}].{digest_key}"),
+            )?;
+        }
         let count = bounded_u64_values(
             dict_value(row, "atom_indices")?,
             1,
@@ -1861,6 +2203,15 @@ fn prepared_input_receipt_sha256(
     hash.update(PREPARED_INPUT_RECEIPT_DOMAIN);
     hash.update(projection_sha256);
     hash.update(pipeline_receipt_sha256);
+    hash.finalize().into()
+}
+
+fn prepared_session_receipt_sha256(projection_sha256: [u8; 32], pipeline_id: &str) -> [u8; 32] {
+    let mut hash = Sha256::new();
+    hash.update(PREPARED_SESSION_RECEIPT_DOMAIN);
+    hash.update((pipeline_id.len() as u64).to_be_bytes());
+    hash.update(pipeline_id.as_bytes());
+    hash.update(projection_sha256);
     hash.finalize().into()
 }
 

@@ -1,0 +1,57 @@
+{
+  "api": {
+    "consumer_surfaces": [
+      "cli",
+      "benchmark",
+      "api",
+      "product_shadow"
+    ],
+    "native_class": "NativeFixed64PreparedSessionV1",
+    "native_entrypoint": "native_fixed64_prepare_session_v1",
+    "python_factory": "prepare_native_fixed64_session",
+    "stateless_entrypoint": "native_fixed64_complete_pipeline_v3",
+    "transport_schema_id": "betelgeuze.engine_v2_native_fixed64_complete_input/3.0.0"
+  },
+  "authority": {
+    "customer_pose_emission_authorized": false,
+    "d1_d2_molecular_execution_authorized": false,
+    "existing_rank_auto_change_authorized": false,
+    "fresh_holdout_execution_authorized": false,
+    "hip_device_execution_authorized": false,
+    "historical_ab_execution_authorized": false,
+    "molecular_execution_authorized": false,
+    "product_performance_claim_authorized": false,
+    "production_claim_authorized": false,
+    "public_benchmark_authorized": false,
+    "qualification_rerun_authorized": false,
+    "reservation_authorized": false,
+    "stage0_admission_authorized": false
+  },
+  "lifecycle": {
+    "bounded_preflight_before_owned_copy": true,
+    "consumer_identity_excluded_from_prepared_projection": true,
+    "consumer_view_receipt_domain_separated": true,
+    "context_created_once_per_session": true,
+    "input_mutation_after_prepare_changes_session": false,
+    "native_pipeline_created_once_per_session": true,
+    "native_pipeline_destroyed_before_owned_input": true,
+    "prepared_input_owned_by_rust": true,
+    "repeated_run_executes_scientific_pipeline": true,
+    "run_count_in_scientific_receipt": false,
+    "scientific_result_cached": false,
+    "session_send": false,
+    "session_sync": false,
+    "stateless_v3_uses_same_owned_input_parser": true
+  },
+  "schema_id": "betelgeuze.engine_v2_native_fixed64_prepared_session/1.0.0",
+  "scope": {
+    "candidate_denominator": 64,
+    "hip_disposition": "compile_only_no_device_execution_or_parity_claim",
+    "validated_backends": [
+      "cpp_cpu_reference",
+      "rust_cpu"
+    ],
+    "validation_mode": "synthetic_native_cpu_only"
+  },
+  "status": "synthetic_native_cpu_development_authority_false"
+}
