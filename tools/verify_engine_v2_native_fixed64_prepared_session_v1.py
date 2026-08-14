@@ -28,6 +28,9 @@ DEFAULT_TEST_SOURCE = (
 DEFAULT_DOCUMENTATION = (
     REPOSITORY_ROOT / "docs/engine_v2_native_fixed64_prepared_session_v1.md"
 )
+DEFAULT_WORKFLOW = (
+    REPOSITORY_ROOT / ".github/workflows/ci-engine-v2-release-candidate.yml"
+)
 
 EXPECTED_AUTHORITY_FIELDS = frozenset(
     {
@@ -147,6 +150,7 @@ def verify(
     python_source_path: Path = DEFAULT_PYTHON_SOURCE,
     test_source_path: Path = DEFAULT_TEST_SOURCE,
     documentation_path: Path = DEFAULT_DOCUMENTATION,
+    workflow_path: Path = DEFAULT_WORKFLOW,
 ) -> dict[str, object]:
     document, raw = _read_json(contract_path)
     _require_exact_keys(
@@ -248,6 +252,35 @@ def verify(
         ),
         label="prepared-session documentation",
     )
+    workflow = _read_text(workflow_path, label="prepared-session CI workflow")
+    try:
+        static_sparse_start = workflow.index("sparse-checkout: |")
+        static_sparse_end = workflow.index(
+            "sparse-checkout-cone-mode: false", static_sparse_start
+        )
+    except ValueError as exc:
+        raise ContractError(
+            "prepared-session CI workflow static sparse checkout is unavailable"
+        ) from exc
+    static_sparse = workflow[static_sparse_start:static_sparse_end]
+    _require_snippets(
+        static_sparse,
+        (
+            "tests/unit/test_engine_v2_native_fixed64_complete_pipeline.py",
+            "config/engine_v2_native_fixed64_prepared_session_v1.json",
+            "tools/verify_engine_v2_native_fixed64_prepared_session_v1.py",
+            "docs/engine_v2_native_fixed64_prepared_session_v1.md",
+        ),
+        label="prepared-session static sparse checkout",
+    )
+    _require_snippets(
+        workflow,
+        (
+            "Verify native fixed64 prepared session v1 contract",
+            "python tools/verify_engine_v2_native_fixed64_prepared_session_v1.py",
+        ),
+        label="prepared-session CI workflow",
+    )
     return {
         "all_authority_false": True,
         "candidate_denominator": 64,
@@ -266,6 +299,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--python-source", type=Path, default=DEFAULT_PYTHON_SOURCE)
     parser.add_argument("--test-source", type=Path, default=DEFAULT_TEST_SOURCE)
     parser.add_argument("--documentation", type=Path, default=DEFAULT_DOCUMENTATION)
+    parser.add_argument("--workflow", type=Path, default=DEFAULT_WORKFLOW)
     return parser
 
 
@@ -278,6 +312,7 @@ def main(argv: list[str] | None = None) -> int:
             python_source_path=args.python_source,
             test_source_path=args.test_source,
             documentation_path=args.documentation,
+            workflow_path=args.workflow,
         )
     except ContractError as exc:
         raise SystemExit(str(exc)) from exc

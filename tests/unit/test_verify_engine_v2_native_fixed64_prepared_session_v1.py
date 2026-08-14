@@ -12,6 +12,7 @@ from tools.verify_engine_v2_native_fixed64_prepared_session_v1 import (
     DEFAULT_PYTHON_SOURCE,
     DEFAULT_RUST_SOURCE,
     DEFAULT_TEST_SOURCE,
+    DEFAULT_WORKFLOW,
     verify,
 )
 
@@ -104,6 +105,7 @@ def test_prepared_session_contract_rejects_source_binding_drift(
         "python_source_path": DEFAULT_PYTHON_SOURCE,
         "test_source_path": DEFAULT_TEST_SOURCE,
         "documentation_path": DEFAULT_DOCUMENTATION,
+        "workflow_path": DEFAULT_WORKFLOW,
     }
     argument = {
         "rust": "rust_source_path",
@@ -115,6 +117,23 @@ def test_prepared_session_contract_rejects_source_binding_drift(
 
     with pytest.raises(ContractError, match="missing frozen contract snippets"):
         verify(**kwargs)
+
+
+def test_prepared_session_contract_rejects_static_sparse_input_drift(
+    tmp_path: Path,
+) -> None:
+    workflow = DEFAULT_WORKFLOW.read_text(encoding="utf-8")
+    static_start = workflow.index("sparse-checkout: |")
+    needle = "tests/unit/test_engine_v2_native_fixed64_complete_pipeline.py"
+    needle_start = workflow.index(needle, static_start)
+    drifted = tmp_path / DEFAULT_WORKFLOW.name
+    drifted.write_text(
+        workflow[:needle_start] + "DRIFTED" + workflow[needle_start + len(needle) :],
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ContractError, match="missing frozen contract snippets"):
+        verify(workflow_path=drifted)
 
 
 def test_prepared_session_contract_rejects_duplicate_json_keys(
