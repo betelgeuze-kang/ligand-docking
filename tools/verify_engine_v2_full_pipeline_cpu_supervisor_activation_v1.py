@@ -65,21 +65,26 @@ STATUS = "frozen_packaged_non_consuming_activation_not_operational"
 EXPECTED_BINARY_SHA256 = (
     "a33a07fc8a9f55a843ead479cee5b46f8ef31cb6787141fb7e3d8a563efb1466"
 )
+EXPECTED_BINARY_SHA1 = "c29d7fea5d9c4691ff843f7fb9cbf2bfa1f40f46"
 EXPECTED_PREFLIGHT_SHA256 = (
     "67c2e6ace0a4585d7004508323dc9928ddf45ee24e4bc77fa0406be4331857a0"
 )
+EXPECTED_PREFLIGHT_SHA1 = "5e7d7a3b6a4f4eb5a9e19ed1f5d6252200cd8fac"
 EXPECTED_SOURCE_SHA256 = (
     "ac476df202f01083e2d9ff34b64030de1d3fef13b2be09180e6a463cd47043c2"
 )
+EXPECTED_SOURCE_SHA1 = "9d7ff8433d995ac70384b50d07a24f8764066cb8"
 EXPECTED_SUPERVISOR_CONTRACT_SHA256 = (
     "f7bb886032856d67b40e4abf2252f12b1f8b352b5f363b6a1ffbb4d1bf38fbfa"
 )
 EXPECTED_ROSTER_SHA256 = (
     "a607613fd6d3a76d1d2d94f7be68d0493c6b23de28c97adfe5193d96732c58e1"
 )
+EXPECTED_ROSTER_SHA1 = "64ace7107e6e16083ef0baa0287f4604e86b5415"
 EXPECTED_SBOM_SHA256 = (
-    "dcdfd59935b469d43186052d05f9e5e12d8cbbb8097c4f7231043a1bd17ac601"
+    "0e3787526b4337476d3b59acdeaf6bc959efbabc2a1d12026235287fc95361bc"
 )
+EXPECTED_PACKAGE_VERIFICATION_CODE = "eb0ccf335804d8295753661004b69a0e140137d0"
 EXPECTED_EXTERNAL_BLOCKERS = [
     "external_reservation_provider_not_operational",
     "external_reservation_endpoint_not_configured",
@@ -312,7 +317,7 @@ def _verify_package(
         or 3 in _elf_program_types(binary)
     ):
         raise SupervisorActivationContractError("static supervisor package binary drifted")
-    if _sha256(sbom_raw) != EXPECTED_SBOM_SHA256 or len(sbom_raw) != 3_790:
+    if _sha256(sbom_raw) != EXPECTED_SBOM_SHA256 or len(sbom_raw) != 4_586:
         raise SupervisorActivationContractError("supervisor package SBOM drifted")
     if package.get("binary_sha256") != EXPECTED_BINARY_SHA256:
         raise SupervisorActivationContractError("package binary binding drifted")
@@ -373,7 +378,7 @@ def _verify_package(
             "engine-v2-full-pipeline-cpu-supervisor-v1.spdx.json"
         ),
         "sbom_sha256": EXPECTED_SBOM_SHA256,
-        "sbom_size_bytes": 3_790,
+        "sbom_size_bytes": 4_586,
         "static_elf_no_dynamic_or_interp": True,
         "target_triple": "x86_64-linux-gnu",
     }
@@ -396,19 +401,66 @@ def _verify_package(
         raise SupervisorActivationContractError("package Git index mode drifted")
     files = {row.get("SPDXID"): row for row in sbom.get("files", []) if isinstance(row, dict)}
     expected_files = {
-        "SPDXRef-File-Binary": (binary_path, EXPECTED_BINARY_SHA256),
-        "SPDXRef-File-Source": (source_path, EXPECTED_SOURCE_SHA256),
-        "SPDXRef-File-Preflight": (preflight_path, EXPECTED_PREFLIGHT_SHA256),
-        "SPDXRef-File-Roster": (roster_path, EXPECTED_ROSTER_SHA256),
+        "SPDXRef-File-Binary": (
+            binary_path,
+            EXPECTED_BINARY_SHA1,
+            EXPECTED_BINARY_SHA256,
+        ),
+        "SPDXRef-File-Source": (
+            source_path,
+            EXPECTED_SOURCE_SHA1,
+            EXPECTED_SOURCE_SHA256,
+        ),
+        "SPDXRef-File-Preflight": (
+            preflight_path,
+            EXPECTED_PREFLIGHT_SHA1,
+            EXPECTED_PREFLIGHT_SHA256,
+        ),
+        "SPDXRef-File-Roster": (
+            roster_path,
+            EXPECTED_ROSTER_SHA1,
+            EXPECTED_ROSTER_SHA256,
+        ),
     }
     if set(files) != set(expected_files):
         raise SupervisorActivationContractError("package SBOM file inventory drifted")
-    for spdx_id, (path, digest) in expected_files.items():
+    for spdx_id, (path, sha1_digest, sha256_digest) in expected_files.items():
         checksums = files[spdx_id].get("checksums")
-        if checksums != [{"algorithm": "SHA256", "checksumValue": digest}]:
+        if checksums != [
+            {"algorithm": "SHA1", "checksumValue": sha1_digest},
+            {"algorithm": "SHA256", "checksumValue": sha256_digest},
+        ]:
             raise SupervisorActivationContractError(f"package SBOM checksum drifted: {spdx_id}")
-        if _sha256(_read_bytes(path)) != digest:
+        raw = _read_bytes(path)
+        if (
+            hashlib.sha1(raw, usedforsecurity=False).hexdigest() != sha1_digest
+            or _sha256(raw) != sha256_digest
+        ):
             raise SupervisorActivationContractError(f"package payload drifted: {path}")
+    packages = sbom.get("packages")
+    if type(packages) is not list or len(packages) != 1 or type(packages[0]) is not dict:
+        raise SupervisorActivationContractError("package SBOM package inventory drifted")
+    spdx_package = packages[0]
+    expected_package_checksums = [
+        {"algorithm": "SHA1", "checksumValue": EXPECTED_BINARY_SHA1},
+        {"algorithm": "SHA256", "checksumValue": EXPECTED_BINARY_SHA256},
+    ]
+    derived_verification_code = hashlib.sha1(
+        EXPECTED_BINARY_SHA1.encode("ascii"),
+        usedforsecurity=False,
+    ).hexdigest()
+    if (
+        spdx_package.get("SPDXID") != "SPDXRef-Package-Supervisor"
+        or spdx_package.get("filesAnalyzed") is not True
+        or spdx_package.get("hasFiles") != ["SPDXRef-File-Binary"]
+        or spdx_package.get("checksums") != expected_package_checksums
+        or spdx_package.get("packageVerificationCode")
+        != {"packageVerificationCodeValue": EXPECTED_PACKAGE_VERIFICATION_CODE}
+        or derived_verification_code != EXPECTED_PACKAGE_VERIFICATION_CODE
+    ):
+        raise SupervisorActivationContractError(
+            "package SBOM verification-code evidence drifted"
+        )
     described = subprocess.run(
         [str(binary_path), "--describe-contract"],
         check=True,
@@ -559,11 +611,15 @@ def _verify_workflows(paths: tuple[Path, ...]) -> None:
         "tests/unit/test_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py",
         "tests/unit/test_verify_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py",
         "docs/engine_v2_full_pipeline_cpu_supervisor_activation_v1.md",
-            "engine-v2-full-pipeline-cpu-supervisor-v1.spdx.json",
-            (
-                "chmod 0555 packaging/engine-v2/full-pipeline-cpu-supervisor/"
-                "1.0.0/engine-v2-full-pipeline-cpu-supervisor-v1"
-            ),
+        "engine-v2-full-pipeline-cpu-supervisor-v1.spdx.json",
+        (
+            "chmod 0555 packaging/engine-v2/full-pipeline-cpu-supervisor/"
+            "1.0.0/engine-v2-full-pipeline-cpu-supervisor-v1"
+        ),
+        (
+            "git fetch --no-tags --depth=1 origin "
+            "2d03360e782ec9f06518b704ac4fb498fb3448e6"
+        ),
         "Verify packaged full-pipeline CPU supervisor activation v1",
     )
     for path in paths:

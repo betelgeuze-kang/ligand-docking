@@ -341,6 +341,22 @@ def test_package_binary_is_static_rostered_but_still_non_operational() -> None:
     assert hashlib.sha256(binary.read_bytes()).hexdigest() == (
         "a33a07fc8a9f55a843ead479cee5b46f8ef31cb6787141fb7e3d8a563efb1466"
     )
+    sbom = __import__("json").loads(
+        binary.with_suffix(".spdx.json").read_text(encoding="ascii")
+    )
+    spdx_package = sbom["packages"][0]
+    binary_sha1 = hashlib.sha1(
+        binary.read_bytes(),
+        usedforsecurity=False,
+    ).hexdigest()
+    assert spdx_package["filesAnalyzed"] is True
+    assert spdx_package["hasFiles"] == ["SPDXRef-File-Binary"]
+    assert spdx_package["packageVerificationCode"] == {
+        "packageVerificationCodeValue": hashlib.sha1(
+            binary_sha1.encode("ascii"),
+            usedforsecurity=False,
+        ).hexdigest()
+    }
     described = subprocess.run(
         [str(binary), "--describe-contract"],
         check=True,

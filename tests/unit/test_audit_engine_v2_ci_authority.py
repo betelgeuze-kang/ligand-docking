@@ -159,6 +159,16 @@ def _write_full_pipeline_cpu_supervisor_activation_contract(tmp_path: Path) -> N
         source = root / relative
         target.write_bytes(source.read_bytes())
         target.chmod(source.stat().st_mode & 0o777)
+    binary_relative = (
+        "packaging/engine-v2/full-pipeline-cpu-supervisor/1.0.0/"
+        "engine-v2-full-pipeline-cpu-supervisor-v1"
+    )
+    subprocess.run(["git", "init", "--quiet"], cwd=tmp_path, check=True)
+    subprocess.run(
+        ["git", "add", "--", binary_relative],
+        cwd=tmp_path,
+        check=True,
+    )
 
 
 def _native_fixed64_cpu_v5_ci_tokens() -> tuple[str, ...]:
@@ -799,6 +809,43 @@ def test_full_pipeline_cpu_supervisor_activation_requires_static_ci_and_false_au
         ]
         is True
     )
+
+    binary_relative = (
+        "packaging/engine-v2/full-pipeline-cpu-supervisor/1.0.0/"
+        "engine-v2-full-pipeline-cpu-supervisor-v1"
+    )
+    binary = tmp_path / binary_relative
+    binary.chmod(0o755)
+    assert (
+        build_inventory(tmp_path)[
+            "full_pipeline_cpu_supervisor_activation_authority_fail_closed"
+        ]
+        is True
+    )
+    subprocess.run(
+        ["git", "update-index", "--chmod=-x", "--", binary_relative],
+        cwd=tmp_path,
+        check=True,
+    )
+    assert (
+        build_inventory(tmp_path)[
+            "full_pipeline_cpu_supervisor_activation_authority_fail_closed"
+        ]
+        is False
+    )
+    subprocess.run(
+        ["git", "update-index", "--chmod=+x", "--", binary_relative],
+        cwd=tmp_path,
+        check=True,
+    )
+    binary.chmod(0o775)
+    assert (
+        build_inventory(tmp_path)[
+            "full_pipeline_cpu_supervisor_activation_authority_fail_closed"
+        ]
+        is False
+    )
+    binary.chmod(0o755)
 
     tokens.remove("docs/engine_v2_full_pipeline_cpu_supervisor_activation_v1.md")
     main_workflow.write_text("\n".join(tokens), encoding="utf-8")

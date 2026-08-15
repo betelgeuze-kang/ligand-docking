@@ -11,6 +11,9 @@ The contract is based on merged `main` commit
 `2d03360e782ec9f06518b704ac4fb498fb3448e6` and tree
 `e0dd19eb3efab258d88d192440b025d79b6c9802`. The complete Git commit object
 and NUL-delimited tree manifest are independently re-hashed by the verifier.
+Every authoritative shallow-checkout workflow explicitly fetches this commit
+before verification; the source-foundation check never relies on an implicit
+promisor-object network fetch.
 It retains the frozen full-pipeline performance activation, profile, runtime
 manifest, and predecessor supervisor contract as distinct bindings.
 
@@ -28,6 +31,11 @@ The committed x86-64 static ELF package is 2,069,736 bytes and has SHA-256
 Two builds using the frozen GCC 11.4.0 executable and exact flags were
 byte-identical. The verifier confirms ELF64/x86-64 executable identity, absence
 of `PT_INTERP` and `PT_DYNAMIC`, package digest, and SPDX 2.3 SBOM bindings.
+Because the package declares `filesAnalyzed=true`, the SBOM carries the
+mandatory SHA-1 checksums and a package verification code derived from the
+sole contained binary. Source, roster, and preflight entries remain separately
+bound evidence and are not represented as files contained by the binary
+package.
 Git records the artifact with index mode `100755`, because Git cannot encode
 `0555`; each authoritative workflow explicitly materializes mode `0555` before
 verification. This is still repository-owned transport evidence, not a

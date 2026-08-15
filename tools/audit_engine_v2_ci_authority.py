@@ -8,6 +8,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import subprocess
 from typing import Any, cast
 
 if __package__:
@@ -876,11 +877,11 @@ def _full_pipeline_cpu_supervisor_activation_authority_is_fail_closed(
         repo_root
         / "tools/preflight_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py"
     )
-    binary_path = (
-        repo_root
-        / "packaging/engine-v2/full-pipeline-cpu-supervisor/1.0.0/"
+    binary_relative = (
+        "packaging/engine-v2/full-pipeline-cpu-supervisor/1.0.0/"
         "engine-v2-full-pipeline-cpu-supervisor-v1"
     )
+    binary_path = repo_root / binary_relative
     sbom_path = binary_path.with_suffix(".spdx.json")
     try:
         activation, activation_raw = load_canonical(activation_path)
@@ -891,7 +892,22 @@ def _full_pipeline_cpu_supervisor_activation_authority_is_fail_closed(
         binary_raw = binary_path.read_bytes()
         sbom_raw = sbom_path.read_bytes()
         binary_mode = binary_path.stat().st_mode & 0o777
-    except (OSError, UnicodeError, ValueError):
+        index_entry = subprocess.run(
+            ["git", "ls-files", "--stage", "--", binary_relative],
+            cwd=repo_root,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+    except (OSError, UnicodeError, ValueError, subprocess.CalledProcessError):
+        return False
+    index_fields = index_entry.rstrip("\n").split(maxsplit=3)
+    if (
+        len(index_fields) != 4
+        or index_fields[0] != "100755"
+        or index_fields[2] != "0"
+        or index_fields[3] != binary_relative
+    ):
         return False
 
     authority = activation.get("authority")
@@ -977,12 +993,12 @@ def _full_pipeline_cpu_supervisor_activation_authority_is_fail_closed(
         == "a33a07fc8a9f55a843ead479cee5b46f8ef31cb6787141fb7e3d8a563efb1466"
         and package.get("binary_size_bytes") == len(binary_raw) == 2_069_736
         and package.get("binary_mode") == "0555"
-        and binary_mode == 0o555
+        and binary_mode in (0o555, 0o755)
         and binary_raw[:7] == b"\x7fELF\x02\x01\x01"
         and package.get("sbom_sha256")
         == hashlib.sha256(sbom_raw).hexdigest()
-        == "dcdfd59935b469d43186052d05f9e5e12d8cbbb8097c4f7231043a1bd17ac601"
-        and package.get("sbom_size_bytes") == len(sbom_raw) == 3_790
+        == "0e3787526b4337476d3b59acdeaf6bc959efbabc2a1d12026235287fc95361bc"
+        and package.get("sbom_size_bytes") == len(sbom_raw) == 4_586
         and package.get("double_build_byte_identity_verified") is True
         and package.get("static_elf_no_dynamic_or_interp") is True
         and package.get("repository_index_mode") == "100755"
@@ -1031,7 +1047,7 @@ def _full_pipeline_cpu_supervisor_activation_authority_is_fail_closed(
         and roster_provisioning.get("root_installation_receipt_present") is False
         and roster_provisioning.get("repository_account_creation_allowed") is False
         and hashlib.sha256(activation_raw).hexdigest()
-        == "30919d4364071e25296c2b84261656c0be71635ed1f394ec0a3a09c045c539c4"
+        == "e49dd29ee3e531e04326bd6750bb9a6ebfa5cc6cd38212889eccf539b4aa60a2"
     )
 
 

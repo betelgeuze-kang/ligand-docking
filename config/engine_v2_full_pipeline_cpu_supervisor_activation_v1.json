@@ -159,8 +159,8 @@
     "repository_index_mode": "100755",
     "repository_materialization": "explicit_chmod_0555_before_verification",
     "sbom_path": "packaging/engine-v2/full-pipeline-cpu-supervisor/1.0.0/engine-v2-full-pipeline-cpu-supervisor-v1.spdx.json",
-    "sbom_sha256": "dcdfd59935b469d43186052d05f9e5e12d8cbbb8097c4f7231043a1bd17ac601",
-    "sbom_size_bytes": 3790,
+    "sbom_sha256": "0e3787526b4337476d3b59acdeaf6bc959efbabc2a1d12026235287fc95361bc",
+    "sbom_size_bytes": 4586,
     "static_elf_no_dynamic_or_interp": true,
     "target_triple": "x86_64-linux-gnu"
   },

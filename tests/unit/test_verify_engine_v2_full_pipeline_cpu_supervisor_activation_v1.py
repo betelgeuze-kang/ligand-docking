@@ -190,6 +190,23 @@ def test_supervisor_activation_rejects_ci_sparse_omission(tmp_path: Path) -> Non
         verify(workflow_paths=(workflow, *DEFAULT_WORKFLOWS[1:]))
 
 
+def test_supervisor_activation_rejects_ci_foundation_fetch_omission(
+    tmp_path: Path,
+) -> None:
+    original = DEFAULT_WORKFLOWS[0]
+    workflow = tmp_path / original.name
+    workflow.write_text(
+        original.read_text(encoding="utf-8").replace(
+            "git fetch --no-tags --depth=1 origin "
+            "2d03360e782ec9f06518b704ac4fb498fb3448e6",
+            "DRIFTED",
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(SupervisorActivationContractError, match="workflow"):
+        verify(workflow_paths=(workflow, *DEFAULT_WORKFLOWS[1:]))
+
+
 def test_supervisor_activation_rejects_ci_authority_audit_omission(
     tmp_path: Path,
 ) -> None:

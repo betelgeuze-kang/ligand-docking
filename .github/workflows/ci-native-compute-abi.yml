@@ -325,6 +325,9 @@ jobs:
           git fetch --no-tags --depth=1 origin c15b46e4a93e157826677165642b8788b75f20c7
           test "$(git rev-parse --verify 'c15b46e4a93e157826677165642b8788b75f20c7^{commit}')" = \
             "c15b46e4a93e157826677165642b8788b75f20c7"
+          git fetch --no-tags --depth=1 origin 2d03360e782ec9f06518b704ac4fb498fb3448e6
+          test "$(git rev-parse --verify '2d03360e782ec9f06518b704ac4fb498fb3448e6^{commit}')" = \
+            "2d03360e782ec9f06518b704ac4fb498fb3448e6"
 
       - name: Report hosted toolchain
         run: |
