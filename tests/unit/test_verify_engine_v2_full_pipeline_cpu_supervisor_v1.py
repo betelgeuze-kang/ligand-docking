@@ -104,6 +104,9 @@ def test_supervisor_static_binary_is_non_operational(tmp_path: Path) -> None:
     )
     assert json.loads(described.stdout) == {
         "authority_false": True,
+        "client_gid": 2**32 - 1,
+        "client_identity_configured": False,
+        "client_uid": 2**32 - 1,
         "handoff_bytes": 464,
         "installation_authorized": False,
         "operational": False,
@@ -114,6 +117,9 @@ def test_supervisor_static_binary_is_non_operational(tmp_path: Path) -> None:
         "runtime_launch_authorized": False,
         "schema_id": "betelgeuze.engine_v2_full_pipeline_cpu_supervisor/1.0.0",
         "supervisor_id": "engine_v2_full_pipeline_cpu_supervisor_v1",
+        "preflight_sha256": (
+            "aca96d31bb1ca09d9eb83a10bb7a8a91192fc1405a9eaa8011d94453a28a306e"
+        ),
         "terminal_bytes": 96,
     }
     self_tested = subprocess.run(

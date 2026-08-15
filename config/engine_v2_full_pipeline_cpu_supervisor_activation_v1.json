@@ -1,0 +1,193 @@
+{
+  "activation_id": "engine_v2_full_pipeline_cpu_supervisor_activation_v1",
+  "authority": {
+    "fresh_holdout_execution_authorized": false,
+    "github_actions_production_authority": false,
+    "hip_device_execution_authorized": false,
+    "installation_authorized": false,
+    "molecular_execution_authorized": false,
+    "performance_measurement_authorized": false,
+    "product_execution_authorized": false,
+    "public_benchmark_authorized": false,
+    "qualification_consumption_authorized": false,
+    "reservation_authorized": false,
+    "runtime_launch_authorized": false,
+    "scientific_claim_authorized": false,
+    "stage0_admission_authorized": false,
+    "test_double_production_authority": false
+  },
+  "bindings": {
+    "full_pipeline_performance_activation_sha256": "c9f77a76c0d7687d1c4195f06d50529ce66d915dd1a79f48e9a2827570af9ea2",
+    "full_pipeline_profile_sha256": "385fb713cca8f39353f138115749abdfc9768b02222e13111a418360be30a000",
+    "predecessor_supervisor_contract_sha256": "4f144f83563f6ca48835c4e59432bcb4c8c59feb2a76570961b0cd6887c1c076",
+    "runtime_scope_manifest_sha256": "72b90f500af43c921ce0b8f7d6774c5e99a7e4f3fe366478b3fc33b524b4b404",
+    "supervisor_contract_sha256": "f7bb886032856d67b40e4abf2252f12b1f8b352b5f363b6a1ffbb4d1bf38fbfa",
+    "supervisor_source_sha256": "ac476df202f01083e2d9ff34b64030de1d3fef13b2be09180e6a463cd47043c2"
+  },
+  "downstream_binding": {
+    "actual_binding_receipt_present": false,
+    "candidate_or_molecular_evidence_allowed": false,
+    "qualification_state_write_allowed": false,
+    "required_identity_chain": [
+      "source_foundation",
+      "supervisor_contract",
+      "supervisor_source",
+      "package_binary",
+      "package_sbom",
+      "client_roster",
+      "preflight_source",
+      "performance_profile",
+      "runtime_manifest",
+      "request_sha256",
+      "handoff_packet_sha256",
+      "sealed_handoff_receipt_sha256",
+      "user_namespace_fd_identity",
+      "mount_namespace_fd_identity",
+      "terminal_receipt_sha256",
+      "qualification_state_transition_sha256"
+    ],
+    "required_stages": [
+      "supervisor_request",
+      "kernel_attested_handoff",
+      "non_consuming_preflight",
+      "terminal_receipt",
+      "qualification_state_transition"
+    ],
+    "result_dependent_binding_allowed": false,
+    "schema_id": "betelgeuze.engine_v2_full_pipeline_cpu_supervisor_downstream_binding/1.0.0",
+    "terminal_must_bind_request_nonce_and_sha256": true
+  },
+  "external_authority": {
+    "all_authority_false": true,
+    "blockers": [
+      "external_reservation_provider_not_operational",
+      "external_reservation_endpoint_not_configured",
+      "external_reservation_trust_anchor_not_configured",
+      "historical_execution_operational_authority_false"
+    ],
+    "external_reservation_operational": false,
+    "operations_decision_ready": false,
+    "unresolved_field_count": 32
+  },
+  "foundation": {
+    "merged_main_commit_object_encoding": "git_cat_file_commit_raw_v1",
+    "merged_main_commit_oid": "2d03360e782ec9f06518b704ac4fb498fb3448e6",
+    "merged_main_commit_sha256": "054884d6ea57633d4b7e5335b115f91149a0f3967a1366f625d67769d8f1daac",
+    "merged_main_tree_manifest_encoding": "git_ls_tree_r_full_tree_z_v1",
+    "merged_main_tree_oid": "e0dd19eb3efab258d88d192440b025d79b6c9802",
+    "merged_main_tree_sha256": "315f9ef674fa00c6edd65aa204688344f4de39bc62460979452c914e39a5b151"
+  },
+  "handoff": {
+    "actual_handoff_receipt_present": false,
+    "descriptor_count": 3,
+    "descriptor_roles": [
+      "sealed_handoff_receipt",
+      "initial_user_namespace",
+      "initial_mount_namespace"
+    ],
+    "expected_flags": [
+      "exec_observed",
+      "peer_credential_bound",
+      "namespace_fds_bound"
+    ],
+    "handoff_bytes": 464,
+    "handoff_magic": "BGV2CPUHANDOF1",
+    "namespace_fd_ioctls": [
+      "NS_GET_NSTYPE",
+      "NS_GET_OWNER_UID",
+      "NS_GET_PARENT",
+      "NS_GET_USERNS"
+    ],
+    "peer_pidfd_required": true,
+    "preflight_sha256": "67c2e6ace0a4585d7004508323dc9928ddf45ee24e4bc77fa0406be4331857a0",
+    "preflight_size_bytes": 23361,
+    "preflight_source_path": "tools/preflight_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py",
+    "sealed_receipt_mode": "0400",
+    "sealed_receipt_required_seals": [
+      "F_SEAL_SEAL",
+      "F_SEAL_SHRINK",
+      "F_SEAL_GROW",
+      "F_SEAL_WRITE"
+    ],
+    "socket_peer_credential_required": "SO_PEERCRED_root_service_socketpair",
+    "terminal_bytes": 96,
+    "terminal_magic": "BGV2CPUTERMV1",
+    "terminal_parser_implemented": true,
+    "version": 1
+  },
+  "lifecycle": {
+    "account_provisioning_receipt_present": false,
+    "activation_operational": false,
+    "client_roster_frozen": true,
+    "downstream_binding_declared": true,
+    "exactly_once_runner_bound": false,
+    "handoff_preflight_implemented": true,
+    "independent_namespace_trace_qualification_present": false,
+    "package_binary_frozen": true,
+    "performance_preflight_bound": false,
+    "provider_qualified": false,
+    "root_installation_receipt_present": false,
+    "service_socket_bound": false,
+    "supervisor_execution_performed": false,
+    "terminal_downstream_receipt_present": false
+  },
+  "package": {
+    "binary_mode": "0555",
+    "binary_path": "packaging/engine-v2/full-pipeline-cpu-supervisor/1.0.0/engine-v2-full-pipeline-cpu-supervisor-v1",
+    "binary_sha256": "a33a07fc8a9f55a843ead479cee5b46f8ef31cb6787141fb7e3d8a563efb1466",
+    "binary_size_bytes": 2069736,
+    "build_flags": [
+      "-std=c++17",
+      "-O2",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-Werror",
+      "-static",
+      "-s",
+      "-Wl,--build-id=none",
+      "-DBETELGEUZE_ENGINE_V2_SUPERVISOR_CLIENT_UID=64042U",
+      "-DBETELGEUZE_ENGINE_V2_SUPERVISOR_CLIENT_GID=64042U",
+      "-DBETELGEUZE_ENGINE_V2_SUPERVISOR_PREFLIGHT_SHA256=\"67c2e6ace0a4585d7004508323dc9928ddf45ee24e4bc77fa0406be4331857a0\""
+    ],
+    "compiler_path": "/usr/bin/g++",
+    "compiler_sha256": "2360901d864cf10bfd6296e261cb2c14053552a80377761ab07146ec9ec9a2c0",
+    "compiler_version": "g++ (Ubuntu 11.4.0-1ubuntu1~22.04.3) 11.4.0",
+    "double_build_byte_identity_verified": true,
+    "installation_path": "/usr/local/libexec/betelgeuze-engine-v2-full-pipeline-cpu-supervisor-v1",
+    "package_id": "engine_v2_full_pipeline_cpu_supervisor_v1_rostered_static_x86_64",
+    "repository_index_mode": "100755",
+    "repository_materialization": "explicit_chmod_0555_before_verification",
+    "sbom_path": "packaging/engine-v2/full-pipeline-cpu-supervisor/1.0.0/engine-v2-full-pipeline-cpu-supervisor-v1.spdx.json",
+    "sbom_sha256": "dcdfd59935b469d43186052d05f9e5e12d8cbbb8097c4f7231043a1bd17ac601",
+    "sbom_size_bytes": 3790,
+    "static_elf_no_dynamic_or_interp": true,
+    "target_triple": "x86_64-linux-gnu"
+  },
+  "restrictions": {
+    "actual_molecular_execution_allowed": false,
+    "actual_supervisor_service_execution_allowed": false,
+    "fresh_or_historical_case_input_allowed": false,
+    "github_actions_service_execution_allowed": false,
+    "hip_device_execution_allowed": false,
+    "package_installation_allowed": false,
+    "performance_measurement_allowed": false,
+    "production_credentials_allowed": false,
+    "production_endpoint_access_allowed": false,
+    "qualification_consumption_allowed": false,
+    "reservation_allowed": false,
+    "result_dependent_configuration_allowed": false,
+    "test_double_production_authority_allowed": false
+  },
+  "roster": {
+    "client_gid": 64042,
+    "client_uid": 64042,
+    "provisioning_receipt_present": false,
+    "roster_path": "config/engine_v2_full_pipeline_cpu_supervisor_activation_v1_roster.json",
+    "roster_sha256": "a607613fd6d3a76d1d2d94f7be68d0493c6b23de28c97adfe5193d96732c58e1",
+    "service_gid": 0,
+    "service_uid": 0
+  },
+  "schema_id": "betelgeuze.engine_v2_full_pipeline_cpu_supervisor_activation/1.0.0",
+  "status": "frozen_packaged_non_consuming_activation_not_operational"
+}

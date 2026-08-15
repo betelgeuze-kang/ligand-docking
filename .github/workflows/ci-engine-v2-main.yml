@@ -117,6 +117,15 @@ on:
       - "tools/verify_engine_v2_full_pipeline_cpu_supervisor_v1.py"
       - "tests/unit/test_verify_engine_v2_full_pipeline_cpu_supervisor_v1.py"
       - "docs/engine_v2_full_pipeline_cpu_supervisor_v1.md"
+      - "config/engine_v2_full_pipeline_cpu_supervisor_activation_v1.json"
+      - "config/engine_v2_full_pipeline_cpu_supervisor_activation_v1_roster.json"
+      - "tools/preflight_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py"
+      - "tools/verify_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py"
+      - "tests/unit/test_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py"
+      - "tests/unit/test_verify_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py"
+      - "docs/engine_v2_full_pipeline_cpu_supervisor_activation_v1.md"
+      - "packaging/engine-v2/full-pipeline-cpu-supervisor/1.0.0/engine-v2-full-pipeline-cpu-supervisor-v1"
+      - "packaging/engine-v2/full-pipeline-cpu-supervisor/1.0.0/engine-v2-full-pipeline-cpu-supervisor-v1.spdx.json"
       - "tools/verify_engine_v2_native_fixed64_cpu_profile_v5.py"
       - "tools/verify_engine_v2_native_fixed64_cpu_profile_v6.py"
       - "tools/verify_engine_v2_native_fixed64_cpu_v6_rustc_wrapper.py"
@@ -342,6 +351,15 @@ jobs:
             tools/verify_engine_v2_full_pipeline_cpu_supervisor_v1.py
             tests/unit/test_verify_engine_v2_full_pipeline_cpu_supervisor_v1.py
             docs/engine_v2_full_pipeline_cpu_supervisor_v1.md
+            config/engine_v2_full_pipeline_cpu_supervisor_activation_v1.json
+            config/engine_v2_full_pipeline_cpu_supervisor_activation_v1_roster.json
+            tools/preflight_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py
+            tools/verify_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py
+            tests/unit/test_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py
+            tests/unit/test_verify_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py
+            docs/engine_v2_full_pipeline_cpu_supervisor_activation_v1.md
+            packaging/engine-v2/full-pipeline-cpu-supervisor/1.0.0/engine-v2-full-pipeline-cpu-supervisor-v1
+            packaging/engine-v2/full-pipeline-cpu-supervisor/1.0.0/engine-v2-full-pipeline-cpu-supervisor-v1.spdx.json
             tools/verify_engine_v2_native_fixed64_cpu_profile_v5.py
             tools/verify_engine_v2_native_fixed64_cpu_profile_v6.py
             tools/verify_engine_v2_native_fixed64_cpu_v6_rustc_wrapper.py
@@ -565,6 +583,11 @@ jobs:
         run: >-
           python tools/verify_engine_v2_full_pipeline_cpu_supervisor_v1.py
 
+      - name: Verify packaged full-pipeline CPU supervisor activation v1
+        run: |
+          chmod 0555 packaging/engine-v2/full-pipeline-cpu-supervisor/1.0.0/engine-v2-full-pipeline-cpu-supervisor-v1
+          python tools/verify_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py
+
       - name: Compile and enforce architecture boundaries
         run: |
           python -m compileall -q \
@@ -595,6 +618,8 @@ jobs:
             tools/preflight_engine_v2_cpu_performance_v3.py \
             tools/run_engine_v2_cpu_performance_qualification_v3.py \
             tools/verify_engine_v2_full_pipeline_cpu_supervisor_v1.py \
+            tools/preflight_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py \
+            tools/verify_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py \
             tools/verify_engine_v2_native_fixed64_cpu_profile_v5.py \
             tools/verify_engine_v2_native_fixed64_cpu_profile_v6.py \
             tools/verify_engine_v2_native_fixed64_cpu_v6_rustc_wrapper.py \
@@ -702,6 +727,14 @@ jobs:
             /tmp/engine-v2-full-pipeline-cpu-supervisor-v1.json
           grep -q '"qualification_consumption_authorized":false' \
             /tmp/engine-v2-full-pipeline-cpu-supervisor-v1.json
+          python tools/verify_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py \
+            > /tmp/engine-v2-full-pipeline-cpu-supervisor-activation-v1.json
+          grep -q '"activation_operational":false' \
+            /tmp/engine-v2-full-pipeline-cpu-supervisor-activation-v1.json
+          grep -q '"qualification_consumed":false' \
+            /tmp/engine-v2-full-pipeline-cpu-supervisor-activation-v1.json
+          grep -q '"reservation_created":false' \
+            /tmp/engine-v2-full-pipeline-cpu-supervisor-activation-v1.json
           python tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py \
             > /tmp/engine-v2-native-fixed64-cpu-profile-v4-archive.json
           grep -q '"archived":true' \
@@ -893,6 +926,8 @@ jobs:
             tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1_activation.py \
             tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py \
             tests/unit/test_verify_engine_v2_full_pipeline_cpu_supervisor_v1.py \
+            tests/unit/test_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py \
+            tests/unit/test_verify_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py \
             tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v5.py \
             tests/unit/test_verify_engine_v2_native_fixed64_cpu_profile_v6.py \
             tests/unit/test_verify_engine_v2_native_fixed64_cpu_v6_evidence.py \

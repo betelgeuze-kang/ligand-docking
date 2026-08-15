@@ -108,7 +108,7 @@ EXPECTED_IMPLEMENTATION = {
         "native/tools/engine_v2_full_pipeline_cpu_supervisor_v1.cpp"
     ),
     "service_source_sha256": (
-        "a7abb3ab52fc01b65b0d6d1cd09e5d807d5f9060c7aca1e1312225040b60c741"
+        "ac476df202f01083e2d9ff34b64030de1d3fef13b2be09180e6a463cd47043c2"
     ),
     "socket_path": (
         "/run/betelgeuze-engine-v2/full-pipeline-cpu-supervisor-v1.sock"
@@ -355,7 +355,11 @@ def _verify_source(source_path: Path) -> str:
             "constexpr bool kInstallationAuthorized = false;",
             "constexpr bool kRuntimeLaunchAuthorized = false;",
             "constexpr bool kQualificationConsumptionAuthorized = false;",
-            "constexpr uid_t kExpectedClientUid = std::numeric_limits<uid_t>::max();",
+            "#ifndef BETELGEUZE_ENGINE_V2_SUPERVISOR_CLIENT_UID",
+            "#ifndef BETELGEUZE_ENGINE_V2_SUPERVISOR_CLIENT_GID",
+            "#ifndef BETELGEUZE_ENGINE_V2_SUPERVISOR_PREFLIGHT_SHA256",
+            "BETELGEUZE_ENGINE_V2_SUPERVISOR_CLIENT_UID;",
+            "BETELGEUZE_ENGINE_V2_SUPERVISOR_CLIENT_GID;",
             "bool client_identity_is_configured()",
             "!client_identity_is_configured()",
             "static_assert(sizeof(RequestWireV1) == 192);",

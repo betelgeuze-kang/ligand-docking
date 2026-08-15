@@ -21,6 +21,8 @@ from tools.audit_engine_v2_ci_authority import (
     EXTERNAL_RESERVATION_REQUIRED_TOKENS,
     FULL_PIPELINE_CPU_SUPERVISOR_CONTRACT_PATHS,
     FULL_PIPELINE_CPU_SUPERVISOR_REQUIRED_TOKEN_COUNTS,
+    FULL_PIPELINE_CPU_SUPERVISOR_ACTIVATION_CONTRACT_PATHS,
+    FULL_PIPELINE_CPU_SUPERVISOR_ACTIVATION_REQUIRED_TOKEN_COUNTS,
     GLOBAL_ORIENTATION_CONTRACT_PATHS,
     GLOBAL_ORIENTATION_REQUIRED_TOKENS,
     MIXED64_V2_CONTRACT_PATHS,
@@ -134,6 +136,29 @@ def _write_full_pipeline_cpu_supervisor_contract(tmp_path: Path) -> None:
     for relative in FULL_PIPELINE_CPU_SUPERVISOR_CONTRACT_PATHS:
         target = tmp_path / relative
         target.write_bytes((root / relative).read_bytes())
+
+
+def _full_pipeline_cpu_supervisor_activation_ci_tokens() -> tuple[str, ...]:
+    return tuple(
+        token
+        for token, minimum_count in (
+            FULL_PIPELINE_CPU_SUPERVISOR_ACTIVATION_REQUIRED_TOKEN_COUNTS.items()
+        )
+        for _ in range(minimum_count)
+    )
+
+
+def _write_full_pipeline_cpu_supervisor_activation_contract(tmp_path: Path) -> None:
+    root = Path(__file__).resolve().parents[2]
+    _write_full_pipeline_cpu_supervisor_contract(tmp_path)
+    _mark_complete_contract(
+        tmp_path, FULL_PIPELINE_CPU_SUPERVISOR_ACTIVATION_CONTRACT_PATHS
+    )
+    for relative in FULL_PIPELINE_CPU_SUPERVISOR_ACTIVATION_CONTRACT_PATHS:
+        target = tmp_path / relative
+        source = root / relative
+        target.write_bytes(source.read_bytes())
+        target.chmod(source.stat().st_mode & 0o777)
 
 
 def _native_fixed64_cpu_v5_ci_tokens() -> tuple[str, ...]:
@@ -605,6 +630,24 @@ def test_repository_has_no_specialized_one_shot_workflow() -> None:
     )
     assert inventory["full_pipeline_cpu_supervisor_in_authoritative_ci"] is True
     assert inventory["full_pipeline_cpu_supervisor_authority_fail_closed"] is True
+    assert all(
+        main_text.count(token) >= minimum_count
+        for token, minimum_count in (
+            FULL_PIPELINE_CPU_SUPERVISOR_ACTIVATION_REQUIRED_TOKEN_COUNTS.items()
+        )
+    )
+    assert (
+        inventory[
+            "full_pipeline_cpu_supervisor_activation_in_authoritative_ci"
+        ]
+        is True
+    )
+    assert (
+        inventory[
+            "full_pipeline_cpu_supervisor_activation_authority_fail_closed"
+        ]
+        is True
+    )
     assert all(token in main_text for token in NATIVE_FIXED64_CPU_V5_REQUIRED_TOKENS)
     assert all(
         main_text.count(token) >= minimum_count
@@ -732,6 +775,81 @@ def test_full_pipeline_cpu_supervisor_authority_escalation_fails_ci_audit(
     payload = build_inventory(tmp_path)
     assert payload["full_pipeline_cpu_supervisor_authority_fail_closed"] is False
     assert payload["full_pipeline_cpu_supervisor_in_authoritative_ci"] is False
+
+
+def test_full_pipeline_cpu_supervisor_activation_requires_static_ci_and_false_authority(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_full_pipeline_cpu_supervisor_activation_contract(tmp_path)
+    main_workflow = tmp_path / AUTHORITATIVE_WORKFLOWS[0]
+    tokens = list(_full_pipeline_cpu_supervisor_activation_ci_tokens())
+    main_workflow.write_text("\n".join(tokens), encoding="utf-8")
+
+    payload = build_inventory(tmp_path)
+    assert (
+        payload[
+            "full_pipeline_cpu_supervisor_activation_in_authoritative_ci"
+        ]
+        is True
+    )
+    assert (
+        payload[
+            "full_pipeline_cpu_supervisor_activation_authority_fail_closed"
+        ]
+        is True
+    )
+
+    tokens.remove("docs/engine_v2_full_pipeline_cpu_supervisor_activation_v1.md")
+    main_workflow.write_text("\n".join(tokens), encoding="utf-8")
+    assert (
+        build_inventory(tmp_path)[
+            "full_pipeline_cpu_supervisor_activation_in_authoritative_ci"
+        ]
+        is False
+    )
+
+
+def test_full_pipeline_cpu_supervisor_activation_authority_escalation_fails_ci_audit(
+    tmp_path: Path,
+) -> None:
+    _write_authoritative_workflows(tmp_path)
+    _write_full_pipeline_cpu_supervisor_activation_contract(tmp_path)
+    contract_path = (
+        tmp_path
+        / "config/engine_v2_full_pipeline_cpu_supervisor_activation_v1.json"
+    )
+    document = json.loads(contract_path.read_text(encoding="ascii"))
+    document["authority"]["runtime_launch_authorized"] = True
+    contract_path.write_text(
+        json.dumps(
+            document,
+            allow_nan=False,
+            ensure_ascii=True,
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="ascii",
+    )
+    (tmp_path / AUTHORITATIVE_WORKFLOWS[0]).write_text(
+        "\n".join(_full_pipeline_cpu_supervisor_activation_ci_tokens()),
+        encoding="utf-8",
+    )
+
+    payload = build_inventory(tmp_path)
+    assert (
+        payload[
+            "full_pipeline_cpu_supervisor_activation_authority_fail_closed"
+        ]
+        is False
+    )
+    assert (
+        payload[
+            "full_pipeline_cpu_supervisor_activation_in_authoritative_ci"
+        ]
+        is False
+    )
 
 
 @pytest.mark.parametrize("authority_key", CPU_PERFORMANCE_FALSE_AUTHORITY_KEYS)

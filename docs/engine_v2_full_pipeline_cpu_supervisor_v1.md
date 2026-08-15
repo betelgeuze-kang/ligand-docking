@@ -19,11 +19,14 @@ Python stage-0 path reachable.
 
 The source contains three compile-time false gates: installation, runtime
 launch, and qualification consumption. The client UID and GID are also
-unconfigured fail-closed sentinels. No environment variable, request field,
-GitHub Actions input, or command-line option can turn those gates on. The only
-successful commands are `--describe-contract` and the non-service primitive
-self-test; every service invocation exits 125 before namespace inspection,
-socket creation, fork, or exec.
+unconfigured fail-closed sentinels in the default build. A separately reviewed
+package may supply the exact client UID/GID and preflight SHA as compile-time
+definitions, but those definitions cannot alter the three false gates. No
+environment variable, request field, GitHub Actions input, or command-line
+option can turn those gates on. The only successful commands are
+`--describe-contract` and the non-service primitive self-test; every service
+invocation exits 125 before namespace inspection, socket creation, fork, or
+exec.
 
 ## Fixed protocol
 
@@ -95,12 +98,15 @@ absent:
 - an exactly-once qualification-state transaction;
 - an operational socket or successful preflight receipt.
 
-The next activation/downstream-binding change must independently provision and
-attest the service, freeze the roster and binary, teach the preflight to verify
-the sealed handoff and namespace FDs, and keep the preflight non-consuming. A
-separate review must then qualify timeout, descendant cleanup, peer death,
-replay, and ambiguous terminal handling before the one-shot CPU qualification
-runner can be considered.
+The separately reviewed
+`engine_v2_full_pipeline_cpu_supervisor_activation_v1` successor freezes the
+roster, static package, SBOM, and child-side handoff parser while keeping every
+authority bit false. It does not revise this source-only contract into an
+installation receipt. A later operational integration must still provision and
+attest the service, qualify timeout, descendant cleanup, peer death, replay,
+namespace/trace behavior, and ambiguous terminal handling, then bind the
+performance preflight and exactly-once state transition before the one-shot CPU
+qualification runner can be considered.
 
 ## Compile-only verification
 

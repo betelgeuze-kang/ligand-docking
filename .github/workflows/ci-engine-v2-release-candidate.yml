@@ -86,6 +86,15 @@ on:
       - "tools/audit_engine_v2_ci_authority.py"
       - "tests/unit/test_verify_engine_v2_full_pipeline_cpu_supervisor_v1.py"
       - "docs/engine_v2_full_pipeline_cpu_supervisor_v1.md"
+      - "config/engine_v2_full_pipeline_cpu_supervisor_activation_v1.json"
+      - "config/engine_v2_full_pipeline_cpu_supervisor_activation_v1_roster.json"
+      - "tools/preflight_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py"
+      - "tools/verify_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py"
+      - "tests/unit/test_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py"
+      - "tests/unit/test_verify_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py"
+      - "docs/engine_v2_full_pipeline_cpu_supervisor_activation_v1.md"
+      - "packaging/engine-v2/full-pipeline-cpu-supervisor/1.0.0/engine-v2-full-pipeline-cpu-supervisor-v1"
+      - "packaging/engine-v2/full-pipeline-cpu-supervisor/1.0.0/engine-v2-full-pipeline-cpu-supervisor-v1.spdx.json"
       - "docs/engine_v2_full_pipeline_cpu_performance_v1.md"
       - "docs/engine_v2_full_pipeline_cpu_performance_v1_activation.md"
       - "config/engine_v2_cpu_performance_profile.json"
@@ -201,6 +210,15 @@ jobs:
             tools/audit_engine_v2_ci_authority.py
             tests/unit/test_verify_engine_v2_full_pipeline_cpu_supervisor_v1.py
             docs/engine_v2_full_pipeline_cpu_supervisor_v1.md
+            config/engine_v2_full_pipeline_cpu_supervisor_activation_v1.json
+            config/engine_v2_full_pipeline_cpu_supervisor_activation_v1_roster.json
+            tools/preflight_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py
+            tools/verify_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py
+            tests/unit/test_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py
+            tests/unit/test_verify_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py
+            docs/engine_v2_full_pipeline_cpu_supervisor_activation_v1.md
+            packaging/engine-v2/full-pipeline-cpu-supervisor/1.0.0/engine-v2-full-pipeline-cpu-supervisor-v1
+            packaging/engine-v2/full-pipeline-cpu-supervisor/1.0.0/engine-v2-full-pipeline-cpu-supervisor-v1.spdx.json
             tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1.py
             tests/unit/test_verify_engine_v2_full_pipeline_cpu_performance_v1.py
             tests/unit/test_engine_v2_full_pipeline_cpu_performance_v1_activation.py
@@ -230,7 +248,7 @@ jobs:
       - name: Install pinned static-analysis tools
         run: |
           python -m pip install pip==25.0.1
-          python -m pip install ruff==0.12.4 pyright==1.1.403 cryptography==46.0.5 numpy==1.26.4
+          python -m pip install ruff==0.12.4 pyright==1.1.403 pytest==8.3.5 cryptography==46.0.5 numpy==1.26.4
           python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
 
       - name: Run focused static analysis
@@ -251,6 +269,8 @@ jobs:
             tools/preflight_engine_v2_full_pipeline_cpu_performance_v1_activation.py \
             tools/verify_engine_v2_full_pipeline_cpu_performance_v1_activation.py \
             tools/verify_engine_v2_full_pipeline_cpu_supervisor_v1.py \
+            tools/preflight_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py \
+            tools/verify_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py \
             tools/build_engine_v2_sbom.py \
             --config packaging/engine-v2/pyproject.toml > static-analysis.log 2>&1
           ruff_status=$?
@@ -304,6 +324,14 @@ jobs:
       - name: Verify full-pipeline CPU supervisor v1
         run: >-
           python tools/verify_engine_v2_full_pipeline_cpu_supervisor_v1.py
+
+      - name: Verify packaged full-pipeline CPU supervisor activation v1
+        run: |
+          chmod 0555 packaging/engine-v2/full-pipeline-cpu-supervisor/1.0.0/engine-v2-full-pipeline-cpu-supervisor-v1
+          python tools/verify_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py
+          python -m pytest -q \
+            tests/unit/test_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py \
+            tests/unit/test_verify_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py
 
       - name: Upload static-analysis diagnostics
         if: always()

@@ -1,0 +1,36 @@
+{
+  "authority": {
+    "installation_authorized": false,
+    "qualification_consumption_authorized": false,
+    "reservation_authorized": false,
+    "runtime_launch_authorized": false
+  },
+  "client": {
+    "account_name": "betelgeuze-engine-v2-qualification",
+    "gid": 64042,
+    "group_name": "betelgeuze-engine-v2-qualification",
+    "home": "/nonexistent",
+    "private_primary_group_required": true,
+    "role": "non_consuming_cpu_qualification_client",
+    "shell": "/usr/sbin/nologin",
+    "supplementary_groups": [],
+    "uid": 64042
+  },
+  "provisioning": {
+    "account_provisioning_receipt_present": false,
+    "account_provisioning_state": "not_evidenced",
+    "host_identity_collision_check_required": true,
+    "repository_account_creation_allowed": false,
+    "root_installation_receipt_present": false,
+    "systemd_unit_present": false
+  },
+  "roster_id": "engine_v2_full_pipeline_cpu_supervisor_activation_v1_roster",
+  "schema_id": "betelgeuze.engine_v2_full_pipeline_cpu_supervisor_roster/1.0.0",
+  "service": {
+    "gid": 0,
+    "role": "root_supervisor_service",
+    "supplementary_groups_allowed": false,
+    "uid": 0
+  },
+  "status": "frozen_desired_state_not_provisioned"
+}
