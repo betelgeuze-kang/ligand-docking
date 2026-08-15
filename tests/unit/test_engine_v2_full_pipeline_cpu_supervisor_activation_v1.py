@@ -288,10 +288,13 @@ def test_production_roster_is_distinct_and_unprivileged() -> None:
 
 def test_standalone_preflight_fails_before_handoff_or_output() -> None:
     script = Path(activation.__file__).resolve()
+    environment = os.environ.copy()
+    environment.pop("GITHUB_ACTIONS", None)
     completed = subprocess.run(
         [sys.executable, str(script)],
         check=False,
         capture_output=True,
+        env=environment,
         text=True,
     )
     assert completed.returncode == 125
@@ -300,6 +303,27 @@ def test_standalone_preflight_fails_before_handoff_or_output() -> None:
     assert payload["authority_false"] is True
     assert payload["status"] == "rejected_non_consuming"
     assert "process state changed" in payload["error"]
+
+
+def test_github_actions_preflight_is_rejected_before_process_state() -> None:
+    script = Path(activation.__file__).resolve()
+    environment = os.environ.copy()
+    environment["GITHUB_ACTIONS"] = "true"
+    completed = subprocess.run(
+        [sys.executable, str(script)],
+        check=False,
+        capture_output=True,
+        env=environment,
+        text=True,
+    )
+    assert completed.returncode == 125
+    assert completed.stdout == ""
+    payload = __import__("json").loads(completed.stderr)
+    assert payload["authority_false"] is True
+    assert payload["status"] == "rejected_non_consuming"
+    assert payload["error"] == (
+        "GitHub Actions cannot run the supervisor activation preflight"
+    )
 
 
 def test_package_binary_is_static_rostered_but_still_non_operational() -> None:
