@@ -1,0 +1,149 @@
+{
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "creationInfo": {
+    "created": "2026-08-14T23:30:00Z",
+    "creators": [
+      "Organization: Betelgeuze",
+      "Tool: engine-v2-supervisor-activation-verifier-v1"
+    ]
+  },
+  "dataLicense": "CC0-1.0",
+  "documentNamespace": "https://betelgeuze.local/spdx/engine-v2-full-pipeline-cpu-supervisor-v1/a33a07fc8a9f55a843ead479cee5b46f8ef31cb6787141fb7e3d8a563efb1466",
+  "files": [
+    {
+      "SPDXID": "SPDXRef-File-Binary",
+      "checksums": [
+        {
+          "algorithm": "SHA1",
+          "checksumValue": "c29d7fea5d9c4691ff843f7fb9cbf2bfa1f40f46"
+        },
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "a33a07fc8a9f55a843ead479cee5b46f8ef31cb6787141fb7e3d8a563efb1466"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "engine-v2-full-pipeline-cpu-supervisor-v1",
+      "licenseConcluded": "NOASSERTION",
+      "licenseInfoInFiles": [
+        "NOASSERTION"
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-File-Source",
+      "checksums": [
+        {
+          "algorithm": "SHA1",
+          "checksumValue": "9d7ff8433d995ac70384b50d07a24f8764066cb8"
+        },
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "ac476df202f01083e2d9ff34b64030de1d3fef13b2be09180e6a463cd47043c2"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "../../../../native/tools/engine_v2_full_pipeline_cpu_supervisor_v1.cpp",
+      "licenseConcluded": "NOASSERTION",
+      "licenseInfoInFiles": [
+        "NOASSERTION"
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-File-Preflight",
+      "checksums": [
+        {
+          "algorithm": "SHA1",
+          "checksumValue": "5e7d7a3b6a4f4eb5a9e19ed1f5d6252200cd8fac"
+        },
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "67c2e6ace0a4585d7004508323dc9928ddf45ee24e4bc77fa0406be4331857a0"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "../../../../tools/preflight_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py",
+      "licenseConcluded": "NOASSERTION",
+      "licenseInfoInFiles": [
+        "NOASSERTION"
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-File-Roster",
+      "checksums": [
+        {
+          "algorithm": "SHA1",
+          "checksumValue": "64ace7107e6e16083ef0baa0287f4604e86b5415"
+        },
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "a607613fd6d3a76d1d2d94f7be68d0493c6b23de28c97adfe5193d96732c58e1"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "../../../../config/engine_v2_full_pipeline_cpu_supervisor_activation_v1_roster.json",
+      "licenseConcluded": "NOASSERTION",
+      "licenseInfoInFiles": [
+        "NOASSERTION"
+      ]
+    }
+  ],
+  "name": "engine-v2-full-pipeline-cpu-supervisor-v1-sbom",
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-Package-Supervisor",
+      "checksums": [
+        {
+          "algorithm": "SHA1",
+          "checksumValue": "c29d7fea5d9c4691ff843f7fb9cbf2bfa1f40f46"
+        },
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "a33a07fc8a9f55a843ead479cee5b46f8ef31cb6787141fb7e3d8a563efb1466"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": true,
+      "hasFiles": [
+        "SPDXRef-File-Binary"
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "engine-v2-full-pipeline-cpu-supervisor-v1",
+      "packageFileName": "engine-v2-full-pipeline-cpu-supervisor-v1",
+      "packageVerificationCode": {
+        "packageVerificationCodeValue": "eb0ccf335804d8295753661004b69a0e140137d0"
+      },
+      "supplier": "Organization: Betelgeuze",
+      "versionInfo": "1.0.0"
+    }
+  ],
+  "relationships": [
+    {
+      "relatedSpdxElement": "SPDXRef-Package-Supervisor",
+      "relationshipType": "DESCRIBES",
+      "spdxElementId": "SPDXRef-DOCUMENT"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-Binary",
+      "relationshipType": "CONTAINS",
+      "spdxElementId": "SPDXRef-Package-Supervisor"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-Source",
+      "relationshipType": "GENERATED_FROM",
+      "spdxElementId": "SPDXRef-File-Binary"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-Preflight",
+      "relationshipType": "OTHER",
+      "spdxElementId": "SPDXRef-Package-Supervisor"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-Roster",
+      "relationshipType": "OTHER",
+      "spdxElementId": "SPDXRef-Package-Supervisor"
+    }
+  ],
+  "spdxVersion": "SPDX-2.3"
+}

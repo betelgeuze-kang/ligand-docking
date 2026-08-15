@@ -66,8 +66,12 @@ constexpr char kPreloadPaths[] =
 
 constexpr char kActivationSha256[] =
     "c9f77a76c0d7687d1c4195f06d50529ce66d915dd1a79f48e9a2827570af9ea2";
+#ifndef BETELGEUZE_ENGINE_V2_SUPERVISOR_PREFLIGHT_SHA256
+#define BETELGEUZE_ENGINE_V2_SUPERVISOR_PREFLIGHT_SHA256 \
+  "aca96d31bb1ca09d9eb83a10bb7a8a91192fc1405a9eaa8011d94453a28a306e"
+#endif
 constexpr char kPreflightSha256[] =
-    "aca96d31bb1ca09d9eb83a10bb7a8a91192fc1405a9eaa8011d94453a28a306e";
+    BETELGEUZE_ENGINE_V2_SUPERVISOR_PREFLIGHT_SHA256;
 constexpr char kProfileSha256[] =
     "385fb713cca8f39353f138115749abdfc9768b02222e13111a418360be30a000";
 constexpr char kRuntimeManifestSha256[] =
@@ -81,14 +85,26 @@ constexpr char kLaunchVectorSha256[] =
 constexpr char kLaunchEnvironmentSha256[] =
     "5cf4cf74eba4f493ae3f8a88c3459e2f8861146b6e38b5c4d7bd65e958f0da96";
 
-// A later, separately reviewed provisioning change must replace the account
-// sentinels and all three false constants. This source cannot be activated by
-// an environment variable, command-line flag, or caller-controlled file.
+// A separately reviewed package may compile an exact non-root client roster
+// into the binary.  The default build remains unrostered, and neither roster
+// definition can change the three false authority constants below.  This
+// source cannot be activated by an environment variable, runtime command-line
+// flag, or caller-controlled file.
+#ifndef BETELGEUZE_ENGINE_V2_SUPERVISOR_CLIENT_UID
+#define BETELGEUZE_ENGINE_V2_SUPERVISOR_CLIENT_UID \
+  std::numeric_limits<uid_t>::max()
+#endif
+#ifndef BETELGEUZE_ENGINE_V2_SUPERVISOR_CLIENT_GID
+#define BETELGEUZE_ENGINE_V2_SUPERVISOR_CLIENT_GID \
+  std::numeric_limits<gid_t>::max()
+#endif
 constexpr bool kInstallationAuthorized = false;
 constexpr bool kRuntimeLaunchAuthorized = false;
 constexpr bool kQualificationConsumptionAuthorized = false;
-constexpr uid_t kExpectedClientUid = std::numeric_limits<uid_t>::max();
-constexpr gid_t kExpectedClientGid = std::numeric_limits<gid_t>::max();
+constexpr uid_t kExpectedClientUid =
+    BETELGEUZE_ENGINE_V2_SUPERVISOR_CLIENT_UID;
+constexpr gid_t kExpectedClientGid =
+    BETELGEUZE_ENGINE_V2_SUPERVISOR_CLIENT_GID;
 constexpr ino_t kExpectedInitialUserNamespaceInode = 4026531837;
 constexpr ino_t kExpectedInitialMountNamespaceInode = 4026531841;
 
@@ -1165,7 +1181,12 @@ __attribute__((used, noinline)) int run_service() {
 
 void describe_contract() {
   std::cout
-      << "{\"authority_false\":true,\"handoff_bytes\":"
+      << "{\"authority_false\":true,\"client_gid\":"
+      << static_cast<uintmax_t>(kExpectedClientGid)
+      << ",\"client_identity_configured\":"
+      << (client_identity_is_configured() ? "true" : "false")
+      << ",\"client_uid\":" << static_cast<uintmax_t>(kExpectedClientUid)
+      << ",\"handoff_bytes\":"
       << sizeof(HandoffWireV1)
       << ",\"installation_authorized\":false,"
          "\"operational\":false,\"protocol_version\":"
@@ -1175,7 +1196,8 @@ void describe_contract() {
       << ",\"runtime_launch_authorized\":false,\"schema_id\":"
          "\"betelgeuze.engine_v2_full_pipeline_cpu_supervisor/1.0.0\","
          "\"supervisor_id\":\""
-      << kSupervisorId << "\",\"terminal_bytes\":" << sizeof(TerminalWireV1)
+      << kSupervisorId << "\",\"preflight_sha256\":\"" << kPreflightSha256
+      << "\",\"terminal_bytes\":" << sizeof(TerminalWireV1)
       << "}\n";
 }
 

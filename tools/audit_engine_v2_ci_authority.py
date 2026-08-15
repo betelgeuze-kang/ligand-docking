@@ -8,6 +8,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import subprocess
 from typing import Any, cast
 
 if __package__:
@@ -248,6 +249,54 @@ FULL_PIPELINE_CPU_SUPERVISOR_FALSE_AUTHORITY_KEYS = (
     "hip_device_execution_authorized",
     "installation_authorized",
     "molecular_execution_authorized",
+    "product_execution_authorized",
+    "public_benchmark_authorized",
+    "qualification_consumption_authorized",
+    "reservation_authorized",
+    "runtime_launch_authorized",
+    "scientific_claim_authorized",
+    "stage0_admission_authorized",
+    "test_double_production_authority",
+)
+FULL_PIPELINE_CPU_SUPERVISOR_ACTIVATION_CONTRACT_PATHS = (
+    "config/engine_v2_full_pipeline_cpu_supervisor_activation_v1.json",
+    "config/engine_v2_full_pipeline_cpu_supervisor_activation_v1_roster.json",
+    "tools/preflight_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py",
+    "tools/verify_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py",
+    "tests/unit/test_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py",
+    "tests/unit/test_verify_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py",
+    "docs/engine_v2_full_pipeline_cpu_supervisor_activation_v1.md",
+    (
+        "packaging/engine-v2/full-pipeline-cpu-supervisor/1.0.0/"
+        "engine-v2-full-pipeline-cpu-supervisor-v1"
+    ),
+    (
+        "packaging/engine-v2/full-pipeline-cpu-supervisor/1.0.0/"
+        "engine-v2-full-pipeline-cpu-supervisor-v1.spdx.json"
+    ),
+)
+FULL_PIPELINE_CPU_SUPERVISOR_ACTIVATION_REQUIRED_TOKEN_COUNTS = {
+    "config/engine_v2_full_pipeline_cpu_supervisor_activation_v1.json": 2,
+    "config/engine_v2_full_pipeline_cpu_supervisor_activation_v1_roster.json": 2,
+    "tools/preflight_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py": 3,
+    "tools/verify_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py": 5,
+    "tests/unit/test_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py": 3,
+    "tests/unit/test_verify_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py": 3,
+    "docs/engine_v2_full_pipeline_cpu_supervisor_activation_v1.md": 2,
+    "engine-v2-full-pipeline-cpu-supervisor-v1.spdx.json": 2,
+    (
+        "chmod 0555 packaging/engine-v2/full-pipeline-cpu-supervisor/1.0.0/"
+        "engine-v2-full-pipeline-cpu-supervisor-v1"
+    ): 1,
+    "Verify packaged full-pipeline CPU supervisor activation v1": 1,
+}
+FULL_PIPELINE_CPU_SUPERVISOR_ACTIVATION_FALSE_AUTHORITY_KEYS = (
+    "fresh_holdout_execution_authorized",
+    "github_actions_production_authority",
+    "hip_device_execution_authorized",
+    "installation_authorized",
+    "molecular_execution_authorized",
+    "performance_measurement_authorized",
     "product_execution_authorized",
     "public_benchmark_authorized",
     "qualification_consumption_authorized",
@@ -767,6 +816,238 @@ def _full_pipeline_cpu_supervisor_authority_is_fail_closed(
             "if (!kInstallationAuthorized || !kRuntimeLaunchAuthorized ||"
         )
         < source.index("return run_service();")
+    )
+
+
+def _full_pipeline_cpu_supervisor_activation_authority_is_fail_closed(
+    repo_root: Path,
+) -> bool:
+    def reject_duplicate_keys(
+        pairs: list[tuple[str, object]],
+    ) -> dict[str, object]:
+        observed: dict[str, object] = {}
+        for key, value in pairs:
+            if key in observed:
+                raise ValueError(f"duplicate JSON key: {key}")
+            observed[key] = value
+        return observed
+
+    def reject_float(value: str) -> object:
+        raise ValueError(f"JSON float is forbidden: {value}")
+
+    def load_canonical(path: Path) -> tuple[dict[str, object], bytes]:
+        raw = path.read_bytes()
+        value = json.loads(
+            raw.decode("ascii"),
+            object_pairs_hook=reject_duplicate_keys,
+            parse_float=reject_float,
+            parse_constant=reject_float,
+        )
+        if type(value) is not dict:
+            raise ValueError("JSON root is not an object")
+        canonical = (
+            json.dumps(
+                value,
+                allow_nan=False,
+                ensure_ascii=True,
+                indent=2,
+                sort_keys=True,
+            ).encode("ascii")
+            + b"\n"
+        )
+        if raw != canonical:
+            raise ValueError("JSON is not canonical")
+        return value, raw
+
+    activation_path = (
+        repo_root
+        / "config/engine_v2_full_pipeline_cpu_supervisor_activation_v1.json"
+    )
+    roster_path = (
+        repo_root
+        / "config/engine_v2_full_pipeline_cpu_supervisor_activation_v1_roster.json"
+    )
+    source_path = (
+        repo_root / "native/tools/engine_v2_full_pipeline_cpu_supervisor_v1.cpp"
+    )
+    supervisor_contract_path = (
+        repo_root / "config/engine_v2_full_pipeline_cpu_supervisor_v1.json"
+    )
+    preflight_path = (
+        repo_root
+        / "tools/preflight_engine_v2_full_pipeline_cpu_supervisor_activation_v1.py"
+    )
+    binary_relative = (
+        "packaging/engine-v2/full-pipeline-cpu-supervisor/1.0.0/"
+        "engine-v2-full-pipeline-cpu-supervisor-v1"
+    )
+    binary_path = repo_root / binary_relative
+    sbom_path = binary_path.with_suffix(".spdx.json")
+    try:
+        activation, activation_raw = load_canonical(activation_path)
+        roster, roster_raw = load_canonical(roster_path)
+        source_raw = source_path.read_bytes()
+        supervisor_contract_raw = supervisor_contract_path.read_bytes()
+        preflight_raw = preflight_path.read_bytes()
+        binary_raw = binary_path.read_bytes()
+        sbom_raw = sbom_path.read_bytes()
+        binary_mode = binary_path.stat().st_mode & 0o777
+        index_entry = subprocess.run(
+            ["git", "ls-files", "--stage", "--", binary_relative],
+            cwd=repo_root,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+    except (OSError, UnicodeError, ValueError, subprocess.CalledProcessError):
+        return False
+    index_fields = index_entry.rstrip("\n").split(maxsplit=3)
+    if (
+        len(index_fields) != 4
+        or index_fields[0] != "100755"
+        or index_fields[2] != "0"
+        or index_fields[3] != binary_relative
+    ):
+        return False
+
+    authority = activation.get("authority")
+    restrictions = activation.get("restrictions")
+    lifecycle = activation.get("lifecycle")
+    package = activation.get("package")
+    bindings = activation.get("bindings")
+    handoff = activation.get("handoff")
+    downstream = activation.get("downstream_binding")
+    external = activation.get("external_authority")
+    roster_binding = activation.get("roster")
+    roster_authority = roster.get("authority")
+    roster_provisioning = roster.get("provisioning")
+    identity_chain = (
+        downstream.get("required_identity_chain")
+        if type(downstream) is dict
+        else None
+    )
+    stages = downstream.get("required_stages") if type(downstream) is dict else None
+    expected_lifecycle = {
+        "account_provisioning_receipt_present": False,
+        "activation_operational": False,
+        "client_roster_frozen": True,
+        "downstream_binding_declared": True,
+        "exactly_once_runner_bound": False,
+        "handoff_preflight_implemented": True,
+        "independent_namespace_trace_qualification_present": False,
+        "package_binary_frozen": True,
+        "performance_preflight_bound": False,
+        "provider_qualified": False,
+        "root_installation_receipt_present": False,
+        "service_socket_bound": False,
+        "supervisor_execution_performed": False,
+        "terminal_downstream_receipt_present": False,
+    }
+    expected_external_blockers = [
+        "external_reservation_provider_not_operational",
+        "external_reservation_endpoint_not_configured",
+        "external_reservation_trust_anchor_not_configured",
+        "historical_execution_operational_authority_false",
+    ]
+    return bool(
+        set(activation)
+        == {
+            "activation_id",
+            "authority",
+            "bindings",
+            "downstream_binding",
+            "external_authority",
+            "foundation",
+            "handoff",
+            "lifecycle",
+            "package",
+            "restrictions",
+            "roster",
+            "schema_id",
+            "status",
+        }
+        and activation.get("schema_id")
+        == "betelgeuze.engine_v2_full_pipeline_cpu_supervisor_activation/1.0.0"
+        and activation.get("activation_id")
+        == "engine_v2_full_pipeline_cpu_supervisor_activation_v1"
+        and activation.get("status")
+        == "frozen_packaged_non_consuming_activation_not_operational"
+        and type(authority) is dict
+        and set(authority)
+        == set(FULL_PIPELINE_CPU_SUPERVISOR_ACTIVATION_FALSE_AUTHORITY_KEYS)
+        and all(value is False for value in authority.values())
+        and type(restrictions) is dict
+        and restrictions
+        and all(value is False for value in restrictions.values())
+        and lifecycle == expected_lifecycle
+        and type(bindings) is dict
+        and bindings.get("supervisor_contract_sha256")
+        == hashlib.sha256(supervisor_contract_raw).hexdigest()
+        == "f7bb886032856d67b40e4abf2252f12b1f8b352b5f363b6a1ffbb4d1bf38fbfa"
+        and bindings.get("supervisor_source_sha256")
+        == hashlib.sha256(source_raw).hexdigest()
+        == "ac476df202f01083e2d9ff34b64030de1d3fef13b2be09180e6a463cd47043c2"
+        and type(package) is dict
+        and package.get("binary_sha256")
+        == hashlib.sha256(binary_raw).hexdigest()
+        == "a33a07fc8a9f55a843ead479cee5b46f8ef31cb6787141fb7e3d8a563efb1466"
+        and package.get("binary_size_bytes") == len(binary_raw) == 2_069_736
+        and package.get("binary_mode") == "0555"
+        and binary_mode in (0o555, 0o755)
+        and binary_raw[:7] == b"\x7fELF\x02\x01\x01"
+        and package.get("sbom_sha256")
+        == hashlib.sha256(sbom_raw).hexdigest()
+        == "0e3787526b4337476d3b59acdeaf6bc959efbabc2a1d12026235287fc95361bc"
+        and package.get("sbom_size_bytes") == len(sbom_raw) == 4_586
+        and package.get("double_build_byte_identity_verified") is True
+        and package.get("static_elf_no_dynamic_or_interp") is True
+        and package.get("repository_index_mode") == "100755"
+        and package.get("repository_materialization")
+        == "explicit_chmod_0555_before_verification"
+        and type(handoff) is dict
+        and handoff.get("actual_handoff_receipt_present") is False
+        and handoff.get("descriptor_count") == 3
+        and handoff.get("handoff_bytes") == 464
+        and handoff.get("terminal_bytes") == 96
+        and handoff.get("peer_pidfd_required") is True
+        and handoff.get("preflight_sha256")
+        == hashlib.sha256(preflight_raw).hexdigest()
+        == "67c2e6ace0a4585d7004508323dc9928ddf45ee24e4bc77fa0406be4331857a0"
+        and handoff.get("preflight_size_bytes") == len(preflight_raw) == 23_361
+        and type(downstream) is dict
+        and downstream.get("actual_binding_receipt_present") is False
+        and downstream.get("candidate_or_molecular_evidence_allowed") is False
+        and downstream.get("qualification_state_write_allowed") is False
+        and downstream.get("result_dependent_binding_allowed") is False
+        and downstream.get("terminal_must_bind_request_nonce_and_sha256") is True
+        and type(identity_chain) is list
+        and len(identity_chain) == 16
+        and type(stages) is list
+        and len(stages) == 5
+        and type(external) is dict
+        and external.get("all_authority_false") is True
+        and external.get("blockers") == expected_external_blockers
+        and external.get("external_reservation_operational") is False
+        and external.get("operations_decision_ready") is False
+        and external.get("unresolved_field_count") == 32
+        and type(roster_binding) is dict
+        and roster_binding.get("roster_sha256")
+        == hashlib.sha256(roster_raw).hexdigest()
+        == "a607613fd6d3a76d1d2d94f7be68d0493c6b23de28c97adfe5193d96732c58e1"
+        and roster_binding.get("client_uid") == 64042
+        and roster_binding.get("client_gid") == 64042
+        and roster_binding.get("service_uid") == 0
+        and roster_binding.get("service_gid") == 0
+        and roster.get("status") == "frozen_desired_state_not_provisioned"
+        and type(roster_authority) is dict
+        and roster_authority
+        and all(value is False for value in roster_authority.values())
+        and type(roster_provisioning) is dict
+        and roster_provisioning.get("account_provisioning_receipt_present") is False
+        and roster_provisioning.get("root_installation_receipt_present") is False
+        and roster_provisioning.get("repository_account_creation_allowed") is False
+        and hashlib.sha256(activation_raw).hexdigest()
+        == "e49dd29ee3e531e04326bd6750bb9a6ebfa5cc6cd38212889eccf539b4aa60a2"
     )
 
 
@@ -2112,6 +2393,38 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         )
     )
 
+    full_pipeline_cpu_supervisor_activation_present = any(
+        (repo_root / path).is_file()
+        for path in FULL_PIPELINE_CPU_SUPERVISOR_ACTIVATION_CONTRACT_PATHS
+    )
+    full_pipeline_cpu_supervisor_activation_files_complete = all(
+        (repo_root / path).is_file()
+        for path in FULL_PIPELINE_CPU_SUPERVISOR_ACTIVATION_CONTRACT_PATHS
+    )
+    full_pipeline_cpu_supervisor_activation_authority_fail_closed = (
+        not full_pipeline_cpu_supervisor_activation_present
+        or (
+            full_pipeline_cpu_supervisor_activation_files_complete
+            and full_pipeline_cpu_supervisor_authority_fail_closed
+            and _full_pipeline_cpu_supervisor_activation_authority_is_fail_closed(
+                repo_root
+            )
+        )
+    )
+    full_pipeline_cpu_supervisor_activation_in_authoritative_ci = (
+        not full_pipeline_cpu_supervisor_activation_present
+        or (
+            full_pipeline_cpu_supervisor_activation_files_complete
+            and full_pipeline_cpu_supervisor_activation_authority_fail_closed
+            and all(
+                main_text.count(token) >= minimum_count
+                for token, minimum_count in (
+                    FULL_PIPELINE_CPU_SUPERVISOR_ACTIVATION_REQUIRED_TOKEN_COUNTS.items()
+                )
+            )
+        )
+    )
+
     cpu_performance_contract_present = any(
         (repo_root / path).is_file() for path in CPU_PERFORMANCE_CONTRACT_PATHS
     )
@@ -2122,6 +2435,7 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         cpu_performance_contract_files_complete
         and _cpu_performance_authority_is_fail_closed(repo_root)
         and full_pipeline_cpu_supervisor_authority_fail_closed
+        and full_pipeline_cpu_supervisor_activation_authority_fail_closed
     )
     cpu_performance_contract_in_authoritative_ci = (
         not cpu_performance_contract_present
@@ -2129,6 +2443,7 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
             cpu_performance_contract_files_complete
             and cpu_performance_authority_fail_closed
             and full_pipeline_cpu_supervisor_in_authoritative_ci
+            and full_pipeline_cpu_supervisor_activation_in_authoritative_ci
             and all(
                 main_text.count(token) >= minimum_count
                 for token, minimum_count in (
@@ -2350,6 +2665,12 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
         ),
         "full_pipeline_cpu_supervisor_in_authoritative_ci": (
             full_pipeline_cpu_supervisor_in_authoritative_ci
+        ),
+        "full_pipeline_cpu_supervisor_activation_authority_fail_closed": (
+            full_pipeline_cpu_supervisor_activation_authority_fail_closed
+        ),
+        "full_pipeline_cpu_supervisor_activation_in_authoritative_ci": (
+            full_pipeline_cpu_supervisor_activation_in_authoritative_ci
         ),
         "native_fixed64_cpu_v5_contract_in_authoritative_ci": (
             native_fixed64_cpu_v5_contract_in_authoritative_ci

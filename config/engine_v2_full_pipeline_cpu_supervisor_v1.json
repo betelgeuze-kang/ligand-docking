@@ -49,7 +49,7 @@
     "python_executable_path": "/usr/bin/python3.10",
     "python_executable_sha256": "7d51cd6b48b521277f5caa4610a82126e315fa2be4df069823a8b1eeb5bd4a86",
     "service_source_path": "native/tools/engine_v2_full_pipeline_cpu_supervisor_v1.cpp",
-    "service_source_sha256": "a7abb3ab52fc01b65b0d6d1cd09e5d807d5f9060c7aca1e1312225040b60c741",
+    "service_source_sha256": "ac476df202f01083e2d9ff34b64030de1d3fef13b2be09180e6a463cd47043c2",
     "socket_path": "/run/betelgeuze-engine-v2/full-pipeline-cpu-supervisor-v1.sock"
   },
   "lifecycle": {
