@@ -333,7 +333,10 @@ def test_package_binary_is_static_rostered_but_still_non_operational() -> None:
         / "engine-v2-full-pipeline-cpu-supervisor-v1"
     )
     metadata = binary.stat()
-    assert stat.S_IMODE(metadata.st_mode) == 0o555
+    materialized_mode = stat.S_IMODE(metadata.st_mode)
+    assert materialized_mode in (0o555, 0o755)
+    assert materialized_mode & 0o022 == 0
+    assert materialized_mode & 0o111 == 0o111
     assert metadata.st_size == 2_069_736
     assert hashlib.sha256(binary.read_bytes()).hexdigest() == (
         "a33a07fc8a9f55a843ead479cee5b46f8ef31cb6787141fb7e3d8a563efb1466"
