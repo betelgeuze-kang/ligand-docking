@@ -1,0 +1,47 @@
+name: ci-repository-artifact-policy
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-repository-artifact-policy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  artifact-policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+      HEAD_SHA: ${{ github.sha }}
+    steps:
+      - name: Check out complete comparison history
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Install focused test dependency
+        run: python -m pip install pytest==8.3.5
+
+      - name: Check changed artifacts
+        run: |
+          test -n "${BASE_SHA}"
+          python tools/check_repository_artifact_policy_v1.py \
+            --base "${BASE_SHA}" \
+            --head "${HEAD_SHA}" \
+            --pretty
+
+      - name: Run policy tests
+        run: python -m pytest -q tests/unit/test_repository_artifact_policy_v1.py
