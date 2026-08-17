@@ -7,6 +7,8 @@
   "numeric_absolute_tolerance": 1e-10,
   "minimum_samples_per_case": 5,
   "required_architecture_count": 2,
+  "minimum_hip_fast_median_speedup_over_rust_cpu": 1.0,
+  "maximum_scientific_values_per_case": 100000,
   "authority": {
     "gpu_acceleration_claim_authorized": false,
     "scientific_claim_authorized": false,
