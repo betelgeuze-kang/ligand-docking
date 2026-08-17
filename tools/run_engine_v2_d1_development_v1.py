@@ -212,10 +212,15 @@ def _load_manifest(path: Path) -> tuple[dict[str, Any], tuple[tuple[str, str], .
     for index, row in enumerate(rows):
         if type(row) is not dict or set(row) != {"case_id", "result_path"}:
             raise D1DevelopmentError(f"manifest row {index} has an invalid shape")
+        result_path = row["result_path"]
+        if type(result_path) is not str or not result_path:
+            raise D1DevelopmentError(
+                f"manifest row {index} result_path must be a non-empty string"
+            )
         result.append(
             (
                 _case_id(row["case_id"], name=f"manifest case {index}"),
-                str(row["result_path"]),
+                result_path,
             )
         )
     case_ids = [case_id for case_id, _ in result]
