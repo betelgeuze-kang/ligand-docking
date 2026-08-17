@@ -91,10 +91,19 @@ def _profile(path: Path) -> dict[str, Any]:
     if profile.get("output_denominator") != 64:
         raise FunnelError("output denominator changed")
     quotas = profile.get("lane_quotas")
+    lane_order = profile.get("lane_order")
     if type(quotas) is not dict or sum(quotas.values()) != 64:
         raise FunnelError("lane quotas must total 64")
     if any(type(value) is not int or value <= 0 for value in quotas.values()):
         raise FunnelError("lane quotas must be positive integers")
+    if (
+        type(lane_order) is not list
+        or len(lane_order) != len(quotas)
+        or any(type(lane) is not str or not lane for lane in lane_order)
+        or len(set(lane_order)) != len(lane_order)
+        or set(lane_order) != set(quotas)
+    ):
+        raise FunnelError("lane order must list every quota lane exactly once")
     authority = profile.get("authority")
     if type(authority) is not dict or any(
         value is not False for value in authority.values()
@@ -213,10 +222,11 @@ def run(profile_path: Path, input_path: Path) -> dict[str, Any]:
     rows = document.get("candidates")
     if type(rows) is not list or len(rows) != 512:
         raise FunnelError("exactly 512 candidate rows required")
-    lanes = set(profile["lane_quotas"])
+    lane_order = profile["lane_order"]
+    lanes = set(lane_order)
     parsed = [_candidate(raw, index, lanes) for index, raw in enumerate(rows)]
     observations: list[dict[str, Any]] = []
-    by_lane: dict[str, list[dict[str, Any]]] = {lane: [] for lane in lanes}
+    by_lane: dict[str, list[dict[str, Any]]] = {lane: [] for lane in lane_order}
     for row in parsed:
         decision = "typed_failure"
         if row["status"] == "generated":
@@ -242,7 +252,7 @@ def run(profile_path: Path, input_path: Path) -> dict[str, Any]:
 
     selected_rows: list[dict[str, Any]] = []
     lane_summary: dict[str, dict[str, int]] = {}
-    for lane in sorted(lanes):
+    for lane in lane_order:
         quota = profile["lane_quotas"][lane]
         chosen = _select_lane(
             by_lane[lane], quota, profile["quality_prefilter_multiplier"]
@@ -286,6 +296,7 @@ def run(profile_path: Path, input_path: Path) -> dict[str, Any]:
         "profile_id": profile["profile_id"],
         "input_denominator": 512,
         "output_denominator": 64,
+        "lane_order": lane_order,
         "input_sha256": _digest(document),
         "profile_sha256": _digest(profile),
         "observations": observations,
