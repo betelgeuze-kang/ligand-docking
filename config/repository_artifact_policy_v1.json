@@ -1,0 +1,48 @@
+{
+  "schema_id": "betelgeuze.repository_artifact_policy/1.0.0",
+  "policy_id": "repository_forward_growth_guard_v1",
+  "scope": "added_or_modified_paths_between_base_and_head",
+  "max_file_bytes": 2097152,
+  "max_generated_text_bytes": 262144,
+  "generated_text_suffixes": [".html", ".htm", ".svg"],
+  "forbidden_suffixes": [
+    ".7z",
+    ".a",
+    ".bin",
+    ".ckpt",
+    ".dll",
+    ".dylib",
+    ".h5",
+    ".hdf5",
+    ".npy",
+    ".npz",
+    ".o",
+    ".onnx",
+    ".pt",
+    ".pth",
+    ".so",
+    ".tar",
+    ".tar.gz",
+    ".tgz",
+    ".whl",
+    ".zip"
+  ],
+  "forbidden_path_prefixes": [
+    ".betelgeuze-engine-v2/",
+    "build/",
+    "dist/",
+    "node_modules/",
+    "runs/",
+    "target/"
+  ],
+  "allowlisted_exact_paths": [],
+  "allowlisted_path_prefixes": [],
+  "recommended_external_destinations": [
+    "GitHub Releases",
+    "OCI or package registry",
+    "Zenodo or object storage",
+    "model registry"
+  ],
+  "history_rewrite_authorized": false,
+  "existing_repository_history_reinterpreted": false
+}
