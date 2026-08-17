@@ -1,0 +1,87 @@
+name: ci-engine-v2-session-completion
+
+on:
+  pull_request:
+    paths:
+      - "tools/verify_engine_v2_d1_development_v1.py"
+      - "tools/materialize_engine_v2_d1_case_results_v1.py"
+      - "tools/run_engine_v2_sampling_funnel_v1.py"
+      - "tools/run_engine_v2_water_box_reference_v1.py"
+      - "tools/inventory_github_actions_pins_v1.py"
+      - "tools/verify_engine_v2_hip_d1_benchmark_v1.py"
+      - "tools/analyze_rust_docking_module_boundaries_v1.py"
+      - "config/engine_v2_sampling_funnel_v1.json"
+      - "config/engine_v2_water_box_reference_v1.json"
+      - "config/engine_v2_hip_d1_benchmark_profile_v1.json"
+      - "tests/unit/test_engine_v2_d1_development_v1_hardening.py"
+      - "tests/unit/test_materialize_engine_v2_d1_case_results_v1.py"
+      - "tests/unit/test_engine_v2_sampling_funnel_v1.py"
+      - "tests/unit/test_engine_v2_water_box_reference_v1.py"
+      - "tests/unit/test_inventory_github_actions_pins_v1.py"
+      - "tests/unit/test_verify_engine_v2_hip_d1_benchmark_v1.py"
+      - "tests/unit/test_analyze_rust_docking_module_boundaries_v1.py"
+      - ".github/workflows/ci-engine-v2-session-completion.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "tools/verify_engine_v2_d1_development_v1.py"
+      - "tools/materialize_engine_v2_d1_case_results_v1.py"
+      - "tools/run_engine_v2_sampling_funnel_v1.py"
+      - "tools/run_engine_v2_water_box_reference_v1.py"
+      - "tools/inventory_github_actions_pins_v1.py"
+      - "tools/verify_engine_v2_hip_d1_benchmark_v1.py"
+      - "tools/analyze_rust_docking_module_boundaries_v1.py"
+      - "config/engine_v2_sampling_funnel_v1.json"
+      - "config/engine_v2_water_box_reference_v1.json"
+      - "config/engine_v2_hip_d1_benchmark_profile_v1.json"
+      - "tests/unit/test_engine_v2_d1_development_v1_hardening.py"
+      - "tests/unit/test_materialize_engine_v2_d1_case_results_v1.py"
+      - "tests/unit/test_engine_v2_sampling_funnel_v1.py"
+      - "tests/unit/test_engine_v2_water_box_reference_v1.py"
+      - "tests/unit/test_inventory_github_actions_pins_v1.py"
+      - "tests/unit/test_verify_engine_v2_hip_d1_benchmark_v1.py"
+      - "tests/unit/test_analyze_rust_docking_module_boundaries_v1.py"
+      - ".github/workflows/ci-engine-v2-session-completion.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-engine-v2-session-completion-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - name: Check out source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install focused dependencies
+        run: python -m pip install pytest==8.3.5 numpy==2.2.6
+
+      - name: Compile tools
+        run: python -m compileall -q tools
+
+      - name: Run focused tests
+        run: |
+          python -m pytest -q \
+            tests/unit/test_engine_v2_d1_development_v1_hardening.py \
+            tests/unit/test_materialize_engine_v2_d1_case_results_v1.py \
+            tests/unit/test_engine_v2_sampling_funnel_v1.py \
+            tests/unit/test_engine_v2_water_box_reference_v1.py \
+            tests/unit/test_inventory_github_actions_pins_v1.py \
+            tests/unit/test_verify_engine_v2_hip_d1_benchmark_v1.py \
+            tests/unit/test_analyze_rust_docking_module_boundaries_v1.py
