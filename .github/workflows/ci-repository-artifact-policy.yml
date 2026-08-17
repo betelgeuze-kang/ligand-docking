@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -18,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+      EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
       HEAD_SHA: ${{ github.sha }}
     steps:
       - name: Check out complete comparison history
@@ -36,10 +37,14 @@ jobs:
         run: python -m pip install pytest==8.3.5
 
       - name: Check changed artifacts
+        shell: bash
         run: |
-          test -n "${BASE_SHA}"
+          base_sha="${EVENT_BASE_SHA}"
+          if [[ -z "${base_sha}" || "${base_sha}" =~ ^0+$ ]]; then
+            base_sha="$(git rev-parse "${HEAD_SHA}^")"
+          fi
           python tools/check_repository_artifact_policy_v1.py \
-            --base "${BASE_SHA}" \
+            --base "${base_sha}" \
             --head "${HEAD_SHA}" \
             --pretty
 
