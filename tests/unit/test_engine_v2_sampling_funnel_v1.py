@@ -15,10 +15,16 @@ assert SPEC is not None and SPEC.loader is not None
 FUNNEL = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(FUNNEL)
 PROFILE = ROOT / "config/engine_v2_sampling_funnel_v1.json"
+EXPECTED_LANE_ORDER = [
+    "uniform_so3",
+    "pocket_surface",
+    "single_anchor",
+    "multi_anchor",
+]
 
 
 def _pool() -> dict:
-    lanes = ["uniform_so3", "pocket_surface", "single_anchor", "multi_anchor"]
+    lanes = EXPECTED_LANE_ORDER
     rows = []
     for index in range(512):
         lane = lanes[index % len(lanes)]
@@ -61,6 +67,13 @@ def test_exact_deterministic_512_to_64(tmp_path: Path) -> None:
     assert len(first["observations"]) == 512
     assert len(first["selected_rows"]) == 64
     assert first["receipt_sha256"] == second["receipt_sha256"]
+    assert first["lane_order"] == EXPECTED_LANE_ORDER
+    assert [
+        row["lane"] for row in first["selected_rows"][:24]
+    ] == ["uniform_so3"] * 24
+    assert [
+        row["lane"] for row in first["selected_rows"][-8:]
+    ] == ["multi_anchor"] * 8
     assert first["authority"]["scientific_claim_authorized"] is False
 
 
@@ -89,6 +102,7 @@ def test_lane_shortfall_stays_in_output_denominator(tmp_path: Path) -> None:
     assert len(result["selected_rows"]) == 64
     assert len(failures) == 8
     assert {row["failure_code"] for row in failures} == {"lane_quota_unfilled"}
+    assert all(row["lane"] == "multi_anchor" for row in failures)
 
 
 def test_hard_rejects_are_not_selected(tmp_path: Path) -> None:
@@ -111,3 +125,12 @@ def test_candidate_sha_must_be_lowercase_hex(tmp_path: Path) -> None:
     value["candidates"][0]["source_sha256"] = "Z" * 64
     with pytest.raises(FUNNEL.FunnelError, match="source_sha256"):
         FUNNEL.run(PROFILE, _save(tmp_path, value))
+
+
+def test_lane_order_must_cover_quota_map(tmp_path: Path) -> None:
+    profile = json.loads(PROFILE.read_text(encoding="utf-8"))
+    profile["lane_order"].pop()
+    path = tmp_path / "profile.json"
+    path.write_text(json.dumps(profile), encoding="utf-8")
+    with pytest.raises(FUNNEL.FunnelError, match="lane order"):
+        FUNNEL._profile(path)
