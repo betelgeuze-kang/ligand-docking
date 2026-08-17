@@ -6,11 +6,17 @@
   "hard_minimum_vdw_ratio": 0.55,
   "maximum_pocket_escape_angstrom": 4.0,
   "quality_prefilter_multiplier": 4,
+  "lane_order": [
+    "uniform_so3",
+    "pocket_surface",
+    "single_anchor",
+    "multi_anchor"
+  ],
   "lane_quotas": {
-    "multi_anchor": 8,
+    "uniform_so3": 24,
     "pocket_surface": 16,
     "single_anchor": 16,
-    "uniform_so3": 24
+    "multi_anchor": 8
   },
   "authority": {
     "fresh_128_execution_authorized": false,
