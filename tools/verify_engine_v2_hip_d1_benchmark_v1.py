@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Verify a completed representative D1 CPU/HIP benchmark result.
 
-The verifier checks denominator, discrete scientific parity, bounded numerical
-parity, timing samples, hardware/toolchain identity, and a fail-closed claim
-boundary. It never executes a GPU or authorizes an acceleration claim.
+The verifier checks the manifest identity, ordered cohort, denominator,
+discrete scientific parity, bounded numerical parity, timing samples,
+hardware/toolchain identity, and a fail-closed claim boundary. It never
+executes a GPU or authorizes an acceleration claim.
 """
 
 from __future__ import annotations
@@ -12,10 +13,13 @@ import argparse
 import json
 import math
 from pathlib import Path
+import re
 from typing import Any
 
 PROFILE_SCHEMA = "betelgeuze.engine_v2_hip_d1_benchmark_profile/1.0.0"
 RESULT_SCHEMA = "betelgeuze.engine_v2_hip_d1_benchmark_result/1.0.0"
+CASE_ID_RE = re.compile(r"^[A-Za-z0-9_.:-]{1,128}$")
+SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
 class HipBenchmarkError(ValueError):
@@ -29,6 +33,18 @@ def _load(path: Path) -> dict[str, Any]:
         raise HipBenchmarkError(f"cannot load {path}: {exc}") from exc
     if type(value) is not dict:
         raise HipBenchmarkError("JSON root must be object")
+    return value
+
+
+def _sha256(value: Any, name: str) -> str:
+    if type(value) is not str or SHA256_RE.fullmatch(value) is None:
+        raise HipBenchmarkError(f"{name} must be lowercase SHA-256")
+    return value
+
+
+def _case_id(value: Any, name: str) -> str:
+    if type(value) is not str or CASE_ID_RE.fullmatch(value) is None:
+        raise HipBenchmarkError(f"{name} is not a valid case ID")
     return value
 
 
@@ -60,19 +76,49 @@ def _finite_values(value: Any, name: str) -> list[float]:
     return output
 
 
+def _compare_cases(
+    reference_cases: list[dict[str, Any]],
+    candidate_cases: list[dict[str, Any]],
+    label: str,
+    tolerance: float,
+) -> None:
+    for reference, candidate in zip(reference_cases, candidate_cases, strict=True):
+        if reference["case_id"] != candidate["case_id"]:
+            raise HipBenchmarkError(f"{label}: case ordering mismatch")
+        for key in ("decision_sha256", "failure_sha256", "rank_sha256"):
+            if reference[key] != candidate[key]:
+                raise HipBenchmarkError(f"{label}: discrete parity")
+        reference_values = _finite_values(
+            reference["scientific_values"], f"{label}/reference"
+        )
+        candidate_values = _finite_values(
+            candidate["scientific_values"], f"{label}/candidate"
+        )
+        if len(reference_values) != len(candidate_values):
+            raise HipBenchmarkError(f"{label}: scientific value shape")
+        if any(
+            abs(reference_value - candidate_value) > tolerance
+            for reference_value, candidate_value in zip(
+                reference_values, candidate_values, strict=True
+            )
+        ):
+            raise HipBenchmarkError(f"{label}: numerical parity")
+
+
 def verify(profile_path: Path, result_path: Path) -> dict[str, Any]:
     profile, result = _load(profile_path), _load(result_path)
     if profile.get("schema_id") != PROFILE_SCHEMA:
         raise HipBenchmarkError("profile identity")
-    authority = profile.get("authority")
-    if type(authority) is not dict or any(
-        value is not False for value in authority.values()
+    profile_authority = profile.get("authority")
+    if type(profile_authority) is not dict or any(
+        value is not False for value in profile_authority.values()
     ):
         raise HipBenchmarkError("profile authority")
     if result.get("schema_id") != RESULT_SCHEMA:
         raise HipBenchmarkError("result identity")
     if result.get("profile_id") != profile.get("profile_id"):
         raise HipBenchmarkError("profile cross-wire")
+    manifest_sha256 = _sha256(result.get("manifest_sha256"), "manifest_sha256")
     required_backends = profile.get("required_backends")
     if type(required_backends) is not list or required_backends != [
         "rust_cpu",
@@ -91,6 +137,9 @@ def verify(profile_path: Path, result_path: Path) -> dict[str, Any]:
     minimum_samples = int(profile["minimum_samples_per_case"])
     case_count = int(profile["case_count"])
     denominator = int(profile["candidate_denominator"])
+    canonical_case_ids: list[str] | None = None
+    canonical_cpu_cases: list[dict[str, Any]] | None = None
+
     for architecture in architectures:
         if type(architecture) is not dict:
             raise HipBenchmarkError("architecture row must be an object")
@@ -102,18 +151,17 @@ def verify(profile_path: Path, result_path: Path) -> dict[str, Any]:
         ):
             raise HipBenchmarkError("duplicate/invalid architecture")
         seen.add(gpu_architecture)
-        for identity in (
-            "gpu_model",
-            "rocm_version",
-            "driver_version",
-            "wheel_sha256",
-            "native_extension_sha256",
-        ):
+        for identity in ("gpu_model", "rocm_version", "driver_version"):
             value = architecture.get(identity)
             if type(value) is not str or not value:
                 raise HipBenchmarkError(
                     f"{gpu_architecture}: missing identity {identity}"
                 )
+        _sha256(architecture.get("wheel_sha256"), f"{gpu_architecture}.wheel")
+        _sha256(
+            architecture.get("native_extension_sha256"),
+            f"{gpu_architecture}.native_extension",
+        )
         backends = architecture.get("backends")
         if type(backends) is not dict or set(backends) != set(required_backends):
             raise HipBenchmarkError("backend set mismatch")
@@ -135,19 +183,21 @@ def verify(profile_path: Path, result_path: Path) -> dict[str, Any]:
                 raise HipBenchmarkError(
                     f"{gpu_architecture}/{backend_name}: peak memory"
                 )
+            observed_ids: list[str] = []
             for case_index, case in enumerate(cases):
                 if type(case) is not dict:
                     raise HipBenchmarkError(
                         f"{gpu_architecture}/{backend_name}: case object"
                     )
-                expected_case = f"D1_CASE_{case_index:03d}"
-                if case.get("case_id") != expected_case:
-                    raise HipBenchmarkError(
-                        f"{gpu_architecture}/{backend_name}: case ordering mismatch"
+                observed_ids.append(
+                    _case_id(
+                        case.get("case_id"),
+                        f"{gpu_architecture}/{backend_name}/case[{case_index}]",
                     )
+                )
                 _positive_samples(
                     case.get("wall_time_seconds"),
-                    f"{gpu_architecture}/{backend_name}/{expected_case}",
+                    f"{gpu_architecture}/{backend_name}/{observed_ids[-1]}",
                     minimum_samples,
                 )
                 for digest_name in (
@@ -155,61 +205,54 @@ def verify(profile_path: Path, result_path: Path) -> dict[str, Any]:
                     "failure_sha256",
                     "rank_sha256",
                 ):
-                    digest = case.get(digest_name)
-                    if (
-                        type(digest) is not str
-                        or len(digest) != 64
-                        or any(
-                            character not in "0123456789abcdef"
-                            for character in digest
-                        )
-                    ):
-                        raise HipBenchmarkError(
-                            f"{gpu_architecture}/{backend_name}: {digest_name}"
-                        )
+                    _sha256(
+                        case.get(digest_name),
+                        f"{gpu_architecture}/{backend_name}/{digest_name}",
+                    )
                 _finite_values(
                     case.get("scientific_values"),
-                    f"{gpu_architecture}/{backend_name}/{expected_case}",
+                    f"{gpu_architecture}/{backend_name}/{observed_ids[-1]}",
+                )
+            if len(set(observed_ids)) != case_count:
+                raise HipBenchmarkError(
+                    f"{gpu_architecture}/{backend_name}: duplicate case ID"
+                )
+            if canonical_case_ids is None:
+                canonical_case_ids = observed_ids
+            elif observed_ids != canonical_case_ids:
+                raise HipBenchmarkError(
+                    f"{gpu_architecture}/{backend_name}: ordered cohort mismatch"
                 )
         cpu_cases = backends["rust_cpu"]["cases"]
+        if canonical_cpu_cases is None:
+            canonical_cpu_cases = cpu_cases
+        else:
+            _compare_cases(
+                canonical_cpu_cases,
+                cpu_cases,
+                f"{gpu_architecture}/rust_cpu_cross_architecture",
+                tolerance,
+            )
         for backend_name in ("hip_safe", "hip_fast"):
-            hip_cases = backends[backend_name]["cases"]
-            for cpu_case, hip_case in zip(cpu_cases, hip_cases, strict=True):
-                if cpu_case["case_id"] != hip_case["case_id"]:
-                    raise HipBenchmarkError("case ordering mismatch")
-                for key in ("decision_sha256", "failure_sha256", "rank_sha256"):
-                    if cpu_case[key] != hip_case[key]:
-                        raise HipBenchmarkError(
-                            f"{gpu_architecture}/{backend_name}: discrete parity"
-                        )
-                cpu_values = _finite_values(
-                    cpu_case["scientific_values"], "rust_cpu scientific values"
-                )
-                hip_values = _finite_values(
-                    hip_case["scientific_values"],
-                    f"{backend_name} scientific values",
-                )
-                if len(cpu_values) != len(hip_values):
-                    raise HipBenchmarkError("scientific value shape")
-                if any(
-                    abs(cpu_value - hip_value) > tolerance
-                    for cpu_value, hip_value in zip(
-                        cpu_values, hip_values, strict=True
-                    )
-                ):
-                    raise HipBenchmarkError(
-                        f"{gpu_architecture}/{backend_name}: numerical parity"
-                    )
+            _compare_cases(
+                cpu_cases,
+                backends[backend_name]["cases"],
+                f"{gpu_architecture}/{backend_name}",
+                tolerance,
+            )
     result_authority = result.get("authority")
-    if type(result_authority) is not dict or any(
-        value is not False for value in result_authority.values()
+    if type(result_authority) is not dict or set(result_authority) != set(
+        profile_authority
     ):
+        raise HipBenchmarkError("result authority field set")
+    if any(value is not False for value in result_authority.values()):
         raise HipBenchmarkError("result authority escalated")
     return {
         "verified": True,
         "architecture_count": len(seen),
         "case_count": case_count,
         "candidate_denominator": denominator,
+        "manifest_sha256": manifest_sha256,
         "claim_authority_granted": False,
     }
 
