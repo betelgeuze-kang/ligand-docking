@@ -1,0 +1,49 @@
+{
+  "schema_id": "betelgeuze.engine_v2_d1_development_profile/1.0.0",
+  "profile_id": "engine_v2_d1_repeatable_development_v1",
+  "case_count": 32,
+  "candidate_denominator": 64,
+  "rmsd_threshold_angstrom": 2.0,
+  "top_k": [1, 5],
+  "score_direction": "lower_is_better",
+  "development_policy": {
+    "repeatable_execution_allowed": true,
+    "result_informed_iteration_allowed": true,
+    "fresh_holdout_overlap_allowed": false,
+    "fresh_holdout_execution_allowed": false,
+    "stage0_admission_allowed": false,
+    "public_benchmark_claim_allowed": false,
+    "scientific_claim_allowed": false,
+    "product_promotion_allowed": false,
+    "customer_pose_emission_allowed": false
+  },
+  "required_inputs": {
+    "manifest_schema_id": "betelgeuze.engine_v2_d1_manifest/1.0.0",
+    "fresh_registry_schema_id": "betelgeuze.engine_v2_fresh_case_registry/1.0.0",
+    "case_result_schema_id": "betelgeuze.engine_v2_d1_case_result/1.0.0",
+    "relative_regular_result_paths_only": true,
+    "complete_case_set_required": true,
+    "complete_candidate_rows_required_for_prepared_cases": true
+  },
+  "reported_metrics": [
+    "preparation_success",
+    "proposal_oracle_recovery",
+    "valid_proposal_oracle_recovery",
+    "top1_recovery",
+    "top5_recovery",
+    "invalid_top1",
+    "top1_validity_unavailable",
+    "mean_scoring_regret_angstrom",
+    "lane_contribution",
+    "typed_failure_distribution",
+    "baseline_new_and_lost_recovery"
+  ],
+  "authority": {
+    "reservation_authorized": false,
+    "molecular_holdout_execution_authorized": false,
+    "fresh_128_execution_authorized": false,
+    "benchmark_claim_authorized": false,
+    "scientific_claim_authorized": false,
+    "product_authorized": false
+  }
+}
