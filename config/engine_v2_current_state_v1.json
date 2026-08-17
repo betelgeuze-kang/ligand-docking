@@ -1,0 +1,49 @@
+{
+  "schema_id": "betelgeuze.engine_v2_current_state/1.0.0",
+  "engine_id": "betelgeuze_independent_engine_v2",
+  "implementation_stage": "v2_native_fixed64_pipeline_alpha_abi121",
+  "evidence_anchor_commit": "7cdb60da8afca2afee6e1070383911eb88d6d78e",
+  "native_compute": {
+    "abi_version": "1.21",
+    "fixed_candidate_denominator": 64,
+    "complete_pipeline": true,
+    "prepared_input_transport": "native_fixed64_complete_pipeline_v3",
+    "cpu_reference_backend": "cpp_cpu_reference",
+    "production_cpu_backend": "rust_cpu",
+    "hip_safe_backend": "hip_safe",
+    "hip_fast_backend": "hip_fast"
+  },
+  "maturity": {
+    "software_api": "beta",
+    "native_docking_core": "alpha",
+    "docking_science": "alpha",
+    "hip_performance": "experimental",
+    "molecular_dynamics": "pre_alpha"
+  },
+  "evidence": {
+    "native_fixed64_cpu_v7_consumed": true,
+    "native_fixed64_cpu_v7_terminal_decision": "PASS",
+    "native_fixed64_cpu_v7_authoritative": false,
+    "molecular_development_evidence_available": true,
+    "fresh_128_executed": false,
+    "stage0_admitted": false,
+    "hip_molecular_performance_qualified": false,
+    "production_md_validated": false
+  },
+  "claim_policy": {
+    "customer_execution_enabled": false,
+    "scientific_validity_green": false,
+    "benchmark_validity_green": false,
+    "gpu_acceleration_claim_allowed": false,
+    "docking_accuracy_claim_allowed": false,
+    "free_energy_claim_allowed": false
+  },
+  "canonical_companions": [
+    "docs/engine_v2_current_state_v1.md",
+    "docs/engine_v2_status.md",
+    "docs/engine_v2_stage0_status.md",
+    "docs/engine_v2_native_fixed64_cpu_qualification_v7_result.md",
+    "config/independent_engine_v2_capabilities.yaml"
+  ],
+  "generated_or_updated_utc": "2026-08-17T00:00:00Z"
+}
