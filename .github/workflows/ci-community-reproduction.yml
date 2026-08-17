@@ -1,0 +1,66 @@
+name: ci-community-reproduction
+
+on:
+  pull_request:
+    paths:
+      - "config/community_reproduction_receipt_v1.schema.json"
+      - "tools/verify_community_reproduction_receipt_v1.py"
+      - "tests/unit/test_community_reproduction_receipt_v1.py"
+      - "docs/community_reproduction.md"
+      - "docs/community_license_options.md"
+      - ".github/ISSUE_TEMPLATE/benchmark-reproduction.yml"
+      - ".github/workflows/ci-community-reproduction.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "config/community_reproduction_receipt_v1.schema.json"
+      - "tools/verify_community_reproduction_receipt_v1.py"
+      - "tests/unit/test_community_reproduction_receipt_v1.py"
+      - "docs/community_reproduction.md"
+      - "docs/community_license_options.md"
+      - ".github/ISSUE_TEMPLATE/benchmark-reproduction.yml"
+      - ".github/workflows/ci-community-reproduction.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-community-reproduction-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  reproduction-receipt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out community reproduction surface
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          sparse-checkout: |
+            config/community_reproduction_receipt_v1.schema.json
+            tools/verify_community_reproduction_receipt_v1.py
+            tests/unit/test_community_reproduction_receipt_v1.py
+            docs/community_reproduction.md
+            docs/community_license_options.md
+            .github/ISSUE_TEMPLATE/benchmark-reproduction.yml
+          sparse-checkout-cone-mode: false
+          show-progress: false
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Install focused test dependency
+        run: python -m pip install pytest==8.3.5
+
+      - name: Parse JSON schema
+        run: python -m json.tool config/community_reproduction_receipt_v1.schema.json > /dev/null
+
+      - name: Compile verifier
+        run: python -m py_compile tools/verify_community_reproduction_receipt_v1.py
+
+      - name: Run reproduction receipt tests
+        run: python -m pytest -q tests/unit/test_community_reproduction_receipt_v1.py

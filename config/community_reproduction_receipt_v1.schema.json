@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/betelgeuze-kang/ligand-docking/config/community_reproduction_receipt_v1.schema.json",
+  "title": "Betelgeuze community reproduction receipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_id",
+    "repository",
+    "source_commit_sha",
+    "profile_id",
+    "backend",
+    "hardware",
+    "software",
+    "benchmark",
+    "results",
+    "submitter",
+    "claim_boundary",
+    "receipt_sha256"
+  ],
+  "properties": {
+    "schema_id": {
+      "const": "betelgeuze.community_reproduction_receipt/1.0.0"
+    },
+    "repository": {
+      "const": "betelgeuze-kang/ligand-docking"
+    },
+    "source_commit_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "profile_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "backend": {
+      "enum": ["cpp_cpu_reference", "rust_cpu", "hip_safe", "hip_fast"]
+    },
+    "hardware": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["os", "architecture", "cpu_model", "gpu_model", "rocm_version"],
+      "properties": {
+        "os": {"type": "string", "minLength": 1, "maxLength": 200},
+        "architecture": {"type": "string", "minLength": 1, "maxLength": 100},
+        "cpu_model": {"type": "string", "minLength": 1, "maxLength": 300},
+        "gpu_model": {"type": ["string", "null"], "maxLength": 300},
+        "rocm_version": {"type": ["string", "null"], "maxLength": 100}
+      }
+    },
+    "software": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "python_version",
+        "rustc_version",
+        "compiler_identity",
+        "wheel_sha256",
+        "native_extension_sha256"
+      ],
+      "properties": {
+        "python_version": {"type": "string", "minLength": 1, "maxLength": 100},
+        "rustc_version": {"type": "string", "minLength": 1, "maxLength": 200},
+        "compiler_identity": {"type": "string", "minLength": 1, "maxLength": 300},
+        "wheel_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "native_extension_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "benchmark": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "benchmark_id",
+        "manifest_sha256",
+        "case_count",
+        "candidate_denominator",
+        "result_sha256"
+      ],
+      "properties": {
+        "benchmark_id": {"type": "string", "minLength": 1, "maxLength": 200},
+        "manifest_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "case_count": {"type": "integer", "minimum": 1, "maximum": 1000000},
+        "candidate_denominator": {"const": 64},
+        "result_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "results": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["completed_case_count", "failed_case_count", "metrics"],
+      "properties": {
+        "completed_case_count": {"type": "integer", "minimum": 0},
+        "failed_case_count": {"type": "integer", "minimum": 0},
+        "metrics": {"type": "object"}
+      }
+    },
+    "submitter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["github_login", "organization", "attests_independent_run"],
+      "properties": {
+        "github_login": {"type": "string", "pattern": "^[A-Za-z0-9-]{1,39}$"},
+        "organization": {"type": ["string", "null"], "maxLength": 200},
+        "attests_independent_run": {"const": true}
+      }
+    },
+    "claim_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "self_reported",
+        "project_verified",
+        "scientific_claim_authorized",
+        "benchmark_claim_authorized",
+        "product_claim_authorized"
+      ],
+      "properties": {
+        "self_reported": {"const": true},
+        "project_verified": {"const": false},
+        "scientific_claim_authorized": {"const": false},
+        "benchmark_claim_authorized": {"const": false},
+        "product_claim_authorized": {"const": false}
+      }
+    },
+    "notes": {"type": "string", "maxLength": 4000},
+    "receipt_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}
