@@ -1,0 +1,90 @@
+name: Benchmark reproduction
+description: Submit a structurally verified independent CPU or ROCm/HIP reproduction.
+title: "[reproduction] "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reproducing Betelgeuze. Do not include credentials, customer structures, protected holdout contents, private paths, or proprietary raw data. A submission remains self-reported until a separate project review is recorded.
+
+  - type: input
+    id: source_commit
+    attributes:
+      label: Source commit
+      description: Exact lowercase 40-hex commit used for the build.
+      placeholder: 0123456789abcdef0123456789abcdef01234567
+    validations:
+      required: true
+
+  - type: input
+    id: profile
+    attributes:
+      label: Profile ID
+      description: Exact benchmark or qualification profile ID.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: backend
+    attributes:
+      label: Backend
+      options:
+        - cpp_cpu_reference
+        - rust_cpu
+        - hip_safe
+        - hip_fast
+    validations:
+      required: true
+
+  - type: textarea
+    id: hardware
+    attributes:
+      label: Hardware and operating system
+      description: OS, architecture, CPU model, GPU model, and ROCm version when applicable.
+    validations:
+      required: true
+
+  - type: textarea
+    id: software
+    attributes:
+      label: Software identities
+      description: Python, rustc, compiler, wheel SHA-256, and native-extension SHA-256.
+    validations:
+      required: true
+
+  - type: input
+    id: receipt
+    attributes:
+      label: Reproduction receipt
+      description: Attach the small v1 receipt JSON or provide a stable URL. Run the repository verifier before submitting.
+    validations:
+      required: true
+
+  - type: input
+    id: raw_result_sha
+    attributes:
+      label: Raw result SHA-256
+      description: Hash of the complete result artifact. Store large artifacts outside the issue.
+    validations:
+      required: true
+
+  - type: textarea
+    id: observations
+    attributes:
+      label: Observations and failures
+      description: Include failed cases, typed errors, runtime anomalies, and any divergence. Do not report only successful rows.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: attestations
+    attributes:
+      label: Attestations
+      options:
+        - label: I ran this independently from the stated source and binaries.
+          required: true
+        - label: The receipt contains no secrets, protected holdout contents, customer structures, or proprietary raw data.
+          required: true
+        - label: I understand that structural verification does not authorize scientific, benchmark, product, or performance claims.
+          required: true
