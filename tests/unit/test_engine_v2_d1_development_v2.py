@@ -117,6 +117,39 @@ def _report() -> dict:
     return value
 
 
+def _report_with_baseline() -> dict:
+    value = _report()
+    baseline = json.loads(json.dumps(value["current"]))
+    baseline_case = baseline["cases"][0]
+    baseline_case["top1_recovered"] = False
+    baseline_case["top5_recovered"] = False
+    baseline_case["top1_final_rmsd_angstrom"] = 3.0
+    baseline_case["best_final_rmsd_angstrom"] = 0.5
+    baseline_case["scoring_regret_angstrom"] = 2.5
+    baseline["aggregate"]["top1_recovery_count"] = 0
+    baseline["aggregate"]["top5_recovery_count"] = 1
+    baseline["aggregate"]["mean_scoring_regret_angstrom"] = sum(
+        row["scoring_regret_angstrom"] for row in baseline["cases"]
+    ) / 32
+    value["baseline"] = {
+        "manifest_sha256": "6" * 64,
+        "manifest_projection_sha256": "7" * 64,
+        "summary": baseline,
+        "comparison": {
+            "new_proposal_oracle_recovered_case_ids": [],
+            "lost_proposal_oracle_recovered_case_ids": [],
+            "new_valid_proposal_oracle_recovered_case_ids": [],
+            "lost_valid_proposal_oracle_recovered_case_ids": [],
+            "new_top1_recovered_case_ids": ["D1_CASE_000"],
+            "lost_top1_recovered_case_ids": [],
+            "new_top5_recovered_case_ids": ["D1_CASE_000"],
+            "lost_top5_recovered_case_ids": [],
+        },
+    }
+    _reseal(value)
+    return value
+
+
 def _reseal(value: dict) -> None:
     value.pop("report_sha256", None)
     value["report_sha256"] = V1._sha256_value(value)
@@ -149,6 +182,21 @@ def test_manifest_result_path_keeps_original_json_type(tmp_path: Path, bad) -> N
 
 def test_valid_persisted_report_is_replayed(tmp_path: Path) -> None:
     assert VERIFIER.verify_report(_save(tmp_path, _report()))["verified"] is True
+
+
+def test_valid_baseline_comparison_is_replayed(tmp_path: Path) -> None:
+    assert (
+        VERIFIER.verify_report(_save(tmp_path, _report_with_baseline()))["verified"]
+        is True
+    )
+
+
+def test_resealed_baseline_comparison_tamper_is_rejected(tmp_path: Path) -> None:
+    value = _report_with_baseline()
+    value["baseline"]["comparison"]["new_top1_recovered_case_ids"] = []
+    _reseal(value)
+    with pytest.raises(VERIFIER.D1ReportVerificationError, match="case-row mismatch"):
+        VERIFIER.verify_report(_save(tmp_path, value))
 
 
 def test_resealed_aggregate_count_tamper_is_rejected(tmp_path: Path) -> None:
