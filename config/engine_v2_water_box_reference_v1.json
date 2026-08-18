@@ -1,0 +1,33 @@
+{
+  "schema_id": "betelgeuze.engine_v2_water_box_reference_profile/1.0.0",
+  "profile_id": "engine_v2_development_water_box_v1",
+  "units": {
+    "length": "angstrom",
+    "energy": "kcal_per_mol",
+    "mass": "dalton",
+    "time": "femtosecond",
+    "charge": "elementary_charge"
+  },
+  "water": {
+    "oh_distance_angstrom": 0.9572,
+    "hoh_angle_degrees": 104.52,
+    "bond_k_kcal_per_mol_a2": 450.0,
+    "angle_k_kcal_per_mol_rad2": 55.0,
+    "oxygen_charge": -0.834,
+    "hydrogen_charge": 0.417,
+    "oxygen_sigma_angstrom": 3.15061,
+    "oxygen_epsilon_kcal_per_mol": 0.1521,
+    "hydrogen_sigma_angstrom": 0.0,
+    "hydrogen_epsilon_kcal_per_mol": 0.0,
+    "oxygen_mass_dalton": 15.9994,
+    "hydrogen_mass_dalton": 1.008
+  },
+  "coulomb_constant_kcal_a_per_mol_e2": 332.06371,
+  "force_to_acceleration": 0.0004184,
+  "authority": {
+    "production_md_validated": false,
+    "scientific_claim_authorized": false,
+    "free_energy_claim_authorized": false,
+    "performance_claim_authorized": false
+  }
+}
