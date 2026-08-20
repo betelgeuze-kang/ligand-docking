@@ -57,6 +57,23 @@ quality prefiltering, and deterministic farthest-point diversity. It accepts no
 RMSD, native-pose, PoseBusters, or downstream-rank field and preserves quota
 shortfall as typed output failures.
 
+Profile schema 1.1 freezes global coordinate-identity deduplication as
+`global_coordinate_sha256_first_pool_index`. Every generated row is encountered
+in pool order before geometric filtering, so the first occurrence owns the
+coordinate identity and every later occurrence remains in the 512-row ledger as
+`duplicate_coordinate`. Per-lane evidence now records generated, upstream typed
+failure, vdW rejection, pocket rejection, duplicate, total filtered, eligible,
+selected, and shortfall counts.
+
+The same selection is implemented without serialization dependencies in the
+Rust search core as `run_native_sampling_funnel(...)`. The Rust receipt retains
+all 512 typed inputs, all 512 decisions, the exact 64-row output, the canonical
+profile hash, and every lane summary, then independently rederives itself. A
+shared frozen fixture requires the Python reference and Rust CPU implementation
+to select the same ordered 64 pool indices. This is the native preselection
+core; it does not yet add a public preselected-proposal entry point to the ABI
+1.21 complete pipeline and therefore grants no molecular or promotion authority.
+
 ## CPU water-box development reference
 
 ```bash

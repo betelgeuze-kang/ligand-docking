@@ -21,6 +21,19 @@ EXPECTED_LANE_ORDER = [
     "single_anchor",
     "multi_anchor",
 ]
+EXPECTED_SELECTED_POOL_INDICES = [
+    int(value)
+    for value in (
+        ROOT
+        / "rust/betelgeuze-docking-search/tests/fixtures/"
+        "sampling_funnel_selected_indices_v1.txt"
+    )
+    .read_text(encoding="ascii")
+    .split()
+]
+EXPECTED_PROFILE_CANONICAL_SHA256 = (
+    "5f9a3f30ddb1cf76a64cb64dff678c191751e2ead368c8e9f73f08d44ec69a28"
+)
 
 
 def _pool() -> dict:
@@ -61,6 +74,7 @@ def _save(tmp_path: Path, value: dict) -> Path:
 
 
 def test_exact_deterministic_512_to_64(tmp_path: Path) -> None:
+    assert FUNNEL._digest(FUNNEL._profile(PROFILE)) == EXPECTED_PROFILE_CANONICAL_SHA256
     path = _save(tmp_path, _pool())
     first = FUNNEL.run(PROFILE, path)
     second = FUNNEL.run(PROFILE, path)
@@ -69,12 +83,40 @@ def test_exact_deterministic_512_to_64(tmp_path: Path) -> None:
     assert first["receipt_sha256"] == second["receipt_sha256"]
     assert first["lane_order"] == EXPECTED_LANE_ORDER
     assert [
+        row["source_pool_index"] for row in first["selected_rows"]
+    ] == EXPECTED_SELECTED_POOL_INDICES
+    assert [
         row["lane"] for row in first["selected_rows"][:24]
     ] == ["uniform_so3"] * 24
     assert [
         row["lane"] for row in first["selected_rows"][-8:]
     ] == ["multi_anchor"] * 8
     assert first["authority"]["scientific_claim_authorized"] is False
+    assert all(
+        summary["generated_count"] == 128
+        and summary["typed_failure_count"] == 0
+        and summary["duplicate_count"] == 0
+        and summary["filtered_count"] == 0
+        for summary in first["lane_summary"].values()
+    )
+
+
+def test_global_coordinate_identity_duplicate_is_filtered(tmp_path: Path) -> None:
+    value = _pool()
+    value["candidates"][1]["coordinate_sha256"] = value["candidates"][0][
+        "coordinate_sha256"
+    ]
+    result = FUNNEL.run(PROFILE, _save(tmp_path, value))
+    assert result["observations"][0]["decision"] == "eligible"
+    assert result["observations"][1]["decision"] == "duplicate_coordinate"
+    assert result["lane_summary"]["pocket_surface"]["duplicate_count"] == 1
+    assert result["lane_summary"]["pocket_surface"]["filtered_count"] == 1
+    selected_coordinates = [
+        row["coordinate_sha256"]
+        for row in result["selected_rows"]
+        if row["status"] == "selected"
+    ]
+    assert len(selected_coordinates) == len(set(selected_coordinates))
 
 
 def test_lane_shortfall_stays_in_output_denominator(tmp_path: Path) -> None:
@@ -127,6 +169,13 @@ def test_candidate_sha_must_be_lowercase_hex(tmp_path: Path) -> None:
         FUNNEL.run(PROFILE, _save(tmp_path, value))
 
 
+def test_candidate_sha_must_not_be_zero(tmp_path: Path) -> None:
+    value = _pool()
+    value["candidates"][0]["coordinate_sha256"] = "0" * 64
+    with pytest.raises(FUNNEL.FunnelError, match="coordinate_sha256"):
+        FUNNEL.run(PROFILE, _save(tmp_path, value))
+
+
 def test_lane_order_must_cover_quota_map(tmp_path: Path) -> None:
     profile = json.loads(PROFILE.read_text(encoding="utf-8"))
     profile["lane_order"].pop()
@@ -134,3 +183,49 @@ def test_lane_order_must_cover_quota_map(tmp_path: Path) -> None:
     path.write_text(json.dumps(profile), encoding="utf-8")
     with pytest.raises(FUNNEL.FunnelError, match="lane order"):
         FUNNEL._profile(path)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("hard_minimum_vdw_ratio", 0.9),
+        ("maximum_pocket_escape_angstrom", 5.0),
+        ("quality_prefilter_multiplier", 5),
+        ("lane_order", list(reversed(EXPECTED_LANE_ORDER))),
+    ],
+)
+def test_profile_must_match_frozen_native_constants(
+    tmp_path: Path,
+    field: str,
+    value: object,
+) -> None:
+    profile = json.loads(PROFILE.read_text(encoding="utf-8"))
+    profile[field] = value
+    path = tmp_path / "profile.json"
+    path.write_text(json.dumps(profile), encoding="utf-8")
+    with pytest.raises(FUNNEL.FunnelError, match="profile differs"):
+        FUNNEL._profile(path)
+
+
+def test_profile_quota_must_match_frozen_native_constants(tmp_path: Path) -> None:
+    profile = json.loads(PROFILE.read_text(encoding="utf-8"))
+    profile["lane_quotas"]["uniform_so3"] -= 1
+    profile["lane_quotas"]["pocket_surface"] += 1
+    path = tmp_path / "profile.json"
+    path.write_text(json.dumps(profile), encoding="utf-8")
+    with pytest.raises(FUNNEL.FunnelError, match="profile differs"):
+        FUNNEL._profile(path)
+
+
+def test_profile_non_numeric_quota_is_a_typed_funnel_error(tmp_path: Path) -> None:
+    profile = json.loads(PROFILE.read_text(encoding="utf-8"))
+    profile["lane_quotas"]["uniform_so3"] = "24"
+    path = tmp_path / "profile.json"
+    path.write_text(json.dumps(profile), encoding="utf-8")
+    with pytest.raises(FUNNEL.FunnelError, match="positive integers"):
+        FUNNEL._profile(path)
+
+
+def test_embedding_distance_overflow_is_a_typed_funnel_error() -> None:
+    with pytest.raises(FUNNEL.FunnelError, match="embedding distance"):
+        FUNNEL._distance((1e200,) * 7, (-1e200,) * 7)
