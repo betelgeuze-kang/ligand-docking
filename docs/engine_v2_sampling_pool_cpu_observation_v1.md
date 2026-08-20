@@ -59,15 +59,19 @@ source closure of merged main commit
 `cb987662477e6fc56409f382ac5757ce62a09228` and tree
 `ed4221a64d7740e4063bdaff777e150f7035c769`. It binds the complete Rust tree,
 runner and observer sources, release rlib, temporary observer binary, Rust/Cargo
-toolchain, Linux OS/kernel/boot identity hashes, CPU model, and the exact 24-CPU
-affinity set. Its receipt SHA-256 is
-`eafcf3a7ebfe80c7f5b777d0a526a1fa7cd4ae8c5b6f01da74d4393d6b904cc5`.
+toolchain, every effective Cargo configuration lookup candidate, a fixed
+allowlisted timed-process environment, Linux OS/kernel/boot identity hashes,
+CPU model, and the exact 24-CPU affinity set. The Cargo binding records both
+modern `config.toml` and legacy `config` candidates from the Rust working
+directory through every ancestor plus Cargo home; all candidates were absent
+for this capture. Its receipt SHA-256 is
+`0fe57e9780c9c90d550371db3237590b975650527c9988707cdb7fc79746e24f`.
 
 | fixture | raw samples | p50 ns | p95 ns | peak RSS KiB | peak delta KiB |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| small | 7 | 19,874,518 | 20,032,912 | 2,688 | 768 |
-| medium | 7 | 66,535,177 | 66,737,692 | 3,072 | 1,152 |
-| large | 7 | 194,052,295 | 194,339,172 | 3,456 | 1,536 |
+| small | 7 | 19,953,128 | 20,106,714 | 2,688 | 768 |
+| medium | 7 | 66,350,331 | 67,314,410 | 3,072 | 1,152 |
+| large | 7 | 194,607,432 | 198,945,742 | 3,456 | 1,536 |
 
 Verify the canonical receipt without reading a clock or executing an
 observation:

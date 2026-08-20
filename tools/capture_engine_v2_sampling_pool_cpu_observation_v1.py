@@ -11,7 +11,9 @@ import os
 from pathlib import Path
 import platform
 import re
+import signal
 import stat
+import subprocess
 import sys
 import tempfile
 from typing import Any, Mapping, Sequence
@@ -85,6 +87,15 @@ _BUILD_ENVIRONMENT_KEYS = (
     "RUSTDOCFLAGS",
     "RUSTFLAGS",
 )
+_CARGO_CONFIGURATION_FILENAMES = ("config.toml", "config")
+_TIMED_RUNTIME_ENVIRONMENT = {
+    "LANG": "C",
+    "LC_ALL": "C",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "RAYON_NUM_THREADS": "1",
+    "TZ": "UTC",
+}
 _OBSERVATION_KEYS = {
     "authority",
     "cpu_model",
@@ -248,6 +259,126 @@ def _environment_fingerprints() -> dict[str, object]:
     }
 
 
+def _path_sha256(path: Path) -> str:
+    return _sha256(os.fsencode(str(path.absolute())))
+
+
+def _cargo_configuration_file(path: Path) -> dict[str, object]:
+    binding: dict[str, object] = {
+        "candidate_path_sha256": _path_sha256(path),
+        "content_sha256": None,
+        "present": False,
+        "resolved_path_sha256": None,
+    }
+    try:
+        path.lstat()
+    except FileNotFoundError:
+        return binding
+    try:
+        resolved = path.resolve(strict=True)
+        if not resolved.is_file():
+            raise SamplingPoolCPUObservationEvidenceError(
+                "Cargo configuration candidate is not a regular file"
+            )
+        content = resolved.read_bytes()
+    except OSError as exc:
+        raise SamplingPoolCPUObservationEvidenceError(
+            "Cargo configuration candidate is unreadable"
+        ) from exc
+    return {
+        **binding,
+        "content_sha256": _sha256(content),
+        "present": True,
+        "resolved_path_sha256": _path_sha256(resolved),
+    }
+
+
+def _cargo_configuration_binding() -> dict[str, object]:
+    raw_cargo_home = os.environ.get("CARGO_HOME")
+    if raw_cargo_home is not None and not raw_cargo_home:
+        raise SamplingPoolCPUObservationEvidenceError("CARGO_HOME is empty")
+    if raw_cargo_home is None:
+        cargo_home = Path.home() / ".cargo"
+        cargo_home_origin = "default_user_home"
+    else:
+        candidate = Path(raw_cargo_home).expanduser()
+        cargo_home = (
+            candidate if candidate.is_absolute() else observer.RUST_ROOT / candidate
+        )
+        cargo_home_origin = "environment"
+
+    roots: list[dict[str, object]] = []
+    for index, directory in enumerate(
+        (observer.RUST_ROOT, *observer.RUST_ROOT.parents)
+    ):
+        root = directory / ".cargo"
+        roots.append(
+            {
+                "candidate_files": {
+                    name: _cargo_configuration_file(root / name)
+                    for name in _CARGO_CONFIGURATION_FILENAMES
+                },
+                "root_path_sha256": _path_sha256(root),
+                "scope": f"working_directory_ancestor_{index}",
+            }
+        )
+    roots.append(
+        {
+            "candidate_files": {
+                name: _cargo_configuration_file(cargo_home / name)
+                for name in _CARGO_CONFIGURATION_FILENAMES
+            },
+            "root_path_sha256": _path_sha256(cargo_home),
+            "scope": "cargo_home",
+        }
+    )
+    return {
+        "cargo_home_origin": cargo_home_origin,
+        "lookup_roots": roots,
+    }
+
+
+def _timed_runtime_environment() -> dict[str, str]:
+    return dict(_TIMED_RUNTIME_ENVIRONMENT)
+
+
+def _run_timed_observer(
+    command: Sequence[str], *, cwd: Path, timeout: int
+) -> subprocess.CompletedProcess[str]:
+    try:
+        process = subprocess.Popen(
+            command,
+            cwd=cwd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            start_new_session=True,
+            env=_timed_runtime_environment(),
+        )
+    except OSError as exc:
+        raise SamplingPoolCPUObservationEvidenceError(
+            "timed observer failed to launch"
+        ) from exc
+    try:
+        stdout, stderr = process.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired as exc:
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        process.communicate()
+        raise SamplingPoolCPUObservationEvidenceError(
+            "timed observer exceeded its timeout"
+        ) from exc
+    completed = subprocess.CompletedProcess(command, process.returncode, stdout, stderr)
+    if completed.returncode != 0:
+        detail = completed.stderr.strip() or completed.stdout.strip()
+        raise SamplingPoolCPUObservationEvidenceError(
+            f"timed observer failed: {detail[:4096]}"
+        )
+    return completed
+
+
 def _cpu_affinity() -> list[int]:
     try:
         affinity = sorted(os.sched_getaffinity(0))
@@ -279,6 +410,7 @@ def _affinity_cpu_models_from(cpuinfo: str, affinity: Sequence[int]) -> dict[str
         "uarch",
         "cpu",
     )
+    sections: list[dict[str, str]] = []
     for section in re.split(r"\n\s*\n", cpuinfo):
         fields: dict[str, str] = {}
         for line in section.splitlines():
@@ -286,12 +418,29 @@ def _affinity_cpu_models_from(cpuinfo: str, affinity: Sequence[int]) -> dict[str
                 continue
             key, value = line.split(":", 1)
             fields[key.strip().lower()] = value.strip()
+        sections.append(fields)
+
+    machine_wide_model: str | None = None
+    machine_sections = [
+        fields for fields in sections if not fields.get("processor", "").isdigit()
+    ]
+    for label in (*labels, "processor"):
+        candidates = {fields[label] for fields in machine_sections if fields.get(label)}
+        if candidates:
+            if len(candidates) != 1:
+                raise SamplingPoolCPUObservationEvidenceError(
+                    "machine-wide CPU model is ambiguous"
+                )
+            machine_wide_model = candidates.pop()
+            break
+
+    for fields in sections:
         processor = fields.get("processor", "")
         if not processor.isdigit():
             continue
         model = next(
             (fields[label] for label in labels if fields.get(label)),
-            None,
+            machine_wide_model,
         )
         if model is not None:
             models[int(processor)] = model
@@ -369,6 +518,8 @@ def capture() -> dict[str, object]:
     _verify_imported_observer_binding()
     source = _verify_source_baseline()
     capture_tool_sha256 = _file_sha256(Path(__file__).resolve())
+    build_environment = _environment_fingerprints()
+    cargo_configuration = _cargo_configuration_binding()
     rlib = observer._build_library()
     rlib_sha256 = _file_sha256(rlib)
     rlib_bytes = rlib.stat().st_size
@@ -380,7 +531,7 @@ def capture() -> dict[str, object]:
         executable_sha256 = _file_sha256(executable)
         executable_bytes = executable.stat().st_size
         affinity_before = _cpu_affinity()
-        completed = observer._run(
+        completed = _run_timed_observer(
             (str(executable), "--observe", str(SAMPLE_COUNT)),
             cwd=REPOSITORY_ROOT,
             timeout=600,
@@ -404,6 +555,13 @@ def capture() -> dict[str, object]:
         raise SamplingPoolCPUObservationEvidenceError(
             "capture tool or release rlib changed during execution"
         )
+    if (
+        _environment_fingerprints() != build_environment
+        or _cargo_configuration_binding() != cargo_configuration
+    ):
+        raise SamplingPoolCPUObservationEvidenceError(
+            "build environment or Cargo configuration changed during execution"
+        )
     toolchain = {
         "cargo_version": observer._run(
             ("cargo", "--version", "--verbose"),
@@ -419,11 +577,13 @@ def capture() -> dict[str, object]:
     projection: dict[str, object] = {
         "authority": dict(observation["authority"]),
         "build": {
-            "build_environment": _environment_fingerprints(),
+            "build_environment": build_environment,
+            "cargo_configuration": cargo_configuration,
             "observer_binary_bytes": executable_bytes,
             "observer_binary_sha256": executable_sha256,
             "release_rlib_bytes": rlib_bytes,
             "release_rlib_sha256": rlib_sha256,
+            "runtime_environment": _timed_runtime_environment(),
             "toolchain": toolchain,
         },
         "captured_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -457,6 +617,86 @@ def _require_git_oid(value: object, *, label: str) -> str:
             f"{label} is not a lowercase Git OID"
         )
     return value
+
+
+def _verify_cargo_configuration(value: object) -> None:
+    if (
+        type(value) is not dict
+        or set(value) != {"cargo_home_origin", "lookup_roots"}
+        or value.get("cargo_home_origin") not in {"default_user_home", "environment"}
+        or type(value.get("lookup_roots")) is not list
+        or not value["lookup_roots"]
+    ):
+        raise SamplingPoolCPUObservationEvidenceError(
+            "Cargo configuration binding is invalid"
+        )
+    roots = value["lookup_roots"]
+    expected_scopes = [
+        *(f"working_directory_ancestor_{index}" for index in range(len(roots) - 1)),
+        "cargo_home",
+    ]
+    if [row.get("scope") if type(row) is dict else None for row in roots] != (
+        expected_scopes
+    ):
+        raise SamplingPoolCPUObservationEvidenceError(
+            "Cargo configuration lookup roots are invalid"
+        )
+    for root in roots:
+        if (
+            type(root) is not dict
+            or set(root) != {"candidate_files", "root_path_sha256", "scope"}
+            or type(root.get("candidate_files")) is not dict
+            or set(root["candidate_files"]) != set(_CARGO_CONFIGURATION_FILENAMES)
+        ):
+            raise SamplingPoolCPUObservationEvidenceError(
+                "Cargo configuration lookup root is invalid"
+            )
+        _require_digest(
+            root.get("root_path_sha256"),
+            label=f"Cargo configuration root {root.get('scope')}",
+        )
+        candidate_digests: set[str] = set()
+        for name, candidate in root["candidate_files"].items():
+            if (
+                type(candidate) is not dict
+                or set(candidate)
+                != {
+                    "candidate_path_sha256",
+                    "content_sha256",
+                    "present",
+                    "resolved_path_sha256",
+                }
+                or type(candidate.get("present")) is not bool
+            ):
+                raise SamplingPoolCPUObservationEvidenceError(
+                    f"Cargo configuration candidate is invalid: {name}"
+                )
+            candidate_digests.add(
+                _require_digest(
+                    candidate.get("candidate_path_sha256"),
+                    label=f"Cargo configuration candidate {name}",
+                )
+            )
+            if candidate["present"]:
+                _require_digest(
+                    candidate.get("content_sha256"),
+                    label=f"Cargo configuration content {name}",
+                )
+                _require_digest(
+                    candidate.get("resolved_path_sha256"),
+                    label=f"Cargo configuration resolved path {name}",
+                )
+            elif (
+                candidate.get("content_sha256") is not None
+                or candidate.get("resolved_path_sha256") is not None
+            ):
+                raise SamplingPoolCPUObservationEvidenceError(
+                    f"absent Cargo configuration candidate has metadata: {name}"
+                )
+        if len(candidate_digests) != len(_CARGO_CONFIGURATION_FILENAMES):
+            raise SamplingPoolCPUObservationEvidenceError(
+                "Cargo configuration candidate paths are not distinct"
+            )
 
 
 def verify(document: object) -> dict[str, object]:
@@ -560,10 +800,12 @@ def verify(document: object) -> dict[str, object]:
     build = document["build"]
     if type(build) is not dict or set(build) != {
         "build_environment",
+        "cargo_configuration",
         "observer_binary_bytes",
         "observer_binary_sha256",
         "release_rlib_bytes",
         "release_rlib_sha256",
+        "runtime_environment",
         "toolchain",
     }:
         raise SamplingPoolCPUObservationEvidenceError("build binding is absent")
@@ -601,7 +843,16 @@ def verify(document: object) -> dict[str, object]:
             raise SamplingPoolCPUObservationEvidenceError(
                 f"build environment metadata is invalid: {key}"
             )
+    _verify_cargo_configuration(build["cargo_configuration"])
+    if build.get("runtime_environment") != _TIMED_RUNTIME_ENVIRONMENT:
+        raise SamplingPoolCPUObservationEvidenceError(
+            "timed runtime environment is invalid"
+        )
     host = document["host"]
+    affinity_cpu_ids = host.get("affinity_cpu_ids") if type(host) is dict else None
+    affinity_cpu_models = (
+        host.get("affinity_cpu_models") if type(host) is dict else None
+    )
     if (
         type(host) is not dict
         or set(host)
@@ -617,14 +868,17 @@ def verify(document: object) -> dict[str, object]:
             "system",
         }
         or host.get("cpu_model") != validated_observation["cpu_model"]
-        or type(host.get("affinity_cpu_ids")) is not list
-        or not host["affinity_cpu_ids"]
-        or any(type(item) is not int or item < 0 for item in host["affinity_cpu_ids"])
-        or host["affinity_cpu_ids"] != sorted(set(host["affinity_cpu_ids"]))
-        or type(host.get("affinity_cpu_models")) is not dict
-        or set(host["affinity_cpu_models"])
-        != {str(item) for item in host["affinity_cpu_ids"]}
-        or set(host["affinity_cpu_models"].values()) != {host.get("cpu_model")}
+        or type(affinity_cpu_ids) is not list
+        or not affinity_cpu_ids
+        or any(type(item) is not int or item < 0 for item in affinity_cpu_ids)
+        or affinity_cpu_ids != sorted(set(affinity_cpu_ids))
+        or type(affinity_cpu_models) is not dict
+        or set(affinity_cpu_models) != {str(item) for item in affinity_cpu_ids}
+        or any(
+            type(model) is not str or not model.strip()
+            for model in affinity_cpu_models.values()
+        )
+        or set(affinity_cpu_models.values()) != {host.get("cpu_model")}
         or type(host.get("logical_cpu_count")) is not int
         or host["logical_cpu_count"] <= 0
         or any(

@@ -25,7 +25,7 @@ def _reseal(value: dict[str, object]) -> dict[str, object]:
 def test_committed_source_binary_host_bound_observation_verifies() -> None:
     value = evidence.load_and_verify(EVIDENCE)
     assert value["receipt_sha256"] == (
-        "eafcf3a7ebfe80c7f5b777d0a526a1fa7cd4ae8c5b6f01da74d4393d6b904cc5"
+        "0fe57e9780c9c90d550371db3237590b975650527c9988707cdb7fc79746e24f"
     )
     assert value["source"]["merged_main_commit"] == evidence.SOURCE_BASELINE_COMMIT
     assert value["source"]["merged_main_tree"] == evidence.SOURCE_BASELINE_TREE
@@ -104,6 +104,33 @@ def test_resealed_semantic_cross_wiring_fails_closed() -> None:
     ):
         evidence.verify(_reseal(value))
 
+    value = json.loads(EVIDENCE.read_text(encoding="ascii"))
+    first_cpu = next(iter(value["host"]["affinity_cpu_models"]))
+    value["host"]["affinity_cpu_models"][first_cpu] = []
+    with pytest.raises(
+        evidence.SamplingPoolCPUObservationEvidenceError,
+        match="host identity",
+    ):
+        evidence.verify(_reseal(value))
+
+    value = json.loads(EVIDENCE.read_text(encoding="ascii"))
+    value["build"]["runtime_environment"]["LD_PRELOAD"] = "/tmp/inject.so"
+    with pytest.raises(
+        evidence.SamplingPoolCPUObservationEvidenceError,
+        match="runtime environment",
+    ):
+        evidence.verify(_reseal(value))
+
+    value = json.loads(EVIDENCE.read_text(encoding="ascii"))
+    value["build"]["cargo_configuration"]["lookup_roots"][0]["candidate_files"][
+        "config.toml"
+    ]["candidate_path_sha256"] = "not-a-digest"
+    with pytest.raises(
+        evidence.SamplingPoolCPUObservationEvidenceError,
+        match="lowercase SHA-256",
+    ):
+        evidence.verify(_reseal(value))
+
 
 def test_capture_is_blocked_in_github_actions_before_build(
     monkeypatch: pytest.MonkeyPatch,
@@ -165,3 +192,50 @@ model name : Example CPU A
         match="unavailable for effective affinity",
     ):
         evidence._affinity_cpu_models_from(cpuinfo, [0, 2])
+
+    machine_wide = """\
+processor : 0
+hart : 0
+
+processor : 1
+hart : 1
+
+Hardware : Example Machine CPU
+"""
+    assert evidence._affinity_cpu_models_from(machine_wide, [0, 1]) == {
+        "0": "Example Machine CPU",
+        "1": "Example Machine CPU",
+    }
+
+
+def test_cargo_configuration_and_timed_environment_are_bound(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    rust_root = tmp_path / "repository" / "rust"
+    rust_config = rust_root / ".cargo" / "config.toml"
+    rust_config.parent.mkdir(parents=True)
+    rust_config.write_text(
+        "[build]\nrustflags = ['-Ctarget-cpu=native']\n", encoding="ascii"
+    )
+    cargo_home = tmp_path / "cargo-home"
+    cargo_home.mkdir()
+    cargo_config = cargo_home / "config"
+    cargo_config.write_text("[net]\noffline = true\n", encoding="ascii")
+    monkeypatch.setattr(evidence.observer, "RUST_ROOT", rust_root)
+    monkeypatch.setenv("CARGO_HOME", str(cargo_home))
+
+    binding = evidence._cargo_configuration_binding()
+    assert binding["cargo_home_origin"] == "environment"
+    roots = binding["lookup_roots"]
+    assert roots[0]["candidate_files"]["config.toml"]["content_sha256"] == (
+        evidence._sha256(rust_config.read_bytes())
+    )
+    assert roots[-1]["scope"] == "cargo_home"
+    assert roots[-1]["candidate_files"]["config"]["content_sha256"] == (
+        evidence._sha256(cargo_config.read_bytes())
+    )
+
+    monkeypatch.setenv("LD_PRELOAD", "/tmp/inject.so")
+    runtime = evidence._timed_runtime_environment()
+    assert runtime == evidence._TIMED_RUNTIME_ENVIRONMENT
+    assert "LD_PRELOAD" not in runtime
