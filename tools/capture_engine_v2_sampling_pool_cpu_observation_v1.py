@@ -59,11 +59,30 @@ MAXIMUM_EVIDENCE_BYTES = 128 * 1024
 _SHA256 = re.compile(r"[0-9a-f]{64}")
 _GIT_OID = re.compile(r"[0-9a-f]{40}")
 _BUILD_ENVIRONMENT_KEYS = (
+    "CARGO_BUILD_JOBS",
+    "CARGO_BUILD_RUSTC",
+    "CARGO_BUILD_RUSTC_WRAPPER",
+    "CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER",
     "CARGO_BUILD_TARGET",
     "CARGO_ENCODED_RUSTFLAGS",
+    "CARGO_HOME",
+    "CARGO_INCREMENTAL",
+    "CARGO_PROFILE_RELEASE_CODEGEN_UNITS",
+    "CARGO_PROFILE_RELEASE_DEBUG",
+    "CARGO_PROFILE_RELEASE_DEBUG_ASSERTIONS",
+    "CARGO_PROFILE_RELEASE_INCREMENTAL",
+    "CARGO_PROFILE_RELEASE_LTO",
+    "CARGO_PROFILE_RELEASE_OPT_LEVEL",
+    "CARGO_PROFILE_RELEASE_OVERFLOW_CHECKS",
+    "CARGO_PROFILE_RELEASE_PANIC",
+    "CARGO_PROFILE_RELEASE_RPATH",
+    "CARGO_PROFILE_RELEASE_STRIP",
     "CARGO_TARGET_DIR",
     "RUSTC",
     "RUSTC_WRAPPER",
+    "RUSTC_WORKSPACE_WRAPPER",
+    "RUSTDOC",
+    "RUSTDOCFLAGS",
     "RUSTFLAGS",
 )
 _OBSERVATION_KEYS = {
@@ -248,10 +267,47 @@ def _require_stable_affinity(before: list[int], after: object) -> None:
         )
 
 
+def _affinity_cpu_models_from(cpuinfo: str, affinity: Sequence[int]) -> dict[str, str]:
+    models: dict[int, str] = {}
+    labels = (
+        "model name",
+        "model",
+        "hardware",
+        "machine",
+        "system type",
+        "platform",
+        "uarch",
+        "cpu",
+    )
+    for section in re.split(r"\n\s*\n", cpuinfo):
+        fields: dict[str, str] = {}
+        for line in section.splitlines():
+            if ":" not in line:
+                continue
+            key, value = line.split(":", 1)
+            fields[key.strip().lower()] = value.strip()
+        processor = fields.get("processor", "")
+        if not processor.isdigit():
+            continue
+        model = next(
+            (fields[label] for label in labels if fields.get(label)),
+            None,
+        )
+        if model is not None:
+            models[int(processor)] = model
+    missing = [cpu_id for cpu_id in affinity if cpu_id not in models]
+    if missing:
+        raise SamplingPoolCPUObservationEvidenceError(
+            "CPU model is unavailable for effective affinity"
+        )
+    return {str(cpu_id): models[cpu_id] for cpu_id in affinity}
+
+
 def _host_identity(cpu_model: str) -> dict[str, object]:
     try:
         os_release = Path("/etc/os-release").read_bytes()
         boot_id = Path("/proc/sys/kernel/random/boot_id").read_bytes().strip()
+        cpuinfo = Path("/proc/cpuinfo").read_text(encoding="ascii")
     except (OSError, ValueError) as exc:
         raise SamplingPoolCPUObservationEvidenceError(
             "Linux host identity is unavailable"
@@ -261,8 +317,15 @@ def _host_identity(cpu_model: str) -> dict[str, object]:
         raise SamplingPoolCPUObservationEvidenceError(
             "Linux CPU affinity or logical count is invalid"
         )
+    affinity = _cpu_affinity()
+    affinity_cpu_models = _affinity_cpu_models_from(cpuinfo, affinity)
+    if set(affinity_cpu_models.values()) != {cpu_model}:
+        raise SamplingPoolCPUObservationEvidenceError(
+            "effective affinity CPU models differ from observer identity"
+        )
     return {
-        "affinity_cpu_ids": _cpu_affinity(),
+        "affinity_cpu_ids": affinity,
+        "affinity_cpu_models": affinity_cpu_models,
         "boot_id_sha256": _sha256(boot_id),
         "cpu_model": cpu_model,
         "kernel_release": platform.release(),
@@ -442,6 +505,10 @@ def verify(document: object) -> dict[str, object]:
         )
     except observer.SamplingPoolCPUObservationError as exc:
         raise SamplingPoolCPUObservationEvidenceError(str(exc)) from exc
+    if any(row["peak_rss_delta_kib"] > row["peak_rss_kib"] for row in fixtures):
+        raise SamplingPoolCPUObservationEvidenceError(
+            "peak RSS delta exceeds absolute peak"
+        )
     if document["authority"] != validated_observation["authority"]:
         raise SamplingPoolCPUObservationEvidenceError(
             "evidence authority differs from observation"
@@ -525,7 +592,10 @@ def verify(document: object) -> dict[str, object]:
             or (row["set"] is False and row["value_sha256"] is not None)
             or (
                 row["set"] is True
-                and _SHA256.fullmatch(str(row["value_sha256"])) is None
+                and (
+                    type(row["value_sha256"]) is not str
+                    or _SHA256.fullmatch(row["value_sha256"]) is None
+                )
             )
         ):
             raise SamplingPoolCPUObservationEvidenceError(
@@ -537,6 +607,7 @@ def verify(document: object) -> dict[str, object]:
         or set(host)
         != {
             "affinity_cpu_ids",
+            "affinity_cpu_models",
             "boot_id_sha256",
             "cpu_model",
             "kernel_release",
@@ -550,12 +621,17 @@ def verify(document: object) -> dict[str, object]:
         or not host["affinity_cpu_ids"]
         or any(type(item) is not int or item < 0 for item in host["affinity_cpu_ids"])
         or host["affinity_cpu_ids"] != sorted(set(host["affinity_cpu_ids"]))
+        or type(host.get("affinity_cpu_models")) is not dict
+        or set(host["affinity_cpu_models"])
+        != {str(item) for item in host["affinity_cpu_ids"]}
+        or set(host["affinity_cpu_models"].values()) != {host.get("cpu_model")}
         or type(host.get("logical_cpu_count")) is not int
         or host["logical_cpu_count"] <= 0
         or any(
             type(host.get(key)) is not str or not host[key]
-            for key in ("cpu_model", "kernel_release", "machine_architecture", "system")
+            for key in ("cpu_model", "kernel_release", "machine_architecture")
         )
+        or host.get("system") != "Linux"
     ):
         raise SamplingPoolCPUObservationEvidenceError("host identity is invalid")
     _require_digest(host.get("boot_id_sha256"), label="host.boot_id_sha256")

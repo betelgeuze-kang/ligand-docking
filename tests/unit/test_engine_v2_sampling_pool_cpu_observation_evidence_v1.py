@@ -25,7 +25,7 @@ def _reseal(value: dict[str, object]) -> dict[str, object]:
 def test_committed_source_binary_host_bound_observation_verifies() -> None:
     value = evidence.load_and_verify(EVIDENCE)
     assert value["receipt_sha256"] == (
-        "43734da1187bc7287fc7ba346d3db93c0128da95ea84adb95d51ff87757bb21e"
+        "eafcf3a7ebfe80c7f5b777d0a526a1fa7cd4ae8c5b6f01da74d4393d6b904cc5"
     )
     assert value["source"]["merged_main_commit"] == evidence.SOURCE_BASELINE_COMMIT
     assert value["source"]["merged_main_tree"] == evidence.SOURCE_BASELINE_TREE
@@ -75,6 +75,35 @@ def test_resealed_semantic_cross_wiring_fails_closed() -> None:
     ):
         evidence.verify(_reseal(value))
 
+    value = json.loads(EVIDENCE.read_text(encoding="ascii"))
+    value["observation"]["fixtures"][0]["peak_rss_delta_kib"] = (
+        value["observation"]["fixtures"][0]["peak_rss_kib"] + 1
+    )
+    with pytest.raises(
+        evidence.SamplingPoolCPUObservationEvidenceError,
+        match="delta exceeds",
+    ):
+        evidence.verify(_reseal(value))
+
+    value = json.loads(EVIDENCE.read_text(encoding="ascii"))
+    value["build"]["build_environment"]["RUSTFLAGS"] = {
+        "set": True,
+        "value_sha256": int("1" * 64),
+    }
+    with pytest.raises(
+        evidence.SamplingPoolCPUObservationEvidenceError,
+        match="build environment metadata",
+    ):
+        evidence.verify(_reseal(value))
+
+    value = json.loads(EVIDENCE.read_text(encoding="ascii"))
+    value["host"]["system"] = "OtherOS"
+    with pytest.raises(
+        evidence.SamplingPoolCPUObservationEvidenceError,
+        match="host identity",
+    ):
+        evidence.verify(_reseal(value))
+
 
 def test_capture_is_blocked_in_github_actions_before_build(
     monkeypatch: pytest.MonkeyPatch,
@@ -117,3 +146,22 @@ def test_affinity_and_imported_runner_binding_fail_closed(
         match="imported observation runner differs",
     ):
         evidence._verify_imported_observer_binding()
+
+
+def test_effective_affinity_cpu_models_are_complete_and_homogeneous() -> None:
+    cpuinfo = """\
+processor : 0
+model name : Example CPU A
+
+processor : 1
+model name : Example CPU A
+"""
+    assert evidence._affinity_cpu_models_from(cpuinfo, [0, 1]) == {
+        "0": "Example CPU A",
+        "1": "Example CPU A",
+    }
+    with pytest.raises(
+        evidence.SamplingPoolCPUObservationEvidenceError,
+        match="unavailable for effective affinity",
+    ):
+        evidence._affinity_cpu_models_from(cpuinfo, [0, 2])

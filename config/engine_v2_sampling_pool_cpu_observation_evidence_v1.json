@@ -14,11 +14,75 @@
   },
   "build": {
     "build_environment": {
+      "CARGO_BUILD_JOBS": {
+        "set": false,
+        "value_sha256": null
+      },
+      "CARGO_BUILD_RUSTC": {
+        "set": false,
+        "value_sha256": null
+      },
+      "CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER": {
+        "set": false,
+        "value_sha256": null
+      },
+      "CARGO_BUILD_RUSTC_WRAPPER": {
+        "set": false,
+        "value_sha256": null
+      },
       "CARGO_BUILD_TARGET": {
         "set": false,
         "value_sha256": null
       },
       "CARGO_ENCODED_RUSTFLAGS": {
+        "set": false,
+        "value_sha256": null
+      },
+      "CARGO_HOME": {
+        "set": false,
+        "value_sha256": null
+      },
+      "CARGO_INCREMENTAL": {
+        "set": false,
+        "value_sha256": null
+      },
+      "CARGO_PROFILE_RELEASE_CODEGEN_UNITS": {
+        "set": false,
+        "value_sha256": null
+      },
+      "CARGO_PROFILE_RELEASE_DEBUG": {
+        "set": false,
+        "value_sha256": null
+      },
+      "CARGO_PROFILE_RELEASE_DEBUG_ASSERTIONS": {
+        "set": false,
+        "value_sha256": null
+      },
+      "CARGO_PROFILE_RELEASE_INCREMENTAL": {
+        "set": false,
+        "value_sha256": null
+      },
+      "CARGO_PROFILE_RELEASE_LTO": {
+        "set": false,
+        "value_sha256": null
+      },
+      "CARGO_PROFILE_RELEASE_OPT_LEVEL": {
+        "set": false,
+        "value_sha256": null
+      },
+      "CARGO_PROFILE_RELEASE_OVERFLOW_CHECKS": {
+        "set": false,
+        "value_sha256": null
+      },
+      "CARGO_PROFILE_RELEASE_PANIC": {
+        "set": false,
+        "value_sha256": null
+      },
+      "CARGO_PROFILE_RELEASE_RPATH": {
+        "set": false,
+        "value_sha256": null
+      },
+      "CARGO_PROFILE_RELEASE_STRIP": {
         "set": false,
         "value_sha256": null
       },
@@ -30,7 +94,19 @@
         "set": false,
         "value_sha256": null
       },
+      "RUSTC_WORKSPACE_WRAPPER": {
+        "set": false,
+        "value_sha256": null
+      },
       "RUSTC_WRAPPER": {
+        "set": false,
+        "value_sha256": null
+      },
+      "RUSTDOC": {
+        "set": false,
+        "value_sha256": null
+      },
+      "RUSTDOCFLAGS": {
         "set": false,
         "value_sha256": null
       },
@@ -48,7 +124,7 @@
       "rustc_version": "rustc 1.93.0 (254b59607 2026-01-19)\nbinary: rustc\ncommit-hash: 254b59607d4417e9dffbc307138ae5c86280fe4c\ncommit-date: 2026-01-19\nhost: x86_64-unknown-linux-gnu\nrelease: 1.93.0\nLLVM version: 21.1.8"
     }
   },
-  "captured_at_utc": "2026-08-20T22:18:10+00:00",
+  "captured_at_utc": "2026-08-20T22:30:05+00:00",
   "host": {
     "affinity_cpu_ids": [
       0,
@@ -76,6 +152,32 @@
       22,
       23
     ],
+    "affinity_cpu_models": {
+      "0": "AMD Ryzen 9 5900X 12-Core Processor",
+      "1": "AMD Ryzen 9 5900X 12-Core Processor",
+      "10": "AMD Ryzen 9 5900X 12-Core Processor",
+      "11": "AMD Ryzen 9 5900X 12-Core Processor",
+      "12": "AMD Ryzen 9 5900X 12-Core Processor",
+      "13": "AMD Ryzen 9 5900X 12-Core Processor",
+      "14": "AMD Ryzen 9 5900X 12-Core Processor",
+      "15": "AMD Ryzen 9 5900X 12-Core Processor",
+      "16": "AMD Ryzen 9 5900X 12-Core Processor",
+      "17": "AMD Ryzen 9 5900X 12-Core Processor",
+      "18": "AMD Ryzen 9 5900X 12-Core Processor",
+      "19": "AMD Ryzen 9 5900X 12-Core Processor",
+      "2": "AMD Ryzen 9 5900X 12-Core Processor",
+      "20": "AMD Ryzen 9 5900X 12-Core Processor",
+      "21": "AMD Ryzen 9 5900X 12-Core Processor",
+      "22": "AMD Ryzen 9 5900X 12-Core Processor",
+      "23": "AMD Ryzen 9 5900X 12-Core Processor",
+      "3": "AMD Ryzen 9 5900X 12-Core Processor",
+      "4": "AMD Ryzen 9 5900X 12-Core Processor",
+      "5": "AMD Ryzen 9 5900X 12-Core Processor",
+      "6": "AMD Ryzen 9 5900X 12-Core Processor",
+      "7": "AMD Ryzen 9 5900X 12-Core Processor",
+      "8": "AMD Ryzen 9 5900X 12-Core Processor",
+      "9": "AMD Ryzen 9 5900X 12-Core Processor"
+    },
     "boot_id_sha256": "d8ae51be7b605f18ebf53f0c6f8f5cdb9eb583ed9c46937409ccc08581534d1f",
     "cpu_model": "AMD Ryzen 9 5900X 12-Core Processor",
     "kernel_release": "6.5.0-26-generic",
@@ -108,16 +210,16 @@
         "peak_rss_kib": 2688,
         "receipt_sha256": "2603c7b0b13dd2af26313d26ce63e73e8162de396a1fb5d7030a31a993c60831",
         "receptor_atom_count": 64,
-        "wall_time_ns_p50": 19946369,
-        "wall_time_ns_p95": 20079190,
+        "wall_time_ns_p50": 19874518,
+        "wall_time_ns_p95": 20032912,
         "wall_time_ns_samples": [
-          20079190,
-          20009060,
-          19941569,
-          19946369,
-          20000710,
-          19944889,
-          19886568
+          19926609,
+          20032912,
+          19868338,
+          19874518,
+          19861787,
+          19864118,
+          19887627
         ]
       },
       {
@@ -128,16 +230,16 @@
         "peak_rss_kib": 3072,
         "receipt_sha256": "61a8bb8490359fa03f0fb8fc0a12514203d602dc6539faac447f0e65e8e8d3a5",
         "receptor_atom_count": 256,
-        "wall_time_ns_p50": 66321101,
-        "wall_time_ns_p95": 66946421,
+        "wall_time_ns_p50": 66535177,
+        "wall_time_ns_p95": 66737692,
         "wall_time_ns_samples": [
-          66321101,
-          66344232,
-          66239200,
-          66934269,
-          66295381,
-          66215480,
-          66946421
+          66314111,
+          66276760,
+          66685761,
+          66566978,
+          66737692,
+          66535177,
+          66257348
         ]
       },
       {
@@ -148,16 +250,16 @@
         "peak_rss_kib": 3456,
         "receipt_sha256": "ded4134a8cd2e0c6d42f096c0220c22931378a5cba96e2fc36dba54f77bdc0bb",
         "receptor_atom_count": 512,
-        "wall_time_ns_p50": 194079557,
-        "wall_time_ns_p95": 195006572,
+        "wall_time_ns_p50": 194052295,
+        "wall_time_ns_p95": 194339172,
         "wall_time_ns_samples": [
-          194225899,
-          194079557,
-          193882605,
-          194051087,
-          195006572,
-          193883162,
-          194761703
+          193970999,
+          194001042,
+          194052295,
+          194339172,
+          194225369,
+          194054524,
+          194027475
         ]
       }
     ],
@@ -170,10 +272,10 @@
     "wall_time_role": "descriptive_no_threshold_no_claim"
   },
   "profile_id": "engine_v2_sampling_pool_synthetic_cpu_observation_evidence_v1",
-  "receipt_sha256": "43734da1187bc7287fc7ba346d3db93c0128da95ea84adb95d51ff87757bb21e",
+  "receipt_sha256": "eafcf3a7ebfe80c7f5b777d0a526a1fa7cd4ae8c5b6f01da74d4393d6b904cc5",
   "schema_id": "betelgeuze.engine_v2_sampling_pool_cpu_observation_evidence/1.0.0",
   "source": {
-    "capture_tool_sha256": "b6bb6b744a6a2c9ee3c0c131296e1bb7a04d93d7cc9dc7ffe445ed885a5fb286",
+    "capture_tool_sha256": "ffd4b62f3b7791b8ffd82e7f081c13e7b70525caaa384a02ee9c7f7d3cd2f1a0",
     "cargo_lock_sha256": "b4f9534bc51bccd72157b0be73ce12c939411821c10c11e70b00996e1f82baac",
     "closure_paths": [
       "LICENSE",

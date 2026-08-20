@@ -61,9 +61,9 @@ The current `main` branch contains:
   durable seven-sample local receipt binds merged main commit `cb987662`, tree
   `ed4221a6`, the exact Rust source closure, release rlib, observer binary,
   toolchain, host/kernel identity, and 24-CPU affinity. It records p50 wall
-  times of 19,946,369, 66,321,101, and 194,079,557 ns for the three frozen work
+  times of 19,874,518, 66,535,177, and 194,052,295 ns for the three frozen work
   denominators. Receipt
-  `43734da1187bc7287fc7ba346d3db93c0128da95ea84adb95d51ff87757bb21e`
+  `eafcf3a7ebfe80c7f5b777d0a526a1fa7cd4ae8c5b6f01da74d4393d6b904cc5`
   remains single-host synthetic descriptive evidence and grants no performance,
   scientific, molecular, benchmark, product, Stage 0, or HIP authority;
 - bounded single-model PDB and single-molecule SDF V2000 ingestion;
