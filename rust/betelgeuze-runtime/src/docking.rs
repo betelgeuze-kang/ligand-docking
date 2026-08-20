@@ -59,6 +59,14 @@ use super::{
     ErrorCode, PositionSoa, Result, UnitSystem,
 };
 
+mod preselected;
+
+pub use preselected::{
+    Fixed64PreselectedBatchReceipts, Fixed64PreselectedPipeline, Fixed64PreselectedPipelineReceipt,
+    Fixed64PreselectedPipelineRow, Fixed64PreselectedRunInput,
+    FIXED64_PRESELECTED_PIPELINE_PROFILE_ID,
+};
+
 pub type Sha256 = [u8; 32];
 pub const FIXED64_NATIVE_PIPELINE_PROFILE_ID: &str =
     "betelgeuze.engine_v2_native_fixed64_complete_pipeline/2.0.0";
@@ -2794,6 +2802,101 @@ impl Drop for GeometricAdmissionHandleGuard {
     }
 }
 
+struct RigidHandleGuard(NonNull<sys::bg_docking_rigid_refinement>);
+
+impl RigidHandleGuard {
+    fn into_inner(self) -> NonNull<sys::bg_docking_rigid_refinement> {
+        let handle = self.0;
+        std::mem::forget(self);
+        handle
+    }
+}
+
+impl Drop for RigidHandleGuard {
+    fn drop(&mut self) {
+        // SAFETY: the guard owns this non-null handle until into_inner transfers it.
+        unsafe { sys::bg_docking_rigid_refinement_destroy(self.0.as_ptr()) };
+    }
+}
+
+struct TorsionHandleGuard(NonNull<sys::bg_docking_torsion_v7>);
+
+impl TorsionHandleGuard {
+    fn into_inner(self) -> NonNull<sys::bg_docking_torsion_v7> {
+        let handle = self.0;
+        std::mem::forget(self);
+        handle
+    }
+}
+
+impl Drop for TorsionHandleGuard {
+    fn drop(&mut self) {
+        // SAFETY: the guard owns this non-null handle until into_inner transfers it.
+        unsafe { sys::bg_docking_torsion_v7_destroy(self.0.as_ptr()) };
+    }
+}
+
+struct DownstreamHandleGuard(NonNull<sys::bg_docking_fixed64_downstream_v1>);
+
+impl DownstreamHandleGuard {
+    fn into_inner(self) -> NonNull<sys::bg_docking_fixed64_downstream_v1> {
+        let handle = self.0;
+        std::mem::forget(self);
+        handle
+    }
+}
+
+impl Drop for DownstreamHandleGuard {
+    fn drop(&mut self) {
+        // SAFETY: the guard owns this non-null handle until into_inner transfers it.
+        unsafe { sys::bg_docking_fixed64_downstream_v1_destroy(self.0.as_ptr()) };
+    }
+}
+
+struct RankerHandleGuard(NonNull<sys::bg_docking_stable_top_k_v1>);
+
+impl RankerHandleGuard {
+    fn into_inner(self) -> NonNull<sys::bg_docking_stable_top_k_v1> {
+        let handle = self.0;
+        std::mem::forget(self);
+        handle
+    }
+}
+
+pub(crate) struct PreselectedHandles {
+    pub(crate) rigid: NonNull<sys::bg_docking_rigid_refinement>,
+    pub(crate) torsion: NonNull<sys::bg_docking_torsion_v7>,
+    pub(crate) downstream: NonNull<sys::bg_docking_fixed64_downstream_v1>,
+    pub(crate) ranker: NonNull<sys::bg_docking_stable_top_k_v1>,
+}
+
+impl Drop for PreselectedHandles {
+    fn drop(&mut self) {
+        // SAFETY: this value exclusively owns all four non-null handles.
+        unsafe {
+            sys::bg_docking_rigid_refinement_destroy(self.rigid.as_ptr());
+            sys::bg_docking_torsion_v7_destroy(self.torsion.as_ptr());
+            sys::bg_docking_fixed64_downstream_v1_destroy(self.downstream.as_ptr());
+            sys::bg_docking_stable_top_k_v1_destroy(self.ranker.as_ptr());
+        }
+    }
+}
+
+impl Drop for RankerHandleGuard {
+    fn drop(&mut self) {
+        // SAFETY: the guard owns this non-null handle until into_inner transfers it.
+        unsafe { sys::bg_docking_stable_top_k_v1_destroy(self.0.as_ptr()) };
+    }
+}
+
+fn preselected_component_backend(
+    query: impl FnOnce(*mut sys::bg_backend) -> sys::bg_status,
+) -> Result<Backend> {
+    let mut raw = sys::BG_BACKEND_AUTO;
+    status_result(query(&mut raw))?;
+    Backend::from_raw(raw)
+}
+
 fn validity_cell_component(value: f64, cell_size: f64) -> Result<i64> {
     let component = (value / cell_size).floor();
     const I64_MIN_INCLUSIVE: f64 = -9_223_372_036_854_775_808.0;
@@ -2982,6 +3085,30 @@ fn canonical_pocket_normal(value: [f64; 3]) -> Result<[f64; 3]> {
 
 impl Fixed64Pipeline {
     pub fn new(context: &Context, scientific: Fixed64PipelineContext<'_>) -> Result<Self> {
+        Ok(Self::new_internal(context, scientific, false)?.0)
+    }
+
+    pub(crate) fn new_preselected(
+        context: &Context,
+        scientific: Fixed64PipelineContext<'_>,
+    ) -> Result<(Self, PreselectedHandles)> {
+        let (pipeline, handles) = Self::new_internal(context, scientific, true)?;
+        Ok((
+            pipeline,
+            handles.ok_or_else(|| {
+                Error::local(
+                    ErrorCode::InternalError,
+                    "preselected component construction returned no handles",
+                )
+            })?,
+        ))
+    }
+
+    fn new_internal(
+        context: &Context,
+        scientific: Fixed64PipelineContext<'_>,
+        include_preselected: bool,
+    ) -> Result<(Self, Option<PreselectedHandles>)> {
         Self::profile_id()?;
         let counts = scientific.validate()?;
         let expected_backend = context.backend()?;
@@ -3601,40 +3728,177 @@ impl Fixed64Pipeline {
                 "native replay admission backend changed during construction",
             ));
         }
-        Ok(Self {
-            handle: handle.into_inner(),
-            replay_admission_handle: replay_admission_handle.into_inner(),
-            context_lease: context.lease(),
-            backend,
-            receptor_atom_count: receptor_count,
-            ligand_atom_count: ligand_count,
-            ligand_heavy_atom_count,
-            geometric_hard_rejection_minimum_vdw_ratio,
-            geometric_max_batch_exact_pair_evaluations,
-            geometric_input,
-            rigid_v2_config,
-            rigid_v3_config,
-            rigid_clearance_config,
-            scorer_context,
-            maximum_torsion_steps,
-            receptor_system_sha256: scientific.identities.receptor_system_sha256,
-            ligand_system_sha256: scientific.identities.ligand_system_sha256,
-            authority_input_receipt_sha256: scientific.identities.authority_input_receipt_sha256,
-            backend_receipt_sha256: scientific.identities.backend_receipt_sha256,
-            pocket_center_angstrom: scientific.pocket_center_angstrom,
-            expected_admission_context_receipt_sha256,
-            expected_refinement_context_receipt_sha256,
-            expected_scorer_context_receipt_sha256,
-            expected_validity_context_receipt_sha256,
-            expected_component_binding_receipt_sha256,
-            rotatable_child_atom_indices,
-            validity_exclusion_count,
-            validity_chirality_count,
-            validity_contact_cell_size_angstrom,
-            validity_receptor_cells,
-            validity_context,
-            _not_send_or_sync: PhantomData,
-        })
+        let preselected_handles = if include_preselected {
+            let mut preselected_rigid_handle = ptr::null_mut();
+            // SAFETY: the validated descriptor remains live for this call and the
+            // native constructor deep-copies every molecular channel.
+            status_result(unsafe {
+                sys::bg_docking_rigid_refinement_create(
+                    context.raw_handle(),
+                    &rigid,
+                    &mut preselected_rigid_handle,
+                )
+            })?;
+            let preselected_rigid_handle =
+                NonNull::new(preselected_rigid_handle).ok_or_else(|| {
+                    Error::local(
+                        ErrorCode::InternalError,
+                        "native preselected rigid creation succeeded with a null handle",
+                    )
+                })?;
+            let preselected_rigid_handle = RigidHandleGuard(preselected_rigid_handle);
+
+            let mut preselected_torsion_handle = ptr::null_mut();
+            // SAFETY: the validated descriptor remains live for this call and the
+            // native constructor deep-copies every molecular channel.
+            status_result(unsafe {
+                sys::bg_docking_torsion_v7_create(
+                    context.raw_handle(),
+                    &torsion,
+                    &mut preselected_torsion_handle,
+                )
+            })?;
+            let preselected_torsion_handle =
+                NonNull::new(preselected_torsion_handle).ok_or_else(|| {
+                    Error::local(
+                        ErrorCode::InternalError,
+                        "native preselected torsion creation succeeded with a null handle",
+                    )
+                })?;
+            let preselected_torsion_handle = TorsionHandleGuard(preselected_torsion_handle);
+
+            let mut preselected_downstream_handle = ptr::null_mut();
+            // SAFETY: both validated descriptors remain live for this call and the
+            // native constructor deep-copies every molecular channel.
+            status_result(unsafe {
+                sys::bg_docking_fixed64_downstream_v1_create(
+                    context.raw_handle(),
+                    &scorer,
+                    &validity,
+                    &mut preselected_downstream_handle,
+                )
+            })?;
+            let preselected_downstream_handle = NonNull::new(preselected_downstream_handle)
+                .ok_or_else(|| {
+                    Error::local(
+                        ErrorCode::InternalError,
+                        "native preselected downstream creation succeeded with a null handle",
+                    )
+                })?;
+            let preselected_downstream_handle =
+                DownstreamHandleGuard(preselected_downstream_handle);
+
+            let mut preselected_ranker_handle = ptr::null_mut();
+            // SAFETY: the output pointer is writable and the native constructor
+            // binds the new ranker to the exact context backend/device.
+            status_result(unsafe {
+                sys::bg_docking_stable_top_k_v1_create(
+                    context.raw_handle(),
+                    &mut preselected_ranker_handle,
+                )
+            })?;
+            let preselected_ranker_handle =
+                NonNull::new(preselected_ranker_handle).ok_or_else(|| {
+                    Error::local(
+                        ErrorCode::InternalError,
+                        "native preselected ranker creation succeeded with a null handle",
+                    )
+                })?;
+            let preselected_ranker_handle = RankerHandleGuard(preselected_ranker_handle);
+
+            for (label, observed) in [
+                (
+                    "rigid",
+                    preselected_component_backend(|output| unsafe {
+                        sys::bg_docking_rigid_refinement_get_backend(
+                            preselected_rigid_handle.0.as_ptr(),
+                            output,
+                        )
+                    })?,
+                ),
+                (
+                    "torsion",
+                    preselected_component_backend(|output| unsafe {
+                        sys::bg_docking_torsion_v7_get_backend(
+                            preselected_torsion_handle.0.as_ptr(),
+                            output,
+                        )
+                    })?,
+                ),
+                (
+                    "downstream",
+                    preselected_component_backend(|output| unsafe {
+                        sys::bg_docking_fixed64_downstream_v1_get_backend(
+                            preselected_downstream_handle.0.as_ptr(),
+                            output,
+                        )
+                    })?,
+                ),
+                (
+                    "ranker",
+                    preselected_component_backend(|output| unsafe {
+                        sys::bg_docking_stable_top_k_v1_get_backend(
+                            preselected_ranker_handle.0.as_ptr(),
+                            output,
+                        )
+                    })?,
+                ),
+            ] {
+                if observed != backend {
+                    return Err(Error::local(
+                        ErrorCode::AbiMismatch,
+                        format!("native preselected {label} backend changed during construction"),
+                    ));
+                }
+            }
+            Some(PreselectedHandles {
+                rigid: preselected_rigid_handle.into_inner(),
+                torsion: preselected_torsion_handle.into_inner(),
+                downstream: preselected_downstream_handle.into_inner(),
+                ranker: preselected_ranker_handle.into_inner(),
+            })
+        } else {
+            None
+        };
+        Ok((
+            Self {
+                handle: handle.into_inner(),
+                replay_admission_handle: replay_admission_handle.into_inner(),
+                context_lease: context.lease(),
+                backend,
+                receptor_atom_count: receptor_count,
+                ligand_atom_count: ligand_count,
+                ligand_heavy_atom_count,
+                geometric_hard_rejection_minimum_vdw_ratio,
+                geometric_max_batch_exact_pair_evaluations,
+                geometric_input,
+                rigid_v2_config,
+                rigid_v3_config,
+                rigid_clearance_config,
+                scorer_context,
+                maximum_torsion_steps,
+                receptor_system_sha256: scientific.identities.receptor_system_sha256,
+                ligand_system_sha256: scientific.identities.ligand_system_sha256,
+                authority_input_receipt_sha256: scientific
+                    .identities
+                    .authority_input_receipt_sha256,
+                backend_receipt_sha256: scientific.identities.backend_receipt_sha256,
+                pocket_center_angstrom: scientific.pocket_center_angstrom,
+                expected_admission_context_receipt_sha256,
+                expected_refinement_context_receipt_sha256,
+                expected_scorer_context_receipt_sha256,
+                expected_validity_context_receipt_sha256,
+                expected_component_binding_receipt_sha256,
+                rotatable_child_atom_indices,
+                validity_exclusion_count,
+                validity_chirality_count,
+                validity_contact_cell_size_angstrom,
+                validity_receptor_cells,
+                validity_context,
+                _not_send_or_sync: PhantomData,
+            },
+            preselected_handles,
+        ))
     }
 
     pub const fn backend(&self) -> Backend {

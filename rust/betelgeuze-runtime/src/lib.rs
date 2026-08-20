@@ -18,13 +18,15 @@ pub use docking::{
     Fixed64CoordinateSource, Fixed64Donor, Fixed64ExactSourceEvidence, Fixed64FeatureGeometry,
     Fixed64FeatureKind, Fixed64GeometricEvidence, Fixed64Identities,
     Fixed64IndexedCoordinateSource, Fixed64Ligand, Fixed64Pair, Fixed64Pipeline,
-    Fixed64PipelineContext, Fixed64PipelineReceipt, Fixed64PipelineRow, Fixed64ProducerEvidence,
+    Fixed64PipelineContext, Fixed64PipelineReceipt, Fixed64PipelineRow,
+    Fixed64PreselectedBatchReceipts, Fixed64PreselectedPipeline, Fixed64PreselectedPipelineReceipt,
+    Fixed64PreselectedPipelineRow, Fixed64PreselectedRunInput, Fixed64ProducerEvidence,
     Fixed64RankingEvidence, Fixed64Receptor, Fixed64RefinementEvidence, Fixed64RefinementMode,
     Fixed64RigidCoordinates, Fixed64RigidEvidence, Fixed64RigidProfileEvidence, Fixed64Rotor,
     Fixed64RunInput, Fixed64ScientificCandidateProjection, Fixed64ScientificProjection,
     Fixed64ScorerEvidence, Fixed64SourceEvidence, Fixed64TorsionCoordinates,
     Fixed64TorsionEvidence, Fixed64TorsionMoveEvidence, Fixed64ValidityEvidence,
-    FIXED64_NATIVE_PIPELINE_PROFILE_ID,
+    FIXED64_NATIVE_PIPELINE_PROFILE_ID, FIXED64_PRESELECTED_PIPELINE_PROFILE_ID,
 };
 pub use dynamics::{
     DistanceConstraint, DistanceConstraints, DynamicsReport, Integrator, MinimizationReport,

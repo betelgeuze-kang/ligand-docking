@@ -35,6 +35,13 @@ The current `main` branch contains:
   frozen profile and receipt but receives no live qualification authority. This
   is engineering-only evidence and grants no molecular, benchmark, Stage 0,
   product, HIP-device, or claim authority;
+- a separately constructed Rust public preselected-fixed64 composition path that accepts the exact
+  receipt-bound 512-to-64 funnel payload and invokes the existing ABI 1.21
+  admission, rigid/V7 refinement, post-refinement admission, ScorerV1,
+  validity, stable-rank, and clustering kernels without rerunning proposal
+  generation. Its receipt rederives every component and row binding, synthetic
+  C++/Rust CPU coverage preserves rank order, and all execution, reservation,
+  benchmark, product, Stage 0, Fresh-128, and claim authority remains false;
 - bounded single-model PDB and single-molecule SDF V2000 ingestion;
 - bounded single-block CIF syntax plus mmCIF entity/asym/polymer identity,
   zero-occupancy, altloc, nonpoly instance, component atom/bond, and selected

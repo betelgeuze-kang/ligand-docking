@@ -71,8 +71,7 @@ all 512 typed inputs, all 512 decisions, the exact 64-row output, the canonical
 profile hash, and every lane summary, then independently rederives itself. A
 shared frozen fixture requires the Python reference and Rust CPU implementation
 to select the same ordered 64 pool indices. This is the native preselection
-core; it does not yet add a public preselected-proposal entry point to the ABI
-1.21 complete pipeline and therefore grants no molecular or promotion authority.
+core and grants no molecular or promotion authority.
 
 The coordinate-bearing bridge is `NativeSamplingFunnelPayloadBatch` plus
 `materialize_native_sampling_funnel_preselected_batch(...)`. It validates an
@@ -82,9 +81,38 @@ and typed-failure identity, then copies only the selected rows into exact
 their output slots with zero numerical sentinels that downstream inactive-row
 semantics must ignore. The materialized receipt binds the funnel and payload
 receipts and rederives every selected coordinate digest and canonical
-quaternion. This is an ABI-ready data layout, not an ABI invocation; public
-complete-pipeline composition remains the next dependency and all execution,
-benchmark, scientific, product, and rank-mutation authority remains false.
+quaternion.
+
+`Fixed64PreselectedPipeline::run_preselected(...)` now consumes that exact
+materialized batch without invoking a second proposal producer. The separate
+constructor allocates its additional component handles only when this path is
+explicitly requested, so existing `Fixed64Pipeline` callers retain their prior
+construction and memory behavior. It composes the existing
+public ABI 1.21 geometric-admission, rigid-refinement, torsion-V7,
+ScorerV1/validity/stable-rank, and direct-RMSD kernels. The same full-Cartesian
+geometric admission is applied both before refinement and to final refined
+coordinates before ScorerV1. Lane shortfalls remain inactive typed rows, and
+the exact source coordinates and quaternions are retained unchanged in the
+result receipt.
+
+Before issuing a receipt, the live runtime independently replays admission,
+rigid, torsion, refinement, ScorerV1, validity, rank, and clustering semantics
+against the bound molecular contexts. A persisted receipt rederives every
+component evidence digest, batch digest, row receipt, count, coordinate channel,
+and final pipeline receipt; it also replays the self-contained rigid, torsion,
+refinement, rank, and clustering policies. It does not claim to reconstruct the
+omitted molecular admission, scorer, or validity contexts after persistence.
+The payload and materialized
+receipts now bind the exact ligand-system identity, and runtime composition
+rejects a same-atom-count batch from another ligand. The persisted receipt also
+retains the refinement modes and budgets, torsion eligibility and baseline
+angles, RMSD threshold, rotor indices, and declared policies needed to replay
+rigid, torsion, refinement, ranking, and clustering policy checks. Synthetic integration coverage
+requires C++ reference and Rust CPU to preserve the same selected, valid,
+representative, and Top-K slot orders. This is a synthetic/test-only common
+composition boundary: molecular execution, reservation, benchmark, Stage 0,
+Fresh-128, product, customer-pose, rank-mutation, scientific-claim, and
+performance-claim authority all remain false.
 
 ## CPU water-box development reference
 
