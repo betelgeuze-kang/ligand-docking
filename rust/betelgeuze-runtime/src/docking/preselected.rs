@@ -499,6 +499,19 @@ impl Fixed64PreselectedPipeline {
                 &mut cluster_output,
             )
         })?;
+        validate_component_output_counts(
+            checked_count(CANDIDATE_COUNT)?,
+            coordinate_count_u64,
+            checked_count(MOVE_COUNT)?,
+            &initial_output,
+            &rigid_output,
+            &torsion_output,
+            &post_output,
+            &scorer_output,
+            &validity_output,
+            &ranking_output,
+            &cluster_output,
+        )?;
         let representative_count = usize::try_from(cluster_output.representative_index_count)
             .map_err(|_| {
                 Error::local(
@@ -525,6 +538,7 @@ impl Fixed64PreselectedPipeline {
             self,
             input,
             &effective_modes,
+            initial_output.batch_receipt_sha256,
             &initial_rows,
             &rigid_rows,
             &rigid_coordinates,
@@ -532,6 +546,7 @@ impl Fixed64PreselectedPipeline {
             &torsion_moves,
             &torsion_coordinates,
             &refinement_rows,
+            post_output.batch_receipt_sha256,
             &post_rows,
             &scorer_rows,
             &validity_rows,
@@ -614,6 +629,152 @@ fn validate_preselected_input(
         return Err(invalid(
             "preselected fixed64 input denominator, policy, or numeric field is invalid",
         ));
+    }
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn validate_component_output_counts(
+    candidate_count: u64,
+    coordinate_count: u64,
+    move_count: u64,
+    initial_admission: &sys::bg_docking_geometric_admission_output_v1,
+    rigid: &sys::bg_docking_rigid_refinement_output_v1,
+    torsion: &sys::bg_docking_torsion_v7_output_v1,
+    post_admission: &sys::bg_docking_geometric_admission_output_v1,
+    scorer: &sys::bg_docking_scorer_v1_output_v1,
+    validity: &sys::bg_docking_pose_validity_output_v1,
+    ranking: &sys::bg_docking_stable_top_k_output_v1,
+    cluster: &sys::bg_docking_rmsd_cluster_output_v1,
+) -> Result<()> {
+    let top_k_limit = u64::from(sys::BG_DOCKING_STABLE_TOP_K_LIMIT);
+    for (observed, expected, label) in [
+        (
+            initial_admission.row_capacity,
+            candidate_count,
+            "initial-admission row capacity",
+        ),
+        (
+            initial_admission.row_count,
+            candidate_count,
+            "initial-admission row count",
+        ),
+        (rigid.row_capacity, candidate_count, "rigid row capacity"),
+        (rigid.row_count, candidate_count, "rigid row count"),
+        (
+            rigid.coordinate_capacity,
+            coordinate_count,
+            "rigid coordinate capacity",
+        ),
+        (
+            rigid.coordinate_count,
+            coordinate_count,
+            "rigid coordinate count",
+        ),
+        (
+            torsion.row_capacity,
+            candidate_count,
+            "torsion row capacity",
+        ),
+        (torsion.row_count, candidate_count, "torsion row count"),
+        (torsion.move_capacity, move_count, "torsion move capacity"),
+        (torsion.move_count, move_count, "torsion move count"),
+        (
+            torsion.coordinate_capacity,
+            coordinate_count,
+            "torsion coordinate capacity",
+        ),
+        (
+            torsion.coordinate_count,
+            coordinate_count,
+            "torsion coordinate count",
+        ),
+        (
+            post_admission.row_capacity,
+            candidate_count,
+            "post-admission row capacity",
+        ),
+        (
+            post_admission.row_count,
+            candidate_count,
+            "post-admission row count",
+        ),
+        (scorer.row_capacity, candidate_count, "scorer row capacity"),
+        (scorer.row_count, candidate_count, "scorer row count"),
+        (
+            validity.row_capacity,
+            candidate_count,
+            "validity row capacity",
+        ),
+        (validity.row_count, candidate_count, "validity row count"),
+        (
+            ranking.row_capacity,
+            candidate_count,
+            "ranking row capacity",
+        ),
+        (ranking.row_count, candidate_count, "ranking row count"),
+        (
+            ranking.primary_index_capacity,
+            candidate_count,
+            "primary rank capacity",
+        ),
+        (
+            ranking.valid_index_capacity,
+            candidate_count,
+            "valid rank capacity",
+        ),
+        (
+            cluster.row_capacity,
+            candidate_count,
+            "cluster row capacity",
+        ),
+        (cluster.row_count, candidate_count, "cluster row count"),
+        (
+            cluster.representative_index_capacity,
+            candidate_count,
+            "cluster representative capacity",
+        ),
+        (
+            cluster.top_k_index_capacity,
+            top_k_limit,
+            "cluster Top-K capacity",
+        ),
+    ] {
+        if observed != expected {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                format!("preselected native {label} is {observed}, expected {expected}"),
+            ));
+        }
+    }
+    for (count, capacity, label) in [
+        (
+            ranking.primary_index_count,
+            ranking.primary_index_capacity,
+            "primary rank count",
+        ),
+        (
+            ranking.valid_index_count,
+            ranking.valid_index_capacity,
+            "valid rank count",
+        ),
+        (
+            cluster.representative_index_count,
+            cluster.representative_index_capacity,
+            "cluster representative count",
+        ),
+        (
+            cluster.top_k_index_count,
+            cluster.top_k_index_capacity,
+            "cluster Top-K count",
+        ),
+    ] {
+        if count > capacity {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                format!("preselected native {label} exceeds its capacity"),
+            ));
+        }
     }
     Ok(())
 }
@@ -803,6 +964,7 @@ fn validate_preselected_outputs(
     pipeline: &Fixed64Pipeline,
     input: Fixed64PreselectedRunInput<'_>,
     effective_modes: &[i32],
+    initial_batch_receipt_sha256: Sha256,
     initial_rows: &[sys::bg_docking_geometric_admission_row_v1],
     rigid_rows: &[sys::bg_docking_rigid_refinement_row_v1],
     rigid_coordinates: &[Vec<f64>; 12],
@@ -810,6 +972,7 @@ fn validate_preselected_outputs(
     torsion_moves: &[sys::bg_docking_torsion_v7_move_v1],
     torsion_coordinates: &[Vec<f64>; 8],
     refinement_rows: &[sys::bg_docking_fixed64_refinement_row_v1],
+    post_batch_receipt_sha256: Sha256,
     post_rows: &[sys::bg_docking_geometric_admission_row_v1],
     scorer_rows: &[sys::bg_docking_scorer_v1_row_v1],
     validity_rows: &[sys::bg_docking_pose_validity_row_v1],
@@ -836,6 +999,33 @@ fn validate_preselected_outputs(
         input.preselected.y_angstrom(),
         input.preselected.z_angstrom(),
     ];
+    let expected_receipt_graph = ExpectedPipelineReceiptGraph {
+        allocation_inventory_sha256: [0; 32],
+        allocation_receipt_sha256: [0; 32],
+        source_bundle_receipt_sha256: input.preselected.receipt_sha256(),
+        admission_context_receipt_sha256: pipeline.expected_admission_context_receipt_sha256,
+        refinement_context_receipt_sha256: pipeline.expected_refinement_context_receipt_sha256,
+        scorer_context_receipt_sha256: pipeline.expected_scorer_context_receipt_sha256,
+        validity_context_receipt_sha256: pipeline.expected_validity_context_receipt_sha256,
+        component_binding_receipt_sha256: pipeline.expected_component_binding_receipt_sha256,
+        refinement_policy_receipt_sha256: input.predeclared_refinement_policy_sha256,
+        post_admission_policy_receipt_sha256: input
+            .predeclared_post_refinement_admission_policy_sha256,
+        authority_input_receipt_sha256: pipeline.authority_input_receipt_sha256,
+        receptor_system_sha256: pipeline.receptor_system_sha256,
+        ligand_system_sha256: pipeline.ligand_system_sha256,
+        backend_receipt_sha256: pipeline.backend_receipt_sha256,
+        backend: pipeline.backend,
+        receptor_atom_count: receptor_count,
+        ligand_atom_count: ligand_count,
+        ligand_heavy_atom_count: pipeline.ligand_heavy_atom_count,
+        geometric_max_batch_exact_pair_evaluations: pipeline
+            .geometric_max_batch_exact_pair_evaluations,
+        pocket_center_angstrom: pipeline.pocket_center_angstrom,
+        pocket_radius_angstrom: pipeline.geometric_input.pocket_radius_angstrom(),
+        geometric_hard_rejection_minimum_vdw_ratio: pipeline
+            .geometric_hard_rejection_minimum_vdw_ratio,
+    };
     for slot in 0..candidate_count {
         let producer_status = match input.preselected.rows()[slot].state() {
             NativeSamplingFunnelSelectedState::Selected { .. } => {
@@ -858,6 +1048,20 @@ fn validate_preselected_outputs(
             source_coordinates,
             slot,
         )?;
+        if initial_rows[slot].row_receipt_sha256
+            != canonical_geometric_row_receipt(
+                &expected_receipt_graph,
+                producer_status,
+                source_coordinates,
+                slot,
+                &initial_rows[slot],
+            )?
+        {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "preselected initial-admission row receipt was not independently rederived",
+            ));
+        }
         validate_rigid_row_semantics(
             &rigid_rows[slot],
             effective_modes[slot],
@@ -905,6 +1109,40 @@ fn validate_preselected_outputs(
             ],
             slot,
         )?;
+        if post_rows[slot].row_receipt_sha256
+            != canonical_geometric_row_receipt(
+                &expected_receipt_graph,
+                synthetic_status,
+                [
+                    final_coordinates[0].as_slice(),
+                    final_coordinates[1].as_slice(),
+                    final_coordinates[2].as_slice(),
+                ],
+                slot,
+                &post_rows[slot],
+            )?
+        {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "preselected post-admission row receipt was not independently rederived",
+            ));
+        }
+    }
+    if initial_batch_receipt_sha256
+        != canonical_geometric_batch_receipt_rows(&expected_receipt_graph, initial_rows)
+    {
+        return Err(Error::local(
+            ErrorCode::AbiMismatch,
+            "preselected initial-admission batch receipt was not independently rederived",
+        ));
+    }
+    if post_batch_receipt_sha256
+        != canonical_geometric_batch_receipt_rows(&expected_receipt_graph, post_rows)
+    {
+        return Err(Error::local(
+            ErrorCode::AbiMismatch,
+            "preselected post-admission batch receipt was not independently rederived",
+        ));
     }
     validate_torsion_evidence(
         torsion_rows,
