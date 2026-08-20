@@ -14,6 +14,9 @@ PROFILE_SCHEMA = "betelgeuze.engine_v2_sampling_funnel_profile/1.1.0"
 INPUT_SCHEMA = "betelgeuze.engine_v2_sampling_funnel_input/1.0.0"
 OUTPUT_SCHEMA = "betelgeuze.engine_v2_sampling_funnel_result/1.1.0"
 DUPLICATE_POLICY = "global_coordinate_sha256_first_pool_index"
+FROZEN_PROFILE_CANONICAL_SHA256 = (
+    "5f9a3f30ddb1cf76a64cb64dff678c191751e2ead368c8e9f73f08d44ec69a28"
+)
 FORBIDDEN_FRAGMENTS = ("rmsd", "posebuster", "native_pose", "downstream_rank")
 CANDIDATE_FIELDS = {
     "pool_index",
@@ -95,10 +98,12 @@ def _profile(path: Path) -> dict[str, Any]:
         raise FunnelError("duplicate policy changed")
     quotas = profile.get("lane_quotas")
     lane_order = profile.get("lane_order")
-    if type(quotas) is not dict or sum(quotas.values()) != 64:
-        raise FunnelError("lane quotas must total 64")
+    if type(quotas) is not dict:
+        raise FunnelError("lane quotas must be an object")
     if any(type(value) is not int or value <= 0 for value in quotas.values()):
         raise FunnelError("lane quotas must be positive integers")
+    if sum(quotas.values()) != 64:
+        raise FunnelError("lane quotas must total 64")
     if (
         type(lane_order) is not list
         or len(lane_order) != len(quotas)
@@ -112,6 +117,8 @@ def _profile(path: Path) -> dict[str, Any]:
         value is not False for value in authority.values()
     ):
         raise FunnelError("funnel authority escalated")
+    if _digest(profile) != FROZEN_PROFILE_CANONICAL_SHA256:
+        raise FunnelError("profile differs from frozen native constants")
     return profile
 
 
@@ -187,9 +194,11 @@ def _quality(row: dict[str, Any]) -> tuple[float, float, float, int]:
 
 
 def _distance(first: tuple[float, ...], second: tuple[float, ...]) -> float:
-    distance = math.sqrt(
-        sum((left - right) ** 2 for left, right in zip(first, second, strict=True))
-    )
+    squared_distance = 0.0
+    for left, right in zip(first, second, strict=True):
+        delta = left - right
+        squared_distance += delta * delta
+    distance = math.sqrt(squared_distance)
     if not math.isfinite(distance):
         raise FunnelError("embedding distance is out of range")
     return distance

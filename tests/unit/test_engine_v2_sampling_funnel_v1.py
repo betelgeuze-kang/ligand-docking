@@ -183,3 +183,49 @@ def test_lane_order_must_cover_quota_map(tmp_path: Path) -> None:
     path.write_text(json.dumps(profile), encoding="utf-8")
     with pytest.raises(FUNNEL.FunnelError, match="lane order"):
         FUNNEL._profile(path)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("hard_minimum_vdw_ratio", 0.9),
+        ("maximum_pocket_escape_angstrom", 5.0),
+        ("quality_prefilter_multiplier", 5),
+        ("lane_order", list(reversed(EXPECTED_LANE_ORDER))),
+    ],
+)
+def test_profile_must_match_frozen_native_constants(
+    tmp_path: Path,
+    field: str,
+    value: object,
+) -> None:
+    profile = json.loads(PROFILE.read_text(encoding="utf-8"))
+    profile[field] = value
+    path = tmp_path / "profile.json"
+    path.write_text(json.dumps(profile), encoding="utf-8")
+    with pytest.raises(FUNNEL.FunnelError, match="profile differs"):
+        FUNNEL._profile(path)
+
+
+def test_profile_quota_must_match_frozen_native_constants(tmp_path: Path) -> None:
+    profile = json.loads(PROFILE.read_text(encoding="utf-8"))
+    profile["lane_quotas"]["uniform_so3"] -= 1
+    profile["lane_quotas"]["pocket_surface"] += 1
+    path = tmp_path / "profile.json"
+    path.write_text(json.dumps(profile), encoding="utf-8")
+    with pytest.raises(FUNNEL.FunnelError, match="profile differs"):
+        FUNNEL._profile(path)
+
+
+def test_profile_non_numeric_quota_is_a_typed_funnel_error(tmp_path: Path) -> None:
+    profile = json.loads(PROFILE.read_text(encoding="utf-8"))
+    profile["lane_quotas"]["uniform_so3"] = "24"
+    path = tmp_path / "profile.json"
+    path.write_text(json.dumps(profile), encoding="utf-8")
+    with pytest.raises(FUNNEL.FunnelError, match="positive integers"):
+        FUNNEL._profile(path)
+
+
+def test_embedding_distance_overflow_is_a_typed_funnel_error() -> None:
+    with pytest.raises(FUNNEL.FunnelError, match="embedding distance"):
+        FUNNEL._distance((1e200,) * 7, (-1e200,) * 7)
