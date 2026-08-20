@@ -29,6 +29,19 @@ EXPECTED_FIXTURE_COUNTS = {
     "medium": (24, 256, 3_145_728),
     "large": (48, 512, 12_582_912),
 }
+EXPECTED_AUTHORITY_KEYS = {
+    "customer_pose_authorized",
+    "fresh_128_execution_authorized",
+    "hip_device_execution_authorized",
+    "molecular_execution_authorized",
+    "performance_claim_authorized",
+    "product_authorized",
+    "public_benchmark_authorized",
+    "rank_mutation_authorized",
+    "reservation_authorized",
+    "scientific_claim_authorized",
+    "stage0_admission_authorized",
+}
 
 
 class SamplingPoolCPUObservationError(RuntimeError):
@@ -138,7 +151,10 @@ def _compile_observer(rlib: Path, output: Path) -> None:
     )
 
 
-def _validate(document: object, *, observed: bool) -> dict[str, Any]:
+def _validate(
+    document: object, *, expected_sample_count: int | None
+) -> dict[str, Any]:
+    observed = expected_sample_count is not None
     if type(document) is not dict:
         raise SamplingPoolCPUObservationError("observer output must be an object")
     value = document
@@ -171,8 +187,14 @@ def _validate(document: object, *, observed: bool) -> dict[str, Any]:
             samples = row.get("wall_time_ns_samples")
             if (
                 type(samples) is not list
-                or not samples
+                or len(samples) != expected_sample_count
                 or any(type(sample) is not int or sample <= 0 for sample in samples)
+                or row.get("wall_time_ns_p50") != sorted(samples)[
+                    (50 * len(samples) + 99) // 100 - 1
+                ]
+                or row.get("wall_time_ns_p95") != sorted(samples)[
+                    (95 * len(samples) + 99) // 100 - 1
+                ]
                 or type(row.get("peak_rss_kib")) is not int
                 or row["peak_rss_kib"] <= 0
                 or type(row.get("peak_rss_delta_kib")) is not int
@@ -185,10 +207,14 @@ def _validate(document: object, *, observed: bool) -> dict[str, Any]:
         authority = value.get("authority")
         if (
             type(authority) is not dict
-            or not authority
+            or set(authority) != EXPECTED_AUTHORITY_KEYS
             or any(type(item) is not bool or item for item in authority.values())
         ):
             raise SamplingPoolCPUObservationError("observer authority is not all false")
+        if value.get("sample_count") != expected_sample_count:
+            raise SamplingPoolCPUObservationError(
+                "observer sample denominator changed"
+            )
         if value.get("status") != "local_synthetic_development_observation_only":
             raise SamplingPoolCPUObservationError("observer status changed")
     elif value.get("all_authority_false") is not True:
@@ -219,7 +245,7 @@ def execute(*, samples: int | None) -> dict[str, Any]:
         )
     except (json.JSONDecodeError, UnicodeError) as exc:
         raise SamplingPoolCPUObservationError("observer output is invalid JSON") from exc
-    return _validate(document, observed=samples is not None)
+    return _validate(document, expected_sample_count=samples)
 
 
 def _parser() -> argparse.ArgumentParser:

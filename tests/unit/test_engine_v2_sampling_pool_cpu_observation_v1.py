@@ -8,6 +8,7 @@ import sys
 import pytest
 
 from tools.run_engine_v2_sampling_pool_cpu_observation_v1 import (
+    EXPECTED_AUTHORITY_KEYS,
     EXPECTED_FIXTURE_COUNTS,
     EXPECTED_RECEIPTS,
     PROFILE_ID,
@@ -64,12 +65,44 @@ def test_duplicate_crosswired_and_malformed_outputs_fail_closed() -> None:
     value = fixture_document()
     value["fixtures"][0]["receipt_sha256"] = "00" * 32
     with pytest.raises(SamplingPoolCPUObservationError, match="receipt changed"):
-        _validate(value, observed=False)
+        _validate(value, expected_sample_count=None)
 
     value = fixture_document()
     value["fixtures"] = value["fixtures"][:2]
     with pytest.raises(SamplingPoolCPUObservationError, match="denominator changed"):
-        _validate(value, observed=False)
+        _validate(value, expected_sample_count=None)
+
+
+def observed_document(samples: int = 3) -> dict[str, object]:
+    value = fixture_document()
+    value.pop("all_authority_false")
+    value["authority"] = {key: False for key in EXPECTED_AUTHORITY_KEYS}
+    value["sample_count"] = samples
+    value["status"] = "local_synthetic_development_observation_only"
+    for row in value["fixtures"]:
+        row["wall_time_ns_samples"] = list(range(1, samples + 1))
+        row["wall_time_ns_p50"] = 2
+        row["wall_time_ns_p95"] = samples
+        row["peak_rss_kib"] = 1
+        row["peak_rss_delta_kib"] = 0
+    return value
+
+
+def test_observation_sample_and_authority_denominators_fail_closed() -> None:
+    value = observed_document()
+    value["fixtures"][0]["wall_time_ns_samples"] = [1]
+    with pytest.raises(SamplingPoolCPUObservationError, match="timing or memory"):
+        _validate(value, expected_sample_count=3)
+
+    value = observed_document()
+    value["sample_count"] = 2
+    with pytest.raises(SamplingPoolCPUObservationError, match="sample denominator"):
+        _validate(value, expected_sample_count=3)
+
+    value = observed_document()
+    del value["authority"]["reservation_authorized"]
+    with pytest.raises(SamplingPoolCPUObservationError, match="authority"):
+        _validate(value, expected_sample_count=3)
 
 
 def test_github_actions_timing_fails_before_build(monkeypatch: pytest.MonkeyPatch) -> None:

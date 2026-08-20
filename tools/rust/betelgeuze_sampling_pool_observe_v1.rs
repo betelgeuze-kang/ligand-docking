@@ -153,6 +153,9 @@ fn observe(sample_count: usize) -> Result<String, String> {
             "sample count must be within [{MINIMUM_SAMPLE_COUNT}, {MAXIMUM_SAMPLE_COUNT}]"
         ));
     }
+    // Resolve host identity before launching any timed children so an unsupported
+    // /proc/cpuinfo format cannot waste the requested observation work.
+    let cpu_model = json_escape(&cpu_model()?);
     let executable = env::current_exe().map_err(|error| format!("current executable: {error}"))?;
     let mut fixture_rows = Vec::with_capacity(FIXTURES.len());
     for spec in FIXTURES {
@@ -191,7 +194,6 @@ fn observe(sample_count: usize) -> Result<String, String> {
         }
         fixture_rows.push(format_observed_fixture(spec, &observations));
     }
-    let cpu_model = json_escape(&cpu_model()?);
     Ok(format!(
         "{{\"authority\":{{\"customer_pose_authorized\":false,\"fresh_128_execution_authorized\":false,\"hip_device_execution_authorized\":false,\"molecular_execution_authorized\":false,\"performance_claim_authorized\":false,\"product_authorized\":false,\"public_benchmark_authorized\":false,\"rank_mutation_authorized\":false,\"reservation_authorized\":false,\"scientific_claim_authorized\":false,\"stage0_admission_authorized\":false}},\"cpu_model\":\"{cpu_model}\",\"fixtures\":[{}],\"memory_role\":\"descriptive_process_peak_rss_only\",\"profile_id\":\"{PROFILE_ID}\",\"sample_count\":{sample_count},\"schema_id\":\"{SCHEMA_ID}\",\"status\":\"local_synthetic_development_observation_only\",\"timed_boundary\":\"produce_native_sampling_pool_only_fixture_construction_excluded\",\"wall_time_role\":\"descriptive_no_threshold_no_claim\"}}",
         fixture_rows.join(",")
@@ -399,11 +401,23 @@ fn peak_rss_kib() -> Result<u64, String> {
 fn cpu_model() -> Result<String, String> {
     let cpuinfo = fs::read_to_string("/proc/cpuinfo")
         .map_err(|error| format!("read /proc/cpuinfo: {error}"))?;
-    cpuinfo
-        .lines()
-        .find_map(|line| line.strip_prefix("model name\t: "))
-        .map(str::to_owned)
+    cpu_model_from(&cpuinfo)
         .ok_or_else(|| "CPU model is absent from /proc/cpuinfo".to_owned())
+}
+
+fn cpu_model_from(cpuinfo: &str) -> Option<String> {
+    // Linux architectures expose different labels. Prefer a descriptive model,
+    // then fall back to the architecture-specific hardware/processor labels.
+    ["model name", "model", "hardware", "processor"]
+        .into_iter()
+        .find_map(|wanted| {
+            cpuinfo.lines().find_map(|line| {
+                let (key, value) = line.split_once(':')?;
+                let value = value.trim();
+                (key.trim().eq_ignore_ascii_case(wanted) && !value.is_empty())
+                    .then(|| value.to_owned())
+            })
+        })
 }
 
 fn hex(value: [u8; 32]) -> String {
@@ -469,5 +483,18 @@ mod tests {
         assert!(observe(MINIMUM_SAMPLE_COUNT - 1).is_err());
         assert!(observe(MAXIMUM_SAMPLE_COUNT + 1).is_err());
         assert!(parse_child("short").is_err());
+    }
+
+    #[test]
+    fn cpu_identity_accepts_architecture_specific_linux_labels() {
+        assert_eq!(
+            cpu_model_from("processor : 0\nHardware : Neoverse-N1\n"),
+            Some("Neoverse-N1".to_owned())
+        );
+        assert_eq!(
+            cpu_model_from("Model\t: PowerNV 10\nprocessor\t: 0\n"),
+            Some("PowerNV 10".to_owned())
+        );
+        assert_eq!(cpu_model_from("processor :\n"), None);
     }
 }
