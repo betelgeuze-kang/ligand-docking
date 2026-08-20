@@ -20,8 +20,8 @@ execution before any observation is considered usable.
 ## Static fixture verification
 
 ```bash
-cargo run --release -p betelgeuze-docking-search \
-  --bin betelgeuze-sampling-pool-observe-v1 -- --verify-fixtures
+python3 tools/run_engine_v2_sampling_pool_cpu_observation_v1.py \
+  --verify-fixtures
 ```
 
 This operation reads no clocks and emits only deterministic fixture identities,
@@ -30,9 +30,14 @@ denominators, and all-false authority state. It is safe for ordinary tests.
 ## Local descriptive observation
 
 ```bash
-cargo run --release -p betelgeuze-docking-search \
-  --bin betelgeuze-sampling-pool-observe-v1 -- --observe 7
+python3 tools/run_engine_v2_sampling_pool_cpu_observation_v1.py \
+  --observe 7
 ```
+
+The Python wrapper builds only the existing docking-search library target, then
+compiles the observer source into a temporary directory with `rustc`. It does
+not add or mutate a Cargo target, preserving the frozen consumed-v7 target
+inventory.
 
 The parent launches a fresh child process for every fixture/sample pair. Fixture
 construction is outside the timed boundary; the wall clock covers only
