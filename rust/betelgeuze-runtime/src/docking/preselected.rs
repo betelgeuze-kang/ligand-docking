@@ -648,6 +648,24 @@ fn validate_component_output_counts(
     cluster: &sys::bg_docking_rmsd_cluster_output_v1,
 ) -> Result<()> {
     let top_k_limit = u64::from(sys::BG_DOCKING_STABLE_TOP_K_LIMIT);
+    if [
+        initial_admission.unit_system,
+        rigid.unit_system,
+        torsion.unit_system,
+        post_admission.unit_system,
+        scorer.unit_system,
+        validity.unit_system,
+        ranking.unit_system,
+        cluster.unit_system,
+    ]
+    .iter()
+    .any(|unit| *unit != sys::BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL)
+    {
+        return Err(Error::local(
+            ErrorCode::AbiMismatch,
+            "preselected native component returned a non-canonical unit system",
+        ));
+    }
     for (observed, expected, label) in [
         (
             initial_admission.row_capacity,
