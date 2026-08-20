@@ -66,14 +66,16 @@ modern `config.toml` and legacy `config` candidates from the Rust working
 directory through every ancestor plus Cargo home; all candidates were absent
 for this capture. A hashed path-component chain starts at `rust/.cargo`, removes
 one ancestor per row, and ends at `/.cargo`, proving completeness without
-assuming a checkout-specific path depth. Its receipt SHA-256 is
-`b44ef98a3b9da7cae34b1bba28da279f7757de401e9cd0adb005e0b555e0a1f2`.
+assuming a checkout-specific path depth. The release rlib is compiled inside a
+new capture-owned temporary Cargo target, and Cargo/rustc identities must match
+before and after compilation and timing. Its receipt SHA-256 is
+`94b4cc1eaf192791afd2ce966f1eaeb7f5e0d0fccd98ea0a1ee224aae114bffc`.
 
 | fixture | raw samples | p50 ns | p95 ns | peak RSS KiB | peak delta KiB |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| small | 7 | 19,872,626 | 22,172,496 | 2,688 | 768 |
-| medium | 7 | 66,861,931 | 79,320,257 | 3,072 | 1,152 |
-| large | 7 | 195,819,684 | 202,903,993 | 3,456 | 1,536 |
+| small | 7 | 19,949,933 | 20,081,998 | 2,688 | 768 |
+| medium | 7 | 66,518,170 | 66,990,164 | 3,072 | 1,152 |
+| large | 7 | 195,010,373 | 196,091,035 | 3,456 | 1,536 |
 
 Verify the canonical receipt without reading a clock or executing an
 observation:

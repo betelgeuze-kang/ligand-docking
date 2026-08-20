@@ -81,6 +81,7 @@ RECEIPT_DOMAIN = b"betelgeuze.engine_v2_sampling_pool_cpu_observation_evidence/1
 MAXIMUM_EVIDENCE_BYTES = 128 * 1024
 _SHA256 = re.compile(r"[0-9a-f]{64}")
 _GIT_OID = re.compile(r"[0-9a-f]{40}")
+_MAXIMUM_JSON_INTEGER_DIGITS = 128
 _BUILD_ENVIRONMENT_KEYS = (
     "CARGO_BUILD_JOBS",
     "CARGO_BUILD_RUSTC",
@@ -196,6 +197,15 @@ def _parse_finite_float(token: str) -> float:
     return value
 
 
+def _parse_bounded_int(token: str) -> int:
+    digits = token.removeprefix("-")
+    if len(digits) > _MAXIMUM_JSON_INTEGER_DIGITS:
+        raise SamplingPoolCPUObservationEvidenceError(
+            "JSON integer exceeds the evidence digit limit"
+        )
+    return int(token)
+
+
 def _file_sha256(path: Path) -> str:
     return _sha256(path.read_bytes())
 
@@ -216,7 +226,7 @@ def _receipt_sha256(projection: Mapping[str, object]) -> str:
     return _sha256(RECEIPT_DOMAIN + _canonical_projection(projection))
 
 
-def _git(*arguments: str) -> str:
+def _git_bytes(*arguments: str) -> bytes:
     try:
         completed = subprocess.run(
             (
@@ -229,7 +239,6 @@ def _git(*arguments: str) -> str:
             cwd=REPOSITORY_ROOT,
             env=dict(_SOURCE_GIT_ENVIRONMENT),
             capture_output=True,
-            text=True,
             timeout=30,
             check=False,
         )
@@ -238,11 +247,92 @@ def _git(*arguments: str) -> str:
             f"git source binding failed: {' '.join(arguments)}"
         ) from exc
     if completed.returncode != 0:
-        detail = completed.stderr.strip() or completed.stdout.strip()
+        detail = (completed.stderr.strip() or completed.stdout.strip()).decode(
+            "utf-8", errors="replace"
+        )
         raise SamplingPoolCPUObservationEvidenceError(
             f"git source binding failed: {' '.join(arguments)}: {detail[:4096]}"
         )
-    return completed.stdout.strip()
+    return completed.stdout
+
+
+def _git(*arguments: str) -> str:
+    try:
+        return _git_bytes(*arguments).decode("utf-8").strip()
+    except UnicodeError as exc:
+        raise SamplingPoolCPUObservationEvidenceError(
+            f"git source binding output is not UTF-8: {' '.join(arguments)}"
+        ) from exc
+
+
+def _git_blob_oid(raw: bytes, object_format: str) -> str:
+    if object_format not in {"sha1", "sha256"}:
+        raise SamplingPoolCPUObservationEvidenceError(
+            "Git object format is unsupported"
+        )
+    digest = hashlib.new(object_format)
+    digest.update(f"blob {len(raw)}\0".encode("ascii"))
+    digest.update(raw)
+    return digest.hexdigest()
+
+
+def _verify_actual_source_bytes() -> None:
+    object_format = _git("rev-parse", "--show-object-format")
+    listing = _git_bytes(
+        "ls-tree",
+        "-r",
+        "-z",
+        "--full-tree",
+        SOURCE_BASELINE_COMMIT,
+        "--",
+        *SOURCE_CLOSURE_PATHS,
+    )
+    rows = [row for row in listing.split(b"\0") if row]
+    if not rows:
+        raise SamplingPoolCPUObservationEvidenceError(
+            "baseline source closure is empty"
+        )
+    executable_bits = stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
+    for row in rows:
+        try:
+            metadata, raw_path = row.split(b"\t", 1)
+            mode, object_type, expected_oid = metadata.decode("ascii").split()
+            relative_path = raw_path.decode("utf-8")
+        except (UnicodeError, ValueError) as exc:
+            raise SamplingPoolCPUObservationEvidenceError(
+                "baseline source tree entry is invalid"
+            ) from exc
+        if object_type != "blob" or mode not in {"100644", "100755", "120000"}:
+            raise SamplingPoolCPUObservationEvidenceError(
+                f"unsupported baseline source entry: {relative_path}"
+            )
+        actual_path = REPOSITORY_ROOT / relative_path
+        try:
+            metadata = actual_path.lstat()
+            if mode == "120000":
+                if not stat.S_ISLNK(metadata.st_mode):
+                    raise SamplingPoolCPUObservationEvidenceError(
+                        f"source symlink shape changed: {relative_path}"
+                    )
+                actual_bytes = os.fsencode(os.readlink(actual_path))
+            else:
+                if not stat.S_ISREG(metadata.st_mode):
+                    raise SamplingPoolCPUObservationEvidenceError(
+                        f"source file shape changed: {relative_path}"
+                    )
+                if bool(metadata.st_mode & executable_bits) != (mode == "100755"):
+                    raise SamplingPoolCPUObservationEvidenceError(
+                        f"source executable mode changed: {relative_path}"
+                    )
+                actual_bytes = actual_path.read_bytes()
+        except OSError as exc:
+            raise SamplingPoolCPUObservationEvidenceError(
+                f"source file is unreadable: {relative_path}"
+            ) from exc
+        if _git_blob_oid(actual_bytes, object_format) != expected_oid:
+            raise SamplingPoolCPUObservationEvidenceError(
+                f"source bytes differ from merged baseline: {relative_path}"
+            )
 
 
 def _verify_source_baseline(
@@ -254,6 +344,7 @@ def _verify_source_baseline(
             "merged source baseline tree changed"
         )
     if require_matching_worktree:
+        _verify_actual_source_bytes()
         try:
             _git(
                 "diff",
@@ -298,16 +389,12 @@ def _verify_source_baseline(
 
 def _baseline_file_sha256(path: str) -> str:
     try:
-        completed = observer._run(
-            ("git", "show", f"{SOURCE_BASELINE_COMMIT}:{path}"),
-            cwd=REPOSITORY_ROOT,
-            timeout=30,
-        )
-    except observer.SamplingPoolCPUObservationError as exc:
+        raw = _git_bytes("show", f"{SOURCE_BASELINE_COMMIT}:{path}")
+    except SamplingPoolCPUObservationEvidenceError as exc:
         raise SamplingPoolCPUObservationEvidenceError(
             f"baseline file is unavailable: {path}"
         ) from exc
-    return _sha256(completed.stdout.encode("utf-8"))
+    return _sha256(raw)
 
 
 def _environment_fingerprints() -> dict[str, object]:
@@ -322,8 +409,13 @@ def _environment_fingerprints() -> dict[str, object]:
     }
 
 
-def _path_sha256(path: Path) -> str:
-    return _sha256(os.fsencode(str(path.absolute())))
+_CARGO_PATH_COMPONENT_DOMAIN = b"betelgeuze.cargo_path_components/1\0"
+
+
+def _components_path_sha256(components: Sequence[str]) -> str:
+    return _sha256(
+        _CARGO_PATH_COMPONENT_DOMAIN + _canonical_projection(list(components))
+    )
 
 
 def _path_components_sha256(path: Path) -> list[str]:
@@ -333,11 +425,17 @@ def _path_components_sha256(path: Path) -> list[str]:
     ]
 
 
+def _path_sha256(path: Path) -> str:
+    return _components_path_sha256(_path_components_sha256(path))
+
+
 def _cargo_configuration_file(path: Path) -> dict[str, object]:
+    candidate_components = _path_components_sha256(path)
     binding: dict[str, object] = {
-        "candidate_path_sha256": _path_sha256(path),
+        "candidate_path_sha256": _components_path_sha256(candidate_components),
         "content_sha256": None,
         "present": False,
+        "resolved_path_components_sha256": None,
         "resolved_path_sha256": None,
     }
     try:
@@ -359,6 +457,7 @@ def _cargo_configuration_file(path: Path) -> dict[str, object]:
         **binding,
         "content_sha256": _sha256(content),
         "present": True,
+        "resolved_path_components_sha256": _path_components_sha256(resolved),
         "resolved_path_sha256": _path_sha256(resolved),
     }
 
@@ -563,6 +662,7 @@ def _load_observer_output(raw: str) -> dict[str, Any]:
             raw,
             object_pairs_hook=observer._reject_duplicate_keys,
             parse_float=_parse_finite_float,
+            parse_int=_parse_bounded_int,
             parse_constant=lambda token: (_ for _ in ()).throw(
                 SamplingPoolCPUObservationEvidenceError(
                     f"non-finite observer JSON value: {token}"
@@ -583,59 +683,8 @@ def _load_observer_output(raw: str) -> dict[str, Any]:
         raise SamplingPoolCPUObservationEvidenceError(str(exc)) from exc
 
 
-def capture() -> dict[str, object]:
-    if os.environ.get("GITHUB_ACTIONS", "").lower() == "true":
-        raise SamplingPoolCPUObservationEvidenceError(
-            "GitHub Actions cannot capture timing evidence"
-        )
-    _verify_imported_observer_binding()
-    source = _verify_source_baseline()
-    capture_tool_sha256 = _file_sha256(Path(__file__).resolve())
-    build_environment = _environment_fingerprints()
-    cargo_configuration = _cargo_configuration_binding()
-    rlib = observer._build_library()
-    rlib_sha256 = _file_sha256(rlib)
-    rlib_bytes = rlib.stat().st_size
-    with tempfile.TemporaryDirectory(
-        prefix="engine-v2-sampling-pool-evidence-"
-    ) as directory:
-        executable = Path(directory) / "betelgeuze-sampling-pool-observe-v1"
-        observer._compile_observer(rlib, executable)
-        executable_sha256 = _file_sha256(executable)
-        executable_bytes = executable.stat().st_size
-        affinity_before = _cpu_affinity()
-        completed = _run_timed_observer(
-            (str(executable), "--observe", str(SAMPLE_COUNT)),
-            cwd=REPOSITORY_ROOT,
-            timeout=600,
-        )
-        if _file_sha256(executable) != executable_sha256:
-            raise SamplingPoolCPUObservationEvidenceError(
-                "observer binary changed during execution"
-            )
-    observation = _load_observer_output(completed.stdout)
-    host = _host_identity(str(observation["cpu_model"]))
-    _require_stable_affinity(affinity_before, host["affinity_cpu_ids"])
-    if _verify_source_baseline() != source:
-        raise SamplingPoolCPUObservationEvidenceError(
-            "source closure changed during execution"
-        )
-    if (
-        _file_sha256(Path(__file__).resolve()) != capture_tool_sha256
-        or _file_sha256(rlib) != rlib_sha256
-        or rlib.stat().st_size != rlib_bytes
-    ):
-        raise SamplingPoolCPUObservationEvidenceError(
-            "capture tool or release rlib changed during execution"
-        )
-    if (
-        _environment_fingerprints() != build_environment
-        or _cargo_configuration_binding() != cargo_configuration
-    ):
-        raise SamplingPoolCPUObservationEvidenceError(
-            "build environment or Cargo configuration changed during execution"
-        )
-    toolchain = {
+def _toolchain_identity() -> dict[str, str]:
+    return {
         "cargo_version": observer._run(
             ("cargo", "--version", "--verbose"),
             cwd=observer.RUST_ROOT,
@@ -647,15 +696,137 @@ def capture() -> dict[str, object]:
             timeout=30,
         ).stdout.strip(),
     }
+
+
+def _build_release_library_fresh(target_directory: Path) -> Path:
+    if target_directory.exists():
+        raise SamplingPoolCPUObservationEvidenceError(
+            "capture-owned Cargo target already exists"
+        )
+    completed = observer._run(
+        (
+            "cargo",
+            "build",
+            "--target-dir",
+            str(target_directory),
+            "--release",
+            "--locked",
+            "-p",
+            "betelgeuze-docking-search",
+            "--lib",
+            "--message-format=json",
+        ),
+        cwd=observer.RUST_ROOT,
+        timeout=180,
+    )
+    observed: list[Path] = []
+    for line in completed.stdout.splitlines():
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        target = row.get("target")
+        if row.get("reason") != "compiler-artifact" or type(target) is not dict:
+            continue
+        if target.get("name") != "betelgeuze_docking_search":
+            continue
+        for filename in row.get("filenames", []):
+            path = Path(filename)
+            if (
+                path.name == "libbetelgeuze_docking_search.rlib"
+                or path.name.startswith("libbetelgeuze_docking_search-")
+            ) and path.suffix == ".rlib":
+                observed.append(path.resolve())
+    unique = sorted(set(observed))
+    resolved_target = target_directory.resolve()
+    if (
+        len(unique) != 1
+        or not unique[0].is_file()
+        or not unique[0].is_relative_to(resolved_target)
+    ):
+        raise SamplingPoolCPUObservationEvidenceError(
+            "fresh Cargo build did not report one exact in-target rlib"
+        )
+    return unique[0]
+
+
+def _capture_fresh_observation() -> tuple[dict[str, Any], list[int], dict[str, object]]:
+    with tempfile.TemporaryDirectory(
+        prefix="engine-v2-sampling-pool-evidence-"
+    ) as directory:
+        temporary_root = Path(directory)
+        rlib = _build_release_library_fresh(temporary_root / "cargo-target")
+        rlib_sha256 = _file_sha256(rlib)
+        rlib_bytes = rlib.stat().st_size
+        executable = temporary_root / "betelgeuze-sampling-pool-observe-v1"
+        observer._compile_observer(rlib, executable)
+        executable_sha256 = _file_sha256(executable)
+        executable_bytes = executable.stat().st_size
+        affinity_before = _cpu_affinity()
+        completed = _run_timed_observer(
+            (str(executable), "--observe", str(SAMPLE_COUNT)),
+            cwd=REPOSITORY_ROOT,
+            timeout=600,
+        )
+        if (
+            _file_sha256(executable) != executable_sha256
+            or executable.stat().st_size != executable_bytes
+            or _file_sha256(rlib) != rlib_sha256
+            or rlib.stat().st_size != rlib_bytes
+        ):
+            raise SamplingPoolCPUObservationEvidenceError(
+                "fresh observer binary or release rlib changed during execution"
+            )
+        observation = _load_observer_output(completed.stdout)
+        artifacts: dict[str, object] = {
+            "observer_binary_bytes": executable_bytes,
+            "observer_binary_sha256": executable_sha256,
+            "release_rlib_bytes": rlib_bytes,
+            "release_rlib_sha256": rlib_sha256,
+            "target_directory_role": "fresh_capture_owned_temporary_directory",
+        }
+        return observation, affinity_before, artifacts
+
+
+def capture() -> dict[str, object]:
+    if os.environ.get("GITHUB_ACTIONS", "").lower() == "true":
+        raise SamplingPoolCPUObservationEvidenceError(
+            "GitHub Actions cannot capture timing evidence"
+        )
+    _verify_imported_observer_binding()
+    source = _verify_source_baseline()
+    capture_tool_sha256 = _file_sha256(Path(__file__).resolve())
+    build_environment = _environment_fingerprints()
+    cargo_configuration = _cargo_configuration_binding()
+    toolchain = _toolchain_identity()
+    observation, affinity_before, artifacts = _capture_fresh_observation()
+    host = _host_identity(str(observation["cpu_model"]))
+    _require_stable_affinity(affinity_before, host["affinity_cpu_ids"])
+    if _verify_source_baseline() != source:
+        raise SamplingPoolCPUObservationEvidenceError(
+            "source closure changed during execution"
+        )
+    if _file_sha256(Path(__file__).resolve()) != capture_tool_sha256:
+        raise SamplingPoolCPUObservationEvidenceError(
+            "capture tool changed during execution"
+        )
+    if (
+        _environment_fingerprints() != build_environment
+        or _cargo_configuration_binding() != cargo_configuration
+    ):
+        raise SamplingPoolCPUObservationEvidenceError(
+            "build environment or Cargo configuration changed during execution"
+        )
+    if _toolchain_identity() != toolchain:
+        raise SamplingPoolCPUObservationEvidenceError(
+            "Rust/Cargo toolchain changed during execution"
+        )
     projection: dict[str, object] = {
         "authority": dict(observation["authority"]),
         "build": {
             "build_environment": build_environment,
             "cargo_configuration": cargo_configuration,
-            "observer_binary_bytes": executable_bytes,
-            "observer_binary_sha256": executable_sha256,
-            "release_rlib_bytes": rlib_bytes,
-            "release_rlib_sha256": rlib_sha256,
+            **artifacts,
             "runtime_environment": _timed_runtime_environment(),
             "toolchain": toolchain,
         },
@@ -737,10 +908,14 @@ def _verify_cargo_configuration(value: object) -> None:
             raise SamplingPoolCPUObservationEvidenceError(
                 "Cargo configuration lookup root is invalid"
             )
-        _require_digest(
+        root_components = root["root_path_components_sha256"]
+        if _require_digest(
             root.get("root_path_sha256"),
             label=f"Cargo configuration root {root.get('scope')}",
-        )
+        ) != _components_path_sha256(root_components):
+            raise SamplingPoolCPUObservationEvidenceError(
+                "Cargo configuration root digest is not component-bound"
+            )
         candidate_digests: set[str] = set()
         for name, candidate in root["candidate_files"].items():
             if (
@@ -750,6 +925,7 @@ def _verify_cargo_configuration(value: object) -> None:
                     "candidate_path_sha256",
                     "content_sha256",
                     "present",
+                    "resolved_path_components_sha256",
                     "resolved_path_sha256",
                 }
                 or type(candidate.get("present")) is not bool
@@ -757,23 +933,46 @@ def _verify_cargo_configuration(value: object) -> None:
                 raise SamplingPoolCPUObservationEvidenceError(
                     f"Cargo configuration candidate is invalid: {name}"
                 )
-            candidate_digests.add(
-                _require_digest(
-                    candidate.get("candidate_path_sha256"),
-                    label=f"Cargo configuration candidate {name}",
-                )
+            candidate_digest = _require_digest(
+                candidate.get("candidate_path_sha256"),
+                label=f"Cargo configuration candidate {name}",
             )
+            expected_candidate_components = [*root_components, _sha256(name.encode())]
+            if candidate_digest != _components_path_sha256(
+                expected_candidate_components
+            ):
+                raise SamplingPoolCPUObservationEvidenceError(
+                    f"Cargo configuration candidate path is not root-bound: {name}"
+                )
+            candidate_digests.add(candidate_digest)
             if candidate["present"]:
                 _require_digest(
                     candidate.get("content_sha256"),
                     label=f"Cargo configuration content {name}",
                 )
-                _require_digest(
+                resolved_components = candidate.get("resolved_path_components_sha256")
+                if (
+                    type(resolved_components) is not list
+                    or not resolved_components
+                    or any(
+                        type(component) is not str
+                        or _SHA256.fullmatch(component) is None
+                        for component in resolved_components
+                    )
+                ):
+                    raise SamplingPoolCPUObservationEvidenceError(
+                        f"Cargo configuration resolved components are invalid: {name}"
+                    )
+                if _require_digest(
                     candidate.get("resolved_path_sha256"),
                     label=f"Cargo configuration resolved path {name}",
-                )
+                ) != _components_path_sha256(resolved_components):
+                    raise SamplingPoolCPUObservationEvidenceError(
+                        f"Cargo configuration resolved path is not component-bound: {name}"
+                    )
             elif (
                 candidate.get("content_sha256") is not None
+                or candidate.get("resolved_path_components_sha256") is not None
                 or candidate.get("resolved_path_sha256") is not None
             ):
                 raise SamplingPoolCPUObservationEvidenceError(
@@ -930,6 +1129,7 @@ def verify(document: object) -> dict[str, object]:
         "release_rlib_bytes",
         "release_rlib_sha256",
         "runtime_environment",
+        "target_directory_role",
         "toolchain",
     }:
         raise SamplingPoolCPUObservationEvidenceError("build binding is absent")
@@ -938,6 +1138,12 @@ def verify(document: object) -> dict[str, object]:
     for key in ("observer_binary_bytes", "release_rlib_bytes"):
         if type(build.get(key)) is not int or build[key] <= 0:
             raise SamplingPoolCPUObservationEvidenceError(f"build.{key} is invalid")
+    if build.get("target_directory_role") != (
+        "fresh_capture_owned_temporary_directory"
+    ):
+        raise SamplingPoolCPUObservationEvidenceError(
+            "build target-directory role is invalid"
+        )
     if (
         type(build.get("toolchain")) is not dict
         or set(build["toolchain"]) != {"cargo_version", "rustc_version"}
@@ -1015,14 +1221,23 @@ def verify(document: object) -> dict[str, object]:
         raise SamplingPoolCPUObservationEvidenceError("host identity is invalid")
     _require_digest(host.get("boot_id_sha256"), label="host.boot_id_sha256")
     _require_digest(host.get("os_release_sha256"), label="host.os_release_sha256")
+    timestamp = document["captured_at_utc"]
+    if type(timestamp) is not str:
+        raise SamplingPoolCPUObservationEvidenceError("capture timestamp is invalid")
     try:
-        captured = datetime.fromisoformat(str(document["captured_at_utc"]))
+        captured = datetime.fromisoformat(timestamp)
     except ValueError as exc:
         raise SamplingPoolCPUObservationEvidenceError(
             "capture timestamp is invalid"
         ) from exc
-    if captured.tzinfo is None or captured.utcoffset() != timezone.utc.utcoffset(None):
-        raise SamplingPoolCPUObservationEvidenceError("capture timestamp is not UTC")
+    if (
+        captured.tzinfo is None
+        or captured.utcoffset() != timezone.utc.utcoffset(None)
+        or captured.isoformat(timespec="seconds") != timestamp
+    ):
+        raise SamplingPoolCPUObservationEvidenceError(
+            "capture timestamp is not exact UTC calendar seconds"
+        )
     return document
 
 
@@ -1050,6 +1265,7 @@ def load_and_verify(path: Path) -> dict[str, object]:
             raw.decode("ascii"),
             object_pairs_hook=observer._reject_duplicate_keys,
             parse_float=_parse_finite_float,
+            parse_int=_parse_bounded_int,
             parse_constant=lambda token: (_ for _ in ()).throw(
                 SamplingPoolCPUObservationEvidenceError(
                     f"non-finite evidence JSON value: {token}"

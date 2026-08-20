@@ -25,7 +25,7 @@ def _reseal(value: dict[str, object]) -> dict[str, object]:
 def test_committed_source_binary_host_bound_observation_verifies() -> None:
     value = evidence.load_and_verify(EVIDENCE)
     assert value["receipt_sha256"] == (
-        "b44ef98a3b9da7cae34b1bba28da279f7757de401e9cd0adb005e0b555e0a1f2"
+        "94b4cc1eaf192791afd2ce966f1eaeb7f5e0d0fccd98ea0a1ee224aae114bffc"
     )
     assert value["source"]["merged_main_commit"] == evidence.SOURCE_BASELINE_COMMIT
     assert value["source"]["merged_main_tree"] == evidence.SOURCE_BASELINE_TREE
@@ -86,6 +86,34 @@ def test_resealed_semantic_cross_wiring_fails_closed() -> None:
     with pytest.raises(
         evidence.SamplingPoolCPUObservationEvidenceError,
         match="host identity",
+    ):
+        evidence.verify(_reseal(value))
+
+    value = json.loads(EVIDENCE.read_text(encoding="ascii"))
+    value["captured_at_utc"] = "2026-W34-4T23:21:26Z"
+    with pytest.raises(
+        evidence.SamplingPoolCPUObservationEvidenceError,
+        match="capture timestamp",
+    ):
+        evidence.verify(_reseal(value))
+
+    value = json.loads(EVIDENCE.read_text(encoding="ascii"))
+    value["build"]["cargo_configuration"]["lookup_roots"][0]["root_path_sha256"] = (
+        "0" * 64
+    )
+    with pytest.raises(
+        evidence.SamplingPoolCPUObservationEvidenceError,
+        match="not component-bound",
+    ):
+        evidence.verify(_reseal(value))
+
+    value = json.loads(EVIDENCE.read_text(encoding="ascii"))
+    value["build"]["cargo_configuration"]["lookup_roots"][0]["candidate_files"][
+        "config.toml"
+    ]["candidate_path_sha256"] = "0" * 64
+    with pytest.raises(
+        evidence.SamplingPoolCPUObservationEvidenceError,
+        match="not root-bound",
     ):
         evidence.verify(_reseal(value))
 
@@ -275,6 +303,14 @@ def test_cli_overflowing_json_number_is_stably_blocked(
         "non-finite JSON number is forbidden\n"
     )
 
+    oversized = tmp_path / "oversized-integer.json"
+    oversized.write_text('{"value":' + "1" * 5000 + "}\n", encoding="ascii")
+    assert evidence.main(["--verify", str(oversized)]) == 1
+    assert capsys.readouterr().out == (
+        "sampling_pool_cpu_observation_evidence=blocked:"
+        "JSON integer exceeds the evidence digit limit\n"
+    )
+
 
 def test_source_git_ignores_ambient_repository_redirection(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
@@ -282,6 +318,25 @@ def test_source_git_ignores_ambient_repository_redirection(
     monkeypatch.setenv("GIT_DIR", str(tmp_path / "other-git-dir"))
     monkeypatch.setenv("GIT_WORK_TREE", str(tmp_path / "other-work-tree"))
     assert Path(evidence._git("rev-parse", "--show-toplevel")) == ROOT
+    assert evidence._baseline_file_sha256("rust/Cargo.lock") == evidence._sha256(
+        evidence._git_bytes(
+            "show", f"{evidence.SOURCE_BASELINE_COMMIT}:rust/Cargo.lock"
+        )
+    )
+    evidence._verify_actual_source_bytes()
+
+
+def test_fresh_target_and_toolchain_helpers_fail_closed(tmp_path: Path) -> None:
+    occupied_target = tmp_path / "occupied-target"
+    occupied_target.mkdir()
+    with pytest.raises(
+        evidence.SamplingPoolCPUObservationEvidenceError,
+        match="already exists",
+    ):
+        evidence._build_release_library_fresh(occupied_target)
+    toolchain = evidence._toolchain_identity()
+    assert set(toolchain) == {"cargo_version", "rustc_version"}
+    assert all(value for value in toolchain.values())
 
 
 def test_effective_affinity_cpu_models_are_complete_and_homogeneous() -> None:

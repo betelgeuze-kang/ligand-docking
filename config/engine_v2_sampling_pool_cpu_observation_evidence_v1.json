@@ -121,15 +121,17 @@
         {
           "candidate_files": {
             "config": {
-              "candidate_path_sha256": "267ba3b15fcfd1baf3c21bd70729f330ed491db14338c022ad29a649eedd9b41",
+              "candidate_path_sha256": "251cdf1232c47d379cca9fb2d88e45089c76a20c4e4e9eed2c070a3bdc892b2b",
               "content_sha256": null,
               "present": false,
+              "resolved_path_components_sha256": null,
               "resolved_path_sha256": null
             },
             "config.toml": {
-              "candidate_path_sha256": "cb5aeeb9f2984b3c487d0af8ee80e243e02a2d02f983000622745819ae748d5d",
+              "candidate_path_sha256": "216de662ebe51d9cf1512b8b9b2f2cff7fba87e1f0b3c4659e5622ca4606e022",
               "content_sha256": null,
               "present": false,
+              "resolved_path_components_sha256": null,
               "resolved_path_sha256": null
             }
           },
@@ -143,21 +145,23 @@
             "521fe5c9ece1aa1f8b66228171598263574aefc6fa4ba06a61747ec81ee9f5a3",
             "c0f7069e07464fa4e93b743976ee388e5ee530e3393fa306e4745d442bbf1fe8"
           ],
-          "root_path_sha256": "b9bf4a9c2cb9368c862ca5a82e30b7c64f44f24c22cc417f135e7997f66c8723",
+          "root_path_sha256": "a449cc234cda69317596ba28812084d81d84f2dc0a2dede0b5a0f98177fb1eef",
           "scope": "working_directory_ancestor_0"
         },
         {
           "candidate_files": {
             "config": {
-              "candidate_path_sha256": "89cbf275b47240a581bae3696960b0d2880f74db2abb238d673651a67ab347d3",
+              "candidate_path_sha256": "7df4a652dbdb5cc5eebd9254f6f503cc273e210f41922837776f201c50454ec8",
               "content_sha256": null,
               "present": false,
+              "resolved_path_components_sha256": null,
               "resolved_path_sha256": null
             },
             "config.toml": {
-              "candidate_path_sha256": "266748f2bfdf40c09abdcc2e34da0774c545ce7c0ea4e1ba96e21b9952350e51",
+              "candidate_path_sha256": "d457eed3270dcc4c78cd9f1d07a51d1efb54bfb24caa4267a54e8c7c7ee489e8",
               "content_sha256": null,
               "present": false,
+              "resolved_path_components_sha256": null,
               "resolved_path_sha256": null
             }
           },
@@ -170,21 +174,23 @@
             "b8d8ce23368c5df6969d0494488617307e638cc5f6e0691e8fccf7bc2db07255",
             "c0f7069e07464fa4e93b743976ee388e5ee530e3393fa306e4745d442bbf1fe8"
           ],
-          "root_path_sha256": "d94ead0fe9422f476a808684a71202e2e09e39d68a34ca92780e9009061af1bf",
+          "root_path_sha256": "122353602a0001c60d243ea3cec9ce06e8fd0ed1b51e6a82a86c37e9d46e7ec4",
           "scope": "working_directory_ancestor_1"
         },
         {
           "candidate_files": {
             "config": {
-              "candidate_path_sha256": "5480f0edd80b8636bd0bf238d6500bc75ee026a812c89e92ef9d613a24099f1a",
+              "candidate_path_sha256": "d2bfe1e7a9de6add95444e06520690ac2cb71b5a3f0544dd4e7679a066661838",
               "content_sha256": null,
               "present": false,
+              "resolved_path_components_sha256": null,
               "resolved_path_sha256": null
             },
             "config.toml": {
-              "candidate_path_sha256": "b64f6257a82377ad0963917ed971c7e6eee6d08aa5f1317755b29d2696b5a1d9",
+              "candidate_path_sha256": "9bac87500fbff6dd580c04d73497074cb22e01a54e5c07b1e01768ef42f872ab",
               "content_sha256": null,
               "present": false,
+              "resolved_path_components_sha256": null,
               "resolved_path_sha256": null
             }
           },
@@ -196,21 +202,23 @@
             "570f9eac085a0183973170690355fa9f61e2bf0010f38101fd0d54f7788e9f4d",
             "c0f7069e07464fa4e93b743976ee388e5ee530e3393fa306e4745d442bbf1fe8"
           ],
-          "root_path_sha256": "e4932760f8b0f45a50afac83795f04090e102b7d1034c6f33a24a24ea0e8a9bd",
+          "root_path_sha256": "98a4a39539299147fa9a64cbe4732392ad4d7875387903c369a3e9cba2085011",
           "scope": "working_directory_ancestor_2"
         },
         {
           "candidate_files": {
             "config": {
-              "candidate_path_sha256": "4aef7cd82ba188c332ab9961c702084f298f765a40845ec73332fa8307f935db",
+              "candidate_path_sha256": "c655f3a7f7d39c6534b2852af19b61f290c8ef57341c8d547e1e88a41727ca9f",
               "content_sha256": null,
               "present": false,
+              "resolved_path_components_sha256": null,
               "resolved_path_sha256": null
             },
             "config.toml": {
-              "candidate_path_sha256": "f75c6e9b0a73af78922440d0751691d6d393381b261b8114361248aba8a21b9f",
+              "candidate_path_sha256": "95974b019fb2319e393214d2ff05add83f393db2b80eb47e3fe9147b274bf536",
               "content_sha256": null,
               "present": false,
+              "resolved_path_components_sha256": null,
               "resolved_path_sha256": null
             }
           },
@@ -221,21 +229,23 @@
             "666a44f0580788557379b5f8ff05bc006a3ecc4b4bd35f0dd08fa27338c2edea",
             "c0f7069e07464fa4e93b743976ee388e5ee530e3393fa306e4745d442bbf1fe8"
           ],
-          "root_path_sha256": "bc50280f7fc975380a5b62aa7560d47af4051d4014857d68128e0ecc40c20e0c",
+          "root_path_sha256": "6e85f82cbd3dc3044f5c9b8c63d6bf39616f2c329db7cbc18abb99a77e6aab2e",
           "scope": "working_directory_ancestor_3"
         },
         {
           "candidate_files": {
             "config": {
-              "candidate_path_sha256": "57025ca2741c5291489045f14d938b50f534cbb19f3415d89b69abee1dfa8e04",
+              "candidate_path_sha256": "2e2105029017b8939b9c598ef53c658aad2fc3f08040339a66c1b7dbc3d0aa3e",
               "content_sha256": null,
               "present": false,
+              "resolved_path_components_sha256": null,
               "resolved_path_sha256": null
             },
             "config.toml": {
-              "candidate_path_sha256": "f3766a146a4c78c2ce917d7912bea9b012a5195479f23816f656a8a27b5f9fb9",
+              "candidate_path_sha256": "ec0ecc37bb8ce058d2a86fea0c32dc3d79f3a8e43e2c2163f250a3ef5998a2d8",
               "content_sha256": null,
               "present": false,
+              "resolved_path_components_sha256": null,
               "resolved_path_sha256": null
             }
           },
@@ -245,21 +255,23 @@
             "a1d1128ffe5a2849afb3ac4cad6413b6d75453babc7cac579b95c66a565fe4cc",
             "c0f7069e07464fa4e93b743976ee388e5ee530e3393fa306e4745d442bbf1fe8"
           ],
-          "root_path_sha256": "d9d9a5c85e15f83d121a740f878919c4ddd0e162a665ca1872ca0e09bd1953b7",
+          "root_path_sha256": "dd1f33296003885fd7a34ffcd75025e68beb65caaddcd363fe3084d707fab984",
           "scope": "working_directory_ancestor_4"
         },
         {
           "candidate_files": {
             "config": {
-              "candidate_path_sha256": "4a538302aab36f03e1cfd752897f98783b318613439a9affe4a486335a88e27b",
+              "candidate_path_sha256": "4e80293e3012d5ad2b2d4739af8b2079c151d71eed6e76c3b39923864aa303ac",
               "content_sha256": null,
               "present": false,
+              "resolved_path_components_sha256": null,
               "resolved_path_sha256": null
             },
             "config.toml": {
-              "candidate_path_sha256": "81ee465de1a98467744cf452f32699a9487a6481fa535bd4c11f2456db6f454e",
+              "candidate_path_sha256": "eb9f526b2e9b029ca8763ff15e8aabb26463d03bfcd9f43f33360e02797289fa",
               "content_sha256": null,
               "present": false,
+              "resolved_path_components_sha256": null,
               "resolved_path_sha256": null
             }
           },
@@ -268,21 +280,23 @@
             "74549460f4e5bd883abb5b36b672fd27cf14a073d3c984ee9e6ab9faa3d0b472",
             "c0f7069e07464fa4e93b743976ee388e5ee530e3393fa306e4745d442bbf1fe8"
           ],
-          "root_path_sha256": "be5d867eec6f1e5ba23e3f6736cfc690f256817a8a88a59d6bd07a4ca3d7808a",
+          "root_path_sha256": "992a9841a10fee45a4df364e98550146487f482e32ca3f638827e6c2979c17bc",
           "scope": "working_directory_ancestor_5"
         },
         {
           "candidate_files": {
             "config": {
-              "candidate_path_sha256": "7e6660974bbf11c5c74e1abac5c3ecfe24aa684a97e89cd357f2a9e272335348",
+              "candidate_path_sha256": "f462edc01afcf628afaaabff0fd014d981a36675daea1cc117402eb0fd46235e",
               "content_sha256": null,
               "present": false,
+              "resolved_path_components_sha256": null,
               "resolved_path_sha256": null
             },
             "config.toml": {
-              "candidate_path_sha256": "dfcf0a33ef285fad9f2f30793981502d87b8fc7f1ab372049d13c4a0a1d72da0",
+              "candidate_path_sha256": "4b2eae1540dc3e132fd8504d5df2f2ea29f875236a015f70a73ab28f4c7847b7",
               "content_sha256": null,
               "present": false,
+              "resolved_path_components_sha256": null,
               "resolved_path_sha256": null
             }
           },
@@ -290,42 +304,46 @@
             "4ea140588150773ce3aace786aeef7f4049ce100fa649c94fbbddb960f1da942",
             "c0f7069e07464fa4e93b743976ee388e5ee530e3393fa306e4745d442bbf1fe8"
           ],
-          "root_path_sha256": "0a31cffaaa80a7792a185ae15da1becddce553e28defbd1f744511ef54b62cf8",
+          "root_path_sha256": "55c82ffedf3bdaba327061aea05122c72dabae69e57d1ad7f4fc9299defe7b16",
           "scope": "working_directory_ancestor_6"
         },
         {
           "candidate_files": {
             "config": {
-              "candidate_path_sha256": "9f2e73c2801230e0edbec768a84df4566cb069dc26a13effb5e383c1de3f8f0a",
+              "candidate_path_sha256": "423047084c8bb778274d9d8c416a2b2f22bde729401fe13d20e5cca451a0ee84",
               "content_sha256": null,
               "present": false,
+              "resolved_path_components_sha256": null,
               "resolved_path_sha256": null
             },
             "config.toml": {
-              "candidate_path_sha256": "70d663ddab3591b190affb7d14ad01abd9ffae6478c2a8909fa26aba930e4234",
+              "candidate_path_sha256": "a6f5a1e7dde065d641665e2ad5c6a1418be43095b0faa7c380806c33ae7947d5",
               "content_sha256": null,
               "present": false,
+              "resolved_path_components_sha256": null,
               "resolved_path_sha256": null
             }
           },
           "root_path_components_sha256": [
             "c0f7069e07464fa4e93b743976ee388e5ee530e3393fa306e4745d442bbf1fe8"
           ],
-          "root_path_sha256": "2db84a3461a9450030b6bec458ae0d2c1f21ac14db3e4b5b81f05f425194c68b",
+          "root_path_sha256": "67614756eab49cbc850dab2d3516c0459b25b5cb7415d9bf5104ac887825b5e7",
           "scope": "working_directory_ancestor_7"
         },
         {
           "candidate_files": {
             "config": {
-              "candidate_path_sha256": "4a538302aab36f03e1cfd752897f98783b318613439a9affe4a486335a88e27b",
+              "candidate_path_sha256": "4e80293e3012d5ad2b2d4739af8b2079c151d71eed6e76c3b39923864aa303ac",
               "content_sha256": null,
               "present": false,
+              "resolved_path_components_sha256": null,
               "resolved_path_sha256": null
             },
             "config.toml": {
-              "candidate_path_sha256": "81ee465de1a98467744cf452f32699a9487a6481fa535bd4c11f2456db6f454e",
+              "candidate_path_sha256": "eb9f526b2e9b029ca8763ff15e8aabb26463d03bfcd9f43f33360e02797289fa",
               "content_sha256": null,
               "present": false,
+              "resolved_path_components_sha256": null,
               "resolved_path_sha256": null
             }
           },
@@ -334,7 +352,7 @@
             "74549460f4e5bd883abb5b36b672fd27cf14a073d3c984ee9e6ab9faa3d0b472",
             "c0f7069e07464fa4e93b743976ee388e5ee530e3393fa306e4745d442bbf1fe8"
           ],
-          "root_path_sha256": "be5d867eec6f1e5ba23e3f6736cfc690f256817a8a88a59d6bd07a4ca3d7808a",
+          "root_path_sha256": "992a9841a10fee45a4df364e98550146487f482e32ca3f638827e6c2979c17bc",
           "scope": "cargo_home"
         }
       ]
@@ -351,12 +369,13 @@
       "RAYON_NUM_THREADS": "1",
       "TZ": "UTC"
     },
+    "target_directory_role": "fresh_capture_owned_temporary_directory",
     "toolchain": {
       "cargo_version": "cargo 1.93.0 (083ac5135 2025-12-15)\nrelease: 1.93.0\ncommit-hash: 083ac5135f967fd9dc906ab057a2315861c7a80d\ncommit-date: 2025-12-15\nhost: x86_64-unknown-linux-gnu\nlibgit2: 1.9.1 (sys:0.20.2 vendored)\nlibcurl: 8.15.0-DEV (sys:0.4.83+curl-8.15.0 vendored ssl:OpenSSL/3.5.4)\nssl: OpenSSL 3.5.4 30 Sep 2025\nos: Ubuntu 22.4.0 (jammy) [64-bit]",
       "rustc_version": "rustc 1.93.0 (254b59607 2026-01-19)\nbinary: rustc\ncommit-hash: 254b59607d4417e9dffbc307138ae5c86280fe4c\ncommit-date: 2026-01-19\nhost: x86_64-unknown-linux-gnu\nrelease: 1.93.0\nLLVM version: 21.1.8"
     }
   },
-  "captured_at_utc": "2026-08-20T23:21:26+00:00",
+  "captured_at_utc": "2026-08-20T23:41:50+00:00",
   "host": {
     "affinity_cpu_ids": [
       0,
@@ -442,16 +461,16 @@
         "peak_rss_kib": 2688,
         "receipt_sha256": "2603c7b0b13dd2af26313d26ce63e73e8162de396a1fb5d7030a31a993c60831",
         "receptor_atom_count": 64,
-        "wall_time_ns_p50": 19872626,
-        "wall_time_ns_p95": 22172496,
+        "wall_time_ns_p50": 19949933,
+        "wall_time_ns_p95": 20081998,
         "wall_time_ns_samples": [
-          19891647,
-          19864265,
-          19878526,
-          19857005,
-          19847605,
-          22172496,
-          19872626
+          19928842,
+          19949933,
+          20081998,
+          19951323,
+          19901871,
+          19934282,
+          20054486
         ]
       },
       {
@@ -462,16 +481,16 @@
         "peak_rss_kib": 3072,
         "receipt_sha256": "61a8bb8490359fa03f0fb8fc0a12514203d602dc6539faac447f0e65e8e8d3a5",
         "receptor_atom_count": 256,
-        "wall_time_ns_p50": 66861931,
-        "wall_time_ns_p95": 79320257,
+        "wall_time_ns_p50": 66518170,
+        "wall_time_ns_p95": 66990164,
         "wall_time_ns_samples": [
-          79320257,
-          66861931,
-          74692685,
-          66860510,
-          74396024,
-          66860931,
-          66258590
+          66246352,
+          66518170,
+          66647013,
+          66198240,
+          66586281,
+          66291563,
+          66990164
         ]
       },
       {
@@ -482,16 +501,16 @@
         "peak_rss_kib": 3456,
         "receipt_sha256": "ded4134a8cd2e0c6d42f096c0220c22931378a5cba96e2fc36dba54f77bdc0bb",
         "receptor_atom_count": 512,
-        "wall_time_ns_p50": 195819684,
-        "wall_time_ns_p95": 202903993,
+        "wall_time_ns_p50": 195010373,
+        "wall_time_ns_p95": 196091035,
         "wall_time_ns_samples": [
-          202903993,
-          195806995,
-          200100196,
-          195819684,
-          196422526,
-          194789468,
-          194585291
+          195869679,
+          194832767,
+          195527858,
+          196091035,
+          194322643,
+          195010373,
+          194050404
         ]
       }
     ],
@@ -504,10 +523,10 @@
     "wall_time_role": "descriptive_no_threshold_no_claim"
   },
   "profile_id": "engine_v2_sampling_pool_synthetic_cpu_observation_evidence_v1",
-  "receipt_sha256": "b44ef98a3b9da7cae34b1bba28da279f7757de401e9cd0adb005e0b555e0a1f2",
+  "receipt_sha256": "94b4cc1eaf192791afd2ce966f1eaeb7f5e0d0fccd98ea0a1ee224aae114bffc",
   "schema_id": "betelgeuze.engine_v2_sampling_pool_cpu_observation_evidence/1.0.0",
   "source": {
-    "capture_tool_sha256": "778add717e4738736eac048906903ce8914b442bd5433cc0a30dd811a1ee6542",
+    "capture_tool_sha256": "c7c654c639bdcdd2d38e195c7d6375706f7772df8485f6e379fe424222e0e699",
     "cargo_lock_sha256": "b4f9534bc51bccd72157b0be73ce12c939411821c10c11e70b00996e1f82baac",
     "closure_paths": [
       "LICENSE",
