@@ -26,6 +26,7 @@ mod receipt;
 mod refine;
 mod repository_d0;
 mod rigid_refinement;
+mod sampling_funnel;
 mod scorer_v1;
 mod search;
 mod sha256;
@@ -146,6 +147,20 @@ pub use rigid_refinement::{
     NativeRigidV2Config, NativeRigidV3Config, NativeRigidV6Outcome,
     NATIVE_RIGID_REFINEMENT_MAX_LIGAND_ATOMS, NATIVE_RIGID_REFINEMENT_MAX_PAIR_EVALUATIONS,
     NATIVE_RIGID_REFINEMENT_MAX_RECEPTOR_ATOMS, NATIVE_RIGID_REFINEMENT_MAX_STEPS,
+};
+pub use sampling_funnel::{
+    run_native_sampling_funnel, NativeSamplingFunnelCandidate, NativeSamplingFunnelCandidateState,
+    NativeSamplingFunnelDecision, NativeSamplingFunnelError, NativeSamplingFunnelErrorCode,
+    NativeSamplingFunnelGeneratedCandidate, NativeSamplingFunnelLane,
+    NativeSamplingFunnelLaneSummary, NativeSamplingFunnelObservation, NativeSamplingFunnelReceipt,
+    NativeSamplingFunnelSelectedRow, NativeSamplingFunnelSelectedState,
+    NATIVE_SAMPLING_FUNNEL_DUPLICATE_POLICY, NATIVE_SAMPLING_FUNNEL_EMBEDDING_DIMENSION,
+    NATIVE_SAMPLING_FUNNEL_HARD_MINIMUM_VDW_RATIO, NATIVE_SAMPLING_FUNNEL_INPUT_DENOMINATOR,
+    NATIVE_SAMPLING_FUNNEL_INPUT_SCHEMA_ID, NATIVE_SAMPLING_FUNNEL_LANE_ORDER,
+    NATIVE_SAMPLING_FUNNEL_MAXIMUM_POCKET_ESCAPE_ANGSTROM,
+    NATIVE_SAMPLING_FUNNEL_OUTPUT_DENOMINATOR, NATIVE_SAMPLING_FUNNEL_PROFILE_CANONICAL_SHA256,
+    NATIVE_SAMPLING_FUNNEL_PROFILE_ID, NATIVE_SAMPLING_FUNNEL_QUALITY_PREFILTER_MULTIPLIER,
+    NATIVE_SAMPLING_FUNNEL_SCHEMA_ID,
 };
 pub use scorer_v1::{
     score_native_fixed64_scorer_v1, NativeScorerV1Atom, NativeScorerV1Backend, NativeScorerV1Batch,

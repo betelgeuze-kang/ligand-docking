@@ -1,11 +1,12 @@
 {
-  "schema_id": "betelgeuze.engine_v2_sampling_funnel_profile/1.0.0",
+  "schema_id": "betelgeuze.engine_v2_sampling_funnel_profile/1.1.0",
   "profile_id": "engine_v2_deterministic_512_to_64_funnel_v1",
   "input_denominator": 512,
   "output_denominator": 64,
   "hard_minimum_vdw_ratio": 0.55,
   "maximum_pocket_escape_angstrom": 4.0,
   "quality_prefilter_multiplier": 4,
+  "duplicate_policy": "global_coordinate_sha256_first_pool_index",
   "lane_order": [
     "uniform_so3",
     "pocket_surface",

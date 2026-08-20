@@ -10,9 +10,10 @@ import math
 from pathlib import Path
 from typing import Any
 
-PROFILE_SCHEMA = "betelgeuze.engine_v2_sampling_funnel_profile/1.0.0"
+PROFILE_SCHEMA = "betelgeuze.engine_v2_sampling_funnel_profile/1.1.0"
 INPUT_SCHEMA = "betelgeuze.engine_v2_sampling_funnel_input/1.0.0"
-OUTPUT_SCHEMA = "betelgeuze.engine_v2_sampling_funnel_result/1.0.0"
+OUTPUT_SCHEMA = "betelgeuze.engine_v2_sampling_funnel_result/1.1.0"
+DUPLICATE_POLICY = "global_coordinate_sha256_first_pool_index"
 FORBIDDEN_FRAGMENTS = ("rmsd", "posebuster", "native_pose", "downstream_rank")
 CANDIDATE_FIELDS = {
     "pool_index",
@@ -90,6 +91,8 @@ def _profile(path: Path) -> dict[str, Any]:
         raise FunnelError("input denominator changed")
     if profile.get("output_denominator") != 64:
         raise FunnelError("output denominator changed")
+    if profile.get("duplicate_policy") != DUPLICATE_POLICY:
+        raise FunnelError("duplicate policy changed")
     quotas = profile.get("lane_quotas")
     lane_order = profile.get("lane_order")
     if type(quotas) is not dict or sum(quotas.values()) != 64:
@@ -152,6 +155,7 @@ def _candidate(
             type(raw[key]) is not str
             or len(raw[key]) != 64
             or any(character not in "0123456789abcdef" for character in raw[key])
+            or raw[key] == "0" * 64
         ):
             raise FunnelError(f"candidate {index} {key}")
     parsed = dict(raw)
@@ -168,6 +172,8 @@ def _candidate(
     parsed["embedding"] = tuple(
         _number(value, f"embedding {index}") for value in embedding
     )
+    if not math.isfinite(parsed["shape_penalty"] + parsed["anchor_penalty"]):
+        raise FunnelError(f"candidate {index} quality sum is out of range")
     return parsed
 
 
@@ -181,9 +187,12 @@ def _quality(row: dict[str, Any]) -> tuple[float, float, float, int]:
 
 
 def _distance(first: tuple[float, ...], second: tuple[float, ...]) -> float:
-    return math.sqrt(
+    distance = math.sqrt(
         sum((left - right) ** 2 for left, right in zip(first, second, strict=True))
     )
+    if not math.isfinite(distance):
+        raise FunnelError("embedding distance is out of range")
+    return distance
 
 
 def _select_lane(
@@ -227,19 +236,45 @@ def run(profile_path: Path, input_path: Path) -> dict[str, Any]:
     parsed = [_candidate(raw, index, lanes) for index, raw in enumerate(rows)]
     observations: list[dict[str, Any]] = []
     by_lane: dict[str, list[dict[str, Any]]] = {lane: [] for lane in lane_order}
+    lane_counts: dict[str, dict[str, int]] = {
+        lane: {
+            "generated_count": 0,
+            "typed_failure_count": 0,
+            "hard_rejected_vdw_count": 0,
+            "hard_rejected_pocket_count": 0,
+            "duplicate_count": 0,
+            "filtered_count": 0,
+        }
+        for lane in lane_order
+    }
+    seen_coordinate_sha256: set[str] = set()
     for row in parsed:
         decision = "typed_failure"
         if row["status"] == "generated":
-            if row["minimum_vdw_ratio"] < profile["hard_minimum_vdw_ratio"]:
+            lane_counts[row["lane"]]["generated_count"] += 1
+            coordinate_sha256 = row["coordinate_sha256"]
+            duplicate_coordinate = coordinate_sha256 in seen_coordinate_sha256
+            seen_coordinate_sha256.add(coordinate_sha256)
+            if duplicate_coordinate:
+                decision = "duplicate_coordinate"
+                lane_counts[row["lane"]]["duplicate_count"] += 1
+                lane_counts[row["lane"]]["filtered_count"] += 1
+            elif row["minimum_vdw_ratio"] < profile["hard_minimum_vdw_ratio"]:
                 decision = "hard_reject_vdw"
+                lane_counts[row["lane"]]["hard_rejected_vdw_count"] += 1
+                lane_counts[row["lane"]]["filtered_count"] += 1
             elif (
                 row["pocket_escape_angstrom"]
                 > profile["maximum_pocket_escape_angstrom"]
             ):
                 decision = "hard_reject_pocket"
+                lane_counts[row["lane"]]["hard_rejected_pocket_count"] += 1
+                lane_counts[row["lane"]]["filtered_count"] += 1
             else:
                 decision = "eligible"
                 by_lane[row["lane"]].append(row)
+        else:
+            lane_counts[row["lane"]]["typed_failure_count"] += 1
         observations.append(
             {
                 "pool_index": row["pool_index"],
@@ -284,6 +319,7 @@ def run(profile_path: Path, input_path: Path) -> dict[str, Any]:
                     }
                 )
         lane_summary[lane] = {
+            **lane_counts[lane],
             "quota": quota,
             "eligible_count": len(by_lane[lane]),
             "selected_count": len(chosen),
