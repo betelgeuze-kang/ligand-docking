@@ -772,7 +772,7 @@ fn minimum_distance(
             let delta = left - right;
             squared += delta * delta;
         }
-        let distance = squared.sqrt();
+        let distance = libm::sqrt(squared);
         if !distance.is_finite() {
             return Err(non_finite(
                 "sampling-funnel embedding distance is non-finite",
