@@ -1,15 +1,18 @@
 use betelgeuze_docking_search::{
-    Fixed64FeatureGeometry as IndependentFeatureGeometry,
+    materialize_native_sampling_funnel_preselected_batch, native_fixed64_coordinate_sha256,
+    run_native_sampling_funnel, Fixed64FeatureGeometry as IndependentFeatureGeometry,
     Fixed64FeatureGeometryInventory as IndependentFeatureGeometryInventory,
-    Fixed64FeatureKind as IndependentFeatureKind,
+    Fixed64FeatureKind as IndependentFeatureKind, NativeSamplingFunnelCandidate,
+    NativeSamplingFunnelLane, NativeSamplingFunnelPayloadBatch, NativeSamplingFunnelPayloadRow,
+    Quaternion, Vec3,
 };
 use betelgeuze_runtime::{
     Backend, Context, ContextOptions, ErrorCode, Fixed64AtomicFeature,
     Fixed64ConformerCoordinateSource, Fixed64CoordinateSource, Fixed64ExactSourceEvidence,
     Fixed64FeatureGeometry, Fixed64FeatureKind, Fixed64Identities, Fixed64IndexedCoordinateSource,
     Fixed64LaneMetricsReceipt, Fixed64LaneMetricsReference, Fixed64Ligand, Fixed64Pipeline,
-    Fixed64PipelineContext, Fixed64Receptor, Fixed64RefinementMode, Fixed64RunInput,
-    Fixed64ScientificProjection, Fixed64SourceEvidence, PositionSoa,
+    Fixed64PipelineContext, Fixed64PreselectedRunInput, Fixed64Receptor, Fixed64RefinementMode,
+    Fixed64RunInput, Fixed64ScientificProjection, Fixed64SourceEvidence, PositionSoa,
 };
 use betelgeuze_sys as sys;
 use sha2::{Digest, Sha256};
@@ -277,6 +280,79 @@ fn digest(value: &str) -> [u8; 32] {
         *output = u8::from_str_radix(&value[index * 2..index * 2 + 2], 16).unwrap();
     }
     result
+}
+
+fn funnel_digest(value: u64) -> [u8; 32] {
+    let mut digest = [0; 32];
+    digest[24..].copy_from_slice(&value.to_be_bytes());
+    digest
+}
+
+fn funnel_lane(index: usize) -> NativeSamplingFunnelLane {
+    match index % 4 {
+        0 => NativeSamplingFunnelLane::UniformSo3,
+        1 => NativeSamplingFunnelLane::PocketSurface,
+        2 => NativeSamplingFunnelLane::SingleAnchor,
+        3 => NativeSamplingFunnelLane::MultiAnchor,
+        _ => unreachable!(),
+    }
+}
+
+fn funnel_coordinates(index: usize) -> Vec<Vec3> {
+    let base = index as f64 * 0.01;
+    vec![
+        Vec3::new(base - 0.5, 0.0, 0.0),
+        Vec3::new(base + 0.5, 0.0, 0.0),
+    ]
+}
+
+fn preselected_funnel_fixture() -> betelgeuze_docking_search::NativeSamplingFunnelPreselectedBatch {
+    let candidates = (0..512)
+        .map(|index| {
+            if funnel_lane(index) == NativeSamplingFunnelLane::MultiAnchor {
+                NativeSamplingFunnelCandidate::typed_failure(
+                    index,
+                    NativeSamplingFunnelLane::MultiAnchor,
+                    "synthetic_feature_missing",
+                )
+                .unwrap()
+            } else {
+                let coordinates = funnel_coordinates(index);
+                NativeSamplingFunnelCandidate::generated(
+                    index,
+                    funnel_lane(index),
+                    funnel_digest(index as u64 + 1),
+                    funnel_digest(index as u64 + 513),
+                    native_fixed64_coordinate_sha256(&coordinates).unwrap(),
+                    0.8,
+                    1.0,
+                    (index % 17) as f64,
+                    (index % 11) as f64,
+                    std::array::from_fn(|dimension| ((index * (dimension + 3)) % 19) as f64),
+                )
+                .unwrap()
+            }
+        })
+        .collect();
+    let payloads = (0..512)
+        .map(|index| {
+            if funnel_lane(index) == NativeSamplingFunnelLane::MultiAnchor {
+                NativeSamplingFunnelPayloadRow::typed_failure(index).unwrap()
+            } else {
+                NativeSamplingFunnelPayloadRow::generated(
+                    index,
+                    funnel_digest(index as u64 + 1),
+                    funnel_digest(index as u64 + 513),
+                    funnel_coordinates(index),
+                    Quaternion::new(0.0, 0.0, 0.0, 1.0),
+                )
+                .unwrap()
+            }
+        })
+        .collect();
+    let funnel = run_native_sampling_funnel(candidates).unwrap();
+    let payloads = NativeSamplingFunnelPayloadBatch::new(2, payloads).unwrap();
+    materialize_native_sampling_funnel_preselected_batch(&funnel, &payloads).unwrap()
 }
 
 fn assert_numeric_parity(left: f64, right: f64) {
@@ -888,6 +964,138 @@ fn safe_run_returns_complete_fixed64_receipt_and_preserves_typed_failures() {
             rust_row.ranking.stable_valid_rank
         );
     }
+}
+
+#[test]
+fn preselected_fixed64_composition_preserves_payloads_and_rederives_receipts() {
+    let fixture = TwoAtomFixture::new();
+    let preselected = preselected_funnel_fixture();
+    let candidate_modes: [Fixed64RefinementMode; 64] = std::array::from_fn(|slot| {
+        if slot % 2 == 0 {
+            Fixed64RefinementMode::V2Translation
+        } else {
+            Fixed64RefinementMode::V6BaselineV2Lane
+        }
+    });
+    let rigid_steps = [4_u64; 64];
+    let torsion_eligible = [0_u8; 64];
+    let torsion_steps = [0_u64; 64];
+    let baseline_angles = [0.0_f64; 128];
+    let input = Fixed64PreselectedRunInput {
+        preselected: &preselected,
+        rmsd_threshold_angstrom: 1.5,
+        candidate_modes: &candidate_modes,
+        rigid_max_steps: &rigid_steps,
+        proposal_is_torsion_eligible: &torsion_eligible,
+        torsion_max_steps: &torsion_steps,
+        baseline_torsion_angles_radians: &baseline_angles,
+        predeclared_refinement_policy_sha256: [0x76; 32],
+        predeclared_post_refinement_admission_policy_sha256: [0x77; 32],
+    };
+
+    let mut receipts = Vec::new();
+    for options in [ContextOptions::cpu_reference(), ContextOptions::rust_cpu()] {
+        let context = Context::new(options).unwrap();
+        let pipeline = Fixed64Pipeline::new(&context, fixture.scientific_context()).unwrap();
+        let receipt = pipeline.run_preselected(input).unwrap();
+        assert_eq!(receipt, pipeline.run_preselected(input).unwrap());
+        assert!(receipt.has_valid_receipt());
+        assert_eq!(receipt.backend, options.backend);
+        assert_eq!(receipt.ligand_atom_count, 2);
+        assert_eq!(receipt.selected_count, 56);
+        assert_eq!(receipt.lane_shortfall_count, 8);
+        assert!(receipt.refined_count > 0);
+        assert!(receipt.rows.iter().any(|row| {
+            row.requested_refinement_mode
+                == sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_V6_BASELINE_V2_LANE
+                && row.refinement.coordinate_available
+        }));
+        assert_eq!(receipt.rows.len(), 64);
+        assert_eq!(receipt.torsion_moves.len(), 512);
+        assert_eq!(
+            receipt.source_coordinates.x_angstrom,
+            preselected.x_angstrom()
+        );
+        assert_eq!(
+            receipt.source_coordinates.y_angstrom,
+            preselected.y_angstrom()
+        );
+        assert_eq!(
+            receipt.source_coordinates.z_angstrom,
+            preselected.z_angstrom()
+        );
+        assert_eq!(
+            receipt.source_quaternions[0],
+            preselected.source_quaternion_x()
+        );
+        assert_eq!(
+            receipt.source_quaternions[1],
+            preselected.source_quaternion_y()
+        );
+        assert_eq!(
+            receipt.source_quaternions[2],
+            preselected.source_quaternion_z()
+        );
+        assert_eq!(
+            receipt.source_quaternions[3],
+            preselected.source_quaternion_w()
+        );
+        assert_eq!(
+            receipt.post_admitted_count + receipt.post_rejected_count,
+            receipt.refined_count
+        );
+        assert!(receipt.scored_count <= receipt.post_admitted_count);
+        assert!(receipt.valid_count <= receipt.scored_count);
+        assert!(receipt.authority.denominator_preserved);
+        assert!(!receipt.authority.molecular_execution_authorized);
+        assert!(!receipt.authority.reservation_authorized);
+        assert!(!receipt.authority.benchmark_execution_authorized);
+        assert!(!receipt.authority.production_claim_authorized);
+        assert!(!receipt.molecular_execution_authorized());
+        assert!(!receipt.benchmark_claim_authorized());
+        assert!(!receipt.product_authorized());
+        assert!(!receipt.scientific_claim_authorized());
+        assert!(receipt
+            .rows
+            .iter()
+            .all(|row| row.row_receipt_sha256 != [0; 32]));
+        for slot in 56..64 {
+            assert_eq!(receipt.rows[slot].effective_refinement_mode, 0);
+            assert_eq!(receipt.source_quaternions[3][slot], 0.0);
+            assert!(!receipt.initial_admission_rows[slot].rank_eligible);
+        }
+        let mut changed_coordinate = receipt.clone();
+        changed_coordinate.source_coordinates.x_angstrom[0] += 0.25;
+        assert!(!changed_coordinate.has_valid_receipt());
+        let mut changed_evidence = receipt.clone();
+        changed_evidence.scorer_rows[0].total_score += 0.25;
+        assert!(!changed_evidence.has_valid_receipt());
+        let mut changed_torsion_move = receipt.clone();
+        changed_torsion_move.torsion_moves[0].delta_radians += 0.25;
+        assert!(!changed_torsion_move.has_valid_receipt());
+        let mut absent_policy = input;
+        absent_policy.predeclared_refinement_policy_sha256 = [0; 32];
+        let error = pipeline.run_preselected(absent_policy).unwrap_err();
+        assert_eq!(error.code, ErrorCode::InvalidArgument);
+        receipts.push(receipt);
+    }
+
+    assert_eq!(
+        receipts[0].primary_slot_indices,
+        receipts[1].primary_slot_indices
+    );
+    assert_eq!(
+        receipts[0].valid_slot_indices,
+        receipts[1].valid_slot_indices
+    );
+    assert_eq!(
+        receipts[0].representative_slot_indices,
+        receipts[1].representative_slot_indices
+    );
+    assert_eq!(
+        receipts[0].top_k_slot_indices,
+        receipts[1].top_k_slot_indices
+    );
 }
 
 fn assert_transformed_placements_are_independently_replayed(
