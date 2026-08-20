@@ -42,6 +42,16 @@ The current `main` branch contains:
   generation. Its receipt rederives every component and row binding, synthetic
   C++/Rust CPU coverage preserves rank order, and all execution, reservation,
   benchmark, product, Stage 0, Fresh-128, and claim authority remains false;
+- a source-bound Rust CPU producer for the exact 512-row preselection input. It
+  executes 128 deterministic transforms in each uniform-SO3, pocket-surface,
+  single-anchor, and multi-anchor lane, derives the orientation seed from the
+  complete search and geometric-input identities, computes the existing exact
+  geometric metrics for every generated coordinate set, and directly emits the
+  receipt-bound funnel payload plus materialized 64 rows. Missing compatible
+  dual-anchor geometry becomes 128 typed failures rather than a substituted
+  lane. Aggregate pair work is bounded before coordinate generation, and every
+  molecular, reservation, benchmark, Fresh-128, product, Stage 0, performance,
+  and scientific-claim authority remains false;
 - bounded single-model PDB and single-molecule SDF V2000 ingestion;
 - bounded single-block CIF syntax plus mmCIF entity/asym/polymer identity,
   zero-occupancy, altloc, nonpoly instance, component atom/bond, and selected

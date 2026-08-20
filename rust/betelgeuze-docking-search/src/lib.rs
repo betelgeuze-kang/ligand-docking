@@ -30,6 +30,7 @@ mod sampling_funnel;
 mod sampling_funnel_batch;
 #[cfg(test)]
 mod sampling_funnel_tests;
+mod sampling_pool;
 mod scorer_v1;
 mod search;
 mod sha256;
@@ -172,6 +173,14 @@ pub use sampling_funnel_batch::{
     NativeSamplingFunnelPreselectedBatch, NativeSamplingFunnelPreselectedRow,
     NATIVE_SAMPLING_FUNNEL_PAYLOAD_BATCH_SCHEMA_ID,
     NATIVE_SAMPLING_FUNNEL_PRESELECTED_BATCH_SCHEMA_ID,
+};
+pub use sampling_pool::{
+    produce_native_sampling_pool, NativeSamplingPoolBatch, NativeSamplingPoolError,
+    NativeSamplingPoolErrorCode, NATIVE_SAMPLING_POOL_ANCHOR_PENALTY_ID,
+    NATIVE_SAMPLING_POOL_DUAL_ANCHOR_TOLERANCE_ANGSTROM, NATIVE_SAMPLING_POOL_EMBEDDING_ID,
+    NATIVE_SAMPLING_POOL_LANE_DENOMINATOR, NATIVE_SAMPLING_POOL_MULTI_ANCHOR_UNAVAILABLE,
+    NATIVE_SAMPLING_POOL_PLACEMENT_CLEARANCE_ANGSTROM, NATIVE_SAMPLING_POOL_PROFILE_ID,
+    NATIVE_SAMPLING_POOL_SCHEMA_ID, NATIVE_SAMPLING_POOL_SHAPE_PENALTY_ID,
 };
 pub use scorer_v1::{
     score_native_fixed64_scorer_v1, NativeScorerV1Atom, NativeScorerV1Backend, NativeScorerV1Batch,

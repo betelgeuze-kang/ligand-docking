@@ -24,10 +24,42 @@ pub(crate) struct CombinationSet {
     pub placement_mode: PlacementMode,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct AnchorInventory {
+    pub singles: Vec<AnchorCombination>,
+    pub duals: Vec<AnchorCombination>,
+}
+
 pub(crate) fn compatible_combinations(
     input: &SearchInput,
     config: &SearchConfig,
 ) -> Result<CombinationSet, SearchError> {
+    let inventory = compatible_anchor_inventory(input, config)?;
+    let compatible_single_pair_count = inventory.singles.len();
+    let compatible_dual_combination_count = inventory.duals.len();
+    let (combinations, placement_mode) = if inventory.duals.is_empty() {
+        if inventory.singles.len() > MAX_ANCHOR_COMBINATIONS {
+            return Err(SearchError::new(
+                SearchErrorCode::TooManyItems,
+                format!("anchor combinations exceed the cap of {MAX_ANCHOR_COMBINATIONS}"),
+            ));
+        }
+        (inventory.singles, PlacementMode::SingleAnchorFallback)
+    } else {
+        (inventory.duals, PlacementMode::DualAnchor)
+    };
+    Ok(CombinationSet {
+        combinations,
+        compatible_single_pair_count,
+        compatible_dual_combination_count,
+        placement_mode,
+    })
+}
+
+pub(crate) fn compatible_anchor_inventory(
+    input: &SearchInput,
+    config: &SearchConfig,
+) -> Result<AnchorInventory, SearchError> {
     let mut singles = Vec::new();
     for (surface_index, surface) in input.surface_samples.iter().enumerate() {
         for (ligand_anchor_index, ligand_anchor) in input.ligand_anchors.iter().enumerate() {
@@ -54,7 +86,14 @@ pub(crate) fn compatible_combinations(
         ));
     }
     singles.sort_by_key(|pair| pair_key(input, *pair));
-    let compatible_single_pair_count = singles.len();
+    let single_combinations = singles
+        .iter()
+        .copied()
+        .map(|primary| AnchorCombination {
+            primary,
+            secondary: None,
+        })
+        .collect::<Vec<_>>();
 
     let mut duals = Vec::new();
     for (left_index, left) in singles.iter().copied().enumerate() {
@@ -108,32 +147,9 @@ pub(crate) fn compatible_combinations(
         )
     });
     duals.dedup();
-    let compatible_dual_combination_count = duals.len();
-    let (combinations, placement_mode) = if duals.is_empty() {
-        (
-            singles
-                .into_iter()
-                .map(|primary| AnchorCombination {
-                    primary,
-                    secondary: None,
-                })
-                .collect(),
-            PlacementMode::SingleAnchorFallback,
-        )
-    } else {
-        (duals, PlacementMode::DualAnchor)
-    };
-    if combinations.len() > MAX_ANCHOR_COMBINATIONS {
-        return Err(SearchError::new(
-            SearchErrorCode::TooManyItems,
-            format!("anchor combinations exceed the cap of {MAX_ANCHOR_COMBINATIONS}"),
-        ));
-    }
-    Ok(CombinationSet {
-        combinations,
-        compatible_single_pair_count,
-        compatible_dual_combination_count,
-        placement_mode,
+    Ok(AnchorInventory {
+        singles: single_combinations,
+        duals,
     })
 }
 
