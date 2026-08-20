@@ -24,6 +24,11 @@ EXPECTED_RECEIPTS = {
     "medium": "61a8bb8490359fa03f0fb8fc0a12514203d602dc6539faac447f0e65e8e8d3a5",
     "large": "ded4134a8cd2e0c6d42f096c0220c22931378a5cba96e2fc36dba54f77bdc0bb",
 }
+EXPECTED_FIXTURE_COUNTS = {
+    "small": (8, 64, 262_144),
+    "medium": (24, 256, 3_145_728),
+    "large": (48, 512, 12_582_912),
+}
 
 
 class SamplingPoolCPUObservationError(RuntimeError):
@@ -153,6 +158,15 @@ def _validate(document: object, *, observed: bool) -> dict[str, Any]:
             raise SamplingPoolCPUObservationError(
                 f"{fixture_id} producer receipt changed"
             )
+        ligand_count, receptor_count, pair_count = EXPECTED_FIXTURE_COUNTS[fixture_id]
+        if (
+            row.get("ligand_atom_count") != ligand_count
+            or row.get("receptor_atom_count") != receptor_count
+            or row.get("exact_pair_evaluation_count") != pair_count
+        ):
+            raise SamplingPoolCPUObservationError(
+                f"{fixture_id} work denominator changed"
+            )
         if observed:
             samples = row.get("wall_time_ns_samples")
             if (
@@ -169,7 +183,11 @@ def _validate(document: object, *, observed: bool) -> dict[str, Any]:
                 )
     if observed:
         authority = value.get("authority")
-        if type(authority) is not dict or not authority or any(authority.values()):
+        if (
+            type(authority) is not dict
+            or not authority
+            or any(type(item) is not bool or item for item in authority.values())
+        ):
             raise SamplingPoolCPUObservationError("observer authority is not all false")
         if value.get("status") != "local_synthetic_development_observation_only":
             raise SamplingPoolCPUObservationError("observer status changed")

@@ -8,6 +8,7 @@ import sys
 import pytest
 
 from tools.run_engine_v2_sampling_pool_cpu_observation_v1 import (
+    EXPECTED_FIXTURE_COUNTS,
     EXPECTED_RECEIPTS,
     PROFILE_ID,
     SCHEMA_ID,
@@ -25,7 +26,13 @@ def fixture_document() -> dict[str, object]:
     return {
         "all_authority_false": True,
         "fixtures": [
-            {"fixture_id": fixture_id, "receipt_sha256": receipt}
+            {
+                "fixture_id": fixture_id,
+                "receipt_sha256": receipt,
+                "ligand_atom_count": EXPECTED_FIXTURE_COUNTS[fixture_id][0],
+                "receptor_atom_count": EXPECTED_FIXTURE_COUNTS[fixture_id][1],
+                "exact_pair_evaluation_count": EXPECTED_FIXTURE_COUNTS[fixture_id][2],
+            }
             for fixture_id, receipt in EXPECTED_RECEIPTS.items()
         ],
         "profile_id": PROFILE_ID,
