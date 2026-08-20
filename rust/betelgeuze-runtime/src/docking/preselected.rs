@@ -76,6 +76,7 @@ pub struct Fixed64PreselectedPipelineRow {
 pub struct Fixed64PreselectedPipelineReceipt {
     pub backend: Backend,
     pub unit_system: UnitSystem,
+    pub ligand_system_sha256: Sha256,
     pub ligand_atom_count: usize,
     pub selected_count: u64,
     pub lane_shortfall_count: u64,
@@ -85,6 +86,16 @@ pub struct Fixed64PreselectedPipelineReceipt {
     pub post_rejected_count: u64,
     pub scored_count: u64,
     pub valid_count: u64,
+    pub rmsd_threshold_angstrom: f64,
+    pub requested_refinement_modes: Vec<i32>,
+    pub rigid_max_steps: Vec<u64>,
+    pub proposal_is_torsion_eligible: Vec<u8>,
+    pub torsion_max_steps: Vec<u64>,
+    pub baseline_torsion_angles_radians: Vec<f64>,
+    pub maximum_torsion_steps: u64,
+    pub rotatable_child_atom_indices: Vec<u64>,
+    pub predeclared_refinement_policy_sha256: Sha256,
+    pub predeclared_post_refinement_admission_policy_sha256: Sha256,
     pub source_coordinates: PositionSoaOwned,
     pub source_quaternions: [Vec<f64>; 4],
     pub rigid_coordinates: Fixed64RigidCoordinates,
@@ -139,7 +150,27 @@ impl Fixed64PreselectedPipelineReceipt {
     }
 }
 
-impl Fixed64Pipeline {
+/// Pipeline variant that owns the additional ABI 1.21 component handles only
+/// when preselected composition is explicitly requested.
+pub struct Fixed64PreselectedPipeline {
+    pipeline: Fixed64Pipeline,
+    handles: PreselectedHandles,
+}
+
+impl std::ops::Deref for Fixed64PreselectedPipeline {
+    type Target = Fixed64Pipeline;
+
+    fn deref(&self) -> &Self::Target {
+        &self.pipeline
+    }
+}
+
+impl Fixed64PreselectedPipeline {
+    pub fn new(context: &Context, scientific: Fixed64PipelineContext<'_>) -> Result<Self> {
+        let (pipeline, handles) = Fixed64Pipeline::new_preselected(context, scientific)?;
+        Ok(Self { pipeline, handles })
+    }
+
     pub fn run_preselected(
         &self,
         input: Fixed64PreselectedRunInput<'_>,
@@ -250,7 +281,7 @@ impl Fixed64Pipeline {
         status_result(unsafe {
             sys::bg_docking_rigid_refinement_fixed64(
                 self.context_lease.raw_handle(),
-                self.preselected_rigid_handle.as_ptr(),
+                self.handles.rigid.as_ptr(),
                 &rigid_batch,
                 &mut rigid_output,
             )
@@ -297,7 +328,7 @@ impl Fixed64Pipeline {
         status_result(unsafe {
             sys::bg_docking_torsion_v7_refine_fixed64(
                 self.context_lease.raw_handle(),
-                self.preselected_torsion_handle.as_ptr(),
+                self.handles.torsion.as_ptr(),
                 &torsion_batch,
                 &mut torsion_output,
             )
@@ -397,7 +428,7 @@ impl Fixed64Pipeline {
         status_result(unsafe {
             sys::bg_docking_fixed64_downstream_v1_run(
                 self.context_lease.raw_handle(),
-                self.preselected_downstream_handle.as_ptr(),
+                self.handles.downstream.as_ptr(),
                 &downstream_batch,
                 final_quaternions[0].as_ptr(),
                 final_quaternions[1].as_ptr(),
@@ -454,7 +485,7 @@ impl Fixed64Pipeline {
         status_result(unsafe {
             sys::bg_docking_stable_top_k_v1_cluster_direct_rmsd_fixed64(
                 self.context_lease.raw_handle(),
-                self.preselected_ranker_handle.as_ptr(),
+                self.handles.ranker.as_ptr(),
                 &cluster_input,
                 &mut cluster_output,
             )
@@ -549,6 +580,7 @@ fn validate_preselected_input(
         .ok_or_else(|| invalid("preselected coordinate denominator overflowed"))?;
     if !input.preselected.has_valid_receipt()
         || input.preselected.ligand_atom_count() != pipeline.ligand_atom_count
+        || input.preselected.ligand_system_sha256() != pipeline.ligand_system_sha256
         || input.preselected.rows().len() != candidate_count
         || input.candidate_modes.len() != candidate_count
         || input.rigid_max_steps.len() != candidate_count
@@ -970,21 +1002,48 @@ fn policy_receipt(
     input: Fixed64PreselectedRunInput<'_>,
     raw_modes: &[i32],
 ) -> Sha256 {
+    policy_receipt_fields(
+        input.preselected.receipt_sha256(),
+        pipeline.expected_component_binding_receipt_sha256,
+        input.predeclared_refinement_policy_sha256,
+        input.predeclared_post_refinement_admission_policy_sha256,
+        input.rmsd_threshold_angstrom,
+        raw_modes,
+        input.rigid_max_steps,
+        input.proposal_is_torsion_eligible,
+        input.torsion_max_steps,
+        input.baseline_torsion_angles_radians,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn policy_receipt_fields(
+    preselected_receipt_sha256: Sha256,
+    component_binding_receipt_sha256: Sha256,
+    refinement_policy_sha256: Sha256,
+    post_admission_policy_sha256: Sha256,
+    rmsd_threshold_angstrom: f64,
+    raw_modes: &[i32],
+    rigid_max_steps: &[u64],
+    proposal_is_torsion_eligible: &[u8],
+    torsion_max_steps: &[u64],
+    baseline_torsion_angles_radians: &[f64],
+) -> Sha256 {
     let mut hash = CanonicalHasher::new(PRESELECTED_POLICY_SCHEMA_ID);
-    hash.digest(input.preselected.receipt_sha256());
-    hash.digest(pipeline.expected_component_binding_receipt_sha256);
-    hash.digest(input.predeclared_refinement_policy_sha256);
-    hash.digest(input.predeclared_post_refinement_admission_policy_sha256);
-    hash.f64(input.rmsd_threshold_angstrom);
+    hash.digest(preselected_receipt_sha256);
+    hash.digest(component_binding_receipt_sha256);
+    hash.digest(refinement_policy_sha256);
+    hash.digest(post_admission_policy_sha256);
+    hash.f64(rmsd_threshold_angstrom);
     hash.usize(raw_modes.len());
     for (slot, mode) in raw_modes.iter().enumerate() {
         hash.i32(*mode);
-        hash.u64(input.rigid_max_steps[slot]);
-        hash.byte(input.proposal_is_torsion_eligible[slot]);
-        hash.u64(input.torsion_max_steps[slot]);
+        hash.u64(rigid_max_steps[slot]);
+        hash.byte(proposal_is_torsion_eligible[slot]);
+        hash.u64(torsion_max_steps[slot]);
     }
-    hash.usize(input.baseline_torsion_angles_radians.len());
-    for value in input.baseline_torsion_angles_radians {
+    hash.usize(baseline_torsion_angles_radians.len());
+    for value in baseline_torsion_angles_radians {
         hash.f64(*value);
     }
     hash.finish()
@@ -1072,6 +1131,24 @@ fn validate_receipt_shape(value: &Fixed64PreselectedPipelineReceipt) -> Result<(
     ]
     .iter()
     .all(|length| *length == count);
+    let exact_policy = value.requested_refinement_modes.len() == count
+        && value.rigid_max_steps.len() == count
+        && value.proposal_is_torsion_eligible.len() == count
+        && value.torsion_max_steps.len() == count
+        && value.baseline_torsion_angles_radians.len() == coordinate_count
+        && value.rmsd_threshold_angstrom.is_finite()
+        && value.rmsd_threshold_angstrom > 0.0
+        && finite(&value.baseline_torsion_angles_radians)
+        && value
+            .proposal_is_torsion_eligible
+            .iter()
+            .all(|value| *value <= 1)
+        && value
+            .torsion_max_steps
+            .iter()
+            .all(|steps| *steps <= value.maximum_torsion_steps)
+        && digest_present(&value.predeclared_refinement_policy_sha256)
+        && digest_present(&value.predeclared_post_refinement_admission_policy_sha256);
     let coordinate_channels = [
         &value.source_coordinates,
         &value.rigid_coordinates.selected,
@@ -1099,7 +1176,9 @@ fn validate_receipt_shape(value: &Fixed64PreselectedPipelineReceipt) -> Result<(
         && !value.authority.production_claim_authorized
         && !value.authority.scientific_claim_authorized;
     if value.ligand_atom_count == 0
+        || !digest_present(&value.ligand_system_sha256)
         || !exact_rows
+        || !exact_policy
         || !coordinate_channels
         || value.torsion_moves.len() != count * sys::BG_DOCKING_TORSION_V7_MAX_MOVES as usize
         || value
@@ -1142,6 +1221,48 @@ fn validate_receipt_evidence(value: &Fixed64PreselectedPipelineReceipt) -> Resul
         .copied()
         .map(abi_refinement_row_from_evidence)
         .collect::<Vec<_>>();
+    let scorer_rows = value
+        .scorer_rows
+        .iter()
+        .copied()
+        .map(abi_scorer_row_from_evidence)
+        .collect::<Vec<_>>();
+    let validity_rows = value
+        .validity_rows
+        .iter()
+        .copied()
+        .map(abi_validity_row_from_evidence)
+        .collect::<Vec<_>>();
+    let ranking_rows = value
+        .ranking_rows
+        .iter()
+        .copied()
+        .map(abi_ranking_row_from_evidence)
+        .collect::<Vec<_>>();
+    let cluster_rows = value
+        .cluster_rows
+        .iter()
+        .copied()
+        .map(abi_cluster_row_from_evidence)
+        .collect::<Vec<_>>();
+    let expected_policy_receipt = policy_receipt_fields(
+        value.receipts.preselected_batch_receipt_sha256,
+        value.receipts.component_binding_receipt_sha256,
+        value.predeclared_refinement_policy_sha256,
+        value.predeclared_post_refinement_admission_policy_sha256,
+        value.rmsd_threshold_angstrom,
+        &value.requested_refinement_modes,
+        &value.rigid_max_steps,
+        &value.proposal_is_torsion_eligible,
+        &value.torsion_max_steps,
+        &value.baseline_torsion_angles_radians,
+    );
+    if value.receipts.policy_receipt_sha256 != expected_policy_receipt {
+        return Err(Error::local(
+            ErrorCode::AbiMismatch,
+            "preselected pipeline policy receipt changed",
+        ));
+    }
     let rigid_coordinates: [&[f64]; 12] = [
         value.rigid_coordinates.selected.x_angstrom.as_slice(),
         value.rigid_coordinates.selected.y_angstrom.as_slice(),
@@ -1183,6 +1304,10 @@ fn validate_receipt_evidence(value: &Fixed64PreselectedPipelineReceipt) -> Resul
         value.final_quaternions[2].as_slice(),
         value.final_quaternions[3].as_slice(),
     ];
+    let rigid_coordinates_owned: [Vec<f64>; 12] =
+        std::array::from_fn(|index| rigid_coordinates[index].to_vec());
+    let torsion_coordinates_owned: [Vec<f64>; 8] =
+        std::array::from_fn(|index| torsion_coordinates[index].to_vec());
     let mut refinement_batch = CanonicalHasher::new(
         "betelgeuze.engine_v2_native_fixed64_preselected_refinement_batch/1.0.0",
     );
@@ -1197,7 +1322,32 @@ fn validate_receipt_evidence(value: &Fixed64PreselectedPipelineReceipt) -> Resul
         CanonicalHasher::new("betelgeuze.engine_v2_native_fixed64_preselected_cluster_batch/1.0.0");
     for slot in 0..value.rows.len() {
         let row = &value.rows[slot];
+        validate_rigid_row_semantics(
+            &rigid_rows[slot],
+            row.effective_refinement_mode,
+            value.rigid_max_steps[slot],
+            &rigid_coordinates_owned,
+            slot,
+            value.ligand_atom_count as u64,
+        )?;
+        let rigid_budget_valid = [
+            row.rigid.selected,
+            row.rigid.comparison_v2,
+            row.rigid.baseline_v3,
+            row.rigid.clearance_v4,
+        ]
+        .iter()
+        .all(|profile| profile.accepted_steps <= value.rigid_max_steps[slot]);
+        let torsion_budget_valid = row.torsion.torsion_step_budget <= value.torsion_max_steps[slot]
+            && row.torsion.evaluated_torsion_steps <= value.torsion_max_steps[slot]
+            && row.torsion.accepted_torsion_steps <= row.torsion.evaluated_torsion_steps;
         if row.slot_index as usize != slot
+            || row.requested_refinement_mode != value.requested_refinement_modes[slot]
+            || (row.effective_refinement_mode != row.requested_refinement_mode
+                && row.effective_refinement_mode
+                    != sys::BG_DOCKING_RIGID_REFINEMENT_CANDIDATE_INACTIVE)
+            || !rigid_budget_valid
+            || !torsion_budget_valid
             || row.initial_admission != value.initial_admission_rows[slot]
             || row.rigid != value.rigid_rows[slot]
             || row.torsion != value.torsion_rows[slot]
@@ -1225,13 +1375,10 @@ fn validate_receipt_evidence(value: &Fixed64PreselectedPipelineReceipt) -> Resul
             final_coordinates,
             final_quaternions,
         )?;
-        let scorer_digest = canonical_scorer_evidence(&abi_scorer_row_from_evidence(row.scorer));
-        let validity_digest =
-            canonical_validity_evidence(&abi_validity_row_from_evidence(row.validity));
-        let ranking_digest =
-            canonical_ranking_evidence(&abi_ranking_row_from_evidence(row.ranking));
-        let cluster_digest =
-            canonical_cluster_evidence(&abi_cluster_row_from_evidence(row.cluster));
+        let scorer_digest = canonical_scorer_evidence(&scorer_rows[slot]);
+        let validity_digest = canonical_validity_evidence(&validity_rows[slot]);
+        let ranking_digest = canonical_ranking_evidence(&ranking_rows[slot]);
+        let cluster_digest = canonical_cluster_evidence(&cluster_rows[slot]);
         let mut row_hash = CanonicalHasher::new(PRESELECTED_ROW_SCHEMA_ID);
         row_hash.digest(value.receipts.preselected_batch_receipt_sha256);
         row_hash.usize(slot);
@@ -1262,6 +1409,75 @@ fn validate_receipt_evidence(value: &Fixed64PreselectedPipelineReceipt) -> Resul
         ranking_batch.digest(ranking_digest);
         cluster_batch.digest(cluster_digest);
     }
+    validate_torsion_evidence(
+        &torsion_rows,
+        &torsion_moves,
+        &rigid_rows,
+        &value.proposal_is_torsion_eligible,
+        &value.torsion_max_steps,
+        value.maximum_torsion_steps,
+        &value.rotatable_child_atom_indices,
+        &torsion_coordinates_owned,
+        &rigid_coordinates_owned,
+        &value.baseline_torsion_angles_radians,
+        value.ligand_atom_count as u64,
+    )?;
+    let mut producer_rows: Vec<sys::bg_docking_fixed64_producer_row_v1> =
+        vec![zeroed(); value.rows.len()];
+    for (slot, producer) in producer_rows.iter_mut().enumerate() {
+        producer.placement_quaternion_x = value.source_quaternions[0][slot];
+        producer.placement_quaternion_y = value.source_quaternions[1][slot];
+        producer.placement_quaternion_z = value.source_quaternions[2][slot];
+        producer.placement_quaternion_w = value.source_quaternions[3][slot];
+    }
+    let effective_modes = value
+        .rows
+        .iter()
+        .map(|row| row.effective_refinement_mode)
+        .collect::<Vec<_>>();
+    validate_refinement_evidence(
+        &refinement_rows,
+        &producer_rows,
+        &rigid_rows,
+        &torsion_rows,
+        &effective_modes,
+        [
+            rigid_coordinates[0],
+            rigid_coordinates[1],
+            rigid_coordinates[2],
+        ],
+        [
+            torsion_coordinates[4],
+            torsion_coordinates[5],
+            torsion_coordinates[6],
+        ],
+        final_coordinates,
+        final_quaternions,
+        value.ligand_atom_count as u64,
+        value.backend,
+    )?;
+    let mut ranking_output = init(sys::bg_docking_stable_top_k_output_v1_init)?;
+    ranking_output.primary_index_count = checked_count(value.primary_slot_indices.len())?;
+    ranking_output.valid_index_count = checked_count(value.valid_slot_indices.len())?;
+    let mut cluster_output = init(sys::bg_docking_rmsd_cluster_output_v1_init)?;
+    cluster_output.representative_index_count =
+        checked_count(value.representative_slot_indices.len())?;
+    cluster_output.top_k_index_count = checked_count(value.top_k_slot_indices.len())?;
+    validate_index_evidence(
+        &ranking_output,
+        &cluster_output,
+        &scorer_rows,
+        &validity_rows,
+        &ranking_rows,
+        &cluster_rows,
+        &value.primary_slot_indices,
+        &value.valid_slot_indices,
+        &value.representative_slot_indices,
+        &value.top_k_slot_indices,
+        value.rmsd_threshold_angstrom,
+        final_coordinates,
+        value.ligand_atom_count as u64,
+    )?;
     let selected_count = value
         .rows
         .iter()
@@ -1348,6 +1564,7 @@ fn derive_pipeline_receipt(value: &Fixed64PreselectedPipelineReceipt) -> Result<
     validate_receipt_shape(value)?;
     let mut hash = CanonicalHasher::new(FIXED64_PRESELECTED_PIPELINE_PROFILE_ID);
     hash.byte(backend_id(value.backend));
+    hash.digest(value.ligand_system_sha256);
     hash.usize(value.ligand_atom_count);
     for count in [
         value.selected_count,
@@ -1361,6 +1578,22 @@ fn derive_pipeline_receipt(value: &Fixed64PreselectedPipelineReceipt) -> Result<
     ] {
         hash.u64(count);
     }
+    hash.f64(value.rmsd_threshold_angstrom);
+    hash.usize(value.requested_refinement_modes.len());
+    for slot in 0..value.requested_refinement_modes.len() {
+        hash.i32(value.requested_refinement_modes[slot]);
+        hash.u64(value.rigid_max_steps[slot]);
+        hash.byte(value.proposal_is_torsion_eligible[slot]);
+        hash.u64(value.torsion_max_steps[slot]);
+    }
+    hash_f64_channel(&mut hash, &value.baseline_torsion_angles_radians);
+    hash.u64(value.maximum_torsion_steps);
+    hash.usize(value.rotatable_child_atom_indices.len());
+    for atom_index in &value.rotatable_child_atom_indices {
+        hash.u64(*atom_index);
+    }
+    hash.digest(value.predeclared_refinement_policy_sha256);
+    hash.digest(value.predeclared_post_refinement_admission_policy_sha256);
     for digest in [
         value.receipts.preselected_batch_receipt_sha256,
         value.receipts.admission_context_receipt_sha256,
@@ -1649,6 +1882,7 @@ fn build_receipt(
     let mut receipt = Fixed64PreselectedPipelineReceipt {
         backend: pipeline.backend,
         unit_system: UnitSystem::AngstromKcalMol,
+        ligand_system_sha256: pipeline.ligand_system_sha256,
         ligand_atom_count: ligand_count,
         selected_count: checked_count(selected_count)?,
         lane_shortfall_count: checked_count(raw_modes.len() - selected_count)?,
@@ -1667,6 +1901,17 @@ fn build_receipt(
         )?,
         scored_count: checked_count(scored_count)?,
         valid_count: checked_count(valid_count_count)?,
+        rmsd_threshold_angstrom: input.rmsd_threshold_angstrom,
+        requested_refinement_modes: raw_modes.to_vec(),
+        rigid_max_steps: input.rigid_max_steps.to_vec(),
+        proposal_is_torsion_eligible: input.proposal_is_torsion_eligible.to_vec(),
+        torsion_max_steps: input.torsion_max_steps.to_vec(),
+        baseline_torsion_angles_radians: input.baseline_torsion_angles_radians.to_vec(),
+        maximum_torsion_steps: pipeline.maximum_torsion_steps,
+        rotatable_child_atom_indices: pipeline.rotatable_child_atom_indices.clone(),
+        predeclared_refinement_policy_sha256: input.predeclared_refinement_policy_sha256,
+        predeclared_post_refinement_admission_policy_sha256: input
+            .predeclared_post_refinement_admission_policy_sha256,
         source_coordinates: PositionSoaOwned {
             x_angstrom: input.preselected.x_angstrom().to_vec(),
             y_angstrom: input.preselected.y_angstrom().to_vec(),

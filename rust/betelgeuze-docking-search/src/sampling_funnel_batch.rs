@@ -16,9 +16,9 @@ use crate::{
 };
 
 pub const NATIVE_SAMPLING_FUNNEL_PAYLOAD_BATCH_SCHEMA_ID: &str =
-    "betelgeuze.engine_v2_native_sampling_funnel_payload_batch/1.0.0";
+    "betelgeuze.engine_v2_native_sampling_funnel_payload_batch/1.1.0";
 pub const NATIVE_SAMPLING_FUNNEL_PRESELECTED_BATCH_SCHEMA_ID: &str =
-    "betelgeuze.engine_v2_native_sampling_funnel_preselected_batch/1.0.0";
+    "betelgeuze.engine_v2_native_sampling_funnel_preselected_batch/1.1.0";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NativeSamplingFunnelBatchErrorCode {
@@ -157,6 +157,7 @@ impl NativeSamplingFunnelPayloadRow {
 #[derive(Clone, Debug, PartialEq)]
 pub struct NativeSamplingFunnelPayloadBatch {
     ligand_atom_count: usize,
+    ligand_system_sha256: [u8; 32],
     rows: Box<[NativeSamplingFunnelPayloadRow]>,
     receipt_sha256: [u8; 32],
 }
@@ -164,9 +165,13 @@ pub struct NativeSamplingFunnelPayloadBatch {
 impl NativeSamplingFunnelPayloadBatch {
     pub fn new(
         ligand_atom_count: usize,
+        ligand_system_sha256: [u8; 32],
         rows: Vec<NativeSamplingFunnelPayloadRow>,
     ) -> Result<Self, NativeSamplingFunnelBatchError> {
-        if ligand_atom_count == 0 || ligand_atom_count > FIXED64_MAX_LIGAND_ATOMS {
+        if ligand_atom_count == 0
+            || ligand_atom_count > FIXED64_MAX_LIGAND_ATOMS
+            || digest_is_zero(ligand_system_sha256)
+        {
             return Err(invalid(
                 "payload ligand denominator is outside frozen bounds",
             ));
@@ -184,9 +189,11 @@ impl NativeSamplingFunnelPayloadBatch {
                 ));
             }
         }
-        let receipt_sha256 = payload_batch_receipt_sha256(ligand_atom_count, &rows);
+        let receipt_sha256 =
+            payload_batch_receipt_sha256(ligand_atom_count, ligand_system_sha256, &rows);
         let value = Self {
             ligand_atom_count,
+            ligand_system_sha256,
             rows: rows.into_boxed_slice(),
             receipt_sha256,
         };
@@ -199,6 +206,11 @@ impl NativeSamplingFunnelPayloadBatch {
     #[must_use]
     pub const fn ligand_atom_count(&self) -> usize {
         self.ligand_atom_count
+    }
+
+    #[must_use]
+    pub const fn ligand_system_sha256(&self) -> [u8; 32] {
+        self.ligand_system_sha256
     }
 
     #[must_use]
@@ -215,12 +227,17 @@ impl NativeSamplingFunnelPayloadBatch {
     pub fn has_valid_receipt(&self) -> bool {
         self.ligand_atom_count > 0
             && self.ligand_atom_count <= FIXED64_MAX_LIGAND_ATOMS
+            && !digest_is_zero(self.ligand_system_sha256)
             && self.rows.len() == NATIVE_SAMPLING_FUNNEL_INPUT_DENOMINATOR
             && self.rows.iter().enumerate().all(|(expected, row)| {
                 row.pool_index == expected && row.has_valid_payload(self.ligand_atom_count)
             })
             && self.receipt_sha256
-                == payload_batch_receipt_sha256(self.ligand_atom_count, &self.rows)
+                == payload_batch_receipt_sha256(
+                    self.ligand_atom_count,
+                    self.ligand_system_sha256,
+                    &self.rows,
+                )
     }
 }
 
@@ -251,6 +268,7 @@ impl NativeSamplingFunnelPreselectedRow {
 #[derive(Clone, Debug, PartialEq)]
 pub struct NativeSamplingFunnelPreselectedBatch {
     ligand_atom_count: usize,
+    ligand_system_sha256: [u8; 32],
     rows: Box<[NativeSamplingFunnelPreselectedRow]>,
     x_angstrom: Box<[f64]>,
     y_angstrom: Box<[f64]>,
@@ -268,6 +286,11 @@ impl NativeSamplingFunnelPreselectedBatch {
     #[must_use]
     pub const fn ligand_atom_count(&self) -> usize {
         self.ligand_atom_count
+    }
+
+    #[must_use]
+    pub const fn ligand_system_sha256(&self) -> [u8; 32] {
+        self.ligand_system_sha256
     }
 
     #[must_use]
@@ -387,6 +410,7 @@ impl NativeSamplingFunnelPreselectedBatch {
         };
         if self.ligand_atom_count == 0
             || self.ligand_atom_count > FIXED64_MAX_LIGAND_ATOMS
+            || digest_is_zero(self.ligand_system_sha256)
             || self.rows.len() != NATIVE_SAMPLING_FUNNEL_OUTPUT_DENOMINATOR
             || self.x_angstrom.len() != expected_coordinate_count
             || self.y_angstrom.len() != expected_coordinate_count
@@ -564,6 +588,7 @@ pub fn materialize_native_sampling_funnel_preselected_batch(
     }
     let mut value = NativeSamplingFunnelPreselectedBatch {
         ligand_atom_count: payloads.ligand_atom_count,
+        ligand_system_sha256: payloads.ligand_system_sha256,
         rows: rows.into_boxed_slice(),
         x_angstrom: x_angstrom.into_boxed_slice(),
         y_angstrom: y_angstrom.into_boxed_slice(),
@@ -585,11 +610,13 @@ pub fn materialize_native_sampling_funnel_preselected_batch(
 
 fn payload_batch_receipt_sha256(
     ligand_atom_count: usize,
+    ligand_system_sha256: [u8; 32],
     rows: &[NativeSamplingFunnelPayloadRow],
 ) -> [u8; 32] {
     let mut hash = CanonicalHash::new(NATIVE_SAMPLING_FUNNEL_PAYLOAD_BATCH_SCHEMA_ID);
     hash.usize(NATIVE_SAMPLING_FUNNEL_INPUT_DENOMINATOR);
     hash.usize(ligand_atom_count);
+    hash.digest(ligand_system_sha256);
     hash.usize(rows.len());
     for row in rows {
         hash.usize(row.pool_index);
@@ -620,6 +647,7 @@ fn preselected_batch_receipt_sha256(value: &NativeSamplingFunnelPreselectedBatch
     let mut hash = CanonicalHash::new(NATIVE_SAMPLING_FUNNEL_PRESELECTED_BATCH_SCHEMA_ID);
     hash.usize(NATIVE_SAMPLING_FUNNEL_OUTPUT_DENOMINATOR);
     hash.usize(value.ligand_atom_count);
+    hash.digest(value.ligand_system_sha256);
     hash.digest(value.funnel_receipt_sha256);
     hash.digest(value.payload_receipt_sha256);
     for (output_index, row) in value.rows.iter().enumerate() {
@@ -756,6 +784,7 @@ mod tests {
         .unwrap();
         let payloads = NativeSamplingFunnelPayloadBatch::new(
             2,
+            digest(9001),
             (0..NATIVE_SAMPLING_FUNNEL_INPUT_DENOMINATOR)
                 .map(generated_payload)
                 .collect(),
@@ -773,6 +802,7 @@ mod tests {
             materialize_native_sampling_funnel_preselected_batch(&funnel, &payloads).unwrap();
         assert_eq!(first, second);
         assert_eq!(first.rows().len(), 64);
+        assert_eq!(first.ligand_system_sha256(), digest(9001));
         assert_eq!(first.x_angstrom().len(), 128);
         assert_eq!(first.y_angstrom().len(), 128);
         assert_eq!(first.z_angstrom().len(), 128);
@@ -813,7 +843,7 @@ mod tests {
         )
         .unwrap();
         let coordinate_cross_wire =
-            NativeSamplingFunnelPayloadBatch::new(2, coordinate_cross_wire).unwrap();
+            NativeSamplingFunnelPayloadBatch::new(2, digest(9001), coordinate_cross_wire).unwrap();
         assert_eq!(
             materialize_native_sampling_funnel_preselected_batch(&funnel, &coordinate_cross_wire)
                 .unwrap_err()
@@ -833,7 +863,7 @@ mod tests {
         )
         .unwrap();
         let source_cross_wire =
-            NativeSamplingFunnelPayloadBatch::new(2, source_cross_wire).unwrap();
+            NativeSamplingFunnelPayloadBatch::new(2, digest(9001), source_cross_wire).unwrap();
         assert_eq!(
             materialize_native_sampling_funnel_preselected_batch(&funnel, &source_cross_wire)
                 .unwrap_err()
@@ -868,7 +898,8 @@ mod tests {
             })
             .collect();
         let funnel = run_native_sampling_funnel(candidates).unwrap();
-        let payloads = NativeSamplingFunnelPayloadBatch::new(2, payload_rows).unwrap();
+        let payloads =
+            NativeSamplingFunnelPayloadBatch::new(2, digest(9001), payload_rows).unwrap();
         let batch =
             materialize_native_sampling_funnel_preselected_batch(&funnel, &payloads).unwrap();
         for output_index in 56..64 {
@@ -894,7 +925,7 @@ mod tests {
             .collect::<Vec<_>>();
         reordered.swap(0, 1);
         assert_eq!(
-            NativeSamplingFunnelPayloadBatch::new(2, reordered)
+            NativeSamplingFunnelPayloadBatch::new(2, digest(9001), reordered)
                 .unwrap_err()
                 .code(),
             NativeSamplingFunnelBatchErrorCode::InputCrossWired
@@ -912,6 +943,7 @@ mod tests {
         let funnel = run_native_sampling_funnel(candidates).unwrap();
         let payloads = NativeSamplingFunnelPayloadBatch::new(
             2,
+            digest(9001),
             (0..NATIVE_SAMPLING_FUNNEL_INPUT_DENOMINATOR)
                 .map(generated_payload)
                 .collect(),

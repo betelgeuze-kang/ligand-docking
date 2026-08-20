@@ -83,8 +83,11 @@ semantics must ignore. The materialized receipt binds the funnel and payload
 receipts and rederives every selected coordinate digest and canonical
 quaternion.
 
-`Fixed64Pipeline::run_preselected(...)` now consumes that exact materialized
-batch without invoking a second proposal producer. It composes the existing
+`Fixed64PreselectedPipeline::run_preselected(...)` now consumes that exact
+materialized batch without invoking a second proposal producer. The separate
+constructor allocates its additional component handles only when this path is
+explicitly requested, so existing `Fixed64Pipeline` callers retain their prior
+construction and memory behavior. It composes the existing
 public ABI 1.21 geometric-admission, rigid-refinement, torsion-V7,
 ScorerV1/validity/stable-rank, and direct-RMSD kernels. The same full-Cartesian
 geometric admission is applied both before refinement and to final refined
@@ -95,7 +98,12 @@ result receipt.
 The preselected pipeline receipt independently replays admission, rigid,
 torsion, refinement, ScorerV1, validity, rank, and clustering semantics. It
 rederives every component evidence digest, batch digest, row receipt, count,
-coordinate channel, and final pipeline receipt. Synthetic integration coverage
+coordinate channel, and final pipeline receipt. The payload and materialized
+receipts now bind the exact ligand-system identity, and runtime composition
+rejects a same-atom-count batch from another ligand. The persisted receipt also
+retains the refinement modes and budgets, torsion eligibility and baseline
+angles, RMSD threshold, rotor indices, and declared policies needed to replay
+rigid, torsion, refinement, ranking, and clustering policy checks. Synthetic integration coverage
 requires C++ reference and Rust CPU to preserve the same selected, valid,
 representative, and Top-K slot orders. This is a synthetic/test-only common
 composition boundary: molecular execution, reservation, benchmark, Stage 0,

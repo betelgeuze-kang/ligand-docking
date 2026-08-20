@@ -19,7 +19,7 @@ pub use docking::{
     Fixed64FeatureKind, Fixed64GeometricEvidence, Fixed64Identities,
     Fixed64IndexedCoordinateSource, Fixed64Ligand, Fixed64Pair, Fixed64Pipeline,
     Fixed64PipelineContext, Fixed64PipelineReceipt, Fixed64PipelineRow,
-    Fixed64PreselectedBatchReceipts, Fixed64PreselectedPipelineReceipt,
+    Fixed64PreselectedBatchReceipts, Fixed64PreselectedPipeline, Fixed64PreselectedPipelineReceipt,
     Fixed64PreselectedPipelineRow, Fixed64PreselectedRunInput, Fixed64ProducerEvidence,
     Fixed64RankingEvidence, Fixed64Receptor, Fixed64RefinementEvidence, Fixed64RefinementMode,
     Fixed64RigidCoordinates, Fixed64RigidEvidence, Fixed64RigidProfileEvidence, Fixed64Rotor,

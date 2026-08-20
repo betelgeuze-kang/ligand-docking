@@ -11,8 +11,9 @@ use betelgeuze_runtime::{
     Fixed64ConformerCoordinateSource, Fixed64CoordinateSource, Fixed64ExactSourceEvidence,
     Fixed64FeatureGeometry, Fixed64FeatureKind, Fixed64Identities, Fixed64IndexedCoordinateSource,
     Fixed64LaneMetricsReceipt, Fixed64LaneMetricsReference, Fixed64Ligand, Fixed64Pipeline,
-    Fixed64PipelineContext, Fixed64PreselectedRunInput, Fixed64Receptor, Fixed64RefinementMode,
-    Fixed64RunInput, Fixed64ScientificProjection, Fixed64SourceEvidence, PositionSoa,
+    Fixed64PipelineContext, Fixed64PreselectedPipeline, Fixed64PreselectedRunInput,
+    Fixed64Receptor, Fixed64RefinementMode, Fixed64RunInput, Fixed64ScientificProjection,
+    Fixed64SourceEvidence, PositionSoa,
 };
 use betelgeuze_sys as sys;
 use sha2::{Digest, Sha256};
@@ -306,7 +307,9 @@ fn funnel_coordinates(index: usize) -> Vec<Vec3> {
     ]
 }
 
-fn preselected_funnel_fixture() -> betelgeuze_docking_search::NativeSamplingFunnelPreselectedBatch {
+fn preselected_funnel_fixture(
+    ligand_system_sha256: [u8; 32],
+) -> betelgeuze_docking_search::NativeSamplingFunnelPreselectedBatch {
     let candidates = (0..512)
         .map(|index| {
             if funnel_lane(index) == NativeSamplingFunnelLane::MultiAnchor {
@@ -351,7 +354,8 @@ fn preselected_funnel_fixture() -> betelgeuze_docking_search::NativeSamplingFunn
         })
         .collect();
     let funnel = run_native_sampling_funnel(candidates).unwrap();
-    let payloads = NativeSamplingFunnelPayloadBatch::new(2, payloads).unwrap();
+    let payloads =
+        NativeSamplingFunnelPayloadBatch::new(2, ligand_system_sha256, payloads).unwrap();
     materialize_native_sampling_funnel_preselected_batch(&funnel, &payloads).unwrap()
 }
 
@@ -969,7 +973,8 @@ fn safe_run_returns_complete_fixed64_receipt_and_preserves_typed_failures() {
 #[test]
 fn preselected_fixed64_composition_preserves_payloads_and_rederives_receipts() {
     let fixture = TwoAtomFixture::new();
-    let preselected = preselected_funnel_fixture();
+    let preselected = preselected_funnel_fixture([0x33; 32]);
+    let crosswired_preselected = preselected_funnel_fixture([0x99; 32]);
     let candidate_modes: [Fixed64RefinementMode; 64] = std::array::from_fn(|slot| {
         if slot % 2 == 0 {
             Fixed64RefinementMode::V2Translation
@@ -996,11 +1001,13 @@ fn preselected_fixed64_composition_preserves_payloads_and_rederives_receipts() {
     let mut receipts = Vec::new();
     for options in [ContextOptions::cpu_reference(), ContextOptions::rust_cpu()] {
         let context = Context::new(options).unwrap();
-        let pipeline = Fixed64Pipeline::new(&context, fixture.scientific_context()).unwrap();
+        let pipeline =
+            Fixed64PreselectedPipeline::new(&context, fixture.scientific_context()).unwrap();
         let receipt = pipeline.run_preselected(input).unwrap();
         assert_eq!(receipt, pipeline.run_preselected(input).unwrap());
         assert!(receipt.has_valid_receipt());
         assert_eq!(receipt.backend, options.backend);
+        assert_eq!(receipt.ligand_system_sha256, [0x33; 32]);
         assert_eq!(receipt.ligand_atom_count, 2);
         assert_eq!(receipt.selected_count, 56);
         assert_eq!(receipt.lane_shortfall_count, 8);
@@ -1073,9 +1080,18 @@ fn preselected_fixed64_composition_preserves_payloads_and_rederives_receipts() {
         let mut changed_torsion_move = receipt.clone();
         changed_torsion_move.torsion_moves[0].delta_radians += 0.25;
         assert!(!changed_torsion_move.has_valid_receipt());
+        let mut changed_policy = receipt.clone();
+        changed_policy.rigid_max_steps[0] += 1;
+        assert!(!changed_policy.has_valid_receipt());
         let mut absent_policy = input;
         absent_policy.predeclared_refinement_policy_sha256 = [0; 32];
         let error = pipeline.run_preselected(absent_policy).unwrap_err();
+        assert_eq!(error.code, ErrorCode::InvalidArgument);
+        let crosswired_input = Fixed64PreselectedRunInput {
+            preselected: &crosswired_preselected,
+            ..input
+        };
+        let error = pipeline.run_preselected(crosswired_input).unwrap_err();
         assert_eq!(error.code, ErrorCode::InvalidArgument);
         receipts.push(receipt);
     }
