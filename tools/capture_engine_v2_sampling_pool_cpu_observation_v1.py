@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 from datetime import datetime, timezone
 import hashlib
+import importlib
 import json
 import os
 from pathlib import Path
@@ -16,6 +17,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+from types import ModuleType
 from typing import Any, Mapping, Sequence
 
 
@@ -34,14 +36,32 @@ RUNNER_SOURCE_PATH = (
 EXPECTED_RUNNER_SOURCE_SHA256 = (
     "051d7f6fc4ecc84c16a72c196abb23f8e619e5d245924310c7373147f8416479"
 )
-if hashlib.sha256(RUNNER_SOURCE_PATH.read_bytes()).hexdigest() != (
-    EXPECTED_RUNNER_SOURCE_SHA256
-):
-    raise SamplingPoolCPUObservationEvidenceError(
-        "imported observation runner differs from the pinned source"
-    )
 
-from tools import run_engine_v2_sampling_pool_cpu_observation_v1 as observer  # noqa: E402
+
+def _load_observer() -> ModuleType:
+    try:
+        source_sha256 = hashlib.sha256(RUNNER_SOURCE_PATH.read_bytes()).hexdigest()
+    except OSError as exc:
+        raise SamplingPoolCPUObservationEvidenceError(
+            "pinned observation runner is unreadable"
+        ) from exc
+    if source_sha256 != EXPECTED_RUNNER_SOURCE_SHA256:
+        raise SamplingPoolCPUObservationEvidenceError(
+            "imported observation runner differs from the pinned source"
+        )
+    module = importlib.import_module(
+        "tools.run_engine_v2_sampling_pool_cpu_observation_v1"
+    )
+    if Path(module.__file__).resolve() != RUNNER_SOURCE_PATH:
+        raise SamplingPoolCPUObservationEvidenceError(
+            "imported observation runner differs from the pinned source"
+        )
+    return module
+
+
+observer: ModuleType | None = None
+if __name__ != "__main__":
+    observer = _load_observer()
 
 
 SOURCE_BASELINE_COMMIT = "cb987662477e6fc56409f382ac5757ce62a09228"
@@ -58,6 +78,7 @@ STATUS = "local_synthetic_development_observation_only"
 SAMPLE_COUNT = 7
 RECEIPT_DOMAIN = b"betelgeuze.engine_v2_sampling_pool_cpu_observation_evidence/1\0"
 MAXIMUM_EVIDENCE_BYTES = 128 * 1024
+EXPECTED_CARGO_WORKING_DIRECTORY_ANCESTOR_COUNT = 8
 _SHA256 = re.compile(r"[0-9a-f]{64}")
 _GIT_OID = re.compile(r"[0-9a-f]{40}")
 _BUILD_ENVIRONMENT_KEYS = (
@@ -95,6 +116,14 @@ _TIMED_RUNTIME_ENVIRONMENT = {
     "OPENBLAS_NUM_THREADS": "1",
     "RAYON_NUM_THREADS": "1",
     "TZ": "UTC",
+}
+_SOURCE_GIT_ENVIRONMENT = {
+    "GIT_CONFIG_GLOBAL": "/dev/null",
+    "GIT_CONFIG_NOSYSTEM": "1",
+    "GIT_OPTIONAL_LOCKS": "0",
+    "LANG": "C",
+    "LC_ALL": "C",
+    "PATH": os.defpath,
 }
 _OBSERVATION_KEYS = {
     "authority",
@@ -155,7 +184,9 @@ def _file_sha256(path: Path) -> str:
 
 def _verify_imported_observer_binding() -> None:
     if (
-        Path(observer.__file__).resolve() != RUNNER_SOURCE_PATH
+        observer is None
+        or observer.__file__ is None
+        or Path(observer.__file__).resolve() != RUNNER_SOURCE_PATH
         or _file_sha256(RUNNER_SOURCE_PATH) != EXPECTED_RUNNER_SOURCE_SHA256
     ):
         raise SamplingPoolCPUObservationEvidenceError(
@@ -169,11 +200,30 @@ def _receipt_sha256(projection: Mapping[str, object]) -> str:
 
 def _git(*arguments: str) -> str:
     try:
-        completed = observer._run(("git", *arguments), cwd=REPOSITORY_ROOT, timeout=30)
-    except observer.SamplingPoolCPUObservationError as exc:
+        completed = subprocess.run(
+            (
+                "git",
+                "-C",
+                str(REPOSITORY_ROOT),
+                f"--work-tree={REPOSITORY_ROOT}",
+                *arguments,
+            ),
+            cwd=REPOSITORY_ROOT,
+            env=dict(_SOURCE_GIT_ENVIRONMENT),
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
         raise SamplingPoolCPUObservationEvidenceError(
             f"git source binding failed: {' '.join(arguments)}"
         ) from exc
+    if completed.returncode != 0:
+        detail = completed.stderr.strip() or completed.stdout.strip()
+        raise SamplingPoolCPUObservationEvidenceError(
+            f"git source binding failed: {' '.join(arguments)}: {detail[:4096]}"
+        )
     return completed.stdout.strip()
 
 
@@ -187,19 +237,14 @@ def _verify_source_baseline(
         )
     if require_matching_worktree:
         try:
-            observer._run(
-                (
-                    "git",
-                    "diff",
-                    "--quiet",
-                    SOURCE_BASELINE_COMMIT,
-                    "--",
-                    *SOURCE_CLOSURE_PATHS,
-                ),
-                cwd=REPOSITORY_ROOT,
-                timeout=30,
+            _git(
+                "diff",
+                "--quiet",
+                SOURCE_BASELINE_COMMIT,
+                "--",
+                *SOURCE_CLOSURE_PATHS,
             )
-        except observer.SamplingPoolCPUObservationError as exc:
+        except SamplingPoolCPUObservationEvidenceError as exc:
             raise SamplingPoolCPUObservationEvidenceError(
                 "working source closure differs from merged baseline"
             ) from exc
@@ -623,16 +668,21 @@ def _verify_cargo_configuration(value: object) -> None:
     if (
         type(value) is not dict
         or set(value) != {"cargo_home_origin", "lookup_roots"}
+        or type(value.get("cargo_home_origin")) is not str
         or value.get("cargo_home_origin") not in {"default_user_home", "environment"}
         or type(value.get("lookup_roots")) is not list
-        or not value["lookup_roots"]
+        or len(value["lookup_roots"])
+        != EXPECTED_CARGO_WORKING_DIRECTORY_ANCESTOR_COUNT + 1
     ):
         raise SamplingPoolCPUObservationEvidenceError(
             "Cargo configuration binding is invalid"
         )
     roots = value["lookup_roots"]
     expected_scopes = [
-        *(f"working_directory_ancestor_{index}" for index in range(len(roots) - 1)),
+        *(
+            f"working_directory_ancestor_{index}"
+            for index in range(EXPECTED_CARGO_WORKING_DIRECTORY_ANCESTOR_COUNT)
+        ),
         "cargo_home",
     ]
     if [row.get("scope") if type(row) is dict else None for row in roots] != (
@@ -739,6 +789,10 @@ def verify(document: object) -> dict[str, object]:
         type(row) is not dict or set(row) != _OBSERVED_FIXTURE_KEYS for row in fixtures
     ):
         raise SamplingPoolCPUObservationEvidenceError("observed fixture keys changed")
+    if any(
+        type(row["fixture_id"]) is not str or not row["fixture_id"] for row in fixtures
+    ):
+        raise SamplingPoolCPUObservationEvidenceError("fixture ID is invalid")
     try:
         validated_observation = observer._validate(
             observation, expected_sample_count=SAMPLE_COUNT
@@ -749,9 +803,15 @@ def verify(document: object) -> dict[str, object]:
         raise SamplingPoolCPUObservationEvidenceError(
             "peak RSS delta exceeds absolute peak"
         )
-    if document["authority"] != validated_observation["authority"]:
+    authority = document["authority"]
+    if (
+        type(authority) is not dict
+        or set(authority) != observer.EXPECTED_AUTHORITY_KEYS
+        or any(type(value) is not bool for value in authority.values())
+        or authority != validated_observation["authority"]
+    ):
         raise SamplingPoolCPUObservationEvidenceError(
-            "evidence authority differs from observation"
+            "evidence authority is invalid or differs from observation"
         )
     source = document["source"]
     if type(source) is not dict:
@@ -976,7 +1036,14 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    global observer
     arguments = _parser().parse_args(argv)
+    try:
+        if observer is None:
+            observer = _load_observer()
+    except (OSError, SamplingPoolCPUObservationEvidenceError) as exc:
+        print(f"sampling_pool_cpu_observation_evidence=blocked:{exc}")
+        return 1
     try:
         if arguments.capture is not None:
             document = capture()

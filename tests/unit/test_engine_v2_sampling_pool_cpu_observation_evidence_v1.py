@@ -25,7 +25,7 @@ def _reseal(value: dict[str, object]) -> dict[str, object]:
 def test_committed_source_binary_host_bound_observation_verifies() -> None:
     value = evidence.load_and_verify(EVIDENCE)
     assert value["receipt_sha256"] == (
-        "0fe57e9780c9c90d550371db3237590b975650527c9988707cdb7fc79746e24f"
+        "f79604c22d25277bddaf366cee9afe08b9a107f4241f19604a50932b7f6a9968"
     )
     assert value["source"]["merged_main_commit"] == evidence.SOURCE_BASELINE_COMMIT
     assert value["source"]["merged_main_tree"] == evidence.SOURCE_BASELINE_TREE
@@ -131,6 +131,40 @@ def test_resealed_semantic_cross_wiring_fails_closed() -> None:
     ):
         evidence.verify(_reseal(value))
 
+    value = json.loads(EVIDENCE.read_text(encoding="ascii"))
+    value["build"]["cargo_configuration"]["lookup_roots"] = [
+        value["build"]["cargo_configuration"]["lookup_roots"][-1]
+    ]
+    with pytest.raises(
+        evidence.SamplingPoolCPUObservationEvidenceError,
+        match="Cargo configuration binding",
+    ):
+        evidence.verify(_reseal(value))
+
+    value = json.loads(EVIDENCE.read_text(encoding="ascii"))
+    value["build"]["cargo_configuration"]["cargo_home_origin"] = []
+    with pytest.raises(
+        evidence.SamplingPoolCPUObservationEvidenceError,
+        match="Cargo configuration binding",
+    ):
+        evidence.verify(_reseal(value))
+
+    value = json.loads(EVIDENCE.read_text(encoding="ascii"))
+    value["observation"]["fixtures"][0]["fixture_id"] = []
+    with pytest.raises(
+        evidence.SamplingPoolCPUObservationEvidenceError,
+        match="fixture ID",
+    ):
+        evidence.verify(_reseal(value))
+
+    value = json.loads(EVIDENCE.read_text(encoding="ascii"))
+    value["authority"]["reservation_authorized"] = 0
+    with pytest.raises(
+        evidence.SamplingPoolCPUObservationEvidenceError,
+        match="authority",
+    ):
+        evidence.verify(_reseal(value))
+
 
 def test_capture_is_blocked_in_github_actions_before_build(
     monkeypatch: pytest.MonkeyPatch,
@@ -173,6 +207,31 @@ def test_affinity_and_imported_runner_binding_fail_closed(
         match="imported observation runner differs",
     ):
         evidence._verify_imported_observer_binding()
+
+
+def test_cli_runner_binding_failure_is_stable(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(evidence, "observer", None)
+    monkeypatch.setattr(
+        evidence,
+        "_load_observer",
+        lambda: (_ for _ in ()).throw(
+            evidence.SamplingPoolCPUObservationEvidenceError("runner unavailable")
+        ),
+    )
+    assert evidence.main(["--verify", str(EVIDENCE)]) == 1
+    assert capsys.readouterr().out == (
+        "sampling_pool_cpu_observation_evidence=blocked:runner unavailable\n"
+    )
+
+
+def test_source_git_ignores_ambient_repository_redirection(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("GIT_DIR", str(tmp_path / "other-git-dir"))
+    monkeypatch.setenv("GIT_WORK_TREE", str(tmp_path / "other-work-tree"))
+    assert Path(evidence._git("rev-parse", "--show-toplevel")) == ROOT
 
 
 def test_effective_affinity_cpu_models_are_complete_and_homogeneous() -> None:
