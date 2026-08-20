@@ -114,6 +114,44 @@ composition boundary: molecular execution, reservation, benchmark, Stage 0,
 Fresh-128, product, customer-pose, rank-mutation, scientific-claim, and
 performance-claim authority all remain false.
 
+### Source-bound native 512-row producer
+
+`produce_native_sampling_pool(...)` removes the remaining caller-supplied
+proposal-coordinate boundary ahead of the funnel. The Rust CPU implementation
+constructs four contiguous 128-row lanes from `SearchInput` and
+`Fixed64GeometricInput`:
+
+- uniform SO(3) rotates centered source coordinates onto the pocket center;
+- pocket-surface rotates centered source coordinates onto deterministically
+  ID-ordered surface targets;
+- single-anchor executes the existing compatible-anchor placement transform;
+- multi-anchor executes the existing dual-anchor correction and placement, or
+  preserves all 128 slots as typed failures when no compatible dual exists.
+
+The low-discrepancy orientation seed is a digest of the complete canonical
+search input and geometric-input receipt, rather than a separately accepted
+producer seed. Ligand radii and receptor coordinates/radii must match across
+the two inputs exactly. Every generated coordinate set is observed by
+`evaluate_fixed64_geometric_metrics(...)`; its exact minimum vdW ratio, pocket
+escape, and penetrating-pair fraction feed the result-independent funnel
+quality state. The shape penalty is the dimensionless penetrating-pair count
+divided by the exact ligand-receptor pair count. Anchor lanes add the
+dimensionless half-one-minus mean alignment cosine and fit RMSD divided by the
+frozen 0.75-angstrom dual tolerance; non-anchor lanes use zero anchor penalty.
+The aggregate generated-candidate × ligand-atom × receptor-atom traversal must
+fit the existing 16,777,216-pair bound before any proposal coordinates are
+created.
+
+The returned `NativeSamplingPoolBatch` retains the 512-row funnel receipt,
+512-row coordinate payload, materialized 64-row batch, source/input identities,
+exact executed pair count, and a composition receipt. `verifies_against(...)`
+re-executes generation and all geometric observations from the two bound
+inputs. Self-verification alone checks retained identities and nested receipts;
+it does not reconstruct omitted inputs. This implementation and its tests are
+synthetic engineering evidence only. It does not authorize molecular runs,
+reservation, D1/Fresh-128, public benchmarks, Stage 0, product use, performance
+claims, or scientific claims.
+
 ## CPU water-box development reference
 
 ```bash

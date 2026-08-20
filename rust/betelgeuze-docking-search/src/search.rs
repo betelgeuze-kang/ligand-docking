@@ -427,7 +427,10 @@ fn validate_config(config: &SearchConfig) -> Result<(), SearchError> {
     Ok(())
 }
 
-fn validate_input(input: &SearchInput, config: &SearchConfig) -> Result<(), SearchError> {
+pub(crate) fn validate_input(
+    input: &SearchInput,
+    config: &SearchConfig,
+) -> Result<(), SearchError> {
     if input.ligand_atoms.is_empty() {
         return Err(SearchError::new(
             SearchErrorCode::EmptyLigand,
