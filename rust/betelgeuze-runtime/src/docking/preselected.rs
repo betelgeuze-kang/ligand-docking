@@ -776,6 +776,117 @@ fn validate_component_output_counts(
             ));
         }
     }
+    require_authority_false(&[
+        (
+            initial_admission.molecular_execution_authorized,
+            "initial-admission molecular execution",
+        ),
+        (
+            initial_admission.reservation_authorized,
+            "initial-admission reservation",
+        ),
+        (
+            initial_admission.benchmark_execution_authorized,
+            "initial-admission benchmark execution",
+        ),
+        (
+            initial_admission.existing_rank_auto_change_authorized,
+            "initial-admission rank mutation",
+        ),
+        (
+            initial_admission.customer_pose_emission_authorized,
+            "initial-admission pose emission",
+        ),
+        (
+            initial_admission.production_claim_authorized,
+            "initial-admission production claim",
+        ),
+        (
+            initial_admission.scientific_claim_authorized,
+            "initial-admission scientific claim",
+        ),
+        (
+            rigid.molecular_execution_authorized,
+            "rigid molecular execution",
+        ),
+        (
+            rigid.existing_rank_auto_change_authorized,
+            "rigid rank mutation",
+        ),
+        (
+            rigid.customer_pose_emission_authorized,
+            "rigid pose emission",
+        ),
+        (rigid.production_claim_authorized, "rigid production claim"),
+        (
+            torsion.molecular_execution_authorized,
+            "torsion molecular execution",
+        ),
+        (
+            torsion.existing_rank_auto_change_authorized,
+            "torsion rank mutation",
+        ),
+        (
+            torsion.customer_pose_emission_authorized,
+            "torsion pose emission",
+        ),
+        (
+            torsion.production_claim_authorized,
+            "torsion production claim",
+        ),
+        (
+            post_admission.molecular_execution_authorized,
+            "post-admission molecular execution",
+        ),
+        (
+            post_admission.reservation_authorized,
+            "post-admission reservation",
+        ),
+        (
+            post_admission.benchmark_execution_authorized,
+            "post-admission benchmark execution",
+        ),
+        (
+            post_admission.existing_rank_auto_change_authorized,
+            "post-admission rank mutation",
+        ),
+        (
+            post_admission.customer_pose_emission_authorized,
+            "post-admission pose emission",
+        ),
+        (
+            post_admission.production_claim_authorized,
+            "post-admission production claim",
+        ),
+        (
+            post_admission.scientific_claim_authorized,
+            "post-admission scientific claim",
+        ),
+        (
+            ranking.existing_rank_auto_change_authorized,
+            "ranking mutation",
+        ),
+        (
+            ranking.customer_pose_emission_authorized,
+            "ranking pose emission",
+        ),
+        (
+            ranking.production_claim_authorized,
+            "ranking production claim",
+        ),
+        (
+            cluster.existing_rank_auto_change_authorized,
+            "cluster rank mutation",
+        ),
+        (
+            cluster.customer_pose_emission_authorized,
+            "cluster pose emission",
+        ),
+        (
+            cluster.production_claim_authorized,
+            "cluster production claim",
+        ),
+    ])?;
     Ok(())
 }
 
