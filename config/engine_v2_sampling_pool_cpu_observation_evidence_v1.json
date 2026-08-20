@@ -133,6 +133,16 @@
               "resolved_path_sha256": null
             }
           },
+          "root_path_components_sha256": [
+            "4ea140588150773ce3aace786aeef7f4049ce100fa649c94fbbddb960f1da942",
+            "74549460f4e5bd883abb5b36b672fd27cf14a073d3c984ee9e6ab9faa3d0b472",
+            "a1d1128ffe5a2849afb3ac4cad6413b6d75453babc7cac579b95c66a565fe4cc",
+            "666a44f0580788557379b5f8ff05bc006a3ecc4b4bd35f0dd08fa27338c2edea",
+            "570f9eac085a0183973170690355fa9f61e2bf0010f38101fd0d54f7788e9f4d",
+            "b8d8ce23368c5df6969d0494488617307e638cc5f6e0691e8fccf7bc2db07255",
+            "521fe5c9ece1aa1f8b66228171598263574aefc6fa4ba06a61747ec81ee9f5a3",
+            "c0f7069e07464fa4e93b743976ee388e5ee530e3393fa306e4745d442bbf1fe8"
+          ],
           "root_path_sha256": "b9bf4a9c2cb9368c862ca5a82e30b7c64f44f24c22cc417f135e7997f66c8723",
           "scope": "working_directory_ancestor_0"
         },
@@ -151,6 +161,15 @@
               "resolved_path_sha256": null
             }
           },
+          "root_path_components_sha256": [
+            "4ea140588150773ce3aace786aeef7f4049ce100fa649c94fbbddb960f1da942",
+            "74549460f4e5bd883abb5b36b672fd27cf14a073d3c984ee9e6ab9faa3d0b472",
+            "a1d1128ffe5a2849afb3ac4cad6413b6d75453babc7cac579b95c66a565fe4cc",
+            "666a44f0580788557379b5f8ff05bc006a3ecc4b4bd35f0dd08fa27338c2edea",
+            "570f9eac085a0183973170690355fa9f61e2bf0010f38101fd0d54f7788e9f4d",
+            "b8d8ce23368c5df6969d0494488617307e638cc5f6e0691e8fccf7bc2db07255",
+            "c0f7069e07464fa4e93b743976ee388e5ee530e3393fa306e4745d442bbf1fe8"
+          ],
           "root_path_sha256": "d94ead0fe9422f476a808684a71202e2e09e39d68a34ca92780e9009061af1bf",
           "scope": "working_directory_ancestor_1"
         },
@@ -169,6 +188,14 @@
               "resolved_path_sha256": null
             }
           },
+          "root_path_components_sha256": [
+            "4ea140588150773ce3aace786aeef7f4049ce100fa649c94fbbddb960f1da942",
+            "74549460f4e5bd883abb5b36b672fd27cf14a073d3c984ee9e6ab9faa3d0b472",
+            "a1d1128ffe5a2849afb3ac4cad6413b6d75453babc7cac579b95c66a565fe4cc",
+            "666a44f0580788557379b5f8ff05bc006a3ecc4b4bd35f0dd08fa27338c2edea",
+            "570f9eac085a0183973170690355fa9f61e2bf0010f38101fd0d54f7788e9f4d",
+            "c0f7069e07464fa4e93b743976ee388e5ee530e3393fa306e4745d442bbf1fe8"
+          ],
           "root_path_sha256": "e4932760f8b0f45a50afac83795f04090e102b7d1034c6f33a24a24ea0e8a9bd",
           "scope": "working_directory_ancestor_2"
         },
@@ -187,6 +214,13 @@
               "resolved_path_sha256": null
             }
           },
+          "root_path_components_sha256": [
+            "4ea140588150773ce3aace786aeef7f4049ce100fa649c94fbbddb960f1da942",
+            "74549460f4e5bd883abb5b36b672fd27cf14a073d3c984ee9e6ab9faa3d0b472",
+            "a1d1128ffe5a2849afb3ac4cad6413b6d75453babc7cac579b95c66a565fe4cc",
+            "666a44f0580788557379b5f8ff05bc006a3ecc4b4bd35f0dd08fa27338c2edea",
+            "c0f7069e07464fa4e93b743976ee388e5ee530e3393fa306e4745d442bbf1fe8"
+          ],
           "root_path_sha256": "bc50280f7fc975380a5b62aa7560d47af4051d4014857d68128e0ecc40c20e0c",
           "scope": "working_directory_ancestor_3"
         },
@@ -205,6 +239,12 @@
               "resolved_path_sha256": null
             }
           },
+          "root_path_components_sha256": [
+            "4ea140588150773ce3aace786aeef7f4049ce100fa649c94fbbddb960f1da942",
+            "74549460f4e5bd883abb5b36b672fd27cf14a073d3c984ee9e6ab9faa3d0b472",
+            "a1d1128ffe5a2849afb3ac4cad6413b6d75453babc7cac579b95c66a565fe4cc",
+            "c0f7069e07464fa4e93b743976ee388e5ee530e3393fa306e4745d442bbf1fe8"
+          ],
           "root_path_sha256": "d9d9a5c85e15f83d121a740f878919c4ddd0e162a665ca1872ca0e09bd1953b7",
           "scope": "working_directory_ancestor_4"
         },
@@ -223,6 +263,11 @@
               "resolved_path_sha256": null
             }
           },
+          "root_path_components_sha256": [
+            "4ea140588150773ce3aace786aeef7f4049ce100fa649c94fbbddb960f1da942",
+            "74549460f4e5bd883abb5b36b672fd27cf14a073d3c984ee9e6ab9faa3d0b472",
+            "c0f7069e07464fa4e93b743976ee388e5ee530e3393fa306e4745d442bbf1fe8"
+          ],
           "root_path_sha256": "be5d867eec6f1e5ba23e3f6736cfc690f256817a8a88a59d6bd07a4ca3d7808a",
           "scope": "working_directory_ancestor_5"
         },
@@ -241,6 +286,10 @@
               "resolved_path_sha256": null
             }
           },
+          "root_path_components_sha256": [
+            "4ea140588150773ce3aace786aeef7f4049ce100fa649c94fbbddb960f1da942",
+            "c0f7069e07464fa4e93b743976ee388e5ee530e3393fa306e4745d442bbf1fe8"
+          ],
           "root_path_sha256": "0a31cffaaa80a7792a185ae15da1becddce553e28defbd1f744511ef54b62cf8",
           "scope": "working_directory_ancestor_6"
         },
@@ -259,6 +308,9 @@
               "resolved_path_sha256": null
             }
           },
+          "root_path_components_sha256": [
+            "c0f7069e07464fa4e93b743976ee388e5ee530e3393fa306e4745d442bbf1fe8"
+          ],
           "root_path_sha256": "2db84a3461a9450030b6bec458ae0d2c1f21ac14db3e4b5b81f05f425194c68b",
           "scope": "working_directory_ancestor_7"
         },
@@ -277,6 +329,11 @@
               "resolved_path_sha256": null
             }
           },
+          "root_path_components_sha256": [
+            "4ea140588150773ce3aace786aeef7f4049ce100fa649c94fbbddb960f1da942",
+            "74549460f4e5bd883abb5b36b672fd27cf14a073d3c984ee9e6ab9faa3d0b472",
+            "c0f7069e07464fa4e93b743976ee388e5ee530e3393fa306e4745d442bbf1fe8"
+          ],
           "root_path_sha256": "be5d867eec6f1e5ba23e3f6736cfc690f256817a8a88a59d6bd07a4ca3d7808a",
           "scope": "cargo_home"
         }
@@ -299,7 +356,7 @@
       "rustc_version": "rustc 1.93.0 (254b59607 2026-01-19)\nbinary: rustc\ncommit-hash: 254b59607d4417e9dffbc307138ae5c86280fe4c\ncommit-date: 2026-01-19\nhost: x86_64-unknown-linux-gnu\nrelease: 1.93.0\nLLVM version: 21.1.8"
     }
   },
-  "captured_at_utc": "2026-08-20T23:03:31+00:00",
+  "captured_at_utc": "2026-08-20T23:21:26+00:00",
   "host": {
     "affinity_cpu_ids": [
       0,
@@ -385,16 +442,16 @@
         "peak_rss_kib": 2688,
         "receipt_sha256": "2603c7b0b13dd2af26313d26ce63e73e8162de396a1fb5d7030a31a993c60831",
         "receptor_atom_count": 64,
-        "wall_time_ns_p50": 19886319,
-        "wall_time_ns_p95": 20373237,
+        "wall_time_ns_p50": 19872626,
+        "wall_time_ns_p95": 22172496,
         "wall_time_ns_samples": [
-          19873918,
-          19886319,
-          19865737,
-          19847998,
-          20373237,
-          19994003,
-          19920260
+          19891647,
+          19864265,
+          19878526,
+          19857005,
+          19847605,
+          22172496,
+          19872626
         ]
       },
       {
@@ -405,16 +462,16 @@
         "peak_rss_kib": 3072,
         "receipt_sha256": "61a8bb8490359fa03f0fb8fc0a12514203d602dc6539faac447f0e65e8e8d3a5",
         "receptor_atom_count": 256,
-        "wall_time_ns_p50": 66390560,
-        "wall_time_ns_p95": 67578114,
+        "wall_time_ns_p50": 66861931,
+        "wall_time_ns_p95": 79320257,
         "wall_time_ns_samples": [
-          66624069,
-          66390560,
-          66247523,
-          66209552,
-          67578114,
-          66575075,
-          66338285
+          79320257,
+          66861931,
+          74692685,
+          66860510,
+          74396024,
+          66860931,
+          66258590
         ]
       },
       {
@@ -425,16 +482,16 @@
         "peak_rss_kib": 3456,
         "receipt_sha256": "ded4134a8cd2e0c6d42f096c0220c22931378a5cba96e2fc36dba54f77bdc0bb",
         "receptor_atom_count": 512,
-        "wall_time_ns_p50": 194888996,
-        "wall_time_ns_p95": 201582828,
+        "wall_time_ns_p50": 195819684,
+        "wall_time_ns_p95": 202903993,
         "wall_time_ns_samples": [
-          193974271,
-          201582828,
-          194888996,
-          194022352,
-          195181627,
-          195035040,
-          193877885
+          202903993,
+          195806995,
+          200100196,
+          195819684,
+          196422526,
+          194789468,
+          194585291
         ]
       }
     ],
@@ -447,10 +504,10 @@
     "wall_time_role": "descriptive_no_threshold_no_claim"
   },
   "profile_id": "engine_v2_sampling_pool_synthetic_cpu_observation_evidence_v1",
-  "receipt_sha256": "f79604c22d25277bddaf366cee9afe08b9a107f4241f19604a50932b7f6a9968",
+  "receipt_sha256": "b44ef98a3b9da7cae34b1bba28da279f7757de401e9cd0adb005e0b555e0a1f2",
   "schema_id": "betelgeuze.engine_v2_sampling_pool_cpu_observation_evidence/1.0.0",
   "source": {
-    "capture_tool_sha256": "61b8457198fe6c003bb1e0813a0c9c568d8cfe6c7cc23b5e51e38ab33b608280",
+    "capture_tool_sha256": "778add717e4738736eac048906903ce8914b442bd5433cc0a30dd811a1ee6542",
     "cargo_lock_sha256": "b4f9534bc51bccd72157b0be73ce12c939411821c10c11e70b00996e1f82baac",
     "closure_paths": [
       "LICENSE",

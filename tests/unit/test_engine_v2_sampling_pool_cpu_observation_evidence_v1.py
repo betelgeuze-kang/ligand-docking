@@ -25,7 +25,7 @@ def _reseal(value: dict[str, object]) -> dict[str, object]:
 def test_committed_source_binary_host_bound_observation_verifies() -> None:
     value = evidence.load_and_verify(EVIDENCE)
     assert value["receipt_sha256"] == (
-        "f79604c22d25277bddaf366cee9afe08b9a107f4241f19604a50932b7f6a9968"
+        "b44ef98a3b9da7cae34b1bba28da279f7757de401e9cd0adb005e0b555e0a1f2"
     )
     assert value["source"]["merged_main_commit"] == evidence.SOURCE_BASELINE_COMMIT
     assert value["source"]["merged_main_tree"] == evidence.SOURCE_BASELINE_TREE
@@ -48,6 +48,44 @@ def test_resealed_semantic_cross_wiring_fails_closed() -> None:
     with pytest.raises(
         evidence.SamplingPoolCPUObservationEvidenceError,
         match="authority",
+    ):
+        evidence.verify(_reseal(value))
+
+    value = json.loads(EVIDENCE.read_text(encoding="ascii"))
+    value["source"]["closure_verified_clean"] = 1
+    with pytest.raises(
+        evidence.SamplingPoolCPUObservationEvidenceError,
+        match="clean-closure marker",
+    ):
+        evidence.verify(_reseal(value))
+
+    value = json.loads(EVIDENCE.read_text(encoding="ascii"))
+    value["observation"]["sample_count"] = float(value["observation"]["sample_count"])
+    with pytest.raises(
+        evidence.SamplingPoolCPUObservationEvidenceError,
+        match="not integers",
+    ):
+        evidence.verify(_reseal(value))
+
+    for key in (
+        "ligand_atom_count",
+        "exact_pair_evaluation_count",
+        "wall_time_ns_p50",
+    ):
+        value = json.loads(EVIDENCE.read_text(encoding="ascii"))
+        row = value["observation"]["fixtures"][0]
+        row[key] = float(row[key])
+        with pytest.raises(
+            evidence.SamplingPoolCPUObservationEvidenceError,
+            match="not integers",
+        ):
+            evidence.verify(_reseal(value))
+
+    value = json.loads(EVIDENCE.read_text(encoding="ascii"))
+    value["host"]["logical_cpu_count"] = 1
+    with pytest.raises(
+        evidence.SamplingPoolCPUObservationEvidenceError,
+        match="host identity",
     ):
         evidence.verify(_reseal(value))
 
@@ -226,6 +264,18 @@ def test_cli_runner_binding_failure_is_stable(
     )
 
 
+def test_cli_overflowing_json_number_is_stably_blocked(
+    capsys: pytest.CaptureFixture[str], tmp_path: Path
+) -> None:
+    overflowing = tmp_path / "overflowing.json"
+    overflowing.write_text('{"value":1e400}\n', encoding="ascii")
+    assert evidence.main(["--verify", str(overflowing)]) == 1
+    assert capsys.readouterr().out == (
+        "sampling_pool_cpu_observation_evidence=blocked:"
+        "non-finite JSON number is forbidden\n"
+    )
+
+
 def test_source_git_ignores_ambient_repository_redirection(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -284,6 +334,7 @@ def test_cargo_configuration_and_timed_environment_are_bound(
     monkeypatch.setenv("CARGO_HOME", str(cargo_home))
 
     binding = evidence._cargo_configuration_binding()
+    evidence._verify_cargo_configuration(binding)
     assert binding["cargo_home_origin"] == "environment"
     roots = binding["lookup_roots"]
     assert roots[0]["candidate_files"]["config.toml"]["content_sha256"] == (
@@ -293,6 +344,21 @@ def test_cargo_configuration_and_timed_environment_are_bound(
     assert roots[-1]["candidate_files"]["config"]["content_sha256"] == (
         evidence._sha256(cargo_config.read_bytes())
     )
+
+    incomplete = copy.deepcopy(binding)
+    del incomplete["lookup_roots"][1]
+    for index, root in enumerate(incomplete["lookup_roots"][:-1]):
+        root["scope"] = f"working_directory_ancestor_{index}"
+    with pytest.raises(
+        evidence.SamplingPoolCPUObservationEvidenceError,
+        match="ancestor chain is incomplete",
+    ):
+        evidence._verify_cargo_configuration(incomplete)
+
+    monkeypatch.setattr(evidence.observer, "RUST_ROOT", Path("/tmp/rust"))
+    shallow_binding = evidence._cargo_configuration_binding()
+    assert len(shallow_binding["lookup_roots"]) == 4
+    evidence._verify_cargo_configuration(shallow_binding)
 
     monkeypatch.setenv("LD_PRELOAD", "/tmp/inject.so")
     runtime = evidence._timed_runtime_environment()

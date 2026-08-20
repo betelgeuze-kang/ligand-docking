@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 import hashlib
 import importlib
 import json
+import math
 import os
 from pathlib import Path
 import platform
@@ -78,7 +79,6 @@ STATUS = "local_synthetic_development_observation_only"
 SAMPLE_COUNT = 7
 RECEIPT_DOMAIN = b"betelgeuze.engine_v2_sampling_pool_cpu_observation_evidence/1\0"
 MAXIMUM_EVIDENCE_BYTES = 128 * 1024
-EXPECTED_CARGO_WORKING_DIRECTORY_ANCESTOR_COUNT = 8
 _SHA256 = re.compile(r"[0-9a-f]{64}")
 _GIT_OID = re.compile(r"[0-9a-f]{40}")
 _BUILD_ENVIRONMENT_KEYS = (
@@ -149,6 +149,15 @@ _OBSERVED_FIXTURE_KEYS = {
     "wall_time_ns_p95",
     "wall_time_ns_samples",
 }
+_OBSERVED_FIXTURE_INTEGER_KEYS = {
+    "exact_pair_evaluation_count",
+    "ligand_atom_count",
+    "peak_rss_delta_kib",
+    "peak_rss_kib",
+    "receptor_atom_count",
+    "wall_time_ns_p50",
+    "wall_time_ns_p95",
+}
 
 
 def _canonical_bytes(value: object) -> bytes:
@@ -176,6 +185,15 @@ def _canonical_projection(value: object) -> bytes:
 
 def _sha256(raw: bytes) -> str:
     return hashlib.sha256(raw).hexdigest()
+
+
+def _parse_finite_float(token: str) -> float:
+    value = float(token)
+    if not math.isfinite(value):
+        raise SamplingPoolCPUObservationEvidenceError(
+            "non-finite JSON number is forbidden"
+        )
+    return value
 
 
 def _file_sha256(path: Path) -> str:
@@ -308,6 +326,13 @@ def _path_sha256(path: Path) -> str:
     return _sha256(os.fsencode(str(path.absolute())))
 
 
+def _path_components_sha256(path: Path) -> list[str]:
+    absolute = path.absolute()
+    return [
+        _sha256(os.fsencode(part)) for part in absolute.parts if part != absolute.anchor
+    ]
+
+
 def _cargo_configuration_file(path: Path) -> dict[str, object]:
     binding: dict[str, object] = {
         "candidate_path_sha256": _path_sha256(path),
@@ -363,6 +388,7 @@ def _cargo_configuration_binding() -> dict[str, object]:
                     name: _cargo_configuration_file(root / name)
                     for name in _CARGO_CONFIGURATION_FILENAMES
                 },
+                "root_path_components_sha256": _path_components_sha256(root),
                 "root_path_sha256": _path_sha256(root),
                 "scope": f"working_directory_ancestor_{index}",
             }
@@ -373,6 +399,7 @@ def _cargo_configuration_binding() -> dict[str, object]:
                 name: _cargo_configuration_file(cargo_home / name)
                 for name in _CARGO_CONFIGURATION_FILENAMES
             },
+            "root_path_components_sha256": _path_components_sha256(cargo_home),
             "root_path_sha256": _path_sha256(cargo_home),
             "scope": "cargo_home",
         }
@@ -535,6 +562,7 @@ def _load_observer_output(raw: str) -> dict[str, Any]:
         value = json.loads(
             raw,
             object_pairs_hook=observer._reject_duplicate_keys,
+            parse_float=_parse_finite_float,
             parse_constant=lambda token: (_ for _ in ()).throw(
                 SamplingPoolCPUObservationEvidenceError(
                     f"non-finite observer JSON value: {token}"
@@ -671,18 +699,15 @@ def _verify_cargo_configuration(value: object) -> None:
         or type(value.get("cargo_home_origin")) is not str
         or value.get("cargo_home_origin") not in {"default_user_home", "environment"}
         or type(value.get("lookup_roots")) is not list
-        or len(value["lookup_roots"])
-        != EXPECTED_CARGO_WORKING_DIRECTORY_ANCESTOR_COUNT + 1
+        or len(value["lookup_roots"]) < 3
     ):
         raise SamplingPoolCPUObservationEvidenceError(
             "Cargo configuration binding is invalid"
         )
     roots = value["lookup_roots"]
+    working_roots = roots[:-1]
     expected_scopes = [
-        *(
-            f"working_directory_ancestor_{index}"
-            for index in range(EXPECTED_CARGO_WORKING_DIRECTORY_ANCESTOR_COUNT)
-        ),
+        *(f"working_directory_ancestor_{index}" for index in range(len(working_roots))),
         "cargo_home",
     ]
     if [row.get("scope") if type(row) is dict else None for row in roots] != (
@@ -694,9 +719,20 @@ def _verify_cargo_configuration(value: object) -> None:
     for root in roots:
         if (
             type(root) is not dict
-            or set(root) != {"candidate_files", "root_path_sha256", "scope"}
+            or set(root)
+            != {
+                "candidate_files",
+                "root_path_components_sha256",
+                "root_path_sha256",
+                "scope",
+            }
             or type(root.get("candidate_files")) is not dict
             or set(root["candidate_files"]) != set(_CARGO_CONFIGURATION_FILENAMES)
+            or type(root.get("root_path_components_sha256")) is not list
+            or any(
+                type(component) is not str or _SHA256.fullmatch(component) is None
+                for component in root["root_path_components_sha256"]
+            )
         ):
             raise SamplingPoolCPUObservationEvidenceError(
                 "Cargo configuration lookup root is invalid"
@@ -747,6 +783,21 @@ def _verify_cargo_configuration(value: object) -> None:
             raise SamplingPoolCPUObservationEvidenceError(
                 "Cargo configuration candidate paths are not distinct"
             )
+    cargo_component = _sha256(b".cargo")
+    rust_component = _sha256(b"rust")
+    working_components = [root["root_path_components_sha256"] for root in working_roots]
+    if (
+        len(working_components[0]) < 2
+        or working_components[0][-2:] != [rust_component, cargo_component]
+        or working_components[-1] != [cargo_component]
+        or any(
+            following != current[:-2] + [cargo_component]
+            for current, following in zip(working_components, working_components[1:])
+        )
+    ):
+        raise SamplingPoolCPUObservationEvidenceError(
+            "Cargo configuration ancestor chain is incomplete"
+        )
 
 
 def verify(document: object) -> dict[str, object]:
@@ -793,6 +844,15 @@ def verify(document: object) -> dict[str, object]:
         type(row["fixture_id"]) is not str or not row["fixture_id"] for row in fixtures
     ):
         raise SamplingPoolCPUObservationEvidenceError("fixture ID is invalid")
+    if type(observation.get("sample_count")) is not int or any(
+        any(type(row[key]) is not int for key in _OBSERVED_FIXTURE_INTEGER_KEYS)
+        or type(row["wall_time_ns_samples"]) is not list
+        or any(type(sample) is not int for sample in row["wall_time_ns_samples"])
+        for row in fixtures
+    ):
+        raise SamplingPoolCPUObservationEvidenceError(
+            "observation denominators or statistics are not integers"
+        )
     try:
         validated_observation = observer._validate(
             observation, expected_sample_count=SAMPLE_COUNT
@@ -830,6 +890,10 @@ def verify(document: object) -> dict[str, object]:
         "rust_tree_git_oid",
     }:
         raise SamplingPoolCPUObservationEvidenceError("source binding keys changed")
+    if type(source.get("closure_verified_clean")) is not bool:
+        raise SamplingPoolCPUObservationEvidenceError(
+            "source clean-closure marker is not Boolean"
+        )
     current_source = _verify_source_baseline(require_matching_worktree=False)
     for key, expected in current_source.items():
         if source.get(key) != expected:
@@ -941,6 +1005,7 @@ def verify(document: object) -> dict[str, object]:
         or set(affinity_cpu_models.values()) != {host.get("cpu_model")}
         or type(host.get("logical_cpu_count")) is not int
         or host["logical_cpu_count"] <= 0
+        or len(affinity_cpu_ids) > host["logical_cpu_count"]
         or any(
             type(host.get(key)) is not str or not host[key]
             for key in ("cpu_model", "kernel_release", "machine_architecture")
@@ -984,6 +1049,7 @@ def load_and_verify(path: Path) -> dict[str, object]:
         document = json.loads(
             raw.decode("ascii"),
             object_pairs_hook=observer._reject_duplicate_keys,
+            parse_float=_parse_finite_float,
             parse_constant=lambda token: (_ for _ in ()).throw(
                 SamplingPoolCPUObservationEvidenceError(
                     f"non-finite evidence JSON value: {token}"

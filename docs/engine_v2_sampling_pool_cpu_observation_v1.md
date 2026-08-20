@@ -64,14 +64,16 @@ allowlisted timed-process environment, Linux OS/kernel/boot identity hashes,
 CPU model, and the exact 24-CPU affinity set. The Cargo binding records both
 modern `config.toml` and legacy `config` candidates from the Rust working
 directory through every ancestor plus Cargo home; all candidates were absent
-for this capture. Its receipt SHA-256 is
-`f79604c22d25277bddaf366cee9afe08b9a107f4241f19604a50932b7f6a9968`.
+for this capture. A hashed path-component chain starts at `rust/.cargo`, removes
+one ancestor per row, and ends at `/.cargo`, proving completeness without
+assuming a checkout-specific path depth. Its receipt SHA-256 is
+`b44ef98a3b9da7cae34b1bba28da279f7757de401e9cd0adb005e0b555e0a1f2`.
 
 | fixture | raw samples | p50 ns | p95 ns | peak RSS KiB | peak delta KiB |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| small | 7 | 19,886,319 | 20,373,237 | 2,688 | 768 |
-| medium | 7 | 66,390,560 | 67,578,114 | 3,072 | 1,152 |
-| large | 7 | 194,888,996 | 201,582,828 | 3,456 | 1,536 |
+| small | 7 | 19,872,626 | 22,172,496 | 2,688 | 768 |
+| medium | 7 | 66,861,931 | 79,320,257 | 3,072 | 1,152 |
+| large | 7 | 195,819,684 | 202,903,993 | 3,456 | 1,536 |
 
 Verify the canonical receipt without reading a clock or executing an
 observation:
