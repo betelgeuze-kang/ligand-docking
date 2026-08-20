@@ -12,13 +12,18 @@ from pathlib import Path
 import platform
 import re
 import stat
+import sys
 import tempfile
 from typing import Any, Mapping, Sequence
 
-from tools import run_engine_v2_sampling_pool_cpu_observation_v1 as observer
-
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+if str(REPOSITORY_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPOSITORY_ROOT))
+
+from tools import run_engine_v2_sampling_pool_cpu_observation_v1 as observer  # noqa: E402
+
+
 SOURCE_BASELINE_COMMIT = "cb987662477e6fc56409f382ac5757ce62a09228"
 SOURCE_BASELINE_TREE = "ed4221a64d7740e4063bdaff777e150f7035c769"
 SOURCE_CLOSURE_PATHS = (

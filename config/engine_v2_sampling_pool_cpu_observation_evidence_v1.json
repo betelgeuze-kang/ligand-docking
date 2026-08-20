@@ -48,7 +48,7 @@
       "rustc_version": "rustc 1.93.0 (254b59607 2026-01-19)\nbinary: rustc\ncommit-hash: 254b59607d4417e9dffbc307138ae5c86280fe4c\ncommit-date: 2026-01-19\nhost: x86_64-unknown-linux-gnu\nrelease: 1.93.0\nLLVM version: 21.1.8"
     }
   },
-  "captured_at_utc": "2026-08-20T21:58:38+00:00",
+  "captured_at_utc": "2026-08-20T22:08:27+00:00",
   "host": {
     "affinity_cpu_ids": [
       0,
@@ -108,16 +108,16 @@
         "peak_rss_kib": 2688,
         "receipt_sha256": "2603c7b0b13dd2af26313d26ce63e73e8162de396a1fb5d7030a31a993c60831",
         "receptor_atom_count": 64,
-        "wall_time_ns_p50": 19921089,
-        "wall_time_ns_p95": 20119108,
+        "wall_time_ns_p50": 19892350,
+        "wall_time_ns_p95": 20433180,
         "wall_time_ns_samples": [
-          20119108,
-          19968981,
-          19904509,
-          19884239,
-          19921020,
-          20009873,
-          19921089
+          20433180,
+          19921951,
+          19884640,
+          19881599,
+          19892350,
+          20295294,
+          19862158
         ]
       },
       {
@@ -128,16 +128,16 @@
         "peak_rss_kib": 3072,
         "receipt_sha256": "61a8bb8490359fa03f0fb8fc0a12514203d602dc6539faac447f0e65e8e8d3a5",
         "receptor_atom_count": 256,
-        "wall_time_ns_p50": 66344795,
-        "wall_time_ns_p95": 66638537,
+        "wall_time_ns_p50": 67381665,
+        "wall_time_ns_p95": 68214227,
         "wall_time_ns_samples": [
-          66496982,
-          66398208,
-          66321635,
-          66290735,
-          66344795,
-          66638537,
-          66297444
+          66310275,
+          68004748,
+          68214227,
+          66293545,
+          67381665,
+          67864293,
+          66276675
         ]
       },
       {
@@ -148,16 +148,16 @@
         "peak_rss_kib": 3456,
         "receipt_sha256": "ded4134a8cd2e0c6d42f096c0220c22931378a5cba96e2fc36dba54f77bdc0bb",
         "receptor_atom_count": 512,
-        "wall_time_ns_p50": 194472248,
-        "wall_time_ns_p95": 197253597,
+        "wall_time_ns_p50": 194996269,
+        "wall_time_ns_p95": 199691115,
         "wall_time_ns_samples": [
-          194470459,
-          193953709,
-          194759830,
-          194452797,
-          197253597,
-          194472248,
-          195106232
+          195734188,
+          193952601,
+          199691115,
+          195105514,
+          194024905,
+          194074955,
+          194996269
         ]
       }
     ],
@@ -170,10 +170,10 @@
     "wall_time_role": "descriptive_no_threshold_no_claim"
   },
   "profile_id": "engine_v2_sampling_pool_synthetic_cpu_observation_evidence_v1",
-  "receipt_sha256": "f1fe8d59ee3182656ed7f81e1dca49f8dc71bebbeb073716b4b6b332b5c8c006",
+  "receipt_sha256": "18474af83f0969f158c83b610e8fde61aa80d3a6682d75e4d32100cd86d98538",
   "schema_id": "betelgeuze.engine_v2_sampling_pool_cpu_observation_evidence/1.0.0",
   "source": {
-    "capture_tool_sha256": "6748b12edda57f2bdba0f61e33a8876cd86f37d0e65110fb2076bc160d9e6f02",
+    "capture_tool_sha256": "88fcae841ef43ff431775b296a04445ccc7e0eaf8562f550495604852f647d75",
     "cargo_lock_sha256": "b4f9534bc51bccd72157b0be73ce12c939411821c10c11e70b00996e1f82baac",
     "closure_paths": [
       "LICENSE",

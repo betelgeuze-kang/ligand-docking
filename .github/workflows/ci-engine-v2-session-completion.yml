@@ -7,22 +7,28 @@ on:
       - "tools/verify_engine_v2_d1_development_v2.py"
       - "tools/materialize_engine_v2_d1_case_results_v1.py"
       - "tools/run_engine_v2_sampling_funnel_v1.py"
+      - "tools/run_engine_v2_sampling_pool_cpu_observation_v1.py"
+      - "tools/capture_engine_v2_sampling_pool_cpu_observation_v1.py"
+      - "tools/rust/betelgeuze_sampling_pool_observe_v1.rs"
       - "tools/run_engine_v2_water_box_reference_v1.py"
       - "tools/inventory_github_actions_pins_v1.py"
       - "tools/verify_engine_v2_hip_d1_benchmark_v1.py"
       - "tools/analyze_rust_docking_module_boundaries_v1.py"
       - "config/engine_v2_sampling_funnel_v1.json"
+      - "config/engine_v2_sampling_pool_cpu_observation_evidence_v1.json"
       - "config/engine_v2_water_box_reference_v1.json"
       - "config/engine_v2_hip_d1_benchmark_profile_v1.json"
       - "tests/unit/test_engine_v2_d1_development_v2.py"
       - "tests/unit/test_materialize_engine_v2_d1_case_results_v1.py"
       - "tests/unit/test_engine_v2_sampling_funnel_v1.py"
+      - "tests/unit/test_engine_v2_sampling_pool_cpu_observation_evidence_v1.py"
       - "rust/betelgeuze-docking-search/tests/fixtures/sampling_funnel_selected_indices_v1.txt"
       - "tests/unit/test_engine_v2_water_box_reference_v1.py"
       - "tests/unit/test_inventory_github_actions_pins_v1.py"
       - "tests/unit/test_verify_engine_v2_hip_d1_benchmark_v1.py"
       - "tests/unit/test_analyze_rust_docking_module_boundaries_v1.py"
       - "docs/engine_v2_session_completion_v1.md"
+      - "docs/engine_v2_sampling_pool_cpu_observation_v1.md"
       - "docs/engine_v2_product_release_reconstruction_v1.md"
       - "docs/community_license_owner_decision_v1.md"
       - ".github/workflows/ci-engine-v2-session-completion.yml"
@@ -34,22 +40,28 @@ on:
       - "tools/verify_engine_v2_d1_development_v2.py"
       - "tools/materialize_engine_v2_d1_case_results_v1.py"
       - "tools/run_engine_v2_sampling_funnel_v1.py"
+      - "tools/run_engine_v2_sampling_pool_cpu_observation_v1.py"
+      - "tools/capture_engine_v2_sampling_pool_cpu_observation_v1.py"
+      - "tools/rust/betelgeuze_sampling_pool_observe_v1.rs"
       - "tools/run_engine_v2_water_box_reference_v1.py"
       - "tools/inventory_github_actions_pins_v1.py"
       - "tools/verify_engine_v2_hip_d1_benchmark_v1.py"
       - "tools/analyze_rust_docking_module_boundaries_v1.py"
       - "config/engine_v2_sampling_funnel_v1.json"
+      - "config/engine_v2_sampling_pool_cpu_observation_evidence_v1.json"
       - "config/engine_v2_water_box_reference_v1.json"
       - "config/engine_v2_hip_d1_benchmark_profile_v1.json"
       - "tests/unit/test_engine_v2_d1_development_v2.py"
       - "tests/unit/test_materialize_engine_v2_d1_case_results_v1.py"
       - "tests/unit/test_engine_v2_sampling_funnel_v1.py"
+      - "tests/unit/test_engine_v2_sampling_pool_cpu_observation_evidence_v1.py"
       - "rust/betelgeuze-docking-search/tests/fixtures/sampling_funnel_selected_indices_v1.txt"
       - "tests/unit/test_engine_v2_water_box_reference_v1.py"
       - "tests/unit/test_inventory_github_actions_pins_v1.py"
       - "tests/unit/test_verify_engine_v2_hip_d1_benchmark_v1.py"
       - "tests/unit/test_analyze_rust_docking_module_boundaries_v1.py"
       - "docs/engine_v2_session_completion_v1.md"
+      - "docs/engine_v2_sampling_pool_cpu_observation_v1.md"
       - "docs/engine_v2_product_release_reconstruction_v1.md"
       - "docs/community_license_owner_decision_v1.md"
       - ".github/workflows/ci-engine-v2-session-completion.yml"
@@ -74,6 +86,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
+          fetch-depth: 0
           show-progress: false
 
       - name: Set up Python
@@ -90,6 +103,7 @@ jobs:
           python -m py_compile tools/verify_engine_v2_d1_development_v2.py
           python -m py_compile tools/materialize_engine_v2_d1_case_results_v1.py
           python -m py_compile tools/run_engine_v2_sampling_funnel_v1.py
+          python -m py_compile tools/capture_engine_v2_sampling_pool_cpu_observation_v1.py
           python -m py_compile tools/run_engine_v2_water_box_reference_v1.py
           python -m py_compile tools/inventory_github_actions_pins_v1.py
           python -m py_compile tools/verify_engine_v2_hip_d1_benchmark_v1.py
@@ -97,10 +111,13 @@ jobs:
 
       - name: Run focused tests
         run: |
+          python tools/capture_engine_v2_sampling_pool_cpu_observation_v1.py \
+            --verify config/engine_v2_sampling_pool_cpu_observation_evidence_v1.json
           python -m pytest -q \
             tests/unit/test_engine_v2_d1_development_v2.py \
             tests/unit/test_materialize_engine_v2_d1_case_results_v1.py \
             tests/unit/test_engine_v2_sampling_funnel_v1.py \
+            tests/unit/test_engine_v2_sampling_pool_cpu_observation_evidence_v1.py \
             tests/unit/test_engine_v2_water_box_reference_v1.py \
             tests/unit/test_inventory_github_actions_pins_v1.py \
             tests/unit/test_verify_engine_v2_hip_d1_benchmark_v1.py \

@@ -25,7 +25,7 @@ def _reseal(value: dict[str, object]) -> dict[str, object]:
 def test_committed_source_binary_host_bound_observation_verifies() -> None:
     value = evidence.load_and_verify(EVIDENCE)
     assert value["receipt_sha256"] == (
-        "f1fe8d59ee3182656ed7f81e1dca49f8dc71bebbeb073716b4b6b332b5c8c006"
+        "18474af83f0969f158c83b610e8fde61aa80d3a6682d75e4d32100cd86d98538"
     )
     assert value["source"]["merged_main_commit"] == evidence.SOURCE_BASELINE_COMMIT
     assert value["source"]["merged_main_tree"] == evidence.SOURCE_BASELINE_TREE
