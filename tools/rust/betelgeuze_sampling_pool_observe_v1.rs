@@ -407,14 +407,29 @@ fn cpu_model() -> Result<String, String> {
 
 fn cpu_model_from(cpuinfo: &str) -> Option<String> {
     // Linux architectures expose different labels. Prefer a descriptive model,
-    // then fall back to the architecture-specific hardware/processor labels.
-    ["model name", "model", "hardware", "processor"]
+    // then fall back to architecture-specific machine/uarch labels. A Processor
+    // label is usable only when it is descriptive rather than a numeric CPU index.
+    [
+        "model name",
+        "model",
+        "hardware",
+        "machine",
+        "system type",
+        "platform",
+        "uarch",
+        "cpu",
+        "processor",
+    ]
         .into_iter()
         .find_map(|wanted| {
             cpuinfo.lines().find_map(|line| {
                 let (key, value) = line.split_once(':')?;
                 let value = value.trim();
-                (key.trim().eq_ignore_ascii_case(wanted) && !value.is_empty())
+                let is_descriptive_processor = wanted != "processor"
+                    || value.chars().any(|character| character.is_alphabetic());
+                (key.trim().eq_ignore_ascii_case(wanted)
+                    && !value.is_empty()
+                    && is_descriptive_processor)
                     .then(|| value.to_owned())
             })
         })
@@ -495,6 +510,11 @@ mod tests {
             cpu_model_from("Model\t: PowerNV 10\nprocessor\t: 0\n"),
             Some("PowerNV 10".to_owned())
         );
+        assert_eq!(
+            cpu_model_from("processor : 0\nhart : 0\nuarch : sifive,u74-mc\n"),
+            Some("sifive,u74-mc".to_owned())
+        );
+        assert_eq!(cpu_model_from("processor : 0\nhart : 0\n"), None);
         assert_eq!(cpu_model_from("processor :\n"), None);
     }
 }

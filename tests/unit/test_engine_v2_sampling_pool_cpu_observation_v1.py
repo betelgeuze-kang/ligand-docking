@@ -19,6 +19,7 @@ from tools.run_engine_v2_sampling_pool_cpu_observation_v1 import (
     PROFILE_ID,
     SCHEMA_ID,
     SamplingPoolCPUObservationError,
+    _build_library,
     _compile_observer,
     _reject_duplicate_keys,
     _run,
@@ -152,6 +153,15 @@ def test_compile_uses_cargo_reported_rlib_dependency_directory(
         tmp_path / "observer-from-release-root",
     )
     assert f"dependency={dependency_dir}" in observed[1][0]
+
+
+def test_standalone_rust_test_module_is_compiled_and_executed(
+    tmp_path: Path,
+) -> None:
+    executable = tmp_path / "sampling-pool-observer-tests"
+    _compile_observer(_build_library(), executable, test_harness=True)
+    completed = _run((str(executable),), cwd=ROOT, timeout=120)
+    assert "4 passed" in completed.stdout
 
 
 def test_timeout_kills_the_entire_command_process_group(

@@ -152,16 +152,20 @@ def _build_library() -> Path:
     return unique[0]
 
 
-def _compile_observer(rlib: Path, output: Path) -> None:
+def _compile_observer(rlib: Path, output: Path, *, test_harness: bool = False) -> None:
     dependency_directory = (
         rlib.parent if rlib.parent.name == "deps" else rlib.parent / "deps"
     )
-    _run(
+    arguments = [
+        "rustc",
+        "--edition=2021",
+        "-C",
+        "opt-level=3",
+    ]
+    if test_harness:
+        arguments.append("--test")
+    arguments.extend(
         (
-            "rustc",
-            "--edition=2021",
-            "-C",
-            "opt-level=3",
             str(RUST_SOURCE),
             "--extern",
             f"betelgeuze_docking_search={rlib}",
@@ -169,7 +173,10 @@ def _compile_observer(rlib: Path, output: Path) -> None:
             f"dependency={dependency_directory}",
             "-o",
             str(output),
-        ),
+        )
+    )
+    _run(
+        tuple(arguments),
         cwd=REPOSITORY_ROOT,
         timeout=120,
     )
