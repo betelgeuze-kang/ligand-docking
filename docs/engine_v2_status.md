@@ -52,6 +52,12 @@ The current `main` branch contains:
   lane. Aggregate pair work is bounded before coordinate generation, and every
   molecular, reservation, benchmark, Fresh-128, product, Stage 0, performance,
   and scientific-claim authority remains false;
+- a separate non-authoritative synthetic CPU observation executable for that
+  producer. Three compiled fixtures freeze 262,144, 3,145,728, and 12,582,912
+  exact geometric pair evaluations, verify their exact producer receipts, and
+  use fresh child processes to report raw wall-time samples plus Linux process
+  peak RSS. GitHub Actions timing is blocked, no threshold or baseline is
+  present, and the output is descriptive local development evidence only;
 - bounded single-model PDB and single-molecule SDF V2000 ingestion;
 - bounded single-block CIF syntax plus mmCIF entity/asym/polymer identity,
   zero-occupancy, altloc, nonpoly instance, component atom/bond, and selected
