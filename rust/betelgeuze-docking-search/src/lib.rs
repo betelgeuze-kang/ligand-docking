@@ -27,6 +27,8 @@ mod refine;
 mod repository_d0;
 mod rigid_refinement;
 mod sampling_funnel;
+#[cfg(test)]
+mod sampling_funnel_tests;
 mod scorer_v1;
 mod search;
 mod sha256;

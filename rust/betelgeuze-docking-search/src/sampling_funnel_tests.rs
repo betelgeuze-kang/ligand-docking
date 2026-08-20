@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use betelgeuze_docking_search::{
+use crate::{
     run_native_sampling_funnel, NativeSamplingFunnelCandidate, NativeSamplingFunnelDecision,
     NativeSamplingFunnelErrorCode, NativeSamplingFunnelLane, NativeSamplingFunnelSelectedState,
     NATIVE_SAMPLING_FUNNEL_INPUT_DENOMINATOR, NATIVE_SAMPLING_FUNNEL_OUTPUT_DENOMINATOR,
@@ -13,7 +13,7 @@ const EXPECTED_PROFILE_CANONICAL_SHA256: [u8; 32] = [
 ];
 
 const EXPECTED_SELECTED_POOL_INDICES: &str =
-    include_str!("fixtures/sampling_funnel_selected_indices_v1.txt");
+    include_str!("../tests/fixtures/sampling_funnel_selected_indices_v1.txt");
 
 fn digest(value: u64) -> [u8; 32] {
     let mut result = [0u8; 32];
