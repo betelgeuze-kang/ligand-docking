@@ -1,0 +1,194 @@
+{
+  "authority": {
+    "customer_pose_authorized": false,
+    "fresh_128_execution_authorized": false,
+    "hip_device_execution_authorized": false,
+    "molecular_execution_authorized": false,
+    "performance_claim_authorized": false,
+    "product_authorized": false,
+    "public_benchmark_authorized": false,
+    "rank_mutation_authorized": false,
+    "reservation_authorized": false,
+    "scientific_claim_authorized": false,
+    "stage0_admission_authorized": false
+  },
+  "build": {
+    "build_environment": {
+      "CARGO_BUILD_TARGET": {
+        "set": false,
+        "value_sha256": null
+      },
+      "CARGO_ENCODED_RUSTFLAGS": {
+        "set": false,
+        "value_sha256": null
+      },
+      "CARGO_TARGET_DIR": {
+        "set": false,
+        "value_sha256": null
+      },
+      "RUSTC": {
+        "set": false,
+        "value_sha256": null
+      },
+      "RUSTC_WRAPPER": {
+        "set": false,
+        "value_sha256": null
+      },
+      "RUSTFLAGS": {
+        "set": false,
+        "value_sha256": null
+      }
+    },
+    "observer_binary_bytes": 4290592,
+    "observer_binary_sha256": "3cb8c0779f4948871d76e1054922673db3e7b25379bb7f56f4c4f3f0c4bca4b3",
+    "release_rlib_bytes": 4720384,
+    "release_rlib_sha256": "5198997fb8a51a668ce6b6cc0763f55c4a08c0c2e695e3a8dbf97aace235902a",
+    "toolchain": {
+      "cargo_version": "cargo 1.93.0 (083ac5135 2025-12-15)\nrelease: 1.93.0\ncommit-hash: 083ac5135f967fd9dc906ab057a2315861c7a80d\ncommit-date: 2025-12-15\nhost: x86_64-unknown-linux-gnu\nlibgit2: 1.9.1 (sys:0.20.2 vendored)\nlibcurl: 8.15.0-DEV (sys:0.4.83+curl-8.15.0 vendored ssl:OpenSSL/3.5.4)\nssl: OpenSSL 3.5.4 30 Sep 2025\nos: Ubuntu 22.4.0 (jammy) [64-bit]",
+      "rustc_version": "rustc 1.93.0 (254b59607 2026-01-19)\nbinary: rustc\ncommit-hash: 254b59607d4417e9dffbc307138ae5c86280fe4c\ncommit-date: 2026-01-19\nhost: x86_64-unknown-linux-gnu\nrelease: 1.93.0\nLLVM version: 21.1.8"
+    }
+  },
+  "captured_at_utc": "2026-08-20T21:58:38+00:00",
+  "host": {
+    "affinity_cpu_ids": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23
+    ],
+    "boot_id_sha256": "d8ae51be7b605f18ebf53f0c6f8f5cdb9eb583ed9c46937409ccc08581534d1f",
+    "cpu_model": "AMD Ryzen 9 5900X 12-Core Processor",
+    "kernel_release": "6.5.0-26-generic",
+    "logical_cpu_count": 24,
+    "machine_architecture": "x86_64",
+    "os_release_sha256": "594d5ddd35aedb47f00d9c34d140017907a5b9f93c975aba125fc924daac5c07",
+    "system": "Linux"
+  },
+  "observation": {
+    "authority": {
+      "customer_pose_authorized": false,
+      "fresh_128_execution_authorized": false,
+      "hip_device_execution_authorized": false,
+      "molecular_execution_authorized": false,
+      "performance_claim_authorized": false,
+      "product_authorized": false,
+      "public_benchmark_authorized": false,
+      "rank_mutation_authorized": false,
+      "reservation_authorized": false,
+      "scientific_claim_authorized": false,
+      "stage0_admission_authorized": false
+    },
+    "cpu_model": "AMD Ryzen 9 5900X 12-Core Processor",
+    "fixtures": [
+      {
+        "exact_pair_evaluation_count": 262144,
+        "fixture_id": "small",
+        "ligand_atom_count": 8,
+        "peak_rss_delta_kib": 768,
+        "peak_rss_kib": 2688,
+        "receipt_sha256": "2603c7b0b13dd2af26313d26ce63e73e8162de396a1fb5d7030a31a993c60831",
+        "receptor_atom_count": 64,
+        "wall_time_ns_p50": 19921089,
+        "wall_time_ns_p95": 20119108,
+        "wall_time_ns_samples": [
+          20119108,
+          19968981,
+          19904509,
+          19884239,
+          19921020,
+          20009873,
+          19921089
+        ]
+      },
+      {
+        "exact_pair_evaluation_count": 3145728,
+        "fixture_id": "medium",
+        "ligand_atom_count": 24,
+        "peak_rss_delta_kib": 1152,
+        "peak_rss_kib": 3072,
+        "receipt_sha256": "61a8bb8490359fa03f0fb8fc0a12514203d602dc6539faac447f0e65e8e8d3a5",
+        "receptor_atom_count": 256,
+        "wall_time_ns_p50": 66344795,
+        "wall_time_ns_p95": 66638537,
+        "wall_time_ns_samples": [
+          66496982,
+          66398208,
+          66321635,
+          66290735,
+          66344795,
+          66638537,
+          66297444
+        ]
+      },
+      {
+        "exact_pair_evaluation_count": 12582912,
+        "fixture_id": "large",
+        "ligand_atom_count": 48,
+        "peak_rss_delta_kib": 1536,
+        "peak_rss_kib": 3456,
+        "receipt_sha256": "ded4134a8cd2e0c6d42f096c0220c22931378a5cba96e2fc36dba54f77bdc0bb",
+        "receptor_atom_count": 512,
+        "wall_time_ns_p50": 194472248,
+        "wall_time_ns_p95": 197253597,
+        "wall_time_ns_samples": [
+          194470459,
+          193953709,
+          194759830,
+          194452797,
+          197253597,
+          194472248,
+          195106232
+        ]
+      }
+    ],
+    "memory_role": "descriptive_process_peak_rss_only",
+    "profile_id": "engine_v2_sampling_pool_synthetic_cpu_observation_v1",
+    "sample_count": 7,
+    "schema_id": "betelgeuze.engine_v2_sampling_pool_cpu_observation/1.0.0",
+    "status": "local_synthetic_development_observation_only",
+    "timed_boundary": "produce_native_sampling_pool_only_fixture_construction_excluded",
+    "wall_time_role": "descriptive_no_threshold_no_claim"
+  },
+  "profile_id": "engine_v2_sampling_pool_synthetic_cpu_observation_evidence_v1",
+  "receipt_sha256": "f1fe8d59ee3182656ed7f81e1dca49f8dc71bebbeb073716b4b6b332b5c8c006",
+  "schema_id": "betelgeuze.engine_v2_sampling_pool_cpu_observation_evidence/1.0.0",
+  "source": {
+    "capture_tool_sha256": "6748b12edda57f2bdba0f61e33a8876cd86f37d0e65110fb2076bc160d9e6f02",
+    "cargo_lock_sha256": "b4f9534bc51bccd72157b0be73ce12c939411821c10c11e70b00996e1f82baac",
+    "closure_paths": [
+      "LICENSE",
+      "rust",
+      "tools/run_engine_v2_sampling_pool_cpu_observation_v1.py",
+      "tools/rust/betelgeuze_sampling_pool_observe_v1.rs"
+    ],
+    "closure_verified_clean": true,
+    "merged_main_commit": "cb987662477e6fc56409f382ac5757ce62a09228",
+    "merged_main_tree": "ed4221a64d7740e4063bdaff777e150f7035c769",
+    "observer_source_git_blob": "676ac27554bdd52aa578de894234061e8923971d",
+    "observer_source_sha256": "3604cf32c2bea571c9c01670c5c2b79cea2d1f1df3bd0f0c1e254a583716b55e",
+    "runner_source_git_blob": "6b1f47b9d18db0fc273bc37d7296147ca19fb305",
+    "runner_source_sha256": "051d7f6fc4ecc84c16a72c196abb23f8e619e5d245924310c7373147f8416479",
+    "rust_tree_git_oid": "4b71a124c5f1e092d779add350093d9975bf3390"
+  },
+  "status": "local_synthetic_development_observation_only"
+}
