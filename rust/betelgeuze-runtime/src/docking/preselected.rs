@@ -122,6 +122,9 @@ pub struct Fixed64PreselectedPipelineReceipt {
 }
 
 impl Fixed64PreselectedPipelineReceipt {
+    /// Verifies persisted receipt integrity and the self-contained refinement,
+    /// ranking, and clustering policies. Molecular-context admission, scorer,
+    /// and validity semantics are verified before issuance by `run_preselected`.
     #[must_use]
     pub fn has_valid_receipt(&self) -> bool {
         validate_receipt_shape(self).is_ok()
@@ -153,8 +156,8 @@ impl Fixed64PreselectedPipelineReceipt {
 /// Pipeline variant that owns the additional ABI 1.21 component handles only
 /// when preselected composition is explicitly requested.
 pub struct Fixed64PreselectedPipeline {
-    pipeline: Fixed64Pipeline,
     handles: PreselectedHandles,
+    pipeline: Fixed64Pipeline,
 }
 
 impl std::ops::Deref for Fixed64PreselectedPipeline {
@@ -168,7 +171,7 @@ impl std::ops::Deref for Fixed64PreselectedPipeline {
 impl Fixed64PreselectedPipeline {
     pub fn new(context: &Context, scientific: Fixed64PipelineContext<'_>) -> Result<Self> {
         let (pipeline, handles) = Fixed64Pipeline::new_preselected(context, scientific)?;
-        Ok(Self { pipeline, handles })
+        Ok(Self { handles, pipeline })
     }
 
     pub fn run_preselected(
@@ -452,6 +455,12 @@ impl Fixed64PreselectedPipeline {
                 "preselected valid rank count overflows usize",
             )
         })?;
+        if primary_count > CANDIDATE_COUNT || valid_count > CANDIDATE_COUNT {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "preselected native rank count exceeds fixed64 capacity",
+            ));
+        }
         primary_indices.truncate(primary_count);
         valid_indices.truncate(valid_count);
 
@@ -490,22 +499,27 @@ impl Fixed64PreselectedPipeline {
                 &mut cluster_output,
             )
         })?;
-        representative_indices.truncate(
-            usize::try_from(cluster_output.representative_index_count).map_err(|_| {
+        let representative_count = usize::try_from(cluster_output.representative_index_count)
+            .map_err(|_| {
                 Error::local(
                     ErrorCode::AbiMismatch,
                     "preselected representative count overflows usize",
                 )
-            })?,
-        );
-        top_k_indices.truncate(usize::try_from(cluster_output.top_k_index_count).map_err(
-            |_| {
-                Error::local(
-                    ErrorCode::AbiMismatch,
-                    "preselected Top-K count overflows usize",
-                )
-            },
-        )?);
+            })?;
+        let top_k_count = usize::try_from(cluster_output.top_k_index_count).map_err(|_| {
+            Error::local(
+                ErrorCode::AbiMismatch,
+                "preselected Top-K count overflows usize",
+            )
+        })?;
+        if representative_count > CANDIDATE_COUNT || top_k_count > TOP_K_LIMIT {
+            return Err(Error::local(
+                ErrorCode::AbiMismatch,
+                "preselected native cluster count exceeds output capacity",
+            ));
+        }
+        representative_indices.truncate(representative_count);
+        top_k_indices.truncate(top_k_count);
 
         validate_preselected_outputs(
             self,

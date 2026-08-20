@@ -95,10 +95,14 @@ coordinates before ScorerV1. Lane shortfalls remain inactive typed rows, and
 the exact source coordinates and quaternions are retained unchanged in the
 result receipt.
 
-The preselected pipeline receipt independently replays admission, rigid,
-torsion, refinement, ScorerV1, validity, rank, and clustering semantics. It
-rederives every component evidence digest, batch digest, row receipt, count,
-coordinate channel, and final pipeline receipt. The payload and materialized
+Before issuing a receipt, the live runtime independently replays admission,
+rigid, torsion, refinement, ScorerV1, validity, rank, and clustering semantics
+against the bound molecular contexts. A persisted receipt rederives every
+component evidence digest, batch digest, row receipt, count, coordinate channel,
+and final pipeline receipt; it also replays the self-contained rigid, torsion,
+refinement, rank, and clustering policies. It does not claim to reconstruct the
+omitted molecular admission, scorer, or validity contexts after persistence.
+The payload and materialized
 receipts now bind the exact ligand-system identity, and runtime composition
 rejects a same-atom-count batch from another ligand. The persisted receipt also
 retains the refinement modes and budgets, torsion eligibility and baseline
