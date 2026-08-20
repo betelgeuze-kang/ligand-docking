@@ -245,7 +245,7 @@ pub fn produce_native_sampling_pool(
     input: &SearchInput,
     geometric_input: &Fixed64GeometricInput,
 ) -> Result<NativeSamplingPoolBatch, NativeSamplingPoolError> {
-    let mut placement_config = SearchConfig {
+    let placement_config = SearchConfig {
         orientation_count: NATIVE_SAMPLING_POOL_LANE_DENOMINATOR,
         generated_candidate_limit: NATIVE_SAMPLING_POOL_LANE_DENOMINATOR,
         coarse_keep: NATIVE_SAMPLING_POOL_LANE_DENOMINATOR,
@@ -299,7 +299,6 @@ pub fn produce_native_sampling_pool(
     let multi_candidates = if inventory.duals.is_empty() {
         Vec::new()
     } else {
-        placement_config.generated_candidate_limit = NATIVE_SAMPLING_POOL_LANE_DENOMINATOR;
         place_candidates(
             input,
             &placement_config,
