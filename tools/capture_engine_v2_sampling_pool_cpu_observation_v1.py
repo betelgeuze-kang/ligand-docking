@@ -21,6 +21,24 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 if str(REPOSITORY_ROOT) not in sys.path:
     sys.path.insert(0, str(REPOSITORY_ROOT))
 
+
+class SamplingPoolCPUObservationEvidenceError(RuntimeError):
+    """Raised when capture or verification fails closed."""
+
+
+RUNNER_SOURCE_PATH = (
+    REPOSITORY_ROOT / "tools/run_engine_v2_sampling_pool_cpu_observation_v1.py"
+)
+EXPECTED_RUNNER_SOURCE_SHA256 = (
+    "051d7f6fc4ecc84c16a72c196abb23f8e619e5d245924310c7373147f8416479"
+)
+if hashlib.sha256(RUNNER_SOURCE_PATH.read_bytes()).hexdigest() != (
+    EXPECTED_RUNNER_SOURCE_SHA256
+):
+    raise SamplingPoolCPUObservationEvidenceError(
+        "imported observation runner differs from the pinned source"
+    )
+
 from tools import run_engine_v2_sampling_pool_cpu_observation_v1 as observer  # noqa: E402
 
 
@@ -48,10 +66,30 @@ _BUILD_ENVIRONMENT_KEYS = (
     "RUSTC_WRAPPER",
     "RUSTFLAGS",
 )
-
-
-class SamplingPoolCPUObservationEvidenceError(RuntimeError):
-    """Raised when capture or verification fails closed."""
+_OBSERVATION_KEYS = {
+    "authority",
+    "cpu_model",
+    "fixtures",
+    "memory_role",
+    "profile_id",
+    "sample_count",
+    "schema_id",
+    "status",
+    "timed_boundary",
+    "wall_time_role",
+}
+_OBSERVED_FIXTURE_KEYS = {
+    "exact_pair_evaluation_count",
+    "fixture_id",
+    "ligand_atom_count",
+    "peak_rss_delta_kib",
+    "peak_rss_kib",
+    "receptor_atom_count",
+    "receipt_sha256",
+    "wall_time_ns_p50",
+    "wall_time_ns_p95",
+    "wall_time_ns_samples",
+}
 
 
 def _canonical_bytes(value: object) -> bytes:
@@ -83,6 +121,16 @@ def _sha256(raw: bytes) -> str:
 
 def _file_sha256(path: Path) -> str:
     return _sha256(path.read_bytes())
+
+
+def _verify_imported_observer_binding() -> None:
+    if (
+        Path(observer.__file__).resolve() != RUNNER_SOURCE_PATH
+        or _file_sha256(RUNNER_SOURCE_PATH) != EXPECTED_RUNNER_SOURCE_SHA256
+    ):
+        raise SamplingPoolCPUObservationEvidenceError(
+            "imported observation runner differs from the pinned source"
+        )
 
 
 def _receipt_sha256(projection: Mapping[str, object]) -> str:
@@ -181,9 +229,27 @@ def _environment_fingerprints() -> dict[str, object]:
     }
 
 
-def _host_identity(cpu_model: str) -> dict[str, object]:
+def _cpu_affinity() -> list[int]:
     try:
         affinity = sorted(os.sched_getaffinity(0))
+    except (OSError, ValueError) as exc:
+        raise SamplingPoolCPUObservationEvidenceError(
+            "Linux CPU affinity is unavailable"
+        ) from exc
+    if not affinity:
+        raise SamplingPoolCPUObservationEvidenceError("Linux CPU affinity is empty")
+    return affinity
+
+
+def _require_stable_affinity(before: list[int], after: object) -> None:
+    if after != before:
+        raise SamplingPoolCPUObservationEvidenceError(
+            "CPU affinity changed during observation"
+        )
+
+
+def _host_identity(cpu_model: str) -> dict[str, object]:
+    try:
         os_release = Path("/etc/os-release").read_bytes()
         boot_id = Path("/proc/sys/kernel/random/boot_id").read_bytes().strip()
     except (OSError, ValueError) as exc:
@@ -191,12 +257,12 @@ def _host_identity(cpu_model: str) -> dict[str, object]:
             "Linux host identity is unavailable"
         ) from exc
     logical_cpu_count = os.cpu_count()
-    if not affinity or type(logical_cpu_count) is not int or logical_cpu_count <= 0:
+    if type(logical_cpu_count) is not int or logical_cpu_count <= 0:
         raise SamplingPoolCPUObservationEvidenceError(
             "Linux CPU affinity or logical count is invalid"
         )
     return {
-        "affinity_cpu_ids": affinity,
+        "affinity_cpu_ids": _cpu_affinity(),
         "boot_id_sha256": _sha256(boot_id),
         "cpu_model": cpu_model,
         "kernel_release": platform.release(),
@@ -237,6 +303,7 @@ def capture() -> dict[str, object]:
         raise SamplingPoolCPUObservationEvidenceError(
             "GitHub Actions cannot capture timing evidence"
         )
+    _verify_imported_observer_binding()
     source = _verify_source_baseline()
     capture_tool_sha256 = _file_sha256(Path(__file__).resolve())
     rlib = observer._build_library()
@@ -249,6 +316,7 @@ def capture() -> dict[str, object]:
         observer._compile_observer(rlib, executable)
         executable_sha256 = _file_sha256(executable)
         executable_bytes = executable.stat().st_size
+        affinity_before = _cpu_affinity()
         completed = observer._run(
             (str(executable), "--observe", str(SAMPLE_COUNT)),
             cwd=REPOSITORY_ROOT,
@@ -259,6 +327,8 @@ def capture() -> dict[str, object]:
                 "observer binary changed during execution"
             )
     observation = _load_observer_output(completed.stdout)
+    host = _host_identity(str(observation["cpu_model"]))
+    _require_stable_affinity(affinity_before, host["affinity_cpu_ids"])
     if _verify_source_baseline() != source:
         raise SamplingPoolCPUObservationEvidenceError(
             "source closure changed during execution"
@@ -294,7 +364,7 @@ def capture() -> dict[str, object]:
             "toolchain": toolchain,
         },
         "captured_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "host": _host_identity(str(observation["cpu_model"])),
+        "host": host,
         "observation": observation,
         "profile_id": PROFILE_ID,
         "schema_id": SCHEMA_ID,
@@ -327,6 +397,7 @@ def _require_git_oid(value: object, *, label: str) -> str:
 
 
 def verify(document: object) -> dict[str, object]:
+    _verify_imported_observer_binding()
     if type(document) is not dict:
         raise SamplingPoolCPUObservationEvidenceError("evidence must be an object")
     expected_keys = {
@@ -357,9 +428,17 @@ def verify(document: object) -> dict[str, object]:
         raise SamplingPoolCPUObservationEvidenceError(
             "evidence schema, profile, or status changed"
         )
+    observation = document["observation"]
+    if type(observation) is not dict or set(observation) != _OBSERVATION_KEYS:
+        raise SamplingPoolCPUObservationEvidenceError("observation keys changed")
+    fixtures = observation.get("fixtures")
+    if type(fixtures) is not list or any(
+        type(row) is not dict or set(row) != _OBSERVED_FIXTURE_KEYS for row in fixtures
+    ):
+        raise SamplingPoolCPUObservationEvidenceError("observed fixture keys changed")
     try:
         validated_observation = observer._validate(
-            document["observation"], expected_sample_count=SAMPLE_COUNT
+            observation, expected_sample_count=SAMPLE_COUNT
         )
     except observer.SamplingPoolCPUObservationError as exc:
         raise SamplingPoolCPUObservationEvidenceError(str(exc)) from exc

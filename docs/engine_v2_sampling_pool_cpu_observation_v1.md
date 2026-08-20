@@ -61,13 +61,13 @@ source closure of merged main commit
 runner and observer sources, release rlib, temporary observer binary, Rust/Cargo
 toolchain, Linux OS/kernel/boot identity hashes, CPU model, and the exact 24-CPU
 affinity set. Its receipt SHA-256 is
-`18474af83f0969f158c83b610e8fde61aa80d3a6682d75e4d32100cd86d98538`.
+`43734da1187bc7287fc7ba346d3db93c0128da95ea84adb95d51ff87757bb21e`.
 
 | fixture | raw samples | p50 ns | p95 ns | peak RSS KiB | peak delta KiB |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| small | 7 | 19,892,350 | 20,433,180 | 2,688 | 768 |
-| medium | 7 | 67,381,665 | 68,214,227 | 3,072 | 1,152 |
-| large | 7 | 194,996,269 | 199,691,115 | 3,456 | 1,536 |
+| small | 7 | 19,946,369 | 20,079,190 | 2,688 | 768 |
+| medium | 7 | 66,321,101 | 66,946,421 | 3,072 | 1,152 |
+| large | 7 | 194,079,557 | 195,006,572 | 3,456 | 1,536 |
 
 Verify the canonical receipt without reading a clock or executing an
 observation:

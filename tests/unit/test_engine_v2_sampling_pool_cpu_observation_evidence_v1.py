@@ -25,7 +25,7 @@ def _reseal(value: dict[str, object]) -> dict[str, object]:
 def test_committed_source_binary_host_bound_observation_verifies() -> None:
     value = evidence.load_and_verify(EVIDENCE)
     assert value["receipt_sha256"] == (
-        "18474af83f0969f158c83b610e8fde61aa80d3a6682d75e4d32100cd86d98538"
+        "43734da1187bc7287fc7ba346d3db93c0128da95ea84adb95d51ff87757bb21e"
     )
     assert value["source"]["merged_main_commit"] == evidence.SOURCE_BASELINE_COMMIT
     assert value["source"]["merged_main_tree"] == evidence.SOURCE_BASELINE_TREE
@@ -59,6 +59,22 @@ def test_resealed_semantic_cross_wiring_fails_closed() -> None:
     ):
         evidence.verify(_reseal(value))
 
+    value = json.loads(EVIDENCE.read_text(encoding="ascii"))
+    value["observation"]["performance_claim_authorized"] = True
+    with pytest.raises(
+        evidence.SamplingPoolCPUObservationEvidenceError,
+        match="observation keys",
+    ):
+        evidence.verify(_reseal(value))
+
+    value = json.loads(EVIDENCE.read_text(encoding="ascii"))
+    value["observation"]["fixtures"][0]["unreviewed_metric"] = 1
+    with pytest.raises(
+        evidence.SamplingPoolCPUObservationEvidenceError,
+        match="fixture keys",
+    ):
+        evidence.verify(_reseal(value))
+
 
 def test_capture_is_blocked_in_github_actions_before_build(
     monkeypatch: pytest.MonkeyPatch,
@@ -82,3 +98,22 @@ def test_evidence_write_is_exclusive(tmp_path: Path) -> None:
     assert destination.read_bytes() == b"{}\n"
     with pytest.raises(FileExistsError):
         evidence._write_exclusive(destination, b"changed\n")
+
+
+def test_affinity_and_imported_runner_binding_fail_closed(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    with pytest.raises(
+        evidence.SamplingPoolCPUObservationEvidenceError,
+        match="affinity changed",
+    ):
+        evidence._require_stable_affinity([0, 1], [0])
+
+    replacement = tmp_path / "run_engine_v2_sampling_pool_cpu_observation_v1.py"
+    replacement.write_text("# changed\n", encoding="ascii")
+    monkeypatch.setattr(evidence.observer, "__file__", str(replacement))
+    with pytest.raises(
+        evidence.SamplingPoolCPUObservationEvidenceError,
+        match="imported observation runner differs",
+    ):
+        evidence._verify_imported_observer_binding()
