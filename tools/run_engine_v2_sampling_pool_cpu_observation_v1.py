@@ -7,6 +7,7 @@ import argparse
 import json
 import os
 from pathlib import Path
+import signal
 import subprocess
 import tempfile
 from typing import Any, Sequence
@@ -14,9 +15,7 @@ from typing import Any, Sequence
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 RUST_ROOT = REPOSITORY_ROOT / "rust"
-RUST_SOURCE = (
-    REPOSITORY_ROOT / "tools/rust/betelgeuze_sampling_pool_observe_v1.rs"
-)
+RUST_SOURCE = REPOSITORY_ROOT / "tools/rust/betelgeuze_sampling_pool_observe_v1.rs"
 SCHEMA_ID = "betelgeuze.engine_v2_sampling_pool_cpu_observation/1.0.0"
 PROFILE_ID = "engine_v2_sampling_pool_synthetic_cpu_observation_v1"
 EXPECTED_RECEIPTS = {
@@ -42,6 +41,11 @@ EXPECTED_AUTHORITY_KEYS = {
     "scientific_claim_authorized",
     "stage0_admission_authorized",
 }
+EXPECTED_MEMORY_ROLE = "descriptive_process_peak_rss_only"
+EXPECTED_TIMED_BOUNDARY = (
+    "produce_native_sampling_pool_only_fixture_construction_excluded"
+)
+EXPECTED_WALL_TIME_ROLE = "descriptive_no_threshold_no_claim"
 
 
 class SamplingPoolCPUObservationError(RuntimeError):
@@ -64,13 +68,13 @@ def _run(
     timeout: int,
 ) -> subprocess.CompletedProcess[str]:
     try:
-        completed = subprocess.run(
+        process = subprocess.Popen(
             command,
             cwd=cwd,
-            check=False,
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
-            timeout=timeout,
+            start_new_session=True,
             env={
                 **os.environ,
                 "RAYON_NUM_THREADS": "1",
@@ -78,10 +82,27 @@ def _run(
                 "OPENBLAS_NUM_THREADS": "1",
             },
         )
-    except (OSError, subprocess.TimeoutExpired) as exc:
+    except OSError as exc:
         raise SamplingPoolCPUObservationError(
-            f"command failed to launch or timed out: {command[0]}"
+            f"command failed to launch: {command[0]}"
         ) from exc
+    try:
+        stdout, stderr = process.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired as exc:
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        process.communicate()
+        raise SamplingPoolCPUObservationError(
+            f"command timed out: {command[0]}"
+        ) from exc
+    completed = subprocess.CompletedProcess(
+        command,
+        process.returncode,
+        stdout,
+        stderr,
+    )
     if completed.returncode != 0:
         detail = completed.stderr.strip() or completed.stdout.strip()
         raise SamplingPoolCPUObservationError(
@@ -132,6 +153,9 @@ def _build_library() -> Path:
 
 
 def _compile_observer(rlib: Path, output: Path) -> None:
+    dependency_directory = (
+        rlib.parent if rlib.parent.name == "deps" else rlib.parent / "deps"
+    )
     _run(
         (
             "rustc",
@@ -142,7 +166,7 @@ def _compile_observer(rlib: Path, output: Path) -> None:
             "--extern",
             f"betelgeuze_docking_search={rlib}",
             "-L",
-            f"dependency={RUST_ROOT / 'target/release/deps'}",
+            f"dependency={dependency_directory}",
             "-o",
             str(output),
         ),
@@ -151,9 +175,7 @@ def _compile_observer(rlib: Path, output: Path) -> None:
     )
 
 
-def _validate(
-    document: object, *, expected_sample_count: int | None
-) -> dict[str, Any]:
+def _validate(document: object, *, expected_sample_count: int | None) -> dict[str, Any]:
     observed = expected_sample_count is not None
     if type(document) is not dict:
         raise SamplingPoolCPUObservationError("observer output must be an object")
@@ -163,9 +185,7 @@ def _validate(
     fixtures = value.get("fixtures")
     if type(fixtures) is not list or len(fixtures) != 3:
         raise SamplingPoolCPUObservationError("observer fixture denominator changed")
-    fixture_map = {
-        row.get("fixture_id"): row for row in fixtures if type(row) is dict
-    }
+    fixture_map = {row.get("fixture_id"): row for row in fixtures if type(row) is dict}
     if set(fixture_map) != set(EXPECTED_RECEIPTS):
         raise SamplingPoolCPUObservationError("observer fixture identities changed")
     for fixture_id, receipt in EXPECTED_RECEIPTS.items():
@@ -189,12 +209,10 @@ def _validate(
                 type(samples) is not list
                 or len(samples) != expected_sample_count
                 or any(type(sample) is not int or sample <= 0 for sample in samples)
-                or row.get("wall_time_ns_p50") != sorted(samples)[
-                    (50 * len(samples) + 99) // 100 - 1
-                ]
-                or row.get("wall_time_ns_p95") != sorted(samples)[
-                    (95 * len(samples) + 99) // 100 - 1
-                ]
+                or row.get("wall_time_ns_p50")
+                != sorted(samples)[(50 * len(samples) + 99) // 100 - 1]
+                or row.get("wall_time_ns_p95")
+                != sorted(samples)[(95 * len(samples) + 99) // 100 - 1]
                 or type(row.get("peak_rss_kib")) is not int
                 or row["peak_rss_kib"] <= 0
                 or type(row.get("peak_rss_delta_kib")) is not int
@@ -212,11 +230,19 @@ def _validate(
         ):
             raise SamplingPoolCPUObservationError("observer authority is not all false")
         if value.get("sample_count") != expected_sample_count:
-            raise SamplingPoolCPUObservationError(
-                "observer sample denominator changed"
-            )
+            raise SamplingPoolCPUObservationError("observer sample denominator changed")
         if value.get("status") != "local_synthetic_development_observation_only":
             raise SamplingPoolCPUObservationError("observer status changed")
+        if type(value.get("cpu_model")) is not str or not value["cpu_model"].strip():
+            raise SamplingPoolCPUObservationError("observer CPU identity is absent")
+        if (
+            value.get("memory_role") != EXPECTED_MEMORY_ROLE
+            or value.get("timed_boundary") != EXPECTED_TIMED_BOUNDARY
+            or value.get("wall_time_role") != EXPECTED_WALL_TIME_ROLE
+        ):
+            raise SamplingPoolCPUObservationError(
+                "observer measurement role metadata changed"
+            )
     elif value.get("all_authority_false") is not True:
         raise SamplingPoolCPUObservationError("fixture verification authority changed")
     return value
@@ -228,7 +254,9 @@ def execute(*, samples: int | None) -> dict[str, Any]:
             "GitHub Actions cannot create timing observations"
         )
     rlib = _build_library()
-    with tempfile.TemporaryDirectory(prefix="engine-v2-sampling-pool-observer-") as directory:
+    with tempfile.TemporaryDirectory(
+        prefix="engine-v2-sampling-pool-observer-"
+    ) as directory:
         executable = Path(directory) / "betelgeuze-sampling-pool-observe-v1"
         _compile_observer(rlib, executable)
         arguments = [str(executable), "--verify-fixtures"]
@@ -244,7 +272,9 @@ def execute(*, samples: int | None) -> dict[str, Any]:
             ),
         )
     except (json.JSONDecodeError, UnicodeError) as exc:
-        raise SamplingPoolCPUObservationError("observer output is invalid JSON") from exc
+        raise SamplingPoolCPUObservationError(
+            "observer output is invalid JSON"
+        ) from exc
     return _validate(document, expected_sample_count=samples)
 
 
@@ -258,7 +288,9 @@ def _parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> int:
     arguments = _parser().parse_args(argv)
-    result = execute(samples=arguments.observe if not arguments.verify_fixtures else None)
+    result = execute(
+        samples=arguments.observe if not arguments.verify_fixtures else None
+    )
     print(json.dumps(result, allow_nan=False, separators=(",", ":"), sort_keys=True))
     return 0
 
