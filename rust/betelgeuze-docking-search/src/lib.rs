@@ -27,6 +27,7 @@ mod refine;
 mod repository_d0;
 mod rigid_refinement;
 mod sampling_funnel;
+mod sampling_funnel_batch;
 #[cfg(test)]
 mod sampling_funnel_tests;
 mod scorer_v1;
@@ -163,6 +164,14 @@ pub use sampling_funnel::{
     NATIVE_SAMPLING_FUNNEL_OUTPUT_DENOMINATOR, NATIVE_SAMPLING_FUNNEL_PROFILE_CANONICAL_SHA256,
     NATIVE_SAMPLING_FUNNEL_PROFILE_ID, NATIVE_SAMPLING_FUNNEL_QUALITY_PREFILTER_MULTIPLIER,
     NATIVE_SAMPLING_FUNNEL_SCHEMA_ID,
+};
+pub use sampling_funnel_batch::{
+    materialize_native_sampling_funnel_preselected_batch, NativeSamplingFunnelBatchError,
+    NativeSamplingFunnelBatchErrorCode, NativeSamplingFunnelPayloadBatch,
+    NativeSamplingFunnelPayloadRow, NativeSamplingFunnelPayloadRowState,
+    NativeSamplingFunnelPreselectedBatch, NativeSamplingFunnelPreselectedRow,
+    NATIVE_SAMPLING_FUNNEL_PAYLOAD_BATCH_SCHEMA_ID,
+    NATIVE_SAMPLING_FUNNEL_PRESELECTED_BATCH_SCHEMA_ID,
 };
 pub use scorer_v1::{
     score_native_fixed64_scorer_v1, NativeScorerV1Atom, NativeScorerV1Backend, NativeScorerV1Batch,

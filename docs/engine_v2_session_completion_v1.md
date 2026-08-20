@@ -74,6 +74,18 @@ to select the same ordered 64 pool indices. This is the native preselection
 core; it does not yet add a public preselected-proposal entry point to the ABI
 1.21 complete pipeline and therefore grants no molecular or promotion authority.
 
+The coordinate-bearing bridge is `NativeSamplingFunnelPayloadBatch` plus
+`materialize_native_sampling_funnel_preselected_batch(...)`. It validates an
+exact 512-row payload ledger against every funnel source, proposal, coordinate,
+and typed-failure identity, then copies only the selected rows into exact
+64-candidate x/y/z and quaternion x/y/z/w SoA channels. Lane shortfalls retain
+their output slots with zero numerical sentinels that downstream inactive-row
+semantics must ignore. The materialized receipt binds the funnel and payload
+receipts and rederives every selected coordinate digest and canonical
+quaternion. This is an ABI-ready data layout, not an ABI invocation; public
+complete-pipeline composition remains the next dependency and all execution,
+benchmark, scientific, product, and rank-mutation authority remains false.
+
 ## CPU water-box development reference
 
 ```bash
