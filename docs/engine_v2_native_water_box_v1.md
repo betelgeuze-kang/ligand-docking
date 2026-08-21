@@ -102,6 +102,14 @@ and a successful checkpoint load invalidates it. Mixed/nonperiodic and HIP
 paths do not consume the cache. This behavior has no timing threshold or
 performance/acceleration claim.
 
+CPU dynamics also retain one set of force-vector allocations across repeated
+force evaluations within a transactional integrate or minimize call. This is
+an internal work-simulation path: the public stateless evaluator remains
+transactional, while an internal evaluation failure may consume the work-local
+buffers before the failed work simulation is discarded. C++ reference and Rust
+CPU use the same lifetime rule; HIP evaluation is unchanged. This structural
+allocation reuse carries no measured timing evidence or acceleration claim.
+
 ## Frozen development observations
 
 The independently implemented Python oracle and both native CPU backends agree
