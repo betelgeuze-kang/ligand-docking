@@ -196,6 +196,15 @@ struct CellAssignment {
     atom: usize,
 }
 
+fn inclusive_squared_radius(radius: f64) -> f64 {
+    let squared = radius * radius;
+    if squared.is_finite() {
+        f64::from_bits(squared.to_bits() + 1)
+    } else {
+        squared
+    }
+}
+
 fn displacement(
     system: &System<'_>,
     forcefield: &ForceField<'_>,
@@ -683,6 +692,7 @@ fn periodic_neighbor_pairs(
 ) -> Result<Vec<NeighborPair>, KernelError> {
     let cell_counts = periodic_cell_counts(forcefield);
     let search_radius = forcefield.cutoff.max(forcefield.minimum_pair_distance);
+    let search_radius_squared = inclusive_squared_radius(search_radius);
     let mut assignments = Vec::new();
     assignments
         .try_reserve_exact(forcefield.atom_count)
@@ -736,10 +746,8 @@ fn periodic_neighbor_pairs(
         candidates.sort_unstable();
         candidates.dedup();
         for atom_j in candidates.iter().copied() {
-            let distance = displacement(system, forcefield, atom_i, atom_j)?
-                .squared_norm()
-                .sqrt();
-            if distance <= search_radius {
+            let squared_distance = displacement(system, forcefield, atom_i, atom_j)?.squared_norm();
+            if squared_distance <= search_radius_squared {
                 fallible_push(
                     &mut pairs,
                     NeighborPair { atom_i, atom_j },
@@ -841,6 +849,18 @@ pub(crate) fn evaluate(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn squared_radius_fast_path_keeps_the_rounded_inclusive_boundary() {
+        let radius = f64::from_bits(0x4016_9edc_6be4_9bff);
+        let rounded_square = radius * radius;
+        let boundary_squared = f64::from_bits(0x403f_fb07_75e4_29ed);
+
+        assert_eq!(rounded_square.to_bits(), 0x403f_fb07_75e4_29ec);
+        assert_eq!(boundary_squared.sqrt(), radius);
+        assert!(boundary_squared > rounded_square);
+        assert!(boundary_squared <= inclusive_squared_radius(radius));
+    }
 
     #[test]
     fn periodic_cell_list_is_canonical_and_crosses_box_boundaries() {
