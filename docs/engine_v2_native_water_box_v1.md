@@ -127,10 +127,12 @@ Public integrate and minimize transactions operate in place behind an RAII
 rollback. Nonzero integration and minimization snapshot only the six mutable
 position and velocity channels, the absolute step, and semantic neighbor-cache
 metadata; immutable particle, force-field, constraint, and integrator
-configuration are not copied. A zero-step integration snapshots only the
-scalar/cache metadata. Failures restore the six channels in place, preserving
-every borrowed particle-view address, while success needs no second six-channel
-copy. This is an unmeasured lifetime property and carries no acceleration claim.
+configuration are not copied. The simulation retains the six rollback-vector
+allocations across later nonzero calls, including calls that fail and restore
+state. A zero-step integration snapshots only the scalar/cache metadata.
+Failures restore the six channels in place, preserving every borrowed
+particle-view address, while success needs no second six-channel copy. These are
+unmeasured lifetime properties and carry no acceleration claim.
 
 The CPU minimizer retains one candidate `System` across all bounded Armijo
 attempts and iterations. Each trial overwrites only its position channels from

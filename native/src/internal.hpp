@@ -314,6 +314,15 @@ struct bg_simulation final {
         uint64_t reuse_count = UINT64_C(0);
     };
 
+    struct DynamicStateScratch final {
+        std::vector<double> position_x;
+        std::vector<double> position_y;
+        std::vector<double> position_z;
+        std::vector<double> velocity_x;
+        std::vector<double> velocity_y;
+        std::vector<double> velocity_z;
+    };
+
     bg_system system;
     bg_forcefield forcefield;
     std::vector<DistanceConstraint> constraints;
@@ -328,6 +337,7 @@ struct bg_simulation final {
     uint64_t absolute_step = UINT64_C(0);
     std::array<uint8_t, 32> static_fingerprint{};
     NeighborListCache neighbor_list_cache;
+    DynamicStateScratch dynamic_state_scratch;
 };
 
 namespace betelgeuze::native {
