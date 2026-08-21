@@ -90,4 +90,7 @@ python3 tools/capture_engine_v2_sampling_pool_cpu_observation_v1.py \
 These are single-host synthetic descriptive observations, not a threshold,
 baseline comparison, qualification, acceleration claim, or representative
 molecular throughput result. Capture is prohibited in GitHub Actions; ordinary
-CI only verifies the frozen receipt and source bindings.
+CI only verifies the frozen receipt and source bindings. Later Rust changes do
+not alter this historical receipt, but they also are not covered by it: receipt
+verification resolves the bound Git blobs at the recorded baseline commit,
+while a new capture would require a separately reviewed source baseline.

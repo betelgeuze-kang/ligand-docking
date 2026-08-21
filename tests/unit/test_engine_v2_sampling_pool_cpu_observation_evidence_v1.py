@@ -374,7 +374,14 @@ def test_source_git_ignores_ambient_repository_redirection(
             "show", f"{evidence.SOURCE_BASELINE_COMMIT}:rust/Cargo.lock"
         )
     )
-    evidence._verify_actual_source_bytes()
+    source = evidence._verify_source_baseline(require_matching_worktree=False)
+    assert source["merged_main_commit"] == evidence.SOURCE_BASELINE_COMMIT
+    assert source["merged_main_tree"] == evidence.SOURCE_BASELINE_TREE
+    with pytest.raises(
+        evidence.SamplingPoolCPUObservationEvidenceError,
+        match="source bytes differ from merged baseline",
+    ):
+        evidence._verify_actual_source_bytes()
 
 
 def test_fresh_target_and_toolchain_helpers_fail_closed(tmp_path: Path) -> None:

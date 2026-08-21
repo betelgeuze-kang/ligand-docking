@@ -12,7 +12,10 @@ from typing import Any
 
 import numpy as np
 
-PROFILE_SCHEMA = "betelgeuze.engine_v2_water_box_reference_profile/1.0.0"
+PROFILE_SCHEMAS = {
+    "betelgeuze.engine_v2_water_box_reference_profile/1.0.0",
+    "betelgeuze.engine_v2_native_water_box_profile/1.0.0",
+}
 
 
 class WaterReferenceError(ValueError):
@@ -24,7 +27,7 @@ def load_profile(path: Path) -> dict[str, Any]:
         value = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise WaterReferenceError(f"cannot load water profile: {exc}") from exc
-    if value.get("schema_id") != PROFILE_SCHEMA:
+    if value.get("schema_id") not in PROFILE_SCHEMAS:
         raise WaterReferenceError("water profile schema changed")
     authority = value.get("authority")
     if type(authority) is not dict or any(
@@ -93,6 +96,66 @@ def build_box(
 
 def minimum_image(delta: np.ndarray, box: float) -> np.ndarray:
     return delta - box * np.floor(delta / box + 0.5)
+
+
+def _nonbonded_settings(
+    profile: dict[str, Any],
+) -> tuple[float | None, float | None, float, float, float]:
+    value = profile.get("nonbonded")
+    if value is None:
+        return None, None, 1.0, 0.0, 1.0e-10
+    if type(value) is not dict:
+        raise WaterReferenceError("nonbonded settings must be an object")
+    try:
+        cutoff = float(value["cutoff_angstrom"])
+        switch_start = float(value["switch_start_angstrom"])
+        dielectric = float(value["dielectric"])
+        screening_kappa = float(value["screening_kappa_per_angstrom"])
+        minimum_distance = float(value["minimum_pair_distance_angstrom"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise WaterReferenceError("nonbonded settings are incomplete") from exc
+    if (
+        not math.isfinite(cutoff)
+        or cutoff <= 0.0
+        or not math.isfinite(switch_start)
+        or switch_start < 0.0
+        or switch_start >= cutoff
+        or not math.isfinite(dielectric)
+        or dielectric <= 0.0
+        or not math.isfinite(screening_kappa)
+        or screening_kappa < 0.0
+        or not math.isfinite(minimum_distance)
+        or minimum_distance <= 0.0
+    ):
+        raise WaterReferenceError("nonbonded settings are invalid")
+    return cutoff, switch_start, dielectric, screening_kappa, minimum_distance
+
+
+def _switching_value(
+    distance: float, start: float | None, cutoff: float | None
+) -> tuple[float, float]:
+    if start is None or cutoff is None or distance <= start:
+        return 1.0, 0.0
+    if distance >= cutoff:
+        return 0.0, 0.0
+    width = cutoff - start
+    coordinate = (distance - start) / width
+    coordinate2 = coordinate * coordinate
+    coordinate3 = coordinate2 * coordinate
+    coordinate4 = coordinate3 * coordinate
+    coordinate5 = coordinate4 * coordinate
+    return (
+        1.0
+        - 10.0 * coordinate3
+        + 15.0 * coordinate4
+        - 6.0 * coordinate5,
+        (
+            -30.0 * coordinate2
+            + 60.0 * coordinate3
+            - 30.0 * coordinate4
+        )
+        / width,
+    )
 
 
 def energy_forces(
@@ -165,6 +228,9 @@ def energy_forces(
         dtype=float,
     )
     coulomb = float(profile["coulomb_constant_kcal_a_per_mol_e2"])
+    cutoff, switch_start, dielectric, screening_kappa, minimum_distance = (
+        _nonbonded_settings(profile)
+    )
     for first in range(len(positions)):
         if atom_types[first] not in (0, 1):
             raise WaterReferenceError("unsupported atom type")
@@ -175,26 +241,43 @@ def energy_forces(
                 raise WaterReferenceError("unsupported atom type")
             displacement = minimum_image(positions[second] - positions[first], box)
             squared_distance = float(np.dot(displacement, displacement))
-            if squared_distance <= 1.0e-20:
-                raise WaterReferenceError("overlapping atoms")
             distance = math.sqrt(squared_distance)
+            if distance < minimum_distance:
+                raise WaterReferenceError("overlapping atoms")
+            if cutoff is not None and distance > cutoff:
+                continue
             mixed_sigma = 0.5 * (
                 sigma[atom_types[first]] + sigma[atom_types[second]]
             )
             mixed_epsilon = math.sqrt(
                 epsilon[atom_types[first]] * epsilon[atom_types[second]]
             )
-            energy_derivative = 0.0
+            lennard_jones = 0.0
+            lennard_jones_derivative = 0.0
             if mixed_sigma > 0.0 and mixed_epsilon > 0.0:
                 ratio6 = (mixed_sigma / distance) ** 6
                 ratio12 = ratio6 * ratio6
-                energy += 4.0 * mixed_epsilon * (ratio12 - ratio6)
-                energy_derivative += (
+                lennard_jones = 4.0 * mixed_epsilon * (ratio12 - ratio6)
+                lennard_jones_derivative = (
                     24.0 * mixed_epsilon * (-2.0 * ratio12 + ratio6) / distance
                 )
-            energy += coulomb * charges[first] * charges[second] / distance
-            energy_derivative += (
-                -coulomb * charges[first] * charges[second] / squared_distance
+            screened_charge = (
+                charges[first]
+                * charges[second]
+                * math.exp(-screening_kappa * distance)
+            )
+            electrostatic = coulomb * screened_charge / (dielectric * distance)
+            electrostatic_derivative = electrostatic * (
+                -screening_kappa - 1.0 / distance
+            )
+            switch, switch_derivative = _switching_value(
+                distance, switch_start, cutoff
+            )
+            pair_energy = lennard_jones + electrostatic
+            energy += pair_energy * switch
+            energy_derivative = (
+                (lennard_jones_derivative + electrostatic_derivative) * switch
+                + pair_energy * switch_derivative
             )
             force_first = energy_derivative * displacement / distance
             forces[first] += force_first

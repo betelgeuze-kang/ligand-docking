@@ -3,6 +3,7 @@
 //! The raw handles and pointers remain private to this crate. All system input
 //! is copied into native-owned structure-of-arrays storage.
 
+mod development_water_box;
 mod docking;
 mod dynamics;
 mod fixed64_lane_metrics;
@@ -12,6 +13,11 @@ mod qualification_v6;
 mod qualification_v7;
 
 pub use betelgeuze_docking_search::Fixed64Lane;
+pub use development_water_box::{
+    development_water_box_v1_profile_sha256, evaluate_development_single_water_v1,
+    evaluate_development_water_box_v1, DevelopmentWaterBoxV1, DEVELOPMENT_WATER_BOX_V1_ATOM_COUNT,
+    DEVELOPMENT_WATER_BOX_V1_PROFILE_ID, DEVELOPMENT_WATER_BOX_V1_SCHEMA_ID,
+};
 pub use docking::{
     Fixed64AtomicFeature, Fixed64AuthorityDisposition, Fixed64BatchReceipts,
     Fixed64ChiralityCenter, Fixed64ClusterEvidence, Fixed64ConformerCoordinateSource,

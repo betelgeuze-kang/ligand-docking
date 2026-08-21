@@ -66,6 +66,15 @@ The current `main` branch contains:
   `42b5d76c870c17ef49528319d6209a587b5ef40ef6be63c12c166d776da9e394`
   remains single-host synthetic descriptive evidence and grants no performance,
   scientific, molecular, benchmark, product, Stage 0, or HIP authority;
+- a native-owned two-water CPU development slice using the shared canonical
+  `System`, `ForceField`, and `Simulation` state owners. Its exact successor
+  profile is embedded into the compiled Rust runtime, while C++ reference and
+  Rust CPU tests preserve standalone single-water and two-water energy/force
+  parity, 100-step Velocity Verlet state parity, seeded BAOAB state parity, and
+  exact checkpoint continuation.
+  The entry point is CPU-only and has no PME, neighbor-list-performance,
+  constraint-validation, ion, protein, production-MD, scientific,
+  free-energy, benchmark, product, Stage 0, or performance authority;
 - bounded single-model PDB and single-molecule SDF V2000 ingestion;
 - bounded single-block CIF syntax plus mmCIF entity/asym/polymer identity,
   zero-occupancy, altloc, nonpoly instance, component atom/bond, and selected

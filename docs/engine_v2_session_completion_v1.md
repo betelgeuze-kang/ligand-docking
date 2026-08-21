@@ -152,7 +152,7 @@ synthetic engineering evidence only. It does not authorize molecular runs,
 reservation, D1/Fresh-128, public benchmarks, Stage 0, product use, performance
 claims, or scientific claims.
 
-## CPU water-box development reference
+## CPU water-box development reference and native slice
 
 ```bash
 python tools/run_engine_v2_water_box_reference_v1.py \
@@ -166,6 +166,20 @@ This is a bounded CPU numerical reference for harmonic water, orthorhombic
 minimum-image Lennard-Jones/Coulomb interactions, Velocity Verlet, energy
 observation, and deterministic checkpoint state. It has no PME, NPT, ion,
 protein, production-MD, free-energy, or performance authority.
+
+The successor profile
+`config/engine_v2_native_water_box_profile_v1.json` binds those frozen two-water
+inputs to the canonical native ABI Coulomb constant and explicit cutoff/switch
+settings. A standalone single-water evaluation and `DevelopmentWaterBoxV1`
+construct the same atoms through the shared native `System`, `ForceField`, and
+`Simulation` owners. Their public entry
+points admit only the C++ reference and Rust CPU backends. Focused tests require
+single-water and two-water energy/force parity, 100-step Velocity Verlet parity,
+128-step seeded BAOAB parity, and bit-exact Rust checkpoint continuation. The compiled runtime
+embeds the exact profile bytes and exposes their SHA-256 identity.
+
+See `docs/engine_v2_native_water_box_v1.md` for the frozen development metrics
+and remaining scientific boundaries.
 
 ## HIP D1 benchmark result verification
 
