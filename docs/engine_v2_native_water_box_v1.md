@@ -72,7 +72,7 @@ binary64 boundary. The C++ reference stores cell assignments in one sorted
 contiguous array, matching the Rust CPU traversal shape and avoiding per-cell
 tree nodes. These are implementation changes under the same mathematical
 profile and do not constitute timing evidence or an acceleration claim.
-This first functional list has no skin or reuse cache.
+The v1 profile remains the immutable every-evaluation builder baseline.
 
 The two CPU evaluators also expose an internal, non-public path that consumes a
 caller-owned canonical neighbor-pair slice. Both implementations require
@@ -84,9 +84,19 @@ still applies exclusions, minimum-distance validation, and the exact cutoff in
 canonical order. The native dynamics dispatcher constructs one canonical slice
 per fully periodic CPU evaluation and supplies the same representation to the
 selected C++ or Rust evaluator. The public stateless context continues to use
-the backend-owned builder on every call. Neither path reuses a list yet; this
-shared dynamics boundary is the prerequisite for a later `Simulation`-owned
-skin/reuse cache.
+the backend-owned builder on every call.
+
+The v2 successor adds a private `Simulation`-owned cache for fully periodic
+CPU dynamics only. It builds canonical pairs to
+`max(cutoff, minimum_pair_distance) + 1.0` angstrom and reuses that slice only
+while every atom remains strictly below 0.5 angstrom from its unwrapped build
+reference. The existing pair evaluator still applies minimum-distance and
+exact-cutoff semantics. Cache mutations follow the existing transactional
+integrate/minimize clone boundary; failed operations cannot commit them.
+Checkpoint bytes and the static fingerprint do not include this derived state,
+and a successful checkpoint load invalidates it. Mixed/nonperiodic and HIP
+paths do not consume the cache. This behavior has no timing threshold or
+performance/acceleration claim.
 
 ## Frozen development observations
 
@@ -131,8 +141,8 @@ evidence.
 
 ## Remaining boundaries
 
-The slice has no neighbor-list reuse or performance evidence, general ion
-preparation, PME/Ewald,
+The slice has functional neighbor-list reuse but no performance evidence,
+general ion preparation, PME/Ewald,
 NPT/barostat, peptide or protein system, public benchmark, production-MD,
 free-energy, scientific-claim, product, Stage 0, Fresh-128, reservation, or
 performance-claim authority. The rigid-water checks are synthetic CPU

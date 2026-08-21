@@ -22,6 +22,7 @@ include = [
     "vendor/native/src/forcefield.cpp",
     "vendor/native/src/system.cpp",
     "vendor/native/src/cpu/evaluator.hpp",
+    "vendor/native/src/cpu/neighbor_pair.hpp",
     "vendor/native/src/cpu/evaluator.cpp",
     "vendor/native/src/rust/provider.h",
     "vendor/native/src/rust/evaluator.hpp",

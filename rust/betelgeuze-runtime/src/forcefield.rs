@@ -23,6 +23,18 @@ pub fn native_periodic_neighbor_list_v1_profile_sha256() -> [u8; 32] {
     Sha256::digest(NATIVE_PERIODIC_NEIGHBOR_LIST_V1_PROFILE_BYTES).into()
 }
 
+pub const NATIVE_PERIODIC_NEIGHBOR_LIST_V2_SCHEMA_ID: &str =
+    "betelgeuze.engine_v2_native_periodic_neighbor_list_profile/2.0.0";
+pub const NATIVE_PERIODIC_NEIGHBOR_LIST_V2_PROFILE_ID: &str =
+    "engine_v2_native_periodic_cpu_neighbor_cache_development_v2";
+const NATIVE_PERIODIC_NEIGHBOR_LIST_V2_PROFILE_BYTES: &[u8] =
+    include_bytes!("../assets/engine_v2_native_periodic_neighbor_list_profile_v2.json");
+
+/// SHA-256 of the exact periodic CPU neighbor-cache profile embedded into this runtime.
+pub fn native_periodic_neighbor_list_v2_profile_sha256() -> [u8; 32] {
+    Sha256::digest(NATIVE_PERIODIC_NEIGHBOR_LIST_V2_PROFILE_BYTES).into()
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct AtomNonbonded {
     pub sigma_angstrom: f64,

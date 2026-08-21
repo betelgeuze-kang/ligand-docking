@@ -28,6 +28,11 @@ NEIGHBOR_LIST_PROFILE = json.loads(
         ROOT / "config/engine_v2_native_periodic_neighbor_list_profile_v1.json"
     ).read_text()
 )
+NEIGHBOR_CACHE_PROFILE = json.loads(
+    (
+        ROOT / "config/engine_v2_native_periodic_neighbor_list_profile_v2.json"
+    ).read_text()
+)
 ION_PROFILE = json.loads(
     (ROOT / "config/engine_v2_native_water_ion_profile_v1.json").read_text()
 )
@@ -103,6 +108,37 @@ def test_native_neighbor_list_profile_matches_the_packaged_runtime_asset() -> No
     assert validation["minimum_distance_validation_outside_cutoff_required"] is True
     assert all(
         value is False for value in NEIGHBOR_LIST_PROFILE["authority"].values()
+    )
+
+
+def test_native_neighbor_cache_profile_matches_the_packaged_runtime_asset() -> None:
+    canonical = (
+        ROOT / "config/engine_v2_native_periodic_neighbor_list_profile_v2.json"
+    ).read_bytes()
+    packaged = (
+        ROOT
+        / "rust/betelgeuze-runtime/assets/engine_v2_native_periodic_neighbor_list_profile_v2.json"
+    ).read_bytes()
+    assert packaged == canonical
+    assert hashlib.sha256(canonical).hexdigest() == (
+        "c9e671b925b8f5da48a43dec2abe264e695840b277cc3cf4a84aa7255b59150d"
+    )
+    assert NEIGHBOR_CACHE_PROFILE["predecessor"]["sha256"] == (
+        "409902e5f6776bd58c76f80a572c9cf978f7e2f4938003e5609036bfe91c631f"
+    )
+    activation = NEIGHBOR_CACHE_PROFILE["activation"]
+    assert activation["owner"] == "native_simulation"
+    assert activation["skin_angstrom"] == 1.0
+    assert "strictly below" in activation["reuse_rule"]
+    assert "greater than or equal" in activation["rebuild_rule"]
+    assert "neither serialized nor fingerprinted" in activation["checkpoint_policy"]
+    validation = NEIGHBOR_CACHE_PROFILE["validation"]
+    assert validation["failed_operation_cache_rollback_required"] is True
+    assert validation["checkpoint_load_invalidation_required"] is True
+    assert validation["performance_measurement_present"] is False
+    assert validation["performance_threshold_present"] is False
+    assert all(
+        value is False for value in NEIGHBOR_CACHE_PROFILE["authority"].values()
     )
 
 

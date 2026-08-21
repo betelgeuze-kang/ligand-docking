@@ -523,7 +523,7 @@ bg_status velocity_verlet_step(
     cpu::Evaluation *out_final_evaluation) {
     cpu::Evaluation evaluation;
     bg_status status = evaluate(
-        context, simulation->system, simulation->forcefield, true, &evaluation);
+        context, simulation, simulation->system, true, &evaluation);
     if (status != BG_STATUS_OK) {
         return status;
     }
@@ -538,7 +538,7 @@ bg_status velocity_verlet_step(
         return status;
     }
     status = evaluate(
-        context, simulation->system, simulation->forcefield, true, &evaluation);
+        context, simulation, simulation->system, true, &evaluation);
     if (status != BG_STATUS_OK) {
         return status;
     }
@@ -560,7 +560,7 @@ bg_status baoab_step(
     cpu::Evaluation *out_final_evaluation) {
     cpu::Evaluation evaluation;
     bg_status status = evaluate(
-        context, simulation->system, simulation->forcefield, true, &evaluation);
+        context, simulation, simulation->system, true, &evaluation);
     if (status != BG_STATUS_OK) {
         return status;
     }
@@ -582,7 +582,7 @@ bg_status baoab_step(
         return status;
     }
     status = evaluate(
-        context, simulation->system, simulation->forcefield, true, &evaluation);
+        context, simulation, simulation->system, true, &evaluation);
     if (status != BG_STATUS_OK) {
         return status;
     }
@@ -928,7 +928,7 @@ bg_status minimize(
     (void)source;
     cpu::Evaluation evaluation;
     bg_status status =
-        evaluate(context, work->system, work->forcefield, true, &evaluation);
+        evaluate(context, work, work->system, true, &evaluation);
     if (status != BG_STATUS_OK) {
         return status;
     }
@@ -988,8 +988,8 @@ bg_status minimize(
                     force_dot_displacement > 0.0) {
                     status = evaluate(
                         context,
+                        work,
                         candidate,
-                        work->forcefield,
                         false,
                         &trial_evaluation);
                     const double armijo_bound = current_energy -
@@ -1023,7 +1023,7 @@ bg_status minimize(
         current_energy = accepted_energy;
         ++completed;
         status =
-            evaluate(context, work->system, work->forcefield, true, &evaluation);
+            evaluate(context, work, work->system, true, &evaluation);
         if (status != BG_STATUS_OK) {
             return status;
         }
@@ -1073,7 +1073,7 @@ bg_status integrate(
     bg_status status = BG_STATUS_OK;
     if (step_count == UINT64_C(0)) {
         status = evaluate(
-            context, work->system, work->forcefield, false, &final_evaluation);
+            context, work, work->system, false, &final_evaluation);
         if (status != BG_STATUS_OK) {
             return status;
         }

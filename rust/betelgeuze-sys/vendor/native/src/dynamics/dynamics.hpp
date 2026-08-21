@@ -14,8 +14,8 @@ inline constexpr double kGasConstantKcalPerMolKelvin =
 
 bg_status evaluate(
     const bg_context &context,
+    bg_simulation *simulation,
     const bg_system &system,
-    const bg_forcefield &forcefield,
     bool compute_forces,
     cpu::Evaluation *out_evaluation);
 

@@ -6,6 +6,7 @@
 #  define BG_INTERNAL_UNDEF_DESCRIPTOR_INIT_MACRO_GUARD
 #endif
 #include "betelgeuze/engine.h"
+#include "cpu/neighbor_pair.hpp"
 #if defined(BG_INTERNAL_UNDEF_DESCRIPTOR_INIT_MACRO_GUARD)
 #  undef BG_DISABLE_DESCRIPTOR_INIT_CONVENIENCE_MACROS
 #  undef BG_INTERNAL_UNDEF_DESCRIPTOR_INIT_MACRO_GUARD
@@ -297,6 +298,16 @@ struct bg_simulation final {
         double distance = 0.0;
     };
 
+    struct NeighborListCache final {
+        bool valid = false;
+        std::vector<double> reference_x;
+        std::vector<double> reference_y;
+        std::vector<double> reference_z;
+        std::vector<betelgeuze::native::cpu::NeighborPair> pairs;
+        uint64_t build_count = UINT64_C(0);
+        uint64_t reuse_count = UINT64_C(0);
+    };
+
     bg_system system;
     bg_forcefield forcefield;
     std::vector<DistanceConstraint> constraints;
@@ -310,6 +321,7 @@ struct bg_simulation final {
     uint64_t random_seed = UINT64_C(0);
     uint64_t absolute_step = UINT64_C(0);
     std::array<uint8_t, 32> static_fingerprint{};
+    NeighborListCache neighbor_list_cache;
 };
 
 namespace betelgeuze::native {
