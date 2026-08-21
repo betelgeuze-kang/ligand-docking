@@ -159,6 +159,16 @@ _OBSERVED_FIXTURE_INTEGER_KEYS = {
     "wall_time_ns_p50",
     "wall_time_ns_p95",
 }
+_OBSERVED_FIXTURE_U64_KEYS = {
+    "exact_pair_evaluation_count",
+    "ligand_atom_count",
+    "peak_rss_delta_kib",
+    "peak_rss_kib",
+    "receptor_atom_count",
+}
+_OBSERVED_FIXTURE_U128_KEYS = {"wall_time_ns_p50", "wall_time_ns_p95"}
+_U64_MAX = (1 << 64) - 1
+_U128_MAX = (1 << 128) - 1
 
 
 def _canonical_bytes(value: object) -> bytes:
@@ -672,6 +682,7 @@ def _load_observer_output(raw: str) -> dict[str, Any]:
     except (
         json.JSONDecodeError,
         observer.SamplingPoolCPUObservationError,
+        RecursionError,
         UnicodeError,
     ) as exc:
         raise SamplingPoolCPUObservationEvidenceError(
@@ -1052,6 +1063,15 @@ def verify(document: object) -> dict[str, object]:
         raise SamplingPoolCPUObservationEvidenceError(
             "observation denominators or statistics are not integers"
         )
+    if observation["sample_count"] > _U64_MAX or any(
+        any(row[key] > _U64_MAX for key in _OBSERVED_FIXTURE_U64_KEYS)
+        or any(row[key] > _U128_MAX for key in _OBSERVED_FIXTURE_U128_KEYS)
+        or any(sample > _U128_MAX for sample in row["wall_time_ns_samples"])
+        for row in fixtures
+    ):
+        raise SamplingPoolCPUObservationEvidenceError(
+            "observation metric exceeds its producer integer width"
+        )
     try:
         validated_observation = observer._validate(
             observation, expected_sample_count=SAMPLE_COUNT
@@ -1174,6 +1194,15 @@ def verify(document: object) -> dict[str, object]:
                 f"build environment metadata is invalid: {key}"
             )
     _verify_cargo_configuration(build["cargo_configuration"])
+    expected_cargo_home_origin = (
+        "environment"
+        if build["build_environment"]["CARGO_HOME"]["set"]
+        else "default_user_home"
+    )
+    if build["cargo_configuration"]["cargo_home_origin"] != expected_cargo_home_origin:
+        raise SamplingPoolCPUObservationEvidenceError(
+            "Cargo-home origin differs from its environment fingerprint"
+        )
     if build.get("runtime_environment") != _TIMED_RUNTIME_ENVIRONMENT:
         raise SamplingPoolCPUObservationEvidenceError(
             "timed runtime environment is invalid"
@@ -1275,6 +1304,7 @@ def load_and_verify(path: Path) -> dict[str, object]:
     except (
         json.JSONDecodeError,
         observer.SamplingPoolCPUObservationError,
+        RecursionError,
         UnicodeError,
     ) as exc:
         raise SamplingPoolCPUObservationEvidenceError(

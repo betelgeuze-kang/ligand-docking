@@ -25,7 +25,7 @@ def _reseal(value: dict[str, object]) -> dict[str, object]:
 def test_committed_source_binary_host_bound_observation_verifies() -> None:
     value = evidence.load_and_verify(EVIDENCE)
     assert value["receipt_sha256"] == (
-        "94b4cc1eaf192791afd2ce966f1eaeb7f5e0d0fccd98ea0a1ee224aae114bffc"
+        "5d1e2731d51f6d85bf1e688cb6fba0393f5fc10fbf5daab8526fca0dbef3307b"
     )
     assert value["source"]["merged_main_commit"] == evidence.SOURCE_BASELINE_COMMIT
     assert value["source"]["merged_main_tree"] == evidence.SOURCE_BASELINE_TREE
@@ -114,6 +114,24 @@ def test_resealed_semantic_cross_wiring_fails_closed() -> None:
     with pytest.raises(
         evidence.SamplingPoolCPUObservationEvidenceError,
         match="not root-bound",
+    ):
+        evidence.verify(_reseal(value))
+
+    value = json.loads(EVIDENCE.read_text(encoding="ascii"))
+    row = value["observation"]["fixtures"][0]
+    row["peak_rss_kib"] = evidence._U64_MAX + 1
+    row["peak_rss_delta_kib"] = evidence._U64_MAX + 1
+    with pytest.raises(
+        evidence.SamplingPoolCPUObservationEvidenceError,
+        match="producer integer width",
+    ):
+        evidence.verify(_reseal(value))
+
+    value = json.loads(EVIDENCE.read_text(encoding="ascii"))
+    value["build"]["cargo_configuration"]["cargo_home_origin"] = "environment"
+    with pytest.raises(
+        evidence.SamplingPoolCPUObservationEvidenceError,
+        match="differs from its environment fingerprint",
     ):
         evidence.verify(_reseal(value))
 
@@ -309,6 +327,13 @@ def test_cli_overflowing_json_number_is_stably_blocked(
     assert capsys.readouterr().out == (
         "sampling_pool_cpu_observation_evidence=blocked:"
         "JSON integer exceeds the evidence digit limit\n"
+    )
+
+    nested = tmp_path / "excessively-nested.json"
+    nested.write_text("[" * 60_000 + "]" * 60_000 + "\n", encoding="ascii")
+    assert evidence.main(["--verify", str(nested)]) == 1
+    assert capsys.readouterr().out == (
+        "sampling_pool_cpu_observation_evidence=blocked:evidence is not strict JSON\n"
     )
 
 

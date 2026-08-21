@@ -69,13 +69,13 @@ one ancestor per row, and ends at `/.cargo`, proving completeness without
 assuming a checkout-specific path depth. The release rlib is compiled inside a
 new capture-owned temporary Cargo target, and Cargo/rustc identities must match
 before and after compilation and timing. Its receipt SHA-256 is
-`94b4cc1eaf192791afd2ce966f1eaeb7f5e0d0fccd98ea0a1ee224aae114bffc`.
+`5d1e2731d51f6d85bf1e688cb6fba0393f5fc10fbf5daab8526fca0dbef3307b`.
 
 | fixture | raw samples | p50 ns | p95 ns | peak RSS KiB | peak delta KiB |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| small | 7 | 19,949,933 | 20,081,998 | 2,688 | 768 |
-| medium | 7 | 66,518,170 | 66,990,164 | 3,072 | 1,152 |
-| large | 7 | 195,010,373 | 196,091,035 | 3,456 | 1,536 |
+| small | 7 | 19,882,541 | 20,224,043 | 2,688 | 768 |
+| medium | 7 | 66,255,969 | 66,646,642 | 3,072 | 1,152 |
+| large | 7 | 195,142,286 | 197,651,534 | 3,456 | 1,536 |
 
 Verify the canonical receipt without reading a clock or executing an
 observation:
