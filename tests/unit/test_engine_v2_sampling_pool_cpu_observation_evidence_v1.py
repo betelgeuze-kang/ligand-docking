@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import copy
+import io
 import json
 import os
 from pathlib import Path
+import tarfile
 
 import pytest
 
@@ -397,11 +399,50 @@ def test_fresh_target_and_toolchain_helpers_fail_closed(tmp_path: Path) -> None:
 
 def test_registry_sources_and_home_resolution_fail_closed(
     monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
-    cargo_home, _ = evidence._effective_cargo_home()
-    assert evidence._verify_registry_dependency_sources(cargo_home) == list(
-        evidence._REGISTRY_DEPENDENCIES
-    )
+    cargo_home = tmp_path / "cargo-home"
+    index_directory = "index.example.invalid-0000000000000000"
+    package = "fixture-dependency-1.2.3"
+    relative = "src/lib.rs"
+    contents = b"pub fn fixture() -> u8 { 7 }\n"
+    archive = cargo_home / "registry" / "cache" / index_directory / f"{package}.crate"
+    archive.parent.mkdir(parents=True)
+    with tarfile.open(archive, "w:gz") as handle:
+        member = tarfile.TarInfo(f"{package}/{relative}")
+        member.mode = 0o644
+        member.size = len(contents)
+        handle.addfile(member, io.BytesIO(contents))
+
+    source = cargo_home / "registry" / "src" / index_directory / package / relative
+    source.parent.mkdir(parents=True)
+    source.write_bytes(contents)
+    source.chmod(0o644)
+    source_rows = [
+        {
+            "executable": False,
+            "path": relative,
+            "sha256": evidence._sha256(contents),
+        }
+    ]
+    dependency = {
+        "crate_sha256": evidence._file_sha256(archive),
+        "name": "fixture-dependency",
+        "source_tree_sha256": evidence._sha256(
+            evidence._REGISTRY_SOURCE_TREE_DOMAIN
+            + evidence._canonical_projection(source_rows)
+        ),
+        "version": "1.2.3",
+    }
+    monkeypatch.setattr(evidence, "_REGISTRY_DEPENDENCIES", (dependency,))
+    assert evidence._verify_registry_dependency_sources(cargo_home) == [dependency]
+
+    source.write_bytes(b"tampered\n")
+    with pytest.raises(
+        evidence.SamplingPoolCPUObservationEvidenceError,
+        match="source bytes differ",
+    ):
+        evidence._verify_registry_dependency_sources(cargo_home)
 
     monkeypatch.delenv("CARGO_HOME", raising=False)
     monkeypatch.setattr(
