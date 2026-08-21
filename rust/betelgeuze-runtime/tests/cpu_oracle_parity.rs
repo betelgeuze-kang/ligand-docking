@@ -255,11 +255,14 @@ fn neutral_water_ion_fixture_matches_the_independent_oracle_on_cpu() {
     let fixture = neutral_water_ion_fixture();
     let expected = oracle::evaluate(&fixture.input).expect("water-ion oracle evaluation succeeds");
     for backend in [runtime::Backend::CppCpuReference, runtime::Backend::RustCpu] {
-        let native = native_fixture(&fixture, backend);
-        let actual = native
-            .context
-            .evaluate(&native.system, &native.forcefield)
-            .expect("water-ion CPU evaluation succeeds");
+        let options = match backend {
+            runtime::Backend::CppCpuReference => runtime::ContextOptions::cpu_reference(),
+            runtime::Backend::RustCpu => runtime::ContextOptions::rust_cpu(),
+            _ => unreachable!("water-ion oracle test is frozen to CPU backends"),
+        };
+        let context = runtime::Context::new(options).expect("water-ion CPU context succeeds");
+        let actual = runtime::evaluate_development_water_ion_v1(&context)
+            .expect("exported water-ion CPU evaluation succeeds");
         assert_energy_close(fixture.name, actual.energy, expected);
         for atom in 0..fixture.input.positions.len() {
             for axis in 0..3 {
