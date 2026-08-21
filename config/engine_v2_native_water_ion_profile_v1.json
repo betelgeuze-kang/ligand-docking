@@ -1,0 +1,71 @@
+{
+  "schema_id": "betelgeuze.engine_v2_native_water_ion_profile/1.0.0",
+  "profile_id": "engine_v2_native_tip3p_nacl_development_v1",
+  "predecessor": {
+    "path": "config/engine_v2_native_periodic_neighbor_list_profile_v1.json",
+    "sha256": "ee2c64b3e40ec1905a97b0c2646e36c59fe30f674adfd019dde016e2637e3628",
+    "semantic_change": "Add explicit Na+ and Cl- parameter identities plus one neutral static CPU development fixture."
+  },
+  "parameter_source": {
+    "citation": "Joung, I. S.; Cheatham, T. E. J. Phys. Chem. B 2008, 112, 9020-9041",
+    "doi": "10.1021/jp8001614",
+    "water_model_target": "TIP3P",
+    "source_lennard_jones_representation": "AMBER_Rmin_over_2_angstrom_and_epsilon_kcal_per_mol",
+    "native_sigma_conversion": "sigma_angstrom = 2 * rmin_over_2_angstrom / pow(2, 1/6)",
+    "long_range_method_compatibility_claimed": false
+  },
+  "supported_identities": [
+    {
+      "species": "sodium",
+      "atomic_number": 11,
+      "formal_charge": 1,
+      "charge_elementary": 1.0,
+      "mass_dalton": 22.99,
+      "rmin_over_2_angstrom": 1.369,
+      "epsilon_kcal_per_mol": 0.0874393,
+      "sigma_angstrom": 2.439280690268249,
+      "sigma_binary64_hex": "0x1.383a59833bb42p+1"
+    },
+    {
+      "species": "chloride",
+      "atomic_number": 17,
+      "formal_charge": -1,
+      "charge_elementary": -1.0,
+      "mass_dalton": 35.45,
+      "rmin_over_2_angstrom": 2.513,
+      "epsilon_kcal_per_mol": 0.035591,
+      "sigma_angstrom": 4.477656957373345,
+      "sigma_binary64_hex": "0x1.1e91ee7ca8064p+2"
+    }
+  ],
+  "unsupported_policy": {
+    "result": "typed_unsupported_identity_error",
+    "identity_fields": ["atomic_number", "formal_charge"],
+    "implicit_element_or_charge_coercion_allowed": false
+  },
+  "fixture": {
+    "water_count": 2,
+    "sodium_count": 1,
+    "chloride_count": 1,
+    "total_charge_elementary": 0.0,
+    "static_energy_force_evaluation_only": true,
+    "cpu_backends": ["cpp_cpu_reference", "rust_cpu"]
+  },
+  "validation": {
+    "independent_all_pairs_oracle_required": true,
+    "analytic_force_finite_difference_required": true,
+    "cpu_backend_parity_required": true,
+    "parameter_bits_and_profile_digest_required": true
+  },
+  "authority": {
+    "molecular_execution_authorized": false,
+    "production_md_validated": false,
+    "scientific_claim_authorized": false,
+    "parameter_applicability_claim_authorized": false,
+    "performance_claim_authorized": false,
+    "reservation_authorized": false,
+    "fresh_128_authorized": false,
+    "public_benchmark_authorized": false,
+    "hip_device_execution_authorized": false
+  }
+}

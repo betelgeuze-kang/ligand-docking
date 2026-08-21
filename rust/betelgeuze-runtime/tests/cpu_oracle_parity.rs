@@ -251,6 +251,36 @@ fn fully_periodic_cpu_cell_list_preserves_minimum_distance_validation_beyond_cut
 }
 
 #[test]
+fn neutral_water_ion_fixture_matches_the_independent_oracle_on_cpu() {
+    let fixture = neutral_water_ion_fixture();
+    let expected = oracle::evaluate(&fixture.input).expect("water-ion oracle evaluation succeeds");
+    for backend in [runtime::Backend::CppCpuReference, runtime::Backend::RustCpu] {
+        let options = match backend {
+            runtime::Backend::CppCpuReference => runtime::ContextOptions::cpu_reference(),
+            runtime::Backend::RustCpu => runtime::ContextOptions::rust_cpu(),
+            _ => unreachable!("water-ion oracle test is frozen to CPU backends"),
+        };
+        let context = runtime::Context::new(options).expect("water-ion CPU context succeeds");
+        let actual = runtime::evaluate_development_water_ion_v1(&context)
+            .expect("exported water-ion CPU evaluation succeeds");
+        assert_energy_close(fixture.name, actual.energy, expected);
+        for atom in 0..fixture.input.positions.len() {
+            for axis in 0..3 {
+                let expected_force = finite_difference_force(&fixture, atom, axis);
+                let observed = native_force_component(&actual.forces, atom, axis);
+                let difference = (observed - expected_force).abs();
+                assert!(
+                    difference <= FORCE_TOLERANCE,
+                    "{} {} force atom {atom} axis {axis} differs by {difference:.3e}",
+                    fixture.name,
+                    backend_name(backend)
+                );
+            }
+        }
+    }
+}
+
+#[test]
 fn native_safe_backends_match_cpp_reference_within_the_frozen_tolerance() {
     for fixture in fixtures() {
         let cpp = native_fixture(&fixture, runtime::Backend::CppCpuReference);
@@ -557,6 +587,81 @@ fn fully_periodic_cell_list() -> Fixture {
     input.nonbonded = settings(3.0, 2.5, 1.8, 0.06);
     Fixture {
         name: "fully_periodic_cell_list",
+        input,
+        exact: None,
+    }
+}
+
+fn neutral_water_ion_fixture() -> Fixture {
+    let water_x = f64::from_bits(0x3fe2_bf8c_302c_3616);
+    let water_y = f64::from_bits(0x3fe8_38ef_e489_67cf);
+    let oxygen_charge = f64::from_bits(0xbfea_b020_c49b_a5e3);
+    let hydrogen_charge = f64::from_bits(0x3fda_b020_c49b_a5e3);
+    let oxygen = atom(
+        f64::from_bits(0x4009_3473_0403_9abf),
+        f64::from_bits(0x3fc3_7803_46dc_5d64),
+        oxygen_charge,
+    );
+    let hydrogen = atom(1.0, 0.0, hydrogen_charge);
+    let positions = vec![
+        p(0.0, 0.0, 0.0),
+        p(water_x, water_y, 0.0),
+        p(water_x, -water_y, 0.0),
+        p(4.0, 0.0, 0.0),
+        p(4.0 + water_x, water_y, 0.0),
+        p(4.0 + water_x, -water_y, 0.0),
+        p(8.0, 2.0, 0.0),
+        p(10.5, 2.0, 0.0),
+    ];
+    let atoms = vec![
+        oxygen,
+        hydrogen,
+        hydrogen,
+        oxygen,
+        hydrogen,
+        hydrogen,
+        atom(
+            f64::from_bits(0x4003_83a5_9833_bb42),
+            f64::from_bits(0x3fb6_626c_05e2_9810),
+            1.0,
+        ),
+        atom(
+            f64::from_bits(0x4011_e91e_e7ca_8064),
+            f64::from_bits(0x3fa2_38fb_ca10_59ea),
+            -1.0,
+        ),
+    ];
+    let mut input = oracle::OracleInput::new(positions, atoms);
+    let oh = f64::from_bits(0x3fee_a161_e4f7_65fe);
+    for (atom_i, atom_j) in [(0, 1), (0, 2), (3, 4), (3, 5)] {
+        input.bonds.push(oracle::HarmonicBond {
+            atom_i,
+            atom_j,
+            equilibrium_angstrom: oh,
+            force_constant_kcal_per_mol_angstrom2: 450.0,
+        });
+    }
+    for (atom_i, atom_j, atom_k) in [(1, 0, 2), (4, 3, 5)] {
+        input.angles.push(oracle::HarmonicAngle {
+            atom_i,
+            atom_j,
+            atom_k,
+            equilibrium_radians: f64::from_bits(0x3ffd_2fff_5ab1_7aaf),
+            force_constant_kcal_per_mol_radian2: 55.0,
+        });
+    }
+    input.exclusions = [(0, 1), (0, 2), (1, 2), (3, 4), (3, 5), (4, 5)]
+        .into_iter()
+        .map(|(atom_i, atom_j)| oracle::PairExclusion { atom_i, atom_j })
+        .collect();
+    input.cell = Some(oracle::OrthorhombicCell {
+        lengths_angstrom: [14.0; 3],
+        periodic_axes: [true; 3],
+    });
+    input.nonbonded = settings(6.99, 6.5, 1.0, 0.0);
+    input.nonbonded.minimum_pair_distance_angstrom = 1.0e-10;
+    Fixture {
+        name: "neutral_water_ion_static",
         input,
         exact: None,
     }

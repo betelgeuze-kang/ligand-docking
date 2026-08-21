@@ -12,6 +12,7 @@ use crate::{
     Result, Simulation, SimulationOptions, System, VelocitySoa,
 };
 use sha2::{Digest, Sha256};
+use std::fmt;
 
 pub const DEVELOPMENT_WATER_BOX_V1_SCHEMA_ID: &str = "betelgeuze.engine_v2_native_water_box/1.0.0";
 pub const DEVELOPMENT_WATER_BOX_V1_PROFILE_ID: &str = "engine_v2_native_two_water_development_v1";
@@ -20,10 +21,17 @@ pub const DEVELOPMENT_WATER_BOX_CONSTRAINTS_V1_SCHEMA_ID: &str =
 pub const DEVELOPMENT_WATER_BOX_CONSTRAINTS_V1_PROFILE_ID: &str =
     "engine_v2_native_two_water_constraints_development_v1";
 pub const DEVELOPMENT_WATER_BOX_V1_ATOM_COUNT: usize = 6;
+pub const DEVELOPMENT_WATER_ION_V1_SCHEMA_ID: &str =
+    "betelgeuze.engine_v2_native_water_ion_profile/1.0.0";
+pub const DEVELOPMENT_WATER_ION_V1_PROFILE_ID: &str = "engine_v2_native_tip3p_nacl_development_v1";
+pub const DEVELOPMENT_WATER_ION_V1_PARAMETER_SOURCE_DOI: &str = "10.1021/jp8001614";
+pub const DEVELOPMENT_WATER_ION_V1_ATOM_COUNT: usize = 8;
 const DEVELOPMENT_WATER_BOX_V1_PROFILE_BYTES: &[u8] =
     include_bytes!("../assets/engine_v2_native_water_box_profile_v1.json");
 const DEVELOPMENT_WATER_BOX_CONSTRAINTS_V1_PROFILE_BYTES: &[u8] =
     include_bytes!("../assets/engine_v2_native_water_box_constraints_profile_v1.json");
+const DEVELOPMENT_WATER_ION_V1_PROFILE_BYTES: &[u8] =
+    include_bytes!("../assets/engine_v2_native_water_ion_profile_v1.json");
 
 const OH_DISTANCE_ANGSTROM: f64 = f64::from_bits(0x3feea161e4f765fe);
 const HOH_ANGLE_RADIANS: f64 = f64::from_bits(0x3ffd2fff5ab17aaf);
@@ -45,6 +53,11 @@ const HH_DISTANCE_ANGSTROM: f64 = 2.0 * f64::from_bits(0x3fe838efe48967cf);
 const CONSTRAINT_TOLERANCE_ANGSTROM: f64 = 1.0e-10;
 const CONSTRAINT_VELOCITY_TOLERANCE_ANGSTROM_PER_FEMTOSECOND: f64 = 1.0e-10;
 const CONSTRAINT_MAX_ITERATIONS: u32 = 100;
+
+const SODIUM_SIGMA_ANGSTROM: f64 = f64::from_bits(0x4003_83a5_9833_bb42);
+const SODIUM_EPSILON_KCAL_PER_MOL: f64 = f64::from_bits(0x3fb6_626c_05e2_9810);
+const CHLORIDE_SIGMA_ANGSTROM: f64 = f64::from_bits(0x4011_e91e_e7ca_8064);
+const CHLORIDE_EPSILON_KCAL_PER_MOL: f64 = f64::from_bits(0x3fa2_38fb_ca10_59ea);
 
 const POSITION_X: [f64; DEVELOPMENT_WATER_BOX_V1_ATOM_COUNT] = [
     0.0,
@@ -103,6 +116,100 @@ const EXCLUSIONS: [PairExclusion; 6] = [
     exclusion(4, 5),
 ];
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct DevelopmentIonIdentityV1 {
+    pub atomic_number: u8,
+    pub formal_charge: i8,
+}
+
+impl DevelopmentIonIdentityV1 {
+    pub const SODIUM: Self = Self {
+        atomic_number: 11,
+        formal_charge: 1,
+    };
+    pub const CHLORIDE: Self = Self {
+        atomic_number: 17,
+        formal_charge: -1,
+    };
+
+    pub const fn new(atomic_number: u8, formal_charge: i8) -> Self {
+        Self {
+            atomic_number,
+            formal_charge,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DevelopmentIonSpeciesV1 {
+    Sodium,
+    Chloride,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct DevelopmentIonParametersV1 {
+    pub species: DevelopmentIonSpeciesV1,
+    pub identity: DevelopmentIonIdentityV1,
+    pub charge_elementary: f64,
+    pub mass_dalton: f64,
+    pub rmin_over_2_angstrom: f64,
+    pub sigma_angstrom: f64,
+    pub epsilon_kcal_per_mol: f64,
+    pub parameter_source_doi: &'static str,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DevelopmentIonParameterErrorV1 {
+    UnsupportedIdentity(DevelopmentIonIdentityV1),
+}
+
+impl fmt::Display for DevelopmentIonParameterErrorV1 {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::UnsupportedIdentity(identity) => write!(
+                formatter,
+                "unsupported development ion identity: atomic_number={}, formal_charge={}",
+                identity.atomic_number, identity.formal_charge
+            ),
+        }
+    }
+}
+
+impl std::error::Error for DevelopmentIonParameterErrorV1 {}
+
+pub fn development_ion_parameters_v1(
+    identity: DevelopmentIonIdentityV1,
+) -> std::result::Result<DevelopmentIonParametersV1, DevelopmentIonParameterErrorV1> {
+    let parameters = match identity {
+        DevelopmentIonIdentityV1::SODIUM => DevelopmentIonParametersV1 {
+            species: DevelopmentIonSpeciesV1::Sodium,
+            identity,
+            charge_elementary: 1.0,
+            mass_dalton: 22.99,
+            rmin_over_2_angstrom: 1.369,
+            sigma_angstrom: SODIUM_SIGMA_ANGSTROM,
+            epsilon_kcal_per_mol: SODIUM_EPSILON_KCAL_PER_MOL,
+            parameter_source_doi: DEVELOPMENT_WATER_ION_V1_PARAMETER_SOURCE_DOI,
+        },
+        DevelopmentIonIdentityV1::CHLORIDE => DevelopmentIonParametersV1 {
+            species: DevelopmentIonSpeciesV1::Chloride,
+            identity,
+            charge_elementary: -1.0,
+            mass_dalton: 35.45,
+            rmin_over_2_angstrom: 2.513,
+            sigma_angstrom: CHLORIDE_SIGMA_ANGSTROM,
+            epsilon_kcal_per_mol: CHLORIDE_EPSILON_KCAL_PER_MOL,
+            parameter_source_doi: DEVELOPMENT_WATER_ION_V1_PARAMETER_SOURCE_DOI,
+        },
+        unsupported => {
+            return Err(DevelopmentIonParameterErrorV1::UnsupportedIdentity(
+                unsupported,
+            ));
+        }
+    };
+    Ok(parameters)
+}
+
 const fn oxygen_nonbonded() -> AtomNonbonded {
     AtomNonbonded {
         sigma_angstrom: OXYGEN_SIGMA_ANGSTROM,
@@ -159,6 +266,59 @@ fn single_water_system() -> Result<System> {
     ))
 }
 
+fn water_ion_system() -> Result<System> {
+    let sodium = development_ion_parameters_v1(DevelopmentIonIdentityV1::SODIUM)
+        .map_err(|error| invalid(error.to_string()))?;
+    let chloride = development_ion_parameters_v1(DevelopmentIonIdentityV1::CHLORIDE)
+        .map_err(|error| invalid(error.to_string()))?;
+    let position_x = [
+        POSITION_X[0],
+        POSITION_X[1],
+        POSITION_X[2],
+        POSITION_X[3],
+        POSITION_X[4],
+        POSITION_X[5],
+        8.0,
+        10.5,
+    ];
+    let position_y = [
+        POSITION_Y[0],
+        POSITION_Y[1],
+        POSITION_Y[2],
+        POSITION_Y[3],
+        POSITION_Y[4],
+        POSITION_Y[5],
+        2.0,
+        2.0,
+    ];
+    let position_z = [0.0; DEVELOPMENT_WATER_ION_V1_ATOM_COUNT];
+    let mass = [
+        MASS_DALTON[0],
+        MASS_DALTON[1],
+        MASS_DALTON[2],
+        MASS_DALTON[3],
+        MASS_DALTON[4],
+        MASS_DALTON[5],
+        sodium.mass_dalton,
+        chloride.mass_dalton,
+    ];
+    let charge = [
+        CHARGE_ELEMENTARY[0],
+        CHARGE_ELEMENTARY[1],
+        CHARGE_ELEMENTARY[2],
+        CHARGE_ELEMENTARY[3],
+        CHARGE_ELEMENTARY[4],
+        CHARGE_ELEMENTARY[5],
+        sodium.charge_elementary,
+        chloride.charge_elementary,
+    ];
+    System::new(ParticleSoa::new(
+        PositionSoa::new(&position_x, &position_y, &position_z),
+        &mass,
+        &charge,
+    ))
+}
+
 fn forcefield() -> Result<ForceField> {
     let mut input = ForceFieldInput::new(&ATOM_NONBONDED);
     input.bonds = &BONDS;
@@ -184,11 +344,48 @@ fn single_water_forcefield() -> Result<ForceField> {
     ForceField::new(input)
 }
 
-fn require_cpu_backend(context: &Context) -> Result<()> {
+fn water_ion_forcefield() -> Result<ForceField> {
+    let sodium = development_ion_parameters_v1(DevelopmentIonIdentityV1::SODIUM)
+        .map_err(|error| invalid(error.to_string()))?;
+    let chloride = development_ion_parameters_v1(DevelopmentIonIdentityV1::CHLORIDE)
+        .map_err(|error| invalid(error.to_string()))?;
+    let atom_nonbonded = [
+        ATOM_NONBONDED[0],
+        ATOM_NONBONDED[1],
+        ATOM_NONBONDED[2],
+        ATOM_NONBONDED[3],
+        ATOM_NONBONDED[4],
+        ATOM_NONBONDED[5],
+        AtomNonbonded {
+            sigma_angstrom: sodium.sigma_angstrom,
+            epsilon_kcal_per_mol: sodium.epsilon_kcal_per_mol,
+        },
+        AtomNonbonded {
+            sigma_angstrom: chloride.sigma_angstrom,
+            epsilon_kcal_per_mol: chloride.epsilon_kcal_per_mol,
+        },
+    ];
+    let mut input = ForceFieldInput::new(&atom_nonbonded);
+    input.bonds = &BONDS;
+    input.angles = &ANGLES;
+    input.exclusions = &EXCLUSIONS;
+    input.cell = Some(OrthorhombicCell {
+        lengths_angstrom: [BOX_ANGSTROM; 3],
+        periodic_axes: [true; 3],
+    });
+    input.nonbonded.cutoff_angstrom = CUTOFF_ANGSTROM;
+    input.nonbonded.switch_start_angstrom = SWITCH_START_ANGSTROM;
+    input.nonbonded.dielectric = 1.0;
+    input.nonbonded.screening_kappa_per_angstrom = 0.0;
+    input.nonbonded.minimum_pair_distance_angstrom = 1.0e-10;
+    ForceField::new(input)
+}
+
+fn require_cpu_backend(context: &Context, profile_id: &str) -> Result<()> {
     match context.backend()? {
         Backend::CppCpuReference | Backend::RustCpu => Ok(()),
         backend => Err(invalid(format!(
-            "{DEVELOPMENT_WATER_BOX_V1_PROFILE_ID} is a CPU-only development profile; resolved backend {backend:?} is not admitted"
+            "{profile_id} is a CPU-only development profile; resolved backend {backend:?} is not admitted"
         ))),
     }
 }
@@ -203,16 +400,27 @@ pub fn development_water_box_constraints_v1_profile_sha256() -> [u8; 32] {
     Sha256::digest(DEVELOPMENT_WATER_BOX_CONSTRAINTS_V1_PROFILE_BYTES).into()
 }
 
+/// SHA-256 of the exact bounded NaCl development profile embedded into this runtime.
+pub fn development_water_ion_v1_profile_sha256() -> [u8; 32] {
+    Sha256::digest(DEVELOPMENT_WATER_ION_V1_PROFILE_BYTES).into()
+}
+
 /// Evaluate one frozen unconstrained water through a selected CPU backend.
 pub fn evaluate_development_single_water_v1(context: &Context) -> Result<Evaluation> {
-    require_cpu_backend(context)?;
+    require_cpu_backend(context, DEVELOPMENT_WATER_BOX_V1_PROFILE_ID)?;
     context.evaluate(&single_water_system()?, &single_water_forcefield()?)
 }
 
 /// Evaluate the frozen initial coordinates through the selected native backend.
 pub fn evaluate_development_water_box_v1(context: &Context) -> Result<Evaluation> {
-    require_cpu_backend(context)?;
+    require_cpu_backend(context, DEVELOPMENT_WATER_BOX_V1_PROFILE_ID)?;
     context.evaluate(&system()?, &forcefield()?)
+}
+
+/// Evaluate the frozen neutral two-water plus Na+/Cl- static CPU fixture.
+pub fn evaluate_development_water_ion_v1(context: &Context) -> Result<Evaluation> {
+    require_cpu_backend(context, DEVELOPMENT_WATER_ION_V1_PROFILE_ID)?;
+    context.evaluate(&water_ion_system()?, &water_ion_forcefield()?)
 }
 
 /// Native-owned frozen two-water development simulation.
@@ -327,7 +535,7 @@ impl DevelopmentWaterBoxV1 {
     }
 
     pub fn integrate(&mut self, context: &Context, step_count: u64) -> Result<DynamicsReport> {
-        require_cpu_backend(context)?;
+        require_cpu_backend(context, DEVELOPMENT_WATER_BOX_V1_PROFILE_ID)?;
         context.integrate(&mut self.simulation, step_count)
     }
 
@@ -350,7 +558,7 @@ impl DevelopmentWaterBoxV1 {
 
 #[cfg(test)]
 mod tests {
-    use super::{HH_DISTANCE_ANGSTROM, OH_DISTANCE_ANGSTROM};
+    use super::{CHARGE_ELEMENTARY, HH_DISTANCE_ANGSTROM, OH_DISTANCE_ANGSTROM};
     use crate as runtime;
 
     const TOLERANCE: f64 = 2.0e-11;
@@ -365,6 +573,95 @@ mod tests {
 
         assert!(cpp_evaluation.energy.total_kcal_per_mol.abs() < 1.0e-24);
         assert_evaluation_close(&cpp_evaluation, &rust_evaluation, TOLERANCE);
+    }
+
+    #[test]
+    fn frozen_water_ion_catalog_is_exact_and_rejects_unsupported_identities() {
+        assert_eq!(
+            runtime::DEVELOPMENT_WATER_ION_V1_SCHEMA_ID,
+            "betelgeuze.engine_v2_native_water_ion_profile/1.0.0"
+        );
+        assert_eq!(
+            runtime::DEVELOPMENT_WATER_ION_V1_PROFILE_ID,
+            "engine_v2_native_tip3p_nacl_development_v1"
+        );
+        assert_eq!(
+            runtime::DEVELOPMENT_WATER_ION_V1_PARAMETER_SOURCE_DOI,
+            "10.1021/jp8001614"
+        );
+        assert_eq!(
+            runtime::development_water_ion_v1_profile_sha256(),
+            [
+                0x40, 0x99, 0x02, 0xe5, 0xf6, 0x77, 0x6b, 0xd5, 0x8c, 0x76, 0xf8, 0x0a, 0x57, 0x2c,
+                0x9c, 0xf9, 0x78, 0xf7, 0xe2, 0xf4, 0x93, 0x80, 0x03, 0xe5, 0x60, 0x90, 0x36, 0xbf,
+                0xe9, 0x1c, 0x63, 0x1f,
+            ]
+        );
+
+        let sodium =
+            runtime::development_ion_parameters_v1(runtime::DevelopmentIonIdentityV1::SODIUM)
+                .unwrap();
+        assert_eq!(sodium.species, runtime::DevelopmentIonSpeciesV1::Sodium);
+        assert_eq!(sodium.charge_elementary.to_bits(), 1.0f64.to_bits());
+        assert_eq!(sodium.mass_dalton.to_bits(), 22.99f64.to_bits());
+        assert_eq!(sodium.rmin_over_2_angstrom.to_bits(), 1.369f64.to_bits());
+        assert_eq!(sodium.sigma_angstrom.to_bits(), 0x4003_83a5_9833_bb42);
+        assert_eq!(sodium.epsilon_kcal_per_mol.to_bits(), 0x3fb6_626c_05e2_9810);
+        let converted_sodium_sigma = 2.0 * sodium.rmin_over_2_angstrom / 2.0f64.powf(1.0 / 6.0);
+        assert!((converted_sodium_sigma - sodium.sigma_angstrom).abs() <= 1.0e-15);
+
+        let chloride =
+            runtime::development_ion_parameters_v1(runtime::DevelopmentIonIdentityV1::CHLORIDE)
+                .unwrap();
+        assert_eq!(chloride.species, runtime::DevelopmentIonSpeciesV1::Chloride);
+        assert_eq!(chloride.charge_elementary.to_bits(), (-1.0f64).to_bits());
+        assert_eq!(chloride.mass_dalton.to_bits(), 35.45f64.to_bits());
+        assert_eq!(chloride.rmin_over_2_angstrom.to_bits(), 2.513f64.to_bits());
+        assert_eq!(chloride.sigma_angstrom.to_bits(), 0x4011_e91e_e7ca_8064);
+        assert_eq!(
+            chloride.epsilon_kcal_per_mol.to_bits(),
+            0x3fa2_38fb_ca10_59ea
+        );
+        let converted_chloride_sigma = 2.0 * chloride.rmin_over_2_angstrom / 2.0f64.powf(1.0 / 6.0);
+        assert!((converted_chloride_sigma - chloride.sigma_angstrom).abs() <= 1.0e-15);
+        assert_eq!(
+            CHARGE_ELEMENTARY.iter().sum::<f64>()
+                + sodium.charge_elementary
+                + chloride.charge_elementary,
+            0.0
+        );
+
+        for identity in [
+            runtime::DevelopmentIonIdentityV1::new(11, 0),
+            runtime::DevelopmentIonIdentityV1::new(19, 1),
+        ] {
+            assert_eq!(
+                runtime::development_ion_parameters_v1(identity),
+                Err(runtime::DevelopmentIonParameterErrorV1::UnsupportedIdentity(identity))
+            );
+        }
+    }
+
+    #[test]
+    fn frozen_neutral_water_ion_fixture_matches_across_cpu_backends() {
+        let cpp = runtime::Context::new(runtime::ContextOptions::cpu_reference()).unwrap();
+        let rust = runtime::Context::new(runtime::ContextOptions::rust_cpu()).unwrap();
+        let cpp_result = runtime::evaluate_development_water_ion_v1(&cpp).unwrap();
+        let rust_result = runtime::evaluate_development_water_ion_v1(&rust).unwrap();
+        assert_eq!(cpp_result.energy, rust_result.energy);
+        assert_eq!(cpp_result.forces, rust_result.forces);
+        assert_eq!(
+            cpp_result.forces.x_kcal_per_mol_angstrom.len(),
+            runtime::DEVELOPMENT_WATER_ION_V1_ATOM_COUNT
+        );
+        assert!(cpp_result.energy.total_kcal_per_mol.is_finite());
+        assert!(cpp_result
+            .forces
+            .x_kcal_per_mol_angstrom
+            .iter()
+            .chain(&cpp_result.forces.y_kcal_per_mol_angstrom)
+            .chain(&cpp_result.forces.z_kcal_per_mol_angstrom)
+            .all(|value| value.is_finite()));
     }
 
     #[test]

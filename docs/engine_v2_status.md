@@ -78,7 +78,10 @@ The current `main` branch contains:
   fully periodic nonbonded CPU work through deterministic cell lists with
   inclusive-cutoff membership, canonical pair order, wrapped-cell
   deduplication, integer-box translation and atom-permutation invariance, and
-  independent all-pairs oracle parity.
+  independent all-pairs oracle parity. A bounded successor adds explicit
+  Joung/Cheatham TIP3P-targeted Na+/Cl- identities, a charge-neutral static
+  CPU/oracle fixture, and typed rejection of every unsupported element/charge
+  pair without claiming general ion preparation or parameter applicability.
   The entry point is CPU-only and has no PME, neighbor-list reuse/performance,
   ion, protein, production-MD, scientific, free-energy, benchmark, product,
   Stage 0, or performance authority;
