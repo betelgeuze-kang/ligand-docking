@@ -62,6 +62,7 @@ const VENDORED_FILES: &[&str] = &[
     "native/src/forcefield.cpp",
     "native/src/system.cpp",
     "native/src/cpu/evaluator.hpp",
+    "native/src/cpu/neighbor_pair.hpp",
     "native/src/cpu/evaluator.cpp",
     "native/src/rust/provider.h",
     "native/src/rust/evaluator.hpp",
