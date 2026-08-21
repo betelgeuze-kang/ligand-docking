@@ -199,6 +199,15 @@ cutoff. The independent all-pairs oracle remains the validation source.
 Lists rebuild on every evaluation and carry no performance or acceleration
 claim.
 
+The next SHA-bound successor admits only explicit Na+ and Cl- identities from
+the Joung/Cheatham TIP3P-targeted parameter table, converts the source
+`Rmin/2` representation to the native sigma convention, and rejects every
+other element/charge pair with a typed error. One charge-neutral static
+two-water/Na+/Cl- fixture is checked against the independent all-pairs oracle
+and both CPU backends. It is not a trajectory or scientific applicability
+claim, and it does not authorize general ion preparation or long-range
+electrostatics.
+
 See `docs/engine_v2_native_water_box_v1.md` for the frozen development metrics
 and remaining scientific boundaries.
 

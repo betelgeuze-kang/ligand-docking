@@ -26,6 +26,17 @@ The periodic CPU traversal successor is
 It binds the rigid-water successor's exact digest and is embedded into the
 runtime without changing either earlier profile identity.
 
+The bounded ion successor is
+`config/engine_v2_native_water_ion_profile_v1.json`, SHA-256
+`409902e5f6776bd58c76f80a572c9cf978f7e2f4938003e5609036bfe91c631f`.
+It admits only the explicit identities `(atomic_number=11, formal_charge=+1)`
+and `(atomic_number=17, formal_charge=-1)`. Their TIP3P-targeted `Rmin/2` and
+epsilon values are bound to Joung and Cheatham,
+[DOI 10.1021/jp8001614](https://doi.org/10.1021/jp8001614), and converted to the
+native sigma convention by `sigma = 2 * (Rmin/2) / 2^(1/6)`. Every other
+element/charge identity returns a domain-specific typed error rather than an
+implicit fallback.
+
 The profile is an explicit successor to the Python development profile merged
 in PR #340. It binds that predecessor's exact SHA-256 and records the semantic
 changes: the canonical native ABI Coulomb constant plus native cutoff and
@@ -88,13 +99,19 @@ independent-oracle tests then
 exercise the cell-list path through both CPU evaluators for energy, force, NVE,
 BAOAB, constraints, and checkpoint parity.
 
+A separate neutral static fixture adds one Na+ and one Cl- to the two-water
+box. The independent all-pairs oracle checks every analytic force component by
+central difference and both CPU evaluators. It is deliberately not integrated
+as a trajectory, concentration model, or equilibrium observation.
+
 These are tiny-fixture development observations. They are not equilibrium NVT
 statistics, stability validation, throughput measurements, or acceleration
 evidence.
 
 ## Remaining boundaries
 
-The slice has no neighbor-list reuse or performance evidence, ions, PME/Ewald,
+The slice has no neighbor-list reuse or performance evidence, general ion
+preparation, PME/Ewald,
 NPT/barostat, peptide or protein system, public benchmark, production-MD,
 free-energy, scientific-claim, product, Stage 0, Fresh-128, reservation, or
 performance-claim authority. The rigid-water checks are synthetic CPU

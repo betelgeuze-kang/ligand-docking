@@ -28,6 +28,9 @@ NEIGHBOR_LIST_PROFILE = json.loads(
         ROOT / "config/engine_v2_native_periodic_neighbor_list_profile_v1.json"
     ).read_text()
 )
+ION_PROFILE = json.loads(
+    (ROOT / "config/engine_v2_native_water_ion_profile_v1.json").read_text()
+)
 
 
 def test_native_profile_matches_the_packaged_runtime_asset() -> None:
@@ -101,6 +104,30 @@ def test_native_neighbor_list_profile_matches_the_packaged_runtime_asset() -> No
     assert all(
         value is False for value in NEIGHBOR_LIST_PROFILE["authority"].values()
     )
+
+
+def test_native_water_ion_profile_matches_the_packaged_runtime_asset() -> None:
+    canonical = (ROOT / "config/engine_v2_native_water_ion_profile_v1.json").read_bytes()
+    packaged = (
+        ROOT
+        / "rust/betelgeuze-runtime/assets/engine_v2_native_water_ion_profile_v1.json"
+    ).read_bytes()
+    assert packaged == canonical
+    assert hashlib.sha256(canonical).hexdigest() == (
+        "409902e5f6776bd58c76f80a572c9cf978f7e2f4938003e5609036bfe91c631f"
+    )
+    assert ION_PROFILE["predecessor"]["sha256"] == (
+        "ee2c64b3e40ec1905a97b0c2646e36c59fe30f674adfd019dde016e2637e3628"
+    )
+    assert ION_PROFILE["parameter_source"]["doi"] == "10.1021/jp8001614"
+    assert ION_PROFILE["parameter_source"]["water_model_target"] == "TIP3P"
+    assert [
+        (row["atomic_number"], row["formal_charge"])
+        for row in ION_PROFILE["supported_identities"]
+    ] == [(11, 1), (17, -1)]
+    assert ION_PROFILE["fixture"]["total_charge_elementary"] == 0.0
+    assert ION_PROFILE["fixture"]["static_energy_force_evaluation_only"] is True
+    assert all(value is False for value in ION_PROFILE["authority"].values())
 
 
 def test_analytic_force_matches_finite_difference() -> None:
