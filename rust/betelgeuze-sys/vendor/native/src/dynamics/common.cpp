@@ -5,7 +5,9 @@
 #include "../rust/evaluator.hpp"
 #include "sha256.hpp"
 
+#include <algorithm>
 #include <cstddef>
+#include <vector>
 
 namespace betelgeuze::native::dynamics {
 namespace {
@@ -53,6 +55,33 @@ bg_status evaluate(
         return fail(
             BG_STATUS_INVALID_ARGUMENT,
             "context and simulation unit systems must match");
+    }
+    if (forcefield.periodic_axes_mask ==
+            static_cast<uint32_t>(BG_PERIODIC_AXES_ALL) &&
+        (context.backend == BG_BACKEND_CPP_CPU_REFERENCE ||
+         context.backend == BG_BACKEND_RUST_CPU)) {
+        std::vector<cpu::NeighborPair> neighbor_pairs;
+        const double search_radius =
+            std::max(forcefield.cutoff, forcefield.minimum_pair_distance);
+        bg_status status = cpu::build_periodic_neighbor_pairs(
+            system, forcefield, search_radius, &neighbor_pairs);
+        if (status != BG_STATUS_OK) {
+            return status;
+        }
+        if (context.backend == BG_BACKEND_CPP_CPU_REFERENCE) {
+            return cpu::evaluate_with_neighbor_pairs(
+                system,
+                forcefield,
+                neighbor_pairs,
+                compute_forces,
+                out_evaluation);
+        }
+        return rust_cpu::evaluate_with_neighbor_pairs(
+            system,
+            forcefield,
+            neighbor_pairs,
+            compute_forces,
+            out_evaluation);
     }
     switch (context.backend) {
         case BG_BACKEND_CPP_CPU_REFERENCE:

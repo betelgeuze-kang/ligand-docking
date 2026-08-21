@@ -38,9 +38,10 @@ bg_status normalize_provider_status(int32_t status) noexcept {
 
 }  // namespace
 
-bg_status evaluate(
+bg_status evaluate_impl(
     const bg_system &system,
     const bg_forcefield &forcefield,
+    const std::vector<cpu::NeighborPair> *neighbor_pairs,
     bool compute_forces,
     cpu::Evaluation *out_evaluation) {
     static_assert(std::is_standard_layout_v<bg_forcefield::Pair>);
@@ -50,6 +51,13 @@ bg_status evaluate(
     static_assert(offsetof(bg_forcefield::Pair, atom_i) ==
                   offsetof(bg_rust_cpu_pair_v1, atom_i));
     static_assert(offsetof(bg_forcefield::Pair, atom_j) ==
+                  offsetof(bg_rust_cpu_pair_v1, atom_j));
+    static_assert(std::is_standard_layout_v<cpu::NeighborPair>);
+    static_assert(sizeof(cpu::NeighborPair) == sizeof(bg_rust_cpu_pair_v1));
+    static_assert(alignof(cpu::NeighborPair) == alignof(bg_rust_cpu_pair_v1));
+    static_assert(offsetof(cpu::NeighborPair, atom_i) ==
+                  offsetof(bg_rust_cpu_pair_v1, atom_i));
+    static_assert(offsetof(cpu::NeighborPair, atom_j) ==
                   offsetof(bg_rust_cpu_pair_v1, atom_j));
     static_assert(
         sizeof(bg_forcefield::PairScale) == sizeof(bg_rust_cpu_pair_scale_v1));
@@ -154,13 +162,24 @@ bg_status evaluate(
     provider_error.struct_size = static_cast<uint32_t>(sizeof(provider_error));
     provider_error.abi_version = BG_RUST_CPU_PROVIDER_ABI_VERSION;
 
-    const int32_t raw_status = bg_rust_cpu_evaluate_v1(
-        &provider_system,
-        &provider_forcefield,
-        compute_forces ? UINT8_C(1) : UINT8_C(0),
-        &provider_energy,
-        compute_forces ? &provider_forces : nullptr,
-        &provider_error);
+    const int32_t raw_status = neighbor_pairs == nullptr
+        ? bg_rust_cpu_evaluate_v1(
+              &provider_system,
+              &provider_forcefield,
+              compute_forces ? UINT8_C(1) : UINT8_C(0),
+              &provider_energy,
+              compute_forces ? &provider_forces : nullptr,
+              &provider_error)
+        : bg_rust_cpu_evaluate_with_neighbor_pairs_v1(
+              &provider_system,
+              &provider_forcefield,
+              neighbor_pairs->size(),
+              reinterpret_cast<const bg_rust_cpu_pair_v1 *>(
+                  data_or_null(*neighbor_pairs)),
+              compute_forces ? UINT8_C(1) : UINT8_C(0),
+              &provider_energy,
+              compute_forces ? &provider_forces : nullptr,
+              &provider_error);
     const bg_status status = normalize_provider_status(raw_status);
     if (status != BG_STATUS_OK) {
         provider_error.message[BG_RUST_CPU_ERROR_CAPACITY - 1U] = '\0';
@@ -186,6 +205,29 @@ bg_status evaluate(
     candidate.energy.total_kcal_per_mol = provider_energy.total;
     *out_evaluation = std::move(candidate);
     return BG_STATUS_OK;
+}
+
+bg_status evaluate(
+    const bg_system &system,
+    const bg_forcefield &forcefield,
+    bool compute_forces,
+    cpu::Evaluation *out_evaluation) {
+    return evaluate_impl(
+        system, forcefield, nullptr, compute_forces, out_evaluation);
+}
+
+bg_status evaluate_with_neighbor_pairs(
+    const bg_system &system,
+    const bg_forcefield &forcefield,
+    const std::vector<cpu::NeighborPair> &neighbor_pairs,
+    bool compute_forces,
+    cpu::Evaluation *out_evaluation) {
+    return evaluate_impl(
+        system,
+        forcefield,
+        &neighbor_pairs,
+        compute_forces,
+        out_evaluation);
 }
 
 }  // namespace betelgeuze::native::rust_cpu

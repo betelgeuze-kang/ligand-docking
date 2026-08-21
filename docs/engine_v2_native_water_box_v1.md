@@ -74,6 +74,20 @@ tree nodes. These are implementation changes under the same mathematical
 profile and do not constitute timing evidence or an acceleration claim.
 This first functional list has no skin or reuse cache.
 
+The two CPU evaluators also expose an internal, non-public path that consumes a
+caller-owned canonical neighbor-pair slice. Both implementations require
+strictly increasing, unique, in-range `atom_i < atom_j` rows and reject the
+slice for non-fully-periodic systems. The Rust path crosses a separate hidden
+provider symbol and remains transactional on malformed rows. Buffered slices
+may contain pairs outside the force cutoff because the ordinary pair evaluator
+still applies exclusions, minimum-distance validation, and the exact cutoff in
+canonical order. The native dynamics dispatcher constructs one canonical slice
+per fully periodic CPU evaluation and supplies the same representation to the
+selected C++ or Rust evaluator. The public stateless context continues to use
+the backend-owned builder on every call. Neither path reuses a list yet; this
+shared dynamics boundary is the prerequisite for a later `Simulation`-owned
+skin/reuse cache.
+
 ## Frozen development observations
 
 The independently implemented Python oracle and both native CPU backends agree

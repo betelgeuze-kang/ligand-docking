@@ -2835,6 +2835,7 @@ unsafe fn cluster_direct_rmsd_fixed64(
 unsafe fn evaluate_impl(
     system: *const SystemV1,
     forcefield: *const ForceFieldV1,
+    neighbor_pairs: Option<&[Pair]>,
     compute_forces: u8,
     out_energy: *mut EnergyV1,
     out_forces: *mut ForceOutputV1,
@@ -2860,11 +2861,16 @@ unsafe fn evaluate_impl(
     let output_channels =
         unsafe { validate_outputs(system.atom_count, compute_forces, out_energy, out_forces)? };
     let (system, forcefield) = unsafe { build_inputs(system, forcefield)? };
-    let evaluation =
-        kernel::evaluate(&system, &forcefield, compute_forces).map_err(|error| ProviderError {
-            status: error.status,
-            message: error.message,
-        })?;
+    let evaluation = match neighbor_pairs {
+        Some(pairs) => {
+            kernel::evaluate_with_neighbor_pairs(&system, &forcefield, pairs, compute_forces)
+        }
+        None => kernel::evaluate(&system, &forcefield, compute_forces),
+    }
+    .map_err(|error| ProviderError {
+        status: error.status,
+        message: error.message,
+    })?;
 
     let energy = EnergyV1 {
         struct_size: u32::try_from(size_of::<EnergyV1>()).unwrap_or(0),
@@ -2929,7 +2935,84 @@ pub unsafe extern "C" fn bg_rust_cpu_evaluate_v1(
     }
     clear_error(error);
     let result = catch_unwind(AssertUnwindSafe(|| unsafe {
-        evaluate_impl(system, forcefield, compute_forces, out_energy, out_forces)
+        evaluate_impl(
+            system,
+            forcefield,
+            None,
+            compute_forces,
+            out_energy,
+            out_forces,
+        )
+    }));
+    match result {
+        Ok(Ok(())) => STATUS_OK,
+        Ok(Err(provider_error)) => {
+            write_error(error, provider_error.message);
+            provider_error.status
+        }
+        Err(_) => {
+            write_error(error, "rust_cpu provider panicked");
+            STATUS_INTERNAL_ERROR
+        }
+    }
+}
+
+/// Evaluate through a caller-owned canonical neighbor-pair slice.
+///
+/// # Safety
+/// The base evaluator safety contract applies. `neighbor_pairs` must point to
+/// `neighbor_pair_count` readable canonical pair rows for the duration of this
+/// call; a zero count permits a null pointer.
+#[no_mangle]
+pub unsafe extern "C" fn bg_rust_cpu_evaluate_with_neighbor_pairs_v1(
+    system: *const SystemV1,
+    forcefield: *const ForceFieldV1,
+    neighbor_pair_count: usize,
+    neighbor_pairs: *const Pair,
+    compute_forces: u8,
+    out_energy: *mut EnergyV1,
+    out_forces: *mut ForceOutputV1,
+    out_error: *mut ErrorV1,
+) -> i32 {
+    let error = unsafe {
+        match out_error.as_mut() {
+            Some(error) => error,
+            None => return STATUS_INVALID_ARGUMENT,
+        }
+    };
+    if validate_header::<ErrorV1>(
+        error.struct_size,
+        error.abi_version,
+        "rust_cpu error output size mismatch",
+    )
+    .is_err()
+        || !reserved_is_zero(&error.reserved)
+    {
+        return STATUS_ABI_MISMATCH;
+    }
+    clear_error(error);
+    let pairs = unsafe {
+        match checked_slice(
+            neighbor_pairs,
+            neighbor_pair_count,
+            "neighbor pairs are null",
+        ) {
+            Ok(pairs) => pairs,
+            Err(provider_error) => {
+                write_error(error, provider_error.message);
+                return provider_error.status;
+            }
+        }
+    };
+    let result = catch_unwind(AssertUnwindSafe(|| unsafe {
+        evaluate_impl(
+            system,
+            forcefield,
+            Some(pairs),
+            compute_forces,
+            out_energy,
+            out_forces,
+        )
     }));
     match result {
         Ok(Ok(())) => STATUS_OK,
@@ -3775,6 +3858,186 @@ mod tests {
         assert_eq!(force_y, [0.0]);
         assert_eq!(force_z, [0.0]);
         assert_eq!(error_message(&error), "");
+    }
+
+    #[test]
+    fn provider_supplied_neighbor_pairs_match_automatic_and_fail_transactionally() {
+        let position_x = [0.2, 9.8];
+        let position_y = [0.0; 2];
+        let position_z = [0.0; 2];
+        let charge = [0.3, -0.4];
+        let sigma = [1.0; 2];
+        let epsilon = [0.05; 2];
+        let system = SystemV1 {
+            struct_size: u32::try_from(size_of::<SystemV1>()).unwrap(),
+            abi_version: PROVIDER_ABI_VERSION,
+            atom_count: 2,
+            position_x: position_x.as_ptr(),
+            position_y: position_y.as_ptr(),
+            position_z: position_z.as_ptr(),
+            charge: charge.as_ptr(),
+            reserved: [0; 4],
+        };
+        let forcefield = ForceFieldV1 {
+            struct_size: u32::try_from(size_of::<ForceFieldV1>()).unwrap(),
+            abi_version: PROVIDER_ABI_VERSION,
+            atom_count: 2,
+            sigma: sigma.as_ptr(),
+            epsilon: epsilon.as_ptr(),
+            bonds: BondSoaV1 {
+                count: 0,
+                atom_i: ptr::null(),
+                atom_j: ptr::null(),
+                equilibrium: ptr::null(),
+                force_constant: ptr::null(),
+            },
+            angles: AngleSoaV1 {
+                count: 0,
+                atom_i: ptr::null(),
+                atom_j: ptr::null(),
+                atom_k: ptr::null(),
+                equilibrium: ptr::null(),
+                force_constant: ptr::null(),
+            },
+            torsions: TorsionSoaV1 {
+                count: 0,
+                atom_i: ptr::null(),
+                atom_j: ptr::null(),
+                atom_k: ptr::null(),
+                atom_l: ptr::null(),
+                periodicity: ptr::null(),
+                phase: ptr::null(),
+                amplitude: ptr::null(),
+            },
+            exclusion_count: 0,
+            exclusions: ptr::null(),
+            pair_scale_count: 0,
+            pair_scales: ptr::null(),
+            periodic_axes_mask: 7,
+            reserved0: 0,
+            cell_lengths: [10.0; 3],
+            cutoff: 3.0,
+            switch_start: 2.5,
+            dielectric: 1.0,
+            screening_kappa: 0.0,
+            minimum_pair_distance: 1.0e-10,
+            reserved: [0; 4],
+        };
+        let mut automatic_energy = energy_with_sentinel(17.0);
+        let mut automatic_x = [19.0; 2];
+        let mut automatic_y = [23.0; 2];
+        let mut automatic_z = [29.0; 2];
+        let mut automatic_forces = ForceOutputV1 {
+            struct_size: u32::try_from(size_of::<ForceOutputV1>()).unwrap(),
+            abi_version: PROVIDER_ABI_VERSION,
+            capacity: 2,
+            x: automatic_x.as_mut_ptr(),
+            y: automatic_y.as_mut_ptr(),
+            z: automatic_z.as_mut_ptr(),
+            reserved: [0; 4],
+        };
+        let mut error = error_output();
+        // SAFETY: All descriptors point to live, correctly sized, disjoint storage.
+        assert_eq!(
+            unsafe {
+                bg_rust_cpu_evaluate_v1(
+                    &system,
+                    &forcefield,
+                    1,
+                    &mut automatic_energy,
+                    &mut automatic_forces,
+                    &mut error,
+                )
+            },
+            STATUS_OK
+        );
+
+        let pairs = [Pair {
+            atom_i: 0,
+            atom_j: 1,
+        }];
+        let mut supplied_energy = energy_with_sentinel(31.0);
+        let mut supplied_x = [37.0; 2];
+        let mut supplied_y = [41.0; 2];
+        let mut supplied_z = [43.0; 2];
+        let mut supplied_forces = ForceOutputV1 {
+            struct_size: u32::try_from(size_of::<ForceOutputV1>()).unwrap(),
+            abi_version: PROVIDER_ABI_VERSION,
+            capacity: 2,
+            x: supplied_x.as_mut_ptr(),
+            y: supplied_y.as_mut_ptr(),
+            z: supplied_z.as_mut_ptr(),
+            reserved: [0; 4],
+        };
+        // SAFETY: The canonical pair and all descriptors point to live,
+        // correctly sized, disjoint storage.
+        assert_eq!(
+            unsafe {
+                bg_rust_cpu_evaluate_with_neighbor_pairs_v1(
+                    &system,
+                    &forcefield,
+                    pairs.len(),
+                    pairs.as_ptr(),
+                    1,
+                    &mut supplied_energy,
+                    &mut supplied_forces,
+                    &mut error,
+                )
+            },
+            STATUS_OK
+        );
+        for (left, right) in [
+            (
+                automatic_energy.harmonic_bond,
+                supplied_energy.harmonic_bond,
+            ),
+            (
+                automatic_energy.harmonic_angle,
+                supplied_energy.harmonic_angle,
+            ),
+            (
+                automatic_energy.periodic_torsion,
+                supplied_energy.periodic_torsion,
+            ),
+            (
+                automatic_energy.lennard_jones,
+                supplied_energy.lennard_jones,
+            ),
+            (automatic_energy.coulomb, supplied_energy.coulomb),
+            (automatic_energy.total, supplied_energy.total),
+        ] {
+            assert_eq!(left.to_bits(), right.to_bits());
+        }
+        assert_eq!(automatic_x.map(f64::to_bits), supplied_x.map(f64::to_bits));
+        assert_eq!(automatic_y.map(f64::to_bits), supplied_y.map(f64::to_bits));
+        assert_eq!(automatic_z.map(f64::to_bits), supplied_z.map(f64::to_bits));
+
+        let duplicate = [pairs[0], pairs[0]];
+        let energy_before = supplied_energy.total.to_bits();
+        let x_before = supplied_x.map(f64::to_bits);
+        // SAFETY: The duplicate rows are readable and the provider must reject
+        // their semantics before committing any output.
+        assert_eq!(
+            unsafe {
+                bg_rust_cpu_evaluate_with_neighbor_pairs_v1(
+                    &system,
+                    &forcefield,
+                    duplicate.len(),
+                    duplicate.as_ptr(),
+                    1,
+                    &mut supplied_energy,
+                    &mut supplied_forces,
+                    &mut error,
+                )
+            },
+            STATUS_INVALID_ARGUMENT
+        );
+        assert_eq!(
+            error_message(&error),
+            "neighbor pairs must be unique sorted in-range canonical pairs"
+        );
+        assert_eq!(supplied_energy.total.to_bits(), energy_before);
+        assert_eq!(supplied_x.map(f64::to_bits), x_before);
     }
 
     #[test]

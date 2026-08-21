@@ -61,8 +61,8 @@ impl Vector3 {
 }
 
 #[repr(C)]
-#[derive(Clone, Copy)]
-pub(crate) struct Pair {
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Pair {
     pub atom_i: usize,
     pub atom_j: usize,
 }
@@ -182,12 +182,6 @@ impl KernelError {
 struct SwitchValue {
     value: f64,
     derivative: f64,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-struct NeighborPair {
-    atom_i: usize,
-    atom_j: usize,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -513,11 +507,20 @@ fn evaluate_torsions(
 fn evaluate_nonbonded(
     system: &System<'_>,
     forcefield: &ForceField<'_>,
+    neighbor_pairs: Option<&[Pair]>,
     compute_forces: bool,
     evaluation: &mut Evaluation,
 ) -> Result<(), KernelError> {
     if forcefield.periodic_axes_mask == 0b111 {
-        for pair in periodic_neighbor_pairs(system, forcefield)? {
+        let built_pairs;
+        let pairs = if let Some(pairs) = neighbor_pairs {
+            validate_neighbor_pairs(pairs, forcefield.atom_count)?;
+            pairs
+        } else {
+            built_pairs = periodic_neighbor_pairs(system, forcefield)?;
+            &built_pairs
+        };
+        for pair in pairs {
             evaluate_nonbonded_pair(
                 system,
                 forcefield,
@@ -528,6 +531,11 @@ fn evaluate_nonbonded(
             )?;
         }
     } else {
+        if neighbor_pairs.is_some() {
+            return Err(KernelError::invalid(
+                "neighbor pairs require a fully periodic orthorhombic system",
+            ));
+        }
         for atom_i in 0..forcefield.atom_count {
             for atom_j in (atom_i + 1)..forcefield.atom_count {
                 evaluate_nonbonded_pair(
@@ -540,6 +548,20 @@ fn evaluate_nonbonded(
                 )?;
             }
         }
+    }
+    Ok(())
+}
+
+fn validate_neighbor_pairs(pairs: &[Pair], atom_count: usize) -> Result<(), KernelError> {
+    let mut previous = None;
+    for pair in pairs {
+        let key = (pair.atom_i, pair.atom_j);
+        if pair.atom_i >= pair.atom_j || pair.atom_j >= atom_count || previous >= Some(key) {
+            return Err(KernelError::invalid(
+                "neighbor pairs must be unique sorted in-range canonical pairs",
+            ));
+        }
+        previous = Some(key);
     }
     Ok(())
 }
@@ -689,7 +711,7 @@ fn offset_periodic_cell(index: usize, offset: i8, count: usize) -> usize {
 fn periodic_neighbor_pairs(
     system: &System<'_>,
     forcefield: &ForceField<'_>,
-) -> Result<Vec<NeighborPair>, KernelError> {
+) -> Result<Vec<Pair>, KernelError> {
     let cell_counts = periodic_cell_counts(forcefield);
     let search_radius = forcefield.cutoff.max(forcefield.minimum_pair_distance);
     let search_radius_squared = inclusive_squared_radius(search_radius);
@@ -750,7 +772,7 @@ fn periodic_neighbor_pairs(
             if squared_distance <= search_radius_squared {
                 fallible_push(
                     &mut pairs,
-                    NeighborPair { atom_i, atom_j },
+                    Pair { atom_i, atom_j },
                     "periodic neighbor-list pair capacity failed",
                 )?;
             }
@@ -792,9 +814,10 @@ fn zeroed_force_channel(atom_count: usize) -> Result<Vec<f64>, KernelError> {
     Ok(values)
 }
 
-pub(crate) fn evaluate(
+fn evaluate_impl(
     system: &System<'_>,
     forcefield: &ForceField<'_>,
+    neighbor_pairs: Option<&[Pair]>,
     compute_forces: bool,
 ) -> Result<Evaluation, KernelError> {
     if !storage_is_consistent(system, forcefield) {
@@ -824,7 +847,13 @@ pub(crate) fn evaluate(
     evaluate_bonds(system, forcefield, compute_forces, &mut evaluation)?;
     evaluate_angles(system, forcefield, compute_forces, &mut evaluation)?;
     evaluate_torsions(system, forcefield, compute_forces, &mut evaluation)?;
-    evaluate_nonbonded(system, forcefield, compute_forces, &mut evaluation)?;
+    evaluate_nonbonded(
+        system,
+        forcefield,
+        neighbor_pairs,
+        compute_forces,
+        &mut evaluation,
+    )?;
     evaluation.energy.total = evaluation.energy.harmonic_bond
         + evaluation.energy.harmonic_angle
         + evaluation.energy.periodic_torsion
@@ -844,6 +873,23 @@ pub(crate) fn evaluate(
         return Err(KernelError::numerical("force output is not finite"));
     }
     Ok(evaluation)
+}
+
+pub(crate) fn evaluate(
+    system: &System<'_>,
+    forcefield: &ForceField<'_>,
+    compute_forces: bool,
+) -> Result<Evaluation, KernelError> {
+    evaluate_impl(system, forcefield, None, compute_forces)
+}
+
+pub(crate) fn evaluate_with_neighbor_pairs(
+    system: &System<'_>,
+    forcefield: &ForceField<'_>,
+    neighbor_pairs: &[Pair],
+    compute_forces: bool,
+) -> Result<Evaluation, KernelError> {
+    evaluate_impl(system, forcefield, Some(neighbor_pairs), compute_forces)
 }
 
 #[cfg(test)]
@@ -867,9 +913,9 @@ mod tests {
         let position_x = [0.2, 9.8, 4.0, 6.5, 1.0];
         let position_y = [0.0; 5];
         let position_z = [0.0; 5];
-        let charge = [0.0; 5];
+        let charge = [0.1, -0.2, 0.3, -0.4, 0.5];
         let sigma = [1.0; 5];
-        let epsilon = [0.0; 5];
+        let epsilon = [0.05; 5];
         let system = System {
             position_x: &position_x,
             position_y: &position_y,
@@ -914,23 +960,23 @@ mod tests {
         };
 
         let expected = vec![
-            NeighborPair {
+            Pair {
                 atom_i: 0,
                 atom_j: 1,
             },
-            NeighborPair {
+            Pair {
                 atom_i: 0,
                 atom_j: 4,
             },
-            NeighborPair {
+            Pair {
                 atom_i: 1,
                 atom_j: 4,
             },
-            NeighborPair {
+            Pair {
                 atom_i: 2,
                 atom_j: 3,
             },
-            NeighborPair {
+            Pair {
                 atom_i: 2,
                 atom_j: 4,
             },
@@ -938,6 +984,55 @@ mod tests {
         assert_eq!(
             periodic_neighbor_pairs(&system, &forcefield).unwrap(),
             expected
+        );
+        let automatic = evaluate(&system, &forcefield, true).unwrap();
+        let supplied = evaluate_with_neighbor_pairs(&system, &forcefield, &expected, true).unwrap();
+        for (left, right) in [
+            (
+                automatic.energy.harmonic_bond,
+                supplied.energy.harmonic_bond,
+            ),
+            (
+                automatic.energy.harmonic_angle,
+                supplied.energy.harmonic_angle,
+            ),
+            (
+                automatic.energy.periodic_torsion,
+                supplied.energy.periodic_torsion,
+            ),
+            (
+                automatic.energy.lennard_jones,
+                supplied.energy.lennard_jones,
+            ),
+            (automatic.energy.coulomb, supplied.energy.coulomb),
+            (automatic.energy.total, supplied.energy.total),
+        ] {
+            assert_eq!(left.to_bits(), right.to_bits());
+        }
+        for (left, right) in automatic
+            .force_x
+            .iter()
+            .chain(&automatic.force_y)
+            .chain(&automatic.force_z)
+            .zip(
+                supplied
+                    .force_x
+                    .iter()
+                    .chain(&supplied.force_y)
+                    .chain(&supplied.force_z),
+            )
+        {
+            assert_eq!(left.to_bits(), right.to_bits());
+        }
+        let malformed = [expected[0], expected[0]];
+        let error = match evaluate_with_neighbor_pairs(&system, &forcefield, &malformed, true) {
+            Ok(_) => panic!("duplicate supplied neighbor pair must be rejected"),
+            Err(error) => error,
+        };
+        assert_eq!(error.status, STATUS_INVALID_ARGUMENT);
+        assert_eq!(
+            error.message,
+            "neighbor pairs must be unique sorted in-range canonical pairs"
         );
 
         let translated_x = [20.2, -0.2, 14.0, -3.5, 11.0];
