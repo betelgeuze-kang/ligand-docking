@@ -59,12 +59,20 @@ bg_status periodic_neighbor_pairs(
     }
 
     std::vector<cpu::NeighborPair> pairs;
+    if (cache.build_scratch == nullptr || !cache.build_scratch.unique()) {
+        cache.build_scratch =
+            std::make_shared<cpu::NeighborBuildScratch>();
+    }
     const double search_radius = std::max(
         simulation->forcefield.cutoff,
         simulation->forcefield.minimum_pair_distance) +
         kNeighborListSkinAngstrom;
-    bg_status status = cpu::build_periodic_neighbor_pairs(
-        system, simulation->forcefield, search_radius, &pairs);
+    bg_status status = cpu::build_periodic_neighbor_pairs_reusing_scratch(
+        system,
+        simulation->forcefield,
+        search_radius,
+        cache.build_scratch.get(),
+        &pairs);
     if (status != BG_STATUS_OK) {
         return status;
     }

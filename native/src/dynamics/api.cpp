@@ -237,7 +237,11 @@ class IntegrationRollback final {
         : simulation_(simulation),
           snapshot_particle_channels_(snapshot_particle_channels),
           absolute_step_(simulation->absolute_step),
-          neighbor_list_cache_(simulation->neighbor_list_cache) {
+          neighbor_list_data_(simulation->neighbor_list_cache.data),
+          neighbor_list_build_count_(
+              simulation->neighbor_list_cache.build_count),
+          neighbor_list_reuse_count_(
+              simulation->neighbor_list_cache.reuse_count) {
         if (snapshot_particle_channels_) {
             position_x_ = simulation_->system.position_x;
             position_y_ = simulation_->system.position_y;
@@ -264,7 +268,12 @@ class IntegrationRollback final {
             restore_channel(velocity_z_, &simulation_->system.velocity_z);
         }
         simulation_->absolute_step = absolute_step_;
-        simulation_->neighbor_list_cache = std::move(neighbor_list_cache_);
+        simulation_->neighbor_list_cache.data =
+            std::move(neighbor_list_data_);
+        simulation_->neighbor_list_cache.build_count =
+            neighbor_list_build_count_;
+        simulation_->neighbor_list_cache.reuse_count =
+            neighbor_list_reuse_count_;
     }
 
     void commit() noexcept {
@@ -281,7 +290,10 @@ class IntegrationRollback final {
     bg_simulation *simulation_ = nullptr;
     bool snapshot_particle_channels_ = false;
     uint64_t absolute_step_ = UINT64_C(0);
-    bg_simulation::NeighborListCache neighbor_list_cache_;
+    std::shared_ptr<const bg_simulation::NeighborListCacheData>
+        neighbor_list_data_;
+    uint64_t neighbor_list_build_count_ = UINT64_C(0);
+    uint64_t neighbor_list_reuse_count_ = UINT64_C(0);
     std::vector<double> position_x_;
     std::vector<double> position_y_;
     std::vector<double> position_z_;

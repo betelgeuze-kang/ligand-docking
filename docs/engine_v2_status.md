@@ -87,7 +87,10 @@ The current `main` branch contains:
   strictly below 0.5 angstrom. Failed operations do not commit cache changes,
   transaction clones share the immutable cached atom/pair payload instead of
   deep-copying it, and successful checkpoint loads invalidate this unpersisted
-  derived state. CPU dynamics additionally retain work-local force-vector
+  derived state. Periodic CPU neighbor rebuilds retain four simulation-owned
+  cell-list scratch buffers across rebuilds without changing immutable pair
+  publication or semantic cache rollback. CPU dynamics additionally retain
+  work-local force-vector
   storage across repeated force evaluations within one transactional integrate
   or minimize call; public stateless evaluation, HIP evaluation, and failure
   commit semantics remain unchanged. Unconstrained drifts avoid unnecessary
