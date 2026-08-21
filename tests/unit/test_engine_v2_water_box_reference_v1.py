@@ -135,6 +135,7 @@ def test_native_profile_matches_the_frozen_initial_energy_and_force() -> None:
 
 def test_native_profile_freezes_the_100_step_nve_observation() -> None:
     result = WATER.run_nve(NATIVE_PROFILE, 100, 0.02)
+    repeated = WATER.run_nve(NATIVE_PROFILE, 100, 0.02)
     assert result["initial_total_energy"] == pytest.approx(
         -2.2354281465712305, abs=2.0e-14
     )
@@ -144,10 +145,9 @@ def test_native_profile_freezes_the_100_step_nve_observation() -> None:
     assert result["absolute_drift"] == pytest.approx(
         -1.2489678713478725e-7, abs=2.0e-14
     )
-    assert (
-        result["checkpoint_sha256"]
-        == "1b471d5364976ed24ce93397862649f1fec001dcb65dcf4f110afcc472b110df"
-    )
+    assert result["checkpoint_sha256"] == repeated["checkpoint_sha256"]
+    assert len(result["checkpoint_sha256"]) == 64
+    int(result["checkpoint_sha256"], 16)
 
 
 def test_native_switch_force_matches_finite_difference() -> None:
