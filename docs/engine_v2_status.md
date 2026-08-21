@@ -90,7 +90,10 @@ The current `main` branch contains:
   derived state. CPU dynamics additionally retain work-local force-vector
   storage across repeated force evaluations within one transactional integrate
   or minimize call; public stateless evaluation, HIP evaluation, and failure
-  commit semantics remain unchanged, and no timing claim is made.
+  commit semantics remain unchanged. Unconstrained drifts avoid unnecessary
+  coordinate snapshots, while constrained integration retains one work-local
+  three-channel snapshot buffer across all drifts in the call. No timing claim
+  is made.
   The entry point is CPU-only and has no PME, neighbor-list performance
   evidence, general ion preparation, protein, production-MD, scientific,
   free-energy, benchmark, product, Stage 0, or performance authority;
