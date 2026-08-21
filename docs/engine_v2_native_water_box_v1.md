@@ -13,6 +13,13 @@ The Rust runtime embeds those exact bytes, and its focused test freezes the same
 digest. The profile records angstrom, kcal/mol, dalton, femtosecond, and
 elementary-charge units.
 
+The rigid-water successor is
+`config/engine_v2_native_water_box_constraints_profile_v1.json`, SHA-256
+`8dcad0b5005b7a768ce0a88b1804b55ecddb9b3490e2dd59179dfa2393433507`.
+It binds the unconstrained profile's exact digest rather than changing that
+already-merged identity. The runtime embeds and independently hashes these
+successor bytes as well.
+
 The profile is an explicit successor to the Python development profile merged
 in PR #340. It binds that predecessor's exact SHA-256 and records the semantic
 changes: the canonical native ABI Coulomb constant plus native cutoff and
@@ -49,14 +56,22 @@ within the focused binary64 tolerance. The frozen observations are:
 - a Rust checkpoint restores all positions, velocities, masses, charges,
   integrator state, absolute step, and RNG continuation exactly.
 
+The rigid-water lane adds six frozen distance rows: two O-H and one H-H row per
+water. Its H-H target is `1.5139006545273224` angstrom, derived from the frozen
+coordinates; both SHAKE position and RATTLE radial-velocity tolerances are
+`1e-10`, with at most 100 deterministic sweeps. Focused tests require 12
+degrees of freedom, residuals within the frozen tolerances, C++ reference/Rust
+CPU state parity after 100 NVE and 128 seeded BAOAB steps, and bit-exact 32-step
+continuation from a Rust checkpoint.
+
 These are tiny-fixture development observations. They are not equilibrium NVT
 statistics, stability validation, throughput measurements, or acceleration
 evidence.
 
 ## Remaining boundaries
 
-The slice has no SHAKE/RATTLE water constraint validation, neighbor-list
-performance evidence, ions, PME/Ewald, NPT/barostat, peptide or protein system,
-public benchmark, production-MD, free-energy, scientific-claim, product,
-Stage 0, Fresh-128, reservation, or performance-claim authority. Those remain
-separate reviewed dependencies.
+The slice has no neighbor-list performance evidence, ions, PME/Ewald,
+NPT/barostat, peptide or protein system, public benchmark, production-MD,
+free-energy, scientific-claim, product, Stage 0, Fresh-128, reservation, or
+performance-claim authority. The rigid-water checks are synthetic CPU
+development validation only; those broader dependencies remain separate.

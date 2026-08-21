@@ -178,6 +178,15 @@ single-water and two-water energy/force parity, 100-step Velocity Verlet parity,
 128-step seeded BAOAB parity, and bit-exact Rust checkpoint continuation. The compiled runtime
 embeds the exact profile bytes and exposes their SHA-256 identity.
 
+A separate immutable successor profile,
+`config/engine_v2_native_water_box_constraints_profile_v1.json`, adds the six
+rigid-water distance rows without mutating that base identity. The native CPU
+lane now validates SHAKE/RATTLE position and radial-velocity residuals, the
+12-degree-of-freedom report, 100-step NVE and 128-step seeded BAOAB C++/Rust
+parity, and bit-exact checkpoint continuation. This is bounded synthetic CPU
+development evidence and grants no molecular, production, scientific,
+performance, Stage 0, Fresh-128, reservation, or HIP-device authority.
+
 See `docs/engine_v2_native_water_box_v1.md` for the frozen development metrics
 and remaining scientific boundaries.
 

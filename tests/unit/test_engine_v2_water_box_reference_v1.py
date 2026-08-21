@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import json
 from pathlib import Path
 
 import numpy as np
@@ -19,6 +20,9 @@ PROFILE = WATER.load_profile(ROOT / "config/engine_v2_water_box_reference_v1.jso
 NATIVE_PROFILE = WATER.load_profile(
     ROOT / "config/engine_v2_native_water_box_profile_v1.json"
 )
+CONSTRAINTS_PROFILE = json.loads(
+    (ROOT / "config/engine_v2_native_water_box_constraints_profile_v1.json").read_text()
+)
 
 
 def test_native_profile_matches_the_packaged_runtime_asset() -> None:
@@ -33,6 +37,31 @@ def test_native_profile_matches_the_packaged_runtime_asset() -> None:
     assert hashlib.sha256(canonical).hexdigest() == (
         "2b0be83b57085c655092ab0272aea5a91b9c3f90c344fa062d494ad324f0019e"
     )
+
+
+def test_native_constraints_profile_matches_the_packaged_runtime_asset() -> None:
+    canonical = (
+        ROOT / "config/engine_v2_native_water_box_constraints_profile_v1.json"
+    ).read_bytes()
+    packaged = (
+        ROOT
+        / "rust/betelgeuze-runtime/assets/engine_v2_native_water_box_constraints_profile_v1.json"
+    ).read_bytes()
+    assert packaged == canonical
+    assert hashlib.sha256(canonical).hexdigest() == (
+        "8dcad0b5005b7a768ce0a88b1804b55ecddb9b3490e2dd59179dfa2393433507"
+    )
+    assert CONSTRAINTS_PROFILE["predecessor"]["sha256"] == (
+        "2b0be83b57085c655092ab0272aea5a91b9c3f90c344fa062d494ad324f0019e"
+    )
+    constraints = CONSTRAINTS_PROFILE["constraints"]
+    assert constraints["rows_per_water"] * constraints["water_count"] == 6
+    positions, *_ = WATER.build_box(NATIVE_PROFILE)
+    assert constraints["hh_distance_angstrom"] == pytest.approx(
+        np.linalg.norm(positions[1] - positions[2]), abs=1.0e-15
+    )
+    assert constraints["expected_degrees_of_freedom"] == 12
+    assert all(value is False for value in CONSTRAINTS_PROFILE["authority"].values())
 
 
 def test_analytic_force_matches_finite_difference() -> None:
