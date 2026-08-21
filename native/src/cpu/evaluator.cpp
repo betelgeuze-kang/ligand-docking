@@ -899,6 +899,7 @@ bg_status evaluate_impl(
     const bg_forcefield &forcefield,
     const std::vector<NeighborPair> *neighbor_pairs,
     bool compute_forces,
+    bool reuse_force_storage,
     Evaluation *out_evaluation) {
     if (out_evaluation == nullptr) {
         return fail(BG_STATUS_INVALID_ARGUMENT, "evaluation output is null");
@@ -915,14 +916,22 @@ bg_status evaluate_impl(
     }
 
     Evaluation candidate;
+    if (reuse_force_storage && compute_forces) {
+        candidate.force_x = std::move(out_evaluation->force_x);
+        candidate.force_y = std::move(out_evaluation->force_y);
+        candidate.force_z = std::move(out_evaluation->force_z);
+    }
     candidate.energy.struct_size =
         static_cast<uint32_t>(sizeof(bg_energy_components_v1));
     candidate.energy.abi_version = BG_ABI_VERSION;
     candidate.energy.unit_system = BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL;
     if (compute_forces) {
-        candidate.force_x.assign(forcefield.atom_count, 0.0);
-        candidate.force_y.assign(forcefield.atom_count, 0.0);
-        candidate.force_z.assign(forcefield.atom_count, 0.0);
+        candidate.force_x.resize(forcefield.atom_count);
+        candidate.force_y.resize(forcefield.atom_count);
+        candidate.force_z.resize(forcefield.atom_count);
+        std::fill(candidate.force_x.begin(), candidate.force_x.end(), 0.0);
+        std::fill(candidate.force_y.begin(), candidate.force_y.end(), 0.0);
+        std::fill(candidate.force_z.begin(), candidate.force_z.end(), 0.0);
     }
 
     bg_status status =
@@ -975,7 +984,18 @@ bg_status evaluate(
     bool compute_forces,
     Evaluation *out_evaluation) {
     return evaluate_impl(
-        system, forcefield, nullptr, compute_forces, out_evaluation);
+        system, forcefield, nullptr, compute_forces, false, out_evaluation);
+}
+
+bg_status evaluate_reusing_force_storage(
+    const bg_system &system,
+    const bg_forcefield &forcefield,
+    bool compute_forces,
+    Evaluation *out_evaluation) {
+    // Dynamics owns a disposable work simulation, so it may trade the public
+    // evaluator's failure transactionality for retaining force-vector capacity.
+    return evaluate_impl(
+        system, forcefield, nullptr, compute_forces, true, out_evaluation);
 }
 
 bg_status build_periodic_neighbor_pairs(
@@ -1004,6 +1024,23 @@ bg_status evaluate_with_neighbor_pairs(
         forcefield,
         &neighbor_pairs,
         compute_forces,
+        false,
+        out_evaluation);
+}
+
+bg_status evaluate_with_neighbor_pairs_reusing_force_storage(
+    const bg_system &system,
+    const bg_forcefield &forcefield,
+    const std::vector<NeighborPair> &neighbor_pairs,
+    bool compute_forces,
+    Evaluation *out_evaluation) {
+    // This internal entry point is destructive on errors after storage moves.
+    return evaluate_impl(
+        system,
+        forcefield,
+        &neighbor_pairs,
+        compute_forces,
+        true,
         out_evaluation);
 }
 

@@ -23,6 +23,12 @@ bg_status evaluate(
     bool compute_forces,
     Evaluation *out_evaluation);
 
+bg_status evaluate_reusing_force_storage(
+    const bg_system &system,
+    const bg_forcefield &forcefield,
+    bool compute_forces,
+    Evaluation *out_evaluation);
+
 bg_status build_periodic_neighbor_pairs(
     const bg_system &system,
     const bg_forcefield &forcefield,
@@ -30,6 +36,13 @@ bg_status build_periodic_neighbor_pairs(
     std::vector<NeighborPair> *out_pairs);
 
 bg_status evaluate_with_neighbor_pairs(
+    const bg_system &system,
+    const bg_forcefield &forcefield,
+    const std::vector<NeighborPair> &neighbor_pairs,
+    bool compute_forces,
+    Evaluation *out_evaluation);
+
+bg_status evaluate_with_neighbor_pairs_reusing_force_storage(
     const bg_system &system,
     const bg_forcefield &forcefield,
     const std::vector<NeighborPair> &neighbor_pairs,

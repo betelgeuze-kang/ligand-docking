@@ -87,7 +87,10 @@ The current `main` branch contains:
   strictly below 0.5 angstrom. Failed operations do not commit cache changes,
   transaction clones share the immutable cached atom/pair payload instead of
   deep-copying it, and successful checkpoint loads invalidate this unpersisted
-  derived state.
+  derived state. CPU dynamics additionally retain work-local force-vector
+  storage across repeated force evaluations within one transactional integrate
+  or minimize call; public stateless evaluation, HIP evaluation, and failure
+  commit semantics remain unchanged, and no timing claim is made.
   The entry point is CPU-only and has no PME, neighbor-list performance
   evidence, general ion preparation, protein, production-MD, scientific,
   free-energy, benchmark, product, Stage 0, or performance authority;

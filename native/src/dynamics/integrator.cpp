@@ -521,14 +521,17 @@ bg_status velocity_verlet_step(
     const bg_context &context,
     bg_simulation *simulation,
     cpu::Evaluation *out_final_evaluation) {
-    cpu::Evaluation evaluation;
     bg_status status = evaluate(
-        context, simulation, simulation->system, true, &evaluation);
+        context,
+        simulation,
+        simulation->system,
+        true,
+        out_final_evaluation);
     if (status != BG_STATUS_OK) {
         return status;
     }
     const double half_dt = 0.5 * simulation->timestep_femtoseconds;
-    status = kick(evaluation, half_dt, &simulation->system);
+    status = kick(*out_final_evaluation, half_dt, &simulation->system);
     if (status != BG_STATUS_OK) {
         return status;
     }
@@ -538,11 +541,15 @@ bg_status velocity_verlet_step(
         return status;
     }
     status = evaluate(
-        context, simulation, simulation->system, true, &evaluation);
+        context,
+        simulation,
+        simulation->system,
+        true,
+        out_final_evaluation);
     if (status != BG_STATUS_OK) {
         return status;
     }
-    status = kick(evaluation, half_dt, &simulation->system);
+    status = kick(*out_final_evaluation, half_dt, &simulation->system);
     if (status != BG_STATUS_OK) {
         return status;
     }
@@ -550,7 +557,6 @@ bg_status velocity_verlet_step(
     if (status != BG_STATUS_OK) {
         return status;
     }
-    *out_final_evaluation = std::move(evaluation);
     return BG_STATUS_OK;
 }
 
@@ -558,14 +564,17 @@ bg_status baoab_step(
     const bg_context &context,
     bg_simulation *simulation,
     cpu::Evaluation *out_final_evaluation) {
-    cpu::Evaluation evaluation;
     bg_status status = evaluate(
-        context, simulation, simulation->system, true, &evaluation);
+        context,
+        simulation,
+        simulation->system,
+        true,
+        out_final_evaluation);
     if (status != BG_STATUS_OK) {
         return status;
     }
     const double half_dt = 0.5 * simulation->timestep_femtoseconds;
-    status = kick(evaluation, half_dt, &simulation->system);
+    status = kick(*out_final_evaluation, half_dt, &simulation->system);
     if (status != BG_STATUS_OK) {
         return status;
     }
@@ -582,11 +591,15 @@ bg_status baoab_step(
         return status;
     }
     status = evaluate(
-        context, simulation, simulation->system, true, &evaluation);
+        context,
+        simulation,
+        simulation->system,
+        true,
+        out_final_evaluation);
     if (status != BG_STATUS_OK) {
         return status;
     }
-    status = kick(evaluation, half_dt, &simulation->system);
+    status = kick(*out_final_evaluation, half_dt, &simulation->system);
     if (status != BG_STATUS_OK) {
         return status;
     }
@@ -594,7 +607,6 @@ bg_status baoab_step(
     if (status != BG_STATUS_OK) {
         return status;
     }
-    *out_final_evaluation = std::move(evaluation);
     return BG_STATUS_OK;
 }
 

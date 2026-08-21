@@ -137,14 +137,14 @@ bg_status evaluate(
             return status;
         }
         if (context.backend == BG_BACKEND_CPP_CPU_REFERENCE) {
-            return cpu::evaluate_with_neighbor_pairs(
+            return cpu::evaluate_with_neighbor_pairs_reusing_force_storage(
                 system,
                 forcefield,
                 *neighbor_pairs,
                 compute_forces,
                 out_evaluation);
         }
-        return rust_cpu::evaluate_with_neighbor_pairs(
+        return rust_cpu::evaluate_with_neighbor_pairs_reusing_force_storage(
             system,
             forcefield,
             *neighbor_pairs,
@@ -153,10 +153,10 @@ bg_status evaluate(
     }
     switch (context.backend) {
         case BG_BACKEND_CPP_CPU_REFERENCE:
-            return cpu::evaluate(
+            return cpu::evaluate_reusing_force_storage(
                 system, forcefield, compute_forces, out_evaluation);
         case BG_BACKEND_RUST_CPU:
-            return rust_cpu::evaluate(
+            return rust_cpu::evaluate_reusing_force_storage(
                 system, forcefield, compute_forces, out_evaluation);
         case BG_BACKEND_HIP_SAFE:
             return hip_safe::evaluate(
