@@ -544,6 +544,7 @@ bg_status evaluate_torsions(
 bg_status evaluate_nonbonded(
     const bg_system &system,
     const bg_forcefield &forcefield,
+    const std::vector<NeighborPair> *neighbor_pairs,
     bool compute_forces,
     Evaluation *evaluation);
 
@@ -556,9 +557,8 @@ using CellAssignment = std::pair<CellKey, std::size_t>;
 }
 
 [[nodiscard]] std::array<std::size_t, 3> periodic_cell_counts(
-    const bg_forcefield &forcefield) noexcept {
-    const double search_radius =
-        std::max(forcefield.cutoff, forcefield.minimum_pair_distance);
+    const bg_forcefield &forcefield,
+    double search_radius) noexcept {
     std::array<std::size_t, 3> counts{};
     for (std::size_t axis = 0; axis < counts.size(); ++axis) {
         const double count =
@@ -618,16 +618,23 @@ bg_status periodic_cell_key(
     return index;
 }
 
-bg_status build_periodic_neighbor_pairs(
+bg_status build_periodic_neighbor_pairs_impl(
     const bg_system &system,
     const bg_forcefield &forcefield,
-    std::vector<bg_forcefield::Pair> *out_pairs) {
+    double search_radius,
+    std::vector<NeighborPair> *out_pairs) {
     if (out_pairs == nullptr) {
         return fail(BG_STATUS_INTERNAL_ERROR, "neighbor-list pair output is null");
     }
-    const auto cell_counts = periodic_cell_counts(forcefield);
-    const double search_radius =
+    const double minimum_search_radius =
         std::max(forcefield.cutoff, forcefield.minimum_pair_distance);
+    if (!std::isfinite(search_radius) ||
+        search_radius < minimum_search_radius) {
+        return fail(
+            BG_STATUS_INVALID_ARGUMENT,
+            "periodic neighbor-list search radius is invalid");
+    }
+    const auto cell_counts = periodic_cell_counts(forcefield, search_radius);
     const double search_radius_squared =
         inclusive_squared_radius(search_radius);
     std::vector<CellKey> atom_cells(forcefield.atom_count);
@@ -643,7 +650,7 @@ bg_status build_periodic_neighbor_pairs(
     }
     std::sort(assignments.begin(), assignments.end());
 
-    std::vector<bg_forcefield::Pair> pairs;
+    std::vector<NeighborPair> pairs;
     std::vector<CellKey> neighbor_cells;
     neighbor_cells.reserve(27U);
     std::vector<std::size_t> candidates;
@@ -819,18 +826,35 @@ bg_status evaluate_nonbonded_pair(
 bg_status evaluate_nonbonded(
     const bg_system &system,
     const bg_forcefield &forcefield,
+    const std::vector<NeighborPair> *neighbor_pairs,
     bool compute_forces,
     Evaluation *evaluation) {
     if (forcefield.periodic_axes_mask ==
         static_cast<uint32_t>(BG_PERIODIC_AXES_ALL)) {
-        std::vector<bg_forcefield::Pair> pairs;
-        bg_status status =
-            build_periodic_neighbor_pairs(system, forcefield, &pairs);
-        if (status != BG_STATUS_OK) {
-            return status;
+        std::vector<NeighborPair> built_pairs;
+        if (neighbor_pairs == nullptr) {
+            const double search_radius =
+                std::max(forcefield.cutoff, forcefield.minimum_pair_distance);
+            bg_status status = build_periodic_neighbor_pairs_impl(
+                system, forcefield, search_radius, &built_pairs);
+            if (status != BG_STATUS_OK) {
+                return status;
+            }
+            neighbor_pairs = &built_pairs;
         }
-        for (const bg_forcefield::Pair &pair : pairs) {
-            status = evaluate_nonbonded_pair(
+        NeighborPair previous{};
+        bool has_previous = false;
+        for (const NeighborPair &pair : *neighbor_pairs) {
+            if (pair.atom_i >= pair.atom_j ||
+                pair.atom_j >= forcefield.atom_count ||
+                (has_previous && !(previous < pair))) {
+                return fail(
+                    BG_STATUS_INVALID_ARGUMENT,
+                    "neighbor pairs must be unique sorted in-range canonical pairs");
+            }
+            has_previous = true;
+            previous = pair;
+            const bg_status status = evaluate_nonbonded_pair(
                 system,
                 forcefield,
                 pair.atom_i,
@@ -842,6 +866,12 @@ bg_status evaluate_nonbonded(
             }
         }
         return BG_STATUS_OK;
+    }
+
+    if (neighbor_pairs != nullptr) {
+        return fail(
+            BG_STATUS_INVALID_ARGUMENT,
+            "neighbor pairs require a fully periodic orthorhombic system");
     }
 
     for (std::size_t atom_i = 0; atom_i < forcefield.atom_count; ++atom_i) {
@@ -864,9 +894,10 @@ bg_status evaluate_nonbonded(
 
 }  // namespace
 
-bg_status evaluate(
+bg_status evaluate_impl(
     const bg_system &system,
     const bg_forcefield &forcefield,
+    const std::vector<NeighborPair> *neighbor_pairs,
     bool compute_forces,
     Evaluation *out_evaluation) {
     if (out_evaluation == nullptr) {
@@ -907,7 +938,8 @@ bg_status evaluate(
     if (status != BG_STATUS_OK) {
         return status;
     }
-    status = evaluate_nonbonded(system, forcefield, compute_forces, &candidate);
+    status = evaluate_nonbonded(
+        system, forcefield, neighbor_pairs, compute_forces, &candidate);
     if (status != BG_STATUS_OK) {
         return status;
     }
@@ -935,6 +967,44 @@ bg_status evaluate(
 
     *out_evaluation = std::move(candidate);
     return BG_STATUS_OK;
+}
+
+bg_status evaluate(
+    const bg_system &system,
+    const bg_forcefield &forcefield,
+    bool compute_forces,
+    Evaluation *out_evaluation) {
+    return evaluate_impl(
+        system, forcefield, nullptr, compute_forces, out_evaluation);
+}
+
+bg_status build_periodic_neighbor_pairs(
+    const bg_system &system,
+    const bg_forcefield &forcefield,
+    double search_radius,
+    std::vector<NeighborPair> *out_pairs) {
+    if (forcefield.periodic_axes_mask !=
+        static_cast<uint32_t>(BG_PERIODIC_AXES_ALL)) {
+        return fail(
+            BG_STATUS_INVALID_ARGUMENT,
+            "periodic neighbor-list construction requires all periodic axes");
+    }
+    return build_periodic_neighbor_pairs_impl(
+        system, forcefield, search_radius, out_pairs);
+}
+
+bg_status evaluate_with_neighbor_pairs(
+    const bg_system &system,
+    const bg_forcefield &forcefield,
+    const std::vector<NeighborPair> &neighbor_pairs,
+    bool compute_forces,
+    Evaluation *out_evaluation) {
+    return evaluate_impl(
+        system,
+        forcefield,
+        &neighbor_pairs,
+        compute_forces,
+        out_evaluation);
 }
 
 }  // namespace betelgeuze::native::cpu

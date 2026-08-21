@@ -129,6 +129,16 @@ int32_t bg_rust_cpu_evaluate_v1(
     bg_rust_cpu_force_output_v1 *out_forces,
     bg_rust_cpu_error_v1 *out_error);
 
+int32_t bg_rust_cpu_evaluate_with_neighbor_pairs_v1(
+    const bg_rust_cpu_system_v1 *system,
+    const bg_rust_cpu_forcefield_v1 *forcefield,
+    size_t neighbor_pair_count,
+    const bg_rust_cpu_pair_v1 *neighbor_pairs,
+    uint8_t compute_forces,
+    bg_rust_cpu_energy_v1 *out_energy,
+    bg_rust_cpu_force_output_v1 *out_forces,
+    bg_rust_cpu_error_v1 *out_error);
+
 int32_t bg_rust_cpu_docking_geometric_admission_v1_create(
     const bg_docking_geometric_admission_context_soa_v1 *descriptor,
     void **out_state,
