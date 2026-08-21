@@ -1,26 +1,14 @@
 #ifndef BETELGEUZE_NATIVE_CPU_EVALUATOR_HPP
 #define BETELGEUZE_NATIVE_CPU_EVALUATOR_HPP
 
+#include "neighbor_pair.hpp"
+
 #include "betelgeuze/engine.h"
 
 #include <cstddef>
 #include <vector>
 
 namespace betelgeuze::native::cpu {
-
-struct NeighborPair final {
-    std::size_t atom_i = 0;
-    std::size_t atom_j = 0;
-
-    friend bool operator<(const NeighborPair &left, const NeighborPair &right) noexcept {
-        return left.atom_i < right.atom_i ||
-               (left.atom_i == right.atom_i && left.atom_j < right.atom_j);
-    }
-
-    friend bool operator==(const NeighborPair &left, const NeighborPair &right) noexcept {
-        return left.atom_i == right.atom_i && left.atom_j == right.atom_j;
-    }
-};
 
 struct Evaluation final {
     bg_energy_components_v1 energy{};

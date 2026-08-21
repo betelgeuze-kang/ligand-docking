@@ -229,7 +229,7 @@ void fill_particle_view(
 }
 
 void commit_dynamic_state(
-    const bg_simulation &work,
+    bg_simulation &work,
     bg_simulation *simulation) noexcept {
     std::copy(
         work.system.position_x.begin(), work.system.position_x.end(),
@@ -250,6 +250,7 @@ void commit_dynamic_state(
         work.system.velocity_z.begin(), work.system.velocity_z.end(),
         simulation->system.velocity_z.begin());
     simulation->absolute_step = work.absolute_step;
+    simulation->neighbor_list_cache = std::move(work.neighbor_list_cache);
 }
 
 }  // namespace

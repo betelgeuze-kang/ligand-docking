@@ -6,11 +6,77 @@
 #include "sha256.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
+#include <limits>
+#include <utility>
 #include <vector>
 
 namespace betelgeuze::native::dynamics {
 namespace {
+
+constexpr double kNeighborListSkinAngstrom = 1.0;
+constexpr double kNeighborListReuseRadiusAngstrom =
+    0.5 * kNeighborListSkinAngstrom;
+
+void increment_saturating(uint64_t *value) noexcept {
+    if (*value != std::numeric_limits<uint64_t>::max()) {
+        ++*value;
+    }
+}
+
+[[nodiscard]] bool neighbor_list_is_reusable(
+    const bg_simulation::NeighborListCache &cache,
+    const bg_system &system) noexcept {
+    const std::size_t atom_count = system.position_x.size();
+    if (!cache.valid || cache.reference_x.size() != atom_count ||
+        cache.reference_y.size() != atom_count ||
+        cache.reference_z.size() != atom_count) {
+        return false;
+    }
+    for (std::size_t atom = 0; atom < atom_count; ++atom) {
+        const double displacement = std::hypot(
+            system.position_x[atom] - cache.reference_x[atom],
+            system.position_y[atom] - cache.reference_y[atom],
+            system.position_z[atom] - cache.reference_z[atom]);
+        if (!std::isfinite(displacement) ||
+            displacement >= kNeighborListReuseRadiusAngstrom) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bg_status periodic_neighbor_pairs(
+    bg_simulation *simulation,
+    const bg_system &system,
+    const std::vector<cpu::NeighborPair> **out_pairs) {
+    bg_simulation::NeighborListCache &cache = simulation->neighbor_list_cache;
+    if (neighbor_list_is_reusable(cache, system)) {
+        increment_saturating(&cache.reuse_count);
+        *out_pairs = &cache.pairs;
+        return BG_STATUS_OK;
+    }
+
+    std::vector<cpu::NeighborPair> pairs;
+    const double search_radius = std::max(
+        simulation->forcefield.cutoff,
+        simulation->forcefield.minimum_pair_distance) +
+        kNeighborListSkinAngstrom;
+    bg_status status = cpu::build_periodic_neighbor_pairs(
+        system, simulation->forcefield, search_radius, &pairs);
+    if (status != BG_STATUS_OK) {
+        return status;
+    }
+    cache.reference_x = system.position_x;
+    cache.reference_y = system.position_y;
+    cache.reference_z = system.position_z;
+    cache.pairs = std::move(pairs);
+    cache.valid = true;
+    increment_saturating(&cache.build_count);
+    *out_pairs = &cache.pairs;
+    return BG_STATUS_OK;
+}
 
 void hash_size_vector(
     Sha256 *hash,
@@ -43,13 +109,16 @@ void hash_double_vector(
 
 bg_status evaluate(
     const bg_context &context,
+    bg_simulation *simulation,
     const bg_system &system,
-    const bg_forcefield &forcefield,
     bool compute_forces,
     cpu::Evaluation *out_evaluation) {
-    if (out_evaluation == nullptr) {
-        return fail(BG_STATUS_INTERNAL_ERROR, "dynamics evaluation output is null");
+    if (simulation == nullptr || out_evaluation == nullptr) {
+        return fail(
+            BG_STATUS_INTERNAL_ERROR,
+            "dynamics simulation or evaluation output is null");
     }
+    const bg_forcefield &forcefield = simulation->forcefield;
     if (context.unit_system != system.unit_system ||
         context.unit_system != forcefield.unit_system) {
         return fail(
@@ -60,11 +129,9 @@ bg_status evaluate(
             static_cast<uint32_t>(BG_PERIODIC_AXES_ALL) &&
         (context.backend == BG_BACKEND_CPP_CPU_REFERENCE ||
          context.backend == BG_BACKEND_RUST_CPU)) {
-        std::vector<cpu::NeighborPair> neighbor_pairs;
-        const double search_radius =
-            std::max(forcefield.cutoff, forcefield.minimum_pair_distance);
-        bg_status status = cpu::build_periodic_neighbor_pairs(
-            system, forcefield, search_radius, &neighbor_pairs);
+        const std::vector<cpu::NeighborPair> *neighbor_pairs = nullptr;
+        bg_status status = periodic_neighbor_pairs(
+            simulation, system, &neighbor_pairs);
         if (status != BG_STATUS_OK) {
             return status;
         }
@@ -72,14 +139,14 @@ bg_status evaluate(
             return cpu::evaluate_with_neighbor_pairs(
                 system,
                 forcefield,
-                neighbor_pairs,
+                *neighbor_pairs,
                 compute_forces,
                 out_evaluation);
         }
         return rust_cpu::evaluate_with_neighbor_pairs(
             system,
             forcefield,
-            neighbor_pairs,
+            *neighbor_pairs,
             compute_forces,
             out_evaluation);
     }

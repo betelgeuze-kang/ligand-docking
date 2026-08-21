@@ -1,4 +1,5 @@
 #include "betelgeuze/engine.h"
+#include "../src/internal.hpp"
 
 #include <array>
 #include <cassert>
@@ -141,6 +142,25 @@ bg_forcefield *make_rotating_constraint_forcefield() {
     descriptor.exclusion_count = UINT64_C(3);
     descriptor.exclusion_atom_i = exclusion_i.data();
     descriptor.exclusion_atom_j = exclusion_j.data();
+    bg_forcefield *forcefield = nullptr;
+    assert(bg_forcefield_create(&descriptor, &forcefield) == BG_STATUS_OK);
+    return forcefield;
+}
+
+bg_forcefield *make_periodic_nonbonded_forcefield(std::size_t atom_count) {
+    const std::vector<double> sigma(atom_count, 1.5);
+    const std::vector<double> epsilon(atom_count, 0.05);
+    bg_forcefield_soa_v1 descriptor;
+    assert(bg_forcefield_soa_v1_init(&descriptor) == BG_STATUS_OK);
+    descriptor.atom_count = static_cast<uint64_t>(atom_count);
+    descriptor.sigma_angstrom = sigma.data();
+    descriptor.epsilon_kcal_per_mol = epsilon.data();
+    descriptor.periodic_axes_mask = BG_PERIODIC_AXES_ALL;
+    descriptor.cell_lengths_angstrom[0] = 10.0;
+    descriptor.cell_lengths_angstrom[1] = 10.0;
+    descriptor.cell_lengths_angstrom[2] = 10.0;
+    descriptor.cutoff_angstrom = 4.0;
+    descriptor.switch_start_angstrom = 3.0;
     bg_forcefield *forcefield = nullptr;
     assert(bg_forcefield_create(&descriptor, &forcefield) == BG_STATUS_OK);
     return forcefield;
@@ -876,6 +896,108 @@ void test_deep_ownership_and_signed_zero_checkpoint() {
     integrate(handles.context, handles.simulation, UINT64_C(1));
 }
 
+void test_periodic_cpu_neighbor_cache() {
+    NativeHandles cpp;
+    cpp.context = make_context(BG_BACKEND_CPP_CPU_REFERENCE);
+    cpp.system = make_system(
+        {-3.5, 0.0, 3.5}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0},
+        {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0},
+        {12.0, 16.0, 14.0});
+    cpp.forcefield = make_periodic_nonbonded_forcefield(3U);
+    cpp.simulation = make_simulation(
+        cpp.system, cpp.forcefield, BG_INTEGRATOR_VELOCITY_VERLET,
+        0.1, 0.0, 0.0, UINT64_C(0), nullptr);
+
+    NativeHandles rust;
+    rust.context = make_context(BG_BACKEND_RUST_CPU);
+    rust.system = make_system(
+        {-3.5, 0.0, 3.5}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0},
+        {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0},
+        {12.0, 16.0, 14.0});
+    rust.forcefield = make_periodic_nonbonded_forcefield(3U);
+    rust.simulation = make_simulation(
+        rust.system, rust.forcefield, BG_INTEGRATOR_VELOCITY_VERLET,
+        0.1, 0.0, 0.0, UINT64_C(0), nullptr);
+
+    const bg_dynamics_report_v1 cpp_initial =
+        integrate(cpp.context, cpp.simulation, UINT64_C(0));
+    const bg_dynamics_report_v1 rust_initial =
+        integrate(rust.context, rust.simulation, UINT64_C(0));
+    assert(same_bits(
+        cpp_initial.potential_kcal_per_mol,
+        rust_initial.potential_kcal_per_mol));
+    assert(same_bits(
+        cpp_initial.total_kcal_per_mol,
+        rust_initial.total_kcal_per_mol));
+    assert(cpp.simulation->neighbor_list_cache.valid);
+    assert(cpp.simulation->neighbor_list_cache.pairs.size() == 3U);
+    assert(cpp.simulation->neighbor_list_cache.build_count == UINT64_C(1));
+    assert(cpp.simulation->neighbor_list_cache.reuse_count == UINT64_C(0));
+    assert(rust.simulation->neighbor_list_cache.pairs ==
+           cpp.simulation->neighbor_list_cache.pairs);
+
+    const bg_dynamics_report_v1 switched_backend =
+        integrate(rust.context, cpp.simulation, UINT64_C(0));
+    assert(same_bits(
+        switched_backend.potential_kcal_per_mol,
+        cpp_initial.potential_kcal_per_mol));
+    assert(cpp.simulation->neighbor_list_cache.build_count == UINT64_C(1));
+    assert(cpp.simulation->neighbor_list_cache.reuse_count == UINT64_C(1));
+    integrate(cpp.context, cpp.simulation, UINT64_C(0));
+    assert(cpp.simulation->neighbor_list_cache.build_count == UINT64_C(1));
+    assert(cpp.simulation->neighbor_list_cache.reuse_count == UINT64_C(2));
+    cpp.simulation->system.position_x[0] += 0.4;
+    integrate(cpp.context, cpp.simulation, UINT64_C(0));
+    assert(cpp.simulation->neighbor_list_cache.build_count == UINT64_C(1));
+    assert(cpp.simulation->neighbor_list_cache.reuse_count == UINT64_C(3));
+    cpp.simulation->system.position_x[0] += 0.2;
+    integrate(cpp.context, cpp.simulation, UINT64_C(0));
+    assert(cpp.simulation->neighbor_list_cache.build_count == UINT64_C(2));
+    assert(cpp.simulation->neighbor_list_cache.reuse_count == UINT64_C(3));
+
+    const uint64_t builds_before_failure =
+        cpp.simulation->neighbor_list_cache.build_count;
+    const uint64_t reuses_before_failure =
+        cpp.simulation->neighbor_list_cache.reuse_count;
+    const double saved_x = cpp.simulation->system.position_x[0];
+    cpp.simulation->system.position_x[0] =
+        cpp.simulation->system.position_x[1];
+    bg_dynamics_report_v1 failed_report;
+    assert(bg_dynamics_report_v1_init(&failed_report) == BG_STATUS_OK);
+    assert(bg_context_integrate(
+               cpp.context, cpp.simulation, UINT64_C(0), &failed_report) ==
+           BG_STATUS_NUMERICAL_ERROR);
+    assert(cpp.simulation->neighbor_list_cache.build_count ==
+           builds_before_failure);
+    assert(cpp.simulation->neighbor_list_cache.reuse_count ==
+           reuses_before_failure);
+    cpp.simulation->system.position_x[0] = saved_x;
+
+    uint64_t checkpoint_size = UINT64_C(0);
+    assert(bg_simulation_checkpoint_size(
+               cpp.simulation, &checkpoint_size) == BG_STATUS_OK);
+    std::vector<uint8_t> checkpoint(
+        static_cast<std::size_t>(checkpoint_size));
+    uint64_t written = UINT64_C(0);
+    assert(bg_simulation_checkpoint_write(
+               cpp.simulation,
+               checkpoint.data(),
+               checkpoint_size,
+               &written) == BG_STATUS_OK);
+    assert(written == checkpoint_size);
+    assert(bg_simulation_checkpoint_load(
+               cpp.simulation,
+               checkpoint.data(),
+               checkpoint_size) == BG_STATUS_OK);
+    assert(!cpp.simulation->neighbor_list_cache.valid);
+    assert(cpp.simulation->neighbor_list_cache.pairs.empty());
+    assert(cpp.simulation->neighbor_list_cache.build_count == UINT64_C(0));
+    assert(cpp.simulation->neighbor_list_cache.reuse_count == UINT64_C(0));
+    integrate(cpp.context, cpp.simulation, UINT64_C(0));
+    assert(cpp.simulation->neighbor_list_cache.valid);
+    assert(cpp.simulation->neighbor_list_cache.build_count == UINT64_C(1));
+}
+
 void test_hip_parity_if_available() {
 #if BG_TEST_HIP_ENABLED
     uint8_t available = UINT8_C(0);
@@ -919,6 +1041,7 @@ int main() {
     test_nvt_fixture_and_checkpoint();
     test_report_and_state_failure_transactionality();
     test_deep_ownership_and_signed_zero_checkpoint();
+    test_periodic_cpu_neighbor_cache();
     test_hip_parity_if_available();
     return 0;
 }

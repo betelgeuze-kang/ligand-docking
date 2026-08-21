@@ -81,10 +81,14 @@ The current `main` branch contains:
   independent all-pairs oracle parity. A bounded successor adds explicit
   Joung/Cheatham TIP3P-targeted Na+/Cl- identities, a charge-neutral static
   CPU/oracle fixture, and typed rejection of every unsupported element/charge
-  pair without claiming general ion preparation or parameter applicability.
-  The entry point is CPU-only and has no PME, neighbor-list reuse/performance,
-  ion, protein, production-MD, scientific, free-energy, benchmark, product,
-  Stage 0, or performance authority;
+  pair without claiming general ion preparation or parameter applicability. A
+  further successor retains a `Simulation`-owned canonical pair slice with a
+  1.0 angstrom skin while all per-atom build-reference displacements remain
+  strictly below 0.5 angstrom. Failed operations do not commit cache changes,
+  and successful checkpoint loads invalidate this unpersisted derived state.
+  The entry point is CPU-only and has no PME, neighbor-list performance
+  evidence, general ion preparation, protein, production-MD, scientific,
+  free-energy, benchmark, product, Stage 0, or performance authority;
 - bounded single-model PDB and single-molecule SDF V2000 ingestion;
 - bounded single-block CIF syntax plus mmCIF entity/asym/polymer identity,
   zero-occupancy, altloc, nonpoly instance, component atom/bond, and selected

@@ -213,6 +213,7 @@ void commit_loaded_state(
         candidate.system.velocity_z.begin(), candidate.system.velocity_z.end(),
         simulation->system.velocity_z.begin());
     simulation->absolute_step = candidate.absolute_step;
+    simulation->neighbor_list_cache = {};
 }
 
 }  // namespace

@@ -1,0 +1,44 @@
+{
+  "schema_id": "betelgeuze.engine_v2_native_periodic_neighbor_list_profile/2.0.0",
+  "profile_id": "engine_v2_native_periodic_cpu_neighbor_cache_development_v2",
+  "predecessor": {
+    "path": "config/engine_v2_native_water_ion_profile_v1.json",
+    "sha256": "409902e5f6776bd58c76f80a572c9cf978f7e2f4938003e5609036bfe91c631f",
+    "semantic_change": "Retain a transactional Simulation-owned buffered canonical pair slice across fully periodic CPU dynamics evaluations."
+  },
+  "activation": {
+    "backends": ["cpp_cpu_reference", "rust_cpu"],
+    "owner": "native_simulation",
+    "periodic_axes_required": [true, true, true],
+    "base_search_radius_angstrom": "max(cutoff_angstrom, minimum_pair_distance_angstrom)",
+    "skin_angstrom": 1.0,
+    "buffered_search_radius_angstrom": "base_search_radius_angstrom + skin_angstrom",
+    "reuse_rule": "maximum per-atom Euclidean displacement from the unwrapped build reference is strictly below skin_angstrom / 2",
+    "rebuild_rule": "cache absent, shape mismatch, non-finite displacement, or any per-atom displacement greater than or equal to skin_angstrom / 2",
+    "pair_order": "ascending_atom_i_then_ascending_atom_j",
+    "evaluation_order": "minimum_pair_distance validation before exact cutoff exclusion",
+    "backend_switch_policy": "the same backend-independent canonical pair representation is valid for either admitted CPU evaluator",
+    "transaction_policy": "cache updates commit only with a successful integrate or minimize operation",
+    "checkpoint_policy": "derived cache is neither serialized nor fingerprinted and is invalidated after successful checkpoint load",
+    "public_stateless_context_policy": "backend-owned builder remains per-call and uncached",
+    "mixed_nonperiodic_or_hip_policy": "cache is not used"
+  },
+  "validation": {
+    "cpp_rust_binary64_energy_parity_required": true,
+    "small_displacement_reuse_required": true,
+    "half_skin_boundary_rebuild_required": true,
+    "failed_operation_cache_rollback_required": true,
+    "checkpoint_load_invalidation_required": true,
+    "independent_all_pairs_oracle_parity_required": true,
+    "performance_measurement_present": false,
+    "performance_threshold_present": false
+  },
+  "authority": {
+    "production_md_validated": false,
+    "scientific_claim_authorized": false,
+    "performance_claim_authorized": false,
+    "acceleration_claim_authorized": false,
+    "molecular_execution_authorized": false,
+    "hip_device_execution_authorized": false
+  }
+}

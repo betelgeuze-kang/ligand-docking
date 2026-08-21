@@ -208,6 +208,18 @@ and both CPU backends. It is not a trajectory or scientific applicability
 claim, and it does not authorize general ion preparation or long-range
 electrostatics.
 
+The next SHA-bound successor,
+`config/engine_v2_native_periodic_neighbor_list_profile_v2.json`, retains one
+buffered canonical pair slice in the native `Simulation` for fully periodic
+C++ reference or Rust CPU dynamics. Its 1.0 angstrom skin is reusable only
+while every atom is strictly below 0.5 angstrom from the unwrapped build
+reference; the exact pair evaluator continues to enforce minimum-distance and
+cutoff semantics. Cache changes share the integrate/minimize transaction,
+checkpoint load invalidates the unpersisted derived state, and public
+stateless/mixed/nonperiodic/HIP evaluation remains uncached. The profile has no
+performance measurement or threshold and grants no performance or acceleration
+authority.
+
 See `docs/engine_v2_native_water_box_v1.md` for the frozen development metrics
 and remaining scientific boundaries.
 

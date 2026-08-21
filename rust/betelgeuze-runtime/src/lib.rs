@@ -54,10 +54,12 @@ pub use fixed64_lane_metrics::{
     FIXED64_ORACLE_RMSD_THRESHOLD_ANGSTROM,
 };
 pub use forcefield::{
-    native_periodic_neighbor_list_v1_profile_sha256, AtomNonbonded, EnergyComponents, Evaluation,
+    native_periodic_neighbor_list_v1_profile_sha256,
+    native_periodic_neighbor_list_v2_profile_sha256, AtomNonbonded, EnergyComponents, Evaluation,
     ForceField, ForceFieldInput, ForceSoaOwned, HarmonicAngle, HarmonicBond, NonbondedSettings,
     OrthorhombicCell, PairExclusion, PairScale, PeriodicTorsion,
     NATIVE_PERIODIC_NEIGHBOR_LIST_V1_PROFILE_ID, NATIVE_PERIODIC_NEIGHBOR_LIST_V1_SCHEMA_ID,
+    NATIVE_PERIODIC_NEIGHBOR_LIST_V2_PROFILE_ID, NATIVE_PERIODIC_NEIGHBOR_LIST_V2_SCHEMA_ID,
 };
 pub use qualification::{
     compare_fixed64_scientific_numeric_parity, fixed64_cpu_v5_live_activation_admitted,
