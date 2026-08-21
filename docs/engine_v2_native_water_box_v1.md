@@ -92,16 +92,17 @@ CPU dynamics only. It builds canonical pairs to
 while every atom remains strictly below 0.5 angstrom from its unwrapped build
 reference. The existing pair evaluator still applies minimum-distance and
 exact-cutoff semantics. Cache mutations follow the existing transactional
-integrate/minimize clone boundary; failed operations cannot commit them.
+integrate/minimize boundary; failed operations cannot commit semantic cache
+payloads or counters.
 The cached reference coordinates and canonical pairs live in one immutable
-shared payload, so a transaction clone retains that payload rather than
-deep-copying its atom and pair arrays; a rebuild publishes a new payload only
-inside the work simulation. Periodic CPU rebuilds also retain simulation-owned
+shared payload, so an operation rollback snapshot retains that payload rather
+than deep-copying its atom and pair arrays; a rebuild publishes a new payload
+only after it succeeds. Periodic CPU rebuilds also retain simulation-owned
 cell-key, sorted-assignment, neighbor-cell, and candidate-index scratch storage.
-The public stateless evaluator still uses call-local scratch, while a shared
-transaction clone detaches an empty work-local scratch object before rebuilding.
-Failed integration may consume only scratch capacity; pair payloads and cache
-counters retain their existing rollback semantics.
+The public stateless evaluator still uses call-local scratch, while an
+internally shared simulation scratch detaches before rebuilding. Failed
+operations may consume only scratch state/capacity; pair payloads and cache
+counters retain their rollback semantics.
 Checkpoint bytes and the static fingerprint do not include this derived state,
 and a successful checkpoint load invalidates it. Mixed/nonperiodic and HIP
 paths do not consume the cache. This behavior has no timing threshold or
@@ -109,9 +110,9 @@ performance/acceleration claim.
 
 CPU dynamics also retain one set of force-vector allocations across repeated
 force evaluations within a transactional integrate or minimize call. This is
-an internal work-simulation path: the public stateless evaluator remains
-transactional, while an internal evaluation failure may consume the work-local
-buffers before the failed work simulation is discarded. C++ reference and Rust
+an internal operation-local path: the public stateless evaluator remains
+transactional, while an internal evaluation failure may consume the local
+buffers before they are discarded. C++ reference and Rust
 CPU use the same lifetime rule; HIP evaluation is unchanged. This structural
 allocation reuse carries no measured timing evidence or acceleration claim.
 
@@ -122,23 +123,25 @@ call, including both BAOAB half-drifts. SHAKE/RATTLE ordering and binary64
 updates are unchanged. This is an allocation-lifetime property without timing
 evidence or an acceleration claim.
 
-The public integrate transaction operates in place behind an RAII rollback.
-For nonzero step counts it snapshots only the six mutable position and velocity
-channels, the absolute step, and neighbor-cache metadata; immutable particle,
-force-field, constraint, and integrator configuration are not copied. A zero
-step evaluation snapshots only the scalar/cache metadata. Failures restore the
-six channels in place, preserving every borrowed particle-view address, while
-success needs no second channel copy. The minimizer retains its separate work
-simulation because accepted candidate position buffers are swapped there. This
-is an unmeasured lifetime property and carries no acceleration claim.
+Public integrate and minimize transactions operate in place behind an RAII
+rollback. Nonzero integration and minimization snapshot only the six mutable
+position and velocity channels, the absolute step, and semantic neighbor-cache
+metadata; immutable particle, force-field, constraint, and integrator
+configuration are not copied. A zero-step integration snapshots only the
+scalar/cache metadata. Failures restore the six channels in place, preserving
+every borrowed particle-view address, while success needs no second six-channel
+copy. This is an unmeasured lifetime property and carries no acceleration claim.
 
 The CPU minimizer retains one candidate `System` across all bounded Armijo
 attempts and iterations. Each trial overwrites only its position channels from
 the unchanged accepted state; an accepted trial swaps those three buffers into
-the transactional work simulation. Static particle channels are copied once,
-and rejected trials allocate no replacement system. Evaluation order,
-constraint projection, accepted coordinates, and checkpoint semantics are
-unchanged. This also carries no timing evidence or acceleration claim.
+the active simulation under a position-storage guard. At exit the guard restores
+the original borrowed-view storage, copying final positions once only when the
+alternate buffer holds the accepted state. Static candidate channels are copied
+once, and rejected trials allocate no replacement system. Evaluation order,
+constraint projection, accepted coordinates, failure rollback, and checkpoint
+semantics are unchanged. This also carries no timing evidence or acceleration
+claim.
 
 ## Frozen development observations
 

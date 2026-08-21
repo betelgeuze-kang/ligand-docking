@@ -26,6 +26,69 @@ struct VectorChannels final {
     std::vector<double> z;
 };
 
+class PositionStorageGuard final {
+  public:
+    PositionStorageGuard(
+        bg_system *work,
+        bg_system *candidate,
+        bool active) noexcept
+        : work_(work),
+          candidate_(candidate),
+          active_(active),
+          original_x_(active ? work->position_x.data() : nullptr),
+          original_y_(active ? work->position_y.data() : nullptr),
+          original_z_(active ? work->position_z.data() : nullptr) {}
+
+    PositionStorageGuard(const PositionStorageGuard &) = delete;
+    PositionStorageGuard &operator=(const PositionStorageGuard &) = delete;
+
+    ~PositionStorageGuard() noexcept {
+        restore_original_storage();
+    }
+
+    void preserve_final_positions() noexcept {
+        if (!active_ || has_original_storage()) {
+            return;
+        }
+        std::copy(
+            work_->position_x.begin(),
+            work_->position_x.end(),
+            candidate_->position_x.begin());
+        std::copy(
+            work_->position_y.begin(),
+            work_->position_y.end(),
+            candidate_->position_y.begin());
+        std::copy(
+            work_->position_z.begin(),
+            work_->position_z.end(),
+            candidate_->position_z.begin());
+        restore_original_storage();
+    }
+
+  private:
+    [[nodiscard]] bool has_original_storage() const noexcept {
+        return work_->position_x.data() == original_x_ &&
+               work_->position_y.data() == original_y_ &&
+               work_->position_z.data() == original_z_;
+    }
+
+    void restore_original_storage() noexcept {
+        if (!active_ || has_original_storage()) {
+            return;
+        }
+        work_->position_x.swap(candidate_->position_x);
+        work_->position_y.swap(candidate_->position_y);
+        work_->position_z.swap(candidate_->position_z);
+    }
+
+    bg_system *work_ = nullptr;
+    bg_system *candidate_ = nullptr;
+    bool active_ = false;
+    const double *original_x_ = nullptr;
+    const double *original_y_ = nullptr;
+    const double *original_z_ = nullptr;
+};
+
 [[nodiscard]] bool finite_vector(const Vector3 &value) noexcept {
     return std::isfinite(value.x) && std::isfinite(value.y) &&
            std::isfinite(value.z);
@@ -958,11 +1021,9 @@ bg_status validate_constraint_state(const bg_simulation &simulation) noexcept {
 
 bg_status minimize(
     const bg_context &context,
-    const bg_simulation &source,
     const bg_minimizer_options_v1 &options,
     bg_simulation *work,
     bg_minimization_report_v1 *out_report) {
-    (void)source;
     cpu::Evaluation evaluation;
     bg_status status =
         evaluate(context, work, work->system, true, &evaluation);
@@ -983,9 +1044,13 @@ bg_status minimize(
     // Keep the accepted work coordinates unchanged during line search; the
     // candidate position buffers are overwritten and swapped only on accept.
     bg_system candidate;
-    if (!converged && options.max_iterations != UINT64_C(0)) {
+    const bool has_candidate =
+        !converged && options.max_iterations != UINT64_C(0);
+    if (has_candidate) {
         candidate = work->system;
     }
+    PositionStorageGuard position_storage(
+        &work->system, &candidate, has_candidate);
 
     while (!converged && completed < options.max_iterations) {
         bool accepted = false;
@@ -1087,6 +1152,8 @@ bg_status minimize(
              energy_change <= options.energy_tolerance_kcal_per_mol);
     }
 
+    position_storage.preserve_final_positions();
+
     status = validate_constraint_independence(*work);
     if (status != BG_STATUS_OK) {
         return fail(
@@ -1113,11 +1180,9 @@ bg_status minimize(
 
 bg_status integrate(
     const bg_context &context,
-    const bg_simulation &source,
     uint64_t step_count,
     bg_simulation *work,
     bg_dynamics_report_v1 *out_report) {
-    (void)source;
     cpu::Evaluation final_evaluation;
     VectorChannels constraint_scratch;
     bg_status status = BG_STATUS_OK;

@@ -28,14 +28,12 @@ bg_status validate_constraint_independence(const bg_simulation &simulation);
 
 bg_status minimize(
     const bg_context &context,
-    const bg_simulation &source,
     const bg_minimizer_options_v1 &options,
     bg_simulation *work,
     bg_minimization_report_v1 *out_report);
 
 bg_status integrate(
     const bg_context &context,
-    const bg_simulation &source,
     uint64_t step_count,
     bg_simulation *work,
     bg_dynamics_report_v1 *out_report);

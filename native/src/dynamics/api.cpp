@@ -229,9 +229,9 @@ void fill_particle_view(
     }
 }
 
-class IntegrationRollback final {
+class DynamicStateRollback final {
   public:
-    IntegrationRollback(
+    DynamicStateRollback(
         bg_simulation *simulation,
         bool snapshot_particle_channels)
         : simulation_(simulation),
@@ -252,10 +252,10 @@ class IntegrationRollback final {
         }
     }
 
-    IntegrationRollback(const IntegrationRollback &) = delete;
-    IntegrationRollback &operator=(const IntegrationRollback &) = delete;
+    DynamicStateRollback(const DynamicStateRollback &) = delete;
+    DynamicStateRollback &operator=(const DynamicStateRollback &) = delete;
 
-    ~IntegrationRollback() noexcept {
+    ~DynamicStateRollback() noexcept {
         if (committed_) {
             return;
         }
@@ -302,31 +302,6 @@ class IntegrationRollback final {
     std::vector<double> velocity_z_;
     bool committed_ = false;
 };
-
-void commit_dynamic_state(
-    bg_simulation &work,
-    bg_simulation *simulation) noexcept {
-    std::copy(
-        work.system.position_x.begin(), work.system.position_x.end(),
-        simulation->system.position_x.begin());
-    std::copy(
-        work.system.position_y.begin(), work.system.position_y.end(),
-        simulation->system.position_y.begin());
-    std::copy(
-        work.system.position_z.begin(), work.system.position_z.end(),
-        simulation->system.position_z.begin());
-    std::copy(
-        work.system.velocity_x.begin(), work.system.velocity_x.end(),
-        simulation->system.velocity_x.begin());
-    std::copy(
-        work.system.velocity_y.begin(), work.system.velocity_y.end(),
-        simulation->system.velocity_y.begin());
-    std::copy(
-        work.system.velocity_z.begin(), work.system.velocity_z.end(),
-        simulation->system.velocity_z.begin());
-    simulation->absolute_step = work.absolute_step;
-    simulation->neighbor_list_cache = std::move(work.neighbor_list_cache);
-}
 
 }  // namespace
 }  // namespace betelgeuze::native::dynamics
@@ -732,13 +707,13 @@ extern "C" BG_API bg_status BG_CALL bg_context_minimize(
                 BG_STATUS_INVALID_ARGUMENT,
                 "context, simulation, and minimizer units must match");
         }
-        auto work = std::make_unique<bg_simulation>(*simulation);
+        DynamicStateRollback rollback(simulation, true);
         bg_minimization_report_v1 report = *out_report;
-        status = minimize(*context, *simulation, *options, work.get(), &report);
+        status = minimize(*context, *options, simulation, &report);
         if (status != BG_STATUS_OK) {
             return status;
         }
-        commit_dynamic_state(*work, simulation);
+        rollback.commit();
         *out_report = report;
         return BG_STATUS_OK;
     });
@@ -775,10 +750,10 @@ extern "C" BG_API bg_status BG_CALL bg_context_integrate(
                 BG_STATUS_CAPACITY_OVERFLOW,
                 "absolute dynamics step would overflow uint64");
         }
-        IntegrationRollback rollback(simulation, step_count != UINT64_C(0));
+        DynamicStateRollback rollback(
+            simulation, step_count != UINT64_C(0));
         bg_dynamics_report_v1 report = *out_report;
-        status = integrate(
-            *context, *simulation, step_count, simulation, &report);
+        status = integrate(*context, step_count, simulation, &report);
         if (status != BG_STATUS_OK) {
             return status;
         }

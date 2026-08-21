@@ -344,11 +344,10 @@ void test_minimizer_and_transactionality() {
         handles.system, handles.forcefield, BG_INTEGRATOR_VELOCITY_VERLET,
         0.2, 0.0, 0.0, UINT64_C(0), nullptr);
     const bg_particle_soa_view before = particle_view(handles.simulation);
-    const double *const position_address = before.position_x_angstrom;
-    const double *const velocity_address =
-        before.velocity_x_angstrom_per_femtosecond;
+    const auto addresses = particle_addresses(before);
     const std::array<double, 2> velocities = {
-        velocity_address[0], velocity_address[1]};
+        before.velocity_x_angstrom_per_femtosecond[0],
+        before.velocity_x_angstrom_per_femtosecond[1]};
 
     bg_minimizer_options_v1 options;
     assert(bg_minimizer_options_v1_init(&options) == BG_STATUS_OK);
@@ -366,8 +365,7 @@ void test_minimizer_and_transactionality() {
     assert(report.final_potential_kcal_per_mol < 1.0e-20);
     assert(report.maximum_force_kcal_per_mol_angstrom <= 1.0e-10);
     const bg_particle_soa_view after = particle_view(handles.simulation);
-    assert(after.position_x_angstrom == position_address);
-    assert(after.velocity_x_angstrom_per_femtosecond == velocity_address);
+    assert(particle_addresses(after) == addresses);
     assert(after.velocity_x_angstrom_per_femtosecond[0] == velocities[0]);
     assert(after.velocity_x_angstrom_per_femtosecond[1] == velocities[1]);
     uint64_t step = UINT64_C(99);
@@ -391,6 +389,7 @@ void test_minimizer_and_transactionality() {
     assert(std::memcmp(
                &failed_report, &failed_snapshot, sizeof(failed_report)) == 0);
     const bg_particle_soa_view failed_view = particle_view(handles.simulation);
+    assert(particle_addresses(failed_view) == addresses);
     assert(failed_view.position_x_angstrom[0] == positions[0]);
     assert(failed_view.position_x_angstrom[1] == positions[1]);
 
@@ -413,9 +412,13 @@ void test_minimizer_and_transactionality() {
     options.energy_tolerance_kcal_per_mol = 0.0;
     options.force_tolerance_kcal_per_mol_angstrom = 0.0;
     assert(bg_minimization_report_v1_init(&report) == BG_STATUS_OK);
+    const auto recovered_addresses =
+        particle_addresses(particle_view(recovered.simulation));
     assert(bg_context_minimize(
                recovered.context, recovered.simulation, &options, &report) ==
            BG_STATUS_OK);
+    assert(particle_addresses(particle_view(recovered.simulation)) ==
+           recovered_addresses);
     assert(std::strlen(bg_last_error_message()) == 0U);
 }
 
