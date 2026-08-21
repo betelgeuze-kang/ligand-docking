@@ -196,6 +196,20 @@ bg_particle_soa_view particle_view(const bg_simulation *simulation) {
     return view;
 }
 
+std::array<const double *, 8> particle_addresses(
+    const bg_particle_soa_view &view) {
+    return {
+        view.position_x_angstrom,
+        view.position_y_angstrom,
+        view.position_z_angstrom,
+        view.velocity_x_angstrom_per_femtosecond,
+        view.velocity_y_angstrom_per_femtosecond,
+        view.velocity_z_angstrom_per_femtosecond,
+        view.mass_dalton,
+        view.charge_elementary,
+    };
+}
+
 bg_dynamics_report_v1 integrate(
     const bg_context *context,
     bg_simulation *simulation,
@@ -570,13 +584,13 @@ void test_nve_fixture_and_zero_step() {
         initial_view.velocity_x_angstrom_per_femtosecond[0],
         initial_view.velocity_x_angstrom_per_femtosecond[1],
     };
-    const double *const initial_address = initial_view.position_x_angstrom;
+    const auto initial_addresses = particle_addresses(initial_view);
     const bg_dynamics_report_v1 initial_report =
         integrate(first.context, first.simulation, UINT64_C(0));
     assert(initial_report.steps_completed == UINT64_C(0));
     assert(initial_report.absolute_step == UINT64_C(0));
     const bg_particle_soa_view zero_view = particle_view(first.simulation);
-    assert(zero_view.position_x_angstrom == initial_address);
+    assert(particle_addresses(zero_view) == initial_addresses);
     assert(zero_view.position_x_angstrom[0] == initial_state[0]);
     assert(zero_view.position_x_angstrom[1] == initial_state[1]);
     assert(zero_view.velocity_x_angstrom_per_femtosecond[0] == initial_state[2]);
@@ -601,6 +615,7 @@ void test_nve_fixture_and_zero_step() {
                     initial_report.total_kcal_per_mol) < 1.0e-5);
     assert(first_report.absolute_step == UINT64_C(1000));
     const bg_particle_soa_view frozen_nve = particle_view(first.simulation);
+    assert(particle_addresses(frozen_nve) == initial_addresses);
     assert(frozen_nve.position_x_angstrom[0] == -0x1.2919f91fb7dfbp-1);
     assert(frozen_nve.position_x_angstrom[1] == 0x1.1206ae0afd1abp-1);
     assert(frozen_nve.velocity_x_angstrom_per_femtosecond[0] ==
@@ -788,6 +803,7 @@ void test_report_and_state_failure_transactionality() {
         handles.system, handles.forcefield, BG_INTEGRATOR_VELOCITY_VERLET,
         4.0, 0.0, 0.0, UINT64_C(0), nullptr);
     const bg_particle_soa_view before = particle_view(handles.simulation);
+    const auto addresses = particle_addresses(before);
     const std::array<double, 4> snapshot = {
         before.position_x_angstrom[0], before.position_x_angstrom[1],
         before.velocity_x_angstrom_per_femtosecond[0],
@@ -803,6 +819,7 @@ void test_report_and_state_failure_transactionality() {
            BG_STATUS_NUMERICAL_ERROR);
     assert(std::memcmp(&report, &report_snapshot, sizeof(report)) == 0);
     const bg_particle_soa_view after = particle_view(handles.simulation);
+    assert(particle_addresses(after) == addresses);
     assert(after.position_x_angstrom[0] == snapshot[0]);
     assert(after.position_x_angstrom[1] == snapshot[1]);
     assert(after.velocity_x_angstrom_per_femtosecond[0] == snapshot[2]);
