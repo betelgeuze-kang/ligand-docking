@@ -193,7 +193,9 @@ periodic orthorhombic nonbonded work through deterministic C++ reference and
 Rust CPU cell lists. It freezes inclusive-cutoff pair membership, wrapped-cell
 deduplication, canonical pair order, and integer-box translation invariance;
 atom-permutation invariance is checked after mapping forces back to source atom
-identity. The independent all-pairs oracle remains the validation source.
+identity. The search radius is `max(cutoff, minimum_pair_distance)`, so the
+existing fail-closed minimum-distance check remains effective even outside the
+cutoff. The independent all-pairs oracle remains the validation source.
 Lists rebuild on every evaluation and carry no performance or acceleration
 claim.
 

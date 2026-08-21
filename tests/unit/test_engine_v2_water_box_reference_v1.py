@@ -79,7 +79,7 @@ def test_native_neighbor_list_profile_matches_the_packaged_runtime_asset() -> No
     ).read_bytes()
     assert packaged == canonical
     assert hashlib.sha256(canonical).hexdigest() == (
-        "71d8c83953c915674649a502048e3570423d2e55b967e777b4fb5528319f7ec0"
+        "ee2c64b3e40ec1905a97b0c2646e36c59fe30f674adfd019dde016e2637e3628"
     )
     assert NEIGHBOR_LIST_PROFILE["predecessor"]["sha256"] == (
         "8dcad0b5005b7a768ce0a88b1804b55ecddb9b3490e2dd59179dfa2393433507"
@@ -88,9 +88,16 @@ def test_native_neighbor_list_profile_matches_the_packaged_runtime_asset() -> No
     assert activation["periodic_axes_required"] == [True, True, True]
     assert activation["pair_order"] == "ascending_atom_i_then_ascending_atom_j"
     assert activation["rebuild_policy"] == "every_nonbonded_evaluation"
+    assert activation["search_radius_angstrom"] == (
+        "max(cutoff_angstrom, minimum_pair_distance_angstrom)"
+    )
+    assert activation["evaluation_order"] == (
+        "minimum_pair_distance validation before cutoff exclusion"
+    )
     validation = NEIGHBOR_LIST_PROFILE["validation"]
     assert validation["performance_threshold_present"] is False
     assert validation["atom_permutation_invariance_required"] is True
+    assert validation["minimum_distance_validation_outside_cutoff_required"] is True
     assert all(
         value is False for value in NEIGHBOR_LIST_PROFILE["authority"].values()
     )

@@ -551,10 +551,12 @@ using CellKey = std::array<std::size_t, 3>;
 
 [[nodiscard]] std::array<std::size_t, 3> periodic_cell_counts(
     const bg_forcefield &forcefield) noexcept {
+    const double search_radius =
+        std::max(forcefield.cutoff, forcefield.minimum_pair_distance);
     std::array<std::size_t, 3> counts{};
     for (std::size_t axis = 0; axis < counts.size(); ++axis) {
         const double count =
-            std::floor(forcefield.cell_lengths[axis] / forcefield.cutoff);
+            std::floor(forcefield.cell_lengths[axis] / search_radius);
         counts[axis] = count >= static_cast<double>(forcefield.atom_count)
                            ? forcefield.atom_count
                            : std::max<std::size_t>(
@@ -618,6 +620,8 @@ bg_status build_periodic_neighbor_pairs(
         return fail(BG_STATUS_INTERNAL_ERROR, "neighbor-list pair output is null");
     }
     const auto cell_counts = periodic_cell_counts(forcefield);
+    const double search_radius =
+        std::max(forcefield.cutoff, forcefield.minimum_pair_distance);
     std::vector<CellKey> atom_cells(forcefield.atom_count);
     std::map<CellKey, std::vector<std::size_t>> bins;
     for (std::size_t atom = 0; atom < forcefield.atom_count; ++atom) {
@@ -683,7 +687,7 @@ bg_status build_periodic_neighbor_pairs(
             if (status != BG_STATUS_OK) {
                 return status;
             }
-            if (std::sqrt(squared_distance) <= forcefield.cutoff) {
+            if (std::sqrt(squared_distance) <= search_radius) {
                 pairs.push_back({atom_i, atom_j});
             }
         }

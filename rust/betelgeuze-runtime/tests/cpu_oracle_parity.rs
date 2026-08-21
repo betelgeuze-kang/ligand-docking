@@ -222,6 +222,35 @@ fn fully_periodic_cpu_cell_list_is_image_and_permutation_invariant() {
 }
 
 #[test]
+fn fully_periodic_cpu_cell_list_preserves_minimum_distance_validation_beyond_cutoff() {
+    let mut input = oracle::OracleInput::new(
+        vec![p(0.0, 0.0, 0.0), p(2.0, 0.0, 0.0)],
+        vec![atom(1.0, 0.0, 0.0), atom(1.0, 0.0, 0.0)],
+    );
+    input.cell = Some(oracle::OrthorhombicCell {
+        lengths_angstrom: [10.0, 10.0, 10.0],
+        periodic_axes: [true, true, true],
+    });
+    input.nonbonded = settings(1.0, 0.5, 1.0, 0.0);
+    input.nonbonded.minimum_pair_distance_angstrom = 3.0;
+    let fixture = Fixture {
+        name: "fully_periodic_minimum_distance_beyond_cutoff",
+        input,
+        exact: None,
+    };
+
+    for backend in [runtime::Backend::CppCpuReference, runtime::Backend::RustCpu] {
+        let native = native_fixture(&fixture, backend);
+        let error = native
+            .context
+            .evaluate(&native.system, &native.forcefield)
+            .expect_err("minimum-distance violation outside cutoff must fail closed");
+        assert_eq!(error.code, runtime::ErrorCode::NumericalError);
+        assert!(error.message.contains("below minimum_pair_distance"));
+    }
+}
+
+#[test]
 fn native_safe_backends_match_cpp_reference_within_the_frozen_tolerance() {
     for fixture in fixtures() {
         let cpp = native_fixture(&fixture, runtime::Backend::CppCpuReference);

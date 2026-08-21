@@ -617,8 +617,9 @@ fn fallible_push<T>(
 }
 
 fn periodic_cell_counts(forcefield: &ForceField<'_>) -> [usize; 3] {
+    let search_radius = forcefield.cutoff.max(forcefield.minimum_pair_distance);
     forcefield.cell_lengths.map(|length| {
-        let count = (length / forcefield.cutoff).floor();
+        let count = (length / search_radius).floor();
         if count >= forcefield.atom_count as f64 {
             forcefield.atom_count
         } else {
@@ -681,6 +682,7 @@ fn periodic_neighbor_pairs(
     forcefield: &ForceField<'_>,
 ) -> Result<Vec<NeighborPair>, KernelError> {
     let cell_counts = periodic_cell_counts(forcefield);
+    let search_radius = forcefield.cutoff.max(forcefield.minimum_pair_distance);
     let mut assignments = Vec::new();
     assignments
         .try_reserve_exact(forcefield.atom_count)
@@ -737,7 +739,7 @@ fn periodic_neighbor_pairs(
             let distance = displacement(system, forcefield, atom_i, atom_j)?
                 .squared_norm()
                 .sqrt();
-            if distance <= forcefield.cutoff {
+            if distance <= search_radius {
                 fallible_push(
                     &mut pairs,
                     NeighborPair { atom_i, atom_j },

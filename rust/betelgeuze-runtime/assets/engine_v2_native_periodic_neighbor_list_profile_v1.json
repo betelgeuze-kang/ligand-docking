@@ -9,12 +9,14 @@
   "activation": {
     "backends": ["cpp_cpu_reference", "rust_cpu"],
     "periodic_axes_required": [true, true, true],
-    "cell_count_per_axis": "min(atom_count, max(1, floor(cell_length_angstrom / cutoff_angstrom)))",
-    "cell_width_is_at_least_cutoff": true,
+    "search_radius_angstrom": "max(cutoff_angstrom, minimum_pair_distance_angstrom)",
+    "cell_count_per_axis": "min(atom_count, max(1, floor(cell_length_angstrom / search_radius_angstrom)))",
+    "cell_width_is_at_least_search_radius": true,
     "neighbor_cell_offsets_per_axis": [-1, 0, 1],
     "wrapped_neighbor_cells_are_deduplicated": true,
     "pair_order": "ascending_atom_i_then_ascending_atom_j",
-    "pair_rule": "atom_i < atom_j and sqrt(minimum_image_squared_distance) <= cutoff_angstrom",
+    "candidate_pair_rule": "atom_i < atom_j and sqrt(minimum_image_squared_distance) <= search_radius_angstrom",
+    "evaluation_order": "minimum_pair_distance validation before cutoff exclusion",
     "rebuild_policy": "every_nonbonded_evaluation",
     "mixed_or_nonperiodic_fallback": "canonical_all_pairs"
   },
@@ -23,6 +25,7 @@
     "integer_box_translation_invariance_required": true,
     "atom_permutation_invariance_required": true,
     "cutoff_boundary_inclusive": true,
+    "minimum_distance_validation_outside_cutoff_required": true,
     "water_box_nve_baoab_and_constraint_parity_required": true,
     "performance_threshold_present": false
   },

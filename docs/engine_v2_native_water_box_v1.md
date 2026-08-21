@@ -22,7 +22,7 @@ successor bytes as well.
 
 The periodic CPU traversal successor is
 `config/engine_v2_native_periodic_neighbor_list_profile_v1.json`, SHA-256
-`71d8c83953c915674649a502048e3570423d2e55b967e777b4fb5528319f7ec0`.
+`ee2c64b3e40ec1905a97b0c2646e36c59fe30f674adfd019dde016e2637e3628`.
 It binds the rigid-water successor's exact digest and is embedded into the
 runtime without changing either earlier profile identity.
 
@@ -46,12 +46,15 @@ Only the C++ CPU reference and Rust CPU backends are admitted. The profile does
 not silently select HIP, and this work performs no HIP-device execution.
 
 Fully periodic orthorhombic CPU evaluations now build a deterministic cell
-list on every nonbonded evaluation. Each cell width is at least the cutoff;
-the 27 wrapped neighboring cell keys are deduplicated; exact minimum-image
-pairs within the inclusive cutoff are emitted in ascending `(atom_i, atom_j)`
-order. Mixed-axis and nonperiodic systems retain the canonical all-pairs path.
-The common ordering preserves binary64 accumulation parity with the independent
-all-pairs oracle. This first functional list has no skin or reuse cache.
+list on every nonbonded evaluation. Each cell width is at least
+`max(cutoff, minimum_pair_distance)`; the 27 wrapped neighboring cell keys are
+deduplicated; exact minimum-image candidates within that search radius are
+emitted in ascending `(atom_i, atom_j)` order. Evaluation then validates the
+minimum distance before applying the inclusive cutoff, preserving fail-closed
+behavior when the configured minimum exceeds the cutoff. Mixed-axis and
+nonperiodic systems retain the canonical all-pairs path. The common ordering
+preserves binary64 accumulation parity with the independent all-pairs oracle.
+This first functional list has no skin or reuse cache.
 
 ## Frozen development observations
 
