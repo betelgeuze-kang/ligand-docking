@@ -110,6 +110,13 @@ buffers before the failed work simulation is discarded. C++ reference and Rust
 CPU use the same lifetime rule; HIP evaluation is unchanged. This structural
 allocation reuse carries no measured timing evidence or acceleration claim.
 
+The integrator likewise skips unconstrained-coordinate snapshots when no
+distance constraints exist. When constraints are present, one three-channel
+snapshot buffer is retained across every drift in the transactional integrate
+call, including both BAOAB half-drifts. SHAKE/RATTLE ordering and binary64
+updates are unchanged. This is an allocation-lifetime property without timing
+evidence or an acceleration claim.
+
 ## Frozen development observations
 
 The independently implemented Python oracle and both native CPU backends agree

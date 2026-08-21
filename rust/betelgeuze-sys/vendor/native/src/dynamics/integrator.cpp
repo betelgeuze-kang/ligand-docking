@@ -339,7 +339,8 @@ bg_status apply_rattle(
 bg_status drift_and_constrain(
     const bg_simulation &simulation,
     double duration,
-    bg_system *system) {
+    bg_system *system,
+    VectorChannels *unconstrained_positions) {
     for (std::size_t atom = 0; atom < system->position_x.size(); ++atom) {
         const double next_x =
             system->position_x[atom] + duration * system->velocity_x[atom];
@@ -357,31 +358,48 @@ bg_status drift_and_constrain(
         system->position_y[atom] = next_y;
         system->position_z[atom] = next_z;
     }
-    const std::vector<double> unconstrained_x = system->position_x;
-    const std::vector<double> unconstrained_y = system->position_y;
-    const std::vector<double> unconstrained_z = system->position_z;
+    if (simulation.constraints.empty()) {
+        return BG_STATUS_OK;
+    }
+    const std::size_t atom_count = system->position_x.size();
+    unconstrained_positions->x.resize(atom_count);
+    unconstrained_positions->y.resize(atom_count);
+    unconstrained_positions->z.resize(atom_count);
+    std::copy(
+        system->position_x.begin(),
+        system->position_x.end(),
+        unconstrained_positions->x.begin());
+    std::copy(
+        system->position_y.begin(),
+        system->position_y.end(),
+        unconstrained_positions->y.begin());
+    std::copy(
+        system->position_z.begin(),
+        system->position_z.end(),
+        unconstrained_positions->z.begin());
     const bg_status status = apply_shake(simulation, system);
     if (status != BG_STATUS_OK) {
         return status;
     }
-    if (!simulation.constraints.empty()) {
-        for (std::size_t atom = 0; atom < system->position_x.size(); ++atom) {
-            const double next_vx = system->velocity_x[atom] +
-                (system->position_x[atom] - unconstrained_x[atom]) / duration;
-            const double next_vy = system->velocity_y[atom] +
-                (system->position_y[atom] - unconstrained_y[atom]) / duration;
-            const double next_vz = system->velocity_z[atom] +
-                (system->position_z[atom] - unconstrained_z[atom]) / duration;
-            if (!std::isfinite(next_vx) || !std::isfinite(next_vy) ||
-                !std::isfinite(next_vz)) {
-                return fail(
-                    BG_STATUS_NUMERICAL_ERROR,
-                    "constraint velocity reconstruction overflowed");
-            }
-            system->velocity_x[atom] = next_vx;
-            system->velocity_y[atom] = next_vy;
-            system->velocity_z[atom] = next_vz;
+    for (std::size_t atom = 0; atom < system->position_x.size(); ++atom) {
+        const double next_vx = system->velocity_x[atom] +
+            (system->position_x[atom] - unconstrained_positions->x[atom]) /
+                duration;
+        const double next_vy = system->velocity_y[atom] +
+            (system->position_y[atom] - unconstrained_positions->y[atom]) /
+                duration;
+        const double next_vz = system->velocity_z[atom] +
+            (system->position_z[atom] - unconstrained_positions->z[atom]) /
+                duration;
+        if (!std::isfinite(next_vx) || !std::isfinite(next_vy) ||
+            !std::isfinite(next_vz)) {
+            return fail(
+                BG_STATUS_NUMERICAL_ERROR,
+                "constraint velocity reconstruction overflowed");
         }
+        system->velocity_x[atom] = next_vx;
+        system->velocity_y[atom] = next_vy;
+        system->velocity_z[atom] = next_vz;
     }
     return apply_rattle(simulation, system);
 }
@@ -520,7 +538,8 @@ bg_status ornstein_uhlenbeck(
 bg_status velocity_verlet_step(
     const bg_context &context,
     bg_simulation *simulation,
-    cpu::Evaluation *out_final_evaluation) {
+    cpu::Evaluation *out_final_evaluation,
+    VectorChannels *constraint_scratch) {
     bg_status status = evaluate(
         context,
         simulation,
@@ -536,7 +555,10 @@ bg_status velocity_verlet_step(
         return status;
     }
     status = drift_and_constrain(
-        *simulation, simulation->timestep_femtoseconds, &simulation->system);
+        *simulation,
+        simulation->timestep_femtoseconds,
+        &simulation->system,
+        constraint_scratch);
     if (status != BG_STATUS_OK) {
         return status;
     }
@@ -563,7 +585,8 @@ bg_status velocity_verlet_step(
 bg_status baoab_step(
     const bg_context &context,
     bg_simulation *simulation,
-    cpu::Evaluation *out_final_evaluation) {
+    cpu::Evaluation *out_final_evaluation,
+    VectorChannels *constraint_scratch) {
     bg_status status = evaluate(
         context,
         simulation,
@@ -578,7 +601,8 @@ bg_status baoab_step(
     if (status != BG_STATUS_OK) {
         return status;
     }
-    status = drift_and_constrain(*simulation, half_dt, &simulation->system);
+    status = drift_and_constrain(
+        *simulation, half_dt, &simulation->system, constraint_scratch);
     if (status != BG_STATUS_OK) {
         return status;
     }
@@ -586,7 +610,8 @@ bg_status baoab_step(
     if (status != BG_STATUS_OK) {
         return status;
     }
-    status = drift_and_constrain(*simulation, half_dt, &simulation->system);
+    status = drift_and_constrain(
+        *simulation, half_dt, &simulation->system, constraint_scratch);
     if (status != BG_STATUS_OK) {
         return status;
     }
@@ -1082,6 +1107,7 @@ bg_status integrate(
     bg_dynamics_report_v1 *out_report) {
     (void)source;
     cpu::Evaluation final_evaluation;
+    VectorChannels constraint_scratch;
     bg_status status = BG_STATUS_OK;
     if (step_count == UINT64_C(0)) {
         status = evaluate(
@@ -1094,10 +1120,17 @@ bg_status integrate(
             switch (work->integrator) {
                 case BG_INTEGRATOR_VELOCITY_VERLET:
                     status = velocity_verlet_step(
-                        context, work, &final_evaluation);
+                        context,
+                        work,
+                        &final_evaluation,
+                        &constraint_scratch);
                     break;
                 case BG_INTEGRATOR_LANGEVIN_BAOAB:
-                    status = baoab_step(context, work, &final_evaluation);
+                    status = baoab_step(
+                        context,
+                        work,
+                        &final_evaluation,
+                        &constraint_scratch);
                     break;
                 default:
                     return fail(
