@@ -17,6 +17,7 @@ import signal
 import stat
 import subprocess
 import sys
+import tarfile
 import tempfile
 from types import ModuleType
 from typing import Any, Mapping, Sequence
@@ -91,6 +92,7 @@ _BUILD_ENVIRONMENT_KEYS = (
     "CARGO_ENCODED_RUSTFLAGS",
     "CARGO_HOME",
     "CARGO_INCREMENTAL",
+    "CARGO_NET_OFFLINE",
     "CARGO_PROFILE_RELEASE_CODEGEN_UNITS",
     "CARGO_PROFILE_RELEASE_DEBUG",
     "CARGO_PROFILE_RELEASE_DEBUG_ASSERTIONS",
@@ -102,13 +104,32 @@ _BUILD_ENVIRONMENT_KEYS = (
     "CARGO_PROFILE_RELEASE_RPATH",
     "CARGO_PROFILE_RELEASE_STRIP",
     "CARGO_TARGET_DIR",
+    "HOME",
+    "LANG",
+    "LC_ALL",
+    "PATH",
     "RUSTC",
     "RUSTC_WRAPPER",
     "RUSTC_WORKSPACE_WRAPPER",
     "RUSTDOC",
     "RUSTDOCFLAGS",
     "RUSTFLAGS",
+    "RUSTUP_HOME",
+    "RUSTUP_TOOLCHAIN",
 )
+_BUILD_ENVIRONMENT_PASSTHROUGH_KEYS = (
+    "CARGO_HOME",
+    "HOME",
+    "PATH",
+    "RUSTUP_HOME",
+    "RUSTUP_TOOLCHAIN",
+)
+_BUILD_ENVIRONMENT_FIXED = {
+    "CARGO_INCREMENTAL": "0",
+    "CARGO_NET_OFFLINE": "true",
+    "LANG": "C",
+    "LC_ALL": "C",
+}
 _CARGO_CONFIGURATION_FILENAMES = ("config.toml", "config")
 _TIMED_RUNTIME_ENVIRONMENT = {
     "LANG": "C",
@@ -169,6 +190,16 @@ _OBSERVED_FIXTURE_U64_KEYS = {
 _OBSERVED_FIXTURE_U128_KEYS = {"wall_time_ns_p50", "wall_time_ns_p95"}
 _U64_MAX = (1 << 64) - 1
 _U128_MAX = (1 << 128) - 1
+_I64_MAX = (1 << 63) - 1
+_REGISTRY_DEPENDENCIES = (
+    {
+        "crate_sha256": "b6d2cec3eae94f9f509c767b45932f1ada8350c4bdb85af2fcab4a3c14807981",
+        "name": "libm",
+        "source_tree_sha256": "a195f2abe1ee3756857fdabbe3ca3ee75bf214f94b47cc0a2fcc8f0c25695e48",
+        "version": "0.2.16",
+    },
+)
+_REGISTRY_SOURCE_TREE_DOMAIN = b"betelgeuze.registry_source_tree/1\0"
 
 
 def _canonical_bytes(value: object) -> bytes:
@@ -407,13 +438,19 @@ def _baseline_file_sha256(path: str) -> str:
     return _sha256(raw)
 
 
-def _environment_fingerprints() -> dict[str, object]:
+def _environment_fingerprints(
+    environment: Mapping[str, str], *, cargo_home: Path
+) -> dict[str, object]:
     return {
         key: {
-            "set": key in os.environ,
-            "value_sha256": _sha256(os.environ[key].encode())
-            if key in os.environ
-            else None,
+            "set": key in environment,
+            "value_sha256": (
+                _path_sha256(cargo_home)
+                if key == "CARGO_HOME" and key in environment
+                else _sha256(os.fsencode(environment[key]))
+                if key in environment
+                else None
+            ),
         }
         for key in _BUILD_ENVIRONMENT_KEYS
     }
@@ -472,19 +509,45 @@ def _cargo_configuration_file(path: Path) -> dict[str, object]:
     }
 
 
-def _cargo_configuration_binding() -> dict[str, object]:
+def _effective_cargo_home() -> tuple[Path, str]:
     raw_cargo_home = os.environ.get("CARGO_HOME")
     if raw_cargo_home is not None and not raw_cargo_home:
         raise SamplingPoolCPUObservationEvidenceError("CARGO_HOME is empty")
-    if raw_cargo_home is None:
-        cargo_home = Path.home() / ".cargo"
-        cargo_home_origin = "default_user_home"
-    else:
+    try:
+        if raw_cargo_home is None:
+            return (Path.home() / ".cargo").absolute(), "default_user_home"
         candidate = Path(raw_cargo_home).expanduser()
-        cargo_home = (
-            candidate if candidate.is_absolute() else observer.RUST_ROOT / candidate
-        )
-        cargo_home_origin = "environment"
+    except (OSError, RuntimeError) as exc:
+        raise SamplingPoolCPUObservationEvidenceError(
+            "Cargo home cannot be resolved"
+        ) from exc
+    cargo_home = (
+        candidate if candidate.is_absolute() else observer.RUST_ROOT / candidate
+    )
+    return cargo_home.absolute(), "environment"
+
+
+def _build_subprocess_environment() -> dict[str, str]:
+    try:
+        default_home = str(Path.home())
+    except (OSError, RuntimeError) as exc:
+        raise SamplingPoolCPUObservationEvidenceError(
+            "build home cannot be resolved"
+        ) from exc
+    environment = dict(_BUILD_ENVIRONMENT_FIXED)
+    for key in _BUILD_ENVIRONMENT_PASSTHROUGH_KEYS:
+        if key in os.environ:
+            environment[key] = os.environ[key]
+    environment.setdefault("HOME", default_home)
+    environment.setdefault("PATH", os.defpath)
+    return environment
+
+
+def _cargo_configuration_binding(
+    cargo_home: Path | None = None, cargo_home_origin: str | None = None
+) -> dict[str, object]:
+    if cargo_home is None or cargo_home_origin is None:
+        cargo_home, cargo_home_origin = _effective_cargo_home()
 
     roots: list[dict[str, object]] = []
     for index, directory in enumerate(
@@ -513,6 +576,14 @@ def _cargo_configuration_binding() -> dict[str, object]:
             "scope": "cargo_home",
         }
     )
+    if any(
+        candidate["present"]
+        for root in roots
+        for candidate in root["candidate_files"].values()
+    ):
+        raise SamplingPoolCPUObservationEvidenceError(
+            "Cargo configuration overrides are forbidden for capture"
+        )
     return {
         "cargo_home_origin": cargo_home_origin,
         "lookup_roots": roots,
@@ -694,30 +765,188 @@ def _load_observer_output(raw: str) -> dict[str, Any]:
         raise SamplingPoolCPUObservationEvidenceError(str(exc)) from exc
 
 
-def _toolchain_identity() -> dict[str, str]:
+def _run_build_command(
+    command: Sequence[str],
+    *,
+    cwd: Path,
+    environment: Mapping[str, str],
+    timeout: int,
+) -> subprocess.CompletedProcess[str]:
+    try:
+        process = subprocess.Popen(
+            command,
+            cwd=cwd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            start_new_session=True,
+            env=dict(environment),
+        )
+    except OSError as exc:
+        raise SamplingPoolCPUObservationEvidenceError(
+            f"build command failed to launch: {command[0]}"
+        ) from exc
+    try:
+        stdout, stderr = process.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired as exc:
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        process.communicate()
+        raise SamplingPoolCPUObservationEvidenceError(
+            f"build command timed out: {command[0]}"
+        ) from exc
+    completed = subprocess.CompletedProcess(command, process.returncode, stdout, stderr)
+    if completed.returncode != 0:
+        detail = completed.stderr.strip() or completed.stdout.strip()
+        raise SamplingPoolCPUObservationEvidenceError(
+            f"build command failed ({command[0]}): {detail[:4096]}"
+        )
+    return completed
+
+
+def _toolchain_identity(environment: Mapping[str, str]) -> dict[str, object]:
+    cargo_version = _run_build_command(
+        ("cargo", "--version", "--verbose"),
+        cwd=observer.RUST_ROOT,
+        environment=environment,
+        timeout=30,
+    ).stdout.strip()
+    rustc_version = _run_build_command(
+        ("rustc", "--version", "--verbose"),
+        cwd=observer.RUST_ROOT,
+        environment=environment,
+        timeout=30,
+    ).stdout.strip()
+    sysroot = Path(
+        _run_build_command(
+            ("rustc", "--print", "sysroot"),
+            cwd=observer.RUST_ROOT,
+            environment=environment,
+            timeout=30,
+        ).stdout.strip()
+    )
+    cargo_executable = sysroot / "bin" / "cargo"
+    rustc_executable = sysroot / "bin" / "rustc"
+    if not cargo_executable.is_file() or not rustc_executable.is_file():
+        raise SamplingPoolCPUObservationEvidenceError(
+            "effective Rust toolchain executables are unavailable"
+        )
     return {
-        "cargo_version": observer._run(
-            ("cargo", "--version", "--verbose"),
-            cwd=observer.RUST_ROOT,
-            timeout=30,
-        ).stdout.strip(),
-        "rustc_version": observer._run(
-            ("rustc", "--version", "--verbose"),
-            cwd=observer.RUST_ROOT,
-            timeout=30,
-        ).stdout.strip(),
+        "cargo_executable_sha256": _file_sha256(cargo_executable),
+        "cargo_version": cargo_version,
+        "rustc_executable_sha256": _file_sha256(rustc_executable),
+        "rustc_sysroot_sha256": _path_sha256(sysroot),
+        "rustc_version": rustc_version,
     }
 
 
-def _build_release_library_fresh(target_directory: Path) -> Path:
+def _verify_registry_dependency_sources(cargo_home: Path) -> list[dict[str, str]]:
+    verified: list[dict[str, str]] = []
+    for expected in _REGISTRY_DEPENDENCIES:
+        package = f"{expected['name']}-{expected['version']}"
+        candidates = sorted(
+            (cargo_home / "registry" / "cache").glob(f"*/{package}.crate")
+        )
+        matching = [
+            path
+            for path in candidates
+            if _file_sha256(path) == expected["crate_sha256"]
+        ]
+        if len(matching) != 1:
+            raise SamplingPoolCPUObservationEvidenceError(
+                f"locked registry crate is unavailable or ambiguous: {package}"
+            )
+        archive = matching[0]
+        index_directory = archive.parent.name
+        source_directory = cargo_home / "registry" / "src" / index_directory / package
+        archive_rows: list[dict[str, object]] = []
+        archive_files: dict[str, tuple[str, bool]] = {}
+        try:
+            with tarfile.open(archive, "r:*") as handle:
+                for member in handle.getmembers():
+                    parts = Path(member.name).parts
+                    if not parts or parts[0] != package or ".." in parts:
+                        raise SamplingPoolCPUObservationEvidenceError(
+                            f"registry crate path is invalid: {package}"
+                        )
+                    if member.isdir():
+                        continue
+                    if not member.isfile():
+                        raise SamplingPoolCPUObservationEvidenceError(
+                            f"registry crate contains a non-file entry: {package}"
+                        )
+                    relative = "/".join(parts[1:])
+                    extracted = handle.extractfile(member)
+                    if not relative or extracted is None:
+                        raise SamplingPoolCPUObservationEvidenceError(
+                            f"registry crate member is unreadable: {package}"
+                        )
+                    digest = _sha256(extracted.read())
+                    executable = bool(member.mode & 0o111)
+                    archive_files[relative] = (digest, executable)
+                    archive_rows.append(
+                        {
+                            "executable": executable,
+                            "path": relative,
+                            "sha256": digest,
+                        }
+                    )
+        except (OSError, tarfile.TarError) as exc:
+            raise SamplingPoolCPUObservationEvidenceError(
+                f"registry crate is unreadable: {package}"
+            ) from exc
+        archive_rows.sort(key=lambda row: str(row["path"]))
+        tree_sha256 = _sha256(
+            _REGISTRY_SOURCE_TREE_DOMAIN + _canonical_projection(archive_rows)
+        )
+        if tree_sha256 != expected["source_tree_sha256"]:
+            raise SamplingPoolCPUObservationEvidenceError(
+                f"registry crate source tree differs from the pinned tree: {package}"
+            )
+        actual_files: dict[str, tuple[str, bool]] = {}
+        executable_bits = stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
+        try:
+            for path in source_directory.rglob("*"):
+                if path.is_dir():
+                    continue
+                relative = path.relative_to(source_directory).as_posix()
+                if relative == ".cargo-ok":
+                    continue
+                metadata = path.lstat()
+                if not stat.S_ISREG(metadata.st_mode):
+                    raise SamplingPoolCPUObservationEvidenceError(
+                        f"registry source contains a non-file entry: {package}"
+                    )
+                actual_files[relative] = (
+                    _file_sha256(path),
+                    bool(metadata.st_mode & executable_bits),
+                )
+        except OSError as exc:
+            raise SamplingPoolCPUObservationEvidenceError(
+                f"registry source is unreadable: {package}"
+            ) from exc
+        if actual_files != archive_files:
+            raise SamplingPoolCPUObservationEvidenceError(
+                f"registry source bytes differ from the locked crate: {package}"
+            )
+        verified.append(dict(expected))
+    return verified
+
+
+def _build_release_library_fresh(
+    target_directory: Path, environment: Mapping[str, str]
+) -> Path:
     if target_directory.exists():
         raise SamplingPoolCPUObservationEvidenceError(
             "capture-owned Cargo target already exists"
         )
-    completed = observer._run(
+    completed = _run_build_command(
         (
             "cargo",
             "build",
+            "--offline",
             "--target-dir",
             str(target_directory),
             "--release",
@@ -728,6 +957,7 @@ def _build_release_library_fresh(target_directory: Path) -> Path:
             "--message-format=json",
         ),
         cwd=observer.RUST_ROOT,
+        environment=environment,
         timeout=180,
     )
     observed: list[Path] = []
@@ -761,16 +991,40 @@ def _build_release_library_fresh(target_directory: Path) -> Path:
     return unique[0]
 
 
-def _capture_fresh_observation() -> tuple[dict[str, Any], list[int], dict[str, object]]:
+def _capture_fresh_observation(
+    environment: Mapping[str, str],
+) -> tuple[dict[str, Any], list[int], dict[str, object]]:
     with tempfile.TemporaryDirectory(
         prefix="engine-v2-sampling-pool-evidence-"
     ) as directory:
         temporary_root = Path(directory)
-        rlib = _build_release_library_fresh(temporary_root / "cargo-target")
+        rlib = _build_release_library_fresh(
+            temporary_root / "cargo-target", environment
+        )
         rlib_sha256 = _file_sha256(rlib)
         rlib_bytes = rlib.stat().st_size
         executable = temporary_root / "betelgeuze-sampling-pool-observe-v1"
-        observer._compile_observer(rlib, executable)
+        dependency_directory = (
+            rlib.parent if rlib.parent.name == "deps" else rlib.parent / "deps"
+        )
+        _run_build_command(
+            (
+                "rustc",
+                "--edition=2021",
+                "-C",
+                "opt-level=3",
+                str(observer.RUST_SOURCE),
+                "--extern",
+                f"betelgeuze_docking_search={rlib}",
+                "-L",
+                f"dependency={dependency_directory}",
+                "-o",
+                str(executable),
+            ),
+            cwd=REPOSITORY_ROOT,
+            environment=environment,
+            timeout=120,
+        )
         executable_sha256 = _file_sha256(executable)
         executable_bytes = executable.stat().st_size
         affinity_before = _cpu_affinity()
@@ -807,10 +1061,17 @@ def capture() -> dict[str, object]:
     _verify_imported_observer_binding()
     source = _verify_source_baseline()
     capture_tool_sha256 = _file_sha256(Path(__file__).resolve())
-    build_environment = _environment_fingerprints()
-    cargo_configuration = _cargo_configuration_binding()
-    toolchain = _toolchain_identity()
-    observation, affinity_before, artifacts = _capture_fresh_observation()
+    cargo_home, cargo_home_origin = _effective_cargo_home()
+    build_subprocess_environment = _build_subprocess_environment()
+    build_environment = _environment_fingerprints(
+        build_subprocess_environment, cargo_home=cargo_home
+    )
+    cargo_configuration = _cargo_configuration_binding(cargo_home, cargo_home_origin)
+    registry_dependencies = _verify_registry_dependency_sources(cargo_home)
+    toolchain = _toolchain_identity(build_subprocess_environment)
+    observation, affinity_before, artifacts = _capture_fresh_observation(
+        build_subprocess_environment
+    )
     host = _host_identity(str(observation["cpu_model"]))
     _require_stable_affinity(affinity_before, host["affinity_cpu_ids"])
     if _verify_source_baseline() != source:
@@ -821,14 +1082,22 @@ def capture() -> dict[str, object]:
         raise SamplingPoolCPUObservationEvidenceError(
             "capture tool changed during execution"
         )
+    cargo_home_after, cargo_home_origin_after = _effective_cargo_home()
+    build_subprocess_environment_after = _build_subprocess_environment()
     if (
-        _environment_fingerprints() != build_environment
-        or _cargo_configuration_binding() != cargo_configuration
+        _environment_fingerprints(
+            build_subprocess_environment_after, cargo_home=cargo_home_after
+        )
+        != build_environment
+        or _cargo_configuration_binding(cargo_home_after, cargo_home_origin_after)
+        != cargo_configuration
+        or _verify_registry_dependency_sources(cargo_home_after)
+        != registry_dependencies
     ):
         raise SamplingPoolCPUObservationEvidenceError(
-            "build environment or Cargo configuration changed during execution"
+            "build environment, Cargo configuration, or registry source changed"
         )
-    if _toolchain_identity() != toolchain:
+    if _toolchain_identity(build_subprocess_environment_after) != toolchain:
         raise SamplingPoolCPUObservationEvidenceError(
             "Rust/Cargo toolchain changed during execution"
         )
@@ -836,8 +1105,10 @@ def capture() -> dict[str, object]:
         "authority": dict(observation["authority"]),
         "build": {
             "build_environment": build_environment,
+            "build_environment_policy": "sanitized_allowlist_v1",
             "cargo_configuration": cargo_configuration,
             **artifacts,
+            "registry_dependencies": registry_dependencies,
             "runtime_environment": _timed_runtime_environment(),
             "toolchain": toolchain,
         },
@@ -993,6 +1264,14 @@ def _verify_cargo_configuration(value: object) -> None:
             raise SamplingPoolCPUObservationEvidenceError(
                 "Cargo configuration candidate paths are not distinct"
             )
+    if any(
+        candidate["present"]
+        for root in roots
+        for candidate in root["candidate_files"].values()
+    ):
+        raise SamplingPoolCPUObservationEvidenceError(
+            "Cargo configuration overrides are forbidden"
+        )
     cargo_component = _sha256(b".cargo")
     rust_component = _sha256(b"rust")
     working_components = [root["root_path_components_sha256"] for root in working_roots]
@@ -1143,11 +1422,13 @@ def verify(document: object) -> dict[str, object]:
     build = document["build"]
     if type(build) is not dict or set(build) != {
         "build_environment",
+        "build_environment_policy",
         "cargo_configuration",
         "observer_binary_bytes",
         "observer_binary_sha256",
         "release_rlib_bytes",
         "release_rlib_sha256",
+        "registry_dependencies",
         "runtime_environment",
         "target_directory_role",
         "toolchain",
@@ -1156,8 +1437,12 @@ def verify(document: object) -> dict[str, object]:
     for key in ("observer_binary_sha256", "release_rlib_sha256"):
         _require_digest(build.get(key), label=f"build.{key}")
     for key in ("observer_binary_bytes", "release_rlib_bytes"):
-        if type(build.get(key)) is not int or build[key] <= 0:
+        if type(build.get(key)) is not int or build[key] <= 0 or build[key] > _I64_MAX:
             raise SamplingPoolCPUObservationEvidenceError(f"build.{key} is invalid")
+    if build.get("build_environment_policy") != "sanitized_allowlist_v1":
+        raise SamplingPoolCPUObservationEvidenceError(
+            "build environment policy is invalid"
+        )
     if build.get("target_directory_role") != (
         "fresh_capture_owned_temporary_directory"
     ):
@@ -1166,7 +1451,14 @@ def verify(document: object) -> dict[str, object]:
         )
     if (
         type(build.get("toolchain")) is not dict
-        or set(build["toolchain"]) != {"cargo_version", "rustc_version"}
+        or set(build["toolchain"])
+        != {
+            "cargo_executable_sha256",
+            "cargo_version",
+            "rustc_executable_sha256",
+            "rustc_sysroot_sha256",
+            "rustc_version",
+        }
         or any(
             type(build["toolchain"].get(key)) is not str
             or not build["toolchain"][key].strip()
@@ -1176,6 +1468,16 @@ def verify(document: object) -> dict[str, object]:
         or set(build["build_environment"]) != set(_BUILD_ENVIRONMENT_KEYS)
     ):
         raise SamplingPoolCPUObservationEvidenceError("build metadata is invalid")
+    for key in (
+        "cargo_executable_sha256",
+        "rustc_executable_sha256",
+        "rustc_sysroot_sha256",
+    ):
+        _require_digest(build["toolchain"].get(key), label=f"build.toolchain.{key}")
+    if build.get("registry_dependencies") != list(_REGISTRY_DEPENDENCIES):
+        raise SamplingPoolCPUObservationEvidenceError(
+            "registry dependency source binding is invalid"
+        )
     for key, row in build["build_environment"].items():
         if (
             type(row) is not dict
@@ -1193,6 +1495,26 @@ def verify(document: object) -> dict[str, object]:
             raise SamplingPoolCPUObservationEvidenceError(
                 f"build environment metadata is invalid: {key}"
             )
+    for key, value in _BUILD_ENVIRONMENT_FIXED.items():
+        if build["build_environment"].get(key) != {
+            "set": True,
+            "value_sha256": _sha256(os.fsencode(value)),
+        }:
+            raise SamplingPoolCPUObservationEvidenceError(
+                f"fixed build environment changed: {key}"
+            )
+    for key in (
+        set(_BUILD_ENVIRONMENT_KEYS)
+        - set(_BUILD_ENVIRONMENT_PASSTHROUGH_KEYS)
+        - set(_BUILD_ENVIRONMENT_FIXED)
+    ):
+        if build["build_environment"][key] != {
+            "set": False,
+            "value_sha256": None,
+        }:
+            raise SamplingPoolCPUObservationEvidenceError(
+                f"forbidden build override is present: {key}"
+            )
     _verify_cargo_configuration(build["cargo_configuration"])
     expected_cargo_home_origin = (
         "environment"
@@ -1202,6 +1524,13 @@ def verify(document: object) -> dict[str, object]:
     if build["cargo_configuration"]["cargo_home_origin"] != expected_cargo_home_origin:
         raise SamplingPoolCPUObservationEvidenceError(
             "Cargo-home origin differs from its environment fingerprint"
+        )
+    if build["build_environment"]["CARGO_HOME"]["set"] and (
+        build["build_environment"]["CARGO_HOME"]["value_sha256"]
+        != build["cargo_configuration"]["lookup_roots"][-1]["root_path_sha256"]
+    ):
+        raise SamplingPoolCPUObservationEvidenceError(
+            "Cargo-home environment digest differs from its lookup root"
         )
     if build.get("runtime_environment") != _TIMED_RUNTIME_ENVIRONMENT:
         raise SamplingPoolCPUObservationEvidenceError(
@@ -1318,9 +1647,12 @@ def load_and_verify(path: Path) -> dict[str, object]:
 
 
 def _write_exclusive(path: Path, payload: bytes) -> None:
-    destination = path.resolve()
+    destination = path.absolute()
     destination.parent.mkdir(parents=True, exist_ok=True)
-    descriptor = os.open(destination, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    descriptor = os.open(destination, flags, 0o600)
     try:
         with os.fdopen(descriptor, "wb") as handle:
             handle.write(payload)

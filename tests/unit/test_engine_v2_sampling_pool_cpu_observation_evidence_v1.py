@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -25,7 +26,7 @@ def _reseal(value: dict[str, object]) -> dict[str, object]:
 def test_committed_source_binary_host_bound_observation_verifies() -> None:
     value = evidence.load_and_verify(EVIDENCE)
     assert value["receipt_sha256"] == (
-        "5d1e2731d51f6d85bf1e688cb6fba0393f5fc10fbf5daab8526fca0dbef3307b"
+        "42b5d76c870c17ef49528319d6209a587b5ef40ef6be63c12c166d776da9e394"
     )
     assert value["source"]["merged_main_commit"] == evidence.SOURCE_BASELINE_COMMIT
     assert value["source"]["merged_main_tree"] == evidence.SOURCE_BASELINE_TREE
@@ -132,6 +133,22 @@ def test_resealed_semantic_cross_wiring_fails_closed() -> None:
     with pytest.raises(
         evidence.SamplingPoolCPUObservationEvidenceError,
         match="differs from its environment fingerprint",
+    ):
+        evidence.verify(_reseal(value))
+
+    value = json.loads(EVIDENCE.read_text(encoding="ascii"))
+    value["build"]["observer_binary_bytes"] = evidence._I64_MAX + 1
+    with pytest.raises(
+        evidence.SamplingPoolCPUObservationEvidenceError,
+        match="observer_binary_bytes is invalid",
+    ):
+        evidence.verify(_reseal(value))
+
+    value = json.loads(EVIDENCE.read_text(encoding="ascii"))
+    value["build"]["registry_dependencies"][0]["source_tree_sha256"] = "0" * 64
+    with pytest.raises(
+        evidence.SamplingPoolCPUObservationEvidenceError,
+        match="registry dependency source binding",
     ):
         evidence.verify(_reseal(value))
 
@@ -273,6 +290,13 @@ def test_evidence_write_is_exclusive(tmp_path: Path) -> None:
     with pytest.raises(FileExistsError):
         evidence._write_exclusive(destination, b"changed\n")
 
+    dangling_target = tmp_path / "dangling-target.json"
+    dangling_link = tmp_path / "dangling-link.json"
+    dangling_link.symlink_to(dangling_target)
+    with pytest.raises(FileExistsError):
+        evidence._write_exclusive(dangling_link, b"redirected\n")
+    assert not dangling_target.exists()
+
 
 def test_affinity_and_imported_runner_binding_fail_closed(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
@@ -352,16 +376,44 @@ def test_source_git_ignores_ambient_repository_redirection(
 
 
 def test_fresh_target_and_toolchain_helpers_fail_closed(tmp_path: Path) -> None:
+    environment = evidence._build_subprocess_environment()
     occupied_target = tmp_path / "occupied-target"
     occupied_target.mkdir()
     with pytest.raises(
         evidence.SamplingPoolCPUObservationEvidenceError,
         match="already exists",
     ):
-        evidence._build_release_library_fresh(occupied_target)
-    toolchain = evidence._toolchain_identity()
-    assert set(toolchain) == {"cargo_version", "rustc_version"}
+        evidence._build_release_library_fresh(occupied_target, environment)
+    toolchain = evidence._toolchain_identity(environment)
+    assert set(toolchain) == {
+        "cargo_executable_sha256",
+        "cargo_version",
+        "rustc_executable_sha256",
+        "rustc_sysroot_sha256",
+        "rustc_version",
+    }
     assert all(value for value in toolchain.values())
+
+
+def test_registry_sources_and_home_resolution_fail_closed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    cargo_home, _ = evidence._effective_cargo_home()
+    assert evidence._verify_registry_dependency_sources(cargo_home) == list(
+        evidence._REGISTRY_DEPENDENCIES
+    )
+
+    monkeypatch.delenv("CARGO_HOME", raising=False)
+    monkeypatch.setattr(
+        evidence.Path,
+        "home",
+        lambda: (_ for _ in ()).throw(RuntimeError("home unavailable")),
+    )
+    with pytest.raises(
+        evidence.SamplingPoolCPUObservationEvidenceError,
+        match="Cargo home cannot be resolved",
+    ):
+        evidence._effective_cargo_home()
 
 
 def test_effective_affinity_cpu_models_are_complete_and_homogeneous() -> None:
@@ -413,17 +465,30 @@ def test_cargo_configuration_and_timed_environment_are_bound(
     monkeypatch.setattr(evidence.observer, "RUST_ROOT", rust_root)
     monkeypatch.setenv("CARGO_HOME", str(cargo_home))
 
+    assert evidence._cargo_configuration_file(rust_config)["content_sha256"] == (
+        evidence._sha256(rust_config.read_bytes())
+    )
+    assert evidence._cargo_configuration_file(cargo_config)["content_sha256"] == (
+        evidence._sha256(cargo_config.read_bytes())
+    )
+    with pytest.raises(
+        evidence.SamplingPoolCPUObservationEvidenceError,
+        match="overrides are forbidden",
+    ):
+        evidence._cargo_configuration_binding()
+    rust_config.unlink()
+    cargo_config.unlink()
+
     binding = evidence._cargo_configuration_binding()
     evidence._verify_cargo_configuration(binding)
     assert binding["cargo_home_origin"] == "environment"
     roots = binding["lookup_roots"]
-    assert roots[0]["candidate_files"]["config.toml"]["content_sha256"] == (
-        evidence._sha256(rust_config.read_bytes())
-    )
     assert roots[-1]["scope"] == "cargo_home"
-    assert roots[-1]["candidate_files"]["config"]["content_sha256"] == (
-        evidence._sha256(cargo_config.read_bytes())
+    environment = evidence._build_subprocess_environment()
+    fingerprints = evidence._environment_fingerprints(
+        environment, cargo_home=cargo_home
     )
+    assert fingerprints["CARGO_HOME"]["value_sha256"] == (roots[-1]["root_path_sha256"])
 
     incomplete = copy.deepcopy(binding)
     del incomplete["lookup_roots"][1]
@@ -439,6 +504,19 @@ def test_cargo_configuration_and_timed_environment_are_bound(
     shallow_binding = evidence._cargo_configuration_binding()
     assert len(shallow_binding["lookup_roots"]) == 4
     evidence._verify_cargo_configuration(shallow_binding)
+
+    monkeypatch.setenv(
+        "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTFLAGS", "-Ctarget-cpu=native"
+    )
+    monkeypatch.setenv("RUSTC", "/tmp/untrusted-rustc")
+    sanitized = evidence._build_subprocess_environment()
+    assert "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTFLAGS" not in sanitized
+    assert "RUSTC" not in sanitized
+    raw_surrogate = os.fsdecode(b"\xff")
+    raw_fingerprints = evidence._environment_fingerprints(
+        {"RUSTFLAGS": raw_surrogate}, cargo_home=cargo_home
+    )
+    assert raw_fingerprints["RUSTFLAGS"]["value_sha256"] == evidence._sha256(b"\xff")
 
     monkeypatch.setenv("LD_PRELOAD", "/tmp/inject.so")
     runtime = evidence._timed_runtime_environment()

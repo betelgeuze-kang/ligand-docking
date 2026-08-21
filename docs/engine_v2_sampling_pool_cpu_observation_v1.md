@@ -67,15 +67,17 @@ directory through every ancestor plus Cargo home; all candidates were absent
 for this capture. A hashed path-component chain starts at `rust/.cargo`, removes
 one ancestor per row, and ends at `/.cargo`, proving completeness without
 assuming a checkout-specific path depth. The release rlib is compiled inside a
-new capture-owned temporary Cargo target, and Cargo/rustc identities must match
-before and after compilation and timing. Its receipt SHA-256 is
-`5d1e2731d51f6d85bf1e688cb6fba0393f5fc10fbf5daab8526fca0dbef3307b`.
+new capture-owned temporary Cargo target under a sanitized build-environment
+allowlist. Cargo/rustc executable identities must match before and after
+compilation and timing, and the actual `libm` registry tree must match its
+locked crate checksum and pinned 155-file tree. Its receipt SHA-256 is
+`42b5d76c870c17ef49528319d6209a587b5ef40ef6be63c12c166d776da9e394`.
 
 | fixture | raw samples | p50 ns | p95 ns | peak RSS KiB | peak delta KiB |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| small | 7 | 19,882,541 | 20,224,043 | 2,688 | 768 |
-| medium | 7 | 66,255,969 | 66,646,642 | 3,072 | 1,152 |
-| large | 7 | 195,142,286 | 197,651,534 | 3,456 | 1,536 |
+| small | 7 | 20,151,107 | 23,646,562 | 2,688 | 768 |
+| medium | 7 | 66,426,037 | 68,239,818 | 3,072 | 1,152 |
+| large | 7 | 194,135,495 | 195,115,778 | 3,456 | 1,536 |
 
 Verify the canonical receipt without reading a clock or executing an
 observation:
