@@ -74,8 +74,12 @@ The current `main` branch contains:
   exact checkpoint continuation. An immutable successor profile adds six
   rigid-water SHAKE/RATTLE rows and freezes position/velocity residual bounds,
   12 constrained degrees of freedom, CPU-backend NVE/BAOAB parity, and exact
-  constrained checkpoint continuation.
-  The entry point is CPU-only and has no PME, neighbor-list-performance,
+  constrained checkpoint continuation. A further SHA-bound successor routes
+  fully periodic nonbonded CPU work through deterministic cell lists with
+  inclusive-cutoff membership, canonical pair order, wrapped-cell
+  deduplication, integer-box translation and atom-permutation invariance, and
+  independent all-pairs oracle parity.
+  The entry point is CPU-only and has no PME, neighbor-list reuse/performance,
   ion, protein, production-MD, scientific, free-energy, benchmark, product,
   Stage 0, or performance authority;
 - bounded single-model PDB and single-molecule SDF V2000 ingestion;

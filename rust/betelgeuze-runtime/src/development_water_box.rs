@@ -386,6 +386,22 @@ mod tests {
                 0x24, 0xf0, 0x01, 0x9e,
             ]
         );
+        assert_eq!(
+            runtime::NATIVE_PERIODIC_NEIGHBOR_LIST_V1_SCHEMA_ID,
+            "betelgeuze.engine_v2_native_periodic_neighbor_list_profile/1.0.0"
+        );
+        assert_eq!(
+            runtime::NATIVE_PERIODIC_NEIGHBOR_LIST_V1_PROFILE_ID,
+            "engine_v2_native_periodic_cpu_cell_list_development_v1"
+        );
+        assert_eq!(
+            runtime::native_periodic_neighbor_list_v1_profile_sha256(),
+            [
+                0x71, 0xd8, 0xc8, 0x39, 0x53, 0xc9, 0x15, 0x67, 0x46, 0x49, 0xa5, 0x02, 0x04, 0x8e,
+                0x35, 0x70, 0x42, 0x3d, 0x2e, 0x55, 0xb9, 0x67, 0xe7, 0x77, 0xb4, 0xfb, 0x55, 0x28,
+                0x31, 0x9f, 0x7e, 0xc0,
+            ]
+        );
 
         let cpp = runtime::Context::new(runtime::ContextOptions::cpu_reference()).unwrap();
         let rust = runtime::Context::new(runtime::ContextOptions::rust_cpu()).unwrap();

@@ -23,6 +23,11 @@ NATIVE_PROFILE = WATER.load_profile(
 CONSTRAINTS_PROFILE = json.loads(
     (ROOT / "config/engine_v2_native_water_box_constraints_profile_v1.json").read_text()
 )
+NEIGHBOR_LIST_PROFILE = json.loads(
+    (
+        ROOT / "config/engine_v2_native_periodic_neighbor_list_profile_v1.json"
+    ).read_text()
+)
 
 
 def test_native_profile_matches_the_packaged_runtime_asset() -> None:
@@ -62,6 +67,33 @@ def test_native_constraints_profile_matches_the_packaged_runtime_asset() -> None
     )
     assert constraints["expected_degrees_of_freedom"] == 12
     assert all(value is False for value in CONSTRAINTS_PROFILE["authority"].values())
+
+
+def test_native_neighbor_list_profile_matches_the_packaged_runtime_asset() -> None:
+    canonical = (
+        ROOT / "config/engine_v2_native_periodic_neighbor_list_profile_v1.json"
+    ).read_bytes()
+    packaged = (
+        ROOT
+        / "rust/betelgeuze-runtime/assets/engine_v2_native_periodic_neighbor_list_profile_v1.json"
+    ).read_bytes()
+    assert packaged == canonical
+    assert hashlib.sha256(canonical).hexdigest() == (
+        "71d8c83953c915674649a502048e3570423d2e55b967e777b4fb5528319f7ec0"
+    )
+    assert NEIGHBOR_LIST_PROFILE["predecessor"]["sha256"] == (
+        "8dcad0b5005b7a768ce0a88b1804b55ecddb9b3490e2dd59179dfa2393433507"
+    )
+    activation = NEIGHBOR_LIST_PROFILE["activation"]
+    assert activation["periodic_axes_required"] == [True, True, True]
+    assert activation["pair_order"] == "ascending_atom_i_then_ascending_atom_j"
+    assert activation["rebuild_policy"] == "every_nonbonded_evaluation"
+    validation = NEIGHBOR_LIST_PROFILE["validation"]
+    assert validation["performance_threshold_present"] is False
+    assert validation["atom_permutation_invariance_required"] is True
+    assert all(
+        value is False for value in NEIGHBOR_LIST_PROFILE["authority"].values()
+    )
 
 
 def test_analytic_force_matches_finite_difference() -> None:

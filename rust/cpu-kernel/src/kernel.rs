@@ -184,6 +184,18 @@ struct SwitchValue {
     derivative: f64,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct NeighborPair {
+    atom_i: usize,
+    atom_j: usize,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+struct CellAssignment {
+    key: [usize; 3],
+    atom: usize,
+}
+
 fn displacement(
     system: &System<'_>,
     forcefield: &ForceField<'_>,
@@ -495,71 +507,246 @@ fn evaluate_nonbonded(
     compute_forces: bool,
     evaluation: &mut Evaluation,
 ) -> Result<(), KernelError> {
-    for atom_i in 0..forcefield.atom_count {
-        for atom_j in (atom_i + 1)..forcefield.atom_count {
-            if pair_is_excluded(forcefield, atom_i, atom_j) {
-                continue;
-            }
-            let delta = displacement(system, forcefield, atom_i, atom_j)?;
-            let distance = delta.squared_norm().sqrt();
-            if distance < forcefield.minimum_pair_distance {
-                return Err(KernelError::numerical(
-                    "nonbonded pair is below minimum_pair_distance",
-                ));
-            }
-            if distance > forcefield.cutoff {
-                continue;
-            }
-            let (lj_scale, coulomb_scale) = pair_scales(forcefield, atom_i, atom_j);
-            let sigma = 0.5 * (forcefield.sigma[atom_i] + forcefield.sigma[atom_j]);
-            let epsilon = (forcefield.epsilon[atom_i] * forcefield.epsilon[atom_j]).sqrt();
-            let ratio = sigma / distance;
-            let ratio2 = ratio * ratio;
-            let ratio6 = ratio2 * ratio2 * ratio2;
-            let ratio12 = ratio6 * ratio6;
-            let lennard_jones = 4.0 * epsilon * (ratio12 - ratio6) * lj_scale;
-            let screened_charge = system.charge[atom_i]
-                * system.charge[atom_j]
-                * (-forcefield.screening_kappa * distance).exp();
-            let coulomb = COULOMB_CONSTANT * screened_charge / (forcefield.dielectric * distance)
-                * coulomb_scale;
-            let switching = switching_value(distance, forcefield.switch_start, forcefield.cutoff);
-            checked_accumulate(
-                &mut evaluation.energy.lennard_jones,
-                lennard_jones * switching.value,
-                "Lennard-Jones pair produced a non-finite energy",
-            )?;
-            checked_accumulate(
-                &mut evaluation.energy.coulomb,
-                coulomb * switching.value,
-                "Coulomb pair produced a non-finite energy",
-            )?;
-            if !compute_forces {
-                continue;
-            }
-            let lennard_jones_derivative =
-                24.0 * epsilon * lj_scale * (ratio6 - 2.0 * ratio12) / distance;
-            let coulomb_derivative = coulomb * (-forcefield.screening_kappa - 1.0 / distance);
-            let radial_derivative = lennard_jones_derivative * switching.value
-                + lennard_jones * switching.derivative
-                + coulomb_derivative * switching.value
-                + coulomb * switching.derivative;
-            let force = delta.scaled(-radial_derivative / distance);
-            checked_accumulate_force(
+    if forcefield.periodic_axes_mask == 0b111 {
+        for pair in periodic_neighbor_pairs(system, forcefield)? {
+            evaluate_nonbonded_pair(
+                system,
+                forcefield,
+                pair.atom_i,
+                pair.atom_j,
+                compute_forces,
                 evaluation,
-                atom_i,
-                force,
-                "nonbonded pair produced a non-finite force",
             )?;
-            checked_accumulate_force(
-                evaluation,
-                atom_j,
-                force.scaled(-1.0),
-                "nonbonded pair produced a non-finite force",
-            )?;
+        }
+    } else {
+        for atom_i in 0..forcefield.atom_count {
+            for atom_j in (atom_i + 1)..forcefield.atom_count {
+                evaluate_nonbonded_pair(
+                    system,
+                    forcefield,
+                    atom_i,
+                    atom_j,
+                    compute_forces,
+                    evaluation,
+                )?;
+            }
         }
     }
     Ok(())
+}
+
+fn evaluate_nonbonded_pair(
+    system: &System<'_>,
+    forcefield: &ForceField<'_>,
+    atom_i: usize,
+    atom_j: usize,
+    compute_forces: bool,
+    evaluation: &mut Evaluation,
+) -> Result<(), KernelError> {
+    if pair_is_excluded(forcefield, atom_i, atom_j) {
+        return Ok(());
+    }
+    let delta = displacement(system, forcefield, atom_i, atom_j)?;
+    let distance = delta.squared_norm().sqrt();
+    if distance < forcefield.minimum_pair_distance {
+        return Err(KernelError::numerical(
+            "nonbonded pair is below minimum_pair_distance",
+        ));
+    }
+    if distance > forcefield.cutoff {
+        return Ok(());
+    }
+    let (lj_scale, coulomb_scale) = pair_scales(forcefield, atom_i, atom_j);
+    let sigma = 0.5 * (forcefield.sigma[atom_i] + forcefield.sigma[atom_j]);
+    let epsilon = (forcefield.epsilon[atom_i] * forcefield.epsilon[atom_j]).sqrt();
+    let ratio = sigma / distance;
+    let ratio2 = ratio * ratio;
+    let ratio6 = ratio2 * ratio2 * ratio2;
+    let ratio12 = ratio6 * ratio6;
+    let lennard_jones = 4.0 * epsilon * (ratio12 - ratio6) * lj_scale;
+    let screened_charge = system.charge[atom_i]
+        * system.charge[atom_j]
+        * (-forcefield.screening_kappa * distance).exp();
+    let coulomb =
+        COULOMB_CONSTANT * screened_charge / (forcefield.dielectric * distance) * coulomb_scale;
+    let switching = switching_value(distance, forcefield.switch_start, forcefield.cutoff);
+    checked_accumulate(
+        &mut evaluation.energy.lennard_jones,
+        lennard_jones * switching.value,
+        "Lennard-Jones pair produced a non-finite energy",
+    )?;
+    checked_accumulate(
+        &mut evaluation.energy.coulomb,
+        coulomb * switching.value,
+        "Coulomb pair produced a non-finite energy",
+    )?;
+    if !compute_forces {
+        return Ok(());
+    }
+    let lennard_jones_derivative = 24.0 * epsilon * lj_scale * (ratio6 - 2.0 * ratio12) / distance;
+    let coulomb_derivative = coulomb * (-forcefield.screening_kappa - 1.0 / distance);
+    let radial_derivative = lennard_jones_derivative * switching.value
+        + lennard_jones * switching.derivative
+        + coulomb_derivative * switching.value
+        + coulomb * switching.derivative;
+    let force = delta.scaled(-radial_derivative / distance);
+    checked_accumulate_force(
+        evaluation,
+        atom_i,
+        force,
+        "nonbonded pair produced a non-finite force",
+    )?;
+    checked_accumulate_force(
+        evaluation,
+        atom_j,
+        force.scaled(-1.0),
+        "nonbonded pair produced a non-finite force",
+    )
+}
+
+fn fallible_push<T>(
+    values: &mut Vec<T>,
+    value: T,
+    message: &'static str,
+) -> Result<(), KernelError> {
+    values
+        .try_reserve(1)
+        .map_err(|_| KernelError::out_of_memory(message))?;
+    values.push(value);
+    Ok(())
+}
+
+fn periodic_cell_counts(forcefield: &ForceField<'_>) -> [usize; 3] {
+    forcefield.cell_lengths.map(|length| {
+        let count = (length / forcefield.cutoff).floor();
+        if count >= forcefield.atom_count as f64 {
+            forcefield.atom_count
+        } else {
+            (count as usize).max(1)
+        }
+    })
+}
+
+fn periodic_cell_key(
+    system: &System<'_>,
+    forcefield: &ForceField<'_>,
+    cell_counts: [usize; 3],
+    atom: usize,
+) -> Result<[usize; 3], KernelError> {
+    let coordinates = [
+        system.position_x[atom],
+        system.position_y[atom],
+        system.position_z[atom],
+    ];
+    let mut key = [0; 3];
+    for axis in 0..3 {
+        let coordinate = coordinates[axis];
+        if !coordinate.is_finite() {
+            return Err(KernelError::numerical(
+                "periodic neighbor-list coordinate is not finite",
+            ));
+        }
+        let length = forcefield.cell_lengths[axis];
+        let wrapped = coordinate.rem_euclid(length);
+        let width = length / cell_counts[axis] as f64;
+        let index = (wrapped / width).floor() as usize;
+        key[axis] = index.min(cell_counts[axis] - 1);
+    }
+    Ok(key)
+}
+
+fn offset_periodic_cell(index: usize, offset: i8, count: usize) -> usize {
+    match offset {
+        -1 => {
+            if index == 0 {
+                count - 1
+            } else {
+                index - 1
+            }
+        }
+        0 => index,
+        1 => {
+            if index + 1 == count {
+                0
+            } else {
+                index + 1
+            }
+        }
+        _ => unreachable!("cell-list offsets are frozen to -1, 0, and 1"),
+    }
+}
+
+fn periodic_neighbor_pairs(
+    system: &System<'_>,
+    forcefield: &ForceField<'_>,
+) -> Result<Vec<NeighborPair>, KernelError> {
+    let cell_counts = periodic_cell_counts(forcefield);
+    let mut assignments = Vec::new();
+    assignments
+        .try_reserve_exact(forcefield.atom_count)
+        .map_err(|_| KernelError::out_of_memory("periodic neighbor-list allocation failed"))?;
+    let mut atom_keys = Vec::new();
+    atom_keys
+        .try_reserve_exact(forcefield.atom_count)
+        .map_err(|_| KernelError::out_of_memory("periodic neighbor-list allocation failed"))?;
+    for atom in 0..forcefield.atom_count {
+        let key = periodic_cell_key(system, forcefield, cell_counts, atom)?;
+        atom_keys.push(key);
+        assignments.push(CellAssignment { key, atom });
+    }
+    assignments.sort_unstable();
+
+    let mut candidates = Vec::new();
+    candidates
+        .try_reserve_exact(forcefield.atom_count)
+        .map_err(|_| KernelError::out_of_memory("periodic neighbor-list allocation failed"))?;
+    let mut pairs = Vec::new();
+    for (atom_i, center) in atom_keys.iter().copied().enumerate() {
+        candidates.clear();
+        let mut neighbor_keys = [[0; 3]; 27];
+        let mut neighbor_key_count = 0;
+        for dx in [-1_i8, 0, 1] {
+            for dy in [-1_i8, 0, 1] {
+                for dz in [-1_i8, 0, 1] {
+                    let key = [
+                        offset_periodic_cell(center[0], dx, cell_counts[0]),
+                        offset_periodic_cell(center[1], dy, cell_counts[1]),
+                        offset_periodic_cell(center[2], dz, cell_counts[2]),
+                    ];
+                    if !neighbor_keys[..neighbor_key_count].contains(&key) {
+                        neighbor_keys[neighbor_key_count] = key;
+                        neighbor_key_count += 1;
+                    }
+                }
+            }
+        }
+        neighbor_keys[..neighbor_key_count].sort_unstable();
+        for key in &neighbor_keys[..neighbor_key_count] {
+            let begin = assignments.partition_point(|row| row.key < *key);
+            let end = assignments.partition_point(|row| row.key <= *key);
+            candidates.extend(
+                assignments[begin..end]
+                    .iter()
+                    .map(|row| row.atom)
+                    .filter(|atom_j| *atom_j > atom_i),
+            );
+        }
+        candidates.sort_unstable();
+        candidates.dedup();
+        for atom_j in candidates.iter().copied() {
+            let distance = displacement(system, forcefield, atom_i, atom_j)?
+                .squared_norm()
+                .sqrt();
+            if distance <= forcefield.cutoff {
+                fallible_push(
+                    &mut pairs,
+                    NeighborPair { atom_i, atom_j },
+                    "periodic neighbor-list pair capacity failed",
+                )?;
+            }
+        }
+    }
+    Ok(pairs)
 }
 
 fn storage_is_consistent(system: &System<'_>, forcefield: &ForceField<'_>) -> bool {
@@ -647,4 +834,100 @@ pub(crate) fn evaluate(
         return Err(KernelError::numerical("force output is not finite"));
     }
     Ok(evaluation)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn periodic_cell_list_is_canonical_and_crosses_box_boundaries() {
+        let position_x = [0.2, 9.8, 4.0, 6.5, 1.0];
+        let position_y = [0.0; 5];
+        let position_z = [0.0; 5];
+        let charge = [0.0; 5];
+        let sigma = [1.0; 5];
+        let epsilon = [0.0; 5];
+        let system = System {
+            position_x: &position_x,
+            position_y: &position_y,
+            position_z: &position_z,
+            charge: &charge,
+        };
+        let forcefield = ForceField {
+            atom_count: 5,
+            sigma: &sigma,
+            epsilon: &epsilon,
+            bonds: BondSoa {
+                atom_i: &[],
+                atom_j: &[],
+                equilibrium: &[],
+                force_constant: &[],
+            },
+            angles: AngleSoa {
+                atom_i: &[],
+                atom_j: &[],
+                atom_k: &[],
+                equilibrium: &[],
+                force_constant: &[],
+            },
+            torsions: TorsionSoa {
+                atom_i: &[],
+                atom_j: &[],
+                atom_k: &[],
+                atom_l: &[],
+                periodicity: &[],
+                phase: &[],
+                amplitude: &[],
+            },
+            exclusions: &[],
+            pair_scales: &[],
+            periodic_axes_mask: 0b111,
+            cell_lengths: [10.0; 3],
+            cutoff: 3.0,
+            switch_start: 2.5,
+            dielectric: 1.0,
+            screening_kappa: 0.0,
+            minimum_pair_distance: 1.0e-10,
+        };
+
+        let expected = vec![
+            NeighborPair {
+                atom_i: 0,
+                atom_j: 1,
+            },
+            NeighborPair {
+                atom_i: 0,
+                atom_j: 4,
+            },
+            NeighborPair {
+                atom_i: 1,
+                atom_j: 4,
+            },
+            NeighborPair {
+                atom_i: 2,
+                atom_j: 3,
+            },
+            NeighborPair {
+                atom_i: 2,
+                atom_j: 4,
+            },
+        ];
+        assert_eq!(
+            periodic_neighbor_pairs(&system, &forcefield).unwrap(),
+            expected
+        );
+
+        let translated_x = [20.2, -0.2, 14.0, -3.5, 11.0];
+        let translated = System {
+            position_x: &translated_x,
+            position_y: &position_y,
+            position_z: &position_z,
+            charge: &charge,
+        };
+        assert_eq!(
+            periodic_neighbor_pairs(&translated, &forcefield).unwrap(),
+            expected
+        );
+    }
 }

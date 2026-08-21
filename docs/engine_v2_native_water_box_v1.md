@@ -20,6 +20,12 @@ It binds the unconstrained profile's exact digest rather than changing that
 already-merged identity. The runtime embeds and independently hashes these
 successor bytes as well.
 
+The periodic CPU traversal successor is
+`config/engine_v2_native_periodic_neighbor_list_profile_v1.json`, SHA-256
+`71d8c83953c915674649a502048e3570423d2e55b967e777b4fb5528319f7ec0`.
+It binds the rigid-water successor's exact digest and is embedded into the
+runtime without changing either earlier profile identity.
+
 The profile is an explicit successor to the Python development profile merged
 in PR #340. It binds that predecessor's exact SHA-256 and records the semantic
 changes: the canonical native ABI Coulomb constant plus native cutoff and
@@ -38,6 +44,14 @@ and `Simulation` types. Interwater Lennard-Jones and Coulomb terms use a
 
 Only the C++ CPU reference and Rust CPU backends are admitted. The profile does
 not silently select HIP, and this work performs no HIP-device execution.
+
+Fully periodic orthorhombic CPU evaluations now build a deterministic cell
+list on every nonbonded evaluation. Each cell width is at least the cutoff;
+the 27 wrapped neighboring cell keys are deduplicated; exact minimum-image
+pairs within the inclusive cutoff are emitted in ascending `(atom_i, atom_j)`
+order. Mixed-axis and nonperiodic systems retain the canonical all-pairs path.
+The common ordering preserves binary64 accumulation parity with the independent
+all-pairs oracle. This first functional list has no skin or reuse cache.
 
 ## Frozen development observations
 
@@ -64,13 +78,20 @@ degrees of freedom, residuals within the frozen tolerances, C++ reference/Rust
 CPU state parity after 100 NVE and 128 seeded BAOAB steps, and bit-exact 32-step
 continuation from a Rust checkpoint.
 
+The periodic cell-list test freezes a cutoff-boundary pair, a pair crossing the
+box boundary, canonical ordering, and invariance to independent integer-box
+translations and atom permutations. The existing native water and
+independent-oracle tests then
+exercise the cell-list path through both CPU evaluators for energy, force, NVE,
+BAOAB, constraints, and checkpoint parity.
+
 These are tiny-fixture development observations. They are not equilibrium NVT
 statistics, stability validation, throughput measurements, or acceleration
 evidence.
 
 ## Remaining boundaries
 
-The slice has no neighbor-list performance evidence, ions, PME/Ewald,
+The slice has no neighbor-list reuse or performance evidence, ions, PME/Ewald,
 NPT/barostat, peptide or protein system, public benchmark, production-MD,
 free-energy, scientific-claim, product, Stage 0, Fresh-128, reservation, or
 performance-claim authority. The rigid-water checks are synthetic CPU
