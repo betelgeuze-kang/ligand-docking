@@ -1,0 +1,61 @@
+{
+  "schema_id": "betelgeuze.engine_v2_native_water_box_profile/1.0.0",
+  "profile_id": "engine_v2_native_two_water_development_v1",
+  "predecessor": {
+    "path": "config/engine_v2_water_box_reference_v1.json",
+    "sha256": "1bdbbbde08d70f333948f15daf3c193c8ddc1570ebe969f86d05722e9dd73288",
+    "semantic_change": "Use the canonical native ABI Coulomb constant and explicit native cutoff/switch settings."
+  },
+  "units": {
+    "length": "angstrom",
+    "energy": "kcal_per_mol",
+    "mass": "dalton",
+    "time": "femtosecond",
+    "charge": "elementary_charge"
+  },
+  "water": {
+    "oh_distance_angstrom": 0.9572,
+    "hoh_angle_degrees": 104.52,
+    "bond_k_kcal_per_mol_a2": 450.0,
+    "angle_k_kcal_per_mol_rad2": 55.0,
+    "oxygen_charge": -0.834,
+    "hydrogen_charge": 0.417,
+    "oxygen_sigma_angstrom": 3.15061,
+    "oxygen_epsilon_kcal_per_mol": 0.1521,
+    "hydrogen_sigma_angstrom": 0.0,
+    "hydrogen_epsilon_kcal_per_mol": 0.0,
+    "oxygen_mass_dalton": 15.9994,
+    "hydrogen_mass_dalton": 1.008
+  },
+  "native_representation": {
+    "hydrogen_sigma_angstrom": 1.0,
+    "reason": "The ABI requires positive sigma; exact zero hydrogen epsilon preserves a zero Lennard-Jones contribution."
+  },
+  "nonbonded": {
+    "cutoff_angstrom": 6.99,
+    "switch_start_angstrom": 6.5,
+    "dielectric": 1.0,
+    "screening_kappa_per_angstrom": 0.0,
+    "minimum_pair_distance_angstrom": 1e-10
+  },
+  "box": {
+    "water_count": 2,
+    "spacing_angstrom": 4.0,
+    "orthorhombic_lengths_angstrom": [14.0, 14.0, 14.0],
+    "periodic_axes": [true, true, true]
+  },
+  "integration": {
+    "timestep_femtoseconds": 0.02,
+    "nve_steps": 100,
+    "baoab_temperature_kelvin": 300.0,
+    "baoab_friction_per_femtosecond": 0.001
+  },
+  "coulomb_constant_kcal_a_per_mol_e2": 332.063713299,
+  "force_to_acceleration": 0.0004184,
+  "authority": {
+    "production_md_validated": false,
+    "scientific_claim_authorized": false,
+    "free_energy_claim_authorized": false,
+    "performance_claim_authorized": false
+  }
+}

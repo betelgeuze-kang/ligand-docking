@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 from pathlib import Path
 
@@ -15,6 +16,23 @@ assert SPEC is not None and SPEC.loader is not None
 WATER = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(WATER)
 PROFILE = WATER.load_profile(ROOT / "config/engine_v2_water_box_reference_v1.json")
+NATIVE_PROFILE = WATER.load_profile(
+    ROOT / "config/engine_v2_native_water_box_profile_v1.json"
+)
+
+
+def test_native_profile_matches_the_packaged_runtime_asset() -> None:
+    canonical = (
+        ROOT / "config/engine_v2_native_water_box_profile_v1.json"
+    ).read_bytes()
+    packaged = (
+        ROOT
+        / "rust/betelgeuze-runtime/assets/engine_v2_native_water_box_profile_v1.json"
+    ).read_bytes()
+    assert packaged == canonical
+    assert hashlib.sha256(canonical).hexdigest() == (
+        "2b0be83b57085c655092ab0272aea5a91b9c3f90c344fa062d494ad324f0019e"
+    )
 
 
 def test_analytic_force_matches_finite_difference() -> None:
@@ -103,3 +121,67 @@ def test_unsupported_atom_type_is_rejected() -> None:
     atom_types[0] = 7
     with pytest.raises(WATER.WaterReferenceError, match="unsupported atom type"):
         WATER.energy_forces(PROFILE, positions, charges, atom_types, box)
+
+
+def test_native_profile_matches_the_frozen_initial_energy_and_force() -> None:
+    positions, _masses, charges, atom_types, box = WATER.build_box(NATIVE_PROFILE)
+    energy, forces = WATER.energy_forces(
+        NATIVE_PROFILE, positions, charges, atom_types, box
+    )
+    assert energy == pytest.approx(-2.235452238349433, abs=2.0e-14)
+    assert forces[0, 0] == pytest.approx(-3.7730687065767325, abs=2.0e-14)
+    assert forces[4, 1] == pytest.approx(0.246800271365888, abs=2.0e-14)
+
+
+def test_native_profile_freezes_the_100_step_nve_observation() -> None:
+    result = WATER.run_nve(NATIVE_PROFILE, 100, 0.02)
+    assert result["initial_total_energy"] == pytest.approx(
+        -2.2354281465712305, abs=2.0e-14
+    )
+    assert result["final_total_energy"] == pytest.approx(
+        -2.2354282714680176, abs=2.0e-14
+    )
+    assert result["absolute_drift"] == pytest.approx(
+        -1.2489678713478725e-7, abs=2.0e-14
+    )
+    assert (
+        result["checkpoint_sha256"]
+        == "1b471d5364976ed24ce93397862649f1fec001dcb65dcf4f110afcc472b110df"
+    )
+
+
+def test_native_switch_force_matches_finite_difference() -> None:
+    positions, _masses, charges, atom_types, box = WATER.build_box(NATIVE_PROFILE)
+    positions[3:] += np.array([2.7, 0.0, 0.0])
+    _energy, forces = WATER.energy_forces(
+        NATIVE_PROFILE, positions, charges, atom_types, box
+    )
+    step = 1.0e-6
+    plus, minus = positions.copy(), positions.copy()
+    plus[3, 0] += step
+    minus[3, 0] -= step
+    energy_plus, _ = WATER.energy_forces(
+        NATIVE_PROFILE, plus, charges, atom_types, box
+    )
+    energy_minus, _ = WATER.energy_forces(
+        NATIVE_PROFILE, minus, charges, atom_types, box
+    )
+    numeric = -(energy_plus - energy_minus) / (2.0 * step)
+    assert forces[3, 0] == pytest.approx(numeric, abs=2.0e-5)
+
+
+def test_native_cutoff_removes_all_interwater_pairs() -> None:
+    positions, _masses, charges, atom_types, box = WATER.build_box(NATIVE_PROFILE)
+    positions[3:] += np.array([3.0, 7.0, 7.0])
+    energy, forces = WATER.energy_forces(
+        NATIVE_PROFILE, positions, charges, atom_types, box
+    )
+    assert abs(energy) < 1.0e-24
+    assert np.max(np.abs(forces)) < 1.0e-12
+
+
+def test_native_nonbonded_settings_fail_closed() -> None:
+    profile = {**NATIVE_PROFILE, "nonbonded": {"cutoff_angstrom": 7.0}}
+    positions, _masses, charges, atom_types, box = WATER.build_box(profile)
+    with pytest.raises(WATER.WaterReferenceError, match="incomplete"):
+        WATER.energy_forces(profile, positions, charges, atom_types, box)
