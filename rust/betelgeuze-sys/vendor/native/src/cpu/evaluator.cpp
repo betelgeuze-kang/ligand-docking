@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <map>
 #include <utility>
 
 namespace betelgeuze::native::cpu {
@@ -544,19 +545,138 @@ bg_status evaluate_nonbonded(
     const bg_system &system,
     const bg_forcefield &forcefield,
     bool compute_forces,
-    Evaluation *evaluation) noexcept {
+    Evaluation *evaluation);
+
+using CellKey = std::array<std::size_t, 3>;
+
+[[nodiscard]] std::array<std::size_t, 3> periodic_cell_counts(
+    const bg_forcefield &forcefield) noexcept {
+    const double search_radius =
+        std::max(forcefield.cutoff, forcefield.minimum_pair_distance);
+    std::array<std::size_t, 3> counts{};
+    for (std::size_t axis = 0; axis < counts.size(); ++axis) {
+        const double count =
+            std::floor(forcefield.cell_lengths[axis] / search_radius);
+        counts[axis] = count >= static_cast<double>(forcefield.atom_count)
+                           ? forcefield.atom_count
+                           : std::max<std::size_t>(
+                                 static_cast<std::size_t>(count), 1U);
+    }
+    return counts;
+}
+
+bg_status periodic_cell_key(
+    const bg_system &system,
+    const bg_forcefield &forcefield,
+    const std::array<std::size_t, 3> &cell_counts,
+    std::size_t atom,
+    CellKey *out_key) noexcept {
+    if (out_key == nullptr) {
+        return fail(BG_STATUS_INTERNAL_ERROR, "neighbor-list cell output is null");
+    }
+    const std::array<double, 3> coordinates = {
+        system.position_x[atom],
+        system.position_y[atom],
+        system.position_z[atom],
+    };
+    CellKey key{};
+    for (std::size_t axis = 0; axis < key.size(); ++axis) {
+        if (!std::isfinite(coordinates[axis])) {
+            return fail(
+                BG_STATUS_NUMERICAL_ERROR,
+                "periodic neighbor-list coordinate is not finite");
+        }
+        const double length = forcefield.cell_lengths[axis];
+        double wrapped = std::fmod(coordinates[axis], length);
+        if (wrapped < 0.0) {
+            wrapped += length;
+        }
+        const double width = length / static_cast<double>(cell_counts[axis]);
+        const auto index = static_cast<std::size_t>(std::floor(wrapped / width));
+        key[axis] = std::min(index, cell_counts[axis] - 1U);
+    }
+    *out_key = key;
+    return BG_STATUS_OK;
+}
+
+[[nodiscard]] std::size_t offset_periodic_cell(
+    std::size_t index,
+    int offset,
+    std::size_t count) noexcept {
+    if (offset < 0) {
+        return index == 0 ? count - 1U : index - 1U;
+    }
+    if (offset > 0) {
+        return index + 1U == count ? 0U : index + 1U;
+    }
+    return index;
+}
+
+bg_status build_periodic_neighbor_pairs(
+    const bg_system &system,
+    const bg_forcefield &forcefield,
+    std::vector<bg_forcefield::Pair> *out_pairs) {
+    if (out_pairs == nullptr) {
+        return fail(BG_STATUS_INTERNAL_ERROR, "neighbor-list pair output is null");
+    }
+    const auto cell_counts = periodic_cell_counts(forcefield);
+    const double search_radius =
+        std::max(forcefield.cutoff, forcefield.minimum_pair_distance);
+    std::vector<CellKey> atom_cells(forcefield.atom_count);
+    std::map<CellKey, std::vector<std::size_t>> bins;
+    for (std::size_t atom = 0; atom < forcefield.atom_count; ++atom) {
+        bg_status status = periodic_cell_key(
+            system, forcefield, cell_counts, atom, &atom_cells[atom]);
+        if (status != BG_STATUS_OK) {
+            return status;
+        }
+        bins[atom_cells[atom]].push_back(atom);
+    }
+
+    std::vector<bg_forcefield::Pair> pairs;
+    std::vector<CellKey> neighbor_cells;
+    neighbor_cells.reserve(27U);
+    std::vector<std::size_t> candidates;
+    candidates.reserve(forcefield.atom_count);
     for (std::size_t atom_i = 0; atom_i < forcefield.atom_count; ++atom_i) {
-        for (std::size_t atom_j = atom_i + 1; atom_j < forcefield.atom_count;
-             ++atom_j) {
-            // Exclusion means that no nonbonded equation exists, so it must be
-            // applied before the pair-distance singularity check.
-            if (pair_is_excluded(forcefield, atom_i, atom_j)) {
+        neighbor_cells.clear();
+        const CellKey center = atom_cells[atom_i];
+        for (int dx = -1; dx <= 1; ++dx) {
+            for (int dy = -1; dy <= 1; ++dy) {
+                for (int dz = -1; dz <= 1; ++dz) {
+                    neighbor_cells.push_back({
+                        offset_periodic_cell(center[0], dx, cell_counts[0]),
+                        offset_periodic_cell(center[1], dy, cell_counts[1]),
+                        offset_periodic_cell(center[2], dz, cell_counts[2]),
+                    });
+                }
+            }
+        }
+        std::sort(neighbor_cells.begin(), neighbor_cells.end());
+        neighbor_cells.erase(
+            std::unique(neighbor_cells.begin(), neighbor_cells.end()),
+            neighbor_cells.end());
+
+        candidates.clear();
+        for (const CellKey &key : neighbor_cells) {
+            const auto found = bins.find(key);
+            if (found == bins.end()) {
                 continue;
             }
-
+            for (const std::size_t atom_j : found->second) {
+                if (atom_j > atom_i) {
+                    candidates.push_back(atom_j);
+                }
+            }
+        }
+        std::sort(candidates.begin(), candidates.end());
+        candidates.erase(
+            std::unique(candidates.begin(), candidates.end()),
+            candidates.end());
+        for (const std::size_t atom_j : candidates) {
             Vector3 delta;
             double squared_distance = 0.0;
-            bg_status status = checked_displacement(
+            const bg_status status = checked_displacement(
                 system,
                 forcefield,
                 atom_i,
@@ -567,82 +687,152 @@ bg_status evaluate_nonbonded(
             if (status != BG_STATUS_OK) {
                 return status;
             }
-            const double minimum = forcefield.minimum_pair_distance;
-            if (squared_distance < minimum * minimum) {
-                return fail(
-                    BG_STATUS_NUMERICAL_ERROR,
-                    "nonbonded pair is below minimum_pair_distance");
+            if (std::sqrt(squared_distance) <= search_radius) {
+                pairs.push_back({atom_i, atom_j});
             }
-            const double distance = std::sqrt(squared_distance);
-            if (distance > forcefield.cutoff) {
-                continue;
-            }
+        }
+    }
+    *out_pairs = std::move(pairs);
+    return BG_STATUS_OK;
+}
 
-            const PairScales scales = pair_scales(forcefield, atom_i, atom_j);
-            const double sigma =
-                0.5 * (forcefield.sigma[atom_i] + forcefield.sigma[atom_j]);
-            const double epsilon = std::sqrt(
-                forcefield.epsilon[atom_i] * forcefield.epsilon[atom_j]);
-            const double ratio = sigma / distance;
-            const double ratio2 = ratio * ratio;
-            const double ratio6 = ratio2 * ratio2 * ratio2;
-            const double ratio12 = ratio6 * ratio6;
-            const double lennard_jones =
-                4.0 * epsilon * (ratio12 - ratio6) * scales.lennard_jones;
+bg_status evaluate_nonbonded_pair(
+    const bg_system &system,
+    const bg_forcefield &forcefield,
+    std::size_t atom_i,
+    std::size_t atom_j,
+    bool compute_forces,
+    Evaluation *evaluation) noexcept {
+    // Exclusion means that no nonbonded equation exists, so it must be
+    // applied before the pair-distance singularity check.
+    if (pair_is_excluded(forcefield, atom_i, atom_j)) {
+        return BG_STATUS_OK;
+    }
 
-            const double screened_charge =
-                system.charge[atom_i] * system.charge[atom_j] *
-                std::exp(-forcefield.screening_kappa * distance);
-            const double coulomb =
-                BG_COULOMB_CONSTANT_KCAL_ANGSTROM_PER_MOL_E2 *
-                screened_charge / (forcefield.dielectric * distance) *
-                scales.coulomb;
-            const SwitchValue switching = switching_value(
-                distance, forcefield.switch_start, forcefield.cutoff);
+    Vector3 delta;
+    double squared_distance = 0.0;
+    bg_status status = checked_displacement(
+        system,
+        forcefield,
+        atom_i,
+        atom_j,
+        "nonbonded displacement is not finite",
+        &delta,
+        &squared_distance);
+    if (status != BG_STATUS_OK) {
+        return status;
+    }
+    const double minimum = forcefield.minimum_pair_distance;
+    if (squared_distance < minimum * minimum) {
+        return fail(
+            BG_STATUS_NUMERICAL_ERROR,
+            "nonbonded pair is below minimum_pair_distance");
+    }
+    const double distance = std::sqrt(squared_distance);
+    if (distance > forcefield.cutoff) {
+        return BG_STATUS_OK;
+    }
 
-            status = checked_accumulate(
-                &evaluation->energy.lennard_jones_kcal_per_mol,
-                lennard_jones * switching.value,
-                "Lennard-Jones pair produced a non-finite energy");
+    const PairScales scales = pair_scales(forcefield, atom_i, atom_j);
+    const double sigma =
+        0.5 * (forcefield.sigma[atom_i] + forcefield.sigma[atom_j]);
+    const double epsilon = std::sqrt(
+        forcefield.epsilon[atom_i] * forcefield.epsilon[atom_j]);
+    const double ratio = sigma / distance;
+    const double ratio2 = ratio * ratio;
+    const double ratio6 = ratio2 * ratio2 * ratio2;
+    const double ratio12 = ratio6 * ratio6;
+    const double lennard_jones =
+        4.0 * epsilon * (ratio12 - ratio6) * scales.lennard_jones;
+
+    const double screened_charge =
+        system.charge[atom_i] * system.charge[atom_j] *
+        std::exp(-forcefield.screening_kappa * distance);
+    const double coulomb =
+        BG_COULOMB_CONSTANT_KCAL_ANGSTROM_PER_MOL_E2 * screened_charge /
+        (forcefield.dielectric * distance) * scales.coulomb;
+    const SwitchValue switching = switching_value(
+        distance, forcefield.switch_start, forcefield.cutoff);
+
+    status = checked_accumulate(
+        &evaluation->energy.lennard_jones_kcal_per_mol,
+        lennard_jones * switching.value,
+        "Lennard-Jones pair produced a non-finite energy");
+    if (status != BG_STATUS_OK) {
+        return status;
+    }
+    status = checked_accumulate(
+        &evaluation->energy.coulomb_kcal_per_mol,
+        coulomb * switching.value,
+        "Coulomb pair produced a non-finite energy");
+    if (status != BG_STATUS_OK || !compute_forces) {
+        return status;
+    }
+
+    const double lennard_jones_derivative =
+        24.0 * epsilon * scales.lennard_jones *
+        (ratio6 - 2.0 * ratio12) / distance;
+    const double coulomb_derivative =
+        coulomb * (-forcefield.screening_kappa - 1.0 / distance);
+    const double radial_derivative =
+        lennard_jones_derivative * switching.value +
+        lennard_jones * switching.derivative +
+        coulomb_derivative * switching.value +
+        coulomb * switching.derivative;
+    const Vector3 force = delta.scaled(-radial_derivative / distance);
+    status = checked_accumulate_force(
+        evaluation,
+        atom_i,
+        force,
+        "nonbonded pair produced a non-finite force");
+    if (status != BG_STATUS_OK) {
+        return status;
+    }
+    return checked_accumulate_force(
+        evaluation,
+        atom_j,
+        force.scaled(-1.0),
+        "nonbonded pair produced a non-finite force");
+}
+
+bg_status evaluate_nonbonded(
+    const bg_system &system,
+    const bg_forcefield &forcefield,
+    bool compute_forces,
+    Evaluation *evaluation) {
+    if (forcefield.periodic_axes_mask ==
+        static_cast<uint32_t>(BG_PERIODIC_AXES_ALL)) {
+        std::vector<bg_forcefield::Pair> pairs;
+        bg_status status =
+            build_periodic_neighbor_pairs(system, forcefield, &pairs);
+        if (status != BG_STATUS_OK) {
+            return status;
+        }
+        for (const bg_forcefield::Pair &pair : pairs) {
+            status = evaluate_nonbonded_pair(
+                system,
+                forcefield,
+                pair.atom_i,
+                pair.atom_j,
+                compute_forces,
+                evaluation);
             if (status != BG_STATUS_OK) {
                 return status;
             }
-            status = checked_accumulate(
-                &evaluation->energy.coulomb_kcal_per_mol,
-                coulomb * switching.value,
-                "Coulomb pair produced a non-finite energy");
-            if (status != BG_STATUS_OK) {
-                return status;
-            }
-            if (!compute_forces) {
-                continue;
-            }
+        }
+        return BG_STATUS_OK;
+    }
 
-            const double lennard_jones_derivative =
-                24.0 * epsilon * scales.lennard_jones *
-                (ratio6 - 2.0 * ratio12) / distance;
-            const double coulomb_derivative =
-                coulomb *
-                (-forcefield.screening_kappa - 1.0 / distance);
-            const double radial_derivative =
-                lennard_jones_derivative * switching.value +
-                lennard_jones * switching.derivative +
-                coulomb_derivative * switching.value +
-                coulomb * switching.derivative;
-            const Vector3 force = delta.scaled(-radial_derivative / distance);
-            status = checked_accumulate_force(
-                evaluation,
+    for (std::size_t atom_i = 0; atom_i < forcefield.atom_count; ++atom_i) {
+        for (std::size_t atom_j = atom_i + 1; atom_j < forcefield.atom_count;
+             ++atom_j) {
+            const bg_status status = evaluate_nonbonded_pair(
+                system,
+                forcefield,
                 atom_i,
-                force,
-                "nonbonded pair produced a non-finite force");
-            if (status != BG_STATUS_OK) {
-                return status;
-            }
-            status = checked_accumulate_force(
-                evaluation,
                 atom_j,
-                force.scaled(-1.0),
-                "nonbonded pair produced a non-finite force");
+                compute_forces,
+                evaluation);
             if (status != BG_STATUS_OK) {
                 return status;
             }

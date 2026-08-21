@@ -175,6 +175,82 @@ fn cpu_evaluation_is_bit_deterministic_and_conserves_net_force() {
 }
 
 #[test]
+fn fully_periodic_cpu_cell_list_is_image_and_permutation_invariant() {
+    let original = fully_periodic_cell_list();
+    let mut transformed = original.clone();
+    transformed.input.positions.reverse();
+    transformed.input.atom_nonbonded.reverse();
+    for (index, position) in transformed.input.positions.iter_mut().enumerate() {
+        position.x_angstrom += 10.0 * (index as f64 - 2.0);
+        position.y_angstrom += 10.0 * ((index % 3) as f64 - 1.0);
+        position.z_angstrom -= 10.0 * ((index % 2) as f64 + 1.0);
+    }
+
+    for backend in [runtime::Backend::CppCpuReference, runtime::Backend::RustCpu] {
+        let original_native = native_fixture(&original, backend);
+        let original_result = original_native
+            .context
+            .evaluate(&original_native.system, &original_native.forcefield)
+            .expect("original periodic CPU evaluation succeeds");
+        let transformed_native = native_fixture(&transformed, backend);
+        let transformed_result = transformed_native
+            .context
+            .evaluate(&transformed_native.system, &transformed_native.forcefield)
+            .expect("transformed periodic CPU evaluation succeeds");
+
+        for ((name, left), (_, right)) in runtime_energy_values(original_result.energy)
+            .into_iter()
+            .zip(runtime_energy_values(transformed_result.energy))
+        {
+            assert_close_cross_backend(original.name, backend, name, left, right);
+        }
+        for axis in 0..3 {
+            let original_force = force_channel(&original_result.forces, axis);
+            let transformed_force = force_channel(&transformed_result.forces, axis);
+            for atom in 0..original_force.len() {
+                let transformed_atom = original_force.len() - 1 - atom;
+                let difference = (original_force[atom] - transformed_force[transformed_atom]).abs();
+                assert!(
+                    difference <= CROSS_BACKEND_TOLERANCE,
+                    "{} {} transformed force atom {atom} axis {axis} changed by {difference:.3e}",
+                    original.name,
+                    backend_name(backend)
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn fully_periodic_cpu_cell_list_preserves_minimum_distance_validation_beyond_cutoff() {
+    let mut input = oracle::OracleInput::new(
+        vec![p(0.0, 0.0, 0.0), p(2.0, 0.0, 0.0)],
+        vec![atom(1.0, 0.0, 0.0), atom(1.0, 0.0, 0.0)],
+    );
+    input.cell = Some(oracle::OrthorhombicCell {
+        lengths_angstrom: [10.0, 10.0, 10.0],
+        periodic_axes: [true, true, true],
+    });
+    input.nonbonded = settings(1.0, 0.5, 1.0, 0.0);
+    input.nonbonded.minimum_pair_distance_angstrom = 3.0;
+    let fixture = Fixture {
+        name: "fully_periodic_minimum_distance_beyond_cutoff",
+        input,
+        exact: None,
+    };
+
+    for backend in [runtime::Backend::CppCpuReference, runtime::Backend::RustCpu] {
+        let native = native_fixture(&fixture, backend);
+        let error = native
+            .context
+            .evaluate(&native.system, &native.forcefield)
+            .expect_err("minimum-distance violation outside cutoff must fail closed");
+        assert_eq!(error.code, runtime::ErrorCode::NumericalError);
+        assert!(error.message.contains("below minimum_pair_distance"));
+    }
+}
+
+#[test]
 fn native_safe_backends_match_cpp_reference_within_the_frozen_tolerance() {
     for fixture in fixtures() {
         let cpp = native_fixture(&fixture, runtime::Backend::CppCpuReference);
@@ -332,6 +408,7 @@ fn fixtures() -> Vec<Fixture> {
         isolated_screened_coulomb(),
         explicit_scales_and_exclusion(),
         periodic_minimum_image(),
+        fully_periodic_cell_list(),
         switching_window(),
         combined_system(),
     ]
@@ -452,6 +529,34 @@ fn periodic_minimum_image() -> Fixture {
     input.nonbonded = settings(4.5, 3.5, 1.4, 0.11);
     Fixture {
         name: "periodic_minimum_image",
+        input,
+        exact: None,
+    }
+}
+
+fn fully_periodic_cell_list() -> Fixture {
+    let positions = vec![
+        p(0.2, 0.1, 0.2),
+        p(9.8, 0.2, 0.3),
+        p(4.0, 4.0, 4.0),
+        p(6.0, 4.5, 4.2),
+        p(1.0, 1.0, 0.5),
+    ];
+    let atoms = vec![
+        atom(0.30, 0.7, 0.05),
+        atom(0.40, 0.9, -0.08),
+        atom(0.35, 0.5, 0.04),
+        atom(0.45, 1.1, -0.06),
+        atom(0.32, 0.6, 0.05),
+    ];
+    let mut input = oracle::OracleInput::new(positions, atoms);
+    input.cell = Some(oracle::OrthorhombicCell {
+        lengths_angstrom: [10.0, 10.0, 10.0],
+        periodic_axes: [true, true, true],
+    });
+    input.nonbonded = settings(3.0, 2.5, 1.8, 0.06);
+    Fixture {
+        name: "fully_periodic_cell_list",
         input,
         exact: None,
     }

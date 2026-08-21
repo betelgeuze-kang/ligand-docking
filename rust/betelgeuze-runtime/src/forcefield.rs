@@ -4,11 +4,24 @@ use std::ptr::{self, NonNull};
 use std::rc::Rc;
 
 use betelgeuze_sys as sys;
+use sha2::{Digest, Sha256};
 
 use crate::{
     checked_count, ensure_abi_compatibility, invalid, status_result, Context, Error, ErrorCode,
     Result, System,
 };
+
+pub const NATIVE_PERIODIC_NEIGHBOR_LIST_V1_SCHEMA_ID: &str =
+    "betelgeuze.engine_v2_native_periodic_neighbor_list_profile/1.0.0";
+pub const NATIVE_PERIODIC_NEIGHBOR_LIST_V1_PROFILE_ID: &str =
+    "engine_v2_native_periodic_cpu_cell_list_development_v1";
+const NATIVE_PERIODIC_NEIGHBOR_LIST_V1_PROFILE_BYTES: &[u8] =
+    include_bytes!("../assets/engine_v2_native_periodic_neighbor_list_profile_v1.json");
+
+/// SHA-256 of the exact periodic CPU cell-list profile embedded into this runtime.
+pub fn native_periodic_neighbor_list_v1_profile_sha256() -> [u8; 32] {
+    Sha256::digest(NATIVE_PERIODIC_NEIGHBOR_LIST_V1_PROFILE_BYTES).into()
+}
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct AtomNonbonded {

@@ -187,6 +187,18 @@ parity, and bit-exact checkpoint continuation. This is bounded synthetic CPU
 development evidence and grants no molecular, production, scientific,
 performance, Stage 0, Fresh-128, reservation, or HIP-device authority.
 
+The next immutable successor,
+`config/engine_v2_native_periodic_neighbor_list_profile_v1.json`, routes fully
+periodic orthorhombic nonbonded work through deterministic C++ reference and
+Rust CPU cell lists. It freezes inclusive-cutoff pair membership, wrapped-cell
+deduplication, canonical pair order, and integer-box translation invariance;
+atom-permutation invariance is checked after mapping forces back to source atom
+identity. The search radius is `max(cutoff, minimum_pair_distance)`, so the
+existing fail-closed minimum-distance check remains effective even outside the
+cutoff. The independent all-pairs oracle remains the validation source.
+Lists rebuild on every evaluation and carry no performance or acceleration
+claim.
+
 See `docs/engine_v2_native_water_box_v1.md` for the frozen development metrics
 and remaining scientific boundaries.
 
