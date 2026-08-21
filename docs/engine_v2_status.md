@@ -85,7 +85,9 @@ The current `main` branch contains:
   further successor retains a `Simulation`-owned canonical pair slice with a
   1.0 angstrom skin while all per-atom build-reference displacements remain
   strictly below 0.5 angstrom. Failed operations do not commit cache changes,
-  and successful checkpoint loads invalidate this unpersisted derived state.
+  transaction clones share the immutable cached atom/pair payload instead of
+  deep-copying it, and successful checkpoint loads invalidate this unpersisted
+  derived state.
   The entry point is CPU-only and has no PME, neighbor-list performance
   evidence, general ion preparation, protein, production-MD, scientific,
   free-energy, benchmark, product, Stage 0, or performance authority;

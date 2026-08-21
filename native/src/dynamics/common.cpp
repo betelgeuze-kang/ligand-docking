@@ -29,16 +29,16 @@ void increment_saturating(uint64_t *value) noexcept {
     const bg_simulation::NeighborListCache &cache,
     const bg_system &system) noexcept {
     const std::size_t atom_count = system.position_x.size();
-    if (!cache.valid || cache.reference_x.size() != atom_count ||
-        cache.reference_y.size() != atom_count ||
-        cache.reference_z.size() != atom_count) {
+    if (cache.data == nullptr || cache.data->reference_x.size() != atom_count ||
+        cache.data->reference_y.size() != atom_count ||
+        cache.data->reference_z.size() != atom_count) {
         return false;
     }
     for (std::size_t atom = 0; atom < atom_count; ++atom) {
         const double displacement = std::hypot(
-            system.position_x[atom] - cache.reference_x[atom],
-            system.position_y[atom] - cache.reference_y[atom],
-            system.position_z[atom] - cache.reference_z[atom]);
+            system.position_x[atom] - cache.data->reference_x[atom],
+            system.position_y[atom] - cache.data->reference_y[atom],
+            system.position_z[atom] - cache.data->reference_z[atom]);
         if (!std::isfinite(displacement) ||
             displacement >= kNeighborListReuseRadiusAngstrom) {
             return false;
@@ -54,7 +54,7 @@ bg_status periodic_neighbor_pairs(
     bg_simulation::NeighborListCache &cache = simulation->neighbor_list_cache;
     if (neighbor_list_is_reusable(cache, system)) {
         increment_saturating(&cache.reuse_count);
-        *out_pairs = &cache.pairs;
+        *out_pairs = &cache.data->pairs;
         return BG_STATUS_OK;
     }
 
@@ -68,13 +68,14 @@ bg_status periodic_neighbor_pairs(
     if (status != BG_STATUS_OK) {
         return status;
     }
-    cache.reference_x = system.position_x;
-    cache.reference_y = system.position_y;
-    cache.reference_z = system.position_z;
-    cache.pairs = std::move(pairs);
-    cache.valid = true;
+    auto data = std::make_shared<bg_simulation::NeighborListCacheData>();
+    data->reference_x = system.position_x;
+    data->reference_y = system.position_y;
+    data->reference_z = system.position_z;
+    data->pairs = std::move(pairs);
+    cache.data = std::move(data);
     increment_saturating(&cache.build_count);
-    *out_pairs = &cache.pairs;
+    *out_pairs = &cache.data->pairs;
     return BG_STATUS_OK;
 }
 

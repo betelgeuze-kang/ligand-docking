@@ -929,12 +929,14 @@ void test_periodic_cpu_neighbor_cache() {
     assert(same_bits(
         cpp_initial.total_kcal_per_mol,
         rust_initial.total_kcal_per_mol));
-    assert(cpp.simulation->neighbor_list_cache.valid);
-    assert(cpp.simulation->neighbor_list_cache.pairs.size() == 3U);
+    assert(cpp.simulation->neighbor_list_cache.data != nullptr);
+    assert(cpp.simulation->neighbor_list_cache.data->pairs.size() == 3U);
     assert(cpp.simulation->neighbor_list_cache.build_count == UINT64_C(1));
     assert(cpp.simulation->neighbor_list_cache.reuse_count == UINT64_C(0));
-    assert(rust.simulation->neighbor_list_cache.pairs ==
-           cpp.simulation->neighbor_list_cache.pairs);
+    assert(rust.simulation->neighbor_list_cache.data->pairs ==
+           cpp.simulation->neighbor_list_cache.data->pairs);
+    const auto *const initial_cache_data =
+        cpp.simulation->neighbor_list_cache.data.get();
 
     const bg_dynamics_report_v1 switched_backend =
         integrate(rust.context, cpp.simulation, UINT64_C(0));
@@ -943,22 +945,28 @@ void test_periodic_cpu_neighbor_cache() {
         cpp_initial.potential_kcal_per_mol));
     assert(cpp.simulation->neighbor_list_cache.build_count == UINT64_C(1));
     assert(cpp.simulation->neighbor_list_cache.reuse_count == UINT64_C(1));
+    assert(cpp.simulation->neighbor_list_cache.data.get() == initial_cache_data);
     integrate(cpp.context, cpp.simulation, UINT64_C(0));
     assert(cpp.simulation->neighbor_list_cache.build_count == UINT64_C(1));
     assert(cpp.simulation->neighbor_list_cache.reuse_count == UINT64_C(2));
+    assert(cpp.simulation->neighbor_list_cache.data.get() == initial_cache_data);
     cpp.simulation->system.position_x[0] += 0.4;
     integrate(cpp.context, cpp.simulation, UINT64_C(0));
     assert(cpp.simulation->neighbor_list_cache.build_count == UINT64_C(1));
     assert(cpp.simulation->neighbor_list_cache.reuse_count == UINT64_C(3));
+    assert(cpp.simulation->neighbor_list_cache.data.get() == initial_cache_data);
     cpp.simulation->system.position_x[0] += 0.2;
     integrate(cpp.context, cpp.simulation, UINT64_C(0));
     assert(cpp.simulation->neighbor_list_cache.build_count == UINT64_C(2));
     assert(cpp.simulation->neighbor_list_cache.reuse_count == UINT64_C(3));
+    assert(cpp.simulation->neighbor_list_cache.data.get() != initial_cache_data);
 
     const uint64_t builds_before_failure =
         cpp.simulation->neighbor_list_cache.build_count;
     const uint64_t reuses_before_failure =
         cpp.simulation->neighbor_list_cache.reuse_count;
+    const auto *const cache_data_before_failure =
+        cpp.simulation->neighbor_list_cache.data.get();
     const double saved_x = cpp.simulation->system.position_x[0];
     cpp.simulation->system.position_x[0] =
         cpp.simulation->system.position_x[1];
@@ -971,6 +979,8 @@ void test_periodic_cpu_neighbor_cache() {
            builds_before_failure);
     assert(cpp.simulation->neighbor_list_cache.reuse_count ==
            reuses_before_failure);
+    assert(cpp.simulation->neighbor_list_cache.data.get() ==
+           cache_data_before_failure);
     cpp.simulation->system.position_x[0] = saved_x;
 
     uint64_t checkpoint_size = UINT64_C(0);
@@ -989,12 +999,11 @@ void test_periodic_cpu_neighbor_cache() {
                cpp.simulation,
                checkpoint.data(),
                checkpoint_size) == BG_STATUS_OK);
-    assert(!cpp.simulation->neighbor_list_cache.valid);
-    assert(cpp.simulation->neighbor_list_cache.pairs.empty());
+    assert(cpp.simulation->neighbor_list_cache.data == nullptr);
     assert(cpp.simulation->neighbor_list_cache.build_count == UINT64_C(0));
     assert(cpp.simulation->neighbor_list_cache.reuse_count == UINT64_C(0));
     integrate(cpp.context, cpp.simulation, UINT64_C(0));
-    assert(cpp.simulation->neighbor_list_cache.valid);
+    assert(cpp.simulation->neighbor_list_cache.data != nullptr);
     assert(cpp.simulation->neighbor_list_cache.build_count == UINT64_C(1));
 }
 
