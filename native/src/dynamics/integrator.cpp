@@ -980,28 +980,34 @@ bg_status minimize(
     uint64_t completed = UINT64_C(0);
     bool converged = maximum_force <=
                      options.force_tolerance_kcal_per_mol_angstrom;
+    // Keep the accepted work coordinates unchanged during line search; the
+    // candidate position buffers are overwritten and swapped only on accept.
+    bg_system candidate;
+    if (!converged && options.max_iterations != UINT64_C(0)) {
+        candidate = work->system;
+    }
 
     while (!converged && completed < options.max_iterations) {
-        const std::vector<double> base_x = work->system.position_x;
-        const std::vector<double> base_y = work->system.position_y;
-        const std::vector<double> base_z = work->system.position_z;
         bool accepted = false;
         double accepted_energy = current_energy;
-        bg_system accepted_system;
         double step = options.initial_step_angstrom2_mol_per_kcal;
         for (uint32_t attempt = 0;
              attempt < options.max_line_search_steps &&
              step >= options.minimum_step_angstrom2_mol_per_kcal;
              ++attempt) {
-            bg_system candidate = work->system;
             bool finite = true;
-            for (std::size_t atom = 0; atom < base_x.size(); ++atom) {
+            for (std::size_t atom = 0;
+                 atom < work->system.position_x.size();
+                 ++atom) {
                 candidate.position_x[atom] =
-                    base_x[atom] + step * direction.x[atom];
+                    work->system.position_x[atom] +
+                    step * direction.x[atom];
                 candidate.position_y[atom] =
-                    base_y[atom] + step * direction.y[atom];
+                    work->system.position_y[atom] +
+                    step * direction.y[atom];
                 candidate.position_z[atom] =
-                    base_z[atom] + step * direction.z[atom];
+                    work->system.position_z[atom] +
+                    step * direction.z[atom];
                 finite = finite && std::isfinite(candidate.position_x[atom]) &&
                          std::isfinite(candidate.position_y[atom]) &&
                          std::isfinite(candidate.position_z[atom]);
@@ -1010,14 +1016,19 @@ bg_status minimize(
                             : BG_STATUS_NUMERICAL_ERROR;
             if (status == BG_STATUS_OK) {
                 double force_dot_displacement = 0.0;
-                for (std::size_t atom = 0; atom < base_x.size(); ++atom) {
+                for (std::size_t atom = 0;
+                     atom < work->system.position_x.size();
+                     ++atom) {
                     const double contribution =
                         evaluation.force_x[atom] *
-                            (candidate.position_x[atom] - base_x[atom]) +
+                            (candidate.position_x[atom] -
+                             work->system.position_x[atom]) +
                         evaluation.force_y[atom] *
-                            (candidate.position_y[atom] - base_y[atom]) +
+                            (candidate.position_y[atom] -
+                             work->system.position_y[atom]) +
                         evaluation.force_z[atom] *
-                            (candidate.position_z[atom] - base_z[atom]);
+                            (candidate.position_z[atom] -
+                             work->system.position_z[atom]);
                     force_dot_displacement += contribution;
                 }
                 cpu::Evaluation trial_evaluation;
@@ -1037,7 +1048,6 @@ bg_status minimize(
                         accepted = true;
                         accepted_energy =
                             trial_evaluation.energy.total_kcal_per_mol;
-                        accepted_system = std::move(candidate);
                         break;
                     }
                 }
@@ -1055,7 +1065,9 @@ bg_status minimize(
                 BG_STATUS_NUMERICAL_ERROR,
                 "bounded Armijo line search did not find an acceptable step");
         }
-        work->system = std::move(accepted_system);
+        work->system.position_x.swap(candidate.position_x);
+        work->system.position_y.swap(candidate.position_y);
+        work->system.position_z.swap(candidate.position_z);
         const double energy_change = std::abs(accepted_energy - current_energy);
         current_energy = accepted_energy;
         ++completed;

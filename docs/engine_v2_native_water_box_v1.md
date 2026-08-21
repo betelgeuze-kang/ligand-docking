@@ -117,6 +117,14 @@ call, including both BAOAB half-drifts. SHAKE/RATTLE ordering and binary64
 updates are unchanged. This is an allocation-lifetime property without timing
 evidence or an acceleration claim.
 
+The CPU minimizer retains one candidate `System` across all bounded Armijo
+attempts and iterations. Each trial overwrites only its position channels from
+the unchanged accepted state; an accepted trial swaps those three buffers into
+the transactional work simulation. Static particle channels are copied once,
+and rejected trials allocate no replacement system. Evaluation order,
+constraint projection, accepted coordinates, and checkpoint semantics are
+unchanged. This also carries no timing evidence or acceleration claim.
+
 ## Frozen development observations
 
 The independently implemented Python oracle and both native CPU backends agree
