@@ -6,18 +6,24 @@
 //! benchmark, Stage 0, Fresh-128, or molecular-execution authority.
 
 use crate::{
-    invalid, AtomNonbonded, Backend, Context, DistanceConstraints, DynamicsReport, Evaluation,
-    ForceField, ForceFieldInput, HarmonicAngle, HarmonicBond, Integrator, OrthorhombicCell,
-    PairExclusion, ParticleSnapshot, ParticleSoa, PositionSoa, Result, Simulation,
-    SimulationOptions, System, VelocitySoa,
+    invalid, AtomNonbonded, Backend, Context, DistanceConstraint, DistanceConstraints,
+    DynamicsReport, Evaluation, ForceField, ForceFieldInput, HarmonicAngle, HarmonicBond,
+    Integrator, OrthorhombicCell, PairExclusion, ParticleSnapshot, ParticleSoa, PositionSoa,
+    Result, Simulation, SimulationOptions, System, VelocitySoa,
 };
 use sha2::{Digest, Sha256};
 
 pub const DEVELOPMENT_WATER_BOX_V1_SCHEMA_ID: &str = "betelgeuze.engine_v2_native_water_box/1.0.0";
 pub const DEVELOPMENT_WATER_BOX_V1_PROFILE_ID: &str = "engine_v2_native_two_water_development_v1";
+pub const DEVELOPMENT_WATER_BOX_CONSTRAINTS_V1_SCHEMA_ID: &str =
+    "betelgeuze.engine_v2_native_water_box_constraints_profile/1.0.0";
+pub const DEVELOPMENT_WATER_BOX_CONSTRAINTS_V1_PROFILE_ID: &str =
+    "engine_v2_native_two_water_constraints_development_v1";
 pub const DEVELOPMENT_WATER_BOX_V1_ATOM_COUNT: usize = 6;
 const DEVELOPMENT_WATER_BOX_V1_PROFILE_BYTES: &[u8] =
     include_bytes!("../assets/engine_v2_native_water_box_profile_v1.json");
+const DEVELOPMENT_WATER_BOX_CONSTRAINTS_V1_PROFILE_BYTES: &[u8] =
+    include_bytes!("../assets/engine_v2_native_water_box_constraints_profile_v1.json");
 
 const OH_DISTANCE_ANGSTROM: f64 = f64::from_bits(0x3feea161e4f765fe);
 const HOH_ANGLE_RADIANS: f64 = f64::from_bits(0x3ffd2fff5ab17aaf);
@@ -35,6 +41,10 @@ const SWITCH_START_ANGSTROM: f64 = 6.5;
 const TIMESTEP_FEMTOSECONDS: f64 = 0.02;
 const TEMPERATURE_KELVIN: f64 = 300.0;
 const FRICTION_PER_FEMTOSECOND: f64 = 0.001;
+const HH_DISTANCE_ANGSTROM: f64 = 2.0 * f64::from_bits(0x3fe838efe48967cf);
+const CONSTRAINT_TOLERANCE_ANGSTROM: f64 = 1.0e-10;
+const CONSTRAINT_VELOCITY_TOLERANCE_ANGSTROM_PER_FEMTOSECOND: f64 = 1.0e-10;
+const CONSTRAINT_MAX_ITERATIONS: u32 = 100;
 
 const POSITION_X: [f64; DEVELOPMENT_WATER_BOX_V1_ATOM_COUNT] = [
     0.0,
@@ -188,6 +198,11 @@ pub fn development_water_box_v1_profile_sha256() -> [u8; 32] {
     Sha256::digest(DEVELOPMENT_WATER_BOX_V1_PROFILE_BYTES).into()
 }
 
+/// SHA-256 of the exact rigid-water successor profile embedded into this runtime.
+pub fn development_water_box_constraints_v1_profile_sha256() -> [u8; 32] {
+    Sha256::digest(DEVELOPMENT_WATER_BOX_CONSTRAINTS_V1_PROFILE_BYTES).into()
+}
+
 /// Evaluate one frozen unconstrained water through a selected CPU backend.
 pub fn evaluate_development_single_water_v1(context: &Context) -> Result<Evaluation> {
     require_cpu_backend(context)?;
@@ -208,35 +223,106 @@ pub struct DevelopmentWaterBoxV1 {
 impl DevelopmentWaterBoxV1 {
     /// Construct the frozen deterministic NVE lane.
     pub fn nve() -> Result<Self> {
-        Self::new(SimulationOptions {
-            integrator: Integrator::VelocityVerlet,
-            timestep_femtoseconds: TIMESTEP_FEMTOSECONDS,
-            temperature_kelvin: TEMPERATURE_KELVIN,
-            friction_per_femtosecond: 0.0,
-            random_seed: 0,
-        })
+        Self::new(
+            SimulationOptions {
+                integrator: Integrator::VelocityVerlet,
+                timestep_femtoseconds: TIMESTEP_FEMTOSECONDS,
+                temperature_kelvin: TEMPERATURE_KELVIN,
+                friction_per_femtosecond: 0.0,
+                random_seed: 0,
+            },
+            false,
+        )
+    }
+
+    /// Construct the frozen rigid-water SHAKE/RATTLE NVE lane.
+    pub fn constrained_nve() -> Result<Self> {
+        Self::new(
+            SimulationOptions {
+                integrator: Integrator::VelocityVerlet,
+                timestep_femtoseconds: TIMESTEP_FEMTOSECONDS,
+                temperature_kelvin: TEMPERATURE_KELVIN,
+                friction_per_femtosecond: 0.0,
+                random_seed: 0,
+            },
+            true,
+        )
     }
 
     /// Construct the frozen deterministic BAOAB lane with an explicit seed.
     pub fn baoab(random_seed: u64) -> Result<Self> {
-        Self::new(SimulationOptions {
-            integrator: Integrator::LangevinBaoab,
-            timestep_femtoseconds: TIMESTEP_FEMTOSECONDS,
-            temperature_kelvin: TEMPERATURE_KELVIN,
-            friction_per_femtosecond: FRICTION_PER_FEMTOSECOND,
-            random_seed,
-        })
+        Self::new(
+            SimulationOptions {
+                integrator: Integrator::LangevinBaoab,
+                timestep_femtoseconds: TIMESTEP_FEMTOSECONDS,
+                temperature_kelvin: TEMPERATURE_KELVIN,
+                friction_per_femtosecond: FRICTION_PER_FEMTOSECOND,
+                random_seed,
+            },
+            false,
+        )
     }
 
-    fn new(options: SimulationOptions) -> Result<Self> {
+    /// Construct the frozen rigid-water SHAKE/RATTLE BAOAB lane.
+    pub fn constrained_baoab(random_seed: u64) -> Result<Self> {
+        Self::new(
+            SimulationOptions {
+                integrator: Integrator::LangevinBaoab,
+                timestep_femtoseconds: TIMESTEP_FEMTOSECONDS,
+                temperature_kelvin: TEMPERATURE_KELVIN,
+                friction_per_femtosecond: FRICTION_PER_FEMTOSECOND,
+                random_seed,
+            },
+            true,
+        )
+    }
+
+    fn new(options: SimulationOptions, constrained: bool) -> Result<Self> {
         let system = system()?;
         let forcefield = forcefield()?;
-        let simulation = Simulation::new(
-            &system,
-            &forcefield,
-            &DistanceConstraints::default(),
-            options,
-        )?;
+        let constraints = if constrained {
+            DistanceConstraints {
+                rows: vec![
+                    DistanceConstraint {
+                        atom_i: 0,
+                        atom_j: 1,
+                        distance_angstrom: OH_DISTANCE_ANGSTROM,
+                    },
+                    DistanceConstraint {
+                        atom_i: 0,
+                        atom_j: 2,
+                        distance_angstrom: OH_DISTANCE_ANGSTROM,
+                    },
+                    DistanceConstraint {
+                        atom_i: 1,
+                        atom_j: 2,
+                        distance_angstrom: HH_DISTANCE_ANGSTROM,
+                    },
+                    DistanceConstraint {
+                        atom_i: 3,
+                        atom_j: 4,
+                        distance_angstrom: OH_DISTANCE_ANGSTROM,
+                    },
+                    DistanceConstraint {
+                        atom_i: 3,
+                        atom_j: 5,
+                        distance_angstrom: OH_DISTANCE_ANGSTROM,
+                    },
+                    DistanceConstraint {
+                        atom_i: 4,
+                        atom_j: 5,
+                        distance_angstrom: HH_DISTANCE_ANGSTROM,
+                    },
+                ],
+                tolerance_angstrom: CONSTRAINT_TOLERANCE_ANGSTROM,
+                velocity_tolerance_angstrom_per_femtosecond:
+                    CONSTRAINT_VELOCITY_TOLERANCE_ANGSTROM_PER_FEMTOSECOND,
+                max_iterations: CONSTRAINT_MAX_ITERATIONS,
+            }
+        } else {
+            DistanceConstraints::default()
+        };
+        let simulation = Simulation::new(&system, &forcefield, &constraints, options)?;
         Ok(Self { simulation })
     }
 
@@ -264,6 +350,7 @@ impl DevelopmentWaterBoxV1 {
 
 #[cfg(test)]
 mod tests {
+    use super::{HH_DISTANCE_ANGSTROM, OH_DISTANCE_ANGSTROM};
     use crate as runtime;
 
     const TOLERANCE: f64 = 2.0e-11;
@@ -371,6 +458,102 @@ mod tests {
             TOLERANCE,
         );
         assert_snapshot_bits_equal(&rust_box.snapshot().unwrap(), &repeated.snapshot().unwrap());
+    }
+
+    #[test]
+    fn constrained_nve_preserves_cpu_parity_residuals_and_checkpoint() {
+        assert_eq!(
+            runtime::DEVELOPMENT_WATER_BOX_CONSTRAINTS_V1_SCHEMA_ID,
+            "betelgeuze.engine_v2_native_water_box_constraints_profile/1.0.0"
+        );
+        assert_eq!(
+            runtime::DEVELOPMENT_WATER_BOX_CONSTRAINTS_V1_PROFILE_ID,
+            "engine_v2_native_two_water_constraints_development_v1"
+        );
+        assert_eq!(
+            runtime::development_water_box_constraints_v1_profile_sha256(),
+            [
+                0x8d, 0xca, 0xd0, 0xb5, 0x00, 0x5b, 0x7a, 0x76, 0x8c, 0xe0, 0xa8, 0x8b, 0x18, 0x04,
+                0xb5, 0x5e, 0xcd, 0xdb, 0x9b, 0x34, 0x90, 0xe2, 0xdd, 0x59, 0x17, 0x9d, 0xfa, 0x23,
+                0x93, 0x43, 0x35, 0x07,
+            ]
+        );
+        let cpp = runtime::Context::new(runtime::ContextOptions::cpu_reference()).unwrap();
+        let rust = runtime::Context::new(runtime::ContextOptions::rust_cpu()).unwrap();
+        let mut cpp_box = runtime::DevelopmentWaterBoxV1::constrained_nve().unwrap();
+        let mut rust_box = runtime::DevelopmentWaterBoxV1::constrained_nve().unwrap();
+        let cpp_report = cpp_box.integrate(&cpp, 100).unwrap();
+        let rust_report = rust_box.integrate(&rust, 100).unwrap();
+        assert_eq!(rust_report.degrees_of_freedom, 12);
+        assert_report_close(cpp_report, rust_report, TOLERANCE);
+        assert_snapshot_close(
+            &cpp_box.snapshot().unwrap(),
+            &rust_box.snapshot().unwrap(),
+            TOLERANCE,
+        );
+        assert_constraint_residuals(&rust_box.snapshot().unwrap(), 1.0e-10);
+        let checkpoint = rust_box.checkpoint().unwrap();
+        let mut restarted = runtime::DevelopmentWaterBoxV1::constrained_nve().unwrap();
+        restarted.load_checkpoint(&checkpoint).unwrap();
+        assert_eq!(
+            rust_box.integrate(&rust, 32).unwrap(),
+            restarted.integrate(&rust, 32).unwrap()
+        );
+        assert_snapshot_bits_equal(
+            &rust_box.snapshot().unwrap(),
+            &restarted.snapshot().unwrap(),
+        );
+    }
+
+    #[test]
+    fn constrained_baoab_is_seed_repeatable_and_cpu_parity_complete() {
+        let cpp = runtime::Context::new(runtime::ContextOptions::cpu_reference()).unwrap();
+        let rust = runtime::Context::new(runtime::ContextOptions::rust_cpu()).unwrap();
+        let mut cpp_box = runtime::DevelopmentWaterBoxV1::constrained_baoab(BAOAB_SEED).unwrap();
+        let mut rust_box = runtime::DevelopmentWaterBoxV1::constrained_baoab(BAOAB_SEED).unwrap();
+        let mut repeated = runtime::DevelopmentWaterBoxV1::constrained_baoab(BAOAB_SEED).unwrap();
+        let cpp_report = cpp_box.integrate(&cpp, 128).unwrap();
+        let rust_report = rust_box.integrate(&rust, 128).unwrap();
+        let repeated_report = repeated.integrate(&rust, 128).unwrap();
+        assert_eq!(rust_report.degrees_of_freedom, 12);
+        assert_eq!(rust_report, repeated_report);
+        assert_report_close(cpp_report, rust_report, TOLERANCE);
+        assert_snapshot_close(
+            &cpp_box.snapshot().unwrap(),
+            &rust_box.snapshot().unwrap(),
+            TOLERANCE,
+        );
+        assert_constraint_residuals(&rust_box.snapshot().unwrap(), 1.0e-10);
+        assert_snapshot_bits_equal(&rust_box.snapshot().unwrap(), &repeated.snapshot().unwrap());
+    }
+
+    fn assert_constraint_residuals(snapshot: &runtime::ParticleSnapshot, tolerance: f64) {
+        for (i, j, target) in [
+            (0, 1, OH_DISTANCE_ANGSTROM),
+            (0, 2, OH_DISTANCE_ANGSTROM),
+            (1, 2, HH_DISTANCE_ANGSTROM),
+            (3, 4, OH_DISTANCE_ANGSTROM),
+            (3, 5, OH_DISTANCE_ANGSTROM),
+            (4, 5, HH_DISTANCE_ANGSTROM),
+        ] {
+            let delta = [
+                snapshot.positions.x_angstrom[j] - snapshot.positions.x_angstrom[i],
+                snapshot.positions.y_angstrom[j] - snapshot.positions.y_angstrom[i],
+                snapshot.positions.z_angstrom[j] - snapshot.positions.z_angstrom[i],
+            ];
+            let distance = delta.iter().map(|v| v * v).sum::<f64>().sqrt();
+            assert!((distance - target).abs() <= tolerance);
+            let dv = [
+                snapshot.velocities.x_angstrom_per_femtosecond[j]
+                    - snapshot.velocities.x_angstrom_per_femtosecond[i],
+                snapshot.velocities.y_angstrom_per_femtosecond[j]
+                    - snapshot.velocities.y_angstrom_per_femtosecond[i],
+                snapshot.velocities.z_angstrom_per_femtosecond[j]
+                    - snapshot.velocities.z_angstrom_per_femtosecond[i],
+            ];
+            let residual = delta.iter().zip(dv).map(|(a, b)| a * b).sum::<f64>().abs() / distance;
+            assert!(residual <= tolerance);
+        }
     }
 
     fn assert_evaluation_close(
