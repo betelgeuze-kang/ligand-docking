@@ -93,7 +93,10 @@ The current `main` branch contains:
   commit semantics remain unchanged. Unconstrained drifts avoid unnecessary
   coordinate snapshots, while constrained integration retains one work-local
   three-channel snapshot buffer across all drifts in the call. No timing claim
-  is made.
+  is made. The CPU minimizer similarly retains one work-local candidate system
+  and swaps only accepted position buffers, avoiding a complete system copy for
+  every bounded Armijo attempt while preserving exact accepted-state and
+  transaction semantics.
   The entry point is CPU-only and has no PME, neighbor-list performance
   evidence, general ion preparation, protein, production-MD, scientific,
   free-energy, benchmark, product, Stage 0, or performance authority;
