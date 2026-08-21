@@ -93,6 +93,10 @@ while every atom remains strictly below 0.5 angstrom from its unwrapped build
 reference. The existing pair evaluator still applies minimum-distance and
 exact-cutoff semantics. Cache mutations follow the existing transactional
 integrate/minimize clone boundary; failed operations cannot commit them.
+The cached reference coordinates and canonical pairs live in one immutable
+shared payload, so a transaction clone retains that payload rather than
+deep-copying its atom and pair arrays; a rebuild publishes a new payload only
+inside the work simulation.
 Checkpoint bytes and the static fingerprint do not include this derived state,
 and a successful checkpoint load invalidates it. Mixed/nonperiodic and HIP
 paths do not consume the cache. This behavior has no timing threshold or

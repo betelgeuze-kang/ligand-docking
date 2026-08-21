@@ -17,6 +17,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <memory>
 #include <new>
 #include <stdexcept>
 #include <type_traits>
@@ -298,12 +299,15 @@ struct bg_simulation final {
         double distance = 0.0;
     };
 
-    struct NeighborListCache final {
-        bool valid = false;
+    struct NeighborListCacheData final {
         std::vector<double> reference_x;
         std::vector<double> reference_y;
         std::vector<double> reference_z;
         std::vector<betelgeuze::native::cpu::NeighborPair> pairs;
+    };
+
+    struct NeighborListCache final {
+        std::shared_ptr<const NeighborListCacheData> data;
         uint64_t build_count = UINT64_C(0);
         uint64_t reuse_count = UINT64_C(0);
     };
