@@ -57,7 +57,15 @@ The current `main` branch contains:
   exact geometric pair evaluations, verify their exact producer receipts, and
   use fresh child processes to report raw wall-time samples plus Linux process
   peak RSS. GitHub Actions timing is blocked, no threshold or baseline is
-  present, and the output is descriptive local development evidence only;
+  present, and the output is descriptive local development evidence only. One
+  durable seven-sample local receipt binds merged main commit `cb987662`, tree
+  `ed4221a6`, the exact Rust source closure, release rlib, observer binary,
+  toolchain, host/kernel identity, and 24-CPU affinity. It records p50 wall
+  times of 20,151,107, 66,426,037, and 194,135,495 ns for the three frozen work
+  denominators. Receipt
+  `42b5d76c870c17ef49528319d6209a587b5ef40ef6be63c12c166d776da9e394`
+  remains single-host synthetic descriptive evidence and grants no performance,
+  scientific, molecular, benchmark, product, Stage 0, or HIP authority;
 - bounded single-model PDB and single-molecule SDF V2000 ingestion;
 - bounded single-block CIF syntax plus mmCIF entity/asym/polymer identity,
   zero-occupancy, altloc, nonpoly instance, component atom/bond, and selected

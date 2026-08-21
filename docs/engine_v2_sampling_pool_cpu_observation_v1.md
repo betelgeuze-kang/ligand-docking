@@ -51,3 +51,43 @@ baseline comparison: wall time and peak RSS are descriptive local development
 observations only. They cannot authorize or support molecular execution,
 reservation, D1/Fresh-128, public benchmarks, Stage 0, HIP-device execution,
 product/rank/customer-pose mutation, or performance/scientific claims.
+
+## Durable merged-source observation
+
+The committed v1 evidence receipt was captured on 2026-08-20 from the exact
+source closure of merged main commit
+`cb987662477e6fc56409f382ac5757ce62a09228` and tree
+`ed4221a64d7740e4063bdaff777e150f7035c769`. It binds the complete Rust tree,
+runner and observer sources, release rlib, temporary observer binary, Rust/Cargo
+toolchain, every effective Cargo configuration lookup candidate, a fixed
+allowlisted timed-process environment, Linux OS/kernel/boot identity hashes,
+CPU model, and the exact 24-CPU affinity set. The Cargo binding records both
+modern `config.toml` and legacy `config` candidates from the Rust working
+directory through every ancestor plus Cargo home; all candidates were absent
+for this capture. A hashed path-component chain starts at `rust/.cargo`, removes
+one ancestor per row, and ends at `/.cargo`, proving completeness without
+assuming a checkout-specific path depth. The release rlib is compiled inside a
+new capture-owned temporary Cargo target under a sanitized build-environment
+allowlist. Cargo/rustc executable identities must match before and after
+compilation and timing, and the actual `libm` registry tree must match its
+locked crate checksum and pinned 155-file tree. Its receipt SHA-256 is
+`42b5d76c870c17ef49528319d6209a587b5ef40ef6be63c12c166d776da9e394`.
+
+| fixture | raw samples | p50 ns | p95 ns | peak RSS KiB | peak delta KiB |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| small | 7 | 20,151,107 | 23,646,562 | 2,688 | 768 |
+| medium | 7 | 66,426,037 | 68,239,818 | 3,072 | 1,152 |
+| large | 7 | 194,135,495 | 195,115,778 | 3,456 | 1,536 |
+
+Verify the canonical receipt without reading a clock or executing an
+observation:
+
+```bash
+python3 tools/capture_engine_v2_sampling_pool_cpu_observation_v1.py \
+  --verify config/engine_v2_sampling_pool_cpu_observation_evidence_v1.json
+```
+
+These are single-host synthetic descriptive observations, not a threshold,
+baseline comparison, qualification, acceleration claim, or representative
+molecular throughput result. Capture is prohibited in GitHub Actions; ordinary
+CI only verifies the frozen receipt and source bindings.
