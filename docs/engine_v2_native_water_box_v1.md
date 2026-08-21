@@ -65,6 +65,13 @@ minimum distance before applying the inclusive cutoff, preserving fail-closed
 behavior when the configured minimum exceeds the cutoff. Mixed-axis and
 nonperiodic systems retain the canonical all-pairs path. The common ordering
 preserves binary64 accumulation parity with the independent all-pairs oracle.
+Both CPU implementations use a conservative squared-distance comparison while
+admitting cell candidates, so candidates beyond the search radius do not
+require a square root. The one-ULP outward bound preserves the exact inclusive
+binary64 boundary. The C++ reference stores cell assignments in one sorted
+contiguous array, matching the Rust CPU traversal shape and avoiding per-cell
+tree nodes. These are implementation changes under the same mathematical
+profile and do not constitute timing evidence or an acceleration claim.
 This first functional list has no skin or reuse cache.
 
 ## Frozen development observations

@@ -6,7 +6,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <map>
+#include <limits>
 #include <utility>
 
 namespace betelgeuze::native::cpu {
@@ -548,6 +548,12 @@ bg_status evaluate_nonbonded(
     Evaluation *evaluation);
 
 using CellKey = std::array<std::size_t, 3>;
+using CellAssignment = std::pair<CellKey, std::size_t>;
+
+[[nodiscard]] double inclusive_squared_radius(double radius) noexcept {
+    return std::nextafter(
+        radius * radius, std::numeric_limits<double>::infinity());
+}
 
 [[nodiscard]] std::array<std::size_t, 3> periodic_cell_counts(
     const bg_forcefield &forcefield) noexcept {
@@ -622,16 +628,20 @@ bg_status build_periodic_neighbor_pairs(
     const auto cell_counts = periodic_cell_counts(forcefield);
     const double search_radius =
         std::max(forcefield.cutoff, forcefield.minimum_pair_distance);
+    const double search_radius_squared =
+        inclusive_squared_radius(search_radius);
     std::vector<CellKey> atom_cells(forcefield.atom_count);
-    std::map<CellKey, std::vector<std::size_t>> bins;
+    std::vector<CellAssignment> assignments;
+    assignments.reserve(forcefield.atom_count);
     for (std::size_t atom = 0; atom < forcefield.atom_count; ++atom) {
         bg_status status = periodic_cell_key(
             system, forcefield, cell_counts, atom, &atom_cells[atom]);
         if (status != BG_STATUS_OK) {
             return status;
         }
-        bins[atom_cells[atom]].push_back(atom);
+        assignments.emplace_back(atom_cells[atom], atom);
     }
+    std::sort(assignments.begin(), assignments.end());
 
     std::vector<bg_forcefield::Pair> pairs;
     std::vector<CellKey> neighbor_cells;
@@ -659,11 +669,22 @@ bg_status build_periodic_neighbor_pairs(
 
         candidates.clear();
         for (const CellKey &key : neighbor_cells) {
-            const auto found = bins.find(key);
-            if (found == bins.end()) {
-                continue;
-            }
-            for (const std::size_t atom_j : found->second) {
+            const auto begin = std::lower_bound(
+                assignments.begin(),
+                assignments.end(),
+                key,
+                [](const CellAssignment &row, const CellKey &target) {
+                    return row.first < target;
+                });
+            const auto end = std::upper_bound(
+                begin,
+                assignments.end(),
+                key,
+                [](const CellKey &target, const CellAssignment &row) {
+                    return target < row.first;
+                });
+            for (auto row = begin; row != end; ++row) {
+                const std::size_t atom_j = row->second;
                 if (atom_j > atom_i) {
                     candidates.push_back(atom_j);
                 }
@@ -687,7 +708,7 @@ bg_status build_periodic_neighbor_pairs(
             if (status != BG_STATUS_OK) {
                 return status;
             }
-            if (std::sqrt(squared_distance) <= search_radius) {
+            if (squared_distance <= search_radius_squared) {
                 pairs.push_back({atom_i, atom_j});
             }
         }
