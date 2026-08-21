@@ -117,6 +117,16 @@ call, including both BAOAB half-drifts. SHAKE/RATTLE ordering and binary64
 updates are unchanged. This is an allocation-lifetime property without timing
 evidence or an acceleration claim.
 
+The public integrate transaction operates in place behind an RAII rollback.
+For nonzero step counts it snapshots only the six mutable position and velocity
+channels, the absolute step, and neighbor-cache metadata; immutable particle,
+force-field, constraint, and integrator configuration are not copied. A zero
+step evaluation snapshots only the scalar/cache metadata. Failures restore the
+six channels in place, preserving every borrowed particle-view address, while
+success needs no second channel copy. The minimizer retains its separate work
+simulation because accepted candidate position buffers are swapped there. This
+is an unmeasured lifetime property and carries no acceleration claim.
+
 The CPU minimizer retains one candidate `System` across all bounded Armijo
 attempts and iterations. Each trial overwrites only its position channels from
 the unchanged accepted state; an accepted trial swaps those three buffers into

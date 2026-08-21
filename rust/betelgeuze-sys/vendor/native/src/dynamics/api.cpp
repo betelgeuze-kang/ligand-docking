@@ -8,6 +8,7 @@
 #include <limits>
 #include <memory>
 #include <utility>
+#include <vector>
 
 namespace betelgeuze::native::dynamics {
 namespace {
@@ -227,6 +228,68 @@ void fill_particle_view(
         value = UINT64_C(0);
     }
 }
+
+class IntegrationRollback final {
+  public:
+    IntegrationRollback(
+        bg_simulation *simulation,
+        bool snapshot_particle_channels)
+        : simulation_(simulation),
+          snapshot_particle_channels_(snapshot_particle_channels),
+          absolute_step_(simulation->absolute_step),
+          neighbor_list_cache_(simulation->neighbor_list_cache) {
+        if (snapshot_particle_channels_) {
+            position_x_ = simulation_->system.position_x;
+            position_y_ = simulation_->system.position_y;
+            position_z_ = simulation_->system.position_z;
+            velocity_x_ = simulation_->system.velocity_x;
+            velocity_y_ = simulation_->system.velocity_y;
+            velocity_z_ = simulation_->system.velocity_z;
+        }
+    }
+
+    IntegrationRollback(const IntegrationRollback &) = delete;
+    IntegrationRollback &operator=(const IntegrationRollback &) = delete;
+
+    ~IntegrationRollback() noexcept {
+        if (committed_) {
+            return;
+        }
+        if (snapshot_particle_channels_) {
+            restore_channel(position_x_, &simulation_->system.position_x);
+            restore_channel(position_y_, &simulation_->system.position_y);
+            restore_channel(position_z_, &simulation_->system.position_z);
+            restore_channel(velocity_x_, &simulation_->system.velocity_x);
+            restore_channel(velocity_y_, &simulation_->system.velocity_y);
+            restore_channel(velocity_z_, &simulation_->system.velocity_z);
+        }
+        simulation_->absolute_step = absolute_step_;
+        simulation_->neighbor_list_cache = std::move(neighbor_list_cache_);
+    }
+
+    void commit() noexcept {
+        committed_ = true;
+    }
+
+  private:
+    static void restore_channel(
+        const std::vector<double> &source,
+        std::vector<double> *destination) noexcept {
+        std::copy(source.begin(), source.end(), destination->begin());
+    }
+
+    bg_simulation *simulation_ = nullptr;
+    bool snapshot_particle_channels_ = false;
+    uint64_t absolute_step_ = UINT64_C(0);
+    bg_simulation::NeighborListCache neighbor_list_cache_;
+    std::vector<double> position_x_;
+    std::vector<double> position_y_;
+    std::vector<double> position_z_;
+    std::vector<double> velocity_x_;
+    std::vector<double> velocity_y_;
+    std::vector<double> velocity_z_;
+    bool committed_ = false;
+};
 
 void commit_dynamic_state(
     bg_simulation &work,
@@ -700,13 +763,14 @@ extern "C" BG_API bg_status BG_CALL bg_context_integrate(
                 BG_STATUS_CAPACITY_OVERFLOW,
                 "absolute dynamics step would overflow uint64");
         }
-        auto work = std::make_unique<bg_simulation>(*simulation);
+        IntegrationRollback rollback(simulation, step_count != UINT64_C(0));
         bg_dynamics_report_v1 report = *out_report;
-        status = integrate(*context, *simulation, step_count, work.get(), &report);
+        status = integrate(
+            *context, *simulation, step_count, simulation, &report);
         if (status != BG_STATUS_OK) {
             return status;
         }
-        commit_dynamic_state(*work, simulation);
+        rollback.commit();
         *out_report = report;
         return BG_STATUS_OK;
     });

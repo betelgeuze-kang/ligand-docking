@@ -96,7 +96,10 @@ The current `main` branch contains:
   is made. The CPU minimizer similarly retains one work-local candidate system
   and swaps only accepted position buffers, avoiding a complete system copy for
   every bounded Armijo attempt while preserving exact accepted-state and
-  transaction semantics.
+  transaction semantics. Integration calls operate in place behind a six-channel
+  RAII rollback (or metadata-only rollback for zero steps), so immutable
+  mass/charge, force-field, constraint, and integrator state are not copied and
+  borrowed particle-view addresses remain stable on both success and failure.
   The entry point is CPU-only and has no PME, neighbor-list performance
   evidence, general ion preparation, protein, production-MD, scientific,
   free-energy, benchmark, product, Stage 0, or performance authority;
