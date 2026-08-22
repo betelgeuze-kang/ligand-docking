@@ -159,6 +159,15 @@ outside checkpoint bytes and the static fingerprint. Constraint order,
 tolerances, corrections, failures, and HIP behavior are unchanged; this compute
 reduction is untimed.
 
+BAOAB simulations also derive their immutable Ornstein-Uhlenbeck coefficients
+once at simulation creation. The exact `exp` decay, `expm1` variance factor,
+and atom-specific `sqrt(variance / mass)` values are retained outside
+checkpoint bytes and static identity, then reused for every stochastic step.
+Velocity Verlet leaves the atom-specific cache unallocated. Random-counter
+construction, velocity update order, failure checks, frozen binary64 outputs,
+and checkpoint continuation are unchanged. This is an untimed structural
+compute reduction with no acceleration claim.
+
 The CPU minimizer likewise retains its three projected-force direction vectors
 across later minimize calls. Each projection still copies the current force
 channels before applying the same bounded constraint projection, so no prior

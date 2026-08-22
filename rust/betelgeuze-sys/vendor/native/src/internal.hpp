@@ -345,6 +345,12 @@ struct bg_simulation final {
         std::vector<Direction> directions;
     };
 
+    struct IntegratorCoefficientCache final {
+        double langevin_decay = 1.0;
+        double langevin_variance_factor = 0.0;
+        std::vector<double> langevin_sigma;
+    };
+
     bg_simulation() = default;
     bg_simulation(const bg_simulation &) = delete;
     bg_simulation &operator=(const bg_simulation &) = delete;
@@ -364,6 +370,7 @@ struct bg_simulation final {
     uint64_t random_seed = UINT64_C(0);
     uint64_t absolute_step = UINT64_C(0);
     std::array<uint8_t, 32> static_fingerprint{};
+    IntegratorCoefficientCache integrator_coefficient_cache;
     NeighborListCache neighbor_list_cache;
     DynamicStateScratch dynamic_state_scratch;
     ParticleVectorScratch force_evaluation_scratch;

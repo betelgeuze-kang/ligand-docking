@@ -747,6 +747,12 @@ void test_nve_fixture_and_zero_step() {
     first.simulation = make_simulation(
         first.system, first.forcefield, BG_INTEGRATOR_VELOCITY_VERLET,
         0.2, 999.0, 5.0, UINT64_C(123), nullptr);
+    const bg_simulation::IntegratorCoefficientCache &verlet_coefficients =
+        first.simulation->integrator_coefficient_cache;
+    assert(verlet_coefficients.langevin_decay == 1.0);
+    assert(verlet_coefficients.langevin_variance_factor == 0.0);
+    assert(verlet_coefficients.langevin_sigma.empty());
+    assert(verlet_coefficients.langevin_sigma.capacity() == 0U);
     const bg_particle_soa_view initial_view = particle_view(first.simulation);
     const std::array<double, 4> initial_state = {
         initial_view.position_x_angstrom[0],
@@ -1073,8 +1079,29 @@ void test_nvt_fixture_and_checkpoint() {
     first.simulation = make_simulation(
         first.system, first.forcefield, BG_INTEGRATOR_LANGEVIN_BAOAB,
         1.0, 300.0, 0.05, seed, nullptr);
+    const bg_simulation::IntegratorCoefficientCache &first_coefficients =
+        first.simulation->integrator_coefficient_cache;
+    const double expected_decay = std::exp(-0.05);
+    const double expected_variance_factor = -std::expm1(-0.1);
+    assert(first_coefficients.langevin_decay == expected_decay);
+    assert(first_coefficients.langevin_variance_factor ==
+           expected_variance_factor);
+    assert(first_coefficients.langevin_sigma.size() == 2U);
+    const std::array<double, 2> nvt_masses = {12.0, 16.0};
+    for (std::size_t atom = 0; atom < nvt_masses.size(); ++atom) {
+        const double expected_variance =
+            4.184e-4 * 0.0019872042586408316 * 300.0 *
+            expected_variance_factor / nvt_masses[atom];
+        assert(first_coefficients.langevin_sigma[atom] ==
+               std::sqrt(expected_variance));
+    }
+    const double *const first_sigma_storage =
+        first_coefficients.langevin_sigma.data();
+    assert(first_sigma_storage != nullptr);
     const bg_dynamics_report_v1 one_step =
         integrate(first.context, first.simulation, UINT64_C(1));
+    assert(first.simulation->integrator_coefficient_cache.langevin_sigma.data() ==
+           first_sigma_storage);
     assert(one_step.absolute_step == UINT64_C(1));
     assert(one_step.degrees_of_freedom == UINT64_C(6));
     assert(one_step.potential_kcal_per_mol == 0.0);
@@ -1101,6 +1128,9 @@ void test_nvt_fixture_and_checkpoint() {
     replica.simulation = make_simulation(
         replica.system, replica.forcefield, BG_INTEGRATOR_LANGEVIN_BAOAB,
         1.0, 300.0, 0.05, seed, nullptr);
+    const double *const replica_sigma_storage =
+        replica.simulation->integrator_coefficient_cache.langevin_sigma.data();
+    assert(replica_sigma_storage != nullptr);
     integrate(first.context, replica.simulation, UINT64_C(1));
     assert_same_dynamic_state(first.simulation, replica.simulation);
 
@@ -1157,12 +1187,17 @@ void test_nvt_fixture_and_checkpoint() {
     assert(bg_simulation_checkpoint_load(
                replica.simulation, checkpoint.data(), checkpoint_size) ==
            BG_STATUS_OK);
+    assert(
+        replica.simulation->integrator_coefficient_cache.langevin_sigma.data() ==
+        replica_sigma_storage);
     const bg_particle_soa_view loaded_view = particle_view(replica.simulation);
     const double *const loaded_address = loaded_view.position_x_angstrom;
     integrate(first.context, replica.simulation, UINT64_C(25));
     assert_same_dynamic_state(first.simulation, replica.simulation);
     assert(particle_view(first.simulation).position_x_angstrom ==
            position_address);
+    assert(first.simulation->integrator_coefficient_cache.langevin_sigma.data() ==
+           first_sigma_storage);
     assert(particle_view(replica.simulation).position_x_angstrom ==
            loaded_address);
 

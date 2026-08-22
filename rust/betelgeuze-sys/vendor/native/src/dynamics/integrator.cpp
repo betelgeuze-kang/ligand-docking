@@ -592,10 +592,10 @@ std::array<double, 3> counter_normals(
 bg_status ornstein_uhlenbeck(
     const bg_simulation &simulation,
     bg_system *system) noexcept {
-    const double dt = simulation.timestep_femtoseconds;
-    const double exponent = -simulation.friction_per_femtosecond * dt;
-    const double decay = std::exp(exponent);
-    const double variance_factor = -std::expm1(2.0 * exponent);
+    const bg_simulation::IntegratorCoefficientCache &coefficients =
+        simulation.integrator_coefficient_cache;
+    const double decay = coefficients.langevin_decay;
+    const double variance_factor = coefficients.langevin_variance_factor;
     if (!std::isfinite(decay) || !std::isfinite(variance_factor) ||
         variance_factor < 0.0) {
         return fail(
@@ -603,11 +603,7 @@ bg_status ornstein_uhlenbeck(
             "Langevin OU coefficient is non-finite");
     }
     for (std::size_t atom = 0; atom < system->mass.size(); ++atom) {
-        const double variance =
-            kAccelerationConversion * kGasConstantKcalPerMolKelvin *
-            simulation.temperature_kelvin * variance_factor /
-            system->mass[atom];
-        const double sigma = std::sqrt(variance);
+        const double sigma = coefficients.langevin_sigma[atom];
         if (!std::isfinite(sigma)) {
             return fail(
                 BG_STATUS_NUMERICAL_ERROR,
@@ -955,6 +951,29 @@ bg_status projected_force(
 }
 
 }  // namespace
+
+void initialize_integrator_coefficients(bg_simulation *simulation) {
+    if (simulation->integrator != BG_INTEGRATOR_LANGEVIN_BAOAB) {
+        return;
+    }
+    bg_simulation::IntegratorCoefficientCache &coefficients =
+        simulation->integrator_coefficient_cache;
+    const double exponent =
+        -simulation->friction_per_femtosecond *
+        simulation->timestep_femtoseconds;
+    coefficients.langevin_decay = std::exp(exponent);
+    coefficients.langevin_variance_factor =
+        -std::expm1(2.0 * exponent);
+    coefficients.langevin_sigma.resize(simulation->system.mass.size());
+    for (std::size_t atom = 0; atom < simulation->system.mass.size(); ++atom) {
+        const double variance =
+            kAccelerationConversion * kGasConstantKcalPerMolKelvin *
+            simulation->temperature_kelvin *
+            coefficients.langevin_variance_factor /
+            simulation->system.mass[atom];
+        coefficients.langevin_sigma[atom] = std::sqrt(variance);
+    }
+}
 
 bg_status initialize_constraints(bg_simulation *simulation) {
     bg_status status = apply_shake(*simulation, &simulation->system);
