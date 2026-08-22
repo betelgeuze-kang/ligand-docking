@@ -117,11 +117,12 @@ CPU use the same lifetime rule; HIP evaluation is unchanged. This structural
 allocation reuse carries no measured timing evidence or acceleration claim.
 
 The integrator likewise skips unconstrained-coordinate snapshots when no
-distance constraints exist. When constraints are present, one three-channel
-snapshot buffer is retained across every drift in the transactional integrate
-call, including both BAOAB half-drifts. SHAKE/RATTLE ordering and binary64
-updates are unchanged. This is an allocation-lifetime property without timing
-evidence or an acceleration claim.
+distance constraints exist. When constraints are present, the simulation
+retains one three-channel snapshot buffer across every drift in an integrate
+call, including both BAOAB half-drifts, and across later integrate calls.
+SHAKE/RATTLE ordering and binary64 updates are unchanged. This is derived
+scratch excluded from checkpoint and rollback semantics, and it carries no
+timing evidence or acceleration claim.
 
 Public integrate and minimize transactions operate in place behind an RAII
 rollback. Nonzero integration and minimization snapshot only the six mutable

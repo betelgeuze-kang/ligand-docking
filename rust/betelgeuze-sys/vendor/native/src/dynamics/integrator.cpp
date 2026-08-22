@@ -20,11 +20,7 @@ struct Vector3 final {
     double z = 0.0;
 };
 
-struct VectorChannels final {
-    std::vector<double> x;
-    std::vector<double> y;
-    std::vector<double> z;
-};
+using VectorChannels = bg_simulation::ParticleVectorScratch;
 
 class PositionStorageGuard final {
   public:
@@ -1204,7 +1200,8 @@ bg_status integrate(
     bg_simulation *work,
     bg_dynamics_report_v1 *out_report) {
     cpu::Evaluation final_evaluation;
-    VectorChannels constraint_scratch;
+    VectorChannels *const constraint_scratch =
+        &work->constraint_drift_scratch;
     bg_status status = BG_STATUS_OK;
     if (step_count == UINT64_C(0)) {
         status = evaluate(
@@ -1220,14 +1217,14 @@ bg_status integrate(
                         context,
                         work,
                         &final_evaluation,
-                        &constraint_scratch);
+                        constraint_scratch);
                     break;
                 case BG_INTEGRATOR_LANGEVIN_BAOAB:
                     status = baoab_step(
                         context,
                         work,
                         &final_evaluation,
-                        &constraint_scratch);
+                        constraint_scratch);
                     break;
                 default:
                     return fail(

@@ -323,6 +323,12 @@ struct bg_simulation final {
         std::vector<double> velocity_z;
     };
 
+    struct ParticleVectorScratch final {
+        std::vector<double> x;
+        std::vector<double> y;
+        std::vector<double> z;
+    };
+
     struct ConstraintValidationScratch final {
         struct Direction final {
             double x = 0.0;
@@ -355,6 +361,7 @@ struct bg_simulation final {
     std::array<uint8_t, 32> static_fingerprint{};
     NeighborListCache neighbor_list_cache;
     DynamicStateScratch dynamic_state_scratch;
+    ParticleVectorScratch constraint_drift_scratch;
     ConstraintValidationScratch constraint_validation_scratch;
 };
 
