@@ -1477,6 +1477,60 @@ void test_periodic_cpu_neighbor_cache() {
     assert(cpp.simulation->neighbor_list_cache.build_count == UINT64_C(1));
 }
 
+void test_periodic_cpu_neighbor_reuse_interior() {
+    for (const bg_backend backend :
+         {BG_BACKEND_CPP_CPU_REFERENCE, BG_BACKEND_RUST_CPU}) {
+        NativeHandles handles;
+        handles.context = make_context(backend);
+        handles.system = make_system(
+            {-3.5, 0.0, 3.5}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0},
+            {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0},
+            {12.0, 16.0, 14.0});
+        handles.forcefield = make_periodic_nonbonded_forcefield(3U);
+        handles.simulation = make_simulation(
+            handles.system, handles.forcefield, BG_INTEGRATOR_VELOCITY_VERLET,
+            0.1, 0.0, 0.0, UINT64_C(0), nullptr);
+
+        integrate(handles.context, handles.simulation, UINT64_C(0));
+        const auto *const initial_cache =
+            handles.simulation->neighbor_list_cache.data.get();
+        assert(initial_cache != nullptr);
+        for (std::vector<double> *channel : {
+                 &handles.simulation->system.position_x,
+                 &handles.simulation->system.position_y,
+                 &handles.simulation->system.position_z}) {
+            (*channel)[0] += 0.28;
+        }
+        integrate(handles.context, handles.simulation, UINT64_C(0));
+        assert(
+            handles.simulation->neighbor_list_cache.data.get() ==
+            initial_cache);
+        assert(
+            handles.simulation->neighbor_list_cache.build_count ==
+            UINT64_C(1));
+        assert(
+            handles.simulation->neighbor_list_cache.reuse_count ==
+            UINT64_C(1));
+
+        for (std::vector<double> *channel : {
+                 &handles.simulation->system.position_x,
+                 &handles.simulation->system.position_y,
+                 &handles.simulation->system.position_z}) {
+            (*channel)[0] += 0.02;
+        }
+        integrate(handles.context, handles.simulation, UINT64_C(0));
+        assert(
+            handles.simulation->neighbor_list_cache.data.get() !=
+            initial_cache);
+        assert(
+            handles.simulation->neighbor_list_cache.build_count ==
+            UINT64_C(2));
+        assert(
+            handles.simulation->neighbor_list_cache.reuse_count ==
+            UINT64_C(1));
+    }
+}
+
 void test_hip_parity_if_available() {
 #if BG_TEST_HIP_ENABLED
     uint8_t available = UINT8_C(0);
@@ -1522,6 +1576,7 @@ int main() {
     test_report_and_state_failure_transactionality();
     test_deep_ownership_and_signed_zero_checkpoint();
     test_periodic_cpu_neighbor_cache();
+    test_periodic_cpu_neighbor_reuse_interior();
     test_hip_parity_if_available();
     return 0;
 }

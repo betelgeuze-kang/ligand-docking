@@ -18,6 +18,13 @@ namespace {
 constexpr double kNeighborListSkinAngstrom = 1.0;
 constexpr double kNeighborListReuseRadiusAngstrom =
     0.5 * kNeighborListSkinAngstrom;
+constexpr double kNeighborListReuseInteriorComponentAngstrom =
+    0x1.279a74590331cp-2;
+static_assert(
+    3.0 * kNeighborListReuseInteriorComponentAngstrom *
+            kNeighborListReuseInteriorComponentAngstrom <
+        kNeighborListReuseRadiusAngstrom *
+            kNeighborListReuseRadiusAngstrom);
 
 void increment_saturating(uint64_t *value) noexcept {
     if (*value != std::numeric_limits<uint64_t>::max()) {
@@ -35,10 +42,26 @@ void increment_saturating(uint64_t *value) noexcept {
         return false;
     }
     for (std::size_t atom = 0; atom < atom_count; ++atom) {
+        const double displacement_x =
+            system.position_x[atom] - cache.data->reference_x[atom];
+        const double displacement_y =
+            system.position_y[atom] - cache.data->reference_y[atom];
+        const double displacement_z =
+            system.position_z[atom] - cache.data->reference_z[atom];
+        // The hex threshold is one binary64 value below 0.5/sqrt(3), and the
+        // static assertion proves its closed cube lies inside the reuse
+        // sphere. Most small integration displacements therefore avoid the
+        // square root; the boundary region retains the exact hypot decision.
+        if (std::abs(displacement_x) <
+                kNeighborListReuseInteriorComponentAngstrom &&
+            std::abs(displacement_y) <
+                kNeighborListReuseInteriorComponentAngstrom &&
+            std::abs(displacement_z) <
+                kNeighborListReuseInteriorComponentAngstrom) {
+            continue;
+        }
         const double displacement = std::hypot(
-            system.position_x[atom] - cache.data->reference_x[atom],
-            system.position_y[atom] - cache.data->reference_y[atom],
-            system.position_z[atom] - cache.data->reference_z[atom]);
+            displacement_x, displacement_y, displacement_z);
         if (!std::isfinite(displacement) ||
             displacement >= kNeighborListReuseRadiusAngstrom) {
             return false;
