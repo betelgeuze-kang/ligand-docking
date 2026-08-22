@@ -1477,7 +1477,7 @@ void test_periodic_cpu_neighbor_cache() {
     assert(cpp.simulation->neighbor_list_cache.build_count == UINT64_C(1));
 }
 
-void test_periodic_cpu_neighbor_reuse_interior() {
+void test_periodic_cpu_neighbor_reuse_component_bounds() {
     for (const bg_backend backend :
          {BG_BACKEND_CPP_CPU_REFERENCE, BG_BACKEND_RUST_CPU}) {
         NativeHandles handles;
@@ -1525,6 +1525,20 @@ void test_periodic_cpu_neighbor_reuse_interior() {
         assert(
             handles.simulation->neighbor_list_cache.build_count ==
             UINT64_C(2));
+        assert(
+            handles.simulation->neighbor_list_cache.reuse_count ==
+            UINT64_C(1));
+
+        const auto *const second_cache =
+            handles.simulation->neighbor_list_cache.data.get();
+        handles.simulation->system.position_x[0] += 0.5;
+        integrate(handles.context, handles.simulation, UINT64_C(0));
+        assert(
+            handles.simulation->neighbor_list_cache.data.get() !=
+            second_cache);
+        assert(
+            handles.simulation->neighbor_list_cache.build_count ==
+            UINT64_C(3));
         assert(
             handles.simulation->neighbor_list_cache.reuse_count ==
             UINT64_C(1));
@@ -1576,7 +1590,7 @@ int main() {
     test_report_and_state_failure_transactionality();
     test_deep_ownership_and_signed_zero_checkpoint();
     test_periodic_cpu_neighbor_cache();
-    test_periodic_cpu_neighbor_reuse_interior();
+    test_periodic_cpu_neighbor_reuse_component_bounds();
     test_hip_parity_if_available();
     return 0;
 }

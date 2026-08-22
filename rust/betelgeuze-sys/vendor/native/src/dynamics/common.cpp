@@ -48,15 +48,26 @@ void increment_saturating(uint64_t *value) noexcept {
             system.position_y[atom] - cache.data->reference_y[atom];
         const double displacement_z =
             system.position_z[atom] - cache.data->reference_z[atom];
+        const double absolute_displacement_x = std::abs(displacement_x);
+        const double absolute_displacement_y = std::abs(displacement_y);
+        const double absolute_displacement_z = std::abs(displacement_z);
+        // Any component on or outside the reuse radius proves that the
+        // Euclidean displacement reaches the rebuild boundary. NaNs compare
+        // false and therefore retain the original nonfinite hypot path.
+        if (absolute_displacement_x >= kNeighborListReuseRadiusAngstrom ||
+            absolute_displacement_y >= kNeighborListReuseRadiusAngstrom ||
+            absolute_displacement_z >= kNeighborListReuseRadiusAngstrom) {
+            return false;
+        }
         // The hex threshold is one binary64 value below 0.5/sqrt(3), and the
         // static assertion proves its closed cube lies inside the reuse
         // sphere. Most small integration displacements therefore avoid the
-        // square root; the boundary region retains the exact hypot decision.
-        if (std::abs(displacement_x) <
+        // square root; the intervening shell retains the exact hypot decision.
+        if (absolute_displacement_x <
                 kNeighborListReuseInteriorComponentAngstrom &&
-            std::abs(displacement_y) <
+            absolute_displacement_y <
                 kNeighborListReuseInteriorComponentAngstrom &&
-            std::abs(displacement_z) <
+            absolute_displacement_z <
                 kNeighborListReuseInteriorComponentAngstrom) {
             continue;
         }
