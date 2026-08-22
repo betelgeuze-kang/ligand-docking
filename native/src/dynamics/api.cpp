@@ -278,6 +278,37 @@ class DynamicStateRollback final {
                 scratch.velocity_z, &simulation_->system.velocity_z);
         }
         simulation_->absolute_step = absolute_step_;
+        std::shared_ptr<const bg_simulation::NeighborListCacheData>
+            failed_neighbor_list_data =
+                std::move(simulation_->neighbor_list_cache.data);
+        if (failed_neighbor_list_data.get() != neighbor_list_data_.get()) {
+            auto failed_publication = std::const_pointer_cast<
+                bg_simulation::NeighborListCacheData>(
+                std::move(failed_neighbor_list_data));
+            bool retained = false;
+            for (auto &candidate :
+                 simulation_->neighbor_list_cache.publication_scratch) {
+                if (candidate.get() == neighbor_list_data_.get()) {
+                    candidate = std::move(failed_publication);
+                    retained = true;
+                    break;
+                }
+            }
+            if (!retained) {
+                for (auto &candidate :
+                     simulation_->neighbor_list_cache.publication_scratch) {
+                    if (candidate == nullptr) {
+                        candidate = std::move(failed_publication);
+                        retained = true;
+                        break;
+                    }
+                }
+            }
+            if (!retained) {
+                simulation_->neighbor_list_cache.publication_scratch.front() =
+                    std::move(failed_publication);
+            }
+        }
         simulation_->neighbor_list_cache.data =
             std::move(neighbor_list_data_);
         simulation_->neighbor_list_cache.build_count =

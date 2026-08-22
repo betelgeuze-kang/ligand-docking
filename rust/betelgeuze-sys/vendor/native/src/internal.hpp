@@ -308,6 +308,8 @@ struct bg_simulation final {
 
     struct NeighborListCache final {
         std::shared_ptr<const NeighborListCacheData> data;
+        std::array<std::shared_ptr<NeighborListCacheData>, 2>
+            publication_scratch;
         std::shared_ptr<betelgeuze::native::cpu::NeighborBuildScratch>
             build_scratch;
         uint64_t build_count = UINT64_C(0);

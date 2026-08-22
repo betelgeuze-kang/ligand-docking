@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <functional>
 #include <limits>
 #include <type_traits>
 #include <vector>
@@ -339,6 +340,67 @@ void assert_same_dynamic_state(
     assert(bg_simulation_get_absolute_step(left, &a_step) == BG_STATUS_OK);
     assert(bg_simulation_get_absolute_step(right, &b_step) == BG_STATUS_OK);
     assert(a_step == b_step);
+}
+
+struct NeighborPayloadStorage final {
+    const bg_simulation::NeighborListCacheData *payload = nullptr;
+    const double *reference_x = nullptr;
+    const double *reference_y = nullptr;
+    const double *reference_z = nullptr;
+    const betelgeuze::native::cpu::NeighborPair *pairs = nullptr;
+
+    friend bool operator==(
+        const NeighborPayloadStorage &left,
+        const NeighborPayloadStorage &right) noexcept {
+        return left.payload == right.payload &&
+               left.reference_x == right.reference_x &&
+               left.reference_y == right.reference_y &&
+               left.reference_z == right.reference_z &&
+               left.pairs == right.pairs;
+    }
+};
+
+std::array<NeighborPayloadStorage, 3> neighbor_payload_storage(
+    const bg_simulation *simulation) {
+    const auto &cache = simulation->neighbor_list_cache;
+    std::array<const bg_simulation::NeighborListCacheData *, 3> payloads = {
+        cache.data.get(),
+        cache.publication_scratch[0].get(),
+        cache.publication_scratch[1].get(),
+    };
+    for (const auto *payload : payloads) {
+        assert(payload != nullptr);
+    }
+    std::sort(
+        payloads.begin(),
+        payloads.end(),
+        std::less<const bg_simulation::NeighborListCacheData *>{});
+    assert(payloads[0] != payloads[1]);
+    assert(payloads[1] != payloads[2]);
+    std::array<NeighborPayloadStorage, 3> result{};
+    for (std::size_t index = 0; index < payloads.size(); ++index) {
+        const auto *payload = payloads[index];
+        result[index] = {
+            payload,
+            payload->reference_x.data(),
+            payload->reference_y.data(),
+            payload->reference_z.data(),
+            payload->pairs.data(),
+        };
+    }
+    return result;
+}
+
+bool has_neighbor_publication_scratch(
+    const bg_simulation *simulation,
+    const bg_simulation::NeighborListCacheData *payload) noexcept {
+    const auto &scratch = simulation->neighbor_list_cache.publication_scratch;
+    return std::any_of(
+        scratch.begin(),
+        scratch.end(),
+        [payload](const auto &candidate) {
+            return candidate.get() == payload;
+        });
 }
 
 void test_initializers_and_invalid_rows() {
@@ -1255,6 +1317,14 @@ void test_periodic_cpu_neighbor_cache() {
            cpp.simulation->neighbor_list_cache.data->pairs);
     const auto *const initial_cache_data =
         cpp.simulation->neighbor_list_cache.data.get();
+    const auto *const initial_reference_x_storage =
+        initial_cache_data->reference_x.data();
+    const auto *const initial_reference_y_storage =
+        initial_cache_data->reference_y.data();
+    const auto *const initial_reference_z_storage =
+        initial_cache_data->reference_z.data();
+    const auto *const initial_pair_storage =
+        initial_cache_data->pairs.data();
     const auto *const build_scratch =
         cpp.simulation->neighbor_list_cache.build_scratch.get();
     const auto *const atom_cells_storage =
@@ -1288,6 +1358,18 @@ void test_periodic_cpu_neighbor_cache() {
     assert(cpp.simulation->neighbor_list_cache.build_count == UINT64_C(2));
     assert(cpp.simulation->neighbor_list_cache.reuse_count == UINT64_C(3));
     assert(cpp.simulation->neighbor_list_cache.data.get() != initial_cache_data);
+    const auto *const second_cache_data =
+        cpp.simulation->neighbor_list_cache.data.get();
+    const auto *const second_reference_x_storage =
+        second_cache_data->reference_x.data();
+    const auto *const second_reference_y_storage =
+        second_cache_data->reference_y.data();
+    const auto *const second_reference_z_storage =
+        second_cache_data->reference_z.data();
+    const auto *const second_pair_storage =
+        second_cache_data->pairs.data();
+    assert(has_neighbor_publication_scratch(
+        cpp.simulation, initial_cache_data));
     assert(cpp.simulation->neighbor_list_cache.build_scratch.get() ==
            build_scratch);
     assert(build_scratch->atom_cells.data() == atom_cells_storage);
@@ -1295,12 +1377,52 @@ void test_periodic_cpu_neighbor_cache() {
     assert(build_scratch->neighbor_cells.data() == neighbor_cells_storage);
     assert(build_scratch->candidates.data() == candidates_storage);
 
+    cpp.simulation->system.position_x[0] += 0.6;
+    integrate(cpp.context, cpp.simulation, UINT64_C(0));
+    assert(cpp.simulation->neighbor_list_cache.build_count == UINT64_C(3));
+    assert(cpp.simulation->neighbor_list_cache.reuse_count == UINT64_C(3));
+    assert(cpp.simulation->neighbor_list_cache.data.get() == initial_cache_data);
+    assert(cpp.simulation->neighbor_list_cache.data->reference_x.data() ==
+           initial_reference_x_storage);
+    assert(cpp.simulation->neighbor_list_cache.data->reference_y.data() ==
+           initial_reference_y_storage);
+    assert(cpp.simulation->neighbor_list_cache.data->reference_z.data() ==
+           initial_reference_z_storage);
+    assert(cpp.simulation->neighbor_list_cache.data->pairs.data() ==
+           initial_pair_storage);
+    assert(has_neighbor_publication_scratch(
+        cpp.simulation, second_cache_data));
+    assert(second_cache_data->reference_x.data() == second_reference_x_storage);
+    assert(second_cache_data->reference_y.data() == second_reference_y_storage);
+    assert(second_cache_data->reference_z.data() == second_reference_z_storage);
+    assert(second_cache_data->pairs.data() == second_pair_storage);
+
+    for (double &velocity : cpp.simulation->system.velocity_x) {
+        velocity = 6.0;
+    }
+    const uint64_t builds_before_first_multi_rebuild =
+        cpp.simulation->neighbor_list_cache.build_count;
+    integrate(cpp.context, cpp.simulation, UINT64_C(3));
+    assert(cpp.simulation->neighbor_list_cache.build_count >=
+           builds_before_first_multi_rebuild + UINT64_C(2));
+    const auto retained_publication_storage =
+        neighbor_payload_storage(cpp.simulation);
+    const uint64_t builds_before_second_multi_rebuild =
+        cpp.simulation->neighbor_list_cache.build_count;
+    integrate(cpp.context, cpp.simulation, UINT64_C(3));
+    assert(cpp.simulation->neighbor_list_cache.build_count >=
+           builds_before_second_multi_rebuild + UINT64_C(2));
+    assert(neighbor_payload_storage(cpp.simulation) ==
+           retained_publication_storage);
+
     const uint64_t builds_before_failure =
         cpp.simulation->neighbor_list_cache.build_count;
     const uint64_t reuses_before_failure =
         cpp.simulation->neighbor_list_cache.reuse_count;
     const auto *const cache_data_before_failure =
         cpp.simulation->neighbor_list_cache.data.get();
+    const auto publication_storage_before_failure =
+        neighbor_payload_storage(cpp.simulation);
     const double saved_x = cpp.simulation->system.position_x[0];
     cpp.simulation->system.position_x[0] =
         cpp.simulation->system.position_x[1];
@@ -1315,6 +1437,8 @@ void test_periodic_cpu_neighbor_cache() {
            reuses_before_failure);
     assert(cpp.simulation->neighbor_list_cache.data.get() ==
            cache_data_before_failure);
+    assert(neighbor_payload_storage(cpp.simulation) ==
+           publication_storage_before_failure);
     assert(cpp.simulation->neighbor_list_cache.build_scratch.get() ==
            build_scratch);
     assert(build_scratch->atom_cells.data() == atom_cells_storage);
@@ -1340,6 +1464,12 @@ void test_periodic_cpu_neighbor_cache() {
                checkpoint.data(),
                checkpoint_size) == BG_STATUS_OK);
     assert(cpp.simulation->neighbor_list_cache.data == nullptr);
+    assert(std::all_of(
+        cpp.simulation->neighbor_list_cache.publication_scratch.begin(),
+        cpp.simulation->neighbor_list_cache.publication_scratch.end(),
+        [](const auto &candidate) {
+            return candidate == nullptr;
+        }));
     assert(cpp.simulation->neighbor_list_cache.build_count == UINT64_C(0));
     assert(cpp.simulation->neighbor_list_cache.reuse_count == UINT64_C(0));
     integrate(cpp.context, cpp.simulation, UINT64_C(0));

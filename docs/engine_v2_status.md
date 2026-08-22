@@ -89,11 +89,18 @@ The current `main` branch contains:
   deep-copying it, and successful checkpoint loads invalidate this unpersisted
   derived state. Periodic CPU neighbor rebuilds retain four simulation-owned
   cell-list scratch buffers across rebuilds without changing immutable pair
-  publication or semantic cache rollback. CPU dynamics additionally retain
-  simulation-owned force-vector storage across repeated force evaluations and
-  later transactional integrate or minimize calls; zero-step integration does
-  not initialize it, checkpoint and semantic rollback exclude it as derived
-  scratch, and an internal evaluation failure may consume only that scratch.
+  publication or semantic cache rollback. After the first two publications,
+  rebuilds rotate three simulation-owned immutable payload allocations: one
+  published payload and two reusable scratch payloads. This lets one scratch
+  remain pinned by transaction rollback while later rebuilds alternate the
+  other two, reusing all three reference-coordinate vectors and the canonical-
+  pair vector. A failed operation restores the prior published payload and
+  retains the failed publication as derived scratch. CPU dynamics additionally
+  retain simulation-owned force-vector storage across repeated force
+  evaluations and later transactional integrate or minimize calls; zero-step
+  integration does not initialize it, checkpoint and semantic rollback exclude
+  it as derived scratch, and an internal evaluation failure may consume only
+  that scratch.
   Public stateless evaluation, HIP evaluation, and semantic commit behavior
   remain unchanged. The CPU minimizer also retains its projected-force
   direction vectors across later minimize calls, while copying all current
