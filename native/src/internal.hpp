@@ -297,6 +297,9 @@ struct bg_simulation final {
         std::size_t atom_i = 0;
         std::size_t atom_j = 0;
         double distance = 0.0;
+        double inverse_mass_i = 0.0;
+        double inverse_mass_j = 0.0;
+        double inverse_mass_sum = 0.0;
     };
 
     struct NeighborListCacheData final {

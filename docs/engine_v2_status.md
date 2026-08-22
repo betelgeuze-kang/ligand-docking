@@ -110,7 +110,10 @@ The current `main` branch contains:
   persistent vector. RATTLE and constrained force projection likewise reuse
   each exact displacement/relative-vector dot product for their residual and
   correction, while final constraint-state validation reuses one exact
-  displacement norm for both position and radial-velocity residuals.
+  displacement norm for both position and radial-velocity residuals. Each
+  constraint additionally retains its exact immutable inverse masses and their
+  sum so SHAKE/RATTLE correction sweeps do not repeat those divisions; this
+  derived state is excluded from checkpoint bytes and static identity.
   Public stateless evaluation, HIP evaluation, and semantic commit behavior
   remain unchanged. The CPU minimizer also retains its projected-force
   direction vectors across later minimize calls, while copying all current

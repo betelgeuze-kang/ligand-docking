@@ -626,7 +626,13 @@ extern "C" BG_API bg_status BG_CALL bg_simulation_create(
                     std::min(observed_i, observed_j));
                 const std::size_t atom_j = static_cast<std::size_t>(
                     std::max(observed_i, observed_j));
-                simulation->constraints.push_back({atom_i, atom_j, distance});
+                const double inverse_mass_i =
+                    1.0 / simulation->system.mass[atom_i];
+                const double inverse_mass_j =
+                    1.0 / simulation->system.mass[atom_j];
+                simulation->constraints.push_back(
+                    {atom_i, atom_j, distance, inverse_mass_i,
+                     inverse_mass_j, inverse_mass_i + inverse_mass_j});
             }
             std::sort(
                 simulation->constraints.begin(),

@@ -237,22 +237,18 @@ bg_status apply_shake(
                 continue;
             }
             converged = false;
-            const double inverse_mass_i =
-                1.0 / system->mass[constraint.atom_i];
-            const double inverse_mass_j =
-                1.0 / system->mass[constraint.atom_j];
-            const double inverse_mass_sum = inverse_mass_i + inverse_mass_j;
             const double beta =
-                (1.0 - constraint.distance / distance) / inverse_mass_sum;
+                (1.0 - constraint.distance / distance) /
+                constraint.inverse_mass_sum;
             const Vector3 correction_i{
-                beta * inverse_mass_i * displacement.x,
-                beta * inverse_mass_i * displacement.y,
-                beta * inverse_mass_i * displacement.z,
+                beta * constraint.inverse_mass_i * displacement.x,
+                beta * constraint.inverse_mass_i * displacement.y,
+                beta * constraint.inverse_mass_i * displacement.z,
             };
             const Vector3 correction_j{
-                beta * inverse_mass_j * displacement.x,
-                beta * inverse_mass_j * displacement.y,
-                beta * inverse_mass_j * displacement.z,
+                beta * constraint.inverse_mass_j * displacement.x,
+                beta * constraint.inverse_mass_j * displacement.y,
+                beta * constraint.inverse_mass_j * displacement.z,
             };
             const double next_ix =
                 system->position_x[constraint.atom_i] - correction_i.x;
@@ -357,22 +353,18 @@ bg_status apply_rattle(
                 continue;
             }
             converged = false;
-            const double inverse_mass_i =
-                1.0 / system->mass[constraint.atom_i];
-            const double inverse_mass_j =
-                1.0 / system->mass[constraint.atom_j];
             const double beta =
                 radial_dot /
-                ((inverse_mass_i + inverse_mass_j) * squared_norm);
+                (constraint.inverse_mass_sum * squared_norm);
             const Vector3 correction_i{
-                beta * inverse_mass_i * displacement.x,
-                beta * inverse_mass_i * displacement.y,
-                beta * inverse_mass_i * displacement.z,
+                beta * constraint.inverse_mass_i * displacement.x,
+                beta * constraint.inverse_mass_i * displacement.y,
+                beta * constraint.inverse_mass_i * displacement.z,
             };
             const Vector3 correction_j{
-                beta * inverse_mass_j * displacement.x,
-                beta * inverse_mass_j * displacement.y,
-                beta * inverse_mass_j * displacement.z,
+                beta * constraint.inverse_mass_j * displacement.x,
+                beta * constraint.inverse_mass_j * displacement.y,
+                beta * constraint.inverse_mass_j * displacement.z,
             };
             const double next_ix =
                 system->velocity_x[constraint.atom_i] - correction_i.x;
