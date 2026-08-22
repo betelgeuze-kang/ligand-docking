@@ -323,6 +323,12 @@ struct bg_simulation final {
         std::vector<double> velocity_z;
     };
 
+    bg_simulation() = default;
+    bg_simulation(const bg_simulation &) = delete;
+    bg_simulation &operator=(const bg_simulation &) = delete;
+    bg_simulation(bg_simulation &&) noexcept = default;
+    bg_simulation &operator=(bg_simulation &&) noexcept = default;
+
     bg_system system;
     bg_forcefield forcefield;
     std::vector<DistanceConstraint> constraints;

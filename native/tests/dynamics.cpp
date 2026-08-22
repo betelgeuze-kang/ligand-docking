@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <cstring>
 #include <limits>
+#include <type_traits>
 #include <vector>
 
 #ifndef BG_TEST_HIP_ENABLED
@@ -15,6 +16,9 @@
 #endif
 
 namespace {
+
+static_assert(!std::is_copy_constructible_v<bg_simulation>);
+static_assert(!std::is_copy_assignable_v<bg_simulation>);
 
 struct NativeHandles final {
     bg_context *context = nullptr;

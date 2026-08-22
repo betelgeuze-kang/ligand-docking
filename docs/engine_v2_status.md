@@ -103,9 +103,10 @@ The current `main` branch contains:
   place behind a six-channel RAII rollback (or metadata-only rollback for zero
   integration steps), so immutable mass/charge, force-field, constraint, and
   integrator state are not copied. The simulation retains those six rollback
-  vector allocations across later nonzero calls. A minimizer position-storage
-  guard restores the original buffers before return, keeping borrowed
-  particle-view addresses stable on both success and failure.
+  vector allocations across later nonzero calls, while checkpoint validation
+  excludes this derived scratch from its transaction candidate. A minimizer
+  position-storage guard restores the original buffers before return, keeping
+  borrowed particle-view addresses stable on both success and failure.
   The entry point is CPU-only and has no PME, neighbor-list performance
   evidence, general ion preparation, protein, production-MD, scientific,
   free-energy, benchmark, product, Stage 0, or performance authority;

@@ -191,6 +191,30 @@ bool dynamic_storage_is_valid(const bg_simulation &simulation) noexcept {
            system.mass.size() == count && system.charge.size() == count;
 }
 
+void copy_checkpoint_validation_state(
+    const bg_simulation &source,
+    bg_simulation *candidate) {
+    // Copy semantic state needed to validate and commit the checkpoint. The
+    // neighbor cache and rollback scratch are derived storage and must not be
+    // copied into this short-lived candidate.
+    candidate->system = source.system;
+    candidate->forcefield = source.forcefield;
+    candidate->constraints = source.constraints;
+    candidate->constraint_tolerance = source.constraint_tolerance;
+    candidate->constraint_velocity_tolerance =
+        source.constraint_velocity_tolerance;
+    candidate->constraint_max_iterations =
+        source.constraint_max_iterations;
+    candidate->integrator = source.integrator;
+    candidate->timestep_femtoseconds = source.timestep_femtoseconds;
+    candidate->temperature_kelvin = source.temperature_kelvin;
+    candidate->friction_per_femtosecond =
+        source.friction_per_femtosecond;
+    candidate->random_seed = source.random_seed;
+    candidate->absolute_step = source.absolute_step;
+    candidate->static_fingerprint = source.static_fingerprint;
+}
+
 void commit_loaded_state(
     const bg_simulation &candidate,
     bg_simulation *simulation) noexcept {
@@ -397,7 +421,8 @@ extern "C" BG_API bg_status BG_CALL bg_simulation_checkpoint_load(
                 "checkpoint static forcefield/configuration fingerprint does not match");
         }
 
-        bg_simulation candidate = *simulation;
+        bg_simulation candidate;
+        copy_checkpoint_validation_state(*simulation, &candidate);
         std::vector<double> *const channels[] = {
             &candidate.system.position_x,
             &candidate.system.position_y,

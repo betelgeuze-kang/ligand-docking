@@ -129,7 +129,9 @@ position and velocity channels, the absolute step, and semantic neighbor-cache
 metadata; immutable particle, force-field, constraint, and integrator
 configuration are not copied. The simulation retains the six rollback-vector
 allocations across later nonzero calls, including calls that fail and restore
-state. A zero-step integration snapshots only the scalar/cache metadata.
+state. Checkpoint validation constructs its transaction candidate without
+copying this derived scratch. A zero-step integration snapshots only the
+scalar/cache metadata.
 Failures restore the six channels in place, preserving every borrowed
 particle-view address, while success needs no second six-channel copy. These are
 unmeasured lifetime properties and carry no acceleration claim.
