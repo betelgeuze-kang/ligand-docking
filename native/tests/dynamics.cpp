@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <cstring>
 #include <limits>
+#include <type_traits>
 #include <vector>
 
 #ifndef BG_TEST_HIP_ENABLED
@@ -15,6 +16,9 @@
 #endif
 
 namespace {
+
+static_assert(!std::is_copy_constructible_v<bg_simulation>);
+static_assert(!std::is_copy_assignable_v<bg_simulation>);
 
 struct NativeHandles final {
     bg_context *context = nullptr;
@@ -210,6 +214,20 @@ std::array<const double *, 8> particle_addresses(
     };
 }
 
+std::array<const double *, 6> dynamic_rollback_scratch_addresses(
+    const bg_simulation *simulation) {
+    const bg_simulation::DynamicStateScratch &scratch =
+        simulation->dynamic_state_scratch;
+    return {
+        scratch.position_x.data(),
+        scratch.position_y.data(),
+        scratch.position_z.data(),
+        scratch.velocity_x.data(),
+        scratch.velocity_y.data(),
+        scratch.velocity_z.data(),
+    };
+}
+
 bg_dynamics_report_v1 integrate(
     const bg_context *context,
     bg_simulation *simulation,
@@ -366,6 +384,11 @@ void test_minimizer_and_transactionality() {
     assert(report.maximum_force_kcal_per_mol_angstrom <= 1.0e-10);
     const bg_particle_soa_view after = particle_view(handles.simulation);
     assert(particle_addresses(after) == addresses);
+    const auto rollback_scratch_addresses =
+        dynamic_rollback_scratch_addresses(handles.simulation);
+    for (const double *address : rollback_scratch_addresses) {
+        assert(address != nullptr);
+    }
     assert(after.velocity_x_angstrom_per_femtosecond[0] == velocities[0]);
     assert(after.velocity_x_angstrom_per_femtosecond[1] == velocities[1]);
     uint64_t step = UINT64_C(99);
@@ -390,6 +413,8 @@ void test_minimizer_and_transactionality() {
                &failed_report, &failed_snapshot, sizeof(failed_report)) == 0);
     const bg_particle_soa_view failed_view = particle_view(handles.simulation);
     assert(particle_addresses(failed_view) == addresses);
+    assert(dynamic_rollback_scratch_addresses(handles.simulation) ==
+           rollback_scratch_addresses);
     assert(failed_view.position_x_angstrom[0] == positions[0]);
     assert(failed_view.position_x_angstrom[1] == positions[1]);
 
@@ -827,6 +852,23 @@ void test_report_and_state_failure_transactionality() {
     assert(after.position_x_angstrom[1] == snapshot[1]);
     assert(after.velocity_x_angstrom_per_femtosecond[0] == snapshot[2]);
     assert(after.velocity_x_angstrom_per_femtosecond[1] == snapshot[3]);
+    const auto rollback_scratch_addresses =
+        dynamic_rollback_scratch_addresses(handles.simulation);
+    assert(bg_dynamics_report_v1_init(&report) == BG_STATUS_OK);
+    assert(bg_context_integrate(
+               handles.context, handles.simulation, UINT64_C(1), &report) ==
+           BG_STATUS_NUMERICAL_ERROR);
+    assert(dynamic_rollback_scratch_addresses(handles.simulation) ==
+           rollback_scratch_addresses);
+    const bg_particle_soa_view repeated_after =
+        particle_view(handles.simulation);
+    assert(particle_addresses(repeated_after) == addresses);
+    assert(repeated_after.position_x_angstrom[0] == snapshot[0]);
+    assert(repeated_after.position_x_angstrom[1] == snapshot[1]);
+    assert(repeated_after.velocity_x_angstrom_per_femtosecond[0] ==
+           snapshot[2]);
+    assert(repeated_after.velocity_x_angstrom_per_femtosecond[1] ==
+           snapshot[3]);
 
     NativeHandles overflow;
     overflow.context = make_context(BG_BACKEND_CPU);

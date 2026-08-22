@@ -243,12 +243,14 @@ class DynamicStateRollback final {
           neighbor_list_reuse_count_(
               simulation->neighbor_list_cache.reuse_count) {
         if (snapshot_particle_channels_) {
-            position_x_ = simulation_->system.position_x;
-            position_y_ = simulation_->system.position_y;
-            position_z_ = simulation_->system.position_z;
-            velocity_x_ = simulation_->system.velocity_x;
-            velocity_y_ = simulation_->system.velocity_y;
-            velocity_z_ = simulation_->system.velocity_z;
+            bg_simulation::DynamicStateScratch &scratch =
+                simulation_->dynamic_state_scratch;
+            scratch.position_x = simulation_->system.position_x;
+            scratch.position_y = simulation_->system.position_y;
+            scratch.position_z = simulation_->system.position_z;
+            scratch.velocity_x = simulation_->system.velocity_x;
+            scratch.velocity_y = simulation_->system.velocity_y;
+            scratch.velocity_z = simulation_->system.velocity_z;
         }
     }
 
@@ -260,12 +262,20 @@ class DynamicStateRollback final {
             return;
         }
         if (snapshot_particle_channels_) {
-            restore_channel(position_x_, &simulation_->system.position_x);
-            restore_channel(position_y_, &simulation_->system.position_y);
-            restore_channel(position_z_, &simulation_->system.position_z);
-            restore_channel(velocity_x_, &simulation_->system.velocity_x);
-            restore_channel(velocity_y_, &simulation_->system.velocity_y);
-            restore_channel(velocity_z_, &simulation_->system.velocity_z);
+            const bg_simulation::DynamicStateScratch &scratch =
+                simulation_->dynamic_state_scratch;
+            restore_channel(
+                scratch.position_x, &simulation_->system.position_x);
+            restore_channel(
+                scratch.position_y, &simulation_->system.position_y);
+            restore_channel(
+                scratch.position_z, &simulation_->system.position_z);
+            restore_channel(
+                scratch.velocity_x, &simulation_->system.velocity_x);
+            restore_channel(
+                scratch.velocity_y, &simulation_->system.velocity_y);
+            restore_channel(
+                scratch.velocity_z, &simulation_->system.velocity_z);
         }
         simulation_->absolute_step = absolute_step_;
         simulation_->neighbor_list_cache.data =
@@ -294,12 +304,6 @@ class DynamicStateRollback final {
         neighbor_list_data_;
     uint64_t neighbor_list_build_count_ = UINT64_C(0);
     uint64_t neighbor_list_reuse_count_ = UINT64_C(0);
-    std::vector<double> position_x_;
-    std::vector<double> position_y_;
-    std::vector<double> position_z_;
-    std::vector<double> velocity_x_;
-    std::vector<double> velocity_y_;
-    std::vector<double> velocity_z_;
     bool committed_ = false;
 };
 
