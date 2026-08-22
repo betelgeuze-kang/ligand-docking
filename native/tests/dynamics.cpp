@@ -238,6 +238,17 @@ std::array<const void *, 2> constraint_validation_scratch_addresses(
     };
 }
 
+std::array<const double *, 3> constraint_drift_scratch_addresses(
+    const bg_simulation *simulation) {
+    const bg_simulation::ParticleVectorScratch &scratch =
+        simulation->constraint_drift_scratch;
+    return {
+        scratch.x.data(),
+        scratch.y.data(),
+        scratch.z.data(),
+    };
+}
+
 bg_dynamics_report_v1 integrate(
     const bg_context *context,
     bg_simulation *simulation,
@@ -496,6 +507,14 @@ void test_constraints_and_periodic_images() {
     const bg_dynamics_report_v1 report =
         integrate(handles.context, handles.simulation, UINT64_C(100));
     assert(report.degrees_of_freedom == UINT64_C(5));
+    const auto drift_scratch_addresses =
+        constraint_drift_scratch_addresses(handles.simulation);
+    for (const double *scratch_address : drift_scratch_addresses) {
+        assert(scratch_address != nullptr);
+    }
+    integrate(handles.context, handles.simulation, UINT64_C(1));
+    assert(constraint_drift_scratch_addresses(handles.simulation) ==
+           drift_scratch_addresses);
     view = particle_view(handles.simulation);
     assert(view.position_x_angstrom == address);
     assert(constraint_validation_scratch_addresses(handles.simulation) ==
@@ -661,6 +680,14 @@ void test_nve_fixture_and_zero_step() {
         integrate(first.context, first.simulation, UINT64_C(1000));
     const bg_dynamics_report_v1 second_report =
         integrate(first.context, second.simulation, UINT64_C(1000));
+    const bg_simulation::ParticleVectorScratch &unconstrained_scratch =
+        first.simulation->constraint_drift_scratch;
+    assert(unconstrained_scratch.x.empty());
+    assert(unconstrained_scratch.y.empty());
+    assert(unconstrained_scratch.z.empty());
+    assert(unconstrained_scratch.x.capacity() == 0U);
+    assert(unconstrained_scratch.y.capacity() == 0U);
+    assert(unconstrained_scratch.z.capacity() == 0U);
     assert_same_dynamic_state(first.simulation, second.simulation);
     assert(same_bits(first_report.total_kcal_per_mol,
                      second_report.total_kcal_per_mol));

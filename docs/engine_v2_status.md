@@ -94,12 +94,13 @@ The current `main` branch contains:
   storage across repeated force evaluations within one transactional integrate
   or minimize call; public stateless evaluation, HIP evaluation, and failure
   commit semantics remain unchanged. Unconstrained drifts avoid unnecessary
-  coordinate snapshots, while constrained integration retains one work-local
-  three-channel snapshot buffer across all drifts in the call. No timing claim
-  is made. The CPU minimizer similarly retains one operation-local candidate
-  system and swaps only accepted position buffers, avoiding a complete system
-  copy for every bounded Armijo attempt while preserving exact accepted-state
-  and transaction semantics. Integration and minimization calls operate in
+  coordinate snapshots, while constrained integration retains one
+  simulation-owned three-channel snapshot buffer across all drifts and later
+  calls. No timing claim is made. The CPU minimizer similarly retains one
+  operation-local candidate system and swaps only accepted position buffers,
+  avoiding a complete system copy for every bounded Armijo attempt while
+  preserving exact accepted-state and transaction semantics. Integration and
+  minimization calls operate in
   place behind a six-channel RAII rollback (or metadata-only rollback for zero
   integration steps), so immutable mass/charge, force-field, constraint, and
   integrator state are not copied. The simulation retains those six rollback
