@@ -146,6 +146,14 @@ HIP calls leave the persistent vector untouched. Checkpoint bytes, semantic
 rollback, per-constraint tolerances, and projection updates are unchanged.
 This structural reuse has no timing or acceleration claim.
 
+Constraint correction also reuses exact binary64 residual scalars inside each
+CPU iteration. RATTLE computes the displacement/relative-velocity dot product
+once before using it for both the radial tolerance and the accepted correction,
+and constrained force projection applies the same rule. Final constraint-state
+validation computes the displacement norm once for both position and velocity
+residuals. Constraint order, tolerances, corrections, failures, and HIP behavior
+are unchanged; this compute reduction is untimed.
+
 The CPU minimizer likewise retains its three projected-force direction vectors
 across later minimize calls. Each projection still copies the current force
 channels before applying the same bounded constraint projection, so no prior
