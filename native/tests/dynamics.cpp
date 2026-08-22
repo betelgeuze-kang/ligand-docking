@@ -228,6 +228,16 @@ std::array<const double *, 6> dynamic_rollback_scratch_addresses(
     };
 }
 
+std::array<const void *, 2> constraint_validation_scratch_addresses(
+    const bg_simulation *simulation) {
+    const bg_simulation::ConstraintValidationScratch &scratch =
+        simulation->constraint_validation_scratch;
+    return {
+        scratch.gram.data(),
+        scratch.directions.data(),
+    };
+}
+
 bg_dynamics_report_v1 integrate(
     const bg_context *context,
     bg_simulation *simulation,
@@ -469,6 +479,11 @@ void test_constraints_and_periodic_images() {
     handles.simulation = make_simulation(
         handles.system, handles.forcefield, BG_INTEGRATOR_VELOCITY_VERLET,
         0.1, 0.0, 0.0, UINT64_C(0), &constraints);
+    const auto constraint_scratch_addresses =
+        constraint_validation_scratch_addresses(handles.simulation);
+    for (const void *address : constraint_scratch_addresses) {
+        assert(address != nullptr);
+    }
     bg_particle_soa_view view = particle_view(handles.simulation);
     assert(std::abs(
                std::abs(view.position_x_angstrom[0] -
@@ -483,6 +498,8 @@ void test_constraints_and_periodic_images() {
     assert(report.degrees_of_freedom == UINT64_C(5));
     view = particle_view(handles.simulation);
     assert(view.position_x_angstrom == address);
+    assert(constraint_validation_scratch_addresses(handles.simulation) ==
+           constraint_scratch_addresses);
     assert(std::abs(
                std::abs(view.position_x_angstrom[0] -
                         view.position_x_angstrom[1]) -
@@ -540,6 +557,8 @@ void test_constrained_minimizer_rattle_checkpoint() {
     first.simulation = make_simulation(
         first.system, first.forcefield, BG_INTEGRATOR_VELOCITY_VERLET,
         0.1, 0.0, 0.0, UINT64_C(0), &constraints);
+    const auto first_constraint_scratch_addresses =
+        constraint_validation_scratch_addresses(first.simulation);
     const bg_particle_soa_view initial = particle_view(first.simulation);
     const std::array<double, 2> initial_velocity_y = {
         initial.velocity_y_angstrom_per_femtosecond[0],
@@ -555,6 +574,8 @@ void test_constrained_minimizer_rattle_checkpoint() {
     assert(bg_context_minimize(
                first.context, first.simulation, &options, &report) ==
            BG_STATUS_OK);
+    assert(constraint_validation_scratch_addresses(first.simulation) ==
+           first_constraint_scratch_addresses);
     assert(report.converged == UINT32_C(1));
     const bg_particle_soa_view minimized = particle_view(first.simulation);
     const double dx = minimized.position_x_angstrom[0] -
@@ -590,8 +611,12 @@ void test_constrained_minimizer_rattle_checkpoint() {
     second.simulation = make_simulation(
         second.system, second.forcefield, BG_INTEGRATOR_VELOCITY_VERLET,
         0.1, 0.0, 0.0, UINT64_C(0), &constraints);
+    const auto second_constraint_scratch_addresses =
+        constraint_validation_scratch_addresses(second.simulation);
     assert(bg_simulation_checkpoint_load(
                second.simulation, checkpoint.data(), size) == BG_STATUS_OK);
+    assert(constraint_validation_scratch_addresses(second.simulation) ==
+           second_constraint_scratch_addresses);
     assert_same_dynamic_state(first.simulation, second.simulation);
 }
 

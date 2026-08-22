@@ -323,6 +323,17 @@ struct bg_simulation final {
         std::vector<double> velocity_z;
     };
 
+    struct ConstraintValidationScratch final {
+        struct Direction final {
+            double x = 0.0;
+            double y = 0.0;
+            double z = 0.0;
+        };
+
+        std::vector<double> gram;
+        std::vector<Direction> directions;
+    };
+
     bg_simulation() = default;
     bg_simulation(const bg_simulation &) = delete;
     bg_simulation &operator=(const bg_simulation &) = delete;
@@ -344,6 +355,7 @@ struct bg_simulation final {
     std::array<uint8_t, 32> static_fingerprint{};
     NeighborListCache neighbor_list_cache;
     DynamicStateScratch dynamic_state_scratch;
+    ConstraintValidationScratch constraint_validation_scratch;
 };
 
 namespace betelgeuze::native {
