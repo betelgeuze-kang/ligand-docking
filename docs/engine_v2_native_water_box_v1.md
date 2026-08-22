@@ -136,6 +136,14 @@ Failures restore the six channels in place, preserving every borrowed
 particle-view address, while success needs no second six-channel copy. These are
 unmeasured lifetime properties and carry no acceleration claim.
 
+Constrained simulations also retain the Gram-matrix and normalized-direction
+storage used to revalidate constraint-Jacobian independence after integration,
+minimization, and checkpoint loading. The constraint count is immutable, so
+later validations resize to the same logical shape without replacing capacity.
+This derived scratch is excluded from checkpoint bytes and semantic state; its
+contents may change on a failed validation. The elimination order, pivot rule,
+rank tolerance, and accepted or rejected states are unchanged.
+
 The CPU minimizer retains one candidate `System` across all bounded Armijo
 attempts and iterations. Each trial overwrites only its position channels from
 the unchanged accepted state; an accepted trial swaps those three buffers into

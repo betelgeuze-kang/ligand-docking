@@ -100,6 +100,13 @@ class PositionStorageGuard final {
     return left.x * right.x + left.y * right.y + left.z * right.z;
 }
 
+[[nodiscard]] double dot(
+    const bg_simulation::ConstraintValidationScratch::Direction &left,
+    const bg_simulation::ConstraintValidationScratch::Direction &right)
+    noexcept {
+    return left.x * right.x + left.y * right.y + left.z * right.z;
+}
+
 bool minimum_image_component(
     double raw,
     double length,
@@ -885,11 +892,18 @@ bg_status initialize_constraints(bg_simulation *simulation) {
     if (status != BG_STATUS_OK) {
         return status;
     }
-    return validate_constraint_independence(*simulation);
+    return validate_constraint_independence(
+        *simulation, &simulation->constraint_validation_scratch);
 }
 
 bg_status validate_constraint_independence(
-    const bg_simulation &simulation) {
+    const bg_simulation &simulation,
+    bg_simulation::ConstraintValidationScratch *scratch) {
+    if (scratch == nullptr) {
+        return fail(
+            BG_STATUS_INTERNAL_ERROR,
+            "constraint validation scratch is null");
+    }
     const std::size_t count = simulation.constraints.size();
     if (count == 0) {
         return BG_STATUS_OK;
@@ -899,25 +913,30 @@ bg_status validate_constraint_independence(
             BG_STATUS_CAPACITY_OVERFLOW,
             "constraint Jacobian rank matrix size overflowed");
     }
-    std::vector<double> gram(count * count, 0.0);
-    std::vector<Vector3> directions(count);
+    scratch->gram.resize(count * count);
+    std::fill(scratch->gram.begin(), scratch->gram.end(), 0.0);
+    scratch->directions.resize(count);
+    std::vector<double> &gram = scratch->gram;
+    std::vector<bg_simulation::ConstraintValidationScratch::Direction>
+        &directions = scratch->directions;
     for (std::size_t row = 0; row < count; ++row) {
+        Vector3 direction;
         double squared_norm = 0.0;
         if (!constraint_displacement(
                 simulation.system,
                 simulation.forcefield,
                 simulation.constraints[row].atom_i,
                 simulation.constraints[row].atom_j,
-                &directions[row],
+                &direction,
                 &squared_norm)) {
             return fail(
                 BG_STATUS_NUMERICAL_ERROR,
                 "constraint Jacobian contains an invalid displacement");
         }
         const double inverse_norm = 1.0 / std::sqrt(squared_norm);
-        directions[row].x *= inverse_norm;
-        directions[row].y *= inverse_norm;
-        directions[row].z *= inverse_norm;
+        directions[row].x = direction.x * inverse_norm;
+        directions[row].y = direction.y * inverse_norm;
+        directions[row].z = direction.z * inverse_norm;
     }
     for (std::size_t left = 0; left < count; ++left) {
         for (std::size_t right = 0; right <= left; ++right) {
@@ -1154,7 +1173,8 @@ bg_status minimize(
 
     position_storage.preserve_final_positions();
 
-    status = validate_constraint_independence(*work);
+    status = validate_constraint_independence(
+        *work, &work->constraint_validation_scratch);
     if (status != BG_STATUS_OK) {
         return fail(
             BG_STATUS_NUMERICAL_ERROR,
@@ -1222,7 +1242,8 @@ bg_status integrate(
     }
 
     double kinetic = 0.0;
-    status = validate_constraint_independence(*work);
+    status = validate_constraint_independence(
+        *work, &work->constraint_validation_scratch);
     if (status != BG_STATUS_OK) {
         return fail(
             BG_STATUS_NUMERICAL_ERROR,

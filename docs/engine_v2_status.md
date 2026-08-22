@@ -104,7 +104,11 @@ The current `main` branch contains:
   integration steps), so immutable mass/charge, force-field, constraint, and
   integrator state are not copied. The simulation retains those six rollback
   vector allocations across later nonzero calls, while checkpoint validation
-  excludes this derived scratch from its transaction candidate. A minimizer
+  excludes this derived scratch from its transaction candidate. Constrained
+  simulations also retain the Gram-matrix and normalized-direction buffers
+  used by constraint-Jacobian independence validation across creation,
+  integration, minimization, and checkpoint loads; failed validation may alter
+  only this derived scratch. A minimizer
   position-storage guard restores the original buffers before return, keeping
   borrowed particle-view addresses stable on both success and failure.
   The entry point is CPU-only and has no PME, neighbor-list performance

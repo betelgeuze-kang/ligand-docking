@@ -24,7 +24,9 @@ bg_status evaluate(
 
 bg_status initialize_constraints(bg_simulation *simulation);
 bg_status validate_constraint_state(const bg_simulation &simulation) noexcept;
-bg_status validate_constraint_independence(const bg_simulation &simulation);
+bg_status validate_constraint_independence(
+    const bg_simulation &simulation,
+    bg_simulation::ConstraintValidationScratch *scratch);
 
 bg_status minimize(
     const bg_context &context,

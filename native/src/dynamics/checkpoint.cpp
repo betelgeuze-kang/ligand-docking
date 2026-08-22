@@ -448,7 +448,8 @@ extern "C" BG_API bg_status BG_CALL bg_simulation_checkpoint_load(
         if (status != BG_STATUS_OK) {
             return status;
         }
-        status = validate_constraint_independence(candidate);
+        status = validate_constraint_independence(
+            candidate, &simulation->constraint_validation_scratch);
         if (status != BG_STATUS_OK) {
             return status;
         }
