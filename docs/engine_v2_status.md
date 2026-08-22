@@ -95,7 +95,10 @@ The current `main` branch contains:
   remain pinned by transaction rollback while later rebuilds alternate the
   other two, reusing all three reference-coordinate vectors and the canonical-
   pair vector. A failed operation restores the prior published payload and
-  retains the failed publication as derived scratch. CPU dynamics additionally
+  retains the failed publication as derived scratch. Reuse inspection bypasses
+  `hypot` only inside a compile-time-proven component cube strictly contained
+  by the unchanged 0.5-angstrom Euclidean reuse sphere; all boundary cases use
+  the original decision. CPU dynamics additionally
   retain simulation-owned force-vector storage across repeated force
   evaluations and later transactional integrate or minimize calls; zero-step
   integration does not initialize it, checkpoint and semantic rollback exclude

@@ -112,6 +112,12 @@ On failure the original publication is restored and the failed publication
 becomes derived scratch. This preserves cache payload and counter rollback
 without reallocating the steady-state publication graph, including calls that
 cross the rebuild threshold more than once.
+Reuse inspection also has an exact component-wise interior fast path. If every
+absolute displacement component is below binary64
+`0x1.279a74590331cp-2` angstrom, the compile-time bound `3*t*t < 0.25` proves
+the atom is strictly inside the existing 0.5-angstrom Euclidean reuse sphere,
+so no square root is evaluated. All other finite and nonfinite rows retain the
+original `hypot` decision, including the strict boundary rule.
 Checkpoint bytes and the static fingerprint do not include this derived state,
 and a successful checkpoint load invalidates it. Mixed/nonperiodic and HIP
 paths do not consume the cache. This behavior has no timing threshold or
