@@ -151,8 +151,13 @@ CPU iteration. RATTLE computes the displacement/relative-velocity dot product
 once before using it for both the radial tolerance and the accepted correction,
 and constrained force projection applies the same rule. Final constraint-state
 validation computes the displacement norm once for both position and velocity
-residuals. Constraint order, tolerances, corrections, failures, and HIP behavior
-are unchanged; this compute reduction is untimed.
+residuals. Each distance constraint also retains the two exact inverse masses
+and their exact sum derived from immutable simulation-owned particle masses, so
+SHAKE and RATTLE do not repeat those divisions during correction sweeps. The
+derived values are copied into checkpoint-validation candidates but remain
+outside checkpoint bytes and the static fingerprint. Constraint order,
+tolerances, corrections, failures, and HIP behavior are unchanged; this compute
+reduction is untimed.
 
 The CPU minimizer likewise retains its three projected-force direction vectors
 across later minimize calls. Each projection still copies the current force
