@@ -108,13 +108,15 @@ and a successful checkpoint load invalidates it. Mixed/nonperiodic and HIP
 paths do not consume the cache. This behavior has no timing threshold or
 performance/acceleration claim.
 
-CPU dynamics also retain one set of force-vector allocations across repeated
-force evaluations within a transactional integrate or minimize call. This is
-an internal operation-local path: the public stateless evaluator remains
-transactional, while an internal evaluation failure may consume the local
-buffers before they are discarded. C++ reference and Rust
-CPU use the same lifetime rule; HIP evaluation is unchanged. This structural
-allocation reuse carries no measured timing evidence or acceleration claim.
+CPU dynamics also retain one simulation-owned set of force-vector allocations
+across repeated force evaluations and later transactional integrate or
+minimize calls. Zero-step integration does not consume or initialize this
+storage. The scratch is derived state excluded from checkpoint bytes and
+semantic rollback; an internal evaluation failure may consume its contents or
+capacity. The public stateless evaluator remains transactional, C++ reference
+and Rust CPU use the same lifetime rule, and HIP evaluation is unchanged. This
+structural allocation reuse carries no measured timing evidence or acceleration
+claim.
 
 The integrator likewise skips unconstrained-coordinate snapshots when no
 distance constraints exist. When constraints are present, the simulation
