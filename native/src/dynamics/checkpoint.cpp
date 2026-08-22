@@ -195,8 +195,8 @@ void copy_checkpoint_validation_state(
     const bg_simulation &source,
     bg_simulation *candidate) {
     // Copy semantic state needed to validate and commit the checkpoint. The
-    // neighbor cache and rollback scratch are derived storage and must not be
-    // copied into this short-lived candidate.
+    // Neighbor-cache payloads and all simulation-owned scratch are derived
+    // storage and must not be copied into this short-lived candidate.
     candidate->system = source.system;
     candidate->forcefield = source.forcefield;
     candidate->constraints = source.constraints;

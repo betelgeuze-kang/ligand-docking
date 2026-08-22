@@ -1117,11 +1117,34 @@ bg_status minimize(
                      options.force_tolerance_kcal_per_mol_angstrom;
     // Keep the accepted work coordinates unchanged during line search; the
     // candidate position buffers are overwritten and swapped only on accept.
-    bg_system candidate;
+    bg_system local_candidate;
+    const bool persistent_candidate = uses_cpu_persistent_scratch(context);
+    bg_system &candidate = persistent_candidate
+        ? work->minimizer_candidate_scratch
+        : local_candidate;
     const bool has_candidate =
         !converged && options.max_iterations != UINT64_C(0);
     if (has_candidate) {
-        candidate = work->system;
+        if (!persistent_candidate ||
+            !work->minimizer_candidate_scratch_initialized) {
+            candidate = work->system;
+            if (persistent_candidate) {
+                work->minimizer_candidate_scratch_initialized = true;
+            }
+        } else {
+            std::copy(
+                work->system.velocity_x.begin(),
+                work->system.velocity_x.end(),
+                candidate.velocity_x.begin());
+            std::copy(
+                work->system.velocity_y.begin(),
+                work->system.velocity_y.end(),
+                candidate.velocity_y.begin());
+            std::copy(
+                work->system.velocity_z.begin(),
+                work->system.velocity_z.end(),
+                candidate.velocity_z.begin());
+        }
     }
     PositionStorageGuard position_storage(
         &work->system, &candidate, has_candidate);

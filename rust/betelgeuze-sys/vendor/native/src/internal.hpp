@@ -363,6 +363,8 @@ struct bg_simulation final {
     DynamicStateScratch dynamic_state_scratch;
     ParticleVectorScratch force_evaluation_scratch;
     ParticleVectorScratch minimizer_direction_scratch;
+    bg_system minimizer_candidate_scratch;
+    bool minimizer_candidate_scratch_initialized = false;
     ParticleVectorScratch constraint_drift_scratch;
     ConstraintValidationScratch constraint_validation_scratch;
 };

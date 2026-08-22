@@ -271,6 +271,20 @@ std::array<const double *, 3> minimizer_direction_scratch_addresses(
     };
 }
 
+std::array<const double *, 8> system_storage_addresses(
+    const bg_system &system) {
+    return {
+        system.position_x.data(),
+        system.position_y.data(),
+        system.position_z.data(),
+        system.velocity_x.data(),
+        system.velocity_y.data(),
+        system.velocity_z.data(),
+        system.mass.data(),
+        system.charge.data(),
+    };
+}
+
 bg_dynamics_report_v1 integrate(
     const bg_context *context,
     bg_simulation *simulation,
@@ -788,6 +802,7 @@ void test_cpu_persistent_vector_scratch() {
         assert(initial_direction.x.capacity() == 0U);
         assert(initial_direction.y.capacity() == 0U);
         assert(initial_direction.z.capacity() == 0U);
+        assert(!handles.simulation->minimizer_candidate_scratch_initialized);
 
         bg_minimizer_options_v1 options;
         assert(bg_minimizer_options_v1_init(&options) == BG_STATUS_OK);
@@ -824,6 +839,51 @@ void test_cpu_persistent_vector_scratch() {
                scratch_addresses);
         assert(minimizer_direction_scratch_addresses(handles.simulation) ==
                direction_addresses);
+        assert(!handles.simulation->minimizer_candidate_scratch_initialized);
+
+        options.max_iterations = UINT64_C(1);
+        options.initial_step_angstrom2_mol_per_kcal = 0.02;
+        options.energy_tolerance_kcal_per_mol = 0.0;
+        options.force_tolerance_kcal_per_mol_angstrom = 0.0;
+        assert(bg_minimization_report_v1_init(&report) == BG_STATUS_OK);
+        assert(bg_context_minimize(
+                   handles.context,
+                   handles.simulation,
+                   &options,
+                   &report) == BG_STATUS_OK);
+        assert(handles.simulation->minimizer_candidate_scratch_initialized);
+        const auto candidate_addresses = system_storage_addresses(
+            handles.simulation->minimizer_candidate_scratch);
+        for (const double *address : candidate_addresses) {
+            assert(address != nullptr);
+        }
+
+        integrate(handles.context, handles.simulation, UINT64_C(1));
+        const std::vector<double> expected_velocity_x =
+            handles.simulation->system.velocity_x;
+        const std::vector<double> expected_velocity_y =
+            handles.simulation->system.velocity_y;
+        const std::vector<double> expected_velocity_z =
+            handles.simulation->system.velocity_z;
+        assert(bg_minimization_report_v1_init(&report) == BG_STATUS_OK);
+        assert(bg_context_minimize(
+                   handles.context,
+                   handles.simulation,
+                   &options,
+                   &report) == BG_STATUS_OK);
+        assert(system_storage_addresses(
+                   handles.simulation->minimizer_candidate_scratch) ==
+               candidate_addresses);
+        assert(handles.simulation->minimizer_candidate_scratch.velocity_x ==
+               expected_velocity_x);
+        assert(handles.simulation->minimizer_candidate_scratch.velocity_y ==
+               expected_velocity_y);
+        assert(handles.simulation->minimizer_candidate_scratch.velocity_z ==
+               expected_velocity_z);
+        assert(force_evaluation_scratch_addresses(handles.simulation) ==
+               scratch_addresses);
+        assert(minimizer_direction_scratch_addresses(handles.simulation) ==
+               direction_addresses);
 
         uint64_t checkpoint_size = UINT64_C(0);
         assert(bg_simulation_checkpoint_size(
@@ -845,6 +905,9 @@ void test_cpu_persistent_vector_scratch() {
                scratch_addresses);
         assert(minimizer_direction_scratch_addresses(handles.simulation) ==
                direction_addresses);
+        assert(system_storage_addresses(
+                   handles.simulation->minimizer_candidate_scratch) ==
+               candidate_addresses);
     }
 }
 
