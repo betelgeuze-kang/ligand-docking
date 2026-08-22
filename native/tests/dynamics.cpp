@@ -260,6 +260,17 @@ std::array<const double *, 3> force_evaluation_scratch_addresses(
     };
 }
 
+std::array<const double *, 3> minimizer_direction_scratch_addresses(
+    const bg_simulation *simulation) {
+    const bg_simulation::ParticleVectorScratch &scratch =
+        simulation->minimizer_direction_scratch;
+    return {
+        scratch.x.data(),
+        scratch.y.data(),
+        scratch.z.data(),
+    };
+}
+
 bg_dynamics_report_v1 integrate(
     const bg_context *context,
     bg_simulation *simulation,
@@ -719,7 +730,7 @@ void test_nve_fixture_and_zero_step() {
     assert(first_report.temperature_kelvin == 0x1.92b35dc301dafp+5);
 }
 
-void test_cpu_force_evaluation_scratch() {
+void test_cpu_persistent_vector_scratch() {
     constexpr std::array<bg_backend, 2> backends = {
         BG_BACKEND_CPP_CPU_REFERENCE,
         BG_BACKEND_RUST_CPU,
@@ -769,6 +780,15 @@ void test_cpu_force_evaluation_scratch() {
         assert(force_evaluation_scratch_addresses(handles.simulation) ==
                scratch_addresses);
 
+        const bg_simulation::ParticleVectorScratch &initial_direction =
+            handles.simulation->minimizer_direction_scratch;
+        assert(initial_direction.x.empty());
+        assert(initial_direction.y.empty());
+        assert(initial_direction.z.empty());
+        assert(initial_direction.x.capacity() == 0U);
+        assert(initial_direction.y.capacity() == 0U);
+        assert(initial_direction.z.capacity() == 0U);
+
         bg_minimizer_options_v1 options;
         assert(bg_minimizer_options_v1_init(&options) == BG_STATUS_OK);
         options.max_iterations = UINT64_C(1);
@@ -784,6 +804,26 @@ void test_cpu_force_evaluation_scratch() {
         assert(report.converged == UINT32_C(1));
         assert(force_evaluation_scratch_addresses(handles.simulation) ==
                scratch_addresses);
+        const auto direction_addresses =
+            minimizer_direction_scratch_addresses(handles.simulation);
+        for (const double *address : direction_addresses) {
+            assert(address != nullptr);
+        }
+        assert(handles.simulation->minimizer_direction_scratch.x.size() == 2U);
+        assert(handles.simulation->minimizer_direction_scratch.y.size() == 2U);
+        assert(handles.simulation->minimizer_direction_scratch.z.size() == 2U);
+
+        assert(bg_minimization_report_v1_init(&report) == BG_STATUS_OK);
+        assert(bg_context_minimize(
+                   handles.context,
+                   handles.simulation,
+                   &options,
+                   &report) == BG_STATUS_OK);
+        assert(report.converged == UINT32_C(1));
+        assert(force_evaluation_scratch_addresses(handles.simulation) ==
+               scratch_addresses);
+        assert(minimizer_direction_scratch_addresses(handles.simulation) ==
+               direction_addresses);
 
         uint64_t checkpoint_size = UINT64_C(0);
         assert(bg_simulation_checkpoint_size(
@@ -803,6 +843,8 @@ void test_cpu_force_evaluation_scratch() {
                    checkpoint_size) == BG_STATUS_OK);
         assert(force_evaluation_scratch_addresses(handles.simulation) ==
                scratch_addresses);
+        assert(minimizer_direction_scratch_addresses(handles.simulation) ==
+               direction_addresses);
     }
 }
 
@@ -1282,7 +1324,7 @@ int main() {
     test_constraints_and_periodic_images();
     test_constrained_minimizer_rattle_checkpoint();
     test_nve_fixture_and_zero_step();
-    test_cpu_force_evaluation_scratch();
+    test_cpu_persistent_vector_scratch();
     test_nvt_fixture_and_checkpoint();
     test_report_and_state_failure_transactionality();
     test_deep_ownership_and_signed_zero_checkpoint();

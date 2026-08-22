@@ -118,6 +118,14 @@ and Rust CPU use the same lifetime rule, and HIP evaluation is unchanged. This
 structural allocation reuse carries no measured timing evidence or acceleration
 claim.
 
+The CPU minimizer likewise retains its three projected-force direction vectors
+across later minimize calls. Each projection still copies the current force
+channels before applying the same bounded constraint projection, so no prior
+scratch values participate in a result. This derived storage is excluded from
+checkpoint and rollback semantics and may be consumed on failure. HIP
+minimization continues to use call-local direction storage. This lifetime
+change is untimed and carries no acceleration claim.
+
 The integrator likewise skips unconstrained-coordinate snapshots when no
 distance constraints exist. When constraints are present, the simulation
 retains one three-channel snapshot buffer across every drift in an integrate

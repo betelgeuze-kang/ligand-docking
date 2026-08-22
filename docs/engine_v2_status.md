@@ -95,7 +95,10 @@ The current `main` branch contains:
   not initialize it, checkpoint and semantic rollback exclude it as derived
   scratch, and an internal evaluation failure may consume only that scratch.
   Public stateless evaluation, HIP evaluation, and semantic commit behavior
-  remain unchanged. Unconstrained drifts avoid unnecessary
+  remain unchanged. The CPU minimizer also retains its projected-force
+  direction vectors across later minimize calls, while copying all current
+  force channels before every projection; HIP minimization keeps call-local
+  direction storage. Unconstrained drifts avoid unnecessary
   coordinate snapshots, while constrained integration retains one
   simulation-owned three-channel snapshot buffer across all drifts and later
   calls. No timing claim is made. The CPU minimizer similarly retains one
