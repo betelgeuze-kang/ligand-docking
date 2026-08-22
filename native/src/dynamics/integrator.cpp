@@ -119,7 +119,7 @@ class ForceEvaluationStorageGuard final {
     bool active_ = false;
 };
 
-[[nodiscard]] bool retains_cpu_force_storage(
+[[nodiscard]] bool uses_cpu_persistent_scratch(
     const bg_context &context) noexcept {
     return context.backend == BG_BACKEND_CPP_CPU_REFERENCE ||
            context.backend == BG_BACKEND_RUST_CPU;
@@ -893,9 +893,21 @@ bg_status projected_force(
     const cpu::Evaluation &evaluation,
     VectorChannels *out_direction,
     double *out_maximum) {
-    out_direction->x = evaluation.force_x;
-    out_direction->y = evaluation.force_y;
-    out_direction->z = evaluation.force_z;
+    out_direction->x.resize(evaluation.force_x.size());
+    out_direction->y.resize(evaluation.force_y.size());
+    out_direction->z.resize(evaluation.force_z.size());
+    std::copy(
+        evaluation.force_x.begin(),
+        evaluation.force_x.end(),
+        out_direction->x.begin());
+    std::copy(
+        evaluation.force_y.begin(),
+        evaluation.force_y.end(),
+        out_direction->y.begin());
+    std::copy(
+        evaluation.force_z.begin(),
+        evaluation.force_z.end(),
+        out_direction->z.begin());
     bg_status status =
         project_direction(simulation, simulation.system, out_direction);
     if (status != BG_STATUS_OK) {
@@ -1083,7 +1095,7 @@ bg_status minimize(
     ForceEvaluationStorageGuard force_storage(
         &work->force_evaluation_scratch,
         &evaluation,
-        retains_cpu_force_storage(context));
+        uses_cpu_persistent_scratch(context));
     bg_status status =
         evaluate(context, work, work->system, true, &evaluation);
     if (status != BG_STATUS_OK) {
@@ -1091,7 +1103,10 @@ bg_status minimize(
     }
     const double initial_energy = evaluation.energy.total_kcal_per_mol;
     double current_energy = initial_energy;
-    VectorChannels direction;
+    VectorChannels local_direction;
+    VectorChannels &direction = uses_cpu_persistent_scratch(context)
+        ? work->minimizer_direction_scratch
+        : local_direction;
     double maximum_force = 0.0;
     status = projected_force(*work, evaluation, &direction, &maximum_force);
     if (status != BG_STATUS_OK) {
@@ -1247,7 +1262,7 @@ bg_status integrate(
     ForceEvaluationStorageGuard force_storage(
         &work->force_evaluation_scratch,
         &final_evaluation,
-        step_count != UINT64_C(0) && retains_cpu_force_storage(context));
+        step_count != UINT64_C(0) && uses_cpu_persistent_scratch(context));
     VectorChannels *const constraint_scratch =
         &work->constraint_drift_scratch;
     bg_status status = BG_STATUS_OK;

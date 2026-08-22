@@ -362,6 +362,7 @@ struct bg_simulation final {
     NeighborListCache neighbor_list_cache;
     DynamicStateScratch dynamic_state_scratch;
     ParticleVectorScratch force_evaluation_scratch;
+    ParticleVectorScratch minimizer_direction_scratch;
     ParticleVectorScratch constraint_drift_scratch;
     ConstraintValidationScratch constraint_validation_scratch;
 };
