@@ -58,10 +58,32 @@ bg_status periodic_neighbor_pairs(
         return BG_STATUS_OK;
     }
 
-    std::vector<cpu::NeighborPair> pairs;
     if (cache.build_scratch == nullptr || !cache.build_scratch.unique()) {
         cache.build_scratch =
             std::make_shared<cpu::NeighborBuildScratch>();
+    }
+    std::shared_ptr<bg_simulation::NeighborListCacheData> *publication =
+        nullptr;
+    for (auto &candidate : cache.publication_scratch) {
+        if (candidate != nullptr && candidate.unique()) {
+            publication = &candidate;
+            break;
+        }
+    }
+    if (publication == nullptr) {
+        for (auto &candidate : cache.publication_scratch) {
+            if (candidate == nullptr) {
+                publication = &candidate;
+                break;
+            }
+        }
+    }
+    if (publication == nullptr) {
+        publication = &cache.publication_scratch.front();
+    }
+    if (*publication == nullptr || !publication->unique()) {
+        *publication =
+            std::make_shared<bg_simulation::NeighborListCacheData>();
     }
     const double search_radius = std::max(
         simulation->forcefield.cutoff,
@@ -72,16 +94,22 @@ bg_status periodic_neighbor_pairs(
         simulation->forcefield,
         search_radius,
         cache.build_scratch.get(),
-        &pairs);
+        &(*publication)->pairs);
     if (status != BG_STATUS_OK) {
         return status;
     }
-    auto data = std::make_shared<bg_simulation::NeighborListCacheData>();
-    data->reference_x = system.position_x;
-    data->reference_y = system.position_y;
-    data->reference_z = system.position_z;
-    data->pairs = std::move(pairs);
-    cache.data = std::move(data);
+    (*publication)->reference_x.assign(
+        system.position_x.begin(), system.position_x.end());
+    (*publication)->reference_y.assign(
+        system.position_y.begin(), system.position_y.end());
+    (*publication)->reference_z.assign(
+        system.position_z.begin(), system.position_z.end());
+    std::shared_ptr<const bg_simulation::NeighborListCacheData> previous_data =
+        std::move(cache.data);
+    cache.data = std::move(*publication);
+    *publication =
+        std::const_pointer_cast<bg_simulation::NeighborListCacheData>(
+            std::move(previous_data));
     increment_saturating(&cache.build_count);
     *out_pairs = &cache.data->pairs;
     return BG_STATUS_OK;

@@ -620,6 +620,7 @@ bg_status build_periodic_neighbor_pairs_impl(
     const bg_forcefield &forcefield,
     double search_radius,
     NeighborBuildScratch *scratch,
+    bool reuse_pair_storage,
     std::vector<NeighborPair> *out_pairs) {
     if (scratch == nullptr || out_pairs == nullptr) {
         return fail(
@@ -652,7 +653,10 @@ bg_status build_periodic_neighbor_pairs_impl(
     }
     std::sort(assignments.begin(), assignments.end());
 
-    std::vector<NeighborPair> pairs;
+    std::vector<NeighborPair> local_pairs;
+    std::vector<NeighborPair> &pairs =
+        reuse_pair_storage ? *out_pairs : local_pairs;
+    pairs.clear();
     std::vector<NeighborCellKey> &neighbor_cells = scratch->neighbor_cells;
     neighbor_cells.clear();
     neighbor_cells.reserve(27U);
@@ -726,7 +730,9 @@ bg_status build_periodic_neighbor_pairs_impl(
             }
         }
     }
-    *out_pairs = std::move(pairs);
+    if (!reuse_pair_storage) {
+        *out_pairs = std::move(pairs);
+    }
     return BG_STATUS_OK;
 }
 
@@ -847,6 +853,7 @@ bg_status evaluate_nonbonded(
                 forcefield,
                 search_radius,
                 &build_scratch,
+                false,
                 &built_pairs);
             if (status != BG_STATUS_OK) {
                 return status;
@@ -1022,7 +1029,7 @@ bg_status build_periodic_neighbor_pairs(
     }
     NeighborBuildScratch scratch;
     return build_periodic_neighbor_pairs_impl(
-        system, forcefield, search_radius, &scratch, out_pairs);
+        system, forcefield, search_radius, &scratch, false, out_pairs);
 }
 
 bg_status build_periodic_neighbor_pairs_reusing_scratch(
@@ -1037,8 +1044,10 @@ bg_status build_periodic_neighbor_pairs_reusing_scratch(
             BG_STATUS_INVALID_ARGUMENT,
             "periodic neighbor-list construction requires all periodic axes");
     }
+    // This simulation-owned path treats the pair output as derived scratch:
+    // a failed build may consume its contents while retaining its capacity.
     return build_periodic_neighbor_pairs_impl(
-        system, forcefield, search_radius, scratch, out_pairs);
+        system, forcefield, search_radius, scratch, true, out_pairs);
 }
 
 bg_status evaluate_with_neighbor_pairs(

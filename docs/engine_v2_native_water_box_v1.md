@@ -103,6 +103,15 @@ The public stateless evaluator still uses call-local scratch, while an
 internally shared simulation scratch detaches before rebuilding. Failed
 operations may consume only scratch state/capacity; pair payloads and cache
 counters retain their rollback semantics.
+The immutable publication path retains three simulation-owned buffers: one
+published payload and two reusable scratch payloads. A transaction snapshot
+may pin the previously published buffer while every later rebuild in that same
+call alternates the other two. After their first allocation, all three
+reference-coordinate vectors plus the canonical-pair vector retain storage.
+On failure the original publication is restored and the failed publication
+becomes derived scratch. This preserves cache payload and counter rollback
+without reallocating the steady-state publication graph, including calls that
+cross the rebuild threshold more than once.
 Checkpoint bytes and the static fingerprint do not include this derived state,
 and a successful checkpoint load invalidates it. Mixed/nonperiodic and HIP
 paths do not consume the cache. This behavior has no timing threshold or
