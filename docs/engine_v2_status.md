@@ -90,10 +90,12 @@ The current `main` branch contains:
   derived state. Periodic CPU neighbor rebuilds retain four simulation-owned
   cell-list scratch buffers across rebuilds without changing immutable pair
   publication or semantic cache rollback. CPU dynamics additionally retain
-  operation-local force-vector
-  storage across repeated force evaluations within one transactional integrate
-  or minimize call; public stateless evaluation, HIP evaluation, and failure
-  commit semantics remain unchanged. Unconstrained drifts avoid unnecessary
+  simulation-owned force-vector storage across repeated force evaluations and
+  later transactional integrate or minimize calls; zero-step integration does
+  not initialize it, checkpoint and semantic rollback exclude it as derived
+  scratch, and an internal evaluation failure may consume only that scratch.
+  Public stateless evaluation, HIP evaluation, and semantic commit behavior
+  remain unchanged. Unconstrained drifts avoid unnecessary
   coordinate snapshots, while constrained integration retains one
   simulation-owned three-channel snapshot buffer across all drifts and later
   calls. No timing claim is made. The CPU minimizer similarly retains one

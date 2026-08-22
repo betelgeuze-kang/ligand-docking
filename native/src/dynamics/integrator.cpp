@@ -85,6 +85,46 @@ class PositionStorageGuard final {
     const double *original_z_ = nullptr;
 };
 
+class ForceEvaluationStorageGuard final {
+  public:
+    ForceEvaluationStorageGuard(
+        VectorChannels *scratch,
+        cpu::Evaluation *evaluation,
+        bool active) noexcept
+        : scratch_(scratch), evaluation_(evaluation), active_(active) {
+        if (!active_) {
+            return;
+        }
+        scratch_->x.swap(evaluation_->force_x);
+        scratch_->y.swap(evaluation_->force_y);
+        scratch_->z.swap(evaluation_->force_z);
+    }
+
+    ForceEvaluationStorageGuard(const ForceEvaluationStorageGuard &) = delete;
+    ForceEvaluationStorageGuard &operator=(
+        const ForceEvaluationStorageGuard &) = delete;
+
+    ~ForceEvaluationStorageGuard() noexcept {
+        if (!active_) {
+            return;
+        }
+        evaluation_->force_x.swap(scratch_->x);
+        evaluation_->force_y.swap(scratch_->y);
+        evaluation_->force_z.swap(scratch_->z);
+    }
+
+  private:
+    VectorChannels *scratch_ = nullptr;
+    cpu::Evaluation *evaluation_ = nullptr;
+    bool active_ = false;
+};
+
+[[nodiscard]] bool retains_cpu_force_storage(
+    const bg_context &context) noexcept {
+    return context.backend == BG_BACKEND_CPP_CPU_REFERENCE ||
+           context.backend == BG_BACKEND_RUST_CPU;
+}
+
 [[nodiscard]] bool finite_vector(const Vector3 &value) noexcept {
     return std::isfinite(value.x) && std::isfinite(value.y) &&
            std::isfinite(value.z);
@@ -1040,6 +1080,10 @@ bg_status minimize(
     bg_simulation *work,
     bg_minimization_report_v1 *out_report) {
     cpu::Evaluation evaluation;
+    ForceEvaluationStorageGuard force_storage(
+        &work->force_evaluation_scratch,
+        &evaluation,
+        retains_cpu_force_storage(context));
     bg_status status =
         evaluate(context, work, work->system, true, &evaluation);
     if (status != BG_STATUS_OK) {
@@ -1200,6 +1244,10 @@ bg_status integrate(
     bg_simulation *work,
     bg_dynamics_report_v1 *out_report) {
     cpu::Evaluation final_evaluation;
+    ForceEvaluationStorageGuard force_storage(
+        &work->force_evaluation_scratch,
+        &final_evaluation,
+        step_count != UINT64_C(0) && retains_cpu_force_storage(context));
     VectorChannels *const constraint_scratch =
         &work->constraint_drift_scratch;
     bg_status status = BG_STATUS_OK;

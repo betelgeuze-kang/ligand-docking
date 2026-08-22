@@ -361,6 +361,7 @@ struct bg_simulation final {
     std::array<uint8_t, 32> static_fingerprint{};
     NeighborListCache neighbor_list_cache;
     DynamicStateScratch dynamic_state_scratch;
+    ParticleVectorScratch force_evaluation_scratch;
     ParticleVectorScratch constraint_drift_scratch;
     ConstraintValidationScratch constraint_validation_scratch;
 };

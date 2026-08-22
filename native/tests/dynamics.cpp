@@ -249,6 +249,17 @@ std::array<const double *, 3> constraint_drift_scratch_addresses(
     };
 }
 
+std::array<const double *, 3> force_evaluation_scratch_addresses(
+    const bg_simulation *simulation) {
+    const bg_simulation::ParticleVectorScratch &scratch =
+        simulation->force_evaluation_scratch;
+    return {
+        scratch.x.data(),
+        scratch.y.data(),
+        scratch.z.data(),
+    };
+}
+
 bg_dynamics_report_v1 integrate(
     const bg_context *context,
     bg_simulation *simulation,
@@ -706,6 +717,93 @@ void test_nve_fixture_and_zero_step() {
     assert(first_report.kinetic_kcal_per_mol == 0x1.334b9f89504e4p-2);
     assert(first_report.total_kcal_per_mol == 0x1.bbdc4bb858dc4p-2);
     assert(first_report.temperature_kelvin == 0x1.92b35dc301dafp+5);
+}
+
+void test_cpu_force_evaluation_scratch() {
+    constexpr std::array<bg_backend, 2> backends = {
+        BG_BACKEND_CPP_CPU_REFERENCE,
+        BG_BACKEND_RUST_CPU,
+    };
+    for (const bg_backend backend : backends) {
+        NativeHandles handles;
+        handles.context = make_context(backend);
+        handles.system = make_system(
+            {-0.6, 0.6}, {0.0, 0.0}, {0.0, 0.0},
+            {0.001, -0.001}, {0.0, 0.0}, {0.0, 0.0}, {12.0, 16.0});
+        handles.forcefield = make_forcefield(2U, 1.0, 20.0, false);
+        handles.simulation = make_simulation(
+            handles.system,
+            handles.forcefield,
+            BG_INTEGRATOR_VELOCITY_VERLET,
+            0.2,
+            0.0,
+            0.0,
+            UINT64_C(0),
+            nullptr);
+
+        const bg_simulation::ParticleVectorScratch &initial_scratch =
+            handles.simulation->force_evaluation_scratch;
+        assert(initial_scratch.x.empty());
+        assert(initial_scratch.y.empty());
+        assert(initial_scratch.z.empty());
+        assert(initial_scratch.x.capacity() == 0U);
+        assert(initial_scratch.y.capacity() == 0U);
+        assert(initial_scratch.z.capacity() == 0U);
+
+        integrate(handles.context, handles.simulation, UINT64_C(0));
+        assert(handles.simulation->force_evaluation_scratch.x.empty());
+        assert(handles.simulation->force_evaluation_scratch.y.empty());
+        assert(handles.simulation->force_evaluation_scratch.z.empty());
+
+        integrate(handles.context, handles.simulation, UINT64_C(1));
+        const auto scratch_addresses =
+            force_evaluation_scratch_addresses(handles.simulation);
+        for (const double *address : scratch_addresses) {
+            assert(address != nullptr);
+        }
+        assert(handles.simulation->force_evaluation_scratch.x.size() == 2U);
+        assert(handles.simulation->force_evaluation_scratch.y.size() == 2U);
+        assert(handles.simulation->force_evaluation_scratch.z.size() == 2U);
+
+        integrate(handles.context, handles.simulation, UINT64_C(1));
+        assert(force_evaluation_scratch_addresses(handles.simulation) ==
+               scratch_addresses);
+
+        bg_minimizer_options_v1 options;
+        assert(bg_minimizer_options_v1_init(&options) == BG_STATUS_OK);
+        options.max_iterations = UINT64_C(1);
+        options.force_tolerance_kcal_per_mol_angstrom =
+            std::numeric_limits<double>::max();
+        bg_minimization_report_v1 report;
+        assert(bg_minimization_report_v1_init(&report) == BG_STATUS_OK);
+        assert(bg_context_minimize(
+                   handles.context,
+                   handles.simulation,
+                   &options,
+                   &report) == BG_STATUS_OK);
+        assert(report.converged == UINT32_C(1));
+        assert(force_evaluation_scratch_addresses(handles.simulation) ==
+               scratch_addresses);
+
+        uint64_t checkpoint_size = UINT64_C(0);
+        assert(bg_simulation_checkpoint_size(
+                   handles.simulation, &checkpoint_size) == BG_STATUS_OK);
+        std::vector<uint8_t> checkpoint(
+            static_cast<std::size_t>(checkpoint_size));
+        uint64_t written = UINT64_C(0);
+        assert(bg_simulation_checkpoint_write(
+                   handles.simulation,
+                   checkpoint.data(),
+                   checkpoint_size,
+                   &written) == BG_STATUS_OK);
+        assert(written == checkpoint_size);
+        assert(bg_simulation_checkpoint_load(
+                   handles.simulation,
+                   checkpoint.data(),
+                   checkpoint_size) == BG_STATUS_OK);
+        assert(force_evaluation_scratch_addresses(handles.simulation) ==
+               scratch_addresses);
+    }
 }
 
 void test_nvt_fixture_and_checkpoint() {
@@ -1184,6 +1282,7 @@ int main() {
     test_constraints_and_periodic_images();
     test_constrained_minimizer_rattle_checkpoint();
     test_nve_fixture_and_zero_step();
+    test_cpu_force_evaluation_scratch();
     test_nvt_fixture_and_checkpoint();
     test_report_and_state_failure_transactionality();
     test_deep_ownership_and_signed_zero_checkpoint();
