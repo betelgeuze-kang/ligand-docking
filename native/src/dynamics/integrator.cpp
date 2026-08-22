@@ -773,21 +773,39 @@ bg_status kinetic_energy(
 bg_status project_direction(
     const bg_simulation &simulation,
     const bg_system &system,
-    VectorChannels *direction) noexcept {
+    VectorChannels *direction,
+    std::vector<double> *magnitude_scratch,
+    double *out_maximum) {
     if (simulation.constraints.empty()) {
         return BG_STATUS_OK;
     }
+    struct MagnitudeSummary final {
+        double maximum = 0.0;
+        bool finite = true;
+    };
+    const auto refresh_magnitudes = [&]() {
+        magnitude_scratch->resize(direction->x.size());
+        MagnitudeSummary summary;
+        for (std::size_t atom = 0; atom < direction->x.size(); ++atom) {
+            const double magnitude = std::hypot(
+                direction->x[atom], direction->y[atom],
+                direction->z[atom]);
+            (*magnitude_scratch)[atom] = magnitude;
+            summary.finite = summary.finite && std::isfinite(magnitude);
+            summary.maximum = std::max(summary.maximum, magnitude);
+        }
+        return summary;
+    };
+    MagnitudeSummary magnitudes;
+    bool magnitudes_current = false;
     for (uint32_t sweep = 0; sweep < simulation.constraint_max_iterations;
          ++sweep) {
-        double largest_component = 0.0;
-        for (std::size_t atom = 0; atom < direction->x.size(); ++atom) {
-            largest_component = std::max(
-                largest_component,
-                std::hypot(direction->x[atom], direction->y[atom],
-                           direction->z[atom]));
+        if (!magnitudes_current) {
+            magnitudes = refresh_magnitudes();
+            magnitudes_current = true;
         }
         const double tolerance = 64.0 * std::numeric_limits<double>::epsilon() *
-                                 (1.0 + largest_component);
+                                 (1.0 + magnitudes.maximum);
         bool converged = true;
         for (const bg_simulation::DistanceConstraint &constraint :
              simulation.constraints) {
@@ -834,8 +852,16 @@ bg_status project_direction(
                 beta * displacement.z;
         }
         if (converged) {
+            if (!magnitudes.finite) {
+                return fail(
+                    BG_STATUS_NUMERICAL_ERROR,
+                    "projected force magnitude is non-finite");
+            }
+            *out_maximum = magnitudes.maximum;
             return BG_STATUS_OK;
         }
+        magnitudes = refresh_magnitudes();
+        magnitudes_current = true;
         bool corrected_state_converged = true;
         for (const bg_simulation::DistanceConstraint &constraint :
              simulation.constraints) {
@@ -860,14 +886,8 @@ bg_status project_direction(
                     direction->z[constraint.atom_j],
             };
             const double largest_component = std::max(
-                std::hypot(
-                    direction->x[constraint.atom_i],
-                    direction->y[constraint.atom_i],
-                    direction->z[constraint.atom_i]),
-                std::hypot(
-                    direction->x[constraint.atom_j],
-                    direction->y[constraint.atom_j],
-                    direction->z[constraint.atom_j]));
+                (*magnitude_scratch)[constraint.atom_i],
+                (*magnitude_scratch)[constraint.atom_j]);
             const double tolerance =
                 64.0 * std::numeric_limits<double>::epsilon() *
                 (1.0 + largest_component);
@@ -880,6 +900,12 @@ bg_status project_direction(
             }
         }
         if (corrected_state_converged) {
+            if (!magnitudes.finite) {
+                return fail(
+                    BG_STATUS_NUMERICAL_ERROR,
+                    "projected force magnitude is non-finite");
+            }
+            *out_maximum = magnitudes.maximum;
             return BG_STATUS_OK;
         }
     }
@@ -892,6 +918,7 @@ bg_status projected_force(
     const bg_simulation &simulation,
     const cpu::Evaluation &evaluation,
     VectorChannels *out_direction,
+    std::vector<double> *magnitude_scratch,
     double *out_maximum) {
     out_direction->x.resize(evaluation.force_x.size());
     out_direction->y.resize(evaluation.force_y.size());
@@ -908,10 +935,14 @@ bg_status projected_force(
         evaluation.force_z.begin(),
         evaluation.force_z.end(),
         out_direction->z.begin());
-    bg_status status =
-        project_direction(simulation, simulation.system, out_direction);
+    bg_status status = project_direction(
+        simulation, simulation.system, out_direction, magnitude_scratch,
+        out_maximum);
     if (status != BG_STATUS_OK) {
         return status;
+    }
+    if (!simulation.constraints.empty()) {
+        return BG_STATUS_OK;
     }
     double maximum = 0.0;
     for (std::size_t atom = 0; atom < out_direction->x.size(); ++atom) {
@@ -1107,8 +1138,14 @@ bg_status minimize(
     VectorChannels &direction = uses_cpu_persistent_scratch(context)
         ? work->minimizer_direction_scratch
         : local_direction;
+    std::vector<double> local_magnitude_scratch;
+    std::vector<double> &magnitude_scratch =
+        uses_cpu_persistent_scratch(context)
+        ? work->constraint_projection_magnitude_scratch
+        : local_magnitude_scratch;
     double maximum_force = 0.0;
-    status = projected_force(*work, evaluation, &direction, &maximum_force);
+    status = projected_force(
+        *work, evaluation, &direction, &magnitude_scratch, &maximum_force);
     if (status != BG_STATUS_OK) {
         return status;
     }
@@ -1239,7 +1276,9 @@ bg_status minimize(
             return status;
         }
         current_energy = evaluation.energy.total_kcal_per_mol;
-        status = projected_force(*work, evaluation, &direction, &maximum_force);
+        status = projected_force(
+            *work, evaluation, &direction, &magnitude_scratch,
+            &maximum_force);
         if (status != BG_STATUS_OK) {
             return status;
         }

@@ -136,6 +136,16 @@ and Rust CPU use the same lifetime rule, and HIP evaluation is unchanged. This
 structural allocation reuse carries no measured timing evidence or acceleration
 claim.
 
+Constrained CPU minimization also retains one per-atom projected-force
+magnitude vector. A projection sweep computes each atom norm once per distinct
+direction state, reuses the same binary64 value for every corrected constraint
+endpoint, and returns the same cached maximum to the minimizer instead of
+evaluating those norms again.
+Failed operations may consume this derived scratch, while unconstrained and
+HIP calls leave the persistent vector untouched. Checkpoint bytes, semantic
+rollback, per-constraint tolerances, and projection updates are unchanged.
+This structural reuse has no timing or acceleration claim.
+
 The CPU minimizer likewise retains its three projected-force direction vectors
 across later minimize calls. Each projection still copies the current force
 channels before applying the same bounded constraint projection, so no prior
