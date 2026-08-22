@@ -97,7 +97,8 @@ The current `main` branch contains:
   pair vector. A failed operation restores the prior published payload and
   retains the failed publication as derived scratch. Reuse inspection bypasses
   `hypot` only inside a compile-time-proven component cube strictly contained
-  by the unchanged 0.5-angstrom Euclidean reuse sphere; all boundary cases use
+  by the unchanged 0.5-angstrom Euclidean reuse sphere or when any component is
+  already at or beyond the rebuild radius; NaNs and the intervening shell use
   the original decision. CPU dynamics additionally
   retain simulation-owned force-vector storage across repeated force
   evaluations and later transactional integrate or minimize calls; zero-step
