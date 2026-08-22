@@ -96,7 +96,12 @@ integrate/minimize clone boundary; failed operations cannot commit them.
 The cached reference coordinates and canonical pairs live in one immutable
 shared payload, so a transaction clone retains that payload rather than
 deep-copying its atom and pair arrays; a rebuild publishes a new payload only
-inside the work simulation.
+inside the work simulation. Periodic CPU rebuilds also retain simulation-owned
+cell-key, sorted-assignment, neighbor-cell, and candidate-index scratch storage.
+The public stateless evaluator still uses call-local scratch, while a shared
+transaction clone detaches an empty work-local scratch object before rebuilding.
+Failed integration may consume only scratch capacity; pair payloads and cache
+counters retain their existing rollback semantics.
 Checkpoint bytes and the static fingerprint do not include this derived state,
 and a successful checkpoint load invalidates it. Mixed/nonperiodic and HIP
 paths do not consume the cache. This behavior has no timing threshold or

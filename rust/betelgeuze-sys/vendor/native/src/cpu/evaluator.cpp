@@ -548,9 +548,6 @@ bg_status evaluate_nonbonded(
     bool compute_forces,
     Evaluation *evaluation);
 
-using CellKey = std::array<std::size_t, 3>;
-using CellAssignment = std::pair<CellKey, std::size_t>;
-
 [[nodiscard]] double inclusive_squared_radius(double radius) noexcept {
     return std::nextafter(
         radius * radius, std::numeric_limits<double>::infinity());
@@ -576,7 +573,7 @@ bg_status periodic_cell_key(
     const bg_forcefield &forcefield,
     const std::array<std::size_t, 3> &cell_counts,
     std::size_t atom,
-    CellKey *out_key) noexcept {
+    NeighborCellKey *out_key) noexcept {
     if (out_key == nullptr) {
         return fail(BG_STATUS_INTERNAL_ERROR, "neighbor-list cell output is null");
     }
@@ -585,7 +582,7 @@ bg_status periodic_cell_key(
         system.position_y[atom],
         system.position_z[atom],
     };
-    CellKey key{};
+    NeighborCellKey key{};
     for (std::size_t axis = 0; axis < key.size(); ++axis) {
         if (!std::isfinite(coordinates[axis])) {
             return fail(
@@ -622,9 +619,12 @@ bg_status build_periodic_neighbor_pairs_impl(
     const bg_system &system,
     const bg_forcefield &forcefield,
     double search_radius,
+    NeighborBuildScratch *scratch,
     std::vector<NeighborPair> *out_pairs) {
-    if (out_pairs == nullptr) {
-        return fail(BG_STATUS_INTERNAL_ERROR, "neighbor-list pair output is null");
+    if (scratch == nullptr || out_pairs == nullptr) {
+        return fail(
+            BG_STATUS_INTERNAL_ERROR,
+            "neighbor-list scratch or pair output is null");
     }
     const double minimum_search_radius =
         std::max(forcefield.cutoff, forcefield.minimum_pair_distance);
@@ -637,8 +637,10 @@ bg_status build_periodic_neighbor_pairs_impl(
     const auto cell_counts = periodic_cell_counts(forcefield, search_radius);
     const double search_radius_squared =
         inclusive_squared_radius(search_radius);
-    std::vector<CellKey> atom_cells(forcefield.atom_count);
-    std::vector<CellAssignment> assignments;
+    std::vector<NeighborCellKey> &atom_cells = scratch->atom_cells;
+    std::vector<NeighborCellAssignment> &assignments = scratch->assignments;
+    atom_cells.resize(forcefield.atom_count);
+    assignments.clear();
     assignments.reserve(forcefield.atom_count);
     for (std::size_t atom = 0; atom < forcefield.atom_count; ++atom) {
         bg_status status = periodic_cell_key(
@@ -651,13 +653,15 @@ bg_status build_periodic_neighbor_pairs_impl(
     std::sort(assignments.begin(), assignments.end());
 
     std::vector<NeighborPair> pairs;
-    std::vector<CellKey> neighbor_cells;
+    std::vector<NeighborCellKey> &neighbor_cells = scratch->neighbor_cells;
+    neighbor_cells.clear();
     neighbor_cells.reserve(27U);
-    std::vector<std::size_t> candidates;
+    std::vector<std::size_t> &candidates = scratch->candidates;
+    candidates.clear();
     candidates.reserve(forcefield.atom_count);
     for (std::size_t atom_i = 0; atom_i < forcefield.atom_count; ++atom_i) {
         neighbor_cells.clear();
-        const CellKey center = atom_cells[atom_i];
+        const NeighborCellKey center = atom_cells[atom_i];
         for (int dx = -1; dx <= 1; ++dx) {
             for (int dy = -1; dy <= 1; ++dy) {
                 for (int dz = -1; dz <= 1; ++dz) {
@@ -675,19 +679,21 @@ bg_status build_periodic_neighbor_pairs_impl(
             neighbor_cells.end());
 
         candidates.clear();
-        for (const CellKey &key : neighbor_cells) {
+        for (const NeighborCellKey &key : neighbor_cells) {
             const auto begin = std::lower_bound(
                 assignments.begin(),
                 assignments.end(),
                 key,
-                [](const CellAssignment &row, const CellKey &target) {
+                [](const NeighborCellAssignment &row,
+                   const NeighborCellKey &target) {
                     return row.first < target;
                 });
             const auto end = std::upper_bound(
                 begin,
                 assignments.end(),
                 key,
-                [](const CellKey &target, const CellAssignment &row) {
+                [](const NeighborCellKey &target,
+                   const NeighborCellAssignment &row) {
                     return target < row.first;
                 });
             for (auto row = begin; row != end; ++row) {
@@ -832,11 +838,16 @@ bg_status evaluate_nonbonded(
     if (forcefield.periodic_axes_mask ==
         static_cast<uint32_t>(BG_PERIODIC_AXES_ALL)) {
         std::vector<NeighborPair> built_pairs;
+        NeighborBuildScratch build_scratch;
         if (neighbor_pairs == nullptr) {
             const double search_radius =
                 std::max(forcefield.cutoff, forcefield.minimum_pair_distance);
             bg_status status = build_periodic_neighbor_pairs_impl(
-                system, forcefield, search_radius, &built_pairs);
+                system,
+                forcefield,
+                search_radius,
+                &build_scratch,
+                &built_pairs);
             if (status != BG_STATUS_OK) {
                 return status;
             }
@@ -1009,8 +1020,25 @@ bg_status build_periodic_neighbor_pairs(
             BG_STATUS_INVALID_ARGUMENT,
             "periodic neighbor-list construction requires all periodic axes");
     }
+    NeighborBuildScratch scratch;
     return build_periodic_neighbor_pairs_impl(
-        system, forcefield, search_radius, out_pairs);
+        system, forcefield, search_radius, &scratch, out_pairs);
+}
+
+bg_status build_periodic_neighbor_pairs_reusing_scratch(
+    const bg_system &system,
+    const bg_forcefield &forcefield,
+    double search_radius,
+    NeighborBuildScratch *scratch,
+    std::vector<NeighborPair> *out_pairs) {
+    if (forcefield.periodic_axes_mask !=
+        static_cast<uint32_t>(BG_PERIODIC_AXES_ALL)) {
+        return fail(
+            BG_STATUS_INVALID_ARGUMENT,
+            "periodic neighbor-list construction requires all periodic axes");
+    }
+    return build_periodic_neighbor_pairs_impl(
+        system, forcefield, search_radius, scratch, out_pairs);
 }
 
 bg_status evaluate_with_neighbor_pairs(

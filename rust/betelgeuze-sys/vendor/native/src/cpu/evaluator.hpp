@@ -35,6 +35,13 @@ bg_status build_periodic_neighbor_pairs(
     double search_radius,
     std::vector<NeighborPair> *out_pairs);
 
+bg_status build_periodic_neighbor_pairs_reusing_scratch(
+    const bg_system &system,
+    const bg_forcefield &forcefield,
+    double search_radius,
+    NeighborBuildScratch *scratch,
+    std::vector<NeighborPair> *out_pairs);
+
 bg_status evaluate_with_neighbor_pairs(
     const bg_system &system,
     const bg_forcefield &forcefield,

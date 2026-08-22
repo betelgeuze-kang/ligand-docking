@@ -947,6 +947,7 @@ void test_periodic_cpu_neighbor_cache() {
         cpp_initial.total_kcal_per_mol,
         rust_initial.total_kcal_per_mol));
     assert(cpp.simulation->neighbor_list_cache.data != nullptr);
+    assert(cpp.simulation->neighbor_list_cache.build_scratch != nullptr);
     assert(cpp.simulation->neighbor_list_cache.data->pairs.size() == 3U);
     assert(cpp.simulation->neighbor_list_cache.build_count == UINT64_C(1));
     assert(cpp.simulation->neighbor_list_cache.reuse_count == UINT64_C(0));
@@ -954,6 +955,16 @@ void test_periodic_cpu_neighbor_cache() {
            cpp.simulation->neighbor_list_cache.data->pairs);
     const auto *const initial_cache_data =
         cpp.simulation->neighbor_list_cache.data.get();
+    const auto *const build_scratch =
+        cpp.simulation->neighbor_list_cache.build_scratch.get();
+    const auto *const atom_cells_storage =
+        build_scratch->atom_cells.data();
+    const auto *const assignments_storage =
+        build_scratch->assignments.data();
+    const auto *const neighbor_cells_storage =
+        build_scratch->neighbor_cells.data();
+    const auto *const candidates_storage =
+        build_scratch->candidates.data();
 
     const bg_dynamics_report_v1 switched_backend =
         integrate(rust.context, cpp.simulation, UINT64_C(0));
@@ -977,6 +988,12 @@ void test_periodic_cpu_neighbor_cache() {
     assert(cpp.simulation->neighbor_list_cache.build_count == UINT64_C(2));
     assert(cpp.simulation->neighbor_list_cache.reuse_count == UINT64_C(3));
     assert(cpp.simulation->neighbor_list_cache.data.get() != initial_cache_data);
+    assert(cpp.simulation->neighbor_list_cache.build_scratch.get() ==
+           build_scratch);
+    assert(build_scratch->atom_cells.data() == atom_cells_storage);
+    assert(build_scratch->assignments.data() == assignments_storage);
+    assert(build_scratch->neighbor_cells.data() == neighbor_cells_storage);
+    assert(build_scratch->candidates.data() == candidates_storage);
 
     const uint64_t builds_before_failure =
         cpp.simulation->neighbor_list_cache.build_count;
@@ -998,6 +1015,12 @@ void test_periodic_cpu_neighbor_cache() {
            reuses_before_failure);
     assert(cpp.simulation->neighbor_list_cache.data.get() ==
            cache_data_before_failure);
+    assert(cpp.simulation->neighbor_list_cache.build_scratch.get() ==
+           build_scratch);
+    assert(build_scratch->atom_cells.data() == atom_cells_storage);
+    assert(build_scratch->assignments.data() == assignments_storage);
+    assert(build_scratch->neighbor_cells.data() == neighbor_cells_storage);
+    assert(build_scratch->candidates.data() == candidates_storage);
     cpp.simulation->system.position_x[0] = saved_x;
 
     uint64_t checkpoint_size = UINT64_C(0);
