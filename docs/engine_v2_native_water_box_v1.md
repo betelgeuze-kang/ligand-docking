@@ -155,16 +155,21 @@ This derived scratch is excluded from checkpoint bytes and semantic state; its
 contents may change on a failed validation. The elimination order, pivot rule,
 rank tolerance, and accepted or rejected states are unchanged.
 
-The CPU minimizer retains one candidate `System` across all bounded Armijo
-attempts and iterations. Each trial overwrites only its position channels from
-the unchanged accepted state; an accepted trial swaps those three buffers into
-the active simulation under a position-storage guard. At exit the guard restores
-the original borrowed-view storage, copying final positions once only when the
-alternate buffer holds the accepted state. Static candidate channels are copied
-once, and rejected trials allocate no replacement system. Evaluation order,
-constraint projection, accepted coordinates, failure rollback, and checkpoint
-semantics are unchanged. This also carries no timing evidence or acceleration
-claim.
+The CPU minimizer retains one simulation-owned candidate `System` across all
+bounded Armijo attempts, iterations, and later minimize calls. The first active
+call copies the complete system once; later calls refresh only the three
+velocity channels, while immutable mass, charge, and unit state retain their
+original storage. Calls already converged before line search do not initialize
+the candidate. Each trial overwrites every position channel from the unchanged
+accepted state; an accepted trial swaps those three buffers into the active
+simulation under a position-storage guard. At exit the guard restores the
+original borrowed-view storage, copying final positions once only when the
+alternate buffer holds the accepted state. The candidate is derived scratch
+excluded from checkpoint and rollback semantics, and a failed call may alter
+this derived candidate without changing semantic state. HIP minimization
+retains its call-local candidate. Evaluation order, constraint projection,
+accepted coordinates, and transaction semantics are unchanged. This also
+carries no timing evidence or acceleration claim.
 
 ## Frozen development observations
 

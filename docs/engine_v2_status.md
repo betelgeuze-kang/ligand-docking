@@ -102,9 +102,11 @@ The current `main` branch contains:
   coordinate snapshots, while constrained integration retains one
   simulation-owned three-channel snapshot buffer across all drifts and later
   calls. No timing claim is made. The CPU minimizer similarly retains one
-  operation-local candidate system and swaps only accepted position buffers,
-  avoiding a complete system copy for every bounded Armijo attempt while
-  preserving exact accepted-state and transaction semantics. Integration and
+  simulation-owned candidate system across later minimize calls, refreshing
+  only its dynamic velocity channels after the first active call and swapping
+  only accepted position buffers. Already-converged calls do not initialize the
+  candidate, HIP keeps a call-local candidate, and exact accepted-state and
+  transaction semantics remain unchanged. Integration and
   minimization calls operate in
   place behind a six-channel RAII rollback (or metadata-only rollback for zero
   integration steps), so immutable mass/charge, force-field, constraint, and
