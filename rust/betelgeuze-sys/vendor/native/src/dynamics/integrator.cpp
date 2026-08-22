@@ -343,8 +343,10 @@ bg_status apply_rattle(
                 system->velocity_z[constraint.atom_i] -
                     system->velocity_z[constraint.atom_j],
             };
+            const double radial_dot =
+                dot(displacement, relative_velocity);
             const double radial_velocity =
-                dot(displacement, relative_velocity) / std::sqrt(squared_norm);
+                radial_dot / std::sqrt(squared_norm);
             if (!std::isfinite(radial_velocity)) {
                 return fail(
                     BG_STATUS_NUMERICAL_ERROR,
@@ -359,8 +361,9 @@ bg_status apply_rattle(
                 1.0 / system->mass[constraint.atom_i];
             const double inverse_mass_j =
                 1.0 / system->mass[constraint.atom_j];
-            const double beta = dot(displacement, relative_velocity) /
-                                ((inverse_mass_i + inverse_mass_j) * squared_norm);
+            const double beta =
+                radial_dot /
+                ((inverse_mass_i + inverse_mass_j) * squared_norm);
             const Vector3 correction_i{
                 beta * inverse_mass_i * displacement.x,
                 beta * inverse_mass_i * displacement.y,
@@ -830,14 +833,13 @@ bg_status project_direction(
                 direction->z[constraint.atom_i] -
                     direction->z[constraint.atom_j],
             };
-            const double radial = dot(displacement, relative) /
-                                  std::sqrt(squared_norm);
+            const double radial_dot = dot(displacement, relative);
+            const double radial = radial_dot / std::sqrt(squared_norm);
             if (std::abs(radial) <= tolerance) {
                 continue;
             }
             converged = false;
-            const double beta =
-                dot(displacement, relative) / (2.0 * squared_norm);
+            const double beta = radial_dot / (2.0 * squared_norm);
             direction->x[constraint.atom_i] -=
                 beta * displacement.x;
             direction->y[constraint.atom_i] -=
@@ -1092,8 +1094,9 @@ bg_status validate_constraint_state(const bg_simulation &simulation) noexcept {
                 BG_STATUS_NUMERICAL_ERROR,
                 "constraint state contains an invalid displacement");
         }
+        const double distance = std::sqrt(squared_norm);
         const double distance_error =
-            std::abs(std::sqrt(squared_norm) - constraint.distance);
+            std::abs(distance - constraint.distance);
         const Vector3 relative_velocity{
             simulation.system.velocity_x[constraint.atom_i] -
                 simulation.system.velocity_x[constraint.atom_j],
@@ -1103,8 +1106,7 @@ bg_status validate_constraint_state(const bg_simulation &simulation) noexcept {
                 simulation.system.velocity_z[constraint.atom_j],
         };
         const double radial_velocity =
-            std::abs(dot(displacement, relative_velocity)) /
-            std::sqrt(squared_norm);
+            std::abs(dot(displacement, relative_velocity)) / distance;
         if (!std::isfinite(distance_error) ||
             distance_error > simulation.constraint_tolerance ||
             !std::isfinite(radial_velocity) ||

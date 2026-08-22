@@ -107,7 +107,10 @@ The current `main` branch contains:
   that scratch. Constrained CPU minimization caches one projected-force norm per
   atom so corrected endpoint tolerances and the final maximum reuse identical
   binary64 `hypot` results; unconstrained and HIP calls do not consume this
-  persistent vector.
+  persistent vector. RATTLE and constrained force projection likewise reuse
+  each exact displacement/relative-vector dot product for their residual and
+  correction, while final constraint-state validation reuses one exact
+  displacement norm for both position and radial-velocity residuals.
   Public stateless evaluation, HIP evaluation, and semantic commit behavior
   remain unchanged. The CPU minimizer also retains its projected-force
   direction vectors across later minimize calls, while copying all current
