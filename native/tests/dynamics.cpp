@@ -864,6 +864,12 @@ void test_cpu_persistent_vector_scratch() {
         assert(initial_direction.x.capacity() == 0U);
         assert(initial_direction.y.capacity() == 0U);
         assert(initial_direction.z.capacity() == 0U);
+        assert(
+            handles.simulation->constraint_projection_magnitude_scratch
+                .empty());
+        assert(
+            handles.simulation->constraint_projection_magnitude_scratch
+                .capacity() == 0U);
         assert(!handles.simulation->minimizer_candidate_scratch_initialized);
 
         bg_minimizer_options_v1 options;
@@ -970,6 +976,89 @@ void test_cpu_persistent_vector_scratch() {
         assert(system_storage_addresses(
                    handles.simulation->minimizer_candidate_scratch) ==
                candidate_addresses);
+        assert(
+            handles.simulation->constraint_projection_magnitude_scratch
+                .empty());
+
+        NativeHandles constrained;
+        constrained.context = make_context(backend);
+        constrained.system = make_system(
+            {-0.8, 0.8}, {0.0, 0.0}, {0.0, 0.0},
+            {0.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}, {1.0, 3.0});
+        constrained.forcefield = make_forcefield(2U, 1.0, 20.0, false);
+        const uint64_t constrained_atom_i = UINT64_C(0);
+        const uint64_t constrained_atom_j = UINT64_C(1);
+        const double constrained_target = 1.0;
+        bg_distance_constraints_v1 constrained_rows;
+        assert(bg_distance_constraints_v1_init(&constrained_rows) ==
+               BG_STATUS_OK);
+        constrained_rows.constraint_count = UINT64_C(1);
+        constrained_rows.atom_i = &constrained_atom_i;
+        constrained_rows.atom_j = &constrained_atom_j;
+        constrained_rows.distance_angstrom = &constrained_target;
+        constrained_rows.max_iterations = UINT32_C(100);
+        constrained.simulation = make_simulation(
+            constrained.system,
+            constrained.forcefield,
+            BG_INTEGRATOR_VELOCITY_VERLET,
+            0.1,
+            0.0,
+            0.0,
+            UINT64_C(0),
+            &constrained_rows);
+        assert(
+            constrained.simulation->constraint_projection_magnitude_scratch
+                .empty());
+
+        options.max_iterations = UINT64_C(1);
+        options.force_tolerance_kcal_per_mol_angstrom =
+            std::numeric_limits<double>::max();
+        assert(bg_minimization_report_v1_init(&report) == BG_STATUS_OK);
+        assert(bg_context_minimize(
+                   constrained.context,
+                   constrained.simulation,
+                   &options,
+                   &report) == BG_STATUS_OK);
+        assert(report.converged == UINT32_C(1));
+        const std::vector<double> &magnitude_scratch =
+            constrained.simulation
+                ->constraint_projection_magnitude_scratch;
+        assert(magnitude_scratch.size() == 2U);
+        const double *const magnitude_storage = magnitude_scratch.data();
+        assert(magnitude_storage != nullptr);
+
+        assert(bg_minimization_report_v1_init(&report) == BG_STATUS_OK);
+        assert(bg_context_minimize(
+                   constrained.context,
+                   constrained.simulation,
+                   &options,
+                   &report) == BG_STATUS_OK);
+        assert(
+            constrained.simulation
+                ->constraint_projection_magnitude_scratch.data() ==
+            magnitude_storage);
+
+        uint64_t constraint_checkpoint_size = UINT64_C(0);
+        assert(bg_simulation_checkpoint_size(
+                   constrained.simulation,
+                   &constraint_checkpoint_size) == BG_STATUS_OK);
+        std::vector<uint8_t> constraint_checkpoint(
+            static_cast<std::size_t>(constraint_checkpoint_size));
+        uint64_t constraint_checkpoint_written = UINT64_C(0);
+        assert(bg_simulation_checkpoint_write(
+                   constrained.simulation,
+                   constraint_checkpoint.data(),
+                   constraint_checkpoint_size,
+                   &constraint_checkpoint_written) == BG_STATUS_OK);
+        assert(constraint_checkpoint_written == constraint_checkpoint_size);
+        assert(bg_simulation_checkpoint_load(
+                   constrained.simulation,
+                   constraint_checkpoint.data(),
+                   constraint_checkpoint_size) == BG_STATUS_OK);
+        assert(
+            constrained.simulation
+                ->constraint_projection_magnitude_scratch.data() ==
+            magnitude_storage);
     }
 }
 

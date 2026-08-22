@@ -104,7 +104,10 @@ The current `main` branch contains:
   evaluations and later transactional integrate or minimize calls; zero-step
   integration does not initialize it, checkpoint and semantic rollback exclude
   it as derived scratch, and an internal evaluation failure may consume only
-  that scratch.
+  that scratch. Constrained CPU minimization caches one projected-force norm per
+  atom so corrected endpoint tolerances and the final maximum reuse identical
+  binary64 `hypot` results; unconstrained and HIP calls do not consume this
+  persistent vector.
   Public stateless evaluation, HIP evaluation, and semantic commit behavior
   remain unchanged. The CPU minimizer also retains its projected-force
   direction vectors across later minimize calls, while copying all current
