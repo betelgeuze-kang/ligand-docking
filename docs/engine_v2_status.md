@@ -85,24 +85,26 @@ The current `main` branch contains:
   further successor retains a `Simulation`-owned canonical pair slice with a
   1.0 angstrom skin while all per-atom build-reference displacements remain
   strictly below 0.5 angstrom. Failed operations do not commit cache changes,
-  transaction clones share the immutable cached atom/pair payload instead of
+  rollback snapshots share the immutable cached atom/pair payload instead of
   deep-copying it, and successful checkpoint loads invalidate this unpersisted
   derived state. Periodic CPU neighbor rebuilds retain four simulation-owned
   cell-list scratch buffers across rebuilds without changing immutable pair
   publication or semantic cache rollback. CPU dynamics additionally retain
-  work-local force-vector
+  operation-local force-vector
   storage across repeated force evaluations within one transactional integrate
   or minimize call; public stateless evaluation, HIP evaluation, and failure
   commit semantics remain unchanged. Unconstrained drifts avoid unnecessary
   coordinate snapshots, while constrained integration retains one work-local
   three-channel snapshot buffer across all drifts in the call. No timing claim
-  is made. The CPU minimizer similarly retains one work-local candidate system
-  and swaps only accepted position buffers, avoiding a complete system copy for
-  every bounded Armijo attempt while preserving exact accepted-state and
-  transaction semantics. Integration calls operate in place behind a six-channel
-  RAII rollback (or metadata-only rollback for zero steps), so immutable
-  mass/charge, force-field, constraint, and integrator state are not copied and
-  borrowed particle-view addresses remain stable on both success and failure.
+  is made. The CPU minimizer similarly retains one operation-local candidate
+  system and swaps only accepted position buffers, avoiding a complete system
+  copy for every bounded Armijo attempt while preserving exact accepted-state
+  and transaction semantics. Integration and minimization calls operate in
+  place behind a six-channel RAII rollback (or metadata-only rollback for zero
+  integration steps), so immutable mass/charge, force-field, constraint, and
+  integrator state are not copied. A minimizer position-storage guard restores
+  the original buffers before return, keeping borrowed particle-view addresses
+  stable on both success and failure.
   The entry point is CPU-only and has no PME, neighbor-list performance
   evidence, general ion preparation, protein, production-MD, scientific,
   free-energy, benchmark, product, Stage 0, or performance authority;
