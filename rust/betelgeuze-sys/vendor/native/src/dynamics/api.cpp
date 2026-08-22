@@ -661,6 +661,7 @@ extern "C" BG_API bg_status BG_CALL bg_simulation_create(
             simulation->constraint_velocity_tolerance = 0.0;
             simulation->constraint_max_iterations = UINT32_C(0);
         }
+        initialize_integrator_coefficients(simulation.get());
         status = initialize_constraints(simulation.get());
         if (status != BG_STATUS_OK) {
             return status;

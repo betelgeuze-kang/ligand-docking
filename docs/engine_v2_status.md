@@ -113,7 +113,12 @@ The current `main` branch contains:
   displacement norm for both position and radial-velocity residuals. Each
   constraint additionally retains its exact immutable inverse masses and their
   sum so SHAKE/RATTLE correction sweeps do not repeat those divisions; this
-  derived state is excluded from checkpoint bytes and static identity.
+  derived state is excluded from checkpoint bytes and static identity. BAOAB
+  simulations similarly retain the exact immutable Ornstein-Uhlenbeck decay,
+  variance factor, and atom-specific standard deviations derived at creation,
+  eliminating repeated `exp`, `expm1`, division, and square-root work while
+  preserving the frozen binary64 updates; Velocity Verlet does not allocate
+  that atom-specific cache.
   Public stateless evaluation, HIP evaluation, and semantic commit behavior
   remain unchanged. The CPU minimizer also retains its projected-force
   direction vectors across later minimize calls, while copying all current
