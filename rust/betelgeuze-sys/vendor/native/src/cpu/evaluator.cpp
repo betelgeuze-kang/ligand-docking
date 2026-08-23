@@ -798,9 +798,12 @@ bg_status evaluate_nonbonded_pair(
     const double lennard_jones =
         4.0 * epsilon * (ratio12 - ratio6) * scales.lennard_jones;
 
+    const double screening =
+        forcefield.screening_kappa == 0.0
+            ? 1.0
+            : std::exp(-forcefield.screening_kappa * distance);
     const double screened_charge =
-        system.charge[atom_i] * system.charge[atom_j] *
-        std::exp(-forcefield.screening_kappa * distance);
+        system.charge[atom_i] * system.charge[atom_j] * screening;
     const double coulomb =
         BG_COULOMB_CONSTANT_KCAL_ANGSTROM_PER_MOL_E2 * screened_charge /
         (forcefield.dielectric * distance) * scales.coulomb;
