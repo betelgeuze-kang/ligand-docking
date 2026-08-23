@@ -826,8 +826,9 @@ fn periodic_neighbor_pairs(
                     .filter(|atom_j| *atom_j > atom_i),
             );
         }
+        // Every atom has exactly one assignment and neighbor_keys is unique,
+        // so candidates is already duplicate-free. Sort only for pair order.
         candidates.sort_unstable();
-        candidates.dedup();
         for atom_j in candidates.iter().copied() {
             let squared_distance = displacement(system, forcefield, atom_i, atom_j)?.squared_norm();
             if squared_distance <= search_radius_squared {
