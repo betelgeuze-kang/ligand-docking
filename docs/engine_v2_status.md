@@ -139,8 +139,8 @@ The current `main` branch contains:
   integration steps), so immutable mass/charge, force-field, constraint, and
   integrator state are not copied. The simulation retains those six rollback
   vector allocations across later nonzero calls, while checkpoint validation
-  excludes this derived scratch from its transaction candidate. Constrained
-  periodic Rust CPU dynamics also retains a one-byte derived immutable-
+  excludes this derived scratch from its transaction candidate. Periodic Rust
+  CPU dynamics also retains a one-byte derived immutable-
   force-field validation state: the first successful supplied-neighbor force
   evaluation performs the full Rust provider scan, while later calls continue
   to validate descriptor structure and all dynamic position/charge channels
