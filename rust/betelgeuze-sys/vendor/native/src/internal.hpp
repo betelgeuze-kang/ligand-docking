@@ -375,6 +375,7 @@ struct bg_simulation final {
     NeighborListCache neighbor_list_cache;
     DynamicStateScratch dynamic_state_scratch;
     ParticleVectorScratch force_evaluation_scratch;
+    uint8_t rust_cpu_forcefield_validated = UINT8_C(0);
     ParticleVectorScratch minimizer_direction_scratch;
     std::vector<double> constraint_projection_magnitude_scratch;
     bg_system minimizer_candidate_scratch;

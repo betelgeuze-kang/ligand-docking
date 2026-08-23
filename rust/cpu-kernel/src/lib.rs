@@ -659,9 +659,10 @@ fn validate_pair_scale_order(scales: &[PairScale], atom_count: usize) -> Result<
     Ok(())
 }
 
-unsafe fn build_inputs<'a>(
+unsafe fn build_inputs_impl<'a>(
     system: &'a SystemV1,
     forcefield: &'a ForceFieldV1,
+    validate_immutable_forcefield: bool,
 ) -> Result<(System<'a>, ForceField<'a>), ProviderError> {
     validate_header::<SystemV1>(
         system.struct_size,
@@ -829,131 +830,137 @@ unsafe fn build_inputs<'a>(
         )?
     };
 
-    for values in [position_x, position_y, position_z, charge, sigma, epsilon] {
+    for values in [position_x, position_y, position_z, charge] {
         validate_finite(values, "rust_cpu atom channel contains a non-finite value")?;
     }
-    if sigma.iter().any(|value| *value <= 0.0) || epsilon.iter().any(|value| *value < 0.0) {
-        return Err(ProviderError::invalid(
-            "rust_cpu sigma must be positive and epsilon non-negative",
-        ));
-    }
-    for index in bonds
-        .atom_i
-        .iter()
-        .chain(bonds.atom_j)
-        .chain(angles.atom_i)
-        .chain(angles.atom_j)
-        .chain(angles.atom_k)
-        .chain(torsions.atom_i)
-        .chain(torsions.atom_j)
-        .chain(torsions.atom_k)
-        .chain(torsions.atom_l)
-    {
-        if *index >= atom_count {
+    if validate_immutable_forcefield {
+        for values in [sigma, epsilon] {
+            validate_finite(values, "rust_cpu atom channel contains a non-finite value")?;
+        }
+        if sigma.iter().any(|value| *value <= 0.0) || epsilon.iter().any(|value| *value < 0.0) {
             return Err(ProviderError::invalid(
-                "rust_cpu bonded atom index is out of range",
+                "rust_cpu sigma must be positive and epsilon non-negative",
             ));
         }
-    }
-    for values in [
-        bonds.equilibrium,
-        bonds.force_constant,
-        angles.equilibrium,
-        angles.force_constant,
-        torsions.phase,
-        torsions.amplitude,
-    ] {
-        validate_finite(values, "rust_cpu bonded parameter is not finite")?;
-    }
-    for row in 0..bonds.atom_i.len() {
-        if bonds.atom_i[row] == bonds.atom_j[row]
-            || bonds.equilibrium[row] <= 0.0
-            || bonds.force_constant[row] <= 0.0
+        for index in bonds
+            .atom_i
+            .iter()
+            .chain(bonds.atom_j)
+            .chain(angles.atom_i)
+            .chain(angles.atom_j)
+            .chain(angles.atom_k)
+            .chain(torsions.atom_i)
+            .chain(torsions.atom_j)
+            .chain(torsions.atom_k)
+            .chain(torsions.atom_l)
+        {
+            if *index >= atom_count {
+                return Err(ProviderError::invalid(
+                    "rust_cpu bonded atom index is out of range",
+                ));
+            }
+        }
+        for values in [
+            bonds.equilibrium,
+            bonds.force_constant,
+            angles.equilibrium,
+            angles.force_constant,
+            torsions.phase,
+            torsions.amplitude,
+        ] {
+            validate_finite(values, "rust_cpu bonded parameter is not finite")?;
+        }
+        for row in 0..bonds.atom_i.len() {
+            if bonds.atom_i[row] == bonds.atom_j[row]
+                || bonds.equilibrium[row] <= 0.0
+                || bonds.force_constant[row] <= 0.0
+            {
+                return Err(ProviderError::invalid(
+                    "rust_cpu bond indices and parameters are invalid",
+                ));
+            }
+        }
+        for row in 0..angles.atom_i.len() {
+            let atom_i = angles.atom_i[row];
+            let atom_j = angles.atom_j[row];
+            let atom_k = angles.atom_k[row];
+            if atom_i == atom_j
+                || atom_i == atom_k
+                || atom_j == atom_k
+                || angles.equilibrium[row] <= 0.0
+                || angles.equilibrium[row] >= core::f64::consts::PI
+                || angles.force_constant[row] <= 0.0
+            {
+                return Err(ProviderError::invalid(
+                    "rust_cpu angle indices and parameters are invalid",
+                ));
+            }
+        }
+        for row in 0..torsions.atom_i.len() {
+            let indices = [
+                torsions.atom_i[row],
+                torsions.atom_j[row],
+                torsions.atom_k[row],
+                torsions.atom_l[row],
+            ];
+            let indices_are_distinct = (0..indices.len()).all(|left| {
+                ((left + 1)..indices.len()).all(|right| indices[left] != indices[right])
+            });
+            if !indices_are_distinct
+                || !(1..=12).contains(&torsions.periodicity[row])
+                || torsions.amplitude[row] < 0.0
+            {
+                return Err(ProviderError::invalid(
+                    "rust_cpu torsion indices and parameters are invalid",
+                ));
+            }
+        }
+        validate_pair_order(exclusions, atom_count)?;
+        validate_pair_scale_order(pair_scales, atom_count)?;
+        for scale in pair_scales {
+            if !(0.0..=1.0).contains(&scale.lennard_jones)
+                || !(0.0..=1.0).contains(&scale.coulomb)
+                || exclusions
+                    .binary_search_by_key(&(scale.atom_i, scale.atom_j), |pair| {
+                        (pair.atom_i, pair.atom_j)
+                    })
+                    .is_ok()
+            {
+                return Err(ProviderError::invalid(
+                    "rust_cpu pair scale is out of range or conflicts with an exclusion",
+                ));
+            }
+        }
+        if forcefield.periodic_axes_mask & !7_u32 != 0
+            || !forcefield.cutoff.is_finite()
+            || forcefield.cutoff <= 0.0
+            || !forcefield.switch_start.is_finite()
+            || forcefield.switch_start < 0.0
+            || forcefield.switch_start >= forcefield.cutoff
+            || !forcefield.dielectric.is_finite()
+            || forcefield.dielectric <= 0.0
+            || !forcefield.screening_kappa.is_finite()
+            || forcefield.screening_kappa < 0.0
+            || !forcefield.minimum_pair_distance.is_finite()
+            || forcefield.minimum_pair_distance <= 0.0
         {
             return Err(ProviderError::invalid(
-                "rust_cpu bond indices and parameters are invalid",
+                "rust_cpu nonbonded settings are invalid",
             ));
         }
-    }
-    for row in 0..angles.atom_i.len() {
-        let atom_i = angles.atom_i[row];
-        let atom_j = angles.atom_j[row];
-        let atom_k = angles.atom_k[row];
-        if atom_i == atom_j
-            || atom_i == atom_k
-            || atom_j == atom_k
-            || angles.equilibrium[row] <= 0.0
-            || angles.equilibrium[row] >= core::f64::consts::PI
-            || angles.force_constant[row] <= 0.0
-        {
-            return Err(ProviderError::invalid(
-                "rust_cpu angle indices and parameters are invalid",
-            ));
-        }
-    }
-    for row in 0..torsions.atom_i.len() {
-        let indices = [
-            torsions.atom_i[row],
-            torsions.atom_j[row],
-            torsions.atom_k[row],
-            torsions.atom_l[row],
-        ];
-        let indices_are_distinct = (0..indices.len())
-            .all(|left| ((left + 1)..indices.len()).all(|right| indices[left] != indices[right]));
-        if !indices_are_distinct
-            || !(1..=12).contains(&torsions.periodicity[row])
-            || torsions.amplitude[row] < 0.0
-        {
-            return Err(ProviderError::invalid(
-                "rust_cpu torsion indices and parameters are invalid",
-            ));
-        }
-    }
-    validate_pair_order(exclusions, atom_count)?;
-    validate_pair_scale_order(pair_scales, atom_count)?;
-    for scale in pair_scales {
-        if !(0.0..=1.0).contains(&scale.lennard_jones)
-            || !(0.0..=1.0).contains(&scale.coulomb)
-            || exclusions
-                .binary_search_by_key(&(scale.atom_i, scale.atom_j), |pair| {
-                    (pair.atom_i, pair.atom_j)
-                })
-                .is_ok()
-        {
-            return Err(ProviderError::invalid(
-                "rust_cpu pair scale is out of range or conflicts with an exclusion",
-            ));
-        }
-    }
-    if forcefield.periodic_axes_mask & !7_u32 != 0
-        || !forcefield.cutoff.is_finite()
-        || forcefield.cutoff <= 0.0
-        || !forcefield.switch_start.is_finite()
-        || forcefield.switch_start < 0.0
-        || forcefield.switch_start >= forcefield.cutoff
-        || !forcefield.dielectric.is_finite()
-        || forcefield.dielectric <= 0.0
-        || !forcefield.screening_kappa.is_finite()
-        || forcefield.screening_kappa < 0.0
-        || !forcefield.minimum_pair_distance.is_finite()
-        || forcefield.minimum_pair_distance <= 0.0
-    {
-        return Err(ProviderError::invalid(
-            "rust_cpu nonbonded settings are invalid",
-        ));
-    }
-    let has_periodic_axis = forcefield.periodic_axes_mask != 0;
-    let nonperiodic_lengths_are_all_zero =
-        forcefield.cell_lengths.iter().all(|length| *length == 0.0);
-    for axis in 0..3 {
-        let length = forcefield.cell_lengths[axis];
-        let length_must_be_positive = has_periodic_axis || !nonperiodic_lengths_are_all_zero;
-        if !length.is_finite()
-            || (length_must_be_positive && length <= 0.0)
-            || (forcefield.periodic_axes_mask & (1_u32 << axis) != 0
-                && forcefield.cutoff >= 0.5 * length)
-        {
-            return Err(ProviderError::invalid("rust_cpu periodic cell is invalid"));
+        let has_periodic_axis = forcefield.periodic_axes_mask != 0;
+        let nonperiodic_lengths_are_all_zero =
+            forcefield.cell_lengths.iter().all(|length| *length == 0.0);
+        for axis in 0..3 {
+            let length = forcefield.cell_lengths[axis];
+            let length_must_be_positive = has_periodic_axis || !nonperiodic_lengths_are_all_zero;
+            if !length.is_finite()
+                || (length_must_be_positive && length <= 0.0)
+                || (forcefield.periodic_axes_mask & (1_u32 << axis) != 0
+                    && forcefield.cutoff >= 0.5 * length)
+            {
+                return Err(ProviderError::invalid("rust_cpu periodic cell is invalid"));
+            }
         }
     }
 
@@ -982,6 +989,13 @@ unsafe fn build_inputs<'a>(
             minimum_pair_distance: forcefield.minimum_pair_distance,
         },
     ))
+}
+
+unsafe fn build_inputs<'a>(
+    system: &'a SystemV1,
+    forcefield: &'a ForceFieldV1,
+) -> Result<(System<'a>, ForceField<'a>), ProviderError> {
+    unsafe { build_inputs_impl(system, forcefield, true) }
 }
 
 unsafe fn validate_outputs<'a>(
@@ -2897,6 +2911,7 @@ unsafe fn evaluate_with_neighbor_pairs_reusing_force_output_impl(
     system: *const SystemV1,
     forcefield: *const ForceFieldV1,
     neighbor_pairs: &[Pair],
+    inout_forcefield_validated: *mut u8,
     out_energy: *mut EnergyV1,
     out_forces: *mut ForceOutputV1,
 ) -> Result<(), ProviderError> {
@@ -2910,6 +2925,16 @@ unsafe fn evaluate_with_neighbor_pairs_reusing_force_output_impl(
             .as_ref()
             .ok_or_else(|| ProviderError::invalid("force-field descriptor is null"))?
     };
+    let forcefield_validated = unsafe {
+        inout_forcefield_validated
+            .as_mut()
+            .ok_or_else(|| ProviderError::invalid("force-field validation state is null"))?
+    };
+    if *forcefield_validated > 1 {
+        return Err(ProviderError::invalid(
+            "force-field validation state must be exactly zero or one",
+        ));
+    }
     // This internal dynamics route deliberately writes directly into disposable
     // caller-owned force storage. Descriptor, capacity, and alias validation
     // still complete before the first force write; energy remains transactional.
@@ -2920,7 +2945,9 @@ unsafe fn evaluate_with_neighbor_pairs_reusing_force_output_impl(
                 message: "rust_cpu force output validation changed internally",
             },
         )?;
-    let (system, forcefield) = unsafe { build_inputs(system, forcefield)? };
+    let validate_immutable_forcefield = *forcefield_validated == 0;
+    let (system, forcefield) =
+        unsafe { build_inputs_impl(system, forcefield, validate_immutable_forcefield)? };
     let energy = kernel::evaluate_with_neighbor_pairs_into(
         &system,
         &forcefield,
@@ -2943,6 +2970,10 @@ unsafe fn evaluate_with_neighbor_pairs_reusing_force_output_impl(
         total: energy.total,
         reserved: [0; 4],
     };
+    // The C++ simulation owns an immutable force field. Once a successful
+    // dynamics evaluation has validated it, later evaluations only need to
+    // validate the dynamic system channels and structural descriptor shape.
+    *forcefield_validated = 1;
     // SAFETY: Output identity was validated and energy is committed only after
     // the direct force evaluation succeeds.
     unsafe { ptr::write(out_energy, energy) };
@@ -3090,12 +3121,16 @@ pub unsafe extern "C" fn bg_rust_cpu_evaluate_with_neighbor_pairs_v1(
 ///
 /// # Safety
 /// The base evaluator and caller-owned neighbor-pair safety contracts apply.
+/// `inout_forcefield_validated` must point to a live byte initialized to zero.
+/// Once this function writes one, the force-field descriptor and every channel
+/// it references must remain immutable and live for every call using that byte.
 #[no_mangle]
 pub unsafe extern "C" fn bg_rust_cpu_evaluate_with_neighbor_pairs_reusing_force_output_v1(
     system: *const SystemV1,
     forcefield: *const ForceFieldV1,
     neighbor_pair_count: usize,
     neighbor_pairs: *const Pair,
+    inout_forcefield_validated: *mut u8,
     out_energy: *mut EnergyV1,
     out_forces: *mut ForceOutputV1,
     out_error: *mut ErrorV1,
@@ -3132,7 +3167,12 @@ pub unsafe extern "C" fn bg_rust_cpu_evaluate_with_neighbor_pairs_reusing_force_
     };
     let result = catch_unwind(AssertUnwindSafe(|| unsafe {
         evaluate_with_neighbor_pairs_reusing_force_output_impl(
-            system, forcefield, pairs, out_energy, out_forces,
+            system,
+            forcefield,
+            pairs,
+            inout_forcefield_validated,
+            out_energy,
+            out_forces,
         )
     }));
     match result {
@@ -3987,7 +4027,7 @@ mod tests {
         let position_y = [0.0; 2];
         let position_z = [0.0; 2];
         let charge = [0.3, -0.4];
-        let sigma = [1.0; 2];
+        let mut sigma = [1.0; 2];
         let epsilon = [0.05; 2];
         let system = SystemV1 {
             struct_size: u32::try_from(size_of::<SystemV1>()).unwrap(),
@@ -4146,6 +4186,32 @@ mod tests {
             z: direct_z.as_mut_ptr(),
             reserved: [0; 4],
         };
+        let mut forcefield_validated = 0_u8;
+        sigma[0] = f64::NAN;
+        // SAFETY: All pointer ranges are valid. The first use of a zero state
+        // must fully validate the immutable force field before output mutation.
+        assert_eq!(
+            unsafe {
+                bg_rust_cpu_evaluate_with_neighbor_pairs_reusing_force_output_v1(
+                    &system,
+                    &forcefield,
+                    pairs.len(),
+                    pairs.as_ptr(),
+                    &mut forcefield_validated,
+                    &mut direct_energy,
+                    &mut direct_forces,
+                    &mut error,
+                )
+            },
+            STATUS_INVALID_ARGUMENT
+        );
+        assert_eq!(forcefield_validated, 0);
+        assert_eq!(direct_energy.total, 47.0);
+        assert_eq!(direct_x, [53.0; 2]);
+        assert_eq!(direct_y, [59.0; 2]);
+        assert_eq!(direct_z, [61.0; 2]);
+        sigma[0] = 1.0;
+        assert_eq!(sigma[0], 1.0);
         // SAFETY: The reusable output channels and canonical pair are live,
         // correctly sized, and disjoint.
         assert_eq!(
@@ -4155,6 +4221,7 @@ mod tests {
                     &forcefield,
                     pairs.len(),
                     pairs.as_ptr(),
+                    &mut forcefield_validated,
                     &mut direct_energy,
                     &mut direct_forces,
                     &mut error,
@@ -4162,6 +4229,7 @@ mod tests {
             },
             STATUS_OK
         );
+        assert_eq!(forcefield_validated, 1);
         for (left, right) in [
             (supplied_energy.harmonic_bond, direct_energy.harmonic_bond),
             (supplied_energy.harmonic_angle, direct_energy.harmonic_angle),
@@ -4216,6 +4284,7 @@ mod tests {
                     &forcefield,
                     duplicate.len(),
                     duplicate.as_ptr(),
+                    &mut forcefield_validated,
                     &mut direct_energy,
                     &mut direct_forces,
                     &mut error,
@@ -4227,6 +4296,30 @@ mod tests {
         assert_eq!(direct_x, [0.0; 2]);
         assert_eq!(direct_y, [0.0; 2]);
         assert_eq!(direct_z, [0.0; 2]);
+        assert_eq!(forcefield_validated, 1);
+
+        forcefield_validated = 2;
+        // SAFETY: All pointer ranges remain valid; the deliberately malformed
+        // derived validation state must be rejected before output mutation.
+        assert_eq!(
+            unsafe {
+                bg_rust_cpu_evaluate_with_neighbor_pairs_reusing_force_output_v1(
+                    &system,
+                    &forcefield,
+                    pairs.len(),
+                    pairs.as_ptr(),
+                    &mut forcefield_validated,
+                    &mut direct_energy,
+                    &mut direct_forces,
+                    &mut error,
+                )
+            },
+            STATUS_INVALID_ARGUMENT
+        );
+        assert_eq!(
+            error_message(&error),
+            "force-field validation state must be exactly zero or one"
+        );
     }
 
     #[test]
