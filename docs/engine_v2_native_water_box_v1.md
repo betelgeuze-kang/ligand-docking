@@ -132,22 +132,24 @@ minimize calls. Zero-step integration does not consume or initialize this
 storage. The scratch is derived state excluded from checkpoint bytes and
 semantic rollback; an internal evaluation failure may consume its contents or
 capacity. The public stateless evaluator remains transactional, C++ reference
-and Rust CPU use the same lifetime rule, and HIP evaluation is unchanged. This
-structural allocation reuse carries no measured timing evidence or acceleration
-claim.
+and Rust CPU use the same lifetime rule, and HIP evaluation is unchanged. Both
+the supplied-neighbor periodic and automatic-pair non-fully-periodic Rust CPU
+dynamics paths write directly into this caller-owned storage, avoiding three
+temporary Rust force-vector allocations and three complete channel copies per
+force evaluation. This structural allocation reuse carries no measured timing
+evidence or acceleration claim.
 
-Periodic Rust CPU dynamics additionally retains a one-byte derived validation
-state for the simulation-owned immutable force field. Its first successful
-supplied-neighbor force evaluation performs the complete Rust provider scan of
-atom parameters, bonded rows, pair rules, and nonbonded settings. Later calls
-still validate descriptor shape plus every dynamic position and charge value,
-but do not rescan those immutable force-field channels. Only the internal
-reusable-force entry point can consume this state: zero triggers full
-validation, one permits immutable-scan reuse, and every other value fails
-closed. The public stateless evaluator continues to perform complete validation
-on every call. The state is excluded from
-checkpoint bytes and semantic rollback, and it carries no timing evidence or
-performance claim.
+Rust CPU dynamics additionally retains a one-byte derived validation state for
+the simulation-owned immutable force field. Its first successful reusable-force
+evaluation performs the complete Rust provider scan of atom parameters, bonded
+rows, pair rules, and nonbonded settings. Later calls still validate descriptor
+shape plus every dynamic position and charge value, but do not rescan those
+immutable force-field channels. Only the internal reusable-force entry points
+can consume this state: zero triggers full validation, one permits immutable-
+scan reuse, and every other value fails closed. The public stateless evaluator
+continues to perform complete validation on every call. The state is excluded
+from checkpoint bytes and semantic rollback, and it carries no timing evidence
+or performance claim.
 
 Constrained CPU minimization also retains one per-atom projected-force
 magnitude vector. A projection sweep computes each atom norm once per distinct

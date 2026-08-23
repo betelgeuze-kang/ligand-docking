@@ -139,15 +139,18 @@ The current `main` branch contains:
   integration steps), so immutable mass/charge, force-field, constraint, and
   integrator state are not copied. The simulation retains those six rollback
   vector allocations across later nonzero calls, while checkpoint validation
-  excludes this derived scratch from its transaction candidate. Periodic Rust
-  CPU dynamics also retains a one-byte derived immutable-
-  force-field validation state: the first successful supplied-neighbor force
-  evaluation performs the full Rust provider scan, while later calls continue
-  to validate descriptor structure and all dynamic position/charge channels
-  without rescanning immutable atom parameters, bonded rows, pair rules, or
-  nonbonded settings. Malformed state fails closed, public stateless evaluation
-  still performs complete validation every call, and checkpoint bytes and
-  semantic rollback exclude the state. Constrained
+  excludes this derived scratch from its transaction candidate. Rust CPU
+  dynamics writes both supplied-neighbor periodic and automatic-pair non-fully-
+  periodic forces directly into the reusable caller-owned channels, avoiding
+  three temporary Rust force-vector allocations and three complete channel
+  copies per force evaluation. It also retains a one-byte derived immutable-
+  force-field validation state: the first successful reusable-force evaluation
+  performs the full Rust provider scan, while later calls continue to validate
+  descriptor structure and all dynamic position/charge channels without
+  rescanning immutable atom parameters, bonded rows, pair rules, or nonbonded
+  settings. Malformed state fails closed, public stateless evaluation still
+  performs complete validation every call, and checkpoint bytes and semantic
+  rollback exclude the state. Constrained
   simulations also retain the Gram-matrix and normalized-direction buffers
   used by constraint-Jacobian independence validation across creation,
   integration, minimization, and checkpoint loads; failed validation may alter

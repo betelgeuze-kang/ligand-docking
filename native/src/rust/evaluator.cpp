@@ -144,8 +144,7 @@ bg_status evaluate_impl(
         forcefield.minimum_pair_distance;
 
     cpu::Evaluation candidate;
-    const bool direct_force_output =
-        reuse_force_storage && compute_forces && neighbor_pairs != nullptr;
+    const bool direct_force_output = reuse_force_storage && compute_forces;
     if (direct_force_output && inout_forcefield_validated == nullptr) {
         return fail(
             BG_STATUS_INTERNAL_ERROR,
@@ -183,7 +182,7 @@ bg_status evaluate_impl(
     provider_error.abi_version = BG_RUST_CPU_PROVIDER_ABI_VERSION;
 
     int32_t raw_status = BG_STATUS_INTERNAL_ERROR;
-    if (direct_force_output) {
+    if (direct_force_output && neighbor_pairs != nullptr) {
         raw_status =
             bg_rust_cpu_evaluate_with_neighbor_pairs_reusing_force_output_v1(
                 &provider_system,
@@ -195,6 +194,14 @@ bg_status evaluate_impl(
                 &provider_energy,
                 &provider_forces,
                 &provider_error);
+    } else if (direct_force_output) {
+        raw_status = bg_rust_cpu_evaluate_reusing_force_output_v1(
+            &provider_system,
+            &provider_forcefield,
+            inout_forcefield_validated,
+            &provider_energy,
+            &provider_forces,
+            &provider_error);
     } else if (neighbor_pairs == nullptr) {
         raw_status = bg_rust_cpu_evaluate_v1(
             &provider_system,
@@ -261,6 +268,7 @@ bg_status evaluate_reusing_force_storage(
     const bg_system &system,
     const bg_forcefield &forcefield,
     bool compute_forces,
+    uint8_t *inout_forcefield_validated,
     cpu::Evaluation *out_evaluation) {
     // Dynamics owns a disposable work simulation, so it may trade the public
     // evaluator's failure transactionality for retaining force-vector capacity.
@@ -270,7 +278,7 @@ bg_status evaluate_reusing_force_storage(
         nullptr,
         compute_forces,
         true,
-        nullptr,
+        inout_forcefield_validated,
         out_evaluation);
 }
 

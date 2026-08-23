@@ -2907,10 +2907,10 @@ unsafe fn evaluate_impl(
     Ok(())
 }
 
-unsafe fn evaluate_with_neighbor_pairs_reusing_force_output_impl(
+unsafe fn evaluate_reusing_force_output_impl(
     system: *const SystemV1,
     forcefield: *const ForceFieldV1,
-    neighbor_pairs: &[Pair],
+    neighbor_pairs: Option<&[Pair]>,
     inout_forcefield_validated: *mut u8,
     out_energy: *mut EnergyV1,
     out_forces: *mut ForceOutputV1,
@@ -2948,12 +2948,12 @@ unsafe fn evaluate_with_neighbor_pairs_reusing_force_output_impl(
     let validate_immutable_forcefield = *forcefield_validated == 0;
     let (system, forcefield) =
         unsafe { build_inputs_impl(system, forcefield, validate_immutable_forcefield)? };
-    let energy = kernel::evaluate_with_neighbor_pairs_into(
-        &system,
-        &forcefield,
-        neighbor_pairs,
-        output_channels,
-    )
+    let energy = match neighbor_pairs {
+        Some(pairs) => {
+            kernel::evaluate_with_neighbor_pairs_into(&system, &forcefield, pairs, output_channels)
+        }
+        None => kernel::evaluate_into(&system, &forcefield, output_channels),
+    }
     .map_err(|error| ProviderError {
         status: error.status,
         message: error.message,
@@ -3114,6 +3114,65 @@ pub unsafe extern "C" fn bg_rust_cpu_evaluate_with_neighbor_pairs_v1(
     }
 }
 
+/// Evaluate directly into reusable force storage.
+///
+/// This hidden dynamics-only entry point may modify force channels when the
+/// scientific evaluation fails. Energy is committed only on success.
+///
+/// # Safety
+/// The base evaluator safety contract applies. `inout_forcefield_validated`
+/// must point to a live byte initialized to zero. Once this function writes
+/// one, the force-field descriptor and every channel it references must remain
+/// immutable and live for every call using that byte.
+#[no_mangle]
+pub unsafe extern "C" fn bg_rust_cpu_evaluate_reusing_force_output_v1(
+    system: *const SystemV1,
+    forcefield: *const ForceFieldV1,
+    inout_forcefield_validated: *mut u8,
+    out_energy: *mut EnergyV1,
+    out_forces: *mut ForceOutputV1,
+    out_error: *mut ErrorV1,
+) -> i32 {
+    let error = unsafe {
+        match out_error.as_mut() {
+            Some(error) => error,
+            None => return STATUS_INVALID_ARGUMENT,
+        }
+    };
+    if validate_header::<ErrorV1>(
+        error.struct_size,
+        error.abi_version,
+        "rust_cpu error output size mismatch",
+    )
+    .is_err()
+        || !reserved_is_zero(&error.reserved)
+    {
+        return STATUS_ABI_MISMATCH;
+    }
+    clear_error(error);
+    let result = catch_unwind(AssertUnwindSafe(|| unsafe {
+        evaluate_reusing_force_output_impl(
+            system,
+            forcefield,
+            None,
+            inout_forcefield_validated,
+            out_energy,
+            out_forces,
+        )
+    }));
+    match result {
+        Ok(Ok(())) => STATUS_OK,
+        Ok(Err(provider_error)) => {
+            write_error(error, provider_error.message);
+            provider_error.status
+        }
+        Err(_) => {
+            write_error(error, "rust_cpu provider panicked");
+            STATUS_INTERNAL_ERROR
+        }
+    }
+}
+
 /// Evaluate canonical neighbor pairs directly into reusable force storage.
 ///
 /// This hidden dynamics-only entry point may modify force channels when the
@@ -3166,10 +3225,10 @@ pub unsafe extern "C" fn bg_rust_cpu_evaluate_with_neighbor_pairs_reusing_force_
         }
     };
     let result = catch_unwind(AssertUnwindSafe(|| unsafe {
-        evaluate_with_neighbor_pairs_reusing_force_output_impl(
+        evaluate_reusing_force_output_impl(
             system,
             forcefield,
-            pairs,
+            Some(pairs),
             inout_forcefield_validated,
             out_energy,
             out_forces,
@@ -4019,6 +4078,31 @@ mod tests {
         assert_eq!(force_y, [0.0]);
         assert_eq!(force_z, [0.0]);
         assert_eq!(error_message(&error), "");
+
+        energy = energy_with_sentinel(31.0);
+        force_x = [37.0];
+        force_y = [41.0];
+        force_z = [43.0];
+        let mut forcefield_validated = 0_u8;
+        // SAFETY: The reusable output channels and derived validation state
+        // are live, correctly sized, aligned, and disjoint.
+        let direct_status = unsafe {
+            bg_rust_cpu_evaluate_reusing_force_output_v1(
+                &system,
+                &forcefield,
+                &mut forcefield_validated,
+                &mut energy,
+                &mut forces,
+                &mut error,
+            )
+        };
+        assert_eq!(direct_status, STATUS_OK);
+        assert_eq!(forcefield_validated, 1);
+        assert_eq!(energy.total, 0.0);
+        assert_eq!(force_x, [0.0]);
+        assert_eq!(force_y, [0.0]);
+        assert_eq!(force_z, [0.0]);
+        assert_eq!(error_message(&error), "");
     }
 
     #[test]
@@ -4111,6 +4195,71 @@ mod tests {
                 )
             },
             STATUS_OK
+        );
+
+        let mut automatic_direct_energy = energy_with_sentinel(31.0);
+        let mut automatic_direct_x = [37.0; 2];
+        let mut automatic_direct_y = [41.0; 2];
+        let mut automatic_direct_z = [43.0; 2];
+        let mut automatic_direct_forces = ForceOutputV1 {
+            struct_size: u32::try_from(size_of::<ForceOutputV1>()).unwrap(),
+            abi_version: PROVIDER_ABI_VERSION,
+            capacity: 2,
+            x: automatic_direct_x.as_mut_ptr(),
+            y: automatic_direct_y.as_mut_ptr(),
+            z: automatic_direct_z.as_mut_ptr(),
+            reserved: [0; 4],
+        };
+        let mut automatic_forcefield_validated = 0_u8;
+        // SAFETY: The reusable output channels and derived validation state
+        // are live, correctly sized, aligned, and disjoint.
+        assert_eq!(
+            unsafe {
+                bg_rust_cpu_evaluate_reusing_force_output_v1(
+                    &system,
+                    &forcefield,
+                    &mut automatic_forcefield_validated,
+                    &mut automatic_direct_energy,
+                    &mut automatic_direct_forces,
+                    &mut error,
+                )
+            },
+            STATUS_OK
+        );
+        assert_eq!(automatic_forcefield_validated, 1);
+        for (left, right) in [
+            (
+                automatic_energy.harmonic_bond,
+                automatic_direct_energy.harmonic_bond,
+            ),
+            (
+                automatic_energy.harmonic_angle,
+                automatic_direct_energy.harmonic_angle,
+            ),
+            (
+                automatic_energy.periodic_torsion,
+                automatic_direct_energy.periodic_torsion,
+            ),
+            (
+                automatic_energy.lennard_jones,
+                automatic_direct_energy.lennard_jones,
+            ),
+            (automatic_energy.coulomb, automatic_direct_energy.coulomb),
+            (automatic_energy.total, automatic_direct_energy.total),
+        ] {
+            assert_eq!(left.to_bits(), right.to_bits());
+        }
+        assert_eq!(
+            automatic_x.map(f64::to_bits),
+            automatic_direct_x.map(f64::to_bits)
+        );
+        assert_eq!(
+            automatic_y.map(f64::to_bits),
+            automatic_direct_y.map(f64::to_bits)
+        );
+        assert_eq!(
+            automatic_z.map(f64::to_bits),
+            automatic_direct_z.map(f64::to_bits)
         );
 
         let pairs = [Pair {

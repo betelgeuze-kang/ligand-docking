@@ -15,6 +15,7 @@ bg_status evaluate_reusing_force_storage(
     const bg_system &system,
     const bg_forcefield &forcefield,
     bool compute_forces,
+    uint8_t *inout_forcefield_validated,
     cpu::Evaluation *out_evaluation);
 
 bg_status evaluate_with_neighbor_pairs(
