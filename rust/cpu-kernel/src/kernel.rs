@@ -771,6 +771,18 @@ fn periodic_neighbor_pairs(
     }
     assignments.sort_unstable();
 
+    let mut cell_starts = Vec::new();
+    cell_starts
+        .try_reserve_exact(assignments.len())
+        .map_err(|_| KernelError::out_of_memory("periodic neighbor-list allocation failed"))?;
+    // Index each occupied cell once so atom traversal performs one lookup per
+    // neighbor cell instead of two searches over every atom assignment.
+    for index in 0..assignments.len() {
+        if index == 0 || assignments[index - 1].key != assignments[index].key {
+            cell_starts.push(index);
+        }
+    }
+
     let mut candidates = Vec::new();
     candidates
         .try_reserve_exact(forcefield.atom_count)
@@ -797,8 +809,16 @@ fn periodic_neighbor_pairs(
         }
         neighbor_keys[..neighbor_key_count].sort_unstable();
         for key in &neighbor_keys[..neighbor_key_count] {
-            let begin = assignments.partition_point(|row| row.key < *key);
-            let end = assignments.partition_point(|row| row.key <= *key);
+            let Ok(cell_index) =
+                cell_starts.binary_search_by_key(key, |begin| assignments[*begin].key)
+            else {
+                continue;
+            };
+            let begin = cell_starts[cell_index];
+            let end = cell_starts
+                .get(cell_index + 1)
+                .copied()
+                .unwrap_or(assignments.len());
             candidates.extend(
                 assignments[begin..end]
                     .iter()

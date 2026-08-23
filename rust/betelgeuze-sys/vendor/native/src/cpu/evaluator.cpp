@@ -674,6 +674,18 @@ bg_status build_periodic_neighbor_pairs_impl(
     }
     std::sort(assignments.begin(), assignments.end());
 
+    std::vector<std::size_t> &cell_starts = scratch->cell_starts;
+    cell_starts.clear();
+    cell_starts.reserve(assignments.size());
+    // Index each occupied cell once so atom traversal performs one lookup per
+    // neighbor cell instead of two searches over every atom assignment.
+    for (std::size_t index = 0; index < assignments.size(); ++index) {
+        if (index == 0 ||
+            assignments[index - 1U].first != assignments[index].first) {
+            cell_starts.push_back(index);
+        }
+    }
+
     std::vector<NeighborPair> local_pairs;
     std::vector<NeighborPair> &pairs =
         reuse_pair_storage ? *out_pairs : local_pairs;
@@ -705,24 +717,24 @@ bg_status build_periodic_neighbor_pairs_impl(
 
         candidates.clear();
         for (const NeighborCellKey &key : neighbor_cells) {
-            const auto begin = std::lower_bound(
-                assignments.begin(),
-                assignments.end(),
+            const auto cell = std::lower_bound(
+                cell_starts.begin(),
+                cell_starts.end(),
                 key,
-                [](const NeighborCellAssignment &row,
+                [&assignments](std::size_t begin,
                    const NeighborCellKey &target) {
-                    return row.first < target;
+                    return assignments[begin].first < target;
                 });
-            const auto end = std::upper_bound(
-                begin,
-                assignments.end(),
-                key,
-                [](const NeighborCellKey &target,
-                   const NeighborCellAssignment &row) {
-                    return target < row.first;
-                });
-            for (auto row = begin; row != end; ++row) {
-                const std::size_t atom_j = row->second;
+            if (cell == cell_starts.end() || assignments[*cell].first != key) {
+                continue;
+            }
+            auto next_cell = cell;
+            ++next_cell;
+            const std::size_t end = next_cell == cell_starts.end()
+                                        ? assignments.size()
+                                        : *next_cell;
+            for (std::size_t index = *cell; index < end; ++index) {
+                const std::size_t atom_j = assignments[index].second;
                 if (atom_j > atom_i) {
                     candidates.push_back(atom_j);
                 }

@@ -29,6 +29,7 @@ using NeighborCellAssignment =
 struct NeighborBuildScratch final {
     std::vector<NeighborCellKey> atom_cells;
     std::vector<NeighborCellAssignment> assignments;
+    std::vector<std::size_t> cell_starts;
     std::vector<NeighborCellKey> neighbor_cells;
     std::vector<std::size_t> candidates;
 };
