@@ -1005,6 +1005,23 @@ pub(crate) fn evaluate_with_neighbor_pairs(
     evaluate_impl(system, forcefield, Some(neighbor_pairs), compute_forces)
 }
 
+pub(crate) fn evaluate_into(
+    system: &System<'_>,
+    forcefield: &ForceField<'_>,
+    forces: (&mut [f64], &mut [f64], &mut [f64]),
+) -> Result<Energy, KernelError> {
+    if !storage_is_consistent(system, forcefield) {
+        return Err(KernelError::invalid(
+            "system and force-field atom storage do not match",
+        ));
+    }
+    let (force_x, force_y, force_z) = forces;
+    force_x.fill(0.0);
+    force_y.fill(0.0);
+    force_z.fill(0.0);
+    evaluate_into_impl(system, forcefield, None, true, force_x, force_y, force_z)
+}
+
 pub(crate) fn evaluate_with_neighbor_pairs_into(
     system: &System<'_>,
     forcefield: &ForceField<'_>,

@@ -228,7 +228,11 @@ bg_status evaluate(
                 system, forcefield, compute_forces, out_evaluation);
         case BG_BACKEND_RUST_CPU:
             return rust_cpu::evaluate_reusing_force_storage(
-                system, forcefield, compute_forces, out_evaluation);
+                system,
+                forcefield,
+                compute_forces,
+                &simulation->rust_cpu_forcefield_validated,
+                out_evaluation);
         case BG_BACKEND_HIP_SAFE:
             return hip_safe::evaluate(
                 context.device_ordinal,

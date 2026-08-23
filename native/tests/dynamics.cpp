@@ -861,8 +861,13 @@ void test_cpu_persistent_vector_scratch() {
         assert(handles.simulation->force_evaluation_scratch.x.empty());
         assert(handles.simulation->force_evaluation_scratch.y.empty());
         assert(handles.simulation->force_evaluation_scratch.z.empty());
+        assert(
+            handles.simulation->rust_cpu_forcefield_validated == UINT8_C(0));
 
         integrate(handles.context, handles.simulation, UINT64_C(1));
+        assert(
+            handles.simulation->rust_cpu_forcefield_validated ==
+            (backend == BG_BACKEND_RUST_CPU ? UINT8_C(1) : UINT8_C(0)));
         const auto scratch_addresses =
             force_evaluation_scratch_addresses(handles.simulation);
         for (const double *address : scratch_addresses) {
