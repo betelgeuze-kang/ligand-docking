@@ -749,6 +749,14 @@ void test_nve_fixture_and_zero_step() {
         0.2, 999.0, 5.0, UINT64_C(123), nullptr);
     const bg_simulation::IntegratorCoefficientCache &verlet_coefficients =
         first.simulation->integrator_coefficient_cache;
+    assert(verlet_coefficients.half_kick_scale.size() == 2U);
+    assert(verlet_coefficients.half_kick_scale[0] ==
+           4.184e-4 * 0.1 / 12.0);
+    assert(verlet_coefficients.half_kick_scale[1] ==
+           4.184e-4 * 0.1 / 16.0);
+    const double *const verlet_scale_storage =
+        verlet_coefficients.half_kick_scale.data();
+    assert(verlet_scale_storage != nullptr);
     assert(verlet_coefficients.langevin_decay == 1.0);
     assert(verlet_coefficients.langevin_variance_factor == 0.0);
     assert(verlet_coefficients.langevin_sigma.empty());
@@ -763,6 +771,9 @@ void test_nve_fixture_and_zero_step() {
     const auto initial_addresses = particle_addresses(initial_view);
     const bg_dynamics_report_v1 initial_report =
         integrate(first.context, first.simulation, UINT64_C(0));
+    assert(
+        first.simulation->integrator_coefficient_cache.half_kick_scale.data() ==
+        verlet_scale_storage);
     assert(initial_report.steps_completed == UINT64_C(0));
     assert(initial_report.absolute_step == UINT64_C(0));
     const bg_particle_soa_view zero_view = particle_view(first.simulation);
@@ -784,6 +795,9 @@ void test_nve_fixture_and_zero_step() {
         integrate(first.context, first.simulation, UINT64_C(1000));
     const bg_dynamics_report_v1 second_report =
         integrate(first.context, second.simulation, UINT64_C(1000));
+    assert(
+        first.simulation->integrator_coefficient_cache.half_kick_scale.data() ==
+        verlet_scale_storage);
     const bg_simulation::ParticleVectorScratch &unconstrained_scratch =
         first.simulation->constraint_drift_scratch;
     assert(unconstrained_scratch.x.empty());
@@ -1083,6 +1097,14 @@ void test_nvt_fixture_and_checkpoint() {
         first.simulation->integrator_coefficient_cache;
     const double expected_decay = std::exp(-0.05);
     const double expected_variance_factor = -std::expm1(-0.1);
+    assert(first_coefficients.half_kick_scale.size() == 2U);
+    assert(first_coefficients.half_kick_scale[0] ==
+           4.184e-4 * 0.5 / 12.0);
+    assert(first_coefficients.half_kick_scale[1] ==
+           4.184e-4 * 0.5 / 16.0);
+    const double *const first_scale_storage =
+        first_coefficients.half_kick_scale.data();
+    assert(first_scale_storage != nullptr);
     assert(first_coefficients.langevin_decay == expected_decay);
     assert(first_coefficients.langevin_variance_factor ==
            expected_variance_factor);
@@ -1102,6 +1124,9 @@ void test_nvt_fixture_and_checkpoint() {
         integrate(first.context, first.simulation, UINT64_C(1));
     assert(first.simulation->integrator_coefficient_cache.langevin_sigma.data() ==
            first_sigma_storage);
+    assert(
+        first.simulation->integrator_coefficient_cache.half_kick_scale.data() ==
+        first_scale_storage);
     assert(one_step.absolute_step == UINT64_C(1));
     assert(one_step.degrees_of_freedom == UINT64_C(6));
     assert(one_step.potential_kcal_per_mol == 0.0);
@@ -1130,7 +1155,10 @@ void test_nvt_fixture_and_checkpoint() {
         1.0, 300.0, 0.05, seed, nullptr);
     const double *const replica_sigma_storage =
         replica.simulation->integrator_coefficient_cache.langevin_sigma.data();
+    const double *const replica_scale_storage =
+        replica.simulation->integrator_coefficient_cache.half_kick_scale.data();
     assert(replica_sigma_storage != nullptr);
+    assert(replica_scale_storage != nullptr);
     integrate(first.context, replica.simulation, UINT64_C(1));
     assert_same_dynamic_state(first.simulation, replica.simulation);
 
@@ -1190,6 +1218,9 @@ void test_nvt_fixture_and_checkpoint() {
     assert(
         replica.simulation->integrator_coefficient_cache.langevin_sigma.data() ==
         replica_sigma_storage);
+    assert(
+        replica.simulation->integrator_coefficient_cache.half_kick_scale.data() ==
+        replica_scale_storage);
     const bg_particle_soa_view loaded_view = particle_view(replica.simulation);
     const double *const loaded_address = loaded_view.position_x_angstrom;
     integrate(first.context, replica.simulation, UINT64_C(25));
@@ -1198,6 +1229,9 @@ void test_nvt_fixture_and_checkpoint() {
            position_address);
     assert(first.simulation->integrator_coefficient_cache.langevin_sigma.data() ==
            first_sigma_storage);
+    assert(
+        first.simulation->integrator_coefficient_cache.half_kick_scale.data() ==
+        first_scale_storage);
     assert(particle_view(replica.simulation).position_x_angstrom ==
            loaded_address);
 
