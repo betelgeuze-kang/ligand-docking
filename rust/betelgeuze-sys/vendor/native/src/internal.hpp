@@ -346,6 +346,7 @@ struct bg_simulation final {
     };
 
     struct IntegratorCoefficientCache final {
+        std::vector<double> half_kick_scale;
         double langevin_decay = 1.0;
         double langevin_variance_factor = 0.0;
         std::vector<double> langevin_sigma;

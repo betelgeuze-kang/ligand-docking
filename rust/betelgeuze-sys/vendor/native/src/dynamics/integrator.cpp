@@ -507,11 +507,10 @@ bg_status drift_and_constrain(
 
 bg_status kick(
     const cpu::Evaluation &evaluation,
-    double duration,
+    const std::vector<double> &scales,
     bg_system *system) noexcept {
     for (std::size_t atom = 0; atom < system->mass.size(); ++atom) {
-        const double scale =
-            kAccelerationConversion * duration / system->mass[atom];
+        const double scale = scales[atom];
         const double next_x =
             system->velocity_x[atom] + scale * evaluation.force_x[atom];
         const double next_y =
@@ -646,8 +645,10 @@ bg_status velocity_verlet_step(
     if (status != BG_STATUS_OK) {
         return status;
     }
-    const double half_dt = 0.5 * simulation->timestep_femtoseconds;
-    status = kick(*out_final_evaluation, half_dt, &simulation->system);
+    status = kick(
+        *out_final_evaluation,
+        simulation->integrator_coefficient_cache.half_kick_scale,
+        &simulation->system);
     if (status != BG_STATUS_OK) {
         return status;
     }
@@ -668,7 +669,10 @@ bg_status velocity_verlet_step(
     if (status != BG_STATUS_OK) {
         return status;
     }
-    status = kick(*out_final_evaluation, half_dt, &simulation->system);
+    status = kick(
+        *out_final_evaluation,
+        simulation->integrator_coefficient_cache.half_kick_scale,
+        &simulation->system);
     if (status != BG_STATUS_OK) {
         return status;
     }
@@ -694,7 +698,10 @@ bg_status baoab_step(
         return status;
     }
     const double half_dt = 0.5 * simulation->timestep_femtoseconds;
-    status = kick(*out_final_evaluation, half_dt, &simulation->system);
+    status = kick(
+        *out_final_evaluation,
+        simulation->integrator_coefficient_cache.half_kick_scale,
+        &simulation->system);
     if (status != BG_STATUS_OK) {
         return status;
     }
@@ -721,7 +728,10 @@ bg_status baoab_step(
     if (status != BG_STATUS_OK) {
         return status;
     }
-    status = kick(*out_final_evaluation, half_dt, &simulation->system);
+    status = kick(
+        *out_final_evaluation,
+        simulation->integrator_coefficient_cache.half_kick_scale,
+        &simulation->system);
     if (status != BG_STATUS_OK) {
         return status;
     }
@@ -953,11 +963,18 @@ bg_status projected_force(
 }  // namespace
 
 void initialize_integrator_coefficients(bg_simulation *simulation) {
+    bg_simulation::IntegratorCoefficientCache &coefficients =
+        simulation->integrator_coefficient_cache;
+    const double half_timestep = 0.5 * simulation->timestep_femtoseconds;
+    coefficients.half_kick_scale.resize(simulation->system.mass.size());
+    for (std::size_t atom = 0; atom < simulation->system.mass.size(); ++atom) {
+        coefficients.half_kick_scale[atom] =
+            kAccelerationConversion * half_timestep /
+            simulation->system.mass[atom];
+    }
     if (simulation->integrator != BG_INTEGRATOR_LANGEVIN_BAOAB) {
         return;
     }
-    bg_simulation::IntegratorCoefficientCache &coefficients =
-        simulation->integrator_coefficient_cache;
     const double exponent =
         -simulation->friction_per_femtosecond *
         simulation->timestep_femtoseconds;

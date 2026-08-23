@@ -117,8 +117,10 @@ The current `main` branch contains:
   simulations similarly retain the exact immutable Ornstein-Uhlenbeck decay,
   variance factor, and atom-specific standard deviations derived at creation,
   eliminating repeated `exp`, `expm1`, division, and square-root work while
-  preserving the frozen binary64 updates; Velocity Verlet does not allocate
-  that atom-specific cache.
+  preserving the frozen binary64 updates. Both integrators also retain the
+  exact atom-specific half-kick scales derived from their immutable timestep
+  and masses, avoiding two repeated divisions per atom per step; Velocity
+  Verlet leaves only the Langevin standard-deviation vector unallocated.
   Public stateless evaluation, HIP evaluation, and semantic commit behavior
   remain unchanged. The CPU minimizer also retains its projected-force
   direction vectors across later minimize calls, while copying all current
