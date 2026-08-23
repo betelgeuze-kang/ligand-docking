@@ -740,10 +740,9 @@ bg_status build_periodic_neighbor_pairs_impl(
                 }
             }
         }
+        // Every atom has exactly one assignment and neighbor_cells is unique,
+        // so candidates is already duplicate-free. Sort only for pair order.
         std::sort(candidates.begin(), candidates.end());
-        candidates.erase(
-            std::unique(candidates.begin(), candidates.end()),
-            candidates.end());
         for (const std::size_t atom_j : candidates) {
             Vector3 delta;
             double squared_distance = 0.0;
