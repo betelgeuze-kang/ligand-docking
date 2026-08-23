@@ -582,6 +582,7 @@ bg_status periodic_cell_key(
     const bg_system &system,
     const bg_forcefield &forcefield,
     const std::array<std::size_t, 3> &cell_counts,
+    const std::array<double, 3> &cell_widths,
     std::size_t atom,
     NeighborCellKey *out_key) noexcept {
     if (out_key == nullptr) {
@@ -604,8 +605,8 @@ bg_status periodic_cell_key(
         if (wrapped < 0.0) {
             wrapped += length;
         }
-        const double width = length / static_cast<double>(cell_counts[axis]);
-        const auto index = static_cast<std::size_t>(std::floor(wrapped / width));
+        const auto index = static_cast<std::size_t>(
+            std::floor(wrapped / cell_widths[axis]));
         key[axis] = std::min(index, cell_counts[axis] - 1U);
     }
     *out_key = key;
@@ -646,6 +647,11 @@ bg_status build_periodic_neighbor_pairs_impl(
             "periodic neighbor-list search radius is invalid");
     }
     const auto cell_counts = periodic_cell_counts(forcefield, search_radius);
+    std::array<double, 3> cell_widths{};
+    for (std::size_t axis = 0; axis < cell_widths.size(); ++axis) {
+        cell_widths[axis] = forcefield.cell_lengths[axis] /
+                            static_cast<double>(cell_counts[axis]);
+    }
     const double search_radius_squared =
         inclusive_squared_radius(search_radius);
     std::vector<NeighborCellKey> &atom_cells = scratch->atom_cells;
@@ -655,7 +661,12 @@ bg_status build_periodic_neighbor_pairs_impl(
     assignments.reserve(forcefield.atom_count);
     for (std::size_t atom = 0; atom < forcefield.atom_count; ++atom) {
         bg_status status = periodic_cell_key(
-            system, forcefield, cell_counts, atom, &atom_cells[atom]);
+            system,
+            forcefield,
+            cell_counts,
+            cell_widths,
+            atom,
+            &atom_cells[atom]);
         if (status != BG_STATUS_OK) {
             return status;
         }

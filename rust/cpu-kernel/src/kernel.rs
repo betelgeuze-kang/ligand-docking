@@ -702,6 +702,7 @@ fn periodic_cell_key(
     system: &System<'_>,
     forcefield: &ForceField<'_>,
     cell_counts: [usize; 3],
+    cell_widths: [f64; 3],
     atom: usize,
 ) -> Result<[usize; 3], KernelError> {
     let coordinates = [
@@ -719,8 +720,7 @@ fn periodic_cell_key(
         }
         let length = forcefield.cell_lengths[axis];
         let wrapped = coordinate.rem_euclid(length);
-        let width = length / cell_counts[axis] as f64;
-        let index = (wrapped / width).floor() as usize;
+        let index = (wrapped / cell_widths[axis]).floor() as usize;
         key[axis] = index.min(cell_counts[axis] - 1);
     }
     Ok(key)
@@ -752,6 +752,8 @@ fn periodic_neighbor_pairs(
     forcefield: &ForceField<'_>,
 ) -> Result<Vec<Pair>, KernelError> {
     let cell_counts = periodic_cell_counts(forcefield);
+    let cell_widths =
+        std::array::from_fn(|axis| forcefield.cell_lengths[axis] / cell_counts[axis] as f64);
     let search_radius = forcefield.cutoff.max(forcefield.minimum_pair_distance);
     let search_radius_squared = inclusive_squared_radius(search_radius);
     let mut assignments = Vec::new();
@@ -763,7 +765,7 @@ fn periodic_neighbor_pairs(
         .try_reserve_exact(forcefield.atom_count)
         .map_err(|_| KernelError::out_of_memory("periodic neighbor-list allocation failed"))?;
     for atom in 0..forcefield.atom_count {
-        let key = periodic_cell_key(system, forcefield, cell_counts, atom)?;
+        let key = periodic_cell_key(system, forcefield, cell_counts, cell_widths, atom)?;
         atom_keys.push(key);
         assignments.push(CellAssignment { key, atom });
     }
