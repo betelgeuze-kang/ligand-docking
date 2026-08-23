@@ -143,6 +143,8 @@ bg_status evaluate_impl(
         forcefield.minimum_pair_distance;
 
     cpu::Evaluation candidate;
+    const bool direct_force_output =
+        reuse_force_storage && compute_forces && neighbor_pairs != nullptr;
     if (reuse_force_storage && compute_forces) {
         candidate.force_x = std::move(out_evaluation->force_x);
         candidate.force_y = std::move(out_evaluation->force_y);
@@ -152,9 +154,11 @@ bg_status evaluate_impl(
         candidate.force_x.resize(forcefield.atom_count);
         candidate.force_y.resize(forcefield.atom_count);
         candidate.force_z.resize(forcefield.atom_count);
-        std::fill(candidate.force_x.begin(), candidate.force_x.end(), 0.0);
-        std::fill(candidate.force_y.begin(), candidate.force_y.end(), 0.0);
-        std::fill(candidate.force_z.begin(), candidate.force_z.end(), 0.0);
+        if (!direct_force_output) {
+            std::fill(candidate.force_x.begin(), candidate.force_x.end(), 0.0);
+            std::fill(candidate.force_y.begin(), candidate.force_y.end(), 0.0);
+            std::fill(candidate.force_z.begin(), candidate.force_z.end(), 0.0);
+        }
     }
     bg_rust_cpu_energy_v1 provider_energy{};
     provider_energy.struct_size =
@@ -172,24 +176,38 @@ bg_status evaluate_impl(
     provider_error.struct_size = static_cast<uint32_t>(sizeof(provider_error));
     provider_error.abi_version = BG_RUST_CPU_PROVIDER_ABI_VERSION;
 
-    const int32_t raw_status = neighbor_pairs == nullptr
-        ? bg_rust_cpu_evaluate_v1(
-              &provider_system,
-              &provider_forcefield,
-              compute_forces ? UINT8_C(1) : UINT8_C(0),
-              &provider_energy,
-              compute_forces ? &provider_forces : nullptr,
-              &provider_error)
-        : bg_rust_cpu_evaluate_with_neighbor_pairs_v1(
-              &provider_system,
-              &provider_forcefield,
-              neighbor_pairs->size(),
-              reinterpret_cast<const bg_rust_cpu_pair_v1 *>(
-                  data_or_null(*neighbor_pairs)),
-              compute_forces ? UINT8_C(1) : UINT8_C(0),
-              &provider_energy,
-              compute_forces ? &provider_forces : nullptr,
-              &provider_error);
+    int32_t raw_status = BG_STATUS_INTERNAL_ERROR;
+    if (direct_force_output) {
+        raw_status =
+            bg_rust_cpu_evaluate_with_neighbor_pairs_reusing_force_output_v1(
+                &provider_system,
+                &provider_forcefield,
+                neighbor_pairs->size(),
+                reinterpret_cast<const bg_rust_cpu_pair_v1 *>(
+                    data_or_null(*neighbor_pairs)),
+                &provider_energy,
+                &provider_forces,
+                &provider_error);
+    } else if (neighbor_pairs == nullptr) {
+        raw_status = bg_rust_cpu_evaluate_v1(
+            &provider_system,
+            &provider_forcefield,
+            compute_forces ? UINT8_C(1) : UINT8_C(0),
+            &provider_energy,
+            compute_forces ? &provider_forces : nullptr,
+            &provider_error);
+    } else {
+        raw_status = bg_rust_cpu_evaluate_with_neighbor_pairs_v1(
+            &provider_system,
+            &provider_forcefield,
+            neighbor_pairs->size(),
+            reinterpret_cast<const bg_rust_cpu_pair_v1 *>(
+                data_or_null(*neighbor_pairs)),
+            compute_forces ? UINT8_C(1) : UINT8_C(0),
+            &provider_energy,
+            compute_forces ? &provider_forces : nullptr,
+            &provider_error);
+    }
     const bg_status status = normalize_provider_status(raw_status);
     if (status != BG_STATUS_OK) {
         provider_error.message[BG_RUST_CPU_ERROR_CAPACITY - 1U] = '\0';

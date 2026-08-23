@@ -143,6 +143,13 @@ pub(crate) struct Evaluation {
     pub force_z: Vec<f64>,
 }
 
+struct EvaluationView<'a> {
+    energy: Energy,
+    force_x: &'a mut [f64],
+    force_y: &'a mut [f64],
+    force_z: &'a mut [f64],
+}
+
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct KernelError {
     pub status: i32,
@@ -251,7 +258,7 @@ fn checked_accumulate(
 }
 
 fn checked_accumulate_force(
-    evaluation: &mut Evaluation,
+    evaluation: &mut EvaluationView<'_>,
     atom: usize,
     value: Vector3,
     message: &'static str,
@@ -343,7 +350,7 @@ fn evaluate_bonds(
     system: &System<'_>,
     forcefield: &ForceField<'_>,
     compute_forces: bool,
-    evaluation: &mut Evaluation,
+    evaluation: &mut EvaluationView<'_>,
 ) -> Result<(), KernelError> {
     for row in 0..forcefield.bonds.atom_i.len() {
         let atom_i = forcefield.bonds.atom_i[row];
@@ -385,7 +392,7 @@ fn evaluate_angles(
     system: &System<'_>,
     forcefield: &ForceField<'_>,
     compute_forces: bool,
-    evaluation: &mut Evaluation,
+    evaluation: &mut EvaluationView<'_>,
 ) -> Result<(), KernelError> {
     for row in 0..forcefield.angles.atom_i.len() {
         let atom_i = forcefield.angles.atom_i[row];
@@ -458,7 +465,7 @@ fn evaluate_torsions(
     system: &System<'_>,
     forcefield: &ForceField<'_>,
     compute_forces: bool,
-    evaluation: &mut Evaluation,
+    evaluation: &mut EvaluationView<'_>,
 ) -> Result<(), KernelError> {
     for row in 0..forcefield.torsions.atom_i.len() {
         let atom_i = forcefield.torsions.atom_i[row];
@@ -539,7 +546,7 @@ fn evaluate_nonbonded(
     forcefield: &ForceField<'_>,
     neighbor_pairs: Option<&[Pair]>,
     compute_forces: bool,
-    evaluation: &mut Evaluation,
+    evaluation: &mut EvaluationView<'_>,
 ) -> Result<(), KernelError> {
     // Both traversal forms below are canonical pair order, so each sorted
     // force-field rule stream only needs to move forward once per evaluation.
@@ -608,7 +615,7 @@ fn evaluate_nonbonded_pair(
     atom_j: usize,
     compute_forces: bool,
     pair_rules: &mut PairRuleCursor,
-    evaluation: &mut Evaluation,
+    evaluation: &mut EvaluationView<'_>,
 ) -> Result<(), KernelError> {
     if pair_is_excluded(forcefield, atom_i, atom_j, pair_rules) {
         return Ok(());
@@ -876,35 +883,35 @@ fn zeroed_force_channel(atom_count: usize) -> Result<Vec<f64>, KernelError> {
     Ok(values)
 }
 
-fn evaluate_impl(
+fn evaluate_into_impl(
     system: &System<'_>,
     forcefield: &ForceField<'_>,
     neighbor_pairs: Option<&[Pair]>,
     compute_forces: bool,
-) -> Result<Evaluation, KernelError> {
+    force_x: &mut [f64],
+    force_y: &mut [f64],
+    force_z: &mut [f64],
+) -> Result<Energy, KernelError> {
     if !storage_is_consistent(system, forcefield) {
         return Err(KernelError::invalid(
             "system and force-field atom storage do not match",
         ));
     }
     let atom_count = forcefield.atom_count;
-    let mut evaluation = Evaluation {
+    if compute_forces
+        && (force_x.len() != atom_count
+            || force_y.len() != atom_count
+            || force_z.len() != atom_count)
+    {
+        return Err(KernelError::internal(
+            "rust_cpu force output length changed internally",
+        ));
+    }
+    let mut evaluation = EvaluationView {
         energy: Energy::default(),
-        force_x: if compute_forces {
-            zeroed_force_channel(atom_count)?
-        } else {
-            Vec::new()
-        },
-        force_y: if compute_forces {
-            zeroed_force_channel(atom_count)?
-        } else {
-            Vec::new()
-        },
-        force_z: if compute_forces {
-            zeroed_force_channel(atom_count)?
-        } else {
-            Vec::new()
-        },
+        force_x,
+        force_y,
+        force_z,
     };
     evaluate_bonds(system, forcefield, compute_forces, &mut evaluation)?;
     evaluate_angles(system, forcefield, compute_forces, &mut evaluation)?;
@@ -928,13 +935,57 @@ fn evaluate_impl(
         && evaluation
             .force_x
             .iter()
-            .chain(&evaluation.force_y)
-            .chain(&evaluation.force_z)
+            .chain(evaluation.force_y.iter())
+            .chain(evaluation.force_z.iter())
             .any(|value| !value.is_finite())
     {
         return Err(KernelError::numerical("force output is not finite"));
     }
-    Ok(evaluation)
+    Ok(evaluation.energy)
+}
+
+fn evaluate_impl(
+    system: &System<'_>,
+    forcefield: &ForceField<'_>,
+    neighbor_pairs: Option<&[Pair]>,
+    compute_forces: bool,
+) -> Result<Evaluation, KernelError> {
+    if !storage_is_consistent(system, forcefield) {
+        return Err(KernelError::invalid(
+            "system and force-field atom storage do not match",
+        ));
+    }
+    let atom_count = forcefield.atom_count;
+    let mut force_x = if compute_forces {
+        zeroed_force_channel(atom_count)?
+    } else {
+        Vec::new()
+    };
+    let mut force_y = if compute_forces {
+        zeroed_force_channel(atom_count)?
+    } else {
+        Vec::new()
+    };
+    let mut force_z = if compute_forces {
+        zeroed_force_channel(atom_count)?
+    } else {
+        Vec::new()
+    };
+    let energy = evaluate_into_impl(
+        system,
+        forcefield,
+        neighbor_pairs,
+        compute_forces,
+        &mut force_x,
+        &mut force_y,
+        &mut force_z,
+    )?;
+    Ok(Evaluation {
+        energy,
+        force_x,
+        force_y,
+        force_z,
+    })
 }
 
 pub(crate) fn evaluate(
@@ -952,6 +1003,32 @@ pub(crate) fn evaluate_with_neighbor_pairs(
     compute_forces: bool,
 ) -> Result<Evaluation, KernelError> {
     evaluate_impl(system, forcefield, Some(neighbor_pairs), compute_forces)
+}
+
+pub(crate) fn evaluate_with_neighbor_pairs_into(
+    system: &System<'_>,
+    forcefield: &ForceField<'_>,
+    neighbor_pairs: &[Pair],
+    forces: (&mut [f64], &mut [f64], &mut [f64]),
+) -> Result<Energy, KernelError> {
+    if !storage_is_consistent(system, forcefield) {
+        return Err(KernelError::invalid(
+            "system and force-field atom storage do not match",
+        ));
+    }
+    let (force_x, force_y, force_z) = forces;
+    force_x.fill(0.0);
+    force_y.fill(0.0);
+    force_z.fill(0.0);
+    evaluate_into_impl(
+        system,
+        forcefield,
+        Some(neighbor_pairs),
+        true,
+        force_x,
+        force_y,
+        force_z,
+    )
 }
 
 #[cfg(test)]

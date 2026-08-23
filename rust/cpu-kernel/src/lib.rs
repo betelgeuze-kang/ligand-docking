@@ -2893,6 +2893,62 @@ unsafe fn evaluate_impl(
     Ok(())
 }
 
+unsafe fn evaluate_with_neighbor_pairs_reusing_force_output_impl(
+    system: *const SystemV1,
+    forcefield: *const ForceFieldV1,
+    neighbor_pairs: &[Pair],
+    out_energy: *mut EnergyV1,
+    out_forces: *mut ForceOutputV1,
+) -> Result<(), ProviderError> {
+    let system = unsafe {
+        system
+            .as_ref()
+            .ok_or_else(|| ProviderError::invalid("system descriptor is null"))?
+    };
+    let forcefield = unsafe {
+        forcefield
+            .as_ref()
+            .ok_or_else(|| ProviderError::invalid("force-field descriptor is null"))?
+    };
+    // This internal dynamics route deliberately writes directly into disposable
+    // caller-owned force storage. Descriptor, capacity, and alias validation
+    // still complete before the first force write; energy remains transactional.
+    let output_channels =
+        unsafe { validate_outputs(system.atom_count, true, out_energy, out_forces)? }.ok_or(
+            ProviderError {
+                status: STATUS_INTERNAL_ERROR,
+                message: "rust_cpu force output validation changed internally",
+            },
+        )?;
+    let (system, forcefield) = unsafe { build_inputs(system, forcefield)? };
+    let energy = kernel::evaluate_with_neighbor_pairs_into(
+        &system,
+        &forcefield,
+        neighbor_pairs,
+        output_channels,
+    )
+    .map_err(|error| ProviderError {
+        status: error.status,
+        message: error.message,
+    })?;
+
+    let energy = EnergyV1 {
+        struct_size: u32::try_from(size_of::<EnergyV1>()).unwrap_or(0),
+        abi_version: PROVIDER_ABI_VERSION,
+        harmonic_bond: energy.harmonic_bond,
+        harmonic_angle: energy.harmonic_angle,
+        periodic_torsion: energy.periodic_torsion,
+        lennard_jones: energy.lennard_jones,
+        coulomb: energy.coulomb,
+        total: energy.total,
+        reserved: [0; 4],
+    };
+    // SAFETY: Output identity was validated and energy is committed only after
+    // the direct force evaluation succeeds.
+    unsafe { ptr::write(out_energy, energy) };
+    Ok(())
+}
+
 #[no_mangle]
 pub extern "C" fn bg_rust_cpu_provider_abi_version_v1() -> u32 {
     PROVIDER_ABI_VERSION
@@ -3012,6 +3068,71 @@ pub unsafe extern "C" fn bg_rust_cpu_evaluate_with_neighbor_pairs_v1(
             compute_forces,
             out_energy,
             out_forces,
+        )
+    }));
+    match result {
+        Ok(Ok(())) => STATUS_OK,
+        Ok(Err(provider_error)) => {
+            write_error(error, provider_error.message);
+            provider_error.status
+        }
+        Err(_) => {
+            write_error(error, "rust_cpu provider panicked");
+            STATUS_INTERNAL_ERROR
+        }
+    }
+}
+
+/// Evaluate canonical neighbor pairs directly into reusable force storage.
+///
+/// This hidden dynamics-only entry point may modify force channels when the
+/// scientific evaluation fails. Energy is committed only on success.
+///
+/// # Safety
+/// The base evaluator and caller-owned neighbor-pair safety contracts apply.
+#[no_mangle]
+pub unsafe extern "C" fn bg_rust_cpu_evaluate_with_neighbor_pairs_reusing_force_output_v1(
+    system: *const SystemV1,
+    forcefield: *const ForceFieldV1,
+    neighbor_pair_count: usize,
+    neighbor_pairs: *const Pair,
+    out_energy: *mut EnergyV1,
+    out_forces: *mut ForceOutputV1,
+    out_error: *mut ErrorV1,
+) -> i32 {
+    let error = unsafe {
+        match out_error.as_mut() {
+            Some(error) => error,
+            None => return STATUS_INVALID_ARGUMENT,
+        }
+    };
+    if validate_header::<ErrorV1>(
+        error.struct_size,
+        error.abi_version,
+        "rust_cpu error output size mismatch",
+    )
+    .is_err()
+        || !reserved_is_zero(&error.reserved)
+    {
+        return STATUS_ABI_MISMATCH;
+    }
+    clear_error(error);
+    let pairs = unsafe {
+        match checked_slice(
+            neighbor_pairs,
+            neighbor_pair_count,
+            "neighbor pairs are null",
+        ) {
+            Ok(pairs) => pairs,
+            Err(provider_error) => {
+                write_error(error, provider_error.message);
+                return provider_error.status;
+            }
+        }
+    };
+    let result = catch_unwind(AssertUnwindSafe(|| unsafe {
+        evaluate_with_neighbor_pairs_reusing_force_output_impl(
+            system, forcefield, pairs, out_energy, out_forces,
         )
     }));
     match result {
@@ -4012,6 +4133,52 @@ mod tests {
         assert_eq!(automatic_y.map(f64::to_bits), supplied_y.map(f64::to_bits));
         assert_eq!(automatic_z.map(f64::to_bits), supplied_z.map(f64::to_bits));
 
+        let mut direct_energy = energy_with_sentinel(47.0);
+        let mut direct_x = [53.0; 2];
+        let mut direct_y = [59.0; 2];
+        let mut direct_z = [61.0; 2];
+        let mut direct_forces = ForceOutputV1 {
+            struct_size: u32::try_from(size_of::<ForceOutputV1>()).unwrap(),
+            abi_version: PROVIDER_ABI_VERSION,
+            capacity: 2,
+            x: direct_x.as_mut_ptr(),
+            y: direct_y.as_mut_ptr(),
+            z: direct_z.as_mut_ptr(),
+            reserved: [0; 4],
+        };
+        // SAFETY: The reusable output channels and canonical pair are live,
+        // correctly sized, and disjoint.
+        assert_eq!(
+            unsafe {
+                bg_rust_cpu_evaluate_with_neighbor_pairs_reusing_force_output_v1(
+                    &system,
+                    &forcefield,
+                    pairs.len(),
+                    pairs.as_ptr(),
+                    &mut direct_energy,
+                    &mut direct_forces,
+                    &mut error,
+                )
+            },
+            STATUS_OK
+        );
+        for (left, right) in [
+            (supplied_energy.harmonic_bond, direct_energy.harmonic_bond),
+            (supplied_energy.harmonic_angle, direct_energy.harmonic_angle),
+            (
+                supplied_energy.periodic_torsion,
+                direct_energy.periodic_torsion,
+            ),
+            (supplied_energy.lennard_jones, direct_energy.lennard_jones),
+            (supplied_energy.coulomb, direct_energy.coulomb),
+            (supplied_energy.total, direct_energy.total),
+        ] {
+            assert_eq!(left.to_bits(), right.to_bits());
+        }
+        assert_eq!(supplied_x.map(f64::to_bits), direct_x.map(f64::to_bits));
+        assert_eq!(supplied_y.map(f64::to_bits), direct_y.map(f64::to_bits));
+        assert_eq!(supplied_z.map(f64::to_bits), direct_z.map(f64::to_bits));
+
         let duplicate = [pairs[0], pairs[0]];
         let energy_before = supplied_energy.total.to_bits();
         let x_before = supplied_x.map(f64::to_bits);
@@ -4038,6 +4205,28 @@ mod tests {
         );
         assert_eq!(supplied_energy.total.to_bits(), energy_before);
         assert_eq!(supplied_x.map(f64::to_bits), x_before);
+
+        let direct_energy_before = direct_energy.total.to_bits();
+        // SAFETY: The duplicate rows are readable. This dynamics-only route is
+        // explicitly allowed to clear reusable force channels before failure.
+        assert_eq!(
+            unsafe {
+                bg_rust_cpu_evaluate_with_neighbor_pairs_reusing_force_output_v1(
+                    &system,
+                    &forcefield,
+                    duplicate.len(),
+                    duplicate.as_ptr(),
+                    &mut direct_energy,
+                    &mut direct_forces,
+                    &mut error,
+                )
+            },
+            STATUS_INVALID_ARGUMENT
+        );
+        assert_eq!(direct_energy.total.to_bits(), direct_energy_before);
+        assert_eq!(direct_x, [0.0; 2]);
+        assert_eq!(direct_y, [0.0; 2]);
+        assert_eq!(direct_z, [0.0; 2]);
     }
 
     #[test]
