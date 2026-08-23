@@ -16,17 +16,10 @@ use betelgeuze_docking_search::{
     evaluate_fixed64_geometric_metrics, generate_native_fixed64_single_anchor, orientations,
     refine_interaction_aware_rigid_v2, refine_interaction_aware_rigid_v3,
     refine_interaction_aware_rigid_v6, Fixed64Allocation as IndependentFixed64Allocation,
-    Fixed64AtomicFeatureEvidence as IndependentFixed64AtomicFeature,
-    Fixed64ConformerSourceEvidence as IndependentFixed64ConformerSource,
-    Fixed64ExactV11SourceEvidence as IndependentFixed64ExactSource,
-    Fixed64FeatureGeometry as IndependentFixed64FeatureGeometry,
     Fixed64FeatureGeometryInventory as IndependentFixed64FeatureGeometryInventory,
-    Fixed64FeatureInventory as IndependentFixed64FeatureInventory,
     Fixed64GeometricInput as IndependentFixed64GeometricInput,
-    Fixed64IndexedSourceEvidence as IndependentFixed64IndexedSource,
     Fixed64PlacementErrorCode as IndependentFixed64PlacementErrorCode,
     Fixed64PlacementSource as IndependentFixed64PlacementSource,
-    Fixed64SourceEvidence as IndependentFixed64SourceEvidence,
     NativeFixed64ValidityBackend as IndependentValidityBackend,
     NativeFixed64ValidityChecks as IndependentValidityChecks,
     NativeFixed64ValidityConfig as IndependentValidityConfig,
@@ -62,8 +55,11 @@ mod prepared_input;
 mod preselected;
 mod types;
 
-use prepared_input::validate_run_input;
 pub use prepared_input::Fixed64RunInput;
+use prepared_input::{
+    independent_allocation, independent_feature_geometry_inventory, independent_placement_source,
+    validate_run_input,
+};
 pub use preselected::{
     Fixed64PreselectedBatchReceipts, Fixed64PreselectedPipeline, Fixed64PreselectedPipelineReceipt,
     Fixed64PreselectedPipelineRow, Fixed64PreselectedRunInput,
@@ -2147,147 +2143,6 @@ fn raw_coordinate_source(
         z_angstrom: value.coordinates.z_angstrom.as_ptr(),
         reserved: [0; 4],
     }
-}
-
-const fn independent_source_evidence(
-    value: Fixed64SourceEvidence,
-) -> IndependentFixed64SourceEvidence {
-    IndependentFixed64SourceEvidence {
-        receipt_sha256: value.receipt_sha256,
-        proposal_sha256: value.proposal_sha256,
-        coordinate_sha256: value.coordinate_sha256,
-    }
-}
-
-fn independent_allocation(input: Fixed64RunInput<'_>) -> Result<IndependentFixed64Allocation> {
-    let exact = input.exact_source_evidence;
-    let inventory = IndependentFixed64FeatureInventory::new(
-        IndependentFixed64ExactSource {
-            source_receipt_sha256: exact.source_receipt_sha256,
-            proposal_sha256: exact.proposal_sha256,
-            ligand_coordinate_sha256: exact.ligand_coordinate_sha256,
-            receptor_coordinate_sha256: exact.receptor_coordinate_sha256,
-            prepared_ligand_topology_sha256: exact.prepared_ligand_topology_sha256,
-            prepared_receptor_topology_sha256: exact.prepared_receptor_topology_sha256,
-            ligand_vdw_radii_sha256: exact.ligand_vdw_radii_sha256,
-            ligand_heavy_atom_mask_sha256: exact.ligand_heavy_atom_mask_sha256,
-            receptor_vdw_radii_sha256: exact.receptor_vdw_radii_sha256,
-        },
-        input
-            .atomic_features
-            .iter()
-            .map(|feature| IndependentFixed64AtomicFeature {
-                kind: feature.kind.as_independent(),
-                receipt_sha256: feature.receipt_sha256,
-            })
-            .collect(),
-        input
-            .v7_control_sources
-            .iter()
-            .map(|source| IndependentFixed64IndexedSource {
-                source_index: source.source_index,
-                source: independent_source_evidence(source.source.evidence),
-            })
-            .collect(),
-        input
-            .conformer_sources
-            .iter()
-            .map(|source| IndependentFixed64ConformerSource {
-                rank: source.rank,
-                source: independent_source_evidence(source.source.evidence),
-            })
-            .collect(),
-        input
-            .retained_sources
-            .iter()
-            .map(|source| IndependentFixed64IndexedSource {
-                source_index: source.source_index,
-                source: independent_source_evidence(source.source.evidence),
-            })
-            .collect(),
-    )
-    .map_err(|error| {
-        Error::local(
-            ErrorCode::AbiMismatch,
-            format!("independent fixed64 allocation rejected safe input: {error}"),
-        )
-    })?;
-    IndependentFixed64Allocation::build(inventory).map_err(|error| {
-        Error::local(
-            ErrorCode::AbiMismatch,
-            format!("independent fixed64 allocation derivation failed: {error}"),
-        )
-    })
-}
-
-fn independent_feature_geometry_inventory(
-    input: Fixed64RunInput<'_>,
-) -> Result<Option<IndependentFixed64FeatureGeometryInventory>> {
-    if input.feature_geometries.is_empty() {
-        return Ok(None);
-    }
-    let mut features = Vec::with_capacity(input.feature_geometries.len());
-    for geometry in input.feature_geometries {
-        let atom_indices = geometry
-            .atom_indices
-            .iter()
-            .copied()
-            .map(|index| {
-                usize::try_from(index).map_err(|_| {
-                    Error::local(
-                        ErrorCode::CapacityOverflow,
-                        "fixed64 feature-geometry atom index does not fit usize",
-                    )
-                })
-            })
-            .collect::<Result<Vec<_>>>()?;
-        let feature = IndependentFixed64FeatureGeometry::new(
-            geometry.kind.as_independent(),
-            geometry.allocation_feature_receipt_sha256,
-            atom_indices,
-        )
-        .map_err(|error| {
-            Error::local(
-                ErrorCode::AbiMismatch,
-                format!("independent fixed64 feature geometry rejected safe input: {error}"),
-            )
-        })?;
-        if feature.receipt_sha256() != geometry.feature_geometry_receipt_sha256 {
-            return Err(Error::local(
-                ErrorCode::AbiMismatch,
-                "fixed64 feature-geometry receipt was not independently rederived",
-            ));
-        }
-        features.push(feature);
-    }
-    let inventory = IndependentFixed64FeatureGeometryInventory::new(features).map_err(|error| {
-        Error::local(
-            ErrorCode::AbiMismatch,
-            format!("independent fixed64 feature inventory rejected safe input: {error}"),
-        )
-    })?;
-    if inventory.receipt_sha256() != input.feature_geometry_inventory_sha256 {
-        return Err(Error::local(
-            ErrorCode::AbiMismatch,
-            "fixed64 feature-geometry inventory receipt was not independently rederived",
-        ));
-    }
-    Ok(Some(inventory))
-}
-
-fn independent_placement_source(
-    source: Fixed64CoordinateSource<'_>,
-) -> Result<IndependentFixed64PlacementSource> {
-    IndependentFixed64PlacementSource::new(
-        independent_source_evidence(source.evidence),
-        position_soa_to_vec3(source.coordinates),
-    )
-    .map_err(|error| {
-        Error::local(
-            ErrorCode::AbiMismatch,
-            format!("independent fixed64 placement source rejected safe input: {error}"),
-        )
-    })
 }
 
 /// Owned complete fixed64 native pipeline with a lease on its creating context.
