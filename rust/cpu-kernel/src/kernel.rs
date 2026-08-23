@@ -184,6 +184,12 @@ struct SwitchValue {
     derivative: f64,
 }
 
+#[derive(Default)]
+struct PairRuleCursor {
+    exclusion: usize,
+    scale: usize,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 struct CellAssignment {
     key: [usize; 3],
@@ -266,21 +272,45 @@ fn checked_accumulate_force(
     Ok(())
 }
 
-fn pair_is_excluded(forcefield: &ForceField<'_>, atom_i: usize, atom_j: usize) -> bool {
+fn pair_is_excluded(
+    forcefield: &ForceField<'_>,
+    atom_i: usize,
+    atom_j: usize,
+    cursor: &mut PairRuleCursor,
+) -> bool {
+    let target = (atom_i, atom_j);
+    while cursor.exclusion < forcefield.exclusions.len() {
+        let pair = forcefield.exclusions[cursor.exclusion];
+        if (pair.atom_i, pair.atom_j) >= target {
+            break;
+        }
+        cursor.exclusion += 1;
+    }
     forcefield
         .exclusions
-        .binary_search_by_key(&(atom_i, atom_j), |pair| (pair.atom_i, pair.atom_j))
-        .is_ok()
+        .get(cursor.exclusion)
+        .is_some_and(|pair| (pair.atom_i, pair.atom_j) == target)
 }
 
-fn pair_scales(forcefield: &ForceField<'_>, atom_i: usize, atom_j: usize) -> (f64, f64) {
+fn pair_scales(
+    forcefield: &ForceField<'_>,
+    atom_i: usize,
+    atom_j: usize,
+    cursor: &mut PairRuleCursor,
+) -> (f64, f64) {
+    let target = (atom_i, atom_j);
+    while cursor.scale < forcefield.pair_scales.len() {
+        let scale = forcefield.pair_scales[cursor.scale];
+        if (scale.atom_i, scale.atom_j) >= target {
+            break;
+        }
+        cursor.scale += 1;
+    }
     forcefield
         .pair_scales
-        .binary_search_by_key(&(atom_i, atom_j), |scale| (scale.atom_i, scale.atom_j))
-        .map(|index| {
-            let scale = forcefield.pair_scales[index];
-            (scale.lennard_jones, scale.coulomb)
-        })
+        .get(cursor.scale)
+        .filter(|scale| (scale.atom_i, scale.atom_j) == target)
+        .map(|scale| (scale.lennard_jones, scale.coulomb))
         .unwrap_or((1.0, 1.0))
 }
 
@@ -511,6 +541,9 @@ fn evaluate_nonbonded(
     compute_forces: bool,
     evaluation: &mut Evaluation,
 ) -> Result<(), KernelError> {
+    // Both traversal forms below are canonical pair order, so each sorted
+    // force-field rule stream only needs to move forward once per evaluation.
+    let mut pair_rules = PairRuleCursor::default();
     if forcefield.periodic_axes_mask == 0b111 {
         let built_pairs;
         let pairs = if let Some(pairs) = neighbor_pairs {
@@ -527,6 +560,7 @@ fn evaluate_nonbonded(
                 pair.atom_i,
                 pair.atom_j,
                 compute_forces,
+                &mut pair_rules,
                 evaluation,
             )?;
         }
@@ -544,6 +578,7 @@ fn evaluate_nonbonded(
                     atom_i,
                     atom_j,
                     compute_forces,
+                    &mut pair_rules,
                     evaluation,
                 )?;
             }
@@ -572,9 +607,10 @@ fn evaluate_nonbonded_pair(
     atom_i: usize,
     atom_j: usize,
     compute_forces: bool,
+    pair_rules: &mut PairRuleCursor,
     evaluation: &mut Evaluation,
 ) -> Result<(), KernelError> {
-    if pair_is_excluded(forcefield, atom_i, atom_j) {
+    if pair_is_excluded(forcefield, atom_i, atom_j, pair_rules) {
         return Ok(());
     }
     let delta = displacement(system, forcefield, atom_i, atom_j)?;
@@ -587,7 +623,7 @@ fn evaluate_nonbonded_pair(
     if distance > forcefield.cutoff {
         return Ok(());
     }
-    let (lj_scale, coulomb_scale) = pair_scales(forcefield, atom_i, atom_j);
+    let (lj_scale, coulomb_scale) = pair_scales(forcefield, atom_i, atom_j, pair_rules);
     let sigma = 0.5 * (forcefield.sigma[atom_i] + forcefield.sigma[atom_j]);
     let epsilon = (forcefield.epsilon[atom_i] * forcefield.epsilon[atom_j]).sqrt();
     let ratio = sigma / distance;
