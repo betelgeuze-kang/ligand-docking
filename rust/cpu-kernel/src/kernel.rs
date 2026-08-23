@@ -631,9 +631,12 @@ fn evaluate_nonbonded_pair(
     let ratio6 = ratio2 * ratio2 * ratio2;
     let ratio12 = ratio6 * ratio6;
     let lennard_jones = 4.0 * epsilon * (ratio12 - ratio6) * lj_scale;
-    let screened_charge = system.charge[atom_i]
-        * system.charge[atom_j]
-        * (-forcefield.screening_kappa * distance).exp();
+    let screening = if forcefield.screening_kappa == 0.0 {
+        1.0
+    } else {
+        (-forcefield.screening_kappa * distance).exp()
+    };
+    let screened_charge = system.charge[atom_i] * system.charge[atom_j] * screening;
     let coulomb =
         COULOMB_CONSTANT * screened_charge / (forcefield.dielectric * distance) * coulomb_scale;
     let switching = switching_value(distance, forcefield.switch_start, forcefield.cutoff);
