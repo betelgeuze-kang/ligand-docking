@@ -45,6 +45,7 @@ bg_status evaluate_impl(
     const std::vector<cpu::NeighborPair> *neighbor_pairs,
     bool compute_forces,
     bool reuse_force_storage,
+    uint8_t *inout_forcefield_validated,
     cpu::Evaluation *out_evaluation) {
     static_assert(std::is_standard_layout_v<bg_forcefield::Pair>);
     static_assert(std::is_standard_layout_v<bg_forcefield::PairScale>);
@@ -145,6 +146,11 @@ bg_status evaluate_impl(
     cpu::Evaluation candidate;
     const bool direct_force_output =
         reuse_force_storage && compute_forces && neighbor_pairs != nullptr;
+    if (direct_force_output && inout_forcefield_validated == nullptr) {
+        return fail(
+            BG_STATUS_INTERNAL_ERROR,
+            "rust_cpu reusable force-field validation state is null");
+    }
     if (reuse_force_storage && compute_forces) {
         candidate.force_x = std::move(out_evaluation->force_x);
         candidate.force_y = std::move(out_evaluation->force_y);
@@ -185,6 +191,7 @@ bg_status evaluate_impl(
                 neighbor_pairs->size(),
                 reinterpret_cast<const bg_rust_cpu_pair_v1 *>(
                     data_or_null(*neighbor_pairs)),
+                inout_forcefield_validated,
                 &provider_energy,
                 &provider_forces,
                 &provider_error);
@@ -241,7 +248,13 @@ bg_status evaluate(
     bool compute_forces,
     cpu::Evaluation *out_evaluation) {
     return evaluate_impl(
-        system, forcefield, nullptr, compute_forces, false, out_evaluation);
+        system,
+        forcefield,
+        nullptr,
+        compute_forces,
+        false,
+        nullptr,
+        out_evaluation);
 }
 
 bg_status evaluate_reusing_force_storage(
@@ -252,7 +265,13 @@ bg_status evaluate_reusing_force_storage(
     // Dynamics owns a disposable work simulation, so it may trade the public
     // evaluator's failure transactionality for retaining force-vector capacity.
     return evaluate_impl(
-        system, forcefield, nullptr, compute_forces, true, out_evaluation);
+        system,
+        forcefield,
+        nullptr,
+        compute_forces,
+        true,
+        nullptr,
+        out_evaluation);
 }
 
 bg_status evaluate_with_neighbor_pairs(
@@ -267,6 +286,7 @@ bg_status evaluate_with_neighbor_pairs(
         &neighbor_pairs,
         compute_forces,
         false,
+        nullptr,
         out_evaluation);
 }
 
@@ -275,6 +295,7 @@ bg_status evaluate_with_neighbor_pairs_reusing_force_storage(
     const bg_forcefield &forcefield,
     const std::vector<cpu::NeighborPair> &neighbor_pairs,
     bool compute_forces,
+    uint8_t *inout_forcefield_validated,
     cpu::Evaluation *out_evaluation) {
     // This internal entry point is destructive on errors after storage moves.
     return evaluate_impl(
@@ -283,6 +304,7 @@ bg_status evaluate_with_neighbor_pairs_reusing_force_storage(
         &neighbor_pairs,
         compute_forces,
         true,
+        inout_forcefield_validated,
         out_evaluation);
 }
 

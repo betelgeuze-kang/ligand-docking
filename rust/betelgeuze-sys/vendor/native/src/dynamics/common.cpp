@@ -219,6 +219,7 @@ bg_status evaluate(
             forcefield,
             *neighbor_pairs,
             compute_forces,
+            &simulation->rust_cpu_forcefield_validated,
             out_evaluation);
     }
     switch (context.backend) {

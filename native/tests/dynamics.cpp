@@ -1455,17 +1455,23 @@ void test_periodic_cpu_neighbor_cache() {
     rust.simulation = make_simulation(
         rust.system, rust.forcefield, BG_INTEGRATOR_VELOCITY_VERLET,
         0.1, 0.0, 0.0, UINT64_C(0), nullptr);
+    assert(cpp.simulation->rust_cpu_forcefield_validated == UINT8_C(0));
+    assert(rust.simulation->rust_cpu_forcefield_validated == UINT8_C(0));
 
     const bg_dynamics_report_v1 cpp_initial =
         integrate(cpp.context, cpp.simulation, UINT64_C(0));
     const bg_dynamics_report_v1 rust_initial =
         integrate(rust.context, rust.simulation, UINT64_C(0));
+    assert(cpp.simulation->rust_cpu_forcefield_validated == UINT8_C(0));
+    assert(rust.simulation->rust_cpu_forcefield_validated == UINT8_C(0));
     assert(same_bits(
         cpp_initial.potential_kcal_per_mol,
         rust_initial.potential_kcal_per_mol));
     assert(same_bits(
         cpp_initial.total_kcal_per_mol,
         rust_initial.total_kcal_per_mol));
+    integrate(rust.context, rust.simulation, UINT64_C(1));
+    assert(rust.simulation->rust_cpu_forcefield_validated == UINT8_C(1));
     assert(cpp.simulation->neighbor_list_cache.data != nullptr);
     assert(cpp.simulation->neighbor_list_cache.build_scratch != nullptr);
     assert(cpp.simulation->neighbor_list_cache.data->pairs.size() == 3U);
