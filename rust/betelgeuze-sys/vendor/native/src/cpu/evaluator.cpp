@@ -59,6 +59,11 @@ struct PairScales final {
     double coulomb = 1.0;
 };
 
+struct PairRuleCursor final {
+    std::size_t exclusion = 0;
+    std::size_t scale = 0;
+};
+
 [[nodiscard]] bool is_finite(const Vector3 &value) noexcept {
     return std::isfinite(value.x) && std::isfinite(value.y) &&
            std::isfinite(value.z);
@@ -181,27 +186,32 @@ bg_status checked_accumulate_force(
 [[nodiscard]] bool pair_is_excluded(
     const bg_forcefield &forcefield,
     std::size_t atom_i,
-    std::size_t atom_j) noexcept {
+    std::size_t atom_j,
+    PairRuleCursor *cursor) noexcept {
     const bg_forcefield::Pair target{atom_i, atom_j};
-    return std::binary_search(
-        forcefield.exclusions.begin(), forcefield.exclusions.end(), target);
+    while (cursor->exclusion < forcefield.exclusions.size() &&
+           forcefield.exclusions[cursor->exclusion] < target) {
+        ++cursor->exclusion;
+    }
+    return cursor->exclusion < forcefield.exclusions.size() &&
+           forcefield.exclusions[cursor->exclusion] == target;
 }
 
 [[nodiscard]] PairScales pair_scales(
     const bg_forcefield &forcefield,
     std::size_t atom_i,
-    std::size_t atom_j) noexcept {
+    std::size_t atom_j,
+    PairRuleCursor *cursor) noexcept {
     const bg_forcefield::Pair target{atom_i, atom_j};
-    const auto found = std::lower_bound(
-        forcefield.pair_scales.begin(),
-        forcefield.pair_scales.end(),
-        target,
-        [](const bg_forcefield::PairScale &scale,
-           const bg_forcefield::Pair &pair) noexcept {
-            return scale.pair < pair;
-        });
-    if (found != forcefield.pair_scales.end() && found->pair == target) {
-        return {found->lennard_jones, found->coulomb};
+    while (cursor->scale < forcefield.pair_scales.size() &&
+           forcefield.pair_scales[cursor->scale].pair < target) {
+        ++cursor->scale;
+    }
+    if (cursor->scale < forcefield.pair_scales.size() &&
+        forcefield.pair_scales[cursor->scale].pair == target) {
+        const bg_forcefield::PairScale &found =
+            forcefield.pair_scales[cursor->scale];
+        return {found.lennard_jones, found.coulomb};
     }
     return {};
 }
@@ -742,10 +752,12 @@ bg_status evaluate_nonbonded_pair(
     std::size_t atom_i,
     std::size_t atom_j,
     bool compute_forces,
+    PairRuleCursor *pair_rules,
     Evaluation *evaluation) noexcept {
     // Exclusion means that no nonbonded equation exists, so it must be
     // applied before the pair-distance singularity check.
-    if (pair_is_excluded(forcefield, atom_i, atom_j)) {
+    if (pair_is_excluded(
+            forcefield, atom_i, atom_j, pair_rules)) {
         return BG_STATUS_OK;
     }
 
@@ -773,7 +785,8 @@ bg_status evaluate_nonbonded_pair(
         return BG_STATUS_OK;
     }
 
-    const PairScales scales = pair_scales(forcefield, atom_i, atom_j);
+    const PairScales scales = pair_scales(
+        forcefield, atom_i, atom_j, pair_rules);
     const double sigma =
         0.5 * (forcefield.sigma[atom_i] + forcefield.sigma[atom_j]);
     const double epsilon = std::sqrt(
@@ -841,6 +854,9 @@ bg_status evaluate_nonbonded(
     const std::vector<NeighborPair> *neighbor_pairs,
     bool compute_forces,
     Evaluation *evaluation) {
+    // Both traversal forms below are canonical pair order, so each sorted
+    // force-field rule stream only needs to move forward once per evaluation.
+    PairRuleCursor pair_rules;
     if (forcefield.periodic_axes_mask ==
         static_cast<uint32_t>(BG_PERIODIC_AXES_ALL)) {
         std::vector<NeighborPair> built_pairs;
@@ -878,6 +894,7 @@ bg_status evaluate_nonbonded(
                 pair.atom_i,
                 pair.atom_j,
                 compute_forces,
+                &pair_rules,
                 evaluation);
             if (status != BG_STATUS_OK) {
                 return status;
@@ -901,6 +918,7 @@ bg_status evaluate_nonbonded(
                 atom_i,
                 atom_j,
                 compute_forces,
+                &pair_rules,
                 evaluation);
             if (status != BG_STATUS_OK) {
                 return status;
