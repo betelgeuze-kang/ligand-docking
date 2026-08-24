@@ -44,6 +44,7 @@ use super::{
 
 mod admission;
 mod context;
+mod coordinates;
 mod evidence;
 mod ffi;
 mod output_validation;
@@ -64,6 +65,10 @@ mod types;
 use admission::{
     canonical_geometric_batch_receipt, canonical_geometric_batch_receipt_rows,
     canonical_geometric_row_receipt, numeric_matches, validate_geometric_admission_row_semantics,
+};
+use coordinates::{
+    coordinate_segment, coordinate_segment_matches, coordinate_segments_equal,
+    position_soa_to_vec3, scalar_segments_equal, unit_quaternion,
 };
 use evidence::{
     authority_disposition, cluster_evidence, geometric_evidence, pipeline_row, producer_evidence,
@@ -189,16 +194,6 @@ pub struct Fixed64Pipeline {
     validity_receptor_cells: HashMap<(i64, i64, i64), u64>,
     validity_context: IndependentValidityContext,
     _not_send_or_sync: PhantomData<Rc<()>>,
-}
-
-fn position_soa_to_vec3(coordinates: PositionSoa<'_>) -> Vec<Vec3> {
-    coordinates
-        .x_angstrom
-        .iter()
-        .zip(coordinates.y_angstrom)
-        .zip(coordinates.z_angstrom)
-        .map(|((x, y), z)| Vec3::new(*x, *y, *z))
-        .collect()
 }
 
 fn independent_rigid_v2_config(
@@ -1791,112 +1786,6 @@ impl Fixed64Pipeline {
         }
         Ok(profile_id)
     }
-}
-
-fn coordinate_segment_matches(
-    channels: &[&[f64]],
-    slot: usize,
-    ligand_atom_count: u64,
-    require_zero: bool,
-) -> Result<bool> {
-    let ligand_count = usize::try_from(ligand_atom_count).map_err(|_| {
-        Error::local(
-            ErrorCode::AbiMismatch,
-            "native fixed64 ligand denominator does not fit usize",
-        )
-    })?;
-    let begin = slot.checked_mul(ligand_count).ok_or_else(|| {
-        Error::local(
-            ErrorCode::AbiMismatch,
-            "native fixed64 coordinate segment offset overflowed",
-        )
-    })?;
-    let end = begin.checked_add(ligand_count).ok_or_else(|| {
-        Error::local(
-            ErrorCode::AbiMismatch,
-            "native fixed64 coordinate segment end overflowed",
-        )
-    })?;
-    for channel in channels {
-        let segment = channel.get(begin..end).ok_or_else(|| {
-            Error::local(
-                ErrorCode::AbiMismatch,
-                "native fixed64 coordinate segment exceeds its owned buffer",
-            )
-        })?;
-        if segment.iter().any(|value| {
-            if require_zero {
-                *value != 0.0
-            } else {
-                !value.is_finite()
-            }
-        }) {
-            return Ok(false);
-        }
-    }
-    Ok(true)
-}
-
-fn unit_quaternion(values: [f64; 4]) -> bool {
-    if values.iter().any(|value| !value.is_finite()) {
-        return false;
-    }
-    let norm = values[0].hypot(values[1]).hypot(values[2].hypot(values[3]));
-    norm.is_finite() && (norm - 1.0).abs() <= 1.0e-8
-}
-
-fn coordinate_segment<'a>(
-    channels: [&'a [f64]; 3],
-    slot: usize,
-    ligand_count: usize,
-) -> Option<PositionSoa<'a>> {
-    let begin = slot.checked_mul(ligand_count)?;
-    let end = begin.checked_add(ligand_count)?;
-    Some(PositionSoa::new(
-        channels[0].get(begin..end)?,
-        channels[1].get(begin..end)?,
-        channels[2].get(begin..end)?,
-    ))
-}
-
-fn coordinate_segments_equal(
-    left: [&[f64]; 3],
-    right: [&[f64]; 3],
-    slot: usize,
-    ligand_count: usize,
-) -> bool {
-    let Some(left) = coordinate_segment(left, slot, ligand_count) else {
-        return false;
-    };
-    let Some(right) = coordinate_segment(right, slot, ligand_count) else {
-        return false;
-    };
-    [
-        (left.x_angstrom, right.x_angstrom),
-        (left.y_angstrom, right.y_angstrom),
-        (left.z_angstrom, right.z_angstrom),
-    ]
-    .iter()
-    .all(|(left, right)| {
-        left.iter()
-            .zip(*right)
-            .all(|(left, right)| left.to_bits() == right.to_bits())
-    })
-}
-
-fn scalar_segments_equal(left: &[f64], right: &[f64], slot: usize, count: usize) -> bool {
-    let Some(begin) = slot.checked_mul(count) else {
-        return false;
-    };
-    let Some(end) = begin.checked_add(count) else {
-        return false;
-    };
-    let (Some(left), Some(right)) = (left.get(begin..end), right.get(begin..end)) else {
-        return false;
-    };
-    left.iter()
-        .zip(right)
-        .all(|(left, right)| left.to_bits() == right.to_bits())
 }
 
 #[cfg(test)]
