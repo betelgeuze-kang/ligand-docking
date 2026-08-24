@@ -14,11 +14,11 @@ use betelgeuze_docking_search::{
     NATIVE_FIXED64_SINGLE_ANCHOR_PROFILE_ID,
 };
 
+use super::producer::fixed64_lane_and_placement_for_slot;
 use super::{
-    canonical_coordinate_sha256, coordinate_segment, digest_present,
-    fixed64_lane_and_placement_for_slot, independent_placement_source, init, raw_coordinate_source,
-    status_result, sys, Backend, CanonicalHasher, ContextInner, Error, ErrorCode,
-    Fixed64CoordinateSource, Fixed64SourceEvidence, PositionSoa, Result, Sha256,
+    canonical_coordinate_sha256, coordinate_segment, digest_present, independent_placement_source,
+    init, raw_coordinate_source, status_result, sys, Backend, CanonicalHasher, ContextInner, Error,
+    ErrorCode, Fixed64CoordinateSource, Fixed64SourceEvidence, PositionSoa, Result, Sha256,
 };
 
 const NATIVE_FIXED64_SINGLE_ANCHOR_ABI_SCHEMA_ID: &str =
