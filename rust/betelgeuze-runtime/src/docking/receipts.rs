@@ -8,6 +8,36 @@ use super::{
     FIXED64_NATIVE_PIPELINE_PROFILE_ID,
 };
 
+pub(super) fn digest_present(value: &Sha256) -> bool {
+    value.iter().any(|byte| *byte != 0)
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) struct ExpectedPipelineReceiptGraph {
+    pub(super) allocation_inventory_sha256: Sha256,
+    pub(super) allocation_receipt_sha256: Sha256,
+    pub(super) source_bundle_receipt_sha256: Sha256,
+    pub(super) admission_context_receipt_sha256: Sha256,
+    pub(super) refinement_context_receipt_sha256: Sha256,
+    pub(super) scorer_context_receipt_sha256: Sha256,
+    pub(super) validity_context_receipt_sha256: Sha256,
+    pub(super) component_binding_receipt_sha256: Sha256,
+    pub(super) refinement_policy_receipt_sha256: Sha256,
+    pub(super) post_admission_policy_receipt_sha256: Sha256,
+    pub(super) authority_input_receipt_sha256: Sha256,
+    pub(super) receptor_system_sha256: Sha256,
+    pub(super) ligand_system_sha256: Sha256,
+    pub(super) backend_receipt_sha256: Sha256,
+    pub(super) backend: Backend,
+    pub(super) receptor_atom_count: u64,
+    pub(super) ligand_atom_count: u64,
+    pub(super) ligand_heavy_atom_count: u64,
+    pub(super) geometric_max_batch_exact_pair_evaluations: u64,
+    pub(super) pocket_center_angstrom: [f64; 3],
+    pub(super) pocket_radius_angstrom: f64,
+    pub(super) geometric_hard_rejection_minimum_vdw_ratio: f64,
+}
+
 pub(crate) struct CanonicalHasher {
     digest: Sha256Hasher,
     transcript: Option<Vec<u8>>,
