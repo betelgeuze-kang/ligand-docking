@@ -1,12 +1,106 @@
 use std::collections::HashMap;
 
 use super::{
-    bool_from_abi, coordinate_segment, digest_present, numeric_matches, sys,
-    validity_cell_component, Backend, Error, ErrorCode, IndependentScorerContext,
-    IndependentScorerFailureCode, IndependentScorerOutcome, IndependentValidityChecks,
-    IndependentValidityContext, IndependentValidityFailureCode, IndependentValidityMeasurements,
-    IndependentValidityOutcome, Quaternion, Result, Vec3,
+    bool_from_abi, coordinate_segment, digest_present, invalid, numeric_matches, sys, Backend,
+    Error, ErrorCode, Fixed64Donor, Fixed64Pair, Fixed64Rotor, IndependentScorerContext,
+    IndependentScorerDonor, IndependentScorerFailureCode, IndependentScorerOutcome,
+    IndependentValidityChecks, IndependentValidityContext, IndependentValidityFailureCode,
+    IndependentValidityMeasurements, IndependentValidityOutcome, PositionSoa, Quaternion, Result,
+    Vec3,
 };
+
+fn validity_cell_component(value: f64, cell_size: f64) -> Result<i64> {
+    let component = (value / cell_size).floor();
+    const I64_MIN_INCLUSIVE: f64 = -9_223_372_036_854_775_808.0;
+    const I64_MAX_EXCLUSIVE: f64 = 9_223_372_036_854_775_808.0;
+    if !component.is_finite() || !(I64_MIN_INCLUSIVE..I64_MAX_EXCLUSIVE).contains(&component) {
+        return Err(invalid(
+            "fixed64 receptor coordinate is outside the validity cell-key range",
+        ));
+    }
+    Ok(component as i64)
+}
+
+pub(super) fn validity_receptor_cells(
+    coordinates: PositionSoa<'_>,
+    cell_size: f64,
+) -> Result<HashMap<(i64, i64, i64), u64>> {
+    if !cell_size.is_finite() || cell_size <= 0.0 {
+        return Err(invalid(
+            "fixed64 validity contact-cell size must be finite and positive",
+        ));
+    }
+    let mut cells = HashMap::new();
+    for atom in 0..coordinates.x_angstrom.len() {
+        let key = (
+            validity_cell_component(coordinates.x_angstrom[atom], cell_size)?,
+            validity_cell_component(coordinates.y_angstrom[atom], cell_size)?,
+            validity_cell_component(coordinates.z_angstrom[atom], cell_size)?,
+        );
+        let count = cells.entry(key).or_insert(0_u64);
+        *count = count.checked_add(1).ok_or_else(|| {
+            Error::local(
+                ErrorCode::CapacityOverflow,
+                "fixed64 validity receptor-cell occupancy overflowed",
+            )
+        })?;
+    }
+    Ok(cells)
+}
+
+pub(super) fn u64_pair_to_usize(pair: Fixed64Pair, label: &str) -> Result<[usize; 2]> {
+    Ok([
+        usize::try_from(pair.atom_i).map_err(|_| {
+            Error::local(
+                ErrorCode::CapacityOverflow,
+                format!("fixed64 {label} atom i does not fit usize"),
+            )
+        })?,
+        usize::try_from(pair.atom_j).map_err(|_| {
+            Error::local(
+                ErrorCode::CapacityOverflow,
+                format!("fixed64 {label} atom j does not fit usize"),
+            )
+        })?,
+    ])
+}
+
+pub(super) fn u64_donor_to_usize(
+    donor: Fixed64Donor,
+    label: &str,
+) -> Result<IndependentScorerDonor> {
+    Ok(IndependentScorerDonor {
+        donor_atom_index: usize::try_from(donor.donor_atom_index).map_err(|_| {
+            Error::local(
+                ErrorCode::CapacityOverflow,
+                format!("fixed64 {label} donor atom does not fit usize"),
+            )
+        })?,
+        hydrogen_atom_index: usize::try_from(donor.hydrogen_atom_index).map_err(|_| {
+            Error::local(
+                ErrorCode::CapacityOverflow,
+                format!("fixed64 {label} hydrogen atom does not fit usize"),
+            )
+        })?,
+    })
+}
+
+pub(super) fn u64_rotor_to_usize(rotor: Fixed64Rotor) -> Result<[usize; 4]> {
+    let convert = |value| {
+        usize::try_from(value).map_err(|_| {
+            Error::local(
+                ErrorCode::CapacityOverflow,
+                "fixed64 scorer rotor atom does not fit usize",
+            )
+        })
+    };
+    Ok([
+        convert(rotor.atom_i)?,
+        convert(rotor.atom_j)?,
+        convert(rotor.atom_k)?,
+        convert(rotor.atom_l)?,
+    ])
+}
 
 fn scorer_failure_rank_evidence_is_zero(row: &sys::bg_docking_scorer_v1_row_v1) -> bool {
     row.weighted_terms.iter().all(|value| *value == 0.0)
