@@ -16,10 +16,11 @@ behavior-preserving split tracked in issue #331 is:
 - at most 2,000 lines in `docking.rs`;
 - at most two analyzer-visible top-level runtime items: the
   `Fixed64Pipeline` struct and impl;
-- no scientific, receipt, or validation algorithm implemented directly in the
-  orchestration root. Native handle storage, constructor calls, and guard
-  transfer remain orchestration responsibilities; guard mechanics and
-  destruction are owned by `docking/ffi.rs`.
+- no scientific, receipt, or complete output-graph validation algorithm
+  implemented directly in the orchestration root. Construction-time component
+  backend checks, native `profile_id` ABI validation, native handle storage,
+  constructor calls, and guard transfer remain orchestration responsibilities;
+  guard mechanics and destruction are owned by `docking/ffi.rs`.
 
 The reviewed main tree after PR #407 has 1,709 lines and those two items.
 
@@ -28,7 +29,7 @@ The reviewed main tree after PR #407 has 1,709 lines and those two items.
 | Source | Owned boundary |
 | --- | --- |
 | `lib.rs` | Crate-root public re-exports; a `pub` item inside the private docking module is externally reachable only when this owner exports it. |
-| `docking.rs` | Private child-module wiring plus `Fixed64Pipeline` construction/run orchestration, including owned-handle storage, native constructor calls, and transfer from temporary guards. |
+| `docking.rs` | Private child-module wiring plus `Fixed64Pipeline` construction/run orchestration, including construction-time component-backend checks, native `profile_id` ABI validation, owned-handle storage, native constructor calls, and transfer from temporary guards. |
 | `docking/types.rs` | Public fixed64 Rust data-model inputs, evidence, rows, receipts, enums, and conversions; these borrowed and owned types do not imply a `repr(C)` layout contract. |
 | `docking/context.rs` | Molecular context cardinality, channel, topology, digest validation, and shared identity projection. |
 | `docking/prepared_input.rs` | Run-input source validation, borrowed-to-owned independent projections, and canonical pocket-normal preparation. |
