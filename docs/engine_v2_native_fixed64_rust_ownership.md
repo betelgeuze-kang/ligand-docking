@@ -7,9 +7,11 @@ device authority.
 
 ## Orchestration closure
 
-`rust/betelgeuze-runtime/src/docking.rs` is the public module root and the
-owner of `Fixed64Pipeline` construction and run orchestration. The closure
-ceiling for the behavior-preserving split tracked in issue #331 is:
+`rust/betelgeuze-runtime/src/docking.rs` is the private docking module root and
+the owner of `Fixed64Pipeline` construction and run orchestration. The crate's
+public docking API is the explicit re-export list in
+`rust/betelgeuze-runtime/src/lib.rs`. The closure ceiling for the
+behavior-preserving split tracked in issue #331 is:
 
 - at most 2,000 lines in `docking.rs`;
 - at most two analyzer-visible top-level runtime items: the
@@ -23,7 +25,8 @@ The reviewed main tree after PR #407 has 1,709 lines and those two items.
 
 | Source | Owned boundary |
 | --- | --- |
-| `docking.rs` | Public exports plus `Fixed64Pipeline` construction and run orchestration. |
+| `lib.rs` | Crate-root public re-exports; a `pub` item inside the private docking module is externally reachable only when this owner exports it. |
+| `docking.rs` | Private child-module wiring plus `Fixed64Pipeline` construction and run orchestration. |
 | `docking/types.rs` | Public fixed64 POD inputs, evidence, rows, receipts, enums, and conversions. |
 | `docking/context.rs` | Molecular context cardinality, channel, topology, digest validation, and shared identity projection. |
 | `docking/prepared_input.rs` | Run-input source validation, borrowed-to-owned independent projections, and canonical pocket-normal preparation. |
@@ -45,23 +48,21 @@ The reviewed main tree after PR #407 has 1,709 lines and those two items.
 | `docking/ffi.rs` | Descriptor initialization, ABI boolean/source conversion, temporary and preselected handle ownership, backend queries, and exactly-once destruction. |
 | `docking/output_validation_tests.rs` | Test-only adversarial output-graph fixtures; it has no runtime ownership. |
 
-## Qualification-bound root path
+## Current root path and historical evidence
 
 The logical target is an orchestration root with child ownership modules. The
-physical root intentionally remains `src/docking.rs`, rather than moving to
-`src/docking/mod.rs`, because the current path is part of frozen evidence and
-verification inputs:
+current physical root remains `src/docking.rs`. Several current-checkout tools
+inspect that exact path:
 
-- `engine_v2_native_fixed64_cpu_profile_v7_sources.json` binds the consumed-v7
-  source closure to `src/docking.rs`;
-- `engine_v2_native_fixed64_cpu_profile_v6_sources.json` binds the archived-v6
-  source closure to the same path;
 - the context-lease verifier and CI authority audit inspect that exact owner;
 - the module-boundary analyzer defaults to that exact path.
 
-Renaming the root is therefore not a behavior-preserving #331 cleanup. It
-would require a separately authorized successor profile and evidence plan; the
-consumed CPU-v7 qualification must not be rerun or rewritten for this purpose.
+The consumed-v7 and archived-v6 manifests bind `src/docking.rs` inside their
+historical qualified source commits. Their verifiers read those historical
+trees, so a coordinated current-checkout rename would not rewrite the frozen
+evidence or require rerunning the consumed qualification. Such a rename must
+still update the current context-lease verifier, authority audit, analyzer,
+and their tests together; this documentation change does not perform it.
 
 ## Review invariants
 
