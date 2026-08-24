@@ -10,6 +10,7 @@ from tools.verify_engine_v2_native_fixed64_context_lease_v1 import (
     DEFAULT_CONTEXT_SOURCE,
     DEFAULT_CONTRACT,
     DEFAULT_DOCUMENTATION,
+    DEFAULT_FFI_SOURCE,
     DEFAULT_PIPELINE_SOURCE,
     DEFAULT_TEST_SOURCE,
     verify,
@@ -71,6 +72,7 @@ def test_context_lease_contract_rejects_policy_drift(
     (
         ("context", "pub(crate) fn lease(&self) -> Rc<ContextInner>"),
         ("pipeline", "context_lease: context.lease(),"),
+        ("ffi", "impl Drop for Fixed64Pipeline {"),
         (
             "test",
             "multiple_pipelines_keep_the_shared_context_alive_after_wrapper_drop",
@@ -84,6 +86,7 @@ def test_context_lease_contract_rejects_source_binding_drift(
     paths = {
         "context": DEFAULT_CONTEXT_SOURCE,
         "pipeline": DEFAULT_PIPELINE_SOURCE,
+        "ffi": DEFAULT_FFI_SOURCE,
         "test": DEFAULT_TEST_SOURCE,
         "documentation": DEFAULT_DOCUMENTATION,
     }
@@ -95,12 +98,14 @@ def test_context_lease_contract_rejects_source_binding_drift(
         "contract_path": DEFAULT_CONTRACT,
         "context_source_path": DEFAULT_CONTEXT_SOURCE,
         "pipeline_source_path": DEFAULT_PIPELINE_SOURCE,
+        "ffi_source_path": DEFAULT_FFI_SOURCE,
         "test_source_path": DEFAULT_TEST_SOURCE,
         "documentation_path": DEFAULT_DOCUMENTATION,
     }
     argument = {
         "context": "context_source_path",
         "pipeline": "pipeline_source_path",
+        "ffi": "ffi_source_path",
         "test": "test_source_path",
         "documentation": "documentation_path",
     }[source_kind]
