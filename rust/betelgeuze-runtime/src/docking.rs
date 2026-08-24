@@ -111,8 +111,8 @@ use receipts::{
     canonical_coordinate_sha256, canonical_post_admission_policy_receipt,
     canonical_refinement_context_receipt, canonical_refinement_policy_receipt,
     canonical_scorer_context_receipt, canonical_source_bundle_receipt,
-    canonical_source_payload_sha256, canonical_validity_context_receipt, hash_bool,
-    hash_f64_channel, hash_position_soa_owned, hash_u32_channel,
+    canonical_source_payload_sha256, canonical_validity_context_receipt, digest_present, hash_bool,
+    hash_f64_channel, hash_position_soa_owned, hash_u32_channel, ExpectedPipelineReceiptGraph,
 };
 use refinement::validate_refinement_evidence;
 use rigid::{validate_independent_rigid_replay, validate_rigid_row_semantics};
@@ -134,36 +134,6 @@ pub use types::{
     Fixed64TorsionMoveEvidence, Fixed64ValidityEvidence, Sha256,
     FIXED64_NATIVE_PIPELINE_PROFILE_ID,
 };
-
-fn digest_present(value: &Sha256) -> bool {
-    value.iter().any(|byte| *byte != 0)
-}
-
-#[derive(Debug, Clone, Copy)]
-struct ExpectedPipelineReceiptGraph {
-    allocation_inventory_sha256: Sha256,
-    allocation_receipt_sha256: Sha256,
-    source_bundle_receipt_sha256: Sha256,
-    admission_context_receipt_sha256: Sha256,
-    refinement_context_receipt_sha256: Sha256,
-    scorer_context_receipt_sha256: Sha256,
-    validity_context_receipt_sha256: Sha256,
-    component_binding_receipt_sha256: Sha256,
-    refinement_policy_receipt_sha256: Sha256,
-    post_admission_policy_receipt_sha256: Sha256,
-    authority_input_receipt_sha256: Sha256,
-    receptor_system_sha256: Sha256,
-    ligand_system_sha256: Sha256,
-    backend_receipt_sha256: Sha256,
-    backend: Backend,
-    receptor_atom_count: u64,
-    ligand_atom_count: u64,
-    ligand_heavy_atom_count: u64,
-    geometric_max_batch_exact_pair_evaluations: u64,
-    pocket_center_angstrom: [f64; 3],
-    pocket_radius_angstrom: f64,
-    geometric_hard_rejection_minimum_vdw_ratio: f64,
-}
 
 macro_rules! zeroed_abi_value {
     ($type:ty) => {{
