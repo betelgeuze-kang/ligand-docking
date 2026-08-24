@@ -67,7 +67,9 @@ evidence or require rerunning the consumed qualification. The archived-v6
 verifier instead validates frozen profile/archive metadata and does not inspect a
 current or historical source tree, so the move likewise does not alter that
 archive. The current context-lease verifier, authority audit, analyzer, and
-their path-regression test move together with the physical root.
+their path-regression test move together with the physical root. Older frozen
+source-closure comparisons retain their historical path and therefore continue
+to reject the current checkout as a non-matching baseline without mutation.
 
 ## Review invariants
 
