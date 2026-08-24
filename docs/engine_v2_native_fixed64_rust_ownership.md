@@ -16,8 +16,10 @@ behavior-preserving split tracked in issue #331 is:
 - at most 2,000 lines in `docking.rs`;
 - at most two analyzer-visible top-level runtime items: the
   `Fixed64Pipeline` struct and impl;
-- no scientific, receipt, FFI ownership, or validation algorithm implemented
-  directly in the orchestration root.
+- no scientific, receipt, or validation algorithm implemented directly in the
+  orchestration root. Native handle storage, constructor calls, and guard
+  transfer remain orchestration responsibilities; guard mechanics and
+  destruction are owned by `docking/ffi.rs`.
 
 The reviewed main tree after PR #407 has 1,709 lines and those two items.
 
@@ -26,8 +28,8 @@ The reviewed main tree after PR #407 has 1,709 lines and those two items.
 | Source | Owned boundary |
 | --- | --- |
 | `lib.rs` | Crate-root public re-exports; a `pub` item inside the private docking module is externally reachable only when this owner exports it. |
-| `docking.rs` | Private child-module wiring plus `Fixed64Pipeline` construction and run orchestration. |
-| `docking/types.rs` | Public fixed64 POD inputs, evidence, rows, receipts, enums, and conversions. |
+| `docking.rs` | Private child-module wiring plus `Fixed64Pipeline` construction/run orchestration, including owned-handle storage, native constructor calls, and transfer from temporary guards. |
+| `docking/types.rs` | Public fixed64 Rust data-model inputs, evidence, rows, receipts, enums, and conversions; these borrowed and owned types do not imply a `repr(C)` layout contract. |
 | `docking/context.rs` | Molecular context cardinality, channel, topology, digest validation, and shared identity projection. |
 | `docking/prepared_input.rs` | Run-input source validation, borrowed-to-owned independent projections, and canonical pocket-normal preparation. |
 | `docking/coordinates.rs` | Shared coordinate-segment access, bitwise comparison, finite/zero checks, and quaternion normalization checks. |
@@ -45,7 +47,7 @@ The reviewed main tree after PR #407 has 1,709 lines and those two items.
 | `docking/evidence.rs` | Authenticated native ABI row conversion to the public fixed64 evidence surface. |
 | `docking/output_validation.rs` | Fail-closed validation of the complete native fixed64 output graph. |
 | `docking/preselected.rs` | Producer-bypass composition for a verified receipt-bound 512-to-64 batch. |
-| `docking/ffi.rs` | Descriptor initialization, ABI boolean/source conversion, temporary and preselected handle ownership, backend queries, and exactly-once destruction. |
+| `docking/ffi.rs` | Descriptor initialization, ABI boolean/source conversion, temporary/preselected guard mechanics, backend queries, and exactly-once destruction. |
 | `docking/output_validation_tests.rs` | Test-only adversarial output-graph fixtures; it has no runtime ownership. |
 
 ## Current root path and historical evidence
@@ -57,12 +59,14 @@ inspect that exact path:
 - the context-lease verifier and CI authority audit inspect that exact owner;
 - the module-boundary analyzer defaults to that exact path.
 
-The consumed-v7 and archived-v6 manifests bind `src/docking.rs` inside their
-historical qualified source commits. Their verifiers read those historical
-trees, so a coordinated current-checkout rename would not rewrite the frozen
-evidence or require rerunning the consumed qualification. Such a rename must
-still update the current context-lease verifier, authority audit, analyzer,
-and their tests together; this documentation change does not perform it.
+The consumed-v7 verifier reads its source manifest and source files from the
+historical qualified commit, so a current-checkout rename would not rewrite
+that frozen evidence or require rerunning the consumed qualification. The
+archived-v6 verifier instead validates the frozen profile/archive metadata and
+does not inspect a current or historical source tree; a current rename likewise
+does not alter that archive. Such a rename must still update the current
+context-lease verifier, authority audit, analyzer, and their tests together;
+this documentation change does not perform it.
 
 ## Review invariants
 
