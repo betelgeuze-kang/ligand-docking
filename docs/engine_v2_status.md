@@ -3,7 +3,9 @@
 This document is the human-readable companion to
 `config/independent_engine_v2_capabilities.yaml`. The YAML snapshot is validated
 against `betelgeuze_engine_v2.capabilities.capability_snapshot()` and is the
-machine-readable source of truth.
+machine-readable source of truth. Reviewers of the native fixed64 Rust wrapper
+should also use `docs/engine_v2_native_fixed64_rust_ownership.md` for the
+module-level trust-boundary map and current-tooling root-path constraint.
 
 ## Current implementation stage
 
