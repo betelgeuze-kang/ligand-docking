@@ -33,7 +33,6 @@ use betelgeuze_docking_search::{
     NativeScorerV1Donor as IndependentScorerDonor,
     NativeScorerV1FailureCode as IndependentScorerFailureCode,
     NativeScorerV1KernelOutcome as IndependentScorerOutcome, Quaternion, Vec3,
-    FIXED64_MAX_ABSOLUTE_COORDINATE_ANGSTROM,
 };
 use betelgeuze_sys as sys;
 
@@ -66,6 +65,7 @@ use admission::{
     canonical_geometric_batch_receipt, canonical_geometric_batch_receipt_rows,
     canonical_geometric_row_receipt, numeric_matches, validate_geometric_admission_row_semantics,
 };
+use context::assign_shared_identities;
 use coordinates::{
     coordinate_segment, coordinate_segment_matches, coordinate_segments_equal,
     position_soa_to_vec3, scalar_segments_equal, unit_quaternion,
@@ -91,8 +91,8 @@ use pipeline_evidence::{
 };
 pub use prepared_input::Fixed64RunInput;
 use prepared_input::{
-    independent_allocation, independent_feature_geometry_inventory, independent_placement_source,
-    validate_run_input,
+    canonical_pocket_normal, independent_allocation, independent_feature_geometry_inventory,
+    independent_placement_source, validate_run_input,
 };
 pub use preselected::{
     Fixed64PreselectedBatchReceipts, Fixed64PreselectedPipeline, Fixed64PreselectedPipelineReceipt,
@@ -120,7 +120,10 @@ use receipts::{
     hash_f64_channel, hash_position_soa_owned, hash_u32_channel, ExpectedPipelineReceiptGraph,
 };
 use refinement::validate_refinement_evidence;
-use rigid::{validate_independent_rigid_replay, validate_rigid_row_semantics};
+use rigid::{
+    independent_rigid_v2_config, independent_rigid_v3_config, validate_independent_rigid_replay,
+    validate_rigid_row_semantics,
+};
 #[cfg(test)]
 use scorer_validity::independent_validity_check_mask;
 use scorer_validity::{
@@ -194,92 +197,6 @@ pub struct Fixed64Pipeline {
     validity_receptor_cells: HashMap<(i64, i64, i64), u64>,
     validity_context: IndependentValidityContext,
     _not_send_or_sync: PhantomData<Rc<()>>,
-}
-
-fn independent_rigid_v2_config(
-    value: &sys::bg_docking_rigid_v2_config_v1,
-) -> Result<IndependentRigidV2Config> {
-    Ok(IndependentRigidV2Config {
-        overlap_scale: value.overlap_scale,
-        maximum_step_angstrom: value.maximum_step_angstrom,
-        minimum_step_angstrom: value.minimum_step_angstrom,
-        maximum_total_translation_angstrom: value.maximum_total_translation_angstrom,
-        maximum_backtracking_evaluations: usize::try_from(value.maximum_backtracking_evaluations)
-            .map_err(|_| {
-            Error::local(
-                ErrorCode::CapacityOverflow,
-                "fixed64 rigid backtracking budget does not fit usize",
-            )
-        })?,
-        penalty_tolerance: value.penalty_tolerance,
-        epsilon_angstrom: value.epsilon_angstrom,
-    })
-}
-
-fn independent_rigid_v3_config(
-    value: &sys::bg_docking_rigid_v3_config_v1,
-) -> Result<IndependentRigidV3Config> {
-    Ok(IndependentRigidV3Config {
-        v2: independent_rigid_v2_config(&value.v2)?,
-        maximum_rotation_step_radians: value.maximum_rotation_step_radians,
-        minimum_rotation_step_radians: value.minimum_rotation_step_radians,
-        maximum_total_rotation_radians: value.maximum_total_rotation_radians,
-        maximum_rotation_steps: usize::try_from(value.maximum_rotation_steps).map_err(|_| {
-            Error::local(
-                ErrorCode::CapacityOverflow,
-                "fixed64 rigid rotation budget does not fit usize",
-            )
-        })?,
-        minimum_rotation_relative_penalty_reduction: value
-            .minimum_rotation_relative_penalty_reduction,
-        maximum_centroid_offset_angstrom: value.maximum_centroid_offset_angstrom,
-    })
-}
-
-fn canonical_pocket_normal(value: [f64; 3]) -> Result<[f64; 3]> {
-    const DIRECTION_RATIO_SCALE: f64 = 1_099_511_627_776.0;
-
-    fn canonical_direction_ratio(value: f64) -> f64 {
-        let magnitude = (value.abs() * DIRECTION_RATIO_SCALE + 0.5).floor();
-        let quantized = magnitude.copysign(value) / DIRECTION_RATIO_SCALE;
-        if quantized == 0.0 {
-            0.0
-        } else {
-            quantized
-        }
-    }
-
-    if value.iter().any(|component| {
-        !component.is_finite() || component.abs() > FIXED64_MAX_ABSOLUTE_COORDINATE_ANGSTROM
-    }) {
-        return Err(invalid(
-            "fixed64 pocket normal is outside its finite safety envelope",
-        ));
-    }
-    let maximum = value[0].abs().max(value[1].abs()).max(value[2].abs());
-    if maximum <= 1.0e-12 {
-        return Err(invalid("fixed64 pocket normal is degenerate"));
-    }
-    let scaled = Vec3::new(
-        canonical_direction_ratio(value[0] / maximum),
-        canonical_direction_ratio(value[1] / maximum),
-        canonical_direction_ratio(value[2] / maximum),
-    );
-    // This receipt boundary mirrors the native C++ `std::hypot` sequence.
-    // The dev-only search oracle deliberately uses `libm`, which can differ by
-    // a few ULPs and therefore must not define the ABI digest here.
-    let scaled_norm = scaled.x.hypot(scaled.y).hypot(scaled.z);
-    if !scaled_norm.is_finite() || scaled_norm <= 0.0 {
-        return Err(invalid("fixed64 pocket normal could not be normalized"));
-    }
-    let inverse = 1.0 / scaled_norm;
-    let mut result = [scaled.x * inverse, scaled.y * inverse, scaled.z * inverse];
-    for component in &mut result {
-        if *component == 0.0 {
-            *component = 0.0;
-        }
-    }
-    Ok(result)
 }
 
 impl Fixed64Pipeline {
@@ -1789,7 +1706,6 @@ impl Fixed64Pipeline {
 }
 
 #[cfg(test)]
-#[allow(clippy::items_after_test_module)]
 mod output_validation_tests {
     use super::*;
 
@@ -3229,14 +3145,4 @@ mod output_validation_tests {
         )
         .is_err());
     }
-}
-
-fn assign_shared_identities(
-    descriptor: &mut sys::bg_docking_geometric_admission_context_soa_v1,
-    identities: Fixed64Identities,
-) {
-    descriptor.authority_input_receipt_sha256 = identities.authority_input_receipt_sha256;
-    descriptor.receptor_system_sha256 = identities.receptor_system_sha256;
-    descriptor.ligand_system_sha256 = identities.ligand_system_sha256;
-    descriptor.backend_receipt_sha256 = identities.backend_receipt_sha256;
 }

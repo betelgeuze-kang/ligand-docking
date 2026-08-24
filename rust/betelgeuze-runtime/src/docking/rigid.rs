@@ -18,6 +18,46 @@ use super::{
     ErrorCode, Result,
 };
 
+pub(super) fn independent_rigid_v2_config(
+    value: &sys::bg_docking_rigid_v2_config_v1,
+) -> Result<IndependentRigidV2Config> {
+    Ok(IndependentRigidV2Config {
+        overlap_scale: value.overlap_scale,
+        maximum_step_angstrom: value.maximum_step_angstrom,
+        minimum_step_angstrom: value.minimum_step_angstrom,
+        maximum_total_translation_angstrom: value.maximum_total_translation_angstrom,
+        maximum_backtracking_evaluations: usize::try_from(value.maximum_backtracking_evaluations)
+            .map_err(|_| {
+            Error::local(
+                ErrorCode::CapacityOverflow,
+                "fixed64 rigid backtracking budget does not fit usize",
+            )
+        })?,
+        penalty_tolerance: value.penalty_tolerance,
+        epsilon_angstrom: value.epsilon_angstrom,
+    })
+}
+
+pub(super) fn independent_rigid_v3_config(
+    value: &sys::bg_docking_rigid_v3_config_v1,
+) -> Result<IndependentRigidV3Config> {
+    Ok(IndependentRigidV3Config {
+        v2: independent_rigid_v2_config(&value.v2)?,
+        maximum_rotation_step_radians: value.maximum_rotation_step_radians,
+        minimum_rotation_step_radians: value.minimum_rotation_step_radians,
+        maximum_total_rotation_radians: value.maximum_total_rotation_radians,
+        maximum_rotation_steps: usize::try_from(value.maximum_rotation_steps).map_err(|_| {
+            Error::local(
+                ErrorCode::CapacityOverflow,
+                "fixed64 rigid rotation budget does not fit usize",
+            )
+        })?,
+        minimum_rotation_relative_penalty_reduction: value
+            .minimum_rotation_relative_penalty_reduction,
+        maximum_centroid_offset_angstrom: value.maximum_centroid_offset_angstrom,
+    })
+}
+
 fn rigid_evidence_values(value: &sys::bg_docking_rigid_refinement_evidence_v1) -> [f64; 13] {
     [
         value.initial_penalty,

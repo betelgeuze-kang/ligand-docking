@@ -8,7 +8,8 @@ use betelgeuze_docking_search::{
     Fixed64FeatureInventory as IndependentFixed64FeatureInventory,
     Fixed64IndexedSourceEvidence as IndependentFixed64IndexedSource,
     Fixed64PlacementSource as IndependentFixed64PlacementSource,
-    Fixed64SourceEvidence as IndependentFixed64SourceEvidence,
+    Fixed64SourceEvidence as IndependentFixed64SourceEvidence, Vec3,
+    FIXED64_MAX_ABSOLUTE_COORDINATE_ANGSTROM,
 };
 use betelgeuze_sys as sys;
 
@@ -19,6 +20,52 @@ use super::types::{
 };
 use super::{canonical_coordinate_sha256, digest_present, position_soa_to_vec3};
 use crate::{finite, invalid, Error, ErrorCode, Result};
+
+pub(super) fn canonical_pocket_normal(value: [f64; 3]) -> Result<[f64; 3]> {
+    const DIRECTION_RATIO_SCALE: f64 = 1_099_511_627_776.0;
+
+    fn canonical_direction_ratio(value: f64) -> f64 {
+        let magnitude = (value.abs() * DIRECTION_RATIO_SCALE + 0.5).floor();
+        let quantized = magnitude.copysign(value) / DIRECTION_RATIO_SCALE;
+        if quantized == 0.0 {
+            0.0
+        } else {
+            quantized
+        }
+    }
+
+    if value.iter().any(|component| {
+        !component.is_finite() || component.abs() > FIXED64_MAX_ABSOLUTE_COORDINATE_ANGSTROM
+    }) {
+        return Err(invalid(
+            "fixed64 pocket normal is outside its finite safety envelope",
+        ));
+    }
+    let maximum = value[0].abs().max(value[1].abs()).max(value[2].abs());
+    if maximum <= 1.0e-12 {
+        return Err(invalid("fixed64 pocket normal is degenerate"));
+    }
+    let scaled = Vec3::new(
+        canonical_direction_ratio(value[0] / maximum),
+        canonical_direction_ratio(value[1] / maximum),
+        canonical_direction_ratio(value[2] / maximum),
+    );
+    // This receipt boundary mirrors the native C++ `std::hypot` sequence.
+    // The dev-only search oracle deliberately uses `libm`, which can differ by
+    // a few ULPs and therefore must not define the ABI digest here.
+    let scaled_norm = scaled.x.hypot(scaled.y).hypot(scaled.z);
+    if !scaled_norm.is_finite() || scaled_norm <= 0.0 {
+        return Err(invalid("fixed64 pocket normal could not be normalized"));
+    }
+    let inverse = 1.0 / scaled_norm;
+    let mut result = [scaled.x * inverse, scaled.y * inverse, scaled.z * inverse];
+    for component in &mut result {
+        if *component == 0.0 {
+            *component = 0.0;
+        }
+    }
+    Ok(result)
+}
 
 #[derive(Debug, Clone, Copy)]
 pub struct Fixed64RunInput<'a> {

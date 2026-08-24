@@ -1,7 +1,17 @@
 use super::{
-    checked_count, digest_present, finite, invalid, Fixed64Identities, Fixed64PipelineContext,
+    checked_count, digest_present, finite, invalid, sys, Fixed64Identities, Fixed64PipelineContext,
     Result,
 };
+
+pub(super) fn assign_shared_identities(
+    descriptor: &mut sys::bg_docking_geometric_admission_context_soa_v1,
+    identities: Fixed64Identities,
+) {
+    descriptor.authority_input_receipt_sha256 = identities.authority_input_receipt_sha256;
+    descriptor.receptor_system_sha256 = identities.receptor_system_sha256;
+    descriptor.ligand_system_sha256 = identities.ligand_system_sha256;
+    descriptor.backend_receipt_sha256 = identities.backend_receipt_sha256;
+}
 
 pub(super) struct ValidatedContext {
     pub(super) receptor_atom_count: u64,
