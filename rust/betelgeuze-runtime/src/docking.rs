@@ -8,7 +8,7 @@
 use std::collections::HashMap;
 use std::ffi::CStr;
 use std::marker::PhantomData;
-use std::mem::{size_of, MaybeUninit};
+use std::mem::MaybeUninit;
 use std::ptr::{self, NonNull};
 use std::rc::Rc;
 
@@ -44,6 +44,7 @@ use super::{
 
 mod admission;
 mod evidence;
+mod ffi;
 mod output_validation;
 mod pipeline_evidence;
 mod prepared_input;
@@ -67,6 +68,11 @@ use evidence::{
     authority_disposition, cluster_evidence, geometric_evidence, pipeline_row, producer_evidence,
     ranking_evidence, refinement_evidence, require_authority_false, rigid_evidence,
     scorer_evidence, torsion_evidence, torsion_move_evidence, validity_evidence,
+};
+use ffi::{
+    bool_from_abi, init, preselected_component_backend, raw_coordinate_source, raw_source_evidence,
+    slice_pointer, DownstreamHandleGuard, GeometricAdmissionHandleGuard, PipelineHandleGuard,
+    PreselectedHandles, RankerHandleGuard, RigidHandleGuard, TorsionHandleGuard,
 };
 use output_validation::validate_native_outputs;
 use pipeline_evidence::{
@@ -711,63 +717,12 @@ fn validate_index(index: u64, count: usize, label: &str) -> Result<()> {
     Ok(())
 }
 
-fn slice_pointer<T>(values: &[T]) -> *const T {
-    if values.is_empty() {
-        ptr::null()
-    } else {
-        values.as_ptr()
-    }
-}
-
-fn init<T>(initializer: unsafe extern "C" fn(*mut T, usize, u32) -> sys::bg_status) -> Result<T> {
-    let mut value = MaybeUninit::<T>::uninit();
-    // SAFETY: value is correctly sized writable storage and the ABI initializer
-    // writes every field on success.
-    status_result(unsafe { initializer(value.as_mut_ptr(), size_of::<T>(), sys::BG_ABI_VERSION) })?;
-    // SAFETY: successful ABI initialization wrote the complete descriptor.
-    Ok(unsafe { value.assume_init() })
-}
-
 macro_rules! zeroed_abi_value {
     ($type:ty) => {{
         // SAFETY: Every listed ABI type is a repr(C) aggregate containing only
         // numeric fields, raw pointers, and recursively zero-valid aggregates.
         unsafe { MaybeUninit::<$type>::zeroed().assume_init() }
     }};
-}
-
-fn bool_from_abi(value: u8, label: &str) -> Result<bool> {
-    match value {
-        0 => Ok(false),
-        1 => Ok(true),
-        other => Err(Error::local(
-            ErrorCode::AbiMismatch,
-            format!("native fixed64 {label} returned non-boolean value {other}"),
-        )),
-    }
-}
-
-fn raw_source_evidence(value: Fixed64SourceEvidence) -> sys::bg_docking_fixed64_source_evidence_v1 {
-    sys::bg_docking_fixed64_source_evidence_v1 {
-        receipt_sha256: value.receipt_sha256,
-        proposal_sha256: value.proposal_sha256,
-        coordinate_sha256: value.coordinate_sha256,
-        reserved: [0; 2],
-    }
-}
-
-fn raw_coordinate_source(
-    value: Fixed64CoordinateSource<'_>,
-    ligand_atom_count: u64,
-) -> sys::bg_docking_fixed64_coordinate_source_v1 {
-    sys::bg_docking_fixed64_coordinate_source_v1 {
-        source: raw_source_evidence(value.evidence),
-        ligand_atom_count,
-        x_angstrom: value.coordinates.x_angstrom.as_ptr(),
-        y_angstrom: value.coordinates.y_angstrom.as_ptr(),
-        z_angstrom: value.coordinates.z_angstrom.as_ptr(),
-        reserved: [0; 4],
-    }
 }
 
 /// Owned complete fixed64 native pipeline with a lease on its creating context.
@@ -813,135 +768,6 @@ pub struct Fixed64Pipeline {
     validity_receptor_cells: HashMap<(i64, i64, i64), u64>,
     validity_context: IndependentValidityContext,
     _not_send_or_sync: PhantomData<Rc<()>>,
-}
-
-struct PipelineHandleGuard(NonNull<sys::bg_docking_fixed64_pipeline_v2>);
-
-impl PipelineHandleGuard {
-    fn into_inner(self) -> NonNull<sys::bg_docking_fixed64_pipeline_v2> {
-        let handle = self.0;
-        std::mem::forget(self);
-        handle
-    }
-}
-
-impl Drop for PipelineHandleGuard {
-    fn drop(&mut self) {
-        // SAFETY: the guard owns this non-null handle until into_inner transfers it.
-        unsafe { sys::bg_docking_fixed64_pipeline_v2_destroy(self.0.as_ptr()) };
-    }
-}
-
-struct GeometricAdmissionHandleGuard(NonNull<sys::bg_docking_geometric_admission_v1>);
-
-impl GeometricAdmissionHandleGuard {
-    fn into_inner(self) -> NonNull<sys::bg_docking_geometric_admission_v1> {
-        let handle = self.0;
-        std::mem::forget(self);
-        handle
-    }
-}
-
-impl Drop for GeometricAdmissionHandleGuard {
-    fn drop(&mut self) {
-        // SAFETY: the guard owns this non-null handle until into_inner transfers it.
-        unsafe { sys::bg_docking_geometric_admission_v1_destroy(self.0.as_ptr()) };
-    }
-}
-
-struct RigidHandleGuard(NonNull<sys::bg_docking_rigid_refinement>);
-
-impl RigidHandleGuard {
-    fn into_inner(self) -> NonNull<sys::bg_docking_rigid_refinement> {
-        let handle = self.0;
-        std::mem::forget(self);
-        handle
-    }
-}
-
-impl Drop for RigidHandleGuard {
-    fn drop(&mut self) {
-        // SAFETY: the guard owns this non-null handle until into_inner transfers it.
-        unsafe { sys::bg_docking_rigid_refinement_destroy(self.0.as_ptr()) };
-    }
-}
-
-struct TorsionHandleGuard(NonNull<sys::bg_docking_torsion_v7>);
-
-impl TorsionHandleGuard {
-    fn into_inner(self) -> NonNull<sys::bg_docking_torsion_v7> {
-        let handle = self.0;
-        std::mem::forget(self);
-        handle
-    }
-}
-
-impl Drop for TorsionHandleGuard {
-    fn drop(&mut self) {
-        // SAFETY: the guard owns this non-null handle until into_inner transfers it.
-        unsafe { sys::bg_docking_torsion_v7_destroy(self.0.as_ptr()) };
-    }
-}
-
-struct DownstreamHandleGuard(NonNull<sys::bg_docking_fixed64_downstream_v1>);
-
-impl DownstreamHandleGuard {
-    fn into_inner(self) -> NonNull<sys::bg_docking_fixed64_downstream_v1> {
-        let handle = self.0;
-        std::mem::forget(self);
-        handle
-    }
-}
-
-impl Drop for DownstreamHandleGuard {
-    fn drop(&mut self) {
-        // SAFETY: the guard owns this non-null handle until into_inner transfers it.
-        unsafe { sys::bg_docking_fixed64_downstream_v1_destroy(self.0.as_ptr()) };
-    }
-}
-
-struct RankerHandleGuard(NonNull<sys::bg_docking_stable_top_k_v1>);
-
-impl RankerHandleGuard {
-    fn into_inner(self) -> NonNull<sys::bg_docking_stable_top_k_v1> {
-        let handle = self.0;
-        std::mem::forget(self);
-        handle
-    }
-}
-
-pub(crate) struct PreselectedHandles {
-    pub(crate) rigid: NonNull<sys::bg_docking_rigid_refinement>,
-    pub(crate) torsion: NonNull<sys::bg_docking_torsion_v7>,
-    pub(crate) downstream: NonNull<sys::bg_docking_fixed64_downstream_v1>,
-    pub(crate) ranker: NonNull<sys::bg_docking_stable_top_k_v1>,
-}
-
-impl Drop for PreselectedHandles {
-    fn drop(&mut self) {
-        // SAFETY: this value exclusively owns all four non-null handles.
-        unsafe {
-            sys::bg_docking_rigid_refinement_destroy(self.rigid.as_ptr());
-            sys::bg_docking_torsion_v7_destroy(self.torsion.as_ptr());
-            sys::bg_docking_fixed64_downstream_v1_destroy(self.downstream.as_ptr());
-            sys::bg_docking_stable_top_k_v1_destroy(self.ranker.as_ptr());
-        }
-    }
-}
-
-impl Drop for RankerHandleGuard {
-    fn drop(&mut self) {
-        // SAFETY: the guard owns this non-null handle until into_inner transfers it.
-        unsafe { sys::bg_docking_stable_top_k_v1_destroy(self.0.as_ptr()) };
-    }
-}
-
-fn preselected_component_backend(
-    query: impl FnOnce(*mut sys::bg_backend) -> sys::bg_status,
-) -> Result<Backend> {
-    let mut raw = sys::BG_BACKEND_AUTO;
-    status_result(query(&mut raw))?;
-    Backend::from_raw(raw)
 }
 
 fn validity_cell_component(value: f64, cell_size: f64) -> Result<i64> {
@@ -2633,17 +2459,6 @@ impl Fixed64Pipeline {
             ));
         }
         Ok(profile_id)
-    }
-}
-
-impl Drop for Fixed64Pipeline {
-    fn drop(&mut self) {
-        // SAFETY: this object owns both non-null handles and destroys each once,
-        // before this object's context lease can release the native Context.
-        unsafe {
-            sys::bg_docking_fixed64_pipeline_v2_destroy(self.handle.as_ptr());
-            sys::bg_docking_geometric_admission_v1_destroy(self.replay_admission_handle.as_ptr());
-        }
     }
 }
 

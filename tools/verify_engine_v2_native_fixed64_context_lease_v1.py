@@ -18,6 +18,9 @@ DEFAULT_CONTEXT_SOURCE = REPOSITORY_ROOT / "rust/betelgeuze-runtime/src/lib.rs"
 DEFAULT_PIPELINE_SOURCE = (
     REPOSITORY_ROOT / "rust/betelgeuze-runtime/src/docking.rs"
 )
+DEFAULT_FFI_SOURCE = (
+    REPOSITORY_ROOT / "rust/betelgeuze-runtime/src/docking/ffi.rs"
+)
 DEFAULT_TEST_SOURCE = (
     REPOSITORY_ROOT / "rust/betelgeuze-runtime/tests/docking_fixed64_pipeline.rs"
 )
@@ -124,6 +127,7 @@ def verify(
     contract_path: Path = DEFAULT_CONTRACT,
     context_source_path: Path = DEFAULT_CONTEXT_SOURCE,
     pipeline_source_path: Path = DEFAULT_PIPELINE_SOURCE,
+    ffi_source_path: Path = DEFAULT_FFI_SOURCE,
     test_source_path: Path = DEFAULT_TEST_SOURCE,
     documentation_path: Path = DEFAULT_DOCUMENTATION,
 ) -> dict[str, object]:
@@ -177,13 +181,20 @@ def verify(
             "context_lease: Rc<ContextInner>,",
             "context_lease: context.lease(),",
             "self.context_lease.raw_handle()",
-            "impl Drop for Fixed64Pipeline {",
-            "sys::bg_docking_fixed64_pipeline_v2_destroy(self.handle.as_ptr());",
-            "sys::bg_docking_geometric_admission_v1_destroy(",
             "require_send_sync::<Fixed64Pipeline>();",
             "native constructor deep-copies every molecular channel",
         ),
         label="Rust pipeline source",
+    )
+    ffi_source = _read_text(ffi_source_path, label="Rust docking FFI source")
+    _require_snippets(
+        ffi_source,
+        (
+            "impl Drop for Fixed64Pipeline {",
+            "sys::bg_docking_fixed64_pipeline_v2_destroy(self.handle.as_ptr());",
+            "sys::bg_docking_geometric_admission_v1_destroy(",
+        ),
+        label="Rust docking FFI source",
     )
     test_source = _read_text(test_source_path, label="Rust integration test source")
     _require_snippets(
@@ -223,6 +234,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--contract", type=Path, default=DEFAULT_CONTRACT)
     parser.add_argument("--context-source", type=Path, default=DEFAULT_CONTEXT_SOURCE)
     parser.add_argument("--pipeline-source", type=Path, default=DEFAULT_PIPELINE_SOURCE)
+    parser.add_argument("--ffi-source", type=Path, default=DEFAULT_FFI_SOURCE)
     parser.add_argument("--test-source", type=Path, default=DEFAULT_TEST_SOURCE)
     parser.add_argument("--documentation", type=Path, default=DEFAULT_DOCUMENTATION)
     return parser
@@ -235,6 +247,7 @@ def main(argv: list[str] | None = None) -> int:
             contract_path=args.contract,
             context_source_path=args.context_source,
             pipeline_source_path=args.pipeline_source,
+            ffi_source_path=args.ffi_source,
             test_source_path=args.test_source,
             documentation_path=args.documentation,
         )
