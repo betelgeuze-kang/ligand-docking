@@ -7,13 +7,13 @@ device authority.
 
 ## Orchestration closure
 
-`rust/betelgeuze-runtime/src/docking.rs` is the private docking module root and
+`rust/betelgeuze-runtime/src/docking/mod.rs` is the private docking module root and
 the owner of `Fixed64Pipeline` construction and run orchestration. The crate's
 public docking API is the explicit re-export list in
 `rust/betelgeuze-runtime/src/lib.rs`. The closure ceiling for the
 behavior-preserving split tracked in issue #331 is:
 
-- at most 2,000 lines in `docking.rs`;
+- at most 2,000 lines in `docking/mod.rs`;
 - at most two analyzer-visible top-level runtime items: the
   `Fixed64Pipeline` struct and impl;
 - no scientific, receipt, or complete output-graph validation algorithm
@@ -22,14 +22,14 @@ behavior-preserving split tracked in issue #331 is:
   constructor calls, and guard transfer remain orchestration responsibilities;
   guard mechanics and destruction are owned by `docking/ffi.rs`.
 
-The reviewed main tree after PR #407 has 1,709 lines and those two items.
+The behavior-preserving orchestration root has 1,709 lines and those two items.
 
 ## Ownership map
 
 | Source | Owned boundary |
 | --- | --- |
 | `lib.rs` | Crate-root public re-exports; a `pub` item inside the private docking module is externally reachable only when this owner exports it. |
-| `docking.rs` | Private child-module wiring plus `Fixed64Pipeline` construction/run orchestration, including construction-time component-backend checks, native `profile_id` ABI validation, owned-handle storage, native constructor calls, and transfer from temporary guards. |
+| `docking/mod.rs` | Private child-module wiring plus `Fixed64Pipeline` construction/run orchestration, including construction-time component-backend checks, native `profile_id` ABI validation, owned-handle storage, native constructor calls, and transfer from temporary guards. |
 | `docking/types.rs` | Public fixed64 Rust data-model inputs, evidence, rows, receipts, enums, and conversions; these borrowed and owned types do not imply a `repr(C)` layout contract. |
 | `docking/context.rs` | Molecular context cardinality, channel, topology, digest validation, and shared identity projection. |
 | `docking/prepared_input.rs` | Run-input source validation, borrowed-to-owned independent projections, and canonical pocket-normal preparation. |
@@ -53,21 +53,21 @@ The reviewed main tree after PR #407 has 1,709 lines and those two items.
 
 ## Current root path and historical evidence
 
-The logical target is an orchestration root with child ownership modules. The
-current physical root remains `src/docking.rs`. Several current-checkout tools
-inspect that exact path:
+The orchestration root and its child ownership modules now use the physical
+target layout at `src/docking/mod.rs`. Current-checkout tools inspect that exact
+path:
 
 - the context-lease verifier and CI authority audit inspect that exact owner;
 - the module-boundary analyzer defaults to that exact path.
 
 The consumed-v7 verifier reads its source manifest and source files from the
-historical qualified commit, so a current-checkout rename would not rewrite
-that frozen evidence or require rerunning the consumed qualification. The
-archived-v6 verifier instead validates the frozen profile/archive metadata and
-does not inspect a current or historical source tree; a current rename likewise
-does not alter that archive. Such a rename must still update the current
-context-lease verifier, authority audit, analyzer, and their tests together;
-this documentation change does not perform it.
+historical qualified commit, whose manifest intentionally retains the then-current
+`src/docking.rs` path. This current-checkout move does not rewrite that frozen
+evidence or require rerunning the consumed qualification. The archived-v6
+verifier instead validates frozen profile/archive metadata and does not inspect a
+current or historical source tree, so the move likewise does not alter that
+archive. The current context-lease verifier, authority audit, analyzer, and
+their path-regression test move together with the physical root.
 
 ## Review invariants
 
