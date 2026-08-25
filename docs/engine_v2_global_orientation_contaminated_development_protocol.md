@@ -19,13 +19,13 @@ config/engine_v2_global_orientation_contaminated_development.json
 Protocol schema:
 
 ```text
-betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.5.0
+betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.6.0
 ```
 
 Protocol self-hash:
 
 ```text
-ebb67559292613b2685786c03aab01970d21ee0df3b9b885eb33f7fa3ec75a75
+3f35dc70650ed036f9ec6e1c7a6ec6f2b3610b276142b545ddc8a90cfdab9fb7
 ```
 
 ## Scientific question
@@ -109,17 +109,18 @@ absence is an execution blocker, not a value to be defaulted.
 
 Before any later execution authority can be considered, each case must provide a
 complete source receipt binding case identity, archive-member receipt,
-authenticated input receipt, receptor and ligand coordinate identities, ligand
-topology identity, pocket declaration identity, and preparation-policy identity.
-This binds exact structures and declarations without copying private molecular
-material into the repository.
+authenticated input receipt, independently loadable canonical receptor and
+ligand systems, coordinate identities, ligand topology identity, pocket
+declaration identity, and preparation-policy identity. These private receipts
+remain absent from the repository.
 
 ## Information boundary
 
 The experimental generator may consume only prepared ligand coordinates,
 declared pocket center and normal, bounded receptor surface points, the frozen
-generator configuration, the exact source-receipt identity, and the frozen
-profile identity.
+generator configuration, a sanitized authenticated-input projection, and the
+frozen profile identity. The sanitized projection excludes the full input
+receipt and native-backed pocket source/implementation identities.
 
 It may not consume native or reference pose, RMSD, candidate score, prior
 benchmark outcome, fresh-holdout identity, or product-routing state. Reference
@@ -171,7 +172,7 @@ round-1/2/3 compatibility installers, as well as the native V7 profile and
 transitive native source manifest, build configuration, default config
 fingerprint, and single-thread backend options. Its canonical
 implementation-manifest identity is
-`bfcb9f531c5f298af15e62fad2c73a0bc439ed1fafd768bb195d88659a83752c`.
+`c06b503379acc7688d86636734b734a41ea6715d4ec60425f07215c2d3c5f969`.
 PoseBusters is bound to the exact 0.3.1 universal wheel SHA-256
 `a6d1437d0eb3e0fe13ad73b5c4efdc8c0914ceadd904cde55b2a9835bf591a9d`,
 redock configuration, local report runner, the imported public-redocking
@@ -238,31 +239,47 @@ evidence is insufficient.
 ## Predeclared decision
 
 The decision rules are frozen below, but no executable decision evaluator or Go
-receipt issuer is implemented. Current repository evidence types cannot yet
-prove all required ligand-coordinate, ligand-topology, pocket-declaration, and
-preparation-policy identities; bind each oracle observation to its concrete
-baseline or experimental candidate lineage; or retain an explicit unscored
-state for every failed slot. Treating a digest label or caller-set completeness
-boolean as that evidence is forbidden.
+receipt issuer is implemented. The repository now defines the prerequisite
+private-evidence types in
+`betelgeuze_engine_v2/benchmark/global_orientation_development_contracts.py`.
+They retain source coordinates and identities, rederive receptor surface points,
+bind each arm's exact 64-slot lineage, deterministically regenerate the
+experimental batch for equality checking, materialize accepted experimental
+slots as scorer-compatible `DockingProposal` identities, and require an
+explicit unscored state for every incomplete observation. No private evidence
+instance is
+committed, and the types do not load inputs, score candidates, evaluate the
+decision, or issue authority. Treating a digest label or caller-set completeness
+boolean as actual evidence remains forbidden.
 
-Before an evaluator can be reviewed, repository types must provide all four
-machine-verifiable contracts:
+Before an evaluator can be reviewed, separately authorized private evidence must
+instantiate all four machine-verifiable contracts:
 
 1. a case-source receipt containing the ligand, topology, pocket, exact
    binary64 pocket radius, derived validity-config fingerprint, evaluation
-   pipeline, exact native scorer extension and backend-receipt identities, and
-   generator Python/shared-library/`libm` runtime identities, and preparation
-   identities plus receptor-surface points rederived from the bound receptor
-   geometry by a frozen extraction procedure;
+   pipeline, a concrete backend receipt whose embedded native-extension identity
+   matches the exact native scorer extension, a scorer context rederived from
+   the authenticated molecular systems, and an authenticated preparation-policy
+   identity plus receptor-surface points rederived from the bound receptor
+   geometry by a frozen extraction procedure; the generator source identity is
+   derived only from permitted pre-result inputs, while the still-unbound
+   Python/shared-library/`libm` runtime artifacts remain an execution blocker;
 2. baseline candidate lineage bound to all 64 observation slots;
 3. experimental candidate lineage bound to all 64 observation slots; and
 4. failure-complete observations with an explicit unscored state.
+
+Each generated-row failure code must belong to the frozen allowlist for its
+first incomplete stage: scorer, validity evaluator, or RMSD after validity is
+complete.
 
 Until then,
 `decision_evaluator_implemented = false` and
 `go_receipt_emission_authorized = false`. Missing oracle, selected RMSD, or
 score values must eventually remain explicit failure observations rather than
 parser errors or invented finite values.
+
+The contract-only implementation is documented in
+[the global-orientation development evidence contracts](engine_v2_global_orientation_development_evidence_contracts.md).
 
 A development Go requires every invariant and both criteria. In particular:
 

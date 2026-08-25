@@ -13,7 +13,7 @@ from typing import Any, Mapping
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 
 SCHEMA_ID = (
-    "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.5.0"
+    "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.6.0"
 )
 FROZEN_GLOBAL_ORIENTATION_GENERATOR_ID = "deterministic_surface_aware_rigid_v2"
 BASELINE_LINEAGE_BY_CASE = {
@@ -48,22 +48,36 @@ UNCOVERED_CASE_IDS = (
 )
 SOURCE_RECEIPT_FIELDS = (
     "case_id",
+    "historical_case_source",
+    "historical_case_source_receipt_sha256",
+    "historical_archive_sha256",
+    "historical_member_manifest_sha256",
+    "historical_bundle_checksum_sha256",
+    "authenticated_problem",
+    "receptor_system",
+    "receptor_system_sha256",
+    "ligand_system",
+    "ligand_system_sha256",
+    "scorer_context",
     "source_case_member_receipt_sha256",
     "authenticated_input_receipt_sha256",
     "receptor_coordinate_sha256",
     "ligand_coordinate_sha256",
     "ligand_topology_sha256",
     "pocket_declaration_sha256",
+    "pocket_center_binary64_hex",
+    "pocket_normal_binary64_hex",
     "pocket_radius_angstrom_binary64_hex",
     "pose_validity_config_fingerprint_sha256",
     "preparation_policy_sha256",
     "evaluation_pipeline_sha256",
+    "scorer_backend_receipt",
+    "scorer_implementation_manifest_sha256",
     "scorer_native_extension_sha256",
     "scorer_backend_receipt_sha256",
-    "generator_python_executable_sha256",
-    "generator_python_shared_library_sha256",
-    "generator_libm_sha256",
-    "generator_runtime_fingerprint_sha256",
+    "sanitized_authenticated_input_sha256",
+    "generator_source_receipt_sha256",
+    "generator_runtime_artifacts_bound",
 )
 ALLOWED_INPUTS = (
     "prepared_ligand_coordinates",
@@ -251,9 +265,7 @@ def _generator_parameters() -> tuple[str, ...]:
         raise GlobalOrientationDevelopmentProtocolError(
             "generator signature exposes unsupported parameter forms"
         )
-    return tuple(
-        argument.arg for argument in (*arguments.args, *arguments.kwonlyargs)
-    )
+    return tuple(argument.arg for argument in (*arguments.args, *arguments.kwonlyargs))
 
 
 def _verify_generator_boundary() -> None:
@@ -364,7 +376,7 @@ def _verify_preimport_source_bindings(protocol: Mapping[str, Any]) -> None:
     )
     _exact(
         scorer_manifest.get("python_transitive_source_manifest_sha256"),
-        "18b8e50567dcece1c90566a36065dfafc4effda63db352bb98a786f97782d193",
+        "ff6d02b412069e5f802ac780fa0fc85d827da475cb6cafc6592b7b8ef4ea0ae0",
         name="pre-import ScorerV1 source identity",
     )
     _exact(
@@ -645,10 +657,10 @@ def _verify_authority_bindings(
         ),
         "python_module_path": "betelgeuze_engine_v2/docking/scorer_v1.py",
         "python_module_sha256": (
-            "aa7cd89dba16edb36da033bace57804b9ee851997a400c9d468e61ccefdd0159"
+            "138484e4e3f5473c582485316ed8482fc770d0df2aa9f8397e4c91be22d81b75"
         ),
         "python_transitive_source_manifest_sha256": (
-            "18b8e50567dcece1c90566a36065dfafc4effda63db352bb98a786f97782d193"
+            "ff6d02b412069e5f802ac780fa0fc85d827da475cb6cafc6592b7b8ef4ea0ae0"
         ),
         "python_transitive_source_scope": SCORER_PYTHON_SOURCE_SCOPE,
     }
@@ -664,7 +676,7 @@ def _verify_authority_bindings(
             ),
             "implementation_manifest": implementation_manifest,
             "implementation_source_sha256": (
-                "bfcb9f531c5f298af15e62fad2c73a0bc439ed1fafd768bb195d88659a83752c"
+                "c06b503379acc7688d86636734b734a41ea6715d4ec60425f07215c2d3c5f969"
             ),
             "native_runtime_artifact_contract": native_runtime_artifact_contract,
             "terms_schema_id": "betelgeuze.engine_v2_scorer_v1_terms/1.1.0",
@@ -851,14 +863,48 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
         "phase25_policy_sha256": "b4c5530dc4766500dbbc854875cfb39baadad94196c63be6150514879993d211",
         "global_orientation_synthetic_contract_schema_id": "betelgeuze.engine_v2_global_orientation_synthetic_contract/2.0.0",
         "global_orientation_synthetic_contract_sha256": "02fa37a94f3c1719f5e7b5b808c71d053e313b018ef9bfa7d904869c2ab1dad0",
-        "case_source_receipt_schema_id": "betelgeuze.engine_v2_source_paired_clearance_"
-        "case_source_receipt/1.0.0",
+        "case_source_receipt_schema_id": "betelgeuze.engine_v2_global_orientation_"
+        "development_case_source/1.0.0",
+        "preparation_failure_receipt_schema_id": (
+            "betelgeuze.engine_v2_global_orientation_development_"
+            "preparation_failure/1.0.0"
+        ),
+        "historical_failure_authority_schema_id": (
+            "betelgeuze.engine_v2_global_orientation_historical_failure_authority/1.0.0"
+        ),
+        "lineage_slot_receipt_schema_id": (
+            "betelgeuze.engine_v2_global_orientation_development_lineage_slot/1.0.0"
+        ),
+        "arm_lineage_receipt_schema_id": (
+            "betelgeuze.engine_v2_global_orientation_development_arm_lineage/1.0.0"
+        ),
+        "observation_slot_receipt_schema_id": (
+            "betelgeuze.engine_v2_global_orientation_development_observation_slot/1.0.0"
+        ),
+        "partial_evidence_schema_id": (
+            "betelgeuze.engine_v2_global_orientation_development_partial_evidence/1.0.0"
+        ),
+        "arm_observations_receipt_schema_id": (
+            "betelgeuze.engine_v2_global_orientation_development_arm_observations/1.0.0"
+        ),
+        "development_evidence_contract_module_path": (
+            "betelgeuze_engine_v2/benchmark/global_orientation_development_contracts.py"
+        ),
+        "development_evidence_contract_module_sha256": (
+            "832a5b40257919a1dbe3114cf06a0c5d696bd1e9faf6ee2294a7474d99c8c4aa"
+        ),
+        "contract_types_implemented": True,
         "exact_case_source_receipt_required": True,
         "source_receipt_required_fields": list(SOURCE_RECEIPT_FIELDS),
         "source_receipts_committed": False,
         "source_receipt_absence_blocks_execution": True,
     }
     _exact(dict(sources), expected_sources, name="source bindings")
+    _exact(
+        sources.get("development_evidence_contract_module_sha256"),
+        _file_sha256(str(sources.get("development_evidence_contract_module_path"))),
+        name="live development evidence contract source",
+    )
     _verify_phase25_policy_binding(sources)
     _verify_synthetic_contract_binding(sources)
     _verify_preimport_source_bindings(protocol)
@@ -1086,7 +1132,7 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
             "hard_no_go_any",
             "invariants_all",
             "no_go_effect",
-            "required_future_evidence_contracts",
+            "required_private_evidence_instances",
             "result_cannot_change_protocol",
         },
         name="decision key set",
@@ -1102,7 +1148,7 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
         name="Go receipt authority",
     )
     _exact(
-        tuple(decision.get("required_future_evidence_contracts", ())),
+        tuple(decision.get("required_private_evidence_instances", ())),
         (
             "case_source_receipt_with_ligand_topology_pocket_preparation_and_"
             "rederived_receptor_surface_identities",
@@ -1110,7 +1156,7 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
             "experimental_candidate_lineage_bound_to_all_64_observation_slots",
             "failure_complete_observation_slots_with_explicit_unscored_state",
         ),
-        name="future evidence contracts",
+        name="required private evidence instances",
     )
     _exact(
         decision.get("go_requires_all_invariants"),
@@ -1145,7 +1191,7 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
     _exact(
         tuple(decision.get("hard_no_go_any", ())),
         (
-            "evaluator_or_evidence_contract_absent",
+            "evaluator_or_required_private_evidence_absent",
             "required_invariant_failed",
             "zero_new_previously_uncovered_valid_proposal_recoveries",
             "baseline_recovered_case_regression",

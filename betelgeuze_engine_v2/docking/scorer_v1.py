@@ -924,6 +924,84 @@ class ScorerV1Terms:
         return {**self._projection(), "receipt_sha256": self.receipt_sha256}
 
 
+def derive_scorer_v1_context(
+    authority: AuthenticatedDockingProblem,
+    receptor_system: AllAtomSystem,
+    ligand_system: AllAtomSystem,
+) -> ScorerV1Context:
+    """Derive the complete scorer chemistry context from authenticated systems."""
+
+    if not isinstance(authority, AuthenticatedDockingProblem):
+        raise TypeError("authority must be AuthenticatedDockingProblem")
+    if not isinstance(authority.validity_context, ElementAwarePoseValidityContext):
+        raise ScorerV1Error("scorer v1 requires element-aware authority")
+    for name, system in (
+        ("receptor_system", receptor_system),
+        ("ligand_system", ligand_system),
+    ):
+        if not isinstance(system, AllAtomSystem):
+            raise TypeError(f"{name} must be AllAtomSystem")
+        require_valid_all_atom_system(system)
+    if len(receptor_system.bonds) > MAX_SCORER_V1_RECEPTOR_BONDS_SCANNED:
+        raise ScorerV1Error("receptor bond count exceeds scorer v1 hard bound")
+    if (
+        canonical_system_sha256(receptor_system) != authority.receptor_system_sha256
+        or canonical_system_sha256(ligand_system) != authority.ligand_system_sha256
+    ):
+        raise ScorerV1Error("scorer v1 systems are cross-wired")
+    receptor_indices = authority.receptor_atom_indices
+    receptor_allowed = set(receptor_indices)
+    ligand_allowed = set(range(ligand_system.atom_count))
+    receptor_charges_full = _complete_charges(receptor_system)
+    ligand_charges = _complete_charges(ligand_system)
+    receptor_donors_full, receptor_acceptors_full, receptor_hydrophobic_full = (
+        _features(receptor_system, receptor_allowed)
+    )
+    ligand_donors, ligand_acceptors, ligand_hydrophobic = _features(
+        ligand_system, ligand_allowed
+    )
+    receptor_position = {
+        atom_index: position for position, atom_index in enumerate(receptor_indices)
+    }
+    receptor_donors = tuple(
+        (receptor_position[donor], receptor_position[hydrogen])
+        for donor, hydrogen in receptor_donors_full
+        if donor in receptor_position and hydrogen in receptor_position
+    )
+    return ScorerV1Context(
+        authority_input_receipt_sha256=authority.input_receipt_sha256,
+        receptor_system_sha256=authority.receptor_system_sha256,
+        ligand_system_sha256=authority.ligand_system_sha256,
+        receptor_atom_indices=receptor_indices,
+        receptor_atom_types=tuple(
+            _atom_type(
+                receptor_system.atoms[index].element,
+                receptor_system.atoms[index].aromatic,
+                receptor_system.atoms[index].formal_charge,
+            )
+            for index in receptor_indices
+        ),
+        ligand_atom_types=tuple(
+            _atom_type(atom.element, atom.aromatic, atom.formal_charge)
+            for atom in ligand_system.atoms
+        ),
+        receptor_partial_charges_e=tuple(
+            receptor_charges_full[index] for index in receptor_indices
+        ),
+        ligand_partial_charges_e=ligand_charges,
+        receptor_donors=receptor_donors,
+        ligand_donors=ligand_donors,
+        receptor_acceptors=tuple(
+            receptor_position[index] for index in receptor_acceptors_full
+        ),
+        ligand_acceptors=ligand_acceptors,
+        receptor_hydrophobic=tuple(
+            receptor_position[index] for index in receptor_hydrophobic_full
+        ),
+        ligand_hydrophobic=ligand_hydrophobic,
+    )
+
+
 class ChemistryPoseScorerV1:
     scorer_id = SCORER_V1_ID
     scorer_version = SCORER_V1_VERSION
@@ -941,24 +1019,11 @@ class ChemistryPoseScorerV1:
         backend_options: ScorerBackendOptions | None = None,
         backend_receipt: ScorerBackendReceipt | None = None,
     ) -> None:
-        if not isinstance(authority, AuthenticatedDockingProblem):
-            raise TypeError("authority must be AuthenticatedDockingProblem")
-        if not isinstance(authority.validity_context, ElementAwarePoseValidityContext):
-            raise ScorerV1Error("scorer v1 requires element-aware authority")
-        for name, system in (
-            ("receptor_system", receptor_system),
-            ("ligand_system", ligand_system),
-        ):
-            if not isinstance(system, AllAtomSystem):
-                raise TypeError(f"{name} must be AllAtomSystem")
-            require_valid_all_atom_system(system)
-        if len(receptor_system.bonds) > MAX_SCORER_V1_RECEPTOR_BONDS_SCANNED:
-            raise ScorerV1Error("receptor bond count exceeds scorer v1 hard bound")
-        if (
-            canonical_system_sha256(receptor_system) != authority.receptor_system_sha256
-            or canonical_system_sha256(ligand_system) != authority.ligand_system_sha256
-        ):
-            raise ScorerV1Error("scorer v1 systems are cross-wired")
+        self._context = derive_scorer_v1_context(
+            authority,
+            receptor_system,
+            ligand_system,
+        )
         selected_config = ScorerV1Config() if config is None else config
         if not isinstance(selected_config, ScorerV1Config):
             raise TypeError("config must be ScorerV1Config")
@@ -971,57 +1036,6 @@ class ChemistryPoseScorerV1:
         )
         if not isinstance(selected_backend_options, ScorerBackendOptions):
             raise TypeError("backend_options must be ScorerBackendOptions")
-        receptor_indices = authority.receptor_atom_indices
-        receptor_allowed = set(receptor_indices)
-        ligand_allowed = set(range(ligand_system.atom_count))
-        receptor_charges_full = _complete_charges(receptor_system)
-        ligand_charges = _complete_charges(ligand_system)
-        receptor_donors_full, receptor_acceptors_full, receptor_hydrophobic_full = (
-            _features(receptor_system, receptor_allowed)
-        )
-        ligand_donors, ligand_acceptors, ligand_hydrophobic = _features(
-            ligand_system, ligand_allowed
-        )
-        receptor_position = {
-            atom_index: position for position, atom_index in enumerate(receptor_indices)
-        }
-        receptor_donors = tuple(
-            (receptor_position[donor], receptor_position[hydrogen])
-            for donor, hydrogen in receptor_donors_full
-            if donor in receptor_position and hydrogen in receptor_position
-        )
-        self._context = ScorerV1Context(
-            authority_input_receipt_sha256=authority.input_receipt_sha256,
-            receptor_system_sha256=authority.receptor_system_sha256,
-            ligand_system_sha256=authority.ligand_system_sha256,
-            receptor_atom_indices=receptor_indices,
-            receptor_atom_types=tuple(
-                _atom_type(
-                    receptor_system.atoms[index].element,
-                    receptor_system.atoms[index].aromatic,
-                    receptor_system.atoms[index].formal_charge,
-                )
-                for index in receptor_indices
-            ),
-            ligand_atom_types=tuple(
-                _atom_type(atom.element, atom.aromatic, atom.formal_charge)
-                for atom in ligand_system.atoms
-            ),
-            receptor_partial_charges_e=tuple(
-                receptor_charges_full[index] for index in receptor_indices
-            ),
-            ligand_partial_charges_e=ligand_charges,
-            receptor_donors=receptor_donors,
-            ligand_donors=ligand_donors,
-            receptor_acceptors=tuple(
-                receptor_position[index] for index in receptor_acceptors_full
-            ),
-            ligand_acceptors=ligand_acceptors,
-            receptor_hydrophobic=tuple(
-                receptor_position[index] for index in receptor_hydrophobic_full
-            ),
-            ligand_hydrophobic=ligand_hydrophobic,
-        )
         self._authority = authority
         self._validity = authority.validity_context
         self._config = selected_config
@@ -2113,5 +2127,6 @@ __all__ = [
     "ScorerV1GuidedSearchResult",
     "ScorerV1SearchTermRow",
     "ScorerV1Terms",
+    "derive_scorer_v1_context",
     "run_authenticated_scorer_v1_guided_search",
 ]
