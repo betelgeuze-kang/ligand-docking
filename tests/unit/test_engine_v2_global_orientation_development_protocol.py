@@ -1,0 +1,149 @@
+from __future__ import annotations
+
+import copy
+import hashlib
+import json
+from pathlib import Path
+
+import pytest
+
+from tools.verify_engine_v2_global_orientation_contaminated_development import (
+    GlobalOrientationDevelopmentProtocolError,
+    load_protocol,
+    verify_protocol,
+)
+
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_PROTOCOL_PATH = (
+    _REPO_ROOT / "config/engine_v2_global_orientation_contaminated_development.json"
+)
+_PROTOCOL_DOC_PATH = (
+    _REPO_ROOT
+    / "docs/engine_v2_global_orientation_contaminated_development_protocol.md"
+)
+
+
+def _protocol() -> dict[str, object]:
+    return load_protocol(_PROTOCOL_PATH)
+
+
+def _reseal(payload: dict[str, object]) -> dict[str, object]:
+    changed = copy.deepcopy(payload)
+    changed.pop("protocol_sha256", None)
+    changed["protocol_sha256"] = hashlib.sha256(
+        json.dumps(
+            changed,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+            allow_nan=False,
+        ).encode("ascii")
+    ).hexdigest()
+    return changed
+
+
+def test_current_global_orientation_development_protocol_verifies() -> None:
+    observed = verify_protocol(_protocol())
+    assert observed == (
+        "4c07ca7c3b2f7afaf2152ccc1257898ff0018c76287f7aad42771609adac240a"
+    )
+
+
+def test_protocol_document_tracks_schema_hash_and_execution_boundary() -> None:
+    protocol = _protocol()
+    document = _PROTOCOL_DOC_PATH.read_text(encoding="utf-8")
+
+    assert protocol["schema_id"] in document
+    assert protocol["protocol_sha256"] in document
+    assert "historical_development_execution_authorized = false" in document
+    assert "does not answer that question." in document
+
+
+def test_resealed_execution_authority_escalation_fails_closed() -> None:
+    changed = _protocol()
+    changed["authority"]["historical_development_execution_authorized"] = True
+    changed = _reseal(changed)
+
+    with pytest.raises(
+        GlobalOrientationDevelopmentProtocolError,
+        match="authority",
+    ):
+        verify_protocol(changed)
+
+
+def test_resealed_source_receipt_claim_fails_closed() -> None:
+    changed = _protocol()
+    changed["source_bindings"]["source_receipts_committed"] = True
+    changed = _reseal(changed)
+
+    with pytest.raises(
+        GlobalOrientationDevelopmentProtocolError,
+        match="source bindings",
+    ):
+        verify_protocol(changed)
+
+
+def test_resealed_forbidden_input_drift_fails_closed() -> None:
+    changed = _protocol()
+    changed["information_boundary"]["generator_forbidden_inputs"].remove(
+        "reference_pose"
+    )
+    changed = _reseal(changed)
+
+    with pytest.raises(
+        GlobalOrientationDevelopmentProtocolError,
+        match="forbidden inputs",
+    ):
+        verify_protocol(changed)
+
+
+def test_resealed_candidate_budget_drift_fails_closed() -> None:
+    changed = _protocol()
+    changed["arm_contract"]["experimental"]["generator_config"]["orientation_count"] = 7
+    changed["arm_contract"]["experimental"]["candidate_slot_count"] = 56
+    changed = _reseal(changed)
+
+    with pytest.raises(
+        GlobalOrientationDevelopmentProtocolError,
+        match="experimental denominator",
+    ):
+        verify_protocol(changed)
+
+
+def test_resealed_breadth_criterion_cannot_be_weakened() -> None:
+    changed = _protocol()
+    changed["decision"]["go_criteria_all"][0] = (
+        "valid_proposal_oracle_recovery_in_at_least_1_of_7_previously_uncovered_cases"
+    )
+    changed = _reseal(changed)
+
+    with pytest.raises(
+        GlobalOrientationDevelopmentProtocolError,
+        match="Go criteria",
+    ):
+        verify_protocol(changed)
+
+
+def test_resealed_archive_identity_drift_fails_closed() -> None:
+    changed = _protocol()
+    changed["source_bindings"]["historical_archive_sha256"] = "0" * 64
+    changed = _reseal(changed)
+
+    with pytest.raises(
+        GlobalOrientationDevelopmentProtocolError,
+        match="source bindings",
+    ):
+        verify_protocol(changed)
+
+
+def test_resealed_pr245_dependency_cannot_be_removed() -> None:
+    changed = _protocol()
+    changed["execution_gate"]["pr245_reviewed_terminal_state_required"] = False
+    changed = _reseal(changed)
+
+    with pytest.raises(
+        GlobalOrientationDevelopmentProtocolError,
+        match="execution gate",
+    ):
+        verify_protocol(changed)
