@@ -252,6 +252,9 @@ p50/p95, candidate throughput, transfer
 p50, context p50, kernel totals, and the predeclared strict `hip_fast` median
 gate. CPU fallback, denominator deletion, non-finite values, evidence field
 drift, or any execution/scientific/benchmark/product authority is rejected.
+Each architecture row also records the CPU model, physical-core/logical-thread
+topology, benchmark thread count, affinity, governor, turbo state, NUMA policy,
+and hashed execution environment used by the `rust_cpu` speed-gate reference.
 Each candidate's scientific triple must be entirely finite or entirely JSON
 `null` for a typed failure; partial triples and non-finite numbers are rejected,
 so failures remain in the 64-slot denominator.
@@ -262,7 +265,9 @@ representative backend embeds a self-bound execution receipt naming the
 requested and observed backend, ordered cohort, fallback status, and profiler
 trace. GPU profiler evidence contains the complete normalized ordered dispatch
 rows; the verifier recomputes their canonical digest and rejects any per-kernel
-count or runtime summary not derived from those rows.
+count or runtime summary not derived from those rows. Every ordered case and
+every required timing-sample index must occur in the normalized trace, so a
+rehashed truncated trace is rejected.
 
 The verifier only checks supplied evidence. It never runs a GPU and a passing
 artifact still grants no acceleration, scientific, benchmark, or product

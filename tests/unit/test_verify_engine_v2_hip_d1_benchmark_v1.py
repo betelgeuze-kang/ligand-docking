@@ -75,17 +75,28 @@ def _case(case_id: str, index: int, backend_name: str) -> dict:
 
 def _backend(case_ids: list[str], backend_name: str, architecture: str) -> dict:
     gpu = backend_name != "rust_cpu"
+    profiler_rows = (
+        [
+            {
+                "dispatch_index": dispatch_index,
+                "case_id": case_id,
+                "sample_index": sample_index,
+                "kernel_name": "score_candidates",
+                "runtime_seconds": 0.001953125,
+            }
+            for dispatch_index, (case_id, sample_index) in enumerate(
+                (case_id, sample_index)
+                for case_id in case_ids
+                for sample_index in range(5)
+            )
+        ]
+        if gpu
+        else []
+    )
     profiler_trace = (
         {
             "schema_id": VERIFIER.NORMALIZED_PROFILER_TRACE_SCHEMA,
-            "rows": [
-                {
-                    "dispatch_index": index,
-                    "kernel_name": "score_candidates",
-                    "runtime_seconds": 0.05,
-                }
-                for index in range(5)
-            ],
+            "rows": profiler_rows,
         }
         if gpu
         else None
@@ -125,8 +136,10 @@ def _backend(case_ids: list[str], backend_name: str, architecture: str) -> dict:
             [
                 {
                     "kernel_name": "score_candidates",
-                    "dispatch_count": 5,
-                    "total_runtime_seconds": 0.25,
+                    "dispatch_count": len(profiler_rows),
+                    "total_runtime_seconds": sum(
+                        row["runtime_seconds"] for row in profiler_rows
+                    ),
                 }
             ]
             if gpu
@@ -166,6 +179,17 @@ def _architecture(case_ids: list[str], name: str) -> dict:
         "pci_device_id": "1002:744c",
         "device_serial_sha256": VERIFIER._canonical_sha256(name),
         "total_vram_bytes": 16 * 1024**3,
+        "cpu_model": "AMD Ryzen 9 7950X",
+        "cpu_physical_core_count": 16,
+        "cpu_logical_thread_count": 32,
+        "cpu_execution_settings": {
+            "benchmark_thread_count": 16,
+            "affinity": "0-15",
+            "frequency_governor": "performance",
+            "turbo_enabled": False,
+            "numa_policy": "local",
+            "environment_sha256": "7" * 64,
+        },
         "rocm_version": "6.4.1",
         "driver_version": "amdgpu-6.14",
         "rust_version": "rustc 1.93.0",
@@ -212,7 +236,7 @@ def test_committed_profile_is_valid_unbound_and_non_authoritative() -> None:
         "verified": True,
         "profile_id": "engine_v2_hip_d1_representative_v1",
         "profile_sha256": (
-            "19d9fe580ef22c3600a6e79f0b8bc41d70c95b4d1fefbe86f7513ae3908f0855"
+            "281385177cc504785ba38320c163141ee5239df4c63cad8aac8b5cf3f344d67e"
         ),
         "manifest_bound": False,
         "result_verification_authorized": False,
@@ -240,8 +264,8 @@ def test_valid_bound_result_derives_metrics_without_authority(tmp_path: Path) ->
     assert metrics["rust_cpu"]["candidate_throughput_per_second"] == 640.0
     assert metrics["hip_safe"]["h2d_seconds_p50"] == 0.001
     assert metrics["hip_safe"]["d2h_seconds_p50"] == 0.0005
-    assert metrics["hip_safe"]["kernel_dispatch_count_total"] == 5
-    assert metrics["hip_safe"]["kernel_runtime_seconds_total"] == 0.25
+    assert metrics["hip_safe"]["kernel_dispatch_count_total"] == 160
+    assert metrics["hip_safe"]["kernel_runtime_seconds_total"] == 0.3125
     assert output["device_execution_authorized"] is False
     assert output["claim_authority_granted"] is False
 
@@ -459,6 +483,14 @@ def test_device_and_toolchain_identity_are_required(tmp_path: Path) -> None:
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 
+def test_cpu_reference_execution_identity_is_required(tmp_path: Path) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    result["architectures"][0]["cpu_execution_settings"]["affinity"] = ""
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="nonempty string"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
 @pytest.mark.parametrize("field", ["peak_vram_bytes", "h2d_bytes", "d2h_bytes"])
 def test_gpu_resource_accounting_is_required(tmp_path: Path, field: str) -> None:
     profile_path, profile = _bound_profile(tmp_path)
@@ -496,6 +528,37 @@ def test_profiler_trace_digest_is_recomputed(tmp_path: Path) -> None:
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 
+def test_profiler_trace_must_cover_every_case_sample(tmp_path: Path) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    architecture = result["architectures"][0]
+    backend = architecture["backends"]["hip_fast"]
+    backend["profiler_trace"]["rows"].pop()
+    backend["profiler_trace_sha256"] = VERIFIER._canonical_sha256(
+        backend["profiler_trace"]
+    )
+    backend["kernel_dispatches"][0]["dispatch_count"] = len(
+        backend["profiler_trace"]["rows"]
+    )
+    backend["kernel_dispatches"][0]["total_runtime_seconds"] = sum(
+        row["runtime_seconds"] for row in backend["profiler_trace"]["rows"]
+    )
+    execution_receipt = {
+        "schema_id": VERIFIER.EXECUTION_BACKEND_RECEIPT_SCHEMA,
+        "gpu_architecture": architecture["gpu_architecture"],
+        "requested_backend": "hip_fast",
+        "observed_backend": "hip_fast",
+        "cpu_fallback_observed": False,
+        "ordered_case_ids_sha256": result["ordered_case_ids_sha256"],
+        "profiler_trace_sha256": backend["profiler_trace_sha256"],
+    }
+    backend["execution_backend_receipt_sha256"] = VERIFIER._canonical_sha256(
+        execution_receipt
+    )
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="case/sample coverage"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
 def test_execution_backend_receipt_is_recomputed(tmp_path: Path) -> None:
     profile_path, profile = _bound_profile(tmp_path)
     result = _result(profile)
@@ -527,6 +590,20 @@ def test_failure_probe_cpu_fallback_is_rejected(tmp_path: Path) -> None:
     result = _result(profile)
     result["architectures"][0]["failure_probes"][0]["cpu_fallback_observed"] = True
     with pytest.raises(VERIFIER.HipBenchmarkError, match="CPU fallback"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [("backend", []), ("error_code", {})],
+)
+def test_failure_probe_labels_fail_closed(
+    tmp_path: Path, field: str, value: object
+) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    result["architectures"][0]["failure_probes"][0][field] = value
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="nonempty string"):
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 

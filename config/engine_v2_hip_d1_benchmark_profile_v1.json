@@ -66,7 +66,8 @@
       "numeric_overflow"
     ],
     "cpu_fallback_forbidden": true,
-    "normalized_trace_schema": "betelgeuze.engine_v2_rocprofiler_normalized_dispatch_trace/1.0.0"
+    "normalized_trace_schema": "betelgeuze.engine_v2_rocprofiler_normalized_dispatch_trace/1.0.0",
+    "cpu_reference_identity_required": true
   },
   "performance_gate": {
     "reference_backend": "rust_cpu",
@@ -94,5 +95,5 @@
     "fresh128_authorized": false,
     "stage0_authorized": false
   },
-  "profile_sha256": "19d9fe580ef22c3600a6e79f0b8bc41d70c95b4d1fefbe86f7513ae3908f0855"
+  "profile_sha256": "281385177cc504785ba38320c163141ee5239df4c63cad8aac8b5cf3f344d67e"
 }
