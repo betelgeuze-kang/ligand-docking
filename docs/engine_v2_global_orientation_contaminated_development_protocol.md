@@ -25,7 +25,7 @@ betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.1.0
 Protocol self-hash:
 
 ```text
-4c07ca7c3b2f7afaf2152ccc1257898ff0018c76287f7aad42771609adac240a
+f7fbcdfbfc14f1f839fe4121cab0212d5eb3fef62bbdb6b4530e2acd1f5575f2
 ```
 
 ## Scientific question
@@ -170,16 +170,23 @@ The pure evaluator is:
 betelgeuze_engine_v2/benchmark/global_orientation_development_decision.py
 ```
 
-It accepts the exact ordered nine-case comparison and independently computes new
-valid-proposal recoveries among the seven uncovered cases, invalid selected
-Top-1 counts, baseline recovered-case regression, invariant failures, hard
-No-Go triggers, and the bounded development verdict.
+It accepts the exact ordered nine-case comparison. Every scored row must carry
+its validated frozen case-source receipt plus independently rederived baseline
+and experimental `OracleSelectionEvidence`; the fixed preparation-failure row
+must carry its failure-receipt identity and no candidate evidence. Caller-set
+summary completeness booleans are not accepted. The evaluator independently
+computes new valid-proposal recoveries among the seven uncovered cases, invalid
+selected Top-1 counts, baseline reproduction/regression, invariant failures,
+hard No-Go triggers, and the bounded development verdict. Missing oracle or
+selected RMSD values remain explicit failure observations rather than parser
+errors.
 
-A development Go requires every invariant and both criteria:
+A development Go requires every invariant and both criteria. In particular:
 
-1. valid-proposal-oracle recovery in at least two of seven previously uncovered
+1. the baseline arm reproduces the fixed recovered `6T88_MWQ` Top-1 result;
+2. valid-proposal-oracle recovery in at least two of seven previously uncovered
    cases; and
-2. no increase in the invalid selected-Top-1 count.
+3. no increase in the invalid selected-Top-1 count.
 
 Hard No-Go triggers include any required invariant failure, zero new valid
 proposal recovery, regression of the baseline recovered case, or denominator or

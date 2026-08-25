@@ -472,6 +472,7 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
             "identical_failure_complete_64_slot_denominators",
             "no_reference_or_result_dependent_generator_input",
             "no_preparation_failure_regression",
+            "baseline_recovered_case_reproduced",
             "no_baseline_recovered_case_regression",
             "complete_source_and_observation_rederivation",
         ),

@@ -92,6 +92,7 @@
       "identical_failure_complete_64_slot_denominators",
       "no_reference_or_result_dependent_generator_input",
       "no_preparation_failure_regression",
+      "baseline_recovered_case_reproduced",
       "no_baseline_recovered_case_regression",
       "complete_source_and_observation_rederivation"
     ],
@@ -157,7 +158,7 @@
     ]
   },
   "protocol_role": "fixed_historical_contaminated_development_global_orientation_ab",
-  "protocol_sha256": "4c07ca7c3b2f7afaf2152ccc1257898ff0018c76287f7aad42771609adac240a",
+  "protocol_sha256": "f7fbcdfbfc14f1f839fe4121cab0212d5eb3fef62bbdb6b4530e2acd1f5575f2",
   "schema_id": "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.1.0",
   "shared_execution_contract": {
     "conformer_authority": "same_prepared_ligand_for_both_arms",

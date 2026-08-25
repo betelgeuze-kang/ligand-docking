@@ -10,9 +10,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import hashlib
 import json
-import math
 from typing import Sequence
 
+from .oracle_selection_evidence import OracleSelectionEvidence
+from .source_paired_clearance_activation import (
+    SourcePairedClearanceCaseSourceReceiptV1,
+)
 
 DECISION_SCHEMA_ID = (
     "betelgeuze.engine_v2_global_orientation_development_decision/1.0.0"
@@ -45,11 +48,7 @@ _RECOVERY_GO_CRITERION = (
     "valid_proposal_oracle_recovery_in_at_least_2_of_7_previously_uncovered_cases"
 )
 _INVALID_TOP1_GO_CRITERION = "no_increase_in_invalid_selected_top1_count"
-_INVARIANT_FAILURE_ORDER = (
-    "complete_source_and_observation_rederivation",
-    "no_preparation_failure_regression",
-    "identical_failure_complete_64_slot_denominators",
-)
+_INVARIANT_FAILURE_ORDER = ("baseline_recovered_case_not_reproduced",)
 _HARD_NO_GO_ORDER = (
     "required_invariant_failed",
     "zero_new_previously_uncovered_valid_proposal_recoveries",
@@ -76,21 +75,12 @@ def _sha256(value: object) -> str:
     return hashlib.sha256(_canonical_bytes(value)).hexdigest()
 
 
-def _metric(value: object, *, name: str, required: bool) -> float | None:
-    if value is None:
-        if required:
-            raise GlobalOrientationDevelopmentDecisionError(f"{name} is required")
-        return None
-    if type(value) not in {int, float}:
-        raise GlobalOrientationDevelopmentDecisionError(
-            f"{name} must be a finite non-negative number"
-        )
-    observed = float(value)
-    if not math.isfinite(observed) or observed < 0.0:
-        raise GlobalOrientationDevelopmentDecisionError(
-            f"{name} must be a finite non-negative number"
-        )
-    return observed
+def _is_sha256(value: object) -> bool:
+    return (
+        type(value) is str
+        and len(value) == 64
+        and all(character in "0123456789abcdef" for character in value)
+    )
 
 
 def _require_ordered_subset(
@@ -113,118 +103,94 @@ def _require_ordered_subset(
 @dataclass(frozen=True, slots=True)
 class CaseComparisonObservation:
     case_id: str
-    baseline_preparation_succeeded: bool
-    experimental_preparation_succeeded: bool
-    baseline_candidate_count: int
-    experimental_candidate_count: int
-    baseline_valid_proposal_oracle_rmsd: float | None
-    experimental_valid_proposal_oracle_rmsd: float | None
-    baseline_selected_top1_rmsd: float | None
-    experimental_selected_top1_rmsd: float | None
-    baseline_selected_top1_valid: bool | None
-    experimental_selected_top1_valid: bool | None
-    source_geometry_evidence_complete: bool
-    observation_evidence_complete: bool
+    case_source_receipt: SourcePairedClearanceCaseSourceReceiptV1 | None
+    preparation_failure_receipt_sha256: str | None
+    baseline_evidence: OracleSelectionEvidence | None
+    experimental_evidence: OracleSelectionEvidence | None
 
     def __post_init__(self) -> None:
         if self.case_id not in CASE_IDS:
             raise GlobalOrientationDevelopmentDecisionError(
                 "case_id is outside the fixed cohort"
             )
-        for name in (
-            "baseline_preparation_succeeded",
-            "experimental_preparation_succeeded",
-            "source_geometry_evidence_complete",
-            "observation_evidence_complete",
-        ):
-            if type(getattr(self, name)) is not bool:
-                raise GlobalOrientationDevelopmentDecisionError(
-                    f"{name} must be boolean"
-                )
-        for name in ("baseline_candidate_count", "experimental_candidate_count"):
-            value = getattr(self, name)
-            if type(value) is not int or value < 0:
-                raise GlobalOrientationDevelopmentDecisionError(
-                    f"{name} must be a non-negative integer"
-                )
-
         preparation_failure = self.case_id == "6M73_FNR"
         if preparation_failure:
             if (
-                self.baseline_preparation_succeeded
-                or self.experimental_preparation_succeeded
-                or self.baseline_candidate_count != 0
-                or self.experimental_candidate_count != 0
+                self.case_source_receipt is not None
+                or self.baseline_evidence is not None
+                or self.experimental_evidence is not None
             ):
                 raise GlobalOrientationDevelopmentDecisionError(
                     "the fixed preparation-failure row must remain failure complete"
                 )
-            metric_required = False
-            if (
-                self.baseline_selected_top1_valid is not None
-                or self.experimental_selected_top1_valid is not None
-            ):
+            if not _is_sha256(self.preparation_failure_receipt_sha256):
                 raise GlobalOrientationDevelopmentDecisionError(
-                    "preparation-failure validity must remain unavailable"
+                    "preparation failure requires an exact receipt identity"
                 )
         else:
             if (
-                not self.baseline_preparation_succeeded
-                or not self.experimental_preparation_succeeded
+                type(self.case_source_receipt)
+                is not SourcePairedClearanceCaseSourceReceiptV1
+                or self.case_source_receipt.case_id != self.case_id
             ):
                 raise GlobalOrientationDevelopmentDecisionError(
-                    "scored cases require successful preparation in both arms"
+                    "scored cases require their exact frozen source receipt"
+                )
+            if self.preparation_failure_receipt_sha256 is not None:
+                raise GlobalOrientationDevelopmentDecisionError(
+                    "scored cases cannot carry a preparation-failure receipt"
                 )
             if (
-                self.baseline_candidate_count != CANDIDATE_DENOMINATOR_PER_ARM
-                or self.experimental_candidate_count != CANDIDATE_DENOMINATOR_PER_ARM
+                type(self.baseline_evidence) is not OracleSelectionEvidence
+                or type(self.experimental_evidence) is not OracleSelectionEvidence
             ):
                 raise GlobalOrientationDevelopmentDecisionError(
-                    "scored cases require identical 64-slot denominators"
+                    "scored cases require complete oracle-selection evidence"
                 )
-            metric_required = True
-            if (
-                type(self.baseline_selected_top1_valid) is not bool
-                or type(self.experimental_selected_top1_valid) is not bool
-            ):
-                raise GlobalOrientationDevelopmentDecisionError(
-                    "scored selected-Top-1 validity must be boolean"
-                )
-
-        for name in (
-            "baseline_valid_proposal_oracle_rmsd",
-            "experimental_valid_proposal_oracle_rmsd",
-            "baseline_selected_top1_rmsd",
-            "experimental_selected_top1_rmsd",
-        ):
-            object.__setattr__(
-                self,
-                name,
-                _metric(getattr(self, name), name=name, required=metric_required),
-            )
+            for evidence in (self.baseline_evidence, self.experimental_evidence):
+                if (
+                    evidence.report.candidate_count != CANDIDATE_DENOMINATOR_PER_ARM
+                    or evidence.top_ks != (1, 5)
+                    or evidence.report.rmsd_threshold_angstrom
+                    != RMSD_THRESHOLD_ANGSTROM
+                ):
+                    raise GlobalOrientationDevelopmentDecisionError(
+                        "scored evidence drifted from the fixed 64-slot protocol"
+                    )
 
     @property
-    def evidence_complete(self) -> bool:
+    def baseline_report(self):
+        return None if self.baseline_evidence is None else self.baseline_evidence.report
+
+    @property
+    def experimental_report(self):
         return (
-            self.source_geometry_evidence_complete
-            and self.observation_evidence_complete
+            None
+            if self.experimental_evidence is None
+            else self.experimental_evidence.report
         )
 
     def to_dict(self) -> dict[str, object]:
         return {
             "case_id": self.case_id,
-            "baseline_preparation_succeeded": self.baseline_preparation_succeeded,
-            "experimental_preparation_succeeded": self.experimental_preparation_succeeded,
-            "baseline_candidate_count": self.baseline_candidate_count,
-            "experimental_candidate_count": self.experimental_candidate_count,
-            "baseline_valid_proposal_oracle_rmsd": self.baseline_valid_proposal_oracle_rmsd,
-            "experimental_valid_proposal_oracle_rmsd": self.experimental_valid_proposal_oracle_rmsd,
-            "baseline_selected_top1_rmsd": self.baseline_selected_top1_rmsd,
-            "experimental_selected_top1_rmsd": self.experimental_selected_top1_rmsd,
-            "baseline_selected_top1_valid": self.baseline_selected_top1_valid,
-            "experimental_selected_top1_valid": self.experimental_selected_top1_valid,
-            "source_geometry_evidence_complete": self.source_geometry_evidence_complete,
-            "observation_evidence_complete": self.observation_evidence_complete,
+            "case_source_receipt_sha256": (
+                None
+                if self.case_source_receipt is None
+                else self.case_source_receipt.receipt_sha256
+            ),
+            "preparation_failure_receipt_sha256": (
+                self.preparation_failure_receipt_sha256
+            ),
+            "baseline_oracle_selection_evidence_sha256": (
+                None
+                if self.baseline_evidence is None
+                else self.baseline_evidence.receipt_sha256
+            ),
+            "experimental_oracle_selection_evidence_sha256": (
+                None
+                if self.experimental_evidence is None
+                else self.experimental_evidence.receipt_sha256
+            ),
         }
 
 
@@ -386,47 +352,47 @@ def evaluate_global_orientation_development(
         )
 
     invariant_failures: list[str] = []
-    if any(not row.evidence_complete for row in rows):
-        invariant_failures.append("complete_source_and_observation_rederivation")
-    preparation_row = rows[CASE_IDS.index("6M73_FNR")]
+    baseline_recovered_row = rows[CASE_IDS.index("6T88_MWQ")]
+    baseline_recovered_report = baseline_recovered_row.baseline_report
     if (
-        preparation_row.baseline_preparation_succeeded
-        != preparation_row.experimental_preparation_succeeded
+        not baseline_recovered_report.selected_top1_valid
+        or baseline_recovered_report.selected_top1_rmsd_angstrom is None
+        or baseline_recovered_report.selected_top1_rmsd_angstrom
+        > RMSD_THRESHOLD_ANGSTROM
     ):
-        invariant_failures.append("no_preparation_failure_regression")
-    if any(
-        row.baseline_candidate_count != row.experimental_candidate_count
-        or (
-            row.case_id in SCORED_CASE_IDS
-            and row.baseline_candidate_count != CANDIDATE_DENOMINATOR_PER_ARM
-        )
-        for row in rows
-    ):
-        invariant_failures.append("identical_failure_complete_64_slot_denominators")
+        invariant_failures.append("baseline_recovered_case_not_reproduced")
 
     new_recoveries = tuple(
         row.case_id
         for row in rows
         if row.case_id in UNCOVERED_CASE_IDS
-        and row.baseline_valid_proposal_oracle_rmsd > RMSD_THRESHOLD_ANGSTROM
-        and row.experimental_valid_proposal_oracle_rmsd <= RMSD_THRESHOLD_ANGSTROM
+        and (
+            row.baseline_report.valid_proposal_oracle_rmsd_angstrom is None
+            or row.baseline_report.valid_proposal_oracle_rmsd_angstrom
+            > RMSD_THRESHOLD_ANGSTROM
+        )
+        and row.experimental_report.valid_proposal_oracle_rmsd_angstrom is not None
+        and row.experimental_report.valid_proposal_oracle_rmsd_angstrom
+        <= RMSD_THRESHOLD_ANGSTROM
     )
     baseline_regressions = tuple(
         row.case_id
         for row in rows
         if row.case_id in BASELINE_RECOVERED_CASE_IDS
         and (
-            not row.experimental_selected_top1_valid
-            or row.experimental_selected_top1_rmsd > RMSD_THRESHOLD_ANGSTROM
+            not row.experimental_report.selected_top1_valid
+            or row.experimental_report.selected_top1_rmsd_angstrom is None
+            or row.experimental_report.selected_top1_rmsd_angstrom
+            > RMSD_THRESHOLD_ANGSTROM
         )
     )
     baseline_invalid = sum(
-        not row.baseline_selected_top1_valid
+        not row.baseline_report.selected_top1_valid
         for row in rows
         if row.case_id in SCORED_CASE_IDS
     )
     experimental_invalid = sum(
-        not row.experimental_selected_top1_valid
+        not row.experimental_report.selected_top1_valid
         for row in rows
         if row.case_id in SCORED_CASE_IDS
     )
