@@ -329,6 +329,14 @@ jobs:
           test "$(git rev-parse --verify '2d03360e782ec9f06518b704ac4fb498fb3448e6^{commit}')" = \
             "2d03360e782ec9f06518b704ac4fb498fb3448e6"
 
+      - name: Select frozen hosted Rust toolchain
+        run: |
+          rustup toolchain install 1.93.0 \
+            --profile minimal \
+            --component clippy \
+            --component rustfmt
+          rustup override set 1.93.0
+
       - name: Report hosted toolchain
         run: |
           cmake --version
