@@ -555,6 +555,7 @@ bg_status evaluate_nonbonded(
     const bg_system &system,
     const bg_forcefield &forcefield,
     const std::vector<NeighborPair> *neighbor_pairs,
+    bool validate_supplied_neighbor_pairs,
     bool compute_forces,
     Evaluation *evaluation);
 
@@ -877,6 +878,7 @@ bg_status evaluate_nonbonded(
     const bg_system &system,
     const bg_forcefield &forcefield,
     const std::vector<NeighborPair> *neighbor_pairs,
+    bool validate_supplied_neighbor_pairs,
     bool compute_forces,
     Evaluation *evaluation) {
     // Both traversal forms below are canonical pair order, so each sorted
@@ -904,15 +906,17 @@ bg_status evaluate_nonbonded(
         NeighborPair previous{};
         bool has_previous = false;
         for (const NeighborPair &pair : *neighbor_pairs) {
-            if (pair.atom_i >= pair.atom_j ||
-                pair.atom_j >= forcefield.atom_count ||
-                (has_previous && !(previous < pair))) {
-                return fail(
-                    BG_STATUS_INVALID_ARGUMENT,
-                    "neighbor pairs must be unique sorted in-range canonical pairs");
+            if (validate_supplied_neighbor_pairs) {
+                if (pair.atom_i >= pair.atom_j ||
+                    pair.atom_j >= forcefield.atom_count ||
+                    (has_previous && !(previous < pair))) {
+                    return fail(
+                        BG_STATUS_INVALID_ARGUMENT,
+                        "neighbor pairs must be unique sorted in-range canonical pairs");
+                }
+                has_previous = true;
+                previous = pair;
             }
-            has_previous = true;
-            previous = pair;
             const bg_status status = evaluate_nonbonded_pair(
                 system,
                 forcefield,
@@ -959,6 +963,7 @@ bg_status evaluate_impl(
     const bg_system &system,
     const bg_forcefield &forcefield,
     const std::vector<NeighborPair> *neighbor_pairs,
+    bool validate_supplied_neighbor_pairs,
     bool compute_forces,
     bool reuse_force_storage,
     Evaluation *out_evaluation) {
@@ -1009,7 +1014,12 @@ bg_status evaluate_impl(
         return status;
     }
     status = evaluate_nonbonded(
-        system, forcefield, neighbor_pairs, compute_forces, &candidate);
+        system,
+        forcefield,
+        neighbor_pairs,
+        validate_supplied_neighbor_pairs,
+        compute_forces,
+        &candidate);
     if (status != BG_STATUS_OK) {
         return status;
     }
@@ -1045,7 +1055,13 @@ bg_status evaluate(
     bool compute_forces,
     Evaluation *out_evaluation) {
     return evaluate_impl(
-        system, forcefield, nullptr, compute_forces, false, out_evaluation);
+        system,
+        forcefield,
+        nullptr,
+        false,
+        compute_forces,
+        false,
+        out_evaluation);
 }
 
 bg_status evaluate_reusing_force_storage(
@@ -1056,7 +1072,13 @@ bg_status evaluate_reusing_force_storage(
     // Dynamics owns a disposable work simulation, so it may trade the public
     // evaluator's failure transactionality for retaining force-vector capacity.
     return evaluate_impl(
-        system, forcefield, nullptr, compute_forces, true, out_evaluation);
+        system,
+        forcefield,
+        nullptr,
+        false,
+        compute_forces,
+        true,
+        out_evaluation);
 }
 
 bg_status build_periodic_neighbor_pairs(
@@ -1103,6 +1125,7 @@ bg_status evaluate_with_neighbor_pairs(
         system,
         forcefield,
         &neighbor_pairs,
+        true,
         compute_forces,
         false,
         out_evaluation);
@@ -1119,6 +1142,26 @@ bg_status evaluate_with_neighbor_pairs_reusing_force_storage(
         system,
         forcefield,
         &neighbor_pairs,
+        true,
+        compute_forces,
+        true,
+        out_evaluation);
+}
+
+bg_status evaluate_with_prevalidated_neighbor_pairs_reusing_force_storage(
+    const bg_system &system,
+    const bg_forcefield &forcefield,
+    const std::vector<NeighborPair> &neighbor_pairs,
+    bool compute_forces,
+    Evaluation *out_evaluation) {
+    // Dynamics supplies only pair slices built by this evaluator's canonical
+    // neighbor-list owner. Keep the public supplied-pair entry points fully
+    // validating while avoiding a redundant linear scan on every force call.
+    return evaluate_impl(
+        system,
+        forcefield,
+        &neighbor_pairs,
+        false,
         compute_forces,
         true,
         out_evaluation);
