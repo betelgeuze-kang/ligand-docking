@@ -14,7 +14,6 @@ import json
 import math
 from pathlib import Path
 import re
-import statistics
 from typing import Any
 
 PROFILE_SCHEMA = "betelgeuze.engine_v2_hip_d1_benchmark_profile/1.1.0"
@@ -87,6 +86,9 @@ EXECUTION_BACKEND_RECEIPT_SCHEMA = (
 NORMALIZED_PROFILER_TRACE_SCHEMA = (
     "betelgeuze.engine_v2_rocprofiler_normalized_dispatch_trace/1.0.0"
 )
+# Intentionally empty until an owner-reviewed successor pins exact artifacts.
+AUTHORIZED_BOUND_PROFILE_SHA256S: frozenset[str] = frozenset()
+AUTHORIZED_RESULT_SHA256S: frozenset[str] = frozenset()
 
 
 class HipBenchmarkError(ValueError):
@@ -205,6 +207,10 @@ def _authority(value: Any, name: str) -> None:
 
 def _profile_projection(profile: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in profile.items() if key != "profile_sha256"}
+
+
+def _result_projection(result: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in result.items() if key != "result_sha256"}
 
 
 def _verify_profile_document(profile: dict[str, Any]) -> dict[str, Any]:
@@ -406,12 +412,15 @@ def _verify_profile_document(profile: dict[str, Any]) -> dict[str, Any]:
     profile_sha256 = _sha256(profile["profile_sha256"], "profile.profile_sha256")
     if profile_sha256 != _canonical_sha256(_profile_projection(profile)):
         raise HipBenchmarkError("profile SHA-256 mismatch")
+    repository_authorized = profile_sha256 in AUTHORIZED_BOUND_PROFILE_SHA256S
     return {
         "verified": True,
         "profile_id": profile["profile_id"],
         "profile_sha256": profile_sha256,
         "manifest_bound": expected_manifest is not None,
-        "result_verification_authorized": expected_manifest is not None,
+        "result_verification_authorized": (
+            expected_manifest is not None and repository_authorized
+        ),
         "device_execution_authorized": False,
         "claim_authority_granted": False,
     }
@@ -443,6 +452,33 @@ def _scientific_values(
             _finite(item, f"{name}[{index}]")
             for index, item in enumerate(triple, start=start)
         )
+    return output
+
+
+def _candidate_statuses(
+    value: Any, name: str, denominator: int
+) -> list[dict[str, Any]]:
+    if type(value) is not list or len(value) != denominator:
+        raise HipBenchmarkError(f"{name}: candidate status denominator")
+    output: list[dict[str, Any]] = []
+    for slot_index, raw_status in enumerate(value):
+        status = _exact_keys(
+            raw_status,
+            {"slot_index", "status", "failure_code"},
+            f"{name}[{slot_index}]",
+        )
+        if status["slot_index"] != slot_index:
+            raise HipBenchmarkError(f"{name}: candidate status ordering")
+        if status["status"] == "scored":
+            if status["failure_code"] is not None:
+                raise HipBenchmarkError(f"{name}: scored slot failure code")
+        elif status["status"] == "typed_failure":
+            _nonempty_string(
+                status["failure_code"], f"{name}[{slot_index}].failure_code"
+            )
+        else:
+            raise HipBenchmarkError(f"{name}: candidate status value")
+        output.append(status)
     return output
 
 
@@ -484,6 +520,30 @@ def _compare_case(
 def _nearest_rank_95(values: list[float]) -> float:
     ordered = sorted(values)
     return ordered[math.ceil(0.95 * len(ordered)) - 1]
+
+
+def _finite_sum(values: list[float] | tuple[float, ...], name: str) -> float:
+    try:
+        total = math.fsum(values)
+    except OverflowError as exc:
+        raise HipBenchmarkError(f"{name}: derived sum overflow") from exc
+    if not math.isfinite(total):
+        raise HipBenchmarkError(f"{name}: nonfinite derived sum")
+    return total
+
+
+def _median(values: list[float], name: str) -> float:
+    if not values:
+        raise HipBenchmarkError(f"{name}: empty median")
+    ordered = sorted(values)
+    middle = len(ordered) // 2
+    if len(ordered) % 2:
+        result = ordered[middle]
+    else:
+        result = _finite_sum((ordered[middle - 1] / 2.0, ordered[middle] / 2.0), name)
+    if not math.isfinite(result):
+        raise HipBenchmarkError(f"{name}: nonfinite derived median")
+    return result
 
 
 def _verify_failure_probes(value: Any, architecture: str) -> None:
@@ -569,6 +629,8 @@ def _verify_case(
     expected_keys = {
         "case_id",
         "candidate_count",
+        "candidate_statuses",
+        "repeat_candidate_statuses",
         "scientific_values",
         "repeat_scientific_values",
         "wall_time_seconds",
@@ -588,6 +650,18 @@ def _verify_case(
         repeat = _sha256(case[f"repeat_{field}"], f"{label}.repeat_{field}")
         if digest != repeat:
             raise HipBenchmarkError(f"{label}: repeat stability: {field}")
+    statuses = _candidate_statuses(
+        case["candidate_statuses"], f"{label}.candidate_statuses", denominator
+    )
+    repeat_statuses = _candidate_statuses(
+        case["repeat_candidate_statuses"],
+        f"{label}.repeat_candidate_statuses",
+        denominator,
+    )
+    if statuses != repeat_statuses:
+        raise HipBenchmarkError(f"{label}: repeat candidate status stability")
+    if case["typed_failure_sha256"] != _canonical_sha256(statuses):
+        raise HipBenchmarkError(f"{label}: typed-failure status SHA-256 mismatch")
     scientific = _scientific_values(case["scientific_values"], label, scientific_length)
     repeat_scientific = _scientific_values(
         case["repeat_scientific_values"],
@@ -596,6 +670,16 @@ def _verify_case(
     )
     if scientific != repeat_scientific:
         raise HipBenchmarkError(f"{label}: repeat scientific stability")
+    for slot_index, status in enumerate(statuses):
+        start = slot_index * len(SCIENTIFIC_FIELDS)
+        has_null_triple = all(
+            value is None
+            for value in scientific[start : start + len(SCIENTIFIC_FIELDS)]
+        )
+        if has_null_triple != (status["status"] == "typed_failure"):
+            raise HipBenchmarkError(
+                f"{label}: scientific/status mismatch at slot {slot_index}"
+            )
     wall_times = _samples(
         case["wall_time_seconds"],
         f"{label}.wall_time_seconds",
@@ -655,7 +739,10 @@ def _verify_profiler_trace(
             positive=True,
         )
         count, total = aggregates.get(kernel_name, (0, 0.0))
-        aggregates[kernel_name] = (count + 1, total + runtime)
+        aggregates[kernel_name] = (
+            count + 1,
+            _finite_sum((total, runtime), f"{label}.kernel_runtime"),
+        )
     expected_coverage = {
         (case_id, sample_index)
         for case_id, sample_count in case_sample_counts.items()
@@ -699,7 +786,9 @@ def _verify_profiler_trace(
         ):
             raise HipBenchmarkError(f"{label}: kernel summary/trace mismatch")
         dispatch_total += dispatch_count
-        runtime_total += runtime
+        runtime_total = _finite_sum(
+            (runtime_total, runtime), f"{label}.kernel_runtime_total"
+        )
     if observed_names != set(aggregates):
         raise HipBenchmarkError(f"{label}: incomplete kernel summary")
     return dispatch_total, runtime_total, trace_sha256
@@ -851,6 +940,15 @@ def _verify_backend(
         "cpu_fallback_observed": backend["cpu_fallback_observed"],
         "ordered_case_ids_sha256": _canonical_sha256(ordered_case_ids),
         "profiler_trace_sha256": profiler_trace_sha256,
+        "case_timing_samples_sha256": _canonical_sha256(
+            [
+                {
+                    "case_id": case["case_id"],
+                    "wall_time_seconds": case["wall_time_seconds"],
+                }
+                for case in cases
+            ]
+        ),
     }
     if _sha256(
         backend["execution_backend_receipt_sha256"],
@@ -858,24 +956,38 @@ def _verify_backend(
     ) != _canonical_sha256(execution_receipt):
         raise HipBenchmarkError(f"{label}: execution backend receipt mismatch")
     all_wall_times = [sample for case in cases for sample in case["wall_time_seconds"]]
-    case_medians = [statistics.median(case["wall_time_seconds"]) for case in cases]
+    case_medians = [
+        _median(case["wall_time_seconds"], f"{label}/{case['case_id']}.median")
+        for case in cases
+    ]
     total_candidates = denominator * sum(
         len(case["wall_time_seconds"]) for case in cases
     )
-    return cases, {
-        "context_construction_seconds_p50": statistics.median(context_samples),
-        "case_wall_time_seconds_p50": statistics.median(case_medians),
+    wall_time_total = _finite_sum(all_wall_times, f"{label}.wall_time_total")
+    metrics = {
+        "context_construction_seconds_p50": _median(
+            context_samples, f"{label}.context_median"
+        ),
+        "case_wall_time_seconds_p50": _median(case_medians, f"{label}.case_median"),
         "case_wall_time_seconds_p95": _nearest_rank_95(case_medians),
-        "candidate_throughput_per_second": total_candidates / sum(all_wall_times),
+        "candidate_throughput_per_second": total_candidates / wall_time_total,
         "peak_rss_bytes": peak_rss,
         "peak_vram_bytes": peak_vram,
         "h2d_bytes": h2d_bytes,
         "d2h_bytes": d2h_bytes,
-        "h2d_seconds_p50": statistics.median(h2d_samples) if h2d_samples else 0.0,
-        "d2h_seconds_p50": statistics.median(d2h_samples) if d2h_samples else 0.0,
+        "h2d_seconds_p50": (
+            _median(h2d_samples, f"{label}.h2d_median") if h2d_samples else 0.0
+        ),
+        "d2h_seconds_p50": (
+            _median(d2h_samples, f"{label}.d2h_median") if d2h_samples else 0.0
+        ),
         "kernel_dispatch_count_total": kernel_dispatch_total,
         "kernel_runtime_seconds_total": kernel_total,
     }
+    for metric_name, metric_value in metrics.items():
+        if isinstance(metric_value, float) and not math.isfinite(metric_value):
+            raise HipBenchmarkError(f"{label}.{metric_name}: nonfinite derived metric")
+    return cases, metrics
 
 
 def verify(profile_path: Path, result_path: Path) -> dict[str, Any]:
@@ -887,6 +999,8 @@ def verify(profile_path: Path, result_path: Path) -> dict[str, Any]:
         raise HipBenchmarkError(
             "profile manifest is not bound; result verification refused"
         )
+    if not profile_summary["result_verification_authorized"]:
+        raise HipBenchmarkError("bound profile is not repository-authorized")
     result = _load(result_path)
     _exact_keys(
         result,
@@ -900,6 +1014,7 @@ def verify(profile_path: Path, result_path: Path) -> dict[str, Any]:
             "architectures",
             "authority",
             "output_claim_authorized",
+            "result_sha256",
         },
         "result",
     )
@@ -1113,8 +1228,8 @@ def verify(profile_path: Path, result_path: Path) -> dict[str, Any]:
                     relative_tolerance=relative_tolerance,
                 )
         passing_cases = sum(
-            statistics.median(fast["wall_time_seconds"])
-            < statistics.median(cpu["wall_time_seconds"])
+            _median(fast["wall_time_seconds"], "hip_fast.speed_gate")
+            < _median(cpu["wall_time_seconds"], "rust_cpu.speed_gate")
             for cpu, fast in zip(cpu_cases, verified_backends["hip_fast"], strict=True)
         )
         if passing_cases < profile["performance_gate"]["minimum_passing_case_count"]:
@@ -1129,6 +1244,11 @@ def verify(profile_path: Path, result_path: Path) -> dict[str, Any]:
         raise HipBenchmarkError("baseline gfx1030 architecture missing")
     if not any(name in allowed_newer_architectures for name in seen_architectures):
         raise HipBenchmarkError("newer GPU architecture missing")
+    result_sha256 = _sha256(result["result_sha256"], "result.result_sha256")
+    if result_sha256 != _canonical_sha256(_result_projection(result)):
+        raise HipBenchmarkError("result SHA-256 mismatch")
+    if result_sha256 not in AUTHORIZED_RESULT_SHA256S:
+        raise HipBenchmarkError("result is not repository-authorized")
     return {
         "verified": True,
         "profile_sha256": profile["profile_sha256"],

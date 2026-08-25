@@ -237,6 +237,12 @@ manifest SHA-256 and its owner-selected ordered-case SHA-256, then reseals the
 profile. Profile verification does not authorize D1 materialization, molecular
 execution, or HIP-device execution.
 
+Self-hashing alone is not authorization. The verifier's repository-reviewed
+authorized-bound-profile and authorized-result SHA-256 sets are intentionally
+empty. A future owner-approved manifest/profile and completed result each need
+an explicit code-reviewed digest pin before result verification can succeed;
+an operator-selected path or recomputed self-hash cannot grant that trust.
+
 Once those external prerequisites and authorization exist, the same command
 accepts `--result /absolute/hip-d1-result.json`. A valid result must retain the
 ordered 32-case, 64-candidate cohort on `rust_cpu`, `hip_safe`, and `hip_fast`
@@ -257,17 +263,23 @@ topology, benchmark thread count, affinity, governor, turbo state, NUMA policy,
 and hashed execution environment used by the `rust_cpu` speed-gate reference.
 Each candidate's scientific triple must be entirely finite or entirely JSON
 `null` for a typed failure; partial triples and non-finite numbers are rejected,
-so failures remain in the 64-slot denominator.
+so failures remain in the 64-slot denominator. Structured status rows cover all
+64 slots, their canonical digest is recomputed, and null triples are permitted
+exactly at slots whose status is `typed_failure`.
 
 Each failure probe embeds a structured observation whose backend and typed code
 must match the requested probe and whose canonical SHA-256 is recomputed. Each
 representative backend embeds a self-bound execution receipt naming the
 requested and observed backend, ordered cohort, fallback status, and profiler
-trace. GPU profiler evidence contains the complete normalized ordered dispatch
+trace plus the canonical per-case wall-time sample digest. The repository-pinned
+result digest binds the receipt, timings, and all remaining evidence fields.
+GPU profiler evidence contains the complete normalized ordered dispatch
 rows; the verifier recomputes their canonical digest and rejects any per-kernel
 count or runtime summary not derived from those rows. Every ordered case and
 every required timing-sample index must occur in the normalized trace, so a
 rehashed truncated trace is rejected.
+Derived sums and medians use overflow-safe finite arithmetic; any non-finite
+derived metric is rejected rather than serialized as `Infinity`.
 
 The verifier only checks supplied evidence. It never runs a GPU and a passing
 artifact still grants no acceleration, scientific, benchmark, or product
