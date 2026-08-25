@@ -3,7 +3,10 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import os
 from pathlib import Path
+import subprocess
+import sys
 
 import pytest
 
@@ -58,6 +61,28 @@ def test_protocol_document_tracks_schema_hash_and_execution_boundary() -> None:
     assert protocol["protocol_sha256"] in document
     assert "historical_development_execution_authorized = false" in document
     assert "does not answer that question." in document
+
+
+def test_verifier_runs_outside_checkout_without_pythonpath(tmp_path: Path) -> None:
+    environment = dict(os.environ)
+    environment.pop("PYTHONPATH", None)
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(
+                _REPO_ROOT / "tools/verify_engine_v2_global_orientation_"
+                "contaminated_development.py"
+            ),
+        ],
+        cwd=tmp_path,
+        env=environment,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.stdout.strip() == _protocol()["protocol_sha256"]
 
 
 def test_resealed_execution_authority_escalation_fails_closed() -> None:

@@ -8,9 +8,14 @@ import hashlib
 import inspect
 import json
 from pathlib import Path
+import sys
 from typing import Any, Mapping
 
-from betelgeuze_engine_v2.docking.global_orientation import (
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+if __package__ in {None, ""} and str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from betelgeuze_engine_v2.docking.global_orientation import (  # noqa: E402
     GLOBAL_ORIENTATION_CONFIG_SCHEMA_ID,
     GLOBAL_ORIENTATION_GENERATOR_ID,
     GlobalOrientationConfig,
@@ -533,8 +538,8 @@ def _parser() -> argparse.ArgumentParser:
         "--protocol",
         type=Path,
         default=(
-            Path(__file__).resolve().parents[1] / "config/engine_v2_global_orientation_"
-            "contaminated_development.json"
+            _REPO_ROOT
+            / "config/engine_v2_global_orientation_contaminated_development.json"
         ),
     )
     return parser
