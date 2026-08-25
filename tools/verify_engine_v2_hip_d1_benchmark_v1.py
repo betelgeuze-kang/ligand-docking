@@ -505,7 +505,7 @@ def _candidate_statuses(
             {"slot_index", "status", "failure_code"},
             f"{name}[{slot_index}]",
         )
-        if status["slot_index"] != slot_index:
+        if type(status["slot_index"]) is not int or status["slot_index"] != slot_index:
             raise HipBenchmarkError(f"{name}: candidate status ordering")
         if status["status"] == "scored":
             if status["failure_code"] is not None:
@@ -886,7 +886,7 @@ def _verify_profiler_trace(
             },
             f"{label}.profiler_trace.rows[{index}]",
         )
-        if row["dispatch_index"] != index:
+        if type(row["dispatch_index"]) is not int or row["dispatch_index"] != index:
             raise HipBenchmarkError(f"{label}: profiler dispatch ordering")
         case_id = _case_id(
             row["case_id"], f"{label}.profiler_trace.rows[{index}].case_id"

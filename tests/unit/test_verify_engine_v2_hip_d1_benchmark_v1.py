@@ -577,6 +577,16 @@ def test_structured_candidate_status_digest_is_recomputed(tmp_path: Path) -> Non
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 
+def test_boolean_candidate_slot_index_is_rejected(tmp_path: Path) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    case = result["architectures"][0]["backends"]["rust_cpu"]["cases"][0]
+    case["candidate_statuses"][0]["slot_index"] = False
+    case["repeat_candidate_statuses"][0]["slot_index"] = False
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="candidate status ordering"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
 def test_nonfinite_scientific_value_is_rejected(tmp_path: Path) -> None:
     profile_path, profile = _bound_profile(tmp_path)
     result = _result(profile)
@@ -805,6 +815,20 @@ def test_profiler_trace_digest_is_recomputed(tmp_path: Path) -> None:
         "f" * 64
     )
     with pytest.raises(VERIFIER.HipBenchmarkError, match="trace SHA-256 mismatch"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
+def test_boolean_profiler_dispatch_index_is_rejected(tmp_path: Path) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    backend = result["architectures"][0]["backends"]["hip_fast"]
+    backend["profiler_trace"]["rows"][0]["dispatch_index"] = False
+    backend["profiler_trace_sha256"] = VERIFIER._canonical_sha256(
+        backend["profiler_trace"]
+    )
+    _reseal_backend_receipt(backend, "gfx1030", result["ordered_case_ids"])
+    _seal_and_authorize_result(result)
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="profiler dispatch ordering"):
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 
