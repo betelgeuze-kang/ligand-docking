@@ -269,6 +269,20 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
 
     cohort = _mapping(protocol.get("cohort"), name="cohort")
     _exact(
+        set(cohort),
+        {
+            "baseline_recovered_case_ids",
+            "historical_case_count",
+            "historical_case_ids",
+            "historical_case_ids_sha256",
+            "preparation_failure_case_ids",
+            "previously_uncovered_case_count",
+            "previously_uncovered_case_ids",
+            "scored_case_count",
+        },
+        name="cohort key set",
+    )
+    _exact(
         tuple(cohort.get("historical_case_ids", ())), CASE_IDS, name="historical cohort"
     )
     _exact(cohort.get("historical_case_count"), 9, name="historical count")
@@ -324,6 +338,16 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
         protocol.get("information_boundary"), name="information_boundary"
     )
     _exact(
+        set(information),
+        {
+            "generator_allowed_inputs",
+            "generator_forbidden_inputs",
+            "post_result_candidate_allocation_forbidden",
+            "reference_pose_consumed_only_after_candidate_generation",
+        },
+        name="information boundary key set",
+    )
+    _exact(
         tuple(information.get("generator_allowed_inputs", ())),
         ALLOWED_INPUTS,
         name="generator allowed inputs",
@@ -358,6 +382,17 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
             "scorer_terms_schema_id": "betelgeuze.engine_v2_scorer_v1_terms/1.1.0",
             "posebusters_version": "0.3.1",
             "posebusters_check_count": 22,
+            "posebusters_evidence_schema_id": (
+                "betelgeuze.engine_v2_source_paired_clearance_"
+                "posebusters_evidence/2.0.0"
+            ),
+            "posebusters_full_check_map_required": True,
+            "posebusters_required_check_set_sha256": (
+                "3b4797c8eb95f6471f3dce0977b95b83fd0ed2630d6079607609fbcb2c1d8b93"
+            ),
+            "internal_validity_required_check_set_sha256": (
+                "dcab24089ac9c88daa53f3faeabd04d71fb819cbbe9f86982d964b657cbc5583"
+            ),
             "rmsd_contract": "symmetry_aware_heavy_atom_rmsd_angstrom",
             "rmsd_threshold_angstrom": 2.0,
             "seed": 2026080601,
@@ -406,6 +441,7 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
             "candidate_slot_count",
             "candidate_slot_formula",
             "generator_config",
+            "profile_id",
             "proposal_authority",
         },
         name="experimental arm key set",
@@ -414,6 +450,11 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
         experimental.get("proposal_authority"),
         GLOBAL_ORIENTATION_GENERATOR_ID,
         name="experimental proposal authority",
+    )
+    _exact(
+        experimental.get("profile_id"),
+        GLOBAL_ORIENTATION_GENERATOR_ID,
+        name="experimental profile identity",
     )
     config = _mapping(
         experimental.get("generator_config"),

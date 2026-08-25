@@ -25,7 +25,7 @@ betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.1.0
 Protocol self-hash:
 
 ```text
-51116aa0f1efbb6b023325a3d8bac9551a4bf98ddfd3a9ae9c3f88eb807a3632
+0e8591de97bd8313e748631f4e25222a62c017250b8fe64528eca2d1da0f4f68
 ```
 
 ## Scientific question
@@ -128,6 +128,7 @@ uses:
 
 ```text
 generator_id = deterministic_surface_aware_rigid_v2
+profile_id = deterministic_surface_aware_rigid_v2
 orientation_count = 8
 translation_shell_radii = [1.5]
 translation_points_per_shell = 7
@@ -143,6 +144,14 @@ The exact denominator is:
 Therefore each arm has 512 scored candidate rows and the combined comparison has
 1,024 scored candidate rows. Receptor-clash rejection does not remove a slot
 from the denominator.
+
+Validity is exact, not count-only: PoseBusters 0.3.1 must use the pinned
+22-check set
+`3b4797c8eb95f6471f3dce0977b95b83fd0ed2630d6079607609fbcb2c1d8b93`,
+the full check map, evidence schema
+`betelgeuze.engine_v2_source_paired_clearance_posebusters_evidence/2.0.0`,
+and internal-validity check-set identity
+`dcab24089ac9c88daa53f3faeabd04d71fb819cbbe9f86982d964b657cbc5583`.
 
 ## Required metrics
 

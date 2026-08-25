@@ -24,6 +24,7 @@
           1.5
         ]
       },
+      "profile_id": "deterministic_surface_aware_rigid_v2",
       "proposal_authority": "deterministic_surface_aware_rigid_v2"
     },
     "failed_candidate_slots_retained": true,
@@ -168,19 +169,23 @@
     ]
   },
   "protocol_role": "fixed_historical_contaminated_development_global_orientation_ab",
-  "protocol_sha256": "51116aa0f1efbb6b023325a3d8bac9551a4bf98ddfd3a9ae9c3f88eb807a3632",
+  "protocol_sha256": "0e8591de97bd8313e748631f4e25222a62c017250b8fe64528eca2d1da0f4f68",
   "schema_id": "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.1.0",
   "shared_execution_contract": {
     "conformer_authority": "same_prepared_ligand_for_both_arms",
     "cpu_count": 1,
     "native_scorer_threads": 1,
     "posebusters_check_count": 22,
+    "posebusters_evidence_schema_id": "betelgeuze.engine_v2_source_paired_clearance_posebusters_evidence/2.0.0",
+    "posebusters_full_check_map_required": true,
+    "posebusters_required_check_set_sha256": "3b4797c8eb95f6471f3dce0977b95b83fd0ed2630d6079607609fbcb2c1d8b93",
     "posebusters_version": "0.3.1",
     "preparation_policy": "exact_source_paired_current_v7_preparation",
     "rmsd_contract": "symmetry_aware_heavy_atom_rmsd_angstrom",
     "rmsd_threshold_angstrom": 2.0,
     "scorer_backend": "rust_cpu_required",
     "scorer_terms_schema_id": "betelgeuze.engine_v2_scorer_v1_terms/1.1.0",
+    "internal_validity_required_check_set_sha256": "dcab24089ac9c88daa53f3faeabd04d71fb819cbbe9f86982d964b657cbc5583",
     "seed": 2026080601,
     "torch_interop_threads": 1,
     "torch_intraop_threads": 1

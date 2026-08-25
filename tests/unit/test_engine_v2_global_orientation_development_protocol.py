@@ -49,7 +49,7 @@ def _reseal(payload: dict[str, object]) -> dict[str, object]:
 def test_current_global_orientation_development_protocol_verifies() -> None:
     observed = verify_protocol(_protocol())
     assert observed == (
-        "51116aa0f1efbb6b023325a3d8bac9551a4bf98ddfd3a9ae9c3f88eb807a3632"
+        "0e8591de97bd8313e748631f4e25222a62c017250b8fe64528eca2d1da0f4f68"
     )
 
 
@@ -136,6 +136,18 @@ def test_resealed_forbidden_input_drift_fails_closed() -> None:
         verify_protocol(changed)
 
 
+def test_resealed_unknown_information_boundary_field_fails_closed() -> None:
+    changed = _protocol()
+    changed["information_boundary"]["reference_pose_input_allowed"] = True
+    changed = _reseal(changed)
+
+    with pytest.raises(
+        GlobalOrientationDevelopmentProtocolError,
+        match="information boundary key set",
+    ):
+        verify_protocol(changed)
+
+
 def test_resealed_candidate_budget_drift_fails_closed() -> None:
     changed = _protocol()
     changed["arm_contract"]["experimental"]["generator_config"]["orientation_count"] = 7
@@ -159,6 +171,32 @@ def test_resealed_generator_configuration_drift_fails_closed() -> None:
     with pytest.raises(
         GlobalOrientationDevelopmentProtocolError,
         match="experimental generator config",
+    ):
+        verify_protocol(changed)
+
+
+def test_resealed_generator_profile_drift_fails_closed() -> None:
+    changed = _protocol()
+    changed["arm_contract"]["experimental"]["profile_id"] = "other-profile"
+    changed = _reseal(changed)
+
+    with pytest.raises(
+        GlobalOrientationDevelopmentProtocolError,
+        match="experimental profile identity",
+    ):
+        verify_protocol(changed)
+
+
+def test_resealed_validity_contract_drift_fails_closed() -> None:
+    changed = _protocol()
+    changed["shared_execution_contract"]["posebusters_required_check_set_sha256"] = (
+        "0" * 64
+    )
+    changed = _reseal(changed)
+
+    with pytest.raises(
+        GlobalOrientationDevelopmentProtocolError,
+        match="shared execution contract",
     ):
         verify_protocol(changed)
 
