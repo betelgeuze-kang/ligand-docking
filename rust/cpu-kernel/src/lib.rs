@@ -2911,6 +2911,7 @@ unsafe fn evaluate_reusing_force_output_impl(
     system: *const SystemV1,
     forcefield: *const ForceFieldV1,
     neighbor_pairs: Option<&[Pair]>,
+    prevalidated_neighbor_pairs: bool,
     inout_forcefield_validated: *mut u8,
     out_energy: *mut EnergyV1,
     out_forces: *mut ForceOutputV1,
@@ -2949,6 +2950,14 @@ unsafe fn evaluate_reusing_force_output_impl(
     let (system, forcefield) =
         unsafe { build_inputs_impl(system, forcefield, validate_immutable_forcefield)? };
     let energy = match neighbor_pairs {
+        Some(pairs) if prevalidated_neighbor_pairs => {
+            kernel::evaluate_with_prevalidated_neighbor_pairs_into(
+                &system,
+                &forcefield,
+                pairs,
+                output_channels,
+            )
+        }
         Some(pairs) => {
             kernel::evaluate_with_neighbor_pairs_into(&system, &forcefield, pairs, output_channels)
         }
@@ -3155,6 +3164,7 @@ pub unsafe extern "C" fn bg_rust_cpu_evaluate_reusing_force_output_v1(
             system,
             forcefield,
             None,
+            false,
             inout_forcefield_validated,
             out_energy,
             out_forces,
@@ -3189,6 +3199,69 @@ pub unsafe extern "C" fn bg_rust_cpu_evaluate_with_neighbor_pairs_reusing_force_
     forcefield: *const ForceFieldV1,
     neighbor_pair_count: usize,
     neighbor_pairs: *const Pair,
+    inout_forcefield_validated: *mut u8,
+    out_energy: *mut EnergyV1,
+    out_forces: *mut ForceOutputV1,
+    out_error: *mut ErrorV1,
+) -> i32 {
+    unsafe {
+        evaluate_with_neighbor_pairs_reusing_force_output_entry(
+            system,
+            forcefield,
+            neighbor_pair_count,
+            neighbor_pairs,
+            false,
+            inout_forcefield_validated,
+            out_energy,
+            out_forces,
+            out_error,
+        )
+    }
+}
+
+/// Evaluate a dynamics-owned prevalidated canonical neighbor-pair slice
+/// directly into reusable force storage.
+///
+/// This hidden entry point is restricted to the native dynamics owner that
+/// built the pair slice with the canonical CPU neighbor-list implementation.
+/// Public and general supplied-pair entry points retain full row validation.
+///
+/// # Safety
+/// The reusable-force-output contract applies. The supplied pair rows must
+/// already be unique, strictly sorted, in range, and canonical.
+#[no_mangle]
+pub unsafe extern "C" fn bg_rust_cpu_evaluate_with_prevalidated_neighbor_pairs_reusing_force_output_v1(
+    system: *const SystemV1,
+    forcefield: *const ForceFieldV1,
+    neighbor_pair_count: usize,
+    neighbor_pairs: *const Pair,
+    inout_forcefield_validated: *mut u8,
+    out_energy: *mut EnergyV1,
+    out_forces: *mut ForceOutputV1,
+    out_error: *mut ErrorV1,
+) -> i32 {
+    unsafe {
+        evaluate_with_neighbor_pairs_reusing_force_output_entry(
+            system,
+            forcefield,
+            neighbor_pair_count,
+            neighbor_pairs,
+            true,
+            inout_forcefield_validated,
+            out_energy,
+            out_forces,
+            out_error,
+        )
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+unsafe fn evaluate_with_neighbor_pairs_reusing_force_output_entry(
+    system: *const SystemV1,
+    forcefield: *const ForceFieldV1,
+    neighbor_pair_count: usize,
+    neighbor_pairs: *const Pair,
+    prevalidated_neighbor_pairs: bool,
     inout_forcefield_validated: *mut u8,
     out_energy: *mut EnergyV1,
     out_forces: *mut ForceOutputV1,
@@ -3229,6 +3302,7 @@ pub unsafe extern "C" fn bg_rust_cpu_evaluate_with_neighbor_pairs_reusing_force_
             system,
             forcefield,
             Some(pairs),
+            prevalidated_neighbor_pairs,
             inout_forcefield_validated,
             out_energy,
             out_forces,
@@ -4392,6 +4466,33 @@ mod tests {
         ] {
             assert_eq!(left.to_bits(), right.to_bits());
         }
+        assert_eq!(supplied_x.map(f64::to_bits), direct_x.map(f64::to_bits));
+        assert_eq!(supplied_y.map(f64::to_bits), direct_y.map(f64::to_bits));
+        assert_eq!(supplied_z.map(f64::to_bits), direct_z.map(f64::to_bits));
+
+        // SAFETY: The canonical pair was produced by the same trusted owner
+        // contract used by native dynamics, and all outputs remain live and
+        // disjoint. This exercises the prevalidated provider symbol directly.
+        assert_eq!(
+            unsafe {
+                bg_rust_cpu_evaluate_with_prevalidated_neighbor_pairs_reusing_force_output_v1(
+                    &system,
+                    &forcefield,
+                    pairs.len(),
+                    pairs.as_ptr(),
+                    &mut forcefield_validated,
+                    &mut direct_energy,
+                    &mut direct_forces,
+                    &mut error,
+                )
+            },
+            STATUS_OK
+        );
+        assert_eq!(forcefield_validated, 1);
+        assert_eq!(
+            supplied_energy.total.to_bits(),
+            direct_energy.total.to_bits()
+        );
         assert_eq!(supplied_x.map(f64::to_bits), direct_x.map(f64::to_bits));
         assert_eq!(supplied_y.map(f64::to_bits), direct_y.map(f64::to_bits));
         assert_eq!(supplied_z.map(f64::to_bits), direct_z.map(f64::to_bits));

@@ -151,6 +151,17 @@ continues to perform complete validation on every call. The state is excluded
 from checkpoint bytes and semantic rollback, and it carries no timing evidence
 or performance claim.
 
+Fully periodic CPU dynamics also marks its simulation-owned canonical neighbor
+pairs as prevalidated at the private evaluator boundary. The same C++ builder
+creates every published pair slice in strictly increasing, unique, in-range
+order, so the C++ reference and Rust CPU force evaluators no longer repeat that
+linear row-validation pass on every reuse. Public stateless evaluation and the
+general caller-supplied pair entry points still validate every row and retain
+their existing malformed-input behavior. The private Rust provider symbol is
+not part of the public engine ABI, and its canonical/vendor declarations remain
+byte-identical. This is an untimed structural compute reduction with no
+performance or acceleration claim.
+
 Constrained CPU minimization also retains one per-atom projected-force
 magnitude vector. A projection sweep computes each atom norm once per distinct
 direction state, reuses the same binary64 value for every corrected constraint

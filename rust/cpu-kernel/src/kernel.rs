@@ -541,10 +541,17 @@ fn evaluate_torsions(
     Ok(())
 }
 
+#[derive(Clone, Copy)]
+enum NeighborPairSource<'a> {
+    Automatic,
+    Supplied(&'a [Pair]),
+    Prevalidated(&'a [Pair]),
+}
+
 fn evaluate_nonbonded(
     system: &System<'_>,
     forcefield: &ForceField<'_>,
-    neighbor_pairs: Option<&[Pair]>,
+    neighbor_pairs: NeighborPairSource<'_>,
     compute_forces: bool,
     evaluation: &mut EvaluationView<'_>,
 ) -> Result<(), KernelError> {
@@ -553,12 +560,16 @@ fn evaluate_nonbonded(
     let mut pair_rules = PairRuleCursor::default();
     if forcefield.periodic_axes_mask == 0b111 {
         let built_pairs;
-        let pairs = if let Some(pairs) = neighbor_pairs {
-            validate_neighbor_pairs(pairs, forcefield.atom_count)?;
-            pairs
-        } else {
-            built_pairs = periodic_neighbor_pairs(system, forcefield)?;
-            &built_pairs
+        let pairs = match neighbor_pairs {
+            NeighborPairSource::Automatic => {
+                built_pairs = periodic_neighbor_pairs(system, forcefield)?;
+                &built_pairs
+            }
+            NeighborPairSource::Supplied(pairs) => {
+                validate_neighbor_pairs(pairs, forcefield.atom_count)?;
+                pairs
+            }
+            NeighborPairSource::Prevalidated(pairs) => pairs,
         };
         for pair in pairs {
             evaluate_nonbonded_pair(
@@ -572,7 +583,7 @@ fn evaluate_nonbonded(
             )?;
         }
     } else {
-        if neighbor_pairs.is_some() {
+        if !matches!(neighbor_pairs, NeighborPairSource::Automatic) {
             return Err(KernelError::invalid(
                 "neighbor pairs require a fully periodic orthorhombic system",
             ));
@@ -886,7 +897,7 @@ fn zeroed_force_channel(atom_count: usize) -> Result<Vec<f64>, KernelError> {
 fn evaluate_into_impl(
     system: &System<'_>,
     forcefield: &ForceField<'_>,
-    neighbor_pairs: Option<&[Pair]>,
+    neighbor_pairs: NeighborPairSource<'_>,
     compute_forces: bool,
     force_x: &mut [f64],
     force_y: &mut [f64],
@@ -947,7 +958,7 @@ fn evaluate_into_impl(
 fn evaluate_impl(
     system: &System<'_>,
     forcefield: &ForceField<'_>,
-    neighbor_pairs: Option<&[Pair]>,
+    neighbor_pairs: NeighborPairSource<'_>,
     compute_forces: bool,
 ) -> Result<Evaluation, KernelError> {
     if !storage_is_consistent(system, forcefield) {
@@ -993,7 +1004,12 @@ pub(crate) fn evaluate(
     forcefield: &ForceField<'_>,
     compute_forces: bool,
 ) -> Result<Evaluation, KernelError> {
-    evaluate_impl(system, forcefield, None, compute_forces)
+    evaluate_impl(
+        system,
+        forcefield,
+        NeighborPairSource::Automatic,
+        compute_forces,
+    )
 }
 
 pub(crate) fn evaluate_with_neighbor_pairs(
@@ -1002,7 +1018,12 @@ pub(crate) fn evaluate_with_neighbor_pairs(
     neighbor_pairs: &[Pair],
     compute_forces: bool,
 ) -> Result<Evaluation, KernelError> {
-    evaluate_impl(system, forcefield, Some(neighbor_pairs), compute_forces)
+    evaluate_impl(
+        system,
+        forcefield,
+        NeighborPairSource::Supplied(neighbor_pairs),
+        compute_forces,
+    )
 }
 
 pub(crate) fn evaluate_into(
@@ -1019,7 +1040,15 @@ pub(crate) fn evaluate_into(
     force_x.fill(0.0);
     force_y.fill(0.0);
     force_z.fill(0.0);
-    evaluate_into_impl(system, forcefield, None, true, force_x, force_y, force_z)
+    evaluate_into_impl(
+        system,
+        forcefield,
+        NeighborPairSource::Automatic,
+        true,
+        force_x,
+        force_y,
+        force_z,
+    )
 }
 
 pub(crate) fn evaluate_with_neighbor_pairs_into(
@@ -1040,7 +1069,33 @@ pub(crate) fn evaluate_with_neighbor_pairs_into(
     evaluate_into_impl(
         system,
         forcefield,
-        Some(neighbor_pairs),
+        NeighborPairSource::Supplied(neighbor_pairs),
+        true,
+        force_x,
+        force_y,
+        force_z,
+    )
+}
+
+pub(crate) fn evaluate_with_prevalidated_neighbor_pairs_into(
+    system: &System<'_>,
+    forcefield: &ForceField<'_>,
+    neighbor_pairs: &[Pair],
+    forces: (&mut [f64], &mut [f64], &mut [f64]),
+) -> Result<Energy, KernelError> {
+    if !storage_is_consistent(system, forcefield) {
+        return Err(KernelError::invalid(
+            "system and force-field atom storage do not match",
+        ));
+    }
+    let (force_x, force_y, force_z) = forces;
+    force_x.fill(0.0);
+    force_y.fill(0.0);
+    force_z.fill(0.0);
+    evaluate_into_impl(
+        system,
+        forcefield,
+        NeighborPairSource::Prevalidated(neighbor_pairs),
         true,
         force_x,
         force_y,

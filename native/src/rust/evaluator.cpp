@@ -43,6 +43,7 @@ bg_status evaluate_impl(
     const bg_system &system,
     const bg_forcefield &forcefield,
     const std::vector<cpu::NeighborPair> *neighbor_pairs,
+    bool prevalidated_neighbor_pairs,
     bool compute_forces,
     bool reuse_force_storage,
     uint8_t *inout_forcefield_validated,
@@ -183,8 +184,10 @@ bg_status evaluate_impl(
 
     int32_t raw_status = BG_STATUS_INTERNAL_ERROR;
     if (direct_force_output && neighbor_pairs != nullptr) {
-        raw_status =
-            bg_rust_cpu_evaluate_with_neighbor_pairs_reusing_force_output_v1(
+        const auto evaluator = prevalidated_neighbor_pairs
+            ? bg_rust_cpu_evaluate_with_prevalidated_neighbor_pairs_reusing_force_output_v1
+            : bg_rust_cpu_evaluate_with_neighbor_pairs_reusing_force_output_v1;
+        raw_status = evaluator(
                 &provider_system,
                 &provider_forcefield,
                 neighbor_pairs->size(),
@@ -258,6 +261,7 @@ bg_status evaluate(
         system,
         forcefield,
         nullptr,
+        false,
         compute_forces,
         false,
         nullptr,
@@ -276,6 +280,7 @@ bg_status evaluate_reusing_force_storage(
         system,
         forcefield,
         nullptr,
+        false,
         compute_forces,
         true,
         inout_forcefield_validated,
@@ -292,6 +297,7 @@ bg_status evaluate_with_neighbor_pairs(
         system,
         forcefield,
         &neighbor_pairs,
+        false,
         compute_forces,
         false,
         nullptr,
@@ -310,6 +316,25 @@ bg_status evaluate_with_neighbor_pairs_reusing_force_storage(
         system,
         forcefield,
         &neighbor_pairs,
+        false,
+        compute_forces,
+        true,
+        inout_forcefield_validated,
+        out_evaluation);
+}
+
+bg_status evaluate_with_prevalidated_neighbor_pairs_reusing_force_storage(
+    const bg_system &system,
+    const bg_forcefield &forcefield,
+    const std::vector<cpu::NeighborPair> &neighbor_pairs,
+    bool compute_forces,
+    uint8_t *inout_forcefield_validated,
+    cpu::Evaluation *out_evaluation) {
+    return evaluate_impl(
+        system,
+        forcefield,
+        &neighbor_pairs,
+        true,
         compute_forces,
         true,
         inout_forcefield_validated,

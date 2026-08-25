@@ -207,14 +207,14 @@ bg_status evaluate(
             return status;
         }
         if (context.backend == BG_BACKEND_CPP_CPU_REFERENCE) {
-            return cpu::evaluate_with_neighbor_pairs_reusing_force_storage(
+            return cpu::evaluate_with_prevalidated_neighbor_pairs_reusing_force_storage(
                 system,
                 forcefield,
                 *neighbor_pairs,
                 compute_forces,
                 out_evaluation);
         }
-        return rust_cpu::evaluate_with_neighbor_pairs_reusing_force_storage(
+        return rust_cpu::evaluate_with_prevalidated_neighbor_pairs_reusing_force_storage(
             system,
             forcefield,
             *neighbor_pairs,

@@ -56,6 +56,13 @@ bg_status evaluate_with_neighbor_pairs_reusing_force_storage(
     bool compute_forces,
     Evaluation *out_evaluation);
 
+bg_status evaluate_with_prevalidated_neighbor_pairs_reusing_force_storage(
+    const bg_system &system,
+    const bg_forcefield &forcefield,
+    const std::vector<NeighborPair> &neighbor_pairs,
+    bool compute_forces,
+    Evaluation *out_evaluation);
+
 }  // namespace betelgeuze::native::cpu
 
 #endif  // BETELGEUZE_NATIVE_CPU_EVALUATOR_HPP
