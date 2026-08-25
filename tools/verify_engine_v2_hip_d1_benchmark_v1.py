@@ -16,8 +16,8 @@ from pathlib import Path
 import re
 from typing import Any
 
-PROFILE_SCHEMA = "betelgeuze.engine_v2_hip_d1_benchmark_profile/1.1.0"
-RESULT_SCHEMA = "betelgeuze.engine_v2_hip_d1_benchmark_result/1.1.0"
+PROFILE_SCHEMA = "betelgeuze.engine_v2_hip_d1_benchmark_profile/1.2.0"
+RESULT_SCHEMA = "betelgeuze.engine_v2_hip_d1_benchmark_result/1.2.0"
 CASE_ID_RE = re.compile(r"^[A-Za-z0-9_.:-]{1,128}$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 GPU_ARCHITECTURE_RE = re.compile(r"^gfx[0-9a-z]{2,8}$")
@@ -30,6 +30,13 @@ PARITY_DIGEST_FIELDS = (
     "validity_sha256",
     "rank_sha256",
     "cluster_sha256",
+)
+DERIVED_DISCRETE_FIELDS = (
+    "decision",
+    "score_order",
+    "validity",
+    "rank",
+    "cluster",
 )
 SCIENTIFIC_FIELDS = (
     "score",
@@ -81,7 +88,7 @@ ALLOWED_NEWER_GPU_ARCHITECTURES = (
 )
 FAILURE_OBSERVATION_SCHEMA = "betelgeuze.engine_v2_hip_failure_observation/1.0.0"
 EXECUTION_BACKEND_RECEIPT_SCHEMA = (
-    "betelgeuze.engine_v2_hip_execution_backend_receipt/1.0.0"
+    "betelgeuze.engine_v2_hip_execution_backend_receipt/1.1.0"
 )
 NORMALIZED_PROFILER_TRACE_SCHEMA = (
     "betelgeuze.engine_v2_rocprofiler_normalized_dispatch_trace/1.0.0"
@@ -225,6 +232,7 @@ def _verify_profile_document(profile: dict[str, Any]) -> dict[str, Any]:
             "status",
             "expected_manifest_sha256",
             "expected_ordered_case_ids_sha256",
+            "expected_ordered_candidate_ids_sha256_by_case",
             "case_count",
             "candidate_denominator",
             "required_backends",
@@ -271,6 +279,7 @@ def _verify_profile_document(profile: dict[str, Any]) -> dict[str, Any]:
         profile["parity"],
         {
             "digest_fields",
+            "derived_discrete_fields",
             "scientific_fields",
             "scientific_vector_order",
             "absolute_tolerance",
@@ -285,6 +294,11 @@ def _verify_profile_document(profile: dict[str, Any]) -> dict[str, Any]:
         "profile.parity",
     )
     _exact_list(parity["digest_fields"], PARITY_DIGEST_FIELDS, "parity digest")
+    _exact_list(
+        parity["derived_discrete_fields"],
+        DERIVED_DISCRETE_FIELDS,
+        "derived discrete field",
+    )
     _exact_list(parity["scientific_fields"], SCIENTIFIC_FIELDS, "scientific field")
     if parity["scientific_vector_order"] != "slot_major_field_order":
         raise HipBenchmarkError("scientific vector ordering changed")
@@ -405,16 +419,26 @@ def _verify_profile_document(profile: dict[str, Any]) -> dict[str, Any]:
 
     expected_manifest = profile["expected_manifest_sha256"]
     expected_case_ids = profile["expected_ordered_case_ids_sha256"]
+    expected_candidate_ids = profile["expected_ordered_candidate_ids_sha256_by_case"]
     if expected_manifest is None:
         if (
             profile["status"] != UNBOUND_STATUS
             or profile["blockers"] != list(UNBOUND_BLOCKERS)
             or expected_case_ids is not None
+            or expected_candidate_ids is not None
         ):
             raise HipBenchmarkError("unbound profile state")
     else:
         _sha256(expected_manifest, "profile.expected_manifest_sha256")
         _sha256(expected_case_ids, "profile.expected_ordered_case_ids_sha256")
+        if (
+            type(expected_candidate_ids) is not dict
+            or len(expected_candidate_ids) != profile["case_count"]
+        ):
+            raise HipBenchmarkError("profile candidate identity map")
+        for case_id, digest in expected_candidate_ids.items():
+            _case_id(case_id, "profile candidate identity case")
+            _sha256(digest, f"profile candidate identity {case_id}")
         if profile["status"] != BOUND_STATUS or profile["blockers"] != list(
             BOUND_BLOCKERS
         ):
@@ -459,10 +483,13 @@ def _scientific_values(
             raise HipBenchmarkError(
                 f"{name}: partial typed-failure scientific slot {slot}"
             )
-        output.extend(
+        finite_triple = [
             _finite(item, f"{name}[{index}]")
             for index, item in enumerate(triple, start=start)
-        )
+        ]
+        if finite_triple[1] < 0.0 or finite_triple[2] < 0.0:
+            raise HipBenchmarkError(f"{name}: RMSD must be nonnegative at slot {slot}")
+        output.extend(finite_triple)
     return output
 
 
@@ -491,6 +518,69 @@ def _candidate_statuses(
             raise HipBenchmarkError(f"{name}: candidate status value")
         output.append(status)
     return output
+
+
+def _discrete_outputs(
+    value: Any,
+    name: str,
+    statuses: list[dict[str, Any]],
+    denominator: int,
+) -> dict[str, Any]:
+    outputs = _exact_keys(value, set(DERIVED_DISCRETE_FIELDS), name)
+    scored_slots = [
+        index for index, status in enumerate(statuses) if status["status"] == "scored"
+    ]
+
+    decisions = outputs["decision"]
+    validities = outputs["validity"]
+    ranks = outputs["rank"]
+    clusters = outputs["cluster"]
+    for field_name, rows in (
+        ("decision", decisions),
+        ("validity", validities),
+        ("rank", ranks),
+        ("cluster", clusters),
+    ):
+        if type(rows) is not list or len(rows) != denominator:
+            raise HipBenchmarkError(f"{name}.{field_name}: candidate denominator")
+
+    for slot_index, status in enumerate(statuses):
+        decision = _nonempty_string(
+            decisions[slot_index], f"{name}.decision[{slot_index}]"
+        )
+        if status["status"] == "typed_failure":
+            if (
+                decision != "typed_failure"
+                or validities[slot_index] is not None
+                or ranks[slot_index] is not None
+                or clusters[slot_index] is not None
+            ):
+                raise HipBenchmarkError(
+                    f"{name}: typed-failure discrete output at slot {slot_index}"
+                )
+            continue
+        if decision == "typed_failure":
+            raise HipBenchmarkError(f"{name}: scored decision at slot {slot_index}")
+        if type(validities[slot_index]) is not bool:
+            raise HipBenchmarkError(f"{name}: validity at slot {slot_index}")
+        _integer(ranks[slot_index], f"{name}.rank[{slot_index}]")
+        _integer(clusters[slot_index], f"{name}.cluster[{slot_index}]")
+
+    score_order = outputs["score_order"]
+    if (
+        type(score_order) is not list
+        or any(type(slot) is not int for slot in score_order)
+        or len(score_order) != len(scored_slots)
+        or set(score_order) != set(scored_slots)
+    ):
+        raise HipBenchmarkError(f"{name}.score_order: scored-slot permutation")
+    expected_ranks = list(range(len(scored_slots)))
+    observed_ranks = [ranks[slot] for slot in scored_slots]
+    if sorted(observed_ranks) != expected_ranks:
+        raise HipBenchmarkError(f"{name}.rank: scored-slot permutation")
+    if any(ranks[slot] != rank for rank, slot in enumerate(score_order)):
+        raise HipBenchmarkError(f"{name}: score order/rank mismatch")
+    return outputs
 
 
 def _compare_case(
@@ -634,6 +724,7 @@ def _verify_case(
     label: str,
     case_id: str,
     denominator: int,
+    expected_candidate_ids_sha256: str,
     minimum_samples: int,
     minimum_scored_candidates: int,
     scientific_length: int,
@@ -641,11 +732,16 @@ def _verify_case(
     expected_keys = {
         "case_id",
         "candidate_count",
+        "ordered_candidate_ids",
+        "ordered_candidate_ids_sha256",
         "candidate_statuses",
         "repeat_candidate_statuses",
+        "discrete_outputs",
+        "repeat_discrete_outputs",
         "scientific_values",
         "repeat_scientific_values",
         "wall_time_seconds",
+        "repeat_wall_time_seconds",
         *PARITY_DIGEST_FIELDS,
         *(f"repeat_{field}" for field in PARITY_DIGEST_FIELDS),
     }
@@ -657,6 +753,25 @@ def _verify_case(
         or case["candidate_count"] != denominator
     ):
         raise HipBenchmarkError(f"{label}: candidate denominator deletion")
+    candidate_ids_raw = case["ordered_candidate_ids"]
+    if type(candidate_ids_raw) is not list or len(candidate_ids_raw) != denominator:
+        raise HipBenchmarkError(f"{label}: ordered candidate identity denominator")
+    candidate_ids = [
+        _nonempty_string(value, f"{label}.ordered_candidate_ids[{index}]")
+        for index, value in enumerate(candidate_ids_raw)
+    ]
+    if any(len(value) > 256 for value in candidate_ids):
+        raise HipBenchmarkError(f"{label}: ordered candidate identity length")
+    if len(set(candidate_ids)) != denominator:
+        raise HipBenchmarkError(f"{label}: duplicate ordered candidate identity")
+    candidate_ids_sha256 = _sha256(
+        case["ordered_candidate_ids_sha256"],
+        f"{label}.ordered_candidate_ids_sha256",
+    )
+    if candidate_ids_sha256 != _canonical_sha256(candidate_ids):
+        raise HipBenchmarkError(f"{label}: ordered candidate identity SHA-256")
+    if candidate_ids_sha256 != expected_candidate_ids_sha256:
+        raise HipBenchmarkError(f"{label}: candidate cohort/profile cross-wire")
     for field in PARITY_DIGEST_FIELDS:
         digest = _sha256(case[field], f"{label}.{field}")
         repeat = _sha256(case[f"repeat_{field}"], f"{label}.repeat_{field}")
@@ -679,6 +794,29 @@ def _verify_case(
         raise HipBenchmarkError(f"{label}: insufficient scored candidates")
     if case["typed_failure_sha256"] != _canonical_sha256(statuses):
         raise HipBenchmarkError(f"{label}: typed-failure status SHA-256 mismatch")
+    if case["repeat_typed_failure_sha256"] != _canonical_sha256(repeat_statuses):
+        raise HipBenchmarkError(
+            f"{label}: repeat typed-failure status SHA-256 mismatch"
+        )
+    discrete_outputs = _discrete_outputs(
+        case["discrete_outputs"], f"{label}.discrete_outputs", statuses, denominator
+    )
+    repeat_discrete_outputs = _discrete_outputs(
+        case["repeat_discrete_outputs"],
+        f"{label}.repeat_discrete_outputs",
+        repeat_statuses,
+        denominator,
+    )
+    if discrete_outputs != repeat_discrete_outputs:
+        raise HipBenchmarkError(f"{label}: repeat discrete output stability")
+    for field in DERIVED_DISCRETE_FIELDS:
+        digest_field = f"{field}_sha256"
+        if case[digest_field] != _canonical_sha256(discrete_outputs[field]):
+            raise HipBenchmarkError(f"{label}: {field} output SHA-256 mismatch")
+        if case[f"repeat_{digest_field}"] != _canonical_sha256(
+            repeat_discrete_outputs[field]
+        ):
+            raise HipBenchmarkError(f"{label}: repeat {field} output SHA-256 mismatch")
     scientific = _scientific_values(case["scientific_values"], label, scientific_length)
     repeat_scientific = _scientific_values(
         case["repeat_scientific_values"],
@@ -702,7 +840,21 @@ def _verify_case(
         f"{label}.wall_time_seconds",
         minimum_samples,
     )
-    return {**case, "scientific_values": scientific, "wall_time_seconds": wall_times}
+    repeat_wall_times = _samples(
+        case["repeat_wall_time_seconds"],
+        f"{label}.repeat_wall_time_seconds",
+        minimum_samples,
+    )
+    return {
+        **case,
+        "ordered_candidate_ids": candidate_ids,
+        "discrete_outputs": discrete_outputs,
+        "repeat_discrete_outputs": repeat_discrete_outputs,
+        "scientific_values": scientific,
+        "repeat_scientific_values": repeat_scientific,
+        "wall_time_seconds": wall_times,
+        "repeat_wall_time_seconds": repeat_wall_times,
+    }
 
 
 def _verify_profiler_trace(
@@ -710,7 +862,7 @@ def _verify_profiler_trace(
     trace_sha256_value: Any,
     dispatches_value: Any,
     label: str,
-    case_sample_counts: dict[str, int],
+    case_wall_times: dict[str, list[float]],
 ) -> tuple[int, float, str]:
     trace = _exact_keys(trace_value, {"schema_id", "rows"}, f"{label}.profiler_trace")
     if trace["schema_id"] != NORMALIZED_PROFILER_TRACE_SCHEMA:
@@ -720,7 +872,8 @@ def _verify_profiler_trace(
         raise HipBenchmarkError(f"{label}: complete profiler trace required")
     aggregates: dict[str, list[float]] = {}
     coverage: set[tuple[str, int]] = set()
-    allowed_case_ids = set(case_sample_counts)
+    runtime_by_sample: dict[tuple[str, int], list[float]] = {}
+    allowed_case_ids = set(case_wall_times)
     for index, raw_row in enumerate(rows):
         row = _exact_keys(
             raw_row,
@@ -744,9 +897,10 @@ def _verify_profiler_trace(
             row["sample_index"],
             f"{label}.profiler_trace.rows[{index}].sample_index",
         )
-        if sample_index >= case_sample_counts[case_id]:
+        if sample_index >= len(case_wall_times[case_id]):
             raise HipBenchmarkError(f"{label}: profiler trace sample identity")
-        coverage.add((case_id, sample_index))
+        sample_key = (case_id, sample_index)
+        coverage.add(sample_key)
         kernel_name = _nonempty_string(
             row["kernel_name"], f"{label}.profiler_trace.kernel_name"
         )
@@ -756,13 +910,26 @@ def _verify_profiler_trace(
             positive=True,
         )
         aggregates.setdefault(kernel_name, []).append(runtime)
+        runtime_by_sample.setdefault(sample_key, []).append(runtime)
     expected_coverage = {
         (case_id, sample_index)
-        for case_id, sample_count in case_sample_counts.items()
-        for sample_index in range(sample_count)
+        for case_id, wall_times in case_wall_times.items()
+        for sample_index in range(len(wall_times))
     }
     if coverage != expected_coverage:
         raise HipBenchmarkError(f"{label}: incomplete profiler case/sample coverage")
+    for case_id, sample_index in expected_coverage:
+        dispatch_runtime = _finite_sum(
+            tuple(runtime_by_sample[(case_id, sample_index)]),
+            f"{label}.{case_id}.sample[{sample_index}].dispatch_runtime",
+        )
+        wall_time = case_wall_times[case_id][sample_index]
+        if dispatch_runtime > wall_time and not math.isclose(
+            dispatch_runtime, wall_time, rel_tol=1e-12, abs_tol=0.0
+        ):
+            raise HipBenchmarkError(
+                f"{label}: profiler dispatch runtime exceeds wall time"
+            )
     trace_sha256 = _sha256(trace_sha256_value, f"{label}.profiler_trace_sha256")
     if trace_sha256 != _canonical_sha256(trace):
         raise HipBenchmarkError(f"{label}: profiler trace SHA-256 mismatch")
@@ -811,16 +978,79 @@ def _verify_profiler_trace(
     return dispatch_total, runtime_total, trace_sha256
 
 
+def _case_run_outputs_sha256(cases: list[dict[str, Any]], *, repeat: bool) -> str:
+    prefix = "repeat_" if repeat else ""
+    return _canonical_sha256(
+        [
+            {
+                "case_id": case["case_id"],
+                "candidate_count": case["candidate_count"],
+                "ordered_candidate_ids_sha256": case["ordered_candidate_ids_sha256"],
+                "candidate_statuses": case[f"{prefix}candidate_statuses"],
+                "discrete_outputs": case[f"{prefix}discrete_outputs"],
+                "scientific_values": case[f"{prefix}scientific_values"],
+                "parity_digests": {
+                    field: case[f"{prefix}{field}"] for field in PARITY_DIGEST_FIELDS
+                },
+            }
+            for case in cases
+        ]
+    )
+
+
+def _case_run_timings_sha256(cases: list[dict[str, Any]], *, repeat: bool) -> str:
+    timing_field = "repeat_wall_time_seconds" if repeat else "wall_time_seconds"
+    return _canonical_sha256(
+        [
+            {
+                "case_id": case["case_id"],
+                "wall_time_seconds": case[timing_field],
+            }
+            for case in cases
+        ]
+    )
+
+
+def _execution_backend_receipt(
+    *,
+    architecture: str,
+    backend_name: str,
+    observed_backend: str,
+    cpu_fallback_observed: bool,
+    ordered_case_ids: list[str],
+    run_role: str,
+    execution_run_id_sha256: str,
+    profiler_trace_sha256: str | None,
+    cases: list[dict[str, Any]],
+) -> dict[str, Any]:
+    repeat = run_role == "repeat"
+    return {
+        "schema_id": EXECUTION_BACKEND_RECEIPT_SCHEMA,
+        "gpu_architecture": architecture,
+        "requested_backend": backend_name,
+        "observed_backend": observed_backend,
+        "cpu_fallback_observed": cpu_fallback_observed,
+        "ordered_case_ids_sha256": _canonical_sha256(ordered_case_ids),
+        "run_role": run_role,
+        "execution_run_id_sha256": execution_run_id_sha256,
+        "profiler_trace_sha256": profiler_trace_sha256,
+        "case_timing_samples_sha256": _case_run_timings_sha256(cases, repeat=repeat),
+        "case_outputs_sha256": _case_run_outputs_sha256(cases, repeat=repeat),
+    }
+
+
 def _verify_backend(
     raw: Any,
     *,
     architecture: str,
     backend_name: str,
     ordered_case_ids: list[str],
+    expected_candidate_ids_sha256_by_case: dict[str, str],
     denominator: int,
     sampling: dict[str, Any],
     minimum_scored_candidates: int,
     scientific_length: int,
+    seen_execution_run_ids: set[str],
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     label = f"{architecture}/{backend_name}"
     backend = _exact_keys(
@@ -829,7 +1059,10 @@ def _verify_backend(
             "backend_name",
             "observed_backend",
             "cpu_fallback_observed",
+            "execution_run_id_sha256",
+            "repeat_execution_run_id_sha256",
             "execution_backend_receipt_sha256",
+            "repeat_execution_backend_receipt_sha256",
             "candidate_denominator",
             "context_construction_seconds",
             "peak_rss_bytes",
@@ -842,6 +1075,9 @@ def _verify_backend(
             "profiler_trace",
             "profiler_trace_sha256",
             "kernel_dispatches",
+            "repeat_profiler_trace",
+            "repeat_profiler_trace_sha256",
+            "repeat_kernel_dispatches",
             "cases",
         },
         label,
@@ -852,6 +1088,19 @@ def _verify_backend(
         raise HipBenchmarkError(f"{label}: representative observed backend mismatch")
     if backend["cpu_fallback_observed"] is not False:
         raise HipBenchmarkError(f"{label}: representative CPU fallback observed")
+    execution_run_id = _sha256(
+        backend["execution_run_id_sha256"], f"{label}.execution_run_id_sha256"
+    )
+    repeat_execution_run_id = _sha256(
+        backend["repeat_execution_run_id_sha256"],
+        f"{label}.repeat_execution_run_id_sha256",
+    )
+    if execution_run_id == repeat_execution_run_id:
+        raise HipBenchmarkError(f"{label}: repeat execution identity reused")
+    for run_id in (execution_run_id, repeat_execution_run_id):
+        if run_id in seen_execution_run_ids:
+            raise HipBenchmarkError(f"{label}: duplicate execution identity")
+        seen_execution_run_ids.add(run_id)
     if (
         type(backend["candidate_denominator"]) is not int
         or backend["candidate_denominator"] != denominator
@@ -898,13 +1147,19 @@ def _verify_backend(
             or d2h_samples
             or backend["profiler_trace"] is not None
             or backend["profiler_trace_sha256"] is not None
+            or backend["repeat_profiler_trace"] is not None
+            or backend["repeat_profiler_trace_sha256"] is not None
         ):
             raise HipBenchmarkError(f"{label}: CPU profiler/transfer evidence")
-        if backend["kernel_dispatches"] != []:
+        if (
+            backend["kernel_dispatches"] != []
+            or backend["repeat_kernel_dispatches"] != []
+        ):
             raise HipBenchmarkError(f"{label}: CPU kernel trace")
         kernel_total = 0.0
         kernel_dispatch_total = 0
         profiler_trace_sha256 = None
+        repeat_profiler_trace_sha256 = None
     else:
         if peak_vram <= 0 or h2d_bytes <= 0 or d2h_bytes <= 0:
             raise HipBenchmarkError(f"{label}: missing GPU transfer/VRAM accounting")
@@ -919,6 +1174,7 @@ def _verify_backend(
             sampling["minimum_transfer_samples"],
         )
         profiler_trace_sha256 = None
+        repeat_profiler_trace_sha256 = None
 
     cases_raw = backend["cases"]
     if type(cases_raw) is not list or len(cases_raw) != len(ordered_case_ids):
@@ -929,6 +1185,7 @@ def _verify_backend(
             f"{label}/case[{index}]",
             case_id,
             denominator,
+            expected_candidate_ids_sha256_by_case[case_id],
             sampling["minimum_case_samples"],
             minimum_scored_candidates,
             scientific_length,
@@ -938,8 +1195,9 @@ def _verify_backend(
         )
     ]
     if backend_name != "rust_cpu":
-        case_sample_counts = {
-            case["case_id"]: len(case["wall_time_seconds"]) for case in cases
+        case_wall_times = {case["case_id"]: case["wall_time_seconds"] for case in cases}
+        repeat_case_wall_times = {
+            case["case_id"]: case["repeat_wall_time_seconds"] for case in cases
         }
         kernel_dispatch_total, kernel_total, profiler_trace_sha256 = (
             _verify_profiler_trace(
@@ -947,33 +1205,49 @@ def _verify_backend(
                 backend["profiler_trace_sha256"],
                 backend["kernel_dispatches"],
                 label,
-                case_sample_counts,
+                case_wall_times,
             )
         )
+        _, _, repeat_profiler_trace_sha256 = _verify_profiler_trace(
+            backend["repeat_profiler_trace"],
+            backend["repeat_profiler_trace_sha256"],
+            backend["repeat_kernel_dispatches"],
+            f"{label}/repeat",
+            repeat_case_wall_times,
+        )
 
-    execution_receipt = {
-        "schema_id": EXECUTION_BACKEND_RECEIPT_SCHEMA,
-        "gpu_architecture": architecture,
-        "requested_backend": backend_name,
-        "observed_backend": backend["observed_backend"],
-        "cpu_fallback_observed": backend["cpu_fallback_observed"],
-        "ordered_case_ids_sha256": _canonical_sha256(ordered_case_ids),
-        "profiler_trace_sha256": profiler_trace_sha256,
-        "case_timing_samples_sha256": _canonical_sha256(
-            [
-                {
-                    "case_id": case["case_id"],
-                    "wall_time_seconds": case["wall_time_seconds"],
-                }
-                for case in cases
-            ]
-        ),
-    }
+    execution_receipt = _execution_backend_receipt(
+        architecture=architecture,
+        backend_name=backend_name,
+        observed_backend=backend["observed_backend"],
+        cpu_fallback_observed=backend["cpu_fallback_observed"],
+        ordered_case_ids=ordered_case_ids,
+        run_role="primary",
+        execution_run_id_sha256=execution_run_id,
+        profiler_trace_sha256=profiler_trace_sha256,
+        cases=cases,
+    )
     if _sha256(
         backend["execution_backend_receipt_sha256"],
         f"{label}.execution_backend_receipt_sha256",
     ) != _canonical_sha256(execution_receipt):
         raise HipBenchmarkError(f"{label}: execution backend receipt mismatch")
+    repeat_execution_receipt = _execution_backend_receipt(
+        architecture=architecture,
+        backend_name=backend_name,
+        observed_backend=backend["observed_backend"],
+        cpu_fallback_observed=backend["cpu_fallback_observed"],
+        ordered_case_ids=ordered_case_ids,
+        run_role="repeat",
+        execution_run_id_sha256=repeat_execution_run_id,
+        profiler_trace_sha256=repeat_profiler_trace_sha256,
+        cases=cases,
+    )
+    if _sha256(
+        backend["repeat_execution_backend_receipt_sha256"],
+        f"{label}.repeat_execution_backend_receipt_sha256",
+    ) != _canonical_sha256(repeat_execution_receipt):
+        raise HipBenchmarkError(f"{label}: repeat execution backend receipt mismatch")
     all_wall_times = [sample for case in cases for sample in case["wall_time_seconds"]]
     case_medians = [
         _median(case["wall_time_seconds"], f"{label}/{case['case_id']}.median")
@@ -1065,6 +1339,11 @@ def verify(profile_path: Path, result_path: Path) -> dict[str, Any]:
         raise HipBenchmarkError("ordered case identity SHA-256 mismatch")
     if ordered_case_ids_sha256 != profile["expected_ordered_case_ids_sha256"]:
         raise HipBenchmarkError("ordered cohort/profile cross-wire")
+    expected_candidate_ids_sha256_by_case = profile[
+        "expected_ordered_candidate_ids_sha256_by_case"
+    ]
+    if set(expected_candidate_ids_sha256_by_case) != set(ordered_case_ids):
+        raise HipBenchmarkError("candidate identity map/profile cross-wire")
     _authority(result["authority"], "result.authority")
     if result["output_claim_authorized"] is not False:
         raise HipBenchmarkError("output claim authority escalated")
@@ -1077,6 +1356,7 @@ def verify(profile_path: Path, result_path: Path) -> dict[str, Any]:
         raise HipBenchmarkError("insufficient GPU architectures")
     seen_architectures: set[str] = set()
     seen_device_serials: set[str] = set()
+    seen_execution_run_ids: set[str] = set()
     allowed_newer_architectures = set(profile["allowed_newer_gpu_architectures"])
     canonical_cpu_cases: list[dict[str, Any]] | None = None
     derived_metrics: dict[str, Any] = {}
@@ -1211,12 +1491,16 @@ def verify(profile_path: Path, result_path: Path) -> dict[str, Any]:
                 architecture=architecture_name,
                 backend_name=backend_name,
                 ordered_case_ids=ordered_case_ids,
+                expected_candidate_ids_sha256_by_case=(
+                    expected_candidate_ids_sha256_by_case
+                ),
                 denominator=profile["candidate_denominator"],
                 sampling=profile["sampling"],
                 minimum_scored_candidates=profile["parity"][
                     "minimum_scored_candidates_per_case"
                 ],
                 scientific_length=scientific_length,
+                seen_execution_run_ids=seen_execution_run_ids,
             )
             verified_backends[backend_name] = cases
             architecture_metrics[backend_name] = metrics

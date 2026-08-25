@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import importlib.util
 import json
 from pathlib import Path
@@ -29,6 +30,10 @@ def _case_ids() -> list[str]:
     return [f"PDB_{index:02d}:LIG_{index:02d}" for index in range(32)]
 
 
+def _candidate_ids(case_id: str) -> list[str]:
+    return [f"{case_id}:fixed64:{slot:02d}" for slot in range(64)]
+
+
 def _bound_profile(tmp_path: Path) -> tuple[Path, dict]:
     profile = json.loads(PROFILE.read_text(encoding="utf-8"))
     profile["status"] = VERIFIER.BOUND_STATUS
@@ -36,6 +41,10 @@ def _bound_profile(tmp_path: Path) -> tuple[Path, dict]:
     profile["expected_ordered_case_ids_sha256"] = VERIFIER._canonical_sha256(
         _case_ids()
     )
+    profile["expected_ordered_candidate_ids_sha256_by_case"] = {
+        case_id: VERIFIER._canonical_sha256(_candidate_ids(case_id))
+        for case_id in _case_ids()
+    }
     profile["blockers"] = list(VERIFIER.BOUND_BLOCKERS)
     profile["profile_sha256"] = VERIFIER._canonical_sha256(
         VERIFIER._profile_projection(profile)
@@ -53,11 +62,21 @@ def _case(case_id: str, index: int, backend_name: str) -> dict:
         }
         for slot in range(64)
     ]
-    digests = {
-        field: f"{index * len(VERIFIER.PARITY_DIGEST_FIELDS) + offset + 1:064x}"
-        for offset, field in enumerate(VERIFIER.PARITY_DIGEST_FIELDS)
+    scored_slots = list(range(63))
+    discrete_outputs = {
+        "decision": ["scored_valid"] * 63 + ["typed_failure"],
+        "score_order": scored_slots,
+        "validity": [True] * 63 + [None],
+        "rank": scored_slots + [None],
+        "cluster": [slot % 4 for slot in scored_slots] + [None],
     }
-    digests["typed_failure_sha256"] = VERIFIER._canonical_sha256(statuses)
+    digests = {
+        "typed_failure_sha256": VERIFIER._canonical_sha256(statuses),
+        **{
+            f"{field}_sha256": VERIFIER._canonical_sha256(discrete_outputs[field])
+            for field in VERIFIER.DERIVED_DISCRETE_FIELDS
+        },
+    }
     scientific = [
         component
         for slot in range(64)
@@ -75,13 +94,20 @@ def _case(case_id: str, index: int, backend_name: str) -> dict:
     return {
         "case_id": case_id,
         "candidate_count": 64,
+        "ordered_candidate_ids": _candidate_ids(case_id),
+        "ordered_candidate_ids_sha256": VERIFIER._canonical_sha256(
+            _candidate_ids(case_id)
+        ),
         "candidate_statuses": statuses,
         "repeat_candidate_statuses": [dict(status) for status in statuses],
+        "discrete_outputs": discrete_outputs,
+        "repeat_discrete_outputs": copy.deepcopy(discrete_outputs),
         **digests,
         **{f"repeat_{field}": value for field, value in digests.items()},
         "scientific_values": scientific,
         "repeat_scientific_values": list(scientific),
         "wall_time_seconds": wall_time,
+        "repeat_wall_time_seconds": [value * 1.01 for value in wall_time],
     }
 
 
@@ -117,31 +143,40 @@ def _backend(case_ids: list[str], backend_name: str, architecture: str) -> dict:
         else None
     )
     profiler_trace_sha256 = VERIFIER._canonical_sha256(profiler_trace) if gpu else None
-    execution_receipt = {
-        "schema_id": VERIFIER.EXECUTION_BACKEND_RECEIPT_SCHEMA,
-        "gpu_architecture": architecture,
-        "requested_backend": backend_name,
-        "observed_backend": backend_name,
-        "cpu_fallback_observed": False,
-        "ordered_case_ids_sha256": VERIFIER._canonical_sha256(case_ids),
-        "profiler_trace_sha256": profiler_trace_sha256,
-        "case_timing_samples_sha256": VERIFIER._canonical_sha256(
-            [
-                {
-                    "case_id": case["case_id"],
-                    "wall_time_seconds": case["wall_time_seconds"],
-                }
-                for case in case_rows
-            ]
-        ),
-    }
-    return {
+    repeat_profiler_rows = (
+        [
+            {
+                **row,
+                "runtime_seconds": 0.0018,
+            }
+            for row in profiler_rows
+        ]
+        if gpu
+        else []
+    )
+    repeat_profiler_trace = (
+        {
+            "schema_id": VERIFIER.NORMALIZED_PROFILER_TRACE_SCHEMA,
+            "rows": repeat_profiler_rows,
+        }
+        if gpu
+        else None
+    )
+    repeat_profiler_trace_sha256 = (
+        VERIFIER._canonical_sha256(repeat_profiler_trace) if gpu else None
+    )
+    backend = {
         "backend_name": backend_name,
         "observed_backend": backend_name,
         "cpu_fallback_observed": False,
-        "execution_backend_receipt_sha256": VERIFIER._canonical_sha256(
-            execution_receipt
+        "execution_run_id_sha256": VERIFIER._canonical_sha256(
+            [architecture, backend_name, "primary"]
         ),
+        "repeat_execution_run_id_sha256": VERIFIER._canonical_sha256(
+            [architecture, backend_name, "repeat"]
+        ),
+        "execution_backend_receipt_sha256": "0" * 64,
+        "repeat_execution_backend_receipt_sha256": "0" * 64,
         "candidate_denominator": 64,
         "context_construction_seconds": [0.02, 0.021, 0.019, 0.022, 0.018],
         "peak_rss_bytes": 1048576,
@@ -169,8 +204,25 @@ def _backend(case_ids: list[str], backend_name: str, architecture: str) -> dict:
             if gpu
             else []
         ),
+        "repeat_profiler_trace": repeat_profiler_trace,
+        "repeat_profiler_trace_sha256": repeat_profiler_trace_sha256,
+        "repeat_kernel_dispatches": (
+            [
+                {
+                    "kernel_name": "score_candidates",
+                    "dispatch_count": len(repeat_profiler_rows),
+                    "total_runtime_seconds": sum(
+                        row["runtime_seconds"] for row in repeat_profiler_rows
+                    ),
+                }
+            ]
+            if gpu
+            else []
+        ),
         "cases": case_rows,
     }
+    _reseal_backend_receipt(backend, architecture, case_ids)
+    return backend
 
 
 def _architecture(case_ids: list[str], name: str) -> dict:
@@ -257,27 +309,22 @@ def _seal_and_authorize_result(result: dict) -> dict:
 def _reseal_backend_receipt(
     backend: dict, architecture: str, case_ids: list[str]
 ) -> None:
-    execution_receipt = {
-        "schema_id": VERIFIER.EXECUTION_BACKEND_RECEIPT_SCHEMA,
-        "gpu_architecture": architecture,
-        "requested_backend": backend["backend_name"],
-        "observed_backend": backend["observed_backend"],
-        "cpu_fallback_observed": backend["cpu_fallback_observed"],
-        "ordered_case_ids_sha256": VERIFIER._canonical_sha256(case_ids),
-        "profiler_trace_sha256": backend["profiler_trace_sha256"],
-        "case_timing_samples_sha256": VERIFIER._canonical_sha256(
-            [
-                {
-                    "case_id": case["case_id"],
-                    "wall_time_seconds": case["wall_time_seconds"],
-                }
-                for case in backend["cases"]
-            ]
-        ),
-    }
-    backend["execution_backend_receipt_sha256"] = VERIFIER._canonical_sha256(
-        execution_receipt
-    )
+    for repeat in (False, True):
+        prefix = "repeat_" if repeat else ""
+        receipt = VERIFIER._execution_backend_receipt(
+            architecture=architecture,
+            backend_name=backend["backend_name"],
+            observed_backend=backend["observed_backend"],
+            cpu_fallback_observed=backend["cpu_fallback_observed"],
+            ordered_case_ids=case_ids,
+            run_role="repeat" if repeat else "primary",
+            execution_run_id_sha256=backend[f"{prefix}execution_run_id_sha256"],
+            profiler_trace_sha256=backend[f"{prefix}profiler_trace_sha256"],
+            cases=backend["cases"],
+        )
+        backend[f"{prefix}execution_backend_receipt_sha256"] = (
+            VERIFIER._canonical_sha256(receipt)
+        )
 
 
 def _verify(tmp_path: Path, value: dict | None = None) -> dict:
@@ -292,7 +339,7 @@ def test_committed_profile_is_valid_unbound_and_non_authoritative() -> None:
         "verified": True,
         "profile_id": "engine_v2_hip_d1_representative_v1",
         "profile_sha256": (
-            "87e304256cf9fb422c2c461bac0f1033bc7f6364641af0b72480e0701c48930f"
+            "1fae981689e6c0e9f359baaa966b0f6471714a42be4adf805e43f775c637f450"
         ),
         "manifest_bound": False,
         "result_verification_authorized": False,
@@ -408,6 +455,18 @@ def test_candidate_denominator_deletion_is_rejected(tmp_path: Path) -> None:
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 
+def test_ordered_candidate_identity_is_bound_to_profile(tmp_path: Path) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    case = result["architectures"][0]["backends"]["hip_fast"]["cases"][0]
+    case["ordered_candidate_ids"][0] = "SUBSTITUTED:CANDIDATE:00"
+    case["ordered_candidate_ids_sha256"] = VERIFIER._canonical_sha256(
+        case["ordered_candidate_ids"]
+    )
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="candidate cohort/profile"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
 @pytest.mark.parametrize("field", VERIFIER.PARITY_DIGEST_FIELDS)
 def test_each_discrete_parity_field_is_enforced(tmp_path: Path, field: str) -> None:
     profile_path, profile = _bound_profile(tmp_path)
@@ -418,7 +477,7 @@ def test_each_discrete_parity_field_is_enforced(tmp_path: Path, field: str) -> N
     expected = (
         "status SHA-256 mismatch"
         if field == "typed_failure_sha256"
-        else f"discrete parity: {field}"
+        else f"{field.removesuffix('_sha256')} output SHA-256 mismatch"
     )
     with pytest.raises(VERIFIER.HipBenchmarkError, match=expected):
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
@@ -431,6 +490,18 @@ def test_repeat_digest_drift_is_rejected(tmp_path: Path) -> None:
         "repeat_rank_sha256"
     ] = "f" * 64
     with pytest.raises(VERIFIER.HipBenchmarkError, match="repeat stability"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
+def test_discrete_digest_is_recomputed_from_structured_output(
+    tmp_path: Path,
+) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    case = result["architectures"][0]["backends"]["hip_fast"]["cases"][0]
+    case["discrete_outputs"]["decision"][0] = "scored_alternate"
+    case["repeat_discrete_outputs"]["decision"][0] = "scored_alternate"
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="decision output SHA-256"):
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 
@@ -516,6 +587,17 @@ def test_nonfinite_scientific_value_is_rejected(tmp_path: Path) -> None:
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 
+@pytest.mark.parametrize("component_index", [1, 2])
+def test_negative_rmsd_is_rejected(tmp_path: Path, component_index: int) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    case = result["architectures"][0]["backends"]["hip_safe"]["cases"][0]
+    case["scientific_values"][component_index] = -1.0e-6
+    case["repeat_scientific_values"][component_index] = -1.0e-6
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="RMSD must be nonnegative"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
 def test_integer_to_float_overflow_fails_closed_in_cli(tmp_path: Path) -> None:
     profile = json.loads(PROFILE.read_text(encoding="utf-8"))
     profile["parity"]["absolute_tolerance"] = 10**400
@@ -547,6 +629,11 @@ def test_numerical_parity_tolerance_is_enforced(tmp_path: Path) -> None:
     case = result["architectures"][0]["backends"]["hip_safe"]["cases"][0]
     case["scientific_values"][0] = 1.0e-5
     case["repeat_scientific_values"][0] = 1.0e-5
+    _reseal_backend_receipt(
+        result["architectures"][0]["backends"]["hip_safe"],
+        "gfx1030",
+        result["ordered_case_ids"],
+    )
     with pytest.raises(VERIFIER.HipBenchmarkError, match="numerical parity"):
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
@@ -557,6 +644,11 @@ def test_cross_architecture_cpu_parity_is_enforced(tmp_path: Path) -> None:
     case = result["architectures"][1]["backends"]["rust_cpu"]["cases"][0]
     case["scientific_values"][0] = 1.0e-5
     case["repeat_scientific_values"][0] = 1.0e-5
+    _reseal_backend_receipt(
+        result["architectures"][1]["backends"]["rust_cpu"],
+        "gfx1100",
+        result["ordered_case_ids"],
+    )
     with pytest.raises(VERIFIER.HipBenchmarkError, match="numerical parity"):
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
@@ -747,6 +839,17 @@ def test_profiler_trace_must_cover_every_case_sample(tmp_path: Path) -> None:
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 
+def test_profiler_dispatch_runtime_cannot_exceed_wall_sample(tmp_path: Path) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    backend = result["architectures"][0]["backends"]["hip_fast"]
+    backend["cases"][0]["wall_time_seconds"] = [1.0e-6] * 5
+    _reseal_backend_receipt(backend, "gfx1030", result["ordered_case_ids"])
+    _seal_and_authorize_result(result)
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="exceeds wall time"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
 def test_execution_backend_receipt_is_recomputed(tmp_path: Path) -> None:
     profile_path, profile = _bound_profile(tmp_path)
     result = _result(profile)
@@ -754,6 +857,27 @@ def test_execution_backend_receipt_is_recomputed(tmp_path: Path) -> None:
         "execution_backend_receipt_sha256"
     ] = "f" * 64
     with pytest.raises(VERIFIER.HipBenchmarkError, match="backend receipt mismatch"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
+def test_repeat_execution_identity_must_be_distinct(tmp_path: Path) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    backend = result["architectures"][0]["backends"]["hip_fast"]
+    backend["repeat_execution_run_id_sha256"] = backend["execution_run_id_sha256"]
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="repeat execution identity"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
+def test_repeat_outputs_are_bound_to_repeat_execution_receipt(
+    tmp_path: Path,
+) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    result["architectures"][0]["backends"]["hip_fast"][
+        "repeat_execution_backend_receipt_sha256"
+    ] = "f" * 64
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="repeat execution backend"):
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 
@@ -884,7 +1008,7 @@ def test_speed_gate_timing_samples_are_bound_to_execution_receipt(
     result = _result(profile)
     result["architectures"][0]["backends"]["hip_fast"]["cases"][0][
         "wall_time_seconds"
-    ] = [1.0e-9] * 5
+    ] = [0.01] * 5
     with pytest.raises(VERIFIER.HipBenchmarkError, match="backend receipt mismatch"):
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 

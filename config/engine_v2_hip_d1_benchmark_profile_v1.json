@@ -1,9 +1,10 @@
 {
-  "schema_id": "betelgeuze.engine_v2_hip_d1_benchmark_profile/1.1.0",
+  "schema_id": "betelgeuze.engine_v2_hip_d1_benchmark_profile/1.2.0",
   "profile_id": "engine_v2_hip_d1_representative_v1",
   "status": "frozen_non_authoritative_manifest_not_bound",
   "expected_manifest_sha256": null,
   "expected_ordered_case_ids_sha256": null,
+  "expected_ordered_candidate_ids_sha256_by_case": null,
   "case_count": 32,
   "candidate_denominator": 64,
   "required_backends": ["rust_cpu", "hip_safe", "hip_fast"],
@@ -32,6 +33,13 @@
       "validity_sha256",
       "rank_sha256",
       "cluster_sha256"
+    ],
+    "derived_discrete_fields": [
+      "decision",
+      "score_order",
+      "validity",
+      "rank",
+      "cluster"
     ],
     "scientific_fields": [
       "score",
@@ -96,5 +104,5 @@
     "fresh128_authorized": false,
     "stage0_authorized": false
   },
-  "profile_sha256": "87e304256cf9fb422c2c461bac0f1033bc7f6364641af0b72480e0701c48930f"
+  "profile_sha256": "1fae981689e6c0e9f359baaa966b0f6471714a42be4adf805e43f775c637f450"
 }

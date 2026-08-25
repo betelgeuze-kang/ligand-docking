@@ -230,12 +230,13 @@ python tools/verify_engine_v2_hip_d1_benchmark_v1.py \
   --profile config/engine_v2_hip_d1_benchmark_profile_v1.json
 ```
 
-This verifies the committed 1.1 profile and its self-hash only. The profile is
+This verifies the committed 1.2 profile and its self-hash only. The profile is
 deliberately `frozen_non_authoritative_manifest_not_bound`; passing `--result`
 is rejected until an owner-controlled successor binds the exact private D1
 manifest SHA-256 and its owner-selected ordered-case SHA-256, then reseals the
-profile. Profile verification does not authorize D1 materialization, molecular
-execution, or HIP-device execution.
+profile. The bound successor must also carry the owner-sealed ordered
+64-candidate identity digest for every selected case. Profile verification does
+not authorize D1 materialization, molecular execution, or HIP-device execution.
 
 Self-hashing alone is not authorization. The verifier's repository-reviewed
 authorized-bound-profile and authorized-result SHA-256 sets are intentionally
@@ -251,7 +252,10 @@ digests (decision, typed failure, score order, validity, rank, and clustering),
 all 192 slot-major score/proposal-RMSD/final-RMSD positions per case, a stable
 repeat, case/context/transfer timing samples, RSS/VRAM, H2D/D2H bytes, complete
 ROCprofiler kernel traces, typed failure probes, and GPU/toolchain/artifact
-identities. The newer GPU must be in the profile's explicit architecture
+identities. The five non-failure discrete digests are recomputed from ordered
+decision, score-order, validity, rank, and cluster structures; the typed-failure
+digest is recomputed from the 64 structured status rows. The newer GPU must be
+in the profile's explicit architecture
 allowlist (including alphanumeric targets such as `gfx90a`), and every
 architecture needs a distinct hashed device serial. The verifier derives case
 p50/p95, candidate throughput, transfer
@@ -263,7 +267,8 @@ topology, benchmark thread count, affinity, governor, turbo state, NUMA policy,
 and hashed execution environment used by the `rust_cpu` speed-gate reference.
 Each candidate's scientific triple must be entirely finite or entirely JSON
 `null` for a typed failure; partial triples and non-finite numbers are rejected,
-so failures remain in the 64-slot denominator. Every representative case must
+and proposal/final RMSD values must be nonnegative. Failures therefore remain
+in the 64-slot denominator. Every representative case must
 also retain at least the profile-defined minimum of one scored candidate, which
 prevents an all-failure cohort from satisfying the benchmark contract.
 Structured status rows cover all 64 slots, their canonical digest is recomputed,
@@ -273,15 +278,21 @@ Each failure probe embeds a structured observation whose backend and typed code
 must match the requested probe and whose canonical SHA-256 is recomputed. Each
 representative backend embeds a self-bound execution receipt naming the
 requested and observed backend, ordered cohort, fallback status, and profiler
-trace plus the canonical per-case wall-time sample digest. The repository-pinned
-result digest binds the receipt, timings, and all remaining evidence fields.
+trace plus the canonical per-case wall-time and output digests. Primary and
+repeat executions use distinct globally unique run identities, separate timing
+samples, separate GPU traces/summaries, and separate receipts; repeat outputs
+are bound to the repeat receipt rather than accepted as unproven copied fields.
+The repository-pinned result digest binds both receipts, timings, and all
+remaining evidence fields.
 GPU profiler evidence contains the complete normalized ordered dispatch
 rows; the verifier recomputes their canonical digest and rejects any per-kernel
 count or runtime summary not derived from those rows. Every ordered case and
 every required timing-sample index must occur in the normalized trace, so a
 rehashed truncated trace is rejected. Kernel runtime summaries use a
 relative-only consistency tolerance, while reported totals are always derived
-from the normalized trace rather than copied from submitted summaries.
+from the normalized trace rather than copied from submitted summaries. For each
+case/sample pair, the sum of dispatch runtimes must not exceed its enclosing
+wall-time sample.
 Derived sums and medians use overflow-safe finite arithmetic; any non-finite
 derived metric is rejected rather than serialized as `Infinity`.
 
