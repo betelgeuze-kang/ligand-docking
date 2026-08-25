@@ -614,10 +614,10 @@ def _discrete_outputs(
         raise HipBenchmarkError(f"{name}: score order/rank mismatch")
     if valid_cluster_ids:
         observed_cluster_ids = sorted(set(valid_cluster_ids))
-        if observed_cluster_ids != list(range(1, observed_cluster_ids[-1] + 1)):
-            raise HipBenchmarkError(f"{name}: noncontiguous cluster IDs")
         if observed_cluster_ids[-1] > len(valid_cluster_ids):
             raise HipBenchmarkError(f"{name}: cluster ID exceeds valid candidates")
+        if observed_cluster_ids != list(range(1, observed_cluster_ids[-1] + 1)):
+            raise HipBenchmarkError(f"{name}: noncontiguous cluster IDs")
     return outputs
 
 

@@ -599,6 +599,18 @@ def test_cluster_membership_matches_candidate_validity(
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 
+def test_untrusted_cluster_id_is_bounded_before_range_expansion(
+    tmp_path: Path,
+) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    case = result["architectures"][0]["backends"]["hip_fast"]["cases"][0]
+    for prefix in ("", "repeat_"):
+        case[f"{prefix}discrete_outputs"]["cluster"][0] = 10**30
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="cluster ID exceeds"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
 def test_scientific_vector_shape_is_enforced(tmp_path: Path) -> None:
     profile_path, profile = _bound_profile(tmp_path)
     result = _result(profile)
