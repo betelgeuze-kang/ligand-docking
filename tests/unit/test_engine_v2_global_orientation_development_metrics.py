@@ -219,6 +219,64 @@ def test_missing_score_withholds_selection_and_all_oracle_metrics() -> None:
     }
 
 
+def test_invalid_candidate_rmsd_failure_preserves_complete_valid_oracle() -> None:
+    arm = _arm()
+    target = next(row for row in arm.observations if row.candidate_evidence is not None)
+    complete = target.candidate_evidence
+    assert complete is not None
+    check_results = dict(complete.posebusters.check_results)
+    check_results[next(iter(check_results))] = False
+    invalid_posebusters = replace(
+        complete.posebusters,
+        check_results=check_results,
+    )
+    partial = GlobalOrientationDevelopmentPartialCandidateEvidenceV1(
+        candidate_id=complete.candidate_id,
+        proposal_index=complete.proposal_index,
+        proposal_fingerprint_sha256=(complete.candidate_proposal_fingerprint_sha256),
+        coordinate_sha256=complete.coordinate_sha256,
+        scorer_terms=complete.scorer_terms,
+        internal_validity=complete.internal_validity,
+        posebusters=invalid_posebusters,
+        rmsd=None,
+        raw_score_rank=complete.raw_score_rank,
+    )
+    changed = replace(
+        target,
+        candidate_evidence=None,
+        partial_evidence=partial,
+        validity_status="evaluated",
+        rmsd_status="not_evaluated",
+        failure_code="rmsd_failed",
+    )
+    partial_arm = GlobalOrientationDevelopmentArmObservationsV1(
+        lineage=arm.lineage,
+        observations=tuple(
+            changed if row.proposal_index == changed.proposal_index else row
+            for row in arm.observations
+        ),
+    )
+    expected_valid_oracle = min(
+        row.candidate_evidence.rmsd.rmsd_angstrom
+        for row in arm.observations
+        if row.candidate_evidence is not None
+        and row.proposal_index != changed.proposal_index
+    )
+
+    document = GlobalOrientationDevelopmentArmMetricsV1(partial_arm).to_dict()
+
+    assert document["metric_evidence_complete"] is False
+    assert document["validity_coverage_complete"] is True
+    assert document["rmsd_coverage_complete"] is False
+    assert document["proposal_oracle_rmsd_angstrom_binary64_hex"] is None
+    assert document["proposal_oracle_success"] is None
+    assert document["valid_proposal_oracle_rmsd_angstrom_binary64_hex"] == (
+        expected_valid_oracle.hex()
+    )
+    assert document["valid_proposal_oracle_success"] is True
+    assert document["failure_class"] is None
+
+
 def test_arm_metrics_reject_unfrozen_threshold_top_k_and_summary_substitutes() -> None:
     arm = _arm()
     with pytest.raises(

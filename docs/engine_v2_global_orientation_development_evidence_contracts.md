@@ -152,7 +152,8 @@ with only partial downstream evidence remains visible but makes
 `metric_evidence_complete = false`; absent validity or RMSD is never converted
 to an invented finite value. Score, validity, and RMSD coverage are reported
 separately. Arm-wide and ranked oracle values remain null until their required
-RMSD and validity coverage is complete, while selection-derived fields remain
+RMSD and validity coverage is complete. An RMSD failure for a candidate already
+known invalid does not block the valid-candidate oracle. Selection-derived fields remain
 null until every generated candidate has score evidence. Unknown selected
 validity and success remain null, and the receipt withholds the definitive
 failure class until metric evidence is complete. The metrics receipt cannot evaluate the cohort

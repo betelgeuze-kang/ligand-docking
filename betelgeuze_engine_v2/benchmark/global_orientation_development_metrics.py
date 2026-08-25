@@ -212,8 +212,10 @@ class GlobalOrientationDevelopmentArmMetricsV1:
             _minimum_rmsd(rows) if rmsd_coverage_complete else (None, None)
         )
         valid_rows = tuple(row for row in rows if row["valid"] is True)
-        valid_oracle_coverage_complete = (
-            validity_coverage_complete and rmsd_coverage_complete
+        valid_oracle_coverage_complete = validity_coverage_complete and all(
+            row["rmsd_angstrom"] is not None
+            for row in generated_rows
+            if row["valid"] is True
         )
         valid_proposal_index, valid_proposal_rmsd = (
             _minimum_rmsd(valid_rows)

@@ -116,7 +116,7 @@
         "native_source_manifest_sha256": "ecb009ac228652c6c6cbdefcdd70828ce3d9aeea5a5e31d0fff0246d4d5f932e",
         "python_module_path": "betelgeuze_engine_v2/docking/scorer_v1.py",
         "python_module_sha256": "138484e4e3f5473c582485316ed8482fc770d0df2aa9f8397e4c91be22d81b75",
-        "python_transitive_source_manifest_sha256": "9d293b4a0034f5ac400a18f5ad4955d6055bcb5500571bd73ab047bd4021c2a1",
+        "python_transitive_source_manifest_sha256": "190e9a0db9e76e656de3a30a4b335a283b49ab58dbb1b05e9584ecf3ea630702",
         "python_transitive_source_scope": {
           "files": [],
           "manifest_algorithm": "canonical_sorted_path_sha256_rows/1.0.0",
@@ -125,7 +125,7 @@
           ]
         }
       },
-      "implementation_source_sha256": "581fb93d50aaebeb1b47127f8b7acbee44a35717129c50cd3100d3478acdcd61",
+      "implementation_source_sha256": "686cae2e117b7290864e2adee72303cdc798837bdf85cd2595532151bf7973f9",
       "native_runtime_artifact_contract": {
         "artifact_identities_committed": false,
         "consumed_qualification_receipt_path": "config/engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt.json",
@@ -284,7 +284,7 @@
   "metrics": {
     "arm_metrics_evaluator_implemented": true,
     "arm_metrics_module_path": "betelgeuze_engine_v2/benchmark/global_orientation_development_metrics.py",
-    "arm_metrics_module_sha256": "b4696ce2e76a072035f3f00c44d38c5ad497daebfb90868457611e94b0a16d4d",
+    "arm_metrics_module_sha256": "c3612dbb90f82972f6787094af7effdbbfc78df08b296a5bf0f9a778a9f21aa5",
     "arm_metrics_require_exact_arm_observations": true,
     "arm_metrics_schema_id": "betelgeuze.engine_v2_global_orientation_development_arm_metrics/1.0.0",
     "failure_classes": [
@@ -315,7 +315,7 @@
     ]
   },
   "protocol_role": "fixed_historical_contaminated_development_global_orientation_ab",
-  "protocol_sha256": "7e4a5028fb8ff3865610e1a28e7e3fccebea8f475dcb929eec2ee18c74c735b4",
+  "protocol_sha256": "6538186dc2573249d966b6f9f61118fd28f6e89d834b2eade25cd6808a8b8423",
   "schema_id": "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.7.0",
   "shared_execution_contract": {
     "conformer_authority": "same_prepared_ligand_for_both_arms",
