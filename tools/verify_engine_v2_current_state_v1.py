@@ -9,7 +9,9 @@ surfaces without granting any scientific, benchmark, product, or GPU authority.
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -141,6 +143,22 @@ def _require_exact_keys(
         )
 
 
+def _require_generated_utc(value: Any) -> str:
+    if type(value) is not str or re.fullmatch(
+        r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z", value
+    ) is None:
+        raise CurrentStateError(
+            "generated_or_updated_utc must use canonical RFC3339 UTC seconds"
+        )
+    try:
+        dt.datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ")
+    except ValueError as exc:
+        raise CurrentStateError(
+            "generated_or_updated_utc must be a valid UTC calendar timestamp"
+        ) from exc
+    return value
+
+
 def _require_text(path: Path, markers: tuple[str, ...]) -> None:
     try:
         text = path.read_text(encoding="utf-8")
@@ -161,6 +179,9 @@ def render_markdown(registry: dict[str, Any]) -> str:
     """Render the review-facing current-state summary from the JSON source."""
 
     _require_exact_keys(registry, TOP_LEVEL_KEYS, "current-state registry")
+    generated_or_updated_utc = _require_generated_utc(
+        registry.get("generated_or_updated_utc")
+    )
     sections = {
         "native_compute": set(NATIVE_LABELS),
         "maturity": set(MATURITY_MEANINGS),
@@ -196,7 +217,7 @@ def render_markdown(registry: dict[str, Any]) -> str:
         f"| Engine | `{registry['engine_id']}` |",
         f"| Implementation stage | `{registry['implementation_stage']}` |",
         f"| Evidence anchor commit | `{registry['evidence_anchor_commit']}` |",
-        f"| Generated or updated UTC | `{registry['generated_or_updated_utc']}` |",
+        f"| Generated or updated UTC | `{generated_or_updated_utc}` |",
         "",
         "## Native compute surface",
         "",
@@ -289,6 +310,7 @@ def verify_root(root: Path) -> dict[str, Any]:
     registry = _load_json(registry_path)
 
     _require_exact_keys(registry, TOP_LEVEL_KEYS, "current-state registry")
+    _require_generated_utc(registry.get("generated_or_updated_utc"))
 
     if registry.get("schema_id") != SCHEMA_ID:
         raise CurrentStateError("current-state schema_id changed")

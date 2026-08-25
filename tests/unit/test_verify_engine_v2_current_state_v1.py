@@ -110,6 +110,32 @@ def test_unrendered_registry_field_fails_closed(tmp_path: Path) -> None:
         MODULE.verify_root(root)
 
 
+@pytest.mark.parametrize(
+    "value",
+    [None, "2026-08-17T00:00:00Z|broken", "2026-02-30T00:00:00Z"],
+)
+def test_invalid_generated_timestamp_fails_closed(
+    tmp_path: Path, value: object
+) -> None:
+    root = _write_minimal_root(tmp_path)
+    path = root / "config/engine_v2_current_state_v1.json"
+    registry = json.loads(path.read_text(encoding="utf-8"))
+    registry["generated_or_updated_utc"] = value
+    path.write_text(json.dumps(registry), encoding="utf-8")
+
+    with pytest.raises(MODULE.CurrentStateError, match="generated_or_updated_utc"):
+        MODULE.verify_root(root)
+
+    rendered = subprocess.run(
+        [sys.executable, str(RENDERER), "--root", str(root)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert rendered.returncode == 1
+    assert "generated_or_updated_utc" in rendered.stderr
+
+
 def test_fresh_execution_escalation_fails_closed(tmp_path: Path) -> None:
     root = _write_minimal_root(tmp_path)
     path = root / "config/engine_v2_current_state_v1.json"
