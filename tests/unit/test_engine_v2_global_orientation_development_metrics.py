@@ -65,6 +65,9 @@ def test_arm_metrics_rederive_every_declared_metric_from_exact_receipt() -> None
     assert document["accepted_candidate_count"] == len(generated)
     assert document["rejected_candidate_count"] == 64 - len(generated)
     assert document["scored_candidate_count"] == len(generated)
+    assert document["score_coverage_complete"] is True
+    assert document["validity_coverage_complete"] is True
+    assert document["rmsd_coverage_complete"] is True
     assert document["metric_evidence_complete"] is True
     assert document["proposal_oracle_rmsd_angstrom_binary64_hex"] == (
         expected_oracle.hex()
@@ -127,6 +130,20 @@ def test_partial_stage_evidence_remains_visible_and_marks_metrics_incomplete() -
     document = GlobalOrientationDevelopmentArmMetricsV1(partial_arm).to_dict()
 
     assert document["metric_evidence_complete"] is False
+    assert document["score_coverage_complete"] is True
+    assert document["validity_coverage_complete"] is False
+    assert document["rmsd_coverage_complete"] is False
+    assert document["proposal_oracle_index"] is None
+    assert document["proposal_oracle_rmsd_angstrom_binary64_hex"] is None
+    assert document["proposal_oracle_success"] is None
+    assert document["valid_proposal_oracle_index"] is None
+    assert document["valid_proposal_oracle_rmsd_angstrom_binary64_hex"] is None
+    assert document["valid_proposal_oracle_success"] is None
+    assert all(
+        row["proposal_oracle_rmsd_angstrom_binary64_hex"] is None
+        and row["valid_proposal_oracle_rmsd_angstrom_binary64_hex"] is None
+        for row in document["ranked_oracles"]
+    )
     assert document["selected_top1_index"] == changed.proposal_index
     assert document["selected_top1_valid"] is None
     assert document["selected_top1_success"] is None
@@ -145,6 +162,61 @@ def test_partial_stage_evidence_remains_visible_and_marks_metrics_incomplete() -
         ]
         is not None
     )
+
+
+def test_missing_score_withholds_selection_and_all_oracle_metrics() -> None:
+    arm = _arm()
+    target = max(
+        (row for row in arm.observations if row.candidate_evidence is not None),
+        key=lambda row: row.candidate_evidence.raw_score_rank,
+    )
+    changed = replace(
+        target,
+        candidate_evidence=None,
+        score_status="unscored",
+        validity_status="not_evaluated",
+        rmsd_status="not_evaluated",
+        failure_code="scorer_failed",
+    )
+    partial_arm = GlobalOrientationDevelopmentArmObservationsV1(
+        lineage=arm.lineage,
+        observations=tuple(
+            changed if row.proposal_index == changed.proposal_index else row
+            for row in arm.observations
+        ),
+    )
+
+    document = GlobalOrientationDevelopmentArmMetricsV1(partial_arm).to_dict()
+
+    assert document["metric_evidence_complete"] is False
+    assert document["score_coverage_complete"] is False
+    assert document["validity_coverage_complete"] is False
+    assert document["rmsd_coverage_complete"] is False
+    for key in (
+        "proposal_oracle_index",
+        "proposal_oracle_rmsd_angstrom_binary64_hex",
+        "proposal_oracle_success",
+        "valid_proposal_oracle_index",
+        "valid_proposal_oracle_rmsd_angstrom_binary64_hex",
+        "valid_proposal_oracle_success",
+        "selected_top1_index",
+        "selected_top1_score_binary64_hex",
+        "selected_top1_rmsd_angstrom_binary64_hex",
+        "selected_top1_valid",
+        "selected_top1_success",
+        "selection_regret_angstrom_binary64_hex",
+        "failure_class",
+    ):
+        assert document[key] is None
+    assert all(
+        row["proposal_oracle_rmsd_angstrom_binary64_hex"] is None
+        and row["valid_proposal_oracle_rmsd_angstrom_binary64_hex"] is None
+        for row in document["ranked_oracles"]
+    )
+    assert document["failure_code_counts"] == {
+        "receptor_clash": 3,
+        "scorer_failed": 1,
+    }
 
 
 def test_arm_metrics_reject_unfrozen_threshold_top_k_and_summary_substitutes() -> None:

@@ -25,7 +25,7 @@ betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.7.0
 Protocol self-hash:
 
 ```text
-f265155bcba21aa3d90b4fe83a63f4457d15f589d5a105766ed3527d3d738c70
+7e4a5028fb8ff3865610e1a28e7e3fccebea8f475dcb929eec2ee18c74c735b4
 ```
 
 ## Scientific question
@@ -172,7 +172,7 @@ round-1/2/3 compatibility installers, as well as the native V7 profile and
 transitive native source manifest, build configuration, default config
 fingerprint, and single-thread backend options. Its canonical
 implementation-manifest identity is
-`fdfc35ebfe3daad488cdd65e01da211063736f984642072b5bca5d4129a65fd6`.
+`581fb93d50aaebeb1b47127f8b7acbee44a35717129c50cd3100d3478acdcd61`.
 PoseBusters is bound to the exact 0.3.1 universal wheel SHA-256
 `a6d1437d0eb3e0fe13ad73b5c4efdc8c0914ceadd904cde55b2a9835bf591a9d`,
 redock configuration, local report runner, the imported public-redocking
@@ -242,9 +242,12 @@ derives these per-arm values only from an exact
 observations in its own receipt. It uses completed stages from partial evidence
 without manufacturing missing validity or RMSD values; any generated slot that
 lacks full candidate evidence makes `metric_evidence_complete = false`.
-Unknown selected validity/success remains null and the definitive failure class
-is withheld until metric evidence is complete. Generation failures remain
-explicit complete failure observations. This is an
+Score, validity, and RMSD coverage are reported independently; oracle values are
+withheld until their relevant coverage is complete, and selection-derived
+values remain null until every generated candidate has score evidence. Unknown
+selected validity/success remains null and the definitive failure class is
+withheld until metric evidence is complete. Generation failures remain explicit
+complete failure observations. This is an
 arm-metrics prerequisite only: it does not compare the cohort, decide Go/No-Go,
 or issue any execution or claim authority.
 

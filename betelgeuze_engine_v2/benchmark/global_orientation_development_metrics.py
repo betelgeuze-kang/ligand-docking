@@ -182,6 +182,18 @@ class GlobalOrientationDevelopmentArmMetricsV1:
             raise GlobalOrientationDevelopmentMetricsError(
                 "arm metrics require the exact 64-slot denominator"
             )
+        generated_rows = tuple(
+            row for row in rows if row["generation_status"] == "generated"
+        )
+        score_coverage_complete = all(
+            row["score"] is not None for row in generated_rows
+        )
+        validity_coverage_complete = all(
+            row["validity_complete"] is True for row in generated_rows
+        )
+        rmsd_coverage_complete = all(
+            row["rmsd_angstrom"] is not None for row in generated_rows
+        )
         scored = tuple(row for row in rows if row["score"] is not None)
         ranked = tuple(
             sorted(
@@ -196,10 +208,19 @@ class GlobalOrientationDevelopmentArmMetricsV1:
                 "raw score ranks are not a complete deterministic ordering"
             )
 
-        proposal_index, proposal_rmsd = _minimum_rmsd(rows)
+        proposal_index, proposal_rmsd = (
+            _minimum_rmsd(rows) if rmsd_coverage_complete else (None, None)
+        )
         valid_rows = tuple(row for row in rows if row["valid"] is True)
-        valid_proposal_index, valid_proposal_rmsd = _minimum_rmsd(valid_rows)
-        selected = None if not ranked else ranked[0]
+        valid_oracle_coverage_complete = (
+            validity_coverage_complete and rmsd_coverage_complete
+        )
+        valid_proposal_index, valid_proposal_rmsd = (
+            _minimum_rmsd(valid_rows)
+            if valid_oracle_coverage_complete
+            else (None, None)
+        )
+        selected = ranked[0] if score_coverage_complete and ranked else None
         metric_evidence_complete = all(
             row["generation_status"] == "failed"
             or row["full_candidate_evidence"] is True
@@ -209,14 +230,36 @@ class GlobalOrientationDevelopmentArmMetricsV1:
         ranked_oracles = []
         for requested_k in self.top_k:
             subset = ranked[:requested_k]
-            _, ranked_rmsd = _minimum_rmsd(subset)
-            _, ranked_valid_rmsd = _minimum_rmsd(
-                tuple(row for row in subset if row["valid"] is True)
+            ranked_rmsd_coverage_complete = score_coverage_complete and all(
+                row["rmsd_angstrom"] is not None for row in subset
+            )
+            ranked_valid_rmsd_coverage_complete = (
+                score_coverage_complete
+                and all(row["validity_complete"] is True for row in subset)
+                and all(
+                    row["rmsd_angstrom"] is not None
+                    for row in subset
+                    if row["valid"] is True
+                )
+            )
+            _, ranked_rmsd = (
+                _minimum_rmsd(subset) if ranked_rmsd_coverage_complete else (None, None)
+            )
+            _, ranked_valid_rmsd = (
+                _minimum_rmsd(tuple(row for row in subset if row["valid"] is True))
+                if ranked_valid_rmsd_coverage_complete
+                else (None, None)
             )
             ranked_oracles.append(
                 {
                     "k": requested_k,
+                    "proposal_oracle_evidence_complete": (
+                        ranked_rmsd_coverage_complete
+                    ),
                     "proposal_oracle_rmsd_angstrom_binary64_hex": _hex(ranked_rmsd),
+                    "valid_proposal_oracle_evidence_complete": (
+                        ranked_valid_rmsd_coverage_complete
+                    ),
                     "valid_proposal_oracle_rmsd_angstrom_binary64_hex": _hex(
                         ranked_valid_rmsd
                     ),
@@ -225,21 +268,31 @@ class GlobalOrientationDevelopmentArmMetricsV1:
 
         selected_rmsd = None if selected is None else selected["rmsd_angstrom"]
         selected_valid = None if selected is None else selected["valid"]
-        selected_success = (
+        if not score_coverage_complete:
+            selected_success = None
+        elif selected is None:
+            selected_success = False
+        elif selected_valid is None or selected_rmsd is None:
+            selected_success = None
+        else:
+            selected_success = bool(
+                selected_valid is True and selected_rmsd <= self.rmsd_threshold_angstrom
+            )
+        proposal_success = (
             None
-            if not metric_evidence_complete
+            if not rmsd_coverage_complete
             else bool(
-                selected_valid is True
-                and selected_rmsd is not None
-                and selected_rmsd <= self.rmsd_threshold_angstrom
+                proposal_rmsd is not None
+                and proposal_rmsd <= self.rmsd_threshold_angstrom
             )
         )
-        proposal_success = bool(
-            proposal_rmsd is not None and proposal_rmsd <= self.rmsd_threshold_angstrom
-        )
-        valid_proposal_success = bool(
-            valid_proposal_rmsd is not None
-            and valid_proposal_rmsd <= self.rmsd_threshold_angstrom
+        valid_proposal_success = (
+            None
+            if not valid_oracle_coverage_complete
+            else bool(
+                valid_proposal_rmsd is not None
+                and valid_proposal_rmsd <= self.rmsd_threshold_angstrom
+            )
         )
         if not metric_evidence_complete:
             failure_class = None
@@ -276,6 +329,9 @@ class GlobalOrientationDevelopmentArmMetricsV1:
                 row["validity_complete"] is True for row in rows
             ),
             "valid_candidate_count": len(valid_rows),
+            "score_coverage_complete": score_coverage_complete,
+            "validity_coverage_complete": validity_coverage_complete,
+            "rmsd_coverage_complete": rmsd_coverage_complete,
             "rmsd_evaluated_candidate_count": sum(
                 row["rmsd_angstrom"] is not None for row in rows
             ),
