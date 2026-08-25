@@ -13,7 +13,7 @@ from typing import Any, Mapping
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 
 SCHEMA_ID = (
-    "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.7.0"
+    "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.8.0"
 )
 FROZEN_GLOBAL_ORIENTATION_GENERATOR_ID = "deterministic_surface_aware_rigid_v2"
 BASELINE_LINEAGE_BY_CASE = {
@@ -376,7 +376,7 @@ def _verify_preimport_source_bindings(protocol: Mapping[str, Any]) -> None:
     )
     _exact(
         scorer_manifest.get("python_transitive_source_manifest_sha256"),
-        "190e9a0db9e76e656de3a30a4b335a283b49ab58dbb1b05e9584ecf3ea630702",
+        "4e291a2dfbbdfac79d422ea5709cd37c94f3ddbf45ec78039e3892d45714a21e",
         name="pre-import ScorerV1 source identity",
     )
     _exact(
@@ -660,7 +660,7 @@ def _verify_authority_bindings(
             "138484e4e3f5473c582485316ed8482fc770d0df2aa9f8397e4c91be22d81b75"
         ),
         "python_transitive_source_manifest_sha256": (
-            "190e9a0db9e76e656de3a30a4b335a283b49ab58dbb1b05e9584ecf3ea630702"
+            "4e291a2dfbbdfac79d422ea5709cd37c94f3ddbf45ec78039e3892d45714a21e"
         ),
         "python_transitive_source_scope": SCORER_PYTHON_SOURCE_SCOPE,
     }
@@ -676,7 +676,7 @@ def _verify_authority_bindings(
             ),
             "implementation_manifest": implementation_manifest,
             "implementation_source_sha256": (
-                "686cae2e117b7290864e2adee72303cdc798837bdf85cd2595532151bf7973f9"
+                "e308b0310b041de8c5b4acc68e1417bc3c7a2ee9ab678a700ab6788bacf98387"
             ),
             "native_runtime_artifact_contract": native_runtime_artifact_contract,
             "terms_schema_id": "betelgeuze.engine_v2_scorer_v1_terms/1.1.0",
@@ -1159,7 +1159,11 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
     _exact(
         set(decision),
         {
+            "cohort_decision_schema_id",
             "decision_evaluator_implemented",
+            "decision_evaluator_module_path",
+            "decision_evaluator_module_sha256",
+            "decision_requires_exact_case_comparison_receipts",
             "go_criteria_all",
             "go_effect",
             "go_receipt_emission_authorized",
@@ -1169,13 +1173,45 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
             "no_go_effect",
             "required_private_evidence_instances",
             "result_cannot_change_protocol",
+            "scored_case_comparison_schema_id",
         },
         name="decision key set",
     )
     _exact(
         decision.get("decision_evaluator_implemented"),
-        False,
+        True,
         name="decision evaluator implementation state",
+    )
+    _exact(
+        decision.get("decision_evaluator_module_path"),
+        "betelgeuze_engine_v2/benchmark/global_orientation_development_decision.py",
+        name="decision evaluator module path",
+    )
+    _exact(
+        decision.get("decision_evaluator_module_sha256"),
+        "ed704107274b3de6db2118ddeb690a6cb167b3395a69e94b0a8c1c90ad5a8c93",
+        name="decision evaluator module identity",
+    )
+    _exact(
+        decision.get("decision_evaluator_module_sha256"),
+        _file_sha256(str(decision.get("decision_evaluator_module_path"))),
+        name="live decision evaluator source",
+    )
+    _exact(
+        decision.get("scored_case_comparison_schema_id"),
+        "betelgeuze.engine_v2_global_orientation_development_scored_case_"
+        "comparison/1.0.0",
+        name="scored-case comparison schema",
+    )
+    _exact(
+        decision.get("cohort_decision_schema_id"),
+        "betelgeuze.engine_v2_global_orientation_development_cohort_decision/1.0.0",
+        name="cohort decision schema",
+    )
+    _exact(
+        decision.get("decision_requires_exact_case_comparison_receipts"),
+        True,
+        name="decision exact-evidence requirement",
     )
     _exact(
         decision.get("go_receipt_emission_authorized"),
@@ -1185,11 +1221,13 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
     _exact(
         tuple(decision.get("required_private_evidence_instances", ())),
         (
-            "case_source_receipt_with_ligand_topology_pocket_preparation_and_"
-            "rederived_receptor_surface_identities",
+            "case_source_receipts_for_all_eight_scored_cases_with_ligand_topology_"
+            "pocket_preparation_and_rederived_receptor_surface_identities",
             "baseline_candidate_lineage_bound_to_all_64_observation_slots",
             "experimental_candidate_lineage_bound_to_all_64_observation_slots",
             "failure_complete_observation_slots_with_explicit_unscored_state",
+            "typed_preparation_failure_receipt_with_pinned_historical_source_"
+            "authority_for_6M73_FNR",
         ),
         name="required private evidence instances",
     )
@@ -1204,7 +1242,7 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
     _exact(
         tuple(decision.get("invariants_all", ())),
         (
-            "complete_source_receipts_for_all_nine_cases",
+            "complete_source_or_preparation_failure_receipts_for_all_nine_cases",
             "identical_failure_complete_64_slot_denominators",
             "no_reference_or_result_dependent_generator_input",
             "no_preparation_failure_regression",

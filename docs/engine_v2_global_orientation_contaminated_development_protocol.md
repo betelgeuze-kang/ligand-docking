@@ -19,13 +19,13 @@ config/engine_v2_global_orientation_contaminated_development.json
 Protocol schema:
 
 ```text
-betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.7.0
+betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.8.0
 ```
 
 Protocol self-hash:
 
 ```text
-6538186dc2573249d966b6f9f61118fd28f6e89d834b2eade25cd6808a8b8423
+ac5899b1b619020dcbdf2ce950eb3ce5f2b551c5b07a036b931b19d6fe4f1af0
 ```
 
 ## Scientific question
@@ -172,7 +172,7 @@ round-1/2/3 compatibility installers, as well as the native V7 profile and
 transitive native source manifest, build configuration, default config
 fingerprint, and single-thread backend options. Its canonical
 implementation-manifest identity is
-`686cae2e117b7290864e2adee72303cdc798837bdf85cd2595532151bf7973f9`.
+`e308b0310b041de8c5b4acc68e1417bc3c7a2ee9ab678a700ab6788bacf98387`.
 PoseBusters is bound to the exact 0.3.1 universal wheel SHA-256
 `a6d1437d0eb3e0fe13ad73b5c4efdc8c0914ceadd904cde55b2a9835bf591a9d`,
 redock configuration, local report runner, the imported public-redocking
@@ -248,31 +248,36 @@ values remain null until every generated candidate has score evidence. A known
 invalid candidate's missing RMSD does not block the valid-candidate oracle. Unknown
 selected validity/success remains null and the definitive failure class is
 withheld until metric evidence is complete. Generation failures remain explicit
-complete failure observations. This is an
-arm-metrics prerequisite only: it does not compare the cohort, decide Go/No-Go,
-or issue any execution or claim authority.
+complete failure observations. This is an arm-metrics prerequisite only: the
+per-arm receipt does not compare the cohort or issue any execution or claim
+authority.
 
 ## Predeclared decision
 
-The decision rules are frozen below, but no executable cohort decision evaluator
-or Go receipt issuer is implemented. The repository now defines the prerequisite
+The decision rules are frozen below. The repository now defines the prerequisite
 private-evidence and per-arm metric types in
 `betelgeuze_engine_v2/benchmark/global_orientation_development_contracts.py`
-and `betelgeuze_engine_v2/benchmark/global_orientation_development_metrics.py`.
+and `betelgeuze_engine_v2/benchmark/global_orientation_development_metrics.py`,
+plus a hash-bound cohort evaluator in
+`betelgeuze_engine_v2/benchmark/global_orientation_development_decision.py`.
 They retain source coordinates and identities, rederive receptor surface points,
 bind each arm's exact 64-slot lineage, deterministically regenerate the
 experimental batch for equality checking, materialize accepted experimental
 slots as scorer-compatible `DockingProposal` identities, and require an
-explicit unscored state for every incomplete observation. No private evidence
-instance is
-committed, and the types do not load inputs, score candidates, evaluate the
-decision, or issue authority. Treating a digest label or caller-set completeness
-boolean as actual evidence remains forbidden.
+explicit unscored state for every incomplete observation. The evaluator accepts
+only exact baseline and experimental arm-metrics objects for the ordered eight
+scored cases plus the exact `6M73_FNR` preparation-failure receipt. It owns the
+full nested receipts and rederives all case lists, counts, invariants, criteria,
+and hard No-Go triggers. No private evidence instance is committed, and none of
+the types load inputs, score candidates, or issue authority. Treating a digest
+label or caller-set summary, completeness boolean, count, or float as actual
+evidence remains forbidden.
 
-Before an evaluator can be reviewed, separately authorized private evidence must
-instantiate all four machine-verifiable contracts:
+Before the evaluator can receive a real cohort, separately authorized private
+evidence must instantiate all five machine-verifiable contracts:
 
-1. a case-source receipt containing the ligand, topology, pocket, exact
+1. a case-source receipt for each of the eight scored cases containing the
+   ligand, topology, pocket, exact
    binary64 pocket radius, derived validity-config fingerprint, evaluation
    pipeline, a concrete backend receipt whose embedded native-extension identity
    matches the exact native scorer extension, a scorer context rederived from
@@ -283,19 +288,20 @@ instantiate all four machine-verifiable contracts:
    Python/shared-library/`libm` runtime artifacts remain an execution blocker;
 2. baseline candidate lineage bound to all 64 observation slots;
 3. experimental candidate lineage bound to all 64 observation slots; and
-4. failure-complete observations with an explicit unscored state.
+4. failure-complete observations with an explicit unscored state; and
+5. the typed `6M73_FNR` preparation-failure receipt owning its pinned historical
+   archive, cohort, policy, and engine-receipt source authority.
 
 Each generated-row failure code must belong to the frozen allowlist for its
 first incomplete stage: scorer, validity evaluator, or RMSD after validity is
 complete.
 
-Until then,
-`decision_evaluator_implemented = false` and
-`go_receipt_emission_authorized = false`. Missing oracle, selected RMSD, or
-score values must eventually remain explicit failure observations rather than
-parser errors or invented finite values.
+The protocol now records `decision_evaluator_implemented = true` while retaining
+`go_receipt_emission_authorized = false`. Missing oracle, selected RMSD, or score
+values remain explicit incomplete evidence and force No-Go rather than becoming
+parser errors or invented finite or boolean values.
 
-The contract-only implementation is documented in
+The exact evidence and decision implementation is documented in
 [the global-orientation development evidence contracts](engine_v2_global_orientation_development_evidence_contracts.md).
 
 A development Go requires every invariant and both criteria. In particular:
@@ -310,9 +316,10 @@ proposal recovery, regression of the baseline recovered case, or denominator or
 source-binding drift. One recovered case is not enough because it fails the
 breadth criterion.
 
-Even a Go permits only a separate review of a later development follow-up. It
-does not authorize execution, fresh data, Stage 0, product routing, customer
-poses, profile promotion, or claims.
+Even the evaluator's protocol Go permits only a separate review of a later
+development follow-up. It is not a Go receipt and does not authorize execution,
+fresh data, Stage 0, product routing, customer poses, profile promotion, or
+claims.
 
 ## Execution gate
 
@@ -320,7 +327,8 @@ Actual execution remains false. A future execution authority would require all
 of the following:
 
 1. PR #245 remains in its reviewed terminal state;
-2. complete source receipts exist for all nine cases;
+2. complete case-source receipts exist for all eight scored cases and the typed
+   preparation-failure source-authority receipt exists for `6M73_FNR`;
 3. a separate execution-authority contract is reviewed;
 4. an operator reservation is durably recorded;
 5. exact-head CI is green; and

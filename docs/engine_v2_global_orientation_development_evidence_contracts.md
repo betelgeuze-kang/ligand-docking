@@ -3,12 +3,14 @@
 ## Status
 
 `betelgeuze_engine_v2/benchmark/global_orientation_development_contracts.py`
-defines the repository-side data contracts required before the fixed
-global-orientation development protocol can receive an evaluator.
+defines the repository-side evidence contracts for the fixed global-orientation
+development protocol. The separate hash-bound
+`global_orientation_development_decision.py` module now evaluates an exact
+nine-case cohort assembled from those contracts.
 
-The module contains no molecular loader, proposal generator, scorer, evaluator,
-reservation client, output writer, or execution entry point. Constructing a
-receipt seals caller-supplied observations only. Every receipt keeps historical,
+These modules contain no molecular loader, scorer execution, reservation client,
+output writer, or execution entry point. Constructing a receipt validates and
+seals already-supplied typed observations. Every receipt keeps historical,
 Fresh-128, Stage 0, profile-promotion, product, customer-pose, and public/scientific
 authority false.
 
@@ -156,16 +158,41 @@ RMSD and validity coverage is complete. An RMSD failure for a candidate already
 known invalid does not block the valid-candidate oracle. Selection-derived fields remain
 null until every generated candidate has score evidence. Unknown selected
 validity and success remain null, and the receipt withholds the definitive
-failure class until metric evidence is complete. The metrics receipt cannot evaluate the cohort
-decision or issue execution, Go, promotion, product, Fresh-128, Stage 0, or
-claim authority.
+failure class until metric evidence is complete. The per-arm metrics receipt
+cannot itself evaluate the cohort decision or issue execution, Go, promotion,
+product, Fresh-128, Stage 0, or claim authority.
+
+## Exact cohort decision
+
+`GlobalOrientationDevelopmentScoredCaseComparisonV1` accepts only exact
+baseline and experimental `GlobalOrientationDevelopmentArmMetricsV1` objects.
+It requires the frozen arm identities, one shared exact case-source receipt, and
+the exact 64-slot denominator. It owns both complete metrics receipts and
+rederives decision inputs from them; caller-supplied counts, case lists,
+completeness flags, booleans, floats, or receipt digests are not inputs.
+
+`GlobalOrientationDevelopmentCohortDecisionV1` requires the ordered eight-case
+scored roster plus the exact typed `6M73_FNR` preparation-failure receipt. It
+rederives the nine-member source-evidence invariant from eight exact case-source
+receipts plus that failure receipt's pinned historical source authority; it does
+not mislabel the failed preparation as a prepared case source. It also rederives
+evidence completeness, valid-proposal-oracle recoveries, invalid or absent
+selected Top-1 counts, baseline `6T88_MWQ` reproduction/regression, invariants,
+Go criteria, and hard No-Go triggers. Incomplete evidence stays visible and
+yields No-Go; null oracle or selection values are never replaced by invented
+finite or boolean values.
+
+The evaluator's `go_permit_separate_development_followup_review` result is only
+the predeclared protocol verdict. It is not a Go receipt and grants no execution,
+Fresh-128, Stage 0, promotion, product, customer-pose, public, or scientific
+authority. Every such authority field, including
+`go_receipt_emission_authorized`, remains false.
 
 ## Remaining boundary
 
-The fixed protocol now has an exact per-arm metrics evaluator, but still has no
-cohort decision evaluator and no Go receipt issuer.
-Before either could be reviewed, separately authorized private evidence would
-have to instantiate these contracts for every required case and arm, while all
-existing operational blockers and the historical one-shot reservation gate
-remain satisfied. This repository change neither performs nor authorizes that
-work.
+The fixed protocol now has exact per-arm metrics and cohort decision evaluators,
+but still has no private evidence instance and no Go receipt issuer. Separately
+authorized private evidence would have to instantiate these contracts for every
+required case and arm, while all existing operational blockers and the
+historical one-shot reservation gate remain satisfied. This repository change
+neither performs nor authorizes that work.
