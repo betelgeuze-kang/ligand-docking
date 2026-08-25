@@ -116,7 +116,7 @@
         "native_source_manifest_sha256": "ecb009ac228652c6c6cbdefcdd70828ce3d9aeea5a5e31d0fff0246d4d5f932e",
         "python_module_path": "betelgeuze_engine_v2/docking/scorer_v1.py",
         "python_module_sha256": "aa7cd89dba16edb36da033bace57804b9ee851997a400c9d468e61ccefdd0159",
-        "python_transitive_source_manifest_sha256": "18b8e50567dcece1c90566a36065dfafc4effda63db352bb98a786f97782d193",
+        "python_transitive_source_manifest_sha256": "8dde61047e5b4cd503a84555e8767e07bb95d5382273732e2348ca42b7c1bb02",
         "python_transitive_source_scope": {
           "files": [],
           "manifest_algorithm": "canonical_sorted_path_sha256_rows/1.0.0",
@@ -125,7 +125,7 @@
           ]
         }
       },
-      "implementation_source_sha256": "bfcb9f531c5f298af15e62fad2c73a0bc439ed1fafd768bb195d88659a83752c",
+      "implementation_source_sha256": "e82097d6e9dd7fb768d6ebf2afe3f51edd0741b1c755858718dc763973c96a67",
       "native_runtime_artifact_contract": {
         "artifact_identities_committed": false,
         "consumed_qualification_receipt_path": "config/engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt.json",
@@ -226,7 +226,7 @@
     "go_effect": "permit_separate_review_of_global_orientation_development_followup_only",
     "go_requires_all_invariants": true,
     "hard_no_go_any": [
-      "evaluator_or_evidence_contract_absent",
+      "evaluator_or_required_private_evidence_absent",
       "required_invariant_failed",
       "zero_new_previously_uncovered_valid_proposal_recoveries",
       "baseline_recovered_case_regression",
@@ -242,7 +242,7 @@
       "complete_source_and_observation_rederivation"
     ],
     "no_go_effect": "retain_synthetic_only_global_orientation_and_close_molecular_execution_request",
-    "required_future_evidence_contracts": [
+    "required_private_evidence_instances": [
       "case_source_receipt_with_ligand_topology_pocket_preparation_and_rederived_receptor_surface_identities",
       "baseline_candidate_lineage_bound_to_all_64_observation_slots",
       "experimental_candidate_lineage_bound_to_all_64_observation_slots",
@@ -310,8 +310,8 @@
     ]
   },
   "protocol_role": "fixed_historical_contaminated_development_global_orientation_ab",
-  "protocol_sha256": "ebb67559292613b2685786c03aab01970d21ee0df3b9b885eb33f7fa3ec75a75",
-  "schema_id": "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.5.0",
+  "protocol_sha256": "a3665a02da7918035bbd81e9b1b398fd976b52879aeb550239a695bd224b9d72",
+  "schema_id": "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.6.0",
   "shared_execution_contract": {
     "conformer_authority": "same_prepared_ligand_for_both_arms",
     "cpu_count": 1,
@@ -332,17 +332,25 @@
     "torch_intraop_threads": 1
   },
   "source_bindings": {
-    "case_source_receipt_schema_id": "betelgeuze.engine_v2_source_paired_clearance_case_source_receipt/1.0.0",
+    "arm_lineage_receipt_schema_id": "betelgeuze.engine_v2_global_orientation_development_arm_lineage/1.0.0",
+    "arm_observations_receipt_schema_id": "betelgeuze.engine_v2_global_orientation_development_arm_observations/1.0.0",
+    "case_source_receipt_schema_id": "betelgeuze.engine_v2_global_orientation_development_case_source/1.0.0",
+    "contract_types_implemented": true,
+    "development_evidence_contract_module_path": "betelgeuze_engine_v2/benchmark/global_orientation_development_contracts.py",
+    "development_evidence_contract_module_sha256": "6c2b15a78bbc88fde4341de9b8b31cd4a133b03725714566526c946f37440f6d",
     "exact_case_source_receipt_required": true,
     "global_orientation_synthetic_contract_schema_id": "betelgeuze.engine_v2_global_orientation_synthetic_contract/2.0.0",
     "global_orientation_synthetic_contract_sha256": "02fa37a94f3c1719f5e7b5b808c71d053e313b018ef9bfa7d904869c2ab1dad0",
     "historical_archive_sha256": "8bef33eba296989b795a11fd05a7e119124b066d91bec28a8b910d38a083fbcc",
     "historical_bundle_checksum_sha256": "6ee04e23e01a73bb643bb4d1fde240e06fd2916ea085e3652c11e2428bd432a9",
     "historical_member_manifest_sha256": "7f7f5273362a9457b022bc9b2b95c75625cdd259b1b1685aeb4b57d41d985e21",
+    "lineage_slot_receipt_schema_id": "betelgeuze.engine_v2_global_orientation_development_lineage_slot/1.0.0",
+    "observation_slot_receipt_schema_id": "betelgeuze.engine_v2_global_orientation_development_observation_slot/1.0.0",
     "phase25_policy_schema_id": "betelgeuze.engine_v2_phase25_cohort_admission/1.3.0",
     "phase25_policy_sha256": "b4c5530dc4766500dbbc854875cfb39baadad94196c63be6150514879993d211",
     "source_commit_git_sha1": "754bebb9ddc2fbffdaca5d4143ff515c3b38c032",
     "source_receipt_absence_blocks_execution": true,
+    "preparation_failure_receipt_schema_id": "betelgeuze.engine_v2_global_orientation_development_preparation_failure/1.0.0",
     "source_receipt_required_fields": [
       "case_id",
       "source_case_member_receipt_sha256",

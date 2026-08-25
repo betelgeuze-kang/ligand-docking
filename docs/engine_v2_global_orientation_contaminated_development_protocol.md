@@ -19,13 +19,13 @@ config/engine_v2_global_orientation_contaminated_development.json
 Protocol schema:
 
 ```text
-betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.5.0
+betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.6.0
 ```
 
 Protocol self-hash:
 
 ```text
-ebb67559292613b2685786c03aab01970d21ee0df3b9b885eb33f7fa3ec75a75
+a3665a02da7918035bbd81e9b1b398fd976b52879aeb550239a695bd224b9d72
 ```
 
 ## Scientific question
@@ -238,15 +238,18 @@ evidence is insufficient.
 ## Predeclared decision
 
 The decision rules are frozen below, but no executable decision evaluator or Go
-receipt issuer is implemented. Current repository evidence types cannot yet
-prove all required ligand-coordinate, ligand-topology, pocket-declaration, and
-preparation-policy identities; bind each oracle observation to its concrete
-baseline or experimental candidate lineage; or retain an explicit unscored
-state for every failed slot. Treating a digest label or caller-set completeness
-boolean as that evidence is forbidden.
+receipt issuer is implemented. The repository now defines the prerequisite
+private-evidence types in
+`betelgeuze_engine_v2/benchmark/global_orientation_development_contracts.py`.
+They retain source coordinates and identities, rederive receptor surface points,
+bind each arm's exact 64-slot lineage, and require an explicit unscored state for
+every incomplete observation. No private evidence instance is committed, and
+the types do not load inputs, run components, evaluate the decision, or issue
+authority. Treating a digest label or caller-set completeness boolean as actual
+evidence remains forbidden.
 
-Before an evaluator can be reviewed, repository types must provide all four
-machine-verifiable contracts:
+Before an evaluator can be reviewed, separately authorized private evidence must
+instantiate all four machine-verifiable contracts:
 
 1. a case-source receipt containing the ligand, topology, pocket, exact
    binary64 pocket radius, derived validity-config fingerprint, evaluation
@@ -263,6 +266,9 @@ Until then,
 `go_receipt_emission_authorized = false`. Missing oracle, selected RMSD, or
 score values must eventually remain explicit failure observations rather than
 parser errors or invented finite values.
+
+The contract-only implementation is documented in
+[the global-orientation development evidence contracts](engine_v2_global_orientation_development_evidence_contracts.md).
 
 A development Go requires every invariant and both criteria. In particular:
 

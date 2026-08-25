@@ -13,7 +13,7 @@ from typing import Any, Mapping
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 
 SCHEMA_ID = (
-    "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.5.0"
+    "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.6.0"
 )
 FROZEN_GLOBAL_ORIENTATION_GENERATOR_ID = "deterministic_surface_aware_rigid_v2"
 BASELINE_LINEAGE_BY_CASE = {
@@ -251,9 +251,7 @@ def _generator_parameters() -> tuple[str, ...]:
         raise GlobalOrientationDevelopmentProtocolError(
             "generator signature exposes unsupported parameter forms"
         )
-    return tuple(
-        argument.arg for argument in (*arguments.args, *arguments.kwonlyargs)
-    )
+    return tuple(argument.arg for argument in (*arguments.args, *arguments.kwonlyargs))
 
 
 def _verify_generator_boundary() -> None:
@@ -364,7 +362,7 @@ def _verify_preimport_source_bindings(protocol: Mapping[str, Any]) -> None:
     )
     _exact(
         scorer_manifest.get("python_transitive_source_manifest_sha256"),
-        "18b8e50567dcece1c90566a36065dfafc4effda63db352bb98a786f97782d193",
+        "8dde61047e5b4cd503a84555e8767e07bb95d5382273732e2348ca42b7c1bb02",
         name="pre-import ScorerV1 source identity",
     )
     _exact(
@@ -648,7 +646,7 @@ def _verify_authority_bindings(
             "aa7cd89dba16edb36da033bace57804b9ee851997a400c9d468e61ccefdd0159"
         ),
         "python_transitive_source_manifest_sha256": (
-            "18b8e50567dcece1c90566a36065dfafc4effda63db352bb98a786f97782d193"
+            "8dde61047e5b4cd503a84555e8767e07bb95d5382273732e2348ca42b7c1bb02"
         ),
         "python_transitive_source_scope": SCORER_PYTHON_SOURCE_SCOPE,
     }
@@ -664,7 +662,7 @@ def _verify_authority_bindings(
             ),
             "implementation_manifest": implementation_manifest,
             "implementation_source_sha256": (
-                "bfcb9f531c5f298af15e62fad2c73a0bc439ed1fafd768bb195d88659a83752c"
+                "e82097d6e9dd7fb768d6ebf2afe3f51edd0741b1c755858718dc763973c96a67"
             ),
             "native_runtime_artifact_contract": native_runtime_artifact_contract,
             "terms_schema_id": "betelgeuze.engine_v2_scorer_v1_terms/1.1.0",
@@ -851,14 +849,42 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
         "phase25_policy_sha256": "b4c5530dc4766500dbbc854875cfb39baadad94196c63be6150514879993d211",
         "global_orientation_synthetic_contract_schema_id": "betelgeuze.engine_v2_global_orientation_synthetic_contract/2.0.0",
         "global_orientation_synthetic_contract_sha256": "02fa37a94f3c1719f5e7b5b808c71d053e313b018ef9bfa7d904869c2ab1dad0",
-        "case_source_receipt_schema_id": "betelgeuze.engine_v2_source_paired_clearance_"
-        "case_source_receipt/1.0.0",
+        "case_source_receipt_schema_id": "betelgeuze.engine_v2_global_orientation_"
+        "development_case_source/1.0.0",
+        "preparation_failure_receipt_schema_id": (
+            "betelgeuze.engine_v2_global_orientation_development_"
+            "preparation_failure/1.0.0"
+        ),
+        "lineage_slot_receipt_schema_id": (
+            "betelgeuze.engine_v2_global_orientation_development_lineage_slot/1.0.0"
+        ),
+        "arm_lineage_receipt_schema_id": (
+            "betelgeuze.engine_v2_global_orientation_development_arm_lineage/1.0.0"
+        ),
+        "observation_slot_receipt_schema_id": (
+            "betelgeuze.engine_v2_global_orientation_development_observation_slot/1.0.0"
+        ),
+        "arm_observations_receipt_schema_id": (
+            "betelgeuze.engine_v2_global_orientation_development_arm_observations/1.0.0"
+        ),
+        "development_evidence_contract_module_path": (
+            "betelgeuze_engine_v2/benchmark/global_orientation_development_contracts.py"
+        ),
+        "development_evidence_contract_module_sha256": (
+            "6c2b15a78bbc88fde4341de9b8b31cd4a133b03725714566526c946f37440f6d"
+        ),
+        "contract_types_implemented": True,
         "exact_case_source_receipt_required": True,
         "source_receipt_required_fields": list(SOURCE_RECEIPT_FIELDS),
         "source_receipts_committed": False,
         "source_receipt_absence_blocks_execution": True,
     }
     _exact(dict(sources), expected_sources, name="source bindings")
+    _exact(
+        sources.get("development_evidence_contract_module_sha256"),
+        _file_sha256(str(sources.get("development_evidence_contract_module_path"))),
+        name="live development evidence contract source",
+    )
     _verify_phase25_policy_binding(sources)
     _verify_synthetic_contract_binding(sources)
     _verify_preimport_source_bindings(protocol)
@@ -1086,7 +1112,7 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
             "hard_no_go_any",
             "invariants_all",
             "no_go_effect",
-            "required_future_evidence_contracts",
+            "required_private_evidence_instances",
             "result_cannot_change_protocol",
         },
         name="decision key set",
@@ -1102,7 +1128,7 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
         name="Go receipt authority",
     )
     _exact(
-        tuple(decision.get("required_future_evidence_contracts", ())),
+        tuple(decision.get("required_private_evidence_instances", ())),
         (
             "case_source_receipt_with_ligand_topology_pocket_preparation_and_"
             "rederived_receptor_surface_identities",
@@ -1110,7 +1136,7 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
             "experimental_candidate_lineage_bound_to_all_64_observation_slots",
             "failure_complete_observation_slots_with_explicit_unscored_state",
         ),
-        name="future evidence contracts",
+        name="required private evidence instances",
     )
     _exact(
         decision.get("go_requires_all_invariants"),
@@ -1145,7 +1171,7 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
     _exact(
         tuple(decision.get("hard_no_go_any", ())),
         (
-            "evaluator_or_evidence_contract_absent",
+            "evaluator_or_required_private_evidence_absent",
             "required_invariant_failed",
             "zero_new_previously_uncovered_valid_proposal_recoveries",
             "baseline_recovered_case_regression",
