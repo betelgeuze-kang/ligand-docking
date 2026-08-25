@@ -34,8 +34,9 @@ members of the fixed historical cohort. It retains:
   scorer-backend receipt identities;
 - Python executable, Python shared library, and `libm` payload identities plus
   their independently rederived combined runtime fingerprint; and
-- a canonical ordered receptor atom-index projection whose surface points are
-  rederived directly from the retained receptor coordinates.
+- the exact receptor atom subset selected by the authenticated validity context,
+  whose points are rederived directly from retained receptor coordinates rather
+  than accepted as a caller-selected surface subset.
 
 The ninth cohort member, `6M73_FNR`, remains in the denominator through a pinned
 `GlobalOrientationDevelopmentHistoricalFailureAuthorityV1` owned by

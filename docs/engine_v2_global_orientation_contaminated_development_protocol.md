@@ -25,7 +25,7 @@ betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.6.0
 Protocol self-hash:
 
 ```text
-3ccb8f369e0088e7003fe90968f8835158f0cf3b44202f6671b38cf6cba7fd08
+60a99b15ea152f934174730d7ab8377901aeffd1dc595c8e7e72d79aaf4dd0a9
 ```
 
 ## Scientific question
@@ -171,7 +171,7 @@ round-1/2/3 compatibility installers, as well as the native V7 profile and
 transitive native source manifest, build configuration, default config
 fingerprint, and single-thread backend options. Its canonical
 implementation-manifest identity is
-`9e7ff31b4a361c3d6a221fc9f529f50da843e55497d95a786303b3e6f7bfb203`.
+`d5cec2c34730ac519d24f34b4d802a5ea613e6fd0598a513eafe3926197272ce`.
 PoseBusters is bound to the exact 0.3.1 universal wheel SHA-256
 `a6d1437d0eb3e0fe13ad73b5c4efdc8c0914ceadd904cde55b2a9835bf591a9d`,
 redock configuration, local report runner, the imported public-redocking

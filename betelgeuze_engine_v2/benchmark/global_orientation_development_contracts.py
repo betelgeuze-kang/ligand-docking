@@ -381,7 +381,7 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
         GLOBAL_ORIENTATION_HISTORICAL_BUNDLE_CHECKSUM_SHA256
     )
     surface_extraction_procedure_id: str = (
-        "authenticated_receptor_coordinate_index_projection_v1"
+        "authenticated_validity_receptor_subset_projection_v1"
     )
     schema_id: str = GLOBAL_ORIENTATION_DEVELOPMENT_CASE_SOURCE_SCHEMA_ID
     _receptor_surface_points: Coordinates = field(init=False, repr=False)
@@ -590,7 +590,7 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
             )
         if (
             self.surface_extraction_procedure_id
-            != "authenticated_receptor_coordinate_index_projection_v1"
+            != "authenticated_validity_receptor_subset_projection_v1"
         ):
             raise GlobalOrientationDevelopmentContractError(
                 "surface extraction procedure is not frozen"
@@ -602,9 +602,10 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
             or tuple(sorted(set(indices))) != indices
             or indices[-1] >= len(receptor)
             or indices[0] < 0
+            or indices != authenticated.receptor_atom_indices
         ):
             raise GlobalOrientationDevelopmentContractError(
-                "receptor surface indices are invalid or non-canonical"
+                "receptor surface indices do not match the authenticated receptor subset"
             )
         surface = tuple(receptor[index] for index in indices)
         object.__setattr__(self, "receptor_surface_atom_indices", indices)
@@ -1580,6 +1581,8 @@ def _validate_observation_authority(
         internal.authority_input_receipt_sha256
         != historical.authenticated_input_receipt_sha256
         or internal.problem_fingerprint_sha256 != historical.problem_fingerprint_sha256
+        or internal.context_fingerprint_sha256
+        != case_source.authenticated_problem.validity_context.fingerprint_sha256
         or internal.config_fingerprint_sha256
         != case_source.pose_validity_config_fingerprint_sha256
         or internal.evaluator_implementation_sha256

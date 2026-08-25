@@ -280,7 +280,7 @@ def _source() -> GlobalOrientationDevelopmentCaseSourceReceiptV1:
                 libm_sha256=libm,
             )
         ),
-        receptor_surface_atom_indices=(0, 2),
+        receptor_surface_atom_indices=authenticated.receptor_atom_indices,
     )
 
 
@@ -399,7 +399,9 @@ def _candidate_evidence(
         problem_fingerprint_sha256=(
             source.historical_case_source.problem_fingerprint_sha256
         ),
-        context_fingerprint_sha256=_digest("validity-context"),
+        context_fingerprint_sha256=(
+            source.authenticated_problem.validity_context.fingerprint_sha256
+        ),
         config_fingerprint_sha256=(source.pose_validity_config_fingerprint_sha256),
         evaluator_implementation_sha256=(
             GLOBAL_ORIENTATION_INTERNAL_VALIDITY_IMPLEMENTATION_SHA256
@@ -486,6 +488,7 @@ def test_case_source_rederives_coordinates_surface_validity_and_runtime() -> Non
 
     assert source.receptor_surface_points == (
         source.receptor_coordinates[0],
+        source.receptor_coordinates[1],
         source.receptor_coordinates[2],
     )
     assert source.schema_id == bindings["case_source_receipt_schema_id"]
@@ -514,9 +517,14 @@ def test_case_source_rejects_crosswired_radius_runtime_and_surface() -> None:
         replace(source, generator_libm_sha256=_digest("other-libm"))
     with pytest.raises(
         GlobalOrientationDevelopmentContractError,
-        match="surface indices",
+        match="receptor surface indices",
     ):
         replace(source, receptor_surface_atom_indices=(2, 0))
+    with pytest.raises(
+        GlobalOrientationDevelopmentContractError,
+        match="authenticated receptor subset",
+    ):
+        replace(source, receptor_surface_atom_indices=(0, 2))
 
 
 def test_preparation_failure_retains_ninth_case_without_candidate_rows() -> None:
@@ -742,6 +750,27 @@ def test_candidate_authority_and_score_ranks_are_rederived_at_arm_level() -> Non
             observations=(
                 *observations[:target],
                 wrong_authority,
+                *observations[target + 1 :],
+            ),
+        )
+
+    wrong_validity = replace(
+        evidence.internal_validity,
+        context_fingerprint_sha256=_digest("crosswired-validity-context"),
+    )
+    wrong_validity_context = replace(
+        observations[target],
+        candidate_evidence=replace(evidence, internal_validity=wrong_validity),
+    )
+    with pytest.raises(
+        GlobalOrientationDevelopmentContractError,
+        match="internal-validity evidence",
+    ):
+        GlobalOrientationDevelopmentArmObservationsV1(
+            lineage=lineage,
+            observations=(
+                *observations[:target],
+                wrong_validity_context,
                 *observations[target + 1 :],
             ),
         )
