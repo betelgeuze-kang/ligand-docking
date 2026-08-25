@@ -16,8 +16,8 @@ from pathlib import Path
 import re
 from typing import Any
 
-PROFILE_SCHEMA = "betelgeuze.engine_v2_hip_d1_benchmark_profile/1.2.0"
-RESULT_SCHEMA = "betelgeuze.engine_v2_hip_d1_benchmark_result/1.2.0"
+PROFILE_SCHEMA = "betelgeuze.engine_v2_hip_d1_benchmark_profile/1.3.0"
+RESULT_SCHEMA = "betelgeuze.engine_v2_hip_d1_benchmark_result/1.3.0"
 CASE_ID_RE = re.compile(r"^[A-Za-z0-9_.:-]{1,128}$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 GPU_ARCHITECTURE_RE = re.compile(r"^gfx[0-9a-z]{2,8}$")
@@ -52,6 +52,12 @@ FAILURE_PROBE_CODES = (
     "execution_timeout",
     "numeric_overflow",
 )
+FAILURE_STIMULUS_TYPES = {
+    "backend_unavailable": "force_backend_unavailable",
+    "device_oom": "force_device_allocation_failure",
+    "execution_timeout": "force_execution_deadline_expiry",
+    "numeric_overflow": "force_numeric_overflow",
+}
 AUTHORITY_KEYS = (
     "device_execution_authorized",
     "gpu_acceleration_claim_authorized",
@@ -89,15 +95,17 @@ ALLOWED_NEWER_GPU_ARCHITECTURES = (
     "gfx1200",
     "gfx1201",
 )
-FAILURE_OBSERVATION_SCHEMA = "betelgeuze.engine_v2_hip_failure_observation/1.0.0"
+FAILURE_STIMULUS_SCHEMA = "betelgeuze.engine_v2_hip_failure_stimulus/1.0.0"
+FAILURE_OBSERVATION_SCHEMA = "betelgeuze.engine_v2_hip_failure_observation/1.1.0"
+FAILURE_PROBE_RECEIPT_SCHEMA = "betelgeuze.engine_v2_hip_failure_probe_receipt/1.0.0"
 EXECUTION_BACKEND_RECEIPT_SCHEMA = (
-    "betelgeuze.engine_v2_hip_execution_backend_receipt/1.2.0"
+    "betelgeuze.engine_v2_hip_execution_backend_receipt/1.3.0"
 )
 NORMALIZED_PROFILER_TRACE_SCHEMA = (
     "betelgeuze.engine_v2_rocprofiler_normalized_dispatch_trace/1.1.0"
 )
 NORMALIZED_TRANSFER_TRACE_SCHEMA = (
-    "betelgeuze.engine_v2_hip_normalized_transfer_trace/1.1.0"
+    "betelgeuze.engine_v2_hip_normalized_transfer_trace/1.2.0"
 )
 # Intentionally empty until an owner-reviewed successor pins exact artifacts.
 AUTHORIZED_BOUND_PROFILE_SHA256S: frozenset[str] = frozenset()
@@ -690,7 +698,9 @@ def _median(values: list[float], name: str) -> float:
     return result
 
 
-def _verify_failure_probes(value: Any, architecture: str) -> None:
+def _verify_failure_probes(
+    value: Any, architecture: str, seen_execution_run_ids: set[str]
+) -> None:
     if type(value) is not list or len(value) != len(FAILURE_PROBE_CODES) * 2:
         raise HipBenchmarkError(f"{architecture}: failure probe coverage")
     observed: set[tuple[str, str]] = set()
@@ -700,9 +710,13 @@ def _verify_failure_probes(value: Any, architecture: str) -> None:
             {
                 "backend",
                 "error_code",
+                "execution_run_id_sha256",
+                "failure_stimulus",
+                "failure_stimulus_sha256",
                 "observed_error",
                 "observed_error_sha256",
                 "cpu_fallback_observed",
+                "probe_execution_receipt_sha256",
                 "claim_authority_granted",
             },
             f"{architecture}.failure_probes[{index}]",
@@ -722,6 +736,45 @@ def _verify_failure_probes(value: Any, architecture: str) -> None:
         if pair in observed:
             raise HipBenchmarkError(f"{architecture}: duplicate failure probe")
         observed.add(pair)
+        execution_run_id = _sha256(
+            probe["execution_run_id_sha256"],
+            f"{architecture}.failure_probes[{index}].execution_run_id_sha256",
+        )
+        if execution_run_id in seen_execution_run_ids:
+            raise HipBenchmarkError(f"{architecture}: duplicate execution identity")
+        seen_execution_run_ids.add(execution_run_id)
+        stimulus = _exact_keys(
+            probe["failure_stimulus"],
+            {
+                "schema_id",
+                "gpu_architecture",
+                "requested_backend",
+                "requested_error_code",
+                "stimulus_type",
+                "stimulus_parameter_sha256",
+            },
+            f"{architecture}.failure_probes[{index}].failure_stimulus",
+        )
+        if stimulus["schema_id"] != FAILURE_STIMULUS_SCHEMA:
+            raise HipBenchmarkError(f"{architecture}: failure stimulus schema")
+        if stimulus["gpu_architecture"] != architecture:
+            raise HipBenchmarkError(f"{architecture}: failure stimulus architecture")
+        if stimulus["requested_backend"] != backend:
+            raise HipBenchmarkError(f"{architecture}: failure stimulus backend")
+        if stimulus["requested_error_code"] != error_code:
+            raise HipBenchmarkError(f"{architecture}: failure stimulus error code")
+        if stimulus["stimulus_type"] != FAILURE_STIMULUS_TYPES[error_code]:
+            raise HipBenchmarkError(f"{architecture}: failure stimulus type")
+        _sha256(
+            stimulus["stimulus_parameter_sha256"],
+            f"{architecture}.failure stimulus parameter",
+        )
+        stimulus_sha256 = _sha256(
+            probe["failure_stimulus_sha256"],
+            f"{architecture}.failure stimulus SHA",
+        )
+        if stimulus_sha256 != _canonical_sha256(stimulus):
+            raise HipBenchmarkError(f"{architecture}: failure stimulus SHA-256")
         observation = _exact_keys(
             probe["observed_error"],
             {
@@ -729,6 +782,8 @@ def _verify_failure_probes(value: Any, architecture: str) -> None:
                 "gpu_architecture",
                 "requested_backend",
                 "error_code",
+                "execution_run_id_sha256",
+                "failure_stimulus_sha256",
                 "message_sha256",
             },
             f"{architecture}.failure_probes[{index}].observed_error",
@@ -741,6 +796,10 @@ def _verify_failure_probes(value: Any, architecture: str) -> None:
             raise HipBenchmarkError(f"{architecture}: failure observation backend")
         if observation["error_code"] != error_code:
             raise HipBenchmarkError(f"{architecture}: failure observation error code")
+        if observation["execution_run_id_sha256"] != execution_run_id:
+            raise HipBenchmarkError(f"{architecture}: failure observation execution")
+        if observation["failure_stimulus_sha256"] != stimulus_sha256:
+            raise HipBenchmarkError(f"{architecture}: failure observation stimulus")
         _sha256(observation["message_sha256"], f"{architecture}.failure message")
         observed_error_sha256 = _sha256(
             probe["observed_error_sha256"], f"{architecture}.failure_probe SHA"
@@ -749,6 +808,21 @@ def _verify_failure_probes(value: Any, architecture: str) -> None:
             raise HipBenchmarkError(f"{architecture}: failure observation SHA-256")
         if probe["cpu_fallback_observed"] is not False:
             raise HipBenchmarkError(f"{architecture}: CPU fallback observed")
+        expected_receipt = {
+            "schema_id": FAILURE_PROBE_RECEIPT_SCHEMA,
+            "gpu_architecture": architecture,
+            "requested_backend": backend,
+            "requested_error_code": error_code,
+            "execution_run_id_sha256": execution_run_id,
+            "failure_stimulus_sha256": stimulus_sha256,
+            "observed_error_sha256": observed_error_sha256,
+            "cpu_fallback_observed": False,
+        }
+        if _sha256(
+            probe["probe_execution_receipt_sha256"],
+            f"{architecture}.failure probe receipt SHA",
+        ) != _canonical_sha256(expected_receipt):
+            raise HipBenchmarkError(f"{architecture}: failure probe receipt mismatch")
         if probe["claim_authority_granted"] is not False:
             raise HipBenchmarkError(
                 f"{architecture}: failure probe authority escalated"
@@ -1091,7 +1165,10 @@ def _verify_transfer_trace(
     if type(rows) is not list or not rows:
         raise HipBenchmarkError(f"{label}: complete transfer trace required")
     bytes_by_direction: dict[str, list[int]] = {"h2d": [], "d2h": []}
-    timings_by_direction: dict[str, list[float]] = {"h2d": [], "d2h": []}
+    timings_by_direction_sample: dict[str, dict[tuple[str, int], list[float]]] = {
+        "h2d": {},
+        "d2h": {},
+    }
     coverage_by_direction: dict[str, set[tuple[str, int]]] = {
         "h2d": set(),
         "d2h": set(),
@@ -1129,8 +1206,6 @@ def _verify_transfer_trace(
         if sample_index >= len(case_wall_times[case_id]):
             raise HipBenchmarkError(f"{label}: transfer trace sample identity")
         sample_key = (case_id, sample_index)
-        if sample_key in coverage_by_direction[direction]:
-            raise HipBenchmarkError(f"{label}: duplicate transfer case/sample event")
         coverage_by_direction[direction].add(sample_key)
         bytes_by_direction[direction].append(
             _integer(
@@ -1144,20 +1219,23 @@ def _verify_transfer_trace(
             f"{label}.transfer_trace.rows[{index}].runtime_seconds",
             positive=True,
         )
-        timings_by_direction[direction].append(runtime)
+        timings_by_direction_sample[direction].setdefault(sample_key, []).append(
+            runtime
+        )
         runtime_by_sample.setdefault(sample_key, []).append(runtime)
-    expected_coverage = {
+    expected_sample_order = [
         (case_id, sample_index)
         for case_id, wall_times in case_wall_times.items()
         for sample_index in range(len(wall_times))
-    }
+    ]
+    expected_coverage = set(expected_sample_order)
     if any(
         coverage_by_direction[direction] != expected_coverage
         for direction in ("h2d", "d2h")
     ):
         raise HipBenchmarkError(f"{label}: incomplete transfer case/sample coverage")
     if any(
-        len(timings_by_direction[direction]) < minimum_samples
+        len(timings_by_direction_sample[direction]) < minimum_samples
         for direction in ("h2d", "d2h")
     ):
         raise HipBenchmarkError(f"{label}: insufficient transfer trace samples")
@@ -1171,14 +1249,27 @@ def _verify_transfer_trace(
             transfer_runtime, wall_time, rel_tol=1e-12, abs_tol=0.0
         ):
             raise HipBenchmarkError(f"{label}: transfer runtime exceeds wall time")
+    aggregate_timings_by_direction = {
+        direction: [
+            _finite_sum(
+                tuple(timings_by_direction_sample[direction][sample_key]),
+                (
+                    f"{label}.{sample_key[0]}.sample[{sample_key[1]}]."
+                    f"{direction}_runtime"
+                ),
+            )
+            for sample_key in expected_sample_order
+        ]
+        for direction in ("h2d", "d2h")
+    }
     trace_sha256 = _sha256(trace_sha256_value, f"{label}.transfer_trace_sha256")
     if trace_sha256 != _canonical_sha256(trace):
         raise HipBenchmarkError(f"{label}: transfer trace SHA-256 mismatch")
     return (
         sum(bytes_by_direction["h2d"]),
         sum(bytes_by_direction["d2h"]),
-        timings_by_direction["h2d"],
-        timings_by_direction["d2h"],
+        aggregate_timings_by_direction["h2d"],
+        aggregate_timings_by_direction["d2h"],
         trace_sha256,
     )
 
@@ -1228,6 +1319,8 @@ def _execution_backend_receipt(
     profiler_trace_sha256: str | None,
     transfer_trace_sha256: str | None,
     context_construction_samples: list[float],
+    peak_rss_bytes: int,
+    peak_vram_bytes: int,
     cases: list[dict[str, Any]],
 ) -> dict[str, Any]:
     repeat = run_role == "repeat"
@@ -1245,6 +1338,8 @@ def _execution_backend_receipt(
         "context_construction_samples_sha256": _canonical_sha256(
             context_construction_samples
         ),
+        "peak_rss_bytes": peak_rss_bytes,
+        "peak_vram_bytes": peak_vram_bytes,
         "case_timing_samples_sha256": _case_run_timings_sha256(cases, repeat=repeat),
         "case_outputs_sha256": _case_run_outputs_sha256(cases, repeat=repeat),
     }
@@ -1281,6 +1376,8 @@ def _verify_backend(
             "repeat_context_construction_seconds",
             "peak_rss_bytes",
             "peak_vram_bytes",
+            "repeat_peak_rss_bytes",
+            "repeat_peak_vram_bytes",
             "h2d_bytes",
             "d2h_bytes",
             "h2d_seconds",
@@ -1342,6 +1439,14 @@ def _verify_backend(
     )
     peak_rss = _integer(backend["peak_rss_bytes"], f"{label}.peak_rss_bytes", minimum=1)
     peak_vram = _integer(backend["peak_vram_bytes"], f"{label}.peak_vram_bytes")
+    repeat_peak_rss = _integer(
+        backend["repeat_peak_rss_bytes"],
+        f"{label}.repeat_peak_rss_bytes",
+        minimum=1,
+    )
+    repeat_peak_vram = _integer(
+        backend["repeat_peak_vram_bytes"], f"{label}.repeat_peak_vram_bytes"
+    )
     h2d_bytes = _integer(backend["h2d_bytes"], f"{label}.h2d_bytes")
     d2h_bytes = _integer(backend["d2h_bytes"], f"{label}.d2h_bytes")
     failure_counts = _exact_keys(
@@ -1357,7 +1462,7 @@ def _verify_backend(
         raise HipBenchmarkError(f"{label}: representative runtime failure")
 
     if backend_name == "rust_cpu":
-        if peak_vram != 0 or h2d_bytes != 0 or d2h_bytes != 0:
+        if peak_vram != 0 or repeat_peak_vram != 0 or h2d_bytes != 0 or d2h_bytes != 0:
             raise HipBenchmarkError(f"{label}: CPU transfer/VRAM accounting")
         h2d_samples = _samples(
             backend["h2d_seconds"],
@@ -1396,7 +1501,7 @@ def _verify_backend(
         transfer_trace_sha256 = None
         repeat_transfer_trace_sha256 = None
     else:
-        if peak_vram <= 0 or h2d_bytes <= 0 or d2h_bytes <= 0:
+        if peak_vram <= 0 or repeat_peak_vram <= 0 or h2d_bytes <= 0 or d2h_bytes <= 0:
             raise HipBenchmarkError(f"{label}: missing GPU transfer/VRAM accounting")
         h2d_samples = _samples(
             backend["h2d_seconds"],
@@ -1495,6 +1600,8 @@ def _verify_backend(
         profiler_trace_sha256=profiler_trace_sha256,
         transfer_trace_sha256=transfer_trace_sha256,
         context_construction_samples=context_samples,
+        peak_rss_bytes=peak_rss,
+        peak_vram_bytes=peak_vram,
         cases=cases,
     )
     if _sha256(
@@ -1513,6 +1620,8 @@ def _verify_backend(
         profiler_trace_sha256=repeat_profiler_trace_sha256,
         transfer_trace_sha256=repeat_transfer_trace_sha256,
         context_construction_samples=repeat_context_samples,
+        peak_rss_bytes=repeat_peak_rss,
+        peak_vram_bytes=repeat_peak_vram,
         cases=cases,
     )
     if _sha256(
@@ -1541,6 +1650,8 @@ def _verify_backend(
         "candidate_throughput_per_second": total_candidates / wall_time_total,
         "peak_rss_bytes": peak_rss,
         "peak_vram_bytes": peak_vram,
+        "repeat_peak_rss_bytes": repeat_peak_rss,
+        "repeat_peak_vram_bytes": repeat_peak_vram,
         "h2d_bytes": h2d_bytes,
         "d2h_bytes": d2h_bytes,
         "h2d_seconds_p50": (
@@ -1752,7 +1863,11 @@ def verify(profile_path: Path, result_path: Path) -> dict[str, Any]:
             f"{architecture_name}.total_vram_bytes",
             minimum=1,
         )
-        _verify_failure_probes(architecture["failure_probes"], architecture_name)
+        _verify_failure_probes(
+            architecture["failure_probes"],
+            architecture_name,
+            seen_execution_run_ids,
+        )
         backends = _exact_keys(
             architecture["backends"],
             set(REQUIRED_BACKENDS),
@@ -1779,7 +1894,10 @@ def verify(profile_path: Path, result_path: Path) -> dict[str, Any]:
             )
             verified_backends[backend_name] = cases
             architecture_metrics[backend_name] = metrics
-            if metrics["peak_vram_bytes"] > architecture["total_vram_bytes"]:
+            if (
+                max(metrics["peak_vram_bytes"], metrics["repeat_peak_vram_bytes"])
+                > architecture["total_vram_bytes"]
+            ):
                 raise HipBenchmarkError(
                     f"{architecture_name}/{backend_name}: peak VRAM exceeds device"
                 )

@@ -256,6 +256,8 @@ def _backend(case_ids: list[str], backend_name: str, architecture: str) -> dict:
         ],
         "peak_rss_bytes": 1048576,
         "peak_vram_bytes": 2097152 if gpu else 0,
+        "repeat_peak_rss_bytes": 1064960,
+        "repeat_peak_vram_bytes": 2162688 if gpu else 0,
         "h2d_bytes": 4096 * len(case_ids) * 5 if gpu else 0,
         "d2h_bytes": 2048 * len(case_ids) * 5 if gpu else 0,
         "h2d_seconds": [0.001] * (len(case_ids) * 5) if gpu else [],
@@ -308,20 +310,53 @@ def _architecture(case_ids: list[str], name: str) -> dict:
     failure_probes = []
     for backend in VERIFIER.REQUIRED_BACKENDS[1:]:
         for code in VERIFIER.FAILURE_PROBE_CODES:
+            execution_run_id = VERIFIER._canonical_sha256(
+                [name, backend, code, "failure-probe"]
+            )
+            stimulus = {
+                "schema_id": VERIFIER.FAILURE_STIMULUS_SCHEMA,
+                "gpu_architecture": name,
+                "requested_backend": backend,
+                "requested_error_code": code,
+                "stimulus_type": VERIFIER.FAILURE_STIMULUS_TYPES[code],
+                "stimulus_parameter_sha256": VERIFIER._canonical_sha256(
+                    [name, backend, code, "stimulus-parameter"]
+                ),
+            }
+            stimulus_sha256 = VERIFIER._canonical_sha256(stimulus)
             observation = {
                 "schema_id": VERIFIER.FAILURE_OBSERVATION_SCHEMA,
                 "gpu_architecture": name,
                 "requested_backend": backend,
                 "error_code": code,
+                "execution_run_id_sha256": execution_run_id,
+                "failure_stimulus_sha256": stimulus_sha256,
                 "message_sha256": "9" * 64,
+            }
+            observed_error_sha256 = VERIFIER._canonical_sha256(observation)
+            receipt = {
+                "schema_id": VERIFIER.FAILURE_PROBE_RECEIPT_SCHEMA,
+                "gpu_architecture": name,
+                "requested_backend": backend,
+                "requested_error_code": code,
+                "execution_run_id_sha256": execution_run_id,
+                "failure_stimulus_sha256": stimulus_sha256,
+                "observed_error_sha256": observed_error_sha256,
+                "cpu_fallback_observed": False,
             }
             failure_probes.append(
                 {
                     "backend": backend,
                     "error_code": code,
+                    "execution_run_id_sha256": execution_run_id,
+                    "failure_stimulus": stimulus,
+                    "failure_stimulus_sha256": stimulus_sha256,
                     "observed_error": observation,
-                    "observed_error_sha256": VERIFIER._canonical_sha256(observation),
+                    "observed_error_sha256": observed_error_sha256,
                     "cpu_fallback_observed": False,
+                    "probe_execution_receipt_sha256": VERIFIER._canonical_sha256(
+                        receipt
+                    ),
                     "claim_authority_granted": False,
                 }
             )
@@ -411,6 +446,8 @@ def _reseal_backend_receipt(
             context_construction_samples=backend[
                 f"{prefix}context_construction_seconds"
             ],
+            peak_rss_bytes=backend[f"{prefix}peak_rss_bytes"],
+            peak_vram_bytes=backend[f"{prefix}peak_vram_bytes"],
             cases=backend["cases"],
         )
         backend[f"{prefix}execution_backend_receipt_sha256"] = (
@@ -430,7 +467,7 @@ def test_committed_profile_is_valid_unbound_and_non_authoritative() -> None:
         "verified": True,
         "profile_id": "engine_v2_hip_d1_representative_v1",
         "profile_sha256": (
-            "a5f4e86a8e3e319155f42891f4c606018d0b2323af27c51d2652f0680df66182"
+            "14bbcf914e5b6ad56f9969770d192b1916aac820a1a16a69eb60409bffd51606"
         ),
         "manifest_bound": False,
         "result_verification_authorized": False,
@@ -479,6 +516,8 @@ def test_valid_bound_result_derives_metrics_without_authority(tmp_path: Path) ->
     assert metrics["rust_cpu"]["case_wall_time_seconds_p50"] == 0.1
     assert metrics["rust_cpu"]["case_wall_time_seconds_p95"] == 0.1
     assert metrics["rust_cpu"]["candidate_throughput_per_second"] == 640.0
+    assert metrics["hip_safe"]["repeat_peak_rss_bytes"] == 1064960
+    assert metrics["hip_safe"]["repeat_peak_vram_bytes"] == 2162688
     assert metrics["hip_safe"]["h2d_seconds_p50"] == 0.001
     assert metrics["hip_safe"]["d2h_seconds_p50"] == 0.0005
     assert metrics["hip_safe"]["kernel_dispatch_count_total"] == 160
@@ -927,6 +966,29 @@ def test_transfer_trace_is_bound_to_execution_receipt(tmp_path: Path) -> None:
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 
+def test_transfer_trace_aggregates_multiple_events_per_timed_sample(
+    tmp_path: Path,
+) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    backend = result["architectures"][0]["backends"]["hip_safe"]
+    original = backend["transfer_trace"]["rows"][0]
+    first = {**original, "bytes": 1024, "runtime_seconds": 0.00025}
+    second = {**original, "bytes": 3072, "runtime_seconds": 0.00075}
+    backend["transfer_trace"]["rows"][0:1] = [first, second]
+    for event_index, row in enumerate(backend["transfer_trace"]["rows"]):
+        row["event_index"] = event_index
+    backend["transfer_trace_sha256"] = VERIFIER._canonical_sha256(
+        backend["transfer_trace"]
+    )
+    _reseal_backend_receipt(backend, "gfx1030", result["ordered_case_ids"])
+    _seal_and_authorize_result(result)
+    output = VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+    assert output["derived_metrics"]["gfx1030"]["hip_safe"][
+        "h2d_seconds_p50"
+    ] == pytest.approx(0.001)
+
+
 def test_transfer_trace_must_cover_every_case_sample_and_direction(
     tmp_path: Path,
 ) -> None:
@@ -1108,6 +1170,27 @@ def test_context_timing_samples_are_bound_to_execution_receipts(
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 
+@pytest.mark.parametrize(
+    "field",
+    [
+        "peak_rss_bytes",
+        "peak_vram_bytes",
+        "repeat_peak_rss_bytes",
+        "repeat_peak_vram_bytes",
+    ],
+)
+def test_peak_memory_metrics_are_bound_to_execution_receipts(
+    tmp_path: Path, field: str
+) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    backend = result["architectures"][0]["backends"]["hip_fast"]
+    backend[field] += 4096
+    _seal_and_authorize_result(result)
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="backend receipt mismatch"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
 def test_repeat_execution_identity_must_be_distinct(tmp_path: Path) -> None:
     profile_path, profile = _bound_profile(tmp_path)
     result = _result(profile)
@@ -1179,6 +1262,40 @@ def test_complete_failure_probe_set_is_required(tmp_path: Path) -> None:
     result = _result(profile)
     result["architectures"][0]["failure_probes"].pop()
     with pytest.raises(VERIFIER.HipBenchmarkError, match="failure probe coverage"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
+def test_failure_probe_execution_identities_are_distinct(tmp_path: Path) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    probes = result["architectures"][0]["failure_probes"]
+    probes[1]["execution_run_id_sha256"] = probes[0]["execution_run_id_sha256"]
+    _seal_and_authorize_result(result)
+    with pytest.raises(
+        VERIFIER.HipBenchmarkError, match="duplicate execution identity"
+    ):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
+def test_failure_probe_stimulus_type_is_predeclared(tmp_path: Path) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    result["architectures"][0]["failure_probes"][0]["failure_stimulus"][
+        "stimulus_type"
+    ] = "operator_selected"
+    _seal_and_authorize_result(result)
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="failure stimulus type"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
+def test_failure_probe_receipt_binds_observation_to_execution(tmp_path: Path) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    probe = result["architectures"][0]["failure_probes"][0]
+    probe["observed_error"]["message_sha256"] = "8" * 64
+    probe["observed_error_sha256"] = VERIFIER._canonical_sha256(probe["observed_error"])
+    _seal_and_authorize_result(result)
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="probe receipt mismatch"):
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 

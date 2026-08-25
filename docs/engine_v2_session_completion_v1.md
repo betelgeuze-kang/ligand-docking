@@ -230,7 +230,7 @@ python tools/verify_engine_v2_hip_d1_benchmark_v1.py \
   --profile config/engine_v2_hip_d1_benchmark_profile_v1.json
 ```
 
-This verifies the committed 1.2 profile and its self-hash only. The profile is
+This verifies the committed 1.3 profile and its self-hash only. The profile is
 deliberately `frozen_non_authoritative_manifest_not_bound`; passing `--result`
 is rejected until an owner-controlled successor binds the exact private D1
 manifest SHA-256 and its owner-selected ordered-case SHA-256, then reseals the
@@ -279,8 +279,10 @@ prevents an all-failure cohort from satisfying the benchmark contract.
 Structured status rows cover all 64 slots, their canonical digest is recomputed,
 and null triples are permitted exactly at slots whose status is `typed_failure`.
 
-Each failure probe embeds a structured observation whose backend and typed code
-must match the requested probe and whose canonical SHA-256 is recomputed. Each
+Each failure probe has a globally distinct execution identity and embeds a
+predeclared typed stimulus, a structured observation bound to that stimulus and
+execution, and a recomputed probe receipt. Its backend and typed code must match
+the requested probe, and all canonical SHA-256 bindings are recomputed. Each
 representative backend embeds a self-bound execution receipt naming the
 requested and observed backend, ordered cohort, fallback status, and profiler
 trace plus the canonical per-case wall-time and output digests. Primary and
@@ -291,6 +293,8 @@ Each normalized profiler and transfer trace embeds its corresponding run
 identity, so primary evidence cannot be copied into the repeat slot and
 rehashed. Primary and repeat context-construction samples are separately bound
 into their matching receipts and reported as separate derived p50 metrics.
+Primary and repeat RSS/VRAM peaks are likewise separate and receipt-bound before
+being reported.
 Requested/observed backend identity and CPU-fallback state are recorded and
 validated independently for each run and bound into the corresponding receipt.
 The repository-pinned result digest binds both receipts, timings, and all
@@ -308,8 +312,10 @@ wall-time sample.
 GPU H2D/D2H bytes and timing samples are likewise rederived from normalized,
 ordered memory-copy event traces whose hashes are bound into the corresponding
 primary or repeat execution receipt. Each direction must cover every ordered
-case and every timing-sample index exactly once, and the per-sample transfer
-runtime must fit its enclosing wall-time sample. Profiler identity requires a
+case and every timing-sample index; multiple copy events for the same direction
+and timed sample remain distinct in the trace while their bytes and runtimes are
+aggregated for the derived sample. The combined per-sample transfer runtime must
+fit its enclosing wall-time sample. Profiler identity requires a
 parsed non-whitespace `rocprofiler-sdk` version suffix.
 Derived sums and medians use overflow-safe finite arithmetic, including a
 stable even-sample midpoint that preserves positive subnormal values; any
