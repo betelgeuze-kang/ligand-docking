@@ -19,13 +19,13 @@ config/engine_v2_global_orientation_contaminated_development.json
 Protocol schema:
 
 ```text
-betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.4.0
+betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.5.0
 ```
 
 Protocol self-hash:
 
 ```text
-65ed853d70683f940fdc3e914f6584f6dd530d1ca9de3a8459ff950e6e315768
+ebb67559292613b2685786c03aab01970d21ee0df3b9b885eb33f7fa3ec75a75
 ```
 
 ## Scientific question
@@ -199,6 +199,14 @@ Any separately authorized future execution must freeze the exact native `.so`
 SHA-256 and the `ScorerBackendReceipt` SHA-256 in its authenticated source
 receipt; neither cross-arm equality nor a caller-supplied implementation label
 can substitute for those identities.
+
+The global-orientation generator uses Python binary64 operations backed by the
+interpreter, shared runtime, and platform `libm`. No exact generator runtime is
+currently frozen. The protocol therefore records the Python executable,
+Python shared library, `libm`, and combined runtime fingerprints as absent and
+makes that absence another independent execution blocker. Future execution
+evidence must bind all four payload identities; a matching generator source
+hash alone is insufficient.
 Future evidence types must match every expected identity in
 `authority_bindings`; same-schema or same-label substitutions fail closed.
 
@@ -236,8 +244,9 @@ machine-verifiable contracts:
 1. a case-source receipt containing the ligand, topology, pocket, exact
    binary64 pocket radius, derived validity-config fingerprint, evaluation
    pipeline, exact native scorer extension and backend-receipt identities, and
-   preparation identities plus receptor-surface points rederived from the
-   bound receptor geometry by a frozen extraction procedure;
+   generator Python/shared-library/`libm` runtime identities, and preparation
+   identities plus receptor-surface points rederived from the bound receptor
+   geometry by a frozen extraction procedure;
 2. baseline candidate lineage bound to all 64 observation slots;
 3. experimental candidate lineage bound to all 64 observation slots; and
 4. failure-complete observations with an explicit unscored state.

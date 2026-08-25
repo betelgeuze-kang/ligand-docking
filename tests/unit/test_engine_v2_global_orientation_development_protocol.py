@@ -50,7 +50,7 @@ def _reseal(payload: dict[str, object]) -> dict[str, object]:
 def test_current_global_orientation_development_protocol_verifies() -> None:
     observed = verify_protocol(_protocol())
     assert observed == (
-        "65ed853d70683f940fdc3e914f6584f6dd530d1ca9de3a8459ff950e6e315768"
+        "ebb67559292613b2685786c03aab01970d21ee0df3b9b885eb33f7fa3ec75a75"
     )
 
 
@@ -76,7 +76,14 @@ def test_live_generator_identity_cannot_move_with_resealed_protocol(
     changed["arm_contract"]["experimental"]["proposal_authority"] = "other-profile"
     changed["arm_contract"]["experimental"]["profile_id"] = "other-profile"
     changed = _reseal(changed)
-    monkeypatch.setattr(verifier, "GLOBAL_ORIENTATION_GENERATOR_ID", "other-profile")
+    real_live_authorities = verifier._live_authorities
+
+    def moved_live_authorities() -> dict[str, object]:
+        live = real_live_authorities()
+        live["GLOBAL_ORIENTATION_GENERATOR_ID"] = "other-profile"
+        return live
+
+    monkeypatch.setattr(verifier, "_live_authorities", moved_live_authorities)
 
     with pytest.raises(
         GlobalOrientationDevelopmentProtocolError,
@@ -126,7 +133,7 @@ def test_resealed_scorer_or_evaluator_authority_drift_fails_closed() -> None:
 
         with pytest.raises(
             GlobalOrientationDevelopmentProtocolError,
-            match="authority binding",
+            match="source identity|authority binding",
         ):
             verify_protocol(changed)
 
@@ -146,7 +153,7 @@ def test_resealed_transitive_evaluator_source_drift_fails_closed() -> None:
 
         with pytest.raises(
             GlobalOrientationDevelopmentProtocolError,
-            match="authority binding",
+            match="source identity|authority binding",
         ):
             verify_protocol(changed)
 
@@ -156,19 +163,19 @@ def test_resealed_transitive_evaluator_source_drift_fails_closed() -> None:
     (
         (
             "betelgeuze_engine_v2/docking/contact_validity.py",
-            "ScorerV1 transitive Python source manifest",
+            "pre-import ScorerV1 source manifest",
         ),
         (
             "betelgeuze_engine_v2/stack_round3_integrity_compat.py",
-            "ScorerV1 transitive Python source manifest",
+            "pre-import ScorerV1 source manifest",
         ),
         (
             "betelgeuze_engine_v2/benchmark/public_redocking_benchmark.py",
-            "PoseBusters evaluation source manifest",
+            "pre-import ScorerV1 source manifest",
         ),
         (
             "betelgeuze_engine_v2/stack_round1_hardening.py",
-            "internal validity transitive source manifest",
+            "pre-import ScorerV1 source manifest",
         ),
     ),
 )
@@ -191,6 +198,28 @@ def test_live_transitive_evaluator_source_drift_fails_closed(
         match=expected_error,
     ):
         verify_protocol(_protocol())
+
+
+def test_source_manifest_is_verified_before_live_package_import(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    preflight_observed = False
+    real_source_manifest = verifier._source_manifest
+    real_live_authorities = verifier._live_authorities
+
+    def observed_source_manifest(**kwargs: object) -> list[dict[str, str]]:
+        nonlocal preflight_observed
+        preflight_observed = True
+        return real_source_manifest(**kwargs)
+
+    def guarded_live_authorities() -> dict[str, object]:
+        assert preflight_observed
+        return real_live_authorities()
+
+    monkeypatch.setattr(verifier, "_source_manifest", observed_source_manifest)
+    monkeypatch.setattr(verifier, "_live_authorities", guarded_live_authorities)
+
+    verify_protocol(_protocol())
 
 
 def test_resealed_validity_configuration_contract_drift_fails_closed() -> None:
@@ -228,6 +257,40 @@ def test_resealed_runtime_artifact_or_evaluation_pipeline_drift_fails_closed() -
         GlobalOrientationDevelopmentProtocolError,
         match="ScorerV1 authority binding",
     ):
+        verify_protocol(changed)
+
+
+def test_resealed_generator_runtime_binding_cannot_be_bypassed() -> None:
+    changed = _protocol()
+    changed["authority_bindings"]["experimental_global_orientation"][
+        "runtime_artifact_contract"
+    ]["unbound_generator_runtime_blocks_execution"] = False
+    changed = _reseal(changed)
+
+    with pytest.raises(
+        GlobalOrientationDevelopmentProtocolError,
+        match="experimental authority binding",
+    ):
+        verify_protocol(changed)
+
+
+@pytest.mark.parametrize(
+    ("section", "field", "integer_value"),
+    (
+        ("decision", "decision_evaluator_implemented", 0),
+        ("execution_gate", "operator_reservation_required", 1),
+    ),
+)
+def test_resealed_boolean_integer_substitution_fails_closed(
+    section: str,
+    field: str,
+    integer_value: int,
+) -> None:
+    changed = _protocol()
+    changed[section][field] = integer_value
+    changed = _reseal(changed)
+
+    with pytest.raises(GlobalOrientationDevelopmentProtocolError):
         verify_protocol(changed)
 
 

@@ -15,24 +15,8 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 if __package__ in {None, ""} and str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from betelgeuze_engine_v2.docking.global_orientation import (  # noqa: E402
-    GLOBAL_ORIENTATION_CONFIG_SCHEMA_ID,
-    GLOBAL_ORIENTATION_GENERATOR_ID,
-    GlobalOrientationConfig,
-    generate_global_orientation_batch,
-)
-from betelgeuze_engine_v2.docking.scorer_v1 import (  # noqa: E402
-    ScorerBackendOptions,
-    ScorerV1Config,
-)
-from betelgeuze_engine_v2.docking.validity import (  # noqa: E402
-    PUBLIC_BENCHMARK_POSE_VALIDITY_POLICY_ID,
-    PoseValidityConfig,
-)
-
-
 SCHEMA_ID = (
-    "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.4.0"
+    "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.5.0"
 )
 FROZEN_GLOBAL_ORIENTATION_GENERATOR_ID = "deterministic_surface_aware_rigid_v2"
 BASELINE_LINEAGE_BY_CASE = {
@@ -79,6 +63,10 @@ SOURCE_RECEIPT_FIELDS = (
     "evaluation_pipeline_sha256",
     "scorer_native_extension_sha256",
     "scorer_backend_receipt_sha256",
+    "generator_python_executable_sha256",
+    "generator_python_shared_library_sha256",
+    "generator_libm_sha256",
+    "generator_runtime_fingerprint_sha256",
 )
 ALLOWED_INPUTS = (
     "prepared_ligand_coordinates",
@@ -107,6 +95,26 @@ AUTHORITY_KEYS = (
     "customer_pose_emission_authorized",
     "public_or_scientific_claim_authorized",
 )
+INTERNAL_VALIDITY_SOURCE_SCOPE = {
+    "files": [
+        "betelgeuze_engine_v2/__init__.py",
+        "betelgeuze_engine_v2/docking/validity.py",
+        "betelgeuze_engine_v2/stack_round1_hardening.py",
+    ],
+    "manifest_algorithm": "canonical_sorted_path_sha256_rows/1.0.0",
+}
+POSEBUSTERS_EVALUATION_SOURCE_SCOPE = {
+    "files": [
+        "betelgeuze_engine_v2/benchmark/public_redocking_benchmark.py",
+        "tools/run_engine_v2_public_redocking_300.py",
+    ],
+    "manifest_algorithm": "canonical_sorted_path_sha256_rows/1.0.0",
+}
+SCORER_PYTHON_SOURCE_SCOPE = {
+    "files": [],
+    "manifest_algorithm": "canonical_sorted_path_sha256_rows/1.0.0",
+    "roots": ["betelgeuze_engine_v2"],
+}
 
 
 class GlobalOrientationDevelopmentProtocolError(ValueError):
@@ -196,22 +204,69 @@ def _load_json_object(path: Path, *, name: str) -> dict[str, Any]:
     return payload
 
 
+def _typed_equal(value: object, expected: object) -> bool:
+    if type(value) is not type(expected):
+        return False
+    if isinstance(expected, dict):
+        return set(value) == set(expected) and all(
+            _typed_equal(value[key], expected[key]) for key in expected
+        )
+    if isinstance(expected, (list, tuple)):
+        return len(value) == len(expected) and all(
+            _typed_equal(observed, frozen)
+            for observed, frozen in zip(value, expected, strict=True)
+        )
+    return bool(value == expected)
+
+
 def _exact(value: object, expected: object, *, name: str) -> None:
-    if value != expected:
+    if not _typed_equal(value, expected):
         raise GlobalOrientationDevelopmentProtocolError(f"{name} drifted")
+
+
+def _live_authorities() -> dict[str, object]:
+    from betelgeuze_engine_v2.docking.global_orientation import (
+        GLOBAL_ORIENTATION_CONFIG_SCHEMA_ID,
+        GLOBAL_ORIENTATION_GENERATOR_ID,
+        GlobalOrientationConfig,
+        generate_global_orientation_batch,
+    )
+    from betelgeuze_engine_v2.docking.scorer_v1 import (
+        ScorerBackendOptions,
+        ScorerV1Config,
+    )
+    from betelgeuze_engine_v2.docking.validity import (
+        PUBLIC_BENCHMARK_POSE_VALIDITY_POLICY_ID,
+        PoseValidityConfig,
+    )
+
+    return {
+        "GLOBAL_ORIENTATION_CONFIG_SCHEMA_ID": GLOBAL_ORIENTATION_CONFIG_SCHEMA_ID,
+        "GLOBAL_ORIENTATION_GENERATOR_ID": GLOBAL_ORIENTATION_GENERATOR_ID,
+        "GlobalOrientationConfig": GlobalOrientationConfig,
+        "generate_global_orientation_batch": generate_global_orientation_batch,
+        "ScorerBackendOptions": ScorerBackendOptions,
+        "ScorerV1Config": ScorerV1Config,
+        "PUBLIC_BENCHMARK_POSE_VALIDITY_POLICY_ID": (
+            PUBLIC_BENCHMARK_POSE_VALIDITY_POLICY_ID
+        ),
+        "PoseValidityConfig": PoseValidityConfig,
+    }
 
 
 def load_protocol(path: Path) -> dict[str, Any]:
     return _load_json_object(path, name="protocol")
 
 
-def _verify_generator_boundary() -> None:
+def _verify_generator_boundary(live: Mapping[str, object]) -> None:
     _exact(
-        GLOBAL_ORIENTATION_GENERATOR_ID,
+        live["GLOBAL_ORIENTATION_GENERATOR_ID"],
         FROZEN_GLOBAL_ORIENTATION_GENERATOR_ID,
         name="live generator identity",
     )
-    parameters = tuple(inspect.signature(generate_global_orientation_batch).parameters)
+    parameters = tuple(
+        inspect.signature(live["generate_global_orientation_batch"]).parameters
+    )
     _exact(
         parameters,
         (
@@ -304,7 +359,39 @@ def _verify_phase25_policy_binding(
     )
 
 
-def _verify_authority_bindings(protocol: Mapping[str, Any]) -> None:
+def _verify_preimport_source_bindings(protocol: Mapping[str, Any]) -> None:
+    bindings = _mapping(protocol.get("authority_bindings"), name="authority bindings")
+    scorer = _mapping(bindings.get("scorer_v1"), name="ScorerV1 authority binding")
+    scorer_manifest = _mapping(
+        scorer.get("implementation_manifest"),
+        name="ScorerV1 implementation manifest",
+    )
+    _exact(
+        scorer_manifest.get("python_transitive_source_scope"),
+        SCORER_PYTHON_SOURCE_SCOPE,
+        name="pre-import ScorerV1 source scope",
+    )
+    _exact(
+        scorer_manifest.get("python_transitive_source_manifest_sha256"),
+        "18b8e50567dcece1c90566a36065dfafc4effda63db352bb98a786f97782d193",
+        name="pre-import ScorerV1 source identity",
+    )
+    _exact(
+        scorer_manifest.get("python_transitive_source_manifest_sha256"),
+        _sha256(
+            _source_manifest(
+                roots=tuple(SCORER_PYTHON_SOURCE_SCOPE["roots"]),
+                files=tuple(SCORER_PYTHON_SOURCE_SCOPE["files"]),
+            )
+        ),
+        name="pre-import ScorerV1 source manifest",
+    )
+
+
+def _verify_authority_bindings(
+    protocol: Mapping[str, Any],
+    live: Mapping[str, object],
+) -> None:
     bindings = _mapping(protocol.get("authority_bindings"), name="authority bindings")
     _exact(
         set(bindings),
@@ -352,6 +439,14 @@ def _verify_authority_bindings(protocol: Mapping[str, Any]) -> None:
         bindings.get("experimental_global_orientation"),
         name="experimental authority binding",
     )
+    generator_runtime_artifact_contract = {
+        "generator_libm_sha256": None,
+        "generator_python_executable_sha256": None,
+        "generator_python_shared_library_sha256": None,
+        "generator_runtime_fingerprint_sha256": None,
+        "runtime_identities_committed": False,
+        "unbound_generator_runtime_blocks_execution": True,
+    }
     _exact(
         dict(experimental),
         {
@@ -362,6 +457,7 @@ def _verify_authority_bindings(protocol: Mapping[str, Any]) -> None:
             "generator_module_sha256": (
                 "9983774745872a6d3e2abf3c8a14dc80c915ad4703dfe3675b58f39aedcd6b61"
             ),
+            "runtime_artifact_contract": generator_runtime_artifact_contract,
         },
         name="experimental authority binding",
     )
@@ -370,20 +466,12 @@ def _verify_authority_bindings(protocol: Mapping[str, Any]) -> None:
         bindings.get("internal_validity"),
         name="internal validity authority binding",
     )
-    internal_source_scope = {
-        "files": [
-            "betelgeuze_engine_v2/__init__.py",
-            "betelgeuze_engine_v2/docking/validity.py",
-            "betelgeuze_engine_v2/stack_round1_hardening.py",
-        ],
-        "manifest_algorithm": "canonical_sorted_path_sha256_rows/1.0.0",
-    }
     internal_source_manifest = _source_manifest(
-        files=tuple(internal_source_scope["files"]),
+        files=tuple(INTERNAL_VALIDITY_SOURCE_SCOPE["files"]),
     )
-    validity_config = PoseValidityConfig(
+    validity_config = live["PoseValidityConfig"](
         pocket_radius_angstrom=1.0,
-        policy_id=PUBLIC_BENCHMARK_POSE_VALIDITY_POLICY_ID,
+        policy_id=live["PUBLIC_BENCHMARK_POSE_VALIDITY_POLICY_ID"],
     ).to_dict()
     validity_config.pop("pocket_radius_angstrom")
     validity_fixed_fields = {
@@ -418,7 +506,7 @@ def _verify_authority_bindings(protocol: Mapping[str, Any]) -> None:
             "evaluator_source_manifest_sha256": (
                 "5f966c2fca0b1ba43664ac8c1fdef4fd345a5d47829590972ed902df411675fc"
             ),
-            "evaluator_source_scope": internal_source_scope,
+            "evaluator_source_scope": INTERNAL_VALIDITY_SOURCE_SCOPE,
             "required_check_set_sha256": (
                 "dcab24089ac9c88daa53f3faeabd04d71fb819cbbe9f86982d964b657cbc5583"
             ),
@@ -459,13 +547,7 @@ def _verify_authority_bindings(protocol: Mapping[str, Any]) -> None:
         "evaluation_source_manifest_sha256": (
             "2f843fee77e2d40d70882d2bb959fc828f3806921b915a0e702b1a138cc777bb"
         ),
-        "evaluation_source_scope": {
-            "files": [
-                "betelgeuze_engine_v2/benchmark/public_redocking_benchmark.py",
-                "tools/run_engine_v2_public_redocking_300.py",
-            ],
-            "manifest_algorithm": "canonical_sorted_path_sha256_rows/1.0.0",
-        },
+        "evaluation_source_scope": POSEBUSTERS_EVALUATION_SOURCE_SCOPE,
         "expected_evaluation_pipeline_sha256": (
             "40530119249b792728a70cb5ba65cc9c60cf834e1a744d6987dae75046459922"
         ),
@@ -486,9 +568,7 @@ def _verify_authority_bindings(protocol: Mapping[str, Any]) -> None:
     _exact(
         posebusters.get("evaluation_source_manifest_sha256"),
         _sha256(
-            _source_manifest(
-                files=tuple(expected_posebusters["evaluation_source_scope"]["files"])
-            )
+            _source_manifest(files=tuple(POSEBUSTERS_EVALUATION_SOURCE_SCOPE["files"]))
         ),
         name="PoseBusters evaluation source manifest",
     )
@@ -539,11 +619,6 @@ def _verify_authority_bindings(protocol: Mapping[str, Any]) -> None:
     )
 
     scorer = _mapping(bindings.get("scorer_v1"), name="ScorerV1 authority binding")
-    scorer_python_source_scope = {
-        "files": [],
-        "manifest_algorithm": "canonical_sorted_path_sha256_rows/1.0.0",
-        "roots": ["betelgeuze_engine_v2"],
-    }
     native_runtime_artifact_contract = {
         "artifact_identities_committed": False,
         "consumed_qualification_receipt_path": (
@@ -581,7 +656,7 @@ def _verify_authority_bindings(protocol: Mapping[str, Any]) -> None:
         "python_transitive_source_manifest_sha256": (
             "18b8e50567dcece1c90566a36065dfafc4effda63db352bb98a786f97782d193"
         ),
-        "python_transitive_source_scope": scorer_python_source_scope,
+        "python_transitive_source_scope": SCORER_PYTHON_SOURCE_SCOPE,
     }
     _exact(
         dict(scorer),
@@ -611,8 +686,8 @@ def _verify_authority_bindings(protocol: Mapping[str, Any]) -> None:
         implementation_manifest["python_transitive_source_manifest_sha256"],
         _sha256(
             _source_manifest(
-                roots=tuple(scorer_python_source_scope["roots"]),
-                files=tuple(scorer_python_source_scope["files"]),
+                roots=tuple(SCORER_PYTHON_SOURCE_SCOPE["roots"]),
+                files=tuple(SCORER_PYTHON_SOURCE_SCOPE["files"]),
             )
         ),
         name="ScorerV1 transitive Python source manifest",
@@ -635,12 +710,12 @@ def _verify_authority_bindings(protocol: Mapping[str, Any]) -> None:
         )
     _exact(
         scorer.get("config_fingerprint_sha256"),
-        ScorerV1Config().fingerprint_sha256,
+        live["ScorerV1Config"]().fingerprint_sha256,
         name="live ScorerV1 config identity",
     )
     _exact(
         scorer.get("backend_options_fingerprint_sha256"),
-        ScorerBackendOptions(thread_count=1).fingerprint_sha256,
+        live["ScorerBackendOptions"](thread_count=1).fingerprint_sha256,
         name="live ScorerV1 backend options identity",
     )
 
@@ -769,7 +844,9 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
     _exact(dict(sources), expected_sources, name="source bindings")
     _verify_phase25_policy_binding(sources)
     _verify_synthetic_contract_binding(sources)
-    _verify_authority_bindings(protocol)
+    _verify_preimport_source_bindings(protocol)
+    live = _live_authorities()
+    _verify_authority_bindings(protocol, live)
 
     information = _mapping(
         protocol.get("information_boundary"), name="information_boundary"
@@ -804,7 +881,7 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
         True,
         name="post-result allocation boundary",
     )
-    _verify_generator_boundary()
+    _verify_generator_boundary(live)
 
     shared = _mapping(
         protocol.get("shared_execution_contract"),
@@ -900,7 +977,7 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
     _exact(
         dict(config),
         {
-            "schema_id": GLOBAL_ORIENTATION_CONFIG_SCHEMA_ID,
+            "schema_id": live["GLOBAL_ORIENTATION_CONFIG_SCHEMA_ID"],
             "orientation_count": 8,
             "translation_shell_radii": [1.5],
             "translation_points_per_shell": 7,
@@ -908,7 +985,7 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
         },
         name="experimental generator config",
     )
-    concrete = GlobalOrientationConfig(
+    concrete = live["GlobalOrientationConfig"](
         orientation_count=config.get("orientation_count"),
         translation_shell_radii=tuple(config.get("translation_shell_radii", ())),
         translation_points_per_shell=config.get("translation_points_per_shell"),

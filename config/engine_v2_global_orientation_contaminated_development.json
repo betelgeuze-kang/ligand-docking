@@ -19,7 +19,15 @@
     "experimental_global_orientation": {
       "generator_id": "deterministic_surface_aware_rigid_v2",
       "generator_module_path": "betelgeuze_engine_v2/docking/global_orientation.py",
-      "generator_module_sha256": "9983774745872a6d3e2abf3c8a14dc80c915ad4703dfe3675b58f39aedcd6b61"
+      "generator_module_sha256": "9983774745872a6d3e2abf3c8a14dc80c915ad4703dfe3675b58f39aedcd6b61",
+      "runtime_artifact_contract": {
+        "generator_libm_sha256": null,
+        "generator_python_executable_sha256": null,
+        "generator_python_shared_library_sha256": null,
+        "generator_runtime_fingerprint_sha256": null,
+        "runtime_identities_committed": false,
+        "unbound_generator_runtime_blocks_execution": true
+      }
     },
     "internal_validity": {
       "config_contract": {
@@ -302,8 +310,8 @@
     ]
   },
   "protocol_role": "fixed_historical_contaminated_development_global_orientation_ab",
-  "protocol_sha256": "65ed853d70683f940fdc3e914f6584f6dd530d1ca9de3a8459ff950e6e315768",
-  "schema_id": "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.4.0",
+  "protocol_sha256": "ebb67559292613b2685786c03aab01970d21ee0df3b9b885eb33f7fa3ec75a75",
+  "schema_id": "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.5.0",
   "shared_execution_contract": {
     "conformer_authority": "same_prepared_ligand_for_both_arms",
     "cpu_count": 1,
@@ -348,7 +356,11 @@
       "preparation_policy_sha256",
       "evaluation_pipeline_sha256",
       "scorer_native_extension_sha256",
-      "scorer_backend_receipt_sha256"
+      "scorer_backend_receipt_sha256",
+      "generator_python_executable_sha256",
+      "generator_python_shared_library_sha256",
+      "generator_libm_sha256",
+      "generator_runtime_fingerprint_sha256"
     ],
     "source_receipts_committed": false
   },
