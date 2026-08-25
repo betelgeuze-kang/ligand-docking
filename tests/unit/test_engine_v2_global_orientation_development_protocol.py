@@ -50,7 +50,7 @@ def _reseal(payload: dict[str, object]) -> dict[str, object]:
 def test_current_global_orientation_development_protocol_verifies() -> None:
     observed = verify_protocol(_protocol())
     assert observed == (
-        "0e8591de97bd8313e748631f4e25222a62c017250b8fe64528eca2d1da0f4f68"
+        "506bd29065fc34385d5089fc650e1bf02853dc5f8eb705480033f997db59cf4e"
     )
 
 
@@ -83,6 +83,52 @@ def test_live_generator_identity_cannot_move_with_resealed_protocol(
         match="live generator identity",
     ):
         verify_protocol(changed)
+
+
+def test_resealed_generator_source_identity_drift_fails_closed() -> None:
+    changed = _protocol()
+    changed["authority_bindings"]["experimental_global_orientation"][
+        "generator_module_sha256"
+    ] = "0" * 64
+    changed = _reseal(changed)
+
+    with pytest.raises(
+        GlobalOrientationDevelopmentProtocolError,
+        match="experimental authority binding",
+    ):
+        verify_protocol(changed)
+
+
+def test_resealed_baseline_lineage_identity_drift_fails_closed() -> None:
+    changed = _protocol()
+    changed["authority_bindings"]["baseline_current_v7"][
+        "candidate_lineage_sha256_by_case"
+    ]["6T88_MWQ"] = "0" * 64
+    changed = _reseal(changed)
+
+    with pytest.raises(
+        GlobalOrientationDevelopmentProtocolError,
+        match="baseline authority binding",
+    ):
+        verify_protocol(changed)
+
+
+def test_resealed_scorer_or_evaluator_authority_drift_fails_closed() -> None:
+    for authority, field in (
+        ("scorer_v1", "implementation_source_sha256"),
+        ("internal_validity", "evaluator_implementation_sha256"),
+        ("posebusters", "implementation_sha256"),
+        ("rmsd", "symmetry_policy_sha256"),
+    ):
+        changed = _protocol()
+        changed["authority_bindings"][authority][field] = "0" * 64
+        changed = _reseal(changed)
+
+        with pytest.raises(
+            GlobalOrientationDevelopmentProtocolError,
+            match="authority binding",
+        ):
+            verify_protocol(changed)
 
 
 def test_protocol_document_tracks_schema_hash_and_execution_boundary() -> None:

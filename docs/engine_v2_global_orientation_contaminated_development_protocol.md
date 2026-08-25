@@ -19,13 +19,13 @@ config/engine_v2_global_orientation_contaminated_development.json
 Protocol schema:
 
 ```text
-betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.1.0
+betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.2.0
 ```
 
 Protocol self-hash:
 
 ```text
-0e8591de97bd8313e748631f4e25222a62c017250b8fe64528eca2d1da0f4f68
+506bd29065fc34385d5089fc650e1bf02853dc5f8eb705480033f997db59cf4e
 ```
 
 ## Scientific question
@@ -94,6 +94,16 @@ The protocol is bound to the reviewed source-paired evidence identities:
 | Phase 2.5 policy | `b4c5530dc4766500dbbc854875cfb39baadad94196c63be6150514879993d211` |
 | Synthetic global-orientation contract | `02fa37a94f3c1719f5e7b5b808c71d053e313b018ef9bfa7d904869c2ab1dad0` |
 
+The protocol also freezes executable authority rather than trusting labels.
+The experimental generator is bound to the exact
+`global_orientation.py` source SHA-256
+`9983774745872a6d3e2abf3c8a14dc80c915ad4703dfe3675b58f39aedcd6b61`.
+The baseline is bound to the eight pre-existing current-V7 candidate-lineage
+receipts; their canonical manifest identity is
+`220db66f0b6dde2b4c2cabfa48dbccc2e6bd7d4192e9f93f092364a249327c99`.
+Changing either implementation or any baseline candidate set invalidates the
+protocol even if a component keeps the same human-readable profile label.
+
 The repository does not commit the private molecular source receipts. Their
 absence is an execution blocker, not a value to be defaulted.
 
@@ -152,6 +162,20 @@ the full check map, evidence schema
 `betelgeuze.engine_v2_source_paired_clearance_posebusters_evidence/2.0.0`,
 and internal-validity check-set identity
 `dcab24089ac9c88daa53f3faeabd04d71fb819cbbe9f86982d964b657cbc5583`.
+
+Scoring and evaluation authority is hash-bound as well. The ScorerV1 binding
+includes its exact Python source, native V7 profile, transitive source manifest,
+build configuration, default config fingerprint, and single-thread backend
+options; their canonical implementation-manifest identity is
+`9b37e00d4616018677c6104a59311b03e829894f443925733618705a167ddccf`.
+PoseBusters is bound to the exact 0.3.1 universal wheel SHA-256
+`a6d1437d0eb3e0fe13ad73b5c4efdc8c0914ceadd904cde55b2a9835bf591a9d`,
+redock configuration, local report runner, and full check set. RMSD evidence
+must carry that same report implementation/config identity plus the pinned
+complete heavy-atom bijection and no-alignment symmetry policies. Internal
+validity and local RMSD source modules are also independently SHA-256 bound.
+Future evidence types must match every expected identity in
+`authority_bindings`; same-schema or same-label substitutions fail closed.
 
 ## Required metrics
 

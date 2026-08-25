@@ -21,12 +21,26 @@ from betelgeuze_engine_v2.docking.global_orientation import (  # noqa: E402
     GlobalOrientationConfig,
     generate_global_orientation_batch,
 )
+from betelgeuze_engine_v2.docking.scorer_v1 import (  # noqa: E402
+    ScorerBackendOptions,
+    ScorerV1Config,
+)
 
 
 SCHEMA_ID = (
-    "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.1.0"
+    "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.2.0"
 )
 FROZEN_GLOBAL_ORIENTATION_GENERATOR_ID = "deterministic_surface_aware_rigid_v2"
+BASELINE_LINEAGE_BY_CASE = {
+    "5SD5_HWI": "0133959300cee30971f55e3b3a7b043f06008d58e0abd38346c6972a4c038b52",
+    "5SIS_JSM": "1e6a11a46b76d9913d167094b4c9479a14ec23e6052b55d501f0e4ad1c330d3a",
+    "6M2B_EZO": "9e8fc7c3c9a1aac38c45eb30ed5e9aeb592c7336770ffb526b52cfb30fb87952",
+    "6T88_MWQ": "09a8bc0009ed0e05b1d09370eb09f82072190bf8bfa6dee8e16654b4691f19dd",
+    "6TW5_9M2": "3a365b3bb51aa2be01bec444ed96a637f4e16ea44dd47e0e25beafb3a7050596",
+    "6TW7_NZB": "92a78638bc4d44373142fb855238414bcb6fc5a7675bcf5c1f2bd09e388ee10c",
+    "6VTA_AKN": "e8fc07b8a3540d2a3e0aacdc81ca339c71ff57194883bf1b9b4eb57181ed5b76",
+    "6WTN_RXT": "4bcc74b03b172a107113981d8f64157682c512934183a617ea2e59fb91f30371",
+}
 CASE_IDS = (
     "5SD5_HWI",
     "5SIS_JSM",
@@ -102,6 +116,16 @@ def _canonical_bytes(value: object) -> bytes:
 
 def _sha256(value: object) -> str:
     return hashlib.sha256(_canonical_bytes(value)).hexdigest()
+
+
+def _file_sha256(relative_path: str) -> str:
+    path = _REPO_ROOT / relative_path
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError as exc:
+        raise GlobalOrientationDevelopmentProtocolError(
+            f"bound authority source is not readable: {relative_path}: {exc}"
+        ) from exc
 
 
 def _mapping(value: object, *, name: str) -> Mapping[str, Any]:
@@ -248,10 +272,249 @@ def _verify_phase25_policy_binding(
     )
 
 
+def _verify_authority_bindings(protocol: Mapping[str, Any]) -> None:
+    bindings = _mapping(protocol.get("authority_bindings"), name="authority bindings")
+    _exact(
+        set(bindings),
+        {
+            "baseline_current_v7",
+            "experimental_global_orientation",
+            "internal_validity",
+            "posebusters",
+            "rmsd",
+            "scorer_v1",
+        },
+        name="authority binding key set",
+    )
+
+    baseline = _mapping(
+        bindings.get("baseline_current_v7"),
+        name="baseline authority binding",
+    )
+    _exact(
+        dict(baseline),
+        {
+            "candidate_lineage_manifest_sha256": (
+                "220db66f0b6dde2b4c2cabfa48dbccc2e6bd7d4192e9f93f092364a249327c99"
+            ),
+            "candidate_lineage_receipt_schema_id": (
+                "betelgeuze.engine_v2_source_paired_clearance_current_v7_lineage/1.0.0"
+            ),
+            "candidate_lineage_sha256_by_case": BASELINE_LINEAGE_BY_CASE,
+            "source_authority_module_path": (
+                "betelgeuze_engine_v2/benchmark/source_paired_clearance_activation.py"
+            ),
+            "source_authority_module_sha256": (
+                "e93774d3e2a93154268ba593bf51032e017dbccf80f5a67dcc432b384fbd8a7f"
+            ),
+        },
+        name="baseline authority binding",
+    )
+    _exact(
+        baseline.get("candidate_lineage_manifest_sha256"),
+        _sha256(BASELINE_LINEAGE_BY_CASE),
+        name="baseline lineage manifest",
+    )
+
+    experimental = _mapping(
+        bindings.get("experimental_global_orientation"),
+        name="experimental authority binding",
+    )
+    _exact(
+        dict(experimental),
+        {
+            "generator_id": FROZEN_GLOBAL_ORIENTATION_GENERATOR_ID,
+            "generator_module_path": (
+                "betelgeuze_engine_v2/docking/global_orientation.py"
+            ),
+            "generator_module_sha256": (
+                "9983774745872a6d3e2abf3c8a14dc80c915ad4703dfe3675b58f39aedcd6b61"
+            ),
+        },
+        name="experimental authority binding",
+    )
+
+    internal = _mapping(
+        bindings.get("internal_validity"),
+        name="internal validity authority binding",
+    )
+    _exact(
+        dict(internal),
+        {
+            "evaluator_implementation_path": (
+                "betelgeuze_engine_v2/docking/validity.py"
+            ),
+            "evaluator_implementation_sha256": (
+                "5b1263ddf83deee0c46142be9e8d973bc9af6710d197f20451ab4d5ee996a619"
+            ),
+            "required_check_set_sha256": (
+                "dcab24089ac9c88daa53f3faeabd04d71fb819cbbe9f86982d964b657cbc5583"
+            ),
+        },
+        name="internal validity authority binding",
+    )
+
+    posebusters = _mapping(
+        bindings.get("posebusters"),
+        name="PoseBusters authority binding",
+    )
+    posebusters_config = {
+        "mode": "redock",
+        "package_filename": "posebusters-0.3.1-py3-none-any.whl",
+        "package_sha256": (
+            "a6d1437d0eb3e0fe13ad73b5c4efdc8c0914ceadd904cde55b2a9835bf591a9d"
+        ),
+        "posebusters_version": "0.3.1",
+        "required_check_set_sha256": (
+            "3b4797c8eb95f6471f3dce0977b95b83fd0ed2630d6079607609fbcb2c1d8b93"
+        ),
+    }
+    expected_posebusters = {
+        **posebusters_config,
+        "config_sha256": (
+            "1e2013837fc3fbb3334ff5b2e94f029c65f1203f2a2a2abbd7f7d01c008c5533"
+        ),
+        "implementation_sha256": posebusters_config["package_sha256"],
+        "runner_source_path": "tools/run_engine_v2_public_redocking_300.py",
+        "runner_source_sha256": (
+            "045267dcdbf27cf18a29dee55a95d3cf123b14e857b10c7cb9971b47a8955169"
+        ),
+    }
+    _exact(
+        dict(posebusters), expected_posebusters, name="PoseBusters authority binding"
+    )
+    _exact(
+        posebusters.get("config_sha256"),
+        _sha256(posebusters_config),
+        name="PoseBusters config identity",
+    )
+
+    rmsd = _mapping(bindings.get("rmsd"), name="RMSD authority binding")
+    atom_mapping_policy = {
+        "complete_bijection_required": True,
+        "mapping_direction": "reference_position_to_candidate_position",
+        "mapping_scope": "all_ligand_heavy_atoms",
+        "mapping_source": "posebusters_redock_report",
+    }
+    symmetry_policy = {
+        "alignment_allowed": False,
+        "metric": "direct_heavy_atom_rmsd_angstrom",
+        "minimum_over_symmetry_permutations": True,
+        "symmetry_mapping_source": "posebusters_redock_report",
+    }
+    _exact(
+        dict(rmsd),
+        {
+            "atom_mapping_policy": atom_mapping_policy,
+            "atom_mapping_sha256": (
+                "0ab5a381924ae5a4ab08ca0dd6a0af58b8637d83927c88f04c8c82b2d7ce328c"
+            ),
+            "config_sha256": expected_posebusters["config_sha256"],
+            "implementation_sha256": expected_posebusters["implementation_sha256"],
+            "local_metric_module_path": ("betelgeuze_engine_v2/docking/metrics.py"),
+            "local_metric_module_sha256": (
+                "e47915e80fdec830243f28105bee4f43b7f7b9d92a4ece73826dc29282305df9"
+            ),
+            "method_id": "posebusters_redock_symmetry_aware_rmsd",
+            "symmetry_policy": symmetry_policy,
+            "symmetry_policy_sha256": (
+                "e29f135b0809fd4fc417899ceaff71b766beb939291a52af06435957e4da833b"
+            ),
+        },
+        name="RMSD authority binding",
+    )
+    _exact(
+        rmsd.get("atom_mapping_sha256"),
+        _sha256(atom_mapping_policy),
+        name="RMSD atom-mapping identity",
+    )
+    _exact(
+        rmsd.get("symmetry_policy_sha256"),
+        _sha256(symmetry_policy),
+        name="RMSD symmetry-policy identity",
+    )
+
+    scorer = _mapping(bindings.get("scorer_v1"), name="ScorerV1 authority binding")
+    implementation_manifest = {
+        "native_build_configuration_sha256": (
+            "6e39e4e07bcb2f9324f242adcf3f48428191b2a91418d34520c6acc1cf046068"
+        ),
+        "native_profile_id": "engine_v2_native_fixed64_cpu_synthetic_v7",
+        "native_profile_sha256": (
+            "50c3e609a23e3bf0641a900f71dc360dcadc1a52c3bde66cdfa74b8c1affcd5d"
+        ),
+        "native_source_manifest_sha256": (
+            "ecb009ac228652c6c6cbdefcdd70828ce3d9aeea5a5e31d0fff0246d4d5f932e"
+        ),
+        "python_module_path": "betelgeuze_engine_v2/docking/scorer_v1.py",
+        "python_module_sha256": (
+            "aa7cd89dba16edb36da033bace57804b9ee851997a400c9d468e61ccefdd0159"
+        ),
+    }
+    _exact(
+        dict(scorer),
+        {
+            "backend": "rust_cpu_required",
+            "backend_options_fingerprint_sha256": (
+                "3e1279f7426288224a1377e9021cc07c3a62115a3ac38534a70871fb8911415f"
+            ),
+            "config_fingerprint_sha256": (
+                "f6592bb681ae1dfad2700291013e04a239c5961687386582ac7c009c5a7de783"
+            ),
+            "implementation_manifest": implementation_manifest,
+            "implementation_source_sha256": (
+                "9b37e00d4616018677c6104a59311b03e829894f443925733618705a167ddccf"
+            ),
+            "terms_schema_id": "betelgeuze.engine_v2_scorer_v1_terms/1.1.0",
+        },
+        name="ScorerV1 authority binding",
+    )
+    _exact(
+        scorer.get("implementation_source_sha256"),
+        _sha256(implementation_manifest),
+        name="ScorerV1 implementation manifest",
+    )
+    _exact(
+        scorer.get("config_fingerprint_sha256"),
+        ScorerV1Config().fingerprint_sha256,
+        name="live ScorerV1 config identity",
+    )
+    _exact(
+        scorer.get("backend_options_fingerprint_sha256"),
+        ScorerBackendOptions(thread_count=1).fingerprint_sha256,
+        name="live ScorerV1 backend options identity",
+    )
+
+    source_bindings = (
+        (baseline, "source_authority_module_path", "source_authority_module_sha256"),
+        (experimental, "generator_module_path", "generator_module_sha256"),
+        (internal, "evaluator_implementation_path", "evaluator_implementation_sha256"),
+        (posebusters, "runner_source_path", "runner_source_sha256"),
+        (rmsd, "local_metric_module_path", "local_metric_module_sha256"),
+        (
+            _mapping(scorer.get("implementation_manifest"), name="scorer manifest"),
+            "python_module_path",
+            "python_module_sha256",
+        ),
+    )
+    for binding, path_key, hash_key in source_bindings:
+        relative_path = binding.get(path_key)
+        if type(relative_path) is not str:
+            raise GlobalOrientationDevelopmentProtocolError(
+                f"authority source path is invalid: {path_key}"
+            )
+        _exact(
+            binding.get(hash_key),
+            _file_sha256(relative_path),
+            name=f"live authority source {relative_path}",
+        )
+
+
 def verify_protocol(protocol: Mapping[str, Any]) -> str:
     expected_top_keys = {
         "arm_contract",
         "authority",
+        "authority_bindings",
         "cohort",
         "decision",
         "execution_gate",
@@ -347,6 +610,7 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
     _exact(dict(sources), expected_sources, name="source bindings")
     _verify_phase25_policy_binding(sources)
     _verify_synthetic_contract_binding(sources)
+    _verify_authority_bindings(protocol)
 
     information = _mapping(
         protocol.get("information_boundary"), name="information_boundary"
