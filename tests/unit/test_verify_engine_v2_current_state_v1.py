@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -14,6 +16,7 @@ SPEC = importlib.util.spec_from_file_location(
 assert SPEC is not None and SPEC.loader is not None
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
+RENDERER = ROOT / "tools/render_engine_v2_current_state_v1.py"
 
 
 def _write_minimal_root(tmp_path: Path) -> Path:
@@ -76,6 +79,24 @@ def test_human_summary_drift_fails_closed(tmp_path: Path) -> None:
 
     with pytest.raises(MODULE.CurrentStateError, match="exact rendered JSON summary"):
         MODULE.verify_root(root)
+
+
+def test_crlf_summary_is_not_exact_byte_identity(tmp_path: Path) -> None:
+    root = _write_minimal_root(tmp_path)
+    path = root / "docs/engine_v2_current_state_v1.md"
+    path.write_bytes(path.read_bytes().replace(b"\n", b"\r\n"))
+
+    with pytest.raises(MODULE.CurrentStateError, match="exact rendered JSON summary"):
+        MODULE.verify_root(root)
+
+    checked = subprocess.run(
+        [sys.executable, str(RENDERER), "--root", str(root), "--check"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert checked.returncode == 1
+    assert "not the exact rendered JSON summary" in checked.stderr
 
 
 def test_unrendered_registry_field_fails_closed(tmp_path: Path) -> None:

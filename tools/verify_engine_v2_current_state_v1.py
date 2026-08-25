@@ -366,12 +366,12 @@ def verify_root(root: Path) -> dict[str, Any]:
 
     current_state_document = root / "docs/engine_v2_current_state_v1.md"
     try:
-        observed_document = current_state_document.read_text(encoding="utf-8")
+        observed_document = current_state_document.read_bytes()
     except OSError as exc:
         raise CurrentStateError(
             f"cannot read generated current-state document: {exc}"
         ) from exc
-    expected_document = render_markdown(registry)
+    expected_document = render_markdown(registry).encode("utf-8")
     if observed_document != expected_document:
         raise CurrentStateError(
             "docs/engine_v2_current_state_v1.md is not the exact rendered JSON summary"

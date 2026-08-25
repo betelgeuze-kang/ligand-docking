@@ -31,14 +31,14 @@ def main() -> int:
     source = root / "config/engine_v2_current_state_v1.json"
     output = root / "docs/engine_v2_current_state_v1.md"
     try:
-        rendered = render_markdown(_load_json(source))
+        rendered = render_markdown(_load_json(source)).encode("utf-8")
     except (CurrentStateError, KeyError, TypeError) as exc:
         print(f"current-state render failed: {exc}", file=sys.stderr)
         return 1
 
     if args.check:
         try:
-            observed = output.read_text(encoding="utf-8")
+            observed = output.read_bytes()
         except OSError as exc:
             print(f"current-state check failed: {exc}", file=sys.stderr)
             return 1
@@ -52,11 +52,11 @@ def main() -> int:
         return 0
 
     if args.write:
-        output.write_text(rendered, encoding="utf-8")
+        output.write_bytes(rendered)
         print(output)
         return 0
 
-    sys.stdout.write(rendered)
+    sys.stdout.buffer.write(rendered)
     return 0
 
 
