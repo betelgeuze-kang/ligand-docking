@@ -21,6 +21,7 @@ PORTABLE_OBSERVATION_SCHEMA_ID = (
 )
 FIXTURE_SUITE_PATH = "tests/fixtures/engine_v2_global_orientation_adversarial_v1.json"
 GEODESIC_DUPLICATE_THRESHOLD_RADIANS = 1.0e-10
+GENERATOR_ZERO_VECTOR_THRESHOLD = 1.0e-12
 EXPECTED_SOURCE_SEED_BINDING_FIELDS = (
     "source_receipt_sha256",
     "ligand_input_sha256",
@@ -421,9 +422,13 @@ def verify_fixture_suite(suite: Mapping[str, Any]) -> str:
         pocket_normal = _vector(
             fixture.get("pocket_normal"), name=f"{fixture_id} pocket_normal"
         )
-        if sum(component * component for component in pocket_normal) == 0.0:
+        normal_squared_norm = sum(component * component for component in pocket_normal)
+        if (
+            not math.isfinite(normal_squared_norm)
+            or math.sqrt(normal_squared_norm) <= GENERATOR_ZERO_VECTOR_THRESHOLD
+        ):
             raise GlobalOrientationSyntheticContractError(
-                f"{fixture_id} pocket_normal must be non-zero"
+                f"{fixture_id} pocket_normal must exceed the generator normalization threshold"
             )
     return expected_hash
 

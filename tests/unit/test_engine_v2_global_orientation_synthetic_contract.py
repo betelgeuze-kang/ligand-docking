@@ -313,6 +313,14 @@ def test_resealed_fixture_authority_escalation_fails_closed() -> None:
             "pocket_normal.*finite number",
         ),
         (
+            lambda fixture: fixture.__setitem__("pocket_normal", [1.0e-20, 0.0, 0.0]),
+            "pocket_normal.*generator normalization threshold",
+        ),
+        (
+            lambda fixture: fixture.__setitem__("pocket_normal", [1.0e308, 0.0, 0.0]),
+            "pocket_normal.*generator normalization threshold",
+        ),
+        (
             lambda fixture: fixture["config"].__setitem__(
                 "translation_shell_radii", [1.0, 1.0]
             ),
