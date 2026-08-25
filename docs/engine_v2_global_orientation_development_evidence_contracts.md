@@ -32,9 +32,10 @@ members of the fixed historical cohort. It retains:
   the immutable public-redocking validity fields;
 - the frozen evaluation-pipeline identity plus the concrete scorer-backend
   receipt, whose receipt and embedded native-extension identities must exactly
-  equal the repeated scorer runtime identities;
-- Python executable, Python shared library, and `libm` payload identities plus
-  their independently rederived combined runtime fingerprint; and
+  equal the repeated scorer runtime identities and whose backend, options, and
+  direct ScorerV1 module identity must match the frozen CPU profile;
+- a generator-source receipt rederived only from the authenticated input,
+  prepared ligand, pocket geometry, and authenticated receptor subset; and
 - the exact receptor atom subset selected by the authenticated validity context,
   whose points are rederived directly from retained receptor coordinates rather
   than accepted as a caller-selected surface subset.
@@ -50,7 +51,8 @@ or runtime regression.
 
 These contracts can represent future private receipts. They do not populate the
 currently absent per-case fingerprints or runtime artifacts in the public
-protocol, and they do not make those absent identities available.
+protocol, and they do not accept caller-declared runtime digests as evidence.
+The protocol's unbound-runtime gate therefore remains closed.
 
 ## Exact arm lineage
 
@@ -69,9 +71,11 @@ or overlong lineages fail closed. A digest alone is not accepted: the baseline
 arm must own the exact `SourcePairedClearanceCurrentV7LineageReceiptV1`, while
 the experimental arm must own the exact `GlobalOrientationBatch`. The
 experimental batch is deterministically regenerated from the retained ligand,
-authenticated receptor subset, pocket, frozen config, source receipt, and
-profile; the supplied batch must equal that regenerated document. Every slot is
-then rederived from the regenerated authority, including transforms,
+authenticated receptor subset, pocket, frozen config, permitted-input source
+receipt, and profile; the supplied batch must equal that regenerated document.
+The seed projection excludes the nested historical/native-pose receipt and
+unbound runtime metadata. Every slot is then rederived from the regenerated
+authority, including transforms,
 coordinates, minimum receptor distance, generated/failed state, proposal and
 coordinate identity, generation receipt, and failure code.
 

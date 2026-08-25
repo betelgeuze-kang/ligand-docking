@@ -25,7 +25,7 @@ betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.6.0
 Protocol self-hash:
 
 ```text
-4b2decc87db8d3c8178a74ac8ad6fd080f2de4a727b2ddab42a9d3d47f6ce6e1
+3824c316e3f1a02195d6619c84e165ca70104b11822360d828d25ffaec0f939a
 ```
 
 ## Scientific question
@@ -171,7 +171,7 @@ round-1/2/3 compatibility installers, as well as the native V7 profile and
 transitive native source manifest, build configuration, default config
 fingerprint, and single-thread backend options. Its canonical
 implementation-manifest identity is
-`7a157941bb876baa1c630010d388c69a890db8d753842c86b0417ece89d6a7e1`.
+`2dd560bbc3a2163c82611f95d2e1bff9ee992fd790f9393d40c22a94abd2cc62`.
 PoseBusters is bound to the exact 0.3.1 universal wheel SHA-256
 `a6d1437d0eb3e0fe13ad73b5c4efdc8c0914ceadd904cde55b2a9835bf591a9d`,
 redock configuration, local report runner, the imported public-redocking
@@ -255,10 +255,12 @@ instantiate all four machine-verifiable contracts:
 1. a case-source receipt containing the ligand, topology, pocket, exact
    binary64 pocket radius, derived validity-config fingerprint, evaluation
    pipeline, a concrete backend receipt whose embedded native-extension identity
-   matches the exact native scorer extension, and
-   generator Python/shared-library/`libm` runtime identities, and preparation
-   identities plus receptor-surface points rederived from the bound receptor
-   geometry by a frozen extraction procedure;
+   matches the exact native scorer extension, a scorer context rederived from
+   the authenticated molecular systems, and an authenticated preparation-policy
+   identity plus receptor-surface points rederived from the bound receptor
+   geometry by a frozen extraction procedure; the generator source identity is
+   derived only from permitted pre-result inputs, while the still-unbound
+   Python/shared-library/`libm` runtime artifacts remain an execution blocker;
 2. baseline candidate lineage bound to all 64 observation slots;
 3. experimental candidate lineage bound to all 64 observation slots; and
 4. failure-complete observations with an explicit unscored state.

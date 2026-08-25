@@ -26,9 +26,11 @@ from .source_paired_clearance_activation import (
 from betelgeuze_engine_v2 import AllAtomSystem
 from betelgeuze_engine_v2.docking import (
     AuthenticatedDockingProblem,
+    ScorerBackend,
     ScorerBackendReceipt,
     ScorerV1Context,
     ScorerV1Terms,
+    derive_scorer_v1_context,
 )
 from betelgeuze_engine_v2.docking.global_orientation import (
     GlobalOrientationBatch,
@@ -65,8 +67,8 @@ GLOBAL_ORIENTATION_DEVELOPMENT_PARTIAL_EVIDENCE_SCHEMA_ID = (
 GLOBAL_ORIENTATION_DEVELOPMENT_ARM_OBSERVATIONS_SCHEMA_ID = (
     "betelgeuze.engine_v2_global_orientation_development_arm_observations/1.0.0"
 )
-GLOBAL_ORIENTATION_DEVELOPMENT_RUNTIME_SCHEMA_ID = (
-    "betelgeuze.engine_v2_global_orientation_generator_runtime/1.0.0"
+GLOBAL_ORIENTATION_DEVELOPMENT_GENERATOR_SOURCE_SCHEMA_ID = (
+    "betelgeuze.engine_v2_global_orientation_generator_source/1.0.0"
 )
 GLOBAL_ORIENTATION_DEVELOPMENT_COORDINATES_SCHEMA_ID = (
     "betelgeuze.engine_v2_global_orientation_source_coordinates/1.0.0"
@@ -74,6 +76,12 @@ GLOBAL_ORIENTATION_DEVELOPMENT_COORDINATES_SCHEMA_ID = (
 POSE_VALIDITY_CONFIG_SCHEMA_ID = "betelgeuze.engine_v2_pose_validity_config/3.0.0"
 PUBLIC_REDOCKING_POSE_VALIDITY_POLICY_ID = (
     "betelgeuze.engine_v2_pose_validity_policy/public-redocking/1.0.0"
+)
+GLOBAL_ORIENTATION_SCORER_BACKEND_OPTIONS_SHA256 = (
+    "3e1279f7426288224a1377e9021cc07c3a62115a3ac38534a70871fb8911415f"
+)
+GLOBAL_ORIENTATION_SCORER_MODULE_SHA256 = (
+    "138484e4e3f5473c582485316ed8482fc770d0df2aa9f8397e4c91be22d81b75"
 )
 GLOBAL_ORIENTATION_DEVELOPMENT_CANDIDATE_DENOMINATOR = 64
 GLOBAL_ORIENTATION_DEVELOPMENT_SCORED_CASE_IDS = (
@@ -312,26 +320,50 @@ def derive_global_orientation_pose_validity_config_fingerprint(
     )
 
 
-def derive_global_orientation_generator_runtime_fingerprint(
+def derive_global_orientation_generator_source_receipt_sha256(
     *,
-    python_executable_sha256: str,
-    python_shared_library_sha256: str,
-    libm_sha256: str,
+    authenticated_input_receipt_sha256: str,
+    ligand_coordinate_sha256: str,
+    ligand_topology_sha256: str,
+    pocket_center: Vector3,
+    pocket_normal: Vector3,
+    pocket_radius_angstrom: float,
+    receptor_surface_points: Coordinates,
 ) -> str:
-    """Bind the three executable payloads used by Python binary64 generation."""
+    """Derive the generator seed authority from permitted pre-result inputs only."""
 
     return _sha256(
         {
-            "schema_id": GLOBAL_ORIENTATION_DEVELOPMENT_RUNTIME_SCHEMA_ID,
-            "python_executable_sha256": _digest(
-                python_executable_sha256,
-                name="python_executable_sha256",
+            "schema_id": GLOBAL_ORIENTATION_DEVELOPMENT_GENERATOR_SOURCE_SCHEMA_ID,
+            "authenticated_input_receipt_sha256": _digest(
+                authenticated_input_receipt_sha256,
+                name="authenticated_input_receipt_sha256",
             ),
-            "python_shared_library_sha256": _digest(
-                python_shared_library_sha256,
-                name="python_shared_library_sha256",
+            "ligand_coordinate_sha256": _digest(
+                ligand_coordinate_sha256,
+                name="ligand_coordinate_sha256",
             ),
-            "libm_sha256": _digest(libm_sha256, name="libm_sha256"),
+            "ligand_topology_sha256": _digest(
+                ligand_topology_sha256,
+                name="ligand_topology_sha256",
+            ),
+            "pocket_center_binary64_hex": [
+                value.hex() for value in _vector(pocket_center, name="pocket_center")
+            ],
+            "pocket_normal_binary64_hex": [
+                value.hex() for value in _vector(pocket_normal, name="pocket_normal")
+            ],
+            "pocket_radius_angstrom_binary64_hex": _finite(
+                pocket_radius_angstrom,
+                name="pocket_radius_angstrom",
+                minimum=0.0,
+            ).hex(),
+            "receptor_surface_input_sha256": _sha256(
+                _coordinates_projection(receptor_surface_points)
+            ),
+            "native_pose_input_consumed": False,
+            "reference_pose_input_consumed": False,
+            "result_input_consumed": False,
         }
     )
 
@@ -350,7 +382,7 @@ def _authority_projection() -> dict[str, bool]:
 
 @dataclass(frozen=True, slots=True)
 class GlobalOrientationDevelopmentCaseSourceReceiptV1:
-    """Prepared-case source identity with rederived surface and runtime bindings."""
+    """Prepared-case source identity with rederived chemistry and surface bindings."""
 
     case_id: str
     historical_case_source: SourcePairedClearanceCaseSourceReceiptV1
@@ -375,10 +407,6 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
     scorer_backend_receipt: ScorerBackendReceipt
     scorer_native_extension_sha256: str
     scorer_backend_receipt_sha256: str
-    generator_python_executable_sha256: str
-    generator_python_shared_library_sha256: str
-    generator_libm_sha256: str
-    generator_runtime_fingerprint_sha256: str
     receptor_surface_atom_indices: tuple[int, ...]
     historical_archive_sha256: str = GLOBAL_ORIENTATION_HISTORICAL_ARCHIVE_SHA256
     historical_member_manifest_sha256: str = (
@@ -495,9 +523,6 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
             "evaluation_pipeline_sha256",
             "scorer_native_extension_sha256",
             "scorer_backend_receipt_sha256",
-            "generator_python_executable_sha256",
-            "generator_python_shared_library_sha256",
-            "generator_libm_sha256",
             "historical_archive_sha256",
             "historical_member_manifest_sha256",
             "historical_bundle_checksum_sha256",
@@ -507,14 +532,33 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
             raise GlobalOrientationDevelopmentContractError(
                 "ligand topology does not match the authenticated molecular system"
             )
+        expected_scorer_context = derive_scorer_v1_context(
+            authenticated,
+            self.receptor_system,
+            self.ligand_system,
+        )
+        if self.scorer_context.to_dict() != expected_scorer_context.to_dict():
+            raise GlobalOrientationDevelopmentContractError(
+                "scorer context does not rederive from the authenticated molecular systems"
+            )
         if (
             self.scorer_backend_receipt_sha256
             != self.scorer_backend_receipt.receipt_sha256
             or self.scorer_native_extension_sha256
             != self.scorer_backend_receipt.extension_sha256
+            or self.scorer_backend_receipt.backend
+            is not ScorerBackend.RUST_CPU_REQUIRED
+            or self.scorer_backend_receipt.options_fingerprint_sha256
+            != GLOBAL_ORIENTATION_SCORER_BACKEND_OPTIONS_SHA256
+            or self.scorer_backend_receipt.implementation_source_sha256
+            != GLOBAL_ORIENTATION_SCORER_MODULE_SHA256
         ):
             raise GlobalOrientationDevelopmentContractError(
-                "scorer backend receipt or native extension identity is cross-wired"
+                "scorer backend profile, receipt, or native extension identity is cross-wired"
+            )
+        if self.preparation_policy_sha256 != authenticated.authority_policy_sha256:
+            raise GlobalOrientationDevelopmentContractError(
+                "preparation policy does not match authenticated docking authority"
             )
         center = _vector(self.pocket_center, name="pocket_center")
         normal = _vector(self.pocket_normal, name="pocket_normal")
@@ -590,21 +634,6 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
             raise GlobalOrientationDevelopmentContractError(
                 "pose-validity config identity does not rederive from pocket radius"
             )
-        expected_runtime = derive_global_orientation_generator_runtime_fingerprint(
-            python_executable_sha256=self.generator_python_executable_sha256,
-            python_shared_library_sha256=(self.generator_python_shared_library_sha256),
-            libm_sha256=self.generator_libm_sha256,
-        )
-        if (
-            _digest(
-                self.generator_runtime_fingerprint_sha256,
-                name="generator_runtime_fingerprint_sha256",
-            )
-            != expected_runtime
-        ):
-            raise GlobalOrientationDevelopmentContractError(
-                "generator runtime identity does not rederive"
-            )
         if (
             self.surface_extraction_procedure_id
             != "authenticated_validity_receptor_subset_projection_v1"
@@ -632,6 +661,18 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
     @property
     def receptor_surface_points(self) -> Coordinates:
         return tuple(self._receptor_surface_points)
+
+    @property
+    def generator_source_receipt_sha256(self) -> str:
+        return derive_global_orientation_generator_source_receipt_sha256(
+            authenticated_input_receipt_sha256=self.authenticated_input_receipt_sha256,
+            ligand_coordinate_sha256=self.ligand_coordinate_sha256,
+            ligand_topology_sha256=self.ligand_topology_sha256,
+            pocket_center=self.pocket_center,
+            pocket_normal=self.pocket_normal,
+            pocket_radius_angstrom=self.pocket_radius_angstrom,
+            receptor_surface_points=self.receptor_surface_points,
+        )
 
     def _projection(self) -> dict[str, object]:
         return {
@@ -679,16 +720,8 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
             "scorer_backend_receipt": self.scorer_backend_receipt.to_dict(),
             "scorer_native_extension_sha256": self.scorer_native_extension_sha256,
             "scorer_backend_receipt_sha256": self.scorer_backend_receipt_sha256,
-            "generator_python_executable_sha256": (
-                self.generator_python_executable_sha256
-            ),
-            "generator_python_shared_library_sha256": (
-                self.generator_python_shared_library_sha256
-            ),
-            "generator_libm_sha256": self.generator_libm_sha256,
-            "generator_runtime_fingerprint_sha256": (
-                self.generator_runtime_fingerprint_sha256
-            ),
+            "generator_source_receipt_sha256": (self.generator_source_receipt_sha256),
+            "generator_runtime_artifacts_bound": False,
             "surface_extraction_procedure_id": self.surface_extraction_procedure_id,
             "receptor_surface_atom_indices": list(self.receptor_surface_atom_indices),
             "receptor_surface_points_binary64_hex": _coordinates_projection(
@@ -1071,7 +1104,9 @@ class GlobalOrientationDevelopmentArmLineageReceiptV1:
                     translation_points_per_shell=7,
                     minimum_receptor_distance=1.1,
                 ),
-                source_receipt_sha256=case_source,
+                source_receipt_sha256=(
+                    self.case_source.generator_source_receipt_sha256
+                ),
                 profile_id="deterministic_surface_aware_rigid_v2",
             )
             expected_surface_sha256 = _sha256(
@@ -1204,6 +1239,10 @@ class GlobalOrientationDevelopmentPartialCandidateEvidenceV1:
         if self.rmsd is not None and self.posebusters is None:
             raise GlobalOrientationDevelopmentContractError(
                 "partial RMSD evidence requires completed validity evidence"
+            )
+        if self.rmsd is not None:
+            raise GlobalOrientationDevelopmentContractError(
+                "completed RMSD and ranking require full candidate evidence"
             )
         if type(self.raw_score_rank) is not int or self.raw_score_rank < 1:
             raise GlobalOrientationDevelopmentContractError(
@@ -1767,7 +1806,7 @@ __all__ = [
     "GlobalOrientationDevelopmentLineageSlotV1",
     "GlobalOrientationDevelopmentObservationSlotV1",
     "GlobalOrientationDevelopmentPreparationFailureReceiptV1",
-    "derive_global_orientation_generator_runtime_fingerprint",
+    "derive_global_orientation_generator_source_receipt_sha256",
     "derive_global_orientation_pose_validity_config_fingerprint",
     "derive_global_orientation_source_coordinates_sha256",
 ]

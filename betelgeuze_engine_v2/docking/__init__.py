@@ -265,6 +265,7 @@ from .scorer_v1 import (  # noqa: E402
     ScorerV1GuidedSearchResult,
     ScorerV1SearchTermRow,
     ScorerV1Terms,
+    derive_scorer_v1_context,
     run_authenticated_scorer_v1_guided_search,
 )
 from .energy_refinement import (  # noqa: E402
@@ -649,6 +650,7 @@ __all__ = [
     "ScorerV1GuidedSearchResult",
     "ScorerV1SearchTermRow",
     "ScorerV1Terms",
+    "derive_scorer_v1_context",
     "TorsionSearchSpace",
     "TorsionContactRefinementError",
     "TorsionSearchSpaceDerivationReceipt",
