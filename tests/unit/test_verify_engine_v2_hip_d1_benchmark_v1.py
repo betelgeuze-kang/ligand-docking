@@ -68,7 +68,7 @@ def _case(case_id: str, index: int, backend_name: str) -> dict:
         "score_order": scored_slots,
         "validity": [True] * 63 + [None],
         "rank": [slot + 1 for slot in scored_slots] + [None],
-        "cluster": [slot % 4 for slot in scored_slots] + [None],
+        "cluster": [(slot % 4) + 1 for slot in scored_slots] + [None],
     }
     digests = {
         "typed_failure_sha256": VERIFIER._canonical_sha256(statuses),
@@ -169,15 +169,26 @@ def _backend(case_ids: list[str], backend_name: str, architecture: str) -> dict:
         [
             {
                 "event_index": event_index,
+                "case_id": case_id,
+                "sample_index": sample_index,
                 "direction": direction,
                 "bytes": byte_count,
                 "runtime_seconds": runtime,
             }
-            for event_index, (direction, byte_count, runtime) in enumerate(
-                [
-                    *[("h2d", value, 0.001) for value in [820, 819, 819, 819, 819]],
-                    *[("d2h", value, 0.0005) for value in [412, 409, 409, 409, 409]],
-                ]
+            for event_index, (
+                case_id,
+                sample_index,
+                direction,
+                byte_count,
+                runtime,
+            ) in enumerate(
+                (case_id, sample_index, direction, byte_count, runtime)
+                for case_id in case_ids
+                for sample_index in range(5)
+                for direction, byte_count, runtime in (
+                    ("h2d", 4096, 0.001),
+                    ("d2h", 2048, 0.0005),
+                )
             )
         ]
         if gpu
@@ -230,10 +241,10 @@ def _backend(case_ids: list[str], backend_name: str, architecture: str) -> dict:
         "context_construction_seconds": [0.02, 0.021, 0.019, 0.022, 0.018],
         "peak_rss_bytes": 1048576,
         "peak_vram_bytes": 2097152 if gpu else 0,
-        "h2d_bytes": 4096 if gpu else 0,
-        "d2h_bytes": 2048 if gpu else 0,
-        "h2d_seconds": [0.001] * 5 if gpu else [],
-        "d2h_seconds": [0.0005] * 5 if gpu else [],
+        "h2d_bytes": 4096 * len(case_ids) * 5 if gpu else 0,
+        "d2h_bytes": 2048 * len(case_ids) * 5 if gpu else 0,
+        "h2d_seconds": [0.001] * (len(case_ids) * 5) if gpu else [],
+        "d2h_seconds": [0.0005] * (len(case_ids) * 5) if gpu else [],
         "runtime_failure_counts": {
             "success": 32,
             **{code: 0 for code in VERIFIER.FAILURE_PROBE_CODES},
@@ -393,7 +404,7 @@ def test_committed_profile_is_valid_unbound_and_non_authoritative() -> None:
         "verified": True,
         "profile_id": "engine_v2_hip_d1_representative_v1",
         "profile_sha256": (
-            "0706610ea5188aadd13134e9e4f6b34f9371941f12bbe2981103d955d81dac2b"
+            "dcda00abd9a56420b846da5ce4a405d1d6ab63c2e7cc59ae966c42f924e46404"
         ),
         "manifest_bound": False,
         "result_verification_authorized": False,
@@ -568,6 +579,23 @@ def test_zero_based_stable_rank_is_rejected(tmp_path: Path) -> None:
     case["discrete_outputs"]["rank"][0] = 0
     case["repeat_discrete_outputs"]["rank"][0] = 0
     with pytest.raises(VERIFIER.HipBenchmarkError, match="rank: scored-slot"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
+@pytest.mark.parametrize(
+    ("validity", "cluster_id", "message"),
+    [(True, 0, "valid candidate cluster"), (False, 2, "invalid candidate cluster")],
+)
+def test_cluster_membership_matches_candidate_validity(
+    tmp_path: Path, validity: bool, cluster_id: int, message: str
+) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    case = result["architectures"][0]["backends"]["hip_fast"]["cases"][0]
+    for prefix in ("", "repeat_"):
+        case[f"{prefix}discrete_outputs"]["validity"][0] = validity
+        case[f"{prefix}discrete_outputs"]["cluster"][0] = cluster_id
+    with pytest.raises(VERIFIER.HipBenchmarkError, match=message):
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 
@@ -847,6 +875,26 @@ def test_transfer_trace_is_bound_to_execution_receipt(tmp_path: Path) -> None:
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 
+def test_transfer_trace_must_cover_every_case_sample_and_direction(
+    tmp_path: Path,
+) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    backend = result["architectures"][0]["backends"]["hip_safe"]
+    removed = backend["transfer_trace"]["rows"].pop(0)
+    for event_index, row in enumerate(backend["transfer_trace"]["rows"]):
+        row["event_index"] = event_index
+    backend["transfer_trace_sha256"] = VERIFIER._canonical_sha256(
+        backend["transfer_trace"]
+    )
+    backend["h2d_bytes"] -= removed["bytes"]
+    backend["h2d_seconds"].pop(0)
+    _reseal_backend_receipt(backend, "gfx1030", result["ordered_case_ids"])
+    _seal_and_authorize_result(result)
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="transfer case/sample"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
 def test_kernel_trace_is_required(tmp_path: Path) -> None:
     profile_path, profile = _bound_profile(tmp_path)
     result = _result(profile)
@@ -1016,7 +1064,7 @@ def test_repeat_outputs_are_bound_to_repeat_execution_receipt(
 def test_transfer_sample_floor_is_enforced(tmp_path: Path) -> None:
     profile_path, profile = _bound_profile(tmp_path)
     result = _result(profile)
-    result["architectures"][0]["backends"]["hip_safe"]["h2d_seconds"].pop()
+    result["architectures"][0]["backends"]["hip_safe"]["h2d_seconds"] = [0.001] * 4
     with pytest.raises(VERIFIER.HipBenchmarkError, match="insufficient samples"):
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 

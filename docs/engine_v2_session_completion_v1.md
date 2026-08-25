@@ -257,6 +257,9 @@ decision, score-order, validity, rank, and cluster structures; the typed-failure
 digest is recomputed from the 64 structured status rows. Score order is also
 recomputed from ascending finite score with slot-index tie-breaking, and
 structured ranks preserve the native one-based `stable_rank` convention. The
+cluster structure also preserves native membership semantics: valid scored
+candidates use contiguous one-based cluster IDs, invalid scored candidates use
+zero, and typed failures remain null. The
 newer GPU must be in the profile's explicit architecture
 allowlist (including alphanumeric targets such as `gfx90a`), and every
 architecture needs a distinct hashed device serial. The verifier derives case
@@ -298,8 +301,10 @@ case/sample pair, the sum of dispatch runtimes must not exceed its enclosing
 wall-time sample.
 GPU H2D/D2H bytes and timing samples are likewise rederived from normalized,
 ordered memory-copy event traces whose hashes are bound into the corresponding
-primary or repeat execution receipt. Profiler identity requires a parsed
-non-whitespace `rocprofiler-sdk` version suffix.
+primary or repeat execution receipt. Each direction must cover every ordered
+case and every timing-sample index exactly once, and the per-sample transfer
+runtime must fit its enclosing wall-time sample. Profiler identity requires a
+parsed non-whitespace `rocprofiler-sdk` version suffix.
 Derived sums and medians use overflow-safe finite arithmetic; any non-finite
 derived metric is rejected rather than serialized as `Infinity`.
 

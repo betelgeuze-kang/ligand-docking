@@ -290,6 +290,7 @@ def _verify_profile_document(profile: dict[str, Any]) -> dict[str, Any]:
             "scientific_vector_order",
             "score_order_policy",
             "rank_policy",
+            "cluster_policy",
             "absolute_tolerance",
             "relative_tolerance",
             "nonfinite_values_allowed",
@@ -314,6 +315,8 @@ def _verify_profile_document(profile: dict[str, Any]) -> dict[str, Any]:
         raise HipBenchmarkError("score order policy changed")
     if parity["rank_policy"] != "one_based_stable_rank":
         raise HipBenchmarkError("rank policy changed")
+    if parity["cluster_policy"] != "valid_one_based_contiguous_invalid_zero":
+        raise HipBenchmarkError("cluster policy changed")
     if (
         parity["typed_failure_scientific_value_encoding"]
         != "json_null_for_complete_slot_triple"
@@ -562,6 +565,7 @@ def _discrete_outputs(
         if type(rows) is not list or len(rows) != denominator:
             raise HipBenchmarkError(f"{name}.{field_name}: candidate denominator")
 
+    valid_cluster_ids: list[int] = []
     for slot_index, status in enumerate(statuses):
         decision = _nonempty_string(
             decisions[slot_index], f"{name}.decision[{slot_index}]"
@@ -582,7 +586,17 @@ def _discrete_outputs(
         if type(validities[slot_index]) is not bool:
             raise HipBenchmarkError(f"{name}: validity at slot {slot_index}")
         _integer(ranks[slot_index], f"{name}.rank[{slot_index}]")
-        _integer(clusters[slot_index], f"{name}.cluster[{slot_index}]")
+        cluster_id = _integer(clusters[slot_index], f"{name}.cluster[{slot_index}]")
+        if validities[slot_index]:
+            if cluster_id < 1:
+                raise HipBenchmarkError(
+                    f"{name}: valid candidate cluster at slot {slot_index}"
+                )
+            valid_cluster_ids.append(cluster_id)
+        elif cluster_id != 0:
+            raise HipBenchmarkError(
+                f"{name}: invalid candidate cluster at slot {slot_index}"
+            )
 
     score_order = outputs["score_order"]
     if (
@@ -598,6 +612,12 @@ def _discrete_outputs(
         raise HipBenchmarkError(f"{name}.rank: scored-slot permutation")
     if any(ranks[slot] != rank for rank, slot in enumerate(score_order, start=1)):
         raise HipBenchmarkError(f"{name}: score order/rank mismatch")
+    if valid_cluster_ids:
+        observed_cluster_ids = sorted(set(valid_cluster_ids))
+        if observed_cluster_ids != list(range(1, observed_cluster_ids[-1] + 1)):
+            raise HipBenchmarkError(f"{name}: noncontiguous cluster IDs")
+        if observed_cluster_ids[-1] > len(valid_cluster_ids):
+            raise HipBenchmarkError(f"{name}: cluster ID exceeds valid candidates")
     return outputs
 
 
@@ -1031,6 +1051,7 @@ def _verify_transfer_trace(
     trace_sha256_value: Any,
     label: str,
     minimum_samples: int,
+    case_wall_times: dict[str, list[float]],
 ) -> tuple[int, int, list[float], list[float], str]:
     trace = _exact_keys(trace_value, {"schema_id", "rows"}, f"{label}.transfer_trace")
     if trace["schema_id"] != NORMALIZED_TRANSFER_TRACE_SCHEMA:
@@ -1040,10 +1061,22 @@ def _verify_transfer_trace(
         raise HipBenchmarkError(f"{label}: complete transfer trace required")
     bytes_by_direction: dict[str, list[int]] = {"h2d": [], "d2h": []}
     timings_by_direction: dict[str, list[float]] = {"h2d": [], "d2h": []}
+    coverage_by_direction: dict[str, set[tuple[str, int]]] = {
+        "h2d": set(),
+        "d2h": set(),
+    }
+    runtime_by_sample: dict[tuple[str, int], list[float]] = {}
     for index, raw_row in enumerate(rows):
         row = _exact_keys(
             raw_row,
-            {"event_index", "direction", "bytes", "runtime_seconds"},
+            {
+                "event_index",
+                "case_id",
+                "sample_index",
+                "direction",
+                "bytes",
+                "runtime_seconds",
+            },
             f"{label}.transfer_trace.rows[{index}]",
         )
         if type(row["event_index"]) is not int or row["event_index"] != index:
@@ -1053,6 +1086,21 @@ def _verify_transfer_trace(
         )
         if direction not in bytes_by_direction:
             raise HipBenchmarkError(f"{label}: transfer direction")
+        case_id = _case_id(
+            row["case_id"], f"{label}.transfer_trace.rows[{index}].case_id"
+        )
+        if case_id not in case_wall_times:
+            raise HipBenchmarkError(f"{label}: transfer trace case identity")
+        sample_index = _integer(
+            row["sample_index"],
+            f"{label}.transfer_trace.rows[{index}].sample_index",
+        )
+        if sample_index >= len(case_wall_times[case_id]):
+            raise HipBenchmarkError(f"{label}: transfer trace sample identity")
+        sample_key = (case_id, sample_index)
+        if sample_key in coverage_by_direction[direction]:
+            raise HipBenchmarkError(f"{label}: duplicate transfer case/sample event")
+        coverage_by_direction[direction].add(sample_key)
         bytes_by_direction[direction].append(
             _integer(
                 row["bytes"],
@@ -1060,18 +1108,38 @@ def _verify_transfer_trace(
                 minimum=1,
             )
         )
-        timings_by_direction[direction].append(
-            _finite(
-                row["runtime_seconds"],
-                f"{label}.transfer_trace.rows[{index}].runtime_seconds",
-                positive=True,
-            )
+        runtime = _finite(
+            row["runtime_seconds"],
+            f"{label}.transfer_trace.rows[{index}].runtime_seconds",
+            positive=True,
         )
+        timings_by_direction[direction].append(runtime)
+        runtime_by_sample.setdefault(sample_key, []).append(runtime)
+    expected_coverage = {
+        (case_id, sample_index)
+        for case_id, wall_times in case_wall_times.items()
+        for sample_index in range(len(wall_times))
+    }
+    if any(
+        coverage_by_direction[direction] != expected_coverage
+        for direction in ("h2d", "d2h")
+    ):
+        raise HipBenchmarkError(f"{label}: incomplete transfer case/sample coverage")
     if any(
         len(timings_by_direction[direction]) < minimum_samples
         for direction in ("h2d", "d2h")
     ):
         raise HipBenchmarkError(f"{label}: insufficient transfer trace samples")
+    for case_id, sample_index in expected_coverage:
+        transfer_runtime = _finite_sum(
+            tuple(runtime_by_sample[(case_id, sample_index)]),
+            f"{label}.{case_id}.sample[{sample_index}].transfer_runtime",
+        )
+        wall_time = case_wall_times[case_id][sample_index]
+        if transfer_runtime > wall_time and not math.isclose(
+            transfer_runtime, wall_time, rel_tol=1e-12, abs_tol=0.0
+        ):
+            raise HipBenchmarkError(f"{label}: transfer runtime exceeds wall time")
     trace_sha256 = _sha256(trace_sha256_value, f"{label}.transfer_trace_sha256")
     if trace_sha256 != _canonical_sha256(trace):
         raise HipBenchmarkError(f"{label}: transfer trace SHA-256 mismatch")
@@ -1293,31 +1361,8 @@ def _verify_backend(
         )
         profiler_trace_sha256 = None
         repeat_profiler_trace_sha256 = None
-        (
-            trace_h2d_bytes,
-            trace_d2h_bytes,
-            trace_h2d_samples,
-            trace_d2h_samples,
-            transfer_trace_sha256,
-        ) = _verify_transfer_trace(
-            backend["transfer_trace"],
-            backend["transfer_trace_sha256"],
-            label,
-            sampling["minimum_transfer_samples"],
-        )
-        if (
-            h2d_bytes != trace_h2d_bytes
-            or d2h_bytes != trace_d2h_bytes
-            or h2d_samples != trace_h2d_samples
-            or d2h_samples != trace_d2h_samples
-        ):
-            raise HipBenchmarkError(f"{label}: transfer summary/trace mismatch")
-        *_, repeat_transfer_trace_sha256 = _verify_transfer_trace(
-            backend["repeat_transfer_trace"],
-            backend["repeat_transfer_trace_sha256"],
-            f"{label}/repeat",
-            sampling["minimum_transfer_samples"],
-        )
+        transfer_trace_sha256 = None
+        repeat_transfer_trace_sha256 = None
 
     cases_raw = backend["cases"]
     if type(cases_raw) is not list or len(cases_raw) != len(ordered_case_ids):
@@ -1342,6 +1387,33 @@ def _verify_backend(
         repeat_case_wall_times = {
             case["case_id"]: case["repeat_wall_time_seconds"] for case in cases
         }
+        (
+            trace_h2d_bytes,
+            trace_d2h_bytes,
+            trace_h2d_samples,
+            trace_d2h_samples,
+            transfer_trace_sha256,
+        ) = _verify_transfer_trace(
+            backend["transfer_trace"],
+            backend["transfer_trace_sha256"],
+            label,
+            sampling["minimum_transfer_samples"],
+            case_wall_times,
+        )
+        if (
+            h2d_bytes != trace_h2d_bytes
+            or d2h_bytes != trace_d2h_bytes
+            or h2d_samples != trace_h2d_samples
+            or d2h_samples != trace_d2h_samples
+        ):
+            raise HipBenchmarkError(f"{label}: transfer summary/trace mismatch")
+        *_, repeat_transfer_trace_sha256 = _verify_transfer_trace(
+            backend["repeat_transfer_trace"],
+            backend["repeat_transfer_trace_sha256"],
+            f"{label}/repeat",
+            sampling["minimum_transfer_samples"],
+            repeat_case_wall_times,
+        )
         kernel_dispatch_total, kernel_total, profiler_trace_sha256 = (
             _verify_profiler_trace(
                 backend["profiler_trace"],
