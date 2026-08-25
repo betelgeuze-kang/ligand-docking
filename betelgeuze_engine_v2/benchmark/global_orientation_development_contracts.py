@@ -22,8 +22,17 @@ from .source_paired_clearance_activation import (
     SourcePairedClearancePoseBustersEvidenceV1,
     SourcePairedClearanceRmsdEvidenceV1,
 )
-from betelgeuze_engine_v2.docking import ScorerV1Terms
+from betelgeuze_engine_v2 import AllAtomSystem
+from betelgeuze_engine_v2.docking import (
+    AuthenticatedDockingProblem,
+    ScorerV1Context,
+    ScorerV1Terms,
+)
 from betelgeuze_engine_v2.docking.global_orientation import GlobalOrientationBatch
+from betelgeuze_engine_v2.molecular import (
+    canonical_system_sha256,
+    canonical_topology_sha256,
+)
 
 
 GLOBAL_ORIENTATION_DEVELOPMENT_CASE_SOURCE_SCHEMA_ID = (
@@ -31,6 +40,9 @@ GLOBAL_ORIENTATION_DEVELOPMENT_CASE_SOURCE_SCHEMA_ID = (
 )
 GLOBAL_ORIENTATION_DEVELOPMENT_PREPARATION_FAILURE_SCHEMA_ID = (
     "betelgeuze.engine_v2_global_orientation_development_preparation_failure/1.0.0"
+)
+GLOBAL_ORIENTATION_DEVELOPMENT_HISTORICAL_FAILURE_AUTHORITY_SCHEMA_ID = (
+    "betelgeuze.engine_v2_global_orientation_historical_failure_authority/1.0.0"
 )
 GLOBAL_ORIENTATION_DEVELOPMENT_LINEAGE_SLOT_SCHEMA_ID = (
     "betelgeuze.engine_v2_global_orientation_development_lineage_slot/1.0.0"
@@ -81,6 +93,15 @@ GLOBAL_ORIENTATION_HISTORICAL_MEMBER_MANIFEST_SHA256 = (
 )
 GLOBAL_ORIENTATION_HISTORICAL_BUNDLE_CHECKSUM_SHA256 = (
     "6ee04e23e01a73bb643bb4d1fde240e06fd2916ea085e3652c11e2428bd432a9"
+)
+GLOBAL_ORIENTATION_HISTORICAL_CASE_IDS_SHA256 = (
+    "cd2c24c9c7d937865f40352375e8a17c6b83b0b0fab8c134218d2c29537493c1"
+)
+GLOBAL_ORIENTATION_PHASE25_POLICY_SHA256 = (
+    "b4c5530dc4766500dbbc854875cfb39baadad94196c63be6150514879993d211"
+)
+GLOBAL_ORIENTATION_6M73_HISTORICAL_ENGINE_RECEIPT_SHA256 = (
+    "0cd0c48c10032757f48a45e7721704fb096c1756f59a86b03fa0513a1c5e8dfb"
 )
 GLOBAL_ORIENTATION_EXPECTED_EVALUATION_PIPELINE_SHA256 = (
     "40530119249b792728a70cb5ba65cc9c60cf834e1a744d6987dae75046459922"
@@ -327,6 +348,10 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
 
     case_id: str
     historical_case_source: SourcePairedClearanceCaseSourceReceiptV1
+    authenticated_problem: AuthenticatedDockingProblem
+    receptor_system: AllAtomSystem
+    ligand_system: AllAtomSystem
+    scorer_context: ScorerV1Context
     source_case_member_receipt_sha256: str
     authenticated_input_receipt_sha256: str
     receptor_coordinates: Coordinates
@@ -381,6 +406,35 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
             )
         historical_receipt_sha256 = self.historical_case_source.receipt_sha256
         if (
+            type(self.authenticated_problem) is not AuthenticatedDockingProblem
+            or type(self.receptor_system) is not AllAtomSystem
+            or type(self.ligand_system) is not AllAtomSystem
+            or type(self.scorer_context) is not ScorerV1Context
+        ):
+            raise TypeError(
+                "case source requires exact authenticated problem, molecular systems, and scorer context"
+            )
+        authenticated = self.authenticated_problem
+        receptor_system_sha256 = canonical_system_sha256(self.receptor_system)
+        ligand_system_sha256 = canonical_system_sha256(self.ligand_system)
+        if (
+            authenticated.input_receipt_sha256
+            != self.historical_case_source.authenticated_input_receipt_sha256
+            or authenticated.problem.fingerprint_sha256
+            != self.historical_case_source.problem_fingerprint_sha256
+            or authenticated.receptor_system_sha256 != receptor_system_sha256
+            or authenticated.ligand_system_sha256 != ligand_system_sha256
+            or self.scorer_context.authority_input_receipt_sha256
+            != authenticated.input_receipt_sha256
+            or self.scorer_context.receptor_system_sha256 != receptor_system_sha256
+            or self.scorer_context.ligand_system_sha256 != ligand_system_sha256
+            or self.scorer_context.receptor_atom_indices
+            != authenticated.receptor_atom_indices
+        ):
+            raise GlobalOrientationDevelopmentContractError(
+                "prepared molecular systems or scorer context contradict the authenticated historical member"
+            )
+        if (
             self.source_case_member_receipt_sha256
             != self.historical_case_source.source_case_member_receipt_sha256
             or self.authenticated_input_receipt_sha256
@@ -394,6 +448,24 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
             name="receptor_coordinates",
         )
         ligand = _coordinates(self.ligand_coordinates, name="ligand_coordinates")
+        authenticated_receptor = _coordinates(
+            self.receptor_system.coordinates[authenticated.receptor_model_index]
+            .detach()
+            .cpu()
+            .tolist(),
+            name="authenticated_receptor_coordinates",
+        )
+        authenticated_ligand = _coordinates(
+            self.ligand_system.coordinates[authenticated.ligand_model_index]
+            .detach()
+            .cpu()
+            .tolist(),
+            name="authenticated_ligand_coordinates",
+        )
+        if receptor != authenticated_receptor or ligand != authenticated_ligand:
+            raise GlobalOrientationDevelopmentContractError(
+                "retained coordinates do not match the authenticated molecular systems"
+            )
         object.__setattr__(self, "receptor_coordinates", receptor)
         object.__setattr__(self, "ligand_coordinates", ligand)
         if derive_global_orientation_source_coordinates_sha256(receptor) != _digest(
@@ -423,6 +495,10 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
             "historical_bundle_checksum_sha256",
         ):
             object.__setattr__(self, name, _digest(getattr(self, name), name=name))
+        if self.ligand_topology_sha256 != canonical_topology_sha256(self.ligand_system):
+            raise GlobalOrientationDevelopmentContractError(
+                "ligand topology does not match the authenticated molecular system"
+            )
         center = _vector(self.pocket_center, name="pocket_center")
         normal = _vector(self.pocket_normal, name="pocket_normal")
         if math.sqrt(sum(component * component for component in normal)) == 0.0:
@@ -474,6 +550,15 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
         ):
             raise GlobalOrientationDevelopmentContractError(
                 "evaluation pipeline does not match the frozen protocol"
+            )
+        if (
+            authenticated.pocket.center.detach().cpu().tolist() != list(center)
+            or authenticated.pocket.radius_angstrom != radius
+            or authenticated.validity_context.config.fingerprint_sha256
+            != self.pose_validity_config_fingerprint_sha256
+        ):
+            raise GlobalOrientationDevelopmentContractError(
+                "pocket or validity configuration contradicts the authenticated problem"
             )
         expected_validity = derive_global_orientation_pose_validity_config_fingerprint(
             radius
@@ -545,6 +630,10 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
             "historical_bundle_checksum_sha256": (
                 self.historical_bundle_checksum_sha256
             ),
+            "authenticated_problem": self.authenticated_problem.to_dict(),
+            "receptor_system_sha256": canonical_system_sha256(self.receptor_system),
+            "ligand_system_sha256": canonical_system_sha256(self.ligand_system),
+            "scorer_context": self.scorer_context.to_dict(),
             "source_case_member_receipt_sha256": (
                 self.source_case_member_receipt_sha256
             ),
@@ -604,13 +693,86 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
 
 
 @dataclass(frozen=True, slots=True)
+class GlobalOrientationDevelopmentHistoricalFailureAuthorityV1:
+    """Pinned historical authority for the sole 6M73 preparation failure."""
+
+    case_id: str = GLOBAL_ORIENTATION_DEVELOPMENT_PREPARATION_FAILURE_CASE_ID
+    historical_archive_sha256: str = GLOBAL_ORIENTATION_HISTORICAL_ARCHIVE_SHA256
+    historical_member_manifest_sha256: str = (
+        GLOBAL_ORIENTATION_HISTORICAL_MEMBER_MANIFEST_SHA256
+    )
+    historical_bundle_checksum_sha256: str = (
+        GLOBAL_ORIENTATION_HISTORICAL_BUNDLE_CHECKSUM_SHA256
+    )
+    historical_case_ids_sha256: str = GLOBAL_ORIENTATION_HISTORICAL_CASE_IDS_SHA256
+    phase25_policy_sha256: str = GLOBAL_ORIENTATION_PHASE25_POLICY_SHA256
+    historical_engine_receipt_sha256: str = (
+        GLOBAL_ORIENTATION_6M73_HISTORICAL_ENGINE_RECEIPT_SHA256
+    )
+    schema_id: str = (
+        GLOBAL_ORIENTATION_DEVELOPMENT_HISTORICAL_FAILURE_AUTHORITY_SCHEMA_ID
+    )
+    _receipt_sha256: str = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        expected = {
+            "case_id": GLOBAL_ORIENTATION_DEVELOPMENT_PREPARATION_FAILURE_CASE_ID,
+            "historical_archive_sha256": GLOBAL_ORIENTATION_HISTORICAL_ARCHIVE_SHA256,
+            "historical_member_manifest_sha256": (
+                GLOBAL_ORIENTATION_HISTORICAL_MEMBER_MANIFEST_SHA256
+            ),
+            "historical_bundle_checksum_sha256": (
+                GLOBAL_ORIENTATION_HISTORICAL_BUNDLE_CHECKSUM_SHA256
+            ),
+            "historical_case_ids_sha256": GLOBAL_ORIENTATION_HISTORICAL_CASE_IDS_SHA256,
+            "phase25_policy_sha256": GLOBAL_ORIENTATION_PHASE25_POLICY_SHA256,
+            "historical_engine_receipt_sha256": (
+                GLOBAL_ORIENTATION_6M73_HISTORICAL_ENGINE_RECEIPT_SHA256
+            ),
+            "schema_id": (
+                GLOBAL_ORIENTATION_DEVELOPMENT_HISTORICAL_FAILURE_AUTHORITY_SCHEMA_ID
+            ),
+        }
+        if any(getattr(self, name) != value for name, value in expected.items()):
+            raise GlobalOrientationDevelopmentContractError(
+                "preparation-failure authority does not match the pinned historical member"
+            )
+        object.__setattr__(self, "_receipt_sha256", _sha256(self._projection()))
+
+    def _projection(self) -> dict[str, object]:
+        return {
+            "schema_id": self.schema_id,
+            "case_id": self.case_id,
+            "historical_archive_sha256": self.historical_archive_sha256,
+            "historical_member_manifest_sha256": (
+                self.historical_member_manifest_sha256
+            ),
+            "historical_bundle_checksum_sha256": (
+                self.historical_bundle_checksum_sha256
+            ),
+            "historical_case_ids_sha256": self.historical_case_ids_sha256,
+            "phase25_policy_sha256": self.phase25_policy_sha256,
+            "historical_engine_receipt_sha256": (self.historical_engine_receipt_sha256),
+        }
+
+    @property
+    def receipt_sha256(self) -> str:
+        observed = _sha256(self._projection())
+        if observed != self._receipt_sha256:
+            raise GlobalOrientationDevelopmentContractError(
+                "historical preparation-failure authority changed"
+            )
+        return observed
+
+    def to_dict(self) -> dict[str, object]:
+        return {**self._projection(), "receipt_sha256": self.receipt_sha256}
+
+
+@dataclass(frozen=True, slots=True)
 class GlobalOrientationDevelopmentPreparationFailureReceiptV1:
     """Retain the ninth cohort member as a typed preparation failure."""
 
-    case_id: str
-    source_case_member_receipt_sha256: str
-    authenticated_input_receipt_sha256: str
-    preparation_policy_sha256: str
+    historical_authority: GlobalOrientationDevelopmentHistoricalFailureAuthorityV1
     failure_code: str
     schema_id: str = GLOBAL_ORIENTATION_DEVELOPMENT_PREPARATION_FAILURE_SCHEMA_ID
     _receipt_sha256: str = field(init=False, repr=False)
@@ -619,18 +781,18 @@ class GlobalOrientationDevelopmentPreparationFailureReceiptV1:
         if (
             self.schema_id
             != GLOBAL_ORIENTATION_DEVELOPMENT_PREPARATION_FAILURE_SCHEMA_ID
-            or self.case_id
-            != GLOBAL_ORIENTATION_DEVELOPMENT_PREPARATION_FAILURE_CASE_ID
         ):
             raise GlobalOrientationDevelopmentContractError(
                 "preparation-failure row is outside the frozen cohort"
             )
-        for name in (
-            "source_case_member_receipt_sha256",
-            "authenticated_input_receipt_sha256",
-            "preparation_policy_sha256",
+        if (
+            type(self.historical_authority)
+            is not GlobalOrientationDevelopmentHistoricalFailureAuthorityV1
         ):
-            object.__setattr__(self, name, _digest(getattr(self, name), name=name))
+            raise TypeError(
+                "preparation failure requires the exact historical failure authority"
+            )
+        self.historical_authority.receipt_sha256
         object.__setattr__(
             self, "failure_code", _text(self.failure_code, name="failure_code")
         )
@@ -639,14 +801,14 @@ class GlobalOrientationDevelopmentPreparationFailureReceiptV1:
     def _projection(self) -> dict[str, object]:
         return {
             "schema_id": self.schema_id,
-            "case_id": self.case_id,
-            "source_case_member_receipt_sha256": (
-                self.source_case_member_receipt_sha256
+            "case_id": self.historical_authority.case_id,
+            "historical_authority": self.historical_authority.to_dict(),
+            "historical_authority_receipt_sha256": (
+                self.historical_authority.receipt_sha256
             ),
-            "authenticated_input_receipt_sha256": (
-                self.authenticated_input_receipt_sha256
+            "preparation_policy_sha256": (
+                self.historical_authority.phase25_policy_sha256
             ),
-            "preparation_policy_sha256": self.preparation_policy_sha256,
             "preparation_status": "failed",
             "failure_code": self.failure_code,
             "candidate_denominator": 0,
@@ -910,6 +1072,8 @@ class GlobalOrientationDevelopmentArmLineageReceiptV1:
             )
             if (
                 arm_authority != authority_receipt.receipt_sha256
+                or authority_receipt.profile_id
+                != "deterministic_surface_aware_rigid_v2"
                 or authority_receipt.source_receipt_sha256 != case_source
                 or authority_receipt.ligand_input_sha256
                 != _sha256(_coordinates_projection(self.case_source.ligand_coordinates))
@@ -1039,6 +1203,33 @@ class GlobalOrientationDevelopmentPartialCandidateEvidenceV1:
         ):
             raise GlobalOrientationDevelopmentContractError(
                 "partial evidence stages are cross-wired"
+            )
+        pose_evidence = tuple(
+            value
+            for value in (self.internal_validity, self.posebusters, self.rmsd)
+            if value is not None
+        )
+        if len({value.pose_artifact_sha256 for value in pose_evidence}) > 1:
+            raise GlobalOrientationDevelopmentContractError(
+                "partial evidence stages do not describe one pose artifact"
+            )
+        if (
+            self.posebusters is not None
+            and self.rmsd is not None
+            and (
+                self.posebusters.report_artifact_sha256
+                != self.rmsd.report_artifact_sha256
+                or self.posebusters.native_pose_artifact_sha256
+                != self.rmsd.native_pose_artifact_sha256
+                or self.posebusters.receptor_artifact_sha256
+                != self.rmsd.receptor_artifact_sha256
+                or self.posebusters.implementation_sha256
+                != self.rmsd.implementation_sha256
+                or self.posebusters.config_sha256 != self.rmsd.config_sha256
+            )
+        ):
+            raise GlobalOrientationDevelopmentContractError(
+                "partial PoseBusters and RMSD evidence do not share one report"
             )
         for value in linked_values:
             value.receipt_sha256
@@ -1377,6 +1568,8 @@ def _validate_observation_authority(
     if scorer is not None and (
         scorer.authority_input_receipt_sha256
         != historical.authenticated_input_receipt_sha256
+        or scorer.context_fingerprint_sha256
+        != case_source.scorer_context.fingerprint_sha256
         or scorer.config_fingerprint_sha256 != GLOBAL_ORIENTATION_SCORER_CONFIG_SHA256
         or scorer.backend_receipt_sha256 != case_source.scorer_backend_receipt_sha256
     ):

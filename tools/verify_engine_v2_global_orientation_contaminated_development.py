@@ -53,6 +53,10 @@ SOURCE_RECEIPT_FIELDS = (
     "historical_archive_sha256",
     "historical_member_manifest_sha256",
     "historical_bundle_checksum_sha256",
+    "authenticated_problem",
+    "receptor_system_sha256",
+    "ligand_system_sha256",
+    "scorer_context",
     "source_case_member_receipt_sha256",
     "authenticated_input_receipt_sha256",
     "receptor_coordinate_sha256",
@@ -369,7 +373,7 @@ def _verify_preimport_source_bindings(protocol: Mapping[str, Any]) -> None:
     )
     _exact(
         scorer_manifest.get("python_transitive_source_manifest_sha256"),
-        "6724302c961b290ad59d4f83bb2d942003dbdad2485b9245fb3d5c3cd27b942c",
+        "5bd541a307b386a19c72d6338cd08ac713425079a424f4cdbc6d79599231e158",
         name="pre-import ScorerV1 source identity",
     )
     _exact(
@@ -653,7 +657,7 @@ def _verify_authority_bindings(
             "aa7cd89dba16edb36da033bace57804b9ee851997a400c9d468e61ccefdd0159"
         ),
         "python_transitive_source_manifest_sha256": (
-            "6724302c961b290ad59d4f83bb2d942003dbdad2485b9245fb3d5c3cd27b942c"
+            "5bd541a307b386a19c72d6338cd08ac713425079a424f4cdbc6d79599231e158"
         ),
         "python_transitive_source_scope": SCORER_PYTHON_SOURCE_SCOPE,
     }
@@ -669,7 +673,7 @@ def _verify_authority_bindings(
             ),
             "implementation_manifest": implementation_manifest,
             "implementation_source_sha256": (
-                "92dc494f02a6c772b89efa949e3af03868390dbfbe391662c846afc1599ed3f9"
+                "9e7ff31b4a361c3d6a221fc9f529f50da843e55497d95a786303b3e6f7bfb203"
             ),
             "native_runtime_artifact_contract": native_runtime_artifact_contract,
             "terms_schema_id": "betelgeuze.engine_v2_scorer_v1_terms/1.1.0",
@@ -862,6 +866,9 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
             "betelgeuze.engine_v2_global_orientation_development_"
             "preparation_failure/1.0.0"
         ),
+        "historical_failure_authority_schema_id": (
+            "betelgeuze.engine_v2_global_orientation_historical_failure_authority/1.0.0"
+        ),
         "lineage_slot_receipt_schema_id": (
             "betelgeuze.engine_v2_global_orientation_development_lineage_slot/1.0.0"
         ),
@@ -881,7 +888,7 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
             "betelgeuze_engine_v2/benchmark/global_orientation_development_contracts.py"
         ),
         "development_evidence_contract_module_sha256": (
-            "73baae9e409fb0e708ac6954639f7be040f093ba06aad5a409452528d422590b"
+            "b54965b0fea659edbe9d917074988b767221f7616f1099fe1435b9def7d0558a"
         ),
         "contract_types_implemented": True,
         "exact_case_source_receipt_required": True,

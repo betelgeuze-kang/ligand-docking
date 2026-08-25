@@ -116,7 +116,7 @@
         "native_source_manifest_sha256": "ecb009ac228652c6c6cbdefcdd70828ce3d9aeea5a5e31d0fff0246d4d5f932e",
         "python_module_path": "betelgeuze_engine_v2/docking/scorer_v1.py",
         "python_module_sha256": "aa7cd89dba16edb36da033bace57804b9ee851997a400c9d468e61ccefdd0159",
-        "python_transitive_source_manifest_sha256": "6724302c961b290ad59d4f83bb2d942003dbdad2485b9245fb3d5c3cd27b942c",
+        "python_transitive_source_manifest_sha256": "5bd541a307b386a19c72d6338cd08ac713425079a424f4cdbc6d79599231e158",
         "python_transitive_source_scope": {
           "files": [],
           "manifest_algorithm": "canonical_sorted_path_sha256_rows/1.0.0",
@@ -125,7 +125,7 @@
           ]
         }
       },
-      "implementation_source_sha256": "92dc494f02a6c772b89efa949e3af03868390dbfbe391662c846afc1599ed3f9",
+      "implementation_source_sha256": "9e7ff31b4a361c3d6a221fc9f529f50da843e55497d95a786303b3e6f7bfb203",
       "native_runtime_artifact_contract": {
         "artifact_identities_committed": false,
         "consumed_qualification_receipt_path": "config/engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt.json",
@@ -310,7 +310,7 @@
     ]
   },
   "protocol_role": "fixed_historical_contaminated_development_global_orientation_ab",
-  "protocol_sha256": "256c7e80ef5a016edcca91d6d378f5896589feb206e3882eed2900001491b0a0",
+  "protocol_sha256": "3ccb8f369e0088e7003fe90968f8835158f0cf3b44202f6671b38cf6cba7fd08",
   "schema_id": "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.6.0",
   "shared_execution_contract": {
     "conformer_authority": "same_prepared_ligand_for_both_arms",
@@ -337,12 +337,13 @@
     "case_source_receipt_schema_id": "betelgeuze.engine_v2_global_orientation_development_case_source/1.0.0",
     "contract_types_implemented": true,
     "development_evidence_contract_module_path": "betelgeuze_engine_v2/benchmark/global_orientation_development_contracts.py",
-    "development_evidence_contract_module_sha256": "73baae9e409fb0e708ac6954639f7be040f093ba06aad5a409452528d422590b",
+    "development_evidence_contract_module_sha256": "b54965b0fea659edbe9d917074988b767221f7616f1099fe1435b9def7d0558a",
     "exact_case_source_receipt_required": true,
     "global_orientation_synthetic_contract_schema_id": "betelgeuze.engine_v2_global_orientation_synthetic_contract/2.0.0",
     "global_orientation_synthetic_contract_sha256": "02fa37a94f3c1719f5e7b5b808c71d053e313b018ef9bfa7d904869c2ab1dad0",
     "historical_archive_sha256": "8bef33eba296989b795a11fd05a7e119124b066d91bec28a8b910d38a083fbcc",
     "historical_bundle_checksum_sha256": "6ee04e23e01a73bb643bb4d1fde240e06fd2916ea085e3652c11e2428bd432a9",
+    "historical_failure_authority_schema_id": "betelgeuze.engine_v2_global_orientation_historical_failure_authority/1.0.0",
     "historical_member_manifest_sha256": "7f7f5273362a9457b022bc9b2b95c75625cdd259b1b1685aeb4b57d41d985e21",
     "lineage_slot_receipt_schema_id": "betelgeuze.engine_v2_global_orientation_development_lineage_slot/1.0.0",
     "observation_slot_receipt_schema_id": "betelgeuze.engine_v2_global_orientation_development_observation_slot/1.0.0",
@@ -359,6 +360,10 @@
       "historical_archive_sha256",
       "historical_member_manifest_sha256",
       "historical_bundle_checksum_sha256",
+      "authenticated_problem",
+      "receptor_system_sha256",
+      "ligand_system_sha256",
+      "scorer_context",
       "source_case_member_receipt_sha256",
       "authenticated_input_receipt_sha256",
       "receptor_coordinate_sha256",

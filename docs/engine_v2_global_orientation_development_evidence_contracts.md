@@ -19,8 +19,12 @@ members of the fixed historical cohort. It retains:
 
 - the exact authenticated historical case-source receipt, including its frozen
   archive member, native pose, receptor artifact, and current-V7 lineage;
+- the exact authenticated docking problem, canonical receptor and ligand
+  molecular systems, and concrete ScorerV1 context;
 - the pinned historical archive, member-manifest, and bundle identities;
 - complete receptor and ligand coordinates with canonical binary64 identities;
+- proof that those coordinates and the ligand topology equal the authenticated
+  molecular systems selected by the historical input receipt;
 - ligand topology, pocket declaration, and preparation-policy identities;
 - the exact pocket center, normalized normal, and binary64 radius, with the
   pocket declaration identity rederived over that geometry and historical case;
@@ -33,10 +37,13 @@ members of the fixed historical cohort. It retains:
 - a canonical ordered receptor atom-index projection whose surface points are
   rederived directly from the retained receptor coordinates.
 
-The ninth cohort member, `6M73_FNR`, remains in the denominator through
-`GlobalOrientationDevelopmentPreparationFailureReceiptV1`. It has a typed
-preparation failure and zero candidate rows; it cannot be silently omitted or
-relabeled as a scored case.
+The ninth cohort member, `6M73_FNR`, remains in the denominator through a pinned
+`GlobalOrientationDevelopmentHistoricalFailureAuthorityV1` owned by
+`GlobalOrientationDevelopmentPreparationFailureReceiptV1`. Its archive,
+manifest, bundle, cohort, Phase 2.5 policy, and historical engine receipt are
+constants rather than caller-supplied digests. It has a typed preparation
+failure and zero candidate rows; it cannot be silently omitted or relabeled as
+a scored case.
 
 These contracts can represent future private receipts. They do not populate the
 currently absent per-case fingerprints or runtime artifacts in the public
@@ -86,7 +93,9 @@ from the denominator or becoming invented finite values.
 `GlobalOrientationDevelopmentArmObservationsV1` requires a one-to-one binding
 between all 64 lineage slots and all 64 observations. It checks candidate scorer,
 validity, PoseBusters, RMSD, native-pose, receptor, and authenticated-input fields
-against the case and frozen evaluator bindings. Raw score ranks are independently
+against the case and frozen evaluator bindings. Scorer terms must also match the
+concrete prepared-case ScorerV1 context. Partial evaluator stages must describe
+one pose artifact, and PoseBusters/RMSD stages must share one report. Raw score ranks are independently
 rederived from `(total_score, proposal_index)`. It reports generated, scored, and
 unscored counts without evaluating the frozen Go/No-Go criteria.
 

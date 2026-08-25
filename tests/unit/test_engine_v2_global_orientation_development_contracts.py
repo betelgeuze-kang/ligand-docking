@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+# Torch is optional for collection; engine imports intentionally follow this guard.
+# ruff: noqa: E402
+
 from dataclasses import replace
 import hashlib
 import json
@@ -7,12 +10,25 @@ from pathlib import Path
 
 import pytest
 
+torch = pytest.importorskip("torch")
+
+from betelgeuze_engine_v2 import (  # noqa: E402
+    AllAtomSystem,
+    Atom,
+    Bond,
+    Chain,
+    Residue,
+    StructureProvenance,
+    canonical_system_sha256,
+    canonical_topology_sha256,
+)
 from betelgeuze_engine_v2.benchmark.global_orientation_development_contracts import (
     GLOBAL_ORIENTATION_DEVELOPMENT_CANDIDATE_DENOMINATOR,
     GlobalOrientationDevelopmentArmLineageReceiptV1,
     GlobalOrientationDevelopmentArmObservationsV1,
     GlobalOrientationDevelopmentCaseSourceReceiptV1,
     GlobalOrientationDevelopmentContractError,
+    GlobalOrientationDevelopmentHistoricalFailureAuthorityV1,
     GlobalOrientationDevelopmentLineageSlotV1,
     GlobalOrientationDevelopmentObservationSlotV1,
     GlobalOrientationDevelopmentPartialCandidateEvidenceV1,
@@ -32,9 +48,13 @@ from betelgeuze_engine_v2.benchmark.source_paired_clearance_activation import (
     SourcePairedClearanceRmsdEvidenceV1,
 )
 from betelgeuze_engine_v2.docking import (
+    DockingScope,
+    PocketDefinition,
     PoseValidityConfig,
     PoseValidityResult,
+    ScorerV1Context,
     ScorerV1Terms,
+    build_authenticated_known_pocket_docking_problem,
 )
 from betelgeuze_engine_v2.docking.global_orientation import (
     GlobalOrientationConfig,
@@ -55,13 +75,83 @@ def _digest(label: str) -> str:
     return hashlib.sha256(label.encode("ascii")).hexdigest()
 
 
+def _system(*, receptor: bool) -> AllAtomSystem:
+    if receptor:
+        elements = ("C", "C", "C")
+        coordinates = (((1.0, 4.0, 0.0), (4.0, 4.0, 0.0), (7.0, 0.0, 0.0)),)
+        bonds = ()
+        name = "REC"
+    else:
+        elements = ("C", "N", "C", "O")
+        coordinates = (
+            ((0.0, 0.0, 0.0), (1.4, 0.0, 0.0), (2.8, 0.3, 0.0), (4.1, 1.0, 0.2)),
+        )
+        bonds = (
+            Bond(index=0, atom_i=0, atom_j=1, order=1.0),
+            Bond(index=1, atom_i=1, atom_j=2, order=1.0),
+            Bond(index=2, atom_i=2, atom_j=3, order=1.0),
+        )
+        name = "LIG"
+    atoms = tuple(
+        Atom(
+            index=index,
+            name=f"A{index}",
+            element=element,
+            atomic_number={"C": 6, "N": 7, "O": 8}[element],
+            residue_index=0,
+        )
+        for index, element in enumerate(elements)
+    )
+    return AllAtomSystem(
+        system_id=f"orientation-{name.lower()}",
+        atoms=atoms,
+        bonds=bonds,
+        residues=(
+            Residue(
+                index=0,
+                name=name,
+                chain_index=0,
+                sequence_number=1,
+                atom_indices=tuple(range(len(atoms))),
+            ),
+        ),
+        chains=(Chain(index=0, chain_id="A", residue_indices=(0,)),),
+        coordinates=torch.tensor(coordinates, dtype=torch.float64),
+        provenance=StructureProvenance(
+            source_format="unit",
+            source_id=f"orientation-{name.lower()}-source",
+            source_sha256=_digest(f"{name}-source"),
+            parser_name="orientation-contract-fixture",
+            parser_version="1.0.0",
+        ),
+    )
+
+
 def _source() -> GlobalOrientationDevelopmentCaseSourceReceiptV1:
-    receptor = ((0.0, 0.0, 0.0), (1.0, 2.0, 3.0), (4.0, 5.0, 6.0))
-    ligand = ((0.0, 0.0, 0.0), (0.5, 0.0, 0.0))
+    receptor_system = _system(receptor=True)
+    ligand_system = _system(receptor=False)
+    center = (2.5, 0.5, 0.0)
+    normal = (0.0, 0.0, 1.0)
+    radius = 10.0
+    authenticated = build_authenticated_known_pocket_docking_problem(
+        receptor_system,
+        ligand_system,
+        PocketDefinition(
+            scope=DockingScope.KNOWN_POCKET,
+            method_id="manual-reviewed-sphere",
+            method_version="1.0.0",
+            coordinate_frame_id="prepared-receptor-frame-v1",
+            center=torch.tensor(center, dtype=torch.float64),
+            radius_angstrom=radius,
+            source_artifact_sha256=_digest("pocket-source"),
+            implementation_source_sha256=_digest("pocket-implementation"),
+        ),
+    )
+    receptor = tuple(tuple(row) for row in receptor_system.coordinates[0].tolist())
+    ligand = tuple(tuple(row) for row in ligand_system.coordinates[0].tolist())
     python = _digest("python")
     shared = _digest("libpython")
     libm = _digest("libm")
-    radius = 10.0
     historical = SourcePairedClearanceCaseSourceReceiptV1(
         case_id="5SD5_HWI",
         source_case_member_path=(
@@ -76,7 +166,7 @@ def _source() -> GlobalOrientationDevelopmentCaseSourceReceiptV1:
         authenticated_input_receipt_sha256=(
             "129286d9f9bf96ba482b6744197b330a6dd489033e3533f9f9542b2c3e39f730"
         ),
-        problem_fingerprint_sha256=_digest("problem"),
+        problem_fingerprint_sha256=authenticated.problem.fingerprint_sha256,
         source_proposal_receipt_sha256=(
             "f2a100e35c8951f5ce954a963091ee04cf6d86eb15d6c47e8cc1e8a2d6ab67ba"
         ),
@@ -96,11 +186,56 @@ def _source() -> GlobalOrientationDevelopmentCaseSourceReceiptV1:
             "0133959300cee30971f55e3b3a7b043f06008d58e0abd38346c6972a4c038b52"
         ),
     )
-    center = (1.0, 1.0, 1.0)
-    normal = (0.0, 0.0, 1.0)
+    object.__setattr__(
+        historical,
+        "authenticated_input_receipt_sha256",
+        authenticated.input_receipt_sha256,
+    )
+    object.__setattr__(
+        historical,
+        "_receipt_sha256",
+        hashlib.sha256(
+            json.dumps(
+                historical._projection(),
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=True,
+                allow_nan=False,
+            ).encode("ascii")
+        ).hexdigest(),
+    )
+    scorer_context = ScorerV1Context(
+        authority_input_receipt_sha256=authenticated.input_receipt_sha256,
+        receptor_system_sha256=canonical_system_sha256(receptor_system),
+        ligand_system_sha256=canonical_system_sha256(ligand_system),
+        receptor_atom_indices=authenticated.receptor_atom_indices,
+        receptor_atom_types=tuple(
+            "C:aliphatic:neutral" for _ in authenticated.receptor_atom_indices
+        ),
+        ligand_atom_types=(
+            "C:aliphatic:neutral",
+            "N:aliphatic:neutral",
+            "C:aliphatic:neutral",
+            "O:aliphatic:neutral",
+        ),
+        receptor_partial_charges_e=tuple(
+            0.0 for _ in authenticated.receptor_atom_indices
+        ),
+        ligand_partial_charges_e=(0.0, 0.0, 0.0, 0.0),
+        receptor_donors=(),
+        ligand_donors=(),
+        receptor_acceptors=(),
+        ligand_acceptors=(3,),
+        receptor_hydrophobic=tuple(range(len(authenticated.receptor_atom_indices))),
+        ligand_hydrophobic=(0, 2),
+    )
     return GlobalOrientationDevelopmentCaseSourceReceiptV1(
         case_id="5SD5_HWI",
         historical_case_source=historical,
+        authenticated_problem=authenticated,
+        receptor_system=receptor_system,
+        ligand_system=ligand_system,
+        scorer_context=scorer_context,
         source_case_member_receipt_sha256=(
             historical.source_case_member_receipt_sha256
         ),
@@ -115,7 +250,7 @@ def _source() -> GlobalOrientationDevelopmentCaseSourceReceiptV1:
         ligand_coordinate_sha256=(
             derive_global_orientation_source_coordinates_sha256(ligand)
         ),
-        ligand_topology_sha256=_digest("ligand-topology"),
+        ligand_topology_sha256=canonical_topology_sha256(ligand_system),
         pocket_declaration_sha256=derive_global_orientation_pocket_declaration_sha256(
             case_id=historical.case_id,
             historical_case_source_receipt_sha256=historical.receipt_sha256,
@@ -153,6 +288,7 @@ def _lineage(
     source: GlobalOrientationDevelopmentCaseSourceReceiptV1,
     *,
     arm_id: str = "experimental_global_orientation_v1",
+    profile_id: str = "deterministic_surface_aware_rigid_v2",
 ) -> GlobalOrientationDevelopmentArmLineageReceiptV1:
     if arm_id != "experimental_global_orientation_v1":
         raise AssertionError("test helper currently constructs the experimental arm")
@@ -168,6 +304,7 @@ def _lineage(
             minimum_receptor_distance=1.1,
         ),
         source_receipt_sha256=source.receipt_sha256,
+        profile_id=profile_id,
     )
     slots = tuple(
         GlobalOrientationDevelopmentLineageSlotV1(
@@ -233,7 +370,7 @@ def _candidate_evidence(
         authority_input_receipt_sha256=(
             source.historical_case_source.authenticated_input_receipt_sha256
         ),
-        context_fingerprint_sha256=_digest("scorer-context"),
+        context_fingerprint_sha256=source.scorer_context.fingerprint_sha256,
         config_fingerprint_sha256=GLOBAL_ORIENTATION_SCORER_CONFIG_SHA256,
         backend_receipt_sha256=source.scorer_backend_receipt_sha256,
         typed_vdw=score,
@@ -384,16 +521,23 @@ def test_case_source_rejects_crosswired_radius_runtime_and_surface() -> None:
 
 def test_preparation_failure_retains_ninth_case_without_candidate_rows() -> None:
     receipt = GlobalOrientationDevelopmentPreparationFailureReceiptV1(
-        case_id="6M73_FNR",
-        source_case_member_receipt_sha256=_digest("failure-archive"),
-        authenticated_input_receipt_sha256=_digest("failure-input"),
-        preparation_policy_sha256=_digest("failure-policy"),
+        historical_authority=(
+            GlobalOrientationDevelopmentHistoricalFailureAuthorityV1()
+        ),
         failure_code="ligand_preparation_failed",
     )
 
     assert receipt.to_dict()["candidate_denominator"] == 0
     assert receipt.to_dict()["preparation_status"] == "failed"
     assert receipt.to_dict()["stage0_admission_authority"] is False
+    with pytest.raises(
+        GlobalOrientationDevelopmentContractError,
+        match="pinned historical member",
+    ):
+        replace(
+            receipt.historical_authority,
+            historical_engine_receipt_sha256=_digest("fabricated-failure"),
+        )
 
 
 def test_arm_lineage_and_observations_bind_exact_failure_complete_64_slots() -> None:
@@ -561,6 +705,11 @@ def test_arm_authority_and_slots_must_rederive_from_generator_batch() -> None:
                 *lineage.slots[generated_index + 1 :],
             ),
         )
+    with pytest.raises(
+        GlobalOrientationDevelopmentContractError,
+        match="concrete generator batch",
+    ):
+        _lineage(_source(), profile_id="unfrozen-profile")
 
 
 def test_candidate_authority_and_score_ranks_are_rederived_at_arm_level() -> None:
@@ -593,6 +742,27 @@ def test_candidate_authority_and_score_ranks_are_rederived_at_arm_level() -> Non
             observations=(
                 *observations[:target],
                 wrong_authority,
+                *observations[target + 1 :],
+            ),
+        )
+
+    wrong_context_terms = replace(
+        evidence.scorer_terms,
+        context_fingerprint_sha256=_digest("crosswired-context"),
+    )
+    wrong_context = replace(
+        observations[target],
+        candidate_evidence=replace(evidence, scorer_terms=wrong_context_terms),
+    )
+    with pytest.raises(
+        GlobalOrientationDevelopmentContractError,
+        match="case/scorer authority",
+    ):
+        GlobalOrientationDevelopmentArmObservationsV1(
+            lineage=lineage,
+            observations=(
+                *observations[:target],
+                wrong_context,
                 *observations[target + 1 :],
             ),
         )
@@ -660,3 +830,77 @@ def test_partial_evidence_preserves_score_when_later_evaluation_fails() -> None:
     assert row["score_binary64_hex"] == complete.scorer_terms.total_score.hex()
     assert row["partial_evidence"]["scorer_terms"]
     assert row["candidate_evidence"] is None
+
+
+def test_partial_evidence_requires_one_pose_and_report() -> None:
+    source = _source()
+    lineage = _lineage(source)
+    slot = next(
+        value for value in lineage.slots if value.generation_status == "generated"
+    )
+    complete = _candidate_evidence(slot, source)
+
+    with pytest.raises(
+        GlobalOrientationDevelopmentContractError,
+        match="one pose artifact",
+    ):
+        GlobalOrientationDevelopmentPartialCandidateEvidenceV1(
+            candidate_id=complete.candidate_id,
+            proposal_index=complete.proposal_index,
+            proposal_fingerprint_sha256=(
+                complete.candidate_proposal_fingerprint_sha256
+            ),
+            coordinate_sha256=complete.coordinate_sha256,
+            scorer_terms=complete.scorer_terms,
+            internal_validity=complete.internal_validity,
+            posebusters=complete.posebusters,
+            rmsd=replace(
+                complete.rmsd,
+                pose_artifact_sha256=_digest("other-pose"),
+            ),
+            raw_score_rank=complete.raw_score_rank,
+        )
+    with pytest.raises(
+        GlobalOrientationDevelopmentContractError,
+        match="one report",
+    ):
+        GlobalOrientationDevelopmentPartialCandidateEvidenceV1(
+            candidate_id=complete.candidate_id,
+            proposal_index=complete.proposal_index,
+            proposal_fingerprint_sha256=(
+                complete.candidate_proposal_fingerprint_sha256
+            ),
+            coordinate_sha256=complete.coordinate_sha256,
+            scorer_terms=complete.scorer_terms,
+            internal_validity=complete.internal_validity,
+            posebusters=complete.posebusters,
+            rmsd=replace(
+                complete.rmsd,
+                report_artifact_sha256=_digest("other-report"),
+            ),
+            raw_score_rank=complete.raw_score_rank,
+        )
+
+
+def test_case_source_coordinates_and_topology_match_authenticated_systems() -> None:
+    source = _source()
+    changed_receptor = (
+        (99.0, 99.0, 99.0),
+        *source.receptor_coordinates[1:],
+    )
+    with pytest.raises(
+        GlobalOrientationDevelopmentContractError,
+        match="retained coordinates",
+    ):
+        replace(
+            source,
+            receptor_coordinates=changed_receptor,
+            receptor_coordinate_sha256=(
+                derive_global_orientation_source_coordinates_sha256(changed_receptor)
+            ),
+        )
+    with pytest.raises(
+        GlobalOrientationDevelopmentContractError,
+        match="ligand topology",
+    ):
+        replace(source, ligand_topology_sha256=_digest("other-topology"))
