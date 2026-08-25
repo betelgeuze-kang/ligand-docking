@@ -389,6 +389,7 @@ jobs:
             tests/unit/test_engine_v2_global_orientation_evidence.py
             tests/unit/test_engine_v2_global_orientation_synthetic_contract.py
             tests/unit/test_engine_v2_global_orientation_development_contracts.py
+            tests/unit/test_engine_v2_global_orientation_development_metrics.py
             tests/unit/test_engine_v2_global_orientation_development_protocol.py
             tests/unit/test_engine_v2_fixed_mixed64_allocation.py
             tests/unit/test_engine_v2_mixed64_proposal_geometry_v3.py
@@ -916,6 +917,7 @@ jobs:
             tests/unit/test_engine_v2_global_orientation_evidence.py \
             tests/unit/test_engine_v2_global_orientation_synthetic_contract.py \
             tests/unit/test_engine_v2_global_orientation_development_contracts.py \
+            tests/unit/test_engine_v2_global_orientation_development_metrics.py \
             tests/unit/test_engine_v2_global_orientation_development_protocol.py \
             tests/unit/test_engine_v2_fixed_mixed64_allocation.py \
             tests/unit/test_engine_v2_mixed64_proposal_geometry_v3.py \
@@ -1029,6 +1031,7 @@ jobs:
           import betelgeuze_engine_v2.benchmark.oracle_selection_evidence
           import betelgeuze_engine_v2.benchmark.oracle_selection_metrics
           import betelgeuze_engine_v2.benchmark.global_orientation_development_contracts
+          import betelgeuze_engine_v2.benchmark.global_orientation_development_metrics
           import betelgeuze_engine_v2.docking.global_orientation
           import betelgeuze_engine_v2.docking.global_orientation_evidence
           import betelgeuze_engine_v2.docking.geometric_admission_v2

@@ -50,7 +50,7 @@ def _reseal(payload: dict[str, object]) -> dict[str, object]:
 def test_current_global_orientation_development_protocol_verifies() -> None:
     observed = verify_protocol(_protocol())
     assert observed == (
-        "3f35dc70650ed036f9ec6e1c7a6ec6f2b3610b276142b545ddc8a90cfdab9fb7"
+        "6538186dc2573249d966b6f9f61118fd28f6e89d834b2eade25cd6808a8b8423"
     )
 
 
@@ -162,6 +162,36 @@ def test_resealed_transitive_evaluator_source_drift_fails_closed() -> None:
             match="source identity|authority binding",
         ):
             verify_protocol(changed)
+
+
+def test_resealed_or_live_arm_metrics_source_drift_fails_closed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    changed = _protocol()
+    changed["metrics"]["arm_metrics_module_sha256"] = "0" * 64
+    changed = _reseal(changed)
+
+    with pytest.raises(
+        GlobalOrientationDevelopmentProtocolError,
+        match="arm metrics module identity",
+    ):
+        verify_protocol(changed)
+
+    real_file_sha256 = verifier._file_sha256
+
+    def changed_file_sha256(path: str) -> str:
+        if path == (
+            "betelgeuze_engine_v2/benchmark/global_orientation_development_metrics.py"
+        ):
+            return "0" * 64
+        return real_file_sha256(path)
+
+    monkeypatch.setattr(verifier, "_file_sha256", changed_file_sha256)
+    with pytest.raises(
+        GlobalOrientationDevelopmentProtocolError,
+        match="pre-import ScorerV1 source manifest|live arm metrics source",
+    ):
+        verify_protocol(_protocol())
 
 
 @pytest.mark.parametrize(
@@ -285,6 +315,7 @@ def test_resealed_generator_runtime_binding_cannot_be_bypassed() -> None:
     (
         ("decision", "decision_evaluator_implemented", 0),
         ("execution_gate", "operator_reservation_required", 1),
+        ("metrics", "arm_metrics_evaluator_implemented", 1),
     ),
 )
 def test_resealed_boolean_integer_substitution_fails_closed(
