@@ -10,6 +10,7 @@ on:
       - "docs/engine_v2_stage0_status.md"
       - "docs/engine_v2_native_fixed64_cpu_qualification_v7_result.md"
       - "tools/verify_engine_v2_current_state_v1.py"
+      - "tools/render_engine_v2_current_state_v1.py"
       - "tests/unit/test_verify_engine_v2_current_state_v1.py"
       - ".github/workflows/ci-engine-v2-current-state.yml"
   push:
@@ -23,6 +24,7 @@ on:
       - "docs/engine_v2_stage0_status.md"
       - "docs/engine_v2_native_fixed64_cpu_qualification_v7_result.md"
       - "tools/verify_engine_v2_current_state_v1.py"
+      - "tools/render_engine_v2_current_state_v1.py"
       - "tests/unit/test_verify_engine_v2_current_state_v1.py"
       - ".github/workflows/ci-engine-v2-current-state.yml"
   workflow_dispatch:
@@ -50,6 +52,7 @@ jobs:
             docs/engine_v2_stage0_status.md
             docs/engine_v2_native_fixed64_cpu_qualification_v7_result.md
             tools/verify_engine_v2_current_state_v1.py
+            tools/render_engine_v2_current_state_v1.py
             tests/unit/test_verify_engine_v2_current_state_v1.py
           sparse-checkout-cone-mode: false
           show-progress: false
@@ -65,8 +68,14 @@ jobs:
       - name: Verify current state
         run: python tools/verify_engine_v2_current_state_v1.py --pretty
 
-      - name: Compile verifier
-        run: python -m py_compile tools/verify_engine_v2_current_state_v1.py
+      - name: Check generated current-state summary
+        run: python tools/render_engine_v2_current_state_v1.py --check
+
+      - name: Compile current-state tools
+        run: >-
+          python -m py_compile
+          tools/verify_engine_v2_current_state_v1.py
+          tools/render_engine_v2_current_state_v1.py
 
       - name: Run current-state tests
         run: python -m pytest -q tests/unit/test_verify_engine_v2_current_state_v1.py

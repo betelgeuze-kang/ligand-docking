@@ -27,7 +27,9 @@ def _write_minimal_root(tmp_path: Path) -> Path:
     (root / "config/engine_v2_current_state_v1.json").write_text(
         json.dumps(registry, sort_keys=True), encoding="utf-8"
     )
-    (root / "docs/engine_v2_current_state_v1.md").write_text("state", encoding="utf-8")
+    (root / "docs/engine_v2_current_state_v1.md").write_text(
+        MODULE.render_markdown(registry), encoding="utf-8"
+    )
     (root / "docs/engine_v2_status.md").write_text(
         "ABI 1.21\nexactly-once-consumed native CPU qualification-v7\n",
         encoding="utf-8",
@@ -52,6 +54,39 @@ def test_repository_current_state_verifies() -> None:
     assert result["verified"] is True
     assert result["claim_authority_granted"] is False
     assert result["implementation_stage"] == MODULE.IMPLEMENTATION_STAGE
+
+
+def test_repository_document_is_the_exact_deterministic_render() -> None:
+    registry = json.loads(
+        (ROOT / "config/engine_v2_current_state_v1.json").read_text(encoding="utf-8")
+    )
+    document = (ROOT / "docs/engine_v2_current_state_v1.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert document == MODULE.render_markdown(registry)
+
+
+def test_human_summary_drift_fails_closed(tmp_path: Path) -> None:
+    root = _write_minimal_root(tmp_path)
+    path = root / "docs/engine_v2_current_state_v1.md"
+    path.write_text(
+        path.read_text(encoding="utf-8") + "manual edit\n", encoding="utf-8"
+    )
+
+    with pytest.raises(MODULE.CurrentStateError, match="exact rendered JSON summary"):
+        MODULE.verify_root(root)
+
+
+def test_unrendered_registry_field_fails_closed(tmp_path: Path) -> None:
+    root = _write_minimal_root(tmp_path)
+    path = root / "config/engine_v2_current_state_v1.json"
+    registry = json.loads(path.read_text(encoding="utf-8"))
+    registry["claim_policy"]["unreviewed_new_claim"] = False
+    path.write_text(json.dumps(registry), encoding="utf-8")
+
+    with pytest.raises(MODULE.CurrentStateError, match="claim_policy keys changed"):
+        MODULE.verify_root(root)
 
 
 def test_fresh_execution_escalation_fails_closed(tmp_path: Path) -> None:
