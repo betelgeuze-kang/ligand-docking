@@ -36,6 +36,7 @@ from betelgeuze_engine_v2.benchmark.global_orientation_development_contracts imp
     derive_global_orientation_pose_validity_config_fingerprint,
     derive_global_orientation_pocket_declaration_sha256,
     derive_global_orientation_source_coordinates_sha256,
+    materialize_global_orientation_docking_proposals,
 )
 from betelgeuze_engine_v2.benchmark.source_paired_clearance_activation import (
     INTERNAL_VALIDITY_REQUIRED_CHECK_NAMES,
@@ -299,21 +300,26 @@ def _lineage_from_batch(
     batch,
 ) -> GlobalOrientationDevelopmentArmLineageReceiptV1:
     arm_id = "experimental_global_orientation_v1"
+    proposals = materialize_global_orientation_docking_proposals(source, batch)
     slots = tuple(
         GlobalOrientationDevelopmentLineageSlotV1(
             case_source_receipt_sha256=source.receipt_sha256,
             arm_id=arm_id,
             proposal_index=index,
-            candidate_id=f"{source.case_id}:{arm_id}:{index:02d}",
+            candidate_id=(
+                proposals[index].candidate_id
+                if proposals[index] is not None
+                else f"{source.case_id}:{arm_id}:{index:02d}"
+            ),
             generation_status="generated" if batch.slots[index].accepted else "failed",
             proposal_fingerprint_sha256=(
-                batch.slots[index].receipt_sha256
-                if batch.slots[index].accepted
+                proposals[index].fingerprint_sha256
+                if proposals[index] is not None
                 else None
             ),
             coordinate_sha256=(
-                batch.slots[index].coordinate_sha256
-                if batch.slots[index].accepted
+                proposals[index].coordinate_fingerprint_sha256
+                if proposals[index] is not None
                 else None
             ),
             generation_receipt_sha256=(
@@ -577,6 +583,36 @@ def test_arm_lineage_and_observations_bind_exact_failure_complete_64_slots() -> 
     assert document["unscored_candidate_count"] == 64 - generated_count
     assert document["failure_complete_observation_denominator"] is True
     assert document["observations"][0]["candidate_evidence"]["scorer_v1_terms"]
+    generated_index = next(
+        slot.proposal_index
+        for slot in lineage.slots
+        if slot.generation_status == "generated"
+    )
+    generated_slot = lineage.slots[generated_index]
+    docking_proposal = lineage.experimental_docking_proposals[generated_index]
+    assert docking_proposal is not None
+    assert (
+        generated_slot.proposal_fingerprint_sha256
+        == docking_proposal.fingerprint_sha256
+    )
+    assert (
+        generated_slot.coordinate_sha256
+        == docking_proposal.coordinate_fingerprint_sha256
+    )
+    assert (
+        generated_slot.generation_receipt_sha256
+        == lineage.arm_authority_receipt.slots[generated_index].receipt_sha256
+    )
+    assert (
+        generated_slot.proposal_fingerprint_sha256
+        != generated_slot.generation_receipt_sha256
+    )
+    assert (
+        document["observations"][generated_index]["candidate_evidence"][
+            "scorer_v1_terms"
+        ]["proposal_fingerprint_sha256"]
+        == docking_proposal.fingerprint_sha256
+    )
     failed_index = next(
         slot.proposal_index
         for slot in lineage.slots

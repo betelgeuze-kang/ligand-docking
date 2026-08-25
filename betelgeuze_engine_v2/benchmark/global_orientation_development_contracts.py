@@ -15,6 +15,8 @@ import math
 import re
 from typing import Iterable, Sequence
 
+import torch
+
 from .source_paired_clearance_activation import (
     SourcePairedClearanceCaseSourceReceiptV1,
     SourcePairedClearanceCandidateEvidenceV1,
@@ -36,6 +38,10 @@ from betelgeuze_engine_v2.docking.global_orientation import (
     GlobalOrientationBatch,
     GlobalOrientationConfig,
     generate_global_orientation_batch,
+)
+from betelgeuze_engine_v2.docking.proposals import (
+    DockingProposal,
+    bind_docking_proposal_state,
 )
 from betelgeuze_engine_v2.molecular import (
     canonical_system_sha256,
@@ -744,6 +750,74 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
         return {**self._projection(), "receipt_sha256": self.receipt_sha256}
 
 
+def _global_orientation_rotation_matrix(
+    quaternion: tuple[float, float, float, float],
+) -> torch.Tensor:
+    x, y, z, w = quaternion
+    return torch.tensor(
+        (
+            (
+                1.0 - 2.0 * (y * y + z * z),
+                2.0 * (x * y - z * w),
+                2.0 * (x * z + y * w),
+            ),
+            (
+                2.0 * (x * y + z * w),
+                1.0 - 2.0 * (x * x + z * z),
+                2.0 * (y * z - x * w),
+            ),
+            (
+                2.0 * (x * z - y * w),
+                2.0 * (y * z + x * w),
+                1.0 - 2.0 * (x * x + y * y),
+            ),
+        ),
+        dtype=torch.float64,
+    )
+
+
+def materialize_global_orientation_docking_proposals(
+    case_source: GlobalOrientationDevelopmentCaseSourceReceiptV1,
+    batch: GlobalOrientationBatch,
+) -> tuple[DockingProposal | None, ...]:
+    """Materialize scorer-compatible proposal identities for accepted slots."""
+
+    if type(case_source) is not GlobalOrientationDevelopmentCaseSourceReceiptV1:
+        raise TypeError("case_source must be the exact prepared-case source receipt")
+    if type(batch) is not GlobalOrientationBatch:
+        raise TypeError("batch must be the exact global-orientation batch")
+    if batch.source_receipt_sha256 != case_source.generator_source_receipt_sha256:
+        raise GlobalOrientationDevelopmentContractError(
+            "global-orientation batch is cross-wired to another generator source"
+        )
+    proposal_seed = int(batch.source_seed_sha256[:16], 16) & (2**63 - 1)
+    problem = case_source.authenticated_problem
+    torsion_angles = torch.zeros(
+        case_source.ligand_system.atom_count,
+        dtype=torch.float64,
+    )
+    proposals: list[DockingProposal | None] = []
+    for slot in batch.slots:
+        if not slot.accepted:
+            proposals.append(None)
+            continue
+        proposal = bind_docking_proposal_state(
+            coordinates=torch.tensor(
+                slot.transformed_coordinates,
+                dtype=torch.float64,
+            ),
+            torsion_angles=torsion_angles,
+            rotation=_global_orientation_rotation_matrix(slot.quaternion),
+            translation=torch.tensor(slot.translation, dtype=torch.float64),
+            proposal_index=slot.proposal_index,
+            seed=proposal_seed,
+            problem_fingerprint_sha256=problem.problem.fingerprint_sha256,
+            search_space_fingerprint_sha256=(problem.search_space.fingerprint_sha256),
+        )
+        proposals.append(proposal)
+    return tuple(proposals)
+
+
 @dataclass(frozen=True, slots=True)
 class GlobalOrientationDevelopmentHistoricalFailureAuthorityV1:
     """Pinned historical authority for the sole 6M73 preparation failure."""
@@ -999,6 +1073,10 @@ class GlobalOrientationDevelopmentArmLineageReceiptV1:
     )
     slots: tuple[GlobalOrientationDevelopmentLineageSlotV1, ...]
     schema_id: str = GLOBAL_ORIENTATION_DEVELOPMENT_ARM_LINEAGE_SCHEMA_ID
+    _experimental_docking_proposals: tuple[DockingProposal | None, ...] = field(
+        init=False,
+        repr=False,
+    )
     _receipt_sha256: str = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -1040,6 +1118,7 @@ class GlobalOrientationDevelopmentArmLineageReceiptV1:
             )
         authority_receipt = self.arm_authority_receipt
         historical = self.case_source.historical_case_source
+        experimental_proposals: tuple[DockingProposal | None, ...] = ()
         if self.arm_id == "baseline_current_v7":
             if (
                 type(authority_receipt)
@@ -1112,17 +1191,34 @@ class GlobalOrientationDevelopmentArmLineageReceiptV1:
             expected_surface_sha256 = _sha256(
                 _coordinates_projection(self.case_source.receptor_surface_points)
             )
+            experimental_proposals = materialize_global_orientation_docking_proposals(
+                self.case_source,
+                expected_batch,
+            )
             expected_slots = tuple(
                 (
                     source_slot.proposal_index,
-                    f"{self.case_source.case_id}:{self.arm_id}:{source_slot.proposal_index:02d}",
+                    (
+                        proposal.candidate_id
+                        if proposal is not None
+                        else f"{self.case_source.case_id}:{self.arm_id}:"
+                        f"{source_slot.proposal_index:02d}"
+                    ),
                     "generated" if source_slot.accepted else "failed",
-                    source_slot.receipt_sha256 if source_slot.accepted else None,
-                    source_slot.coordinate_sha256 if source_slot.accepted else None,
+                    (proposal.fingerprint_sha256 if proposal is not None else None),
+                    (
+                        proposal.coordinate_fingerprint_sha256
+                        if proposal is not None
+                        else None
+                    ),
                     source_slot.receipt_sha256 if source_slot.accepted else None,
                     None if source_slot.accepted else source_slot.rejection_code,
                 )
-                for source_slot in expected_batch.slots
+                for source_slot, proposal in zip(
+                    expected_batch.slots,
+                    experimental_proposals,
+                    strict=True,
+                )
             )
             observed_slots = tuple(
                 (
@@ -1149,7 +1245,18 @@ class GlobalOrientationDevelopmentArmLineageReceiptV1:
                     "experimental lineage does not rederive from its concrete generator batch"
                 )
         object.__setattr__(self, "slots", slots)
+        object.__setattr__(
+            self,
+            "_experimental_docking_proposals",
+            experimental_proposals,
+        )
         object.__setattr__(self, "_receipt_sha256", _sha256(self._projection()))
+
+    @property
+    def experimental_docking_proposals(
+        self,
+    ) -> tuple[DockingProposal | None, ...]:
+        return tuple(self._experimental_docking_proposals)
 
     def _projection(self) -> dict[str, object]:
         return {
@@ -1160,6 +1267,18 @@ class GlobalOrientationDevelopmentArmLineageReceiptV1:
             "arm_id": self.arm_id,
             "arm_authority_sha256": self.arm_authority_sha256,
             "arm_authority_receipt": self.arm_authority_receipt.to_dict(),
+            "experimental_docking_proposals": [
+                (
+                    None
+                    if proposal is None
+                    else {
+                        "candidate_id": proposal.candidate_id,
+                        "fingerprint_sha256": proposal.fingerprint_sha256,
+                        "identity_payload": proposal.identity_payload(),
+                    }
+                )
+                for proposal in self._experimental_docking_proposals
+            ],
             "candidate_denominator": len(self.slots),
             "slots": [slot.to_dict() for slot in self.slots],
             "failure_complete_generation_denominator": True,
@@ -1809,4 +1928,5 @@ __all__ = [
     "derive_global_orientation_generator_source_receipt_sha256",
     "derive_global_orientation_pose_validity_config_fingerprint",
     "derive_global_orientation_source_coordinates_sha256",
+    "materialize_global_orientation_docking_proposals",
 ]

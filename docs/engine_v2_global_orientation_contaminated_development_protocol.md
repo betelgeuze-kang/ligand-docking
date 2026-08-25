@@ -25,7 +25,7 @@ betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.6.0
 Protocol self-hash:
 
 ```text
-3824c316e3f1a02195d6619c84e165ca70104b11822360d828d25ffaec0f939a
+ff7904966c35469e3eec9c4d8a48e42c8a0609ba258ca561b6b11632d5a7d9ef
 ```
 
 ## Scientific question
@@ -171,7 +171,7 @@ round-1/2/3 compatibility installers, as well as the native V7 profile and
 transitive native source manifest, build configuration, default config
 fingerprint, and single-thread backend options. Its canonical
 implementation-manifest identity is
-`2dd560bbc3a2163c82611f95d2e1bff9ee992fd790f9393d40c22a94abd2cc62`.
+`c8a732b4ec28483f78e763bf65770f83c31371caccb569e575431a158ace9640`.
 PoseBusters is bound to the exact 0.3.1 universal wheel SHA-256
 `a6d1437d0eb3e0fe13ad73b5c4efdc8c0914ceadd904cde55b2a9835bf591a9d`,
 redock configuration, local report runner, the imported public-redocking
@@ -243,8 +243,10 @@ private-evidence types in
 `betelgeuze_engine_v2/benchmark/global_orientation_development_contracts.py`.
 They retain source coordinates and identities, rederive receptor surface points,
 bind each arm's exact 64-slot lineage, deterministically regenerate the
-experimental batch for equality checking, and require an explicit unscored
-state for every incomplete observation. No private evidence instance is
+experimental batch for equality checking, materialize accepted experimental
+slots as scorer-compatible `DockingProposal` identities, and require an
+explicit unscored state for every incomplete observation. No private evidence
+instance is
 committed, and the types do not load inputs, score candidates, evaluate the
 decision, or issue authority. Treating a digest label or caller-set completeness
 boolean as actual evidence remains forbidden.
