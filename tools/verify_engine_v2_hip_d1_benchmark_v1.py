@@ -91,13 +91,13 @@ ALLOWED_NEWER_GPU_ARCHITECTURES = (
 )
 FAILURE_OBSERVATION_SCHEMA = "betelgeuze.engine_v2_hip_failure_observation/1.0.0"
 EXECUTION_BACKEND_RECEIPT_SCHEMA = (
-    "betelgeuze.engine_v2_hip_execution_backend_receipt/1.1.0"
+    "betelgeuze.engine_v2_hip_execution_backend_receipt/1.2.0"
 )
 NORMALIZED_PROFILER_TRACE_SCHEMA = (
-    "betelgeuze.engine_v2_rocprofiler_normalized_dispatch_trace/1.0.0"
+    "betelgeuze.engine_v2_rocprofiler_normalized_dispatch_trace/1.1.0"
 )
 NORMALIZED_TRANSFER_TRACE_SCHEMA = (
-    "betelgeuze.engine_v2_hip_normalized_transfer_trace/1.0.0"
+    "betelgeuze.engine_v2_hip_normalized_transfer_trace/1.1.0"
 )
 # Intentionally empty until an owner-reviewed successor pins exact artifacts.
 AUTHORIZED_BOUND_PROFILE_SHA256S: frozenset[str] = frozenset()
@@ -679,7 +679,12 @@ def _median(values: list[float], name: str) -> float:
     if len(ordered) % 2:
         result = ordered[middle]
     else:
-        result = _finite_sum((ordered[middle - 1] / 2.0, ordered[middle] / 2.0), name)
+        lower = ordered[middle - 1]
+        upper = ordered[middle]
+        if (lower >= 0.0) == (upper >= 0.0):
+            result = lower + (upper - lower) / 2.0
+        else:
+            result = _finite_sum((lower / 2.0, upper / 2.0), name)
     if not math.isfinite(result):
         raise HipBenchmarkError(f"{name}: nonfinite derived median")
     return result
@@ -931,10 +936,23 @@ def _verify_profiler_trace(
     dispatches_value: Any,
     label: str,
     case_wall_times: dict[str, list[float]],
+    expected_execution_run_id: str,
 ) -> tuple[int, float, str]:
-    trace = _exact_keys(trace_value, {"schema_id", "rows"}, f"{label}.profiler_trace")
+    trace = _exact_keys(
+        trace_value,
+        {"schema_id", "execution_run_id_sha256", "rows"},
+        f"{label}.profiler_trace",
+    )
     if trace["schema_id"] != NORMALIZED_PROFILER_TRACE_SCHEMA:
         raise HipBenchmarkError(f"{label}: profiler trace schema")
+    if (
+        _sha256(
+            trace["execution_run_id_sha256"],
+            f"{label}.profiler_trace.execution_run_id_sha256",
+        )
+        != expected_execution_run_id
+    ):
+        raise HipBenchmarkError(f"{label}: profiler trace execution identity")
     rows = trace["rows"]
     if type(rows) is not list or not rows:
         raise HipBenchmarkError(f"{label}: complete profiler trace required")
@@ -1052,10 +1070,23 @@ def _verify_transfer_trace(
     label: str,
     minimum_samples: int,
     case_wall_times: dict[str, list[float]],
+    expected_execution_run_id: str,
 ) -> tuple[int, int, list[float], list[float], str]:
-    trace = _exact_keys(trace_value, {"schema_id", "rows"}, f"{label}.transfer_trace")
+    trace = _exact_keys(
+        trace_value,
+        {"schema_id", "execution_run_id_sha256", "rows"},
+        f"{label}.transfer_trace",
+    )
     if trace["schema_id"] != NORMALIZED_TRANSFER_TRACE_SCHEMA:
         raise HipBenchmarkError(f"{label}: transfer trace schema")
+    if (
+        _sha256(
+            trace["execution_run_id_sha256"],
+            f"{label}.transfer_trace.execution_run_id_sha256",
+        )
+        != expected_execution_run_id
+    ):
+        raise HipBenchmarkError(f"{label}: transfer trace execution identity")
     rows = trace["rows"]
     if type(rows) is not list or not rows:
         raise HipBenchmarkError(f"{label}: complete transfer trace required")
@@ -1196,6 +1227,7 @@ def _execution_backend_receipt(
     execution_run_id_sha256: str,
     profiler_trace_sha256: str | None,
     transfer_trace_sha256: str | None,
+    context_construction_samples: list[float],
     cases: list[dict[str, Any]],
 ) -> dict[str, Any]:
     repeat = run_role == "repeat"
@@ -1210,6 +1242,9 @@ def _execution_backend_receipt(
         "execution_run_id_sha256": execution_run_id_sha256,
         "profiler_trace_sha256": profiler_trace_sha256,
         "transfer_trace_sha256": transfer_trace_sha256,
+        "context_construction_samples_sha256": _canonical_sha256(
+            context_construction_samples
+        ),
         "case_timing_samples_sha256": _case_run_timings_sha256(cases, repeat=repeat),
         "case_outputs_sha256": _case_run_outputs_sha256(cases, repeat=repeat),
     }
@@ -1243,6 +1278,7 @@ def _verify_backend(
             "repeat_execution_backend_receipt_sha256",
             "candidate_denominator",
             "context_construction_seconds",
+            "repeat_context_construction_seconds",
             "peak_rss_bytes",
             "peak_vram_bytes",
             "h2d_bytes",
@@ -1297,6 +1333,11 @@ def _verify_backend(
     context_samples = _samples(
         backend["context_construction_seconds"],
         f"{label}.context_construction_seconds",
+        sampling["minimum_context_samples"],
+    )
+    repeat_context_samples = _samples(
+        backend["repeat_context_construction_seconds"],
+        f"{label}.repeat_context_construction_seconds",
         sampling["minimum_context_samples"],
     )
     peak_rss = _integer(backend["peak_rss_bytes"], f"{label}.peak_rss_bytes", minimum=1)
@@ -1407,6 +1448,7 @@ def _verify_backend(
             label,
             sampling["minimum_transfer_samples"],
             case_wall_times,
+            execution_run_id,
         )
         if (
             h2d_bytes != trace_h2d_bytes
@@ -1421,6 +1463,7 @@ def _verify_backend(
             f"{label}/repeat",
             sampling["minimum_transfer_samples"],
             repeat_case_wall_times,
+            repeat_execution_run_id,
         )
         kernel_dispatch_total, kernel_total, profiler_trace_sha256 = (
             _verify_profiler_trace(
@@ -1429,6 +1472,7 @@ def _verify_backend(
                 backend["kernel_dispatches"],
                 label,
                 case_wall_times,
+                execution_run_id,
             )
         )
         _, _, repeat_profiler_trace_sha256 = _verify_profiler_trace(
@@ -1437,6 +1481,7 @@ def _verify_backend(
             backend["repeat_kernel_dispatches"],
             f"{label}/repeat",
             repeat_case_wall_times,
+            repeat_execution_run_id,
         )
 
     execution_receipt = _execution_backend_receipt(
@@ -1449,6 +1494,7 @@ def _verify_backend(
         execution_run_id_sha256=execution_run_id,
         profiler_trace_sha256=profiler_trace_sha256,
         transfer_trace_sha256=transfer_trace_sha256,
+        context_construction_samples=context_samples,
         cases=cases,
     )
     if _sha256(
@@ -1466,6 +1512,7 @@ def _verify_backend(
         execution_run_id_sha256=repeat_execution_run_id,
         profiler_trace_sha256=repeat_profiler_trace_sha256,
         transfer_trace_sha256=repeat_transfer_trace_sha256,
+        context_construction_samples=repeat_context_samples,
         cases=cases,
     )
     if _sha256(
@@ -1485,6 +1532,9 @@ def _verify_backend(
     metrics = {
         "context_construction_seconds_p50": _median(
             context_samples, f"{label}.context_median"
+        ),
+        "repeat_context_construction_seconds_p50": _median(
+            repeat_context_samples, f"{label}.repeat_context_median"
         ),
         "case_wall_time_seconds_p50": _median(case_medians, f"{label}.case_median"),
         "case_wall_time_seconds_p95": _nearest_rank_95(case_medians),

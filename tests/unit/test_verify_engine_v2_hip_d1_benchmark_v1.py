@@ -113,6 +113,12 @@ def _case(case_id: str, index: int, backend_name: str) -> dict:
 
 def _backend(case_ids: list[str], backend_name: str, architecture: str) -> dict:
     gpu = backend_name != "rust_cpu"
+    execution_run_id = VERIFIER._canonical_sha256(
+        [architecture, backend_name, "primary"]
+    )
+    repeat_execution_run_id = VERIFIER._canonical_sha256(
+        [architecture, backend_name, "repeat"]
+    )
     case_rows = [
         _case(case_id, index, backend_name) for index, case_id in enumerate(case_ids)
     ]
@@ -137,6 +143,7 @@ def _backend(case_ids: list[str], backend_name: str, architecture: str) -> dict:
     profiler_trace = (
         {
             "schema_id": VERIFIER.NORMALIZED_PROFILER_TRACE_SCHEMA,
+            "execution_run_id_sha256": execution_run_id,
             "rows": profiler_rows,
         }
         if gpu
@@ -157,6 +164,7 @@ def _backend(case_ids: list[str], backend_name: str, architecture: str) -> dict:
     repeat_profiler_trace = (
         {
             "schema_id": VERIFIER.NORMALIZED_PROFILER_TRACE_SCHEMA,
+            "execution_run_id_sha256": repeat_execution_run_id,
             "rows": repeat_profiler_rows,
         }
         if gpu
@@ -197,6 +205,7 @@ def _backend(case_ids: list[str], backend_name: str, architecture: str) -> dict:
     transfer_trace = (
         {
             "schema_id": VERIFIER.NORMALIZED_TRANSFER_TRACE_SCHEMA,
+            "execution_run_id_sha256": execution_run_id,
             "rows": transfer_rows,
         }
         if gpu
@@ -217,6 +226,7 @@ def _backend(case_ids: list[str], backend_name: str, architecture: str) -> dict:
     repeat_transfer_trace = (
         {
             "schema_id": VERIFIER.NORMALIZED_TRANSFER_TRACE_SCHEMA,
+            "execution_run_id_sha256": repeat_execution_run_id,
             "rows": repeat_transfer_rows,
         }
         if gpu
@@ -231,16 +241,19 @@ def _backend(case_ids: list[str], backend_name: str, architecture: str) -> dict:
         "cpu_fallback_observed": False,
         "repeat_observed_backend": backend_name,
         "repeat_cpu_fallback_observed": False,
-        "execution_run_id_sha256": VERIFIER._canonical_sha256(
-            [architecture, backend_name, "primary"]
-        ),
-        "repeat_execution_run_id_sha256": VERIFIER._canonical_sha256(
-            [architecture, backend_name, "repeat"]
-        ),
+        "execution_run_id_sha256": execution_run_id,
+        "repeat_execution_run_id_sha256": repeat_execution_run_id,
         "execution_backend_receipt_sha256": "0" * 64,
         "repeat_execution_backend_receipt_sha256": "0" * 64,
         "candidate_denominator": 64,
         "context_construction_seconds": [0.02, 0.021, 0.019, 0.022, 0.018],
+        "repeat_context_construction_seconds": [
+            0.0202,
+            0.02121,
+            0.01919,
+            0.02222,
+            0.01818,
+        ],
         "peak_rss_bytes": 1048576,
         "peak_vram_bytes": 2097152 if gpu else 0,
         "h2d_bytes": 4096 * len(case_ids) * 5 if gpu else 0,
@@ -395,6 +408,9 @@ def _reseal_backend_receipt(
             execution_run_id_sha256=backend[f"{prefix}execution_run_id_sha256"],
             profiler_trace_sha256=backend[f"{prefix}profiler_trace_sha256"],
             transfer_trace_sha256=backend[f"{prefix}transfer_trace_sha256"],
+            context_construction_samples=backend[
+                f"{prefix}context_construction_seconds"
+            ],
             cases=backend["cases"],
         )
         backend[f"{prefix}execution_backend_receipt_sha256"] = (
@@ -414,7 +430,7 @@ def test_committed_profile_is_valid_unbound_and_non_authoritative() -> None:
         "verified": True,
         "profile_id": "engine_v2_hip_d1_representative_v1",
         "profile_sha256": (
-            "dcda00abd9a56420b846da5ce4a405d1d6ab63c2e7cc59ae966c42f924e46404"
+            "a5f4e86a8e3e319155f42891f4c606018d0b2323af27c51d2652f0680df66182"
         ),
         "manifest_bound": False,
         "result_verification_authorized": False,
@@ -459,6 +475,7 @@ def test_valid_bound_result_derives_metrics_without_authority(tmp_path: Path) ->
     assert metrics["hip_fast_primary_speed_gate_passing_case_count"] == 32
     assert metrics["hip_fast_repeat_speed_gate_passing_case_count"] == 32
     assert metrics["rust_cpu"]["context_construction_seconds_p50"] == 0.02
+    assert metrics["rust_cpu"]["repeat_context_construction_seconds_p50"] == 0.0202
     assert metrics["rust_cpu"]["case_wall_time_seconds_p50"] == 0.1
     assert metrics["rust_cpu"]["case_wall_time_seconds_p95"] == 0.1
     assert metrics["rust_cpu"]["candidate_throughput_per_second"] == 640.0
@@ -1075,12 +1092,65 @@ def test_execution_backend_receipt_is_recomputed(tmp_path: Path) -> None:
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 
+@pytest.mark.parametrize(
+    "field",
+    ["context_construction_seconds", "repeat_context_construction_seconds"],
+)
+def test_context_timing_samples_are_bound_to_execution_receipts(
+    tmp_path: Path, field: str
+) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    backend = result["architectures"][0]["backends"]["hip_fast"]
+    backend[field][0] *= 0.5
+    _seal_and_authorize_result(result)
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="backend receipt mismatch"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
 def test_repeat_execution_identity_must_be_distinct(tmp_path: Path) -> None:
     profile_path, profile = _bound_profile(tmp_path)
     result = _result(profile)
     backend = result["architectures"][0]["backends"]["hip_fast"]
     backend["repeat_execution_run_id_sha256"] = backend["execution_run_id_sha256"]
     with pytest.raises(VERIFIER.HipBenchmarkError, match="repeat execution identity"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
+def test_repeat_profiler_trace_cannot_reuse_primary_execution_evidence(
+    tmp_path: Path,
+) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    backend = result["architectures"][0]["backends"]["hip_fast"]
+    backend["repeat_profiler_trace"] = copy.deepcopy(backend["profiler_trace"])
+    backend["repeat_profiler_trace_sha256"] = VERIFIER._canonical_sha256(
+        backend["repeat_profiler_trace"]
+    )
+    backend["repeat_kernel_dispatches"] = copy.deepcopy(backend["kernel_dispatches"])
+    _reseal_backend_receipt(backend, "gfx1030", result["ordered_case_ids"])
+    _seal_and_authorize_result(result)
+    with pytest.raises(
+        VERIFIER.HipBenchmarkError, match="profiler trace execution identity"
+    ):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
+def test_repeat_transfer_trace_cannot_reuse_primary_execution_evidence(
+    tmp_path: Path,
+) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    backend = result["architectures"][0]["backends"]["hip_fast"]
+    backend["repeat_transfer_trace"] = copy.deepcopy(backend["transfer_trace"])
+    backend["repeat_transfer_trace_sha256"] = VERIFIER._canonical_sha256(
+        backend["repeat_transfer_trace"]
+    )
+    _reseal_backend_receipt(backend, "gfx1030", result["ordered_case_ids"])
+    _seal_and_authorize_result(result)
+    with pytest.raises(
+        VERIFIER.HipBenchmarkError, match="transfer trace execution identity"
+    ):
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 
@@ -1267,6 +1337,14 @@ def test_overflowing_derived_timing_sum_is_rejected(tmp_path: Path) -> None:
     _seal_and_authorize_result(result)
     with pytest.raises(VERIFIER.HipBenchmarkError, match="derived sum overflow"):
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
+def test_even_median_preserves_positive_subnormal_values() -> None:
+    smallest_subnormal = 5e-324
+    assert (
+        VERIFIER._median([smallest_subnormal, smallest_subnormal], "subnormal")
+        == smallest_subnormal
+    )
 
 
 @pytest.mark.parametrize(

@@ -287,6 +287,10 @@ trace plus the canonical per-case wall-time and output digests. Primary and
 repeat executions use distinct globally unique run identities, separate timing
 samples, separate GPU traces/summaries, and separate receipts; repeat outputs
 are bound to the repeat receipt rather than accepted as unproven copied fields.
+Each normalized profiler and transfer trace embeds its corresponding run
+identity, so primary evidence cannot be copied into the repeat slot and
+rehashed. Primary and repeat context-construction samples are separately bound
+into their matching receipts and reported as separate derived p50 metrics.
 Requested/observed backend identity and CPU-fallback state are recorded and
 validated independently for each run and bound into the corresponding receipt.
 The repository-pinned result digest binds both receipts, timings, and all
@@ -307,8 +311,9 @@ primary or repeat execution receipt. Each direction must cover every ordered
 case and every timing-sample index exactly once, and the per-sample transfer
 runtime must fit its enclosing wall-time sample. Profiler identity requires a
 parsed non-whitespace `rocprofiler-sdk` version suffix.
-Derived sums and medians use overflow-safe finite arithmetic; any non-finite
-derived metric is rejected rather than serialized as `Infinity`.
+Derived sums and medians use overflow-safe finite arithmetic, including a
+stable even-sample midpoint that preserves positive subnormal values; any
+non-finite derived metric is rejected rather than serialized as `Infinity`.
 
 The verifier only checks supplied evidence. It never runs a GPU and a passing
 artifact still grants no acceleration, scientific, benchmark, or product
