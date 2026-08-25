@@ -49,7 +49,7 @@ def _reseal(payload: dict[str, object]) -> dict[str, object]:
 def test_current_global_orientation_development_protocol_verifies() -> None:
     observed = verify_protocol(_protocol())
     assert observed == (
-        "aef9ae4dca5d0c2643bbc772267037224b328d043c63501a6e070ec3af37a3f8"
+        "1478abd2a39b2dbc8a435116c6a0f08d6da7c52c758f179e384efedd8b078a4d"
     )
 
 
@@ -95,6 +95,19 @@ def test_resealed_execution_authority_escalation_fails_closed() -> None:
         match="authority",
     ):
         verify_protocol(changed)
+
+
+def test_resealed_evaluator_or_go_receipt_escalation_fails_closed() -> None:
+    for key in ("decision_evaluator_implemented", "go_receipt_emission_authorized"):
+        changed = _protocol()
+        changed["decision"][key] = True
+        changed = _reseal(changed)
+
+        with pytest.raises(
+            GlobalOrientationDevelopmentProtocolError,
+            match="decision evaluator|Go receipt",
+        ):
+            verify_protocol(changed)
 
 
 def test_resealed_source_receipt_claim_fails_closed() -> None:

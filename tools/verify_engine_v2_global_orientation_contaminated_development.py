@@ -428,11 +428,6 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
 
     metrics = _mapping(protocol.get("metrics"), name="metrics")
     _exact(
-        metrics.get("case_arm_evidence_schema_id"),
-        "betelgeuze.engine_v2_global_orientation_case_arm_evidence/1.0.0",
-        name="case-arm evidence schema",
-    )
-    _exact(
         tuple(metrics.get("failure_classes", ())),
         ("success", "proposal_failure", "validity_failure", "ranking_failure"),
         name="failure classes",
@@ -450,6 +445,7 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
             "generated_candidate_count",
             "accepted_candidate_count",
             "rejected_candidate_count",
+            "unscored_candidate_count",
             "failure_class",
         ),
         name="required per-case metrics",
@@ -463,14 +459,25 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
 
     decision = _mapping(protocol.get("decision"), name="decision")
     _exact(
-        decision.get("decision_receipt_schema_id"),
-        "betelgeuze.engine_v2_global_orientation_development_decision/1.1.0",
-        name="decision receipt schema",
+        decision.get("decision_evaluator_implemented"),
+        False,
+        name="decision evaluator implementation state",
     )
     _exact(
-        decision.get("decision_factory_only"),
-        True,
-        name="decision factory boundary",
+        decision.get("go_receipt_emission_authorized"),
+        False,
+        name="Go receipt authority",
+    )
+    _exact(
+        tuple(decision.get("required_future_evidence_contracts", ())),
+        (
+            "case_source_receipt_with_ligand_topology_pocket_and_"
+            "preparation_identities",
+            "baseline_candidate_lineage_bound_to_all_64_observation_slots",
+            "experimental_candidate_lineage_bound_to_all_64_observation_slots",
+            "failure_complete_observation_slots_with_explicit_unscored_state",
+        ),
+        name="future evidence contracts",
     )
     _exact(
         decision.get("go_requires_all_invariants"),
@@ -505,6 +512,7 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
     _exact(
         tuple(decision.get("hard_no_go_any", ())),
         (
+            "evaluator_or_evidence_contract_absent",
             "required_invariant_failed",
             "zero_new_previously_uncovered_valid_proposal_recoveries",
             "baseline_recovered_case_regression",

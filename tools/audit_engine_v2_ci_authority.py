@@ -54,7 +54,6 @@ GLOBAL_ORIENTATION_CONTRACT_PATHS = (
     "betelgeuze_engine_v2/docking/global_orientation_evidence.py",
     "betelgeuze_engine_v2/benchmark/oracle_selection_metrics.py",
     "betelgeuze_engine_v2/benchmark/oracle_selection_evidence.py",
-    "betelgeuze_engine_v2/benchmark/global_orientation_development_decision.py",
     "config/engine_v2_global_orientation_synthetic_contract.json",
     "config/engine_v2_global_orientation_contaminated_development.json",
 )
@@ -66,7 +65,6 @@ GLOBAL_ORIENTATION_REQUIRED_TOKENS = (
     "tests/unit/test_engine_v2_global_orientation_evidence.py",
     "tests/unit/test_engine_v2_global_orientation_synthetic_contract.py",
     "tests/unit/test_engine_v2_global_orientation_development_protocol.py",
-    "tests/unit/test_engine_v2_global_orientation_development_decision.py",
     "tests/unit/test_engine_v2_oracle_selection_metrics.py",
     "tests/unit/test_engine_v2_oracle_selection_evidence.py",
     "docs/engine_v2_global_orientation_design.md",
@@ -75,7 +73,6 @@ GLOBAL_ORIENTATION_REQUIRED_TOKENS = (
     "dist-engine-v2",
     "import betelgeuze_engine_v2.benchmark.oracle_selection_evidence",
     "import betelgeuze_engine_v2.benchmark.oracle_selection_metrics",
-    "import betelgeuze_engine_v2.benchmark.global_orientation_development_decision",
     "import betelgeuze_engine_v2.docking.global_orientation",
     "import betelgeuze_engine_v2.docking.global_orientation_evidence",
 )

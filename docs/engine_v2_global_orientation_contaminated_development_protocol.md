@@ -25,7 +25,7 @@ betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.1.0
 Protocol self-hash:
 
 ```text
-aef9ae4dca5d0c2643bbc772267037224b328d043c63501a6e070ec3af37a3f8
+1478abd2a39b2dbc8a435116c6a0f08d6da7c52c758f179e384efedd8b078a4d
 ```
 
 ## Scientific question
@@ -164,31 +164,28 @@ evidence is insufficient.
 
 ## Predeclared decision
 
-The pure evaluator is:
+The decision rules are frozen below, but no executable decision evaluator or Go
+receipt issuer is implemented. Current repository evidence types cannot yet
+prove all required ligand-coordinate, ligand-topology, pocket-declaration, and
+preparation-policy identities; bind each oracle observation to its concrete
+baseline or experimental candidate lineage; or retain an explicit unscored
+state for every failed slot. Treating a digest label or caller-set completeness
+boolean as that evidence is forbidden.
 
-```text
-betelgeuze_engine_v2/benchmark/global_orientation_development_decision.py
-```
+Before an evaluator can be reviewed, repository types must provide all four
+machine-verifiable contracts:
 
-It accepts the exact ordered nine-case comparison. Every scored row must carry
-its validated frozen case-source receipt plus independently rederived baseline
-and experimental `OracleSelectionEvidence`; the fixed preparation-failure row
-must carry its failure-receipt identity and no candidate evidence. Caller-set
-summary completeness booleans are not accepted. The evaluator independently
-computes new valid-proposal recoveries among the seven uncovered cases, invalid
-selected Top-1 counts, baseline reproduction/regression, invariant failures,
-hard No-Go triggers, and the bounded development verdict. Missing oracle or
-selected RMSD values remain explicit failure observations rather than parser
-errors.
+1. a case-source receipt containing the ligand, topology, pocket, and
+   preparation identities;
+2. baseline candidate lineage bound to all 64 observation slots;
+3. experimental candidate lineage bound to all 64 observation slots; and
+4. failure-complete observations with an explicit unscored state.
 
-Each scored arm is wrapped by
-`betelgeuze.engine_v2_global_orientation_case_arm_evidence/1.0.0`, which
-self-hashes the case ID, frozen arm/proposal authority, exact case-source
-receipt, candidate-lineage receipt, complete oracle evidence receipt, and all
-candidate-observation receipts. The decision receipt schema is
-`betelgeuze.engine_v2_global_orientation_development_decision/1.1.0` and is
-factory-only: callers cannot construct a Go receipt without the evaluator's
-validated observation roster.
+Until then,
+`decision_evaluator_implemented = false` and
+`go_receipt_emission_authorized = false`. Missing oracle, selected RMSD, or
+score values must eventually remain explicit failure observations rather than
+parser errors or invented finite values.
 
 A development Go requires every invariant and both criteria. In particular:
 
