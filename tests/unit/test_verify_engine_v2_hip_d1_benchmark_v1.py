@@ -189,10 +189,16 @@ def test_valid_bound_result_derives_metrics_without_authority(tmp_path: Path) ->
     assert output["architecture_count"] == 2
     assert output["case_count"] == 32
     assert output["candidate_denominator"] == 64
-    assert (
-        output["derived_metrics"]["gfx1030"]["hip_fast_speed_gate_passing_case_count"]
-        == 32
-    )
+    metrics = output["derived_metrics"]["gfx1030"]
+    assert metrics["hip_fast_speed_gate_passing_case_count"] == 32
+    assert metrics["rust_cpu"]["context_construction_seconds_p50"] == 0.02
+    assert metrics["rust_cpu"]["case_wall_time_seconds_p50"] == 0.1
+    assert metrics["rust_cpu"]["case_wall_time_seconds_p95"] == 0.1
+    assert metrics["rust_cpu"]["candidate_throughput_per_second"] == 640.0
+    assert metrics["hip_safe"]["h2d_seconds_p50"] == 0.001
+    assert metrics["hip_safe"]["d2h_seconds_p50"] == 0.0005
+    assert metrics["hip_safe"]["kernel_dispatch_count_total"] == 160
+    assert metrics["hip_safe"]["kernel_runtime_seconds_total"] == 0.25
     assert output["device_execution_authorized"] is False
     assert output["claim_authority_granted"] is False
 
