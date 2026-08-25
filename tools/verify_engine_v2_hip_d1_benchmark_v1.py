@@ -21,7 +21,7 @@ PROFILE_SCHEMA = "betelgeuze.engine_v2_hip_d1_benchmark_profile/1.1.0"
 RESULT_SCHEMA = "betelgeuze.engine_v2_hip_d1_benchmark_result/1.1.0"
 CASE_ID_RE = re.compile(r"^[A-Za-z0-9_.:-]{1,128}$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
-GPU_ARCHITECTURE_RE = re.compile(r"^gfx([0-9]{3,5})$")
+GPU_ARCHITECTURE_RE = re.compile(r"^gfx[0-9a-z]{2,8}$")
 PCI_DEVICE_ID_RE = re.compile(r"^[0-9a-f]{4}:[0-9a-f]{4}$")
 REQUIRED_BACKENDS = ("rust_cpu", "hip_safe", "hip_fast")
 PARITY_DIGEST_FIELDS = (
@@ -65,6 +65,27 @@ UNBOUND_BLOCKERS = (
 BOUND_BLOCKERS = (
     "hip_device_evidence_not_supplied",
     "hip_device_execution_not_authorized",
+)
+ALLOWED_NEWER_GPU_ARCHITECTURES = (
+    "gfx90a",
+    "gfx940",
+    "gfx941",
+    "gfx942",
+    "gfx950",
+    "gfx1100",
+    "gfx1101",
+    "gfx1102",
+    "gfx1150",
+    "gfx1151",
+    "gfx1200",
+    "gfx1201",
+)
+FAILURE_OBSERVATION_SCHEMA = "betelgeuze.engine_v2_hip_failure_observation/1.0.0"
+EXECUTION_BACKEND_RECEIPT_SCHEMA = (
+    "betelgeuze.engine_v2_hip_execution_backend_receipt/1.0.0"
+)
+NORMALIZED_PROFILER_TRACE_SCHEMA = (
+    "betelgeuze.engine_v2_rocprofiler_normalized_dispatch_trace/1.0.0"
 )
 
 
@@ -194,12 +215,14 @@ def _verify_profile_document(profile: dict[str, Any]) -> dict[str, Any]:
             "profile_id",
             "status",
             "expected_manifest_sha256",
+            "expected_ordered_case_ids_sha256",
             "case_count",
             "candidate_denominator",
             "required_backends",
             "required_architecture_count",
             "baseline_gpu_architecture",
             "newer_gpu_architecture_required",
+            "allowed_newer_gpu_architectures",
             "parity",
             "sampling",
             "profiling",
@@ -229,6 +252,11 @@ def _verify_profile_document(profile: dict[str, Any]) -> dict[str, Any]:
         raise HipBenchmarkError("baseline GPU architecture changed")
     if profile["newer_gpu_architecture_required"] is not True:
         raise HipBenchmarkError("newer GPU architecture policy changed")
+    _exact_list(
+        profile["allowed_newer_gpu_architectures"],
+        ALLOWED_NEWER_GPU_ARCHITECTURES,
+        "allowed newer GPU architecture",
+    )
 
     parity = _exact_keys(
         profile["parity"],
@@ -308,6 +336,7 @@ def _verify_profile_document(profile: dict[str, Any]) -> dict[str, Any]:
             "failure_probes_required",
             "failure_probe_codes",
             "cpu_fallback_forbidden",
+            "normalized_trace_schema",
         },
         "profile.profiling",
     )
@@ -322,6 +351,8 @@ def _verify_profile_document(profile: dict[str, Any]) -> dict[str, Any]:
         if profiling[key] is not True:
             raise HipBenchmarkError(f"profiling policy changed: {key}")
     _exact_list(profiling["failure_probe_codes"], FAILURE_PROBE_CODES, "failure probe")
+    if profiling["normalized_trace_schema"] != NORMALIZED_PROFILER_TRACE_SCHEMA:
+        raise HipBenchmarkError("normalized profiler trace schema changed")
 
     gate = _exact_keys(
         profile["performance_gate"],
@@ -354,13 +385,17 @@ def _verify_profile_document(profile: dict[str, Any]) -> dict[str, Any]:
         raise HipBenchmarkError("performance gate policy changed")
 
     expected_manifest = profile["expected_manifest_sha256"]
+    expected_case_ids = profile["expected_ordered_case_ids_sha256"]
     if expected_manifest is None:
-        if profile["status"] != UNBOUND_STATUS or profile["blockers"] != list(
-            UNBOUND_BLOCKERS
+        if (
+            profile["status"] != UNBOUND_STATUS
+            or profile["blockers"] != list(UNBOUND_BLOCKERS)
+            or expected_case_ids is not None
         ):
             raise HipBenchmarkError("unbound profile state")
     else:
         _sha256(expected_manifest, "profile.expected_manifest_sha256")
+        _sha256(expected_case_ids, "profile.expected_ordered_case_ids_sha256")
         if profile["status"] != BOUND_STATUS or profile["blockers"] != list(
             BOUND_BLOCKERS
         ):
@@ -459,6 +494,7 @@ def _verify_failure_probes(value: Any, architecture: str) -> None:
             {
                 "backend",
                 "error_code",
+                "observed_error",
                 "observed_error_sha256",
                 "cpu_fallback_observed",
                 "claim_authority_granted",
@@ -469,7 +505,31 @@ def _verify_failure_probes(value: Any, architecture: str) -> None:
         if pair in observed:
             raise HipBenchmarkError(f"{architecture}: duplicate failure probe")
         observed.add(pair)
-        _sha256(probe["observed_error_sha256"], f"{architecture}.failure_probe SHA")
+        observation = _exact_keys(
+            probe["observed_error"],
+            {
+                "schema_id",
+                "gpu_architecture",
+                "requested_backend",
+                "error_code",
+                "message_sha256",
+            },
+            f"{architecture}.failure_probes[{index}].observed_error",
+        )
+        if observation["schema_id"] != FAILURE_OBSERVATION_SCHEMA:
+            raise HipBenchmarkError(f"{architecture}: failure observation schema")
+        if observation["gpu_architecture"] != architecture:
+            raise HipBenchmarkError(f"{architecture}: failure observation architecture")
+        if observation["requested_backend"] != probe["backend"]:
+            raise HipBenchmarkError(f"{architecture}: failure observation backend")
+        if observation["error_code"] != probe["error_code"]:
+            raise HipBenchmarkError(f"{architecture}: failure observation error code")
+        _sha256(observation["message_sha256"], f"{architecture}.failure message")
+        observed_error_sha256 = _sha256(
+            probe["observed_error_sha256"], f"{architecture}.failure_probe SHA"
+        )
+        if observed_error_sha256 != _canonical_sha256(observation):
+            raise HipBenchmarkError(f"{architecture}: failure observation SHA-256")
         if probe["cpu_fallback_observed"] is not False:
             raise HipBenchmarkError(f"{architecture}: CPU fallback observed")
         if probe["claim_authority_granted"] is not False:
@@ -531,6 +591,79 @@ def _verify_case(
     return {**case, "scientific_values": scientific, "wall_time_seconds": wall_times}
 
 
+def _verify_profiler_trace(
+    trace_value: Any,
+    trace_sha256_value: Any,
+    dispatches_value: Any,
+    label: str,
+) -> tuple[int, float, str]:
+    trace = _exact_keys(trace_value, {"schema_id", "rows"}, f"{label}.profiler_trace")
+    if trace["schema_id"] != NORMALIZED_PROFILER_TRACE_SCHEMA:
+        raise HipBenchmarkError(f"{label}: profiler trace schema")
+    rows = trace["rows"]
+    if type(rows) is not list or not rows:
+        raise HipBenchmarkError(f"{label}: complete profiler trace required")
+    aggregates: dict[str, tuple[int, float]] = {}
+    for index, raw_row in enumerate(rows):
+        row = _exact_keys(
+            raw_row,
+            {"dispatch_index", "kernel_name", "runtime_seconds"},
+            f"{label}.profiler_trace.rows[{index}]",
+        )
+        if row["dispatch_index"] != index:
+            raise HipBenchmarkError(f"{label}: profiler dispatch ordering")
+        kernel_name = _nonempty_string(
+            row["kernel_name"], f"{label}.profiler_trace.kernel_name"
+        )
+        runtime = _finite(
+            row["runtime_seconds"],
+            f"{label}.profiler_trace.runtime_seconds",
+            positive=True,
+        )
+        count, total = aggregates.get(kernel_name, (0, 0.0))
+        aggregates[kernel_name] = (count + 1, total + runtime)
+    trace_sha256 = _sha256(trace_sha256_value, f"{label}.profiler_trace_sha256")
+    if trace_sha256 != _canonical_sha256(trace):
+        raise HipBenchmarkError(f"{label}: profiler trace SHA-256 mismatch")
+
+    dispatches = dispatches_value
+    if type(dispatches) is not list or not dispatches:
+        raise HipBenchmarkError(f"{label}: kernel dispatch summary required")
+    observed_names: set[str] = set()
+    dispatch_total = 0
+    runtime_total = 0.0
+    for index, raw_dispatch in enumerate(dispatches):
+        dispatch = _exact_keys(
+            raw_dispatch,
+            {"kernel_name", "dispatch_count", "total_runtime_seconds"},
+            f"{label}.kernel_dispatches[{index}]",
+        )
+        name = _nonempty_string(dispatch["kernel_name"], f"{label}.kernel_name")
+        if name in observed_names:
+            raise HipBenchmarkError(f"{label}: duplicate kernel summary")
+        observed_names.add(name)
+        if name not in aggregates:
+            raise HipBenchmarkError(f"{label}: kernel summary not present in trace")
+        dispatch_count = _integer(
+            dispatch["dispatch_count"], f"{label}.{name}.dispatch_count", minimum=1
+        )
+        runtime = _finite(
+            dispatch["total_runtime_seconds"],
+            f"{label}.{name}.runtime",
+            positive=True,
+        )
+        expected_count, expected_runtime = aggregates[name]
+        if dispatch_count != expected_count or not math.isclose(
+            runtime, expected_runtime, rel_tol=0.0, abs_tol=1e-15
+        ):
+            raise HipBenchmarkError(f"{label}: kernel summary/trace mismatch")
+        dispatch_total += dispatch_count
+        runtime_total += runtime
+    if observed_names != set(aggregates):
+        raise HipBenchmarkError(f"{label}: incomplete kernel summary")
+    return dispatch_total, runtime_total, trace_sha256
+
+
 def _verify_backend(
     raw: Any,
     *,
@@ -546,6 +679,9 @@ def _verify_backend(
         raw,
         {
             "backend_name",
+            "observed_backend",
+            "cpu_fallback_observed",
+            "execution_backend_receipt_sha256",
             "candidate_denominator",
             "context_construction_seconds",
             "peak_rss_bytes",
@@ -555,6 +691,7 @@ def _verify_backend(
             "h2d_seconds",
             "d2h_seconds",
             "runtime_failure_counts",
+            "profiler_trace",
             "profiler_trace_sha256",
             "kernel_dispatches",
             "cases",
@@ -563,6 +700,10 @@ def _verify_backend(
     )
     if backend["backend_name"] != backend_name:
         raise HipBenchmarkError(f"{label}: backend identity")
+    if backend["observed_backend"] != backend_name:
+        raise HipBenchmarkError(f"{label}: representative observed backend mismatch")
+    if backend["cpu_fallback_observed"] is not False:
+        raise HipBenchmarkError(f"{label}: representative CPU fallback observed")
     if (
         type(backend["candidate_denominator"]) is not int
         or backend["candidate_denominator"] != denominator
@@ -604,12 +745,18 @@ def _verify_backend(
             0,
             allow_empty=True,
         )
-        if h2d_samples or d2h_samples or backend["profiler_trace_sha256"] is not None:
+        if (
+            h2d_samples
+            or d2h_samples
+            or backend["profiler_trace"] is not None
+            or backend["profiler_trace_sha256"] is not None
+        ):
             raise HipBenchmarkError(f"{label}: CPU profiler/transfer evidence")
         if backend["kernel_dispatches"] != []:
             raise HipBenchmarkError(f"{label}: CPU kernel trace")
         kernel_total = 0.0
         kernel_dispatch_total = 0
+        profiler_trace_sha256 = None
     else:
         if peak_vram <= 0 or h2d_bytes <= 0 or d2h_bytes <= 0:
             raise HipBenchmarkError(f"{label}: missing GPU transfer/VRAM accounting")
@@ -623,36 +770,29 @@ def _verify_backend(
             f"{label}.d2h_seconds",
             sampling["minimum_transfer_samples"],
         )
-        _sha256(
-            backend["profiler_trace_sha256"],
-            f"{label}.profiler_trace_sha256",
+        kernel_dispatch_total, kernel_total, profiler_trace_sha256 = (
+            _verify_profiler_trace(
+                backend["profiler_trace"],
+                backend["profiler_trace_sha256"],
+                backend["kernel_dispatches"],
+                label,
+            )
         )
-        dispatches = backend["kernel_dispatches"]
-        if type(dispatches) is not list or not dispatches:
-            raise HipBenchmarkError(f"{label}: kernel dispatch trace required")
-        names: set[str] = set()
-        kernel_total = 0.0
-        kernel_dispatch_total = 0
-        for index, raw_dispatch in enumerate(dispatches):
-            dispatch = _exact_keys(
-                raw_dispatch,
-                {"kernel_name", "dispatch_count", "total_runtime_seconds"},
-                f"{label}.kernel_dispatches[{index}]",
-            )
-            name = _nonempty_string(dispatch["kernel_name"], f"{label}.kernel_name")
-            if name in names:
-                raise HipBenchmarkError(f"{label}: duplicate kernel name")
-            names.add(name)
-            kernel_dispatch_total += _integer(
-                dispatch["dispatch_count"],
-                f"{label}.{name}.dispatch_count",
-                minimum=1,
-            )
-            kernel_total += _finite(
-                dispatch["total_runtime_seconds"],
-                f"{label}.{name}.runtime",
-                positive=True,
-            )
+
+    execution_receipt = {
+        "schema_id": EXECUTION_BACKEND_RECEIPT_SCHEMA,
+        "gpu_architecture": architecture,
+        "requested_backend": backend_name,
+        "observed_backend": backend["observed_backend"],
+        "cpu_fallback_observed": backend["cpu_fallback_observed"],
+        "ordered_case_ids_sha256": _canonical_sha256(ordered_case_ids),
+        "profiler_trace_sha256": profiler_trace_sha256,
+    }
+    if _sha256(
+        backend["execution_backend_receipt_sha256"],
+        f"{label}.execution_backend_receipt_sha256",
+    ) != _canonical_sha256(execution_receipt):
+        raise HipBenchmarkError(f"{label}: execution backend receipt mismatch")
 
     cases_raw = backend["cases"]
     if type(cases_raw) is not list or len(cases_raw) != len(ordered_case_ids):
@@ -737,10 +877,13 @@ def verify(profile_path: Path, result_path: Path) -> dict[str, Any]:
     ]
     if len(set(ordered_case_ids)) != len(ordered_case_ids):
         raise HipBenchmarkError("duplicate ordered case ID")
-    if _sha256(
+    ordered_case_ids_sha256 = _sha256(
         result["ordered_case_ids_sha256"], "ordered_case_ids_sha256"
-    ) != _canonical_sha256(ordered_case_ids):
+    )
+    if ordered_case_ids_sha256 != _canonical_sha256(ordered_case_ids):
         raise HipBenchmarkError("ordered case identity SHA-256 mismatch")
+    if ordered_case_ids_sha256 != profile["expected_ordered_case_ids_sha256"]:
+        raise HipBenchmarkError("ordered cohort/profile cross-wire")
     _authority(result["authority"], "result.authority")
     if result["output_claim_authorized"] is not False:
         raise HipBenchmarkError("output claim authority escalated")
@@ -752,7 +895,8 @@ def verify(profile_path: Path, result_path: Path) -> dict[str, Any]:
     ):
         raise HipBenchmarkError("insufficient GPU architectures")
     seen_architectures: set[str] = set()
-    architecture_ranks: dict[str, int] = {}
+    seen_device_serials: set[str] = set()
+    allowed_newer_architectures = set(profile["allowed_newer_gpu_architectures"])
     canonical_cpu_cases: list[dict[str, Any]] | None = None
     derived_metrics: dict[str, Any] = {}
     scientific_length = profile["candidate_denominator"] * len(SCIENTIFIC_FIELDS)
@@ -764,7 +908,6 @@ def verify(profile_path: Path, result_path: Path) -> dict[str, Any]:
             raw_architecture,
             {
                 "gpu_architecture",
-                "architecture_generation_rank",
                 "gpu_model",
                 "pci_device_id",
                 "device_serial_sha256",
@@ -785,21 +928,16 @@ def verify(profile_path: Path, result_path: Path) -> dict[str, Any]:
         architecture_name = _nonempty_string(
             architecture["gpu_architecture"], "gpu_architecture"
         )
-        architecture_match = GPU_ARCHITECTURE_RE.fullmatch(architecture_name)
-        if architecture_match is None:
+        if GPU_ARCHITECTURE_RE.fullmatch(architecture_name) is None:
             raise HipBenchmarkError("invalid GPU architecture identity")
+        if (
+            architecture_name != profile["baseline_gpu_architecture"]
+            and architecture_name not in allowed_newer_architectures
+        ):
+            raise HipBenchmarkError("GPU architecture not allowed by profile")
         if architecture_name in seen_architectures:
             raise HipBenchmarkError("duplicate GPU architecture")
         seen_architectures.add(architecture_name)
-        architecture_ranks[architecture_name] = _integer(
-            architecture["architecture_generation_rank"],
-            f"{architecture_name}.architecture_generation_rank",
-            minimum=1,
-        )
-        if architecture_ranks[architecture_name] != int(architecture_match.group(1)):
-            raise HipBenchmarkError(
-                f"{architecture_name}: architecture generation rank mismatch"
-            )
         for identity in (
             "gpu_model",
             "rocm_version",
@@ -816,8 +954,14 @@ def verify(profile_path: Path, result_path: Path) -> dict[str, Any]:
             raise HipBenchmarkError(f"{architecture_name}: invalid PCI device ID")
         if not architecture["profiler_version"].startswith("rocprofiler-sdk "):
             raise HipBenchmarkError(f"{architecture_name}: profiler identity")
+        device_serial_sha256 = _sha256(
+            architecture["device_serial_sha256"],
+            f"{architecture_name}.device_serial_sha256",
+        )
+        if device_serial_sha256 in seen_device_serials:
+            raise HipBenchmarkError("duplicate GPU device identity")
+        seen_device_serials.add(device_serial_sha256)
         for digest in (
-            "device_serial_sha256",
             "wheel_sha256",
             "native_extension_sha256",
             "native_binary_sha256",
@@ -890,13 +1034,9 @@ def verify(profile_path: Path, result_path: Path) -> dict[str, Any]:
         derived_metrics[architecture_name] = architecture_metrics
 
     baseline = profile["baseline_gpu_architecture"]
-    if baseline not in architecture_ranks:
+    if baseline not in seen_architectures:
         raise HipBenchmarkError("baseline gfx1030 architecture missing")
-    if architecture_ranks[baseline] != 1030:
-        raise HipBenchmarkError("baseline architecture rank mismatch")
-    if not any(
-        rank > architecture_ranks[baseline] for rank in architecture_ranks.values()
-    ):
+    if not any(name in allowed_newer_architectures for name in seen_architectures):
         raise HipBenchmarkError("newer GPU architecture missing")
     return {
         "verified": True,

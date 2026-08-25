@@ -3,12 +3,27 @@
   "profile_id": "engine_v2_hip_d1_representative_v1",
   "status": "frozen_non_authoritative_manifest_not_bound",
   "expected_manifest_sha256": null,
+  "expected_ordered_case_ids_sha256": null,
   "case_count": 32,
   "candidate_denominator": 64,
   "required_backends": ["rust_cpu", "hip_safe", "hip_fast"],
   "required_architecture_count": 2,
   "baseline_gpu_architecture": "gfx1030",
   "newer_gpu_architecture_required": true,
+  "allowed_newer_gpu_architectures": [
+    "gfx90a",
+    "gfx940",
+    "gfx941",
+    "gfx942",
+    "gfx950",
+    "gfx1100",
+    "gfx1101",
+    "gfx1102",
+    "gfx1150",
+    "gfx1151",
+    "gfx1200",
+    "gfx1201"
+  ],
   "parity": {
     "digest_fields": [
       "decision_sha256",
@@ -50,7 +65,8 @@
       "execution_timeout",
       "numeric_overflow"
     ],
-    "cpu_fallback_forbidden": true
+    "cpu_fallback_forbidden": true,
+    "normalized_trace_schema": "betelgeuze.engine_v2_rocprofiler_normalized_dispatch_trace/1.0.0"
   },
   "performance_gate": {
     "reference_backend": "rust_cpu",
@@ -78,5 +94,5 @@
     "fresh128_authorized": false,
     "stage0_authorized": false
   },
-  "profile_sha256": "223e1256ad4d4235ba15680b8c8ec5aab4721288f1b6e5dac49f71f5ee958eea"
+  "profile_sha256": "19d9fe580ef22c3600a6e79f0b8bc41d70c95b4d1fefbe86f7513ae3908f0855"
 }

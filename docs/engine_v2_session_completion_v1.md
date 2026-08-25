@@ -233,8 +233,9 @@ python tools/verify_engine_v2_hip_d1_benchmark_v1.py \
 This verifies the committed 1.1 profile and its self-hash only. The profile is
 deliberately `frozen_non_authoritative_manifest_not_bound`; passing `--result`
 is rejected until an owner-controlled successor binds the exact private D1
-manifest SHA-256 and reseals the profile. Profile verification does not
-authorize D1 materialization, molecular execution, or HIP-device execution.
+manifest SHA-256 and its owner-selected ordered-case SHA-256, then reseals the
+profile. Profile verification does not authorize D1 materialization, molecular
+execution, or HIP-device execution.
 
 Once those external prerequisites and authorization exist, the same command
 accepts `--result /absolute/hip-d1-result.json`. A valid result must retain the
@@ -244,13 +245,24 @@ digests (decision, typed failure, score order, validity, rank, and clustering),
 all 192 slot-major score/proposal-RMSD/final-RMSD positions per case, a stable
 repeat, case/context/transfer timing samples, RSS/VRAM, H2D/D2H bytes, complete
 ROCprofiler kernel traces, typed failure probes, and GPU/toolchain/artifact
-identities. The verifier derives case p50/p95, candidate throughput, transfer
+identities. The newer GPU must be in the profile's explicit architecture
+allowlist (including alphanumeric targets such as `gfx90a`), and every
+architecture needs a distinct hashed device serial. The verifier derives case
+p50/p95, candidate throughput, transfer
 p50, context p50, kernel totals, and the predeclared strict `hip_fast` median
 gate. CPU fallback, denominator deletion, non-finite values, evidence field
 drift, or any execution/scientific/benchmark/product authority is rejected.
 Each candidate's scientific triple must be entirely finite or entirely JSON
 `null` for a typed failure; partial triples and non-finite numbers are rejected,
 so failures remain in the 64-slot denominator.
+
+Each failure probe embeds a structured observation whose backend and typed code
+must match the requested probe and whose canonical SHA-256 is recomputed. Each
+representative backend embeds a self-bound execution receipt naming the
+requested and observed backend, ordered cohort, fallback status, and profiler
+trace. GPU profiler evidence contains the complete normalized ordered dispatch
+rows; the verifier recomputes their canonical digest and rejects any per-kernel
+count or runtime summary not derived from those rows.
 
 The verifier only checks supplied evidence. It never runs a GPU and a passing
 artifact still grants no acceleration, scientific, benchmark, or product

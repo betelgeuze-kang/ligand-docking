@@ -25,10 +25,17 @@ def _save(tmp_path: Path, name: str, value: object) -> Path:
     return path
 
 
+def _case_ids() -> list[str]:
+    return [f"PDB_{index:02d}:LIG_{index:02d}" for index in range(32)]
+
+
 def _bound_profile(tmp_path: Path) -> tuple[Path, dict]:
     profile = json.loads(PROFILE.read_text(encoding="utf-8"))
     profile["status"] = VERIFIER.BOUND_STATUS
     profile["expected_manifest_sha256"] = "c" * 64
+    profile["expected_ordered_case_ids_sha256"] = VERIFIER._canonical_sha256(
+        _case_ids()
+    )
     profile["blockers"] = list(VERIFIER.BOUND_BLOCKERS)
     profile["profile_sha256"] = VERIFIER._canonical_sha256(
         VERIFIER._profile_projection(profile)
@@ -66,10 +73,40 @@ def _case(case_id: str, index: int, backend_name: str) -> dict:
     }
 
 
-def _backend(case_ids: list[str], backend_name: str) -> dict:
+def _backend(case_ids: list[str], backend_name: str, architecture: str) -> dict:
     gpu = backend_name != "rust_cpu"
+    profiler_trace = (
+        {
+            "schema_id": VERIFIER.NORMALIZED_PROFILER_TRACE_SCHEMA,
+            "rows": [
+                {
+                    "dispatch_index": index,
+                    "kernel_name": "score_candidates",
+                    "runtime_seconds": 0.05,
+                }
+                for index in range(5)
+            ],
+        }
+        if gpu
+        else None
+    )
+    profiler_trace_sha256 = VERIFIER._canonical_sha256(profiler_trace) if gpu else None
+    execution_receipt = {
+        "schema_id": VERIFIER.EXECUTION_BACKEND_RECEIPT_SCHEMA,
+        "gpu_architecture": architecture,
+        "requested_backend": backend_name,
+        "observed_backend": backend_name,
+        "cpu_fallback_observed": False,
+        "ordered_case_ids_sha256": VERIFIER._canonical_sha256(case_ids),
+        "profiler_trace_sha256": profiler_trace_sha256,
+    }
     return {
         "backend_name": backend_name,
+        "observed_backend": backend_name,
+        "cpu_fallback_observed": False,
+        "execution_backend_receipt_sha256": VERIFIER._canonical_sha256(
+            execution_receipt
+        ),
         "candidate_denominator": 64,
         "context_construction_seconds": [0.02, 0.021, 0.019, 0.022, 0.018],
         "peak_rss_bytes": 1048576,
@@ -82,12 +119,13 @@ def _backend(case_ids: list[str], backend_name: str) -> dict:
             "success": 32,
             **{code: 0 for code in VERIFIER.FAILURE_PROBE_CODES},
         },
-        "profiler_trace_sha256": "d" * 64 if gpu else None,
+        "profiler_trace": profiler_trace,
+        "profiler_trace_sha256": profiler_trace_sha256,
         "kernel_dispatches": (
             [
                 {
                     "kernel_name": "score_candidates",
-                    "dispatch_count": 160,
+                    "dispatch_count": 5,
                     "total_runtime_seconds": 0.25,
                 }
             ]
@@ -101,27 +139,32 @@ def _backend(case_ids: list[str], backend_name: str) -> dict:
     }
 
 
-def _architecture(case_ids: list[str], name: str, rank: int) -> dict:
-    failure_probes = [
-        {
-            "backend": backend,
-            "error_code": code,
-            "observed_error_sha256": f"{1000 + index:064x}",
-            "cpu_fallback_observed": False,
-            "claim_authority_granted": False,
-        }
-        for index, (backend, code) in enumerate(
-            (backend, code)
-            for backend in VERIFIER.REQUIRED_BACKENDS[1:]
-            for code in VERIFIER.FAILURE_PROBE_CODES
-        )
-    ]
+def _architecture(case_ids: list[str], name: str) -> dict:
+    failure_probes = []
+    for backend in VERIFIER.REQUIRED_BACKENDS[1:]:
+        for code in VERIFIER.FAILURE_PROBE_CODES:
+            observation = {
+                "schema_id": VERIFIER.FAILURE_OBSERVATION_SCHEMA,
+                "gpu_architecture": name,
+                "requested_backend": backend,
+                "error_code": code,
+                "message_sha256": "9" * 64,
+            }
+            failure_probes.append(
+                {
+                    "backend": backend,
+                    "error_code": code,
+                    "observed_error": observation,
+                    "observed_error_sha256": VERIFIER._canonical_sha256(observation),
+                    "cpu_fallback_observed": False,
+                    "claim_authority_granted": False,
+                }
+            )
     return {
         "gpu_architecture": name,
-        "architecture_generation_rank": rank,
         "gpu_model": f"AMD {name}",
         "pci_device_id": "1002:744c",
-        "device_serial_sha256": "1" * 64,
+        "device_serial_sha256": VERIFIER._canonical_sha256(name),
         "total_vram_bytes": 16 * 1024**3,
         "rocm_version": "6.4.1",
         "driver_version": "amdgpu-6.14",
@@ -133,14 +176,14 @@ def _architecture(case_ids: list[str], name: str, rank: int) -> dict:
         "profiler_version": "rocprofiler-sdk 0.6.0",
         "failure_probes": failure_probes,
         "backends": {
-            backend: _backend(case_ids, backend)
+            backend: _backend(case_ids, backend, name)
             for backend in VERIFIER.REQUIRED_BACKENDS
         },
     }
 
 
 def _result(profile: dict) -> dict:
-    case_ids = [f"PDB_{index:02d}:LIG_{index:02d}" for index in range(32)]
+    case_ids = _case_ids()
     return {
         "schema_id": VERIFIER.RESULT_SCHEMA,
         "profile_id": profile["profile_id"],
@@ -149,8 +192,8 @@ def _result(profile: dict) -> dict:
         "ordered_case_ids": case_ids,
         "ordered_case_ids_sha256": VERIFIER._canonical_sha256(case_ids),
         "architectures": [
-            _architecture(case_ids, "gfx1030", 1030),
-            _architecture(case_ids, "gfx1100", 1100),
+            _architecture(case_ids, "gfx1030"),
+            _architecture(case_ids, "gfx1100"),
         ],
         "authority": {key: False for key in VERIFIER.AUTHORITY_KEYS},
         "output_claim_authorized": False,
@@ -169,7 +212,7 @@ def test_committed_profile_is_valid_unbound_and_non_authoritative() -> None:
         "verified": True,
         "profile_id": "engine_v2_hip_d1_representative_v1",
         "profile_sha256": (
-            "223e1256ad4d4235ba15680b8c8ec5aab4721288f1b6e5dac49f71f5ee958eea"
+            "19d9fe580ef22c3600a6e79f0b8bc41d70c95b4d1fefbe86f7513ae3908f0855"
         ),
         "manifest_bound": False,
         "result_verification_authorized": False,
@@ -197,7 +240,7 @@ def test_valid_bound_result_derives_metrics_without_authority(tmp_path: Path) ->
     assert metrics["rust_cpu"]["candidate_throughput_per_second"] == 640.0
     assert metrics["hip_safe"]["h2d_seconds_p50"] == 0.001
     assert metrics["hip_safe"]["d2h_seconds_p50"] == 0.0005
-    assert metrics["hip_safe"]["kernel_dispatch_count_total"] == 160
+    assert metrics["hip_safe"]["kernel_dispatch_count_total"] == 5
     assert metrics["hip_safe"]["kernel_runtime_seconds_total"] == 0.25
     assert output["device_execution_authorized"] is False
     assert output["claim_authority_granted"] is False
@@ -241,6 +284,17 @@ def test_ordered_case_identity_hash_is_enforced(tmp_path: Path) -> None:
     result = _result(profile)
     result["ordered_case_ids_sha256"] = "f" * 64
     with pytest.raises(VERIFIER.HipBenchmarkError, match="case identity"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
+def test_ordered_cohort_is_bound_to_profile_manifest_selection(tmp_path: Path) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    result["ordered_case_ids"][0] = "OTHER:CASE"
+    result["ordered_case_ids_sha256"] = VERIFIER._canonical_sha256(
+        result["ordered_case_ids"]
+    )
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="cohort/profile cross-wire"):
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 
@@ -359,18 +413,41 @@ def test_backend_ordered_cohort_is_enforced(tmp_path: Path) -> None:
 def test_baseline_architecture_is_required(tmp_path: Path) -> None:
     profile_path, profile = _bound_profile(tmp_path)
     result = _result(profile)
-    result["architectures"][0]["gpu_architecture"] = "gfx900"
-    result["architectures"][0]["architecture_generation_rank"] = 900
+    case_ids = result["ordered_case_ids"]
+    result["architectures"] = [
+        _architecture(case_ids, "gfx1100"),
+        _architecture(case_ids, "gfx942"),
+    ]
     with pytest.raises(VERIFIER.HipBenchmarkError, match="gfx1030"):
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 
-def test_newer_architecture_is_required(tmp_path: Path) -> None:
+def test_architecture_must_be_in_owner_sealed_policy(tmp_path: Path) -> None:
     profile_path, profile = _bound_profile(tmp_path)
     result = _result(profile)
-    result["architectures"][1]["gpu_architecture"] = "gfx1010"
-    result["architectures"][1]["architecture_generation_rank"] = 1010
-    with pytest.raises(VERIFIER.HipBenchmarkError, match="newer GPU"):
+    result["architectures"][1] = _architecture(result["ordered_case_ids"], "gfx1010")
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="not allowed by profile"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
+def test_alphanumeric_newer_architecture_is_accepted(tmp_path: Path) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    result["architectures"][1] = _architecture(result["ordered_case_ids"], "gfx90a")
+    assert VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))[
+        "verified"
+    ]
+
+
+def test_distinct_architectures_require_distinct_device_identities(
+    tmp_path: Path,
+) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    result["architectures"][1]["device_serial_sha256"] = result["architectures"][0][
+        "device_serial_sha256"
+    ]
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="duplicate GPU device"):
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 
@@ -399,6 +476,36 @@ def test_kernel_trace_is_required(tmp_path: Path) -> None:
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 
+def test_kernel_summary_must_be_derived_from_profiler_trace(tmp_path: Path) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    result["architectures"][0]["backends"]["hip_fast"]["kernel_dispatches"][0][
+        "dispatch_count"
+    ] = 6
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="summary/trace mismatch"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
+def test_profiler_trace_digest_is_recomputed(tmp_path: Path) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    result["architectures"][0]["backends"]["hip_fast"]["profiler_trace_sha256"] = (
+        "f" * 64
+    )
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="trace SHA-256 mismatch"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
+def test_execution_backend_receipt_is_recomputed(tmp_path: Path) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    result["architectures"][0]["backends"]["hip_fast"][
+        "execution_backend_receipt_sha256"
+    ] = "f" * 64
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="backend receipt mismatch"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
 def test_transfer_sample_floor_is_enforced(tmp_path: Path) -> None:
     profile_path, profile = _bound_profile(tmp_path)
     result = _result(profile)
@@ -420,6 +527,34 @@ def test_failure_probe_cpu_fallback_is_rejected(tmp_path: Path) -> None:
     result = _result(profile)
     result["architectures"][0]["failure_probes"][0]["cpu_fallback_observed"] = True
     with pytest.raises(VERIFIER.HipBenchmarkError, match="CPU fallback"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
+def test_failure_probe_structured_error_code_is_enforced(tmp_path: Path) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    result["architectures"][0]["failure_probes"][0]["observed_error"]["error_code"] = (
+        "device_oom"
+    )
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="observation error code"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
+def test_failure_observation_digest_is_recomputed(tmp_path: Path) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    result["architectures"][0]["failure_probes"][0]["observed_error"][
+        "message_sha256"
+    ] = "8" * 64
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="observation SHA-256"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
+def test_representative_cpu_fallback_is_rejected(tmp_path: Path) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    result["architectures"][0]["backends"]["hip_safe"]["cpu_fallback_observed"] = True
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="representative CPU fallback"):
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 
