@@ -58,6 +58,7 @@ GLOBAL_ORIENTATION_CONTRACT_PATHS = (
     "betelgeuze_engine_v2/benchmark/global_orientation_development_metrics.py",
     "betelgeuze_engine_v2/benchmark/global_orientation_development_decision.py",
     "config/engine_v2_global_orientation_synthetic_contract.json",
+    "tests/fixtures/engine_v2_global_orientation_adversarial_v1.json",
     "config/engine_v2_global_orientation_contaminated_development.json",
 )
 GLOBAL_ORIENTATION_REQUIRED_TOKENS = (
@@ -65,6 +66,7 @@ GLOBAL_ORIENTATION_REQUIRED_TOKENS = (
     "tools/verify_engine_v2_global_orientation_synthetic_contract.py",
     "tools/verify_engine_v2_global_orientation_contaminated_development.py",
     "tests/unit/test_engine_v2_global_orientation.py",
+    "tests/unit/test_engine_v2_global_orientation_adversarial_fixtures.py",
     "tests/unit/test_engine_v2_global_orientation_evidence.py",
     "tests/unit/test_engine_v2_global_orientation_synthetic_contract.py",
     "tests/unit/test_engine_v2_global_orientation_development_contracts.py",

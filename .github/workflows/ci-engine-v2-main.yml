@@ -60,6 +60,7 @@ on:
       - "config/engine_v2_source_paired_clearance_external_reservation.json"
       - "config/engine_v2_source_paired_clearance_external_reservation_operations_decision.json"
       - "config/engine_v2_global_orientation_synthetic_contract.json"
+      - "tests/fixtures/engine_v2_global_orientation_adversarial_v1.json"
       - "config/engine_v2_global_orientation_contaminated_development.json"
       - "config/engine_v2_mixed64_geometric_candidate_evidence_v2.json"
       - "config/engine_v2_cpu_performance_profile.json"
@@ -279,6 +280,7 @@ jobs:
             config/engine_v2_source_paired_clearance_external_reservation.json
             config/engine_v2_source_paired_clearance_external_reservation_operations_decision.json
             config/engine_v2_global_orientation_synthetic_contract.json
+            tests/fixtures/engine_v2_global_orientation_adversarial_v1.json
             config/engine_v2_global_orientation_contaminated_development.json
             config/engine_v2_mixed64_geometric_candidate_evidence_v2.json
             config/engine_v2_mixed64_proposal_geometry_v3.json
@@ -389,6 +391,7 @@ jobs:
             tests/unit/test_reconcile_engine_v2_stage0_full_suites.py
             tests/unit/test_audit_engine_v2_ci_authority.py
             tests/unit/test_engine_v2_global_orientation.py
+            tests/unit/test_engine_v2_global_orientation_adversarial_fixtures.py
             tests/unit/test_engine_v2_global_orientation_evidence.py
             tests/unit/test_engine_v2_global_orientation_synthetic_contract.py
             tests/unit/test_engine_v2_global_orientation_development_contracts.py
@@ -918,6 +921,7 @@ jobs:
             tests/unit/test_source_paired_clearance_external_reservation_concurrency.py \
             tests/unit/test_verify_engine_v2_source_paired_clearance_external_reservation_operations_decision.py \
             tests/unit/test_engine_v2_global_orientation.py \
+            tests/unit/test_engine_v2_global_orientation_adversarial_fixtures.py \
             tests/unit/test_engine_v2_global_orientation_evidence.py \
             tests/unit/test_engine_v2_global_orientation_synthetic_contract.py \
             tests/unit/test_engine_v2_global_orientation_development_contracts.py \
