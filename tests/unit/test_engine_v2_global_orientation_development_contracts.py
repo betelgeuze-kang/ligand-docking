@@ -22,7 +22,11 @@ from betelgeuze_engine_v2 import (  # noqa: E402
     Chain,
     Residue,
     StructureProvenance,
+    canonical_system_sha256,
     canonical_topology_sha256,
+)
+from betelgeuze_engine_v2.molecular import (  # noqa: E402
+    all_atom_system_from_canonical_json,
 )
 from betelgeuze_engine_v2.benchmark.global_orientation_development_contracts import (
     GLOBAL_ORIENTATION_DEVELOPMENT_CANDIDATE_DENOMINATOR,
@@ -38,6 +42,7 @@ from betelgeuze_engine_v2.benchmark.global_orientation_development_contracts imp
     derive_global_orientation_generator_source_receipt_sha256,
     derive_global_orientation_pose_validity_config_fingerprint,
     derive_global_orientation_pocket_declaration_sha256,
+    derive_global_orientation_sanitized_authenticated_input_sha256,
     derive_global_orientation_source_coordinates_sha256,
     derive_global_orientation_scorer_implementation_manifest_sha256,
     materialize_global_orientation_docking_proposals,
@@ -506,6 +511,26 @@ def test_case_source_rederives_coordinates_surface_validity_and_runtime() -> Non
     assert source.pose_validity_config_fingerprint_sha256 == expected
 
 
+def test_case_source_serializes_rederivable_molecular_systems() -> None:
+    source = _source()
+    document = source.to_dict()
+    reconstructed = []
+    for role in ("receptor", "ligand"):
+        system = all_atom_system_from_canonical_json(
+            json.dumps(document[f"{role}_system"], sort_keys=True)
+        )
+        assert canonical_system_sha256(system) == document[f"{role}_system_sha256"]
+        reconstructed.append(system)
+    assert (
+        derive_scorer_v1_context(
+            source.authenticated_problem,
+            reconstructed[0],
+            reconstructed[1],
+        ).to_dict()
+        == source.scorer_context.to_dict()
+    )
+
+
 def test_case_source_rejects_crosswired_radius_chemistry_and_surface() -> None:
     source = _source()
 
@@ -715,6 +740,12 @@ def test_generated_unscored_slot_requires_explicit_failure() -> None:
         match="success/failure state",
     ):
         replace(partial, failure_code=None)
+    for contradictory_code in ("rmsd_timeout", "scorer_receptor_clash"):
+        with pytest.raises(
+            GlobalOrientationDevelopmentContractError,
+            match="first incomplete evaluation stage",
+        ):
+            replace(partial, failure_code=contradictory_code)
 
 
 def test_case_source_authenticates_archive_pocket_and_evaluation_authority() -> None:
@@ -784,7 +815,9 @@ def test_generator_seed_uses_only_permitted_pre_result_projection() -> None:
     source = _source()
     assert source.generator_source_receipt_sha256 == (
         derive_global_orientation_generator_source_receipt_sha256(
-            authenticated_input_receipt_sha256=source.authenticated_input_receipt_sha256,
+            sanitized_authenticated_input_sha256=(
+                source.sanitized_authenticated_input_sha256
+            ),
             ligand_coordinate_sha256=source.ligand_coordinate_sha256,
             ligand_topology_sha256=source.ligand_topology_sha256,
             pocket_center=source.pocket_center,
@@ -798,6 +831,30 @@ def test_generator_seed_uses_only_permitted_pre_result_projection() -> None:
     assert batch.source_receipt_sha256 != source.receipt_sha256
     assert source.historical_case_source.native_pose_artifact_sha256 not in json.dumps(
         batch.to_dict(), sort_keys=True
+    )
+
+    alternate = build_element_aware_authenticated_known_pocket_docking_problem(
+        source.receptor_system,
+        source.ligand_system,
+        PocketDefinition(
+            scope=source.authenticated_problem.pocket.scope,
+            method_id=source.authenticated_problem.pocket.method_id,
+            method_version=source.authenticated_problem.pocket.method_version,
+            coordinate_frame_id=(
+                source.authenticated_problem.pocket.coordinate_frame_id
+            ),
+            center=source.authenticated_problem.pocket.center,
+            radius_angstrom=source.authenticated_problem.pocket.radius_angstrom,
+            source_artifact_sha256=_digest("different-native-backed-pocket-source"),
+            implementation_source_sha256=(
+                source.authenticated_problem.pocket.implementation_source_sha256
+            ),
+        ),
+    )
+    assert alternate.input_receipt_sha256 != source.authenticated_input_receipt_sha256
+    assert (
+        derive_global_orientation_sanitized_authenticated_input_sha256(alternate)
+        == source.sanitized_authenticated_input_sha256
     )
 
 
@@ -1052,11 +1109,72 @@ def test_partial_evidence_preserves_each_completed_validity_evaluator() -> None:
         assert (retained["posebusters"] is not None) == (posebusters is not None)
 
 
+def test_generated_failure_code_matches_first_incomplete_stage() -> None:
+    source = _source()
+    slot = next(
+        value
+        for value in _lineage(source).slots
+        if value.generation_status == "generated"
+    )
+    complete = _candidate_evidence(slot, source)
+    score_only = GlobalOrientationDevelopmentPartialCandidateEvidenceV1(
+        candidate_id=complete.candidate_id,
+        proposal_index=complete.proposal_index,
+        proposal_fingerprint_sha256=(complete.candidate_proposal_fingerprint_sha256),
+        coordinate_sha256=complete.coordinate_sha256,
+        scorer_terms=complete.scorer_terms,
+        internal_validity=None,
+        posebusters=None,
+        rmsd=None,
+        raw_score_rank=complete.raw_score_rank,
+    )
+    validity_failure = GlobalOrientationDevelopmentObservationSlotV1(
+        lineage_slot_receipt_sha256=slot.receipt_sha256,
+        case_source_receipt_sha256=slot.case_source_receipt_sha256,
+        arm_id=slot.arm_id,
+        proposal_index=slot.proposal_index,
+        candidate_id=slot.candidate_id,
+        generation_status="generated",
+        proposal_fingerprint_sha256=slot.proposal_fingerprint_sha256,
+        coordinate_sha256=slot.coordinate_sha256,
+        score_status="scored",
+        validity_status="not_evaluated",
+        rmsd_status="not_evaluated",
+        candidate_evidence=None,
+        partial_evidence=score_only,
+        failure_code="validity_evaluator_failed",
+    )
+    with pytest.raises(
+        GlobalOrientationDevelopmentContractError,
+        match="first incomplete evaluation stage",
+    ):
+        replace(validity_failure, failure_code="receptor_clash")
+
+    validity_complete = replace(
+        score_only,
+        internal_validity=complete.internal_validity,
+        posebusters=complete.posebusters,
+    )
+    rmsd_failure = replace(
+        validity_failure,
+        partial_evidence=validity_complete,
+        validity_status="evaluated",
+        failure_code="rmsd_timeout",
+    )
+    assert rmsd_failure.failure_code == "rmsd_timeout"
+    with pytest.raises(
+        GlobalOrientationDevelopmentContractError,
+        match="first incomplete evaluation stage",
+    ):
+        replace(rmsd_failure, failure_code="validity_evaluator_failed")
+
+
 def test_public_contract_api_exports_required_constructors() -> None:
     assert {
         "GlobalOrientationDevelopmentHistoricalFailureAuthorityV1",
         "GlobalOrientationDevelopmentPartialCandidateEvidenceV1",
         "derive_global_orientation_pocket_declaration_sha256",
+        "derive_global_orientation_sanitized_authenticated_input_sha256",
         "derive_global_orientation_scorer_implementation_manifest_sha256",
     } <= set(contracts_module.__all__)
 

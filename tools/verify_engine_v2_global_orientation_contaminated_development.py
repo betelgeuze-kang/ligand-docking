@@ -54,7 +54,9 @@ SOURCE_RECEIPT_FIELDS = (
     "historical_member_manifest_sha256",
     "historical_bundle_checksum_sha256",
     "authenticated_problem",
+    "receptor_system",
     "receptor_system_sha256",
+    "ligand_system",
     "ligand_system_sha256",
     "scorer_context",
     "source_case_member_receipt_sha256",
@@ -73,6 +75,7 @@ SOURCE_RECEIPT_FIELDS = (
     "scorer_implementation_manifest_sha256",
     "scorer_native_extension_sha256",
     "scorer_backend_receipt_sha256",
+    "sanitized_authenticated_input_sha256",
     "generator_source_receipt_sha256",
     "generator_runtime_artifacts_bound",
 )
@@ -373,7 +376,7 @@ def _verify_preimport_source_bindings(protocol: Mapping[str, Any]) -> None:
     )
     _exact(
         scorer_manifest.get("python_transitive_source_manifest_sha256"),
-        "c619c08ebc97369727a10d760dfec97ca199ad1dfb64bce1e41857d382be4fe6",
+        "ff6d02b412069e5f802ac780fa0fc85d827da475cb6cafc6592b7b8ef4ea0ae0",
         name="pre-import ScorerV1 source identity",
     )
     _exact(
@@ -657,7 +660,7 @@ def _verify_authority_bindings(
             "138484e4e3f5473c582485316ed8482fc770d0df2aa9f8397e4c91be22d81b75"
         ),
         "python_transitive_source_manifest_sha256": (
-            "c619c08ebc97369727a10d760dfec97ca199ad1dfb64bce1e41857d382be4fe6"
+            "ff6d02b412069e5f802ac780fa0fc85d827da475cb6cafc6592b7b8ef4ea0ae0"
         ),
         "python_transitive_source_scope": SCORER_PYTHON_SOURCE_SCOPE,
     }
@@ -673,7 +676,7 @@ def _verify_authority_bindings(
             ),
             "implementation_manifest": implementation_manifest,
             "implementation_source_sha256": (
-                "ae5ae2af0f5fe208ba40c3192f7d0941c60c7f98b438c1b326c042d0159e2eea"
+                "c06b503379acc7688d86636734b734a41ea6715d4ec60425f07215c2d3c5f969"
             ),
             "native_runtime_artifact_contract": native_runtime_artifact_contract,
             "terms_schema_id": "betelgeuze.engine_v2_scorer_v1_terms/1.1.0",
@@ -888,7 +891,7 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
             "betelgeuze_engine_v2/benchmark/global_orientation_development_contracts.py"
         ),
         "development_evidence_contract_module_sha256": (
-            "e0608b0bdde69a39980b65b343f302190c7d84391885fa1c72212dfd8cc8c48b"
+            "832a5b40257919a1dbe3114cf06a0c5d696bd1e9faf6ee2294a7474d99c8c4aa"
         ),
         "contract_types_implemented": True,
         "exact_case_source_receipt_required": True,

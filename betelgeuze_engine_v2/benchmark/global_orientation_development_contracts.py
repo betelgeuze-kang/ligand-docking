@@ -45,6 +45,7 @@ from betelgeuze_engine_v2.docking.proposals import (
     bind_docking_proposal_state,
 )
 from betelgeuze_engine_v2.molecular import (
+    canonical_system_json_bytes,
     canonical_system_sha256,
     canonical_topology_sha256,
 )
@@ -103,6 +104,33 @@ GLOBAL_ORIENTATION_DEVELOPMENT_ARM_IDS = (
     "baseline_current_v7",
     "experimental_global_orientation_v1",
 )
+GLOBAL_ORIENTATION_DEVELOPMENT_EVALUATION_FAILURE_CODES = {
+    "score": frozenset(
+        {
+            "scorer_backend_failed",
+            "scorer_failed",
+            "scorer_non_finite",
+            "scorer_timeout",
+        }
+    ),
+    "validity": frozenset(
+        {
+            "internal_validity_failed",
+            "internal_validity_timeout",
+            "posebusters_failed",
+            "posebusters_timeout",
+            "validity_evaluator_failed",
+            "validity_evaluator_timeout",
+        }
+    ),
+    "rmsd": frozenset(
+        {
+            "rmsd_failed",
+            "rmsd_mapping_failed",
+            "rmsd_timeout",
+        }
+    ),
+}
 GLOBAL_ORIENTATION_HISTORICAL_ARCHIVE_SHA256 = (
     "8bef33eba296989b795a11fd05a7e119124b066d91bec28a8b910d38a083fbcc"
 )
@@ -326,7 +354,7 @@ def derive_global_orientation_pose_validity_config_fingerprint(
 
 def derive_global_orientation_generator_source_receipt_sha256(
     *,
-    authenticated_input_receipt_sha256: str,
+    sanitized_authenticated_input_sha256: str,
     ligand_coordinate_sha256: str,
     ligand_topology_sha256: str,
     pocket_center: Vector3,
@@ -339,9 +367,9 @@ def derive_global_orientation_generator_source_receipt_sha256(
     return _sha256(
         {
             "schema_id": GLOBAL_ORIENTATION_DEVELOPMENT_GENERATOR_SOURCE_SCHEMA_ID,
-            "authenticated_input_receipt_sha256": _digest(
-                authenticated_input_receipt_sha256,
-                name="authenticated_input_receipt_sha256",
+            "sanitized_authenticated_input_sha256": _digest(
+                sanitized_authenticated_input_sha256,
+                name="sanitized_authenticated_input_sha256",
             ),
             "ligand_coordinate_sha256": _digest(
                 ligand_coordinate_sha256,
@@ -365,6 +393,47 @@ def derive_global_orientation_generator_source_receipt_sha256(
             "receptor_surface_input_sha256": _sha256(
                 _coordinates_projection(receptor_surface_points)
             ),
+            "native_pose_input_consumed": False,
+            "reference_pose_input_consumed": False,
+            "result_input_consumed": False,
+        }
+    )
+
+
+def derive_global_orientation_sanitized_authenticated_input_sha256(
+    authenticated_problem: AuthenticatedDockingProblem,
+) -> str:
+    """Bind only authenticated pre-result inputs safe for generator seeding."""
+
+    if type(authenticated_problem) is not AuthenticatedDockingProblem:
+        raise TypeError("authenticated_problem must be exact authenticated authority")
+    pocket = authenticated_problem.pocket
+    return _sha256(
+        {
+            "schema_id": (
+                "betelgeuze.engine_v2_global_orientation_sanitized_authenticated_input/1.0.0"
+            ),
+            "scope": pocket.scope.value,
+            "pocket_method_id": pocket.method_id,
+            "pocket_method_version": pocket.method_version,
+            "coordinate_frame_id": pocket.coordinate_frame_id,
+            "receptor_system_sha256": authenticated_problem.receptor_system_sha256,
+            "ligand_system_sha256": authenticated_problem.ligand_system_sha256,
+            "search_space_fingerprint_sha256": (
+                authenticated_problem.search_space.fingerprint_sha256
+            ),
+            "search_space_derivation_receipt_sha256": (
+                authenticated_problem.search_space_receipt.receipt_sha256
+            ),
+            "validity_policy_sha256": (
+                authenticated_problem.validity_context.config.fingerprint_sha256
+            ),
+            "receptor_atom_indices": list(authenticated_problem.receptor_atom_indices),
+            "receptor_model_index": authenticated_problem.receptor_model_index,
+            "ligand_model_index": authenticated_problem.ligand_model_index,
+            "authority_policy_sha256": (authenticated_problem.authority_policy_sha256),
+            "pocket_source_artifact_identity_consumed": False,
+            "pocket_implementation_identity_consumed": False,
             "native_pose_input_consumed": False,
             "reference_pose_input_consumed": False,
             "result_input_consumed": False,
@@ -723,13 +792,21 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
     @property
     def generator_source_receipt_sha256(self) -> str:
         return derive_global_orientation_generator_source_receipt_sha256(
-            authenticated_input_receipt_sha256=self.authenticated_input_receipt_sha256,
+            sanitized_authenticated_input_sha256=(
+                self.sanitized_authenticated_input_sha256
+            ),
             ligand_coordinate_sha256=self.ligand_coordinate_sha256,
             ligand_topology_sha256=self.ligand_topology_sha256,
             pocket_center=self.pocket_center,
             pocket_normal=self.pocket_normal,
             pocket_radius_angstrom=self.pocket_radius_angstrom,
             receptor_surface_points=self.receptor_surface_points,
+        )
+
+    @property
+    def sanitized_authenticated_input_sha256(self) -> str:
+        return derive_global_orientation_sanitized_authenticated_input_sha256(
+            self.authenticated_problem
         )
 
     def _projection(self) -> dict[str, object]:
@@ -748,7 +825,13 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
                 self.historical_bundle_checksum_sha256
             ),
             "authenticated_problem": self.authenticated_problem.to_dict(),
+            "receptor_system": json.loads(
+                canonical_system_json_bytes(self.receptor_system).decode("ascii")
+            ),
             "receptor_system_sha256": canonical_system_sha256(self.receptor_system),
+            "ligand_system": json.loads(
+                canonical_system_json_bytes(self.ligand_system).decode("ascii")
+            ),
             "ligand_system_sha256": canonical_system_sha256(self.ligand_system),
             "scorer_context": self.scorer_context.to_dict(),
             "source_case_member_receipt_sha256": (
@@ -781,6 +864,9 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
             ),
             "scorer_native_extension_sha256": self.scorer_native_extension_sha256,
             "scorer_backend_receipt_sha256": self.scorer_backend_receipt_sha256,
+            "sanitized_authenticated_input_sha256": (
+                self.sanitized_authenticated_input_sha256
+            ),
             "generator_source_receipt_sha256": (self.generator_source_receipt_sha256),
             "generator_runtime_artifacts_bound": False,
             "surface_extraction_procedure_id": self.surface_extraction_procedure_id,
@@ -1689,6 +1775,23 @@ class GlobalOrientationDevelopmentObservationSlotV1:
             raise GlobalOrientationDevelopmentContractError(
                 "observation success/failure state is contradictory"
             )
+        if not complete_success and self.generation_status == "generated":
+            assert failure is not None
+            if self.score_status == "unscored":
+                failed_stage = "score"
+            elif self.validity_status == "not_evaluated":
+                failed_stage = "validity"
+            else:
+                failed_stage = "rmsd"
+            if (
+                failure
+                not in GLOBAL_ORIENTATION_DEVELOPMENT_EVALUATION_FAILURE_CODES[
+                    failed_stage
+                ]
+            ):
+                raise GlobalOrientationDevelopmentContractError(
+                    "failure code does not match the first incomplete evaluation stage"
+                )
         object.__setattr__(self, "_receipt_sha256", _sha256(self._projection()))
 
     def _projection(self) -> dict[str, object]:
@@ -2011,6 +2114,7 @@ __all__ = [
     "derive_global_orientation_generator_source_receipt_sha256",
     "derive_global_orientation_pose_validity_config_fingerprint",
     "derive_global_orientation_pocket_declaration_sha256",
+    "derive_global_orientation_sanitized_authenticated_input_sha256",
     "derive_global_orientation_scorer_implementation_manifest_sha256",
     "derive_global_orientation_source_coordinates_sha256",
     "materialize_global_orientation_docking_proposals",

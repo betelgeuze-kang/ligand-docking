@@ -20,7 +20,8 @@ members of the fixed historical cohort. It retains:
 - the exact authenticated historical case-source receipt, including its frozen
   archive member, native pose, receptor artifact, and current-V7 lineage;
 - the exact authenticated docking problem, canonical receptor and ligand
-  molecular systems, and concrete ScorerV1 context;
+  molecular systems serialized as independently loadable canonical documents,
+  and concrete ScorerV1 context;
 - the pinned historical archive, member-manifest, and bundle identities;
 - complete receptor and ligand coordinates with canonical binary64 identities;
 - proof that those coordinates and the ligand topology equal the authenticated
@@ -35,8 +36,10 @@ members of the fixed historical cohort. It retains:
   equal the repeated scorer runtime identities and whose backend, options, and
   live-rederived aggregate Python/native implementation manifest must match the
   frozen CPU profile;
-- a generator-source receipt rederived only from the authenticated input,
-  prepared ligand, pocket geometry, and authenticated receptor subset; and
+- a generator-source receipt rederived only from a sanitized authenticated-input
+  projection, prepared ligand, pocket geometry, and authenticated receptor
+  subset; the sanitized projection excludes the full input-receipt digest and
+  the native-backed pocket source and implementation identities; and
 - the exact receptor atom subset selected by the authenticated validity context,
   whose points are rederived directly from retained receptor coordinates rather
   than accepted as a caller-selected surface subset.
@@ -74,8 +77,9 @@ the experimental arm must own the exact `GlobalOrientationBatch`. The
 experimental batch is deterministically regenerated from the retained ligand,
 authenticated receptor subset, pocket, frozen config, permitted-input source
 receipt, and profile; the supplied batch must equal that regenerated document.
-The seed projection excludes the nested historical/native-pose receipt and
-unbound runtime metadata. Every slot is then rederived from the regenerated
+The seed projection excludes the nested historical/native-pose receipt, the
+native-backed pocket source identity, and unbound runtime metadata. Every slot
+is then rederived from the regenerated
 authority, including transforms,
 coordinates, minimum receptor distance, generated/failed state, proposal and
 coordinate identity, generation receipt, and failure code.
@@ -117,6 +121,11 @@ stage and its raw-score rank alongside a typed failure; it cannot be collapsed
 to an invented `unscored` row. A failed generation cannot carry downstream
 evidence. Missing values therefore remain observations rather than disappearing
 from the denominator or becoming invented finite values.
+Generated-row failure codes come from frozen per-stage allowlists and must match
+the first incomplete stage: scorer failure/backend/timeout/non-finite codes for
+scoring; evaluator/internal-validity/PoseBusters failure or timeout codes for
+validity; and RMSD failure/mapping/timeout codes after both validity evaluators
+complete.
 
 `GlobalOrientationDevelopmentArmObservationsV1` requires a one-to-one binding
 between all 64 lineage slots and all 64 observations. It checks candidate scorer,

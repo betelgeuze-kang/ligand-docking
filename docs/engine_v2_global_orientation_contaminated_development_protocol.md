@@ -25,7 +25,7 @@ betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.6.0
 Protocol self-hash:
 
 ```text
-9504b81ac35540ec4957834ec4fe06add6e4fd8a8c4b7952986747e31011dc97
+3f35dc70650ed036f9ec6e1c7a6ec6f2b3610b276142b545ddc8a90cfdab9fb7
 ```
 
 ## Scientific question
@@ -109,17 +109,18 @@ absence is an execution blocker, not a value to be defaulted.
 
 Before any later execution authority can be considered, each case must provide a
 complete source receipt binding case identity, archive-member receipt,
-authenticated input receipt, receptor and ligand coordinate identities, ligand
-topology identity, pocket declaration identity, and preparation-policy identity.
-This binds exact structures and declarations without copying private molecular
-material into the repository.
+authenticated input receipt, independently loadable canonical receptor and
+ligand systems, coordinate identities, ligand topology identity, pocket
+declaration identity, and preparation-policy identity. These private receipts
+remain absent from the repository.
 
 ## Information boundary
 
 The experimental generator may consume only prepared ligand coordinates,
 declared pocket center and normal, bounded receptor surface points, the frozen
-generator configuration, the exact source-receipt identity, and the frozen
-profile identity.
+generator configuration, a sanitized authenticated-input projection, and the
+frozen profile identity. The sanitized projection excludes the full input
+receipt and native-backed pocket source/implementation identities.
 
 It may not consume native or reference pose, RMSD, candidate score, prior
 benchmark outcome, fresh-holdout identity, or product-routing state. Reference
@@ -171,7 +172,7 @@ round-1/2/3 compatibility installers, as well as the native V7 profile and
 transitive native source manifest, build configuration, default config
 fingerprint, and single-thread backend options. Its canonical
 implementation-manifest identity is
-`ae5ae2af0f5fe208ba40c3192f7d0941c60c7f98b438c1b326c042d0159e2eea`.
+`c06b503379acc7688d86636734b734a41ea6715d4ec60425f07215c2d3c5f969`.
 PoseBusters is bound to the exact 0.3.1 universal wheel SHA-256
 `a6d1437d0eb3e0fe13ad73b5c4efdc8c0914ceadd904cde55b2a9835bf591a9d`,
 redock configuration, local report runner, the imported public-redocking
@@ -266,6 +267,10 @@ instantiate all four machine-verifiable contracts:
 2. baseline candidate lineage bound to all 64 observation slots;
 3. experimental candidate lineage bound to all 64 observation slots; and
 4. failure-complete observations with an explicit unscored state.
+
+Each generated-row failure code must belong to the frozen allowlist for its
+first incomplete stage: scorer, validity evaluator, or RMSD after validity is
+complete.
 
 Until then,
 `decision_evaluator_implemented = false` and

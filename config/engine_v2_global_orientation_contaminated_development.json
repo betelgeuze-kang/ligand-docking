@@ -116,7 +116,7 @@
         "native_source_manifest_sha256": "ecb009ac228652c6c6cbdefcdd70828ce3d9aeea5a5e31d0fff0246d4d5f932e",
         "python_module_path": "betelgeuze_engine_v2/docking/scorer_v1.py",
         "python_module_sha256": "138484e4e3f5473c582485316ed8482fc770d0df2aa9f8397e4c91be22d81b75",
-        "python_transitive_source_manifest_sha256": "c619c08ebc97369727a10d760dfec97ca199ad1dfb64bce1e41857d382be4fe6",
+        "python_transitive_source_manifest_sha256": "ff6d02b412069e5f802ac780fa0fc85d827da475cb6cafc6592b7b8ef4ea0ae0",
         "python_transitive_source_scope": {
           "files": [],
           "manifest_algorithm": "canonical_sorted_path_sha256_rows/1.0.0",
@@ -125,7 +125,7 @@
           ]
         }
       },
-      "implementation_source_sha256": "ae5ae2af0f5fe208ba40c3192f7d0941c60c7f98b438c1b326c042d0159e2eea",
+      "implementation_source_sha256": "c06b503379acc7688d86636734b734a41ea6715d4ec60425f07215c2d3c5f969",
       "native_runtime_artifact_contract": {
         "artifact_identities_committed": false,
         "consumed_qualification_receipt_path": "config/engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt.json",
@@ -310,7 +310,7 @@
     ]
   },
   "protocol_role": "fixed_historical_contaminated_development_global_orientation_ab",
-  "protocol_sha256": "9504b81ac35540ec4957834ec4fe06add6e4fd8a8c4b7952986747e31011dc97",
+  "protocol_sha256": "3f35dc70650ed036f9ec6e1c7a6ec6f2b3610b276142b545ddc8a90cfdab9fb7",
   "schema_id": "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.6.0",
   "shared_execution_contract": {
     "conformer_authority": "same_prepared_ligand_for_both_arms",
@@ -337,7 +337,7 @@
     "case_source_receipt_schema_id": "betelgeuze.engine_v2_global_orientation_development_case_source/1.0.0",
     "contract_types_implemented": true,
     "development_evidence_contract_module_path": "betelgeuze_engine_v2/benchmark/global_orientation_development_contracts.py",
-    "development_evidence_contract_module_sha256": "e0608b0bdde69a39980b65b343f302190c7d84391885fa1c72212dfd8cc8c48b",
+    "development_evidence_contract_module_sha256": "832a5b40257919a1dbe3114cf06a0c5d696bd1e9faf6ee2294a7474d99c8c4aa",
     "exact_case_source_receipt_required": true,
     "global_orientation_synthetic_contract_schema_id": "betelgeuze.engine_v2_global_orientation_synthetic_contract/2.0.0",
     "global_orientation_synthetic_contract_sha256": "02fa37a94f3c1719f5e7b5b808c71d053e313b018ef9bfa7d904869c2ab1dad0",
@@ -361,7 +361,9 @@
       "historical_member_manifest_sha256",
       "historical_bundle_checksum_sha256",
       "authenticated_problem",
+      "receptor_system",
       "receptor_system_sha256",
+      "ligand_system",
       "ligand_system_sha256",
       "scorer_context",
       "source_case_member_receipt_sha256",
@@ -380,6 +382,7 @@
       "scorer_implementation_manifest_sha256",
       "scorer_native_extension_sha256",
       "scorer_backend_receipt_sha256",
+      "sanitized_authenticated_input_sha256",
       "generator_source_receipt_sha256",
       "generator_runtime_artifacts_bound"
     ],
