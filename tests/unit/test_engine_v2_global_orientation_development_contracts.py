@@ -52,6 +52,8 @@ from betelgeuze_engine_v2.docking import (
     PocketDefinition,
     PoseValidityConfig,
     PoseValidityResult,
+    ScorerBackend,
+    ScorerBackendReceipt,
     ScorerV1Context,
     ScorerV1Terms,
     build_authenticated_known_pocket_docking_problem,
@@ -229,6 +231,17 @@ def _source() -> GlobalOrientationDevelopmentCaseSourceReceiptV1:
         receptor_hydrophobic=tuple(range(len(authenticated.receptor_atom_indices))),
         ligand_hydrophobic=(0, 2),
     )
+    native_extension = _digest("native-extension")
+    backend_receipt = ScorerBackendReceipt(
+        backend=ScorerBackend.RUST_CPU_REQUIRED,
+        backend_version="unit-native-v1",
+        implementation_source_sha256=_digest("scorer-implementation"),
+        options_fingerprint_sha256=_digest("scorer-options"),
+        extension_sha256=native_extension,
+        cargo_lock_sha256=_digest("cargo-lock"),
+        rustc_version="rustc unit",
+        target_triple="unit-target",
+    )
     return GlobalOrientationDevelopmentCaseSourceReceiptV1(
         case_id="5SD5_HWI",
         historical_case_source=historical,
@@ -268,8 +281,9 @@ def _source() -> GlobalOrientationDevelopmentCaseSourceReceiptV1:
         evaluation_pipeline_sha256=(
             GLOBAL_ORIENTATION_EXPECTED_EVALUATION_PIPELINE_SHA256
         ),
-        scorer_native_extension_sha256=_digest("native-extension"),
-        scorer_backend_receipt_sha256=_digest("backend-receipt"),
+        scorer_backend_receipt=backend_receipt,
+        scorer_native_extension_sha256=native_extension,
+        scorer_backend_receipt_sha256=backend_receipt.receipt_sha256,
         generator_python_executable_sha256=python,
         generator_python_shared_library_sha256=shared,
         generator_libm_sha256=libm,
@@ -306,6 +320,14 @@ def _lineage(
         source_receipt_sha256=source.receipt_sha256,
         profile_id=profile_id,
     )
+    return _lineage_from_batch(source, batch)
+
+
+def _lineage_from_batch(
+    source: GlobalOrientationDevelopmentCaseSourceReceiptV1,
+    batch,
+) -> GlobalOrientationDevelopmentArmLineageReceiptV1:
+    arm_id = "experimental_global_orientation_v1"
     slots = tuple(
         GlobalOrientationDevelopmentLineageSlotV1(
             case_source_receipt_sha256=source.receipt_sha256,
@@ -532,7 +554,7 @@ def test_preparation_failure_retains_ninth_case_without_candidate_rows() -> None
         historical_authority=(
             GlobalOrientationDevelopmentHistoricalFailureAuthorityV1()
         ),
-        failure_code="ligand_preparation_failed",
+        failure_code="unsupported_large_ring_system",
     )
 
     assert receipt.to_dict()["candidate_denominator"] == 0
@@ -546,6 +568,11 @@ def test_preparation_failure_retains_ninth_case_without_candidate_rows() -> None
             receipt.historical_authority,
             historical_engine_receipt_sha256=_digest("fabricated-failure"),
         )
+    with pytest.raises(
+        GlobalOrientationDevelopmentContractError,
+        match="frozen historical failure code",
+    ):
+        replace(receipt, failure_code="parser_failed")
 
 
 def test_arm_lineage_and_observations_bind_exact_failure_complete_64_slots() -> None:
@@ -682,6 +709,14 @@ def test_case_source_authenticates_archive_pocket_and_evaluation_authority() -> 
         match="evaluation pipeline",
     ):
         replace(source, evaluation_pipeline_sha256=_digest("other-evaluator"))
+    with pytest.raises(
+        GlobalOrientationDevelopmentContractError,
+        match="native extension identity",
+    ):
+        replace(
+            source,
+            scorer_native_extension_sha256=_digest("crosswired-extension"),
+        )
 
 
 def test_arm_authority_and_slots_must_rederive_from_generator_batch() -> None:
@@ -718,6 +753,29 @@ def test_arm_authority_and_slots_must_rederive_from_generator_batch() -> None:
         match="concrete generator batch",
     ):
         _lineage(_source(), profile_id="unfrozen-profile")
+
+    batch = lineage.arm_authority_receipt
+    forged_coordinates = tuple(
+        (x + 0.25, y, z)
+        for x, y, z in batch.slots[generated_index].transformed_coordinates
+    )
+    forged_slot = replace(
+        batch.slots[generated_index],
+        transformed_coordinates=forged_coordinates,
+    )
+    forged_batch = replace(
+        batch,
+        slots=(
+            *batch.slots[:generated_index],
+            forged_slot,
+            *batch.slots[generated_index + 1 :],
+        ),
+    )
+    with pytest.raises(
+        GlobalOrientationDevelopmentContractError,
+        match="concrete generator batch",
+    ):
+        _lineage_from_batch(lineage.case_source, forged_batch)
 
 
 def test_candidate_authority_and_score_ranks_are_rederived_at_arm_level() -> None:

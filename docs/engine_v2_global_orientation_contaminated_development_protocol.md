@@ -25,7 +25,7 @@ betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.6.0
 Protocol self-hash:
 
 ```text
-60a99b15ea152f934174730d7ab8377901aeffd1dc595c8e7e72d79aaf4dd0a9
+4b2decc87db8d3c8178a74ac8ad6fd080f2de4a727b2ddab42a9d3d47f6ce6e1
 ```
 
 ## Scientific question
@@ -171,7 +171,7 @@ round-1/2/3 compatibility installers, as well as the native V7 profile and
 transitive native source manifest, build configuration, default config
 fingerprint, and single-thread backend options. Its canonical
 implementation-manifest identity is
-`d5cec2c34730ac519d24f34b4d802a5ea613e6fd0598a513eafe3926197272ce`.
+`7a157941bb876baa1c630010d388c69a890db8d753842c86b0417ece89d6a7e1`.
 PoseBusters is bound to the exact 0.3.1 universal wheel SHA-256
 `a6d1437d0eb3e0fe13ad73b5c4efdc8c0914ceadd904cde55b2a9835bf591a9d`,
 redock configuration, local report runner, the imported public-redocking
@@ -242,18 +242,20 @@ receipt issuer is implemented. The repository now defines the prerequisite
 private-evidence types in
 `betelgeuze_engine_v2/benchmark/global_orientation_development_contracts.py`.
 They retain source coordinates and identities, rederive receptor surface points,
-bind each arm's exact 64-slot lineage, and require an explicit unscored state for
-every incomplete observation. No private evidence instance is committed, and
-the types do not load inputs, run components, evaluate the decision, or issue
-authority. Treating a digest label or caller-set completeness boolean as actual
-evidence remains forbidden.
+bind each arm's exact 64-slot lineage, deterministically regenerate the
+experimental batch for equality checking, and require an explicit unscored
+state for every incomplete observation. No private evidence instance is
+committed, and the types do not load inputs, score candidates, evaluate the
+decision, or issue authority. Treating a digest label or caller-set completeness
+boolean as actual evidence remains forbidden.
 
 Before an evaluator can be reviewed, separately authorized private evidence must
 instantiate all four machine-verifiable contracts:
 
 1. a case-source receipt containing the ligand, topology, pocket, exact
    binary64 pocket radius, derived validity-config fingerprint, evaluation
-   pipeline, exact native scorer extension and backend-receipt identities, and
+   pipeline, a concrete backend receipt whose embedded native-extension identity
+   matches the exact native scorer extension, and
    generator Python/shared-library/`libm` runtime identities, and preparation
    identities plus receptor-surface points rederived from the bound receptor
    geometry by a frozen extraction procedure;

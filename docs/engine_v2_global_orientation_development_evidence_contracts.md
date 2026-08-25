@@ -30,8 +30,9 @@ members of the fixed historical cohort. It retains:
   pocket declaration identity rederived over that geometry and historical case;
 - the validity-config fingerprint independently rederived from that radius and
   the immutable public-redocking validity fields;
-- the frozen evaluation-pipeline identity plus native-extension and
-  scorer-backend receipt identities;
+- the frozen evaluation-pipeline identity plus the concrete scorer-backend
+  receipt, whose receipt and embedded native-extension identities must exactly
+  equal the repeated scorer runtime identities;
 - Python executable, Python shared library, and `libm` payload identities plus
   their independently rederived combined runtime fingerprint; and
 - the exact receptor atom subset selected by the authenticated validity context,
@@ -43,8 +44,9 @@ The ninth cohort member, `6M73_FNR`, remains in the denominator through a pinned
 `GlobalOrientationDevelopmentPreparationFailureReceiptV1`. Its archive,
 manifest, bundle, cohort, Phase 2.5 policy, and historical engine receipt are
 constants rather than caller-supplied digests. It has a typed preparation
-failure and zero candidate rows; it cannot be silently omitted or relabeled as
-a scored case.
+`unsupported_large_ring_system` failure and zero candidate rows; it cannot be
+silently omitted, relabeled as a scored case, or substituted with a new parser
+or runtime regression.
 
 These contracts can represent future private receipts. They do not populate the
 currently absent per-case fingerprints or runtime artifacts in the public
@@ -65,9 +67,13 @@ proposal, coordinate, and generation-receipt identities, or `failed`, with only
 a typed generation failure. Cross-case, cross-arm, reordered, duplicate, short,
 or overlong lineages fail closed. A digest alone is not accepted: the baseline
 arm must own the exact `SourcePairedClearanceCurrentV7LineageReceiptV1`, while
-the experimental arm must own the exact `GlobalOrientationBatch`. Every slot is
-rederived from that concrete authority receipt, including generated/failed
-state, proposal and coordinate identity, generation receipt, and failure code.
+the experimental arm must own the exact `GlobalOrientationBatch`. The
+experimental batch is deterministically regenerated from the retained ligand,
+authenticated receptor subset, pocket, frozen config, source receipt, and
+profile; the supplied batch must equal that regenerated document. Every slot is
+then rederived from the regenerated authority, including transforms,
+coordinates, minimum receptor distance, generated/failed state, proposal and
+coordinate identity, generation receipt, and failure code.
 
 ## Failure-complete observations
 

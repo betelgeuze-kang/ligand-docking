@@ -1,8 +1,9 @@
 """Failure-complete evidence contracts for global-orientation development.
 
 These types seal already-observed, private development evidence.  They do not
-load molecular inputs, run a proposal generator or scorer, evaluate a protocol
-decision, or grant execution authority.
+load molecular inputs, run a scorer, evaluate a protocol decision, or grant
+execution authority. Experimental lineages are validated by deterministic
+regeneration from the already-retained case-source coordinates.
 """
 
 from __future__ import annotations
@@ -25,10 +26,15 @@ from .source_paired_clearance_activation import (
 from betelgeuze_engine_v2 import AllAtomSystem
 from betelgeuze_engine_v2.docking import (
     AuthenticatedDockingProblem,
+    ScorerBackendReceipt,
     ScorerV1Context,
     ScorerV1Terms,
 )
-from betelgeuze_engine_v2.docking.global_orientation import GlobalOrientationBatch
+from betelgeuze_engine_v2.docking.global_orientation import (
+    GlobalOrientationBatch,
+    GlobalOrientationConfig,
+    generate_global_orientation_batch,
+)
 from betelgeuze_engine_v2.molecular import (
     canonical_system_sha256,
     canonical_topology_sha256,
@@ -366,6 +372,7 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
     pose_validity_config_fingerprint_sha256: str
     preparation_policy_sha256: str
     evaluation_pipeline_sha256: str
+    scorer_backend_receipt: ScorerBackendReceipt
     scorer_native_extension_sha256: str
     scorer_backend_receipt_sha256: str
     generator_python_executable_sha256: str
@@ -410,9 +417,10 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
             or type(self.receptor_system) is not AllAtomSystem
             or type(self.ligand_system) is not AllAtomSystem
             or type(self.scorer_context) is not ScorerV1Context
+            or type(self.scorer_backend_receipt) is not ScorerBackendReceipt
         ):
             raise TypeError(
-                "case source requires exact authenticated problem, molecular systems, and scorer context"
+                "case source requires exact authenticated problem, molecular systems, scorer context, and backend receipt"
             )
         authenticated = self.authenticated_problem
         receptor_system_sha256 = canonical_system_sha256(self.receptor_system)
@@ -498,6 +506,15 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
         if self.ligand_topology_sha256 != canonical_topology_sha256(self.ligand_system):
             raise GlobalOrientationDevelopmentContractError(
                 "ligand topology does not match the authenticated molecular system"
+            )
+        if (
+            self.scorer_backend_receipt_sha256
+            != self.scorer_backend_receipt.receipt_sha256
+            or self.scorer_native_extension_sha256
+            != self.scorer_backend_receipt.extension_sha256
+        ):
+            raise GlobalOrientationDevelopmentContractError(
+                "scorer backend receipt or native extension identity is cross-wired"
             )
         center = _vector(self.pocket_center, name="pocket_center")
         normal = _vector(self.pocket_normal, name="pocket_normal")
@@ -659,6 +676,7 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
             ),
             "preparation_policy_sha256": self.preparation_policy_sha256,
             "evaluation_pipeline_sha256": self.evaluation_pipeline_sha256,
+            "scorer_backend_receipt": self.scorer_backend_receipt.to_dict(),
             "scorer_native_extension_sha256": self.scorer_native_extension_sha256,
             "scorer_backend_receipt_sha256": self.scorer_backend_receipt_sha256,
             "generator_python_executable_sha256": (
@@ -797,6 +815,10 @@ class GlobalOrientationDevelopmentPreparationFailureReceiptV1:
         object.__setattr__(
             self, "failure_code", _text(self.failure_code, name="failure_code")
         )
+        if self.failure_code != "unsupported_large_ring_system":
+            raise GlobalOrientationDevelopmentContractError(
+                "preparation failure does not match the frozen historical failure code"
+            )
         object.__setattr__(self, "_receipt_sha256", _sha256(self._projection()))
 
     def _projection(self) -> dict[str, object]:
@@ -1038,11 +1060,19 @@ class GlobalOrientationDevelopmentArmLineageReceiptV1:
                     "experimental arm requires the exact global-orientation batch"
                 )
             assert isinstance(authority_receipt, GlobalOrientationBatch)
-            expected_config = (
-                authority_receipt.config.orientation_count == 8
-                and authority_receipt.config.translation_shell_radii == (1.5,)
-                and authority_receipt.config.translation_points_per_shell == 7
-                and authority_receipt.config.minimum_receptor_distance == 1.1
+            expected_batch = generate_global_orientation_batch(
+                self.case_source.ligand_coordinates,
+                pocket_center=self.case_source.pocket_center,
+                pocket_normal=self.case_source.pocket_normal,
+                receptor_surface_points=self.case_source.receptor_surface_points,
+                config=GlobalOrientationConfig(
+                    orientation_count=8,
+                    translation_shell_radii=(1.5,),
+                    translation_points_per_shell=7,
+                    minimum_receptor_distance=1.1,
+                ),
+                source_receipt_sha256=case_source,
+                profile_id="deterministic_surface_aware_rigid_v2",
             )
             expected_surface_sha256 = _sha256(
                 _coordinates_projection(self.case_source.receptor_surface_points)
@@ -1057,7 +1087,7 @@ class GlobalOrientationDevelopmentArmLineageReceiptV1:
                     source_slot.receipt_sha256 if source_slot.accepted else None,
                     None if source_slot.accepted else source_slot.rejection_code,
                 )
-                for source_slot in authority_receipt.slots
+                for source_slot in expected_batch.slots
             )
             observed_slots = tuple(
                 (
@@ -1072,17 +1102,12 @@ class GlobalOrientationDevelopmentArmLineageReceiptV1:
                 for slot in slots
             )
             if (
-                arm_authority != authority_receipt.receipt_sha256
-                or authority_receipt.profile_id
-                != "deterministic_surface_aware_rigid_v2"
-                or authority_receipt.source_receipt_sha256 != case_source
-                or authority_receipt.ligand_input_sha256
+                arm_authority != expected_batch.receipt_sha256
+                or authority_receipt.to_dict() != expected_batch.to_dict()
+                or expected_batch.ligand_input_sha256
                 != _sha256(_coordinates_projection(self.case_source.ligand_coordinates))
-                or authority_receipt.receptor_surface_input_sha256
+                or expected_batch.receptor_surface_input_sha256
                 != expected_surface_sha256
-                or authority_receipt.pocket_center != self.case_source.pocket_center
-                or authority_receipt.pocket_normal != self.case_source.pocket_normal
-                or not expected_config
                 or observed_slots != expected_slots
             ):
                 raise GlobalOrientationDevelopmentContractError(

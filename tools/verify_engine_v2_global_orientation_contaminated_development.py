@@ -69,6 +69,7 @@ SOURCE_RECEIPT_FIELDS = (
     "pose_validity_config_fingerprint_sha256",
     "preparation_policy_sha256",
     "evaluation_pipeline_sha256",
+    "scorer_backend_receipt",
     "scorer_native_extension_sha256",
     "scorer_backend_receipt_sha256",
     "generator_python_executable_sha256",
@@ -373,7 +374,7 @@ def _verify_preimport_source_bindings(protocol: Mapping[str, Any]) -> None:
     )
     _exact(
         scorer_manifest.get("python_transitive_source_manifest_sha256"),
-        "4f83e98b3687fc3b16518932cfe99a9fc1f0435cd6a8281f2e945eb5f21cec71",
+        "1b901a337f15a3219d6901ec515b719ede3a6bc2a96c831c8f584b76e33f3e23",
         name="pre-import ScorerV1 source identity",
     )
     _exact(
@@ -657,7 +658,7 @@ def _verify_authority_bindings(
             "aa7cd89dba16edb36da033bace57804b9ee851997a400c9d468e61ccefdd0159"
         ),
         "python_transitive_source_manifest_sha256": (
-            "4f83e98b3687fc3b16518932cfe99a9fc1f0435cd6a8281f2e945eb5f21cec71"
+            "1b901a337f15a3219d6901ec515b719ede3a6bc2a96c831c8f584b76e33f3e23"
         ),
         "python_transitive_source_scope": SCORER_PYTHON_SOURCE_SCOPE,
     }
@@ -673,7 +674,7 @@ def _verify_authority_bindings(
             ),
             "implementation_manifest": implementation_manifest,
             "implementation_source_sha256": (
-                "d5cec2c34730ac519d24f34b4d802a5ea613e6fd0598a513eafe3926197272ce"
+                "7a157941bb876baa1c630010d388c69a890db8d753842c86b0417ece89d6a7e1"
             ),
             "native_runtime_artifact_contract": native_runtime_artifact_contract,
             "terms_schema_id": "betelgeuze.engine_v2_scorer_v1_terms/1.1.0",
@@ -888,7 +889,7 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
             "betelgeuze_engine_v2/benchmark/global_orientation_development_contracts.py"
         ),
         "development_evidence_contract_module_sha256": (
-            "bd684345b01e0e22cccf57e1bbc968df51c679234f443feb2ad062d2e57bd165"
+            "08ddd2a638bc423c1d5f6e53f5e0ec5afdf63e4204e24aa283555294d1c527c3"
         ),
         "contract_types_implemented": True,
         "exact_case_source_receipt_required": True,
