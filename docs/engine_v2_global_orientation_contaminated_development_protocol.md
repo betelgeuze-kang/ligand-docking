@@ -19,13 +19,13 @@ config/engine_v2_global_orientation_contaminated_development.json
 Protocol schema:
 
 ```text
-betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.9.0
+betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.10.0
 ```
 
 Protocol self-hash:
 
 ```text
-13f2a1e0ba788f3847ce536626019369ca489cc697679ec5aefe820a4a96eb98
+bed16a09c9ce1121abef7c019c5b8359521d760eb0ebe5a587f0c5c64b1a40d1
 ```
 
 ## Scientific question
@@ -92,7 +92,7 @@ The protocol is bound to the reviewed source-paired evidence identities:
 | Member manifest | `7f7f5273362a9457b022bc9b2b95c75625cdd259b1b1685aeb4b57d41d985e21` |
 | Bundle checksum | `6ee04e23e01a73bb643bb4d1fde240e06fd2916ea085e3652c11e2428bd432a9` |
 | Phase 2.5 policy | `b4c5530dc4766500dbbc854875cfb39baadad94196c63be6150514879993d211` |
-| Synthetic global-orientation contract | `ea7eb95d783225070e1d67435a644a28c4465a60e019ccc7dac73bf70943f8b8` |
+| Synthetic global-orientation contract | `4d172b791bb41a337f7589b5ced3a6f1260f4d914c44a72ee7f744eb5e010d76` |
 
 The protocol also freezes executable authority rather than trusting labels.
 The experimental generator is bound to the exact
@@ -104,11 +104,12 @@ receipts; their canonical manifest identity is
 Changing either implementation or any baseline candidate set invalidates the
 protocol even if a component keeps the same human-readable profile label.
 
-Synthetic contract v2.1 also binds the exact self-hashed seven-fixture
+Synthetic contract v2.2 also binds the exact self-hashed seven-fixture
 adversarial corpus for narrow-channel, two-lobe, symmetry, mirror, tangent,
 orientation-only, and translation-only behavior. Those fixtures regenerate
-failure-complete golden proposal batches and structural invariants only; they
-do not replace any private case receipt or reduce an execution blocker.
+portable discrete proposal observations and runtime-local floating-point
+structural invariants. They do not replace any private case receipt or reduce
+an execution blocker.
 
 The repository does not commit the private molecular source receipts. Their
 absence is an execution blocker, not a value to be defaulted.

@@ -11,10 +11,13 @@ from pathlib import Path
 from typing import Any, Mapping
 
 
-SCHEMA_ID = "betelgeuze.engine_v2_global_orientation_synthetic_contract/2.1.0"
+SCHEMA_ID = "betelgeuze.engine_v2_global_orientation_synthetic_contract/2.2.0"
 GENERATOR_ID = "deterministic_surface_aware_rigid_v2"
 FIXTURE_SUITE_SCHEMA_ID = (
-    "betelgeuze.engine_v2_global_orientation_adversarial_fixture_suite/1.0.0"
+    "betelgeuze.engine_v2_global_orientation_adversarial_fixture_suite/1.1.0"
+)
+PORTABLE_OBSERVATION_SCHEMA_ID = (
+    "betelgeuze.engine_v2_global_orientation_adversarial_observation/1.0.0"
 )
 FIXTURE_SUITE_PATH = "tests/fixtures/engine_v2_global_orientation_adversarial_v1.json"
 GEODESIC_DUPLICATE_THRESHOLD_RADIANS = 1.0e-10
@@ -229,6 +232,7 @@ def verify_fixture_suite(suite: Mapping[str, Any]) -> str:
         "authority",
         "fixtures",
         "generator_id",
+        "portable_observation_schema_id",
         "profile_id",
         "schema_id",
         "source_receipt_sha256",
@@ -242,6 +246,10 @@ def verify_fixture_suite(suite: Mapping[str, Any]) -> str:
     if suite.get("generator_id") != GENERATOR_ID:
         raise GlobalOrientationSyntheticContractError(
             "fixture suite generator identity drifted"
+        )
+    if suite.get("portable_observation_schema_id") != PORTABLE_OBSERVATION_SCHEMA_ID:
+        raise GlobalOrientationSyntheticContractError(
+            "portable observation schema identity drifted"
         )
     profile_id = suite.get("profile_id")
     if (
@@ -293,7 +301,7 @@ def verify_fixture_suite(suite: Mapping[str, Any]) -> str:
     fixture_keys = {
         "config",
         "expected_accepted_count",
-        "expected_batch_receipt_sha256",
+        "expected_portable_observation_receipt_sha256",
         "expected_candidate_slot_count",
         "expected_rejected_count",
         "fixture_id",
@@ -387,8 +395,8 @@ def verify_fixture_suite(suite: Mapping[str, Any]) -> str:
                 f"fixture denominator counts do not reconcile for {fixture_id}"
             )
         _sha256_identity(
-            fixture.get("expected_batch_receipt_sha256"),
-            name=f"{fixture_id} expected_batch_receipt_sha256",
+            fixture.get("expected_portable_observation_receipt_sha256"),
+            name=f"{fixture_id} expected_portable_observation_receipt_sha256",
         )
         if (
             tuple(fixture.get("required_invariants", ()))
@@ -483,12 +491,14 @@ def verify_contract(
         name="adversarial_fixture_suite",
     )
     if set(fixture_contract) != {
-        "exact_batch_receipts_required",
         "failure_complete_denominators_required",
         "fixture_file_path",
         "fixture_file_sha256",
         "invariant_rederivation_required",
         "ordered_fixture_ids",
+        "portable_observation_receipts_required",
+        "portable_observation_schema_id",
+        "runtime_float_fields_forbidden_in_portable_receipt",
         "schema_id",
         "synthetic_inputs_only",
     }:
@@ -498,6 +508,13 @@ def verify_contract(
     if fixture_contract.get("schema_id") != FIXTURE_SUITE_SCHEMA_ID:
         raise GlobalOrientationSyntheticContractError(
             "adversarial fixture suite schema drifted"
+        )
+    if (
+        fixture_contract.get("portable_observation_schema_id")
+        != PORTABLE_OBSERVATION_SCHEMA_ID
+    ):
+        raise GlobalOrientationSyntheticContractError(
+            "portable observation schema contract drifted"
         )
     if fixture_contract.get("fixture_file_path") != FIXTURE_SUITE_PATH:
         raise GlobalOrientationSyntheticContractError(
@@ -510,9 +527,10 @@ def verify_contract(
             "adversarial fixture contract IDs drifted"
         )
     for required_true in (
-        "exact_batch_receipts_required",
         "failure_complete_denominators_required",
         "invariant_rederivation_required",
+        "portable_observation_receipts_required",
+        "runtime_float_fields_forbidden_in_portable_receipt",
         "synthetic_inputs_only",
     ):
         if fixture_contract.get(required_true) is not True:

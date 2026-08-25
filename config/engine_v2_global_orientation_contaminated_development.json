@@ -321,8 +321,8 @@
     ]
   },
   "protocol_role": "fixed_historical_contaminated_development_global_orientation_ab",
-  "protocol_sha256": "13f2a1e0ba788f3847ce536626019369ca489cc697679ec5aefe820a4a96eb98",
-  "schema_id": "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.9.0",
+  "protocol_sha256": "bed16a09c9ce1121abef7c019c5b8359521d760eb0ebe5a587f0c5c64b1a40d1",
+  "schema_id": "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.10.0",
   "shared_execution_contract": {
     "conformer_authority": "same_prepared_ligand_for_both_arms",
     "cpu_count": 1,
@@ -350,8 +350,8 @@
     "development_evidence_contract_module_path": "betelgeuze_engine_v2/benchmark/global_orientation_development_contracts.py",
     "development_evidence_contract_module_sha256": "832a5b40257919a1dbe3114cf06a0c5d696bd1e9faf6ee2294a7474d99c8c4aa",
     "exact_case_source_receipt_required": true,
-    "global_orientation_synthetic_contract_schema_id": "betelgeuze.engine_v2_global_orientation_synthetic_contract/2.1.0",
-    "global_orientation_synthetic_contract_sha256": "ea7eb95d783225070e1d67435a644a28c4465a60e019ccc7dac73bf70943f8b8",
+    "global_orientation_synthetic_contract_schema_id": "betelgeuze.engine_v2_global_orientation_synthetic_contract/2.2.0",
+    "global_orientation_synthetic_contract_sha256": "4d172b791bb41a337f7589b5ced3a6f1260f4d914c44a72ee7f744eb5e010d76",
     "historical_archive_sha256": "8bef33eba296989b795a11fd05a7e119124b066d91bec28a8b910d38a083fbcc",
     "historical_bundle_checksum_sha256": "6ee04e23e01a73bb643bb4d1fde240e06fd2916ea085e3652c11e2428bd432a9",
     "historical_failure_authority_schema_id": "betelgeuze.engine_v2_global_orientation_historical_failure_authority/1.0.0",

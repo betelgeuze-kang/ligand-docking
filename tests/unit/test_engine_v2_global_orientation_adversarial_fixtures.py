@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import math
 from pathlib import Path
@@ -72,6 +73,58 @@ def _build(fixture: dict[str, object], suite: dict[str, object]):
         source_receipt_sha256=suite["source_receipt_sha256"],
         profile_id=suite["profile_id"],
     )
+
+
+def _portable_observation_receipt(
+    fixture: dict[str, object], suite: dict[str, object], batch
+) -> str:
+    payload = {
+        "schema_id": suite["portable_observation_schema_id"],
+        "fixture_id": fixture["fixture_id"],
+        "generator_id": suite["generator_id"],
+        "config_receipt_sha256": batch.config.receipt_sha256,
+        "ligand_input_sha256": batch.ligand_input_sha256,
+        "receptor_surface_input_sha256": batch.receptor_surface_input_sha256,
+        "source_receipt_sha256": batch.source_receipt_sha256,
+        "source_seed_sha256": batch.source_seed_sha256,
+        "profile_id": batch.profile_id,
+        "candidate_slot_count": len(batch.slots),
+        "accepted_count": batch.accepted_count,
+        "rejected_count": batch.rejected_count,
+        "slot_outcomes": [
+            {
+                "proposal_index": slot.proposal_index,
+                "orientation_index": slot.orientation_index,
+                "raw_sequence_index": slot.raw_sequence_index,
+                "accepted_sequence_index": slot.accepted_sequence_index,
+                "translation_index": slot.translation_index,
+                "accepted": slot.accepted,
+                "rejection_code": slot.rejection_code,
+            }
+            for slot in batch.slots
+        ],
+    }
+
+    def assert_no_runtime_float(value: object) -> None:
+        assert type(value) is not float
+        if isinstance(value, dict):
+            for key, nested in value.items():
+                assert_no_runtime_float(key)
+                assert_no_runtime_float(nested)
+        elif isinstance(value, (list, tuple)):
+            for nested in value:
+                assert_no_runtime_float(nested)
+
+    assert_no_runtime_float(payload)
+    return hashlib.sha256(
+        json.dumps(
+            payload,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+            allow_nan=False,
+        ).encode("ascii")
+    ).hexdigest()
 
 
 def _derive_invariants(
@@ -234,13 +287,17 @@ def _derive_invariants(
     raise AssertionError(f"unknown fixture_id: {fixture_id}")
 
 
-def test_exact_adversarial_fixture_suite_rederives_all_seven_golden_batches() -> None:
+def test_exact_adversarial_fixture_suite_rederives_portable_observations() -> None:
     suite = load_fixture_suite(_FIXTURE_PATH)
     assert verify_fixture_suite(suite) == suite["suite_sha256"]
 
     for fixture in suite["fixtures"]:
         batch = _build(fixture, suite)
-        assert batch.receipt_sha256 == fixture["expected_batch_receipt_sha256"]
+        assert len(batch.receipt_sha256) == 64
+        assert (
+            _portable_observation_receipt(fixture, suite, batch)
+            == (fixture["expected_portable_observation_receipt_sha256"])
+        )
         assert len(batch.slots) == fixture["expected_candidate_slot_count"]
         assert batch.accepted_count == fixture["expected_accepted_count"]
         assert batch.rejected_count == fixture["expected_rejected_count"]
@@ -254,9 +311,11 @@ def test_fixture_geometry_substitution_cannot_reproduce_the_golden_receipt() -> 
     fixture = copy.deepcopy(suite["fixtures"][0])
     fixture["ligand_coordinates"][0][0] = -1.25
 
+    batch = _build(fixture, suite)
+
     assert (
-        _build(fixture, suite).receipt_sha256
-        != (fixture["expected_batch_receipt_sha256"])
+        _portable_observation_receipt(fixture, suite, batch)
+        != (fixture["expected_portable_observation_receipt_sha256"])
     )
 
 

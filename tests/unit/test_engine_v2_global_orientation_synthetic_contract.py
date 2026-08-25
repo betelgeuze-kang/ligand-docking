@@ -73,7 +73,10 @@ def test_current_synthetic_global_orientation_contract_verifies() -> None:
     assert tuple(fixture_contract["ordered_fixture_ids"]) == (
         EXPECTED_ADVERSARIAL_FIXTURE_IDS
     )
-    assert fixture_contract["exact_batch_receipts_required"] is True
+    assert fixture_contract["portable_observation_receipts_required"] is True
+    assert (
+        fixture_contract["runtime_float_fields_forbidden_in_portable_receipt"] is True
+    )
     assert fixture_contract["invariant_rederivation_required"] is True
 
 

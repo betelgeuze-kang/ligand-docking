@@ -19,7 +19,7 @@
         ]
       },
       "expected_accepted_count": 8,
-      "expected_batch_receipt_sha256": "cfe19361eb2bbbbfb398e7e122b050cf74673025907922e9ba50654f82aa74a2",
+      "expected_portable_observation_receipt_sha256": "f44106af66826dcbe4ae6e568a9238ed2ac6f0ec2a66c0fa1edc509418dbaecf",
       "expected_candidate_slot_count": 72,
       "expected_rejected_count": 64,
       "fixture_id": "narrow_channel",
@@ -55,7 +55,7 @@
         ]
       },
       "expected_accepted_count": 23,
-      "expected_batch_receipt_sha256": "f53b8e77f6b3f8aa00ed961eb59351e0939a25522c92345789ff8134b0f62df6",
+      "expected_portable_observation_receipt_sha256": "446dfc1826caed9f5a0f1ca200982735165465a92074eb5335ee9b613c287644",
       "expected_candidate_slot_count": 36,
       "expected_rejected_count": 13,
       "fixture_id": "two_lobe_pocket",
@@ -87,7 +87,7 @@
         "translation_shell_radii": []
       },
       "expected_accepted_count": 12,
-      "expected_batch_receipt_sha256": "1ad5ffce1bed81c7d8c4433d4dbe45becdae7e1fc4f17ce3d8ae55fd4a78f7fc",
+      "expected_portable_observation_receipt_sha256": "2ce3d4a1cfb8d9b29a2ccf4a5e5c1b51c23269e0dd3c07557bf8dfad17e27afb",
       "expected_candidate_slot_count": 12,
       "expected_rejected_count": 0,
       "fixture_id": "symmetry_decoy",
@@ -113,7 +113,7 @@
         "translation_shell_radii": []
       },
       "expected_accepted_count": 8,
-      "expected_batch_receipt_sha256": "a7e90c742b7c3146d5c8e91e00d0efb0f16d5d2f8bbdfdf48e90e5d3be2c2c18",
+      "expected_portable_observation_receipt_sha256": "18869ac72abc7417aa6f531575d48ca66e1b5dc28ada04dbab5a991c2d606864",
       "expected_candidate_slot_count": 8,
       "expected_rejected_count": 0,
       "fixture_id": "mirror_decoy",
@@ -142,7 +142,7 @@
         ]
       },
       "expected_accepted_count": 5,
-      "expected_batch_receipt_sha256": "32c41180f3fb94e71419b0310a4b9d2f743c4731609d1a49afd878f368f9a8d3",
+      "expected_portable_observation_receipt_sha256": "8e623c51130f30648428b87ebd325d18b66f24442319937ef3a79a32b201af18",
       "expected_candidate_slot_count": 5,
       "expected_rejected_count": 0,
       "fixture_id": "tangent_placement",
@@ -169,7 +169,7 @@
         "translation_shell_radii": []
       },
       "expected_accepted_count": 6,
-      "expected_batch_receipt_sha256": "07bfbc532dceac09295856c912746c68edc257bea74bd8337f0149799f6c2bd2",
+      "expected_portable_observation_receipt_sha256": "f0d9b3d9384f282ec2ac5c0ba476d473e7ce1b142e9486c4a2d2f8296fd02e8c",
       "expected_candidate_slot_count": 6,
       "expected_rejected_count": 0,
       "fixture_id": "orientation_only",
@@ -199,7 +199,7 @@
         ]
       },
       "expected_accepted_count": 9,
-      "expected_batch_receipt_sha256": "5c97e2af3b396ed504520885b67053f1d96aff507f80b7e933d972d846728c7d",
+      "expected_portable_observation_receipt_sha256": "7610ae2fcd2630694b4976aecc8d091bc763acfe85dca8fcb588a9a4bd6a0cf7",
       "expected_candidate_slot_count": 9,
       "expected_rejected_count": 0,
       "fixture_id": "translation_only",
@@ -220,8 +220,9 @@
     }
   ],
   "generator_id": "deterministic_surface_aware_rigid_v2",
+  "portable_observation_schema_id": "betelgeuze.engine_v2_global_orientation_adversarial_observation/1.0.0",
   "profile_id": "engine-v2-global-orientation-adversarial-v1",
-  "schema_id": "betelgeuze.engine_v2_global_orientation_adversarial_fixture_suite/1.0.0",
+  "schema_id": "betelgeuze.engine_v2_global_orientation_adversarial_fixture_suite/1.1.0",
   "source_receipt_sha256": "abababababababababababababababababababababababababababababababab",
-  "suite_sha256": "89b35d28cc42eb8885dfca8cdbfd7942c1adcb82de6a013168248378e94482a0"
+  "suite_sha256": "8e4e56ad9f3cdee8847e6aceaa2542c5c72575b50b903aa95d61eafbf877aa72"
 }

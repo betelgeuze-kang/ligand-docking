@@ -201,12 +201,16 @@ The exact adversarial corpus now adds seven source-rederived fixtures:
   distances.
 
 The inputs, exact accepted/rejected denominators, required invariant names, and
-golden batch receipts are stored in the self-hashed
+portable observation receipts are stored in the self-hashed
 `tests/fixtures/engine_v2_global_orientation_adversarial_v1.json` corpus. The
-synthetic contract v2.1 binds the exact corpus file hash and ordered fixture
+synthetic contract v2.2 binds the exact corpus file hash and ordered fixture
 roster. Tests independently regenerate every batch and recompute every
-invariant; changing a geometry, configuration, count, receipt, fixture order,
-or authority bit fails closed. These fixtures remain synthetic geometry checks,
+invariant. Portable receipts bind input identities, source seed, configuration,
+slot indices, and accept/reject outcomes while deliberately excluding
+runtime-sensitive quaternion, transformed-coordinate, and distance floats.
+Those floats remain covered by direct structural assertions on every supported
+runtime. Changing a geometry, configuration, count, outcome, fixture order, or
+authority bit fails closed. These fixtures remain synthetic geometry checks,
 not molecular coverage or accuracy evidence.
 
 ## Promotion gates

@@ -60,11 +60,12 @@ currently absent per-case fingerprints or runtime artifacts in the public
 protocol, and they do not accept caller-declared runtime digests as evidence.
 The protocol's unbound-runtime gate therefore remains closed.
 
-The bound synthetic contract v2.1 separately owns an exact seven-fixture
+The bound synthetic contract v2.2 separately owns an exact seven-fixture
 adversarial corpus covering narrow-channel, two-lobe, symmetry, mirror,
 tangent, orientation-only, and translation-only generator behavior. Those
-golden batches validate rigid-geometry and denominator semantics only; they are
-not case-source, scorer, validity, RMSD, or molecular evidence for this private
+portable discrete observations plus runtime-rederived floating-point
+invariants validate rigid-geometry and denominator semantics only; they are not
+case-source, scorer, validity, RMSD, or molecular evidence for this private
 cohort contract.
 
 ## Exact arm lineage
