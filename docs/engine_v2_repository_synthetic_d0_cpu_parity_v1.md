@@ -2,6 +2,12 @@
 
 This contract closes the previously explicit numeric-parity gap for the repository-owned synthetic D0 fixed64 session. The native Rust owner materializes the same 64-slot input, creates one persistent `cpp_cpu_reference` context and one persistent `rust_cpu` context, runs each context twice without timing, and compares their backend-independent scientific projections.
 
+The source policy declares this separate parity profile and schema, while this
+parity policy binds the exact raw source-policy SHA-256 plus its prepared-input,
+source-bundle, allocation, and denominator identities. The two independent
+static verifiers reject either a stale source declaration or parity
+cross-wiring without introducing a circular policy hash.
+
 The comparison is complete over all 16,896 binary64 values in the projection: proposal and final coordinate states, geometric measurements, rigid and torsion objectives, all eight `ScorerV1Terms`, validity measurements, ranking scores, cluster RMSD, and final quaternions. Absolute tolerance is `1e-11` and relative tolerance is `4e-12`, matching the already-frozen CPU V7 numeric contract. Non-finite values fail closed. Denominator, stage counts, typed failures, status, validity masks, stable ranks, V7 selection, and source/allocation identities require exact parity through the backend-independent decision receipt.
 
 Backend-bound receipt hashes and coordinate SHA-256 identities are not required to match. They deliberately bind provider-specific execution and bitwise coordinates; the receipt preserves their distinct identities and reports how many final coordinate identities are equal or different. Numeric tolerance, exact decision parity, and source identity parity remain mandatory.

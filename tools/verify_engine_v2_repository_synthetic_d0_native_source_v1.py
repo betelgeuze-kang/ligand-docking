@@ -13,24 +13,24 @@ from typing import Any
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONTRACT = (
-    REPOSITORY_ROOT
-    / "config/engine_v2_repository_synthetic_d0_native_source_v1.json"
+    REPOSITORY_ROOT / "config/engine_v2_repository_synthetic_d0_native_source_v1.json"
+)
+DEFAULT_CPU_PARITY_CONTRACT = (
+    REPOSITORY_ROOT / "config/engine_v2_repository_synthetic_d0_cpu_parity_v1.json"
 )
 DEFAULT_RUST_SOURCE = (
     REPOSITORY_ROOT / "rust/betelgeuze-docking-search/src/repository_d0.rs"
 )
-DEFAULT_RUST_LIBRARY = (
-    REPOSITORY_ROOT / "rust/betelgeuze-docking-search/src/lib.rs"
-)
+DEFAULT_RUST_LIBRARY = REPOSITORY_ROOT / "rust/betelgeuze-docking-search/src/lib.rs"
 DEFAULT_FIXTURE_MANIFEST = (
-    REPOSITORY_ROOT
-    / "betelgeuze_engine_v2/docking/synthetic_d0_fixture_admission.json"
+    REPOSITORY_ROOT / "betelgeuze_engine_v2/docking/synthetic_d0_fixture_admission.json"
 )
 DEFAULT_DOCUMENTATION = (
-    REPOSITORY_ROOT
-    / "docs/engine_v2_repository_synthetic_d0_native_source_v1.md"
+    REPOSITORY_ROOT / "docs/engine_v2_repository_synthetic_d0_native_source_v1.md"
 )
-DEFAULT_NATIVE_WORKFLOW = REPOSITORY_ROOT / ".github/workflows/ci-native-compute-abi.yml"
+DEFAULT_NATIVE_WORKFLOW = (
+    REPOSITORY_ROOT / ".github/workflows/ci-native-compute-abi.yml"
+)
 DEFAULT_RELEASE_WORKFLOW = (
     REPOSITORY_ROOT / ".github/workflows/ci-engine-v2-release-candidate.yml"
 )
@@ -129,12 +129,71 @@ EXPECTED_RECEIPT_IDENTITIES = {
 }
 EXPECTED_SCOPE = {
     "component": "betelgeuze-docking-search::repository_d0",
-    "cpp_parity_status": "pending_separate_parity_change",
+    "cpp_parity_policy_profile_id": ("engine_v2_repository_synthetic_d0_cpu_parity_v1"),
+    "cpp_parity_policy_schema_id": (
+        "betelgeuze.engine_v2_repository_synthetic_d0_cpu_parity_policy/1.1.0"
+    ),
+    "cpp_parity_status": "implemented_separate_non_authoritative_policy",
     "hip_disposition": "compile_only_no_device_execution_or_parity_claim",
     "implementation": "rust_native_no_python_science_transport",
     "molecular_input_scope": "repository_owned_synthetic_d0_only",
     "performance_claim": "none",
     "validation_mode": "synthetic_native_cpu_only",
+}
+EXPECTED_CPU_PARITY_AUTHORITY_FIELDS = frozenset(
+    {
+        "fresh_holdout_execution_authorized",
+        "hip_device_execution_authorized",
+        "historical_ab_execution_authorized",
+        "molecular_execution_authorized",
+        "product_performance_claim_authorized",
+        "public_benchmark_authorized",
+        "qualification_rerun_authorized",
+        "reservation_authorized",
+        "scientific_claim_authorized",
+        "stage0_admission_authorized",
+    }
+)
+EXPECTED_CPU_PARITY_COMPARISON = {
+    "absolute_tolerance": 1e-11,
+    "all_coordinate_states_compared": True,
+    "all_geometric_measurements_compared": True,
+    "all_refinement_objectives_compared": True,
+    "all_scorer_v1_terms_compared": True,
+    "all_validity_measurements_compared": True,
+    "backend_bound_receipt_identity_parity_required": False,
+    "coordinate_sha256_identity_parity_required": False,
+    "exact_decision_sha256_parity_required": True,
+    "exact_denominator_and_stage_counts_required": True,
+    "exact_failure_status_and_validity_masks_required": True,
+    "exact_rank_and_v7_selection_required": True,
+    "exact_source_and_allocation_identity_parity_required": True,
+    "nonfinite_values_allowed": False,
+    "relative_tolerance": 4e-12,
+    "repeat_stability_required": True,
+}
+EXPECTED_CPU_PARITY_RESTRICTIONS = {
+    "actual_molecular_execution_allowed": False,
+    "contains_molecular_cases": False,
+    "fresh_or_historical_case_input_allowed": False,
+    "github_actions_production_authority_allowed": False,
+    "performance_measurement_allowed": False,
+    "reservation_allowed": False,
+    "result_dependent_configuration_allowed": False,
+    "test_double_production_authority_allowed": False,
+}
+EXPECTED_CPU_PARITY_RUNTIME = {
+    "entrypoint": "native_fixed64_repository_synthetic_d0_cpu_parity_v1",
+    "native_backends": ["cpp_cpu_reference", "rust_cpu"],
+    "no_caller_science_input": True,
+    "source_session_contract_sha256": (
+        "51f314de529f1ed3b000bdfff2f7f3494a308303f5d6acf19ab517b3e7054de3"
+    ),
+    "synthetic_only_acknowledgment": (
+        "repository-synthetic-d0-only:no-reservation:no-molecular-experiment:"
+        "no-qualification-rerun:no-product-action:no-public-or-scientific-claim"
+    ),
+    "timing_fields_forbidden": True,
 }
 EXPECTED_SOURCE_GENERATION = {
     "centered_candidate_count": 8,
@@ -223,6 +282,31 @@ def _read_json(path: Path) -> tuple[dict[str, Any], bytes]:
     return document, raw
 
 
+def _read_compact_json(path: Path, *, label: str) -> tuple[dict[str, Any], bytes]:
+    raw = _read_bytes(path, label=label)
+    try:
+        document = json.loads(
+            raw.decode("ascii"), object_pairs_hook=_pairs_no_duplicates
+        )
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise ContractError(f"{label} is not valid ASCII JSON") from exc
+    if type(document) is not dict:
+        raise ContractError(f"{label} must be one object")
+    canonical = (
+        json.dumps(
+            document,
+            allow_nan=False,
+            ensure_ascii=True,
+            separators=(",", ":"),
+            sort_keys=True,
+        )
+        + "\n"
+    ).encode("ascii")
+    if raw != canonical:
+        raise ContractError(f"{label} is not canonical compact ASCII")
+    return document, raw
+
+
 def _require_exact_keys(
     value: object, expected: set[str], *, label: str
 ) -> dict[str, Any]:
@@ -245,9 +329,125 @@ def _digest_values(source: str, start: str, end: str) -> list[str]:
     return re.findall(r'digest\("([0-9a-f]{64})"\)', section)
 
 
+def _verify_cpu_parity_binding(
+    *,
+    parity_document: dict[str, Any],
+    parity_raw: bytes,
+    source_document: dict[str, Any],
+    source_raw: bytes,
+) -> str:
+    _require_exact_keys(
+        parity_document,
+        {
+            "authority",
+            "comparison",
+            "expected",
+            "profile_id",
+            "restrictions",
+            "runtime",
+            "schema_id",
+            "status",
+        },
+        label="CPU parity policy",
+    )
+    scope = source_document["scope"]
+    if (
+        parity_document["schema_id"] != scope["cpp_parity_policy_schema_id"]
+        or parity_document["profile_id"] != scope["cpp_parity_policy_profile_id"]
+        or parity_document["status"]
+        != "frozen_synthetic_non_authoritative_cpu_parity_policy"
+    ):
+        raise ContractError("CPU parity policy identity or status changed")
+
+    authority = _require_exact_keys(
+        parity_document["authority"],
+        set(EXPECTED_CPU_PARITY_AUTHORITY_FIELDS),
+        label="CPU parity authority",
+    )
+    if any(value is not False for value in authority.values()):
+        raise ContractError("CPU parity policy acquired execution authority")
+    comparison = _require_exact_keys(
+        parity_document["comparison"],
+        set(EXPECTED_CPU_PARITY_COMPARISON),
+        label="CPU parity comparison",
+    )
+    if comparison != EXPECTED_CPU_PARITY_COMPARISON:
+        raise ContractError("CPU parity comparison coverage changed")
+    restrictions = _require_exact_keys(
+        parity_document["restrictions"],
+        set(EXPECTED_CPU_PARITY_RESTRICTIONS),
+        label="CPU parity restrictions",
+    )
+    if restrictions != EXPECTED_CPU_PARITY_RESTRICTIONS:
+        raise ContractError("CPU parity restrictions changed")
+
+    runtime = _require_exact_keys(
+        parity_document["runtime"],
+        {*EXPECTED_CPU_PARITY_RUNTIME, "source_contract_sha256"},
+        label="CPU parity runtime",
+    )
+    expected_runtime = {
+        **EXPECTED_CPU_PARITY_RUNTIME,
+        "source_contract_sha256": hashlib.sha256(source_raw).hexdigest(),
+    }
+    if runtime != expected_runtime:
+        raise ContractError("CPU parity policy is not bound to this source policy")
+
+    expected = _require_exact_keys(
+        parity_document["expected"],
+        {
+            "allocation_receipt_sha256",
+            "candidate_denominator",
+            "cluster_count",
+            "compared_f64_count",
+            "generated_count",
+            "initial_admitted_count",
+            "ligand_atom_count",
+            "native_source_bundle_receipt_sha256",
+            "post_admitted_count",
+            "post_rejected_count",
+            "prepared_input_receipt_sha256",
+            "primary_slot_indices",
+            "receptor_atom_count",
+            "refined_count",
+            "representative_slot_indices",
+            "scientific_decision_sha256",
+            "scored_count",
+            "scorer_v1_term_count",
+            "top_k_slot_indices",
+            "typed_failure_count",
+            "valid_count",
+            "valid_slot_indices",
+        },
+        label="CPU parity expected result",
+    )
+    required_source_values = {
+        "allocation_receipt_sha256": source_document["receipt_identities"][
+            "allocation_receipt_sha256"
+        ],
+        "candidate_denominator": source_document["fixture"]["candidate_denominator"],
+        "compared_f64_count": 16_896,
+        "ligand_atom_count": source_document["fixture"]["ligand_atom_count"],
+        "native_source_bundle_receipt_sha256": source_document["receipt_identities"][
+            "native_source_bundle_receipt_sha256"
+        ],
+        "prepared_input_receipt_sha256": source_document["receipt_identities"][
+            "prepared_input_receipt_sha256"
+        ],
+        "receptor_atom_count": source_document["fixture"]["receptor_atom_count"],
+        "typed_failure_count": source_document["feature_inventory"][
+            "typed_failure_count"
+        ],
+    }
+    if any(expected[key] != value for key, value in required_source_values.items()):
+        raise ContractError("CPU parity expected result is cross-wired from source")
+    return hashlib.sha256(parity_raw).hexdigest()
+
+
 def verify(
     *,
     contract_path: Path = DEFAULT_CONTRACT,
+    cpu_parity_contract_path: Path = DEFAULT_CPU_PARITY_CONTRACT,
     rust_source_path: Path = DEFAULT_RUST_SOURCE,
     rust_library_path: Path = DEFAULT_RUST_LIBRARY,
     fixture_manifest_path: Path = DEFAULT_FIXTURE_MANIFEST,
@@ -273,7 +473,7 @@ def verify(
     )
     if (
         document["schema_id"]
-        != "betelgeuze.engine_v2_repository_synthetic_d0_native_source_policy/1.0.0"
+        != "betelgeuze.engine_v2_repository_synthetic_d0_native_source_policy/1.1.0"
         or document["status"]
         != "repository_synthetic_d0_native_source_only_authority_false"
     ):
@@ -297,18 +497,34 @@ def verify(
         if observed != expected:
             raise ContractError(f"{label} changed from the frozen native policy")
 
+    parity_document, parity_raw = _read_compact_json(
+        cpu_parity_contract_path,
+        label="CPU parity policy",
+    )
+    parity_policy_sha256 = _verify_cpu_parity_binding(
+        parity_document=parity_document,
+        parity_raw=parity_raw,
+        source_document=document,
+        source_raw=raw,
+    )
+
     manifest = _read_bytes(fixture_manifest_path, label="synthetic D0 manifest")
     if hashlib.sha256(manifest).hexdigest() != EXPECTED_FIXTURE["manifest_sha256"]:
         raise ContractError("repository synthetic D0 fixture manifest identity changed")
 
     rust_source = _read_text(rust_source_path, label="Rust materializer source")
-    if len(
-        re.findall(
-            r"pub fn materialize_repository_synthetic_d0_sources\s*\(\s*\)\s*->",
-            rust_source,
+    if (
+        len(
+            re.findall(
+                r"pub fn materialize_repository_synthetic_d0_sources\s*\(\s*\)\s*->",
+                rust_source,
+            )
         )
-    ) != 1:
-        raise ContractError("native materializer API is not one exact zero-input function")
+        != 1
+    ):
+        raise ContractError(
+            "native materializer API is not one exact zero-input function"
+        )
     if re.search(r"\bunsafe\b", rust_source):
         raise ContractError("native materializer gained unsafe Rust")
     _require_snippets(
@@ -380,7 +596,9 @@ def verify(
         "#[derive(Clone, Copy",
     )
     if len(proposal_identities) != 28 or len(coordinate_identities) != 28:
-        raise ContractError("frozen current-V7 proposal or coordinate identity count changed")
+        raise ContractError(
+            "frozen current-V7 proposal or coordinate identity count changed"
+        )
     proposal_manifest = hashlib.sha256(
         "".join(proposal_identities).encode("ascii")
     ).hexdigest()
@@ -395,7 +613,9 @@ def verify(
             "selected_current_v7_coordinate_identity_manifest_sha256"
         ]
     ):
-        raise ContractError("ordered current-V7 proposal or coordinate identity manifest changed")
+        raise ContractError(
+            "ordered current-V7 proposal or coordinate identity manifest changed"
+        )
 
     rust_library = _read_text(rust_library_path, label="Rust library export")
     _require_snippets(
@@ -420,7 +640,8 @@ def verify(
             "21 frozen one-ULP corrections",
             "54 ready plus 10 typed failures",
             "All operational authority remains false",
-            "C++ parity is a separate pending change",
+            "separate non-authoritative Rust-to-C++ CPU parity policy",
+            "all 16,896 binary64 values",
             "HIP is compile-only",
             "consumed native fixed64 CPU v7 qualification",
         ),
@@ -431,9 +652,12 @@ def verify(
     release_workflow = _read_text(release_workflow_path, label="release workflow")
     contract_rel = "config/engine_v2_repository_synthetic_d0_native_source_v1.json"
     verifier_rel = "tools/verify_engine_v2_repository_synthetic_d0_native_source_v1.py"
-    test_rel = "tests/unit/test_verify_engine_v2_repository_synthetic_d0_native_source_v1.py"
+    test_rel = (
+        "tests/unit/test_verify_engine_v2_repository_synthetic_d0_native_source_v1.py"
+    )
     docs_rel = "docs/engine_v2_repository_synthetic_d0_native_source_v1.md"
     fixture_rel = "betelgeuze_engine_v2/docking/synthetic_d0_fixture_admission.json"
+    parity_rel = "config/engine_v2_repository_synthetic_d0_cpu_parity_v1.json"
     _require_snippets(
         native_workflow,
         (
@@ -442,6 +666,7 @@ def verify(
             test_rel,
             docs_rel,
             fixture_rel,
+            parity_rel,
             f"python3 {verifier_rel}",
         ),
         label="native workflow",
@@ -453,6 +678,7 @@ def verify(
             verifier_rel,
             test_rel,
             docs_rel,
+            parity_rel,
             f"python {verifier_rel}",
         ),
         label="release workflow",
@@ -460,7 +686,7 @@ def verify(
 
     return {
         "schema_id": (
-            "betelgeuze.engine_v2_repository_synthetic_d0_native_source_verification/1.0.0"
+            "betelgeuze.engine_v2_repository_synthetic_d0_native_source_verification/1.1.0"
         ),
         "status": "verified_static_non_authoritative",
         "contract_sha256": hashlib.sha256(raw).hexdigest(),
@@ -469,6 +695,9 @@ def verify(
         "ready_slot_count": 54,
         "typed_failure_count": 10,
         "bitwise_current_v7_coordinate_identity_count": 28,
+        "cpp_cpu_parity_bound": True,
+        "cpp_cpu_parity_compared_f64_count": 16_896,
+        "cpp_cpu_parity_policy_sha256": parity_policy_sha256,
         "native_source_bundle_receipt_sha256": EXPECTED_RECEIPT_IDENTITIES[
             "native_source_bundle_receipt_sha256"
         ],
@@ -483,9 +712,17 @@ def verify(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--contract", type=Path, default=DEFAULT_CONTRACT)
+    parser.add_argument(
+        "--cpu-parity-contract",
+        type=Path,
+        default=DEFAULT_CPU_PARITY_CONTRACT,
+    )
     arguments = parser.parse_args(argv)
     try:
-        result = verify(contract_path=arguments.contract)
+        result = verify(
+            contract_path=arguments.contract,
+            cpu_parity_contract_path=arguments.cpu_parity_contract,
+        )
     except ContractError as exc:
         parser.exit(1, f"{exc}\n")
     print(

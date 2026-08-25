@@ -999,21 +999,21 @@ def _full_pipeline_cpu_supervisor_activation_authority_is_fail_closed(
         and type(bindings) is dict
         and bindings.get("supervisor_contract_sha256")
         == hashlib.sha256(supervisor_contract_raw).hexdigest()
-        == "f7bb886032856d67b40e4abf2252f12b1f8b352b5f363b6a1ffbb4d1bf38fbfa"
+        == "e6002252e240f8086c3051bdb3018b643855b42588ada1c7c1e58bef0fbb0c9a"
         and bindings.get("supervisor_source_sha256")
         == hashlib.sha256(source_raw).hexdigest()
-        == "ac476df202f01083e2d9ff34b64030de1d3fef13b2be09180e6a463cd47043c2"
+        == "0fdf424349ff075d0bef0a92718ef69e8213eb59f19d2ef175eccde15d71f5e1"
         and type(package) is dict
         and package.get("binary_sha256")
         == hashlib.sha256(binary_raw).hexdigest()
-        == "a33a07fc8a9f55a843ead479cee5b46f8ef31cb6787141fb7e3d8a563efb1466"
+        == "c7da6610ea596b3cb9580ebfdfc2f608bd27faca97932cadf25af2ec278bbf1b"
         and package.get("binary_size_bytes") == len(binary_raw) == 2_069_736
         and package.get("binary_mode") == "0555"
         and binary_mode in (0o555, 0o755)
         and binary_raw[:7] == b"\x7fELF\x02\x01\x01"
         and package.get("sbom_sha256")
         == hashlib.sha256(sbom_raw).hexdigest()
-        == "0e3787526b4337476d3b59acdeaf6bc959efbabc2a1d12026235287fc95361bc"
+        == "82eb88536ecb12467633ff957e4ec532aa0abcc8f4ab04e0ecc439b8a0ad9b51"
         and package.get("sbom_size_bytes") == len(sbom_raw) == 4_586
         and package.get("double_build_byte_identity_verified") is True
         and package.get("static_elf_no_dynamic_or_interp") is True
@@ -1028,7 +1028,7 @@ def _full_pipeline_cpu_supervisor_activation_authority_is_fail_closed(
         and handoff.get("peer_pidfd_required") is True
         and handoff.get("preflight_sha256")
         == hashlib.sha256(preflight_raw).hexdigest()
-        == "67c2e6ace0a4585d7004508323dc9928ddf45ee24e4bc77fa0406be4331857a0"
+        == "aff270795a85a3e6660b0f3f990a3542f1ee05a7fb3795b9146dc7dd062070b6"
         and handoff.get("preflight_size_bytes") == len(preflight_raw) == 23_361
         and type(downstream) is dict
         and downstream.get("actual_binding_receipt_present") is False
@@ -1063,7 +1063,7 @@ def _full_pipeline_cpu_supervisor_activation_authority_is_fail_closed(
         and roster_provisioning.get("root_installation_receipt_present") is False
         and roster_provisioning.get("repository_account_creation_allowed") is False
         and hashlib.sha256(activation_raw).hexdigest()
-        == "e49dd29ee3e531e04326bd6750bb9a6ebfa5cc6cd38212889eccf539b4aa60a2"
+        == "fb5acd2c5c762b0e79562ca30519bfccfe0d64939093a8926d0ef52574fa9e18"
     )
 
 

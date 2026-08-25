@@ -63,28 +63,28 @@ SCHEMA_ID = "betelgeuze.engine_v2_full_pipeline_cpu_supervisor_activation/1.0.0"
 ACTIVATION_ID = "engine_v2_full_pipeline_cpu_supervisor_activation_v1"
 STATUS = "frozen_packaged_non_consuming_activation_not_operational"
 EXPECTED_BINARY_SHA256 = (
-    "a33a07fc8a9f55a843ead479cee5b46f8ef31cb6787141fb7e3d8a563efb1466"
+    "c7da6610ea596b3cb9580ebfdfc2f608bd27faca97932cadf25af2ec278bbf1b"
 )
-EXPECTED_BINARY_SHA1 = "c29d7fea5d9c4691ff843f7fb9cbf2bfa1f40f46"
+EXPECTED_BINARY_SHA1 = "064c551527e107c41ebe7a30e22736b8276d5465"
 EXPECTED_PREFLIGHT_SHA256 = (
-    "67c2e6ace0a4585d7004508323dc9928ddf45ee24e4bc77fa0406be4331857a0"
+    "aff270795a85a3e6660b0f3f990a3542f1ee05a7fb3795b9146dc7dd062070b6"
 )
-EXPECTED_PREFLIGHT_SHA1 = "5e7d7a3b6a4f4eb5a9e19ed1f5d6252200cd8fac"
+EXPECTED_PREFLIGHT_SHA1 = "f8c1d1ba69425748f5d8cdbb4f0974c2829b9066"
 EXPECTED_SOURCE_SHA256 = (
-    "ac476df202f01083e2d9ff34b64030de1d3fef13b2be09180e6a463cd47043c2"
+    "0fdf424349ff075d0bef0a92718ef69e8213eb59f19d2ef175eccde15d71f5e1"
 )
-EXPECTED_SOURCE_SHA1 = "9d7ff8433d995ac70384b50d07a24f8764066cb8"
+EXPECTED_SOURCE_SHA1 = "f952e0298e0dde9e864c7552454dbe0b742b6a82"
 EXPECTED_SUPERVISOR_CONTRACT_SHA256 = (
-    "f7bb886032856d67b40e4abf2252f12b1f8b352b5f363b6a1ffbb4d1bf38fbfa"
+    "e6002252e240f8086c3051bdb3018b643855b42588ada1c7c1e58bef0fbb0c9a"
 )
 EXPECTED_ROSTER_SHA256 = (
     "a607613fd6d3a76d1d2d94f7be68d0493c6b23de28c97adfe5193d96732c58e1"
 )
 EXPECTED_ROSTER_SHA1 = "64ace7107e6e16083ef0baa0287f4604e86b5415"
 EXPECTED_SBOM_SHA256 = (
-    "0e3787526b4337476d3b59acdeaf6bc959efbabc2a1d12026235287fc95361bc"
+    "82eb88536ecb12467633ff957e4ec532aa0abcc8f4ab04e0ecc439b8a0ad9b51"
 )
-EXPECTED_PACKAGE_VERIFICATION_CODE = "eb0ccf335804d8295753661004b69a0e140137d0"
+EXPECTED_PACKAGE_VERIFICATION_CODE = "f1c1555460b9f23da98572f5e41fc9ee6134fc65"
 EXPECTED_EXTERNAL_BLOCKERS = [
     "external_reservation_provider_not_operational",
     "external_reservation_endpoint_not_configured",
@@ -754,7 +754,7 @@ def verify(
     bindings = contract["bindings"]
     if bindings != {
         "full_pipeline_performance_activation_sha256": (
-            "c9f77a76c0d7687d1c4195f06d50529ce66d915dd1a79f48e9a2827570af9ea2"
+            "0c282c168e201eea5ac9315f50d1fd49aa2d825804d1f03b89602c5cbae21325"
         ),
         "full_pipeline_profile_sha256": (
             "385fb713cca8f39353f138115749abdfc9768b02222e13111a418360be30a000"

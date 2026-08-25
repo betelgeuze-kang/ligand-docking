@@ -339,7 +339,7 @@ def test_package_binary_is_static_rostered_but_still_non_operational() -> None:
     assert materialized_mode & 0o111 == 0o111
     assert metadata.st_size == 2_069_736
     assert hashlib.sha256(binary.read_bytes()).hexdigest() == (
-        "a33a07fc8a9f55a843ead479cee5b46f8ef31cb6787141fb7e3d8a563efb1466"
+        "c7da6610ea596b3cb9580ebfdfc2f608bd27faca97932cadf25af2ec278bbf1b"
     )
     sbom = __import__("json").loads(
         binary.with_suffix(".spdx.json").read_text(encoding="ascii")
@@ -368,7 +368,7 @@ def test_package_binary_is_static_rostered_but_still_non_operational() -> None:
     assert description["client_gid"] == 64042
     assert description["client_identity_configured"] is True
     assert description["preflight_sha256"] == (
-        "67c2e6ace0a4585d7004508323dc9928ddf45ee24e4bc77fa0406be4331857a0"
+        "aff270795a85a3e6660b0f3f990a3542f1ee05a7fb3795b9146dc7dd062070b6"
     )
     rejected = subprocess.run(
         [str(binary)],

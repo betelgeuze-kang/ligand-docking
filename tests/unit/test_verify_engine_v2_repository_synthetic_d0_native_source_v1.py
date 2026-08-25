@@ -8,6 +8,7 @@ import pytest
 from tools.verify_engine_v2_repository_synthetic_d0_native_source_v1 import (
     ContractError,
     DEFAULT_CONTRACT,
+    DEFAULT_CPU_PARITY_CONTRACT,
     DEFAULT_FIXTURE_MANIFEST,
     DEFAULT_NATIVE_WORKFLOW,
     DEFAULT_RELEASE_WORKFLOW,
@@ -31,6 +32,20 @@ def _write_json(path: Path, document: object) -> None:
     )
 
 
+def _write_compact_json(path: Path, document: object) -> None:
+    path.write_text(
+        json.dumps(
+            document,
+            allow_nan=False,
+            ensure_ascii=True,
+            separators=(",", ":"),
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="ascii",
+    )
+
+
 def test_native_repository_d0_source_contract_verifies() -> None:
     result = verify()
 
@@ -40,12 +55,50 @@ def test_native_repository_d0_source_contract_verifies() -> None:
     assert result["ready_slot_count"] == 54
     assert result["typed_failure_count"] == 10
     assert result["bitwise_current_v7_coordinate_identity_count"] == 28
+    assert result["cpp_cpu_parity_bound"] is True
+    assert result["cpp_cpu_parity_compared_f64_count"] == 16_896
+    assert len(result["cpp_cpu_parity_policy_sha256"]) == 64
     assert result["consumer_activation_authorized"] is False
     assert result["molecular_execution_authorized"] is False
     assert result["reservation_authorized"] is False
     assert result["hip_device_execution_authorized"] is False
     assert result["verification_blockers"] == []
     assert len(result["contract_sha256"]) == 64
+
+
+@pytest.mark.parametrize(
+    ("mutation", "message"),
+    (
+        (
+            lambda document: document["runtime"].update(
+                source_contract_sha256="0" * 64
+            ),
+            "not bound to this source policy",
+        ),
+        (
+            lambda document: document["authority"].update(
+                molecular_execution_authorized=True
+            ),
+            "acquired execution authority",
+        ),
+        (
+            lambda document: document["expected"].update(
+                native_source_bundle_receipt_sha256="0" * 64
+            ),
+            "cross-wired from source",
+        ),
+    ),
+)
+def test_native_repository_d0_source_rejects_cpu_parity_cross_wiring(
+    tmp_path: Path, mutation, message: str
+) -> None:
+    document = json.loads(DEFAULT_CPU_PARITY_CONTRACT.read_text(encoding="ascii"))
+    mutation(document)
+    contract = tmp_path / "parity.json"
+    _write_compact_json(contract, document)
+
+    with pytest.raises(ContractError, match=message):
+        verify(cpu_parity_contract_path=contract)
 
 
 @pytest.mark.parametrize(
@@ -122,7 +175,11 @@ def test_native_repository_d0_source_rejects_caller_input(
     needle = "pub fn materialize_repository_synthetic_d0_sources(\n)"
     assert needle in raw
     drifted.write_text(
-        raw.replace(needle, "pub fn materialize_repository_synthetic_d0_sources(\n    caller: u64,\n)", 1),
+        raw.replace(
+            needle,
+            "pub fn materialize_repository_synthetic_d0_sources(\n    caller: u64,\n)",
+            1,
+        ),
         encoding="utf-8",
     )
 

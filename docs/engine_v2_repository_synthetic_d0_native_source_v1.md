@@ -51,9 +51,15 @@ feature-inventory, and derived allocation receipts are frozen as
 `0a13f3fd3ee9a95ef496135c6834dd3528aff729e20aa032df07182f6abe78f0`,
 and `8775a56bcd15bc903ead9365eb699c167d523157404dc2271c11a5274bacd2fb`.
 
-This change is source materialization only. Consumer activation remains false,
-C++ parity is a separate pending change, and HIP is compile-only with no
-device execution or parity claim. It neither invokes nor reruns the consumed native fixed64 CPU v7 qualification.
+This remains a source-materialization policy and consumer activation remains
+false. A separate non-authoritative Rust-to-C++ CPU parity policy now binds the
+exact raw source-policy identity and the same prepared-input, source-bundle,
+allocation, and denominator identities. That policy compares all 16,896 binary64 values
+in the backend-independent scientific projection, requires
+exact decisions, status, ranks, and source identities, and applies only frozen
+numeric tolerances to scientific floating-point values. It changes neither the
+materialized source nor any product authority. HIP is compile-only with no
+device execution or parity claim. Neither policy invokes or reruns the consumed native fixed64 CPU v7 qualification.
 
 All operational authority remains false. External authority must reach blocker
 zero before reservation, molecular A/B, D1/D2 molecular execution, Fresh-128,

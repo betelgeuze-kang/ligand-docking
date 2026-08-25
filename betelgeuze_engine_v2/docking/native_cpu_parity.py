@@ -18,7 +18,7 @@ REPOSITORY_SYNTHETIC_D0_CPU_PARITY_PROFILE_ID = (
     "engine_v2_repository_synthetic_d0_cpu_parity_v1"
 )
 REPOSITORY_SYNTHETIC_D0_CPU_PARITY_POLICY_SHA256 = (
-    "47d3fd8a0fe341591d46c0427dc45d726898813e953b039ce66fd47816ad1511"
+    "51428dfb18e4c7dd3bdbd5da543968caf611799bd84840c04b7c53eeaca27295"
 )
 REPOSITORY_SYNTHETIC_D0_NATIVE_ACKNOWLEDGMENT = (
     "repository-synthetic-d0-only:no-reservation:no-molecular-experiment:"

@@ -71,7 +71,7 @@ EXPECTED_BUILD = {
 }
 EXPECTED_FOUNDATION = {
     "activation_contract_sha256": (
-        "c9f77a76c0d7687d1c4195f06d50529ce66d915dd1a79f48e9a2827570af9ea2"
+        "0c282c168e201eea5ac9315f50d1fd49aa2d825804d1f03b89602c5cbae21325"
     ),
     "foundation_commit_oid": "c15b46e4a93e157826677165642b8788b75f20c7",
     "foundation_commit_sha256": (
@@ -82,7 +82,7 @@ EXPECTED_FOUNDATION = {
         "e28fb3eabc81cb71bae3c1f0b51ce58642be6164454538c14e39c34b776fee43"
     ),
     "preflight_sha256": (
-        "aca96d31bb1ca09d9eb83a10bb7a8a91192fc1405a9eaa8011d94453a28a306e"
+        "1c50fa1b3bb183f63070873840a53a648e810a3240ff1829e2a49cca8373bdb5"
     ),
     "profile_sha256": (
         "385fb713cca8f39353f138115749abdfc9768b02222e13111a418360be30a000"
@@ -108,7 +108,7 @@ EXPECTED_IMPLEMENTATION = {
         "native/tools/engine_v2_full_pipeline_cpu_supervisor_v1.cpp"
     ),
     "service_source_sha256": (
-        "ac476df202f01083e2d9ff34b64030de1d3fef13b2be09180e6a463cd47043c2"
+        "0fdf424349ff075d0bef0a92718ef69e8213eb59f19d2ef175eccde15d71f5e1"
     ),
     "socket_path": (
         "/run/betelgeuze-engine-v2/full-pipeline-cpu-supervisor-v1.sock"

@@ -118,7 +118,7 @@ def test_supervisor_static_binary_is_non_operational(tmp_path: Path) -> None:
         "schema_id": "betelgeuze.engine_v2_full_pipeline_cpu_supervisor/1.0.0",
         "supervisor_id": "engine_v2_full_pipeline_cpu_supervisor_v1",
         "preflight_sha256": (
-            "aca96d31bb1ca09d9eb83a10bb7a8a91192fc1405a9eaa8011d94453a28a306e"
+            "1c50fa1b3bb183f63070873840a53a648e810a3240ff1829e2a49cca8373bdb5"
         ),
         "terminal_bytes": 96,
     }

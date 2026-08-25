@@ -3,7 +3,7 @@
 namespace {
 
 constexpr char kExpectedPreflightSha256[] =
-    "aca96d31bb1ca09d9eb83a10bb7a8a91192fc1405a9eaa8011d94453a28a306e";
+    "1c50fa1b3bb183f63070873840a53a648e810a3240ff1829e2a49cca8373bdb5";
 constexpr char kRequiredSupervisor[] =
     "mount-independent initial-namespace attestation and trace-excluding exec "
     "supervisor";

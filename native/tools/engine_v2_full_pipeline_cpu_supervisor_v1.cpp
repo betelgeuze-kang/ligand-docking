@@ -65,10 +65,10 @@ constexpr char kPreloadPaths[] =
     "/usr/lib/x86_64-linux-gnu/libc.so.6";
 
 constexpr char kActivationSha256[] =
-    "c9f77a76c0d7687d1c4195f06d50529ce66d915dd1a79f48e9a2827570af9ea2";
+    "0c282c168e201eea5ac9315f50d1fd49aa2d825804d1f03b89602c5cbae21325";
 #ifndef BETELGEUZE_ENGINE_V2_SUPERVISOR_PREFLIGHT_SHA256
 #define BETELGEUZE_ENGINE_V2_SUPERVISOR_PREFLIGHT_SHA256 \
-  "aca96d31bb1ca09d9eb83a10bb7a8a91192fc1405a9eaa8011d94453a28a306e"
+  "1c50fa1b3bb183f63070873840a53a648e810a3240ff1829e2a49cca8373bdb5"
 #endif
 constexpr char kPreflightSha256[] =
     BETELGEUZE_ENGINE_V2_SUPERVISOR_PREFLIGHT_SHA256;
