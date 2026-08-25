@@ -377,9 +377,14 @@ def test_source_git_ignores_ambient_repository_redirection(
     source = evidence._verify_source_baseline(require_matching_worktree=False)
     assert source["merged_main_commit"] == evidence.SOURCE_BASELINE_COMMIT
     assert source["merged_main_tree"] == evidence.SOURCE_BASELINE_TREE
+    assert not (ROOT / "rust/betelgeuze-runtime/src/docking.rs").exists()
+    assert (ROOT / "rust/betelgeuze-runtime/src/docking/mod.rs").is_file()
     with pytest.raises(
         evidence.SamplingPoolCPUObservationEvidenceError,
-        match="source bytes differ from merged baseline",
+        match=(
+            "source file is unreadable: "
+            r"rust/betelgeuze-runtime/src/docking\.rs"
+        ),
     ):
         evidence._verify_actual_source_bytes()
 

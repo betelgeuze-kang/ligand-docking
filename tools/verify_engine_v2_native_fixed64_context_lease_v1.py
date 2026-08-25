@@ -16,7 +16,7 @@ DEFAULT_CONTRACT = (
 )
 DEFAULT_CONTEXT_SOURCE = REPOSITORY_ROOT / "rust/betelgeuze-runtime/src/lib.rs"
 DEFAULT_PIPELINE_SOURCE = (
-    REPOSITORY_ROOT / "rust/betelgeuze-runtime/src/docking.rs"
+    REPOSITORY_ROOT / "rust/betelgeuze-runtime/src/docking/mod.rs"
 )
 DEFAULT_FFI_SOURCE = (
     REPOSITORY_ROOT / "rust/betelgeuze-runtime/src/docking/ffi.rs"

@@ -241,7 +241,7 @@ or authorize acceleration claims.
 ```bash
 python tools/inventory_github_actions_pins_v1.py --root . --output actions.json
 python tools/analyze_rust_docking_module_boundaries_v1.py \
-  --path rust/betelgeuze-runtime/src/docking.rs \
+  --path rust/betelgeuze-runtime/src/docking/mod.rs \
   --output docking-boundaries.json
 ```
 

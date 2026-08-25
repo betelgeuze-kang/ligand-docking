@@ -309,7 +309,7 @@ FULL_PIPELINE_CPU_SUPERVISOR_ACTIVATION_FALSE_AUTHORITY_KEYS = (
 NATIVE_FIXED64_CPU_V5_CONTRACT_PATHS = (
     "config/engine_v2_native_fixed64_cpu_profile_v5.json",
     "config/engine_v2_native_fixed64_cpu_profile_v5_archive.json",
-    "rust/betelgeuze-runtime/src/docking.rs",
+    "rust/betelgeuze-runtime/src/docking/mod.rs",
     "rust/betelgeuze-runtime/src/lib.rs",
     "rust/betelgeuze-runtime/src/qualification.rs",
     "native/src/docking/fixed64_pipeline.cpp",

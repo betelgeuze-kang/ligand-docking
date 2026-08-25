@@ -12,6 +12,8 @@ import json
 from pathlib import Path
 import re
 
+DEFAULT_DOCKING_SOURCE = Path("rust/betelgeuze-runtime/src/docking/mod.rs")
+
 ITEM = re.compile(
     r"^(?P<prefix>pub(?:\([^)]*\))?\s+)?"
     r"(?P<kind>struct|enum|trait|impl|fn|const|static|type)\s+"
@@ -89,7 +91,7 @@ def main() -> int:
     parser.add_argument(
         "--path",
         type=Path,
-        default=Path("rust/betelgeuze-runtime/src/docking.rs"),
+        default=DEFAULT_DOCKING_SOURCE,
     )
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()

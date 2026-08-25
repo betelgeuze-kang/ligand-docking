@@ -13,6 +13,13 @@ ANALYZER = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(ANALYZER)
 
 
+def test_default_path_tracks_physical_module_root() -> None:
+    assert ANALYZER.DEFAULT_DOCKING_SOURCE == Path(
+        "rust/betelgeuze-runtime/src/docking/mod.rs"
+    )
+    assert (ROOT / ANALYZER.DEFAULT_DOCKING_SOURCE).is_file()
+
+
 def test_classifies_top_level_items_without_authority(tmp_path: Path) -> None:
     path = tmp_path / "docking.rs"
     path.write_text(
