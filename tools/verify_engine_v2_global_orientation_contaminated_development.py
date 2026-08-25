@@ -376,7 +376,7 @@ def _verify_preimport_source_bindings(protocol: Mapping[str, Any]) -> None:
     )
     _exact(
         scorer_manifest.get("python_transitive_source_manifest_sha256"),
-        "4e291a2dfbbdfac79d422ea5709cd37c94f3ddbf45ec78039e3892d45714a21e",
+        "7db2a8ba4bdf4c70c941b106892e36aaccd253c6a88d31ac4ef78e73fd416aa7",
         name="pre-import ScorerV1 source identity",
     )
     _exact(
@@ -660,7 +660,7 @@ def _verify_authority_bindings(
             "138484e4e3f5473c582485316ed8482fc770d0df2aa9f8397e4c91be22d81b75"
         ),
         "python_transitive_source_manifest_sha256": (
-            "4e291a2dfbbdfac79d422ea5709cd37c94f3ddbf45ec78039e3892d45714a21e"
+            "7db2a8ba4bdf4c70c941b106892e36aaccd253c6a88d31ac4ef78e73fd416aa7"
         ),
         "python_transitive_source_scope": SCORER_PYTHON_SOURCE_SCOPE,
     }
@@ -676,7 +676,7 @@ def _verify_authority_bindings(
             ),
             "implementation_manifest": implementation_manifest,
             "implementation_source_sha256": (
-                "e308b0310b041de8c5b4acc68e1417bc3c7a2ee9ab678a700ab6788bacf98387"
+                "df9430d447b7c28c60327a85e9d60e8f8475928e885c0d10eb289a9e1325d846"
             ),
             "native_runtime_artifact_contract": native_runtime_artifact_contract,
             "terms_schema_id": "betelgeuze.engine_v2_scorer_v1_terms/1.1.0",

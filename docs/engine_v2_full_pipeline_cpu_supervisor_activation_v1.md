@@ -18,7 +18,7 @@ It retains the frozen full-pipeline performance activation, profile, runtime
 manifest, and predecessor supervisor contract as distinct bindings.
 
 The supervisor source remains C++17 and has SHA-256
-`ac476df202f01083e2d9ff34b64030de1d3fef13b2be09180e6a463cd47043c2`.
+`0fdf424349ff075d0bef0a92718ef69e8213eb59f19d2ef175eccde15d71f5e1`.
 The default build still has an unconfigured client identity. A package build
 may compile only the exact client UID, GID, and preflight SHA into the source;
 the installation, runtime-launch, and qualification-consumption constants
@@ -27,7 +27,7 @@ remain compile-time false and cannot be changed by those parameters.
 ## Frozen package and roster
 
 The committed x86-64 static ELF package is 2,069,736 bytes and has SHA-256
-`a33a07fc8a9f55a843ead479cee5b46f8ef31cb6787141fb7e3d8a563efb1466`.
+`c7da6610ea596b3cb9580ebfdfc2f608bd27faca97932cadf25af2ec278bbf1b`.
 Two builds using the frozen GCC 11.4.0 executable and exact flags were
 byte-identical. The verifier confirms ELF64/x86-64 executable identity, absence
 of `PT_INTERP` and `PT_DYNAMIC`, package digest, and SPDX 2.3 SBOM bindings.
@@ -59,7 +59,7 @@ account boundary.
 ## Sealed handoff preflight
 
 The exact standalone handoff preflight has SHA-256
-`67c2e6ace0a4585d7004508323dc9928ddf45ee24e4bc77fa0406be4331857a0`.
+`aff270795a85a3e6660b0f3f990a3542f1ee05a7fb3795b9146dc7dd062070b6`.
 Before any downstream runtime or scientific module is loaded, it requires:
 
 - the exact supervisor-derived argument vector and environment;

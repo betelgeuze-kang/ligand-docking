@@ -24,8 +24,8 @@ DEFAULT_DOCUMENTATION = REPOSITORY_ROOT / "docs/engine_v2_repository_synthetic_d
 DEFAULT_RELEASE_WORKFLOW = REPOSITORY_ROOT / ".github/workflows/ci-engine-v2-release-candidate.yml"
 DEFAULT_NATIVE_WORKFLOW = REPOSITORY_ROOT / ".github/workflows/ci-native-compute-abi.yml"
 
-POLICY_SHA256 = "47d3fd8a0fe341591d46c0427dc45d726898813e953b039ce66fd47816ad1511"
-SOURCE_CONTRACT_SHA256 = "2dbd7da6c8a2b7e6612eabbf15c118bddd659629f974374aac6bccc22deb7e96"
+POLICY_SHA256 = "51428dfb18e4c7dd3bdbd5da543968caf611799bd84840c04b7c53eeaca27295"
+SOURCE_CONTRACT_SHA256 = "8c5254a63d048207301493f1c2b06b58ddd81fd053c112157a7c160420c157ee"
 SESSION_CONTRACT_SHA256 = "51f314de529f1ed3b000bdfff2f7f3494a308303f5d6acf19ab517b3e7054de3"
 ACKNOWLEDGMENT = (
     "repository-synthetic-d0-only:no-reservation:no-molecular-experiment:"
@@ -195,7 +195,7 @@ def verify(
     )
     _require_exact(
         document["schema_id"],
-        "betelgeuze.engine_v2_repository_synthetic_d0_cpu_parity_policy/1.0.0",
+        "betelgeuze.engine_v2_repository_synthetic_d0_cpu_parity_policy/1.1.0",
         name="schema_id",
     )
     _require_exact(

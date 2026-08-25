@@ -221,7 +221,7 @@ _PROFILE_SHA256 = "385fb713cca8f39353f138115749abdfc9768b02222e13111a418360be30a
 _EXPECTED_SOURCE_BINDINGS = {
     "profile_sha256": _PROFILE_SHA256,
     "profile_verifier_sha256": (
-        "b05d9e9710cc9594eba4a0630420dfbc1204dba9e89c63332a0f10bbc541e880"
+        "161e2df7a9242cfc528cefcba04adf7f17aee7b1e0a9d52b969110a7f6007d2e"
     ),
     "measurement_core_sha256": (
         "c27657f104248973f11f6da498fc08da460cb6d4823719139762ce76b0cd18d7"
@@ -233,7 +233,7 @@ _EXPECTED_SOURCE_BINDINGS = {
         "ea4fb7953d2bb2c1e4e16380dd3ad362d4fa8265bf0c11d26d69dfed3cc8df25"
     ),
     "native_cpu_parity_sha256": (
-        "cbff9243caea510e070067663e7c36c216afc84e226b9ade3e37b03e6ac30f75"
+        "66f7029ffe78132e914a17f9fcb0b9fdeb6dac7ecdbda9139e3b296153093579"
     ),
     "host_preflight_sha256": (
         "236496cb7342040191db51f6c801948ab1c6b859d09a85b35e3c8a9c00a38adf"

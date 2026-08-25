@@ -84,7 +84,7 @@ const REPOSITORY_D0_CPU_PARITY_SCHEMA_ID: &str =
     "betelgeuze.engine_v2_repository_synthetic_d0_cpu_parity_receipt/1.0.0";
 const REPOSITORY_D0_CPU_PARITY_PROFILE_ID: &str = "engine_v2_repository_synthetic_d0_cpu_parity_v1";
 const REPOSITORY_D0_CPU_PARITY_POLICY_SHA256: &str =
-    "47d3fd8a0fe341591d46c0427dc45d726898813e953b039ce66fd47816ad1511";
+    "51428dfb18e4c7dd3bdbd5da543968caf611799bd84840c04b7c53eeaca27295";
 const REPOSITORY_D0_CPU_PARITY_EXPECTED_DECISION_SHA256: &str =
     "8908c757de4e7a8f5d12452e40ec0292b44c3db7893f98d5b92956e1f0c9d9f4";
 const REPOSITORY_D0_CPU_PARITY_EXPECTED_SOURCE_BUNDLE_SHA256: &str =

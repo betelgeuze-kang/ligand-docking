@@ -80,10 +80,12 @@
     "selected_current_v7_coordinate_identity_manifest_sha256": "6da149e7d418ebbe709615ba6df8d188c198e26fe56756e81da21dd8eba864b3",
     "selected_proposal_identity_manifest_sha256": "aa4dc1845c6354116d09d2f99998b8ed0847b00d5ea0b4cf8d144a3b98ee38cf"
   },
-  "schema_id": "betelgeuze.engine_v2_repository_synthetic_d0_native_source_policy/1.0.0",
+  "schema_id": "betelgeuze.engine_v2_repository_synthetic_d0_native_source_policy/1.1.0",
   "scope": {
     "component": "betelgeuze-docking-search::repository_d0",
-    "cpp_parity_status": "pending_separate_parity_change",
+    "cpp_parity_policy_profile_id": "engine_v2_repository_synthetic_d0_cpu_parity_v1",
+    "cpp_parity_policy_schema_id": "betelgeuze.engine_v2_repository_synthetic_d0_cpu_parity_policy/1.1.0",
+    "cpp_parity_status": "implemented_separate_non_authoritative_policy",
     "hip_disposition": "compile_only_no_device_execution_or_parity_claim",
     "implementation": "rust_native_no_python_science_transport",
     "molecular_input_scope": "repository_owned_synthetic_d0_only",

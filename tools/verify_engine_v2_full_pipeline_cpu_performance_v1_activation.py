@@ -84,7 +84,7 @@ ACTIVATION_SCHEMA_ID = (
 ACTIVATION_ID = "engine_v2_full_pipeline_cpu_performance_v1_activation"
 PROFILE_ID = "engine_v2_full_pipeline_cpu_performance_v1"
 PROFILE_SHA256 = "385fb713cca8f39353f138115749abdfc9768b02222e13111a418360be30a000"
-ACTIVATION_SHA256 = "c9f77a76c0d7687d1c4195f06d50529ce66d915dd1a79f48e9a2827570af9ea2"
+ACTIVATION_SHA256 = "0c282c168e201eea5ac9315f50d1fd49aa2d825804d1f03b89602c5cbae21325"
 STDLIB_CLOSURE_SHA256 = (
     "d892595cc2bb59aae3fbf7100da9e6b52809082dd5cbc2edb2646811d0b58e35"
 )
@@ -106,7 +106,7 @@ FOUNDATION_TREE_SHA256 = (
 SOURCE_BINDINGS = {
     "profile_sha256": PROFILE_SHA256,
     "profile_verifier_sha256": (
-        "b05d9e9710cc9594eba4a0630420dfbc1204dba9e89c63332a0f10bbc541e880"
+        "161e2df7a9242cfc528cefcba04adf7f17aee7b1e0a9d52b969110a7f6007d2e"
     ),
     "measurement_core_sha256": (
         "c27657f104248973f11f6da498fc08da460cb6d4823719139762ce76b0cd18d7"
@@ -118,7 +118,7 @@ SOURCE_BINDINGS = {
         "ea4fb7953d2bb2c1e4e16380dd3ad362d4fa8265bf0c11d26d69dfed3cc8df25"
     ),
     "native_cpu_parity_sha256": (
-        "cbff9243caea510e070067663e7c36c216afc84e226b9ade3e37b03e6ac30f75"
+        "66f7029ffe78132e914a17f9fcb0b9fdeb6dac7ecdbda9139e3b296153093579"
     ),
     "host_preflight_sha256": (
         "236496cb7342040191db51f6c801948ab1c6b859d09a85b35e3c8a9c00a38adf"
@@ -979,7 +979,7 @@ def verify(
             "trusted_root_launcher": {
                 "artifact_role": "non_operational_fail_closed_stub",
                 "binary_sha256": (
-                    "f72eff58f85bb028aa53a4cf356bbe8e86fb11622ac0cd7060d13fb0ed3e0068"
+                    "5d420a30dff9c713f4cf61cb4ea58b7b35c30b5a2443ce5a5bd3ebae53c75ea1"
                 ),
                 "installation_authorized": False,
                 "runtime_launch_authorized": False,

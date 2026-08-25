@@ -118,7 +118,7 @@
     "native_initialization_delta_exact": true,
     "performance_measurement_allowed": false,
     "performance_sidecar_sha256": "04253e3897bb5746e1c1082dbf8e27922835ffb075aeb3268c18a0895662173f",
-    "preflight_tool_sha256": "aca96d31bb1ca09d9eb83a10bb7a8a91192fc1405a9eaa8011d94453a28a306e",
+    "preflight_tool_sha256": "1c50fa1b3bb183f63070873840a53a648e810a3240ff1829e2a49cca8373bdb5",
     "qualification_state_write_allowed": false,
     "reservation_allowed": false,
     "trusted_initial_namespace_exec_supervisor": {
@@ -131,11 +131,11 @@
     },
     "trusted_root_launcher": {
       "artifact_role": "non_operational_fail_closed_stub",
-      "binary_sha256": "f72eff58f85bb028aa53a4cf356bbe8e86fb11622ac0cd7060d13fb0ed3e0068",
+      "binary_sha256": "5d420a30dff9c713f4cf61cb4ea58b7b35c30b5a2443ce5a5bd3ebae53c75ea1",
       "installation_authorized": false,
       "runtime_launch_authorized": false,
       "source_path": "native/tools/engine_v2_full_pipeline_cpu_preflight_launcher_v1.cpp",
-      "source_sha256": "9e30f5102f592ef9f95f3c3251febc0d6aeb811a78c40cdc1c794b8b9b6c827d",
+      "source_sha256": "c683b43be0e43e959c57c249cf6726ac5077e3c415ccb494b09b758847d58774",
       "static_elf_no_dynamic_or_interp_required": true
     }
   },
@@ -185,10 +185,10 @@
     "merged_main_commit_sha256": "1b478ee3b9737e9d50fc854fb4bde93cbd1efd48015a27df52199a698d17e82e",
     "merged_main_tree_sha256": "69998e9df4740c927568b41e21eb8b94185d4fa3b9dd5fa37d71bcbbd5060579",
     "native_consumer_sha256": "ea4fb7953d2bb2c1e4e16380dd3ad362d4fa8265bf0c11d26d69dfed3cc8df25",
-    "native_cpu_parity_sha256": "cbff9243caea510e070067663e7c36c216afc84e226b9ade3e37b03e6ac30f75",
+    "native_cpu_parity_sha256": "66f7029ffe78132e914a17f9fcb0b9fdeb6dac7ecdbda9139e3b296153093579",
     "preinit_executable_closure_manifest_sha256": "282e17c72a82f0dc3e968e74fc2072371d7673dacf84b18985b2c2253c305558",
     "profile_sha256": "385fb713cca8f39353f138115749abdfc9768b02222e13111a418360be30a000",
-    "profile_verifier_sha256": "b05d9e9710cc9594eba4a0630420dfbc1204dba9e89c63332a0f10bbc541e880",
+    "profile_verifier_sha256": "161e2df7a9242cfc528cefcba04adf7f17aee7b1e0a9d52b969110a7f6007d2e",
     "runner_tool_sha256": "bfaf4bc25b2161a43e1e01418394c716d4b762fd39ec6708a01791159916e6e8",
     "stdlib_import_closure_manifest_sha256": "d892595cc2bb59aae3fbf7100da9e6b52809082dd5cbc2edb2646811d0b58e35"
   },
