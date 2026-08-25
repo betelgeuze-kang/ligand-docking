@@ -43,6 +43,7 @@
     "relative_tolerance": 4e-12,
     "nonfinite_values_allowed": false,
     "typed_failure_scientific_value_encoding": "json_null_for_complete_slot_triple",
+    "minimum_scored_candidates_per_case": 1,
     "no_denominator_deletion": true,
     "repeat_stability_required": true,
     "cpu_cross_architecture_parity_required": true
@@ -95,5 +96,5 @@
     "fresh128_authorized": false,
     "stage0_authorized": false
   },
-  "profile_sha256": "281385177cc504785ba38320c163141ee5239df4c63cad8aac8b5cf3f344d67e"
+  "profile_sha256": "87e304256cf9fb422c2c461bac0f1033bc7f6364641af0b72480e0701c48930f"
 }

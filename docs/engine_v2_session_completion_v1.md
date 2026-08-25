@@ -263,9 +263,11 @@ topology, benchmark thread count, affinity, governor, turbo state, NUMA policy,
 and hashed execution environment used by the `rust_cpu` speed-gate reference.
 Each candidate's scientific triple must be entirely finite or entirely JSON
 `null` for a typed failure; partial triples and non-finite numbers are rejected,
-so failures remain in the 64-slot denominator. Structured status rows cover all
-64 slots, their canonical digest is recomputed, and null triples are permitted
-exactly at slots whose status is `typed_failure`.
+so failures remain in the 64-slot denominator. Every representative case must
+also retain at least the profile-defined minimum of one scored candidate, which
+prevents an all-failure cohort from satisfying the benchmark contract.
+Structured status rows cover all 64 slots, their canonical digest is recomputed,
+and null triples are permitted exactly at slots whose status is `typed_failure`.
 
 Each failure probe embeds a structured observation whose backend and typed code
 must match the requested probe and whose canonical SHA-256 is recomputed. Each
@@ -277,7 +279,9 @@ GPU profiler evidence contains the complete normalized ordered dispatch
 rows; the verifier recomputes their canonical digest and rejects any per-kernel
 count or runtime summary not derived from those rows. Every ordered case and
 every required timing-sample index must occur in the normalized trace, so a
-rehashed truncated trace is rejected.
+rehashed truncated trace is rejected. Kernel runtime summaries use a
+relative-only consistency tolerance, while reported totals are always derived
+from the normalized trace rather than copied from submitted summaries.
 Derived sums and medians use overflow-safe finite arithmetic; any non-finite
 derived metric is rejected rather than serialized as `Infinity`.
 

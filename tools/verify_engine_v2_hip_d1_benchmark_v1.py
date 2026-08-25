@@ -167,7 +167,10 @@ def _integer(value: Any, name: str, *, minimum: int = 0) -> int:
 def _finite(value: Any, name: str, *, positive: bool = False) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise HipBenchmarkError(f"{name} must be finite number")
-    number = float(value)
+    try:
+        number = float(value)
+    except (OverflowError, ValueError) as exc:
+        raise HipBenchmarkError(f"{name} must be finite number") from exc
     if not math.isfinite(number) or (positive and number <= 0.0):
         qualifier = "positive " if positive else ""
         raise HipBenchmarkError(f"{name} must be {qualifier}finite number")
@@ -274,6 +277,7 @@ def _verify_profile_document(profile: dict[str, Any]) -> dict[str, Any]:
             "relative_tolerance",
             "nonfinite_values_allowed",
             "typed_failure_scientific_value_encoding",
+            "minimum_scored_candidates_per_case",
             "no_denominator_deletion",
             "repeat_stability_required",
             "cpu_cross_architecture_parity_required",
@@ -289,6 +293,13 @@ def _verify_profile_document(profile: dict[str, Any]) -> dict[str, Any]:
         != "json_null_for_complete_slot_triple"
     ):
         raise HipBenchmarkError("typed-failure scientific encoding changed")
+    minimum_scored = _integer(
+        parity["minimum_scored_candidates_per_case"],
+        "minimum scored candidates per case",
+        minimum=1,
+    )
+    if minimum_scored != 1 or minimum_scored > profile["candidate_denominator"]:
+        raise HipBenchmarkError("minimum scored candidate policy changed")
     if (
         _finite(parity["absolute_tolerance"], "absolute tolerance", positive=True)
         != 1e-10
@@ -624,6 +635,7 @@ def _verify_case(
     case_id: str,
     denominator: int,
     minimum_samples: int,
+    minimum_scored_candidates: int,
     scientific_length: int,
 ) -> dict[str, Any]:
     expected_keys = {
@@ -660,6 +672,11 @@ def _verify_case(
     )
     if statuses != repeat_statuses:
         raise HipBenchmarkError(f"{label}: repeat candidate status stability")
+    if (
+        sum(status["status"] == "scored" for status in statuses)
+        < minimum_scored_candidates
+    ):
+        raise HipBenchmarkError(f"{label}: insufficient scored candidates")
     if case["typed_failure_sha256"] != _canonical_sha256(statuses):
         raise HipBenchmarkError(f"{label}: typed-failure status SHA-256 mismatch")
     scientific = _scientific_values(case["scientific_values"], label, scientific_length)
@@ -701,7 +718,7 @@ def _verify_profiler_trace(
     rows = trace["rows"]
     if type(rows) is not list or not rows:
         raise HipBenchmarkError(f"{label}: complete profiler trace required")
-    aggregates: dict[str, tuple[int, float]] = {}
+    aggregates: dict[str, list[float]] = {}
     coverage: set[tuple[str, int]] = set()
     allowed_case_ids = set(case_sample_counts)
     for index, raw_row in enumerate(rows):
@@ -738,11 +755,7 @@ def _verify_profiler_trace(
             f"{label}.profiler_trace.runtime_seconds",
             positive=True,
         )
-        count, total = aggregates.get(kernel_name, (0, 0.0))
-        aggregates[kernel_name] = (
-            count + 1,
-            _finite_sum((total, runtime), f"{label}.kernel_runtime"),
-        )
+        aggregates.setdefault(kernel_name, []).append(runtime)
     expected_coverage = {
         (case_id, sample_index)
         for case_id, sample_count in case_sample_counts.items()
@@ -759,7 +772,7 @@ def _verify_profiler_trace(
         raise HipBenchmarkError(f"{label}: kernel dispatch summary required")
     observed_names: set[str] = set()
     dispatch_total = 0
-    runtime_total = 0.0
+    derived_runtime_totals: list[float] = []
     for index, raw_dispatch in enumerate(dispatches):
         dispatch = _exact_keys(
             raw_dispatch,
@@ -780,17 +793,21 @@ def _verify_profiler_trace(
             f"{label}.{name}.runtime",
             positive=True,
         )
-        expected_count, expected_runtime = aggregates[name]
+        expected_count = len(aggregates[name])
+        expected_runtime = _finite_sum(
+            tuple(aggregates[name]), f"{label}.{name}.kernel_runtime"
+        )
         if dispatch_count != expected_count or not math.isclose(
-            runtime, expected_runtime, rel_tol=0.0, abs_tol=1e-15
+            runtime, expected_runtime, rel_tol=1e-12, abs_tol=0.0
         ):
             raise HipBenchmarkError(f"{label}: kernel summary/trace mismatch")
         dispatch_total += dispatch_count
-        runtime_total = _finite_sum(
-            (runtime_total, runtime), f"{label}.kernel_runtime_total"
-        )
+        derived_runtime_totals.append(expected_runtime)
     if observed_names != set(aggregates):
         raise HipBenchmarkError(f"{label}: incomplete kernel summary")
+    runtime_total = _finite_sum(
+        tuple(derived_runtime_totals), f"{label}.kernel_runtime_total"
+    )
     return dispatch_total, runtime_total, trace_sha256
 
 
@@ -802,6 +819,7 @@ def _verify_backend(
     ordered_case_ids: list[str],
     denominator: int,
     sampling: dict[str, Any],
+    minimum_scored_candidates: int,
     scientific_length: int,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     label = f"{architecture}/{backend_name}"
@@ -912,6 +930,7 @@ def _verify_backend(
             case_id,
             denominator,
             sampling["minimum_case_samples"],
+            minimum_scored_candidates,
             scientific_length,
         )
         for index, (raw_case, case_id) in enumerate(
@@ -1194,6 +1213,9 @@ def verify(profile_path: Path, result_path: Path) -> dict[str, Any]:
                 ordered_case_ids=ordered_case_ids,
                 denominator=profile["candidate_denominator"],
                 sampling=profile["sampling"],
+                minimum_scored_candidates=profile["parity"][
+                    "minimum_scored_candidates_per_case"
+                ],
                 scientific_length=scientific_length,
             )
             verified_backends[backend_name] = cases

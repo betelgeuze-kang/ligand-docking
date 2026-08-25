@@ -292,7 +292,7 @@ def test_committed_profile_is_valid_unbound_and_non_authoritative() -> None:
         "verified": True,
         "profile_id": "engine_v2_hip_d1_representative_v1",
         "profile_sha256": (
-            "281385177cc504785ba38320c163141ee5239df4c63cad8aac8b5cf3f344d67e"
+            "87e304256cf9fb422c2c461bac0f1033bc7f6364641af0b72480e0701c48930f"
         ),
         "manifest_bound": False,
         "result_verification_authorized": False,
@@ -516,6 +516,31 @@ def test_nonfinite_scientific_value_is_rejected(tmp_path: Path) -> None:
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 
+def test_integer_to_float_overflow_fails_closed_in_cli(tmp_path: Path) -> None:
+    profile = json.loads(PROFILE.read_text(encoding="utf-8"))
+    profile["parity"]["absolute_tolerance"] = 10**400
+    profile["profile_sha256"] = VERIFIER._canonical_sha256(
+        VERIFIER._profile_projection(profile)
+    )
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--profile",
+            str(_save(tmp_path, "overflow-profile.json", profile)),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.returncode == 1
+    assert completed.stderr == ""
+    assert json.loads(completed.stdout) == {
+        "verified": False,
+        "error": "absolute tolerance must be finite number",
+    }
+
+
 def test_numerical_parity_tolerance_is_enforced(tmp_path: Path) -> None:
     profile_path, profile = _bound_profile(tmp_path)
     result = _result(profile)
@@ -628,6 +653,57 @@ def test_kernel_summary_must_be_derived_from_profiler_trace(tmp_path: Path) -> N
     ] = 6
     with pytest.raises(VERIFIER.HipBenchmarkError, match="summary/trace mismatch"):
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
+def test_tiny_profiler_runtime_cannot_use_dominating_absolute_tolerance(
+    tmp_path: Path,
+) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    architecture = result["architectures"][0]
+    backend = architecture["backends"]["hip_fast"]
+    for row in backend["profiler_trace"]["rows"]:
+        row["runtime_seconds"] = 1.0e-20
+    backend["profiler_trace_sha256"] = VERIFIER._canonical_sha256(
+        backend["profiler_trace"]
+    )
+    backend["kernel_dispatches"][0]["total_runtime_seconds"] = 1.0e-15
+    _reseal_backend_receipt(
+        backend, architecture["gpu_architecture"], result["ordered_case_ids"]
+    )
+    _seal_and_authorize_result(result)
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="summary/trace mismatch"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
+def test_reported_kernel_runtime_is_derived_from_profiler_trace(
+    tmp_path: Path,
+) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    architecture = result["architectures"][0]
+    backend = architecture["backends"]["hip_fast"]
+    for row in backend["profiler_trace"]["rows"]:
+        row["runtime_seconds"] = 1.0e-6
+    expected_runtime = VERIFIER._finite_sum(
+        tuple(row["runtime_seconds"] for row in backend["profiler_trace"]["rows"]),
+        "test profiler runtime",
+    )
+    submitted_runtime = expected_runtime * (1.0 + 5.0e-13)
+    backend["profiler_trace_sha256"] = VERIFIER._canonical_sha256(
+        backend["profiler_trace"]
+    )
+    backend["kernel_dispatches"][0]["total_runtime_seconds"] = submitted_runtime
+    _reseal_backend_receipt(
+        backend, architecture["gpu_architecture"], result["ordered_case_ids"]
+    )
+    _seal_and_authorize_result(result)
+    output = VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+    observed = output["derived_metrics"]["gfx1030"]["hip_fast"][
+        "kernel_runtime_seconds_total"
+    ]
+    assert observed == expected_runtime
+    assert observed != submitted_runtime
 
 
 def test_profiler_trace_digest_is_recomputed(tmp_path: Path) -> None:
@@ -756,6 +832,33 @@ def test_representative_runtime_failure_is_rejected(tmp_path: Path) -> None:
     counts["success"] = 31
     counts["device_oom"] = 1
     with pytest.raises(VERIFIER.HipBenchmarkError, match="runtime success denominator"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
+def test_each_representative_case_requires_a_scored_candidate(
+    tmp_path: Path,
+) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    for architecture in result["architectures"]:
+        for backend in architecture["backends"].values():
+            case = backend["cases"][0]
+            statuses = [
+                {
+                    "slot_index": slot,
+                    "status": "typed_failure",
+                    "failure_code": "candidate_rejected",
+                }
+                for slot in range(64)
+            ]
+            case["candidate_statuses"] = statuses
+            case["repeat_candidate_statuses"] = [dict(status) for status in statuses]
+            status_sha256 = VERIFIER._canonical_sha256(statuses)
+            case["typed_failure_sha256"] = status_sha256
+            case["repeat_typed_failure_sha256"] = status_sha256
+            case["scientific_values"] = [None] * (64 * 3)
+            case["repeat_scientific_values"] = [None] * (64 * 3)
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="insufficient scored"):
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 
