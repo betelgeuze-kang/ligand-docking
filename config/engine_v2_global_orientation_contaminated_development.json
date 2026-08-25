@@ -116,7 +116,7 @@
         "native_source_manifest_sha256": "ecb009ac228652c6c6cbdefcdd70828ce3d9aeea5a5e31d0fff0246d4d5f932e",
         "python_module_path": "betelgeuze_engine_v2/docking/scorer_v1.py",
         "python_module_sha256": "138484e4e3f5473c582485316ed8482fc770d0df2aa9f8397e4c91be22d81b75",
-        "python_transitive_source_manifest_sha256": "4e291a2dfbbdfac79d422ea5709cd37c94f3ddbf45ec78039e3892d45714a21e",
+        "python_transitive_source_manifest_sha256": "7db2a8ba4bdf4c70c941b106892e36aaccd253c6a88d31ac4ef78e73fd416aa7",
         "python_transitive_source_scope": {
           "files": [],
           "manifest_algorithm": "canonical_sorted_path_sha256_rows/1.0.0",
@@ -125,7 +125,7 @@
           ]
         }
       },
-      "implementation_source_sha256": "e308b0310b041de8c5b4acc68e1417bc3c7a2ee9ab678a700ab6788bacf98387",
+      "implementation_source_sha256": "df9430d447b7c28c60327a85e9d60e8f8475928e885c0d10eb289a9e1325d846",
       "native_runtime_artifact_contract": {
         "artifact_identities_committed": false,
         "consumed_qualification_receipt_path": "config/engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt.json",
@@ -321,7 +321,7 @@
     ]
   },
   "protocol_role": "fixed_historical_contaminated_development_global_orientation_ab",
-  "protocol_sha256": "bed16a09c9ce1121abef7c019c5b8359521d760eb0ebe5a587f0c5c64b1a40d1",
+  "protocol_sha256": "7ecbb5fa10ce95b035cdc0c11b2c27469caa019aa994315831ad2631cca0fdc3",
   "schema_id": "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.10.0",
   "shared_execution_contract": {
     "conformer_authority": "same_prepared_ligand_for_both_arms",
