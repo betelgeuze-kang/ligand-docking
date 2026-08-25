@@ -32,7 +32,7 @@ from betelgeuze_engine_v2.docking.validity import (  # noqa: E402
 
 
 SCHEMA_ID = (
-    "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.3.0"
+    "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.4.0"
 )
 FROZEN_GLOBAL_ORIENTATION_GENERATOR_ID = "deterministic_surface_aware_rigid_v2"
 BASELINE_LINEAGE_BY_CASE = {
@@ -76,6 +76,9 @@ SOURCE_RECEIPT_FIELDS = (
     "pocket_radius_angstrom_binary64_hex",
     "pose_validity_config_fingerprint_sha256",
     "preparation_policy_sha256",
+    "evaluation_pipeline_sha256",
+    "scorer_native_extension_sha256",
+    "scorer_backend_receipt_sha256",
 )
 ALLOWED_INPUTS = (
     "prepared_ligand_coordinates",
@@ -463,6 +466,9 @@ def _verify_authority_bindings(protocol: Mapping[str, Any]) -> None:
             ],
             "manifest_algorithm": "canonical_sorted_path_sha256_rows/1.0.0",
         },
+        "expected_evaluation_pipeline_sha256": (
+            "40530119249b792728a70cb5ba65cc9c60cf834e1a744d6987dae75046459922"
+        ),
         "implementation_sha256": posebusters_config["package_sha256"],
         "runner_source_path": "tools/run_engine_v2_public_redocking_300.py",
         "runner_source_sha256": (
@@ -534,18 +540,28 @@ def _verify_authority_bindings(protocol: Mapping[str, Any]) -> None:
 
     scorer = _mapping(bindings.get("scorer_v1"), name="ScorerV1 authority binding")
     scorer_python_source_scope = {
-        "files": [
-            "betelgeuze_engine_v2/__init__.py",
-            "betelgeuze_engine_v2/stack_round1_hardening.py",
-            "betelgeuze_engine_v2/stack_round1_minimization_compat.py",
-        ],
+        "files": [],
         "manifest_algorithm": "canonical_sorted_path_sha256_rows/1.0.0",
-        "roots": [
-            "betelgeuze_engine_v2/ai",
-            "betelgeuze_engine_v2/contracts",
-            "betelgeuze_engine_v2/docking",
-            "betelgeuze_engine_v2/molecular",
-        ],
+        "roots": ["betelgeuze_engine_v2"],
+    }
+    native_runtime_artifact_contract = {
+        "artifact_identities_committed": False,
+        "consumed_qualification_receipt_path": (
+            "config/engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt.json"
+        ),
+        "consumed_qualification_receipt_sha256": (
+            "80df998dbe52ec51ac29a27511d936d9cb08b0df29e333b35f8a7de513d4da1a"
+        ),
+        "native_backend_receipt_sha256": None,
+        "native_extension_sha256": None,
+        "post_qualification_build_boundary_path": (
+            "config/engine_v2_native_fixed64_cpu_post_qualification_build_boundary_v1.json"
+        ),
+        "post_qualification_build_boundary_sha256": (
+            "c151fbff4ca2853fa5ed958541a0f215dc5eda41810d17916533c9907f11546c"
+        ),
+        "qualification_rerun_authorized": False,
+        "unbound_native_runtime_blocks_execution": True,
     }
     implementation_manifest = {
         "native_build_configuration_sha256": (
@@ -563,7 +579,7 @@ def _verify_authority_bindings(protocol: Mapping[str, Any]) -> None:
             "aa7cd89dba16edb36da033bace57804b9ee851997a400c9d468e61ccefdd0159"
         ),
         "python_transitive_source_manifest_sha256": (
-            "8c820fedb0619ec486eb89f9565632f341b9b203a77c48152932092ca7c50919"
+            "18b8e50567dcece1c90566a36065dfafc4effda63db352bb98a786f97782d193"
         ),
         "python_transitive_source_scope": scorer_python_source_scope,
     }
@@ -579,8 +595,9 @@ def _verify_authority_bindings(protocol: Mapping[str, Any]) -> None:
             ),
             "implementation_manifest": implementation_manifest,
             "implementation_source_sha256": (
-                "032544bed46fb0fa5e7aa0a2742c653963793b6c02cecf74177969ebb0896100"
+                "bfcb9f531c5f298af15e62fad2c73a0bc439ed1fafd768bb195d88659a83752c"
             ),
+            "native_runtime_artifact_contract": native_runtime_artifact_contract,
             "terms_schema_id": "betelgeuze.engine_v2_scorer_v1_terms/1.1.0",
         },
         name="ScorerV1 authority binding",
@@ -600,6 +617,22 @@ def _verify_authority_bindings(protocol: Mapping[str, Any]) -> None:
         ),
         name="ScorerV1 transitive Python source manifest",
     )
+    for path_key, hash_key in (
+        (
+            "consumed_qualification_receipt_path",
+            "consumed_qualification_receipt_sha256",
+        ),
+        (
+            "post_qualification_build_boundary_path",
+            "post_qualification_build_boundary_sha256",
+        ),
+    ):
+        relative_path = native_runtime_artifact_contract[path_key]
+        _exact(
+            native_runtime_artifact_contract[hash_key],
+            _file_sha256(relative_path),
+            name=f"ScorerV1 native runtime boundary {relative_path}",
+        )
     _exact(
         scorer.get("config_fingerprint_sha256"),
         ScorerV1Config().fingerprint_sha256,

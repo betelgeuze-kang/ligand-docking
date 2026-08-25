@@ -50,7 +50,7 @@ def _reseal(payload: dict[str, object]) -> dict[str, object]:
 def test_current_global_orientation_development_protocol_verifies() -> None:
     observed = verify_protocol(_protocol())
     assert observed == (
-        "541f41afd3198808617f9f7091b05a2f54e381ffe303f59455fd3b8d56cde3b8"
+        "65ed853d70683f940fdc3e914f6584f6dd530d1ca9de3a8459ff950e6e315768"
     )
 
 
@@ -159,6 +159,10 @@ def test_resealed_transitive_evaluator_source_drift_fails_closed() -> None:
             "ScorerV1 transitive Python source manifest",
         ),
         (
+            "betelgeuze_engine_v2/stack_round3_integrity_compat.py",
+            "ScorerV1 transitive Python source manifest",
+        ),
+        (
             "betelgeuze_engine_v2/benchmark/public_redocking_benchmark.py",
             "PoseBusters evaluation source manifest",
         ),
@@ -199,6 +203,30 @@ def test_resealed_validity_configuration_contract_drift_fails_closed() -> None:
     with pytest.raises(
         GlobalOrientationDevelopmentProtocolError,
         match="internal validity authority binding",
+    ):
+        verify_protocol(changed)
+
+
+def test_resealed_runtime_artifact_or_evaluation_pipeline_drift_fails_closed() -> None:
+    changed = _protocol()
+    changed["authority_bindings"]["posebusters"][
+        "expected_evaluation_pipeline_sha256"
+    ] = "0" * 64
+    changed = _reseal(changed)
+    with pytest.raises(
+        GlobalOrientationDevelopmentProtocolError,
+        match="PoseBusters authority binding",
+    ):
+        verify_protocol(changed)
+
+    changed = _protocol()
+    changed["authority_bindings"]["scorer_v1"]["native_runtime_artifact_contract"][
+        "unbound_native_runtime_blocks_execution"
+    ] = False
+    changed = _reseal(changed)
+    with pytest.raises(
+        GlobalOrientationDevelopmentProtocolError,
+        match="ScorerV1 authority binding",
     ):
         verify_protocol(changed)
 

@@ -66,6 +66,7 @@
         ],
         "manifest_algorithm": "canonical_sorted_path_sha256_rows/1.0.0"
       },
+      "expected_evaluation_pipeline_sha256": "40530119249b792728a70cb5ba65cc9c60cf834e1a744d6987dae75046459922",
       "implementation_sha256": "a6d1437d0eb3e0fe13ad73b5c4efdc8c0914ceadd904cde55b2a9835bf591a9d",
       "mode": "redock",
       "package_filename": "posebusters-0.3.1-py3-none-any.whl",
@@ -107,23 +108,27 @@
         "native_source_manifest_sha256": "ecb009ac228652c6c6cbdefcdd70828ce3d9aeea5a5e31d0fff0246d4d5f932e",
         "python_module_path": "betelgeuze_engine_v2/docking/scorer_v1.py",
         "python_module_sha256": "aa7cd89dba16edb36da033bace57804b9ee851997a400c9d468e61ccefdd0159",
-        "python_transitive_source_manifest_sha256": "8c820fedb0619ec486eb89f9565632f341b9b203a77c48152932092ca7c50919",
+        "python_transitive_source_manifest_sha256": "18b8e50567dcece1c90566a36065dfafc4effda63db352bb98a786f97782d193",
         "python_transitive_source_scope": {
-          "files": [
-            "betelgeuze_engine_v2/__init__.py",
-            "betelgeuze_engine_v2/stack_round1_hardening.py",
-            "betelgeuze_engine_v2/stack_round1_minimization_compat.py"
-          ],
+          "files": [],
           "manifest_algorithm": "canonical_sorted_path_sha256_rows/1.0.0",
           "roots": [
-            "betelgeuze_engine_v2/ai",
-            "betelgeuze_engine_v2/contracts",
-            "betelgeuze_engine_v2/docking",
-            "betelgeuze_engine_v2/molecular"
+            "betelgeuze_engine_v2"
           ]
         }
       },
-      "implementation_source_sha256": "032544bed46fb0fa5e7aa0a2742c653963793b6c02cecf74177969ebb0896100",
+      "implementation_source_sha256": "bfcb9f531c5f298af15e62fad2c73a0bc439ed1fafd768bb195d88659a83752c",
+      "native_runtime_artifact_contract": {
+        "artifact_identities_committed": false,
+        "consumed_qualification_receipt_path": "config/engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt.json",
+        "consumed_qualification_receipt_sha256": "80df998dbe52ec51ac29a27511d936d9cb08b0df29e333b35f8a7de513d4da1a",
+        "native_backend_receipt_sha256": null,
+        "native_extension_sha256": null,
+        "post_qualification_build_boundary_path": "config/engine_v2_native_fixed64_cpu_post_qualification_build_boundary_v1.json",
+        "post_qualification_build_boundary_sha256": "c151fbff4ca2853fa5ed958541a0f215dc5eda41810d17916533c9907f11546c",
+        "qualification_rerun_authorized": false,
+        "unbound_native_runtime_blocks_execution": true
+      },
       "terms_schema_id": "betelgeuze.engine_v2_scorer_v1_terms/1.1.0"
     }
   },
@@ -297,8 +302,8 @@
     ]
   },
   "protocol_role": "fixed_historical_contaminated_development_global_orientation_ab",
-  "protocol_sha256": "541f41afd3198808617f9f7091b05a2f54e381ffe303f59455fd3b8d56cde3b8",
-  "schema_id": "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.3.0",
+  "protocol_sha256": "65ed853d70683f940fdc3e914f6584f6dd530d1ca9de3a8459ff950e6e315768",
+  "schema_id": "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.4.0",
   "shared_execution_contract": {
     "conformer_authority": "same_prepared_ligand_for_both_arms",
     "cpu_count": 1,
@@ -340,7 +345,10 @@
       "pocket_declaration_sha256",
       "pocket_radius_angstrom_binary64_hex",
       "pose_validity_config_fingerprint_sha256",
-      "preparation_policy_sha256"
+      "preparation_policy_sha256",
+      "evaluation_pipeline_sha256",
+      "scorer_native_extension_sha256",
+      "scorer_backend_receipt_sha256"
     ],
     "source_receipts_committed": false
   },

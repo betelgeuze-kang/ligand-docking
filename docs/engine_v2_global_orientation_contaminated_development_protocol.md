@@ -19,13 +19,13 @@ config/engine_v2_global_orientation_contaminated_development.json
 Protocol schema:
 
 ```text
-betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.3.0
+betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.4.0
 ```
 
 Protocol self-hash:
 
 ```text
-541f41afd3198808617f9f7091b05a2f54e381ffe303f59455fd3b8d56cde3b8
+65ed853d70683f940fdc3e914f6584f6dd530d1ca9de3a8459ff950e6e315768
 ```
 
 ## Scientific question
@@ -164,16 +164,20 @@ and internal-validity check-set identity
 `dcab24089ac9c88daa53f3faeabd04d71fb819cbbe9f86982d964b657cbc5583`.
 
 Scoring and evaluation authority is hash-bound as well. The ScorerV1 binding
-includes a live-rederived manifest over its docking, molecular, AI, contracts,
-and runtime-hardening Python source scope, including `contact_validity.py`, as
-well as the native V7 profile and transitive native source manifest, build
-configuration, default config fingerprint, and single-thread backend options.
-Its canonical implementation-manifest identity is
-`032544bed46fb0fa5e7aa0a2742c653963793b6c02cecf74177969ebb0896100`.
+includes a live-rederived manifest over every Python source below
+`betelgeuze_engine_v2`, including `contact_validity.py` and all import-time
+round-1/2/3 compatibility installers, as well as the native V7 profile and
+transitive native source manifest, build configuration, default config
+fingerprint, and single-thread backend options. Its canonical
+implementation-manifest identity is
+`bfcb9f531c5f298af15e62fad2c73a0bc439ed1fafd768bb195d88659a83752c`.
 PoseBusters is bound to the exact 0.3.1 universal wheel SHA-256
 `a6d1437d0eb3e0fe13ad73b5c4efdc8c0914ceadd904cde55b2a9835bf591a9d`,
 redock configuration, local report runner, the imported public-redocking
-column contract, and full check set. RMSD evidence
+column contract, full check set, and the historical V11 evaluation-pipeline
+identity `40530119249b792728a70cb5ba65cc9c60cf834e1a744d6987dae75046459922`.
+That pipeline identity includes evaluator versions and installed payload hashes
+for RDKit, NumPy, pandas, and PyYAML. RMSD evidence
 must carry that same report implementation/config identity plus the pinned
 complete heavy-atom bijection and no-alignment symmetry policies. Internal
 validity binds both its source and the runtime hardening that replaces
@@ -184,6 +188,17 @@ the resulting config fingerprint in the authenticated source receipt. Those
 case receipts are not committed, so the per-case fingerprint map is empty and
 this absence independently blocks execution; a caller cannot substitute a
 default or self-asserted config identity.
+
+The consumed native fixed64 CPU V7 qualification binds source, profile, and
+build configuration but does not retain the exact scorer extension or derived
+backend-receipt identity. The repository's post-qualification boundary marks
+the current runtime development build as unbound, and qualification rerun is
+not authorized. Therefore this protocol records both runtime artifact
+identities as absent and makes that absence an independent execution blocker.
+Any separately authorized future execution must freeze the exact native `.so`
+SHA-256 and the `ScorerBackendReceipt` SHA-256 in its authenticated source
+receipt; neither cross-arm equality nor a caller-supplied implementation label
+can substitute for those identities.
 Future evidence types must match every expected identity in
 `authority_bindings`; same-schema or same-label substitutions fail closed.
 
@@ -219,9 +234,10 @@ Before an evaluator can be reviewed, repository types must provide all four
 machine-verifiable contracts:
 
 1. a case-source receipt containing the ligand, topology, pocket, exact
-   binary64 pocket radius, derived validity-config fingerprint, and preparation
-   identities plus receptor-surface points rederived from the bound receptor
-   geometry by a frozen extraction procedure;
+   binary64 pocket radius, derived validity-config fingerprint, evaluation
+   pipeline, exact native scorer extension and backend-receipt identities, and
+   preparation identities plus receptor-surface points rederived from the
+   bound receptor geometry by a frozen extraction procedure;
 2. baseline candidate lineage bound to all 64 observation slots;
 3. experimental candidate lineage bound to all 64 observation slots; and
 4. failure-complete observations with an explicit unscored state.
