@@ -1,5 +1,5 @@
 {
-  "schema_id": "betelgeuze.engine_v2_hip_d1_benchmark_profile/1.3.0",
+  "schema_id": "betelgeuze.engine_v2_hip_d1_benchmark_profile/1.4.0",
   "profile_id": "engine_v2_hip_d1_representative_v1",
   "status": "frozen_non_authoritative_manifest_not_bound",
   "expected_manifest_sha256": null,
@@ -48,6 +48,7 @@
     ],
     "scientific_vector_order": "slot_major_field_order",
     "score_order_policy": "ascending_score_then_slot_index",
+    "decision_policy": "scored_valid_or_scored_invalid_matches_validity",
     "rank_policy": "one_based_stable_rank",
     "cluster_policy": "valid_one_based_contiguous_invalid_zero",
     "absolute_tolerance": 1e-10,
@@ -78,8 +79,26 @@
       "numeric_overflow"
     ],
     "cpu_fallback_forbidden": true,
-    "normalized_trace_schema": "betelgeuze.engine_v2_rocprofiler_normalized_dispatch_trace/1.1.0",
+    "normalized_trace_schema": "betelgeuze.engine_v2_rocprofiler_normalized_dispatch_trace/1.2.0",
     "normalized_transfer_trace_schema": "betelgeuze.engine_v2_hip_normalized_transfer_trace/1.2.0",
+    "required_dispatch_counts_per_sample": {
+      "geometric_admission": 2,
+      "rigid_refinement": 1,
+      "torsion_refinement": 1,
+      "scoring": 1,
+      "pose_validity": 1,
+      "stable_ranking": 1,
+      "rmsd_clustering": 1
+    },
+    "required_kernel_by_stage": {
+      "geometric_admission": "geometric_fixed64_kernel",
+      "rigid_refinement": "rigid_refinement_kernel",
+      "torsion_refinement": "torsion_fixed64_kernel",
+      "scoring": "scorer_fixed64_kernel",
+      "pose_validity": "validity_fixed64_kernel",
+      "stable_ranking": "stable_top_k_fixed64_kernel",
+      "rmsd_clustering": "direct_rmsd_cluster_fixed64_kernel"
+    },
     "cpu_reference_identity_required": true
   },
   "performance_gate": {
@@ -108,5 +127,5 @@
     "fresh128_authorized": false,
     "stage0_authorized": false
   },
-  "profile_sha256": "14bbcf914e5b6ad56f9969770d192b1916aac820a1a16a69eb60409bffd51606"
+  "profile_sha256": "8153417dd8741ab9d024e0356163e9290c5059b16a00faddbf73143d89eed96e"
 }

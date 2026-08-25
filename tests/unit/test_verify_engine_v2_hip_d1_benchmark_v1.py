@@ -111,6 +111,22 @@ def _case(case_id: str, index: int, backend_name: str) -> dict:
     }
 
 
+def _kernel_summaries(rows: list[dict]) -> list[dict]:
+    kernel_names = list(dict.fromkeys(row["kernel_name"] for row in rows))
+    return [
+        {
+            "kernel_name": kernel_name,
+            "dispatch_count": sum(row["kernel_name"] == kernel_name for row in rows),
+            "total_runtime_seconds": sum(
+                row["runtime_seconds"]
+                for row in rows
+                if row["kernel_name"] == kernel_name
+            ),
+        }
+        for kernel_name in kernel_names
+    ]
+
+
 def _backend(case_ids: list[str], backend_name: str, architecture: str) -> dict:
     gpu = backend_name != "rust_cpu"
     execution_run_id = VERIFIER._canonical_sha256(
@@ -122,19 +138,25 @@ def _backend(case_ids: list[str], backend_name: str, architecture: str) -> dict:
     case_rows = [
         _case(case_id, index, backend_name) for index, case_id in enumerate(case_ids)
     ]
+    kernel_by_stage = VERIFIER.REQUIRED_PROFILER_KERNEL_BY_STAGE
     profiler_rows = (
         [
             {
                 "dispatch_index": dispatch_index,
                 "case_id": case_id,
                 "sample_index": sample_index,
-                "kernel_name": "score_candidates",
-                "runtime_seconds": 0.001953125,
+                "stage_id": stage_id,
+                "kernel_name": kernel_by_stage[stage_id],
+                "runtime_seconds": 0.000244140625,
             }
-            for dispatch_index, (case_id, sample_index) in enumerate(
-                (case_id, sample_index)
+            for dispatch_index, (case_id, sample_index, stage_id) in enumerate(
+                (case_id, sample_index, stage_id)
                 for case_id in case_ids
                 for sample_index in range(5)
+                for stage_id, dispatch_count in (
+                    VERIFIER.REQUIRED_PROFILER_DISPATCH_COUNTS_PER_SAMPLE.items()
+                )
+                for _ in range(dispatch_count)
             )
         ]
         if gpu
@@ -268,35 +290,13 @@ def _backend(case_ids: list[str], backend_name: str, architecture: str) -> dict:
         },
         "profiler_trace": profiler_trace,
         "profiler_trace_sha256": profiler_trace_sha256,
-        "kernel_dispatches": (
-            [
-                {
-                    "kernel_name": "score_candidates",
-                    "dispatch_count": len(profiler_rows),
-                    "total_runtime_seconds": sum(
-                        row["runtime_seconds"] for row in profiler_rows
-                    ),
-                }
-            ]
-            if gpu
-            else []
-        ),
+        "kernel_dispatches": _kernel_summaries(profiler_rows) if gpu else [],
         "transfer_trace": transfer_trace,
         "transfer_trace_sha256": transfer_trace_sha256,
         "repeat_profiler_trace": repeat_profiler_trace,
         "repeat_profiler_trace_sha256": repeat_profiler_trace_sha256,
         "repeat_kernel_dispatches": (
-            [
-                {
-                    "kernel_name": "score_candidates",
-                    "dispatch_count": len(repeat_profiler_rows),
-                    "total_runtime_seconds": sum(
-                        row["runtime_seconds"] for row in repeat_profiler_rows
-                    ),
-                }
-            ]
-            if gpu
-            else []
+            _kernel_summaries(repeat_profiler_rows) if gpu else []
         ),
         "repeat_transfer_trace": repeat_transfer_trace,
         "repeat_transfer_trace_sha256": repeat_transfer_trace_sha256,
@@ -467,7 +467,7 @@ def test_committed_profile_is_valid_unbound_and_non_authoritative() -> None:
         "verified": True,
         "profile_id": "engine_v2_hip_d1_representative_v1",
         "profile_sha256": (
-            "14bbcf914e5b6ad56f9969770d192b1916aac820a1a16a69eb60409bffd51606"
+            "8153417dd8741ab9d024e0356163e9290c5059b16a00faddbf73143d89eed96e"
         ),
         "manifest_bound": False,
         "result_verification_authorized": False,
@@ -520,7 +520,7 @@ def test_valid_bound_result_derives_metrics_without_authority(tmp_path: Path) ->
     assert metrics["hip_safe"]["repeat_peak_vram_bytes"] == 2162688
     assert metrics["hip_safe"]["h2d_seconds_p50"] == 0.001
     assert metrics["hip_safe"]["d2h_seconds_p50"] == 0.0005
-    assert metrics["hip_safe"]["kernel_dispatch_count_total"] == 160
+    assert metrics["hip_safe"]["kernel_dispatch_count_total"] == 1280
     assert metrics["hip_safe"]["kernel_runtime_seconds_total"] == 0.3125
     assert output["device_execution_authorized"] is False
     assert output["claim_authority_granted"] is False
@@ -553,6 +553,40 @@ def test_profile_self_hash_tamper_is_rejected(tmp_path: Path) -> None:
     profile = json.loads(PROFILE.read_text(encoding="utf-8"))
     profile["profile_sha256"] = "f" * 64
     with pytest.raises(VERIFIER.HipBenchmarkError, match="profile SHA-256 mismatch"):
+        VERIFIER.verify_profile(_save(tmp_path, "profile.json", profile))
+
+
+def test_profile_decision_policy_is_frozen(tmp_path: Path) -> None:
+    profile = json.loads(PROFILE.read_text(encoding="utf-8"))
+    profile["parity"]["decision_policy"] = "operator_selected"
+    profile["profile_sha256"] = VERIFIER._canonical_sha256(
+        VERIFIER._profile_projection(profile)
+    )
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="decision policy changed"):
+        VERIFIER.verify_profile(_save(tmp_path, "profile.json", profile))
+
+
+def test_profile_required_dispatch_contract_is_frozen(tmp_path: Path) -> None:
+    profile = json.loads(PROFILE.read_text(encoding="utf-8"))
+    profile["profiling"]["required_dispatch_counts_per_sample"]["scoring"] = 0
+    profile["profile_sha256"] = VERIFIER._canonical_sha256(
+        VERIFIER._profile_projection(profile)
+    )
+    with pytest.raises(
+        VERIFIER.HipBenchmarkError, match="profiler dispatch contract changed"
+    ):
+        VERIFIER.verify_profile(_save(tmp_path, "profile.json", profile))
+
+
+def test_profile_required_kernel_contract_is_frozen(tmp_path: Path) -> None:
+    profile = json.loads(PROFILE.read_text(encoding="utf-8"))
+    profile["profiling"]["required_kernel_by_stage"]["scoring"] = "arbitrary"
+    profile["profile_sha256"] = VERIFIER._canonical_sha256(
+        VERIFIER._profile_projection(profile)
+    )
+    with pytest.raises(
+        VERIFIER.HipBenchmarkError, match="profiler kernel contract changed"
+    ):
         VERIFIER.verify_profile(_save(tmp_path, "profile.json", profile))
 
 
@@ -645,9 +679,42 @@ def test_discrete_digest_is_recomputed_from_structured_output(
     profile_path, profile = _bound_profile(tmp_path)
     result = _result(profile)
     case = result["architectures"][0]["backends"]["hip_fast"]["cases"][0]
-    case["discrete_outputs"]["decision"][0] = "scored_alternate"
-    case["repeat_discrete_outputs"]["decision"][0] = "scored_alternate"
+    for prefix in ("", "repeat_"):
+        case[f"{prefix}discrete_outputs"]["decision"][0] = "scored_invalid"
+        case[f"{prefix}discrete_outputs"]["validity"][0] = False
+        case[f"{prefix}discrete_outputs"]["cluster"][0] = 0
     with pytest.raises(VERIFIER.HipBenchmarkError, match="decision output SHA-256"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
+@pytest.mark.parametrize(
+    ("decision", "validity", "message"),
+    [
+        ("nonsense", True, "scored decision value"),
+        ("scored_invalid", True, "decision/validity mismatch"),
+        ("scored_valid", False, "decision/validity mismatch"),
+    ],
+)
+def test_scored_decision_is_defined_and_matches_validity(
+    tmp_path: Path, decision: str, validity: bool, message: str
+) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    architecture = result["architectures"][0]
+    backend = architecture["backends"]["hip_fast"]
+    case = backend["cases"][0]
+    for prefix in ("", "repeat_"):
+        outputs = case[f"{prefix}discrete_outputs"]
+        outputs["decision"][0] = decision
+        outputs["validity"][0] = validity
+        outputs["cluster"][0] = 1 if validity else 0
+        for field in ("decision", "validity", "cluster"):
+            case[f"{prefix}{field}_sha256"] = VERIFIER._canonical_sha256(outputs[field])
+    _reseal_backend_receipt(
+        backend, architecture["gpu_architecture"], result["ordered_case_ids"]
+    )
+    _seal_and_authorize_result(result)
+    with pytest.raises(VERIFIER.HipBenchmarkError, match=message):
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 
@@ -672,6 +739,9 @@ def test_cluster_membership_matches_candidate_validity(
     result = _result(profile)
     case = result["architectures"][0]["backends"]["hip_fast"]["cases"][0]
     for prefix in ("", "repeat_"):
+        case[f"{prefix}discrete_outputs"]["decision"][0] = (
+            "scored_valid" if validity else "scored_invalid"
+        )
         case[f"{prefix}discrete_outputs"]["validity"][0] = validity
         case[f"{prefix}discrete_outputs"]["cluster"][0] = cluster_id
     with pytest.raises(VERIFIER.HipBenchmarkError, match=message):
@@ -1039,6 +1109,7 @@ def test_tiny_profiler_runtime_cannot_use_dominating_absolute_tolerance(
     backend["profiler_trace_sha256"] = VERIFIER._canonical_sha256(
         backend["profiler_trace"]
     )
+    backend["kernel_dispatches"] = _kernel_summaries(backend["profiler_trace"]["rows"])
     backend["kernel_dispatches"][0]["total_runtime_seconds"] = 1.0e-15
     _reseal_backend_receipt(
         backend, architecture["gpu_architecture"], result["ordered_case_ids"]
@@ -1061,11 +1132,16 @@ def test_reported_kernel_runtime_is_derived_from_profiler_trace(
         tuple(row["runtime_seconds"] for row in backend["profiler_trace"]["rows"]),
         "test profiler runtime",
     )
-    submitted_runtime = expected_runtime * (1.0 + 5.0e-13)
     backend["profiler_trace_sha256"] = VERIFIER._canonical_sha256(
         backend["profiler_trace"]
     )
-    backend["kernel_dispatches"][0]["total_runtime_seconds"] = submitted_runtime
+    backend["kernel_dispatches"] = _kernel_summaries(backend["profiler_trace"]["rows"])
+    expected_first_runtime = backend["kernel_dispatches"][0]["total_runtime_seconds"]
+    submitted_first_runtime = expected_first_runtime * (1.0 + 5.0e-13)
+    backend["kernel_dispatches"][0]["total_runtime_seconds"] = submitted_first_runtime
+    submitted_total = (
+        expected_runtime - expected_first_runtime + submitted_first_runtime
+    )
     _reseal_backend_receipt(
         backend, architecture["gpu_architecture"], result["ordered_case_ids"]
     )
@@ -1075,7 +1151,7 @@ def test_reported_kernel_runtime_is_derived_from_profiler_trace(
         "kernel_runtime_seconds_total"
     ]
     assert observed == expected_runtime
-    assert observed != submitted_runtime
+    assert observed != submitted_total
 
 
 def test_profiler_trace_digest_is_recomputed(tmp_path: Path) -> None:
@@ -1107,29 +1183,69 @@ def test_profiler_trace_must_cover_every_case_sample(tmp_path: Path) -> None:
     result = _result(profile)
     architecture = result["architectures"][0]
     backend = architecture["backends"]["hip_fast"]
-    backend["profiler_trace"]["rows"].pop()
+    final_case_id = result["ordered_case_ids"][-1]
+    backend["profiler_trace"]["rows"] = [
+        row
+        for row in backend["profiler_trace"]["rows"]
+        if not (row["case_id"] == final_case_id and row["sample_index"] == 4)
+    ]
+    for dispatch_index, row in enumerate(backend["profiler_trace"]["rows"]):
+        row["dispatch_index"] = dispatch_index
     backend["profiler_trace_sha256"] = VERIFIER._canonical_sha256(
         backend["profiler_trace"]
     )
-    backend["kernel_dispatches"][0]["dispatch_count"] = len(
-        backend["profiler_trace"]["rows"]
+    backend["kernel_dispatches"] = _kernel_summaries(backend["profiler_trace"]["rows"])
+    _reseal_backend_receipt(
+        backend, architecture["gpu_architecture"], result["ordered_case_ids"]
     )
-    backend["kernel_dispatches"][0]["total_runtime_seconds"] = sum(
-        row["runtime_seconds"] for row in backend["profiler_trace"]["rows"]
-    )
-    execution_receipt = {
-        "schema_id": VERIFIER.EXECUTION_BACKEND_RECEIPT_SCHEMA,
-        "gpu_architecture": architecture["gpu_architecture"],
-        "requested_backend": "hip_fast",
-        "observed_backend": "hip_fast",
-        "cpu_fallback_observed": False,
-        "ordered_case_ids_sha256": result["ordered_case_ids_sha256"],
-        "profiler_trace_sha256": backend["profiler_trace_sha256"],
-    }
-    backend["execution_backend_receipt_sha256"] = VERIFIER._canonical_sha256(
-        execution_receipt
-    )
+    _seal_and_authorize_result(result)
     with pytest.raises(VERIFIER.HipBenchmarkError, match="case/sample coverage"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
+def test_profiler_trace_requires_every_pipeline_stage_per_sample(
+    tmp_path: Path,
+) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    architecture = result["architectures"][0]
+    backend = architecture["backends"]["hip_fast"]
+    backend["profiler_trace"]["rows"] = [
+        row for row in backend["profiler_trace"]["rows"] if row["stage_id"] == "scoring"
+    ]
+    for dispatch_index, row in enumerate(backend["profiler_trace"]["rows"]):
+        row["dispatch_index"] = dispatch_index
+    backend["profiler_trace_sha256"] = VERIFIER._canonical_sha256(
+        backend["profiler_trace"]
+    )
+    backend["kernel_dispatches"] = _kernel_summaries(backend["profiler_trace"]["rows"])
+    _reseal_backend_receipt(
+        backend, architecture["gpu_architecture"], result["ordered_case_ids"]
+    )
+    _seal_and_authorize_result(result)
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="dispatch contract"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
+def test_profiler_stage_id_requires_the_expected_normalized_kernel(
+    tmp_path: Path,
+) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    architecture = result["architectures"][0]
+    backend = architecture["backends"]["hip_fast"]
+    for row in backend["profiler_trace"]["rows"]:
+        if row["stage_id"] == "scoring":
+            row["kernel_name"] = "arbitrary_kernel"
+    backend["profiler_trace_sha256"] = VERIFIER._canonical_sha256(
+        backend["profiler_trace"]
+    )
+    backend["kernel_dispatches"] = _kernel_summaries(backend["profiler_trace"]["rows"])
+    _reseal_backend_receipt(
+        backend, architecture["gpu_architecture"], result["ordered_case_ids"]
+    )
+    _seal_and_authorize_result(result)
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="stage/kernel identity"):
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 

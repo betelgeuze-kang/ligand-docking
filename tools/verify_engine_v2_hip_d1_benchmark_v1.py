@@ -16,8 +16,8 @@ from pathlib import Path
 import re
 from typing import Any
 
-PROFILE_SCHEMA = "betelgeuze.engine_v2_hip_d1_benchmark_profile/1.3.0"
-RESULT_SCHEMA = "betelgeuze.engine_v2_hip_d1_benchmark_result/1.3.0"
+PROFILE_SCHEMA = "betelgeuze.engine_v2_hip_d1_benchmark_profile/1.4.0"
+RESULT_SCHEMA = "betelgeuze.engine_v2_hip_d1_benchmark_result/1.4.0"
 CASE_ID_RE = re.compile(r"^[A-Za-z0-9_.:-]{1,128}$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 GPU_ARCHITECTURE_RE = re.compile(r"^gfx[0-9a-z]{2,8}$")
@@ -57,6 +57,24 @@ FAILURE_STIMULUS_TYPES = {
     "device_oom": "force_device_allocation_failure",
     "execution_timeout": "force_execution_deadline_expiry",
     "numeric_overflow": "force_numeric_overflow",
+}
+REQUIRED_PROFILER_DISPATCH_COUNTS_PER_SAMPLE = {
+    "geometric_admission": 2,
+    "rigid_refinement": 1,
+    "torsion_refinement": 1,
+    "scoring": 1,
+    "pose_validity": 1,
+    "stable_ranking": 1,
+    "rmsd_clustering": 1,
+}
+REQUIRED_PROFILER_KERNEL_BY_STAGE = {
+    "geometric_admission": "geometric_fixed64_kernel",
+    "rigid_refinement": "rigid_refinement_kernel",
+    "torsion_refinement": "torsion_fixed64_kernel",
+    "scoring": "scorer_fixed64_kernel",
+    "pose_validity": "validity_fixed64_kernel",
+    "stable_ranking": "stable_top_k_fixed64_kernel",
+    "rmsd_clustering": "direct_rmsd_cluster_fixed64_kernel",
 }
 AUTHORITY_KEYS = (
     "device_execution_authorized",
@@ -102,7 +120,7 @@ EXECUTION_BACKEND_RECEIPT_SCHEMA = (
     "betelgeuze.engine_v2_hip_execution_backend_receipt/1.3.0"
 )
 NORMALIZED_PROFILER_TRACE_SCHEMA = (
-    "betelgeuze.engine_v2_rocprofiler_normalized_dispatch_trace/1.1.0"
+    "betelgeuze.engine_v2_rocprofiler_normalized_dispatch_trace/1.2.0"
 )
 NORMALIZED_TRANSFER_TRACE_SCHEMA = (
     "betelgeuze.engine_v2_hip_normalized_transfer_trace/1.2.0"
@@ -297,6 +315,7 @@ def _verify_profile_document(profile: dict[str, Any]) -> dict[str, Any]:
             "scientific_fields",
             "scientific_vector_order",
             "score_order_policy",
+            "decision_policy",
             "rank_policy",
             "cluster_policy",
             "absolute_tolerance",
@@ -321,6 +340,8 @@ def _verify_profile_document(profile: dict[str, Any]) -> dict[str, Any]:
         raise HipBenchmarkError("scientific vector ordering changed")
     if parity["score_order_policy"] != "ascending_score_then_slot_index":
         raise HipBenchmarkError("score order policy changed")
+    if parity["decision_policy"] != "scored_valid_or_scored_invalid_matches_validity":
+        raise HipBenchmarkError("decision policy changed")
     if parity["rank_policy"] != "one_based_stable_rank":
         raise HipBenchmarkError("rank policy changed")
     if parity["cluster_policy"] != "valid_one_based_contiguous_invalid_zero":
@@ -392,6 +413,8 @@ def _verify_profile_document(profile: dict[str, Any]) -> dict[str, Any]:
             "cpu_fallback_forbidden",
             "normalized_trace_schema",
             "normalized_transfer_trace_schema",
+            "required_dispatch_counts_per_sample",
+            "required_kernel_by_stage",
             "cpu_reference_identity_required",
         },
         "profile.profiling",
@@ -415,6 +438,13 @@ def _verify_profile_document(profile: dict[str, Any]) -> dict[str, Any]:
         != NORMALIZED_TRANSFER_TRACE_SCHEMA
     ):
         raise HipBenchmarkError("normalized transfer trace schema changed")
+    if (
+        profiling["required_dispatch_counts_per_sample"]
+        != REQUIRED_PROFILER_DISPATCH_COUNTS_PER_SAMPLE
+    ):
+        raise HipBenchmarkError("required profiler dispatch contract changed")
+    if profiling["required_kernel_by_stage"] != REQUIRED_PROFILER_KERNEL_BY_STAGE:
+        raise HipBenchmarkError("required profiler kernel contract changed")
 
     gate = _exact_keys(
         profile["performance_gate"],
@@ -593,6 +623,17 @@ def _discrete_outputs(
             raise HipBenchmarkError(f"{name}: scored decision at slot {slot_index}")
         if type(validities[slot_index]) is not bool:
             raise HipBenchmarkError(f"{name}: validity at slot {slot_index}")
+        if decision not in {"scored_valid", "scored_invalid"}:
+            raise HipBenchmarkError(
+                f"{name}: scored decision value at slot {slot_index}"
+            )
+        expected_decision = (
+            "scored_valid" if validities[slot_index] else "scored_invalid"
+        )
+        if decision != expected_decision:
+            raise HipBenchmarkError(
+                f"{name}: scored decision/validity mismatch at slot {slot_index}"
+            )
         _integer(ranks[slot_index], f"{name}.rank[{slot_index}]")
         cluster_id = _integer(clusters[slot_index], f"{name}.cluster[{slot_index}]")
         if validities[slot_index]:
@@ -1011,6 +1052,8 @@ def _verify_profiler_trace(
     label: str,
     case_wall_times: dict[str, list[float]],
     expected_execution_run_id: str,
+    required_dispatch_counts_per_sample: dict[str, int],
+    required_kernel_by_stage: dict[str, str],
 ) -> tuple[int, float, str]:
     trace = _exact_keys(
         trace_value,
@@ -1033,6 +1076,7 @@ def _verify_profiler_trace(
     aggregates: dict[str, list[float]] = {}
     coverage: set[tuple[str, int]] = set()
     runtime_by_sample: dict[tuple[str, int], list[float]] = {}
+    stage_counts_by_sample: dict[tuple[str, int], dict[str, int]] = {}
     allowed_case_ids = set(case_wall_times)
     for index, raw_row in enumerate(rows):
         row = _exact_keys(
@@ -1041,6 +1085,7 @@ def _verify_profiler_trace(
                 "dispatch_index",
                 "case_id",
                 "sample_index",
+                "stage_id",
                 "kernel_name",
                 "runtime_seconds",
             },
@@ -1061,9 +1106,17 @@ def _verify_profiler_trace(
             raise HipBenchmarkError(f"{label}: profiler trace sample identity")
         sample_key = (case_id, sample_index)
         coverage.add(sample_key)
+        stage_id = _nonempty_string(row["stage_id"], f"{label}.profiler_trace.stage_id")
+        sample_stage_counts = stage_counts_by_sample.setdefault(sample_key, {})
+        sample_stage_counts[stage_id] = sample_stage_counts.get(stage_id, 0) + 1
         kernel_name = _nonempty_string(
             row["kernel_name"], f"{label}.profiler_trace.kernel_name"
         )
+        if (
+            stage_id in required_kernel_by_stage
+            and kernel_name != required_kernel_by_stage[stage_id]
+        ):
+            raise HipBenchmarkError(f"{label}: profiler stage/kernel identity")
         runtime = _finite(
             row["runtime_seconds"],
             f"{label}.profiler_trace.runtime_seconds",
@@ -1079,6 +1132,15 @@ def _verify_profiler_trace(
     if coverage != expected_coverage:
         raise HipBenchmarkError(f"{label}: incomplete profiler case/sample coverage")
     for case_id, sample_index in expected_coverage:
+        observed_required_counts = {
+            stage_id: stage_counts_by_sample[(case_id, sample_index)].get(stage_id, 0)
+            for stage_id in required_dispatch_counts_per_sample
+        }
+        if observed_required_counts != required_dispatch_counts_per_sample:
+            raise HipBenchmarkError(
+                f"{label}: required profiler dispatch contract at "
+                f"{case_id}/sample[{sample_index}]"
+            )
         dispatch_runtime = _finite_sum(
             tuple(runtime_by_sample[(case_id, sample_index)]),
             f"{label}.{case_id}.sample[{sample_index}].dispatch_runtime",
@@ -1354,6 +1416,8 @@ def _verify_backend(
     expected_candidate_ids_sha256_by_case: dict[str, str],
     denominator: int,
     sampling: dict[str, Any],
+    required_dispatch_counts_per_sample: dict[str, int],
+    required_kernel_by_stage: dict[str, str],
     minimum_scored_candidates: int,
     scientific_length: int,
     seen_execution_run_ids: set[str],
@@ -1578,6 +1642,8 @@ def _verify_backend(
                 label,
                 case_wall_times,
                 execution_run_id,
+                required_dispatch_counts_per_sample,
+                required_kernel_by_stage,
             )
         )
         _, _, repeat_profiler_trace_sha256 = _verify_profiler_trace(
@@ -1587,6 +1653,8 @@ def _verify_backend(
             f"{label}/repeat",
             repeat_case_wall_times,
             repeat_execution_run_id,
+            required_dispatch_counts_per_sample,
+            required_kernel_by_stage,
         )
 
     execution_receipt = _execution_backend_receipt(
@@ -1886,6 +1954,12 @@ def verify(profile_path: Path, result_path: Path) -> dict[str, Any]:
                 ),
                 denominator=profile["candidate_denominator"],
                 sampling=profile["sampling"],
+                required_dispatch_counts_per_sample=profile["profiling"][
+                    "required_dispatch_counts_per_sample"
+                ],
+                required_kernel_by_stage=profile["profiling"][
+                    "required_kernel_by_stage"
+                ],
                 minimum_scored_candidates=profile["parity"][
                     "minimum_scored_candidates_per_case"
                 ],

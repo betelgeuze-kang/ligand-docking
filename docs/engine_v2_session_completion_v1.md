@@ -230,7 +230,7 @@ python tools/verify_engine_v2_hip_d1_benchmark_v1.py \
   --profile config/engine_v2_hip_d1_benchmark_profile_v1.json
 ```
 
-This verifies the committed 1.3 profile and its self-hash only. The profile is
+This verifies the committed 1.4 profile and its self-hash only. The profile is
 deliberately `frozen_non_authoritative_manifest_not_bound`; passing `--result`
 is rejected until an owner-controlled successor binds the exact private D1
 manifest SHA-256 and its owner-selected ordered-case SHA-256, then reseals the
@@ -255,8 +255,10 @@ ROCprofiler kernel traces, typed failure probes, and GPU/toolchain/artifact
 identities. The five non-failure discrete digests are recomputed from ordered
 decision, score-order, validity, rank, and cluster structures; the typed-failure
 digest is recomputed from the 64 structured status rows. Score order is also
-recomputed from ascending finite score with slot-index tie-breaking, and
-structured ranks preserve the native one-based `stable_rank` convention. The
+recomputed from ascending finite score with slot-index tie-breaking. Scored
+decisions are restricted to `scored_valid` or `scored_invalid` and must agree
+with the corresponding boolean validity entry. Structured ranks preserve the
+native one-based `stable_rank` convention. The
 cluster structure also preserves native membership semantics: valid scored
 candidates use contiguous one-based cluster IDs, invalid scored candidates use
 zero, and typed failures remain null. The
@@ -304,7 +306,13 @@ GPU profiler evidence contains the complete normalized ordered dispatch
 rows; the verifier recomputes their canonical digest and rejects any per-kernel
 count or runtime summary not derived from those rows. Every ordered case and
 every required timing-sample index must occur in the normalized trace, so a
-rehashed truncated trace is rejected. Kernel runtime summaries use a
+rehashed truncated trace is rejected. Each timed sample must also contain the
+owner-defined stable stage contract: two geometric-admission dispatches plus
+rigid refinement, torsion refinement, scoring, pose validity, stable ranking,
+and RMSD clustering. A trace retaining only one arbitrary dispatch per sample
+is therefore incomplete, and each stable stage ID must name its profile-pinned
+normalized HIP kernel rather than an operator-selected label. Kernel runtime
+summaries use a
 relative-only consistency tolerance, while reported totals are always derived
 from the normalized trace rather than copied from submitted summaries. For each
 case/sample pair, the sum of dispatch runtimes must not exceed its enclosing
