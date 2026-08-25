@@ -49,7 +49,7 @@ def _reseal(payload: dict[str, object]) -> dict[str, object]:
 def test_current_global_orientation_development_protocol_verifies() -> None:
     observed = verify_protocol(_protocol())
     assert observed == (
-        "1478abd2a39b2dbc8a435116c6a0f08d6da7c52c758f179e384efedd8b078a4d"
+        "51116aa0f1efbb6b023325a3d8bac9551a4bf98ddfd3a9ae9c3f88eb807a3632"
     )
 
 
@@ -144,7 +144,33 @@ def test_resealed_candidate_budget_drift_fails_closed() -> None:
 
     with pytest.raises(
         GlobalOrientationDevelopmentProtocolError,
-        match="experimental denominator",
+        match="experimental generator config",
+    ):
+        verify_protocol(changed)
+
+
+def test_resealed_generator_configuration_drift_fails_closed() -> None:
+    changed = _protocol()
+    changed["arm_contract"]["experimental"]["generator_config"][
+        "minimum_receptor_distance"
+    ] = 1.2
+    changed = _reseal(changed)
+
+    with pytest.raises(
+        GlobalOrientationDevelopmentProtocolError,
+        match="experimental generator config",
+    ):
+        verify_protocol(changed)
+
+
+def test_resealed_unknown_decision_authority_fails_closed() -> None:
+    changed = _protocol()
+    changed["decision"]["product_execution_authorized"] = True
+    changed = _reseal(changed)
+
+    with pytest.raises(
+        GlobalOrientationDevelopmentProtocolError,
+        match="decision key set",
     ):
         verify_protocol(changed)
 

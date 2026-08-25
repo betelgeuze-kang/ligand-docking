@@ -25,7 +25,7 @@ betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.1.0
 Protocol self-hash:
 
 ```text
-1478abd2a39b2dbc8a435116c6a0f08d6da7c52c758f179e384efedd8b078a4d
+51116aa0f1efbb6b023325a3d8bac9551a4bf98ddfd3a9ae9c3f88eb807a3632
 ```
 
 ## Scientific question
@@ -176,7 +176,8 @@ Before an evaluator can be reviewed, repository types must provide all four
 machine-verifiable contracts:
 
 1. a case-source receipt containing the ligand, topology, pocket, and
-   preparation identities;
+   preparation identities plus receptor-surface points rederived from the bound
+   receptor geometry by a frozen extraction procedure;
 2. baseline candidate lineage bound to all 64 observation slots;
 3. experimental candidate lineage bound to all 64 observation slots; and
 4. failure-complete observations with an explicit unscored state.

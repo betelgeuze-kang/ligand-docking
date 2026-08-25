@@ -371,6 +371,25 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
 
     arms = _mapping(protocol.get("arm_contract"), name="arm_contract")
     _exact(
+        set(arms),
+        {
+            "arm_ids",
+            "baseline",
+            "candidate_slots_per_scored_case_per_arm",
+            "denominators_identical_required",
+            "expected_scored_candidate_rows_combined",
+            "expected_scored_candidate_rows_per_arm",
+            "experimental",
+            "failed_candidate_slots_retained",
+            "failed_preparation_rows_retained",
+            "same_candidate_budget_required",
+            "same_pocket_required",
+            "same_prepared_ligand_required",
+            "same_scorer_required",
+        },
+        name="arm contract key set",
+    )
+    _exact(
         tuple(arms.get("arm_ids", ())),
         ("baseline_current_v7", "experimental_global_orientation_v1"),
         name="arm identities",
@@ -382,6 +401,16 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
     )
     experimental = _mapping(arms.get("experimental"), name="experimental arm")
     _exact(
+        set(experimental),
+        {
+            "candidate_slot_count",
+            "candidate_slot_formula",
+            "generator_config",
+            "proposal_authority",
+        },
+        name="experimental arm key set",
+    )
+    _exact(
         experimental.get("proposal_authority"),
         GLOBAL_ORIENTATION_GENERATOR_ID,
         name="experimental proposal authority",
@@ -391,9 +420,15 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
         name="experimental generator config",
     )
     _exact(
-        config.get("schema_id"),
-        GLOBAL_ORIENTATION_CONFIG_SCHEMA_ID,
-        name="experimental config schema",
+        dict(config),
+        {
+            "schema_id": GLOBAL_ORIENTATION_CONFIG_SCHEMA_ID,
+            "orientation_count": 8,
+            "translation_shell_radii": [1.5],
+            "translation_points_per_shell": 7,
+            "minimum_receptor_distance": 1.1,
+        },
+        name="experimental generator config",
     )
     concrete = GlobalOrientationConfig(
         orientation_count=config.get("orientation_count"),
@@ -428,6 +463,18 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
 
     metrics = _mapping(protocol.get("metrics"), name="metrics")
     _exact(
+        set(metrics),
+        {
+            "failure_classes",
+            "full_observation_rederivation_required",
+            "required_per_case",
+            "source_geometry_rederivation_required",
+            "summary_rederived_from_complete_case_receipts",
+            "top_k",
+        },
+        name="metrics key set",
+    )
+    _exact(
         tuple(metrics.get("failure_classes", ())),
         ("success", "proposal_failure", "validity_failure", "ranking_failure"),
         name="failure classes",
@@ -459,6 +506,22 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
 
     decision = _mapping(protocol.get("decision"), name="decision")
     _exact(
+        set(decision),
+        {
+            "decision_evaluator_implemented",
+            "go_criteria_all",
+            "go_effect",
+            "go_receipt_emission_authorized",
+            "go_requires_all_invariants",
+            "hard_no_go_any",
+            "invariants_all",
+            "no_go_effect",
+            "required_future_evidence_contracts",
+            "result_cannot_change_protocol",
+        },
+        name="decision key set",
+    )
+    _exact(
         decision.get("decision_evaluator_implemented"),
         False,
         name="decision evaluator implementation state",
@@ -471,8 +534,8 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
     _exact(
         tuple(decision.get("required_future_evidence_contracts", ())),
         (
-            "case_source_receipt_with_ligand_topology_pocket_and_"
-            "preparation_identities",
+            "case_source_receipt_with_ligand_topology_pocket_preparation_and_"
+            "rederived_receptor_surface_identities",
             "baseline_candidate_lineage_bound_to_all_64_observation_slots",
             "experimental_candidate_lineage_bound_to_all_64_observation_slots",
             "failure_complete_observation_slots_with_explicit_unscored_state",
