@@ -82,8 +82,12 @@ coordinate identity, generation receipt, and failure code.
 Each accepted experimental slot is also materialized as an exact
 `DockingProposal` using the authenticated problem/search-space identities, a
 source-seed-derived bounded integer seed, the slot rigid transform and
-coordinates, and zero torsion deltas. The lineage's proposal and coordinate
-fingerprints come from that scorer-compatible object. The distinct
+coordinates, and zero torsion deltas. Because generation rotates centered
+ligand coordinates, the proposal records the equivalent affine translation
+`slot target - ligand centroid @ rotation.T` and verifies that applying the
+stored transform to the original ligand reproduces the bound coordinates. The
+lineage's proposal and coordinate fingerprints come from that scorer-compatible
+object. The distinct
 `GlobalOrientationSlot` receipt remains the generation receipt, so generator
 lineage is not mislabeled as scorer proposal authority.
 

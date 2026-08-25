@@ -796,19 +796,42 @@ def materialize_global_orientation_docking_proposals(
         case_source.ligand_system.atom_count,
         dtype=torch.float64,
     )
+    ligand_coordinates = torch.tensor(
+        case_source.ligand_coordinates,
+        dtype=torch.float64,
+    )
+    ligand_centroid = ligand_coordinates.mean(dim=0)
     proposals: list[DockingProposal | None] = []
     for slot in batch.slots:
         if not slot.accepted:
             proposals.append(None)
             continue
-        proposal = bind_docking_proposal_state(
-            coordinates=torch.tensor(
-                slot.transformed_coordinates,
+        rotation = _global_orientation_rotation_matrix(slot.quaternion)
+        affine_translation = (
+            torch.tensor(
+                slot.translation,
                 dtype=torch.float64,
-            ),
+            )
+            - ligand_centroid @ rotation.T
+        )
+        transformed_coordinates = torch.tensor(
+            slot.transformed_coordinates,
+            dtype=torch.float64,
+        )
+        if not torch.allclose(
+            ligand_coordinates @ rotation.T + affine_translation,
+            transformed_coordinates,
+            rtol=0.0,
+            atol=1.0e-12,
+        ):
+            raise GlobalOrientationDevelopmentContractError(
+                "materialized proposal transform does not reproduce generator coordinates"
+            )
+        proposal = bind_docking_proposal_state(
+            coordinates=transformed_coordinates,
             torsion_angles=torsion_angles,
-            rotation=_global_orientation_rotation_matrix(slot.quaternion),
-            translation=torch.tensor(slot.translation, dtype=torch.float64),
+            rotation=rotation,
+            translation=affine_translation,
             proposal_index=slot.proposal_index,
             seed=proposal_seed,
             problem_fingerprint_sha256=problem.problem.fingerprint_sha256,

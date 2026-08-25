@@ -559,7 +559,8 @@ def test_preparation_failure_retains_ninth_case_without_candidate_rows() -> None
 
 
 def test_arm_lineage_and_observations_bind_exact_failure_complete_64_slots() -> None:
-    lineage = _lineage(_source())
+    source = _source()
+    lineage = _lineage(source)
     evidence = GlobalOrientationDevelopmentArmObservationsV1(
         lineage=lineage,
         observations=tuple(_observation(slot) for slot in lineage.slots),
@@ -606,6 +607,13 @@ def test_arm_lineage_and_observations_bind_exact_failure_complete_64_slots() -> 
     assert (
         generated_slot.proposal_fingerprint_sha256
         != generated_slot.generation_receipt_sha256
+    )
+    source_coordinates = torch.tensor(source.ligand_coordinates, dtype=torch.float64)
+    assert torch.allclose(
+        source_coordinates @ docking_proposal.rotation.T + docking_proposal.translation,
+        docking_proposal.coordinates,
+        rtol=0.0,
+        atol=1.0e-12,
     )
     assert (
         document["observations"][generated_index]["candidate_evidence"][
@@ -842,7 +850,7 @@ def test_arm_authority_and_slots_must_rederive_from_generator_batch() -> None:
     )
     with pytest.raises(
         GlobalOrientationDevelopmentContractError,
-        match="concrete generator batch",
+        match="generator",
     ):
         _lineage_from_batch(lineage.case_source, forged_batch)
 
