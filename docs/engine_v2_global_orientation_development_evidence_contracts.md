@@ -136,9 +136,28 @@ one pose artifact, and PoseBusters/RMSD stages must share one report. Raw score 
 rederived from `(total_score, proposal_index)`. It reports generated, scored, and
 unscored counts without evaluating the frozen Go/No-Go criteria.
 
+## Exact per-arm metrics
+
+`betelgeuze_engine_v2/benchmark/global_orientation_development_metrics.py`
+defines `GlobalOrientationDevelopmentArmMetricsV1`. It accepts only an exact
+`GlobalOrientationDevelopmentArmObservationsV1` object and owns that full
+64-slot receipt in its output. It rederives proposal and valid-proposal oracles,
+score-ranked Top-1/Top-5 oracles, selected Top-1 evidence, selection regret,
+candidate counts, typed failure-code counts, and the mutually exclusive failure
+class directly from retained complete or partial observations. Caller-supplied
+summary values and digest-only substitutes are not inputs.
+
+A generation-failure slot remains a complete observed failure. A generated slot
+with only partial downstream evidence remains visible but makes
+`metric_evidence_complete = false`; absent validity or RMSD is never converted
+to an invented finite value. The metrics receipt cannot evaluate the cohort
+decision or issue execution, Go, promotion, product, Fresh-128, Stage 0, or
+claim authority.
+
 ## Remaining boundary
 
-The fixed protocol still has no decision evaluator and no Go receipt issuer.
+The fixed protocol now has an exact per-arm metrics evaluator, but still has no
+cohort decision evaluator and no Go receipt issuer.
 Before either could be reviewed, separately authorized private evidence would
 have to instantiate these contracts for every required case and arm, while all
 existing operational blockers and the historical one-shot reservation gate

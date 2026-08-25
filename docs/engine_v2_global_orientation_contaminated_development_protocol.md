@@ -19,13 +19,13 @@ config/engine_v2_global_orientation_contaminated_development.json
 Protocol schema:
 
 ```text
-betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.6.0
+betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.7.0
 ```
 
 Protocol self-hash:
 
 ```text
-3f35dc70650ed036f9ec6e1c7a6ec6f2b3610b276142b545ddc8a90cfdab9fb7
+8d3daab3a0c6e08d1aa577ee92eddb5bf4b349ce1288fe3067f058af3455322d
 ```
 
 ## Scientific question
@@ -172,7 +172,7 @@ round-1/2/3 compatibility installers, as well as the native V7 profile and
 transitive native source manifest, build configuration, default config
 fingerprint, and single-thread backend options. Its canonical
 implementation-manifest identity is
-`c06b503379acc7688d86636734b734a41ea6715d4ec60425f07215c2d3c5f969`.
+`fdcba186efd0cef0d73d7490fa652181379d950eb30b4674e31f4d4b5627328f`.
 PoseBusters is bound to the exact 0.3.1 universal wheel SHA-256
 `a6d1437d0eb3e0fe13ad73b5c4efdc8c0914ceadd904cde55b2a9835bf591a9d`,
 redock configuration, local report runner, the imported public-redocking
@@ -236,12 +236,23 @@ Complete source geometry and every candidate observation must be retained so the
 batch and report can be independently regenerated. Summary-only or hash-only
 evidence is insufficient.
 
+The hash-bound `GlobalOrientationDevelopmentArmMetricsV1` implementation now
+derives these per-arm values only from an exact
+`GlobalOrientationDevelopmentArmObservationsV1` receipt and retains all 64
+observations in its own receipt. It uses completed stages from partial evidence
+without manufacturing missing validity or RMSD values; any generated slot that
+lacks full candidate evidence makes `metric_evidence_complete = false`.
+Generation failures remain explicit complete failure observations. This is an
+arm-metrics prerequisite only: it does not compare the cohort, decide Go/No-Go,
+or issue any execution or claim authority.
+
 ## Predeclared decision
 
-The decision rules are frozen below, but no executable decision evaluator or Go
-receipt issuer is implemented. The repository now defines the prerequisite
-private-evidence types in
-`betelgeuze_engine_v2/benchmark/global_orientation_development_contracts.py`.
+The decision rules are frozen below, but no executable cohort decision evaluator
+or Go receipt issuer is implemented. The repository now defines the prerequisite
+private-evidence and per-arm metric types in
+`betelgeuze_engine_v2/benchmark/global_orientation_development_contracts.py`
+and `betelgeuze_engine_v2/benchmark/global_orientation_development_metrics.py`.
 They retain source coordinates and identities, rederive receptor surface points,
 bind each arm's exact 64-slot lineage, deterministically regenerate the
 experimental batch for equality checking, materialize accepted experimental

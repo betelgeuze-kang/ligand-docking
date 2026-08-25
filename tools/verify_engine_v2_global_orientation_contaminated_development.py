@@ -13,7 +13,7 @@ from typing import Any, Mapping
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 
 SCHEMA_ID = (
-    "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.6.0"
+    "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.7.0"
 )
 FROZEN_GLOBAL_ORIENTATION_GENERATOR_ID = "deterministic_surface_aware_rigid_v2"
 BASELINE_LINEAGE_BY_CASE = {
@@ -376,7 +376,7 @@ def _verify_preimport_source_bindings(protocol: Mapping[str, Any]) -> None:
     )
     _exact(
         scorer_manifest.get("python_transitive_source_manifest_sha256"),
-        "ff6d02b412069e5f802ac780fa0fc85d827da475cb6cafc6592b7b8ef4ea0ae0",
+        "440e754f75ce48ac5e4631b051eca066ababec55e618579079db3d155521169a",
         name="pre-import ScorerV1 source identity",
     )
     _exact(
@@ -660,7 +660,7 @@ def _verify_authority_bindings(
             "138484e4e3f5473c582485316ed8482fc770d0df2aa9f8397e4c91be22d81b75"
         ),
         "python_transitive_source_manifest_sha256": (
-            "ff6d02b412069e5f802ac780fa0fc85d827da475cb6cafc6592b7b8ef4ea0ae0"
+            "440e754f75ce48ac5e4631b051eca066ababec55e618579079db3d155521169a"
         ),
         "python_transitive_source_scope": SCORER_PYTHON_SOURCE_SCOPE,
     }
@@ -676,7 +676,7 @@ def _verify_authority_bindings(
             ),
             "implementation_manifest": implementation_manifest,
             "implementation_source_sha256": (
-                "c06b503379acc7688d86636734b734a41ea6715d4ec60425f07215c2d3c5f969"
+                "fdcba186efd0cef0d73d7490fa652181379d950eb30b4674e31f4d4b5627328f"
             ),
             "native_runtime_artifact_contract": native_runtime_artifact_contract,
             "terms_schema_id": "betelgeuze.engine_v2_scorer_v1_terms/1.1.0",
@@ -1081,6 +1081,11 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
     _exact(
         set(metrics),
         {
+            "arm_metrics_evaluator_implemented",
+            "arm_metrics_module_path",
+            "arm_metrics_module_sha256",
+            "arm_metrics_require_exact_arm_observations",
+            "arm_metrics_schema_id",
             "failure_classes",
             "full_observation_rederivation_required",
             "required_per_case",
@@ -1089,6 +1094,36 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
             "top_k",
         },
         name="metrics key set",
+    )
+    _exact(
+        metrics.get("arm_metrics_evaluator_implemented"),
+        True,
+        name="arm metrics evaluator implementation state",
+    )
+    _exact(
+        metrics.get("arm_metrics_schema_id"),
+        "betelgeuze.engine_v2_global_orientation_development_arm_metrics/1.0.0",
+        name="arm metrics schema",
+    )
+    _exact(
+        metrics.get("arm_metrics_module_path"),
+        "betelgeuze_engine_v2/benchmark/global_orientation_development_metrics.py",
+        name="arm metrics module path",
+    )
+    _exact(
+        metrics.get("arm_metrics_module_sha256"),
+        "2648a5788d7cbc7079db736ae6317a8d71f39b11dd820e8f8335b6e331167d75",
+        name="arm metrics module identity",
+    )
+    _exact(
+        metrics.get("arm_metrics_module_sha256"),
+        _file_sha256(str(metrics.get("arm_metrics_module_path"))),
+        name="live arm metrics source",
+    )
+    _exact(
+        metrics.get("arm_metrics_require_exact_arm_observations"),
+        True,
+        name="arm metrics exact-observation requirement",
     )
     _exact(
         tuple(metrics.get("failure_classes", ())),
