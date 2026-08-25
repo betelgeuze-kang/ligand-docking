@@ -87,8 +87,12 @@ def test_arm_metrics_rederive_every_declared_metric_from_exact_receipt() -> None
 
 def test_partial_stage_evidence_remains_visible_and_marks_metrics_incomplete() -> None:
     arm = _arm()
-    target = next(
-        row for row in reversed(arm.observations) if row.candidate_evidence is not None
+    target = min(
+        (row for row in arm.observations if row.candidate_evidence is not None),
+        key=lambda row: (
+            row.candidate_evidence.scorer_terms.total_score,
+            row.proposal_index,
+        ),
     )
     complete = target.candidate_evidence
     assert complete is not None
@@ -123,6 +127,10 @@ def test_partial_stage_evidence_remains_visible_and_marks_metrics_incomplete() -
     document = GlobalOrientationDevelopmentArmMetricsV1(partial_arm).to_dict()
 
     assert document["metric_evidence_complete"] is False
+    assert document["selected_top1_index"] == changed.proposal_index
+    assert document["selected_top1_valid"] is None
+    assert document["selected_top1_success"] is None
+    assert document["failure_class"] is None
     assert document["scored_candidate_count"] == document["generated_candidate_count"]
     assert document["rmsd_evaluated_candidate_count"] == (
         document["generated_candidate_count"] - 1

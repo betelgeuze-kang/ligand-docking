@@ -25,7 +25,7 @@ betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.7.0
 Protocol self-hash:
 
 ```text
-8d3daab3a0c6e08d1aa577ee92eddb5bf4b349ce1288fe3067f058af3455322d
+f265155bcba21aa3d90b4fe83a63f4457d15f589d5a105766ed3527d3d738c70
 ```
 
 ## Scientific question
@@ -172,7 +172,7 @@ round-1/2/3 compatibility installers, as well as the native V7 profile and
 transitive native source manifest, build configuration, default config
 fingerprint, and single-thread backend options. Its canonical
 implementation-manifest identity is
-`fdcba186efd0cef0d73d7490fa652181379d950eb30b4674e31f4d4b5627328f`.
+`fdfc35ebfe3daad488cdd65e01da211063736f984642072b5bca5d4129a65fd6`.
 PoseBusters is bound to the exact 0.3.1 universal wheel SHA-256
 `a6d1437d0eb3e0fe13ad73b5c4efdc8c0914ceadd904cde55b2a9835bf591a9d`,
 redock configuration, local report runner, the imported public-redocking
@@ -242,7 +242,9 @@ derives these per-arm values only from an exact
 observations in its own receipt. It uses completed stages from partial evidence
 without manufacturing missing validity or RMSD values; any generated slot that
 lacks full candidate evidence makes `metric_evidence_complete = false`.
-Generation failures remain explicit complete failure observations. This is an
+Unknown selected validity/success remains null and the definitive failure class
+is withheld until metric evidence is complete. Generation failures remain
+explicit complete failure observations. This is an
 arm-metrics prerequisite only: it does not compare the cohort, decide Go/No-Go,
 or issue any execution or claim authority.
 

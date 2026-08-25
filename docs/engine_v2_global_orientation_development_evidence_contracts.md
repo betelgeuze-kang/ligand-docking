@@ -150,7 +150,9 @@ summary values and digest-only substitutes are not inputs.
 A generation-failure slot remains a complete observed failure. A generated slot
 with only partial downstream evidence remains visible but makes
 `metric_evidence_complete = false`; absent validity or RMSD is never converted
-to an invented finite value. The metrics receipt cannot evaluate the cohort
+to an invented finite value. Unknown selected validity and success remain null,
+and the receipt withholds the definitive failure class until metric evidence is
+complete. The metrics receipt cannot evaluate the cohort
 decision or issue execution, Go, promotion, product, Fresh-128, Stage 0, or
 claim authority.
 
