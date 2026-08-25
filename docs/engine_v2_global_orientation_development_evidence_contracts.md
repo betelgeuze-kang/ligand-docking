@@ -33,7 +33,8 @@ members of the fixed historical cohort. It retains:
 - the frozen evaluation-pipeline identity plus the concrete scorer-backend
   receipt, whose receipt and embedded native-extension identities must exactly
   equal the repeated scorer runtime identities and whose backend, options, and
-  direct ScorerV1 module identity must match the frozen CPU profile;
+  live-rederived aggregate Python/native implementation manifest must match the
+  frozen CPU profile;
 - a generator-source receipt rederived only from the authenticated input,
   prepared ligand, pocket geometry, and authenticated receptor subset; and
 - the exact receptor atom subset selected by the authenticated validity context,
@@ -102,6 +103,10 @@ Score, validity, and RMSD have separate explicit state machines:
 - score: `scored` or `unscored`;
 - validity: `evaluated` or `not_evaluated`; and
 - RMSD: `evaluated` or `not_evaluated`.
+
+Internal validity and PoseBusters are retained independently if one evaluator
+completes before the other fails. The combined validity status remains
+`not_evaluated` until both receipts exist; neither completed result is discarded.
 
 A fully successful slot requires the exact full
 `SourcePairedClearanceCandidateEvidenceV1` object, including complete ScorerV1

@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 import hashlib
 import json
 import math
+from pathlib import Path
 import re
 from typing import Iterable, Sequence
 
@@ -85,9 +86,6 @@ PUBLIC_REDOCKING_POSE_VALIDITY_POLICY_ID = (
 )
 GLOBAL_ORIENTATION_SCORER_BACKEND_OPTIONS_SHA256 = (
     "3e1279f7426288224a1377e9021cc07c3a62115a3ac38534a70871fb8911415f"
-)
-GLOBAL_ORIENTATION_SCORER_MODULE_SHA256 = (
-    "138484e4e3f5473c582485316ed8482fc770d0df2aa9f8397e4c91be22d81b75"
 )
 GLOBAL_ORIENTATION_DEVELOPMENT_CANDIDATE_DENOMINATOR = 64
 GLOBAL_ORIENTATION_DEVELOPMENT_SCORED_CASE_IDS = (
@@ -374,6 +372,51 @@ def derive_global_orientation_generator_source_receipt_sha256(
     )
 
 
+def derive_global_orientation_scorer_implementation_manifest_sha256() -> str:
+    """Rederive the frozen aggregate scorer implementation identity live."""
+
+    package_root = Path(__file__).resolve().parents[1]
+    repository_root = package_root.parent
+    source_rows = []
+    try:
+        for path in sorted(package_root.rglob("*.py")):
+            if path.is_file():
+                source_rows.append(
+                    {
+                        "path": path.relative_to(repository_root).as_posix(),
+                        "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                    }
+                )
+        scorer_module = package_root / "docking/scorer_v1.py"
+        scorer_module_sha256 = hashlib.sha256(scorer_module.read_bytes()).hexdigest()
+    except OSError as exc:
+        raise GlobalOrientationDevelopmentContractError(
+            "scorer implementation sources are not readable"
+        ) from exc
+    source_scope = {
+        "files": [],
+        "manifest_algorithm": "canonical_sorted_path_sha256_rows/1.0.0",
+        "roots": ["betelgeuze_engine_v2"],
+    }
+    implementation_manifest = {
+        "native_build_configuration_sha256": (
+            "6e39e4e07bcb2f9324f242adcf3f48428191b2a91418d34520c6acc1cf046068"
+        ),
+        "native_profile_id": "engine_v2_native_fixed64_cpu_synthetic_v7",
+        "native_profile_sha256": (
+            "50c3e609a23e3bf0641a900f71dc360dcadc1a52c3bde66cdfa74b8c1affcd5d"
+        ),
+        "native_source_manifest_sha256": (
+            "ecb009ac228652c6c6cbdefcdd70828ce3d9aeea5a5e31d0fff0246d4d5f932e"
+        ),
+        "python_module_path": "betelgeuze_engine_v2/docking/scorer_v1.py",
+        "python_module_sha256": scorer_module_sha256,
+        "python_transitive_source_manifest_sha256": _sha256(source_rows),
+        "python_transitive_source_scope": source_scope,
+    }
+    return _sha256(implementation_manifest)
+
+
 def _authority_projection() -> dict[str, bool]:
     return {
         "historical_development_execution_authorized": False,
@@ -426,6 +469,7 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
     )
     schema_id: str = GLOBAL_ORIENTATION_DEVELOPMENT_CASE_SOURCE_SCHEMA_ID
     _receptor_surface_points: Coordinates = field(init=False, repr=False)
+    _scorer_implementation_manifest_sha256: str = field(init=False, repr=False)
     _receipt_sha256: str = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -437,6 +481,9 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
             raise GlobalOrientationDevelopmentContractError(
                 "case source is outside the frozen scored cohort"
             )
+        scorer_implementation_manifest_sha256 = (
+            derive_global_orientation_scorer_implementation_manifest_sha256()
+        )
         if (
             type(self.historical_case_source)
             is not SourcePairedClearanceCaseSourceReceiptV1
@@ -557,7 +604,7 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
             or self.scorer_backend_receipt.options_fingerprint_sha256
             != GLOBAL_ORIENTATION_SCORER_BACKEND_OPTIONS_SHA256
             or self.scorer_backend_receipt.implementation_source_sha256
-            != GLOBAL_ORIENTATION_SCORER_MODULE_SHA256
+            != scorer_implementation_manifest_sha256
         ):
             raise GlobalOrientationDevelopmentContractError(
                 "scorer backend profile, receipt, or native extension identity is cross-wired"
@@ -662,6 +709,11 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
         surface = tuple(receptor[index] for index in indices)
         object.__setattr__(self, "receptor_surface_atom_indices", indices)
         object.__setattr__(self, "_receptor_surface_points", surface)
+        object.__setattr__(
+            self,
+            "_scorer_implementation_manifest_sha256",
+            scorer_implementation_manifest_sha256,
+        )
         object.__setattr__(self, "_receipt_sha256", _sha256(self._projection()))
 
     @property
@@ -724,6 +776,9 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
             "preparation_policy_sha256": self.preparation_policy_sha256,
             "evaluation_pipeline_sha256": self.evaluation_pipeline_sha256,
             "scorer_backend_receipt": self.scorer_backend_receipt.to_dict(),
+            "scorer_implementation_manifest_sha256": (
+                self._scorer_implementation_manifest_sha256
+            ),
             "scorer_native_extension_sha256": self.scorer_native_extension_sha256,
             "scorer_backend_receipt_sha256": self.scorer_backend_receipt_sha256,
             "generator_source_receipt_sha256": (self.generator_source_receipt_sha256),
@@ -1374,13 +1429,11 @@ class GlobalOrientationDevelopmentPartialCandidateEvidenceV1:
             raise GlobalOrientationDevelopmentContractError(
                 "partial evidence must retain at least the completed score stage"
             )
-        if (self.internal_validity is None) != (self.posebusters is None):
+        if self.rmsd is not None and (
+            self.internal_validity is None or self.posebusters is None
+        ):
             raise GlobalOrientationDevelopmentContractError(
-                "partial validity evidence must retain both evaluators"
-            )
-        if self.rmsd is not None and self.posebusters is None:
-            raise GlobalOrientationDevelopmentContractError(
-                "partial RMSD evidence requires completed validity evidence"
+                "partial RMSD evidence requires both completed validity evaluators"
             )
         if self.rmsd is not None:
             raise GlobalOrientationDevelopmentContractError(
@@ -1609,7 +1662,12 @@ class GlobalOrientationDevelopmentObservationSlotV1:
                 or partial.coordinate_sha256 != self.coordinate_sha256
                 or self.score_status != "scored"
                 or self.validity_status
-                != ("evaluated" if partial.posebusters is not None else "not_evaluated")
+                != (
+                    "evaluated"
+                    if partial.internal_validity is not None
+                    and partial.posebusters is not None
+                    else "not_evaluated"
+                )
                 or self.rmsd_status
                 != ("evaluated" if partial.rmsd is not None else "not_evaluated")
             ):
@@ -1945,11 +2003,15 @@ __all__ = [
     "GlobalOrientationDevelopmentArmObservationsV1",
     "GlobalOrientationDevelopmentCaseSourceReceiptV1",
     "GlobalOrientationDevelopmentContractError",
+    "GlobalOrientationDevelopmentHistoricalFailureAuthorityV1",
     "GlobalOrientationDevelopmentLineageSlotV1",
     "GlobalOrientationDevelopmentObservationSlotV1",
+    "GlobalOrientationDevelopmentPartialCandidateEvidenceV1",
     "GlobalOrientationDevelopmentPreparationFailureReceiptV1",
     "derive_global_orientation_generator_source_receipt_sha256",
     "derive_global_orientation_pose_validity_config_fingerprint",
+    "derive_global_orientation_pocket_declaration_sha256",
+    "derive_global_orientation_scorer_implementation_manifest_sha256",
     "derive_global_orientation_source_coordinates_sha256",
     "materialize_global_orientation_docking_proposals",
 ]

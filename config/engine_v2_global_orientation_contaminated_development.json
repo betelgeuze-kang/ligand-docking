@@ -116,7 +116,7 @@
         "native_source_manifest_sha256": "ecb009ac228652c6c6cbdefcdd70828ce3d9aeea5a5e31d0fff0246d4d5f932e",
         "python_module_path": "betelgeuze_engine_v2/docking/scorer_v1.py",
         "python_module_sha256": "138484e4e3f5473c582485316ed8482fc770d0df2aa9f8397e4c91be22d81b75",
-        "python_transitive_source_manifest_sha256": "02afcc4fcd3762e7c9714bdb9415955a8558e003a328a6b88297c262fff65d0d",
+        "python_transitive_source_manifest_sha256": "c619c08ebc97369727a10d760dfec97ca199ad1dfb64bce1e41857d382be4fe6",
         "python_transitive_source_scope": {
           "files": [],
           "manifest_algorithm": "canonical_sorted_path_sha256_rows/1.0.0",
@@ -125,7 +125,7 @@
           ]
         }
       },
-      "implementation_source_sha256": "03db1092ff5be400024b6847ac4d0687c1faad70e81c0556b88f3266b464a984",
+      "implementation_source_sha256": "ae5ae2af0f5fe208ba40c3192f7d0941c60c7f98b438c1b326c042d0159e2eea",
       "native_runtime_artifact_contract": {
         "artifact_identities_committed": false,
         "consumed_qualification_receipt_path": "config/engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt.json",
@@ -310,7 +310,7 @@
     ]
   },
   "protocol_role": "fixed_historical_contaminated_development_global_orientation_ab",
-  "protocol_sha256": "378b28adfdb8566fca9b46eac8249fdea95fdd0f6761e4aa8ade67f19802af44",
+  "protocol_sha256": "9504b81ac35540ec4957834ec4fe06add6e4fd8a8c4b7952986747e31011dc97",
   "schema_id": "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.6.0",
   "shared_execution_contract": {
     "conformer_authority": "same_prepared_ligand_for_both_arms",
@@ -337,7 +337,7 @@
     "case_source_receipt_schema_id": "betelgeuze.engine_v2_global_orientation_development_case_source/1.0.0",
     "contract_types_implemented": true,
     "development_evidence_contract_module_path": "betelgeuze_engine_v2/benchmark/global_orientation_development_contracts.py",
-    "development_evidence_contract_module_sha256": "979a3a967a97ef09acc023cbc12a1bbcacabfaecb17dce186133a47dee65971a",
+    "development_evidence_contract_module_sha256": "e0608b0bdde69a39980b65b343f302190c7d84391885fa1c72212dfd8cc8c48b",
     "exact_case_source_receipt_required": true,
     "global_orientation_synthetic_contract_schema_id": "betelgeuze.engine_v2_global_orientation_synthetic_contract/2.0.0",
     "global_orientation_synthetic_contract_sha256": "02fa37a94f3c1719f5e7b5b808c71d053e313b018ef9bfa7d904869c2ab1dad0",
@@ -377,6 +377,7 @@
       "preparation_policy_sha256",
       "evaluation_pipeline_sha256",
       "scorer_backend_receipt",
+      "scorer_implementation_manifest_sha256",
       "scorer_native_extension_sha256",
       "scorer_backend_receipt_sha256",
       "generator_source_receipt_sha256",

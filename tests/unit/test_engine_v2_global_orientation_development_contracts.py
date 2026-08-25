@@ -4,6 +4,7 @@ from __future__ import annotations
 # ruff: noqa: E402
 
 from dataclasses import replace
+from functools import lru_cache
 import hashlib
 import json
 from pathlib import Path
@@ -11,6 +12,8 @@ from pathlib import Path
 import pytest
 
 torch = pytest.importorskip("torch")
+
+import betelgeuze_engine_v2.benchmark.global_orientation_development_contracts as contracts_module  # noqa: E402
 
 from betelgeuze_engine_v2 import (  # noqa: E402
     AllAtomSystem,
@@ -36,6 +39,7 @@ from betelgeuze_engine_v2.benchmark.global_orientation_development_contracts imp
     derive_global_orientation_pose_validity_config_fingerprint,
     derive_global_orientation_pocket_declaration_sha256,
     derive_global_orientation_source_coordinates_sha256,
+    derive_global_orientation_scorer_implementation_manifest_sha256,
     materialize_global_orientation_docking_proposals,
 )
 from betelgeuze_engine_v2.benchmark.source_paired_clearance_activation import (
@@ -131,6 +135,7 @@ def _system(*, receptor: bool) -> AllAtomSystem:
     )
 
 
+@lru_cache(maxsize=1)
 def _source() -> GlobalOrientationDevelopmentCaseSourceReceiptV1:
     receptor_system = _system(receptor=True)
     ligand_system = _system(receptor=False)
@@ -216,7 +221,7 @@ def _source() -> GlobalOrientationDevelopmentCaseSourceReceiptV1:
         backend=ScorerBackend.RUST_CPU_REQUIRED,
         backend_version="unit-native-v1",
         implementation_source_sha256=(
-            "138484e4e3f5473c582485316ed8482fc770d0df2aa9f8397e4c91be22d81b75"
+            derive_global_orientation_scorer_implementation_manifest_sha256()
         ),
         options_fingerprint_sha256=backend_options.fingerprint_sha256,
         extension_sha256=native_extension,
@@ -994,6 +999,66 @@ def test_partial_evidence_preserves_score_when_later_evaluation_fails() -> None:
     assert row["score_binary64_hex"] == complete.scorer_terms.total_score.hex()
     assert row["partial_evidence"]["scorer_terms"]
     assert row["candidate_evidence"] is None
+
+
+def test_partial_evidence_preserves_each_completed_validity_evaluator() -> None:
+    source = _source()
+    lineage = _lineage(source)
+    observations = tuple(_observation(slot, source) for slot in lineage.slots)
+    target = next(
+        slot.proposal_index
+        for slot in lineage.slots
+        if slot.generation_status == "generated"
+    )
+    complete = observations[target].candidate_evidence
+    assert complete is not None
+
+    for internal, posebusters, failure_code in (
+        (complete.internal_validity, None, "posebusters_failed"),
+        (None, complete.posebusters, "internal_validity_failed"),
+    ):
+        partial = GlobalOrientationDevelopmentPartialCandidateEvidenceV1(
+            candidate_id=complete.candidate_id,
+            proposal_index=complete.proposal_index,
+            proposal_fingerprint_sha256=(
+                complete.candidate_proposal_fingerprint_sha256
+            ),
+            coordinate_sha256=complete.coordinate_sha256,
+            scorer_terms=complete.scorer_terms,
+            internal_validity=internal,
+            posebusters=posebusters,
+            rmsd=None,
+            raw_score_rank=complete.raw_score_rank,
+        )
+        partial_observation = replace(
+            observations[target],
+            candidate_evidence=None,
+            partial_evidence=partial,
+            score_status="scored",
+            validity_status="not_evaluated",
+            rmsd_status="not_evaluated",
+            failure_code=failure_code,
+        )
+        receipt = GlobalOrientationDevelopmentArmObservationsV1(
+            lineage=lineage,
+            observations=(
+                *observations[:target],
+                partial_observation,
+                *observations[target + 1 :],
+            ),
+        )
+        retained = receipt.to_dict()["observations"][target]["partial_evidence"]
+        assert (retained["internal_validity"] is not None) == (internal is not None)
+        assert (retained["posebusters"] is not None) == (posebusters is not None)
+
+
+def test_public_contract_api_exports_required_constructors() -> None:
+    assert {
+        "GlobalOrientationDevelopmentHistoricalFailureAuthorityV1",
+        "GlobalOrientationDevelopmentPartialCandidateEvidenceV1",
+        "derive_global_orientation_pocket_declaration_sha256",
+        "derive_global_orientation_scorer_implementation_manifest_sha256",
+    } <= set(contracts_module.__all__)
 
 
 def test_partial_evidence_requires_one_pose_and_stops_before_rmsd() -> None:
