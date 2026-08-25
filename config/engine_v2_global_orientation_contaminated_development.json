@@ -116,7 +116,7 @@
         "native_source_manifest_sha256": "ecb009ac228652c6c6cbdefcdd70828ce3d9aeea5a5e31d0fff0246d4d5f932e",
         "python_module_path": "betelgeuze_engine_v2/docking/scorer_v1.py",
         "python_module_sha256": "138484e4e3f5473c582485316ed8482fc770d0df2aa9f8397e4c91be22d81b75",
-        "python_transitive_source_manifest_sha256": "190e9a0db9e76e656de3a30a4b335a283b49ab58dbb1b05e9584ecf3ea630702",
+        "python_transitive_source_manifest_sha256": "4e291a2dfbbdfac79d422ea5709cd37c94f3ddbf45ec78039e3892d45714a21e",
         "python_transitive_source_scope": {
           "files": [],
           "manifest_algorithm": "canonical_sorted_path_sha256_rows/1.0.0",
@@ -125,7 +125,7 @@
           ]
         }
       },
-      "implementation_source_sha256": "686cae2e117b7290864e2adee72303cdc798837bdf85cd2595532151bf7973f9",
+      "implementation_source_sha256": "e308b0310b041de8c5b4acc68e1417bc3c7a2ee9ab678a700ab6788bacf98387",
       "native_runtime_artifact_contract": {
         "artifact_identities_committed": false,
         "consumed_qualification_receipt_path": "config/engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt.json",
@@ -217,7 +217,11 @@
     "scored_case_count": 8
   },
   "decision": {
-    "decision_evaluator_implemented": false,
+    "cohort_decision_schema_id": "betelgeuze.engine_v2_global_orientation_development_cohort_decision/1.0.0",
+    "decision_evaluator_implemented": true,
+    "decision_evaluator_module_path": "betelgeuze_engine_v2/benchmark/global_orientation_development_decision.py",
+    "decision_evaluator_module_sha256": "ed704107274b3de6db2118ddeb690a6cb167b3395a69e94b0a8c1c90ad5a8c93",
+    "decision_requires_exact_case_comparison_receipts": true,
     "go_receipt_emission_authorized": false,
     "go_criteria_all": [
       "valid_proposal_oracle_recovery_in_at_least_2_of_7_previously_uncovered_cases",
@@ -233,7 +237,7 @@
       "candidate_denominator_or_source_binding_drift"
     ],
     "invariants_all": [
-      "complete_source_receipts_for_all_nine_cases",
+      "complete_source_or_preparation_failure_receipts_for_all_nine_cases",
       "identical_failure_complete_64_slot_denominators",
       "no_reference_or_result_dependent_generator_input",
       "no_preparation_failure_regression",
@@ -243,12 +247,14 @@
     ],
     "no_go_effect": "retain_synthetic_only_global_orientation_and_close_molecular_execution_request",
     "required_private_evidence_instances": [
-      "case_source_receipt_with_ligand_topology_pocket_preparation_and_rederived_receptor_surface_identities",
+      "case_source_receipts_for_all_eight_scored_cases_with_ligand_topology_pocket_preparation_and_rederived_receptor_surface_identities",
       "baseline_candidate_lineage_bound_to_all_64_observation_slots",
       "experimental_candidate_lineage_bound_to_all_64_observation_slots",
-      "failure_complete_observation_slots_with_explicit_unscored_state"
+      "failure_complete_observation_slots_with_explicit_unscored_state",
+      "typed_preparation_failure_receipt_with_pinned_historical_source_authority_for_6M73_FNR"
     ],
-    "result_cannot_change_protocol": true
+    "result_cannot_change_protocol": true,
+    "scored_case_comparison_schema_id": "betelgeuze.engine_v2_global_orientation_development_scored_case_comparison/1.0.0"
   },
   "execution_gate": {
     "actual_execution_authorized": false,
@@ -315,8 +321,8 @@
     ]
   },
   "protocol_role": "fixed_historical_contaminated_development_global_orientation_ab",
-  "protocol_sha256": "6538186dc2573249d966b6f9f61118fd28f6e89d834b2eade25cd6808a8b8423",
-  "schema_id": "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.7.0",
+  "protocol_sha256": "ac5899b1b619020dcbdf2ce950eb3ce5f2b551c5b07a036b931b19d6fe4f1af0",
+  "schema_id": "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.8.0",
   "shared_execution_contract": {
     "conformer_authority": "same_prepared_ligand_for_both_arms",
     "cpu_count": 1,

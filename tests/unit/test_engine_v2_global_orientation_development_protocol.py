@@ -50,7 +50,7 @@ def _reseal(payload: dict[str, object]) -> dict[str, object]:
 def test_current_global_orientation_development_protocol_verifies() -> None:
     observed = verify_protocol(_protocol())
     assert observed == (
-        "6538186dc2573249d966b6f9f61118fd28f6e89d834b2eade25cd6808a8b8423"
+        "ac5899b1b619020dcbdf2ce950eb3ce5f2b551c5b07a036b931b19d6fe4f1af0"
     )
 
 
@@ -314,6 +314,8 @@ def test_resealed_generator_runtime_binding_cannot_be_bypassed() -> None:
     ("section", "field", "integer_value"),
     (
         ("decision", "decision_evaluator_implemented", 0),
+        ("decision", "decision_requires_exact_case_comparison_receipts", 1),
+        ("decision", "go_receipt_emission_authorized", 0),
         ("execution_gate", "operator_reservation_required", 1),
         ("metrics", "arm_metrics_evaluator_implemented", 1),
     ),
@@ -375,17 +377,54 @@ def test_resealed_execution_authority_escalation_fails_closed() -> None:
         verify_protocol(changed)
 
 
-def test_resealed_evaluator_or_go_receipt_escalation_fails_closed() -> None:
-    for key in ("decision_evaluator_implemented", "go_receipt_emission_authorized"):
-        changed = _protocol()
-        changed["decision"][key] = True
-        changed = _reseal(changed)
+def test_resealed_evaluator_disable_or_go_receipt_escalation_fails_closed() -> None:
+    changed = _protocol()
+    changed["decision"]["decision_evaluator_implemented"] = False
+    changed = _reseal(changed)
+    with pytest.raises(
+        GlobalOrientationDevelopmentProtocolError,
+        match="decision evaluator",
+    ):
+        verify_protocol(changed)
 
-        with pytest.raises(
-            GlobalOrientationDevelopmentProtocolError,
-            match="decision evaluator|Go receipt",
+    changed = _protocol()
+    changed["decision"]["go_receipt_emission_authorized"] = True
+    changed = _reseal(changed)
+    with pytest.raises(
+        GlobalOrientationDevelopmentProtocolError,
+        match="Go receipt",
+    ):
+        verify_protocol(changed)
+
+
+def test_resealed_or_live_decision_evaluator_source_drift_fails_closed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    changed = _protocol()
+    changed["decision"]["decision_evaluator_module_sha256"] = "0" * 64
+    changed = _reseal(changed)
+    with pytest.raises(
+        GlobalOrientationDevelopmentProtocolError,
+        match="decision evaluator module identity",
+    ):
+        verify_protocol(changed)
+
+    real_file_sha256 = verifier._file_sha256
+
+    def changed_file_sha256(path: str) -> str:
+        if path == (
+            "betelgeuze_engine_v2/benchmark/"
+            "global_orientation_development_decision.py"
         ):
-            verify_protocol(changed)
+            return "0" * 64
+        return real_file_sha256(path)
+
+    monkeypatch.setattr(verifier, "_file_sha256", changed_file_sha256)
+    with pytest.raises(
+        GlobalOrientationDevelopmentProtocolError,
+        match="pre-import ScorerV1 source manifest|live decision evaluator source",
+    ):
+        verify_protocol(_protocol())
 
 
 def test_resealed_source_receipt_claim_fails_closed() -> None:
