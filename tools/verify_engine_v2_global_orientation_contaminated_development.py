@@ -4,16 +4,13 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import hashlib
-import inspect
 import json
 from pathlib import Path
-import sys
 from typing import Any, Mapping
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
-if __package__ in {None, ""} and str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
 
 SCHEMA_ID = (
     "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.5.0"
@@ -115,6 +112,9 @@ SCORER_PYTHON_SOURCE_SCOPE = {
     "manifest_algorithm": "canonical_sorted_path_sha256_rows/1.0.0",
     "roots": ["betelgeuze_engine_v2"],
 }
+GLOBAL_ORIENTATION_CONFIG_SCHEMA_ID = (
+    "betelgeuze.engine_v2_global_orientation_config/1.0.0"
+)
 
 
 class GlobalOrientationDevelopmentProtocolError(ValueError):
@@ -224,49 +224,40 @@ def _exact(value: object, expected: object, *, name: str) -> None:
         raise GlobalOrientationDevelopmentProtocolError(f"{name} drifted")
 
 
-def _live_authorities() -> dict[str, object]:
-    from betelgeuze_engine_v2.docking.global_orientation import (
-        GLOBAL_ORIENTATION_CONFIG_SCHEMA_ID,
-        GLOBAL_ORIENTATION_GENERATOR_ID,
-        GlobalOrientationConfig,
-        generate_global_orientation_batch,
-    )
-    from betelgeuze_engine_v2.docking.scorer_v1 import (
-        ScorerBackendOptions,
-        ScorerV1Config,
-    )
-    from betelgeuze_engine_v2.docking.validity import (
-        PUBLIC_BENCHMARK_POSE_VALIDITY_POLICY_ID,
-        PoseValidityConfig,
-    )
-
-    return {
-        "GLOBAL_ORIENTATION_CONFIG_SCHEMA_ID": GLOBAL_ORIENTATION_CONFIG_SCHEMA_ID,
-        "GLOBAL_ORIENTATION_GENERATOR_ID": GLOBAL_ORIENTATION_GENERATOR_ID,
-        "GlobalOrientationConfig": GlobalOrientationConfig,
-        "generate_global_orientation_batch": generate_global_orientation_batch,
-        "ScorerBackendOptions": ScorerBackendOptions,
-        "ScorerV1Config": ScorerV1Config,
-        "PUBLIC_BENCHMARK_POSE_VALIDITY_POLICY_ID": (
-            PUBLIC_BENCHMARK_POSE_VALIDITY_POLICY_ID
-        ),
-        "PoseValidityConfig": PoseValidityConfig,
-    }
-
-
 def load_protocol(path: Path) -> dict[str, Any]:
     return _load_json_object(path, name="protocol")
 
 
-def _verify_generator_boundary(live: Mapping[str, object]) -> None:
-    _exact(
-        live["GLOBAL_ORIENTATION_GENERATOR_ID"],
-        FROZEN_GLOBAL_ORIENTATION_GENERATOR_ID,
-        name="live generator identity",
+def _generator_parameters() -> tuple[str, ...]:
+    path = _REPO_ROOT / "betelgeuze_engine_v2/docking/global_orientation.py"
+    try:
+        module = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    except (OSError, UnicodeError, SyntaxError) as exc:
+        raise GlobalOrientationDevelopmentProtocolError(
+            f"generator source is not parseable: {exc}"
+        ) from exc
+    functions = [
+        node
+        for node in module.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.name == "generate_global_orientation_batch"
+    ]
+    if len(functions) != 1:
+        raise GlobalOrientationDevelopmentProtocolError(
+            "generator entry point is not unique"
+        )
+    arguments = functions[0].args
+    if arguments.posonlyargs or arguments.vararg or arguments.kwarg:
+        raise GlobalOrientationDevelopmentProtocolError(
+            "generator signature exposes unsupported parameter forms"
+        )
+    return tuple(
+        argument.arg for argument in (*arguments.args, *arguments.kwonlyargs)
     )
-    parameters = tuple(
-        inspect.signature(live["generate_global_orientation_batch"]).parameters
-    )
+
+
+def _verify_generator_boundary() -> None:
+    parameters = _generator_parameters()
     _exact(
         parameters,
         (
@@ -390,7 +381,6 @@ def _verify_preimport_source_bindings(protocol: Mapping[str, Any]) -> None:
 
 def _verify_authority_bindings(
     protocol: Mapping[str, Any],
-    live: Mapping[str, object],
 ) -> None:
     bindings = _mapping(protocol.get("authority_bindings"), name="authority bindings")
     _exact(
@@ -469,14 +459,18 @@ def _verify_authority_bindings(
     internal_source_manifest = _source_manifest(
         files=tuple(INTERNAL_VALIDITY_SOURCE_SCOPE["files"]),
     )
-    validity_config = live["PoseValidityConfig"](
-        pocket_radius_angstrom=1.0,
-        policy_id=live["PUBLIC_BENCHMARK_POSE_VALIDITY_POLICY_ID"],
-    ).to_dict()
-    validity_config.pop("pocket_radius_angstrom")
     validity_fixed_fields = {
         "schema_id": "betelgeuze.engine_v2_pose_validity_fixed_fields/1.0.0",
-        **validity_config,
+        "policy_id": (
+            "betelgeuze.engine_v2_pose_validity_policy/public-redocking/1.0.0"
+        ),
+        "bond_length_tolerance_angstrom": 0.15,
+        "ligand_self_clash_angstrom": 0.75,
+        "receptor_ligand_clash_angstrom": 0.8,
+        "rotation_tolerance": 1.0e-6,
+        "chirality_volume_tolerance": 1.0e-8,
+        "max_pair_checks": 250_000,
+        "max_cross_checks": 1_000_000,
     }
     validity_config_contract = {
         "config_schema_id": "betelgeuze.engine_v2_pose_validity_config/3.0.0",
@@ -708,15 +702,38 @@ def _verify_authority_bindings(
             _file_sha256(relative_path),
             name=f"ScorerV1 native runtime boundary {relative_path}",
         )
+    scorer_config_projection = {
+        "schema_id": "betelgeuze.engine_v2_scorer_v1_config/1.0.0",
+        "algorithm_id": (
+            "sparse_typed_lj_charge_hbond_hydrophobic_geometry_torsion_strain/1.0.0"
+        ),
+        "typed_vdw_weight_binary64_hex": float(1.0).hex(),
+        "electrostatics_weight_binary64_hex": float(0.35).hex(),
+        "directional_hbond_weight_binary64_hex": float(1.5).hex(),
+        "hydrophobic_contact_weight_binary64_hex": float(0.6).hex(),
+        "desolvation_weight_binary64_hex": float(0.4).hex(),
+        "torsion_energy_weight_binary64_hex": float(0.15).hex(),
+        "ligand_strain_weight_binary64_hex": float(0.5).hex(),
+        "weak_pocket_prior_weight_binary64_hex": float(0.05).hex(),
+        "electrostatic_dielectric_binary64_hex": float(4.0).hex(),
+        "pair_cutoff_angstrom_binary64_hex": float(8.0).hex(),
+        "hbond_distance_max_angstrom_binary64_hex": float(3.0).hex(),
+        "polar_burial_distance_angstrom_binary64_hex": float(4.5).hex(),
+        "max_receptor_candidate_pairs": 1_000_000,
+        "max_ligand_pair_checks": 250_000,
+        "calibrated": False,
+        "scientifically_validated": False,
+        "claim_safe": False,
+    }
     _exact(
         scorer.get("config_fingerprint_sha256"),
-        live["ScorerV1Config"]().fingerprint_sha256,
-        name="live ScorerV1 config identity",
+        _sha256(scorer_config_projection),
+        name="ScorerV1 config identity",
     )
     _exact(
         scorer.get("backend_options_fingerprint_sha256"),
-        live["ScorerBackendOptions"](thread_count=1).fingerprint_sha256,
-        name="live ScorerV1 backend options identity",
+        _sha256({"thread_count": 1, "max_batch_size": 64}),
+        name="ScorerV1 backend options identity",
     )
 
     source_bindings = (
@@ -845,8 +862,7 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
     _verify_phase25_policy_binding(sources)
     _verify_synthetic_contract_binding(sources)
     _verify_preimport_source_bindings(protocol)
-    live = _live_authorities()
-    _verify_authority_bindings(protocol, live)
+    _verify_authority_bindings(protocol)
 
     information = _mapping(
         protocol.get("information_boundary"), name="information_boundary"
@@ -881,7 +897,7 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
         True,
         name="post-result allocation boundary",
     )
-    _verify_generator_boundary(live)
+    _verify_generator_boundary()
 
     shared = _mapping(
         protocol.get("shared_execution_contract"),
@@ -977,7 +993,7 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
     _exact(
         dict(config),
         {
-            "schema_id": live["GLOBAL_ORIENTATION_CONFIG_SCHEMA_ID"],
+            "schema_id": GLOBAL_ORIENTATION_CONFIG_SCHEMA_ID,
             "orientation_count": 8,
             "translation_shell_radii": [1.5],
             "translation_points_per_shell": 7,
@@ -985,13 +1001,12 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
         },
         name="experimental generator config",
     )
-    concrete = live["GlobalOrientationConfig"](
-        orientation_count=config.get("orientation_count"),
-        translation_shell_radii=tuple(config.get("translation_shell_radii", ())),
-        translation_points_per_shell=config.get("translation_points_per_shell"),
-        minimum_receptor_distance=config.get("minimum_receptor_distance"),
+    candidate_slot_count = config["orientation_count"] * (
+        1
+        + len(config["translation_shell_radii"])
+        * config["translation_points_per_shell"]
     )
-    _exact(concrete.candidate_slot_count, 64, name="experimental denominator")
+    _exact(candidate_slot_count, 64, name="experimental denominator")
     _exact(
         experimental.get("candidate_slot_count"),
         64,

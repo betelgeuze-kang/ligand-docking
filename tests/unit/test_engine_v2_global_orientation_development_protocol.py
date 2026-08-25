@@ -69,25 +69,15 @@ def test_protocol_loader_rejects_duplicate_json_keys(tmp_path: Path) -> None:
         load_protocol(path)
 
 
-def test_live_generator_identity_cannot_move_with_resealed_protocol(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_generator_identity_cannot_move_with_resealed_protocol() -> None:
     changed = _protocol()
     changed["arm_contract"]["experimental"]["proposal_authority"] = "other-profile"
     changed["arm_contract"]["experimental"]["profile_id"] = "other-profile"
     changed = _reseal(changed)
-    real_live_authorities = verifier._live_authorities
-
-    def moved_live_authorities() -> dict[str, object]:
-        live = real_live_authorities()
-        live["GLOBAL_ORIENTATION_GENERATOR_ID"] = "other-profile"
-        return live
-
-    monkeypatch.setattr(verifier, "_live_authorities", moved_live_authorities)
 
     with pytest.raises(
         GlobalOrientationDevelopmentProtocolError,
-        match="live generator identity",
+        match="experimental proposal authority",
     ):
         verify_protocol(changed)
 
@@ -104,6 +94,22 @@ def test_resealed_generator_source_identity_drift_fails_closed() -> None:
         match="experimental authority binding",
     ):
         verify_protocol(changed)
+
+
+def test_generator_signature_is_checked_without_importing_engine_package(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        verifier,
+        "_generator_parameters",
+        lambda: ("ligand_coordinates", "reference_pose"),
+    )
+
+    with pytest.raises(
+        GlobalOrientationDevelopmentProtocolError,
+        match="generator signature",
+    ):
+        verify_protocol(_protocol())
 
 
 def test_resealed_baseline_lineage_identity_drift_fails_closed() -> None:
@@ -200,26 +206,26 @@ def test_live_transitive_evaluator_source_drift_fails_closed(
         verify_protocol(_protocol())
 
 
-def test_source_manifest_is_verified_before_live_package_import(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    preflight_observed = False
-    real_source_manifest = verifier._source_manifest
-    real_live_authorities = verifier._live_authorities
+def test_verifier_module_import_does_not_load_engine_or_native_package() -> None:
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import sys; "
+                "import tools.verify_engine_v2_global_orientation_"
+                "contaminated_development; "
+                "assert 'betelgeuze_engine_v2' not in sys.modules; "
+                "assert 'betelgeuze_engine_v2_native' not in sys.modules"
+            ),
+        ],
+        cwd=_REPO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
 
-    def observed_source_manifest(**kwargs: object) -> list[dict[str, str]]:
-        nonlocal preflight_observed
-        preflight_observed = True
-        return real_source_manifest(**kwargs)
-
-    def guarded_live_authorities() -> dict[str, object]:
-        assert preflight_observed
-        return real_live_authorities()
-
-    monkeypatch.setattr(verifier, "_source_manifest", observed_source_manifest)
-    monkeypatch.setattr(verifier, "_live_authorities", guarded_live_authorities)
-
-    verify_protocol(_protocol())
+    assert completed.returncode == 0, completed.stderr
 
 
 def test_resealed_validity_configuration_contract_drift_fails_closed() -> None:

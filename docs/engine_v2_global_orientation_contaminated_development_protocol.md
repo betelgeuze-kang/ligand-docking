@@ -124,8 +124,9 @@ profile identity.
 It may not consume native or reference pose, RMSD, candidate score, prior
 benchmark outcome, fresh-holdout identity, or product-routing state. Reference
 poses are available only to the post-generation evaluator. Candidate allocation
-after seeing any result is forbidden. The verifier also checks the live
-generator signature for forbidden input paths.
+after seeing any result is forbidden. The verifier parses the bound generator
+source with the standard-library AST and checks its signature for forbidden
+input paths without importing Engine V2.
 
 ## Equal arm contract
 
@@ -199,6 +200,12 @@ Any separately authorized future execution must freeze the exact native `.so`
 SHA-256 and the `ScorerBackendReceipt` SHA-256 in its authenticated source
 receipt; neither cross-arm equality nor a caller-supplied implementation label
 can substitute for those identities.
+
+The integrity verifier is standard-library-only: it hashes every bound source
+and artifact, parses the generator AST, and rederives canonical configuration
+identities without importing `betelgeuze_engine_v2` or
+`betelgeuze_engine_v2_native`. Thus untrusted or unbound package initializers do
+not execute during verification.
 
 The global-orientation generator uses Python binary64 operations backed by the
 interpreter, shared runtime, and platform `libm`. No exact generator runtime is
