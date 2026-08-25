@@ -8,15 +8,21 @@ from pathlib import Path
 import pytest
 
 from tools.verify_engine_v2_global_orientation_synthetic_contract import (
+    EXPECTED_ADVERSARIAL_FIXTURE_IDS,
     GlobalOrientationSyntheticContractError,
     load_contract,
+    load_fixture_suite,
     verify_contract,
+    verify_fixture_suite,
 )
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _CONTRACT_PATH = (
     _REPO_ROOT / "config/engine_v2_global_orientation_synthetic_contract.json"
+)
+_FIXTURE_PATH = (
+    _REPO_ROOT / "tests/fixtures/engine_v2_global_orientation_adversarial_v1.json"
 )
 
 
@@ -39,6 +45,21 @@ def _reseal(payload: dict[str, object]) -> dict[str, object]:
     return changed
 
 
+def _reseal_fixture_suite(payload: dict[str, object]) -> dict[str, object]:
+    changed = copy.deepcopy(payload)
+    changed.pop("suite_sha256", None)
+    changed["suite_sha256"] = hashlib.sha256(
+        json.dumps(
+            changed,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+            allow_nan=False,
+        ).encode("ascii")
+    ).hexdigest()
+    return changed
+
+
 def test_current_synthetic_global_orientation_contract_verifies() -> None:
     observed = verify_contract(_contract())
     assert len(observed) == 64
@@ -48,6 +69,21 @@ def test_current_synthetic_global_orientation_contract_verifies() -> None:
     assert receipt["accepted_sequence_indices_required"] is True
     assert receipt["coverage_statistics_required"] is True
     assert receipt["duplicate_statistics_required"] is True
+    fixture_contract = _contract()["adversarial_fixture_suite"]
+    assert tuple(fixture_contract["ordered_fixture_ids"]) == (
+        EXPECTED_ADVERSARIAL_FIXTURE_IDS
+    )
+    assert fixture_contract["exact_batch_receipts_required"] is True
+    assert fixture_contract["invariant_rederivation_required"] is True
+
+
+def test_current_adversarial_fixture_suite_verifies() -> None:
+    suite = load_fixture_suite(_FIXTURE_PATH)
+
+    assert verify_fixture_suite(suite) == suite["suite_sha256"]
+    assert tuple(fixture["fixture_id"] for fixture in suite["fixtures"]) == (
+        EXPECTED_ADVERSARIAL_FIXTURE_IDS
+    )
 
 
 def test_resealed_native_pose_input_escalation_fails_closed() -> None:
@@ -208,3 +244,93 @@ def test_resealed_index_stability_requirement_cannot_be_disabled(
         match=key,
     ):
         verify_contract(changed)
+
+
+def test_resealed_fixture_id_drift_fails_closed() -> None:
+    changed = _contract()
+    changed["adversarial_fixture_suite"]["ordered_fixture_ids"][-1] = (
+        "result_dependent_translation"
+    )
+    changed = _reseal(changed)
+
+    with pytest.raises(
+        GlobalOrientationSyntheticContractError,
+        match="fixture contract IDs",
+    ):
+        verify_contract(changed)
+
+
+def test_resealed_fixture_file_hash_drift_fails_closed() -> None:
+    changed = _contract()
+    changed["adversarial_fixture_suite"]["fixture_file_sha256"] = "0" * 64
+    changed = _reseal(changed)
+
+    with pytest.raises(
+        GlobalOrientationSyntheticContractError,
+        match="fixture file SHA-256 drifted",
+    ):
+        verify_contract(changed)
+
+
+def test_resealed_fixture_invariant_drift_fails_closed() -> None:
+    changed = load_fixture_suite(_FIXTURE_PATH)
+    changed["fixtures"][0]["required_invariants"][-1] = (
+        "accept_every_channel_orientation"
+    )
+    changed = _reseal_fixture_suite(changed)
+
+    with pytest.raises(
+        GlobalOrientationSyntheticContractError,
+        match="fixture invariant set drifted",
+    ):
+        verify_fixture_suite(changed)
+
+
+def test_resealed_fixture_authority_escalation_fails_closed() -> None:
+    changed = load_fixture_suite(_FIXTURE_PATH)
+    changed["authority"]["product_execution_authorized"] = True
+    changed = _reseal_fixture_suite(changed)
+
+    with pytest.raises(
+        GlobalOrientationSyntheticContractError,
+        match="fixture suite authority must remain false",
+    ):
+        verify_fixture_suite(changed)
+
+
+@pytest.mark.parametrize(
+    ("mutation", "message"),
+    (
+        (
+            lambda fixture: fixture["ligand_coordinates"][0].append(0.0),
+            "ligand_coordinates.*exactly three",
+        ),
+        (
+            lambda fixture: fixture["pocket_normal"].__setitem__(0, "infinite"),
+            "pocket_normal.*finite number",
+        ),
+        (
+            lambda fixture: fixture["config"].__setitem__(
+                "translation_shell_radii", [1.0, 1.0]
+            ),
+            "translation shell radii must be unique and increasing",
+        ),
+        (
+            lambda fixture: fixture.__setitem__(
+                "expected_candidate_slot_count",
+                fixture["expected_candidate_slot_count"] + 1,
+            ),
+            "candidate count does not match config",
+        ),
+    ),
+)
+def test_resealed_malformed_fixture_geometry_or_config_fails_closed(
+    mutation,
+    message: str,
+) -> None:
+    changed = load_fixture_suite(_FIXTURE_PATH)
+    mutation(changed["fixtures"][0])
+    changed = _reseal_fixture_suite(changed)
+
+    with pytest.raises(GlobalOrientationSyntheticContractError, match=message):
+        verify_fixture_suite(changed)

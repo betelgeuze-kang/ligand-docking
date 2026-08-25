@@ -13,7 +13,7 @@ from typing import Any, Mapping
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 
 SCHEMA_ID = (
-    "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.8.0"
+    "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.9.0"
 )
 FROZEN_GLOBAL_ORIENTATION_GENERATOR_ID = "deterministic_surface_aware_rigid_v2"
 BASELINE_LINEAGE_BY_CASE = {
@@ -861,8 +861,8 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
         "historical_bundle_checksum_sha256": "6ee04e23e01a73bb643bb4d1fde240e06fd2916ea085e3652c11e2428bd432a9",
         "phase25_policy_schema_id": "betelgeuze.engine_v2_phase25_cohort_admission/1.3.0",
         "phase25_policy_sha256": "b4c5530dc4766500dbbc854875cfb39baadad94196c63be6150514879993d211",
-        "global_orientation_synthetic_contract_schema_id": "betelgeuze.engine_v2_global_orientation_synthetic_contract/2.0.0",
-        "global_orientation_synthetic_contract_sha256": "02fa37a94f3c1719f5e7b5b808c71d053e313b018ef9bfa7d904869c2ab1dad0",
+        "global_orientation_synthetic_contract_schema_id": "betelgeuze.engine_v2_global_orientation_synthetic_contract/2.1.0",
+        "global_orientation_synthetic_contract_sha256": "ea7eb95d783225070e1d67435a644a28c4465a60e019ccc7dac73bf70943f8b8",
         "case_source_receipt_schema_id": "betelgeuze.engine_v2_global_orientation_"
         "development_case_source/1.0.0",
         "preparation_failure_receipt_schema_id": (

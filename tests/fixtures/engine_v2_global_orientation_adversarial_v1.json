@@ -1,0 +1,227 @@
+{
+  "authority": {
+    "customer_pose_emission_authorized": false,
+    "fresh_holdout_execution_authorized": false,
+    "historical_ab_execution_authorized": false,
+    "product_execution_authorized": false,
+    "profile_promotion_authority": false,
+    "public_or_scientific_claim_authorized": false,
+    "stage0_admission_authority": false
+  },
+  "fixtures": [
+    {
+      "config": {
+        "minimum_receptor_distance": 0.7,
+        "orientation_count": 8,
+        "translation_points_per_shell": 8,
+        "translation_shell_radii": [
+          1.5
+        ]
+      },
+      "expected_accepted_count": 8,
+      "expected_batch_receipt_sha256": "cfe19361eb2bbbbfb398e7e122b050cf74673025907922e9ba50654f82aa74a2",
+      "expected_candidate_slot_count": 72,
+      "expected_rejected_count": 64,
+      "fixture_id": "narrow_channel",
+      "ligand_coordinates": [
+        [-1.5, 0.0, 0.0],
+        [0.0, 0.0, 0.0],
+        [1.5, 0.0, 0.0]
+      ],
+      "pocket_center": [0.0, 0.0, 0.0],
+      "pocket_normal": [0.0, 0.0, 1.0],
+      "receptor_surface_points": [
+        [-3.0, -1.0, 0.0], [-3.0, 1.0, 0.0], [-3.0, 0.0, -1.0], [-3.0, 0.0, 1.0],
+        [-2.0, -1.0, 0.0], [-2.0, 1.0, 0.0], [-2.0, 0.0, -1.0], [-2.0, 0.0, 1.0],
+        [-1.0, -1.0, 0.0], [-1.0, 1.0, 0.0], [-1.0, 0.0, -1.0], [-1.0, 0.0, 1.0],
+        [0.0, -1.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, -1.0], [0.0, 0.0, 1.0],
+        [1.0, -1.0, 0.0], [1.0, 1.0, 0.0], [1.0, 0.0, -1.0], [1.0, 0.0, 1.0],
+        [2.0, -1.0, 0.0], [2.0, 1.0, 0.0], [2.0, 0.0, -1.0], [2.0, 0.0, 1.0],
+        [3.0, -1.0, 0.0], [3.0, 1.0, 0.0], [3.0, 0.0, -1.0], [3.0, 0.0, 1.0]
+      ],
+      "required_invariants": [
+        "failure_complete_denominator",
+        "mixed_acceptance_and_receptor_clash",
+        "accepted_slots_span_multiple_orientations"
+      ]
+    },
+    {
+      "config": {
+        "minimum_receptor_distance": 0.7,
+        "orientation_count": 4,
+        "translation_points_per_shell": 8,
+        "translation_shell_radii": [
+          2.0
+        ]
+      },
+      "expected_accepted_count": 23,
+      "expected_batch_receipt_sha256": "f53b8e77f6b3f8aa00ed961eb59351e0939a25522c92345789ff8134b0f62df6",
+      "expected_candidate_slot_count": 36,
+      "expected_rejected_count": 13,
+      "fixture_id": "two_lobe_pocket",
+      "ligand_coordinates": [
+        [-0.4, 0.0, 0.0],
+        [0.4, 0.0, 0.0],
+        [0.0, 0.4, 0.0]
+      ],
+      "pocket_center": [0.0, 0.0, 0.0],
+      "pocket_normal": [0.0, 0.0, 1.0],
+      "receptor_surface_points": [
+        [0.0, -2.0, -2.0], [0.0, -2.0, -1.0], [0.0, -2.0, 0.0], [0.0, -2.0, 1.0], [0.0, -2.0, 2.0],
+        [0.0, -1.0, -2.0], [0.0, -1.0, -1.0], [0.0, -1.0, 0.0], [0.0, -1.0, 1.0], [0.0, -1.0, 2.0],
+        [0.0, 0.0, -2.0], [0.0, 0.0, -1.0], [0.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, 0.0, 2.0],
+        [0.0, 1.0, -2.0], [0.0, 1.0, -1.0], [0.0, 1.0, 0.0], [0.0, 1.0, 1.0], [0.0, 1.0, 2.0],
+        [0.0, 2.0, -2.0], [0.0, 2.0, -1.0], [0.0, 2.0, 0.0], [0.0, 2.0, 1.0], [0.0, 2.0, 2.0]
+      ],
+      "required_invariants": [
+        "failure_complete_denominator",
+        "mixed_acceptance_and_receptor_clash",
+        "accepted_centroids_occupy_both_lobes"
+      ]
+    },
+    {
+      "config": {
+        "minimum_receptor_distance": 0.0,
+        "orientation_count": 12,
+        "translation_points_per_shell": 1,
+        "translation_shell_radii": []
+      },
+      "expected_accepted_count": 12,
+      "expected_batch_receipt_sha256": "1ad5ffce1bed81c7d8c4433d4dbe45becdae7e1fc4f17ce3d8ae55fd4a78f7fc",
+      "expected_candidate_slot_count": 12,
+      "expected_rejected_count": 0,
+      "fixture_id": "symmetry_decoy",
+      "ligand_coordinates": [
+        [1.0, 0.0, 0.0], [-1.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0], [0.0, -1.0, 0.0],
+        [0.0, 0.0, 1.0], [0.0, 0.0, -1.0]
+      ],
+      "pocket_center": [0.0, 0.0, 0.0],
+      "pocket_normal": [0.0, 0.0, 1.0],
+      "receptor_surface_points": [],
+      "required_invariants": [
+        "failure_complete_denominator",
+        "antipodal_symmetry_preserved",
+        "distinct_orientation_receipts_for_symmetric_geometry"
+      ]
+    },
+    {
+      "config": {
+        "minimum_receptor_distance": 0.0,
+        "orientation_count": 8,
+        "translation_points_per_shell": 1,
+        "translation_shell_radii": []
+      },
+      "expected_accepted_count": 8,
+      "expected_batch_receipt_sha256": "a7e90c742b7c3146d5c8e91e00d0efb0f16d5d2f8bbdfdf48e90e5d3be2c2c18",
+      "expected_candidate_slot_count": 8,
+      "expected_rejected_count": 0,
+      "fixture_id": "mirror_decoy",
+      "ligand_coordinates": [
+        [0.0, 0.0, 0.0],
+        [1.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [0.0, 0.0, 1.0]
+      ],
+      "pocket_center": [0.0, 0.0, 0.0],
+      "pocket_normal": [0.0, 0.0, 1.0],
+      "receptor_surface_points": [],
+      "required_invariants": [
+        "failure_complete_denominator",
+        "proper_rotation_preserves_chirality",
+        "mirror_decoy_has_opposite_chirality"
+      ]
+    },
+    {
+      "config": {
+        "minimum_receptor_distance": 0.0,
+        "orientation_count": 1,
+        "translation_points_per_shell": 4,
+        "translation_shell_radii": [
+          2.0
+        ]
+      },
+      "expected_accepted_count": 5,
+      "expected_batch_receipt_sha256": "32c41180f3fb94e71419b0310a4b9d2f743c4731609d1a49afd878f368f9a8d3",
+      "expected_candidate_slot_count": 5,
+      "expected_rejected_count": 0,
+      "fixture_id": "tangent_placement",
+      "ligand_coordinates": [
+        [-1.5, 0.0, 0.0],
+        [0.0, 0.0, 0.0],
+        [1.5, 0.0, 0.0]
+      ],
+      "pocket_center": [0.0, 0.0, 0.0],
+      "pocket_normal": [1.0, 1.0, 1.0],
+      "receptor_surface_points": [],
+      "required_invariants": [
+        "failure_complete_denominator",
+        "shell_radius_preserved",
+        "tangent_component_present",
+        "normal_projection_spans_both_sides"
+      ]
+    },
+    {
+      "config": {
+        "minimum_receptor_distance": 0.0,
+        "orientation_count": 6,
+        "translation_points_per_shell": 1,
+        "translation_shell_radii": []
+      },
+      "expected_accepted_count": 6,
+      "expected_batch_receipt_sha256": "07bfbc532dceac09295856c912746c68edc257bea74bd8337f0149799f6c2bd2",
+      "expected_candidate_slot_count": 6,
+      "expected_rejected_count": 0,
+      "fixture_id": "orientation_only",
+      "ligand_coordinates": [
+        [-1.5, 0.0, 0.0],
+        [0.0, 0.0, 0.0],
+        [1.5, 0.0, 0.0]
+      ],
+      "pocket_center": [1.0, -2.0, 3.0],
+      "pocket_normal": [0.0, 0.0, 1.0],
+      "receptor_surface_points": [],
+      "required_invariants": [
+        "failure_complete_denominator",
+        "single_translation_target",
+        "centroid_fixed_at_pocket_center",
+        "orientations_change_coordinates"
+      ]
+    },
+    {
+      "config": {
+        "minimum_receptor_distance": 0.0,
+        "orientation_count": 1,
+        "translation_points_per_shell": 4,
+        "translation_shell_radii": [
+          1.0,
+          2.0
+        ]
+      },
+      "expected_accepted_count": 9,
+      "expected_batch_receipt_sha256": "5c97e2af3b396ed504520885b67053f1d96aff507f80b7e933d972d846728c7d",
+      "expected_candidate_slot_count": 9,
+      "expected_rejected_count": 0,
+      "fixture_id": "translation_only",
+      "ligand_coordinates": [
+        [-1.5, 0.0, 0.0],
+        [0.0, 0.0, 0.0],
+        [1.5, 0.0, 0.0]
+      ],
+      "pocket_center": [0.0, 0.0, 0.0],
+      "pocket_normal": [0.0, 0.0, 1.0],
+      "receptor_surface_points": [],
+      "required_invariants": [
+        "failure_complete_denominator",
+        "single_orientation_quaternion",
+        "translation_targets_are_distinct",
+        "intramolecular_distances_preserved"
+      ]
+    }
+  ],
+  "generator_id": "deterministic_surface_aware_rigid_v2",
+  "profile_id": "engine-v2-global-orientation-adversarial-v1",
+  "schema_id": "betelgeuze.engine_v2_global_orientation_adversarial_fixture_suite/1.0.0",
+  "source_receipt_sha256": "abababababababababababababababababababababababababababababababab",
+  "suite_sha256": "89b35d28cc42eb8885dfca8cdbfd7942c1adcb82de6a013168248378e94482a0"
+}

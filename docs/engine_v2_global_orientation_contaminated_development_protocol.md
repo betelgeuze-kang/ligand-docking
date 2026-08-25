@@ -19,13 +19,13 @@ config/engine_v2_global_orientation_contaminated_development.json
 Protocol schema:
 
 ```text
-betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.8.0
+betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.9.0
 ```
 
 Protocol self-hash:
 
 ```text
-ac5899b1b619020dcbdf2ce950eb3ce5f2b551c5b07a036b931b19d6fe4f1af0
+13f2a1e0ba788f3847ce536626019369ca489cc697679ec5aefe820a4a96eb98
 ```
 
 ## Scientific question
@@ -92,7 +92,7 @@ The protocol is bound to the reviewed source-paired evidence identities:
 | Member manifest | `7f7f5273362a9457b022bc9b2b95c75625cdd259b1b1685aeb4b57d41d985e21` |
 | Bundle checksum | `6ee04e23e01a73bb643bb4d1fde240e06fd2916ea085e3652c11e2428bd432a9` |
 | Phase 2.5 policy | `b4c5530dc4766500dbbc854875cfb39baadad94196c63be6150514879993d211` |
-| Synthetic global-orientation contract | `02fa37a94f3c1719f5e7b5b808c71d053e313b018ef9bfa7d904869c2ab1dad0` |
+| Synthetic global-orientation contract | `ea7eb95d783225070e1d67435a644a28c4465a60e019ccc7dac73bf70943f8b8` |
 
 The protocol also freezes executable authority rather than trusting labels.
 The experimental generator is bound to the exact
@@ -103,6 +103,12 @@ receipts; their canonical manifest identity is
 `220db66f0b6dde2b4c2cabfa48dbccc2e6bd7d4192e9f93f092364a249327c99`.
 Changing either implementation or any baseline candidate set invalidates the
 protocol even if a component keeps the same human-readable profile label.
+
+Synthetic contract v2.1 also binds the exact self-hashed seven-fixture
+adversarial corpus for narrow-channel, two-lobe, symmetry, mirror, tangent,
+orientation-only, and translation-only behavior. Those fixtures regenerate
+failure-complete golden proposal batches and structural invariants only; they
+do not replace any private case receipt or reduce an execution blocker.
 
 The repository does not commit the private molecular source receipts. Their
 absence is an execution blocker, not a value to be defaulted.

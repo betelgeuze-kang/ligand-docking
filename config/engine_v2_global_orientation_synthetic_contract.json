@@ -11,6 +11,24 @@
     "source_rederivation_evidence_required": true,
     "synthetic_contract_only": true
   },
+  "adversarial_fixture_suite": {
+    "exact_batch_receipts_required": true,
+    "failure_complete_denominators_required": true,
+    "fixture_file_path": "tests/fixtures/engine_v2_global_orientation_adversarial_v1.json",
+    "fixture_file_sha256": "7d8dc6db9e296eaa46ecc4cd1b65927d93a882468ca0b9235a6090dc9531bdc2",
+    "invariant_rederivation_required": true,
+    "ordered_fixture_ids": [
+      "narrow_channel",
+      "two_lobe_pocket",
+      "symmetry_decoy",
+      "mirror_decoy",
+      "tangent_placement",
+      "orientation_only",
+      "translation_only"
+    ],
+    "schema_id": "betelgeuze.engine_v2_global_orientation_adversarial_fixture_suite/1.0.0",
+    "synthetic_inputs_only": true
+  },
   "authority": {
     "customer_pose_emission_authorized": false,
     "fresh_holdout_execution_authorized": false,
@@ -20,7 +38,7 @@
     "public_or_scientific_claim_authorized": false,
     "stage0_admission_authority": false
   },
-  "contract_sha256": "02fa37a94f3c1719f5e7b5b808c71d053e313b018ef9bfa7d904869c2ab1dad0",
+  "contract_sha256": "ea7eb95d783225070e1d67435a644a28c4465a60e019ccc7dac73bf70943f8b8",
   "metrics": {
     "failure_classes": [
       "success",
@@ -60,6 +78,6 @@
     ],
     "source_seed_sha256_required": true
   },
-  "schema_id": "betelgeuze.engine_v2_global_orientation_synthetic_contract/2.0.0",
+  "schema_id": "betelgeuze.engine_v2_global_orientation_synthetic_contract/2.1.0",
   "status": "implemented_synthetic_validation_only"
 }

@@ -184,9 +184,30 @@ The initial tests cover:
 - report, score, and threshold substitution rejection; and
 - contract-level rederivation and authority-escalation tamper rejection.
 
-Future synthetic fixtures should add narrow channels, two-lobe pockets, mirror
-and symmetry decoys, tangent placement, and independent orientation-versus-
-translation error controls.
+The exact adversarial corpus now adds seven source-rederived fixtures:
+
+- a narrow channel with both accepted and receptor-clash rows across multiple
+  orientations;
+- a two-lobe pocket with failure-complete central-wall rejection and accepted
+  centroids on both sides;
+- an antipodally symmetric ligand that preserves all three opposite pairs while
+  retaining distinct orientation coordinates and receipts;
+- a chiral tetrahedron whose proper SO(3) proposals preserve signed volume and
+  cannot become its opposite-chirality mirror decoy;
+- a non-axis-aligned pocket normal whose shell targets retain exact radius,
+  non-zero tangent components, and normal projections on both sides;
+- an orientation-only control with one fixed centroid/translation target; and
+- a translation-only control with one quaternion and invariant intramolecular
+  distances.
+
+The inputs, exact accepted/rejected denominators, required invariant names, and
+golden batch receipts are stored in the self-hashed
+`tests/fixtures/engine_v2_global_orientation_adversarial_v1.json` corpus. The
+synthetic contract v2.1 binds the exact corpus file hash and ordered fixture
+roster. Tests independently regenerate every batch and recompute every
+invariant; changing a geometry, configuration, count, receipt, fixture order,
+or authority bit fails closed. These fixtures remain synthetic geometry checks,
+not molecular coverage or accuracy evidence.
 
 ## Promotion gates
 
