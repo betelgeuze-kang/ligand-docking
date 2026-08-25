@@ -10,7 +10,9 @@ from betelgeuze_engine_v2.benchmark import (
 )
 from betelgeuze_engine_v2.benchmark.global_orientation_development_decision import (
     CASE_IDS,
+    CaseArmOracleEvidence,
     CaseComparisonObservation,
+    GlobalOrientationDevelopmentDecision,
     GlobalOrientationDevelopmentDecisionError,
     evaluate_global_orientation_development,
 )
@@ -78,6 +80,33 @@ def _evidence(
     return build_oracle_selection_evidence(tuple(observations))
 
 
+def _arm_evidence(
+    *,
+    case_id: str,
+    source_receipt: SourcePairedClearanceCaseSourceReceiptV1,
+    arm: str,
+    oracle_evidence: OracleSelectionEvidence,
+) -> CaseArmOracleEvidence:
+    if arm == "baseline":
+        arm_id = "baseline_current_v7"
+        proposal_authority = "current_v7"
+        lineage = source_receipt.current_v7_candidate_lineage_sha256
+    else:
+        arm_id = "experimental_global_orientation_v1"
+        proposal_authority = "deterministic_surface_aware_rigid_v2"
+        lineage = _digest(
+            f"experimental-lineage:{case_id}:{oracle_evidence.receipt_sha256}"
+        )
+    return CaseArmOracleEvidence(
+        case_id=case_id,
+        arm_id=arm_id,
+        proposal_authority=proposal_authority,
+        case_source_receipt_sha256=source_receipt.receipt_sha256,
+        candidate_lineage_receipt_sha256=lineage,
+        oracle_evidence=oracle_evidence,
+    )
+
+
 def _rows() -> tuple[CaseComparisonObservation, ...]:
     rows: list[CaseComparisonObservation] = []
     for case_id in CASE_IDS:
@@ -101,13 +130,24 @@ def _rows() -> tuple[CaseComparisonObservation, ...]:
             selected_rmsd=baseline_top1_rmsd,
             selected_valid=baseline_top1_valid,
         )
+        source_receipt = _source_receipt(case_id)
         rows.append(
             CaseComparisonObservation(
                 case_id=case_id,
-                case_source_receipt=_source_receipt(case_id),
+                case_source_receipt=source_receipt,
                 preparation_failure_receipt_sha256=None,
-                baseline_evidence=baseline,
-                experimental_evidence=baseline,
+                baseline_evidence=_arm_evidence(
+                    case_id=case_id,
+                    source_receipt=source_receipt,
+                    arm="baseline",
+                    oracle_evidence=baseline,
+                ),
+                experimental_evidence=_arm_evidence(
+                    case_id=case_id,
+                    source_receipt=source_receipt,
+                    arm="experimental",
+                    oracle_evidence=baseline,
+                ),
             )
         )
     return tuple(rows)
@@ -131,7 +171,19 @@ def _replace_evidence(
         candidate_count=candidate_count,
     )
     return tuple(
-        replace(row, **{field: evidence}) if row.case_id == case_id else row
+        replace(
+            row,
+            **{
+                field: _arm_evidence(
+                    case_id=case_id,
+                    source_receipt=row.case_source_receipt,
+                    arm=arm,
+                    oracle_evidence=evidence,
+                )
+            },
+        )
+        if row.case_id == case_id
+        else row
         for row in rows
     )
 
@@ -217,6 +269,18 @@ def test_missing_evidence_fails_before_decision() -> None:
         replace(row, baseline_evidence=None)
 
 
+def test_oracle_evidence_cannot_be_transplanted_between_cases() -> None:
+    rows = _rows()
+    target = next(row for row in rows if row.case_id == "5SD5_HWI")
+    donor = next(row for row in rows if row.case_id == "5SIS_JSM")
+
+    with pytest.raises(
+        GlobalOrientationDevelopmentDecisionError,
+        match="scored evidence drifted",
+    ):
+        replace(target, experimental_evidence=donor.experimental_evidence)
+
+
 def test_invalid_selected_top1_increase_blocks_go_criterion() -> None:
     rows = _replace_evidence(
         _two_recoveries(),
@@ -240,11 +304,16 @@ def test_denominator_drift_fails_before_decision() -> None:
     ):
         replace(
             row,
-            experimental_evidence=_evidence(
-                valid_oracle_rmsd=3.0,
-                selected_rmsd=4.0,
-                selected_valid=False,
-                candidate_count=63,
+            experimental_evidence=_arm_evidence(
+                case_id=row.case_id,
+                source_receipt=row.case_source_receipt,
+                arm="experimental",
+                oracle_evidence=_evidence(
+                    valid_oracle_rmsd=3.0,
+                    selected_rmsd=4.0,
+                    selected_valid=False,
+                    candidate_count=63,
+                ),
             ),
         )
 
@@ -296,21 +365,38 @@ def test_wrong_observation_type_fails_with_protocol_error() -> None:
 
 
 def test_direct_construction_cannot_forge_go_verdict() -> None:
-    decision = evaluate_global_orientation_development(_rows())
     with pytest.raises(
         GlobalOrientationDevelopmentDecisionError,
-        match="verdict is inconsistent",
+        match="constructed by the protocol evaluator",
     ):
-        replace(decision, verdict="go")
+        GlobalOrientationDevelopmentDecision(
+            verdict="go",
+            invariant_failures=(),
+            hard_no_go_triggers=(),
+            go_criteria=(
+                "valid_proposal_oracle_recovery_in_at_least_2_of_7_"
+                "previously_uncovered_cases",
+                "no_increase_in_invalid_selected_top1_count",
+            ),
+            new_valid_proposal_recovery_case_ids=("5SD5_HWI", "5SIS_JSM"),
+            baseline_invalid_selected_top1_count=0,
+            experimental_invalid_selected_top1_count=0,
+            baseline_recovered_regression_case_ids=(),
+            observation_receipt_sha256s=("a" * 64,) * 9,
+        )
 
 
 def test_decision_requires_complete_observation_receipt_roster() -> None:
     decision = evaluate_global_orientation_development(_rows())
+
+    object.__setattr__(
+        decision,
+        "observation_receipt_sha256s",
+        decision.observation_receipt_sha256s[:-1],
+    )
+
     with pytest.raises(
         GlobalOrientationDevelopmentDecisionError,
-        match="nine lowercase SHA-256",
+        match="changed after construction",
     ):
-        replace(
-            decision,
-            observation_receipt_sha256s=decision.observation_receipt_sha256s[:-1],
-        )
+        _ = decision.receipt_sha256

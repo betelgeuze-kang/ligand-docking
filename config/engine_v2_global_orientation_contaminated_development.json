@@ -75,6 +75,8 @@
     "scored_case_count": 8
   },
   "decision": {
+    "decision_factory_only": true,
+    "decision_receipt_schema_id": "betelgeuze.engine_v2_global_orientation_development_decision/1.1.0",
     "go_criteria_all": [
       "valid_proposal_oracle_recovery_in_at_least_2_of_7_previously_uncovered_cases",
       "no_increase_in_invalid_selected_top1_count"
@@ -131,6 +133,7 @@
     "reference_pose_consumed_only_after_candidate_generation": true
   },
   "metrics": {
+    "case_arm_evidence_schema_id": "betelgeuze.engine_v2_global_orientation_case_arm_evidence/1.0.0",
     "failure_classes": [
       "success",
       "proposal_failure",
@@ -158,7 +161,7 @@
     ]
   },
   "protocol_role": "fixed_historical_contaminated_development_global_orientation_ab",
-  "protocol_sha256": "f7fbcdfbfc14f1f839fe4121cab0212d5eb3fef62bbdb6b4530e2acd1f5575f2",
+  "protocol_sha256": "aef9ae4dca5d0c2643bbc772267037224b328d043c63501a6e070ec3af37a3f8",
   "schema_id": "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.1.0",
   "shared_execution_contract": {
     "conformer_authority": "same_prepared_ligand_for_both_arms",

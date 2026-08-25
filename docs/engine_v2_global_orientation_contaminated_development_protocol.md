@@ -25,7 +25,7 @@ betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.1.0
 Protocol self-hash:
 
 ```text
-f7fbcdfbfc14f1f839fe4121cab0212d5eb3fef62bbdb6b4530e2acd1f5575f2
+aef9ae4dca5d0c2643bbc772267037224b328d043c63501a6e070ec3af37a3f8
 ```
 
 ## Scientific question
@@ -180,6 +180,15 @@ selected Top-1 counts, baseline reproduction/regression, invariant failures,
 hard No-Go triggers, and the bounded development verdict. Missing oracle or
 selected RMSD values remain explicit failure observations rather than parser
 errors.
+
+Each scored arm is wrapped by
+`betelgeuze.engine_v2_global_orientation_case_arm_evidence/1.0.0`, which
+self-hashes the case ID, frozen arm/proposal authority, exact case-source
+receipt, candidate-lineage receipt, complete oracle evidence receipt, and all
+candidate-observation receipts. The decision receipt schema is
+`betelgeuze.engine_v2_global_orientation_development_decision/1.1.0` and is
+factory-only: callers cannot construct a Go receipt without the evaluator's
+validated observation roster.
 
 A development Go requires every invariant and both criteria. In particular:
 

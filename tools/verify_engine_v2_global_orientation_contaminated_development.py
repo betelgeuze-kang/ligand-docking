@@ -428,6 +428,11 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
 
     metrics = _mapping(protocol.get("metrics"), name="metrics")
     _exact(
+        metrics.get("case_arm_evidence_schema_id"),
+        "betelgeuze.engine_v2_global_orientation_case_arm_evidence/1.0.0",
+        name="case-arm evidence schema",
+    )
+    _exact(
         tuple(metrics.get("failure_classes", ())),
         ("success", "proposal_failure", "validity_failure", "ranking_failure"),
         name="failure classes",
@@ -457,6 +462,16 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
         _exact(metrics.get(key), True, name=f"metrics.{key}")
 
     decision = _mapping(protocol.get("decision"), name="decision")
+    _exact(
+        decision.get("decision_receipt_schema_id"),
+        "betelgeuze.engine_v2_global_orientation_development_decision/1.1.0",
+        name="decision receipt schema",
+    )
+    _exact(
+        decision.get("decision_factory_only"),
+        True,
+        name="decision factory boundary",
+    )
     _exact(
         decision.get("go_requires_all_invariants"),
         True,

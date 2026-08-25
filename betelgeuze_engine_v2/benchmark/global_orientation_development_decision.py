@@ -7,7 +7,7 @@ authorize a scientific claim.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import InitVar, dataclass, field
 import hashlib
 import json
 from typing import Sequence
@@ -16,9 +16,10 @@ from .oracle_selection_evidence import OracleSelectionEvidence
 from .source_paired_clearance_activation import (
     SourcePairedClearanceCaseSourceReceiptV1,
 )
+from ..docking.global_orientation import GLOBAL_ORIENTATION_GENERATOR_ID
 
 DECISION_SCHEMA_ID = (
-    "betelgeuze.engine_v2_global_orientation_development_decision/1.0.0"
+    "betelgeuze.engine_v2_global_orientation_development_decision/1.1.0"
 )
 CASE_IDS = (
     "5SD5_HWI",
@@ -44,6 +45,10 @@ UNCOVERED_CASE_IDS = (
 BASELINE_RECOVERED_CASE_IDS = ("6T88_MWQ",)
 RMSD_THRESHOLD_ANGSTROM = 2.0
 CANDIDATE_DENOMINATOR_PER_ARM = 64
+CASE_ARM_EVIDENCE_SCHEMA_ID = (
+    "betelgeuze.engine_v2_global_orientation_case_arm_evidence/1.0.0"
+)
+_DECISION_CONSTRUCTION_TOKEN = object()
 _RECOVERY_GO_CRITERION = (
     "valid_proposal_oracle_recovery_in_at_least_2_of_7_previously_uncovered_cases"
 )
@@ -101,12 +106,79 @@ def _require_ordered_subset(
 
 
 @dataclass(frozen=True, slots=True)
+class CaseArmOracleEvidence:
+    case_id: str
+    arm_id: str
+    proposal_authority: str
+    case_source_receipt_sha256: str
+    candidate_lineage_receipt_sha256: str
+    oracle_evidence: OracleSelectionEvidence
+    schema_id: str = CASE_ARM_EVIDENCE_SCHEMA_ID
+    _receipt_sha256: str = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        if self.schema_id != CASE_ARM_EVIDENCE_SCHEMA_ID:
+            raise GlobalOrientationDevelopmentDecisionError(
+                "case-arm evidence schema is invalid"
+            )
+        if self.case_id not in SCORED_CASE_IDS:
+            raise GlobalOrientationDevelopmentDecisionError(
+                "case-arm evidence is outside the scored cohort"
+            )
+        expected_authority = {
+            "baseline_current_v7": "current_v7",
+            "experimental_global_orientation_v1": GLOBAL_ORIENTATION_GENERATOR_ID,
+        }.get(self.arm_id)
+        if expected_authority is None or self.proposal_authority != expected_authority:
+            raise GlobalOrientationDevelopmentDecisionError(
+                "case-arm proposal authority is invalid"
+            )
+        if not _is_sha256(self.case_source_receipt_sha256) or not _is_sha256(
+            self.candidate_lineage_receipt_sha256
+        ):
+            raise GlobalOrientationDevelopmentDecisionError(
+                "case-arm source and lineage receipts must be SHA-256 identities"
+            )
+        if type(self.oracle_evidence) is not OracleSelectionEvidence:
+            raise GlobalOrientationDevelopmentDecisionError(
+                "case-arm evidence requires exact oracle-selection evidence"
+            )
+        object.__setattr__(self, "_receipt_sha256", _sha256(self._projection()))
+
+    def _projection(self) -> dict[str, object]:
+        return {
+            "schema_id": self.schema_id,
+            "case_id": self.case_id,
+            "arm_id": self.arm_id,
+            "proposal_authority": self.proposal_authority,
+            "case_source_receipt_sha256": self.case_source_receipt_sha256,
+            "candidate_lineage_receipt_sha256": (self.candidate_lineage_receipt_sha256),
+            "oracle_selection_evidence_sha256": self.oracle_evidence.receipt_sha256,
+            "candidate_observation_receipt_sha256s": list(
+                self.oracle_evidence.report.observation_receipt_sha256s
+            ),
+            "development_only": True,
+            "execution_authorized": False,
+            "public_or_scientific_claim_authorized": False,
+        }
+
+    @property
+    def receipt_sha256(self) -> str:
+        observed = _sha256(self._projection())
+        if observed != self._receipt_sha256:
+            raise GlobalOrientationDevelopmentDecisionError(
+                "case-arm evidence changed after construction"
+            )
+        return observed
+
+
+@dataclass(frozen=True, slots=True)
 class CaseComparisonObservation:
     case_id: str
     case_source_receipt: SourcePairedClearanceCaseSourceReceiptV1 | None
     preparation_failure_receipt_sha256: str | None
-    baseline_evidence: OracleSelectionEvidence | None
-    experimental_evidence: OracleSelectionEvidence | None
+    baseline_evidence: CaseArmOracleEvidence | None
+    experimental_evidence: CaseArmOracleEvidence | None
 
     def __post_init__(self) -> None:
         if self.case_id not in CASE_IDS:
@@ -141,17 +213,39 @@ class CaseComparisonObservation:
                     "scored cases cannot carry a preparation-failure receipt"
                 )
             if (
-                type(self.baseline_evidence) is not OracleSelectionEvidence
-                or type(self.experimental_evidence) is not OracleSelectionEvidence
+                type(self.baseline_evidence) is not CaseArmOracleEvidence
+                or type(self.experimental_evidence) is not CaseArmOracleEvidence
             ):
                 raise GlobalOrientationDevelopmentDecisionError(
                     "scored cases require complete oracle-selection evidence"
                 )
-            for evidence in (self.baseline_evidence, self.experimental_evidence):
+            expected_bindings = (
+                (
+                    self.baseline_evidence,
+                    "baseline_current_v7",
+                    self.case_source_receipt.current_v7_candidate_lineage_sha256,
+                ),
+                (
+                    self.experimental_evidence,
+                    "experimental_global_orientation_v1",
+                    None,
+                ),
+            )
+            for evidence, arm_id, baseline_lineage in expected_bindings:
                 if (
-                    evidence.report.candidate_count != CANDIDATE_DENOMINATOR_PER_ARM
-                    or evidence.top_ks != (1, 5)
-                    or evidence.report.rmsd_threshold_angstrom
+                    evidence.case_id != self.case_id
+                    or evidence.arm_id != arm_id
+                    or evidence.case_source_receipt_sha256
+                    != self.case_source_receipt.receipt_sha256
+                    or (
+                        baseline_lineage is not None
+                        and evidence.candidate_lineage_receipt_sha256
+                        != baseline_lineage
+                    )
+                    or evidence.oracle_evidence.report.candidate_count
+                    != CANDIDATE_DENOMINATOR_PER_ARM
+                    or evidence.oracle_evidence.top_ks != (1, 5)
+                    or evidence.oracle_evidence.report.rmsd_threshold_angstrom
                     != RMSD_THRESHOLD_ANGSTROM
                 ):
                     raise GlobalOrientationDevelopmentDecisionError(
@@ -160,14 +254,18 @@ class CaseComparisonObservation:
 
     @property
     def baseline_report(self):
-        return None if self.baseline_evidence is None else self.baseline_evidence.report
+        return (
+            None
+            if self.baseline_evidence is None
+            else self.baseline_evidence.oracle_evidence.report
+        )
 
     @property
     def experimental_report(self):
         return (
             None
             if self.experimental_evidence is None
-            else self.experimental_evidence.report
+            else self.experimental_evidence.oracle_evidence.report
         )
 
     def to_dict(self) -> dict[str, object]:
@@ -207,8 +305,13 @@ class GlobalOrientationDevelopmentDecision:
     observation_receipt_sha256s: tuple[str, ...]
     schema_id: str = DECISION_SCHEMA_ID
     _receipt_sha256: str = field(init=False, repr=False)
+    _construction_token: InitVar[object] = None
 
-    def __post_init__(self) -> None:
+    def __post_init__(self, _construction_token: object) -> None:
+        if _construction_token is not _DECISION_CONSTRUCTION_TOKEN:
+            raise GlobalOrientationDevelopmentDecisionError(
+                "decisions must be constructed by the protocol evaluator"
+            )
         if self.schema_id != DECISION_SCHEMA_ID:
             raise GlobalOrientationDevelopmentDecisionError(
                 "decision schema is invalid"
@@ -423,13 +526,16 @@ def evaluate_global_orientation_development(
         experimental_invalid_selected_top1_count=experimental_invalid,
         baseline_recovered_regression_case_ids=baseline_regressions,
         observation_receipt_sha256s=observation_hashes,
+        _construction_token=_DECISION_CONSTRUCTION_TOKEN,
     )
 
 
 __all__ = [
     "BASELINE_RECOVERED_CASE_IDS",
     "CANDIDATE_DENOMINATOR_PER_ARM",
+    "CASE_ARM_EVIDENCE_SCHEMA_ID",
     "CASE_IDS",
+    "CaseArmOracleEvidence",
     "CaseComparisonObservation",
     "DECISION_SCHEMA_ID",
     "GlobalOrientationDevelopmentDecision",
