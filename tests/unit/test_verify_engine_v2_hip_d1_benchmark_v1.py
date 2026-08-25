@@ -67,7 +67,7 @@ def _case(case_id: str, index: int, backend_name: str) -> dict:
         "decision": ["scored_valid"] * 63 + ["typed_failure"],
         "score_order": scored_slots,
         "validity": [True] * 63 + [None],
-        "rank": scored_slots + [None],
+        "rank": [slot + 1 for slot in scored_slots] + [None],
         "cluster": [slot % 4 for slot in scored_slots] + [None],
     }
     digests = {
@@ -393,7 +393,7 @@ def test_committed_profile_is_valid_unbound_and_non_authoritative() -> None:
         "verified": True,
         "profile_id": "engine_v2_hip_d1_representative_v1",
         "profile_sha256": (
-            "f88733b34898ef8b60d81c7cbb099cc0991001b30a4fed7693cdd27de72eb162"
+            "0706610ea5188aadd13134e9e4f6b34f9371941f12bbe2981103d955d81dac2b"
         ),
         "manifest_bound": False,
         "result_verification_authorized": False,
@@ -558,6 +558,16 @@ def test_discrete_digest_is_recomputed_from_structured_output(
     case["discrete_outputs"]["decision"][0] = "scored_alternate"
     case["repeat_discrete_outputs"]["decision"][0] = "scored_alternate"
     with pytest.raises(VERIFIER.HipBenchmarkError, match="decision output SHA-256"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
+def test_zero_based_stable_rank_is_rejected(tmp_path: Path) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    case = result["architectures"][0]["backends"]["hip_fast"]["cases"][0]
+    case["discrete_outputs"]["rank"][0] = 0
+    case["repeat_discrete_outputs"]["rank"][0] = 0
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="rank: scored-slot"):
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 

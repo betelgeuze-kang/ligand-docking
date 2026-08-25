@@ -48,6 +48,7 @@
     ],
     "scientific_vector_order": "slot_major_field_order",
     "score_order_policy": "ascending_score_then_slot_index",
+    "rank_policy": "one_based_stable_rank",
     "absolute_tolerance": 1e-10,
     "relative_tolerance": 4e-12,
     "nonfinite_values_allowed": false,
@@ -106,5 +107,5 @@
     "fresh128_authorized": false,
     "stage0_authorized": false
   },
-  "profile_sha256": "f88733b34898ef8b60d81c7cbb099cc0991001b30a4fed7693cdd27de72eb162"
+  "profile_sha256": "0706610ea5188aadd13134e9e4f6b34f9371941f12bbe2981103d955d81dac2b"
 }

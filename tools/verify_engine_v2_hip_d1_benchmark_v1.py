@@ -289,6 +289,7 @@ def _verify_profile_document(profile: dict[str, Any]) -> dict[str, Any]:
             "scientific_fields",
             "scientific_vector_order",
             "score_order_policy",
+            "rank_policy",
             "absolute_tolerance",
             "relative_tolerance",
             "nonfinite_values_allowed",
@@ -311,6 +312,8 @@ def _verify_profile_document(profile: dict[str, Any]) -> dict[str, Any]:
         raise HipBenchmarkError("scientific vector ordering changed")
     if parity["score_order_policy"] != "ascending_score_then_slot_index":
         raise HipBenchmarkError("score order policy changed")
+    if parity["rank_policy"] != "one_based_stable_rank":
+        raise HipBenchmarkError("rank policy changed")
     if (
         parity["typed_failure_scientific_value_encoding"]
         != "json_null_for_complete_slot_triple"
@@ -589,11 +592,11 @@ def _discrete_outputs(
         or set(score_order) != set(scored_slots)
     ):
         raise HipBenchmarkError(f"{name}.score_order: scored-slot permutation")
-    expected_ranks = list(range(len(scored_slots)))
+    expected_ranks = list(range(1, len(scored_slots) + 1))
     observed_ranks = [ranks[slot] for slot in scored_slots]
     if sorted(observed_ranks) != expected_ranks:
         raise HipBenchmarkError(f"{name}.rank: scored-slot permutation")
-    if any(ranks[slot] != rank for rank, slot in enumerate(score_order)):
+    if any(ranks[slot] != rank for rank, slot in enumerate(score_order, start=1)):
         raise HipBenchmarkError(f"{name}: score order/rank mismatch")
     return outputs
 

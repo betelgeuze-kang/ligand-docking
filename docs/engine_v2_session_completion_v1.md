@@ -255,8 +255,9 @@ ROCprofiler kernel traces, typed failure probes, and GPU/toolchain/artifact
 identities. The five non-failure discrete digests are recomputed from ordered
 decision, score-order, validity, rank, and cluster structures; the typed-failure
 digest is recomputed from the 64 structured status rows. Score order is also
-recomputed from ascending finite score with slot-index tie-breaking. The newer
-GPU must be in the profile's explicit architecture
+recomputed from ascending finite score with slot-index tie-breaking, and
+structured ranks preserve the native one-based `stable_rank` convention. The
+newer GPU must be in the profile's explicit architecture
 allowlist (including alphanumeric targets such as `gfx90a`), and every
 architecture needs a distinct hashed device serial. The verifier derives case
 p50/p95, candidate throughput, transfer
