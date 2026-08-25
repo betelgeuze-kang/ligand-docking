@@ -25,10 +25,14 @@ from betelgeuze_engine_v2.docking.scorer_v1 import (  # noqa: E402
     ScorerBackendOptions,
     ScorerV1Config,
 )
+from betelgeuze_engine_v2.docking.validity import (  # noqa: E402
+    PUBLIC_BENCHMARK_POSE_VALIDITY_POLICY_ID,
+    PoseValidityConfig,
+)
 
 
 SCHEMA_ID = (
-    "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.2.0"
+    "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.3.0"
 )
 FROZEN_GLOBAL_ORIENTATION_GENERATOR_ID = "deterministic_surface_aware_rigid_v2"
 BASELINE_LINEAGE_BY_CASE = {
@@ -69,6 +73,8 @@ SOURCE_RECEIPT_FIELDS = (
     "ligand_coordinate_sha256",
     "ligand_topology_sha256",
     "pocket_declaration_sha256",
+    "pocket_radius_angstrom_binary64_hex",
+    "pose_validity_config_fingerprint_sha256",
     "preparation_policy_sha256",
 )
 ALLOWED_INPUTS = (
@@ -126,6 +132,29 @@ def _file_sha256(relative_path: str) -> str:
         raise GlobalOrientationDevelopmentProtocolError(
             f"bound authority source is not readable: {relative_path}: {exc}"
         ) from exc
+
+
+def _source_manifest(
+    *,
+    roots: tuple[str, ...] = (),
+    files: tuple[str, ...] = (),
+) -> list[dict[str, str]]:
+    paths = set(files)
+    for relative_root in roots:
+        root = _REPO_ROOT / relative_root
+        if not root.is_dir():
+            raise GlobalOrientationDevelopmentProtocolError(
+                f"bound authority source root is not readable: {relative_root}"
+            )
+        paths.update(
+            path.relative_to(_REPO_ROOT).as_posix()
+            for path in root.rglob("*.py")
+            if path.is_file()
+        )
+    return [
+        {"path": relative_path, "sha256": _file_sha256(relative_path)}
+        for relative_path in sorted(paths)
+    ]
 
 
 def _mapping(value: object, *, name: str) -> Mapping[str, Any]:
@@ -338,20 +367,70 @@ def _verify_authority_bindings(protocol: Mapping[str, Any]) -> None:
         bindings.get("internal_validity"),
         name="internal validity authority binding",
     )
+    internal_source_scope = {
+        "files": [
+            "betelgeuze_engine_v2/__init__.py",
+            "betelgeuze_engine_v2/docking/validity.py",
+            "betelgeuze_engine_v2/stack_round1_hardening.py",
+        ],
+        "manifest_algorithm": "canonical_sorted_path_sha256_rows/1.0.0",
+    }
+    internal_source_manifest = _source_manifest(
+        files=tuple(internal_source_scope["files"]),
+    )
+    validity_config = PoseValidityConfig(
+        pocket_radius_angstrom=1.0,
+        policy_id=PUBLIC_BENCHMARK_POSE_VALIDITY_POLICY_ID,
+    ).to_dict()
+    validity_config.pop("pocket_radius_angstrom")
+    validity_fixed_fields = {
+        "schema_id": "betelgeuze.engine_v2_pose_validity_fixed_fields/1.0.0",
+        **validity_config,
+    }
+    validity_config_contract = {
+        "config_schema_id": "betelgeuze.engine_v2_pose_validity_config/3.0.0",
+        "execution_requires_exact_per_case_config_fingerprint": True,
+        "fixed_fields": validity_fixed_fields,
+        "fixed_fields_sha256": (
+            "598a7dbe66b534d94591858b5897c3b30361b80258395458fbf5af933b7aeb43"
+        ),
+        "per_case_config_fingerprint_sha256_by_case": {},
+        "per_case_config_fingerprints_committed": False,
+        "per_case_config_fingerprints_source_field": (
+            "pose_validity_config_fingerprint_sha256"
+        ),
+        "pocket_radius_source_field": "pocket_radius_angstrom_binary64_hex",
+        "uncommitted_per_case_config_blocks_execution": True,
+    }
     _exact(
         dict(internal),
         {
+            "config_contract": validity_config_contract,
             "evaluator_implementation_path": (
                 "betelgeuze_engine_v2/docking/validity.py"
             ),
             "evaluator_implementation_sha256": (
                 "5b1263ddf83deee0c46142be9e8d973bc9af6710d197f20451ab4d5ee996a619"
             ),
+            "evaluator_source_manifest_sha256": (
+                "5f966c2fca0b1ba43664ac8c1fdef4fd345a5d47829590972ed902df411675fc"
+            ),
+            "evaluator_source_scope": internal_source_scope,
             "required_check_set_sha256": (
                 "dcab24089ac9c88daa53f3faeabd04d71fb819cbbe9f86982d964b657cbc5583"
             ),
         },
         name="internal validity authority binding",
+    )
+    _exact(
+        internal.get("evaluator_source_manifest_sha256"),
+        _sha256(internal_source_manifest),
+        name="internal validity transitive source manifest",
+    )
+    _exact(
+        validity_config_contract["fixed_fields_sha256"],
+        _sha256(validity_fixed_fields),
+        name="internal validity fixed configuration",
     )
 
     posebusters = _mapping(
@@ -374,6 +453,16 @@ def _verify_authority_bindings(protocol: Mapping[str, Any]) -> None:
         "config_sha256": (
             "1e2013837fc3fbb3334ff5b2e94f029c65f1203f2a2a2abbd7f7d01c008c5533"
         ),
+        "evaluation_source_manifest_sha256": (
+            "2f843fee77e2d40d70882d2bb959fc828f3806921b915a0e702b1a138cc777bb"
+        ),
+        "evaluation_source_scope": {
+            "files": [
+                "betelgeuze_engine_v2/benchmark/public_redocking_benchmark.py",
+                "tools/run_engine_v2_public_redocking_300.py",
+            ],
+            "manifest_algorithm": "canonical_sorted_path_sha256_rows/1.0.0",
+        },
         "implementation_sha256": posebusters_config["package_sha256"],
         "runner_source_path": "tools/run_engine_v2_public_redocking_300.py",
         "runner_source_sha256": (
@@ -387,6 +476,15 @@ def _verify_authority_bindings(protocol: Mapping[str, Any]) -> None:
         posebusters.get("config_sha256"),
         _sha256(posebusters_config),
         name="PoseBusters config identity",
+    )
+    _exact(
+        posebusters.get("evaluation_source_manifest_sha256"),
+        _sha256(
+            _source_manifest(
+                files=tuple(expected_posebusters["evaluation_source_scope"]["files"])
+            )
+        ),
+        name="PoseBusters evaluation source manifest",
     )
 
     rmsd = _mapping(bindings.get("rmsd"), name="RMSD authority binding")
@@ -435,6 +533,20 @@ def _verify_authority_bindings(protocol: Mapping[str, Any]) -> None:
     )
 
     scorer = _mapping(bindings.get("scorer_v1"), name="ScorerV1 authority binding")
+    scorer_python_source_scope = {
+        "files": [
+            "betelgeuze_engine_v2/__init__.py",
+            "betelgeuze_engine_v2/stack_round1_hardening.py",
+            "betelgeuze_engine_v2/stack_round1_minimization_compat.py",
+        ],
+        "manifest_algorithm": "canonical_sorted_path_sha256_rows/1.0.0",
+        "roots": [
+            "betelgeuze_engine_v2/ai",
+            "betelgeuze_engine_v2/contracts",
+            "betelgeuze_engine_v2/docking",
+            "betelgeuze_engine_v2/molecular",
+        ],
+    }
     implementation_manifest = {
         "native_build_configuration_sha256": (
             "6e39e4e07bcb2f9324f242adcf3f48428191b2a91418d34520c6acc1cf046068"
@@ -450,6 +562,10 @@ def _verify_authority_bindings(protocol: Mapping[str, Any]) -> None:
         "python_module_sha256": (
             "aa7cd89dba16edb36da033bace57804b9ee851997a400c9d468e61ccefdd0159"
         ),
+        "python_transitive_source_manifest_sha256": (
+            "8c820fedb0619ec486eb89f9565632f341b9b203a77c48152932092ca7c50919"
+        ),
+        "python_transitive_source_scope": scorer_python_source_scope,
     }
     _exact(
         dict(scorer),
@@ -463,7 +579,7 @@ def _verify_authority_bindings(protocol: Mapping[str, Any]) -> None:
             ),
             "implementation_manifest": implementation_manifest,
             "implementation_source_sha256": (
-                "9b37e00d4616018677c6104a59311b03e829894f443925733618705a167ddccf"
+                "032544bed46fb0fa5e7aa0a2742c653963793b6c02cecf74177969ebb0896100"
             ),
             "terms_schema_id": "betelgeuze.engine_v2_scorer_v1_terms/1.1.0",
         },
@@ -473,6 +589,16 @@ def _verify_authority_bindings(protocol: Mapping[str, Any]) -> None:
         scorer.get("implementation_source_sha256"),
         _sha256(implementation_manifest),
         name="ScorerV1 implementation manifest",
+    )
+    _exact(
+        implementation_manifest["python_transitive_source_manifest_sha256"],
+        _sha256(
+            _source_manifest(
+                roots=tuple(scorer_python_source_scope["roots"]),
+                files=tuple(scorer_python_source_scope["files"]),
+            )
+        ),
+        name="ScorerV1 transitive Python source manifest",
     )
     _exact(
         scorer.get("config_fingerprint_sha256"),

@@ -50,7 +50,7 @@ def _reseal(payload: dict[str, object]) -> dict[str, object]:
 def test_current_global_orientation_development_protocol_verifies() -> None:
     observed = verify_protocol(_protocol())
     assert observed == (
-        "506bd29065fc34385d5089fc650e1bf02853dc5f8eb705480033f997db59cf4e"
+        "541f41afd3198808617f9f7091b05a2f54e381ffe303f59455fd3b8d56cde3b8"
     )
 
 
@@ -129,6 +129,78 @@ def test_resealed_scorer_or_evaluator_authority_drift_fails_closed() -> None:
             match="authority binding",
         ):
             verify_protocol(changed)
+
+
+def test_resealed_transitive_evaluator_source_drift_fails_closed() -> None:
+    for authority, field in (
+        ("scorer_v1", "python_transitive_source_manifest_sha256"),
+        ("posebusters", "evaluation_source_manifest_sha256"),
+        ("internal_validity", "evaluator_source_manifest_sha256"),
+    ):
+        changed = _protocol()
+        target = changed["authority_bindings"][authority]
+        if authority == "scorer_v1":
+            target = target["implementation_manifest"]
+        target[field] = "0" * 64
+        changed = _reseal(changed)
+
+        with pytest.raises(
+            GlobalOrientationDevelopmentProtocolError,
+            match="authority binding",
+        ):
+            verify_protocol(changed)
+
+
+@pytest.mark.parametrize(
+    ("relative_path", "expected_error"),
+    (
+        (
+            "betelgeuze_engine_v2/docking/contact_validity.py",
+            "ScorerV1 transitive Python source manifest",
+        ),
+        (
+            "betelgeuze_engine_v2/benchmark/public_redocking_benchmark.py",
+            "PoseBusters evaluation source manifest",
+        ),
+        (
+            "betelgeuze_engine_v2/stack_round1_hardening.py",
+            "internal validity transitive source manifest",
+        ),
+    ),
+)
+def test_live_transitive_evaluator_source_drift_fails_closed(
+    monkeypatch: pytest.MonkeyPatch,
+    relative_path: str,
+    expected_error: str,
+) -> None:
+    real_file_sha256 = verifier._file_sha256
+
+    def changed_file_sha256(path: str) -> str:
+        if path == relative_path:
+            return "0" * 64
+        return real_file_sha256(path)
+
+    monkeypatch.setattr(verifier, "_file_sha256", changed_file_sha256)
+
+    with pytest.raises(
+        GlobalOrientationDevelopmentProtocolError,
+        match=expected_error,
+    ):
+        verify_protocol(_protocol())
+
+
+def test_resealed_validity_configuration_contract_drift_fails_closed() -> None:
+    changed = _protocol()
+    changed["authority_bindings"]["internal_validity"]["config_contract"][
+        "fixed_fields"
+    ]["receptor_ligand_clash_angstrom"] = 0.9
+    changed = _reseal(changed)
+
+    with pytest.raises(
+        GlobalOrientationDevelopmentProtocolError,
+        match="internal validity authority binding",
+    ):
+        verify_protocol(changed)
 
 
 def test_protocol_document_tracks_schema_hash_and_execution_boundary() -> None:

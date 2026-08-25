@@ -19,13 +19,13 @@ config/engine_v2_global_orientation_contaminated_development.json
 Protocol schema:
 
 ```text
-betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.2.0
+betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.3.0
 ```
 
 Protocol self-hash:
 
 ```text
-506bd29065fc34385d5089fc650e1bf02853dc5f8eb705480033f997db59cf4e
+541f41afd3198808617f9f7091b05a2f54e381ffe303f59455fd3b8d56cde3b8
 ```
 
 ## Scientific question
@@ -164,16 +164,26 @@ and internal-validity check-set identity
 `dcab24089ac9c88daa53f3faeabd04d71fb819cbbe9f86982d964b657cbc5583`.
 
 Scoring and evaluation authority is hash-bound as well. The ScorerV1 binding
-includes its exact Python source, native V7 profile, transitive source manifest,
-build configuration, default config fingerprint, and single-thread backend
-options; their canonical implementation-manifest identity is
-`9b37e00d4616018677c6104a59311b03e829894f443925733618705a167ddccf`.
+includes a live-rederived manifest over its docking, molecular, AI, contracts,
+and runtime-hardening Python source scope, including `contact_validity.py`, as
+well as the native V7 profile and transitive native source manifest, build
+configuration, default config fingerprint, and single-thread backend options.
+Its canonical implementation-manifest identity is
+`032544bed46fb0fa5e7aa0a2742c653963793b6c02cecf74177969ebb0896100`.
 PoseBusters is bound to the exact 0.3.1 universal wheel SHA-256
 `a6d1437d0eb3e0fe13ad73b5c4efdc8c0914ceadd904cde55b2a9835bf591a9d`,
-redock configuration, local report runner, and full check set. RMSD evidence
+redock configuration, local report runner, the imported public-redocking
+column contract, and full check set. RMSD evidence
 must carry that same report implementation/config identity plus the pinned
 complete heavy-atom bijection and no-alignment symmetry policies. Internal
-validity and local RMSD source modules are also independently SHA-256 bound.
+validity binds both its source and the runtime hardening that replaces
+`PoseValidityConfig`. Its public-redocking fixed fields have identity
+`598a7dbe66b534d94591858b5897c3b30361b80258395458fbf5af933b7aeb43`.
+Each scored case must additionally supply its exact binary64 pocket radius and
+the resulting config fingerprint in the authenticated source receipt. Those
+case receipts are not committed, so the per-case fingerprint map is empty and
+this absence independently blocks execution; a caller cannot substitute a
+default or self-asserted config identity.
 Future evidence types must match every expected identity in
 `authority_bindings`; same-schema or same-label substitutions fail closed.
 
@@ -208,9 +218,10 @@ boolean as that evidence is forbidden.
 Before an evaluator can be reviewed, repository types must provide all four
 machine-verifiable contracts:
 
-1. a case-source receipt containing the ligand, topology, pocket, and
-   preparation identities plus receptor-surface points rederived from the bound
-   receptor geometry by a frozen extraction procedure;
+1. a case-source receipt containing the ligand, topology, pocket, exact
+   binary64 pocket radius, derived validity-config fingerprint, and preparation
+   identities plus receptor-surface points rederived from the bound receptor
+   geometry by a frozen extraction procedure;
 2. baseline candidate lineage bound to all 64 observation slots;
 3. experimental candidate lineage bound to all 64 observation slots; and
 4. failure-complete observations with an explicit unscored state.

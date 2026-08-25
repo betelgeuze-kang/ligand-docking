@@ -22,12 +22,50 @@
       "generator_module_sha256": "9983774745872a6d3e2abf3c8a14dc80c915ad4703dfe3675b58f39aedcd6b61"
     },
     "internal_validity": {
+      "config_contract": {
+        "config_schema_id": "betelgeuze.engine_v2_pose_validity_config/3.0.0",
+        "execution_requires_exact_per_case_config_fingerprint": true,
+        "fixed_fields": {
+          "bond_length_tolerance_angstrom": 0.15,
+          "chirality_volume_tolerance": 1e-08,
+          "ligand_self_clash_angstrom": 0.75,
+          "max_cross_checks": 1000000,
+          "max_pair_checks": 250000,
+          "policy_id": "betelgeuze.engine_v2_pose_validity_policy/public-redocking/1.0.0",
+          "receptor_ligand_clash_angstrom": 0.8,
+          "rotation_tolerance": 1e-06,
+          "schema_id": "betelgeuze.engine_v2_pose_validity_fixed_fields/1.0.0"
+        },
+        "fixed_fields_sha256": "598a7dbe66b534d94591858b5897c3b30361b80258395458fbf5af933b7aeb43",
+        "per_case_config_fingerprint_sha256_by_case": {},
+        "per_case_config_fingerprints_committed": false,
+        "per_case_config_fingerprints_source_field": "pose_validity_config_fingerprint_sha256",
+        "pocket_radius_source_field": "pocket_radius_angstrom_binary64_hex",
+        "uncommitted_per_case_config_blocks_execution": true
+      },
       "evaluator_implementation_path": "betelgeuze_engine_v2/docking/validity.py",
       "evaluator_implementation_sha256": "5b1263ddf83deee0c46142be9e8d973bc9af6710d197f20451ab4d5ee996a619",
+      "evaluator_source_manifest_sha256": "5f966c2fca0b1ba43664ac8c1fdef4fd345a5d47829590972ed902df411675fc",
+      "evaluator_source_scope": {
+        "files": [
+          "betelgeuze_engine_v2/__init__.py",
+          "betelgeuze_engine_v2/docking/validity.py",
+          "betelgeuze_engine_v2/stack_round1_hardening.py"
+        ],
+        "manifest_algorithm": "canonical_sorted_path_sha256_rows/1.0.0"
+      },
       "required_check_set_sha256": "dcab24089ac9c88daa53f3faeabd04d71fb819cbbe9f86982d964b657cbc5583"
     },
     "posebusters": {
       "config_sha256": "1e2013837fc3fbb3334ff5b2e94f029c65f1203f2a2a2abbd7f7d01c008c5533",
+      "evaluation_source_manifest_sha256": "2f843fee77e2d40d70882d2bb959fc828f3806921b915a0e702b1a138cc777bb",
+      "evaluation_source_scope": {
+        "files": [
+          "betelgeuze_engine_v2/benchmark/public_redocking_benchmark.py",
+          "tools/run_engine_v2_public_redocking_300.py"
+        ],
+        "manifest_algorithm": "canonical_sorted_path_sha256_rows/1.0.0"
+      },
       "implementation_sha256": "a6d1437d0eb3e0fe13ad73b5c4efdc8c0914ceadd904cde55b2a9835bf591a9d",
       "mode": "redock",
       "package_filename": "posebusters-0.3.1-py3-none-any.whl",
@@ -68,9 +106,24 @@
         "native_profile_sha256": "50c3e609a23e3bf0641a900f71dc360dcadc1a52c3bde66cdfa74b8c1affcd5d",
         "native_source_manifest_sha256": "ecb009ac228652c6c6cbdefcdd70828ce3d9aeea5a5e31d0fff0246d4d5f932e",
         "python_module_path": "betelgeuze_engine_v2/docking/scorer_v1.py",
-        "python_module_sha256": "aa7cd89dba16edb36da033bace57804b9ee851997a400c9d468e61ccefdd0159"
+        "python_module_sha256": "aa7cd89dba16edb36da033bace57804b9ee851997a400c9d468e61ccefdd0159",
+        "python_transitive_source_manifest_sha256": "8c820fedb0619ec486eb89f9565632f341b9b203a77c48152932092ca7c50919",
+        "python_transitive_source_scope": {
+          "files": [
+            "betelgeuze_engine_v2/__init__.py",
+            "betelgeuze_engine_v2/stack_round1_hardening.py",
+            "betelgeuze_engine_v2/stack_round1_minimization_compat.py"
+          ],
+          "manifest_algorithm": "canonical_sorted_path_sha256_rows/1.0.0",
+          "roots": [
+            "betelgeuze_engine_v2/ai",
+            "betelgeuze_engine_v2/contracts",
+            "betelgeuze_engine_v2/docking",
+            "betelgeuze_engine_v2/molecular"
+          ]
+        }
       },
-      "implementation_source_sha256": "9b37e00d4616018677c6104a59311b03e829894f443925733618705a167ddccf",
+      "implementation_source_sha256": "032544bed46fb0fa5e7aa0a2742c653963793b6c02cecf74177969ebb0896100",
       "terms_schema_id": "betelgeuze.engine_v2_scorer_v1_terms/1.1.0"
     }
   },
@@ -244,8 +297,8 @@
     ]
   },
   "protocol_role": "fixed_historical_contaminated_development_global_orientation_ab",
-  "protocol_sha256": "506bd29065fc34385d5089fc650e1bf02853dc5f8eb705480033f997db59cf4e",
-  "schema_id": "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.2.0",
+  "protocol_sha256": "541f41afd3198808617f9f7091b05a2f54e381ffe303f59455fd3b8d56cde3b8",
+  "schema_id": "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.3.0",
   "shared_execution_contract": {
     "conformer_authority": "same_prepared_ligand_for_both_arms",
     "cpu_count": 1,
@@ -285,6 +338,8 @@
       "ligand_coordinate_sha256",
       "ligand_topology_sha256",
       "pocket_declaration_sha256",
+      "pocket_radius_angstrom_binary64_hex",
+      "pose_validity_config_fingerprint_sha256",
       "preparation_policy_sha256"
     ],
     "source_receipts_committed": false
