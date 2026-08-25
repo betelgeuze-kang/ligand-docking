@@ -57,6 +57,7 @@ on:
       - "config/engine_v2_source_paired_clearance_external_reservation.json"
       - "config/engine_v2_source_paired_clearance_external_reservation_operations_decision.json"
       - "config/engine_v2_global_orientation_synthetic_contract.json"
+      - "config/engine_v2_global_orientation_contaminated_development.json"
       - "config/engine_v2_mixed64_geometric_candidate_evidence_v2.json"
       - "config/engine_v2_cpu_performance_profile.json"
       - "config/engine_v2_cpu_performance_v2_terminal_decision.json"
@@ -100,6 +101,7 @@ on:
       - "tools/verify_engine_v2_source_paired_clearance_external_reservation.py"
       - "tools/verify_engine_v2_source_paired_clearance_external_reservation_operations_decision.py"
       - "tools/verify_engine_v2_global_orientation_synthetic_contract.py"
+      - "tools/verify_engine_v2_global_orientation_contaminated_development.py"
       - "tools/verify_engine_v2_mixed64_geometric_candidate_evidence_v2.py"
       - "tools/verify_engine_v2_mixed64_candidate_evidence_artifact.py"
       - "tools/verify_engine_v2_cpu_performance_profile.py"
@@ -274,6 +276,7 @@ jobs:
             config/engine_v2_source_paired_clearance_external_reservation.json
             config/engine_v2_source_paired_clearance_external_reservation_operations_decision.json
             config/engine_v2_global_orientation_synthetic_contract.json
+            config/engine_v2_global_orientation_contaminated_development.json
             config/engine_v2_mixed64_geometric_candidate_evidence_v2.json
             config/engine_v2_mixed64_proposal_geometry_v3.json
             config/engine_v2_mixed64_proposal_producer_v3.json
@@ -330,6 +333,7 @@ jobs:
             tools/verify_engine_v2_source_paired_clearance_external_reservation.py
             tools/verify_engine_v2_source_paired_clearance_external_reservation_operations_decision.py
             tools/verify_engine_v2_global_orientation_synthetic_contract.py
+            tools/verify_engine_v2_global_orientation_contaminated_development.py
             tools/verify_engine_v2_mixed64_geometric_candidate_evidence_v2.py
             tools/verify_engine_v2_mixed64_candidate_evidence_artifact.py
             tools/verify_engine_v2_mixed64_proposal_geometry_v3.py
@@ -384,6 +388,7 @@ jobs:
             tests/unit/test_engine_v2_global_orientation.py
             tests/unit/test_engine_v2_global_orientation_evidence.py
             tests/unit/test_engine_v2_global_orientation_synthetic_contract.py
+            tests/unit/test_engine_v2_global_orientation_development_protocol.py
             tests/unit/test_engine_v2_fixed_mixed64_allocation.py
             tests/unit/test_engine_v2_mixed64_proposal_geometry_v3.py
             tests/unit/test_verify_engine_v2_mixed64_proposal_geometry_v3.py
@@ -515,6 +520,7 @@ jobs:
             docs/engine_v2_source_paired_clearance_one_shot_ab.md
             docs/engine_v2_source_paired_clearance_external_reservation.md
             docs/engine_v2_global_orientation_design.md
+            docs/engine_v2_global_orientation_contaminated_development_protocol.md
             docs/engine_v2_mixed64_geometric_candidate_evidence_v2.md
             docs/engine_v2_cpu_performance_qualification.md
             docs/engine_v2_native_fixed64_cpu_qualification_v5.md
@@ -613,6 +619,7 @@ jobs:
             tools/verify_engine_v2_source_paired_clearance_external_reservation.py \
             tools/verify_engine_v2_source_paired_clearance_external_reservation_operations_decision.py \
             tools/verify_engine_v2_global_orientation_synthetic_contract.py \
+            tools/verify_engine_v2_global_orientation_contaminated_development.py \
             tools/verify_engine_v2_mixed64_geometric_candidate_evidence_v2.py \
             tools/verify_engine_v2_mixed64_candidate_evidence_artifact.py \
             tools/verify_engine_v2_cpu_performance_profile.py \
@@ -671,6 +678,7 @@ jobs:
           grep -q 'historical_execution_operational_authority_false' \
             /tmp/engine-v2-external-reservation-operations-decision.json
           python tools/verify_engine_v2_global_orientation_synthetic_contract.py
+          python tools/verify_engine_v2_global_orientation_contaminated_development.py
           python tools/verify_engine_v2_mixed64_geometric_candidate_evidence_v2.py
           python tools/verify_engine_v2_cpu_performance_profile.py \
             > /tmp/engine-v2-cpu-performance-profile.json
@@ -905,6 +913,7 @@ jobs:
             tests/unit/test_engine_v2_global_orientation.py \
             tests/unit/test_engine_v2_global_orientation_evidence.py \
             tests/unit/test_engine_v2_global_orientation_synthetic_contract.py \
+            tests/unit/test_engine_v2_global_orientation_development_protocol.py \
             tests/unit/test_engine_v2_fixed_mixed64_allocation.py \
             tests/unit/test_engine_v2_mixed64_proposal_geometry_v3.py \
             tests/unit/test_verify_engine_v2_mixed64_proposal_geometry_v3.py \

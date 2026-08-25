@@ -1,0 +1,368 @@
+{
+  "authority_bindings": {
+    "baseline_current_v7": {
+      "candidate_lineage_manifest_sha256": "220db66f0b6dde2b4c2cabfa48dbccc2e6bd7d4192e9f93f092364a249327c99",
+      "candidate_lineage_receipt_schema_id": "betelgeuze.engine_v2_source_paired_clearance_current_v7_lineage/1.0.0",
+      "candidate_lineage_sha256_by_case": {
+        "5SD5_HWI": "0133959300cee30971f55e3b3a7b043f06008d58e0abd38346c6972a4c038b52",
+        "5SIS_JSM": "1e6a11a46b76d9913d167094b4c9479a14ec23e6052b55d501f0e4ad1c330d3a",
+        "6M2B_EZO": "9e8fc7c3c9a1aac38c45eb30ed5e9aeb592c7336770ffb526b52cfb30fb87952",
+        "6T88_MWQ": "09a8bc0009ed0e05b1d09370eb09f82072190bf8bfa6dee8e16654b4691f19dd",
+        "6TW5_9M2": "3a365b3bb51aa2be01bec444ed96a637f4e16ea44dd47e0e25beafb3a7050596",
+        "6TW7_NZB": "92a78638bc4d44373142fb855238414bcb6fc5a7675bcf5c1f2bd09e388ee10c",
+        "6VTA_AKN": "e8fc07b8a3540d2a3e0aacdc81ca339c71ff57194883bf1b9b4eb57181ed5b76",
+        "6WTN_RXT": "4bcc74b03b172a107113981d8f64157682c512934183a617ea2e59fb91f30371"
+      },
+      "source_authority_module_path": "betelgeuze_engine_v2/benchmark/source_paired_clearance_activation.py",
+      "source_authority_module_sha256": "e93774d3e2a93154268ba593bf51032e017dbccf80f5a67dcc432b384fbd8a7f"
+    },
+    "experimental_global_orientation": {
+      "generator_id": "deterministic_surface_aware_rigid_v2",
+      "generator_module_path": "betelgeuze_engine_v2/docking/global_orientation.py",
+      "generator_module_sha256": "9983774745872a6d3e2abf3c8a14dc80c915ad4703dfe3675b58f39aedcd6b61",
+      "runtime_artifact_contract": {
+        "generator_libm_sha256": null,
+        "generator_python_executable_sha256": null,
+        "generator_python_shared_library_sha256": null,
+        "generator_runtime_fingerprint_sha256": null,
+        "runtime_identities_committed": false,
+        "unbound_generator_runtime_blocks_execution": true
+      }
+    },
+    "internal_validity": {
+      "config_contract": {
+        "config_schema_id": "betelgeuze.engine_v2_pose_validity_config/3.0.0",
+        "execution_requires_exact_per_case_config_fingerprint": true,
+        "fixed_fields": {
+          "bond_length_tolerance_angstrom": 0.15,
+          "chirality_volume_tolerance": 1e-08,
+          "ligand_self_clash_angstrom": 0.75,
+          "max_cross_checks": 1000000,
+          "max_pair_checks": 250000,
+          "policy_id": "betelgeuze.engine_v2_pose_validity_policy/public-redocking/1.0.0",
+          "receptor_ligand_clash_angstrom": 0.8,
+          "rotation_tolerance": 1e-06,
+          "schema_id": "betelgeuze.engine_v2_pose_validity_fixed_fields/1.0.0"
+        },
+        "fixed_fields_sha256": "598a7dbe66b534d94591858b5897c3b30361b80258395458fbf5af933b7aeb43",
+        "per_case_config_fingerprint_sha256_by_case": {},
+        "per_case_config_fingerprints_committed": false,
+        "per_case_config_fingerprints_source_field": "pose_validity_config_fingerprint_sha256",
+        "pocket_radius_source_field": "pocket_radius_angstrom_binary64_hex",
+        "uncommitted_per_case_config_blocks_execution": true
+      },
+      "evaluator_implementation_path": "betelgeuze_engine_v2/docking/validity.py",
+      "evaluator_implementation_sha256": "5b1263ddf83deee0c46142be9e8d973bc9af6710d197f20451ab4d5ee996a619",
+      "evaluator_source_manifest_sha256": "5f966c2fca0b1ba43664ac8c1fdef4fd345a5d47829590972ed902df411675fc",
+      "evaluator_source_scope": {
+        "files": [
+          "betelgeuze_engine_v2/__init__.py",
+          "betelgeuze_engine_v2/docking/validity.py",
+          "betelgeuze_engine_v2/stack_round1_hardening.py"
+        ],
+        "manifest_algorithm": "canonical_sorted_path_sha256_rows/1.0.0"
+      },
+      "required_check_set_sha256": "dcab24089ac9c88daa53f3faeabd04d71fb819cbbe9f86982d964b657cbc5583"
+    },
+    "posebusters": {
+      "config_sha256": "1e2013837fc3fbb3334ff5b2e94f029c65f1203f2a2a2abbd7f7d01c008c5533",
+      "evaluation_source_manifest_sha256": "2f843fee77e2d40d70882d2bb959fc828f3806921b915a0e702b1a138cc777bb",
+      "evaluation_source_scope": {
+        "files": [
+          "betelgeuze_engine_v2/benchmark/public_redocking_benchmark.py",
+          "tools/run_engine_v2_public_redocking_300.py"
+        ],
+        "manifest_algorithm": "canonical_sorted_path_sha256_rows/1.0.0"
+      },
+      "expected_evaluation_pipeline_sha256": "40530119249b792728a70cb5ba65cc9c60cf834e1a744d6987dae75046459922",
+      "implementation_sha256": "a6d1437d0eb3e0fe13ad73b5c4efdc8c0914ceadd904cde55b2a9835bf591a9d",
+      "mode": "redock",
+      "package_filename": "posebusters-0.3.1-py3-none-any.whl",
+      "package_sha256": "a6d1437d0eb3e0fe13ad73b5c4efdc8c0914ceadd904cde55b2a9835bf591a9d",
+      "posebusters_version": "0.3.1",
+      "required_check_set_sha256": "3b4797c8eb95f6471f3dce0977b95b83fd0ed2630d6079607609fbcb2c1d8b93",
+      "runner_source_path": "tools/run_engine_v2_public_redocking_300.py",
+      "runner_source_sha256": "045267dcdbf27cf18a29dee55a95d3cf123b14e857b10c7cb9971b47a8955169"
+    },
+    "rmsd": {
+      "atom_mapping_policy": {
+        "complete_bijection_required": true,
+        "mapping_direction": "reference_position_to_candidate_position",
+        "mapping_scope": "all_ligand_heavy_atoms",
+        "mapping_source": "posebusters_redock_report"
+      },
+      "atom_mapping_sha256": "0ab5a381924ae5a4ab08ca0dd6a0af58b8637d83927c88f04c8c82b2d7ce328c",
+      "config_sha256": "1e2013837fc3fbb3334ff5b2e94f029c65f1203f2a2a2abbd7f7d01c008c5533",
+      "implementation_sha256": "a6d1437d0eb3e0fe13ad73b5c4efdc8c0914ceadd904cde55b2a9835bf591a9d",
+      "local_metric_module_path": "betelgeuze_engine_v2/docking/metrics.py",
+      "local_metric_module_sha256": "e47915e80fdec830243f28105bee4f43b7f7b9d92a4ece73826dc29282305df9",
+      "method_id": "posebusters_redock_symmetry_aware_rmsd",
+      "symmetry_policy": {
+        "alignment_allowed": false,
+        "metric": "direct_heavy_atom_rmsd_angstrom",
+        "minimum_over_symmetry_permutations": true,
+        "symmetry_mapping_source": "posebusters_redock_report"
+      },
+      "symmetry_policy_sha256": "e29f135b0809fd4fc417899ceaff71b766beb939291a52af06435957e4da833b"
+    },
+    "scorer_v1": {
+      "backend": "rust_cpu_required",
+      "backend_options_fingerprint_sha256": "3e1279f7426288224a1377e9021cc07c3a62115a3ac38534a70871fb8911415f",
+      "config_fingerprint_sha256": "f6592bb681ae1dfad2700291013e04a239c5961687386582ac7c009c5a7de783",
+      "implementation_manifest": {
+        "native_build_configuration_sha256": "6e39e4e07bcb2f9324f242adcf3f48428191b2a91418d34520c6acc1cf046068",
+        "native_profile_id": "engine_v2_native_fixed64_cpu_synthetic_v7",
+        "native_profile_sha256": "50c3e609a23e3bf0641a900f71dc360dcadc1a52c3bde66cdfa74b8c1affcd5d",
+        "native_source_manifest_sha256": "ecb009ac228652c6c6cbdefcdd70828ce3d9aeea5a5e31d0fff0246d4d5f932e",
+        "python_module_path": "betelgeuze_engine_v2/docking/scorer_v1.py",
+        "python_module_sha256": "aa7cd89dba16edb36da033bace57804b9ee851997a400c9d468e61ccefdd0159",
+        "python_transitive_source_manifest_sha256": "18b8e50567dcece1c90566a36065dfafc4effda63db352bb98a786f97782d193",
+        "python_transitive_source_scope": {
+          "files": [],
+          "manifest_algorithm": "canonical_sorted_path_sha256_rows/1.0.0",
+          "roots": [
+            "betelgeuze_engine_v2"
+          ]
+        }
+      },
+      "implementation_source_sha256": "bfcb9f531c5f298af15e62fad2c73a0bc439ed1fafd768bb195d88659a83752c",
+      "native_runtime_artifact_contract": {
+        "artifact_identities_committed": false,
+        "consumed_qualification_receipt_path": "config/engine_v2_native_fixed64_cpu_qualification_v7_execution_receipt.json",
+        "consumed_qualification_receipt_sha256": "80df998dbe52ec51ac29a27511d936d9cb08b0df29e333b35f8a7de513d4da1a",
+        "native_backend_receipt_sha256": null,
+        "native_extension_sha256": null,
+        "post_qualification_build_boundary_path": "config/engine_v2_native_fixed64_cpu_post_qualification_build_boundary_v1.json",
+        "post_qualification_build_boundary_sha256": "c151fbff4ca2853fa5ed958541a0f215dc5eda41810d17916533c9907f11546c",
+        "qualification_rerun_authorized": false,
+        "unbound_native_runtime_blocks_execution": true
+      },
+      "terms_schema_id": "betelgeuze.engine_v2_scorer_v1_terms/1.1.0"
+    }
+  },
+  "arm_contract": {
+    "arm_ids": [
+      "baseline_current_v7",
+      "experimental_global_orientation_v1"
+    ],
+    "baseline": {
+      "candidate_slot_count": 64,
+      "proposal_authority": "current_v7"
+    },
+    "candidate_slots_per_scored_case_per_arm": 64,
+    "denominators_identical_required": true,
+    "expected_scored_candidate_rows_combined": 1024,
+    "expected_scored_candidate_rows_per_arm": 512,
+    "experimental": {
+      "candidate_slot_count": 64,
+      "candidate_slot_formula": "orientation_count*(1+translation_shell_count*translation_points_per_shell)",
+      "generator_config": {
+        "minimum_receptor_distance": 1.1,
+        "orientation_count": 8,
+        "schema_id": "betelgeuze.engine_v2_global_orientation_config/1.0.0",
+        "translation_points_per_shell": 7,
+        "translation_shell_radii": [
+          1.5
+        ]
+      },
+      "profile_id": "deterministic_surface_aware_rigid_v2",
+      "proposal_authority": "deterministic_surface_aware_rigid_v2"
+    },
+    "failed_candidate_slots_retained": true,
+    "failed_preparation_rows_retained": true,
+    "same_candidate_budget_required": true,
+    "same_pocket_required": true,
+    "same_prepared_ligand_required": true,
+    "same_scorer_required": true
+  },
+  "authority": {
+    "customer_pose_emission_authorized": false,
+    "fresh_holdout_execution_authorized": false,
+    "historical_development_execution_authorized": false,
+    "product_execution_authorized": false,
+    "profile_promotion_authority": false,
+    "public_or_scientific_claim_authorized": false,
+    "stage0_admission_authority": false
+  },
+  "cohort": {
+    "baseline_recovered_case_ids": [
+      "6T88_MWQ"
+    ],
+    "historical_case_count": 9,
+    "historical_case_ids": [
+      "5SD5_HWI",
+      "5SIS_JSM",
+      "6M2B_EZO",
+      "6M73_FNR",
+      "6T88_MWQ",
+      "6TW5_9M2",
+      "6TW7_NZB",
+      "6VTA_AKN",
+      "6WTN_RXT"
+    ],
+    "historical_case_ids_sha256": "cd2c24c9c7d937865f40352375e8a17c6b83b0b0fab8c134218d2c29537493c1",
+    "preparation_failure_case_ids": [
+      "6M73_FNR"
+    ],
+    "previously_uncovered_case_count": 7,
+    "previously_uncovered_case_ids": [
+      "5SD5_HWI",
+      "5SIS_JSM",
+      "6M2B_EZO",
+      "6TW5_9M2",
+      "6TW7_NZB",
+      "6VTA_AKN",
+      "6WTN_RXT"
+    ],
+    "scored_case_count": 8
+  },
+  "decision": {
+    "decision_evaluator_implemented": false,
+    "go_receipt_emission_authorized": false,
+    "go_criteria_all": [
+      "valid_proposal_oracle_recovery_in_at_least_2_of_7_previously_uncovered_cases",
+      "no_increase_in_invalid_selected_top1_count"
+    ],
+    "go_effect": "permit_separate_review_of_global_orientation_development_followup_only",
+    "go_requires_all_invariants": true,
+    "hard_no_go_any": [
+      "evaluator_or_evidence_contract_absent",
+      "required_invariant_failed",
+      "zero_new_previously_uncovered_valid_proposal_recoveries",
+      "baseline_recovered_case_regression",
+      "candidate_denominator_or_source_binding_drift"
+    ],
+    "invariants_all": [
+      "complete_source_receipts_for_all_nine_cases",
+      "identical_failure_complete_64_slot_denominators",
+      "no_reference_or_result_dependent_generator_input",
+      "no_preparation_failure_regression",
+      "baseline_recovered_case_reproduced",
+      "no_baseline_recovered_case_regression",
+      "complete_source_and_observation_rederivation"
+    ],
+    "no_go_effect": "retain_synthetic_only_global_orientation_and_close_molecular_execution_request",
+    "required_future_evidence_contracts": [
+      "case_source_receipt_with_ligand_topology_pocket_preparation_and_rederived_receptor_surface_identities",
+      "baseline_candidate_lineage_bound_to_all_64_observation_slots",
+      "experimental_candidate_lineage_bound_to_all_64_observation_slots",
+      "failure_complete_observation_slots_with_explicit_unscored_state"
+    ],
+    "result_cannot_change_protocol": true
+  },
+  "execution_gate": {
+    "actual_execution_authorized": false,
+    "operator_reservation_required": true,
+    "output_root": ".betelgeuze/engine_v2_global_orientation_contaminated_development",
+    "owner_only_directory_mode_octal": "0700",
+    "owner_only_receipt_mode_octal": "0600",
+    "pr245_reviewed_terminal_state_required": true,
+    "separate_execution_authority_required": true
+  },
+  "information_boundary": {
+    "generator_allowed_inputs": [
+      "prepared_ligand_coordinates",
+      "declared_pocket_center",
+      "declared_pocket_normal",
+      "bounded_receptor_surface_points",
+      "frozen_global_orientation_config",
+      "source_receipt_sha256",
+      "profile_id"
+    ],
+    "generator_forbidden_inputs": [
+      "native_pose",
+      "reference_pose",
+      "rmsd",
+      "candidate_score",
+      "prior_benchmark_outcome",
+      "fresh_holdout_identity",
+      "product_routing_state"
+    ],
+    "post_result_candidate_allocation_forbidden": true,
+    "reference_pose_consumed_only_after_candidate_generation": true
+  },
+  "metrics": {
+    "failure_classes": [
+      "success",
+      "proposal_failure",
+      "validity_failure",
+      "ranking_failure"
+    ],
+    "full_observation_rederivation_required": true,
+    "required_per_case": [
+      "proposal_oracle_rmsd",
+      "valid_proposal_oracle_rmsd",
+      "ranked_top1_oracle_rmsd",
+      "ranked_top5_oracle_rmsd",
+      "selected_top1_rmsd",
+      "selection_regret",
+      "generated_candidate_count",
+      "accepted_candidate_count",
+      "rejected_candidate_count",
+      "unscored_candidate_count",
+      "failure_class"
+    ],
+    "source_geometry_rederivation_required": true,
+    "summary_rederived_from_complete_case_receipts": true,
+    "top_k": [
+      1,
+      5
+    ]
+  },
+  "protocol_role": "fixed_historical_contaminated_development_global_orientation_ab",
+  "protocol_sha256": "ebb67559292613b2685786c03aab01970d21ee0df3b9b885eb33f7fa3ec75a75",
+  "schema_id": "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.5.0",
+  "shared_execution_contract": {
+    "conformer_authority": "same_prepared_ligand_for_both_arms",
+    "cpu_count": 1,
+    "native_scorer_threads": 1,
+    "posebusters_check_count": 22,
+    "posebusters_evidence_schema_id": "betelgeuze.engine_v2_source_paired_clearance_posebusters_evidence/2.0.0",
+    "posebusters_full_check_map_required": true,
+    "posebusters_required_check_set_sha256": "3b4797c8eb95f6471f3dce0977b95b83fd0ed2630d6079607609fbcb2c1d8b93",
+    "posebusters_version": "0.3.1",
+    "preparation_policy": "exact_source_paired_current_v7_preparation",
+    "rmsd_contract": "symmetry_aware_heavy_atom_rmsd_angstrom",
+    "rmsd_threshold_angstrom": 2.0,
+    "scorer_backend": "rust_cpu_required",
+    "scorer_terms_schema_id": "betelgeuze.engine_v2_scorer_v1_terms/1.1.0",
+    "internal_validity_required_check_set_sha256": "dcab24089ac9c88daa53f3faeabd04d71fb819cbbe9f86982d964b657cbc5583",
+    "seed": 2026080601,
+    "torch_interop_threads": 1,
+    "torch_intraop_threads": 1
+  },
+  "source_bindings": {
+    "case_source_receipt_schema_id": "betelgeuze.engine_v2_source_paired_clearance_case_source_receipt/1.0.0",
+    "exact_case_source_receipt_required": true,
+    "global_orientation_synthetic_contract_schema_id": "betelgeuze.engine_v2_global_orientation_synthetic_contract/2.0.0",
+    "global_orientation_synthetic_contract_sha256": "02fa37a94f3c1719f5e7b5b808c71d053e313b018ef9bfa7d904869c2ab1dad0",
+    "historical_archive_sha256": "8bef33eba296989b795a11fd05a7e119124b066d91bec28a8b910d38a083fbcc",
+    "historical_bundle_checksum_sha256": "6ee04e23e01a73bb643bb4d1fde240e06fd2916ea085e3652c11e2428bd432a9",
+    "historical_member_manifest_sha256": "7f7f5273362a9457b022bc9b2b95c75625cdd259b1b1685aeb4b57d41d985e21",
+    "phase25_policy_schema_id": "betelgeuze.engine_v2_phase25_cohort_admission/1.3.0",
+    "phase25_policy_sha256": "b4c5530dc4766500dbbc854875cfb39baadad94196c63be6150514879993d211",
+    "source_commit_git_sha1": "754bebb9ddc2fbffdaca5d4143ff515c3b38c032",
+    "source_receipt_absence_blocks_execution": true,
+    "source_receipt_required_fields": [
+      "case_id",
+      "source_case_member_receipt_sha256",
+      "authenticated_input_receipt_sha256",
+      "receptor_coordinate_sha256",
+      "ligand_coordinate_sha256",
+      "ligand_topology_sha256",
+      "pocket_declaration_sha256",
+      "pocket_radius_angstrom_binary64_hex",
+      "pose_validity_config_fingerprint_sha256",
+      "preparation_policy_sha256",
+      "evaluation_pipeline_sha256",
+      "scorer_native_extension_sha256",
+      "scorer_backend_receipt_sha256",
+      "generator_python_executable_sha256",
+      "generator_python_shared_library_sha256",
+      "generator_libm_sha256",
+      "generator_runtime_fingerprint_sha256"
+    ],
+    "source_receipts_committed": false
+  },
+  "status": "frozen_protocol_only_execution_blocked"
+}
