@@ -287,6 +287,8 @@ trace plus the canonical per-case wall-time and output digests. Primary and
 repeat executions use distinct globally unique run identities, separate timing
 samples, separate GPU traces/summaries, and separate receipts; repeat outputs
 are bound to the repeat receipt rather than accepted as unproven copied fields.
+Requested/observed backend identity and CPU-fallback state are recorded and
+validated independently for each run and bound into the corresponding receipt.
 The repository-pinned result digest binds both receipts, timings, and all
 remaining evidence fields. The speed gate counts only cases that beat the CPU
 reference in both the primary and repeat executions.

@@ -125,7 +125,7 @@ def _load(path: Path) -> dict[str, Any]:
         )
     except HipBenchmarkError:
         raise
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+    except (OSError, UnicodeError, ValueError) as exc:
         raise HipBenchmarkError(f"cannot load {path}: {exc}") from exc
     if type(value) is not dict:
         raise HipBenchmarkError("JSON root must be object")
@@ -1235,6 +1235,8 @@ def _verify_backend(
             "backend_name",
             "observed_backend",
             "cpu_fallback_observed",
+            "repeat_observed_backend",
+            "repeat_cpu_fallback_observed",
             "execution_run_id_sha256",
             "repeat_execution_run_id_sha256",
             "execution_backend_receipt_sha256",
@@ -1268,6 +1270,12 @@ def _verify_backend(
         raise HipBenchmarkError(f"{label}: representative observed backend mismatch")
     if backend["cpu_fallback_observed"] is not False:
         raise HipBenchmarkError(f"{label}: representative CPU fallback observed")
+    if backend["repeat_observed_backend"] != backend_name:
+        raise HipBenchmarkError(
+            f"{label}: repeat representative observed backend mismatch"
+        )
+    if backend["repeat_cpu_fallback_observed"] is not False:
+        raise HipBenchmarkError(f"{label}: repeat representative CPU fallback observed")
     execution_run_id = _sha256(
         backend["execution_run_id_sha256"], f"{label}.execution_run_id_sha256"
     )
@@ -1451,8 +1459,8 @@ def _verify_backend(
     repeat_execution_receipt = _execution_backend_receipt(
         architecture=architecture,
         backend_name=backend_name,
-        observed_backend=backend["observed_backend"],
-        cpu_fallback_observed=backend["cpu_fallback_observed"],
+        observed_backend=backend["repeat_observed_backend"],
+        cpu_fallback_observed=backend["repeat_cpu_fallback_observed"],
         ordered_case_ids=ordered_case_ids,
         run_role="repeat",
         execution_run_id_sha256=repeat_execution_run_id,

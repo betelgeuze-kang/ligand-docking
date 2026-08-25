@@ -229,6 +229,8 @@ def _backend(case_ids: list[str], backend_name: str, architecture: str) -> dict:
         "backend_name": backend_name,
         "observed_backend": backend_name,
         "cpu_fallback_observed": False,
+        "repeat_observed_backend": backend_name,
+        "repeat_cpu_fallback_observed": False,
         "execution_run_id_sha256": VERIFIER._canonical_sha256(
             [architecture, backend_name, "primary"]
         ),
@@ -378,8 +380,16 @@ def _reseal_backend_receipt(
         receipt = VERIFIER._execution_backend_receipt(
             architecture=architecture,
             backend_name=backend["backend_name"],
-            observed_backend=backend["observed_backend"],
-            cpu_fallback_observed=backend["cpu_fallback_observed"],
+            observed_backend=(
+                backend["repeat_observed_backend"]
+                if repeat
+                else backend["observed_backend"]
+            ),
+            cpu_fallback_observed=(
+                backend["repeat_cpu_fallback_observed"]
+                if repeat
+                else backend["cpu_fallback_observed"]
+            ),
             ordered_case_ids=case_ids,
             run_role="repeat" if repeat else "primary",
             execution_run_id_sha256=backend[f"{prefix}execution_run_id_sha256"],
@@ -467,6 +477,19 @@ def test_duplicate_json_key_is_rejected(tmp_path: Path) -> None:
     path = tmp_path / "duplicate.json"
     path.write_text(raw, encoding="utf-8")
     with pytest.raises(VERIFIER.HipBenchmarkError, match="duplicate JSON key"):
+        VERIFIER.verify_profile(path)
+
+
+def test_json_parser_value_error_is_translated_fail_closed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = _save(tmp_path, "profile.json", {})
+
+    def _raise_integer_limit(*_args: object, **_kwargs: object) -> object:
+        raise ValueError("integer string conversion limit exceeded")
+
+    monkeypatch.setattr(VERIFIER.json, "loads", _raise_integer_limit)
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="cannot load.*integer string"):
         VERIFIER.verify_profile(path)
 
 
@@ -1136,6 +1159,16 @@ def test_representative_cpu_fallback_is_rejected(tmp_path: Path) -> None:
     result = _result(profile)
     result["architectures"][0]["backends"]["hip_safe"]["cpu_fallback_observed"] = True
     with pytest.raises(VERIFIER.HipBenchmarkError, match="representative CPU fallback"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
+def test_repeat_representative_cpu_fallback_is_rejected(tmp_path: Path) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    result["architectures"][0]["backends"]["hip_safe"][
+        "repeat_cpu_fallback_observed"
+    ] = True
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="repeat representative CPU"):
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 
