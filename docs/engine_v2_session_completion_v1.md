@@ -254,8 +254,9 @@ repeat, case/context/transfer timing samples, RSS/VRAM, H2D/D2H bytes, complete
 ROCprofiler kernel traces, typed failure probes, and GPU/toolchain/artifact
 identities. The five non-failure discrete digests are recomputed from ordered
 decision, score-order, validity, rank, and cluster structures; the typed-failure
-digest is recomputed from the 64 structured status rows. The newer GPU must be
-in the profile's explicit architecture
+digest is recomputed from the 64 structured status rows. Score order is also
+recomputed from ascending finite score with slot-index tie-breaking. The newer
+GPU must be in the profile's explicit architecture
 allowlist (including alphanumeric targets such as `gfx90a`), and every
 architecture needs a distinct hashed device serial. The verifier derives case
 p50/p95, candidate throughput, transfer
@@ -283,7 +284,8 @@ repeat executions use distinct globally unique run identities, separate timing
 samples, separate GPU traces/summaries, and separate receipts; repeat outputs
 are bound to the repeat receipt rather than accepted as unproven copied fields.
 The repository-pinned result digest binds both receipts, timings, and all
-remaining evidence fields.
+remaining evidence fields. The speed gate counts only cases that beat the CPU
+reference in both the primary and repeat executions.
 GPU profiler evidence contains the complete normalized ordered dispatch
 rows; the verifier recomputes their canonical digest and rejects any per-kernel
 count or runtime summary not derived from those rows. Every ordered case and
@@ -293,6 +295,10 @@ relative-only consistency tolerance, while reported totals are always derived
 from the normalized trace rather than copied from submitted summaries. For each
 case/sample pair, the sum of dispatch runtimes must not exceed its enclosing
 wall-time sample.
+GPU H2D/D2H bytes and timing samples are likewise rederived from normalized,
+ordered memory-copy event traces whose hashes are bound into the corresponding
+primary or repeat execution receipt. Profiler identity requires a parsed
+non-whitespace `rocprofiler-sdk` version suffix.
 Derived sums and medians use overflow-safe finite arithmetic; any non-finite
 derived metric is rejected rather than serialized as `Infinity`.
 

@@ -165,6 +165,55 @@ def _backend(case_ids: list[str], backend_name: str, architecture: str) -> dict:
     repeat_profiler_trace_sha256 = (
         VERIFIER._canonical_sha256(repeat_profiler_trace) if gpu else None
     )
+    transfer_rows = (
+        [
+            {
+                "event_index": event_index,
+                "direction": direction,
+                "bytes": byte_count,
+                "runtime_seconds": runtime,
+            }
+            for event_index, (direction, byte_count, runtime) in enumerate(
+                [
+                    *[("h2d", value, 0.001) for value in [820, 819, 819, 819, 819]],
+                    *[("d2h", value, 0.0005) for value in [412, 409, 409, 409, 409]],
+                ]
+            )
+        ]
+        if gpu
+        else []
+    )
+    transfer_trace = (
+        {
+            "schema_id": VERIFIER.NORMALIZED_TRANSFER_TRACE_SCHEMA,
+            "rows": transfer_rows,
+        }
+        if gpu
+        else None
+    )
+    transfer_trace_sha256 = VERIFIER._canonical_sha256(transfer_trace) if gpu else None
+    repeat_transfer_rows = (
+        [
+            {
+                **row,
+                "runtime_seconds": (0.0011 if row["direction"] == "h2d" else 0.00055),
+            }
+            for row in transfer_rows
+        ]
+        if gpu
+        else []
+    )
+    repeat_transfer_trace = (
+        {
+            "schema_id": VERIFIER.NORMALIZED_TRANSFER_TRACE_SCHEMA,
+            "rows": repeat_transfer_rows,
+        }
+        if gpu
+        else None
+    )
+    repeat_transfer_trace_sha256 = (
+        VERIFIER._canonical_sha256(repeat_transfer_trace) if gpu else None
+    )
     backend = {
         "backend_name": backend_name,
         "observed_backend": backend_name,
@@ -204,6 +253,8 @@ def _backend(case_ids: list[str], backend_name: str, architecture: str) -> dict:
             if gpu
             else []
         ),
+        "transfer_trace": transfer_trace,
+        "transfer_trace_sha256": transfer_trace_sha256,
         "repeat_profiler_trace": repeat_profiler_trace,
         "repeat_profiler_trace_sha256": repeat_profiler_trace_sha256,
         "repeat_kernel_dispatches": (
@@ -219,6 +270,8 @@ def _backend(case_ids: list[str], backend_name: str, architecture: str) -> dict:
             if gpu
             else []
         ),
+        "repeat_transfer_trace": repeat_transfer_trace,
+        "repeat_transfer_trace_sha256": repeat_transfer_trace_sha256,
         "cases": case_rows,
     }
     _reseal_backend_receipt(backend, architecture, case_ids)
@@ -320,6 +373,7 @@ def _reseal_backend_receipt(
             run_role="repeat" if repeat else "primary",
             execution_run_id_sha256=backend[f"{prefix}execution_run_id_sha256"],
             profiler_trace_sha256=backend[f"{prefix}profiler_trace_sha256"],
+            transfer_trace_sha256=backend[f"{prefix}transfer_trace_sha256"],
             cases=backend["cases"],
         )
         backend[f"{prefix}execution_backend_receipt_sha256"] = (
@@ -339,7 +393,7 @@ def test_committed_profile_is_valid_unbound_and_non_authoritative() -> None:
         "verified": True,
         "profile_id": "engine_v2_hip_d1_representative_v1",
         "profile_sha256": (
-            "1fae981689e6c0e9f359baaa966b0f6471714a42be4adf805e43f775c637f450"
+            "f88733b34898ef8b60d81c7cbb099cc0991001b30a4fed7693cdd27de72eb162"
         ),
         "manifest_bound": False,
         "result_verification_authorized": False,
@@ -381,6 +435,8 @@ def test_valid_bound_result_derives_metrics_without_authority(tmp_path: Path) ->
     assert output["candidate_denominator"] == 64
     metrics = output["derived_metrics"]["gfx1030"]
     assert metrics["hip_fast_speed_gate_passing_case_count"] == 32
+    assert metrics["hip_fast_primary_speed_gate_passing_case_count"] == 32
+    assert metrics["hip_fast_repeat_speed_gate_passing_case_count"] == 32
     assert metrics["rust_cpu"]["context_construction_seconds_p50"] == 0.02
     assert metrics["rust_cpu"]["case_wall_time_seconds_p50"] == 0.1
     assert metrics["rust_cpu"]["case_wall_time_seconds_p95"] == 0.1
@@ -648,6 +704,18 @@ def test_numerical_parity_tolerance_is_enforced(tmp_path: Path) -> None:
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 
+def test_score_order_is_derived_from_scientific_scores(tmp_path: Path) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    case = result["architectures"][0]["backends"]["hip_safe"]["cases"][0]
+    case["scientific_values"][0] = 100.0
+    case["scientific_values"][3] = -100.0
+    case["repeat_scientific_values"][0] = 100.0
+    case["repeat_scientific_values"][3] = -100.0
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="score order/scientific"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
 def test_cross_architecture_cpu_parity_is_enforced(tmp_path: Path) -> None:
     profile_path, profile = _bound_profile(tmp_path)
     result = _result(profile)
@@ -722,6 +790,14 @@ def test_device_and_toolchain_identity_are_required(tmp_path: Path) -> None:
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 
+def test_profiler_identity_requires_version_suffix(tmp_path: Path) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    result["architectures"][0]["profiler_version"] = "rocprofiler-sdk "
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="profiler identity"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
 def test_cpu_reference_execution_identity_is_required(tmp_path: Path) -> None:
     profile_path, profile = _bound_profile(tmp_path)
     result = _result(profile)
@@ -736,6 +812,28 @@ def test_gpu_resource_accounting_is_required(tmp_path: Path, field: str) -> None
     result = _result(profile)
     result["architectures"][0]["backends"]["hip_safe"][field] = 0
     with pytest.raises(VERIFIER.HipBenchmarkError, match="transfer/VRAM"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
+def test_transfer_summary_is_derived_from_normalized_trace(tmp_path: Path) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    result["architectures"][0]["backends"]["hip_safe"]["h2d_bytes"] += 1
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="transfer summary/trace"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
+def test_transfer_trace_is_bound_to_execution_receipt(tmp_path: Path) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    backend = result["architectures"][0]["backends"]["hip_safe"]
+    backend["transfer_trace"]["rows"][0]["bytes"] += 1
+    backend["transfer_trace_sha256"] = VERIFIER._canonical_sha256(
+        backend["transfer_trace"]
+    )
+    backend["h2d_bytes"] += 1
+    _seal_and_authorize_result(result)
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="backend receipt mismatch"):
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 
@@ -1022,6 +1120,21 @@ def test_predeclared_speed_gate_is_enforced(tmp_path: Path) -> None:
         )
     _seal_and_authorize_result(result)
     with pytest.raises(VERIFIER.HipBenchmarkError, match="speed gate"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
+def test_repeat_speed_gate_is_enforced(tmp_path: Path) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    for architecture in result["architectures"]:
+        backend = architecture["backends"]["hip_fast"]
+        for case in backend["cases"]:
+            case["repeat_wall_time_seconds"] = [10.0] * 5
+        _reseal_backend_receipt(
+            backend, architecture["gpu_architecture"], result["ordered_case_ids"]
+        )
+    _seal_and_authorize_result(result)
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="replicated.*speed gate"):
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 

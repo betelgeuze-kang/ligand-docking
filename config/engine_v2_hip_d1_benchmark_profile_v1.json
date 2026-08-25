@@ -47,6 +47,7 @@
       "final_rmsd_angstrom"
     ],
     "scientific_vector_order": "slot_major_field_order",
+    "score_order_policy": "ascending_score_then_slot_index",
     "absolute_tolerance": 1e-10,
     "relative_tolerance": 4e-12,
     "nonfinite_values_allowed": false,
@@ -76,6 +77,7 @@
     ],
     "cpu_fallback_forbidden": true,
     "normalized_trace_schema": "betelgeuze.engine_v2_rocprofiler_normalized_dispatch_trace/1.0.0",
+    "normalized_transfer_trace_schema": "betelgeuze.engine_v2_hip_normalized_transfer_trace/1.0.0",
     "cpu_reference_identity_required": true
   },
   "performance_gate": {
@@ -104,5 +106,5 @@
     "fresh128_authorized": false,
     "stage0_authorized": false
   },
-  "profile_sha256": "1fae981689e6c0e9f359baaa966b0f6471714a42be4adf805e43f775c637f450"
+  "profile_sha256": "f88733b34898ef8b60d81c7cbb099cc0991001b30a4fed7693cdd27de72eb162"
 }

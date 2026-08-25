@@ -22,6 +22,9 @@ CASE_ID_RE = re.compile(r"^[A-Za-z0-9_.:-]{1,128}$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 GPU_ARCHITECTURE_RE = re.compile(r"^gfx[0-9a-z]{2,8}$")
 PCI_DEVICE_ID_RE = re.compile(r"^[0-9a-f]{4}:[0-9a-f]{4}$")
+ROCPROFILER_VERSION_RE = re.compile(
+    r"^rocprofiler-sdk [0-9]+(?:\.[0-9]+){1,3}(?:[-+][A-Za-z0-9.-]+)?$"
+)
 REQUIRED_BACKENDS = ("rust_cpu", "hip_safe", "hip_fast")
 PARITY_DIGEST_FIELDS = (
     "decision_sha256",
@@ -92,6 +95,9 @@ EXECUTION_BACKEND_RECEIPT_SCHEMA = (
 )
 NORMALIZED_PROFILER_TRACE_SCHEMA = (
     "betelgeuze.engine_v2_rocprofiler_normalized_dispatch_trace/1.0.0"
+)
+NORMALIZED_TRANSFER_TRACE_SCHEMA = (
+    "betelgeuze.engine_v2_hip_normalized_transfer_trace/1.0.0"
 )
 # Intentionally empty until an owner-reviewed successor pins exact artifacts.
 AUTHORIZED_BOUND_PROFILE_SHA256S: frozenset[str] = frozenset()
@@ -282,6 +288,7 @@ def _verify_profile_document(profile: dict[str, Any]) -> dict[str, Any]:
             "derived_discrete_fields",
             "scientific_fields",
             "scientific_vector_order",
+            "score_order_policy",
             "absolute_tolerance",
             "relative_tolerance",
             "nonfinite_values_allowed",
@@ -302,6 +309,8 @@ def _verify_profile_document(profile: dict[str, Any]) -> dict[str, Any]:
     _exact_list(parity["scientific_fields"], SCIENTIFIC_FIELDS, "scientific field")
     if parity["scientific_vector_order"] != "slot_major_field_order":
         raise HipBenchmarkError("scientific vector ordering changed")
+    if parity["score_order_policy"] != "ascending_score_then_slot_index":
+        raise HipBenchmarkError("score order policy changed")
     if (
         parity["typed_failure_scientific_value_encoding"]
         != "json_null_for_complete_slot_triple"
@@ -368,6 +377,7 @@ def _verify_profile_document(profile: dict[str, Any]) -> dict[str, Any]:
             "failure_probe_codes",
             "cpu_fallback_forbidden",
             "normalized_trace_schema",
+            "normalized_transfer_trace_schema",
             "cpu_reference_identity_required",
         },
         "profile.profiling",
@@ -386,6 +396,11 @@ def _verify_profile_document(profile: dict[str, Any]) -> dict[str, Any]:
     _exact_list(profiling["failure_probe_codes"], FAILURE_PROBE_CODES, "failure probe")
     if profiling["normalized_trace_schema"] != NORMALIZED_PROFILER_TRACE_SCHEMA:
         raise HipBenchmarkError("normalized profiler trace schema changed")
+    if (
+        profiling["normalized_transfer_trace_schema"]
+        != NORMALIZED_TRANSFER_TRACE_SCHEMA
+    ):
+        raise HipBenchmarkError("normalized transfer trace schema changed")
 
     gate = _exact_keys(
         profile["performance_gate"],
@@ -823,18 +838,48 @@ def _verify_case(
         f"{label}.repeat",
         scientific_length,
     )
-    if scientific != repeat_scientific:
-        raise HipBenchmarkError(f"{label}: repeat scientific stability")
     for slot_index, status in enumerate(statuses):
         start = slot_index * len(SCIENTIFIC_FIELDS)
-        has_null_triple = all(
+        primary_null = all(
             value is None
             for value in scientific[start : start + len(SCIENTIFIC_FIELDS)]
         )
-        if has_null_triple != (status["status"] == "typed_failure"):
+        repeat_null = all(
+            value is None
+            for value in repeat_scientific[start : start + len(SCIENTIFIC_FIELDS)]
+        )
+        typed_failure = status["status"] == "typed_failure"
+        if primary_null != typed_failure or repeat_null != typed_failure:
             raise HipBenchmarkError(
                 f"{label}: scientific/status mismatch at slot {slot_index}"
             )
+    scored_slots = [
+        slot_index
+        for slot_index, status in enumerate(statuses)
+        if status["status"] == "scored"
+    ]
+    expected_score_order = sorted(
+        scored_slots,
+        key=lambda slot_index: (
+            scientific[slot_index * len(SCIENTIFIC_FIELDS)],
+            slot_index,
+        ),
+    )
+    repeat_expected_score_order = sorted(
+        scored_slots,
+        key=lambda slot_index: (
+            repeat_scientific[slot_index * len(SCIENTIFIC_FIELDS)],
+            slot_index,
+        ),
+    )
+    if discrete_outputs["score_order"] != expected_score_order:
+        raise HipBenchmarkError(f"{label}: score order/scientific score mismatch")
+    if repeat_discrete_outputs["score_order"] != repeat_expected_score_order:
+        raise HipBenchmarkError(
+            f"{label}: repeat score order/scientific score mismatch"
+        )
+    if scientific != repeat_scientific:
+        raise HipBenchmarkError(f"{label}: repeat scientific stability")
     wall_times = _samples(
         case["wall_time_seconds"],
         f"{label}.wall_time_seconds",
@@ -978,6 +1023,64 @@ def _verify_profiler_trace(
     return dispatch_total, runtime_total, trace_sha256
 
 
+def _verify_transfer_trace(
+    trace_value: Any,
+    trace_sha256_value: Any,
+    label: str,
+    minimum_samples: int,
+) -> tuple[int, int, list[float], list[float], str]:
+    trace = _exact_keys(trace_value, {"schema_id", "rows"}, f"{label}.transfer_trace")
+    if trace["schema_id"] != NORMALIZED_TRANSFER_TRACE_SCHEMA:
+        raise HipBenchmarkError(f"{label}: transfer trace schema")
+    rows = trace["rows"]
+    if type(rows) is not list or not rows:
+        raise HipBenchmarkError(f"{label}: complete transfer trace required")
+    bytes_by_direction: dict[str, list[int]] = {"h2d": [], "d2h": []}
+    timings_by_direction: dict[str, list[float]] = {"h2d": [], "d2h": []}
+    for index, raw_row in enumerate(rows):
+        row = _exact_keys(
+            raw_row,
+            {"event_index", "direction", "bytes", "runtime_seconds"},
+            f"{label}.transfer_trace.rows[{index}]",
+        )
+        if type(row["event_index"]) is not int or row["event_index"] != index:
+            raise HipBenchmarkError(f"{label}: transfer event ordering")
+        direction = _nonempty_string(
+            row["direction"], f"{label}.transfer_trace.direction"
+        )
+        if direction not in bytes_by_direction:
+            raise HipBenchmarkError(f"{label}: transfer direction")
+        bytes_by_direction[direction].append(
+            _integer(
+                row["bytes"],
+                f"{label}.transfer_trace.rows[{index}].bytes",
+                minimum=1,
+            )
+        )
+        timings_by_direction[direction].append(
+            _finite(
+                row["runtime_seconds"],
+                f"{label}.transfer_trace.rows[{index}].runtime_seconds",
+                positive=True,
+            )
+        )
+    if any(
+        len(timings_by_direction[direction]) < minimum_samples
+        for direction in ("h2d", "d2h")
+    ):
+        raise HipBenchmarkError(f"{label}: insufficient transfer trace samples")
+    trace_sha256 = _sha256(trace_sha256_value, f"{label}.transfer_trace_sha256")
+    if trace_sha256 != _canonical_sha256(trace):
+        raise HipBenchmarkError(f"{label}: transfer trace SHA-256 mismatch")
+    return (
+        sum(bytes_by_direction["h2d"]),
+        sum(bytes_by_direction["d2h"]),
+        timings_by_direction["h2d"],
+        timings_by_direction["d2h"],
+        trace_sha256,
+    )
+
+
 def _case_run_outputs_sha256(cases: list[dict[str, Any]], *, repeat: bool) -> str:
     prefix = "repeat_" if repeat else ""
     return _canonical_sha256(
@@ -1021,6 +1124,7 @@ def _execution_backend_receipt(
     run_role: str,
     execution_run_id_sha256: str,
     profiler_trace_sha256: str | None,
+    transfer_trace_sha256: str | None,
     cases: list[dict[str, Any]],
 ) -> dict[str, Any]:
     repeat = run_role == "repeat"
@@ -1034,6 +1138,7 @@ def _execution_backend_receipt(
         "run_role": run_role,
         "execution_run_id_sha256": execution_run_id_sha256,
         "profiler_trace_sha256": profiler_trace_sha256,
+        "transfer_trace_sha256": transfer_trace_sha256,
         "case_timing_samples_sha256": _case_run_timings_sha256(cases, repeat=repeat),
         "case_outputs_sha256": _case_run_outputs_sha256(cases, repeat=repeat),
     }
@@ -1075,9 +1180,13 @@ def _verify_backend(
             "profiler_trace",
             "profiler_trace_sha256",
             "kernel_dispatches",
+            "transfer_trace",
+            "transfer_trace_sha256",
             "repeat_profiler_trace",
             "repeat_profiler_trace_sha256",
             "repeat_kernel_dispatches",
+            "repeat_transfer_trace",
+            "repeat_transfer_trace_sha256",
             "cases",
         },
         label,
@@ -1149,6 +1258,10 @@ def _verify_backend(
             or backend["profiler_trace_sha256"] is not None
             or backend["repeat_profiler_trace"] is not None
             or backend["repeat_profiler_trace_sha256"] is not None
+            or backend["transfer_trace"] is not None
+            or backend["transfer_trace_sha256"] is not None
+            or backend["repeat_transfer_trace"] is not None
+            or backend["repeat_transfer_trace_sha256"] is not None
         ):
             raise HipBenchmarkError(f"{label}: CPU profiler/transfer evidence")
         if (
@@ -1160,6 +1273,8 @@ def _verify_backend(
         kernel_dispatch_total = 0
         profiler_trace_sha256 = None
         repeat_profiler_trace_sha256 = None
+        transfer_trace_sha256 = None
+        repeat_transfer_trace_sha256 = None
     else:
         if peak_vram <= 0 or h2d_bytes <= 0 or d2h_bytes <= 0:
             raise HipBenchmarkError(f"{label}: missing GPU transfer/VRAM accounting")
@@ -1175,6 +1290,31 @@ def _verify_backend(
         )
         profiler_trace_sha256 = None
         repeat_profiler_trace_sha256 = None
+        (
+            trace_h2d_bytes,
+            trace_d2h_bytes,
+            trace_h2d_samples,
+            trace_d2h_samples,
+            transfer_trace_sha256,
+        ) = _verify_transfer_trace(
+            backend["transfer_trace"],
+            backend["transfer_trace_sha256"],
+            label,
+            sampling["minimum_transfer_samples"],
+        )
+        if (
+            h2d_bytes != trace_h2d_bytes
+            or d2h_bytes != trace_d2h_bytes
+            or h2d_samples != trace_h2d_samples
+            or d2h_samples != trace_d2h_samples
+        ):
+            raise HipBenchmarkError(f"{label}: transfer summary/trace mismatch")
+        *_, repeat_transfer_trace_sha256 = _verify_transfer_trace(
+            backend["repeat_transfer_trace"],
+            backend["repeat_transfer_trace_sha256"],
+            f"{label}/repeat",
+            sampling["minimum_transfer_samples"],
+        )
 
     cases_raw = backend["cases"]
     if type(cases_raw) is not list or len(cases_raw) != len(ordered_case_ids):
@@ -1225,6 +1365,7 @@ def _verify_backend(
         run_role="primary",
         execution_run_id_sha256=execution_run_id,
         profiler_trace_sha256=profiler_trace_sha256,
+        transfer_trace_sha256=transfer_trace_sha256,
         cases=cases,
     )
     if _sha256(
@@ -1241,6 +1382,7 @@ def _verify_backend(
         run_role="repeat",
         execution_run_id_sha256=repeat_execution_run_id,
         profiler_trace_sha256=repeat_profiler_trace_sha256,
+        transfer_trace_sha256=repeat_transfer_trace_sha256,
         cases=cases,
     )
     if _sha256(
@@ -1457,7 +1599,7 @@ def verify(profile_path: Path, result_path: Path) -> dict[str, Any]:
         )
         if PCI_DEVICE_ID_RE.fullmatch(pci_device_id) is None:
             raise HipBenchmarkError(f"{architecture_name}: invalid PCI device ID")
-        if not architecture["profiler_version"].startswith("rocprofiler-sdk "):
+        if ROCPROFILER_VERSION_RE.fullmatch(architecture["profiler_version"]) is None:
             raise HipBenchmarkError(f"{architecture_name}: profiler identity")
         device_serial_sha256 = _sha256(
             architecture["device_serial_sha256"],
@@ -1533,15 +1675,32 @@ def verify(profile_path: Path, result_path: Path) -> dict[str, Any]:
                     absolute_tolerance=absolute_tolerance,
                     relative_tolerance=relative_tolerance,
                 )
-        passing_cases = sum(
-            _median(fast["wall_time_seconds"], "hip_fast.speed_gate")
-            < _median(cpu["wall_time_seconds"], "rust_cpu.speed_gate")
+        primary_gate_results = [
+            _median(fast["wall_time_seconds"], "hip_fast.speed_gate.primary")
+            < _median(cpu["wall_time_seconds"], "rust_cpu.speed_gate.primary")
             for cpu, fast in zip(cpu_cases, verified_backends["hip_fast"], strict=True)
+        ]
+        repeat_gate_results = [
+            _median(fast["repeat_wall_time_seconds"], "hip_fast.speed_gate.repeat")
+            < _median(cpu["repeat_wall_time_seconds"], "rust_cpu.speed_gate.repeat")
+            for cpu, fast in zip(cpu_cases, verified_backends["hip_fast"], strict=True)
+        ]
+        passing_cases = sum(
+            primary and repeat
+            for primary, repeat in zip(
+                primary_gate_results, repeat_gate_results, strict=True
+            )
         )
         if passing_cases < profile["performance_gate"]["minimum_passing_case_count"]:
             raise HipBenchmarkError(
-                f"{architecture_name}: predeclared hip_fast speed gate"
+                f"{architecture_name}: replicated predeclared hip_fast speed gate"
             )
+        architecture_metrics["hip_fast_primary_speed_gate_passing_case_count"] = sum(
+            primary_gate_results
+        )
+        architecture_metrics["hip_fast_repeat_speed_gate_passing_case_count"] = sum(
+            repeat_gate_results
+        )
         architecture_metrics["hip_fast_speed_gate_passing_case_count"] = passing_cases
         derived_metrics[architecture_name] = architecture_metrics
 
