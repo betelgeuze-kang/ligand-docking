@@ -227,14 +227,34 @@ and remaining scientific boundaries.
 
 ```bash
 python tools/verify_engine_v2_hip_d1_benchmark_v1.py \
-  --profile config/engine_v2_hip_d1_benchmark_profile_v1.json \
-  --result /absolute/hip-d1-result.json
+  --profile config/engine_v2_hip_d1_benchmark_profile_v1.json
 ```
 
-A valid result needs at least two distinct AMD GPU architectures and complete
-`rust_cpu`, `hip_safe`, and `hip_fast` case sets with exact decision, failure,
-and rank parity plus bounded numerical parity. The verifier does not run a GPU
-or authorize acceleration claims.
+This verifies the committed 1.1 profile and its self-hash only. The profile is
+deliberately `frozen_non_authoritative_manifest_not_bound`; passing `--result`
+is rejected until an owner-controlled successor binds the exact private D1
+manifest SHA-256 and reseals the profile. Profile verification does not
+authorize D1 materialization, molecular execution, or HIP-device execution.
+
+Once those external prerequisites and authorization exist, the same command
+accepts `--result /absolute/hip-d1-result.json`. A valid result must retain the
+ordered 32-case, 64-candidate cohort on `rust_cpu`, `hip_safe`, and `hip_fast`
+for `gfx1030` and at least one newer architecture. It records six exact parity
+digests (decision, typed failure, score order, validity, rank, and clustering),
+all 192 slot-major score/proposal-RMSD/final-RMSD positions per case, a stable
+repeat, case/context/transfer timing samples, RSS/VRAM, H2D/D2H bytes, complete
+ROCprofiler kernel traces, typed failure probes, and GPU/toolchain/artifact
+identities. The verifier derives case p50/p95, candidate throughput, transfer
+p50, context p50, kernel totals, and the predeclared strict `hip_fast` median
+gate. CPU fallback, denominator deletion, non-finite values, evidence field
+drift, or any execution/scientific/benchmark/product authority is rejected.
+Each candidate's scientific triple must be entirely finite or entirely JSON
+`null` for a typed failure; partial triples and non-finite numbers are rejected,
+so failures remain in the 64-slot denominator.
+
+The verifier only checks supplied evidence. It never runs a GPU and a passing
+artifact still grants no acceleration, scientific, benchmark, or product
+claim authority.
 
 ## Maintenance tools
 

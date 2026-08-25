@@ -1,16 +1,82 @@
 {
-  "schema_id": "betelgeuze.engine_v2_hip_d1_benchmark_profile/1.0.0",
+  "schema_id": "betelgeuze.engine_v2_hip_d1_benchmark_profile/1.1.0",
   "profile_id": "engine_v2_hip_d1_representative_v1",
+  "status": "frozen_non_authoritative_manifest_not_bound",
+  "expected_manifest_sha256": null,
   "case_count": 32,
   "candidate_denominator": 64,
   "required_backends": ["rust_cpu", "hip_safe", "hip_fast"],
-  "numeric_absolute_tolerance": 1e-10,
-  "minimum_samples_per_case": 5,
   "required_architecture_count": 2,
+  "baseline_gpu_architecture": "gfx1030",
+  "newer_gpu_architecture_required": true,
+  "parity": {
+    "digest_fields": [
+      "decision_sha256",
+      "typed_failure_sha256",
+      "score_order_sha256",
+      "validity_sha256",
+      "rank_sha256",
+      "cluster_sha256"
+    ],
+    "scientific_fields": [
+      "score",
+      "proposal_rmsd_angstrom",
+      "final_rmsd_angstrom"
+    ],
+    "scientific_vector_order": "slot_major_field_order",
+    "absolute_tolerance": 1e-10,
+    "relative_tolerance": 4e-12,
+    "nonfinite_values_allowed": false,
+    "typed_failure_scientific_value_encoding": "json_null_for_complete_slot_triple",
+    "no_denominator_deletion": true,
+    "repeat_stability_required": true,
+    "cpu_cross_architecture_parity_required": true
+  },
+  "sampling": {
+    "minimum_case_samples": 5,
+    "minimum_context_samples": 5,
+    "minimum_transfer_samples": 5,
+    "p50_method": "median",
+    "p95_method": "nearest_rank_95"
+  },
+  "profiling": {
+    "profiler": "rocprofiler-sdk",
+    "kernel_dispatch_trace_required": true,
+    "transfer_accounting_required": true,
+    "failure_probes_required": true,
+    "failure_probe_codes": [
+      "backend_unavailable",
+      "device_oom",
+      "execution_timeout",
+      "numeric_overflow"
+    ],
+    "cpu_fallback_forbidden": true
+  },
+  "performance_gate": {
+    "reference_backend": "rust_cpu",
+    "candidate_backend": "hip_fast",
+    "statistic": "per_case_median_wall_time_seconds",
+    "maximum_ratio_numerator": 1,
+    "maximum_ratio_denominator": 1,
+    "strictly_less_than_ratio": true,
+    "minimum_passing_case_count": 1
+  },
+  "blockers": [
+    "d1_manifest_not_materialized",
+    "hip_device_evidence_not_supplied",
+    "hip_device_execution_not_authorized"
+  ],
   "authority": {
+    "device_execution_authorized": false,
     "gpu_acceleration_claim_authorized": false,
     "scientific_claim_authorized": false,
     "benchmark_claim_authorized": false,
-    "product_authorized": false
-  }
+    "product_authorized": false,
+    "production_authorized": false,
+    "reservation_authorized": false,
+    "molecular_ab_authorized": false,
+    "fresh128_authorized": false,
+    "stage0_authorized": false
+  },
+  "profile_sha256": "223e1256ad4d4235ba15680b8c8ec5aab4721288f1b6e5dac49f71f5ee958eea"
 }
