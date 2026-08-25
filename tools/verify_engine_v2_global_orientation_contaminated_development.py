@@ -48,12 +48,19 @@ UNCOVERED_CASE_IDS = (
 )
 SOURCE_RECEIPT_FIELDS = (
     "case_id",
+    "historical_case_source",
+    "historical_case_source_receipt_sha256",
+    "historical_archive_sha256",
+    "historical_member_manifest_sha256",
+    "historical_bundle_checksum_sha256",
     "source_case_member_receipt_sha256",
     "authenticated_input_receipt_sha256",
     "receptor_coordinate_sha256",
     "ligand_coordinate_sha256",
     "ligand_topology_sha256",
     "pocket_declaration_sha256",
+    "pocket_center_binary64_hex",
+    "pocket_normal_binary64_hex",
     "pocket_radius_angstrom_binary64_hex",
     "pose_validity_config_fingerprint_sha256",
     "preparation_policy_sha256",
@@ -362,7 +369,7 @@ def _verify_preimport_source_bindings(protocol: Mapping[str, Any]) -> None:
     )
     _exact(
         scorer_manifest.get("python_transitive_source_manifest_sha256"),
-        "8dde61047e5b4cd503a84555e8767e07bb95d5382273732e2348ca42b7c1bb02",
+        "6724302c961b290ad59d4f83bb2d942003dbdad2485b9245fb3d5c3cd27b942c",
         name="pre-import ScorerV1 source identity",
     )
     _exact(
@@ -646,7 +653,7 @@ def _verify_authority_bindings(
             "aa7cd89dba16edb36da033bace57804b9ee851997a400c9d468e61ccefdd0159"
         ),
         "python_transitive_source_manifest_sha256": (
-            "8dde61047e5b4cd503a84555e8767e07bb95d5382273732e2348ca42b7c1bb02"
+            "6724302c961b290ad59d4f83bb2d942003dbdad2485b9245fb3d5c3cd27b942c"
         ),
         "python_transitive_source_scope": SCORER_PYTHON_SOURCE_SCOPE,
     }
@@ -662,7 +669,7 @@ def _verify_authority_bindings(
             ),
             "implementation_manifest": implementation_manifest,
             "implementation_source_sha256": (
-                "e82097d6e9dd7fb768d6ebf2afe3f51edd0741b1c755858718dc763973c96a67"
+                "92dc494f02a6c772b89efa949e3af03868390dbfbe391662c846afc1599ed3f9"
             ),
             "native_runtime_artifact_contract": native_runtime_artifact_contract,
             "terms_schema_id": "betelgeuze.engine_v2_scorer_v1_terms/1.1.0",
@@ -864,6 +871,9 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
         "observation_slot_receipt_schema_id": (
             "betelgeuze.engine_v2_global_orientation_development_observation_slot/1.0.0"
         ),
+        "partial_evidence_schema_id": (
+            "betelgeuze.engine_v2_global_orientation_development_partial_evidence/1.0.0"
+        ),
         "arm_observations_receipt_schema_id": (
             "betelgeuze.engine_v2_global_orientation_development_arm_observations/1.0.0"
         ),
@@ -871,7 +881,7 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
             "betelgeuze_engine_v2/benchmark/global_orientation_development_contracts.py"
         ),
         "development_evidence_contract_module_sha256": (
-            "6c2b15a78bbc88fde4341de9b8b31cd4a133b03725714566526c946f37440f6d"
+            "73baae9e409fb0e708ac6954639f7be040f093ba06aad5a409452528d422590b"
         ),
         "contract_types_implemented": True,
         "exact_case_source_receipt_required": True,

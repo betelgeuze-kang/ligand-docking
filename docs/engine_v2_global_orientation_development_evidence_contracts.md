@@ -17,13 +17,17 @@ authority false.
 `GlobalOrientationDevelopmentCaseSourceReceiptV1` is limited to the eight scored
 members of the fixed historical cohort. It retains:
 
-- the archive-member and authenticated-input receipt identities;
+- the exact authenticated historical case-source receipt, including its frozen
+  archive member, native pose, receptor artifact, and current-V7 lineage;
+- the pinned historical archive, member-manifest, and bundle identities;
 - complete receptor and ligand coordinates with canonical binary64 identities;
 - ligand topology, pocket declaration, and preparation-policy identities;
-- the exact pocket center, normal, and binary64 radius;
+- the exact pocket center, normalized normal, and binary64 radius, with the
+  pocket declaration identity rederived over that geometry and historical case;
 - the validity-config fingerprint independently rederived from that radius and
   the immutable public-redocking validity fields;
-- evaluation-pipeline, native-extension, and scorer-backend receipt identities;
+- the frozen evaluation-pipeline identity plus native-extension and
+  scorer-backend receipt identities;
 - Python executable, Python shared library, and `libm` payload identities plus
   their independently rederived combined runtime fingerprint; and
 - a canonical ordered receptor atom-index projection whose surface points are
@@ -51,9 +55,11 @@ experimental_global_orientation_v1
 Each `GlobalOrientationDevelopmentLineageSlotV1` is either `generated`, with
 proposal, coordinate, and generation-receipt identities, or `failed`, with only
 a typed generation failure. Cross-case, cross-arm, reordered, duplicate, short,
-or overlong lineages fail closed. The arm-level authority digest binds the exact
-baseline lineage authority or experimental generator batch outside the slot
-rows.
+or overlong lineages fail closed. A digest alone is not accepted: the baseline
+arm must own the exact `SourcePairedClearanceCurrentV7LineageReceiptV1`, while
+the experimental arm must own the exact `GlobalOrientationBatch`. Every slot is
+rederived from that concrete authority receipt, including generated/failed
+state, proposal and coordinate identity, generation receipt, and failure code.
 
 ## Failure-complete observations
 
@@ -67,17 +73,22 @@ Score, validity, and RMSD have separate explicit state machines:
 - validity: `evaluated` or `not_evaluated`; and
 - RMSD: `evaluated` or `not_evaluated`.
 
-A successful slot requires the exact full
+A fully successful slot requires the exact full
 `SourcePairedClearanceCandidateEvidenceV1` object, including complete ScorerV1
 terms, internal validity checks, PoseBusters check map, and RMSD evidence; receipt
-digests alone are not accepted. Every other state requires a typed failure. A
-failed generation cannot carry downstream evidence. Missing values therefore
-remain observations rather than disappearing from the denominator or becoming
-invented finite values.
+digests alone are not accepted. If scoring succeeds but a later evaluator fails,
+`GlobalOrientationDevelopmentPartialCandidateEvidenceV1` retains every completed
+stage and its raw-score rank alongside a typed failure; it cannot be collapsed
+to an invented `unscored` row. A failed generation cannot carry downstream
+evidence. Missing values therefore remain observations rather than disappearing
+from the denominator or becoming invented finite values.
 
 `GlobalOrientationDevelopmentArmObservationsV1` requires a one-to-one binding
-between all 64 lineage slots and all 64 observations. It reports generated,
-scored, and unscored counts without evaluating the frozen Go/No-Go criteria.
+between all 64 lineage slots and all 64 observations. It checks candidate scorer,
+validity, PoseBusters, RMSD, native-pose, receptor, and authenticated-input fields
+against the case and frozen evaluator bindings. Raw score ranks are independently
+rederived from `(total_score, proposal_index)`. It reports generated, scored, and
+unscored counts without evaluating the frozen Go/No-Go criteria.
 
 ## Remaining boundary
 

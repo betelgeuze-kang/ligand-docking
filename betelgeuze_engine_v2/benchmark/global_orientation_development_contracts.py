@@ -15,8 +15,15 @@ import re
 from typing import Iterable, Sequence
 
 from .source_paired_clearance_activation import (
+    SourcePairedClearanceCaseSourceReceiptV1,
     SourcePairedClearanceCandidateEvidenceV1,
+    SourcePairedClearanceCurrentV7LineageReceiptV1,
+    SourcePairedClearanceInternalValidityEvidenceV1,
+    SourcePairedClearancePoseBustersEvidenceV1,
+    SourcePairedClearanceRmsdEvidenceV1,
 )
+from betelgeuze_engine_v2.docking import ScorerV1Terms
+from betelgeuze_engine_v2.docking.global_orientation import GlobalOrientationBatch
 
 
 GLOBAL_ORIENTATION_DEVELOPMENT_CASE_SOURCE_SCHEMA_ID = (
@@ -33,6 +40,9 @@ GLOBAL_ORIENTATION_DEVELOPMENT_ARM_LINEAGE_SCHEMA_ID = (
 )
 GLOBAL_ORIENTATION_DEVELOPMENT_OBSERVATION_SLOT_SCHEMA_ID = (
     "betelgeuze.engine_v2_global_orientation_development_observation_slot/1.0.0"
+)
+GLOBAL_ORIENTATION_DEVELOPMENT_PARTIAL_EVIDENCE_SCHEMA_ID = (
+    "betelgeuze.engine_v2_global_orientation_development_partial_evidence/1.0.0"
 )
 GLOBAL_ORIENTATION_DEVELOPMENT_ARM_OBSERVATIONS_SCHEMA_ID = (
     "betelgeuze.engine_v2_global_orientation_development_arm_observations/1.0.0"
@@ -62,6 +72,36 @@ GLOBAL_ORIENTATION_DEVELOPMENT_PREPARATION_FAILURE_CASE_ID = "6M73_FNR"
 GLOBAL_ORIENTATION_DEVELOPMENT_ARM_IDS = (
     "baseline_current_v7",
     "experimental_global_orientation_v1",
+)
+GLOBAL_ORIENTATION_HISTORICAL_ARCHIVE_SHA256 = (
+    "8bef33eba296989b795a11fd05a7e119124b066d91bec28a8b910d38a083fbcc"
+)
+GLOBAL_ORIENTATION_HISTORICAL_MEMBER_MANIFEST_SHA256 = (
+    "7f7f5273362a9457b022bc9b2b95c75625cdd259b1b1685aeb4b57d41d985e21"
+)
+GLOBAL_ORIENTATION_HISTORICAL_BUNDLE_CHECKSUM_SHA256 = (
+    "6ee04e23e01a73bb643bb4d1fde240e06fd2916ea085e3652c11e2428bd432a9"
+)
+GLOBAL_ORIENTATION_EXPECTED_EVALUATION_PIPELINE_SHA256 = (
+    "40530119249b792728a70cb5ba65cc9c60cf834e1a744d6987dae75046459922"
+)
+GLOBAL_ORIENTATION_SCORER_CONFIG_SHA256 = (
+    "f6592bb681ae1dfad2700291013e04a239c5961687386582ac7c009c5a7de783"
+)
+GLOBAL_ORIENTATION_INTERNAL_VALIDITY_IMPLEMENTATION_SHA256 = (
+    "5b1263ddf83deee0c46142be9e8d973bc9af6710d197f20451ab4d5ee996a619"
+)
+GLOBAL_ORIENTATION_POSEBUSTERS_IMPLEMENTATION_SHA256 = (
+    "a6d1437d0eb3e0fe13ad73b5c4efdc8c0914ceadd904cde55b2a9835bf591a9d"
+)
+GLOBAL_ORIENTATION_POSEBUSTERS_CONFIG_SHA256 = (
+    "1e2013837fc3fbb3334ff5b2e94f029c65f1203f2a2a2abbd7f7d01c008c5533"
+)
+GLOBAL_ORIENTATION_RMSD_ATOM_MAPPING_SHA256 = (
+    "0ab5a381924ae5a4ab08ca0dd6a0af58b8637d83927c88f04c8c82b2d7ce328c"
+)
+GLOBAL_ORIENTATION_RMSD_SYMMETRY_POLICY_SHA256 = (
+    "e29f135b0809fd4fc417899ceaff71b766beb939291a52af06435957e4da833b"
 )
 MAX_SOURCE_ATOMS = 1_000_000
 _DIGEST_RE = re.compile(r"[0-9a-f]{64}")
@@ -173,6 +213,48 @@ def derive_global_orientation_source_coordinates_sha256(
     )
 
 
+def derive_global_orientation_pocket_declaration_sha256(
+    *,
+    case_id: str,
+    historical_case_source_receipt_sha256: str,
+    pocket_center: Sequence[float],
+    pocket_normal: Sequence[float],
+    pocket_radius_angstrom: float,
+) -> str:
+    """Bind the concrete pocket vectors and radius to one authenticated case."""
+
+    center = _vector(pocket_center, name="pocket_center")
+    normal = _vector(pocket_normal, name="pocket_normal")
+    length = math.sqrt(sum(component * component for component in normal))
+    if length == 0.0:
+        raise GlobalOrientationDevelopmentContractError(
+            "pocket_normal must be non-zero"
+        )
+    unit_normal = tuple(component / length for component in normal)
+    radius = _finite(
+        pocket_radius_angstrom,
+        name="pocket_radius_angstrom",
+        minimum=0.0,
+    )
+    if radius == 0.0:
+        raise GlobalOrientationDevelopmentContractError(
+            "pocket_radius_angstrom must be positive"
+        )
+    return _sha256(
+        {
+            "schema_id": "betelgeuze.engine_v2_global_orientation_pocket_declaration/1.0.0",
+            "case_id": _text(case_id, name="case_id"),
+            "historical_case_source_receipt_sha256": _digest(
+                historical_case_source_receipt_sha256,
+                name="historical_case_source_receipt_sha256",
+            ),
+            "pocket_center_binary64_hex": [value.hex() for value in center],
+            "pocket_normal_binary64_hex": [value.hex() for value in unit_normal],
+            "pocket_radius_angstrom_binary64_hex": radius.hex(),
+        }
+    )
+
+
 def derive_global_orientation_pose_validity_config_fingerprint(
     pocket_radius_angstrom: float,
 ) -> str:
@@ -244,6 +326,7 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
     """Prepared-case source identity with rederived surface and runtime bindings."""
 
     case_id: str
+    historical_case_source: SourcePairedClearanceCaseSourceReceiptV1
     source_case_member_receipt_sha256: str
     authenticated_input_receipt_sha256: str
     receptor_coordinates: Coordinates
@@ -265,6 +348,13 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
     generator_libm_sha256: str
     generator_runtime_fingerprint_sha256: str
     receptor_surface_atom_indices: tuple[int, ...]
+    historical_archive_sha256: str = GLOBAL_ORIENTATION_HISTORICAL_ARCHIVE_SHA256
+    historical_member_manifest_sha256: str = (
+        GLOBAL_ORIENTATION_HISTORICAL_MEMBER_MANIFEST_SHA256
+    )
+    historical_bundle_checksum_sha256: str = (
+        GLOBAL_ORIENTATION_HISTORICAL_BUNDLE_CHECKSUM_SHA256
+    )
     surface_extraction_procedure_id: str = (
         "authenticated_receptor_coordinate_index_projection_v1"
     )
@@ -280,6 +370,24 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
         if self.case_id not in GLOBAL_ORIENTATION_DEVELOPMENT_SCORED_CASE_IDS:
             raise GlobalOrientationDevelopmentContractError(
                 "case source is outside the frozen scored cohort"
+            )
+        if (
+            type(self.historical_case_source)
+            is not SourcePairedClearanceCaseSourceReceiptV1
+            or self.historical_case_source.case_id != self.case_id
+        ):
+            raise GlobalOrientationDevelopmentContractError(
+                "case source is not bound to its authenticated historical member"
+            )
+        historical_receipt_sha256 = self.historical_case_source.receipt_sha256
+        if (
+            self.source_case_member_receipt_sha256
+            != self.historical_case_source.source_case_member_receipt_sha256
+            or self.authenticated_input_receipt_sha256
+            != self.historical_case_source.authenticated_input_receipt_sha256
+        ):
+            raise GlobalOrientationDevelopmentContractError(
+                "case source identities contradict the authenticated historical member"
             )
         receptor = _coordinates(
             self.receptor_coordinates,
@@ -310,6 +418,9 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
             "generator_python_executable_sha256",
             "generator_python_shared_library_sha256",
             "generator_libm_sha256",
+            "historical_archive_sha256",
+            "historical_member_manifest_sha256",
+            "historical_bundle_checksum_sha256",
         ):
             object.__setattr__(self, name, _digest(getattr(self, name), name=name))
         center = _vector(self.pocket_center, name="pocket_center")
@@ -319,7 +430,12 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
                 "pocket_normal must be non-zero"
             )
         object.__setattr__(self, "pocket_center", center)
-        object.__setattr__(self, "pocket_normal", normal)
+        normal_length = math.sqrt(sum(component * component for component in normal))
+        object.__setattr__(
+            self,
+            "pocket_normal",
+            tuple(component / normal_length for component in normal),
+        )
         radius = _finite(
             self.pocket_radius_angstrom,
             name="pocket_radius_angstrom",
@@ -330,6 +446,35 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
                 "pocket_radius_angstrom must be positive"
             )
         object.__setattr__(self, "pocket_radius_angstrom", radius)
+        if (
+            self.historical_archive_sha256
+            != GLOBAL_ORIENTATION_HISTORICAL_ARCHIVE_SHA256
+            or self.historical_member_manifest_sha256
+            != GLOBAL_ORIENTATION_HISTORICAL_MEMBER_MANIFEST_SHA256
+            or self.historical_bundle_checksum_sha256
+            != GLOBAL_ORIENTATION_HISTORICAL_BUNDLE_CHECKSUM_SHA256
+        ):
+            raise GlobalOrientationDevelopmentContractError(
+                "case source is not bound to the frozen historical archive authority"
+            )
+        expected_pocket = derive_global_orientation_pocket_declaration_sha256(
+            case_id=self.case_id,
+            historical_case_source_receipt_sha256=historical_receipt_sha256,
+            pocket_center=center,
+            pocket_normal=self.pocket_normal,
+            pocket_radius_angstrom=radius,
+        )
+        if self.pocket_declaration_sha256 != expected_pocket:
+            raise GlobalOrientationDevelopmentContractError(
+                "pocket geometry does not match its authenticated declaration"
+            )
+        if (
+            self.evaluation_pipeline_sha256
+            != GLOBAL_ORIENTATION_EXPECTED_EVALUATION_PIPELINE_SHA256
+        ):
+            raise GlobalOrientationDevelopmentContractError(
+                "evaluation pipeline does not match the frozen protocol"
+            )
         expected_validity = derive_global_orientation_pose_validity_config_fingerprint(
             radius
         )
@@ -389,6 +534,17 @@ class GlobalOrientationDevelopmentCaseSourceReceiptV1:
         return {
             "schema_id": self.schema_id,
             "case_id": self.case_id,
+            "historical_case_source": self.historical_case_source.to_dict(),
+            "historical_case_source_receipt_sha256": (
+                self.historical_case_source.receipt_sha256
+            ),
+            "historical_archive_sha256": self.historical_archive_sha256,
+            "historical_member_manifest_sha256": (
+                self.historical_member_manifest_sha256
+            ),
+            "historical_bundle_checksum_sha256": (
+                self.historical_bundle_checksum_sha256
+            ),
             "source_case_member_receipt_sha256": (
                 self.source_case_member_receipt_sha256
             ),
@@ -620,6 +776,9 @@ class GlobalOrientationDevelopmentArmLineageReceiptV1:
     case_source: GlobalOrientationDevelopmentCaseSourceReceiptV1
     arm_id: str
     arm_authority_sha256: str
+    arm_authority_receipt: (
+        SourcePairedClearanceCurrentV7LineageReceiptV1 | GlobalOrientationBatch
+    )
     slots: tuple[GlobalOrientationDevelopmentLineageSlotV1, ...]
     schema_id: str = GLOBAL_ORIENTATION_DEVELOPMENT_ARM_LINEAGE_SCHEMA_ID
     _receipt_sha256: str = field(init=False, repr=False)
@@ -661,6 +820,109 @@ class GlobalOrientationDevelopmentArmLineageReceiptV1:
             raise GlobalOrientationDevelopmentContractError(
                 "arm lineage is not an exact ordered 64-slot binding"
             )
+        authority_receipt = self.arm_authority_receipt
+        historical = self.case_source.historical_case_source
+        if self.arm_id == "baseline_current_v7":
+            if (
+                type(authority_receipt)
+                is not SourcePairedClearanceCurrentV7LineageReceiptV1
+            ):
+                raise TypeError(
+                    "baseline arm requires the exact current-V7 lineage receipt"
+                )
+            assert isinstance(
+                authority_receipt,
+                SourcePairedClearanceCurrentV7LineageReceiptV1,
+            )
+            expected_slots = tuple(
+                (
+                    proposal.proposal_index,
+                    proposal.candidate_id,
+                    proposal.fingerprint_sha256,
+                    proposal.coordinate_fingerprint_sha256,
+                )
+                for proposal in authority_receipt.current_v7_proposals
+            )
+            observed_slots = tuple(
+                (
+                    slot.proposal_index,
+                    slot.candidate_id,
+                    slot.proposal_fingerprint_sha256,
+                    slot.coordinate_sha256,
+                )
+                for slot in slots
+            )
+            if (
+                arm_authority != authority_receipt.lineage_identity_sha256
+                or arm_authority != historical.current_v7_candidate_lineage_sha256
+                or authority_receipt.source_proposal_receipt.receipt_sha256
+                != historical.source_proposal_receipt_sha256
+                or authority_receipt.source_proposal_receipt.authenticated_input_receipt_sha256
+                != historical.authenticated_input_receipt_sha256
+                or any(slot.generation_status != "generated" for slot in slots)
+                or any(
+                    slot.generation_receipt_sha256 != authority_receipt.receipt_sha256
+                    for slot in slots
+                )
+                or observed_slots != expected_slots
+            ):
+                raise GlobalOrientationDevelopmentContractError(
+                    "baseline lineage does not match its concrete current-V7 authority"
+                )
+        else:
+            if type(authority_receipt) is not GlobalOrientationBatch:
+                raise TypeError(
+                    "experimental arm requires the exact global-orientation batch"
+                )
+            assert isinstance(authority_receipt, GlobalOrientationBatch)
+            expected_config = (
+                authority_receipt.config.orientation_count == 8
+                and authority_receipt.config.translation_shell_radii == (1.5,)
+                and authority_receipt.config.translation_points_per_shell == 7
+                and authority_receipt.config.minimum_receptor_distance == 1.1
+            )
+            expected_surface_sha256 = _sha256(
+                _coordinates_projection(self.case_source.receptor_surface_points)
+            )
+            expected_slots = tuple(
+                (
+                    source_slot.proposal_index,
+                    f"{self.case_source.case_id}:{self.arm_id}:{source_slot.proposal_index:02d}",
+                    "generated" if source_slot.accepted else "failed",
+                    source_slot.receipt_sha256 if source_slot.accepted else None,
+                    source_slot.coordinate_sha256 if source_slot.accepted else None,
+                    source_slot.receipt_sha256 if source_slot.accepted else None,
+                    None if source_slot.accepted else source_slot.rejection_code,
+                )
+                for source_slot in authority_receipt.slots
+            )
+            observed_slots = tuple(
+                (
+                    slot.proposal_index,
+                    slot.candidate_id,
+                    slot.generation_status,
+                    slot.proposal_fingerprint_sha256,
+                    slot.coordinate_sha256,
+                    slot.generation_receipt_sha256,
+                    slot.failure_code,
+                )
+                for slot in slots
+            )
+            if (
+                arm_authority != authority_receipt.receipt_sha256
+                or authority_receipt.source_receipt_sha256 != case_source
+                or authority_receipt.ligand_input_sha256
+                != _sha256(_coordinates_projection(self.case_source.ligand_coordinates))
+                or authority_receipt.receptor_surface_input_sha256
+                != expected_surface_sha256
+                or authority_receipt.pocket_center != self.case_source.pocket_center
+                or authority_receipt.pocket_normal != self.case_source.pocket_normal
+                or not expected_config
+                or observed_slots != expected_slots
+            ):
+                raise GlobalOrientationDevelopmentContractError(
+                    "experimental lineage does not rederive from its concrete generator batch"
+                )
         object.__setattr__(self, "slots", slots)
         object.__setattr__(self, "_receipt_sha256", _sha256(self._projection()))
 
@@ -672,6 +934,7 @@ class GlobalOrientationDevelopmentArmLineageReceiptV1:
             "case_source_receipt_sha256": self.case_source.receipt_sha256,
             "arm_id": self.arm_id,
             "arm_authority_sha256": self.arm_authority_sha256,
+            "arm_authority_receipt": self.arm_authority_receipt.to_dict(),
             "candidate_denominator": len(self.slots),
             "slots": [slot.to_dict() for slot in self.slots],
             "failure_complete_generation_denominator": True,
@@ -684,6 +947,129 @@ class GlobalOrientationDevelopmentArmLineageReceiptV1:
         if observed != self._receipt_sha256:
             raise GlobalOrientationDevelopmentContractError(
                 "arm-lineage receipt changed"
+            )
+        return observed
+
+    def to_dict(self) -> dict[str, object]:
+        return {**self._projection(), "receipt_sha256": self.receipt_sha256}
+
+
+@dataclass(frozen=True, slots=True)
+class GlobalOrientationDevelopmentPartialCandidateEvidenceV1:
+    """Retain completed scoring/evaluation stages when a later stage fails."""
+
+    candidate_id: str
+    proposal_index: int
+    proposal_fingerprint_sha256: str
+    coordinate_sha256: str
+    scorer_terms: ScorerV1Terms | None
+    internal_validity: SourcePairedClearanceInternalValidityEvidenceV1 | None
+    posebusters: SourcePairedClearancePoseBustersEvidenceV1 | None
+    rmsd: SourcePairedClearanceRmsdEvidenceV1 | None
+    raw_score_rank: int | None
+    schema_id: str = GLOBAL_ORIENTATION_DEVELOPMENT_PARTIAL_EVIDENCE_SCHEMA_ID
+    _receipt_sha256: str = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        if self.schema_id != GLOBAL_ORIENTATION_DEVELOPMENT_PARTIAL_EVIDENCE_SCHEMA_ID:
+            raise GlobalOrientationDevelopmentContractError(
+                "partial-evidence schema_id is invalid"
+            )
+        object.__setattr__(
+            self,
+            "candidate_id",
+            _text(self.candidate_id, name="candidate_id"),
+        )
+        if type(self.proposal_index) is not int or self.proposal_index < 0:
+            raise GlobalOrientationDevelopmentContractError(
+                "partial-evidence proposal_index is invalid"
+            )
+        for name in ("proposal_fingerprint_sha256", "coordinate_sha256"):
+            object.__setattr__(self, name, _digest(getattr(self, name), name=name))
+        expected_types = (
+            (self.scorer_terms, ScorerV1Terms, "scorer_terms"),
+            (
+                self.internal_validity,
+                SourcePairedClearanceInternalValidityEvidenceV1,
+                "internal_validity",
+            ),
+            (
+                self.posebusters,
+                SourcePairedClearancePoseBustersEvidenceV1,
+                "posebusters",
+            ),
+            (self.rmsd, SourcePairedClearanceRmsdEvidenceV1, "rmsd"),
+        )
+        for value, expected_type, name in expected_types:
+            if value is not None and type(value) is not expected_type:
+                raise TypeError(f"{name} has an invalid evidence type")
+        if self.scorer_terms is None:
+            raise GlobalOrientationDevelopmentContractError(
+                "partial evidence must retain at least the completed score stage"
+            )
+        if (self.internal_validity is None) != (self.posebusters is None):
+            raise GlobalOrientationDevelopmentContractError(
+                "partial validity evidence must retain both evaluators"
+            )
+        if self.rmsd is not None and self.posebusters is None:
+            raise GlobalOrientationDevelopmentContractError(
+                "partial RMSD evidence requires completed validity evidence"
+            )
+        if type(self.raw_score_rank) is not int or self.raw_score_rank < 1:
+            raise GlobalOrientationDevelopmentContractError(
+                "partial scored evidence requires a positive raw score rank"
+            )
+        linked_values = tuple(
+            value
+            for value in (
+                self.scorer_terms,
+                self.internal_validity,
+                self.posebusters,
+                self.rmsd,
+            )
+            if value is not None
+        )
+        if any(
+            value.proposal_fingerprint_sha256 != self.proposal_fingerprint_sha256
+            for value in linked_values
+        ) or any(
+            value.coordinate_sha256 != self.coordinate_sha256
+            for value in linked_values
+            if not isinstance(value, ScorerV1Terms)
+        ):
+            raise GlobalOrientationDevelopmentContractError(
+                "partial evidence stages are cross-wired"
+            )
+        for value in linked_values:
+            value.receipt_sha256
+        object.__setattr__(self, "_receipt_sha256", _sha256(self._projection()))
+
+    def _projection(self) -> dict[str, object]:
+        return {
+            "schema_id": self.schema_id,
+            "candidate_id": self.candidate_id,
+            "proposal_index": self.proposal_index,
+            "proposal_fingerprint_sha256": self.proposal_fingerprint_sha256,
+            "coordinate_sha256": self.coordinate_sha256,
+            "scorer_terms": self.scorer_terms.to_dict(),
+            "internal_validity": (
+                None
+                if self.internal_validity is None
+                else self.internal_validity.to_dict()
+            ),
+            "posebusters": (
+                None if self.posebusters is None else self.posebusters.to_dict()
+            ),
+            "rmsd": None if self.rmsd is None else self.rmsd.to_dict(),
+            "raw_score_rank": self.raw_score_rank,
+        }
+
+    @property
+    def receipt_sha256(self) -> str:
+        observed = _sha256(self._projection())
+        if observed != self._receipt_sha256:
+            raise GlobalOrientationDevelopmentContractError(
+                "partial candidate evidence changed"
             )
         return observed
 
@@ -706,6 +1092,9 @@ class GlobalOrientationDevelopmentObservationSlotV1:
     rmsd_status: str
     candidate_evidence: SourcePairedClearanceCandidateEvidenceV1 | None
     failure_code: str | None
+    partial_evidence: GlobalOrientationDevelopmentPartialCandidateEvidenceV1 | None = (
+        None
+    )
     schema_id: str = GLOBAL_ORIENTATION_DEVELOPMENT_OBSERVATION_SLOT_SCHEMA_ID
     _receipt_sha256: str = field(init=False, repr=False)
 
@@ -771,6 +1160,17 @@ class GlobalOrientationDevelopmentObservationSlotV1:
             raise TypeError(
                 "candidate_evidence must be exact full source-paired candidate evidence"
             )
+        partial = self.partial_evidence
+        if (
+            partial is not None
+            and type(partial)
+            is not GlobalOrientationDevelopmentPartialCandidateEvidenceV1
+        ):
+            raise TypeError("partial_evidence has an invalid evidence type")
+        if evidence is not None and partial is not None:
+            raise GlobalOrientationDevelopmentContractError(
+                "observation cannot carry full and partial evidence together"
+            )
         complete_success = evidence is not None
         if self.generation_status == "failed":
             if (
@@ -801,6 +1201,24 @@ class GlobalOrientationDevelopmentObservationSlotV1:
                     "full candidate evidence is cross-wired or incomplete"
                 )
             evidence.receipt_sha256
+        elif partial is not None:
+            if (
+                self.generation_status != "generated"
+                or partial.proposal_index != self.proposal_index
+                or partial.candidate_id != self.candidate_id
+                or partial.proposal_fingerprint_sha256
+                != self.proposal_fingerprint_sha256
+                or partial.coordinate_sha256 != self.coordinate_sha256
+                or self.score_status != "scored"
+                or self.validity_status
+                != ("evaluated" if partial.posebusters is not None else "not_evaluated")
+                or self.rmsd_status
+                != ("evaluated" if partial.rmsd is not None else "not_evaluated")
+            ):
+                raise GlobalOrientationDevelopmentContractError(
+                    "partial candidate evidence is cross-wired or contradicts stage state"
+                )
+            partial.receipt_sha256
         elif (
             self.score_status != "unscored"
             or self.validity_status != "not_evaluated"
@@ -836,25 +1254,57 @@ class GlobalOrientationDevelopmentObservationSlotV1:
                 if self.candidate_evidence is None
                 else self.candidate_evidence.to_dict()
             ),
+            "partial_evidence": (
+                None
+                if self.partial_evidence is None
+                else self.partial_evidence.to_dict()
+            ),
             "score_binary64_hex": (
                 None
-                if self.candidate_evidence is None
-                else self.candidate_evidence.scorer_terms.total_score.hex()
+                if self.candidate_evidence is None and self.partial_evidence is None
+                else (
+                    self.candidate_evidence.scorer_terms.total_score.hex()
+                    if self.candidate_evidence is not None
+                    else self.partial_evidence.scorer_terms.total_score.hex()
+                )
             ),
             "internal_valid": (
                 None
                 if self.candidate_evidence is None
-                else self.candidate_evidence.internal_validity.valid
+                and (
+                    self.partial_evidence is None
+                    or self.partial_evidence.internal_validity is None
+                )
+                else (
+                    self.candidate_evidence.internal_validity.valid
+                    if self.candidate_evidence is not None
+                    else self.partial_evidence.internal_validity.valid
+                )
             ),
             "posebusters_valid": (
                 None
                 if self.candidate_evidence is None
-                else self.candidate_evidence.posebusters.valid
+                and (
+                    self.partial_evidence is None
+                    or self.partial_evidence.posebusters is None
+                )
+                else (
+                    self.candidate_evidence.posebusters.valid
+                    if self.candidate_evidence is not None
+                    else self.partial_evidence.posebusters.valid
+                )
             ),
             "rmsd_angstrom_binary64_hex": (
                 None
                 if self.candidate_evidence is None
-                else self.candidate_evidence.rmsd.rmsd_angstrom.hex()
+                and (
+                    self.partial_evidence is None or self.partial_evidence.rmsd is None
+                )
+                else (
+                    self.candidate_evidence.rmsd.rmsd_angstrom.hex()
+                    if self.candidate_evidence is not None
+                    else self.partial_evidence.rmsd.rmsd_angstrom.hex()
+                )
             ),
             "failure_code": self.failure_code,
             "explicit_unscored_state": self.score_status == "unscored",
@@ -869,6 +1319,105 @@ class GlobalOrientationDevelopmentObservationSlotV1:
 
     def to_dict(self) -> dict[str, object]:
         return {**self._projection(), "receipt_sha256": self.receipt_sha256}
+
+
+def _observation_evidence_components(
+    observation: GlobalOrientationDevelopmentObservationSlotV1,
+) -> tuple[
+    ScorerV1Terms | None,
+    SourcePairedClearanceInternalValidityEvidenceV1 | None,
+    SourcePairedClearancePoseBustersEvidenceV1 | None,
+    SourcePairedClearanceRmsdEvidenceV1 | None,
+    int | None,
+]:
+    if observation.candidate_evidence is not None:
+        evidence = observation.candidate_evidence
+        return (
+            evidence.scorer_terms,
+            evidence.internal_validity,
+            evidence.posebusters,
+            evidence.rmsd,
+            evidence.raw_score_rank,
+        )
+    if observation.partial_evidence is not None:
+        partial = observation.partial_evidence
+        return (
+            partial.scorer_terms,
+            partial.internal_validity,
+            partial.posebusters,
+            partial.rmsd,
+            partial.raw_score_rank,
+        )
+    return (None, None, None, None, None)
+
+
+def _validate_observation_authority(
+    *,
+    case_source: GlobalOrientationDevelopmentCaseSourceReceiptV1,
+    lineage: GlobalOrientationDevelopmentArmLineageReceiptV1,
+    observation: GlobalOrientationDevelopmentObservationSlotV1,
+) -> None:
+    scorer, internal, posebusters, rmsd, _ = _observation_evidence_components(
+        observation
+    )
+    historical = case_source.historical_case_source
+    full_evidence = observation.candidate_evidence
+    if full_evidence is not None:
+        expected_source_proposal = (
+            observation.proposal_fingerprint_sha256
+            if lineage.arm_id == "experimental_global_orientation_v1"
+            else lineage.arm_authority_receipt.source_proposal_fingerprint_sha256(
+                observation.proposal_index
+            )
+        )
+        if full_evidence.source_proposal_fingerprint_sha256 != expected_source_proposal:
+            raise GlobalOrientationDevelopmentContractError(
+                "candidate evidence contradicts the concrete arm source lineage"
+            )
+    if scorer is not None and (
+        scorer.authority_input_receipt_sha256
+        != historical.authenticated_input_receipt_sha256
+        or scorer.config_fingerprint_sha256 != GLOBAL_ORIENTATION_SCORER_CONFIG_SHA256
+        or scorer.backend_receipt_sha256 != case_source.scorer_backend_receipt_sha256
+    ):
+        raise GlobalOrientationDevelopmentContractError(
+            "candidate score evidence contradicts the frozen case/scorer authority"
+        )
+    if internal is not None and (
+        internal.authority_input_receipt_sha256
+        != historical.authenticated_input_receipt_sha256
+        or internal.problem_fingerprint_sha256 != historical.problem_fingerprint_sha256
+        or internal.config_fingerprint_sha256
+        != case_source.pose_validity_config_fingerprint_sha256
+        or internal.evaluator_implementation_sha256
+        != GLOBAL_ORIENTATION_INTERNAL_VALIDITY_IMPLEMENTATION_SHA256
+    ):
+        raise GlobalOrientationDevelopmentContractError(
+            "internal-validity evidence contradicts the frozen case authority"
+        )
+    if posebusters is not None and (
+        posebusters.implementation_sha256
+        != GLOBAL_ORIENTATION_POSEBUSTERS_IMPLEMENTATION_SHA256
+        or posebusters.config_sha256 != GLOBAL_ORIENTATION_POSEBUSTERS_CONFIG_SHA256
+        or posebusters.native_pose_artifact_sha256
+        != historical.native_pose_artifact_sha256
+        or posebusters.receptor_artifact_sha256 != historical.receptor_artifact_sha256
+    ):
+        raise GlobalOrientationDevelopmentContractError(
+            "PoseBusters evidence contradicts the frozen case/evaluator authority"
+        )
+    if rmsd is not None and (
+        rmsd.implementation_sha256
+        != GLOBAL_ORIENTATION_POSEBUSTERS_IMPLEMENTATION_SHA256
+        or rmsd.config_sha256 != GLOBAL_ORIENTATION_POSEBUSTERS_CONFIG_SHA256
+        or rmsd.native_pose_artifact_sha256 != historical.native_pose_artifact_sha256
+        or rmsd.receptor_artifact_sha256 != historical.receptor_artifact_sha256
+        or rmsd.atom_mapping_sha256 != GLOBAL_ORIENTATION_RMSD_ATOM_MAPPING_SHA256
+        or rmsd.symmetry_policy_sha256 != GLOBAL_ORIENTATION_RMSD_SYMMETRY_POLICY_SHA256
+    ):
+        raise GlobalOrientationDevelopmentContractError(
+            "RMSD evidence contradicts the frozen case/evaluator authority"
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -920,6 +1469,29 @@ class GlobalOrientationDevelopmentArmObservationsV1:
                 raise GlobalOrientationDevelopmentContractError(
                     "observation is cross-wired to another lineage slot"
                 )
+            _validate_observation_authority(
+                case_source=self.lineage.case_source,
+                lineage=self.lineage,
+                observation=observation,
+            )
+        scored_rows = []
+        for observation in observations:
+            scorer, _, _, _, raw_rank = _observation_evidence_components(observation)
+            if scorer is not None:
+                scored_rows.append(
+                    (scorer.total_score, observation.proposal_index, raw_rank)
+                )
+        expected_order = sorted(
+            scored_rows,
+            key=lambda value: (value[0], value[1]),
+        )
+        if any(
+            raw_rank != expected_rank
+            for expected_rank, (_, _, raw_rank) in enumerate(expected_order, start=1)
+        ):
+            raise GlobalOrientationDevelopmentContractError(
+                "raw score ranks do not rederive from deterministic score ordering"
+            )
         object.__setattr__(self, "observations", observations)
         object.__setattr__(self, "_receipt_sha256", _sha256(self._projection()))
 

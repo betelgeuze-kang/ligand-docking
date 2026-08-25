@@ -50,7 +50,7 @@ def _reseal(payload: dict[str, object]) -> dict[str, object]:
 def test_current_global_orientation_development_protocol_verifies() -> None:
     observed = verify_protocol(_protocol())
     assert observed == (
-        "a3665a02da7918035bbd81e9b1b398fd976b52879aeb550239a695bd224b9d72"
+        "256c7e80ef5a016edcca91d6d378f5896589feb206e3882eed2900001491b0a0"
     )
 
 
