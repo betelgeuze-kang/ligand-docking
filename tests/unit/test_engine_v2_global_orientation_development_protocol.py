@@ -10,6 +10,7 @@ import sys
 
 import pytest
 
+import tools.verify_engine_v2_global_orientation_contaminated_development as verifier
 from tools.verify_engine_v2_global_orientation_contaminated_development import (
     GlobalOrientationDevelopmentProtocolError,
     load_protocol,
@@ -51,6 +52,37 @@ def test_current_global_orientation_development_protocol_verifies() -> None:
     assert observed == (
         "0e8591de97bd8313e748631f4e25222a62c017250b8fe64528eca2d1da0f4f68"
     )
+
+
+def test_protocol_loader_rejects_duplicate_json_keys(tmp_path: Path) -> None:
+    path = tmp_path / "duplicate.json"
+    path.write_text(
+        '{"authority":{"historical_development_execution_authorized":true,'
+        '"historical_development_execution_authorized":false}}',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        GlobalOrientationDevelopmentProtocolError,
+        match="duplicate JSON key: historical_development_execution_authorized",
+    ):
+        load_protocol(path)
+
+
+def test_live_generator_identity_cannot_move_with_resealed_protocol(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    changed = _protocol()
+    changed["arm_contract"]["experimental"]["proposal_authority"] = "other-profile"
+    changed["arm_contract"]["experimental"]["profile_id"] = "other-profile"
+    changed = _reseal(changed)
+    monkeypatch.setattr(verifier, "GLOBAL_ORIENTATION_GENERATOR_ID", "other-profile")
+
+    with pytest.raises(
+        GlobalOrientationDevelopmentProtocolError,
+        match="live generator identity",
+    ):
+        verify_protocol(changed)
 
 
 def test_protocol_document_tracks_schema_hash_and_execution_boundary() -> None:

@@ -26,6 +26,7 @@ from betelgeuze_engine_v2.docking.global_orientation import (  # noqa: E402
 SCHEMA_ID = (
     "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.1.0"
 )
+FROZEN_GLOBAL_ORIENTATION_GENERATOR_ID = "deterministic_surface_aware_rigid_v2"
 CASE_IDS = (
     "5SD5_HWI",
     "5SIS_JSM",
@@ -109,26 +110,51 @@ def _mapping(value: object, *, name: str) -> Mapping[str, Any]:
     return value
 
 
+def _reject_duplicate_object_pairs(
+    pairs: list[tuple[str, Any]],
+) -> dict[str, Any]:
+    observed: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in observed:
+            raise GlobalOrientationDevelopmentProtocolError(
+                f"duplicate JSON key: {key}"
+            )
+        observed[key] = value
+    return observed
+
+
+def _load_json_object(path: Path, *, name: str) -> dict[str, Any]:
+    try:
+        payload = json.loads(
+            path.read_text(encoding="utf-8"),
+            object_pairs_hook=_reject_duplicate_object_pairs,
+        )
+    except GlobalOrientationDevelopmentProtocolError:
+        raise
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise GlobalOrientationDevelopmentProtocolError(
+            f"{name} is not readable JSON: {exc}"
+        ) from exc
+    if not isinstance(payload, dict):
+        raise GlobalOrientationDevelopmentProtocolError(f"{name} must be a JSON object")
+    return payload
+
+
 def _exact(value: object, expected: object, *, name: str) -> None:
     if value != expected:
         raise GlobalOrientationDevelopmentProtocolError(f"{name} drifted")
 
 
 def load_protocol(path: Path) -> dict[str, Any]:
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
-        raise GlobalOrientationDevelopmentProtocolError(
-            f"protocol is not readable JSON: {exc}"
-        ) from exc
-    if not isinstance(payload, dict):
-        raise GlobalOrientationDevelopmentProtocolError(
-            "protocol must be a JSON object"
-        )
-    return payload
+    return _load_json_object(path, name="protocol")
 
 
 def _verify_generator_boundary() -> None:
+    _exact(
+        GLOBAL_ORIENTATION_GENERATOR_ID,
+        FROZEN_GLOBAL_ORIENTATION_GENERATOR_ID,
+        name="live generator identity",
+    )
     parameters = tuple(inspect.signature(generate_global_orientation_batch).parameters)
     _exact(
         parameters,
@@ -169,16 +195,7 @@ def _verify_synthetic_contract_binding(
         Path(__file__).resolve().parents[1]
         / "config/engine_v2_global_orientation_synthetic_contract.json"
     )
-    try:
-        contract = json.loads(contract_path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
-        raise GlobalOrientationDevelopmentProtocolError(
-            f"synthetic contract is not readable JSON: {exc}"
-        ) from exc
-    if not isinstance(contract, dict):
-        raise GlobalOrientationDevelopmentProtocolError(
-            "synthetic contract must be a JSON object"
-        )
+    contract = _load_json_object(contract_path, name="synthetic contract")
     projection = dict(contract)
     observed_hash = projection.pop("contract_sha256", None)
     _exact(
@@ -196,6 +213,12 @@ def _verify_synthetic_contract_binding(
         source_bindings.get("global_orientation_synthetic_contract_sha256"),
         name="live synthetic contract hash binding",
     )
+    algorithm = _mapping(contract.get("algorithm"), name="synthetic algorithm")
+    _exact(
+        algorithm.get("generator_id"),
+        FROZEN_GLOBAL_ORIENTATION_GENERATOR_ID,
+        name="synthetic generator identity",
+    )
 
 
 def _verify_phase25_policy_binding(
@@ -205,16 +228,7 @@ def _verify_phase25_policy_binding(
         Path(__file__).resolve().parents[1]
         / "config/engine_v2_phase25_cohort_admission.json"
     )
-    try:
-        policy = json.loads(policy_path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
-        raise GlobalOrientationDevelopmentProtocolError(
-            f"phase 2.5 policy is not readable JSON: {exc}"
-        ) from exc
-    if not isinstance(policy, dict):
-        raise GlobalOrientationDevelopmentProtocolError(
-            "phase 2.5 policy must be a JSON object"
-        )
+    policy = _load_json_object(policy_path, name="phase 2.5 policy")
     projection = dict(policy)
     observed_hash = projection.pop("policy_sha256", None)
     _exact(
@@ -448,12 +462,12 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
     )
     _exact(
         experimental.get("proposal_authority"),
-        GLOBAL_ORIENTATION_GENERATOR_ID,
+        FROZEN_GLOBAL_ORIENTATION_GENERATOR_ID,
         name="experimental proposal authority",
     )
     _exact(
         experimental.get("profile_id"),
-        GLOBAL_ORIENTATION_GENERATOR_ID,
+        FROZEN_GLOBAL_ORIENTATION_GENERATOR_ID,
         name="experimental profile identity",
     )
     config = _mapping(
