@@ -338,6 +338,47 @@ The verifier only checks supplied evidence. It never runs a GPU and a passing
 artifact still grants no acceleration, scientific, benchmark, or product
 claim authority.
 
+### HIP D1 measurement-journal normalization
+
+```bash
+python tools/normalize_engine_v2_hip_d1_measurement_v1.py \
+  --profile config/engine_v2_hip_d1_benchmark_profile_v1.json
+```
+
+Profile-only mode reports the committed blockers and performs no execution.
+After an independently authorized owner-controlled wrapper records a complete
+sample-relative nanosecond journal, the same tool accepts `--journal` and an
+absent `--output` path. It requires the exact ordered 32-case and minimum
+sample coverage, the profile-pinned eight-stage sequence and kernel names,
+positive bounded event intervals, both H2D and D2H coverage for every sample,
+and aggregate dispatch/transfer runtime no greater than the enclosing wall
+sample. It emits the exact normalized profiler 1.3 and transfer 1.2 fragments,
+their canonical hashes, derived kernel summaries, byte totals, and per-sample
+transfer timings accepted by the result verifier.
+
+The journal is one strict JSON object with the 1.0 schema ID, exact profile and
+execution-run hashes, one of `hip_safe` or `hip_fast`, 32 ordered case IDs, the
+all-false profile authority map, and case-major samples. Sample indices start at
+zero and remain contiguous independently for each case; counts may exceed the
+profile minimum. Each sample contains `wall_time_nanoseconds`, ordered
+`dispatches`, and ordered `transfers`. Dispatch and transfer rows carry positive
+`start_offset_nanoseconds` and `end_offset_nanoseconds` relative to that sample;
+dispatches additionally carry `stage_id` and `kernel_name`, while transfers
+carry `direction` and `bytes`.
+
+```bash
+python tools/normalize_engine_v2_hip_d1_measurement_v1.py \
+  --profile config/engine_v2_hip_d1_benchmark_profile_v1.json \
+  --journal /absolute/owner-recorded-run.json \
+  --output /absolute/absent-normalized-run.json
+```
+
+The normalizer cannot launch a command or device, cannot overwrite an output,
+and carries the same all-false authority map as the profile. A journal is
+measurement evidence only; it is not an execution authorization receipt and
+cannot bind the currently unmaterialized D1 manifest or populate either empty
+repository authorization allowlist.
+
 ## Maintenance tools
 
 ```bash
