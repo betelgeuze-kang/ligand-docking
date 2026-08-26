@@ -338,6 +338,43 @@ The verifier only checks supplied evidence. It never runs a GPU and a passing
 artifact still grants no acceleration, scientific, benchmark, or product
 claim authority.
 
+### HIP D1 owner identity binding
+
+```bash
+python tools/bind_engine_v2_hip_d1_profile_v1.py \
+  --profile config/engine_v2_hip_d1_benchmark_profile_v1.json
+```
+
+Profile-only mode validates the complete frozen 1.5 profile and reports that
+the committed profile is unbound and result verification is unauthorized. It
+does not read molecular inputs or grant permission to materialize or execute
+them.
+
+After the owner independently selects a licensed private D1 cohort, the same
+tool can consume a self-hashed binding request and write an absent bound-profile
+successor. The request contains the exact base-profile SHA-256, exact private
+manifest SHA-256, 32 ordered unique case IDs, and an exact ordered list of 64
+unique candidate identities for every case. Candidate identities are retained
+only long enough to derive the profile's per-case canonical SHA-256 map; the
+private identities are not copied into the output profile. The request also
+contains the full authority map with every value literally `false`.
+
+```bash
+python tools/bind_engine_v2_hip_d1_profile_v1.py \
+  --profile config/engine_v2_hip_d1_benchmark_profile_v1.json \
+  --binding-request /absolute/owner-binding-request.json \
+  --output /absolute/absent-bound-profile.json
+```
+
+The output changes only the manifest/case/candidate binding fields, status,
+blockers, and profile self-hash. It is checked again by the canonical HIP D1
+profile verifier before publication and is written with an absent-only atomic
+link. A generated profile remains unauthorized until its exact digest is added
+to the verifier's repository-reviewed bound-profile allowlist in a separate
+code review. The binder cannot edit that allowlist, cannot authorize a result,
+cannot launch a command or device, and reports molecular/device execution and
+authority as false in its self-hashed receipt.
+
 ### HIP D1 measurement-journal normalization
 
 ```bash
