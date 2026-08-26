@@ -1,0 +1,49 @@
+{
+  "schema_id": "betelgeuze.engine_v2_native_water_box_nvt_constraint_residual_profile/1.0.0",
+  "profile_id": "engine_v2_native_two_water_nvt_constraint_residual_development_v1",
+  "predecessor": {
+    "path": "config/engine_v2_native_water_box_nvt_ensemble_profile_v1.json",
+    "sha256": "bb2577c0e227151b8aa95b5c288249823206020558a186eccc8b5ddcbca802de",
+    "semantic_change": "Retain ordered position and radial-velocity constraint residual observations for the existing repeated-seed constrained BAOAB lane without changing its sampling or authority."
+  },
+  "system_bindings": {
+    "water_profile_sha256": "2b0be83b57085c655092ab0272aea5a91b9c3f90c344fa062d494ad324f0019e",
+    "constraint_profile_sha256": "8dcad0b5005b7a768ce0a88b1804b55ecddb9b3490e2dd59179dfa2393433507",
+    "nvt_ensemble_profile_sha256": "bb2577c0e227151b8aa95b5c288249823206020558a186eccc8b5ddcbca802de",
+    "atom_count": 6,
+    "water_count": 2,
+    "constraint_count": 6,
+    "expected_degrees_of_freedom": 12
+  },
+  "sampling": {
+    "integrator": "constrained_langevin_baoab",
+    "timestep_femtoseconds": 0.5,
+    "target_temperature_kelvin": 300.0,
+    "friction_per_femtosecond": 0.01,
+    "ordered_random_seeds": [101, 211, 307, 401, 503, 601, 701, 809],
+    "burn_in_steps_per_seed": 2000,
+    "sample_count_per_seed": 32,
+    "sample_stride_steps": 100
+  },
+  "validation": {
+    "cpu_backends": ["cpp_cpu_reference", "rust_cpu"],
+    "same_build_backend_bit_identity_required": true,
+    "same_seed_repeatability_required": true,
+    "ordered_residual_rows_required": true,
+    "maximum_position_constraint_residual_angstrom": 1e-10,
+    "maximum_radial_velocity_constraint_residual_angstrom_per_femtosecond": 1e-10,
+    "finite_nonnegative_residuals_required": true,
+    "population_distribution_rows_retained": true,
+    "backend_tagged_observation_receipt_required": true,
+    "performance_measurement_present": false,
+    "performance_threshold_present": false
+  },
+  "authority": {
+    "production_md_validated": false,
+    "scientific_claim_authorized": false,
+    "free_energy_claim_authorized": false,
+    "performance_claim_authorized": false,
+    "molecular_execution_authorized": false,
+    "hip_device_execution_authorized": false
+  }
+}

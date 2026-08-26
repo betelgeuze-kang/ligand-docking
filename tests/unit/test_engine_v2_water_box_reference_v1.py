@@ -28,6 +28,12 @@ NVT_ENSEMBLE_PROFILE = json.loads(
         ROOT / "config/engine_v2_native_water_box_nvt_ensemble_profile_v1.json"
     ).read_text()
 )
+NVT_CONSTRAINT_RESIDUAL_PROFILE = json.loads(
+    (
+        ROOT
+        / "config/engine_v2_native_water_box_nvt_constraint_residual_profile_v1.json"
+    ).read_text()
+)
 NEIGHBOR_LIST_PROFILE = json.loads(
     (
         ROOT / "config/engine_v2_native_periodic_neighbor_list_profile_v1.json"
@@ -131,6 +137,60 @@ def test_native_nvt_ensemble_profile_matches_the_packaged_runtime_asset() -> Non
     assert validation["performance_threshold_present"] is False
     assert all(
         value is False for value in NVT_ENSEMBLE_PROFILE["authority"].values()
+    )
+
+
+def test_native_nvt_constraint_residual_profile_matches_packaged_asset() -> None:
+    canonical = (
+        ROOT
+        / "config/engine_v2_native_water_box_nvt_constraint_residual_profile_v1.json"
+    ).read_bytes()
+    packaged = (
+        ROOT
+        / "rust/betelgeuze-runtime/assets/engine_v2_native_water_box_nvt_constraint_residual_profile_v1.json"
+    ).read_bytes()
+    assert packaged == canonical
+    assert hashlib.sha256(canonical).hexdigest() == (
+        "a92070ade1d214e9526a101666b49e8a7d5b909888293b79437ca859ef4e7c35"
+    )
+    assert NVT_CONSTRAINT_RESIDUAL_PROFILE["predecessor"]["sha256"] == (
+        "bb2577c0e227151b8aa95b5c288249823206020558a186eccc8b5ddcbca802de"
+    )
+    bindings = NVT_CONSTRAINT_RESIDUAL_PROFILE["system_bindings"]
+    assert bindings["water_profile_sha256"] == (
+        "2b0be83b57085c655092ab0272aea5a91b9c3f90c344fa062d494ad324f0019e"
+    )
+    assert bindings["constraint_profile_sha256"] == (
+        "8dcad0b5005b7a768ce0a88b1804b55ecddb9b3490e2dd59179dfa2393433507"
+    )
+    assert bindings["nvt_ensemble_profile_sha256"] == (
+        "bb2577c0e227151b8aa95b5c288249823206020558a186eccc8b5ddcbca802de"
+    )
+    assert bindings["constraint_count"] == 6
+    assert bindings["expected_degrees_of_freedom"] == 12
+    assert NVT_CONSTRAINT_RESIDUAL_PROFILE["sampling"] == NVT_ENSEMBLE_PROFILE[
+        "sampling"
+    ]
+    validation = NVT_CONSTRAINT_RESIDUAL_PROFILE["validation"]
+    assert validation["cpu_backends"] == ["cpp_cpu_reference", "rust_cpu"]
+    assert validation["same_build_backend_bit_identity_required"] is True
+    assert validation["same_seed_repeatability_required"] is True
+    assert validation["ordered_residual_rows_required"] is True
+    assert validation["maximum_position_constraint_residual_angstrom"] == 1.0e-10
+    assert (
+        validation[
+            "maximum_radial_velocity_constraint_residual_angstrom_per_femtosecond"
+        ]
+        == 1.0e-10
+    )
+    assert validation["finite_nonnegative_residuals_required"] is True
+    assert validation["population_distribution_rows_retained"] is True
+    assert validation["backend_tagged_observation_receipt_required"] is True
+    assert validation["performance_measurement_present"] is False
+    assert validation["performance_threshold_present"] is False
+    assert all(
+        value is False
+        for value in NVT_CONSTRAINT_RESIDUAL_PROFILE["authority"].values()
     )
 
 
