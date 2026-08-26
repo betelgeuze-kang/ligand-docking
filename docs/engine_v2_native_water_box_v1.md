@@ -57,6 +57,13 @@ changes: the canonical native ABI Coulomb constant plus native cutoff and
 switch settings. This provenance does not assert independent review,
 calibration, or applicability of a named published water force field.
 
+The constrained ion-dynamics successor is
+`config/engine_v2_native_water_ion_dynamics_profile_v1.json`, SHA-256
+`ad009e5a60c07dccf2d6c50e76d73aa9c8206201ae1bab7c585b63641df098e3`.
+It binds the exact static ion, water-constraint, and periodic-neighbor
+identities and embeds the same bytes into the runtime. It does not modify the
+static profile or broaden its parameter and authority boundaries.
+
 ## Native path
 
 The single-water entry point evaluates one frozen unconstrained water with the
@@ -290,6 +297,12 @@ within the focused binary64 tolerance. The frozen observations are:
   position residuals remain at or below `1e-10` angstrom, and radial-velocity
   residuals remain at or below `1e-10` angstrom/fs. Its backend-tagged receipt
   binds every residual row plus the independently rederived mean and maximum;
+- the neutral two-water/Na+/Cl- successor runs 100 constrained Velocity
+  Verlet steps through the shared simulation owner. Its 18-DOF report and
+  eight-atom state are bit-identical between the two CPU backends within one
+  build, both ions change position, all six water constraint rows retain the
+  existing residual bounds, and a checkpoint continues from absolute step 100
+  to 132 exactly;
 - a Rust checkpoint restores all positions, velocities, masses, charges,
   integrator state, absolute step, and RNG continuation exactly.
 
@@ -310,8 +323,10 @@ BAOAB, constraints, and checkpoint parity.
 
 A separate neutral static fixture adds one Na+ and one Cl- to the two-water
 box. The independent all-pairs oracle checks every analytic force component by
-central difference and both CPU evaluators. It is deliberately not integrated
-as a trajectory, concentration model, or equilibrium observation.
+central difference and both CPU evaluators. Its immutable successor integrates
+that same synthetic fixture for a short constrained CPU trajectory with exact
+checkpoint continuation. This is not a concentration model, equilibrium
+observation, general ion-preparation path, or molecular-execution authority.
 
 These are deterministic finite-sample tiny-fixture development observations.
 The repeated-seed means and variance only verify the frozen implementation and

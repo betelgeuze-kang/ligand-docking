@@ -208,6 +208,15 @@ and both CPU backends. It is not a trajectory or scientific applicability
 claim, and it does not authorize general ion preparation or long-range
 electrostatics.
 
+An immutable ion-dynamics successor binds that exact static fixture plus the
+water-constraint and periodic-neighbor identities. A separate native owner
+runs 100 constrained Velocity Verlet steps and a 32-step checkpoint
+continuation. C++ reference and Rust CPU must retain the same 18-DOF report and
+eight-atom state within one build, both ions must move, the six water
+constraints remain within the existing residual bounds, and absolute step 132
+must be restored exactly. This remains tiny synthetic CPU implementation
+evidence with every authority field false.
+
 The next SHA-bound successor,
 `config/engine_v2_native_periodic_neighbor_list_profile_v2.json`, retains one
 buffered canonical pair slice in the native `Simulation` for fully periodic

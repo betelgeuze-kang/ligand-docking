@@ -1,0 +1,52 @@
+{
+  "schema_id": "betelgeuze.engine_v2_native_water_ion_dynamics_profile/1.0.0",
+  "profile_id": "engine_v2_native_tip3p_nacl_constrained_dynamics_development_v1",
+  "predecessor": {
+    "path": "config/engine_v2_native_water_ion_profile_v1.json",
+    "sha256": "409902e5f6776bd58c76f80a572c9cf978f7e2f4938003e5609036bfe91c631f",
+    "semantic_change": "Integrate the existing neutral two-water plus Na+/Cl- synthetic CPU fixture through the shared constrained dynamics owner without changing its parameter identities or authority."
+  },
+  "system_bindings": {
+    "water_ion_profile_sha256": "409902e5f6776bd58c76f80a572c9cf978f7e2f4938003e5609036bfe91c631f",
+    "water_constraint_profile_sha256": "8dcad0b5005b7a768ce0a88b1804b55ecddb9b3490e2dd59179dfa2393433507",
+    "periodic_neighbor_list_profile_sha256": "ee2c64b3e40ec1905a97b0c2646e36c59fe30f674adfd019dde016e2637e3628",
+    "atom_count": 8,
+    "water_count": 2,
+    "sodium_count": 1,
+    "chloride_count": 1,
+    "constraint_count": 6,
+    "expected_degrees_of_freedom": 18,
+    "total_charge_elementary": 0.0
+  },
+  "trajectory": {
+    "integrator": "constrained_velocity_verlet",
+    "timestep_femtoseconds": 0.02,
+    "primary_step_count": 100,
+    "checkpoint_continuation_step_count": 32,
+    "initial_ion_velocities_zero": true
+  },
+  "validation": {
+    "cpu_backends": ["cpp_cpu_reference", "rust_cpu"],
+    "same_build_backend_bit_identity_required": true,
+    "finite_energy_and_state_required": true,
+    "ordered_absolute_step_required": true,
+    "maximum_position_constraint_residual_angstrom": 1e-10,
+    "maximum_radial_velocity_constraint_residual_angstrom_per_femtosecond": 1e-10,
+    "ion_position_change_required": true,
+    "exact_checkpoint_continuation_required": true,
+    "absolute_step_continuation_required": true,
+    "performance_measurement_present": false,
+    "performance_threshold_present": false
+  },
+  "authority": {
+    "molecular_execution_authorized": false,
+    "production_md_validated": false,
+    "scientific_claim_authorized": false,
+    "parameter_applicability_claim_authorized": false,
+    "performance_claim_authorized": false,
+    "reservation_authorized": false,
+    "fresh_128_authorized": false,
+    "public_benchmark_authorized": false,
+    "hip_device_execution_authorized": false
+  }
+}

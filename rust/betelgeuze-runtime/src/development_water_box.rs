@@ -32,6 +32,10 @@ pub const DEVELOPMENT_WATER_BOX_V1_ATOM_COUNT: usize = 6;
 pub const DEVELOPMENT_WATER_ION_V1_SCHEMA_ID: &str =
     "betelgeuze.engine_v2_native_water_ion_profile/1.0.0";
 pub const DEVELOPMENT_WATER_ION_V1_PROFILE_ID: &str = "engine_v2_native_tip3p_nacl_development_v1";
+pub const DEVELOPMENT_WATER_ION_DYNAMICS_V1_SCHEMA_ID: &str =
+    "betelgeuze.engine_v2_native_water_ion_dynamics_profile/1.0.0";
+pub const DEVELOPMENT_WATER_ION_DYNAMICS_V1_PROFILE_ID: &str =
+    "engine_v2_native_tip3p_nacl_constrained_dynamics_development_v1";
 pub const DEVELOPMENT_WATER_ION_V1_PARAMETER_SOURCE_DOI: &str = "10.1021/jp8001614";
 pub const DEVELOPMENT_WATER_ION_V1_ATOM_COUNT: usize = 8;
 const DEVELOPMENT_WATER_BOX_V1_PROFILE_BYTES: &[u8] =
@@ -44,6 +48,8 @@ const DEVELOPMENT_WATER_BOX_NVT_CONSTRAINT_RESIDUAL_V1_PROFILE_BYTES: &[u8] =
     include_bytes!("../assets/engine_v2_native_water_box_nvt_constraint_residual_profile_v1.json");
 const DEVELOPMENT_WATER_ION_V1_PROFILE_BYTES: &[u8] =
     include_bytes!("../assets/engine_v2_native_water_ion_profile_v1.json");
+const DEVELOPMENT_WATER_ION_DYNAMICS_V1_PROFILE_BYTES: &[u8] =
+    include_bytes!("../assets/engine_v2_native_water_ion_dynamics_profile_v1.json");
 
 const OH_DISTANCE_ANGSTROM: f64 = f64::from_bits(0x3feea161e4f765fe);
 const HOH_ANGLE_RADIANS: f64 = f64::from_bits(0x3ffd2fff5ab17aaf);
@@ -285,6 +291,14 @@ fn single_water_system() -> Result<System> {
 }
 
 fn water_ion_system() -> Result<System> {
+    water_ion_system_with_velocities(false)
+}
+
+fn water_ion_dynamics_system() -> Result<System> {
+    water_ion_system_with_velocities(true)
+}
+
+fn water_ion_system_with_velocities(include_velocities: bool) -> Result<System> {
     let sodium = development_ion_parameters_v1(DevelopmentIonIdentityV1::SODIUM)
         .map_err(|error| invalid(error.to_string()))?;
     let chloride = development_ion_parameters_v1(DevelopmentIonIdentityV1::CHLORIDE)
@@ -330,11 +344,50 @@ fn water_ion_system() -> Result<System> {
         sodium.charge_elementary,
         chloride.charge_elementary,
     ];
-    System::new(ParticleSoa::new(
+    let particles = ParticleSoa::new(
         PositionSoa::new(&position_x, &position_y, &position_z),
         &mass,
         &charge,
-    ))
+    );
+    if include_velocities {
+        let velocity_x = [
+            VELOCITY_X[0],
+            VELOCITY_X[1],
+            VELOCITY_X[2],
+            VELOCITY_X[3],
+            VELOCITY_X[4],
+            VELOCITY_X[5],
+            0.0,
+            0.0,
+        ];
+        let velocity_y = [
+            VELOCITY_Y[0],
+            VELOCITY_Y[1],
+            VELOCITY_Y[2],
+            VELOCITY_Y[3],
+            VELOCITY_Y[4],
+            VELOCITY_Y[5],
+            0.0,
+            0.0,
+        ];
+        let velocity_z = [
+            VELOCITY_Z[0],
+            VELOCITY_Z[1],
+            VELOCITY_Z[2],
+            VELOCITY_Z[3],
+            VELOCITY_Z[4],
+            VELOCITY_Z[5],
+            0.0,
+            0.0,
+        ];
+        System::new(particles.with_velocities(VelocitySoa::new(
+            &velocity_x,
+            &velocity_y,
+            &velocity_z,
+        )))
+    } else {
+        System::new(particles)
+    }
 }
 
 fn forcefield() -> Result<ForceField> {
@@ -433,6 +486,11 @@ pub fn development_water_ion_v1_profile_sha256() -> [u8; 32] {
     Sha256::digest(DEVELOPMENT_WATER_ION_V1_PROFILE_BYTES).into()
 }
 
+/// SHA-256 of the exact constrained water-ion dynamics profile.
+pub fn development_water_ion_dynamics_v1_profile_sha256() -> [u8; 32] {
+    Sha256::digest(DEVELOPMENT_WATER_ION_DYNAMICS_V1_PROFILE_BYTES).into()
+}
+
 /// Evaluate one frozen unconstrained water through a selected CPU backend.
 pub fn evaluate_development_single_water_v1(context: &Context) -> Result<Evaluation> {
     require_cpu_backend(context, DEVELOPMENT_WATER_BOX_V1_PROFILE_ID)?;
@@ -453,6 +511,11 @@ pub fn evaluate_development_water_ion_v1(context: &Context) -> Result<Evaluation
 
 /// Native-owned frozen two-water development simulation.
 pub struct DevelopmentWaterBoxV1 {
+    simulation: Simulation,
+}
+
+/// Native-owned constrained neutral two-water plus Na+/Cl- development simulation.
+pub struct DevelopmentWaterIonDynamicsV1 {
     simulation: Simulation,
 }
 
@@ -579,44 +642,7 @@ impl DevelopmentWaterBoxV1 {
         let system = system()?;
         let forcefield = forcefield()?;
         let constraints = if constrained {
-            DistanceConstraints {
-                rows: vec![
-                    DistanceConstraint {
-                        atom_i: 0,
-                        atom_j: 1,
-                        distance_angstrom: OH_DISTANCE_ANGSTROM,
-                    },
-                    DistanceConstraint {
-                        atom_i: 0,
-                        atom_j: 2,
-                        distance_angstrom: OH_DISTANCE_ANGSTROM,
-                    },
-                    DistanceConstraint {
-                        atom_i: 1,
-                        atom_j: 2,
-                        distance_angstrom: HH_DISTANCE_ANGSTROM,
-                    },
-                    DistanceConstraint {
-                        atom_i: 3,
-                        atom_j: 4,
-                        distance_angstrom: OH_DISTANCE_ANGSTROM,
-                    },
-                    DistanceConstraint {
-                        atom_i: 3,
-                        atom_j: 5,
-                        distance_angstrom: OH_DISTANCE_ANGSTROM,
-                    },
-                    DistanceConstraint {
-                        atom_i: 4,
-                        atom_j: 5,
-                        distance_angstrom: HH_DISTANCE_ANGSTROM,
-                    },
-                ],
-                tolerance_angstrom: CONSTRAINT_TOLERANCE_ANGSTROM,
-                velocity_tolerance_angstrom_per_femtosecond:
-                    CONSTRAINT_VELOCITY_TOLERANCE_ANGSTROM_PER_FEMTOSECOND,
-                max_iterations: CONSTRAINT_MAX_ITERATIONS,
-            }
+            frozen_water_constraints()
         } else {
             DistanceConstraints::default()
         };
@@ -643,6 +669,90 @@ impl DevelopmentWaterBoxV1 {
 
     pub fn load_checkpoint(&mut self, checkpoint: &[u8]) -> Result<()> {
         self.simulation.load_checkpoint(checkpoint)
+    }
+}
+
+impl DevelopmentWaterIonDynamicsV1 {
+    /// Construct the frozen constrained Velocity Verlet water-ion lane.
+    pub fn constrained_nve() -> Result<Self> {
+        let system = water_ion_dynamics_system()?;
+        let forcefield = water_ion_forcefield()?;
+        let constraints = frozen_water_constraints();
+        let simulation = Simulation::new(
+            &system,
+            &forcefield,
+            &constraints,
+            SimulationOptions {
+                integrator: Integrator::VelocityVerlet,
+                timestep_femtoseconds: TIMESTEP_FEMTOSECONDS,
+                temperature_kelvin: TEMPERATURE_KELVIN,
+                friction_per_femtosecond: 0.0,
+                random_seed: 0,
+            },
+        )?;
+        Ok(Self { simulation })
+    }
+
+    pub fn integrate(&mut self, context: &Context, step_count: u64) -> Result<DynamicsReport> {
+        require_cpu_backend(context, DEVELOPMENT_WATER_ION_DYNAMICS_V1_PROFILE_ID)?;
+        context.integrate(&mut self.simulation, step_count)
+    }
+
+    pub fn snapshot(&self) -> Result<ParticleSnapshot> {
+        self.simulation.snapshot()
+    }
+
+    pub fn absolute_step(&self) -> Result<u64> {
+        self.simulation.absolute_step()
+    }
+
+    pub fn checkpoint(&self) -> Result<Vec<u8>> {
+        self.simulation.checkpoint()
+    }
+
+    pub fn load_checkpoint(&mut self, checkpoint: &[u8]) -> Result<()> {
+        self.simulation.load_checkpoint(checkpoint)
+    }
+}
+
+fn frozen_water_constraints() -> DistanceConstraints {
+    DistanceConstraints {
+        rows: vec![
+            DistanceConstraint {
+                atom_i: 0,
+                atom_j: 1,
+                distance_angstrom: OH_DISTANCE_ANGSTROM,
+            },
+            DistanceConstraint {
+                atom_i: 0,
+                atom_j: 2,
+                distance_angstrom: OH_DISTANCE_ANGSTROM,
+            },
+            DistanceConstraint {
+                atom_i: 1,
+                atom_j: 2,
+                distance_angstrom: HH_DISTANCE_ANGSTROM,
+            },
+            DistanceConstraint {
+                atom_i: 3,
+                atom_j: 4,
+                distance_angstrom: OH_DISTANCE_ANGSTROM,
+            },
+            DistanceConstraint {
+                atom_i: 3,
+                atom_j: 5,
+                distance_angstrom: OH_DISTANCE_ANGSTROM,
+            },
+            DistanceConstraint {
+                atom_i: 4,
+                atom_j: 5,
+                distance_angstrom: HH_DISTANCE_ANGSTROM,
+            },
+        ],
+        tolerance_angstrom: CONSTRAINT_TOLERANCE_ANGSTROM,
+        velocity_tolerance_angstrom_per_femtosecond:
+            CONSTRAINT_VELOCITY_TOLERANCE_ANGSTROM_PER_FEMTOSECOND,
+        max_iterations: CONSTRAINT_MAX_ITERATIONS,
     }
 }
 
@@ -1134,6 +1244,98 @@ mod tests {
             .chain(&cpp_result.forces.y_kcal_per_mol_angstrom)
             .chain(&cpp_result.forces.z_kcal_per_mol_angstrom)
             .all(|value| value.is_finite()));
+    }
+
+    #[test]
+    fn constrained_water_ion_dynamics_is_cpu_parity_complete_and_checkpoint_exact() {
+        assert_eq!(
+            runtime::DEVELOPMENT_WATER_ION_DYNAMICS_V1_SCHEMA_ID,
+            "betelgeuze.engine_v2_native_water_ion_dynamics_profile/1.0.0"
+        );
+        assert_eq!(
+            runtime::DEVELOPMENT_WATER_ION_DYNAMICS_V1_PROFILE_ID,
+            "engine_v2_native_tip3p_nacl_constrained_dynamics_development_v1"
+        );
+        assert_eq!(
+            runtime::development_water_ion_dynamics_v1_profile_sha256(),
+            [
+                0xad, 0x00, 0x9e, 0x5a, 0x60, 0xc0, 0x7d, 0xcc, 0xf2, 0xd6, 0xc5, 0x0e, 0x76, 0xd7,
+                0x3a, 0xa9, 0xc8, 0x20, 0x62, 0x01, 0xae, 0x1b, 0xab, 0x7c, 0x58, 0x5b, 0x63, 0x64,
+                0x1d, 0xf0, 0x98, 0xe3,
+            ]
+        );
+
+        let cpp = runtime::Context::new(runtime::ContextOptions::cpu_reference()).unwrap();
+        let rust = runtime::Context::new(runtime::ContextOptions::rust_cpu()).unwrap();
+        let mut cpp_system = runtime::DevelopmentWaterIonDynamicsV1::constrained_nve().unwrap();
+        let mut rust_system = runtime::DevelopmentWaterIonDynamicsV1::constrained_nve().unwrap();
+        let initial = rust_system.snapshot().unwrap();
+        for ion_index in [6, 7] {
+            assert_eq!(
+                initial.velocities.x_angstrom_per_femtosecond[ion_index].to_bits(),
+                0.0f64.to_bits()
+            );
+            assert_eq!(
+                initial.velocities.y_angstrom_per_femtosecond[ion_index].to_bits(),
+                0.0f64.to_bits()
+            );
+            assert_eq!(
+                initial.velocities.z_angstrom_per_femtosecond[ion_index].to_bits(),
+                0.0f64.to_bits()
+            );
+        }
+
+        let cpp_report = cpp_system.integrate(&cpp, 100).unwrap();
+        let rust_report = rust_system.integrate(&rust, 100).unwrap();
+        assert_eq!(cpp_report, rust_report);
+        assert_eq!(rust_report.steps_completed, 100);
+        assert_eq!(rust_report.absolute_step, 100);
+        assert_eq!(rust_report.degrees_of_freedom, 18);
+        assert!(rust_report.total_kcal_per_mol.is_finite());
+        assert!(rust_report.kinetic_kcal_per_mol.is_finite());
+        assert!(rust_report.potential_kcal_per_mol.is_finite());
+        let cpp_snapshot = cpp_system.snapshot().unwrap();
+        let rust_snapshot = rust_system.snapshot().unwrap();
+        assert_snapshot_bits_equal(&cpp_snapshot, &rust_snapshot);
+        assert!(rust_snapshot
+            .positions
+            .x_angstrom
+            .iter()
+            .chain(&rust_snapshot.positions.y_angstrom)
+            .chain(&rust_snapshot.positions.z_angstrom)
+            .chain(&rust_snapshot.velocities.x_angstrom_per_femtosecond)
+            .chain(&rust_snapshot.velocities.y_angstrom_per_femtosecond)
+            .chain(&rust_snapshot.velocities.z_angstrom_per_femtosecond)
+            .chain(&rust_snapshot.mass_dalton)
+            .chain(&rust_snapshot.charge_elementary)
+            .all(|value| value.is_finite()));
+        assert_constraint_residuals(&rust_snapshot, 1.0e-10);
+        for ion_index in [6, 7] {
+            assert!(
+                initial.positions.x_angstrom[ion_index].to_bits()
+                    != rust_snapshot.positions.x_angstrom[ion_index].to_bits()
+                    || initial.positions.y_angstrom[ion_index].to_bits()
+                        != rust_snapshot.positions.y_angstrom[ion_index].to_bits()
+                    || initial.positions.z_angstrom[ion_index].to_bits()
+                        != rust_snapshot.positions.z_angstrom[ion_index].to_bits()
+            );
+        }
+
+        let checkpoint = rust_system.checkpoint().unwrap();
+        assert_eq!(checkpoint, rust_system.checkpoint().unwrap());
+        let mut restarted = runtime::DevelopmentWaterIonDynamicsV1::constrained_nve().unwrap();
+        restarted.load_checkpoint(&checkpoint).unwrap();
+        assert_eq!(restarted.absolute_step().unwrap(), 100);
+        assert_snapshot_bits_equal(&rust_snapshot, &restarted.snapshot().unwrap());
+        let continued = rust_system.integrate(&rust, 32).unwrap();
+        let restarted_report = restarted.integrate(&rust, 32).unwrap();
+        assert_eq!(continued, restarted_report);
+        assert_eq!(continued.absolute_step, 132);
+        assert_snapshot_bits_equal(
+            &rust_system.snapshot().unwrap(),
+            &restarted.snapshot().unwrap(),
+        );
+        assert_constraint_residuals(&restarted.snapshot().unwrap(), 1.0e-10);
     }
 
     #[test]

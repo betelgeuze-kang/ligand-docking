@@ -47,6 +47,11 @@ NEIGHBOR_CACHE_PROFILE = json.loads(
 ION_PROFILE = json.loads(
     (ROOT / "config/engine_v2_native_water_ion_profile_v1.json").read_text()
 )
+ION_DYNAMICS_PROFILE = json.loads(
+    (
+        ROOT / "config/engine_v2_native_water_ion_dynamics_profile_v1.json"
+    ).read_text()
+)
 
 
 def test_native_profile_matches_the_packaged_runtime_asset() -> None:
@@ -281,6 +286,55 @@ def test_native_water_ion_profile_matches_the_packaged_runtime_asset() -> None:
     assert ION_PROFILE["fixture"]["total_charge_elementary"] == 0.0
     assert ION_PROFILE["fixture"]["static_energy_force_evaluation_only"] is True
     assert all(value is False for value in ION_PROFILE["authority"].values())
+
+
+def test_native_water_ion_dynamics_profile_matches_packaged_asset() -> None:
+    canonical = (
+        ROOT / "config/engine_v2_native_water_ion_dynamics_profile_v1.json"
+    ).read_bytes()
+    packaged = (
+        ROOT
+        / "rust/betelgeuze-runtime/assets/engine_v2_native_water_ion_dynamics_profile_v1.json"
+    ).read_bytes()
+    assert packaged == canonical
+    assert hashlib.sha256(canonical).hexdigest() == (
+        "ad009e5a60c07dccf2d6c50e76d73aa9c8206201ae1bab7c585b63641df098e3"
+    )
+    assert ION_DYNAMICS_PROFILE["predecessor"]["sha256"] == (
+        "409902e5f6776bd58c76f80a572c9cf978f7e2f4938003e5609036bfe91c631f"
+    )
+    bindings = ION_DYNAMICS_PROFILE["system_bindings"]
+    assert bindings["water_ion_profile_sha256"] == (
+        "409902e5f6776bd58c76f80a572c9cf978f7e2f4938003e5609036bfe91c631f"
+    )
+    assert bindings["water_constraint_profile_sha256"] == (
+        "8dcad0b5005b7a768ce0a88b1804b55ecddb9b3490e2dd59179dfa2393433507"
+    )
+    assert bindings["periodic_neighbor_list_profile_sha256"] == (
+        "ee2c64b3e40ec1905a97b0c2646e36c59fe30f674adfd019dde016e2637e3628"
+    )
+    assert bindings["atom_count"] == 8
+    assert bindings["constraint_count"] == 6
+    assert bindings["expected_degrees_of_freedom"] == 18
+    assert bindings["total_charge_elementary"] == 0.0
+    assert ION_DYNAMICS_PROFILE["trajectory"] == {
+        "integrator": "constrained_velocity_verlet",
+        "timestep_femtoseconds": 0.02,
+        "primary_step_count": 100,
+        "checkpoint_continuation_step_count": 32,
+        "initial_ion_velocities_zero": True,
+    }
+    validation = ION_DYNAMICS_PROFILE["validation"]
+    assert validation["cpu_backends"] == ["cpp_cpu_reference", "rust_cpu"]
+    assert validation["same_build_backend_bit_identity_required"] is True
+    assert validation["ion_position_change_required"] is True
+    assert validation["exact_checkpoint_continuation_required"] is True
+    assert validation["absolute_step_continuation_required"] is True
+    assert validation["performance_measurement_present"] is False
+    assert validation["performance_threshold_present"] is False
+    assert all(
+        value is False for value in ION_DYNAMICS_PROFILE["authority"].values()
+    )
 
 
 def test_analytic_force_matches_finite_difference() -> None:
