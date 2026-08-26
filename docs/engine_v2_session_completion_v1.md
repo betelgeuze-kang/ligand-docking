@@ -220,6 +220,18 @@ stateless/mixed/nonperiodic/HIP evaluation remains uncached. The profile has no
 performance measurement or threshold and grants no performance or acceleration
 authority.
 
+The next SHA-bound successor,
+`config/engine_v2_native_water_box_nvt_ensemble_profile_v1.json`, runs only the
+two admitted CPU backends over eight fixed constrained-BAOAB seeds. After a
+fixed 2,000-step burn-in, it retains 32 observations per seed at a 100-step
+stride, emits an ordered backend-tagged receipt over the exact binary64 rows and
+summary, and requires same-build repeatability, CPU-backend binary64 identity,
+positive kinetic energy, nonzero temperature variance, and a broad 240–360 K
+mean-temperature development bound. This is a deterministic tiny synthetic
+validation, not equilibrium, production-MD,
+performance, molecular-execution, scientific-claim, reservation, Stage 0,
+Fresh-128, or HIP-device authority.
+
 See `docs/engine_v2_native_water_box_v1.md` for the frozen development metrics
 and remaining scientific boundaries.
 

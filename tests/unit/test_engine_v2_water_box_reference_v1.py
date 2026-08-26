@@ -23,6 +23,11 @@ NATIVE_PROFILE = WATER.load_profile(
 CONSTRAINTS_PROFILE = json.loads(
     (ROOT / "config/engine_v2_native_water_box_constraints_profile_v1.json").read_text()
 )
+NVT_ENSEMBLE_PROFILE = json.loads(
+    (
+        ROOT / "config/engine_v2_native_water_box_nvt_ensemble_profile_v1.json"
+    ).read_text()
+)
 NEIGHBOR_LIST_PROFILE = json.loads(
     (
         ROOT / "config/engine_v2_native_periodic_neighbor_list_profile_v1.json"
@@ -75,6 +80,58 @@ def test_native_constraints_profile_matches_the_packaged_runtime_asset() -> None
     )
     assert constraints["expected_degrees_of_freedom"] == 12
     assert all(value is False for value in CONSTRAINTS_PROFILE["authority"].values())
+
+
+def test_native_nvt_ensemble_profile_matches_the_packaged_runtime_asset() -> None:
+    canonical = (
+        ROOT / "config/engine_v2_native_water_box_nvt_ensemble_profile_v1.json"
+    ).read_bytes()
+    packaged = (
+        ROOT
+        / "rust/betelgeuze-runtime/assets/engine_v2_native_water_box_nvt_ensemble_profile_v1.json"
+    ).read_bytes()
+    assert packaged == canonical
+    assert hashlib.sha256(canonical).hexdigest() == (
+        "bb2577c0e227151b8aa95b5c288249823206020558a186eccc8b5ddcbca802de"
+    )
+    assert NVT_ENSEMBLE_PROFILE["predecessor"]["sha256"] == (
+        "c9e671b925b8f5da48a43dec2abe264e695840b277cc3cf4a84aa7255b59150d"
+    )
+    assert NVT_ENSEMBLE_PROFILE["system_bindings"] == {
+        "water_profile_sha256": (
+            "2b0be83b57085c655092ab0272aea5a91b9c3f90c344fa062d494ad324f0019e"
+        ),
+        "constraint_profile_sha256": (
+            "8dcad0b5005b7a768ce0a88b1804b55ecddb9b3490e2dd59179dfa2393433507"
+        ),
+        "atom_count": 6,
+        "water_count": 2,
+        "expected_degrees_of_freedom": 12,
+    }
+    sampling = NVT_ENSEMBLE_PROFILE["sampling"]
+    assert sampling == {
+        "integrator": "constrained_langevin_baoab",
+        "timestep_femtoseconds": 0.5,
+        "target_temperature_kelvin": 300.0,
+        "friction_per_femtosecond": 0.01,
+        "ordered_random_seeds": [101, 211, 307, 401, 503, 601, 701, 809],
+        "burn_in_steps_per_seed": 2000,
+        "sample_count_per_seed": 32,
+        "sample_stride_steps": 100,
+    }
+    validation = NVT_ENSEMBLE_PROFILE["validation"]
+    assert validation["cpu_backends"] == ["cpp_cpu_reference", "rust_cpu"]
+    assert validation["same_seed_repeatability_required"] is True
+    assert validation["ordered_observation_receipt_required"] is True
+    assert validation["kinetic_temperature_identity_required"] is True
+    assert validation["minimum_mean_temperature_kelvin"] == 240.0
+    assert validation["maximum_mean_temperature_kelvin"] == 360.0
+    assert validation["nonzero_temperature_variance_required"] is True
+    assert validation["performance_measurement_present"] is False
+    assert validation["performance_threshold_present"] is False
+    assert all(
+        value is False for value in NVT_ENSEMBLE_PROFILE["authority"].values()
+    )
 
 
 def test_native_neighbor_list_profile_matches_the_packaged_runtime_asset() -> None:

@@ -20,6 +20,10 @@ pub const DEVELOPMENT_WATER_BOX_CONSTRAINTS_V1_SCHEMA_ID: &str =
     "betelgeuze.engine_v2_native_water_box_constraints_profile/1.0.0";
 pub const DEVELOPMENT_WATER_BOX_CONSTRAINTS_V1_PROFILE_ID: &str =
     "engine_v2_native_two_water_constraints_development_v1";
+pub const DEVELOPMENT_WATER_BOX_NVT_ENSEMBLE_V1_SCHEMA_ID: &str =
+    "betelgeuze.engine_v2_native_water_box_nvt_ensemble_profile/1.0.0";
+pub const DEVELOPMENT_WATER_BOX_NVT_ENSEMBLE_V1_PROFILE_ID: &str =
+    "engine_v2_native_two_water_nvt_ensemble_development_v1";
 pub const DEVELOPMENT_WATER_BOX_V1_ATOM_COUNT: usize = 6;
 pub const DEVELOPMENT_WATER_ION_V1_SCHEMA_ID: &str =
     "betelgeuze.engine_v2_native_water_ion_profile/1.0.0";
@@ -30,6 +34,8 @@ const DEVELOPMENT_WATER_BOX_V1_PROFILE_BYTES: &[u8] =
     include_bytes!("../assets/engine_v2_native_water_box_profile_v1.json");
 const DEVELOPMENT_WATER_BOX_CONSTRAINTS_V1_PROFILE_BYTES: &[u8] =
     include_bytes!("../assets/engine_v2_native_water_box_constraints_profile_v1.json");
+const DEVELOPMENT_WATER_BOX_NVT_ENSEMBLE_V1_PROFILE_BYTES: &[u8] =
+    include_bytes!("../assets/engine_v2_native_water_box_nvt_ensemble_profile_v1.json");
 const DEVELOPMENT_WATER_ION_V1_PROFILE_BYTES: &[u8] =
     include_bytes!("../assets/engine_v2_native_water_ion_profile_v1.json");
 
@@ -53,6 +59,12 @@ const HH_DISTANCE_ANGSTROM: f64 = 2.0 * f64::from_bits(0x3fe838efe48967cf);
 const CONSTRAINT_TOLERANCE_ANGSTROM: f64 = 1.0e-10;
 const CONSTRAINT_VELOCITY_TOLERANCE_ANGSTROM_PER_FEMTOSECOND: f64 = 1.0e-10;
 const CONSTRAINT_MAX_ITERATIONS: u32 = 100;
+const NVT_ENSEMBLE_TIMESTEP_FEMTOSECONDS: f64 = 0.5;
+const NVT_ENSEMBLE_FRICTION_PER_FEMTOSECOND: f64 = 0.01;
+const NVT_ENSEMBLE_SEEDS: [u64; 8] = [101, 211, 307, 401, 503, 601, 701, 809];
+const NVT_ENSEMBLE_BURN_IN_STEPS: u64 = 2_000;
+const NVT_ENSEMBLE_SAMPLE_COUNT: usize = 32;
+const NVT_ENSEMBLE_SAMPLE_STRIDE_STEPS: u64 = 100;
 
 const SODIUM_SIGMA_ANGSTROM: f64 = f64::from_bits(0x4003_83a5_9833_bb42);
 const SODIUM_EPSILON_KCAL_PER_MOL: f64 = f64::from_bits(0x3fb6_626c_05e2_9810);
@@ -400,6 +412,11 @@ pub fn development_water_box_constraints_v1_profile_sha256() -> [u8; 32] {
     Sha256::digest(DEVELOPMENT_WATER_BOX_CONSTRAINTS_V1_PROFILE_BYTES).into()
 }
 
+/// SHA-256 of the exact repeated-seed NVT observation profile.
+pub fn development_water_box_nvt_ensemble_v1_profile_sha256() -> [u8; 32] {
+    Sha256::digest(DEVELOPMENT_WATER_BOX_NVT_ENSEMBLE_V1_PROFILE_BYTES).into()
+}
+
 /// SHA-256 of the exact bounded NaCl development profile embedded into this runtime.
 pub fn development_water_ion_v1_profile_sha256() -> [u8; 32] {
     Sha256::digest(DEVELOPMENT_WATER_ION_V1_PROFILE_BYTES).into()
@@ -426,6 +443,26 @@ pub fn evaluate_development_water_ion_v1(context: &Context) -> Result<Evaluation
 /// Native-owned frozen two-water development simulation.
 pub struct DevelopmentWaterBoxV1 {
     simulation: Simulation,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct DevelopmentWaterBoxNvtObservationV1 {
+    pub random_seed: u64,
+    pub sample_index: u32,
+    pub absolute_step: u64,
+    pub degrees_of_freedom: u64,
+    pub kinetic_kcal_per_mol: f64,
+    pub temperature_kelvin: f64,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct DevelopmentWaterBoxNvtEnsembleReportV1 {
+    pub backend: Backend,
+    pub observations: Vec<DevelopmentWaterBoxNvtObservationV1>,
+    pub mean_kinetic_kcal_per_mol: f64,
+    pub mean_temperature_kelvin: f64,
+    pub temperature_variance_kelvin2: f64,
+    pub observation_receipt_sha256: [u8; 32],
 }
 
 impl DevelopmentWaterBoxV1 {
@@ -556,10 +593,134 @@ impl DevelopmentWaterBoxV1 {
     }
 }
 
+/// Run the frozen repeated-seed constrained BAOAB development observation.
+///
+/// This is a tiny synthetic CPU validation lane. It does not authorize general
+/// molecular execution, performance claims, or scientifically validated NVT.
+pub fn observe_development_water_box_nvt_ensemble_v1(
+    context: &Context,
+) -> Result<DevelopmentWaterBoxNvtEnsembleReportV1> {
+    require_cpu_backend(context, DEVELOPMENT_WATER_BOX_NVT_ENSEMBLE_V1_PROFILE_ID)?;
+    let backend = context.backend()?;
+    let mut observations = Vec::with_capacity(NVT_ENSEMBLE_SEEDS.len() * NVT_ENSEMBLE_SAMPLE_COUNT);
+    for random_seed in NVT_ENSEMBLE_SEEDS {
+        let mut water_box = DevelopmentWaterBoxV1::new(
+            SimulationOptions {
+                integrator: Integrator::LangevinBaoab,
+                timestep_femtoseconds: NVT_ENSEMBLE_TIMESTEP_FEMTOSECONDS,
+                temperature_kelvin: TEMPERATURE_KELVIN,
+                friction_per_femtosecond: NVT_ENSEMBLE_FRICTION_PER_FEMTOSECOND,
+                random_seed,
+            },
+            true,
+        )?;
+        let burn_in = water_box.integrate(context, NVT_ENSEMBLE_BURN_IN_STEPS)?;
+        if burn_in.absolute_step != NVT_ENSEMBLE_BURN_IN_STEPS || burn_in.degrees_of_freedom != 12 {
+            return Err(invalid(
+                "NVT ensemble burn-in returned an invalid step or degree-of-freedom count",
+            ));
+        }
+        for sample_index in 0..NVT_ENSEMBLE_SAMPLE_COUNT {
+            let report = water_box.integrate(context, NVT_ENSEMBLE_SAMPLE_STRIDE_STEPS)?;
+            let sample_index_u64 = u64::try_from(sample_index)
+                .map_err(|_| invalid("NVT ensemble sample index exceeds u64"))?;
+            let sample_index_u32 = u32::try_from(sample_index)
+                .map_err(|_| invalid("NVT ensemble sample index exceeds u32"))?;
+            let expected_step = NVT_ENSEMBLE_BURN_IN_STEPS
+                + (sample_index_u64 + 1) * NVT_ENSEMBLE_SAMPLE_STRIDE_STEPS;
+            if report.absolute_step != expected_step
+                || report.degrees_of_freedom != 12
+                || !report.kinetic_kcal_per_mol.is_finite()
+                || report.kinetic_kcal_per_mol <= 0.0
+                || !report.temperature_kelvin.is_finite()
+                || report.temperature_kelvin <= 0.0
+            {
+                return Err(invalid("NVT ensemble sample is incomplete or non-finite"));
+            }
+            observations.push(DevelopmentWaterBoxNvtObservationV1 {
+                random_seed,
+                sample_index: sample_index_u32,
+                absolute_step: report.absolute_step,
+                degrees_of_freedom: report.degrees_of_freedom,
+                kinetic_kcal_per_mol: report.kinetic_kcal_per_mol,
+                temperature_kelvin: report.temperature_kelvin,
+            });
+        }
+    }
+
+    let observation_count = u32::try_from(observations.len())
+        .map_err(|_| invalid("NVT ensemble observation count exceeds u32"))?;
+    let count = f64::from(observation_count);
+    let mean_kinetic_kcal_per_mol = observations
+        .iter()
+        .map(|row| row.kinetic_kcal_per_mol)
+        .sum::<f64>()
+        / count;
+    let mean_temperature_kelvin = observations
+        .iter()
+        .map(|row| row.temperature_kelvin)
+        .sum::<f64>()
+        / count;
+    let temperature_variance_kelvin2 = observations
+        .iter()
+        .map(|row| {
+            let delta = row.temperature_kelvin - mean_temperature_kelvin;
+            delta * delta
+        })
+        .sum::<f64>()
+        / count;
+    if !(240.0..=360.0).contains(&mean_temperature_kelvin)
+        || !mean_kinetic_kcal_per_mol.is_finite()
+        || mean_kinetic_kcal_per_mol <= 0.0
+        || !temperature_variance_kelvin2.is_finite()
+        || temperature_variance_kelvin2 <= 0.0
+    {
+        return Err(invalid(
+            "NVT ensemble development distribution is outside the frozen bounds",
+        ));
+    }
+
+    let mut receipt = Sha256::new();
+    receipt.update(b"betelgeuze.engine_v2_native_water_box_nvt_ensemble_observation/1.0.0\0");
+    receipt.update(development_water_box_nvt_ensemble_v1_profile_sha256());
+    let backend_tag = match backend {
+        Backend::CppCpuReference => 1_u8,
+        Backend::RustCpu => 2_u8,
+        Backend::Auto | Backend::HipFast | Backend::HipSafe => {
+            return Err(invalid(
+                "NVT ensemble CPU guard admitted an unsupported backend",
+            ));
+        }
+    };
+    receipt.update([backend_tag]);
+    receipt.update(u64::from(observation_count).to_le_bytes());
+    for row in &observations {
+        receipt.update(row.random_seed.to_le_bytes());
+        receipt.update(row.sample_index.to_le_bytes());
+        receipt.update(row.absolute_step.to_le_bytes());
+        receipt.update(row.degrees_of_freedom.to_le_bytes());
+        receipt.update(row.kinetic_kcal_per_mol.to_bits().to_le_bytes());
+        receipt.update(row.temperature_kelvin.to_bits().to_le_bytes());
+    }
+    receipt.update(mean_kinetic_kcal_per_mol.to_bits().to_le_bytes());
+    receipt.update(mean_temperature_kelvin.to_bits().to_le_bytes());
+    receipt.update(temperature_variance_kelvin2.to_bits().to_le_bytes());
+
+    Ok(DevelopmentWaterBoxNvtEnsembleReportV1 {
+        backend,
+        observations,
+        mean_kinetic_kcal_per_mol,
+        mean_temperature_kelvin,
+        temperature_variance_kelvin2,
+        observation_receipt_sha256: receipt.finalize().into(),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::{CHARGE_ELEMENTARY, HH_DISTANCE_ANGSTROM, OH_DISTANCE_ANGSTROM};
     use crate as runtime;
+    use sha2::{Digest, Sha256};
 
     const TOLERANCE: f64 = 2.0e-11;
     const BAOAB_SEED: u64 = 0x42d0_3301_a5a5_0101;
@@ -787,6 +948,108 @@ mod tests {
             TOLERANCE,
         );
         assert_snapshot_bits_equal(&rust_box.snapshot().unwrap(), &repeated.snapshot().unwrap());
+    }
+
+    #[test]
+    fn repeated_seed_nvt_distribution_is_frozen_repeatable_and_cpu_bounded() {
+        assert_eq!(
+            runtime::DEVELOPMENT_WATER_BOX_NVT_ENSEMBLE_V1_SCHEMA_ID,
+            "betelgeuze.engine_v2_native_water_box_nvt_ensemble_profile/1.0.0"
+        );
+        assert_eq!(
+            runtime::DEVELOPMENT_WATER_BOX_NVT_ENSEMBLE_V1_PROFILE_ID,
+            "engine_v2_native_two_water_nvt_ensemble_development_v1"
+        );
+        assert_eq!(
+            runtime::development_water_box_nvt_ensemble_v1_profile_sha256(),
+            [
+                0xbb, 0x25, 0x77, 0xc0, 0xe2, 0x27, 0x15, 0x1b, 0x8a, 0xa9, 0x5b, 0x5c, 0x28, 0x82,
+                0x49, 0x82, 0x32, 0x06, 0x02, 0x05, 0x58, 0xa1, 0x86, 0xec, 0xcc, 0x8b, 0x5d, 0xdc,
+                0xbc, 0xa8, 0x02, 0xde,
+            ]
+        );
+        let cpp = runtime::Context::new(runtime::ContextOptions::cpu_reference()).unwrap();
+        let rust = runtime::Context::new(runtime::ContextOptions::rust_cpu()).unwrap();
+        let cpp_report = runtime::observe_development_water_box_nvt_ensemble_v1(&cpp).unwrap();
+        let rust_report = runtime::observe_development_water_box_nvt_ensemble_v1(&rust).unwrap();
+        let repeated = runtime::observe_development_water_box_nvt_ensemble_v1(&rust).unwrap();
+        assert_eq!(rust_report, repeated);
+        assert_eq!(cpp_report.observations, rust_report.observations);
+        assert_eq!(
+            cpp_report.mean_temperature_kelvin.to_bits(),
+            rust_report.mean_temperature_kelvin.to_bits()
+        );
+        assert_eq!(
+            cpp_report.temperature_variance_kelvin2.to_bits(),
+            rust_report.temperature_variance_kelvin2.to_bits()
+        );
+        assert_eq!(
+            cpp_report.mean_kinetic_kcal_per_mol.to_bits(),
+            rust_report.mean_kinetic_kcal_per_mol.to_bits()
+        );
+        assert_eq!(cpp_report.observations.len(), 8 * 32);
+        assert_eq!(rust_report.observations.len(), 8 * 32);
+        for (backend, report) in [
+            (runtime::Backend::CppCpuReference, &cpp_report),
+            (runtime::Backend::RustCpu, &rust_report),
+        ] {
+            assert_eq!(report.backend, backend);
+            assert!((240.0..=360.0).contains(&report.mean_temperature_kelvin));
+            assert!(report.mean_kinetic_kcal_per_mol > 0.0);
+            assert!(report.temperature_variance_kelvin2 > 0.0);
+            for (index, row) in report.observations.iter().enumerate() {
+                let seed_index = index / 32;
+                let sample_index = index % 32;
+                assert_eq!(
+                    row.random_seed,
+                    [101, 211, 307, 401, 503, 601, 701, 809][seed_index]
+                );
+                assert_eq!(row.sample_index, sample_index as u32);
+                assert_eq!(row.absolute_step, 2_000 + (sample_index as u64 + 1) * 100);
+                assert_eq!(row.degrees_of_freedom, 12);
+                assert!(row.kinetic_kcal_per_mol > 0.0);
+                assert!(row.temperature_kelvin > 0.0);
+            }
+            assert_eq!(
+                report.observation_receipt_sha256,
+                independently_recompute_nvt_observation_receipt(report)
+            );
+        }
+        assert_ne!(
+            cpp_report.observation_receipt_sha256,
+            rust_report.observation_receipt_sha256
+        );
+    }
+
+    fn independently_recompute_nvt_observation_receipt(
+        report: &runtime::DevelopmentWaterBoxNvtEnsembleReportV1,
+    ) -> [u8; 32] {
+        let backend_tag = match report.backend {
+            runtime::Backend::CppCpuReference => 1_u8,
+            runtime::Backend::RustCpu => 2_u8,
+            other => panic!("unexpected NVT observation backend: {other:?}"),
+        };
+        let mut receipt = Sha256::new();
+        receipt.update(b"betelgeuze.engine_v2_native_water_box_nvt_ensemble_observation/1.0.0\0");
+        receipt.update(runtime::development_water_box_nvt_ensemble_v1_profile_sha256());
+        receipt.update([backend_tag]);
+        receipt.update(
+            u64::try_from(report.observations.len())
+                .unwrap()
+                .to_le_bytes(),
+        );
+        for row in &report.observations {
+            receipt.update(row.random_seed.to_le_bytes());
+            receipt.update(row.sample_index.to_le_bytes());
+            receipt.update(row.absolute_step.to_le_bytes());
+            receipt.update(row.degrees_of_freedom.to_le_bytes());
+            receipt.update(row.kinetic_kcal_per_mol.to_bits().to_le_bytes());
+            receipt.update(row.temperature_kelvin.to_bits().to_le_bytes());
+        }
+        receipt.update(report.mean_kinetic_kcal_per_mol.to_bits().to_le_bytes());
+        receipt.update(report.mean_temperature_kelvin.to_bits().to_le_bytes());
+        receipt.update(report.temperature_variance_kelvin2.to_bits().to_le_bytes());
+        receipt.finalize().into()
     }
 
     #[test]
