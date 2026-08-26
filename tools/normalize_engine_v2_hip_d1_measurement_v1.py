@@ -29,6 +29,17 @@ PROFILER_TRACE_SCHEMA = (
 TRANSFER_TRACE_SCHEMA = "betelgeuze.engine_v2_hip_normalized_transfer_trace/1.2.0"
 PROFILE_ID = "engine_v2_hip_d1_representative_v1"
 GPU_BACKENDS = {"hip_safe", "hip_fast"}
+UNBOUND_STATUS = "frozen_non_authoritative_manifest_not_bound"
+BOUND_STATUS = "frozen_non_authoritative_manifest_bound"
+UNBOUND_BLOCKERS = [
+    "d1_manifest_not_materialized",
+    "hip_device_evidence_not_supplied",
+    "hip_device_execution_not_authorized",
+]
+BOUND_BLOCKERS = [
+    "hip_device_evidence_not_supplied",
+    "hip_device_execution_not_authorized",
+]
 FAILURE_PROBE_CODES = [
     "backend_unavailable",
     "device_oom",
@@ -155,6 +166,14 @@ def _sha256(value: Any, label: str) -> str:
     return _string(value, label, SHA256_RE)
 
 
+def _authority(value: Any, label: str) -> None:
+    if type(value) is not dict or set(value) != set(AUTHORITY):
+        raise MeasurementNormalizationError(f"{label} field set changed")
+    for key in AUTHORITY:
+        if value[key] is not False:
+            raise MeasurementNormalizationError(f"{label}.{key} must remain false")
+
+
 def _seconds(nanoseconds: int) -> float:
     result = nanoseconds / 1_000_000_000.0
     if not math.isfinite(result) or result <= 0.0:
@@ -210,12 +229,19 @@ def _profile(document: dict[str, Any]) -> dict[str, Any]:
     projection.pop("profile_sha256")
     if profile_sha256 != _hash(projection):
         raise MeasurementNormalizationError("HIP D1 profile self-hash mismatch")
-    if document.get("case_count") != 32 or document.get("candidate_denominator") != 64:
+    if (
+        _integer(document.get("case_count"), "profile.case_count", minimum=1) != 32
+        or _integer(
+            document.get("candidate_denominator"),
+            "profile.candidate_denominator",
+            minimum=1,
+        )
+        != 64
+    ):
         raise MeasurementNormalizationError("HIP D1 denominator changed")
     if document.get("required_backends") != ["rust_cpu", "hip_safe", "hip_fast"]:
         raise MeasurementNormalizationError("HIP D1 backend order changed")
-    if document.get("authority") != AUTHORITY:
-        raise MeasurementNormalizationError("HIP D1 profile authority changed")
+    _authority(document.get("authority"), "profile.authority")
     sampling = document.get("sampling")
     profiling = document.get("profiling")
     if type(sampling) is not dict or type(profiling) is not dict:
@@ -227,7 +253,7 @@ def _profile(document: dict[str, Any]) -> dict[str, Any]:
         "p50_method": "median",
         "p95_method": "nearest_rank_95",
     }
-    if sampling != expected_sampling:
+    if _canonical(sampling) != _canonical(expected_sampling):
         raise MeasurementNormalizationError("HIP D1 sampling policy changed")
     blockers = document.get("blockers")
     if (
@@ -250,8 +276,36 @@ def _profile(document: dict[str, Any]) -> dict[str, Any]:
         "required_kernel_by_stage": REQUIRED_KERNEL_BY_STAGE,
         "cpu_reference_identity_required": True,
     }
-    if profiling != expected_profiling:
+    if _canonical(profiling) != _canonical(expected_profiling):
         raise MeasurementNormalizationError("HIP D1 profiler policy changed")
+    expected_manifest = document["expected_manifest_sha256"]
+    expected_case_ids = document["expected_ordered_case_ids_sha256"]
+    expected_candidate_ids = document["expected_ordered_candidate_ids_sha256_by_case"]
+    if expected_manifest is None:
+        if (
+            document["status"] != UNBOUND_STATUS
+            or blockers != UNBOUND_BLOCKERS
+            or expected_case_ids is not None
+            or expected_candidate_ids is not None
+        ):
+            raise MeasurementNormalizationError("HIP D1 unbound profile state changed")
+    else:
+        _sha256(expected_manifest, "profile.expected_manifest_sha256")
+        expected_case_ids = _sha256(
+            expected_case_ids, "profile.expected_ordered_case_ids_sha256"
+        )
+        if (
+            type(expected_candidate_ids) is not dict
+            or len(expected_candidate_ids) != 32
+        ):
+            raise MeasurementNormalizationError(
+                "HIP D1 bound candidate identity map changed"
+            )
+        for case_id, digest in expected_candidate_ids.items():
+            _string(case_id, "profile candidate identity case", CASE_RE)
+            _sha256(digest, f"profile candidate identity {case_id}")
+        if document["status"] != BOUND_STATUS or blockers != BOUND_BLOCKERS:
+            raise MeasurementNormalizationError("HIP D1 bound profile state changed")
     return {
         "profile_sha256": profile_sha256,
         "minimum_case_samples": 5,
@@ -260,6 +314,10 @@ def _profile(document: dict[str, Any]) -> dict[str, Any]:
         "required_kernels": dict(REQUIRED_KERNEL_BY_STAGE),
         "blockers": list(blockers),
         "status": document.get("status"),
+        "expected_ordered_case_ids_sha256": expected_case_ids,
+        "expected_candidate_case_ids": (
+            None if expected_candidate_ids is None else set(expected_candidate_ids)
+        ),
     }
 
 
@@ -301,8 +359,7 @@ def normalize(profile: dict[str, Any], journal: dict[str, Any]) -> dict[str, Any
         raise MeasurementNormalizationError(
             "measurement journal requires a HIP backend"
         )
-    if journal["authority"] != AUTHORITY:
-        raise MeasurementNormalizationError("measurement journal authority changed")
+    _authority(journal["authority"], "journal.authority")
 
     ordered_case_ids = journal["ordered_case_ids"]
     if type(ordered_case_ids) is not list or len(ordered_case_ids) != 32:
@@ -316,6 +373,20 @@ def normalize(profile: dict[str, Any], journal: dict[str, Any]) -> dict[str, Any
     if len(set(case_ids)) != 32:
         raise MeasurementNormalizationError(
             "measurement journal case IDs are duplicated"
+        )
+    if (
+        policy["expected_ordered_case_ids_sha256"] is not None
+        and _hash(case_ids) != policy["expected_ordered_case_ids_sha256"]
+    ):
+        raise MeasurementNormalizationError(
+            "measurement journal ordered cases do not match the bound profile"
+        )
+    if (
+        policy["expected_candidate_case_ids"] is not None
+        and set(case_ids) != policy["expected_candidate_case_ids"]
+    ):
+        raise MeasurementNormalizationError(
+            "measurement journal cases do not match the bound candidate map"
         )
 
     samples = journal["samples"]

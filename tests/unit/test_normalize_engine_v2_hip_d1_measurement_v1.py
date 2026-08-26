@@ -32,6 +32,12 @@ def _profile() -> dict:
     return json.loads(PROFILE_PATH.read_text(encoding="utf-8"))
 
 
+def _rehash_profile(profile: dict) -> None:
+    projection = dict(profile)
+    projection.pop("profile_sha256")
+    profile["profile_sha256"] = NORMALIZER._hash(projection)
+
+
 def _journal() -> dict:
     profile = _profile()
     stages = profile["profiling"]["required_stage_sequence_per_sample"]
@@ -277,9 +283,7 @@ def test_whitespace_kernel_names_and_reversed_timestamps_fail_closed() -> None:
 def test_frozen_sampling_policy_cannot_be_rehashed_and_relaxed() -> None:
     profile = _profile()
     profile["sampling"]["minimum_case_samples"] = 4
-    projection = dict(profile)
-    projection.pop("profile_sha256")
-    profile["profile_sha256"] = NORMALIZER._hash(projection)
+    _rehash_profile(profile)
     with pytest.raises(
         NORMALIZER.MeasurementNormalizationError, match="sampling policy"
     ):
@@ -287,13 +291,76 @@ def test_frozen_sampling_policy_cannot_be_rehashed_and_relaxed() -> None:
 
     profile = _profile()
     profile["profiling"]["failure_probe_codes"] = ["backend_unavailable"]
-    projection = dict(profile)
-    projection.pop("profile_sha256")
-    profile["profile_sha256"] = NORMALIZER._hash(projection)
+    _rehash_profile(profile)
     with pytest.raises(
         NORMALIZER.MeasurementNormalizationError, match="profiler policy"
     ):
         NORMALIZER.normalize(profile, _journal())
+
+
+def test_profile_state_cannot_be_rehashed_into_an_inconsistent_binding() -> None:
+    profile = _profile()
+    profile["status"] = NORMALIZER.BOUND_STATUS
+    _rehash_profile(profile)
+    with pytest.raises(
+        NORMALIZER.MeasurementNormalizationError, match="unbound profile state"
+    ):
+        NORMALIZER.profile_only(profile)
+
+    profile = _profile()
+    profile["blockers"] = list(NORMALIZER.BOUND_BLOCKERS)
+    _rehash_profile(profile)
+    with pytest.raises(
+        NORMALIZER.MeasurementNormalizationError, match="unbound profile state"
+    ):
+        NORMALIZER.profile_only(profile)
+
+
+def test_bound_profile_binds_the_journal_case_order_and_candidate_map() -> None:
+    journal = _journal()
+    profile = _profile()
+    case_ids = journal["ordered_case_ids"]
+    profile["status"] = NORMALIZER.BOUND_STATUS
+    profile["blockers"] = list(NORMALIZER.BOUND_BLOCKERS)
+    profile["expected_manifest_sha256"] = "b" * 64
+    profile["expected_ordered_case_ids_sha256"] = NORMALIZER._hash(case_ids)
+    profile["expected_ordered_candidate_ids_sha256_by_case"] = {
+        case_id: "c" * 64 for case_id in case_ids
+    }
+    _rehash_profile(profile)
+    journal["profile_sha256"] = profile["profile_sha256"]
+    NORMALIZER.normalize(profile, journal)
+
+    journal["ordered_case_ids"][0] = "D1_CASE_REPLACED"
+    with pytest.raises(NORMALIZER.MeasurementNormalizationError, match="bound profile"):
+        NORMALIZER.normalize(profile, journal)
+
+    profile["expected_ordered_case_ids_sha256"] = NORMALIZER._hash(
+        journal["ordered_case_ids"]
+    )
+    _rehash_profile(profile)
+    journal["profile_sha256"] = profile["profile_sha256"]
+    with pytest.raises(
+        NORMALIZER.MeasurementNormalizationError, match="bound candidate map"
+    ):
+        NORMALIZER.normalize(profile, journal)
+
+
+def test_authority_values_must_be_literal_false() -> None:
+    journal = _journal()
+    journal["authority"] = {key: 0 for key in NORMALIZER.AUTHORITY}
+    with pytest.raises(
+        NORMALIZER.MeasurementNormalizationError, match="must remain false"
+    ):
+        NORMALIZER.normalize(_profile(), journal)
+
+    profile = _profile()
+    profile["authority"] = {key: 0 for key in NORMALIZER.AUTHORITY}
+    _rehash_profile(profile)
+    with pytest.raises(
+        NORMALIZER.MeasurementNormalizationError, match="must remain false"
+    ):
+        NORMALIZER.profile_only(profile)
 
 
 def test_boolean_and_out_of_range_timestamps_fail_closed() -> None:
