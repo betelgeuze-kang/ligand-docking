@@ -503,6 +503,59 @@ def test_arbitrarily_resealed_result_is_not_authorized(
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 
+def test_pre_pin_candidate_validation_is_complete_but_non_authoritative(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    monkeypatch.setattr(VERIFIER, "AUTHORIZED_BOUND_PROFILE_SHA256S", frozenset())
+    monkeypatch.setattr(VERIFIER, "AUTHORIZED_RESULT_SHA256S", frozenset())
+
+    output = VERIFIER.validate_candidate_result(
+        profile_path,
+        _save(tmp_path, "candidate-result.json", result),
+    )
+
+    assert output["candidate_valid"] is True
+    assert output["profile_sha256"] == profile["profile_sha256"]
+    assert output["result_sha256"] == result["result_sha256"]
+    assert output["profile_digest_pinned"] is False
+    assert output["result_digest_pinned"] is False
+    assert output["result_verification_authorized"] is False
+    assert output["architecture_count"] == 2
+    assert output["case_count"] == 32
+    assert output["candidate_denominator"] == 64
+    assert output["device_execution_authorized"] is False
+    assert output["claim_authority_granted"] is False
+    assert "verified" not in output
+
+
+def test_pre_pin_candidate_validation_still_requires_a_bound_profile(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="manifest is not bound"):
+        VERIFIER.validate_candidate_result(
+            PROFILE,
+            _save(tmp_path, "candidate-result.json", {}),
+        )
+
+
+def test_pre_pin_candidate_validation_rejects_result_self_hash_tamper(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    result["result_sha256"] = "f" * 64
+    monkeypatch.setattr(VERIFIER, "AUTHORIZED_BOUND_PROFILE_SHA256S", frozenset())
+    monkeypatch.setattr(VERIFIER, "AUTHORIZED_RESULT_SHA256S", frozenset())
+
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="result SHA-256 mismatch"):
+        VERIFIER.validate_candidate_result(
+            profile_path,
+            _save(tmp_path, "candidate-result.json", result),
+        )
+
+
 def test_valid_bound_result_derives_metrics_without_authority(tmp_path: Path) -> None:
     output = _verify(tmp_path)
     assert output["verified"] is True
@@ -1661,3 +1714,28 @@ def test_profile_only_cli_succeeds_without_result() -> None:
     )
     assert completed.returncode == 0
     assert json.loads(completed.stdout)["manifest_bound"] is False
+
+
+def test_candidate_result_cli_uses_non_authoritative_status_key(
+    tmp_path: Path,
+) -> None:
+    candidate_path = _save(tmp_path, "candidate-result.json", {})
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--profile",
+            str(PROFILE),
+            "--candidate-result",
+            str(candidate_path),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.returncode == 1
+    assert completed.stderr == ""
+    assert json.loads(completed.stdout) == {
+        "candidate_valid": False,
+        "error": "profile manifest is not bound; result verification refused",
+    }
