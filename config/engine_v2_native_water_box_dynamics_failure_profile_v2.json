@@ -1,0 +1,45 @@
+{
+  "schema_id": "betelgeuze.engine_v2_native_water_box_dynamics_failure_profile/2.0.0",
+  "profile_id": "engine_v2_native_water_box_dynamics_failure_boundary_development_v2",
+  "predecessor": {
+    "path": "config/engine_v2_native_water_box_dynamics_failure_profile_v1.json",
+    "sha256": "e6fef18952ef813b3f2e96b1614e7b9215f62f032b1abda92b4a2d13d453e6d0",
+    "semantic_change": "Strengthen the mapping-only OOM row with a deterministic probe of the production native exception boundary, without attempting an allocation or granting OOM-resilience authority."
+  },
+  "oom_boundary_probe": {
+    "predecessor_case_id": "out_of_memory_status_mapping",
+    "production_boundary": "betelgeuze::native::guarded_status",
+    "deterministic_exception": "std::bad_alloc",
+    "expected_native_status": "BG_STATUS_OUT_OF_MEMORY",
+    "expected_native_message": "native allocation failed",
+    "safe_rust_mapping": "ErrorCode::OutOfMemory",
+    "native_probe_compiled_into_product_library": false,
+    "native_probe_calls_production_boundary": true,
+    "allocator_attempted": false,
+    "allocation_failure_injected": false,
+    "hip_device_execution_required": false
+  },
+  "validation": {
+    "predecessor_rows_unchanged": true,
+    "native_bad_alloc_exception_mapping_required": true,
+    "native_last_error_message_required": true,
+    "safe_rust_status_mapping_required": true,
+    "all_required_failure_classes_typed": true,
+    "all_required_failure_classes_runtime_exercised": false,
+    "production_oom_resilience_validated": false,
+    "performance_measurement_present": false,
+    "performance_threshold_present": false
+  },
+  "authority": {
+    "molecular_execution_authorized": false,
+    "production_md_validated": false,
+    "scientific_claim_authorized": false,
+    "parameter_applicability_claim_authorized": false,
+    "performance_claim_authorized": false,
+    "reservation_authorized": false,
+    "fresh_128_authorized": false,
+    "public_benchmark_authorized": false,
+    "hip_device_execution_authorized": false,
+    "production_oom_resilience_authorized": false
+  }
+}

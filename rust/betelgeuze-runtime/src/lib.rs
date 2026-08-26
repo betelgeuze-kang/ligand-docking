@@ -16,6 +16,7 @@ pub use betelgeuze_docking_search::Fixed64Lane;
 pub use development_water_box::{
     development_ion_parameters_v1, development_water_box_constraints_v1_profile_sha256,
     development_water_box_dynamics_failure_v1_profile_sha256,
+    development_water_box_dynamics_failure_v2_profile_sha256,
     development_water_box_nvt_constraint_residual_v1_profile_sha256,
     development_water_box_nvt_ensemble_v1_profile_sha256, development_water_box_v1_profile_sha256,
     development_water_ion_dynamics_v1_profile_sha256, development_water_ion_v1_profile_sha256,
@@ -33,6 +34,8 @@ pub use development_water_box::{
     DEVELOPMENT_WATER_BOX_CONSTRAINTS_V1_SCHEMA_ID,
     DEVELOPMENT_WATER_BOX_DYNAMICS_FAILURE_V1_PROFILE_ID,
     DEVELOPMENT_WATER_BOX_DYNAMICS_FAILURE_V1_SCHEMA_ID,
+    DEVELOPMENT_WATER_BOX_DYNAMICS_FAILURE_V2_PROFILE_ID,
+    DEVELOPMENT_WATER_BOX_DYNAMICS_FAILURE_V2_SCHEMA_ID,
     DEVELOPMENT_WATER_BOX_NVT_CONSTRAINT_RESIDUAL_V1_PROFILE_ID,
     DEVELOPMENT_WATER_BOX_NVT_CONSTRAINT_RESIDUAL_V1_SCHEMA_ID,
     DEVELOPMENT_WATER_BOX_NVT_ENSEMBLE_V1_PROFILE_ID,

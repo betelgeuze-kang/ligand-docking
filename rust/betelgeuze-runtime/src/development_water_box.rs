@@ -41,6 +41,10 @@ pub const DEVELOPMENT_WATER_BOX_DYNAMICS_FAILURE_V1_SCHEMA_ID: &str =
     "betelgeuze.engine_v2_native_water_box_dynamics_failure_profile/1.0.0";
 pub const DEVELOPMENT_WATER_BOX_DYNAMICS_FAILURE_V1_PROFILE_ID: &str =
     "engine_v2_native_water_box_dynamics_failure_matrix_development_v1";
+pub const DEVELOPMENT_WATER_BOX_DYNAMICS_FAILURE_V2_SCHEMA_ID: &str =
+    "betelgeuze.engine_v2_native_water_box_dynamics_failure_profile/2.0.0";
+pub const DEVELOPMENT_WATER_BOX_DYNAMICS_FAILURE_V2_PROFILE_ID: &str =
+    "engine_v2_native_water_box_dynamics_failure_boundary_development_v2";
 pub const DEVELOPMENT_WATER_ION_V1_PARAMETER_SOURCE_DOI: &str = "10.1021/jp8001614";
 pub const DEVELOPMENT_WATER_ION_V1_ATOM_COUNT: usize = 8;
 const DEVELOPMENT_WATER_BOX_V1_PROFILE_BYTES: &[u8] =
@@ -57,6 +61,8 @@ const DEVELOPMENT_WATER_ION_DYNAMICS_V1_PROFILE_BYTES: &[u8] =
     include_bytes!("../assets/engine_v2_native_water_ion_dynamics_profile_v1.json");
 const DEVELOPMENT_WATER_BOX_DYNAMICS_FAILURE_V1_PROFILE_BYTES: &[u8] =
     include_bytes!("../assets/engine_v2_native_water_box_dynamics_failure_profile_v1.json");
+const DEVELOPMENT_WATER_BOX_DYNAMICS_FAILURE_V2_PROFILE_BYTES: &[u8] =
+    include_bytes!("../assets/engine_v2_native_water_box_dynamics_failure_profile_v2.json");
 
 const OH_DISTANCE_ANGSTROM: f64 = f64::from_bits(0x3feea161e4f765fe);
 const HOH_ANGLE_RADIANS: f64 = f64::from_bits(0x3ffd2fff5ab17aaf);
@@ -538,6 +544,11 @@ pub fn development_water_ion_dynamics_v1_profile_sha256() -> [u8; 32] {
 /// SHA-256 of the exact typed-failure matrix profile.
 pub fn development_water_box_dynamics_failure_v1_profile_sha256() -> [u8; 32] {
     Sha256::digest(DEVELOPMENT_WATER_BOX_DYNAMICS_FAILURE_V1_PROFILE_BYTES).into()
+}
+
+/// SHA-256 of the native exception-boundary successor profile.
+pub fn development_water_box_dynamics_failure_v2_profile_sha256() -> [u8; 32] {
+    Sha256::digest(DEVELOPMENT_WATER_BOX_DYNAMICS_FAILURE_V2_PROFILE_BYTES).into()
 }
 
 /// Observe the bounded CPU dynamics typed-failure contract.
@@ -1774,6 +1785,30 @@ mod tests {
         assert_eq!(
             rust_report.observation_receipt_sha256,
             independently_hash_failure_report(&rust_report)
+        );
+    }
+
+    #[test]
+    fn dynamics_failure_boundary_successor_is_frozen_without_allocator_authority() {
+        assert_eq!(
+            runtime::DEVELOPMENT_WATER_BOX_DYNAMICS_FAILURE_V2_SCHEMA_ID,
+            "betelgeuze.engine_v2_native_water_box_dynamics_failure_profile/2.0.0"
+        );
+        assert_eq!(
+            runtime::DEVELOPMENT_WATER_BOX_DYNAMICS_FAILURE_V2_PROFILE_ID,
+            "engine_v2_native_water_box_dynamics_failure_boundary_development_v2"
+        );
+        assert_eq!(
+            runtime::development_water_box_dynamics_failure_v2_profile_sha256(),
+            [
+                0x0b, 0xf2, 0x09, 0xeb, 0x62, 0x28, 0x7f, 0x82, 0x08, 0x0a, 0x12, 0x3d, 0x7f, 0x48,
+                0xe8, 0xc6, 0x32, 0x61, 0xd7, 0xa3, 0x70, 0x28, 0x31, 0x12, 0xe1, 0xaf, 0x95, 0xca,
+                0x5e, 0x47, 0x57, 0xbe,
+            ]
+        );
+        assert_eq!(
+            runtime::ErrorCode::from_raw(betelgeuze_sys::BG_STATUS_OUT_OF_MEMORY),
+            Some(runtime::ErrorCode::OutOfMemory)
         );
     }
 
