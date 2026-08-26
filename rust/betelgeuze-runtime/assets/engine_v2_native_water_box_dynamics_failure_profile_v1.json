@@ -1,0 +1,77 @@
+{
+  "schema_id": "betelgeuze.engine_v2_native_water_box_dynamics_failure_profile/1.0.0",
+  "profile_id": "engine_v2_native_water_box_dynamics_failure_matrix_development_v1",
+  "predecessor": {
+    "path": "config/engine_v2_native_water_ion_dynamics_profile_v1.json",
+    "sha256": "ad009e5a60c07dccf2d6c50e76d73aa9c8206201ae1bab7c585b63641df098e3",
+    "semantic_change": "Retain an ordered typed-failure matrix for the bounded native CPU dynamics slice while distinguishing executed rejection paths from the non-executing OOM status-mapping contract."
+  },
+  "ordered_failure_rows": [
+    {
+      "case_id": "nonfinite_particle_position",
+      "failure_class": "nonfinite_input",
+      "expected_typed_failure": "invalid_argument",
+      "evidence_kind": "safe_wrapper_rejection",
+      "failure_attempted": true,
+      "state_preservation_check": "not_created"
+    },
+    {
+      "case_id": "linearly_dependent_constraint_jacobian",
+      "failure_class": "singular_constraints",
+      "expected_typed_failure": "invalid_argument",
+      "evidence_kind": "native_runtime_rejection",
+      "failure_attempted": true,
+      "state_preservation_check": "not_created"
+    },
+    {
+      "case_id": "absolute_step_uint64_overflow",
+      "failure_class": "capacity",
+      "expected_typed_failure": "capacity_overflow",
+      "evidence_kind": "safe_wrapper_capacity_preflight",
+      "failure_attempted": true,
+      "state_preservation_check": "exact_checkpoint_and_snapshot_unchanged"
+    },
+    {
+      "case_id": "out_of_memory_status_mapping",
+      "failure_class": "out_of_memory",
+      "expected_typed_failure": "out_of_memory",
+      "evidence_kind": "status_mapping_only",
+      "failure_attempted": false,
+      "state_preservation_check": "not_applicable"
+    },
+    {
+      "case_id": "unsupported_ion_identity",
+      "failure_class": "unsupported_parameters",
+      "expected_typed_failure": "unsupported_ion_identity",
+      "evidence_kind": "domain_catalog_rejection",
+      "failure_attempted": true,
+      "state_preservation_check": "not_applicable"
+    }
+  ],
+  "validation": {
+    "cpu_backends": ["cpp_cpu_reference", "rust_cpu"],
+    "ordered_rows_required": true,
+    "backend_tagged_receipt_required": true,
+    "actual_failure_attempt_count": 4,
+    "mapping_only_row_count": 1,
+    "all_required_failure_classes_typed": true,
+    "all_required_failure_classes_runtime_exercised": false,
+    "oom_allocation_attempted": false,
+    "capacity_failure_transactionality_required": true,
+    "hip_device_execution_required": false,
+    "performance_measurement_present": false,
+    "performance_threshold_present": false
+  },
+  "authority": {
+    "molecular_execution_authorized": false,
+    "production_md_validated": false,
+    "scientific_claim_authorized": false,
+    "parameter_applicability_claim_authorized": false,
+    "performance_claim_authorized": false,
+    "reservation_authorized": false,
+    "fresh_128_authorized": false,
+    "public_benchmark_authorized": false,
+    "hip_device_execution_authorized": false,
+    "production_oom_resilience_authorized": false
+  }
+}

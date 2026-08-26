@@ -7,10 +7,11 @@
 
 use crate::{
     invalid, AtomNonbonded, Backend, Context, DistanceConstraint, DistanceConstraints,
-    DynamicsReport, Evaluation, ForceField, ForceFieldInput, HarmonicAngle, HarmonicBond,
-    Integrator, OrthorhombicCell, PairExclusion, ParticleSnapshot, ParticleSoa, PositionSoa,
-    Result, Simulation, SimulationOptions, System, VelocitySoa,
+    DynamicsReport, Error, ErrorCode, Evaluation, ForceField, ForceFieldInput, HarmonicAngle,
+    HarmonicBond, Integrator, OrthorhombicCell, PairExclusion, ParticleSnapshot, ParticleSoa,
+    PositionSoa, Result, Simulation, SimulationOptions, System, VelocitySoa,
 };
+use betelgeuze_sys as sys;
 use sha2::{Digest, Sha256};
 use std::fmt;
 
@@ -36,6 +37,10 @@ pub const DEVELOPMENT_WATER_ION_DYNAMICS_V1_SCHEMA_ID: &str =
     "betelgeuze.engine_v2_native_water_ion_dynamics_profile/1.0.0";
 pub const DEVELOPMENT_WATER_ION_DYNAMICS_V1_PROFILE_ID: &str =
     "engine_v2_native_tip3p_nacl_constrained_dynamics_development_v1";
+pub const DEVELOPMENT_WATER_BOX_DYNAMICS_FAILURE_V1_SCHEMA_ID: &str =
+    "betelgeuze.engine_v2_native_water_box_dynamics_failure_profile/1.0.0";
+pub const DEVELOPMENT_WATER_BOX_DYNAMICS_FAILURE_V1_PROFILE_ID: &str =
+    "engine_v2_native_water_box_dynamics_failure_matrix_development_v1";
 pub const DEVELOPMENT_WATER_ION_V1_PARAMETER_SOURCE_DOI: &str = "10.1021/jp8001614";
 pub const DEVELOPMENT_WATER_ION_V1_ATOM_COUNT: usize = 8;
 const DEVELOPMENT_WATER_BOX_V1_PROFILE_BYTES: &[u8] =
@@ -50,6 +55,8 @@ const DEVELOPMENT_WATER_ION_V1_PROFILE_BYTES: &[u8] =
     include_bytes!("../assets/engine_v2_native_water_ion_profile_v1.json");
 const DEVELOPMENT_WATER_ION_DYNAMICS_V1_PROFILE_BYTES: &[u8] =
     include_bytes!("../assets/engine_v2_native_water_ion_dynamics_profile_v1.json");
+const DEVELOPMENT_WATER_BOX_DYNAMICS_FAILURE_V1_PROFILE_BYTES: &[u8] =
+    include_bytes!("../assets/engine_v2_native_water_box_dynamics_failure_profile_v1.json");
 
 const OH_DISTANCE_ANGSTROM: f64 = f64::from_bits(0x3feea161e4f765fe);
 const HOH_ANGLE_RADIANS: f64 = f64::from_bits(0x3ffd2fff5ab17aaf);
@@ -200,6 +207,43 @@ impl fmt::Display for DevelopmentIonParameterErrorV1 {
 }
 
 impl std::error::Error for DevelopmentIonParameterErrorV1 {}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DevelopmentDynamicsFailureCodeV1 {
+    InvalidArgument,
+    CapacityOverflow,
+    OutOfMemory,
+    UnsupportedIonIdentity,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DevelopmentDynamicsFailureEvidenceV1 {
+    SafeWrapperRejection,
+    NativeRuntimeRejection,
+    SafeWrapperCapacityPreflight,
+    StatusMappingOnly,
+    DomainCatalogRejection,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DevelopmentDynamicsFailureRowV1 {
+    pub case_id: &'static str,
+    pub failure_code: DevelopmentDynamicsFailureCodeV1,
+    pub evidence_kind: DevelopmentDynamicsFailureEvidenceV1,
+    pub failure_attempted: bool,
+    pub state_preserved: Option<bool>,
+    pub message: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DevelopmentDynamicsFailureReportV1 {
+    pub backend: Backend,
+    pub rows: Vec<DevelopmentDynamicsFailureRowV1>,
+    pub all_required_failure_classes_typed: bool,
+    pub all_required_failure_classes_runtime_exercised: bool,
+    pub oom_allocation_attempted: bool,
+    pub observation_receipt_sha256: [u8; 32],
+}
 
 pub fn development_ion_parameters_v1(
     identity: DevelopmentIonIdentityV1,
@@ -489,6 +533,280 @@ pub fn development_water_ion_v1_profile_sha256() -> [u8; 32] {
 /// SHA-256 of the exact constrained water-ion dynamics profile.
 pub fn development_water_ion_dynamics_v1_profile_sha256() -> [u8; 32] {
     Sha256::digest(DEVELOPMENT_WATER_ION_DYNAMICS_V1_PROFILE_BYTES).into()
+}
+
+/// SHA-256 of the exact typed-failure matrix profile.
+pub fn development_water_box_dynamics_failure_v1_profile_sha256() -> [u8; 32] {
+    Sha256::digest(DEVELOPMENT_WATER_BOX_DYNAMICS_FAILURE_V1_PROFILE_BYTES).into()
+}
+
+/// Observe the bounded CPU dynamics typed-failure contract.
+///
+/// Four rows execute deterministic rejection paths. The OOM row intentionally
+/// verifies only the public native-status to safe-Rust error mapping; it does
+/// not allocate, inject a production failure, or claim OOM resilience.
+pub fn observe_development_water_box_dynamics_failures_v1(
+    context: &Context,
+) -> Result<DevelopmentDynamicsFailureReportV1> {
+    require_cpu_backend(
+        context,
+        DEVELOPMENT_WATER_BOX_DYNAMICS_FAILURE_V1_PROFILE_ID,
+    )?;
+    let backend = context.backend()?;
+    let mut rows = Vec::with_capacity(5);
+
+    let nonfinite_x = [f64::NAN];
+    let zero = [0.0];
+    let mass = [1.0];
+    let nonfinite_error = expected_error(
+        System::new(ParticleSoa::new(
+            PositionSoa::new(&nonfinite_x, &zero, &zero),
+            &mass,
+            &zero,
+        )),
+        "nonfinite particle position unexpectedly created a system",
+    )?;
+    rows.push(native_failure_row(
+        "nonfinite_particle_position",
+        DevelopmentDynamicsFailureCodeV1::InvalidArgument,
+        DevelopmentDynamicsFailureEvidenceV1::SafeWrapperRejection,
+        nonfinite_error,
+        None,
+    )?);
+
+    let singular_x = [0.0, 1.0, 2.0];
+    let singular_zero = [0.0; 3];
+    let singular_mass = [1.0; 3];
+    let singular_system = System::new(ParticleSoa::new(
+        PositionSoa::new(&singular_x, &singular_zero, &singular_zero),
+        &singular_mass,
+        &singular_zero,
+    ))?;
+    let singular_nonbonded = [AtomNonbonded {
+        sigma_angstrom: 1.0,
+        epsilon_kcal_per_mol: 0.0,
+    }; 3];
+    let singular_forcefield = ForceField::new(ForceFieldInput::new(&singular_nonbonded))?;
+    let singular_constraints = DistanceConstraints {
+        rows: vec![
+            DistanceConstraint {
+                atom_i: 0,
+                atom_j: 1,
+                distance_angstrom: 1.0,
+            },
+            DistanceConstraint {
+                atom_i: 1,
+                atom_j: 2,
+                distance_angstrom: 1.0,
+            },
+            DistanceConstraint {
+                atom_i: 0,
+                atom_j: 2,
+                distance_angstrom: 2.0,
+            },
+        ],
+        ..DistanceConstraints::default()
+    };
+    let singular_error = expected_error(
+        Simulation::new(
+            &singular_system,
+            &singular_forcefield,
+            &singular_constraints,
+            SimulationOptions::default(),
+        ),
+        "linearly dependent constraints unexpectedly created a simulation",
+    )?;
+    rows.push(native_failure_row(
+        "linearly_dependent_constraint_jacobian",
+        DevelopmentDynamicsFailureCodeV1::InvalidArgument,
+        DevelopmentDynamicsFailureEvidenceV1::NativeRuntimeRejection,
+        singular_error,
+        None,
+    )?);
+
+    let mut capacity_fixture = DevelopmentWaterIonDynamicsV1::constrained_nve()?;
+    let mut maximum_step_checkpoint = capacity_fixture.checkpoint()?;
+    if maximum_step_checkpoint.len() < 104 {
+        return Err(invalid(
+            "capacity fixture checkpoint is shorter than its canonical header",
+        ));
+    }
+    maximum_step_checkpoint[32..40].copy_from_slice(&u64::MAX.to_le_bytes());
+    maximum_step_checkpoint[72..104].fill(0);
+    let digest = Sha256::digest(&maximum_step_checkpoint);
+    maximum_step_checkpoint[72..104].copy_from_slice(&digest);
+    capacity_fixture.load_checkpoint(&maximum_step_checkpoint)?;
+    if capacity_fixture.absolute_step()? != u64::MAX {
+        return Err(invalid(
+            "capacity fixture did not restore the maximum uint64 absolute step",
+        ));
+    }
+    let capacity_snapshot = capacity_fixture.snapshot()?;
+    let capacity_checkpoint = capacity_fixture.checkpoint()?;
+    let capacity_error = expected_error(
+        capacity_fixture.integrate(context, 1),
+        "maximum absolute step unexpectedly accepted another dynamics step",
+    )?;
+    let capacity_state_preserved = capacity_fixture.absolute_step()? == u64::MAX
+        && capacity_fixture.snapshot()? == capacity_snapshot
+        && capacity_fixture.checkpoint()? == capacity_checkpoint;
+    if !capacity_state_preserved {
+        return Err(invalid(
+            "capacity failure modified the frozen dynamics state or checkpoint",
+        ));
+    }
+    rows.push(native_failure_row(
+        "absolute_step_uint64_overflow",
+        DevelopmentDynamicsFailureCodeV1::CapacityOverflow,
+        DevelopmentDynamicsFailureEvidenceV1::SafeWrapperCapacityPreflight,
+        capacity_error,
+        Some(true),
+    )?);
+
+    if ErrorCode::from_raw(sys::BG_STATUS_OUT_OF_MEMORY) != Some(ErrorCode::OutOfMemory) {
+        return Err(invalid(
+            "native out-of-memory status did not map to the safe Rust error code",
+        ));
+    }
+    rows.push(DevelopmentDynamicsFailureRowV1 {
+        case_id: "out_of_memory_status_mapping",
+        failure_code: DevelopmentDynamicsFailureCodeV1::OutOfMemory,
+        evidence_kind: DevelopmentDynamicsFailureEvidenceV1::StatusMappingOnly,
+        failure_attempted: false,
+        state_preserved: None,
+        message: "BG_STATUS_OUT_OF_MEMORY maps to ErrorCode::OutOfMemory; allocation not attempted"
+            .to_owned(),
+    });
+
+    let unsupported = DevelopmentIonIdentityV1::new(19, 1);
+    let unsupported_error = development_ion_parameters_v1(unsupported)
+        .expect_err("unsupported development ion identity unexpectedly resolved parameters");
+    if unsupported_error != DevelopmentIonParameterErrorV1::UnsupportedIdentity(unsupported) {
+        return Err(invalid(
+            "unsupported ion identity returned the wrong domain error",
+        ));
+    }
+    rows.push(DevelopmentDynamicsFailureRowV1 {
+        case_id: "unsupported_ion_identity",
+        failure_code: DevelopmentDynamicsFailureCodeV1::UnsupportedIonIdentity,
+        evidence_kind: DevelopmentDynamicsFailureEvidenceV1::DomainCatalogRejection,
+        failure_attempted: true,
+        state_preserved: None,
+        message: unsupported_error.to_string(),
+    });
+
+    let expected_case_ids = [
+        "nonfinite_particle_position",
+        "linearly_dependent_constraint_jacobian",
+        "absolute_step_uint64_overflow",
+        "out_of_memory_status_mapping",
+        "unsupported_ion_identity",
+    ];
+    if rows.iter().map(|row| row.case_id).ne(expected_case_ids) {
+        return Err(invalid("typed-failure rows are not in canonical order"));
+    }
+    let mut receipt = Sha256::new();
+    receipt.update(b"betelgeuze.engine_v2_native_water_box_dynamics_failure_observation/1.0.0\0");
+    receipt.update(development_water_box_dynamics_failure_v1_profile_sha256());
+    receipt.update([failure_backend_tag(backend)?]);
+    receipt.update(
+        u64::try_from(rows.len())
+            .map_err(|_| invalid("typed-failure row count exceeds u64"))?
+            .to_le_bytes(),
+    );
+    for row in &rows {
+        receipt.update(row.case_id.as_bytes());
+        receipt.update([0]);
+        receipt.update([failure_code_tag(row.failure_code)]);
+        receipt.update([failure_evidence_tag(row.evidence_kind)]);
+        receipt.update([u8::from(row.failure_attempted)]);
+        receipt.update([match row.state_preserved {
+            None => 0,
+            Some(false) => 1,
+            Some(true) => 2,
+        }]);
+        receipt.update(row.message.as_bytes());
+        receipt.update([0]);
+    }
+    receipt.update([1, 0, 0]);
+
+    Ok(DevelopmentDynamicsFailureReportV1 {
+        backend,
+        rows,
+        all_required_failure_classes_typed: true,
+        all_required_failure_classes_runtime_exercised: false,
+        oom_allocation_attempted: false,
+        observation_receipt_sha256: receipt.finalize().into(),
+    })
+}
+
+fn expected_error<T>(result: Result<T>, success_message: &'static str) -> Result<Error> {
+    match result {
+        Ok(_) => Err(invalid(success_message)),
+        Err(error) => Ok(error),
+    }
+}
+
+fn native_failure_row(
+    case_id: &'static str,
+    failure_code: DevelopmentDynamicsFailureCodeV1,
+    evidence_kind: DevelopmentDynamicsFailureEvidenceV1,
+    error: Error,
+    state_preserved: Option<bool>,
+) -> Result<DevelopmentDynamicsFailureRowV1> {
+    let expected_error_code = match failure_code {
+        DevelopmentDynamicsFailureCodeV1::InvalidArgument => ErrorCode::InvalidArgument,
+        DevelopmentDynamicsFailureCodeV1::CapacityOverflow => ErrorCode::CapacityOverflow,
+        DevelopmentDynamicsFailureCodeV1::OutOfMemory => ErrorCode::OutOfMemory,
+        DevelopmentDynamicsFailureCodeV1::UnsupportedIonIdentity => {
+            return Err(invalid(
+                "unsupported-ion domain error cannot be built from a native error",
+            ));
+        }
+    };
+    if error.code != expected_error_code {
+        return Err(invalid(format!(
+            "{case_id} returned {:?} instead of {expected_error_code:?}",
+            error.code
+        )));
+    }
+    Ok(DevelopmentDynamicsFailureRowV1 {
+        case_id,
+        failure_code,
+        evidence_kind,
+        failure_attempted: true,
+        state_preserved,
+        message: error.message,
+    })
+}
+
+const fn failure_code_tag(code: DevelopmentDynamicsFailureCodeV1) -> u8 {
+    match code {
+        DevelopmentDynamicsFailureCodeV1::InvalidArgument => 1,
+        DevelopmentDynamicsFailureCodeV1::CapacityOverflow => 2,
+        DevelopmentDynamicsFailureCodeV1::OutOfMemory => 3,
+        DevelopmentDynamicsFailureCodeV1::UnsupportedIonIdentity => 4,
+    }
+}
+
+const fn failure_evidence_tag(evidence: DevelopmentDynamicsFailureEvidenceV1) -> u8 {
+    match evidence {
+        DevelopmentDynamicsFailureEvidenceV1::SafeWrapperRejection => 1,
+        DevelopmentDynamicsFailureEvidenceV1::NativeRuntimeRejection => 2,
+        DevelopmentDynamicsFailureEvidenceV1::SafeWrapperCapacityPreflight => 3,
+        DevelopmentDynamicsFailureEvidenceV1::StatusMappingOnly => 4,
+        DevelopmentDynamicsFailureEvidenceV1::DomainCatalogRejection => 5,
+    }
+}
+
+fn failure_backend_tag(backend: Backend) -> Result<u8> {
+    match backend {
+        Backend::CppCpuReference => Ok(1),
+        Backend::RustCpu => Ok(2),
+        Backend::Auto | Backend::HipFast | Backend::HipSafe => Err(invalid(
+            "typed-failure CPU guard admitted an unsupported backend",
+        )),
+    }
 }
 
 /// Evaluate one frozen unconstrained water through a selected CPU backend.
@@ -1339,6 +1657,127 @@ mod tests {
     }
 
     #[test]
+    fn dynamics_failure_matrix_is_ordered_typed_and_honest_about_oom() {
+        assert_eq!(
+            runtime::DEVELOPMENT_WATER_BOX_DYNAMICS_FAILURE_V1_SCHEMA_ID,
+            "betelgeuze.engine_v2_native_water_box_dynamics_failure_profile/1.0.0"
+        );
+        assert_eq!(
+            runtime::DEVELOPMENT_WATER_BOX_DYNAMICS_FAILURE_V1_PROFILE_ID,
+            "engine_v2_native_water_box_dynamics_failure_matrix_development_v1"
+        );
+        assert_eq!(
+            runtime::development_water_box_dynamics_failure_v1_profile_sha256(),
+            [
+                0xe6, 0xfe, 0xf1, 0x89, 0x52, 0xef, 0x81, 0x3b, 0x3f, 0x2e, 0x96, 0xb1, 0x61, 0x4e,
+                0x7b, 0x92, 0x15, 0xf6, 0x2f, 0x03, 0x2b, 0x1a, 0xbd, 0xa9, 0x2b, 0x4a, 0x2d, 0x13,
+                0xd4, 0x53, 0xe6, 0xd0,
+            ]
+        );
+
+        let cpp = runtime::Context::new(runtime::ContextOptions::cpu_reference()).unwrap();
+        let rust = runtime::Context::new(runtime::ContextOptions::rust_cpu()).unwrap();
+        let cpp_report = runtime::observe_development_water_box_dynamics_failures_v1(&cpp).unwrap();
+        let repeated = runtime::observe_development_water_box_dynamics_failures_v1(&cpp).unwrap();
+        let rust_report =
+            runtime::observe_development_water_box_dynamics_failures_v1(&rust).unwrap();
+        assert_eq!(cpp_report, repeated);
+        assert_eq!(cpp_report.rows, rust_report.rows);
+        assert_ne!(
+            cpp_report.observation_receipt_sha256,
+            rust_report.observation_receipt_sha256
+        );
+        assert!(cpp_report.all_required_failure_classes_typed);
+        assert!(!cpp_report.all_required_failure_classes_runtime_exercised);
+        assert!(!cpp_report.oom_allocation_attempted);
+        assert_eq!(
+            cpp_report
+                .rows
+                .iter()
+                .map(|row| row.case_id)
+                .collect::<Vec<_>>(),
+            vec![
+                "nonfinite_particle_position",
+                "linearly_dependent_constraint_jacobian",
+                "absolute_step_uint64_overflow",
+                "out_of_memory_status_mapping",
+                "unsupported_ion_identity",
+            ]
+        );
+        assert_eq!(
+            cpp_report
+                .rows
+                .iter()
+                .map(|row| row.failure_code)
+                .collect::<Vec<_>>(),
+            vec![
+                runtime::DevelopmentDynamicsFailureCodeV1::InvalidArgument,
+                runtime::DevelopmentDynamicsFailureCodeV1::InvalidArgument,
+                runtime::DevelopmentDynamicsFailureCodeV1::CapacityOverflow,
+                runtime::DevelopmentDynamicsFailureCodeV1::OutOfMemory,
+                runtime::DevelopmentDynamicsFailureCodeV1::UnsupportedIonIdentity,
+            ]
+        );
+        assert_eq!(
+            cpp_report
+                .rows
+                .iter()
+                .map(|row| row.evidence_kind)
+                .collect::<Vec<_>>(),
+            vec![
+                runtime::DevelopmentDynamicsFailureEvidenceV1::SafeWrapperRejection,
+                runtime::DevelopmentDynamicsFailureEvidenceV1::NativeRuntimeRejection,
+                runtime::DevelopmentDynamicsFailureEvidenceV1::SafeWrapperCapacityPreflight,
+                runtime::DevelopmentDynamicsFailureEvidenceV1::StatusMappingOnly,
+                runtime::DevelopmentDynamicsFailureEvidenceV1::DomainCatalogRejection,
+            ]
+        );
+        assert_eq!(
+            cpp_report
+                .rows
+                .iter()
+                .map(|row| row.failure_attempted)
+                .collect::<Vec<_>>(),
+            vec![true, true, true, false, true]
+        );
+        assert_eq!(
+            cpp_report
+                .rows
+                .iter()
+                .map(|row| row.state_preserved)
+                .collect::<Vec<_>>(),
+            vec![None, None, Some(true), None, None]
+        );
+        assert_eq!(
+            cpp_report.rows[0].message,
+            "position SoA channels must contain only finite values"
+        );
+        assert_eq!(
+            cpp_report.rows[1].message,
+            "constraint Jacobian rows are linearly dependent"
+        );
+        assert_eq!(
+            cpp_report.rows[2].message,
+            "absolute dynamics step would overflow uint64"
+        );
+        assert!(cpp_report.rows[3]
+            .message
+            .contains("allocation not attempted"));
+        assert_eq!(
+            cpp_report.rows[4].message,
+            "unsupported development ion identity: atomic_number=19, formal_charge=1"
+        );
+        assert_eq!(
+            cpp_report.observation_receipt_sha256,
+            independently_hash_failure_report(&cpp_report)
+        );
+        assert_eq!(
+            rust_report.observation_receipt_sha256,
+            independently_hash_failure_report(&rust_report)
+        );
+    }
+
+    #[test]
     fn frozen_initial_water_box_matches_across_cpu_backends() {
         assert_eq!(runtime::DEVELOPMENT_WATER_BOX_V1_ATOM_COUNT, 6);
         assert_eq!(
@@ -1825,6 +2264,54 @@ mod tests {
         receipt.update(report.mean_kinetic_kcal_per_mol.to_bits().to_le_bytes());
         receipt.update(report.mean_temperature_kelvin.to_bits().to_le_bytes());
         receipt.update(report.temperature_variance_kelvin2.to_bits().to_le_bytes());
+        receipt.finalize().into()
+    }
+
+    fn independently_hash_failure_report(
+        report: &runtime::DevelopmentDynamicsFailureReportV1,
+    ) -> [u8; 32] {
+        let backend_tag = match report.backend {
+            runtime::Backend::CppCpuReference => 1_u8,
+            runtime::Backend::RustCpu => 2_u8,
+            other => panic!("unexpected failure-report backend: {other:?}"),
+        };
+        let mut receipt = Sha256::new();
+        receipt
+            .update(b"betelgeuze.engine_v2_native_water_box_dynamics_failure_observation/1.0.0\0");
+        receipt.update(runtime::development_water_box_dynamics_failure_v1_profile_sha256());
+        receipt.update([backend_tag]);
+        receipt.update(u64::try_from(report.rows.len()).unwrap().to_le_bytes());
+        for row in &report.rows {
+            let failure_code_tag = match row.failure_code {
+                runtime::DevelopmentDynamicsFailureCodeV1::InvalidArgument => 1,
+                runtime::DevelopmentDynamicsFailureCodeV1::CapacityOverflow => 2,
+                runtime::DevelopmentDynamicsFailureCodeV1::OutOfMemory => 3,
+                runtime::DevelopmentDynamicsFailureCodeV1::UnsupportedIonIdentity => 4,
+            };
+            let evidence_tag = match row.evidence_kind {
+                runtime::DevelopmentDynamicsFailureEvidenceV1::SafeWrapperRejection => 1,
+                runtime::DevelopmentDynamicsFailureEvidenceV1::NativeRuntimeRejection => 2,
+                runtime::DevelopmentDynamicsFailureEvidenceV1::SafeWrapperCapacityPreflight => 3,
+                runtime::DevelopmentDynamicsFailureEvidenceV1::StatusMappingOnly => 4,
+                runtime::DevelopmentDynamicsFailureEvidenceV1::DomainCatalogRejection => 5,
+            };
+            receipt.update(row.case_id.as_bytes());
+            receipt.update([0]);
+            receipt.update([failure_code_tag, evidence_tag]);
+            receipt.update([u8::from(row.failure_attempted)]);
+            receipt.update([match row.state_preserved {
+                None => 0,
+                Some(false) => 1,
+                Some(true) => 2,
+            }]);
+            receipt.update(row.message.as_bytes());
+            receipt.update([0]);
+        }
+        receipt.update([
+            u8::from(report.all_required_failure_classes_typed),
+            u8::from(report.all_required_failure_classes_runtime_exercised),
+            u8::from(report.oom_allocation_attempted),
+        ]);
         receipt.finalize().into()
     }
 
