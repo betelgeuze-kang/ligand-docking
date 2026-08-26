@@ -193,6 +193,20 @@ def test_samples_above_the_profile_minimum_are_retained() -> None:
     assert result["kernel_dispatch_count"] == (32 * 5 + 1) * 8
 
 
+def test_sample_indices_have_no_undocumented_ceiling() -> None:
+    journal = _journal()
+    template = journal["samples"][4]
+    extras = []
+    for sample_index in range(5, 1025):
+        extra = copy.deepcopy(template)
+        extra["sample_index"] = sample_index
+        extras.append(extra)
+    journal["samples"][5:5] = extras
+    result = NORMALIZER.normalize(_profile(), journal)
+    assert len(result["wall_time_seconds_by_case"]["D1_CASE_00"]) == 1025
+    assert result["kernel_dispatch_count"] == (32 * 5 + 1020) * 8
+
+
 def test_required_stage_sequence_and_kernel_are_exact() -> None:
     journal = _journal()
     dispatches = journal["samples"][0]["dispatches"]
@@ -278,6 +292,26 @@ def test_whitespace_kernel_names_and_reversed_timestamps_fail_closed() -> None:
     dispatches[0]["end_offset_nanoseconds"] = 45_000
     with pytest.raises(NORMALIZER.MeasurementNormalizationError, match="chronological"):
         NORMALIZER.normalize(_profile(), journal)
+
+
+def test_long_auxiliary_kernel_names_are_retained() -> None:
+    journal = _journal()
+    kernel_name = "templated_auxiliary_kernel_" + "x" * 300
+    journal["samples"][0]["dispatches"].append(
+        {
+            "stage_id": "auxiliary",
+            "kernel_name": kernel_name,
+            "start_offset_nanoseconds": 170_000,
+            "end_offset_nanoseconds": 180_000,
+        }
+    )
+    result = NORMALIZER.normalize(_profile(), journal)
+    assert result["profiler_trace"]["rows"][8]["kernel_name"] == kernel_name
+    assert result["kernel_dispatches"][-1] == {
+        "kernel_name": kernel_name,
+        "dispatch_count": 1,
+        "total_runtime_seconds": 1e-5,
+    }
 
 
 def test_frozen_sampling_policy_cannot_be_rehashed_and_relaxed() -> None:

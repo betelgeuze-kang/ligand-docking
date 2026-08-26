@@ -213,7 +213,7 @@ def _integer(
 
 
 def _string(value: Any, label: str, pattern: re.Pattern[str] | None = None) -> str:
-    if type(value) is not str or not value.strip() or len(value) > 256:
+    if type(value) is not str or not value.strip():
         raise MeasurementNormalizationError(f"{label} must be a non-empty string")
     if pattern is not None and pattern.fullmatch(value) is None:
         raise MeasurementNormalizationError(f"{label} has an invalid identity")
@@ -488,7 +488,7 @@ def normalize(profile: dict[str, Any], journal: dict[str, Any]) -> dict[str, Any
             (
                 sample,
                 _string(sample["case_id"], "sample.case_id", CASE_RE),
-                _integer(sample["sample_index"], "sample.sample_index", maximum=1023),
+                _integer(sample["sample_index"], "sample.sample_index"),
             )
         )
     cursor = 0
