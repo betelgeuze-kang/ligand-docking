@@ -230,7 +230,7 @@ python tools/verify_engine_v2_hip_d1_benchmark_v1.py \
   --profile config/engine_v2_hip_d1_benchmark_profile_v1.json
 ```
 
-This verifies the committed 1.4 profile and its self-hash only. The profile is
+This verifies the committed 1.5 profile and its self-hash only. The profile is
 deliberately `frozen_non_authoritative_manifest_not_bound`; passing `--result`
 is rejected until an owner-controlled successor binds the exact private D1
 manifest SHA-256 and its owner-selected ordered-case SHA-256, then reseals the
@@ -261,7 +261,9 @@ with the corresponding boolean validity entry. Structured ranks preserve the
 native one-based `stable_rank` convention. The
 cluster structure also preserves native membership semantics: valid scored
 candidates use contiguous one-based cluster IDs, invalid scored candidates use
-zero, and typed failures remain null. The
+zero, and typed failures remain null. New one-based cluster IDs must be first
+encountered in ascending order while traversing validity-filtered stable rank,
+matching native representative discovery. The
 newer GPU must be in the profile's explicit architecture
 allowlist (including alphanumeric targets such as `gfx90a`), and every
 architecture needs a distinct hashed device serial. The verifier derives case
@@ -297,6 +299,9 @@ rehashed. Primary and repeat context-construction samples are separately bound
 into their matching receipts and reported as separate derived p50 metrics.
 Primary and repeat RSS/VRAM peaks are likewise separate and receipt-bound before
 being reported.
+Every backend receipt also binds a canonical executable-bundle digest covering
+the architecture row's wheel, native extension, and native binary, so CPU and
+HIP evidence cannot be attributed to a different claimed build.
 Requested/observed backend identity and CPU-fallback state are recorded and
 validated independently for each run and bound into the corresponding receipt.
 The repository-pinned result digest binds both receipts, timings, and all
@@ -307,13 +312,13 @@ rows; the verifier recomputes their canonical digest and rejects any per-kernel
 count or runtime summary not derived from those rows. Every ordered case and
 every required timing-sample index must occur in the normalized trace, so a
 rehashed truncated trace is rejected. Each timed sample must also contain the
-owner-defined stable stage contract: two geometric-admission dispatches plus
-rigid refinement, torsion refinement, scoring, pose validity, stable ranking,
-and RMSD clustering. A trace retaining only one arbitrary dispatch per sample
-is therefore incomplete, and each stable stage ID must name its profile-pinned
-normalized HIP kernel rather than an operator-selected label. Kernel runtime
-summaries use a
-relative-only consistency tolerance, while reported totals are always derived
+owner-defined ordered stage contract: initial admission, rigid refinement,
+torsion refinement, post-refinement admission, scoring, pose validity, stable
+ranking, and RMSD clustering. A trace retaining only one arbitrary dispatch
+per sample is therefore incomplete, and each stable stage ID must name its
+profile-pinned normalized HIP kernel rather than an operator-selected label.
+Kernel runtime summaries use a relative-only consistency tolerance, while
+reported totals are always derived
 from the normalized trace rather than copied from submitted summaries. For each
 case/sample pair, the sum of dispatch runtimes must not exceed its enclosing
 wall-time sample.

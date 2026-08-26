@@ -16,8 +16,8 @@ from pathlib import Path
 import re
 from typing import Any
 
-PROFILE_SCHEMA = "betelgeuze.engine_v2_hip_d1_benchmark_profile/1.4.0"
-RESULT_SCHEMA = "betelgeuze.engine_v2_hip_d1_benchmark_result/1.4.0"
+PROFILE_SCHEMA = "betelgeuze.engine_v2_hip_d1_benchmark_profile/1.5.0"
+RESULT_SCHEMA = "betelgeuze.engine_v2_hip_d1_benchmark_result/1.5.0"
 CASE_ID_RE = re.compile(r"^[A-Za-z0-9_.:-]{1,128}$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 GPU_ARCHITECTURE_RE = re.compile(r"^gfx[0-9a-z]{2,8}$")
@@ -58,19 +58,21 @@ FAILURE_STIMULUS_TYPES = {
     "execution_timeout": "force_execution_deadline_expiry",
     "numeric_overflow": "force_numeric_overflow",
 }
-REQUIRED_PROFILER_DISPATCH_COUNTS_PER_SAMPLE = {
-    "geometric_admission": 2,
-    "rigid_refinement": 1,
-    "torsion_refinement": 1,
-    "scoring": 1,
-    "pose_validity": 1,
-    "stable_ranking": 1,
-    "rmsd_clustering": 1,
-}
+REQUIRED_PROFILER_STAGE_SEQUENCE_PER_SAMPLE = (
+    "initial_geometric_admission",
+    "rigid_refinement",
+    "torsion_refinement",
+    "post_geometric_admission",
+    "scoring",
+    "pose_validity",
+    "stable_ranking",
+    "rmsd_clustering",
+)
 REQUIRED_PROFILER_KERNEL_BY_STAGE = {
-    "geometric_admission": "geometric_fixed64_kernel",
+    "initial_geometric_admission": "geometric_fixed64_kernel",
     "rigid_refinement": "rigid_refinement_kernel",
     "torsion_refinement": "torsion_fixed64_kernel",
+    "post_geometric_admission": "geometric_fixed64_kernel",
     "scoring": "scorer_fixed64_kernel",
     "pose_validity": "validity_fixed64_kernel",
     "stable_ranking": "stable_top_k_fixed64_kernel",
@@ -116,11 +118,12 @@ ALLOWED_NEWER_GPU_ARCHITECTURES = (
 FAILURE_STIMULUS_SCHEMA = "betelgeuze.engine_v2_hip_failure_stimulus/1.0.0"
 FAILURE_OBSERVATION_SCHEMA = "betelgeuze.engine_v2_hip_failure_observation/1.1.0"
 FAILURE_PROBE_RECEIPT_SCHEMA = "betelgeuze.engine_v2_hip_failure_probe_receipt/1.0.0"
+EXECUTABLE_BUNDLE_SCHEMA = "betelgeuze.engine_v2_executable_bundle/1.0.0"
 EXECUTION_BACKEND_RECEIPT_SCHEMA = (
-    "betelgeuze.engine_v2_hip_execution_backend_receipt/1.3.0"
+    "betelgeuze.engine_v2_hip_execution_backend_receipt/1.4.0"
 )
 NORMALIZED_PROFILER_TRACE_SCHEMA = (
-    "betelgeuze.engine_v2_rocprofiler_normalized_dispatch_trace/1.2.0"
+    "betelgeuze.engine_v2_rocprofiler_normalized_dispatch_trace/1.3.0"
 )
 NORMALIZED_TRANSFER_TRACE_SCHEMA = (
     "betelgeuze.engine_v2_hip_normalized_transfer_trace/1.2.0"
@@ -413,7 +416,7 @@ def _verify_profile_document(profile: dict[str, Any]) -> dict[str, Any]:
             "cpu_fallback_forbidden",
             "normalized_trace_schema",
             "normalized_transfer_trace_schema",
-            "required_dispatch_counts_per_sample",
+            "required_stage_sequence_per_sample",
             "required_kernel_by_stage",
             "cpu_reference_identity_required",
         },
@@ -438,11 +441,11 @@ def _verify_profile_document(profile: dict[str, Any]) -> dict[str, Any]:
         != NORMALIZED_TRANSFER_TRACE_SCHEMA
     ):
         raise HipBenchmarkError("normalized transfer trace schema changed")
-    if (
-        profiling["required_dispatch_counts_per_sample"]
-        != REQUIRED_PROFILER_DISPATCH_COUNTS_PER_SAMPLE
-    ):
-        raise HipBenchmarkError("required profiler dispatch contract changed")
+    _exact_list(
+        profiling["required_stage_sequence_per_sample"],
+        REQUIRED_PROFILER_STAGE_SEQUENCE_PER_SAMPLE,
+        "required profiler stage sequence",
+    )
     if profiling["required_kernel_by_stage"] != REQUIRED_PROFILER_KERNEL_BY_STAGE:
         raise HipBenchmarkError("required profiler kernel contract changed")
 
@@ -667,6 +670,17 @@ def _discrete_outputs(
             raise HipBenchmarkError(f"{name}: cluster ID exceeds valid candidates")
         if observed_cluster_ids != list(range(1, observed_cluster_ids[-1] + 1)):
             raise HipBenchmarkError(f"{name}: noncontiguous cluster IDs")
+    cluster_discovery_order: list[int] = []
+    seen_cluster_ids: set[int] = set()
+    for slot in score_order:
+        if not validities[slot]:
+            continue
+        cluster_id = clusters[slot]
+        if cluster_id not in seen_cluster_ids:
+            seen_cluster_ids.add(cluster_id)
+            cluster_discovery_order.append(cluster_id)
+    if cluster_discovery_order != list(range(1, len(cluster_discovery_order) + 1)):
+        raise HipBenchmarkError(f"{name}: cluster discovery order")
     return outputs
 
 
@@ -1052,7 +1066,7 @@ def _verify_profiler_trace(
     label: str,
     case_wall_times: dict[str, list[float]],
     expected_execution_run_id: str,
-    required_dispatch_counts_per_sample: dict[str, int],
+    required_stage_sequence_per_sample: list[str],
     required_kernel_by_stage: dict[str, str],
 ) -> tuple[int, float, str]:
     trace = _exact_keys(
@@ -1076,7 +1090,7 @@ def _verify_profiler_trace(
     aggregates: dict[str, list[float]] = {}
     coverage: set[tuple[str, int]] = set()
     runtime_by_sample: dict[tuple[str, int], list[float]] = {}
-    stage_counts_by_sample: dict[tuple[str, int], dict[str, int]] = {}
+    stage_sequence_by_sample: dict[tuple[str, int], list[str]] = {}
     allowed_case_ids = set(case_wall_times)
     for index, raw_row in enumerate(rows):
         row = _exact_keys(
@@ -1107,8 +1121,7 @@ def _verify_profiler_trace(
         sample_key = (case_id, sample_index)
         coverage.add(sample_key)
         stage_id = _nonempty_string(row["stage_id"], f"{label}.profiler_trace.stage_id")
-        sample_stage_counts = stage_counts_by_sample.setdefault(sample_key, {})
-        sample_stage_counts[stage_id] = sample_stage_counts.get(stage_id, 0) + 1
+        stage_sequence_by_sample.setdefault(sample_key, []).append(stage_id)
         kernel_name = _nonempty_string(
             row["kernel_name"], f"{label}.profiler_trace.kernel_name"
         )
@@ -1131,14 +1144,16 @@ def _verify_profiler_trace(
     }
     if coverage != expected_coverage:
         raise HipBenchmarkError(f"{label}: incomplete profiler case/sample coverage")
+    required_stage_ids = set(required_stage_sequence_per_sample)
     for case_id, sample_index in expected_coverage:
-        observed_required_counts = {
-            stage_id: stage_counts_by_sample[(case_id, sample_index)].get(stage_id, 0)
-            for stage_id in required_dispatch_counts_per_sample
-        }
-        if observed_required_counts != required_dispatch_counts_per_sample:
+        observed_required_sequence = [
+            stage_id
+            for stage_id in stage_sequence_by_sample[(case_id, sample_index)]
+            if stage_id in required_stage_ids
+        ]
+        if observed_required_sequence != required_stage_sequence_per_sample:
             raise HipBenchmarkError(
-                f"{label}: required profiler dispatch contract at "
+                f"{label}: required profiler stage sequence at "
                 f"{case_id}/sample[{sample_index}]"
             )
         dispatch_runtime = _finite_sum(
@@ -1369,6 +1384,21 @@ def _case_run_timings_sha256(cases: list[dict[str, Any]], *, repeat: bool) -> st
     )
 
 
+def _executable_bundle_sha256(
+    wheel_sha256: str,
+    native_extension_sha256: str,
+    native_binary_sha256: str,
+) -> str:
+    return _canonical_sha256(
+        {
+            "schema_id": EXECUTABLE_BUNDLE_SCHEMA,
+            "wheel_sha256": wheel_sha256,
+            "native_extension_sha256": native_extension_sha256,
+            "native_binary_sha256": native_binary_sha256,
+        }
+    )
+
+
 def _execution_backend_receipt(
     *,
     architecture: str,
@@ -1383,6 +1413,7 @@ def _execution_backend_receipt(
     context_construction_samples: list[float],
     peak_rss_bytes: int,
     peak_vram_bytes: int,
+    executable_bundle_sha256: str,
     cases: list[dict[str, Any]],
 ) -> dict[str, Any]:
     repeat = run_role == "repeat"
@@ -1402,6 +1433,7 @@ def _execution_backend_receipt(
         ),
         "peak_rss_bytes": peak_rss_bytes,
         "peak_vram_bytes": peak_vram_bytes,
+        "executable_bundle_sha256": executable_bundle_sha256,
         "case_timing_samples_sha256": _case_run_timings_sha256(cases, repeat=repeat),
         "case_outputs_sha256": _case_run_outputs_sha256(cases, repeat=repeat),
     }
@@ -1416,8 +1448,9 @@ def _verify_backend(
     expected_candidate_ids_sha256_by_case: dict[str, str],
     denominator: int,
     sampling: dict[str, Any],
-    required_dispatch_counts_per_sample: dict[str, int],
+    required_stage_sequence_per_sample: list[str],
     required_kernel_by_stage: dict[str, str],
+    executable_bundle_sha256: str,
     minimum_scored_candidates: int,
     scientific_length: int,
     seen_execution_run_ids: set[str],
@@ -1642,7 +1675,7 @@ def _verify_backend(
                 label,
                 case_wall_times,
                 execution_run_id,
-                required_dispatch_counts_per_sample,
+                required_stage_sequence_per_sample,
                 required_kernel_by_stage,
             )
         )
@@ -1653,7 +1686,7 @@ def _verify_backend(
             f"{label}/repeat",
             repeat_case_wall_times,
             repeat_execution_run_id,
-            required_dispatch_counts_per_sample,
+            required_stage_sequence_per_sample,
             required_kernel_by_stage,
         )
 
@@ -1670,6 +1703,7 @@ def _verify_backend(
         context_construction_samples=context_samples,
         peak_rss_bytes=peak_rss,
         peak_vram_bytes=peak_vram,
+        executable_bundle_sha256=executable_bundle_sha256,
         cases=cases,
     )
     if _sha256(
@@ -1690,6 +1724,7 @@ def _verify_backend(
         context_construction_samples=repeat_context_samples,
         peak_rss_bytes=repeat_peak_rss,
         peak_vram_bytes=repeat_peak_vram,
+        executable_bundle_sha256=executable_bundle_sha256,
         cases=cases,
     )
     if _sha256(
@@ -1920,12 +1955,19 @@ def verify(profile_path: Path, result_path: Path) -> dict[str, Any]:
         if device_serial_sha256 in seen_device_serials:
             raise HipBenchmarkError("duplicate GPU device identity")
         seen_device_serials.add(device_serial_sha256)
-        for digest in (
-            "wheel_sha256",
-            "native_extension_sha256",
-            "native_binary_sha256",
-        ):
-            _sha256(architecture[digest], f"{architecture_name}.{digest}")
+        artifact_sha256s = {
+            digest: _sha256(architecture[digest], f"{architecture_name}.{digest}")
+            for digest in (
+                "wheel_sha256",
+                "native_extension_sha256",
+                "native_binary_sha256",
+            )
+        }
+        executable_bundle_sha256 = _executable_bundle_sha256(
+            artifact_sha256s["wheel_sha256"],
+            artifact_sha256s["native_extension_sha256"],
+            artifact_sha256s["native_binary_sha256"],
+        )
         _integer(
             architecture["total_vram_bytes"],
             f"{architecture_name}.total_vram_bytes",
@@ -1954,12 +1996,13 @@ def verify(profile_path: Path, result_path: Path) -> dict[str, Any]:
                 ),
                 denominator=profile["candidate_denominator"],
                 sampling=profile["sampling"],
-                required_dispatch_counts_per_sample=profile["profiling"][
-                    "required_dispatch_counts_per_sample"
+                required_stage_sequence_per_sample=profile["profiling"][
+                    "required_stage_sequence_per_sample"
                 ],
                 required_kernel_by_stage=profile["profiling"][
                     "required_kernel_by_stage"
                 ],
+                executable_bundle_sha256=executable_bundle_sha256,
                 minimum_scored_candidates=profile["parity"][
                     "minimum_scored_candidates_per_case"
                 ],

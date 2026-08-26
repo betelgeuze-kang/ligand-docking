@@ -1,5 +1,5 @@
 {
-  "schema_id": "betelgeuze.engine_v2_hip_d1_benchmark_profile/1.4.0",
+  "schema_id": "betelgeuze.engine_v2_hip_d1_benchmark_profile/1.5.0",
   "profile_id": "engine_v2_hip_d1_representative_v1",
   "status": "frozen_non_authoritative_manifest_not_bound",
   "expected_manifest_sha256": null,
@@ -79,21 +79,23 @@
       "numeric_overflow"
     ],
     "cpu_fallback_forbidden": true,
-    "normalized_trace_schema": "betelgeuze.engine_v2_rocprofiler_normalized_dispatch_trace/1.2.0",
+    "normalized_trace_schema": "betelgeuze.engine_v2_rocprofiler_normalized_dispatch_trace/1.3.0",
     "normalized_transfer_trace_schema": "betelgeuze.engine_v2_hip_normalized_transfer_trace/1.2.0",
-    "required_dispatch_counts_per_sample": {
-      "geometric_admission": 2,
-      "rigid_refinement": 1,
-      "torsion_refinement": 1,
-      "scoring": 1,
-      "pose_validity": 1,
-      "stable_ranking": 1,
-      "rmsd_clustering": 1
-    },
+    "required_stage_sequence_per_sample": [
+      "initial_geometric_admission",
+      "rigid_refinement",
+      "torsion_refinement",
+      "post_geometric_admission",
+      "scoring",
+      "pose_validity",
+      "stable_ranking",
+      "rmsd_clustering"
+    ],
     "required_kernel_by_stage": {
-      "geometric_admission": "geometric_fixed64_kernel",
+      "initial_geometric_admission": "geometric_fixed64_kernel",
       "rigid_refinement": "rigid_refinement_kernel",
       "torsion_refinement": "torsion_fixed64_kernel",
+      "post_geometric_admission": "geometric_fixed64_kernel",
       "scoring": "scorer_fixed64_kernel",
       "pose_validity": "validity_fixed64_kernel",
       "stable_ranking": "stable_top_k_fixed64_kernel",
@@ -127,5 +129,5 @@
     "fresh128_authorized": false,
     "stage0_authorized": false
   },
-  "profile_sha256": "8153417dd8741ab9d024e0356163e9290c5059b16a00faddbf73143d89eed96e"
+  "profile_sha256": "f2613c47e86be6c0a7035c251b8d4cf9cf60fb652d1da34fc70fa43bb3fff4eb"
 }

@@ -153,10 +153,7 @@ def _backend(case_ids: list[str], backend_name: str, architecture: str) -> dict:
                 (case_id, sample_index, stage_id)
                 for case_id in case_ids
                 for sample_index in range(5)
-                for stage_id, dispatch_count in (
-                    VERIFIER.REQUIRED_PROFILER_DISPATCH_COUNTS_PER_SAMPLE.items()
-                )
-                for _ in range(dispatch_count)
+                for stage_id in VERIFIER.REQUIRED_PROFILER_STAGE_SEQUENCE_PER_SAMPLE
             )
         ]
         if gpu
@@ -448,6 +445,11 @@ def _reseal_backend_receipt(
             ],
             peak_rss_bytes=backend[f"{prefix}peak_rss_bytes"],
             peak_vram_bytes=backend[f"{prefix}peak_vram_bytes"],
+            executable_bundle_sha256=VERIFIER._executable_bundle_sha256(
+                "a" * 64,
+                "b" * 64,
+                "e" * 64,
+            ),
             cases=backend["cases"],
         )
         backend[f"{prefix}execution_backend_receipt_sha256"] = (
@@ -467,7 +469,7 @@ def test_committed_profile_is_valid_unbound_and_non_authoritative() -> None:
         "verified": True,
         "profile_id": "engine_v2_hip_d1_representative_v1",
         "profile_sha256": (
-            "8153417dd8741ab9d024e0356163e9290c5059b16a00faddbf73143d89eed96e"
+            "f2613c47e86be6c0a7035c251b8d4cf9cf60fb652d1da34fc70fa43bb3fff4eb"
         ),
         "manifest_bound": False,
         "result_verification_authorized": False,
@@ -566,14 +568,14 @@ def test_profile_decision_policy_is_frozen(tmp_path: Path) -> None:
         VERIFIER.verify_profile(_save(tmp_path, "profile.json", profile))
 
 
-def test_profile_required_dispatch_contract_is_frozen(tmp_path: Path) -> None:
+def test_profile_required_stage_sequence_is_frozen(tmp_path: Path) -> None:
     profile = json.loads(PROFILE.read_text(encoding="utf-8"))
-    profile["profiling"]["required_dispatch_counts_per_sample"]["scoring"] = 0
+    profile["profiling"]["required_stage_sequence_per_sample"].reverse()
     profile["profile_sha256"] = VERIFIER._canonical_sha256(
         VERIFIER._profile_projection(profile)
     )
     with pytest.raises(
-        VERIFIER.HipBenchmarkError, match="profiler dispatch contract changed"
+        VERIFIER.HipBenchmarkError, match="required profiler stage sequence"
     ):
         VERIFIER.verify_profile(_save(tmp_path, "profile.json", profile))
 
@@ -680,9 +682,9 @@ def test_discrete_digest_is_recomputed_from_structured_output(
     result = _result(profile)
     case = result["architectures"][0]["backends"]["hip_fast"]["cases"][0]
     for prefix in ("", "repeat_"):
-        case[f"{prefix}discrete_outputs"]["decision"][0] = "scored_invalid"
-        case[f"{prefix}discrete_outputs"]["validity"][0] = False
-        case[f"{prefix}discrete_outputs"]["cluster"][0] = 0
+        case[f"{prefix}discrete_outputs"]["decision"][4] = "scored_invalid"
+        case[f"{prefix}discrete_outputs"]["validity"][4] = False
+        case[f"{prefix}discrete_outputs"]["cluster"][4] = 0
     with pytest.raises(VERIFIER.HipBenchmarkError, match="decision output SHA-256"):
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
@@ -745,6 +747,24 @@ def test_cluster_membership_matches_candidate_validity(
         case[f"{prefix}discrete_outputs"]["validity"][0] = validity
         case[f"{prefix}discrete_outputs"]["cluster"][0] = cluster_id
     with pytest.raises(VERIFIER.HipBenchmarkError, match=message):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
+def test_cluster_ids_follow_valid_stable_rank_discovery_order(tmp_path: Path) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    architecture = result["architectures"][0]
+    backend = architecture["backends"]["hip_fast"]
+    case = backend["cases"][0]
+    for prefix in ("", "repeat_"):
+        clusters = case[f"{prefix}discrete_outputs"]["cluster"]
+        clusters[0], clusters[1] = clusters[1], clusters[0]
+        case[f"{prefix}cluster_sha256"] = VERIFIER._canonical_sha256(clusters)
+    _reseal_backend_receipt(
+        backend, architecture["gpu_architecture"], result["ordered_case_ids"]
+    )
+    _seal_and_authorize_result(result)
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="cluster discovery order"):
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 
@@ -989,6 +1009,17 @@ def test_device_and_toolchain_identity_are_required(tmp_path: Path) -> None:
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 
+def test_executable_bundle_identity_is_bound_to_each_backend_receipt(
+    tmp_path: Path,
+) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    result["architectures"][0]["wheel_sha256"] = "f" * 64
+    _seal_and_authorize_result(result)
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="backend receipt mismatch"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
 def test_profiler_identity_requires_version_suffix(tmp_path: Path) -> None:
     profile_path, profile = _bound_profile(tmp_path)
     result = _result(profile)
@@ -1223,7 +1254,28 @@ def test_profiler_trace_requires_every_pipeline_stage_per_sample(
         backend, architecture["gpu_architecture"], result["ordered_case_ids"]
     )
     _seal_and_authorize_result(result)
-    with pytest.raises(VERIFIER.HipBenchmarkError, match="dispatch contract"):
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="stage sequence"):
+        VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
+
+
+def test_profiler_stages_follow_native_pipeline_order(tmp_path: Path) -> None:
+    profile_path, profile = _bound_profile(tmp_path)
+    result = _result(profile)
+    architecture = result["architectures"][0]
+    backend = architecture["backends"]["hip_fast"]
+    stage_count = len(VERIFIER.REQUIRED_PROFILER_STAGE_SEQUENCE_PER_SAMPLE)
+    first_sample_rows = backend["profiler_trace"]["rows"][:stage_count]
+    backend["profiler_trace"]["rows"][:stage_count] = reversed(first_sample_rows)
+    for dispatch_index, row in enumerate(backend["profiler_trace"]["rows"]):
+        row["dispatch_index"] = dispatch_index
+    backend["profiler_trace_sha256"] = VERIFIER._canonical_sha256(
+        backend["profiler_trace"]
+    )
+    _reseal_backend_receipt(
+        backend, architecture["gpu_architecture"], result["ordered_case_ids"]
+    )
+    _seal_and_authorize_result(result)
+    with pytest.raises(VERIFIER.HipBenchmarkError, match="stage sequence"):
         VERIFIER.verify(profile_path, _save(tmp_path, "result.json", result))
 
 
