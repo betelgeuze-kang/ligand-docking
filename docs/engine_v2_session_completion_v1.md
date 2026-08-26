@@ -227,14 +227,116 @@ and remaining scientific boundaries.
 
 ```bash
 python tools/verify_engine_v2_hip_d1_benchmark_v1.py \
-  --profile config/engine_v2_hip_d1_benchmark_profile_v1.json \
-  --result /absolute/hip-d1-result.json
+  --profile config/engine_v2_hip_d1_benchmark_profile_v1.json
 ```
 
-A valid result needs at least two distinct AMD GPU architectures and complete
-`rust_cpu`, `hip_safe`, and `hip_fast` case sets with exact decision, failure,
-and rank parity plus bounded numerical parity. The verifier does not run a GPU
-or authorize acceleration claims.
+This verifies the committed 1.5 profile and its self-hash only. The profile is
+deliberately `frozen_non_authoritative_manifest_not_bound`; passing `--result`
+is rejected until an owner-controlled successor binds the exact private D1
+manifest SHA-256 and its owner-selected ordered-case SHA-256, then reseals the
+profile. The bound successor must also carry the owner-sealed ordered
+64-candidate identity digest for every selected case. Profile verification does
+not authorize D1 materialization, molecular execution, or HIP-device execution.
+
+Self-hashing alone is not authorization. The verifier's repository-reviewed
+authorized-bound-profile and authorized-result SHA-256 sets are intentionally
+empty. A future owner-approved manifest/profile and completed result each need
+an explicit code-reviewed digest pin before result verification can succeed;
+an operator-selected path or recomputed self-hash cannot grant that trust.
+
+Once those external prerequisites and authorization exist, the same command
+accepts `--result /absolute/hip-d1-result.json`. A valid result must retain the
+ordered 32-case, 64-candidate cohort on `rust_cpu`, `hip_safe`, and `hip_fast`
+for `gfx1030` and at least one newer architecture. It records six exact parity
+digests (decision, typed failure, score order, validity, rank, and clustering),
+all 192 slot-major score/proposal-RMSD/final-RMSD positions per case, a stable
+repeat, case/context/transfer timing samples, RSS/VRAM, H2D/D2H bytes, complete
+ROCprofiler kernel traces, typed failure probes, and GPU/toolchain/artifact
+identities. The five non-failure discrete digests are recomputed from ordered
+decision, score-order, validity, rank, and cluster structures; the typed-failure
+digest is recomputed from the 64 structured status rows. Score order is also
+recomputed from ascending finite score with slot-index tie-breaking. Scored
+decisions are restricted to `scored_valid` or `scored_invalid` and must agree
+with the corresponding boolean validity entry. Structured ranks preserve the
+native one-based `stable_rank` convention. The
+cluster structure also preserves native membership semantics: valid scored
+candidates use contiguous one-based cluster IDs, invalid scored candidates use
+zero, and typed failures remain null. New one-based cluster IDs must be first
+encountered in ascending order while traversing validity-filtered stable rank,
+matching native representative discovery. The
+newer GPU must be in the profile's explicit architecture
+allowlist (including alphanumeric targets such as `gfx90a`), and every
+architecture needs a distinct hashed device serial. The verifier derives case
+p50/p95, candidate throughput, transfer
+p50, context p50, kernel totals, and the predeclared strict `hip_fast` median
+gate. CPU fallback, denominator deletion, non-finite values, evidence field
+drift, or any execution/scientific/benchmark/product authority is rejected.
+Each architecture row also records the CPU model, physical-core/logical-thread
+topology, benchmark thread count, affinity, governor, turbo state, NUMA policy,
+and hashed execution environment used by the `rust_cpu` speed-gate reference.
+Each candidate's scientific triple must be entirely finite or entirely JSON
+`null` for a typed failure; partial triples and non-finite numbers are rejected,
+and proposal/final RMSD values must be nonnegative. Failures therefore remain
+in the 64-slot denominator. Every representative case must
+also retain at least the profile-defined minimum of one scored candidate, which
+prevents an all-failure cohort from satisfying the benchmark contract.
+Structured status rows cover all 64 slots, their canonical digest is recomputed,
+and null triples are permitted exactly at slots whose status is `typed_failure`.
+
+Each failure probe has a globally distinct execution identity and embeds a
+predeclared typed stimulus, a structured observation bound to that stimulus and
+execution, and a recomputed probe receipt. Its backend and typed code must match
+the requested probe, and all canonical SHA-256 bindings are recomputed. Each
+representative backend embeds a self-bound execution receipt naming the
+requested and observed backend, ordered cohort, fallback status, and profiler
+trace plus the canonical per-case wall-time and output digests. Primary and
+repeat executions use distinct globally unique run identities, separate timing
+samples, separate GPU traces/summaries, and separate receipts; repeat outputs
+are bound to the repeat receipt rather than accepted as unproven copied fields.
+Each normalized profiler and transfer trace embeds its corresponding run
+identity, so primary evidence cannot be copied into the repeat slot and
+rehashed. Primary and repeat context-construction samples are separately bound
+into their matching receipts and reported as separate derived p50 metrics.
+Primary and repeat RSS/VRAM peaks are likewise separate and receipt-bound before
+being reported.
+Every backend receipt also binds a canonical executable-bundle digest covering
+the architecture row's wheel, native extension, and native binary, so CPU and
+HIP evidence cannot be attributed to a different claimed build.
+Requested/observed backend identity and CPU-fallback state are recorded and
+validated independently for each run and bound into the corresponding receipt.
+The repository-pinned result digest binds both receipts, timings, and all
+remaining evidence fields. The speed gate counts only cases that beat the CPU
+reference in both the primary and repeat executions.
+GPU profiler evidence contains the complete normalized ordered dispatch
+rows; the verifier recomputes their canonical digest and rejects any per-kernel
+count or runtime summary not derived from those rows. Every ordered case and
+every required timing-sample index must occur in the normalized trace, so a
+rehashed truncated trace is rejected. Each timed sample must also contain the
+owner-defined ordered stage contract: initial admission, rigid refinement,
+torsion refinement, post-refinement admission, scoring, pose validity, stable
+ranking, and RMSD clustering. A trace retaining only one arbitrary dispatch
+per sample is therefore incomplete, and each stable stage ID must name its
+profile-pinned normalized HIP kernel rather than an operator-selected label.
+Kernel runtime summaries use a relative-only consistency tolerance, while
+reported totals are always derived
+from the normalized trace rather than copied from submitted summaries. For each
+case/sample pair, the sum of dispatch runtimes must not exceed its enclosing
+wall-time sample.
+GPU H2D/D2H bytes and timing samples are likewise rederived from normalized,
+ordered memory-copy event traces whose hashes are bound into the corresponding
+primary or repeat execution receipt. Each direction must cover every ordered
+case and every timing-sample index; multiple copy events for the same direction
+and timed sample remain distinct in the trace while their bytes and runtimes are
+aggregated for the derived sample. The combined per-sample transfer runtime must
+fit its enclosing wall-time sample. Profiler identity requires a
+parsed non-whitespace `rocprofiler-sdk` version suffix.
+Derived sums and medians use overflow-safe finite arithmetic, including a
+stable even-sample midpoint that preserves positive subnormal values; any
+non-finite derived metric is rejected rather than serialized as `Infinity`.
+
+The verifier only checks supplied evidence. It never runs a GPU and a passing
+artifact still grants no acceleration, scientific, benchmark, or product
+claim authority.
 
 ## Maintenance tools
 
