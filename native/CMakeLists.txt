@@ -949,6 +949,41 @@ if(BUILD_TESTING)
         COMMAND betelgeuze_engine_dynamics
     )
 
+    add_executable(
+        betelgeuze_engine_guarded_status
+        tests/guarded_status.cpp
+    )
+    target_include_directories(
+        betelgeuze_engine_guarded_status
+        PRIVATE "${PROJECT_SOURCE_DIR}/include"
+    )
+    target_compile_features(
+        betelgeuze_engine_guarded_status
+        PRIVATE cxx_std_17
+    )
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(betelgeuze_engine_guarded_status PRIVATE
+            -Wall
+            -Wextra
+            -Wpedantic
+            -Wconversion
+            -Wsign-conversion
+            -Werror
+            -UNDEBUG
+            -ffp-contract=off
+            -fno-fast-math
+        )
+    elseif(MSVC)
+        target_compile_options(
+            betelgeuze_engine_guarded_status
+            PRIVATE /W4 /WX /UNDEBUG /fp:strict
+        )
+    endif()
+    add_test(
+        NAME betelgeuze_engine_guarded_status
+        COMMAND betelgeuze_engine_guarded_status
+    )
+
     if(BG_ENABLE_HIP)
         foreach(BG_HIP_TEST IN ITEMS hip_evaluator hip_error_rows)
             if(BG_HIP_TEST STREQUAL "hip_error_rows")

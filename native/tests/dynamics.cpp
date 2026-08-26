@@ -9,22 +9,12 @@
 #include <cstring>
 #include <functional>
 #include <limits>
-#include <new>
 #include <type_traits>
 #include <vector>
 
 #ifndef BG_TEST_HIP_ENABLED
 #define BG_TEST_HIP_ENABLED 0
 #endif
-
-namespace betelgeuze::native {
-
-// The production library intentionally hides its thread-local error buffer.
-// This test-owned buffer lets the header-defined production exception boundary
-// be exercised without exporting internals or adding a product test hook.
-thread_local std::array<char, kLastErrorCapacity> last_error{};
-
-}  // namespace betelgeuze::native
 
 namespace {
 
@@ -478,20 +468,6 @@ void test_initializers_and_invalid_rows() {
     assert(bg_simulation_create(
                handles.system, handles.forcefield, &constraints, &options,
                &simulation) == BG_STATUS_INVALID_ARGUMENT);
-}
-
-void test_guarded_status_maps_bad_alloc_without_an_allocator_probe() {
-    const bg_status status = betelgeuze::native::guarded_status(
-        []() -> bg_status { throw std::bad_alloc(); });
-    assert(status == BG_STATUS_OUT_OF_MEMORY);
-    assert(std::strcmp(
-               betelgeuze::native::last_error.data(),
-               "native allocation failed") == 0);
-
-    const bg_status cleared = betelgeuze::native::guarded_status(
-        []() -> bg_status { return BG_STATUS_OK; });
-    assert(cleared == BG_STATUS_OK);
-    assert(std::strlen(betelgeuze::native::last_error.data()) == 0U);
 }
 
 void test_minimizer_and_transactionality() {
@@ -1774,7 +1750,6 @@ void test_hip_parity_if_available() {
 
 int main() {
     test_initializers_and_invalid_rows();
-    test_guarded_status_maps_bad_alloc_without_an_allocator_probe();
     test_minimizer_and_transactionality();
     test_constraints_and_periodic_images();
     test_constrained_minimizer_rattle_checkpoint();

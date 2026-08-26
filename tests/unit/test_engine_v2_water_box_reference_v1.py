@@ -64,6 +64,12 @@ DYNAMICS_FAILURE_BOUNDARY_PROFILE = json.loads(
         / "config/engine_v2_native_water_box_dynamics_failure_profile_v2.json"
     ).read_text()
 )
+DYNAMICS_EXCEPTION_BOUNDARY_MATRIX_PROFILE = json.loads(
+    (
+        ROOT
+        / "config/engine_v2_native_water_box_dynamics_failure_profile_v3.json"
+    ).read_text()
+)
 
 
 def test_native_profile_matches_the_packaged_runtime_asset() -> None:
@@ -449,6 +455,62 @@ def test_native_dynamics_failure_boundary_profile_matches_packaged_asset() -> No
         value is False
         for value in DYNAMICS_FAILURE_BOUNDARY_PROFILE["authority"].values()
     )
+
+
+def test_native_exception_boundary_matrix_profile_matches_packaged_asset() -> None:
+    canonical = (
+        ROOT / "config/engine_v2_native_water_box_dynamics_failure_profile_v3.json"
+    ).read_bytes()
+    packaged = (
+        ROOT
+        / "rust/betelgeuze-runtime/assets/engine_v2_native_water_box_dynamics_failure_profile_v3.json"
+    ).read_bytes()
+    assert packaged == canonical
+    assert hashlib.sha256(canonical).hexdigest() == (
+        "b0f73f136489cbdc17c55be0f82d16b4cfd5dd3218373a0d2c4a310c9884f32c"
+    )
+    profile = DYNAMICS_EXCEPTION_BOUNDARY_MATRIX_PROFILE
+    assert profile["predecessor"]["sha256"] == (
+        "0bf209eb62287f82080a123d7f48e8c63261d7a370283112e1af95ca5e4757be"
+    )
+    boundary = profile["boundary"]
+    assert boundary == {
+        "source": "native/src/internal.hpp",
+        "symbol": "betelgeuze::native::guarded_status",
+        "test_translation_unit": "native/tests/guarded_status.cpp",
+        "header_defined_production_boundary_source_exercised": True,
+        "test_owned_last_error_storage": True,
+        "probe_compiled_into_product_library": False,
+        "product_library_test_hook_added": False,
+        "exception_objects_constructed_before_boundary_where_applicable": True,
+        "oom_allocator_attempted": False,
+        "allocation_failure_injected": False,
+        "hip_device_execution_required": False,
+    }
+    assert [row["row_id"] for row in profile["ordered_rows"]] == [
+        "returned_status_passthrough",
+        "length_error",
+        "bad_alloc",
+        "standard_exception",
+        "unknown_exception",
+        "success_clears_error",
+    ]
+    assert profile["safe_rust_mappings"] == {
+        "BG_STATUS_CAPACITY_OVERFLOW": "ErrorCode::CapacityOverflow",
+        "BG_STATUS_OUT_OF_MEMORY": "ErrorCode::OutOfMemory",
+        "BG_STATUS_INTERNAL_ERROR": "ErrorCode::InternalError",
+    }
+    validation = profile["validation"]
+    assert validation["predecessor_rows_unchanged"] is True
+    assert validation["ordered_native_boundary_rows_required"] is True
+    assert validation["exact_native_last_error_messages_required"] is True
+    assert validation["safe_rust_status_mappings_required"] is True
+    assert validation["all_boundary_rows_runtime_exercised_in_test_translation_unit"] is True
+    assert validation["production_api_exception_injection_performed"] is False
+    assert validation["production_oom_resilience_validated"] is False
+    assert validation["performance_measurement_present"] is False
+    assert validation["performance_threshold_present"] is False
+    assert all(value is False for value in profile["authority"].values())
 
 
 def test_analytic_force_matches_finite_difference() -> None:

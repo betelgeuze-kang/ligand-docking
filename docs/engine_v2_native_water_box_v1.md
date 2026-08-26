@@ -85,6 +85,19 @@ the product library, attempts no allocation, injects no allocator failure, and
 grants no production OOM-resilience, molecular, HIP-device, performance, or
 scientific authority.
 
+The complete exception-boundary successor is
+`config/engine_v2_native_water_box_dynamics_failure_profile_v3.json`, SHA-256
+`b0f73f136489cbdc17c55be0f82d16b4cfd5dd3218373a0d2c4a310c9884f32c`.
+It moves the boundary probe into a dedicated native test translation unit and
+freezes six ordered rows: returned-status passthrough, `std::length_error`,
+`std::bad_alloc`, another `std::exception`, a non-standard exception, and
+success clearing stale error state. Each row requires the exact native status
+and error text, while Rust freezes the capacity, OOM, and internal-error status
+mappings. The test compiles the same header-defined production boundary against
+test-owned error storage; it adds no product-library hook, performs no
+production-API exception injection or allocator-failure injection, and grants
+no runtime-resilience or execution authority.
+
 ## Native path
 
 The single-water entry point evaluates one frozen unconstrained water with the
