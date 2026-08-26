@@ -217,6 +217,16 @@ constraints remain within the existing residual bounds, and absolute step 132
 must be restored exactly. This remains tiny synthetic CPU implementation
 evidence with every authority field false.
 
+An immutable typed-failure successor binds the ion-dynamics profile and emits
+five ordered backend-tagged rows for nonfinite input, linearly dependent
+constraints, absolute-step capacity overflow, OOM status mapping, and an
+unsupported ion identity. Four rows execute deterministic rejection paths and
+the capacity row must preserve the exact checkpoint and snapshot. The OOM row
+tests only `BG_STATUS_OUT_OF_MEMORY` to `ErrorCode::OutOfMemory` mapping, with
+no allocation attempt or production-resilience authority. Every scientific,
+molecular, performance, product, reservation, benchmark, Fresh-128, and HIP
+device authority remains false.
+
 The next SHA-bound successor,
 `config/engine_v2_native_periodic_neighbor_list_profile_v2.json`, retains one
 buffered canonical pair slice in the native `Simulation` for fully periodic

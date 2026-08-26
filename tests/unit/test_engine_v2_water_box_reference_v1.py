@@ -52,6 +52,12 @@ ION_DYNAMICS_PROFILE = json.loads(
         ROOT / "config/engine_v2_native_water_ion_dynamics_profile_v1.json"
     ).read_text()
 )
+DYNAMICS_FAILURE_PROFILE = json.loads(
+    (
+        ROOT
+        / "config/engine_v2_native_water_box_dynamics_failure_profile_v1.json"
+    ).read_text()
+)
 
 
 def test_native_profile_matches_the_packaged_runtime_asset() -> None:
@@ -334,6 +340,63 @@ def test_native_water_ion_dynamics_profile_matches_packaged_asset() -> None:
     assert validation["performance_threshold_present"] is False
     assert all(
         value is False for value in ION_DYNAMICS_PROFILE["authority"].values()
+    )
+
+
+def test_native_dynamics_failure_profile_matches_packaged_asset() -> None:
+    canonical = (
+        ROOT / "config/engine_v2_native_water_box_dynamics_failure_profile_v1.json"
+    ).read_bytes()
+    packaged = (
+        ROOT
+        / "rust/betelgeuze-runtime/assets/engine_v2_native_water_box_dynamics_failure_profile_v1.json"
+    ).read_bytes()
+    assert packaged == canonical
+    assert hashlib.sha256(canonical).hexdigest() == (
+        "e6fef18952ef813b3f2e96b1614e7b9215f62f032b1abda92b4a2d13d453e6d0"
+    )
+    assert DYNAMICS_FAILURE_PROFILE["predecessor"]["sha256"] == (
+        "ad009e5a60c07dccf2d6c50e76d73aa9c8206201ae1bab7c585b63641df098e3"
+    )
+    rows = DYNAMICS_FAILURE_PROFILE["ordered_failure_rows"]
+    assert [row["case_id"] for row in rows] == [
+        "nonfinite_particle_position",
+        "linearly_dependent_constraint_jacobian",
+        "absolute_step_uint64_overflow",
+        "out_of_memory_status_mapping",
+        "unsupported_ion_identity",
+    ]
+    assert [row["expected_typed_failure"] for row in rows] == [
+        "invalid_argument",
+        "invalid_argument",
+        "capacity_overflow",
+        "out_of_memory",
+        "unsupported_ion_identity",
+    ]
+    assert [row["failure_attempted"] for row in rows] == [
+        True,
+        True,
+        True,
+        False,
+        True,
+    ]
+    assert rows[2]["state_preservation_check"] == (
+        "exact_checkpoint_and_snapshot_unchanged"
+    )
+    assert rows[3]["evidence_kind"] == "status_mapping_only"
+    validation = DYNAMICS_FAILURE_PROFILE["validation"]
+    assert validation["cpu_backends"] == ["cpp_cpu_reference", "rust_cpu"]
+    assert validation["actual_failure_attempt_count"] == 4
+    assert validation["mapping_only_row_count"] == 1
+    assert validation["all_required_failure_classes_typed"] is True
+    assert validation["all_required_failure_classes_runtime_exercised"] is False
+    assert validation["oom_allocation_attempted"] is False
+    assert validation["capacity_failure_transactionality_required"] is True
+    assert validation["hip_device_execution_required"] is False
+    assert validation["performance_measurement_present"] is False
+    assert validation["performance_threshold_present"] is False
+    assert all(
+        value is False for value in DYNAMICS_FAILURE_PROFILE["authority"].values()
     )
 
 

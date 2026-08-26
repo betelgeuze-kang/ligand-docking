@@ -117,7 +117,13 @@ The current `main` branch contains:
   successor: both CPU backends retain the same 100-step 18-DOF report and
   eight-atom state, the ions move, water residuals remain bounded, and a
   checkpoint continues exactly through absolute step 132. This remains
-  synthetic and changes no authority. CPU dynamics additionally
+  synthetic and changes no authority. A separate immutable failure-matrix
+  successor retains ordered typed rows for nonfinite input, a linearly
+  dependent constraint Jacobian, absolute-step capacity overflow, OOM status
+  mapping, and unsupported ion identity. Four deterministic rejection paths
+  execute on both CPU contexts; the capacity row proves exact state/checkpoint
+  preservation. The OOM row is explicitly mapping-only, performs no allocation
+  attempt, and does not claim runtime OOM resilience. CPU dynamics additionally
   retain simulation-owned force-vector storage across repeated force
   evaluations and later transactional integrate or minimize calls; zero-step
   integration does not initialize it, checkpoint and semantic rollback exclude

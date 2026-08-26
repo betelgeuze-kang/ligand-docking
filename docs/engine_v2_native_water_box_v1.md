@@ -64,6 +64,15 @@ It binds the exact static ion, water-constraint, and periodic-neighbor
 identities and embeds the same bytes into the runtime. It does not modify the
 static profile or broaden its parameter and authority boundaries.
 
+The typed-failure successor is
+`config/engine_v2_native_water_box_dynamics_failure_profile_v1.json`, SHA-256
+`e6fef18952ef813b3f2e96b1614e7b9215f62f032b1abda92b4a2d13d453e6d0`.
+It retains five ordered rows: nonfinite input, a linearly dependent constraint
+Jacobian, absolute-step capacity overflow, OOM status mapping, and unsupported
+ion identity. Four rows execute deterministic rejection paths. The OOM row is
+deliberately mapping-only: no allocation failure is attempted and it grants no
+production OOM-resilience authority.
+
 ## Native path
 
 The single-water entry point evaluates one frozen unconstrained water with the
@@ -76,6 +85,15 @@ and `Simulation` types. Interwater Lennard-Jones and Coulomb terms use a
 
 Only the C++ CPU reference and Rust CPU backends are admitted. The profile does
 not silently select HIP, and this work performs no HIP-device execution.
+
+`observe_development_water_box_dynamics_failures_v1` emits the same five typed
+rows on both admitted CPU contexts and hashes the ordered row content into a
+backend-tagged receipt. The capacity row loads an integrity-valid checkpoint at
+absolute step `UINT64_MAX`, observes a `CapacityOverflow` on the next-step
+preflight, and requires the snapshot and checkpoint to remain exact. The
+singular-constraint row reaches native simulation creation and observes the
+linearly dependent Jacobian rejection. The nonfinite and unsupported-identity
+rows retain their safe-wrapper and domain-catalog errors respectively.
 
 Fully periodic orthorhombic CPU evaluations now build a deterministic cell
 list on every nonbonded evaluation. Each cell width is at least
