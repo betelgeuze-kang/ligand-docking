@@ -45,6 +45,10 @@ pub const DEVELOPMENT_WATER_BOX_DYNAMICS_FAILURE_V2_SCHEMA_ID: &str =
     "betelgeuze.engine_v2_native_water_box_dynamics_failure_profile/2.0.0";
 pub const DEVELOPMENT_WATER_BOX_DYNAMICS_FAILURE_V2_PROFILE_ID: &str =
     "engine_v2_native_water_box_dynamics_failure_boundary_development_v2";
+pub const DEVELOPMENT_WATER_BOX_DYNAMICS_FAILURE_V3_SCHEMA_ID: &str =
+    "betelgeuze.engine_v2_native_water_box_dynamics_failure_profile/3.0.0";
+pub const DEVELOPMENT_WATER_BOX_DYNAMICS_FAILURE_V3_PROFILE_ID: &str =
+    "engine_v2_native_exception_boundary_matrix_development_v3";
 pub const DEVELOPMENT_WATER_ION_V1_PARAMETER_SOURCE_DOI: &str = "10.1021/jp8001614";
 pub const DEVELOPMENT_WATER_ION_V1_ATOM_COUNT: usize = 8;
 const DEVELOPMENT_WATER_BOX_V1_PROFILE_BYTES: &[u8] =
@@ -63,6 +67,8 @@ const DEVELOPMENT_WATER_BOX_DYNAMICS_FAILURE_V1_PROFILE_BYTES: &[u8] =
     include_bytes!("../assets/engine_v2_native_water_box_dynamics_failure_profile_v1.json");
 const DEVELOPMENT_WATER_BOX_DYNAMICS_FAILURE_V2_PROFILE_BYTES: &[u8] =
     include_bytes!("../assets/engine_v2_native_water_box_dynamics_failure_profile_v2.json");
+const DEVELOPMENT_WATER_BOX_DYNAMICS_FAILURE_V3_PROFILE_BYTES: &[u8] =
+    include_bytes!("../assets/engine_v2_native_water_box_dynamics_failure_profile_v3.json");
 
 const OH_DISTANCE_ANGSTROM: f64 = f64::from_bits(0x3feea161e4f765fe);
 const HOH_ANGLE_RADIANS: f64 = f64::from_bits(0x3ffd2fff5ab17aaf);
@@ -549,6 +555,11 @@ pub fn development_water_box_dynamics_failure_v1_profile_sha256() -> [u8; 32] {
 /// SHA-256 of the native exception-boundary successor profile.
 pub fn development_water_box_dynamics_failure_v2_profile_sha256() -> [u8; 32] {
     Sha256::digest(DEVELOPMENT_WATER_BOX_DYNAMICS_FAILURE_V2_PROFILE_BYTES).into()
+}
+
+/// SHA-256 of the complete native exception-boundary matrix profile.
+pub fn development_water_box_dynamics_failure_v3_profile_sha256() -> [u8; 32] {
+    Sha256::digest(DEVELOPMENT_WATER_BOX_DYNAMICS_FAILURE_V3_PROFILE_BYTES).into()
 }
 
 /// Observe the bounded CPU dynamics typed-failure contract.
@@ -1809,6 +1820,38 @@ mod tests {
         assert_eq!(
             runtime::ErrorCode::from_raw(betelgeuze_sys::BG_STATUS_OUT_OF_MEMORY),
             Some(runtime::ErrorCode::OutOfMemory)
+        );
+    }
+
+    #[test]
+    fn native_exception_boundary_matrix_is_frozen_without_product_hook() {
+        assert_eq!(
+            runtime::DEVELOPMENT_WATER_BOX_DYNAMICS_FAILURE_V3_SCHEMA_ID,
+            "betelgeuze.engine_v2_native_water_box_dynamics_failure_profile/3.0.0"
+        );
+        assert_eq!(
+            runtime::DEVELOPMENT_WATER_BOX_DYNAMICS_FAILURE_V3_PROFILE_ID,
+            "engine_v2_native_exception_boundary_matrix_development_v3"
+        );
+        assert_eq!(
+            runtime::development_water_box_dynamics_failure_v3_profile_sha256(),
+            [
+                0xb0, 0xf7, 0x3f, 0x13, 0x64, 0x89, 0xcb, 0xdc, 0x17, 0xc5, 0x5b, 0xe0, 0xf8, 0x2d,
+                0x16, 0xb4, 0xcf, 0xd5, 0xdd, 0x32, 0x18, 0x37, 0x3a, 0x0d, 0x2c, 0x4a, 0x31, 0x0c,
+                0x98, 0x84, 0xf3, 0x2c,
+            ]
+        );
+        assert_eq!(
+            runtime::ErrorCode::from_raw(betelgeuze_sys::BG_STATUS_CAPACITY_OVERFLOW),
+            Some(runtime::ErrorCode::CapacityOverflow)
+        );
+        assert_eq!(
+            runtime::ErrorCode::from_raw(betelgeuze_sys::BG_STATUS_OUT_OF_MEMORY),
+            Some(runtime::ErrorCode::OutOfMemory)
+        );
+        assert_eq!(
+            runtime::ErrorCode::from_raw(betelgeuze_sys::BG_STATUS_INTERNAL_ERROR),
+            Some(runtime::ErrorCode::InternalError)
         );
     }
 

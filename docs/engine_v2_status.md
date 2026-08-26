@@ -128,8 +128,13 @@ The current `main` branch contains:
   native exception boundary and requires its native status, exact last-error
   message, and safe Rust status mapping. The probe lives only in a native test
   translation unit: it attempts no allocation, injects no allocator failure,
-  and grants no production OOM-resilience authority. CPU dynamics additionally
-  retain simulation-owned force-vector storage across repeated force
+  and grants no production OOM-resilience authority. A further immutable
+  successor isolates the header-defined boundary in a dedicated native test
+  translation unit and freezes returned-status passthrough, length, allocation,
+  standard, unknown, and success-clearing rows with exact status/message and
+  safe Rust mapping checks. It uses test-owned error storage and adds no
+  product-library hook or production-API exception injection. CPU dynamics
+  additionally retain simulation-owned force-vector storage across repeated force
   evaluations and later transactional integrate or minimize calls; zero-step
   integration does not initialize it, checkpoint and semantic rollback exclude
   it as derived scratch, and an internal evaluation failure may consume only

@@ -235,6 +235,15 @@ last-error message, and retains the safe Rust `ErrorCode::OutOfMemory` mapping.
 The probe is not part of the product library, attempts no allocation, injects
 no allocator failure, and grants no runtime OOM-resilience or other authority.
 
+The v3 exception-boundary successor moves this check into a dedicated native
+test translation unit and freezes six ordered rows: returned-status
+passthrough, `std::length_error`, `std::bad_alloc`, another standard exception,
+a non-standard exception, and success clearing stale error state. Exact native
+status/message behavior and safe Rust capacity/OOM/internal mappings are
+required. The same header-defined production boundary is compiled against
+test-owned error storage; no product-library hook, production-API exception
+injection, allocator-failure injection, or authority is added.
+
 The next SHA-bound successor,
 `config/engine_v2_native_periodic_neighbor_list_profile_v2.json`, retains one
 buffered canonical pair slice in the native `Simulation` for fully periodic

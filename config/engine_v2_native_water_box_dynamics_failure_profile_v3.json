@@ -1,0 +1,88 @@
+{
+  "schema_id": "betelgeuze.engine_v2_native_water_box_dynamics_failure_profile/3.0.0",
+  "profile_id": "engine_v2_native_exception_boundary_matrix_development_v3",
+  "predecessor": {
+    "path": "config/engine_v2_native_water_box_dynamics_failure_profile_v2.json",
+    "sha256": "0bf209eb62287f82080a123d7f48e8c63261d7a370283112e1af95ca5e4757be",
+    "semantic_change": "Isolate and complete deterministic catch-row coverage for the header-defined native guarded_status boundary without adding a product hook or injecting allocator failure."
+  },
+  "boundary": {
+    "source": "native/src/internal.hpp",
+    "symbol": "betelgeuze::native::guarded_status",
+    "test_translation_unit": "native/tests/guarded_status.cpp",
+    "header_defined_production_boundary_source_exercised": true,
+    "test_owned_last_error_storage": true,
+    "probe_compiled_into_product_library": false,
+    "product_library_test_hook_added": false,
+    "exception_objects_constructed_before_boundary_where_applicable": true,
+    "oom_allocator_attempted": false,
+    "allocation_failure_injected": false,
+    "hip_device_execution_required": false
+  },
+  "ordered_rows": [
+    {
+      "row_id": "returned_status_passthrough",
+      "stimulus": "return BG_STATUS_INVALID_ARGUMENT",
+      "expected_status": "BG_STATUS_INVALID_ARGUMENT",
+      "expected_message": ""
+    },
+    {
+      "row_id": "length_error",
+      "stimulus": "throw preconstructed std::length_error",
+      "expected_status": "BG_STATUS_CAPACITY_OVERFLOW",
+      "expected_message": "native container capacity exceeded"
+    },
+    {
+      "row_id": "bad_alloc",
+      "stimulus": "throw std::bad_alloc",
+      "expected_status": "BG_STATUS_OUT_OF_MEMORY",
+      "expected_message": "native allocation failed"
+    },
+    {
+      "row_id": "standard_exception",
+      "stimulus": "throw preconstructed std::runtime_error",
+      "expected_status": "BG_STATUS_INTERNAL_ERROR",
+      "expected_message": "native operation failed"
+    },
+    {
+      "row_id": "unknown_exception",
+      "stimulus": "throw int32_t",
+      "expected_status": "BG_STATUS_INTERNAL_ERROR",
+      "expected_message": "unknown native exception"
+    },
+    {
+      "row_id": "success_clears_error",
+      "stimulus": "return BG_STATUS_OK after stale error state",
+      "expected_status": "BG_STATUS_OK",
+      "expected_message": ""
+    }
+  ],
+  "safe_rust_mappings": {
+    "BG_STATUS_CAPACITY_OVERFLOW": "ErrorCode::CapacityOverflow",
+    "BG_STATUS_OUT_OF_MEMORY": "ErrorCode::OutOfMemory",
+    "BG_STATUS_INTERNAL_ERROR": "ErrorCode::InternalError"
+  },
+  "validation": {
+    "predecessor_rows_unchanged": true,
+    "ordered_native_boundary_rows_required": true,
+    "exact_native_last_error_messages_required": true,
+    "safe_rust_status_mappings_required": true,
+    "all_boundary_rows_runtime_exercised_in_test_translation_unit": true,
+    "production_api_exception_injection_performed": false,
+    "production_oom_resilience_validated": false,
+    "performance_measurement_present": false,
+    "performance_threshold_present": false
+  },
+  "authority": {
+    "molecular_execution_authorized": false,
+    "production_md_validated": false,
+    "scientific_claim_authorized": false,
+    "parameter_applicability_claim_authorized": false,
+    "performance_claim_authorized": false,
+    "reservation_authorized": false,
+    "fresh_128_authorized": false,
+    "public_benchmark_authorized": false,
+    "hip_device_execution_authorized": false,
+    "production_oom_resilience_authorized": false
+  }
+}
