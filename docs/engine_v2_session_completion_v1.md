@@ -435,6 +435,36 @@ measurement evidence only; it is not an execution authorization receipt and
 cannot bind the currently unmaterialized D1 manifest or populate either empty
 repository authorization allowlist.
 
+### HIP D1 candidate-result assembly
+
+After an independently authorized owner wrapper has completed the full
+result-shaped evidence draft, the repository can recompute its redundant
+bindings without launching another workload:
+
+```bash
+python tools/assemble_engine_v2_hip_d1_candidate_result_v1.py \
+  --profile /absolute/manifest-bound-profile.json \
+  --draft /absolute/owner-recorded-result-draft.json \
+  --output /absolute/absent-candidate-result.json
+```
+
+The assembler requires a valid manifest-bound profile and treats the draft as
+owner-recorded evidence, not as authority. It recomputes the ordered cohort and
+per-case candidate digests, structured parity digests, normalized trace hashes
+and kernel summaries, primary transfer byte/time aggregates, failure-probe
+hashes and receipts, primary/repeat backend receipts, and final result
+self-hash. A nested failure observation must already bind its exact stimulus;
+the assembler rejects a cross-wire instead of rewriting owner evidence.
+
+Before linking the absent output, the tool runs the canonical complete
+`--candidate-result` validation against a temporary file. Invalid identity,
+science/parity, repeat, trace, transfer, failure, speed-gate, or authority
+evidence therefore leaves no output. The assembly receipt binds the exact
+source-draft and candidate-result hashes, but reports result verification,
+device/molecular execution, and every authority as false. It cannot add a
+repository digest pin, invoke a command or device, overwrite an artifact, or
+turn a candidate into a verified result.
+
 ## Maintenance tools
 
 ```bash
