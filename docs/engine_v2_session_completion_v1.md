@@ -244,6 +244,25 @@ empty. A future owner-approved manifest/profile and completed result each need
 an explicit code-reviewed digest pin before result verification can succeed;
 an operator-selected path or recomputed self-hash cannot grant that trust.
 
+Before those pins are reviewed, the same verifier can fully validate an exact
+candidate result against an exact manifest-bound profile:
+
+```bash
+python tools/verify_engine_v2_hip_d1_benchmark_v1.py \
+  --profile /absolute/manifest-bound-profile.json \
+  --candidate-result /absolute/completed-result.json
+```
+
+Candidate mode exists only to break the digest-review cycle: it recomputes the
+complete result, receipt, parity, trace, transfer, failure-probe, identity, and
+performance-gate evidence before reviewers pin the resulting profile and
+result digests. It still requires a manifest-bound profile, but it does not
+require either repository allowlist entry. Its output uses
+`candidate_valid`, never `verified`; reports both digest-pin states; and keeps
+result verification, device execution, and every claim authority false. The
+ordinary `--result` path remains the only repository-authorized verification
+path and still requires both exact digest pins.
+
 Once those external prerequisites and authorization exist, the same command
 accepts `--result /absolute/hip-d1-result.json`. A valid result must retain the
 ordered 32-case, 64-candidate cohort on `rust_cpu`, `hip_safe`, and `hip_fast`

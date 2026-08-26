@@ -1772,8 +1772,13 @@ def _verify_backend(
     return cases, metrics
 
 
-def verify(profile_path: Path, result_path: Path) -> dict[str, Any]:
-    """Verify a completed result against an exact manifest-bound profile."""
+def _verify_result_document(
+    profile_path: Path,
+    result_path: Path,
+    *,
+    require_repository_authorization: bool,
+) -> dict[str, Any]:
+    """Validate a completed result and optionally require repository pins."""
 
     profile = _load(profile_path)
     profile_summary = _verify_profile_document(profile)
@@ -1781,7 +1786,10 @@ def verify(profile_path: Path, result_path: Path) -> dict[str, Any]:
         raise HipBenchmarkError(
             "profile manifest is not bound; result verification refused"
         )
-    if not profile_summary["result_verification_authorized"]:
+    if (
+        require_repository_authorization
+        and not profile_summary["result_verification_authorized"]
+    ):
         raise HipBenchmarkError("bound profile is not repository-authorized")
     result = _load(result_path)
     _exact_keys(
@@ -2080,11 +2088,16 @@ def verify(profile_path: Path, result_path: Path) -> dict[str, Any]:
     result_sha256 = _sha256(result["result_sha256"], "result.result_sha256")
     if result_sha256 != _canonical_sha256(_result_projection(result)):
         raise HipBenchmarkError("result SHA-256 mismatch")
-    if result_sha256 not in AUTHORIZED_RESULT_SHA256S:
+    result_repository_authorized = result_sha256 in AUTHORIZED_RESULT_SHA256S
+    if require_repository_authorization and not result_repository_authorized:
         raise HipBenchmarkError("result is not repository-authorized")
     return {
-        "verified": True,
         "profile_sha256": profile["profile_sha256"],
+        "result_sha256": result_sha256,
+        "profile_repository_authorized": profile_summary[
+            "result_verification_authorized"
+        ],
+        "result_repository_authorized": result_repository_authorized,
         "manifest_sha256": manifest_sha256,
         "architecture_count": len(seen_architectures),
         "case_count": profile["case_count"],
@@ -2095,19 +2108,62 @@ def verify(profile_path: Path, result_path: Path) -> dict[str, Any]:
     }
 
 
+def verify(profile_path: Path, result_path: Path) -> dict[str, Any]:
+    """Verify a completed result against repository-authorized exact digests."""
+
+    output = _verify_result_document(
+        profile_path,
+        result_path,
+        require_repository_authorization=True,
+    )
+    output.pop("profile_repository_authorized")
+    output.pop("result_repository_authorized")
+    output.pop("result_sha256")
+    return {"verified": True, **output}
+
+
+def validate_candidate_result(profile_path: Path, result_path: Path) -> dict[str, Any]:
+    """Fully validate a pre-pin result without granting repository authority."""
+
+    output = _verify_result_document(
+        profile_path,
+        result_path,
+        require_repository_authorization=False,
+    )
+    return {
+        "candidate_valid": True,
+        "profile_sha256": output["profile_sha256"],
+        "result_sha256": output["result_sha256"],
+        "profile_digest_pinned": output["profile_repository_authorized"],
+        "result_digest_pinned": output["result_repository_authorized"],
+        "result_verification_authorized": False,
+        "manifest_sha256": output["manifest_sha256"],
+        "architecture_count": output["architecture_count"],
+        "case_count": output["case_count"],
+        "candidate_denominator": output["candidate_denominator"],
+        "derived_metrics": output["derived_metrics"],
+        "device_execution_authorized": False,
+        "claim_authority_granted": False,
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--profile", type=Path, required=True)
-    parser.add_argument("--result", type=Path)
+    result_group = parser.add_mutually_exclusive_group()
+    result_group.add_argument("--result", type=Path)
+    result_group.add_argument("--candidate-result", type=Path)
     args = parser.parse_args()
     try:
-        output = (
-            verify_profile(args.profile)
-            if args.result is None
-            else verify(args.profile, args.result)
-        )
+        if args.result is not None:
+            output = verify(args.profile, args.result)
+        elif args.candidate_result is not None:
+            output = validate_candidate_result(args.profile, args.candidate_result)
+        else:
+            output = verify_profile(args.profile)
     except HipBenchmarkError as exc:
-        print(json.dumps({"verified": False, "error": str(exc)}, sort_keys=True))
+        status = "candidate_valid" if args.candidate_result is not None else "verified"
+        print(json.dumps({status: False, "error": str(exc)}, sort_keys=True))
         return 1
     print(json.dumps(output, sort_keys=True))
     return 0
