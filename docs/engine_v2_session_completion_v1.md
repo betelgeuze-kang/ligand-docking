@@ -232,6 +232,16 @@ validation, not equilibrium, production-MD,
 performance, molecular-execution, scientific-claim, reservation, Stage 0,
 Fresh-128, or HIP-device authority.
 
+An immutable residual-distribution successor,
+`config/engine_v2_native_water_box_nvt_constraint_residual_profile_v1.json`,
+uses the exact same seeds, burn-in, stride, and sample count. It retains the
+maximum position and radial-velocity constraint residual across all six frozen
+rows for every observation, rederives their mean and maximum, and binds them to
+an ordered backend-tagged receipt. Both CPU backends must produce bit-identical
+rows within one build and remain within the existing `1e-10` position and
+radial-velocity tolerances. This remains tiny synthetic implementation evidence
+with every authority field false.
+
 See `docs/engine_v2_native_water_box_v1.md` for the frozen development metrics
 and remaining scientific boundaries.
 

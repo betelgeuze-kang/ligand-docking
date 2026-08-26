@@ -24,6 +24,10 @@ pub const DEVELOPMENT_WATER_BOX_NVT_ENSEMBLE_V1_SCHEMA_ID: &str =
     "betelgeuze.engine_v2_native_water_box_nvt_ensemble_profile/1.0.0";
 pub const DEVELOPMENT_WATER_BOX_NVT_ENSEMBLE_V1_PROFILE_ID: &str =
     "engine_v2_native_two_water_nvt_ensemble_development_v1";
+pub const DEVELOPMENT_WATER_BOX_NVT_CONSTRAINT_RESIDUAL_V1_SCHEMA_ID: &str =
+    "betelgeuze.engine_v2_native_water_box_nvt_constraint_residual_profile/1.0.0";
+pub const DEVELOPMENT_WATER_BOX_NVT_CONSTRAINT_RESIDUAL_V1_PROFILE_ID: &str =
+    "engine_v2_native_two_water_nvt_constraint_residual_development_v1";
 pub const DEVELOPMENT_WATER_BOX_V1_ATOM_COUNT: usize = 6;
 pub const DEVELOPMENT_WATER_ION_V1_SCHEMA_ID: &str =
     "betelgeuze.engine_v2_native_water_ion_profile/1.0.0";
@@ -36,6 +40,8 @@ const DEVELOPMENT_WATER_BOX_CONSTRAINTS_V1_PROFILE_BYTES: &[u8] =
     include_bytes!("../assets/engine_v2_native_water_box_constraints_profile_v1.json");
 const DEVELOPMENT_WATER_BOX_NVT_ENSEMBLE_V1_PROFILE_BYTES: &[u8] =
     include_bytes!("../assets/engine_v2_native_water_box_nvt_ensemble_profile_v1.json");
+const DEVELOPMENT_WATER_BOX_NVT_CONSTRAINT_RESIDUAL_V1_PROFILE_BYTES: &[u8] =
+    include_bytes!("../assets/engine_v2_native_water_box_nvt_constraint_residual_profile_v1.json");
 const DEVELOPMENT_WATER_ION_V1_PROFILE_BYTES: &[u8] =
     include_bytes!("../assets/engine_v2_native_water_ion_profile_v1.json");
 
@@ -417,6 +423,11 @@ pub fn development_water_box_nvt_ensemble_v1_profile_sha256() -> [u8; 32] {
     Sha256::digest(DEVELOPMENT_WATER_BOX_NVT_ENSEMBLE_V1_PROFILE_BYTES).into()
 }
 
+/// SHA-256 of the exact repeated-seed constraint-residual observation profile.
+pub fn development_water_box_nvt_constraint_residual_v1_profile_sha256() -> [u8; 32] {
+    Sha256::digest(DEVELOPMENT_WATER_BOX_NVT_CONSTRAINT_RESIDUAL_V1_PROFILE_BYTES).into()
+}
+
 /// SHA-256 of the exact bounded NaCl development profile embedded into this runtime.
 pub fn development_water_ion_v1_profile_sha256() -> [u8; 32] {
     Sha256::digest(DEVELOPMENT_WATER_ION_V1_PROFILE_BYTES).into()
@@ -463,6 +474,48 @@ pub struct DevelopmentWaterBoxNvtEnsembleReportV1 {
     pub mean_temperature_kelvin: f64,
     pub temperature_variance_kelvin2: f64,
     pub observation_receipt_sha256: [u8; 32],
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct DevelopmentWaterBoxNvtConstraintObservationV1 {
+    pub random_seed: u64,
+    pub sample_index: u32,
+    pub absolute_step: u64,
+    pub degrees_of_freedom: u64,
+    pub kinetic_kcal_per_mol: f64,
+    pub temperature_kelvin: f64,
+    pub maximum_position_constraint_residual_angstrom: f64,
+    pub maximum_radial_velocity_constraint_residual_angstrom_per_femtosecond: f64,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct DevelopmentWaterBoxNvtConstraintEnsembleReportV1 {
+    pub backend: Backend,
+    pub observations: Vec<DevelopmentWaterBoxNvtConstraintObservationV1>,
+    pub mean_kinetic_kcal_per_mol: f64,
+    pub mean_temperature_kelvin: f64,
+    pub temperature_variance_kelvin2: f64,
+    pub mean_position_constraint_residual_angstrom: f64,
+    pub maximum_position_constraint_residual_angstrom: f64,
+    pub mean_radial_velocity_constraint_residual_angstrom_per_femtosecond: f64,
+    pub maximum_radial_velocity_constraint_residual_angstrom_per_femtosecond: f64,
+    pub observation_receipt_sha256: [u8; 32],
+}
+
+#[derive(Clone, Copy)]
+struct DevelopmentWaterBoxNvtSummary {
+    observation_count: u32,
+    mean_kinetic_kcal_per_mol: f64,
+    mean_temperature_kelvin: f64,
+    temperature_variance_kelvin2: f64,
+}
+
+#[derive(Clone, Copy)]
+struct DevelopmentWaterBoxConstraintResidualSummary {
+    mean_position_constraint_residual_angstrom: f64,
+    maximum_position_constraint_residual_angstrom: f64,
+    mean_radial_velocity_constraint_residual_angstrom_per_femtosecond: f64,
+    maximum_radial_velocity_constraint_residual_angstrom_per_femtosecond: f64,
 }
 
 impl DevelopmentWaterBoxV1 {
@@ -601,6 +654,159 @@ pub fn observe_development_water_box_nvt_ensemble_v1(
     context: &Context,
 ) -> Result<DevelopmentWaterBoxNvtEnsembleReportV1> {
     require_cpu_backend(context, DEVELOPMENT_WATER_BOX_NVT_ENSEMBLE_V1_PROFILE_ID)?;
+    let (backend, observations) = collect_development_water_box_nvt_observations(
+        context,
+        |_water_box, random_seed, sample_index, report| {
+            Ok(DevelopmentWaterBoxNvtObservationV1 {
+                random_seed,
+                sample_index,
+                absolute_step: report.absolute_step,
+                degrees_of_freedom: report.degrees_of_freedom,
+                kinetic_kcal_per_mol: report.kinetic_kcal_per_mol,
+                temperature_kelvin: report.temperature_kelvin,
+            })
+        },
+    )?;
+    let summary = summarize_development_water_box_nvt(&observations, |row| {
+        (row.kinetic_kcal_per_mol, row.temperature_kelvin)
+    })?;
+    let mut receipt = Sha256::new();
+    receipt.update(b"betelgeuze.engine_v2_native_water_box_nvt_ensemble_observation/1.0.0\0");
+    receipt.update(development_water_box_nvt_ensemble_v1_profile_sha256());
+    receipt.update([nvt_backend_tag(backend)?]);
+    receipt.update(u64::from(summary.observation_count).to_le_bytes());
+    for row in &observations {
+        receipt.update(row.random_seed.to_le_bytes());
+        receipt.update(row.sample_index.to_le_bytes());
+        receipt.update(row.absolute_step.to_le_bytes());
+        receipt.update(row.degrees_of_freedom.to_le_bytes());
+        receipt.update(row.kinetic_kcal_per_mol.to_bits().to_le_bytes());
+        receipt.update(row.temperature_kelvin.to_bits().to_le_bytes());
+    }
+    receipt.update(summary.mean_kinetic_kcal_per_mol.to_bits().to_le_bytes());
+    receipt.update(summary.mean_temperature_kelvin.to_bits().to_le_bytes());
+    receipt.update(summary.temperature_variance_kelvin2.to_bits().to_le_bytes());
+
+    Ok(DevelopmentWaterBoxNvtEnsembleReportV1 {
+        backend,
+        observations,
+        mean_kinetic_kcal_per_mol: summary.mean_kinetic_kcal_per_mol,
+        mean_temperature_kelvin: summary.mean_temperature_kelvin,
+        temperature_variance_kelvin2: summary.temperature_variance_kelvin2,
+        observation_receipt_sha256: receipt.finalize().into(),
+    })
+}
+
+/// Run the immutable constraint-residual successor to the repeated-seed NVT lane.
+///
+/// This retains the ordered residual distribution for a tiny synthetic CPU
+/// fixture. It grants no production, scientific, molecular, performance, or
+/// HIP-device authority.
+pub fn observe_development_water_box_nvt_constraint_ensemble_v1(
+    context: &Context,
+) -> Result<DevelopmentWaterBoxNvtConstraintEnsembleReportV1> {
+    require_cpu_backend(
+        context,
+        DEVELOPMENT_WATER_BOX_NVT_CONSTRAINT_RESIDUAL_V1_PROFILE_ID,
+    )?;
+    let (backend, observations) = collect_development_water_box_nvt_observations(
+        context,
+        |water_box, random_seed, sample_index, report| {
+            let snapshot = water_box.snapshot()?;
+            let (maximum_position_residual, maximum_radial_velocity_residual) =
+                frozen_water_box_constraint_residuals(&snapshot)?;
+            Ok(DevelopmentWaterBoxNvtConstraintObservationV1 {
+                random_seed,
+                sample_index,
+                absolute_step: report.absolute_step,
+                degrees_of_freedom: report.degrees_of_freedom,
+                kinetic_kcal_per_mol: report.kinetic_kcal_per_mol,
+                temperature_kelvin: report.temperature_kelvin,
+                maximum_position_constraint_residual_angstrom: maximum_position_residual,
+                maximum_radial_velocity_constraint_residual_angstrom_per_femtosecond:
+                    maximum_radial_velocity_residual,
+            })
+        },
+    )?;
+    let summary = summarize_development_water_box_nvt(&observations, |row| {
+        (row.kinetic_kcal_per_mol, row.temperature_kelvin)
+    })?;
+    let residual_summary = summarize_development_water_box_constraint_residuals(&observations)?;
+    let mut receipt = Sha256::new();
+    receipt.update(
+        b"betelgeuze.engine_v2_native_water_box_nvt_constraint_residual_observation/1.0.0\0",
+    );
+    receipt.update(development_water_box_nvt_constraint_residual_v1_profile_sha256());
+    receipt.update([nvt_backend_tag(backend)?]);
+    receipt.update(u64::from(summary.observation_count).to_le_bytes());
+    for row in &observations {
+        receipt.update(row.random_seed.to_le_bytes());
+        receipt.update(row.sample_index.to_le_bytes());
+        receipt.update(row.absolute_step.to_le_bytes());
+        receipt.update(row.degrees_of_freedom.to_le_bytes());
+        receipt.update(row.kinetic_kcal_per_mol.to_bits().to_le_bytes());
+        receipt.update(row.temperature_kelvin.to_bits().to_le_bytes());
+        receipt.update(
+            row.maximum_position_constraint_residual_angstrom
+                .to_bits()
+                .to_le_bytes(),
+        );
+        receipt.update(
+            row.maximum_radial_velocity_constraint_residual_angstrom_per_femtosecond
+                .to_bits()
+                .to_le_bytes(),
+        );
+    }
+    receipt.update(summary.mean_kinetic_kcal_per_mol.to_bits().to_le_bytes());
+    receipt.update(summary.mean_temperature_kelvin.to_bits().to_le_bytes());
+    receipt.update(summary.temperature_variance_kelvin2.to_bits().to_le_bytes());
+    receipt.update(
+        residual_summary
+            .mean_position_constraint_residual_angstrom
+            .to_bits()
+            .to_le_bytes(),
+    );
+    receipt.update(
+        residual_summary
+            .maximum_position_constraint_residual_angstrom
+            .to_bits()
+            .to_le_bytes(),
+    );
+    receipt.update(
+        residual_summary
+            .mean_radial_velocity_constraint_residual_angstrom_per_femtosecond
+            .to_bits()
+            .to_le_bytes(),
+    );
+    receipt.update(
+        residual_summary
+            .maximum_radial_velocity_constraint_residual_angstrom_per_femtosecond
+            .to_bits()
+            .to_le_bytes(),
+    );
+
+    Ok(DevelopmentWaterBoxNvtConstraintEnsembleReportV1 {
+        backend,
+        observations,
+        mean_kinetic_kcal_per_mol: summary.mean_kinetic_kcal_per_mol,
+        mean_temperature_kelvin: summary.mean_temperature_kelvin,
+        temperature_variance_kelvin2: summary.temperature_variance_kelvin2,
+        mean_position_constraint_residual_angstrom: residual_summary
+            .mean_position_constraint_residual_angstrom,
+        maximum_position_constraint_residual_angstrom: residual_summary
+            .maximum_position_constraint_residual_angstrom,
+        mean_radial_velocity_constraint_residual_angstrom_per_femtosecond: residual_summary
+            .mean_radial_velocity_constraint_residual_angstrom_per_femtosecond,
+        maximum_radial_velocity_constraint_residual_angstrom_per_femtosecond: residual_summary
+            .maximum_radial_velocity_constraint_residual_angstrom_per_femtosecond,
+        observation_receipt_sha256: receipt.finalize().into(),
+    })
+}
+
+fn collect_development_water_box_nvt_observations<T>(
+    context: &Context,
+    mut capture: impl FnMut(&DevelopmentWaterBoxV1, u64, u32, DynamicsReport) -> Result<T>,
+) -> Result<(Backend, Vec<T>)> {
     let backend = context.backend()?;
     let mut observations = Vec::with_capacity(NVT_ENSEMBLE_SEEDS.len() * NVT_ENSEMBLE_SAMPLE_COUNT);
     for random_seed in NVT_ENSEMBLE_SEEDS {
@@ -637,34 +843,29 @@ pub fn observe_development_water_box_nvt_ensemble_v1(
             {
                 return Err(invalid("NVT ensemble sample is incomplete or non-finite"));
             }
-            observations.push(DevelopmentWaterBoxNvtObservationV1 {
-                random_seed,
-                sample_index: sample_index_u32,
-                absolute_step: report.absolute_step,
-                degrees_of_freedom: report.degrees_of_freedom,
-                kinetic_kcal_per_mol: report.kinetic_kcal_per_mol,
-                temperature_kelvin: report.temperature_kelvin,
-            });
+            observations.push(capture(&water_box, random_seed, sample_index_u32, report)?);
         }
     }
+    Ok((backend, observations))
+}
 
+fn summarize_development_water_box_nvt<T>(
+    observations: &[T],
+    values: impl Fn(&T) -> (f64, f64),
+) -> Result<DevelopmentWaterBoxNvtSummary> {
     let observation_count = u32::try_from(observations.len())
         .map_err(|_| invalid("NVT ensemble observation count exceeds u32"))?;
+    if observation_count == 0 {
+        return Err(invalid("NVT ensemble returned no observations"));
+    }
     let count = f64::from(observation_count);
-    let mean_kinetic_kcal_per_mol = observations
-        .iter()
-        .map(|row| row.kinetic_kcal_per_mol)
-        .sum::<f64>()
-        / count;
-    let mean_temperature_kelvin = observations
-        .iter()
-        .map(|row| row.temperature_kelvin)
-        .sum::<f64>()
-        / count;
+    let mean_kinetic_kcal_per_mol =
+        observations.iter().map(|row| values(row).0).sum::<f64>() / count;
+    let mean_temperature_kelvin = observations.iter().map(|row| values(row).1).sum::<f64>() / count;
     let temperature_variance_kelvin2 = observations
         .iter()
         .map(|row| {
-            let delta = row.temperature_kelvin - mean_temperature_kelvin;
+            let delta = values(row).1 - mean_temperature_kelvin;
             delta * delta
         })
         .sum::<f64>()
@@ -680,40 +881,150 @@ pub fn observe_development_water_box_nvt_ensemble_v1(
         ));
     }
 
-    let mut receipt = Sha256::new();
-    receipt.update(b"betelgeuze.engine_v2_native_water_box_nvt_ensemble_observation/1.0.0\0");
-    receipt.update(development_water_box_nvt_ensemble_v1_profile_sha256());
-    let backend_tag = match backend {
-        Backend::CppCpuReference => 1_u8,
-        Backend::RustCpu => 2_u8,
-        Backend::Auto | Backend::HipFast | Backend::HipSafe => {
-            return Err(invalid(
-                "NVT ensemble CPU guard admitted an unsupported backend",
-            ));
-        }
-    };
-    receipt.update([backend_tag]);
-    receipt.update(u64::from(observation_count).to_le_bytes());
-    for row in &observations {
-        receipt.update(row.random_seed.to_le_bytes());
-        receipt.update(row.sample_index.to_le_bytes());
-        receipt.update(row.absolute_step.to_le_bytes());
-        receipt.update(row.degrees_of_freedom.to_le_bytes());
-        receipt.update(row.kinetic_kcal_per_mol.to_bits().to_le_bytes());
-        receipt.update(row.temperature_kelvin.to_bits().to_le_bytes());
-    }
-    receipt.update(mean_kinetic_kcal_per_mol.to_bits().to_le_bytes());
-    receipt.update(mean_temperature_kelvin.to_bits().to_le_bytes());
-    receipt.update(temperature_variance_kelvin2.to_bits().to_le_bytes());
-
-    Ok(DevelopmentWaterBoxNvtEnsembleReportV1 {
-        backend,
-        observations,
+    Ok(DevelopmentWaterBoxNvtSummary {
+        observation_count,
         mean_kinetic_kcal_per_mol,
         mean_temperature_kelvin,
         temperature_variance_kelvin2,
-        observation_receipt_sha256: receipt.finalize().into(),
     })
+}
+
+fn summarize_development_water_box_constraint_residuals(
+    observations: &[DevelopmentWaterBoxNvtConstraintObservationV1],
+) -> Result<DevelopmentWaterBoxConstraintResidualSummary> {
+    let observation_count = u32::try_from(observations.len())
+        .map_err(|_| invalid("NVT constraint observation count exceeds u32"))?;
+    if observation_count == 0 {
+        return Err(invalid("NVT constraint ensemble returned no observations"));
+    }
+    if observations.iter().any(|row| {
+        !row.maximum_position_constraint_residual_angstrom
+            .is_finite()
+            || row.maximum_position_constraint_residual_angstrom < 0.0
+            || !row
+                .maximum_radial_velocity_constraint_residual_angstrom_per_femtosecond
+                .is_finite()
+            || row.maximum_radial_velocity_constraint_residual_angstrom_per_femtosecond < 0.0
+    }) {
+        return Err(invalid(
+            "NVT constraint distribution contains an invalid residual",
+        ));
+    }
+    let count = f64::from(observation_count);
+    let mean_position_constraint_residual_angstrom = observations
+        .iter()
+        .map(|row| row.maximum_position_constraint_residual_angstrom)
+        .sum::<f64>()
+        / count;
+    let maximum_position_constraint_residual_angstrom = observations
+        .iter()
+        .map(|row| row.maximum_position_constraint_residual_angstrom)
+        .fold(0.0, f64::max);
+    let mean_radial_velocity_constraint_residual_angstrom_per_femtosecond = observations
+        .iter()
+        .map(|row| row.maximum_radial_velocity_constraint_residual_angstrom_per_femtosecond)
+        .sum::<f64>()
+        / count;
+    let maximum_radial_velocity_constraint_residual_angstrom_per_femtosecond = observations
+        .iter()
+        .map(|row| row.maximum_radial_velocity_constraint_residual_angstrom_per_femtosecond)
+        .fold(0.0, f64::max);
+    if maximum_position_constraint_residual_angstrom > CONSTRAINT_TOLERANCE_ANGSTROM
+        || maximum_radial_velocity_constraint_residual_angstrom_per_femtosecond
+            > CONSTRAINT_VELOCITY_TOLERANCE_ANGSTROM_PER_FEMTOSECOND
+    {
+        return Err(invalid(
+            "NVT constraint distribution is outside the frozen residual bounds",
+        ));
+    }
+    Ok(DevelopmentWaterBoxConstraintResidualSummary {
+        mean_position_constraint_residual_angstrom,
+        maximum_position_constraint_residual_angstrom,
+        mean_radial_velocity_constraint_residual_angstrom_per_femtosecond,
+        maximum_radial_velocity_constraint_residual_angstrom_per_femtosecond,
+    })
+}
+
+fn nvt_backend_tag(backend: Backend) -> Result<u8> {
+    match backend {
+        Backend::CppCpuReference => Ok(1_u8),
+        Backend::RustCpu => Ok(2_u8),
+        Backend::Auto | Backend::HipFast | Backend::HipSafe => Err(invalid(
+            "NVT ensemble CPU guard admitted an unsupported backend",
+        )),
+    }
+}
+
+fn frozen_water_box_constraint_residuals(snapshot: &ParticleSnapshot) -> Result<(f64, f64)> {
+    let expected_count = DEVELOPMENT_WATER_BOX_V1_ATOM_COUNT;
+    let channel_lengths = [
+        snapshot.len(),
+        snapshot.positions.x_angstrom.len(),
+        snapshot.positions.y_angstrom.len(),
+        snapshot.positions.z_angstrom.len(),
+        snapshot.velocities.x_angstrom_per_femtosecond.len(),
+        snapshot.velocities.y_angstrom_per_femtosecond.len(),
+        snapshot.velocities.z_angstrom_per_femtosecond.len(),
+    ];
+    if channel_lengths
+        .iter()
+        .any(|length| *length != expected_count)
+    {
+        return Err(invalid(
+            "NVT constraint observation snapshot has an invalid channel shape",
+        ));
+    }
+    let mut maximum_position_residual = 0.0_f64;
+    let mut maximum_radial_velocity_residual = 0.0_f64;
+    for (atom_i, atom_j, target_distance) in [
+        (0, 1, OH_DISTANCE_ANGSTROM),
+        (0, 2, OH_DISTANCE_ANGSTROM),
+        (1, 2, HH_DISTANCE_ANGSTROM),
+        (3, 4, OH_DISTANCE_ANGSTROM),
+        (3, 5, OH_DISTANCE_ANGSTROM),
+        (4, 5, HH_DISTANCE_ANGSTROM),
+    ] {
+        let displacement = [
+            snapshot.positions.x_angstrom[atom_j] - snapshot.positions.x_angstrom[atom_i],
+            snapshot.positions.y_angstrom[atom_j] - snapshot.positions.y_angstrom[atom_i],
+            snapshot.positions.z_angstrom[atom_j] - snapshot.positions.z_angstrom[atom_i],
+        ];
+        let relative_velocity = [
+            snapshot.velocities.x_angstrom_per_femtosecond[atom_j]
+                - snapshot.velocities.x_angstrom_per_femtosecond[atom_i],
+            snapshot.velocities.y_angstrom_per_femtosecond[atom_j]
+                - snapshot.velocities.y_angstrom_per_femtosecond[atom_i],
+            snapshot.velocities.z_angstrom_per_femtosecond[atom_j]
+                - snapshot.velocities.z_angstrom_per_femtosecond[atom_i],
+        ];
+        let distance = displacement
+            .iter()
+            .map(|value| value * value)
+            .sum::<f64>()
+            .sqrt();
+        if !distance.is_finite() || distance <= 0.0 {
+            return Err(invalid(
+                "NVT constraint observation contains a degenerate distance",
+            ));
+        }
+        let position_residual = (distance - target_distance).abs();
+        let radial_velocity_residual = displacement
+            .iter()
+            .zip(relative_velocity)
+            .map(|(left, right)| left * right)
+            .sum::<f64>()
+            .abs()
+            / distance;
+        if !position_residual.is_finite() || !radial_velocity_residual.is_finite() {
+            return Err(invalid(
+                "NVT constraint observation contains a non-finite residual",
+            ));
+        }
+        maximum_position_residual = maximum_position_residual.max(position_residual);
+        maximum_radial_velocity_residual =
+            maximum_radial_velocity_residual.max(radial_velocity_residual);
+    }
+    Ok((maximum_position_residual, maximum_radial_velocity_residual))
 }
 
 #[cfg(test)]
@@ -1019,6 +1330,269 @@ mod tests {
             cpp_report.observation_receipt_sha256,
             rust_report.observation_receipt_sha256
         );
+    }
+
+    #[test]
+    fn repeated_seed_nvt_constraint_residual_distribution_is_retained_and_cpu_parity_complete() {
+        assert_eq!(
+            runtime::DEVELOPMENT_WATER_BOX_NVT_CONSTRAINT_RESIDUAL_V1_SCHEMA_ID,
+            "betelgeuze.engine_v2_native_water_box_nvt_constraint_residual_profile/1.0.0"
+        );
+        assert_eq!(
+            runtime::DEVELOPMENT_WATER_BOX_NVT_CONSTRAINT_RESIDUAL_V1_PROFILE_ID,
+            "engine_v2_native_two_water_nvt_constraint_residual_development_v1"
+        );
+        assert_eq!(
+            runtime::development_water_box_nvt_constraint_residual_v1_profile_sha256(),
+            [
+                0xa9, 0x20, 0x70, 0xad, 0xe1, 0xd2, 0x14, 0xe9, 0x52, 0x6a, 0x10, 0x16, 0x66, 0xb4,
+                0x9e, 0x8a, 0x7d, 0x5b, 0x90, 0x98, 0x88, 0x29, 0x3b, 0x79, 0x43, 0x7c, 0xa8, 0x59,
+                0xef, 0x4e, 0x7c, 0x35,
+            ]
+        );
+        let cpp = runtime::Context::new(runtime::ContextOptions::cpu_reference()).unwrap();
+        let rust = runtime::Context::new(runtime::ContextOptions::rust_cpu()).unwrap();
+        let cpp_report =
+            runtime::observe_development_water_box_nvt_constraint_ensemble_v1(&cpp).unwrap();
+        let rust_report =
+            runtime::observe_development_water_box_nvt_constraint_ensemble_v1(&rust).unwrap();
+        let repeated =
+            runtime::observe_development_water_box_nvt_constraint_ensemble_v1(&rust).unwrap();
+        assert_eq!(rust_report, repeated);
+        assert_eq!(cpp_report.observations, rust_report.observations);
+        for (left, right) in [
+            (
+                cpp_report.mean_kinetic_kcal_per_mol,
+                rust_report.mean_kinetic_kcal_per_mol,
+            ),
+            (
+                cpp_report.mean_temperature_kelvin,
+                rust_report.mean_temperature_kelvin,
+            ),
+            (
+                cpp_report.temperature_variance_kelvin2,
+                rust_report.temperature_variance_kelvin2,
+            ),
+            (
+                cpp_report.mean_position_constraint_residual_angstrom,
+                rust_report.mean_position_constraint_residual_angstrom,
+            ),
+            (
+                cpp_report.maximum_position_constraint_residual_angstrom,
+                rust_report.maximum_position_constraint_residual_angstrom,
+            ),
+            (
+                cpp_report.mean_radial_velocity_constraint_residual_angstrom_per_femtosecond,
+                rust_report.mean_radial_velocity_constraint_residual_angstrom_per_femtosecond,
+            ),
+            (
+                cpp_report.maximum_radial_velocity_constraint_residual_angstrom_per_femtosecond,
+                rust_report.maximum_radial_velocity_constraint_residual_angstrom_per_femtosecond,
+            ),
+        ] {
+            assert_eq!(left.to_bits(), right.to_bits());
+        }
+        for (backend, report) in [
+            (runtime::Backend::CppCpuReference, &cpp_report),
+            (runtime::Backend::RustCpu, &rust_report),
+        ] {
+            assert_eq!(report.backend, backend);
+            assert_eq!(report.observations.len(), 8 * 32);
+            assert!(report.mean_position_constraint_residual_angstrom >= 0.0);
+            assert!(report.maximum_position_constraint_residual_angstrom <= 1.0e-10);
+            assert!(
+                report.mean_radial_velocity_constraint_residual_angstrom_per_femtosecond >= 0.0
+            );
+            assert!(
+                report.maximum_radial_velocity_constraint_residual_angstrom_per_femtosecond
+                    <= 1.0e-10
+            );
+            for (index, row) in report.observations.iter().enumerate() {
+                let seed_index = index / 32;
+                let sample_index = index % 32;
+                assert_eq!(
+                    row.random_seed,
+                    [101, 211, 307, 401, 503, 601, 701, 809][seed_index]
+                );
+                assert_eq!(row.sample_index, sample_index as u32);
+                assert_eq!(row.absolute_step, 2_000 + (sample_index as u64 + 1) * 100);
+                assert_eq!(row.degrees_of_freedom, 12);
+                assert!(row
+                    .maximum_position_constraint_residual_angstrom
+                    .is_finite());
+                assert!(row.maximum_position_constraint_residual_angstrom >= 0.0);
+                assert!(row.maximum_position_constraint_residual_angstrom <= 1.0e-10);
+                assert!(row
+                    .maximum_radial_velocity_constraint_residual_angstrom_per_femtosecond
+                    .is_finite());
+                assert!(
+                    row.maximum_radial_velocity_constraint_residual_angstrom_per_femtosecond >= 0.0
+                );
+                assert!(
+                    row.maximum_radial_velocity_constraint_residual_angstrom_per_femtosecond
+                        <= 1.0e-10
+                );
+            }
+            assert_constraint_summary_rederived(report);
+            assert_eq!(
+                report.observation_receipt_sha256,
+                independently_recompute_nvt_constraint_observation_receipt(report)
+            );
+        }
+        assert_ne!(
+            cpp_report.observation_receipt_sha256,
+            rust_report.observation_receipt_sha256
+        );
+    }
+
+    fn assert_constraint_summary_rederived(
+        report: &runtime::DevelopmentWaterBoxNvtConstraintEnsembleReportV1,
+    ) {
+        let count = report.observations.len() as f64;
+        let mean_kinetic = report
+            .observations
+            .iter()
+            .map(|row| row.kinetic_kcal_per_mol)
+            .sum::<f64>()
+            / count;
+        let mean_temperature = report
+            .observations
+            .iter()
+            .map(|row| row.temperature_kelvin)
+            .sum::<f64>()
+            / count;
+        let temperature_variance = report
+            .observations
+            .iter()
+            .map(|row| {
+                let delta = row.temperature_kelvin - mean_temperature;
+                delta * delta
+            })
+            .sum::<f64>()
+            / count;
+        let mean_position = report
+            .observations
+            .iter()
+            .map(|row| row.maximum_position_constraint_residual_angstrom)
+            .sum::<f64>()
+            / count;
+        let maximum_position = report
+            .observations
+            .iter()
+            .map(|row| row.maximum_position_constraint_residual_angstrom)
+            .fold(0.0, f64::max);
+        let mean_velocity = report
+            .observations
+            .iter()
+            .map(|row| row.maximum_radial_velocity_constraint_residual_angstrom_per_femtosecond)
+            .sum::<f64>()
+            / count;
+        let maximum_velocity = report
+            .observations
+            .iter()
+            .map(|row| row.maximum_radial_velocity_constraint_residual_angstrom_per_femtosecond)
+            .fold(0.0, f64::max);
+        assert_eq!(
+            mean_kinetic.to_bits(),
+            report.mean_kinetic_kcal_per_mol.to_bits()
+        );
+        assert_eq!(
+            mean_temperature.to_bits(),
+            report.mean_temperature_kelvin.to_bits()
+        );
+        assert_eq!(
+            temperature_variance.to_bits(),
+            report.temperature_variance_kelvin2.to_bits()
+        );
+        assert_eq!(
+            mean_position.to_bits(),
+            report.mean_position_constraint_residual_angstrom.to_bits()
+        );
+        assert_eq!(
+            maximum_position.to_bits(),
+            report
+                .maximum_position_constraint_residual_angstrom
+                .to_bits()
+        );
+        assert_eq!(
+            mean_velocity.to_bits(),
+            report
+                .mean_radial_velocity_constraint_residual_angstrom_per_femtosecond
+                .to_bits()
+        );
+        assert_eq!(
+            maximum_velocity.to_bits(),
+            report
+                .maximum_radial_velocity_constraint_residual_angstrom_per_femtosecond
+                .to_bits()
+        );
+    }
+
+    fn independently_recompute_nvt_constraint_observation_receipt(
+        report: &runtime::DevelopmentWaterBoxNvtConstraintEnsembleReportV1,
+    ) -> [u8; 32] {
+        let backend_tag = match report.backend {
+            runtime::Backend::CppCpuReference => 1_u8,
+            runtime::Backend::RustCpu => 2_u8,
+            other => panic!("unexpected NVT constraint observation backend: {other:?}"),
+        };
+        let mut receipt = Sha256::new();
+        receipt.update(
+            b"betelgeuze.engine_v2_native_water_box_nvt_constraint_residual_observation/1.0.0\0",
+        );
+        receipt.update(runtime::development_water_box_nvt_constraint_residual_v1_profile_sha256());
+        receipt.update([backend_tag]);
+        receipt.update(
+            u64::try_from(report.observations.len())
+                .unwrap()
+                .to_le_bytes(),
+        );
+        for row in &report.observations {
+            receipt.update(row.random_seed.to_le_bytes());
+            receipt.update(row.sample_index.to_le_bytes());
+            receipt.update(row.absolute_step.to_le_bytes());
+            receipt.update(row.degrees_of_freedom.to_le_bytes());
+            receipt.update(row.kinetic_kcal_per_mol.to_bits().to_le_bytes());
+            receipt.update(row.temperature_kelvin.to_bits().to_le_bytes());
+            receipt.update(
+                row.maximum_position_constraint_residual_angstrom
+                    .to_bits()
+                    .to_le_bytes(),
+            );
+            receipt.update(
+                row.maximum_radial_velocity_constraint_residual_angstrom_per_femtosecond
+                    .to_bits()
+                    .to_le_bytes(),
+            );
+        }
+        receipt.update(report.mean_kinetic_kcal_per_mol.to_bits().to_le_bytes());
+        receipt.update(report.mean_temperature_kelvin.to_bits().to_le_bytes());
+        receipt.update(report.temperature_variance_kelvin2.to_bits().to_le_bytes());
+        receipt.update(
+            report
+                .mean_position_constraint_residual_angstrom
+                .to_bits()
+                .to_le_bytes(),
+        );
+        receipt.update(
+            report
+                .maximum_position_constraint_residual_angstrom
+                .to_bits()
+                .to_le_bytes(),
+        );
+        receipt.update(
+            report
+                .mean_radial_velocity_constraint_residual_angstrom_per_femtosecond
+                .to_bits()
+                .to_le_bytes(),
+        );
+        receipt.update(
+            report
+                .maximum_radial_velocity_constraint_residual_angstrom_per_femtosecond
+                .to_bits()
+                .to_le_bytes(),
+        );
+        receipt.finalize().into()
     }
 
     fn independently_recompute_nvt_observation_receipt(

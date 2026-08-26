@@ -32,6 +32,14 @@ The repeated-seed thermostat-observation successor is
 It binds the exact water, constraint, and neighbor-cache identities and embeds
 the same bytes into the runtime. It does not modify any predecessor profile.
 
+The constraint-distribution successor is
+`config/engine_v2_native_water_box_nvt_constraint_residual_profile_v1.json`,
+SHA-256
+`a92070ade1d214e9526a101666b49e8a7d5b909888293b79437ca859ef4e7c35`.
+It binds the exact NVT predecessor and preserves its sampling unchanged while
+retaining maximum position and radial-velocity residuals for every ordered
+observation row.
+
 The bounded ion successor is
 `config/engine_v2_native_water_ion_profile_v1.json`, SHA-256
 `409902e5f6776bd58c76f80a572c9cf978f7e2f4938003e5609036bfe91c631f`.
@@ -276,6 +284,12 @@ within the focused binary64 tolerance. The frozen observations are:
   remain within `[240, 360]` K and the variance must be finite and positive.
   Each report carries an independently rederived ordered receipt that includes
   its backend tag, exact observation rows, and exact binary64 summary;
+- the constraint-distribution successor retains the maximum residual across
+  all six frozen distance rows for each of those 256 observations. C++
+  reference and Rust CPU rows and summaries are bit-identical within one build,
+  position residuals remain at or below `1e-10` angstrom, and radial-velocity
+  residuals remain at or below `1e-10` angstrom/fs. Its backend-tagged receipt
+  binds every residual row plus the independently rederived mean and maximum;
 - a Rust checkpoint restores all positions, velocities, masses, charges,
   integrator state, absolute step, and RNG continuation exactly.
 

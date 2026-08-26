@@ -108,7 +108,12 @@ The current `main` branch contains:
   with deterministic backend-tagged receipts. Its broad mean-temperature and
   nonzero-variance gates are finite synthetic implementation checks only; they
   grant no equilibrium, molecular-execution, production, performance, or
-  scientific authority. CPU dynamics additionally
+  scientific authority. An immutable successor retains the maximum position
+  and radial-velocity constraint residual across all six frozen rows for each
+  ordered observation, with same-build CPU bit identity, complete distribution
+  rows, independently rederived mean/maximum summaries, and a backend-tagged
+  receipt. It does not change the sampling or authority. CPU dynamics
+  additionally
   retain simulation-owned force-vector storage across repeated force
   evaluations and later transactional integrate or minimize calls; zero-step
   integration does not initialize it, checkpoint and semantic rollback exclude
