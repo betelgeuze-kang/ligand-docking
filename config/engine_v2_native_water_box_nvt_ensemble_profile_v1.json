@@ -1,0 +1,46 @@
+{
+  "schema_id": "betelgeuze.engine_v2_native_water_box_nvt_ensemble_profile/1.0.0",
+  "profile_id": "engine_v2_native_two_water_nvt_ensemble_development_v1",
+  "predecessor": {
+    "path": "config/engine_v2_native_periodic_neighbor_list_profile_v2.json",
+    "sha256": "c9e671b925b8f5da48a43dec2abe264e695840b277cc3cf4a84aa7255b59150d",
+    "semantic_change": "Add a fixed repeated-seed constrained BAOAB NVT distribution observation without changing the native water, constraint, ion, or neighbor-cache profiles."
+  },
+  "system_bindings": {
+    "water_profile_sha256": "2b0be83b57085c655092ab0272aea5a91b9c3f90c344fa062d494ad324f0019e",
+    "constraint_profile_sha256": "8dcad0b5005b7a768ce0a88b1804b55ecddb9b3490e2dd59179dfa2393433507",
+    "atom_count": 6,
+    "water_count": 2,
+    "expected_degrees_of_freedom": 12
+  },
+  "sampling": {
+    "integrator": "constrained_langevin_baoab",
+    "timestep_femtoseconds": 0.5,
+    "target_temperature_kelvin": 300.0,
+    "friction_per_femtosecond": 0.01,
+    "ordered_random_seeds": [101, 211, 307, 401, 503, 601, 701, 809],
+    "burn_in_steps_per_seed": 2000,
+    "sample_count_per_seed": 32,
+    "sample_stride_steps": 100
+  },
+  "validation": {
+    "cpu_backends": ["cpp_cpu_reference", "rust_cpu"],
+    "same_seed_repeatability_required": true,
+    "ordered_observation_receipt_required": true,
+    "finite_positive_kinetic_energy_required": true,
+    "kinetic_temperature_identity_required": true,
+    "minimum_mean_temperature_kelvin": 240.0,
+    "maximum_mean_temperature_kelvin": 360.0,
+    "nonzero_temperature_variance_required": true,
+    "performance_measurement_present": false,
+    "performance_threshold_present": false
+  },
+  "authority": {
+    "production_md_validated": false,
+    "scientific_claim_authorized": false,
+    "free_energy_claim_authorized": false,
+    "performance_claim_authorized": false,
+    "molecular_execution_authorized": false,
+    "hip_device_execution_authorized": false
+  }
+}

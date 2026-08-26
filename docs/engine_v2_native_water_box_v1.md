@@ -26,6 +26,12 @@ The periodic CPU traversal successor is
 It binds the rigid-water successor's exact digest and is embedded into the
 runtime without changing either earlier profile identity.
 
+The repeated-seed thermostat-observation successor is
+`config/engine_v2_native_water_box_nvt_ensemble_profile_v1.json`, SHA-256
+`bb2577c0e227151b8aa95b5c288249823206020558a186eccc8b5ddcbca802de`.
+It binds the exact water, constraint, and neighbor-cache identities and embeds
+the same bytes into the runtime. It does not modify any predecessor profile.
+
 The bounded ion successor is
 `config/engine_v2_native_water_ion_profile_v1.json`, SHA-256
 `409902e5f6776bd58c76f80a572c9cf978f7e2f4938003e5609036bfe91c631f`.
@@ -263,6 +269,13 @@ within the focused binary64 tolerance. The frozen observations are:
 - absolute total-energy drift: `-1.2489678713478725e-7` kcal/mol;
 - 128-step BAOAB state is repeatable for the frozen explicit seed and preserves
   C++ reference/Rust CPU parity;
+- eight ordered constrained BAOAB seeds, each observed 32 times after a
+  2,000-step burn-in at a 100-step stride, produce 256 bit-identical C++
+  reference/Rust CPU rows and exact matching mean kinetic energy, mean kinetic
+  temperature, and population temperature variance. The mean temperature must
+  remain within `[240, 360]` K and the variance must be finite and positive.
+  Each report carries an independently rederived ordered receipt that includes
+  its backend tag, exact observation rows, and exact binary64 summary;
 - a Rust checkpoint restores all positions, velocities, masses, charges,
   integrator state, absolute step, and RNG continuation exactly.
 
@@ -286,9 +299,11 @@ box. The independent all-pairs oracle checks every analytic force component by
 central difference and both CPU evaluators. It is deliberately not integrated
 as a trajectory, concentration model, or equilibrium observation.
 
-These are tiny-fixture development observations. They are not equilibrium NVT
-statistics, stability validation, throughput measurements, or acceleration
-evidence.
+These are deterministic finite-sample tiny-fixture development observations.
+The repeated-seed means and variance only verify the frozen implementation and
+the broad `[240, 360]` K development bound. They are not an equilibrium NVT
+distribution, statistical convergence, stability validation, throughput
+measurement, or acceleration evidence.
 
 ## Remaining boundaries
 

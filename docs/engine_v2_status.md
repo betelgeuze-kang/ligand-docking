@@ -101,7 +101,14 @@ The current `main` branch contains:
   `hypot` only inside a compile-time-proven component cube strictly contained
   by the unchanged 0.5-angstrom Euclidean reuse sphere or when any component is
   already at or beyond the rebuild radius; NaNs and the intervening shell use
-  the original decision. CPU dynamics additionally
+  the original decision. The CPU runtime also exposes a SHA-bound repeated-seed
+  constrained-BAOAB development observation:
+  eight ordered seeds, 2,000 burn-in steps, and 32 samples at a 100-step stride
+  produce the same 256 binary64 observation rows on C++ reference and Rust CPU,
+  with deterministic backend-tagged receipts. Its broad mean-temperature and
+  nonzero-variance gates are finite synthetic implementation checks only; they
+  grant no equilibrium, molecular-execution, production, performance, or
+  scientific authority. CPU dynamics additionally
   retain simulation-owned force-vector storage across repeated force
   evaluations and later transactional integrate or minimize calls; zero-step
   integration does not initialize it, checkpoint and semantic rollback exclude
