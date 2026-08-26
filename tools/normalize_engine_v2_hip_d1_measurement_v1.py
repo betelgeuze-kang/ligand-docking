@@ -29,6 +29,32 @@ PROFILER_TRACE_SCHEMA = (
 TRANSFER_TRACE_SCHEMA = "betelgeuze.engine_v2_hip_normalized_transfer_trace/1.2.0"
 PROFILE_ID = "engine_v2_hip_d1_representative_v1"
 GPU_BACKENDS = {"hip_safe", "hip_fast"}
+FAILURE_PROBE_CODES = [
+    "backend_unavailable",
+    "device_oom",
+    "execution_timeout",
+    "numeric_overflow",
+]
+REQUIRED_STAGE_SEQUENCE = [
+    "initial_geometric_admission",
+    "rigid_refinement",
+    "torsion_refinement",
+    "post_geometric_admission",
+    "scoring",
+    "pose_validity",
+    "stable_ranking",
+    "rmsd_clustering",
+]
+REQUIRED_KERNEL_BY_STAGE = {
+    "initial_geometric_admission": "geometric_fixed64_kernel",
+    "rigid_refinement": "rigid_refinement_kernel",
+    "torsion_refinement": "torsion_fixed64_kernel",
+    "post_geometric_admission": "geometric_fixed64_kernel",
+    "scoring": "scorer_fixed64_kernel",
+    "pose_validity": "validity_fixed64_kernel",
+    "stable_ranking": "stable_top_k_fixed64_kernel",
+    "rmsd_clustering": "direct_rmsd_cluster_fixed64_kernel",
+}
 CASE_RE = re.compile(r"^[A-Za-z0-9_.:-]{1,128}$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 STAGE_RE = re.compile(r"^[A-Za-z0-9_.:-]{1,128}$")
@@ -118,7 +144,7 @@ def _integer(
 
 
 def _string(value: Any, label: str, pattern: re.Pattern[str] | None = None) -> str:
-    if type(value) is not str or not value or len(value) > 256:
+    if type(value) is not str or not value.strip() or len(value) > 256:
         raise MeasurementNormalizationError(f"{label} must be a non-empty string")
     if pattern is not None and pattern.fullmatch(value) is None:
         raise MeasurementNormalizationError(f"{label} has an invalid identity")
@@ -149,6 +175,32 @@ def _finite_sum(values: list[float], label: str) -> float:
 
 
 def _profile(document: dict[str, Any]) -> dict[str, Any]:
+    _exact(
+        document,
+        {
+            "schema_id",
+            "profile_id",
+            "status",
+            "expected_manifest_sha256",
+            "expected_ordered_case_ids_sha256",
+            "expected_ordered_candidate_ids_sha256_by_case",
+            "case_count",
+            "candidate_denominator",
+            "required_backends",
+            "required_architecture_count",
+            "baseline_gpu_architecture",
+            "newer_gpu_architecture_required",
+            "allowed_newer_gpu_architectures",
+            "parity",
+            "sampling",
+            "profiling",
+            "performance_gate",
+            "blockers",
+            "authority",
+            "profile_sha256",
+        },
+        "HIP D1 profile",
+    )
     if document.get("schema_id") != PROFILE_SCHEMA:
         raise MeasurementNormalizationError("HIP D1 profile schema changed")
     if document.get("profile_id") != PROFILE_ID:
@@ -168,18 +220,15 @@ def _profile(document: dict[str, Any]) -> dict[str, Any]:
     profiling = document.get("profiling")
     if type(sampling) is not dict or type(profiling) is not dict:
         raise MeasurementNormalizationError("HIP D1 measurement policy is missing")
-    minimum_case_samples = _integer(
-        sampling.get("minimum_case_samples"),
-        "minimum_case_samples",
-        minimum=1,
-        maximum=1024,
-    )
-    minimum_transfer_samples = _integer(
-        sampling.get("minimum_transfer_samples"),
-        "minimum_transfer_samples",
-        minimum=1,
-        maximum=1024,
-    )
+    expected_sampling = {
+        "minimum_case_samples": 5,
+        "minimum_context_samples": 5,
+        "minimum_transfer_samples": 5,
+        "p50_method": "median",
+        "p95_method": "nearest_rank_95",
+    }
+    if sampling != expected_sampling:
+        raise MeasurementNormalizationError("HIP D1 sampling policy changed")
     blockers = document.get("blockers")
     if (
         type(blockers) is not list
@@ -188,37 +237,27 @@ def _profile(document: dict[str, Any]) -> dict[str, Any]:
         or len(set(blockers)) != len(blockers)
     ):
         raise MeasurementNormalizationError("HIP D1 blocker set is invalid")
-    stages = profiling.get("required_stage_sequence_per_sample")
-    kernels = profiling.get("required_kernel_by_stage")
-    if (
-        type(stages) is not list
-        or not stages
-        or any(type(stage) is not str for stage in stages)
-        or len(set(stages)) != len(stages)
-        or type(kernels) is not dict
-        or set(kernels) != set(stages)
-    ):
-        raise MeasurementNormalizationError("HIP D1 profiler stage policy changed")
-    for stage in stages:
-        _string(stage, "required stage", STAGE_RE)
-        _string(kernels[stage], f"kernel for {stage}")
-    if (
-        profiling.get("profiler") != "rocprofiler-sdk"
-        or profiling.get("kernel_dispatch_trace_required") is not True
-        or profiling.get("transfer_accounting_required") is not True
-        or profiling.get("cpu_fallback_forbidden") is not True
-    ):
+    expected_profiling = {
+        "profiler": "rocprofiler-sdk",
+        "kernel_dispatch_trace_required": True,
+        "transfer_accounting_required": True,
+        "failure_probes_required": True,
+        "failure_probe_codes": FAILURE_PROBE_CODES,
+        "cpu_fallback_forbidden": True,
+        "normalized_trace_schema": PROFILER_TRACE_SCHEMA,
+        "normalized_transfer_trace_schema": TRANSFER_TRACE_SCHEMA,
+        "required_stage_sequence_per_sample": REQUIRED_STAGE_SEQUENCE,
+        "required_kernel_by_stage": REQUIRED_KERNEL_BY_STAGE,
+        "cpu_reference_identity_required": True,
+    }
+    if profiling != expected_profiling:
         raise MeasurementNormalizationError("HIP D1 profiler policy changed")
-    if profiling.get("normalized_trace_schema") != PROFILER_TRACE_SCHEMA:
-        raise MeasurementNormalizationError("normalized profiler schema changed")
-    if profiling.get("normalized_transfer_trace_schema") != TRANSFER_TRACE_SCHEMA:
-        raise MeasurementNormalizationError("normalized transfer schema changed")
     return {
         "profile_sha256": profile_sha256,
-        "minimum_case_samples": minimum_case_samples,
-        "minimum_transfer_samples": minimum_transfer_samples,
-        "required_stages": list(stages),
-        "required_kernels": dict(kernels),
+        "minimum_case_samples": 5,
+        "minimum_transfer_samples": 5,
+        "required_stages": list(REQUIRED_STAGE_SEQUENCE),
+        "required_kernels": dict(REQUIRED_KERNEL_BY_STAGE),
         "blockers": list(blockers),
         "status": document.get("status"),
     }
@@ -346,6 +385,8 @@ def normalize(profile: dict[str, Any], journal: dict[str, Any]) -> dict[str, Any
             raise MeasurementNormalizationError("each sample needs dispatch events")
         observed_required_stages: list[str] = []
         sample_dispatch_seconds: list[float] = []
+        sample_dispatch_nanoseconds: list[int] = []
+        previous_dispatch_start = -1
         for event_offset, raw_dispatch in enumerate(dispatches):
             dispatch = _exact(
                 raw_dispatch,
@@ -359,16 +400,26 @@ def normalize(profile: dict[str, Any], journal: dict[str, Any]) -> dict[str, Any
             )
             stage_id = _string(dispatch["stage_id"], "dispatch.stage_id", STAGE_RE)
             kernel_name = _string(dispatch["kernel_name"], "dispatch.kernel_name")
+            dispatch_start = _integer(
+                dispatch["start_offset_nanoseconds"], "dispatch.start"
+            )
+            if dispatch_start < previous_dispatch_start:
+                raise MeasurementNormalizationError(
+                    "dispatch events are not in chronological order"
+                )
+            previous_dispatch_start = dispatch_start
             if stage_id in policy["required_kernels"]:
                 observed_required_stages.append(stage_id)
                 if kernel_name != policy["required_kernels"][stage_id]:
                     raise MeasurementNormalizationError(
                         f"required stage/kernel mismatch: {stage_id}"
                     )
-            runtime = _seconds(
-                _duration(dispatch, wall_ns, f"dispatch[{event_offset}]")
+            runtime_nanoseconds = _duration(
+                dispatch, wall_ns, f"dispatch[{event_offset}]"
             )
+            runtime = _seconds(runtime_nanoseconds)
             sample_dispatch_seconds.append(runtime)
+            sample_dispatch_nanoseconds.append(runtime_nanoseconds)
             if kernel_name not in kernel_runtimes:
                 kernel_runtimes[kernel_name] = []
                 kernel_order.append(kernel_name)
@@ -387,17 +438,17 @@ def normalize(profile: dict[str, Any], journal: dict[str, Any]) -> dict[str, Any
             raise MeasurementNormalizationError(
                 f"required stage sequence changed at {case_id}/sample[{sample_index}]"
             )
-        if (
-            _finite_sum(sample_dispatch_seconds, "sample dispatch runtime")
-            > wall_seconds
-        ):
+        _finite_sum(sample_dispatch_seconds, "sample dispatch runtime")
+        if sum(sample_dispatch_nanoseconds) > wall_ns:
             raise MeasurementNormalizationError("dispatch runtime exceeds wall time")
 
         transfers = sample["transfers"]
         if type(transfers) is not list or not transfers:
             raise MeasurementNormalizationError("each sample needs transfer events")
         sample_transfer_seconds: list[float] = []
+        sample_transfer_nanoseconds: list[int] = []
         by_direction: dict[str, list[float]] = {"h2d": [], "d2h": []}
+        previous_transfer_start = -1
         for event_offset, raw_transfer in enumerate(transfers):
             transfer = _exact(
                 raw_transfer,
@@ -412,20 +463,30 @@ def normalize(profile: dict[str, Any], journal: dict[str, Any]) -> dict[str, Any
             direction = _string(transfer["direction"], "transfer.direction")
             if direction not in transfer_bytes:
                 raise MeasurementNormalizationError("transfer direction changed")
+            transfer_start = _integer(
+                transfer["start_offset_nanoseconds"], "transfer.start"
+            )
+            if transfer_start < previous_transfer_start:
+                raise MeasurementNormalizationError(
+                    "transfer events are not in chronological order"
+                )
+            previous_transfer_start = transfer_start
             byte_count = _integer(
                 transfer["bytes"],
                 "transfer.bytes",
                 minimum=1,
                 maximum=MAX_EVENT_BYTES,
             )
-            runtime = _seconds(
-                _duration(transfer, wall_ns, f"transfer[{event_offset}]")
+            runtime_nanoseconds = _duration(
+                transfer, wall_ns, f"transfer[{event_offset}]"
             )
+            runtime = _seconds(runtime_nanoseconds)
             transfer_bytes[direction] += byte_count
             if transfer_bytes[direction] > MAX_EVENT_BYTES:
                 raise MeasurementNormalizationError("transfer byte total overflow")
             by_direction[direction].append(runtime)
             sample_transfer_seconds.append(runtime)
+            sample_transfer_nanoseconds.append(runtime_nanoseconds)
             transfer_rows.append(
                 {
                     "event_index": len(transfer_rows),
@@ -440,10 +501,8 @@ def normalize(profile: dict[str, Any], journal: dict[str, Any]) -> dict[str, Any
             raise MeasurementNormalizationError(
                 f"both transfer directions are required at {case_id}/sample[{sample_index}]"
             )
-        if (
-            _finite_sum(sample_transfer_seconds, "sample transfer runtime")
-            > wall_seconds
-        ):
+        _finite_sum(sample_transfer_seconds, "sample transfer runtime")
+        if sum(sample_transfer_nanoseconds) > wall_ns:
             raise MeasurementNormalizationError("transfer runtime exceeds wall time")
         for direction in ("h2d", "d2h"):
             transfer_seconds[direction].append(

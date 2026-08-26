@@ -190,7 +190,12 @@ def test_samples_above_the_profile_minimum_are_retained() -> None:
 def test_required_stage_sequence_and_kernel_are_exact() -> None:
     journal = _journal()
     dispatches = journal["samples"][0]["dispatches"]
-    dispatches[0], dispatches[1] = dispatches[1], dispatches[0]
+    first_identity = (dispatches[0]["stage_id"], dispatches[0]["kernel_name"])
+    dispatches[0]["stage_id"], dispatches[0]["kernel_name"] = (
+        dispatches[1]["stage_id"],
+        dispatches[1]["kernel_name"],
+    )
+    dispatches[1]["stage_id"], dispatches[1]["kernel_name"] = first_identity
     with pytest.raises(
         NORMALIZER.MeasurementNormalizationError, match="stage sequence"
     ):
@@ -218,6 +223,77 @@ def test_aggregate_runtime_cannot_exceed_wall_time() -> None:
         NORMALIZER.MeasurementNormalizationError, match="dispatch runtime"
     ):
         NORMALIZER.normalize(_profile(), journal)
+
+
+def test_integer_nanosecond_sum_equal_to_wall_is_accepted() -> None:
+    journal = _journal()
+    sample = journal["samples"][0]
+    sample["wall_time_nanoseconds"] = 3_725
+    cursor = 0
+    for event_index, dispatch in enumerate(sample["dispatches"]):
+        duration = 466 if event_index < 7 else 463
+        dispatch["start_offset_nanoseconds"] = cursor
+        cursor += duration
+        dispatch["end_offset_nanoseconds"] = cursor
+    sample["transfers"] = [
+        {
+            "direction": "h2d",
+            "bytes": 1,
+            "start_offset_nanoseconds": 0,
+            "end_offset_nanoseconds": 1,
+        },
+        {
+            "direction": "d2h",
+            "bytes": 1,
+            "start_offset_nanoseconds": 1,
+            "end_offset_nanoseconds": 2,
+        },
+    ]
+    result = NORMALIZER.normalize(_profile(), journal)
+    assert result["wall_time_seconds_by_case"]["D1_CASE_00"][0] == 3.725e-6
+
+
+def test_whitespace_kernel_names_and_reversed_timestamps_fail_closed() -> None:
+    journal = _journal()
+    journal["samples"][0]["dispatches"].append(
+        {
+            "stage_id": "auxiliary",
+            "kernel_name": "   ",
+            "start_offset_nanoseconds": 170_000,
+            "end_offset_nanoseconds": 180_000,
+        }
+    )
+    with pytest.raises(NORMALIZER.MeasurementNormalizationError, match="non-empty"):
+        NORMALIZER.normalize(_profile(), journal)
+
+    journal = _journal()
+    dispatches = journal["samples"][0]["dispatches"]
+    dispatches[0]["start_offset_nanoseconds"] = 40_000
+    dispatches[0]["end_offset_nanoseconds"] = 45_000
+    with pytest.raises(NORMALIZER.MeasurementNormalizationError, match="chronological"):
+        NORMALIZER.normalize(_profile(), journal)
+
+
+def test_frozen_sampling_policy_cannot_be_rehashed_and_relaxed() -> None:
+    profile = _profile()
+    profile["sampling"]["minimum_case_samples"] = 4
+    projection = dict(profile)
+    projection.pop("profile_sha256")
+    profile["profile_sha256"] = NORMALIZER._hash(projection)
+    with pytest.raises(
+        NORMALIZER.MeasurementNormalizationError, match="sampling policy"
+    ):
+        NORMALIZER.normalize(profile, _journal())
+
+    profile = _profile()
+    profile["profiling"]["failure_probe_codes"] = ["backend_unavailable"]
+    projection = dict(profile)
+    projection.pop("profile_sha256")
+    profile["profile_sha256"] = NORMALIZER._hash(projection)
+    with pytest.raises(
+        NORMALIZER.MeasurementNormalizationError, match="profiler policy"
+    ):
+        NORMALIZER.normalize(profile, _journal())
 
 
 def test_boolean_and_out_of_range_timestamps_fail_closed() -> None:
