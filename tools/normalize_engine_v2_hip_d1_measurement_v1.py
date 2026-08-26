@@ -66,6 +66,64 @@ REQUIRED_KERNEL_BY_STAGE = {
     "stable_ranking": "stable_top_k_fixed64_kernel",
     "rmsd_clustering": "direct_rmsd_cluster_fixed64_kernel",
 }
+ALLOWED_NEWER_GPU_ARCHITECTURES = [
+    "gfx90a",
+    "gfx940",
+    "gfx941",
+    "gfx942",
+    "gfx950",
+    "gfx1100",
+    "gfx1101",
+    "gfx1102",
+    "gfx1150",
+    "gfx1151",
+    "gfx1200",
+    "gfx1201",
+]
+EXPECTED_PARITY = {
+    "digest_fields": [
+        "decision_sha256",
+        "typed_failure_sha256",
+        "score_order_sha256",
+        "validity_sha256",
+        "rank_sha256",
+        "cluster_sha256",
+    ],
+    "derived_discrete_fields": [
+        "decision",
+        "score_order",
+        "validity",
+        "rank",
+        "cluster",
+    ],
+    "scientific_fields": [
+        "score",
+        "proposal_rmsd_angstrom",
+        "final_rmsd_angstrom",
+    ],
+    "scientific_vector_order": "slot_major_field_order",
+    "score_order_policy": "ascending_score_then_slot_index",
+    "decision_policy": "scored_valid_or_scored_invalid_matches_validity",
+    "rank_policy": "one_based_stable_rank",
+    "cluster_policy": "valid_one_based_contiguous_invalid_zero",
+    "absolute_tolerance": 1e-10,
+    "relative_tolerance": 4e-12,
+    "nonfinite_values_allowed": False,
+    "typed_failure_scientific_value_encoding": "json_null_for_complete_slot_triple",
+    "minimum_scored_candidates_per_case": 1,
+    "no_denominator_deletion": True,
+    "repeat_stability_required": True,
+    "cpu_cross_architecture_parity_required": True,
+}
+EXPECTED_PERFORMANCE_GATE = {
+    "reference_backend": "rust_cpu",
+    "candidate_backend": "hip_fast",
+    "statistic": "per_case_median_wall_time_seconds",
+    "maximum_ratio_numerator": 1,
+    "maximum_ratio_denominator": 1,
+    "strictly_less_than_ratio": True,
+    "minimum_passing_case_count": 1,
+}
 CASE_RE = re.compile(r"^[A-Za-z0-9_.:-]{1,128}$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 STAGE_RE = re.compile(r"^[A-Za-z0-9_.:-]{1,128}$")
@@ -241,6 +299,25 @@ def _profile(document: dict[str, Any]) -> dict[str, Any]:
         raise MeasurementNormalizationError("HIP D1 denominator changed")
     if document.get("required_backends") != ["rust_cpu", "hip_safe", "hip_fast"]:
         raise MeasurementNormalizationError("HIP D1 backend order changed")
+    if (
+        _integer(
+            document.get("required_architecture_count"),
+            "profile.required_architecture_count",
+            minimum=1,
+        )
+        != 2
+        or document.get("baseline_gpu_architecture") != "gfx1030"
+        or document.get("newer_gpu_architecture_required") is not True
+        or _canonical(document.get("allowed_newer_gpu_architectures"))
+        != _canonical(ALLOWED_NEWER_GPU_ARCHITECTURES)
+    ):
+        raise MeasurementNormalizationError("HIP D1 architecture policy changed")
+    if _canonical(document.get("parity")) != _canonical(EXPECTED_PARITY):
+        raise MeasurementNormalizationError("HIP D1 parity policy changed")
+    if _canonical(document.get("performance_gate")) != _canonical(
+        EXPECTED_PERFORMANCE_GATE
+    ):
+        raise MeasurementNormalizationError("HIP D1 performance gate policy changed")
     _authority(document.get("authority"), "profile.authority")
     sampling = document.get("sampling")
     profiling = document.get("profiling")

@@ -298,6 +298,52 @@ def test_frozen_sampling_policy_cannot_be_rehashed_and_relaxed() -> None:
         NORMALIZER.normalize(profile, _journal())
 
 
+def test_all_remaining_frozen_profile_policies_are_pinned() -> None:
+    mutations = [
+        ("architecture", lambda profile: profile.update(required_architecture_count=3)),
+        (
+            "architecture",
+            lambda profile: profile.update(baseline_gpu_architecture="gfx1100"),
+        ),
+        (
+            "architecture",
+            lambda profile: profile.update(newer_gpu_architecture_required=1),
+        ),
+        (
+            "architecture",
+            lambda profile: profile["allowed_newer_gpu_architectures"].reverse(),
+        ),
+        (
+            "parity",
+            lambda profile: profile["parity"].update(absolute_tolerance=1e-9),
+        ),
+        (
+            "parity",
+            lambda profile: profile["parity"].update(no_denominator_deletion=1),
+        ),
+        (
+            "performance gate",
+            lambda profile: profile["performance_gate"].update(
+                maximum_ratio_numerator=2
+            ),
+        ),
+        (
+            "performance gate",
+            lambda profile: profile["performance_gate"].update(
+                strictly_less_than_ratio=1
+            ),
+        ),
+    ]
+    for expected_error, mutate in mutations:
+        profile = _profile()
+        mutate(profile)
+        _rehash_profile(profile)
+        with pytest.raises(
+            NORMALIZER.MeasurementNormalizationError, match=expected_error
+        ):
+            NORMALIZER.profile_only(profile)
+
+
 def test_profile_state_cannot_be_rehashed_into_an_inconsistent_binding() -> None:
     profile = _profile()
     profile["status"] = NORMALIZER.BOUND_STATUS
