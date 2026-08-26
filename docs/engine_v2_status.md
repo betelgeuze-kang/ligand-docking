@@ -112,8 +112,12 @@ The current `main` branch contains:
   and radial-velocity constraint residual across all six frozen rows for each
   ordered observation, with same-build CPU bit identity, complete distribution
   rows, independently rederived mean/maximum summaries, and a backend-tagged
-  receipt. It does not change the sampling or authority. CPU dynamics
-  additionally
+  receipt. It does not change the sampling or authority. The neutral
+  two-water/Na+/Cl- static fixture also has an immutable constrained-dynamics
+  successor: both CPU backends retain the same 100-step 18-DOF report and
+  eight-atom state, the ions move, water residuals remain bounded, and a
+  checkpoint continues exactly through absolute step 132. This remains
+  synthetic and changes no authority. CPU dynamics additionally
   retain simulation-owned force-vector storage across repeated force
   evaluations and later transactional integrate or minimize calls; zero-step
   integration does not initialize it, checkpoint and semantic rollback exclude
