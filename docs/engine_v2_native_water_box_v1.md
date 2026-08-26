@@ -73,6 +73,18 @@ ion identity. Four rows execute deterministic rejection paths. The OOM row is
 deliberately mapping-only: no allocation failure is attempted and it grants no
 production OOM-resilience authority.
 
+The SHA-bound exception-boundary successor is
+`config/engine_v2_native_water_box_dynamics_failure_profile_v2.json`, SHA-256
+`0bf209eb62287f82080a123d7f48e8c63261d7a370283112e1af95ca5e4757be`.
+It preserves the five v1 rows and strengthens only the OOM mapping evidence: a
+native test translation unit deterministically throws `std::bad_alloc` through
+the production `betelgeuze::native::guarded_status` boundary, requires
+`BG_STATUS_OUT_OF_MEMORY` and the exact native last-error message, and retains
+the safe Rust `ErrorCode::OutOfMemory` mapping. The probe is not compiled into
+the product library, attempts no allocation, injects no allocator failure, and
+grants no production OOM-resilience, molecular, HIP-device, performance, or
+scientific authority.
+
 ## Native path
 
 The single-water entry point evaluates one frozen unconstrained water with the

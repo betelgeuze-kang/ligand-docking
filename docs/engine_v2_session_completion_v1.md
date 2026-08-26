@@ -227,6 +227,14 @@ no allocation attempt or production-resilience authority. Every scientific,
 molecular, performance, product, reservation, benchmark, Fresh-128, and HIP
 device authority remains false.
 
+A SHA-bound v2 successor preserves those rows and strengthens only the OOM
+mapping evidence. Its native test translation unit deterministically throws
+`std::bad_alloc` through the production `betelgeuze::native::guarded_status`
+exception boundary, requires `BG_STATUS_OUT_OF_MEMORY` plus the exact native
+last-error message, and retains the safe Rust `ErrorCode::OutOfMemory` mapping.
+The probe is not part of the product library, attempts no allocation, injects
+no allocator failure, and grants no runtime OOM-resilience or other authority.
+
 The next SHA-bound successor,
 `config/engine_v2_native_periodic_neighbor_list_profile_v2.json`, retains one
 buffered canonical pair slice in the native `Simulation` for fully periodic

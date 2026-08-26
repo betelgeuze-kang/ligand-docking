@@ -58,6 +58,12 @@ DYNAMICS_FAILURE_PROFILE = json.loads(
         / "config/engine_v2_native_water_box_dynamics_failure_profile_v1.json"
     ).read_text()
 )
+DYNAMICS_FAILURE_BOUNDARY_PROFILE = json.loads(
+    (
+        ROOT
+        / "config/engine_v2_native_water_box_dynamics_failure_profile_v2.json"
+    ).read_text()
+)
 
 
 def test_native_profile_matches_the_packaged_runtime_asset() -> None:
@@ -397,6 +403,51 @@ def test_native_dynamics_failure_profile_matches_packaged_asset() -> None:
     assert validation["performance_threshold_present"] is False
     assert all(
         value is False for value in DYNAMICS_FAILURE_PROFILE["authority"].values()
+    )
+
+
+def test_native_dynamics_failure_boundary_profile_matches_packaged_asset() -> None:
+    canonical = (
+        ROOT / "config/engine_v2_native_water_box_dynamics_failure_profile_v2.json"
+    ).read_bytes()
+    packaged = (
+        ROOT
+        / "rust/betelgeuze-runtime/assets/engine_v2_native_water_box_dynamics_failure_profile_v2.json"
+    ).read_bytes()
+    assert packaged == canonical
+    assert hashlib.sha256(canonical).hexdigest() == (
+        "0bf209eb62287f82080a123d7f48e8c63261d7a370283112e1af95ca5e4757be"
+    )
+    assert DYNAMICS_FAILURE_BOUNDARY_PROFILE["predecessor"]["sha256"] == (
+        "e6fef18952ef813b3f2e96b1614e7b9215f62f032b1abda92b4a2d13d453e6d0"
+    )
+    probe = DYNAMICS_FAILURE_BOUNDARY_PROFILE["oom_boundary_probe"]
+    assert probe == {
+        "predecessor_case_id": "out_of_memory_status_mapping",
+        "production_boundary": "betelgeuze::native::guarded_status",
+        "deterministic_exception": "std::bad_alloc",
+        "expected_native_status": "BG_STATUS_OUT_OF_MEMORY",
+        "expected_native_message": "native allocation failed",
+        "safe_rust_mapping": "ErrorCode::OutOfMemory",
+        "native_probe_compiled_into_product_library": False,
+        "native_probe_calls_production_boundary": True,
+        "allocator_attempted": False,
+        "allocation_failure_injected": False,
+        "hip_device_execution_required": False,
+    }
+    validation = DYNAMICS_FAILURE_BOUNDARY_PROFILE["validation"]
+    assert validation["predecessor_rows_unchanged"] is True
+    assert validation["native_bad_alloc_exception_mapping_required"] is True
+    assert validation["native_last_error_message_required"] is True
+    assert validation["safe_rust_status_mapping_required"] is True
+    assert validation["all_required_failure_classes_typed"] is True
+    assert validation["all_required_failure_classes_runtime_exercised"] is False
+    assert validation["production_oom_resilience_validated"] is False
+    assert validation["performance_measurement_present"] is False
+    assert validation["performance_threshold_present"] is False
+    assert all(
+        value is False
+        for value in DYNAMICS_FAILURE_BOUNDARY_PROFILE["authority"].values()
     )
 
 

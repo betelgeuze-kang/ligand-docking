@@ -123,7 +123,12 @@ The current `main` branch contains:
   mapping, and unsupported ion identity. Four deterministic rejection paths
   execute on both CPU contexts; the capacity row proves exact state/checkpoint
   preservation. The OOM row is explicitly mapping-only, performs no allocation
-  attempt, and does not claim runtime OOM resilience. CPU dynamics additionally
+  attempt, and does not claim runtime OOM resilience. A SHA-bound successor
+  additionally drives a deterministic `std::bad_alloc` through the production
+  native exception boundary and requires its native status, exact last-error
+  message, and safe Rust status mapping. The probe lives only in a native test
+  translation unit: it attempts no allocation, injects no allocator failure,
+  and grants no production OOM-resilience authority. CPU dynamics additionally
   retain simulation-owned force-vector storage across repeated force
   evaluations and later transactional integrate or minimize calls; zero-step
   integration does not initialize it, checkpoint and semantic rollback exclude
