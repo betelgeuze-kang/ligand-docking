@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PROFILE_PATH = ROOT / "config/engine_v2_direct_ewald_reference_profile_v1.json"
 CRATE = ROOT / "rust/reference-ewald"
-PROFILE_SHA256 = "5d0d46f737edd30f86a20346371198d1ca158b57841416098d44caa7d593b439"
+PROFILE_SHA256 = "b8ccefc6e5aee2cd596a503259024745bd47fe60589240d79d684d4df701dcb6"
 
 
 def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
@@ -44,7 +44,7 @@ def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
         "external_md_engine_dependency": False,
         "fixed64_cpu_v7_source_closure_modified": False,
         "source_sha256": (
-            "b27b0c4e417ff7ce4e5d7faa6889f2d595db78c18274a500b2ff29d4632302f0"
+            "12d2ef7d63ac4e823494d4f31bf21a9d385a363e82662277f68830f375ca84bb"
         ),
         "frozen_fixture_sha256": (
             "4911f62b37a26d31cdc76f62775da6e284d8e83fe0b3b3d9514a8e96c4a489e2"
@@ -93,6 +93,7 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
         "coordinate_reduction": (
             "per_axis_rem_euclid_primary_cell_with_positive_zero"
         ),
+        "pair_correction_half_cell_tie": "sign_preserving_antisymmetric",
     }
     observation = profile["frozen_observation"]
     assert observation["total_kcal_per_mol"] == -6.063080251124816

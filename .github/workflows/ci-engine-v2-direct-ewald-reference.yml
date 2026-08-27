@@ -3,6 +3,7 @@ name: ci-engine-v2-direct-ewald-reference
 on:
   pull_request:
     paths:
+      - "rust/Cargo.toml"
       - "rust/reference-ewald/**"
       - "config/engine_v2_direct_ewald_reference_profile_v1.json"
       - "docs/engine_v2_direct_ewald_reference_v1.md"
@@ -11,6 +12,7 @@ on:
   push:
     branches: ["main"]
     paths:
+      - "rust/Cargo.toml"
       - "rust/reference-ewald/**"
       - "config/engine_v2_direct_ewald_reference_profile_v1.json"
       - "docs/engine_v2_direct_ewald_reference_v1.md"

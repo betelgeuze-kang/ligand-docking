@@ -261,6 +261,44 @@ fn exclusion_and_scale_apply_unscreened_local_corrections() {
 }
 
 #[test]
+fn half_cell_pair_correction_force_is_antisymmetric_under_atom_swap() {
+    let mut input = EwaldInput::new(
+        vec![Position::new(0.0, 1.0, 1.0), Position::new(5.0, 1.0, 1.0)],
+        vec![1.0, -1.0],
+        OrthorhombicCell {
+            lengths_angstrom: [10.0, 12.0, 14.0],
+        },
+    );
+    input.settings.real_space_cutoff_angstrom = 4.9;
+    input.exclusions.push(PairExclusion {
+        atom_i: 0,
+        atom_j: 1,
+    });
+    let forward = evaluate(&input).expect("half-cell correction is valid");
+
+    input.positions.swap(0, 1);
+    input.charges_elementary.swap(0, 1);
+    let swapped = evaluate(&input).expect("swapped half-cell correction is valid");
+    assert_close(
+        swapped.energy.total_kcal_per_mol(),
+        forward.energy.total_kcal_per_mol(),
+        2.0e-12,
+    );
+    for axis in 0..3 {
+        assert_close(
+            swapped.forces_kcal_per_mol_angstrom[0][axis],
+            forward.forces_kcal_per_mol_angstrom[1][axis],
+            2.0e-12,
+        );
+        assert_close(
+            swapped.forces_kcal_per_mol_angstrom[1][axis],
+            forward.forces_kcal_per_mol_angstrom[0][axis],
+            2.0e-12,
+        );
+    }
+}
+
+#[test]
 fn malformed_inputs_have_typed_failures() {
     let input = rich_input();
 

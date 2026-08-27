@@ -23,7 +23,9 @@ excluded/scaled pairs after the periodic Ewald sum. Real-space pairs traverse
 `i < j`. Reciprocal integer vectors traverse `nx`, `ny`, then `nz`, each from
 the negative configured maximum through the positive maximum, omitting only
 zero. Forces are analytic negative energy gradients accumulated in the same
-order. Minimum images use `d - L*floor(d/L + 0.5)`.
+order. Real-space minimum images use `d - L*floor(d/L + 0.5)`. Pair-correction
+forces preserve the sign of an exact half-cell tie so atom swaps remain
+antisymmetric.
 
 `fixtures/direct_ewald_v1.tsv` freezes all four energy components, their total,
 and all 12 force components as IEEE-754 bit patterns. The observation example

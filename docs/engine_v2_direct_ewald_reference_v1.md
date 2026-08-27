@@ -18,6 +18,11 @@ subtraction and reciprocal phase construction. This prevents trigonometric
 range-reduction drift for long unwrapped trajectories; the property suite
 includes an image displaced by one million box lengths.
 
+The real-space minimum image remains half-open. Local pair corrections use a
+sign-preserving rule only at an exact half-cell tie, so swapping atom identities
+also swaps their correction forces instead of keeping a direction attached to
+an array index. A dedicated half-cell permutation test freezes that behavior.
+
 The immutable profile is
 `config/engine_v2_direct_ewald_reference_profile_v1.json`. Its four-charge
 fixture includes one excluded pair and one half-scaled pair. Debug and release
@@ -28,7 +33,7 @@ inversion, near-zero net force, bitwise repetition, reciprocal-bound
 convergence, and typed malformed inputs.
 
 The exact profile SHA-256 is
-`5d0d46f737edd30f86a20346371198d1ca158b57841416098d44caa7d593b439`.
+`b8ccefc6e5aee2cd596a503259024745bd47fe60589240d79d684d4df701dcb6`.
 The profile separately binds the evaluator source, frozen fixture, and
 standalone Cargo lockfile hashes.
 

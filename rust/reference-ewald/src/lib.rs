@@ -383,7 +383,11 @@ fn evaluate_pair_corrections(
             } else {
                 continue;
             };
-            let delta = minimum_image(input.positions[atom_i], input.positions[atom_j], input.cell);
+            let delta = pair_correction_displacement(
+                input.positions[atom_i],
+                input.positions[atom_j],
+                input.cell,
+            );
             let distance2 = squared_norm(delta);
             let distance = distance2.sqrt();
             let charge_product =
@@ -605,6 +609,27 @@ fn reduce_to_primary_cell(position: Position, cell: OrthorhombicCell) -> [f64; 3
         reduced[axis] = if value == 0.0 { 0.0 } else { value };
     }
     reduced
+}
+
+fn pair_correction_displacement(
+    first: Position,
+    second: Position,
+    cell: OrthorhombicCell,
+) -> [f64; 3] {
+    let first = reduce_to_primary_cell(first, cell);
+    let second = reduce_to_primary_cell(second, cell);
+    let mut delta = [0.0; 3];
+    for axis in 0..3 {
+        let length = cell.lengths_angstrom[axis];
+        let raw = first[axis] - second[axis];
+        let minimum = raw - length * (raw / length + 0.5).floor();
+        delta[axis] = if minimum.to_bits() == (-0.5 * length).to_bits() && raw > 0.0 {
+            0.5 * length
+        } else {
+            minimum
+        };
+    }
+    delta
 }
 
 fn dot(first: [f64; 3], second: [f64; 3]) -> f64 {
