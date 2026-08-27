@@ -29,20 +29,20 @@ addition can discard the original primary-coordinate bits in a represented
 comparison tolerance rather than a bitwise-identity claim. A real-space pair
 whose distance is within that relative tolerance of the cutoff is rejected with
 `AmbiguousRealSpaceCutoff`, preventing image rounding from changing inclusion.
+A distance within the same tolerance of the minimum-distance threshold is
+rejected with `AmbiguousMinimumPairDistance` before the safety decision.
 A supported negative boundary residual that rounds to the upper
 boundary is preserved regardless of magnitude; only an actual signed zero is
 canonicalized to positive zero. Real-space minimum images then subtract or add one box
 length with an error-free expansion only when the exact expanded displacement is above or below the
-half-cell boundary. Exact real-space ties retain atom-order antisymmetry. An exact half-cell local pair
-correction is rejected because a single-image force cannot preserve both
-common-translation and atom-permutation invariance. A pair scale of exactly one
+half-cell boundary. Exact real-space ties retain atom-order antisymmetry. A local
+pair correction within the periodic-image tolerance of half-cell is rejected
+because a stable single-image force direction cannot be selected. A pair scale of exactly one
 or any pair rule involving a zero charge is a semantic no-op and skips local-
 correction image selection.
 
-Exact local-correction ties are classified with an error-free two-difference
-expansion before comparison with half the cell. This distinguishes an exact
-half-cell pair from representable coordinates whose difference merely rounds
-to half.
+An error-free two-difference expansion supplies the local-correction separation
+used by the half-cell tolerance comparison.
 
 Neutrality is checked with a canonical order and Neumaier compensated sum and
 must be exactly zero because no neutralizing-background convention is defined.
@@ -89,6 +89,9 @@ energy and force in the pinned-log domain. Every completed value that can round
 nonzero is reconstructed; only values below the binary64 half-minimum threshold
 become zero. A nonzero wave-coordinate product that is subnormal or rounds to
 zero is rejected with `PhaseUnderflow` before reciprocal scaling can amplify it.
+A vector whose maximum possible completed energy and force are conservatively
+bounded below the half-minimum-subnormal threshold is skipped before phase
+construction, so irrelevant phase underflow does not reject the input.
 
 `fixtures/direct_ewald_v1.tsv` freezes all four energy components, their total,
 and all 12 force components as IEEE-754 bit patterns. The observation example

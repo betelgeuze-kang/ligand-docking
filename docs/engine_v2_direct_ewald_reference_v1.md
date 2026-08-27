@@ -20,7 +20,9 @@ periodic-equivalent input representations are compared with the frozen
 `5e-12` relative tolerance rather than claiming unrecoverable bitwise identity.
 Any real-space pair within that relative tolerance of the cutoff is rejected
 with typed `AmbiguousRealSpaceCutoff`, so image rounding cannot change a
-discrete pair-inclusion decision.
+discrete pair-inclusion decision. A distance within the same tolerance of the
+minimum-distance threshold is rejected with typed
+`AmbiguousMinimumPairDistance` before the safety comparison.
 The same exact binary64 input remains bitwise deterministic. Reduction also prevents
 trigonometric range-reduction drift for long unwrapped trajectories; the property
 suite includes an image displaced by one million box lengths. If reduction rounds
@@ -32,13 +34,12 @@ preserves the recovered boundary residual instead of rounding it away again.
 
 Real-space image selection uses an error-free separation comparison after
 periodic reduction, preserving atom-swap antisymmetry on both sides of and at
-the half-cell boundary. An exact half-cell local pair correction is rejected with a
-typed `AmbiguousPairCorrectionImage` error because no single-image force
-direction can preserve both translation and permutation invariance. A unit pair
+the half-cell boundary. A local pair correction within the periodic-image
+tolerance of half-cell is rejected with typed `AmbiguousPairCorrectionImage`
+because no stable single-image force direction can be selected. A unit pair
 scale or any pair rule involving a zero charge is a semantic no-op and skips
-that image selection entirely. Exact ties use an error-free two-difference
-expansion before comparing with half the cell, so a representable separation
-just below half is not rejected even when its rounded difference equals half.
+that image selection entirely. An error-free two-difference expansion supplies
+the separation used by the tolerance comparison.
 
 The scalar contract admits a bounded physical/numerical envelope: coordinates
 through `1e12` angstrom; cell lengths from `1e-6` through `1e9` angstrom;
@@ -82,6 +83,9 @@ energy or force in the log domain, preserving every result that can round
 nonzero and returning zero only below the binary64 half-minimum threshold. A
 nonzero wave-coordinate product that becomes subnormal or zero returns the
 typed `PhaseUnderflow` error before phase construction and reciprocal scaling.
+If a conservative maximum-charge bound proves every completed energy and force
+for a vector lies below the half-minimum threshold, that vector is skipped
+before phase construction instead of rejecting irrelevant phase arithmetic.
 
 Neutrality uses a canonical absolute-magnitude/total order and Neumaier
 compensated sum, avoiding input-order-dependent admission, and requires that
@@ -111,7 +115,8 @@ convergence, near-half-cell atom swaps, preservation of every rounded nonzero
 signed boundary residual, multidimensional boundary translation invariance,
 rounded-difference tie classification, exact power-of-two charge normalization,
 tiny-phase structure preservation, subnormal-or-zero phase-product rejection,
-cutoff-ambiguity rejection,
+cutoff- and minimum-distance-ambiguity rejection, tolerance-bounded pair-
+correction half-cell rejection, provably damped-away vector phase bypass,
 common-origin translation stability, atom-order-independent canonical phase
 origin, periodic-origin equivariance, charge-inversion-stable origin selection,
 rooted-geometry radial-tie origin selection, zero-charge origin-signature
@@ -132,7 +137,7 @@ numeric envelope, and typed malformed inputs. The exact force bits are those of
 the pinned math and operation-order contract.
 
 The exact profile SHA-256 is
-`a6b5023fb896a94668bfd3c65049746b12c01665913237aa44c3b126a8258e78`.
+`dd2c7460c2c3e7ea800da51e29bdf54d8933497ade086812d882a65cca4f4e6c`.
 The profile separately binds the evaluator source, frozen fixture, and
 standalone Cargo lockfile hashes.
 

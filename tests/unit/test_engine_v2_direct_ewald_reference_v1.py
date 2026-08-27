@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PROFILE_PATH = ROOT / "config/engine_v2_direct_ewald_reference_profile_v1.json"
 CRATE = ROOT / "rust/reference-ewald"
-PROFILE_SHA256 = "a6b5023fb896a94668bfd3c65049746b12c01665913237aa44c3b126a8258e78"
+PROFILE_SHA256 = "dd2c7460c2c3e7ea800da51e29bdf54d8933497ade086812d882a65cca4f4e6c"
 
 
 def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
@@ -48,7 +48,7 @@ def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
         "external_md_engine_dependency": False,
         "fixed64_cpu_v7_source_closure_modified": False,
         "source_sha256": (
-            "0e700dfbbc2204628fbd43254bb51e838039fa436fa7d6c112322156249ae102"
+            "2de8d94d69175053ccaf2a8057a385019fe5c398d7d95d96c84dc3d9bfafc99e"
         ),
         "frozen_fixture_sha256": (
             "a720c83852c79e401cb8838e9e20b2196985b6e424275949f77291b30b3da338"
@@ -92,6 +92,10 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
             "typed_AmbiguousRealSpaceCutoff_within_periodic_image_relative_"
             "tolerance"
         ),
+        "minimum_pair_distance_ambiguity": (
+            "typed_AmbiguousMinimumPairDistance_within_periodic_image_"
+            "relative_tolerance"
+        ),
         "neutrality_accumulation": (
             "canonical_absolute_magnitude_then_total_order_neumaier_exact_"
             "zero_required"
@@ -132,7 +136,7 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
             "sorted_minimum_times_maximum_then_middle"
         ),
         "pair_correction_half_cell_tie": (
-            "typed_rejection_ambiguous_pair_correction_image"
+            "typed_rejection_within_periodic_image_relative_tolerance"
         ),
         "unit_pair_scale": (
             "semantic_noop_before_pair_correction_image_selection"
@@ -153,7 +157,8 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
             "per_atom_axis_canonical_absolute_magnitude_then_total_order_neumaier"
         ),
         "reciprocal_damping_order": (
-            "translation_equivariant_maximum_absolute_charge_then_global_"
+            "provably_all_completed_values_below_half_minimum_skipped_before_"
+            "phase_then_translation_equivariant_maximum_absolute_charge_then_global_"
             "inversion_invariant_nonzero_charge_only_rooted_signed_minimum_"
             "image_geometry_"
             "signature_atom_order_independent_common_origin_relative_phases_"
@@ -255,6 +260,7 @@ def test_validation_authority_and_standalone_crate_are_bounded() -> None:
         "ConflictingPairRule",
         "AmbiguousPairCorrectionImage",
         "AmbiguousRealSpaceCutoff",
+        "AmbiguousMinimumPairDistance",
         "DampingUnderflow",
         "PhaseUnderflow",
         "MAX_EVALUATION_WORK_UNITS",

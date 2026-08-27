@@ -366,7 +366,7 @@ fn half_cell_pair_correction_image_is_rejected_independent_of_representation() {
 }
 
 #[test]
-fn rounded_half_cell_difference_is_not_an_exact_pair_correction_tie() {
+fn rounded_half_cell_difference_is_rejected_within_image_tolerance() {
     let mut input = EwaldInput::new(
         vec![
             Position::new(5.0, 1.0, 1.0),
@@ -382,7 +382,30 @@ fn rounded_half_cell_difference_is_not_an_exact_pair_correction_tie() {
         atom_i: 0,
         atom_j: 1,
     });
-    evaluate(&input).expect("represented separation is strictly below half a cell");
+    assert_error(&input, EwaldErrorCode::AmbiguousPairCorrectionImage);
+}
+
+#[test]
+fn periodic_pair_correction_half_cell_rounding_is_rejected() {
+    let length = 54_849_437.231_198_68;
+    let primary = 27_424_718.615_599_312;
+    let image = 522_029_518_847.933_5;
+    let mut input = EwaldInput::new(
+        vec![Position::default(), Position::new(primary, 0.0, 0.0)],
+        vec![1.0, -1.0],
+        OrthorhombicCell {
+            lengths_angstrom: [length, 1.0e9, 1.0e9],
+        },
+    );
+    input.settings.real_space_cutoff_angstrom = 1.0;
+    input.exclusions.push(PairExclusion {
+        atom_i: 0,
+        atom_j: 1,
+    });
+    assert_error(&input, EwaldErrorCode::AmbiguousPairCorrectionImage);
+    input.positions[1].x_angstrom = image;
+    assert_eq!((image - primary).to_bits(), (9_517.0 * length).to_bits());
+    assert_error(&input, EwaldErrorCode::AmbiguousPairCorrectionImage);
 }
 
 #[test]
@@ -539,6 +562,25 @@ fn reciprocal_subnormal_phase_product_is_rejected() {
     input.settings.reciprocal_max_indices = [1; 3];
     input.settings.dielectric = 1.0e-12;
     assert_error(&input, EwaldErrorCode::PhaseUnderflow);
+}
+
+#[test]
+fn provably_damped_away_vector_skips_phase_underflow() {
+    let mut input = EwaldInput::new(
+        vec![Position::default(), Position::new(0.3, 0.0, 1.0e-317)],
+        vec![1.0, -1.0],
+        OrthorhombicCell {
+            lengths_angstrom: [1.0, 1.0, 1.0e9],
+        },
+    );
+    input.settings.alpha_per_angstrom = 1.0e-12;
+    input.settings.real_space_cutoff_angstrom = 0.2;
+    input.settings.reciprocal_max_indices = [1; 3];
+    let evaluation = evaluate(&input).expect("damped-away vectors do not construct phases");
+    assert_eq!(
+        evaluation.energy.reciprocal_space_kcal_per_mol.to_bits(),
+        0.0_f64.to_bits()
+    );
 }
 
 #[test]
@@ -784,6 +826,26 @@ fn periodic_image_cutoff_rounding_is_rejected() {
     assert_error(&input, EwaldErrorCode::AmbiguousRealSpaceCutoff);
     input.positions[0].x_angstrom = image;
     assert_error(&input, EwaldErrorCode::AmbiguousRealSpaceCutoff);
+}
+
+#[test]
+fn periodic_image_minimum_distance_rounding_is_rejected() {
+    let length = 0.001;
+    let primary = 0.000_123_456_789;
+    let image = 0.001_123_456_789;
+    let mut input = EwaldInput::new(
+        vec![Position::new(primary, 0.0, 0.0), Position::default()],
+        vec![1.0, -1.0],
+        OrthorhombicCell {
+            lengths_angstrom: [length; 3],
+        },
+    );
+    input.settings.real_space_cutoff_angstrom = 0.000_4;
+    input.settings.minimum_pair_distance_angstrom = primary;
+    input.settings.reciprocal_max_indices = [1; 3];
+    assert_error(&input, EwaldErrorCode::AmbiguousMinimumPairDistance);
+    input.positions[0].x_angstrom = image;
+    assert_error(&input, EwaldErrorCode::AmbiguousMinimumPairDistance);
 }
 
 #[test]

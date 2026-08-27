@@ -32,6 +32,7 @@ const MAX_DIELECTRIC: f64 = 1.0e12;
 const MIN_SUPPORTED_PAIR_DISTANCE_ANGSTROM: f64 = 1.0e-8;
 const MAX_SUPPORTED_PAIR_DISTANCE_ANGSTROM: f64 = 1.0e3;
 const PERIODIC_IMAGE_COMPARISON_RELATIVE_TOLERANCE: f64 = 5.0e-12;
+const LN_HALF_MIN_POSITIVE_SUBNORMAL: f64 = -745.133_219_101_941_1;
 
 /// One Cartesian position in canonical angstrom units.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -175,6 +176,7 @@ pub enum EwaldErrorCode {
     ConflictingPairRule,
     AmbiguousPairCorrectionImage,
     AmbiguousRealSpaceCutoff,
+    AmbiguousMinimumPairDistance,
     PairBelowMinimumDistance,
     DampingUnderflow,
     PhaseUnderflow,
@@ -269,7 +271,7 @@ fn evaluate_real_space(
     result: &mut EwaldEvaluation,
 ) -> Result<(), EwaldError> {
     let alpha = input.settings.alpha_per_angstrom;
-    let minimum2 = input.settings.minimum_pair_distance_angstrom.powi(2);
+    let minimum_distance = input.settings.minimum_pair_distance_angstrom;
     let mut energy_terms = Vec::new();
     let mut force_terms = new_force_term_buffers(input.positions.len());
     for atom_i in 0..input.positions.len() {
@@ -281,16 +283,24 @@ fn evaluate_real_space(
             }
             let delta = minimum_image(input.positions[atom_i], input.positions[atom_j], input.cell);
             let distance2 = squared_norm(delta);
-            if distance2 < minimum2 {
+            let distance = libm::sqrt(distance2);
+            let minimum_scale = distance.abs().max(minimum_distance.abs());
+            if (distance - minimum_distance).abs()
+                <= PERIODIC_IMAGE_COMPARISON_RELATIVE_TOLERANCE * minimum_scale
+            {
                 return Err(EwaldError::new(
-                    EwaldErrorCode::PairBelowMinimumDistance,
+                    EwaldErrorCode::AmbiguousMinimumPairDistance,
                     format!(
-                        "pair ({atom_i},{atom_j}) is below {} angstrom",
-                        input.settings.minimum_pair_distance_angstrom
+                        "pair ({atom_i},{atom_j}) distance {distance} is within the periodic-image tolerance of minimum {minimum_distance}"
                     ),
                 ));
             }
-            let distance = libm::sqrt(distance2);
+            if distance < minimum_distance {
+                return Err(EwaldError::new(
+                    EwaldErrorCode::PairBelowMinimumDistance,
+                    format!("pair ({atom_i},{atom_j}) is below {minimum_distance} angstrom"),
+                ));
+            }
             let cutoff = input.settings.real_space_cutoff_angstrom;
             let cutoff_scale = distance.abs().max(cutoff.abs());
             if (distance - cutoff).abs()
@@ -396,6 +406,16 @@ fn evaluate_reciprocal_space(
                 let wave2 = squared_norm(wave);
                 let damping_exponent = -wave2 / (4.0 * alpha * alpha);
                 let exponential = libm::exp(damping_exponent);
+                if reciprocal_vector_is_provably_zero(
+                    input.positions.len(),
+                    reciprocal_energy_factor,
+                    reciprocal_force_factor,
+                    wave,
+                    wave2,
+                    damping_exponent,
+                ) {
+                    continue;
+                }
                 let phases = relative_positions
                     .iter()
                     .zip(&input.charges_elementary)
@@ -852,10 +872,20 @@ fn pair_correction_displacement(
         let length = cell.lengths_angstrom[axis];
         let (raw, raw_error) = two_difference(first[axis], second[axis]);
         let separation = compare_primary_axis_separation(first[axis], second[axis], length);
-        if separation == Ordering::Equal {
+        let half_length = 0.5 * length;
+        let expanded_separation = if raw.is_sign_negative() {
+            -raw - raw_error
+        } else {
+            raw + raw_error
+        };
+        if (expanded_separation - half_length).abs()
+            <= PERIODIC_IMAGE_COMPARISON_RELATIVE_TOLERANCE * half_length
+        {
             return Err(EwaldError::new(
                 EwaldErrorCode::AmbiguousPairCorrectionImage,
-                format!("pair correction is exactly half a cell on axis {axis}"),
+                format!(
+                    "pair correction is within the periodic-image tolerance of half a cell on axis {axis}"
+                ),
             ));
         }
         delta[axis] = if separation == Ordering::Greater {
@@ -1045,7 +1075,6 @@ fn checked_phase(wave: [f64; 3], position: [f64; 3]) -> Result<f64, EwaldError> 
 }
 
 fn apply_reciprocal_damping(undamped_value: f64, damping_exponent: f64, exponential: f64) -> f64 {
-    const LN_HALF_MIN_POSITIVE_SUBNORMAL: f64 = -745.133_219_101_941_1;
     if undamped_value == 0.0 {
         return 0.0;
     }
@@ -1062,6 +1091,28 @@ fn apply_reciprocal_damping(undamped_value: f64, damping_exponent: f64, exponent
     } else {
         magnitude
     }
+}
+
+fn reciprocal_vector_is_provably_zero(
+    atom_count: usize,
+    reciprocal_energy_factor: f64,
+    reciprocal_force_factor: f64,
+    wave: [f64; 3],
+    wave2: f64,
+    damping_exponent: f64,
+) -> bool {
+    let maximum_charge_sum =
+        f64::from(u32::try_from(atom_count).expect("validated atom count fits u32"))
+            * MAX_ABSOLUTE_CHARGE_E;
+    let maximum_energy =
+        reciprocal_energy_factor.abs() / wave2 * maximum_charge_sum * maximum_charge_sum;
+    let maximum_wave_component = wave.into_iter().map(f64::abs).fold(0.0, f64::max);
+    let maximum_force = reciprocal_force_factor.abs() * maximum_wave_component / wave2
+        * MAX_ABSOLUTE_CHARGE_E
+        * maximum_charge_sum;
+    let maximum_completed = maximum_energy.max(maximum_force);
+    maximum_completed.is_finite()
+        && libm::log(maximum_completed) + damping_exponent <= LN_HALF_MIN_POSITIVE_SUBNORMAL
 }
 
 fn canonical_structure_factor(
