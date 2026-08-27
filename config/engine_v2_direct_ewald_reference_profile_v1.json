@@ -19,7 +19,7 @@
     "native_abi_version_allocated": false,
     "external_md_engine_dependency": false,
     "fixed64_cpu_v7_source_closure_modified": false,
-    "source_sha256": "ace349974f9f29a0a7443a5ecf94499b400406a3c09e3b34d13ae8ace01b51e2",
+    "source_sha256": "12b5de70cc7b0cba52f62c84ce0a18e0687de007d9bea72a8f1f3fecbaebba58",
     "frozen_fixture_sha256": "b733a07c531ba88d204a3b87413346510306bf0147bd10a275efb42469d65359",
     "cargo_lock_sha256": "cc64500cc1c97dfda26a8a4c8b8825c5296935f1e63cbaf61676a321364b3d9d"
   },
@@ -75,7 +75,8 @@
     "minimum_pair_distance_angstrom": {"minimum": 1e-8, "maximum": 1e3},
     "minimum_pair_distance_below_cutoff_required": true,
     "pair_distance_safety": "minimum_squared_is_normal_and_checked_before_any_inverse_distance_operation",
-    "charge_product_safety": "minimum_nonzero_charge_product_is_normal"
+    "charge_product_safety": "minimum_nonzero_charge_product_is_normal",
+    "real_space_zero_damping": "typed_DampingUnderflow_for_nonzero_charge_pair"
   },
   "frozen_observation": {
     "real_space_kcal_per_mol": -0.11800195657683102,
@@ -134,6 +135,7 @@
     "supported_negative_boundary_residual_preserved": true,
     "representable_subunit_real_energy_retained": true,
     "representable_subnormal_cartesian_force_retained": true,
+    "unscaled_real_damping_underflow_typed_rejection": true,
     "typed_malformed_input_failures": true,
     "exact_neutrality_required_without_background_correction": true,
     "bitwise_repeatability": true

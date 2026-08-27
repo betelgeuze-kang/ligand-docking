@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PROFILE_PATH = ROOT / "config/engine_v2_direct_ewald_reference_profile_v1.json"
 CRATE = ROOT / "rust/reference-ewald"
-PROFILE_SHA256 = "be93e3decbcbb2a4fd9897d438cb02fcd13bdc68235cb059d9d532949998c3b9"
+PROFILE_SHA256 = "a095cf0f89340bc713a3a66fa1582de6cf5b68f060ef8387ab5e2964623de112"
 
 
 def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
@@ -48,7 +48,7 @@ def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
         "external_md_engine_dependency": False,
         "fixed64_cpu_v7_source_closure_modified": False,
         "source_sha256": (
-            "ace349974f9f29a0a7443a5ecf94499b400406a3c09e3b34d13ae8ace01b51e2"
+            "12b5de70cc7b0cba52f62c84ce0a18e0687de007d9bea72a8f1f3fecbaebba58"
         ),
         "frozen_fixture_sha256": (
             "b733a07c531ba88d204a3b87413346510306bf0147bd10a275efb42469d65359"
@@ -164,6 +164,9 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
             "distance_operation"
         ),
         "charge_product_safety": "minimum_nonzero_charge_product_is_normal",
+        "real_space_zero_damping": (
+            "typed_DampingUnderflow_for_nonzero_charge_pair"
+        ),
     }
     observation = profile["frozen_observation"]
     assert observation["total_kcal_per_mol"] == -6.0630802511248305
@@ -214,6 +217,7 @@ def test_validation_authority_and_standalone_crate_are_bounded() -> None:
         "CutoffViolatesMinimumImage",
         "ConflictingPairRule",
         "AmbiguousPairCorrectionImage",
+        "DampingUnderflow",
         "MAX_EVALUATION_WORK_UNITS",
         "pair_rule_count",
         "signed_residual",

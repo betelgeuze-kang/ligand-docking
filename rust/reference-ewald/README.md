@@ -67,7 +67,9 @@ Real-space energy divides `erfc` first for sub-unit distances and multiplies the
 Coulomb/charge prefactor first otherwise. Force magnitudes use distance-adaptive
 damping division and distance-adaptive Cartesian component scaling, preserving
 supported subnormal energy and Cartesian force components that are still
-representable.
+representable. A nonzero-charge real-space pair whose pinned `erfc` or
+exponential result reaches exact zero is rejected with `DampingUnderflow`
+instead of silently discarding a potentially representable scaled interaction.
 
 `fixtures/direct_ewald_v1.tsv` freezes all four energy components, their total,
 and all 12 force components as IEEE-754 bit patterns. The observation example

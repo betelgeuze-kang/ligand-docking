@@ -174,6 +174,7 @@ pub enum EwaldErrorCode {
     ConflictingPairRule,
     AmbiguousPairCorrectionImage,
     PairBelowMinimumDistance,
+    DampingUnderflow,
     NonFiniteResult,
 }
 
@@ -286,6 +287,14 @@ fn evaluate_real_space(
                 let alpha_distance = alpha * distance;
                 let erfc_value = libm::erfc(alpha_distance);
                 let exponential = libm::exp(-alpha_distance * alpha_distance);
+                if charge_product != 0.0 && (erfc_value == 0.0 || exponential == 0.0) {
+                    return Err(EwaldError::new(
+                        EwaldErrorCode::DampingUnderflow,
+                        format!(
+                            "pair ({atom_i},{atom_j}) damping underflows at alpha-distance {alpha_distance}"
+                        ),
+                    ));
+                }
                 let charge_prefactor = coulomb_scale * charge_product;
                 let pair_energy = if distance < 1.0 {
                     charge_prefactor * (erfc_value / distance)

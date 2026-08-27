@@ -51,6 +51,10 @@ charge/Coulomb prefactor first otherwise. Radial forces use distance-adaptive
 damping division and then distance-adaptive Cartesian component scaling. This
 retains supported strongly damped energy/forces and subnormal Cartesian force
 components whenever the completed value is representable.
+If pinned real-space `erfc` or exponential evaluation itself reaches exact zero
+for a nonzero-charge pair, evaluation fails closed with typed
+`DampingUnderflow`; the reference never silently reports zero when an external
+scale could make the mathematical completed interaction representable.
 
 Neutrality uses a canonical absolute-magnitude/total order and Neumaier
 compensated sum, avoiding input-order-dependent admission, and requires that
@@ -77,13 +81,14 @@ signed boundary residual, multidimensional boundary translation invariance,
 rounded-difference tie classification, exact power-of-two charge normalization,
 tiny-phase structure preservation, atom-order-independent self energy,
 reciprocal wave rescue before phase underflow, representable strongly damped
-real energy/forces, pre-allocation rule-work rejection, exact-neutral admission,
+real energy/forces, typed zero-damping rejection, pre-allocation rule-work
+rejection, exact-neutral admission,
 subnormal Cartesian force components, unit-scale and zero-charge no-ops, the
 numeric envelope, and typed malformed inputs. The exact force bits are those of
 the pinned math and operation-order contract.
 
 The exact profile SHA-256 is
-`be93e3decbcbb2a4fd9897d438cb02fcd13bdc68235cb059d9d532949998c3b9`.
+`a095cf0f89340bc713a3a66fa1582de6cf5b68f060ef8387ab5e2964623de112`.
 The profile separately binds the evaluator source, frozen fixture, and
 standalone Cargo lockfile hashes.
 

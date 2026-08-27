@@ -459,6 +459,21 @@ fn normalized_structure_factor_preserves_tiny_phase_force() {
 }
 
 #[test]
+fn unscaled_real_damping_underflow_is_rejected() {
+    let mut input = EwaldInput::new(
+        vec![Position::default(), Position::new(1.0, 0.0, 0.0)],
+        vec![16.0, -16.0],
+        OrthorhombicCell {
+            lengths_angstrom: [3.0; 3],
+        },
+    );
+    input.settings.alpha_per_angstrom = 27.4;
+    input.settings.real_space_cutoff_angstrom = 1.1;
+    input.settings.dielectric = 1.0e-12;
+    assert_error(&input, EwaldErrorCode::DampingUnderflow);
+}
+
+#[test]
 fn unsupported_numeric_extremes_have_typed_failures() {
     let input = rich_input();
 
