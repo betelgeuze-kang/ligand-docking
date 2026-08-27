@@ -11,6 +11,7 @@ crate-type = ["rlib", "staticlib"]
 
 [dependencies]
 betelgeuze-docking-search = { path = "../betelgeuze-docking-search" }
+libm = { version = "=0.2.16", default-features = false }
 
 [lints.rust]
 unsafe_op_in_unsafe_fn = "deny"

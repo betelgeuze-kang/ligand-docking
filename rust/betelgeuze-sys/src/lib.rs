@@ -1,8 +1,8 @@
 //! Raw bindings for the Betelgeuze native compute ABI.
 //!
-//! This crate intentionally mirrors `include/betelgeuze/engine.h` without
-//! adding ownership or lifetime semantics. Prefer `betelgeuze-runtime` for a
-//! safe API.
+//! This crate intentionally mirrors `include/betelgeuze/engine.h` and
+//! `include/betelgeuze/direct_ewald.h` without adding ownership or lifetime
+//! semantics. Prefer `betelgeuze-runtime` for a safe API.
 //!
 //! The optional `hip` feature requires `BG_HIP_ARCHITECTURE` and a ROCm
 //! toolchain selected with `HIP_PATH` or `ROCM_PATH`. If device libraries are
@@ -22,6 +22,11 @@ static BG_RUST_CPU_PROVIDER_LINK_ANCHOR: extern "C" fn() -> u32 =
 pub const BG_ABI_VERSION_MAJOR: u32 = 1;
 pub const BG_ABI_VERSION_MINOR: u32 = 21;
 pub const BG_ABI_VERSION: u32 = 1;
+
+pub const BG_DIRECT_EWALD_ABI_VERSION_MAJOR: u32 = 1;
+pub const BG_DIRECT_EWALD_ABI_VERSION_MINOR: u32 = 0;
+pub const BG_DIRECT_EWALD_ABI_VERSION: u32 = 1;
+pub const BG_DIRECT_EWALD_ERROR_DETAIL_CAPACITY: u32 = 256;
 
 pub const BG_CANONICAL_LENGTH_UNIT: &[u8] = b"angstrom\0";
 pub const BG_CANONICAL_ENERGY_UNIT: &[u8] = b"kcal/mol\0";
@@ -59,6 +64,29 @@ pub const BG_BACKEND_HIP: bg_backend = BG_BACKEND_HIP_FAST;
 
 pub type bg_unit_system = i32;
 pub const BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL: bg_unit_system = 1;
+
+pub type bg_direct_ewald_error_code = i32;
+pub const BG_DIRECT_EWALD_ERROR_NONE: bg_direct_ewald_error_code = 0;
+pub const BG_DIRECT_EWALD_ERROR_EMPTY_SYSTEM: bg_direct_ewald_error_code = 1;
+pub const BG_DIRECT_EWALD_ERROR_CAPACITY_EXCEEDED: bg_direct_ewald_error_code = 2;
+pub const BG_DIRECT_EWALD_ERROR_CHARGE_COUNT_MISMATCH: bg_direct_ewald_error_code = 3;
+pub const BG_DIRECT_EWALD_ERROR_NONFINITE_COORDINATE: bg_direct_ewald_error_code = 4;
+pub const BG_DIRECT_EWALD_ERROR_NONFINITE_CHARGE: bg_direct_ewald_error_code = 5;
+pub const BG_DIRECT_EWALD_ERROR_NON_NEUTRAL_SYSTEM: bg_direct_ewald_error_code = 6;
+pub const BG_DIRECT_EWALD_ERROR_INVALID_CELL: bg_direct_ewald_error_code = 7;
+pub const BG_DIRECT_EWALD_ERROR_CUTOFF_VIOLATES_MINIMUM_IMAGE: bg_direct_ewald_error_code = 8;
+pub const BG_DIRECT_EWALD_ERROR_INVALID_PARAMETER: bg_direct_ewald_error_code = 9;
+pub const BG_DIRECT_EWALD_ERROR_ATOM_INDEX_OUT_OF_RANGE: bg_direct_ewald_error_code = 10;
+pub const BG_DIRECT_EWALD_ERROR_REPEATED_ATOM_INDEX: bg_direct_ewald_error_code = 11;
+pub const BG_DIRECT_EWALD_ERROR_DUPLICATE_PAIR_RULE: bg_direct_ewald_error_code = 12;
+pub const BG_DIRECT_EWALD_ERROR_CONFLICTING_PAIR_RULE: bg_direct_ewald_error_code = 13;
+pub const BG_DIRECT_EWALD_ERROR_AMBIGUOUS_PAIR_CORRECTION_IMAGE: bg_direct_ewald_error_code = 14;
+pub const BG_DIRECT_EWALD_ERROR_AMBIGUOUS_REAL_SPACE_CUTOFF: bg_direct_ewald_error_code = 15;
+pub const BG_DIRECT_EWALD_ERROR_AMBIGUOUS_MINIMUM_PAIR_DISTANCE: bg_direct_ewald_error_code = 16;
+pub const BG_DIRECT_EWALD_ERROR_PAIR_BELOW_MINIMUM_DISTANCE: bg_direct_ewald_error_code = 17;
+pub const BG_DIRECT_EWALD_ERROR_DAMPING_UNDERFLOW: bg_direct_ewald_error_code = 18;
+pub const BG_DIRECT_EWALD_ERROR_PHASE_UNDERFLOW: bg_direct_ewald_error_code = 19;
+pub const BG_DIRECT_EWALD_ERROR_NONFINITE_RESULT: bg_direct_ewald_error_code = 20;
 
 pub type bg_integrator = i32;
 pub const BG_INTEGRATOR_VELOCITY_VERLET: bg_integrator = 1;
@@ -421,6 +449,12 @@ pub struct bg_forcefield {
     _private: [u8; 0],
 }
 
+/// Opaque immutable direct-Ewald model.
+#[repr(C)]
+pub struct bg_direct_ewald_model_v1 {
+    _private: [u8; 0],
+}
+
 /// Opaque native simulation. Its representation is intentionally unavailable.
 #[repr(C)]
 pub struct bg_simulation {
@@ -631,6 +665,72 @@ pub struct bg_energy_components_v1 {
     pub lennard_jones_kcal_per_mol: f64,
     pub coulomb_kcal_per_mol: f64,
     pub total_kcal_per_mol: f64,
+    pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_direct_ewald_parameters_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub atom_count: u64,
+    pub unit_system: bg_unit_system,
+    pub reserved0: u32,
+    pub cell_lengths_angstrom: [f64; 3],
+    pub alpha_per_angstrom: f64,
+    pub real_space_cutoff_angstrom: f64,
+    pub reciprocal_max_indices: [i32; 3],
+    pub reserved1: u32,
+    pub dielectric: f64,
+    pub minimum_pair_distance_angstrom: f64,
+    pub exclusion_count: u64,
+    pub exclusion_atom_i: *const u64,
+    pub exclusion_atom_j: *const u64,
+    pub pair_scale_count: u64,
+    pub pair_scale_atom_i: *const u64,
+    pub pair_scale_atom_j: *const u64,
+    pub pair_scale_coulomb: *const f64,
+    pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_direct_ewald_energy_components_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub unit_system: bg_unit_system,
+    pub reserved0: u32,
+    pub real_space_kcal_per_mol: f64,
+    pub reciprocal_space_kcal_per_mol: f64,
+    pub self_kcal_per_mol: f64,
+    pub pair_correction_kcal_per_mol: f64,
+    pub total_kcal_per_mol: f64,
+    pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_direct_ewald_force_soa_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub atom_capacity: u64,
+    pub atom_count: u64,
+    pub unit_system: bg_unit_system,
+    pub reserved0: u32,
+    pub x_kcal_per_mol_angstrom: *mut f64,
+    pub y_kcal_per_mol_angstrom: *mut f64,
+    pub z_kcal_per_mol_angstrom: *mut f64,
+    pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_direct_ewald_error_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub code: bg_direct_ewald_error_code,
+    pub reserved0: u32,
+    pub detail: [c_char; BG_DIRECT_EWALD_ERROR_DETAIL_CAPACITY as usize],
     pub reserved: [u64; 4],
 }
 
@@ -2186,6 +2286,50 @@ pub struct bg_docking_fixed64_refinement_output_v1 {
 }
 
 unsafe extern "C" {
+    pub fn bg_direct_ewald_abi_version() -> u32;
+    pub fn bg_direct_ewald_abi_version_major() -> u32;
+    pub fn bg_direct_ewald_abi_version_minor() -> u32;
+    pub fn bg_direct_ewald_abi_version_string() -> *const c_char;
+    pub fn bg_direct_ewald_parameters_v1_init(
+        parameters: *mut bg_direct_ewald_parameters_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_direct_ewald_energy_components_v1_init(
+        energy: *mut bg_direct_ewald_energy_components_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_direct_ewald_force_soa_v1_init(
+        forces: *mut bg_direct_ewald_force_soa_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_direct_ewald_error_v1_init(
+        error: *mut bg_direct_ewald_error_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_direct_ewald_model_v1_create(
+        parameters: *const bg_direct_ewald_parameters_v1,
+        out_model: *mut *mut bg_direct_ewald_model_v1,
+        out_error: *mut bg_direct_ewald_error_v1,
+    ) -> bg_status;
+    pub fn bg_direct_ewald_model_v1_destroy(model: *mut bg_direct_ewald_model_v1);
+    pub fn bg_direct_ewald_model_v1_get_atom_count(
+        model: *const bg_direct_ewald_model_v1,
+        atom_count: *mut u64,
+    ) -> bg_status;
+    pub fn bg_direct_ewald_model_v1_profile_id() -> *const c_char;
+    pub fn bg_context_evaluate_direct_ewald_v1(
+        context: *const bg_context,
+        system: *const bg_system,
+        model: *const bg_direct_ewald_model_v1,
+        out_energy: *mut bg_direct_ewald_energy_components_v1,
+        out_forces: *mut bg_direct_ewald_force_soa_v1,
+        out_error: *mut bg_direct_ewald_error_v1,
+    ) -> bg_status;
+
     pub fn bg_abi_version() -> u32;
     pub fn bg_abi_version_major() -> u32;
     pub fn bg_abi_version_minor() -> u32;

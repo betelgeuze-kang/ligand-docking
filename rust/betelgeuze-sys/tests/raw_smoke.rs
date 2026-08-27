@@ -156,6 +156,85 @@ fn native_abi_identity_and_canonical_units_match_the_header() {
 }
 
 #[test]
+fn direct_ewald_abi_identity_and_initializers_match_the_header() {
+    // SAFETY: Identity functions return static strings, while each initializer
+    // receives exact writable storage, size, and direct-Ewald ABI version.
+    unsafe {
+        assert_eq!(bg_direct_ewald_abi_version(), BG_DIRECT_EWALD_ABI_VERSION);
+        assert_eq!(
+            bg_direct_ewald_abi_version_major(),
+            BG_DIRECT_EWALD_ABI_VERSION_MAJOR
+        );
+        assert_eq!(
+            bg_direct_ewald_abi_version_minor(),
+            BG_DIRECT_EWALD_ABI_VERSION_MINOR
+        );
+        assert_eq!(owned_string(bg_direct_ewald_abi_version_string()), "1.0.0");
+        assert_eq!(
+            owned_string(bg_direct_ewald_model_v1_profile_id()),
+            "betelgeuze.native_direct_ewald/1.0.0"
+        );
+
+        let mut parameters = core::mem::MaybeUninit::<bg_direct_ewald_parameters_v1>::uninit();
+        assert_eq!(
+            bg_direct_ewald_parameters_v1_init(
+                parameters.as_mut_ptr(),
+                core::mem::size_of::<bg_direct_ewald_parameters_v1>(),
+                BG_DIRECT_EWALD_ABI_VERSION,
+            ),
+            BG_STATUS_OK
+        );
+        let parameters = parameters.assume_init();
+        assert_eq!(
+            parameters.struct_size as usize,
+            core::mem::size_of::<bg_direct_ewald_parameters_v1>()
+        );
+        assert_eq!(parameters.abi_version, BG_DIRECT_EWALD_ABI_VERSION);
+        assert_eq!(parameters.unit_system, BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL);
+
+        let mut energy = core::mem::MaybeUninit::<bg_direct_ewald_energy_components_v1>::uninit();
+        assert_eq!(
+            bg_direct_ewald_energy_components_v1_init(
+                energy.as_mut_ptr(),
+                core::mem::size_of::<bg_direct_ewald_energy_components_v1>(),
+                BG_DIRECT_EWALD_ABI_VERSION,
+            ),
+            BG_STATUS_OK
+        );
+        let energy = energy.assume_init();
+        assert_eq!(energy.abi_version, BG_DIRECT_EWALD_ABI_VERSION);
+        assert_eq!(energy.unit_system, BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL);
+
+        let mut forces = core::mem::MaybeUninit::<bg_direct_ewald_force_soa_v1>::uninit();
+        assert_eq!(
+            bg_direct_ewald_force_soa_v1_init(
+                forces.as_mut_ptr(),
+                core::mem::size_of::<bg_direct_ewald_force_soa_v1>(),
+                BG_DIRECT_EWALD_ABI_VERSION,
+            ),
+            BG_STATUS_OK
+        );
+        let forces = forces.assume_init();
+        assert_eq!(forces.abi_version, BG_DIRECT_EWALD_ABI_VERSION);
+        assert_eq!(forces.unit_system, BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL);
+
+        let mut error = core::mem::MaybeUninit::<bg_direct_ewald_error_v1>::uninit();
+        assert_eq!(
+            bg_direct_ewald_error_v1_init(
+                error.as_mut_ptr(),
+                core::mem::size_of::<bg_direct_ewald_error_v1>(),
+                BG_DIRECT_EWALD_ABI_VERSION,
+            ),
+            BG_STATUS_OK
+        );
+        let error = error.assume_init();
+        assert_eq!(error.abi_version, BG_DIRECT_EWALD_ABI_VERSION);
+        assert_eq!(error.code, BG_DIRECT_EWALD_ERROR_NONE);
+        assert!(error.detail.iter().all(|byte| *byte == 0));
+    }
+}
+
+#[test]
 fn descriptor_initializers_bind_size_version_and_units() {
     // SAFETY: Each MaybeUninit output points to writable storage for exactly
     // the descriptor accepted by the initializer.

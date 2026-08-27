@@ -156,6 +156,21 @@ set(v1_21_symbols
     bg_docking_fixed64_pipeline_v2_profile_id
     bg_docking_fixed64_pipeline_v2_run
 )
+set(direct_ewald_v1_symbols
+    bg_direct_ewald_abi_version
+    bg_direct_ewald_abi_version_major
+    bg_direct_ewald_abi_version_minor
+    bg_direct_ewald_abi_version_string
+    bg_direct_ewald_parameters_v1_init
+    bg_direct_ewald_energy_components_v1_init
+    bg_direct_ewald_force_soa_v1_init
+    bg_direct_ewald_error_v1_init
+    bg_direct_ewald_model_v1_create
+    bg_direct_ewald_model_v1_destroy
+    bg_direct_ewald_model_v1_get_atom_count
+    bg_direct_ewald_model_v1_profile_id
+    bg_context_evaluate_direct_ewald_v1
+)
 foreach(line IN LISTS nm_lines)
     if(line STREQUAL "")
         continue()
@@ -182,10 +197,12 @@ foreach(line IN LISTS nm_lines)
        NOT unversioned STREQUAL "BETELGEUZE_ENGINE_1.18" AND
        NOT unversioned STREQUAL "BETELGEUZE_ENGINE_1.19" AND
        NOT unversioned STREQUAL "BETELGEUZE_ENGINE_1.20" AND
-       NOT unversioned STREQUAL "BETELGEUZE_ENGINE_1.21")
+       NOT unversioned STREQUAL "BETELGEUZE_ENGINE_1.21" AND
+       NOT unversioned STREQUAL "BETELGEUZE_DIRECT_EWALD_1.0")
         message(FATAL_ERROR "unexpected exported symbol: ${symbol}")
     endif()
     if(unversioned MATCHES "^bg_")
+        list(FIND direct_ewald_v1_symbols "${unversioned}" direct_ewald_v1_index)
         list(FIND v1_21_symbols "${unversioned}" v1_21_index)
         list(FIND v1_20_symbols "${unversioned}" v1_20_index)
         list(FIND v1_19_symbols "${unversioned}" v1_19_index)
@@ -205,7 +222,9 @@ foreach(line IN LISTS nm_lines)
         list(FIND v1_5_symbols "${unversioned}" v1_5_index)
         list(FIND v1_3_symbols "${unversioned}" v1_3_index)
         list(FIND v1_1_symbols "${unversioned}" v1_1_index)
-        if(NOT v1_21_index EQUAL -1)
+        if(NOT direct_ewald_v1_index EQUAL -1)
+            set(expected_version "BETELGEUZE_DIRECT_EWALD_1.0")
+        elseif(NOT v1_21_index EQUAL -1)
             set(expected_version "BETELGEUZE_ENGINE_1.21")
         elseif(NOT v1_20_index EQUAL -1)
             set(expected_version "BETELGEUZE_ENGINE_1.20")

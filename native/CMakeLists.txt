@@ -6,6 +6,9 @@ endif()
 
 add_library(betelgeuze_engine SHARED
     src/context.cpp
+    src/ewald/api.cpp
+    src/ewald/cpp_evaluator.cpp
+    src/ewald/rust_evaluator.cpp
     src/evaluator.cpp
     src/forcefield.cpp
     src/system.cpp
@@ -343,7 +346,9 @@ install(TARGETS betelgeuze_engine
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 install(
-    FILES ${PROJECT_SOURCE_DIR}/include/betelgeuze/engine.h
+    FILES
+        ${PROJECT_SOURCE_DIR}/include/betelgeuze/engine.h
+        ${PROJECT_SOURCE_DIR}/include/betelgeuze/direct_ewald.h
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/betelgeuze
 )
 
@@ -387,6 +392,43 @@ if(BUILD_TESTING)
         target_compile_options(betelgeuze_engine_cpp_smoke PRIVATE /UNDEBUG)
     endif()
     add_test(NAME betelgeuze_engine_cpp_smoke COMMAND betelgeuze_engine_cpp_smoke)
+
+    add_executable(
+        betelgeuze_engine_direct_ewald
+        tests/direct_ewald.cpp
+    )
+    target_link_libraries(
+        betelgeuze_engine_direct_ewald
+        PRIVATE betelgeuze_engine
+    )
+    target_compile_features(
+        betelgeuze_engine_direct_ewald
+        PRIVATE cxx_std_17
+    )
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(
+            betelgeuze_engine_direct_ewald
+            PRIVATE
+                -Wall
+                -Wextra
+                -Wpedantic
+                -Wconversion
+                -Wsign-conversion
+                -Werror
+                -UNDEBUG
+                -ffp-contract=off
+                -fno-fast-math
+        )
+    elseif(MSVC)
+        target_compile_options(
+            betelgeuze_engine_direct_ewald
+            PRIVATE /W4 /WX /UNDEBUG /fp:strict
+        )
+    endif()
+    add_test(
+        NAME betelgeuze_engine_direct_ewald
+        COMMAND betelgeuze_engine_direct_ewald
+    )
 
     add_executable(
         betelgeuze_engine_docking_fixed64_allocation

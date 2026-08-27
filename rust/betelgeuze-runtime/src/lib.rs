@@ -8,6 +8,7 @@ mod development_peptide;
 mod development_peptide_constraints;
 mod development_peptide_data;
 mod development_water_box;
+mod direct_ewald;
 mod docking;
 mod dynamics;
 mod fixed64_lane_metrics;
@@ -75,6 +76,11 @@ pub use development_water_box::{
     DEVELOPMENT_WATER_ION_DYNAMICS_V1_PROFILE_ID, DEVELOPMENT_WATER_ION_DYNAMICS_V1_SCHEMA_ID,
     DEVELOPMENT_WATER_ION_V1_ATOM_COUNT, DEVELOPMENT_WATER_ION_V1_PARAMETER_SOURCE_DOI,
     DEVELOPMENT_WATER_ION_V1_PROFILE_ID, DEVELOPMENT_WATER_ION_V1_SCHEMA_ID,
+};
+pub use direct_ewald::{
+    direct_ewald_profile_id, DirectEwaldEnergyComponents, DirectEwaldError, DirectEwaldErrorCode,
+    DirectEwaldEvaluation, DirectEwaldForceSoaOwned, DirectEwaldModel, DirectEwaldPairExclusion,
+    DirectEwaldPairScale, DirectEwaldParameters, DirectEwaldResult, DirectEwaldSettings,
 };
 pub use docking::{
     Fixed64AtomicFeature, Fixed64AuthorityDisposition, Fixed64BatchReceipts,

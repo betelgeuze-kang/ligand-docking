@@ -4,6 +4,7 @@
 //! crate supplies an independently implemented scalar kernel and a versioned,
 //! hidden provider boundary used by the C++ dispatcher.
 
+mod direct_ewald;
 mod docking_fixed64_allocation;
 mod docking_fixed64_indexed_so3;
 mod docking_fixed64_single_anchor;
