@@ -16,9 +16,12 @@ mod qualification_v7;
 
 pub use betelgeuze_docking_search::Fixed64Lane;
 pub use development_peptide::{
-    development_ala3_v1_profile_sha256, evaluate_development_ala3_v1, DevelopmentAla3V1,
-    DEVELOPMENT_ALA3_V1_ATOM_COUNT, DEVELOPMENT_ALA3_V1_PARAMETER_SOURCE_DOI,
-    DEVELOPMENT_ALA3_V1_PROFILE_ID, DEVELOPMENT_ALA3_V1_SCHEMA_ID,
+    development_ala3_v1_profile_sha256, development_ala3_validation_v1_profile_sha256,
+    evaluate_development_ala3_v1, observe_development_ala3_validation_v1, DevelopmentAla3V1,
+    DevelopmentAla3ValidationObservationV1, DEVELOPMENT_ALA3_V1_ATOM_COUNT,
+    DEVELOPMENT_ALA3_V1_PARAMETER_SOURCE_DOI, DEVELOPMENT_ALA3_V1_PROFILE_ID,
+    DEVELOPMENT_ALA3_V1_SCHEMA_ID, DEVELOPMENT_ALA3_VALIDATION_V1_PROFILE_ID,
+    DEVELOPMENT_ALA3_VALIDATION_V1_SCHEMA_ID,
 };
 pub use development_water_box::{
     development_ion_parameters_v1, development_water_box_constraints_v1_profile_sha256,

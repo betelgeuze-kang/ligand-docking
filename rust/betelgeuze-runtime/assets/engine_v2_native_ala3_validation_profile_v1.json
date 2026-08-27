@@ -1,0 +1,64 @@
+{
+  "schema_id": "betelgeuze.engine_v2_native_ala3_validation_profile/1.0.0",
+  "profile_id": "engine_v2_native_ala3_cpu_validation_v1",
+  "parent": {
+    "profile_id": "engine_v2_native_ala3_ff14sb_development_v1",
+    "profile_sha256": "a7a4229cc30bb24393b06d4b19e25b917060213ca432b1263329bda6c0b49adf",
+    "atom_count": 33
+  },
+  "analytic_force": {
+    "method": "central_finite_difference",
+    "displacement_angstrom": 1e-05,
+    "component_count": 99,
+    "maximum_absolute_error_kcal_per_mol_per_angstrom": 1e-06,
+    "all_components_required": true
+  },
+  "translation_invariance": {
+    "translation_angstrom": [
+      8.0,
+      -4.0,
+      2.0
+    ],
+    "maximum_absolute_energy_error_kcal_per_mol": 1e-10,
+    "maximum_absolute_force_error_kcal_per_mol_per_angstrom": 1e-10,
+    "all_force_components_required": true
+  },
+  "atom_permutation_invariance": {
+    "permutation": "reverse_all_33_atom_indices",
+    "topology_and_parameters_remapped": true,
+    "maximum_absolute_energy_error_kcal_per_mol": 1e-10,
+    "maximum_absolute_force_error_kcal_per_mol_per_angstrom": 1e-10,
+    "all_force_components_required": true
+  },
+  "nve_drift": {
+    "integrator": "velocity_verlet",
+    "initial_velocities": "all_exact_zero",
+    "timestep_femtoseconds": 0.05,
+    "step_count": 256,
+    "maximum_absolute_total_energy_drift_kcal_per_mol": 0.0005,
+    "cpu_backend_observation_and_final_state_digest_bitwise_parity_required": true
+  },
+  "runtime": {
+    "admitted_backends": [
+      "cpp_cpu_reference",
+      "rust_cpu"
+    ],
+    "observation_receipt_rederivation_required": true,
+    "backend_receipt_rederivation_required": true,
+    "nonfinite_observation_allowed": false
+  },
+  "authority": {
+    "development_fixture_only": true,
+    "general_peptide_parameter_assignment_implemented": false,
+    "production_md_validated": false,
+    "scientific_claim_authorized": false,
+    "molecular_execution_authorized": false,
+    "performance_claim_authorized": false,
+    "hip_device_execution_authorized": false,
+    "product_authority": false,
+    "reservation_authorized": false,
+    "stage0_admission_authorized": false,
+    "fresh_holdout_execution_authorized": false,
+    "public_benchmark_authorized": false
+  }
+}

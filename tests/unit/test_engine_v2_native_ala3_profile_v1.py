@@ -11,9 +11,16 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 PROFILE_PATH = ROOT / "config/engine_v2_native_ala3_peptide_profile_v1.json"
+VALIDATION_PROFILE_PATH = (
+    ROOT / "config/engine_v2_native_ala3_validation_profile_v1.json"
+)
 ASSET_PATH = (
     ROOT
     / "rust/betelgeuze-runtime/assets/engine_v2_native_ala3_peptide_profile_v1.json"
+)
+VALIDATION_ASSET_PATH = (
+    ROOT
+    / "rust/betelgeuze-runtime/assets/engine_v2_native_ala3_validation_profile_v1.json"
 )
 DATA_PATH = ROOT / "rust/betelgeuze-runtime/src/development_peptide_data.rs"
 RUNTIME_PATH = ROOT / "rust/betelgeuze-runtime/src/development_peptide.rs"
@@ -22,6 +29,9 @@ GENERATOR_PATH = (
 )
 
 PROFILE_SHA256 = "a7a4229cc30bb24393b06d4b19e25b917060213ca432b1263329bda6c0b49adf"
+VALIDATION_PROFILE_SHA256 = (
+    "f86f0e256c66e9908bd0f4f25d2e4d1001c93aa115cf1f42e0dc244fdf8802f4"
+)
 DATA_SHA256 = "7a75f9ccd2d0cee99387ec2ae25c47b145a1a325bf0498b1752340c3a04b88a0"
 PDB_SHA256 = "5510388d045a8f8938236f0975e4f52b81e1b8b7bf9d0c5effcf856050d6123d"
 FFXML_SHA256 = "d9f9779c09d67cd5f8bc657692f174ffab14c469dfd06d560ac1899fa7e976b8"
@@ -168,6 +178,78 @@ def test_generator_and_runtime_bind_the_same_exact_contract() -> None:
         "DistanceConstraints::default()",
         "Integrator::VelocityVerlet",
         "data::PAIR_SCALES",
+    ):
+        assert required in runtime_source
+
+
+def test_validation_successor_is_parent_bound_and_all_authority_stays_false() -> None:
+    canonical = VALIDATION_PROFILE_PATH.read_bytes()
+    assert VALIDATION_ASSET_PATH.read_bytes() == canonical
+    assert hashlib.sha256(canonical).hexdigest() == VALIDATION_PROFILE_SHA256
+    profile = json.loads(canonical)
+
+    assert profile["schema_id"] == (
+        "betelgeuze.engine_v2_native_ala3_validation_profile/1.0.0"
+    )
+    assert profile["profile_id"] == "engine_v2_native_ala3_cpu_validation_v1"
+    assert profile["parent"] == {
+        "profile_id": "engine_v2_native_ala3_ff14sb_development_v1",
+        "profile_sha256": PROFILE_SHA256,
+        "atom_count": 33,
+    }
+    assert profile["analytic_force"] == {
+        "method": "central_finite_difference",
+        "displacement_angstrom": 1e-5,
+        "component_count": 99,
+        "maximum_absolute_error_kcal_per_mol_per_angstrom": 1e-6,
+        "all_components_required": True,
+    }
+    assert profile["translation_invariance"] == {
+        "translation_angstrom": [8.0, -4.0, 2.0],
+        "maximum_absolute_energy_error_kcal_per_mol": 1e-10,
+        "maximum_absolute_force_error_kcal_per_mol_per_angstrom": 1e-10,
+        "all_force_components_required": True,
+    }
+    assert profile["atom_permutation_invariance"] == {
+        "permutation": "reverse_all_33_atom_indices",
+        "topology_and_parameters_remapped": True,
+        "maximum_absolute_energy_error_kcal_per_mol": 1e-10,
+        "maximum_absolute_force_error_kcal_per_mol_per_angstrom": 1e-10,
+        "all_force_components_required": True,
+    }
+    assert profile["nve_drift"] == {
+        "integrator": "velocity_verlet",
+        "initial_velocities": "all_exact_zero",
+        "timestep_femtoseconds": 0.05,
+        "step_count": 256,
+        "maximum_absolute_total_energy_drift_kcal_per_mol": 5e-4,
+        "cpu_backend_observation_and_final_state_digest_bitwise_parity_required": True,
+    }
+    assert profile["runtime"] == {
+        "admitted_backends": ["cpp_cpu_reference", "rust_cpu"],
+        "observation_receipt_rederivation_required": True,
+        "backend_receipt_rederivation_required": True,
+        "nonfinite_observation_allowed": False,
+    }
+    authority = profile["authority"]
+    assert authority["development_fixture_only"] is True
+    assert all(value is False for key, value in authority.items() if key != "development_fixture_only")
+
+    runtime_source = RUNTIME_PATH.read_text()
+    for required in (
+        "DEVELOPMENT_ALA3_VALIDATION_V1_SCHEMA_ID",
+        "DEVELOPMENT_ALA3_VALIDATION_V1_PROFILE_ID",
+        "development_ala3_validation_v1_profile_sha256",
+        "observe_development_ala3_validation_v1",
+        "DevelopmentAla3ValidationObservationV1",
+        "maximum_finite_difference_force_error",
+        "reversed_system_and_forcefield",
+        "validation_observation_receipt",
+        "validation_backend_receipt",
+        "const MAXIMUM_FINITE_DIFFERENCE_FORCE_ERROR: f64 = 1.0e-6",
+        "const MAXIMUM_INVARIANCE_ENERGY_ERROR: f64 = 1.0e-10",
+        "const MAXIMUM_INVARIANCE_FORCE_ERROR: f64 = 1.0e-10",
+        "const MAXIMUM_NVE_TOTAL_ENERGY_DRIFT: f64 = 5.0e-4",
     ):
         assert required in runtime_source
 
