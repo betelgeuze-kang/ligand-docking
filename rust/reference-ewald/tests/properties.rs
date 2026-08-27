@@ -683,6 +683,47 @@ fn reciprocal_phase_origin_is_charge_inversion_invariant() {
 }
 
 #[test]
+fn reciprocal_phase_origin_breaks_radial_ties_without_atom_order() {
+    let a = 131.332_703_005_210_28;
+    let b = 4.871_750_063_866_715;
+    let positions = vec![
+        Position::new(0.0, 0.0, 0.0),
+        Position::new(a, 0.0, 0.0),
+        Position::new(0.0, b, 0.0),
+        Position::new(a, b, 0.0),
+    ];
+    let charges = vec![16.0, 16.0, -16.0, -16.0];
+    let mut input = EwaldInput::new(
+        positions.clone(),
+        charges.clone(),
+        OrthorhombicCell {
+            lengths_angstrom: [
+                4_338.759_594_077_371,
+                14.187_071_914_337_073,
+                0.060_036_731_307_834_7,
+            ],
+        },
+    );
+    input.settings.alpha_per_angstrom = 1.0;
+    input.settings.real_space_cutoff_angstrom = 0.01;
+    input.settings.reciprocal_max_indices = [1; 3];
+    let expected = evaluate(&input).expect("radial-tie fixture is valid");
+    input.positions.swap(0, 1);
+    input.charges_elementary.swap(0, 1);
+    let permuted = evaluate(&input).expect("permuted radial-tie fixture is valid");
+    assert_eq!(permuted.energy, expected.energy);
+    let old_atoms = [1_usize, 0, 2, 3];
+    for (new_atom, old_atom) in old_atoms.into_iter().enumerate() {
+        for axis in 0..3 {
+            assert_eq!(
+                permuted.forces_kcal_per_mol_angstrom[new_atom][axis].to_bits(),
+                expected.forces_kcal_per_mol_angstrom[old_atom][axis].to_bits()
+            );
+        }
+    }
+}
+
+#[test]
 fn exact_box_shift_preserves_interior_remainder_bits() {
     let length = 0.001;
     let mut input = EwaldInput::new(
@@ -706,6 +747,30 @@ fn exact_box_shift_preserves_interior_remainder_bits() {
         length.to_bits()
     );
     let shifted = evaluate(&input).expect("exact image shift is valid");
+    assert_eq!(shifted, expected);
+}
+
+#[test]
+fn exact_box_shift_preserves_asymmetric_two_ulp_remainder_bracket() {
+    let length = 33_681.378_630_309_97;
+    let coordinate = 12_312.132_214_118_1;
+    let mut input = EwaldInput::new(
+        vec![Position::new(coordinate, 0.0, 0.0), Position::default()],
+        vec![1.0, -1.0],
+        OrthorhombicCell {
+            lengths_angstrom: [length; 3],
+        },
+    );
+    input.settings.alpha_per_angstrom = 1.0e-12;
+    input.settings.real_space_cutoff_angstrom = 13_000.0;
+    input.settings.reciprocal_max_indices = [1; 3];
+    let expected = evaluate(&input).expect("asymmetric bracket fixture is valid");
+    input.positions[0].x_angstrom = 45_993.510_844_428_07;
+    assert_eq!(
+        (input.positions[0].x_angstrom - coordinate).to_bits(),
+        length.to_bits()
+    );
+    let shifted = evaluate(&input).expect("one-box asymmetric bracket image is valid");
     assert_eq!(shifted, expected);
 }
 

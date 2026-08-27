@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PROFILE_PATH = ROOT / "config/engine_v2_direct_ewald_reference_profile_v1.json"
 CRATE = ROOT / "rust/reference-ewald"
-PROFILE_SHA256 = "a5d82f1ebc0b00d04cd7a505a723e5d2e4375d8983c6dca74468b3e532c4f767"
+PROFILE_SHA256 = "c0b2b0d5d3242bb5cb109be211fe3d4780613262b8c554ce3f6e2638d5694409"
 
 
 def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
@@ -48,7 +48,7 @@ def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
         "external_md_engine_dependency": False,
         "fixed64_cpu_v7_source_closure_modified": False,
         "source_sha256": (
-            "34afeceee6d61711541ecd6221ceced90af976bf7a23bf84f68a3f047a65f943"
+            "6fe92d0da9fefcb4b97190c5b499b1f8b0f8908fdd851acd3c1d2bf33487490f"
         ),
         "frozen_fixture_sha256": (
             "a720c83852c79e401cb8838e9e20b2196985b6e424275949f77291b30b3da338"
@@ -118,8 +118,9 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
             "rounded_coordinate_difference"
         ),
         "coordinate_reduction": (
-            "per_axis_pinned_floor_quotient_with_canonical_reconciliation_for_"
-            "one_or_two_ulp_direct_and_scaled_remainder_brackets_and_rem_euclid_fallback_"
+            "per_axis_pinned_floor_quotient_with_sign_aware_one_ulp_and_round_"
+            "trip_guarded_two_ulp_direct_and_scaled_remainder_reconciliation_"
+            "and_rem_euclid_fallback_"
             "outside_primary_range_rounded_upper_boundary_recovered_as_"
             "nonzero_signed_residual_and_signed_zero_canonicalized"
         ),
@@ -148,9 +149,10 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
             "per_atom_axis_canonical_absolute_magnitude_then_total_order_neumaier"
         ),
         "reciprocal_damping_order": (
-            "translation_equivariant_maximum_absolute_charge_then_absolute_"
-            "charge_radial_geometry_signature_atom_order_and_charge_inversion_"
-            "independent_common_origin_relative_phases_with_canonical_"
+            "translation_equivariant_maximum_absolute_charge_then_global_"
+            "inversion_invariant_rooted_signed_minimum_image_geometry_"
+            "signature_atom_order_independent_common_origin_relative_phases_"
+            "with_canonical_"
             "compensated_axis_sum_then_exact_power_of_two_charge_normalization_"
             "then_canonical_compensated_structure_sum_then_wave_scaled_prefactor_"
             "before_phase_combination_with_log_domain_scaled_subnormal_or_zero_"

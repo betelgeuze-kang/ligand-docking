@@ -752,7 +752,17 @@ fn reduce_to_primary_cell(position: Position, cell: OrthorhombicCell) -> [f64; 3
                         .min(scaled_remainder.to_bits())
                         .saturating_sub(1),
                 ),
-                2 => direct_remainder + 0.5 * (scaled_remainder - direct_remainder),
+                2 => {
+                    let image = quotient * length;
+                    let scaled_round_trips = (scaled_remainder + image).to_bits()
+                        == component.to_bits()
+                        && (component - scaled_remainder).to_bits() == image.to_bits();
+                    if scaled_round_trips {
+                        direct_remainder + 0.5 * (scaled_remainder - direct_remainder)
+                    } else {
+                        direct_remainder
+                    }
+                }
                 _ => direct_remainder,
             }
         } else {
@@ -814,27 +824,37 @@ fn canonical_phase_origin(input: &EwaldInput) -> Position {
     input.positions[atom]
 }
 
-fn phase_origin_signature(input: &EwaldInput, origin: usize) -> Vec<(f64, f64)> {
+fn phase_origin_signature(input: &EwaldInput, origin: usize) -> Vec<[f64; 6]> {
+    let origin_charge = input.charges_elementary[origin];
     let mut signature = input
         .positions
         .iter()
         .zip(&input.charges_elementary)
         .map(|(&position, &charge)| {
             let delta = minimum_image(position, input.positions[origin], input.cell);
-            (charge.abs(), squared_norm(delta))
+            [
+                charge.abs(),
+                charge * origin_charge,
+                squared_norm(delta),
+                delta[0],
+                delta[1],
+                delta[2],
+            ]
         })
         .collect::<Vec<_>>();
     signature.sort_by(compare_phase_origin_entries);
     signature
 }
 
-fn compare_phase_origin_entries(left: &(f64, f64), right: &(f64, f64)) -> Ordering {
-    left.0
-        .total_cmp(&right.0)
-        .then_with(|| left.1.total_cmp(&right.1))
+fn compare_phase_origin_entries(left: &[f64; 6], right: &[f64; 6]) -> Ordering {
+    left.iter()
+        .zip(right)
+        .map(|(left, right)| left.total_cmp(right))
+        .find(|ordering| *ordering != Ordering::Equal)
+        .unwrap_or(Ordering::Equal)
 }
 
-fn compare_phase_origin_signatures(left: &[(f64, f64)], right: &[(f64, f64)]) -> Ordering {
+fn compare_phase_origin_signatures(left: &[[f64; 6]], right: &[[f64; 6]]) -> Ordering {
     left.iter()
         .zip(right)
         .map(|(left, right)| compare_phase_origin_entries(left, right))

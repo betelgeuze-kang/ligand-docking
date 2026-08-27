@@ -15,9 +15,11 @@ energies and returns analytic forces for every atom.
 
 All positions are reduced per axis before minimum-image subtraction and
 reciprocal phase construction. A pinned-floor quotient and the canonical
-canonical reconciliation of one- and two-ULP direct/scaled remainder brackets
-keeps ordinary interior residues bitwise stable across exact represented box
-shifts. When a rounded
+sign-aware reconciliation of one-ULP direct/scaled remainder brackets and a
+round-trip guard on two-ULP brackets keep ordinary interior residues bitwise
+stable across exact represented box shifts. A two-ULP midpoint is used only
+when both endpoints reconstruct the represented image; otherwise the exact
+direct remainder is retained. When a rounded
 quotient misses the primary range across more than `2^53` cells, reduction falls
 back to the bounded Euclidean remainder. This also prevents
 trigonometric range-reduction drift for long unwrapped trajectories; the property
@@ -53,9 +55,12 @@ charges by the exactly reversible binary64 power of two `2^-40`, retaining tiny
 phases that would underflow if multiplied by charge first without perturbing
 the represented charges, and canonically order and compensate their cosine and
 sine sums. Phases use minimum-image positions relative to a maximum-absolute-charge
-atom; exact magnitude ties are resolved by a sorted absolute-charge/radial-distance
-signature. This common origin is independent of atom order and global charge
-inversion and is equivariant under periodic translations, while a large shared
+atom; exact magnitude ties are resolved by a sorted rooted signature containing
+absolute charge, charge product with the root, squared radial distance, and the
+signed minimum-image displacement. The relative charge product is unchanged by
+global charge inversion, and the signed displacement breaks distinct radial
+ties without consulting input order. This common origin is independent of atom
+order and global charge inversion and is equivariant under periodic translations, while a large shared
 coordinate does not perturb the represented relative geometry. Each phase's three axis products use the same canonical compensated
 sum, preserving representable residuals when large terms cancel. Zero-charge
 atoms bypass phase construction. Force terms then
@@ -107,7 +112,8 @@ rounded-difference tie classification, exact power-of-two charge normalization,
 tiny-phase structure preservation, phase-product underflow rejection,
 common-origin translation stability, atom-order-independent canonical phase
 origin, periodic-origin equivariance, charge-inversion-stable origin selection,
-exact-box-shift one/two-ULP interior-residue stability,
+rooted-geometry radial-tie origin selection, exact-box-shift one/two-ULP
+interior-residue stability including an asymmetric two-ULP bracket,
 full-envelope large-coordinate remainder fallback,
 cancellation-residual-preserving phase summation, atom-order-independent reciprocal structure accumulation,
 zero-charge phase and real-pair distance bypass, atom-order-independent
@@ -123,7 +129,7 @@ numeric envelope, and typed malformed inputs. The exact force bits are those of
 the pinned math and operation-order contract.
 
 The exact profile SHA-256 is
-`a5d82f1ebc0b00d04cd7a505a723e5d2e4375d8983c6dca74468b3e532c4f767`.
+`c0b2b0d5d3242bb5cb109be211fe3d4780613262b8c554ce3f6e2638d5694409`.
 The profile separately binds the evaluator source, frozen fixture, and
 standalone Cargo lockfile hashes.
 
