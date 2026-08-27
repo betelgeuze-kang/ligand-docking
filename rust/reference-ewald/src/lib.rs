@@ -4,6 +4,7 @@
 //! and the consumed fixed64 CPU-v7 source closure. It has no dependency on native
 //! compute, accelerator code, runtime state, or an external MD engine.
 
+use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
 use std::fmt;
@@ -247,7 +248,7 @@ pub fn evaluate(input: &EwaldInput) -> Result<EwaldEvaluation, EwaldError> {
         .sum::<f64>();
     result.energy.self_kcal_per_mol =
         -coulomb_scale * input.settings.alpha_per_angstrom * charge_square_sum
-            / core::f64::consts::PI.sqrt();
+            / libm::sqrt(core::f64::consts::PI);
     evaluate_pair_corrections(input, &pair_rules, coulomb_scale, &mut result)?;
 
     if !result.energy.total_kcal_per_mol().is_finite()
@@ -285,13 +286,13 @@ fn evaluate_real_space(
                     ),
                 ));
             }
-            let distance = distance2.sqrt();
+            let distance = libm::sqrt(distance2);
             if distance <= input.settings.real_space_cutoff_angstrom {
                 let charge_product =
                     input.charges_elementary[atom_i] * input.charges_elementary[atom_j];
                 let alpha_distance = alpha * distance;
                 let erfc_value = libm::erfc(alpha_distance);
-                let exponential = (-alpha_distance * alpha_distance).exp();
+                let exponential = libm::exp(-alpha_distance * alpha_distance);
                 let pair_energy = coulomb_scale * charge_product * erfc_value / distance;
                 checked_add(
                     &mut result.energy.real_space_kcal_per_mol,
@@ -302,7 +303,8 @@ fn evaluate_real_space(
                 let force_factor = coulomb_scale
                     * charge_product
                     * (erfc_value / (distance2 * distance)
-                        + 2.0 * alpha * exponential / (core::f64::consts::PI.sqrt() * distance2));
+                        + 2.0 * alpha * exponential
+                            / (libm::sqrt(core::f64::consts::PI) * distance2));
                 add_pair_force(
                     &mut result.forces_kcal_per_mol_angstrom,
                     atom_i,
@@ -344,21 +346,21 @@ fn evaluate_reciprocal_space(
                     core::f64::consts::TAU * f64::from(nz) / lengths[2],
                 ];
                 let wave2 = squared_norm(wave);
-                let damping = (-wave2 / (4.0 * alpha * alpha)).exp() / wave2;
+                let exponential = libm::exp(-wave2 / (4.0 * alpha * alpha));
                 let mut structure_cos = 0.0;
                 let mut structure_sin = 0.0;
                 for (&charge, &position) in input.charges_elementary.iter().zip(&reduced_positions)
                 {
                     let phase = dot(wave, position);
-                    let (phase_sin, phase_cos) = phase.sin_cos();
+                    let (phase_sin, phase_cos) = libm::sincos(phase);
                     structure_cos += charge * phase_cos;
                     structure_sin += charge * phase_sin;
                 }
                 checked_add(
                     &mut result.energy.reciprocal_space_kcal_per_mol,
-                    reciprocal_energy_factor
-                        * damping
-                        * (structure_cos * structure_cos + structure_sin * structure_sin),
+                    (reciprocal_energy_factor / wave2)
+                        * (structure_cos * structure_cos + structure_sin * structure_sin)
+                        * exponential,
                     "reciprocal-space energy",
                 )?;
                 for ((force, &charge), &position) in result
@@ -368,13 +370,16 @@ fn evaluate_reciprocal_space(
                     .zip(&reduced_positions)
                 {
                     let phase = dot(wave, position);
-                    let (phase_sin, phase_cos) = phase.sin_cos();
-                    let factor = reciprocal_force_factor
+                    let (phase_sin, phase_cos) = libm::sincos(phase);
+                    let undamped_factor = (reciprocal_force_factor / wave2)
                         * charge
-                        * damping
                         * (structure_cos * phase_sin - structure_sin * phase_cos);
                     for axis in 0..3 {
-                        checked_add(&mut force[axis], factor * wave[axis], "reciprocal force")?;
+                        checked_add(
+                            &mut force[axis],
+                            undamped_factor * wave[axis] * exponential,
+                            "reciprocal force",
+                        )?;
                     }
                 }
             }
@@ -413,7 +418,7 @@ fn evaluate_pair_corrections(
                 input.cell,
             )?;
             let distance2 = squared_norm(delta);
-            let distance = distance2.sqrt();
+            let distance = libm::sqrt(distance2);
             let correction_scale = pair_scale - 1.0;
             checked_add(
                 &mut result.energy.pair_correction_kcal_per_mol,
@@ -659,11 +664,14 @@ fn minimum_image(first: Position, second: Position, cell: OrthorhombicCell) -> [
     for axis in 0..3 {
         let length = cell.lengths_angstrom[axis];
         let raw = first[axis] - second[axis];
-        let half = 0.5 * length;
-        delta[axis] = if raw > half {
-            raw - length
-        } else if raw < -half {
-            raw + length
+        delta[axis] = if compare_primary_axis_separation(first[axis], second[axis], length)
+            == Ordering::Greater
+        {
+            if first[axis] > second[axis] {
+                raw - length
+            } else {
+                raw + length
+            }
         } else {
             raw
         };
@@ -699,22 +707,38 @@ fn pair_correction_displacement(
     for axis in 0..3 {
         let length = cell.lengths_angstrom[axis];
         let raw = first[axis] - second[axis];
-        let half = 0.5 * length;
-        if raw.abs().to_bits() == half.to_bits() {
+        let separation = compare_primary_axis_separation(first[axis], second[axis], length);
+        if separation == Ordering::Equal {
             return Err(EwaldError::new(
                 EwaldErrorCode::AmbiguousPairCorrectionImage,
                 format!("pair correction is exactly half a cell on axis {axis}"),
             ));
         }
-        delta[axis] = if raw > half {
-            raw - length
-        } else if raw < -half {
-            raw + length
+        delta[axis] = if separation == Ordering::Greater {
+            if first[axis] > second[axis] {
+                raw - length
+            } else {
+                raw + length
+            }
         } else {
             raw
         };
     }
     Ok(delta)
+}
+
+fn compare_primary_axis_separation(first: f64, second: f64, length: f64) -> Ordering {
+    let (high, low) = if first > second {
+        (first, second)
+    } else {
+        (second, first)
+    };
+    let half = 0.5 * length;
+    if high < half {
+        Ordering::Less
+    } else {
+        (high - half).total_cmp(&low)
+    }
 }
 
 fn accurate_order_independent_sum(values: &[f64]) -> f64 {

@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PROFILE_PATH = ROOT / "config/engine_v2_direct_ewald_reference_profile_v1.json"
 CRATE = ROOT / "rust/reference-ewald"
-PROFILE_SHA256 = "f68ba0f048a770c77eb05126ff6e7e52a0bd688ad0a2b8a69e8658cf3fe26041"
+PROFILE_SHA256 = "1ed29e3f213a040c97b0b48dbd5eb1e287f75e24a22b8dd6bfd4af997b2a3b7e"
 
 
 def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
@@ -36,7 +36,11 @@ def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
     assert profile["implementation"] == {
         "crate": "rust/reference-ewald",
         "reference_schema_id": "betelgeuze.reference_direct_ewald/1.0.0",
-        "arithmetic": "scalar_binary64",
+        "arithmetic": "scalar_binary64_with_pinned_libm_transcendentals",
+        "transcendental_implementation": (
+            "libm_0.2.16_exact_dependency_and_lockfile"
+        ),
+        "platform_std_transcendentals_used": False,
         "direct_ewald_implemented": True,
         "pme_implemented": False,
         "native_runtime_integrated": False,
@@ -44,10 +48,10 @@ def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
         "external_md_engine_dependency": False,
         "fixed64_cpu_v7_source_closure_modified": False,
         "source_sha256": (
-            "c09929b0d5e31f10a6d06e61f1917f671891f8a7e8df989db8a9ff100a1cfc43"
+            "79c0dd90eeb6bfccb1d3e0c50d7b4c5f1982153ce78400ac7a40c719ed712286"
         ),
         "frozen_fixture_sha256": (
-            "4911f62b37a26d31cdc76f62775da6e284d8e83fe0b3b3d9514a8e96c4a489e2"
+            "759e2e7faf11da1ed80a9eb6020dfa0dfc386e0d7b392c825aa3f0f776382cda"
         ),
         "cargo_lock_sha256": (
             "cc64500cc1c97dfda26a8a4c8b8825c5296935f1e63cbaf61676a321364b3d9d"
@@ -101,6 +105,10 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
         "minimum_image_selection": (
             "strict_comparison_after_primary_cell_reduction"
         ),
+        "exact_half_tie_detection": (
+            "sterbenz_exact_high_minus_half_compared_with_low_before_"
+            "rounded_coordinate_difference"
+        ),
         "coordinate_reduction": (
             "per_axis_rem_euclid_primary_cell_with_zero_or_rounded_upper_"
             "boundary_canonicalized_to_positive_zero"
@@ -116,6 +124,10 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
         ),
         "zero_charge_pair_rule": (
             "semantic_noop_before_pair_correction_image_selection"
+        ),
+        "reciprocal_damping_order": (
+            "undamped_prefactor_and_structure_or_force_products_before_"
+            "pinned_exponential"
         ),
     }
     assert profile["numeric_envelope"] == {
@@ -180,6 +192,9 @@ def test_validation_authority_and_standalone_crate_are_bounded() -> None:
         "self_kcal_per_mol",
         "pair_correction_kcal_per_mol",
         "libm::erfc",
+        "libm::exp",
+        "libm::sincos",
+        "libm::sqrt",
         "reciprocal_max_indices",
         "NonNeutralSystem",
         "CutoffViolatesMinimumImage",
@@ -190,6 +205,8 @@ def test_validation_authority_and_standalone_crate_are_bounded() -> None:
         "MIN_SUPPORTED_PAIR_DISTANCE_ANGSTROM",
     ):
         assert required in source
+    for forbidden in (".exp()", ".sin_cos()", ".sqrt()"):
+        assert forbidden not in source
 
     fixture = (CRATE / "fixtures/direct_ewald_v1.tsv").read_text()
     assert "betelgeuze.reference_direct_ewald/1.0.0" in fixture

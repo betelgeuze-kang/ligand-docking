@@ -367,6 +367,44 @@ fn half_cell_pair_correction_image_is_rejected_independent_of_representation() {
 }
 
 #[test]
+fn rounded_half_cell_difference_is_not_an_exact_pair_correction_tie() {
+    let mut input = EwaldInput::new(
+        vec![
+            Position::new(5.0, 1.0, 1.0),
+            Position::new(1.0e-16, 1.0, 1.0),
+        ],
+        vec![1.0, -1.0],
+        OrthorhombicCell {
+            lengths_angstrom: [10.0, 12.0, 14.0],
+        },
+    );
+    input.settings.real_space_cutoff_angstrom = 4.9;
+    input.exclusions.push(PairExclusion {
+        atom_i: 0,
+        atom_j: 1,
+    });
+    evaluate(&input).expect("represented separation is strictly below half a cell");
+}
+
+#[test]
+fn reciprocal_scaling_preserves_representable_damped_terms() {
+    let mut input = EwaldInput::new(
+        vec![Position::default(), Position::new(2.5e-7, 0.0, 0.0)],
+        vec![1.0, -1.0],
+        OrthorhombicCell {
+            lengths_angstrom: [1.0e-6; 3],
+        },
+    );
+    input.settings.alpha_per_angstrom = 1.174_889e5;
+    input.settings.real_space_cutoff_angstrom = 1.0e-7;
+    input.settings.reciprocal_max_indices = [1; 3];
+    input.settings.dielectric = 1.0e-12;
+    let evaluation = evaluate(&input).expect("bounded underflow fixture is valid");
+    assert!(evaluation.energy.reciprocal_space_kcal_per_mol > 0.0);
+    assert!(evaluation.energy.reciprocal_space_kcal_per_mol.is_finite());
+}
+
+#[test]
 fn unsupported_numeric_extremes_have_typed_failures() {
     let input = rich_input();
 

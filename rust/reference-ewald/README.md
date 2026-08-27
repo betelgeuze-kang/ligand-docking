@@ -32,6 +32,11 @@ common-translation and atom-permutation invariance. A pair scale of exactly one
 or any pair rule involving a zero charge is a semantic no-op and skips local-
 correction image selection.
 
+Exact local-correction ties are classified by comparing the lower reduced
+coordinate with the exact high-minus-half difference before consulting the
+rounded coordinate subtraction. This distinguishes an exact half-cell pair
+from representable coordinates whose difference merely rounds to half.
+
 Neutrality is checked with a canonical order and Neumaier compensated sum.
 Cell volume multiplies sorted minimum and maximum lengths before the middle
 length. A combined real-pair plus reciprocal-phase work cap prevents the scalar
@@ -44,6 +49,12 @@ angstrom, dielectric outside `[1e-12,1e12]`, or minimum pair distance outside
 `[1e-8,1e3]` angstrom. The minimum pair distance must also be below the cutoff.
 These bounds keep charge products and squared minimum-distance checks normal
 before any inverse-distance operation.
+
+All exponential, sine/cosine, complementary-error-function, and square-root
+operations use the exactly pinned `libm` 0.2.16 dependency. Reciprocal energy
+and force terms multiply their undamped prefactor and structure factors before
+the exponential, preventing an intermediate damping quotient from underflowing
+when the completed term remains representable.
 
 `fixtures/direct_ewald_v1.tsv` freezes all four energy components, their total,
 and all 12 force components as IEEE-754 bit patterns. The observation example

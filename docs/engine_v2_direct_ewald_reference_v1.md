@@ -25,7 +25,9 @@ representation. An exact half-cell local pair correction is rejected with a
 typed `AmbiguousPairCorrectionImage` error because no single-image force
 direction can preserve both translation and permutation invariance. A unit pair
 scale or any pair rule involving a zero charge is a semantic no-op and skips
-that image selection entirely.
+that image selection entirely. Exact ties compare the lower reduced coordinate
+with the exact high-minus-half difference before using the rounded coordinate
+subtraction, so a representable separation just below half is not rejected.
 
 The scalar contract admits a bounded physical/numerical envelope: coordinates
 through `1e12` angstrom; cell lengths from `1e-6` through `1e9` angstrom;
@@ -34,6 +36,13 @@ bounded alpha, cutoff, dielectric, and minimum-distance settings recorded in
 the immutable profile. The minimum pair distance must be below the cutoff. This
 keeps charge products and the squared minimum distance normal before inverse-
 distance arithmetic while preserving the frozen ordinary-input operation order.
+
+Every exponential, sine/cosine pair, complementary error function, and square
+root is supplied by the exactly pinned `libm` 0.2.16 dependency rather than a
+platform standard-library implementation. Reciprocal terms multiply the
+undamped prefactor and structure/force factors before the pinned exponential,
+retaining contributions whose intermediate `exp(exponent)/wave²` would
+underflow even though the final energy or force is representable.
 
 Neutrality uses a canonical absolute-magnitude/total order and Neumaier
 compensated sum, avoiding input-order-dependent admission. Cell volume uses a
@@ -49,11 +58,12 @@ checked against central finite differences. Additional properties cover global
 translation, integer images, complete atom permutation, global charge
 inversion, near-zero net force, bitwise repetition, reciprocal-bound
 convergence, near-half-cell atom swaps, rounded upper-bound primary-cell
-reduction, unit-scale and zero-charge no-ops, the numeric envelope, and typed
-malformed inputs.
+reduction, rounded-difference tie classification, representable reciprocal
+damping, unit-scale and zero-charge no-ops, the numeric envelope, and typed
+malformed inputs. The exact force bits are those of the pinned math contract.
 
 The exact profile SHA-256 is
-`f68ba0f048a770c77eb05126ff6e7e52a0bd688ad0a2b8a69e8658cf3fe26041`.
+`1ed29e3f213a040c97b0b48dbd5eb1e287f75e24a22b8dd6bfd4af997b2a3b7e`.
 The profile separately binds the evaluator source, frozen fixture, and
 standalone Cargo lockfile hashes.
 
