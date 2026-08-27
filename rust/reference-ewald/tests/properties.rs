@@ -724,7 +724,7 @@ fn reciprocal_phase_origin_breaks_radial_ties_without_atom_order() {
 }
 
 #[test]
-fn exact_box_shift_preserves_interior_remainder_bits() {
+fn exact_box_shift_is_numerically_stable_for_interior_remainders() {
     let length = 0.001;
     let mut input = EwaldInput::new(
         vec![
@@ -747,11 +747,11 @@ fn exact_box_shift_preserves_interior_remainder_bits() {
         length.to_bits()
     );
     let shifted = evaluate(&input).expect("exact image shift is valid");
-    assert_eq!(shifted, expected);
+    assert_evaluation_close(&shifted, &expected, 5.0e-12);
 }
 
 #[test]
-fn exact_box_shift_preserves_asymmetric_two_ulp_remainder_bracket() {
+fn exact_box_shift_is_numerically_stable_for_asymmetric_remainder_brackets() {
     let length = 33_681.378_630_309_97;
     let coordinate = 12_312.132_214_118_1;
     let mut input = EwaldInput::new(
@@ -771,11 +771,11 @@ fn exact_box_shift_preserves_asymmetric_two_ulp_remainder_bracket() {
         length.to_bits()
     );
     let shifted = evaluate(&input).expect("one-box asymmetric bracket image is valid");
-    assert_eq!(shifted, expected);
+    assert_evaluation_close(&shifted, &expected, 5.0e-12);
 }
 
 #[test]
-fn three_box_shift_preserves_one_ulp_remainder_bracket() {
+fn three_box_shift_is_numerically_stable_for_remainder_brackets() {
     let length = 153_300_155.898_179_8;
     let coordinate = 74_905_067.902_713_63;
     let mut input = EwaldInput::new(
@@ -795,11 +795,11 @@ fn three_box_shift_preserves_one_ulp_remainder_bracket() {
         (3.0 * length).to_bits()
     );
     let shifted = evaluate(&input).expect("three-box bracket image is valid");
-    assert_eq!(shifted, expected);
+    assert_evaluation_close(&shifted, &expected, 5.0e-12);
 }
 
 #[test]
-fn two_box_shift_preserves_one_ulp_remainder_bracket() {
+fn two_box_shift_is_numerically_stable_for_remainder_brackets() {
     let length = 1.0e-6;
     let coordinate = 5.958_238_943_898_918e-7;
     let mut input = EwaldInput::new(
@@ -820,7 +820,7 @@ fn two_box_shift_preserves_one_ulp_remainder_bracket() {
         (2.0 * length).to_bits()
     );
     let shifted = evaluate(&input).expect("two-box image is valid");
-    assert_eq!(shifted, expected);
+    assert_evaluation_close(&shifted, &expected, 5.0e-12);
 }
 
 #[test]

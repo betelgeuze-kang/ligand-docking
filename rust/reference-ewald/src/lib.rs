@@ -735,42 +735,7 @@ fn reduce_to_primary_cell(position: Position, cell: OrthorhombicCell) -> [f64; 3
     for axis in 0..3 {
         let length = cell.lengths_angstrom[axis];
         let component = components[axis];
-        let quotient = libm::floor(component / length);
-        let direct_remainder = component - quotient * length;
-        let scaled_remainder = (component / length - quotient) * length;
-        let remainder_ulp_span = direct_remainder
-            .to_bits()
-            .abs_diff(scaled_remainder.to_bits());
-        let value = if direct_remainder.is_sign_positive() && scaled_remainder.is_sign_positive() {
-            match remainder_ulp_span {
-                1 => reconcile_one_ulp_remainder(
-                    direct_remainder,
-                    scaled_remainder,
-                    quotient,
-                    component,
-                    length,
-                ),
-                2 => {
-                    let image = quotient * length;
-                    let scaled_round_trips = (scaled_remainder + image).to_bits()
-                        == component.to_bits()
-                        && (component - scaled_remainder).to_bits() == image.to_bits();
-                    if scaled_round_trips {
-                        direct_remainder + 0.5 * (scaled_remainder - direct_remainder)
-                    } else {
-                        direct_remainder
-                    }
-                }
-                _ => direct_remainder,
-            }
-        } else {
-            direct_remainder
-        };
-        let value = if value < 0.0 || value > length {
-            component.rem_euclid(length)
-        } else {
-            value
-        };
+        let value = component.rem_euclid(length);
         reduced[axis] = if matches!(value.to_bits(), 0 | 0x8000_0000_0000_0000) {
             0.0
         } else if value.to_bits() == length.to_bits() {
@@ -843,47 +808,6 @@ fn phase_origin_signature(input: &EwaldInput, origin: usize) -> Vec<[f64; 6]> {
         .collect::<Vec<_>>();
     signature.sort_by(compare_phase_origin_entries);
     signature
-}
-
-fn reconcile_one_ulp_remainder(
-    direct: f64,
-    scaled: f64,
-    quotient: f64,
-    component: f64,
-    length: f64,
-) -> f64 {
-    let steps = exact_nonnegative_integer_to_u64(quotient.abs()).saturating_sub(1);
-    let candidate_bits = if direct < scaled {
-        direct.to_bits().saturating_sub(steps)
-    } else {
-        direct.to_bits().saturating_add(steps)
-    };
-    let candidate = f64::from_bits(candidate_bits);
-    let image = quotient * length;
-    if candidate.is_sign_positive()
-        && candidate <= length
-        && (candidate + image).to_bits() == component.to_bits()
-        && (component - candidate).to_bits() == image.to_bits()
-    {
-        candidate
-    } else {
-        direct
-    }
-}
-
-fn exact_nonnegative_integer_to_u64(value: f64) -> u64 {
-    if value == 0.0 {
-        return 0;
-    }
-    let bits = value.to_bits();
-    let exponent_bits = (bits >> 52) & 0x7ff;
-    let exponent = i32::try_from(exponent_bits).expect("binary64 exponent fits i32") - 1023;
-    let significand = (bits & ((1_u64 << 52) - 1)) | (1_u64 << 52);
-    if exponent >= 52 {
-        significand << u32::try_from(exponent - 52).expect("validated quotient shift fits u32")
-    } else {
-        significand >> u32::try_from(52 - exponent).expect("validated quotient shift fits u32")
-    }
 }
 
 fn compare_phase_origin_entries(left: &[f64; 6], right: &[f64; 6]) -> Ordering {

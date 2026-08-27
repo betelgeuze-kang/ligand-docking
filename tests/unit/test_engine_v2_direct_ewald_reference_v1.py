@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PROFILE_PATH = ROOT / "config/engine_v2_direct_ewald_reference_profile_v1.json"
 CRATE = ROOT / "rust/reference-ewald"
-PROFILE_SHA256 = "17a6c2bc1f4c9fd36c6d48e70bd948e4902a7544ac4aabb7f50cbeda4b9b9107"
+PROFILE_SHA256 = "810f0804d76e33bf869d52973ccda34ad3571aefecd5149ecb0d8e222d08fc28"
 
 
 def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
@@ -48,7 +48,7 @@ def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
         "external_md_engine_dependency": False,
         "fixed64_cpu_v7_source_closure_modified": False,
         "source_sha256": (
-            "4d54d4b1aa893a4b3eae4e69f1133e81d37b22b95aaa44454c14ae56fb09b12e"
+            "22626505fa35acd8ecb335e0660a93e8d18ad4b9755f062dcbe16eea6408fdab"
         ),
         "frozen_fixture_sha256": (
             "a720c83852c79e401cb8838e9e20b2196985b6e424275949f77291b30b3da338"
@@ -87,6 +87,7 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
         "reciprocal_max_indices": [5, 5, 5],
         "dielectric": 1.0,
         "minimum_pair_distance_angstrom": 1e-8,
+        "periodic_image_comparison_relative_tolerance": 5e-12,
         "neutrality_accumulation": (
             "canonical_absolute_magnitude_then_total_order_neumaier_exact_"
             "zero_required"
@@ -118,12 +119,10 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
             "rounded_coordinate_difference"
         ),
         "coordinate_reduction": (
-            "per_axis_pinned_floor_quotient_with_quotient_magnitude_aware_one_"
-            "ulp_opposite_endpoint_and_round_trip_guarded_two_ulp_direct_and_"
-            "scaled_remainder_reconciliation_"
-            "and_rem_euclid_fallback_"
-            "outside_primary_range_rounded_upper_boundary_recovered_as_"
-            "nonzero_signed_residual_and_signed_zero_canonicalized"
+            "per_axis_euclidean_remainder_with_rounded_upper_boundary_"
+            "recovered_as_nonzero_signed_residual_and_signed_zero_"
+            "canonicalized_periodic_equivalent_binary64_inputs_compared_with_"
+            "frozen_relative_tolerance_not_bitwise_identity"
         ),
         "cell_volume_multiplication_order": (
             "sorted_minimum_times_maximum_then_middle"
@@ -244,7 +243,6 @@ def test_validation_authority_and_standalone_crate_are_bounded() -> None:
         "libm::sincos",
         "libm::sqrt",
         "libm::log",
-        "libm::floor",
         "reciprocal_max_indices",
         "NonNeutralSystem",
         "CutoffViolatesMinimumImage",

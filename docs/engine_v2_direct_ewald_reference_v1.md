@@ -13,17 +13,12 @@ bounds, traversal order, minimum-image tie rule, exclusions, and Coulomb pair
 scales. The result separates real, reciprocal, self, and local pair-correction
 energies and returns analytic forces for every atom.
 
-All positions are reduced per axis before minimum-image subtraction and
-reciprocal phase construction. A pinned-floor quotient, quotient-magnitude-aware
-reconciliation of one-ULP direct/scaled remainder brackets, and a round-trip
-guard on two-ULP brackets keep ordinary interior residues bitwise stable across
-exact represented box shifts. A one-ULP bracket is extrapolated away from the
-scaled endpoint by the represented image count minus one and retained only when
-it reconstructs that image in both directions. A two-ULP midpoint is used only
-when both endpoints reconstruct the represented image; otherwise the exact
-direct remainder is retained. When a rounded
-quotient misses the primary range across more than `2^53` cells, reduction falls
-back to the bounded Euclidean remainder. This also prevents
+All positions are reduced per axis with the bounded Euclidean remainder before
+minimum-image subtraction and reciprocal phase construction. Binary64 addition
+can discard the original primary-coordinate bits in a represented `x + nL`, so
+periodic-equivalent input representations are compared with the frozen
+`5e-12` relative tolerance rather than claiming unrecoverable bitwise identity.
+The same exact binary64 input remains bitwise deterministic. Reduction also prevents
 trigonometric range-reduction drift for long unwrapped trajectories; the property
 suite includes an image displaced by one million box lengths. If reduction rounds
 a supported negative boundary residual up to the cell length, every nonzero
@@ -116,8 +111,8 @@ tiny-phase structure preservation, phase-product underflow rejection,
 common-origin translation stability, atom-order-independent canonical phase
 origin, periodic-origin equivariance, charge-inversion-stable origin selection,
 rooted-geometry radial-tie origin selection, zero-charge origin-signature
-bypass, exact-box-shift one/two-ULP interior-residue stability including a
-three-box one-ULP bracket and an asymmetric two-ULP bracket,
+bypass, numerically bounded exact-box-shift interior-remainder stability across
+one-, two-, and three-box regression fixtures,
 full-envelope large-coordinate remainder fallback,
 cancellation-residual-preserving phase summation, atom-order-independent reciprocal structure accumulation,
 zero-charge phase and real-pair distance bypass, atom-order-independent
@@ -133,7 +128,7 @@ numeric envelope, and typed malformed inputs. The exact force bits are those of
 the pinned math and operation-order contract.
 
 The exact profile SHA-256 is
-`17a6c2bc1f4c9fd36c6d48e70bd948e4902a7544ac4aabb7f50cbeda4b9b9107`.
+`810f0804d76e33bf869d52973ccda34ad3571aefecd5149ecb0d8e222d08fc28`.
 The profile separately binds the evaluator source, frozen fixture, and
 standalone Cargo lockfile hashes.
 
