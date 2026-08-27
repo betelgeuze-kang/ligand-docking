@@ -681,6 +681,54 @@ fn exact_box_shift_preserves_interior_remainder_bits() {
 }
 
 #[test]
+fn large_coordinate_reduction_retains_primary_cell_remainder() {
+    let mut input = EwaldInput::new(
+        vec![
+            Position::new(-253_972_837_833.368_16, 0.0, 0.0),
+            Position::default(),
+        ],
+        vec![1.0, -1.0],
+        OrthorhombicCell {
+            lengths_angstrom: [1.0e-6; 3],
+        },
+    );
+    input.settings.alpha_per_angstrom = 1.0;
+    input.settings.real_space_cutoff_angstrom = 4.8e-7;
+    input.settings.reciprocal_max_indices = [1; 3];
+    let evaluation = evaluate(&input).expect("large coordinate fixture is valid");
+    assert!(evaluation.energy.real_space_kcal_per_mol < 0.0);
+}
+
+#[test]
+fn reciprocal_phase_origin_is_periodic_translation_equivariant() {
+    let mut input = EwaldInput::new(
+        vec![
+            Position::new(0.0, 0.0, 0.0),
+            Position::new(0.0, 0.0, 0.125),
+            Position::new(0.0, 0.0, 0.25),
+            Position::new(0.0, 0.0, 0.5),
+        ],
+        vec![16.0, -16.0, 1.0e-12, -1.0e-12],
+        OrthorhombicCell {
+            lengths_angstrom: [1.0; 3],
+        },
+    );
+    input.settings.alpha_per_angstrom = 1.0;
+    input.settings.real_space_cutoff_angstrom = 0.05;
+    input.settings.reciprocal_max_indices = [1; 3];
+    input.settings.dielectric = 1.0e-12;
+    let expected = evaluate(&input).expect("first periodic origin is valid");
+    for position in &mut input.positions {
+        position.z_angstrom += 0.5;
+    }
+    let translated = evaluate(&input).expect("translated periodic origin is valid");
+    assert_eq!(
+        translated.energy.reciprocal_space_kcal_per_mol.to_bits(),
+        expected.energy.reciprocal_space_kcal_per_mol.to_bits()
+    );
+}
+
+#[test]
 fn zero_charge_atoms_bypass_reciprocal_phase_checks() {
     let mut base = EwaldInput::new(
         vec![Position::default(), Position::new(0.3, 0.0, 0.0)],
@@ -700,6 +748,32 @@ fn zero_charge_atoms_bypass_reciprocal_phase_checks() {
         extended.energy.total_kcal_per_mol(),
         expected.energy.total_kcal_per_mol(),
         1.0e-15,
+    );
+    assert!(extended.forces_kcal_per_mol_angstrom[2]
+        .iter()
+        .all(|component| component.to_bits() == 0));
+}
+
+#[test]
+fn coincident_zero_charge_atom_bypasses_real_pair_distance() {
+    let mut input = EwaldInput::new(
+        vec![Position::default(), Position::new(0.3, 0.0, 0.0)],
+        vec![1.0, -1.0],
+        OrthorhombicCell {
+            lengths_angstrom: [1.0; 3],
+        },
+    );
+    input.settings.alpha_per_angstrom = 1.0;
+    input.settings.real_space_cutoff_angstrom = 0.2;
+    input.settings.reciprocal_max_indices = [1; 3];
+    let expected = evaluate(&input).expect("charged fixture is valid");
+    input.positions.push(Position::default());
+    input.charges_elementary.push(0.0);
+    let extended = evaluate(&input).expect("neutral coincident site is a no-op");
+    assert_eq!(extended.energy, expected.energy);
+    assert_eq!(
+        &extended.forces_kcal_per_mol_angstrom[..2],
+        expected.forces_kcal_per_mol_angstrom
     );
     assert!(extended.forces_kcal_per_mol_angstrom[2]
         .iter()

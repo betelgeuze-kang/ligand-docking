@@ -26,7 +26,8 @@ zero. Forces are analytic negative energy gradients accumulated in the same
 order. Positions are first reduced toward the primary cell using a pinned-floor
 quotient and the canonical midpoint of a two-ULP direct/scaled remainder bracket.
 This keeps ordinary interior residues bitwise stable across exact represented
-box shifts. A supported negative boundary residual that rounds to the upper
+box shifts. A Euclidean-remainder fallback handles rounded quotients that miss
+the primary range across more than `2^53` cells. A supported negative boundary residual that rounds to the upper
 boundary is preserved regardless of magnitude; only an actual signed zero is
 canonicalized to positive zero. Real-space minimum images then subtract or add one box
 length with an error-free expansion only when the exact expanded displacement is above or below the
@@ -45,7 +46,7 @@ Neutrality is checked with a canonical order and Neumaier compensated sum and
 must be exactly zero because no neutralizing-background convention is defined.
 Cell volume multiplies sorted minimum and maximum lengths before the middle
 length. Corrections traverse only sorted declared pair rules. A combined real-
-pair, declared-correction, and reciprocal-phase work cap prevents the scalar
+pair, declared-correction, reciprocal-phase, and phase-origin signature work cap prevents the scalar
 reference's individually valid maxima from creating an unbounded evaluation;
 raw rule rows are bounded before any pair-rule tree allocation.
 The API also rejects finite values outside its documented numeric envelope:
@@ -62,8 +63,8 @@ operations use the exactly pinned `libm` 0.2.16 dependency. Reciprocal structure
 factors normalize charges by the exactly reversible power of two `2^-40`,
 canonically order and compensate their cosine and sine terms, and retain tiny
 phases without perturbing represented charges. Phases use minimum-image positions
-relative to the lexicographically minimum reduced nonzero-charge position, and
-their three axis products use a canonical compensated sum; zero-charge atoms
+relative to the maximum-charge atom, with exact ties resolved by a sorted
+relative-geometry signature, and their three axis products use a canonical compensated sum; zero-charge atoms
 bypass phase construction. Forces
 incorporate each wave component before the structure/phase products, preventing
 a small phase-scaled quotient from underflowing before the wave restores a
@@ -77,6 +78,8 @@ supported subnormal energy and Cartesian force components that are still
 representable. A nonzero-charge real-space pair whose pinned `erfc` or
 exponential result reaches exact zero is rejected with `DampingUnderflow`
 instead of silently discarding a potentially representable scaled interaction.
+Real-space pairs with a signed-zero charge product bypass distance and damping
+checks entirely.
 Subnormal or exact-zero reciprocal exponentials are combined with each undamped
 energy and force in the pinned-log domain. Every completed value that can round
 nonzero is reconstructed; only values below the binary64 half-minimum threshold

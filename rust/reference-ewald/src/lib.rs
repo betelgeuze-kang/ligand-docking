@@ -270,6 +270,11 @@ fn evaluate_real_space(
     let minimum2 = input.settings.minimum_pair_distance_angstrom.powi(2);
     for atom_i in 0..input.positions.len() {
         for atom_j in (atom_i + 1)..input.positions.len() {
+            let charge_product =
+                input.charges_elementary[atom_i] * input.charges_elementary[atom_j];
+            if matches!(charge_product.to_bits(), 0 | 0x8000_0000_0000_0000) {
+                continue;
+            }
             let delta = minimum_image(input.positions[atom_i], input.positions[atom_j], input.cell);
             let distance2 = squared_norm(delta);
             if distance2 < minimum2 {
@@ -283,8 +288,6 @@ fn evaluate_real_space(
             }
             let distance = libm::sqrt(distance2);
             if distance <= input.settings.real_space_cutoff_angstrom {
-                let charge_product =
-                    input.charges_elementary[atom_i] * input.charges_elementary[atom_j];
                 let alpha_distance = alpha * distance;
                 let erfc_value = libm::erfc(alpha_distance);
                 let exponential = libm::exp(-alpha_distance * alpha_distance);
@@ -729,6 +732,11 @@ fn reduce_to_primary_cell(position: Position, cell: OrthorhombicCell) -> [f64; 3
         } else {
             direct_remainder
         };
+        let value = if value < 0.0 || value > length {
+            component.rem_euclid(length)
+        } else {
+            value
+        };
         reduced[axis] = if matches!(value.to_bits(), 0 | 0x8000_0000_0000_0000) {
             0.0
         } else if value.to_bits() == length.to_bits() {
@@ -750,20 +758,69 @@ fn reduce_to_primary_cell(position: Position, cell: OrthorhombicCell) -> [f64; 3
 }
 
 fn canonical_phase_origin(input: &EwaldInput) -> Position {
-    let origin = input
+    let Some(maximum_charge) = input
+        .charges_elementary
+        .iter()
+        .copied()
+        .filter(|charge| *charge != 0.0)
+        .max_by(f64::total_cmp)
+    else {
+        return Position::default();
+    };
+    let candidates = input
+        .charges_elementary
+        .iter()
+        .enumerate()
+        .filter_map(|(atom, &charge)| {
+            (charge.to_bits() == maximum_charge.to_bits()).then_some(atom)
+        })
+        .collect::<Vec<_>>();
+    let atom = if candidates.len() == 1 {
+        candidates[0]
+    } else {
+        candidates
+            .into_iter()
+            .map(|candidate| (candidate, phase_origin_signature(input, candidate)))
+            .min_by(|left, right| compare_phase_origin_signatures(&left.1, &right.1))
+            .expect("a maximum-charge phase-origin candidate exists")
+            .0
+    };
+    input.positions[atom]
+}
+
+fn phase_origin_signature(input: &EwaldInput, origin: usize) -> Vec<(f64, [f64; 3])> {
+    let mut signature = input
         .positions
         .iter()
         .zip(&input.charges_elementary)
-        .filter(|(_, charge)| **charge != 0.0)
-        .map(|(&position, _)| reduce_to_primary_cell(position, input.cell))
-        .min_by(|left, right| {
-            left[0]
-                .total_cmp(&right[0])
-                .then_with(|| left[1].total_cmp(&right[1]))
-                .then_with(|| left[2].total_cmp(&right[2]))
+        .map(|(&position, &charge)| {
+            (
+                charge,
+                minimum_image(position, input.positions[origin], input.cell),
+            )
         })
-        .unwrap_or([0.0; 3]);
-    Position::new(origin[0], origin[1], origin[2])
+        .collect::<Vec<_>>();
+    signature.sort_by(compare_phase_origin_entries);
+    signature
+}
+
+fn compare_phase_origin_entries(left: &(f64, [f64; 3]), right: &(f64, [f64; 3])) -> Ordering {
+    left.0
+        .total_cmp(&right.0)
+        .then_with(|| left.1[0].total_cmp(&right.1[0]))
+        .then_with(|| left.1[1].total_cmp(&right.1[1]))
+        .then_with(|| left.1[2].total_cmp(&right.1[2]))
+}
+
+fn compare_phase_origin_signatures(
+    left: &[(f64, [f64; 3])],
+    right: &[(f64, [f64; 3])],
+) -> Ordering {
+    left.iter()
+        .zip(right)
+        .map(|(left, right)| compare_phase_origin_entries(left, right))
+        .find(|ordering| *ordering != Ordering::Equal)
+        .unwrap_or_else(|| left.len().cmp(&right.len()))
 }
 
 fn pair_correction_displacement(
@@ -897,9 +954,31 @@ fn validate_work_limit(input: &EwaldInput, pair_rule_count: usize) -> Result<(),
                 "reciprocal phase work exceeds addressable capacity",
             )
         })?;
+    let phase_origin_candidate_count = input
+        .charges_elementary
+        .iter()
+        .copied()
+        .filter(|charge| *charge != 0.0)
+        .max_by(f64::total_cmp)
+        .map_or(0, |maximum| {
+            input
+                .charges_elementary
+                .iter()
+                .filter(|charge| charge.to_bits() == maximum.to_bits())
+                .count()
+        });
+    let phase_origin_work = atom_count
+        .checked_mul(phase_origin_candidate_count)
+        .ok_or_else(|| {
+            EwaldError::new(
+                EwaldErrorCode::CapacityExceeded,
+                "phase-origin canonicalization work exceeds addressable capacity",
+            )
+        })?;
     let total_work = pair_count
         .checked_add(pair_rule_count)
         .and_then(|work| work.checked_add(phase_work))
+        .and_then(|work| work.checked_add(phase_origin_work))
         .ok_or_else(|| {
             EwaldError::new(
                 EwaldErrorCode::CapacityExceeded,
