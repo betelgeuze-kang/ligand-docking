@@ -59,6 +59,46 @@ CPU implementations to:
 Only `CppCpuReference` and `RustCpu` contexts are admitted. This slice performs
 no HIP-device execution and records no timing or performance threshold.
 
+## CPU validation successor
+
+The immutable validation successor is
+`config/engine_v2_native_ala3_validation_profile_v1.json`, SHA-256
+`f86f0e256c66e9908bd0f4f25d2e4d1001c93aa115cf1f42e0dc244fdf8802f4`.
+It binds the exact parent profile SHA rather than changing the original
+OpenMM-derived fixture. `observe_development_ala3_validation_v1` executes four
+additional repository-local checks on either admitted CPU backend:
+
+1. all 99 analytic force components are compared with a central finite
+   difference using a `1e-5` Angstrom displacement;
+2. total energy and every force component are compared after the fixed
+   translation `[8, -4, 2]` Angstrom;
+3. the complete system, topology, and parameters are remapped by reversing all
+   33 atom indices and then compared in the original atom order;
+4. zero-velocity Velocity Verlet runs for 256 steps at `0.05` fs and records
+   total-energy drift plus a digest of the complete final state.
+
+The frozen development observation has maximum analytic/finite-difference force
+error `3.10906909106734e-8` kcal/mol/Angstrom, translation energy/force errors
+`4.973799150320701e-14` kcal/mol and `2.2382096176443156e-12`
+kcal/mol/Angstrom, permutation energy/force errors
+`5.684341886080802e-14` kcal/mol and `1.4210854715202004e-14`
+kcal/mol/Angstrom, and signed 256-step energy drift
+`-4.541147624088637e-4` kcal/mol. C++ reference and Rust CPU observations,
+final-state digests, and backend-independent observation receipts are bitwise
+identical; separately tagged backend receipts are independently rederived.
+
+The observation receipt hashes, in order, the observation schema UTF-8 bytes,
+the parent and validation profile digests, the little-endian `u64` component
+count, the nine public floating-point observations as little-endian binary64
+bits in struct order, the little-endian `u64` NVE step count, and the final
+state digest. The backend receipt hashes its schema bytes, the observation
+digest, the little-endian tag length, and either `cpp_cpu_reference` or
+`rust_cpu`. Tests rebuild both byte streams separately from the production
+helpers.
+
+These are deterministic tiny-fixture validation values, not an equilibrium,
+long-timescale, performance, or production-MD result.
+
 ## Authority boundary
 
 The profile explicitly leaves general peptide parameter assignment,
