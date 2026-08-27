@@ -402,6 +402,11 @@ fn evaluate_pair_corrections(
             if pair_scale.to_bits() == 1.0_f64.to_bits() {
                 continue;
             }
+            let charge_product =
+                input.charges_elementary[atom_i] * input.charges_elementary[atom_j];
+            if matches!(charge_product.to_bits(), 0 | 0x8000_0000_0000_0000) {
+                continue;
+            }
             let delta = pair_correction_displacement(
                 input.positions[atom_i],
                 input.positions[atom_j],
@@ -409,8 +414,6 @@ fn evaluate_pair_corrections(
             )?;
             let distance2 = squared_norm(delta);
             let distance = distance2.sqrt();
-            let charge_product =
-                input.charges_elementary[atom_i] * input.charges_elementary[atom_j];
             let correction_scale = pair_scale - 1.0;
             checked_add(
                 &mut result.energy.pair_correction_kcal_per_mol,

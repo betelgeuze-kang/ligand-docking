@@ -283,6 +283,27 @@ fn scale_one_pair_rule_is_a_noop_before_half_cell_image_selection() {
 }
 
 #[test]
+fn zero_charge_pair_rule_is_a_noop_before_half_cell_image_selection() {
+    let mut base = EwaldInput::new(
+        vec![Position::new(0.0, 1.0, 1.0), Position::new(5.0, 1.0, 1.0)],
+        vec![0.0, 0.0],
+        OrthorhombicCell {
+            lengths_angstrom: [10.0, 12.0, 14.0],
+        },
+    );
+    base.settings.real_space_cutoff_angstrom = 4.9;
+    let expected = evaluate(&base).expect("base zero-charge pair is valid");
+    base.exclusions.push(PairExclusion {
+        atom_i: 0,
+        atom_j: 1,
+    });
+    assert_eq!(
+        evaluate(&base).expect("zero-charge correction is semantically neutral"),
+        expected
+    );
+}
+
+#[test]
 fn near_half_cell_real_space_pair_is_antisymmetric_under_atom_swap() {
     let below_half = f64::from_bits(1.5_f64.to_bits() - 1);
     let mut input = EwaldInput::new(

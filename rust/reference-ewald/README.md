@@ -29,7 +29,8 @@ strictly above or below the half-cell boundary. An exact real-space tie uses the
 canonical positive primary-cell representation. An exact half-cell local pair
 correction is rejected because a single-image force cannot preserve both
 common-translation and atom-permutation invariance. A pair scale of exactly one
-is a semantic no-op and skips local-correction image selection.
+or any pair rule involving a zero charge is a semantic no-op and skips local-
+correction image selection.
 
 Neutrality is checked with a canonical order and Neumaier compensated sum.
 Cell volume multiplies sorted minimum and maximum lengths before the middle

@@ -17,7 +17,7 @@
     "native_abi_version_allocated": false,
     "external_md_engine_dependency": false,
     "fixed64_cpu_v7_source_closure_modified": false,
-    "source_sha256": "5d593ce32c875ba07b8ebcdbb0394a1bb27ca8a28dd3c03a3a87db9fa7230f99",
+    "source_sha256": "c09929b0d5e31f10a6d06e61f1917f671891f8a7e8df989db8a9ff100a1cfc43",
     "frozen_fixture_sha256": "4911f62b37a26d31cdc76f62775da6e284d8e83fe0b3b3d9514a8e96c4a489e2",
     "cargo_lock_sha256": "cc64500cc1c97dfda26a8a4c8b8825c5296935f1e63cbaf61676a321364b3d9d"
   },
@@ -54,7 +54,8 @@
     "coordinate_reduction": "per_axis_rem_euclid_primary_cell_with_zero_or_rounded_upper_boundary_canonicalized_to_positive_zero",
     "cell_volume_multiplication_order": "sorted_minimum_times_maximum_then_middle",
     "pair_correction_half_cell_tie": "typed_rejection_ambiguous_pair_correction_image",
-    "unit_pair_scale": "semantic_noop_before_pair_correction_image_selection"
+    "unit_pair_scale": "semantic_noop_before_pair_correction_image_selection",
+    "zero_charge_pair_rule": "semantic_noop_before_pair_correction_image_selection"
   },
   "numeric_envelope": {
     "maximum_absolute_coordinate_angstrom": 1e12,
@@ -103,6 +104,7 @@
     "scaled_pair_correction": true,
     "half_cell_pair_correction_typed_rejection": true,
     "unit_pair_scale_noop_before_image_selection": true,
+    "zero_charge_pair_rule_noop_before_image_selection": true,
     "near_half_cell_atom_swap_invariance": true,
     "rounded_primary_cell_upper_boundary_canonicalization": true,
     "numeric_envelope_typed_rejection": true,

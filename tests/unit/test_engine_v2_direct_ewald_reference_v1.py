@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PROFILE_PATH = ROOT / "config/engine_v2_direct_ewald_reference_profile_v1.json"
 CRATE = ROOT / "rust/reference-ewald"
-PROFILE_SHA256 = "684249abf9948dfd406da96581a6c0c746b8bcdeb5ff1162b3505fe64016728c"
+PROFILE_SHA256 = "f68ba0f048a770c77eb05126ff6e7e52a0bd688ad0a2b8a69e8658cf3fe26041"
 
 
 def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
@@ -44,7 +44,7 @@ def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
         "external_md_engine_dependency": False,
         "fixed64_cpu_v7_source_closure_modified": False,
         "source_sha256": (
-            "5d593ce32c875ba07b8ebcdbb0394a1bb27ca8a28dd3c03a3a87db9fa7230f99"
+            "c09929b0d5e31f10a6d06e61f1917f671891f8a7e8df989db8a9ff100a1cfc43"
         ),
         "frozen_fixture_sha256": (
             "4911f62b37a26d31cdc76f62775da6e284d8e83fe0b3b3d9514a8e96c4a489e2"
@@ -112,6 +112,9 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
             "typed_rejection_ambiguous_pair_correction_image"
         ),
         "unit_pair_scale": (
+            "semantic_noop_before_pair_correction_image_selection"
+        ),
+        "zero_charge_pair_rule": (
             "semantic_noop_before_pair_correction_image_selection"
         ),
     }

@@ -24,7 +24,8 @@ An exact half-cell real-space tie uses the canonical positive primary-cell
 representation. An exact half-cell local pair correction is rejected with a
 typed `AmbiguousPairCorrectionImage` error because no single-image force
 direction can preserve both translation and permutation invariance. A unit pair
-scale is a semantic no-op and skips that image selection entirely.
+scale or any pair rule involving a zero charge is a semantic no-op and skips
+that image selection entirely.
 
 The scalar contract admits a bounded physical/numerical envelope: coordinates
 through `1e12` angstrom; cell lengths from `1e-6` through `1e9` angstrom;
@@ -48,10 +49,11 @@ checked against central finite differences. Additional properties cover global
 translation, integer images, complete atom permutation, global charge
 inversion, near-zero net force, bitwise repetition, reciprocal-bound
 convergence, near-half-cell atom swaps, rounded upper-bound primary-cell
-reduction, unit-scale no-ops, the numeric envelope, and typed malformed inputs.
+reduction, unit-scale and zero-charge no-ops, the numeric envelope, and typed
+malformed inputs.
 
 The exact profile SHA-256 is
-`684249abf9948dfd406da96581a6c0c746b8bcdeb5ff1162b3505fe64016728c`.
+`f68ba0f048a770c77eb05126ff6e7e52a0bd688ad0a2b8a69e8658cf3fe26041`.
 The profile separately binds the evaluator source, frozen fixture, and
 standalone Cargo lockfile hashes.
 
