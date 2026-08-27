@@ -1,0 +1,89 @@
+name: ci-engine-v2-direct-ewald-reference
+
+on:
+  pull_request:
+    paths:
+      - "rust/reference-ewald/**"
+      - "config/engine_v2_direct_ewald_reference_profile_v1.json"
+      - "docs/engine_v2_direct_ewald_reference_v1.md"
+      - "tests/unit/test_engine_v2_direct_ewald_reference_v1.py"
+      - ".github/workflows/ci-engine-v2-direct-ewald-reference.yml"
+  push:
+    branches: ["main"]
+    paths:
+      - "rust/reference-ewald/**"
+      - "config/engine_v2_direct_ewald_reference_profile_v1.json"
+      - "docs/engine_v2_direct_ewald_reference_v1.md"
+      - "tests/unit/test_engine_v2_direct_ewald_reference_v1.py"
+      - ".github/workflows/ci-engine-v2-direct-ewald-reference.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-engine-v2-direct-ewald-reference-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scalar-reference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CUDA_VISIBLE_DEVICES: ""
+      HIP_VISIBLE_DEVICES: ""
+      ROCR_VISIBLE_DEVICES: ""
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          clean: true
+          fetch-depth: 1
+          sparse-checkout: |
+            LICENSE
+            rust/reference-ewald
+            config/engine_v2_direct_ewald_reference_profile_v1.json
+            docs/engine_v2_direct_ewald_reference_v1.md
+            tests/unit/test_engine_v2_direct_ewald_reference_v1.py
+            rust/Cargo.toml
+          sparse-checkout-cone-mode: false
+
+      - name: Report toolchains
+        run: |
+          rustc --version
+          cargo --version
+          python3 --version
+
+      - name: Format and lint standalone scalar reference
+        run: |
+          cargo fmt --manifest-path rust/reference-ewald/Cargo.toml --all -- --check
+          cargo clippy --manifest-path rust/reference-ewald/Cargo.toml \
+            --all-targets --locked -- -D warnings
+
+      - name: Test debug and release scalar reference
+        run: |
+          cargo test --manifest-path rust/reference-ewald/Cargo.toml \
+            --all-targets --locked
+          cargo test --release --manifest-path rust/reference-ewald/Cargo.toml \
+            --all-targets --locked
+
+      - name: Require debug and release frozen observation identity
+        shell: bash
+        run: |
+          observation_dir="$(mktemp -d)"
+          cargo run --quiet --manifest-path rust/reference-ewald/Cargo.toml \
+            --example profile_observation --locked > "$observation_dir/debug.txt"
+          cargo run --quiet --release \
+            --manifest-path rust/reference-ewald/Cargo.toml \
+            --example profile_observation --locked > "$observation_dir/release.txt"
+          diff -u "$observation_dir/debug.txt" "$observation_dir/release.txt"
+          test "$(wc -l < "$observation_dir/debug.txt")" -eq 22
+
+      - name: Verify immutable profile and claim boundary
+        run: |
+          python3 -m pip install pytest==8.3.5
+          python3 -m json.tool \
+            config/engine_v2_direct_ewald_reference_profile_v1.json >/dev/null
+          python3 -m pytest -q \
+            tests/unit/test_engine_v2_direct_ewald_reference_v1.py
