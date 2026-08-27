@@ -311,6 +311,11 @@ fn evaluate_reciprocal_space(
     let reciprocal_force_factor = coulomb_scale * 4.0 * core::f64::consts::PI / volume;
     let alpha = input.settings.alpha_per_angstrom;
     let max_indices = input.settings.reciprocal_max_indices;
+    let reduced_positions = input
+        .positions
+        .iter()
+        .map(|position| reduce_to_primary_cell(*position, input.cell))
+        .collect::<Vec<_>>();
     for nx in -max_indices[0]..=max_indices[0] {
         for ny in -max_indices[1]..=max_indices[1] {
             for nz in -max_indices[2]..=max_indices[2] {
@@ -326,11 +331,12 @@ fn evaluate_reciprocal_space(
                 let damping = (-wave2 / (4.0 * alpha * alpha)).exp() / wave2;
                 let mut structure_cos = 0.0;
                 let mut structure_sin = 0.0;
-                for atom in 0..input.positions.len() {
-                    let phase = dot(wave, input.positions[atom].components());
+                for (&charge, &position) in input.charges_elementary.iter().zip(&reduced_positions)
+                {
+                    let phase = dot(wave, position);
                     let (phase_sin, phase_cos) = phase.sin_cos();
-                    structure_cos += input.charges_elementary[atom] * phase_cos;
-                    structure_sin += input.charges_elementary[atom] * phase_sin;
+                    structure_cos += charge * phase_cos;
+                    structure_sin += charge * phase_sin;
                 }
                 checked_add(
                     &mut result.energy.reciprocal_space_kcal_per_mol,
@@ -339,11 +345,16 @@ fn evaluate_reciprocal_space(
                         * (structure_cos * structure_cos + structure_sin * structure_sin),
                     "reciprocal-space energy",
                 )?;
-                for (atom, force) in result.forces_kcal_per_mol_angstrom.iter_mut().enumerate() {
-                    let phase = dot(wave, input.positions[atom].components());
+                for ((force, &charge), &position) in result
+                    .forces_kcal_per_mol_angstrom
+                    .iter_mut()
+                    .zip(&input.charges_elementary)
+                    .zip(&reduced_positions)
+                {
+                    let phase = dot(wave, position);
                     let (phase_sin, phase_cos) = phase.sin_cos();
                     let factor = reciprocal_force_factor
-                        * input.charges_elementary[atom]
+                        * charge
                         * damping
                         * (structure_cos * phase_sin - structure_sin * phase_cos);
                     for axis in 0..3 {
@@ -575,8 +586,8 @@ fn canonical_pair(
 }
 
 fn minimum_image(first: Position, second: Position, cell: OrthorhombicCell) -> [f64; 3] {
-    let first = first.components();
-    let second = second.components();
+    let first = reduce_to_primary_cell(first, cell);
+    let second = reduce_to_primary_cell(second, cell);
     let mut delta = [0.0; 3];
     for axis in 0..3 {
         let length = cell.lengths_angstrom[axis];
@@ -584,6 +595,16 @@ fn minimum_image(first: Position, second: Position, cell: OrthorhombicCell) -> [
         delta[axis] = raw - length * (raw / length + 0.5).floor();
     }
     delta
+}
+
+fn reduce_to_primary_cell(position: Position, cell: OrthorhombicCell) -> [f64; 3] {
+    let components = position.components();
+    let mut reduced = [0.0; 3];
+    for axis in 0..3 {
+        let value = components[axis].rem_euclid(cell.lengths_angstrom[axis]);
+        reduced[axis] = if value == 0.0 { 0.0 } else { value };
+    }
+    reduced
 }
 
 fn dot(first: [f64; 3], second: [f64; 3]) -> f64 {

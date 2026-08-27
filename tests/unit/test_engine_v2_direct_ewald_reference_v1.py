@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PROFILE_PATH = ROOT / "config/engine_v2_direct_ewald_reference_profile_v1.json"
 CRATE = ROOT / "rust/reference-ewald"
-PROFILE_SHA256 = "d227eb902081a092adc5cfd59aaaf26f54a77ab66b815e2f7a7dbf31e8a3dbbc"
+PROFILE_SHA256 = "5d0d46f737edd30f86a20346371198d1ca158b57841416098d44caa7d593b439"
 
 
 def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
@@ -44,7 +44,7 @@ def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
         "external_md_engine_dependency": False,
         "fixed64_cpu_v7_source_closure_modified": False,
         "source_sha256": (
-            "5e69d09294c25efbbe4478e8a95b959df6b9248afbade967f771790d8d326ede"
+            "b27b0c4e417ff7ce4e5d7faa6889f2d595db78c18274a500b2ff29d4632302f0"
         ),
         "frozen_fixture_sha256": (
             "4911f62b37a26d31cdc76f62775da6e284d8e83fe0b3b3d9514a8e96c4a489e2"
@@ -89,6 +89,9 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
         ),
         "minimum_image_interval": (
             "half_open_negative_half_length_to_positive_half_length"
+        ),
+        "coordinate_reduction": (
+            "per_axis_rem_euclid_primary_cell_with_positive_zero"
         ),
     }
     observation = profile["frozen_observation"]

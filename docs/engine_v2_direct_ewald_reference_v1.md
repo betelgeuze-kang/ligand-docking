@@ -13,6 +13,11 @@ bounds, traversal order, minimum-image tie rule, exclusions, and Coulomb pair
 scales. The result separates real, reciprocal, self, and local pair-correction
 energies and returns analytic forces for every atom.
 
+All positions are reduced per axis into the primary cell before minimum-image
+subtraction and reciprocal phase construction. This prevents trigonometric
+range-reduction drift for long unwrapped trajectories; the property suite
+includes an image displaced by one million box lengths.
+
 The immutable profile is
 `config/engine_v2_direct_ewald_reference_profile_v1.json`. Its four-charge
 fixture includes one excluded pair and one half-scaled pair. Debug and release
@@ -23,7 +28,7 @@ inversion, near-zero net force, bitwise repetition, reciprocal-bound
 convergence, and typed malformed inputs.
 
 The exact profile SHA-256 is
-`d227eb902081a092adc5cfd59aaaf26f54a77ab66b815e2f7a7dbf31e8a3dbbc`.
+`5d0d46f737edd30f86a20346371198d1ca158b57841416098d44caa7d593b439`.
 The profile separately binds the evaluator source, frozen fixture, and
 standalone Cargo lockfile hashes.
 

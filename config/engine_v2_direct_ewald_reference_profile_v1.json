@@ -17,7 +17,7 @@
     "native_abi_version_allocated": false,
     "external_md_engine_dependency": false,
     "fixed64_cpu_v7_source_closure_modified": false,
-    "source_sha256": "5e69d09294c25efbbe4478e8a95b959df6b9248afbade967f771790d8d326ede",
+    "source_sha256": "b27b0c4e417ff7ce4e5d7faa6889f2d595db78c18274a500b2ff29d4632302f0",
     "frozen_fixture_sha256": "4911f62b37a26d31cdc76f62775da6e284d8e83fe0b3b3d9514a8e96c4a489e2",
     "cargo_lock_sha256": "cc64500cc1c97dfda26a8a4c8b8825c5296935f1e63cbaf61676a321364b3d9d"
   },
@@ -46,7 +46,8 @@
     "neutrality_tolerance_elementary": 1e-12,
     "real_pair_order": "lexicographic_i_then_j",
     "reciprocal_vector_order": "nx_then_ny_then_nz_ascending_inclusive_omit_zero",
-    "minimum_image_interval": "half_open_negative_half_length_to_positive_half_length"
+    "minimum_image_interval": "half_open_negative_half_length_to_positive_half_length",
+    "coordinate_reduction": "per_axis_rem_euclid_primary_cell_with_positive_zero"
   },
   "frozen_observation": {
     "real_space_kcal_per_mol": -0.11800195657683102,

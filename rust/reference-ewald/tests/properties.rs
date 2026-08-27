@@ -114,6 +114,16 @@ fn translation_images_permutation_and_charge_inversion_are_invariant() {
         5.0e-12,
     );
 
+    let mut distant_images = input.clone();
+    distant_images.positions[0].x_angstrom += 1_000_000.0 * input.cell.lengths_angstrom[0];
+    distant_images.positions[0].y_angstrom -= 1_000_000.0 * input.cell.lengths_angstrom[1];
+    distant_images.positions[0].z_angstrom += 1_000_000.0 * input.cell.lengths_angstrom[2];
+    assert_evaluation_close(
+        &evaluate(&distant_images).expect("distant integer images are valid"),
+        &expected,
+        5.0e-12,
+    );
+
     let order = [3_usize, 2, 1, 0];
     let mut old_to_new = [0_usize; 4];
     for (new, old) in order.iter().copied().enumerate() {
