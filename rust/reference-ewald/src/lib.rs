@@ -304,11 +304,15 @@ fn evaluate_real_space(
                     "real-space energy",
                 )?;
 
-                let radial_force_magnitude = charge_prefactor * erfc_value / distance2
-                    + charge_prefactor
-                        * (2.0 * alpha / libm::sqrt(core::f64::consts::PI))
-                        * exponential
-                        / distance;
+                let gaussian_prefactor =
+                    charge_prefactor * (2.0 * alpha / libm::sqrt(core::f64::consts::PI));
+                let radial_force_magnitude = if distance < 1.0 {
+                    charge_prefactor * (erfc_value / distance2)
+                        + gaussian_prefactor * (exponential / distance)
+                } else {
+                    charge_prefactor * erfc_value / distance2
+                        + gaussian_prefactor * exponential / distance
+                };
                 add_radial_pair_force(
                     &mut result.forces_kcal_per_mol_angstrom,
                     atom_i,
@@ -376,13 +380,18 @@ fn evaluate_reciprocal_space(
                 {
                     let phase = dot(wave, position);
                     let (phase_sin, phase_cos) = libm::sincos(phase);
-                    let undamped_factor = (reciprocal_force_factor / wave2)
-                        * charge
-                        * (structure_cos * phase_sin - structure_sin * phase_cos);
                     for axis in 0..3 {
                         checked_add(
                             &mut force[axis],
-                            undamped_factor * wave[axis] * exponential,
+                            scaled_reciprocal_force_component(
+                                reciprocal_force_factor,
+                                wave[axis],
+                                wave2,
+                                charge,
+                                (structure_cos, structure_sin),
+                                (phase_sin, phase_cos),
+                                exponential,
+                            ),
                             "reciprocal force",
                         )?;
                     }
@@ -689,7 +698,7 @@ fn reduce_to_primary_cell(position: Position, cell: OrthorhombicCell) -> [f64; 3
             0.0
         } else if value.to_bits() == length.to_bits() {
             let signed_residual = component % length;
-            if signed_residual.abs() < MIN_SUPPORTED_PAIR_DISTANCE_ANGSTROM {
+            if matches!(signed_residual.to_bits(), 0 | 0x8000_0000_0000_0000) {
                 0.0
             } else {
                 signed_residual
@@ -837,6 +846,21 @@ fn squared_norm(vector: [f64; 3]) -> f64 {
     dot(vector, vector)
 }
 
+fn scaled_reciprocal_force_component(
+    reciprocal_force_factor: f64,
+    wave_component: f64,
+    wave2: f64,
+    charge: f64,
+    structure_cos_sin: (f64, f64),
+    phase_sin_cos: (f64, f64),
+    exponential: f64,
+) -> f64 {
+    let prefactor = reciprocal_force_factor * wave_component / wave2 * charge;
+    (prefactor * structure_cos_sin.0 * phase_sin_cos.0
+        - prefactor * structure_cos_sin.1 * phase_sin_cos.1)
+        * exponential
+}
+
 fn add_pair_force(
     forces: &mut [[f64; 3]],
     atom_i: usize,
@@ -901,8 +925,8 @@ fn invalid_parameter(detail: impl Into<String>) -> EwaldError {
 mod tests {
     use super::{
         accurate_order_independent_sum, cell_volume, evaluate_real_space, minimum_image,
-        reduce_to_primary_cell, validate, EwaldEnergyComponents, EwaldEvaluation, EwaldInput,
-        OrthorhombicCell, Position, COULOMB_KCAL_ANGSTROM_PER_MOL_E2,
+        reduce_to_primary_cell, scaled_reciprocal_force_component, validate, EwaldEnergyComponents,
+        EwaldEvaluation, EwaldInput, OrthorhombicCell, Position, COULOMB_KCAL_ANGSTROM_PER_MOL_E2,
     };
 
     #[test]
@@ -919,12 +943,12 @@ mod tests {
     }
 
     #[test]
-    fn primary_cell_reduction_canonicalizes_rounded_upper_boundary() {
+    fn primary_cell_reduction_preserves_rounded_signed_residual() {
         let cell = OrthorhombicCell {
             lengths_angstrom: [10.0, 12.0, 14.0],
         };
         let reduced = reduce_to_primary_cell(Position::new(-1.0e-16, 0.0, 0.0), cell);
-        assert_eq!(reduced[0].to_bits(), 0.0_f64.to_bits());
+        assert_eq!(reduced[0].to_bits(), (-1.0e-16_f64).to_bits());
     }
 
     #[test]
@@ -979,6 +1003,57 @@ mod tests {
         .expect("real-space evaluation remains finite");
         assert!(result.energy.real_space_kcal_per_mol.is_subnormal());
         assert!(result.energy.real_space_kcal_per_mol.is_sign_negative());
+    }
+
+    #[test]
+    fn strongly_damped_subunit_real_force_remains_representable() {
+        let mut input = EwaldInput::new(
+            vec![Position::default(), Position::new(2.62e-5, 0.0, 0.0)],
+            vec![1.0e-12, -1.0e-12],
+            OrthorhombicCell {
+                lengths_angstrom: [1.0; 3],
+            },
+        );
+        input.settings.alpha_per_angstrom = 1.0e6;
+        input.settings.real_space_cutoff_angstrom = 2.62e-5;
+        input.settings.dielectric = 1.0e12;
+        validate(&input).expect("subunit force fixture is inside the numeric envelope");
+        let mut result = EwaldEvaluation {
+            energy: EwaldEnergyComponents::default(),
+            forces_kcal_per_mol_angstrom: vec![[0.0; 3]; 2],
+        };
+        evaluate_real_space(
+            &input,
+            COULOMB_KCAL_ANGSTROM_PER_MOL_E2 / input.settings.dielectric,
+            &mut result,
+        )
+        .expect("real-space evaluation remains finite");
+        assert!(result.forces_kcal_per_mol_angstrom[0][0].is_subnormal());
+        assert!(result.forces_kcal_per_mol_angstrom[0][0].is_sign_positive());
+    }
+
+    #[test]
+    fn reciprocal_wave_scaling_rescues_a_representable_subnormal_force() {
+        let reciprocal_force_factor =
+            COULOMB_KCAL_ANGSTROM_PER_MOL_E2 * 4.0 * core::f64::consts::PI / 1.0e24;
+        let wave_component = core::f64::consts::TAU / 1.0e-6;
+        let wave2 = wave_component * wave_component;
+        let phase_sin = 6.0e-291;
+        let exponential = libm::exp(-wave2 / (4.0 * 1.0e12));
+        let underflowed_old_order =
+            (reciprocal_force_factor / wave2) * phase_sin * wave_component * exponential;
+        let force = scaled_reciprocal_force_component(
+            reciprocal_force_factor,
+            wave_component,
+            wave2,
+            1.0,
+            (1.0, 0.0),
+            (phase_sin, 1.0),
+            exponential,
+        );
+        assert_eq!(underflowed_old_order.to_bits(), 0.0_f64.to_bits());
+        assert!(force.is_subnormal());
+        assert!(force.is_sign_positive());
     }
 
     #[test]

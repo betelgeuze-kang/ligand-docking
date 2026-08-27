@@ -402,6 +402,27 @@ fn supported_negative_boundary_residual_is_not_collapsed_to_zero() {
 }
 
 #[test]
+fn multidimensional_rounded_boundary_translation_is_invariant() {
+    let mut input = EwaldInput::new(
+        vec![
+            Position::new(-5.0e-9, 0.0, 0.0),
+            Position::new(0.0, 2.0e-8, 0.0),
+        ],
+        vec![1.0, -1.0],
+        OrthorhombicCell {
+            lengths_angstrom: [1.0e9; 3],
+        },
+    );
+    input.settings.real_space_cutoff_angstrom = 1.0;
+    let expected = evaluate(&input).expect("boundary fixture is valid");
+    for position in &mut input.positions {
+        position.x_angstrom += 5.0e-9;
+    }
+    let translated = evaluate(&input).expect("translated boundary fixture is valid");
+    assert_evaluation_close(&translated, &expected, 3.0e-12);
+}
+
+#[test]
 fn reciprocal_scaling_preserves_representable_damped_terms() {
     let mut input = EwaldInput::new(
         vec![Position::default(), Position::new(2.5e-7, 0.0, 0.0)],

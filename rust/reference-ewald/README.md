@@ -25,8 +25,8 @@ the negative configured maximum through the positive maximum, omitting only
 zero. Forces are analytic negative energy gradients accumulated in the same
 order. Positions are first reduced toward the primary cell; a supported
 negative boundary residual that `rem_euclid` rounds to the upper boundary is
-preserved, while residuals below the `1e-8` angstrom minimum-distance resolution
-canonicalize to zero. Real-space minimum images then subtract or add one box
+preserved regardless of magnitude; only an actual signed zero is canonicalized
+to positive zero. Real-space minimum images then subtract or add one box
 length only when the exact expanded displacement is above or below the
 half-cell boundary. Exact real-space ties retain atom-order antisymmetry. An exact half-cell local pair
 correction is rejected because a single-image force cannot preserve both
@@ -54,15 +54,15 @@ These bounds keep charge products and squared minimum-distance checks normal
 before any inverse-distance operation.
 
 All exponential, sine/cosine, complementary-error-function, and square-root
-operations use the exactly pinned `libm` 0.2.16 dependency. Reciprocal energy
-and force terms multiply their undamped prefactor and structure factors before
-the exponential, preventing an intermediate damping quotient from underflowing
-when the completed term remains representable.
+operations use the exactly pinned `libm` 0.2.16 dependency. Reciprocal forces
+incorporate each wave component before the structure/phase products and pinned
+exponential, preventing a small phase-scaled quotient from underflowing before
+the wave component restores a representable result.
 Real-space energy divides `erfc` first for sub-unit distances and multiplies the
-Coulomb/charge prefactor first otherwise. Force magnitudes apply the prefactor
-to each damping term before distance division and use a distance-adaptive
-component order, preserving supported subnormal energy and Cartesian force
-components that are still representable.
+Coulomb/charge prefactor first otherwise. Force magnitudes use distance-adaptive
+damping division and distance-adaptive Cartesian component scaling, preserving
+supported subnormal energy and Cartesian force components that are still
+representable.
 
 `fixtures/direct_ewald_v1.tsv` freezes all four energy components, their total,
 and all 12 force components as IEEE-754 bit patterns. The observation example

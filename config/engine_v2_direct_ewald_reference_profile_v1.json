@@ -19,8 +19,8 @@
     "native_abi_version_allocated": false,
     "external_md_engine_dependency": false,
     "fixed64_cpu_v7_source_closure_modified": false,
-    "source_sha256": "1179a63cdb2467010f0af97079aeb3bfd2db8e80f6a48659ab7fbbeb58a9755e",
-    "frozen_fixture_sha256": "0c0c21f69752af020308d859f6ffffdf0381b073a233935645a5a1b08f81f71d",
+    "source_sha256": "e02d25fb1a71d48b88baf7f40bff6e0368cecdbae4b9a642ec4b6bb89d4d6329",
+    "frozen_fixture_sha256": "3b7d105983c074d304657fa5188100b585eb7e416dda88a49a3098707dccc802",
     "cargo_lock_sha256": "cc64500cc1c97dfda26a8a4c8b8825c5296935f1e63cbaf61676a321364b3d9d"
   },
   "fixture": {
@@ -54,18 +54,17 @@
     "minimum_image_interval": "closed_negative_half_length_to_positive_half_length_with_atom_order_antisymmetric_exact_tie",
     "minimum_image_selection": "error_free_separation_comparison_after_periodic_reduction",
     "exact_half_tie_detection": "error_free_two_difference_expansion_compared_with_half_before_rounded_coordinate_difference",
-    "coordinate_reduction": "per_axis_rem_euclid_with_subminimum_rounded_upper_residual_to_positive_zero_and_supported_negative_residual_preserved",
+    "coordinate_reduction": "per_axis_rem_euclid_with_rounded_upper_boundary_recovered_as_nonzero_signed_residual_and_signed_zero_canonicalized",
     "cell_volume_multiplication_order": "sorted_minimum_times_maximum_then_middle",
     "pair_correction_half_cell_tie": "typed_rejection_ambiguous_pair_correction_image",
     "unit_pair_scale": "semantic_noop_before_pair_correction_image_selection",
     "zero_charge_pair_rule": "semantic_noop_before_pair_correction_image_selection",
-    "reciprocal_damping_order": "undamped_prefactor_and_structure_or_force_products_before_pinned_exponential",
+    "reciprocal_damping_order": "wave_scaled_prefactor_before_structure_phase_combination_then_pinned_exponential",
     "real_space_energy_order": "charge_prefactor_times_erfc_over_distance_for_subunit_distance_else_charge_prefactor_times_erfc_then_divide",
-    "real_space_force_order": "charge_prefactor_times_damping_before_distance_division_with_distance_adaptive_component_scaling"
+    "real_space_force_order": "distance_adaptive_damping_division_then_distance_adaptive_cartesian_component_scaling"
   },
   "numeric_envelope": {
     "maximum_absolute_coordinate_angstrom": 1e12,
-    "minimum_preserved_wrapped_residual_angstrom": 1e-8,
     "cell_length_angstrom": {"minimum": 1e-6, "maximum": 1e9},
     "nonzero_absolute_charge_elementary": {"minimum": 1e-12, "maximum": 16.0},
     "alpha_per_angstrom": {"minimum": 1e-12, "maximum": 1e6},
@@ -89,7 +88,7 @@
       "pair_correction": "4031acb81f3a00d4",
       "total": "c01840981bfe6b10"
     },
-    "maximum_central_finite_difference_force_error_kcal_per_mol_angstrom": 1.1746751071850525e-8,
+    "maximum_central_finite_difference_force_error_kcal_per_mol_angstrom": 1.1746751182872828e-8,
     "central_finite_difference_step_angstrom": 1e-5,
     "reciprocal_bound_absolute_total_difference_from_bound_9_kcal_per_mol": {
       "bound_3": 0.21813662961478286,
@@ -113,11 +112,14 @@
     "unit_pair_scale_noop_before_image_selection": true,
     "zero_charge_pair_rule_noop_before_image_selection": true,
     "near_half_cell_atom_swap_invariance": true,
-    "rounded_primary_cell_upper_boundary_canonicalization": true,
+    "every_nonzero_signed_boundary_residual_preserved": true,
+    "multidimensional_boundary_translation_invariance": true,
     "rounded_difference_not_misclassified_as_exact_half_tie": true,
     "pinned_transcendental_fixture_bits": true,
     "representable_reciprocal_damping_retained": true,
     "representable_real_space_damping_retained": true,
+    "representable_subunit_radial_force_retained": true,
+    "reciprocal_wave_rescue_before_phase_underflow": true,
     "numeric_envelope_typed_rejection": true,
     "neutrality_permutation_independent": true,
     "cell_volume_axis_order_independent": true,

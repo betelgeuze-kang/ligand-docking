@@ -17,9 +17,9 @@ All positions are reduced per axis before minimum-image subtraction and
 reciprocal phase construction. This prevents trigonometric range-reduction
 drift for long unwrapped trajectories; the property suite includes an image
 displaced by one million box lengths. If `rem_euclid` rounds a supported
-negative boundary residual up to the cell length, the signed residual is
-preserved instead of collapsing a distinct position to zero. Residuals below
-the frozen `1e-8` angstrom minimum-distance resolution canonicalize to zero.
+negative boundary residual up to the cell length, every nonzero signed residual
+is recovered instead of collapsing a distinct position to zero. Only an actual
+signed zero is canonicalized to positive zero.
 
 Real-space image selection uses an error-free separation comparison after
 periodic reduction, preserving atom-swap antisymmetry on both sides of and at
@@ -41,16 +41,15 @@ distance arithmetic while preserving the frozen ordinary-input operation order.
 
 Every exponential, sine/cosine pair, complementary error function, and square
 root is supplied by the exactly pinned `libm` 0.2.16 dependency rather than a
-platform standard-library implementation. Reciprocal terms multiply the
-undamped prefactor and structure/force factors before the pinned exponential,
-retaining contributions whose intermediate `exp(exponent)/wave²` would
-underflow even though the final energy or force is representable.
+platform standard-library implementation. Reciprocal force terms incorporate
+each wave component before the structure/phase products and pinned exponential,
+retaining contributions whose phase-scaled quotient would underflow before a
+large wave component restores a representable result.
 Real-space energy divides `erfc` first for sub-unit distances and multiplies the
-charge/Coulomb prefactor first otherwise. Radial forces multiply that prefactor
-by each damping term before distance division, then use a distance-adaptive
-component order. This retains supported strongly damped energy/forces and
-subnormal Cartesian force components whenever the completed value is
-representable.
+charge/Coulomb prefactor first otherwise. Radial forces use distance-adaptive
+damping division and then distance-adaptive Cartesian component scaling. This
+retains supported strongly damped energy/forces and subnormal Cartesian force
+components whenever the completed value is representable.
 
 Neutrality uses a canonical absolute-magnitude/total order and Neumaier
 compensated sum, avoiding input-order-dependent admission. Cell volume uses a
@@ -67,15 +66,16 @@ produce identical frozen IEEE-754 values. All 12 analytic force components are
 checked against central finite differences. Additional properties cover global
 translation, integer images, complete atom permutation, global charge
 inversion, near-zero net force, bitwise repetition, reciprocal-bound
-convergence, near-half-cell atom swaps, rounded upper-bound primary-cell
-reduction, retained supported negative boundary residuals, rounded-difference
-tie classification, representable reciprocal damping, representable strongly
-damped real energy/forces, subnormal Cartesian force components, unit-scale and
-zero-charge no-ops, the numeric envelope, and typed malformed inputs. The exact
-force bits are those of the pinned math and operation-order contract.
+convergence, near-half-cell atom swaps, preservation of every rounded nonzero
+signed boundary residual, multidimensional boundary translation invariance,
+rounded-difference tie classification, reciprocal wave rescue before phase
+underflow, representable strongly damped real energy/forces, subnormal Cartesian
+force components, unit-scale and zero-charge no-ops, the numeric envelope, and
+typed malformed inputs. The exact force bits are those of the pinned math and
+operation-order contract.
 
 The exact profile SHA-256 is
-`3c929002704ba081a7f0e35db3e541bf4307cfa6b8341879bd7e427fb73892b5`.
+`550d75458addbec5b11454a2eaa6ad3608e8d0eb3d7a3e669e98f5d1dfa61c3d`.
 The profile separately binds the evaluator source, frozen fixture, and
 standalone Cargo lockfile hashes.
 
