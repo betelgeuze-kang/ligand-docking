@@ -18,10 +18,16 @@ subtraction and reciprocal phase construction. This prevents trigonometric
 range-reduction drift for long unwrapped trajectories; the property suite
 includes an image displaced by one million box lengths.
 
-The real-space minimum image remains half-open. Local pair corrections use a
-sign-preserving rule only at an exact half-cell tie, so swapping atom identities
-also swaps their correction forces instead of keeping a direction attached to
-an array index. A dedicated half-cell permutation test freezes that behavior.
+The real-space minimum image remains half-open. An exact half-cell local pair
+correction is rejected with a typed `AmbiguousPairCorrectionImage` error because
+no single-image force direction can preserve both translation and permutation
+invariance. Tests freeze the rejection across atom swaps and common translation.
+
+Neutrality uses a canonical absolute-magnitude/total order and Neumaier
+compensated sum, avoiding input-order-dependent admission. Cell volume uses a
+canonical min-times-max-then-middle product to avoid axis-order intermediate
+overflow for finite mathematical volumes. Validation also caps the combined
+real-pair and twice-per-vector atom phase work at 10,000,000 work units.
 
 The immutable profile is
 `config/engine_v2_direct_ewald_reference_profile_v1.json`. Its four-charge
@@ -33,7 +39,7 @@ inversion, near-zero net force, bitwise repetition, reciprocal-bound
 convergence, and typed malformed inputs.
 
 The exact profile SHA-256 is
-`b8ccefc6e5aee2cd596a503259024745bd47fe60589240d79d684d4df701dcb6`.
+`359981298cab573b1ea2d576f4f7a7657f788588f01568331f6534c56fdbb6ea`.
 The profile separately binds the evaluator source, frozen fixture, and
 standalone Cargo lockfile hashes.
 

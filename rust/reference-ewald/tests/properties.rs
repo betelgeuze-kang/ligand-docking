@@ -261,7 +261,7 @@ fn exclusion_and_scale_apply_unscreened_local_corrections() {
 }
 
 #[test]
-fn half_cell_pair_correction_force_is_antisymmetric_under_atom_swap() {
+fn half_cell_pair_correction_image_is_rejected_independent_of_representation() {
     let mut input = EwaldInput::new(
         vec![Position::new(0.0, 1.0, 1.0), Position::new(5.0, 1.0, 1.0)],
         vec![1.0, -1.0],
@@ -274,28 +274,16 @@ fn half_cell_pair_correction_force_is_antisymmetric_under_atom_swap() {
         atom_i: 0,
         atom_j: 1,
     });
-    let forward = evaluate(&input).expect("half-cell correction is valid");
+    assert_error(&input, EwaldErrorCode::AmbiguousPairCorrectionImage);
 
     input.positions.swap(0, 1);
     input.charges_elementary.swap(0, 1);
-    let swapped = evaluate(&input).expect("swapped half-cell correction is valid");
-    assert_close(
-        swapped.energy.total_kcal_per_mol(),
-        forward.energy.total_kcal_per_mol(),
-        2.0e-12,
-    );
-    for axis in 0..3 {
-        assert_close(
-            swapped.forces_kcal_per_mol_angstrom[0][axis],
-            forward.forces_kcal_per_mol_angstrom[1][axis],
-            2.0e-12,
-        );
-        assert_close(
-            swapped.forces_kcal_per_mol_angstrom[1][axis],
-            forward.forces_kcal_per_mol_angstrom[0][axis],
-            2.0e-12,
-        );
+    assert_error(&input, EwaldErrorCode::AmbiguousPairCorrectionImage);
+
+    for position in &mut input.positions {
+        position.x_angstrom += 6.0;
     }
+    assert_error(&input, EwaldErrorCode::AmbiguousPairCorrectionImage);
 }
 
 #[test]
@@ -308,6 +296,14 @@ fn malformed_inputs_have_typed_failures() {
         input.cell,
     );
     assert_error(&capacity, EwaldErrorCode::CapacityExceeded);
+
+    let mut excessive_work = EwaldInput::new(
+        vec![Position::default(); 4_096],
+        vec![0.0; 4_096],
+        input.cell,
+    );
+    excessive_work.settings.reciprocal_max_indices = [32, 32, 32];
+    assert_error(&excessive_work, EwaldErrorCode::CapacityExceeded);
 
     let mut empty = input.clone();
     empty.positions.clear();
@@ -329,6 +325,21 @@ fn malformed_inputs_have_typed_failures() {
     let mut charged = input.clone();
     charged.charges_elementary[0] += 0.01;
     assert_error(&charged, EwaldErrorCode::NonNeutralSystem);
+
+    let tiny = 2.0_f64.powi(-54);
+    for charges in [[1.0, tiny, -1.0], [1.0, -1.0, tiny]] {
+        let mut order_sensitive = EwaldInput::new(
+            vec![
+                Position::new(1.0, 1.0, 1.0),
+                Position::new(2.0, 2.0, 2.0),
+                Position::new(3.0, 3.0, 3.0),
+            ],
+            charges.to_vec(),
+            input.cell,
+        );
+        order_sensitive.settings.neutrality_tolerance_elementary = 0.0;
+        assert_error(&order_sensitive, EwaldErrorCode::NonNeutralSystem);
+    }
 
     let mut invalid_cell = input.clone();
     invalid_cell.cell.lengths_angstrom[1] = 0.0;

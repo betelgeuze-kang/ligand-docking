@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PROFILE_PATH = ROOT / "config/engine_v2_direct_ewald_reference_profile_v1.json"
 CRATE = ROOT / "rust/reference-ewald"
-PROFILE_SHA256 = "b8ccefc6e5aee2cd596a503259024745bd47fe60589240d79d684d4df701dcb6"
+PROFILE_SHA256 = "359981298cab573b1ea2d576f4f7a7657f788588f01568331f6534c56fdbb6ea"
 
 
 def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
@@ -44,7 +44,7 @@ def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
         "external_md_engine_dependency": False,
         "fixed64_cpu_v7_source_closure_modified": False,
         "source_sha256": (
-            "12d2ef7d63ac4e823494d4f31bf21a9d385a363e82662277f68830f375ca84bb"
+            "5dae22b9b22aaa912249bd5c33c47e0b0c249ec9aa263d4765d24f026fe3e726"
         ),
         "frozen_fixture_sha256": (
             "4911f62b37a26d31cdc76f62775da6e284d8e83fe0b3b3d9514a8e96c4a489e2"
@@ -83,6 +83,13 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
         "dielectric": 1.0,
         "minimum_pair_distance_angstrom": 1e-8,
         "neutrality_tolerance_elementary": 1e-12,
+        "neutrality_accumulation": (
+            "canonical_absolute_magnitude_then_total_order_neumaier"
+        ),
+        "maximum_evaluation_work_units": 10000000,
+        "evaluation_work_unit_equation": (
+            "pair_count_plus_two_times_atom_count_times_reciprocal_vector_count"
+        ),
         "real_pair_order": "lexicographic_i_then_j",
         "reciprocal_vector_order": (
             "nx_then_ny_then_nz_ascending_inclusive_omit_zero"
@@ -93,7 +100,12 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
         "coordinate_reduction": (
             "per_axis_rem_euclid_primary_cell_with_positive_zero"
         ),
-        "pair_correction_half_cell_tie": "sign_preserving_antisymmetric",
+        "cell_volume_multiplication_order": (
+            "sorted_minimum_times_maximum_then_middle"
+        ),
+        "pair_correction_half_cell_tie": (
+            "typed_rejection_ambiguous_pair_correction_image"
+        ),
     }
     observation = profile["frozen_observation"]
     assert observation["total_kcal_per_mol"] == -6.063080251124816
@@ -140,6 +152,8 @@ def test_validation_authority_and_standalone_crate_are_bounded() -> None:
         "NonNeutralSystem",
         "CutoffViolatesMinimumImage",
         "ConflictingPairRule",
+        "AmbiguousPairCorrectionImage",
+        "MAX_EVALUATION_WORK_UNITS",
     ):
         assert required in source
 

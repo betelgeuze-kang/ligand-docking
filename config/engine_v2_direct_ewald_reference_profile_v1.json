@@ -17,7 +17,7 @@
     "native_abi_version_allocated": false,
     "external_md_engine_dependency": false,
     "fixed64_cpu_v7_source_closure_modified": false,
-    "source_sha256": "12d2ef7d63ac4e823494d4f31bf21a9d385a363e82662277f68830f375ca84bb",
+    "source_sha256": "5dae22b9b22aaa912249bd5c33c47e0b0c249ec9aa263d4765d24f026fe3e726",
     "frozen_fixture_sha256": "4911f62b37a26d31cdc76f62775da6e284d8e83fe0b3b3d9514a8e96c4a489e2",
     "cargo_lock_sha256": "cc64500cc1c97dfda26a8a4c8b8825c5296935f1e63cbaf61676a321364b3d9d"
   },
@@ -44,11 +44,15 @@
     "dielectric": 1.0,
     "minimum_pair_distance_angstrom": 1e-8,
     "neutrality_tolerance_elementary": 1e-12,
+    "neutrality_accumulation": "canonical_absolute_magnitude_then_total_order_neumaier",
+    "maximum_evaluation_work_units": 10000000,
+    "evaluation_work_unit_equation": "pair_count_plus_two_times_atom_count_times_reciprocal_vector_count",
     "real_pair_order": "lexicographic_i_then_j",
     "reciprocal_vector_order": "nx_then_ny_then_nz_ascending_inclusive_omit_zero",
     "minimum_image_interval": "half_open_negative_half_length_to_positive_half_length",
     "coordinate_reduction": "per_axis_rem_euclid_primary_cell_with_positive_zero",
-    "pair_correction_half_cell_tie": "sign_preserving_antisymmetric"
+    "cell_volume_multiplication_order": "sorted_minimum_times_maximum_then_middle",
+    "pair_correction_half_cell_tie": "typed_rejection_ambiguous_pair_correction_image"
   },
   "frozen_observation": {
     "real_space_kcal_per_mol": -0.11800195657683102,
@@ -83,7 +87,10 @@
     "reciprocal_bound_monotone_observation": true,
     "exclusion_correction": true,
     "scaled_pair_correction": true,
-    "half_cell_pair_correction_antisymmetry": true,
+    "half_cell_pair_correction_typed_rejection": true,
+    "neutrality_permutation_independent": true,
+    "cell_volume_axis_order_independent": true,
+    "combined_work_cap": true,
     "typed_malformed_input_failures": true,
     "bitwise_repeatability": true
   },

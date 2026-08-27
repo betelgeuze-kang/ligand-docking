@@ -16,6 +16,7 @@ pub const EWALD_SCHEMA_ID: &str = "betelgeuze.reference_direct_ewald/1.0.0";
 const MAX_ATOM_COUNT: usize = 4_096;
 const MAX_RECIPROCAL_INDEX: i32 = 32;
 const MAX_NEUTRALITY_TOLERANCE_E: f64 = 1.0e-8;
+const MAX_EVALUATION_WORK_UNITS: usize = 10_000_000;
 
 /// One Cartesian position in canonical angstrom units.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -159,6 +160,7 @@ pub enum EwaldErrorCode {
     RepeatedAtomIndex,
     DuplicatePairRule,
     ConflictingPairRule,
+    AmbiguousPairCorrectionImage,
     PairBelowMinimumDistance,
     NonFiniteResult,
 }
@@ -306,7 +308,7 @@ fn evaluate_reciprocal_space(
     result: &mut EwaldEvaluation,
 ) -> Result<(), EwaldError> {
     let lengths = input.cell.lengths_angstrom;
-    let volume = lengths[0] * lengths[1] * lengths[2];
+    let volume = cell_volume(input.cell);
     let reciprocal_energy_factor = coulomb_scale * 2.0 * core::f64::consts::PI / volume;
     let reciprocal_force_factor = coulomb_scale * 4.0 * core::f64::consts::PI / volume;
     let alpha = input.settings.alpha_per_angstrom;
@@ -387,7 +389,7 @@ fn evaluate_pair_corrections(
                 input.positions[atom_i],
                 input.positions[atom_j],
                 input.cell,
-            );
+            )?;
             let distance2 = squared_norm(delta);
             let distance = distance2.sqrt();
             let charge_product =
@@ -468,7 +470,7 @@ fn validate_cell(cell: OrthorhombicCell) -> Result<(), EwaldError> {
             ));
         }
     }
-    let volume = cell.lengths_angstrom.into_iter().product::<f64>();
+    let volume = cell_volume(cell);
     if !volume.is_finite() || volume <= 0.0 {
         return Err(EwaldError::new(
             EwaldErrorCode::InvalidCell,
@@ -497,8 +499,8 @@ fn validate_settings(input: &EwaldInput) -> Result<(), EwaldError> {
             "neutrality_tolerance_elementary must lie in [0,{MAX_NEUTRALITY_TOLERANCE_E}]"
         )));
     }
-    let total_charge = input.charges_elementary.iter().sum::<f64>();
-    if total_charge.abs() > neutrality_tolerance {
+    let total_charge = accurate_order_independent_sum(&input.charges_elementary);
+    if !total_charge.is_finite() || total_charge.abs() > neutrality_tolerance {
         return Err(EwaldError::new(
             EwaldErrorCode::NonNeutralSystem,
             format!(
@@ -519,6 +521,7 @@ fn validate_settings(input: &EwaldInput) -> Result<(), EwaldError> {
             )));
         }
     }
+    validate_work_limit(input)?;
     for (axis, length) in input.cell.lengths_angstrom.iter().copied().enumerate() {
         if input.settings.real_space_cutoff_angstrom >= 0.5 * length {
             return Err(EwaldError::new(
@@ -615,7 +618,7 @@ fn pair_correction_displacement(
     first: Position,
     second: Position,
     cell: OrthorhombicCell,
-) -> [f64; 3] {
+) -> Result<[f64; 3], EwaldError> {
     let first = reduce_to_primary_cell(first, cell);
     let second = reduce_to_primary_cell(second, cell);
     let mut delta = [0.0; 3];
@@ -623,13 +626,91 @@ fn pair_correction_displacement(
         let length = cell.lengths_angstrom[axis];
         let raw = first[axis] - second[axis];
         let minimum = raw - length * (raw / length + 0.5).floor();
-        delta[axis] = if minimum.to_bits() == (-0.5 * length).to_bits() && raw > 0.0 {
-            0.5 * length
-        } else {
-            minimum
-        };
+        if minimum.to_bits() == (-0.5 * length).to_bits() {
+            return Err(EwaldError::new(
+                EwaldErrorCode::AmbiguousPairCorrectionImage,
+                format!("pair correction is exactly half a cell on axis {axis}"),
+            ));
+        }
+        delta[axis] = minimum;
     }
-    delta
+    Ok(delta)
+}
+
+fn accurate_order_independent_sum(values: &[f64]) -> f64 {
+    let mut ordered = values.to_vec();
+    ordered.sort_by(|left, right| {
+        left.abs()
+            .total_cmp(&right.abs())
+            .then_with(|| left.total_cmp(right))
+    });
+    let mut sum = 0.0;
+    let mut correction = 0.0;
+    for value in ordered {
+        let updated = sum + value;
+        correction += if sum.abs() >= value.abs() {
+            (sum - updated) + value
+        } else {
+            (value - updated) + sum
+        };
+        sum = updated;
+    }
+    sum + correction
+}
+
+fn cell_volume(cell: OrthorhombicCell) -> f64 {
+    let mut lengths = cell.lengths_angstrom;
+    lengths.sort_by(f64::total_cmp);
+    (lengths[0] * lengths[2]) * lengths[1]
+}
+
+fn validate_work_limit(input: &EwaldInput) -> Result<(), EwaldError> {
+    let dimensions = input
+        .settings
+        .reciprocal_max_indices
+        .map(|maximum| usize::try_from(2 * maximum + 1).expect("validated positive bound"));
+    let vector_count = dimensions
+        .into_iter()
+        .try_fold(1_usize, usize::checked_mul)
+        .and_then(|count| count.checked_sub(1))
+        .ok_or_else(|| {
+            EwaldError::new(
+                EwaldErrorCode::CapacityExceeded,
+                "reciprocal vector count exceeds addressable capacity",
+            )
+        })?;
+    let atom_count = input.positions.len();
+    let pair_count = atom_count
+        .checked_mul(atom_count.saturating_sub(1))
+        .and_then(|count| count.checked_div(2))
+        .ok_or_else(|| {
+            EwaldError::new(
+                EwaldErrorCode::CapacityExceeded,
+                "real-space pair count exceeds addressable capacity",
+            )
+        })?;
+    let phase_work = atom_count
+        .checked_mul(vector_count)
+        .and_then(|count| count.checked_mul(2))
+        .ok_or_else(|| {
+            EwaldError::new(
+                EwaldErrorCode::CapacityExceeded,
+                "reciprocal phase work exceeds addressable capacity",
+            )
+        })?;
+    let total_work = pair_count.checked_add(phase_work).ok_or_else(|| {
+        EwaldError::new(
+            EwaldErrorCode::CapacityExceeded,
+            "combined evaluation work exceeds addressable capacity",
+        )
+    })?;
+    if total_work > MAX_EVALUATION_WORK_UNITS {
+        return Err(EwaldError::new(
+            EwaldErrorCode::CapacityExceeded,
+            format!("combined evaluation work {total_work} exceeds {MAX_EVALUATION_WORK_UNITS}"),
+        ));
+    }
+    Ok(())
 }
 
 fn dot(first: [f64; 3], second: [f64; 3]) -> f64 {
@@ -682,7 +763,9 @@ fn invalid_parameter(detail: impl Into<String>) -> EwaldError {
 
 #[cfg(test)]
 mod tests {
-    use super::{minimum_image, OrthorhombicCell, Position};
+    use super::{
+        accurate_order_independent_sum, cell_volume, minimum_image, OrthorhombicCell, Position,
+    };
 
     #[test]
     fn minimum_image_uses_frozen_half_open_tie_rule() {
@@ -693,5 +776,27 @@ mod tests {
         let negative = minimum_image(Position::new(-5.0, 0.0, 0.0), Position::default(), cell);
         assert_eq!(positive[0].to_bits(), (-5.0_f64).to_bits());
         assert_eq!(negative[0].to_bits(), (-5.0_f64).to_bits());
+    }
+
+    #[test]
+    fn compensated_charge_sum_is_permutation_independent() {
+        let tiny = 2.0_f64.powi(-54);
+        let first = accurate_order_independent_sum(&[1.0, tiny, -1.0]);
+        let second = accurate_order_independent_sum(&[1.0, -1.0, tiny]);
+        assert_eq!(first.to_bits(), second.to_bits());
+        assert_eq!(first.to_bits(), tiny.to_bits());
+    }
+
+    #[test]
+    fn volume_avoids_axis_order_intermediate_overflow() {
+        let first = cell_volume(OrthorhombicCell {
+            lengths_angstrom: [1.0e200, 1.0e200, 1.0e-200],
+        });
+        let second = cell_volume(OrthorhombicCell {
+            lengths_angstrom: [1.0e200, 1.0e-200, 1.0e200],
+        });
+        assert!(first.is_finite());
+        assert_eq!(first.to_bits(), second.to_bits());
+        assert!((first - 1.0e200).abs() / 1.0e200 < 2.0e-15);
     }
 }
