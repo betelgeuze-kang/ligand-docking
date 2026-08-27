@@ -23,23 +23,26 @@ excluded/scaled pairs after the periodic Ewald sum. Real-space pairs traverse
 `i < j`. Reciprocal integer vectors traverse `nx`, `ny`, then `nz`, each from
 the negative configured maximum through the positive maximum, omitting only
 zero. Forces are analytic negative energy gradients accumulated in the same
-order. Positions are first reduced into the primary cell; real-space minimum
-images then subtract or add one box length only when the raw displacement is
-strictly above or below the half-cell boundary. An exact real-space tie uses the
-canonical positive primary-cell representation. An exact half-cell local pair
+order. Positions are first reduced toward the primary cell; a supported
+negative boundary residual that `rem_euclid` rounds to the upper boundary is
+preserved, while residuals below the `1e-8` angstrom minimum-distance resolution
+canonicalize to zero. Real-space minimum images then subtract or add one box
+length only when the exact expanded displacement is above or below the
+half-cell boundary. Exact real-space ties retain atom-order antisymmetry. An exact half-cell local pair
 correction is rejected because a single-image force cannot preserve both
 common-translation and atom-permutation invariance. A pair scale of exactly one
 or any pair rule involving a zero charge is a semantic no-op and skips local-
 correction image selection.
 
-Exact local-correction ties are classified by comparing the lower reduced
-coordinate with the exact high-minus-half difference before consulting the
-rounded coordinate subtraction. This distinguishes an exact half-cell pair
-from representable coordinates whose difference merely rounds to half.
+Exact local-correction ties are classified with an error-free two-difference
+expansion before comparison with half the cell. This distinguishes an exact
+half-cell pair from representable coordinates whose difference merely rounds
+to half.
 
 Neutrality is checked with a canonical order and Neumaier compensated sum.
 Cell volume multiplies sorted minimum and maximum lengths before the middle
-length. A combined real-pair plus reciprocal-phase work cap prevents the scalar
+length. Corrections traverse only sorted declared pair rules. A combined real-
+pair, declared-correction, and reciprocal-phase work cap prevents the scalar
 reference's individually valid maxima from creating an unbounded evaluation.
 The API also rejects finite values outside its documented numeric envelope:
 absolute coordinates above `1e12` angstrom, cell lengths outside `[1e-6,1e9]`
@@ -55,9 +58,11 @@ operations use the exactly pinned `libm` 0.2.16 dependency. Reciprocal energy
 and force terms multiply their undamped prefactor and structure factors before
 the exponential, preventing an intermediate damping quotient from underflowing
 when the completed term remains representable.
-Real-space force magnitudes similarly apply the Coulomb/charge prefactor to
-each damping term before distance division and multiply by the unit displacement
-last, preserving supported subnormal components that are still representable.
+Real-space energy divides `erfc` first for sub-unit distances and multiplies the
+Coulomb/charge prefactor first otherwise. Force magnitudes apply the prefactor
+to each damping term before distance division and use a distance-adaptive
+component order, preserving supported subnormal energy and Cartesian force
+components that are still representable.
 
 `fixtures/direct_ewald_v1.tsv` freezes all four energy components, their total,
 and all 12 force components as IEEE-754 bit patterns. The observation example

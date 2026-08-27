@@ -13,21 +13,23 @@ bounds, traversal order, minimum-image tie rule, exclusions, and Coulomb pair
 scales. The result separates real, reciprocal, self, and local pair-correction
 energies and returns analytic forces for every atom.
 
-All positions are reduced per axis into the primary cell before minimum-image
-subtraction and reciprocal phase construction. This prevents trigonometric
-range-reduction drift for long unwrapped trajectories; the property suite
-includes an image displaced by one million box lengths.
+All positions are reduced per axis before minimum-image subtraction and
+reciprocal phase construction. This prevents trigonometric range-reduction
+drift for long unwrapped trajectories; the property suite includes an image
+displaced by one million box lengths. If `rem_euclid` rounds a supported
+negative boundary residual up to the cell length, the signed residual is
+preserved instead of collapsing a distinct position to zero. Residuals below
+the frozen `1e-8` angstrom minimum-distance resolution canonicalize to zero.
 
-Real-space image selection uses strict comparisons after primary-cell reduction,
-which preserves atom-swap antisymmetry on both sides of the half-cell boundary.
-An exact half-cell real-space tie uses the canonical positive primary-cell
-representation. An exact half-cell local pair correction is rejected with a
+Real-space image selection uses an error-free separation comparison after
+periodic reduction, preserving atom-swap antisymmetry on both sides of and at
+the half-cell boundary. An exact half-cell local pair correction is rejected with a
 typed `AmbiguousPairCorrectionImage` error because no single-image force
 direction can preserve both translation and permutation invariance. A unit pair
 scale or any pair rule involving a zero charge is a semantic no-op and skips
-that image selection entirely. Exact ties compare the lower reduced coordinate
-with the exact high-minus-half difference before using the rounded coordinate
-subtraction, so a representable separation just below half is not rejected.
+that image selection entirely. Exact ties use an error-free two-difference
+expansion before comparing with half the cell, so a representable separation
+just below half is not rejected even when its rounded difference equals half.
 
 The scalar contract admits a bounded physical/numerical envelope: coordinates
 through `1e12` angstrom; cell lengths from `1e-6` through `1e9` angstrom;
@@ -43,15 +45,20 @@ platform standard-library implementation. Reciprocal terms multiply the
 undamped prefactor and structure/force factors before the pinned exponential,
 retaining contributions whose intermediate `exp(exponent)/wave²` would
 underflow even though the final energy or force is representable.
-Real-space radial forces likewise multiply the charge/Coulomb prefactor by each
-damping term before distance division, then apply the unit displacement. This
-retains supported strongly damped subnormal force components.
+Real-space energy divides `erfc` first for sub-unit distances and multiplies the
+charge/Coulomb prefactor first otherwise. Radial forces multiply that prefactor
+by each damping term before distance division, then use a distance-adaptive
+component order. This retains supported strongly damped energy/forces and
+subnormal Cartesian force components whenever the completed value is
+representable.
 
 Neutrality uses a canonical absolute-magnitude/total order and Neumaier
 compensated sum, avoiding input-order-dependent admission. Cell volume uses a
 canonical min-times-max-then-middle product to avoid axis-order intermediate
-overflow for finite mathematical volumes. Validation also caps the combined
-real-pair and twice-per-vector atom phase work at 10,000,000 work units.
+overflow for finite mathematical volumes. Pair corrections iterate only the
+sorted declared rules, not every possible pair. Validation caps real pairs,
+declared correction rules, and twice-per-vector atom phase work together at
+10,000,000 work units.
 
 The immutable profile is
 `config/engine_v2_direct_ewald_reference_profile_v1.json`. Its four-charge
@@ -61,13 +68,14 @@ checked against central finite differences. Additional properties cover global
 translation, integer images, complete atom permutation, global charge
 inversion, near-zero net force, bitwise repetition, reciprocal-bound
 convergence, near-half-cell atom swaps, rounded upper-bound primary-cell
-reduction, rounded-difference tie classification, representable reciprocal
-damping, representable strongly damped real forces, unit-scale and zero-charge
-no-ops, the numeric envelope, and typed malformed inputs. The exact force bits
-are those of the pinned math and operation-order contract.
+reduction, retained supported negative boundary residuals, rounded-difference
+tie classification, representable reciprocal damping, representable strongly
+damped real energy/forces, subnormal Cartesian force components, unit-scale and
+zero-charge no-ops, the numeric envelope, and typed malformed inputs. The exact
+force bits are those of the pinned math and operation-order contract.
 
 The exact profile SHA-256 is
-`e1baf4aaf0a682a13ae4bfee849cf5db60a7b8d1e45a357333acff10d95efa1c`.
+`3c929002704ba081a7f0e35db3e541bf4307cfa6b8341879bd7e427fb73892b5`.
 The profile separately binds the evaluator source, frozen fixture, and
 standalone Cargo lockfile hashes.
 

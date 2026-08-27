@@ -387,6 +387,21 @@ fn rounded_half_cell_difference_is_not_an_exact_pair_correction_tie() {
 }
 
 #[test]
+fn supported_negative_boundary_residual_is_not_collapsed_to_zero() {
+    let mut input = EwaldInput::new(
+        vec![Position::default(), Position::new(-5.0e-8, 0.0, 0.0)],
+        vec![1.0, -1.0],
+        OrthorhombicCell {
+            lengths_angstrom: [1.0e9; 3],
+        },
+    );
+    input.settings.real_space_cutoff_angstrom = 1.0;
+    let evaluation = evaluate(&input).expect("supported boundary residual is a distinct position");
+    assert!(evaluation.energy.real_space_kcal_per_mol.is_finite());
+    assert!(evaluation.energy.real_space_kcal_per_mol.is_sign_negative());
+}
+
+#[test]
 fn reciprocal_scaling_preserves_representable_damped_terms() {
     let mut input = EwaldInput::new(
         vec![Position::default(), Position::new(2.5e-7, 0.0, 0.0)],

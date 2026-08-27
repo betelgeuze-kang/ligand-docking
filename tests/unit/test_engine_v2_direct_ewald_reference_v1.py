@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PROFILE_PATH = ROOT / "config/engine_v2_direct_ewald_reference_profile_v1.json"
 CRATE = ROOT / "rust/reference-ewald"
-PROFILE_SHA256 = "e1baf4aaf0a682a13ae4bfee849cf5db60a7b8d1e45a357333acff10d95efa1c"
+PROFILE_SHA256 = "3c929002704ba081a7f0e35db3e541bf4307cfa6b8341879bd7e427fb73892b5"
 
 
 def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
@@ -48,7 +48,7 @@ def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
         "external_md_engine_dependency": False,
         "fixed64_cpu_v7_source_closure_modified": False,
         "source_sha256": (
-            "c1cd6af26b31090fb55df1274d3a6b336d036d5461c85938d0a31289c5359c47"
+            "1179a63cdb2467010f0af97079aeb3bfd2db8e80f6a48659ab7fbbeb58a9755e"
         ),
         "frozen_fixture_sha256": (
             "0c0c21f69752af020308d859f6ffffdf0381b073a233935645a5a1b08f81f71d"
@@ -92,7 +92,8 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
         ),
         "maximum_evaluation_work_units": 10000000,
         "evaluation_work_unit_equation": (
-            "pair_count_plus_two_times_atom_count_times_reciprocal_vector_count"
+            "pair_count_plus_pair_rule_count_plus_two_times_atom_count_times_"
+            "reciprocal_vector_count"
         ),
         "real_pair_order": "lexicographic_i_then_j",
         "reciprocal_vector_order": (
@@ -100,18 +101,18 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
         ),
         "minimum_image_interval": (
             "closed_negative_half_length_to_positive_half_length_with_"
-            "primary_cell_positive_exact_tie"
+            "atom_order_antisymmetric_exact_tie"
         ),
         "minimum_image_selection": (
-            "strict_comparison_after_primary_cell_reduction"
+            "error_free_separation_comparison_after_periodic_reduction"
         ),
         "exact_half_tie_detection": (
-            "sterbenz_exact_high_minus_half_compared_with_low_before_"
+            "error_free_two_difference_expansion_compared_with_half_before_"
             "rounded_coordinate_difference"
         ),
         "coordinate_reduction": (
-            "per_axis_rem_euclid_primary_cell_with_zero_or_rounded_upper_"
-            "boundary_canonicalized_to_positive_zero"
+            "per_axis_rem_euclid_with_subminimum_rounded_upper_residual_to_"
+            "positive_zero_and_supported_negative_residual_preserved"
         ),
         "cell_volume_multiplication_order": (
             "sorted_minimum_times_maximum_then_middle"
@@ -129,13 +130,18 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
             "undamped_prefactor_and_structure_or_force_products_before_"
             "pinned_exponential"
         ),
+        "real_space_energy_order": (
+            "charge_prefactor_times_erfc_over_distance_for_subunit_distance_"
+            "else_charge_prefactor_times_erfc_then_divide"
+        ),
         "real_space_force_order": (
-            "charge_prefactor_times_damping_before_distance_division_then_"
-            "unit_direction"
+            "charge_prefactor_times_damping_before_distance_division_with_"
+            "distance_adaptive_component_scaling"
         ),
     }
     assert profile["numeric_envelope"] == {
         "maximum_absolute_coordinate_angstrom": 1e12,
+        "minimum_preserved_wrapped_residual_angstrom": 1e-8,
         "cell_length_angstrom": {"minimum": 1e-6, "maximum": 1e9},
         "nonzero_absolute_charge_elementary": {
             "minimum": 1e-12,
@@ -205,6 +211,8 @@ def test_validation_authority_and_standalone_crate_are_bounded() -> None:
         "ConflictingPairRule",
         "AmbiguousPairCorrectionImage",
         "MAX_EVALUATION_WORK_UNITS",
+        "pair_rule_count",
+        "signed_residual",
         "MIN_NONZERO_ABSOLUTE_CHARGE_E",
         "MIN_SUPPORTED_PAIR_DISTANCE_ANGSTROM",
         "add_radial_pair_force",

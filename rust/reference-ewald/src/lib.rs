@@ -216,8 +216,7 @@ impl Error for EwaldError {}
 type PairKey = (usize, usize);
 
 struct PairRules {
-    exclusions: BTreeSet<PairKey>,
-    scales: BTreeMap<PairKey, f64>,
+    corrections: BTreeMap<PairKey, f64>,
 }
 
 /// Evaluate direct Ewald electrostatics using scalar binary64 arithmetic.
@@ -293,14 +292,18 @@ fn evaluate_real_space(
                 let alpha_distance = alpha * distance;
                 let erfc_value = libm::erfc(alpha_distance);
                 let exponential = libm::exp(-alpha_distance * alpha_distance);
-                let pair_energy = coulomb_scale * charge_product * erfc_value / distance;
+                let charge_prefactor = coulomb_scale * charge_product;
+                let pair_energy = if distance < 1.0 {
+                    charge_prefactor * (erfc_value / distance)
+                } else {
+                    charge_prefactor * erfc_value / distance
+                };
                 checked_add(
                     &mut result.energy.real_space_kcal_per_mol,
                     pair_energy,
                     "real-space energy",
                 )?;
 
-                let charge_prefactor = coulomb_scale * charge_product;
                 let radial_force_magnitude = charge_prefactor * erfc_value / distance2
                     + charge_prefactor
                         * (2.0 * alpha / libm::sqrt(core::f64::consts::PI))
@@ -396,45 +399,34 @@ fn evaluate_pair_corrections(
     coulomb_scale: f64,
     result: &mut EwaldEvaluation,
 ) -> Result<(), EwaldError> {
-    for atom_i in 0..input.positions.len() {
-        for atom_j in (atom_i + 1)..input.positions.len() {
-            let pair = (atom_i, atom_j);
-            let pair_scale = if pair_rules.exclusions.contains(&pair) {
-                0.0
-            } else if let Some(scale) = pair_rules.scales.get(&pair) {
-                *scale
-            } else {
-                continue;
-            };
-            if pair_scale.to_bits() == 1.0_f64.to_bits() {
-                continue;
-            }
-            let charge_product =
-                input.charges_elementary[atom_i] * input.charges_elementary[atom_j];
-            if matches!(charge_product.to_bits(), 0 | 0x8000_0000_0000_0000) {
-                continue;
-            }
-            let delta = pair_correction_displacement(
-                input.positions[atom_i],
-                input.positions[atom_j],
-                input.cell,
-            )?;
-            let distance2 = squared_norm(delta);
-            let distance = libm::sqrt(distance2);
-            let correction_scale = pair_scale - 1.0;
-            checked_add(
-                &mut result.energy.pair_correction_kcal_per_mol,
-                coulomb_scale * charge_product * correction_scale / distance,
-                "pair-correction energy",
-            )?;
-            add_pair_force(
-                &mut result.forces_kcal_per_mol_angstrom,
-                atom_i,
-                atom_j,
-                delta,
-                coulomb_scale * charge_product * correction_scale / (distance2 * distance),
-            )?;
+    for (&(atom_i, atom_j), &pair_scale) in &pair_rules.corrections {
+        if pair_scale.to_bits() == 1.0_f64.to_bits() {
+            continue;
         }
+        let charge_product = input.charges_elementary[atom_i] * input.charges_elementary[atom_j];
+        if matches!(charge_product.to_bits(), 0 | 0x8000_0000_0000_0000) {
+            continue;
+        }
+        let delta = pair_correction_displacement(
+            input.positions[atom_i],
+            input.positions[atom_j],
+            input.cell,
+        )?;
+        let distance2 = squared_norm(delta);
+        let distance = libm::sqrt(distance2);
+        let correction_scale = pair_scale - 1.0;
+        checked_add(
+            &mut result.energy.pair_correction_kcal_per_mol,
+            coulomb_scale * charge_product * correction_scale / distance,
+            "pair-correction energy",
+        )?;
+        add_pair_force(
+            &mut result.forces_kcal_per_mol_angstrom,
+            atom_i,
+            atom_j,
+            delta,
+            coulomb_scale * charge_product * correction_scale / (distance2 * distance),
+        )?;
     }
     Ok(())
 }
@@ -443,7 +435,9 @@ fn validate(input: &EwaldInput) -> Result<PairRules, EwaldError> {
     validate_atom_arrays(input)?;
     validate_cell(input.cell)?;
     validate_settings(input)?;
-    validate_pair_rules(input)
+    let pair_rules = validate_pair_rules(input)?;
+    validate_work_limit(input, pair_rules.corrections.len())?;
+    Ok(pair_rules)
 }
 
 fn validate_atom_arrays(input: &EwaldInput) -> Result<(), EwaldError> {
@@ -588,7 +582,6 @@ fn validate_settings(input: &EwaldInput) -> Result<(), EwaldError> {
             )));
         }
     }
-    validate_work_limit(input)?;
     for (axis, length) in input.cell.lengths_angstrom.iter().copied().enumerate() {
         if input.settings.real_space_cutoff_angstrom >= 0.5 * length {
             return Err(EwaldError::new(
@@ -635,7 +628,11 @@ fn validate_pair_rules(input: &EwaldInput) -> Result<PairRules, EwaldError> {
             format!("pair {pair:?} cannot be both excluded and scaled"),
         ));
     }
-    Ok(PairRules { exclusions, scales })
+    let mut corrections = scales;
+    for pair in exclusions {
+        corrections.insert(pair, 0.0);
+    }
+    Ok(PairRules { corrections })
 }
 
 fn canonical_pair(
@@ -686,11 +683,17 @@ fn reduce_to_primary_cell(position: Position, cell: OrthorhombicCell) -> [f64; 3
     let mut reduced = [0.0; 3];
     for axis in 0..3 {
         let length = cell.lengths_angstrom[axis];
-        let value = components[axis].rem_euclid(length);
-        reduced[axis] = if matches!(value.to_bits(), 0 | 0x8000_0000_0000_0000)
-            || value.to_bits() == length.to_bits()
-        {
+        let component = components[axis];
+        let value = component.rem_euclid(length);
+        reduced[axis] = if matches!(value.to_bits(), 0 | 0x8000_0000_0000_0000) {
             0.0
+        } else if value.to_bits() == length.to_bits() {
+            let signed_residual = component % length;
+            if signed_residual.abs() < MIN_SUPPORTED_PAIR_DISTANCE_ANGSTROM {
+                0.0
+            } else {
+                signed_residual
+            }
         } else {
             value
         };
@@ -735,11 +738,15 @@ fn compare_primary_axis_separation(first: f64, second: f64, length: f64) -> Orde
     } else {
         (second, first)
     };
-    let half = 0.5 * length;
-    if high < half {
-        Ordering::Less
-    } else {
-        (high - half).total_cmp(&low)
+    let difference = high - low;
+    let low_virtual = high - difference;
+    let high_virtual = difference + low_virtual;
+    let low_roundoff = low_virtual - low;
+    let high_roundoff = high - high_virtual;
+    let error = high_roundoff + low_roundoff;
+    match difference.total_cmp(&(0.5 * length)) {
+        Ordering::Equal => error.total_cmp(&0.0),
+        ordering => ordering,
     }
 }
 
@@ -770,7 +777,7 @@ fn cell_volume(cell: OrthorhombicCell) -> f64 {
     (lengths[0] * lengths[2]) * lengths[1]
 }
 
-fn validate_work_limit(input: &EwaldInput) -> Result<(), EwaldError> {
+fn validate_work_limit(input: &EwaldInput, pair_rule_count: usize) -> Result<(), EwaldError> {
     let dimensions = input
         .settings
         .reciprocal_max_indices
@@ -804,12 +811,15 @@ fn validate_work_limit(input: &EwaldInput) -> Result<(), EwaldError> {
                 "reciprocal phase work exceeds addressable capacity",
             )
         })?;
-    let total_work = pair_count.checked_add(phase_work).ok_or_else(|| {
-        EwaldError::new(
-            EwaldErrorCode::CapacityExceeded,
-            "combined evaluation work exceeds addressable capacity",
-        )
-    })?;
+    let total_work = pair_count
+        .checked_add(pair_rule_count)
+        .and_then(|work| work.checked_add(phase_work))
+        .ok_or_else(|| {
+            EwaldError::new(
+                EwaldErrorCode::CapacityExceeded,
+                "combined evaluation work exceeds addressable capacity",
+            )
+        })?;
     if total_work > MAX_EVALUATION_WORK_UNITS {
         return Err(EwaldError::new(
             EwaldErrorCode::CapacityExceeded,
@@ -851,7 +861,11 @@ fn add_radial_pair_force(
     radial_force_magnitude: f64,
 ) -> Result<(), EwaldError> {
     for axis in 0..3 {
-        let component = radial_force_magnitude * (delta[axis] / distance);
+        let component = if distance < 1.0 {
+            (radial_force_magnitude / distance) * delta[axis]
+        } else {
+            (radial_force_magnitude * delta[axis]) / distance
+        };
         checked_add(&mut forces[atom_i][axis], component, "radial pair force")?;
         checked_add(&mut forces[atom_j][axis], -component, "radial pair force")?;
     }
@@ -892,14 +906,16 @@ mod tests {
     };
 
     #[test]
-    fn minimum_image_uses_canonical_positive_exact_half_tie() {
+    fn minimum_image_exact_half_is_image_stable_and_atom_order_antisymmetric() {
         let cell = OrthorhombicCell {
             lengths_angstrom: [10.0, 12.0, 14.0],
         };
         let positive = minimum_image(Position::new(5.0, 0.0, 0.0), Position::default(), cell);
         let negative = minimum_image(Position::new(-5.0, 0.0, 0.0), Position::default(), cell);
+        let swapped = minimum_image(Position::default(), Position::new(5.0, 0.0, 0.0), cell);
         assert_eq!(positive[0].to_bits(), 5.0_f64.to_bits());
         assert_eq!(negative[0].to_bits(), 5.0_f64.to_bits());
+        assert_eq!(swapped[0].to_bits(), (-5.0_f64).to_bits());
     }
 
     #[test]
@@ -924,6 +940,63 @@ mod tests {
         input.settings.real_space_cutoff_angstrom = 1.0e8;
         input.settings.dielectric = 1.0e-12;
         validate(&input).expect("strongly damped fixture is inside the numeric envelope");
+        let mut result = EwaldEvaluation {
+            energy: EwaldEnergyComponents::default(),
+            forces_kcal_per_mol_angstrom: vec![[0.0; 3]; 2],
+        };
+        evaluate_real_space(
+            &input,
+            COULOMB_KCAL_ANGSTROM_PER_MOL_E2 / input.settings.dielectric,
+            &mut result,
+        )
+        .expect("real-space evaluation remains finite");
+        assert!(result.forces_kcal_per_mol_angstrom[0][0].is_subnormal());
+        assert!(result.forces_kcal_per_mol_angstrom[0][0].is_sign_positive());
+    }
+
+    #[test]
+    fn strongly_damped_subunit_real_energy_remains_representable() {
+        let mut input = EwaldInput::new(
+            vec![Position::default(), Position::new(2.58e-5, 0.0, 0.0)],
+            vec![1.0e-12, -1.0e-12],
+            OrthorhombicCell {
+                lengths_angstrom: [1.0; 3],
+            },
+        );
+        input.settings.alpha_per_angstrom = 1.0e6;
+        input.settings.real_space_cutoff_angstrom = 2.58e-5;
+        input.settings.dielectric = 1.0e12;
+        validate(&input).expect("subunit damping fixture is inside the numeric envelope");
+        let mut result = EwaldEvaluation {
+            energy: EwaldEnergyComponents::default(),
+            forces_kcal_per_mol_angstrom: vec![[0.0; 3]; 2],
+        };
+        evaluate_real_space(
+            &input,
+            COULOMB_KCAL_ANGSTROM_PER_MOL_E2 / input.settings.dielectric,
+            &mut result,
+        )
+        .expect("real-space evaluation remains finite");
+        assert!(result.energy.real_space_kcal_per_mol.is_subnormal());
+        assert!(result.energy.real_space_kcal_per_mol.is_sign_negative());
+    }
+
+    #[test]
+    fn large_radial_force_restores_a_subnormal_cartesian_component() {
+        let mut input = EwaldInput::new(
+            vec![
+                Position::default(),
+                Position::new(f64::from_bits(1), 100.0, 0.0),
+            ],
+            vec![16.0, -16.0],
+            OrthorhombicCell {
+                lengths_angstrom: [1.0e9; 3],
+            },
+        );
+        input.settings.alpha_per_angstrom = 1.0e-12;
+        input.settings.real_space_cutoff_angstrom = 101.0;
+        input.settings.dielectric = 1.0e-12;
+        validate(&input).expect("subnormal component fixture is inside the numeric envelope");
         let mut result = EwaldEvaluation {
             energy: EwaldEnergyComponents::default(),
             forces_kcal_per_mol_angstrom: vec![[0.0; 3]; 2],
