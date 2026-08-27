@@ -1,0 +1,357 @@
+{
+  "schema_id": "betelgeuze.engine_v2_native_ala3_peptide_profile/1.0.0",
+  "profile_id": "engine_v2_native_ala3_ff14sb_development_v1",
+  "source": {
+    "coordinate_artifact": {
+      "identity": "nglview-3.1.2/datafiles/ala3.pdb",
+      "sha256": "5510388d045a8f8938236f0975e4f52b81e1b8b7bf9d0c5effcf856050d6123d",
+      "license_record": "nglview distribution declares MIT; legal compliance determination remains external"
+    },
+    "parameter_artifact": {
+      "identity": "OpenMM amber14/protein.ff14SB.xml",
+      "sha256": "d9f9779c09d67cd5f8bc657692f174ffab14c469dfd06d560ac1899fa7e976b8",
+      "upstream_source": "AmberTools 17.6 leaprc.protein.ff14SB",
+      "reference_doi": "10.1021/acs.jctc.5b00255",
+      "openmm_distribution_version": "8.4.0.post2",
+      "openmm_runtime_version": "8.4.0.dev-4768436",
+      "legal_compliance_determination_provided": false
+    },
+    "projection_tool": "benchmarks/oracles/openmm/generate_native_ala3_profile_v1.py"
+  },
+  "units": {
+    "length": "angstrom",
+    "energy": "kcal_per_mol",
+    "force": "kcal_per_mol_per_angstrom",
+    "mass": "dalton",
+    "charge": "elementary_charge",
+    "time": "femtosecond"
+  },
+  "topology": {
+    "residue_sequence": [
+      "ALA",
+      "ALA",
+      "ALA"
+    ],
+    "atom_count": 33,
+    "atoms": [
+      {
+        "index": 0,
+        "residue_index": 0,
+        "residue_name": "ALA",
+        "residue_id": "1",
+        "atom_name": "N",
+        "element": "N"
+      },
+      {
+        "index": 1,
+        "residue_index": 0,
+        "residue_name": "ALA",
+        "residue_id": "1",
+        "atom_name": "H",
+        "element": "H"
+      },
+      {
+        "index": 2,
+        "residue_index": 0,
+        "residue_name": "ALA",
+        "residue_id": "1",
+        "atom_name": "H2",
+        "element": "H"
+      },
+      {
+        "index": 3,
+        "residue_index": 0,
+        "residue_name": "ALA",
+        "residue_id": "1",
+        "atom_name": "H3",
+        "element": "H"
+      },
+      {
+        "index": 4,
+        "residue_index": 0,
+        "residue_name": "ALA",
+        "residue_id": "1",
+        "atom_name": "CA",
+        "element": "C"
+      },
+      {
+        "index": 5,
+        "residue_index": 0,
+        "residue_name": "ALA",
+        "residue_id": "1",
+        "atom_name": "HA",
+        "element": "H"
+      },
+      {
+        "index": 6,
+        "residue_index": 0,
+        "residue_name": "ALA",
+        "residue_id": "1",
+        "atom_name": "CB",
+        "element": "C"
+      },
+      {
+        "index": 7,
+        "residue_index": 0,
+        "residue_name": "ALA",
+        "residue_id": "1",
+        "atom_name": "HB1",
+        "element": "H"
+      },
+      {
+        "index": 8,
+        "residue_index": 0,
+        "residue_name": "ALA",
+        "residue_id": "1",
+        "atom_name": "HB2",
+        "element": "H"
+      },
+      {
+        "index": 9,
+        "residue_index": 0,
+        "residue_name": "ALA",
+        "residue_id": "1",
+        "atom_name": "HB3",
+        "element": "H"
+      },
+      {
+        "index": 10,
+        "residue_index": 0,
+        "residue_name": "ALA",
+        "residue_id": "1",
+        "atom_name": "C",
+        "element": "C"
+      },
+      {
+        "index": 11,
+        "residue_index": 0,
+        "residue_name": "ALA",
+        "residue_id": "1",
+        "atom_name": "O",
+        "element": "O"
+      },
+      {
+        "index": 12,
+        "residue_index": 1,
+        "residue_name": "ALA",
+        "residue_id": "2",
+        "atom_name": "N",
+        "element": "N"
+      },
+      {
+        "index": 13,
+        "residue_index": 1,
+        "residue_name": "ALA",
+        "residue_id": "2",
+        "atom_name": "H",
+        "element": "H"
+      },
+      {
+        "index": 14,
+        "residue_index": 1,
+        "residue_name": "ALA",
+        "residue_id": "2",
+        "atom_name": "CA",
+        "element": "C"
+      },
+      {
+        "index": 15,
+        "residue_index": 1,
+        "residue_name": "ALA",
+        "residue_id": "2",
+        "atom_name": "HA",
+        "element": "H"
+      },
+      {
+        "index": 16,
+        "residue_index": 1,
+        "residue_name": "ALA",
+        "residue_id": "2",
+        "atom_name": "CB",
+        "element": "C"
+      },
+      {
+        "index": 17,
+        "residue_index": 1,
+        "residue_name": "ALA",
+        "residue_id": "2",
+        "atom_name": "HB1",
+        "element": "H"
+      },
+      {
+        "index": 18,
+        "residue_index": 1,
+        "residue_name": "ALA",
+        "residue_id": "2",
+        "atom_name": "HB2",
+        "element": "H"
+      },
+      {
+        "index": 19,
+        "residue_index": 1,
+        "residue_name": "ALA",
+        "residue_id": "2",
+        "atom_name": "HB3",
+        "element": "H"
+      },
+      {
+        "index": 20,
+        "residue_index": 1,
+        "residue_name": "ALA",
+        "residue_id": "2",
+        "atom_name": "C",
+        "element": "C"
+      },
+      {
+        "index": 21,
+        "residue_index": 1,
+        "residue_name": "ALA",
+        "residue_id": "2",
+        "atom_name": "O",
+        "element": "O"
+      },
+      {
+        "index": 22,
+        "residue_index": 2,
+        "residue_name": "ALA",
+        "residue_id": "3",
+        "atom_name": "N",
+        "element": "N"
+      },
+      {
+        "index": 23,
+        "residue_index": 2,
+        "residue_name": "ALA",
+        "residue_id": "3",
+        "atom_name": "H",
+        "element": "H"
+      },
+      {
+        "index": 24,
+        "residue_index": 2,
+        "residue_name": "ALA",
+        "residue_id": "3",
+        "atom_name": "CA",
+        "element": "C"
+      },
+      {
+        "index": 25,
+        "residue_index": 2,
+        "residue_name": "ALA",
+        "residue_id": "3",
+        "atom_name": "HA",
+        "element": "H"
+      },
+      {
+        "index": 26,
+        "residue_index": 2,
+        "residue_name": "ALA",
+        "residue_id": "3",
+        "atom_name": "CB",
+        "element": "C"
+      },
+      {
+        "index": 27,
+        "residue_index": 2,
+        "residue_name": "ALA",
+        "residue_id": "3",
+        "atom_name": "HB1",
+        "element": "H"
+      },
+      {
+        "index": 28,
+        "residue_index": 2,
+        "residue_name": "ALA",
+        "residue_id": "3",
+        "atom_name": "HB2",
+        "element": "H"
+      },
+      {
+        "index": 29,
+        "residue_index": 2,
+        "residue_name": "ALA",
+        "residue_id": "3",
+        "atom_name": "HB3",
+        "element": "H"
+      },
+      {
+        "index": 30,
+        "residue_index": 2,
+        "residue_name": "ALA",
+        "residue_id": "3",
+        "atom_name": "C",
+        "element": "C"
+      },
+      {
+        "index": 31,
+        "residue_index": 2,
+        "residue_name": "ALA",
+        "residue_id": "3",
+        "atom_name": "O",
+        "element": "O"
+      },
+      {
+        "index": 32,
+        "residue_index": 2,
+        "residue_name": "ALA",
+        "residue_id": "3",
+        "atom_name": "OXT",
+        "element": "O"
+      }
+    ],
+    "bond_count": 32,
+    "angle_count": 57,
+    "periodic_torsion_term_count": 72,
+    "exclusion_count": 89,
+    "one_four_scale_count": 74,
+    "net_charge_elementary": 6.661338147750939e-16
+  },
+  "native_projection": {
+    "generated_rust_data_sha256": "7a75f9ccd2d0cee99387ec2ae25c47b145a1a325bf0498b1752340c3a04b88a0",
+    "nonbonded": {
+      "cell": null,
+      "cutoff_angstrom": 20.0,
+      "switch_start_angstrom": 15.0,
+      "maximum_fixture_pair_distance_angstrom": 11.456097459431811,
+      "switching_is_exactly_one_for_every_fixture_pair": true,
+      "dielectric": 1.0,
+      "screening_kappa_per_angstrom": 0.0,
+      "minimum_pair_distance_angstrom": 1e-06
+    },
+    "one_four_lennard_jones_scale": 0.5,
+    "one_four_coulomb_scale": 0.8333333333333334,
+    "proper_and_improper_terms_use_the_existing_periodic_torsion_representation": true
+  },
+  "openmm_reference": {
+    "platform": "Reference",
+    "nonbonded_method": "NoCutoff",
+    "constraints": null,
+    "remove_center_of_mass_motion": false,
+    "potential_energy_kcal_per_mol": 10.003287760014612,
+    "force_channels_sha256": "c5cca7641c5e559090f752e19e084e09f75bf53c250d7f7d3191f3c31db2e760",
+    "maximum_absolute_force_kcal_per_mol_per_angstrom": 28.64752676264597,
+    "comparison": {
+      "energy_absolute_tolerance_kcal_per_mol": 2e-05,
+      "force_absolute_tolerance_kcal_per_mol_per_angstrom": 5e-05
+    }
+  },
+  "dynamics": {
+    "integrator": "velocity_verlet",
+    "initial_velocities": "all_exact_zero",
+    "timestep_femtoseconds": 0.05,
+    "step_count": 32,
+    "checkpoint_step": 13,
+    "cpu_backend_state_parity_required": true,
+    "exact_checkpoint_continuation_required": true
+  },
+  "authority": {
+    "development_fixture_only": true,
+    "general_peptide_parameter_assignment_implemented": false,
+    "production_md_validated": false,
+    "scientific_claim_authorized": false,
+    "molecular_execution_authorized": false,
+    "performance_claim_authorized": false,
+    "hip_device_execution_authorized": false,
+    "product_authority": false
+  }
+}
