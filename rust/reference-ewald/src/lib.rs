@@ -344,11 +344,7 @@ fn evaluate_reciprocal_space(
     let squared_charge_unit = charge_unit * charge_unit;
     let alpha = input.settings.alpha_per_angstrom;
     let max_indices = input.settings.reciprocal_max_indices;
-    let phase_origin = input
-        .charges_elementary
-        .iter()
-        .position(|charge| *charge != 0.0)
-        .map_or_else(Position::default, |atom| input.positions[atom]);
+    let phase_origin = canonical_phase_origin(input);
     let relative_positions = input
         .positions
         .iter()
@@ -719,7 +715,20 @@ fn reduce_to_primary_cell(position: Position, cell: OrthorhombicCell) -> [f64; 3
     for axis in 0..3 {
         let length = cell.lengths_angstrom[axis];
         let component = components[axis];
-        let value = component.rem_euclid(length);
+        let quotient = libm::floor(component / length);
+        let direct_remainder = component - quotient * length;
+        let scaled_remainder = (component / length - quotient) * length;
+        let remainder_ulp_span = direct_remainder
+            .to_bits()
+            .abs_diff(scaled_remainder.to_bits());
+        let value = if direct_remainder.is_sign_positive()
+            && scaled_remainder.is_sign_positive()
+            && remainder_ulp_span == 2
+        {
+            direct_remainder + 0.5 * (scaled_remainder - direct_remainder)
+        } else {
+            direct_remainder
+        };
         reduced[axis] = if matches!(value.to_bits(), 0 | 0x8000_0000_0000_0000) {
             0.0
         } else if value.to_bits() == length.to_bits() {
@@ -729,11 +738,32 @@ fn reduce_to_primary_cell(position: Position, cell: OrthorhombicCell) -> [f64; 3
             } else {
                 signed_residual
             }
+        } else if value < 0.0 {
+            value + length
+        } else if value > length {
+            value - length
         } else {
             value
         };
     }
     reduced
+}
+
+fn canonical_phase_origin(input: &EwaldInput) -> Position {
+    let origin = input
+        .positions
+        .iter()
+        .zip(&input.charges_elementary)
+        .filter(|(_, charge)| **charge != 0.0)
+        .map(|(&position, _)| reduce_to_primary_cell(position, input.cell))
+        .min_by(|left, right| {
+            left[0]
+                .total_cmp(&right[0])
+                .then_with(|| left[1].total_cmp(&right[1]))
+                .then_with(|| left[2].total_cmp(&right[2]))
+        })
+        .unwrap_or([0.0; 3]);
+    Position::new(origin[0], origin[1], origin[2])
 }
 
 fn pair_correction_displacement(

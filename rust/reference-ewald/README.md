@@ -23,10 +23,12 @@ excluded/scaled pairs after the periodic Ewald sum. Real-space pairs traverse
 `i < j`. Reciprocal integer vectors traverse `nx`, `ny`, then `nz`, each from
 the negative configured maximum through the positive maximum, omitting only
 zero. Forces are analytic negative energy gradients accumulated in the same
-order. Positions are first reduced toward the primary cell; a supported
-negative boundary residual that `rem_euclid` rounds to the upper boundary is
-preserved regardless of magnitude; only an actual signed zero is canonicalized
-to positive zero. Real-space minimum images then subtract or add one box
+order. Positions are first reduced toward the primary cell using a pinned-floor
+quotient and the canonical midpoint of a two-ULP direct/scaled remainder bracket.
+This keeps ordinary interior residues bitwise stable across exact represented
+box shifts. A supported negative boundary residual that rounds to the upper
+boundary is preserved regardless of magnitude; only an actual signed zero is
+canonicalized to positive zero. Real-space minimum images then subtract or add one box
 length with an error-free expansion only when the exact expanded displacement is above or below the
 half-cell boundary. Exact real-space ties retain atom-order antisymmetry. An exact half-cell local pair
 correction is rejected because a single-image force cannot preserve both
@@ -60,8 +62,9 @@ operations use the exactly pinned `libm` 0.2.16 dependency. Reciprocal structure
 factors normalize charges by the exactly reversible power of two `2^-40`,
 canonically order and compensate their cosine and sine terms, and retain tiny
 phases without perturbing represented charges. Phases use minimum-image positions
-relative to a common nonzero-charge origin, and their three axis products use a
-canonical compensated sum; zero-charge atoms bypass phase construction. Forces
+relative to the lexicographically minimum reduced nonzero-charge position, and
+their three axis products use a canonical compensated sum; zero-charge atoms
+bypass phase construction. Forces
 incorporate each wave component before the structure/phase products, preventing
 a small phase-scaled quotient from underflowing before the wave restores a
 representable result. Self energy canonically orders and compensates charge-square

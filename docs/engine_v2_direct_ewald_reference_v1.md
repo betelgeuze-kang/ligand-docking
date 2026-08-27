@@ -14,12 +14,14 @@ scales. The result separates real, reciprocal, self, and local pair-correction
 energies and returns analytic forces for every atom.
 
 All positions are reduced per axis before minimum-image subtraction and
-reciprocal phase construction. This prevents trigonometric range-reduction
-drift for long unwrapped trajectories; the property suite includes an image
-displaced by one million box lengths. If `rem_euclid` rounds a supported
-negative boundary residual up to the cell length, every nonzero signed residual
-is recovered instead of collapsing a distinct position to zero. Only an actual
-signed zero is canonicalized to positive zero.
+reciprocal phase construction. A pinned-floor quotient and the canonical
+midpoint of a two-ULP direct/scaled remainder bracket keep ordinary interior
+residues bitwise stable across an exact represented box shift. This also prevents
+trigonometric range-reduction drift for long unwrapped trajectories; the property
+suite includes an image displaced by one million box lengths. If reduction rounds
+a supported negative boundary residual up to the cell length, every nonzero
+signed residual is recovered instead of collapsing a distinct position to zero.
+Only an actual signed zero is canonicalized to positive zero.
 When image adjustment adds or subtracts a box length, TwoDiff/TwoSum expansion
 preserves the recovered boundary residual instead of rounding it away again.
 
@@ -47,9 +49,10 @@ platform standard-library implementation. Reciprocal structure factors scale
 charges by the exactly reversible binary64 power of two `2^-40`, retaining tiny
 phases that would underflow if multiplied by charge first without perturbing
 the represented charges, and canonically order and compensate their cosine and
-sine sums. Phases use minimum-image positions relative to a common nonzero-charge
-origin, so a large shared coordinate does not perturb the represented relative
-geometry. Each phase's three axis products use the same canonical compensated
+sine sums. Phases use minimum-image positions relative to the lexicographically
+minimum reduced nonzero-charge position, making the common origin independent of
+atom order while a large shared coordinate does not perturb the represented
+relative geometry. Each phase's three axis products use the same canonical compensated
 sum, preserving representable residuals when large terms cancel. Zero-charge
 atoms bypass phase construction. Force terms then
 incorporate each wave component before the structure/phase products.
@@ -94,8 +97,9 @@ convergence, near-half-cell atom swaps, preservation of every rounded nonzero
 signed boundary residual, multidimensional boundary translation invariance,
 rounded-difference tie classification, exact power-of-two charge normalization,
 tiny-phase structure preservation, phase-product underflow rejection,
-common-origin translation stability, cancellation-residual-preserving phase
-summation, atom-order-independent reciprocal structure accumulation,
+common-origin translation stability, atom-order-independent canonical phase
+origin, exact-box-shift interior-residue stability,
+cancellation-residual-preserving phase summation, atom-order-independent reciprocal structure accumulation,
 zero-charge phase bypass, atom-order-independent pair-correction energy,
 atom-order-independent self energy,
 reciprocal wave rescue before phase underflow, representable strongly damped
@@ -108,7 +112,7 @@ numeric envelope, and typed malformed inputs. The exact force bits are those of
 the pinned math and operation-order contract.
 
 The exact profile SHA-256 is
-`a757a83db6e7fa65d72ae17f4cb1ef778f819e65ea47cd6bec4671b3d260c9b5`.
+`bc426fbad57d274a1a2fc0d7370e87f9553430db2aecfd25a8a5a00a3c2e5fe6`.
 The profile separately binds the evaluator source, frozen fixture, and
 standalone Cargo lockfile hashes.
 
