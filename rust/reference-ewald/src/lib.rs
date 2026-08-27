@@ -17,6 +17,19 @@ const MAX_ATOM_COUNT: usize = 4_096;
 const MAX_RECIPROCAL_INDEX: i32 = 32;
 const MAX_NEUTRALITY_TOLERANCE_E: f64 = 1.0e-8;
 const MAX_EVALUATION_WORK_UNITS: usize = 10_000_000;
+const MAX_ABSOLUTE_COORDINATE_ANGSTROM: f64 = 1.0e12;
+const MIN_CELL_LENGTH_ANGSTROM: f64 = 1.0e-6;
+const MAX_CELL_LENGTH_ANGSTROM: f64 = 1.0e9;
+const MIN_NONZERO_ABSOLUTE_CHARGE_E: f64 = 1.0e-12;
+const MAX_ABSOLUTE_CHARGE_E: f64 = 16.0;
+const MIN_ALPHA_PER_ANGSTROM: f64 = 1.0e-12;
+const MAX_ALPHA_PER_ANGSTROM: f64 = 1.0e6;
+const MIN_CUTOFF_ANGSTROM: f64 = 1.0e-8;
+const MAX_CUTOFF_ANGSTROM: f64 = 1.0e8;
+const MIN_DIELECTRIC: f64 = 1.0e-12;
+const MAX_DIELECTRIC: f64 = 1.0e12;
+const MIN_SUPPORTED_PAIR_DISTANCE_ANGSTROM: f64 = 1.0e-8;
+const MAX_SUPPORTED_PAIR_DISTANCE_ANGSTROM: f64 = 1.0e3;
 
 /// One Cartesian position in canonical angstrom units.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -208,10 +221,11 @@ struct PairRules {
 
 /// Evaluate direct Ewald electrostatics using scalar binary64 arithmetic.
 ///
-/// Real-space pairs use lexicographic `i < j` order and the half-open minimum
-/// image. Reciprocal vectors use nested `nx`, `ny`, `nz` ascending order over
-/// the inclusive configured bounds, omitting only `(0,0,0)`. Structure factors
-/// and per-vector forces traverse atoms in input order.
+/// Real-space pairs use lexicographic `i < j` order and strict comparisons at
+/// the half-cell image boundary after primary-cell reduction. Reciprocal
+/// vectors use nested `nx`, `ny`, `nz` ascending order over the inclusive
+/// configured bounds, omitting only `(0,0,0)`. Structure factors and per-vector
+/// forces traverse atoms in input order.
 ///
 /// # Errors
 ///
@@ -385,6 +399,9 @@ fn evaluate_pair_corrections(
             } else {
                 continue;
             };
+            if pair_scale.to_bits() == 1.0_f64.to_bits() {
+                continue;
+            }
             let delta = pair_correction_displacement(
                 input.positions[atom_i],
                 input.positions[atom_j],
@@ -449,6 +466,15 @@ fn validate_atom_arrays(input: &EwaldInput) -> Result<(), EwaldError> {
                 format!("atom {atom} has a non-finite coordinate"),
             ));
         }
+        if position
+            .components()
+            .iter()
+            .any(|value| value.abs() > MAX_ABSOLUTE_COORDINATE_ANGSTROM)
+        {
+            return Err(invalid_parameter(format!(
+                "atom {atom} coordinate exceeds {MAX_ABSOLUTE_COORDINATE_ANGSTROM} angstrom"
+            )));
+        }
     }
     for (atom, charge) in input.charges_elementary.iter().enumerate() {
         if !charge.is_finite() {
@@ -457,16 +483,28 @@ fn validate_atom_arrays(input: &EwaldInput) -> Result<(), EwaldError> {
                 format!("atom {atom} charge is not finite"),
             ));
         }
+        let magnitude = charge.abs();
+        if magnitude > MAX_ABSOLUTE_CHARGE_E
+            || (magnitude > 0.0 && magnitude < MIN_NONZERO_ABSOLUTE_CHARGE_E)
+        {
+            return Err(invalid_parameter(format!(
+                "atom {atom} nonzero charge magnitude must lie in [{MIN_NONZERO_ABSOLUTE_CHARGE_E},{MAX_ABSOLUTE_CHARGE_E}] elementary"
+            )));
+        }
     }
     Ok(())
 }
 
 fn validate_cell(cell: OrthorhombicCell) -> Result<(), EwaldError> {
     for (axis, length) in cell.lengths_angstrom.iter().copied().enumerate() {
-        if !length.is_finite() || length <= 0.0 {
+        if !length.is_finite()
+            || !(MIN_CELL_LENGTH_ANGSTROM..=MAX_CELL_LENGTH_ANGSTROM).contains(&length)
+        {
             return Err(EwaldError::new(
                 EwaldErrorCode::InvalidCell,
-                format!("cell length axis {axis} must be finite and positive"),
+                format!(
+                    "cell length axis {axis} must lie in [{MIN_CELL_LENGTH_ANGSTROM},{MAX_CELL_LENGTH_ANGSTROM}] angstrom"
+                ),
             ));
         }
     }
@@ -481,16 +519,35 @@ fn validate_cell(cell: OrthorhombicCell) -> Result<(), EwaldError> {
 }
 
 fn validate_settings(input: &EwaldInput) -> Result<(), EwaldError> {
-    require_positive(input.settings.alpha_per_angstrom, "alpha_per_angstrom")?;
-    require_positive(
+    require_range(
+        input.settings.alpha_per_angstrom,
+        MIN_ALPHA_PER_ANGSTROM,
+        MAX_ALPHA_PER_ANGSTROM,
+        "alpha_per_angstrom",
+    )?;
+    require_range(
         input.settings.real_space_cutoff_angstrom,
+        MIN_CUTOFF_ANGSTROM,
+        MAX_CUTOFF_ANGSTROM,
         "real_space_cutoff_angstrom",
     )?;
-    require_positive(input.settings.dielectric, "dielectric")?;
-    require_positive(
+    require_range(
+        input.settings.dielectric,
+        MIN_DIELECTRIC,
+        MAX_DIELECTRIC,
+        "dielectric",
+    )?;
+    require_range(
         input.settings.minimum_pair_distance_angstrom,
+        MIN_SUPPORTED_PAIR_DISTANCE_ANGSTROM,
+        MAX_SUPPORTED_PAIR_DISTANCE_ANGSTROM,
         "minimum_pair_distance_angstrom",
     )?;
+    if input.settings.minimum_pair_distance_angstrom >= input.settings.real_space_cutoff_angstrom {
+        return Err(invalid_parameter(
+            "minimum_pair_distance_angstrom must be below real_space_cutoff_angstrom",
+        ));
+    }
     let neutrality_tolerance = input.settings.neutrality_tolerance_elementary;
     if !neutrality_tolerance.is_finite()
         || !(0.0..=MAX_NEUTRALITY_TOLERANCE_E).contains(&neutrality_tolerance)
@@ -599,7 +656,14 @@ fn minimum_image(first: Position, second: Position, cell: OrthorhombicCell) -> [
     for axis in 0..3 {
         let length = cell.lengths_angstrom[axis];
         let raw = first[axis] - second[axis];
-        delta[axis] = raw - length * (raw / length + 0.5).floor();
+        let half = 0.5 * length;
+        delta[axis] = if raw > half {
+            raw - length
+        } else if raw < -half {
+            raw + length
+        } else {
+            raw
+        };
     }
     delta
 }
@@ -608,8 +672,15 @@ fn reduce_to_primary_cell(position: Position, cell: OrthorhombicCell) -> [f64; 3
     let components = position.components();
     let mut reduced = [0.0; 3];
     for axis in 0..3 {
-        let value = components[axis].rem_euclid(cell.lengths_angstrom[axis]);
-        reduced[axis] = if value == 0.0 { 0.0 } else { value };
+        let length = cell.lengths_angstrom[axis];
+        let value = components[axis].rem_euclid(length);
+        reduced[axis] = if matches!(value.to_bits(), 0 | 0x8000_0000_0000_0000)
+            || value.to_bits() == length.to_bits()
+        {
+            0.0
+        } else {
+            value
+        };
     }
     reduced
 }
@@ -625,14 +696,20 @@ fn pair_correction_displacement(
     for axis in 0..3 {
         let length = cell.lengths_angstrom[axis];
         let raw = first[axis] - second[axis];
-        let minimum = raw - length * (raw / length + 0.5).floor();
-        if minimum.to_bits() == (-0.5 * length).to_bits() {
+        let half = 0.5 * length;
+        if raw.abs().to_bits() == half.to_bits() {
             return Err(EwaldError::new(
                 EwaldErrorCode::AmbiguousPairCorrectionImage,
                 format!("pair correction is exactly half a cell on axis {axis}"),
             ));
         }
-        delta[axis] = minimum;
+        delta[axis] = if raw > half {
+            raw - length
+        } else if raw < -half {
+            raw + length
+        } else {
+            raw
+        };
     }
     Ok(delta)
 }
@@ -748,10 +825,10 @@ fn checked_add(target: &mut f64, value: f64, context: &str) -> Result<(), EwaldE
     Ok(())
 }
 
-fn require_positive(value: f64, name: &str) -> Result<(), EwaldError> {
-    if !value.is_finite() || value <= 0.0 {
+fn require_range(value: f64, minimum: f64, maximum: f64, name: &str) -> Result<(), EwaldError> {
+    if !value.is_finite() || !(minimum..=maximum).contains(&value) {
         return Err(invalid_parameter(format!(
-            "{name} must be finite and positive"
+            "{name} must lie in [{minimum},{maximum}]"
         )));
     }
     Ok(())
@@ -764,18 +841,28 @@ fn invalid_parameter(detail: impl Into<String>) -> EwaldError {
 #[cfg(test)]
 mod tests {
     use super::{
-        accurate_order_independent_sum, cell_volume, minimum_image, OrthorhombicCell, Position,
+        accurate_order_independent_sum, cell_volume, minimum_image, reduce_to_primary_cell,
+        OrthorhombicCell, Position,
     };
 
     #[test]
-    fn minimum_image_uses_frozen_half_open_tie_rule() {
+    fn minimum_image_uses_canonical_positive_exact_half_tie() {
         let cell = OrthorhombicCell {
             lengths_angstrom: [10.0, 12.0, 14.0],
         };
         let positive = minimum_image(Position::new(5.0, 0.0, 0.0), Position::default(), cell);
         let negative = minimum_image(Position::new(-5.0, 0.0, 0.0), Position::default(), cell);
-        assert_eq!(positive[0].to_bits(), (-5.0_f64).to_bits());
-        assert_eq!(negative[0].to_bits(), (-5.0_f64).to_bits());
+        assert_eq!(positive[0].to_bits(), 5.0_f64.to_bits());
+        assert_eq!(negative[0].to_bits(), 5.0_f64.to_bits());
+    }
+
+    #[test]
+    fn primary_cell_reduction_canonicalizes_rounded_upper_boundary() {
+        let cell = OrthorhombicCell {
+            lengths_angstrom: [10.0, 12.0, 14.0],
+        };
+        let reduced = reduce_to_primary_cell(Position::new(-1.0e-16, 0.0, 0.0), cell);
+        assert_eq!(reduced[0].to_bits(), 0.0_f64.to_bits());
     }
 
     #[test]

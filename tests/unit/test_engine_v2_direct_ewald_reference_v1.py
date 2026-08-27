@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PROFILE_PATH = ROOT / "config/engine_v2_direct_ewald_reference_profile_v1.json"
 CRATE = ROOT / "rust/reference-ewald"
-PROFILE_SHA256 = "359981298cab573b1ea2d576f4f7a7657f788588f01568331f6534c56fdbb6ea"
+PROFILE_SHA256 = "684249abf9948dfd406da96581a6c0c746b8bcdeb5ff1162b3505fe64016728c"
 
 
 def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
@@ -44,7 +44,7 @@ def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
         "external_md_engine_dependency": False,
         "fixed64_cpu_v7_source_closure_modified": False,
         "source_sha256": (
-            "5dae22b9b22aaa912249bd5c33c47e0b0c249ec9aa263d4765d24f026fe3e726"
+            "5d593ce32c875ba07b8ebcdbb0394a1bb27ca8a28dd3c03a3a87db9fa7230f99"
         ),
         "frozen_fixture_sha256": (
             "4911f62b37a26d31cdc76f62775da6e284d8e83fe0b3b3d9514a8e96c4a489e2"
@@ -95,10 +95,15 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
             "nx_then_ny_then_nz_ascending_inclusive_omit_zero"
         ),
         "minimum_image_interval": (
-            "half_open_negative_half_length_to_positive_half_length"
+            "closed_negative_half_length_to_positive_half_length_with_"
+            "primary_cell_positive_exact_tie"
+        ),
+        "minimum_image_selection": (
+            "strict_comparison_after_primary_cell_reduction"
         ),
         "coordinate_reduction": (
-            "per_axis_rem_euclid_primary_cell_with_positive_zero"
+            "per_axis_rem_euclid_primary_cell_with_zero_or_rounded_upper_"
+            "boundary_canonicalized_to_positive_zero"
         ),
         "cell_volume_multiplication_order": (
             "sorted_minimum_times_maximum_then_middle"
@@ -106,6 +111,30 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
         "pair_correction_half_cell_tie": (
             "typed_rejection_ambiguous_pair_correction_image"
         ),
+        "unit_pair_scale": (
+            "semantic_noop_before_pair_correction_image_selection"
+        ),
+    }
+    assert profile["numeric_envelope"] == {
+        "maximum_absolute_coordinate_angstrom": 1e12,
+        "cell_length_angstrom": {"minimum": 1e-6, "maximum": 1e9},
+        "nonzero_absolute_charge_elementary": {
+            "minimum": 1e-12,
+            "maximum": 16.0,
+        },
+        "alpha_per_angstrom": {"minimum": 1e-12, "maximum": 1e6},
+        "real_space_cutoff_angstrom": {"minimum": 1e-8, "maximum": 1e8},
+        "dielectric": {"minimum": 1e-12, "maximum": 1e12},
+        "minimum_pair_distance_angstrom": {
+            "minimum": 1e-8,
+            "maximum": 1e3,
+        },
+        "minimum_pair_distance_below_cutoff_required": True,
+        "pair_distance_safety": (
+            "minimum_squared_is_normal_and_checked_before_any_inverse_"
+            "distance_operation"
+        ),
+        "charge_product_safety": "minimum_nonzero_charge_product_is_normal",
     }
     observation = profile["frozen_observation"]
     assert observation["total_kcal_per_mol"] == -6.063080251124816
@@ -154,6 +183,8 @@ def test_validation_authority_and_standalone_crate_are_bounded() -> None:
         "ConflictingPairRule",
         "AmbiguousPairCorrectionImage",
         "MAX_EVALUATION_WORK_UNITS",
+        "MIN_NONZERO_ABSOLUTE_CHARGE_E",
+        "MIN_SUPPORTED_PAIR_DISTANCE_ANGSTROM",
     ):
         assert required in source
 

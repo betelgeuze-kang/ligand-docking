@@ -261,6 +261,65 @@ fn exclusion_and_scale_apply_unscreened_local_corrections() {
 }
 
 #[test]
+fn scale_one_pair_rule_is_a_noop_before_half_cell_image_selection() {
+    let mut base = EwaldInput::new(
+        vec![Position::new(0.0, 1.0, 1.0), Position::new(5.0, 1.0, 1.0)],
+        vec![1.0, -1.0],
+        OrthorhombicCell {
+            lengths_angstrom: [10.0, 12.0, 14.0],
+        },
+    );
+    base.settings.real_space_cutoff_angstrom = 4.9;
+    let expected = evaluate(&base).expect("base half-cell pair is valid without correction");
+    base.pair_scales.push(PairScale {
+        atom_i: 0,
+        atom_j: 1,
+        coulomb_scale: 1.0,
+    });
+    assert_eq!(
+        evaluate(&base).expect("unit scale is semantically neutral"),
+        expected
+    );
+}
+
+#[test]
+fn near_half_cell_real_space_pair_is_antisymmetric_under_atom_swap() {
+    let below_half = f64::from_bits(1.5_f64.to_bits() - 1);
+    let mut input = EwaldInput::new(
+        vec![
+            Position::new(0.0, 1.0, 1.0),
+            Position::new(below_half, 1.0, 1.0),
+        ],
+        vec![1.0, -1.0],
+        OrthorhombicCell {
+            lengths_angstrom: [3.0, 12.0, 14.0],
+        },
+    );
+    input.settings.real_space_cutoff_angstrom = below_half;
+    let forward = evaluate(&input).expect("near-half pair is valid");
+    input.positions.swap(0, 1);
+    input.charges_elementary.swap(0, 1);
+    let swapped = evaluate(&input).expect("swapped near-half pair is valid");
+    assert_close(
+        swapped.energy.total_kcal_per_mol(),
+        forward.energy.total_kcal_per_mol(),
+        2.0e-12,
+    );
+    for axis in 0..3 {
+        assert_close(
+            swapped.forces_kcal_per_mol_angstrom[0][axis],
+            forward.forces_kcal_per_mol_angstrom[1][axis],
+            2.0e-12,
+        );
+        assert_close(
+            swapped.forces_kcal_per_mol_angstrom[1][axis],
+            forward.forces_kcal_per_mol_angstrom[0][axis],
+            2.0e-12,
+        );
+    }
+}
+
+#[test]
 fn half_cell_pair_correction_image_is_rejected_independent_of_representation() {
     let mut input = EwaldInput::new(
         vec![Position::new(0.0, 1.0, 1.0), Position::new(5.0, 1.0, 1.0)],
@@ -284,6 +343,58 @@ fn half_cell_pair_correction_image_is_rejected_independent_of_representation() {
         position.x_angstrom += 6.0;
     }
     assert_error(&input, EwaldErrorCode::AmbiguousPairCorrectionImage);
+}
+
+#[test]
+fn unsupported_numeric_extremes_have_typed_failures() {
+    let input = rich_input();
+
+    for coordinate in [-1.0e13, 1.0e13] {
+        let mut invalid = input.clone();
+        invalid.positions[0].x_angstrom = coordinate;
+        assert_error(&invalid, EwaldErrorCode::InvalidParameter);
+    }
+
+    for charge in [1.0e-200, 17.0] {
+        let mut invalid = input.clone();
+        invalid.charges_elementary = vec![charge, -charge, 0.0, 0.0];
+        assert_error(&invalid, EwaldErrorCode::InvalidParameter);
+    }
+
+    for length in [1.0e-7, 1.0e10] {
+        let mut invalid = input.clone();
+        invalid.cell.lengths_angstrom[0] = length;
+        assert_error(&invalid, EwaldErrorCode::InvalidCell);
+    }
+
+    for alpha in [1.0e-13, 1.0e7] {
+        let mut invalid = input.clone();
+        invalid.settings.alpha_per_angstrom = alpha;
+        assert_error(&invalid, EwaldErrorCode::InvalidParameter);
+    }
+
+    for cutoff in [1.0e-9, 1.0e9] {
+        let mut invalid = input.clone();
+        invalid.settings.real_space_cutoff_angstrom = cutoff;
+        assert_error(&invalid, EwaldErrorCode::InvalidParameter);
+    }
+
+    for dielectric in [1.0e-13, 1.0e13] {
+        let mut invalid = input.clone();
+        invalid.settings.dielectric = dielectric;
+        assert_error(&invalid, EwaldErrorCode::InvalidParameter);
+    }
+
+    for minimum_distance in [1.0e-201, 1.0e4] {
+        let mut invalid = input.clone();
+        invalid.settings.minimum_pair_distance_angstrom = minimum_distance;
+        assert_error(&invalid, EwaldErrorCode::InvalidParameter);
+    }
+
+    let mut invalid_relation = input;
+    invalid_relation.settings.minimum_pair_distance_angstrom = 7.0;
+    invalid_relation.settings.real_space_cutoff_angstrom = 7.0;
+    assert_error(&invalid_relation, EwaldErrorCode::InvalidParameter);
 }
 
 #[test]
@@ -326,7 +437,7 @@ fn malformed_inputs_have_typed_failures() {
     charged.charges_elementary[0] += 0.01;
     assert_error(&charged, EwaldErrorCode::NonNeutralSystem);
 
-    let tiny = 2.0_f64.powi(-54);
+    let tiny = 2.0_f64.powi(-39);
     for charges in [[1.0, tiny, -1.0], [1.0, -1.0, tiny]] {
         let mut order_sensitive = EwaldInput::new(
             vec![

@@ -17,7 +17,7 @@
     "native_abi_version_allocated": false,
     "external_md_engine_dependency": false,
     "fixed64_cpu_v7_source_closure_modified": false,
-    "source_sha256": "5dae22b9b22aaa912249bd5c33c47e0b0c249ec9aa263d4765d24f026fe3e726",
+    "source_sha256": "5d593ce32c875ba07b8ebcdbb0394a1bb27ca8a28dd3c03a3a87db9fa7230f99",
     "frozen_fixture_sha256": "4911f62b37a26d31cdc76f62775da6e284d8e83fe0b3b3d9514a8e96c4a489e2",
     "cargo_lock_sha256": "cc64500cc1c97dfda26a8a4c8b8825c5296935f1e63cbaf61676a321364b3d9d"
   },
@@ -49,10 +49,24 @@
     "evaluation_work_unit_equation": "pair_count_plus_two_times_atom_count_times_reciprocal_vector_count",
     "real_pair_order": "lexicographic_i_then_j",
     "reciprocal_vector_order": "nx_then_ny_then_nz_ascending_inclusive_omit_zero",
-    "minimum_image_interval": "half_open_negative_half_length_to_positive_half_length",
-    "coordinate_reduction": "per_axis_rem_euclid_primary_cell_with_positive_zero",
+    "minimum_image_interval": "closed_negative_half_length_to_positive_half_length_with_primary_cell_positive_exact_tie",
+    "minimum_image_selection": "strict_comparison_after_primary_cell_reduction",
+    "coordinate_reduction": "per_axis_rem_euclid_primary_cell_with_zero_or_rounded_upper_boundary_canonicalized_to_positive_zero",
     "cell_volume_multiplication_order": "sorted_minimum_times_maximum_then_middle",
-    "pair_correction_half_cell_tie": "typed_rejection_ambiguous_pair_correction_image"
+    "pair_correction_half_cell_tie": "typed_rejection_ambiguous_pair_correction_image",
+    "unit_pair_scale": "semantic_noop_before_pair_correction_image_selection"
+  },
+  "numeric_envelope": {
+    "maximum_absolute_coordinate_angstrom": 1e12,
+    "cell_length_angstrom": {"minimum": 1e-6, "maximum": 1e9},
+    "nonzero_absolute_charge_elementary": {"minimum": 1e-12, "maximum": 16.0},
+    "alpha_per_angstrom": {"minimum": 1e-12, "maximum": 1e6},
+    "real_space_cutoff_angstrom": {"minimum": 1e-8, "maximum": 1e8},
+    "dielectric": {"minimum": 1e-12, "maximum": 1e12},
+    "minimum_pair_distance_angstrom": {"minimum": 1e-8, "maximum": 1e3},
+    "minimum_pair_distance_below_cutoff_required": true,
+    "pair_distance_safety": "minimum_squared_is_normal_and_checked_before_any_inverse_distance_operation",
+    "charge_product_safety": "minimum_nonzero_charge_product_is_normal"
   },
   "frozen_observation": {
     "real_space_kcal_per_mol": -0.11800195657683102,
@@ -88,6 +102,10 @@
     "exclusion_correction": true,
     "scaled_pair_correction": true,
     "half_cell_pair_correction_typed_rejection": true,
+    "unit_pair_scale_noop_before_image_selection": true,
+    "near_half_cell_atom_swap_invariance": true,
+    "rounded_primary_cell_upper_boundary_canonicalization": true,
+    "numeric_envelope_typed_rejection": true,
     "neutrality_permutation_independent": true,
     "cell_volume_axis_order_independent": true,
     "combined_work_cap": true,

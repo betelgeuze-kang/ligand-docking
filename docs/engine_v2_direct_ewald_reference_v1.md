@@ -18,10 +18,21 @@ subtraction and reciprocal phase construction. This prevents trigonometric
 range-reduction drift for long unwrapped trajectories; the property suite
 includes an image displaced by one million box lengths.
 
-The real-space minimum image remains half-open. An exact half-cell local pair
-correction is rejected with a typed `AmbiguousPairCorrectionImage` error because
-no single-image force direction can preserve both translation and permutation
-invariance. Tests freeze the rejection across atom swaps and common translation.
+Real-space image selection uses strict comparisons after primary-cell reduction,
+which preserves atom-swap antisymmetry on both sides of the half-cell boundary.
+An exact half-cell real-space tie uses the canonical positive primary-cell
+representation. An exact half-cell local pair correction is rejected with a
+typed `AmbiguousPairCorrectionImage` error because no single-image force
+direction can preserve both translation and permutation invariance. A unit pair
+scale is a semantic no-op and skips that image selection entirely.
+
+The scalar contract admits a bounded physical/numerical envelope: coordinates
+through `1e12` angstrom; cell lengths from `1e-6` through `1e9` angstrom;
+nonzero charge magnitudes from `1e-12` through `16` elementary charge; and
+bounded alpha, cutoff, dielectric, and minimum-distance settings recorded in
+the immutable profile. The minimum pair distance must be below the cutoff. This
+keeps charge products and the squared minimum distance normal before inverse-
+distance arithmetic while preserving the frozen ordinary-input operation order.
 
 Neutrality uses a canonical absolute-magnitude/total order and Neumaier
 compensated sum, avoiding input-order-dependent admission. Cell volume uses a
@@ -36,10 +47,11 @@ produce identical frozen IEEE-754 values. All 12 analytic force components are
 checked against central finite differences. Additional properties cover global
 translation, integer images, complete atom permutation, global charge
 inversion, near-zero net force, bitwise repetition, reciprocal-bound
-convergence, and typed malformed inputs.
+convergence, near-half-cell atom swaps, rounded upper-bound primary-cell
+reduction, unit-scale no-ops, the numeric envelope, and typed malformed inputs.
 
 The exact profile SHA-256 is
-`359981298cab573b1ea2d576f4f7a7657f788588f01568331f6534c56fdbb6ea`.
+`684249abf9948dfd406da96581a6c0c746b8bcdeb5ff1162b3505fe64016728c`.
 The profile separately binds the evaluator source, frozen fixture, and
 standalone Cargo lockfile hashes.
 

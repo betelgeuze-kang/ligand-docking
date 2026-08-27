@@ -23,14 +23,26 @@ excluded/scaled pairs after the periodic Ewald sum. Real-space pairs traverse
 `i < j`. Reciprocal integer vectors traverse `nx`, `ny`, then `nz`, each from
 the negative configured maximum through the positive maximum, omitting only
 zero. Forces are analytic negative energy gradients accumulated in the same
-order. Real-space minimum images use `d - L*floor(d/L + 0.5)`. An exact
-half-cell local pair correction is rejected because a single-image force cannot
-preserve both common-translation and atom-permutation invariance.
+order. Positions are first reduced into the primary cell; real-space minimum
+images then subtract or add one box length only when the raw displacement is
+strictly above or below the half-cell boundary. An exact real-space tie uses the
+canonical positive primary-cell representation. An exact half-cell local pair
+correction is rejected because a single-image force cannot preserve both
+common-translation and atom-permutation invariance. A pair scale of exactly one
+is a semantic no-op and skips local-correction image selection.
 
 Neutrality is checked with a canonical order and Neumaier compensated sum.
 Cell volume multiplies sorted minimum and maximum lengths before the middle
 length. A combined real-pair plus reciprocal-phase work cap prevents the scalar
 reference's individually valid maxima from creating an unbounded evaluation.
+The API also rejects finite values outside its documented numeric envelope:
+absolute coordinates above `1e12` angstrom, cell lengths outside `[1e-6,1e9]`
+angstrom, nonzero charge magnitudes outside `[1e-12,16]` elementary charge,
+alpha outside `[1e-12,1e6]` per angstrom, cutoff outside `[1e-8,1e8]`
+angstrom, dielectric outside `[1e-12,1e12]`, or minimum pair distance outside
+`[1e-8,1e3]` angstrom. The minimum pair distance must also be below the cutoff.
+These bounds keep charge products and squared minimum-distance checks normal
+before any inverse-distance operation.
 
 `fixtures/direct_ewald_v1.tsv` freezes all four energy components, their total,
 and all 12 force components as IEEE-754 bit patterns. The observation example
