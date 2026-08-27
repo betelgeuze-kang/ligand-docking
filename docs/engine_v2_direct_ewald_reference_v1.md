@@ -46,8 +46,11 @@ and square root is supplied by the exactly pinned `libm` 0.2.16 dependency rathe
 platform standard-library implementation. Reciprocal structure factors scale
 charges by the exactly reversible binary64 power of two `2^-40`, retaining tiny
 phases that would underflow if multiplied by charge first without perturbing
-the represented charges. Force terms then incorporate each wave component
-before the structure/phase products and pinned exponential.
+the represented charges, and canonically order and compensate their cosine and
+sine sums. Phases use minimum-image positions relative to a common nonzero-charge
+origin, so a large shared coordinate does not perturb the represented relative
+geometry. Zero-charge atoms bypass phase construction. Force terms then
+incorporate each wave component before the structure/phase products.
 Real-space energy divides `erfc` first for sub-unit distances and multiplies the
 charge/Coulomb prefactor first otherwise. Radial forces use distance-adaptive
 damping division and then distance-adaptive Cartesian component scaling. This
@@ -57,9 +60,9 @@ If pinned real-space `erfc` or exponential evaluation itself reaches exact zero
 for a nonzero-charge pair, evaluation fails closed with typed
 `DampingUnderflow`; the reference never silently reports zero when an external
 scale could make the mathematical completed interaction representable.
-Exact-zero reciprocal damping is classified against the completed undamped
-energy and force in the log domain: it is skipped only when every completed
-component must round to zero, and otherwise returns `DampingUnderflow`. A
+Subnormal or exact-zero reciprocal exponentials are completed with the undamped
+energy or force in the log domain, preserving every result that can round
+nonzero and returning zero only below the binary64 half-minimum threshold. A
 nonzero wave-coordinate product that itself rounds to zero returns the typed
 `PhaseUnderflow` error before phase construction.
 
@@ -87,9 +90,12 @@ convergence, near-half-cell atom swaps, preservation of every rounded nonzero
 signed boundary residual, multidimensional boundary translation invariance,
 rounded-difference tie classification, exact power-of-two charge normalization,
 tiny-phase structure preservation, phase-product underflow rejection,
+common-origin translation stability, atom-order-independent reciprocal
+structure accumulation, zero-charge phase bypass,
 atom-order-independent self energy,
 reciprocal wave rescue before phase underflow, representable strongly damped
-real energy/forces, log-domain reciprocal and typed real zero-damping handling,
+real energy/forces, log-domain reciprocal damping reconstruction and typed real
+zero-damping handling,
 wrapped-displacement residual preservation, pre-allocation rule-work
 rejection, exact-neutral admission,
 subnormal Cartesian force components, unit-scale and zero-charge no-ops, the
@@ -97,7 +103,7 @@ numeric envelope, and typed malformed inputs. The exact force bits are those of
 the pinned math and operation-order contract.
 
 The exact profile SHA-256 is
-`21a2abd3589ef926421b6736cedc22f166a7cb03358bd0a718180fd8f723fdf4`.
+`32579d5c8389eab41019c027a78b6391b3812b587a47a1cac378743b0f98ecbe`.
 The profile separately binds the evaluator source, frozen fixture, and
 standalone Cargo lockfile hashes.
 

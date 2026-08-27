@@ -219,16 +219,6 @@ struct PairRules {
     corrections: BTreeMap<PairKey, f64>,
 }
 
-#[derive(Clone, Copy)]
-struct ReciprocalUnderflowContext {
-    wave: [f64; 3],
-    wave2: f64,
-    damping_exponent: f64,
-    structure_cos_sin: (f64, f64),
-    scaled_force_factor: f64,
-    charge_unit: f64,
-}
-
 /// Evaluate direct Ewald electrostatics using scalar binary64 arithmetic.
 ///
 /// Real-space pairs use lexicographic `i < j` order and strict comparisons at
@@ -354,10 +344,22 @@ fn evaluate_reciprocal_space(
     let squared_charge_unit = charge_unit * charge_unit;
     let alpha = input.settings.alpha_per_angstrom;
     let max_indices = input.settings.reciprocal_max_indices;
-    let reduced_positions = input
+    let phase_origin = input
+        .charges_elementary
+        .iter()
+        .position(|charge| *charge != 0.0)
+        .map_or_else(Position::default, |atom| input.positions[atom]);
+    let relative_positions = input
         .positions
         .iter()
-        .map(|position| reduce_to_primary_cell(*position, input.cell))
+        .zip(&input.charges_elementary)
+        .map(|(&position, &charge)| {
+            if charge == 0.0 {
+                [0.0; 3]
+            } else {
+                minimum_image(position, phase_origin, input.cell)
+            }
+        })
         .collect::<Vec<_>>();
     for nx in -max_indices[0]..=max_indices[0] {
         for ny in -max_indices[1]..=max_indices[1] {
@@ -373,45 +375,25 @@ fn evaluate_reciprocal_space(
                 let wave2 = squared_norm(wave);
                 let damping_exponent = -wave2 / (4.0 * alpha * alpha);
                 let exponential = libm::exp(damping_exponent);
-                let phases = reduced_positions
+                let phases = relative_positions
                     .iter()
-                    .map(|&position| {
+                    .zip(&input.charges_elementary)
+                    .map(|(&position, &charge)| {
+                        if charge == 0.0 {
+                            return Ok((0.0, 1.0));
+                        }
                         let phase = checked_phase(wave, position)?;
                         Ok(libm::sincos(phase))
                     })
                     .collect::<Result<Vec<_>, EwaldError>>()?;
-                let mut structure_cos = 0.0;
-                let mut structure_sin = 0.0;
-                for (&charge, &(phase_sin, phase_cos)) in
-                    input.charges_elementary.iter().zip(&phases)
-                {
-                    let normalized_charge = charge / charge_unit;
-                    structure_cos += normalized_charge * phase_cos;
-                    structure_sin += normalized_charge * phase_sin;
-                }
+                let (structure_cos, structure_sin) =
+                    canonical_structure_factor(&input.charges_elementary, &phases, charge_unit);
                 let scaled_energy_factor = reciprocal_energy_factor * squared_charge_unit / wave2;
                 let undamped_energy = scaled_energy_factor * structure_cos * structure_cos
                     + scaled_energy_factor * structure_sin * structure_sin;
-                if exponential == 0.0 {
-                    ensure_zero_reciprocal_damping_is_safe(
-                        input,
-                        &phases,
-                        [nx, ny, nz],
-                        undamped_energy,
-                        ReciprocalUnderflowContext {
-                            wave,
-                            wave2,
-                            damping_exponent,
-                            structure_cos_sin: (structure_cos, structure_sin),
-                            scaled_force_factor: reciprocal_force_factor * squared_charge_unit,
-                            charge_unit,
-                        },
-                    )?;
-                    continue;
-                }
                 checked_add(
                     &mut result.energy.reciprocal_space_kcal_per_mol,
-                    undamped_energy * exponential,
+                    apply_reciprocal_damping(undamped_energy, damping_exponent, exponential),
                     "reciprocal-space energy",
                 )?;
                 for ((force, &charge), &(phase_sin, phase_cos)) in result
@@ -421,17 +403,18 @@ fn evaluate_reciprocal_space(
                     .zip(&phases)
                 {
                     for axis in 0..3 {
+                        let undamped_force = scaled_reciprocal_force_component(
+                            reciprocal_force_factor * squared_charge_unit,
+                            wave[axis],
+                            wave2,
+                            charge / charge_unit,
+                            (structure_cos, structure_sin),
+                            (phase_sin, phase_cos),
+                            1.0,
+                        );
                         checked_add(
                             &mut force[axis],
-                            scaled_reciprocal_force_component(
-                                reciprocal_force_factor * squared_charge_unit,
-                                wave[axis],
-                                wave2,
-                                charge / charge_unit,
-                                (structure_cos, structure_sin),
-                                (phase_sin, phase_cos),
-                                exponential,
-                            ),
+                            apply_reciprocal_damping(undamped_force, damping_exponent, exponential),
                             "reciprocal force",
                         )?;
                     }
@@ -921,50 +904,42 @@ fn checked_phase(wave: [f64; 3], position: [f64; 3]) -> Result<f64, EwaldError> 
     Ok(terms[0] + terms[1] + terms[2])
 }
 
-fn damped_value_may_be_representable(undamped_value: f64, damping_exponent: f64) -> bool {
+fn apply_reciprocal_damping(undamped_value: f64, damping_exponent: f64, exponential: f64) -> f64 {
     const LN_HALF_MIN_POSITIVE_SUBNORMAL: f64 = -745.133_219_101_941_1;
-    undamped_value != 0.0
-        && libm::log(undamped_value.abs()) + damping_exponent > LN_HALF_MIN_POSITIVE_SUBNORMAL
+    if undamped_value == 0.0 {
+        return 0.0;
+    }
+    if exponential.is_normal() {
+        return undamped_value * exponential;
+    }
+    let completed_log_magnitude = libm::log(undamped_value.abs()) + damping_exponent;
+    if completed_log_magnitude <= LN_HALF_MIN_POSITIVE_SUBNORMAL {
+        return 0.0;
+    }
+    let magnitude = libm::exp(completed_log_magnitude);
+    if undamped_value.is_sign_negative() {
+        -magnitude
+    } else {
+        magnitude
+    }
 }
 
-fn reciprocal_damping_underflow(nx: i32, ny: i32, nz: i32) -> EwaldError {
-    EwaldError::new(
-        EwaldErrorCode::DampingUnderflow,
-        format!("reciprocal vector ({nx},{ny},{nz}) damping underflows before scaling"),
-    )
-}
-
-fn ensure_zero_reciprocal_damping_is_safe(
-    input: &EwaldInput,
+fn canonical_structure_factor(
+    charges: &[f64],
     phases: &[(f64, f64)],
-    indices: [i32; 3],
-    undamped_energy: f64,
-    context: ReciprocalUnderflowContext,
-) -> Result<(), EwaldError> {
-    if damped_value_may_be_representable(undamped_energy, context.damping_exponent) {
-        return Err(reciprocal_damping_underflow(
-            indices[0], indices[1], indices[2],
-        ));
+    charge_unit: f64,
+) -> (f64, f64) {
+    let mut cosine_terms = Vec::with_capacity(charges.len());
+    let mut sine_terms = Vec::with_capacity(charges.len());
+    for (&charge, &(phase_sin, phase_cos)) in charges.iter().zip(phases) {
+        let normalized_charge = charge / charge_unit;
+        cosine_terms.push(normalized_charge * phase_cos);
+        sine_terms.push(normalized_charge * phase_sin);
     }
-    for (&charge, &phase_sin_cos) in input.charges_elementary.iter().zip(phases) {
-        for wave_component in context.wave {
-            let undamped_force = scaled_reciprocal_force_component(
-                context.scaled_force_factor,
-                wave_component,
-                context.wave2,
-                charge / context.charge_unit,
-                context.structure_cos_sin,
-                phase_sin_cos,
-                1.0,
-            );
-            if damped_value_may_be_representable(undamped_force, context.damping_exponent) {
-                return Err(reciprocal_damping_underflow(
-                    indices[0], indices[1], indices[2],
-                ));
-            }
-        }
-    }
-    Ok(())
+    (
+        accurate_order_independent_sum(&cosine_terms),
+        accurate_order_independent_sum(&sine_terms),
+    )
 }
 
 fn squared_norm(vector: [f64; 3]) -> f64 {

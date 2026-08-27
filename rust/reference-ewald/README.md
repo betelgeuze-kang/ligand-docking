@@ -58,11 +58,13 @@ before any inverse-distance operation.
 All exponential, logarithm, sine/cosine, complementary-error-function, and square-root
 operations use the exactly pinned `libm` 0.2.16 dependency. Reciprocal structure
 factors normalize charges by the exactly reversible power of two `2^-40`,
-retaining tiny phases without perturbing represented charges. Forces incorporate
-each wave component before the structure/phase products and pinned exponential,
-preventing a small phase-scaled quotient from underflowing before the wave restores
-a representable result. Self energy canonically orders and compensates charge-
-square accumulation so it is atom-order independent.
+canonically order and compensate their cosine and sine terms, and retain tiny
+phases without perturbing represented charges. Phases use minimum-image positions
+relative to a common nonzero-charge origin, while zero-charge atoms bypass phase
+construction. Forces incorporate each wave component before the structure/phase
+products, preventing a small phase-scaled quotient from underflowing before the
+wave restores a representable result. Self energy canonically orders and
+compensates charge-square accumulation so it is atom-order independent.
 Real-space energy divides `erfc` first for sub-unit distances and multiplies the
 Coulomb/charge prefactor first otherwise. Force magnitudes use distance-adaptive
 damping division and distance-adaptive Cartesian component scaling, preserving
@@ -70,10 +72,11 @@ supported subnormal energy and Cartesian force components that are still
 representable. A nonzero-charge real-space pair whose pinned `erfc` or
 exponential result reaches exact zero is rejected with `DampingUnderflow`
 instead of silently discarding a potentially representable scaled interaction.
-Exact-zero reciprocal damping uses a pinned-log domain test of the completed
-undamped energy and force: vectors are skipped only when every result must round
-to zero, otherwise `DampingUnderflow` is returned. A nonzero wave-coordinate
-product that rounds to zero is rejected with `PhaseUnderflow`.
+Subnormal or exact-zero reciprocal exponentials are combined with each undamped
+energy and force in the pinned-log domain. Every completed value that can round
+nonzero is reconstructed; only values below the binary64 half-minimum threshold
+become zero. A nonzero wave-coordinate product that rounds to zero is rejected
+with `PhaseUnderflow`.
 
 `fixtures/direct_ewald_v1.tsv` freezes all four energy components, their total,
 and all 12 force components as IEEE-754 bit patterns. The observation example

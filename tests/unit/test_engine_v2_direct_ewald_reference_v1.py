@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PROFILE_PATH = ROOT / "config/engine_v2_direct_ewald_reference_profile_v1.json"
 CRATE = ROOT / "rust/reference-ewald"
-PROFILE_SHA256 = "21a2abd3589ef926421b6736cedc22f166a7cb03358bd0a718180fd8f723fdf4"
+PROFILE_SHA256 = "32579d5c8389eab41019c027a78b6391b3812b587a47a1cac378743b0f98ecbe"
 
 
 def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
@@ -48,10 +48,10 @@ def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
         "external_md_engine_dependency": False,
         "fixed64_cpu_v7_source_closure_modified": False,
         "source_sha256": (
-            "06cb5b1de3775b0ecd24e3675aa2585b1cf403fcf8d75b5ea8e67501cd111eed"
+            "e99cc33c369cf930cdd929638e7c7674dfcc060327701a371b7f162d2bdd85f7"
         ),
         "frozen_fixture_sha256": (
-            "b733a07c531ba88d204a3b87413346510306bf0147bd10a275efb42469d65359"
+            "a8d1efde95b0e3aa946b04cd85c7b973703a2d07f815abf9985bde7aa382c125"
         ),
         "cargo_lock_sha256": (
             "cc64500cc1c97dfda26a8a4c8b8825c5296935f1e63cbaf61676a321364b3d9d"
@@ -133,9 +133,10 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
             "semantic_noop_before_pair_correction_image_selection"
         ),
         "reciprocal_damping_order": (
-            "exact_power_of_two_charge_normalized_structure_then_wave_scaled_"
-            "prefactor_before_phase_combination_and_pinned_exponential_with_"
-            "log_domain_exact_zero_classification"
+            "common_origin_relative_phases_then_exact_power_of_two_charge_"
+            "normalization_then_canonical_compensated_structure_sum_then_wave_"
+            "scaled_prefactor_before_phase_combination_with_log_domain_scaled_"
+            "subnormal_or_zero_exponential_reconstruction"
         ),
         "real_space_energy_order": (
             "charge_prefactor_times_erfc_over_distance_for_subunit_distance_"
@@ -170,15 +171,15 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
             "typed_DampingUnderflow_for_nonzero_charge_pair"
         ),
         "reciprocal_zero_damping": (
-            "log_domain_typed_DampingUnderflow_only_if_completed_energy_or_"
-            "force_can_round_nonzero"
+            "log_domain_scaled_reconstruction_when_completed_energy_or_force_"
+            "can_round_nonzero"
         ),
         "reciprocal_phase_product_underflow": "typed_PhaseUnderflow",
     }
     observation = profile["frozen_observation"]
     assert observation["total_kcal_per_mol"] == -6.0630802511248305
     assert observation["maximum_central_finite_difference_force_error_kcal_per_mol_angstrom"] == (
-        1.1746751238383979e-8
+        1.2102022994842088e-8
     )
     assert observation[
         "reciprocal_bound_absolute_total_difference_from_bound_9_kcal_per_mol"
