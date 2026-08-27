@@ -244,7 +244,7 @@ pub fn observe_development_ala3_constraints_v1(
     Ok(observation)
 }
 
-fn frozen_xh_constraints() -> Result<DistanceConstraints> {
+pub(crate) fn frozen_xh_constraints() -> Result<DistanceConstraints> {
     let rows = data::BONDS
         .iter()
         .filter(|bond| {

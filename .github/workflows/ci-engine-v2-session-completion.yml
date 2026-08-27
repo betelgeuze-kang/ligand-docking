@@ -34,6 +34,7 @@ on:
       - "config/engine_v2_native_ala3_peptide_profile_v1.json"
       - "config/engine_v2_native_ala3_validation_profile_v1.json"
       - "config/engine_v2_native_ala3_constraints_profile_v1.json"
+      - "config/engine_v2_native_ala3_explicit_composition_profile_v1.json"
       - "rust/betelgeuze-runtime/assets/engine_v2_native_water_box_profile_v1.json"
       - "rust/betelgeuze-runtime/assets/engine_v2_native_water_box_constraints_profile_v1.json"
       - "rust/betelgeuze-runtime/assets/engine_v2_native_water_box_nvt_ensemble_profile_v1.json"
@@ -47,9 +48,13 @@ on:
       - "rust/betelgeuze-runtime/assets/engine_v2_native_ala3_peptide_profile_v1.json"
       - "rust/betelgeuze-runtime/assets/engine_v2_native_ala3_validation_profile_v1.json"
       - "rust/betelgeuze-runtime/assets/engine_v2_native_ala3_constraints_profile_v1.json"
+      - "rust/betelgeuze-runtime/assets/engine_v2_native_ala3_explicit_composition_profile_v1.json"
       - "rust/betelgeuze-runtime/src/development_peptide.rs"
       - "rust/betelgeuze-runtime/src/development_peptide_constraints.rs"
       - "rust/betelgeuze-runtime/src/development_peptide_data.rs"
+      - "rust/betelgeuze-runtime/src/development_explicit_composition.rs"
+      - "rust/betelgeuze-runtime/src/development_water_box.rs"
+      - "rust/betelgeuze-runtime/src/lib.rs"
       - "config/engine_v2_hip_d1_benchmark_profile_v1.json"
       - "tests/unit/test_engine_v2_d1_development_v2.py"
       - "tests/unit/test_materialize_engine_v2_d1_case_results_v1.py"
@@ -58,6 +63,7 @@ on:
       - "rust/betelgeuze-docking-search/tests/fixtures/sampling_funnel_selected_indices_v1.txt"
       - "tests/unit/test_engine_v2_water_box_reference_v1.py"
       - "tests/unit/test_engine_v2_native_ala3_profile_v1.py"
+      - "tests/unit/test_engine_v2_native_ala3_explicit_composition_v1.py"
       - "tests/unit/test_inventory_github_actions_pins_v1.py"
       - "tests/unit/test_verify_engine_v2_hip_d1_benchmark_v1.py"
       - "tests/unit/test_bind_engine_v2_hip_d1_profile_v1.py"
@@ -67,6 +73,7 @@ on:
       - "docs/engine_v2_session_completion_v1.md"
       - "docs/engine_v2_native_water_box_v1.md"
       - "docs/engine_v2_native_ala3_peptide_v1.md"
+      - "docs/engine_v2_native_ala3_explicit_composition_v1.md"
       - "docs/engine_v2_sampling_pool_cpu_observation_v1.md"
       - "docs/engine_v2_product_release_reconstruction_v1.md"
       - "docs/community_license_owner_decision_v1.md"
@@ -106,6 +113,7 @@ on:
       - "config/engine_v2_native_ala3_peptide_profile_v1.json"
       - "config/engine_v2_native_ala3_validation_profile_v1.json"
       - "config/engine_v2_native_ala3_constraints_profile_v1.json"
+      - "config/engine_v2_native_ala3_explicit_composition_profile_v1.json"
       - "rust/betelgeuze-runtime/assets/engine_v2_native_water_box_profile_v1.json"
       - "rust/betelgeuze-runtime/assets/engine_v2_native_water_box_constraints_profile_v1.json"
       - "rust/betelgeuze-runtime/assets/engine_v2_native_water_box_nvt_ensemble_profile_v1.json"
@@ -119,9 +127,13 @@ on:
       - "rust/betelgeuze-runtime/assets/engine_v2_native_ala3_peptide_profile_v1.json"
       - "rust/betelgeuze-runtime/assets/engine_v2_native_ala3_validation_profile_v1.json"
       - "rust/betelgeuze-runtime/assets/engine_v2_native_ala3_constraints_profile_v1.json"
+      - "rust/betelgeuze-runtime/assets/engine_v2_native_ala3_explicit_composition_profile_v1.json"
       - "rust/betelgeuze-runtime/src/development_peptide.rs"
       - "rust/betelgeuze-runtime/src/development_peptide_constraints.rs"
       - "rust/betelgeuze-runtime/src/development_peptide_data.rs"
+      - "rust/betelgeuze-runtime/src/development_explicit_composition.rs"
+      - "rust/betelgeuze-runtime/src/development_water_box.rs"
+      - "rust/betelgeuze-runtime/src/lib.rs"
       - "config/engine_v2_hip_d1_benchmark_profile_v1.json"
       - "tests/unit/test_engine_v2_d1_development_v2.py"
       - "tests/unit/test_materialize_engine_v2_d1_case_results_v1.py"
@@ -130,6 +142,7 @@ on:
       - "rust/betelgeuze-docking-search/tests/fixtures/sampling_funnel_selected_indices_v1.txt"
       - "tests/unit/test_engine_v2_water_box_reference_v1.py"
       - "tests/unit/test_engine_v2_native_ala3_profile_v1.py"
+      - "tests/unit/test_engine_v2_native_ala3_explicit_composition_v1.py"
       - "tests/unit/test_inventory_github_actions_pins_v1.py"
       - "tests/unit/test_verify_engine_v2_hip_d1_benchmark_v1.py"
       - "tests/unit/test_bind_engine_v2_hip_d1_profile_v1.py"
@@ -139,6 +152,7 @@ on:
       - "docs/engine_v2_session_completion_v1.md"
       - "docs/engine_v2_native_water_box_v1.md"
       - "docs/engine_v2_native_ala3_peptide_v1.md"
+      - "docs/engine_v2_native_ala3_explicit_composition_v1.md"
       - "docs/engine_v2_sampling_pool_cpu_observation_v1.md"
       - "docs/engine_v2_product_release_reconstruction_v1.md"
       - "docs/community_license_owner_decision_v1.md"
@@ -202,6 +216,7 @@ jobs:
             tests/unit/test_engine_v2_sampling_pool_cpu_observation_evidence_v1.py \
             tests/unit/test_engine_v2_water_box_reference_v1.py \
             tests/unit/test_engine_v2_native_ala3_profile_v1.py \
+            tests/unit/test_engine_v2_native_ala3_explicit_composition_v1.py \
             tests/unit/test_inventory_github_actions_pins_v1.py \
             tests/unit/test_verify_engine_v2_hip_d1_benchmark_v1.py \
             tests/unit/test_bind_engine_v2_hip_d1_profile_v1.py \

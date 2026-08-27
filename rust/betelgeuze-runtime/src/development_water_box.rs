@@ -70,7 +70,7 @@ const DEVELOPMENT_WATER_BOX_DYNAMICS_FAILURE_V2_PROFILE_BYTES: &[u8] =
 const DEVELOPMENT_WATER_BOX_DYNAMICS_FAILURE_V3_PROFILE_BYTES: &[u8] =
     include_bytes!("../assets/engine_v2_native_water_box_dynamics_failure_profile_v3.json");
 
-const OH_DISTANCE_ANGSTROM: f64 = f64::from_bits(0x3feea161e4f765fe);
+pub(crate) const OH_DISTANCE_ANGSTROM: f64 = f64::from_bits(0x3feea161e4f765fe);
 const HOH_ANGLE_RADIANS: f64 = f64::from_bits(0x3ffd2fff5ab17aaf);
 const BOND_FORCE_KCAL_PER_MOL_ANGSTROM2: f64 = 450.0;
 const ANGLE_FORCE_KCAL_PER_MOL_RADIAN2: f64 = 55.0;
@@ -86,10 +86,10 @@ const SWITCH_START_ANGSTROM: f64 = 6.5;
 const TIMESTEP_FEMTOSECONDS: f64 = 0.02;
 const TEMPERATURE_KELVIN: f64 = 300.0;
 const FRICTION_PER_FEMTOSECOND: f64 = 0.001;
-const HH_DISTANCE_ANGSTROM: f64 = 2.0 * f64::from_bits(0x3fe838efe48967cf);
-const CONSTRAINT_TOLERANCE_ANGSTROM: f64 = 1.0e-10;
-const CONSTRAINT_VELOCITY_TOLERANCE_ANGSTROM_PER_FEMTOSECOND: f64 = 1.0e-10;
-const CONSTRAINT_MAX_ITERATIONS: u32 = 100;
+pub(crate) const HH_DISTANCE_ANGSTROM: f64 = 2.0 * f64::from_bits(0x3fe838efe48967cf);
+pub(crate) const CONSTRAINT_TOLERANCE_ANGSTROM: f64 = 1.0e-10;
+pub(crate) const CONSTRAINT_VELOCITY_TOLERANCE_ANGSTROM_PER_FEMTOSECOND: f64 = 1.0e-10;
+pub(crate) const CONSTRAINT_MAX_ITERATIONS: u32 = 100;
 const NVT_ENSEMBLE_TIMESTEP_FEMTOSECONDS: f64 = 0.5;
 const NVT_ENSEMBLE_FRICTION_PER_FEMTOSECOND: f64 = 0.01;
 const NVT_ENSEMBLE_SEEDS: [u64; 8] = [101, 211, 307, 401, 503, 601, 701, 809];
@@ -102,7 +102,7 @@ const SODIUM_EPSILON_KCAL_PER_MOL: f64 = f64::from_bits(0x3fb6_626c_05e2_9810);
 const CHLORIDE_SIGMA_ANGSTROM: f64 = f64::from_bits(0x4011_e91e_e7ca_8064);
 const CHLORIDE_EPSILON_KCAL_PER_MOL: f64 = f64::from_bits(0x3fa2_38fb_ca10_59ea);
 
-const POSITION_X: [f64; DEVELOPMENT_WATER_BOX_V1_ATOM_COUNT] = [
+pub(crate) const POSITION_X: [f64; DEVELOPMENT_WATER_BOX_V1_ATOM_COUNT] = [
     0.0,
     f64::from_bits(0x3fe2bf8c302c3616),
     f64::from_bits(0x3fe2bf8c302c3616),
@@ -110,7 +110,7 @@ const POSITION_X: [f64; DEVELOPMENT_WATER_BOX_V1_ATOM_COUNT] = [
     f64::from_bits(0x401257f1860586c3),
     f64::from_bits(0x401257f1860586c3),
 ];
-const POSITION_Y: [f64; DEVELOPMENT_WATER_BOX_V1_ATOM_COUNT] = [
+pub(crate) const POSITION_Y: [f64; DEVELOPMENT_WATER_BOX_V1_ATOM_COUNT] = [
     0.0,
     f64::from_bits(0x3fe838efe48967cf),
     f64::from_bits(0xbfe838efe48967cf),
@@ -118,12 +118,12 @@ const POSITION_Y: [f64; DEVELOPMENT_WATER_BOX_V1_ATOM_COUNT] = [
     f64::from_bits(0x3fe838efe48967cf),
     f64::from_bits(0xbfe838efe48967cf),
 ];
-const POSITION_Z: [f64; DEVELOPMENT_WATER_BOX_V1_ATOM_COUNT] = [0.0; 6];
+pub(crate) const POSITION_Z: [f64; DEVELOPMENT_WATER_BOX_V1_ATOM_COUNT] = [0.0; 6];
 const VELOCITY_X: [f64; DEVELOPMENT_WATER_BOX_V1_ATOM_COUNT] = [0.0; 6];
 const VELOCITY_Y: [f64; DEVELOPMENT_WATER_BOX_V1_ATOM_COUNT] = [0.0; 6];
 const VELOCITY_Z: [f64; DEVELOPMENT_WATER_BOX_V1_ATOM_COUNT] =
     [0.0, 0.0001, -0.0001, 0.0, 0.0, 0.0];
-const MASS_DALTON: [f64; DEVELOPMENT_WATER_BOX_V1_ATOM_COUNT] = [
+pub(crate) const MASS_DALTON: [f64; DEVELOPMENT_WATER_BOX_V1_ATOM_COUNT] = [
     f64::from_bits(0x402fffb15b573eab),
     f64::from_bits(0x3ff020c49ba5e354),
     f64::from_bits(0x3ff020c49ba5e354),
@@ -131,7 +131,7 @@ const MASS_DALTON: [f64; DEVELOPMENT_WATER_BOX_V1_ATOM_COUNT] = [
     f64::from_bits(0x3ff020c49ba5e354),
     f64::from_bits(0x3ff020c49ba5e354),
 ];
-const CHARGE_ELEMENTARY: [f64; DEVELOPMENT_WATER_BOX_V1_ATOM_COUNT] = [
+pub(crate) const CHARGE_ELEMENTARY: [f64; DEVELOPMENT_WATER_BOX_V1_ATOM_COUNT] = [
     f64::from_bits(0xbfeab020c49ba5e3),
     f64::from_bits(0x3fdab020c49ba5e3),
     f64::from_bits(0x3fdab020c49ba5e3),
@@ -140,7 +140,7 @@ const CHARGE_ELEMENTARY: [f64; DEVELOPMENT_WATER_BOX_V1_ATOM_COUNT] = [
     f64::from_bits(0x3fdab020c49ba5e3),
 ];
 
-const ATOM_NONBONDED: [AtomNonbonded; DEVELOPMENT_WATER_BOX_V1_ATOM_COUNT] = [
+pub(crate) const ATOM_NONBONDED: [AtomNonbonded; DEVELOPMENT_WATER_BOX_V1_ATOM_COUNT] = [
     oxygen_nonbonded(),
     hydrogen_nonbonded(),
     hydrogen_nonbonded(),
@@ -148,9 +148,9 @@ const ATOM_NONBONDED: [AtomNonbonded; DEVELOPMENT_WATER_BOX_V1_ATOM_COUNT] = [
     hydrogen_nonbonded(),
     hydrogen_nonbonded(),
 ];
-const BONDS: [HarmonicBond; 4] = [bond(0, 1), bond(0, 2), bond(3, 4), bond(3, 5)];
-const ANGLES: [HarmonicAngle; 2] = [angle(1, 0, 2), angle(4, 3, 5)];
-const EXCLUSIONS: [PairExclusion; 6] = [
+pub(crate) const BONDS: [HarmonicBond; 4] = [bond(0, 1), bond(0, 2), bond(3, 4), bond(3, 5)];
+pub(crate) const ANGLES: [HarmonicAngle; 2] = [angle(1, 0, 2), angle(4, 3, 5)];
+pub(crate) const EXCLUSIONS: [PairExclusion; 6] = [
     exclusion(0, 1),
     exclusion(0, 2),
     exclusion(1, 2),
