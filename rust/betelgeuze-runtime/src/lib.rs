@@ -3,6 +3,7 @@
 //! The raw handles and pointers remain private to this crate. All system input
 //! is copied into native-owned structure-of-arrays storage.
 
+mod development_explicit_composition;
 mod development_peptide;
 mod development_peptide_constraints;
 mod development_peptide_data;
@@ -16,6 +17,16 @@ mod qualification_v6;
 mod qualification_v7;
 
 pub use betelgeuze_docking_search::Fixed64Lane;
+pub use development_explicit_composition::{
+    development_ala3_explicit_composition_v1_profile_sha256,
+    evaluate_development_ala3_explicit_composition_v1,
+    observe_development_ala3_explicit_composition_v1,
+    DevelopmentAla3ExplicitCompositionObservationV1, DevelopmentAla3ExplicitCompositionV1,
+    DEVELOPMENT_ALA3_EXPLICIT_COMPOSITION_V1_ATOM_COUNT,
+    DEVELOPMENT_ALA3_EXPLICIT_COMPOSITION_V1_CONSTRAINT_COUNT,
+    DEVELOPMENT_ALA3_EXPLICIT_COMPOSITION_V1_PROFILE_ID,
+    DEVELOPMENT_ALA3_EXPLICIT_COMPOSITION_V1_SCHEMA_ID,
+};
 pub use development_peptide::{
     development_ala3_v1_profile_sha256, development_ala3_validation_v1_profile_sha256,
     evaluate_development_ala3_v1, observe_development_ala3_validation_v1, DevelopmentAla3V1,

@@ -1,0 +1,77 @@
+{
+  "schema_id": "betelgeuze.engine_v2_native_ala3_explicit_composition_profile/1.0.0",
+  "profile_id": "engine_v2_native_ala3_tip3p_nacl_composition_development_v1",
+  "parents": {
+    "ala3_profile_sha256": "a7a4229cc30bb24393b06d4b19e25b917060213ca432b1263329bda6c0b49adf",
+    "ala3_constraints_profile_sha256": "815c9ab462aec7daa57b6cf6e42d8bba569d5891ec1e002deff6ad9e974cb692",
+    "water_box_profile_sha256": "2b0be83b57085c655092ab0272aea5a91b9c3f90c344fa062d494ad324f0019e",
+    "water_ion_profile_sha256": "409902e5f6776bd58c76f80a572c9cf978f7e2f4938003e5609036bfe91c631f",
+    "periodic_neighbor_cache_profile_sha256": "c9e671b925b8f5da48a43dec2abe264e695840b277cc3cf4a84aa7255b59150d"
+  },
+  "composition": {
+    "atom_count": 41,
+    "ala3_atom_count": 33,
+    "tip3p_water_count": 2,
+    "sodium_count": 1,
+    "chloride_count": 1,
+    "net_charge_elementary": 0.0,
+    "canonical_component_order": ["ala3", "tip3p_water_0", "tip3p_water_1", "sodium", "chloride"],
+    "general_solvation_or_parameter_assignment_implemented": false
+  },
+  "placement": {
+    "ala3_translation_angstrom": [8.0, 15.0, 15.0],
+    "tip3p_water_fixture_translation_angstrom": [25.0, 5.0, 10.0],
+    "sodium_position_angstrom": [32.0, 10.0, 25.0],
+    "chloride_position_angstrom": [34.5, 10.0, 25.0],
+    "all_positions_inside_primary_cell": true
+  },
+  "periodic_short_range": {
+    "orthorhombic_lengths_angstrom": [40.0, 40.0, 40.0],
+    "periodic_axes": [true, true, true],
+    "cutoff_angstrom": 12.0,
+    "switch_start_angstrom": 10.0,
+    "pme_or_ewald_implemented": false
+  },
+  "constraints": {
+    "ala3_xh_row_count": 17,
+    "rigid_water_row_count": 6,
+    "total_row_count": 23,
+    "position_tolerance_angstrom": 1e-10,
+    "radial_velocity_tolerance_angstrom_per_femtosecond": 1e-10,
+    "maximum_iterations": 100
+  },
+  "nve": {
+    "integrator": "velocity_verlet",
+    "initial_velocities": "all_exact_zero",
+    "timestep_femtoseconds": 0.02,
+    "step_count": 128,
+    "checkpoint_step": 53,
+    "energy_drift_baseline": "total_energy_after_first_constraint_projection_step",
+    "maximum_absolute_post_projection_total_energy_drift_kcal_per_mol": 0.0005,
+    "exact_same_backend_checkpoint_continuation_required": true,
+    "cpu_backend_report_and_state_bitwise_parity_required": true
+  },
+  "observation": {
+    "static_energy_and_force_cpu_parity_required": true,
+    "complete_final_state_digest_required": true,
+    "backend_independent_receipt_rederivation_required": true,
+    "backend_tagged_receipt_rederivation_required": true,
+    "nonfinite_observation_allowed": false
+  },
+  "authority": {
+    "development_fixture_only": true,
+    "explicit_solvent_composition_validated": false,
+    "bulk_solvent_or_equilibration_validated": false,
+    "pme_or_ewald_validated": false,
+    "production_md_validated": false,
+    "scientific_claim_authorized": false,
+    "molecular_execution_authorized": false,
+    "performance_claim_authorized": false,
+    "hip_device_execution_authorized": false,
+    "product_authority": false,
+    "reservation_authorized": false,
+    "stage0_admission_authorized": false,
+    "fresh_holdout_execution_authorized": false,
+    "public_benchmark_authorized": false
+  }
+}
