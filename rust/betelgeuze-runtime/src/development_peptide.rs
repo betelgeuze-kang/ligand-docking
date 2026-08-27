@@ -295,6 +295,18 @@ fn forcefield() -> Result<ForceField> {
     ForceField::new(input)
 }
 
+pub(crate) fn development_ala3_system(with_velocities: bool) -> Result<System> {
+    system(with_velocities)
+}
+
+pub(crate) fn development_ala3_forcefield() -> Result<ForceField> {
+    forcefield()
+}
+
+pub(crate) fn require_development_ala3_cpu_backend(context: &Context) -> Result<Backend> {
+    require_cpu_backend(context)
+}
+
 fn maximum_finite_difference_force_error(
     context: &Context,
     forcefield: &ForceField,

@@ -14,6 +14,9 @@ PROFILE_PATH = ROOT / "config/engine_v2_native_ala3_peptide_profile_v1.json"
 VALIDATION_PROFILE_PATH = (
     ROOT / "config/engine_v2_native_ala3_validation_profile_v1.json"
 )
+CONSTRAINTS_PROFILE_PATH = (
+    ROOT / "config/engine_v2_native_ala3_constraints_profile_v1.json"
+)
 ASSET_PATH = (
     ROOT
     / "rust/betelgeuze-runtime/assets/engine_v2_native_ala3_peptide_profile_v1.json"
@@ -22,8 +25,15 @@ VALIDATION_ASSET_PATH = (
     ROOT
     / "rust/betelgeuze-runtime/assets/engine_v2_native_ala3_validation_profile_v1.json"
 )
+CONSTRAINTS_ASSET_PATH = (
+    ROOT
+    / "rust/betelgeuze-runtime/assets/engine_v2_native_ala3_constraints_profile_v1.json"
+)
 DATA_PATH = ROOT / "rust/betelgeuze-runtime/src/development_peptide_data.rs"
 RUNTIME_PATH = ROOT / "rust/betelgeuze-runtime/src/development_peptide.rs"
+CONSTRAINTS_RUNTIME_PATH = (
+    ROOT / "rust/betelgeuze-runtime/src/development_peptide_constraints.rs"
+)
 GENERATOR_PATH = (
     ROOT / "benchmarks/oracles/openmm/generate_native_ala3_profile_v1.py"
 )
@@ -31,6 +41,9 @@ GENERATOR_PATH = (
 PROFILE_SHA256 = "a7a4229cc30bb24393b06d4b19e25b917060213ca432b1263329bda6c0b49adf"
 VALIDATION_PROFILE_SHA256 = (
     "f86f0e256c66e9908bd0f4f25d2e4d1001c93aa115cf1f42e0dc244fdf8802f4"
+)
+CONSTRAINTS_PROFILE_SHA256 = (
+    "815c9ab462aec7daa57b6cf6e42d8bba569d5891ec1e002deff6ad9e974cb692"
 )
 DATA_SHA256 = "7a75f9ccd2d0cee99387ec2ae25c47b145a1a325bf0498b1752340c3a04b88a0"
 PDB_SHA256 = "5510388d045a8f8938236f0975e4f52b81e1b8b7bf9d0c5effcf856050d6123d"
@@ -279,3 +292,62 @@ def test_generator_rejects_unpinned_openmm_before_projection(
     fake_openmm.version.version = "8.5.0.dev"
     with pytest.raises(SystemExit, match="runtime version mismatch"):
         generator.require_exact_openmm_runtime(fake_openmm)
+
+
+def test_xh_constraints_successor_is_exact_parent_bound_and_fail_closed() -> None:
+    canonical = CONSTRAINTS_PROFILE_PATH.read_bytes()
+    assert CONSTRAINTS_ASSET_PATH.read_bytes() == canonical
+    assert hashlib.sha256(canonical).hexdigest() == CONSTRAINTS_PROFILE_SHA256
+    profile = json.loads(canonical)
+
+    assert profile["schema_id"] == (
+        "betelgeuze.engine_v2_native_ala3_constraints_profile/1.0.0"
+    )
+    assert profile["profile_id"] == (
+        "engine_v2_native_ala3_xh_constraints_development_v1"
+    )
+    assert profile["parents"] == {
+        "ala3_profile_sha256": PROFILE_SHA256,
+        "ala3_validation_profile_sha256": VALIDATION_PROFILE_SHA256,
+    }
+    constraints = profile["constraints"]
+    assert constraints["row_count"] == 17
+    assert constraints["position_tolerance_angstrom"] == 1e-10
+    assert constraints[
+        "radial_velocity_tolerance_angstrom_per_femtosecond"
+    ] == 1e-10
+    assert constraints["maximum_iterations"] == 100
+    assert constraints["mass_weighted_shake_rattle_required"] is True
+    assert profile["nve"]["step_count"] == 512
+    assert profile["nve"]["checkpoint_step"] == 211
+    assert profile["nve"][
+        "maximum_absolute_post_projection_total_energy_drift_kcal_per_mol"
+    ] == 0.005
+    assert profile["nve"][
+        "cpu_backend_report_and_state_maximum_absolute_difference"
+    ] == 2e-10
+    assert profile["baoab"]["random_seed"] == 2711863518
+    assert profile["baoab"]["same_seed_repeatability_required"] is True
+    assert profile["baoab"][
+        "cpu_backend_report_and_state_maximum_absolute_difference"
+    ] == 2e-10
+    authority = profile["authority"]
+    assert authority["development_fixture_only"] is True
+    assert all(
+        value is False
+        for key, value in authority.items()
+        if key != "development_fixture_only"
+    )
+
+    runtime_source = CONSTRAINTS_RUNTIME_PATH.read_text()
+    for required in (
+        "DevelopmentAla3ConstrainedV1",
+        "observe_development_ala3_constraints_v1",
+        "frozen_xh_constraints",
+        "maximum_constraint_residuals",
+        "require_same_terminal_report",
+        "rederive_observation_receipt",
+        "rederive_backend_receipt",
+        "MAXIMUM_ABSOLUTE_POST_PROJECTION_NVE_DRIFT_KCAL_PER_MOL: f64 = 5.0e-3",
+    ):
+        assert required in runtime_source

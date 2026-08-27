@@ -99,6 +99,40 @@ helpers.
 These are deterministic tiny-fixture validation values, not an equilibrium,
 long-timescale, performance, or production-MD result.
 
+## X-H SHAKE/RATTLE successor
+
+The next immutable successor is
+`config/engine_v2_native_ala3_constraints_profile_v1.json`, SHA-256
+`815c9ab462aec7daa57b6cf6e42d8bba569d5891ec1e002deff6ad9e974cb692`.
+It binds both earlier Ala3 profile digests and selects exactly the 17 ff14SB
+bonds having one atom below 2 dalton. Each constraint target is the frozen
+parent harmonic-bond equilibrium distance; harmonic force-field terms remain
+unchanged.
+
+`observe_development_ala3_constraints_v1` applies mass-weighted SHAKE/RATTLE
+with 1e-10 Angstrom position and 1e-10 Angstrom/fs radial-velocity tolerances.
+The zero-velocity NVE lane runs 512 steps at 0.05 fs, proves exact continuation
+from a step-211 checkpoint, and bounds absolute total-energy drift after the
+first constraint-projection step to 0.005 kcal/mol. The fixed-seed BAOAB lane
+runs 256 steps at 300 K with 0.001/fs friction and seed 2711863518, and proves
+complete-state repeatability.
+
+The frozen Rust CPU observation records post-projection signed NVE drift
+`-0.0025591238804905103` kcal/mol. NVE position and radial-velocity residuals
+are `4.0100811560250804e-11` Angstrom and
+`2.7810017239339223e-11` Angstrom/fs; BAOAB residuals are
+`7.665246215537991e-11` Angstrom and `9.314283176212546e-11`
+Angstrom/fs. C++ reference and Rust CPU reports and complete state are compared
+component-wise within `2e-10`; optimized NVE report and state differences peak
+at `1.708571062408737e-10` and `1.7212897773788427e-12`, respectively.
+Same-backend checkpoint continuation and fixed-seed repeatability remain
+bitwise exact. Tests separately rebuild each complete state digest plus the
+backend-independent and backend-tagged receipt streams.
+
+This is a short deterministic vacuum-fixture constraint check. It is not
+equilibration, long-timescale validation, explicit-solvent composition, or a
+scientific/performance result.
+
 ## Authority boundary
 
 The profile explicitly leaves general peptide parameter assignment,

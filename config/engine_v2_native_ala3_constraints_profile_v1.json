@@ -1,0 +1,62 @@
+{
+  "schema_id": "betelgeuze.engine_v2_native_ala3_constraints_profile/1.0.0",
+  "profile_id": "engine_v2_native_ala3_xh_constraints_development_v1",
+  "parents": {
+    "ala3_profile_sha256": "a7a4229cc30bb24393b06d4b19e25b917060213ca432b1263329bda6c0b49adf",
+    "ala3_validation_profile_sha256": "f86f0e256c66e9908bd0f4f25d2e4d1001c93aa115cf1f42e0dc244fdf8802f4"
+  },
+  "constraints": {
+    "selection_rule": "every_ff14sb_bond_with_exactly_one_atom_mass_below_2_dalton",
+    "row_count": 17,
+    "distance_source": "parent_harmonic_bond_equilibrium_angstrom",
+    "position_tolerance_angstrom": 1e-10,
+    "radial_velocity_tolerance_angstrom_per_femtosecond": 1e-10,
+    "maximum_iterations": 100,
+    "mass_weighted_shake_rattle_required": true
+  },
+  "nve": {
+    "integrator": "velocity_verlet",
+    "initial_velocities": "all_exact_zero",
+    "timestep_femtoseconds": 0.05,
+    "step_count": 512,
+    "energy_drift_baseline": "total_energy_after_first_constraint_projection_step",
+    "maximum_absolute_post_projection_total_energy_drift_kcal_per_mol": 0.005,
+    "checkpoint_step": 211,
+    "exact_checkpoint_continuation_required": true,
+    "cpu_backend_report_and_state_maximum_absolute_difference": 2e-10
+  },
+  "baoab": {
+    "integrator": "langevin_baoab",
+    "initial_velocities": "all_exact_zero",
+    "timestep_femtoseconds": 0.05,
+    "temperature_kelvin": 300.0,
+    "friction_per_femtosecond": 0.001,
+    "random_seed": 2711863518,
+    "step_count": 256,
+    "same_seed_repeatability_required": true,
+    "cpu_backend_report_and_state_maximum_absolute_difference": 2e-10
+  },
+  "observation": {
+    "maximum_position_constraint_residual_angstrom": 1e-10,
+    "maximum_radial_velocity_constraint_residual_angstrom_per_femtosecond": 1e-10,
+    "complete_final_state_digest_required": true,
+    "backend_independent_receipt_rederivation_required": true,
+    "backend_tagged_receipt_rederivation_required": true,
+    "nonfinite_observation_allowed": false
+  },
+  "authority": {
+    "development_fixture_only": true,
+    "general_peptide_parameter_assignment_implemented": false,
+    "production_md_validated": false,
+    "equilibrium_or_long_timescale_validation": false,
+    "scientific_claim_authorized": false,
+    "molecular_execution_authorized": false,
+    "performance_claim_authorized": false,
+    "hip_device_execution_authorized": false,
+    "product_authority": false,
+    "reservation_authorized": false,
+    "stage0_admission_authorized": false,
+    "fresh_holdout_execution_authorized": false,
+    "public_benchmark_authorized": false
+  }
+}
