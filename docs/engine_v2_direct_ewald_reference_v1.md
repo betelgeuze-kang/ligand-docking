@@ -43,6 +43,9 @@ platform standard-library implementation. Reciprocal terms multiply the
 undamped prefactor and structure/force factors before the pinned exponential,
 retaining contributions whose intermediate `exp(exponent)/wave²` would
 underflow even though the final energy or force is representable.
+Real-space radial forces likewise multiply the charge/Coulomb prefactor by each
+damping term before distance division, then apply the unit displacement. This
+retains supported strongly damped subnormal force components.
 
 Neutrality uses a canonical absolute-magnitude/total order and Neumaier
 compensated sum, avoiding input-order-dependent admission. Cell volume uses a
@@ -59,11 +62,12 @@ translation, integer images, complete atom permutation, global charge
 inversion, near-zero net force, bitwise repetition, reciprocal-bound
 convergence, near-half-cell atom swaps, rounded upper-bound primary-cell
 reduction, rounded-difference tie classification, representable reciprocal
-damping, unit-scale and zero-charge no-ops, the numeric envelope, and typed
-malformed inputs. The exact force bits are those of the pinned math contract.
+damping, representable strongly damped real forces, unit-scale and zero-charge
+no-ops, the numeric envelope, and typed malformed inputs. The exact force bits
+are those of the pinned math and operation-order contract.
 
 The exact profile SHA-256 is
-`1ed29e3f213a040c97b0b48dbd5eb1e287f75e24a22b8dd6bfd4af997b2a3b7e`.
+`e1baf4aaf0a682a13ae4bfee849cf5db60a7b8d1e45a357333acff10d95efa1c`.
 The profile separately binds the evaluator source, frozen fixture, and
 standalone Cargo lockfile hashes.
 

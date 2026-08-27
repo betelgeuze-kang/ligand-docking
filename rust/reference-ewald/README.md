@@ -55,6 +55,9 @@ operations use the exactly pinned `libm` 0.2.16 dependency. Reciprocal energy
 and force terms multiply their undamped prefactor and structure factors before
 the exponential, preventing an intermediate damping quotient from underflowing
 when the completed term remains representable.
+Real-space force magnitudes similarly apply the Coulomb/charge prefactor to
+each damping term before distance division and multiply by the unit displacement
+last, preserving supported subnormal components that are still representable.
 
 `fixtures/direct_ewald_v1.tsv` freezes all four energy components, their total,
 and all 12 force components as IEEE-754 bit patterns. The observation example

@@ -300,17 +300,19 @@ fn evaluate_real_space(
                     "real-space energy",
                 )?;
 
-                let force_factor = coulomb_scale
-                    * charge_product
-                    * (erfc_value / (distance2 * distance)
-                        + 2.0 * alpha * exponential
-                            / (libm::sqrt(core::f64::consts::PI) * distance2));
-                add_pair_force(
+                let charge_prefactor = coulomb_scale * charge_product;
+                let radial_force_magnitude = charge_prefactor * erfc_value / distance2
+                    + charge_prefactor
+                        * (2.0 * alpha / libm::sqrt(core::f64::consts::PI))
+                        * exponential
+                        / distance;
+                add_radial_pair_force(
                     &mut result.forces_kcal_per_mol_angstrom,
                     atom_i,
                     atom_j,
                     delta,
-                    force_factor,
+                    distance,
+                    radial_force_magnitude,
                 )?;
             }
         }
@@ -840,6 +842,22 @@ fn add_pair_force(
     Ok(())
 }
 
+fn add_radial_pair_force(
+    forces: &mut [[f64; 3]],
+    atom_i: usize,
+    atom_j: usize,
+    delta: [f64; 3],
+    distance: f64,
+    radial_force_magnitude: f64,
+) -> Result<(), EwaldError> {
+    for axis in 0..3 {
+        let component = radial_force_magnitude * (delta[axis] / distance);
+        checked_add(&mut forces[atom_i][axis], component, "radial pair force")?;
+        checked_add(&mut forces[atom_j][axis], -component, "radial pair force")?;
+    }
+    Ok(())
+}
+
 fn checked_add(target: &mut f64, value: f64, context: &str) -> Result<(), EwaldError> {
     let updated = *target + value;
     if !value.is_finite() || !updated.is_finite() {
@@ -868,8 +886,9 @@ fn invalid_parameter(detail: impl Into<String>) -> EwaldError {
 #[cfg(test)]
 mod tests {
     use super::{
-        accurate_order_independent_sum, cell_volume, minimum_image, reduce_to_primary_cell,
-        OrthorhombicCell, Position,
+        accurate_order_independent_sum, cell_volume, evaluate_real_space, minimum_image,
+        reduce_to_primary_cell, validate, EwaldEnergyComponents, EwaldEvaluation, EwaldInput,
+        OrthorhombicCell, Position, COULOMB_KCAL_ANGSTROM_PER_MOL_E2,
     };
 
     #[test]
@@ -890,6 +909,33 @@ mod tests {
         };
         let reduced = reduce_to_primary_cell(Position::new(-1.0e-16, 0.0, 0.0), cell);
         assert_eq!(reduced[0].to_bits(), 0.0_f64.to_bits());
+    }
+
+    #[test]
+    fn strongly_damped_real_force_retains_a_representable_subnormal_component() {
+        let mut input = EwaldInput::new(
+            vec![Position::default(), Position::new(1.0e8, 0.0, 0.0)],
+            vec![16.0, -16.0],
+            OrthorhombicCell {
+                lengths_angstrom: [1.0e9; 3],
+            },
+        );
+        input.settings.alpha_per_angstrom = 2.7e-7;
+        input.settings.real_space_cutoff_angstrom = 1.0e8;
+        input.settings.dielectric = 1.0e-12;
+        validate(&input).expect("strongly damped fixture is inside the numeric envelope");
+        let mut result = EwaldEvaluation {
+            energy: EwaldEnergyComponents::default(),
+            forces_kcal_per_mol_angstrom: vec![[0.0; 3]; 2],
+        };
+        evaluate_real_space(
+            &input,
+            COULOMB_KCAL_ANGSTROM_PER_MOL_E2 / input.settings.dielectric,
+            &mut result,
+        )
+        .expect("real-space evaluation remains finite");
+        assert!(result.forces_kcal_per_mol_angstrom[0][0].is_subnormal());
+        assert!(result.forces_kcal_per_mol_angstrom[0][0].is_sign_positive());
     }
 
     #[test]

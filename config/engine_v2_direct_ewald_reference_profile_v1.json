@@ -19,8 +19,8 @@
     "native_abi_version_allocated": false,
     "external_md_engine_dependency": false,
     "fixed64_cpu_v7_source_closure_modified": false,
-    "source_sha256": "79c0dd90eeb6bfccb1d3e0c50d7b4c5f1982153ce78400ac7a40c719ed712286",
-    "frozen_fixture_sha256": "759e2e7faf11da1ed80a9eb6020dfa0dfc386e0d7b392c825aa3f0f776382cda",
+    "source_sha256": "c1cd6af26b31090fb55df1274d3a6b336d036d5461c85938d0a31289c5359c47",
+    "frozen_fixture_sha256": "0c0c21f69752af020308d859f6ffffdf0381b073a233935645a5a1b08f81f71d",
     "cargo_lock_sha256": "cc64500cc1c97dfda26a8a4c8b8825c5296935f1e63cbaf61676a321364b3d9d"
   },
   "fixture": {
@@ -59,7 +59,8 @@
     "pair_correction_half_cell_tie": "typed_rejection_ambiguous_pair_correction_image",
     "unit_pair_scale": "semantic_noop_before_pair_correction_image_selection",
     "zero_charge_pair_rule": "semantic_noop_before_pair_correction_image_selection",
-    "reciprocal_damping_order": "undamped_prefactor_and_structure_or_force_products_before_pinned_exponential"
+    "reciprocal_damping_order": "undamped_prefactor_and_structure_or_force_products_before_pinned_exponential",
+    "real_space_force_order": "charge_prefactor_times_damping_before_distance_division_then_unit_direction"
   },
   "numeric_envelope": {
     "maximum_absolute_coordinate_angstrom": 1e12,
@@ -114,6 +115,7 @@
     "rounded_difference_not_misclassified_as_exact_half_tie": true,
     "pinned_transcendental_fixture_bits": true,
     "representable_reciprocal_damping_retained": true,
+    "representable_real_space_damping_retained": true,
     "numeric_envelope_typed_rejection": true,
     "neutrality_permutation_independent": true,
     "cell_volume_axis_order_independent": true,

@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PROFILE_PATH = ROOT / "config/engine_v2_direct_ewald_reference_profile_v1.json"
 CRATE = ROOT / "rust/reference-ewald"
-PROFILE_SHA256 = "1ed29e3f213a040c97b0b48dbd5eb1e287f75e24a22b8dd6bfd4af997b2a3b7e"
+PROFILE_SHA256 = "e1baf4aaf0a682a13ae4bfee849cf5db60a7b8d1e45a357333acff10d95efa1c"
 
 
 def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
@@ -48,10 +48,10 @@ def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
         "external_md_engine_dependency": False,
         "fixed64_cpu_v7_source_closure_modified": False,
         "source_sha256": (
-            "79c0dd90eeb6bfccb1d3e0c50d7b4c5f1982153ce78400ac7a40c719ed712286"
+            "c1cd6af26b31090fb55df1274d3a6b336d036d5461c85938d0a31289c5359c47"
         ),
         "frozen_fixture_sha256": (
-            "759e2e7faf11da1ed80a9eb6020dfa0dfc386e0d7b392c825aa3f0f776382cda"
+            "0c0c21f69752af020308d859f6ffffdf0381b073a233935645a5a1b08f81f71d"
         ),
         "cargo_lock_sha256": (
             "cc64500cc1c97dfda26a8a4c8b8825c5296935f1e63cbaf61676a321364b3d9d"
@@ -129,6 +129,10 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
             "undamped_prefactor_and_structure_or_force_products_before_"
             "pinned_exponential"
         ),
+        "real_space_force_order": (
+            "charge_prefactor_times_damping_before_distance_division_then_"
+            "unit_direction"
+        ),
     }
     assert profile["numeric_envelope"] == {
         "maximum_absolute_coordinate_angstrom": 1e12,
@@ -203,6 +207,7 @@ def test_validation_authority_and_standalone_crate_are_bounded() -> None:
         "MAX_EVALUATION_WORK_UNITS",
         "MIN_NONZERO_ABSOLUTE_CHARGE_E",
         "MIN_SUPPORTED_PAIR_DISTANCE_ANGSTROM",
+        "add_radial_pair_force",
     ):
         assert required in source
     for forbidden in (".exp()", ".sin_cos()", ".sqrt()"):
