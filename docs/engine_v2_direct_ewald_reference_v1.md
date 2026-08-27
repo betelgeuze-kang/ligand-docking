@@ -15,8 +15,9 @@ energies and returns analytic forces for every atom.
 
 All positions are reduced per axis before minimum-image subtraction and
 reciprocal phase construction. A pinned-floor quotient and the canonical
-midpoint of a two-ULP direct/scaled remainder bracket keep ordinary interior
-residues bitwise stable across an exact represented box shift. When a rounded
+canonical reconciliation of one- and two-ULP direct/scaled remainder brackets
+keeps ordinary interior residues bitwise stable across exact represented box
+shifts. When a rounded
 quotient misses the primary range across more than `2^53` cells, reduction falls
 back to the bounded Euclidean remainder. This also prevents
 trigonometric range-reduction drift for long unwrapped trajectories; the property
@@ -51,11 +52,11 @@ platform standard-library implementation. Reciprocal structure factors scale
 charges by the exactly reversible binary64 power of two `2^-40`, retaining tiny
 phases that would underflow if multiplied by charge first without perturbing
 the represented charges, and canonically order and compensate their cosine and
-sine sums. Phases use minimum-image positions relative to the maximum-charge atom;
-exact maximum-charge ties are resolved by a sorted relative-geometry signature.
-This common origin is independent of atom order and equivariant under periodic
-translations while a large shared coordinate does not perturb the represented
-relative geometry. Each phase's three axis products use the same canonical compensated
+sine sums. Phases use minimum-image positions relative to a maximum-absolute-charge
+atom; exact magnitude ties are resolved by a sorted absolute-charge/radial-distance
+signature. This common origin is independent of atom order and global charge
+inversion and is equivariant under periodic translations, while a large shared
+coordinate does not perturb the represented relative geometry. Each phase's three axis products use the same canonical compensated
 sum, preserving representable residuals when large terms cancel. Zero-charge
 atoms bypass phase construction. Force terms then
 incorporate each wave component before the structure/phase products.
@@ -84,11 +85,12 @@ so its exposed component is independent of atom ordering.
 Cell volume uses a
 canonical min-times-max-then-middle product to avoid axis-order intermediate
 overflow for finite mathematical volumes. Pair-correction energies are also
-canonically ordered and compensated, while their forces retain declared-rule
-traversal. Pair corrections iterate only the sorted declared rules, not every
+canonically ordered and compensated; real-space and correction force terms use
+the same strategy per atom and axis. Pair corrections iterate only the sorted declared rules, not every
 possible pair. Validation caps real pairs,
-declared correction rules, twice-per-vector atom phase work, and maximum-charge
-origin-candidate signature work together at 10,000,000 work units, first using
+seven times the real-pair and declared-correction counts, twice-per-vector atom
+phase work, and maximum-absolute-charge origin-candidate signature work together
+at 10,000,000 work units, first using
 raw rule-row counts before allocating trees and then the canonical unique-rule
 count.
 
@@ -104,10 +106,12 @@ signed boundary residual, multidimensional boundary translation invariance,
 rounded-difference tie classification, exact power-of-two charge normalization,
 tiny-phase structure preservation, phase-product underflow rejection,
 common-origin translation stability, atom-order-independent canonical phase
-origin, periodic-origin equivariance, exact-box-shift interior-residue stability,
+origin, periodic-origin equivariance, charge-inversion-stable origin selection,
+exact-box-shift one/two-ULP interior-residue stability,
 full-envelope large-coordinate remainder fallback,
 cancellation-residual-preserving phase summation, atom-order-independent reciprocal structure accumulation,
-zero-charge phase and real-pair distance bypass, atom-order-independent pair-correction energy,
+zero-charge phase and real-pair distance bypass, atom-order-independent
+real-space energy and pair-correction energy/force,
 atom-order-independent self energy,
 reciprocal wave rescue before phase underflow, representable strongly damped
 real energy/forces, log-domain reciprocal damping reconstruction and typed real
@@ -119,7 +123,7 @@ numeric envelope, and typed malformed inputs. The exact force bits are those of
 the pinned math and operation-order contract.
 
 The exact profile SHA-256 is
-`bb38257d99422bebb63096457e49bf34e0ef729c18c869e2f83be500a6c85d60`.
+`a5d82f1ebc0b00d04cd7a505a723e5d2e4375d8983c6dca74468b3e532c4f767`.
 The profile separately binds the evaluator source, frozen fixture, and
 standalone Cargo lockfile hashes.
 

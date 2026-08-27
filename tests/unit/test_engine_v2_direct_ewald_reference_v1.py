@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PROFILE_PATH = ROOT / "config/engine_v2_direct_ewald_reference_profile_v1.json"
 CRATE = ROOT / "rust/reference-ewald"
-PROFILE_SHA256 = "bb38257d99422bebb63096457e49bf34e0ef729c18c869e2f83be500a6c85d60"
+PROFILE_SHA256 = "a5d82f1ebc0b00d04cd7a505a723e5d2e4375d8983c6dca74468b3e532c4f767"
 
 
 def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
@@ -48,7 +48,7 @@ def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
         "external_md_engine_dependency": False,
         "fixed64_cpu_v7_source_closure_modified": False,
         "source_sha256": (
-            "475259de9411df997019f6da0741309907ace746328ab5a9597fe040a190cde3"
+            "34afeceee6d61711541ecd6221ceced90af976bf7a23bf84f68a3f047a65f943"
         ),
         "frozen_fixture_sha256": (
             "a720c83852c79e401cb8838e9e20b2196985b6e424275949f77291b30b3da338"
@@ -97,9 +97,9 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
         "charge_normalization_scale_elementary": 9.094947017729282e-13,
         "maximum_evaluation_work_units": 10000000,
         "evaluation_work_unit_equation": (
-            "pair_count_plus_pair_rule_count_plus_two_times_atom_count_times_"
-            "reciprocal_vector_count_plus_atom_count_times_maximum_charge_"
-            "phase_origin_candidate_count"
+            "seven_times_pair_count_plus_seven_times_pair_rule_count_plus_two_"
+            "times_atom_count_times_reciprocal_vector_count_plus_atom_count_"
+            "times_maximum_absolute_charge_phase_origin_candidate_count"
         ),
         "real_pair_order": "lexicographic_i_then_j",
         "reciprocal_vector_order": (
@@ -118,8 +118,8 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
             "rounded_coordinate_difference"
         ),
         "coordinate_reduction": (
-            "per_axis_pinned_floor_quotient_with_canonical_midpoint_for_two_"
-            "ulp_direct_and_scaled_remainder_bracket_and_rem_euclid_fallback_"
+            "per_axis_pinned_floor_quotient_with_canonical_reconciliation_for_"
+            "one_or_two_ulp_direct_and_scaled_remainder_brackets_and_rem_euclid_fallback_"
             "outside_primary_range_rounded_upper_boundary_recovered_as_"
             "nonzero_signed_residual_and_signed_zero_canonicalized"
         ),
@@ -138,13 +138,23 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
         "pair_correction_energy_accumulation": (
             "canonical_absolute_magnitude_then_total_order_neumaier"
         ),
+        "pair_correction_force_accumulation": (
+            "per_atom_axis_canonical_absolute_magnitude_then_total_order_neumaier"
+        ),
+        "real_space_energy_accumulation": (
+            "canonical_absolute_magnitude_then_total_order_neumaier"
+        ),
+        "real_space_force_accumulation": (
+            "per_atom_axis_canonical_absolute_magnitude_then_total_order_neumaier"
+        ),
         "reciprocal_damping_order": (
-            "translation_equivariant_maximum_charge_then_relative_geometry_"
-            "signature_atom_order_independent_common_origin_relative_phases_"
-            "with_canonical_compensated_axis_sum_then_exact_power_of_two_charge_"
-            "normalization_then_canonical_compensated_structure_sum_then_wave_"
-            "scaled_prefactor_before_phase_combination_with_log_domain_scaled_"
-            "subnormal_or_zero_exponential_reconstruction"
+            "translation_equivariant_maximum_absolute_charge_then_absolute_"
+            "charge_radial_geometry_signature_atom_order_and_charge_inversion_"
+            "independent_common_origin_relative_phases_with_canonical_"
+            "compensated_axis_sum_then_exact_power_of_two_charge_normalization_"
+            "then_canonical_compensated_structure_sum_then_wave_scaled_prefactor_"
+            "before_phase_combination_with_log_domain_scaled_subnormal_or_zero_"
+            "exponential_reconstruction"
         ),
         "real_space_energy_order": (
             "charge_prefactor_times_erfc_over_distance_for_subunit_distance_"
@@ -242,7 +252,7 @@ def test_validation_authority_and_standalone_crate_are_bounded() -> None:
         "signed_residual",
         "MIN_NONZERO_ABSOLUTE_CHARGE_E",
         "MIN_SUPPORTED_PAIR_DISTANCE_ANGSTROM",
-        "add_radial_pair_force",
+        "apply_canonical_force_terms",
         "phase_origin_signature",
         "phase_origin_candidate_count",
     ):

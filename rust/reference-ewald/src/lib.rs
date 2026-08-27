@@ -268,6 +268,8 @@ fn evaluate_real_space(
 ) -> Result<(), EwaldError> {
     let alpha = input.settings.alpha_per_angstrom;
     let minimum2 = input.settings.minimum_pair_distance_angstrom.powi(2);
+    let mut energy_terms = Vec::new();
+    let mut force_terms = new_force_term_buffers(input.positions.len());
     for atom_i in 0..input.positions.len() {
         for atom_j in (atom_i + 1)..input.positions.len() {
             let charge_product =
@@ -305,11 +307,7 @@ fn evaluate_real_space(
                 } else {
                     charge_prefactor * erfc_value / distance
                 };
-                checked_add(
-                    &mut result.energy.real_space_kcal_per_mol,
-                    pair_energy,
-                    "real-space energy",
-                )?;
+                energy_terms.push(pair_energy);
 
                 let gaussian_prefactor =
                     charge_prefactor * (2.0 * alpha / libm::sqrt(core::f64::consts::PI));
@@ -320,17 +318,27 @@ fn evaluate_real_space(
                     charge_prefactor * erfc_value / distance2
                         + gaussian_prefactor * exponential / distance
                 };
-                add_radial_pair_force(
-                    &mut result.forces_kcal_per_mol_angstrom,
-                    atom_i,
-                    atom_j,
-                    delta,
-                    distance,
-                    radial_force_magnitude,
-                )?;
+                for (axis, &delta_component) in delta.iter().enumerate() {
+                    let component = if distance < 1.0 {
+                        (radial_force_magnitude / distance) * delta_component
+                    } else {
+                        (radial_force_magnitude * delta_component) / distance
+                    };
+                    push_pair_force_term(&mut force_terms, atom_i, atom_j, axis, component);
+                }
             }
         }
     }
+    checked_add(
+        &mut result.energy.real_space_kcal_per_mol,
+        accurate_order_independent_sum(&energy_terms),
+        "real-space energy",
+    )?;
+    apply_canonical_force_terms(
+        &mut result.forces_kcal_per_mol_angstrom,
+        &force_terms,
+        "real-space force",
+    )?;
     Ok(())
 }
 
@@ -431,6 +439,7 @@ fn evaluate_pair_corrections(
     result: &mut EwaldEvaluation,
 ) -> Result<(), EwaldError> {
     let mut energy_terms = Vec::with_capacity(pair_rules.corrections.len());
+    let mut force_terms = new_force_term_buffers(input.positions.len());
     for (&(atom_i, atom_j), &pair_scale) in &pair_rules.corrections {
         if pair_scale.to_bits() == 1.0_f64.to_bits() {
             continue;
@@ -448,18 +457,26 @@ fn evaluate_pair_corrections(
         let distance = libm::sqrt(distance2);
         let correction_scale = pair_scale - 1.0;
         energy_terms.push(coulomb_scale * charge_product * correction_scale / distance);
-        add_pair_force(
-            &mut result.forces_kcal_per_mol_angstrom,
-            atom_i,
-            atom_j,
-            delta,
-            coulomb_scale * charge_product * correction_scale / (distance2 * distance),
-        )?;
+        let factor = coulomb_scale * charge_product * correction_scale / (distance2 * distance);
+        for (axis, &delta_component) in delta.iter().enumerate() {
+            push_pair_force_term(
+                &mut force_terms,
+                atom_i,
+                atom_j,
+                axis,
+                factor * delta_component,
+            );
+        }
     }
     checked_add(
         &mut result.energy.pair_correction_kcal_per_mol,
         accurate_order_independent_sum(&energy_terms),
         "pair-correction energy",
+    )?;
+    apply_canonical_force_terms(
+        &mut result.forces_kcal_per_mol_angstrom,
+        &force_terms,
+        "pair-correction force",
     )?;
     Ok(())
 }
@@ -724,11 +741,20 @@ fn reduce_to_primary_cell(position: Position, cell: OrthorhombicCell) -> [f64; 3
         let remainder_ulp_span = direct_remainder
             .to_bits()
             .abs_diff(scaled_remainder.to_bits());
-        let value = if direct_remainder.is_sign_positive()
-            && scaled_remainder.is_sign_positive()
-            && remainder_ulp_span == 2
-        {
-            direct_remainder + 0.5 * (scaled_remainder - direct_remainder)
+        let value = if direct_remainder.is_sign_positive() && scaled_remainder.is_sign_positive() {
+            match remainder_ulp_span {
+                1 if quotient > 0.0 => {
+                    f64::from_bits(direct_remainder.to_bits().max(scaled_remainder.to_bits()) + 1)
+                }
+                1 if quotient < 0.0 => f64::from_bits(
+                    direct_remainder
+                        .to_bits()
+                        .min(scaled_remainder.to_bits())
+                        .saturating_sub(1),
+                ),
+                2 => direct_remainder + 0.5 * (scaled_remainder - direct_remainder),
+                _ => direct_remainder,
+            }
         } else {
             direct_remainder
         };
@@ -758,11 +784,11 @@ fn reduce_to_primary_cell(position: Position, cell: OrthorhombicCell) -> [f64; 3
 }
 
 fn canonical_phase_origin(input: &EwaldInput) -> Position {
-    let Some(maximum_charge) = input
+    let Some(maximum_charge_magnitude) = input
         .charges_elementary
         .iter()
-        .copied()
-        .filter(|charge| *charge != 0.0)
+        .map(|charge| charge.abs())
+        .filter(|magnitude| *magnitude != 0.0)
         .max_by(f64::total_cmp)
     else {
         return Position::default();
@@ -772,7 +798,7 @@ fn canonical_phase_origin(input: &EwaldInput) -> Position {
         .iter()
         .enumerate()
         .filter_map(|(atom, &charge)| {
-            (charge.to_bits() == maximum_charge.to_bits()).then_some(atom)
+            (charge.abs().to_bits() == maximum_charge_magnitude.to_bits()).then_some(atom)
         })
         .collect::<Vec<_>>();
     let atom = if candidates.len() == 1 {
@@ -788,34 +814,27 @@ fn canonical_phase_origin(input: &EwaldInput) -> Position {
     input.positions[atom]
 }
 
-fn phase_origin_signature(input: &EwaldInput, origin: usize) -> Vec<(f64, [f64; 3])> {
+fn phase_origin_signature(input: &EwaldInput, origin: usize) -> Vec<(f64, f64)> {
     let mut signature = input
         .positions
         .iter()
         .zip(&input.charges_elementary)
         .map(|(&position, &charge)| {
-            (
-                charge,
-                minimum_image(position, input.positions[origin], input.cell),
-            )
+            let delta = minimum_image(position, input.positions[origin], input.cell);
+            (charge.abs(), squared_norm(delta))
         })
         .collect::<Vec<_>>();
     signature.sort_by(compare_phase_origin_entries);
     signature
 }
 
-fn compare_phase_origin_entries(left: &(f64, [f64; 3]), right: &(f64, [f64; 3])) -> Ordering {
+fn compare_phase_origin_entries(left: &(f64, f64), right: &(f64, f64)) -> Ordering {
     left.0
         .total_cmp(&right.0)
-        .then_with(|| left.1[0].total_cmp(&right.1[0]))
-        .then_with(|| left.1[1].total_cmp(&right.1[1]))
-        .then_with(|| left.1[2].total_cmp(&right.1[2]))
+        .then_with(|| left.1.total_cmp(&right.1))
 }
 
-fn compare_phase_origin_signatures(
-    left: &[(f64, [f64; 3])],
-    right: &[(f64, [f64; 3])],
-) -> Ordering {
+fn compare_phase_origin_signatures(left: &[(f64, f64)], right: &[(f64, f64)]) -> Ordering {
     left.iter()
         .zip(right)
         .map(|(left, right)| compare_phase_origin_entries(left, right))
@@ -957,14 +976,14 @@ fn validate_work_limit(input: &EwaldInput, pair_rule_count: usize) -> Result<(),
     let phase_origin_candidate_count = input
         .charges_elementary
         .iter()
-        .copied()
-        .filter(|charge| *charge != 0.0)
+        .map(|charge| charge.abs())
+        .filter(|magnitude| *magnitude != 0.0)
         .max_by(f64::total_cmp)
         .map_or(0, |maximum| {
             input
                 .charges_elementary
                 .iter()
-                .filter(|charge| charge.to_bits() == maximum.to_bits())
+                .filter(|charge| charge.abs().to_bits() == maximum.to_bits())
                 .count()
         });
     let phase_origin_work = atom_count
@@ -975,8 +994,20 @@ fn validate_work_limit(input: &EwaldInput, pair_rule_count: usize) -> Result<(),
                 "phase-origin canonicalization work exceeds addressable capacity",
             )
         })?;
-    let total_work = pair_count
-        .checked_add(pair_rule_count)
+    let pair_accumulation_work = pair_count.checked_mul(7).ok_or_else(|| {
+        EwaldError::new(
+            EwaldErrorCode::CapacityExceeded,
+            "real-space accumulation work exceeds addressable capacity",
+        )
+    })?;
+    let pair_rule_accumulation_work = pair_rule_count.checked_mul(7).ok_or_else(|| {
+        EwaldError::new(
+            EwaldErrorCode::CapacityExceeded,
+            "pair-correction accumulation work exceeds addressable capacity",
+        )
+    })?;
+    let total_work = pair_accumulation_work
+        .checked_add(pair_rule_accumulation_work)
         .and_then(|work| work.checked_add(phase_work))
         .and_then(|work| work.checked_add(phase_origin_work))
         .ok_or_else(|| {
@@ -1072,37 +1103,36 @@ fn scaled_reciprocal_force_component(
         * exponential
 }
 
-fn add_pair_force(
-    forces: &mut [[f64; 3]],
-    atom_i: usize,
-    atom_j: usize,
-    delta: [f64; 3],
-    factor: f64,
-) -> Result<(), EwaldError> {
-    for axis in 0..3 {
-        let component = factor * delta[axis];
-        checked_add(&mut forces[atom_i][axis], component, "pair force")?;
-        checked_add(&mut forces[atom_j][axis], -component, "pair force")?;
-    }
-    Ok(())
+fn new_force_term_buffers(atom_count: usize) -> Vec<[Vec<f64>; 3]> {
+    (0..atom_count)
+        .map(|_| [Vec::new(), Vec::new(), Vec::new()])
+        .collect()
 }
 
-fn add_radial_pair_force(
-    forces: &mut [[f64; 3]],
+fn push_pair_force_term(
+    terms: &mut [[Vec<f64>; 3]],
     atom_i: usize,
     atom_j: usize,
-    delta: [f64; 3],
-    distance: f64,
-    radial_force_magnitude: f64,
+    axis: usize,
+    component: f64,
+) {
+    terms[atom_i][axis].push(component);
+    terms[atom_j][axis].push(-component);
+}
+
+fn apply_canonical_force_terms(
+    forces: &mut [[f64; 3]],
+    terms: &[[Vec<f64>; 3]],
+    context: &str,
 ) -> Result<(), EwaldError> {
-    for axis in 0..3 {
-        let component = if distance < 1.0 {
-            (radial_force_magnitude / distance) * delta[axis]
-        } else {
-            (radial_force_magnitude * delta[axis]) / distance
-        };
-        checked_add(&mut forces[atom_i][axis], component, "radial pair force")?;
-        checked_add(&mut forces[atom_j][axis], -component, "radial pair force")?;
+    for (force, atom_terms) in forces.iter_mut().zip(terms) {
+        for axis in 0..3 {
+            checked_add(
+                &mut force[axis],
+                accurate_order_independent_sum(&atom_terms[axis]),
+                context,
+            )?;
+        }
     }
     Ok(())
 }
@@ -1139,8 +1169,7 @@ mod tests {
         evaluate_real_space, minimum_image, reduce_to_primary_cell,
         scaled_reciprocal_force_component, validate, EwaldEnergyComponents, EwaldErrorCode,
         EwaldEvaluation, EwaldInput, OrthorhombicCell, PairExclusion, Position,
-        CHARGE_NORMALIZATION_SCALE_E, COULOMB_KCAL_ANGSTROM_PER_MOL_E2, MAX_ATOM_COUNT,
-        MAX_EVALUATION_WORK_UNITS,
+        CHARGE_NORMALIZATION_SCALE_E, COULOMB_KCAL_ANGSTROM_PER_MOL_E2, MAX_EVALUATION_WORK_UNITS,
     };
 
     #[test]
@@ -1303,17 +1332,18 @@ mod tests {
 
     #[test]
     fn raw_pair_rule_work_is_rejected_before_tree_validation() {
+        let atom_count = 100;
         let mut input = EwaldInput::new(
-            vec![Position::default(); MAX_ATOM_COUNT],
-            vec![0.0; MAX_ATOM_COUNT],
+            vec![Position::default(); atom_count],
+            vec![0.0; atom_count],
             OrthorhombicCell {
                 lengths_angstrom: [20.0; 3],
             },
         );
         input.settings.reciprocal_max_indices = [1; 3];
-        let pair_count = MAX_ATOM_COUNT * (MAX_ATOM_COUNT - 1) / 2;
-        let phase_work = MAX_ATOM_COUNT * 26 * 2;
-        let rows_to_exceed_cap = MAX_EVALUATION_WORK_UNITS - pair_count - phase_work + 1;
+        let pair_count = atom_count * (atom_count - 1) / 2;
+        let phase_work = atom_count * 26 * 2;
+        let rows_to_exceed_cap = (MAX_EVALUATION_WORK_UNITS - 7 * pair_count - phase_work) / 7 + 1;
         input.exclusions = vec![
             PairExclusion {
                 atom_i: 0,

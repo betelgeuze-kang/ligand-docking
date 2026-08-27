@@ -654,6 +654,35 @@ fn reciprocal_phase_origin_is_atom_order_independent() {
 }
 
 #[test]
+fn reciprocal_phase_origin_is_charge_inversion_invariant() {
+    let mut input = EwaldInput::new(
+        vec![
+            Position::new(0.0, 0.0, 0.0),
+            Position::new(0.0, 0.0, 158_453_747.399_991_48),
+            Position::new(0.0, 0.0, 158_453_747.399_991_45),
+            Position::new(0.0, 0.0, 57_217_295.914_571_5),
+        ],
+        vec![16.0, -16.0, 1.0e-12, -1.0e-12],
+        OrthorhombicCell {
+            lengths_angstrom: [1.0e-6, 1.0e-6, 1.0e9],
+        },
+    );
+    input.settings.alpha_per_angstrom = 1.0;
+    input.settings.real_space_cutoff_angstrom = 2.0e-7;
+    input.settings.reciprocal_max_indices = [1; 3];
+    input.settings.dielectric = 1.0e-12;
+    let expected = evaluate(&input).expect("original charges are valid");
+    for charge in &mut input.charges_elementary {
+        *charge = -*charge;
+    }
+    let inverted = evaluate(&input).expect("inverted charges are valid");
+    assert_eq!(
+        inverted.energy.reciprocal_space_kcal_per_mol.to_bits(),
+        expected.energy.reciprocal_space_kcal_per_mol.to_bits()
+    );
+}
+
+#[test]
 fn exact_box_shift_preserves_interior_remainder_bits() {
     let length = 0.001;
     let mut input = EwaldInput::new(
@@ -677,6 +706,31 @@ fn exact_box_shift_preserves_interior_remainder_bits() {
         length.to_bits()
     );
     let shifted = evaluate(&input).expect("exact image shift is valid");
+    assert_eq!(shifted, expected);
+}
+
+#[test]
+fn two_box_shift_preserves_one_ulp_remainder_bracket() {
+    let length = 1.0e-6;
+    let coordinate = 5.958_238_943_898_918e-7;
+    let mut input = EwaldInput::new(
+        vec![Position::new(coordinate, 0.0, 0.0), Position::default()],
+        vec![1.0, -1.0],
+        OrthorhombicCell {
+            lengths_angstrom: [length; 3],
+        },
+    );
+    input.settings.alpha_per_angstrom = 1.0;
+    input.settings.real_space_cutoff_angstrom = 4.5e-7;
+    input.settings.reciprocal_max_indices = [1; 3];
+    input.settings.dielectric = 1.0e-12;
+    let expected = evaluate(&input).expect("one-ULP remainder fixture is valid");
+    input.positions[0].x_angstrom = 2.595_823_894_389_891_7e-6;
+    assert_eq!(
+        (input.positions[0].x_angstrom - coordinate).to_bits(),
+        (2.0 * length).to_bits()
+    );
+    let shifted = evaluate(&input).expect("two-box image is valid");
     assert_eq!(shifted, expected);
 }
 
@@ -831,6 +885,99 @@ fn pair_correction_energy_is_atom_order_independent() {
     assert_eq!(
         permuted.energy.pair_correction_kcal_per_mol.to_bits(),
         expected.energy.pair_correction_kcal_per_mol.to_bits()
+    );
+}
+
+#[test]
+fn pair_correction_force_is_atom_order_independent() {
+    let positions = vec![
+        Position::default(),
+        Position::new(10.0, 0.0, 0.0),
+        Position::new(-10.0, 0.0, 0.0),
+        Position::new(50.0, 0.0, 0.0),
+        Position::new(-50.0, 0.0, 0.0),
+    ];
+    let charges = vec![1.0, 1.0, 1.0, -1.5, -1.5];
+    let mut input = EwaldInput::new(
+        positions.clone(),
+        charges.clone(),
+        OrthorhombicCell {
+            lengths_angstrom: [200.0; 3],
+        },
+    );
+    input.settings.alpha_per_angstrom = 1.0e-12;
+    input.settings.real_space_cutoff_angstrom = 1.0;
+    input.settings.reciprocal_max_indices = [1; 3];
+    input.settings.dielectric = 1.0e-12;
+    input.exclusions = vec![
+        PairExclusion {
+            atom_i: 0,
+            atom_j: 1,
+        },
+        PairExclusion {
+            atom_i: 0,
+            atom_j: 2,
+        },
+    ];
+    input.pair_scales = vec![PairScale {
+        atom_i: 0,
+        atom_j: 3,
+        coulomb_scale: f64::from_bits(1.0_f64.to_bits() - 1),
+    }];
+    let expected = evaluate(&input).expect("first correction-force order is valid");
+
+    let order = [0_usize, 1, 3, 2, 4];
+    let old_to_new = [0_usize, 1, 3, 2, 4];
+    input.positions = order.iter().map(|&atom| positions[atom]).collect();
+    input.charges_elementary = order.iter().map(|&atom| charges[atom]).collect();
+    for exclusion in &mut input.exclusions {
+        exclusion.atom_i = old_to_new[exclusion.atom_i];
+        exclusion.atom_j = old_to_new[exclusion.atom_j];
+    }
+    for scale in &mut input.pair_scales {
+        scale.atom_i = old_to_new[scale.atom_i];
+        scale.atom_j = old_to_new[scale.atom_j];
+    }
+    let permuted = evaluate(&input).expect("permuted correction-force order is valid");
+    assert_ne!(expected.forces_kcal_per_mol_angstrom[0][0].to_bits(), 0);
+    assert_eq!(
+        permuted.forces_kcal_per_mol_angstrom[0][0].to_bits(),
+        expected.forces_kcal_per_mol_angstrom[0][0].to_bits()
+    );
+}
+
+#[test]
+fn real_space_energy_is_atom_order_independent() {
+    let positions = vec![
+        Position::new(0.0, 0.0, 0.0),
+        Position::new(1.0, 0.0, 0.0),
+        Position::new(20.0, 0.0, 0.0),
+        Position::new(21.0, 0.0, 0.0),
+        Position::new(40.0, 0.0, 0.0),
+        Position::new(41.0, 0.0, 0.0),
+        Position::new(100.0, 0.0, 0.0),
+    ];
+    let charges = vec![1.0, 1.0, 1.0, -1.0, 5.0e-9, -5.0e-9, -2.0];
+    let mut input = EwaldInput::new(
+        positions.clone(),
+        charges.clone(),
+        OrthorhombicCell {
+            lengths_angstrom: [200.0; 3],
+        },
+    );
+    input.settings.alpha_per_angstrom = 1.0e-12;
+    input.settings.real_space_cutoff_angstrom = 1.5;
+    input.settings.reciprocal_max_indices = [1; 3];
+    let expected = evaluate(&input).expect("first real-pair order is valid");
+
+    let order = [0_usize, 1, 4, 5, 2, 3, 6];
+    input.positions = order.iter().map(|&atom| positions[atom]).collect();
+    input.charges_elementary = order.iter().map(|&atom| charges[atom]).collect();
+    let permuted = evaluate(&input).expect("permuted real-pair order is valid");
+    assert_ne!(expected.energy.real_space_kcal_per_mol.to_bits(), 0);
+    assert_eq!(
+        permuted.energy.real_space_kcal_per_mol.to_bits(),
+        expected.energy.real_space_kcal_per_mol.to_bits()
     );
 }
 

@@ -24,7 +24,7 @@ excluded/scaled pairs after the periodic Ewald sum. Real-space pairs traverse
 the negative configured maximum through the positive maximum, omitting only
 zero. Forces are analytic negative energy gradients accumulated in the same
 order. Positions are first reduced toward the primary cell using a pinned-floor
-quotient and the canonical midpoint of a two-ULP direct/scaled remainder bracket.
+quotient and canonical reconciliation of one- and two-ULP direct/scaled remainder brackets.
 This keeps ordinary interior residues bitwise stable across exact represented
 box shifts. A Euclidean-remainder fallback handles rounded quotients that miss
 the primary range across more than `2^53` cells. A supported negative boundary residual that rounds to the upper
@@ -45,8 +45,8 @@ to half.
 Neutrality is checked with a canonical order and Neumaier compensated sum and
 must be exactly zero because no neutralizing-background convention is defined.
 Cell volume multiplies sorted minimum and maximum lengths before the middle
-length. Corrections traverse only sorted declared pair rules. A combined real-
-pair, declared-correction, reciprocal-phase, and phase-origin signature work cap prevents the scalar
+length. Corrections traverse only sorted declared pair rules. A combined seven-times-real-pair,
+seven-times-declared-correction, reciprocal-phase, and phase-origin signature work cap prevents the scalar
 reference's individually valid maxima from creating an unbounded evaluation;
 raw rule rows are bounded before any pair-rule tree allocation.
 The API also rejects finite values outside its documented numeric envelope:
@@ -63,14 +63,15 @@ operations use the exactly pinned `libm` 0.2.16 dependency. Reciprocal structure
 factors normalize charges by the exactly reversible power of two `2^-40`,
 canonically order and compensate their cosine and sine terms, and retain tiny
 phases without perturbing represented charges. Phases use minimum-image positions
-relative to the maximum-charge atom, with exact ties resolved by a sorted
-relative-geometry signature, and their three axis products use a canonical compensated sum; zero-charge atoms
+relative to a maximum-absolute-charge atom, with exact magnitude ties resolved by
+a sorted absolute-charge/radial-distance signature, and their three axis products use a canonical compensated sum; zero-charge atoms
 bypass phase construction. Forces
 incorporate each wave component before the structure/phase products, preventing
 a small phase-scaled quotient from underflowing before the wave restores a
 representable result. Self energy canonically orders and compensates charge-square
-accumulation so it is atom-order independent. Pair-correction energies use the
-same canonical compensated strategy across declared rules.
+accumulation so it is atom-order independent. Real-space energies and per-atom/axis
+forces, plus pair-correction energies and forces, use the same canonical compensated
+strategy across their pair terms.
 Real-space energy divides `erfc` first for sub-unit distances and multiplies the
 Coulomb/charge prefactor first otherwise. Force magnitudes use distance-adaptive
 damping division and distance-adaptive Cartesian component scaling, preserving
