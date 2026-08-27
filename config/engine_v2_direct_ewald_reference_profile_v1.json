@@ -19,7 +19,7 @@
     "native_abi_version_allocated": false,
     "external_md_engine_dependency": false,
     "fixed64_cpu_v7_source_closure_modified": false,
-    "source_sha256": "12b5de70cc7b0cba52f62c84ce0a18e0687de007d9bea72a8f1f3fecbaebba58",
+    "source_sha256": "06cb5b1de3775b0ecd24e3675aa2585b1cf403fcf8d75b5ea8e67501cd111eed",
     "frozen_fixture_sha256": "b733a07c531ba88d204a3b87413346510306bf0147bd10a275efb42469d65359",
     "cargo_lock_sha256": "cc64500cc1c97dfda26a8a4c8b8825c5296935f1e63cbaf61676a321364b3d9d"
   },
@@ -54,14 +54,14 @@
     "real_pair_order": "lexicographic_i_then_j",
     "reciprocal_vector_order": "nx_then_ny_then_nz_ascending_inclusive_omit_zero",
     "minimum_image_interval": "closed_negative_half_length_to_positive_half_length_with_atom_order_antisymmetric_exact_tie",
-    "minimum_image_selection": "error_free_separation_comparison_after_periodic_reduction",
+    "minimum_image_selection": "error_free_separation_comparison_and_wrapped_displacement_expansion_after_periodic_reduction",
     "exact_half_tie_detection": "error_free_two_difference_expansion_compared_with_half_before_rounded_coordinate_difference",
     "coordinate_reduction": "per_axis_rem_euclid_with_rounded_upper_boundary_recovered_as_nonzero_signed_residual_and_signed_zero_canonicalized",
     "cell_volume_multiplication_order": "sorted_minimum_times_maximum_then_middle",
     "pair_correction_half_cell_tie": "typed_rejection_ambiguous_pair_correction_image",
     "unit_pair_scale": "semantic_noop_before_pair_correction_image_selection",
     "zero_charge_pair_rule": "semantic_noop_before_pair_correction_image_selection",
-    "reciprocal_damping_order": "exact_power_of_two_charge_normalized_structure_then_wave_scaled_prefactor_before_phase_combination_and_pinned_exponential",
+    "reciprocal_damping_order": "exact_power_of_two_charge_normalized_structure_then_wave_scaled_prefactor_before_phase_combination_and_pinned_exponential_with_log_domain_exact_zero_classification",
     "real_space_energy_order": "charge_prefactor_times_erfc_over_distance_for_subunit_distance_else_charge_prefactor_times_erfc_then_divide",
     "real_space_force_order": "distance_adaptive_damping_division_then_distance_adaptive_cartesian_component_scaling"
   },
@@ -76,7 +76,9 @@
     "minimum_pair_distance_below_cutoff_required": true,
     "pair_distance_safety": "minimum_squared_is_normal_and_checked_before_any_inverse_distance_operation",
     "charge_product_safety": "minimum_nonzero_charge_product_is_normal",
-    "real_space_zero_damping": "typed_DampingUnderflow_for_nonzero_charge_pair"
+    "real_space_zero_damping": "typed_DampingUnderflow_for_nonzero_charge_pair",
+    "reciprocal_zero_damping": "log_domain_typed_DampingUnderflow_only_if_completed_energy_or_force_can_round_nonzero",
+    "reciprocal_phase_product_underflow": "typed_PhaseUnderflow"
   },
   "frozen_observation": {
     "real_space_kcal_per_mol": -0.11800195657683102,
@@ -123,6 +125,8 @@
     "representable_real_space_damping_retained": true,
     "representable_subunit_radial_force_retained": true,
     "reciprocal_wave_rescue_before_phase_underflow": true,
+    "reciprocal_exact_zero_damping_classified_in_log_domain": true,
+    "reciprocal_phase_product_underflow_typed_rejection": true,
     "tiny_phase_structure_factor_preserved": true,
     "power_of_two_charge_normalization_exact": true,
     "numeric_envelope_typed_rejection": true,
@@ -133,6 +137,7 @@
     "raw_pair_rule_work_cap_before_tree_allocation": true,
     "pair_correction_traverses_declared_rules_only": true,
     "supported_negative_boundary_residual_preserved": true,
+    "wrapped_pair_displacement_residual_preserved": true,
     "representable_subunit_real_energy_retained": true,
     "representable_subnormal_cartesian_force_retained": true,
     "unscaled_real_damping_underflow_typed_rejection": true,

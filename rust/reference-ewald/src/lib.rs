@@ -175,6 +175,7 @@ pub enum EwaldErrorCode {
     AmbiguousPairCorrectionImage,
     PairBelowMinimumDistance,
     DampingUnderflow,
+    PhaseUnderflow,
     NonFiniteResult,
 }
 
@@ -216,6 +217,16 @@ type PairKey = (usize, usize);
 
 struct PairRules {
     corrections: BTreeMap<PairKey, f64>,
+}
+
+#[derive(Clone, Copy)]
+struct ReciprocalUnderflowContext {
+    wave: [f64; 3],
+    wave2: f64,
+    damping_exponent: f64,
+    structure_cos_sin: (f64, f64),
+    scaled_force_factor: f64,
+    charge_unit: f64,
 }
 
 /// Evaluate direct Ewald electrostatics using scalar binary64 arithmetic.
@@ -360,33 +371,55 @@ fn evaluate_reciprocal_space(
                     core::f64::consts::TAU * f64::from(nz) / lengths[2],
                 ];
                 let wave2 = squared_norm(wave);
-                let exponential = libm::exp(-wave2 / (4.0 * alpha * alpha));
+                let damping_exponent = -wave2 / (4.0 * alpha * alpha);
+                let exponential = libm::exp(damping_exponent);
+                let phases = reduced_positions
+                    .iter()
+                    .map(|&position| {
+                        let phase = checked_phase(wave, position)?;
+                        Ok(libm::sincos(phase))
+                    })
+                    .collect::<Result<Vec<_>, EwaldError>>()?;
                 let mut structure_cos = 0.0;
                 let mut structure_sin = 0.0;
-                for (&charge, &position) in input.charges_elementary.iter().zip(&reduced_positions)
+                for (&charge, &(phase_sin, phase_cos)) in
+                    input.charges_elementary.iter().zip(&phases)
                 {
-                    let phase = dot(wave, position);
-                    let (phase_sin, phase_cos) = libm::sincos(phase);
                     let normalized_charge = charge / charge_unit;
                     structure_cos += normalized_charge * phase_cos;
                     structure_sin += normalized_charge * phase_sin;
                 }
                 let scaled_energy_factor = reciprocal_energy_factor * squared_charge_unit / wave2;
+                let undamped_energy = scaled_energy_factor * structure_cos * structure_cos
+                    + scaled_energy_factor * structure_sin * structure_sin;
+                if exponential == 0.0 {
+                    ensure_zero_reciprocal_damping_is_safe(
+                        input,
+                        &phases,
+                        [nx, ny, nz],
+                        undamped_energy,
+                        ReciprocalUnderflowContext {
+                            wave,
+                            wave2,
+                            damping_exponent,
+                            structure_cos_sin: (structure_cos, structure_sin),
+                            scaled_force_factor: reciprocal_force_factor * squared_charge_unit,
+                            charge_unit,
+                        },
+                    )?;
+                    continue;
+                }
                 checked_add(
                     &mut result.energy.reciprocal_space_kcal_per_mol,
-                    (scaled_energy_factor * structure_cos * structure_cos
-                        + scaled_energy_factor * structure_sin * structure_sin)
-                        * exponential,
+                    undamped_energy * exponential,
                     "reciprocal-space energy",
                 )?;
-                for ((force, &charge), &position) in result
+                for ((force, &charge), &(phase_sin, phase_cos)) in result
                     .forces_kcal_per_mol_angstrom
                     .iter_mut()
                     .zip(&input.charges_elementary)
-                    .zip(&reduced_positions)
+                    .zip(&phases)
                 {
-                    let phase = dot(wave, position);
-                    let (phase_sin, phase_cos) = libm::sincos(phase);
                     for axis in 0..3 {
                         checked_add(
                             &mut force[axis],
@@ -679,14 +712,14 @@ fn minimum_image(first: Position, second: Position, cell: OrthorhombicCell) -> [
     let mut delta = [0.0; 3];
     for axis in 0..3 {
         let length = cell.lengths_angstrom[axis];
-        let raw = first[axis] - second[axis];
+        let (raw, raw_error) = two_difference(first[axis], second[axis]);
         delta[axis] = if compare_primary_axis_separation(first[axis], second[axis], length)
             == Ordering::Greater
         {
             if first[axis] > second[axis] {
-                raw - length
+                add_to_expansion(raw, raw_error, -length)
             } else {
-                raw + length
+                add_to_expansion(raw, raw_error, length)
             }
         } else {
             raw
@@ -728,7 +761,7 @@ fn pair_correction_displacement(
     let mut delta = [0.0; 3];
     for axis in 0..3 {
         let length = cell.lengths_angstrom[axis];
-        let raw = first[axis] - second[axis];
+        let (raw, raw_error) = two_difference(first[axis], second[axis]);
         let separation = compare_primary_axis_separation(first[axis], second[axis], length);
         if separation == Ordering::Equal {
             return Err(EwaldError::new(
@@ -738,9 +771,9 @@ fn pair_correction_displacement(
         }
         delta[axis] = if separation == Ordering::Greater {
             if first[axis] > second[axis] {
-                raw - length
+                add_to_expansion(raw, raw_error, -length)
             } else {
-                raw + length
+                add_to_expansion(raw, raw_error, length)
             }
         } else {
             raw
@@ -755,16 +788,29 @@ fn compare_primary_axis_separation(first: f64, second: f64, length: f64) -> Orde
     } else {
         (second, first)
     };
-    let difference = high - low;
-    let low_virtual = high - difference;
-    let high_virtual = difference + low_virtual;
-    let low_roundoff = low_virtual - low;
-    let high_roundoff = high - high_virtual;
-    let error = high_roundoff + low_roundoff;
+    let (difference, error) = two_difference(high, low);
     match difference.total_cmp(&(0.5 * length)) {
         Ordering::Equal => error.total_cmp(&0.0),
         ordering => ordering,
     }
+}
+
+fn two_difference(first: f64, second: f64) -> (f64, f64) {
+    let difference = first - second;
+    let second_virtual = first - difference;
+    let first_virtual = difference + second_virtual;
+    let second_roundoff = second_virtual - second;
+    let first_roundoff = first - first_virtual;
+    (difference, first_roundoff + second_roundoff)
+}
+
+fn add_to_expansion(high: f64, low: f64, value: f64) -> f64 {
+    let sum = high + value;
+    let value_virtual = sum - high;
+    let high_virtual = sum - value_virtual;
+    let high_roundoff = high - high_virtual;
+    let value_roundoff = value - value_virtual;
+    sum + (low + high_roundoff + value_roundoff)
 }
 
 fn accurate_order_independent_sum(values: &[f64]) -> f64 {
@@ -856,6 +902,69 @@ fn validate_work_limit(input: &EwaldInput, pair_rule_count: usize) -> Result<(),
 
 fn dot(first: [f64; 3], second: [f64; 3]) -> f64 {
     first[0] * second[0] + first[1] * second[1] + first[2] * second[2]
+}
+
+fn checked_phase(wave: [f64; 3], position: [f64; 3]) -> Result<f64, EwaldError> {
+    let terms = [
+        wave[0] * position[0],
+        wave[1] * position[1],
+        wave[2] * position[2],
+    ];
+    for axis in 0..3 {
+        if wave[axis] != 0.0 && position[axis] != 0.0 && terms[axis] == 0.0 {
+            return Err(EwaldError::new(
+                EwaldErrorCode::PhaseUnderflow,
+                format!("reciprocal phase product underflows on axis {axis}"),
+            ));
+        }
+    }
+    Ok(terms[0] + terms[1] + terms[2])
+}
+
+fn damped_value_may_be_representable(undamped_value: f64, damping_exponent: f64) -> bool {
+    const LN_HALF_MIN_POSITIVE_SUBNORMAL: f64 = -745.133_219_101_941_1;
+    undamped_value != 0.0
+        && libm::log(undamped_value.abs()) + damping_exponent > LN_HALF_MIN_POSITIVE_SUBNORMAL
+}
+
+fn reciprocal_damping_underflow(nx: i32, ny: i32, nz: i32) -> EwaldError {
+    EwaldError::new(
+        EwaldErrorCode::DampingUnderflow,
+        format!("reciprocal vector ({nx},{ny},{nz}) damping underflows before scaling"),
+    )
+}
+
+fn ensure_zero_reciprocal_damping_is_safe(
+    input: &EwaldInput,
+    phases: &[(f64, f64)],
+    indices: [i32; 3],
+    undamped_energy: f64,
+    context: ReciprocalUnderflowContext,
+) -> Result<(), EwaldError> {
+    if damped_value_may_be_representable(undamped_energy, context.damping_exponent) {
+        return Err(reciprocal_damping_underflow(
+            indices[0], indices[1], indices[2],
+        ));
+    }
+    for (&charge, &phase_sin_cos) in input.charges_elementary.iter().zip(phases) {
+        for wave_component in context.wave {
+            let undamped_force = scaled_reciprocal_force_component(
+                context.scaled_force_factor,
+                wave_component,
+                context.wave2,
+                charge / context.charge_unit,
+                context.structure_cos_sin,
+                phase_sin_cos,
+                1.0,
+            );
+            if damped_value_may_be_representable(undamped_force, context.damping_exponent) {
+                return Err(reciprocal_damping_underflow(
+                    indices[0], indices[1], indices[2],
+                ));
+            }
+        }
+    }
+    Ok(())
 }
 
 fn squared_norm(vector: [f64; 3]) -> f64 {

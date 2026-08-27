@@ -474,6 +474,56 @@ fn unscaled_real_damping_underflow_is_rejected() {
 }
 
 #[test]
+fn representable_reciprocal_zero_damping_is_rejected() {
+    let mut input = EwaldInput::new(
+        vec![Position::default(), Position::new(2.5e-7, 0.0, 0.0)],
+        vec![16.0, -16.0],
+        OrthorhombicCell {
+            lengths_angstrom: [1.0e-6; 3],
+        },
+    );
+    input.settings.alpha_per_angstrom = 114_714.744_190_909_54;
+    input.settings.real_space_cutoff_angstrom = 2.0e-7;
+    input.settings.reciprocal_max_indices = [1; 3];
+    input.settings.dielectric = 1.0e-12;
+    assert_error(&input, EwaldErrorCode::DampingUnderflow);
+}
+
+#[test]
+fn reciprocal_phase_product_underflow_is_rejected() {
+    let mut input = EwaldInput::new(
+        vec![Position::default(), Position::new(0.3, 0.0, 1.0e-317)],
+        vec![16.0, -16.0],
+        OrthorhombicCell {
+            lengths_angstrom: [1.0, 1.0, 1.0e9],
+        },
+    );
+    input.settings.alpha_per_angstrom = 1.0;
+    input.settings.real_space_cutoff_angstrom = 0.2;
+    input.settings.reciprocal_max_indices = [1; 3];
+    input.settings.dielectric = 1.0e-12;
+    assert_error(&input, EwaldErrorCode::PhaseUnderflow);
+}
+
+#[test]
+fn wrapped_pair_displacement_preserves_boundary_residuals() {
+    let mut input = EwaldInput::new(
+        vec![
+            Position::new(-5.0e-8, 0.0, 0.0),
+            Position::new(999_999_999.999_999_9, 0.0, 0.0),
+        ],
+        vec![1.0, -1.0],
+        OrthorhombicCell {
+            lengths_angstrom: [1.0e9; 3],
+        },
+    );
+    input.settings.real_space_cutoff_angstrom = 8.0e-8;
+    let evaluation = evaluate(&input).expect("wrapped residual fixture is valid");
+    assert!(evaluation.energy.real_space_kcal_per_mol.is_sign_negative());
+    assert_ne!(evaluation.energy.real_space_kcal_per_mol.to_bits(), 0);
+}
+
+#[test]
 fn unsupported_numeric_extremes_have_typed_failures() {
     let input = rich_input();
 

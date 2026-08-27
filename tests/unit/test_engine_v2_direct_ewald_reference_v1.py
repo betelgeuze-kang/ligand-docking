@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PROFILE_PATH = ROOT / "config/engine_v2_direct_ewald_reference_profile_v1.json"
 CRATE = ROOT / "rust/reference-ewald"
-PROFILE_SHA256 = "a095cf0f89340bc713a3a66fa1582de6cf5b68f060ef8387ab5e2964623de112"
+PROFILE_SHA256 = "21a2abd3589ef926421b6736cedc22f166a7cb03358bd0a718180fd8f723fdf4"
 
 
 def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
@@ -48,7 +48,7 @@ def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
         "external_md_engine_dependency": False,
         "fixed64_cpu_v7_source_closure_modified": False,
         "source_sha256": (
-            "12b5de70cc7b0cba52f62c84ce0a18e0687de007d9bea72a8f1f3fecbaebba58"
+            "06cb5b1de3775b0ecd24e3675aa2585b1cf403fcf8d75b5ea8e67501cd111eed"
         ),
         "frozen_fixture_sha256": (
             "b733a07c531ba88d204a3b87413346510306bf0147bd10a275efb42469d65359"
@@ -109,7 +109,8 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
             "atom_order_antisymmetric_exact_tie"
         ),
         "minimum_image_selection": (
-            "error_free_separation_comparison_after_periodic_reduction"
+            "error_free_separation_comparison_and_wrapped_displacement_"
+            "expansion_after_periodic_reduction"
         ),
         "exact_half_tie_detection": (
             "error_free_two_difference_expansion_compared_with_half_before_"
@@ -133,7 +134,8 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
         ),
         "reciprocal_damping_order": (
             "exact_power_of_two_charge_normalized_structure_then_wave_scaled_"
-            "prefactor_before_phase_combination_and_pinned_exponential"
+            "prefactor_before_phase_combination_and_pinned_exponential_with_"
+            "log_domain_exact_zero_classification"
         ),
         "real_space_energy_order": (
             "charge_prefactor_times_erfc_over_distance_for_subunit_distance_"
@@ -167,6 +169,11 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
         "real_space_zero_damping": (
             "typed_DampingUnderflow_for_nonzero_charge_pair"
         ),
+        "reciprocal_zero_damping": (
+            "log_domain_typed_DampingUnderflow_only_if_completed_energy_or_"
+            "force_can_round_nonzero"
+        ),
+        "reciprocal_phase_product_underflow": "typed_PhaseUnderflow",
     }
     observation = profile["frozen_observation"]
     assert observation["total_kcal_per_mol"] == -6.0630802511248305
@@ -212,12 +219,14 @@ def test_validation_authority_and_standalone_crate_are_bounded() -> None:
         "libm::exp",
         "libm::sincos",
         "libm::sqrt",
+        "libm::log",
         "reciprocal_max_indices",
         "NonNeutralSystem",
         "CutoffViolatesMinimumImage",
         "ConflictingPairRule",
         "AmbiguousPairCorrectionImage",
         "DampingUnderflow",
+        "PhaseUnderflow",
         "MAX_EVALUATION_WORK_UNITS",
         "pair_rule_count",
         "signed_residual",

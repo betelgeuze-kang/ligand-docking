@@ -27,7 +27,7 @@ order. Positions are first reduced toward the primary cell; a supported
 negative boundary residual that `rem_euclid` rounds to the upper boundary is
 preserved regardless of magnitude; only an actual signed zero is canonicalized
 to positive zero. Real-space minimum images then subtract or add one box
-length only when the exact expanded displacement is above or below the
+length with an error-free expansion only when the exact expanded displacement is above or below the
 half-cell boundary. Exact real-space ties retain atom-order antisymmetry. An exact half-cell local pair
 correction is rejected because a single-image force cannot preserve both
 common-translation and atom-permutation invariance. A pair scale of exactly one
@@ -55,7 +55,7 @@ angstrom, dielectric outside `[1e-12,1e12]`, or minimum pair distance outside
 These bounds keep charge products and squared minimum-distance checks normal
 before any inverse-distance operation.
 
-All exponential, sine/cosine, complementary-error-function, and square-root
+All exponential, logarithm, sine/cosine, complementary-error-function, and square-root
 operations use the exactly pinned `libm` 0.2.16 dependency. Reciprocal structure
 factors normalize charges by the exactly reversible power of two `2^-40`,
 retaining tiny phases without perturbing represented charges. Forces incorporate
@@ -70,6 +70,10 @@ supported subnormal energy and Cartesian force components that are still
 representable. A nonzero-charge real-space pair whose pinned `erfc` or
 exponential result reaches exact zero is rejected with `DampingUnderflow`
 instead of silently discarding a potentially representable scaled interaction.
+Exact-zero reciprocal damping uses a pinned-log domain test of the completed
+undamped energy and force: vectors are skipped only when every result must round
+to zero, otherwise `DampingUnderflow` is returned. A nonzero wave-coordinate
+product that rounds to zero is rejected with `PhaseUnderflow`.
 
 `fixtures/direct_ewald_v1.tsv` freezes all four energy components, their total,
 and all 12 force components as IEEE-754 bit patterns. The observation example

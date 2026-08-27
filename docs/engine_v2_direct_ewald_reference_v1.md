@@ -20,6 +20,8 @@ displaced by one million box lengths. If `rem_euclid` rounds a supported
 negative boundary residual up to the cell length, every nonzero signed residual
 is recovered instead of collapsing a distinct position to zero. Only an actual
 signed zero is canonicalized to positive zero.
+When image adjustment adds or subtracts a box length, TwoDiff/TwoSum expansion
+preserves the recovered boundary residual instead of rounding it away again.
 
 Real-space image selection uses an error-free separation comparison after
 periodic reduction, preserving atom-swap antisymmetry on both sides of and at
@@ -39,8 +41,8 @@ the immutable profile. The minimum pair distance must be below the cutoff. This
 keeps charge products and the squared minimum distance normal before inverse-
 distance arithmetic while preserving the frozen ordinary-input operation order.
 
-Every exponential, sine/cosine pair, complementary error function, and square
-root is supplied by the exactly pinned `libm` 0.2.16 dependency rather than a
+Every exponential, logarithm, sine/cosine pair, complementary error function,
+and square root is supplied by the exactly pinned `libm` 0.2.16 dependency rather than a
 platform standard-library implementation. Reciprocal structure factors scale
 charges by the exactly reversible binary64 power of two `2^-40`, retaining tiny
 phases that would underflow if multiplied by charge first without perturbing
@@ -55,6 +57,11 @@ If pinned real-space `erfc` or exponential evaluation itself reaches exact zero
 for a nonzero-charge pair, evaluation fails closed with typed
 `DampingUnderflow`; the reference never silently reports zero when an external
 scale could make the mathematical completed interaction representable.
+Exact-zero reciprocal damping is classified against the completed undamped
+energy and force in the log domain: it is skipped only when every completed
+component must round to zero, and otherwise returns `DampingUnderflow`. A
+nonzero wave-coordinate product that itself rounds to zero returns the typed
+`PhaseUnderflow` error before phase construction.
 
 Neutrality uses a canonical absolute-magnitude/total order and Neumaier
 compensated sum, avoiding input-order-dependent admission, and requires that
@@ -79,16 +86,18 @@ inversion, near-zero net force, bitwise repetition, reciprocal-bound
 convergence, near-half-cell atom swaps, preservation of every rounded nonzero
 signed boundary residual, multidimensional boundary translation invariance,
 rounded-difference tie classification, exact power-of-two charge normalization,
-tiny-phase structure preservation, atom-order-independent self energy,
+tiny-phase structure preservation, phase-product underflow rejection,
+atom-order-independent self energy,
 reciprocal wave rescue before phase underflow, representable strongly damped
-real energy/forces, typed zero-damping rejection, pre-allocation rule-work
+real energy/forces, log-domain reciprocal and typed real zero-damping handling,
+wrapped-displacement residual preservation, pre-allocation rule-work
 rejection, exact-neutral admission,
 subnormal Cartesian force components, unit-scale and zero-charge no-ops, the
 numeric envelope, and typed malformed inputs. The exact force bits are those of
 the pinned math and operation-order contract.
 
 The exact profile SHA-256 is
-`a095cf0f89340bc713a3a66fa1582de6cf5b68f060ef8387ab5e2964623de112`.
+`21a2abd3589ef926421b6736cedc22f166a7cb03358bd0a718180fd8f723fdf4`.
 The profile separately binds the evaluator source, frozen fixture, and
 standalone Cargo lockfile hashes.
 
