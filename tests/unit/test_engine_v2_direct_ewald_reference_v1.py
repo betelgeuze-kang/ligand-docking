@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PROFILE_PATH = ROOT / "config/engine_v2_direct_ewald_reference_profile_v1.json"
 CRATE = ROOT / "rust/reference-ewald"
-PROFILE_SHA256 = "810f0804d76e33bf869d52973ccda34ad3571aefecd5149ecb0d8e222d08fc28"
+PROFILE_SHA256 = "a6b5023fb896a94668bfd3c65049746b12c01665913237aa44c3b126a8258e78"
 
 
 def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
@@ -48,7 +48,7 @@ def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
         "external_md_engine_dependency": False,
         "fixed64_cpu_v7_source_closure_modified": False,
         "source_sha256": (
-            "22626505fa35acd8ecb335e0660a93e8d18ad4b9755f062dcbe16eea6408fdab"
+            "0e700dfbbc2204628fbd43254bb51e838039fa436fa7d6c112322156249ae102"
         ),
         "frozen_fixture_sha256": (
             "a720c83852c79e401cb8838e9e20b2196985b6e424275949f77291b30b3da338"
@@ -88,6 +88,10 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
         "dielectric": 1.0,
         "minimum_pair_distance_angstrom": 1e-8,
         "periodic_image_comparison_relative_tolerance": 5e-12,
+        "real_space_cutoff_ambiguity": (
+            "typed_AmbiguousRealSpaceCutoff_within_periodic_image_relative_"
+            "tolerance"
+        ),
         "neutrality_accumulation": (
             "canonical_absolute_magnitude_then_total_order_neumaier_exact_"
             "zero_required"
@@ -196,7 +200,9 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
             "log_domain_scaled_reconstruction_when_completed_energy_or_force_"
             "can_round_nonzero"
         ),
-        "reciprocal_phase_product_underflow": "typed_PhaseUnderflow",
+        "reciprocal_phase_product_underflow": (
+            "typed_PhaseUnderflow_for_subnormal_or_zero_product"
+        ),
     }
     observation = profile["frozen_observation"]
     assert observation["total_kcal_per_mol"] == -6.0630802511248305
@@ -248,6 +254,7 @@ def test_validation_authority_and_standalone_crate_are_bounded() -> None:
         "CutoffViolatesMinimumImage",
         "ConflictingPairRule",
         "AmbiguousPairCorrectionImage",
+        "AmbiguousRealSpaceCutoff",
         "DampingUnderflow",
         "PhaseUnderflow",
         "MAX_EVALUATION_WORK_UNITS",

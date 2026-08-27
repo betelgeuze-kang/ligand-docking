@@ -23,11 +23,13 @@ excluded/scaled pairs after the periodic Ewald sum. Real-space pairs traverse
 `i < j`. Reciprocal integer vectors traverse `nx`, `ny`, then `nz`, each from
 the negative configured maximum through the positive maximum, omitting only
 zero. Forces are analytic negative energy gradients accumulated in the same
-order. Positions are first reduced toward the primary cell using a pinned-floor
-quotient and canonical reconciliation of one- and two-ULP direct/scaled remainder brackets.
-This keeps ordinary interior residues bitwise stable across exact represented
-box shifts. A Euclidean-remainder fallback handles rounded quotients that miss
-the primary range across more than `2^53` cells. A supported negative boundary residual that rounds to the upper
+order. Positions are reduced with the bounded Euclidean remainder. Binary64
+addition can discard the original primary-coordinate bits in a represented
+`x + nL`, so periodic-equivalent representations use a frozen `5e-12` relative
+comparison tolerance rather than a bitwise-identity claim. A real-space pair
+whose distance is within that relative tolerance of the cutoff is rejected with
+`AmbiguousRealSpaceCutoff`, preventing image rounding from changing inclusion.
+A supported negative boundary residual that rounds to the upper
 boundary is preserved regardless of magnitude; only an actual signed zero is
 canonicalized to positive zero. Real-space minimum images then subtract or add one box
 length with an error-free expansion only when the exact expanded displacement is above or below the
@@ -64,8 +66,9 @@ factors normalize charges by the exactly reversible power of two `2^-40`,
 canonically order and compensate their cosine and sine terms, and retain tiny
 phases without perturbing represented charges. Phases use minimum-image positions
 relative to a maximum-absolute-charge atom, with exact magnitude ties resolved by
-a sorted absolute-charge/radial-distance signature, and their three axis products use a canonical compensated sum; zero-charge atoms
-bypass phase construction. Forces
+a nonzero-charge-only rooted signature of relative charge and signed minimum-image
+geometry. Their three axis products use a canonical compensated sum; zero-charge atoms
+bypass both origin signatures and phase construction. Forces
 incorporate each wave component before the structure/phase products, preventing
 a small phase-scaled quotient from underflowing before the wave restores a
 representable result. Self energy canonically orders and compensates charge-square
@@ -76,16 +79,16 @@ Real-space energy divides `erfc` first for sub-unit distances and multiplies the
 Coulomb/charge prefactor first otherwise. Force magnitudes use distance-adaptive
 damping division and distance-adaptive Cartesian component scaling, preserving
 supported subnormal energy and Cartesian force components that are still
-representable. A nonzero-charge real-space pair whose pinned `erfc` or
-exponential result reaches exact zero is rejected with `DampingUnderflow`
-instead of silently discarding a potentially representable scaled interaction.
+representable while damping itself remains normal. A nonzero-charge real-space
+pair whose pinned `erfc` or exponential result is subnormal or zero is rejected
+with `DampingUnderflow` instead of amplifying a quantized damping value.
 Real-space pairs with a signed-zero charge product bypass distance and damping
 checks entirely.
 Subnormal or exact-zero reciprocal exponentials are combined with each undamped
 energy and force in the pinned-log domain. Every completed value that can round
 nonzero is reconstructed; only values below the binary64 half-minimum threshold
-become zero. A nonzero wave-coordinate product that rounds to zero is rejected
-with `PhaseUnderflow`.
+become zero. A nonzero wave-coordinate product that is subnormal or rounds to
+zero is rejected with `PhaseUnderflow` before reciprocal scaling can amplify it.
 
 `fixtures/direct_ewald_v1.tsv` freezes all four energy components, their total,
 and all 12 force components as IEEE-754 bit patterns. The observation example

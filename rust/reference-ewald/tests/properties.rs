@@ -304,7 +304,7 @@ fn zero_charge_pair_rule_is_a_noop_before_half_cell_image_selection() {
 
 #[test]
 fn near_half_cell_real_space_pair_is_antisymmetric_under_atom_swap() {
-    let below_half = f64::from_bits(1.5_f64.to_bits() - 1);
+    let below_half = 1.5 - 1.0e-10;
     let mut input = EwaldInput::new(
         vec![
             Position::new(0.0, 1.0, 1.0),
@@ -315,7 +315,7 @@ fn near_half_cell_real_space_pair_is_antisymmetric_under_atom_swap() {
             lengths_angstrom: [3.0, 12.0, 14.0],
         },
     );
-    input.settings.real_space_cutoff_angstrom = below_half;
+    input.settings.real_space_cutoff_angstrom = 1.5 - 5.0e-11;
     let forward = evaluate(&input).expect("near-half pair is valid");
     input.positions.swap(0, 1);
     input.charges_elementary.swap(0, 1);
@@ -442,7 +442,7 @@ fn reciprocal_scaling_preserves_representable_damped_terms() {
 #[test]
 fn normalized_structure_factor_preserves_tiny_phase_force() {
     let mut input = EwaldInput::new(
-        vec![Position::default(), Position::new(3.0e-7, 0.0, 1.0e-305)],
+        vec![Position::default(), Position::new(3.0e-7, 0.0, 1.0e-299)],
         vec![1.0e-12, -1.0e-12],
         OrthorhombicCell {
             lengths_angstrom: [1.0e-6, 1.0e-6, 1.0e9],
@@ -454,7 +454,7 @@ fn normalized_structure_factor_preserves_tiny_phase_force() {
     input.settings.dielectric = 1.0e-12;
     let evaluation = evaluate(&input).expect("tiny-phase fixture is inside the numeric envelope");
     let force = evaluation.forces_kcal_per_mol_angstrom[0][2];
-    assert!(force.is_subnormal());
+    assert!(force.is_finite());
     assert_ne!(force.to_bits(), 0.0_f64.to_bits());
 }
 
@@ -519,6 +519,22 @@ fn reciprocal_phase_product_underflow_is_rejected() {
         },
     );
     input.settings.alpha_per_angstrom = 1.0;
+    input.settings.real_space_cutoff_angstrom = 0.2;
+    input.settings.reciprocal_max_indices = [1; 3];
+    input.settings.dielectric = 1.0e-12;
+    assert_error(&input, EwaldErrorCode::PhaseUnderflow);
+}
+
+#[test]
+fn reciprocal_subnormal_phase_product_is_rejected() {
+    let mut input = EwaldInput::new(
+        vec![Position::default(), Position::new(0.3, 0.0, 5.0e-316)],
+        vec![16.0, -16.0],
+        OrthorhombicCell {
+            lengths_angstrom: [1.0, 1.0, 1.0e9],
+        },
+    );
+    input.settings.alpha_per_angstrom = 1.0e-4;
     input.settings.real_space_cutoff_angstrom = 0.2;
     input.settings.reciprocal_max_indices = [1; 3];
     input.settings.dielectric = 1.0e-12;
@@ -748,6 +764,26 @@ fn exact_box_shift_is_numerically_stable_for_interior_remainders() {
     );
     let shifted = evaluate(&input).expect("exact image shift is valid");
     assert_evaluation_close(&shifted, &expected, 5.0e-12);
+}
+
+#[test]
+fn periodic_image_cutoff_rounding_is_rejected() {
+    let length = 0.001;
+    let primary = 0.000_123_456_789_f64;
+    let image = 0.001_123_456_789;
+    let cutoff = f64::from_bits(primary.to_bits() - 1);
+    let mut input = EwaldInput::new(
+        vec![Position::new(primary, 0.0, 0.0), Position::default()],
+        vec![1.0, -1.0],
+        OrthorhombicCell {
+            lengths_angstrom: [length; 3],
+        },
+    );
+    input.settings.real_space_cutoff_angstrom = cutoff;
+    input.settings.reciprocal_max_indices = [1; 3];
+    assert_error(&input, EwaldErrorCode::AmbiguousRealSpaceCutoff);
+    input.positions[0].x_angstrom = image;
+    assert_error(&input, EwaldErrorCode::AmbiguousRealSpaceCutoff);
 }
 
 #[test]

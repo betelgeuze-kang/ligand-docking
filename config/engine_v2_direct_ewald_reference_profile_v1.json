@@ -19,7 +19,7 @@
     "native_abi_version_allocated": false,
     "external_md_engine_dependency": false,
     "fixed64_cpu_v7_source_closure_modified": false,
-    "source_sha256": "22626505fa35acd8ecb335e0660a93e8d18ad4b9755f062dcbe16eea6408fdab",
+    "source_sha256": "0e700dfbbc2204628fbd43254bb51e838039fa436fa7d6c112322156249ae102",
     "frozen_fixture_sha256": "a720c83852c79e401cb8838e9e20b2196985b6e424275949f77291b30b3da338",
     "cargo_lock_sha256": "cc64500cc1c97dfda26a8a4c8b8825c5296935f1e63cbaf61676a321364b3d9d"
   },
@@ -47,6 +47,7 @@
     "dielectric": 1.0,
     "minimum_pair_distance_angstrom": 1e-8,
     "periodic_image_comparison_relative_tolerance": 5e-12,
+    "real_space_cutoff_ambiguity": "typed_AmbiguousRealSpaceCutoff_within_periodic_image_relative_tolerance",
     "neutrality_accumulation": "canonical_absolute_magnitude_then_total_order_neumaier_exact_zero_required",
     "self_charge_square_accumulation": "canonical_absolute_magnitude_then_total_order_neumaier",
     "charge_normalization_scale_elementary": 9.094947017729282e-13,
@@ -83,7 +84,7 @@
     "charge_product_safety": "minimum_nonzero_charge_product_is_normal",
     "real_space_zero_damping": "typed_DampingUnderflow_for_subnormal_or_zero_erfc_or_exponential_on_nonzero_charge_pair",
     "reciprocal_zero_damping": "log_domain_scaled_reconstruction_when_completed_energy_or_force_can_round_nonzero",
-    "reciprocal_phase_product_underflow": "typed_PhaseUnderflow"
+    "reciprocal_phase_product_underflow": "typed_PhaseUnderflow_for_subnormal_or_zero_product"
   },
   "frozen_observation": {
     "real_space_kcal_per_mol": -0.11800195657683102,
@@ -132,6 +133,7 @@
     "reciprocal_wave_rescue_before_phase_underflow": true,
     "reciprocal_subnormal_and_zero_damping_scaled_in_log_domain": true,
     "reciprocal_phase_product_underflow_typed_rejection": true,
+    "reciprocal_subnormal_phase_product_typed_rejection": true,
     "reciprocal_phase_common_origin_translation_stable": true,
     "reciprocal_phase_origin_atom_order_independent": true,
     "reciprocal_phase_origin_periodic_translation_equivariant": true,
@@ -159,6 +161,7 @@
     "one_ulp_remainder_bracket_numerically_stable": true,
     "multi_box_one_ulp_remainder_bracket_numerically_stable": true,
     "asymmetric_two_ulp_remainder_bracket_numerically_stable": true,
+    "periodic_image_cutoff_ambiguity_typed_rejection": true,
     "large_coordinate_remainder_full_envelope_preserved": true,
     "real_space_energy_atom_order_independent": true,
     "representable_subunit_real_energy_retained": true,

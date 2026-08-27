@@ -31,6 +31,7 @@ const MIN_DIELECTRIC: f64 = 1.0e-12;
 const MAX_DIELECTRIC: f64 = 1.0e12;
 const MIN_SUPPORTED_PAIR_DISTANCE_ANGSTROM: f64 = 1.0e-8;
 const MAX_SUPPORTED_PAIR_DISTANCE_ANGSTROM: f64 = 1.0e3;
+const PERIODIC_IMAGE_COMPARISON_RELATIVE_TOLERANCE: f64 = 5.0e-12;
 
 /// One Cartesian position in canonical angstrom units.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -173,6 +174,7 @@ pub enum EwaldErrorCode {
     DuplicatePairRule,
     ConflictingPairRule,
     AmbiguousPairCorrectionImage,
+    AmbiguousRealSpaceCutoff,
     PairBelowMinimumDistance,
     DampingUnderflow,
     PhaseUnderflow,
@@ -289,7 +291,19 @@ fn evaluate_real_space(
                 ));
             }
             let distance = libm::sqrt(distance2);
-            if distance <= input.settings.real_space_cutoff_angstrom {
+            let cutoff = input.settings.real_space_cutoff_angstrom;
+            let cutoff_scale = distance.abs().max(cutoff.abs());
+            if (distance - cutoff).abs()
+                <= PERIODIC_IMAGE_COMPARISON_RELATIVE_TOLERANCE * cutoff_scale
+            {
+                return Err(EwaldError::new(
+                    EwaldErrorCode::AmbiguousRealSpaceCutoff,
+                    format!(
+                        "pair ({atom_i},{atom_j}) distance {distance} is within the periodic-image tolerance of cutoff {cutoff}"
+                    ),
+                ));
+            }
+            if distance <= cutoff {
                 let alpha_distance = alpha * distance;
                 let erfc_value = libm::erfc(alpha_distance);
                 let exponential = libm::exp(-alpha_distance * alpha_distance);
@@ -1020,10 +1034,10 @@ fn checked_phase(wave: [f64; 3], position: [f64; 3]) -> Result<f64, EwaldError> 
         wave[2] * position[2],
     ];
     for axis in 0..3 {
-        if wave[axis] != 0.0 && position[axis] != 0.0 && terms[axis] == 0.0 {
+        if wave[axis] != 0.0 && position[axis] != 0.0 && !terms[axis].is_normal() {
             return Err(EwaldError::new(
                 EwaldErrorCode::PhaseUnderflow,
-                format!("reciprocal phase product underflows on axis {axis}"),
+                format!("reciprocal phase product is subnormal or zero on axis {axis}"),
             ));
         }
     }
@@ -1181,13 +1195,13 @@ mod tests {
     #[test]
     fn strongly_damped_subnormal_real_force_is_rejected() {
         let mut input = EwaldInput::new(
-            vec![Position::default(), Position::new(1.0e8, 0.0, 0.0)],
+            vec![Position::default(), Position::new(9.0e7, 0.0, 0.0)],
             vec![16.0, -16.0],
             OrthorhombicCell {
                 lengths_angstrom: [1.0e9; 3],
             },
         );
-        input.settings.alpha_per_angstrom = 2.7e-7;
+        input.settings.alpha_per_angstrom = 3.0e-7;
         input.settings.real_space_cutoff_angstrom = 1.0e8;
         input.settings.dielectric = 1.0e-12;
         validate(&input).expect("strongly damped fixture is inside the numeric envelope");
@@ -1214,7 +1228,7 @@ mod tests {
             },
         );
         input.settings.alpha_per_angstrom = 1.0e6;
-        input.settings.real_space_cutoff_angstrom = 2.58e-5;
+        input.settings.real_space_cutoff_angstrom = 2.59e-5;
         input.settings.dielectric = 1.0e12;
         validate(&input).expect("subunit damping fixture is inside the numeric envelope");
         let mut result = EwaldEvaluation {
@@ -1241,7 +1255,7 @@ mod tests {
             },
         );
         input.settings.alpha_per_angstrom = 1.0e6;
-        input.settings.real_space_cutoff_angstrom = 2.62e-5;
+        input.settings.real_space_cutoff_angstrom = 2.63e-5;
         input.settings.dielectric = 1.0e12;
         validate(&input).expect("subunit force fixture is inside the numeric envelope");
         let mut result = EwaldEvaluation {

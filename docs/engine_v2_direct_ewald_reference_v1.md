@@ -18,6 +18,9 @@ minimum-image subtraction and reciprocal phase construction. Binary64 addition
 can discard the original primary-coordinate bits in a represented `x + nL`, so
 periodic-equivalent input representations are compared with the frozen
 `5e-12` relative tolerance rather than claiming unrecoverable bitwise identity.
+Any real-space pair within that relative tolerance of the cutoff is rejected
+with typed `AmbiguousRealSpaceCutoff`, so image rounding cannot change a
+discrete pair-inclusion decision.
 The same exact binary64 input remains bitwise deterministic. Reduction also prevents
 trigonometric range-reduction drift for long unwrapped trajectories; the property
 suite includes an image displaced by one million box lengths. If reduction rounds
@@ -77,8 +80,8 @@ checks entirely.
 Subnormal or exact-zero reciprocal exponentials are completed with the undamped
 energy or force in the log domain, preserving every result that can round
 nonzero and returning zero only below the binary64 half-minimum threshold. A
-nonzero wave-coordinate product that itself rounds to zero returns the typed
-`PhaseUnderflow` error before phase construction.
+nonzero wave-coordinate product that becomes subnormal or zero returns the
+typed `PhaseUnderflow` error before phase construction and reciprocal scaling.
 
 Neutrality uses a canonical absolute-magnitude/total order and Neumaier
 compensated sum, avoiding input-order-dependent admission, and requires that
@@ -107,7 +110,8 @@ inversion, near-zero net force, bitwise repetition, reciprocal-bound
 convergence, near-half-cell atom swaps, preservation of every rounded nonzero
 signed boundary residual, multidimensional boundary translation invariance,
 rounded-difference tie classification, exact power-of-two charge normalization,
-tiny-phase structure preservation, phase-product underflow rejection,
+tiny-phase structure preservation, subnormal-or-zero phase-product rejection,
+cutoff-ambiguity rejection,
 common-origin translation stability, atom-order-independent canonical phase
 origin, periodic-origin equivariance, charge-inversion-stable origin selection,
 rooted-geometry radial-tie origin selection, zero-charge origin-signature
@@ -128,7 +132,7 @@ numeric envelope, and typed malformed inputs. The exact force bits are those of
 the pinned math and operation-order contract.
 
 The exact profile SHA-256 is
-`810f0804d76e33bf869d52973ccda34ad3571aefecd5149ecb0d8e222d08fc28`.
+`a6b5023fb896a94668bfd3c65049746b12c01665913237aa44c3b126a8258e78`.
 The profile separately binds the evaluator source, frozen fixture, and
 standalone Cargo lockfile hashes.
 
