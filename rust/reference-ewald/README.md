@@ -60,11 +60,13 @@ operations use the exactly pinned `libm` 0.2.16 dependency. Reciprocal structure
 factors normalize charges by the exactly reversible power of two `2^-40`,
 canonically order and compensate their cosine and sine terms, and retain tiny
 phases without perturbing represented charges. Phases use minimum-image positions
-relative to a common nonzero-charge origin, while zero-charge atoms bypass phase
-construction. Forces incorporate each wave component before the structure/phase
-products, preventing a small phase-scaled quotient from underflowing before the
-wave restores a representable result. Self energy canonically orders and
-compensates charge-square accumulation so it is atom-order independent.
+relative to a common nonzero-charge origin, and their three axis products use a
+canonical compensated sum; zero-charge atoms bypass phase construction. Forces
+incorporate each wave component before the structure/phase products, preventing
+a small phase-scaled quotient from underflowing before the wave restores a
+representable result. Self energy canonically orders and compensates charge-square
+accumulation so it is atom-order independent. Pair-correction energies use the
+same canonical compensated strategy across declared rules.
 Real-space energy divides `erfc` first for sub-unit distances and multiplies the
 Coulomb/charge prefactor first otherwise. Force magnitudes use distance-adaptive
 damping division and distance-adaptive Cartesian component scaling, preserving

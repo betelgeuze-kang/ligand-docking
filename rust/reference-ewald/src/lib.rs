@@ -431,6 +431,7 @@ fn evaluate_pair_corrections(
     coulomb_scale: f64,
     result: &mut EwaldEvaluation,
 ) -> Result<(), EwaldError> {
+    let mut energy_terms = Vec::with_capacity(pair_rules.corrections.len());
     for (&(atom_i, atom_j), &pair_scale) in &pair_rules.corrections {
         if pair_scale.to_bits() == 1.0_f64.to_bits() {
             continue;
@@ -447,11 +448,7 @@ fn evaluate_pair_corrections(
         let distance2 = squared_norm(delta);
         let distance = libm::sqrt(distance2);
         let correction_scale = pair_scale - 1.0;
-        checked_add(
-            &mut result.energy.pair_correction_kcal_per_mol,
-            coulomb_scale * charge_product * correction_scale / distance,
-            "pair-correction energy",
-        )?;
+        energy_terms.push(coulomb_scale * charge_product * correction_scale / distance);
         add_pair_force(
             &mut result.forces_kcal_per_mol_angstrom,
             atom_i,
@@ -460,6 +457,11 @@ fn evaluate_pair_corrections(
             coulomb_scale * charge_product * correction_scale / (distance2 * distance),
         )?;
     }
+    checked_add(
+        &mut result.energy.pair_correction_kcal_per_mol,
+        accurate_order_independent_sum(&energy_terms),
+        "pair-correction energy",
+    )?;
     Ok(())
 }
 
@@ -901,7 +903,7 @@ fn checked_phase(wave: [f64; 3], position: [f64; 3]) -> Result<f64, EwaldError> 
             ));
         }
     }
-    Ok(terms[0] + terms[1] + terms[2])
+    Ok(accurate_order_independent_sum(&terms))
 }
 
 fn apply_reciprocal_damping(undamped_value: f64, damping_exponent: f64, exponential: f64) -> f64 {

@@ -526,6 +526,29 @@ fn reciprocal_phase_product_underflow_is_rejected() {
 }
 
 #[test]
+fn reciprocal_phase_sum_preserves_cancellation_residual() {
+    let inverse_tau = 1.0 / core::f64::consts::TAU;
+    let mut input = EwaldInput::new(
+        vec![
+            Position::new(0.0, 0.0, inverse_tau),
+            Position::new(inverse_tau, 1.0e-292, 0.0),
+        ],
+        vec![16.0, -16.0],
+        OrthorhombicCell {
+            lengths_angstrom: [1.0, 1.0e9, 1.0],
+        },
+    );
+    input.settings.alpha_per_angstrom = 1.0;
+    input.settings.real_space_cutoff_angstrom = 0.1;
+    input.settings.reciprocal_max_indices = [1; 3];
+    input.settings.dielectric = 1.0e-12;
+    let evaluation = evaluate(&input).expect("phase cancellation fixture is valid");
+    let residual_force = evaluation.forces_kcal_per_mol_angstrom[0][1].abs();
+    assert!(residual_force > 1.0e-311);
+    assert!(residual_force < 1.0e-309);
+}
+
+#[test]
 fn wrapped_pair_displacement_preserves_boundary_residuals() {
     let mut input = EwaldInput::new(
         vec![
@@ -624,6 +647,60 @@ fn zero_charge_atoms_bypass_reciprocal_phase_checks() {
     assert!(extended.forces_kcal_per_mol_angstrom[2]
         .iter()
         .all(|component| component.to_bits() == 0));
+}
+
+#[test]
+fn pair_correction_energy_is_atom_order_independent() {
+    let positions = vec![
+        Position::default(),
+        Position::new(10.0, 0.0, 0.0),
+        Position::new(0.0, 10.0, 0.0),
+        Position::new(50.0, 0.0, 0.0),
+    ];
+    let charges = vec![1.0, 1.0, -1.0, -1.0];
+    let mut input = EwaldInput::new(
+        positions.clone(),
+        charges.clone(),
+        OrthorhombicCell {
+            lengths_angstrom: [200.0; 3],
+        },
+    );
+    input.settings.real_space_cutoff_angstrom = 1.0;
+    input.settings.reciprocal_max_indices = [1; 3];
+    input.settings.dielectric = 1.0e-12;
+    input.pair_scales = vec![
+        PairScale {
+            atom_i: 0,
+            atom_j: 1,
+            coulomb_scale: 0.0,
+        },
+        PairScale {
+            atom_i: 0,
+            atom_j: 2,
+            coulomb_scale: 0.0,
+        },
+        PairScale {
+            atom_i: 1,
+            atom_j: 3,
+            coulomb_scale: f64::from_bits(1.0_f64.to_bits() - 1),
+        },
+    ];
+    let expected = evaluate(&input).expect("first correction order is valid");
+
+    let order = [1_usize, 0, 2, 3];
+    let old_to_new = [1_usize, 0, 2, 3];
+    input.positions = order.iter().map(|&atom| positions[atom]).collect();
+    input.charges_elementary = order.iter().map(|&atom| charges[atom]).collect();
+    for scale in &mut input.pair_scales {
+        scale.atom_i = old_to_new[scale.atom_i];
+        scale.atom_j = old_to_new[scale.atom_j];
+    }
+    let permuted = evaluate(&input).expect("permuted correction order is valid");
+    assert_ne!(expected.energy.pair_correction_kcal_per_mol.to_bits(), 0);
+    assert_eq!(
+        permuted.energy.pair_correction_kcal_per_mol.to_bits(),
+        expected.energy.pair_correction_kcal_per_mol.to_bits()
+    );
 }
 
 #[test]

@@ -49,7 +49,9 @@ phases that would underflow if multiplied by charge first without perturbing
 the represented charges, and canonically order and compensate their cosine and
 sine sums. Phases use minimum-image positions relative to a common nonzero-charge
 origin, so a large shared coordinate does not perturb the represented relative
-geometry. Zero-charge atoms bypass phase construction. Force terms then
+geometry. Each phase's three axis products use the same canonical compensated
+sum, preserving representable residuals when large terms cancel. Zero-charge
+atoms bypass phase construction. Force terms then
 incorporate each wave component before the structure/phase products.
 Real-space energy divides `erfc` first for sub-unit distances and multiplies the
 charge/Coulomb prefactor first otherwise. Radial forces use distance-adaptive
@@ -73,8 +75,10 @@ Self energy applies the same canonical compensated strategy to charge squares,
 so its exposed component is independent of atom ordering.
 Cell volume uses a
 canonical min-times-max-then-middle product to avoid axis-order intermediate
-overflow for finite mathematical volumes. Pair corrections iterate only the
-sorted declared rules, not every possible pair. Validation caps real pairs,
+overflow for finite mathematical volumes. Pair-correction energies are also
+canonically ordered and compensated, while their forces retain declared-rule
+traversal. Pair corrections iterate only the sorted declared rules, not every
+possible pair. Validation caps real pairs,
 declared correction rules, and twice-per-vector atom phase work together at
 10,000,000 work units, first using raw rule-row counts before allocating trees
 and then the canonical unique-rule count.
@@ -90,8 +94,9 @@ convergence, near-half-cell atom swaps, preservation of every rounded nonzero
 signed boundary residual, multidimensional boundary translation invariance,
 rounded-difference tie classification, exact power-of-two charge normalization,
 tiny-phase structure preservation, phase-product underflow rejection,
-common-origin translation stability, atom-order-independent reciprocal
-structure accumulation, zero-charge phase bypass,
+common-origin translation stability, cancellation-residual-preserving phase
+summation, atom-order-independent reciprocal structure accumulation,
+zero-charge phase bypass, atom-order-independent pair-correction energy,
 atom-order-independent self energy,
 reciprocal wave rescue before phase underflow, representable strongly damped
 real energy/forces, log-domain reciprocal damping reconstruction and typed real
@@ -103,7 +108,7 @@ numeric envelope, and typed malformed inputs. The exact force bits are those of
 the pinned math and operation-order contract.
 
 The exact profile SHA-256 is
-`32579d5c8389eab41019c027a78b6391b3812b587a47a1cac378743b0f98ecbe`.
+`a757a83db6e7fa65d72ae17f4cb1ef778f819e65ea47cd6bec4671b3d260c9b5`.
 The profile separately binds the evaluator source, frozen fixture, and
 standalone Cargo lockfile hashes.
 
