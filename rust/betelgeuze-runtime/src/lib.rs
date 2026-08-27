@@ -4,6 +4,7 @@
 //! is copied into native-owned structure-of-arrays storage.
 
 mod development_peptide;
+mod development_peptide_constraints;
 mod development_peptide_data;
 mod development_water_box;
 mod docking;
@@ -22,6 +23,12 @@ pub use development_peptide::{
     DEVELOPMENT_ALA3_V1_PARAMETER_SOURCE_DOI, DEVELOPMENT_ALA3_V1_PROFILE_ID,
     DEVELOPMENT_ALA3_V1_SCHEMA_ID, DEVELOPMENT_ALA3_VALIDATION_V1_PROFILE_ID,
     DEVELOPMENT_ALA3_VALIDATION_V1_SCHEMA_ID,
+};
+pub use development_peptide_constraints::{
+    development_ala3_constraints_v1_profile_sha256, observe_development_ala3_constraints_v1,
+    DevelopmentAla3ConstrainedV1, DevelopmentAla3ConstraintsObservationV1,
+    DEVELOPMENT_ALA3_CONSTRAINTS_V1_PROFILE_ID, DEVELOPMENT_ALA3_CONSTRAINTS_V1_ROW_COUNT,
+    DEVELOPMENT_ALA3_CONSTRAINTS_V1_SCHEMA_ID,
 };
 pub use development_water_box::{
     development_ion_parameters_v1, development_water_box_constraints_v1_profile_sha256,
