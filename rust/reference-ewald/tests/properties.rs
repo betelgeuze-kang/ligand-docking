@@ -775,6 +775,30 @@ fn exact_box_shift_preserves_asymmetric_two_ulp_remainder_bracket() {
 }
 
 #[test]
+fn three_box_shift_preserves_one_ulp_remainder_bracket() {
+    let length = 153_300_155.898_179_8;
+    let coordinate = 74_905_067.902_713_63;
+    let mut input = EwaldInput::new(
+        vec![Position::new(coordinate, 0.0, 0.0), Position::default()],
+        vec![1.0, -1.0],
+        OrthorhombicCell {
+            lengths_angstrom: [length; 3],
+        },
+    );
+    input.settings.alpha_per_angstrom = 1.0e-12;
+    input.settings.real_space_cutoff_angstrom = 75_000_000.0;
+    input.settings.reciprocal_max_indices = [1; 3];
+    let expected = evaluate(&input).expect("three-box bracket fixture is valid");
+    input.positions[0].x_angstrom = 534_805_535.597_253_1;
+    assert_eq!(
+        (input.positions[0].x_angstrom - coordinate).to_bits(),
+        (3.0 * length).to_bits()
+    );
+    let shifted = evaluate(&input).expect("three-box bracket image is valid");
+    assert_eq!(shifted, expected);
+}
+
+#[test]
 fn two_box_shift_preserves_one_ulp_remainder_bracket() {
     let length = 1.0e-6;
     let coordinate = 5.958_238_943_898_918e-7;
@@ -871,6 +895,57 @@ fn zero_charge_atoms_bypass_reciprocal_phase_checks() {
     assert!(extended.forces_kcal_per_mol_angstrom[2]
         .iter()
         .all(|component| component.to_bits() == 0));
+}
+
+#[test]
+fn zero_charge_atoms_do_not_change_phase_origin_ties() {
+    let mut input = EwaldInput::new(
+        vec![
+            Position::new(0.0, 0.0, 0.0),
+            Position::new(0.0, 0.0, 158_453_747.399_991_48),
+            Position::new(0.0, 0.0, 158_453_747.399_991_45),
+            Position::new(0.0, 0.0, 57_217_295.914_571_5),
+        ],
+        vec![16.0, -16.0, 1.0e-12, -1.0e-12],
+        OrthorhombicCell {
+            lengths_angstrom: [1.0e-6, 1.0e-6, 1.0e9],
+        },
+    );
+    input.settings.alpha_per_angstrom = 1.0;
+    input.settings.real_space_cutoff_angstrom = 2.0e-7;
+    input.settings.reciprocal_max_indices = [1; 3];
+    input.settings.dielectric = 1.0e-12;
+    let expected = evaluate(&input).expect("charged origin-tie fixture is valid");
+    input.positions.push(input.positions[0]);
+    input.charges_elementary.push(0.0);
+    let extended = evaluate(&input).expect("zero-charge origin-tie fixture is valid");
+    assert_eq!(extended.energy, expected.energy);
+    for (actual, expected) in extended.forces_kcal_per_mol_angstrom[..4]
+        .iter()
+        .zip(&expected.forces_kcal_per_mol_angstrom)
+    {
+        for axis in 0..3 {
+            assert_eq!(actual[axis].to_bits(), expected[axis].to_bits());
+        }
+    }
+    assert!(extended.forces_kcal_per_mol_angstrom[4]
+        .iter()
+        .all(|component| component.to_bits() == 0));
+}
+
+#[test]
+fn subnormal_real_damping_is_rejected_before_scale_restoration() {
+    let mut input = EwaldInput::new(
+        vec![Position::default(), Position::new(1.0, 0.0, 0.0)],
+        vec![16.0, -16.0],
+        OrthorhombicCell {
+            lengths_angstrom: [3.0; 3],
+        },
+    );
+    input.settings.alpha_per_angstrom = 27.2;
+    input.settings.real_space_cutoff_angstrom = 1.1;
+    input.settings.dielectric = 1.0e-12;
+    assert_error(&input, EwaldErrorCode::DampingUnderflow);
 }
 
 #[test]

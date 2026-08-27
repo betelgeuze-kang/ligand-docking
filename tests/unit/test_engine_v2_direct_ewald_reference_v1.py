@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PROFILE_PATH = ROOT / "config/engine_v2_direct_ewald_reference_profile_v1.json"
 CRATE = ROOT / "rust/reference-ewald"
-PROFILE_SHA256 = "c0b2b0d5d3242bb5cb109be211fe3d4780613262b8c554ce3f6e2638d5694409"
+PROFILE_SHA256 = "17a6c2bc1f4c9fd36c6d48e70bd948e4902a7544ac4aabb7f50cbeda4b9b9107"
 
 
 def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
@@ -48,7 +48,7 @@ def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
         "external_md_engine_dependency": False,
         "fixed64_cpu_v7_source_closure_modified": False,
         "source_sha256": (
-            "6fe92d0da9fefcb4b97190c5b499b1f8b0f8908fdd851acd3c1d2bf33487490f"
+            "4d54d4b1aa893a4b3eae4e69f1133e81d37b22b95aaa44454c14ae56fb09b12e"
         ),
         "frozen_fixture_sha256": (
             "a720c83852c79e401cb8838e9e20b2196985b6e424275949f77291b30b3da338"
@@ -118,8 +118,9 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
             "rounded_coordinate_difference"
         ),
         "coordinate_reduction": (
-            "per_axis_pinned_floor_quotient_with_sign_aware_one_ulp_and_round_"
-            "trip_guarded_two_ulp_direct_and_scaled_remainder_reconciliation_"
+            "per_axis_pinned_floor_quotient_with_quotient_magnitude_aware_one_"
+            "ulp_opposite_endpoint_and_round_trip_guarded_two_ulp_direct_and_"
+            "scaled_remainder_reconciliation_"
             "and_rem_euclid_fallback_"
             "outside_primary_range_rounded_upper_boundary_recovered_as_"
             "nonzero_signed_residual_and_signed_zero_canonicalized"
@@ -150,7 +151,8 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
         ),
         "reciprocal_damping_order": (
             "translation_equivariant_maximum_absolute_charge_then_global_"
-            "inversion_invariant_rooted_signed_minimum_image_geometry_"
+            "inversion_invariant_nonzero_charge_only_rooted_signed_minimum_"
+            "image_geometry_"
             "signature_atom_order_independent_common_origin_relative_phases_"
             "with_canonical_"
             "compensated_axis_sum_then_exact_power_of_two_charge_normalization_"
@@ -188,7 +190,8 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
         ),
         "charge_product_safety": "minimum_nonzero_charge_product_is_normal",
         "real_space_zero_damping": (
-            "typed_DampingUnderflow_for_nonzero_charge_pair"
+            "typed_DampingUnderflow_for_subnormal_or_zero_erfc_or_"
+            "exponential_on_nonzero_charge_pair"
         ),
         "reciprocal_zero_damping": (
             "log_domain_scaled_reconstruction_when_completed_energy_or_force_"

@@ -293,11 +293,11 @@ fn evaluate_real_space(
                 let alpha_distance = alpha * distance;
                 let erfc_value = libm::erfc(alpha_distance);
                 let exponential = libm::exp(-alpha_distance * alpha_distance);
-                if charge_product != 0.0 && (erfc_value == 0.0 || exponential == 0.0) {
+                if !erfc_value.is_normal() || !exponential.is_normal() {
                     return Err(EwaldError::new(
                         EwaldErrorCode::DampingUnderflow,
                         format!(
-                            "pair ({atom_i},{atom_j}) damping underflows at alpha-distance {alpha_distance}"
+                            "pair ({atom_i},{atom_j}) damping is subnormal or zero at alpha-distance {alpha_distance}"
                         ),
                     ));
                 }
@@ -743,14 +743,12 @@ fn reduce_to_primary_cell(position: Position, cell: OrthorhombicCell) -> [f64; 3
             .abs_diff(scaled_remainder.to_bits());
         let value = if direct_remainder.is_sign_positive() && scaled_remainder.is_sign_positive() {
             match remainder_ulp_span {
-                1 if quotient > 0.0 => {
-                    f64::from_bits(direct_remainder.to_bits().max(scaled_remainder.to_bits()) + 1)
-                }
-                1 if quotient < 0.0 => f64::from_bits(
-                    direct_remainder
-                        .to_bits()
-                        .min(scaled_remainder.to_bits())
-                        .saturating_sub(1),
+                1 => reconcile_one_ulp_remainder(
+                    direct_remainder,
+                    scaled_remainder,
+                    quotient,
+                    component,
+                    length,
                 ),
                 2 => {
                     let image = quotient * length;
@@ -830,6 +828,7 @@ fn phase_origin_signature(input: &EwaldInput, origin: usize) -> Vec<[f64; 6]> {
         .positions
         .iter()
         .zip(&input.charges_elementary)
+        .filter(|(_, charge)| **charge != 0.0)
         .map(|(&position, &charge)| {
             let delta = minimum_image(position, input.positions[origin], input.cell);
             [
@@ -844,6 +843,47 @@ fn phase_origin_signature(input: &EwaldInput, origin: usize) -> Vec<[f64; 6]> {
         .collect::<Vec<_>>();
     signature.sort_by(compare_phase_origin_entries);
     signature
+}
+
+fn reconcile_one_ulp_remainder(
+    direct: f64,
+    scaled: f64,
+    quotient: f64,
+    component: f64,
+    length: f64,
+) -> f64 {
+    let steps = exact_nonnegative_integer_to_u64(quotient.abs()).saturating_sub(1);
+    let candidate_bits = if direct < scaled {
+        direct.to_bits().saturating_sub(steps)
+    } else {
+        direct.to_bits().saturating_add(steps)
+    };
+    let candidate = f64::from_bits(candidate_bits);
+    let image = quotient * length;
+    if candidate.is_sign_positive()
+        && candidate <= length
+        && (candidate + image).to_bits() == component.to_bits()
+        && (component - candidate).to_bits() == image.to_bits()
+    {
+        candidate
+    } else {
+        direct
+    }
+}
+
+fn exact_nonnegative_integer_to_u64(value: f64) -> u64 {
+    if value == 0.0 {
+        return 0;
+    }
+    let bits = value.to_bits();
+    let exponent_bits = (bits >> 52) & 0x7ff;
+    let exponent = i32::try_from(exponent_bits).expect("binary64 exponent fits i32") - 1023;
+    let significand = (bits & ((1_u64 << 52) - 1)) | (1_u64 << 52);
+    if exponent >= 52 {
+        significand << u32::try_from(exponent - 52).expect("validated quotient shift fits u32")
+    } else {
+        significand >> u32::try_from(52 - exponent).expect("validated quotient shift fits u32")
+    }
 }
 
 fn compare_phase_origin_entries(left: &[f64; 6], right: &[f64; 6]) -> Ordering {
@@ -1215,7 +1255,7 @@ mod tests {
     }
 
     #[test]
-    fn strongly_damped_real_force_retains_a_representable_subnormal_component() {
+    fn strongly_damped_subnormal_real_force_is_rejected() {
         let mut input = EwaldInput::new(
             vec![Position::default(), Position::new(1.0e8, 0.0, 0.0)],
             vec![16.0, -16.0],
@@ -1231,14 +1271,13 @@ mod tests {
             energy: EwaldEnergyComponents::default(),
             forces_kcal_per_mol_angstrom: vec![[0.0; 3]; 2],
         };
-        evaluate_real_space(
+        let error = evaluate_real_space(
             &input,
             COULOMB_KCAL_ANGSTROM_PER_MOL_E2 / input.settings.dielectric,
             &mut result,
         )
-        .expect("real-space evaluation remains finite");
-        assert!(result.forces_kcal_per_mol_angstrom[0][0].is_subnormal());
-        assert!(result.forces_kcal_per_mol_angstrom[0][0].is_sign_positive());
+        .expect_err("subnormal real damping must fail closed");
+        assert_eq!(error.code(), EwaldErrorCode::DampingUnderflow);
     }
 
     #[test]

@@ -14,10 +14,12 @@ scales. The result separates real, reciprocal, self, and local pair-correction
 energies and returns analytic forces for every atom.
 
 All positions are reduced per axis before minimum-image subtraction and
-reciprocal phase construction. A pinned-floor quotient and the canonical
-sign-aware reconciliation of one-ULP direct/scaled remainder brackets and a
-round-trip guard on two-ULP brackets keep ordinary interior residues bitwise
-stable across exact represented box shifts. A two-ULP midpoint is used only
+reciprocal phase construction. A pinned-floor quotient, quotient-magnitude-aware
+reconciliation of one-ULP direct/scaled remainder brackets, and a round-trip
+guard on two-ULP brackets keep ordinary interior residues bitwise stable across
+exact represented box shifts. A one-ULP bracket is extrapolated away from the
+scaled endpoint by the represented image count minus one and retained only when
+it reconstructs that image in both directions. A two-ULP midpoint is used only
 when both endpoints reconstruct the represented image; otherwise the exact
 direct remainder is retained. When a rounded
 quotient misses the primary range across more than `2^53` cells, reduction falls
@@ -57,9 +59,10 @@ the represented charges, and canonically order and compensate their cosine and
 sine sums. Phases use minimum-image positions relative to a maximum-absolute-charge
 atom; exact magnitude ties are resolved by a sorted rooted signature containing
 absolute charge, charge product with the root, squared radial distance, and the
-signed minimum-image displacement. The relative charge product is unchanged by
-global charge inversion, and the signed displacement breaks distinct radial
-ties without consulting input order. This common origin is independent of atom
+signed minimum-image displacement. Zero-charge sites are excluded from this
+signature as well as from phase construction. The relative charge product is
+unchanged by global charge inversion, and the signed displacement breaks
+distinct radial ties without consulting input order. This common origin is independent of atom
 order and global charge inversion and is equivariant under periodic translations, while a large shared
 coordinate does not perturb the represented relative geometry. Each phase's three axis products use the same canonical compensated
 sum, preserving representable residuals when large terms cancel. Zero-charge
@@ -69,11 +72,11 @@ Real-space energy divides `erfc` first for sub-unit distances and multiplies the
 charge/Coulomb prefactor first otherwise. Radial forces use distance-adaptive
 damping division and then distance-adaptive Cartesian component scaling. This
 retains supported strongly damped energy/forces and subnormal Cartesian force
-components whenever the completed value is representable.
-If pinned real-space `erfc` or exponential evaluation itself reaches exact zero
+components whenever the damping values themselves remain normal.
+If pinned real-space `erfc` or exponential evaluation becomes subnormal or zero
 for a nonzero-charge pair, evaluation fails closed with typed
-`DampingUnderflow`; the reference never silently reports zero when an external
-scale could make the mathematical completed interaction representable.
+`DampingUnderflow`; the reference does not amplify a quantized damping value
+even when an external scale could make the completed interaction representable.
 Real-space pairs with a signed-zero charge product bypass distance and damping
 checks entirely.
 Subnormal or exact-zero reciprocal exponentials are completed with the undamped
@@ -112,8 +115,9 @@ rounded-difference tie classification, exact power-of-two charge normalization,
 tiny-phase structure preservation, phase-product underflow rejection,
 common-origin translation stability, atom-order-independent canonical phase
 origin, periodic-origin equivariance, charge-inversion-stable origin selection,
-rooted-geometry radial-tie origin selection, exact-box-shift one/two-ULP
-interior-residue stability including an asymmetric two-ULP bracket,
+rooted-geometry radial-tie origin selection, zero-charge origin-signature
+bypass, exact-box-shift one/two-ULP interior-residue stability including a
+three-box one-ULP bracket and an asymmetric two-ULP bracket,
 full-envelope large-coordinate remainder fallback,
 cancellation-residual-preserving phase summation, atom-order-independent reciprocal structure accumulation,
 zero-charge phase and real-pair distance bypass, atom-order-independent
@@ -121,7 +125,7 @@ real-space energy and pair-correction energy/force,
 atom-order-independent self energy,
 reciprocal wave rescue before phase underflow, representable strongly damped
 real energy/forces, log-domain reciprocal damping reconstruction and typed real
-zero-damping handling,
+subnormal-or-zero-damping handling,
 wrapped-displacement residual preservation, pre-allocation rule-work
 rejection, exact-neutral admission,
 subnormal Cartesian force components, unit-scale and zero-charge no-ops, the
@@ -129,7 +133,7 @@ numeric envelope, and typed malformed inputs. The exact force bits are those of
 the pinned math and operation-order contract.
 
 The exact profile SHA-256 is
-`c0b2b0d5d3242bb5cb109be211fe3d4780613262b8c554ce3f6e2638d5694409`.
+`17a6c2bc1f4c9fd36c6d48e70bd948e4902a7544ac4aabb7f50cbeda4b9b9107`.
 The profile separately binds the evaluator source, frozen fixture, and
 standalone Cargo lockfile hashes.
 
