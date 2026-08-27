@@ -57,10 +57,12 @@ before any inverse-distance operation.
 
 All exponential, sine/cosine, complementary-error-function, and square-root
 operations use the exactly pinned `libm` 0.2.16 dependency. Reciprocal structure
-factors normalize charges by the minimum supported nonzero magnitude, retaining
-tiny phases before charge scaling. Forces incorporate each wave component before
-the structure/phase products and pinned exponential, preventing a small phase-
-scaled quotient from underflowing before the wave restores a representable result.
+factors normalize charges by the exactly reversible power of two `2^-40`,
+retaining tiny phases without perturbing represented charges. Forces incorporate
+each wave component before the structure/phase products and pinned exponential,
+preventing a small phase-scaled quotient from underflowing before the wave restores
+a representable result. Self energy canonically orders and compensates charge-
+square accumulation so it is atom-order independent.
 Real-space energy divides `erfc` first for sub-unit distances and multiplies the
 Coulomb/charge prefactor first otherwise. Force magnitudes use distance-adaptive
 damping division and distance-adaptive Cartesian component scaling, preserving

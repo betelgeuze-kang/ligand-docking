@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PROFILE_PATH = ROOT / "config/engine_v2_direct_ewald_reference_profile_v1.json"
 CRATE = ROOT / "rust/reference-ewald"
-PROFILE_SHA256 = "072595df59178a91158a51759694c6ad1cdbaf6898a2dedaaa79ac937ebe0ff8"
+PROFILE_SHA256 = "be93e3decbcbb2a4fd9897d438cb02fcd13bdc68235cb059d9d532949998c3b9"
 
 
 def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
@@ -48,10 +48,10 @@ def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
         "external_md_engine_dependency": False,
         "fixed64_cpu_v7_source_closure_modified": False,
         "source_sha256": (
-            "16f0cf45df1b681c66a8fc54562306360b1c8ffce03c1575e7e7319258eea799"
+            "ace349974f9f29a0a7443a5ecf94499b400406a3c09e3b34d13ae8ace01b51e2"
         ),
         "frozen_fixture_sha256": (
-            "d253605c7fb8e50076f4b4e786a99f674678764f7e58d81124fc6dacb9f3a817"
+            "b733a07c531ba88d204a3b87413346510306bf0147bd10a275efb42469d65359"
         ),
         "cargo_lock_sha256": (
             "cc64500cc1c97dfda26a8a4c8b8825c5296935f1e63cbaf61676a321364b3d9d"
@@ -91,6 +91,10 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
             "canonical_absolute_magnitude_then_total_order_neumaier_exact_"
             "zero_required"
         ),
+        "self_charge_square_accumulation": (
+            "canonical_absolute_magnitude_then_total_order_neumaier"
+        ),
+        "charge_normalization_scale_elementary": 9.094947017729282e-13,
         "maximum_evaluation_work_units": 10000000,
         "evaluation_work_unit_equation": (
             "pair_count_plus_pair_rule_count_plus_two_times_atom_count_times_"
@@ -128,8 +132,8 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
             "semantic_noop_before_pair_correction_image_selection"
         ),
         "reciprocal_damping_order": (
-            "minimum_charge_normalized_structure_then_wave_scaled_prefactor_"
-            "before_phase_combination_and_pinned_exponential"
+            "exact_power_of_two_charge_normalized_structure_then_wave_scaled_"
+            "prefactor_before_phase_combination_and_pinned_exponential"
         ),
         "real_space_energy_order": (
             "charge_prefactor_times_erfc_over_distance_for_subunit_distance_"
@@ -162,16 +166,16 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
         "charge_product_safety": "minimum_nonzero_charge_product_is_normal",
     }
     observation = profile["frozen_observation"]
-    assert observation["total_kcal_per_mol"] == -6.063080251124823
+    assert observation["total_kcal_per_mol"] == -6.0630802511248305
     assert observation["maximum_central_finite_difference_force_error_kcal_per_mol_angstrom"] == (
-        1.1391479759481626e-8
+        1.1746751238383979e-8
     )
     assert observation[
         "reciprocal_bound_absolute_total_difference_from_bound_9_kcal_per_mol"
     ] == {
-        "bound_3": 0.21813662961478997,
-        "bound_5": 0.0011959243365495809,
-        "bound_7": 1.6123660273592577e-6,
+        "bound_3": 0.21813662961478286,
+        "bound_5": 0.0011959243365424754,
+        "bound_7": 1.6123660202538304e-6,
     }
     assert observation["debug_release_bitwise_identical"] is True
     assert observation["frozen_energy_and_force_component_count"] == 17

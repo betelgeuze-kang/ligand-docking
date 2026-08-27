@@ -42,10 +42,10 @@ distance arithmetic while preserving the frozen ordinary-input operation order.
 Every exponential, sine/cosine pair, complementary error function, and square
 root is supplied by the exactly pinned `libm` 0.2.16 dependency rather than a
 platform standard-library implementation. Reciprocal structure factors scale
-charges by the minimum supported nonzero magnitude, retaining tiny phases that
-would underflow if multiplied by charge first. Force terms then incorporate each
-wave component before the structure/phase products and pinned exponential,
-retaining contributions whose phase-scaled quotient would otherwise vanish.
+charges by the exactly reversible binary64 power of two `2^-40`, retaining tiny
+phases that would underflow if multiplied by charge first without perturbing
+the represented charges. Force terms then incorporate each wave component
+before the structure/phase products and pinned exponential.
 Real-space energy divides `erfc` first for sub-unit distances and multiplies the
 charge/Coulomb prefactor first otherwise. Radial forces use distance-adaptive
 damping division and then distance-adaptive Cartesian component scaling. This
@@ -55,6 +55,8 @@ components whenever the completed value is representable.
 Neutrality uses a canonical absolute-magnitude/total order and Neumaier
 compensated sum, avoiding input-order-dependent admission, and requires that
 sum to be exactly zero because this API defines no neutralizing background.
+Self energy applies the same canonical compensated strategy to charge squares,
+so its exposed component is independent of atom ordering.
 Cell volume uses a
 canonical min-times-max-then-middle product to avoid axis-order intermediate
 overflow for finite mathematical volumes. Pair corrections iterate only the
@@ -72,7 +74,8 @@ translation, integer images, complete atom permutation, global charge
 inversion, near-zero net force, bitwise repetition, reciprocal-bound
 convergence, near-half-cell atom swaps, preservation of every rounded nonzero
 signed boundary residual, multidimensional boundary translation invariance,
-rounded-difference tie classification, tiny-phase structure preservation,
+rounded-difference tie classification, exact power-of-two charge normalization,
+tiny-phase structure preservation, atom-order-independent self energy,
 reciprocal wave rescue before phase underflow, representable strongly damped
 real energy/forces, pre-allocation rule-work rejection, exact-neutral admission,
 subnormal Cartesian force components, unit-scale and zero-charge no-ops, the
@@ -80,7 +83,7 @@ numeric envelope, and typed malformed inputs. The exact force bits are those of
 the pinned math and operation-order contract.
 
 The exact profile SHA-256 is
-`072595df59178a91158a51759694c6ad1cdbaf6898a2dedaaa79ac937ebe0ff8`.
+`be93e3decbcbb2a4fd9897d438cb02fcd13bdc68235cb059d9d532949998c3b9`.
 The profile separately binds the evaluator source, frozen fixture, and
 standalone Cargo lockfile hashes.
 

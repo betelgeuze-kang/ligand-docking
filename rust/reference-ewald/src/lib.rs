@@ -22,6 +22,7 @@ const MIN_CELL_LENGTH_ANGSTROM: f64 = 1.0e-6;
 const MAX_CELL_LENGTH_ANGSTROM: f64 = 1.0e9;
 const MIN_NONZERO_ABSOLUTE_CHARGE_E: f64 = 1.0e-12;
 const MAX_ABSOLUTE_CHARGE_E: f64 = 16.0;
+const CHARGE_NORMALIZATION_SCALE_E: f64 = f64::from_bits(0x3d70_0000_0000_0000);
 const MIN_ALPHA_PER_ANGSTROM: f64 = 1.0e-12;
 const MAX_ALPHA_PER_ANGSTROM: f64 = 1.0e6;
 const MIN_CUTOFF_ANGSTROM: f64 = 1.0e-8;
@@ -237,11 +238,7 @@ pub fn evaluate(input: &EwaldInput) -> Result<EwaldEvaluation, EwaldError> {
     let coulomb_scale = COULOMB_KCAL_ANGSTROM_PER_MOL_E2 / input.settings.dielectric;
     evaluate_real_space(input, coulomb_scale, &mut result)?;
     evaluate_reciprocal_space(input, coulomb_scale, &mut result)?;
-    let charge_square_sum = input
-        .charges_elementary
-        .iter()
-        .map(|charge| charge * charge)
-        .sum::<f64>();
+    let charge_square_sum = accurate_charge_square_sum(&input.charges_elementary);
     result.energy.self_kcal_per_mol =
         -coulomb_scale * input.settings.alpha_per_angstrom * charge_square_sum
             / libm::sqrt(core::f64::consts::PI);
@@ -333,7 +330,7 @@ fn evaluate_reciprocal_space(
     let volume = cell_volume(input.cell);
     let reciprocal_energy_factor = coulomb_scale * 2.0 * core::f64::consts::PI / volume;
     let reciprocal_force_factor = coulomb_scale * 4.0 * core::f64::consts::PI / volume;
-    let charge_unit = MIN_NONZERO_ABSOLUTE_CHARGE_E;
+    let charge_unit = CHARGE_NORMALIZATION_SCALE_E;
     let squared_charge_unit = charge_unit * charge_unit;
     let alpha = input.settings.alpha_per_angstrom;
     let max_indices = input.settings.reciprocal_max_indices;
@@ -782,6 +779,14 @@ fn accurate_order_independent_sum(values: &[f64]) -> f64 {
     sum + correction
 }
 
+fn accurate_charge_square_sum(charges: &[f64]) -> f64 {
+    let squares = charges
+        .iter()
+        .map(|charge| charge * charge)
+        .collect::<Vec<_>>();
+    accurate_order_independent_sum(&squares)
+}
+
 fn cell_volume(cell: OrthorhombicCell) -> f64 {
     let mut lengths = cell.lengths_angstrom;
     lengths.sort_by(f64::total_cmp);
@@ -926,10 +931,12 @@ fn invalid_parameter(detail: impl Into<String>) -> EwaldError {
 #[cfg(test)]
 mod tests {
     use super::{
-        accurate_order_independent_sum, cell_volume, evaluate_real_space, minimum_image,
-        reduce_to_primary_cell, scaled_reciprocal_force_component, validate, EwaldEnergyComponents,
-        EwaldErrorCode, EwaldEvaluation, EwaldInput, OrthorhombicCell, PairExclusion, Position,
-        COULOMB_KCAL_ANGSTROM_PER_MOL_E2, MAX_ATOM_COUNT, MAX_EVALUATION_WORK_UNITS,
+        accurate_charge_square_sum, accurate_order_independent_sum, cell_volume,
+        evaluate_real_space, minimum_image, reduce_to_primary_cell,
+        scaled_reciprocal_force_component, validate, EwaldEnergyComponents, EwaldErrorCode,
+        EwaldEvaluation, EwaldInput, OrthorhombicCell, PairExclusion, Position,
+        CHARGE_NORMALIZATION_SCALE_E, COULOMB_KCAL_ANGSTROM_PER_MOL_E2, MAX_ATOM_COUNT,
+        MAX_EVALUATION_WORK_UNITS,
     };
 
     #[test]
@@ -1057,6 +1064,37 @@ mod tests {
         assert_eq!(underflowed_old_order.to_bits(), 0.0_f64.to_bits());
         assert!(force.is_subnormal());
         assert!(force.is_sign_positive());
+    }
+
+    #[test]
+    fn power_of_two_charge_normalization_is_exact_and_neutrality_preserving() {
+        let charges = [0.7, -0.4, -0.6, 0.300_000_000_000_000_04];
+        let normalized = charges.map(|charge| charge / CHARGE_NORMALIZATION_SCALE_E);
+        for (&charge, &scaled) in charges.iter().zip(&normalized) {
+            assert_eq!(
+                (scaled * CHARGE_NORMALIZATION_SCALE_E).to_bits(),
+                charge.to_bits()
+            );
+        }
+        assert_eq!(accurate_order_independent_sum(&normalized).to_bits(), 0);
+    }
+
+    #[test]
+    fn charge_square_sum_is_atom_order_independent() {
+        let first = [
+            13.249_214_005_789_042,
+            -13.249_214_005_789_042,
+            14.375_751_207_670_909,
+            -14.375_751_207_670_909,
+            8.071_499_065_172_876,
+            -8.071_499_065_172_876,
+        ];
+        let mut reversed = first;
+        reversed.reverse();
+        assert_eq!(
+            accurate_charge_square_sum(&first).to_bits(),
+            accurate_charge_square_sum(&reversed).to_bits()
+        );
     }
 
     #[test]
