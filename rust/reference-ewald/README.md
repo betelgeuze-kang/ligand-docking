@@ -6,7 +6,7 @@ outside the production Rust workspace and the consumed fixed64 CPU-v7 source
 closure. It imports no native compute, accelerator, runtime, Python, or
 external molecular-dynamics implementation.
 
-The supported domain is a neutral, fully periodic orthorhombic cell. Canonical
+The supported domain is a representationally exact-neutral, fully periodic orthorhombic cell. Canonical
 units are angstrom, elementary charge, kcal/mol, and kcal/(mol·angstrom).
 With Coulomb conversion `K`, dielectric `epsilon`, splitting parameter `alpha`,
 volume `V`, charges `q_i`, and reciprocal vector `k`, the frozen components are:
@@ -39,11 +39,13 @@ expansion before comparison with half the cell. This distinguishes an exact
 half-cell pair from representable coordinates whose difference merely rounds
 to half.
 
-Neutrality is checked with a canonical order and Neumaier compensated sum.
+Neutrality is checked with a canonical order and Neumaier compensated sum and
+must be exactly zero because no neutralizing-background convention is defined.
 Cell volume multiplies sorted minimum and maximum lengths before the middle
 length. Corrections traverse only sorted declared pair rules. A combined real-
 pair, declared-correction, and reciprocal-phase work cap prevents the scalar
-reference's individually valid maxima from creating an unbounded evaluation.
+reference's individually valid maxima from creating an unbounded evaluation;
+raw rule rows are bounded before any pair-rule tree allocation.
 The API also rejects finite values outside its documented numeric envelope:
 absolute coordinates above `1e12` angstrom, cell lengths outside `[1e-6,1e9]`
 angstrom, nonzero charge magnitudes outside `[1e-12,16]` elementary charge,
@@ -54,10 +56,11 @@ These bounds keep charge products and squared minimum-distance checks normal
 before any inverse-distance operation.
 
 All exponential, sine/cosine, complementary-error-function, and square-root
-operations use the exactly pinned `libm` 0.2.16 dependency. Reciprocal forces
-incorporate each wave component before the structure/phase products and pinned
-exponential, preventing a small phase-scaled quotient from underflowing before
-the wave component restores a representable result.
+operations use the exactly pinned `libm` 0.2.16 dependency. Reciprocal structure
+factors normalize charges by the minimum supported nonzero magnitude, retaining
+tiny phases before charge scaling. Forces incorporate each wave component before
+the structure/phase products and pinned exponential, preventing a small phase-
+scaled quotient from underflowing before the wave restores a representable result.
 Real-space energy divides `erfc` first for sub-unit distances and multiplies the
 Coulomb/charge prefactor first otherwise. Force magnitudes use distance-adaptive
 damping division and distance-adaptive Cartesian component scaling, preserving

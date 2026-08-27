@@ -15,7 +15,7 @@ fn fixture() -> EwaldInput {
             Position::new(10.2, 12.3, 7.7),
             Position::new(15.4, 17.1, 19.3),
         ],
-        vec![0.7, -0.4, -0.6, 0.3],
+        vec![0.7, -0.4, -0.6, 0.300_000_000_000_000_04],
         OrthorhombicCell {
             lengths_angstrom: [18.0, 20.0, 22.0],
         },
@@ -26,7 +26,6 @@ fn fixture() -> EwaldInput {
         reciprocal_max_indices: [5, 5, 5],
         dielectric: 1.0,
         minimum_pair_distance_angstrom: 1.0e-8,
-        neutrality_tolerance_elementary: 1.0e-12,
     };
     input.exclusions.push(PairExclusion {
         atom_i: 0,

@@ -19,8 +19,8 @@
     "native_abi_version_allocated": false,
     "external_md_engine_dependency": false,
     "fixed64_cpu_v7_source_closure_modified": false,
-    "source_sha256": "e02d25fb1a71d48b88baf7f40bff6e0368cecdbae4b9a642ec4b6bb89d4d6329",
-    "frozen_fixture_sha256": "3b7d105983c074d304657fa5188100b585eb7e416dda88a49a3098707dccc802",
+    "source_sha256": "16f0cf45df1b681c66a8fc54562306360b1c8ffce03c1575e7e7319258eea799",
+    "frozen_fixture_sha256": "d253605c7fb8e50076f4b4e786a99f674678764f7e58d81124fc6dacb9f3a817",
     "cargo_lock_sha256": "cc64500cc1c97dfda26a8a4c8b8825c5296935f1e63cbaf61676a321364b3d9d"
   },
   "fixture": {
@@ -31,8 +31,9 @@
       [10.2, 12.3, 7.7],
       [15.4, 17.1, 19.3]
     ],
-    "charges_elementary": [0.7, -0.4, -0.6, 0.3],
+    "charges_elementary": [0.7, -0.4, -0.6, 0.30000000000000004],
     "net_charge_elementary": 0.0,
+    "net_charge_admission": "canonical_compensated_sum_exactly_zero",
     "orthorhombic_lengths_angstrom": [18.0, 20.0, 22.0],
     "periodic_axes": [true, true, true],
     "excluded_pairs": [[0, 1]],
@@ -45,8 +46,7 @@
     "reciprocal_max_indices": [5, 5, 5],
     "dielectric": 1.0,
     "minimum_pair_distance_angstrom": 1e-8,
-    "neutrality_tolerance_elementary": 1e-12,
-    "neutrality_accumulation": "canonical_absolute_magnitude_then_total_order_neumaier",
+    "neutrality_accumulation": "canonical_absolute_magnitude_then_total_order_neumaier_exact_zero_required",
     "maximum_evaluation_work_units": 10000000,
     "evaluation_work_unit_equation": "pair_count_plus_pair_rule_count_plus_two_times_atom_count_times_reciprocal_vector_count",
     "real_pair_order": "lexicographic_i_then_j",
@@ -59,7 +59,7 @@
     "pair_correction_half_cell_tie": "typed_rejection_ambiguous_pair_correction_image",
     "unit_pair_scale": "semantic_noop_before_pair_correction_image_selection",
     "zero_charge_pair_rule": "semantic_noop_before_pair_correction_image_selection",
-    "reciprocal_damping_order": "wave_scaled_prefactor_before_structure_phase_combination_then_pinned_exponential",
+    "reciprocal_damping_order": "minimum_charge_normalized_structure_then_wave_scaled_prefactor_before_phase_combination_and_pinned_exponential",
     "real_space_energy_order": "charge_prefactor_times_erfc_over_distance_for_subunit_distance_else_charge_prefactor_times_erfc_then_divide",
     "real_space_force_order": "distance_adaptive_damping_division_then_distance_adaptive_cartesian_component_scaling"
   },
@@ -77,22 +77,22 @@
   },
   "frozen_observation": {
     "real_space_kcal_per_mol": -0.11800195657683102,
-    "reciprocal_space_kcal_per_mol": 40.265526075077766,
+    "reciprocal_space_kcal_per_mol": 40.26552607507776,
     "self_kcal_per_mol": -63.88528884806217,
     "pair_correction_kcal_per_mol": 17.67468447843642,
-    "total_kcal_per_mol": -6.063080251124816,
+    "total_kcal_per_mol": -6.063080251124823,
     "energy_ieee754_bits_hex": {
       "real_space": "bfbe3560505c8b5a",
-      "reciprocal_space": "404421fcc22858dd",
+      "reciprocal_space": "404421fcc22858dc",
       "self": "c04ff151251cf863",
       "pair_correction": "4031acb81f3a00d4",
-      "total": "c01840981bfe6b10"
+      "total": "c01840981bfe6b18"
     },
-    "maximum_central_finite_difference_force_error_kcal_per_mol_angstrom": 1.1746751182872828e-8,
+    "maximum_central_finite_difference_force_error_kcal_per_mol_angstrom": 1.1391479759481626e-8,
     "central_finite_difference_step_angstrom": 1e-5,
     "reciprocal_bound_absolute_total_difference_from_bound_9_kcal_per_mol": {
-      "bound_3": 0.21813662961478286,
-      "bound_5": 0.0011959243365424754,
+      "bound_3": 0.21813662961478997,
+      "bound_5": 0.0011959243365495809,
       "bound_7": 1.6123660273592577e-6
     },
     "debug_release_bitwise_identical": true,
@@ -120,15 +120,18 @@
     "representable_real_space_damping_retained": true,
     "representable_subunit_radial_force_retained": true,
     "reciprocal_wave_rescue_before_phase_underflow": true,
+    "tiny_phase_structure_factor_preserved": true,
     "numeric_envelope_typed_rejection": true,
     "neutrality_permutation_independent": true,
     "cell_volume_axis_order_independent": true,
     "combined_work_cap": true,
+    "raw_pair_rule_work_cap_before_tree_allocation": true,
     "pair_correction_traverses_declared_rules_only": true,
     "supported_negative_boundary_residual_preserved": true,
     "representable_subunit_real_energy_retained": true,
     "representable_subnormal_cartesian_force_retained": true,
     "typed_malformed_input_failures": true,
+    "exact_neutrality_required_without_background_correction": true,
     "bitwise_repeatability": true
   },
   "authority": {

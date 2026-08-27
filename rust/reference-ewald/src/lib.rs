@@ -16,7 +16,6 @@ pub const EWALD_SCHEMA_ID: &str = "betelgeuze.reference_direct_ewald/1.0.0";
 
 const MAX_ATOM_COUNT: usize = 4_096;
 const MAX_RECIPROCAL_INDEX: i32 = 32;
-const MAX_NEUTRALITY_TOLERANCE_E: f64 = 1.0e-8;
 const MAX_EVALUATION_WORK_UNITS: usize = 10_000_000;
 const MAX_ABSOLUTE_COORDINATE_ANGSTROM: f64 = 1.0e12;
 const MIN_CELL_LENGTH_ANGSTROM: f64 = 1.0e-6;
@@ -84,7 +83,6 @@ pub struct EwaldSettings {
     pub reciprocal_max_indices: [i32; 3],
     pub dielectric: f64,
     pub minimum_pair_distance_angstrom: f64,
-    pub neutrality_tolerance_elementary: f64,
 }
 
 impl Default for EwaldSettings {
@@ -95,7 +93,6 @@ impl Default for EwaldSettings {
             reciprocal_max_indices: [5, 5, 5],
             dielectric: 1.0,
             minimum_pair_distance_angstrom: 1.0e-8,
-            neutrality_tolerance_elementary: 1.0e-12,
         }
     }
 }
@@ -336,6 +333,8 @@ fn evaluate_reciprocal_space(
     let volume = cell_volume(input.cell);
     let reciprocal_energy_factor = coulomb_scale * 2.0 * core::f64::consts::PI / volume;
     let reciprocal_force_factor = coulomb_scale * 4.0 * core::f64::consts::PI / volume;
+    let charge_unit = MIN_NONZERO_ABSOLUTE_CHARGE_E;
+    let squared_charge_unit = charge_unit * charge_unit;
     let alpha = input.settings.alpha_per_angstrom;
     let max_indices = input.settings.reciprocal_max_indices;
     let reduced_positions = input
@@ -362,13 +361,15 @@ fn evaluate_reciprocal_space(
                 {
                     let phase = dot(wave, position);
                     let (phase_sin, phase_cos) = libm::sincos(phase);
-                    structure_cos += charge * phase_cos;
-                    structure_sin += charge * phase_sin;
+                    let normalized_charge = charge / charge_unit;
+                    structure_cos += normalized_charge * phase_cos;
+                    structure_sin += normalized_charge * phase_sin;
                 }
+                let scaled_energy_factor = reciprocal_energy_factor * squared_charge_unit / wave2;
                 checked_add(
                     &mut result.energy.reciprocal_space_kcal_per_mol,
-                    (reciprocal_energy_factor / wave2)
-                        * (structure_cos * structure_cos + structure_sin * structure_sin)
+                    (scaled_energy_factor * structure_cos * structure_cos
+                        + scaled_energy_factor * structure_sin * structure_sin)
                         * exponential,
                     "reciprocal-space energy",
                 )?;
@@ -384,10 +385,10 @@ fn evaluate_reciprocal_space(
                         checked_add(
                             &mut force[axis],
                             scaled_reciprocal_force_component(
-                                reciprocal_force_factor,
+                                reciprocal_force_factor * squared_charge_unit,
                                 wave[axis],
                                 wave2,
-                                charge,
+                                charge / charge_unit,
                                 (structure_cos, structure_sin),
                                 (phase_sin, phase_cos),
                                 exponential,
@@ -444,6 +445,17 @@ fn validate(input: &EwaldInput) -> Result<PairRules, EwaldError> {
     validate_atom_arrays(input)?;
     validate_cell(input.cell)?;
     validate_settings(input)?;
+    let raw_pair_rule_count = input
+        .exclusions
+        .len()
+        .checked_add(input.pair_scales.len())
+        .ok_or_else(|| {
+            EwaldError::new(
+                EwaldErrorCode::CapacityExceeded,
+                "pair-rule row count exceeds addressable capacity",
+            )
+        })?;
+    validate_work_limit(input, raw_pair_rule_count)?;
     let pair_rules = validate_pair_rules(input)?;
     validate_work_limit(input, pair_rules.corrections.len())?;
     Ok(pair_rules)
@@ -561,21 +573,11 @@ fn validate_settings(input: &EwaldInput) -> Result<(), EwaldError> {
             "minimum_pair_distance_angstrom must be below real_space_cutoff_angstrom",
         ));
     }
-    let neutrality_tolerance = input.settings.neutrality_tolerance_elementary;
-    if !neutrality_tolerance.is_finite()
-        || !(0.0..=MAX_NEUTRALITY_TOLERANCE_E).contains(&neutrality_tolerance)
-    {
-        return Err(invalid_parameter(format!(
-            "neutrality_tolerance_elementary must lie in [0,{MAX_NEUTRALITY_TOLERANCE_E}]"
-        )));
-    }
     let total_charge = accurate_order_independent_sum(&input.charges_elementary);
-    if !total_charge.is_finite() || total_charge.abs() > neutrality_tolerance {
+    if !total_charge.is_finite() || total_charge != 0.0 {
         return Err(EwaldError::new(
             EwaldErrorCode::NonNeutralSystem,
-            format!(
-                "total charge {total_charge} exceeds neutrality tolerance {neutrality_tolerance}"
-            ),
+            format!("total charge {total_charge} is not exactly zero"),
         ));
     }
     for (axis, maximum) in input
@@ -926,7 +928,8 @@ mod tests {
     use super::{
         accurate_order_independent_sum, cell_volume, evaluate_real_space, minimum_image,
         reduce_to_primary_cell, scaled_reciprocal_force_component, validate, EwaldEnergyComponents,
-        EwaldEvaluation, EwaldInput, OrthorhombicCell, Position, COULOMB_KCAL_ANGSTROM_PER_MOL_E2,
+        EwaldErrorCode, EwaldEvaluation, EwaldInput, OrthorhombicCell, PairExclusion, Position,
+        COULOMB_KCAL_ANGSTROM_PER_MOL_E2, MAX_ATOM_COUNT, MAX_EVALUATION_WORK_UNITS,
     };
 
     #[test]
@@ -1054,6 +1057,32 @@ mod tests {
         assert_eq!(underflowed_old_order.to_bits(), 0.0_f64.to_bits());
         assert!(force.is_subnormal());
         assert!(force.is_sign_positive());
+    }
+
+    #[test]
+    fn raw_pair_rule_work_is_rejected_before_tree_validation() {
+        let mut input = EwaldInput::new(
+            vec![Position::default(); MAX_ATOM_COUNT],
+            vec![0.0; MAX_ATOM_COUNT],
+            OrthorhombicCell {
+                lengths_angstrom: [20.0; 3],
+            },
+        );
+        input.settings.reciprocal_max_indices = [1; 3];
+        let pair_count = MAX_ATOM_COUNT * (MAX_ATOM_COUNT - 1) / 2;
+        let phase_work = MAX_ATOM_COUNT * 26 * 2;
+        let rows_to_exceed_cap = MAX_EVALUATION_WORK_UNITS - pair_count - phase_work + 1;
+        input.exclusions = vec![
+            PairExclusion {
+                atom_i: 0,
+                atom_j: 1,
+            };
+            rows_to_exceed_cap
+        ];
+        let Err(error) = validate(&input) else {
+            panic!("raw rule rows must exceed the work cap");
+        };
+        assert_eq!(error.code(), EwaldErrorCode::CapacityExceeded);
     }
 
     #[test]

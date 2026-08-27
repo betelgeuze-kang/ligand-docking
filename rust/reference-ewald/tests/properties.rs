@@ -11,7 +11,7 @@ fn rich_input() -> EwaldInput {
             Position::new(10.2, 12.3, 7.7),
             Position::new(15.4, 17.1, 19.3),
         ],
-        vec![0.7, -0.4, -0.6, 0.3],
+        vec![0.7, -0.4, -0.6, 0.300_000_000_000_000_04],
         OrthorhombicCell {
             lengths_angstrom: [18.0, 20.0, 22.0],
         },
@@ -22,7 +22,6 @@ fn rich_input() -> EwaldInput {
         reciprocal_max_indices: [5, 5, 5],
         dielectric: 1.0,
         minimum_pair_distance_angstrom: 1.0e-8,
-        neutrality_tolerance_elementary: 1.0e-12,
     };
     input.exclusions.push(PairExclusion {
         atom_i: 0,
@@ -441,6 +440,25 @@ fn reciprocal_scaling_preserves_representable_damped_terms() {
 }
 
 #[test]
+fn normalized_structure_factor_preserves_tiny_phase_force() {
+    let mut input = EwaldInput::new(
+        vec![Position::default(), Position::new(3.0e-7, 0.0, 1.0e-305)],
+        vec![1.0e-12, -1.0e-12],
+        OrthorhombicCell {
+            lengths_angstrom: [1.0e-6, 1.0e-6, 1.0e9],
+        },
+    );
+    input.settings.alpha_per_angstrom = 1.0;
+    input.settings.real_space_cutoff_angstrom = 2.0e-7;
+    input.settings.reciprocal_max_indices = [1; 3];
+    input.settings.dielectric = 1.0e-12;
+    let evaluation = evaluate(&input).expect("tiny-phase fixture is inside the numeric envelope");
+    let force = evaluation.forces_kcal_per_mol_angstrom[0][2];
+    assert!(force.is_subnormal());
+    assert_ne!(force.to_bits(), 0.0_f64.to_bits());
+}
+
+#[test]
 fn unsupported_numeric_extremes_have_typed_failures() {
     let input = rich_input();
 
@@ -532,9 +550,21 @@ fn malformed_inputs_have_typed_failures() {
     charged.charges_elementary[0] += 0.01;
     assert_error(&charged, EwaldErrorCode::NonNeutralSystem);
 
+    let mut minimum_charged = EwaldInput::new(
+        vec![Position::new(1.0e-7, 0.0, 0.0)],
+        vec![1.0e-12],
+        OrthorhombicCell {
+            lengths_angstrom: [1.0e-6; 3],
+        },
+    );
+    minimum_charged.settings.alpha_per_angstrom = 1.0e-12;
+    minimum_charged.settings.real_space_cutoff_angstrom = 2.0e-8;
+    minimum_charged.settings.dielectric = 1.0e-12;
+    assert_error(&minimum_charged, EwaldErrorCode::NonNeutralSystem);
+
     let tiny = 2.0_f64.powi(-39);
     for charges in [[1.0, tiny, -1.0], [1.0, -1.0, tiny]] {
-        let mut order_sensitive = EwaldInput::new(
+        let order_sensitive = EwaldInput::new(
             vec![
                 Position::new(1.0, 1.0, 1.0),
                 Position::new(2.0, 2.0, 2.0),
@@ -543,7 +573,6 @@ fn malformed_inputs_have_typed_failures() {
             charges.to_vec(),
             input.cell,
         );
-        order_sensitive.settings.neutrality_tolerance_elementary = 0.0;
         assert_error(&order_sensitive, EwaldErrorCode::NonNeutralSystem);
     }
 

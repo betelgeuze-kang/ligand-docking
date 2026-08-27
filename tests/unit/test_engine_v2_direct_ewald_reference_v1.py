@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PROFILE_PATH = ROOT / "config/engine_v2_direct_ewald_reference_profile_v1.json"
 CRATE = ROOT / "rust/reference-ewald"
-PROFILE_SHA256 = "550d75458addbec5b11454a2eaa6ad3608e8d0eb3d7a3e669e98f5d1dfa61c3d"
+PROFILE_SHA256 = "072595df59178a91158a51759694c6ad1cdbaf6898a2dedaaa79ac937ebe0ff8"
 
 
 def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
@@ -48,10 +48,10 @@ def test_profile_identity_parent_and_reference_boundary_are_frozen() -> None:
         "external_md_engine_dependency": False,
         "fixed64_cpu_v7_source_closure_modified": False,
         "source_sha256": (
-            "e02d25fb1a71d48b88baf7f40bff6e0368cecdbae4b9a642ec4b6bb89d4d6329"
+            "16f0cf45df1b681c66a8fc54562306360b1c8ffce03c1575e7e7319258eea799"
         ),
         "frozen_fixture_sha256": (
-            "3b7d105983c074d304657fa5188100b585eb7e416dda88a49a3098707dccc802"
+            "d253605c7fb8e50076f4b4e786a99f674678764f7e58d81124fc6dacb9f3a817"
         ),
         "cargo_lock_sha256": (
             "cc64500cc1c97dfda26a8a4c8b8825c5296935f1e63cbaf61676a321364b3d9d"
@@ -70,8 +70,9 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
             [10.2, 12.3, 7.7],
             [15.4, 17.1, 19.3],
         ],
-        "charges_elementary": [0.7, -0.4, -0.6, 0.3],
+        "charges_elementary": [0.7, -0.4, -0.6, 0.30000000000000004],
         "net_charge_elementary": 0.0,
+        "net_charge_admission": "canonical_compensated_sum_exactly_zero",
         "orthorhombic_lengths_angstrom": [18.0, 20.0, 22.0],
         "periodic_axes": [True, True, True],
         "excluded_pairs": [[0, 1]],
@@ -86,9 +87,9 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
         "reciprocal_max_indices": [5, 5, 5],
         "dielectric": 1.0,
         "minimum_pair_distance_angstrom": 1e-8,
-        "neutrality_tolerance_elementary": 1e-12,
         "neutrality_accumulation": (
-            "canonical_absolute_magnitude_then_total_order_neumaier"
+            "canonical_absolute_magnitude_then_total_order_neumaier_exact_"
+            "zero_required"
         ),
         "maximum_evaluation_work_units": 10000000,
         "evaluation_work_unit_equation": (
@@ -127,8 +128,8 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
             "semantic_noop_before_pair_correction_image_selection"
         ),
         "reciprocal_damping_order": (
-            "wave_scaled_prefactor_before_structure_phase_combination_then_"
-            "pinned_exponential"
+            "minimum_charge_normalized_structure_then_wave_scaled_prefactor_"
+            "before_phase_combination_and_pinned_exponential"
         ),
         "real_space_energy_order": (
             "charge_prefactor_times_erfc_over_distance_for_subunit_distance_"
@@ -161,15 +162,15 @@ def test_fixture_settings_and_frozen_observations_are_exact() -> None:
         "charge_product_safety": "minimum_nonzero_charge_product_is_normal",
     }
     observation = profile["frozen_observation"]
-    assert observation["total_kcal_per_mol"] == -6.063080251124816
+    assert observation["total_kcal_per_mol"] == -6.063080251124823
     assert observation["maximum_central_finite_difference_force_error_kcal_per_mol_angstrom"] == (
-        1.1746751182872828e-8
+        1.1391479759481626e-8
     )
     assert observation[
         "reciprocal_bound_absolute_total_difference_from_bound_9_kcal_per_mol"
     ] == {
-        "bound_3": 0.21813662961478286,
-        "bound_5": 0.0011959243365424754,
+        "bound_3": 0.21813662961478997,
+        "bound_5": 0.0011959243365495809,
         "bound_7": 1.6123660273592577e-6,
     }
     assert observation["debug_release_bitwise_identical"] is True
