@@ -87,6 +87,7 @@ IMPLEMENTATION_CONTRACT_BASE = {
     "hip_to_cpu_fallback": False,
     "independent_parent_reference_linked_into_production": False,
     "pme_implemented": False,
+    "pair_rule_exclusion_provenance_preserved": True,
     "rust_cpu_lane": True,
     "runtime_fixture_path": RUNTIME_FIXTURE_RELATIVE_PATH.as_posix(),
     "runtime_fixture_sha256": PARENT_REFERENCE["fixture_sha256"],
@@ -111,6 +112,7 @@ VALIDATION_CONTRACT = {
     "hip_backend_fails_closed_without_device_execution": True,
     "model_create_failure_returns_null_handle": True,
     "model_deep_copy_survives_caller_input_mutation": True,
+    "model_pair_rule_provenance_source_guard": True,
     "mach_o_public_export_allowlist_enforced": True,
     "public_symbol_version_enforced": True,
     "required_null_input_clears_valid_typed_error": True,
@@ -510,6 +512,18 @@ def _require_source_contract(sources: dict[str, bytes]) -> None:
     ):
         if required not in native_test:
             _fail(f"native direct-Ewald validation is missing: {required}")
+    model_source = text("native/src/ewald/model.hpp")
+    api_source = text("native/src/ewald/api.cpp")
+    for required in (
+        "bool is_exclusion = false;",
+        "exclusion->first.atom_j, 0.0, true",
+        "scale->second,\n                false",
+    ):
+        if required not in model_source + api_source:
+            _fail(
+                "direct-Ewald pair-rule exclusion provenance is missing: "
+                f"{required}"
+            )
     for required in (
         "alias_parameters_before",
         "alias_error_before",

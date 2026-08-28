@@ -235,6 +235,16 @@ set(direct_ewald_v1_symbols
     bg_direct_ewald_model_v1_profile_id
     bg_context_evaluate_direct_ewald_v1
 )
+set(direct_ewald_composite_v1_symbols
+    bg_direct_ewald_composite_abi_version
+    bg_direct_ewald_composite_abi_version_major
+    bg_direct_ewald_composite_abi_version_minor
+    bg_direct_ewald_composite_abi_version_string
+    bg_direct_ewald_composite_energy_components_v1_init
+    bg_direct_ewald_composite_force_soa_v1_init
+    bg_direct_ewald_composite_v1_profile_id
+    bg_context_evaluate_direct_ewald_composite_v1
+)
 set(versioned_symbols
     ${v1_0_symbols}
     ${v1_1_symbols}
@@ -257,6 +267,7 @@ set(versioned_symbols
     ${v1_20_symbols}
     ${v1_21_symbols}
     ${direct_ewald_v1_symbols}
+    ${direct_ewald_composite_v1_symbols}
 )
 set(sorted_versioned_symbols ${versioned_symbols})
 set(sorted_expected_symbols ${expected_symbols})
@@ -306,7 +317,8 @@ foreach(line IN LISTS nm_lines)
        NOT unversioned STREQUAL "BETELGEUZE_ENGINE_1.19" AND
        NOT unversioned STREQUAL "BETELGEUZE_ENGINE_1.20" AND
        NOT unversioned STREQUAL "BETELGEUZE_ENGINE_1.21" AND
-       NOT unversioned STREQUAL "BETELGEUZE_DIRECT_EWALD_1.0")
+       NOT unversioned STREQUAL "BETELGEUZE_DIRECT_EWALD_1.0" AND
+       NOT unversioned STREQUAL "BETELGEUZE_DIRECT_EWALD_COMPOSITE_1.0")
         message(FATAL_ERROR "unexpected exported symbol: ${symbol}")
     endif()
     if(unversioned MATCHES "^bg_")
@@ -318,6 +330,7 @@ foreach(line IN LISTS nm_lines)
         if(OBJECT_FORMAT STREQUAL "MACHO")
             continue()
         endif()
+        list(FIND direct_ewald_composite_v1_symbols "${unversioned}" direct_ewald_composite_v1_index)
         list(FIND direct_ewald_v1_symbols "${unversioned}" direct_ewald_v1_index)
         list(FIND v1_21_symbols "${unversioned}" v1_21_index)
         list(FIND v1_20_symbols "${unversioned}" v1_20_index)
@@ -339,7 +352,9 @@ foreach(line IN LISTS nm_lines)
         list(FIND v1_3_symbols "${unversioned}" v1_3_index)
         list(FIND v1_1_symbols "${unversioned}" v1_1_index)
         list(FIND v1_0_symbols "${unversioned}" v1_0_index)
-        if(NOT direct_ewald_v1_index EQUAL -1)
+        if(NOT direct_ewald_composite_v1_index EQUAL -1)
+            set(expected_version "BETELGEUZE_DIRECT_EWALD_COMPOSITE_1.0")
+        elseif(NOT direct_ewald_v1_index EQUAL -1)
             set(expected_version "BETELGEUZE_DIRECT_EWALD_1.0")
         elseif(NOT v1_21_index EQUAL -1)
             set(expected_version "BETELGEUZE_ENGINE_1.21")

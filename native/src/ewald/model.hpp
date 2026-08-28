@@ -21,6 +21,7 @@ struct PairRule final {
     std::size_t atom_i = 0;
     std::size_t atom_j = 0;
     double coulomb_scale = 1.0;
+    bool is_exclusion = false;
 };
 
 }  // namespace betelgeuze::native::ewald

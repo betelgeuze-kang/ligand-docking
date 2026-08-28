@@ -8,7 +8,7 @@ its reserved fields.
 The public C header is `include/betelgeuze/direct_ewald.h`. Its ABI identity is
 1.0.0 (`BG_DIRECT_EWALD_ABI_VERSION=1`) and its ELF export node is
 `BETELGEUZE_DIRECT_EWALD_1.0`. Mach-O uses an exact positive export allowlist
-containing the same 143 public C symbols. This final-link boundary prevents the
+containing the current 151 public C symbols. This final-link boundary prevents the
 private Rust provider archive, including both direct-Ewald provider entry
 points, from entering the dylib ABI. A hosted macOS build checks the complete
 defined-external symbol set with `nm`; Linux retains exact symbol-version checks.

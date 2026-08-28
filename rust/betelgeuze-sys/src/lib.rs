@@ -1,8 +1,9 @@
 //! Raw bindings for the Betelgeuze native compute ABI.
 //!
 //! This crate intentionally mirrors `include/betelgeuze/engine.h` and
-//! `include/betelgeuze/direct_ewald.h` without adding ownership or lifetime
-//! semantics. Prefer `betelgeuze-runtime` for a safe API.
+//! `include/betelgeuze/direct_ewald.h`, and
+//! `include/betelgeuze/direct_ewald_composite.h` without adding ownership or
+//! lifetime semantics. Prefer `betelgeuze-runtime` for a safe API.
 //!
 //! The optional `hip` feature requires `BG_HIP_ARCHITECTURE` and a ROCm
 //! toolchain selected with `HIP_PATH` or `ROCM_PATH`. If device libraries are
@@ -27,6 +28,10 @@ pub const BG_DIRECT_EWALD_ABI_VERSION_MAJOR: u32 = 1;
 pub const BG_DIRECT_EWALD_ABI_VERSION_MINOR: u32 = 0;
 pub const BG_DIRECT_EWALD_ABI_VERSION: u32 = 1;
 pub const BG_DIRECT_EWALD_ERROR_DETAIL_CAPACITY: u32 = 256;
+
+pub const BG_DIRECT_EWALD_COMPOSITE_ABI_VERSION_MAJOR: u32 = 1;
+pub const BG_DIRECT_EWALD_COMPOSITE_ABI_VERSION_MINOR: u32 = 0;
+pub const BG_DIRECT_EWALD_COMPOSITE_ABI_VERSION: u32 = 1;
 
 pub const BG_CANONICAL_LENGTH_UNIT: &[u8] = b"angstrom\0";
 pub const BG_CANONICAL_ENERGY_UNIT: &[u8] = b"kcal/mol\0";
@@ -731,6 +736,43 @@ pub struct bg_direct_ewald_error_v1 {
     pub code: bg_direct_ewald_error_code,
     pub reserved0: u32,
     pub detail: [c_char; BG_DIRECT_EWALD_ERROR_DETAIL_CAPACITY as usize],
+    pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_direct_ewald_composite_energy_components_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub unit_system: bg_unit_system,
+    pub reserved0: u32,
+    pub short_harmonic_bond_kcal_per_mol: f64,
+    pub short_harmonic_angle_kcal_per_mol: f64,
+    pub short_periodic_torsion_kcal_per_mol: f64,
+    pub short_lennard_jones_kcal_per_mol: f64,
+    pub short_coulomb_kcal_per_mol: f64,
+    pub short_total_kcal_per_mol: f64,
+    pub ewald_real_space_kcal_per_mol: f64,
+    pub ewald_reciprocal_space_kcal_per_mol: f64,
+    pub ewald_self_kcal_per_mol: f64,
+    pub ewald_pair_correction_kcal_per_mol: f64,
+    pub ewald_total_kcal_per_mol: f64,
+    pub total_kcal_per_mol: f64,
+    pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_direct_ewald_composite_force_soa_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub atom_capacity: u64,
+    pub atom_count: u64,
+    pub unit_system: bg_unit_system,
+    pub reserved0: u32,
+    pub x_kcal_per_mol_angstrom: *mut f64,
+    pub y_kcal_per_mol_angstrom: *mut f64,
+    pub z_kcal_per_mol_angstrom: *mut f64,
     pub reserved: [u64; 4],
 }
 
@@ -2327,6 +2369,30 @@ unsafe extern "C" {
         model: *const bg_direct_ewald_model_v1,
         out_energy: *mut bg_direct_ewald_energy_components_v1,
         out_forces: *mut bg_direct_ewald_force_soa_v1,
+        out_error: *mut bg_direct_ewald_error_v1,
+    ) -> bg_status;
+    pub fn bg_direct_ewald_composite_abi_version() -> u32;
+    pub fn bg_direct_ewald_composite_abi_version_major() -> u32;
+    pub fn bg_direct_ewald_composite_abi_version_minor() -> u32;
+    pub fn bg_direct_ewald_composite_abi_version_string() -> *const c_char;
+    pub fn bg_direct_ewald_composite_energy_components_v1_init(
+        energy: *mut bg_direct_ewald_composite_energy_components_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_direct_ewald_composite_force_soa_v1_init(
+        forces: *mut bg_direct_ewald_composite_force_soa_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_direct_ewald_composite_v1_profile_id() -> *const c_char;
+    pub fn bg_context_evaluate_direct_ewald_composite_v1(
+        context: *const bg_context,
+        system: *const bg_system,
+        forcefield: *const bg_forcefield,
+        model: *const bg_direct_ewald_model_v1,
+        out_energy: *mut bg_direct_ewald_composite_energy_components_v1,
+        out_forces: *mut bg_direct_ewald_composite_force_soa_v1,
         out_error: *mut bg_direct_ewald_error_v1,
     ) -> bg_status;
 

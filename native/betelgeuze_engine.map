@@ -226,3 +226,15 @@ BETELGEUZE_DIRECT_EWALD_1.0 {
         bg_direct_ewald_model_v1_profile_id;
         bg_context_evaluate_direct_ewald_v1;
 } BETELGEUZE_ENGINE_1.21;
+
+BETELGEUZE_DIRECT_EWALD_COMPOSITE_1.0 {
+    global:
+        bg_direct_ewald_composite_abi_version;
+        bg_direct_ewald_composite_abi_version_major;
+        bg_direct_ewald_composite_abi_version_minor;
+        bg_direct_ewald_composite_abi_version_string;
+        bg_direct_ewald_composite_energy_components_v1_init;
+        bg_direct_ewald_composite_force_soa_v1_init;
+        bg_direct_ewald_composite_v1_profile_id;
+        bg_context_evaluate_direct_ewald_composite_v1;
+} BETELGEUZE_DIRECT_EWALD_1.0;

@@ -10,6 +10,9 @@ fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(BG_DIRECT_EWALD_ABI_VERSION_MAJOR, 1);
     assert_eq!(BG_DIRECT_EWALD_ABI_VERSION_MINOR, 0);
     assert_eq!(BG_DIRECT_EWALD_ABI_VERSION, 1);
+    assert_eq!(BG_DIRECT_EWALD_COMPOSITE_ABI_VERSION_MAJOR, 1);
+    assert_eq!(BG_DIRECT_EWALD_COMPOSITE_ABI_VERSION_MINOR, 0);
+    assert_eq!(BG_DIRECT_EWALD_COMPOSITE_ABI_VERSION, 1);
     assert_eq!(BG_DIRECT_EWALD_ERROR_DETAIL_CAPACITY, 256);
     assert_eq!(size_of::<bg_status>(), 4);
     assert_eq!(size_of::<bg_backend>(), 4);
@@ -159,6 +162,175 @@ fn direct_ewald_layouts_match_the_c_header() {
     assert_eq!(offset_of!(bg_direct_ewald_error_v1, code), 8);
     assert_eq!(offset_of!(bg_direct_ewald_error_v1, detail), 16);
     assert_eq!(offset_of!(bg_direct_ewald_error_v1, reserved), 272);
+}
+
+#[cfg(target_pointer_width = "64")]
+#[test]
+fn direct_ewald_composite_layouts_match_the_c_header() {
+    assert_eq!(
+        size_of::<bg_direct_ewald_composite_energy_components_v1>(),
+        144
+    );
+    assert_eq!(
+        align_of::<bg_direct_ewald_composite_energy_components_v1>(),
+        8
+    );
+    assert_eq!(
+        offset_of!(bg_direct_ewald_composite_energy_components_v1, struct_size),
+        0
+    );
+    assert_eq!(
+        offset_of!(bg_direct_ewald_composite_energy_components_v1, abi_version),
+        4
+    );
+    assert_eq!(
+        offset_of!(bg_direct_ewald_composite_energy_components_v1, unit_system),
+        8
+    );
+    assert_eq!(
+        offset_of!(bg_direct_ewald_composite_energy_components_v1, reserved0),
+        12
+    );
+    assert_eq!(
+        offset_of!(
+            bg_direct_ewald_composite_energy_components_v1,
+            short_harmonic_bond_kcal_per_mol
+        ),
+        16
+    );
+    assert_eq!(
+        offset_of!(
+            bg_direct_ewald_composite_energy_components_v1,
+            short_harmonic_angle_kcal_per_mol
+        ),
+        24
+    );
+    assert_eq!(
+        offset_of!(
+            bg_direct_ewald_composite_energy_components_v1,
+            short_periodic_torsion_kcal_per_mol
+        ),
+        32
+    );
+    assert_eq!(
+        offset_of!(
+            bg_direct_ewald_composite_energy_components_v1,
+            short_lennard_jones_kcal_per_mol
+        ),
+        40
+    );
+    assert_eq!(
+        offset_of!(
+            bg_direct_ewald_composite_energy_components_v1,
+            short_coulomb_kcal_per_mol
+        ),
+        48
+    );
+    assert_eq!(
+        offset_of!(
+            bg_direct_ewald_composite_energy_components_v1,
+            short_total_kcal_per_mol
+        ),
+        56
+    );
+    assert_eq!(
+        offset_of!(
+            bg_direct_ewald_composite_energy_components_v1,
+            ewald_real_space_kcal_per_mol
+        ),
+        64
+    );
+    assert_eq!(
+        offset_of!(
+            bg_direct_ewald_composite_energy_components_v1,
+            ewald_reciprocal_space_kcal_per_mol
+        ),
+        72
+    );
+    assert_eq!(
+        offset_of!(
+            bg_direct_ewald_composite_energy_components_v1,
+            ewald_self_kcal_per_mol
+        ),
+        80
+    );
+    assert_eq!(
+        offset_of!(
+            bg_direct_ewald_composite_energy_components_v1,
+            ewald_pair_correction_kcal_per_mol
+        ),
+        88
+    );
+    assert_eq!(
+        offset_of!(
+            bg_direct_ewald_composite_energy_components_v1,
+            ewald_total_kcal_per_mol
+        ),
+        96
+    );
+    assert_eq!(
+        offset_of!(
+            bg_direct_ewald_composite_energy_components_v1,
+            total_kcal_per_mol
+        ),
+        104
+    );
+    assert_eq!(
+        offset_of!(bg_direct_ewald_composite_energy_components_v1, reserved),
+        112
+    );
+
+    assert_eq!(size_of::<bg_direct_ewald_composite_force_soa_v1>(), 88);
+    assert_eq!(align_of::<bg_direct_ewald_composite_force_soa_v1>(), 8);
+    assert_eq!(
+        offset_of!(bg_direct_ewald_composite_force_soa_v1, struct_size),
+        0
+    );
+    assert_eq!(
+        offset_of!(bg_direct_ewald_composite_force_soa_v1, abi_version),
+        4
+    );
+    assert_eq!(
+        offset_of!(bg_direct_ewald_composite_force_soa_v1, atom_capacity),
+        8
+    );
+    assert_eq!(
+        offset_of!(bg_direct_ewald_composite_force_soa_v1, atom_count),
+        16
+    );
+    assert_eq!(
+        offset_of!(bg_direct_ewald_composite_force_soa_v1, unit_system),
+        24
+    );
+    assert_eq!(
+        offset_of!(bg_direct_ewald_composite_force_soa_v1, reserved0),
+        28
+    );
+    assert_eq!(
+        offset_of!(
+            bg_direct_ewald_composite_force_soa_v1,
+            x_kcal_per_mol_angstrom
+        ),
+        32
+    );
+    assert_eq!(
+        offset_of!(
+            bg_direct_ewald_composite_force_soa_v1,
+            y_kcal_per_mol_angstrom
+        ),
+        40
+    );
+    assert_eq!(
+        offset_of!(
+            bg_direct_ewald_composite_force_soa_v1,
+            z_kcal_per_mol_angstrom
+        ),
+        48
+    );
+    assert_eq!(
+        offset_of!(bg_direct_ewald_composite_force_soa_v1, reserved),
+        56
+    );
 }
 
 #[cfg(target_pointer_width = "64")]

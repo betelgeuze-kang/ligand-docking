@@ -57,8 +57,10 @@ const QUALIFICATION_FORBIDDEN_ENVIRONMENT: &[&str] = &[
 const VENDORED_FILES: &[&str] = &[
     "include/betelgeuze/engine.h",
     "include/betelgeuze/direct_ewald.h",
+    "include/betelgeuze/direct_ewald_composite.h",
     "native/src/internal.hpp",
     "native/src/context.cpp",
+    "native/src/composite/direct_ewald.cpp",
     "native/src/ewald/api.cpp",
     "native/src/ewald/cpp_evaluator.cpp",
     "native/src/ewald/cpp_evaluator.hpp",
@@ -440,6 +442,7 @@ fn main() {
     }
     let include_dir = vendor_root.join("include");
     let context_source = vendor_root.join("native/src/context.cpp");
+    let direct_ewald_composite_source = vendor_root.join("native/src/composite/direct_ewald.cpp");
     let direct_ewald_api_source = vendor_root.join("native/src/ewald/api.cpp");
     let direct_ewald_cpp_evaluator_source = vendor_root.join("native/src/ewald/cpp_evaluator.cpp");
     let direct_ewald_rust_evaluator_source =
@@ -485,10 +488,14 @@ fn main() {
     let cpp_layout_probe = manifest_dir.join("abi/layout_assertions.cpp");
     let direct_ewald_c_header_probe = manifest_dir.join("abi/direct_ewald_header_c11.c");
     let direct_ewald_cpp_layout_probe = manifest_dir.join("abi/direct_ewald_layout_assertions.cpp");
+    let composite_c_header_probe = manifest_dir.join("abi/composite_header_c11.c");
+    let composite_cpp_layout_probe = manifest_dir.join("abi/composite_layout_assertions.cpp");
     track(&c_header_probe);
     track(&cpp_layout_probe);
     track(&direct_ewald_c_header_probe);
     track(&direct_ewald_cpp_layout_probe);
+    track(&composite_c_header_probe);
+    track(&composite_cpp_layout_probe);
 
     let hip_safe_link = build_hip_safe_provider(&manifest_dir, &include_dir, &hip_provider_source);
     assert!(
@@ -500,6 +507,7 @@ fn main() {
         .cpp(true)
         .include(&include_dir)
         .file(&context_source)
+        .file(&direct_ewald_composite_source)
         .file(&direct_ewald_api_source)
         .file(&direct_ewald_cpp_evaluator_source)
         .file(&direct_ewald_rust_evaluator_source)
@@ -649,6 +657,14 @@ fn main() {
         .compile("betelgeuze_sys_direct_ewald_header_c11_probe");
 
     cc::Build::new()
+        .include(&include_dir)
+        .file(&composite_c_header_probe)
+        .flag_if_supported("-std=c11")
+        .warnings(true)
+        .warnings_into_errors(true)
+        .compile("betelgeuze_sys_composite_header_c11_probe");
+
+    cc::Build::new()
         .cpp(true)
         .std("c++17")
         .include(&include_dir)
@@ -665,4 +681,13 @@ fn main() {
         .warnings(true)
         .warnings_into_errors(true)
         .compile("betelgeuze_sys_direct_ewald_cpp_layout_probe");
+
+    cc::Build::new()
+        .cpp(true)
+        .std("c++17")
+        .include(&include_dir)
+        .file(&composite_cpp_layout_probe)
+        .warnings(true)
+        .warnings_into_errors(true)
+        .compile("betelgeuze_sys_composite_cpp_layout_probe");
 }
