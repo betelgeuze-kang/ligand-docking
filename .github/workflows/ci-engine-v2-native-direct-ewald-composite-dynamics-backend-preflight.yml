@@ -1,0 +1,217 @@
+name: ci-engine-v2-native-direct-ewald-composite-dynamics-backend-preflight
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/ci-engine-v2-native-direct-ewald-composite-dynamics-backend-preflight.yml"
+      - "CMakeLists.txt"
+      - "include/betelgeuze/direct_ewald.h"
+      - "include/betelgeuze/direct_ewald_composite.h"
+      - "include/betelgeuze/direct_ewald_composite_dynamics.h"
+      - "include/betelgeuze/engine.h"
+      - "native/**"
+      - "rust/Cargo.lock"
+      - "rust/Cargo.toml"
+      - "rust/cpu-kernel/**"
+      - "rust/betelgeuze-sys/**"
+      - "rust/betelgeuze-runtime/**"
+      - "rust_engine_v2/Cargo.lock"
+      - "rust_engine_v2/Cargo.toml"
+      - "config/engine_v2_native_direct_ewald_composite_dynamics_profile_v1.json"
+      - "config/engine_v2_native_direct_ewald_composite_dynamics_profile_v1_sources.json"
+      - "config/engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_profile_v1.json"
+      - "config/engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_profile_v1_sources.json"
+      - "docs/engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_v1.md"
+      - "tools/__init__.py"
+      - "tools/verify_engine_v2_native_direct_ewald_composite_dynamics_v1.py"
+      - "tools/verify_engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_v1.py"
+      - "tests/unit/test_engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_v1.py"
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/ci-engine-v2-native-direct-ewald-composite-dynamics-backend-preflight.yml"
+      - "CMakeLists.txt"
+      - "include/betelgeuze/direct_ewald.h"
+      - "include/betelgeuze/direct_ewald_composite.h"
+      - "include/betelgeuze/direct_ewald_composite_dynamics.h"
+      - "include/betelgeuze/engine.h"
+      - "native/**"
+      - "rust/Cargo.lock"
+      - "rust/Cargo.toml"
+      - "rust/cpu-kernel/**"
+      - "rust/betelgeuze-sys/**"
+      - "rust/betelgeuze-runtime/**"
+      - "rust_engine_v2/Cargo.lock"
+      - "rust_engine_v2/Cargo.toml"
+      - "config/engine_v2_native_direct_ewald_composite_dynamics_profile_v1.json"
+      - "config/engine_v2_native_direct_ewald_composite_dynamics_profile_v1_sources.json"
+      - "config/engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_profile_v1.json"
+      - "config/engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_profile_v1_sources.json"
+      - "docs/engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_v1.md"
+      - "tools/__init__.py"
+      - "tools/verify_engine_v2_native_direct_ewald_composite_dynamics_v1.py"
+      - "tools/verify_engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_v1.py"
+      - "tests/unit/test_engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_v1.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-engine-v2-native-direct-ewald-composite-dynamics-backend-preflight-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CUDA_VISIBLE_DEVICES: ""
+  HIP_VISIBLE_DEVICES: ""
+  ROCR_VISIBLE_DEVICES: ""
+
+jobs:
+  immutable-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+    steps:
+      - name: Check out current and frozen objects
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          clean: true
+          fetch-depth: 0
+
+      - name: Verify exact PR 438 merge and reviewed tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=5f6f4e2642dbe5c1272b2a9710288db25db5164f
+          base_tree=95f3d64a553f6c261d59a7ef8bd202561d51c45a
+          merge=e434295b1711f612e0f7e9fac2d95de92abf19a8
+          tree=3546ef29ae708c16c7af1e3be4925d2d7ad1f6b5
+          reviewed=581a17a135d75ddf085c4edd29f3763c2f691fcf
+          test "$(git rev-parse "$base^{commit}")" = "$base"
+          test "$(git rev-parse "$base^{tree}")" = "$base_tree"
+          git merge-base --is-ancestor "$base" HEAD
+          test "$(git rev-parse "$merge^{commit}")" = "$merge"
+          test "$(git rev-parse "$merge^{tree}")" = "$tree"
+          git fetch --no-tags --depth=1 origin refs/pull/438/head
+          test "$(git rev-parse FETCH_HEAD)" = "$reviewed"
+          test "$(git rev-parse FETCH_HEAD^{tree})" = "$tree"
+          test "$(git show "$merge:config/engine_v2_native_direct_ewald_composite_dynamics_profile_v1.json" | sha256sum | cut -d ' ' -f1)" = "42aad2692719d3d0233d9b71e24e6b49fe50a27fbc150d31fb4d9688ae84215f"
+          test "$(git show "$merge:config/engine_v2_native_direct_ewald_composite_dynamics_profile_v1_sources.json" | sha256sum | cut -d ' ' -f1)" = "1a7a284467958e7c153edb0afd86cc5ea4ad07b659266ecf59d9da7549a19d15"
+
+      - name: Verify canonical successor evidence
+        run: |
+          python3 -m json.tool \
+            config/engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_profile_v1.json \
+            >/dev/null
+          python3 -m json.tool \
+            config/engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_profile_v1_sources.json \
+            >/dev/null
+          python3 -m pip install pytest==8.3.5
+          python3 tools/verify_engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_v1.py
+          python3 -m pytest -q \
+            tests/unit/test_engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_v1.py
+
+  native-linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out native sources
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          clean: true
+          fetch-depth: 1
+
+      - name: Select hosted Rust toolchain
+        run: |
+          rustup toolchain install 1.93.0 --profile minimal
+          rustup override set 1.93.0
+
+      - name: Build and test release preflight and exports
+        run: |
+          cmake -S . -B build/native-direct-composite-preflight-release \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=ON \
+            -DBG_ENABLE_HIP=OFF \
+            -DBG_ENABLE_HIP_SAFE=OFF
+          cmake --build build/native-direct-composite-preflight-release \
+            --target betelgeuze_engine_direct_ewald_composite_dynamics --parallel 2
+          ctest --test-dir build/native-direct-composite-preflight-release \
+            -R '^betelgeuze_engine_(direct_ewald_composite_dynamics|export_allowlist)$' \
+            --output-on-failure
+
+      - name: Build and test sanitizer preflight
+        env:
+          ASAN_OPTIONS: detect_leaks=1:strict_string_checks=1
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+        run: |
+          cmake -S . -B build/native-direct-composite-preflight-sanitize \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DBUILD_TESTING=ON \
+            -DBG_ENABLE_HIP=OFF \
+            -DBG_ENABLE_HIP_SAFE=OFF \
+            -DCMAKE_C_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer' \
+            -DCMAKE_CXX_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer'
+          cmake --build build/native-direct-composite-preflight-sanitize \
+            --target betelgeuze_engine_direct_ewald_composite_dynamics --parallel 2
+          ctest --test-dir build/native-direct-composite-preflight-sanitize \
+            -R '^betelgeuze_engine_direct_ewald_composite_dynamics$' \
+            --output-on-failure
+
+  rust-boundaries-and-docs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/build/direct-composite-preflight-cargo
+    steps:
+      - name: Check out packaged Rust boundary
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          clean: true
+          fetch-depth: 1
+
+      - name: Select hosted Rust toolchain
+        run: |
+          rustup toolchain install 1.93.0 --profile minimal
+          rustup override set 1.93.0
+
+      - name: Verify raw and safe Rust boundaries and docs
+        run: |
+          cargo test --manifest-path rust/Cargo.toml --locked \
+            --package betelgeuze-sys --test layout --test raw_smoke
+          cargo test --manifest-path rust/Cargo.toml --locked \
+            --package betelgeuze-runtime --test direct_ewald_composite_dynamics
+          cargo doc --manifest-path rust/Cargo.toml --locked \
+            --no-deps --package betelgeuze-sys --package betelgeuze-runtime
+
+  macos-export-boundary:
+    runs-on: macos-15
+    timeout-minutes: 35
+    steps:
+      - name: Check out native export boundary
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          clean: true
+          fetch-depth: 1
+
+      - name: Select hosted Rust toolchain
+        run: |
+          rustup toolchain install 1.93.0 --profile minimal
+          rustup override set 1.93.0
+
+      - name: Build shared engine and verify exact exports
+        run: |
+          cmake -S . -B build/native-direct-composite-preflight-macos \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=ON \
+            -DBG_ENABLE_HIP=OFF \
+            -DBG_ENABLE_HIP_SAFE=OFF
+          cmake --build build/native-direct-composite-preflight-macos \
+            --target betelgeuze_engine --parallel 2
+          ctest --test-dir build/native-direct-composite-preflight-macos \
+            -R '^betelgeuze_engine_export_allowlist$' --output-on-failure

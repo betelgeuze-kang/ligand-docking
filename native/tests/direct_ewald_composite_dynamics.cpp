@@ -1377,11 +1377,14 @@ void verify_baoab_hip_and_step_overflow_fail_closed() {
 
     const CompositeSimulationPtr simulation = make_composite_simulation(
         system.get(), forcefield.get(), model.get(), 0.001);
-    for (const bg_backend backend : {
-             BG_BACKEND_HIP_SAFE,
-             BG_BACKEND_HIP_FAST,
-         }) {
+    const std::array<bg_backend, 3> unsupported_backends{{
+        BG_BACKEND_HIP_SAFE,
+        BG_BACKEND_HIP_FAST,
+        static_cast<bg_backend>(INT32_C(0x7fffffff)),
+    }};
+    for (const bg_backend backend : unsupported_backends) {
         bg_context fake_context{};
+        fake_context.requested_backend = backend;
         fake_context.backend = backend;
         fake_context.unit_system = BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL;
         const ParticleSnapshot before = snapshot_composite(simulation.get());
@@ -1401,19 +1404,93 @@ void verify_baoab_hip_and_step_overflow_fail_closed() {
                 &report,
                 &error),
             BG_STATUS_UNSUPPORTED_BACKEND,
-            "composite HIP integration did not fail closed");
+            "composite unsupported-backend integration did not fail closed");
         require(
             std::memcmp(&report, &report_before, sizeof(report)) == 0,
-            "HIP rejection changed report");
+            "unsupported-backend rejection changed report");
         require(
             error.code == BG_DIRECT_EWALD_ERROR_NONE &&
                 error.detail[0] == '\0',
-            "HIP rejection retained a typed Ewald error");
+            "unsupported-backend rejection retained a typed Ewald error");
         require_snapshot_exact(
             snapshot_composite(simulation.get()),
             before,
-            "HIP rejection changed state");
+            "unsupported-backend rejection changed state");
     }
+
+    const ContextPtr auto_context = make_context(BG_BACKEND_AUTO);
+    require(
+        auto_context->requested_backend == BG_BACKEND_AUTO &&
+            auto_context->backend == BG_BACKEND_RUST_CPU,
+        "AUTO context did not preserve its request and resolved Rust CPU lane");
+    const ParticleSnapshot auto_before = snapshot_composite(simulation.get());
+    bg_dynamics_report_v1 auto_report{};
+    init_report(&auto_report);
+    auto_report.steps_completed = UINT64_C(56);
+    auto_report.total_kcal_per_mol = 67.0;
+    const bg_dynamics_report_v1 auto_report_before = auto_report;
+    init_error(&error);
+    error.code = BG_DIRECT_EWALD_ERROR_NONFINITE_RESULT;
+    std::memcpy(error.detail, "stale", sizeof("stale"));
+    require_status(
+        bg_context_integrate_direct_ewald_composite_v1(
+            auto_context.get(),
+            simulation.get(),
+            UINT64_C(1),
+            &auto_report,
+            &error),
+        BG_STATUS_UNSUPPORTED_BACKEND,
+        "composite dynamics accepted an AUTO request resolved to Rust CPU");
+    require(
+        std::memcmp(
+            &auto_report, &auto_report_before, sizeof(auto_report)) == 0,
+        "AUTO rejection changed report");
+    require(
+        error.code == BG_DIRECT_EWALD_ERROR_NONE &&
+            error.detail[0] == '\0',
+        "AUTO rejection retained a typed Ewald error");
+    require_snapshot_exact(
+        snapshot_composite(simulation.get()),
+        auto_before,
+        "AUTO rejection changed state");
+
+    bg_context mismatched_context{};
+    mismatched_context.requested_backend = BG_BACKEND_CPP_CPU_REFERENCE;
+    mismatched_context.backend = BG_BACKEND_RUST_CPU;
+    mismatched_context.unit_system = BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL;
+    const ParticleSnapshot mismatch_before =
+        snapshot_composite(simulation.get());
+    bg_dynamics_report_v1 mismatch_report{};
+    init_report(&mismatch_report);
+    mismatch_report.steps_completed = UINT64_C(57);
+    mismatch_report.total_kcal_per_mol = 68.0;
+    const bg_dynamics_report_v1 mismatch_report_before = mismatch_report;
+    init_error(&error);
+    error.code = BG_DIRECT_EWALD_ERROR_NONFINITE_RESULT;
+    std::memcpy(error.detail, "stale", sizeof("stale"));
+    require_status(
+        bg_context_integrate_direct_ewald_composite_v1(
+            &mismatched_context,
+            simulation.get(),
+            UINT64_C(1),
+            &mismatch_report,
+            &error),
+        BG_STATUS_ABI_MISMATCH,
+        "composite dynamics accepted mismatched requested and resolved CPU lanes");
+    require(
+        std::memcmp(
+            &mismatch_report,
+            &mismatch_report_before,
+            sizeof(mismatch_report)) == 0,
+        "requested/resolved mismatch changed report");
+    require(
+        error.code == BG_DIRECT_EWALD_ERROR_NONE &&
+            error.detail[0] == '\0',
+        "requested/resolved mismatch retained a typed Ewald error");
+    require_snapshot_exact(
+        snapshot_composite(simulation.get()),
+        mismatch_before,
+        "requested/resolved mismatch changed state");
 
     const ContextPtr context = make_context(BG_BACKEND_CPP_CPU_REFERENCE);
     integrate_success(context.get(), simulation.get(), UINT64_C(1));

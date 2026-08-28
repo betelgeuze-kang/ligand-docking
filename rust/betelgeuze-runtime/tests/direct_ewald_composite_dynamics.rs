@@ -137,6 +137,26 @@ fn nonneutral_creation_preserves_the_typed_direct_ewald_error() {
     assert_eq!(error.code, Some(DirectEwaldErrorCode::NonNeutralSystem));
 }
 
+#[test]
+fn auto_request_fails_closed_and_preserves_every_dynamic_byte() {
+    let context =
+        Context::new(ContextOptions::auto(0)).expect("AUTO context creation is available");
+    let mut simulation = neutral_simulation(options(0.1)).unwrap();
+    let initial_snapshot = simulation.snapshot().unwrap();
+    let initial_step = simulation.absolute_step().unwrap();
+    let initial_checkpoint = simulation.checkpoint().unwrap();
+
+    let error = context
+        .integrate_direct_ewald_composite(&mut simulation, 1)
+        .expect_err("AUTO must not inherit its resolved CPU lane");
+    assert_eq!(error.status, ErrorCode::UnsupportedBackend);
+    assert_eq!(error.code, None);
+    assert!(error.detail.contains("cannot fall back"));
+    assert_eq!(simulation.absolute_step().unwrap(), initial_step);
+    assert_snapshot_bits(&initial_snapshot, &simulation.snapshot().unwrap());
+    assert_eq!(simulation.checkpoint().unwrap(), initial_checkpoint);
+}
+
 fn neutral_simulation(
     options: SimulationOptions,
 ) -> runtime::DirectEwaldResult<DirectEwaldCompositeSimulation> {

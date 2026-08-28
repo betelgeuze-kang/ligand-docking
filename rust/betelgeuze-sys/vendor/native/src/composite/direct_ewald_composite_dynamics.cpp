@@ -855,11 +855,22 @@ bg_context_integrate_direct_ewald_composite_v1(
                 BG_STATUS_INVALID_ARGUMENT,
                 "context, composite simulation, and dynamics report must not be null");
         }
-        if (context->backend != BG_BACKEND_CPP_CPU_REFERENCE &&
-            context->backend != BG_BACKEND_RUST_CPU) {
+        switch (context->requested_backend) {
+            case BG_BACKEND_CPP_CPU_REFERENCE:
+            case BG_BACKEND_RUST_CPU:
+                break;
+            case BG_BACKEND_AUTO:
+            case BG_BACKEND_HIP_SAFE:
+            case BG_BACKEND_HIP_FAST:
+            default:
+                return fail(
+                    BG_STATUS_UNSUPPORTED_BACKEND,
+                    "direct-Ewald composite dynamics supports only explicitly requested CPU backends");
+        }
+        if (context->backend != context->requested_backend) {
             return fail(
-                BG_STATUS_UNSUPPORTED_BACKEND,
-                "direct-Ewald composite dynamics supports only explicit CPU backends");
+                BG_STATUS_ABI_MISMATCH,
+                "direct-Ewald composite dynamics requested and resolved CPU backends must match");
         }
         status = validate_owner_invariant(*simulation);
         if (status != BG_STATUS_OK) {
