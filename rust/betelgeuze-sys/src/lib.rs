@@ -3,8 +3,9 @@
 //! This crate intentionally mirrors the native headers
 //! `include/betelgeuze/engine.h`, `include/betelgeuze/direct_ewald.h`,
 //! `include/betelgeuze/direct_ewald_composite.h`,
-//! `include/betelgeuze/direct_ewald_composite_dynamics.h`, and
-//! `include/betelgeuze/particle_mesh_reciprocal.h` without adding ownership or
+//! `include/betelgeuze/direct_ewald_composite_dynamics.h`,
+//! `include/betelgeuze/particle_mesh_reciprocal.h`, and
+//! `include/betelgeuze/particle_mesh_ewald.h` without adding ownership or
 //! lifetime semantics. Prefer `betelgeuze-runtime` for a safe API.
 //!
 //! The optional `hip` feature requires `BG_HIP_ARCHITECTURE` and a ROCm
@@ -36,6 +37,10 @@ pub const BG_PARTICLE_MESH_RECIPROCAL_ABI_VERSION_MINOR: u32 = 0;
 pub const BG_PARTICLE_MESH_RECIPROCAL_ABI_VERSION: u32 = 1;
 pub const BG_PARTICLE_MESH_RECIPROCAL_ERROR_DETAIL_CAPACITY: u32 = 256;
 pub const BG_PARTICLE_MESH_RECIPROCAL_CARDINAL_B_SPLINE_ORDER: u32 = 4;
+
+pub const BG_PARTICLE_MESH_EWALD_ABI_VERSION_MAJOR: u32 = 1;
+pub const BG_PARTICLE_MESH_EWALD_ABI_VERSION_MINOR: u32 = 0;
+pub const BG_PARTICLE_MESH_EWALD_ABI_VERSION: u32 = 1;
 
 pub const BG_DIRECT_EWALD_COMPOSITE_ABI_VERSION_MAJOR: u32 = 1;
 pub const BG_DIRECT_EWALD_COMPOSITE_ABI_VERSION_MINOR: u32 = 0;
@@ -816,6 +821,36 @@ pub struct bg_direct_ewald_energy_components_v1 {
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub struct bg_direct_ewald_force_soa_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub atom_capacity: u64,
+    pub atom_count: u64,
+    pub unit_system: bg_unit_system,
+    pub reserved0: u32,
+    pub x_kcal_per_mol_angstrom: *mut f64,
+    pub y_kcal_per_mol_angstrom: *mut f64,
+    pub z_kcal_per_mol_angstrom: *mut f64,
+    pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_particle_mesh_ewald_energy_components_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub unit_system: bg_unit_system,
+    pub reserved0: u32,
+    pub real_space_kcal_per_mol: f64,
+    pub reciprocal_space_kcal_per_mol: f64,
+    pub self_kcal_per_mol: f64,
+    pub pair_correction_kcal_per_mol: f64,
+    pub total_kcal_per_mol: f64,
+    pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_particle_mesh_ewald_force_soa_v1 {
     pub struct_size: u32,
     pub abi_version: u32,
     pub atom_capacity: u64,
@@ -2472,6 +2507,31 @@ unsafe extern "C" {
         out_energy: *mut bg_particle_mesh_reciprocal_energy_v1,
         out_forces: *mut bg_particle_mesh_reciprocal_force_soa_v1,
         out_error: *mut bg_particle_mesh_reciprocal_error_v1,
+    ) -> bg_status;
+
+    pub fn bg_particle_mesh_ewald_abi_version() -> u32;
+    pub fn bg_particle_mesh_ewald_abi_version_major() -> u32;
+    pub fn bg_particle_mesh_ewald_abi_version_minor() -> u32;
+    pub fn bg_particle_mesh_ewald_abi_version_string() -> *const c_char;
+    pub fn bg_particle_mesh_ewald_energy_components_v1_init(
+        energy: *mut bg_particle_mesh_ewald_energy_components_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_particle_mesh_ewald_force_soa_v1_init(
+        forces: *mut bg_particle_mesh_ewald_force_soa_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_particle_mesh_ewald_v1_profile_id() -> *const c_char;
+    pub fn bg_context_evaluate_particle_mesh_ewald_v1(
+        context: *const bg_context,
+        system: *const bg_system,
+        direct_model: *const bg_direct_ewald_model_v1,
+        particle_mesh_reciprocal_model: *const bg_particle_mesh_reciprocal_model_v1,
+        out_energy: *mut bg_particle_mesh_ewald_energy_components_v1,
+        out_forces: *mut bg_particle_mesh_ewald_force_soa_v1,
+        out_error: *mut bg_direct_ewald_error_v1,
     ) -> bg_status;
 
     pub fn bg_direct_ewald_abi_version() -> u32;

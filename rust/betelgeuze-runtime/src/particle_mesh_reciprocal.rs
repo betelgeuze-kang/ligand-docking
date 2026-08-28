@@ -219,6 +219,10 @@ impl ParticleMeshReciprocalModel {
     pub fn is_empty(&self) -> ParticleMeshReciprocalResult<bool> {
         self.len().map(|length| length == 0)
     }
+
+    pub(crate) fn raw_handle(&self) -> *mut sys::bg_particle_mesh_reciprocal_model_v1 {
+        self.handle.as_ptr()
+    }
 }
 
 impl Drop for ParticleMeshReciprocalModel {
@@ -378,7 +382,8 @@ pub fn particle_mesh_reciprocal_profile_id() -> ParticleMeshReciprocalResult<Str
     }
 }
 
-fn ensure_particle_mesh_reciprocal_abi_compatibility() -> ParticleMeshReciprocalResult<()> {
+pub(crate) fn ensure_particle_mesh_reciprocal_abi_compatibility() -> ParticleMeshReciprocalResult<()>
+{
     ensure_abi_compatibility().map_err(ParticleMeshReciprocalError::from)?;
     // SAFETY: Version query takes no pointers.
     let observed = unsafe { sys::bg_particle_mesh_reciprocal_abi_version() };

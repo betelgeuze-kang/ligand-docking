@@ -9,6 +9,8 @@ links = "betelgeuze_engine"
 build = "build.rs"
 include = [
     "Cargo.toml",
+    "abi/particle_mesh_ewald_header_c11.c",
+    "abi/particle_mesh_ewald_layout_assertions.cpp",
     "abi/particle_mesh_reciprocal_header_c11.c",
     "abi/particle_mesh_reciprocal_layout_assertions.cpp",
     "abi/direct_ewald_header_c11.c",
@@ -27,6 +29,7 @@ include = [
     "vendor/include/betelgeuze/direct_ewald_composite.h",
     "vendor/include/betelgeuze/direct_ewald_composite_dynamics.h",
     "vendor/include/betelgeuze/engine.h",
+    "vendor/include/betelgeuze/particle_mesh_ewald.h",
     "vendor/include/betelgeuze/particle_mesh_reciprocal.h",
     "vendor/native/src/internal.hpp",
     "vendor/native/src/context.cpp",
@@ -35,6 +38,7 @@ include = [
     "vendor/native/src/composite/direct_ewald_composite_dynamics.hpp",
     "vendor/native/src/composite/direct_ewald_composite_dynamics.cpp",
     "vendor/native/src/composite/direct_ewald_composite_checkpoint.cpp",
+    "vendor/native/src/composite/particle_mesh_ewald.cpp",
     "vendor/native/src/ewald/api.cpp",
     "vendor/native/src/ewald/cpp_evaluator.cpp",
     "vendor/native/src/ewald/cpp_evaluator.hpp",

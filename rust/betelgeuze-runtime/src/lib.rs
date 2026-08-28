@@ -15,6 +15,7 @@ mod docking;
 mod dynamics;
 mod fixed64_lane_metrics;
 mod forcefield;
+mod particle_mesh_ewald;
 mod particle_mesh_reciprocal;
 mod qualification;
 mod qualification_v6;
@@ -127,6 +128,10 @@ pub use forcefield::{
     OrthorhombicCell, PairExclusion, PairScale, PeriodicTorsion,
     NATIVE_PERIODIC_NEIGHBOR_LIST_V1_PROFILE_ID, NATIVE_PERIODIC_NEIGHBOR_LIST_V1_SCHEMA_ID,
     NATIVE_PERIODIC_NEIGHBOR_LIST_V2_PROFILE_ID, NATIVE_PERIODIC_NEIGHBOR_LIST_V2_SCHEMA_ID,
+};
+pub use particle_mesh_ewald::{
+    particle_mesh_ewald_profile_id, ParticleMeshEwaldEnergyComponents, ParticleMeshEwaldEvaluation,
+    ParticleMeshEwaldForceSoaOwned,
 };
 pub use particle_mesh_reciprocal::{
     particle_mesh_reciprocal_profile_id, ParticleMeshReciprocalEnergy, ParticleMeshReciprocalError,
