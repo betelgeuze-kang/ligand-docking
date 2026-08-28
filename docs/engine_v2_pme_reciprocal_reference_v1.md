@@ -234,7 +234,11 @@ The independent semantic oracle is reviewed PR #435:
 The verifier reads historical bytes directly from those merge objects,
 requires both merges to be ancestors, checks reviewed/merged tree identity,
 and requires the current direct-Ewald oracle inputs to remain byte-identical
-to PR #435.
+to PR #435. The hosted workflow explicitly fetches the GitHub-managed,
+read-only PR #435 and #438 pull refs and checks their exact reviewed-head
+object IDs before running the verifier. A missing or moved pull ref therefore
+fails CI closed instead of silently removing that tree comparison from a clean
+checkout.
 
 ## Claim and execution boundary
 

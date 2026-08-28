@@ -316,6 +316,17 @@ def test_ci_runs_only_safe_standalone_scalar_checks() -> None:
     ):
         assert forbidden not in workflow
 
+    reviewed_head_materialization = """\
+          git fetch --no-tags --depth=1 origin refs/pull/435/head
+          test "$(git rev-parse FETCH_HEAD)" = "b94e4c008db1c8414f5d0f24fa266c85c828d13c"
+          git fetch --no-tags --depth=1 origin refs/pull/438/head
+          test "$(git rev-parse FETCH_HEAD)" = "581a17a135d75ddf085c4edd29f3763c2f691fcf"
+"""
+    assert reviewed_head_materialization in workflow
+    assert workflow.index(reviewed_head_materialization) < workflow.index(
+        "python3 tools/verify_engine_v2_pme_reciprocal_reference_v1.py"
+    )
+
 
 def test_refresh_rolls_back_both_files_after_post_write_failure(
     tmp_path: Path,

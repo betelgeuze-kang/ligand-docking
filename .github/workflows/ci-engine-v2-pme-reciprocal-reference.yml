@@ -70,6 +70,13 @@ jobs:
           clean: true
           fetch-depth: 0
 
+      - name: Materialize frozen reviewed heads
+        run: |
+          git fetch --no-tags --depth=1 origin refs/pull/435/head
+          test "$(git rev-parse FETCH_HEAD)" = "b94e4c008db1c8414f5d0f24fa266c85c828d13c"
+          git fetch --no-tags --depth=1 origin refs/pull/438/head
+          test "$(git rev-parse FETCH_HEAD)" = "581a17a135d75ddf085c4edd29f3763c2f691fcf"
+
       - name: Select frozen hosted Rust toolchain
         run: |
           rustup toolchain install 1.93.0 \
