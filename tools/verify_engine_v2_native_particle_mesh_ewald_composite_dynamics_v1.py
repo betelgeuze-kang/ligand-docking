@@ -23,6 +23,29 @@ SCHEMA_ID = "betelgeuze.engine_v2_native_particle_mesh_ewald_composite_dynamics_
 SOURCE_SCHEMA_ID = "betelgeuze.engine_v2_native_particle_mesh_ewald_composite_dynamics_sources/1.0.0"
 PROFILE_ID = "betelgeuze.native_particle_mesh_ewald_composite_dynamics/1.0.0"
 PINNED_CHECKOUT_ACTION = "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"
+MINIMAL_RUST_TOOLCHAIN_INSTALL = "rustup toolchain install 1.93.0 --profile minimal"
+RUST_BOUNDARY_TOOLCHAIN_INSTALL = f"{MINIMAL_RUST_TOOLCHAIN_INSTALL} --component rustfmt --component clippy"
+RUST_BOUNDARY_TEST_STEP = "\n".join((
+    "      - name: Test raw and safe boundaries, docs, format, and clippy",
+    "        run: |",
+    "          cargo test --manifest-path rust/Cargo.toml --locked --package betelgeuze-sys --test layout --test raw_smoke",
+    "          cargo test --manifest-path rust/Cargo.toml --locked --package betelgeuze-runtime --lib particle_mesh_ewald_composite_dynamics",
+    "          cargo test --manifest-path rust/Cargo.toml --locked --package betelgeuze-runtime --test particle_mesh_ewald_composite_dynamics",
+    "          cargo test --manifest-path rust/Cargo.toml --locked --package betelgeuze-runtime --doc particle_mesh_ewald_composite_dynamics",
+    "          cargo doc --manifest-path rust/Cargo.toml --locked --no-deps --package betelgeuze-sys --package betelgeuze-runtime",
+    "          cargo fmt --manifest-path rust/Cargo.toml --all -- --check",
+    "          cargo clippy --manifest-path rust/Cargo.toml --locked --package betelgeuze-sys --package betelgeuze-runtime --all-targets -- -D warnings",
+    "          cargo package --manifest-path rust/betelgeuze-sys/Cargo.toml --locked " + "\\",
+    "            --config 'patch.crates-io.betelgeuze-cpu-kernel.path=\"rust/cpu-kernel\"'",
+    "          BETELGEUZE_V7_NON_AUTHORITATIVE_PACKAGE_BUILD=1 " + "\\",
+    '          BETELGEUZE_V7_SOURCE_ROOT="$GITHUB_WORKSPACE" ' + "\\",
+    "          cargo package --manifest-path rust/betelgeuze-runtime/Cargo.toml --locked " + "\\",
+    "            --config 'patch.crates-io.betelgeuze-sys.path=\"rust/betelgeuze-sys\"' " + "\\",
+    "            --config 'patch.crates-io.betelgeuze-cpu-kernel.path=\"rust/cpu-kernel\"' " + "\\",
+    "            --config 'patch.crates-io.betelgeuze-docking-search.path=\"rust/betelgeuze-docking-search\"' " + "\\",
+    "            --config 'patch.crates-io.betelgeuze-reference-physics.path=\"rust/reference-physics\"' " + "\\",
+    "            --config 'patch.crates-io.betelgeuze-reference-dynamics.path=\"rust/reference-dynamics\"'",
+)) + "\n"
 REQUIRED_TRIGGER_PATHS = (
     ".github/workflows/ci-engine-v2-native-direct-ewald-composite-dynamics-backend-preflight.yml",
     ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics.yml",
@@ -292,6 +315,30 @@ def require_workflow_contract(workflow: str) -> None:
     uses = re.findall(r"^\s*uses:\s*(\S+)\s*(?:#.*)?$", workflow, re.MULTILINE)
     if uses != [PINNED_CHECKOUT_ACTION] * 4:
         fail("workflow actions must be exactly four pinned checkout uses")
+    toolchain_installs = [line.strip() for line in re.findall(r"(?m)^\s*rustup toolchain install .+$", workflow)]
+    if toolchain_installs != [
+        MINIMAL_RUST_TOOLCHAIN_INSTALL,
+        RUST_BOUNDARY_TOOLCHAIN_INSTALL,
+        MINIMAL_RUST_TOOLCHAIN_INSTALL,
+    ]:
+        fail("workflow Rust toolchain/component installation drift")
+    rust_boundaries = re.search(
+        r"(?ms)^  rust-boundaries:\n(?P<body>.*?)(?=^  \S|\Z)",
+        workflow,
+    )
+    rust_boundary_toolchain_block = (
+        "      - name: Select frozen hosted Rust toolchain\n"
+        "        run: |\n"
+        f"          {RUST_BOUNDARY_TOOLCHAIN_INSTALL}\n"
+        "          rustup override set 1.93.0\n"
+    )
+    if rust_boundaries is None or rust_boundaries.group("body").count(rust_boundary_toolchain_block) != 1:
+        fail("rust-boundaries job must own the exact Rust toolchain/component installation block")
+    rust_boundary_test_step_name = "      - name: Test raw and safe boundaries, docs, format, and clippy\n"
+    if rust_boundaries.group("body").count(rust_boundary_test_step_name) != 1:
+        fail("rust-boundaries must contain exactly one named Rust command step")
+    if rust_boundaries.group("body").count(rust_boundary_toolchain_block + RUST_BOUNDARY_TEST_STEP) != 1:
+        fail("Rust toolchain/component installation must immediately precede the exact rust-boundaries command step")
     if workflow.count("cmake -S . -B ") != 3:
         fail("workflow must contain exactly three CMake configurations")
     if workflow.count("DBG_ENABLE_HIP=OFF") != 3 or workflow.count("DBG_ENABLE_HIP_SAFE=OFF") != 3:

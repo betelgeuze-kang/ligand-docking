@@ -153,7 +153,7 @@ jobs:
           fetch-depth: 1
       - name: Select frozen hosted Rust toolchain
         run: |
-          rustup toolchain install 1.93.0 --profile minimal
+          rustup toolchain install 1.93.0 --profile minimal --component rustfmt --component clippy
           rustup override set 1.93.0
       - name: Test raw and safe boundaries, docs, format, and clippy
         run: |

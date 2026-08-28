@@ -73,7 +73,98 @@ def test_workflow_is_pinned_cpu_only_and_fetches_parents() -> None:
     text = (ROOT / verifier.WORKFLOW_RELATIVE_PATH).read_text()
     assert text.count("actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0") == 4
     assert "permissions:\n  contents: read" in text
+    assert text.count(verifier.RUST_BOUNDARY_TOOLCHAIN_INSTALL) == 1
     verifier.require_contracts(ROOT)
+
+@pytest.mark.parametrize("component", [" --component rustfmt", " --component clippy"])
+def test_rust_boundary_toolchain_component_removal_fails_closed(component: str) -> None:
+    text = (ROOT / verifier.WORKFLOW_RELATIVE_PATH).read_text()
+    assert verifier.RUST_BOUNDARY_TOOLCHAIN_INSTALL in text
+    with pytest.raises(ValueError, match="toolchain/component installation drift"):
+        verifier.require_workflow_contract(text.replace(component, "", 1))
+
+@pytest.mark.parametrize("next_job_header", [
+    "macos-export-boundary:",
+    "macos_export_boundary:",
+    "MacosExportBoundary:",
+    '"macos-export-boundary":',
+    "macos-export-boundary: # next job",
+])
+def test_rust_boundary_toolchain_component_relocation_fails_closed(next_job_header: str) -> None:
+    text = (ROOT / verifier.WORKFLOW_RELATIVE_PATH).read_text()
+    text = text.replace("  macos-export-boundary:\n", f"  {next_job_header}\n", 1)
+    full_step = (
+        "      - name: Select frozen hosted Rust toolchain\n"
+        "        run: |\n"
+        f"          {verifier.RUST_BOUNDARY_TOOLCHAIN_INSTALL}\n"
+        "          rustup override set 1.93.0\n"
+    )
+    minimal_step = (
+        "      - name: Select frozen hosted Rust toolchain\n"
+        "        run: |\n"
+        f"          {verifier.MINIMAL_RUST_TOOLCHAIN_INSTALL}\n"
+        "          rustup override set 1.93.0\n"
+    )
+    relocated = text.replace(full_step, "", 1)
+    before_macos_step, found_macos_step, after_macos_step = relocated.rpartition(minimal_step)
+    assert found_macos_step == minimal_step
+    relocated = f"{before_macos_step}{full_step}{after_macos_step}"
+    following_run = "      - name: Verify exact shared-library exports\n        run: |\n"
+    relocated = relocated.replace(
+        following_run,
+        f"{following_run}          {verifier.MINIMAL_RUST_TOOLCHAIN_INSTALL}\n",
+        1,
+    )
+    with pytest.raises(ValueError, match="rust-boundaries job must own"):
+        verifier.require_workflow_contract(relocated)
+
+def test_rust_boundary_toolchain_install_after_tests_fails_closed() -> None:
+    text = (ROOT / verifier.WORKFLOW_RELATIVE_PATH).read_text()
+    full_step = (
+        "      - name: Select frozen hosted Rust toolchain\n"
+        "        run: |\n"
+        f"          {verifier.RUST_BOUNDARY_TOOLCHAIN_INSTALL}\n"
+        "          rustup override set 1.93.0\n"
+    )
+    moved_late = text.replace(full_step, "", 1)
+    moved_late = moved_late.replace(
+        "  macos-export-boundary:\n",
+        f"{full_step}  macos-export-boundary:\n",
+        1,
+    )
+    with pytest.raises(ValueError, match="must immediately precede the exact rust-boundaries command step"):
+        verifier.require_workflow_contract(moved_late)
+
+def test_rust_boundary_toolchain_duplicate_noop_step_name_fails_closed() -> None:
+    text = (ROOT / verifier.WORKFLOW_RELATIVE_PATH).read_text()
+    full_step = (
+        "      - name: Select frozen hosted Rust toolchain\n"
+        "        run: |\n"
+        f"          {verifier.RUST_BOUNDARY_TOOLCHAIN_INSTALL}\n"
+        "          rustup override set 1.93.0\n"
+    )
+    duplicate_noop = (
+        "      - name: Test raw and safe boundaries, docs, format, and clippy\n"
+        "        run: echo duplicate-name sentinel\n"
+    )
+    moved_late = text.replace(full_step, "", 1)
+    moved_late = moved_late.replace(
+        "  macos-export-boundary:\n",
+        f"{full_step}{duplicate_noop}  macos-export-boundary:\n",
+        1,
+    )
+    with pytest.raises(ValueError, match="exactly one named Rust command step"):
+        verifier.require_workflow_contract(moved_late)
+
+@pytest.mark.parametrize("command", [
+    "          cargo fmt --manifest-path rust/Cargo.toml --all -- --check\n",
+    "          cargo clippy --manifest-path rust/Cargo.toml --locked --package betelgeuze-sys --package betelgeuze-runtime --all-targets -- -D warnings\n",
+])
+def test_rust_boundary_exact_command_step_removal_fails_closed(command: str) -> None:
+    text = (ROOT / verifier.WORKFLOW_RELATIVE_PATH).read_text()
+    assert text.count(command) == 1
+    with pytest.raises(ValueError, match="exact rust-boundaries command step"):
+        verifier.require_workflow_contract(text.replace(command, "", 1))
 
 @pytest.mark.parametrize("old,new", [
     ("DBG_ENABLE_HIP=OFF", "DBG_ENABLE_HIP=ON"),
