@@ -218,6 +218,42 @@ def test_predecessor_workflow_freeze_is_exact() -> None:
     ).read_text()
 
 
+def test_predecessor_unit_freeze_is_exact() -> None:
+    verifier.require_predecessor_unit_freeze(ROOT)
+    frozen = verifier.git(
+        "show",
+        f"{verifier.PREDECESSOR['merge_commit']}:"
+        f"{verifier.PREDECESSOR_UNIT_RELATIVE_PATH.as_posix()}",
+    ).stdout.decode()
+    expected = verifier.expected_frozen_predecessor_unit(frozen)
+    assert expected == (
+        ROOT / verifier.PREDECESSOR_UNIT_RELATIVE_PATH
+    ).read_text()
+
+
+@pytest.mark.parametrize(
+    "old,new",
+    [
+        ("    FORCE_SCRATCH_EVIDENCE_PRESENT,\n", "    False,\n"),
+        (").is_file()\n", ").is_dir()\n"),
+        ("pytestmark = pytest.mark.skipif(\n", "pytestmark = pytest.mark.xfail(\n"),
+    ],
+)
+def test_predecessor_unit_freeze_mutation_fails_closed(
+    tmp_path: Path,
+    old: str,
+    new: str,
+) -> None:
+    relative = verifier.PREDECESSOR_UNIT_RELATIVE_PATH
+    destination = tmp_path / relative
+    destination.parent.mkdir(parents=True)
+    current = (ROOT / relative).read_text()
+    assert current.count(old) == 1
+    destination.write_text(current.replace(old, new, 1))
+    with pytest.raises(ValueError, match="predecessor unit freeze drift"):
+        verifier.require_predecessor_unit_freeze(tmp_path)
+
+
 def test_workflow_is_pinned_cpu_only_and_fetches_predecessor() -> None:
     text = (ROOT / verifier.WORKFLOW_RELATIVE_PATH).read_text()
     assert text.count(verifier.PINNED_CHECKOUT_ACTION) == 4

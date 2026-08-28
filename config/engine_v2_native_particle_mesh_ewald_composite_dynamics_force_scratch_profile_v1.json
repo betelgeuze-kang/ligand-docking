@@ -52,7 +52,7 @@
     "persistent_final_soa_force_output_storage": true,
     "source_manifest_entry_count": 194,
     "source_manifest_path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_profile_v1_sources.json",
-    "source_manifest_sha256": "e38828389a1e03ba2a9185ea6b84b143970e0fcc609199000a5ce60f2416da54",
+    "source_manifest_sha256": "d428b3f18d26382fbb7e5e8a48f3a114eb953b8708bec77c4f00ec6c0d1bcc3f",
     "storage_transfer_after_upstream_success_only": true,
     "test_only_owner_introspection_not_exported": true,
     "timing_claimed": false

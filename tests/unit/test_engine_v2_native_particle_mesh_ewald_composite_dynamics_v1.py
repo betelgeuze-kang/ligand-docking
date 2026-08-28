@@ -5,6 +5,18 @@ import pytest
 from tools import verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_v1 as verifier
 
 ROOT = Path(__file__).resolve().parents[2]
+FORCE_SCRATCH_EVIDENCE_PRESENT = (
+    ROOT
+    / "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_"
+    "force_scratch_profile_v1.json"
+).is_file()
+pytestmark = pytest.mark.skipif(
+    FORCE_SCRATCH_EVIDENCE_PRESENT,
+    reason=(
+        "legacy particle-mesh Ewald composite dynamics evidence is verified "
+        "from its exact frozen object after force-scratch evidence is present"
+    ),
+)
 
 def test_exact_profile_manifest_and_contracts() -> None:
     result = verifier.verify(ROOT)

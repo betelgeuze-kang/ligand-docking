@@ -38,6 +38,9 @@ UNIT_RELATIVE_PATH = Path(
     "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_"
     "dynamics_force_scratch_v1.py"
 )
+PREDECESSOR_UNIT_RELATIVE_PATH = Path(
+    "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_v1.py"
+)
 VERIFIER_RELATIVE_PATH = Path(
     "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_"
     "force_scratch_v1.py"
@@ -111,7 +114,10 @@ EXPECTED_DELTA_PATHS = tuple(
     sorted(
         set(EVIDENCE_PATHS)
         | set(IMPLEMENTATION_DELTA_PATHS)
-        | {PREDECESSOR_WORKFLOW_RELATIVE_PATH},
+        | {
+            PREDECESSOR_WORKFLOW_RELATIVE_PATH,
+            PREDECESSOR_UNIT_RELATIVE_PATH,
+        },
         key=lambda path: path.as_posix(),
     )
 )
@@ -133,7 +139,7 @@ REQUIRED_TRIGGER_PATHS = (
     "tools/__init__.py",
     "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_v1.py",
     VERIFIER_RELATIVE_PATH.as_posix(),
-    "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_v1.py",
+    PREDECESSOR_UNIT_RELATIVE_PATH.as_posix(),
     UNIT_RELATIVE_PATH.as_posix(),
 )
 AUTHORITY = {
@@ -434,6 +440,7 @@ def discover_source_paths(root: Path = ROOT) -> list[Path]:
             PREDECESSOR_PROFILE_RELATIVE_PATH,
             PREDECESSOR_MANIFEST_RELATIVE_PATH,
             PREDECESSOR_WORKFLOW_RELATIVE_PATH,
+            PREDECESSOR_UNIT_RELATIVE_PATH,
             WORKFLOW_RELATIVE_PATH,
             DOC_RELATIVE_PATH,
             UNIT_RELATIVE_PATH,
@@ -939,6 +946,37 @@ def require_predecessor_workflow_freeze(root: Path = ROOT) -> None:
         fail("predecessor workflow freeze drift")
 
 
+def expected_frozen_predecessor_unit(frozen: str) -> str:
+    anchor = "ROOT = Path(__file__).resolve().parents[2]\n"
+    addition = """FORCE_SCRATCH_EVIDENCE_PRESENT = (
+    ROOT
+    / "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_"
+    "force_scratch_profile_v1.json"
+).is_file()
+pytestmark = pytest.mark.skipif(
+    FORCE_SCRATCH_EVIDENCE_PRESENT,
+    reason=(
+        "legacy particle-mesh Ewald composite dynamics evidence is verified "
+        "from its exact frozen object after force-scratch evidence is present"
+    ),
+)
+"""
+    if frozen.count(anchor) != 1:
+        fail("frozen predecessor unit insertion point drift")
+    return frozen.replace(anchor, anchor + addition, 1)
+
+
+def require_predecessor_unit_freeze(root: Path = ROOT) -> None:
+    merge = PREDECESSOR["merge_commit"]
+    frozen = git(
+        "show", f"{merge}:{PREDECESSOR_UNIT_RELATIVE_PATH.as_posix()}"
+    ).stdout.decode()
+    expected = expected_frozen_predecessor_unit(frozen)
+    current = (root / PREDECESSOR_UNIT_RELATIVE_PATH).read_text()
+    if current != expected:
+        fail("predecessor unit freeze drift")
+
+
 def expected_force_scratch_source(frozen: str) -> str:
     old = """    cpu::Evaluation candidate;
     candidate.energy.struct_size =
@@ -1075,6 +1113,7 @@ def require_contracts(root: Path = ROOT) -> None:
     require_exact_public_symbols(root)
     require_force_scratch_contract(root)
     require_predecessor_workflow_freeze(root)
+    require_predecessor_unit_freeze(root)
     require_workflow_contract((root / WORKFLOW_RELATIVE_PATH).read_text())
     observed_delta = current_delta_paths()
     if observed_delta != EXPECTED_DELTA_PATHS:
