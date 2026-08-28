@@ -14,6 +14,17 @@ from tools import (
 
 
 ROOT = Path(__file__).resolve().parents[2]
+PARTICLE_MESH_EWALD_COMPOSITE_DYNAMICS_EVIDENCE_PRESENT = (
+    ROOT
+    / "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_profile_v1.json"
+).is_file()
+pytestmark = pytest.mark.skipif(
+    PARTICLE_MESH_EWALD_COMPOSITE_DYNAMICS_EVIDENCE_PRESENT,
+    reason=(
+        "legacy particle-mesh Ewald composite evidence is verified from its exact "
+        "frozen object after particle-mesh Ewald composite dynamics evidence is present"
+    ),
+)
 PROFILE = ROOT / verifier.PROFILE_RELATIVE_PATH
 MANIFEST = ROOT / verifier.SOURCE_MANIFEST_RELATIVE_PATH
 TOOL = ROOT / (

@@ -61,6 +61,7 @@ const VENDORED_FILES: &[&str] = &[
     "include/betelgeuze/direct_ewald_composite_dynamics.h",
     "include/betelgeuze/particle_mesh_ewald.h",
     "include/betelgeuze/particle_mesh_ewald_composite.h",
+    "include/betelgeuze/particle_mesh_ewald_composite_dynamics.h",
     "include/betelgeuze/particle_mesh_reciprocal.h",
     "native/src/internal.hpp",
     "native/src/context.cpp",
@@ -71,6 +72,10 @@ const VENDORED_FILES: &[&str] = &[
     "native/src/composite/direct_ewald_composite_checkpoint.cpp",
     "native/src/composite/particle_mesh_ewald.cpp",
     "native/src/composite/particle_mesh_ewald_composite.cpp",
+    "native/src/composite/particle_mesh_ewald_composite_evaluator.hpp",
+    "native/src/composite/particle_mesh_ewald_composite_dynamics.hpp",
+    "native/src/composite/particle_mesh_ewald_composite_dynamics.cpp",
+    "native/src/composite/particle_mesh_ewald_composite_checkpoint.cpp",
     "native/src/ewald/api.cpp",
     "native/src/ewald/cpp_evaluator.cpp",
     "native/src/ewald/cpp_evaluator.hpp",
@@ -468,6 +473,10 @@ fn main() {
         vendor_root.join("native/src/composite/particle_mesh_ewald.cpp");
     let particle_mesh_ewald_composite_source =
         vendor_root.join("native/src/composite/particle_mesh_ewald_composite.cpp");
+    let particle_mesh_ewald_composite_dynamics_source =
+        vendor_root.join("native/src/composite/particle_mesh_ewald_composite_dynamics.cpp");
+    let particle_mesh_ewald_composite_checkpoint_source =
+        vendor_root.join("native/src/composite/particle_mesh_ewald_composite_checkpoint.cpp");
     let direct_ewald_api_source = vendor_root.join("native/src/ewald/api.cpp");
     let direct_ewald_cpp_evaluator_source = vendor_root.join("native/src/ewald/cpp_evaluator.cpp");
     let direct_ewald_rust_evaluator_source =
@@ -531,6 +540,10 @@ fn main() {
         manifest_dir.join("abi/particle_mesh_ewald_composite_header_c11.c");
     let particle_mesh_ewald_composite_cpp_layout_probe =
         manifest_dir.join("abi/particle_mesh_ewald_composite_layout_assertions.cpp");
+    let particle_mesh_ewald_composite_dynamics_c_header_probe =
+        manifest_dir.join("abi/particle_mesh_ewald_composite_dynamics_header_c11.c");
+    let particle_mesh_ewald_composite_dynamics_cpp_layout_probe =
+        manifest_dir.join("abi/particle_mesh_ewald_composite_dynamics_layout_assertions.cpp");
     let composite_c_header_probe = manifest_dir.join("abi/composite_header_c11.c");
     let composite_cpp_layout_probe = manifest_dir.join("abi/composite_layout_assertions.cpp");
     let composite_dynamics_c_header_probe =
@@ -547,6 +560,8 @@ fn main() {
     track(&particle_mesh_ewald_cpp_layout_probe);
     track(&particle_mesh_ewald_composite_c_header_probe);
     track(&particle_mesh_ewald_composite_cpp_layout_probe);
+    track(&particle_mesh_ewald_composite_dynamics_c_header_probe);
+    track(&particle_mesh_ewald_composite_dynamics_cpp_layout_probe);
     track(&composite_c_header_probe);
     track(&composite_cpp_layout_probe);
     track(&composite_dynamics_c_header_probe);
@@ -567,6 +582,8 @@ fn main() {
         .file(&direct_ewald_composite_checkpoint_source)
         .file(&particle_mesh_ewald_source)
         .file(&particle_mesh_ewald_composite_source)
+        .file(&particle_mesh_ewald_composite_dynamics_source)
+        .file(&particle_mesh_ewald_composite_checkpoint_source)
         .file(&direct_ewald_api_source)
         .file(&direct_ewald_cpp_evaluator_source)
         .file(&direct_ewald_rust_evaluator_source)
@@ -756,6 +773,14 @@ fn main() {
 
     cc::Build::new()
         .include(&include_dir)
+        .file(&particle_mesh_ewald_composite_dynamics_c_header_probe)
+        .flag_if_supported("-std=c11")
+        .warnings(true)
+        .warnings_into_errors(true)
+        .compile("betelgeuze_sys_particle_mesh_ewald_composite_dynamics_header_c11_probe");
+
+    cc::Build::new()
+        .include(&include_dir)
         .file(&composite_c_header_probe)
         .flag_if_supported("-std=c11")
         .warnings(true)
@@ -814,6 +839,15 @@ fn main() {
         .warnings(true)
         .warnings_into_errors(true)
         .compile("betelgeuze_sys_particle_mesh_ewald_composite_cpp_layout_probe");
+
+    cc::Build::new()
+        .cpp(true)
+        .std("c++17")
+        .include(&include_dir)
+        .file(&particle_mesh_ewald_composite_dynamics_cpp_layout_probe)
+        .warnings(true)
+        .warnings_into_errors(true)
+        .compile("betelgeuze_sys_particle_mesh_ewald_composite_dynamics_cpp_layout_probe");
 
     cc::Build::new()
         .cpp(true)

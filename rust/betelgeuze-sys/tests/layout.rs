@@ -24,6 +24,15 @@ fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(BG_DIRECT_EWALD_COMPOSITE_DYNAMICS_ABI_VERSION_MAJOR, 1);
     assert_eq!(BG_DIRECT_EWALD_COMPOSITE_DYNAMICS_ABI_VERSION_MINOR, 0);
     assert_eq!(BG_DIRECT_EWALD_COMPOSITE_DYNAMICS_ABI_VERSION, 1);
+    assert_eq!(
+        BG_PARTICLE_MESH_EWALD_COMPOSITE_DYNAMICS_ABI_VERSION_MAJOR,
+        1
+    );
+    assert_eq!(
+        BG_PARTICLE_MESH_EWALD_COMPOSITE_DYNAMICS_ABI_VERSION_MINOR,
+        0
+    );
+    assert_eq!(BG_PARTICLE_MESH_EWALD_COMPOSITE_DYNAMICS_ABI_VERSION, 1);
     assert_eq!(BG_DIRECT_EWALD_ERROR_DETAIL_CAPACITY, 256);
     assert_eq!(size_of::<bg_status>(), 4);
     assert_eq!(size_of::<bg_backend>(), 4);
@@ -2558,6 +2567,34 @@ fn direct_ewald_composite_dynamics_reuses_frozen_engine_layouts() {
     assert_eq!(offset_of!(bg_dynamics_report_v1, reserved), 72);
 }
 
+#[cfg(target_pointer_width = "64")]
+#[test]
+fn particle_mesh_ewald_composite_dynamics_reuses_frozen_engine_layouts() {
+    assert_eq!(size_of::<bg_distance_constraints_v1>(), 104);
+    assert_eq!(align_of::<bg_distance_constraints_v1>(), 8);
+    assert_eq!(offset_of!(bg_distance_constraints_v1, constraint_count), 8);
+    assert_eq!(offset_of!(bg_distance_constraints_v1, atom_i), 24);
+    assert_eq!(offset_of!(bg_distance_constraints_v1, max_iterations), 64);
+    assert_eq!(offset_of!(bg_distance_constraints_v1, reserved), 72);
+
+    assert_eq!(size_of::<bg_simulation_options_v1>(), 80);
+    assert_eq!(align_of::<bg_simulation_options_v1>(), 8);
+    assert_eq!(offset_of!(bg_simulation_options_v1, integrator), 12);
+    assert_eq!(
+        offset_of!(bg_simulation_options_v1, timestep_femtoseconds),
+        16
+    );
+    assert_eq!(offset_of!(bg_simulation_options_v1, random_seed), 40);
+    assert_eq!(offset_of!(bg_simulation_options_v1, reserved), 48);
+
+    assert_eq!(size_of::<bg_dynamics_report_v1>(), 104);
+    assert_eq!(align_of::<bg_dynamics_report_v1>(), 8);
+    assert_eq!(offset_of!(bg_dynamics_report_v1, steps_completed), 16);
+    assert_eq!(offset_of!(bg_dynamics_report_v1, absolute_step), 24);
+    assert_eq!(offset_of!(bg_dynamics_report_v1, degrees_of_freedom), 32);
+    assert_eq!(offset_of!(bg_dynamics_report_v1, reserved), 72);
+}
+
 #[test]
 fn opaque_handles_are_only_used_behind_pointers() {
     assert_eq!(size_of::<*mut bg_context>(), size_of::<usize>());
@@ -2569,6 +2606,10 @@ fn opaque_handles_are_only_used_behind_pointers() {
     );
     assert_eq!(
         size_of::<*mut bg_direct_ewald_composite_simulation_v1>(),
+        size_of::<usize>()
+    );
+    assert_eq!(
+        size_of::<*mut bg_particle_mesh_ewald_composite_simulation_v1>(),
         size_of::<usize>()
     );
     assert_eq!(size_of::<*mut bg_simulation>(), size_of::<usize>());

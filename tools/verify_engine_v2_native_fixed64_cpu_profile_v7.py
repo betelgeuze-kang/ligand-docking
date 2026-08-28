@@ -154,6 +154,7 @@ EXPECTED_CARGO_TARGETS = {
     "rust/betelgeuze-runtime/tests/fixed64_cpu_probe_v5_activation.rs",
     "rust/betelgeuze-runtime/tests/particle_mesh_ewald.rs",
     "rust/betelgeuze-runtime/tests/particle_mesh_ewald_composite.rs",
+    "rust/betelgeuze-runtime/tests/particle_mesh_ewald_composite_dynamics.rs",
     "rust/betelgeuze-runtime/tests/particle_mesh_reciprocal.rs",
     "rust/betelgeuze-runtime/tests/runtime.rs",
     "rust/betelgeuze-sys/build.rs",
