@@ -224,8 +224,11 @@ struct PairRules {
 /// Real-space pairs use lexicographic `i < j` order and strict comparisons at
 /// the half-cell image boundary after primary-cell reduction. Reciprocal
 /// vectors use nested `nx`, `ny`, `nz` ascending order over the inclusive
-/// configured bounds, omitting only `(0,0,0)`. Structure factors and per-vector
-/// forces traverse atoms in input order.
+/// configured bounds, omitting only `(0,0,0)`. The exact internal-only
+/// `[0,0,0]` sentinel skips reciprocal evaluation for the native
+/// particle-mesh Ewald composition path; public direct-Ewald model creation
+/// does not admit it. Structure factors and per-vector forces traverse atoms
+/// in input order.
 ///
 /// # Errors
 ///
@@ -678,17 +681,18 @@ fn validate_settings(input: &EwaldInput) -> Result<(), EwaldError> {
             format!("total charge {total_charge} is not exactly zero"),
         ));
     }
-    for (axis, maximum) in input
-        .settings
-        .reciprocal_max_indices
-        .iter()
-        .copied()
-        .enumerate()
-    {
-        if !(1..=MAX_RECIPROCAL_INDEX).contains(&maximum) {
-            return Err(invalid_parameter(format!(
-                "reciprocal_max_indices axis {axis} must lie in [1,{MAX_RECIPROCAL_INDEX}]"
-            )));
+    let reciprocal_max_indices = input.settings.reciprocal_max_indices;
+    // The native particle-mesh Ewald boundary passes an internal copied model
+    // with exact all-zero bounds to retain direct real-space, self, and pair
+    // terms without also evaluating the direct reciprocal sum. Public native
+    // direct-model construction continues to require every bound in [1,32].
+    if reciprocal_max_indices != [0; 3] {
+        for (axis, maximum) in reciprocal_max_indices.into_iter().enumerate() {
+            if !(1..=MAX_RECIPROCAL_INDEX).contains(&maximum) {
+                return Err(invalid_parameter(format!(
+                    "reciprocal_max_indices axis {axis} must lie in [1,{MAX_RECIPROCAL_INDEX}], or all three must be zero for internal local-only evaluation"
+                )));
+            }
         }
     }
     for (axis, length) in input.cell.lengths_angstrom.iter().copied().enumerate() {
@@ -995,7 +999,7 @@ fn validate_work_limit(input: &EwaldInput, pair_rule_count: usize) -> Result<(),
     let dimensions = input
         .settings
         .reciprocal_max_indices
-        .map(|maximum| usize::try_from(2 * maximum + 1).expect("validated positive bound"));
+        .map(|maximum| usize::try_from(2 * maximum + 1).expect("validated nonnegative bound"));
     let vector_count = dimensions
         .into_iter()
         .try_fold(1_usize, usize::checked_mul)
@@ -2224,6 +2228,95 @@ mod tests {
             energy_bits(with_forces.energy),
             energy_bits(energy_only.energy)
         );
+    }
+
+    #[test]
+    fn internal_all_zero_reciprocal_bounds_preserve_local_terms_and_forces() {
+        let mut input = EwaldInput::new(
+            vec![Position::default(), Position::new(1.3, 0.4, 0.7)],
+            vec![1.0, -1.0],
+            OrthorhombicCell {
+                lengths_angstrom: [10.0, 12.0, 14.0],
+            },
+        );
+        input.settings.alpha_per_angstrom = 0.31;
+        input.settings.real_space_cutoff_angstrom = 4.0;
+        input.settings.reciprocal_max_indices = [0; 3];
+        input.pair_scales = vec![super::PairScale {
+            atom_i: 0,
+            atom_j: 1,
+            coulomb_scale: 0.5,
+        }];
+
+        let pair_rules = validate(&input).expect("the internal all-zero sentinel is valid");
+        let coulomb_scale = COULOMB_KCAL_ANGSTROM_PER_MOL_E2 / input.settings.dielectric;
+        let mut expected_local = EwaldEvaluation {
+            energy: EwaldEnergyComponents::default(),
+            forces_kcal_per_mol_angstrom: vec![[0.0; 3]; input.positions.len()],
+        };
+        evaluate_real_space(&input, coulomb_scale, true, &mut expected_local)
+            .expect("local real-space evaluation must succeed");
+        expected_local.energy.self_kcal_per_mol = -coulomb_scale
+            * input.settings.alpha_per_angstrom
+            * accurate_charge_square_sum(&input.charges_elementary)
+            / libm::sqrt(core::f64::consts::PI);
+        super::evaluate_pair_corrections(
+            &input,
+            &pair_rules,
+            coulomb_scale,
+            true,
+            &mut expected_local,
+        )
+        .expect("local pair-correction evaluation must succeed");
+
+        let observed = super::evaluate(&input).expect("local-only evaluation must succeed");
+        assert_eq!(
+            observed.energy.reciprocal_space_kcal_per_mol.to_bits(),
+            0.0_f64.to_bits()
+        );
+        assert_eq!(
+            [
+                observed.energy.real_space_kcal_per_mol,
+                observed.energy.self_kcal_per_mol,
+                observed.energy.pair_correction_kcal_per_mol,
+            ]
+            .map(f64::to_bits),
+            [
+                expected_local.energy.real_space_kcal_per_mol,
+                expected_local.energy.self_kcal_per_mol,
+                expected_local.energy.pair_correction_kcal_per_mol,
+            ]
+            .map(f64::to_bits)
+        );
+        assert_eq!(
+            observed
+                .forces_kcal_per_mol_angstrom
+                .iter()
+                .flat_map(|force| force.map(f64::to_bits))
+                .collect::<Vec<_>>(),
+            expected_local
+                .forces_kcal_per_mol_angstrom
+                .iter()
+                .flat_map(|force| force.map(f64::to_bits))
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn mixed_zero_reciprocal_bounds_remain_invalid() {
+        let mut input = EwaldInput::new(
+            vec![Position::default(), Position::new(1.3, 0.4, 0.7)],
+            vec![1.0, -1.0],
+            OrthorhombicCell {
+                lengths_angstrom: [10.0, 12.0, 14.0],
+            },
+        );
+        input.settings.real_space_cutoff_angstrom = 4.0;
+        input.settings.reciprocal_max_indices = [0, 1, 1];
+        let Err(error) = validate(&input) else {
+            panic!("mixed zero bounds must fail closed");
+        };
+        assert_eq!(error.code(), EwaldErrorCode::InvalidParameter);
     }
 
     #[test]

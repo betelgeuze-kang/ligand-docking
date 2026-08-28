@@ -8,16 +8,19 @@ on:
       - ".github/workflows/ci-engine-v2-native-direct-ewald-composite-dynamics.yml"
       - "CMakeLists.txt"
       - "include/betelgeuze/particle_mesh_reciprocal.h"
+      - "include/betelgeuze/particle_mesh_ewald.h"
       - "include/betelgeuze/engine.h"
       - "native/CMakeLists.txt"
       - "native/betelgeuze_engine.exports"
       - "native/betelgeuze_engine.map"
       - "native/src/context.cpp"
       - "native/src/particle_mesh_reciprocal/**"
+      - "native/src/composite/particle_mesh_ewald.cpp"
       - "native/src/internal.hpp"
       - "native/src/system.cpp"
       - "native/tests/check_exports.cmake"
       - "native/tests/particle_mesh_reciprocal.cpp"
+      - "native/tests/particle_mesh_ewald.cpp"
       - "rust/Cargo.lock"
       - "rust/Cargo.toml"
       - "rust/cpu-kernel/**"
@@ -35,6 +38,11 @@ on:
       - "tools/verify_engine_v2_native_fixed64_cpu_profile_v7.py"
       - "tools/verify_engine_v2_native_particle_mesh_reciprocal_cpu_v1.py"
       - "tests/unit/test_engine_v2_native_particle_mesh_reciprocal_cpu_v1.py"
+      - "config/engine_v2_native_particle_mesh_ewald_cpu_profile_v1.json"
+      - "config/engine_v2_native_particle_mesh_ewald_cpu_profile_v1_sources.json"
+      - "docs/engine_v2_native_particle_mesh_ewald_cpu_v1.md"
+      - "tools/verify_engine_v2_native_particle_mesh_ewald_cpu_v1.py"
+      - "tests/unit/test_engine_v2_native_particle_mesh_ewald_cpu_v1.py"
       - "tests/unit/test_engine_v2_native_direct_ewald_cpu_v1.py"
       - "tests/unit/test_engine_v2_native_direct_ewald_composite_v1.py"
       - "tests/unit/test_engine_v2_native_direct_ewald_composite_dynamics_v1.py"
@@ -47,16 +55,19 @@ on:
       - ".github/workflows/ci-engine-v2-native-direct-ewald-composite-dynamics.yml"
       - "CMakeLists.txt"
       - "include/betelgeuze/particle_mesh_reciprocal.h"
+      - "include/betelgeuze/particle_mesh_ewald.h"
       - "include/betelgeuze/engine.h"
       - "native/CMakeLists.txt"
       - "native/betelgeuze_engine.exports"
       - "native/betelgeuze_engine.map"
       - "native/src/context.cpp"
       - "native/src/particle_mesh_reciprocal/**"
+      - "native/src/composite/particle_mesh_ewald.cpp"
       - "native/src/internal.hpp"
       - "native/src/system.cpp"
       - "native/tests/check_exports.cmake"
       - "native/tests/particle_mesh_reciprocal.cpp"
+      - "native/tests/particle_mesh_ewald.cpp"
       - "rust/Cargo.lock"
       - "rust/Cargo.toml"
       - "rust/cpu-kernel/**"
@@ -74,6 +85,11 @@ on:
       - "tools/verify_engine_v2_native_fixed64_cpu_profile_v7.py"
       - "tools/verify_engine_v2_native_particle_mesh_reciprocal_cpu_v1.py"
       - "tests/unit/test_engine_v2_native_particle_mesh_reciprocal_cpu_v1.py"
+      - "config/engine_v2_native_particle_mesh_ewald_cpu_profile_v1.json"
+      - "config/engine_v2_native_particle_mesh_ewald_cpu_profile_v1_sources.json"
+      - "docs/engine_v2_native_particle_mesh_ewald_cpu_v1.md"
+      - "tools/verify_engine_v2_native_particle_mesh_ewald_cpu_v1.py"
+      - "tests/unit/test_engine_v2_native_particle_mesh_ewald_cpu_v1.py"
       - "tests/unit/test_engine_v2_native_direct_ewald_cpu_v1.py"
       - "tests/unit/test_engine_v2_native_direct_ewald_composite_v1.py"
       - "tests/unit/test_engine_v2_native_direct_ewald_composite_dynamics_v1.py"
@@ -139,20 +155,28 @@ jobs:
       - name: Report Python
         run: python3 --version
 
-      - name: Verify canonical profile and source binding
+      - name: Verify exact frozen reciprocal evidence
         run: |
+          frozen=735883551510cbef91adc3e57dc131a1234b67fb
+          frozen_tree=6c2b6f3960b6df0592b78bb44e429389aa58bcbb
+          current_sha="$(git rev-parse HEAD)"
+          test "$(git rev-parse "$frozen^{tree}")" = "$frozen_tree"
+          git diff --exit-code "$frozen" -- \
+            config/engine_v2_native_particle_mesh_reciprocal_cpu_profile_v1.json \
+            config/engine_v2_native_particle_mesh_reciprocal_cpu_profile_v1_sources.json \
+            tools/verify_engine_v2_native_particle_mesh_reciprocal_cpu_v1.py
+          git checkout --detach --quiet "$frozen"
           python3 -m json.tool \
             config/engine_v2_native_particle_mesh_reciprocal_cpu_profile_v1.json >/dev/null
           python3 -m json.tool \
             config/engine_v2_native_particle_mesh_reciprocal_cpu_profile_v1_sources.json \
             >/dev/null
           python3 tools/verify_engine_v2_native_particle_mesh_reciprocal_cpu_v1.py
-
-      - name: Verify fail-closed evidence tests
-        run: |
           python3 -m pip install pytest==8.3.5
           python3 -m pytest -q \
             tests/unit/test_engine_v2_native_particle_mesh_reciprocal_cpu_v1.py
+          git checkout --detach --quiet "$current_sha"
+          test "$(git rev-parse HEAD)" = "$current_sha"
 
   macos-export-boundary:
     runs-on: macos-15

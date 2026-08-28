@@ -1,0 +1,221 @@
+name: ci-engine-v2-native-particle-mesh-ewald
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/ci-engine-v2-native-particle-mesh-ewald.yml"
+      - ".github/workflows/ci-engine-v2-native-particle-mesh-reciprocal.yml"
+      - "CMakeLists.txt"
+      - "include/betelgeuze/engine.h"
+      - "include/betelgeuze/direct_ewald.h"
+      - "include/betelgeuze/particle_mesh_reciprocal.h"
+      - "include/betelgeuze/particle_mesh_ewald.h"
+      - "native/**"
+      - "rust/Cargo.lock"
+      - "rust/Cargo.toml"
+      - "rust/cpu-kernel/**"
+      - "rust/betelgeuze-sys/**"
+      - "rust/betelgeuze-runtime/**"
+      - "rust_engine_v2/Cargo.lock"
+      - "rust_engine_v2/Cargo.toml"
+      - "config/engine_v2_native_particle_mesh_ewald_cpu_profile_v1.json"
+      - "config/engine_v2_native_particle_mesh_ewald_cpu_profile_v1_sources.json"
+      - "docs/engine_v2_native_particle_mesh_ewald_cpu_v1.md"
+      - "tools/__init__.py"
+      - "tools/verify_engine_v2_native_fixed64_cpu_profile_v7.py"
+      - "tools/verify_engine_v2_native_particle_mesh_ewald_cpu_v1.py"
+      - "tests/unit/test_engine_v2_native_particle_mesh_ewald_cpu_v1.py"
+      - "tests/unit/test_engine_v2_native_particle_mesh_reciprocal_cpu_v1.py"
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/ci-engine-v2-native-particle-mesh-ewald.yml"
+      - ".github/workflows/ci-engine-v2-native-particle-mesh-reciprocal.yml"
+      - "CMakeLists.txt"
+      - "include/betelgeuze/engine.h"
+      - "include/betelgeuze/direct_ewald.h"
+      - "include/betelgeuze/particle_mesh_reciprocal.h"
+      - "include/betelgeuze/particle_mesh_ewald.h"
+      - "native/**"
+      - "rust/Cargo.lock"
+      - "rust/Cargo.toml"
+      - "rust/cpu-kernel/**"
+      - "rust/betelgeuze-sys/**"
+      - "rust/betelgeuze-runtime/**"
+      - "rust_engine_v2/Cargo.lock"
+      - "rust_engine_v2/Cargo.toml"
+      - "config/engine_v2_native_particle_mesh_ewald_cpu_profile_v1.json"
+      - "config/engine_v2_native_particle_mesh_ewald_cpu_profile_v1_sources.json"
+      - "docs/engine_v2_native_particle_mesh_ewald_cpu_v1.md"
+      - "tools/__init__.py"
+      - "tools/verify_engine_v2_native_fixed64_cpu_profile_v7.py"
+      - "tools/verify_engine_v2_native_particle_mesh_ewald_cpu_v1.py"
+      - "tests/unit/test_engine_v2_native_particle_mesh_ewald_cpu_v1.py"
+      - "tests/unit/test_engine_v2_native_particle_mesh_reciprocal_cpu_v1.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-engine-v2-native-particle-mesh-ewald-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CUDA_VISIBLE_DEVICES: ""
+  HIP_VISIBLE_DEVICES: ""
+  ROCR_VISIBLE_DEVICES: ""
+
+jobs:
+  immutable-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+    steps:
+      - name: Check out complete history for frozen parent objects
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          clean: true
+          fetch-depth: 0
+
+      - name: Materialize exact reviewed parent heads
+        run: |
+          test "$(git rev-parse ba008fcaa75891bca45e7b3d33b67449d80fb7d4^{tree})" = "0530a50af2cceeff02341ccb6fab141fd8c43726"
+          test "$(git rev-parse 074d3b71373088c0738de7a14797fe35d66d986e^{tree})" = "e2763a42f4605d7435514c49f18259ea44f4dd3c"
+          test "$(git rev-parse ebbd7a20538cfd7516d9b53adb2e54c6de14bd97^{tree})" = "2ae92801369c7e16147e07cbb16e19c062e52cc9"
+          test "$(git rev-parse 735883551510cbef91adc3e57dc131a1234b67fb^{tree})" = "6c2b6f3960b6df0592b78bb44e429389aa58bcbb"
+          git fetch --no-tags --depth=1 origin refs/pull/435/head
+          test "$(git rev-parse FETCH_HEAD)" = "b94e4c008db1c8414f5d0f24fa266c85c828d13c"
+          test "$(git rev-parse FETCH_HEAD^{tree})" = "0530a50af2cceeff02341ccb6fab141fd8c43726"
+          git fetch --no-tags --depth=1 origin refs/pull/436/head
+          test "$(git rev-parse FETCH_HEAD)" = "60a0047af27acacbce3feed7ee1dcedd8a690176"
+          test "$(git rev-parse FETCH_HEAD^{tree})" = "e2763a42f4605d7435514c49f18259ea44f4dd3c"
+          git fetch --no-tags --depth=1 origin refs/pull/439/head
+          test "$(git rev-parse FETCH_HEAD)" = "62d309c82aab9b4cfa45c4c3e6d11c93b3bd3786"
+          test "$(git rev-parse FETCH_HEAD^{tree})" = "2ae92801369c7e16147e07cbb16e19c062e52cc9"
+          git fetch --no-tags --depth=1 origin refs/pull/440/head
+          test "$(git rev-parse FETCH_HEAD)" = "098bce0d726dbed6e4bf7b533e0445f81e244ea2"
+          test "$(git rev-parse FETCH_HEAD^{tree})" = "6c2b6f3960b6df0592b78bb44e429389aa58bcbb"
+
+      - name: Verify canonical profile and fail-closed evidence
+        run: |
+          python3 -m json.tool \
+            config/engine_v2_native_particle_mesh_ewald_cpu_profile_v1.json >/dev/null
+          python3 -m json.tool \
+            config/engine_v2_native_particle_mesh_ewald_cpu_profile_v1_sources.json >/dev/null
+          python3 -m pip install pytest==8.3.5
+          python3 tools/verify_engine_v2_native_particle_mesh_ewald_cpu_v1.py
+          python3 -m pytest -q \
+            tests/unit/test_engine_v2_native_particle_mesh_ewald_cpu_v1.py
+
+  native-linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out native and Rust sources
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          clean: true
+          fetch-depth: 1
+
+      - name: Select frozen hosted Rust toolchain
+        run: |
+          rustup toolchain install 1.93.0 --profile minimal
+          rustup override set 1.93.0
+
+      - name: Build and test release native composition
+        run: |
+          cmake -S . -B build/native-pme-ewald-release \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=ON \
+            -DBG_ENABLE_HIP=OFF \
+            -DBG_ENABLE_HIP_SAFE=OFF
+          cmake --build build/native-pme-ewald-release \
+            --target betelgeuze_engine_particle_mesh_ewald --parallel 2
+          ctest --test-dir build/native-pme-ewald-release \
+            -R '^betelgeuze_engine_(particle_mesh_ewald|export_allowlist)$' \
+            --output-on-failure
+
+      - name: Build and test sanitizer native composition
+        env:
+          ASAN_OPTIONS: detect_leaks=1:strict_string_checks=1
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+        run: |
+          cmake -S . -B build/native-pme-ewald-sanitize \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DBUILD_TESTING=ON \
+            -DBG_ENABLE_HIP=OFF \
+            -DBG_ENABLE_HIP_SAFE=OFF \
+            -DCMAKE_C_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer' \
+            -DCMAKE_CXX_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer'
+          cmake --build build/native-pme-ewald-sanitize \
+            --target betelgeuze_engine_particle_mesh_ewald --parallel 2
+          ctest --test-dir build/native-pme-ewald-sanitize \
+            -R '^betelgeuze_engine_particle_mesh_ewald$' --output-on-failure
+
+  rust-bindings:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out packaged bindings
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          clean: true
+          fetch-depth: 1
+
+      - name: Select frozen hosted Rust toolchain
+        run: |
+          rustup toolchain install 1.93.0 --profile minimal
+          rustup override set 1.93.0
+
+      - name: Verify raw and safe Rust boundaries
+        run: |
+          cargo test --manifest-path rust/Cargo.toml --locked \
+            --package betelgeuze-cpu-kernel direct_ewald
+          cargo test --manifest-path rust/Cargo.toml --locked \
+            --package betelgeuze-sys --test layout --test raw_smoke
+          cargo test --manifest-path rust/Cargo.toml --locked \
+            --package betelgeuze-runtime --test particle_mesh_ewald
+          cargo package --manifest-path rust/betelgeuze-sys/Cargo.toml --locked \
+            --config 'patch.crates-io.betelgeuze-cpu-kernel.path="rust/cpu-kernel"'
+          BETELGEUZE_V7_NON_AUTHORITATIVE_PACKAGE_BUILD=1 \
+          BETELGEUZE_V7_SOURCE_ROOT="$GITHUB_WORKSPACE" \
+          cargo package --manifest-path rust/betelgeuze-runtime/Cargo.toml --locked \
+            --config 'patch.crates-io.betelgeuze-sys.path="rust/betelgeuze-sys"' \
+            --config 'patch.crates-io.betelgeuze-cpu-kernel.path="rust/cpu-kernel"' \
+            --config 'patch.crates-io.betelgeuze-docking-search.path="rust/betelgeuze-docking-search"' \
+            --config 'patch.crates-io.betelgeuze-reference-physics.path="rust/reference-physics"' \
+            --config 'patch.crates-io.betelgeuze-reference-dynamics.path="rust/reference-dynamics"'
+
+  macos-export-boundary:
+    runs-on: macos-15
+    timeout-minutes: 35
+    steps:
+      - name: Check out native compute sources
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          clean: true
+          fetch-depth: 1
+
+      - name: Select frozen hosted Rust toolchain
+        run: |
+          rustup toolchain install 1.93.0 --profile minimal
+          rustup override set 1.93.0
+
+      - name: Build shared engine and verify exact exports
+        run: |
+          cmake -S . -B build/native-pme-ewald-macos \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=ON \
+            -DBG_ENABLE_HIP=OFF \
+            -DBG_ENABLE_HIP_SAFE=OFF
+          cmake --build build/native-pme-ewald-macos \
+            --target betelgeuze_engine --parallel 2
+          ctest --test-dir build/native-pme-ewald-macos \
+            -R '^betelgeuze_engine_export_allowlist$' --output-on-failure

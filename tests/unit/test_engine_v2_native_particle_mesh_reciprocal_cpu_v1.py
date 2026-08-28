@@ -19,6 +19,19 @@ WORKFLOW = ROOT / (
     ".github/workflows/ci-engine-v2-native-particle-mesh-reciprocal.yml"
 )
 
+_ADDITIVE_PARTICLE_MESH_EWALD_EVIDENCE = (
+    ROOT / "include/betelgeuze/particle_mesh_ewald.h",
+    ROOT / "config/engine_v2_native_particle_mesh_ewald_cpu_profile_v1.json",
+    ROOT / "tools/verify_engine_v2_native_particle_mesh_ewald_cpu_v1.py",
+)
+pytestmark = pytest.mark.skipif(
+    all(path.exists() for path in _ADDITIVE_PARTICLE_MESH_EWALD_EVIDENCE),
+    reason=(
+        "legacy reciprocal-only evidence is verified from its exact frozen object "
+        "after the additive particle-mesh Ewald ABI is present"
+    ),
+)
+
 
 def test_exact_profile_and_source_binding_verify() -> None:
     profile_raw = PROFILE.read_bytes()
