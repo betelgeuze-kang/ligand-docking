@@ -1,0 +1,23 @@
+[package]
+name = "betelgeuze-reference-pme-reciprocal"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+license-file = "../../LICENSE"
+publish = false
+description = "Independent deterministic scalar particle-mesh reciprocal reference for Betelgeuze"
+
+[dependencies]
+libm = { version = "=0.2.16", default-features = false }
+
+[dev-dependencies]
+betelgeuze-reference-ewald = { version = "=0.1.0", path = "../reference-ewald" }
+
+[workspace]
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = "deny"
+pedantic = "deny"
