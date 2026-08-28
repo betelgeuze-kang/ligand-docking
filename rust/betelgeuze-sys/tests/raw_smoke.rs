@@ -26,6 +26,15 @@ unsafe fn initialize<T>(
 unsafe fn assert_initializer_exact<T>(
     initializer: unsafe extern "C" fn(*mut T, usize, u32) -> bg_status,
 ) {
+    // SAFETY: This wrapper preserves the frozen Engine ABI version used by
+    // the existing descriptor-initializer coverage below.
+    unsafe { assert_versioned_initializer_exact(initializer, BG_ABI_VERSION) };
+}
+
+unsafe fn assert_versioned_initializer_exact<T>(
+    initializer: unsafe extern "C" fn(*mut T, usize, u32) -> bg_status,
+    abi_version: u32,
+) {
     let size = core::mem::size_of::<T>();
     assert!(size > 0);
     let mut storage = core::mem::MaybeUninit::<T>::uninit();
@@ -37,9 +46,9 @@ unsafe fn assert_initializer_exact<T>(
     let snapshot = snapshot.to_vec();
 
     for (caller_size, caller_version) in [
-        (size - 1, BG_ABI_VERSION),
-        (size + 1, BG_ABI_VERSION),
-        (size, BG_ABI_VERSION + 1),
+        (size - 1, abi_version),
+        (size + 1, abi_version),
+        (size, abi_version + 1),
     ] {
         // SAFETY: The pointer addresses size bytes, and the initializer must
         // reject this incompatible identity before dereferencing it.
@@ -56,7 +65,7 @@ unsafe fn assert_initializer_exact<T>(
 
     // SAFETY: Exact size/version authorizes initialization of the whole T.
     assert_eq!(
-        unsafe { initializer(storage.as_mut_ptr(), size, BG_ABI_VERSION) },
+        unsafe { initializer(storage.as_mut_ptr(), size, abi_version) },
         BG_STATUS_OK
     );
 }
@@ -231,6 +240,207 @@ fn direct_ewald_abi_identity_and_initializers_match_the_header() {
         assert_eq!(error.abi_version, BG_DIRECT_EWALD_ABI_VERSION);
         assert_eq!(error.code, BG_DIRECT_EWALD_ERROR_NONE);
         assert!(error.detail.iter().all(|byte| *byte == 0));
+    }
+}
+
+#[test]
+fn direct_ewald_composite_identity_initializers_and_null_failure_are_transactional() {
+    // SAFETY: Identity functions take no pointers. Initializers receive exact
+    // writable storage. The evaluation deliberately supplies null borrowed
+    // handles while retaining valid, disjoint output descriptors.
+    unsafe {
+        assert_eq!(
+            bg_direct_ewald_composite_abi_version(),
+            BG_DIRECT_EWALD_COMPOSITE_ABI_VERSION
+        );
+        assert_eq!(
+            bg_direct_ewald_composite_abi_version_major(),
+            BG_DIRECT_EWALD_COMPOSITE_ABI_VERSION_MAJOR
+        );
+        assert_eq!(
+            bg_direct_ewald_composite_abi_version_minor(),
+            BG_DIRECT_EWALD_COMPOSITE_ABI_VERSION_MINOR
+        );
+        assert_eq!(
+            owned_string(bg_direct_ewald_composite_abi_version_string()),
+            "1.0.0"
+        );
+        assert_eq!(
+            owned_string(bg_direct_ewald_composite_v1_profile_id()),
+            "betelgeuze.native_direct_ewald_composite/1.0.0"
+        );
+
+        assert_versioned_initializer_exact(
+            bg_direct_ewald_composite_energy_components_v1_init,
+            BG_DIRECT_EWALD_COMPOSITE_ABI_VERSION,
+        );
+        assert_versioned_initializer_exact(
+            bg_direct_ewald_composite_force_soa_v1_init,
+            BG_DIRECT_EWALD_COMPOSITE_ABI_VERSION,
+        );
+        assert_eq!(
+            bg_direct_ewald_composite_energy_components_v1_init(
+                ptr::null_mut(),
+                core::mem::size_of::<bg_direct_ewald_composite_energy_components_v1>(),
+                BG_DIRECT_EWALD_COMPOSITE_ABI_VERSION,
+            ),
+            BG_STATUS_INVALID_ARGUMENT
+        );
+
+        let mut energy =
+            core::mem::MaybeUninit::<bg_direct_ewald_composite_energy_components_v1>::uninit();
+        assert_eq!(
+            bg_direct_ewald_composite_energy_components_v1_init(
+                energy.as_mut_ptr(),
+                core::mem::size_of::<bg_direct_ewald_composite_energy_components_v1>(),
+                BG_DIRECT_EWALD_COMPOSITE_ABI_VERSION,
+            ),
+            BG_STATUS_OK
+        );
+        let mut energy = energy.assume_init();
+        assert_eq!(
+            energy.struct_size as usize,
+            core::mem::size_of::<bg_direct_ewald_composite_energy_components_v1>()
+        );
+        assert_eq!(energy.abi_version, BG_DIRECT_EWALD_COMPOSITE_ABI_VERSION);
+        assert_eq!(energy.unit_system, BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL);
+        assert_eq!(
+            energy.short_coulomb_kcal_per_mol.to_bits(),
+            0.0_f64.to_bits()
+        );
+        assert!(energy.reserved.iter().all(|value| *value == 0));
+
+        let mut forces = core::mem::MaybeUninit::<bg_direct_ewald_composite_force_soa_v1>::uninit();
+        assert_eq!(
+            bg_direct_ewald_composite_force_soa_v1_init(
+                forces.as_mut_ptr(),
+                core::mem::size_of::<bg_direct_ewald_composite_force_soa_v1>(),
+                BG_DIRECT_EWALD_COMPOSITE_ABI_VERSION,
+            ),
+            BG_STATUS_OK
+        );
+        let mut forces = forces.assume_init();
+        assert_eq!(
+            forces.struct_size as usize,
+            core::mem::size_of::<bg_direct_ewald_composite_force_soa_v1>()
+        );
+        assert_eq!(forces.abi_version, BG_DIRECT_EWALD_COMPOSITE_ABI_VERSION);
+        assert_eq!(forces.unit_system, BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL);
+        assert_eq!(forces.atom_capacity, 0);
+        assert_eq!(forces.atom_count, 0);
+        assert!(forces.x_kcal_per_mol_angstrom.is_null());
+        assert!(forces.y_kcal_per_mol_angstrom.is_null());
+        assert!(forces.z_kcal_per_mol_angstrom.is_null());
+        assert!(forces.reserved.iter().all(|value| *value == 0));
+
+        let mut force_x = [11.0, 12.0, 13.0, 14.0];
+        let mut force_y = [21.0, 22.0, 23.0, 24.0];
+        let mut force_z = [31.0, 32.0, 33.0, 34.0];
+        forces.atom_capacity = 4;
+        forces.atom_count = 77;
+        forces.x_kcal_per_mol_angstrom = force_x.as_mut_ptr();
+        forces.y_kcal_per_mol_angstrom = force_y.as_mut_ptr();
+        forces.z_kcal_per_mol_angstrom = force_z.as_mut_ptr();
+
+        energy.short_harmonic_bond_kcal_per_mol = 1.0;
+        energy.short_harmonic_angle_kcal_per_mol = 2.0;
+        energy.short_periodic_torsion_kcal_per_mol = 3.0;
+        energy.short_lennard_jones_kcal_per_mol = 4.0;
+        energy.short_coulomb_kcal_per_mol = 5.0;
+        energy.short_total_kcal_per_mol = 6.0;
+        energy.ewald_real_space_kcal_per_mol = 7.0;
+        energy.ewald_reciprocal_space_kcal_per_mol = 8.0;
+        energy.ewald_self_kcal_per_mol = 9.0;
+        energy.ewald_pair_correction_kcal_per_mol = 10.0;
+        energy.ewald_total_kcal_per_mol = 11.0;
+        energy.total_kcal_per_mol = 12.0;
+
+        let mut error = core::mem::MaybeUninit::<bg_direct_ewald_error_v1>::uninit();
+        assert_eq!(
+            bg_direct_ewald_error_v1_init(
+                error.as_mut_ptr(),
+                core::mem::size_of::<bg_direct_ewald_error_v1>(),
+                BG_DIRECT_EWALD_ABI_VERSION,
+            ),
+            BG_STATUS_OK
+        );
+        let mut error = error.assume_init();
+        error.code = BG_DIRECT_EWALD_ERROR_NONFINITE_RESULT;
+        error.detail[0] = b'x' as c_char;
+
+        assert_eq!(
+            bg_context_evaluate_direct_ewald_composite_v1(
+                ptr::null(),
+                ptr::null(),
+                ptr::null(),
+                ptr::null(),
+                &mut energy,
+                &mut forces,
+                &mut error,
+            ),
+            BG_STATUS_INVALID_ARGUMENT
+        );
+        assert_eq!(
+            [
+                energy.short_harmonic_bond_kcal_per_mol,
+                energy.short_harmonic_angle_kcal_per_mol,
+                energy.short_periodic_torsion_kcal_per_mol,
+                energy.short_lennard_jones_kcal_per_mol,
+                energy.short_coulomb_kcal_per_mol,
+                energy.short_total_kcal_per_mol,
+                energy.ewald_real_space_kcal_per_mol,
+                energy.ewald_reciprocal_space_kcal_per_mol,
+                energy.ewald_self_kcal_per_mol,
+                energy.ewald_pair_correction_kcal_per_mol,
+                energy.ewald_total_kcal_per_mol,
+                energy.total_kcal_per_mol,
+            ],
+            [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0]
+        );
+        assert_eq!(error.code, BG_DIRECT_EWALD_ERROR_NONE);
+        assert!(error.detail.iter().all(|byte| *byte == 0));
+        assert_eq!(forces.atom_capacity, 4);
+        assert_eq!(forces.atom_count, 77);
+        assert_eq!(forces.x_kcal_per_mol_angstrom, force_x.as_mut_ptr());
+        assert_eq!(forces.y_kcal_per_mol_angstrom, force_y.as_mut_ptr());
+        assert_eq!(forces.z_kcal_per_mol_angstrom, force_z.as_mut_ptr());
+        assert_eq!(force_x, [11.0, 12.0, 13.0, 14.0]);
+        assert_eq!(force_y, [21.0, 22.0, 23.0, 24.0]);
+        assert_eq!(force_z, [31.0, 32.0, 33.0, 34.0]);
+
+        assert_eq!(
+            bg_context_evaluate_direct_ewald_composite_v1(
+                ptr::null(),
+                ptr::null(),
+                ptr::null(),
+                ptr::null(),
+                &mut energy,
+                &mut forces,
+                ptr::null_mut(),
+            ),
+            BG_STATUS_INVALID_ARGUMENT
+        );
+        assert_eq!(
+            [
+                energy.short_harmonic_bond_kcal_per_mol,
+                energy.short_harmonic_angle_kcal_per_mol,
+                energy.short_periodic_torsion_kcal_per_mol,
+                energy.short_lennard_jones_kcal_per_mol,
+                energy.short_coulomb_kcal_per_mol,
+                energy.short_total_kcal_per_mol,
+                energy.ewald_real_space_kcal_per_mol,
+                energy.ewald_reciprocal_space_kcal_per_mol,
+                energy.ewald_self_kcal_per_mol,
+                energy.ewald_pair_correction_kcal_per_mol,
+                energy.ewald_total_kcal_per_mol,
+                energy.total_kcal_per_mol,
+            ],
+            [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0]
+        );
+        assert_eq!(forces.atom_count, 77);
+        assert_eq!(force_x, [11.0, 12.0, 13.0, 14.0]);
+        assert_eq!(force_y, [21.0, 22.0, 23.0, 24.0]);
+        assert_eq!(force_z, [31.0, 32.0, 33.0, 34.0]);
     }
 }
 

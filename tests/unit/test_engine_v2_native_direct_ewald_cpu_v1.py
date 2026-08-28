@@ -17,7 +17,7 @@ MANIFEST = ROOT / verifier.SOURCE_MANIFEST_RELATIVE_PATH
 TOOL = ROOT / "tools/verify_engine_v2_native_direct_ewald_cpu_v1.py"
 WORKFLOW = ROOT / ".github/workflows/ci-engine-v2-native-direct-ewald.yml"
 PROFILE_SHA256 = (
-    "5d0a09742e8388938e90988a6a23fd945d5e2613d0fa37e9f2c8c9dd86d89de8"
+    "0b565387e272137984cdc08f26ec742c955dda563dca4104d23d83e0fdea5f23"
 )
 
 

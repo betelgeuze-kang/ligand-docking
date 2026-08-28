@@ -145,6 +145,7 @@ EXPECTED_CARGO_TARGETS = {
     "rust/betelgeuze-runtime/src/bin/betelgeuze-fixed64-cpu-qualify-v7.rs",
     "rust/betelgeuze-runtime/src/lib.rs",
     "rust/betelgeuze-runtime/build.rs",
+    "rust/betelgeuze-runtime/tests/composite.rs",
     "rust/betelgeuze-runtime/tests/cpu_oracle_parity.rs",
     "rust/betelgeuze-runtime/tests/direct_ewald.rs",
     "rust/betelgeuze-runtime/tests/docking_fixed64_pipeline.rs",

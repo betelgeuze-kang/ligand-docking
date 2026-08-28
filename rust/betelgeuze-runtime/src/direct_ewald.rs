@@ -255,6 +255,10 @@ impl DirectEwaldModel {
     pub fn is_empty(&self) -> DirectEwaldResult<bool> {
         self.len().map(|length| length == 0)
     }
+
+    pub(crate) fn raw_handle(&self) -> *mut sys::bg_direct_ewald_model_v1 {
+        self.handle.as_ptr()
+    }
 }
 
 impl Drop for DirectEwaldModel {
@@ -404,7 +408,7 @@ pub fn direct_ewald_profile_id() -> DirectEwaldResult<String> {
     }
 }
 
-fn ensure_direct_ewald_abi_compatibility() -> DirectEwaldResult<()> {
+pub(crate) fn ensure_direct_ewald_abi_compatibility() -> DirectEwaldResult<()> {
     ensure_abi_compatibility().map_err(DirectEwaldError::from)?;
     // SAFETY: The version query takes no pointers.
     let observed = unsafe { sys::bg_direct_ewald_abi_version() };
@@ -418,7 +422,7 @@ fn ensure_direct_ewald_abi_compatibility() -> DirectEwaldResult<()> {
     }
 }
 
-fn require_direct_ewald_backend(backend: Backend) -> DirectEwaldResult<()> {
+pub(crate) fn require_direct_ewald_backend(backend: Backend) -> DirectEwaldResult<()> {
     match backend {
         Backend::CppCpuReference | Backend::RustCpu => Ok(()),
         Backend::Auto | Backend::HipFast | Backend::HipSafe => Err(DirectEwaldError {
@@ -473,7 +477,7 @@ fn initialized_forces() -> DirectEwaldResult<sys::bg_direct_ewald_force_soa_v1> 
     Ok(unsafe { raw.assume_init() })
 }
 
-fn initialized_error() -> DirectEwaldResult<sys::bg_direct_ewald_error_v1> {
+pub(crate) fn initialized_error() -> DirectEwaldResult<sys::bg_direct_ewald_error_v1> {
     let mut raw = MaybeUninit::<sys::bg_direct_ewald_error_v1>::uninit();
     // SAFETY: raw is correctly sized writable storage.
     plain_status(unsafe {
@@ -569,7 +573,7 @@ fn validate_error_descriptor(raw: &sys::bg_direct_ewald_error_v1) -> DirectEwald
     }
 }
 
-fn validate_cleared_error(raw: &sys::bg_direct_ewald_error_v1) -> DirectEwaldResult<()> {
+pub(crate) fn validate_cleared_error(raw: &sys::bg_direct_ewald_error_v1) -> DirectEwaldResult<()> {
     validate_error_descriptor(raw)?;
     if raw.code != sys::BG_DIRECT_EWALD_ERROR_NONE || raw.detail.iter().any(|value| *value != 0) {
         Err(abi_error(
@@ -580,7 +584,7 @@ fn validate_cleared_error(raw: &sys::bg_direct_ewald_error_v1) -> DirectEwaldRes
     }
 }
 
-fn error_from_call(
+pub(crate) fn error_from_call(
     status: sys::bg_status,
     raw: &sys::bg_direct_ewald_error_v1,
 ) -> DirectEwaldError {
@@ -613,7 +617,7 @@ fn error_from_call(
     }
 }
 
-fn plain_status(status: sys::bg_status) -> DirectEwaldResult<()> {
+pub(crate) fn plain_status(status: sys::bg_status) -> DirectEwaldResult<()> {
     if status == sys::BG_STATUS_OK {
         Ok(())
     } else {
@@ -621,7 +625,7 @@ fn plain_status(status: sys::bg_status) -> DirectEwaldResult<()> {
     }
 }
 
-fn abi_error(detail: impl Into<String>) -> DirectEwaldError {
+pub(crate) fn abi_error(detail: impl Into<String>) -> DirectEwaldError {
     DirectEwaldError {
         status: ErrorCode::AbiMismatch,
         code: None,

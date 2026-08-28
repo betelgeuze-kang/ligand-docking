@@ -3,6 +3,7 @@
 //! The raw handles and pointers remain private to this crate. All system input
 //! is copied into native-owned structure-of-arrays storage.
 
+mod composite;
 mod development_explicit_composition;
 mod development_peptide;
 mod development_peptide_constraints;
@@ -18,6 +19,10 @@ mod qualification_v6;
 mod qualification_v7;
 
 pub use betelgeuze_docking_search::Fixed64Lane;
+pub use composite::{
+    direct_ewald_composite_profile_id, DirectEwaldCompositeEnergyComponents,
+    DirectEwaldCompositeEvaluation,
+};
 pub use development_explicit_composition::{
     development_ala3_explicit_composition_v1_profile_sha256,
     evaluate_development_ala3_explicit_composition_v1,
@@ -833,6 +838,10 @@ impl System {
 
     pub fn is_empty(&self) -> Result<bool> {
         self.len().map(|length| length == 0)
+    }
+
+    pub(crate) fn raw_handle(&self) -> *mut sys::bg_system {
+        self.handle.as_ptr()
     }
 
     pub fn unit_system(&self) -> Result<UnitSystem> {

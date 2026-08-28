@@ -492,11 +492,12 @@ bg_status copy_pair_rules(
             (exclusion != exclusions.end() &&
              exclusion->first < scale->first)) {
             out_rules->push_back(PairRule{
-                exclusion->first.atom_i, exclusion->first.atom_j, 0.0});
+                exclusion->first.atom_i, exclusion->first.atom_j, 0.0, true});
             ++exclusion;
         } else {
             out_rules->push_back(PairRule{
-                scale->first.atom_i, scale->first.atom_j, scale->second});
+                scale->first.atom_i, scale->first.atom_j, scale->second,
+                false});
             ++scale;
         }
     }
