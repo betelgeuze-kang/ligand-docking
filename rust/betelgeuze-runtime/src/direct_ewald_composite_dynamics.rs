@@ -354,8 +354,8 @@ impl Context {
         simulation: &mut DirectEwaldCompositeSimulation,
         step_count: u64,
     ) -> DirectEwaldResult<DynamicsReport> {
+        self.require_direct_ewald_composite_dynamics_backend()?;
         ensure_composite_dynamics_abi_compatibility()?;
-        require_direct_ewald_backend(self.backend().map_err(DirectEwaldError::from)?)?;
 
         let initial_step = simulation.absolute_step()?;
         let expected_absolute_step =
@@ -408,6 +408,22 @@ impl Context {
             expected_absolute_step,
             expected_degrees_of_freedom,
         )
+    }
+
+    fn require_direct_ewald_composite_dynamics_backend(&self) -> DirectEwaldResult<()> {
+        // Reject AUTO/HIP from the immutable request before any native ABI or
+        // simulation call. A resolved CPU lane cannot authorize fallback for
+        // this explicitly selected CPU-only dynamics boundary.
+        let requested = self.requested_backend();
+        require_direct_ewald_backend(requested)?;
+        let resolved = self.backend().map_err(DirectEwaldError::from)?;
+        if resolved != requested {
+            return Err(abi_error(format!(
+                "native context resolved {resolved:?} after explicit {requested:?} request"
+            )));
+        }
+        require_direct_ewald_backend(resolved)?;
+        Ok(())
     }
 }
 

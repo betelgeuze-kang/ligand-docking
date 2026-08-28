@@ -1,0 +1,179 @@
+{
+  "abi": {
+    "abi_version": 1,
+    "abi_version_major": 1,
+    "abi_version_minor": 0,
+    "abi_version_string": "1.0.0",
+    "checkpoint_format_changed": false,
+    "checkpoint_header_size_bytes": 104,
+    "checkpoint_magic": "BGDEC001",
+    "direct_ewald_abi_changed": false,
+    "engine_abi_version_changed": false,
+    "header": "include/betelgeuze/direct_ewald_composite_dynamics.h",
+    "new_public_symbol_added": false,
+    "profile_id": "betelgeuze.native_direct_ewald_composite_dynamics/1.0.0",
+    "public_symbol_count": 13,
+    "public_symbol_set_changed": false,
+    "stateful_composite_dynamics_abi_changed": false,
+    "stateless_composite_abi_changed": false,
+    "symbol_version_node": "BETELGEUZE_DIRECT_EWALD_COMPOSITE_DYNAMICS_1.0"
+  },
+  "authority": {
+    "acceleration_claim_authorized": false,
+    "d1_d2_execution_authorized": false,
+    "fresh_holdout_execution_authorized": false,
+    "hip_device_execution_authorized": false,
+    "historical_molecular_ab_execution_authorized": false,
+    "molecular_execution_authorized": false,
+    "performance_claim_authorized": false,
+    "product_authority": false,
+    "public_benchmark_authorized": false,
+    "qualification_rerun_authorized": false,
+    "reservation_authorized": false,
+    "root_supervisor_install_authorized": false,
+    "scientific_claim_authorized": false,
+    "stage0_admission_authorized": false,
+    "test_double_production_authority": false
+  },
+  "implementation": {
+    "auto_request_rejected_even_when_resolved_rust_cpu": true,
+    "backend_preflight_only_hardening": true,
+    "checkpoint_format_changed": false,
+    "cpp_cpu_reference_explicit_request_accepted": true,
+    "fixed64_cpu_v7_qualification_invoked": false,
+    "hip_device_execution_invoked": false,
+    "hip_fast_request_rejected": true,
+    "hip_safe_request_rejected": true,
+    "hip_to_cpu_fallback": false,
+    "molecular_execution_invoked": false,
+    "new_model_ownership_introduced": false,
+    "new_public_symbol_added": false,
+    "preflight_precedes_owner_validation_and_evaluation": true,
+    "requested_backend_is_authoritative": true,
+    "requested_resolved_cpu_mismatch_rejected": true,
+    "requested_resolved_mismatch_status": "BG_STATUS_ABI_MISMATCH",
+    "rust_cpu_explicit_request_accepted": true,
+    "source_manifest_entry_count": 120,
+    "source_manifest_path": "config/engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_profile_v1_sources.json",
+    "source_manifest_sha256": "1aed00454380e70338428b11e347b7d47f28b2b5f46e5e843612dca0ac361432",
+    "unknown_backend_request_rejected": true,
+    "unsupported_request_status": "BG_STATUS_UNSUPPORTED_BACKEND",
+    "whole_call_transactional_commit": true
+  },
+  "operational_boundary": {
+    "blockers": [
+      "external_reservation_endpoint_not_configured",
+      "external_reservation_provider_not_operational",
+      "external_reservation_trust_anchor_not_configured",
+      "historical_execution_operational_authority_false"
+    ],
+    "unresolved_operational_decisions": 32
+  },
+  "predecessor": {
+    "merge_commit": "e434295b1711f612e0f7e9fac2d95de92abf19a8",
+    "merge_tree": "3546ef29ae708c16c7af1e3be4925d2d7ad1f6b5",
+    "profile_path": "config/engine_v2_native_direct_ewald_composite_dynamics_profile_v1.json",
+    "profile_sha256": "42aad2692719d3d0233d9b71e24e6b49fe50a27fbc150d31fb4d9688ae84215f",
+    "pull_request": 438,
+    "reviewed_head": "581a17a135d75ddf085c4edd29f3763c2f691fcf",
+    "source_manifest_entry_count": 113,
+    "source_manifest_path": "config/engine_v2_native_direct_ewald_composite_dynamics_profile_v1_sources.json",
+    "source_manifest_sha256": "1a7a284467958e7c153edb0afd86cc5ea4ad07b659266ecf59d9da7549a19d15"
+  },
+  "profile_id": "engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_development_v1",
+  "roadmap_issue": 434,
+  "schema_id": "betelgeuze.engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_profile/1.0.0",
+  "successor_base": {
+    "commit": "5f6f4e2642dbe5c1272b2a9710288db25db5164f",
+    "tree": "95f3d64a553f6c261d59a7ef8bd202561d51c45a"
+  },
+  "successor_slice": {
+    "bound_implementation_delta_count": 5,
+    "bound_implementation_deltas": {
+      "native/src/composite/direct_ewald_composite_dynamics.cpp": {
+        "base_byte_count": 35055,
+        "base_sha256": "0115c52a7b97cac5cd56a48ce35d3cc2efe76ea4c777fcd97d4ec13a21a8db4f",
+        "current_byte_count": 35481,
+        "current_sha256": "7d0949d59edefcf188a8d18b95e424fb7361ceaed3f0fc877c9784c03fa3dc0e"
+      },
+      "native/tests/direct_ewald_composite_dynamics.cpp": {
+        "base_byte_count": 70339,
+        "base_sha256": "c614b598627358492c350663df6ebeb80f03bf78093d59bb72b1fc94b441d337",
+        "current_byte_count": 73642,
+        "current_sha256": "b87b139c3e118d98a1b0c6f33e22563824cff191304e23c04a1a202be66d5efc"
+      },
+      "rust/betelgeuze-runtime/src/direct_ewald_composite_dynamics.rs": {
+        "base_byte_count": 24700,
+        "base_sha256": "7253fb1efe1e1d054701d0e00b6041ad413d8adc23ef6d4f5ec5b541debf48a9",
+        "current_byte_count": 25426,
+        "current_sha256": "a3d3168fc98acce341415aa8fcd494923a974e5c42544d8019e57dceb7284fef"
+      },
+      "rust/betelgeuze-runtime/tests/direct_ewald_composite_dynamics.rs": {
+        "base_byte_count": 12084,
+        "base_sha256": "7bbdbdba77e417d3c5847c0ed5ebeb549c2e00bcc308aa7a90acf524025e69a4",
+        "current_byte_count": 13042,
+        "current_sha256": "d9b88b6ab4389f1d98da3473ffbe8e821d46b9c5f48ab47f3ce532816c5de14e"
+      },
+      "rust/betelgeuze-sys/vendor/native/src/composite/direct_ewald_composite_dynamics.cpp": {
+        "base_byte_count": 35055,
+        "base_sha256": "0115c52a7b97cac5cd56a48ce35d3cc2efe76ea4c777fcd97d4ec13a21a8db4f",
+        "current_byte_count": 35481,
+        "current_sha256": "7d0949d59edefcf188a8d18b95e424fb7361ceaed3f0fc877c9784c03fa3dc0e"
+      }
+    },
+    "original_path_count": 11,
+    "original_paths": [
+      ".github/workflows/ci-engine-v2-native-direct-ewald-composite-dynamics-backend-preflight.yml",
+      "config/engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_profile_v1.json",
+      "config/engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_profile_v1_sources.json",
+      "docs/engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_v1.md",
+      "native/src/composite/direct_ewald_composite_dynamics.cpp",
+      "native/tests/direct_ewald_composite_dynamics.cpp",
+      "rust/betelgeuze-runtime/src/direct_ewald_composite_dynamics.rs",
+      "rust/betelgeuze-runtime/tests/direct_ewald_composite_dynamics.rs",
+      "rust/betelgeuze-sys/vendor/native/src/composite/direct_ewald_composite_dynamics.cpp",
+      "tests/unit/test_engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_v1.py",
+      "tools/verify_engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_v1.py"
+    ],
+    "successor_evidence_path_count": 6,
+    "successor_evidence_paths": [
+      ".github/workflows/ci-engine-v2-native-direct-ewald-composite-dynamics-backend-preflight.yml",
+      "config/engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_profile_v1.json",
+      "config/engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_profile_v1_sources.json",
+      "docs/engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_v1.md",
+      "tests/unit/test_engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_v1.py",
+      "tools/verify_engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_v1.py"
+    ]
+  },
+  "validation": {
+    "actual_auto_context_rejected": true,
+    "actual_auto_context_requested_auto_resolved_rust_cpu": true,
+    "actual_auto_rejection_checkpoint_unchanged": true,
+    "actual_auto_rejection_report_unchanged": true,
+    "actual_auto_rejection_state_unchanged": true,
+    "c11_public_header_probe_preserved": true,
+    "canonical_vendor_byte_identity": true,
+    "cpp_layout_probe_preserved": true,
+    "exact_five_implementation_deltas_bound_to_successor_base": true,
+    "explicit_cpp_cpu_integration_succeeds": true,
+    "explicit_rust_cpu_safe_runtime_covered": true,
+    "git_object_probes_lazy_fetch_disabled": true,
+    "mach_o_exact_export_allowlist": true,
+    "native_mismatch_rejection_report_unchanged": true,
+    "native_mismatch_rejection_state_unchanged": true,
+    "native_real_auto_rejection": true,
+    "optional_local_reviewed_head_tree_checked_when_present": true,
+    "public_symbol_version_checked": true,
+    "requested_resolved_mismatch_rejected": true,
+    "safe_rust_full_preflight_precedes_composite_abi_and_native_integration_call": true,
+    "safe_rust_unsupported_request_rejected_before_resolved_backend_query": true,
+    "stale_typed_error_cleared_on_native_preflight_rejection": true,
+    "standalone_reviewed_head_object_required": false,
+    "unsupported_hip_and_unknown_rejection_transactional": true,
+    "workflow_all_four_actions_exactly_pinned": true,
+    "workflow_global_cpu_only_environment": true,
+    "workflow_global_read_only_permissions": true,
+    "workflow_no_reservation_supervisor_or_public_benchmark_execution": true,
+    "workflow_trigger_covers_bound_tools_init": true
+  }
+}
