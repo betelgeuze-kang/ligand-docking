@@ -16,9 +16,14 @@
       "sha256": "1a140ce6f1d31d0cafb56a10c5ef0a311a47a22f19de06d1e50167dc2c7854a6"
     },
     {
-      "byte_count": 39362,
+      "byte_count": 40164,
       "path": "native/CMakeLists.txt",
-      "sha256": "89026cca6dab9bf13dbadd4155122e4fdef508ae7d2e78296231d028bd9576aa"
+      "sha256": "1dd357f315d8c612926b40867e42effd0ef3207d344c3ce0274b9d002bf71bab"
+    },
+    {
+      "byte_count": 5174,
+      "path": "native/betelgeuze_engine.exports",
+      "sha256": "b53e846df6eb6fa36036b61f83b5ef96799dda4c6fde77c7a435144b58c0fa3b"
     },
     {
       "byte_count": 7649,
@@ -76,9 +81,9 @@
       "sha256": "e439421809d2f592d0e520ff1249d15afcfe231b3b09cba91afc8ddce4530858"
     },
     {
-      "byte_count": 10989,
+      "byte_count": 15179,
       "path": "native/tests/check_exports.cmake",
-      "sha256": "30c9d5c73a4f682b035d42cab65485e9bfd51467a7bf0af387fb23dd78924188"
+      "sha256": "2a8a26decbb38588c28d2064632012d0deb7ecc83205973343bb0f78d8e46d49"
     },
     {
       "byte_count": 38828,
@@ -266,9 +271,9 @@
       "sha256": "b95c399abddc84ccd0aeed7b6459ccdb09e5f42458089f8cb1b38abb2be277fd"
     },
     {
-      "byte_count": 29452,
+      "byte_count": 31337,
       "path": "tools/verify_engine_v2_native_direct_ewald_cpu_v1.py",
-      "sha256": "2964ff6fc5f522d05356265b933d49650e21087e255177db125efc25e470423c"
+      "sha256": "4f2de6f170cd4c80f9d8eccd36dd5cf61c211284e645bc7ea7110b0722916fcf"
     }
   ],
   "schema_id": "betelgeuze.engine_v2_native_direct_ewald_cpu_sources/1.0.0",

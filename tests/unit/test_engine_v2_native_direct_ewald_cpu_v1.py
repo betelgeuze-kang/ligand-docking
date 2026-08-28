@@ -17,7 +17,7 @@ MANIFEST = ROOT / verifier.SOURCE_MANIFEST_RELATIVE_PATH
 TOOL = ROOT / "tools/verify_engine_v2_native_direct_ewald_cpu_v1.py"
 WORKFLOW = ROOT / ".github/workflows/ci-engine-v2-native-direct-ewald.yml"
 PROFILE_SHA256 = (
-    "786d028ad03753ac028b54555c69ac6ad988c4a65ed048b3db4897c3adc8c22f"
+    "5d0a09742e8388938e90988a6a23fd945d5e2613d0fa37e9f2c8c9dd86d89de8"
 )
 
 
@@ -150,6 +150,40 @@ def test_production_reference_dependency_fails_closed() -> None:
             verifier._require_source_contract(tampered)
 
 
+def test_mach_o_export_boundary_fails_closed_on_private_or_missing_symbols() -> None:
+    _, sources = verifier.require_source_manifest(ROOT, MANIFEST.read_bytes())
+    exports_path = "native/betelgeuze_engine.exports"
+
+    tampered = dict(sources)
+    tampered[exports_path] += (
+        b"_bg_rust_direct_ewald_provider_abi_version_v1\n"
+    )
+    with pytest.raises(
+        verifier.NativeDirectEwaldCPUProfileV1Error,
+        match="private Rust provider entered the Mach-O",
+    ):
+        verifier._require_source_contract(tampered)
+
+    tampered = dict(sources)
+    export_lines = tampered[exports_path].splitlines()
+    tampered[exports_path] = b"\n".join(export_lines[:-1]) + b"\n"
+    with pytest.raises(
+        verifier.NativeDirectEwaldCPUProfileV1Error,
+        match="Mach-O public export allowlist changed",
+    ):
+        verifier._require_source_contract(tampered)
+
+    tampered = dict(sources)
+    tampered["native/CMakeLists.txt"] = tampered[
+        "native/CMakeLists.txt"
+    ].replace(b"LINKER:-exported_symbols_list", b"LINKER:-not-an-export-list")
+    with pytest.raises(
+        verifier.NativeDirectEwaldCPUProfileV1Error,
+        match="Mach-O final-link export boundary is missing",
+    ):
+        verifier._require_source_contract(tampered)
+
+
 def test_operational_blocker_removal_fails_closed() -> None:
     profile = json.loads(PROFILE.read_text(encoding="ascii"))
     profile["operational_boundary"]["blockers"].pop()
@@ -190,6 +224,14 @@ def test_ci_is_read_only_evidence_verification_without_forbidden_execution() -> 
     assert "--refresh" not in workflow
     assert "verify_engine_v2_native_direct_ewald_cpu_v1.py" in workflow
     assert "test_engine_v2_native_direct_ewald_cpu_v1.py" in workflow
+    for required in (
+        '"native/betelgeuze_engine.exports"',
+        "macos-export-boundary:",
+        "runs-on: macos-15",
+        "-DBG_ENABLE_HIP_SAFE=OFF",
+        "betelgeuze_engine_export_allowlist",
+    ):
+        assert required in workflow
     for forbidden in (
         "fixed64-cpu-qualify-v7",
         "qualification_v7_execution",

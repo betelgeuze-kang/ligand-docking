@@ -111,6 +111,7 @@ VALIDATION_CONTRACT = {
     "hip_backend_fails_closed_without_device_execution": True,
     "model_create_failure_returns_null_handle": True,
     "model_deep_copy_survives_caller_input_mutation": True,
+    "mach_o_public_export_allowlist_enforced": True,
     "public_symbol_version_enforced": True,
     "required_null_input_clears_valid_typed_error": True,
     "rust_safe_abnormal_create_return_handle_guard": True,
@@ -167,6 +168,7 @@ REQUIRED_SOURCE_PATHS = (
     Path("include/betelgeuze/direct_ewald.h"),
     Path("include/betelgeuze/engine.h"),
     Path("native/CMakeLists.txt"),
+    Path("native/betelgeuze_engine.exports"),
     Path("native/betelgeuze_engine.map"),
     Path("native/src/context.cpp"),
     Path("native/src/internal.hpp"),
@@ -457,6 +459,42 @@ def _require_source_contract(sources: dict[str, bytes]) -> None:
     version_map = text("native/betelgeuze_engine.map")
     if "BETELGEUZE_DIRECT_EWALD_1.0" not in version_map:
         _fail("direct-Ewald ELF symbol version node is missing")
+    map_symbols = re.findall(
+        r"(?m)^[ \t]+(bg_[A-Za-z0-9_]+);[ \t]*$", version_map
+    )
+    if not map_symbols or len(map_symbols) != len(set(map_symbols)):
+        _fail("ELF public symbol map must be non-empty and duplicate-free")
+    if any(symbol.startswith("bg_rust_") for symbol in map_symbols):
+        _fail("private Rust provider entered the ELF public symbol map")
+    macho_exports = text("native/betelgeuze_engine.exports").splitlines()
+    expected_macho_exports = [f"_{symbol}" for symbol in map_symbols]
+    if any(symbol.startswith("_bg_rust_") for symbol in macho_exports):
+        _fail("private Rust provider entered the Mach-O public export allowlist")
+    if macho_exports != expected_macho_exports:
+        _fail("Mach-O public export allowlist changed from the ELF public ABI")
+
+    cmake_source = text("native/CMakeLists.txt")
+    for required in (
+        "set(BG_ENGINE_APPLE_EXPORTS",
+        '"LINKER:-exported_symbols_list,${BG_ENGINE_APPLE_EXPORTS}"',
+        "LINK_DEPENDS ${BG_ENGINE_APPLE_EXPORTS}",
+        "set(BG_ENGINE_EXPORT_OBJECT_FORMAT MACHO)",
+        "if(UNIX AND CMAKE_NM)",
+        "-DOBJECT_FORMAT=${BG_ENGINE_EXPORT_OBJECT_FORMAT}",
+        "-DPUBLIC_SYMBOLS=${BG_ENGINE_APPLE_EXPORTS}",
+    ):
+        if required not in cmake_source:
+            _fail(f"Mach-O final-link export boundary is missing: {required}")
+
+    export_test = text("native/tests/check_exports.cmake")
+    for required in (
+        'OBJECT_FORMAT STREQUAL "MACHO"',
+        'COMMAND "${NM}" -g -U -j "${LIBRARY}"',
+        'unversioned MATCHES "^bg_rust_"',
+        "exported symbol set does not exactly match the public allowlist",
+    ):
+        if required not in export_test:
+            _fail(f"Mach-O export regression check is missing: {required}")
     native_test = text("native/tests/direct_ewald.cpp")
     for required in (
         "verify_initializer_transactionality<bg_direct_ewald_parameters_v1>",

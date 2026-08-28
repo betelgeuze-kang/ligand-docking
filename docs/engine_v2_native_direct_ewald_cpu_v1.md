@@ -7,8 +7,13 @@ its reserved fields.
 
 The public C header is `include/betelgeuze/direct_ewald.h`. Its ABI identity is
 1.0.0 (`BG_DIRECT_EWALD_ABI_VERSION=1`) and its ELF export node is
-`BETELGEUZE_DIRECT_EWALD_1.0`. The API owns an opaque immutable model, energy,
-force, and typed-error descriptors. Model creation deep-copies the settings,
+`BETELGEUZE_DIRECT_EWALD_1.0`. Mach-O uses an exact positive export allowlist
+containing the same 143 public C symbols. This final-link boundary prevents the
+private Rust provider archive, including both direct-Ewald provider entry
+points, from entering the dylib ABI. A hosted macOS build checks the complete
+defined-external symbol set with `nm`; Linux retains exact symbol-version checks.
+The API owns an opaque immutable model, energy, force, and typed-error
+descriptors. Model creation deep-copies the settings,
 exclusions, and scaled-pair rows. Failed creation returns a null handle; failed
 evaluation leaves the caller-owned energy, force channels, force count, and
 other output state uncommitted. Descriptor initializers are transactional on
@@ -53,11 +58,11 @@ The profile is
 `config/engine_v2_native_direct_ewald_cpu_profile_v1.json`; its source binding
 is `config/engine_v2_native_direct_ewald_cpu_profile_v1_sources.json`. The
 manifest uses canonical ASCII JSON and sorted unique rows containing repository
-path, byte count, and SHA-256. It covers the direct implementation, public and
-private ABI surfaces, direct tests and their crate-local frozen fixture, Rust
-system/runtime binding files, vendor copies, the primary Rust workspace, the
-separate `rust_engine_v2` native-wheel Cargo manifest and lockfile, and the four
-parent-oracle inputs.
+path, byte count, and SHA-256. It covers the direct implementation, ELF and
+Mach-O public export policies, private ABI surface, direct tests and their
+crate-local frozen fixture, Rust system/runtime binding files, vendor copies,
+the primary Rust workspace, the separate `rust_engine_v2` native-wheel Cargo
+manifest and lockfile, and the four parent-oracle inputs.
 It also binds the verifier itself and its `tools` package initializer. Neither
 contains the resulting profile hash, so this remains acyclic. It deliberately
 excludes the profile, manifest, profile-hash unit test, documentation, and

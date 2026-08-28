@@ -45,9 +45,9 @@
     "runtime_fixture_sha256": "a720c83852c79e401cb8838e9e20b2196985b6e424275949f77291b30b3da338",
     "rust_cpu_lane": true,
     "shared_runtime_dynamics_integrated": false,
-    "source_manifest_entry_count": 54,
+    "source_manifest_entry_count": 55,
     "source_manifest_path": "config/engine_v2_native_direct_ewald_cpu_profile_v1_sources.json",
-    "source_manifest_sha256": "9fcaca515e7a8e854c510062242a0e37dd4a389914e2bc2141cbc5d3ad869059"
+    "source_manifest_sha256": "4f2acac517f56ade77b8712bfd24b4312f208f2a5902862f73a807e2a3f7e3ab"
   },
   "operational_boundary": {
     "blockers": [
@@ -88,6 +88,7 @@
     "evaluation_failure_output_transactionality": true,
     "force_component_count": 12,
     "hip_backend_fails_closed_without_device_execution": true,
+    "mach_o_public_export_allowlist_enforced": true,
     "model_create_failure_returns_null_handle": true,
     "model_deep_copy_survives_caller_input_mutation": true,
     "public_symbol_version_enforced": true,

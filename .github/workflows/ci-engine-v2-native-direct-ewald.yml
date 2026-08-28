@@ -6,6 +6,7 @@ on:
       - "include/betelgeuze/direct_ewald.h"
       - "include/betelgeuze/engine.h"
       - "native/CMakeLists.txt"
+      - "native/betelgeuze_engine.exports"
       - "native/betelgeuze_engine.map"
       - "native/src/context.cpp"
       - "native/src/ewald/**"
@@ -35,6 +36,7 @@ on:
       - "include/betelgeuze/direct_ewald.h"
       - "include/betelgeuze/engine.h"
       - "native/CMakeLists.txt"
+      - "native/betelgeuze_engine.exports"
       - "native/betelgeuze_engine.map"
       - "native/src/context.cpp"
       - "native/src/ewald/**"
@@ -116,3 +118,50 @@ jobs:
           python3 -m pip install pytest==8.3.5
           python3 -m pytest -q \
             tests/unit/test_engine_v2_native_direct_ewald_cpu_v1.py
+
+  macos-export-boundary:
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      CUDA_VISIBLE_DEVICES: ""
+      HIP_VISIBLE_DEVICES: ""
+      ROCR_VISIBLE_DEVICES: ""
+    steps:
+      - name: Check out native compute sources
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          clean: true
+          fetch-depth: 1
+
+      - name: Select frozen hosted Rust toolchain
+        run: |
+          rustup toolchain install 1.93.0 --profile minimal
+          rustup override set 1.93.0
+
+      - name: Report hosted toolchain
+        run: |
+          cmake --version
+          clang++ --version
+          rustc --version
+          cargo --version
+
+      - name: Configure Mach-O export boundary
+        run: >-
+          cmake -S . -B build/native-macos
+          -DCMAKE_BUILD_TYPE=Release
+          -DBUILD_TESTING=ON
+          -DBG_ENABLE_HIP=OFF
+          -DBG_ENABLE_HIP_SAFE=OFF
+
+      - name: Build the shared engine only
+        run: >-
+          cmake --build build/native-macos
+          --target betelgeuze_engine
+          --parallel 2
+
+      - name: Verify exact Mach-O public exports
+        run: >-
+          ctest --test-dir build/native-macos
+          -R '^betelgeuze_engine_export_allowlist$'
+          --output-on-failure

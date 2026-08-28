@@ -312,7 +312,19 @@ if(BG_ENABLE_HIP)
     )
 endif()
 
-if(UNIX AND NOT APPLE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+set(BG_ENGINE_APPLE_EXPORTS
+    "${CMAKE_CURRENT_SOURCE_DIR}/betelgeuze_engine.exports")
+if(APPLE)
+    # C++ visibility properties do not apply to objects pulled from the Rust
+    # static provider archive.  Restrict the final Mach-O dylib to the same
+    # public C ABI represented by the ELF version script.
+    target_link_options(betelgeuze_engine PRIVATE
+        "LINKER:-exported_symbols_list,${BG_ENGINE_APPLE_EXPORTS}"
+    )
+    set_property(TARGET betelgeuze_engine APPEND PROPERTY
+        LINK_DEPENDS ${BG_ENGINE_APPLE_EXPORTS}
+    )
+elseif(UNIX AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_link_options(betelgeuze_engine PRIVATE
         "LINKER:--version-script=${CMAKE_CURRENT_SOURCE_DIR}/betelgeuze_engine.map"
     )
@@ -1174,12 +1186,19 @@ if(BUILD_TESTING)
         bg_add_hip_internal_engine_test(hip_pipeline_stats)
     endif()
 
-    if(UNIX AND NOT APPLE AND CMAKE_NM)
+    if(UNIX AND CMAKE_NM)
+        if(APPLE)
+            set(BG_ENGINE_EXPORT_OBJECT_FORMAT MACHO)
+        else()
+            set(BG_ENGINE_EXPORT_OBJECT_FORMAT ELF)
+        endif()
         add_test(
             NAME betelgeuze_engine_export_allowlist
             COMMAND ${CMAKE_COMMAND}
                 -DNM=${CMAKE_NM}
                 -DLIBRARY=$<TARGET_FILE:betelgeuze_engine>
+                -DOBJECT_FORMAT=${BG_ENGINE_EXPORT_OBJECT_FORMAT}
+                -DPUBLIC_SYMBOLS=${BG_ENGINE_APPLE_EXPORTS}
                 -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/check_exports.cmake
         )
     endif()
