@@ -16,6 +16,7 @@
 #include "betelgeuze/particle_mesh_ewald_composite.h"
 
 #include "evaluator.hpp"
+#include "particle_mesh_ewald_composite_evaluator.hpp"
 #include "../cpu/evaluator.hpp"
 #include "../ewald/cpp_evaluator.hpp"
 #include "../ewald/model.hpp"
@@ -47,22 +48,6 @@ constexpr const char *kProfileId =
 struct ByteRange final {
     std::uintptr_t begin = 0U;
     std::uintptr_t end = 0U;
-};
-
-struct Evaluation final {
-    double short_harmonic_bond = 0.0;
-    double short_harmonic_angle = 0.0;
-    double short_periodic_torsion = 0.0;
-    double short_lennard_jones = 0.0;
-    double short_coulomb = 0.0;
-    double short_total = 0.0;
-    double pme_real_space = 0.0;
-    double pme_reciprocal_space = 0.0;
-    double pme_self = 0.0;
-    double pme_pair_correction = 0.0;
-    double pme_total = 0.0;
-    double total = 0.0;
-    std::vector<std::array<double, 3>> forces;
 };
 
 bool make_byte_range(
@@ -704,8 +689,8 @@ bg_status validate_compatibility(
     const bg_particle_mesh_reciprocal_model_v1 &reciprocal_model,
     const bg_particle_mesh_ewald_composite_energy_components_v1 &energy,
     const bg_particle_mesh_ewald_composite_force_soa_v1 *forces) {
-    bg_status status = composite::validate_handle_compatibility(
-        context, system, forcefield, direct_model);
+    bg_status status = validate_static_compatibility(
+        system, forcefield, direct_model, reciprocal_model);
     if (status != BG_STATUS_OK) {
         return status;
     }
@@ -716,29 +701,6 @@ bg_status validate_compatibility(
         return fail(
             BG_STATUS_INVALID_ARGUMENT,
             "particle-mesh Ewald composite context, handles, and outputs must use matching units");
-    }
-    if (reciprocal_model.atom_count != direct_model.atom_count) {
-        return fail(
-            BG_STATUS_INVALID_ARGUMENT,
-            "particle-mesh Ewald composite model atom counts must match exactly");
-    }
-    for (std::size_t axis = 0U; axis < 3U; ++axis) {
-        if (!double_bits_equal(
-                direct_model.cell_lengths_angstrom[axis],
-                reciprocal_model.cell_lengths_angstrom[axis])) {
-            return fail(
-                BG_STATUS_INVALID_ARGUMENT,
-                "particle-mesh Ewald composite model cell-length bits must match exactly");
-        }
-    }
-    if (!double_bits_equal(
-            direct_model.alpha_per_angstrom,
-            reciprocal_model.alpha_per_angstrom) ||
-        !double_bits_equal(
-            direct_model.dielectric, reciprocal_model.dielectric)) {
-        return fail(
-            BG_STATUS_INVALID_ARGUMENT,
-            "particle-mesh Ewald composite model alpha and dielectric bits must match exactly");
     }
     return BG_STATUS_OK;
 }
@@ -836,7 +798,41 @@ bool reciprocal_parent_is_valid(
     return true;
 }
 
-bg_status evaluate_parents(
+}  // namespace
+
+bg_status validate_static_compatibility(
+    const bg_system &system,
+    const bg_forcefield &forcefield,
+    const bg_direct_ewald_model_v1 &direct_model,
+    const bg_particle_mesh_reciprocal_model_v1 &reciprocal_model) {
+    bg_status status = composite::validate_static_compatibility(
+        system, forcefield, direct_model);
+    if (status != BG_STATUS_OK) {
+        return status;
+    }
+    if (reciprocal_model.unit_system != system.unit_system ||
+        reciprocal_model.atom_count != direct_model.atom_count) {
+        return fail(BG_STATUS_INVALID_ARGUMENT,
+            "particle-mesh Ewald composite model units and atom counts must match exactly");
+    }
+    for (std::size_t axis = 0U; axis < 3U; ++axis) {
+        if (!double_bits_equal(direct_model.cell_lengths_angstrom[axis],
+                               reciprocal_model.cell_lengths_angstrom[axis])) {
+            return fail(BG_STATUS_INVALID_ARGUMENT,
+                "particle-mesh Ewald composite model cell-length bits must match exactly");
+        }
+    }
+    if (!double_bits_equal(direct_model.alpha_per_angstrom,
+                           reciprocal_model.alpha_per_angstrom) ||
+        !double_bits_equal(direct_model.dielectric,
+                           reciprocal_model.dielectric)) {
+        return fail(BG_STATUS_INVALID_ARGUMENT,
+            "particle-mesh Ewald composite model alpha and dielectric bits must match exactly");
+    }
+    return BG_STATUS_OK;
+}
+
+bg_status evaluate_prevalidated(
     bg_backend lane,
     const bg_system &system,
     const bg_forcefield &forcefield,
@@ -845,12 +841,27 @@ bg_status evaluate_parents(
     bool compute_forces,
     Evaluation *out_evaluation,
     bg_direct_ewald_error_v1 *out_error) {
+    bool cpp_lane = false;
+    switch (lane) {
+        case BG_BACKEND_CPP_CPU_REFERENCE:
+            cpp_lane = true;
+            break;
+        case BG_BACKEND_RUST_CPU:
+            break;
+        case BG_BACKEND_AUTO:
+        case BG_BACKEND_HIP_SAFE:
+        case BG_BACKEND_HIP_FAST:
+        default:
+            return fail(
+                BG_STATUS_UNSUPPORTED_BACKEND,
+                "particle-mesh Ewald composite internal evaluator requires an explicit CPU lane");
+    }
     bg_system short_system = system;
     std::fill(short_system.charge.begin(), short_system.charge.end(), 0.0);
 
     cpu::Evaluation short_evaluation;
     bg_status status = BG_STATUS_INTERNAL_ERROR;
-    if (lane == BG_BACKEND_CPP_CPU_REFERENCE) {
+    if (cpp_lane) {
         status = cpu::evaluate(
             short_system, forcefield, compute_forces, &short_evaluation);
     } else {
@@ -872,7 +883,7 @@ bg_status evaluate_parents(
     local_direct_model.reciprocal_max_indices = {{0, 0, 0}};
     ewald::Evaluation direct_evaluation;
     ewald::Error direct_error;
-    if (lane == BG_BACKEND_CPP_CPU_REFERENCE) {
+    if (cpp_lane) {
         status = ewald::cpp_cpu::evaluate(
             system, local_direct_model, compute_forces, &direct_evaluation,
             &direct_error);
@@ -898,7 +909,7 @@ bg_status evaluate_parents(
 
     particle_mesh_reciprocal::Evaluation reciprocal_evaluation;
     particle_mesh_reciprocal::Error reciprocal_error;
-    if (lane == BG_BACKEND_CPP_CPU_REFERENCE) {
+    if (cpp_lane) {
         status = particle_mesh_reciprocal::cpp_cpu::evaluate(
             system, reciprocal_model, compute_forces,
             &reciprocal_evaluation, &reciprocal_error);
@@ -991,7 +1002,6 @@ bg_status evaluate_parents(
     return BG_STATUS_OK;
 }
 
-}  // namespace
 }  // namespace betelgeuze::native::particle_mesh_ewald_composite
 
 extern "C" BG_API std::uint32_t BG_CALL
@@ -1154,7 +1164,7 @@ bg_context_evaluate_particle_mesh_ewald_composite_v1(
         }
 
         Evaluation evaluation;
-        status = evaluate_parents(
+        status = evaluate_prevalidated(
             lane, *system, *forcefield, *direct_model,
             *reciprocal_model, out_forces != nullptr, &evaluation,
             out_error);

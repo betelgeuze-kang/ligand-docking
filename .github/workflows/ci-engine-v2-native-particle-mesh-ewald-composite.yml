@@ -93,7 +93,7 @@ jobs:
           clean: true
           fetch-depth: 0
 
-      - name: Materialize exact reviewed parent heads
+      - name: Materialize exact PR 442 merge and reviewed tree
         shell: bash
         run: |
           set -euo pipefail
@@ -105,9 +105,27 @@ jobs:
           git fetch --no-tags --depth=1 origin refs/pull/441/head
           test "$(git rev-parse FETCH_HEAD)" = "59ad72fe57e82106a71df2c88c63c9fe12d014ad"
           test "$(git rev-parse FETCH_HEAD^{tree})" = "ae0a6eddd44262eeec633c57a0f5566bf7989361"
+          merge=5f6f4e2642dbe5c1272b2a9710288db25db5164f
+          tree=95f3d64a553f6c261d59a7ef8bd202561d51c45a
+          reviewed=8ce40276b58098186edc0dbde426c9b3be12f010
+          test "$(git rev-parse "$merge^{commit}")" = "$merge"
+          test "$(git rev-parse "$merge^{tree}")" = "$tree"
+          git merge-base --is-ancestor "$merge" HEAD
+          git fetch --no-tags --depth=1 origin refs/pull/442/head
+          test "$(git rev-parse FETCH_HEAD)" = "$reviewed"
+          test "$(git rev-parse FETCH_HEAD^{tree})" = "$tree"
 
-      - name: Verify canonical evidence and fail-closed contracts
+      - name: Verify exact frozen PR 442 evidence
+        shell: bash
         run: |
+          set -euo pipefail
+          frozen=5f6f4e2642dbe5c1272b2a9710288db25db5164f
+          frozen_tree=95f3d64a553f6c261d59a7ef8bd202561d51c45a
+          current_sha="$(git rev-parse HEAD)"
+          test "$(git rev-parse "$frozen^{commit}")" = "$frozen"
+          test "$(git rev-parse "$frozen^{tree}")" = "$frozen_tree"
+          git checkout --detach --quiet "$frozen"
+          trap 'git checkout --detach --quiet "$current_sha"' EXIT
           python3 -m json.tool \
             config/engine_v2_native_particle_mesh_ewald_composite_cpu_profile_v1.json \
             >/dev/null
@@ -118,6 +136,9 @@ jobs:
           python3 tools/verify_engine_v2_native_particle_mesh_ewald_composite_cpu_v1.py
           python3 -m pytest -q \
             tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_cpu_v1.py
+          git checkout --detach --quiet "$current_sha"
+          trap - EXIT
+          test "$(git rev-parse HEAD)" = "$current_sha"
 
   native-linux:
     runs-on: ubuntu-latest
