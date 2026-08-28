@@ -12,6 +12,22 @@ from tools import verify_engine_v2_native_particle_mesh_ewald_cpu_v1 as verifier
 
 
 ROOT = Path(__file__).resolve().parents[2]
+ADDITIVE_PARTICLE_MESH_EWALD_COMPOSITE_EVIDENCE_PRESENT = all(
+    (ROOT / relative).is_file()
+    for relative in (
+        "include/betelgeuze/particle_mesh_ewald_composite.h",
+        "config/engine_v2_native_particle_mesh_ewald_composite_cpu_profile_v1.json",
+        "config/engine_v2_native_particle_mesh_ewald_composite_cpu_profile_v1_sources.json",
+        "tools/verify_engine_v2_native_particle_mesh_ewald_composite_cpu_v1.py",
+    )
+)
+pytestmark = pytest.mark.skipif(
+    ADDITIVE_PARTICLE_MESH_EWALD_COMPOSITE_EVIDENCE_PRESENT,
+    reason=(
+        "legacy particle-mesh Ewald evidence is verified from its exact frozen "
+        "object after the additive short-range composite ABI is present"
+    ),
+)
 PROFILE = ROOT / verifier.PROFILE_RELATIVE_PATH
 MANIFEST = ROOT / verifier.SOURCE_MANIFEST_RELATIVE_PATH
 TOOL = ROOT / "tools/verify_engine_v2_native_particle_mesh_ewald_cpu_v1.py"

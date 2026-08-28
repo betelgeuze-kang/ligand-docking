@@ -286,3 +286,16 @@ BETELGEUZE_PARTICLE_MESH_EWALD_1.0 {
         bg_particle_mesh_ewald_v1_profile_id;
         bg_context_evaluate_particle_mesh_ewald_v1;
 } BETELGEUZE_PARTICLE_MESH_RECIPROCAL_1.0;
+
+BETELGEUZE_PARTICLE_MESH_EWALD_COMPOSITE_1.0 {
+    global:
+        /* Frozen stateless 8-symbol short-range + PME boundary. */
+        bg_particle_mesh_ewald_composite_abi_version;
+        bg_particle_mesh_ewald_composite_abi_version_major;
+        bg_particle_mesh_ewald_composite_abi_version_minor;
+        bg_particle_mesh_ewald_composite_abi_version_string;
+        bg_particle_mesh_ewald_composite_energy_components_v1_init;
+        bg_particle_mesh_ewald_composite_force_soa_v1_init;
+        bg_particle_mesh_ewald_composite_v1_profile_id;
+        bg_context_evaluate_particle_mesh_ewald_composite_v1;
+} BETELGEUZE_PARTICLE_MESH_EWALD_1.0;

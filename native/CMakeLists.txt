@@ -10,6 +10,7 @@ add_library(betelgeuze_engine SHARED
     src/composite/direct_ewald_composite_checkpoint.cpp
     src/composite/direct_ewald_composite_dynamics.cpp
     src/composite/particle_mesh_ewald.cpp
+    src/composite/particle_mesh_ewald_composite.cpp
     src/ewald/api.cpp
     src/ewald/cpp_evaluator.cpp
     src/ewald/rust_evaluator.cpp
@@ -371,6 +372,7 @@ install(
         ${PROJECT_SOURCE_DIR}/include/betelgeuze/direct_ewald_composite.h
         ${PROJECT_SOURCE_DIR}/include/betelgeuze/direct_ewald_composite_dynamics.h
         ${PROJECT_SOURCE_DIR}/include/betelgeuze/particle_mesh_ewald.h
+        ${PROJECT_SOURCE_DIR}/include/betelgeuze/particle_mesh_ewald_composite.h
         ${PROJECT_SOURCE_DIR}/include/betelgeuze/particle_mesh_reciprocal.h
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/betelgeuze
 )
@@ -525,6 +527,43 @@ if(BUILD_TESTING)
     add_test(
         NAME betelgeuze_engine_particle_mesh_ewald
         COMMAND betelgeuze_engine_particle_mesh_ewald
+    )
+
+    add_executable(
+        betelgeuze_engine_particle_mesh_ewald_composite
+        tests/particle_mesh_ewald_composite.cpp
+    )
+    target_link_libraries(
+        betelgeuze_engine_particle_mesh_ewald_composite
+        PRIVATE betelgeuze_engine
+    )
+    target_compile_features(
+        betelgeuze_engine_particle_mesh_ewald_composite
+        PRIVATE cxx_std_17
+    )
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(
+            betelgeuze_engine_particle_mesh_ewald_composite
+            PRIVATE
+                -Wall
+                -Wextra
+                -Wpedantic
+                -Wconversion
+                -Wsign-conversion
+                -Werror
+                -UNDEBUG
+                -ffp-contract=off
+                -fno-fast-math
+        )
+    elseif(MSVC)
+        target_compile_options(
+            betelgeuze_engine_particle_mesh_ewald_composite
+            PRIVATE /W4 /WX /UNDEBUG /fp:strict
+        )
+    endif()
+    add_test(
+        NAME betelgeuze_engine_particle_mesh_ewald_composite
+        COMMAND betelgeuze_engine_particle_mesh_ewald_composite
     )
 
     add_executable(
