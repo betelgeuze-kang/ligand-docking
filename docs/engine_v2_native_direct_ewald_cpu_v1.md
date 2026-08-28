@@ -15,9 +15,9 @@ other output state uncommitted. Descriptor initializers are transactional on
 ABI mismatch. A valid error descriptor is cleared at call entry, so an untyped
 ABI or capacity failure cannot leak a typed code/detail from an earlier call.
 The same clearing rule applies before mandatory context/system/model/energy or
-parameter null-input rejection. Create validates the output-handle slot against
-both parameter and error storage before it writes the null failure value, so a
-raw FFI alias cannot corrupt an input descriptor.
+parameter null-input rejection. Create validates the writable model and error
+storage against the parameter descriptor and every plausibly usable pair-rule
+channel span before any write, so a raw FFI alias cannot corrupt an input.
 
 Two explicit host lanes implement the same frozen semantics. The Rust CPU lane
 uses the pinned `libm` implementation and reproduces all five parent energy
@@ -27,6 +27,9 @@ strict standard-math implementation, repeats identical inputs bit-for-bit
 within that lane, and is compared to Rust with the frozen
 `5e-12 * max(1, abs(reference))` component tolerance. The test also requires
 matching typed ambiguity, damping-underflow, and phase-underflow categories.
+Energy-only calls preserve the full-evaluation energy bits while omitting force
+storage and real-space, reciprocal-space, and pair-correction force
+accumulation in both CPU lanes.
 No production native source links the standalone `rust/reference-ewald` crate.
 
 The Rust system crate mirrors the C ABI, compiles C11 header and C++ layout

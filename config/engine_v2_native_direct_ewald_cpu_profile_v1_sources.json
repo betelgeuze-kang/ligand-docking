@@ -6,9 +6,9 @@
       "sha256": "dd2c7460c2c3e7ea800da51e29bdf54d8933497ade086812d882a65cca4f4e6c"
     },
     {
-      "byte_count": 7680,
+      "byte_count": 7883,
       "path": "include/betelgeuze/direct_ewald.h",
-      "sha256": "920c484e1ae9f3e4c02787b1feaf9a9a5bc44a8f26c48d1d804e50b5d66e0684"
+      "sha256": "f579560f91ffb5c48dce4b515f063c8ea9b52c94f00e2fb211cc8d808ed52bfa"
     },
     {
       "byte_count": 140395,
@@ -31,14 +31,14 @@
       "sha256": "80de77f79f0dcfbb436256a3999473cb1d61448f8263b2686e59efe835a4d581"
     },
     {
-      "byte_count": 36694,
+      "byte_count": 39304,
       "path": "native/src/ewald/api.cpp",
-      "sha256": "da4d7f79a15ee8d97f4b891863ae9b58fcdf7fd2c21bcfe34a14071d3487f5b4"
+      "sha256": "3d56dfcf2874a9b9817ed274ad8443230db50af75826b9d760c76c81a7a25a75"
     },
     {
-      "byte_count": 35150,
+      "byte_count": 35959,
       "path": "native/src/ewald/cpp_evaluator.cpp",
-      "sha256": "018c894840979855d014e7901a437f157163cc2cd648ae95ce8f5f29ef25d9e5"
+      "sha256": "68a2800fc00be65986b6e0dea6251dd1b0af13fb2efa63fc3fd19c25f9696761"
     },
     {
       "byte_count": 1003,
@@ -81,9 +81,9 @@
       "sha256": "30c9d5c73a4f682b035d42cab65485e9bfd51467a7bf0af387fb23dd78924188"
     },
     {
-      "byte_count": 33924,
+      "byte_count": 38828,
       "path": "native/tests/direct_ewald.cpp",
-      "sha256": "54f77f2f9767f8e528372da830a5ad79f6956e41bf67c39d7233002a5c53110d"
+      "sha256": "933156b57535cf6cf7a31c2a96b4ab2864d24db8689cd6b25642c91270386f16"
     },
     {
       "byte_count": 3799,
@@ -161,9 +161,9 @@
       "sha256": "cf4579c66cdd869eac4824611b7e9734d9ea42e484155d5b823b9886826dea32"
     },
     {
-      "byte_count": 7680,
+      "byte_count": 7883,
       "path": "rust/betelgeuze-sys/vendor/include/betelgeuze/direct_ewald.h",
-      "sha256": "920c484e1ae9f3e4c02787b1feaf9a9a5bc44a8f26c48d1d804e50b5d66e0684"
+      "sha256": "f579560f91ffb5c48dce4b515f063c8ea9b52c94f00e2fb211cc8d808ed52bfa"
     },
     {
       "byte_count": 140395,
@@ -176,14 +176,14 @@
       "sha256": "80de77f79f0dcfbb436256a3999473cb1d61448f8263b2686e59efe835a4d581"
     },
     {
-      "byte_count": 36694,
+      "byte_count": 39304,
       "path": "rust/betelgeuze-sys/vendor/native/src/ewald/api.cpp",
-      "sha256": "da4d7f79a15ee8d97f4b891863ae9b58fcdf7fd2c21bcfe34a14071d3487f5b4"
+      "sha256": "3d56dfcf2874a9b9817ed274ad8443230db50af75826b9d760c76c81a7a25a75"
     },
     {
-      "byte_count": 35150,
+      "byte_count": 35959,
       "path": "rust/betelgeuze-sys/vendor/native/src/ewald/cpp_evaluator.cpp",
-      "sha256": "018c894840979855d014e7901a437f157163cc2cd648ae95ce8f5f29ef25d9e5"
+      "sha256": "68a2800fc00be65986b6e0dea6251dd1b0af13fb2efa63fc3fd19c25f9696761"
     },
     {
       "byte_count": 1003,
@@ -226,9 +226,9 @@
       "sha256": "eb489ba207d9c2500967a48f02a09dd0d2978087a91678511274330bf50a5450"
     },
     {
-      "byte_count": 90599,
+      "byte_count": 93090,
       "path": "rust/cpu-kernel/src/direct_ewald.rs",
-      "sha256": "79a52b1d83128f8acbd0f5fa6707101d325029d0dbc74e98de7ef0e16b1bee94"
+      "sha256": "c612081e2d55f0d532694d6a8b93573a550fc024384f50936e63b0679677d9ae"
     },
     {
       "byte_count": 166116,
@@ -266,9 +266,9 @@
       "sha256": "b95c399abddc84ccd0aeed7b6459ccdb09e5f42458089f8cb1b38abb2be277fd"
     },
     {
-      "byte_count": 28871,
+      "byte_count": 29452,
       "path": "tools/verify_engine_v2_native_direct_ewald_cpu_v1.py",
-      "sha256": "6a095af21ce352a9a133683dc87f61652e3b764b6388c616a114af72d73b9bf0"
+      "sha256": "2964ff6fc5f522d05356265b933d49650e21087e255177db125efc25e470423c"
     }
   ],
   "schema_id": "betelgeuze.engine_v2_native_direct_ewald_cpu_sources/1.0.0",

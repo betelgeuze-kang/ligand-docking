@@ -440,6 +440,111 @@ void verify_model_validation_errors() {
            0);
     assert(std::memcmp(&error, &alias_error_before, sizeof(error)) == 0);
 
+    auto verify_pair_rule_channel_alias = [](std::size_t channel_index) {
+        Fixture alias_fixture;
+        bg_direct_ewald_parameters_v1 alias_parameters =
+            fixture_parameters(alias_fixture);
+        bg_direct_ewald_error_v1 alias_error{};
+        init_error(&alias_error);
+        const Fixture fixture_before = alias_fixture;
+        const bg_direct_ewald_parameters_v1 parameters_before =
+            alias_parameters;
+        const bg_direct_ewald_error_v1 error_before = alias_error;
+        const std::array<void *, 5> channels{{
+            alias_fixture.exclusion_i.data(),
+            alias_fixture.exclusion_j.data(),
+            alias_fixture.scale_i.data(),
+            alias_fixture.scale_j.data(),
+            alias_fixture.scales.data(),
+        }};
+        assert(bg_direct_ewald_model_v1_create(
+                   &alias_parameters,
+                   reinterpret_cast<bg_direct_ewald_model_v1 **>(
+                       channels[channel_index]),
+                   &alias_error) == BG_STATUS_INVALID_ARGUMENT);
+        assert(std::memcmp(
+                   &alias_parameters, &parameters_before,
+                   sizeof(alias_parameters)) == 0);
+        assert(std::memcmp(&alias_error, &error_before, sizeof(alias_error)) ==
+               0);
+        assert(alias_fixture.exclusion_i == fixture_before.exclusion_i);
+        assert(alias_fixture.exclusion_j == fixture_before.exclusion_j);
+        assert(alias_fixture.scale_i == fixture_before.scale_i);
+        assert(alias_fixture.scale_j == fixture_before.scale_j);
+        assert(alias_fixture.scales == fixture_before.scales);
+    };
+    for (std::size_t channel_index = 0; channel_index < 5;
+         ++channel_index) {
+        verify_pair_rule_channel_alias(channel_index);
+    }
+
+    std::array<uint64_t, 2> interior_exclusion_i{{0, 2}};
+    std::array<uint64_t, 2> interior_exclusion_j{{1, 3}};
+    parameters = fixture_parameters(fixture);
+    parameters.exclusion_count = interior_exclusion_i.size();
+    parameters.exclusion_atom_i = interior_exclusion_i.data();
+    parameters.exclusion_atom_j = interior_exclusion_j.data();
+    parameters.pair_scale_count = 0;
+    const auto interior_exclusion_i_before = interior_exclusion_i;
+    const auto interior_exclusion_j_before = interior_exclusion_j;
+    init_error(&error);
+    const bg_direct_ewald_error_v1 interior_error_before = error;
+    assert(bg_direct_ewald_model_v1_create(
+               &parameters,
+               reinterpret_cast<bg_direct_ewald_model_v1 **>(
+                   &interior_exclusion_i[1]),
+               &error) == BG_STATUS_INVALID_ARGUMENT);
+    assert(interior_exclusion_i == interior_exclusion_i_before);
+    assert(interior_exclusion_j == interior_exclusion_j_before);
+    assert(std::memcmp(
+               &error, &interior_error_before, sizeof(error)) == 0);
+
+    bg_direct_ewald_error_v1 channel_error{};
+    init_error(&channel_error);
+    parameters = fixture_parameters(fixture);
+    parameters.exclusion_atom_i = &channel_error.reserved[0];
+    const bg_direct_ewald_error_v1 error_channel_before = channel_error;
+    const bg_direct_ewald_parameters_v1 error_alias_parameters_before =
+        parameters;
+    raw_model = reinterpret_cast<bg_direct_ewald_model_v1 *>(
+        static_cast<std::uintptr_t>(1));
+    assert(bg_direct_ewald_model_v1_create(
+               &parameters, &raw_model, &channel_error) ==
+           BG_STATUS_INVALID_ARGUMENT);
+    assert(raw_model == reinterpret_cast<bg_direct_ewald_model_v1 *>(
+                            static_cast<std::uintptr_t>(1)));
+    assert(std::memcmp(
+               &parameters, &error_alias_parameters_before,
+               sizeof(parameters)) == 0);
+    assert(std::memcmp(
+               &channel_error, &error_channel_before,
+               sizeof(channel_error)) == 0);
+
+    parameters = fixture_parameters(fixture);
+    parameters.exclusion_atom_i = nullptr;
+    init_error(&error);
+    error.code = BG_DIRECT_EWALD_ERROR_NON_NEUTRAL_SYSTEM;
+    std::memcpy(error.detail, "stale", sizeof("stale"));
+    raw_model = reinterpret_cast<bg_direct_ewald_model_v1 *>(
+        static_cast<std::uintptr_t>(1));
+    assert(bg_direct_ewald_model_v1_create(
+               &parameters, &raw_model, &error) == BG_STATUS_INVALID_ARGUMENT);
+    assert(raw_model == nullptr);
+    assert(error.code == BG_DIRECT_EWALD_ERROR_NONE);
+    assert(error.detail[0] == '\0');
+
+    parameters = fixture_parameters(fixture);
+    parameters.exclusion_count = UINT64_MAX;
+    init_error(&error);
+    raw_model = reinterpret_cast<bg_direct_ewald_model_v1 *>(
+        static_cast<std::uintptr_t>(1));
+    assert(bg_direct_ewald_model_v1_create(
+               &parameters, &raw_model, &error) ==
+           BG_STATUS_CAPACITY_OVERFLOW);
+    assert(raw_model == nullptr);
+    assert(error.code == BG_DIRECT_EWALD_ERROR_CAPACITY_EXCEEDED);
+    assert(error.detail[0] != '\0');
+
     parameters = fixture_parameters(fixture);
     parameters.atom_count = 0;
     assert(try_create(&parameters, BG_DIRECT_EWALD_ERROR_EMPTY_SYSTEM) ==

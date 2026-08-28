@@ -161,6 +161,11 @@ BG_API bg_status BG_CALL bg_direct_ewald_error_v1_init(
         (error), sizeof(*(error)), BG_DIRECT_EWALD_ABI_VERSION)
 #endif
 
+/*
+ * Model creation deep-copies every non-empty pair-rule channel.  Writable
+ * model-output and typed-error storage must not overlap the parameter
+ * descriptor or any used pair-rule channel span.
+ */
 BG_API bg_status BG_CALL bg_direct_ewald_model_v1_create(
     const bg_direct_ewald_parameters_v1 *parameters,
     bg_direct_ewald_model_v1 **out_model,

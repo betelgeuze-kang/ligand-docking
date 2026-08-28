@@ -47,7 +47,7 @@
     "shared_runtime_dynamics_integrated": false,
     "source_manifest_entry_count": 54,
     "source_manifest_path": "config/engine_v2_native_direct_ewald_cpu_profile_v1_sources.json",
-    "source_manifest_sha256": "371e3164e87b0ed7f5e6fdf160cd0488aeb6d1b84203bdc53849f37d07ac1ace"
+    "source_manifest_sha256": "9fcaca515e7a8e854c510062242a0e37dd4a389914e2bc2141cbc5d3ad869059"
   },
   "operational_boundary": {
     "blockers": [
@@ -82,6 +82,7 @@
     "cpp_rust_energy_and_force_relative_tolerance": 5e-12,
     "cpp_struct_layout_probe": true,
     "create_out_model_alias_rejected_before_write": true,
+    "create_output_storage_pair_rule_alias_rejected_before_write": true,
     "descriptor_initializer_transactionality": true,
     "energy_component_count": 5,
     "evaluation_failure_output_transactionality": true,
@@ -91,6 +92,7 @@
     "model_deep_copy_survives_caller_input_mutation": true,
     "public_symbol_version_enforced": true,
     "required_null_input_clears_valid_typed_error": true,
+    "rust_cpu_energy_only_skips_force_storage_and_accumulation": true,
     "rust_cpu_frozen_fixture_bit_identity_against_parent_oracle": true,
     "rust_cpu_same_input_bitwise_repeat": true,
     "rust_safe_abnormal_create_return_handle_guard": true,

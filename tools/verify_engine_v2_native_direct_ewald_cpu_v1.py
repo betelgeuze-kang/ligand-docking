@@ -103,6 +103,7 @@ VALIDATION_CONTRACT = {
     "cpp_rust_energy_and_force_relative_tolerance": 5e-12,
     "cpp_struct_layout_probe": True,
     "create_out_model_alias_rejected_before_write": True,
+    "create_output_storage_pair_rule_alias_rejected_before_write": True,
     "descriptor_initializer_transactionality": True,
     "energy_component_count": 5,
     "evaluation_failure_output_transactionality": True,
@@ -117,6 +118,7 @@ VALIDATION_CONTRACT = {
     "rust_safe_model_send_sync_disabled": True,
     "rust_safe_runtime_both_cpu_lanes_against_parent_fixture": True,
     "rust_safe_runtime_energy_only_bit_identity": True,
+    "rust_cpu_energy_only_skips_force_storage_and_accumulation": True,
     "rust_safe_runtime_failure_recovery": True,
     "rust_safe_runtime_parent_fixture_byte_identity": True,
     "rust_safe_runtime_same_lane_bitwise_repeat": True,
@@ -473,7 +475,12 @@ def _require_source_contract(sources: dict[str, bytes]) -> None:
     for required in (
         "alias_parameters_before",
         "alias_error_before",
+        "verify_pair_rule_channel_alias",
+        "interior_exclusion_i",
+        "error_channel_before",
         "validate_create_descriptor_overlap",
+        "counted_range_overlaps",
+        "channels_may_be_used",
     ):
         combined = native_test + text("native/src/ewald/api.cpp")
         if required not in combined:
@@ -488,6 +495,12 @@ def _require_source_contract(sources: dict[str, bytes]) -> None:
     rust_source = text("rust/cpu-kernel/src/direct_ewald.rs")
     if "pub unsafe extern \"C\" fn bg_rust_direct_ewald_evaluate_v1" not in rust_source:
         _fail("Rust direct-Ewald provider entry point is missing")
+    for required in (
+        "evaluate_with_force_option",
+        "energy_only_path_has_identical_bits_without_force_storage",
+    ):
+        if required not in rust_source:
+            _fail(f"Rust direct-Ewald energy-only force elision is missing: {required}")
     nonproduction_paths = {
         REFERENCE_PROFILE_RELATIVE_PATH.as_posix(),
         REFERENCE_SOURCE_RELATIVE_PATH.as_posix(),

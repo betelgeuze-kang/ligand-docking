@@ -232,19 +232,36 @@ struct PairRules {
 /// Returns a typed [`EwaldError`] when the input violates a structural,
 /// numerical, neutrality, periodic-cell, cutoff, or pair-rule invariant.
 pub fn evaluate(input: &EwaldInput) -> Result<EwaldEvaluation, EwaldError> {
+    evaluate_with_force_option(input, true)
+}
+
+fn evaluate_with_force_option(
+    input: &EwaldInput,
+    compute_forces: bool,
+) -> Result<EwaldEvaluation, EwaldError> {
     let pair_rules = validate(input)?;
     let mut result = EwaldEvaluation {
         energy: EwaldEnergyComponents::default(),
-        forces_kcal_per_mol_angstrom: vec![[0.0; 3]; input.positions.len()],
+        forces_kcal_per_mol_angstrom: if compute_forces {
+            vec![[0.0; 3]; input.positions.len()]
+        } else {
+            Vec::new()
+        },
     };
     let coulomb_scale = COULOMB_KCAL_ANGSTROM_PER_MOL_E2 / input.settings.dielectric;
-    evaluate_real_space(input, coulomb_scale, &mut result)?;
-    evaluate_reciprocal_space(input, coulomb_scale, &mut result)?;
+    evaluate_real_space(input, coulomb_scale, compute_forces, &mut result)?;
+    evaluate_reciprocal_space(input, coulomb_scale, compute_forces, &mut result)?;
     let charge_square_sum = accurate_charge_square_sum(&input.charges_elementary);
     result.energy.self_kcal_per_mol =
         -coulomb_scale * input.settings.alpha_per_angstrom * charge_square_sum
             / libm::sqrt(core::f64::consts::PI);
-    evaluate_pair_corrections(input, &pair_rules, coulomb_scale, &mut result)?;
+    evaluate_pair_corrections(
+        input,
+        &pair_rules,
+        coulomb_scale,
+        compute_forces,
+        &mut result,
+    )?;
 
     if !result.energy.total_kcal_per_mol().is_finite()
         || result
@@ -264,12 +281,13 @@ pub fn evaluate(input: &EwaldInput) -> Result<EwaldEvaluation, EwaldError> {
 fn evaluate_real_space(
     input: &EwaldInput,
     coulomb_scale: f64,
+    compute_forces: bool,
     result: &mut EwaldEvaluation,
 ) -> Result<(), EwaldError> {
     let alpha = input.settings.alpha_per_angstrom;
     let minimum_distance = input.settings.minimum_pair_distance_angstrom;
     let mut energy_terms = Vec::new();
-    let mut force_terms = new_force_term_buffers(input.positions.len());
+    let mut force_terms = compute_forces.then(|| new_force_term_buffers(input.positions.len()));
     for atom_i in 0..input.positions.len() {
         for atom_j in (atom_i + 1)..input.positions.len() {
             let charge_product =
@@ -329,22 +347,24 @@ fn evaluate_real_space(
                 };
                 energy_terms.push(pair_energy);
 
-                let gaussian_prefactor =
-                    charge_prefactor * (2.0 * alpha / libm::sqrt(core::f64::consts::PI));
-                let radial_force_magnitude = if distance < 1.0 {
-                    charge_prefactor * (erfc_value / distance2)
-                        + gaussian_prefactor * (exponential / distance)
-                } else {
-                    charge_prefactor * erfc_value / distance2
-                        + gaussian_prefactor * exponential / distance
-                };
-                for (axis, &delta_component) in delta.iter().enumerate() {
-                    let component = if distance < 1.0 {
-                        (radial_force_magnitude / distance) * delta_component
+                if let Some(force_terms) = force_terms.as_mut() {
+                    let gaussian_prefactor =
+                        charge_prefactor * (2.0 * alpha / libm::sqrt(core::f64::consts::PI));
+                    let radial_force_magnitude = if distance < 1.0 {
+                        charge_prefactor * (erfc_value / distance2)
+                            + gaussian_prefactor * (exponential / distance)
                     } else {
-                        (radial_force_magnitude * delta_component) / distance
+                        charge_prefactor * erfc_value / distance2
+                            + gaussian_prefactor * exponential / distance
                     };
-                    push_pair_force_term(&mut force_terms, atom_i, atom_j, axis, component);
+                    for (axis, &delta_component) in delta.iter().enumerate() {
+                        let component = if distance < 1.0 {
+                            (radial_force_magnitude / distance) * delta_component
+                        } else {
+                            (radial_force_magnitude * delta_component) / distance
+                        };
+                        push_pair_force_term(force_terms, atom_i, atom_j, axis, component);
+                    }
                 }
             }
         }
@@ -354,17 +374,20 @@ fn evaluate_real_space(
         accurate_order_independent_sum(&energy_terms),
         "real-space energy",
     )?;
-    apply_canonical_force_terms(
-        &mut result.forces_kcal_per_mol_angstrom,
-        &force_terms,
-        "real-space force",
-    )?;
+    if let Some(force_terms) = force_terms.as_ref() {
+        apply_canonical_force_terms(
+            &mut result.forces_kcal_per_mol_angstrom,
+            force_terms,
+            "real-space force",
+        )?;
+    }
     Ok(())
 }
 
 fn evaluate_reciprocal_space(
     input: &EwaldInput,
     coulomb_scale: f64,
+    compute_forces: bool,
     result: &mut EwaldEvaluation,
 ) -> Result<(), EwaldError> {
     let lengths = input.cell.lengths_angstrom;
@@ -433,27 +456,33 @@ fn evaluate_reciprocal_space(
                     apply_reciprocal_damping(undamped_energy, damping_exponent, exponential),
                     "reciprocal-space energy",
                 )?;
-                for ((force, &charge), &(phase_sin, phase_cos)) in result
-                    .forces_kcal_per_mol_angstrom
-                    .iter_mut()
-                    .zip(&input.charges_elementary)
-                    .zip(&phases)
-                {
-                    for axis in 0..3 {
-                        let undamped_force = scaled_reciprocal_force_component(
-                            reciprocal_force_factor * squared_charge_unit,
-                            wave[axis],
-                            wave2,
-                            charge / charge_unit,
-                            (structure_cos, structure_sin),
-                            (phase_sin, phase_cos),
-                            1.0,
-                        );
-                        checked_add(
-                            &mut force[axis],
-                            apply_reciprocal_damping(undamped_force, damping_exponent, exponential),
-                            "reciprocal force",
-                        )?;
+                if compute_forces {
+                    for ((force, &charge), &(phase_sin, phase_cos)) in result
+                        .forces_kcal_per_mol_angstrom
+                        .iter_mut()
+                        .zip(&input.charges_elementary)
+                        .zip(&phases)
+                    {
+                        for axis in 0..3 {
+                            let undamped_force = scaled_reciprocal_force_component(
+                                reciprocal_force_factor * squared_charge_unit,
+                                wave[axis],
+                                wave2,
+                                charge / charge_unit,
+                                (structure_cos, structure_sin),
+                                (phase_sin, phase_cos),
+                                1.0,
+                            );
+                            checked_add(
+                                &mut force[axis],
+                                apply_reciprocal_damping(
+                                    undamped_force,
+                                    damping_exponent,
+                                    exponential,
+                                ),
+                                "reciprocal force",
+                            )?;
+                        }
                     }
                 }
             }
@@ -466,10 +495,11 @@ fn evaluate_pair_corrections(
     input: &EwaldInput,
     pair_rules: &PairRules,
     coulomb_scale: f64,
+    compute_forces: bool,
     result: &mut EwaldEvaluation,
 ) -> Result<(), EwaldError> {
     let mut energy_terms = Vec::with_capacity(pair_rules.corrections.len());
-    let mut force_terms = new_force_term_buffers(input.positions.len());
+    let mut force_terms = compute_forces.then(|| new_force_term_buffers(input.positions.len()));
     for (&(atom_i, atom_j), &pair_scale) in &pair_rules.corrections {
         if pair_scale.to_bits() == 1.0_f64.to_bits() {
             continue;
@@ -487,15 +517,11 @@ fn evaluate_pair_corrections(
         let distance = libm::sqrt(distance2);
         let correction_scale = pair_scale - 1.0;
         energy_terms.push(coulomb_scale * charge_product * correction_scale / distance);
-        let factor = coulomb_scale * charge_product * correction_scale / (distance2 * distance);
-        for (axis, &delta_component) in delta.iter().enumerate() {
-            push_pair_force_term(
-                &mut force_terms,
-                atom_i,
-                atom_j,
-                axis,
-                factor * delta_component,
-            );
+        if let Some(force_terms) = force_terms.as_mut() {
+            let factor = coulomb_scale * charge_product * correction_scale / (distance2 * distance);
+            for (axis, &delta_component) in delta.iter().enumerate() {
+                push_pair_force_term(force_terms, atom_i, atom_j, axis, factor * delta_component);
+            }
         }
     }
     checked_add(
@@ -503,11 +529,13 @@ fn evaluate_pair_corrections(
         accurate_order_independent_sum(&energy_terms),
         "pair-correction energy",
     )?;
-    apply_canonical_force_terms(
-        &mut result.forces_kcal_per_mol_angstrom,
-        &force_terms,
-        "pair-correction force",
-    )?;
+    if let Some(force_terms) = force_terms.as_ref() {
+        apply_canonical_force_terms(
+            &mut result.forces_kcal_per_mol_angstrom,
+            force_terms,
+            "pair-correction force",
+        )?;
+    }
     Ok(())
 }
 
@@ -1740,7 +1768,12 @@ unsafe fn evaluate_provider_impl(
         }
     }
 
-    let result = evaluate(&input).map_err(ProviderFailure::from)?;
+    let result = if compute_forces == 1 {
+        evaluate(&input)
+    } else {
+        evaluate_with_force_option(&input, false)
+    }
+    .map_err(ProviderFailure::from)?;
     let components = result.energy;
     let energy = DirectEwaldEnergyV1 {
         struct_size: u32::try_from(size_of::<DirectEwaldEnergyV1>()).unwrap_or(0),
@@ -2164,6 +2197,36 @@ mod tests {
     }
 
     #[test]
+    fn energy_only_path_has_identical_bits_without_force_storage() {
+        let mut input = EwaldInput::new(
+            vec![Position::default(), Position::new(1.3, 0.4, 0.7)],
+            vec![1.0, -1.0],
+            OrthorhombicCell {
+                lengths_angstrom: [10.0, 12.0, 14.0],
+            },
+        );
+        input.settings.real_space_cutoff_angstrom = 4.0;
+        input.settings.reciprocal_max_indices = [2, 2, 2];
+        let with_forces = super::evaluate(&input).expect("full evaluation must succeed");
+        let energy_only = super::evaluate_with_force_option(&input, false)
+            .expect("energy-only evaluation must succeed");
+        assert!(energy_only.forces_kcal_per_mol_angstrom.is_empty());
+        let energy_bits = |energy: EwaldEnergyComponents| {
+            [
+                energy.real_space_kcal_per_mol.to_bits(),
+                energy.reciprocal_space_kcal_per_mol.to_bits(),
+                energy.self_kcal_per_mol.to_bits(),
+                energy.pair_correction_kcal_per_mol.to_bits(),
+                energy.total_kcal_per_mol().to_bits(),
+            ]
+        };
+        assert_eq!(
+            energy_bits(with_forces.energy),
+            energy_bits(energy_only.energy)
+        );
+    }
+
+    #[test]
     fn provider_failure_leaves_energy_and_forces_untouched() {
         let position_x = [0.0, 1.0];
         let position_y = [0.0; 2];
@@ -2306,6 +2369,7 @@ mod tests {
         let error = evaluate_real_space(
             &input,
             COULOMB_KCAL_ANGSTROM_PER_MOL_E2 / input.settings.dielectric,
+            true,
             &mut result,
         )
         .expect_err("subnormal real damping must fail closed");
@@ -2332,6 +2396,7 @@ mod tests {
         evaluate_real_space(
             &input,
             COULOMB_KCAL_ANGSTROM_PER_MOL_E2 / input.settings.dielectric,
+            true,
             &mut result,
         )
         .expect("real-space evaluation remains finite");
@@ -2359,6 +2424,7 @@ mod tests {
         evaluate_real_space(
             &input,
             COULOMB_KCAL_ANGSTROM_PER_MOL_E2 / input.settings.dielectric,
+            true,
             &mut result,
         )
         .expect("real-space evaluation remains finite");
@@ -2471,6 +2537,7 @@ mod tests {
         evaluate_real_space(
             &input,
             COULOMB_KCAL_ANGSTROM_PER_MOL_E2 / input.settings.dielectric,
+            true,
             &mut result,
         )
         .expect("real-space evaluation remains finite");

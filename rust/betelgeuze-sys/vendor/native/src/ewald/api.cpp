@@ -88,6 +88,29 @@ bool checked_multiply(
     return true;
 }
 
+bool counted_range_overlaps(
+    const void *pointer,
+    uint64_t element_count,
+    std::size_t element_size,
+    const ByteRange &candidate) noexcept {
+    if (pointer == nullptr || element_count == 0 || element_size == 0) {
+        return false;
+    }
+    const std::uintptr_t begin = reinterpret_cast<std::uintptr_t>(pointer);
+    if (candidate.end <= begin) {
+        return false;
+    }
+    if (candidate.begin < begin) {
+        return true;
+    }
+    const std::uintptr_t element_offset =
+        (candidate.begin - begin) / element_size;
+    if (element_offset > std::numeric_limits<uint64_t>::max()) {
+        return false;
+    }
+    return element_count > static_cast<uint64_t>(element_offset);
+}
+
 bool checked_accumulate(
     std::size_t value,
     std::size_t *total) noexcept {
@@ -618,8 +641,9 @@ bg_status validate_create_descriptor_overlap(
             BG_STATUS_INVALID_ARGUMENT,
             "direct-Ewald parameters and error descriptors must not overlap");
     }
-    if (out_model != nullptr) {
-        ByteRange model_output_range;
+    ByteRange model_output_range;
+    const bool has_model_output = out_model != nullptr;
+    if (has_model_output) {
         if (!make_byte_range(
                 out_model, sizeof(*out_model), &model_output_range) ||
             ranges_overlap(model_output_range, error_range) ||
@@ -628,6 +652,45 @@ bg_status validate_create_descriptor_overlap(
             return fail(
                 BG_STATUS_INVALID_ARGUMENT,
                 "direct-Ewald create descriptors and model output must not overlap");
+        }
+    }
+    constexpr uint64_t kMaxPlausibleRuleCount =
+        static_cast<uint64_t>(kMaxEvaluationWorkUnits / 7U);
+    const bool channels_may_be_used =
+        has_parameters &&
+        parameters->exclusion_count <= kMaxPlausibleRuleCount &&
+        parameters->pair_scale_count <=
+            kMaxPlausibleRuleCount - parameters->exclusion_count;
+    if (channels_may_be_used) {
+        struct ChannelRange final {
+            const void *pointer;
+            uint64_t element_count;
+            std::size_t element_size;
+        };
+        const std::array<ChannelRange, 5> channels{{
+            {parameters->exclusion_atom_i, parameters->exclusion_count,
+             sizeof(*parameters->exclusion_atom_i)},
+            {parameters->exclusion_atom_j, parameters->exclusion_count,
+             sizeof(*parameters->exclusion_atom_j)},
+            {parameters->pair_scale_atom_i, parameters->pair_scale_count,
+             sizeof(*parameters->pair_scale_atom_i)},
+            {parameters->pair_scale_atom_j, parameters->pair_scale_count,
+             sizeof(*parameters->pair_scale_atom_j)},
+            {parameters->pair_scale_coulomb, parameters->pair_scale_count,
+             sizeof(*parameters->pair_scale_coulomb)},
+        }};
+        for (const ChannelRange &channel : channels) {
+            if (counted_range_overlaps(
+                    channel.pointer, channel.element_count,
+                    channel.element_size, error_range) ||
+                (has_model_output &&
+                 counted_range_overlaps(
+                     channel.pointer, channel.element_count,
+                     channel.element_size, model_output_range))) {
+                return fail(
+                    BG_STATUS_INVALID_ARGUMENT,
+                    "direct-Ewald create output storage must not overlap pair-rule channels");
+            }
         }
     }
     return BG_STATUS_OK;

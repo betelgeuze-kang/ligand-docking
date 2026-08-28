@@ -514,10 +514,14 @@ bool evaluate_real_space(
     const bg_system &system,
     const bg_direct_ewald_model_v1 &model,
     double coulomb_scale,
+    bool compute_forces,
     Evaluation *result,
     Error *error) {
     std::vector<double> energy_terms;
-    ForceTerms force_terms(system.charge.size());
+    ForceTerms force_terms;
+    if (compute_forces) {
+        force_terms.resize(system.charge.size());
+    }
     for (std::size_t atom_i = 0; atom_i < system.charge.size(); ++atom_i) {
         for (std::size_t atom_j = atom_i + 1U;
              atom_j < system.charge.size(); ++atom_j) {
@@ -577,22 +581,26 @@ bool evaluate_real_space(
                                                : charge_prefactor * erfc_value /
                                                      distance;
                 energy_terms.push_back(pair_energy);
-                const double gaussian_prefactor =
-                    charge_prefactor *
-                    (2.0 * model.alpha_per_angstrom / std::sqrt(kPi));
-                const double radial_force_magnitude =
-                    distance < 1.0
-                        ? charge_prefactor * (erfc_value / distance2) +
-                              gaussian_prefactor * (exponential / distance)
-                        : charge_prefactor * erfc_value / distance2 +
-                              gaussian_prefactor * exponential / distance;
-                for (std::size_t axis = 0; axis < 3; ++axis) {
-                    const double component =
+                if (compute_forces) {
+                    const double gaussian_prefactor =
+                        charge_prefactor *
+                        (2.0 * model.alpha_per_angstrom / std::sqrt(kPi));
+                    const double radial_force_magnitude =
                         distance < 1.0
-                            ? (radial_force_magnitude / distance) * delta[axis]
-                            : (radial_force_magnitude * delta[axis]) / distance;
-                    push_pair_force_term(
-                        &force_terms, atom_i, atom_j, axis, component);
+                            ? charge_prefactor * (erfc_value / distance2) +
+                                  gaussian_prefactor * (exponential / distance)
+                            : charge_prefactor * erfc_value / distance2 +
+                                  gaussian_prefactor * exponential / distance;
+                    for (std::size_t axis = 0; axis < 3; ++axis) {
+                        const double component =
+                            distance < 1.0
+                                ? (radial_force_magnitude / distance) *
+                                      delta[axis]
+                                : (radial_force_magnitude * delta[axis]) /
+                                      distance;
+                        push_pair_force_term(
+                            &force_terms, atom_i, atom_j, axis, component);
+                    }
                 }
             }
         }
@@ -602,8 +610,9 @@ bool evaluate_real_space(
             "real-space energy")) {
         return false;
     }
-    return apply_canonical_force_terms(
-        &result->forces, force_terms, error, "real-space force");
+    return !compute_forces ||
+           apply_canonical_force_terms(
+               &result->forces, force_terms, error, "real-space force");
 }
 
 bool reciprocal_vector_is_provably_zero(
@@ -701,6 +710,7 @@ bool evaluate_reciprocal_space(
     const bg_system &system,
     const bg_direct_ewald_model_v1 &model,
     double coulomb_scale,
+    bool compute_forces,
     Evaluation *result,
     Error *error) {
     const double volume = cell_volume(model.cell_lengths_angstrom);
@@ -777,22 +787,26 @@ bool evaluate_reciprocal_space(
                         error, "reciprocal-space energy")) {
                     return false;
                 }
-                for (std::size_t atom = 0; atom < system.charge.size(); ++atom) {
-                    for (std::size_t axis = 0; axis < 3; ++axis) {
-                        const double undamped_force =
-                            scaled_reciprocal_force_component(
-                                reciprocal_force_factor * squared_charge_unit,
-                                wave[axis], wave2,
-                                system.charge[atom] /
-                                    kChargeNormalizationScale,
-                                structure, phases[atom]);
-                        if (!checked_add(
-                                &result->forces[atom][axis],
-                                apply_reciprocal_damping(
-                                    undamped_force, damping_exponent,
-                                    exponential),
-                                error, "reciprocal force")) {
-                            return false;
+                if (compute_forces) {
+                    for (std::size_t atom = 0; atom < system.charge.size();
+                         ++atom) {
+                        for (std::size_t axis = 0; axis < 3; ++axis) {
+                            const double undamped_force =
+                                scaled_reciprocal_force_component(
+                                    reciprocal_force_factor *
+                                        squared_charge_unit,
+                                    wave[axis], wave2,
+                                    system.charge[atom] /
+                                        kChargeNormalizationScale,
+                                    structure, phases[atom]);
+                            if (!checked_add(
+                                    &result->forces[atom][axis],
+                                    apply_reciprocal_damping(
+                                        undamped_force, damping_exponent,
+                                        exponential),
+                                    error, "reciprocal force")) {
+                                return false;
+                            }
                         }
                     }
                 }
@@ -806,11 +820,15 @@ bool evaluate_pair_corrections(
     const bg_system &system,
     const bg_direct_ewald_model_v1 &model,
     double coulomb_scale,
+    bool compute_forces,
     Evaluation *result,
     Error *error) {
     std::vector<double> energy_terms;
     energy_terms.reserve(model.pair_rules.size());
-    ForceTerms force_terms(system.charge.size());
+    ForceTerms force_terms;
+    if (compute_forces) {
+        force_terms.resize(system.charge.size());
+    }
     for (const PairRule &rule : model.pair_rules) {
         if (bits(rule.coulomb_scale) == bits(1.0)) {
             continue;
@@ -832,13 +850,15 @@ bool evaluate_pair_corrections(
         const double correction_scale = rule.coulomb_scale - 1.0;
         energy_terms.push_back(
             coulomb_scale * charge_product * correction_scale / distance);
-        const double factor =
-            coulomb_scale * charge_product * correction_scale /
-            (distance2 * distance);
-        for (std::size_t axis = 0; axis < 3; ++axis) {
-            push_pair_force_term(
-                &force_terms, rule.atom_i, rule.atom_j, axis,
-                factor * delta[axis]);
+        if (compute_forces) {
+            const double factor =
+                coulomb_scale * charge_product * correction_scale /
+                (distance2 * distance);
+            for (std::size_t axis = 0; axis < 3; ++axis) {
+                push_pair_force_term(
+                    &force_terms, rule.atom_i, rule.atom_j, axis,
+                    factor * delta[axis]);
+            }
         }
     }
     if (!checked_add(
@@ -846,8 +866,10 @@ bool evaluate_pair_corrections(
             "pair-correction energy")) {
         return false;
     }
-    return apply_canonical_force_terms(
-        &result->forces, force_terms, error, "pair-correction force");
+    return !compute_forces ||
+           apply_canonical_force_terms(
+               &result->forces, force_terms, error,
+               "pair-correction force");
 }
 
 }  // namespace
@@ -868,12 +890,16 @@ bg_status evaluate(
                    : BG_STATUS_NUMERICAL_ERROR;
     }
     Evaluation result;
-    result.forces.assign(system.charge.size(), Vector3{});
+    if (compute_forces) {
+        result.forces.assign(system.charge.size(), Vector3{});
+    }
     const double coulomb_scale = kCoulombConstant / model.dielectric;
     if (!evaluate_real_space(
-            system, model, coulomb_scale, &result, out_error) ||
+            system, model, coulomb_scale, compute_forces, &result,
+            out_error) ||
         !evaluate_reciprocal_space(
-            system, model, coulomb_scale, &result, out_error)) {
+            system, model, coulomb_scale, compute_forces, &result,
+            out_error)) {
         return out_error->code == BG_DIRECT_EWALD_ERROR_CAPACITY_EXCEEDED
                    ? BG_STATUS_CAPACITY_OVERFLOW
                    : BG_STATUS_NUMERICAL_ERROR;
@@ -882,7 +908,8 @@ bg_status evaluate(
         -coulomb_scale * model.alpha_per_angstrom *
         accurate_charge_square_sum(system.charge) / std::sqrt(kPi);
     if (!evaluate_pair_corrections(
-            system, model, coulomb_scale, &result, out_error)) {
+            system, model, coulomb_scale, compute_forces, &result,
+            out_error)) {
         return BG_STATUS_NUMERICAL_ERROR;
     }
     if (!std::isfinite(result.energy.total())) {
@@ -900,9 +927,6 @@ bg_status evaluate(
                 return BG_STATUS_NUMERICAL_ERROR;
             }
         }
-    }
-    if (!compute_forces) {
-        result.forces.clear();
     }
     *out_evaluation = std::move(result);
     return BG_STATUS_OK;
