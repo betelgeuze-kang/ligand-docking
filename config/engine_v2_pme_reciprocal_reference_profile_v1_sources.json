@@ -1,0 +1,116 @@
+{
+  "files": [
+    {
+      "byte_count": 828,
+      "path": "LICENSE",
+      "sha256": "5784208421b9379372ed51596201f78ab2c7157b96667fea7e0fb0bbd077e325"
+    },
+    {
+      "byte_count": 11500,
+      "path": "config/engine_v2_direct_ewald_reference_profile_v1.json",
+      "sha256": "dd2c7460c2c3e7ea800da51e29bdf54d8933497ade086812d882a65cca4f4e6c"
+    },
+    {
+      "byte_count": 4985,
+      "path": "config/engine_v2_native_direct_ewald_composite_dynamics_profile_v1.json",
+      "sha256": "42aad2692719d3d0233d9b71e24e6b49fe50a27fbc150d31fb4d9688ae84215f"
+    },
+    {
+      "byte_count": 20955,
+      "path": "config/engine_v2_native_direct_ewald_composite_dynamics_profile_v1_sources.json",
+      "sha256": "1a7a284467958e7c153edb0afd86cc5ea4ad07b659266ecf59d9da7549a19d15"
+    },
+    {
+      "byte_count": 648,
+      "path": "rust/Cargo.toml",
+      "sha256": "4a0b23729baeec10cc0e57abd4fb199c762531124fabfa400c34b8475592281c"
+    },
+    {
+      "byte_count": 387,
+      "path": "rust/reference-ewald/Cargo.lock",
+      "sha256": "cc64500cc1c97dfda26a8a4c8b8825c5296935f1e63cbaf61676a321364b3d9d"
+    },
+    {
+      "byte_count": 407,
+      "path": "rust/reference-ewald/Cargo.toml",
+      "sha256": "44422b2daa40776946235a91dcd120a6ea9ee7b0b521fd50293a3cce9fe2880f"
+    },
+    {
+      "byte_count": 6974,
+      "path": "rust/reference-ewald/README.md",
+      "sha256": "f03a26ad087ac8d2298de18632e6d62faaf5970619cff7a7c2b7df4d487d2feb"
+    },
+    {
+      "byte_count": 679,
+      "path": "rust/reference-ewald/fixtures/direct_ewald_v1.tsv",
+      "sha256": "a720c83852c79e401cb8838e9e20b2196985b6e424275949f77291b30b3da338"
+    },
+    {
+      "byte_count": 52465,
+      "path": "rust/reference-ewald/src/lib.rs",
+      "sha256": "2de8d94d69175053ccaf2a8057a385019fe5c398d7d95d96c84dc3d9bfafc99e"
+    },
+    {
+      "byte_count": 522,
+      "path": "rust/reference-pme/Cargo.lock",
+      "sha256": "98d90148a16d2a7fc3f20b27a0cc9ab570c47759c2666ea7a9a0193067c94d80"
+    },
+    {
+      "byte_count": 529,
+      "path": "rust/reference-pme/Cargo.toml",
+      "sha256": "df00ec72a86db3972e443eac56812f608f314fd3e9f5066027bb0a73bf5b5375"
+    },
+    {
+      "byte_count": 9362,
+      "path": "rust/reference-pme/README.md",
+      "sha256": "d64f1ff61636682ba232b44ffc7c43ede88dbf2f87294af6bd1ba1742f34e43c"
+    },
+    {
+      "byte_count": 9217,
+      "path": "rust/reference-pme/examples/profile_observation.rs",
+      "sha256": "04f2e6aec5d19bc9a9e6ffeefb70b96622fbd86e022090a989a54a97f04a8c4b"
+    },
+    {
+      "byte_count": 533,
+      "path": "rust/reference-pme/fixtures/pme_reciprocal_v1.tsv",
+      "sha256": "669e4409ba56897061976c38fbf53985fb1f744e8e5b3613512b0f957951deef"
+    },
+    {
+      "byte_count": 2485,
+      "path": "rust/reference-pme/src/direct_dft.rs",
+      "sha256": "02ef10bad87cc1e5310b19125487b3aae93b7175895404367ad6c2500de1c833"
+    },
+    {
+      "byte_count": 7189,
+      "path": "rust/reference-pme/src/fft.rs",
+      "sha256": "e65c2a4f3837ae25ce32883671462120c6a2ac9af60c27bbe78e92d502c58c01"
+    },
+    {
+      "byte_count": 39969,
+      "path": "rust/reference-pme/src/lib.rs",
+      "sha256": "9579d213ec47fc75f70dbb4df76ff951de4a51518dc9216233c663a3e43e53c4"
+    },
+    {
+      "byte_count": 2361,
+      "path": "rust/reference-pme/tests/frozen_fixture.rs",
+      "sha256": "8c37fd2ac8c4e08c0b6fdaa1651682904547540fc06c690c6d42fe5304489a7f"
+    },
+    {
+      "byte_count": 18599,
+      "path": "rust/reference-pme/tests/properties.rs",
+      "sha256": "a09ac18c0d732b0be4603eaa43d6db35040068510fdfd78a12d20893d25f791f"
+    },
+    {
+      "byte_count": 146,
+      "path": "tools/__init__.py",
+      "sha256": "b95c399abddc84ccd0aeed7b6459ccdb09e5f42458089f8cb1b38abb2be277fd"
+    },
+    {
+      "byte_count": 57045,
+      "path": "tools/verify_engine_v2_pme_reciprocal_reference_v1.py",
+      "sha256": "2125c23add339ac362367e5aa9ed812d2573c3e8128b56ed48a3ec5040c997ba"
+    }
+  ],
+  "schema_id": "betelgeuze.engine_v2_pme_reciprocal_reference_sources/1.0.0",
+  "scope": "standalone_scalar_particle_mesh_reciprocal_v1_inputs"
+}

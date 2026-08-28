@@ -1,0 +1,489 @@
+{
+  "accuracy_acceptance": {
+    "arbitrary_translation_absolute_energy_difference_kcal_per_mol": {
+      "exclusive_maximum": 0.02,
+      "exclusive_minimum": 1e-06
+    },
+    "central_finite_difference_scaled_absolute_tolerance": 2e-07,
+    "fft_direct_dft_evaluation_energy_scaled_absolute_tolerance": 2e-12,
+    "fft_direct_dft_evaluation_force_scaled_absolute_tolerance": 7e-12,
+    "fft_direct_dft_transform_forward_scaled_absolute_tolerance": 3e-12,
+    "fft_direct_dft_transform_inverse_scaled_absolute_tolerance": 5e-12,
+    "integer_grid_translation_scaled_absolute_tolerance": 2e-13,
+    "maximum_absolute_net_force_component_kcal_per_mol_angstrom": 0.05,
+    "maximum_arbitrary_translation_force_difference_kcal_per_mol_angstrom": 0.05,
+    "mesh_32_absolute_energy_difference_from_direct_ewald_kcal_per_mol": 0.002,
+    "mesh_32_maximum_force_difference_from_direct_ewald_kcal_per_mol_angstrom": 0.003,
+    "mesh_energy_and_force_errors_strictly_decrease": true
+  },
+  "accuracy_observation": {
+    "arbitrary_translation_absolute_energy_difference_kcal_per_mol": 0.008671552197633048,
+    "debug_release_observation_line_count": 31,
+    "debug_release_observation_sha256": "899845a391e23da253a5f0e2bdb5a78794ec7beb4dabee1f04726d6af1492144",
+    "direct_ewald_bound_9_reciprocal_space_kcal_per_mol": 40.26672199941431,
+    "fft_direct_dft_checked_in_tests": true,
+    "integer_grid_translation_absolute_energy_difference_kcal_per_mol": 0.0,
+    "maximum_absolute_net_force_component_kcal_per_mol_angstrom": 0.03840533986220912,
+    "maximum_arbitrary_translation_force_difference_kcal_per_mol_angstrom": 0.023738262606489924,
+    "maximum_central_finite_difference_force_error_kcal_per_mol_angstrom": 5.949347681166728e-10,
+    "maximum_integer_grid_translation_force_difference_kcal_per_mol_angstrom": 1.7763568394002505e-15,
+    "mesh_refinement": [
+      {
+        "absolute_energy_difference_from_direct_ewald_kcal_per_mol": 0.9181130620454852,
+        "maximum_force_difference_from_direct_ewald_reciprocal_finite_difference_kcal_per_mol_angstrom": 0.31015104327656573,
+        "mesh_dimensions": [
+          8,
+          8,
+          8
+        ]
+      },
+      {
+        "absolute_energy_difference_from_direct_ewald_kcal_per_mol": 0.03310630558823391,
+        "maximum_force_difference_from_direct_ewald_reciprocal_finite_difference_kcal_per_mol_angstrom": 0.036006726728953886,
+        "mesh_dimensions": [
+          16,
+          16,
+          16
+        ]
+      },
+      {
+        "absolute_energy_difference_from_direct_ewald_kcal_per_mol": 0.0019507390685902237,
+        "maximum_force_difference_from_direct_ewald_reciprocal_finite_difference_kcal_per_mol_angstrom": 0.002645625838342769,
+        "mesh_dimensions": [
+          32,
+          32,
+          32
+        ]
+      }
+    ]
+  },
+  "authority": {
+    "acceleration_claim_authorized": false,
+    "d1_d2_execution_authorized": false,
+    "fresh_holdout_execution_authorized": false,
+    "hip_device_execution_authorized": false,
+    "historical_molecular_ab_execution_authorized": false,
+    "molecular_execution_authorized": false,
+    "performance_claim_authorized": false,
+    "product_authority": false,
+    "public_benchmark_authorized": false,
+    "qualification_rerun_authorized": false,
+    "reservation_authorized": false,
+    "root_supervisor_install_authorized": false,
+    "scientific_claim_authorized": false,
+    "stage0_admission_authorized": false,
+    "test_double_production_authority": false
+  },
+  "fixture": {
+    "atom_count": 4,
+    "charges_elementary": [
+      0.7,
+      -0.4,
+      -0.6,
+      0.30000000000000004
+    ],
+    "development_fixture_only": true,
+    "net_charge_elementary": 0.0,
+    "orthorhombic_lengths_angstrom": [
+      18.0,
+      20.0,
+      22.0
+    ],
+    "periodic_axes": [
+      true,
+      true,
+      true
+    ],
+    "positions_angstrom": [
+      [
+        1.25,
+        2.5,
+        3.75
+      ],
+      [
+        5.1,
+        3.2,
+        8.4
+      ],
+      [
+        10.2,
+        12.3,
+        7.7
+      ],
+      [
+        15.4,
+        17.1,
+        19.3
+      ]
+    ]
+  },
+  "frozen_observation": {
+    "debug_release_bitwise_identical": true,
+    "energy_ieee754_bits_hex": "40441de71e7a685d",
+    "force_ieee754_bits_hex": [
+      {
+        "atom": 0,
+        "x": "3ff7abf233cae3fe",
+        "y": "3fe3f50c6800dce2",
+        "z": "4003a5fe62912de6"
+      },
+      {
+        "atom": 1,
+        "x": "bff82153b58fe4a2",
+        "y": "bfdf03fd220eaedd",
+        "z": "bff996032fc40900"
+      },
+      {
+        "atom": 2,
+        "x": "3fd5c06e1da10cd7",
+        "y": "3fcf508ce37d6938",
+        "z": "bfdf6cb861fdf624"
+      },
+      {
+        "atom": 3,
+        "x": "bfd2c72283b8727e",
+        "y": "bfda223bfc4695cd",
+        "z": "bfd9e0699f282115"
+      }
+    ],
+    "frozen_energy_and_force_component_count": 13
+  },
+  "implementation": {
+    "actual_forward_inverse_fft": true,
+    "analytic_reciprocal_forces": true,
+    "arithmetic": "scalar_binary64_with_pinned_libm_transcendentals",
+    "cardinal_b_spline_order": 4,
+    "cargo_lock_sha256": "98d90148a16d2a7fc3f20b27a0cc9ab570c47759c2666ea7a9a0193067c94d80",
+    "crate": "rust/reference-pme",
+    "direct_discrete_fourier_oracle_is_test_only": true,
+    "direct_ewald_semantic_oracle_is_dev_only": true,
+    "external_fft_dependency": false,
+    "external_md_engine_dependency": false,
+    "fixed64_cpu_v7_qualification_invoked": false,
+    "frozen_fixture_sha256": "669e4409ba56897061976c38fbf53985fb1f744e8e5b3613512b0f957951deef",
+    "full_pme_implemented": false,
+    "hip_device_execution_invoked": false,
+    "molecular_execution_invoked": false,
+    "native_abi_added": false,
+    "native_runtime_integrated": false,
+    "normal_and_rescued_force_modes_share_one_scaled_spectrum": true,
+    "normal_energy_path_is_direct_when_no_mode_requires_rescue": true,
+    "pair_correction_implemented": false,
+    "particle_mesh_reciprocal_implemented": true,
+    "performance_evidence_collected": false,
+    "post_influence_inverse_transform_count": 1,
+    "production_complex_mesh_buffer_byte_upper_bound": 8388608,
+    "production_complex_mesh_buffer_count_upper_bound": 1,
+    "real_space_implemented": false,
+    "reference_schema_id": "betelgeuze.reference_particle_mesh_reciprocal/1.0.0",
+    "self_energy_implemented": false,
+    "source_manifest_entry_count": 22,
+    "source_manifest_path": "config/engine_v2_pme_reciprocal_reference_profile_v1_sources.json",
+    "source_manifest_sha256": "da6d669c85d63236936ba1f1324937b90e7cf57cc6dd58b16ab7d43d6278b296",
+    "standalone_workspace": true,
+    "transcendental_implementation": "libm_0.2.16_exact_dependency_and_lockfile",
+    "underflow_rescue_combines_regular_and_rescued_energy_before_downscale": true,
+    "underflow_rescue_common_scale_power_of_two_exponent": 256,
+    "underflow_rescue_rounds_scaled_completed_values_once": true,
+    "underflow_rescue_uses_completed_mode_log_domain_scaling": true,
+    "work_cap_checked_before_assignment_or_grid_allocation": true
+  },
+  "numeric_envelope": {
+    "alpha_per_angstrom": {
+      "maximum": 1000000.0,
+      "minimum": 1e-12
+    },
+    "cell_length_angstrom": {
+      "maximum": 1000000000.0,
+      "minimum": 1e-06
+    },
+    "dielectric": {
+      "maximum": 1000000000000.0,
+      "minimum": 1e-12
+    },
+    "maximum_absolute_coordinate_angstrom": 1000000000000.0,
+    "maximum_evaluation_work_units": 16000000,
+    "maximum_mesh_dimension": 128,
+    "maximum_mesh_point_count": 1048576,
+    "maximum_particle_count": 4096,
+    "maximum_public_complex_mesh_buffer_bytes": 8388608,
+    "maximum_public_complex_mesh_buffer_count": 1,
+    "maximum_reachable_mesh_point_count_under_work_cap": 524288,
+    "mesh_dimensions_must_be_powers_of_two": true,
+    "mesh_point_cap_regression_dimensions": [
+      128,
+      128,
+      128
+    ],
+    "minimum_mesh_dimension": 4,
+    "nonzero_absolute_charge_elementary": {
+      "maximum": 16.0,
+      "minimum": 1e-12
+    },
+    "work_cap_near_boundary_admitted_dimensions": [
+      32,
+      128,
+      128
+    ],
+    "work_cap_near_boundary_admitted_mesh_point_count": 524288,
+    "work_cap_regression_dimensions": [
+      64,
+      128,
+      128
+    ],
+    "work_cap_regression_mesh_point_count": 1048576
+  },
+  "numerical_contract": {
+    "alpha_per_angstrom": 0.31,
+    "assignment": "fixed_order_4_cardinal_b_spline",
+    "cardinal_b_spline_order": 4,
+    "central_finite_difference_step_angstrom": 1e-05,
+    "coordinate_reduction": "bounded_per_axis_euclidean_remainder",
+    "coulomb_kcal_angstrom_per_mol_e2": 332.063713299,
+    "dielectric": 1.0,
+    "direct_ewald_reference_reciprocal_max_indices": [
+      9,
+      9,
+      9
+    ],
+    "evaluation_work_unit_components": {
+      "fft_butterflies_forward_and_inverse": "mesh_point_count_times_sum_log2_mesh_dimensions",
+      "force_gather_support_visits_per_particle": 192,
+      "influence_visits": "mesh_point_count",
+      "spread_support_visits_per_particle": 64
+    },
+    "evaluation_work_unit_equation": "mesh_point_count_times_one_plus_sum_log2_mesh_dimensions_plus_particle_count_times_cardinal_b_spline_order_cubed_times_four",
+    "even_grid_nyquist_representative": "negative_half_dimension",
+    "fft_axis_order": "z_then_y_then_x_for_z_fast_storage",
+    "fft_forward_normalization": "unnormalized",
+    "fft_forward_sign": "negative",
+    "fft_inverse_normalization": "per_axis_one_over_axis_length_for_net_one_over_mesh_point_count",
+    "fft_inverse_sign": "positive",
+    "force_method": "analytic_assignment_weight_derivative_of_mesh_energy",
+    "maximum_evaluation_work_units": 16000000,
+    "mesh_dimensions": [
+      16,
+      16,
+      16
+    ],
+    "mesh_origin": "orthorhombic_cell_origin",
+    "mesh_refinement_sequence": [
+      [
+        8,
+        8,
+        8
+      ],
+      [
+        16,
+        16,
+        16
+      ],
+      [
+        32,
+        32,
+        32
+      ]
+    ],
+    "neutralizing_background": false,
+    "reciprocal_zero_mode": "omitted",
+    "signed_frequency_mapping": "index_when_index_less_than_half_dimension_else_index_minus_dimension",
+    "spline_deconvolution": "discrete_cardinal_b_spline_modulus_squared",
+    "underflow_rescue": {
+      "common_force_spectrum": "all_normal_and_rescued_modes_share_one_scaled_spectrum",
+      "common_scale_ieee754_bits_hex": "4ff0000000000000",
+      "common_scale_is_exact_binary64": true,
+      "common_scale_log_expression": "binary64_core_f64_consts_ln_2_times_256_added_before_pinned_libm_exp",
+      "common_scale_power_of_two_exponent": 256,
+      "completed_rescued_energy_component_log": "log_energy_prefactor_minus_log_wave_squared_minus_two_log_assignment_modulus_plus_damping_exponent_plus_two_log_absolute_charge_component_plus_256_times_binary64_ln_2",
+      "completed_rescued_influence_spectrum_component_log": "minus_log_wave_squared_minus_two_log_assignment_modulus_plus_damping_exponent_plus_log_absolute_charge_component_plus_256_times_binary64_ln_2",
+      "completed_scaled_value_rounding": "zero_when_log_magnitude_less_than_or_equal_to_ln_half_minimum_positive_subnormal_else_pinned_libm_exp",
+      "energy_when_any_mode_requires_rescue": "compensated_sum_of_energy_prefactor_times_common_scale_times_regular_sum_and_scaled_rescued_components_then_divide_once_by_common_scale",
+      "energy_when_no_mode_requires_rescue": "energy_prefactor_times_direct_compensated_regular_reciprocal_sum",
+      "force_grid_multiplier": "two_times_energy_prefactor_times_mesh_point_count_divided_by_common_scale",
+      "force_method_in_scaled_domain": "one_inverse_then_assignment_derivative_sum_then_negative_charge_times_axis_mesh_dimension_over_cell_length_times_force_grid_multiplier",
+      "inverse_transform_count_after_influence": 1,
+      "ln_half_minimum_positive_subnormal": -745.1332191019411,
+      "normal_influence_spectrum_component": "direct_influence_times_charge_component_then_exact_common_scale",
+      "rescued_component_sign": "restored_after_log_domain_magnitude",
+      "trigger": "nonzero_charge_mode_when_damping_influence_energy_or_a_corresponding_nonzero_influence_spectrum_component_is_not_normal",
+      "validated_bounds": {
+        "accepted_mesh_point_count_power_of_two_maximum": 19,
+        "common_scale_margin_over_energy_component_count_bits": 236,
+        "conservative_scaled_intermediate_exclusive_power_of_two_bound": 356,
+        "derivative_stencil_l1_maximum": 1.5,
+        "energy_prefactor_exclusive_power_of_two_bound": 111,
+        "force_geometry_multiplier_exclusive_power_of_two_bound": 31,
+        "inverse_squared_spline_modulus_exclusive_power_of_two_bound": 10,
+        "inverse_wave_squared_exclusive_power_of_two_bound": 55,
+        "positive_energy_component_count_exclusive_power_of_two_bound": 20,
+        "post_inverse_force_multiplier_exclusive_power_of_two_bound": -94,
+        "reciprocal_charge_mode_magnitude_inclusive_power_of_two_bound": 16,
+        "scaled_energy_sum_exclusive_power_of_two_bound": 484,
+        "scaled_influence_spectrum_exclusive_power_of_two_bound": 337,
+        "two_energy_prefactor_mesh_count_exclusive_power_of_two_bound": 131
+      }
+    },
+    "underflow_rescue_regression": {
+      "focused_scaled_aggregation": {
+        "mixed_regular_and_rescued_lanes_each_round_separately_to_zero": true,
+        "mixed_regular_and_rescued_lanes_restore_ieee754_bits_hex": "0000000000000001",
+        "rescue_only_individual_component_count": 8,
+        "rescue_only_individual_unscaled_ieee754_bits_hex": "0000000000000000",
+        "rescue_only_restored_sum_ieee754_bits_hex": "0000000000000001"
+      },
+      "large_cell_normal_output": {
+        "alpha_per_angstrom": 1.15e-10,
+        "central_finite_difference_step_angstrom": 1000.0,
+        "charges_elementary": [
+          16.0,
+          -16.0
+        ],
+        "dielectric": 1e-12,
+        "expected_particle_1_x_force_kcal_per_mol_angstrom": -1.6999574664e-295,
+        "expected_reciprocal_space_kcal_per_mol": 7.4746417761e-287,
+        "expected_values_are_normal_and_nonzero": true,
+        "mesh_dimensions": [
+          4,
+          4,
+          4
+        ],
+        "orthorhombic_lengths_angstrom": [
+          1000000000.0,
+          1e-06,
+          1e-06
+        ],
+        "positions_angstrom": [
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            400000000.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "raw_first_wave_damping_ieee754_bits_hex": "0000000000000000",
+        "relative_tolerance_without_unit_floor": 1e-08
+      },
+      "small_cell_subnormal_output": {
+        "aggregate_energy_dielectric": 25000000000.0,
+        "aggregate_energy_ieee754_bits_hex": "0000000000000001",
+        "alpha_per_angstrom": 115000.0,
+        "charges_elementary": [
+          16.0,
+          -16.0
+        ],
+        "force_only_dielectric": 1000000000000.0,
+        "force_only_energy_ieee754_bits_hex": "0000000000000000",
+        "force_only_expected_particle_1_x_is_negative_subnormal": true,
+        "force_only_expected_particle_1_x_kcal_per_mol_angstrom": -1.7e-319,
+        "force_only_relative_tolerance_without_unit_floor": 0.001,
+        "mesh_dimensions": [
+          4,
+          4,
+          4
+        ],
+        "orthorhombic_lengths_angstrom": [
+          1e-06,
+          1e-06,
+          1e-06
+        ],
+        "positions_angstrom": [
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            4e-07,
+            0.0,
+            0.0
+          ]
+        ],
+        "raw_first_wave_damping_ieee754_bits_hex": "0000000000000000"
+      },
+      "synthetic_regressions_only": true
+    }
+  },
+  "operational_boundary": {
+    "blockers": [
+      "external_reservation_endpoint_not_configured",
+      "external_reservation_provider_not_operational",
+      "external_reservation_trust_anchor_not_configured",
+      "historical_execution_operational_authority_false"
+    ],
+    "unresolved_operational_decisions": 32
+  },
+  "prerequisite": {
+    "merge_commit": "e434295b1711f612e0f7e9fac2d95de92abf19a8",
+    "merge_tree": "3546ef29ae708c16c7af1e3be4925d2d7ad1f6b5",
+    "profile_path": "config/engine_v2_native_direct_ewald_composite_dynamics_profile_v1.json",
+    "profile_sha256": "42aad2692719d3d0233d9b71e24e6b49fe50a27fbc150d31fb4d9688ae84215f",
+    "pull_request": 438,
+    "reviewed_head": "581a17a135d75ddf085c4edd29f3763c2f691fcf",
+    "source_manifest_entry_count": 113,
+    "source_manifest_path": "config/engine_v2_native_direct_ewald_composite_dynamics_profile_v1_sources.json",
+    "source_manifest_sha256": "1a7a284467958e7c153edb0afd86cc5ea4ad07b659266ecf59d9da7549a19d15"
+  },
+  "profile_id": "engine_v2_four_charge_pme_reciprocal_reference_development_v1",
+  "roadmap_issue": 434,
+  "schema_id": "betelgeuze.engine_v2_pme_reciprocal_reference_profile/1.0.0",
+  "semantic_oracle": {
+    "cargo_lock_path": "rust/reference-ewald/Cargo.lock",
+    "cargo_lock_sha256": "cc64500cc1c97dfda26a8a4c8b8825c5296935f1e63cbaf61676a321364b3d9d",
+    "cargo_manifest_path": "rust/reference-ewald/Cargo.toml",
+    "cargo_manifest_sha256": "44422b2daa40776946235a91dcd120a6ea9ee7b0b521fd50293a3cce9fe2880f",
+    "fixture_path": "rust/reference-ewald/fixtures/direct_ewald_v1.tsv",
+    "fixture_sha256": "a720c83852c79e401cb8838e9e20b2196985b6e424275949f77291b30b3da338",
+    "merge_commit": "ba008fcaa75891bca45e7b3d33b67449d80fb7d4",
+    "merge_tree": "0530a50af2cceeff02341ccb6fab141fd8c43726",
+    "profile_path": "config/engine_v2_direct_ewald_reference_profile_v1.json",
+    "profile_sha256": "dd2c7460c2c3e7ea800da51e29bdf54d8933497ade086812d882a65cca4f4e6c",
+    "pull_request": 435,
+    "readme_path": "rust/reference-ewald/README.md",
+    "readme_sha256": "f03a26ad087ac8d2298de18632e6d62faaf5970619cff7a7c2b7df4d487d2feb",
+    "reference_schema_id": "betelgeuze.reference_direct_ewald/1.0.0",
+    "reviewed_head": "b94e4c008db1c8414f5d0f24fa266c85c828d13c",
+    "source_path": "rust/reference-ewald/src/lib.rs",
+    "source_sha256": "2de8d94d69175053ccaf2a8057a385019fe5c398d7d95d96c84dc3d9bfafc99e"
+  },
+  "validation": {
+    "all_12_forces_match_central_finite_differences": true,
+    "arbitrary_translation_is_bounded_accuracy_observation_not_exact_identity": true,
+    "assignment_derivative_sum_zero": true,
+    "assignment_partition_of_unity": true,
+    "atom_permutation_property": true,
+    "charge_inversion_property": true,
+    "debug_release_frozen_observation_identity": true,
+    "deposited_grid_charge_conservation": true,
+    "direct_ewald_bound_9_reciprocal_accuracy_observed": true,
+    "fft_against_independent_full_3d_direct_dft_parity": true,
+    "fft_conjugate_symmetry": true,
+    "fft_round_trip": true,
+    "frozen_energy_and_force_bits": true,
+    "integer_grid_cell_translation_property": true,
+    "integer_periodic_image_property": true,
+    "mesh_128_cubed_point_capacity_rejection": true,
+    "mesh_64_128_128_work_capacity_rejection": true,
+    "mesh_energy_equals_half_grid_charge_potential_sum": true,
+    "mesh_refinement_sequence_observed_without_performance_claim": true,
+    "mixed_regular_and_rescued_energy_lanes_round_once_to_minimum_subnormal": true,
+    "net_force_is_bounded_accuracy_observation_not_exact_identity": true,
+    "power_of_two_scaled_common_spectrum_preserves_subnormal_force": true,
+    "raw_zero_damping_rescued_to_normal_nonzero_energy_and_force": true,
+    "rescue_only_scaled_energy_components_round_once_to_minimum_subnormal": true,
+    "same_input_bitwise_repeat": true,
+    "signed_frequency_and_nyquist_mapping": true,
+    "small_cell_force_only_energy_rounds_to_zero": true,
+    "small_cell_force_only_particle_1_x_is_negative_subnormal": true,
+    "small_cell_scaled_energy_aggregation_has_minimum_subnormal_bits": true,
+    "typed_malformed_input_failures": true,
+    "underflow_rescue_fft_matches_independent_full_3d_direct_dft": true,
+    "underflow_rescue_force_matches_energy_central_finite_difference": true,
+    "underflow_rescue_half_grid_charge_potential_identity": true,
+    "work_cap_typed_capacity_rejection_before_allocation": true,
+    "zero_mode_omitted_without_background_correction": true
+  }
+}
