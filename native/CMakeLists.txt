@@ -646,6 +646,7 @@ if(BUILD_TESTING)
     add_executable(
         betelgeuze_engine_particle_mesh_ewald_composite_dynamics
         tests/particle_mesh_ewald_composite_dynamics.cpp
+        tests/particle_mesh_ewald_composite_dynamics_scratch.cpp
     )
     target_link_libraries(
         betelgeuze_engine_particle_mesh_ewald_composite_dynamics

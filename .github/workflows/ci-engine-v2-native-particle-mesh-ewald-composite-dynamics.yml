@@ -96,7 +96,7 @@ jobs:
           persist-credentials: false
           clean: true
           fetch-depth: 0
-      - name: Materialize exact parent reviewed heads and merges
+      - name: Materialize exact PR 444 evidence and parent reviewed heads
         shell: bash
         run: |
           set -euo pipefail
@@ -108,13 +108,26 @@ jobs:
           git fetch --no-tags --depth=1 origin refs/pull/443/head
           test "$(git rev-parse FETCH_HEAD)" = "b785fd793c421c27730516453559a27b9cee6427"
           test "$(git rev-parse FETCH_HEAD^{tree})" = "515d0ea740426d6267a5b521acc451ea1492f282"
-      - name: Verify canonical bounded evidence
+          test "$(git rev-parse 6499ef99ed5b7b3a374b9f4ab15bc43057f44cf3^{tree})" = "531399ae05897624439f561402b7d51d76a21cad"
+          git fetch --no-tags --depth=1 origin refs/pull/444/head
+          test "$(git rev-parse FETCH_HEAD)" = "84dcdf4759e1d182d52502f157a2d551bfad68a4"
+          test "$(git rev-parse FETCH_HEAD^{tree})" = "531399ae05897624439f561402b7d51d76a21cad"
+      - name: Verify exact frozen PR 444 evidence
+        shell: bash
         run: |
+          set -euo pipefail
+          frozen=6499ef99ed5b7b3a374b9f4ab15bc43057f44cf3
+          current_sha="$(git rev-parse HEAD)"
+          git checkout --detach --quiet "$frozen"
+          trap 'git checkout --detach --quiet "$current_sha"' EXIT
           python3 -m json.tool config/engine_v2_native_particle_mesh_ewald_composite_dynamics_profile_v1.json >/dev/null
           python3 -m json.tool config/engine_v2_native_particle_mesh_ewald_composite_dynamics_profile_v1_sources.json >/dev/null
           python3 -m pip install pytest==8.3.5
           python3 tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_v1.py
           python3 -m pytest -q tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_v1.py
+          git checkout --detach --quiet "$current_sha"
+          trap - EXIT
+          test "$(git rev-parse HEAD)" = "$current_sha"
 
   native-linux:
     runs-on: ubuntu-latest
