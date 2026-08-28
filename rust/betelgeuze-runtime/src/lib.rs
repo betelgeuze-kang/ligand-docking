@@ -15,6 +15,7 @@ mod docking;
 mod dynamics;
 mod fixed64_lane_metrics;
 mod forcefield;
+mod particle_mesh_reciprocal;
 mod qualification;
 mod qualification_v6;
 mod qualification_v7;
@@ -126,6 +127,12 @@ pub use forcefield::{
     OrthorhombicCell, PairExclusion, PairScale, PeriodicTorsion,
     NATIVE_PERIODIC_NEIGHBOR_LIST_V1_PROFILE_ID, NATIVE_PERIODIC_NEIGHBOR_LIST_V1_SCHEMA_ID,
     NATIVE_PERIODIC_NEIGHBOR_LIST_V2_PROFILE_ID, NATIVE_PERIODIC_NEIGHBOR_LIST_V2_SCHEMA_ID,
+};
+pub use particle_mesh_reciprocal::{
+    particle_mesh_reciprocal_profile_id, ParticleMeshReciprocalEnergy, ParticleMeshReciprocalError,
+    ParticleMeshReciprocalErrorCode, ParticleMeshReciprocalEvaluation,
+    ParticleMeshReciprocalForceSoaOwned, ParticleMeshReciprocalModel,
+    ParticleMeshReciprocalParameters, ParticleMeshReciprocalResult, ParticleMeshReciprocalSettings,
 };
 pub use qualification::{
     compare_fixed64_scientific_numeric_parity, fixed64_cpu_v5_live_activation_admitted,
@@ -506,6 +513,7 @@ impl Drop for ContextInner {
 /// ```
 pub struct Context {
     inner: Rc<ContextInner>,
+    requested_backend: Backend,
 }
 
 impl Context {
@@ -540,6 +548,7 @@ impl Context {
         })?;
         Ok(Self {
             inner: Rc::new(ContextInner { handle }),
+            requested_backend: options.backend,
         })
     }
 
@@ -594,6 +603,10 @@ impl Context {
 
     pub(crate) fn lease(&self) -> Rc<ContextInner> {
         Rc::clone(&self.inner)
+    }
+
+    pub(crate) const fn requested_backend(&self) -> Backend {
+        self.requested_backend
     }
 }
 

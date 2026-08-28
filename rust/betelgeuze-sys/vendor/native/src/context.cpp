@@ -394,6 +394,7 @@ extern "C" BG_API bg_status BG_CALL bg_context_create(
         }
 
         auto context = std::make_unique<bg_context>();
+        context->requested_backend = options->backend;
         context->backend = selected_backend;
         context->unit_system = options->unit_system;
         context->device_ordinal = options->device_ordinal;

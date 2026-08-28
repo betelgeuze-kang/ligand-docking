@@ -10,6 +10,11 @@ fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(BG_DIRECT_EWALD_ABI_VERSION_MAJOR, 1);
     assert_eq!(BG_DIRECT_EWALD_ABI_VERSION_MINOR, 0);
     assert_eq!(BG_DIRECT_EWALD_ABI_VERSION, 1);
+    assert_eq!(BG_PARTICLE_MESH_RECIPROCAL_ABI_VERSION_MAJOR, 1);
+    assert_eq!(BG_PARTICLE_MESH_RECIPROCAL_ABI_VERSION_MINOR, 0);
+    assert_eq!(BG_PARTICLE_MESH_RECIPROCAL_ABI_VERSION, 1);
+    assert_eq!(BG_PARTICLE_MESH_RECIPROCAL_ERROR_DETAIL_CAPACITY, 256);
+    assert_eq!(BG_PARTICLE_MESH_RECIPROCAL_CARDINAL_B_SPLINE_ORDER, 4);
     assert_eq!(BG_DIRECT_EWALD_COMPOSITE_ABI_VERSION_MAJOR, 1);
     assert_eq!(BG_DIRECT_EWALD_COMPOSITE_ABI_VERSION_MINOR, 0);
     assert_eq!(BG_DIRECT_EWALD_COMPOSITE_ABI_VERSION, 1);
@@ -21,6 +26,7 @@ fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(size_of::<bg_backend>(), 4);
     assert_eq!(size_of::<bg_unit_system>(), 4);
     assert_eq!(size_of::<bg_direct_ewald_error_code>(), 4);
+    assert_eq!(size_of::<bg_particle_mesh_reciprocal_error_code>(), 4);
     assert_eq!(size_of::<bg_integrator>(), 4);
     assert_eq!(size_of::<bg_docking_fixed64_lane>(), 4);
     assert_eq!(size_of::<bg_docking_fixed64_feature_kind>(), 4);
@@ -76,6 +82,22 @@ fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL, 1);
     assert_eq!(
         [
+            BG_PARTICLE_MESH_RECIPROCAL_ERROR_NONE,
+            BG_PARTICLE_MESH_RECIPROCAL_ERROR_EMPTY_SYSTEM,
+            BG_PARTICLE_MESH_RECIPROCAL_ERROR_CAPACITY_EXCEEDED,
+            BG_PARTICLE_MESH_RECIPROCAL_ERROR_CHARGE_COUNT_MISMATCH,
+            BG_PARTICLE_MESH_RECIPROCAL_ERROR_NONFINITE_COORDINATE,
+            BG_PARTICLE_MESH_RECIPROCAL_ERROR_NONFINITE_CHARGE,
+            BG_PARTICLE_MESH_RECIPROCAL_ERROR_NON_NEUTRAL_SYSTEM,
+            BG_PARTICLE_MESH_RECIPROCAL_ERROR_INVALID_CELL,
+            BG_PARTICLE_MESH_RECIPROCAL_ERROR_INVALID_PARAMETER,
+            BG_PARTICLE_MESH_RECIPROCAL_ERROR_INVALID_MESH,
+            BG_PARTICLE_MESH_RECIPROCAL_ERROR_NONFINITE_RESULT,
+        ],
+        core::array::from_fn(|index| index as bg_particle_mesh_reciprocal_error_code)
+    );
+    assert_eq!(
+        [
             BG_DIRECT_EWALD_ERROR_NONE,
             BG_DIRECT_EWALD_ERROR_EMPTY_SYSTEM,
             BG_DIRECT_EWALD_ERROR_CAPACITY_EXCEEDED,
@@ -106,6 +128,129 @@ fn scalar_aliases_and_discriminants_match_the_c_header() {
     assert_eq!(BG_PERIODIC_AXIS_Y, 2);
     assert_eq!(BG_PERIODIC_AXIS_Z, 4);
     assert_eq!(BG_PERIODIC_AXES_ALL, 7);
+}
+
+#[cfg(target_pointer_width = "64")]
+#[test]
+fn particle_mesh_reciprocal_layouts_match_the_c_header() {
+    assert_eq!(size_of::<bg_particle_mesh_reciprocal_parameters_v1>(), 112);
+    assert_eq!(align_of::<bg_particle_mesh_reciprocal_parameters_v1>(), 8);
+    assert_eq!(
+        offset_of!(bg_particle_mesh_reciprocal_parameters_v1, struct_size),
+        0
+    );
+    assert_eq!(
+        offset_of!(bg_particle_mesh_reciprocal_parameters_v1, abi_version),
+        4
+    );
+    assert_eq!(
+        offset_of!(bg_particle_mesh_reciprocal_parameters_v1, atom_count),
+        8
+    );
+    assert_eq!(
+        offset_of!(bg_particle_mesh_reciprocal_parameters_v1, unit_system),
+        16
+    );
+    assert_eq!(
+        offset_of!(bg_particle_mesh_reciprocal_parameters_v1, reserved0),
+        20
+    );
+    assert_eq!(
+        offset_of!(
+            bg_particle_mesh_reciprocal_parameters_v1,
+            cell_lengths_angstrom
+        ),
+        24
+    );
+    assert_eq!(
+        offset_of!(
+            bg_particle_mesh_reciprocal_parameters_v1,
+            alpha_per_angstrom
+        ),
+        48
+    );
+    assert_eq!(
+        offset_of!(bg_particle_mesh_reciprocal_parameters_v1, mesh_dimensions),
+        56
+    );
+    assert_eq!(
+        offset_of!(bg_particle_mesh_reciprocal_parameters_v1, reserved1),
+        68
+    );
+    assert_eq!(
+        offset_of!(bg_particle_mesh_reciprocal_parameters_v1, dielectric),
+        72
+    );
+    assert_eq!(
+        offset_of!(bg_particle_mesh_reciprocal_parameters_v1, reserved),
+        80
+    );
+
+    assert_eq!(size_of::<bg_particle_mesh_reciprocal_energy_v1>(), 56);
+    assert_eq!(align_of::<bg_particle_mesh_reciprocal_energy_v1>(), 8);
+    assert_eq!(
+        offset_of!(bg_particle_mesh_reciprocal_energy_v1, struct_size),
+        0
+    );
+    assert_eq!(
+        offset_of!(bg_particle_mesh_reciprocal_energy_v1, abi_version),
+        4
+    );
+    assert_eq!(
+        offset_of!(bg_particle_mesh_reciprocal_energy_v1, unit_system),
+        8
+    );
+    assert_eq!(
+        offset_of!(bg_particle_mesh_reciprocal_energy_v1, reserved0),
+        12
+    );
+    assert_eq!(
+        offset_of!(
+            bg_particle_mesh_reciprocal_energy_v1,
+            reciprocal_space_kcal_per_mol
+        ),
+        16
+    );
+    assert_eq!(
+        offset_of!(bg_particle_mesh_reciprocal_energy_v1, reserved),
+        24
+    );
+
+    assert_eq!(size_of::<bg_particle_mesh_reciprocal_force_soa_v1>(), 88);
+    assert_eq!(align_of::<bg_particle_mesh_reciprocal_force_soa_v1>(), 8);
+    assert_eq!(
+        offset_of!(bg_particle_mesh_reciprocal_force_soa_v1, atom_capacity),
+        8
+    );
+    assert_eq!(
+        offset_of!(bg_particle_mesh_reciprocal_force_soa_v1, atom_count),
+        16
+    );
+    assert_eq!(
+        offset_of!(bg_particle_mesh_reciprocal_force_soa_v1, unit_system),
+        24
+    );
+    assert_eq!(
+        offset_of!(
+            bg_particle_mesh_reciprocal_force_soa_v1,
+            x_kcal_per_mol_angstrom
+        ),
+        32
+    );
+    assert_eq!(
+        offset_of!(bg_particle_mesh_reciprocal_force_soa_v1, reserved),
+        56
+    );
+
+    assert_eq!(size_of::<bg_particle_mesh_reciprocal_error_v1>(), 304);
+    assert_eq!(align_of::<bg_particle_mesh_reciprocal_error_v1>(), 8);
+    assert_eq!(offset_of!(bg_particle_mesh_reciprocal_error_v1, code), 8);
+    assert_eq!(offset_of!(bg_particle_mesh_reciprocal_error_v1, detail), 16);
+    assert_eq!(
+        offset_of!(bg_particle_mesh_reciprocal_error_v1, reserved),
+        272
+    );
+    assert_eq!(size_of::<*mut bg_particle_mesh_reciprocal_model_v1>(), 8);
 }
 
 #[cfg(target_pointer_width = "64")]

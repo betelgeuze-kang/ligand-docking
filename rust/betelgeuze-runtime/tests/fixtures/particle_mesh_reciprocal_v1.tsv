@@ -1,0 +1,16 @@
+# schema_id=betelgeuze.reference_particle_mesh_reciprocal/1.0.0
+# values are IEEE-754 binary64 bit patterns from the frozen four-charge fixture
+value_id	bits_hex
+reciprocal_space_kcal_per_mol	40441de71e7a685d
+force_0_x	3ff7abf233cae3fe
+force_0_y	3fe3f50c6800dce2
+force_0_z	4003a5fe62912de6
+force_1_x	bff82153b58fe4a2
+force_1_y	bfdf03fd220eaedd
+force_1_z	bff996032fc40900
+force_2_x	3fd5c06e1da10cd7
+force_2_y	3fcf508ce37d6938
+force_2_z	bfdf6cb861fdf624
+force_3_x	bfd2c72283b8727e
+force_3_y	bfda223bfc4695cd
+force_3_z	bfd9e0699f282115

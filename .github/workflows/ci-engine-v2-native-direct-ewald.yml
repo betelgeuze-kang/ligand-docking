@@ -84,7 +84,7 @@ jobs:
         with:
           persist-credentials: false
           clean: true
-          fetch-depth: 1
+          fetch-depth: 0
           sparse-checkout: |
             include
             native
@@ -104,20 +104,31 @@ jobs:
       - name: Report Python
         run: python3 --version
 
-      - name: Verify canonical profile and source binding
+      - name: Verify frozen immutable evidence and fail-closed unit contracts
+        shell: bash
         run: |
+          set -euo pipefail
+          frozen=ebbd7a20538cfd7516d9b53adb2e54c6de14bd97
+          frozen_tree=2ae92801369c7e16147e07cbb16e19c062e52cc9
+          current_sha="$(git rev-parse HEAD)"
+          test "$(git rev-parse "$frozen^{tree}")" = "$frozen_tree"
+          git diff --exit-code "$frozen" -- \
+            config/engine_v2_native_direct_ewald_cpu_profile_v1.json \
+            config/engine_v2_native_direct_ewald_cpu_profile_v1_sources.json \
+            docs/engine_v2_native_direct_ewald_cpu_v1.md \
+            tools/verify_engine_v2_native_direct_ewald_cpu_v1.py
+          git checkout --detach --quiet "$frozen"
           python3 -m json.tool \
             config/engine_v2_native_direct_ewald_cpu_profile_v1.json >/dev/null
           python3 -m json.tool \
             config/engine_v2_native_direct_ewald_cpu_profile_v1_sources.json \
             >/dev/null
           python3 tools/verify_engine_v2_native_direct_ewald_cpu_v1.py
-
-      - name: Verify fail-closed evidence tests
-        run: |
           python3 -m pip install pytest==8.3.5
           python3 -m pytest -q \
             tests/unit/test_engine_v2_native_direct_ewald_cpu_v1.py
+          git checkout --detach --quiet "$current_sha"
+          test "$(git rev-parse HEAD)" = "$current_sha"
 
   macos-export-boundary:
     runs-on: macos-15

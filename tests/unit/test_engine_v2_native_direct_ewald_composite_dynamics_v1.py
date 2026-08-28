@@ -14,6 +14,22 @@ from tools import (
 
 
 ROOT = Path(__file__).resolve().parents[2]
+ADDITIVE_RECIPROCAL_EVIDENCE_PRESENT = all(
+    (ROOT / relative).is_file()
+    for relative in (
+        "include/betelgeuze/particle_mesh_reciprocal.h",
+        "config/engine_v2_native_particle_mesh_reciprocal_cpu_profile_v1.json",
+        "config/engine_v2_native_particle_mesh_reciprocal_cpu_profile_v1_sources.json",
+        "tools/verify_engine_v2_native_particle_mesh_reciprocal_cpu_v1.py",
+    )
+)
+pytestmark = pytest.mark.skipif(
+    ADDITIVE_RECIPROCAL_EVIDENCE_PRESENT,
+    reason=(
+        "legacy direct-Ewald composite-dynamics evidence is verified from its "
+        "exact frozen object after the additive reciprocal ABI is present"
+    ),
+)
 PROFILE = ROOT / verifier.PROFILE_RELATIVE_PATH
 MANIFEST = ROOT / verifier.SOURCE_MANIFEST_RELATIVE_PATH
 TOOL = ROOT / "tools/verify_engine_v2_native_direct_ewald_composite_dynamics_v1.py"
