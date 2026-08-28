@@ -379,6 +379,11 @@ def test_source_git_ignores_ambient_repository_redirection(
     assert source["merged_main_tree"] == evidence.SOURCE_BASELINE_TREE
     assert not (ROOT / "rust/betelgeuze-runtime/src/docking.rs").exists()
     assert (ROOT / "rust/betelgeuze-runtime/src/docking/mod.rs").is_file()
+    monkeypatch.setattr(
+        evidence,
+        "SOURCE_CLOSURE_PATHS",
+        ("rust/betelgeuze-runtime/src/docking.rs",),
+    )
     with pytest.raises(
         evidence.SamplingPoolCPUObservationEvidenceError,
         match=(

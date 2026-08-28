@@ -6,6 +6,9 @@ endif()
 
 add_library(betelgeuze_engine SHARED
     src/context.cpp
+    src/ewald/api.cpp
+    src/ewald/cpp_evaluator.cpp
+    src/ewald/rust_evaluator.cpp
     src/evaluator.cpp
     src/forcefield.cpp
     src/system.cpp
@@ -309,7 +312,19 @@ if(BG_ENABLE_HIP)
     )
 endif()
 
-if(UNIX AND NOT APPLE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+set(BG_ENGINE_APPLE_EXPORTS
+    "${CMAKE_CURRENT_SOURCE_DIR}/betelgeuze_engine.exports")
+if(APPLE)
+    # C++ visibility properties do not apply to objects pulled from the Rust
+    # static provider archive.  Restrict the final Mach-O dylib to the same
+    # public C ABI represented by the ELF version script.
+    target_link_options(betelgeuze_engine PRIVATE
+        "LINKER:-exported_symbols_list,${BG_ENGINE_APPLE_EXPORTS}"
+    )
+    set_property(TARGET betelgeuze_engine APPEND PROPERTY
+        LINK_DEPENDS ${BG_ENGINE_APPLE_EXPORTS}
+    )
+elseif(UNIX AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_link_options(betelgeuze_engine PRIVATE
         "LINKER:--version-script=${CMAKE_CURRENT_SOURCE_DIR}/betelgeuze_engine.map"
     )
@@ -343,7 +358,9 @@ install(TARGETS betelgeuze_engine
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 install(
-    FILES ${PROJECT_SOURCE_DIR}/include/betelgeuze/engine.h
+    FILES
+        ${PROJECT_SOURCE_DIR}/include/betelgeuze/engine.h
+        ${PROJECT_SOURCE_DIR}/include/betelgeuze/direct_ewald.h
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/betelgeuze
 )
 
@@ -387,6 +404,43 @@ if(BUILD_TESTING)
         target_compile_options(betelgeuze_engine_cpp_smoke PRIVATE /UNDEBUG)
     endif()
     add_test(NAME betelgeuze_engine_cpp_smoke COMMAND betelgeuze_engine_cpp_smoke)
+
+    add_executable(
+        betelgeuze_engine_direct_ewald
+        tests/direct_ewald.cpp
+    )
+    target_link_libraries(
+        betelgeuze_engine_direct_ewald
+        PRIVATE betelgeuze_engine
+    )
+    target_compile_features(
+        betelgeuze_engine_direct_ewald
+        PRIVATE cxx_std_17
+    )
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(
+            betelgeuze_engine_direct_ewald
+            PRIVATE
+                -Wall
+                -Wextra
+                -Wpedantic
+                -Wconversion
+                -Wsign-conversion
+                -Werror
+                -UNDEBUG
+                -ffp-contract=off
+                -fno-fast-math
+        )
+    elseif(MSVC)
+        target_compile_options(
+            betelgeuze_engine_direct_ewald
+            PRIVATE /W4 /WX /UNDEBUG /fp:strict
+        )
+    endif()
+    add_test(
+        NAME betelgeuze_engine_direct_ewald
+        COMMAND betelgeuze_engine_direct_ewald
+    )
 
     add_executable(
         betelgeuze_engine_docking_fixed64_allocation
@@ -1132,12 +1186,19 @@ if(BUILD_TESTING)
         bg_add_hip_internal_engine_test(hip_pipeline_stats)
     endif()
 
-    if(UNIX AND NOT APPLE AND CMAKE_NM)
+    if(UNIX AND CMAKE_NM)
+        if(APPLE)
+            set(BG_ENGINE_EXPORT_OBJECT_FORMAT MACHO)
+        else()
+            set(BG_ENGINE_EXPORT_OBJECT_FORMAT ELF)
+        endif()
         add_test(
             NAME betelgeuze_engine_export_allowlist
             COMMAND ${CMAKE_COMMAND}
                 -DNM=${CMAKE_NM}
                 -DLIBRARY=$<TARGET_FILE:betelgeuze_engine>
+                -DOBJECT_FORMAT=${BG_ENGINE_EXPORT_OBJECT_FORMAT}
+                -DPUBLIC_SYMBOLS=${BG_ENGINE_APPLE_EXPORTS}
                 -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/check_exports.cmake
         )
     endif()

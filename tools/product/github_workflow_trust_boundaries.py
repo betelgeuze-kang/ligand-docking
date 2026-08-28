@@ -12,7 +12,7 @@ import yaml
 
 WORKFLOW_DIR = Path(".github/workflows")
 FULL_SHA_ACTION = re.compile(r"^[^@\s]+@[0-9a-f]{40}$")
-HOSTED_PR_RUNNERS = frozenset({"ubuntu-latest", "ubuntu-22.04"})
+HOSTED_PR_RUNNERS = frozenset({"macos-15", "ubuntu-latest", "ubuntu-22.04"})
 
 PR_WORKFLOWS = {
     "ci-api-h4-hosted.yml": {"api-security"},

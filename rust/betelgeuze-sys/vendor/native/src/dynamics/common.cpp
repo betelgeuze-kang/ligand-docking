@@ -92,14 +92,15 @@ bg_status periodic_neighbor_pairs(
         return BG_STATUS_OK;
     }
 
-    if (cache.build_scratch == nullptr || !cache.build_scratch.unique()) {
+    if (cache.build_scratch == nullptr ||
+        cache.build_scratch.use_count() != 1) {
         cache.build_scratch =
             std::make_shared<cpu::NeighborBuildScratch>();
     }
     std::shared_ptr<bg_simulation::NeighborListCacheData> *publication =
         nullptr;
     for (auto &candidate : cache.publication_scratch) {
-        if (candidate != nullptr && candidate.unique()) {
+        if (candidate != nullptr && candidate.use_count() == 1) {
             publication = &candidate;
             break;
         }
@@ -115,7 +116,7 @@ bg_status periodic_neighbor_pairs(
     if (publication == nullptr) {
         publication = &cache.publication_scratch.front();
     }
-    if (*publication == nullptr || !publication->unique()) {
+    if (*publication == nullptr || publication->use_count() != 1) {
         *publication =
             std::make_shared<bg_simulation::NeighborListCacheData>();
     }

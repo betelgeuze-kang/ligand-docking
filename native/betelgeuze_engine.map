@@ -209,3 +209,20 @@ BETELGEUZE_ENGINE_1.21 {
         bg_docking_fixed64_pipeline_v2_profile_id;
         bg_docking_fixed64_pipeline_v2_run;
 } BETELGEUZE_ENGINE_1.20;
+
+BETELGEUZE_DIRECT_EWALD_1.0 {
+    global:
+        bg_direct_ewald_abi_version;
+        bg_direct_ewald_abi_version_major;
+        bg_direct_ewald_abi_version_minor;
+        bg_direct_ewald_abi_version_string;
+        bg_direct_ewald_parameters_v1_init;
+        bg_direct_ewald_energy_components_v1_init;
+        bg_direct_ewald_force_soa_v1_init;
+        bg_direct_ewald_error_v1_init;
+        bg_direct_ewald_model_v1_create;
+        bg_direct_ewald_model_v1_destroy;
+        bg_direct_ewald_model_v1_get_atom_count;
+        bg_direct_ewald_model_v1_profile_id;
+        bg_context_evaluate_direct_ewald_v1;
+} BETELGEUZE_ENGINE_1.21;

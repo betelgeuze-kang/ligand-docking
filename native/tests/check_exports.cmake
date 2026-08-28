@@ -1,18 +1,82 @@
-if(NOT DEFINED NM OR NOT DEFINED LIBRARY)
-    message(FATAL_ERROR "NM and LIBRARY are required")
+if(NOT DEFINED NM OR NOT DEFINED LIBRARY OR
+   NOT DEFINED OBJECT_FORMAT OR NOT DEFINED PUBLIC_SYMBOLS)
+    message(FATAL_ERROR
+        "NM, LIBRARY, OBJECT_FORMAT, and PUBLIC_SYMBOLS are required")
 endif()
 
-execute_process(
-    COMMAND "${NM}" -D --defined-only "${LIBRARY}"
-    RESULT_VARIABLE nm_result
-    OUTPUT_VARIABLE nm_output
-    ERROR_VARIABLE nm_error
-)
+if(NOT OBJECT_FORMAT STREQUAL "ELF" AND
+   NOT OBJECT_FORMAT STREQUAL "MACHO")
+    message(FATAL_ERROR "unsupported object format: ${OBJECT_FORMAT}")
+endif()
+
+file(STRINGS "${PUBLIC_SYMBOLS}" public_symbol_lines ENCODING UTF-8)
+set(expected_symbols)
+foreach(public_symbol IN LISTS public_symbol_lines)
+    if(NOT public_symbol MATCHES "^_bg_[A-Za-z0-9_]+$")
+        message(FATAL_ERROR
+            "invalid Mach-O public symbol spelling: ${public_symbol}")
+    endif()
+    string(SUBSTRING "${public_symbol}" 1 -1 unprefixed_public_symbol)
+    list(APPEND expected_symbols "${unprefixed_public_symbol}")
+endforeach()
+if(NOT expected_symbols)
+    message(FATAL_ERROR "public symbol allowlist must not be empty")
+endif()
+set(unique_expected_symbols ${expected_symbols})
+list(REMOVE_DUPLICATES unique_expected_symbols)
+list(LENGTH expected_symbols expected_symbol_count)
+list(LENGTH unique_expected_symbols unique_expected_symbol_count)
+if(NOT expected_symbol_count EQUAL unique_expected_symbol_count)
+    message(FATAL_ERROR "public symbol allowlist contains duplicates")
+endif()
+
+if(OBJECT_FORMAT STREQUAL "MACHO")
+    execute_process(
+        COMMAND "${NM}" -g -U -j "${LIBRARY}"
+        RESULT_VARIABLE nm_result
+        OUTPUT_VARIABLE nm_output
+        ERROR_VARIABLE nm_error
+    )
+else()
+    execute_process(
+        COMMAND "${NM}" -D --defined-only "${LIBRARY}"
+        RESULT_VARIABLE nm_result
+        OUTPUT_VARIABLE nm_output
+        ERROR_VARIABLE nm_error
+    )
+endif()
 if(NOT nm_result EQUAL 0)
     message(FATAL_ERROR "nm failed (${nm_result}): ${nm_error}")
 endif()
 
 string(REPLACE "\n" ";" nm_lines "${nm_output}")
+set(v1_0_symbols
+    bg_abi_version
+    bg_abi_version_major
+    bg_abi_version_minor
+    bg_abi_version_string
+    bg_status_string
+    bg_backend_string
+    bg_unit_system_string
+    bg_last_error_message
+    bg_last_error_message_copy
+    bg_context_options_init
+    bg_particle_soa_init
+    bg_particle_soa_view_init
+    bg_position_soa_init
+    bg_backend_is_available
+    bg_context_create
+    bg_context_destroy
+    bg_context_get_backend
+    bg_context_get_device_ordinal
+    bg_context_get_unit_system
+    bg_system_create
+    bg_system_destroy
+    bg_system_get_particle_count
+    bg_system_get_unit_system
+    bg_system_get_particles
+    bg_system_set_positions
+)
 set(v1_1_symbols
     bg_forcefield_soa_v1_init
     bg_force_soa_v1_init
@@ -156,12 +220,71 @@ set(v1_21_symbols
     bg_docking_fixed64_pipeline_v2_profile_id
     bg_docking_fixed64_pipeline_v2_run
 )
+set(direct_ewald_v1_symbols
+    bg_direct_ewald_abi_version
+    bg_direct_ewald_abi_version_major
+    bg_direct_ewald_abi_version_minor
+    bg_direct_ewald_abi_version_string
+    bg_direct_ewald_parameters_v1_init
+    bg_direct_ewald_energy_components_v1_init
+    bg_direct_ewald_force_soa_v1_init
+    bg_direct_ewald_error_v1_init
+    bg_direct_ewald_model_v1_create
+    bg_direct_ewald_model_v1_destroy
+    bg_direct_ewald_model_v1_get_atom_count
+    bg_direct_ewald_model_v1_profile_id
+    bg_context_evaluate_direct_ewald_v1
+)
+set(versioned_symbols
+    ${v1_0_symbols}
+    ${v1_1_symbols}
+    ${v1_3_symbols}
+    ${v1_5_symbols}
+    ${v1_6_symbols}
+    ${v1_7_symbols}
+    ${v1_8_symbols}
+    ${v1_9_symbols}
+    ${v1_10_symbols}
+    ${v1_11_symbols}
+    ${v1_12_symbols}
+    ${v1_13_symbols}
+    ${v1_14_symbols}
+    ${v1_15_symbols}
+    ${v1_16_symbols}
+    ${v1_17_symbols}
+    ${v1_18_symbols}
+    ${v1_19_symbols}
+    ${v1_20_symbols}
+    ${v1_21_symbols}
+    ${direct_ewald_v1_symbols}
+)
+set(sorted_versioned_symbols ${versioned_symbols})
+set(sorted_expected_symbols ${expected_symbols})
+list(SORT sorted_versioned_symbols)
+list(SORT sorted_expected_symbols)
+if(NOT "${sorted_versioned_symbols}" STREQUAL "${sorted_expected_symbols}")
+    message(FATAL_ERROR
+        "version-node symbol sets do not match the public allowlist")
+endif()
+
+set(observed_symbols)
 foreach(line IN LISTS nm_lines)
     if(line STREQUAL "")
         continue()
     endif()
-    string(REGEX MATCH "[^ 	]+$" symbol "${line}")
-    string(REGEX REPLACE "@@.*$" "" unversioned "${symbol}")
+    if(OBJECT_FORMAT STREQUAL "MACHO")
+        set(symbol "${line}")
+        if(NOT symbol MATCHES "^_[A-Za-z0-9_$]+$")
+            message(FATAL_ERROR "unexpected Mach-O nm output: ${symbol}")
+        endif()
+        string(SUBSTRING "${symbol}" 1 -1 unversioned)
+    else()
+        string(REGEX MATCH "[^ 	]+$" symbol "${line}")
+        string(REGEX REPLACE "@@.*$" "" unversioned "${symbol}")
+    endif()
+    if(unversioned MATCHES "^bg_rust_")
+        message(FATAL_ERROR "private Rust provider symbol exported: ${symbol}")
+    endif()
     if(NOT unversioned MATCHES "^bg_" AND
        NOT unversioned STREQUAL "BETELGEUZE_ENGINE_1.0" AND
        NOT unversioned STREQUAL "BETELGEUZE_ENGINE_1.1" AND
@@ -182,10 +305,20 @@ foreach(line IN LISTS nm_lines)
        NOT unversioned STREQUAL "BETELGEUZE_ENGINE_1.18" AND
        NOT unversioned STREQUAL "BETELGEUZE_ENGINE_1.19" AND
        NOT unversioned STREQUAL "BETELGEUZE_ENGINE_1.20" AND
-       NOT unversioned STREQUAL "BETELGEUZE_ENGINE_1.21")
+       NOT unversioned STREQUAL "BETELGEUZE_ENGINE_1.21" AND
+       NOT unversioned STREQUAL "BETELGEUZE_DIRECT_EWALD_1.0")
         message(FATAL_ERROR "unexpected exported symbol: ${symbol}")
     endif()
     if(unversioned MATCHES "^bg_")
+        list(FIND expected_symbols "${unversioned}" expected_symbol_index)
+        if(expected_symbol_index EQUAL -1)
+            message(FATAL_ERROR "unexpected exported symbol: ${symbol}")
+        endif()
+        list(APPEND observed_symbols "${unversioned}")
+        if(OBJECT_FORMAT STREQUAL "MACHO")
+            continue()
+        endif()
+        list(FIND direct_ewald_v1_symbols "${unversioned}" direct_ewald_v1_index)
         list(FIND v1_21_symbols "${unversioned}" v1_21_index)
         list(FIND v1_20_symbols "${unversioned}" v1_20_index)
         list(FIND v1_19_symbols "${unversioned}" v1_19_index)
@@ -205,7 +338,10 @@ foreach(line IN LISTS nm_lines)
         list(FIND v1_5_symbols "${unversioned}" v1_5_index)
         list(FIND v1_3_symbols "${unversioned}" v1_3_index)
         list(FIND v1_1_symbols "${unversioned}" v1_1_index)
-        if(NOT v1_21_index EQUAL -1)
+        list(FIND v1_0_symbols "${unversioned}" v1_0_index)
+        if(NOT direct_ewald_v1_index EQUAL -1)
+            set(expected_version "BETELGEUZE_DIRECT_EWALD_1.0")
+        elseif(NOT v1_21_index EQUAL -1)
             set(expected_version "BETELGEUZE_ENGINE_1.21")
         elseif(NOT v1_20_index EQUAL -1)
             set(expected_version "BETELGEUZE_ENGINE_1.20")
@@ -243,8 +379,11 @@ foreach(line IN LISTS nm_lines)
             set(expected_version "BETELGEUZE_ENGINE_1.3")
         elseif(NOT v1_1_index EQUAL -1)
             set(expected_version "BETELGEUZE_ENGINE_1.1")
-        else()
+        elseif(NOT v1_0_index EQUAL -1)
             set(expected_version "BETELGEUZE_ENGINE_1.0")
+        else()
+            message(FATAL_ERROR
+                "exported symbol has no version-node assignment: ${symbol}")
         endif()
         if(NOT symbol MATCHES "@@${expected_version}$")
             message(FATAL_ERROR
@@ -254,3 +393,10 @@ foreach(line IN LISTS nm_lines)
         endif()
     endif()
 endforeach()
+
+set(sorted_observed_symbols ${observed_symbols})
+list(SORT sorted_observed_symbols)
+if(NOT "${sorted_observed_symbols}" STREQUAL "${sorted_expected_symbols}")
+    message(FATAL_ERROR
+        "exported symbol set does not exactly match the public allowlist")
+endif()
